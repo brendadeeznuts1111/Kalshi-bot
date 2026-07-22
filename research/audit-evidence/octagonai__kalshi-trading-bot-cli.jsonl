@@ -1,0 +1,10 @@
+{"scope":"line","query":"kalshi_api","path":"env.example","component":"authApi"}
+{"scope":"line","query":"kalshi_api","path":"src/commands/status.ts","component":"authApi"}
+{"scope":"line","query":"kalshi_api","path":"src/setup/wizard.ts","component":"authApi"}
+{"scope":"line","query":"kalshi_api","path":"GUIDE.md","component":"authApi"}
+{"scope":"line","query":"kalshi_api","path":"README.md","component":"authApi"}
+{"scope":"line","query":"dry-run","path":"README.md","component":"orderRealism"}
+{"scope":"line","query":"dry-run","path":"src/commands/help.ts","component":"orderRealism"}
+{"scope":"line","query":"dry-run","path":"src/commands/parse-args.ts","component":"orderRealism"}
+{"scope":"line","query":"kelly","path":"(readme/code aggregate)","component":"riskControls"}
+{"scope":"line","query":"drawdown","path":"(readme/code aggregate)","component":"riskControls"}
