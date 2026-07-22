@@ -1,0 +1,20 @@
+{
+  "name": "tennis-tour-pinnacle-novig",
+  "dimension": "sports-other",
+  "status": "shadow",
+  "role": "baseline",
+  "baseline": "tennis-tour-pinnacle-novig",
+  "created": "2026-07-22",
+  "shadowLog": "shadow-log.jsonl",
+  "hypothesisFile": "hypothesis.md",
+  "minContracts": 5,
+  "gates": {
+    "shadowMinSignals": 200,
+    "shadowMinWeeks": 2,
+    "pilotMaxContracts": 5,
+    "killBrierDriftPct": 15,
+    "graduationMinRealizedEdgeCentsPerFill": 2,
+    "graduationMinFills": 40,
+    "graduationMinDistinctEvents": 40
+  }
+}

@@ -1,13 +1,18 @@
 /**
  * One shadow tick from event-store book_ticks (no network).
  */
-import { asKalshiMarketTicker } from "../../../src/institutions/event-store/brands.ts";
+import {
+  asCanonicalEventId,
+  asKalshiMarketTicker,
+  unbrand,
+} from "../../../src/institutions/event-store/brands.ts";
 import { DEFAULT_EVENT_STORE_DB } from "../../../src/institutions/event-store/paths.ts";
 import { openEventStore } from "../../../src/institutions/event-store/open-db.ts";
 import { latestBookTickForTicker } from "./book-context.ts";
 import { MIN_CONTRACTS, passesThreshold } from "./fees.ts";
 import { loadProgramManifest } from "./program.ts";
 import { appendShadowLine } from "./shadow.ts";
+import { loadScoreContext } from "./score-context.ts";
 import { buildSignalContext, decide, midCents } from "./signal.ts";
 
 export type ExecuteOptions = {
@@ -37,13 +42,16 @@ export async function executeOnce(options: ExecuteOptions): Promise<void> {
     process.exit(1);
   }
 
-  const built = buildSignalContext({
+  const eventId = asCanonicalEventId(options.eventId ?? tick.eventId);
+  const scoreContext = loadScoreContext(db, eventId, ticker);
+  const built = await buildSignalContext({
     ticker: options.ticker,
-    eventId: options.eventId ?? tick.eventId,
+    eventId: unbrand(eventId),
     book: tick.book,
+    scoreContext,
   });
   if (!built) {
-    console.log("Skip: stub p_model unavailable — no tradeable mid in book_ticks");
+    console.log("Skip: p_model unavailable — no tradeable mid in book_ticks");
     return;
   }
 

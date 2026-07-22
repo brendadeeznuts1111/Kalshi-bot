@@ -28,6 +28,7 @@ Recommend concrete actions in build order; prefer `odds-feed` dimension runs (qu
 | Alpha tenant template | **Done** | `.bun-create/alpha-program/` (sole SSOT) |
 | First baseline tenant (NBA, Oct+) | **Born** | `alpha/pinnacle-novig-nba/` — idle until `KXNBAGAME` season |
 | **Live baseline (Jul–Sep)** | **Born** | `alpha/pinnacle-novig-mlb/` — `KXMLBGAME` + `baseball_mlb` |
+| **Tennis tour baseline** | **Born** | `alpha/tennis-tour-pinnacle-novig/` — `KXATPMATCH`/`KXWTAMATCH` + `tennis` |
 | Calibration institution | **Done** | `src/calibration/watcher.ts`, `shadow-maintenance.ts` |
 | Kalshi orderbook fetch (public) | **Done** | `src/bot/kalshi-market-data.ts` — reciprocal bid→ask; crossed-book skip |
 | Append-only shadow log | **Done** | Predictions immutable; `toxicity-mark` + `outcome-resolution` entries chained after |
@@ -56,7 +57,7 @@ Challenger/ITF self-model lane (`tennis-game-model` archetype). Infrastructure o
 | Branded event-store IDs | **Done** | `event-store/brands.ts` |
 | WS on linked corpus / long capture | **Done** | 120s validated: 94 deltas, 64% exchange clock, 0 seq gaps on 24-ticker watch |
 | WS recorder OS cron | **Done** | `tennis:record:ws:register` — `*/30 * * * *`, 300s capture |
-| Alpha join on WS `book_ticks` | **Partial** (scaffold wired) | `alpha/tennis-game-model/` — DB book_ticks → shadow; stub p_model |
+| Alpha join on WS `book_ticks` | **Partial** (live score v0 wired) | `alpha/tennis-game-model/` — DB book_ticks + live_scores → score-adjusted p_model |
 
 **File naming (WS lane):** `kalshi-*` wire · `tennis-ws-*` ground/artifacts · `tennis-book-*` analytics · `orderbook-*` protocol state · `tools/tennis/tennis-ws-ground-cli.ts`.
 
@@ -236,10 +237,10 @@ Public repos answer plumbing. They do not answer α.
 | T1 | WS stream seq + multi-ticker subscribe | **Done** | — |
 | T2 | Dual-clock `book_ticks` + coverage analytics | **Done** | — |
 | T3 | WebView/Image ground + agent mesh | **Done** | `agent tennis --webview` after WS runs |
-| T4 | Long WS capture on watch-set | **Partial** | `tennis:record -- --ws --ws-seconds=300` during live |
-| T5 | Exchange-clock deltas (`source_clock=exchange`) | **Partial** | needs T4 volume |
-| T6 | WS recorder cron | **Next** | `tennis:ws-recorder:register` (mirror canary) |
-| T7 | `tennis-game-model` signal on WS books | **Partial** (scaffold wired) | `alpha:run --program=tennis-game-model --fetch-book`; real p_model next |
+| T4 | Long WS capture on watch-set | **Done** | — |
+| T5 | Exchange-clock deltas (`source_clock=exchange`) | **Done** | — |
+| T6 | WS recorder cron | **Done** | optional: `tennis:record:ws:preview` / `tennis:record:ws:register` |
+| T7 | `tennis-game-model` signal on WS books | **Partial** (live score v0) | score-adjusted p_model from live_scores; full point/game model next |
 
 ## Execute now (priority order)
 
@@ -259,7 +260,7 @@ Public repos answer plumbing. They do not answer α.
 
 1. **`bun run tennis:itf -- --sync --retain-days=3`** — refresh markets + bridge.
 2. **`bun run agent tennis`** — coverage + artifact triage (no network).
-3. **`bun run tennis:record -- --ws --ws-seconds=300`** — needs rotated `KALSHI_*` creds; builds `tennis-ws-recorder/history.jsonl`.
+3. **`bun run tennis:record -- --ws --ws-seconds=300`** — needs rotated `KALSHI_*` creds; builds `tennis-ws-recorder/history.jsonl`. Optional OS cron: preview with `tennis:record:ws:preview`, register with `tennis:record:ws:register` (consent required).
 4. **`bun run tennis:ws-ground`** — Bun.WebView + Bun.Image dashboard (`docs/BUN_NATIVE.md`).
 5. **`bun run agent tennis --webview`** — refresh ground after WS session.
 

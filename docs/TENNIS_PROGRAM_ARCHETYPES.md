@@ -208,14 +208,22 @@ TENNIS_LIVE_INTERVAL_MS=5000 bun run tennis:live -- --loop
 
 The calendar said where the markets are. The collector is what lets a self-model disagree with them.
 
-### Alpha join — `tennis-game-model` (shadow scaffold)
+### Alpha join — `tennis-game-model` (live score v0)
 
-Self-model shadow reads **event-store `book_ticks` only** (no Odds API, no live Kalshi fetch in `--fetch-book`). Latest tick per ticker prefers `kalshi-ws`, else `kalshi-rest`; exposes mid, spread, `source_clock`, and `recv_ts`. Stub `p_model = mid/100` until a point/game model exists — honest placeholder with explicit skip reasons and fee-aware `decide()`.
+Self-model shadow reads **event-store `book_ticks` + `live_scores`** (no Odds API). Latest tick per ticker prefers `kalshi-ws`, else `kalshi-rest`. Pre-match: `priorP = mid/100` with deep-tail skip (>85¢ / <15¢). In-play: logit adjustment from set/game differential (`score-model.ts`). Fee-aware `decide()` + append-only shadow log.
 
 ```bash
 bun run alpha:run -- --program=tennis-game-model --ticker=KXITFMATCH-26JUL22AAA-BBB --fetch-book
-# or from tenant dir:
-cd alpha/tennis-game-model && bun src/run-once.ts --ticker=KXITFMATCH-... --fetch-book
 ```
 
-Requires prior `tennis:record -- --watch` or `tennis:record -- --ws` rows in `research/cache/event-store.db`.
+Requires prior `tennis:record -- --watch` or `--ws` and `tennis:live` rows in `research/cache/event-store.db`.
+
+### Tour baseline — `tennis-tour-pinnacle-novig`
+
+Pinnacle novig baseline for ATP/WTA named events (Odds API `tennis` sport). Same gauntlet as MLB/NBA — **not** for ITF/Challenger.
+
+```bash
+bun run alpha:run -- --program=tennis-tour-pinnacle-novig --ticker=KXATPMATCH-26JUL22BORBUR-BOR --fetch-book
+```
+
+Ticker mapper uses `tour` format (`KXATPMATCH` / `KXWTAMATCH`); overrides in `research/ticker-overrides.json` as tour events appear.

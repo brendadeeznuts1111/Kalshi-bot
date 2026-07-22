@@ -6,6 +6,12 @@ import {
   splitItfMatchupBlob,
 } from "./itf.ts";
 import {
+  isTourKalshiTicker,
+  parseTourMatchupBlob,
+  parseTourYesSideCode,
+  splitTourMatchupBlob,
+} from "./tour.ts";
+import {
   isMlbGameTicker,
   mlbTeamNameMatchesCode,
   mlbYesIsHomeTeam,
@@ -22,7 +28,7 @@ import {
   parseNbaGameTeamCodes,
 } from "./nba.ts";
 
-export type TickerSportFormat = "nba" | "mlb" | "itf" | "unknown";
+export type TickerSportFormat = "nba" | "mlb" | "itf" | "tour" | "unknown";
 
 export { NBA_TEAM_CODES, parseNbaGameTeamCodes } from "./nba.ts";
 export {
@@ -45,11 +51,26 @@ export {
   splitItfMatchupBlob,
   itfMatchupBlobIsUnambiguous,
 } from "./itf.ts";
+export {
+  TOUR_SERIES_TICKERS,
+  isTourKalshiTicker,
+  isTourSeriesTicker,
+  tourSideCodesForEvent,
+  parseTourEventTicker,
+  parseTourMatchupBlob,
+  parseTourSeriesPrefix,
+  parseTourYesSideCode,
+  splitTourMatchupBlob,
+  tourMatchupBlobIsUnambiguous,
+  tourFromSeries,
+  tourFormatLabel,
+} from "./tour.ts";
 
 export function detectTickerFormat(ticker: string): TickerSportFormat {
   if (isNbaGameTicker(ticker)) return "nba";
   if (isMlbGameTicker(ticker)) return "mlb";
   if (isItfKalshiTicker(ticker)) return "itf";
+  if (isTourKalshiTicker(ticker)) return "tour";
   return "unknown";
 }
 
@@ -63,6 +84,12 @@ export function parseGameTeamCodes(ticker: string): [string, string] | null {
     if (!yes || !blob) return null;
     return splitItfMatchupBlob(blob, yes);
   }
+  if (format === "tour") {
+    const yes = parseTourYesSideCode(ticker);
+    const blob = parseTourMatchupBlob(ticker);
+    if (!yes || !blob) return null;
+    return splitTourMatchupBlob(blob, yes);
+  }
   return null;
 }
 
@@ -70,7 +97,7 @@ export function teamNameMatchesCode(ticker: string, code: string, teamName: stri
   const format = detectTickerFormat(ticker);
   if (format === "nba") return nbaTeamNameMatchesCode(code, teamName);
   if (format === "mlb") return mlbTeamNameMatchesCode(code, teamName);
-  if (format === "itf") return teamName.toUpperCase().includes(code);
+  if (format === "itf" || format === "tour") return teamName.toUpperCase().includes(code);
   return teamName.toUpperCase().includes(code);
 }
 
@@ -122,13 +149,18 @@ export function yesProbabilityFromSnapshot(
   if (format === "mlb") {
     return mlbYesIsHomeTeam(ticker, homeTeam, awayTeam) ? homeProb : awayProb;
   }
-  if (format === "itf") {
-    const yesCode = parseItfYesSideCode(ticker);
+  if (format === "itf" || format === "tour") {
+    const yesCode =
+      format === "itf" ? parseItfYesSideCode(ticker) : parseTourYesSideCode(ticker);
     if (!yesCode) return homeProb;
-    if (homeTeam.toUpperCase().includes(yesCode) || yesCode.length >= 3 && homeTeam.toUpperCase().startsWith(yesCode.slice(0, 3))) {
-      return homeProb;
+    if (teamNameMatchesCode(ticker, yesCode, homeTeam)) return homeProb;
+    if (teamNameMatchesCode(ticker, yesCode, awayTeam)) return awayProb;
+    const pair = parseGameTeamCodes(ticker);
+    if (pair) {
+      const other = yesCode === pair[0] ? pair[1] : pair[0];
+      if (teamNameMatchesCode(ticker, other, homeTeam)) return awayProb;
+      if (teamNameMatchesCode(ticker, other, awayTeam)) return homeProb;
     }
-    if (awayTeam.toUpperCase().includes(yesCode)) return awayProb;
     return homeProb;
   }
   return homeProb;
