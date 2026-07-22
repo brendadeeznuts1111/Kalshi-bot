@@ -8,6 +8,11 @@ import type { EvidenceLine, RepoReport, ResearchConfig, ResearchRun } from "./ty
 import { buildRepoReport } from "./evidence.ts";
 import { validateRepoReport } from "./validate.ts";
 import { auditEvidenceRelPath } from "./paths.ts";
+import {
+  DETECTOR_IDS,
+  HIGH_VALUE_MIN_COMPONENT_POINTS,
+  HIGH_VALUE_MIN_TOTAL_SCORE,
+} from "./constants.ts";
 
 /** AuditFinding-compatible wire (ids are opaque until monorepo parse*). */
 export type AuditFindingWire = {
@@ -83,14 +88,14 @@ export function evidenceExportPath(_runId: string, fullName: string): string {
 }
 
 export function isHighValueCandidate(report: RepoReport): boolean {
-  const auth = report.detectors.find((d) => d.id === "auth-api");
-  const orders = report.detectors.find((d) => d.id === "order-realism");
+  const auth = report.detectors.find((d) => d.id === DETECTOR_IDS.authApi);
+  const orders = report.detectors.find((d) => d.id === DETECTOR_IDS.orderRealism);
   return (
-    report.score.total >= 70 &&
+    report.score.total >= HIGH_VALUE_MIN_TOTAL_SCORE &&
     (auth?.matched ?? false) &&
     (orders?.matched ?? false) &&
-    (auth?.pointsContributed ?? 0) >= 15 &&
-    (orders?.pointsContributed ?? 0) >= 15
+    (auth?.pointsContributed ?? 0) >= HIGH_VALUE_MIN_COMPONENT_POINTS &&
+    (orders?.pointsContributed ?? 0) >= HIGH_VALUE_MIN_COMPONENT_POINTS
   );
 }
 

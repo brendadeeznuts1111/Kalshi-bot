@@ -1,12 +1,24 @@
+# Dependencies & tooling
 node_modules/
 .bun-cache/
 coverage/
 .DS_Store
 
-# Runtime cache + machine outputs
+# Local secrets (never commit)
+.env
+.env.*
+!.env.example
+
+# Machine-local runtime (regenerated each run)
 research/cache/
 research/outputs/
 research/exports/
 
-# Per-run markdown snapshots (history lives in cache.db runs table)
+# Per-run markdown snapshots (canonical history: cache.db + latest.md)
 research/reports/run_*.md
+
+# Committed on purpose (do not ignore):
+#   research/reports/latest.md
+#   research/reports/latest.diff.md
+#   research/audit-evidence/*.jsonl
+#   research/queries.json, weights.json, keywords.json, schemas/

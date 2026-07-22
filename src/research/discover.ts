@@ -2,6 +2,14 @@
 import type { ResearchConfig } from "./types.ts";
 import { ghJson } from "./gh.ts";
 import {
+  isUnlicensedSpdx,
+  LICENSE_APACHE_2_0,
+  LICENSE_BSD_2_CLAUSE,
+  LICENSE_BSD_3_CLAUSE,
+  LICENSE_ISC,
+  LICENSE_MIT,
+} from "./constants.ts";
+import {
   githubRepoWebUrl,
   isGitHubRepoUrl,
   parseGitHubRepoRef,
@@ -31,11 +39,11 @@ export async function loadConfig(): Promise<ResearchConfig> {
 
 export function normalizeLicense(raw: GhSearchRepo["license"]): string {
   const normalized = (raw?.spdxId ?? raw?.name ?? "").toLowerCase();
-  if (normalized.includes("mit")) return "mit";
-  if (normalized.includes("apache")) return "apache-2.0";
-  if (normalized.includes("bsd-3")) return "bsd-3-clause";
-  if (normalized.includes("bsd-2")) return "bsd-2-clause";
-  if (normalized === "isc") return "isc";
+  if (normalized.includes("mit")) return LICENSE_MIT;
+  if (normalized.includes("apache")) return LICENSE_APACHE_2_0;
+  if (normalized.includes("bsd-3")) return LICENSE_BSD_3_CLAUSE;
+  if (normalized.includes("bsd-2")) return LICENSE_BSD_2_CLAUSE;
+  if (normalized === LICENSE_ISC) return LICENSE_ISC;
   return normalized;
 }
 
@@ -51,7 +59,7 @@ export function parseLicense(
   const spdxId = raw?.spdxId ?? null;
   const name = raw?.name ?? null;
   const normalized = normalizeLicense(raw);
-  const unlicensed = !normalized || normalized === "noassertion" || normalized === "unlicense";
+  const unlicensed = isUnlicensedSpdx(normalized);
   return { spdxId, name, preferred: preferredLicenses.includes(normalized), unlicensed };
 }
 

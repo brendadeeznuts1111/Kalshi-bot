@@ -1,4 +1,5 @@
 import type { InspectionSignals, RepoCandidate, ResearchConfig, ScoreBreakdown } from "./types.ts";
+import { LICENSE_WEIGHTS, MAX_QUALITY_SCORE } from "./constants.ts";
 
 const MS_PER_DAY = 86_400_000;
 
@@ -18,7 +19,7 @@ export function scoreRepo(
 
   const raw = authApi + orderRealism + testsCi + docsSetup + maintenance + riskControls;
   const licenseModifier = licenseAdjustment(repo, config);
-  const total = Math.max(0, Math.min(100, raw - licenseModifier));
+  const total = Math.max(0, Math.min(MAX_QUALITY_SCORE, raw - licenseModifier));
 
   return {
     authApi,
@@ -84,7 +85,7 @@ function scoreRisk(signals: InspectionSignals, max: number): number {
 function licenseAdjustment(repo: RepoCandidate, config: ResearchConfig): number {
   if (repo.license.unlicensed) return config.weights.license.unlicensedPenalty;
   if (repo.license.preferred) return 0;
-  return 3;
+  return LICENSE_WEIGHTS.nonPreferredPenalty;
 }
 
 export function stackRank(primaryLanguage: string | null): number {

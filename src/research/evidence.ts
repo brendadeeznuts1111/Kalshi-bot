@@ -1,4 +1,8 @@
 // @see https://bun.com/docs/runtime/hashing#bun-hash
+import {
+  COMPONENT_WEIGHTS,
+  DETECTOR_IDS,
+} from "./constants.ts";
 import type {
   DetectorResult,
   EvidenceLine,
@@ -64,12 +68,12 @@ export function buildDetectors(item: ScoredRepo): DetectorResult[] {
 
   return [
     detector(
-      "auth-api",
+      DETECTOR_IDS.authApi,
       "authApi",
       "line",
       s.hasAuthInCode || s.hasV2Api || s.usesOfficialSdk,
       sc.authApi,
-      25,
+      COMPONENT_WEIGHTS.authApi,
       authEvidence,
       [
         s.hasAuthInCode && "KALSHI access headers in code",
@@ -81,12 +85,12 @@ export function buildDetectors(item: ScoredRepo): DetectorResult[] {
         .join("; ") || "no auth signals",
     ),
     detector(
-      "order-realism",
+      DETECTOR_IDS.orderRealism,
       "orderRealism",
       "line",
       s.hasLiveOrderPath || s.hasDryRunDefault,
       sc.orderRealism,
-      25,
+      COMPONENT_WEIGHTS.orderRealism,
       orderEvidence,
       [
         s.hasLiveOrderPath && "live order path markers",
@@ -96,46 +100,46 @@ export function buildDetectors(item: ScoredRepo): DetectorResult[] {
         .join("; ") || "no order signals",
     ),
     detector(
-      "tests-ci",
+      DETECTOR_IDS.testsCi,
       "testsCi",
       "repo",
       s.hasTests || s.hasCi,
       sc.testsCi,
-      15,
+      COMPONENT_WEIGHTS.testsCi,
       [],
       [s.hasTests && "test tree", s.hasCi && "CI config"].filter(Boolean).join("; ") || "no test/ci",
     ),
     detector(
-      "docs-setup",
+      DETECTOR_IDS.docsSetup,
       "docsSetup",
       "repo",
       s.hasSetupSection || s.readmeLength > 500,
       sc.docsSetup,
-      15,
+      COMPONENT_WEIGHTS.docsSetup,
       [],
       [s.hasSetupSection && "setup section", s.hasStrategySection && "strategy section"]
         .filter(Boolean)
         .join("; ") || "thin readme",
     ),
     detector(
-      "maintenance",
+      DETECTOR_IDS.maintenance,
       "maintenance",
       "repo",
       Boolean(s.lastDefaultBranchCommitAt),
       sc.maintenance,
-      10,
+      COMPONENT_WEIGHTS.maintenance,
       [],
       s.lastDefaultBranchCommitAt
         ? `last default-branch commit ${s.lastDefaultBranchCommitAt}`
         : "unknown commit cadence",
     ),
     detector(
-      "risk-controls",
+      DETECTOR_IDS.riskControls,
       "riskControls",
       "strategy",
       s.riskKeywordHits.length > 0,
       sc.riskControls,
-      10,
+      COMPONENT_WEIGHTS.riskControls,
       s.riskKeywordHits.map((k) => ({
         scope: "line" as const,
         query: k,

@@ -7,6 +7,7 @@ import {
   deriveLiftNotes,
   evidenceFingerprint,
 } from "../src/research/evidence.ts";
+import { DETECTOR_IDS } from "../src/research/constants.ts";
 import type { InspectionSignals, RepoCandidate, ScoredRepo } from "../src/research/types.ts";
 
 function scored(overrides: Partial<ScoredRepo> = {}): ScoredRepo {
@@ -71,7 +72,7 @@ describe("buildRepoReport", () => {
   });
 
   test("EvidenceLine from code search hits", () => {
-    const auth = buildDetectors(scored()).find((d) => d.id === "auth-api")!;
+    const auth = buildDetectors(scored()).find((d) => d.id === DETECTOR_IDS.authApi)!;
     expect(auth.evidence[0]?.path).toBe("src/auth.ts");
     expect(auth.evidence[0]?.component).toBe("authApi");
   });

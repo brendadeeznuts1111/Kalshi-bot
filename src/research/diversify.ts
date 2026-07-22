@@ -1,5 +1,6 @@
 import type { ResearchConfig, ScoredRepo } from "./types.ts";
 import { compareScored } from "./score.ts";
+import { DEFAULT_MAX_PER_TAG } from "./constants.ts";
 
 export function buildShortlist(
   scored: ScoredRepo[],
@@ -12,7 +13,7 @@ export function buildShortlist(
     compareScored(a, b, config.weights.stackTiebreakThreshold),
   );
 
-  const maxPerTag = config.weights.maxPerTag;
+  const maxPerTag = config.weights.maxPerTag ?? DEFAULT_MAX_PER_TAG;
   const majorTags = config.keywords.majorStrategyTags;
   const picked: ScoredRepo[] = [];
   const tagCounts = new Map<string, number>();

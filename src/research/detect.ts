@@ -1,4 +1,5 @@
 import type { CodeSearchHit, ResearchConfig } from "./types.ts";
+import { DRY_RUN_MARKERS } from "./constants.ts";
 
 type RootEntry = { name: string };
 
@@ -63,9 +64,7 @@ export function deriveCodeSignals(
   const hasLiveOrderPath =
     orderHits.some((h) => ORDER_MARKERS.some((k) => h.query.includes(k))) ||
     combinedText.includes("portfolio/orders");
-  const hasDryRunDefault = ["dry-run", "dry_run", "paper_trading", "live_trading_enabled=false"].some(
-    (k) => combinedText.includes(k),
-  );
+  const hasDryRunDefault = DRY_RUN_MARKERS.some((k) => combinedText.includes(k));
 
   return {
     combinedText,
