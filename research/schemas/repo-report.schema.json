@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kalshi-bot.local/schemas/repo-report.json",
+  "title": "RepoReport",
+  "description": "Kalshi research per-repo SSOT. Wire boundary before ranking engine or audit adapter.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["fullName", "generatedAt", "score", "detectors", "liftNotes", "strategyTags"],
+  "properties": {
+    "fullName": { "type": "string", "pattern": "^[^/]+/[^/]+$" },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "score": { "$ref": "#/$defs/scoreBreakdown" },
+    "detectors": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/detectorResult" }
+    },
+    "liftNotes": { "type": "string", "minLength": 1 },
+    "strategyTags": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    }
+  },
+  "$defs": {
+    "scoreBreakdown": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "authApi",
+        "orderRealism",
+        "testsCi",
+        "docsSetup",
+        "maintenance",
+        "riskControls",
+        "licenseModifier",
+        "total"
+      ],
+      "properties": {
+        "authApi": { "type": "number", "minimum": 0, "maximum": 25 },
+        "orderRealism": { "type": "number", "minimum": 0, "maximum": 25 },
+        "testsCi": { "type": "number", "minimum": 0, "maximum": 15 },
+        "docsSetup": { "type": "number", "minimum": 0, "maximum": 15 },
+        "maintenance": { "type": "number", "minimum": 0, "maximum": 10 },
+        "riskControls": { "type": "number", "minimum": 0, "maximum": 10 },
+        "licenseModifier": { "type": "number", "minimum": 0, "maximum": 15 },
+        "total": { "type": "number", "minimum": 0, "maximum": 100 }
+      }
+    },
+    "evidenceLine": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scope", "query", "path", "component"],
+      "properties": {
+        "scope": { "const": "line" },
+        "query": { "type": "string", "minLength": 1 },
+        "path": { "type": "string", "minLength": 1 },
+        "component": {
+          "type": "string",
+          "enum": ["authApi", "orderRealism", "riskControls", "strategy"]
+        }
+      }
+    },
+    "detectorResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "component",
+        "scope",
+        "matched",
+        "pointsContributed",
+        "maxPoints",
+        "evidence",
+        "rationale"
+      ],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "component": {
+          "type": "string",
+          "enum": ["authApi", "orderRealism", "testsCi", "docsSetup", "maintenance", "riskControls"]
+        },
+        "scope": { "type": "string", "enum": ["line", "file", "repo", "strategy"] },
+        "matched": { "type": "boolean" },
+        "pointsContributed": { "type": "number", "minimum": 0 },
+        "maxPoints": { "type": "number", "minimum": 0 },
+        "evidence": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/evidenceLine" }
+        },
+        "rationale": { "type": "string" }
+      }
+    }
+  }
+}

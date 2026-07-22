@@ -1,0 +1,12 @@
+[install]
+frozenLockfile = true
+
+[run]
+# @see https://bun.com/docs/runtime/bunfig#run-shell-use-the-system-shell-or-buns-shell
+shell = "bun"
+
+[test]
+# @see https://bun.com/docs/test/code-coverage
+coverage = true
+coverageReporter = ["text"]
+coverageDir = "coverage"

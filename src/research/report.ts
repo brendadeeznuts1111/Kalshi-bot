@@ -1,0 +1,119 @@
+// @see https://bun.com/docs/runtime/file-io#writing-files-bun-write
+import type { ResearchRun, RunDiff, ScoredRepo } from "./types.ts";
+import { writeJson } from "./io.ts";
+import { githubRepoWebUrl, localRepoPath } from "./patterns.ts";
+import { OUTPUT_DIR, REPORT_DIR, joinPath } from "./paths.ts";
+import { formatDiffMarkdown } from "./diff.ts";
+import { buildRepoReport } from "./evidence.ts";
+
+function reportFor(item: ScoredRepo): NonNullable<ScoredRepo["report"]> {
+  return item.report ?? buildRepoReport(item);
+}
+
+function formatEvidenceBlock(item: ScoredRepo): string[] {
+  const report = reportFor(item);
+  const lines: string[] = ["", "#### Evidence & lift", "", `> ${report.liftNotes}`, ""];
+  for (const d of report.detectors) {
+    if (!d.evidence.length && d.pointsContributed === 0) continue;
+    lines.push(`- **${d.id}** (${d.pointsContributed}/${d.maxPoints}): ${d.rationale}`);
+    for (const e of d.evidence.slice(0, 5)) {
+      lines.push(`  - \`${e.query}\` → \`${e.path}\``);
+    }
+  }
+  lines.push("");
+  return lines;
+}
+
+function licenseBadge(repo: ScoredRepo): string {
+  if (repo.repo.license.unlicensed) return "**UNLICENSED**";
+  const id = repo.repo.license.spdxId ?? repo.repo.license.name ?? "unknown";
+  return repo.repo.license.preferred ? id : `${id} (non-preferred)`;
+}
+
+function repoMarkdownLink(item: ScoredRepo): string {
+  const url = githubRepoWebUrl(item.repo.owner, item.repo.name);
+  return `[${item.repo.fullName}](${url})`;
+}
+
+function formatRepoSection(item: ScoredRepo, rank: number): string[] {
+  const lines: string[] = [
+    `### ${rank}. ${repoMarkdownLink(item)} · [local](${localRepoPath(item.repo.owner, item.repo.name)})`,
+    "",
+  ];
+  if (item.repo.license.unlicensed) {
+    lines.push("> **License warning:** No usable open-source license detected. Not safe to lift code.", "");
+  }
+  lines.push(
+    `- Stars: ${item.repo.stars} | Forks: ${item.repo.forks}`,
+    `- License: ${licenseBadge(item)}`,
+    `- Stack: ${item.signals.primaryLanguage ?? "unknown"}`,
+    `- Strategy tags: ${item.signals.strategyTags.join(", ")}`,
+    `- Quality score: **${item.score.total}/100**`,
+    `- Breakdown: auth ${item.score.authApi}, orders ${item.score.orderRealism}, tests ${item.score.testsCi}, docs ${item.score.docsSetup}, maintenance ${item.score.maintenance}, risk ${item.score.riskControls}, license -${item.score.licenseModifier}`,
+    `- Last default-branch commit: ${item.signals.lastDefaultBranchCommitAt ?? "unknown"}`,
+  );
+  if (item.repo.description) lines.push(`- Description: ${item.repo.description}`);
+  lines.push(...formatEvidenceBlock(item));
+  return lines;
+}
+
+export function formatReportMarkdown(run: ResearchRun): string {
+  const lines: string[] = [
+    "# Kalshi GitHub Bot Research Report",
+    "",
+    `Run: \`${run.runId}\``,
+    `Generated: ${run.generatedAt}`,
+    "",
+    `[local browser](/) · [latest diff](latest.diff.md)`,
+    "",
+    "## Stats",
+    `- Discovered: ${run.stats.discovered}`,
+    `- Passed gate: ${run.stats.gated}`,
+    `- Inspected: ${run.stats.inspected}`,
+    `- Shortlist: ${run.stats.shortlist}`,
+    "",
+    "## Shortlist",
+    "",
+    ...run.shortlist.flatMap((item, i) => formatRepoSection(item, i + 1)),
+  ];
+
+  const unlicensed = run.shortlist.filter((s) => s.repo.license.unlicensed);
+  if (unlicensed.length) {
+    lines.push("## License alerts", ...unlicensed.map((s) => `- **${s.repo.fullName}** — unlicensed`), "");
+  }
+
+  if (run.excludedSdkOnly.length) {
+    lines.push(
+      "## SDK-only (excluded from shortlist)",
+      ...run.excludedSdkOnly.slice(0, 10).map(
+        (s) => `- ${repoMarkdownLink(s)} — score ${s.score.total}`,
+      ),
+      "",
+    );
+  }
+
+  lines.push("## All scored repos", "", "| Rank | Repo | Score | License | Tags |", "|------|------|-------|---------|------|");
+  run.scored
+    .filter((s) => !s.signals.isSdkOnly)
+    .sort((a, b) => b.score.total - a.score.total)
+    .forEach((s, i) => {
+      const lic = s.repo.license.unlicensed ? "UNLICENSED" : (s.repo.license.spdxId ?? "?");
+      const local = localRepoPath(s.repo.owner, s.repo.name);
+      lines.push(`| ${i + 1} | [${s.repo.fullName}](${local}) | ${s.score.total} | ${lic} | ${s.signals.strategyTags.join(", ")} |`);
+    });
+
+  return lines.join("\n");
+}
+
+export async function writeOutputs(run: ResearchRun, diff: RunDiff): Promise<void> {
+  const report = formatReportMarkdown(run);
+  const diffMd = formatDiffMarkdown(diff, run);
+
+  await Promise.all([
+    writeJson(joinPath(OUTPUT_DIR, `run_${run.runId}.json`), run),
+    writeJson(joinPath(OUTPUT_DIR, "latest.json"), run),
+    Bun.write(joinPath(REPORT_DIR, `run_${run.runId}.md`), report),
+    Bun.write(joinPath(REPORT_DIR, "latest.md"), report),
+    Bun.write(joinPath(REPORT_DIR, "latest.diff.md"), diffMd),
+  ]);
+}

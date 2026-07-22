@@ -1,0 +1,184 @@
+// @see https://bun.com/docs/runtime/hashing#bun-cryptohasher
+// @see https://bun.com/blog/bun-v1.3.13#sha3-support-in-webcrypto-and-node-crypto
+/**
+ * Wire shapes for monorepo audit SSOT ingestion (option 1).
+ * Parse with lib/audit/parseAuditFinding at the monorepo boundary — not imported here.
+ */
+import type { EvidenceLine, RepoReport, ResearchConfig, ResearchRun } from "./types.ts";
+import { buildRepoReport } from "./evidence.ts";
+import { validateRepoReport } from "./validate.ts";
+import { auditEvidenceRelPath } from "./paths.ts";
+
+/** AuditFinding-compatible wire (ids are opaque until monorepo parse*). */
+export type AuditFindingWire = {
+  id: string;
+  kind: "AuditFinding";
+  title: string;
+  description: string;
+  status: "confirmed" | "open" | "mitigated";
+  publishedAt: string;
+  discoveredIn?: string;
+  evidence: AuditEvidenceWire;
+  related?: string[];
+  relatedDocs?: string[];
+  meta?: { buildPin?: string; emitter?: string };
+};
+
+export type AuditEvidenceWire = {
+  path: string;
+  algorithm: "sha3-256";
+  digest: string;
+  mediaType: string;
+};
+
+export type AuditConceptWire = {
+  id: string;
+  kind: "AuditConcept";
+  title: string;
+  description: string;
+  publishedAt: string;
+  relatedDocs?: string[];
+  meta?: { buildPin?: string; emitter?: string };
+};
+
+export type AuditFindingBundle = {
+  finding: AuditFindingWire;
+  repoReport: RepoReport;
+  evidenceNdjson: string;
+};
+
+export type AuditRunExport = {
+  runId: string;
+  generatedAt: string;
+  concept: AuditConceptWire;
+  bundles: AuditFindingBundle[];
+};
+
+const EMITTER = "kalshi-bot-research";
+const BUILD_PIN = "0.2.0";
+
+export function sha3Hex(payload: string): string {
+  const hasher = new Bun.CryptoHasher("sha3-256");
+  hasher.update(payload);
+  return hasher.digest("hex");
+}
+
+export function evidenceNdjson(report: RepoReport): string {
+  const lines = report.detectors.flatMap((d) => d.evidence);
+  if (!lines.length) return "";
+  return lines.map((e) => JSON.stringify(e)).join("\n");
+}
+
+/** Exact bytes written to the evidence NDJSON file (includes trailing newline when non-empty). */
+export function evidenceFileBody(ndjson: string): string {
+  return ndjson ? `${ndjson}\n` : "";
+}
+
+export function digestEvidenceBody(body: string): string {
+  return sha3Hex(body);
+}
+
+export function evidenceExportPath(_runId: string, fullName: string): string {
+  return auditEvidenceRelPath(fullName);
+}
+
+export function isHighValueCandidate(report: RepoReport): boolean {
+  const auth = report.detectors.find((d) => d.id === "auth-api");
+  const orders = report.detectors.find((d) => d.id === "order-realism");
+  return (
+    report.score.total >= 70 &&
+    (auth?.matched ?? false) &&
+    (orders?.matched ?? false) &&
+    (auth?.pointsContributed ?? 0) >= 15 &&
+    (orders?.pointsContributed ?? 0) >= 15
+  );
+}
+
+function isoDate(iso: string): string {
+  return iso.slice(0, 10);
+}
+
+function findingId(fullName: string): string {
+  return `kalshi-repo-${fullName.replace("/", "-").toLowerCase()}`;
+}
+
+export function shortlistRulesConcept(config: ResearchConfig, publishedAt: string): AuditConceptWire {
+  const majors = config.keywords.majorStrategyTags.join(", ");
+  return {
+    id: "kalshi-shortlist-diversity",
+    kind: "AuditConcept",
+    title: "Kalshi bot shortlist diversity constraints",
+    description: [
+      `Portfolio selection over scored repos: size ${config.weights.shortlistSize},`,
+      `max ${config.weights.maxPerTag} per strategy tag,`,
+      `min 1 per major tag (${majors}),`,
+      `TS/JS tiebreak within ${config.weights.stackTiebreakThreshold} points.`,
+      "Operates above single-repo RepoReport — see docs/FACTOR_STACK.md shortlist scope.",
+    ].join(" "),
+    publishedAt: isoDate(publishedAt),
+    relatedDocs: ["URLPattern", "docs/FACTOR_STACK.md"],
+    meta: { emitter: EMITTER, buildPin: BUILD_PIN },
+  };
+}
+
+export function repoReportToAuditFindingWire(
+  report: RepoReport,
+  runId: string,
+  options?: { status?: AuditFindingWire["status"] },
+): AuditFindingWire {
+  validateRepoReport(report);
+  const ndjson = evidenceNdjson(report);
+  const body = evidenceFileBody(ndjson);
+  const digest = digestEvidenceBody(body);
+  const path = evidenceExportPath(runId, report.fullName);
+
+  return {
+    id: findingId(report.fullName),
+    kind: "AuditFinding",
+    title: `Kalshi bot candidate: ${report.fullName}`,
+    description: [
+      `Quality score ${report.score.total}/100.`,
+      `Strategy: ${report.strategyTags.join(", ") || "none"}.`,
+      report.liftNotes,
+    ].join(" "),
+    status: options?.status ?? "open",
+    publishedAt: isoDate(report.generatedAt),
+    discoveredIn: runId,
+    evidence: {
+      path,
+      algorithm: "sha3-256",
+      digest,
+      mediaType: "application/jsonl",
+    },
+    related: ["kalshi-shortlist-diversity"],
+    relatedDocs: ["URLPattern", "docs/FACTOR_STACK.md"],
+    meta: { emitter: EMITTER, buildPin: BUILD_PIN },
+  };
+}
+
+/** sha3-256 fingerprint for audit export (Phase 2 path; local cache keeps Bun.hash). */
+export function evidenceSha3Fingerprint(lines: EvidenceLine[]): string {
+  const payload = lines
+    .map((l) => `${l.component}:${l.query}:${l.path}`)
+    .sort()
+    .join("\n");
+  return sha3Hex(payload);
+}
+
+export function buildAuditRunExport(run: ResearchRun, config: ResearchConfig): AuditRunExport {
+  const concept = shortlistRulesConcept(config, run.generatedAt);
+  const bundles: AuditFindingBundle[] = [];
+
+  for (const item of run.shortlist) {
+    const report = item.report ?? buildRepoReport(item, run.generatedAt);
+    if (!isHighValueCandidate(report)) continue;
+    const ndjson = evidenceNdjson(report);
+    bundles.push({
+      finding: repoReportToAuditFindingWire(report, run.runId),
+      repoReport: report,
+      evidenceNdjson: ndjson,
+    });
+  }
+
+  return { runId: run.runId, generatedAt: run.generatedAt, concept, bundles };
+}

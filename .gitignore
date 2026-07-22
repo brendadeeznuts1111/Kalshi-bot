@@ -1,0 +1,12 @@
+node_modules/
+.bun-cache/
+coverage/
+.DS_Store
+
+# Runtime cache + machine outputs
+research/cache/
+research/outputs/
+research/exports/
+
+# Per-run markdown snapshots (history lives in cache.db runs table)
+research/reports/run_*.md

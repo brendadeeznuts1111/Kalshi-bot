@@ -1,0 +1,54 @@
+{
+  "authCodeSearch": [
+    "KALSHI-ACCESS-KEY",
+    "trade-api/v2",
+    "RSA-PSS",
+    "kalshi-python",
+    "kalshi-typescript",
+    "@kalshi/kalshi-js",
+    "kalshi_api"
+  ],
+  "orderCodeSearch": [
+    "create_order",
+    "CreateOrder",
+    "portfolio/orders",
+    "/orders",
+    "place_order",
+    "PlaceOrder",
+    "LIVE_TRADING",
+    "dry-run",
+    "dry_run",
+    "paper_trading"
+  ],
+  "riskKeywords": [
+    "kelly",
+    "position size",
+    "position_size",
+    "max exposure",
+    "max_exposure",
+    "stop loss",
+    "stop_loss",
+    "risk limit",
+    "risk_limit",
+    "drawdown"
+  ],
+  "strategyTags": {
+    "market_making": ["market maker", "market_making", "market-making", "spread", "bid-ask", "orderbook"],
+    "arb": ["arbitrage", "arb", "cross-venue", "polymarket", "cross venue"],
+    "sports": ["sports", "nba", "nfl", "mlb", "soccer", "game odds"],
+    "news_event": ["news", "event", "macro", "gdp", "election", "fed"],
+    "momentum": ["momentum", "trend", "breakout"],
+    "mean_reversion": ["mean reversion", "mean_reversion", "reversion"],
+    "llm_ensemble": ["llm", "openrouter", "gpt", "claude", "ensemble", "multi-agent"],
+    "sdk_only": ["sdk wrapper", "api client only", "python client", "typescript client"]
+  },
+  "majorStrategyTags": [
+    "market_making",
+    "arb",
+    "sports",
+    "news_event",
+    "momentum",
+    "mean_reversion",
+    "llm_ensemble"
+  ]
+}

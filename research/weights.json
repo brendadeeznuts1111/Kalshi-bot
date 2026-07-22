@@ -1,0 +1,22 @@
+{
+  "shortlistSize": 12,
+  "maxPerTag": 4,
+  "stackTiebreakThreshold": 5,
+  "gate": {
+    "minStars": 5,
+    "minForks": 3,
+    "maxAgeMonths": 18
+  },
+  "components": {
+    "authApi": 25,
+    "orderRealism": 25,
+    "testsCi": 15,
+    "docsSetup": 15,
+    "maintenance": 10,
+    "riskControls": 10
+  },
+  "license": {
+    "unlicensedPenalty": 15,
+    "preferredLicenses": ["mit", "apache-2.0", "bsd-2-clause", "bsd-3-clause", "isc"]
+  }
+}
