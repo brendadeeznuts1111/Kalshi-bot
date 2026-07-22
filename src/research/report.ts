@@ -97,6 +97,11 @@ export function formatReportMarkdown(run: ResearchRun, dimensionLabel?: string):
     `- Passed gate: ${run.stats.gated}`,
     `- Inspected: ${run.stats.inspected}`,
     `- Shortlist: ${run.stats.shortlist}`,
+    ...(run.stats.cache
+      ? [
+          `- Cache: ETag ${run.stats.cache.searchEtagHits}, search stale ${run.stats.cache.searchDegradedHits}, inspect exact ${run.stats.cache.inspectExactHits}, inspect stale ${run.stats.cache.inspectDegradedHits}, api stale ${run.stats.cache.apiDegradedHits}`,
+        ]
+      : []),
     "",
     "## Shortlist",
     "",

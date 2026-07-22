@@ -1,6 +1,6 @@
 // @see https://bun.com/docs/runtime/file-io#reading-files-bun-file
 import type { ResearchConfig } from "./types.ts";
-import { ghJson } from "./gh.ts";
+import { searchGitHubRepos, type GhSearchRepo } from "./github-search.ts";
 import {
   DEFAULT_GH_SEARCH_LIMIT,
   isUnlicensedSpdx,
@@ -22,17 +22,7 @@ import {
   type ResolvedDimensionQueries,
 } from "./dimensions.ts";
 
-type GhSearchRepo = {
-  fullName: string;
-  description: string | null;
-  stargazersCount: number;
-  forksCount: number;
-  pushedAt: string;
-  isArchived: boolean;
-  url: string;
-  defaultBranch?: string;
-  license?: { spdxId?: string | null; name?: string | null; key?: string } | null;
-};
+export type { GhSearchRepo } from "./github-search.ts";
 
 export async function loadConfig(): Promise<ResearchConfig> {
   const [dimensions, weights, keywords] = await Promise.all([
@@ -70,24 +60,68 @@ export function parseLicense(
   return { spdxId, name, preferred: preferredLicenses.includes(normalized), unlicensed };
 }
 
+export type DiscoverGate = {
+  minStars: number;
+  minForks: number;
+  maxAgeMonths: number;
+};
+
+/** Append GitHub search qualifiers so the API returns fewer gate rejects. */
+export function buildRepoSearchQuery(query: string, gate: DiscoverGate): string {
+  const q = query.trim();
+  if (!q) return q;
+  const parts: string[] = [q];
+
+  if (!/\bstars:/i.test(q) && !/\bforks:/i.test(q)) {
+    if (gate.minStars > 0) {
+      parts.push(`stars:>=${gate.minStars}`);
+    } else if (gate.minForks > 0) {
+      parts.push(`forks:>=${gate.minForks}`);
+    }
+  }
+
+  if (!/\bpushed:/i.test(q)) {
+    parts.push(`pushed:>=${gateCutoffIsoDate(gate.maxAgeMonths)}`);
+  }
+
+  return parts.join(" ");
+}
+
+export function gateCutoffIsoDate(maxAgeMonths: number): string {
+  const d = new Date();
+  d.setMonth(d.getMonth() - maxAgeMonths);
+  return d.toISOString().slice(0, 10);
+}
+
+export type DiscoverResult = {
+  candidates: ReturnType<typeof toCandidate>[];
+  querySet: ResolvedDimensionQueries;
+  searchCache: {
+    etagHits: number;
+    degradedHits: number;
+  };
+};
+
 export async function discoverCandidates(
   config: ResearchConfig,
   dimensionId?: string,
-): Promise<{ candidates: ReturnType<typeof toCandidate>[]; querySet: ResolvedDimensionQueries }> {
+  gate?: DiscoverGate,
+): Promise<DiscoverResult> {
   const seen = new Map<string, ReturnType<typeof toCandidate>>();
   const preferredLicenses = config.weights.license.preferredLicenses;
   const querySet = resolveDimensionQueries(config.dimensions, dimensionId ?? config.dimensions.defaultDimension);
+  const searchGate: DiscoverGate = gate ?? config.weights.gate;
+  let etagHits = 0;
+  let degradedHits = 0;
 
   for (const query of querySet.queries) {
-    const rows = await ghJson<GhSearchRepo[]>([
-      "search",
-      "repos",
-      query,
-      "--json",
-      "fullName,description,stargazersCount,forksCount,pushedAt,isArchived,url,defaultBranch,license",
-      "--limit",
-      String(DEFAULT_GH_SEARCH_LIMIT),
-    ]);
+    const searchQuery = buildRepoSearchQuery(query, searchGate);
+    const { items: rows, fromEtagCache, degraded } = await searchGitHubRepos(
+      searchQuery,
+      DEFAULT_GH_SEARCH_LIMIT,
+    );
+    if (degraded) degradedHits++;
+    else if (fromEtagCache) etagHits++;
 
     for (const row of rows) {
       if (!isGitHubRepoUrl(row.url)) continue;
@@ -101,7 +135,18 @@ export async function discoverCandidates(
     if (seen.size >= querySet.candidateCap) break;
   }
 
-  return { candidates: [...seen.values()], querySet };
+  if (etagHits > 0) {
+    console.error(
+      `Search ETag cache: ${etagHits}/${querySet.queries.length} queries returned 304 (zero search quota)`,
+    );
+  }
+  if (degradedHits > 0) {
+    console.error(
+      `Search degraded cache: ${degradedHits}/${querySet.queries.length} queries used stale results under rate limit`,
+    );
+  }
+
+  return { candidates: [...seen.values()], querySet, searchCache: { etagHits, degradedHits } };
 }
 
 function toCandidate(

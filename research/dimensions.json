@@ -94,11 +94,45 @@
     "tracking": {
       "label": "Portfolio tracking / monitoring",
       "queries": [
-        "\"portfolio tracker\" kalshi",
-        "\"position reconciliation\" kalshi",
-        "kalshi pnl tracker",
+        "kalshi portfolio tracker",
+        "kalshi pnl",
         "kalshi position monitor",
-        "kalshi dashboard bot"
+        "kalshi dashboard bot",
+        "kalshi account balance",
+        "kalshi fills tracker",
+        "kalshi trade log",
+        "kalshi portfolio python",
+        "kalshi positions api",
+        "kalshi exposure",
+        "kalshi reconciliation",
+        "portfolio kalshi github",
+        "kalshi balance monitor"
+      ]
+    },
+    "price-data": {
+      "label": "Price / market data feeds",
+      "queries": [
+        "kalshi websocket",
+        "kalshi orderbook feed",
+        "kalshi market data",
+        "kalshi price feed",
+        "kalshi ticker stream",
+        "kalshi trade-api websocket",
+        "kalshi realtime prices",
+        "kalshi orderbook bot"
+      ]
+    },
+    "wallet-track": {
+      "label": "Wallet / balance tracking",
+      "queries": [
+        "kalshi wallet tracker",
+        "kalshi balance bot",
+        "kalshi account monitor",
+        "kalshi deposit withdraw",
+        "kalshi bankroll tracker",
+        "kalshi portfolio balance",
+        "kalshi cash balance api",
+        "kalshi wallet monitor"
       ]
     },
     "arbitrage": {

@@ -3,6 +3,7 @@
 // @see https://bun.com/docs/runtime/file-io#reading-files-bun-file
 import type { CliOptions } from "../research/cli.ts";
 import { runResearch } from "../research/cli.ts";
+import { GitHubRateLimitError, serializeGitHubApiError, buildGitHubErrorEnrichment } from "../research/gh.ts";
 import { listRunSummaries, loadLatestRunFromDb } from "../research/cache.ts";
 import { REPORT_DIR, joinPath } from "../research/paths.ts";
 import { ROUTES } from "../research/patterns.ts";
@@ -96,6 +97,11 @@ export async function handleRunResearchPost(deps: DashboardDeps = {}): Promise<R
       generatedAt: run.generatedAt,
     });
   } catch (err) {
+    if (err instanceof GitHubRateLimitError) {
+      const wire = serializeGitHubApiError(err, buildGitHubErrorEnrichment(err));
+      failResearch(wire.message);
+      return json({ ok: false, ...wire }, 429);
+    }
     const message = err instanceof Error ? err.message : String(err);
     failResearch(message);
     return json({ ok: false, error: message }, 500);

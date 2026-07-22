@@ -32,6 +32,8 @@ function scored(fullName: string, total: number): ScoredRepo {
       hasRsaPss: false,
       hasLiveOrderPath: false,
       hasDryRunDefault: false,
+      hasAuthFreshness: false,
+      hasCentsPriceBounds: false,
       hasTests: false,
       hasCi: false,
       languages: {},

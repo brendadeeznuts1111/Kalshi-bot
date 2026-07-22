@@ -39,6 +39,8 @@ function scored(
       hasRsaPss: false,
       hasLiveOrderPath: true,
       hasDryRunDefault: false,
+      hasAuthFreshness: false,
+      hasCentsPriceBounds: false,
       hasTests: false,
       hasCi: false,
       languages: {},

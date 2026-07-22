@@ -147,21 +147,32 @@ export const V2_API_MARKER = "trade-api/v2";
 export const PORTFOLIO_ORDERS_MARKER = "portfolio/orders";
 export const RSA_PSS_MARKERS = ["rsa-pss", "rsassa-pss"] as const;
 
+/** Kalshi order price fields — cents are 1–99 on the exchange. */
+export const CENTS_PRICE_MARKERS = [
+  "price_cents",
+  "yes_price",
+  "no_price",
+  "price_in_cents",
+  "cent_price",
+] as const;
+
 /** README length thresholds (chars). */
 export const README_SCORE_LONG_CHARS = 800;
 export const README_DOCS_MATCH_CHARS = 500;
 
 /** Fractional shares of each component max (must sum to ≤ 1 per scorer). */
 export const AUTH_SCORE_SHARES = {
-  authInCode: 0.35,
-  v2Api: 0.25,
-  rsaPss: 0.15,
-  officialSdk: 0.25,
+  authInCode: 0.3,
+  v2Api: 0.22,
+  rsaPss: 0.13,
+  officialSdk: 0.2,
+  authFreshness: 0.15,
 } as const;
 
 export const ORDER_SCORE_SHARES = {
-  liveOrderPath: 0.6,
-  dryRunDefault: 0.4,
+  liveOrderPath: 0.5,
+  dryRunDefault: 0.3,
+  centsBounds: 0.2,
 } as const;
 
 export const TESTS_CI_SCORE_SHARES = {
@@ -182,6 +193,9 @@ export const MAINTENANCE_AGE_DAYS = {
   medium: 180,
   year: 365,
 } as const;
+
+/** Max age (days) for auth freshness — signing stack updated recently. */
+export const AUTH_FRESHNESS_MAX_DAYS = MAINTENANCE_AGE_DAYS.recent;
 
 export const MAINTENANCE_SCORE_SHARES = {
   unknown: 0.2,

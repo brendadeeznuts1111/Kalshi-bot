@@ -46,6 +46,8 @@ function signals(overrides: Partial<InspectionSignals> = {}): InspectionSignals 
     hasRsaPss: true,
     hasLiveOrderPath: true,
     hasDryRunDefault: true,
+    hasAuthFreshness: true,
+    hasCentsPriceBounds: true,
     hasTests: true,
     hasCi: true,
     languages: { TypeScript: 100 },
@@ -94,7 +96,13 @@ describe("scoreRepo", () => {
     const strong = scoreRepo(candidate(), signals(), config);
     const weak = scoreRepo(
       candidate(),
-      signals({ hasAuthInCode: false, hasLiveOrderPath: false, hasDryRunDefault: false }),
+      signals({
+        hasAuthInCode: false,
+        hasLiveOrderPath: false,
+        hasDryRunDefault: false,
+        hasAuthFreshness: false,
+        hasCentsPriceBounds: false,
+      }),
       config,
     );
     expect(strong.total).toBeGreaterThan(weak.total);

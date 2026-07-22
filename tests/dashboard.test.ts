@@ -52,6 +52,8 @@ function mockRun(): ResearchRun {
           hasRsaPss: false,
           hasLiveOrderPath: true,
           hasDryRunDefault: true,
+      hasAuthFreshness: false,
+      hasCentsPriceBounds: false,
           hasTests: true,
           hasCi: false,
           languages: { TypeScript: 100 },

@@ -80,6 +80,7 @@ export function buildDetectors(item: ScoredRepo): DetectorResult[] {
         s.hasAuthInCode && "KALSHI access headers in code",
         s.hasV2Api && "trade-api/v2",
         s.hasRsaPss && "RSA-PSS signing",
+        s.hasAuthFreshness && "auth freshness (recent commit + v2/PSS)",
         s.usesOfficialSdk && "official SDK markers",
       ]
         .filter(Boolean)
@@ -96,6 +97,7 @@ export function buildDetectors(item: ScoredRepo): DetectorResult[] {
       [
         s.hasLiveOrderPath && "live order path markers",
         s.hasDryRunDefault && "dry-run / paper default",
+        s.hasCentsPriceBounds && "cent price bounds (1–99 / price_cents)",
       ]
         .filter(Boolean)
         .join("; ") || "no order signals",

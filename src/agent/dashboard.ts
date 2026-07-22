@@ -8,6 +8,7 @@
 import { parseArgs } from "node:util";
 import { createDashboardServer } from "./dashboard-server.ts";
 import { registerInProcessCron } from "./in-process-cron.ts";
+import { warmGitHubApiNetwork } from "../research/github-network.ts";
 
 export type DashboardCliOptions = {
   port?: number;
@@ -65,6 +66,7 @@ async function runHeadlessWebView(url: string): Promise<void> {
 }
 
 export async function startDashboard(opts: DashboardCliOptions): Promise<ReturnType<typeof createDashboardServer>> {
+  warmGitHubApiNetwork();
   const server = createDashboardServer({ port: opts.port });
   const url = server.url.href;
 

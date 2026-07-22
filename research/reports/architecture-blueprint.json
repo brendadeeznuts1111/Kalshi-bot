@@ -1,0 +1,872 @@
+{
+  "generatedAt": "2026-07-22T06:58:52.320Z",
+  "localBunStack": {
+    "features": [
+      "bun-cron",
+      "bun-file",
+      "bun-hash",
+      "bun-http",
+      "bun-sqlite",
+      "bun-timer"
+    ],
+    "sourceFiles": [
+      "src/agent/agent-report.ts",
+      "src/agent/architecture-blueprint.ts",
+      "src/agent/audit-list.ts",
+      "src/agent/capture-evidence.ts",
+      "src/agent/dashboard-server.ts",
+      "src/agent/in-process-cron.ts",
+      "src/agent/pattern-extract.ts",
+      "src/agent/pulse-log.ts",
+      "src/agent/report-term.ts",
+      "src/research/audit-adapter.ts",
+      "src/research/cache.ts",
+      "src/research/cli.ts",
+      "src/research/dimensions.ts",
+      "src/research/discover.ts",
+      "src/research/export-audit.ts",
+      "src/research/gh.ts",
+      "src/research/github-search.ts",
+      "src/research/io.ts",
+      "src/research/report.ts",
+      "src/research/schedule-cli.ts",
+      "src/research/scheduled.ts",
+      "src/research/serve.ts"
+    ],
+    "featureFiles": {
+      "bun-file": [
+        "src/agent/agent-report.ts",
+        "src/agent/architecture-blueprint.ts",
+        "src/agent/audit-list.ts",
+        "src/agent/capture-evidence.ts",
+        "src/agent/dashboard-server.ts",
+        "src/agent/pattern-extract.ts",
+        "src/agent/pulse-log.ts",
+        "src/agent/report-term.ts",
+        "src/research/cache.ts",
+        "src/research/cli.ts",
+        "src/research/dimensions.ts",
+        "src/research/discover.ts",
+        "src/research/export-audit.ts",
+        "src/research/io.ts",
+        "src/research/report.ts",
+        "src/research/serve.ts"
+      ],
+      "bun-hash": [
+        "src/agent/capture-evidence.ts",
+        "src/agent/pattern-extract.ts",
+        "src/research/audit-adapter.ts",
+        "src/research/export-audit.ts"
+      ],
+      "bun-timer": [
+        "src/agent/capture-evidence.ts",
+        "src/research/gh.ts",
+        "src/research/github-search.ts"
+      ],
+      "bun-http": [
+        "src/agent/dashboard-server.ts",
+        "src/research/serve.ts"
+      ],
+      "bun-cron": [
+        "src/agent/in-process-cron.ts",
+        "src/research/schedule-cli.ts",
+        "src/research/scheduled.ts"
+      ],
+      "bun-sqlite": [
+        "src/research/cache.ts"
+      ]
+    }
+  },
+  "sections": [
+    {
+      "dimension": "price-data",
+      "title": "Price / market data feeds",
+      "runId": null,
+      "runGeneratedAt": null,
+      "recommendedBun": [
+        "bun-websocket",
+        "bun-sqlite"
+      ],
+      "referenceRepo": null,
+      "referenceScore": null,
+      "referenceBadge": null,
+      "referenceFindingId": null,
+      "referenceDimension": null,
+      "bunFeatures": [],
+      "bunFeatureFile": null,
+      "authPattern": null,
+      "orderPattern": null,
+      "liftAuth": null,
+      "liftOrders": null,
+      "liftEntries": [],
+      "shortlistSummary": [],
+      "liftNotes": [],
+      "bunNative": [
+        {
+          "feature": "bun-websocket",
+          "localFiles": []
+        },
+        {
+          "feature": "bun-sqlite",
+          "localFiles": [
+            "src/research/cache.ts"
+          ]
+        }
+      ],
+      "notes": [
+        "GitHub shortlist is non-Bun — mirror APIs from local stack: Bun.cron, Bun.file / Bun.write, Bun.CryptoHasher, Bun.serve, bun:sqlite, Bun.sleep",
+        "No shortlist — run research with --min-stars=1 if niche"
+      ]
+    },
+    {
+      "dimension": "wallet-track",
+      "title": "Wallet / balance tracking",
+      "runId": "2026-07-22T06-34-31-618Z",
+      "runGeneratedAt": "2026-07-22T06:34:31.618Z",
+      "recommendedBun": [
+        "bun-cron",
+        "bun-http"
+      ],
+      "referenceRepo": "bullmeme777/kalshi-portfolio-tracker",
+      "referenceScore": 47.75,
+      "referenceBadge": "✗ unverified",
+      "referenceFindingId": null,
+      "referenceDimension": "wallet-track",
+      "bunFeatures": [],
+      "bunFeatureFile": null,
+      "authPattern": "env secrets, key file",
+      "orderPattern": "order fields (side/count/price)",
+      "liftAuth": "bullmeme777/kalshi-portfolio-tracker",
+      "liftOrders": "bullmeme777/kalshi-portfolio-tracker",
+      "liftEntries": [
+        {
+          "component": "authApi",
+          "repo": "bullmeme777/kalshi-portfolio-tracker",
+          "points": 21.75,
+          "maxPoints": 25,
+          "badge": "✗ unverified",
+          "verified": false,
+          "verification": "unverified",
+          "findingId": null,
+          "rationale": "KALSHI access headers in code; trade-api/v2; auth freshness (recent commit + v2/PSS); official SDK markers",
+          "pattern": {
+            "summary": "env secrets, key file",
+            "excerpt": "py | +-- requirements.txt +-- README.md ``` --- ## Requirements ``` python-dotenv, typer[all], httpx, kalshi-python, pandas ``` * Kalshi account with API read access * Telegram bot token (for alerts and daily summaries) --- *Alpha starts here.*",
+            "file": "README.md",
+            "source": "research/patterns/patterns-latest-wallet-track.json"
+          }
+        },
+        {
+          "component": "orderRealism",
+          "repo": "bullmeme777/kalshi-portfolio-tracker",
+          "points": 17.5,
+          "maxPoints": 25,
+          "badge": "✗ unverified",
+          "verified": false,
+          "verification": "unverified",
+          "findingId": null,
+          "rationale": "live order path markers; cent price bounds (1–99 / price_cents)",
+          "pattern": {
+            "summary": "order fields (side/count/price)",
+            "excerpt": "py | +-- requirements.txt +-- README.md ``` --- ## Requirements ``` python-dotenv, typer[all], httpx, kalshi-python, pandas ``` * Kalshi account with API read access * Telegram bot token (for alerts and daily summaries) --- *Alpha starts here.*",
+            "file": "README.md",
+            "source": "research/patterns/patterns-latest-wallet-track.json"
+          }
+        }
+      ],
+      "shortlistSummary": [
+        {
+          "fullName": "bullmeme777/kalshi-portfolio-tracker",
+          "total": 47.75,
+          "auditTier": null,
+          "license": null,
+          "unlicensed": true,
+          "verified": false,
+          "verification": "unverified",
+          "findingId": null
+        }
+      ],
+      "liftNotes": [
+        "No shortlist repo meets high-value audit export threshold (≥70 total, auth+order ≥15 each).",
+        "Rotor pulse last tick failed — high-value findings not pulse-verified.",
+        "License warning: bullmeme777/kalshi-portfolio-tracker lack usable OSS license."
+      ],
+      "bunNative": [
+        {
+          "feature": "bun-cron",
+          "localFiles": [
+            "src/agent/in-process-cron.ts",
+            "src/research/schedule-cli.ts",
+            "src/research/scheduled.ts"
+          ]
+        },
+        {
+          "feature": "bun-http",
+          "localFiles": [
+            "src/agent/dashboard-server.ts",
+            "src/research/serve.ts"
+          ]
+        }
+      ],
+      "notes": [
+        "GitHub shortlist is non-Bun — mirror APIs from local stack: Bun.cron, Bun.file / Bun.write, Bun.CryptoHasher, Bun.serve, bun:sqlite, Bun.sleep"
+      ]
+    },
+    {
+      "dimension": "tracking",
+      "title": "Portfolio tracking / monitoring",
+      "runId": "2026-07-22T06-34-52-547Z",
+      "runGeneratedAt": "2026-07-22T06:34:52.547Z",
+      "recommendedBun": [
+        "bun-file",
+        "bun-hash"
+      ],
+      "referenceRepo": "bullmeme777/kalshi-portfolio-tracker",
+      "referenceScore": 47.75,
+      "referenceBadge": "✗ unverified",
+      "referenceFindingId": null,
+      "referenceDimension": "tracking",
+      "bunFeatures": [],
+      "bunFeatureFile": null,
+      "authPattern": "env secrets, key file",
+      "orderPattern": "order fields (side/count/price)",
+      "liftAuth": "bullmeme777/kalshi-portfolio-tracker",
+      "liftOrders": "bullmeme777/kalshi-portfolio-tracker",
+      "liftEntries": [
+        {
+          "component": "authApi",
+          "repo": "bullmeme777/kalshi-portfolio-tracker",
+          "points": 21.75,
+          "maxPoints": 25,
+          "badge": "✗ unverified",
+          "verified": false,
+          "verification": "unverified",
+          "findingId": null,
+          "rationale": "KALSHI access headers in code; trade-api/v2; auth freshness (recent commit + v2/PSS); official SDK markers",
+          "pattern": {
+            "summary": "env secrets, key file",
+            "excerpt": "py | +-- requirements.txt +-- README.md ``` --- ## Requirements ``` python-dotenv, typer[all], httpx, kalshi-python, pandas ``` * Kalshi account with API read access * Telegram bot token (for alerts and daily summaries) --- *Alpha starts here.*",
+            "file": "README.md",
+            "source": "research/patterns/patterns-latest-tracking.json"
+          }
+        },
+        {
+          "component": "orderRealism",
+          "repo": "bullmeme777/kalshi-portfolio-tracker",
+          "points": 17.5,
+          "maxPoints": 25,
+          "badge": "✗ unverified",
+          "verified": false,
+          "verification": "unverified",
+          "findingId": null,
+          "rationale": "live order path markers; cent price bounds (1–99 / price_cents)",
+          "pattern": {
+            "summary": "order fields (side/count/price)",
+            "excerpt": "py | +-- requirements.txt +-- README.md ``` --- ## Requirements ``` python-dotenv, typer[all], httpx, kalshi-python, pandas ``` * Kalshi account with API read access * Telegram bot token (for alerts and daily summaries) --- *Alpha starts here.*",
+            "file": "README.md",
+            "source": "research/patterns/patterns-latest-tracking.json"
+          }
+        }
+      ],
+      "shortlistSummary": [
+        {
+          "fullName": "bullmeme777/kalshi-portfolio-tracker",
+          "total": 47.75,
+          "auditTier": null,
+          "license": null,
+          "unlicensed": true,
+          "verified": false,
+          "verification": "unverified",
+          "findingId": null
+        },
+        {
+          "fullName": "kevinhjshim/kalshi-pnl",
+          "total": 27.75,
+          "auditTier": null,
+          "license": null,
+          "unlicensed": true,
+          "verified": false,
+          "verification": "unverified",
+          "findingId": null
+        },
+        {
+          "fullName": "slee8495/kalshi-pnl-dashboard",
+          "total": 29.25,
+          "auditTier": null,
+          "license": null,
+          "unlicensed": true,
+          "verified": false,
+          "verification": "unverified",
+          "findingId": null
+        }
+      ],
+      "liftNotes": [
+        "No shortlist repo meets high-value audit export threshold (≥70 total, auth+order ≥15 each).",
+        "Rotor pulse last tick failed — high-value findings not pulse-verified.",
+        "License warning: bullmeme777/kalshi-portfolio-tracker, kevinhjshim/kalshi-pnl, slee8495/kalshi-pnl-dashboard lack usable OSS license.",
+        "Composite bot: lift modules per component from different repos (see recommendations map)."
+      ],
+      "bunNative": [
+        {
+          "feature": "bun-file",
+          "localFiles": [
+            "src/agent/agent-report.ts",
+            "src/agent/architecture-blueprint.ts",
+            "src/agent/audit-list.ts",
+            "src/agent/capture-evidence.ts"
+          ]
+        },
+        {
+          "feature": "bun-hash",
+          "localFiles": [
+            "src/agent/capture-evidence.ts",
+            "src/agent/pattern-extract.ts",
+            "src/research/audit-adapter.ts",
+            "src/research/export-audit.ts"
+          ]
+        }
+      ],
+      "notes": [
+        "GitHub shortlist is non-Bun — mirror APIs from local stack: Bun.cron, Bun.file / Bun.write, Bun.CryptoHasher, Bun.serve, bun:sqlite, Bun.sleep"
+      ]
+    },
+    {
+      "dimension": "market-making",
+      "title": "Market making / liquidity",
+      "runId": "2026-07-22T06-13-45-870Z",
+      "runGeneratedAt": "2026-07-22T06:13:45.870Z",
+      "recommendedBun": [
+        "bun-http",
+        "bun-websocket"
+      ],
+      "referenceRepo": "rodlaf/KalshiMarketMaker",
+      "referenceScore": 67.75,
+      "referenceBadge": "✗ unverified",
+      "referenceFindingId": null,
+      "referenceDimension": "market-making",
+      "bunFeatures": [],
+      "bunFeatureFile": null,
+      "authPattern": "KALSHI-ACCESS-* headers, RSA-PSS, key file",
+      "orderPattern": "create-order API, order fields (side/count/price), portfolio/orders path",
+      "liftAuth": "rodlaf/KalshiMarketMaker",
+      "liftOrders": "rodlaf/KalshiMarketMaker",
+      "liftEntries": [
+        {
+          "component": "authApi",
+          "repo": "rodlaf/KalshiMarketMaker",
+          "points": 21.25,
+          "maxPoints": 25,
+          "badge": "✗ unverified",
+          "verified": false,
+          "verification": "unverified",
+          "findingId": null,
+          "rationale": "KALSHI access headers in code; trade-api/v2; official SDK markers",
+          "pattern": {
+            "summary": "KALSHI-ACCESS-* headers, RSA-PSS, key file",
+            "excerpt": "= self._create_signature(timestamp, method, path) return { \"KALSHI-ACCESS-KEY\": self.api_key_id, \"KALSHI-ACCESS-SIGNATURE\": signature, \"KALSHI-ACCESS-TIMESTAMP\": timestamp, \"Content-Type\": \"application/json\", } def make_request( self, method: str, path: str, params: Dict = None, data: Dict = None, max_retries: int = 5, ): url = f\"{self.base_url}{pat",
+            "file": "kalshi_market_maker/core/kalshi_api.py",
+            "source": "research/patterns/patterns-latest-market-making.json"
+          }
+        },
+        {
+          "component": "orderRealism",
+          "repo": "rodlaf/KalshiMarketMaker",
+          "points": 25,
+          "maxPoints": 25,
+          "badge": "✗ unverified",
+          "verified": false,
+          "verification": "unverified",
+          "findingId": null,
+          "rationale": "live order path markers; dry-run / paper default",
+          "pattern": {
+            "summary": "create-order API, order fields (side/count/price), portfolio/orders path",
+            "excerpt": "= self._create_signature(timestamp, method, path) return { \"KALSHI-ACCESS-KEY\": self.api_key_id, \"KALSHI-ACCESS-SIGNATURE\": signature, \"KALSHI-ACCESS-TIMESTAMP\": timestamp, \"Content-Type\": \"application/json\", } def make_request( self, method: str, path: str, params: Dict = None, data: Dict = None, max_retries: int = 5, ): url = f\"{self.base_url}{pat",
+            "file": "kalshi_market_maker/core/kalshi_api.py",
+            "source": "research/patterns/patterns-latest-market-making.json"
+          }
+        }
+      ],
+      "shortlistSummary": [
+        {
+          "fullName": "rodlaf/KalshiMarketMaker",
+          "total": 67.75,
+          "auditTier": "watchlist",
+          "license": "mit",
+          "unlicensed": false,
+          "verified": false,
+          "verification": "unverified",
+          "findingId": null
+        }
+      ],
+      "liftNotes": [
+        "No shortlist repo meets high-value audit export threshold (≥70 total, auth+order ≥15 each).",
+        "Watchlist tier (1): rodlaf/KalshiMarketMaker — auditable at ≥65/≥12, status open.",
+        "Rotor pulse last tick failed — high-value findings not pulse-verified."
+      ],
+      "bunNative": [
+        {
+          "feature": "bun-http",
+          "localFiles": [
+            "src/agent/dashboard-server.ts",
+            "src/research/serve.ts"
+          ]
+        },
+        {
+          "feature": "bun-websocket",
+          "localFiles": []
+        }
+      ],
+      "notes": [
+        "GitHub shortlist is non-Bun — mirror APIs from local stack: Bun.cron, Bun.file / Bun.write, Bun.CryptoHasher, Bun.serve, bun:sqlite, Bun.sleep"
+      ]
+    },
+    {
+      "dimension": "arbitrage",
+      "title": "Cross-venue arbitrage",
+      "runId": "2026-07-22T06-19-51-053Z",
+      "runGeneratedAt": "2026-07-22T06:19:51.053Z",
+      "recommendedBun": [
+        "bun-cron",
+        "bun-http"
+      ],
+      "referenceRepo": "RichardFeynmanEnthusiast/kalshi-polymarket-arbitrage-bot",
+      "referenceScore": 69.5,
+      "referenceBadge": "⚠ watchlist",
+      "referenceFindingId": "kalshi-repo-richardfeynmanenthusiast-kalshi-polymarket-arbitrage-bot",
+      "referenceDimension": "arbitrage",
+      "bunFeatures": [],
+      "bunFeatureFile": null,
+      "authPattern": "KALSHI-ACCESS-* headers, RSA-PSS, key file, trade-api/v2",
+      "orderPattern": "create-order API, order fields (side/count/price), portfolio/orders path",
+      "liftAuth": "RichardFeynmanEnthusiast/kalshi-polymarket-arbitrage-bot",
+      "liftOrders": "RichardFeynmanEnthusiast/kalshi-polymarket-arbitrage-bot",
+      "liftEntries": [
+        {
+          "component": "authApi",
+          "repo": "RichardFeynmanEnthusiast/kalshi-polymarket-arbitrage-bot",
+          "points": 15,
+          "maxPoints": 25,
+          "badge": "⚠ watchlist",
+          "verified": false,
+          "verification": "watchlist",
+          "findingId": "kalshi-repo-richardfeynmanenthusiast-kalshi-polymarket-arbitrage-bot",
+          "rationale": "KALSHI access headers in code; trade-api/v2",
+          "pattern": {
+            "summary": "KALSHI-ACCESS-* headers, RSA-PSS, key file, trade-api/v2",
+            "excerpt": "headers = { \"Content-Type\": \"application/json\", \"KALSHI-ACCESS-KEY\": self.key_id, \"KALSHI-ACCESS-SIGNATURE\": signature, \"KALSHI-ACCESS-TIMESTAMP\": timestamp_str, } return headers def sign_pss_text(self, text: str) -> str: \"\"\"Signs the text using RSA-PSS and returns the base64 encoded signature.\"\"\" message = text.encode('utf-8') try: signature = self.private_key.sign",
+            "file": "app/clients/kalshi/base.py",
+            "source": "research/patterns/patterns-latest-arbitrage.json"
+          }
+        },
+        {
+          "component": "orderRealism",
+          "repo": "RichardFeynmanEnthusiast/kalshi-polymarket-arbitrage-bot",
+          "points": 25,
+          "maxPoints": 25,
+          "badge": "⚠ watchlist",
+          "verified": false,
+          "verification": "watchlist",
+          "findingId": "kalshi-repo-richardfeynmanenthusiast-kalshi-polymarket-arbitrage-bot",
+          "rationale": "live order path markers; dry-run / paper default",
+          "pattern": {
+            "summary": "create-order API, order fields (side/count/price), portfolio/orders path",
+            "excerpt": "vironment) self.host = self.HTTP_BASE_URL self.exchange_url = \"/trade-api/v2/exchange\" self.markets_url = \"/trade-api/v2/markets\" self.portfolio_url = \"/trade-api/v2/portfolio\" self.events_url = \"/trade-api/v2/events\" def rate_limit(self) -> None: \"\"\"Built-in rate limiter to prevent exceeding API rate limits.\"\"\" THRESHOLD_IN_MILLISECONDS = 100 now = datetime.now() threshold_in_microseconds = 1000 * T",
+            "file": "app/clients/kalshi/kalshi_http_client.py",
+            "source": "research/patterns/patterns-latest-arbitrage.json"
+          }
+        }
+      ],
+      "shortlistSummary": [
+        {
+          "fullName": "RichardFeynmanEnthusiast/kalshi-polymarket-arbitrage-bot",
+          "total": 69.5,
+          "auditTier": "watchlist",
+          "license": "gpl-3.0",
+          "unlicensed": false,
+          "verified": false,
+          "verification": "watchlist",
+          "findingId": "kalshi-repo-richardfeynmanenthusiast-kalshi-polymarket-arbitrage-bot"
+        }
+      ],
+      "liftNotes": [
+        "No shortlist repo meets high-value audit export threshold (≥70 total, auth+order ≥15 each).",
+        "Watchlist tier (1): RichardFeynmanEnthusiast/kalshi-polymarket-arbitrage-bot — auditable at ≥65/≥12, status open.",
+        "Rotor pulse last tick failed — high-value findings not pulse-verified."
+      ],
+      "bunNative": [
+        {
+          "feature": "bun-cron",
+          "localFiles": [
+            "src/agent/in-process-cron.ts",
+            "src/research/schedule-cli.ts",
+            "src/research/scheduled.ts"
+          ]
+        },
+        {
+          "feature": "bun-http",
+          "localFiles": [
+            "src/agent/dashboard-server.ts",
+            "src/research/serve.ts"
+          ]
+        }
+      ],
+      "notes": [
+        "GitHub shortlist is non-Bun — mirror APIs from local stack: Bun.cron, Bun.file / Bun.write, Bun.CryptoHasher, Bun.serve, bun:sqlite, Bun.sleep"
+      ]
+    },
+    {
+      "dimension": "sports-nba",
+      "title": "NBA",
+      "runId": "2026-07-22T06-18-19-984Z",
+      "runGeneratedAt": "2026-07-22T06:18:19.984Z",
+      "recommendedBun": [
+        "bun-http",
+        "bun-cron"
+      ],
+      "referenceRepo": null,
+      "referenceScore": null,
+      "referenceBadge": null,
+      "referenceFindingId": null,
+      "referenceDimension": null,
+      "bunFeatures": [],
+      "bunFeatureFile": null,
+      "authPattern": null,
+      "orderPattern": null,
+      "liftAuth": "",
+      "liftOrders": "",
+      "liftEntries": [
+        {
+          "component": "authApi",
+          "repo": "",
+          "points": 0,
+          "maxPoints": 25,
+          "badge": "—",
+          "verified": false,
+          "verification": "unverified",
+          "findingId": null,
+          "rationale": "No shortlist candidates",
+          "pattern": null
+        },
+        {
+          "component": "orderRealism",
+          "repo": "",
+          "points": 0,
+          "maxPoints": 25,
+          "badge": "—",
+          "verified": false,
+          "verification": "unverified",
+          "findingId": null,
+          "rationale": "No shortlist candidates",
+          "pattern": null
+        }
+      ],
+      "shortlistSummary": [],
+      "liftNotes": [
+        "No shortlist repo meets high-value audit export threshold (≥70 total, auth+order ≥15 each).",
+        "Rotor pulse last tick failed — high-value findings not pulse-verified."
+      ],
+      "bunNative": [
+        {
+          "feature": "bun-http",
+          "localFiles": [
+            "src/agent/dashboard-server.ts",
+            "src/research/serve.ts"
+          ]
+        },
+        {
+          "feature": "bun-cron",
+          "localFiles": [
+            "src/agent/in-process-cron.ts",
+            "src/research/schedule-cli.ts",
+            "src/research/scheduled.ts"
+          ]
+        }
+      ],
+      "notes": [
+        "GitHub shortlist is non-Bun — mirror APIs from local stack: Bun.cron, Bun.file / Bun.write, Bun.CryptoHasher, Bun.serve, bun:sqlite, Bun.sleep",
+        "No gated candidates yet — probe with `--min-stars=2`"
+      ]
+    },
+    {
+      "dimension": "sports-nfl",
+      "title": "NFL",
+      "runId": null,
+      "runGeneratedAt": null,
+      "recommendedBun": [
+        "bun-http",
+        "bun-cron"
+      ],
+      "referenceRepo": null,
+      "referenceScore": null,
+      "referenceBadge": null,
+      "referenceFindingId": null,
+      "referenceDimension": null,
+      "bunFeatures": [],
+      "bunFeatureFile": null,
+      "authPattern": null,
+      "orderPattern": null,
+      "liftAuth": null,
+      "liftOrders": null,
+      "liftEntries": [],
+      "shortlistSummary": [],
+      "liftNotes": [],
+      "bunNative": [
+        {
+          "feature": "bun-http",
+          "localFiles": [
+            "src/agent/dashboard-server.ts",
+            "src/research/serve.ts"
+          ]
+        },
+        {
+          "feature": "bun-cron",
+          "localFiles": [
+            "src/agent/in-process-cron.ts",
+            "src/research/schedule-cli.ts",
+            "src/research/scheduled.ts"
+          ]
+        }
+      ],
+      "notes": [
+        "GitHub shortlist is non-Bun — mirror APIs from local stack: Bun.cron, Bun.file / Bun.write, Bun.CryptoHasher, Bun.serve, bun:sqlite, Bun.sleep",
+        "No gated candidates yet — probe with `--min-stars=2`"
+      ]
+    },
+    {
+      "dimension": "sports-soccer",
+      "title": "Soccer",
+      "runId": null,
+      "runGeneratedAt": null,
+      "recommendedBun": [
+        "bun-http",
+        "bun-cron"
+      ],
+      "referenceRepo": null,
+      "referenceScore": null,
+      "referenceBadge": null,
+      "referenceFindingId": null,
+      "referenceDimension": null,
+      "bunFeatures": [],
+      "bunFeatureFile": null,
+      "authPattern": null,
+      "orderPattern": null,
+      "liftAuth": null,
+      "liftOrders": null,
+      "liftEntries": [],
+      "shortlistSummary": [],
+      "liftNotes": [],
+      "bunNative": [
+        {
+          "feature": "bun-http",
+          "localFiles": [
+            "src/agent/dashboard-server.ts",
+            "src/research/serve.ts"
+          ]
+        },
+        {
+          "feature": "bun-cron",
+          "localFiles": [
+            "src/agent/in-process-cron.ts",
+            "src/research/schedule-cli.ts",
+            "src/research/scheduled.ts"
+          ]
+        }
+      ],
+      "notes": [
+        "GitHub shortlist is non-Bun — mirror APIs from local stack: Bun.cron, Bun.file / Bun.write, Bun.CryptoHasher, Bun.serve, bun:sqlite, Bun.sleep",
+        "No gated candidates yet — probe with `--min-stars=2`"
+      ]
+    },
+    {
+      "dimension": "sports-other",
+      "title": "Other sports (MLB, NHL, tennis, …)",
+      "runId": null,
+      "runGeneratedAt": null,
+      "recommendedBun": [
+        "bun-http",
+        "bun-cron"
+      ],
+      "referenceRepo": null,
+      "referenceScore": null,
+      "referenceBadge": null,
+      "referenceFindingId": null,
+      "referenceDimension": null,
+      "bunFeatures": [],
+      "bunFeatureFile": null,
+      "authPattern": null,
+      "orderPattern": null,
+      "liftAuth": null,
+      "liftOrders": null,
+      "liftEntries": [],
+      "shortlistSummary": [],
+      "liftNotes": [],
+      "bunNative": [
+        {
+          "feature": "bun-http",
+          "localFiles": [
+            "src/agent/dashboard-server.ts",
+            "src/research/serve.ts"
+          ]
+        },
+        {
+          "feature": "bun-cron",
+          "localFiles": [
+            "src/agent/in-process-cron.ts",
+            "src/research/schedule-cli.ts",
+            "src/research/scheduled.ts"
+          ]
+        }
+      ],
+      "notes": [
+        "GitHub shortlist is non-Bun — mirror APIs from local stack: Bun.cron, Bun.file / Bun.write, Bun.CryptoHasher, Bun.serve, bun:sqlite, Bun.sleep",
+        "No gated candidates yet — probe with `--min-stars=2`"
+      ]
+    },
+    {
+      "dimension": "sports-elections",
+      "title": "Elections / politics",
+      "runId": "2026-07-22T06-19-15-682Z",
+      "runGeneratedAt": "2026-07-22T06:19:15.682Z",
+      "recommendedBun": [
+        "bun-http",
+        "bun-cron"
+      ],
+      "referenceRepo": null,
+      "referenceScore": null,
+      "referenceBadge": null,
+      "referenceFindingId": null,
+      "referenceDimension": null,
+      "bunFeatures": [],
+      "bunFeatureFile": null,
+      "authPattern": null,
+      "orderPattern": null,
+      "liftAuth": "",
+      "liftOrders": "",
+      "liftEntries": [
+        {
+          "component": "authApi",
+          "repo": "",
+          "points": 0,
+          "maxPoints": 25,
+          "badge": "—",
+          "verified": false,
+          "verification": "unverified",
+          "findingId": null,
+          "rationale": "No shortlist candidates",
+          "pattern": null
+        },
+        {
+          "component": "orderRealism",
+          "repo": "",
+          "points": 0,
+          "maxPoints": 25,
+          "badge": "—",
+          "verified": false,
+          "verification": "unverified",
+          "findingId": null,
+          "rationale": "No shortlist candidates",
+          "pattern": null
+        }
+      ],
+      "shortlistSummary": [],
+      "liftNotes": [
+        "No shortlist repo meets high-value audit export threshold (≥70 total, auth+order ≥15 each).",
+        "Rotor pulse last tick failed — high-value findings not pulse-verified."
+      ],
+      "bunNative": [
+        {
+          "feature": "bun-http",
+          "localFiles": [
+            "src/agent/dashboard-server.ts",
+            "src/research/serve.ts"
+          ]
+        },
+        {
+          "feature": "bun-cron",
+          "localFiles": [
+            "src/agent/in-process-cron.ts",
+            "src/research/schedule-cli.ts",
+            "src/research/scheduled.ts"
+          ]
+        }
+      ],
+      "notes": [
+        "GitHub shortlist is non-Bun — mirror APIs from local stack: Bun.cron, Bun.file / Bun.write, Bun.CryptoHasher, Bun.serve, bun:sqlite, Bun.sleep",
+        "No gated candidates yet — probe with `--min-stars=2`"
+      ]
+    },
+    {
+      "dimension": "sports-macro",
+      "title": "Macro / economic events",
+      "runId": "2026-07-22T06-19-21-281Z",
+      "runGeneratedAt": "2026-07-22T06:19:21.281Z",
+      "recommendedBun": [
+        "bun-http",
+        "bun-cron"
+      ],
+      "referenceRepo": null,
+      "referenceScore": null,
+      "referenceBadge": null,
+      "referenceFindingId": null,
+      "referenceDimension": null,
+      "bunFeatures": [],
+      "bunFeatureFile": null,
+      "authPattern": null,
+      "orderPattern": null,
+      "liftAuth": "",
+      "liftOrders": "",
+      "liftEntries": [
+        {
+          "component": "authApi",
+          "repo": "",
+          "points": 0,
+          "maxPoints": 25,
+          "badge": "—",
+          "verified": false,
+          "verification": "unverified",
+          "findingId": null,
+          "rationale": "No shortlist candidates",
+          "pattern": null
+        },
+        {
+          "component": "orderRealism",
+          "repo": "",
+          "points": 0,
+          "maxPoints": 25,
+          "badge": "—",
+          "verified": false,
+          "verification": "unverified",
+          "findingId": null,
+          "rationale": "No shortlist candidates",
+          "pattern": null
+        }
+      ],
+      "shortlistSummary": [],
+      "liftNotes": [
+        "No shortlist repo meets high-value audit export threshold (≥70 total, auth+order ≥15 each).",
+        "Rotor pulse last tick failed — high-value findings not pulse-verified."
+      ],
+      "bunNative": [
+        {
+          "feature": "bun-http",
+          "localFiles": [
+            "src/agent/dashboard-server.ts",
+            "src/research/serve.ts"
+          ]
+        },
+        {
+          "feature": "bun-cron",
+          "localFiles": [
+            "src/agent/in-process-cron.ts",
+            "src/research/schedule-cli.ts",
+            "src/research/scheduled.ts"
+          ]
+        }
+      ],
+      "notes": [
+        "GitHub shortlist is non-Bun — mirror APIs from local stack: Bun.cron, Bun.file / Bun.write, Bun.CryptoHasher, Bun.serve, bun:sqlite, Bun.sleep",
+        "No gated candidates yet — probe with `--min-stars=2`"
+      ]
+    }
+  ]
+}

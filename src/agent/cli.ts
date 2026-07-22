@@ -2,7 +2,15 @@
 // @see https://bun.com/docs/guides/process/argv
 // @see https://bun.com/docs/runtime/utils#bun-main
 import { parseArgs } from "node:util";
-import { runResearch } from "../research/cli.ts";
+import { runResearch, printResearchRunSummary } from "../research/cli.ts";
+import {
+  GitHubRateLimitError,
+  buildGitHubErrorEnrichment,
+  formatRateLimitRemediation,
+  serializeGitHubApiError,
+} from "../research/gh.ts";
+import { isTtyStdout } from "../research/terminal-out.ts";
+import { spawnResearch } from "./research-runner.ts";
 import {
   captureEvidence,
   DEFAULT_CAPTURE_DIR,
@@ -35,6 +43,14 @@ import {
   verifyDashboard,
   type VerifyDashboardOptions,
 } from "./verify-dashboard.ts";
+import {
+  formatAgentReportMarkdown,
+  runAgentReport,
+} from "./agent-report.ts";
+import {
+  formatArchitectureBlueprintMarkdown,
+  runArchitectureBlueprint,
+} from "./architecture-blueprint.ts";
 
 export type AgentCommand =
   | "status"
@@ -43,7 +59,9 @@ export type AgentCommand =
   | "audit-list"
   | "capture-evidence"
   | "verify-dashboard"
-  | "patterns";
+  | "patterns"
+  | "report"
+  | "blueprint";
 
 export function parseAgentCommand(argv: string[]): {
   command: AgentCommand | null;
@@ -57,7 +75,9 @@ export function parseAgentCommand(argv: string[]): {
     command === "audit-list" ||
     command === "capture-evidence" ||
     command === "verify-dashboard" ||
-    command === "patterns"
+    command === "patterns" ||
+    command === "report" ||
+    command === "blueprint"
   ) {
     return { command, rest };
   }
@@ -78,7 +98,11 @@ export async function runAgentStatus(json: boolean): Promise<number> {
   return 0;
 }
 
-export async function runAgentResearch(json: boolean, local: boolean): Promise<number> {
+export async function runAgentResearch(
+  json: boolean,
+  local: boolean,
+  options?: { dimension?: string; inProcess?: boolean },
+): Promise<number> {
   if (!local) {
     const remote = await triggerResearchViaApi();
     if (remote) {
@@ -97,8 +121,47 @@ export async function runAgentResearch(json: boolean, local: boolean): Promise<n
     }
   }
 
+  const researchOpts = {
+    json: false,
+    exportAudit: true as const,
+    dimension: options?.dimension,
+  };
+
+  const useSpawn = !json && !options?.inProcess && isTtyStdout();
+
   try {
-    const run = await runResearch({ json: false, exportAudit: true });
+    if (useSpawn) {
+      const spawned = await spawnResearch(researchOpts);
+      if (!spawned.ok) {
+        if (json) {
+          console.log(JSON.stringify({ ok: false, error: spawned.message, source: "local" }));
+        } else {
+          console.error(spawned.message);
+        }
+        return spawned.exitCode || 1;
+      }
+      if (json) {
+        console.log(
+          JSON.stringify(
+            {
+              ok: true,
+              runId: spawned.run.runId,
+              shortlist: spawned.run.shortlist.length,
+              generatedAt: spawned.run.generatedAt,
+              source: "local",
+              spawned: true,
+            },
+            null,
+            2,
+          ),
+        );
+      } else {
+        printResearchRunSummary(spawned.run);
+      }
+      return 0;
+    }
+
+    const run = await runResearch(researchOpts);
     const payload = {
       ok: true,
       runId: run.runId,
@@ -109,14 +172,20 @@ export async function runAgentResearch(json: boolean, local: boolean): Promise<n
     if (json) {
       console.log(JSON.stringify(payload, null, 2));
     } else {
-      console.log(`Research complete: ${run.runId}`);
-      console.log(`Shortlist (${run.shortlist.length}):`);
-      for (const [i, s] of run.shortlist.entries()) {
-        console.log(`  ${i + 1}. ${s.repo.fullName} — ${s.score.total}`);
-      }
+      printResearchRunSummary(run);
     }
     return 0;
   } catch (err) {
+    if (err instanceof GitHubRateLimitError) {
+      const enrichment = buildGitHubErrorEnrichment(err);
+      const wire = serializeGitHubApiError(err, enrichment);
+      if (json) {
+        console.log(JSON.stringify({ ok: false, runOrigin: "local", ...wire }, null, 2));
+      } else {
+        console.error(formatRateLimitRemediation(err, enrichment));
+      }
+      return 2;
+    }
     const message = err instanceof Error ? err.message : String(err);
     if (json) console.log(JSON.stringify({ ok: false, error: message, source: "local" }));
     else console.error(message);
@@ -211,6 +280,41 @@ export async function runAgentPatterns(
   return 0;
 }
 
+export async function runAgentReportCmd(
+  json: boolean,
+  dimension?: string,
+  runId?: string,
+  noWrite?: boolean,
+): Promise<number> {
+  const report = await runAgentReport({
+    dimension,
+    runId,
+    write: !noWrite && !json,
+  });
+  if (json) {
+    console.log(JSON.stringify(report, null, 2));
+  } else {
+    console.log(formatAgentReportMarkdown(report));
+    if (!noWrite) {
+      console.error("\nWrote research/reports/agent-report.md (or scoped variant)");
+    }
+  }
+  return 0;
+}
+
+export async function runAgentBlueprint(json: boolean, noWrite?: boolean): Promise<number> {
+  const blueprint = await runArchitectureBlueprint({ write: !noWrite && !json });
+  if (json) {
+    console.log(JSON.stringify(blueprint, null, 2));
+  } else {
+    console.log(formatArchitectureBlueprintMarkdown(blueprint));
+    if (!noWrite) {
+      console.error("\nWrote research/reports/architecture-blueprint.md");
+    }
+  }
+  return 0;
+}
+
 export async function runAgentCaptureEvidence(
   argv: string[],
   json: boolean,
@@ -262,10 +366,12 @@ export function printAgentHelp(): void {
 
 Usage:
   bun run agent status [--json]
-  bun run agent run-research [--json] [--local]
+  bun run agent run-research [--json] [--local] [--in-process] [--dimension <id>]
   bun run agent suggest-lift [--json] [--run <run-id>] [--dimension <id>]
   bun run agent audit-list [--json] [--run <run-id>] [--dimension <id>] [--repo <owner/name>]
   bun run agent patterns [--json] [--run <run-id>] [--dimension <id>] [--repo <owner/name>] [--no-write]
+  bun run agent report [--json] [--dimension <id>] [--run <run-id>] [--no-write]
+  bun run agent blueprint [--json] [--no-write]
   bun run agent capture-evidence -- --url=<url> | --market=<ticker> [--out=dir] [--wait-ms=N] [--json]
   bun run agent verify-dashboard [--json] [--max-age-days=N] [--require-pulse]
 
@@ -283,6 +389,8 @@ Examples:
   bun run agent suggest-lift --json
   bun run agent audit-list
   bun run agent patterns --dimension=market-making
+  bun run agent report
+  bun run agent blueprint
   bun run agent run-research -- --local
   bun run agent capture-evidence -- --market=KXHIGHNY-25JAN01
 `);
@@ -320,6 +428,7 @@ export async function runAgentCli(argv: string[]): Promise<number> {
       "no-write": { type: "boolean", default: false },
       "max-age-days": { type: "string" },
       "require-pulse": { type: "boolean", default: false },
+      "in-process": { type: "boolean", default: false },
     },
     strict: false,
     allowPositionals: true,
@@ -329,7 +438,10 @@ export async function runAgentCli(argv: string[]): Promise<number> {
     case "status":
       return runAgentStatus(values.json === true);
     case "run-research":
-      return runAgentResearch(values.json === true, values.local === true);
+      return runAgentResearch(values.json === true, values.local === true, {
+        dimension: stringOpt(values.dimension),
+        inProcess: values["in-process"] === true,
+      });
     case "suggest-lift":
       return runAgentSuggestLift(
         values.json === true,
@@ -351,6 +463,15 @@ export async function runAgentCli(argv: string[]): Promise<number> {
         stringOpt(values.dimension),
         values["no-write"] === true,
       );
+    case "report":
+      return runAgentReportCmd(
+        values.json === true,
+        stringOpt(values.dimension),
+        stringOpt(values.run),
+        values["no-write"] === true,
+      );
+    case "blueprint":
+      return runAgentBlueprint(values.json === true, values["no-write"] === true);
     case "capture-evidence":
       return runAgentCaptureEvidence(rest, values.json === true);
     case "verify-dashboard": {

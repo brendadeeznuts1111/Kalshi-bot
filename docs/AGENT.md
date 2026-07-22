@@ -9,6 +9,8 @@ bun run agent status                    # dashboard API or local fallback (+ ver
 bun run agent audit-list                # shortlist vs rotor catalog
 bun run agent suggest-lift              # per-component lift map (rotor-aware badges)
 bun run agent patterns                  # static pattern report from evidence paths
+bun run agent blueprint                 # Bun stack architecture blueprint
+bun run agent report                    # cross-dimension architecture summary
 bun run agent run-research              # POST /api/research/run if dashboard up
 bun run agent run-research --local        # always in-process (no HTTP)
 bun run agent capture-evidence -- --url=https://kalshi.com/markets/...
@@ -91,6 +93,18 @@ When a pattern report exists under `research/patterns/` (from `agent patterns`),
 
 Designed for an LLM or human deciding what to lift into a composite bot.
 
+## `report`
+
+Cross-dimension architecture summary — shortlist, verification badges, and pattern hints for key slices (`market-making`, `arbitrage`, `tracking`, sports sub-dimensions).
+
+```bash
+bun run agent report
+bun run agent report --dimension=market-making --json
+bun run agent report --no-write   # stdout only
+```
+
+Writes `research/reports/agent-report.md` and `.json`.
+
 ## `patterns`
 
 Static pattern extraction from detector evidence paths — reads source via `gh api` (no clone, no test execution).
@@ -104,7 +118,18 @@ bun run agent patterns --dimension=market-making --no-write   # stdout only
 
 Writes `research/patterns/patterns-latest-{dimension}.md` and `.json` (see [`research/patterns/README.md`](../research/patterns/README.md)).
 
-Heuristics cover auth loading, order construction, dry-run defaults, loop style (poll vs WebSocket), error handling, and project layout.
+Heuristics cover auth loading, order construction, dry-run defaults, loop style (poll vs WebSocket), error handling, project layout, and **Bun runtime features** (`bunFeatures`).
+
+## `blueprint`
+
+Cross-dimension architecture blueprint — recommended Bun stack per domain with reference repos and lift links.
+
+```bash
+bun run agent blueprint
+bun run agent blueprint --json
+```
+
+Writes `research/reports/architecture-blueprint.md`.
 
 ## `capture-evidence`
 

@@ -10,8 +10,11 @@
  * JSON dumps go to gitignored `research/outputs/`; committed reports are `latest.md` + `latest.diff.md`.
  */
 import { Database } from "bun:sqlite";
+import { isGitHubRateLimitError, isGitHubRateLimitTripped, throwCacheMissIfTripped } from "./github-errors.ts";
+import { recordCacheStat } from "./github-cache-stats.ts";
 import { normalizeDimensionId, runDimension, DEFAULT_DIMENSION } from "./dimensions.ts";
-import type { ResearchRun } from "./types.ts";
+import type { ResearchRun, InspectionSignals } from "./types.ts";
+import type { GhSearchRepo } from "./github-search.ts";
 import { CACHE_DB, CACHE_DIR, joinPath } from "./paths.ts";
 
 export { CACHE_DIR, OUTPUT_DIR, REPORT_DIR, RESEARCH_ROOT, CACHE_DB } from "./paths.ts";
@@ -40,6 +43,20 @@ function getDb(): Database {
       generated_at TEXT NOT NULL,
       payload TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS inspect_cache (
+      repo TEXT NOT NULL,
+      pushed_at TEXT NOT NULL,
+      payload TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      PRIMARY KEY (repo, pushed_at)
+    );
+    CREATE TABLE IF NOT EXISTS search_cache (
+      query_key TEXT PRIMARY KEY,
+      query TEXT NOT NULL,
+      etag TEXT,
+      payload TEXT NOT NULL,
+      created_at INTEGER NOT NULL
+    );
   `);
   return db;
 }
@@ -67,7 +84,26 @@ export async function withCache<T>(
     return JSON.parse(row.payload) as T;
   }
 
-  const value = await fetcher();
+  const staleRow = conn
+    .query("SELECT payload FROM api_cache WHERE hash = ?")
+    .get(hash) as { payload: string } | null;
+
+  if (staleRow && isGitHubRateLimitTripped()) {
+    recordCacheStat("apiDegraded");
+    console.error(`[cache] degraded api_cache hit: ${repo}:${endpoint}`);
+    return JSON.parse(staleRow.payload) as T;
+  }
+
+  throwCacheMissIfTripped("api", `${repo}:${endpoint}`);
+
+  let value: T;
+  try {
+    value = await fetcher();
+  } catch (err) {
+    if (isGitHubRateLimitError(err)) throw err;
+    throw err;
+  }
+
   const payload = JSON.stringify(value);
   const expiresAt = now + ttlMs;
 
@@ -82,6 +118,83 @@ export async function withCache<T>(
   );
 
   return value;
+}
+
+/** Whole-repo inspect snapshot — skips all gh calls when `pushed_at` unchanged. */
+export function loadInspectCache(repo: string, pushedAt: string): InspectionSignals | null {
+  const row = getDb()
+    .query("SELECT payload FROM inspect_cache WHERE repo = ? AND pushed_at = ?")
+    .get(repo, pushedAt) as { payload: string } | null;
+  if (!row) return null;
+  try {
+    return JSON.parse(row.payload) as InspectionSignals;
+  } catch {
+    return null;
+  }
+}
+
+export function saveInspectCache(repo: string, pushedAt: string, signals: InspectionSignals): void {
+  getDb().run(
+    `INSERT INTO inspect_cache (repo, pushed_at, payload, created_at)
+     VALUES (?, ?, ?, ?)
+     ON CONFLICT(repo, pushed_at) DO UPDATE SET
+       payload = excluded.payload,
+       created_at = excluded.created_at`,
+    [repo, pushedAt, JSON.stringify(signals), Date.now()],
+  );
+}
+
+/** Most recent inspect snapshot for a repo (any pushed_at) — stale fallback under rate limit. */
+export function loadLatestInspectCache(repo: string): InspectionSignals | null {
+  const row = getDb()
+    .query("SELECT payload FROM inspect_cache WHERE repo = ? ORDER BY created_at DESC LIMIT 1")
+    .get(repo) as { payload: string } | null;
+  if (!row) return null;
+  try {
+    return JSON.parse(row.payload) as InspectionSignals;
+  } catch {
+    return null;
+  }
+}
+
+export function searchQueryKey(query: string): string {
+  return String(Bun.hash(query));
+}
+
+export function loadSearchCache(
+  queryKey: string,
+): { query: string; etag: string | null; payload: GhSearchRepo[] } | null {
+  const row = getDb()
+    .query("SELECT query, etag, payload FROM search_cache WHERE query_key = ?")
+    .get(queryKey) as { query: string; etag: string | null; payload: string } | null;
+  if (!row) return null;
+  try {
+    return {
+      query: row.query,
+      etag: row.etag,
+      payload: JSON.parse(row.payload) as GhSearchRepo[],
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function saveSearchCache(
+  queryKey: string,
+  query: string,
+  etag: string | null,
+  payload: GhSearchRepo[],
+): void {
+  getDb().run(
+    `INSERT INTO search_cache (query_key, query, etag, payload, created_at)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT(query_key) DO UPDATE SET
+       query = excluded.query,
+       etag = excluded.etag,
+       payload = excluded.payload,
+       created_at = excluded.created_at`,
+    [queryKey, query, etag, JSON.stringify(payload), Date.now()],
+  );
 }
 
 export function searchCachedPayloads(

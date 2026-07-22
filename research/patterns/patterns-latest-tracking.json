@@ -1,0 +1,134 @@
+{
+  "runId": "2026-07-22T06-34-52-547Z",
+  "generatedAt": "2026-07-22T06:34:52.547Z",
+  "dimension": "tracking",
+  "repos": [
+    {
+      "fullName": "bullmeme777/kalshi-portfolio-tracker",
+      "score": 47.75,
+      "verification": "✗ unverified",
+      "evidencePaths": [
+        "README.md"
+      ],
+      "files": [
+        {
+          "path": "README.md",
+          "components": [],
+          "hits": {
+            "auth": [
+              "env-secrets",
+              "api-key-file"
+            ],
+            "orders": [
+              "order-fields"
+            ],
+            "dryRun": [],
+            "loop": [],
+            "errors": [],
+            "structure": [],
+            "tests": [],
+            "bunFeatures": []
+          },
+          "excerpt": "py | +-- requirements.txt +-- README.md ``` --- ## Requirements ``` python-dotenv, typer[all], httpx, kalshi-python, pandas ``` * Kalshi account with API read access * Telegram bot token (for alerts and daily summaries) --- *Alpha starts here.*",
+          "fetchOk": true
+        }
+      ],
+      "summary": {
+        "auth": [
+          "env-secrets",
+          "api-key-file"
+        ],
+        "orders": [
+          "order-fields"
+        ],
+        "dryRun": [],
+        "loop": [],
+        "errors": [],
+        "structure": [],
+        "tests": [],
+        "bunFeatures": []
+      }
+    },
+    {
+      "fullName": "slee8495/kalshi-pnl-dashboard",
+      "score": 29.25,
+      "verification": "✗ unverified",
+      "evidencePaths": [
+        "README.md"
+      ],
+      "files": [
+        {
+          "path": "README.md",
+          "components": [],
+          "hits": {
+            "auth": [],
+            "orders": [],
+            "dryRun": [],
+            "loop": [],
+            "errors": [],
+            "structure": [],
+            "tests": [],
+            "bunFeatures": []
+          },
+          "excerpt": null,
+          "fetchOk": false
+        }
+      ],
+      "summary": {
+        "auth": [],
+        "orders": [],
+        "dryRun": [],
+        "loop": [],
+        "errors": [],
+        "structure": [],
+        "tests": [],
+        "bunFeatures": []
+      }
+    },
+    {
+      "fullName": "kevinhjshim/kalshi-pnl",
+      "score": 27.75,
+      "verification": "✗ unverified",
+      "evidencePaths": [
+        "README.md"
+      ],
+      "files": [
+        {
+          "path": "README.md",
+          "components": [],
+          "hits": {
+            "auth": [],
+            "orders": [],
+            "dryRun": [],
+            "loop": [],
+            "errors": [],
+            "structure": [],
+            "tests": [],
+            "bunFeatures": []
+          },
+          "excerpt": null,
+          "fetchOk": false
+        }
+      ],
+      "summary": {
+        "auth": [],
+        "orders": [],
+        "dryRun": [],
+        "loop": [],
+        "errors": [],
+        "structure": [],
+        "tests": [],
+        "bunFeatures": []
+      }
+    }
+  ],
+  "aggregate": {
+    "auth": [
+      "env-secrets",
+      "api-key-file"
+    ],
+    "orders": [
+      "order-fields"
+    ]
+  }
+}

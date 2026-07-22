@@ -10,6 +10,8 @@ import { loadResearchRun } from "../research/cache.ts";
 import { dimensionArtifactBasename, runDimension } from "../research/dimensions.ts";
 import { PATTERNS_DIR, joinPath } from "../research/paths.ts";
 import { readJsonFile, writeJson } from "../research/io.ts";
+import { ensureGhRateBudget } from "../research/gh.ts";
+import { warmGitHubApiNetwork } from "../research/github-network.ts";
 import { lookupRepoVerification, buildRotorVerificationIndex, formatVerificationBadge } from "./audit-list.ts";
 
 export const MAX_REPOS_PER_REPORT = 5;
@@ -23,7 +25,8 @@ export type PatternCategory =
   | "loop"
   | "errors"
   | "structure"
-  | "tests";
+  | "tests"
+  | "bunFeatures";
 
 export type PatternHits = Record<PatternCategory, string[]>;
 
@@ -86,6 +89,13 @@ const PATTERN_LABEL_DISPLAY: Record<string, string> = {
   "structured-logging": "structured logging",
   "client-wrapper": "client wrapper class",
   "test-import": "test framework",
+  "bun-websocket": "Bun WebSocket",
+  "bun-http": "Bun.serve",
+  "bun-sqlite": "bun:sqlite",
+  "bun-cron": "Bun.cron",
+  "bun-hash": "Bun.CryptoHasher",
+  "bun-timer": "Bun.sleep",
+  "bun-file": "Bun.file / Bun.write",
 };
 
 const AGGREGATE_PATH = /\(readme\/code aggregate\)/i;
@@ -110,6 +120,13 @@ const RULES: Array<{ category: PatternCategory; label: string; re: RegExp }> = [
   { category: "structure", label: "strategy-module", re: /strategy|strategies\//i },
   { category: "structure", label: "client-wrapper", re: /class\s+\w*(Client|Api|API)|KalshiClient/i },
   { category: "tests", label: "test-import", re: /pytest|unittest|describe\(|from jest|bun:test/i },
+  { category: "bunFeatures", label: "bun-websocket", re: /Bun\.connect|websocket:\s*true|upgrade:\s*websocket/i },
+  { category: "bunFeatures", label: "bun-http", re: /Bun\.serve\s*\(/ },
+  { category: "bunFeatures", label: "bun-sqlite", re: /from\s+["']bun:sqlite["']|import\s+.*bun:sqlite|new\s+Database\s*\(/ },
+  { category: "bunFeatures", label: "bun-cron", re: /Bun\.cron\s*\(/ },
+  { category: "bunFeatures", label: "bun-hash", re: /Bun\.CryptoHasher|crypto\.createHash\s*\(/ },
+  { category: "bunFeatures", label: "bun-timer", re: /Bun\.sleep\s*\(/ },
+  { category: "bunFeatures", label: "bun-file", re: /Bun\.file\s*\(|Bun\.write\s*\(/ },
 ];
 
 export function emptyPatternHits(): PatternHits {
@@ -121,6 +138,7 @@ export function emptyPatternHits(): PatternHits {
     errors: [],
     structure: [],
     tests: [],
+    bunFeatures: [],
   };
 }
 
@@ -163,6 +181,31 @@ export function selectEvidencePaths(lines: EvidenceLine[], limit = MAX_FILES_PER
     .map(([path]) => path);
 }
 
+/** Evidence paths from inspect signals when detector lines only cite readme aggregate. */
+export function signalEvidencePaths(item: ScoredRepo, limit = MAX_FILES_PER_REPO): string[] {
+  const paths = [
+    ...item.signals.authHits.flatMap((h) => h.paths),
+    ...item.signals.orderHits.flatMap((h) => h.paths),
+  ].filter((path) => path && !AGGREGATE_PATH.test(path));
+  return [...new Set(paths)].slice(0, limit);
+}
+
+export function resolvePatternFetchPaths(
+  item: ScoredRepo,
+  generatedAt: string,
+  limit = MAX_FILES_PER_REPO,
+): string[] {
+  const report = item.report ?? buildRepoReport(item, generatedAt);
+  const evidenceLines = report.detectors.flatMap((d) => d.evidence);
+  const fromEvidence = selectEvidencePaths(evidenceLines, limit);
+  if (fromEvidence.length) return fromEvidence;
+
+  const fromSignals = signalEvidencePaths(item, limit);
+  if (fromSignals.length) return fromSignals;
+
+  return ["README.md"];
+}
+
 function excerptAroundMatch(text: string, maxLen = MAX_EXCERPT_CHARS): string | null {
   if (!text.trim()) return null;
   for (const rule of RULES) {
@@ -183,7 +226,7 @@ export async function extractRepoPatterns(
 ): Promise<RepoPatternReport> {
   const report = item.report ?? buildRepoReport(item, generatedAt);
   const evidenceLines = report.detectors.flatMap((d) => d.evidence);
-  const paths = selectEvidencePaths(evidenceLines);
+  const paths = resolvePatternFetchPaths(item, generatedAt);
   const repoRef = {
     fullName: item.repo.fullName,
     pushedAt: item.repo.pushedAt,
@@ -206,6 +249,21 @@ export async function extractRepoPatterns(
       hits,
       excerpt: text ? excerptAroundMatch(text) : null,
       fetchOk: text !== null,
+    });
+  }
+
+  for (const extra of ["package.json", "bunfig.toml"]) {
+    if (paths.includes(extra) || files.some((f) => f.path === extra)) continue;
+    const text = await fetchRepoFileText(repoRef, extra);
+    if (!text) continue;
+    const hits = analyzeSource(text);
+    summary = mergePatternHits(summary, hits);
+    files.push({
+      path: extra,
+      components: [],
+      hits,
+      excerpt: excerptAroundMatch(text),
+      fetchOk: true,
     });
   }
 
@@ -399,6 +457,48 @@ export async function loadRepoPatternReport(
   return extractRepoPatterns(item, run.generatedAt, badge);
 }
 
+export function formatBunFeatureSummary(hits: PatternHits): string {
+  return formatPatternSummary(hits.bunFeatures);
+}
+
+export function bestBunFeatureRepo(
+  reports: PatternReport[],
+): { fullName: string; dimension: string; features: string[]; file: string | null } | null {
+  let best: {
+    fullName: string;
+    dimension: string;
+    features: string[];
+    file: string | null;
+    score: number;
+  } | null = null;
+
+  for (const report of reports) {
+    for (const repo of report.repos) {
+      const features = repo.summary.bunFeatures;
+      if (!features.length) continue;
+      const bunFile = repo.files.find((f) => f.hits.bunFeatures.length)?.path ?? null;
+      const score = features.length * 10 + repo.score;
+      if (!best || score > best.score) {
+        best = {
+          fullName: repo.fullName,
+          dimension: report.dimension,
+          features,
+          file: bunFile,
+          score,
+        };
+      }
+    }
+  }
+
+  if (!best) return null;
+  return {
+    fullName: best.fullName,
+    dimension: best.dimension,
+    features: best.features,
+    file: best.file,
+  };
+}
+
 export async function writePatternReport(report: PatternReport): Promise<string> {
   await Bun.write(joinPath(PATTERNS_DIR, ".keep"), "");
   const base = patternReportBasename(report.dimension);
@@ -419,6 +519,8 @@ export async function runPatternExtract(options: {
   repo?: string;
   write?: boolean;
 }): Promise<PatternReport | null> {
+  warmGitHubApiNetwork();
+  await ensureGhRateBudget();
   const run = loadRunForPatterns(options.runId, options.dimension);
   if (!run) return null;
   const report = await buildPatternReport(run, { repoFilter: options.repo });

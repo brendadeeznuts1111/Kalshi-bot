@@ -1,6 +1,8 @@
 // @see https://bun.com/docs/test/index#run-tests
-import { describe, expect, test } from "bun:test";
-import { cacheHash, isProductionRunId, isEligibleProductionRun, listRunSummaries, saveRun, loadRunFromDb, searchCachedPayloads, withCache } from "../src/research/cache.ts";
+import { afterEach, describe, expect, test } from "bun:test";
+import { cacheHash, isProductionRunId, isEligibleProductionRun, listRunSummaries, saveRun, loadRunFromDb, searchCachedPayloads, withCache, loadInspectCache, loadLatestInspectCache, saveInspectCache } from "../src/research/cache.ts";
+import { GitHubCacheMissError, resetGitHubRateLimitCircuit, tripGitHubRateLimit } from "../src/research/github-errors.ts";
+import type { InspectionSignals } from "../src/research/types.ts";
 
 describe("isProductionRunId", () => {
   test("accepts ISO pipeline run ids", () => {
@@ -44,6 +46,10 @@ describe("cacheHash", () => {
 });
 
 describe("withCache + runs", () => {
+  afterEach(() => {
+    resetGitHubRateLimitCircuit();
+  });
+
   test("stores and retrieves API payload", async () => {
     const repo = `test/repo-${Date.now()}`;
     let calls = 0;
@@ -66,6 +72,54 @@ describe("withCache + runs", () => {
     await withCache("search/repo", "2026-01-02T00:00:00Z", "readme", async () => "mentions websocket feed");
     const hits = searchCachedPayloads("readme", "websocket");
     expect(hits.some((h) => h.repo === "search/repo")).toBe(true);
+  });
+
+  test("inspect cache round-trips full InspectionSignals", () => {
+    const repo = `inspect/cache-${Date.now()}`;
+    const pushedAt = "2026-03-01T12:00:00Z";
+    const signals: InspectionSignals = {
+      readmeLength: 100,
+      hasSetupSection: true,
+      hasStrategySection: false,
+      authHits: [],
+      orderHits: [],
+      usesOfficialSdk: false,
+      hasAuthInCode: true,
+      hasV2Api: true,
+      hasRsaPss: false,
+      hasLiveOrderPath: false,
+      hasDryRunDefault: true,
+      hasAuthFreshness: true,
+      hasCentsPriceBounds: false,
+      hasTests: true,
+      hasCi: false,
+      languages: { TypeScript: 100 },
+      primaryLanguage: "TypeScript",
+      lastDefaultBranchCommitAt: "2026-02-01T00:00:00Z",
+      strategyTags: ["tracking"],
+      isSdkOnly: false,
+      riskKeywordHits: [],
+    };
+    expect(loadInspectCache(repo, pushedAt)).toBeNull();
+    saveInspectCache(repo, pushedAt, signals);
+    expect(loadInspectCache(repo, pushedAt)).toEqual(signals);
+    expect(loadLatestInspectCache(repo)).toEqual(signals);
+  });
+
+  test("withCache throws GitHubCacheMissError when circuit tripped and no api_cache row", async () => {
+    tripGitHubRateLimit(Math.ceil(Date.now() / 1000) + 120, "test");
+    const repo = `cache-miss-${Date.now()}`;
+    await expect(
+      withCache(repo, "2026-01-01T00:00:00Z", "readme", async () => "should not run"),
+    ).rejects.toBeInstanceOf(GitHubCacheMissError);
+  });
+
+  test("withCache serves stale api_cache when circuit tripped", async () => {
+    const repo = `cache-stale-${Date.now()}`;
+    await withCache(repo, "2026-01-01T00:00:00Z", "readme", async () => "fresh readme");
+    tripGitHubRateLimit(Math.ceil(Date.now() / 1000) + 120, "test");
+    const value = await withCache(repo, "2026-01-01T00:00:00Z", "readme", async () => "should not run");
+    expect(value).toBe("fresh readme");
   });
 
   test("saveRun and loadRunFromDb round-trip", () => {

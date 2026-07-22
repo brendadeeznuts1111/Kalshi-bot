@@ -1,8 +1,11 @@
 import type { CodeSearchHit, ResearchConfig } from "./types.ts";
 import {
   AUTH_MARKERS,
+  AUTH_FRESHNESS_MAX_DAYS,
+  CENTS_PRICE_MARKERS,
   DEFAULT_STRATEGY_TAG,
   DRY_RUN_MARKERS,
+  MS_PER_DAY,
   ORDER_MARKERS,
   PORTFOLIO_ORDERS_MARKER,
   RSA_PSS_MARKERS,
@@ -45,6 +48,34 @@ export function primaryLanguage(languages: Record<string, number>): string | nul
   return entries.sort((a, b) => b[1] - a[1])[0]![0];
 }
 
+export function authCommitFresh(
+  lastCommitAt: string | null,
+  maxAgeDays = AUTH_FRESHNESS_MAX_DAYS,
+): boolean {
+  if (!lastCommitAt) return false;
+  const ageDays = (Date.now() - new Date(lastCommitAt).getTime()) / MS_PER_DAY;
+  return ageDays <= maxAgeDays;
+}
+
+export function deriveAuthFreshness(
+  lastCommitAt: string | null,
+  hasAuthInCode: boolean,
+  hasV2Api: boolean,
+  hasRsaPss: boolean,
+): boolean {
+  return authCommitFresh(lastCommitAt) && hasAuthInCode && (hasV2Api || hasRsaPss);
+}
+
+export function hasCentsPriceSignals(combinedText: string, orderHits: CodeSearchHit[]): boolean {
+  const fromHits = orderHits.some((h) =>
+    CENTS_PRICE_MARKERS.some((m) => h.query.toLowerCase().includes(m)),
+  );
+  if (fromHits) return true;
+  const lower = combinedText.toLowerCase();
+  if (CENTS_PRICE_MARKERS.some((m) => lower.includes(m))) return true;
+  return /\bprice\b[^.\n]{0,40}\b([1-9]|[1-9][0-9])\b/.test(lower);
+}
+
 export function deriveCodeSignals(
   readme: string,
   authHits: CodeSearchHit[],
@@ -63,6 +94,7 @@ export function deriveCodeSignals(
     orderHits.some((h) => ORDER_MARKERS.some((k) => h.query.includes(k))) ||
     combinedText.includes(PORTFOLIO_ORDERS_MARKER);
   const hasDryRunDefault = DRY_RUN_MARKERS.some((k) => combinedText.includes(k));
+  const hasCentsPriceBounds = hasCentsPriceSignals(combinedText, orderHits);
 
   return {
     combinedText,
@@ -72,6 +104,7 @@ export function deriveCodeSignals(
     hasRsaPss,
     hasLiveOrderPath,
     hasDryRunDefault,
+    hasCentsPriceBounds,
     riskKeywordHits: config.keywords.riskKeywords.filter((k) => combinedText.includes(k.toLowerCase())),
   };
 }

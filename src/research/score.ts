@@ -51,6 +51,7 @@ function scoreAuthApi(signals: InspectionSignals, max: number): number {
   if (signals.hasV2Api) score += max * AUTH_SCORE_SHARES.v2Api;
   if (signals.hasRsaPss) score += max * AUTH_SCORE_SHARES.rsaPss;
   if (signals.usesOfficialSdk) score += max * AUTH_SCORE_SHARES.officialSdk;
+  if (signals.hasAuthFreshness) score += max * AUTH_SCORE_SHARES.authFreshness;
   return Math.min(max, score);
 }
 
@@ -58,6 +59,7 @@ function scoreOrderRealism(signals: InspectionSignals, max: number): number {
   let score = 0;
   if (signals.hasLiveOrderPath) score += max * ORDER_SCORE_SHARES.liveOrderPath;
   if (signals.hasDryRunDefault) score += max * ORDER_SCORE_SHARES.dryRunDefault;
+  if (signals.hasCentsPriceBounds) score += max * ORDER_SCORE_SHARES.centsBounds;
   return Math.min(max, score);
 }
 

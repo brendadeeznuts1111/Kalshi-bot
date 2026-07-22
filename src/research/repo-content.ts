@@ -1,6 +1,6 @@
 // @see https://bun.com/docs/runtime/file-io#reading-files-bun-file
 import { decodeBase64 } from "./io.ts";
-import { ghJson } from "./gh.ts";
+import { ghJson, isGitHubRateLimitError } from "./gh.ts";
 import { withCache } from "./cache.ts";
 
 export const MAX_REPO_FILE_BYTES = 80_000;
@@ -40,7 +40,8 @@ export async function fetchRepoFileText(
         data.encoding === "base64" ? decodeBase64(data.content.replace(/\n/g, "")) : data.content;
       if (text.length > MAX_REPO_FILE_BYTES) return null;
       return text;
-    } catch {
+    } catch (err) {
+      if (isGitHubRateLimitError(err)) throw err;
       return null;
     }
   });

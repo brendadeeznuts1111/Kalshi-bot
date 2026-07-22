@@ -39,7 +39,8 @@
             "structure": [
               "client-wrapper"
             ],
-            "tests": []
+            "tests": [],
+            "bunFeatures": []
           },
           "excerpt": "= self._create_signature(timestamp, method, path) return { \"KALSHI-ACCESS-KEY\": self.api_key_id, \"KALSHI-ACCESS-SIGNATURE\": signature, \"KALSHI-ACCESS-TIMESTAMP\": timestamp, \"Content-Type\": \"application/json\", } def make_request( self, method: str, path: str, params: Dict = None, data: Dict = None, max_retries: int = 5, ): url = f\"{self.base_url}{pat",
           "fetchOk": true
@@ -68,7 +69,8 @@
         "structure": [
           "client-wrapper"
         ],
-        "tests": []
+        "tests": [],
+        "bunFeatures": []
       }
     }
   ],

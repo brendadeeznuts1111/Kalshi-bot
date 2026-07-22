@@ -30,6 +30,8 @@ Deep dive: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns)
 | Agent dashboard | `Bun.serve` + optional headless `Bun.WebView` | [`dashboard.ts`](../src/agent/dashboard.ts), [`docs/DASHBOARD.md`](../docs/DASHBOARD.md) |
 | Agent CLI | `Bun.WebView` capture + dashboard client | [`cli.ts`](../src/agent/cli.ts), [`docs/AGENT.md`](../docs/AGENT.md) |
 | Terminal reports | `Bun.markdown.ansi` | [`report-term.ts`](../src/agent/report-term.ts) |
+| TTY tables + OSC 8 links | `Bun.inspect.table` + `Bun.stringWidth` | [`terminal-out.ts`](../src/research/terminal-out.ts) |
+| Agent IPC research progress | `Bun.spawn` + `process.send` | [`research-runner.ts`](../src/agent/research-runner.ts), [`research-progress.ts`](../src/research/research-progress.ts) |
 | CLI flags | `parseArgs` from `node:util` | [`cli.ts`](../src/research/cli.ts) |
 | Unit tests | `bun:test` + `mock.module()` | [`tests/`](../tests/) |
 | Test coverage | `[test] coverage` in `bunfig.toml` | [`bunfig.toml`](../bunfig.toml) |
@@ -56,6 +58,11 @@ Deep dive: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns)
 | `Bun.serve` | https://bun.com/docs/runtime/http/server#basic-setup |
 | `Bun.WebView` | https://bun.com/docs/runtime/webview#new-bun-webview-options |
 | `Bun.markdown.ansi` | https://bun.com/docs/runtime/markdown#ansi-terminal-output |
+| `Bun.inspect.table` | https://bun.com/docs/runtime/utils#bun-inspect-table-tabulardata-properties-options |
+| `Bun.stringWidth` | https://bun.com/docs/runtime/utils#bun-stringwidth |
+| `Bun.spawn` IPC | https://bun.com/docs/runtime/child-process#inter-process-communication-ipc · [reference](https://bun.com/docs/runtime/child-process#reference) |
+| `Bun.Terminal` (PTY) | https://bun.com/docs/runtime/child-process#terminal-pty-support |
+| `Bun.spawnSync` | https://bun.com/docs/runtime/child-process#blocking-api-bun-spawnsync |
 
 ## Cache: `bun:sqlite` not JSON blobs
 
@@ -120,6 +127,43 @@ const local = localRepoPath(ref.owner, ref.repo); // → /repo/:owner/:name
 | `/reports/latest.md` | `Bun.file(research/reports/latest.md)` |
 
 HTML lives in [`views.ts`](../src/research/views.ts) — handlers in [`serve.ts`](../src/research/serve.ts) stay thin.
+
+## Terminal: three layers (PTY vs IPC vs parent TTY)
+
+Bun exposes **three separate terminal mechanisms**. This repo uses layer 1 and 2; layer 3 is optional for a future interactive agent shell.
+
+| Layer | API | Who has `isTTY` | Used here for |
+|-------|-----|-----------------|---------------|
+| **1 — Parent stdout** | `Bun.inspect.table`, `Bun.stringWidth`, `Bun.markdown.ansi` | The **bun research/agent** process you run in Terminal/iTerm | Shortlist tables, lift map, `report:term` |
+| **2 — Child pipes + IPC** | `Bun.spawn({ cmd, ipc, stdout: "pipe" })` + `process.send` | Child sees **pipes** (`isTTY=false`); parent relays stdout | Agent → research progress + final table ([`research-runner.ts`](../src/agent/research-runner.ts)) |
+| **3 — Child PTY** | `Bun.spawn({ terminal: { cols, rows, data } })` or `new Bun.Terminal()` | The **child subprocess** (`isTTY=true`) | **Not used** — see below |
+
+### When PTY (`terminal` option) applies
+
+From [Terminal (PTY) support](https://bun.com/docs/runtime/child-process#terminal-pty-support):
+
+- Child needs **interactive** behavior: prompts, cursor movement, pagers, `bash` REPL.
+- Child checks **`process.stdout.isTTY`** and changes output (colors, width) based on that.
+- You write to **`proc.terminal.write()`** — `proc.stdout`/`stderr` are **null** when `terminal` is set.
+- **`data(terminal, data)`** relays PTY output to the parent (often `process.stdout.write(data)`).
+- **`proc.exited`** = process exit; **`terminal.exit` callback** = PTY stream lifecycle (not the same thing).
+- **Reusable terminal:** `await using terminal = new Bun.Terminal({…})` then pass `{ terminal }` to multiple spawns for one session.
+
+### Why this repo does not use PTY for research
+
+| Subprocess | Why pipes/IPC, not PTY |
+|------------|------------------------|
+| **`gh` via `Bun.$`** | JSON `--json` output; `.quiet()` batch mode; no TTY needed ([`BUN_SHELL.md`](BUN_SHELL.md)) |
+| **Research child** | Structured `ResearchProgressMessage` over IPC; markdown/table on stdout pipe — parsing PTY ANSI would be fragile |
+| **Parent CLI** | Already running in a real TTY — use layer 1 natively |
+
+PTY would only help if we spawned **`gh` without `--json`** for human-readable logs, or built an **interactive research TUI** (pick dimension, watch live inspect in a full-screen view).
+
+### Platform notes (if we add PTY later)
+
+- **macOS/Linux:** `openpty()` — termios, line echo, SIGWINCH.
+- **Windows:** ConPTY — output is re-encoded VT (semantically same, not byte-identical); `\r` not mapped to `\n`; kill child before `terminal.close()` on older Windows.
+- **`Bun.spawnSync`:** blocking; good for tiny CLI tools, not long research runs ([reference](https://bun.com/docs/runtime/child-process#reference)).
 
 ## Testing
 

@@ -38,6 +38,10 @@ export type InspectionSignals = {
   hasRsaPss: boolean;
   hasLiveOrderPath: boolean;
   hasDryRunDefault: boolean;
+  /** Auth stack touched on default branch within freshness window (see authFreshnessMaxDays). */
+  hasAuthFreshness: boolean;
+  /** Order paths reference Kalshi-style cent prices (1–99) or explicit price_cents fields. */
+  hasCentsPriceBounds: boolean;
   hasTests: boolean;
   hasCi: boolean;
   languages: Record<string, number>;
@@ -153,6 +157,13 @@ export type ResearchRun = {
     gated: number;
     inspected: number;
     shortlist: number;
+    cache?: {
+      searchEtagHits: number;
+      searchDegradedHits: number;
+      inspectExactHits: number;
+      inspectDegradedHits: number;
+      apiDegradedHits: number;
+    };
   };
   candidates: RepoCandidate[];
   gated: RepoCandidate[];

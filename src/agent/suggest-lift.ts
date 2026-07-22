@@ -16,6 +16,7 @@ import {
   type RotorVerificationContext,
   type VerificationStatus,
 } from "./audit-list.ts";
+import { isTtyStdout, formatInspectTable, liftTableRows, shortlistSummaryTableRows } from "../research/terminal-out.ts";
 import {
   loadRepoPatternReport,
   patternReportSourceRel,
@@ -276,33 +277,78 @@ export function formatSuggestLift(result: SuggestLiftResult): string {
     header,
   ];
 
-  for (const rec of result.recommendations) {
-    const badge =
-      rec.repo !== ""
-        ? ` ${formatVerificationBadge({
-            verified: rec.verified,
-            verification: rec.verification,
-            auditTier: rec.auditTier,
-          })}`
-        : "";
-    lines.push(
-      `  ${rec.component.padEnd(14)} ← ${rec.repo || "—"} (${rec.points}/${rec.maxPoints})${badge}`,
-    );
-    lines.push(`    ${rec.rationale}`);
-    if (rec.pattern?.summary) {
-      lines.push(`    ↳ pattern: ${rec.pattern.summary}`);
+  const liftRows = liftTableRows(
+    result.recommendations.map((rec) => ({
+      component: rec.component,
+      repo: rec.repo || "—",
+      score: rec.repo ? `${rec.points}/${rec.maxPoints}` : "—",
+      badge:
+        rec.repo !== ""
+          ? formatVerificationBadge({
+              verified: rec.verified,
+              verification: rec.verification,
+              auditTier: rec.auditTier,
+            })
+          : "—",
+    })),
+  );
+
+  if (isTtyStdout() && liftRows.length) {
+    lines.push(formatInspectTable(liftRows, ["component", "repo", "score", "badge"]));
+    for (const rec of result.recommendations) {
+      if (!rec.repo) continue;
+      lines.push(`  ${rec.component}: ${rec.rationale}`);
+      if (rec.pattern?.summary) lines.push(`    ↳ pattern: ${rec.pattern.summary}`);
+    }
+  } else {
+    for (const rec of result.recommendations) {
+      const badge =
+        rec.repo !== ""
+          ? ` ${formatVerificationBadge({
+              verified: rec.verified,
+              verification: rec.verification,
+              auditTier: rec.auditTier,
+            })}`
+          : "";
+      lines.push(
+        `  ${rec.component.padEnd(14)} ← ${rec.repo || "—"} (${rec.points}/${rec.maxPoints})${badge}`,
+      );
+      lines.push(`    ${rec.rationale}`);
+      if (rec.pattern?.summary) {
+        lines.push(`    ↳ pattern: ${rec.pattern.summary}`);
+      }
     }
   }
 
   lines.push("", "Shortlist:");
-  for (const s of result.shortlist) {
-    const lic = s.unlicensed ? " UNLICENSED" : "";
-    const badge = formatVerificationBadge({
-      verified: s.verified,
-      verification: s.verification,
-      auditTier: s.auditTier,
-    });
-    lines.push(`  ${s.fullName} — ${s.total} — ${badge}${lic}`);
+  if (isTtyStdout() && result.shortlist.length) {
+    lines.push(
+      formatInspectTable(
+        shortlistSummaryTableRows(
+          result.shortlist.map((s) => ({
+            fullName: s.fullName,
+            total: s.total,
+            badge: formatVerificationBadge({
+              verified: s.verified,
+              verification: s.verification,
+              auditTier: s.auditTier,
+            }),
+            license: s.unlicensed ? "UNLICENSED" : (s.license ?? "ok"),
+          })),
+        ),
+        ["#", "repo", "score", "badge", "license"],
+      ),
+    );
+  } else {
+    for (const s of result.shortlist) {
+      const lic = s.unlicensed ? " UNLICENSED" : "";
+      const badge = formatVerificationBadge({
+        verified: s.verified,
+        verification: s.verification,
+        auditTier: s.auditTier,
+      });
+      lines.push(`  ${s.fullName} — ${s.total} — ${badge}${lic}`);
+    }
   }
 
   if (result.notes.length) {

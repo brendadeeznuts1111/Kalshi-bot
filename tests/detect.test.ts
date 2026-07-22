@@ -73,6 +73,26 @@ describe("deriveCodeSignals", () => {
     expect(result.hasAuthInCode).toBe(true);
     expect(result.hasLiveOrderPath).toBe(true);
   });
+
+  test("detects cent price markers", () => {
+    const result = deriveCodeSignals(
+      "",
+      [],
+      [{ query: "price_cents", totalCount: 1, paths: ["orders.py"] }],
+      config,
+    );
+    expect(result.hasCentsPriceBounds).toBe(true);
+  });
+});
+
+describe("deriveAuthFreshness", () => {
+  test("requires recent commit and auth stack", async () => {
+    const { deriveAuthFreshness, authCommitFresh } = await import("../src/research/detect.ts");
+    const recent = new Date().toISOString();
+    expect(deriveAuthFreshness(recent, true, true, false)).toBe(true);
+    expect(deriveAuthFreshness("2020-01-01T00:00:00Z", true, true, true)).toBe(false);
+    expect(authCommitFresh(recent)).toBe(true);
+  });
 });
 
 describe("isSdkOnlyRepo", () => {

@@ -37,6 +37,8 @@ function scored(overrides: Partial<ScoredRepo> = {}): ScoredRepo {
     hasRsaPss: false,
     hasLiveOrderPath: true,
     hasDryRunDefault: true,
+      hasAuthFreshness: false,
+      hasCentsPriceBounds: false,
     hasTests: true,
     hasCi: true,
     languages: { TypeScript: 100 },

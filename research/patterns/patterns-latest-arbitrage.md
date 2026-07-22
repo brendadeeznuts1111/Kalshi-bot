@@ -11,7 +11,7 @@ Generated: 2026-07-22T06:19:51.053Z
 - **errors**: try-catch
 - **structure**: client-wrapper
 
-## RichardFeynmanEnthusiast/kalshi-polymarket-arbitrage-bot (69.5) — ✗ unverified
+## RichardFeynmanEnthusiast/kalshi-polymarket-arbitrage-bot (69.5) — ⚠ watchlist
 
 ### `app/clients/kalshi/base.py` (authApi)
 - **auth**: kalshi-access-headers, rsa-pss-signing, api-key-file

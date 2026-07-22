@@ -1,0 +1,118 @@
+{
+  "generatedAt": "2026-07-22T06:32:33.402Z",
+  "dimensions": [
+    {
+      "dimension": "arbitrage",
+      "label": "Cross-venue arbitrage",
+      "runId": "2026-07-22T06-19-51-053Z",
+      "generatedAt": "2026-07-22T06:19:51.053Z",
+      "stats": {
+        "discovered": 14,
+        "gated": 1,
+        "inspected": 1,
+        "shortlist": 1
+      },
+      "shortlist": [
+        {
+          "fullName": "RichardFeynmanEnthusiast/kalshi-polymarket-arbitrage-bot",
+          "total": 69.5,
+          "verification": "⚠ watchlist",
+          "auditTier": "watchlist",
+          "topPattern": "KALSHI-ACCESS-* headers, RSA-PSS, key file, trade-api/v2"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "dimension": "market-making",
+      "label": "Market making / liquidity",
+      "runId": "2026-07-22T06-13-45-870Z",
+      "generatedAt": "2026-07-22T06:13:45.870Z",
+      "stats": {
+        "discovered": 27,
+        "gated": 1,
+        "inspected": 1,
+        "shortlist": 1
+      },
+      "shortlist": [
+        {
+          "fullName": "rodlaf/KalshiMarketMaker",
+          "total": 67.75,
+          "verification": "✗ unverified",
+          "auditTier": "watchlist",
+          "topPattern": "KALSHI-ACCESS-* headers, RSA-PSS, key file, create-order API"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "dimension": "sports-elections",
+      "label": "Elections / politics",
+      "runId": "2026-07-22T06-19-15-682Z",
+      "generatedAt": "2026-07-22T06:19:15.682Z",
+      "stats": {
+        "discovered": 10,
+        "gated": 0,
+        "inspected": 0,
+        "shortlist": 0
+      },
+      "shortlist": [],
+      "notes": [
+        "Discovered repos but none passed gate/shortlist — try --min-stars=2 or refine queries"
+      ]
+    },
+    {
+      "dimension": "sports-macro",
+      "label": "Macro / economic events",
+      "runId": "2026-07-22T06-19-21-281Z",
+      "generatedAt": "2026-07-22T06:19:21.281Z",
+      "stats": {
+        "discovered": 5,
+        "gated": 0,
+        "inspected": 0,
+        "shortlist": 0
+      },
+      "shortlist": [],
+      "notes": [
+        "Discovered repos but none passed gate/shortlist — try --min-stars=2 or refine queries"
+      ]
+    },
+    {
+      "dimension": "sports-nba",
+      "label": "NBA",
+      "runId": "2026-07-22T06-18-19-984Z",
+      "generatedAt": "2026-07-22T06:18:19.984Z",
+      "stats": {
+        "discovered": 8,
+        "gated": 0,
+        "inspected": 0,
+        "shortlist": 0
+      },
+      "shortlist": [],
+      "notes": [
+        "Discovered repos but none passed gate/shortlist — try --min-stars=2 or refine queries"
+      ]
+    },
+    {
+      "dimension": "tracking",
+      "label": "Portfolio tracking / monitoring",
+      "runId": "2026-07-22T06-19-27-172Z",
+      "generatedAt": "2026-07-22T06:19:27.172Z",
+      "stats": {
+        "discovered": 0,
+        "gated": 0,
+        "inspected": 0,
+        "shortlist": 0
+      },
+      "shortlist": [],
+      "notes": [
+        "Zero discovery — broaden dimension queries"
+      ]
+    }
+  ],
+  "architectureNotes": [
+    "Cross-venue arbitrage: lift candidate RichardFeynmanEnthusiast/kalshi-polymarket-arbitrage-bot (69.5) — watchlist tier",
+    "Market making / liquidity: lift candidate rodlaf/KalshiMarketMaker (67.75) — watchlist tier",
+    "Composite bot: mix component lifts across dimensions (see suggest-lift per dimension)."
+  ]
+}

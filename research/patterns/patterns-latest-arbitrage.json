@@ -6,7 +6,7 @@
     {
       "fullName": "RichardFeynmanEnthusiast/kalshi-polymarket-arbitrage-bot",
       "score": 69.5,
-      "verification": "✗ unverified",
+      "verification": "⚠ watchlist",
       "evidencePaths": [
         "app/clients/kalshi/base.py",
         "shared_libraries/shared_infra_pkg/shared_infra/kalshi_clients/kalshi_base.py",
@@ -36,7 +36,8 @@
             "structure": [
               "client-wrapper"
             ],
-            "tests": []
+            "tests": [],
+            "bunFeatures": []
           },
           "excerpt": "headers = { \"Content-Type\": \"application/json\", \"KALSHI-ACCESS-KEY\": self.key_id, \"KALSHI-ACCESS-SIGNATURE\": signature, \"KALSHI-ACCESS-TIMESTAMP\": timestamp_str, } return headers def sign_pss_text(self, text: str) -> str: \"\"\"Signs the text using RSA-PSS and returns the base64 encoded signature.\"\"\" message = text.encode('utf-8') try: signature = self.private_key.sign",
           "fetchOk": true
@@ -61,7 +62,8 @@
             "structure": [
               "client-wrapper"
             ],
-            "tests": []
+            "tests": [],
+            "bunFeatures": []
           },
           "excerpt": "headers = { \"Content-Type\": \"application/json\", \"KALSHI-ACCESS-KEY\": self.key_id, \"KALSHI-ACCESS-SIGNATURE\": signature, \"KALSHI-ACCESS-TIMESTAMP\": timestamp_str, } return headers def sign_pss_text(self, text: str) -> str: \"\"\"Signs the text using RSA-PSS and returns the base64 encoded signature.\"\"\" message = text.encode('utf-8') try: signature = self.private_key.sign",
           "fetchOk": true
@@ -86,7 +88,8 @@
             "structure": [
               "client-wrapper"
             ],
-            "tests": []
+            "tests": [],
+            "bunFeatures": []
           },
           "excerpt": "headers = { \"Content-Type\": \"application/json\", \"KALSHI-ACCESS-KEY\": self.key_id, \"KALSHI-ACCESS-SIGNATURE\": signature, \"KALSHI-ACCESS-TIMESTAMP\": timestamp_str, } return headers def sign_pss_text(self, text: str) -> str: \"\"\"Signs the text using RSA-PSS and returns the base64 encoded signature.\"\"\" message = text.encode('utf-8') try: signature = self.private_key.sign",
           "fetchOk": true
@@ -115,7 +118,8 @@
             "structure": [
               "client-wrapper"
             ],
-            "tests": []
+            "tests": [],
+            "bunFeatures": []
           },
           "excerpt": "vironment) self.host = self.HTTP_BASE_URL self.exchange_url = \"/trade-api/v2/exchange\" self.markets_url = \"/trade-api/v2/markets\" self.portfolio_url = \"/trade-api/v2/portfolio\" self.events_url = \"/trade-api/v2/events\" def rate_limit(self) -> None: \"\"\"Built-in rate limiter to prevent exceeding API rate limits.\"\"\" THRESHOLD_IN_MILLISECONDS = 100 now = datetime.now() threshold_in_microseconds = 1000 * T",
           "fetchOk": true
@@ -146,7 +150,8 @@
             "structure": [
               "client-wrapper"
             ],
-            "tests": []
+            "tests": [],
+            "bunFeatures": []
           },
           "excerpt": "vironment) self.host = self.HTTP_BASE_URL self.exchange_url = \"/trade-api/v2/exchange\" self.markets_url = \"/trade-api/v2/markets\" self.portfolio_url = \"/trade-api/v2/portfolio\" self.events_url = \"/trade-api/v2/events\" def rate_limit(self) -> None: \"\"\"Built-in rate limiter to prevent exceeding API rate limits.\"\"\" THRESHOLD_IN_MILLISECONDS = 100 now = datetime.now() threshold_in_microseconds = 1000 * T",
           "fetchOk": true
@@ -177,7 +182,8 @@
             "structure": [
               "client-wrapper"
             ],
-            "tests": []
+            "tests": [],
+            "bunFeatures": []
           },
           "excerpt": "vironment) self.host = self.HTTP_BASE_URL self.exchange_url = \"/trade-api/v2/exchange\" self.markets_url = \"/trade-api/v2/markets\" self.portfolio_url = \"/trade-api/v2/portfolio\" self.events_url = \"/trade-api/v2/events\" def rate_limit(self) -> None: \"\"\"Built-in rate limiter to prevent exceeding API rate limits.\"\"\" THRESHOLD_IN_MILLISECONDS = 100 now = datetime.now() threshold_in_microseconds = 1000 * T",
           "fetchOk": true
@@ -205,7 +211,8 @@
         "structure": [
           "client-wrapper"
         ],
-        "tests": []
+        "tests": [],
+        "bunFeatures": []
       }
     }
   ],

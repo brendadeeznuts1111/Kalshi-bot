@@ -31,6 +31,8 @@ function scored(): ScoredRepo {
     hasRsaPss: false,
     hasLiveOrderPath: false,
     hasDryRunDefault: false,
+      hasAuthFreshness: false,
+      hasCentsPriceBounds: false,
     hasTests: false,
     hasCi: false,
     languages: { TypeScript: 100 },

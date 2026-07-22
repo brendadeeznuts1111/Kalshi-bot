@@ -19,7 +19,10 @@
     "LIVE_TRADING",
     "dry-run",
     "dry_run",
-    "paper_trading"
+    "paper_trading",
+    "price_cents",
+    "yes_price",
+    "no_price"
   ],
   "riskKeywords": [
     "kelly",
