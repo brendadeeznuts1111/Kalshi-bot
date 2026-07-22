@@ -10,6 +10,9 @@
     "audit:export": "bun src/research/export-audit-cli.ts",
     "serve": "bun --hot src/research/serve.ts",
     "serve:once": "bun src/research/serve.ts",
+    "schedule:register": "bun src/research/schedule-cli.ts register",
+    "schedule:remove": "bun src/research/schedule-cli.ts remove",
+    "schedule:preview": "bun src/research/schedule-cli.ts preview",
     "test": "bun test",
     "test:coverage": "bun test --coverage",
     "typecheck": "tsc --noEmit"

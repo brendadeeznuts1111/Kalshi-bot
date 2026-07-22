@@ -23,6 +23,7 @@ Build a **re-runnable** research script that produces a scored shortlist of publ
 | GitHub URL SSOT | `BunURLPattern` in [`patterns.ts`](../src/research/patterns.ts) |
 | Report browser | `Bun.serve` [`serve.ts`](../src/research/serve.ts) — ≤5 routes |
 | Audit evidence | sha3-256 JSONL under `research/audit-evidence/` (committed) |
+| Scheduled research | OS-level `Bun.cron` — [`docs/CRON.md`](CRON.md) |
 | Tests | `bun:test` + `mock.module()` for `gh.ts` |
 
 ## Stack and layout

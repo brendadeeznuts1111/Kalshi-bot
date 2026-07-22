@@ -212,3 +212,9 @@ export function isUnlicensedSpdx(normalized: string): boolean {
   if (!normalized) return true;
   return (UNLICENSED_SPDX_MARKERS as readonly string[]).includes(normalized);
 }
+
+/** OS-level Bun.cron job title (launchd / crontab / Task Scheduler). */
+export const RESEARCH_CRON_TITLE = "kalshi-research-weekly";
+
+/** Default schedule: Monday 06:00 system local time (cross-platform safe). */
+export const RESEARCH_CRON_SCHEDULE = "0 6 * * MON";
