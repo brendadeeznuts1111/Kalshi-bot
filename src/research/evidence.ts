@@ -2,6 +2,7 @@
 import {
   COMPONENT_WEIGHTS,
   DETECTOR_IDS,
+  README_DOCS_MATCH_CHARS,
 } from "./constants.ts";
 import type {
   DetectorResult,
@@ -113,7 +114,7 @@ export function buildDetectors(item: ScoredRepo): DetectorResult[] {
       DETECTOR_IDS.docsSetup,
       "docsSetup",
       "repo",
-      s.hasSetupSection || s.readmeLength > 500,
+      s.hasSetupSection || s.readmeLength > README_DOCS_MATCH_CHARS,
       sc.docsSetup,
       COMPONENT_WEIGHTS.docsSetup,
       [],

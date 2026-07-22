@@ -7,6 +7,7 @@ import {
   PORTFOLIO_ORDERS_MARKER,
   RSA_PSS_MARKERS,
   SDK_MARKERS,
+  SDK_ONLY_TAG,
   V2_API_MARKER,
 } from "./constants.ts";
 
@@ -83,7 +84,7 @@ export function isSdkOnlyRepo(
 ): boolean {
   const readmeLower = readme.toLowerCase();
   return (
-    strategyTags.includes("sdk_only") ||
+    strategyTags.includes(SDK_ONLY_TAG) ||
     (usesOfficialSdk && !hasLiveOrderPath && readmeLower.includes("client") && readme.length < 2500)
   );
 }

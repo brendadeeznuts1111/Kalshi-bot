@@ -16,6 +16,7 @@ import { writeAuditExports } from "./export-audit.ts";
 import { ensureCacheDir, saveRun } from "./cache.ts";
 import { ensureGh } from "./preflight.ts";
 import { attachRepoReport } from "./evidence.ts";
+import { DEFAULT_INSPECT_CONCURRENCY } from "./constants.ts";
 import type { ResearchRun } from "./types.ts";
 
 export type CliOptions = {
@@ -86,8 +87,8 @@ export async function runResearch(opts: CliOptions): Promise<ResearchRun> {
   const gated = applyGate(candidates, gate);
   console.error(`${gated.length} passed popularity gate`);
 
-  console.error("Inspecting repos (concurrency 4)...");
-  const inspected = await mapPool(gated, 4, async (repo) => {
+  console.error(`Inspecting repos (concurrency ${DEFAULT_INSPECT_CONCURRENCY})...`);
+  const inspected = await mapPool(gated, DEFAULT_INSPECT_CONCURRENCY, async (repo) => {
     console.error(`  inspect ${repo.fullName}`);
     const signals = await inspectRepo(repo, config);
     const score = scoreRepo(repo, signals, config);

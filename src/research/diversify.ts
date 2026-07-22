@@ -1,6 +1,6 @@
 import type { ResearchConfig, ScoredRepo } from "./types.ts";
 import { compareScored } from "./score.ts";
-import { DEFAULT_MAX_PER_TAG } from "./constants.ts";
+import { DEFAULT_MAX_PER_TAG, SDK_ONLY_TAG, UNTAGGED_BUCKET } from "./constants.ts";
 
 export function buildShortlist(
   scored: ScoredRepo[],
@@ -19,15 +19,15 @@ export function buildShortlist(
   const tagCounts = new Map<string, number>();
 
   function canPick(item: ScoredRepo): boolean {
-    const tags = item.signals.strategyTags.filter((t) => t !== "sdk_only");
-    if (!tags.length) return (tagCounts.get("_untagged") ?? 0) < maxPerTag;
+    const tags = item.signals.strategyTags.filter((t) => t !== SDK_ONLY_TAG);
+    if (!tags.length) return (tagCounts.get(UNTAGGED_BUCKET) ?? 0) < maxPerTag;
     return tags.every((tag) => (tagCounts.get(tag) ?? 0) < maxPerTag);
   }
 
   function recordPick(item: ScoredRepo): void {
-    const tags = item.signals.strategyTags.filter((t) => t !== "sdk_only");
+    const tags = item.signals.strategyTags.filter((t) => t !== SDK_ONLY_TAG);
     if (!tags.length) {
-      tagCounts.set("_untagged", (tagCounts.get("_untagged") ?? 0) + 1);
+      tagCounts.set(UNTAGGED_BUCKET, (tagCounts.get(UNTAGGED_BUCKET) ?? 0) + 1);
       return;
     }
     for (const tag of tags) {

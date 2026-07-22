@@ -1,14 +1,6 @@
 // @see https://bun.com/docs/runtime/hashing#bun-cryptohasher
+import { MAX_QUALITY_SCORE, SCORE_COMPONENTS } from "./constants.ts";
 import type { DetectorResult, EvidenceLine, RepoReport, ScoreBreakdown } from "./types.ts";
-
-const COMPONENTS = [
-  "authApi",
-  "orderRealism",
-  "testsCi",
-  "docsSetup",
-  "maintenance",
-  "riskControls",
-] as const;
 
 const SCOPES = ["line", "file", "repo", "strategy"] as const;
 
@@ -32,11 +24,11 @@ export function validateRepoReport(value: unknown): RepoReport {
 
 function isScoreBreakdown(s: ScoreBreakdown): boolean {
   if (!s || typeof s !== "object") return false;
-  for (const k of COMPONENTS) {
+  for (const k of SCORE_COMPONENTS) {
     if (typeof s[k] !== "number" || s[k] < 0) return false;
   }
   if (typeof s.licenseModifier !== "number" || typeof s.total !== "number") return false;
-  if (s.total < 0 || s.total > 100) return false;
+  if (s.total < 0 || s.total > MAX_QUALITY_SCORE) return false;
   return true;
 }
 
@@ -44,7 +36,7 @@ function isDetectorResult(d: DetectorResult): boolean {
   if (!d || typeof d !== "object") return false;
   if (typeof d.id !== "string" || typeof d.rationale !== "string") return false;
   if (typeof d.matched !== "boolean") return false;
-  if (!(COMPONENTS as readonly string[]).includes(d.component)) return false;
+  if (!(SCORE_COMPONENTS as readonly string[]).includes(d.component)) return false;
   if (!(SCOPES as readonly string[]).includes(d.scope)) return false;
   if (typeof d.pointsContributed !== "number" || typeof d.maxPoints !== "number") return false;
   if (!Array.isArray(d.evidence)) return false;

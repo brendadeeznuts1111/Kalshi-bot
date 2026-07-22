@@ -2,6 +2,7 @@
 import type { ResearchConfig } from "./types.ts";
 import { ghJson } from "./gh.ts";
 import {
+  DEFAULT_GH_SEARCH_LIMIT,
   isUnlicensedSpdx,
   LICENSE_APACHE_2_0,
   LICENSE_BSD_2_CLAUSE,
@@ -75,7 +76,7 @@ export async function discoverCandidates(config: ResearchConfig) {
       "--json",
       "fullName,description,stargazersCount,forksCount,pushedAt,isArchived,url,defaultBranch,license",
       "--limit",
-      "30",
+      String(DEFAULT_GH_SEARCH_LIMIT),
     ]);
 
     for (const row of rows) {

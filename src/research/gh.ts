@@ -3,6 +3,7 @@
 // @see https://bun.com/docs/runtime/shell#reading-output
 // @see https://bun.com/docs/runtime/utils#bun-sleep
 import { $ } from "bun";
+import { DEFAULT_GH_RETRIES } from "./constants.ts";
 
 /** All GitHub access via gh CLI — subprocess SSOT. See docs/BUN_SHELL.md. */
 
@@ -16,7 +17,7 @@ export function parseGhStdout<T>(stdout: Buffer | Uint8Array | string): T {
   return JSON.parse(text) as T;
 }
 
-export async function ghJson<T>(args: string[], retries = 3): Promise<T> {
+export async function ghJson<T>(args: string[], retries = DEFAULT_GH_RETRIES): Promise<T> {
   for (let attempt = 0; attempt < retries; attempt++) {
     const { exitCode, stdout, stderr } = await $`gh ${args}`.nothrow().quiet();
 
