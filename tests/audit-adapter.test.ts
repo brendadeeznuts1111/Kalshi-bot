@@ -79,14 +79,16 @@ describe("audit-adapter", () => {
     expect(digest).toMatch(/^[a-f0-9]{64}$/);
   });
 
-  test("finding digest matches evidence file body", () => {
+  test("finding digests match evidence file body (plain: stored equals content)", () => {
     const report = buildRepoReport(highValueScored(), "2026-07-21T00:00:00.000Z");
     const ndjson = evidenceNdjson(report);
     const body = evidenceFileBody(ndjson);
     const finding = repoReportToAuditFindingWire(report, "run-test");
     expect(finding.evidence.algorithm).toBe("sha3-256");
-    expect(finding.evidence.digest).toBe(digestEvidenceBody(body));
-    expect(finding.evidence.digest).toBe(sha3Hex(body));
+    expect(finding.evidence.contentDigest).toBe(digestEvidenceBody(body));
+    expect(finding.evidence.contentDigest).toBe(sha3Hex(body));
+    expect(finding.evidence.encoding).toBe("plain");
+    expect(finding.evidence.digest).toBe(finding.evidence.contentDigest);
     expect(finding.evidence.mediaType).toBe("application/jsonl");
   });
 

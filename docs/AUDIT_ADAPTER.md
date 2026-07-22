@@ -33,12 +33,14 @@ Use `--export-audit` on the research CLI to emit after a run (both tiers).
 
 ## Evidence integrity (Phase 2)
 
-1. **Line evidence** → JSONL (`application/jsonl`), one `EvidenceLine` per row under `research/audit-evidence/`.
-2. **Digest** → `Bun.CryptoHasher("sha3-256")` over the exact evidence file bytes (NDJSON + trailing newline when non-empty).
+1. **Line evidence** → JSONL (`application/jsonl`), one `EvidenceLine` per row under `research/audit-evidence/`. Bodies ≥ 4 KiB are stored as **zstd frames** (`Bun.zstdCompressSync`, level recorded in finding metadata).
+2. **Dual digests** (both `sha3-256`):
+   - **`digest`** — integrity anchor over **bytes as stored** (plain or zstd). Matches `sha3sum` / `openssl dgst -sha3-256` on the file on disk.
+   - **`contentDigest`** — identity hash over the **decompressed NDJSON body** (dedupe / content equality; safe across recompression or level changes).
 3. **Local cache fingerprint** → still `Bun.hash` in `evidenceFingerprint()` (fast, non-audit).
-4. **Audit fingerprint** → `evidenceSha3Fingerprint()` / export digest (tamper-proof).
+4. **Audit fingerprint** → `evidenceSha3Fingerprint()` / export line index (tamper-proof summary).
 
-Monorepo schema requires `evidence.path` under `tools/audit-evidence/`. On ingest, remap (same bytes; rotor uses `.ndjson` because the monorepo gitignores `*.jsonl`):
+Monorepo schema requires `evidence.path` under `tools/audit-evidence/`. On ingest, remap (same stored bytes; rotor uses `.ndjson` because the monorepo gitignores `*.jsonl`):
 
 ```
 research/audit-evidence/{owner}__{repo}.jsonl
@@ -74,7 +76,7 @@ Ingest steps:
 
 1. Validate each `.repo-report.json` with `validateRepoReport` / schema.
 2. Copy evidence using `evidenceCopies` from `rotor-ingest.json` (Kalshi: `.jsonl` → rotor: `.ndjson`, same bytes).
-3. Tamper check: `bun run export-audit -- --verify …` (sha3-256 over file bytes).
+3. Tamper check: `bun run export-audit -- --verify …` (stored `digest` + logical `contentDigest`).
 4. `parseAuditFinding(wire)` → branded interior types at monorepo boundary.
 5. Append to rotor catalog when emitter SSOT exists in `~/Projects`.
 

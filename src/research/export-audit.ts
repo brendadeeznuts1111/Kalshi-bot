@@ -2,6 +2,7 @@
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import {
+  buildAuditEvidenceWire,
   buildAuditRunExport,
   evidenceExportPath,
   evidenceFileBody,
@@ -9,7 +10,13 @@ import {
   type AuditFindingWire,
 } from "./audit-adapter.ts";
 import type { ResearchConfig, ResearchRun } from "./types.ts";
-import { decodeEvidenceBody, encodeEvidenceBody, evidenceStorageLabel } from "./evidence-io.ts";
+import {
+  decodeEvidenceBody,
+  digestLogicalEvidenceBody,
+  digestStoredEvidenceBytes,
+  encodeEvidenceBody,
+  evidenceStorageLabel,
+} from "./evidence-io.ts";
 import { validateRepoReport } from "./validate.ts";
 import { AUDIT_EVIDENCE_DIR, AUDIT_EXPORT_DIR, auditEvidenceAbsPath, joinPath, ROOT } from "./paths.ts";
 
@@ -44,6 +51,9 @@ export async function writeAuditExports(
       tier: b.finding.meta?.tier ?? "watchlist",
       evidencePath: b.finding.evidence.path,
       digest: b.finding.evidence.digest,
+      contentDigest: b.finding.evidence.contentDigest,
+      encoding: b.finding.evidence.encoding,
+      zstdLevel: b.finding.evidence.zstdLevel,
     })),
   };
   await Bun.write(join(auditDir, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
@@ -54,9 +64,13 @@ export async function writeAuditExports(
     await mkdir(AUDIT_EVIDENCE_DIR, { recursive: true });
     const body = evidenceFileBody(bundle.evidenceNdjson);
     const encoded = encodeEvidenceBody(body);
-    await Bun.write(evidenceAbs, encoded);
-    if (evidenceStorageLabel(encoded.byteLength) === "zstd") {
-      console.error(`[audit] zstd evidence ${bundle.repoReport.fullName} (${body.length} → ${encoded.byteLength} bytes)`);
+    const evidence = buildAuditEvidenceWire(body, bundle.finding.evidence.path, encoded);
+    bundle.finding.evidence = evidence;
+    await Bun.write(evidenceAbs, encoded.bytes);
+    if (evidenceStorageLabel(encoded.encoding) === "zstd") {
+      console.error(
+        `[audit] zstd evidence ${bundle.repoReport.fullName} (${body.length} → ${encoded.bytes.byteLength} bytes, level ${encoded.zstdLevel})`,
+      );
     }
     await Bun.write(
       join(auditDir, findingFileName(bundle.finding)),
@@ -74,11 +88,19 @@ export async function writeAuditExports(
   return auditRel;
 }
 
-export async function hashEvidenceFile(absPath: string): Promise<string> {
-  // @see https://bun.com/docs/runtime/hashing#bun-cryptohasher
+export async function hashStoredEvidenceFile(absPath: string): Promise<string> {
   const bytes = await Bun.file(absPath).arrayBuffer();
-  const logical = decodeEvidenceBody(bytes);
-  return new Bun.CryptoHasher("sha3-256").update(logical).digest("hex");
+  return digestStoredEvidenceBytes(new Uint8Array(bytes));
+}
+
+export async function hashLogicalEvidenceFile(absPath: string): Promise<string> {
+  const bytes = await Bun.file(absPath).arrayBuffer();
+  return digestLogicalEvidenceBody(decodeEvidenceBody(bytes));
+}
+
+/** @deprecated use hashStoredEvidenceFile / hashLogicalEvidenceFile */
+export async function hashEvidenceFile(absPath: string): Promise<string> {
+  return hashStoredEvidenceFile(absPath);
 }
 
 export function toRotorFindingWire(finding: AuditFindingWire): AuditFindingWire {
@@ -119,7 +141,12 @@ export async function verifyLocalAuditExport(auditRelDir: string): Promise<Audit
   }
 
   const manifest = JSON.parse(await manifestFile.text()) as {
-    findings: Array<{ id: string; evidencePath: string; digest: string }>;
+    findings: Array<{
+      id: string;
+      evidencePath: string;
+      digest: string;
+      contentDigest?: string;
+    }>;
   };
 
   for (const entry of manifest.findings) {
@@ -134,10 +161,19 @@ export async function verifyLocalAuditExport(auditRelDir: string): Promise<Audit
       errors.push(`missing evidence: ${finding.evidence.path}`);
       continue;
     }
-    const actual = await hashEvidenceFile(evidenceAbs);
-    if (actual !== finding.evidence.digest) {
+    const stored = await hashStoredEvidenceFile(evidenceAbs);
+    const logical = await hashLogicalEvidenceFile(evidenceAbs);
+    const expectedStored = finding.evidence.digest;
+    const expectedLogical = finding.evidence.contentDigest ?? finding.evidence.digest;
+
+    if (stored !== expectedStored) {
       errors.push(
-        `digest mismatch ${finding.evidence.path}: expected ${finding.evidence.digest}, got ${actual}`,
+        `stored digest mismatch ${finding.evidence.path}: expected ${expectedStored}, got ${stored}`,
+      );
+    }
+    if (logical !== expectedLogical) {
+      errors.push(
+        `content digest mismatch ${finding.evidence.path}: expected ${expectedLogical}, got ${logical}`,
       );
     }
   }

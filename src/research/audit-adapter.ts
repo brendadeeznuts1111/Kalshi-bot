@@ -9,6 +9,12 @@ import { buildRepoReport } from "./evidence.ts";
 import { validateRepoReport } from "./validate.ts";
 import { auditEvidenceRelPath } from "./paths.ts";
 import {
+  digestLogicalEvidenceBody,
+  digestStoredEvidenceBytes,
+  encodeEvidenceBody,
+  type EncodedEvidence,
+} from "./evidence-io.ts";
+import {
   AUDIT_CONCEPT_SHORTLIST_ID,
   AUDIT_EVIDENCE_RELATED_DOC,
   AUDIT_RELATED_CONCEPT_IDS,
@@ -40,7 +46,13 @@ export type AuditFindingWire = {
 export type AuditEvidenceWire = {
   path: string;
   algorithm: "sha3-256";
+  /** Integrity anchor — sha3-256 over bytes as stored (plain or zstd frame). */
   digest: string;
+  /** Identity hash — sha3-256 over decompressed NDJSON body. */
+  contentDigest: string;
+  encoding?: "plain" | "zstd";
+  /** Present when encoding is zstd — level used at write time. */
+  zstdLevel?: number;
   mediaType: string;
 };
 
@@ -89,7 +101,24 @@ export function evidenceFileBody(ndjson: string): string {
 }
 
 export function digestEvidenceBody(body: string): string {
-  return sha3Hex(body);
+  return digestLogicalEvidenceBody(body);
+}
+
+/** Build evidence wire with dual digests after encoding (stored + logical). */
+export function buildAuditEvidenceWire(
+  body: string,
+  path: string,
+  encoded: EncodedEvidence = encodeEvidenceBody(body),
+): AuditEvidenceWire {
+  return {
+    path,
+    algorithm: "sha3-256",
+    digest: digestStoredEvidenceBytes(encoded.bytes),
+    contentDigest: digestLogicalEvidenceBody(body),
+    encoding: encoded.encoding,
+    zstdLevel: encoded.zstdLevel,
+    mediaType: "application/jsonl",
+  };
 }
 
 export function evidenceExportPath(_runId: string, fullName: string): string {
@@ -185,7 +214,8 @@ export function shortlistRulesConcept(config: ResearchConfig, publishedAt: strin
 
 /**
  * Maps a {@link RepoReport} to monorepo `AuditFinding` wire JSON (parse at boundary
- * with `parseAuditFinding`). Evidence path points at committed JSONL; digest is sha3-256.
+ * with `parseAuditFinding`). Evidence path points at committed JSONL; dual sha3-256 digests
+ * (stored bytes + decompressed body) — see `buildAuditEvidenceWire`.
  *
  * @param report - Per-repo SSOT from `buildRepoReport`
  * @param runId - Research run id stored in `discoveredIn`
@@ -201,8 +231,8 @@ export function repoReportToAuditFindingWire(
   const tier = options?.tier ?? resolveAuditExportTier(report) ?? "watchlist";
   const ndjson = evidenceNdjson(report);
   const body = evidenceFileBody(ndjson);
-  const digest = digestEvidenceBody(body);
   const path = evidenceExportPath(runId, report.fullName);
+  const evidence = buildAuditEvidenceWire(body, path);
   const tierNote =
     tier === "watchlist"
       ? " Watchlist tier — below high-value export threshold; verify before lift."
@@ -223,12 +253,7 @@ export function repoReportToAuditFindingWire(
     status: options?.status ?? "open",
     publishedAt: isoDate(report.generatedAt),
     discoveredIn: runId,
-    evidence: {
-      path,
-      algorithm: "sha3-256",
-      digest,
-      mediaType: "application/jsonl",
-    },
+    evidence,
     related: [...AUDIT_RELATED_CONCEPT_IDS],
     relatedDocs: [AUDIT_EVIDENCE_RELATED_DOC],
     meta: { emitter: EMITTER, buildPin: BUILD_PIN, tier },
