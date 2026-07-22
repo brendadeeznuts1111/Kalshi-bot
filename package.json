@@ -32,7 +32,13 @@
     "calibration:mark-toxicity": "bun src/calibration/mark-toxicity.ts",
     "calibration:resolve-outcomes": "bun src/calibration/resolve-outcomes.ts",
     "calibration:maintenance": "bun src/calibration/maintenance.ts",
-    "alpha:run": "bun src/alpha/run-shadow-once.ts"
+    "calibration:toxicity:loop": "bun src/calibration/toxicity-loop.ts",
+    "calibration:toxicity:register": "bun src/calibration/toxicity-schedule-cli.ts register",
+    "calibration:toxicity:preview": "bun src/calibration/toxicity-schedule-cli.ts preview",
+    "alpha:run": "bun src/alpha/run-shadow-once.ts",
+    "tennis:events": "bun tools/tennis/events-cli.ts",
+    "tennis:itf": "bun tools/tennis/itf-calendar-cli.ts",
+    "tennis:record": "bun tools/tennis/record-cli.ts"
   },
   "engines": {
     "bun": ">=1.3.13"
