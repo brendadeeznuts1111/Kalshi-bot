@@ -9,6 +9,8 @@ coverage/
 .env
 .env.*
 !.env.example
+*.pem
+kalshi-bot-*.txt
 
 # Machine-local runtime (regenerated each run)
 research/cache/

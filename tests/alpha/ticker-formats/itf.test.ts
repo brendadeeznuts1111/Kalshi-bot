@@ -8,9 +8,9 @@ import {
   splitItfMatchupBlob,
   itfSideCodesForEvent,
   itfMatchupBlobIsUnambiguous,
-} from "../../src/alpha/ticker-formats/itf.ts";
+} from "../../../src/alpha/ticker-formats/itf.ts";
 
-describe("ticker-formats/itf", () => {
+describe("itf", () => {
   test("parses ITF doubles example from Brisbane", () => {
     const don = "KXITFDOUBLES-26JUL21DONMARDELHOY-DONMAR";
     const del = "KXITFDOUBLES-26JUL21DONMARDELHOY-DELHOY";

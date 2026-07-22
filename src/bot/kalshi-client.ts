@@ -4,11 +4,13 @@
  * Shared Kalshi execution client — lift auth + orders from MM/arb shortlist.
  * Tenants import this; harness research code must not import alpha programs.
  */
+import type { KalshiMarketTicker } from "../institutions/event-store/brands.ts";
+import { unbrand } from "../institutions/event-store/brands.ts";
 import { OFFICIAL_URLS } from "../institutions/official-urls.ts";
 export type KalshiOrderSide = "yes" | "no";
 
 export type KalshiOrderRequest = {
-  ticker: string;
+  ticker: KalshiMarketTicker;
   side: KalshiOrderSide;
   count: number;
   /** Limit price in cents (1–99). */
@@ -24,7 +26,10 @@ export type KalshiOrderResult = {
 /** Placeholder until lifted client is wired — execute.ts calls this behind --live. */
 export async function placeOrder(request: KalshiOrderRequest): Promise<KalshiOrderResult> {
   if (request.dryRun) {
-    return { orderId: `dry-${request.ticker}-${Date.now()}`, dryRun: true };
+    return {
+      orderId: `dry-${unbrand(request.ticker)}-${Date.now()}`,
+      dryRun: true,
+    };
   }
   throw new Error(
     `Live Kalshi client not wired — lift from market-making shortlist before --live (API: ${OFFICIAL_URLS.kalshi.tradeApiDocs})`,

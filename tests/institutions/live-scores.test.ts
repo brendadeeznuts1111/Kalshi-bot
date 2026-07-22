@@ -1,13 +1,12 @@
 // @see https://bun.com/docs/test/index#run-tests
 import { describe, expect, test } from "bun:test";
 import { joinPath } from "../../src/research/paths.ts";
-import {
-  isLiveScoreStatus,
-  parseKalshiLiveDataWire,
-  parseKalshiMilestonesWire,
-  pickTennisMilestone,
-} from "../../src/bot/kalshi-live-data.ts";
 import { mintKalshiCompetitorEventId } from "../../src/institutions/event-store/kalshi-event-id.ts";
+import {
+  asCompetitorId,
+  asKalshiEventTicker,
+  asSeriesTicker,
+} from "../../src/institutions/event-store/brands.ts";
 import {
   analyzeScoreSnapshotCadence,
   classifyScoreTransition,
@@ -23,17 +22,12 @@ import {
   type LivePollSummary,
 } from "../../src/institutions/event-store/live-scores.ts";
 import { openEventStore } from "../../src/institutions/event-store/open-db.ts";
-import {
-  listMarketTickersForEventIds,
-  listRecordTickers,
-} from "../../src/institutions/event-store/watch-set.ts";
-import { asCanonicalEventId } from "../../src/institutions/event-store/types.ts";
 
 const FIXTURE = joinPath(import.meta.dir, "../fixtures/kalshi-live-data.json");
 
-const C1 = "9eface64-a579-436d-8717-50f2730400e2";
-const C2 = "2b652366-a7ff-4cc9-8ab9-8a0ba31b68ed";
-const EVENT = "KXITFWMATCH-26JUL22PENKUL";
+const competitor1Id = asCompetitorId("9eface64-a579-436d-8717-50f2730400e2");
+const competitor2Id = asCompetitorId("2b652366-a7ff-4cc9-8ab9-8a0ba31b68ed");
+const eventTicker = asKalshiEventTicker("KXITFWMATCH-26JUL22PENKUL");
 
 function canarySummary(partial: Partial<LivePollSummary>): LivePollSummary {
   return {
@@ -54,50 +48,15 @@ function canarySummary(partial: Partial<LivePollSummary>): LivePollSummary {
   };
 }
 
-describe("kalshi-live-data parse", () => {
-  test("milestones + live wire", async () => {
-    const fx = await Bun.file(FIXTURE).json();
-    const milestones = parseKalshiMilestonesWire(fx.milestones);
-    expect(milestones).toHaveLength(1);
-    expect(pickTennisMilestone(milestones)?.id).toBe("ccf4cd8d-78a4-4dba-8d4e-e680d8753895");
-    expect(milestones[0]!.firstCompetitorId).toBe(C1);
-
-    const idle = parseKalshiLiveDataWire(fx.live_data_not_started)!;
-    expect(idle.status).toBe("not_started");
-    expect(isLiveScoreStatus(idle.status, idle)).toBe(false);
-
-    const live = parseKalshiLiveDataWire(fx.live_data_in_progress)!;
-    expect(live.pointsHome).toBe(30);
-    expect(live.gamesHome).toBe(2);
-    expect(live.gamesAway).toBe(1);
-    expect(live.serverSide).toBe(1);
-    expect(isLiveScoreStatus(live.status, live)).toBe(true);
-  });
-
-  test("early-start via points while status still not_started", () => {
-    expect(
-      isLiveScoreStatus("not_started", {
-        setsHome: 0,
-        setsAway: 0,
-        gamesHome: 0,
-        gamesAway: 0,
-        pointsHome: 15,
-        pointsAway: 0,
-        serverCompetitorId: null,
-      }),
-    ).toBe(true);
-  });
-});
-
-describe("live-scores poller", () => {
+describe("live-scores", () => {
   test("watch set uses lead window; poll upserts + snapshots on change", async () => {
     const db = openEventStore({ dbPath: ":memory:" });
     const fx = await Bun.file(FIXTURE).json();
     const startTs = new Date(Date.now() + 2 * 60_000).toISOString(); // within 5m lead
     const eventId = mintKalshiCompetitorEventId({
-      series: "KXITFWMATCH",
-      competitorA: C1,
-      competitorB: C2,
+      series: asSeriesTicker("KXITFWMATCH"),
+      competitorA: competitor1Id,
+      competitorB: competitor2Id,
       startTs,
     });
     const now = Date.now();
@@ -111,17 +70,17 @@ describe("live-scores poller", () => {
         'Kulikova', 'Penickova', '', '', $start, 'scheduled', 'kalshi-api', '', $now,
         $hash, $now, 'trading'
       )`,
-    ).run({ $id: eventId, $start: startTs, $now: now, $hash: `t|${EVENT}` });
+    ).run({ $id: eventId, $start: startTs, $now: now, $hash: `t|${eventTicker}` });
     db.query(
       `INSERT INTO markets (
         market_id, event_id, venue, ticker, series, market_kind, yes_side_label, side_code,
         competitor_id, source, fetched_ts
       ) VALUES
-        ('kalshi:${EVENT}-PEN', $id, 'kalshi', '${EVENT}-PEN', 'KXITFWMATCH', 'match_winner',
+        ('kalshi:${eventTicker}-PEN', $id, 'kalshi', '${eventTicker}-PEN', 'KXITFWMATCH', 'match_winner',
          'Penickova', 'PEN', $c1, 'kalshi-api', $now),
-        ('kalshi:${EVENT}-KUL', $id, 'kalshi', '${EVENT}-KUL', 'KXITFWMATCH', 'match_winner',
+        ('kalshi:${eventTicker}-KUL', $id, 'kalshi', '${eventTicker}-KUL', 'KXITFWMATCH', 'match_winner',
          'Kulikova', 'KUL', $c2, 'kalshi-api', $now)`,
-    ).run({ $id: eventId, $c1: C1, $c2: C2, $now: now });
+    ).run({ $id: eventId, $c1: competitor1Id, $c2: competitor2Id, $now: now });
 
     expect(listWatchEvents(db, { leadMinutes: 5 })).toHaveLength(1);
 
@@ -139,7 +98,7 @@ describe("live-scores poller", () => {
     };
 
     const first = await pollLiveScores(db, {
-      eventTickers: [EVENT],
+      eventTickers: [eventTicker],
       fetchImpl,
       pauseMs: 0,
     });
@@ -155,7 +114,7 @@ describe("live-scores poller", () => {
 
     phase = "live";
     const second = await pollLiveScores(db, {
-      eventTickers: [EVENT],
+      eventTickers: [eventTicker],
       fetchImpl,
       pauseMs: 0,
     });
@@ -185,9 +144,9 @@ describe("live-scores poller", () => {
     const fx = await Bun.file(FIXTURE).json();
     const startTs = new Date(Date.now() + 2 * 60_000).toISOString();
     const eventId = mintKalshiCompetitorEventId({
-      series: "KXITFWMATCH",
-      competitorA: C1,
-      competitorB: C2,
+      series: asSeriesTicker("KXITFWMATCH"),
+      competitorA: competitor1Id,
+      competitorB: competitor2Id,
       startTs,
     });
     const now = Date.now();
@@ -201,17 +160,17 @@ describe("live-scores poller", () => {
         'Penickova', 'Kulikova', '', '', $start, 'scheduled', 'kalshi-api', '', $now,
         $hash, $now, 'trading'
       )`,
-    ).run({ $id: eventId, $start: startTs, $now: now, $hash: `t|dry|${EVENT}` });
+    ).run({ $id: eventId, $start: startTs, $now: now, $hash: `t|dry|${eventTicker}` });
     db.query(
       `INSERT INTO markets (
         market_id, event_id, venue, ticker, series, market_kind, yes_side_label, side_code,
         competitor_id, source, fetched_ts
       ) VALUES
-        ('kalshi:${EVENT}-PEN', $id, 'kalshi', '${EVENT}-PEN', 'KXITFWMATCH', 'match_winner',
+        ('kalshi:${eventTicker}-PEN', $id, 'kalshi', '${eventTicker}-PEN', 'KXITFWMATCH', 'match_winner',
          'Penickova', 'PEN', $c1, 'kalshi-api', $now),
-        ('kalshi:${EVENT}-KUL', $id, 'kalshi', '${EVENT}-KUL', 'KXITFWMATCH', 'match_winner',
+        ('kalshi:${eventTicker}-KUL', $id, 'kalshi', '${eventTicker}-KUL', 'KXITFWMATCH', 'match_winner',
          'Kulikova', 'KUL', $c2, 'kalshi-api', $now)`,
-    ).run({ $id: eventId, $c1: C1, $c2: C2, $now: now });
+    ).run({ $id: eventId, $c1: competitor1Id, $c2: competitor2Id, $now: now });
 
     const fetchImpl = async (input: string | URL | Request) => {
       const url = String(input);
@@ -222,7 +181,7 @@ describe("live-scores poller", () => {
     };
 
     const summary = await pollLiveScores(db, {
-      eventTickers: [EVENT],
+      eventTickers: [eventTicker],
       fetchImpl,
       pauseMs: 0,
       dryRun: true,
@@ -250,9 +209,9 @@ describe("live-scores poller", () => {
     const startTs = new Date(Date.now() + 2 * 60_000).toISOString();
     const now = Date.now();
     const eventId = mintKalshiCompetitorEventId({
-      series: "KXITFWMATCH",
-      competitorA: C1,
-      competitorB: C2,
+      series: asSeriesTicker("KXITFWMATCH"),
+      competitorA: competitor1Id,
+      competitorB: competitor2Id,
       startTs,
     });
 
@@ -267,17 +226,17 @@ describe("live-scores poller", () => {
           'Penickova', 'Kulikova', '', '', $start, 'scheduled', 'kalshi-api', '', $now,
           $hash, $now, 'trading'
         )`,
-      ).run({ $id: eventId, $start: startTs, $now: now, $hash: `eq|${EVENT}` });
+      ).run({ $id: eventId, $start: startTs, $now: now, $hash: `eq|${eventTicker}` });
       db.query(
         `INSERT INTO markets (
           market_id, event_id, venue, ticker, series, market_kind, yes_side_label, side_code,
           competitor_id, source, fetched_ts
         ) VALUES
-          ('kalshi:${EVENT}-PEN', $id, 'kalshi', '${EVENT}-PEN', 'KXITFWMATCH', 'match_winner',
+          ('kalshi:${eventTicker}-PEN', $id, 'kalshi', '${eventTicker}-PEN', 'KXITFWMATCH', 'match_winner',
            'Penickova', 'PEN', $c1, 'kalshi-api', $now),
-          ('kalshi:${EVENT}-KUL', $id, 'kalshi', '${EVENT}-KUL', 'KXITFWMATCH', 'match_winner',
+          ('kalshi:${eventTicker}-KUL', $id, 'kalshi', '${eventTicker}-KUL', 'KXITFWMATCH', 'match_winner',
            'Kulikova', 'KUL', $c2, 'kalshi-api', $now)`,
-      ).run({ $id: eventId, $c1: C1, $c2: C2, $now: now });
+      ).run({ $id: eventId, $c1: competitor1Id, $c2: competitor2Id, $now: now });
     };
 
     let phase: "idle" | "live" = "idle";
@@ -290,7 +249,7 @@ describe("live-scores poller", () => {
       return new Response(JSON.stringify(body), { status: 200 });
     };
 
-    const opts = { eventTickers: [EVENT], fetchImpl, pauseMs: 0 as const };
+    const opts = { eventTickers: [eventTicker], fetchImpl, pauseMs: 0 as const };
 
     // Parallel DBs, empty live_scores — first poll (idle).
     const dryDb = openEventStore({ dbPath: ":memory:" });
@@ -364,7 +323,7 @@ describe("live-scores poller", () => {
       gamesAway: 1,
       pointsHome: 30,
       pointsAway: 15,
-      serverCompetitorId: C1,
+      serverCompetitorId: competitor1Id,
     };
     expect(classifyScoreTransition(null, base)).toBe("first");
     expect(classifyScoreTransition(base, { ...base, pointsHome: 40 })).toBe("point");
@@ -405,9 +364,9 @@ describe("live-scores poller", () => {
   test("analyzeScoreSnapshotCadence reports gaps and REST verdict", () => {
     const db = openEventStore({ dbPath: ":memory:" });
     const eventId = mintKalshiCompetitorEventId({
-      series: "KXITFWMATCH",
-      competitorA: C1,
-      competitorB: C2,
+      series: asSeriesTicker("KXITFWMATCH"),
+      competitorA: competitor1Id,
+      competitorB: competitor2Id,
       startTs: new Date().toISOString(),
     });
     const now = Date.now();
@@ -443,7 +402,7 @@ describe("live-scores poller", () => {
            $id, $ticker, 'm', $ts, 'recv', 'in_progress',
            0, 0, $g, 0, $p, 0, NULL, '{}', 'kalshi-live-data', '', $ts
          )`,
-      ).run({ $id: eventId, $ticker: EVENT, $ts: s.t, $g: s.g, $p: s.p });
+      ).run({ $id: eventId, $ticker: eventTicker, $ts: s.t, $g: s.g, $p: s.p });
     }
     const report = analyzeScoreSnapshotCadence(db, { intervalMs: 10_000 });
     expect(report.totals.snapshots).toBe(4);
@@ -452,168 +411,14 @@ describe("live-scores poller", () => {
     expect(report.totals.gameTransitions).toBeGreaterThanOrEqual(1);
   });
 
-  test("listRecordTickers selects markets under lead-aligned watch-set", () => {
-    const db = openEventStore({ dbPath: ":memory:" });
-    const now = Date.now();
-    const nearTs = new Date(now + 2 * 60_000).toISOString();
-    const farTs = new Date(now + 60 * 60_000).toISOString();
-    const nearId = mintKalshiCompetitorEventId({
-      series: "KXITFWMATCH",
-      competitorA: C1,
-      competitorB: C2,
-      startTs: nearTs,
-    });
-    const farId = mintKalshiCompetitorEventId({
-      series: "KXITFWMATCH",
-      competitorA: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-      competitorB: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
-      startTs: farTs,
-    });
-    const liveFarId = mintKalshiCompetitorEventId({
-      series: "KXITFMATCH",
-      competitorA: "cccccccc-cccc-cccc-cccc-cccccccccccc",
-      competitorB: "dddddddd-dddd-dddd-dddd-dddddddddddd",
-      startTs: farTs,
-    });
-
-    const insertEvent = (
-      id: string,
-      start: string,
-      ticker: string,
-      series: string,
-      players: [string, string],
-    ) => {
-      db.query(
-        `INSERT INTO events (
-          event_id, tour, level, tournament, location, surface, court, round, best_of,
-          player_a, player_b, winner, loser, start_ts, outcome, source, source_url, fetched_ts,
-          source_row_hash, ingested_at, corpus
-        ) VALUES (
-          $id, 'ITF', $series, 'W', '', 'Hard', '', 'R32', NULL,
-          $a, $b, '', '', $start, 'scheduled', 'kalshi-api', '', $now,
-          $hash, $now, 'trading'
-        )`,
-      ).run({
-        $id: id,
-        $series: series,
-        $a: players[0],
-        $b: players[1],
-        $start: start,
-        $now: now,
-        $hash: `watch|${ticker}`,
-      });
-      db.query(
-        `INSERT INTO markets (
-          market_id, event_id, venue, ticker, series, market_kind, yes_side_label, side_code,
-          competitor_id, source, fetched_ts
-        ) VALUES
-          ('kalshi:${ticker}-A', $id, 'kalshi', '${ticker}-A', $series, 'match_winner',
-           $a, 'A', NULL, 'kalshi-api', $now),
-          ('kalshi:${ticker}-B', $id, 'kalshi', '${ticker}-B', $series, 'match_winner',
-           $b, 'B', NULL, 'kalshi-api', $now)`,
-      ).run({ $id: id, $series: series, $a: players[0], $b: players[1], $now: now });
-    };
-
-    insertEvent(nearId, nearTs, "KXITFWMATCH-26JUL22NEAR", "KXITFWMATCH", ["NearA", "NearB"]);
-    insertEvent(farId, farTs, "KXITFWMATCH-26JUL22FAR", "KXITFWMATCH", ["FarA", "FarB"]);
-    insertEvent(liveFarId, farTs, "KXITFMATCH-26JUL22LIVE", "KXITFMATCH", ["LiveA", "LiveB"]);
-    db.query(
-      `INSERT INTO live_scores (
-         event_id, event_ticker, milestone_id, updated_ts, source_clock, status, match_status,
-         sets_home, sets_away, games_home, games_away, points_home, points_away,
-         server_competitor_id, competitor1_id, competitor2_id, is_live, details_json,
-         source, source_url, fetched_ts
-       ) VALUES (
-         $id, 'KXITFMATCH-26JUL22LIVE', 'm1', $now, 'recv', 'in_progress', 'in_progress',
-         0, 0, 1, 0, 30, 0, NULL, NULL, NULL, 1, '{}',
-         'kalshi-live-data', '', $now
-       )`,
-    ).run({ $id: liveFarId, $now: now });
-
-    expect(listWatchEvents(db, { leadMinutes: 5 })).toHaveLength(2);
-
-    const { events, eventIds, tickers } = listRecordTickers(db, { leadMinutes: 5, limit: 40 });
-    expect(events.map((e) => e.eventTicker).sort()).toEqual([
-      "KXITFMATCH-26JUL22LIVE",
-      "KXITFWMATCH-26JUL22NEAR",
-    ]);
-    expect(eventIds).toContain(asCanonicalEventId(nearId));
-    expect(eventIds).toContain(asCanonicalEventId(liveFarId));
-    expect(eventIds).not.toContain(asCanonicalEventId(farId));
-    expect(tickers.sort()).toEqual([
-      "KXITFMATCH-26JUL22LIVE-A",
-      "KXITFMATCH-26JUL22LIVE-B",
-      "KXITFWMATCH-26JUL22NEAR-A",
-      "KXITFWMATCH-26JUL22NEAR-B",
-    ]);
-    expect(listMarketTickersForEventIds(db, [asCanonicalEventId(farId)])).toEqual([
-      "KXITFWMATCH-26JUL22FAR-A",
-      "KXITFWMATCH-26JUL22FAR-B",
-    ]);
-  });
-
-  test("listRecordTickers clearStale:false is read-only (dry-run safe)", () => {
-    const db = openEventStore({ dbPath: ":memory:" });
-    const now = Date.now();
-    const startTs = new Date(now + 60 * 60_000).toISOString();
-    const eventId = mintKalshiCompetitorEventId({
-      series: "KXITFWMATCH",
-      competitorA: C1,
-      competitorB: C2,
-      startTs,
-    });
-    db.query(
-      `INSERT INTO events (
-        event_id, tour, level, tournament, location, surface, court, round, best_of,
-        player_a, player_b, winner, loser, start_ts, outcome, source, source_url, fetched_ts,
-        source_row_hash, ingested_at, corpus
-      ) VALUES (
-        $id, 'ITF-W', 'KXITFWMATCH', 't', '', 'Hard', '', 'R', NULL,
-        'A', 'B', '', '', $start, 'scheduled', 'kalshi-api', '', $now,
-        $hash, $now, 'trading'
-      )`,
-    ).run({ $id: eventId, $start: startTs, $now: now, $hash: "dry-watch" });
-    db.query(
-      `INSERT INTO markets (
-        market_id, event_id, venue, ticker, series, market_kind, yes_side_label, side_code,
-        competitor_id, source, fetched_ts
-      ) VALUES ('kalshi:KXITFWMATCH-DRY-A', $id, 'kalshi', 'KXITFWMATCH-DRY-A', 'KXITFWMATCH',
-        'match_winner', 'A', 'A', $c1, 'kalshi-api', $now)`,
-    ).run({ $id: eventId, $c1: C1, $now: now });
-    const staleUpdated = now - LIVE_STALE_MS - 1_000;
-    db.query(
-      `INSERT INTO live_scores (
-         event_id, event_ticker, milestone_id, updated_ts, source_clock, status, match_status,
-         sets_home, sets_away, games_home, games_away, points_home, points_away,
-         server_competitor_id, competitor1_id, competitor2_id, is_live, details_json,
-         source, source_url, fetched_ts
-       ) VALUES (
-         $id, 'KXITFWMATCH-DRY', 'm1', $old, 'recv', 'in_progress', 'in_progress',
-         0, 0, 1, 0, 30, 0, NULL, $c1, $c2, 1, '{}',
-         'kalshi-live-data', '', $old
-       )`,
-    ).run({ $id: eventId, $old: staleUpdated, $c1: C1, $c2: C2 });
-
-    const { tickers } = listRecordTickers(db, {
-      leadMinutes: 5,
-      nowMs: now,
-      clearStale: false,
-    });
-    expect(tickers).toEqual([]); // stale is_live ignored for membership, but not cleared
-    const live = db
-      .query(`SELECT is_live FROM live_scores WHERE event_id = $id`)
-      .get({ $id: eventId }) as { is_live: number };
-    expect(live.is_live).toBe(1);
-  });
-
   test("labelForCompetitor maps UUID to market label", () => {
     expect(
       labelForCompetitor(
         [
-          { competitorId: C1, label: "Penickova" },
-          { competitorId: C2, label: "Kulikova" },
+          { competitorId: competitor1Id, label: "Penickova" },
+          { competitorId: competitor2Id, label: "Kulikova" },
         ],
-        C1,
+        competitor1Id,
       ),
     ).toBe("Penickova");
   });
@@ -623,9 +428,9 @@ describe("live-scores poller", () => {
     const now = Date.now();
     const startTs = new Date(now + 60 * 60_000).toISOString(); // outside lead unless is_live
     const eventId = mintKalshiCompetitorEventId({
-      series: "KXITFWMATCH",
-      competitorA: C1,
-      competitorB: C2,
+      series: asSeriesTicker("KXITFWMATCH"),
+      competitorA: competitor1Id,
+      competitorB: competitor2Id,
       startTs,
     });
     db.query(
@@ -643,9 +448,9 @@ describe("live-scores poller", () => {
       `INSERT INTO markets (
         market_id, event_id, venue, ticker, series, market_kind, yes_side_label, side_code,
         competitor_id, source, fetched_ts
-      ) VALUES ('kalshi:${EVENT}-PEN', $id, 'kalshi', '${EVENT}-PEN', 'KXITFWMATCH',
+      ) VALUES ('kalshi:${eventTicker}-PEN', $id, 'kalshi', '${eventTicker}-PEN', 'KXITFWMATCH',
         'match_winner', 'Penickova', 'PEN', $c1, 'kalshi-api', $now)`,
-    ).run({ $id: eventId, $c1: C1, $now: now });
+    ).run({ $id: eventId, $c1: competitor1Id, $now: now });
     db.query(
       `INSERT INTO live_scores (
          event_id, event_ticker, milestone_id, updated_ts, source_clock, status, match_status,
@@ -659,10 +464,10 @@ describe("live-scores poller", () => {
        )`,
     ).run({
       $id: eventId,
-      $et: EVENT,
+      $et: eventTicker,
       $old: now - LIVE_STALE_MS - 1_000,
-      $c1: C1,
-      $c2: C2,
+      $c1: competitor1Id,
+      $c2: competitor2Id,
     });
     expect(listWatchEvents(db, { leadMinutes: 5, nowMs: now }).map((w) => w.eventId)).toEqual([]);
     expect(clearStaleLiveFlags(db, { nowMs: now })).toBe(0); // already cleared by listWatchEvents
@@ -678,15 +483,15 @@ describe("live-scores poller", () => {
     const ancientTs = new Date(now - 48 * 3600_000).toISOString();
     const nearTs = new Date(now + 2 * 60_000).toISOString();
     const ancientId = mintKalshiCompetitorEventId({
-      series: "KXITFWMATCH",
-      competitorA: "cccccccc-cccc-cccc-cccc-cccccccccccc",
-      competitorB: "dddddddd-dddd-dddd-dddd-dddddddddddd",
+      series: asSeriesTicker("KXITFWMATCH"),
+      competitorA: asCompetitorId("cccccccc-cccc-cccc-cccc-cccccccccccc"),
+      competitorB: asCompetitorId("dddddddd-dddd-dddd-dddd-dddddddddddd"),
       startTs: ancientTs,
     });
     const nearId = mintKalshiCompetitorEventId({
-      series: "KXITFWMATCH",
-      competitorA: C1,
-      competitorB: C2,
+      series: asSeriesTicker("KXITFWMATCH"),
+      competitorA: competitor1Id,
+      competitorB: competitor2Id,
       startTs: nearTs,
     });
     for (const [id, start, ticker] of [

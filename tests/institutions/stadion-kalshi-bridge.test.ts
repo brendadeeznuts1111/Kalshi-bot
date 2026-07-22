@@ -19,6 +19,28 @@ import {
   outcomeBitForKalshiPlayers,
 } from "../../src/institutions/event-store/stadion-kalshi-bridge.ts";
 import { asCanonicalEventId } from "../../src/institutions/event-store/types.ts";
+import {
+  asCompetitorId,
+  asSeriesTicker,
+} from "../../src/institutions/event-store/brands.ts";
+
+const SERIES_ITF = asSeriesTicker("KXITFWMATCH");
+const COMP_DAY_A = asCompetitorId("11111111-1111-1111-1111-111111111101");
+const COMP_DAY_B = asCompetitorId("11111111-1111-1111-1111-111111111102");
+const COMP_GRABHER = asCompetitorId("22222222-2222-2222-2222-222222222201");
+const COMP_PERELYGINA = asCompetitorId("22222222-2222-2222-2222-222222222202");
+const COMP_ADJ_A = asCompetitorId("33333333-3333-3333-3333-333333333301");
+const COMP_ADJ_B = asCompetitorId("33333333-3333-3333-3333-333333333302");
+const COMP_GRABHER_2 = asCompetitorId("44444444-4444-4444-4444-444444444401");
+const COMP_PERELYGINA_2 = asCompetitorId("44444444-4444-4444-4444-444444444402");
+const COMP_A1 = asCompetitorId("55555555-5555-5555-5555-555555555501");
+const COMP_B1 = asCompetitorId("55555555-5555-5555-5555-555555555502");
+const COMP_A2 = asCompetitorId("55555555-5555-5555-5555-555555555503");
+const COMP_B2 = asCompetitorId("55555555-5555-5555-5555-555555555504");
+const COMP_POISON_A = asCompetitorId("66666666-6666-6666-6666-666666666601");
+const COMP_POISON_B = asCompetitorId("66666666-6666-6666-6666-666666666602");
+const COMP_SYNC_A = asCompetitorId("77777777-7777-7777-7777-777777777701");
+const COMP_SYNC_B = asCompetitorId("77777777-7777-7777-7777-777777777702");
 
 const FIXTURE = joinPath(import.meta.dir, "../fixtures/itf-stadion-day.json");
 
@@ -71,7 +93,7 @@ function seedKalshiEvent(
   });
 }
 
-describe("stadion-kalshi-bridge helpers", () => {
+describe("stadion-kalshi-bridge", () => {
   test("normalize + extract last names", () => {
     expect(extractLastName("Julia Grabher")).toBe("grabher");
     expect(extractLastName("S. Bejlek")).toBe("bejlek");
@@ -150,9 +172,9 @@ describe("stadion-kalshi-bridge helpers", () => {
     // Stadion day from start_ts prefix; Kalshi occurrence shifted +1 calendar day.
     const kalshiStart = `${matchDayCandidates(target!.startTs)[2]}T18:00:00.000Z`;
     const kalshiId = mintKalshiCompetitorEventId({
-      series: "KXITFWMATCH",
-      competitorA: "day-a",
-      competitorB: "day-b",
+      series: SERIES_ITF,
+      competitorA: COMP_DAY_A,
+      competitorB: COMP_DAY_B,
       startTs: kalshiStart,
     });
     seedKalshiEvent(db, {
@@ -160,7 +182,7 @@ describe("stadion-kalshi-bridge helpers", () => {
       playerA: target!.playerA,
       playerB: target!.playerB,
       startTs: kalshiStart,
-      series: "KXITFWMATCH",
+      series: SERIES_ITF,
       eventTicker: "KXITFWMATCH-26JUL22DAYSLK",
     });
     const summary = bridgeStadionToKalshi(db);
@@ -178,7 +200,7 @@ describe("stadion-kalshi-bridge helpers", () => {
   });
 });
 
-describe("stadion-kalshi-bridge integrate", () => {
+describe("stadion-kalshi-bridge", () => {
   test("links unique surname+day+lane and propagates resolution", async () => {
     const db = openEventStore({ dbPath: ":memory:" });
     const wire = await Bun.file(FIXTURE).json();
@@ -197,9 +219,9 @@ describe("stadion-kalshi-bridge integrate", () => {
     expect(target).toBeTruthy();
 
     const kalshiId = mintKalshiCompetitorEventId({
-      series: "KXITFWMATCH",
-      competitorA: "comp-grabher",
-      competitorB: "comp-perelygina",
+      series: SERIES_ITF,
+      competitorA: COMP_GRABHER,
+      competitorB: COMP_PERELYGINA,
       startTs: target!.startTs,
     });
     // Reverse Kalshi label order vs Stadion sorted pair — tests outcome remap.
@@ -208,7 +230,7 @@ describe("stadion-kalshi-bridge integrate", () => {
       playerA: target!.playerB,
       playerB: target!.playerA,
       startTs: target!.startTs,
-      series: "KXITFWMATCH",
+      series: SERIES_ITF,
       eventTicker: "KXITFWMATCH-26JUL21GRAPER",
     });
 
@@ -262,9 +284,9 @@ describe("stadion-kalshi-bridge integrate", () => {
     }
     // Only one Kalshi on day2 — day1 Stadion would uniquely ±1-link without the cross-day guard.
     const kalshiId = mintKalshiCompetitorEventId({
-      series: "KXITFWMATCH",
-      competitorA: "adj-a",
-      competitorB: "adj-b",
+      series: SERIES_ITF,
+      competitorA: COMP_ADJ_A,
+      competitorB: COMP_ADJ_B,
       startTs: day2,
     });
     seedKalshiEvent(db, {
@@ -272,7 +294,7 @@ describe("stadion-kalshi-bridge integrate", () => {
       playerA,
       playerB,
       startTs: day2,
-      series: "KXITFWMATCH",
+      series: SERIES_ITF,
       eventTicker: "KXITFWMATCH-26JUL22FOOBAR",
     });
     const summary = bridgeStadionToKalshi(db);
@@ -302,9 +324,9 @@ describe("stadion-kalshi-bridge integrate", () => {
     expect(target).toBeTruthy();
     ingestPrimaryResultMatches(db, [target!], { format: "singles" });
     const kalshiId = mintKalshiCompetitorEventId({
-      series: "KXITFWMATCH",
-      competitorA: "comp-grabher-2",
-      competitorB: "comp-perelygina-2",
+      series: SERIES_ITF,
+      competitorA: COMP_GRABHER_2,
+      competitorB: COMP_PERELYGINA_2,
       startTs: target!.startTs,
     });
     seedKalshiEvent(db, {
@@ -312,7 +334,7 @@ describe("stadion-kalshi-bridge integrate", () => {
       playerA: target!.playerA,
       playerB: target!.playerB,
       startTs: target!.startTs,
-      series: "KXITFWMATCH",
+      series: SERIES_ITF,
       eventTicker: "KXITFWMATCH-26JUL21GRAPER2",
     });
     db.query(
@@ -343,15 +365,15 @@ describe("stadion-kalshi-bridge integrate", () => {
     ingestPrimaryResultMatches(db, [target!], { format: "singles" });
 
     const a = mintKalshiCompetitorEventId({
-      series: "KXITFWMATCH",
-      competitorA: "a1",
-      competitorB: "b1",
+      series: SERIES_ITF,
+      competitorA: COMP_A1,
+      competitorB: COMP_B1,
       startTs: target!.startTs,
     });
     const b = mintKalshiCompetitorEventId({
-      series: "KXITFWMATCH",
-      competitorA: "a2",
-      competitorB: "b2",
+      series: SERIES_ITF,
+      competitorA: COMP_A2,
+      competitorB: COMP_B2,
       startTs: target!.startTs,
     });
     seedKalshiEvent(db, {
@@ -359,7 +381,7 @@ describe("stadion-kalshi-bridge integrate", () => {
       playerA: target!.playerA,
       playerB: target!.playerB,
       startTs: target!.startTs,
-      series: "KXITFWMATCH",
+      series: SERIES_ITF,
       eventTicker: "KXITFWMATCH-26JUL21AAA",
     });
     seedKalshiEvent(db, {
@@ -367,7 +389,7 @@ describe("stadion-kalshi-bridge integrate", () => {
       playerA: target!.playerA,
       playerB: target!.playerB,
       startTs: target!.startTs,
-      series: "KXITFWMATCH",
+      series: SERIES_ITF,
       eventTicker: "KXITFWMATCH-26JUL21BBB",
     });
 
@@ -401,9 +423,9 @@ describe("stadion-kalshi-bridge integrate", () => {
     });
 
     const kalshiId = mintKalshiCompetitorEventId({
-      series: "KXITFWMATCH",
-      competitorA: "poison-a",
-      competitorB: "poison-b",
+      series: SERIES_ITF,
+      competitorA: COMP_POISON_A,
+      competitorB: COMP_POISON_B,
       startTs: target!.startTs,
     });
     seedKalshiEvent(db, {
@@ -411,7 +433,7 @@ describe("stadion-kalshi-bridge integrate", () => {
       playerA: target!.playerA,
       playerB: target!.playerB,
       startTs: target!.startTs,
-      series: "KXITFWMATCH",
+      series: SERIES_ITF,
       eventTicker: "KXITFWMATCH-26JUL21POISON",
     });
 
@@ -440,9 +462,9 @@ describe("stadion-kalshi-bridge integrate", () => {
     expect(getLinkedKalshiEventId(db, target!.eventId)).toBeUndefined();
 
     const kalshiId = mintKalshiCompetitorEventId({
-      series: "KXITFWMATCH",
-      competitorA: "sync-a",
-      competitorB: "sync-b",
+      series: SERIES_ITF,
+      competitorA: COMP_SYNC_A,
+      competitorB: COMP_SYNC_B,
       startTs: target!.startTs,
     });
     seedKalshiEvent(db, {
@@ -450,7 +472,7 @@ describe("stadion-kalshi-bridge integrate", () => {
       playerA: target!.playerA,
       playerB: target!.playerB,
       startTs: target!.startTs,
-      series: "KXITFWMATCH",
+      series: SERIES_ITF,
       eventTicker: "KXITFWMATCH-26JUL21SYNC",
     });
 

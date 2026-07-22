@@ -9,7 +9,7 @@ Each command is a focused **sub-agent** grounded in local evidence (`cache.db`, 
 | Sub-agent | Command | Grounding |
 |-----------|---------|-----------|
 | **ground** | `agent ground` | Orchestrates status + cache readiness + miss taxonomy + next actions (cache-only). Coverage: exact → qualifier-normalized → bare phrase. `saveRun` stamps discoverGate (miss queries → else resolveDiscoverGate); unstamped rows also inferred at read time. `pushed:` cutoffs are UTC-month-floored. Partial coverage lists cold queries. |
-| **tennis** | `agent tennis` | Event-store + live canary artifact + score_snapshots cadence triage (default cache-only; `--canary` hits Kalshi dry-run). Next actions for promote / WS cue. |
+| **tennis** | `agent tennis` | Event-store + live canary artifact + score_snapshots cadence triage (default cache-only; `--canary` hits Kalshi dry-run). `--webview` captures book dashboard via `Bun.WebView` + `Bun.Image`. |
 | **status** | `agent status` | Newest eligible production run |
 | **patterns** | `agent patterns` | Detector evidence paths from a cached run |
 | **blueprint** | `agent blueprint` | Bun stack / lift from cached runs + pattern reports |
@@ -30,6 +30,8 @@ bun run agent ground --json --dimension=sports-nba
 bun run agent ground                    # discovery-grounded triage (sub-agents)
 bun run agent tennis                    # event-store + canary artifact + cadence (no network)
 bun run agent tennis --canary           # live dry-run canary then ground
+bun run agent tennis --webview          # ground + WebView/Image WS dashboard artifact
+bun run tennis:ws-ground                # visual ground only
 bun run agent status                    # newest production run (any dimension)
 bun run agent run-research              # spawn research locally (audit export on by default)
 bun run agent patterns                  # static pattern report from evidence paths

@@ -4,6 +4,7 @@
  * Env names the program so a generic export cannot arm every tenant.
  */
 import { placeOrder } from "../../../src/bot/kalshi-client.ts";
+import { asKalshiMarketTicker } from "../../../src/institutions/event-store/brands.ts";
 import { MIN_CONTRACTS, passesThreshold } from "./fees.ts";
 import { loadProgramManifest } from "./program.ts";
 import {
@@ -112,7 +113,7 @@ export async function executeOnce(options: ExecuteOptions): Promise<void> {
 
   addEventExposure(ctx.eventId, decision.contracts ?? minContracts);
   const result = await placeOrder({
-    ticker: options.ticker,
+    ticker: asKalshiMarketTicker(options.ticker),
     side: decision.side ?? "yes",
     count: decision.contracts ?? minContracts,
     priceCents: decision.limitCents ?? options.priceCents,

@@ -40,6 +40,8 @@ Deep dive: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns)
 | Agent CLI | status / patterns / blueprint / tennis over `cache.db` + event-store | [`cli.ts`](../src/agent/cli.ts), [`docs/AGENT.md`](../docs/AGENT.md) |
 | Kalshi live poll | `dns.prefetch` + `fetch.preconnect` + `mapPool` + `Bun.nanoseconds` | [`kalshi-network.ts`](../src/bot/kalshi-network.ts), [`live-scores.ts`](../src/institutions/event-store/live-scores.ts) |
 | Tennis canary artifacts | `Bun.write` + `Bun.hash` under `research/cache/tennis-canary/` | [`live-canary-store.ts`](../src/institutions/event-store/live-canary-store.ts) |
+| Tennis WS dashboard ground | `Bun.WebView` + `Bun.Image` under `research/cache/tennis-ws-ground/` | [`tennis-ws-ground.ts`](../src/institutions/event-store/tennis-ws-ground.ts), [`tennis-ws-dashboard.ts`](../src/institutions/event-store/tennis-ws-dashboard.ts), [`tennis-book-coverage.ts`](../src/institutions/event-store/tennis-book-coverage.ts) |
+| Kalshi WS orderbook | Bun client `WebSocket` + handshake headers | [`kalshi-ws.ts`](../src/bot/kalshi-ws.ts), [`kalshi-ws-recorder.ts`](../src/institutions/event-store/kalshi-ws-recorder.ts), [`tennis-ws-recorder-store.ts`](../src/institutions/event-store/tennis-ws-recorder-store.ts) |
 | Cadence / scoreboard tables | `Bun.inspect.table` | [`terminal-out.ts`](../src/research/terminal-out.ts), tennis CLI + `agent tennis` |
 | Terminal reports | `Bun.markdown.ansi` + `Bun.wrapAnsi` | [`report-term.ts`](../src/agent/report-term.ts) |
 | TTY tables + OSC 8 links | `Bun.inspect.table` + `Bun.stringWidth` / `wrapAnsi` / `stripANSI` | [`terminal-out.ts`](../src/research/terminal-out.ts) |
@@ -88,6 +90,9 @@ Deep dive: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns)
 | `Bun.spawn` IPC | https://bun.com/docs/runtime/child-process#inter-process-communication-ipc · [reference](https://bun.com/docs/runtime/child-process#reference) |
 | `Bun.Terminal` (PTY) | https://bun.com/docs/runtime/child-process#terminal-pty-support |
 | `Bun.spawnSync` | https://bun.com/docs/runtime/child-process#blocking-api-bun-spawnsync |
+| `Bun.WebView` | https://bun.com/docs/runtime/webview |
+| `Bun.Image` | https://bun.com/docs/runtime/image |
+| Client `WebSocket` (headers) | https://bun.com/docs/runtime/http/websockets |
 
 ## Cache: `bun:sqlite` not JSON blobs
 

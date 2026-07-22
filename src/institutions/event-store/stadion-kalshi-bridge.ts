@@ -14,7 +14,12 @@
  */
 // @see https://bun.com/docs/runtime/sqlite
 import type { Database } from "bun:sqlite";
-import { asCanonicalEventId, type CanonicalEventId } from "./types.ts";
+import {
+  asCanonicalEventId,
+  asSeriesTicker,
+  unbrand,
+  type CanonicalEventId,
+} from "./brands.ts";
 import { ITF_STADION_SOURCE, tourFromStadionLevel } from "./itf-stadion.ts";
 import { winnerOutcomeBit } from "./event-id.ts";
 
@@ -235,7 +240,7 @@ function loadKalshiSides(db: Database): IndexedSide[] {
   const out: IndexedSide[] = [];
   for (const r of rows) {
     if (!r.series) continue;
-    const lane = laneFromKalshiSeries(r.series);
+    const lane = laneFromKalshiSeries(unbrand(asSeriesTicker(r.series)));
     const format = formatFromLane(lane);
     let day: string;
     try {
@@ -346,8 +351,8 @@ function upsertLink(
        detail = excluded.detail,
        linked_at = excluded.linked_at`,
   ).run({
-    $stadion: row.stadionEventId,
-    $kalshi: row.kalshiEventId,
+    $stadion: unbrand(row.stadionEventId),
+    $kalshi: row.kalshiEventId ? unbrand(row.kalshiEventId) : null,
     $status: row.status,
     $match_key: row.matchKey,
     $method: METHOD,
@@ -386,7 +391,7 @@ function propagateResolution(
       `SELECT winner, loser, outcome, score_text
        FROM events WHERE event_id = $id AND source = $source`,
     )
-    .get({ $id: stadionEventId, $source: ITF_STADION_SOURCE }) as
+    .get({ $id: unbrand(stadionEventId), $source: ITF_STADION_SOURCE }) as
     | {
         winner: string;
         loser: string;
@@ -398,7 +403,7 @@ function propagateResolution(
 
   const kalshiPlayers = db
     .query(`SELECT player_a, player_b FROM events WHERE event_id = $id AND source = $src`)
-    .get({ $id: kalshiEventId, $src: KALSHI_SOURCE }) as
+    .get({ $id: unbrand(kalshiEventId), $src: KALSHI_SOURCE }) as
     | { player_a: string; player_b: string }
     | null;
   if (!kalshiPlayers) return false;
@@ -427,7 +432,7 @@ function propagateResolution(
     $loser: src.loser,
     $outcome: src.outcome,
     $score_text: src.score_text,
-    $id: kalshiEventId,
+    $id: unbrand(kalshiEventId),
     $ksource: KALSHI_SOURCE,
   });
 
@@ -436,7 +441,7 @@ function propagateResolution(
       `SELECT winner, source, source_url, fetched_ts, corpus, resolved_ts
        FROM resolutions WHERE event_id = $id`,
     )
-    .get({ $id: stadionEventId }) as
+    .get({ $id: unbrand(stadionEventId) }) as
     | {
         winner: string;
         source: string;
@@ -465,7 +470,7 @@ function propagateResolution(
          resolved_ts = excluded.resolved_ts`,
     )
     .run({
-      $event_id: kalshiEventId,
+      $event_id: unbrand(kalshiEventId),
       $outcome: outcomeBit,
       $winner: res.winner,
       $source: res.source,
@@ -609,7 +614,7 @@ export function bridgeStadionToKalshi(db: Database): BridgeSummary {
           `SELECT stadion_event_id FROM event_links
            WHERE kalshi_event_id = $k AND status = 'linked' AND stadion_event_id != $s`,
         )
-        .get({ $k: hit.kalshi.eventId, $s: stadionEventId }) as { stadion_event_id: string } | null;
+        .get({ $k: unbrand(hit.kalshi.eventId), $s: unbrand(stadionEventId) }) as { stadion_event_id: string } | null;
       if (prior) {
         upsertLink(db, {
           stadionEventId,
@@ -657,7 +662,7 @@ export function getLinkedKalshiEventId(
       `SELECT kalshi_event_id FROM event_links
        WHERE stadion_event_id = $id AND status = 'linked'`,
     )
-    .get({ $id: stadionEventId }) as { kalshi_event_id: string | null } | null;
+    .get({ $id: unbrand(stadionEventId) }) as { kalshi_event_id: string | null } | null;
   return tryAsId(row?.kalshi_event_id);
 }
 
@@ -670,7 +675,7 @@ export function getLinkedStadionEventId(
       `SELECT stadion_event_id FROM event_links
        WHERE kalshi_event_id = $id AND status = 'linked'`,
     )
-    .get({ $id: kalshiEventId }) as { stadion_event_id: string } | null;
+    .get({ $id: unbrand(kalshiEventId) }) as { stadion_event_id: string } | null;
   return tryAsId(row?.stadion_event_id);
 }
 

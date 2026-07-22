@@ -40,6 +40,7 @@
     "tennis:events": "bun tools/tennis/events-cli.ts",
     "tennis:itf": "bun tools/tennis/itf-calendar-cli.ts",
     "tennis:record": "bun tools/tennis/record-cli.ts",
+    "tennis:ws-ground": "bun tools/tennis/tennis-ws-ground-cli.ts",
     "tennis:collect": "bun tools/tennis/collect-results-cli.ts",
     "tennis:live": "bun tools/tennis/live-scores-cli.ts",
     "tennis:live:canary": "bun tools/tennis/live-scores-cli.ts --canary",

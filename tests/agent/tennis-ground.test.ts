@@ -1,44 +1,19 @@
 // @see https://bun.com/docs/test/index#run-tests
 import { describe, expect, test } from "bun:test";
-import { parseAgentCommand } from "../src/agent/cli.ts";
+import { parseAgentCommand } from "../../src/agent/cli.ts";
 import {
   buildTennisNextActions,
   formatTennisGround,
   runTennisGround,
-} from "../src/agent/tennis-ground.ts";
-import { buildCanaryArtifact } from "../src/institutions/event-store/live-canary-store.ts";
-import { evaluateLiveCanary } from "../src/institutions/event-store/live-scores.ts";
-import { openEventStore } from "../src/institutions/event-store/open-db.ts";
-import { joinPath } from "../src/research/paths.ts";
+} from "../../src/agent/tennis-ground.ts";
+import { openEventStore } from "../../src/institutions/event-store/open-db.ts";
+import { tempSqlitePath, unlinkSqlite } from "../tmp-db.ts";
 
-describe("agent tennis", () => {
+describe("tennis-ground", () => {
   test("parseAgentCommand recognizes tennis", () => {
     expect(parseAgentCommand(["tennis"]).command).toBe("tennis");
     expect(parseAgentCommand(["tennis", "--", "--canary"]).rest).toEqual(["--canary"]);
-  });
-
-  test("buildCanaryArtifact fingerprints dry-run summary", () => {
-    const summary = {
-      watched: 2,
-      polled: 2,
-      upserted: 2,
-      snapshotsAppended: 1,
-      live: 1,
-      milestoneMissing: 0,
-      wouldRetire: 0,
-      errors: [] as string[],
-      dryRun: true as const,
-      rows: [] as never[],
-      staleLiveCleared: 0,
-      durationMs: 42,
-      concurrency: 4,
-    };
-    const verdict = evaluateLiveCanary(summary);
-    const art = buildCanaryArtifact({ summary, verdict, durationMs: 42, liveTickers: ["KX"] });
-    expect(art.fingerprint.length).toBeGreaterThan(4);
-    expect(art.exitCode).toBe(0);
-    expect(art.dryRun).toBe(true);
-    expect(art.summary.live).toBe(1);
+    expect(parseAgentCommand(["tennis", "--webview"]).rest).toEqual(["--webview"]);
   });
 
   test("buildTennisNextActions recommends canary when missing", () => {
@@ -56,6 +31,30 @@ describe("agent tennis", () => {
         liveNow: 0,
       },
       canary: null,
+      wsGround: null,
+      wsSession: null,
+      wsSessionHistory: [],
+      wsRecorderTrend: {
+        sessions: 0,
+        totalGaps: 0,
+        totalDeltas: 0,
+        totalResyncs: 0,
+        gapSessionPct: null,
+      },
+      bookCoverage: {
+        watchEvents: 0,
+        watchTickers: 3,
+        watchWithWs: 0,
+        watchWithRest: 0,
+        watchWithBoth: 0,
+        watchWithNeither: 3,
+        wsTicksTotal: 0,
+        restTicksTotal: 0,
+        wsExchangeClockTicks: 0,
+        wsExchangeClockPct: null,
+        linkedEventsWithWs: 0,
+        linkedEventsTotal: 0,
+      },
       cadence: {
         assumedIntervalMs: 10_000,
         events: [],
@@ -72,11 +71,12 @@ describe("agent tennis", () => {
     };
     const actions = buildTennisNextActions(report);
     expect(actions.some((a) => a.includes("tennis:live:canary"))).toBe(true);
+    expect(actions.some((a) => a.includes("tennis:ws-ground"))).toBe(true);
     expect(actions.some((a) => a.includes("tennis:live -- --sync --loop"))).toBe(true);
   });
 
   test("runTennisGround over empty store", async () => {
-    const dbPath = joinPath(import.meta.dir, `.tmp-tennis-ground-${Date.now()}.db`);
+    const dbPath = tempSqlitePath("tennis-ground");
     try {
       openEventStore({ dbPath });
       const report = await runTennisGround({ dbPath });
@@ -88,7 +88,7 @@ describe("agent tennis", () => {
       expect(text).toContain("Kalshi agent tennis");
       expect(text).toContain("Next actions");
     } finally {
-      await Bun.$`rm -f ${dbPath} ${dbPath}-wal ${dbPath}-shm`.nothrow().quiet();
+      unlinkSqlite(dbPath);
     }
   });
 });

@@ -7,9 +7,9 @@ import {
   parseMlbYesTeamCode,
   splitMlbMatchupBlob,
   yesProbabilityFromSnapshot,
-} from "../src/alpha/ticker-formats/index.ts";
+} from "../../../src/alpha/ticker-formats/index.ts";
 
-describe("MLB ticker format", () => {
+describe("mlb", () => {
   test("parseMlbYesTeamCode reads suffix team", () => {
     expect(parseMlbYesTeamCode("KXMLBGAME-26JUL242010ATHMIN-MIN")).toBe("MIN");
     expect(parseMlbYesTeamCode("KXMLBGAME-26JUL242215LAASF-SF")).toBe("SF");

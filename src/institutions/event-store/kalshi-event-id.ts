@@ -1,9 +1,18 @@
 import { sha3Hex } from "../evidence-chain.ts";
-import { asCanonicalEventId, type CanonicalEventId } from "./types.ts";
+import {
+  asCanonicalEventId,
+  asCompetitorId,
+  asKalshiEventTicker,
+  type CanonicalEventId,
+  type CompetitorId,
+  type KalshiEventTicker,
+  type SeriesTicker,
+  unbrand,
+} from "./brands.ts";
 
 /** Legacy / fallback — ticker blob alone collides across singles↔doubles surname codes. */
-export function mintKalshiEventId(eventTicker: string): CanonicalEventId {
-  return asCanonicalEventId(sha3Hex(`kalshi|${eventTicker.trim()}`).slice(0, 32));
+export function mintKalshiEventId(eventTicker: KalshiEventTicker): CanonicalEventId {
+  return asCanonicalEventId(sha3Hex(`kalshi|${unbrand(eventTicker)}`).slice(0, 32));
 }
 
 /**
@@ -33,19 +42,19 @@ export function normalizeKalshiStartTs(startTs: string): string {
  * Never key exposure on the ticker matchup blob alone.
  */
 export function mintKalshiCompetitorEventId(parts: {
-  series: string;
-  competitorA: string;
-  competitorB: string;
+  series: SeriesTicker;
+  competitorA: CompetitorId;
+  competitorB: CompetitorId;
   startTs: string;
 }): CanonicalEventId {
-  const a = parts.competitorA.trim();
-  const b = parts.competitorB.trim();
+  const a = unbrand(parts.competitorA).trim();
+  const b = unbrand(parts.competitorB).trim();
   if (!a || !b || a === b) {
     throw new Error("mintKalshiCompetitorEventId requires two distinct competitor ids");
   }
   const [c0, c1] = [a, b].sort((x, y) => x.localeCompare(y));
   const start = normalizeKalshiStartTs(parts.startTs);
-  const series = parts.series.trim();
+  const series = unbrand(parts.series).trim();
   if (!series) {
     throw new Error("mintKalshiCompetitorEventId requires series and startTs");
   }
@@ -55,15 +64,15 @@ export function mintKalshiCompetitorEventId(parts: {
 }
 
 export function tryMintKalshiEventIdFromMarkets(input: {
-  eventTicker: string;
-  series: string;
+  eventTicker: KalshiEventTicker;
+  series: SeriesTicker;
   startTs: string;
-  competitorIds: Array<string | undefined | null>;
+  competitorIds: Array<CompetitorId | undefined | null>;
 }): { eventId: CanonicalEventId; keyedBy: "competitors" | "ticker" } {
   const unique = [
     ...new Set(
       input.competitorIds
-        .map((c) => c?.trim())
+        .map((c) => (c ? unbrand(c).trim() : ""))
         .filter((c): c is string => Boolean(c)),
     ),
   ].sort((a, b) => a.localeCompare(b));
@@ -71,8 +80,8 @@ export function tryMintKalshiEventIdFromMarkets(input: {
     return {
       eventId: mintKalshiCompetitorEventId({
         series: input.series,
-        competitorA: unique[0]!,
-        competitorB: unique[1]!,
+        competitorA: asCompetitorId(unique[0]!),
+        competitorB: asCompetitorId(unique[1]!),
         startTs: input.startTs,
       }),
       keyedBy: "competitors",
@@ -81,15 +90,13 @@ export function tryMintKalshiEventIdFromMarkets(input: {
   return { eventId: mintKalshiEventId(input.eventTicker), keyedBy: "ticker" };
 }
 
-export function kalshiMarketId(ticker: string): string {
-  return `kalshi:${ticker}`;
-}
-
 /**
  * Stable Kalshi venue identity for UNIQUE(source_row_hash).
  * Ticker-only (not startTs) so occurrence reschedule rematerializes one row
  * instead of colliding a new competitor event_id against the same hash.
  */
-export function kalshiSourceRowHash(eventTicker: string): string {
-  return sha3Hex(`kalshi-event|${eventTicker}`);
+export function kalshiSourceRowHash(eventTicker: KalshiEventTicker): string {
+  return sha3Hex(`kalshi-event|${unbrand(eventTicker)}`);
 }
+
+export { kalshiMarketId } from "./brands.ts";

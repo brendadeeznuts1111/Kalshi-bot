@@ -33,6 +33,7 @@ import {
   listWatchEvents,
   listWatchEventsForTickers,
 } from "../../src/institutions/event-store/watch-set.ts";
+import { asKalshiEventTicker } from "../../src/institutions/event-store/brands.ts";
 import { formatInspectTable, isTtyStdout } from "../../src/research/terminal-out.ts";
 
 function rowsToShow(rows: LivePollRow[], opts: { verbose: boolean; singleEvent: boolean }): LivePollRow[] {
@@ -143,7 +144,7 @@ export async function runLiveScoresCli(argv: string[]): Promise<number> {
 
   const runOnce = async () => {
     const eventTickers =
-      typeof values.event === "string" ? [values.event] : undefined;
+      typeof values.event === "string" ? [asKalshiEventTicker(values.event)] : undefined;
     const watchList =
       eventTickers ?
         listWatchEventsForTickers(db, eventTickers)
@@ -235,7 +236,7 @@ export async function runLiveScoresCli(argv: string[]): Promise<number> {
     // Exclusive cadence path when only --cadence was requested without poll flags.
     if (cadenceOnly && values["dry-run"] !== true && !canary && values.sync !== true) {
       const report = analyzeScoreSnapshotCadence(db, {
-        eventTicker: typeof values.event === "string" ? values.event : undefined,
+        eventTicker: typeof values.event === "string" ? asKalshiEventTicker(values.event) : undefined,
         intervalMs,
       });
       emitCadence(report, values.json === true);

@@ -7,9 +7,16 @@ import {
   parseItfSeriesPrefix,
   parseItfYesSideCode,
 } from "../../alpha/ticker-formats/itf.ts";
+import {
+  tryCompetitorId,
+  type CompetitorId,
+  type KalshiEventTicker,
+  type KalshiMarketTicker,
+  unbrand,
+} from "./brands.ts";
 
 export type ItfCalendarLeg = {
-  ticker: string;
+  ticker: KalshiMarketTicker;
   sideCode: string;
   label: string;
   yesBidCents: number | null;
@@ -25,12 +32,12 @@ export type ItfCalendarLeg = {
   bidDepthTop3: number | null;
   /** Sum of top-3 ask sizes when orderbook-enriched; else null. */
   askDepthTop3: number | null;
-  competitorId: string | null;
+  competitorId: CompetitorId | null;
   status: string;
 };
 
 export type ItfCalendarRow = {
-  eventTicker: string;
+  eventTicker: KalshiEventTicker;
   series: string;
   tour: string;
   /** e.g. "Dong / Markovina vs Delaney / Ho Yap" */
@@ -115,8 +122,10 @@ function playerLabels(markets: KalshiMarketWire[]): [string, string] | null {
   return [sorted[0]!, sorted[1]!];
 }
 
-export function groupMarketsByEvent(markets: KalshiMarketWire[]): Map<string, KalshiMarketWire[]> {
-  const map = new Map<string, KalshiMarketWire[]>();
+export function groupMarketsByEvent(
+  markets: KalshiMarketWire[],
+): Map<KalshiEventTicker, KalshiMarketWire[]> {
+  const map = new Map<KalshiEventTicker, KalshiMarketWire[]>();
   for (const m of markets) {
     const list = map.get(m.event_ticker) ?? [];
     list.push(m);
@@ -128,7 +137,7 @@ export function groupMarketsByEvent(markets: KalshiMarketWire[]): Map<string, Ka
 function legFromMarket(m: KalshiMarketWire): ItfCalendarLeg {
   return {
     ticker: m.ticker,
-    sideCode: parseItfYesSideCode(m.ticker) ?? "",
+    sideCode: parseItfYesSideCode(unbrand(m.ticker)) ?? "",
     label: m.yes_sub_title ?? m.ticker,
     yesBidCents: dollarsToCents(m.yes_bid_dollars),
     yesAskCents: dollarsToCents(m.yes_ask_dollars),
@@ -138,7 +147,7 @@ function legFromMarket(m: KalshiMarketWire): ItfCalendarLeg {
     yesAskSize: fpContracts(m.yes_ask_size_fp),
     bidDepthTop3: null,
     askDepthTop3: null,
-    competitorId: m.custom_strike?.tennis_competitor ?? null,
+    competitorId: tryCompetitorId(m.custom_strike?.tennis_competitor ?? null) ?? null,
     status: m.status,
   };
 }
@@ -186,7 +195,7 @@ export function buildItfCalendarRows(markets: KalshiMarketWire[]): ItfCalendarRo
 
   for (const [eventTicker, eventMarkets] of grouped) {
     const sample = eventMarkets[0]!;
-    const series = parseItfSeriesPrefix(sample.ticker) ?? "ITF";
+    const series = parseItfSeriesPrefix(unbrand(sample.ticker)) ?? "ITF";
     const startTs = sample.occurrence_datetime ?? sample.expected_expiration_time ?? "";
     const legs = eventMarkets.map(legFromMarket).sort((a, b) => b.volumeFp - a.volumeFp);
     const labels = playerLabels(eventMarkets);
@@ -320,7 +329,7 @@ export function topItfEventsByFlow(rows: ItfCalendarRow[], n: number): ItfCalend
   return [...rows].sort((a, b) => b.totalVolume24hFp - a.totalVolume24hFp).slice(0, n);
 }
 
-export function tickersForEvents(rows: ItfCalendarRow[]): string[] {
+export function tickersForEvents(rows: ItfCalendarRow[]): KalshiMarketTicker[] {
   return rows.flatMap((r) => r.legs.map((l) => l.ticker));
 }
 

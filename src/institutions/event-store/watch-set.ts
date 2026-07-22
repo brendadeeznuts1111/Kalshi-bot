@@ -4,12 +4,13 @@
  */
 // @see https://bun.com/docs/runtime/sqlite
 import type { Database } from "bun:sqlite";
+import type { CanonicalEventId, KalshiMarketTicker } from "./brands.ts";
+import { asKalshiMarketTicker, unbrand } from "./brands.ts";
 import {
   listWatchEvents,
   listWatchEventsForTickers,
   type WatchEvent,
 } from "./live-scores.ts";
-import type { CanonicalEventId } from "./types.ts";
 
 export {
   listWatchEvents,
@@ -36,19 +37,19 @@ export type RecordTickersResult = {
   events: WatchEvent[];
   eventIds: CanonicalEventId[];
   /** Open market tickers under watch-set event_ids (DB markets rows). */
-  tickers: string[];
+  tickers: KalshiMarketTicker[];
 };
 
 /** Market tickers stored for the given Kalshi event_ids (order stable by ticker). */
 export function listMarketTickersForEventIds(
   db: Database,
   eventIds: readonly CanonicalEventId[],
-): string[] {
+): KalshiMarketTicker[] {
   if (eventIds.length === 0) return [];
   const placeholders = eventIds.map((_, i) => `$e${i}`).join(", ");
   const params: Record<string, string> = {};
   for (let i = 0; i < eventIds.length; i++) {
-    params[`$e${i}`] = eventIds[i]!;
+    params[`$e${i}`] = unbrand(eventIds[i]!);
   }
   const rows = db
     .query(
@@ -57,7 +58,7 @@ export function listMarketTickersForEventIds(
        ORDER BY ticker ASC`,
     )
     .all(params) as Array<{ ticker: string }>;
-  return rows.map((r) => r.ticker);
+  return rows.map((r) => asKalshiMarketTicker(r.ticker));
 }
 
 /**

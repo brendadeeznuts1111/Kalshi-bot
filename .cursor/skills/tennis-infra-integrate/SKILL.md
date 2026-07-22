@@ -43,15 +43,17 @@ bridge
 
 3. **Live → record handoff** — export a single helper used by both CLIs, e.g. `listRecordTickers(db, { leadMinutes, limit })` in `live-scores.ts` or a thin `watch-set.ts`. No duplicated SQL.
 
-4. **CLI surface** — update `docs/TENNIS_PROGRAM_ARCHETYPES.md` + `package.json` scripts if a compose script helps (`tennis:stack` optional; do not overbuild).
+4. **CLI surface** — `docs/TENNIS_PROGRAM_ARCHETYPES.md` + `package.json` (`tennis:ws-ground`, `tennis:record --ws`).
 
-5. **Tests** — watch-set ticker selection; bridge-after-sync smoke with `:memory:` DB; no network in unit tests (inject `fetchImpl`).
+5. **WS book lane** — `kalshi-ws-recorder.ts` + `tennis-ws-*` modules; stream seq per `sid`; `tennis-ws-recorder-store` history; ground via `Bun.WebView`/`Bun.Image`. See `tennis-ws-lane.ts`.
+
+6. **Tests** — watch-set, bridge, orderbook-stream, kalshi-ws-recorder, tennis-book-coverage, tennis-ws-recorder-store; no network (inject `wsFactory`).
 
 ## Hard rules
 
 - Claim only tennis-lane files; leave other sessions' dirty work alone.
 - No surname matcher as primary Kalshi↔Stadion join (existing bridge only).
-- No Kalshi WS in this pass unless `WS_CUE` already forces it — REST watch-set first.
+- No Kalshi WS in this pass unless extending the **done** WS lane (`kalshi-ws-recorder`, `tennis-ws-*`) — do not duplicate wire code.
 - `--dry-run` on live must keep working (no writes).
 - Branded `CanonicalEventId`; no bare `eventId: string` on new APIs.
 - Do not commit unless the user asks.
@@ -60,16 +62,21 @@ bridge
 
 ```bash
 bun test tests/institutions/live-scores.test.ts \
+  tests/institutions/watch-set.test.ts \
   tests/institutions/stadion-kalshi-bridge.test.ts \
-  tests/institutions/tennis-ladder.test.ts \
-  tests/institutions/itf-stadion.test.ts
-bun run tennis:live -- --dry-run --json
-# after watch wiring:
-bun run tennis:record -- --watch --dry-run   # if dry-run added; else one-shot --watch with empty OK
+  tests/institutions/orderbook-stream.test.ts \
+  tests/institutions/kalshi-ws-recorder.test.ts \
+  tests/institutions/tennis-book-coverage.test.ts \
+  tests/institutions/tennis-ws-recorder-store.test.ts \
+  tests/institutions/tennis-ws-dashboard.test.ts \
+  tests/agent/tennis-ground.test.ts
+bun run agent tennis
+bun run tennis:record -- --ws --dry-run
+bun run tennis:ws-ground -- --html-only
 ```
 
 ## Done criteria
 
-- Recorder can target watch-set without `--top`.
-- Sync path can refresh `event_links`.
-- One shared watch helper; tests green; archetypes doc lists the commands.
+- Recorder targets watch-set without `--top`; sync refreshes `event_links`.
+- WS lane: stream seq per sid, session history, WebView ground, `agent tennis` reads artifacts.
+- One shared watch helper; tests green; archetypes doc lists commands + file naming.

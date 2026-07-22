@@ -93,7 +93,20 @@ bridge (after sync or collect) → event_links + resolution on Kalshi event_id
 
 **Book tick clocks:** REST `book_ticks` stamp `recv_ts` after each successful `fetchBook`, set `ts = recv_ts`, and label `source_clock='recv'` (same recv semantics as live scores — no exchange book timestamp on `BookSnapshot` today). Indexed queries keep using `ts`.
 
-**WebSocket recorder:** `tennis:record -- --ws` opens an authenticated Kalshi WS (`wss://external-api-ws.kalshi.com/trade-api/ws/v2`), subscribes `orderbook_delta` for the watch-set tickers, reconstructs books from snapshot+delta (seq-gap → `get_snapshot`), and writes `book_ticks` with `source='kalshi-ws'`. When delta `ts_ms` is present: `ts=ts_ms`, `source_clock='exchange'`; always store `recv_ts` at message receipt. Requires `KALSHI_API_KEY_ID` + `KALSHI_PRIVATE_KEY_PATH` (or `KALSHI_PRIVATE_KEY`). `--ws --dry-run` lists tickers only.
+**WebSocket recorder:** `tennis:record -- --ws` opens an authenticated Kalshi WS (`wss://external-api-ws.kalshi.com/trade-api/ws/v2`), subscribes `orderbook_delta` for the watch-set tickers, reconstructs books from snapshot+delta. **`seq` is per subscription (sid), not per ticker** — stream-level gap detection in [`orderbook-stream.ts`](../src/institutions/event-store/orderbook-stream.ts); gap → `get_snapshot` + stream reset. Watch-set growth uses `update_subscription` `add_markets` (not full resubscribe). Writes `book_ticks` with `source='kalshi-ws'`. When delta `ts_ms` is present: `ts=ts_ms`, `source_clock='exchange'`; always store `recv_ts` at message receipt. Requires `KALSHI_API_KEY_ID` + `KALSHI_PRIVATE_KEY_PATH` (or `KALSHI_PRIVATE_KEY`). `--ws --dry-run` lists tickers only.
+
+**WS visual ground (Bun.WebView + Bun.Image):** `tennis:ws-ground` renders a self-contained HTML dashboard from event-store (`book_ticks` + watch-set), navigates via `data:text/html` in headless `Bun.WebView`, captures `dashboard.png`, and writes a WebP thumb with `Bun.file(...).image().resize(...).webp()`. Artifacts under `research/cache/tennis-ws-ground/`; `agent tennis --webview` runs ground + capture. `@see` [WebView](https://bun.com/docs/runtime/webview) · [Image](https://bun.com/docs/runtime/image). Implementation: [`tennis-ws-dashboard.ts`](../src/institutions/event-store/tennis-ws-dashboard.ts) · [`tennis-ws-ground.ts`](../src/institutions/event-store/tennis-ws-ground.ts) · [`tennis-book-coverage.ts`](../src/institutions/event-store/tennis-book-coverage.ts) · [`tennis-ws-recorder-store.ts`](../src/institutions/event-store/tennis-ws-recorder-store.ts).
+
+**File naming (event-store WS book lane):**
+
+| Prefix | Role | Examples |
+|--------|------|----------|
+| `kalshi-*` | Kalshi wire integration | `kalshi-ws-recorder.ts`, `kalshi-itf-sync.ts`, `src/bot/kalshi-ws.ts` |
+| `tennis-ws-*` | Tennis WS ground + artifacts | `tennis-ws-dashboard.ts`, `tennis-ws-ground.ts`, `tennis-ws-recorder-store.ts`, `tennis-ws-lane.ts` (barrel) |
+| `tennis-book-*` | Tennis book analytics | `tennis-book-coverage.ts` |
+| `orderbook-*` | Protocol-level book state (shared) | `orderbook-live.ts`, `orderbook-stream.ts` |
+| `live-*` | Live scores canary lane | `live-scores.ts`, `live-canary-store.ts` |
+| `tools/tennis/tennis-ws-*-cli.ts` | WS-specific CLIs | `tennis-ws-ground-cli.ts` |
 
 Helper SSOT: [`src/institutions/event-store/watch-set.ts`](../src/institutions/event-store/watch-set.ts) (`listWatchEvents` / `listRecordTickers`). `--lead` default 5m on both `tennis:live` and `tennis:record --watch`.
 
@@ -108,6 +121,9 @@ Helper SSOT: [`src/institutions/event-store/watch-set.ts`](../src/institutions/e
 ```bash
 bun run agent tennis                          # event-store + canary artifact + cadence (no network)
 bun run agent tennis --canary                 # live dry-run canary then ground
+bun run agent tennis --webview                # ground + WebView/Image dashboard artifact
+bun run tennis:ws-ground                      # visual ground only (no network)
+bun run tennis:ws-ground -- --html-only       # HTML artifact; skip WebView when unavailable
 bun run tennis:live -- --sync --loop          # promote: real writes + aging loop
 bun run tennis:live -- --event=KXITFWMATCH-…  # one event (always prints score line)
 bun run tennis:live -- --dry-run              # full read → write boundary; no DB writes

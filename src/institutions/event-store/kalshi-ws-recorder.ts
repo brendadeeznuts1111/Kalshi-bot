@@ -1,5 +1,6 @@
 // @see https://docs.kalshi.com/websockets/orderbook-updates
 // @see https://bun.com/docs/runtime/sqlite
+// @see https://bun.com/docs/runtime/http/websockets
 /**
  * Watch-set Kalshi orderbook WebSocket → book_ticks (dual-clock).
  * ts = exchange ts_ms when present (source_clock=exchange); else recv (source_clock=recv).
@@ -9,7 +10,13 @@ import type { Database } from "bun:sqlite";
 import { KalshiMarketWs, type KalshiWsFactory, type KalshiWsWire } from "../../bot/kalshi-ws.ts";
 import { loadKalshiCredentials, type KalshiCredentials } from "../../bot/kalshi-auth.ts";
 import { marketKindFromTicker } from "./tennis-ladder.ts";
-import type { CanonicalEventId } from "./types.ts";
+import {
+  asCanonicalEventId,
+  tryKalshiMarketTicker,
+  unbrand,
+  type CanonicalEventId,
+  type KalshiMarketTicker,
+} from "./brands.ts";
 import {
   applyOrderbookDelta,
   applyOrderbookSnapshot,
@@ -17,7 +24,14 @@ import {
   liveOrderbookToSnapshot,
   type LiveOrderbook,
 } from "./orderbook-live.ts";
+import {
+  advanceOrderbookStreamSeq,
+  createOrderbookStreamState,
+  resetOrderbookStreamSeq,
+  type OrderbookStreamState,
+} from "./orderbook-stream.ts";
 import { listRecordTickers } from "./watch-set.ts";
+import { persistTennisWsRecorderSession } from "./tennis-ws-recorder-store.ts";
 
 import { OFFICIAL_URLS } from "../official-urls.ts";
 
@@ -29,8 +43,10 @@ export type WsRecorderSummary = {
   snapshots: number;
   deltas: number;
   seqGaps: number;
+  duplicates: number;
   errors: number;
   subscribed: number;
+  resyncRequests: number;
 };
 
 export type WsRecorderOptions = {
@@ -45,23 +61,23 @@ export type WsRecorderOptions = {
   durationMs?: number;
   signal?: AbortSignal;
   dryRun?: boolean;
-  onTick?: (info: { ticker: string; seq: number; sourceClock: string }) => void;
+  onTick?: (info: { ticker: KalshiMarketTicker; seq: number; sourceClock: string }) => void;
   wsFactory?: KalshiWsFactory;
 };
 
-function eventIdForTicker(db: Database, ticker: string): CanonicalEventId | null {
+function eventIdForTicker(db: Database, ticker: KalshiMarketTicker): CanonicalEventId | null {
   const mapped = db
     .query(`SELECT event_id AS eventId FROM markets WHERE ticker = $ticker`)
-    .get({ $ticker: ticker }) as { eventId: string } | null;
+    .get({ $ticker: unbrand(ticker) }) as { eventId: string } | null;
   if (!mapped?.eventId) return null;
-  return mapped.eventId as CanonicalEventId;
+  return asCanonicalEventId(mapped.eventId);
 }
 
 function insertBookTick(
   db: Database,
   args: {
     eventId: CanonicalEventId;
-    ticker: string;
+    ticker: KalshiMarketTicker;
     seq: number;
     ts: number;
     recvTs: number;
@@ -76,8 +92,8 @@ function insertBookTick(
        $event_id, $ticker, $market_kind, $ts, $seq, $levels_json, $source, $source_url, $recv_ts, $source_clock
      )`,
   ).run({
-    $event_id: args.eventId,
-    $ticker: args.ticker,
+    $event_id: unbrand(args.eventId),
+    $ticker: unbrand(args.ticker),
     $market_kind: marketKindFromTicker(args.ticker),
     $ts: args.ts,
     $seq: args.seq,
@@ -99,20 +115,34 @@ function asMsg(wire: KalshiWsWire): Record<string, unknown> | null {
  */
 export function handleOrderbookWire(
   db: Database | null,
-  books: Map<string, LiveOrderbook>,
+  books: Map<KalshiMarketTicker, LiveOrderbook>,
   wire: KalshiWsWire,
   recvTs: number,
-  options: { dryRun?: boolean; onTick?: WsRecorderOptions["onTick"] } = {},
+  options: {
+    dryRun?: boolean;
+    onTick?: WsRecorderOptions["onTick"];
+    stream?: OrderbookStreamState;
+  } = {},
 ): {
-  kind: "snapshot" | "delta" | "gap" | "ignore" | "error";
-  ticker?: string;
+  kind: "snapshot" | "delta" | "gap" | "ignore" | "error" | "duplicate";
+  ticker?: KalshiMarketTicker;
 } {
   const type = wire.type;
   const seq = typeof wire.seq === "number" ? wire.seq : null;
   const msg = asMsg(wire);
   if (!msg || seq == null) return { kind: "ignore" };
-  const ticker = typeof msg.market_ticker === "string" ? msg.market_ticker : "";
+  const ticker = tryKalshiMarketTicker(
+    typeof msg.market_ticker === "string" ? msg.market_ticker : undefined,
+  );
   if (!ticker) return { kind: "ignore" };
+
+  const stream = options.stream;
+  if (stream) {
+    if (typeof wire.sid === "number") stream.sid = wire.sid;
+    const seqVerdict = advanceOrderbookStreamSeq(stream, seq);
+    if (seqVerdict === "duplicate") return { kind: "duplicate", ticker };
+    if (seqVerdict === "gap") return { kind: "gap", ticker };
+  }
 
   let book = books.get(ticker);
   if (!book) {
@@ -124,7 +154,7 @@ export function handleOrderbookWire(
     applyOrderbookSnapshot(
       book,
       {
-        market_ticker: ticker,
+        market_ticker: unbrand(ticker),
         yes_dollars_fp: msg.yes_dollars_fp,
         no_dollars_fp: msg.no_dollars_fp,
       },
@@ -152,14 +182,14 @@ export function handleOrderbookWire(
     const ok = applyOrderbookDelta(
       book,
       {
-        market_ticker: ticker,
+        market_ticker: unbrand(ticker),
         price_dollars: String(msg.price_dollars ?? ""),
         delta_fp: String(msg.delta_fp ?? ""),
         side: String(msg.side ?? ""),
       },
       seq,
     );
-    if (!ok) return { kind: "gap", ticker };
+    if (!ok) return { kind: "error", ticker };
     const exchangeTs = typeof msg.ts_ms === "number" && Number.isFinite(msg.ts_ms) ? msg.ts_ms : null;
     const ts = exchangeTs ?? recvTs;
     const sourceClock = exchangeTs != null ? "exchange" : "recv";
@@ -197,16 +227,19 @@ export async function runKalshiWsWatchRecorder(
     snapshots: 0,
     deltas: 0,
     seqGaps: 0,
+    duplicates: 0,
     errors: 0,
     subscribed: 0,
+    resyncRequests: 0,
   };
   const dryRun = options.dryRun === true;
   const refreshMs = options.refreshMs ?? 30_000;
   const reconnectBaseMs = options.reconnectBaseMs ?? 1_000;
   const durationMs = options.durationMs ?? 0;
   const started = Date.now();
-  const books = new Map<string, LiveOrderbook>();
-  let subscribed = new Set<string>();
+  const books = new Map<KalshiMarketTicker, LiveOrderbook>();
+  const stream = createOrderbookStreamState();
+  let subscribed = new Set<KalshiMarketTicker>();
   let orderbookSid: number | null = null;
   let attempt = 0;
 
@@ -216,7 +249,7 @@ export async function runKalshiWsWatchRecorder(
     options.signal?.aborted === true ||
     (durationMs > 0 && Date.now() - started >= durationMs);
 
-  const resolveTickers = (): string[] => {
+  const resolveTickers = (): KalshiMarketTicker[] => {
     const { tickers } = listRecordTickers(db, {
       leadMinutes: options.leadMinutes,
       limit: options.limit,
@@ -250,40 +283,54 @@ export async function runKalshiWsWatchRecorder(
             }
             const next = new Set(resolveTickers());
             const added = [...next].filter((t) => !subscribed.has(t));
-            // Resubscribe when membership grows — simple full resubscribe.
-            if (added.length > 0 || next.size !== subscribed.size) {
+            const removed = [...subscribed].filter((t) => !next.has(t));
+            if (removed.length > 0) {
               subscribed = next;
               summary.subscribed = next.size;
+              resetOrderbookStreamSeq(stream);
+              orderbookSid = null;
               if (next.size) client.subscribeOrderbook([...next]);
+            } else if (added.length > 0 && orderbookSid != null) {
+              subscribed = next;
+              summary.subscribed = next.size;
+              client.addOrderbookMarkets(orderbookSid, added);
             }
           }, refreshMs);
         },
         onMessage: (wire, recvTs) => {
-          if (typeof wire.sid === "number" && wire.type === "subscribed") {
+          if (wire.type === "subscribed" && typeof wire.sid === "number") {
             orderbookSid = wire.sid;
+            stream.sid = wire.sid;
+            resetOrderbookStreamSeq(stream);
           }
-          const before = summary.ticksRecorded;
           const result = handleOrderbookWire(dryRun ? null : db, books, wire, recvTs, {
             dryRun,
             onTick: options.onTick,
+            stream,
           });
           if (result.kind === "snapshot") summary.snapshots++;
           if (result.kind === "delta") summary.deltas++;
+          if (result.kind === "duplicate") summary.duplicates++;
           if (result.kind === "error") summary.errors++;
           if (result.kind === "gap") {
             summary.seqGaps++;
+            const book = result.ticker ? books.get(result.ticker) : undefined;
+            if (book) book.ready = false;
+            resetOrderbookStreamSeq(stream);
             if (orderbookSid != null && result.ticker) {
               try {
                 client.requestSnapshots(orderbookSid, [result.ticker]);
+                summary.resyncRequests++;
               } catch {
                 summary.errors++;
               }
             }
           }
-          if (!dryRun && summary.ticksRecorded === before) {
-            // count inserts via onTick path: recount when not dry-run by kind
-          }
-          if ((result.kind === "snapshot" || result.kind === "delta") && !dryRun) {
+          if (
+            (result.kind === "snapshot" || result.kind === "delta") &&
+            !dryRun &&
+            db
+          ) {
             summary.ticksRecorded++;
           }
           if (shouldStop()) client.close();
@@ -317,6 +364,13 @@ export async function runKalshiWsWatchRecorder(
     if (shouldStop()) break;
     const backoff = Math.min(30_000, reconnectBaseMs * 2 ** Math.min(attempt, 5));
     await Bun.sleep(backoff);
+  }
+
+  if (!dryRun && summary.subscribed > 0) {
+    await persistTennisWsRecorderSession(summary, {
+      durationMs: Date.now() - started,
+      subscribedTickers: summary.subscribed,
+    });
   }
 
   return summary;

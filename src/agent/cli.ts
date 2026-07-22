@@ -30,6 +30,13 @@ import {
 import { formatDiscoveryGround, runDiscoveryGround } from "./discovery-ground.ts";
 import { formatTennisGround, runTennisGround } from "./tennis-ground.ts";
 import { runLiveScoresCli } from "../../tools/tennis/live-scores-cli.ts";
+import { openEventStore } from "../institutions/event-store/open-db.ts";
+import { DEFAULT_EVENT_STORE_DB } from "../institutions/event-store/paths.ts";
+import {
+  captureTennisWsGround,
+  formatTennisWsGroundLines,
+  persistTennisWsGroundArtifact,
+} from "../institutions/event-store/tennis-ws-ground.ts";
 
 export type AgentCommand =
   | "status"
@@ -72,10 +79,10 @@ export function parseAgentCommand(argv: string[]): {
   return { command: null, rest: argv };
 }
 
-/** Cache-only tennis ground; optional live canary via --canary. */
+/** Cache-only tennis ground; optional live canary via --canary; optional WebView ground. */
 export async function runAgentTennis(
   json: boolean,
-  options?: { canary?: boolean; db?: string },
+  options?: { canary?: boolean; db?: string; webview?: boolean; htmlOnly?: boolean },
 ): Promise<number> {
   if (options?.canary) {
     // Live dry-run smoke first (writes canary artifact under research/cache/tennis-canary/).
@@ -90,10 +97,42 @@ export async function runAgentTennis(
   }
 
   const report = await runTennisGround({ dbPath: options?.db });
+
+  let wsGround = null;
+  if (options?.webview) {
+    const db = openEventStore({ dbPath: options.db ?? DEFAULT_EVENT_STORE_DB });
+    wsGround = await captureTennisWsGround(db, { htmlOnly: options.htmlOnly === true });
+    await persistTennisWsGroundArtifact(wsGround);
+  }
+
   if (json) {
-    console.log(JSON.stringify({ ok: true, ...report }, null, 2));
+    console.log(
+      JSON.stringify(
+        {
+          ok: true,
+          ...report,
+          wsGround: wsGround
+            ? {
+                at: wsGround.at,
+                dashboardHtml: wsGround.dashboardHtml,
+                dashboardPng: wsGround.dashboardPng,
+                thumbWebp: wsGround.thumbWebp,
+                webview: wsGround.webview,
+                image: wsGround.image,
+                model: wsGround.model,
+              }
+            : undefined,
+        },
+        null,
+        2,
+      ),
+    );
   } else {
     console.log(formatTennisGround(report));
+    if (wsGround) {
+      console.log("");
+      console.log(formatTennisWsGroundLines(wsGround).join("\n"));
+    }
   }
   return report.canary?.exitCode === 2 ? 2 : 0;
 }
@@ -286,7 +325,7 @@ export function printAgentHelp(): void {
 
 Usage:
   bun run agent ground [--json] [--dimension <id>]   # discovery-grounded triage
-  bun run agent tennis [--json] [--canary] [--db path]  # event-store + live canary ground
+  bun run agent tennis [--json] [--canary] [--webview] [--html-only] [--db path]  # event-store + live canary ground
   bun run agent status [--json] [--dimension <id>]
   bun run agent run-research [--json] [--in-process] [--dimension <id>] [--no-export-audit]
   bun run agent patterns [--json] [--run <run-id>] [--dimension <id>] [--repo <owner/name>] [--no-write] [--open]
@@ -308,6 +347,7 @@ Examples:
   bun run agent ground
   bun run agent tennis
   bun run agent tennis --canary
+  bun run agent tennis --webview
   bun run agent status
   bun run agent patterns --dimension=market-making
   bun run agent report
@@ -337,6 +377,8 @@ export async function main(argv = Bun.argv.slice(2)): Promise<number> {
       "no-write": { type: "boolean", default: false },
       open: { type: "boolean", default: false },
       canary: { type: "boolean", default: false },
+      webview: { type: "boolean", default: false },
+      "html-only": { type: "boolean", default: false },
       db: { type: "string" },
       help: { type: "boolean", default: false },
     },
@@ -363,6 +405,8 @@ export async function main(argv = Bun.argv.slice(2)): Promise<number> {
     case "tennis":
       return runAgentTennis(json, {
         canary: values.canary === true,
+        webview: values.webview === true,
+        htmlOnly: values["html-only"] === true,
         db: stringOpt(values.db),
       });
     case "run-research":

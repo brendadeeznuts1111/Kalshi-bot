@@ -2,6 +2,8 @@
  * Kalshi tennis ladder series — match winner + micro-markets that share a matchup blob.
  * @see docs/TENNIS_PROGRAM_ARCHETYPES.md
  */
+import type { KalshiEventTicker, KalshiMarketTicker } from "./brands.ts";
+import { unbrand } from "./brands.ts";
 
 export type TennisMarketKind =
   | "match_winner"
@@ -107,24 +109,28 @@ const SERIES_KIND: Record<string, TennisMarketKind> = {
   KXATPANYSET: "set_winner",
 };
 
-export function parseTennisSeriesPrefix(ticker: string): string | null {
-  const dash = ticker.indexOf("-");
+export function parseTennisSeriesPrefix(ticker: KalshiMarketTicker | KalshiEventTicker | string): string | null {
+  const plain = typeof ticker === "string" ? ticker : unbrand(ticker);
+  const dash = plain.indexOf("-");
   if (dash <= 0) return null;
-  return ticker.slice(0, dash);
+  return plain.slice(0, dash);
 }
 
 export function marketKindFromSeries(series: string): TennisMarketKind {
   return SERIES_KIND[series] ?? "other";
 }
 
-export function marketKindFromTicker(ticker: string): TennisMarketKind {
+export function marketKindFromTicker(
+  ticker: KalshiMarketTicker | KalshiEventTicker | string,
+): TennisMarketKind {
   const series = parseTennisSeriesPrefix(ticker);
   return series ? marketKindFromSeries(series) : "other";
 }
 
 /** Date + compressed matchup blob shared across sibling ladder series (e.g. 26JUL22BORBUR). */
-export function extractMatchupDateBlob(tickerOrEvent: string): string | null {
-  const m = tickerOrEvent.match(/(\d{2}[A-Z]{3}\d{2}[A-Z]+)/);
+export function extractMatchupDateBlob(tickerOrEvent: KalshiMarketTicker | KalshiEventTicker | string): string | null {
+  const plain = typeof tickerOrEvent === "string" ? tickerOrEvent : unbrand(tickerOrEvent);
+  const m = plain.match(/(\d{2}[A-Z]{3}\d{2}[A-Z]+)/);
   return m?.[1] ?? null;
 }
 
@@ -137,12 +143,16 @@ export function ladderFamilyFromSeries(series: string): TennisLadderFamily | nul
   return null;
 }
 
-export function ladderFamilyFromTicker(ticker: string): TennisLadderFamily | null {
+export function ladderFamilyFromTicker(
+  ticker: KalshiMarketTicker | KalshiEventTicker | string,
+): TennisLadderFamily | null {
   const series = parseTennisSeriesPrefix(ticker);
   return series ? ladderFamilyFromSeries(series) : null;
 }
 
-export function ladderSeriesForTicker(ticker: string): readonly string[] {
+export function ladderSeriesForTicker(
+  ticker: KalshiMarketTicker | KalshiEventTicker | string,
+): readonly string[] {
   const family = ladderFamilyFromTicker(ticker);
   return family ? TENNIS_LADDER_SERIES[family] : [];
 }
@@ -151,7 +161,7 @@ export type LadderCoverage = {
   family: TennisLadderFamily | null;
   matchupBlob: string | null;
   byKind: Record<string, number>;
-  tickers: string[];
+  tickers: KalshiMarketTicker[];
   perPointOpen: boolean;
   /** True when family has ladder series beyond match_winner but none were open. */
   ladderEmpty: boolean;
@@ -160,7 +170,7 @@ export type LadderCoverage = {
 export function summarizeLadderCoverage(
   family: TennisLadderFamily | null,
   matchupBlob: string | null,
-  tickers: string[],
+  tickers: readonly KalshiMarketTicker[],
 ): LadderCoverage {
   const byKind: Record<string, number> = {};
   for (const t of tickers) {
@@ -175,7 +185,7 @@ export function summarizeLadderCoverage(
     family,
     matchupBlob,
     byKind,
-    tickers,
+    tickers: [...tickers],
     perPointOpen: tickers.some((t) => PER_POINT_MARKET_KINDS.has(marketKindFromTicker(t))),
     ladderEmpty: expectedLadder.length > 0 && !hasNonWinner,
   };

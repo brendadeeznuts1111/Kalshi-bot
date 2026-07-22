@@ -1,5 +1,7 @@
 // @see https://docs.kalshi.com/api-reference/market/get-market-orderbook
 // @see https://bun.com/docs/runtime/networking/fetch#sending-an-http-request
+import type { KalshiMarketTicker } from "../institutions/event-store/brands.ts";
+import { unbrand } from "../institutions/event-store/brands.ts";
 import { OFFICIAL_URLS } from "../institutions/official-urls.ts";
 import type { BookSnapshot } from "../institutions/alpha-signal-types.ts";
 import { parseKalshiOrderbookWire } from "./kalshi-book-parse.ts";
@@ -25,22 +27,22 @@ function resolveBaseUrl(explicit?: string): string {
 
 /** Public endpoint — no auth required for market data. */
 export async function fetchKalshiOrderbookWire(
-  ticker: string,
+  ticker: KalshiMarketTicker,
   options: FetchKalshiBookOptions = {},
 ): Promise<unknown> {
   const fetchImpl = options.fetchImpl ?? fetch;
   const base = resolveBaseUrl(options.baseUrl);
   const depth = options.depth ?? 0;
-  const url = `${base}/markets/${encodeURIComponent(ticker)}/orderbook?depth=${depth}`;
+  const url = `${base}/markets/${encodeURIComponent(unbrand(ticker))}/orderbook?depth=${depth}`;
   const res = await fetchImpl(url, { headers: { Accept: "application/json" } });
   if (!res.ok) {
-    throw new Error(`Kalshi orderbook ${ticker}: ${res.status} ${res.statusText}`);
+    throw new Error(`Kalshi orderbook ${unbrand(ticker)}: ${res.status} ${res.statusText}`);
   }
   return res.json();
 }
 
 export async function fetchKalshiBookSnapshot(
-  ticker: string,
+  ticker: KalshiMarketTicker,
   options: FetchKalshiBookOptions = {},
 ): Promise<BookSnapshot> {
   const wire = await fetchKalshiOrderbookWire(ticker, options);

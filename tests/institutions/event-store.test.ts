@@ -17,7 +17,7 @@ import {
 const FIXTURE_ATP = joinPath(import.meta.dir, "../fixtures/tennis-data/sample-atp.csv");
 const FIXTURE_WTA = joinPath(import.meta.dir, "../fixtures/tennis-data/sample-wta.csv");
 
-describe("event-store tennis history", () => {
+describe("event-store", () => {
   test("parseTennisDataDate accepts DD/MM/YYYY", () => {
     expect(parseTennisDataDate("01/07/2019")).toBe("2019-07-01T12:00:00.000Z");
   });

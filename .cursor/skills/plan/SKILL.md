@@ -3,9 +3,10 @@ name: plan
 description: >-
   Plans Kalshi sports-bot work beyond harness plumbing: independent probability
   model (α), ticker mapping, fee-aware edge, liquidity-sized execution, bankroll
-  and correlation controls, and shadow calibration before live size. Use when
-  the user invokes /plan, asks what to build next after the harness, or needs
-  the sports-bot build order and next steps.
+  and correlation controls, shadow calibration before live size, and tennis
+  event-store institution (ITF watch-set, bridge, WS book lane). Use when the
+  user invokes /plan, asks what to build next after the harness, or needs the
+  sports-bot build order and next steps.
 disable-model-invocation: true
 ---
 
@@ -35,7 +36,44 @@ Recommend concrete actions in build order; prefer `odds-feed` dimension runs (qu
 | Empirical baseline Brier | **Done** | `baselineBrierScore()` from `pinnacle_novig_*` components |
 | Live Kalshi orders | **Stub** | `src/bot/kalshi-client.ts` — dry-run only |
 
+### Tennis event-store institution (parallel — **not alpha**)
+
+Challenger/ITF self-model lane (`tennis-game-model` archetype). Infrastructure only — no Pinnacle α, no shadow graduation. Doctrine: `docs/TENNIS_PROGRAM_ARCHETYPES.md`.
+
+| Layer | Status | Location |
+|---|---|---|
+| Watch-set SSOT (live + record) | **Done** | `watch-set.ts`, `live-scores.ts` |
+| Stadion ↔ Kalshi bridge + retain sync | **Done** | `stadion-kalshi-bridge.ts`, `kalshi-itf-sync.ts` (`--retain-days`) |
+| REST book recorder (watch-set) | **Done** | `kalshi-itf-sync.ts` → `book_ticks` (`kalshi-rest`, `source_clock=recv`) |
+| Kalshi WS auth + client | **Done** | `kalshi-auth.ts`, `src/bot/kalshi-ws.ts` (Bun handshake headers) |
+| WS orderbook recorder (stream seq per sid) | **Done** | `kalshi-ws-recorder.ts`, `orderbook-stream.ts`, `orderbook-live.ts` |
+| Dual-clock book ticks | **Done** | delta `ts_ms` → `source_clock=exchange`; always `recv_ts` |
+| Tennis WS ground (WebView + Image) | **Done** | `tennis-ws-ground.ts`, `tennis-ws-dashboard.ts`, `tennis:ws-ground` |
+| Book coverage analytics | **Done** | `tennis-book-coverage.ts` |
+| WS session artifacts (latest + history) | **Done** | `tennis-ws-recorder-store.ts` → `research/cache/tennis-ws-recorder/` |
+| Agent tennis ground | **Done** | `agent tennis`, `--webview`, `--canary` |
+| Barrel export | **Done** | `tennis-ws-lane.ts` |
+| Branded event-store IDs | **Done** | `event-store/brands.ts` |
+| WS on linked corpus / long capture | **Partial** | need `--ws-seconds=300` during live; 0% exchange clock until deltas |
+| WS recorder OS cron | **Next** | mirror `tennis:live:canary:register` pattern |
+| Alpha join on WS `book_ticks` | **Next** | `tennis-game-model` — after WS volume on watch-set |
+
+**File naming (WS lane):** `kalshi-*` wire · `tennis-ws-*` ground/artifacts · `tennis-book-*` analytics · `orderbook-*` protocol state · `tools/tennis/tennis-ws-ground-cli.ts`.
+
+**Tennis WS commands (institution ground — zero network except `--ws`):**
+
+```bash
+bun run agent tennis                          # event-store + canary + WS artifacts + coverage
+bun run agent tennis --webview                # + Bun.WebView/Image dashboard capture
+bun run tennis:record -- --ws --ws-seconds=300   # live orderbook → book_ticks (KALSHI_* env)
+bun run tennis:ws-ground                      # visual artifact under research/cache/tennis-ws-ground/
+```
+
+**Do not:** treat tennis WS plumbing as alpha edge; graduate ITF lane on Brier; size live from REST-only mids during games.
+
 **Active phase:** live shadow clock — `ODDS_API_KEY` → live tick → **toxicity loop running** → volume → outcomes last.
+
+**Parallel (when ITF watch non-empty):** `tennis:record -- --ws` during live windows feeds `book_ticks` for cadence/execution research on `tennis-game-model` — does not block MLB shadow.
 
 **Sequencing gate:** `--offline` uses fixture odds — hash-chained calibration data about a model that never existed. Baseline `pModel` *is* live Pinnacle novig; the odds key is in front of everything, not item 3.
 
@@ -99,6 +137,7 @@ The harness is the **institution layer** — it governs edge work; it is not the
 | **Evidence chain** | Hash + audit export; commit claims before outcomes | `export-audit.ts`, `evidenceFingerprint` — GitHub repos only; shadow predictions get local `Bun.hash` chain, not rotor bridge |
 | **Pattern library** | Extraction over corpora | `src/agent/pattern-extract.ts` — odds/vig/fee patterns; **second corpus type** (trade/shadow logs) is inward expansion, not `--dimension=self` |
 | **Calibration** | Shadow/live logs → Brier sanity, realized edge, drift → artifacts | `src/calibration/watcher.ts` — **not** a research dimension |
+| **Tennis event-store** | ITF watch-set, bridge, live scores, book_ticks REST+WS, ground artifacts | `src/institutions/event-store/` — **not** alpha; see tennis table above |
 
 An **alpha program** is a disposable tenant plugging into all four. Contract:
 
@@ -189,7 +228,21 @@ Public repos answer plumbing. They do not answer α.
 | 5 | Bankroll / event exposure | Partial | `exposure.ts` caps per eventId; extend to correlated markets |
 | 6 | Calibration loop | **Live** | Toxicity loop during shadow; auto settlement (next); round-trip fees in edge metric (next) |
 
+### Tennis institution (parallel — does not block MLB shadow)
+
+| # | Item | Status | Next action |
+|---|---|---|---|
+| T1 | WS stream seq + multi-ticker subscribe | **Done** | — |
+| T2 | Dual-clock `book_ticks` + coverage analytics | **Done** | — |
+| T3 | WebView/Image ground + agent mesh | **Done** | `agent tennis --webview` after WS runs |
+| T4 | Long WS capture on watch-set | **Partial** | `tennis:record -- --ws --ws-seconds=300` during live |
+| T5 | Exchange-clock deltas (`source_clock=exchange`) | **Partial** | needs T4 volume |
+| T6 | WS recorder cron | **Next** | `tennis:ws-recorder:register` (mirror canary) |
+| T7 | `tennis-game-model` signal on WS books | **Next** | after T4–T5; not Pinnacle α |
+
 ## Execute now (priority order)
+
+### A — MLB shadow (primary α clock)
 
 1. **`ODDS_API_KEY`** — live Pinnacle; `--offline` is dev-only plumbing check, not baseline data.
 2. **Live shadow tick** — `bun run alpha:run -- --program=pinnacle-novig-mlb --ticker=KXMLBGAME-... --fetch-book`
@@ -201,6 +254,14 @@ Public repos answer plumbing. They do not answer α.
 8. **Parallel research** — `bun run research -- --dimension=odds-feed --dry-run` (validation, not blocker).
 9. **Lift live client** — `src/bot/kalshi-client.ts` before `--live`.
 
-**Do not:** size live; graduate on Brier alone; fork the template to `src/alpha/template/`.
+### B — Tennis institution (when ITF watch-set non-empty; parallel)
+
+1. **`bun run tennis:itf -- --sync --retain-days=3`** — refresh markets + bridge.
+2. **`bun run agent tennis`** — coverage + artifact triage (no network).
+3. **`bun run tennis:record -- --ws --ws-seconds=300`** — needs rotated `KALSHI_*` creds; builds `tennis-ws-recorder/history.jsonl`.
+4. **`bun run tennis:ws-ground`** — Bun.WebView + Bun.Image dashboard (`docs/BUN_NATIVE.md`).
+5. **`bun run agent tennis --webview`** — refresh ground after WS session.
+
+**Do not:** size live; graduate on Brier alone; fork the template to `src/alpha/template/`; treat tennis WS as α.
 
 The harness answered "how do public bots talk to Kalshi." The remaining question: "does Pinnacle novig minus Kalshi price survive fees at our size?" — that answer lives in the shadow log, not in another research run.

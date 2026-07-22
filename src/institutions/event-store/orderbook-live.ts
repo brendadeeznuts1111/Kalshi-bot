@@ -4,6 +4,7 @@
  */
 import type { BookLevel, BookSnapshot } from "../alpha-signal-types.ts";
 import { isCrossedKalshiBook, yesAsksFromNoBids } from "../../bot/kalshi-book-parse.ts";
+import { type KalshiMarketTicker, unbrand } from "./brands.ts";
 
 function sortBids(levels: BookLevel[]): BookLevel[] {
   return [...levels].sort((a, b) => b.priceCents - a.priceCents);
@@ -15,7 +16,7 @@ function sortAsks(levels: BookLevel[]): BookLevel[] {
 export type LiveBookSide = "yes" | "no";
 
 export type LiveOrderbook = {
-  ticker: string;
+  ticker: KalshiMarketTicker;
   seq: number;
   /** Price cents → size (contracts, floored). */
   yes: Map<number, number>;
@@ -50,7 +51,7 @@ function levelsFromFpPairs(pairs: unknown): Map<number, number> {
   return out;
 }
 
-export function createEmptyLiveOrderbook(ticker: string): LiveOrderbook {
+export function createEmptyLiveOrderbook(ticker: KalshiMarketTicker): LiveOrderbook {
   return { ticker, seq: 0, yes: new Map(), no: new Map(), ready: false };
 }
 
@@ -64,8 +65,8 @@ export function applyOrderbookSnapshot(
   },
   seq: number,
 ): void {
-  if (msg.market_ticker && msg.market_ticker !== book.ticker) {
-    throw new Error(`snapshot ticker mismatch: ${msg.market_ticker} vs ${book.ticker}`);
+  if (msg.market_ticker && msg.market_ticker !== unbrand(book.ticker)) {
+    throw new Error(`snapshot ticker mismatch: ${msg.market_ticker} vs ${unbrand(book.ticker)}`);
   }
   book.yes = levelsFromFpPairs(msg.yes_dollars_fp);
   book.no = levelsFromFpPairs(msg.no_dollars_fp);
@@ -74,7 +75,8 @@ export function applyOrderbookSnapshot(
 }
 
 /**
- * Apply incremental delta. Returns false if seq gap (caller should resync).
+ * Apply incremental delta. Stream-level seq is checked outside (per sid).
+ * Returns false when book not ready or ticker mismatch.
  * Size ≤ 0 removes the level.
  */
 export function applyOrderbookDelta(
@@ -88,12 +90,7 @@ export function applyOrderbookDelta(
   seq: number,
 ): boolean {
   if (!book.ready) return false;
-  if (book.seq > 0 && seq !== book.seq + 1) {
-    book.ready = false;
-    return false;
-  }
-  if (msg.market_ticker && msg.market_ticker !== book.ticker) {
-    book.ready = false;
+  if (msg.market_ticker && msg.market_ticker !== unbrand(book.ticker)) {
     return false;
   }
   const price = parseDollarPrice(msg.price_dollars);

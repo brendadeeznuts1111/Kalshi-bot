@@ -17,6 +17,18 @@ import {
 } from "../institutions/event-store/live-scores.ts";
 import { openEventStore } from "../institutions/event-store/open-db.ts";
 import { DEFAULT_EVENT_STORE_DB } from "../institutions/event-store/paths.ts";
+import {
+  loadLatestWsGround,
+  type TennisWsGroundLatest,
+} from "../institutions/event-store/tennis-ws-ground.ts";
+import {
+  loadLatestTennisWsRecorderSession,
+  loadTennisWsRecorderHistory,
+  summarizeTennisWsRecorderTrend,
+  type TennisWsRecorderSessionArtifact,
+  type TennisWsRecorderTrend,
+} from "../institutions/event-store/tennis-ws-recorder-store.ts";
+import { analyzeTennisBookCoverage, type TennisBookCoverageReport } from "../institutions/event-store/tennis-book-coverage.ts";
 import { formatInspectTable } from "../research/terminal-out.ts";
 
 export type TennisGroundOptions = {
@@ -39,6 +51,11 @@ export type TennisGroundReport = {
     liveNow: number;
   };
   canary: TennisCanaryArtifact | null;
+  wsGround: TennisWsGroundLatest | null;
+  wsSession: TennisWsRecorderSessionArtifact | null;
+  wsSessionHistory: TennisWsRecorderSessionArtifact[];
+  wsRecorderTrend: TennisWsRecorderTrend;
+  bookCoverage: TennisBookCoverageReport;
   cadence: SnapshotCadenceReport;
   nextActions: string[];
 };
@@ -51,6 +68,7 @@ function count(db: Database, sql: string): number {
 export function buildTennisNextActions(report: Omit<TennisGroundReport, "nextActions">): string[] {
   const actions: string[] = [];
   const c = report.canary;
+  const w = report.wsGround;
   const t = report.cadence.totals;
 
   if (!c) {
@@ -85,6 +103,32 @@ export function buildTennisNextActions(report: Omit<TennisGroundReport, "nextAct
   }
 
   actions.push("bun run tennis:record -- --watch --dry-run   # books under same watch set");
+  actions.push("bun run tennis:record -- --ws --ws-seconds=60   # live orderbook WS → book_ticks");
+  if (!w) {
+    actions.push("bun run tennis:ws-ground   # first Bun.WebView + Bun.Image dashboard artifact");
+  } else if (!w.webview) {
+    actions.push("bun run tennis:ws-ground   # last run html-only — re-capture WebView png");
+  } else {
+    const wsAgeMs = Date.now() - Date.parse(w.at);
+    if (!Number.isFinite(wsAgeMs) || wsAgeMs > 60 * 60_000) {
+      actions.push("bun run tennis:ws-ground   # WS ground artifact >1h old");
+    }
+  }
+  if (report.bookCoverage.watchWithWs === 0 && report.bookCoverage.watchTickers > 0) {
+    actions.push("bun run tennis:record -- --ws --ws-seconds=120   # no WS ticks on current watch-set");
+  }
+  const trend = report.wsRecorderTrend;
+  if (trend.sessions > 0 && trend.gapSessionPct != null && trend.gapSessionPct >= 50) {
+    actions.push(
+      "bun run tennis:record -- --ws --ws-seconds=300   # >50% WS sessions had seq gaps — longer capture",
+    );
+  }
+  if (report.wsSession && report.wsSession.deltas === 0 && report.wsSession.snapshots > 0) {
+    actions.push(
+      "bun run tennis:record -- --ws --ws-seconds=300   # last session snapshots-only — need live deltas",
+    );
+  }
+  actions.push("bun run agent tennis --webview   # ground + refresh visual artifact");
   actions.push("bun run tennis:live:canary:register   # OS cron every 15m (if not registered)");
   actions.push("bun run agent tennis --json   # re-ground after action");
 
@@ -105,6 +149,11 @@ export async function runTennisGround(
   const liveNow = listLiveEventIds(db).length;
   const cadence = analyzeScoreSnapshotCadence(db, { intervalMs });
   const canary = await loadLatestCanary();
+  const wsGround = await loadLatestWsGround();
+  const wsSession = await loadLatestTennisWsRecorderSession();
+  const wsSessionHistory = await loadTennisWsRecorderHistory(8);
+  const wsRecorderTrend = summarizeTennisWsRecorderTrend(wsSessionHistory);
+  const bookCoverage = analyzeTennisBookCoverage(db, { leadMinutes, limit: 40 });
 
   const partial = {
     source: "event-store" as const,
@@ -120,6 +169,11 @@ export async function runTennisGround(
       liveNow,
     },
     canary,
+    wsGround,
+    wsSession,
+    wsSessionHistory,
+    wsRecorderTrend,
+    bookCoverage,
     cadence,
   };
 
@@ -156,6 +210,60 @@ export function formatTennisGround(report: TennisGroundReport): string {
     for (const w of c.warnings.slice(0, 3)) lines.push(`  ~ ${w}`);
   } else {
     lines.push("", "Canary: none — run bun run tennis:live:canary");
+  }
+
+  if (report.wsGround) {
+    const w = report.wsGround;
+    lines.push(
+      "",
+      "WS ground (latest artifact)",
+      `  at=${w.at}  webview=${w.webview}  image=${w.image}`,
+      `  watch=${w.watchEvents}/${w.watchTickers}  book_ticks ws=${w.wsTicks} rest=${w.restTicks} rows=${w.rows}`,
+      `  png=${w.dashboardPng}`,
+    );
+    if (w.image) lines.push(`  thumb=${w.thumbWebp}`);
+  } else {
+    lines.push("", "WS ground: none — run bun run tennis:ws-ground");
+  }
+
+  const bc = report.bookCoverage;
+  lines.push(
+    "",
+    "Book tick coverage (watch-set)",
+    `  watch tickers=${bc.watchTickers}  with_ws=${bc.watchWithWs}  with_rest=${bc.watchWithRest}` +
+      `  both=${bc.watchWithBoth}  neither=${bc.watchWithNeither}`,
+    `  ws exchange_clock=${bc.wsExchangeClockPct ?? "—"}%  linked+ws=${bc.linkedEventsWithWs}/${bc.linkedEventsTotal}`,
+  );
+
+  if (report.wsSession) {
+    const s = report.wsSession;
+    lines.push(
+      "",
+      "WS recorder (latest session)",
+      `  at=${s.at}  duration=${s.durationMs}ms  subscribed=${s.subscribedTickers}  fp=${s.fingerprint}`,
+      `  ticks=${s.ticksRecorded} snapshots=${s.snapshots} deltas=${s.deltas}` +
+        ` gaps=${s.seqGaps} dup=${s.duplicates} resync=${s.resyncRequests} errors=${s.errors}`,
+    );
+  }
+
+  const tr = report.wsRecorderTrend;
+  if (tr.sessions > 0) {
+    lines.push(
+      "",
+      "WS recorder trend (history)",
+      `  sessions=${tr.sessions}  total_deltas=${tr.totalDeltas}  total_gaps=${tr.totalGaps}` +
+        `  resyncs=${tr.totalResyncs}  gap_sessions=${tr.gapSessionPct ?? "—"}%`,
+    );
+    const histRows = report.wsSessionHistory.slice(-5).map((s) => ({
+      at: s.at.slice(11, 19),
+      dur: `${Math.round(s.durationMs / 1000)}s`,
+      sub: s.subscribedTickers,
+      delta: s.deltas,
+      gaps: s.seqGaps,
+    }));
+    if (histRows.length) {
+      lines.push(formatInspectTable(histRows, ["at", "dur", "sub", "delta", "gaps"]).trimEnd());
+    }
   }
 
   const t = report.cadence.totals;

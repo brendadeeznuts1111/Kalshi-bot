@@ -1,5 +1,16 @@
 // @see https://docs.kalshi.com/api-reference/market/get-markets
 // @see https://bun.com/docs/runtime/networking/fetch#sending-an-http-request
+import {
+  asKalshiEventTicker,
+  asKalshiMarketTicker,
+  asSeriesTicker,
+  tryCompetitorId,
+  type CompetitorId,
+  type KalshiEventTicker,
+  type KalshiMarketTicker,
+  type SeriesTicker,
+  unbrand,
+} from "../institutions/event-store/brands.ts";
 import { OFFICIAL_URLS } from "../institutions/official-urls.ts";
 
 export type KalshiFetchImpl = (
@@ -8,8 +19,8 @@ export type KalshiFetchImpl = (
 ) => Promise<Response>;
 
 export type KalshiMarketWire = {
-  ticker: string;
-  event_ticker: string;
+  ticker: KalshiMarketTicker;
+  event_ticker: KalshiEventTicker;
   status: string;
   yes_sub_title?: string;
   no_sub_title?: string;
@@ -27,7 +38,7 @@ export type KalshiMarketWire = {
   expected_expiration_time?: string;
   rules_primary?: string;
   rules_secondary?: string;
-  custom_strike?: { tennis_competitor?: string };
+  custom_strike?: { tennis_competitor?: CompetitorId };
   result?: string;
 };
 
@@ -37,10 +48,10 @@ export type KalshiMarketsPage = {
 };
 
 export type KalshiEventWire = {
-  event_ticker: string;
+  event_ticker: KalshiEventTicker;
   title?: string;
   sub_title?: string;
-  series_ticker?: string;
+  series_ticker?: SeriesTicker;
   category?: string;
   mutually_exclusive?: boolean;
   product_metadata?: { competition?: string; competition_scope?: string };
@@ -70,9 +81,13 @@ export function parseKalshiMarketWire(raw: unknown): KalshiMarketWire | null {
   const status = typeof raw.status === "string" ? raw.status : null;
   if (!ticker || !event_ticker || !status) return null;
   const custom = isRecord(raw.custom_strike) ? raw.custom_strike : undefined;
+  const tennisCompetitor =
+    custom && typeof custom.tennis_competitor === "string"
+      ? tryCompetitorId(custom.tennis_competitor)
+      : undefined;
   return {
-    ticker,
-    event_ticker,
+    ticker: asKalshiMarketTicker(ticker),
+    event_ticker: asKalshiEventTicker(event_ticker),
     status,
     yes_sub_title: typeof raw.yes_sub_title === "string" ? raw.yes_sub_title : undefined,
     no_sub_title: typeof raw.no_sub_title === "string" ? raw.no_sub_title : undefined,
@@ -89,20 +104,17 @@ export function parseKalshiMarketWire(raw: unknown): KalshiMarketWire | null {
       typeof raw.expected_expiration_time === "string" ? raw.expected_expiration_time : undefined,
     rules_primary: typeof raw.rules_primary === "string" ? raw.rules_primary : undefined,
     rules_secondary: typeof raw.rules_secondary === "string" ? raw.rules_secondary : undefined,
-    custom_strike:
-      custom && typeof custom.tennis_competitor === "string"
-        ? { tennis_competitor: custom.tennis_competitor }
-        : undefined,
+    custom_strike: tennisCompetitor ? { tennis_competitor: tennisCompetitor } : undefined,
     result: typeof raw.result === "string" ? raw.result : undefined,
   };
 }
 
 export type KalshiMarketsQuery = {
-  series_ticker?: string;
+  series_ticker?: SeriesTicker;
   status?: string;
   limit?: number;
   cursor?: string;
-  event_ticker?: string;
+  event_ticker?: KalshiEventTicker;
   /** Unix seconds — closed markets closed at/after this time. */
   min_close_ts?: number;
   /** Unix seconds — closed markets closed at/before this time. */
@@ -120,9 +132,9 @@ export async function fetchKalshiMarketsPage(
   const fetchImpl = options.fetchImpl ?? fetch;
   const base = resolveBaseUrl(options.baseUrl);
   const q = new URLSearchParams();
-  if (params.series_ticker) q.set("series_ticker", params.series_ticker);
+  if (params.series_ticker) q.set("series_ticker", unbrand(params.series_ticker));
   if (params.status) q.set("status", params.status);
-  if (params.event_ticker) q.set("event_ticker", params.event_ticker);
+  if (params.event_ticker) q.set("event_ticker", unbrand(params.event_ticker));
   if (params.min_close_ts != null) q.set("min_close_ts", String(params.min_close_ts));
   if (params.max_close_ts != null) q.set("max_close_ts", String(params.max_close_ts));
   if (params.min_settled_ts != null) q.set("min_settled_ts", String(params.min_settled_ts));
@@ -159,20 +171,45 @@ export async function fetchAllKalshiMarkets(
 }
 
 export async function fetchKalshiEvent(
-  eventTicker: string,
+  eventTicker: KalshiEventTicker,
   options: { baseUrl?: string; fetchImpl?: KalshiFetchImpl } = {},
 ): Promise<KalshiEventResponse> {
   const fetchImpl = options.fetchImpl ?? fetch;
   const base = resolveBaseUrl(options.baseUrl);
-  const res = await fetchImpl(`${base}/events/${encodeURIComponent(eventTicker)}`, {
+  const res = await fetchImpl(`${base}/events/${encodeURIComponent(unbrand(eventTicker))}`, {
     headers: { Accept: "application/json" },
   });
-  if (!res.ok) throw new Error(`Kalshi event ${eventTicker}: ${res.status} ${res.statusText}`);
+  if (!res.ok) throw new Error(`Kalshi event ${unbrand(eventTicker)}: ${res.status} ${res.statusText}`);
   const body: unknown = await res.json();
   if (!isRecord(body) || !isRecord(body.event) || !Array.isArray(body.markets)) {
-    throw new Error(`Kalshi event ${eventTicker}: invalid wire`);
+    throw new Error(`Kalshi event ${unbrand(eventTicker)}: invalid wire`);
   }
-  const event = body.event as KalshiEventWire;
+  const rawEvent = body.event;
+  const eventTickerWire =
+    typeof rawEvent.event_ticker === "string" ? asKalshiEventTicker(rawEvent.event_ticker) : eventTicker;
+  const seriesTicker =
+    typeof rawEvent.series_ticker === "string" ? asSeriesTicker(rawEvent.series_ticker) : undefined;
+  const event: KalshiEventWire = {
+    event_ticker: eventTickerWire,
+    title: typeof rawEvent.title === "string" ? rawEvent.title : undefined,
+    sub_title: typeof rawEvent.sub_title === "string" ? rawEvent.sub_title : undefined,
+    series_ticker: seriesTicker,
+    category: typeof rawEvent.category === "string" ? rawEvent.category : undefined,
+    mutually_exclusive:
+      typeof rawEvent.mutually_exclusive === "boolean" ? rawEvent.mutually_exclusive : undefined,
+    product_metadata: isRecord(rawEvent.product_metadata)
+      ? {
+          competition:
+            typeof rawEvent.product_metadata.competition === "string"
+              ? rawEvent.product_metadata.competition
+              : undefined,
+          competition_scope:
+            typeof rawEvent.product_metadata.competition_scope === "string"
+              ? rawEvent.product_metadata.competition_scope
+              : undefined,
+        }
+      : undefined,
+  };
   const markets = body.markets
     .map(parseKalshiMarketWire)
     .filter((m): m is KalshiMarketWire => m != null);

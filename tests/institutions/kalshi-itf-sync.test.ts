@@ -3,67 +3,87 @@ import { describe, expect, test } from "bun:test";
 import { ITF_SERIES_TICKERS } from "../../src/alpha/ticker-formats/itf.ts";
 import type { KalshiFetchImpl, KalshiMarketWire } from "../../src/bot/kalshi-events-api.ts";
 import { fetchKalshiMarketsPage } from "../../src/bot/kalshi-events-api.ts";
+import type { BookSnapshot } from "../../src/institutions/alpha-signal-types.ts";
 import {
   fetchRetainedItfMarkets,
+  recordKalshiBookTicks,
   settlementFromKalshiMarkets,
   syncItfEvents,
 } from "../../src/institutions/event-store/kalshi-itf-sync.ts";
 import { openEventStore } from "../../src/institutions/event-store/open-db.ts";
-import { asCanonicalEventId, type CanonicalEventId } from "../../src/institutions/event-store/types.ts";
+import {
+  asCompetitorId,
+  asKalshiEventTicker,
+  asKalshiMarketTicker,
+  asSeriesTicker,
+  type CanonicalEventId,
+} from "../../src/institutions/event-store/brands.ts";
+import { asCanonicalEventId } from "../../src/institutions/event-store/types.ts";
 
-const COMP_A = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
-const COMP_B = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
+const competitor1Id = asCompetitorId("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+const competitor2Id = asCompetitorId("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
 const NOW_MS = Date.UTC(2026, 6, 22, 12, 0, 0); // 2026-07-22T12:00:00Z
 const MIN_TS = Math.floor(NOW_MS / 1000) - 3 * 86_400;
 
 function wire(
-  partial: Partial<KalshiMarketWire> & Pick<KalshiMarketWire, "ticker" | "event_ticker" | "status">,
+  partial: Omit<Partial<KalshiMarketWire>, "ticker" | "event_ticker" | "custom_strike"> & {
+    ticker: string;
+    event_ticker: string;
+    status: string;
+    custom_strike?: { tennis_competitor?: string };
+  },
 ): KalshiMarketWire {
+  const custom =
+    partial.custom_strike?.tennis_competitor ?
+      { tennis_competitor: asCompetitorId(partial.custom_strike.tennis_competitor) }
+    : undefined;
   return {
     yes_sub_title: partial.yes_sub_title,
-    custom_strike: partial.custom_strike,
     result: partial.result,
     occurrence_datetime: partial.occurrence_datetime ?? "2026-07-22T10:00:00Z",
     ...partial,
+    ticker: asKalshiMarketTicker(partial.ticker),
+    event_ticker: asKalshiEventTicker(partial.event_ticker),
+    custom_strike: custom,
   };
 }
 
-const OPEN_EVENT = "KXITFWMATCH-26JUL22PENKUL";
-const CLOSED_EVENT = "KXITFWMATCH-26JUL21SMIJON";
+const eventTickerOpen = asKalshiEventTicker("KXITFWMATCH-26JUL22PENKUL");
+const eventTickerClosed = asKalshiEventTicker("KXITFWMATCH-26JUL21SMIJON");
 
 const OPEN_MARKETS: KalshiMarketWire[] = [
   wire({
-    ticker: `${OPEN_EVENT}-PEN`,
-    event_ticker: OPEN_EVENT,
+    ticker: "KXITFWMATCH-26JUL22PENKUL-PEN",
+    event_ticker: "KXITFWMATCH-26JUL22PENKUL",
     status: "open",
     yes_sub_title: "Pen",
-    custom_strike: { tennis_competitor: COMP_A },
+    custom_strike: { tennis_competitor: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa" },
   }),
   wire({
-    ticker: `${OPEN_EVENT}-KUL`,
-    event_ticker: OPEN_EVENT,
+    ticker: "KXITFWMATCH-26JUL22PENKUL-KUL",
+    event_ticker: "KXITFWMATCH-26JUL22PENKUL",
     status: "open",
     yes_sub_title: "Kul",
-    custom_strike: { tennis_competitor: COMP_B },
+    custom_strike: { tennis_competitor: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb" },
   }),
 ];
 
 const CLOSED_MARKETS: KalshiMarketWire[] = [
   wire({
-    ticker: `${CLOSED_EVENT}-SMI`,
-    event_ticker: CLOSED_EVENT,
+    ticker: "KXITFWMATCH-26JUL21SMIJON-SMI",
+    event_ticker: "KXITFWMATCH-26JUL21SMIJON",
     status: "closed",
     yes_sub_title: "Smith",
-    custom_strike: { tennis_competitor: COMP_A },
+    custom_strike: { tennis_competitor: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa" },
     result: "yes",
     occurrence_datetime: "2026-07-21T14:00:00Z",
   }),
   wire({
-    ticker: `${CLOSED_EVENT}-JON`,
-    event_ticker: CLOSED_EVENT,
+    ticker: "KXITFWMATCH-26JUL21SMIJON-JON",
+    event_ticker: "KXITFWMATCH-26JUL21SMIJON",
     status: "closed",
     yes_sub_title: "Jones",
-    custom_strike: { tennis_competitor: COMP_B },
+    custom_strike: { tennis_competitor: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb" },
     result: "no",
     occurrence_datetime: "2026-07-21T14:00:00Z",
   }),
@@ -72,11 +92,11 @@ const CLOSED_MARKETS: KalshiMarketWire[] = [
 /** Same closed ticker also returned under settled (dedupe proof). */
 const SETTLED_DUP: KalshiMarketWire[] = [
   wire({
-    ticker: `${CLOSED_EVENT}-SMI`,
-    event_ticker: CLOSED_EVENT,
+    ticker: "KXITFWMATCH-26JUL21SMIJON-SMI",
+    event_ticker: "KXITFWMATCH-26JUL21SMIJON",
     status: "settled",
     yes_sub_title: "Smith",
-    custom_strike: { tennis_competitor: COMP_A },
+    custom_strike: { tennis_competitor: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa" },
     result: "yes",
     occurrence_datetime: "2026-07-21T14:00:00Z",
   }),
@@ -108,7 +128,7 @@ function mockItfFetch(): { fetchImpl: KalshiFetchImpl; calls: URLSearchParams[] 
   return { fetchImpl, calls };
 }
 
-describe("kalshi markets query params", () => {
+describe("kalshi-itf-sync", () => {
   test("fetchKalshiMarketsPage passes min_close_ts / min_settled_ts", async () => {
     let seen = "";
     const fetchImpl: KalshiFetchImpl = async (input) => {
@@ -116,29 +136,25 @@ describe("kalshi markets query params", () => {
       return new Response(JSON.stringify({ markets: [] }), { status: 200 });
     };
     await fetchKalshiMarketsPage(
-      { series_ticker: "KXITFWMATCH", status: "closed", min_close_ts: 1_700_000_000 },
+      { series_ticker: asSeriesTicker("KXITFWMATCH"), status: "closed", min_close_ts: 1_700_000_000 },
       { fetchImpl, baseUrl: "https://example.test/trade-api/v2" },
     );
     expect(seen).toContain("min_close_ts=1700000000");
     expect(seen).toContain("status=closed");
 
     await fetchKalshiMarketsPage(
-      { series_ticker: "KXITFWMATCH", status: "settled", min_settled_ts: 1_700_000_001 },
+      { series_ticker: asSeriesTicker("KXITFWMATCH"), status: "settled", min_settled_ts: 1_700_000_001 },
       { fetchImpl, baseUrl: "https://example.test/trade-api/v2" },
     );
     expect(seen).toContain("min_settled_ts=1700000001");
     expect(seen).toContain("status=settled");
   });
-});
 
-describe("settlementFromKalshiMarkets", () => {
   test("maps result=yes to yes_side_label winner", () => {
     const s = settlementFromKalshiMarkets(CLOSED_MARKETS);
     expect(s).toEqual({ winner: "Smith", loser: "Jones", outcome: "completed" });
   });
-});
 
-describe("fetchRetainedItfMarkets / syncItfEvents", () => {
   test("retainDays>0 merges open+closed+settled and dedupes by ticker", async () => {
     const { fetchImpl, calls } = mockItfFetch();
     const retained = await fetchRetainedItfMarkets({
@@ -150,7 +166,12 @@ describe("fetchRetainedItfMarkets / syncItfEvents", () => {
     expect(retained.byStatus).toEqual({ open: 2, closed: 2, settled: 1 });
     expect(retained.markets).toHaveLength(4); // 2 open + 2 closed (settled dup dropped)
     expect(retained.markets.map((m) => m.ticker).sort()).toEqual(
-      [`${CLOSED_EVENT}-JON`, `${CLOSED_EVENT}-SMI`, `${OPEN_EVENT}-KUL`, `${OPEN_EVENT}-PEN`].sort(),
+      [
+        asKalshiMarketTicker("KXITFWMATCH-26JUL21SMIJON-JON"),
+        asKalshiMarketTicker("KXITFWMATCH-26JUL21SMIJON-SMI"),
+        asKalshiMarketTicker("KXITFWMATCH-26JUL22PENKUL-KUL"),
+        asKalshiMarketTicker("KXITFWMATCH-26JUL22PENKUL-PEN"),
+      ].sort(),
     );
 
     const closedCalls = calls.filter((q) => q.get("status") === "closed");
@@ -196,7 +217,7 @@ describe("fetchRetainedItfMarkets / syncItfEvents", () => {
          WHERE m.ticker = $ticker
          LIMIT 1`,
       )
-      .get({ $ticker: `${CLOSED_EVENT}-SMI` }) as {
+      .get({ $ticker: "KXITFWMATCH-26JUL21SMIJON-SMI" }) as {
       winner: string;
       loser: string;
       outcome: string;
@@ -213,7 +234,7 @@ describe("fetchRetainedItfMarkets / syncItfEvents", () => {
          WHERE m.ticker = $ticker
          LIMIT 1`,
       )
-      .get({ $ticker: `${OPEN_EVENT}-PEN` }) as { winner: string; outcome: string };
+      .get({ $ticker: "KXITFWMATCH-26JUL22PENKUL-PEN" }) as { winner: string; outcome: string };
     expect(open.winner).toBe("");
     expect(open.outcome).toBe("scheduled");
   });
@@ -234,7 +255,7 @@ describe("fetchRetainedItfMarkets / syncItfEvents", () => {
 
     const closedCount = db
       .query(`SELECT COUNT(*) AS n FROM markets WHERE ticker LIKE $p`)
-      .get({ $p: `${CLOSED_EVENT}%` }) as { n: number };
+      .get({ $p: "KXITFWMATCH-26JUL21SMIJON%" }) as { n: number };
     expect(closedCount.n).toBe(0);
   });
 
@@ -247,7 +268,7 @@ describe("fetchRetainedItfMarkets / syncItfEvents", () => {
         event_ticker: event,
         status: "open",
         yes_sub_title: "Foo",
-        custom_strike: { tennis_competitor: COMP_A },
+        custom_strike: { tennis_competitor: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa" },
         occurrence_datetime: "2026-07-22T10:00:00Z",
       }),
       wire({
@@ -255,7 +276,7 @@ describe("fetchRetainedItfMarkets / syncItfEvents", () => {
         event_ticker: event,
         status: "open",
         yes_sub_title: "Bar",
-        custom_strike: { tennis_competitor: COMP_B },
+        custom_strike: { tennis_competitor: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb" },
         occurrence_datetime: "2026-07-22T10:00:00Z",
       }),
     ];
@@ -320,14 +341,14 @@ describe("fetchRetainedItfMarkets / syncItfEvents", () => {
                 event_ticker: event,
                 status: "open",
                 yes_sub_title: "Foo",
-                custom_strike: { tennis_competitor: COMP_A },
+                custom_strike: { tennis_competitor: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa" },
               },
               {
                 ticker: `${event}-BAR`,
                 event_ticker: event,
                 status: "open",
                 yes_sub_title: "Bar",
-                custom_strike: { tennis_competitor: COMP_B },
+                custom_strike: { tennis_competitor: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb" },
               },
             ]
           : [];
@@ -400,7 +421,7 @@ describe("fetchRetainedItfMarkets / syncItfEvents", () => {
          JOIN markets m ON m.event_id = e.event_id
          WHERE m.ticker = $ticker LIMIT 1`,
       )
-      .get({ $ticker: `${CLOSED_EVENT}-SMI` }) as { eventId: CanonicalEventId };
+      .get({ $ticker: "KXITFWMATCH-26JUL21SMIJON-SMI" }) as { eventId: CanonicalEventId };
     const eventId = asCanonicalEventId(row.eventId);
     db.query(
       `UPDATE events SET winner = 'Bridged Winner', loser = 'Bridged Loser', outcome = 'completed'
@@ -419,5 +440,71 @@ describe("fetchRetainedItfMarkets / syncItfEvents", () => {
     expect(after.winner).toBe("Bridged Winner");
     expect(after.loser).toBe("Bridged Loser");
     expect(after.outcome).toBe("completed");
+  });
+
+  test("REST book ticks stamp per-ticker recv_ts with source_clock=recv", async () => {
+    const eventTicker = "KXITFMATCH-26JUL22SANALV";
+    const marketTickerA = asKalshiMarketTicker("KXITFMATCH-26JUL22SANALV-SAN");
+    const marketTickerB = asKalshiMarketTicker("KXITFMATCH-26JUL22SANALV-ALV");
+    const eventId = "kalshi|test|book-ticks-rest";
+    const db = openEventStore({ dbPath: ":memory:" });
+    const now = Date.now();
+    db.query(
+      `INSERT INTO events (
+        event_id, tour, level, tournament, location, surface, court, round, best_of,
+        player_a, player_b, winner, loser, start_ts, outcome, source, source_url, fetched_ts,
+        source_row_hash, ingested_at, corpus
+      ) VALUES (
+        $id, 'ITF', 'KXITFMATCH', 'W15', '', 'Hard', '', 'R32', NULL,
+        'San', 'Alv', '', '', $start, 'scheduled', 'test', '', $now,
+        $hash, $now, 'trading'
+      )`,
+    ).run({
+      $id: eventId,
+      $start: new Date(now).toISOString(),
+      $now: now,
+      $hash: `t|${eventTicker}`,
+    });
+    db.query(
+      `INSERT INTO markets (
+        market_id, event_id, venue, ticker, series, market_kind, yes_side_label, side_code,
+        source, fetched_ts
+      ) VALUES
+        ('kalshi:${marketTickerA}', $id, 'kalshi', $a, 'KXITFMATCH', 'match_winner', 'San', 'SAN', 'test', $now),
+        ('kalshi:${marketTickerB}', $id, 'kalshi', $b, 'KXITFMATCH', 'match_winner', 'Alv', 'ALV', 'test', $now)`,
+    ).run({ $id: eventId, $a: marketTickerA, $b: marketTickerB, $now: now });
+
+    let call = 0;
+    const emptyBook = (): BookSnapshot => ({ ts: 0, bids: [], asks: [], seq: 0 });
+    const fetchBook = async (_ticker: typeof marketTickerA): Promise<BookSnapshot> => {
+      call++;
+      if (call > 1) await Bun.sleep(5);
+      return emptyBook();
+    };
+
+    const summary = await recordKalshiBookTicks(db, [marketTickerA, marketTickerB], {
+      fetchBook,
+      syncFirst: false,
+    });
+    expect(summary.ticksRecorded).toBe(2);
+    expect(summary.errors).toBe(0);
+
+    const rows = db
+      .query(
+        `SELECT ticker, ts, recv_ts, source_clock
+         FROM book_ticks
+         ORDER BY recv_ts ASC`,
+      )
+      .all() as Array<{ ticker: string; ts: number; recv_ts: number; source_clock: string }>;
+
+    expect(rows).toHaveLength(2);
+    for (const row of rows) {
+      expect(row.recv_ts).toBeGreaterThan(0);
+      expect(row.source_clock).toBe("recv");
+      expect(row.ts).toBe(row.recv_ts);
+    }
+    expect(rows[0]!.ticker).toBe(marketTickerA);
+    expect(rows[1]!.ticker).toBe(marketTickerB);
+    expect(rows[1]!.recv_ts).toBeGreaterThan(rows[0]!.recv_ts);
   });
 });

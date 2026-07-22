@@ -27,7 +27,8 @@ import {
   kalshiSourceRowHash,
   tryMintKalshiEventIdFromMarkets,
 } from "./kalshi-event-id.ts";
-import type { CanonicalEventId } from "./types.ts";
+import type { CanonicalEventId, KalshiEventTicker, KalshiMarketTicker, SeriesTicker } from "./brands.ts";
+import { asCanonicalEventId, asKalshiEventTicker, asSeriesTicker, tryKalshiEventTicker, unbrand } from "./brands.ts";
 import type { BookSnapshot } from "../alpha-signal-types.ts";
 import { fetchKalshiBookSnapshot } from "../../bot/kalshi-market-data.ts";
 import {
@@ -84,8 +85,8 @@ export const DEFAULT_ITF_RETAIN_DAYS = 3;
 const KALSHI_VENUE = "kalshi";
 const KALSHI_SOURCE = "kalshi-api";
 const KALSHI_MARKETS_URL = `${OFFICIAL_URLS.kalshi.tradeApiV2Base}/markets`;
-const KALSHI_ORDERBOOK_URL = (ticker: string) =>
-  `${OFFICIAL_URLS.kalshi.tradeApiV2Base}/markets/${encodeURIComponent(ticker)}/orderbook`;
+const KALSHI_ORDERBOOK_URL = (ticker: KalshiMarketTicker) =>
+  `${OFFICIAL_URLS.kalshi.tradeApiV2Base}/markets/${encodeURIComponent(unbrand(ticker))}/orderbook`;
 const TRADING_CORPUS = "trading";
 
 function parseRulesBlob(markets: KalshiMarketWire[]): string {
@@ -128,7 +129,7 @@ async function fetchAllKalshiMarketsRetry(
 
 function dedupeMarketsByTicker(markets: KalshiMarketWire[]): KalshiMarketWire[] {
   const byTicker = new Map<string, KalshiMarketWire>();
-  for (const m of markets) byTicker.set(m.ticker, m);
+  for (const m of markets) byTicker.set(unbrand(m.ticker), m);
   return [...byTicker.values()];
 }
 
@@ -139,7 +140,10 @@ export async function fetchOpenItfMarkets(
   const out: KalshiMarketWire[] = [];
   for (const series of ITF_SERIES_TICKERS) {
     out.push(
-      ...(await fetchAllKalshiMarketsRetry({ series_ticker: series, status: "open" }, options)),
+      ...(await fetchAllKalshiMarketsRetry(
+        { series_ticker: asSeriesTicker(series), status: "open" },
+        options,
+      )),
     );
   }
   return out;
@@ -169,18 +173,19 @@ export async function fetchRetainedItfMarkets(
   const settled: KalshiMarketWire[] = [];
   // Sequential — parallel series fan-out trips public rate limits.
   for (const series of ITF_SERIES_TICKERS) {
+    const seriesTicker = asSeriesTicker(series);
     open.push(
-      ...(await fetchAllKalshiMarketsRetry({ series_ticker: series, status: "open" }, options)),
+      ...(await fetchAllKalshiMarketsRetry({ series_ticker: seriesTicker, status: "open" }, options)),
     );
     closed.push(
       ...(await fetchAllKalshiMarketsRetry(
-        { series_ticker: series, status: "closed", min_close_ts: minTs },
+        { series_ticker: seriesTicker, status: "closed", min_close_ts: minTs },
         options,
       )),
     );
     settled.push(
       ...(await fetchAllKalshiMarketsRetry(
-        { series_ticker: series, status: "settled", min_settled_ts: minTs },
+        { series_ticker: seriesTicker, status: "settled", min_settled_ts: minTs },
         options,
       )),
     );
@@ -223,7 +228,7 @@ export function settlementFromKalshiMarkets(markets: KalshiMarketWire[]): {
   return { winner, loser, outcome: "completed" };
 }
 
-export async function fetchItfCalendarRow(eventTicker: string): Promise<ItfCalendarRow | null> {
+export async function fetchItfCalendarRow(eventTicker: KalshiEventTicker): Promise<ItfCalendarRow | null> {
   const markets = await fetchOpenItfMarkets();
   const rows = buildItfCalendarRows(markets.filter((m) => m.event_ticker === eventTicker));
   return rows[0] ?? null;
@@ -235,30 +240,30 @@ export type UpsertKalshiEventResult =
 
 function upsertKalshiEvent(
   db: Database,
-  eventTicker: string,
+  eventTicker: KalshiEventTicker,
   markets: KalshiMarketWire[],
   eventTitle: string,
   eventSubTitle: string,
   ingestedAt: number,
 ): UpsertKalshiEventResult {
   const sample = markets[0]!;
-  const series = parseItfSeriesPrefix(sample.ticker) ?? "KXITFMATCH";
+  const series = asSeriesTicker(parseItfSeriesPrefix(unbrand(sample.ticker)) ?? "KXITFMATCH");
   const labels = playerLabels(markets);
   const sideCodes = itfSideCodesForEvent(
-    eventTicker,
-    markets.map((m) => m.ticker),
+    unbrand(eventTicker),
+    markets.map((m) => unbrand(m.ticker)),
   );
   if (!sideCodes) {
     return {
       ok: false,
-      anomaly: `ambiguous_itf_blob:${eventTicker} — refuse best-guess side split`,
+      anomaly: `ambiguous_itf_blob:${unbrand(eventTicker)} — refuse best-guess side split`,
     };
   }
   const startTs = sample.occurrence_datetime?.trim() ?? "";
   if (!startTs) {
     return {
       ok: false,
-      anomaly: `missing_occurrence:${eventTicker} — refuse expected_expiration / wall-clock mint`,
+      anomaly: `missing_occurrence:${unbrand(eventTicker)} — refuse expected_expiration / wall-clock mint`,
     };
   }
   const minted = tryMintKalshiEventIdFromMarkets({
@@ -270,7 +275,7 @@ function upsertKalshiEvent(
   if (minted.keyedBy === "ticker") {
     return {
       ok: false,
-      anomaly: `ticker_keyed_event_id:${eventTicker} — missing tennis_competitor pair; refuse trading upsert`,
+      anomaly: `ticker_keyed_event_id:${unbrand(eventTicker)} — missing tennis_competitor pair; refuse trading upsert`,
     };
   }
   const sourceRowHash = kalshiSourceRowHash(eventTicker);
@@ -278,7 +283,7 @@ function upsertKalshiEvent(
   const prior = db
     .query(`SELECT event_id AS eventId FROM events WHERE source_row_hash = $hash`)
     .get({ $hash: sourceRowHash }) as { eventId: string } | null;
-  const eventId = (prior?.eventId as CanonicalEventId | undefined) ?? minted.eventId;
+  const eventId = (prior ? asCanonicalEventId(prior.eventId) : undefined) ?? minted.eventId;
   const keyedBy = minted.keyedBy;
   const playerA = labels?.[0] ?? sideCodes[0]!;
   const playerB = labels?.[1] ?? sideCodes[1]!;
@@ -322,7 +327,7 @@ function upsertKalshiEvent(
         ELSE excluded.score_text
       END`,
   ).run({
-    $event_id: eventId,
+    $event_id: unbrand(eventId),
     $tour: itfTourFromSeries(series),
     $level: eventSubTitle || series,
     $tournament: extractTournament(eventTitle, eventSubTitle),
@@ -334,7 +339,7 @@ function upsertKalshiEvent(
     $start_ts: startTs,
     $outcome: outcome,
     $source: KALSHI_SOURCE,
-    $source_url: `${KALSHI_MARKETS_URL}?event_ticker=${encodeURIComponent(eventTicker)}`,
+    $source_url: `${KALSHI_MARKETS_URL}?event_ticker=${encodeURIComponent(unbrand(eventTicker))}`,
     $fetched_ts: ingestedAt,
     $source_row_hash: sourceRowHash,
     $ingested_at: ingestedAt,
@@ -342,8 +347,8 @@ function upsertKalshiEvent(
   });
 
   for (const m of markets) {
-    const sideCode = parseItfYesSideCode(m.ticker) ?? "";
-    const mSeries = parseTennisSeriesPrefix(m.ticker) ?? series;
+    const sideCode = parseItfYesSideCode(unbrand(m.ticker)) ?? "";
+    const mSeries = asSeriesTicker(parseTennisSeriesPrefix(unbrand(m.ticker)) ?? unbrand(series));
     db.query(
       `INSERT OR REPLACE INTO markets (
         market_id, event_id, venue, ticker, series, market_kind, yes_side_label, side_code,
@@ -353,18 +358,18 @@ function upsertKalshiEvent(
         $competitor_id, $rules_blob, NULL, $source, $source_url, $fetched_ts
       )`,
     ).run({
-      $market_id: kalshiMarketId(m.ticker),
-      $event_id: eventId,
+      $market_id: unbrand(kalshiMarketId(m.ticker)),
+      $event_id: unbrand(eventId),
       $venue: KALSHI_VENUE,
-      $ticker: m.ticker,
-      $series: mSeries,
-      $market_kind: marketKindFromTicker(m.ticker),
+      $ticker: unbrand(m.ticker),
+      $series: unbrand(mSeries),
+      $market_kind: marketKindFromTicker(unbrand(m.ticker)),
       $yes_side_label: m.yes_sub_title ?? "",
       $side_code: sideCode,
-      $competitor_id: m.custom_strike?.tennis_competitor ?? null,
+      $competitor_id: m.custom_strike?.tennis_competitor ? unbrand(m.custom_strike.tennis_competitor) : null,
       $rules_blob: rules,
       $source: KALSHI_SOURCE,
-      $source_url: `${KALSHI_MARKETS_URL}?ticker=${encodeURIComponent(m.ticker)}`,
+      $source_url: `${KALSHI_MARKETS_URL}?ticker=${encodeURIComponent(unbrand(m.ticker))}`,
       $fetched_ts: ingestedAt,
     });
   }
@@ -374,11 +379,12 @@ function upsertKalshiEvent(
 
 /** Open markets across the ladder family that share this matchup date-blob. */
 export async function fetchLadderMarketsForEvent(
-  eventTickerOrMarket: string,
+  eventTickerOrMarket: KalshiEventTicker | KalshiMarketTicker,
 ): Promise<{ markets: KalshiMarketWire[]; coverage: LadderCoverage }> {
-  const blob = extractMatchupDateBlob(eventTickerOrMarket);
-  const family = ladderFamilyFromTicker(eventTickerOrMarket);
-  const seriesList = ladderSeriesForTicker(eventTickerOrMarket);
+  const plain = unbrand(eventTickerOrMarket);
+  const blob = extractMatchupDateBlob(plain);
+  const family = ladderFamilyFromTicker(plain);
+  const seriesList = ladderSeriesForTicker(plain);
   if (!blob || seriesList.length === 0) {
     return {
       markets: [],
@@ -389,9 +395,13 @@ export async function fetchLadderMarketsForEvent(
   const markets: KalshiMarketWire[] = [];
   for (const series of seriesList) {
     try {
-      const batch = await fetchAllKalshiMarketsRetry({ series_ticker: series, status: "open" }, {});
+      const batch = await fetchAllKalshiMarketsRetry(
+        { series_ticker: asSeriesTicker(series), status: "open" },
+        {},
+      );
       for (const m of batch) {
-        const mBlob = extractMatchupDateBlob(m.event_ticker) ?? extractMatchupDateBlob(m.ticker);
+        const mBlob =
+          extractMatchupDateBlob(unbrand(m.event_ticker)) ?? extractMatchupDateBlob(unbrand(m.ticker));
         if (mBlob === blob) markets.push(m);
       }
     } catch {
@@ -404,7 +414,7 @@ export async function fetchLadderMarketsForEvent(
 
 export type SyncItfEventsOptions = ItfFetchOptions & {
   fetchEventDetails?: boolean;
-  eventTickers?: string[];
+  eventTickers?: KalshiEventTicker[];
   /**
    * Days of closed/settled markets to retain (default 3).
    * `0` = open-only (legacy behavior).
@@ -426,8 +436,8 @@ export async function syncItfEvents(
   const markets = retained.markets;
   let grouped = groupMarketsByEvent(markets);
   if (options.eventTickers?.length) {
-    const allow = new Set(options.eventTickers);
-    grouped = new Map([...grouped.entries()].filter(([k]) => allow.has(k)));
+    const allow = new Set(options.eventTickers.map(unbrand));
+    grouped = new Map([...grouped.entries()].filter(([k]) => allow.has(unbrand(k))));
   }
   const ingestedAt = options.nowMs ?? Date.now();
   let eventsUpserted = 0;
@@ -438,7 +448,7 @@ export async function syncItfEvents(
   db.run("BEGIN");
   try {
     for (const [eventTicker, eventMarkets] of grouped) {
-      let title = eventTicker;
+      let title = unbrand(eventTicker);
       let subTitle = "";
       let marketsForEvent = eventMarkets;
       if (options.fetchEventDetails) {
@@ -503,7 +513,7 @@ export type RecordBookTickSummary = {
 
 export async function recordKalshiBookTicks(
   db: Database,
-  tickers: string[],
+  tickers: KalshiMarketTicker[],
   options: {
     fetchBook?: typeof fetchKalshiBookSnapshot;
     syncFirst?: boolean;
@@ -513,29 +523,38 @@ export async function recordKalshiBookTicks(
   const fetchBook = options.fetchBook ?? fetchKalshiBookSnapshot;
   let ticksRecorded = 0;
   let errors = 0;
-  const eventTickers = new Set<string>();
+  const eventTickers = new Set<KalshiEventTicker>();
 
   if (options.syncFirst && tickers.length > 0) {
     const events = tickers
-      .map((t) => parseItfEventTicker(t))
-      .filter((e): e is string => Boolean(e));
+      .map((t) => parseItfEventTicker(unbrand(t)))
+      .filter((e): e is string => Boolean(e))
+      .map((e) => asKalshiEventTicker(e));
     if (events.length) {
-      await syncOpenItfEvents(db, { eventTickers: [...new Set(events)] });
+      const unique = [...new Map(events.map((e) => [unbrand(e), e])).values()];
+      await syncOpenItfEvents(db, { eventTickers: unique });
     }
   }
 
   for (const ticker of tickers) {
-    const eventTicker = parseItfEventTicker(ticker) ?? ticker.replace(/-[A-Z0-9]+$/, "");
+    const tickerPlain = unbrand(ticker);
+    const eventTickerWire =
+      parseItfEventTicker(tickerPlain) ?? tickerPlain.replace(/-[A-Z0-9]+$/, "");
+    const eventTicker = tryKalshiEventTicker(eventTickerWire);
+    if (!eventTicker) {
+      errors++;
+      continue;
+    }
     eventTickers.add(eventTicker);
     const mapped = db
       .query(`SELECT event_id AS eventId FROM markets WHERE ticker = $ticker`)
-      .get({ $ticker: ticker }) as { eventId: string } | null;
+      .get({ $ticker: tickerPlain }) as { eventId: string } | null;
     if (!mapped?.eventId) {
       // Never ticker-mint phantom event_ids — book_ticks must join synced markets.
       errors++;
       continue;
     }
-    const eventId = mapped.eventId as CanonicalEventId;
+    const eventId = asCanonicalEventId(mapped.eventId);
     const kind = marketKindFromTicker(ticker);
     try {
       const book: BookSnapshot = await fetchBook(ticker);
@@ -548,8 +567,8 @@ export async function recordKalshiBookTicks(
            $event_id, $ticker, $market_kind, $ts, $recv_ts, 'recv', NULL, $levels_json, 'kalshi-rest', $source_url
          )`,
       ).run({
-        $event_id: eventId,
-        $ticker: ticker,
+        $event_id: unbrand(eventId),
+        $ticker: tickerPlain,
         $market_kind: kind,
         $ts: recvTs,
         $recv_ts: recvTs,
@@ -576,7 +595,7 @@ export async function recordKalshiBookTicks(
 /** Expand an event ticker to the full open ladder, then record every book. */
 export async function recordEventLadder(
   db: Database,
-  eventTicker: string,
+  eventTicker: KalshiEventTicker,
   options: { fetchBook?: typeof fetchKalshiBookSnapshot; syncFirst?: boolean } = {},
 ): Promise<RecordBookTickSummary> {
   const { markets, coverage } = await fetchLadderMarketsForEvent(eventTicker);

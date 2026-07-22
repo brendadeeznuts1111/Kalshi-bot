@@ -1,19 +1,29 @@
 // @see https://bun.com/docs/test/index#run-tests
 import { describe, expect, test } from "bun:test";
 import {
+  asCompetitorId,
+  asKalshiEventTicker,
+  asSeriesTicker,
+} from "../../src/institutions/event-store/brands.ts";
+import {
   mintKalshiCompetitorEventId,
   mintKalshiEventId,
   normalizeKalshiStartTs,
   tryMintKalshiEventIdFromMarkets,
 } from "../../src/institutions/event-store/kalshi-event-id.ts";
 
+const competitor1Id = asCompetitorId("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+const competitor2Id = asCompetitorId("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+const eventTicker = asKalshiEventTicker("KXITFMATCH-26JUL22SANALV");
+const series = asSeriesTicker("KXITFMATCH");
+
 describe("kalshi-event-id", () => {
   test("competitor+start keys differ from ticker-blob keys", () => {
-    const byTicker = mintKalshiEventId("KXITFMATCH-26JUL22ZAKBAK");
+    const byTicker = mintKalshiEventId(asKalshiEventTicker("KXITFMATCH-26JUL22ZAKBAK"));
     const byComp = mintKalshiCompetitorEventId({
-      series: "KXITFMATCH",
-      competitorA: "aaa",
-      competitorB: "bbb",
+      series,
+      competitorA: competitor1Id,
+      competitorB: competitor2Id,
       startTs: "2026-07-22T10:00:00Z",
     });
     expect(byTicker).not.toBe(byComp);
@@ -21,15 +31,15 @@ describe("kalshi-event-id", () => {
 
   test("competitor order is normalized", () => {
     const a = mintKalshiCompetitorEventId({
-      series: "KXITFMATCH",
-      competitorA: "bbb",
-      competitorB: "aaa",
+      series,
+      competitorA: competitor2Id,
+      competitorB: competitor1Id,
       startTs: "2026-07-22T10:00:00Z",
     });
     const b = mintKalshiCompetitorEventId({
-      series: "KXITFMATCH",
-      competitorA: "aaa",
-      competitorB: "bbb",
+      series,
+      competitorA: competitor1Id,
+      competitorB: competitor2Id,
       startTs: "2026-07-22T10:00:00Z",
     });
     expect(a).toBe(b);
@@ -37,17 +47,17 @@ describe("kalshi-event-id", () => {
 
   test("tryMint prefers competitor pair when both present", () => {
     const r = tryMintKalshiEventIdFromMarkets({
-      eventTicker: "KXITFMATCH-26JUL22SANALV",
-      series: "KXITFMATCH",
+      eventTicker,
+      series,
       startTs: "2026-07-22T10:00:00Z",
-      competitorIds: ["uuid-san", "uuid-alv"],
+      competitorIds: [competitor1Id, competitor2Id],
     });
     expect(r.keyedBy).toBe("competitors");
     const fallback = tryMintKalshiEventIdFromMarkets({
-      eventTicker: "KXITFMATCH-26JUL22SANALV",
-      series: "KXITFMATCH",
+      eventTicker,
+      series,
       startTs: "2026-07-22T10:00:00Z",
-      competitorIds: ["uuid-san"],
+      competitorIds: [competitor1Id],
     });
     expect(fallback.keyedBy).toBe("ticker");
   });
@@ -69,9 +79,9 @@ describe("kalshi-event-id", () => {
 
   test("ISO startTs format variants mint the same competitor event id", () => {
     const base = {
-      series: "KXITFMATCH",
-      competitorA: "aaa",
-      competitorB: "bbb",
+      series,
+      competitorA: competitor1Id,
+      competitorB: competitor2Id,
     };
     const z = mintKalshiCompetitorEventId({ ...base, startTs: "2026-07-22T10:00:00Z" });
     const ms = mintKalshiCompetitorEventId({
@@ -88,9 +98,9 @@ describe("kalshi-event-id", () => {
 
   test("second-level difference within the same minute mints the same id", () => {
     const base = {
-      series: "KXITFMATCH",
-      competitorA: "aaa",
-      competitorB: "bbb",
+      series,
+      competitorA: competitor1Id,
+      competitorB: competitor2Id,
     };
     const a = mintKalshiCompetitorEventId({
       ...base,
@@ -105,9 +115,9 @@ describe("kalshi-event-id", () => {
 
   test("different minutes mint different competitor event ids", () => {
     const base = {
-      series: "KXITFMATCH",
-      competitorA: "aaa",
-      competitorB: "bbb",
+      series,
+      competitorA: competitor1Id,
+      competitorB: competitor2Id,
     };
     const a = mintKalshiCompetitorEventId({
       ...base,

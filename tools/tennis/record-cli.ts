@@ -30,6 +30,12 @@ import { DEFAULT_EVENT_STORE_DB } from "../../src/institutions/event-store/paths
 import { bridgeStadionToKalshi, type BridgeSummary } from "../../src/institutions/event-store/stadion-kalshi-bridge.ts";
 import { listRecordTickers } from "../../src/institutions/event-store/watch-set.ts";
 import { runKalshiWsWatchRecorder } from "../../src/institutions/event-store/kalshi-ws-recorder.ts";
+import {
+  asKalshiEventTicker,
+  asKalshiMarketTicker,
+  unbrand,
+  type KalshiMarketTicker,
+} from "../../src/institutions/event-store/brands.ts";
 
 type RecordOncePayload = {
   dryRun: boolean;
@@ -39,7 +45,7 @@ type RecordOncePayload = {
   rows: Awaited<ReturnType<typeof recordTopItfEvents>>["rows"] | null;
   watch: { events: number; tickers: number } | null;
   record: Awaited<ReturnType<typeof recordKalshiBookTicks>> | null;
-  tickers: string[];
+  tickers: KalshiMarketTicker[];
 };
 
 export async function runTennisRecordCli(argv: string[]): Promise<number> {
@@ -133,7 +139,7 @@ export async function runTennisRecordCli(argv: string[]): Promise<number> {
       };
       console.log(values.json ? JSON.stringify(payload, null, 2) : [
         `record (dry-run)  mode=ws-watch  watch_events=${events.length} tickers=${tickers.length}`,
-        ...tickers.slice(0, 20).map((t) => `  ${t}`),
+        ...tickers.slice(0, 20).map((t) => `  ${unbrand(t)}`),
         tickers.length > 20 ? `  … ${tickers.length - 20} more` : "",
       ].filter(Boolean).join("\n"));
       return 0;
@@ -164,7 +170,8 @@ export async function runTennisRecordCli(argv: string[]): Promise<number> {
       } else {
         console.log(
           `WS: ticks=${summary.ticksRecorded} snapshots=${summary.snapshots} deltas=${summary.deltas}` +
-            ` gaps=${summary.seqGaps} errors=${summary.errors} subscribed=${summary.subscribed}`,
+            ` gaps=${summary.seqGaps} dup=${summary.duplicates} resync=${summary.resyncRequests}` +
+            ` errors=${summary.errors} subscribed=${summary.subscribed}`,
         );
       }
     } finally {
@@ -176,7 +183,7 @@ export async function runTennisRecordCli(argv: string[]): Promise<number> {
 
   const runOnce = async (): Promise<RecordOncePayload> => {
     if (explicitTicker) {
-      const ticker = values.ticker as string;
+      const ticker = asKalshiMarketTicker(values.ticker as string);
       if (dryRun) {
         return {
           dryRun,
@@ -206,7 +213,7 @@ export async function runTennisRecordCli(argv: string[]): Promise<number> {
     }
 
     if (explicitEvent) {
-      const eventTicker = values.event as string;
+      const eventTicker = asKalshiEventTicker(values.event as string);
       if (dryRun) {
         return {
           dryRun,
@@ -216,7 +223,7 @@ export async function runTennisRecordCli(argv: string[]): Promise<number> {
           rows: null,
           watch: null,
           record: null,
-          tickers: [eventTicker],
+          tickers: [],
         };
       }
       if (values["winners-only"]) {
@@ -379,7 +386,7 @@ export async function runTennisRecordCli(argv: string[]): Promise<number> {
             `  watch_events=${payload.watch.events} tickers=${payload.watch.tickers}`
           : `  tickers=${payload.tickers.length}`),
       );
-      for (const t of payload.tickers.slice(0, 20)) console.log(`  ${t}`);
+      for (const t of payload.tickers.slice(0, 20)) console.log(`  ${unbrand(t)}`);
       if (payload.tickers.length > 20) {
         console.log(`  … ${payload.tickers.length - 20} more`);
       }

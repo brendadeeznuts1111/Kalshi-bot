@@ -7,32 +7,41 @@
  * @see https://docs.kalshi.com/getting_started/targets_and_milestones
  */
 import { OFFICIAL_URLS } from "../institutions/official-urls.ts";
+import {
+  tryCompetitorId,
+  tryKalshiEventTicker,
+  tryMilestoneId,
+  type CompetitorId,
+  type KalshiEventTicker,
+  type MilestoneId,
+  unbrand,
+} from "../institutions/event-store/brands.ts";
 import type { KalshiFetchImpl } from "./kalshi-events-api.ts";
 
 /** Re-export for pollers (live-scores, etc.) that inject fetch. */
 export type { KalshiFetchImpl };
 
 export type KalshiMilestoneWire = {
-  id: string;
+  id: MilestoneId;
   type: string;
   title: string;
   startDate: string | null;
-  primaryEventTickers: string[];
-  relatedEventTickers: string[];
+  primaryEventTickers: KalshiEventTicker[];
+  relatedEventTickers: KalshiEventTicker[];
   /** From milestone.details — same UUID family as tennis_competitor. */
-  firstCompetitorId: string | null;
-  secondCompetitorId: string | null;
-  mainGameEventTicker: string | null;
+  firstCompetitorId: CompetitorId | null;
+  secondCompetitorId: CompetitorId | null;
+  mainGameEventTicker: KalshiEventTicker | null;
   rawDetails: Record<string, unknown>;
 };
 
 export type KalshiLiveDataWire = {
-  milestoneId: string;
+  milestoneId: MilestoneId;
   type: string;
   status: string;
   matchStatus: string;
-  competitor1Id: string | null;
-  competitor2Id: string | null;
+  competitor1Id: CompetitorId | null;
+  competitor2Id: CompetitorId | null;
   setsHome: number;
   setsAway: number;
   gamesHome: number;
@@ -40,10 +49,10 @@ export type KalshiLiveDataWire = {
   pointsHome: number;
   pointsAway: number;
   /** Competitor UUID currently serving, or null. */
-  serverCompetitorId: string | null;
+  serverCompetitorId: CompetitorId | null;
   /** 1 = competitor1, 2 = competitor2, 0 = unknown. */
   serverSide: 0 | 1 | 2;
-  winnerCompetitorId: string | null;
+  winnerCompetitorId: CompetitorId | null;
   completedRounds: number;
   details: Record<string, unknown>;
 };
@@ -85,23 +94,30 @@ export function parseKalshiMilestonesWire(wire: unknown): KalshiMilestoneWire[] 
     if (!isRecord(raw)) continue;
     const id = asString(raw.id);
     if (!id) continue;
+    const milestoneId = tryMilestoneId(id);
+    if (!milestoneId) continue;
     const details = isRecord(raw.details) ? raw.details : {};
     const primary = Array.isArray(raw.primary_event_tickers)
-      ? raw.primary_event_tickers.filter((t): t is string => typeof t === "string")
+      ? raw.primary_event_tickers
+          .map((t) => (typeof t === "string" ? tryKalshiEventTicker(t) : undefined))
+          .filter((t): t is KalshiEventTicker => t != null)
       : [];
     const related = Array.isArray(raw.related_event_tickers)
-      ? raw.related_event_tickers.filter((t): t is string => typeof t === "string")
+      ? raw.related_event_tickers
+          .map((t) => (typeof t === "string" ? tryKalshiEventTicker(t) : undefined))
+          .filter((t): t is KalshiEventTicker => t != null)
       : [];
+    const mainGame = asString(details.main_game_event_ticker);
     out.push({
-      id,
+      id: milestoneId,
       type: asString(raw.type) ?? "",
       title: asString(raw.title) ?? "",
       startDate: asString(raw.start_date),
       primaryEventTickers: primary,
       relatedEventTickers: related,
-      firstCompetitorId: asString(details.first_competitor_id),
-      secondCompetitorId: asString(details.second_competitor_id),
-      mainGameEventTicker: asString(details.main_game_event_ticker),
+      firstCompetitorId: tryCompetitorId(asString(details.first_competitor_id)) ?? null,
+      secondCompetitorId: tryCompetitorId(asString(details.second_competitor_id)) ?? null,
+      mainGameEventTicker: mainGame ? tryKalshiEventTicker(mainGame) ?? null : null,
       rawDetails: details,
     });
   }
@@ -113,12 +129,14 @@ export function parseKalshiLiveDataWire(wire: unknown): KalshiLiveDataWire | nul
   if (!isRecord(wire) || !isRecord(wire.live_data)) return null;
   const ld = wire.live_data;
   const details = isRecord(ld.details) ? ld.details : {};
-  const milestoneId = asString(ld.milestone_id);
+  const milestoneRaw = asString(ld.milestone_id);
+  if (!milestoneRaw) return null;
+  const milestoneId = tryMilestoneId(milestoneRaw);
   if (!milestoneId) return null;
-  const competitor1Id = asString(details.competitor1_id);
-  const competitor2Id = asString(details.competitor2_id);
+  const competitor1Id = tryCompetitorId(asString(details.competitor1_id));
+  const competitor2Id = tryCompetitorId(asString(details.competitor2_id));
   const completedRounds = asInt(details.completed_rounds);
-  const serverRaw = asString(details.server);
+  const serverRaw = tryCompetitorId(asString(details.server));
   let serverSide: 0 | 1 | 2 = 0;
   if (serverRaw && competitor1Id && serverRaw === competitor1Id) serverSide = 1;
   else if (serverRaw && competitor2Id && serverRaw === competitor2Id) serverSide = 2;
@@ -128,17 +146,17 @@ export function parseKalshiLiveDataWire(wire: unknown): KalshiLiveDataWire | nul
     type: asString(ld.type) ?? "",
     status: asString(details.status) ?? "",
     matchStatus: asString(details.match_status) ?? "",
-    competitor1Id,
-    competitor2Id,
+    competitor1Id: competitor1Id ?? null,
+    competitor2Id: competitor2Id ?? null,
     setsHome: asInt(details.competitor1_overall_score),
     setsAway: asInt(details.competitor2_overall_score),
     gamesHome: gamesFromRoundScores(details.competitor1_round_scores, completedRounds),
     gamesAway: gamesFromRoundScores(details.competitor2_round_scores, completedRounds),
     pointsHome: asInt(details.competitor1_current_round_score),
     pointsAway: asInt(details.competitor2_current_round_score),
-    serverCompetitorId: serverRaw,
+    serverCompetitorId: serverRaw ?? null,
     serverSide,
-    winnerCompetitorId: asString(details.winner),
+    winnerCompetitorId: tryCompetitorId(asString(details.winner)) ?? null,
     completedRounds,
     details,
   };
@@ -158,32 +176,32 @@ export function isLiveScoreStatus(status: string, score: Pick<KalshiLiveDataWire
 }
 
 export async function fetchKalshiMilestonesForEvent(
-  eventTicker: string,
+  eventTicker: KalshiEventTicker,
   options: { baseUrl?: string; fetchImpl?: KalshiFetchImpl } = {},
 ): Promise<KalshiMilestoneWire[]> {
   const fetchImpl = options.fetchImpl ?? fetch;
   const base = resolveBaseUrl(options.baseUrl);
   const q = new URLSearchParams({
-    related_event_ticker: eventTicker,
+    related_event_ticker: unbrand(eventTicker),
     limit: "100",
   });
   const url = `${base}/milestones?${q}`;
   const res = await fetchImpl(url, { headers: { Accept: "application/json" } });
-  if (!res.ok) throw new Error(`Kalshi milestones ${eventTicker}: ${res.status} ${res.statusText}`);
+  if (!res.ok) throw new Error(`Kalshi milestones ${unbrand(eventTicker)}: ${res.status} ${res.statusText}`);
   return parseKalshiMilestonesWire(await res.json());
 }
 
 export async function fetchKalshiLiveData(
-  milestoneId: string,
+  milestoneId: MilestoneId,
   options: { baseUrl?: string; fetchImpl?: KalshiFetchImpl } = {},
 ): Promise<{ data: KalshiLiveDataWire | null; sourceUrl: string; fetchedTs: number }> {
   const fetchImpl = options.fetchImpl ?? fetch;
   const base = resolveBaseUrl(options.baseUrl);
-  const sourceUrl = `${base}/live_data/milestone/${encodeURIComponent(milestoneId)}`;
+  const sourceUrl = `${base}/live_data/milestone/${encodeURIComponent(unbrand(milestoneId))}`;
   const res = await fetchImpl(sourceUrl, { headers: { Accept: "application/json" } });
   const fetchedTs = Date.now();
   if (res.status === 404) return { data: null, sourceUrl, fetchedTs };
-  if (!res.ok) throw new Error(`Kalshi live_data ${milestoneId}: ${res.status} ${res.statusText}`);
+  if (!res.ok) throw new Error(`Kalshi live_data ${unbrand(milestoneId)}: ${res.status} ${res.statusText}`);
   return { data: parseKalshiLiveDataWire(await res.json()), sourceUrl, fetchedTs };
 }
 

@@ -22,6 +22,7 @@ import {
 import { ensureEventStoreDir, openEventStore } from "../../src/institutions/event-store/open-db.ts";
 import { DEFAULT_EVENT_STORE_DB } from "../../src/institutions/event-store/paths.ts";
 import { bridgeStadionToKalshi } from "../../src/institutions/event-store/stadion-kalshi-bridge.ts";
+import { asKalshiEventTicker } from "../../src/institutions/event-store/brands.ts";
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
@@ -58,7 +59,8 @@ export async function runItfCalendarCli(argv: string[]): Promise<number> {
   });
 
   if (typeof values.event === "string") {
-    let row = await fetchItfCalendarRow(values.event);
+    const eventTicker = asKalshiEventTicker(values.event);
+    let row = await fetchItfCalendarRow(eventTicker);
     if (!row) {
       console.error(`Event not found in open ITF markets: ${values.event}`);
       return 1;

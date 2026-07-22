@@ -2,6 +2,10 @@
 import { describe, expect, test } from "bun:test";
 import type { KalshiMarketWire } from "../../src/bot/kalshi-events-api.ts";
 import {
+  asKalshiEventTicker,
+  asKalshiMarketTicker,
+} from "../../src/institutions/event-store/brands.ts";
+import {
   attachItfLegBookDepth,
   buildItfCalendarRows,
   computeTradableScore,
@@ -11,10 +15,18 @@ import {
 } from "../../src/institutions/event-store/itf-calendar.ts";
 import { formatDepthColumn } from "../../src/institutions/event-store/itf-calendar-format.ts";
 
-function wire(partial: Partial<KalshiMarketWire> & Pick<KalshiMarketWire, "ticker" | "event_ticker">): KalshiMarketWire {
+function wire(
+  partial: Partial<Omit<KalshiMarketWire, "ticker" | "event_ticker">> & {
+    ticker: string;
+    event_ticker: string;
+  },
+): KalshiMarketWire {
+  const { ticker, event_ticker, ...rest } = partial;
   return {
     status: "active",
-    ...partial,
+    ...rest,
+    ticker: asKalshiMarketTicker(ticker),
+    event_ticker: asKalshiEventTicker(event_ticker),
   };
 }
 
@@ -109,7 +121,7 @@ describe("itf-calendar", () => {
       }),
     ]);
     const ranked = filterItfCalendarRows([...deep, ...mid], { sort: "tradable" });
-    expect(ranked[0]!.eventTicker).toBe("KXITFMATCH-26JUL22MID");
+    expect(ranked[0]!.eventTicker).toBe(asKalshiEventTicker("KXITFMATCH-26JUL22MID"));
     expect(ranked[0]!.tradableScore).toBeGreaterThan(ranked[1]!.tradableScore);
   });
 
@@ -159,7 +171,7 @@ describe("itf-calendar", () => {
       wire({ ticker: "KXITFMATCH-26JUL22Y-C", event_ticker: "E2", yes_sub_title: "C", volume_fp: "5000" }),
       wire({ ticker: "KXITFMATCH-26JUL22Y-D", event_ticker: "E2", yes_sub_title: "D", volume_fp: "5000" }),
     ]);
-    expect(topItfEventsByVolume(rows, 1)[0]!.eventTicker).toBe("E1");
+    expect(topItfEventsByVolume(rows, 1)[0]!.eventTicker).toBe(asKalshiEventTicker("E1"));
   });
 
   test("attachItfLegBookDepth sums top-3 levels", () => {

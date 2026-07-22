@@ -6,6 +6,8 @@
  * Bun client WebSocket supports handshake headers (not available in browsers).
  */
 import { OFFICIAL_URLS } from "../institutions/official-urls.ts";
+import type { KalshiMarketTicker } from "../institutions/event-store/brands.ts";
+import { unbrand } from "../institutions/event-store/brands.ts";
 import {
   KALSHI_WS_PATH,
   kalshiWsAccessHeaders,
@@ -152,9 +154,9 @@ export class KalshiMarketWs {
   }
 
   /** Subscribe to orderbook_delta for the given market tickers. */
-  subscribeOrderbook(tickers: string[]): number {
+  subscribeOrderbook(tickers: KalshiMarketTicker[]): number {
     const id = this.nextId();
-    const unique = [...new Set(tickers.filter(Boolean))];
+    const unique = [...new Set(tickers.filter(Boolean).map(unbrand))];
     if (unique.length === 0) return id;
     this.send({
       id,
@@ -169,7 +171,7 @@ export class KalshiMarketWs {
   }
 
   /** Request fresh snapshots without changing subscription membership. */
-  requestSnapshots(sid: number, tickers: string[]): number {
+  requestSnapshots(sid: number, tickers: KalshiMarketTicker[]): number {
     const id = this.nextId();
     this.send({
       id,
@@ -177,7 +179,24 @@ export class KalshiMarketWs {
       params: {
         sid,
         action: "get_snapshot",
-        market_tickers: [...new Set(tickers.filter(Boolean))],
+        market_tickers: [...new Set(tickers.filter(Boolean).map(unbrand))],
+      },
+    });
+    return id;
+  }
+
+  /** Add tickers to an existing orderbook_delta subscription (preserves sid + seq stream). */
+  addOrderbookMarkets(sid: number, tickers: KalshiMarketTicker[]): number {
+    const id = this.nextId();
+    const unique = [...new Set(tickers.filter(Boolean).map(unbrand))];
+    if (unique.length === 0) return id;
+    this.send({
+      id,
+      cmd: "update_subscription",
+      params: {
+        sid,
+        action: "add_markets",
+        market_tickers: unique,
       },
     });
     return id;

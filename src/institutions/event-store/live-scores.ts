@@ -19,21 +19,38 @@ import {
 } from "../../bot/kalshi-live-data.ts";
 import { warmKalshiApiNetwork } from "../../bot/kalshi-network.ts";
 import { mapPool } from "../../research/pool.ts";
-import { asCanonicalEventId, type CanonicalEventId } from "./types.ts";
+import type {
+  CanonicalEventId,
+  CompetitorId,
+  KalshiEventTicker,
+  KalshiMarketTicker,
+  MilestoneId,
+} from "./brands.ts";
+import {
+  asCanonicalEventId,
+  asCompetitorId,
+  asKalshiEventTicker,
+  asKalshiMarketTicker,
+  asMilestoneId,
+  tryCompetitorId,
+  tryKalshiEventTicker,
+  tryMilestoneId,
+  unbrand,
+} from "./brands.ts";
 
 const KALSHI_SOURCE = "kalshi-api";
 const LIVE_SOURCE = "kalshi-live-data";
 
 export type CompetitorLabel = {
-  competitorId: string;
+  competitorId: CompetitorId;
   label: string;
 };
 
 export type WatchEvent = {
   eventId: CanonicalEventId;
-  eventTicker: string;
+  eventTicker: KalshiEventTicker;
   startTs: string;
-  competitorIds: string[];
+  competitorIds: CompetitorId[];
   /** Sorted event-store labels (localeCompare) — not live_data home/away. */
   playerA: string;
   playerB: string;
@@ -54,7 +71,7 @@ export type ScoreTransitionKind =
   | "mixed";
 
 export type LivePollRow = {
-  eventTicker: string;
+  eventTicker: KalshiEventTicker;
   eventId: CanonicalEventId;
   startTs: string;
   playerA: string;
@@ -62,9 +79,9 @@ export type LivePollRow = {
   /** live_data competitor1/2 display names (UUID-mapped); empty if unknown. */
   c1Label: string;
   c2Label: string;
-  competitor1Id: string | null;
-  competitor2Id: string | null;
-  milestoneId: string | null;
+  competitor1Id: CompetitorId | null;
+  competitor2Id: CompetitorId | null;
+  milestoneId: MilestoneId | null;
   status: string | null;
   matchStatus: string | null;
   isLive: boolean;
@@ -131,7 +148,7 @@ export const LIVE_DATA_REQUIRED_DETAIL_KEYS = [
 /** Resolve live_data competitor UUID → market yes_side_label. */
 export function labelForCompetitor(
   competitors: readonly CompetitorLabel[],
-  competitorId: string | null | undefined,
+  competitorId: CompetitorId | null | undefined,
 ): string {
   if (!competitorId) return "";
   const hit = competitors.find((c) => c.competitorId === competitorId);
@@ -185,7 +202,7 @@ export type LiveScoresPollOptions = {
   /** Cap events polled this pass (default 40). */
   limit?: number;
   /** Explicit event tickers; skips watch-set selection. */
-  eventTickers?: string[];
+  eventTickers?: KalshiEventTicker[];
   fetchImpl?: KalshiFetchImpl;
   /**
    * Pause between sequential fetches (default 200).
@@ -309,7 +326,7 @@ function readPrevScoreState(
               server_competitor_id
        FROM live_scores WHERE event_id = $id`,
     )
-    .get({ $id: eventId }) as ScoreFingerprintRow | null;
+    .get({ $id: unbrand(eventId) }) as ScoreFingerprintRow | null;
   if (!prev) return null;
   return {
     status: prev.status,
@@ -425,7 +442,7 @@ export function evaluateLiveCanary(summary: LivePollSummary): LiveCanaryVerdict 
 
 export type SnapshotCadenceEvent = {
   eventId: CanonicalEventId;
-  eventTicker: string;
+  eventTicker: KalshiEventTicker;
   snapshots: number;
   spanMs: number;
   medianGapMs: number | null;
@@ -469,7 +486,7 @@ function percentileNearest(sorted: number[], p: number): number | null {
 export function analyzeScoreSnapshotCadence(
   db: Database,
   options: {
-    eventTicker?: string;
+    eventTicker?: KalshiEventTicker;
     /** Assumed REST poll interval for restVerdict (default TENNIS_LIVE_INTERVAL_MS / 10s). */
     intervalMs?: number;
     /** Only snapshots with ts >= now − windowMs (default 6h). */
@@ -486,7 +503,7 @@ export function analyzeScoreSnapshotCadence(
     ? `AND event_ticker = $ticker`
     : "";
   const params: Record<string, string | number> = { $floor: floorTs };
-  if (options.eventTicker) params.$ticker = options.eventTicker;
+  if (options.eventTicker) params.$ticker = unbrand(options.eventTicker);
 
   const rows = db
     .query(
@@ -513,7 +530,7 @@ export function analyzeScoreSnapshotCadence(
 
   type Acc = {
     eventId: CanonicalEventId;
-    eventTicker: string;
+    eventTicker: KalshiEventTicker;
     ts: number[];
     transitions: SnapshotCadenceEvent["transitions"];
     prev: {
@@ -534,7 +551,7 @@ export function analyzeScoreSnapshotCadence(
     if (!acc) {
       acc = {
         eventId: asCanonicalEventId(r.event_id),
-        eventTicker: r.event_ticker,
+        eventTicker: asKalshiEventTicker(r.event_ticker),
         ts: [],
         transitions: {
           point: 0,
@@ -620,8 +637,12 @@ export function analyzeScoreSnapshotCadence(
 }
 
 /** Resolve event_ticker from a stored market ticker (ITF shape). */
-export function eventTickerFromMarketTicker(ticker: string): string | null {
-  return parseItfEventTicker(ticker);
+export function eventTickerFromMarketTicker(
+  ticker: KalshiMarketTicker | string,
+): KalshiEventTicker | null {
+  const plain = typeof ticker === "string" ? ticker : unbrand(ticker);
+  const parsed = parseItfEventTicker(plain);
+  return parsed ? (tryKalshiEventTicker(parsed) ?? null) : null;
 }
 
 /** Hours after start_ts a non-live scheduled event stays on the watch set. */
@@ -643,13 +664,14 @@ function loadCompetitorLabels(db: Database, eventId: CanonicalEventId): Competit
          AND competitor_id IS NOT NULL AND competitor_id != ''
        ORDER BY ticker ASC`,
     )
-    .all({ $id: eventId }) as Array<{ competitor_id: string; label: string }>;
+    .all({ $id: unbrand(eventId) }) as Array<{ competitor_id: string; label: string }>;
   const seen = new Set<string>();
   const out: CompetitorLabel[] = [];
   for (const r of rows) {
-    if (seen.has(r.competitor_id)) continue;
-    seen.add(r.competitor_id);
-    out.push({ competitorId: r.competitor_id, label: r.label?.trim() || r.competitor_id });
+    const cid = tryCompetitorId(r.competitor_id);
+    if (!cid || seen.has(unbrand(cid))) continue;
+    seen.add(unbrand(cid));
+    out.push({ competitorId: cid, label: r.label?.trim() || unbrand(cid) });
   }
   return out;
 }
@@ -759,7 +781,7 @@ export function listWatchEvents(
   const out: WatchEvent[] = [];
   for (const r of rows) {
     if (!r.sample_ticker) continue;
-    const eventTicker = eventTickerFromMarketTicker(r.sample_ticker);
+    const eventTicker = eventTickerFromMarketTicker(asKalshiMarketTicker(r.sample_ticker));
     if (!eventTicker) continue;
     const eventId = asCanonicalEventId(r.event_id);
     const competitors = loadCompetitorLabels(db, eventId);
@@ -771,15 +793,15 @@ export function listWatchEvents(
       playerB: r.player_b ?? "",
       competitorIds: (r.competitor_ids ?? "")
         .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean),
+        .map((s) => tryCompetitorId(s.trim()))
+        .filter((c): c is CompetitorId => c != null),
       competitors,
     });
   }
   return out;
 }
 
-export function listWatchEventsForTickers(db: Database, eventTickers: string[]): WatchEvent[] {
+export function listWatchEventsForTickers(db: Database, eventTickers: KalshiEventTicker[]): WatchEvent[] {
   const out: WatchEvent[] = [];
   for (const et of eventTickers) {
     const row = db
@@ -796,7 +818,7 @@ export function listWatchEventsForTickers(db: Database, eventTickers: string[]):
          WHERE e.source = $source AND m.ticker LIKE $prefix
          LIMIT 1`,
       )
-      .get({ $source: KALSHI_SOURCE, $prefix: `${et}-%` }) as
+      .get({ $source: KALSHI_SOURCE, $prefix: `${unbrand(et)}-%` }) as
       | {
           event_id: string;
           start_ts: string;
@@ -815,8 +837,8 @@ export function listWatchEventsForTickers(db: Database, eventTickers: string[]):
       playerB: row.player_b ?? "",
       competitorIds: (row.competitor_ids ?? "")
         .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean),
+        .map((s) => tryCompetitorId(s.trim()))
+        .filter((c): c is CompetitorId => c != null),
       competitors: loadCompetitorLabels(db, eventId),
     });
   }
@@ -826,20 +848,20 @@ export function listWatchEventsForTickers(db: Database, eventTickers: string[]):
 /** Trading watch rows require a full competitor UUID pair on both sides. */
 function competitorsAlign(
   live: KalshiLiveDataWire,
-  expected: string[],
+  expected: CompetitorId[],
 ): { ok: true } | { ok: false; reason: "competitor_ids_missing" | "competitor_mismatch" } {
   if (expected.length < 2) return { ok: false, reason: "competitor_ids_missing" };
-  const got = [live.competitor1Id, live.competitor2Id].filter(Boolean) as string[];
+  const got = [live.competitor1Id, live.competitor2Id].filter(Boolean) as CompetitorId[];
   if (got.length < 2) return { ok: false, reason: "competitor_ids_missing" };
-  const exp = new Set(expected);
-  if (!got.every((id) => exp.has(id))) return { ok: false, reason: "competitor_mismatch" };
+  const exp = new Set(expected.map(unbrand));
+  if (!got.every((id) => exp.has(unbrand(id)))) return { ok: false, reason: "competitor_mismatch" };
   return { ok: true };
 }
 
 function upsertLiveScore(
   db: Database,
   eventId: CanonicalEventId,
-  eventTicker: string,
+  eventTicker: KalshiEventTicker,
   live: KalshiLiveDataWire,
   meta: { sourceUrl: string; fetchedTs: number },
 ): { upserted: boolean; snapshot: boolean } {
@@ -878,9 +900,9 @@ function upsertLiveScore(
        source_url = excluded.source_url,
        fetched_ts = excluded.fetched_ts`,
   ).run({
-    $event_id: eventId,
-    $event_ticker: eventTicker,
-    $milestone_id: live.milestoneId,
+    $event_id: unbrand(eventId),
+    $event_ticker: unbrand(eventTicker),
+    $milestone_id: unbrand(live.milestoneId),
     $updated_ts: meta.fetchedTs,
     $status: live.status,
     $match_status: live.matchStatus,
@@ -890,9 +912,9 @@ function upsertLiveScore(
     $games_away: live.gamesAway,
     $points_home: live.pointsHome,
     $points_away: live.pointsAway,
-    $server: live.serverCompetitorId,
-    $c1: live.competitor1Id,
-    $c2: live.competitor2Id,
+    $server: live.serverCompetitorId ? unbrand(live.serverCompetitorId) : null,
+    $c1: live.competitor1Id ? unbrand(live.competitor1Id) : null,
+    $c2: live.competitor2Id ? unbrand(live.competitor2Id) : null,
     $is_live: isLive,
     $details: JSON.stringify(live.details),
     $source: LIVE_SOURCE,
@@ -909,7 +931,7 @@ function upsertLiveScore(
          ELSE outcome
        END
        WHERE event_id = $id AND source = $source`,
-    ).run({ $id: eventId, $source: KALSHI_SOURCE });
+    ).run({ $id: unbrand(eventId), $source: KALSHI_SOURCE });
   }
 
   if (plan.snapshot) {
@@ -924,9 +946,9 @@ function upsertLiveScore(
          $server, $details, $source, $source_url, $fetched_ts
        )`,
     ).run({
-      $event_id: eventId,
-      $event_ticker: eventTicker,
-      $milestone_id: live.milestoneId,
+      $event_id: unbrand(eventId),
+      $event_ticker: unbrand(eventTicker),
+      $milestone_id: unbrand(live.milestoneId),
       $ts: meta.fetchedTs,
       $status: live.status,
       $sets_home: live.setsHome,
@@ -935,7 +957,7 @@ function upsertLiveScore(
       $games_away: live.gamesAway,
       $points_home: live.pointsHome,
       $points_away: live.pointsAway,
-      $server: live.serverCompetitorId,
+      $server: live.serverCompetitorId ? unbrand(live.serverCompetitorId) : null,
       $details: JSON.stringify(live.details),
       $source: LIVE_SOURCE,
       $source_url: meta.sourceUrl,
@@ -946,19 +968,20 @@ function upsertLiveScore(
   return { upserted: plan.upserted, snapshot: plan.snapshot };
 }
 
-const milestoneCache = new Map<string, { id: string; at: number }>();
+const milestoneCache = new Map<string, { id: MilestoneId; at: number }>();
 const MILESTONE_TTL_MS = 30 * 60 * 1000;
 
 async function resolveMilestoneId(
-  eventTicker: string,
+  eventTicker: KalshiEventTicker,
   fetchImpl?: KalshiFetchImpl,
-): Promise<string | null> {
-  const cached = milestoneCache.get(eventTicker);
+): Promise<MilestoneId | null> {
+  const cacheKey = unbrand(eventTicker);
+  const cached = milestoneCache.get(cacheKey);
   if (cached && Date.now() - cached.at < MILESTONE_TTL_MS) return cached.id;
   const milestones = await fetchKalshiMilestonesForEvent(eventTicker, { fetchImpl });
   const pick = pickTennisMilestone(milestones);
   if (!pick) return null;
-  milestoneCache.set(eventTicker, { id: pick.id, at: Date.now() });
+  milestoneCache.set(cacheKey, { id: pick.id, at: Date.now() });
   return pick.id;
 }
 
@@ -997,7 +1020,7 @@ function emptyPollRow(w: WatchEvent, patch: Partial<LivePollRow> = {}): LivePoll
 
 type FetchedWatch = {
   w: WatchEvent;
-  milestoneId: string | null;
+  milestoneId: MilestoneId | null;
   data: KalshiLiveDataWire | null;
   sourceUrl: string;
   fetchedTs: number;
@@ -1191,7 +1214,7 @@ export function getLiveScore(
   db: Database,
   eventId: CanonicalEventId,
 ): {
-  eventTicker: string;
+  eventTicker: KalshiEventTicker;
   status: string;
   isLive: boolean;
   setsHome: number;
@@ -1208,7 +1231,7 @@ export function getLiveScore(
               points_home, points_away, updated_ts
        FROM live_scores WHERE event_id = $id`,
     )
-    .get({ $id: eventId }) as
+    .get({ $id: unbrand(eventId) }) as
     | {
         event_ticker: string;
         status: string;
@@ -1224,7 +1247,7 @@ export function getLiveScore(
     | null;
   if (!row) return null;
   return {
-    eventTicker: row.event_ticker,
+    eventTicker: asKalshiEventTicker(row.event_ticker),
     status: row.status,
     isLive: row.is_live === 1,
     setsHome: row.sets_home,

@@ -10,6 +10,7 @@ import { joinPath } from "../../../src/research/paths.ts";
 import { fetchOdds } from "../../../src/alpha/odds-feed.ts";
 import { parseOddsEventsWire } from "../../../src/alpha/odds-types.ts";
 import { fetchKalshiBookSnapshot } from "../../../src/bot/kalshi-market-data.ts";
+import { asKalshiMarketTicker } from "../../../src/institutions/event-store/brands.ts";
 import { executeOnce } from "./execute.ts";
 import { setOddsEvents } from "./signal.ts";
 
@@ -53,7 +54,7 @@ if (import.meta.main) {
   let book;
   let priceCents: number;
   if (fetchBook) {
-    book = await fetchKalshiBookSnapshot(ticker);
+    book = await fetchKalshiBookSnapshot(asKalshiMarketTicker(ticker));
     priceCents = book.asks[0]?.priceCents ?? book.bids[0]?.priceCents ?? 50;
   } else {
     priceCents = Number(priceArg);

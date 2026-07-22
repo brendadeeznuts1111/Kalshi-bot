@@ -8,8 +8,9 @@ import {
   yesAsksFromNoBids,
 } from "../../src/bot/kalshi-book-parse.ts";
 import { fetchKalshiOrderbookWire } from "../../src/bot/kalshi-market-data.ts";
+import { asKalshiMarketTicker } from "../../src/institutions/event-store/brands.ts";
 
-describe("kalshi book parse", () => {
+describe("kalshi-book-parse", () => {
   test("NO bids convert to YES asks via reciprocity", () => {
     const asks = yesAsksFromNoBids([{ priceCents: 7, size: 10 }]);
     expect(asks[0]?.priceCents).toBe(93);
@@ -42,7 +43,7 @@ describe("kalshi book parse", () => {
     const wire = await Bun.file(
       joinPath(import.meta.dir, "../fixtures/kalshi-orderbook-fp.json"),
     ).json();
-    const json = await fetchKalshiOrderbookWire("KXTEST", {
+    const json = await fetchKalshiOrderbookWire(asKalshiMarketTicker("KXTEST"), {
       fetchImpl: async () =>
         new Response(JSON.stringify(wire), { status: 200, headers: { "Content-Type": "application/json" } }),
     });

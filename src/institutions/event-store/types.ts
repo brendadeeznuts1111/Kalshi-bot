@@ -1,16 +1,39 @@
-/** Canonical cross-venue event key — SSOT join for ticks, signals, positions. */
-export type CanonicalEventId = string & { readonly __brand: unique symbol };
+export type {
+  CanonicalEventId,
+  CompetitorId,
+  KalshiEventTicker,
+  KalshiMarketTicker,
+  MarketId,
+  MilestoneId,
+  SeriesTicker,
+} from "./brands.ts";
+export {
+  asCanonicalEventId,
+  asCompetitorId,
+  asKalshiEventTicker,
+  asKalshiMarketTicker,
+  asMarketId,
+  asMilestoneId,
+  asSeriesTicker,
+  kalshiMarketId,
+  parseCanonicalEventId,
+  parseCompetitorId,
+  parseKalshiEventTicker,
+  parseKalshiMarketTicker,
+  parseMarketId,
+  parseMilestoneId,
+  parseSeriesTicker,
+  tryCanonicalEventId,
+  tryCompetitorId,
+  tryKalshiEventTicker,
+  tryKalshiMarketTicker,
+  tryMarketId,
+  tryMilestoneId,
+  trySeriesTicker,
+  unbrand,
+} from "./brands.ts";
 
-export function asCanonicalEventId(raw: string): CanonicalEventId {
-  const id = raw.trim();
-  if (!id) throw new Error("CanonicalEventId required");
-  return id as CanonicalEventId;
-}
-
-export function tryCanonicalEventId(raw: string | undefined): CanonicalEventId | undefined {
-  if (!raw?.trim()) return undefined;
-  return asCanonicalEventId(raw);
-}
+import type { CanonicalEventId } from "./brands.ts";
 
 export type TennisTour = "ATP" | "WTA";
 

@@ -5,6 +5,7 @@
  */
 import { fetchKalshiBookSnapshot, midFromBookSnapshot } from "../bot/kalshi-market-data.ts";
 import type { FetchKalshiBookOptions } from "../bot/kalshi-market-data.ts";
+import { asKalshiMarketTicker } from "../institutions/event-store/brands.ts";
 import { joinPath } from "../research/paths.ts";
 import { loadProgramManifest } from "../institutions/program-manifest.ts";
 import {
@@ -132,7 +133,7 @@ export async function fetchMidsForTickers(
   const mids: Record<string, number> = {};
   for (const ticker of tickers) {
     try {
-      const book = await fetchKalshiBookSnapshot(ticker, options);
+      const book = await fetchKalshiBookSnapshot(asKalshiMarketTicker(ticker), options);
       if (book.crossed) {
         console.warn(`Kalshi book crossed for ${ticker} — skipping toxicity mid`);
         continue;

@@ -15,7 +15,7 @@ import { asCanonicalEventId } from "../../src/institutions/event-store/types.ts"
 
 const FIXTURE = joinPath(import.meta.dir, "../fixtures/itf-stadion-day.json");
 
-describe("itf-stadion primary collector", () => {
+describe("itf-stadion", () => {
   test("day URL uses dashed ISO date", () => {
     expect(itfStadionDayUrl("2026-07-21")).toBe(
       "https://api.itf-production.sports-data.stadion.io/custom/wttCompleteMatchList/2026-07-21",
