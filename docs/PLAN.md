@@ -36,6 +36,9 @@ Kalshi-bot/
   src/research/
     cli.ts                  # bun run research
     export-audit-cli.ts     # bun run export-audit
+    schedule-cli.ts         # bun run schedule:*
+    scheduled.ts            # OS cron worker (export default { scheduled })
+    constants.ts            # typed SSOT (detectors, weights, cron defaults)
     gh.ts, preflight.ts, pool.ts, io.ts
     discover.ts, gate.ts, inspect.ts, detect.ts
     score.ts, diversify.ts, evidence.ts, validate.ts
@@ -43,7 +46,9 @@ Kalshi-bot/
     patterns.ts             # URLPattern SSOT
     audit-adapter.ts, export-audit.ts
     types.ts, paths.ts
-  tests/                    # bun:test (59+ tests)
+  tests/                    # bun:test (77 tests)
+  docs/
+    CRON.md                 # OS-level Bun.cron setup
   research/
     queries.json, weights.json, keywords.json
     schemas/repo-report.schema.json
@@ -180,6 +185,10 @@ High-value shortlist repos (≥70 pts, auth + order matched) export to monorepo-
 - `mock.module("../src/research/gh.ts")` — inspect tests never hit network
 - Live integration: `bun run research` only
 
+## Scheduling
+
+OS-level weekly research via `Bun.cron` — see [`docs/CRON.md`](CRON.md). Separate from `serve` and manual `bun run research`.
+
 ## Out of scope
 
-Scheduled automation, cloning third-party repos, live trading, merging into `kal-poly-bot`.
+Cloning third-party repos, live trading, merging into `kal-poly-bot`.

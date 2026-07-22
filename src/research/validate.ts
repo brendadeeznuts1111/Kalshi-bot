@@ -1,4 +1,3 @@
-// @see https://bun.com/docs/runtime/hashing#bun-cryptohasher
 import { MAX_QUALITY_SCORE, SCORE_COMPONENTS } from "./constants.ts";
 import type { DetectorResult, EvidenceLine, RepoReport, ScoreBreakdown } from "./types.ts";
 

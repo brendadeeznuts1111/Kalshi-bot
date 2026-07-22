@@ -4,12 +4,7 @@ Canonical entry: [bun.com/docs/runtime/shell](https://bun.com/docs/runtime/shell
 
 This project routes **all** GitHub traffic through [`src/research/gh.ts`](../src/research/gh.ts). No `Bun.spawn`, no `execa`, no Octokit.
 
-Resolve refs from monorepo root:
-
-```bash
-bun tools/bun-doc-refs.ts suggest "Bun.$"
-bun tools/bun-doc-refs.ts url "Bun.$"
-```
+Canonical `Bun.$` entry: [bun.com/docs/runtime/shell#getting-started](https://bun.com/docs/runtime/shell#getting-started)
 
 ## Why `Bun.$` over `Bun.spawn`
 

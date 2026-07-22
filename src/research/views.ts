@@ -1,4 +1,3 @@
-// @see https://bun.com/docs/runtime/html-rewriter
 import type { ResearchRun, ScoredRepo } from "./types.ts";
 import type { RunSummary } from "./cache.ts";
 import { buildRepoReport } from "./evidence.ts";

@@ -1,5 +1,5 @@
-// @see https://bun.com/docs/runtime/cron#bun-cron-path-schedule-title-os-level
 // @see https://bun.com/docs/runtime/cron#the-scheduled-handler
+// @see https://bun.com/docs/runtime/environment-variables
 /**
  * OS-level cron worker — export default { scheduled } for Bun.cron(path, schedule, title).
  * Delegates to runResearch(); no pipeline logic here.

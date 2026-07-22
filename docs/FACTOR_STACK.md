@@ -1,6 +1,6 @@
 # Factor stack — scoring SSOT
 
-Hierarchical evidence model for Kalshi GitHub bot research. Locked as part of **2+4** (local types + this doc). Monorepo `AuditFinding` adapter is **deferred** (option 1).
+Hierarchical evidence model for Kalshi GitHub bot research. Locked as part of **2+4** (local types + this doc). Local audit adapter is **implemented**; monorepo catalog ingest is wired via rotor (`tools/audit-findings/`).
 
 ## Scopes (inside → out)
 
@@ -65,8 +65,4 @@ Built by `buildRepoReport()` in `src/research/evidence.ts`.
 
 Draft adapter: `src/research/audit-adapter.ts` · export: `--export-audit` · [AUDIT_ADAPTER.md](./AUDIT_ADAPTER.md)
 
-Rotor wire (option 3) waits on emitter SSOT in `~/Projects`.
-
-## Canvas
-
-Visual reference: [kalshi-factor-stack.canvas.tsx](/Users/nolarose/.cursor/projects/Users-nolarose-Projects-Kalshi-bot/canvases/kalshi-factor-stack.canvas.tsx)
+Rotor wire ingested; pulse daemon verifies via `bun run pulse:start` in `~/Projects`.

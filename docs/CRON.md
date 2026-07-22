@@ -18,9 +18,10 @@ Canonical API: [bun.com/docs/runtime/cron](https://bun.com/docs/runtime/cron)
 
 ```
 OS scheduler (launchd / crontab / Task Scheduler)
-  → bun run scheduled.ts (--cron-title)
-    → scheduled.ts export default { scheduled() }
-      → runResearch()   ← SSOT (cli.ts)
+  → Bun.cron(SCHEDULED_WORKER_PATH, schedule, title)   # schedule-cli register
+    → bun run --cron-title=<title> scheduled.ts
+      → export default { scheduled() }
+        → runResearch()   ← SSOT (cli.ts)
 ```
 
 **OS-persistent is primary** — survives reboot, fresh process each fire, `gh` auth via user keychain.

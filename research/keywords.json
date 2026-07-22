@@ -1,6 +1,7 @@
 {
   "authCodeSearch": [
     "KALSHI-ACCESS-KEY",
+    "KALSHI-ACCESS-SIGNATURE",
     "trade-api/v2",
     "RSA-PSS",
     "kalshi-python",

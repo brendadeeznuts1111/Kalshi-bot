@@ -6,7 +6,7 @@ Standalone Bun project for discovering and ranking public [Kalshi](https://kalsh
 
 ## Prerequisites
 
-- [Bun](https://bun.sh) >= 1.3.4 ([`URLPattern`](https://bun.com/blog/bun-v1.3.4#urlpattern-api) for GitHub URLs)
+- [Bun](https://bun.sh) >= 1.3.13 ([`URLPattern`](https://bun.com/blog/bun-v1.3.4#urlpattern-api), [`Bun.cron`](https://bun.com/docs/runtime/cron), [SHA3-256](https://bun.com/blog/bun-v1.3.13#sha3-support-in-webcrypto-and-node-crypto))
 - GitHub CLI on PATH (`gh auth login`)
 
 ## Quick start
@@ -42,6 +42,9 @@ Gate overrides: `--min-stars`, `--min-forks`, `--max-age-months` or env vars bel
 | `RESEARCH_MIN_FORKS` | Popularity gate (forks) |
 | `RESEARCH_MAX_AGE_MONTHS` | Max repo age |
 | `RESEARCH_SHORTLIST` | Shortlist size (default 12) |
+| `RESEARCH_EXPORT_AUDIT` | Set `1` on scheduled runs to export audit |
+| `RESEARCH_CRON_SCHEDULE` | Override cron expression (see CRON.md) |
+| `RESEARCH_CRON_TITLE` | OS cron job title |
 | `PORT` | Serve port (default 3456) |
 
 ## Scripts
@@ -50,6 +53,7 @@ Gate overrides: `--min-stars`, `--min-forks`, `--max-age-months` or env vars bel
 |--------|---------|
 | Research | `bun run research` |
 | Audit export | `bun run export-audit` or `bun run audit:export` |
+| Schedule (OS cron) | `bun run schedule:register` / `schedule:remove` / `schedule:preview` |
 | Serve (hot) | `bun run serve` |
 | Serve (once) | `bun run serve:once` |
 | Tests | `bun test` / `bun run test:coverage` |
@@ -91,14 +95,16 @@ Kalshi-bot/
 ├── src/research/
 │   ├── cli.ts              # bun run research
 │   ├── export-audit-cli.ts # bun run export-audit
+│   ├── schedule-cli.ts     # bun run schedule:*
+│   ├── scheduled.ts        # OS cron worker
 │   ├── discover.ts … diversify.ts, score.ts, inspect.ts
 │   ├── evidence.ts, validate.ts, audit-adapter.ts, export-audit.ts
 │   ├── patterns.ts         # URLPattern SSOT (discover, reports, serve)
 │   ├── serve.ts, views.ts  # Bun.serve report browser
 │   ├── cache.ts, diff.ts, report.ts, paths.ts
-│   ├── constants.ts        # typed SSOT: DETECTOR_IDS, COMPONENT_WEIGHTS, licenses
+│   ├── constants.ts        # typed SSOT: DETECTOR_IDS, COMPONENT_WEIGHTS, licenses, cron
 │   └── gh.ts, pool.ts, preflight.ts, detect.ts, types.ts
-├── tests/                  # bun:test (61 tests)
+├── tests/                  # bun:test (77 tests)
 ├── research/
 │   ├── audit-evidence/     # committed JSONL
 │   ├── reports/            # latest.md + latest.diff.md
@@ -149,6 +155,7 @@ See [`docs/AUDIT_ADAPTER.md`](docs/AUDIT_ADAPTER.md).
 
 ## Docs
 
+- [`docs/CRON.md`](docs/CRON.md) — OS-level Bun.cron scheduling
 - [`docs/PLAN.md`](docs/PLAN.md) — as-built design
 - [`docs/FACTOR_STACK.md`](docs/FACTOR_STACK.md) — scoring SSOT
 - [`docs/AUDIT_ADAPTER.md`](docs/AUDIT_ADAPTER.md) — audit wire + rotor ingest

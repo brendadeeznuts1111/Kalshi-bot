@@ -17,6 +17,7 @@
   },
   "license": {
     "unlicensedPenalty": 15,
+    "nonPreferredPenalty": 3,
     "preferredLicenses": ["mit", "apache-2.0", "bsd-2-clause", "bsd-3-clause", "isc"]
   }
 }

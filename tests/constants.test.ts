@@ -72,7 +72,7 @@ describe("constants", () => {
       stackTiebreakThreshold: number;
       gate: { minStars: number; minForks: number; maxAgeMonths: number };
       components: Record<string, number>;
-      license: { unlicensedPenalty: number; preferredLicenses: string[] };
+      license: { unlicensedPenalty: number; nonPreferredPenalty: number; preferredLicenses: string[] };
     };
 
     expect(weights.shortlistSize).toBe(DEFAULT_SHORTLIST_SIZE);
@@ -81,6 +81,7 @@ describe("constants", () => {
     expect(weights.gate).toEqual({ ...DEFAULT_GATE });
     expect(weights.components).toEqual({ ...COMPONENT_WEIGHTS });
     expect(weights.license.unlicensedPenalty).toBe(LICENSE_WEIGHTS.unlicensedPenalty);
+    expect(weights.license.nonPreferredPenalty).toBe(LICENSE_WEIGHTS.nonPreferredPenalty);
     expect(weights.license.preferredLicenses).toEqual([...PREFERRED_LICENSES]);
   });
 });

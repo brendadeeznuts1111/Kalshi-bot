@@ -4,7 +4,7 @@ This project uses **zero runtime npm dependencies**. Every capability maps to a 
 
 **Rule:** before adding any package, check the [Bun API map](#bun-api-map) below — the runtime almost certainly already provides it.
 
-Canonical URLs: [Bun docs index](https://bun.com/docs/llms.txt) · resolve via `bun tools/bun-doc-refs.ts suggest "<API>"`
+Canonical URLs: [Bun docs index](https://bun.com/docs/llms.txt) — use the [@see links](#canonical-see-links) table below (standalone repo; monorepo `bun tools/bun-doc-refs.ts` is optional).
 
 Deep dive: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns)
 
@@ -23,6 +23,8 @@ Deep dive: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns)
 | Embedded cache + run history | `bun:sqlite` + `Bun.hash` | [`cache.ts`](../src/research/cache.ts) |
 | Rate-limit backoff | `Bun.sleep` | [`gh.ts`](../src/research/gh.ts) |
 | Bounded concurrency | [`pool.ts`](../src/research/pool.ts) | [`cli.ts`](../src/research/cli.ts), [`inspect.ts`](../src/research/inspect.ts) |
+| Scheduled research | OS-level `Bun.cron` | [`scheduled.ts`](../src/research/scheduled.ts), [`schedule-cli.ts`](../src/research/schedule-cli.ts) |
+| Audit digests | `Bun.CryptoHasher("sha3-256")` | [`audit-adapter.ts`](../src/research/audit-adapter.ts), [`export-audit.ts`](../src/research/export-audit.ts) |
 | GitHub URL SSOT | `BunURLPattern` + `URLPattern` ([v1.3.4+](https://bun.com/blog/bun-v1.3.4#urlpattern-api)) | [`patterns.ts`](../src/research/patterns.ts) |
 | Report browser | `Bun.serve` routes + `Bun.file` | [`serve.ts`](../src/research/serve.ts), [`views.ts`](../src/research/views.ts) |
 | CLI flags | `parseArgs` from `node:util` | [`cli.ts`](../src/research/cli.ts) |
@@ -45,6 +47,8 @@ Deep dive: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns)
 | `import.meta.main` | https://bun.com/docs/runtime/utils#bun-main |
 | `bun:test` | https://bun.com/docs/test/index#run-tests |
 | `mock.module` | https://bun.com/docs/test/mocks |
+| `Bun.cron` | https://bun.com/docs/runtime/cron |
+| `Bun.CryptoHasher` | https://bun.com/docs/runtime/hashing#bun-cryptohasher |
 | `URLPattern` | https://bun.com/blog/bun-v1.3.4#urlpattern-api |
 | `Bun.serve` | https://bun.com/docs/runtime/http/server#basic-setup |
 
@@ -127,6 +131,15 @@ Colocated under [`tests/`](../tests/):
 | `serve.test.ts` | `Bun.serve` report browser handlers |
 | `inspect.mock.test.ts` | `mock.module("../src/research/gh.ts")` — no network |
 | `preflight.test.ts` | `Bun.which("gh")` |
+| `audit-adapter.test.ts` | sha3 digest + high-value gate |
+| `export-audit.test.ts` | audit export round-trip |
+| `diversify.test.ts` | shortlist caps + tag coverage |
+| `schedule-cli.test.ts` | cron admin parse + preview |
+| `constants.test.ts` | weights.json alignment |
+| `validate.test.ts` | RepoReport wire |
+| `evidence.test.ts` | detectors + fingerprints |
+| `diff.test.ts` | run diffs |
+| `paths.test.ts` | audit evidence paths |
 
 ```bash
 bun test

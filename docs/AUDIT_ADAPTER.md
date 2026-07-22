@@ -1,6 +1,6 @@
 # Audit SSOT adapter
 
-Draft bridge from Kalshi research `RepoReport` → monorepo `AuditFinding` / `AuditConcept` wire shapes. **No monorepo imports** — parse at the FactoryWager boundary with `lib/audit/parseAuditFinding`.
+Draft bridge from Kalshi research `RepoReport` → monorepo `AuditFinding` / `AuditConcept` wire shapes. **No monorepo imports** — parse at the FactoryWager boundary with `lib/audit/parseAuditFinding`. Live finding ingested on rotor `feat/github-repository-ref`.
 
 ## Modules
 
@@ -42,9 +42,10 @@ Path SSOT: `src/research/paths.ts` (`auditEvidenceRelPath`, `AUDIT_EVIDENCE_DIR`
 `shortlistRulesConcept()` encodes portfolio constraints as `kalshi-shortlist-diversity`:
 
 - shortlist size, max per tag, major-tag minimum, TS tiebreak threshold
-- `relatedDocs`: `URLPattern`, `docs/FACTOR_STACK.md`
+- `related`: `kalshi-shortlist-diversity`, `sha3-integrity`, `nagata-map`
+- `relatedDocs`: `SHA3-256` (rotor curated token)
 
-Findings link via `related: ["kalshi-shortlist-diversity"]`.
+Findings link via `related: ["kalshi-shortlist-diversity", "sha3-integrity", "nagata-map"]`.
 
 ## Rotor ingest (when emitter exists)
 

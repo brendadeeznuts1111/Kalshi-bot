@@ -69,6 +69,7 @@ export async function writeAuditExports(
 }
 
 export async function hashEvidenceFile(absPath: string): Promise<string> {
+  // @see https://bun.com/docs/runtime/hashing#bun-cryptohasher
   const bytes = await Bun.file(absPath).arrayBuffer();
   return new Bun.CryptoHasher("sha3-256").update(bytes).digest("hex");
 }
