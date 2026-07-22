@@ -133,6 +133,16 @@ export function matchDayCandidates(startTs: string): string[] {
   return [...new Set([primary, prev, next])];
 }
 
+/** `day|lane|names…` → `lane|names…` (cross-day collision key). */
+export function surnameLaneKeyFromMatchKey(matchKey: string): string {
+  const i = matchKey.indexOf("|");
+  return i < 0 ? matchKey : matchKey.slice(i + 1);
+}
+
+export function dayFromMatchKey(matchKey: string): string {
+  return matchKey.split("|")[0] ?? "";
+}
+
 function lanesFromTourOnly(tour: string, format: "singles" | "doubles"): string[] {
   if (format === "doubles") {
     if (tour === "ITF-W" || tour === "ITF-WD") return ["KXITFWDOUBLES"];
@@ -438,13 +448,21 @@ function propagateResolution(
     | null;
   if (!res) return false;
 
-  const inserted = db
+  const written = db
     .query(
-      `INSERT OR IGNORE INTO resolutions (
+      `INSERT INTO resolutions (
          event_id, outcome, winner, source, source_url, fetched_ts, corpus, resolved_ts
        ) VALUES (
          $event_id, $outcome, $winner, $source, $source_url, $fetched_ts, $corpus, $resolved_ts
-       )`,
+       )
+       ON CONFLICT(event_id) DO UPDATE SET
+         outcome = excluded.outcome,
+         winner = excluded.winner,
+         source = excluded.source,
+         source_url = excluded.source_url,
+         fetched_ts = excluded.fetched_ts,
+         corpus = excluded.corpus,
+         resolved_ts = excluded.resolved_ts`,
     )
     .run({
       $event_id: kalshiEventId,
@@ -456,7 +474,7 @@ function propagateResolution(
       $corpus: res.corpus,
       $resolved_ts: res.resolved_ts,
     });
-  return inserted.changes > 0;
+  return written.changes > 0;
 }
 
 /**
@@ -494,6 +512,17 @@ export function bridgeStadionToKalshi(db: Database): BridgeSummary {
     byStadion.set(s.eventId, list);
   }
   summary.stadionCandidates = byStadion.size;
+
+  // Same surnames+lane on multiple Stadion days → only primary-day links (block ±1 false unique).
+  const stadionIdsBySurnameLane = new Map<string, Set<string>>();
+  for (const [stadionId, variants] of byStadion) {
+    for (const v of variants) {
+      const sk = surnameLaneKeyFromMatchKey(v.matchKey);
+      const set = stadionIdsBySurnameLane.get(sk) ?? new Set<string>();
+      set.add(stadionId);
+      stadionIdsBySurnameLane.set(sk, set);
+    }
+  }
 
   db.run("BEGIN");
   try {
@@ -537,6 +566,43 @@ export function bridgeStadionToKalshi(db: Database): BridgeSummary {
       }
 
       const hit = uniqueKalshi[0]!;
+      let stadionPrimaryDay: string;
+      try {
+        stadionPrimaryDay = dayFromStartTs(hit.variant.startTs);
+      } catch {
+        upsertLink(db, {
+          stadionEventId,
+          kalshiEventId: null,
+          status: "unmatched",
+          matchKey: hit.variant.matchKey,
+          detail: "invalid_stadion_start_ts",
+          linkedAt,
+        });
+        summary.unmatched++;
+        continue;
+      }
+      const hitDay = dayFromMatchKey(hit.variant.matchKey);
+      const surnameLane = surnameLaneKeyFromMatchKey(hit.variant.matchKey);
+      const crossDayStadion =
+        (stadionIdsBySurnameLane.get(surnameLane)?.size ?? 0) > 1;
+      // ±1 probe OK for timezone pad when this surname+lane is unique in Stadion;
+      // when another Stadion day shares the key, require exact primary day.
+      if (crossDayStadion && hitDay !== stadionPrimaryDay) {
+        upsertLink(db, {
+          stadionEventId,
+          kalshiEventId: null,
+          status: "ambiguous",
+          matchKey: hit.variant.matchKey,
+          detail: `cross_day_stadion_requires_primary:${stadionPrimaryDay}`,
+          linkedAt,
+        });
+        summary.ambiguous++;
+        summary.anomalies.push(
+          `ambiguous:${stadionId}:cross_day_stadion_requires_primary`,
+        );
+        continue;
+      }
+
       // Same Kalshi claimed by another Stadion key already linked this pass?
       const prior = db
         .query(
@@ -565,7 +631,7 @@ export function bridgeStadionToKalshi(db: Database): BridgeSummary {
         kalshiEventId: hit.kalshi.eventId,
         status: "linked",
         matchKey: hit.variant.matchKey,
-        detail: "",
+        detail: hitDay === stadionPrimaryDay ? "" : `adjacent_day:${hitDay}`,
         linkedAt,
       });
       summary.linked++;

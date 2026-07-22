@@ -823,15 +823,17 @@ export function listWatchEventsForTickers(db: Database, eventTickers: string[]):
   return out;
 }
 
+/** Trading watch rows require a full competitor UUID pair on both sides. */
 function competitorsAlign(
   live: KalshiLiveDataWire,
   expected: string[],
-): boolean {
-  if (expected.length < 2) return true;
+): { ok: true } | { ok: false; reason: "competitor_ids_missing" | "competitor_mismatch" } {
+  if (expected.length < 2) return { ok: false, reason: "competitor_ids_missing" };
   const got = [live.competitor1Id, live.competitor2Id].filter(Boolean) as string[];
-  if (got.length < 2) return true;
+  if (got.length < 2) return { ok: false, reason: "competitor_ids_missing" };
   const exp = new Set(expected);
-  return got.every((id) => exp.has(id));
+  if (!got.every((id) => exp.has(id))) return { ok: false, reason: "competitor_mismatch" };
+  return { ok: true };
 }
 
 function upsertLiveScore(
@@ -1117,9 +1119,9 @@ export async function pollLiveScores(
     const missingDetailKeys = missingLiveDataDetailKeys(data.details);
     const c1Label = labelForCompetitor(w.competitors, data.competitor1Id);
     const c2Label = labelForCompetitor(w.competitors, data.competitor2Id);
-    if (!competitorsAlign(data, w.competitorIds)) {
-      const err = `competitor_mismatch`;
-      summary.errors.push(`${err}:${w.eventTicker}`);
+    const align = competitorsAlign(data, w.competitorIds);
+    if (!align.ok) {
+      summary.errors.push(`${align.reason}:${w.eventTicker}`);
       summary.rows.push(
         emptyPollRow(w, {
           milestoneId,
@@ -1129,7 +1131,7 @@ export async function pollLiveScores(
           competitor2Id: data.competitor2Id,
           c1Label,
           c2Label,
-          error: err,
+          error: align.reason,
         }),
       );
       continue;

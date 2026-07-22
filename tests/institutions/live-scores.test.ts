@@ -208,8 +208,10 @@ describe("live-scores poller", () => {
         competitor_id, source, fetched_ts
       ) VALUES
         ('kalshi:${EVENT}-PEN', $id, 'kalshi', '${EVENT}-PEN', 'KXITFWMATCH', 'match_winner',
-         'Penickova', 'PEN', $c1, 'kalshi-api', $now)`,
-    ).run({ $id: eventId, $c1: C1, $now: now });
+         'Penickova', 'PEN', $c1, 'kalshi-api', $now),
+        ('kalshi:${EVENT}-KUL', $id, 'kalshi', '${EVENT}-KUL', 'KXITFWMATCH', 'match_winner',
+         'Kulikova', 'KUL', $c2, 'kalshi-api', $now)`,
+    ).run({ $id: eventId, $c1: C1, $c2: C2, $now: now });
 
     const fetchImpl = async (input: string | URL | Request) => {
       const url = String(input);

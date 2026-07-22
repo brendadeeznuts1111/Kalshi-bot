@@ -6,9 +6,10 @@
  * Target selection (first match wins):
  *   --ticker / --event  explicit
  *   --top=N             volume sampling override
- *   --watch             lead-aligned watch-set (start_ts≤now+lead OR is_live)
+ *   --all-open          every open ITF book (vanity / bulk; not the default)
+ *   --watch             lead-aligned watch-set (explicit; also the default)
  *   --ws                authenticated orderbook WebSocket on watch-set (needs API key)
- *   --loop without --top/--event/--ticker defaults to --watch
+ *   bare / --loop       defaults to watch-set (not all-open)
  *
  * After any Kalshi sync, refreshes Stadion↔Kalshi event_links (skip with --bridge=false).
  * --dry-run: resolve tickers only; no sync / book writes / bridge.
@@ -54,6 +55,8 @@ export async function runTennisRecordCli(argv: string[]): Promise<number> {
       top: { type: "string" },
       /** Lead-aligned watch-set (same membership as tennis:live). */
       watch: { type: "boolean", default: false },
+      /** Bulk: every open ITF market (opt-in; bare CLI defaults to watch-set). */
+      "all-open": { type: "boolean", default: false },
       /**
        * Authenticated Kalshi orderbook WebSocket on the watch-set.
        * Requires KALSHI_API_KEY_ID + KALSHI_PRIVATE_KEY_PATH (or KALSHI_PRIVATE_KEY).
@@ -92,10 +95,13 @@ export async function runTennisRecordCli(argv: string[]): Promise<number> {
   const explicitTop = typeof values.top === "string";
   const explicitTicker = typeof values.ticker === "string";
   const explicitEvent = typeof values.event === "string";
-  /** --watch, or --loop with no explicit target, uses lead-aligned watch-set. */
+  const allOpen = values["all-open"] === true;
+  /**
+   * Default target is lead-aligned watch-set (same as tennis:live).
+   * Opt into bulk open books with --all-open; --top/--event/--ticker stay explicit.
+   */
   const watchMode =
-    values.watch === true ||
-    (values.loop === true && !explicitTop && !explicitTicker && !explicitEvent);
+    !allOpen && !explicitTop && !explicitTicker && !explicitEvent;
 
   const maybeBridge = (didSync: boolean): BridgeSummary | null => {
     if (!didSync || !doBridge) return null;

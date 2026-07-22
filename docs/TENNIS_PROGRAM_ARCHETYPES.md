@@ -74,7 +74,9 @@ bun run tennis:collect -- --bridge-only     # re-link only (no collect)
 bun run tennis:itf -- --sync                # Kalshi REST → events/markets, then bridge
 bun run tennis:itf -- --sync --retain-days=3  # also closed/settled in lookback (default 3; 0=open-only)
 bun run tennis:record -- --watch --sync     # books for watch-set (not vanity --top)
-bun run tennis:record -- --loop             # defaults to --watch (lead-aligned)
+bun run tennis:record                       # bare = watch-set (not all open books)
+bun run tennis:record -- --all-open         # opt-in bulk open ITF books
+bun run tennis:record -- --loop             # defaults to watch-set
 bun run tennis:record -- --loop --top=15    # volume sampling override
 ```
 
@@ -97,7 +99,7 @@ Helper SSOT: [`src/institutions/event-store/watch-set.ts`](../src/institutions/e
 
 **Retain sync:** Stadion collect is completed results; open-only Kalshi sync misses matchups that closed before bridge. `--sync` defaults to `--retain-days=3` (open + `status=closed` with `min_close_ts` + `status=settled` with `min_settled_ts`). `retainDays=0` restores open-only. Closed/settled markets with Kalshi `result` fill `winner`/`outcome` when not already bridged.
 
-**Stadion ↔ Kalshi bridge:** namespaces stay separate (`itf|stadion|{matchId}` vs competitor-UUID Kalshi ids). `event_links` joins on UTC day + sorted last names + series lane (`KXITFMATCH` / `KXITFWMATCH` / doubles). Ambiguous keys hard-fail (`status=ambiguous`, no invented pair). On `linked`, Stadion resolution is copied onto the Kalshi `event_id` (outcome bit remapped to Kalshi `player_a`/`player_b` order) so `book_ticks` can join outcomes. Bridge runs after Kalshi `--sync` on `tennis:itf` / `tennis:live` / `tennis:record` (skip with `--bridge=false`); collect already bridges.
+**Stadion ↔ Kalshi bridge:** namespaces stay separate (`itf|stadion|{matchId}` vs competitor-UUID Kalshi ids). `event_links` joins on UTC day + sorted last names + series lane (`KXITFMATCH` / `KXITFWMATCH` / doubles). Stadion probes day±1 for timezone pad, but when the same surnames+lane appear on multiple Stadion days, only the primary-day hit may link (blocks adjacent-day false uniques). Ambiguous keys hard-fail (`status=ambiguous`, no invented pair). On `linked`, Stadion resolution is upserted onto the Kalshi `event_id` (outcome bit remapped to Kalshi `player_a`/`player_b` order) so `book_ticks` can join outcomes. Bridge runs after Kalshi `--sync` on `tennis:itf` / `tennis:live` / `tennis:record` (skip with `--bridge=false`); collect already bridges.
 
 **Kalshi live scores (early-start):** `GET /milestones?related_event_ticker=` → `GET /live_data/milestone/{id}`. Competitor UUIDs in live_data match `custom_strike.tennis_competitor`. Scoreboard matchup is **c1 vs c2** (UUID→`yes_side_label`), same axis as sets/games/pts — not localeCompare `player_a`/`player_b`. Watch set = `outcome=scheduled` and (`start_ts` in `[now−6h, now+lead]` **or** fresh `is_live`). `is_live` clears after 45m without refresh (stuck `in_progress`) or on terminal status. Timestamps are `source_clock=recv`. Stadion still owns final settlement. Bridge probes Stadion day ±1 vs Kalshi occurrence (multi-hit → ambiguous).
 
