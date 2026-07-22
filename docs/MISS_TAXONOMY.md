@@ -20,6 +20,7 @@ bun run rate-limit:status -- --gated=49 --uncached=49  # before live research
 | 3 | Cross-dimension cache fallback | **A** | **done** | `tests/github-errors.test.ts`, `loadFallbackRunFromDb` |
 | 4 | Staleness badges (🕒) | **B** | **done** | `tests/staleness-badge.test.ts` |
 | 5 | Discovery miss (0 candidates) | **C** | **done** | `tests/discovery-miss.test.ts` |
+| — | Discover vs apply gate split | core | **done** | `tests/discover-gate.test.ts` |
 | — | Inspect miss (detector rationale) | C+ | pending | extend pattern-miss |
 | — | Verification miss (export-audit cmd) | D | pending | error wire alternative |
 | — | Data fill (price-data run) | **D** | blocked | rate-limit preflight |

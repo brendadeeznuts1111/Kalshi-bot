@@ -2,7 +2,8 @@
 // @see https://bun.com/docs/runtime/hashing#bun-hash
 // @see https://bun.com/docs/runtime/utils#bun-inspect
 import type { InspectionSignals } from "./types.ts";
-import { loadInspectCache, saveInspectCache } from "./cache.ts";
+import { loadInspectCache, loadLatestInspectCache, saveInspectCache } from "./cache.ts";
+import type { RepoCandidate } from "./types.ts";
 import { deepEqual, inspectBrief, stableHash } from "./bun-native.ts";
 
 /** Structural equality for whole-repo inspect snapshots — used before SQLite writes. */
@@ -21,6 +22,18 @@ export function canReusePriorInspectSnapshot(
   lastCommit: string | null,
 ): prior is InspectionSignals {
   return Boolean(prior?.lastDefaultBranchCommitAt && lastCommit && prior.lastDefaultBranchCommitAt === lastCommit);
+}
+
+/** Exact pushed_at row or any cross-dimension inspect_cache snapshot for this repo. */
+export function canServeInspectFromCache(repo: Pick<RepoCandidate, "fullName" | "pushedAt">): boolean {
+  if (loadInspectCache(repo.fullName, repo.pushedAt) !== null) return true;
+  if (loadLatestInspectCache(repo.fullName) !== null) return true;
+  return false;
+}
+
+/** Repos that would still call live gh inspect (no exact or cross-dimension cache row). */
+export function repoNeedsLiveInspect(repo: Pick<RepoCandidate, "fullName" | "pushedAt">): boolean {
+  return !canServeInspectFromCache(repo);
 }
 
 export type InspectPersistResult =

@@ -1,6 +1,8 @@
 // @see https://bun.com/docs/runtime/webview#new-bun-webview-options
 // @see https://bun.com/blog/bun-v1.3.12#bun-webview-headless-browser-automation
 // @see https://bun.com/docs/runtime/hashing#bun-cryptohasher
+// @see https://bun.com/docs/runtime/image#metadata — Bun.Image.metadata
+import { extractImageEvidenceMeta } from "../../../lib/image-metadata.ts";
 import { joinPath } from "../research/paths.ts";
 
 export type WebCaptureManifest = {
@@ -12,8 +14,12 @@ export type WebCaptureManifest = {
   algorithm: "sha3-256";
   digest: string;
   mediaType: "image/png";
+  /** Pixel dimensions from Bun.Image.metadata (not viewport opts). */
   width: number;
   height: number;
+  format: string;
+  /** Encoded PNG byte length. */
+  size: number;
 };
 
 export type CaptureEvidenceOptions = {
@@ -80,12 +86,13 @@ export async function captureEvidence(
   const url = normalizeCaptureUrl(opts.url);
   const capture = deps.navigateAndCapture ?? defaultNavigateAndCapture;
   const { png, title } = await capture({ ...opts, url });
-  const digest = sha3HexBytes(png);
   const slug = opts.slug ?? `${captureSlugFromUrl(url)}-${Date.now()}`;
   const imagePath = joinPath(opts.outDir, `${slug}.png`);
   const manifestPath = joinPath(opts.outDir, `${slug}.manifest.json`);
 
   await Bun.write(imagePath, png);
+  // Pixel dims from Bun.Image — viewport opts are capture chrome, not image size
+  const imageMeta = await extractImageEvidenceMeta(png, { algorithm: "sha3-256" });
   const manifest: WebCaptureManifest = {
     kind: "WebCapture",
     capturedAt: new Date().toISOString(),
@@ -93,10 +100,12 @@ export async function captureEvidence(
     title,
     imagePath,
     algorithm: "sha3-256",
-    digest,
+    digest: imageMeta.digest,
     mediaType: "image/png",
-    width: opts.width ?? 1280,
-    height: opts.height ?? 800,
+    width: imageMeta.width,
+    height: imageMeta.height,
+    format: imageMeta.format,
+    size: imageMeta.size,
   };
   await Bun.write(manifestPath, JSON.stringify(manifest, null, 2) + "\n");
   return manifest;

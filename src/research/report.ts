@@ -6,6 +6,7 @@ import { githubRepoWebUrl, localRepoPath } from "./patterns.ts";
 import { OUTPUT_DIR, REPORT_DIR, joinPath } from "./paths.ts";
 import { formatDiffMarkdown } from "./diff.ts";
 import { formatDiscoveryMissMarkdown } from "./discovery-miss.ts";
+import { formatDiscoverGateNote } from "./discover-gate.ts";
 import { formatGateMissMarkdown } from "./gate-miss.ts";
 import { buildRepoReport } from "./evidence.ts";
 import { shortlistTagCoverage } from "./diversify.ts";
@@ -106,6 +107,11 @@ export function formatReportMarkdown(run: ResearchRun, dimensionLabel?: string):
       : []),
     "",
   ];
+
+  if (run.config.discoverGate) {
+    const note = formatDiscoverGateNote(run.config.gate, run.config.discoverGate);
+    if (note) lines.push(`> ${note}`, "");
+  }
 
   if (run.discoveryMiss) {
     lines.push(...formatDiscoveryMissMarkdown(run.discoveryMiss));

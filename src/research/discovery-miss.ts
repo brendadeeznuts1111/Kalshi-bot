@@ -1,4 +1,5 @@
 import { buildRepoSearchQuery } from "./discover.ts";
+import { formatDiscoverGateNote } from "./discover-gate.ts";
 import type { DimensionsFile, ResolvedDimensionQueries } from "./dimensions.ts";
 import type { GateOptions } from "./gate.ts";
 
@@ -110,16 +111,21 @@ export function analyzeDiscoveryMiss(
   gate: GateOptions,
   dimensionsFile: DimensionsFile,
   discoveredCount?: number,
+  discoverGate: GateOptions = gate,
 ): DiscoveryMissStats | undefined {
   if (discoveredCount !== undefined && discoveredCount > 0) return undefined;
+
+  const discoverNote = formatDiscoverGateNote(gate, discoverGate);
 
   return {
     dimension,
     label: resolvedQueries.label,
     queriesTried: resolvedQueries.queries,
-    searchQueries: resolvedQueries.queries.map((q) => buildRepoSearchQuery(q, gate)),
+    searchQueries: resolvedQueries.queries.map((q) => buildRepoSearchQuery(q, discoverGate)),
     alternateQueries: proposeAlternateDiscoveryQueries(dimension, resolvedQueries, dimensionsFile),
-    relaxedGateHint: formatRelaxedGateHint(gate),
+    relaxedGateHint: discoverNote
+      ? `${discoverNote} ${formatRelaxedGateHint(gate)}`
+      : formatRelaxedGateHint(gate),
     retryCommand: buildDiscoveryRetryCommand(dimension, gate),
   };
 }

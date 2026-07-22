@@ -151,6 +151,8 @@ export type ResearchRun = {
   config: {
     shortlistSize: number;
     gate: ResearchConfig["weights"]["gate"];
+    /** GitHub search qualifiers — defaults broad when apply gate is strict. */
+    discoverGate?: ResearchConfig["weights"]["gate"];
   };
   stats: {
     discovered: number;

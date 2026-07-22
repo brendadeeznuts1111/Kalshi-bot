@@ -34,11 +34,13 @@ import {
   formatInspectPersistSummary,
   formatInspectSignalsBrief,
   inspectionSignalsEqual,
+  repoNeedsLiveInspect,
 } from "./inspect-utils.ts";
 import { warmGitHubApiNetwork } from "./github-network.ts";
 import { attachRepoReport } from "./evidence.ts";
 import { DEFAULT_INSPECT_CONCURRENCY } from "./constants.ts";
 import { dimensionArtifactBasename, normalizeDimensionId, runDimension } from "./dimensions.ts";
+import { resolveGates } from "./discover-gate.ts";
 import { REPORT_DIR, joinPath } from "./paths.ts";
 import type { ResearchRun } from "./types.ts";
 import { emitResearchProgress, isResearchIpcChild, logResearchProgress, logResearchStatus, type ResearchProgressSink } from "./research-progress.ts";
@@ -52,6 +54,10 @@ export type CliOptions = {
   minStars?: number;
   minForks?: number;
   maxAgeMonths?: number;
+  discoverMinStars?: number;
+  discoverMinForks?: number;
+  discoverMaxAgeMonths?: number;
+  discoverBroad?: boolean;
   diff?: string;
   openReport?: boolean;
   onProgress?: ResearchProgressSink;
@@ -75,6 +81,10 @@ export function parseCliOptions(argv: string[]): CliOptions {
       "min-stars": { type: "string" },
       "min-forks": { type: "string" },
       "max-age-months": { type: "string" },
+      "discover-min-stars": { type: "string" },
+      "discover-min-forks": { type: "string" },
+      "discover-max-age-months": { type: "string" },
+      "discover-broad": { type: "boolean", default: false },
       dimension: { type: "string" },
       "open-report": { type: "boolean", default: false },
     },
@@ -95,6 +105,12 @@ export function parseCliOptions(argv: string[]): CliOptions {
     minStars: values["min-stars"] ? Number(values["min-stars"]) : undefined,
     minForks: values["min-forks"] ? Number(values["min-forks"]) : undefined,
     maxAgeMonths: values["max-age-months"] ? Number(values["max-age-months"]) : undefined,
+    discoverMinStars: values["discover-min-stars"] ? Number(values["discover-min-stars"]) : undefined,
+    discoverMinForks: values["discover-min-forks"] ? Number(values["discover-min-forks"]) : undefined,
+    discoverMaxAgeMonths: values["discover-max-age-months"]
+      ? Number(values["discover-max-age-months"])
+      : undefined,
+    discoverBroad: values["discover-broad"] === true,
     openReport: values["open-report"] === true,
   };
 }
@@ -136,12 +152,18 @@ export async function runResearch(opts: CliOptions): Promise<ResearchRun> {
   beginInspectPersistStats();
 
   const config = await loadConfig();
-  const gate = {
+  const gateInput = {
     minStars: opts.minStars ?? envNumber("RESEARCH_MIN_STARS") ?? config.weights.gate.minStars,
     minForks: opts.minForks ?? envNumber("RESEARCH_MIN_FORKS") ?? config.weights.gate.minForks,
     maxAgeMonths:
       opts.maxAgeMonths ?? envNumber("RESEARCH_MAX_AGE_MONTHS") ?? config.weights.gate.maxAgeMonths,
   };
+  const { apply: gate, discover: discoverGate } = resolveGates(gateInput, {
+    discoverMinStars: opts.discoverMinStars ?? envNumber("RESEARCH_DISCOVER_MIN_STARS"),
+    discoverMinForks: opts.discoverMinForks ?? envNumber("RESEARCH_DISCOVER_MIN_FORKS"),
+    discoverMaxAgeMonths: opts.discoverMaxAgeMonths ?? envNumber("RESEARCH_DISCOVER_MAX_AGE_MONTHS"),
+    discoverBroad: opts.discoverBroad || Bun.env.RESEARCH_DISCOVER_BROAD === "1",
+  });
   const shortlistSize =
     opts.shortlist ?? envNumber("RESEARCH_SHORTLIST") ?? config.weights.shortlistSize;
 
@@ -156,12 +178,12 @@ export async function runResearch(opts: CliOptions): Promise<ResearchRun> {
   progress({ type: "phase", phase: "discover", dimension });
   logResearchStatus(`Discovering candidates (dimension=${dimension})...`);
   await ensureGhRateBudget();
-  const { candidates, querySet } = await discoverCandidates(config, dimension, gate);
+  const { candidates, querySet } = await discoverCandidates(config, dimension, discoverGate);
   logResearchStatus(`Discovered ${candidates.length} candidates (${querySet.label})`);
 
   const discoveryMiss =
     candidates.length === 0
-      ? analyzeDiscoveryMiss(dimension, querySet, gate, config.dimensions, candidates.length)
+      ? analyzeDiscoveryMiss(dimension, querySet, gate, config.dimensions, candidates.length, discoverGate)
       : undefined;
   if (discoveryMiss) {
     logResearchStatus(discoveryMiss.relaxedGateHint);
@@ -189,7 +211,7 @@ export async function runResearch(opts: CliOptions): Promise<ResearchRun> {
   }
 
   progress({ type: "phase", phase: "inspect", dimension, detail: `concurrency ${DEFAULT_INSPECT_CONCURRENCY}` });
-  const uncachedCount = gated.filter((repo) => loadInspectCache(repo.fullName, repo.pushedAt) === null).length;
+  const uncachedCount = gated.filter((repo) => repoNeedsLiveInspect(repo)).length;
   const inspectBudget = await ensureInspectRateBudget({
     repoCount: gated.length,
     uncachedRepoCount: uncachedCount,
@@ -255,7 +277,7 @@ export async function runResearch(opts: CliOptions): Promise<ResearchRun> {
     runId: runId(),
     generatedAt: new Date().toISOString(),
     dimension,
-    config: { shortlistSize, gate },
+    config: { shortlistSize, gate, discoverGate },
     stats: {
       discovered: candidates.length,
       gated: gated.length,

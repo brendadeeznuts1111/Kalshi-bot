@@ -7,7 +7,9 @@ import {
   inspectSignalsDigest,
   inspectionSignalsEqual,
   canReusePriorInspectSnapshot,
+  canServeInspectFromCache,
   persistInspectCache,
+  repoNeedsLiveInspect,
 } from "../src/research/inspect-utils.ts";
 import { loadInspectCache, saveInspectCache } from "../src/research/cache.ts";
 
@@ -72,6 +74,16 @@ describe("inspect-utils", () => {
 
   test("formatInspectPersistSummary mentions deepEquals for unchanged", () => {
     expect(formatInspectPersistSummary({ inserts: 0, updates: 1, unchanged: 2 })).toContain("Bun.deepEquals");
+  });
+
+  test("canServeInspectFromCache accepts cross-dimension inspect_cache row", () => {
+    const repo = `cross-dim-${Date.now()}`;
+    const pushedAt = "2026-01-01T00:00:00Z";
+    const otherPushed = "2026-06-01T00:00:00Z";
+    saveInspectCache(repo, pushedAt, sampleSignals());
+    expect(canServeInspectFromCache({ fullName: repo, pushedAt: otherPushed })).toBe(true);
+    expect(repoNeedsLiveInspect({ fullName: repo, pushedAt: otherPushed })).toBe(false);
+    expect(repoNeedsLiveInspect({ fullName: "no/such-repo", pushedAt: otherPushed })).toBe(true);
   });
 
   test("formatInspectSignalsBrief uses Bun.inspect", () => {

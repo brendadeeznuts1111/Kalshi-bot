@@ -225,7 +225,11 @@ describe("agent cli", () => {
 
   test("captureEvidence writes manifest with injected capture", async () => {
     const outDir = `${import.meta.dir}/.tmp-capture`;
-    const png = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
+    // Valid 10×10 PNG — Bun.Image.metadata requires a real decode
+    const png = Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVR42mNk+M9Qz0AEYBxVSF+FAAhKDveksU63AAAAAElFTkSuQmCC",
+      "base64",
+    );
     const manifest = await captureEvidence(
       { url: "https://kalshi.com/markets/test-market", outDir, slug: "test-capture" },
       {
@@ -234,6 +238,12 @@ describe("agent cli", () => {
     );
     expect(manifest.digest).toBe(sha3HexBytes(png));
     expect(manifest.title).toBe("Test Market");
+    expect(manifest.width).toBe(10);
+    expect(manifest.height).toBe(10);
+    expect(manifest.format).toBe("png");
+    expect(manifest.size).toBe(png.byteLength);
     expect(await Bun.file(manifest.imagePath).exists()).toBe(true);
   });
 });
+
+
