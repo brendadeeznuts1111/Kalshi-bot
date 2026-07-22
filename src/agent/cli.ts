@@ -116,10 +116,15 @@ export async function runAgentResearch(json: boolean, local: boolean): Promise<n
   }
 }
 
-export async function runAgentSuggestLift(json: boolean, runId?: string): Promise<number> {
-  const run = loadRunForSuggest(runId);
+export async function runAgentSuggestLift(
+  json: boolean,
+  runId?: string,
+  dimension?: string,
+): Promise<number> {
+  const run = loadRunForSuggest(runId, dimension);
   if (!run) {
-    const msg = runId ? `Run not found: ${runId}` : "No research runs yet. Run: bun run research";
+    const scope = dimension ? `dimension=${dimension}` : runId ? `run=${runId}` : "latest (all)";
+    const msg = `No research run for ${scope}. Run: bun run research -- --dimension=<id>`;
     if (json) console.log(JSON.stringify({ ok: false, error: msg }));
     else console.error(msg);
     return 1;
@@ -138,10 +143,12 @@ export async function runAgentAuditList(
   json: boolean,
   runId?: string,
   repo?: string,
+  dimension?: string,
 ): Promise<number> {
-  const run = loadRunForAuditList(runId);
+  const run = loadRunForAuditList(runId, dimension);
   if (!run) {
-    const msg = runId ? `Run not found: ${runId}` : "No research runs yet. Run: bun run research";
+    const scope = dimension ? `dimension=${dimension}` : runId ? `run=${runId}` : "latest (all)";
+    const msg = `No research run for ${scope}. Run: bun run research -- --dimension=<id>`;
     if (json) console.log(JSON.stringify({ ok: false, error: msg }));
     else console.error(msg);
     return 1;
@@ -208,8 +215,8 @@ export function printAgentHelp(): void {
 Usage:
   bun run agent status [--json]
   bun run agent run-research [--json] [--local]
-  bun run agent suggest-lift [--json] [--run <run-id>]
-  bun run agent audit-list [--json] [--run <run-id>] [--repo <owner/name>]
+  bun run agent suggest-lift [--json] [--run <run-id>] [--dimension <id>]
+  bun run agent audit-list [--json] [--run <run-id>] [--dimension <id>] [--repo <owner/name>]
   bun run agent capture-evidence -- --url=<url> | --market=<ticker> [--out=dir] [--wait-ms=N] [--json]
   bun run agent verify-dashboard [--json] [--max-age-days=N] [--require-pulse]
 
@@ -259,6 +266,7 @@ export async function runAgentCli(argv: string[]): Promise<number> {
       local: { type: "boolean", default: false },
       run: { type: "string" },
       repo: { type: "string" },
+      dimension: { type: "string" },
       "max-age-days": { type: "string" },
       "require-pulse": { type: "boolean", default: false },
     },
@@ -272,12 +280,17 @@ export async function runAgentCli(argv: string[]): Promise<number> {
     case "run-research":
       return runAgentResearch(values.json === true, values.local === true);
     case "suggest-lift":
-      return runAgentSuggestLift(values.json === true, stringOpt(values.run));
+      return runAgentSuggestLift(
+        values.json === true,
+        stringOpt(values.run),
+        stringOpt(values.dimension),
+      );
     case "audit-list":
       return runAgentAuditList(
         values.json === true,
         stringOpt(values.run),
         stringOpt(values.repo),
+        stringOpt(values.dimension),
       );
     case "capture-evidence":
       return runAgentCaptureEvidence(rest, values.json === true);

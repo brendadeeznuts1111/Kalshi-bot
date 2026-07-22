@@ -12,7 +12,8 @@ import {
   resolveAuditExportTier,
   type AuditExportTier,
 } from "../research/audit-adapter.ts";
-import { loadLatestRunFromDb, loadRunFromDb } from "../research/cache.ts";
+import { runDimension } from "../research/dimensions.ts";
+import { loadResearchRun } from "../research/cache.ts";
 import { latestPulseTick, resolveRotorRoot, type PulseTick } from "./pulse-log.ts";
 
 const KALSHI_FINDING_TITLE_PREFIX = "Kalshi bot candidate: ";
@@ -54,6 +55,7 @@ export type AuditListEntry = {
 export type AuditListResult = {
   runId: string;
   generatedAt: string;
+  dimension: string;
   catalogPath: string;
   catalogAvailable: boolean;
   catalogGenerated: string | null;
@@ -276,6 +278,7 @@ export function buildAuditList(
   return {
     runId: run.runId,
     generatedAt: run.generatedAt,
+    dimension: runDimension(run),
     catalogPath: auditCatalogPath(),
     catalogAvailable: context.catalogAvailable,
     catalogGenerated: context.catalogGenerated,
@@ -285,9 +288,8 @@ export function buildAuditList(
   };
 }
 
-export function loadRunForAuditList(runId?: string): ResearchRun | null {
-  if (runId?.trim()) return loadRunFromDb(runId.trim());
-  return loadLatestRunFromDb();
+export function loadRunForAuditList(runId?: string, dimension?: string): ResearchRun | null {
+  return loadResearchRun({ runId, dimension });
 }
 
 export async function auditListFromRun(
@@ -351,6 +353,7 @@ export async function verificationSummaryForRun(
 export function formatAuditList(result: AuditListResult): string {
   const lines = [
     `Audit list — run ${result.runId} (${result.generatedAt})`,
+    `Dimension: ${result.dimension}`,
     `Catalog: ${result.catalogAvailable ? result.catalogPath : "missing"}`,
   ];
 

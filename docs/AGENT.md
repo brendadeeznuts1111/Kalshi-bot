@@ -63,6 +63,8 @@ Cross-references the latest shortlist against `tools/audit-catalog.json` under `
 
 ```bash
 bun run agent audit-list
+bun run agent audit-list --dimension=market-making
+bun run agent audit-list --dimension=arbitrage
 bun run agent audit-list --repo=openfi-dao/kalshi-trading-bot
 bun run agent audit-list --run=2026-07-22T05-50-48-875Z
 ```
@@ -75,7 +77,12 @@ bun run agent audit-list --run=2026-07-22T05-50-48-875Z
 
 ## `suggest-lift`
 
-Reads the latest (or `--run <id>`) research run from `cache.db` and emits a **component map** — strongest shortlist repo per scoring component (auth, orders, tests, docs, maintenance, risk).
+Reads the latest **`all`** run, or `--dimension <id>` / `--run <id>` from `cache.db`, and emits a **component map** — strongest shortlist repo per scoring component (auth, orders, tests, docs, maintenance, risk).
+
+```bash
+bun run agent suggest-lift --dimension=market-making --json
+bun run agent suggest-lift --dimension=arbitrage
+```
 
 Each line includes rotor badges: **✓ verified**, **⚠ watchlist**, **✗ unverified**. JSON includes `verified`, `verification`, and `findingId` on recommendations and shortlist entries.
 

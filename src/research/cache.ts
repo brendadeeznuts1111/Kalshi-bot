@@ -10,7 +10,7 @@
  * JSON dumps go to gitignored `research/outputs/`; committed reports are `latest.md` + `latest.diff.md`.
  */
 import { Database } from "bun:sqlite";
-import { normalizeDimensionId, runDimension } from "./dimensions.ts";
+import { normalizeDimensionId, runDimension, DEFAULT_DIMENSION } from "./dimensions.ts";
 import type { ResearchRun } from "./types.ts";
 import { CACHE_DB, CACHE_DIR, joinPath } from "./paths.ts";
 
@@ -140,6 +140,16 @@ export function isEligibleProductionRun(run: ResearchRun): boolean {
   if (!isProductionRunId(run.runId)) return false;
   const generatedAtMs = Date.parse(run.generatedAt);
   return Number.isFinite(generatedAtMs) && generatedAtMs <= Date.now() + 86_400_000;
+}
+
+export function loadResearchRun(options?: {
+  runId?: string;
+  dimension?: string;
+}): ResearchRun | null {
+  const runId = options?.runId?.trim();
+  if (runId) return loadRunFromDb(runId);
+  const dimension = normalizeDimensionId(options?.dimension ?? DEFAULT_DIMENSION);
+  return loadLatestRunFromDb({ dimension });
 }
 
 export function loadLatestRunFromDb(options?: {

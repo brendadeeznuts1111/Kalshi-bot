@@ -13,7 +13,7 @@ import {
 import { parseCliOptions } from "../src/research/cli.ts";
 import { parseExportAuditCli } from "../src/research/export-audit-cli.ts";
 import { formatReportMarkdown, writeOutputs } from "../src/research/report.ts";
-import { loadLatestRunFromDb, saveRun, CACHE_DB } from "../src/research/cache.ts";
+import { loadLatestRunFromDb, loadResearchRun, saveRun, CACHE_DB } from "../src/research/cache.ts";
 import { diffRuns } from "../src/research/diff.ts";
 import type { ResearchRun } from "../src/research/types.ts";
 import { REPORT_DIR, joinPath } from "../src/research/paths.ts";
@@ -163,6 +163,12 @@ describe("dimension reports", () => {
     expect(await Bun.file(scoped).exists()).toBe(true);
     const text = await Bun.file(scoped).text();
     expect(text).toContain("Dimension: `sports`");
+  });
+
+  test("loadResearchRun loads latest run for a dimension", () => {
+    const run = loadResearchRun({ dimension: "arbitrage" });
+    expect(run).not.toBeNull();
+    expect(runDimension(run!)).toBe("arbitrage");
   });
 
   test("loadLatestRunFromDb filters by dimension", () => {

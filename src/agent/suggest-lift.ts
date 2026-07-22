@@ -1,7 +1,8 @@
 import type { ResearchRun, ScoredRepo } from "../research/types.ts";
 import type { ScoreComponentKey } from "../research/constants.ts";
 import { SCORE_COMPONENTS, COMPONENT_WEIGHTS } from "../research/constants.ts";
-import { loadLatestRunFromDb, loadRunFromDb } from "../research/cache.ts";
+import { loadResearchRun } from "../research/cache.ts";
+import { runDimension } from "../research/dimensions.ts";
 import { buildRepoReport } from "../research/evidence.ts";
 import {
   isHighValueCandidate,
@@ -43,6 +44,7 @@ export type ShortlistSummary = {
 export type SuggestLiftResult = {
   runId: string;
   generatedAt: string;
+  dimension: string;
   recommendations: LiftRecommendation[];
   shortlist: ShortlistSummary[];
   notes: string[];
@@ -178,6 +180,7 @@ export function suggestLiftFromRun(
   return {
     runId: run.runId,
     generatedAt: run.generatedAt,
+    dimension: runDimension(run),
     recommendations,
     shortlist: shortlist.map((item) => {
       const report = item.report ?? buildRepoReport(item, run.generatedAt);
@@ -205,9 +208,8 @@ export async function suggestLiftWithRotor(run: ResearchRun): Promise<SuggestLif
   return suggestLiftFromRun(run, rotor);
 }
 
-export function loadRunForSuggest(runId?: string): ResearchRun | null {
-  if (runId?.trim()) return loadRunFromDb(runId.trim());
-  return loadLatestRunFromDb();
+export function loadRunForSuggest(runId?: string, dimension?: string): ResearchRun | null {
+  return loadResearchRun({ runId, dimension });
 }
 
 export function formatSuggestLift(result: SuggestLiftResult): string {
@@ -217,6 +219,7 @@ export function formatSuggestLift(result: SuggestLiftResult): string {
       : "Lift map:";
   const lines: string[] = [
     `Lift suggestions — run ${result.runId} (${result.generatedAt})`,
+    `Dimension: ${result.dimension}`,
     "",
     header,
   ];
