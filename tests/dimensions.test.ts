@@ -8,6 +8,7 @@ import {
   normalizeDimensionId,
   resolveDimensionQueries,
   runDimension,
+  loadDimensionsFile,
 } from "../src/research/dimensions.ts";
 import { parseCliOptions } from "../src/research/cli.ts";
 import { parseExportAuditCli } from "../src/research/export-audit-cli.ts";
@@ -61,6 +62,32 @@ describe("dimensions", () => {
 
   test("listDimensionIds is sorted", () => {
     expect(listDimensionIds(SAMPLE_DIMENSIONS)).toEqual(["all", "market-making", "sports"]);
+  });
+
+  test("dimensions.json defines sports sub-slices (no broad sports)", async () => {
+    const file = await loadDimensionsFile();
+    expect(file.dimensions.sports).toBeUndefined();
+    expect(file.dimensions["sports-nba"]?.queries.length).toBeGreaterThan(0);
+    expect(file.dimensions["sports-nfl"]?.queries.length).toBeGreaterThan(0);
+    expect(file.dimensions["sports-elections"]?.queries.length).toBeGreaterThan(0);
+    const ids = listDimensionIds(file);
+    expect(ids.filter((id) => id.startsWith("sports-"))).toEqual([
+      "sports-elections",
+      "sports-macro",
+      "sports-nba",
+      "sports-nfl",
+      "sports-other",
+      "sports-soccer",
+    ]);
+  });
+
+  test("every dimension in dimensions.json has at least one query", async () => {
+    const file = await loadDimensionsFile();
+    for (const id of listDimensionIds(file)) {
+      const def = file.dimensions[id];
+      expect(def?.queries.length).toBeGreaterThan(0);
+      expect(def?.label.trim().length).toBeGreaterThan(0);
+    }
   });
 });
 

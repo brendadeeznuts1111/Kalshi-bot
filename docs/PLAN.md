@@ -43,7 +43,7 @@ Kalshi-bot/
   docs/
     CRON.md                 # OS-level Bun.cron setup
   research/
-    dimensions.json         # dimension query SSOT (all, market-making, sports, …)
+    dimensions.json         # dimension query SSOT (all, market-making, sports-nba/…, …)
     queries.json            # deprecated reference (dimension=all)
     weights.json, keywords.json
     schemas/repo-report.schema.json
@@ -71,6 +71,8 @@ flowchart LR
 ## Discover
 
 Query sets in [`research/dimensions.json`](../research/dimensions.json). Run a slice with `--dimension=<id>` (or `RESEARCH_DIMENSION`). Dedupe by `full_name`. Cap ~100 candidates per dimension (`candidateCap`).
+
+**Query refinement strategy:** Each dimension lists tight, domain-specific queries first, then 1–2 broader fallback queries (e.g. `"NBA Kalshi bot"`) to improve recall on niche slices. Sports use sub-dimensions (`sports-nba`, `sports-nfl`, …) — no broad `sports` bucket. An empty shortlist with low `Discovered` → add queries; high `Discovered` but zero gated → gate may be too strict (CLI/env overrides) or repos lack Kalshi code signals.
 
 ## Popularity gate
 
@@ -131,7 +133,7 @@ Outputs: [`research/reports/latest.diff.md`](../research/reports/latest.diff.md)
 ```bash
 bun run research                      # full pipeline (dimension=all)
 bun run research -- --dimension=market-making
-bun run research -- --dimension=sports --export-audit
+bun run research -- --dimension=sports-nba --export-audit
 bun run dashboard                     # agent dashboard (:3457)
 bun run agent status                  # CLI status + rotor verification
 bun run agent audit-list              # shortlist vs audit-catalog.json

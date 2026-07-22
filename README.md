@@ -27,7 +27,7 @@ bun test && bun run typecheck            # posttest restores latest.md from fixt
 
 ```bash
 bun run research -- --dimension=market-making   # targeted dimension → latest-market-making.md
-bun run research -- --dimension=sports --export-audit
+bun run research -- --dimension=sports-nba --export-audit
 bun run research -- --json               # full run JSON on stdout
 bun run research -- --shortlist 12       # override shortlist size
 bun run research -- --diff <run-id>      # diff vs a specific prior run
@@ -39,6 +39,8 @@ bun run export-audit -- --verify research/exports/audit/<run-id>
 ```
 
 Gate overrides: `--min-stars`, `--min-forks`, `--max-age-months` or env vars below.
+
+Niche dimensions (`sports-nba`, `tracking`, …) may discover candidates but produce an **empty shortlist** if none pass the popularity gate. Check `Discovered` in the report stats — if it is low, broaden queries in [`research/dimensions.json`](research/dimensions.json) (tight sport-specific terms first, then a broader fallback query per dimension).
 
 ### Env overrides
 
@@ -96,7 +98,7 @@ After each `bun run research`, sqlite stores the full run payload; markdown snap
 | `research/reports/latest.diff.md` | yes | Diff vs previous production run |
 | `research/reports/latest.diff.md.fixture` | yes | Test restore SSOT for diff |
 | `research/audit-evidence/*.jsonl` | yes | Line evidence (one file per promoted repo) |
-| `research/dimensions.json` | yes | Dimension query sets (market-making, sports, tracking, …) |
+| `research/dimensions.json` | yes | Dimension query sets (market-making, sports-nba/nfl/…, tracking, …) |
 | `research/queries.json` | yes | Deprecated reference — use `dimensions.json` (`all`) |
 | `research/weights.json`, `keywords.json` | yes | Scoring + detector keywords SSOT |
 | `src/research/constants.ts` | yes | Typed SSOT — detector ids, weights, licenses, thresholds |

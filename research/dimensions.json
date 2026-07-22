@@ -27,15 +27,58 @@
         "kalshi liquidity"
       ]
     },
-    "sports": {
-      "label": "Sport-specific bots",
+    "sports-nba": {
+      "label": "NBA",
       "queries": [
-        "Kalshi NBA bot",
-        "Kalshi NFL bot",
-        "Kalshi MLB bot",
-        "Kalshi soccer bot",
-        "Kalshi sports trading",
-        "kalshi game odds bot"
+        "Kalshi NBA",
+        "NBA player props kalshi",
+        "basketball kalshi trading",
+        "NBA Kalshi bot"
+      ]
+    },
+    "sports-nfl": {
+      "label": "NFL",
+      "queries": [
+        "Kalshi NFL",
+        "NFL player props kalshi",
+        "football kalshi trading",
+        "NFL Kalshi bot"
+      ]
+    },
+    "sports-soccer": {
+      "label": "Soccer",
+      "queries": [
+        "Kalshi soccer",
+        "Kalshi EPL",
+        "soccer kalshi trading",
+        "football kalshi prediction market"
+      ]
+    },
+    "sports-other": {
+      "label": "Other sports (MLB, NHL, tennis, …)",
+      "queries": [
+        "Kalshi MLB",
+        "Kalshi NHL",
+        "Kalshi tennis",
+        "sports kalshi bot"
+      ]
+    },
+    "sports-elections": {
+      "label": "Elections / politics",
+      "queries": [
+        "Kalshi election",
+        "Kalshi politics",
+        "political prediction kalshi",
+        "election Kalshi bot"
+      ]
+    },
+    "sports-macro": {
+      "label": "Macro / economic events",
+      "queries": [
+        "Kalshi fed",
+        "Kalshi CPI",
+        "macro kalshi trading",
+        "economic kalshi prediction"
       ]
     },
     "markets": {
