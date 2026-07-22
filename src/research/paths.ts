@@ -13,6 +13,7 @@ export const CACHE_DIR = joinPath(RESEARCH_ROOT, "cache");
 export const CACHE_DB = joinPath(CACHE_DIR, "cache.db");
 export const OUTPUT_DIR = joinPath(RESEARCH_ROOT, "outputs");
 export const REPORT_DIR = joinPath(RESEARCH_ROOT, "reports");
+export const PATTERNS_DIR = joinPath(RESEARCH_ROOT, "patterns");
 
 /** Committed audit evidence (JSONL) — one file per repo, not per run. */
 export const AUDIT_EVIDENCE_DIR = joinPath(RESEARCH_ROOT, "audit-evidence");

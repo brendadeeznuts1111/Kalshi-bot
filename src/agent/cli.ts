@@ -25,6 +25,12 @@ import {
   loadRunForAuditList,
 } from "./audit-list.ts";
 import {
+  formatPatternReportMarkdown,
+  loadRunForPatterns,
+  patternReportBasename,
+  runPatternExtract,
+} from "./pattern-extract.ts";
+import {
   formatVerifyDashboard,
   verifyDashboard,
   type VerifyDashboardOptions,
@@ -36,7 +42,8 @@ export type AgentCommand =
   | "suggest-lift"
   | "audit-list"
   | "capture-evidence"
-  | "verify-dashboard";
+  | "verify-dashboard"
+  | "patterns";
 
 export function parseAgentCommand(argv: string[]): {
   command: AgentCommand | null;
@@ -49,7 +56,8 @@ export function parseAgentCommand(argv: string[]): {
     command === "suggest-lift" ||
     command === "audit-list" ||
     command === "capture-evidence" ||
-    command === "verify-dashboard"
+    command === "verify-dashboard" ||
+    command === "patterns"
   ) {
     return { command, rest };
   }
@@ -163,6 +171,46 @@ export async function runAgentAuditList(
   return 0;
 }
 
+export async function runAgentPatterns(
+  json: boolean,
+  runId?: string,
+  repo?: string,
+  dimension?: string,
+  noWrite?: boolean,
+): Promise<number> {
+  const run = loadRunForPatterns(runId, dimension);
+  if (!run) {
+    const scope = dimension ? `dimension=${dimension}` : runId ? `run=${runId}` : "latest (all)";
+    const msg = `No research run for ${scope}. Run: bun run research -- --dimension=<id>`;
+    if (json) console.log(JSON.stringify({ ok: false, error: msg }));
+    else console.error(msg);
+    return 1;
+  }
+
+  const report = await runPatternExtract({
+    runId,
+    dimension,
+    repo,
+    write: !noWrite,
+  });
+  if (!report) {
+    const msg = "Pattern extraction failed";
+    if (json) console.log(JSON.stringify({ ok: false, error: msg }));
+    else console.error(msg);
+    return 1;
+  }
+
+  if (json) {
+    console.log(JSON.stringify(report, null, 2));
+  } else {
+    console.log(formatPatternReportMarkdown(report));
+    if (!noWrite) {
+      console.error(`\nWrote research/patterns/${patternReportBasename(report.dimension)}.md`);
+    }
+  }
+  return 0;
+}
+
 export async function runAgentCaptureEvidence(
   argv: string[],
   json: boolean,
@@ -217,6 +265,7 @@ Usage:
   bun run agent run-research [--json] [--local]
   bun run agent suggest-lift [--json] [--run <run-id>] [--dimension <id>]
   bun run agent audit-list [--json] [--run <run-id>] [--dimension <id>] [--repo <owner/name>]
+  bun run agent patterns [--json] [--run <run-id>] [--dimension <id>] [--repo <owner/name>] [--no-write]
   bun run agent capture-evidence -- --url=<url> | --market=<ticker> [--out=dir] [--wait-ms=N] [--json]
   bun run agent verify-dashboard [--json] [--max-age-days=N] [--require-pulse]
 
@@ -233,6 +282,7 @@ Examples:
   bun run agent verify-dashboard
   bun run agent suggest-lift --json
   bun run agent audit-list
+  bun run agent patterns --dimension=market-making
   bun run agent run-research -- --local
   bun run agent capture-evidence -- --market=KXHIGHNY-25JAN01
 `);
@@ -267,6 +317,7 @@ export async function runAgentCli(argv: string[]): Promise<number> {
       run: { type: "string" },
       repo: { type: "string" },
       dimension: { type: "string" },
+      "no-write": { type: "boolean", default: false },
       "max-age-days": { type: "string" },
       "require-pulse": { type: "boolean", default: false },
     },
@@ -291,6 +342,14 @@ export async function runAgentCli(argv: string[]): Promise<number> {
         stringOpt(values.run),
         stringOpt(values.repo),
         stringOpt(values.dimension),
+      );
+    case "patterns":
+      return runAgentPatterns(
+        values.json === true,
+        stringOpt(values.run),
+        stringOpt(values.repo),
+        stringOpt(values.dimension),
+        values["no-write"] === true,
       );
     case "capture-evidence":
       return runAgentCaptureEvidence(rest, values.json === true);

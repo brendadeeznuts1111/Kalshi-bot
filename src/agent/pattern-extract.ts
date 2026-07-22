@@ -1,0 +1,314 @@
+// @see https://bun.com/docs/runtime/file-io#writing-files-bun-write
+/**
+ * Static pattern extraction from detector evidence paths (gh API file reads — no clone).
+ */
+import type { EvidenceLine, ResearchRun, ScoredRepo } from "../research/types.ts";
+import { buildRepoReport } from "../research/evidence.ts";
+import { fetchRepoFileText } from "../research/repo-content.ts";
+import { loadResearchRun } from "../research/cache.ts";
+import { dimensionArtifactBasename, runDimension } from "../research/dimensions.ts";
+import { PATTERNS_DIR, joinPath } from "../research/paths.ts";
+import { writeJson } from "../research/io.ts";
+import { lookupRepoVerification, buildRotorVerificationIndex, formatVerificationBadge } from "./audit-list.ts";
+
+export const MAX_REPOS_PER_REPORT = 5;
+export const MAX_FILES_PER_REPO = 6;
+export const MAX_EXCERPT_CHARS = 480;
+
+export type PatternCategory =
+  | "auth"
+  | "orders"
+  | "dryRun"
+  | "loop"
+  | "errors"
+  | "structure"
+  | "tests";
+
+export type PatternHits = Record<PatternCategory, string[]>;
+
+export type FilePatternSlice = {
+  path: string;
+  components: string[];
+  hits: PatternHits;
+  excerpt: string | null;
+  fetchOk: boolean;
+};
+
+export type RepoPatternReport = {
+  fullName: string;
+  score: number;
+  verification: string;
+  evidencePaths: string[];
+  files: FilePatternSlice[];
+  summary: PatternHits;
+};
+
+export type PatternReport = {
+  runId: string;
+  generatedAt: string;
+  dimension: string;
+  repos: RepoPatternReport[];
+  aggregate: Partial<Record<PatternCategory, string[]>>;
+};
+
+const AGGREGATE_PATH = /\(readme\/code aggregate\)/i;
+
+const RULES: Array<{ category: PatternCategory; label: string; re: RegExp }> = [
+  { category: "auth", label: "kalshi-access-headers", re: /KALSHI-ACCESS-(KEY|SIGNATURE|TIMESTAMP)/i },
+  { category: "auth", label: "trade-api-v2", re: /trade-api\/v2/i },
+  { category: "auth", label: "rsa-pss-signing", re: /RSA-PSS|rsa\.sign|PSS/i },
+  { category: "auth", label: "env-secrets", re: /process\.env|os\.environ|Bun\.env|getenv|dotenv|load_dotenv/i },
+  { category: "auth", label: "api-key-file", re: /\.pem|private_key|API_KEY|ACCESS_KEY/i },
+  { category: "orders", label: "create-order-call", re: /create_order|CreateOrder|place_order|PlaceOrder|post.*orders/i },
+  { category: "orders", label: "order-fields", re: /(side|count|price|type).*?(buy|sell|yes|no|limit|market)/i },
+  { category: "orders", label: "portfolio-orders-path", re: /portfolio\/orders|\/orders/i },
+  { category: "dryRun", label: "dry-run-default", re: /DRY_RUN|dry_run|dry-run|paper_trading|PAPER/i },
+  { category: "loop", label: "websocket", re: /websocket|WebSocket|ws\.|onmessage/i },
+  { category: "loop", label: "polling-loop", re: /setInterval|setTimeout|while\s+True|asyncio\.|poll/i },
+  { category: "loop", label: "state-machine", re: /enum\s+State|state_machine|StateMachine/i },
+  { category: "errors", label: "retry-backoff", re: /retry|backoff|tenacity|exponential/i },
+  { category: "errors", label: "try-catch", re: /\btry\b|\bcatch\b|\bexcept\b|\.nothrow\(/i },
+  { category: "errors", label: "structured-logging", re: /logging\.|logger\.|console\.(error|warn)|log\.(info|error)/i },
+  { category: "structure", label: "config-module", re: /config\.(py|ts|js)|settings\.(py|ts)|from config import/i },
+  { category: "structure", label: "strategy-module", re: /strategy|strategies\//i },
+  { category: "structure", label: "client-wrapper", re: /class\s+\w*(Client|Api|API)|KalshiClient/i },
+  { category: "tests", label: "test-import", re: /pytest|unittest|describe\(|from jest|bun:test/i },
+];
+
+export function emptyPatternHits(): PatternHits {
+  return {
+    auth: [],
+    orders: [],
+    dryRun: [],
+    loop: [],
+    errors: [],
+    structure: [],
+    tests: [],
+  };
+}
+
+export function analyzeSource(text: string): PatternHits {
+  const hits = emptyPatternHits();
+  for (const rule of RULES) {
+    if (rule.re.test(text) && !hits[rule.category].includes(rule.label)) {
+      hits[rule.category].push(rule.label);
+    }
+  }
+  return hits;
+}
+
+export function mergePatternHits(into: PatternHits, add: PatternHits): PatternHits {
+  const out = { ...into };
+  for (const cat of Object.keys(add) as PatternCategory[]) {
+    for (const label of add[cat]) {
+      if (!out[cat].includes(label)) out[cat].push(label);
+    }
+  }
+  return out;
+}
+
+export function selectEvidencePaths(lines: EvidenceLine[], limit = MAX_FILES_PER_REPO): string[] {
+  const scored = lines
+    .filter((l) => l.path && !AGGREGATE_PATH.test(l.path))
+    .map((l) => ({
+      path: l.path,
+      weight: l.component === "authApi" || l.component === "orderRealism" ? 2 : 1,
+    }));
+
+  const byPath = new Map<string, number>();
+  for (const row of scored) {
+    byPath.set(row.path, (byPath.get(row.path) ?? 0) + row.weight);
+  }
+
+  return [...byPath.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit)
+    .map(([path]) => path);
+}
+
+function excerptAroundMatch(text: string, maxLen = MAX_EXCERPT_CHARS): string | null {
+  if (!text.trim()) return null;
+  for (const rule of RULES) {
+    const m = rule.re.exec(text);
+    if (m?.index !== undefined) {
+      const start = Math.max(0, m.index - 80);
+      const end = Math.min(text.length, m.index + maxLen - 80);
+      return text.slice(start, end).replace(/\s+/g, " ").trim();
+    }
+  }
+  return text.slice(0, maxLen).replace(/\s+/g, " ").trim();
+}
+
+export async function extractRepoPatterns(
+  item: ScoredRepo,
+  generatedAt: string,
+  verificationLabel: string,
+): Promise<RepoPatternReport> {
+  const report = item.report ?? buildRepoReport(item, generatedAt);
+  const evidenceLines = report.detectors.flatMap((d) => d.evidence);
+  const paths = selectEvidencePaths(evidenceLines);
+  const repoRef = {
+    fullName: item.repo.fullName,
+    pushedAt: item.repo.pushedAt,
+    defaultBranch: item.repo.defaultBranch,
+  };
+
+  let summary = emptyPatternHits();
+  const files: FilePatternSlice[] = [];
+
+  for (const path of paths) {
+    const text = await fetchRepoFileText(repoRef, path);
+    const hits = text ? analyzeSource(text) : emptyPatternHits();
+    const components = [
+      ...new Set(evidenceLines.filter((e) => e.path === path).map((e) => e.component)),
+    ];
+    summary = mergePatternHits(summary, hits);
+    files.push({
+      path,
+      components,
+      hits,
+      excerpt: text ? excerptAroundMatch(text) : null,
+      fetchOk: text !== null,
+    });
+  }
+
+  return {
+    fullName: item.repo.fullName,
+    score: item.score.total,
+    verification: verificationLabel,
+    evidencePaths: paths,
+    files,
+    summary,
+  };
+}
+
+export function aggregatePatternReports(repos: RepoPatternReport[]): PatternReport["aggregate"] {
+  const agg: PatternReport["aggregate"] = {};
+  for (const repo of repos) {
+    for (const cat of Object.keys(repo.summary) as PatternCategory[]) {
+      for (const label of repo.summary[cat]) {
+        agg[cat] ??= [];
+        if (!agg[cat]!.includes(label)) agg[cat]!.push(label);
+      }
+    }
+  }
+  return agg;
+}
+
+export async function buildPatternReport(
+  run: ResearchRun,
+  options?: { repoFilter?: string; maxRepos?: number },
+): Promise<PatternReport> {
+  const rotor = await buildRotorVerificationIndex();
+  let items = [...run.shortlist].sort((a, b) => b.score.total - a.score.total);
+
+  if (options?.repoFilter?.trim()) {
+    const key = options.repoFilter.trim().toLowerCase();
+    items = items.filter((i) => i.repo.fullName.toLowerCase() === key);
+    if (!items.length) {
+      items = run.scored
+        .filter((s) => s.repo.fullName.toLowerCase() === key)
+        .slice(0, 1);
+    }
+  }
+
+  items = items.slice(0, options?.maxRepos ?? MAX_REPOS_PER_REPORT);
+
+  const repos: RepoPatternReport[] = [];
+  for (const item of items) {
+    const rotorStatus = lookupRepoVerification(rotor, item.repo.fullName);
+    const badge = formatVerificationBadge({
+      verified: rotorStatus.verified,
+      verification: rotorStatus.verification,
+    });
+    repos.push(await extractRepoPatterns(item, run.generatedAt, badge));
+  }
+
+  return {
+    runId: run.runId,
+    generatedAt: run.generatedAt,
+    dimension: runDimension(run),
+    repos,
+    aggregate: aggregatePatternReports(repos),
+  };
+}
+
+export function formatPatternReportMarkdown(report: PatternReport): string {
+  const lines: string[] = [
+    "# Kalshi bot pattern report",
+    "",
+    `Run: \`${report.runId}\``,
+    `Dimension: \`${report.dimension}\``,
+    `Generated: ${report.generatedAt}`,
+    "",
+    "## Aggregate signals",
+  ];
+
+  const cats = Object.keys(report.aggregate) as PatternCategory[];
+  if (!cats.length) {
+    lines.push("_No pattern hits — shortlist empty or no readable evidence files._");
+  } else {
+    for (const cat of cats) {
+      lines.push(`- **${cat}**: ${report.aggregate[cat]?.join(", ") ?? "—"}`);
+    }
+  }
+
+  for (const repo of report.repos) {
+    lines.push("", `## ${repo.fullName} (${repo.score}) — ${repo.verification}`, "");
+    if (!repo.files.length) {
+      lines.push("_No line-evidence paths to inspect._");
+      continue;
+    }
+    for (const file of repo.files) {
+      lines.push(`### \`${file.path}\` (${file.components.join(", ")})`);
+      if (!file.fetchOk) {
+        lines.push("- _Could not fetch file via gh API_");
+        continue;
+      }
+      for (const cat of Object.keys(file.hits) as PatternCategory[]) {
+        if (file.hits[cat].length) {
+          lines.push(`- **${cat}**: ${file.hits[cat].join(", ")}`);
+        }
+      }
+      if (file.excerpt) {
+        lines.push("", "```", file.excerpt, "```");
+      }
+    }
+  }
+
+  lines.push("");
+  return lines.join("\n");
+}
+
+export function patternReportBasename(dimension: string): string {
+  return `patterns-${dimensionArtifactBasename(dimension)}`;
+}
+
+export async function writePatternReport(report: PatternReport): Promise<string> {
+  await Bun.write(joinPath(PATTERNS_DIR, ".keep"), "");
+  const base = patternReportBasename(report.dimension);
+  const mdPath = joinPath(PATTERNS_DIR, `${base}.md`);
+  const jsonPath = joinPath(PATTERNS_DIR, `${base}.json`);
+  await Bun.write(mdPath, formatPatternReportMarkdown(report));
+  await writeJson(jsonPath, report);
+  return mdPath;
+}
+
+export function loadRunForPatterns(runId?: string, dimension?: string): ResearchRun | null {
+  return loadResearchRun({ runId, dimension });
+}
+
+export async function runPatternExtract(options: {
+  runId?: string;
+  dimension?: string;
+  repo?: string;
+  write?: boolean;
+}): Promise<PatternReport | null> {
+  const run = loadRunForPatterns(options.runId, options.dimension);
+  if (!run) return null;
+  const report = await buildPatternReport(run, { repoFilter: options.repo });
+  if (options.write !== false) {
+    await writePatternReport(report);
+  }
+  return report;
+}

@@ -118,6 +118,7 @@ describe("agent cli", () => {
   test("parseAgentCommand recognizes subcommands", () => {
     expect(parseAgentCommand(["status", "--json"]).command).toBe("status");
     expect(parseAgentCommand(["audit-list", "--json"]).command).toBe("audit-list");
+    expect(parseAgentCommand(["patterns", "--dimension=market-making"]).command).toBe("patterns");
     expect(parseAgentCommand(["capture-evidence", "--url=x"]).command).toBe("capture-evidence");
     expect(parseAgentCommand([]).command).toBeNull();
   });

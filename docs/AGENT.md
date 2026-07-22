@@ -8,6 +8,7 @@ CLI for pipeline status, research triggers, rotor verification, module lift sugg
 bun run agent status                    # dashboard API or local fallback (+ verification summary)
 bun run agent audit-list                # shortlist vs rotor catalog
 bun run agent suggest-lift              # per-component lift map (rotor-aware badges)
+bun run agent patterns                  # static pattern report from evidence paths
 bun run agent run-research              # POST /api/research/run if dashboard up
 bun run agent run-research --local        # always in-process (no HTTP)
 bun run agent capture-evidence -- --url=https://kalshi.com/markets/...
@@ -88,6 +89,21 @@ Each line includes rotor badges: **✓ verified**, **⚠ watchlist**, **✗ unve
 
 Designed for an LLM or human deciding what to lift into a composite bot.
 
+## `patterns`
+
+Static pattern extraction from detector evidence paths — reads source via `gh api` (no clone, no test execution).
+
+```bash
+bun run agent patterns --dimension=market-making
+bun run agent patterns --dimension=arbitrage --json
+bun run agent patterns --repo=rodlaf/KalshiMarketMaker
+bun run agent patterns --dimension=market-making --no-write   # stdout only
+```
+
+Writes `research/patterns/patterns-latest-{dimension}.md` and `.json` (see [`research/patterns/README.md`](../research/patterns/README.md)).
+
+Heuristics cover auth loading, order construction, dry-run defaults, loop style (poll vs WebSocket), error handling, and project layout.
+
 ## `capture-evidence`
 
 Uses headless [`Bun.WebView`](https://bun.com/blog/bun-v1.3.12#bun-webview-headless-browser-automation) to:
@@ -130,6 +146,7 @@ Exit **0** = pass, **1** = fail.
 | [`dashboard-client.ts`](../src/agent/dashboard-client.ts) | HTTP client + local fallback |
 | [`audit-list.ts`](../src/agent/audit-list.ts) | Rotor catalog cross-reference |
 | [`suggest-lift.ts`](../src/agent/suggest-lift.ts) | Component lift recommendations |
+| [`pattern-extract.ts`](../src/agent/pattern-extract.ts) | Static pattern reports from evidence paths |
 | [`capture-evidence.ts`](../src/agent/capture-evidence.ts) | WebView screenshot + hash |
 | [`verify-dashboard.ts`](../src/agent/verify-dashboard.ts) | WebView + API parity checks |
 
