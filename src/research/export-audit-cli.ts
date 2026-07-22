@@ -13,6 +13,7 @@ export type ExportAuditCliOptions = {
   runId?: string;
   latest: boolean;
   verify?: string;
+  repo?: string;
 };
 
 export function parseExportAuditCli(argv: string[]): ExportAuditCliOptions {
@@ -22,6 +23,7 @@ export function parseExportAuditCli(argv: string[]): ExportAuditCliOptions {
       run: { type: "string" },
       latest: { type: "boolean", default: false },
       verify: { type: "string" },
+      repo: { type: "string" },
     },
     strict: false,
   });
@@ -30,6 +32,7 @@ export function parseExportAuditCli(argv: string[]): ExportAuditCliOptions {
     runId: typeof values.run === "string" ? values.run : undefined,
     latest: values.latest === true,
     verify: typeof values.verify === "string" ? values.verify : undefined,
+    repo: typeof values.repo === "string" ? values.repo : undefined,
   };
 }
 
@@ -58,9 +61,13 @@ export async function runExportAuditCli(opts: ExportAuditCliOptions): Promise<nu
     return 1;
   }
 
-  const dir = await writeAuditExports(run, config);
+  const dir = await writeAuditExports(run, config, { repo: opts.repo });
   if (!dir) {
-    console.error("No high-value shortlist candidates to export");
+    console.error(
+      opts.repo
+        ? `No high-value export for repo: ${opts.repo}`
+        : "No high-value shortlist candidates to export",
+    );
     return 2;
   }
 

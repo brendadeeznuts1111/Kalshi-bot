@@ -5,7 +5,8 @@ import { githubRepoWebUrl, localRepoPath } from "./patterns.ts";
 import { OUTPUT_DIR, REPORT_DIR, joinPath } from "./paths.ts";
 import { formatDiffMarkdown } from "./diff.ts";
 import { buildRepoReport } from "./evidence.ts";
-import { MAX_QUALITY_SCORE } from "./constants.ts";
+import { shortlistTagCoverage } from "./diversify.ts";
+import { DEFAULT_MAX_PER_TAG, MAX_QUALITY_SCORE } from "./constants.ts";
 
 function reportFor(item: ScoredRepo): NonNullable<ScoredRepo["report"]> {
   return item.report ?? buildRepoReport(item);
@@ -58,6 +59,26 @@ function formatRepoSection(item: ScoredRepo, rank: number): string[] {
   return lines;
 }
 
+function formatTagCoverageMarkdown(run: ResearchRun): string[] {
+  const rows = shortlistTagCoverage(run.shortlist, DEFAULT_MAX_PER_TAG);
+  if (!rows.length) {
+    return ["## Shortlist tag coverage", "", "_No strategy tags in shortlist._", ""];
+  }
+  const lines: string[] = [
+    "## Shortlist tag coverage",
+    "",
+    `Per-tag cap: **${DEFAULT_MAX_PER_TAG}** (multi-tag repos count toward each tag).`,
+    "",
+    "| Tag | Count | Cap | At cap |",
+    "|-----|-------|-----|--------|",
+  ];
+  for (const row of rows) {
+    lines.push(`| ${row.tag} | ${row.count} | ${row.cap} | ${row.atCap ? "yes" : "no"} |`);
+  }
+  lines.push("");
+  return lines;
+}
+
 export function formatReportMarkdown(run: ResearchRun): string {
   const lines: string[] = [
     "# Kalshi GitHub Bot Research Report",
@@ -76,6 +97,7 @@ export function formatReportMarkdown(run: ResearchRun): string {
     "## Shortlist",
     "",
     ...run.shortlist.flatMap((item, i) => formatRepoSection(item, i + 1)),
+    ...formatTagCoverageMarkdown(run),
   ];
 
   const unlicensed = run.shortlist.filter((s) => s.repo.license.unlicensed);

@@ -2,6 +2,39 @@ import type { ResearchConfig, ScoredRepo } from "./types.ts";
 import { compareScored } from "./score.ts";
 import { DEFAULT_MAX_PER_TAG, SDK_ONLY_TAG, UNTAGGED_BUCKET } from "./constants.ts";
 
+export type TagCoverageRow = {
+  tag: string;
+  count: number;
+  cap: number;
+  atCap: boolean;
+};
+
+/** Tag frequency in shortlist (multi-tag repos increment each tag). */
+export function shortlistTagCoverage(
+  shortlist: ScoredRepo[],
+  maxPerTag: number,
+): TagCoverageRow[] {
+  const counts = new Map<string, number>();
+  for (const item of shortlist) {
+    const tags = item.signals.strategyTags.filter((t) => t !== SDK_ONLY_TAG);
+    if (!tags.length) {
+      counts.set(UNTAGGED_BUCKET, (counts.get(UNTAGGED_BUCKET) ?? 0) + 1);
+      continue;
+    }
+    for (const tag of tags) {
+      counts.set(tag, (counts.get(tag) ?? 0) + 1);
+    }
+  }
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([tag, count]) => ({
+      tag,
+      count,
+      cap: maxPerTag,
+      atCap: count >= maxPerTag,
+    }));
+}
+
 export function buildShortlist(
   scored: ScoredRepo[],
   config: ResearchConfig,

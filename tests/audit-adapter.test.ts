@@ -100,7 +100,7 @@ describe("audit-adapter", () => {
     const concept = shortlistRulesConcept(config, "2026-07-21T00:00:00.000Z");
     expect(concept.id).toBe("kalshi-shortlist-diversity");
     expect(concept.kind).toBe("AuditConcept");
-    expect(concept.relatedDocs).toContain("docs/FACTOR_STACK.md");
+    expect(concept.relatedDocs).toContain("SHA3-256");
     expect(concept.description).toContain(String(config.weights.shortlistSize));
   });
 
@@ -121,6 +121,9 @@ describe("audit-adapter", () => {
     const exp = buildAuditRunExport(run, config);
     expect(exp.bundles).toHaveLength(1);
     expect(exp.bundles[0]?.finding.related).toContain("kalshi-shortlist-diversity");
+    expect(exp.bundles[0]?.finding.related).toContain("sha3-integrity");
+    expect(exp.bundles[0]?.finding.related).toContain("nagata-map");
+    expect(exp.bundles[0]?.finding.evidence.algorithm).toBe("sha3-256");
   });
 
   test("monorepoEvidencePath remaps committed evidence path", () => {

@@ -2,8 +2,9 @@
 import type { ResearchRun, ScoredRepo } from "./types.ts";
 import type { RunSummary } from "./cache.ts";
 import { buildRepoReport } from "./evidence.ts";
+import { shortlistTagCoverage } from "./diversify.ts";
 import { githubRepoWebUrl, localRepoPath, ROUTES } from "./patterns.ts";
-import { MAX_QUALITY_SCORE } from "./constants.ts";
+import { DEFAULT_MAX_PER_TAG, MAX_QUALITY_SCORE } from "./constants.ts";
 
 function reportFor(item: ScoredRepo) {
   return item.report ?? buildRepoReport(item);
@@ -89,6 +90,8 @@ export function renderIndex(run: ResearchRun, runs: RunSummary[], diffMd: string
   </div>
   <h2>Shortlist (${run.shortlist.length})</h2>
   <ol>${shortlist || "<li>empty</li>"}</ol>
+  <h2>Tag coverage</h2>
+  ${renderTagCoverageTable(run)}
   <h2>All scored</h2>
   ${renderScoredTable(run)}
   ${diffBlock}
@@ -96,6 +99,22 @@ export function renderIndex(run: ResearchRun, runs: RunSummary[], diffMd: string
   <ul>${runHistory || "<li>none</li>"}</ul>`;
 
   return pageLayout("Kalshi Bot Research", body);
+}
+
+function renderTagCoverageTable(run: ResearchRun): string {
+  const rows = shortlistTagCoverage(run.shortlist, DEFAULT_MAX_PER_TAG);
+  if (!rows.length) return "<p><em>No strategy tags in shortlist.</em></p>";
+  const body = rows
+    .map(
+      (r) =>
+        `<tr><td>${escapeHtml(r.tag)}</td><td>${r.count}</td><td>${r.cap}</td><td>${r.atCap ? "yes" : "no"}</td></tr>`,
+    )
+    .join("\n");
+  return `<p>Per-tag cap: <strong>${DEFAULT_MAX_PER_TAG}</strong> (multi-tag repos count toward each tag).</p>
+  <table>
+    <thead><tr><th>Tag</th><th>Count</th><th>Cap</th><th>At cap</th></tr></thead>
+    <tbody>${body}</tbody>
+  </table>`;
 }
 
 function signalChecks(item: ScoredRepo): string {

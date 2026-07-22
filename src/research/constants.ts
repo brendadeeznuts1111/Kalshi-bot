@@ -109,6 +109,16 @@ export const UNTAGGED_BUCKET = "_untagged";
 /** Audit concept id for shortlist diversity export. */
 export const AUDIT_CONCEPT_SHORTLIST_ID = "kalshi-shortlist-diversity";
 
+/** Rotor audit graph links for high-value finding exports. */
+export const AUDIT_RELATED_CONCEPT_IDS = [
+  AUDIT_CONCEPT_SHORTLIST_ID,
+  "sha3-integrity",
+  "nagata-map",
+] as const;
+
+/** Curated bun-docs token for evidence integrity (rotor relatedDocs verify). */
+export const AUDIT_EVIDENCE_RELATED_DOC = "SHA3-256";
+
 /** Detection markers (code search / readme aggregate). */
 export const SDK_MARKERS = [
   "kalshi-python",

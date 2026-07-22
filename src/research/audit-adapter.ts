@@ -10,6 +10,8 @@ import { validateRepoReport } from "./validate.ts";
 import { auditEvidenceRelPath } from "./paths.ts";
 import {
   AUDIT_CONCEPT_SHORTLIST_ID,
+  AUDIT_EVIDENCE_RELATED_DOC,
+  AUDIT_RELATED_CONCEPT_IDS,
   DETECTOR_IDS,
   HIGH_VALUE_MIN_COMPONENT_POINTS,
   HIGH_VALUE_MIN_TOTAL_SCORE,
@@ -44,6 +46,7 @@ export type AuditConceptWire = {
   title: string;
   description: string;
   publishedAt: string;
+  related?: string[];
   relatedDocs?: string[];
   meta?: { buildPin?: string; emitter?: string };
 };
@@ -131,7 +134,8 @@ export function shortlistRulesConcept(config: ResearchConfig, publishedAt: strin
       "Operates above single-repo RepoReport — see docs/FACTOR_STACK.md shortlist scope.",
     ].join(" "),
     publishedAt: isoDate(publishedAt),
-    relatedDocs: ["URLPattern", "docs/FACTOR_STACK.md"],
+    related: ["sha3-integrity"],
+    relatedDocs: [AUDIT_EVIDENCE_RELATED_DOC],
     meta: { emitter: EMITTER, buildPin: BUILD_PIN },
   };
 }
@@ -174,8 +178,8 @@ export function repoReportToAuditFindingWire(
       digest,
       mediaType: "application/jsonl",
     },
-    related: [AUDIT_CONCEPT_SHORTLIST_ID],
-    relatedDocs: ["URLPattern", "docs/FACTOR_STACK.md"],
+    related: [...AUDIT_RELATED_CONCEPT_IDS],
+    relatedDocs: [AUDIT_EVIDENCE_RELATED_DOC],
     meta: { emitter: EMITTER, buildPin: BUILD_PIN },
   };
 }
@@ -192,11 +196,17 @@ export function evidenceSha3Fingerprint(lines: EvidenceLine[]): string {
 /** Alias for {@link repoReportToAuditFindingWire} — RepoReport → AuditFinding wire. */
 export const adaptToAuditFinding = repoReportToAuditFindingWire;
 
-export function buildAuditRunExport(run: ResearchRun, config: ResearchConfig): AuditRunExport {
+export function buildAuditRunExport(
+  run: ResearchRun,
+  config: ResearchConfig,
+  options?: { repo?: string },
+): AuditRunExport {
   const concept = shortlistRulesConcept(config, run.generatedAt);
   const bundles: AuditFindingBundle[] = [];
+  const repoFilter = options?.repo?.trim().toLowerCase();
 
   for (const item of run.shortlist) {
+    if (repoFilter && item.repo.fullName.toLowerCase() !== repoFilter) continue;
     const report = item.report ?? buildRepoReport(item, run.generatedAt);
     if (!isHighValueCandidate(report)) continue;
     const ndjson = evidenceNdjson(report);

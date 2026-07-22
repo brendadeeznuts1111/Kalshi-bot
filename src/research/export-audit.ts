@@ -19,8 +19,9 @@ function findingFileName(finding: AuditFindingWire): string {
 export async function writeAuditExports(
   run: ResearchRun,
   config: ResearchConfig,
+  options?: { repo?: string },
 ): Promise<string | null> {
-  const exp = buildAuditRunExport(run, config);
+  const exp = buildAuditRunExport(run, config, options);
   if (!exp.bundles.length) return null;
 
   const auditDir = joinPath(AUDIT_EXPORT_DIR, run.runId);
