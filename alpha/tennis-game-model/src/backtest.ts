@@ -58,18 +58,22 @@ export function runBacktest(dbPath: string = DEFAULT_EVENT_STORE_DB): BacktestSu
   const db = openEventStore({ dbPath, readonly: true });
   const resolved = db
     .query(
-      `SELECT r.event_id, r.outcome, m.ticker, m.side_code, m.yes_side_label
+      `SELECT r.event_id, r.outcome, r.winner, m.ticker, m.yes_side_label,
+              e.player_a, e.player_b
        FROM resolutions r
        JOIN markets m ON m.event_id = r.event_id
-       WHERE m.status IN ('closed', 'settled', 'finalized')
+       JOIN events e ON e.event_id = r.event_id
+       WHERE m.market_kind = 'match_winner' OR m.market_kind = ''
        ORDER BY r.event_id`,
     )
     .all() as Array<{
     event_id: string;
     outcome: number;
+    winner: string;
     ticker: string;
-    side_code: string;
     yes_side_label: string;
+    player_a: string;
+    player_b: string;
   }>;
 
   const rows: BacktestRow[] = [];
@@ -102,7 +106,8 @@ export function runBacktest(dbPath: string = DEFAULT_EVENT_STORE_DB): BacktestSu
     if (!model) continue;
 
     const pMarket = mid / 100;
-    const outcome = row.outcome as 0 | 1;
+    const yesWon = row.winner === row.yes_side_label ? 1 : 0;
+    const outcome = yesWon as 0 | 1;
     rows.push({
       eventId: unbrand(eventId),
       ticker: unbrand(ticker),
