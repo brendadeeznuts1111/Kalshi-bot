@@ -1,4 +1,5 @@
 {
+  "_deprecated": "Superseded by research/dimensions.json (dimension=all). Kept for reference only.",
   "candidateCap": 100,
   "queries": [
     "kalshi bot",

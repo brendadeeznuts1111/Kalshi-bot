@@ -101,11 +101,20 @@ export type ScoredRepo = {
   report?: RepoReport;
 };
 
+export type DimensionDef = {
+  label: string;
+  queries: string[];
+  candidateCap?: number;
+};
+
+export type DimensionsConfig = {
+  candidateCap: number;
+  defaultDimension: string;
+  dimensions: Record<string, DimensionDef>;
+};
+
 export type ResearchConfig = {
-  queries: {
-    candidateCap: number;
-    queries: string[];
-  };
+  dimensions: DimensionsConfig;
   weights: {
     shortlistSize: number;
     maxPerTag: number;
@@ -133,6 +142,8 @@ export type ResearchConfig = {
 export type ResearchRun = {
   runId: string;
   generatedAt: string;
+  /** Research question slice — see research/dimensions.json (default `all`). */
+  dimension?: string;
   config: {
     shortlistSize: number;
     gate: ResearchConfig["weights"]["gate"];

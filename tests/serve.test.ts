@@ -23,6 +23,7 @@ function mockRun(runId: string): ResearchRun {
   return {
     runId,
     generatedAt: runId === RUN_ID ? freshTestGeneratedAt() : "2026-12-30T00:00:00.000Z",
+    dimension: "all",
     config: { shortlistSize: 12, gate: { minStars: 5, minForks: 3, maxAgeMonths: 18 } },
     stats: { discovered: 1, gated: 1, inspected: 1, shortlist: 1 },
     candidates: [],

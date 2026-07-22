@@ -1,26 +1,31 @@
 import type { ResearchRun, RunDiff } from "./types.ts";
 import { readJsonFile } from "./io.ts";
+import { dimensionArtifactBasename, normalizeDimensionId, runDimension } from "./dimensions.ts";
 import { isResearchRun, loadLatestRunFromDb, loadRunFromDb, isProductionRunId } from "./cache.ts";
 import { OUTPUT_DIR, joinPath } from "./paths.ts";
 
-async function loadRunFromFile(runId: string): Promise<ResearchRun | null> {
+async function loadRunFromFile(runId: string, dimension?: string): Promise<ResearchRun | null> {
   const direct = await readJsonFile<ResearchRun>(joinPath(OUTPUT_DIR, `run_${runId}.json`));
   if (direct) return direct;
+  const base = dimensionArtifactBasename(normalizeDimensionId(dimension));
+  const scoped = await readJsonFile<ResearchRun>(joinPath(OUTPUT_DIR, `${base}.json`));
+  if (scoped?.runId === runId) return scoped;
   const latest = await readJsonFile<ResearchRun>(joinPath(OUTPUT_DIR, "latest.json"));
   if (latest?.runId === runId) return latest;
   return null;
 }
 
-export async function loadRunById(runId: string): Promise<ResearchRun | null> {
+export async function loadRunById(runId: string, dimension?: string): Promise<ResearchRun | null> {
   const fromDb = loadRunFromDb(runId);
   if (fromDb) return fromDb;
-  return loadRunFromFile(runId);
+  return loadRunFromFile(runId, dimension);
 }
 
-export async function loadPreviousRun(): Promise<ResearchRun | null> {
-  const fromDb = loadLatestRunFromDb();
+export async function loadPreviousRun(dimension = "all"): Promise<ResearchRun | null> {
+  const fromDb = loadLatestRunFromDb({ dimension: normalizeDimensionId(dimension) });
   if (fromDb) return fromDb;
-  const fromFile = await readJsonFile<ResearchRun>(joinPath(OUTPUT_DIR, "latest.json"));
+  const base = dimensionArtifactBasename(normalizeDimensionId(dimension));
+  const fromFile = await readJsonFile<ResearchRun>(joinPath(OUTPUT_DIR, `${base}.json`));
   return fromFile && isResearchRun(fromFile) && isProductionRunId(fromFile.runId) ? fromFile : null;
 }
 
@@ -82,6 +87,7 @@ export function formatDiffMarkdown(diff: RunDiff, current: ResearchRun): string 
   lines.push(`# Kalshi Bot Research Diff`);
   lines.push("");
   lines.push(`Run: \`${current.runId}\``);
+  lines.push(`Dimension: \`${runDimension(current)}\``);
   lines.push(`Generated: ${current.generatedAt}`);
   lines.push("");
 

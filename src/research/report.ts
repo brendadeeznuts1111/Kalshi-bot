@@ -1,4 +1,5 @@
 // @see https://bun.com/docs/runtime/file-io#writing-files-bun-write
+import { dimensionArtifactBasename, runDimension } from "./dimensions.ts";
 import type { ResearchRun, RunDiff, ScoredRepo } from "./types.ts";
 import { writeJson } from "./io.ts";
 import { githubRepoWebUrl, localRepoPath } from "./patterns.ts";
@@ -79,14 +80,17 @@ function formatTagCoverageMarkdown(run: ResearchRun): string[] {
   return lines;
 }
 
-export function formatReportMarkdown(run: ResearchRun): string {
+export function formatReportMarkdown(run: ResearchRun, dimensionLabel?: string): string {
+  const dimension = runDimension(run);
+  const diffName = `${dimensionArtifactBasename(dimension)}.diff.md`;
   const lines: string[] = [
     "# Kalshi GitHub Bot Research Report",
     "",
     `Run: \`${run.runId}\``,
+    `Dimension: \`${dimension}\`${dimensionLabel ? ` — ${dimensionLabel}` : ""}`,
     `Generated: ${run.generatedAt}`,
     "",
-    `[local browser](/) · [latest diff](latest.diff.md)`,
+    `[local browser](/) · [latest diff](${diffName})`,
     "",
     "## Stats",
     `- Discovered: ${run.stats.discovered}`,
@@ -128,15 +132,23 @@ export function formatReportMarkdown(run: ResearchRun): string {
   return lines.join("\n");
 }
 
-export async function writeOutputs(run: ResearchRun, diff: RunDiff): Promise<void> {
-  const report = formatReportMarkdown(run);
+export async function writeOutputs(
+  run: ResearchRun,
+  diff: RunDiff,
+  options?: { dimensionLabel?: string },
+): Promise<void> {
+  const dimension = runDimension(run);
+  const base = dimensionArtifactBasename(dimension);
+  const report = formatReportMarkdown(run, options?.dimensionLabel);
   const diffMd = formatDiffMarkdown(diff, run);
 
-  await Promise.all([
+  const writes: Promise<unknown>[] = [
     writeJson(joinPath(OUTPUT_DIR, `run_${run.runId}.json`), run),
-    writeJson(joinPath(OUTPUT_DIR, "latest.json"), run),
     Bun.write(joinPath(REPORT_DIR, `run_${run.runId}.md`), report),
-    Bun.write(joinPath(REPORT_DIR, "latest.md"), report),
-    Bun.write(joinPath(REPORT_DIR, "latest.diff.md"), diffMd),
-  ]);
+    writeJson(joinPath(OUTPUT_DIR, `${base}.json`), run),
+    Bun.write(joinPath(REPORT_DIR, `${base}.md`), report),
+    Bun.write(joinPath(REPORT_DIR, `${base}.diff.md`), diffMd),
+  ];
+
+  await Promise.all(writes);
 }

@@ -89,6 +89,9 @@ bun run schedule:preview
 # Register (macOS → ~/Library/LaunchAgents/bun.cron.kalshi-research-weekly.plist)
 bun run schedule:register
 
+# Optional: dimension-specific scheduled run (see research/dimensions.json)
+# RESEARCH_DIMENSION=market-making bun run schedule:register
+
 # Optional: export audit on each scheduled run
 # Add RESEARCH_EXPORT_AUDIT=1 to launchd EnvironmentVariables or shell profile
 

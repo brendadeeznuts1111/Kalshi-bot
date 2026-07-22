@@ -1,0 +1,72 @@
+{
+  "candidateCap": 100,
+  "defaultDimension": "all",
+  "dimensions": {
+    "all": {
+      "label": "Broad discovery",
+      "queries": [
+        "kalshi bot",
+        "kalshi trading bot",
+        "kalshi market maker",
+        "kalshi arbitrage",
+        "kalshi polymarket",
+        "topic:kalshi trading",
+        "topic:prediction-markets kalshi",
+        "kalshi trade-api",
+        "kalshi websocket bot"
+      ]
+    },
+    "market-making": {
+      "label": "Market making / liquidity",
+      "queries": [
+        "kalshi market maker",
+        "kalshi market making",
+        "\"quoting engine\" kalshi",
+        "kalshi spread bot",
+        "kalshi orderbook bot",
+        "kalshi liquidity"
+      ]
+    },
+    "sports": {
+      "label": "Sport-specific bots",
+      "queries": [
+        "Kalshi NBA bot",
+        "Kalshi NFL bot",
+        "Kalshi MLB bot",
+        "Kalshi soccer bot",
+        "Kalshi sports trading",
+        "kalshi game odds bot"
+      ]
+    },
+    "markets": {
+      "label": "Market mechanics (binary / event contracts)",
+      "queries": [
+        "Kalshi yes no bot",
+        "Kalshi binary option bot",
+        "Kalshi event contract bot",
+        "kalshi prediction market bot",
+        "kalshi contract trading"
+      ]
+    },
+    "tracking": {
+      "label": "Portfolio tracking / monitoring",
+      "queries": [
+        "\"portfolio tracker\" kalshi",
+        "\"position reconciliation\" kalshi",
+        "kalshi pnl tracker",
+        "kalshi position monitor",
+        "kalshi dashboard bot"
+      ]
+    },
+    "arbitrage": {
+      "label": "Cross-venue arbitrage",
+      "queries": [
+        "kalshi polymarket arbitrage",
+        "kalshi polymarket bot",
+        "\"cross venue\" kalshi",
+        "kalshi prediction market arb",
+        "kalshi cross exchange"
+      ]
+    }
+  }
+}

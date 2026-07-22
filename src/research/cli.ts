@@ -17,11 +17,13 @@ import { ensureCacheDir, saveRun } from "./cache.ts";
 import { ensureGh } from "./preflight.ts";
 import { attachRepoReport } from "./evidence.ts";
 import { DEFAULT_INSPECT_CONCURRENCY } from "./constants.ts";
+import { dimensionArtifactBasename, normalizeDimensionId, runDimension } from "./dimensions.ts";
 import type { ResearchRun } from "./types.ts";
 
 export type CliOptions = {
   json: boolean;
   exportAudit: boolean;
+  dimension?: string;
   shortlist?: number;
   minStars?: number;
   minForks?: number;
@@ -47,13 +49,20 @@ export function parseCliOptions(argv: string[]): CliOptions {
       "min-stars": { type: "string" },
       "min-forks": { type: "string" },
       "max-age-months": { type: "string" },
+      dimension: { type: "string" },
     },
     strict: false,
   });
 
+  const dimensionRaw =
+    typeof values.dimension === "string"
+      ? values.dimension
+      : Bun.env.RESEARCH_DIMENSION?.trim() || undefined;
+
   return {
     json: values.json === true,
     exportAudit: values["export-audit"] === true,
+    dimension: dimensionRaw,
     shortlist: values.shortlist ? Number(values.shortlist) : undefined,
     diff: typeof values.diff === "string" ? values.diff : undefined,
     minStars: values["min-stars"] ? Number(values["min-stars"]) : undefined,
@@ -80,9 +89,11 @@ export async function runResearch(opts: CliOptions): Promise<ResearchRun> {
   const shortlistSize =
     opts.shortlist ?? envNumber("RESEARCH_SHORTLIST") ?? config.weights.shortlistSize;
 
-  console.error("Discovering candidates...");
-  const candidates = await discoverCandidates(config);
-  console.error(`Discovered ${candidates.length} candidates`);
+  const dimension = normalizeDimensionId(opts.dimension ?? config.dimensions.defaultDimension);
+
+  console.error(`Discovering candidates (dimension=${dimension})...`);
+  const { candidates, querySet } = await discoverCandidates(config, dimension);
+  console.error(`Discovered ${candidates.length} candidates (${querySet.label})`);
 
   const gated = applyGate(candidates, gate);
   console.error(`${gated.length} passed popularity gate`);
@@ -106,6 +117,7 @@ export async function runResearch(opts: CliOptions): Promise<ResearchRun> {
   const run: ResearchRun = {
     runId: runId(),
     generatedAt: new Date().toISOString(),
+    dimension,
     config: { shortlistSize, gate },
     stats: {
       discovered: candidates.length,
@@ -120,14 +132,14 @@ export async function runResearch(opts: CliOptions): Promise<ResearchRun> {
     excludedSdkOnly,
   };
 
-  const baseline = opts.diff ? await loadRunById(opts.diff) : await loadPreviousRun();
+  const baseline = opts.diff ? await loadRunById(opts.diff, dimension) : await loadPreviousRun(dimension);
   if (opts.diff && !baseline) {
     throw new Error(`No run found for --diff ${opts.diff}`);
   }
 
   const diff = diffRuns(baseline, run);
   saveRun(run.runId, run.generatedAt, run);
-  await writeOutputs(run, diff);
+  await writeOutputs(run, diff, { dimensionLabel: querySet.label });
   if (opts.exportAudit) {
     const auditDir = await writeAuditExports(run, config);
     if (auditDir) {
@@ -146,13 +158,15 @@ if (import.meta.main) {
     if (opts.json) {
       await Bun.write(Bun.stdout, JSON.stringify(run, null, 2) + "\n");
     } else {
-      console.log(`Run complete: ${run.runId}`);
+      const dimension = runDimension(run);
+      console.log(`Run complete: ${run.runId} (dimension=${dimension})`);
       console.log(`Shortlist (${run.shortlist.length}):`);
       for (const [i, s] of run.shortlist.entries()) {
         const lic = s.repo.license.unlicensed ? " [UNLICENSED]" : "";
         console.log(`  ${i + 1}. ${s.repo.fullName} — ${s.score.total}${lic}`);
       }
-      console.log("Reports: research/reports/latest.md");
+      const reportBase = dimensionArtifactBasename(dimension);
+      console.log(`Reports: research/reports/${reportBase}.md`);
       console.log("Browse:  bun run serve");
     }
   } catch (err) {

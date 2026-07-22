@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 // @see https://bun.com/docs/guides/process/argv
 import { parseArgs } from "node:util";
+import { normalizeDimensionId } from "./dimensions.ts";
 import { loadConfig } from "./discover.ts";
 import { loadRunById, loadPreviousRun } from "./diff.ts";
 import { ensureCacheDir } from "./cache.ts";
@@ -14,6 +15,7 @@ export type ExportAuditCliOptions = {
   latest: boolean;
   verify?: string;
   repo?: string;
+  dimension?: string;
 };
 
 export function parseExportAuditCli(argv: string[]): ExportAuditCliOptions {
@@ -24,15 +26,22 @@ export function parseExportAuditCli(argv: string[]): ExportAuditCliOptions {
       latest: { type: "boolean", default: false },
       verify: { type: "string" },
       repo: { type: "string" },
+      dimension: { type: "string" },
     },
     strict: false,
   });
+
+  const dimensionRaw =
+    typeof values.dimension === "string"
+      ? values.dimension
+      : Bun.env.RESEARCH_DIMENSION?.trim() || undefined;
 
   return {
     runId: typeof values.run === "string" ? values.run : undefined,
     latest: values.latest === true,
     verify: typeof values.verify === "string" ? values.verify : undefined,
     repo: typeof values.repo === "string" ? values.repo : undefined,
+    dimension: dimensionRaw,
   };
 }
 
@@ -50,8 +59,10 @@ export async function runExportAuditCli(opts: ExportAuditCliOptions): Promise<nu
   await ensureCacheDir();
   const config = await loadConfig();
 
-  let run = opts.runId ? await loadRunById(opts.runId) : null;
-  if (!run && opts.latest) run = await loadPreviousRun();
+  let run = opts.runId ? await loadRunById(opts.runId, opts.dimension) : null;
+  if (!run && opts.latest) {
+    run = await loadPreviousRun(normalizeDimensionId(opts.dimension));
+  }
   if (!run && opts.runId) {
     console.error(`No run found: ${opts.runId}`);
     return 1;

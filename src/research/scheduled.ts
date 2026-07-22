@@ -4,6 +4,7 @@
  * OS-level cron worker — export default { scheduled } for Bun.cron(path, schedule, title).
  * Delegates to runResearch(); no pipeline logic here.
  */
+import { normalizeDimensionId } from "./dimensions.ts";
 import { runResearch, type CliOptions } from "./cli.ts";
 import type { ResearchRun } from "./types.ts";
 
@@ -24,6 +25,7 @@ export async function runScheduledResearch(deps: ScheduledDeps = {}): Promise<Re
   return runFn({
     json: false,
     exportAudit: Bun.env.RESEARCH_EXPORT_AUDIT === "1",
+    dimension: normalizeDimensionId(Bun.env.RESEARCH_DIMENSION),
   });
 }
 

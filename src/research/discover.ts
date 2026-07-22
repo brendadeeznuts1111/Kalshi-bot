@@ -16,6 +16,11 @@ import {
   parseGitHubRepoRef,
 } from "./patterns.ts";
 import { RESEARCH_ROOT, joinPath } from "./paths.ts";
+import {
+  loadDimensionsFile,
+  resolveDimensionQueries,
+  type ResolvedDimensionQueries,
+} from "./dimensions.ts";
 
 type GhSearchRepo = {
   fullName: string;
@@ -30,12 +35,12 @@ type GhSearchRepo = {
 };
 
 export async function loadConfig(): Promise<ResearchConfig> {
-  const [queries, weights, keywords] = await Promise.all([
-    Bun.file(joinPath(RESEARCH_ROOT, "queries.json")).json(),
+  const [dimensions, weights, keywords] = await Promise.all([
+    loadDimensionsFile(),
     Bun.file(joinPath(RESEARCH_ROOT, "weights.json")).json(),
     Bun.file(joinPath(RESEARCH_ROOT, "keywords.json")).json(),
   ]);
-  return { queries, weights, keywords } as ResearchConfig;
+  return { dimensions, weights, keywords } as ResearchConfig;
 }
 
 export function normalizeLicense(raw: GhSearchRepo["license"]): string {
@@ -65,11 +70,15 @@ export function parseLicense(
   return { spdxId, name, preferred: preferredLicenses.includes(normalized), unlicensed };
 }
 
-export async function discoverCandidates(config: ResearchConfig) {
+export async function discoverCandidates(
+  config: ResearchConfig,
+  dimensionId?: string,
+): Promise<{ candidates: ReturnType<typeof toCandidate>[]; querySet: ResolvedDimensionQueries }> {
   const seen = new Map<string, ReturnType<typeof toCandidate>>();
   const preferredLicenses = config.weights.license.preferredLicenses;
+  const querySet = resolveDimensionQueries(config.dimensions, dimensionId ?? config.dimensions.defaultDimension);
 
-  for (const query of config.queries.queries) {
+  for (const query of querySet.queries) {
     const rows = await ghJson<GhSearchRepo[]>([
       "search",
       "repos",
@@ -87,12 +96,12 @@ export async function discoverCandidates(config: ResearchConfig) {
       if (!seen.has(ref.fullName)) {
         seen.set(ref.fullName, toCandidate(row, preferredLicenses, ref));
       }
-      if (seen.size >= config.queries.candidateCap) break;
+      if (seen.size >= querySet.candidateCap) break;
     }
-    if (seen.size >= config.queries.candidateCap) break;
+    if (seen.size >= querySet.candidateCap) break;
   }
 
-  return [...seen.values()];
+  return { candidates: [...seen.values()], querySet };
 }
 
 function toCandidate(

@@ -9,7 +9,11 @@ import {
 import type { ResearchConfig } from "../src/research/types.ts";
 
 const config: ResearchConfig = {
-  queries: { candidateCap: 100, queries: [] },
+  dimensions: {
+    candidateCap: 100,
+    defaultDimension: "all",
+    dimensions: { all: { label: "All", queries: ["kalshi bot"] } },
+  },
   weights: {
     shortlistSize: 12,
     maxPerTag: 4,

@@ -10,6 +10,7 @@
  * JSON dumps go to gitignored `research/outputs/`; committed reports are `latest.md` + `latest.diff.md`.
  */
 import { Database } from "bun:sqlite";
+import { normalizeDimensionId, runDimension } from "./dimensions.ts";
 import type { ResearchRun } from "./types.ts";
 import { CACHE_DB, CACHE_DIR, joinPath } from "./paths.ts";
 
@@ -141,7 +142,11 @@ export function isEligibleProductionRun(run: ResearchRun): boolean {
   return Number.isFinite(generatedAtMs) && generatedAtMs <= Date.now() + 86_400_000;
 }
 
-export function loadLatestRunFromDb(options?: { includeFixtures?: boolean }): ResearchRun | null {
+export function loadLatestRunFromDb(options?: {
+  includeFixtures?: boolean;
+  dimension?: string;
+}): ResearchRun | null {
+  const targetDimension = normalizeDimensionId(options?.dimension);
   const rows = getDb()
     .query("SELECT payload FROM runs ORDER BY generated_at DESC LIMIT 50")
     .all() as Array<{ payload: string }>;
@@ -150,6 +155,7 @@ export function loadLatestRunFromDb(options?: { includeFixtures?: boolean }): Re
   for (const row of rows) {
     const parsed = JSON.parse(row.payload) as unknown;
     if (!isResearchRun(parsed)) continue;
+    if (runDimension(parsed) !== targetDimension) continue;
     if (isEligibleProductionRun(parsed)) return parsed;
     fallback ??= parsed;
   }
@@ -166,6 +172,7 @@ export function listRunIds(): string[] {
 export type RunSummary = {
   runId: string;
   generatedAt: string;
+  dimension: string;
   discovered: number;
   gated: number;
   inspected: number;
@@ -184,6 +191,7 @@ export function listRunSummaries(limit = 20): RunSummary[] {
     out.push({
       runId: row.run_id,
       generatedAt: row.generated_at,
+      dimension: runDimension(parsed),
       ...parsed.stats,
     });
   }

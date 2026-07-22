@@ -43,7 +43,9 @@ Kalshi-bot/
   docs/
     CRON.md                 # OS-level Bun.cron setup
   research/
-    queries.json, weights.json, keywords.json
+    dimensions.json         # dimension query SSOT (all, market-making, sports, …)
+    queries.json            # deprecated reference (dimension=all)
+    weights.json, keywords.json
     schemas/repo-report.schema.json
     audit-evidence/         # committed JSONL (one file per promoted repo)
     cache/cache.db          # gitignored sqlite
@@ -68,7 +70,7 @@ flowchart LR
 
 ## Discover
 
-Query set in [`research/queries.json`](../research/queries.json). Dedupe by `full_name`. Cap ~100 candidates (`candidateCap`).
+Query sets in [`research/dimensions.json`](../research/dimensions.json). Run a slice with `--dimension=<id>` (or `RESEARCH_DIMENSION`). Dedupe by `full_name`. Cap ~100 candidates per dimension (`candidateCap`).
 
 ## Popularity gate
 
@@ -127,7 +129,9 @@ Outputs: [`research/reports/latest.diff.md`](../research/reports/latest.diff.md)
 ## CLI
 
 ```bash
-bun run research                      # full pipeline
+bun run research                      # full pipeline (dimension=all)
+bun run research -- --dimension=market-making
+bun run research -- --dimension=sports --export-audit
 bun run dashboard                     # agent dashboard (:3457)
 bun run agent status                  # CLI status + rotor verification
 bun run agent audit-list              # shortlist vs audit-catalog.json
@@ -150,6 +154,7 @@ bun test && bun run typecheck         # posttest restores latest.md from fixture
 | `RESEARCH_MIN_FORKS` | Gate min forks |
 | `RESEARCH_MAX_AGE_MONTHS` | Max repo age |
 | `RESEARCH_SHORTLIST` | Shortlist size |
+| `RESEARCH_DIMENSION` | Dimension id from `dimensions.json` |
 
 ## Output artifacts
 
@@ -157,8 +162,9 @@ bun test && bun run typecheck         # posttest restores latest.md from fixture
 |------|----------|----------|
 | `research/outputs/run_*.json` | gitignored | Full run dump |
 | `research/cache/cache.db` | gitignored | API cache + runs |
-| `research/reports/latest.md` | **committed** | Human shortlist + license callouts + evidence |
-| `research/reports/latest.diff.md` | **committed** | Diff vs previous production run |
+| `research/reports/latest.md` | **committed** | Broad (`all`) shortlist + evidence |
+| `research/reports/latest-{dimension}.md` | optional commit | Per-dimension shortlist reports |
+| `research/reports/latest.diff.md` | **committed** | Diff vs previous `all` run |
 | `research/reports/run_*.md` | gitignored | Per-run MD (history in cache.db) |
 | `research/audit-evidence/*.jsonl` | **committed** | Line evidence for promoted repos |
 | `research/exports/audit/<run>/` | gitignored | Finding wire + rotor-ingest.json |

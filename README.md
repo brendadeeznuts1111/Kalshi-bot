@@ -26,6 +26,8 @@ bun test && bun run typecheck            # posttest restores latest.md from fixt
 ### CLI flags
 
 ```bash
+bun run research -- --dimension=market-making   # targeted dimension → latest-market-making.md
+bun run research -- --dimension=sports --export-audit
 bun run research -- --json               # full run JSON on stdout
 bun run research -- --shortlist 12       # override shortlist size
 bun run research -- --diff <run-id>      # diff vs a specific prior run
@@ -46,6 +48,7 @@ Gate overrides: `--min-stars`, `--min-forks`, `--max-age-months` or env vars bel
 | `RESEARCH_MIN_FORKS` | Popularity gate (forks) |
 | `RESEARCH_MAX_AGE_MONTHS` | Max repo age |
 | `RESEARCH_SHORTLIST` | Shortlist size (default 12) |
+| `RESEARCH_DIMENSION` | Research slice from `research/dimensions.json` (default `all`) |
 | `RESEARCH_EXPORT_AUDIT` | Set `1` on scheduled runs to export audit |
 | `RESEARCH_CRON_SCHEDULE` | Override cron expression (see CRON.md) |
 | `RESEARCH_CRON_TITLE` | OS cron job title |
@@ -93,7 +96,9 @@ After each `bun run research`, sqlite stores the full run payload; markdown snap
 | `research/reports/latest.diff.md` | yes | Diff vs previous production run |
 | `research/reports/latest.diff.md.fixture` | yes | Test restore SSOT for diff |
 | `research/audit-evidence/*.jsonl` | yes | Line evidence (one file per promoted repo) |
-| `research/queries.json`, `weights.json`, `keywords.json` | yes | Config SSOT (defaults mirrored in code) |
+| `research/dimensions.json` | yes | Dimension query sets (market-making, sports, tracking, …) |
+| `research/queries.json` | yes | Deprecated reference — use `dimensions.json` (`all`) |
+| `research/weights.json`, `keywords.json` | yes | Scoring + detector keywords SSOT |
 | `src/research/constants.ts` | yes | Typed SSOT — detector ids, weights, licenses, thresholds |
 | `research/schemas/repo-report.schema.json` | yes | RepoReport wire schema |
 | `research/cache/cache.db` | no | API cache + run history |
@@ -121,7 +126,7 @@ Kalshi-bot/
 ├── research/
 │   ├── audit-evidence/     # committed JSONL (high-value + watchlist exports)
 │   ├── reports/            # latest.md + fixtures
-│   ├── queries.json, weights.json, keywords.json
+│   ├── dimensions.json, weights.json, keywords.json
 │   ├── cache/              # gitignored sqlite
 │   ├── outputs/            # gitignored JSON dumps
 │   └── exports/audit/      # gitignored per-run wire + rotor-ingest.json
