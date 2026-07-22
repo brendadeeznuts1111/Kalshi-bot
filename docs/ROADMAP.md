@@ -37,8 +37,18 @@ Success is a **green live run** on `market-making`, audit export, pattern report
 ```bash
 bun run check                   # typecheck + full suite + artifact restore
 
+# Offline understanding (zero live GitHub — needs warmed search_cache)
+bun run research:dry -- --dimension=market-making --json
+# same as: bun run research -- --dry-run --offline --dimension=market-making
+bun run agent status --json   # any-dimension latest (matches serve /)
+bun run report:term
+bun run agent blueprint --no-write
+
 # Before live research
 bun run rate-limit:status -- --gated=49 --uncached=49
+
+# Live dry-run (discover + rate_limit only — still hits GitHub search)
+bun run research -- --dry-run --dimension=market-making
 
 # Gate-miss proof (0 inspect calls)
 bun run research -- --dimension=sports-nba --min-stars=4 --export-audit

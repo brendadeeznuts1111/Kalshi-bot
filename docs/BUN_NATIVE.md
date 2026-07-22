@@ -12,7 +12,10 @@ Deep dive: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns)
 
 | Capability | Runtime utility | Used in |
 |------------|-----------------|---------|
-| Subprocess / `gh` calls | `Bun.$` + `.json()` / `.text()` via `.nothrow().quiet()` | [`gh.ts`](../src/research/gh.ts) |
+| Subprocess / `gh` calls | `Bun.$` + `.json()` / `.text()` via `.nothrow().quiet()` | [`gh.ts`](../src/research/gh.ts) (rate_limit + auth token) |
+| GitHub REST + code search | `Bun.fetch` + `fetch.preconnect` / `dns.prefetch` | [`github-api.ts`](../src/research/github-api.ts), [`github-search.ts`](../src/research/github-search.ts), [`github-network.ts`](../src/research/github-network.ts) |
+| Offline dry-run | `search_cache` + synthetic quota | [`cli.ts`](../src/research/cli.ts) `--dry-run --offline` / `bun run research:dry` |
+| Test cache isolation | `RESEARCH_CACHE_DB=:memory:` (exact) + `resetCacheDbConnection`; suite runs with `bun test --isolate`. Named `:memory:…` paths are cwd files — use [`tests/tmp-db.ts`](../tests/tmp-db.ts) instead. | [`cache.ts`](../src/research/cache.ts), [`tests/temp-cache.ts`](../tests/temp-cache.ts) |
 | Preflight `gh` on PATH | `Bun.which("gh")` | [`preflight.ts`](../src/research/preflight.ts) |
 | Config load | `Bun.file(…).json()` | [`discover.ts`](../src/research/discover.ts) |
 | Artifact write | `Bun.write` | [`io.ts`](../src/research/io.ts), [`report.ts`](../src/research/report.ts) |
@@ -35,8 +38,9 @@ Deep dive: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns)
 | GitHub URL SSOT | `BunURLPattern` + `URLPattern` ([v1.3.4+](https://bun.com/blog/bun-v1.3.4#urlpattern-api)) | [`patterns.ts`](../src/research/patterns.ts) |
 | Report browser | `Bun.serve` routes + `Bun.file` | [`serve.ts`](../src/research/serve.ts), [`views.ts`](../src/research/views.ts) |
 | Agent CLI | status / patterns / blueprint over `cache.db` | [`cli.ts`](../src/agent/cli.ts), [`docs/AGENT.md`](../docs/AGENT.md) |
-| Terminal reports | `Bun.markdown.ansi` | [`report-term.ts`](../src/agent/report-term.ts) |
-| TTY tables + OSC 8 links | `Bun.inspect.table` + `Bun.stringWidth` | [`terminal-out.ts`](../src/research/terminal-out.ts) |
+| Terminal reports | `Bun.markdown.ansi` + `Bun.wrapAnsi` | [`report-term.ts`](../src/agent/report-term.ts) |
+| TTY tables + OSC 8 links | `Bun.inspect.table` + `Bun.stringWidth` / `wrapAnsi` / `stripANSI` | [`terminal-out.ts`](../src/research/terminal-out.ts) |
+| Phase timings | `Bun.nanoseconds` | [`phase-timing.ts`](../src/research/phase-timing.ts) |
 | Agent IPC research progress | `Bun.spawn` + `process.send` | [`research-runner.ts`](../src/agent/research-runner.ts), [`research-progress.ts`](../src/research/research-progress.ts) |
 | CLI flags | `parseArgs` from `node:util` | [`cli.ts`](../src/research/cli.ts) |
 | Unit tests | `bun:test` + `mock.module()` | [`tests/`](../tests/) |
@@ -74,6 +78,10 @@ Deep dive: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns)
 | `Bun.markdown.ansi` | https://bun.com/docs/runtime/markdown#ansi-terminal-output |
 | `Bun.inspect.table` | https://bun.com/docs/runtime/utils#bun-inspect-table-tabulardata-properties-options |
 | `Bun.stringWidth` | https://bun.com/docs/runtime/utils#bun-stringwidth |
+| `Bun.wrapAnsi` | https://bun.com/docs/runtime/utils#bun-wrapansi |
+| `Bun.stripANSI` | https://bun.com/docs/runtime/utils#bun-stripansi |
+| `Bun.nanoseconds` | https://bun.com/docs/runtime/utils#bun-nanoseconds |
+| `Bun.fetch` / `fetch.preconnect` | https://bun.com/docs/runtime/networking/fetch#sending-an-http-request · [preconnect](https://bun.com/docs/runtime/networking/fetch#preconnect-to-a-host) |
 | `Bun.spawn` IPC | https://bun.com/docs/runtime/child-process#inter-process-communication-ipc · [reference](https://bun.com/docs/runtime/child-process#reference) |
 | `Bun.Terminal` (PTY) | https://bun.com/docs/runtime/child-process#terminal-pty-support |
 | `Bun.spawnSync` | https://bun.com/docs/runtime/child-process#blocking-api-bun-spawnsync |
@@ -148,7 +156,7 @@ Bun exposes **three separate terminal mechanisms**. This repo uses layer 1 and 2
 
 | Layer | API | Who has `isTTY` | Used here for |
 |-------|-----|-----------------|---------------|
-| **1 — Parent stdout** | `Bun.inspect.table`, `Bun.stringWidth`, `Bun.markdown.ansi` | The **bun research/agent** process you run in Terminal/iTerm | Shortlist tables, lift map, `report:term` |
+| **1 — Parent stdout** | `Bun.inspect.table`, `Bun.stringWidth` / `wrapAnsi` / `stripANSI`, `Bun.markdown.ansi` | The **bun research/agent** process you run in Terminal/iTerm | Shortlist tables, lift map, `report:term` |
 | **2 — Child pipes + IPC** | `Bun.spawn({ cmd, ipc, stdout: "pipe" })` + `process.send` | Child sees **pipes** (`isTTY=false`); parent relays stdout | Agent → research progress + final table ([`research-runner.ts`](../src/agent/research-runner.ts)) |
 | **3 — Child PTY** | `Bun.spawn({ terminal: { cols, rows, data } })` or `new Bun.Terminal()` | The **child subprocess** (`isTTY=true`) | **Not used** — see below |
 

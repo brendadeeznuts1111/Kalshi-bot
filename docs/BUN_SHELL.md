@@ -2,7 +2,15 @@
 
 Canonical entry: [bun.com/docs/runtime/shell](https://bun.com/docs/runtime/shell#getting-started)
 
-This project routes **all** GitHub traffic through [`src/research/gh.ts`](../src/research/gh.ts). No `Bun.spawn`, no `execa`, no Octokit.
+GitHub traffic is hybrid:
+
+| Path | Transport |
+|------|-----------|
+| Repo search (discover) | [`github-search.ts`](../src/research/github-search.ts) — `Bun.fetch` + ETag cache |
+| Inspect REST + code search + repo file contents | [`github-api.ts`](../src/research/github-api.ts) — `Bun.fetch` |
+| Rate-limit preflight + legacy `gh` helpers | [`gh.ts`](../src/research/gh.ts) / [`github-rate-limit.ts`](../src/research/github-rate-limit.ts) — `Bun.$` → `gh` |
+
+No `Bun.spawn`, no `execa`, no Octokit. Token resolution still uses `gh auth token` when `GH_TOKEN` / `GITHUB_TOKEN` are unset.
 
 Canonical `Bun.$` entry: [bun.com/docs/runtime/shell#getting-started](https://bun.com/docs/runtime/shell#getting-started)
 

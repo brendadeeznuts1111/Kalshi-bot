@@ -2,11 +2,24 @@
 
 Self-remediating hints when research/agent pipelines miss expected data. Implementation order follows user priority (#1 → #2 → #8 → #3 → #4 → #5).
 
+## Grounded triage
+
+Operator entry for discovery / gate / cache misses — **cache-only** sub-agent mesh:
+
+```bash
+bun run agent ground                         # status + cache + miss + next actions
+bun run agent ground --dimension=market-making
+bun run agent ground --json
+```
+
+Maps to lanes below without hitting GitHub. Prefer this before burning `code_search` quota. See [`AGENT.md`](AGENT.md).
+
 ## Status
 
 Run proof gate:
 
 ```bash
+bun run agent ground           # discovery-grounded triage first
 bun run miss-taxonomy:status   # lane checklist + symbol probes
 bun run check                  # typecheck + full test suite
 bun run rate-limit:status -- --gated=49 --uncached=49  # before live research

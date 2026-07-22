@@ -25,15 +25,19 @@ Recommend concrete actions in build order; prefer `odds-feed` dimension runs (qu
 | Ticker mapper + hard-fail validation | **Done** | `src/alpha/ticker-mapper.ts`, `research/ticker-overrides.json` |
 | Signal wiring (odds → mapper → context) | **Done** | `src/alpha/signal-context.ts` |
 | Alpha tenant template | **Done** | `.bun-create/alpha-program/` (sole SSOT) |
-| First baseline tenant | **Born** | `alpha/pinnacle-novig-nba/` — role=baseline, retires 0.25 stub |
+| First baseline tenant (NBA, Oct+) | **Born** | `alpha/pinnacle-novig-nba/` — idle until `KXNBAGAME` season |
+| **Live baseline (Jul–Sep)** | **Born** | `alpha/pinnacle-novig-mlb/` — `KXMLBGAME` + `baseball_mlb` |
 | Calibration institution | **Done** | `src/calibration/watcher.ts`, `shadow-maintenance.ts` |
-| Kalshi orderbook fetch (public) | **Done** | `src/bot/kalshi-market-data.ts` — reciprocal bid→ask |
-| Toxicity 60s marking | **Done** | `calibration:mark-toxicity --fetch` pulls live mids |
-| Outcome resolution → Brier | **Done** | `calibration:resolve-outcomes` |
+| Kalshi orderbook fetch (public) | **Done** | `src/bot/kalshi-market-data.ts` — reciprocal bid→ask; crossed-book skip |
+| Append-only shadow log | **Done** | Predictions immutable; `toxicity-mark` + `outcome-resolution` entries chained after |
+| Toxicity 60s marking | **Done** | `calibration:toxicity:loop` (15s sweep, T+60s window); `--fetch` for one-off |
+| Outcome resolution → Brier | **Done** | `calibration:resolve-outcomes` — append-only `outcome-resolution` lines |
 | Empirical baseline Brier | **Done** | `baselineBrierScore()` from `pinnacle_novig_*` components |
 | Live Kalshi orders | **Stub** | `src/bot/kalshi-client.ts` — dry-run only |
 
-**Active phase:** shadow loop — `alpha:run` → wait 60s → `calibration:maintenance --fetch-toxicity` → resolve outcomes → `calibration:watcher`.
+**Active phase:** live shadow clock — `ODDS_API_KEY` → live tick → **toxicity loop running** → volume → outcomes last.
+
+**Sequencing gate:** `--offline` uses fixture odds — hash-chained calibration data about a model that never existed. Baseline `pModel` *is* live Pinnacle novig; the odds key is in front of everything, not item 3.
 
 ## Kalshi book semantics (load-bearing)
 
@@ -44,23 +48,44 @@ YES bid at P  ↔  someone willing to buy YES at P
 NO  bid at Q  ↔  YES ask at (100 − Q) cents
 ```
 
-Code: `src/bot/kalshi-book-parse.ts` → interior `BookSnapshot` with `bids[]` (YES) and `asks[]` (derived). **Never** treat displayed Kalshi price as fillable without walking derived depth. Top-of-book optimism is the main shadow/live gap.
+Code: `src/bot/kalshi-book-parse.ts` → interior `BookSnapshot` with `bids[]` (YES) and `asks[]` (derived). Wire arrays are ascending (best bid = last); parser normalizes to best-first. **Never** treat displayed Kalshi price as fillable without walking derived depth. Top-of-book optimism is the main shadow/live gap.
 
-Toxicity marking compares `midAtFillCents` (at signal) vs `midCents` 60s later from the same book parser — measures adverse selection before pilot.
+**Crossed book:** transient `yesBid + noBid > 100` → `book.crossed`, skip tick (logged anomaly), no mid/VWAP. Rare; prevents phantom fills at impossible prices.
+
+Toxicity marking compares `midAtFillCents` (at signal) vs mid fetched in the **T+60s window** (60–75s post-fill) — not hours later. Manual `mark-toxicity` outside that window produces wrong data, not late data.
+
+## Shadow log integrity (append-only)
+
+Prediction lines are **never rewritten**. Toxicity marks and outcome resolutions are **new chained entries** referencing `refLineHash` or `eventId`. Watcher joins at read time via `materializeShadowLines()`.
+
+**Reject:** in-place log edits + hash recomputation — that normalizes editing the commitment log. Legitimate late data (toxicity, outcomes) arrives as append-only entries only.
 
 ## Shadow maintenance loop
 
 ```
-run-once (--fetch-book)  →  append hash-chained JSONL
-        ↓ ~60s
-calibration:mark-toxicity --fetch   →  Kalshi mid → toxicity.movedAgainst
-        ↓ game ends
-calibration:resolve-outcomes        →  outcome 0|1 → Brier
+ODDS_API_KEY set
+        ↓
+alpha:run (--fetch-book, NO --offline)  →  append prediction line (kind=prediction)
+        ↓  toxicity loop must be running
+calibration:toxicity:loop               →  append toxicity-mark at T+60s (15s window)
+        ↓ game ends (last — blocks nothing)
+calibration:resolve-outcomes            →  append outcome-resolution → Brier
         ↓ weekly
-calibration:watcher                 →  graduation / kill artifacts
+calibration:watcher                       →  graduation / kill / baseline artifacts
 ```
 
-Combined: `bun run calibration:maintenance -- --program=pinnacle-novig-nba --fetch-toxicity --resolve=outcomes.json`
+**Toxicity scheduling (pick one while shadow-running):**
+
+```bash
+bun run calibration:toxicity:loop              # in-process, every 15s (preferred during sessions)
+bun run calibration:toxicity:register          # OS cron every minute (background daemon)
+```
+
+One-off mid pull (only valid inside T+60s window): `bun run calibration:mark-toxicity -- --program=pinnacle-novig-nba --fetch`
+
+Combined maintenance (outcomes + optional fetch): `bun run calibration:maintenance -- --program=pinnacle-novig-nba --fetch-toxicity --resolve=outcomes.json`
+
+**Do not use `--force-due` outside tests** — marks outside the 60s window are systematically wrong.
 
 **Graduation guard:** watcher refuses graduation proposals while `empiricalBaselineBrier == null` (0.25 stub) or `role === "baseline"`. Stub that silently certifies is worse than no baseline — baseline-reports and kill-recommendations still emit.
 
@@ -93,6 +118,7 @@ graduation       → pilot (tiny size) → ratchet, or kill — both exported ar
 |---|---|---|
 | `graduationMinRealizedEdgeCentsPerFill` | **Primary** — mean cents/contract after fees at VWAP fill | 2 |
 | `graduationMinFills` | Minimum fills before edge gate | 30 |
+| `graduationMinDistinctEvents` | Minimum distinct resolved `eventId`s (anti tick-spam) | 40 |
 | `shadowMinSignals` + `killBrierDriftPct` | **Brier sanity** — detects gross miscalibration, not incremental edge | 100 / 15% |
 | `shadowMinWeeks` | Regime exposure | 3 |
 
@@ -140,9 +166,11 @@ Never subtract fees in the edge definition *and* again in the threshold. Shadow 
 
 **Sharp consensus source:** Pinnacle via The Odds API. Bookmaker.eu cross-check only. Log timestamp + limit context on every snapshot.
 
-**Shadow fills walk the book:** `simulateFillVwap` on depth; partial fills honest; toxicity marked 60s post-fill (when job wired).
+**Shadow fills walk the book:** `simulateFillVwap` on depth; partial fills honest; toxicity via append-only `toxicity-mark` entries in the T+60s window (loop required).
 
-**Sequencing:** `odds-feed` dimension when quota allows (parallel). Baseline engine in `src/alpha/` is **product code**, not blocked on lift map.
+**Known gap:** `realizedEdgeCentsPerFill` models **entry fee only** — round-trip exit fee not yet subtracted. Graduation edge gate is optimistic until fixed.
+
+**Sequencing:** `ODDS_API_KEY` → live tick → toxicity loop → volume → outcomes. `odds-feed` dimension when quota allows (parallel validation, not a blocker). Baseline engine in `src/alpha/` is **product code**, not blocked on lift map.
 
 **Deprioritize:** Kalshi-only sports scraping; harness completeness as readiness to size; research dimensions for bespoke glue; scoring your own bot with GitHub factor stack.
 
@@ -159,17 +187,19 @@ Public repos answer plumbing. They do not answer α.
 | 3 | Fee-aware edge | **Done** | — |
 | 4 | Execution at real liquidity | **Partial** | `--fetch-book` live; lift auth client for orders |
 | 5 | Bankroll / event exposure | Partial | `exposure.ts` caps per eventId; extend to correlated markets |
-| 6 | Calibration loop | **Live** | Cron maintenance; auto outcome from Kalshi settlement (next) |
+| 6 | Calibration loop | **Live** | Toxicity loop during shadow; auto settlement (next); round-trip fees in edge metric (next) |
 
 ## Execute now (priority order)
 
-1. **Shadow ticks with real book** — `bun run alpha:run -- --program=pinnacle-novig-nba --ticker=KX... --fetch-book --offline`
-2. **60s later** — `bun run calibration:mark-toxicity -- --program=pinnacle-novig-nba --fetch`
-3. **After games** — `calibration:resolve-outcomes` or `--resolve=` on maintenance.
-4. **Weekly** — `calibration:watcher` — check `empiricalBaselineBrier` in artifacts, not placeholder 0.25.
-5. **Ticker overrides** — `research/ticker-overrides.json` for each new `KXNBAGAME` ticker.
-6. **Parallel research** — `bun run research -- --dimension=odds-feed --dry-run`.
-7. **Lift live client** — `src/bot/kalshi-client.ts` before `--live`.
+1. **`ODDS_API_KEY`** — live Pinnacle; `--offline` is dev-only plumbing check, not baseline data.
+2. **Live shadow tick** — `bun run alpha:run -- --program=pinnacle-novig-mlb --ticker=KXMLBGAME-... --fetch-book`
+3. **Toxicity loop running** (separate terminal before step 2) — `bun run calibration:toxicity:loop`
+4. **Volume** — repeat 2+3 across games; discard any fixture/offline shadow lines.
+5. **After games** — `calibration:resolve-outcomes` or `--resolve=` on maintenance (~30s manual).
+6. **Weekly** — `calibration:watcher` — check `empiricalBaselineBrier` in artifacts, not placeholder 0.25.
+7. **Ticker overrides** — `research/ticker-overrides.json` for each new `KXNBAGAME` ticker.
+8. **Parallel research** — `bun run research -- --dimension=odds-feed --dry-run` (validation, not blocker).
+9. **Lift live client** — `src/bot/kalshi-client.ts` before `--live`.
 
 **Do not:** size live; graduate on Brier alone; fork the template to `src/alpha/template/`.
 

@@ -16,6 +16,7 @@ cd /path/to/Kalshi-bot
 
 bun run research                         # full pipeline → latest.md
 bun run serve                            # report browser (:3456, --hot)
+bun run agent ground                     # discovery-grounded triage (cache-only)
 bun run agent status                     # latest run from cache.db
 bun run agent patterns                   # pattern extract from cached run
 bun run agent blueprint                  # architecture blueprint from cache
@@ -52,6 +53,7 @@ Tests skip preflight: `RESEARCH_SKIP_RATE_PREFLIGHT=1`.
 
 ```bash
 bun run research -- --dimension=market-making   # targeted dimension → latest-market-making.md
+bun run research -- --dimension=sports-nba --dry-run   # discover+gate+budget only (no inspect)
 bun run research -- --dimension=sports-nba --export-audit
 bun run research -- --json               # full run JSON on stdout
 bun run research -- --shortlist 12       # override shortlist size
@@ -62,6 +64,8 @@ bun run audit:export -- --latest         # alias for export-audit
 bun run export-audit -- --run <run-id>   # export from explicit run
 bun run export-audit -- --verify research/exports/audit/<run-id>
 ```
+
+`--dry-run` runs discover + popularity gate + `code_search` budget check, then prints `allowed: yes|no` and exits (`0` allowed, `2` blocked). It never inspects or writes reports. Over-budget inspect is allowed only with `GITHUB_RATE_LIMIT_WAIT=1` (multi-wave crawl).
 
 Gate overrides: `--min-stars`, `--min-forks`, `--max-age-months` or env vars below.
 
@@ -200,11 +204,61 @@ bun run export-audit -- --run 2026-07-22T05-50-48-875Z --repo openfi-dao/kalshi-
 
 See [`docs/AUDIT_ADAPTER.md`](docs/AUDIT_ADAPTER.md) for the optional write-only rotor ingest wire.
 
+## Alpha programs
+
+**July 2026:** NBA is off-season — live baseline is [`alpha/pinnacle-novig-mlb/`](alpha/pinnacle-novig-mlb/) on Kalshi `KXMLBGAME` + Odds API `baseball_mlb`. NBA baseline [`alpha/pinnacle-novig-nba/`](alpha/pinnacle-novig-nba/) resumes when `KXNBAGAME` markets open (~October).
+
+Baseline measuring stick: `role: baseline`. Template: [`.bun-create/alpha-program/`](.bun-create/alpha-program/). Engine: [`src/alpha/`](src/alpha/). Institutions: [`src/institutions/`](src/institutions/). Full doctrine: [`.cursor/skills/plan/SKILL.md`](.cursor/skills/plan/SKILL.md).
+
+Scaffold a tenant (always `--no-git`):
+
+```bash
+bun create alpha-program alpha/<name> --no-git
+# or: bun run alpha:init <name> --dimension=sports-nba
+```
+
+### Shadow operator loop (live baseline)
+
+**Gate:** set `ODDS_API_KEY` before any baseline shadow data. `--offline` uses fixture odds — valid for plumbing checks only, not calibration. Discard offline lines before counting toward graduation.
+
+**Order:** toxicity loop running → live ticks → volume → outcomes last (manual, ~30s).
+
+| Step | When | Command |
+|------|------|---------|
+| **1. Toxicity loop** | Start **before** ticks; keep running | `bun run calibration:toxicity:loop` |
+| **2. Live shadow tick** | Each signal (live book + live Pinnacle) | `bun run alpha:run -- --program=pinnacle-novig-mlb --ticker=KXMLBGAME-... --fetch-book` |
+| **3. Resolve outcomes** | After game settles | `bun run calibration:resolve-outcomes -- --program=pinnacle-novig-mlb --file=research/outcomes.json` |
+| **4. Watcher** | Weekly / batch review | `bun run calibration:watcher` |
+
+Terminal 1 (leave open):
+
+```bash
+export ODDS_API_KEY=…
+bun run calibration:toxicity:loop
+```
+
+Terminal 2 (repeat per ticker):
+
+```bash
+bun run alpha:run -- \
+  --program=pinnacle-novig-mlb \
+  --ticker=KXMLBGAME-26JUL242010ATHMIN-MIN \
+  --fetch-book
+```
+
+Map new tickers in [`research/ticker-overrides.json`](research/ticker-overrides.json). Shadow logs live under `alpha/*/shadow-log.jsonl` (gitignored). Background daemon alternative: `bun run calibration:toxicity:register`.
+
+Combined maintenance (outcomes + optional mid fetch): `bun run calibration:maintenance -- --program=pinnacle-novig-mlb --fetch-toxicity --resolve=research/outcomes.json`
+
+**Graduation breadth gate:** `graduationMinDistinctEvents` (default 40) — resolved lines must span ≥40 distinct games; one-game tick-spam cannot graduate.
+
 ## Docs
 
 - [`docs/ROADMAP.md`](docs/ROADMAP.md) — phases, blockers, proof checklist (**start here**)
-- [`docs/AGENT.md`](docs/AGENT.md) — CLI: status, patterns, blueprint, report
-- [`docs/MISS_TAXONOMY.md`](docs/MISS_TAXONOMY.md) — gate/discovery/rate-limit miss map
+- [`docs/OFFICIAL_URLS.md`](docs/OFFICIAL_URLS.md) — verified Kalshi / Odds API / Bun links
+- Alpha shadow loop — **this README § Alpha programs** · calibration: `src/calibration/watcher.ts`
+- [`docs/AGENT.md`](docs/AGENT.md) — CLI sub-agents: ground, status, patterns, blueprint, report
+- [`docs/MISS_TAXONOMY.md`](docs/MISS_TAXONOMY.md) — gate/discovery/rate-limit miss map + grounded triage
 - [`docs/CRON.md`](docs/CRON.md) — OS-level Bun.cron scheduling
 - [`docs/AUDIT_ADAPTER.md`](docs/AUDIT_ADAPTER.md) — audit wire + rotor ingest
 - [`docs/FACTOR_STACK.md`](docs/FACTOR_STACK.md) — scoring SSOT

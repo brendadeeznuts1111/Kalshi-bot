@@ -24,7 +24,7 @@ Build a **re-runnable** research script that produces a scored shortlist of publ
 | Report browser | `Bun.serve` [`serve.ts`](../src/research/serve.ts) — ≤5 routes |
 | Audit evidence | sha3-256 JSONL under `research/audit-evidence/` (committed) |
 | Scheduled research | OS-level `Bun.cron` — [`docs/CRON.md`](CRON.md) |
-| Tests | `bun:test` + `mock.module()` for `gh.ts` |
+| Tests | `bun:test` + `mock.module()` for `github-api.ts` / helpers |
 
 ## Stack and layout
 
@@ -59,15 +59,17 @@ Kalshi-bot/
 
 ```mermaid
 flowchart LR
-  preflight[Bun.which gh] --> discover[discover via gh]
+  preflight[Bun.which gh / token] --> discover[discover Bun.fetch + ETag]
   discover --> gate[popularity gate]
-  gate --> inspect[inspect + sqlite cache]
+  gate --> inspect[inspect Bun.fetch + sqlite cache]
   inspect --> score[quality + license]
   score --> diversify[diversity shortlist]
   diversify --> diff[diff vs prior production run]
   diff --> out[sqlite run + MD report]
   out --> audit[optional --export-audit]
 ```
+
+**Transport split:** repo search + inspect REST/code search use [`github-search.ts`](../src/research/github-search.ts) / [`github-api.ts`](../src/research/github-api.ts) (`Bun.fetch`). Rate-limit preflight and `gh auth token` still use [`gh.ts`](../src/research/gh.ts) (`Bun.$`). Offline understanding: `bun run research:dry` (`--dry-run --offline`) reads `search_cache` only and uses a synthetic code_search quota — zero live GitHub.
 
 ## Discover
 
