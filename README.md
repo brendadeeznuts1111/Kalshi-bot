@@ -55,6 +55,18 @@ Gate overrides: `--min-stars`, `--min-forks`, `--max-age-months` or env vars bel
 | Tests | `bun test` / `bun run test:coverage` |
 | Types | `bun run typecheck` |
 
+## Cache, diff, and artifacts
+
+| Concern | Implementation |
+|---------|----------------|
+| **Bounded concurrency** | `pool.ts` `mapPool()` — inspect capped at `DEFAULT_INSPECT_CONCURRENCY` (4) |
+| **Disk cache** | `cache.ts` → `research/cache/cache.db` — `Bun.hash(repo:endpoint:pushed_at)` |
+| **Run-to-run diff** | `diff.ts` — baseline = latest production run in sqlite (or `--diff <run-id>`) |
+| **JSON dumps** | `research/outputs/` — gitignored (`run_*.json`, `latest.json`) |
+| **Markdown reports** | `research/reports/latest.md` + `latest.diff.md` — **committed** |
+
+After each `bun run research`, sqlite stores the full run payload; markdown snapshots the human-facing shortlist and diff excerpt.
+
 ## What gets committed
 
 | Path | In git? | Notes |

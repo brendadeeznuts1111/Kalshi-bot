@@ -1,5 +1,14 @@
 // @see https://bun.com/docs/runtime/sqlite#load-via-es-module-import
 // @see https://bun.com/docs/runtime/hashing#bun-hash
+/**
+ * Disk cache + run history in `research/cache/cache.db` (gitignored).
+ *
+ * - **api_cache** — keyed by `Bun.hash(repo:endpoint:pushed_at)`; TTL on `expires_at`
+ * - **runs** — full `ResearchRun` JSON for run-to-run diff (`diff.ts`)
+ *
+ * Inspect uses bounded concurrency (`pool.ts` + `DEFAULT_INSPECT_CONCURRENCY`).
+ * JSON dumps go to gitignored `research/outputs/`; committed reports are `latest.md` + `latest.diff.md`.
+ */
 import { Database } from "bun:sqlite";
 import type { ResearchRun } from "./types.ts";
 import { CACHE_DB, CACHE_DIR, joinPath } from "./paths.ts";

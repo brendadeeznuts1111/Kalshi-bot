@@ -106,12 +106,16 @@ Factor stack SSOT: [`docs/FACTOR_STACK.md`](FACTOR_STACK.md).
 
 ## Cache + runs (`bun:sqlite`)
 
-- **api_cache** — TTL on `expires_at`
-- **runs** — full `ResearchRun` JSON by `run_id`
+Embedded `research/cache/cache.db` (gitignored):
 
-Production runs use ISO timestamp run ids (`2026-07-22T04-59-00-818Z`). Test fixtures (`serve-test-run`, etc.) are ignored when resolving “latest” for CLI, serve, and export.
+- **api_cache** — `Bun.hash(repo:endpoint:pushed_at)`, TTL on `expires_at`
+- **runs** — full `ResearchRun` JSON by `run_id` (enables diff without committed JSON)
+
+Inspect concurrency: `pool.ts` + `DEFAULT_INSPECT_CONCURRENCY` (default 4).
 
 Queryable: `searchCachedPayloads("readme", "websocket")`.
+
+**Artifacts:** JSON → `research/outputs/` (gitignored). Markdown → `latest.md` + `latest.diff.md` (committed).
 
 ## Diff
 
