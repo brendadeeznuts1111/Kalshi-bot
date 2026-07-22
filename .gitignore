@@ -19,6 +19,13 @@ research/evidence-captures/
 # Test artifacts (never commit)
 tests/.tmp-*
 
+# Alpha tenant runtime (programs committed; logs are not)
+alpha/*/shadow-log.jsonl
+calibration/artifacts/
+
+# Bun sqlite footgun: `:memory:<name>` is a cwd file, not RAM (use exact `:memory:` or tests/.tmp-*)
+:memory:*
+
 # Per-run markdown snapshots (canonical history: cache.db + latest.md)
 research/reports/run_*.md
 

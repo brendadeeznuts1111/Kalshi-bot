@@ -1,0 +1,18 @@
+{
+  "name": "replace-me",
+  "dimension": "sports-soccer",
+  "status": "shadow",
+  "baseline": "pinnacle-novig",
+  "created": "2026-07-22",
+  "shadowLog": "shadow-log.jsonl",
+  "hypothesisFile": "hypothesis.md",
+  "minContracts": 5,
+  "gates": {
+    "shadowMinSignals": 100,
+    "shadowMinWeeks": 3,
+    "pilotMaxContracts": 5,
+    "killBrierDriftPct": 15,
+    "graduationMinRealizedEdgeCentsPerFill": 2,
+    "graduationMinFills": 30
+  }
+}

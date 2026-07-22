@@ -1,0 +1,25 @@
+[
+  {
+    "id": "b8723516c8b44a2f9e7d4b1a0c3e5f6a",
+    "sport_key": "basketball_nba",
+    "commence_time": "2026-01-15T03:00:00Z",
+    "home_team": "Los Angeles Lakers",
+    "away_team": "Boston Celtics",
+    "bookmakers": [
+      {
+        "key": "pinnacle",
+        "title": "Pinnacle",
+        "last_update": "2026-01-15T02:00:00Z",
+        "markets": [
+          {
+            "key": "h2h",
+            "outcomes": [
+              { "name": "Los Angeles Lakers", "price": -110 },
+              { "name": "Boston Celtics", "price": 100 }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+]
