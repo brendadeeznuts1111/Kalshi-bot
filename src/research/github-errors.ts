@@ -3,6 +3,8 @@
 
 export type GitHubCacheKind = "search" | "inspect" | "api";
 
+export type CacheFallbackSource = "run" | "inspect_cache" | "search_cache";
+
 export type GitHubRemediationAction =
   | "retry_after_reset"
   | "use_cached_run"
@@ -20,6 +22,9 @@ export type GitHubErrorEnrichment = GitHubResearchErrorContext & {
   staleDataAgeMs?: number | null;
   /** Set when staleDataRunId comes from another dimension's cached run. */
   staleDataSourceDimension?: string;
+  /** run | inspect_cache | search_cache — what backs cachedDataAvailable when no run id. */
+  cacheFallbackSource?: CacheFallbackSource;
+  inspectCacheRepoCount?: number;
   cachedDataAvailable?: boolean;
   blockedOperations?: string[];
 };
@@ -259,12 +264,18 @@ function buildCachedRunCommand(dimension: string, runId: string): string {
   return `bun run agent patterns --dimension=${dimension} --run=${runId}`;
 }
 
+function countInspectCacheLabel(enrichment: GitHubErrorEnrichment): number {
+  return enrichment.inspectCacheRepoCount ?? 0;
+}
+
 function pickRemediationAction(
   err: GitHubRateLimitError,
   impact: GitHubApiErrorWire["impact"],
   circuit: GitHubApiErrorWire["circuit"],
 ): GitHubRemediationAction {
-  if (impact.cachedDataAvailable && impact.staleDataRunId) return "use_cached_run";
+  if (impact.cachedDataAvailable && (impact.staleDataRunId || impact.cacheFallbackSource)) {
+    return "use_cached_run";
+  }
   if (err.resetAtMs && retryAfterSeconds(err.resetAtMs) !== null) return "retry_after_reset";
   if (
     circuit.remainingBudget !== null &&
@@ -299,6 +310,25 @@ function buildRemediation(
         ? `Use cached data from ${enrichment.staleDataSourceDimension} dimension run with --run=${runId}`
         : `Use cached data from a previous run with --run=${runId}`,
       eta: null,
+    };
+  }
+
+  if (action === "use_cached_run" && enrichment.cacheFallbackSource === "inspect_cache") {
+    const n = enrichment.inspectCacheRepoCount ?? countInspectCacheLabel(enrichment);
+    return {
+      action,
+      command: buildResearchRetryCommand({ ...ctx, dimension }),
+      alternative: `Cross-dimension inspect cache has ${n} repo snapshot(s) — re-run serves degraded inspect for cached repos`,
+      eta: resetIso,
+    };
+  }
+
+  if (action === "use_cached_run" && enrichment.cacheFallbackSource === "search_cache") {
+    return {
+      action,
+      command: buildResearchRetryCommand({ ...ctx, dimension }),
+      alternative: "Cross-dimension search cache available — discover may use stale ETag results under rate limit",
+      eta: resetIso,
     };
   }
 
@@ -355,6 +385,8 @@ export type GitHubApiErrorWire = {
     staleDataAge: string | null;
     staleDataRunId?: string;
     staleDataSourceDimension?: string;
+    cacheFallbackSource?: CacheFallbackSource;
+    inspectCacheRepoCount?: number;
   };
   circuit: {
     tripped: boolean;
@@ -382,7 +414,7 @@ export function serializeGitHubApiError(
     null;
   const cachedDataAvailable =
     enrichment.cachedDataAvailable ??
-    Boolean(enrichment.staleDataRunId);
+    Boolean(enrichment.staleDataRunId || enrichment.cacheFallbackSource);
 
   const impact: GitHubApiErrorWire["impact"] = {
     dimension: ctx.dimension ?? null,
@@ -394,6 +426,8 @@ export function serializeGitHubApiError(
         : null,
     staleDataRunId: enrichment.staleDataRunId,
     staleDataSourceDimension: enrichment.staleDataSourceDimension,
+    cacheFallbackSource: enrichment.cacheFallbackSource,
+    inspectCacheRepoCount: enrichment.inspectCacheRepoCount,
   };
 
   const action = pickRemediationAction(err, impact, circuit);
@@ -434,7 +468,13 @@ export function formatRateLimitRemediation(
   const lines: string[] = [];
 
   const dim = wire.impact.dimension ?? "research";
-  lines.push(`⚠ ${dim} blocked — ${wire.code === "cache_miss" ? "no cache fallback" : "rate limit exceeded"}`);
+  const blockedLabel =
+    wire.code === "cache_miss"
+      ? wire.impact.cachedDataAvailable
+        ? "cache fallback available"
+        : "no cache fallback"
+      : "rate limit exceeded";
+  lines.push(`⚠ ${dim} blocked — ${blockedLabel}`);
 
   if (wire.retryAfterSeconds !== null && wire.retryAfterSeconds > 0) {
     const mins = Math.ceil(wire.retryAfterSeconds / 60);
@@ -456,6 +496,12 @@ export function formatRateLimitRemediation(
     const limit = wire.circuit.limit ?? "?";
     const remaining = wire.circuit.remainingBudget ?? 0;
     lines.push(`  Circuit tripped at ${trippedAt} · ${remaining}/${limit} remaining`);
+  }
+
+  if (wire.impact.cacheFallbackSource === "inspect_cache" && wire.impact.inspectCacheRepoCount) {
+    lines.push(
+      `  Cross-dimension inspect cache: ${wire.impact.inspectCacheRepoCount} repo snapshot(s)`,
+    );
   }
 
   if (wire.impact.staleDataRunId && wire.remediation.action === "use_cached_run") {

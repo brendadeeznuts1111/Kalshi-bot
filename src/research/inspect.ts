@@ -39,7 +39,9 @@ export async function inspectRepo(
     const stale = loadLatestInspectCache(repo.fullName);
     if (stale) {
       recordCacheStat("inspectDegraded");
-      console.error(`[inspect] degraded — using prior inspect snapshot for ${repo.fullName}`);
+      console.error(
+        `[inspect] degraded — cross-dimension inspect snapshot for ${repo.fullName} (inspect_cache, any prior dimension)`,
+      );
       return stale;
     }
     throwCacheMissIfTripped("inspect", repo.fullName);

@@ -158,6 +158,30 @@ export function loadLatestInspectCache(repo: string): InspectionSignals | null {
   }
 }
 
+/** Distinct repos with inspect snapshots (any dimension / run). */
+export function countInspectCacheRepos(): number {
+  const row = getDb()
+    .query("SELECT COUNT(DISTINCT repo) AS n FROM inspect_cache")
+    .get() as { n: number } | null;
+  return row?.n ?? 0;
+}
+
+export function hasInspectCacheForRepo(repo: string): boolean {
+  const row = getDb().query("SELECT 1 AS ok FROM inspect_cache WHERE repo = ? LIMIT 1").get(repo) as
+    | { ok: number }
+    | null;
+  return row !== null;
+}
+
+export function hasAnySearchCache(): boolean {
+  const row = getDb().query("SELECT 1 AS ok FROM search_cache LIMIT 1").get() as { ok: number } | null;
+  return row !== null;
+}
+
+export function hasSearchCacheForQuery(query: string): boolean {
+  return loadSearchCache(searchQueryKey(query)) !== null;
+}
+
 export function searchQueryKey(query: string): string {
   return String(Bun.hash(query));
 }

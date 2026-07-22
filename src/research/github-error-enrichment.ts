@@ -1,8 +1,54 @@
 /** Cache-backed enrichment for self-remediating GitHub error wire payloads. */
-import { loadFallbackRunFromDb, loadLatestRunFromDb } from "./cache.ts";
+import {
+  countInspectCacheRepos,
+  hasAnySearchCache,
+  hasInspectCacheForRepo,
+  loadFallbackRunFromDb,
+  loadLatestRunFromDb,
+} from "./cache.ts";
 import { runDimension } from "./dimensions.ts";
-import type { GitHubErrorEnrichment, GitHubRateLimitError } from "./github-errors.ts";
-import { currentGitHubResearchErrorContext } from "./github-errors.ts";
+import type { CacheFallbackSource, GitHubErrorEnrichment, GitHubRateLimitError } from "./github-errors.ts";
+import {
+  currentGitHubResearchErrorContext,
+  GitHubCacheMissError,
+} from "./github-errors.ts";
+
+export type { CacheFallbackSource };
+
+export function probeCrossDimensionCacheFallback(err: GitHubRateLimitError): {
+  available: boolean;
+  source?: CacheFallbackSource;
+  inspectCacheRepoCount?: number;
+} {
+  if (err instanceof GitHubCacheMissError) {
+    switch (err.cacheKind) {
+      case "inspect": {
+        if (hasInspectCacheForRepo(err.cacheKey)) {
+          return { available: true, source: "inspect_cache", inspectCacheRepoCount: 1 };
+        }
+        const n = countInspectCacheRepos();
+        if (n > 0) return { available: true, source: "inspect_cache", inspectCacheRepoCount: n };
+        return { available: false };
+      }
+      case "search":
+        if (hasAnySearchCache()) return { available: true, source: "search_cache" };
+        return { available: false };
+      case "api": {
+        const n = countInspectCacheRepos();
+        if (n > 0) return { available: true, source: "inspect_cache", inspectCacheRepoCount: n };
+        if (hasAnySearchCache()) return { available: true, source: "search_cache" };
+        return { available: false };
+      }
+    }
+  }
+
+  const inspectCount = countInspectCacheRepos();
+  if (inspectCount > 0) {
+    return { available: true, source: "inspect_cache", inspectCacheRepoCount: inspectCount };
+  }
+  if (hasAnySearchCache()) return { available: true, source: "search_cache" };
+  return { available: false };
+}
 
 export function buildGitHubErrorEnrichment(
   err: GitHubRateLimitError,
@@ -29,12 +75,24 @@ export function buildGitHubErrorEnrichment(
     overrides.staleDataSourceDimension ??
     (fallbackRun && !latestRun ? runDimension(fallbackRun) : undefined);
 
+  const cacheProbe = probeCrossDimensionCacheFallback(err);
+  const cacheFallbackSource: CacheFallbackSource | undefined =
+    overrides.cacheFallbackSource ?? (staleDataRunId ? "run" : cacheProbe.source);
+  const inspectCacheRepoCount =
+    overrides.inspectCacheRepoCount ?? cacheProbe.inspectCacheRepoCount;
+
+  const cachedDataAvailable =
+    overrides.cachedDataAvailable ??
+    Boolean(staleDataRunId || cacheProbe.available);
+
   return {
     ...ctx,
     staleDataRunId,
     staleDataAgeMs,
     staleDataSourceDimension,
-    cachedDataAvailable: overrides.cachedDataAvailable ?? Boolean(staleDataRunId),
+    cachedDataAvailable,
+    cacheFallbackSource,
+    inspectCacheRepoCount,
     blockedOperations: overrides.blockedOperations,
   };
 }
