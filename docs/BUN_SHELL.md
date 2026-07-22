@@ -104,7 +104,7 @@ Bun escapes interpolated strings ([docs](https://bun.com/docs/runtime/shell#secu
 await $`gh ${["search", "repos", maliciousQuery, "--json", "fullName"]}`.nothrow().quiet();
 ```
 
-**Argument injection** still applies: a malicious repo name passed as `repo:owner/name` in code search could confuse `gh`. Our queries come from fixed `queries.json` + static keyword lists, not user stdin — but if you add interactive mode, validate inputs.
+**Argument injection** still applies: a malicious repo name passed as `repo:owner/name` in code search could confuse `gh`. Our queries come from fixed `dimensions.json` + static keyword lists, not user stdin — but if you add interactive mode, validate inputs.
 
 **Never** do:
 

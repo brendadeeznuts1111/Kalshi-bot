@@ -38,14 +38,13 @@ Kalshi-bot/
       … (see README layout)
     agent/                  # CLI: status, patterns, blueprint, report, report:term
   tools/
-    restore-latest-report.ts  # posttest: fixture → latest.md
+    restore-committed-artifacts.ts  # posttest: fixtures → latest.md + audit JSONL
   tests/                    # bun:test (~292 tests; posttest report restore)
   docs/
     ROADMAP.md              # operator phases, blockers, proof gates
     CRON.md                 # OS-level Bun.cron setup
   research/
     dimensions.json         # dimension query SSOT (all, market-making, sports-nba/…, …)
-    queries.json            # deprecated reference (dimension=all)
     weights.json, keywords.json
     schemas/repo-report.schema.json
     audit-evidence/         # committed JSONL (one file per promoted repo)

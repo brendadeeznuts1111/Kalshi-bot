@@ -109,8 +109,8 @@ beforeAll(async () => {
 
 afterAll(async () => {
   exitTempCache();
-  const { restoreLatestReport } = await import("../tools/restore-latest-report.ts");
-  await restoreLatestReport();
+  const { restoreCommittedArtifacts } = await import("../tools/restore-committed-artifacts.ts");
+  await restoreCommittedArtifacts();
 });
 
 describe("serve handlers", () => {

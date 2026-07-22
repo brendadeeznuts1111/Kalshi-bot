@@ -237,9 +237,6 @@ export function loadRunForLift(runId?: string, dimension?: string): ResearchRun 
   return loadResearchRun({ runId, dimension });
 }
 
-/** @deprecated alias — use loadRunForLift */
-export const loadRunForSuggest = loadRunForLift;
-
 export function formatLift(result: SuggestLiftResult): string {
   const freshness = result.dataFreshness;
   const lines: string[] = [

@@ -90,11 +90,10 @@
       ]
     },
     "sports-other": {
-      "label": "Other sports (MLB, NHL, tennis, …)",
+      "label": "Other sports (MLB, NHL, …)",
       "queries": [
         "Kalshi MLB",
         "Kalshi NHL",
-        "Kalshi tennis",
         "sports kalshi bot",
         "polymarket sports",
         "sports betting model",

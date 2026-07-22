@@ -126,7 +126,6 @@ After each `bun run research`, sqlite stores the full run payload; markdown snap
 | `research/reports/latest.diff.md.fixture` | yes | Test restore SSOT for diff |
 | `research/audit-evidence/*.jsonl` | yes | Line evidence (one file per promoted repo) |
 | `research/dimensions.json` | yes | Dimension query sets (market-making, sports-nba/nfl/…, tracking, …) |
-| `research/queries.json` | yes | Deprecated reference — use `dimensions.json` (`all`) |
 | `research/weights.json`, `keywords.json` | yes | Scoring + detector keywords SSOT |
 | `src/research/constants.ts` | yes | Typed SSOT — detector ids, weights, licenses, thresholds |
 | `research/schemas/repo-report.schema.json` | yes | RepoReport wire schema |
@@ -150,7 +149,7 @@ Kalshi-bot/
 │   │   └── … cache, diff, evidence, audit-adapter, serve, views
 │   └── agent/              # CLI: status, patterns, blueprint, report, report:term
 ├── tools/
-│   └── restore-latest-report.ts   # posttest: fixture → latest.md
+│   └── restore-committed-artifacts.ts   # posttest: fixtures → latest.md + audit JSONL
 ├── tests/                  # bun:test (posttest restores reports)
 ├── research/
 │   ├── audit-evidence/     # committed JSONL (high-value + watchlist exports)

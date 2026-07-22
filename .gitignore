@@ -35,4 +35,4 @@ research/reports/run_*.md
 #   research/reports/latest.diff.md
 #   research/reports/latest.diff.md.fixture
 #   research/audit-evidence/*.jsonl
-#   research/queries.json, weights.json, keywords.json, schemas/
+#   research/weights.json, keywords.json, schemas/
