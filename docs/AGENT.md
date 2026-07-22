@@ -87,6 +87,8 @@ bun run agent suggest-lift --dimension=arbitrage
 
 Each line includes rotor badges: **✓ verified**, **⚠ watchlist**, **✗ unverified**. JSON includes `verified`, `verification`, and `findingId` on recommendations and shortlist entries.
 
+When a pattern report exists under `research/patterns/` (from `agent patterns`), each recommendation also includes a **`pattern`** object: `summary`, `excerpt`, `file`, and `source` (path to the pattern JSON). Text output shows a one-line `↳ pattern:` summary.
+
 Designed for an LLM or human deciding what to lift into a composite bot.
 
 ## `patterns`

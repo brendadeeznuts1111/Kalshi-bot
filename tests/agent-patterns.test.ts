@@ -4,9 +4,12 @@ import {
   analyzeSource,
   emptyPatternHits,
   formatPatternReportMarkdown,
+  formatPatternSummary,
   mergePatternHits,
+  pickPatternSliceForComponent,
   selectEvidencePaths,
 } from "../src/agent/pattern-extract.ts";
+import type { RepoPatternReport } from "../src/agent/pattern-extract.ts";
 import type { EvidenceLine } from "../src/research/types.ts";
 
 describe("agent patterns", () => {
@@ -75,5 +78,47 @@ describe("agent patterns", () => {
     expect(md).toContain("Aggregate signals");
     expect(md).toContain("owner/repo");
     expect(md).toContain("env-secrets");
+  });
+
+  test("pickPatternSliceForComponent prefers authApi evidence file", () => {
+    const repoReport: RepoPatternReport = {
+      fullName: "owner/repo",
+      score: 70,
+      verification: "✗ unverified",
+      evidencePaths: ["src/auth.ts"],
+      summary: {
+        ...emptyPatternHits(),
+        auth: ["rsa-pss-signing", "kalshi-access-headers"],
+      },
+      files: [
+        {
+          path: "README.md",
+          components: ["strategy"],
+          hits: { ...emptyPatternHits(), auth: ["env-secrets"] },
+          excerpt: "readme",
+          fetchOk: true,
+        },
+        {
+          path: "src/auth.ts",
+          components: ["authApi"],
+          hits: {
+            ...emptyPatternHits(),
+            auth: ["rsa-pss-signing", "kalshi-access-headers"],
+          },
+          excerpt: "KALSHI-ACCESS-SIGNATURE",
+          fetchOk: true,
+        },
+      ],
+    };
+    const slice = pickPatternSliceForComponent(repoReport, "authApi");
+    expect(slice.file).toBe("src/auth.ts");
+    expect(slice.summary).toContain("RSA-PSS");
+    expect(slice.excerpt).toContain("KALSHI-ACCESS");
+  });
+
+  test("formatPatternSummary maps known labels", () => {
+    expect(formatPatternSummary(["rsa-pss-signing", "api-key-file"])).toBe(
+      "RSA-PSS, key file",
+    );
   });
 });

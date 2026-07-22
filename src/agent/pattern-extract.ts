@@ -3,12 +3,13 @@
  * Static pattern extraction from detector evidence paths (gh API file reads — no clone).
  */
 import type { EvidenceLine, ResearchRun, ScoredRepo } from "../research/types.ts";
+import type { ScoreComponentKey } from "../research/constants.ts";
 import { buildRepoReport } from "../research/evidence.ts";
 import { fetchRepoFileText } from "../research/repo-content.ts";
 import { loadResearchRun } from "../research/cache.ts";
 import { dimensionArtifactBasename, runDimension } from "../research/dimensions.ts";
 import { PATTERNS_DIR, joinPath } from "../research/paths.ts";
-import { writeJson } from "../research/io.ts";
+import { readJsonFile, writeJson } from "../research/io.ts";
 import { lookupRepoVerification, buildRotorVerificationIndex, formatVerificationBadge } from "./audit-list.ts";
 
 export const MAX_REPOS_PER_REPORT = 5;
@@ -49,6 +50,42 @@ export type PatternReport = {
   dimension: string;
   repos: RepoPatternReport[];
   aggregate: Partial<Record<PatternCategory, string[]>>;
+};
+
+export type LiftPatternRef = {
+  summary: string;
+  excerpt: string | null;
+  file: string | null;
+  source: string;
+};
+
+/** Score component → pattern categories for lift-map excerpts. */
+export const COMPONENT_PATTERN_CATEGORIES: Record<ScoreComponentKey, PatternCategory[]> = {
+  authApi: ["auth"],
+  orderRealism: ["orders"],
+  testsCi: ["tests"],
+  docsSetup: ["structure"],
+  maintenance: ["errors", "structure"],
+  riskControls: ["dryRun"],
+};
+
+const PATTERN_LABEL_DISPLAY: Record<string, string> = {
+  "kalshi-access-headers": "KALSHI-ACCESS-* headers",
+  "rsa-pss-signing": "RSA-PSS",
+  "api-key-file": "key file",
+  "trade-api-v2": "trade-api/v2",
+  "env-secrets": "env secrets",
+  "create-order-call": "create-order API",
+  "order-fields": "order fields (side/count/price)",
+  "portfolio-orders-path": "portfolio/orders path",
+  "dry-run-default": "dry-run default",
+  "polling-loop": "polling loop",
+  websocket: "WebSocket",
+  "retry-backoff": "retry/backoff",
+  "try-catch": "try/catch",
+  "structured-logging": "structured logging",
+  "client-wrapper": "client wrapper class",
+  "test-import": "test framework",
 };
 
 const AGGREGATE_PATH = /\(readme\/code aggregate\)/i;
@@ -282,6 +319,84 @@ export function formatPatternReportMarkdown(report: PatternReport): string {
 
 export function patternReportBasename(dimension: string): string {
   return `patterns-${dimensionArtifactBasename(dimension)}`;
+}
+
+export function patternReportJsonPath(dimension: string): string {
+  return joinPath(PATTERNS_DIR, `${patternReportBasename(dimension)}.json`);
+}
+
+/** Repo-relative path for committed pattern JSON (lift-map source links). */
+export function patternReportSourceRel(dimension: string): string {
+  return joinPath("research/patterns", `${patternReportBasename(dimension)}.json`);
+}
+
+export function formatPatternSummary(labels: string[]): string {
+  return labels
+    .map((label) => PATTERN_LABEL_DISPLAY[label] ?? label.replace(/-/g, " "))
+    .join(", ");
+}
+
+export function pickPatternSliceForComponent(
+  repoReport: RepoPatternReport,
+  component: ScoreComponentKey,
+): { summary: string; excerpt: string | null; file: string | null } {
+  const categories = COMPONENT_PATTERN_CATEGORIES[component];
+  const labels: string[] = [];
+  for (const cat of categories) {
+    for (const label of repoReport.summary[cat]) {
+      if (!labels.includes(label)) labels.push(label);
+    }
+  }
+
+  let bestFile: FilePatternSlice | null = null;
+  let bestScore = -1;
+  for (const file of repoReport.files) {
+    if (!file.fetchOk) continue;
+    const componentMatch = file.components.includes(component) ? 2 : 0;
+    const catHits = categories.reduce((n, cat) => n + file.hits[cat].length, 0);
+    const score = componentMatch + catHits;
+    if (score > bestScore) {
+      bestScore = score;
+      bestFile = file;
+    }
+  }
+
+  return {
+    summary: formatPatternSummary(labels),
+    excerpt: bestFile?.excerpt ?? null,
+    file: bestFile?.path ?? null,
+  };
+}
+
+export async function loadPatternReport(dimension: string): Promise<PatternReport | null> {
+  return readJsonFile<PatternReport>(patternReportJsonPath(dimension));
+}
+
+export async function loadRepoPatternReport(
+  dimension: string,
+  repoFullName: string,
+  run: ResearchRun,
+  options?: { allowLiveFetch?: boolean },
+): Promise<RepoPatternReport | null> {
+  const key = repoFullName.trim().toLowerCase();
+  const cached = await loadPatternReport(dimension);
+  const fromDisk = cached?.repos.find((r) => r.fullName.toLowerCase() === key);
+  if (fromDisk) return fromDisk;
+
+  if (!options?.allowLiveFetch) return null;
+
+  const item =
+    run.shortlist.find((s) => s.repo.fullName.toLowerCase() === key) ??
+    run.scored.find((s) => s.repo.fullName.toLowerCase() === key);
+  if (!item) return null;
+
+  const rotor = await buildRotorVerificationIndex();
+  const rotorStatus = lookupRepoVerification(rotor, item.repo.fullName);
+  const badge = formatVerificationBadge({
+    verified: rotorStatus.verified,
+    verification: rotorStatus.verification,
+  });
+  return extractRepoPatterns(item, run.generatedAt, badge);
 }
 
 export async function writePatternReport(report: PatternReport): Promise<string> {

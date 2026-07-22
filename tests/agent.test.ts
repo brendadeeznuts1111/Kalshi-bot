@@ -17,7 +17,10 @@ import {
 import {
   formatSuggestLift,
   suggestLiftFromRun,
+  attachPatternsToLift,
 } from "../src/agent/suggest-lift.ts";
+import type { RepoPatternReport } from "../src/agent/pattern-extract.ts";
+import { emptyPatternHits } from "../src/agent/pattern-extract.ts";
 import { saveRun } from "../src/research/cache.ts";
 import type { ResearchRun } from "../src/research/types.ts";
 import { freshTestGeneratedAt, TEST_LATEST_RUN_ID } from "./fixtures.ts";
@@ -148,6 +151,38 @@ describe("agent cli", () => {
     expect(result.recommendations[0]?.verification).toBe("unverified");
     expect(result.notes.some((n) => n.includes("License warning"))).toBe(true);
     expect(formatSuggestLift(result)).toContain("Lift map:");
+  });
+
+  test("attachPatternsToLift adds pattern refs from injected loader", async () => {
+    const run = mockRun();
+    run.shortlist = run.scored;
+    const base = suggestLiftFromRun(run);
+    const mockRepoPatterns: RepoPatternReport = {
+      fullName: "OctagonAI/kalshi-trading-bot-cli",
+      score: 78,
+      verification: "✗ unverified",
+      evidencePaths: ["src/tools/kalshi/api.ts"],
+      summary: { ...emptyPatternHits(), auth: ["rsa-pss-signing", "kalshi-access-headers"] },
+      files: [
+        {
+          path: "src/tools/kalshi/api.ts",
+          components: ["authApi"],
+          hits: {
+            ...emptyPatternHits(),
+            auth: ["rsa-pss-signing", "kalshi-access-headers"],
+          },
+          excerpt: "KALSHI-ACCESS-SIGNATURE",
+          fetchOk: true,
+        },
+      ],
+    };
+    const enriched = await attachPatternsToLift(base, run, async (_dim, repo) =>
+      repo === "OctagonAI/kalshi-trading-bot-cli" ? mockRepoPatterns : null,
+    );
+    const authRec = enriched.recommendations.find((r) => r.component === "authApi");
+    expect(authRec?.pattern?.summary).toContain("RSA-PSS");
+    expect(authRec?.pattern?.file).toBe("src/tools/kalshi/api.ts");
+    expect(formatSuggestLift(enriched)).toContain("↳ pattern:");
   });
 
   test("runAgentSuggestLift prints JSON", async () => {

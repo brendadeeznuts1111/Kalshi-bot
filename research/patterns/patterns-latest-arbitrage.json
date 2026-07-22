@@ -1,0 +1,234 @@
+{
+  "runId": "2026-07-22T06-19-51-053Z",
+  "generatedAt": "2026-07-22T06:19:51.053Z",
+  "dimension": "arbitrage",
+  "repos": [
+    {
+      "fullName": "RichardFeynmanEnthusiast/kalshi-polymarket-arbitrage-bot",
+      "score": 69.5,
+      "verification": "✗ unverified",
+      "evidencePaths": [
+        "app/clients/kalshi/base.py",
+        "shared_libraries/shared_infra_pkg/shared_infra/kalshi_clients/kalshi_base.py",
+        "shared_libraries/shared_infra_pkg/build/lib/shared_infra/kalshi_clients/kalshi_base.py",
+        "app/clients/kalshi/kalshi_http_client.py",
+        "shared_libraries/shared_infra_pkg/shared_infra/kalshi_clients/kalshi_http.py",
+        "shared_libraries/shared_infra_pkg/build/lib/shared_infra/kalshi_clients/kalshi_http.py"
+      ],
+      "files": [
+        {
+          "path": "app/clients/kalshi/base.py",
+          "components": [
+            "authApi"
+          ],
+          "hits": {
+            "auth": [
+              "kalshi-access-headers",
+              "rsa-pss-signing",
+              "api-key-file"
+            ],
+            "orders": [],
+            "dryRun": [],
+            "loop": [],
+            "errors": [
+              "try-catch"
+            ],
+            "structure": [
+              "client-wrapper"
+            ],
+            "tests": []
+          },
+          "excerpt": "headers = { \"Content-Type\": \"application/json\", \"KALSHI-ACCESS-KEY\": self.key_id, \"KALSHI-ACCESS-SIGNATURE\": signature, \"KALSHI-ACCESS-TIMESTAMP\": timestamp_str, } return headers def sign_pss_text(self, text: str) -> str: \"\"\"Signs the text using RSA-PSS and returns the base64 encoded signature.\"\"\" message = text.encode('utf-8') try: signature = self.private_key.sign",
+          "fetchOk": true
+        },
+        {
+          "path": "shared_libraries/shared_infra_pkg/shared_infra/kalshi_clients/kalshi_base.py",
+          "components": [
+            "authApi"
+          ],
+          "hits": {
+            "auth": [
+              "kalshi-access-headers",
+              "rsa-pss-signing",
+              "api-key-file"
+            ],
+            "orders": [],
+            "dryRun": [],
+            "loop": [],
+            "errors": [
+              "try-catch"
+            ],
+            "structure": [
+              "client-wrapper"
+            ],
+            "tests": []
+          },
+          "excerpt": "headers = { \"Content-Type\": \"application/json\", \"KALSHI-ACCESS-KEY\": self.key_id, \"KALSHI-ACCESS-SIGNATURE\": signature, \"KALSHI-ACCESS-TIMESTAMP\": timestamp_str, } return headers def sign_pss_text(self, text: str) -> str: \"\"\"Signs the text using RSA-PSS and returns the base64 encoded signature.\"\"\" message = text.encode('utf-8') try: signature = self.private_key.sign",
+          "fetchOk": true
+        },
+        {
+          "path": "shared_libraries/shared_infra_pkg/build/lib/shared_infra/kalshi_clients/kalshi_base.py",
+          "components": [
+            "authApi"
+          ],
+          "hits": {
+            "auth": [
+              "kalshi-access-headers",
+              "rsa-pss-signing",
+              "api-key-file"
+            ],
+            "orders": [],
+            "dryRun": [],
+            "loop": [],
+            "errors": [
+              "try-catch"
+            ],
+            "structure": [
+              "client-wrapper"
+            ],
+            "tests": []
+          },
+          "excerpt": "headers = { \"Content-Type\": \"application/json\", \"KALSHI-ACCESS-KEY\": self.key_id, \"KALSHI-ACCESS-SIGNATURE\": signature, \"KALSHI-ACCESS-TIMESTAMP\": timestamp_str, } return headers def sign_pss_text(self, text: str) -> str: \"\"\"Signs the text using RSA-PSS and returns the base64 encoded signature.\"\"\" message = text.encode('utf-8') try: signature = self.private_key.sign",
+          "fetchOk": true
+        },
+        {
+          "path": "app/clients/kalshi/kalshi_http_client.py",
+          "components": [
+            "authApi",
+            "orderRealism"
+          ],
+          "hits": {
+            "auth": [
+              "trade-api-v2",
+              "api-key-file"
+            ],
+            "orders": [
+              "create-order-call",
+              "order-fields",
+              "portfolio-orders-path"
+            ],
+            "dryRun": [],
+            "loop": [
+              "polling-loop"
+            ],
+            "errors": [],
+            "structure": [
+              "client-wrapper"
+            ],
+            "tests": []
+          },
+          "excerpt": "vironment) self.host = self.HTTP_BASE_URL self.exchange_url = \"/trade-api/v2/exchange\" self.markets_url = \"/trade-api/v2/markets\" self.portfolio_url = \"/trade-api/v2/portfolio\" self.events_url = \"/trade-api/v2/events\" def rate_limit(self) -> None: \"\"\"Built-in rate limiter to prevent exceeding API rate limits.\"\"\" THRESHOLD_IN_MILLISECONDS = 100 now = datetime.now() threshold_in_microseconds = 1000 * T",
+          "fetchOk": true
+        },
+        {
+          "path": "shared_libraries/shared_infra_pkg/shared_infra/kalshi_clients/kalshi_http.py",
+          "components": [
+            "authApi",
+            "orderRealism"
+          ],
+          "hits": {
+            "auth": [
+              "trade-api-v2",
+              "api-key-file"
+            ],
+            "orders": [
+              "create-order-call",
+              "order-fields",
+              "portfolio-orders-path"
+            ],
+            "dryRun": [],
+            "loop": [
+              "polling-loop"
+            ],
+            "errors": [
+              "try-catch"
+            ],
+            "structure": [
+              "client-wrapper"
+            ],
+            "tests": []
+          },
+          "excerpt": "vironment) self.host = self.HTTP_BASE_URL self.exchange_url = \"/trade-api/v2/exchange\" self.markets_url = \"/trade-api/v2/markets\" self.portfolio_url = \"/trade-api/v2/portfolio\" self.events_url = \"/trade-api/v2/events\" def rate_limit(self) -> None: \"\"\"Built-in rate limiter to prevent exceeding API rate limits.\"\"\" THRESHOLD_IN_MILLISECONDS = 100 now = datetime.now() threshold_in_microseconds = 1000 * T",
+          "fetchOk": true
+        },
+        {
+          "path": "shared_libraries/shared_infra_pkg/build/lib/shared_infra/kalshi_clients/kalshi_http.py",
+          "components": [
+            "authApi",
+            "orderRealism"
+          ],
+          "hits": {
+            "auth": [
+              "trade-api-v2",
+              "api-key-file"
+            ],
+            "orders": [
+              "create-order-call",
+              "order-fields",
+              "portfolio-orders-path"
+            ],
+            "dryRun": [],
+            "loop": [
+              "polling-loop"
+            ],
+            "errors": [
+              "try-catch"
+            ],
+            "structure": [
+              "client-wrapper"
+            ],
+            "tests": []
+          },
+          "excerpt": "vironment) self.host = self.HTTP_BASE_URL self.exchange_url = \"/trade-api/v2/exchange\" self.markets_url = \"/trade-api/v2/markets\" self.portfolio_url = \"/trade-api/v2/portfolio\" self.events_url = \"/trade-api/v2/events\" def rate_limit(self) -> None: \"\"\"Built-in rate limiter to prevent exceeding API rate limits.\"\"\" THRESHOLD_IN_MILLISECONDS = 100 now = datetime.now() threshold_in_microseconds = 1000 * T",
+          "fetchOk": true
+        }
+      ],
+      "summary": {
+        "auth": [
+          "kalshi-access-headers",
+          "rsa-pss-signing",
+          "api-key-file",
+          "trade-api-v2"
+        ],
+        "orders": [
+          "create-order-call",
+          "order-fields",
+          "portfolio-orders-path"
+        ],
+        "dryRun": [],
+        "loop": [
+          "polling-loop"
+        ],
+        "errors": [
+          "try-catch"
+        ],
+        "structure": [
+          "client-wrapper"
+        ],
+        "tests": []
+      }
+    }
+  ],
+  "aggregate": {
+    "auth": [
+      "kalshi-access-headers",
+      "rsa-pss-signing",
+      "api-key-file",
+      "trade-api-v2"
+    ],
+    "orders": [
+      "create-order-call",
+      "order-fields",
+      "portfolio-orders-path"
+    ],
+    "loop": [
+      "polling-loop"
+    ],
+    "errors": [
+      "try-catch"
+    ],
+    "structure": [
+      "client-wrapper"
+    ]
+  }
+}

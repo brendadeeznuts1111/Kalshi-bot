@@ -16,6 +16,15 @@ import {
   type RotorVerificationContext,
   type VerificationStatus,
 } from "./audit-list.ts";
+import {
+  loadRepoPatternReport,
+  patternReportSourceRel,
+  pickPatternSliceForComponent,
+  type LiftPatternRef,
+  type RepoPatternReport,
+} from "./pattern-extract.ts";
+
+export type { LiftPatternRef };
 
 export type LiftRecommendation = {
   component: ScoreComponentKey;
@@ -28,6 +37,7 @@ export type LiftRecommendation = {
   verified: boolean;
   verification: VerificationStatus;
   findingId: string | null;
+  pattern: LiftPatternRef | null;
 };
 
 export type ShortlistSummary = {
@@ -94,6 +104,7 @@ function bestForComponent(
       verified: false,
       verification: "unverified",
       findingId: null,
+      pattern: null,
     };
   }
 
@@ -112,6 +123,7 @@ function bestForComponent(
     verified: rotorStatus.verified,
     verification: rotorStatus.verification,
     findingId: rotorStatus.findingId,
+    pattern: null,
   };
 }
 
@@ -203,9 +215,49 @@ export function suggestLiftFromRun(
   };
 }
 
+export async function attachPatternsToLift(
+  result: SuggestLiftResult,
+  run: ResearchRun,
+  loadRepoPatterns: (
+    dimension: string,
+    repo: string,
+    run: ResearchRun,
+  ) => Promise<RepoPatternReport | null> = loadRepoPatternsForLift,
+): Promise<SuggestLiftResult> {
+  const source = patternReportSourceRel(result.dimension);
+  const recommendations = await Promise.all(
+    result.recommendations.map(async (rec) => {
+      if (!rec.repo) return rec;
+      const repoPatterns = await loadRepoPatterns(result.dimension, rec.repo, run);
+      if (!repoPatterns) return rec;
+      const slice = pickPatternSliceForComponent(repoPatterns, rec.component);
+      if (!slice.summary && !slice.excerpt) return rec;
+      return {
+        ...rec,
+        pattern: {
+          summary: slice.summary,
+          excerpt: slice.excerpt,
+          file: slice.file,
+          source,
+        },
+      };
+    }),
+  );
+  return { ...result, recommendations };
+}
+
+async function loadRepoPatternsForLift(
+  dimension: string,
+  repoFullName: string,
+  run: ResearchRun,
+): Promise<RepoPatternReport | null> {
+  return loadRepoPatternReport(dimension, repoFullName, run, { allowLiveFetch: true });
+}
+
 export async function suggestLiftWithRotor(run: ResearchRun): Promise<SuggestLiftResult> {
   const rotor = await buildRotorVerificationIndex();
-  return suggestLiftFromRun(run, rotor);
+  const base = suggestLiftFromRun(run, rotor);
+  return attachPatternsToLift(base, run);
 }
 
 export function loadRunForSuggest(runId?: string, dimension?: string): ResearchRun | null {
@@ -237,6 +289,9 @@ export function formatSuggestLift(result: SuggestLiftResult): string {
       `  ${rec.component.padEnd(14)} ← ${rec.repo || "—"} (${rec.points}/${rec.maxPoints})${badge}`,
     );
     lines.push(`    ${rec.rationale}`);
+    if (rec.pattern?.summary) {
+      lines.push(`    ↳ pattern: ${rec.pattern.summary}`);
+    }
   }
 
   lines.push("", "Shortlist:");
