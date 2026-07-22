@@ -145,6 +145,28 @@ describe("agent patterns", () => {
     expect(md).toContain("env-secrets");
   });
 
+  test("pickPatternSliceForComponent returns miss hints when no labels", () => {
+    const repoReport: RepoPatternReport = {
+      fullName: "owner/tracker",
+      score: 40,
+      verification: "✗ unverified",
+      evidencePaths: ["README.md"],
+      summary: emptyPatternHits(),
+      files: [
+        {
+          path: "README.md",
+          components: ["authApi"],
+          hits: emptyPatternHits(),
+          excerpt: "tracker readme",
+          fetchOk: true,
+        },
+      ],
+    };
+    const slice = pickPatternSliceForComponent(repoReport, "authApi");
+    expect(slice.summary).toContain("Manual review");
+    expect(slice.misses?.length).toBeGreaterThan(0);
+  });
+
   test("pickPatternSliceForComponent prefers authApi evidence file", () => {
     const repoReport: RepoPatternReport = {
       fullName: "owner/repo",

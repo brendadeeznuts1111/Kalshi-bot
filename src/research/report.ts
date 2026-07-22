@@ -5,6 +5,7 @@ import { writeJson } from "./io.ts";
 import { githubRepoWebUrl, localRepoPath } from "./patterns.ts";
 import { OUTPUT_DIR, REPORT_DIR, joinPath } from "./paths.ts";
 import { formatDiffMarkdown } from "./diff.ts";
+import { formatGateMissMarkdown } from "./gate-miss.ts";
 import { buildRepoReport } from "./evidence.ts";
 import { shortlistTagCoverage } from "./diversify.ts";
 import { DEFAULT_MAX_PER_TAG, MAX_QUALITY_SCORE } from "./constants.ts";
@@ -103,11 +104,18 @@ export function formatReportMarkdown(run: ResearchRun, dimensionLabel?: string):
         ]
       : []),
     "",
+  ];
+
+  if (run.gateMiss) {
+    lines.push(...formatGateMissMarkdown(run.gateMiss, run.config.gate));
+  }
+
+  lines.push(
     "## Shortlist",
     "",
     ...run.shortlist.flatMap((item, i) => formatRepoSection(item, i + 1)),
     ...formatTagCoverageMarkdown(run),
-  ];
+  );
 
   const unlicensed = run.shortlist.filter((s) => s.repo.license.unlicensed);
   if (unlicensed.length) {

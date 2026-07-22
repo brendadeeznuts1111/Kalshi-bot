@@ -35,6 +35,19 @@ git add … && git commit                  # pre-commit runs check + deletion gu
 
 Protected paths: `research/reports/latest.md`, `research/reports/latest.diff.md`, `research/audit-evidence/*.jsonl`.
 
+### GitHub rate limits (preflight before live runs)
+
+Inspect uses `gh search code` — **`code_search` bucket (10/min)**, not `core`. Preflight blocks the run when quota is insufficient:
+
+```bash
+bun run rate-limit:status                              # read all buckets
+bun run rate-limit:status -- --gated=49 --uncached=49  # price-data inspect estimate
+bun run research -- --dimension=price-data             # fails fast if code_search too low
+```
+
+Optional: `GITHUB_RATE_LIMIT_WAIT=1` opts into `Bun.sleep` until reset (per-bucket cap; code_search ≤2 min/pause).
+Tests skip preflight: `RESEARCH_SKIP_RATE_PREFLIGHT=1`.
+
 ### CLI flags
 
 ```bash

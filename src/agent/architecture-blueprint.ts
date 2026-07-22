@@ -335,8 +335,19 @@ export async function buildArchitectureBlueprint(): Promise<ArchitectureBlueprin
       }
     }
 
+    if (patternReport?.repos[0]?.patternMiss?.length && !repo?.summary.auth.length) {
+      for (const miss of patternReport.repos[0].patternMiss.slice(0, 2)) {
+        notes.push(`Pattern miss (${miss.category}): ${miss.hint}`);
+      }
+    }
+
     if (!run?.shortlist.length) {
-      if (spec.emptyShortlistNote) {
+      if (run?.gateMiss?.retryHint) {
+        notes.push(run.gateMiss.retryHint);
+        for (const nm of run.gateMiss.nearMisses) {
+          notes.push(`Near miss: **${nm.fullName}** — ${nm.summary}`);
+        }
+      } else if (spec.emptyShortlistNote) {
         notes.push(spec.emptyShortlistNote);
       } else {
         notes.push("No shortlist — run research with --min-stars=1 if niche");
@@ -384,6 +395,11 @@ function formatLiftEntryMarkdown(entry: BlueprintLiftEntry): string[] {
   ];
   if (entry.pattern?.summary) {
     lines.push(`  - ↳ pattern: ${entry.pattern.summary}`);
+  }
+  if (entry.pattern?.misses?.length) {
+    for (const miss of entry.pattern.misses) {
+      lines.push(`  - ↳ review: ${miss.hint}`);
+    }
   }
   if (entry.pattern?.file) {
     lines.push(`  - ↳ file: \`${entry.pattern.file}\``);

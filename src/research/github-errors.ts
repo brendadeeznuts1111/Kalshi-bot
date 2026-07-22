@@ -94,7 +94,7 @@ export class GitHubDegradedCacheError extends GitHubRateLimitError {
 type RateLimitBudget = {
   remaining?: number | null;
   limit?: number | null;
-  resource?: "search" | "core";
+  resource?: "search" | "core" | "code_search";
 };
 
 let trippedUntilMs: number | null = null;
@@ -130,6 +130,7 @@ export function resetGitHubRateLimitCircuit(): void {
 }
 
 export function beginGitHubResearchErrorContext(ctx: GitHubResearchErrorContext): void {
+  resetGitHubRateLimitCircuit();
   activeResearchErrorContext = ctx;
 }
 
@@ -180,7 +181,7 @@ export function getGitHubCircuitState(): {
   trippedAt: string | null;
   remainingBudget: number | null;
   limit: number | null;
-  resource: "search" | "core" | null;
+  resource: "search" | "core" | "code_search" | null;
 } {
   return {
     tripped: isGitHubRateLimitTripped(),
@@ -351,7 +352,7 @@ export type GitHubApiErrorWire = {
     trippedAt: string | null;
     remainingBudget: number | null;
     limit: number | null;
-    resource: "search" | "core" | null;
+    resource: "search" | "core" | "code_search" | null;
   };
 };
 

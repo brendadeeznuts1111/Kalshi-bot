@@ -13,6 +13,7 @@ import { readJsonFile, writeJson } from "../research/io.ts";
 import { ensureGhRateBudget } from "../research/gh.ts";
 import { warmGitHubApiNetwork } from "../research/github-network.ts";
 import { lookupRepoVerification, buildRotorVerificationIndex, formatVerificationBadge } from "./audit-list.ts";
+import { attachPatternMisses, formatPatternMissMarkdown, patternMissForComponent, formatPatternMissSummary } from "./pattern-miss.ts";
 
 export const MAX_REPOS_PER_REPORT = 5;
 export const MAX_FILES_PER_REPO = 6;
@@ -45,6 +46,7 @@ export type RepoPatternReport = {
   evidencePaths: string[];
   files: FilePatternSlice[];
   summary: PatternHits;
+  patternMiss?: import("./pattern-miss.ts").PatternMissSuggestion[];
 };
 
 export type PatternReport = {
@@ -60,6 +62,7 @@ export type LiftPatternRef = {
   excerpt: string | null;
   file: string | null;
   source: string;
+  misses?: import("./pattern-miss.ts").PatternMissSuggestion[];
 };
 
 /** Score component → pattern categories for lift-map excerpts. */
@@ -267,14 +270,14 @@ export async function extractRepoPatterns(
     });
   }
 
-  return {
+  return attachPatternMisses({
     fullName: item.repo.fullName,
     score: item.score.total,
     verification: verificationLabel,
     evidencePaths: paths,
     files,
     summary,
-  };
+  });
 }
 
 export function aggregatePatternReports(repos: RepoPatternReport[]): PatternReport["aggregate"] {
@@ -350,6 +353,10 @@ export function formatPatternReportMarkdown(report: PatternReport): string {
 
   for (const repo of report.repos) {
     lines.push("", `## ${repo.fullName} (${repo.score}) — ${repo.verification}`, "");
+    const totalHits = Object.values(repo.summary).some((labels) => labels.length > 0);
+    if (!totalHits && repo.patternMiss?.length) {
+      lines.push(...formatPatternMissMarkdown(repo.patternMiss));
+    }
     if (!repo.files.length) {
       lines.push("_No line-evidence paths to inspect._");
       continue;
@@ -397,7 +404,7 @@ export function formatPatternSummary(labels: string[]): string {
 export function pickPatternSliceForComponent(
   repoReport: RepoPatternReport,
   component: ScoreComponentKey,
-): { summary: string; excerpt: string | null; file: string | null } {
+): { summary: string; excerpt: string | null; file: string | null; misses?: import("./pattern-miss.ts").PatternMissSuggestion[] } {
   const categories = COMPONENT_PATTERN_CATEGORIES[component];
   const labels: string[] = [];
   for (const cat of categories) {
@@ -417,6 +424,16 @@ export function pickPatternSliceForComponent(
       bestScore = score;
       bestFile = file;
     }
+  }
+
+  if (!labels.length) {
+    const misses = patternMissForComponent(repoReport, categories);
+    return {
+      summary: formatPatternMissSummary(misses),
+      excerpt: bestFile?.excerpt ?? null,
+      file: bestFile?.path ?? repoReport.evidencePaths[0] ?? null,
+      misses: misses.length ? misses : undefined,
+    };
   }
 
   return {

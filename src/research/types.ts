@@ -170,6 +170,8 @@ export type ResearchRun = {
   scored: ScoredRepo[];
   shortlist: ScoredRepo[];
   excludedSdkOnly: ScoredRepo[];
+  /** Populated when discover > 0 but gate passes 0 — near misses + retry command. */
+  gateMiss?: import("./gate-miss.ts").GateMissStats;
 };
 
 export type RunDiff = {

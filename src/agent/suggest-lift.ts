@@ -24,6 +24,7 @@ import {
   type LiftPatternRef,
   type RepoPatternReport,
 } from "./pattern-extract.ts";
+import { formatPatternMissSummary } from "./pattern-miss.ts";
 
 export type { LiftPatternRef };
 
@@ -232,14 +233,15 @@ export async function attachPatternsToLift(
       const repoPatterns = await loadRepoPatterns(result.dimension, rec.repo, run);
       if (!repoPatterns) return rec;
       const slice = pickPatternSliceForComponent(repoPatterns, rec.component);
-      if (!slice.summary && !slice.excerpt) return rec;
+      if (!slice.summary && !slice.excerpt && !slice.misses?.length) return rec;
       return {
         ...rec,
         pattern: {
-          summary: slice.summary,
+          summary: slice.summary || formatPatternMissSummary(slice.misses ?? []),
           excerpt: slice.excerpt,
           file: slice.file,
           source,
+          misses: slice.misses,
         },
       };
     }),
@@ -299,6 +301,9 @@ export function formatSuggestLift(result: SuggestLiftResult): string {
       if (!rec.repo) continue;
       lines.push(`  ${rec.component}: ${rec.rationale}`);
       if (rec.pattern?.summary) lines.push(`    ↳ pattern: ${rec.pattern.summary}`);
+      if (rec.pattern?.misses?.length && !rec.pattern.summary.includes("Manual review")) {
+        lines.push(`    ↳ review: ${formatPatternMissSummary(rec.pattern.misses)}`);
+      }
     }
   } else {
     for (const rec of result.recommendations) {

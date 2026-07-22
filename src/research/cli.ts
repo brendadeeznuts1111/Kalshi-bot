@@ -7,6 +7,7 @@ import { parseArgs } from "node:util";
 import { inspectRepo } from "./inspect.ts";
 import { discoverCandidates, loadConfig } from "./discover.ts";
 import { applyGate } from "./gate.ts";
+import { analyzeGateMiss, formatGateMissMarkdown } from "./gate-miss.ts";
 import { mapPool } from "./pool.ts";
 import { scoreRepo, stackRank } from "./score.ts";
 import { buildShortlist } from "./diversify.ts";
@@ -16,6 +17,7 @@ import { writeAuditExports } from "./export-audit.ts";
 import { ensureCacheDir, saveRun, loadInspectCache } from "./cache.ts";
 import { ensureGh } from "./preflight.ts";
 import { ensureGhRateBudget, GitHubRateLimitError } from "./gh.ts";
+import { ensureInspectRateBudget, formatInspectBudgetEstimate } from "./github-rate-limit.ts";
 import {
   beginGitHubResearchErrorContext,
   buildGitHubErrorEnrichment,
@@ -144,6 +146,7 @@ export async function runResearch(opts: CliOptions): Promise<ResearchRun> {
   logResearchStatus(`Discovered ${candidates.length} candidates (${querySet.label})`);
 
   const gated = applyGate(candidates, gate);
+  const gateMiss = analyzeGateMiss(candidates, gated, gate, { dimension });
   progress({
     type: "stats",
     discovered: candidates.length,
@@ -152,8 +155,21 @@ export async function runResearch(opts: CliOptions): Promise<ResearchRun> {
   });
   progress({ type: "phase", phase: "gate", dimension, detail: `${gated.length} passed gate` });
   logResearchStatus(`${gated.length} passed popularity gate`);
+  if (gateMiss) {
+    logResearchStatus(gateMiss.retryHint ?? "Gate miss — no near-miss candidates to probe");
+    for (const nm of gateMiss.nearMisses) {
+      logResearchStatus(`  near miss: ${nm.fullName} — ${nm.summary}`);
+    }
+  }
 
   progress({ type: "phase", phase: "inspect", dimension, detail: `concurrency ${DEFAULT_INSPECT_CONCURRENCY}` });
+  const uncachedCount = gated.filter((repo) => loadInspectCache(repo.fullName, repo.pushedAt) === null).length;
+  const inspectBudget = await ensureInspectRateBudget({
+    repoCount: gated.length,
+    uncachedRepoCount: uncachedCount,
+    config,
+  });
+  logResearchStatus(formatInspectBudgetEstimate(inspectBudget));
   logResearchStatus(`Inspecting repos (concurrency ${DEFAULT_INSPECT_CONCURRENCY})...`);
   let inspectCacheHits = 0;
   let inspectIndex = 0;
@@ -211,6 +227,7 @@ export async function runResearch(opts: CliOptions): Promise<ResearchRun> {
     scored,
     shortlist,
     excludedSdkOnly,
+    gateMiss,
   };
 
   const baseline = opts.diff ? await loadRunById(opts.diff, dimension) : await loadPreviousRun(dimension);

@@ -14,6 +14,7 @@ import {
 import { withCache, loadInspectCache, loadLatestInspectCache, saveInspectCache } from "./cache.ts";
 import { isGitHubRateLimitTripped } from "./github-errors.ts";
 import { recordCacheStat } from "./github-cache-stats.ts";
+import { DEFAULT_CODE_SEARCH_CONCURRENCY } from "./constants.ts";
 
 type GhCodeHit = { path: string };
 type GhCommit = { commit: { author: { date: string } } };
@@ -109,7 +110,7 @@ async function fetchReadme(repo: RepoCandidate): Promise<string> {
 }
 
 async function searchCode(repo: RepoCandidate, queries: string[], scope: string) {
-  return mapPool(queries, 2, async (term) => {
+  return mapPool(queries, DEFAULT_CODE_SEARCH_CONCURRENCY, async (term) => {
     return withCache(repo.fullName, repo.pushedAt, `code_${term}`, async () => {
       try {
         const rows = await ghJson<GhCodeHit[]>([

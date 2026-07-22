@@ -98,6 +98,9 @@ export const MS_PER_DAY = 86_400_000;
 /** Inspect pool concurrency in CLI. */
 export const DEFAULT_INSPECT_CONCURRENCY = 4;
 
+/** Parallel `gh search code` queries per repo — keep low (code_search is 10/min). */
+export const DEFAULT_CODE_SEARCH_CONCURRENCY = 1;
+
 /** `gh search repos --limit`. */
 export const DEFAULT_GH_SEARCH_LIMIT = 30;
 

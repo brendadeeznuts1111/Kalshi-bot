@@ -11,6 +11,7 @@ import {
   tripGitHubRateLimit,
 } from "./github-errors.ts";
 import { recordCacheStat } from "./github-cache-stats.ts";
+import { computeWaitMs } from "./github-rate-limit.ts";
 
 const GITHUB_API_VERSION = "2022-11-28";
 
@@ -85,9 +86,8 @@ function parseRateLimitHeaders(headers: Headers): {
 }
 
 async function pauseUntilReset(resetSec: number): Promise<void> {
-  const waitMs = Math.max(2000, resetSec * 1000 - Date.now() + 2000);
-  const capped = Math.min(waitMs, 3_600_000);
-  console.error(`[github] rate limit — waiting ${Math.ceil(capped / 1000)}s (GITHUB_RATE_LIMIT_WAIT=1)`);
+  const capped = computeWaitMs(resetSec, Date.now(), "search");
+  console.error(`[github] search rate limit — waiting ${Math.ceil(capped / 1000)}s (GITHUB_RATE_LIMIT_WAIT=1)`);
   await Bun.sleep(capped);
 }
 
