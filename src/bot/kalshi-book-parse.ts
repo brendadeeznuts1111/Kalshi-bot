@@ -44,10 +44,18 @@ export function yesAsksFromNoBids(noBids: BookLevel[]): BookLevel[] {
   }));
 }
 
+/** YES bid P + NO bid Q > 100 implies a transient crossed book (free-money anomaly). */
+export function isCrossedKalshiBook(yesBestBidCents: number | null, noBestBidCents: number | null): boolean {
+  if (yesBestBidCents == null || noBestBidCents == null) return false;
+  return yesBestBidCents + noBestBidCents > 100;
+}
+
 export function midFromBookSnapshot(book: BookSnapshot): number | null {
+  if (book.crossed) return null;
   const bestBid = book.bids[0]?.priceCents;
   const bestAsk = book.asks[0]?.priceCents;
   if (bestBid == null || bestAsk == null) return null;
+  if (bestBid > bestAsk) return null;
   return Math.round((bestBid + bestAsk) / 2);
 }
 
@@ -77,11 +85,15 @@ export function parseKalshiOrderbookWire(wire: unknown, seq = 0): BookSnapshot {
 
   const bids = bestFirstBids(yesBids);
   const asks = bestFirstAsks(yesAsksFromNoBids(noBids));
+  const yesBestBid = bids[0]?.priceCents ?? null;
+  const noBestBid = bestFirstBids(noBids)[0]?.priceCents ?? null;
+  const crossed = isCrossedKalshiBook(yesBestBid, noBestBid);
 
   return {
     ts: Date.now(),
     bids,
     asks,
     seq,
+    ...(crossed ? { crossed: true } : {}),
   };
 }

@@ -5,6 +5,11 @@ import { ensureCacheDir } from "../research/cache.ts";
 import type { FeedEventId } from "./odds-types.ts";
 import { asFeedEventId, tryFeedEventId } from "./odds-types.ts";
 import { TICKER_MAP_DB, TICKER_OVERRIDES_PATH } from "./paths.ts";
+import {
+  bothTeamsMatchedForTicker,
+  detectTickerFormat,
+  extractTeamHints,
+} from "./ticker-formats/index.ts";
 
 export type FeedEventRef = {
   eventId: FeedEventId;
@@ -43,39 +48,8 @@ export class TickerMappingError extends Error {
   }
 }
 
-/** Kalshi NBA suffix codes → substring match in Odds API team names. */
-export const NBA_TEAM_CODES: Record<string, string> = {
-  ATL: "Hawks",
-  BOS: "Celtics",
-  BKN: "Nets",
-  CHA: "Hornets",
-  CHI: "Bulls",
-  CLE: "Cavaliers",
-  DAL: "Mavericks",
-  DEN: "Nuggets",
-  DET: "Pistons",
-  GSW: "Warriors",
-  HOU: "Rockets",
-  IND: "Pacers",
-  LAC: "Clippers",
-  LAL: "Lakers",
-  MEM: "Grizzlies",
-  MIA: "Heat",
-  MIL: "Bucks",
-  MIN: "Timberwolves",
-  NOP: "Pelicans",
-  NYK: "Knicks",
-  OKC: "Thunder",
-  ORL: "Magic",
-  PHI: "76ers",
-  PHX: "Suns",
-  POR: "Trail Blazers",
-  SAC: "Kings",
-  SAS: "Spurs",
-  TOR: "Raptors",
-  UTA: "Jazz",
-  WAS: "Wizards",
-};
+/** @deprecated import from ticker-formats/nba.ts */
+export { NBA_TEAM_CODES, parseNbaGameTeamCodes, extractTeamHints } from "./ticker-formats/index.ts";
 
 let mapDb: Database | null = null;
 let mapDbs = new Map<string, Database>();
@@ -131,32 +105,6 @@ export function extractKalshiDateToken(ticker: string): string | null {
   return m?.[1] ?? null;
 }
 
-/** Parse KXNBAGAME suffix into [homeCode, awayCode] (Kalshi home+away order). */
-export function parseNbaGameTeamCodes(ticker: string): [string, string] | null {
-  const m = ticker.match(/^KXNBAGAME-\d{2}[A-Z]{3}\d{2}([A-Z]{6})$/);
-  if (!m) return null;
-  const blob = m[1]!;
-  return [blob.slice(0, 3), blob.slice(3, 6)];
-}
-
-/** Team hint tokens from ticker suffix (uppercase runs). */
-export function extractTeamHints(ticker: string): string[] {
-  const nba = parseNbaGameTeamCodes(ticker);
-  if (nba) return nba;
-  const upper = ticker.replace(/[^A-Z]/g, "");
-  const hints: string[] = [];
-  for (let len = 3; len <= 4; len++) {
-    if (upper.length >= len) hints.push(upper.slice(-len));
-  }
-  return [...new Set(hints)];
-}
-
-function teamNameMatchesCode(code: string, teamName: string): boolean {
-  const needle = NBA_TEAM_CODES[code];
-  if (!needle) return teamName.toUpperCase().includes(code);
-  return teamName.toLowerCase().includes(needle.toLowerCase());
-}
-
 function teamHintScore(hints: string[], home: string, away: string): number {
   const blob = `${home} ${away}`.toUpperCase();
   let score = 0;
@@ -167,15 +115,7 @@ function teamHintScore(hints: string[], home: string, away: string): number {
 }
 
 function bothTeamsMatched(ticker: string, home: string, away: string): boolean {
-  const nba = parseNbaGameTeamCodes(ticker);
-  if (nba) {
-    const [homeCode, awayCode] = nba;
-    return teamNameMatchesCode(homeCode, home) && teamNameMatchesCode(awayCode, away);
-  }
-  const hints = extractTeamHints(ticker);
-  const homeHit = hints.some((h) => home.toUpperCase().includes(h));
-  const awayHit = hints.some((h) => away.toUpperCase().includes(h));
-  return homeHit && awayHit;
+  return bothTeamsMatchedForTicker(ticker, home, away);
 }
 
 function dateProximityScore(kalshiToken: string | null, commenceTime: string): number {
@@ -311,6 +251,9 @@ export async function matchTicker(
   let bestScore = 0;
   let best: MappedEvent | null = null;
   for (const event of feedEvents) {
+    if (detectTickerFormat(kalshiTicker) !== "unknown") {
+      if (!bothTeamsMatched(kalshiTicker, event.homeTeam, event.awayTeam)) continue;
+    }
     let score = dateProximityScore(dateToken, event.commenceTime);
     score += teamHintScore(hints, event.homeTeam, event.awayTeam);
     if (score > bestScore) {

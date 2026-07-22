@@ -11,12 +11,13 @@ import {
   type FeedEventRef,
   type TickerMapperOptions,
 } from "./ticker-mapper.ts";
+import { yesProbabilityFromSnapshot } from "./ticker-formats/index.ts";
 
 export type BuildPinnacleSignalInput = {
   kalshiTicker: string;
   book: BookSnapshot;
   events: OddsEvent[];
-  /** YES = home team wins on KXNBAGAME-{date}{HOME}{AWAY} tickers. */
+  /** YES side — home on KXNBAGAME; suffix team on KXMLBGAME. */
   side?: "yes" | "no";
   kalshiPriceCents?: number;
   mapperOptions?: TickerMapperOptions;
@@ -58,8 +59,14 @@ export async function buildPinnacleSignalContext(
   if (!snap) return null;
 
   const side = input.side ?? "yes";
-  const pModel =
-    side === "yes" ? snap.probabilities.home : snap.probabilities.away;
+  const yesProb = yesProbabilityFromSnapshot(
+    input.kalshiTicker,
+    snap.probabilities.home,
+    snap.probabilities.away,
+    event.homeTeam,
+    event.awayTeam,
+  );
+  const pModel = side === "yes" ? yesProb : 1 - yesProb;
 
   if (kalshiPriceCents != null) {
     validateTickerMapping(input.kalshiTicker, mapped, {

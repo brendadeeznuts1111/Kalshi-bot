@@ -2,6 +2,7 @@
 import { describe, expect, test } from "bun:test";
 import { joinPath } from "../../src/research/paths.ts";
 import {
+  isCrossedKalshiBook,
   midFromBookSnapshot,
   parseKalshiOrderbookWire,
   yesAsksFromNoBids,
@@ -12,6 +13,19 @@ describe("kalshi book parse", () => {
   test("NO bids convert to YES asks via reciprocity", () => {
     const asks = yesAsksFromNoBids([{ priceCents: 7, size: 10 }]);
     expect(asks[0]?.priceCents).toBe(93);
+    expect(isCrossedKalshiBook(94, 7)).toBe(true);
+    expect(isCrossedKalshiBook(44, 55)).toBe(false);
+  });
+
+  test("detects crossed yes/no bids and nulls mid", () => {
+    const book = parseKalshiOrderbookWire({
+      orderbook: {
+        yes: [[60, 10]],
+        no: [[50, 10]],
+      },
+    });
+    expect(book.crossed).toBe(true);
+    expect(midFromBookSnapshot(book)).toBeNull();
   });
 
   test("parseKalshiOrderbookWire builds best-first book", async () => {
