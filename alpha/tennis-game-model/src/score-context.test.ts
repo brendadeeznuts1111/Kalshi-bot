@@ -113,6 +113,10 @@ describe("score-context", () => {
       setsNo: 0,
       gamesYes: 5,
       gamesNo: 3,
+      pointsServer: 0,
+      pointsReturner: 0,
+      serverIsYes: null,
+      bestOf: 3,
       isLive: true,
     });
   });
@@ -145,6 +149,10 @@ describe("score-context", () => {
       setsNo: 0,
       gamesYes: 4,
       gamesNo: 2,
+      pointsServer: 0,
+      pointsReturner: 0,
+      serverIsYes: null,
+      bestOf: 3,
       isLive: true,
     });
   });

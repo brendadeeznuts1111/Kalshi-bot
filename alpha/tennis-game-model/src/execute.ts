@@ -45,6 +45,7 @@ export async function executeOnce(options: ExecuteOptions): Promise<void> {
   const eventId = asCanonicalEventId(options.eventId ?? tick.eventId);
   const scoreContext = loadScoreContext(db, eventId, ticker);
   const built = await buildSignalContext({
+    db,
     ticker: options.ticker,
     eventId: unbrand(eventId),
     book: tick.book,

@@ -1,5 +1,5 @@
 /**
- * Signal spec — self-model: p_model = market mid prior, live score logit adjustment.
+ * Signal spec — self-model v1: opening prior + match Markov in-play.
  */
 export type {
   BookLevel,
@@ -8,16 +8,24 @@ export type {
   SignalContext,
 } from "../../../src/institutions/alpha-signal-types.ts";
 
+import type { Database } from "bun:sqlite";
 import { midFromBookSnapshot } from "../../../src/bot/kalshi-book-parse.ts";
 import type { BookSnapshot, Decision, SignalContext } from "../../../src/institutions/alpha-signal-types.ts";
+import {
+  asCanonicalEventId,
+  asKalshiMarketTicker,
+  type CanonicalEventId,
+  type KalshiMarketTicker,
+} from "../../../src/institutions/event-store/brands.ts";
+import { buildGameModelP } from "./game-model.ts";
 import type { ScoreContext } from "./score-context.ts";
-import { scoreAdjustedPModel } from "./score-model.ts";
 
 export function midCents(book: BookSnapshot): number | null {
   return midFromBookSnapshot(book);
 }
 
 export async function buildSignalContext(input: {
+  db: Database;
   ticker: string;
   eventId: string;
   book: BookSnapshot;
@@ -28,42 +36,29 @@ export async function buildSignalContext(input: {
     return null;
   }
 
-  const priorP = mid / 100;
-  const score = input.scoreContext ?? null;
-  const adjusted = score
-    ? scoreAdjustedPModel({
-        priorP,
-        setsYes: score.setsYes,
-        setsNo: score.setsNo,
-        gamesYes: score.gamesYes,
-        gamesNo: score.gamesNo,
-        isLive: score.isLive,
-      })
-    : scoreAdjustedPModel({
-        priorP,
-        setsYes: 0,
-        setsNo: 0,
-        gamesYes: 0,
-        gamesNo: 0,
-        isLive: false,
-      });
+  const ticker = asKalshiMarketTicker(input.ticker);
+  const eventId = asCanonicalEventId(input.eventId);
 
-  const components: Record<string, number> = {
-    market_mid_prior: priorP,
-    score_adjusted: adjusted.pModel,
-    live: score?.isLive ? 1 : 0,
-  };
-  if (score?.isLive) {
-    components.set_delta = adjusted.setDelta;
-    components.game_delta = adjusted.gameDelta;
+  const model = buildGameModelP({
+    db: input.db,
+    ticker,
+    eventId,
+    currentMidCents: mid,
+    score: input.scoreContext ?? null,
+  });
+  if (!model) {
+    return null;
   }
 
   return {
     ticker: input.ticker,
     eventId: input.eventId,
     book: input.book,
-    pModel: adjusted.pModel,
-    components,
+    pModel: model.pModel,
+    components: {
+      ...model.components,
+      market_mid_current: mid / 100,
+    },
   };
 }
 
@@ -92,8 +87,8 @@ export function decide(ctx: SignalContext, minContracts: number): Decision {
   if (mid == null) {
     return { action: "skip", reason: "no tradeable mid — one-sided or invalid book" };
   }
-  if (ctx.components.market_mid_prior == null) {
-    return { action: "skip", reason: "p_model unavailable — mid missing at signal build" };
+  if (ctx.components.market_opening_prior == null && ctx.components.market_mid_current == null) {
+    return { action: "skip", reason: "p_model unavailable — no opening prior or mid" };
   }
 
   const isLive = ctx.components.live === 1;
@@ -104,13 +99,16 @@ export function decide(ctx: SignalContext, minContracts: number): Decision {
     };
   }
 
+  const modelKind = ctx.components.model_kind ?? 0;
+  const modelLabel =
+    modelKind === 2 ? "match_markov_v1" : modelKind === 1 ? "opening_fallback" : "opening_prior";
   return {
     action: "trade",
     side: "yes",
     contracts,
     limitCents,
     reason: isLive
-      ? "live score-adjusted p_model passed structural checks (fee gate in execute)"
-      : "market-mid prior passed structural checks (fee gate in execute)",
+      ? `match model (${modelLabel}) passed structural checks (fee gate in execute)`
+      : "opening prior passed structural checks (fee gate in execute)",
   };
 }

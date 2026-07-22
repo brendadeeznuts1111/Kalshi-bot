@@ -3,7 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "bun test src/book-context.test.ts src/score-model.test.ts src/score-context.test.ts",
-    "run-once": "bun src/run-once.ts"
+    "test": "bun test src/",
+    "run-once": "bun src/run-once.ts",
+    "run-watch": "bun src/run-watch.ts",
+    "backtest": "bun src/backtest.ts"
   }
 }

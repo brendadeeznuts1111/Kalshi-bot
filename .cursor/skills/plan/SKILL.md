@@ -57,7 +57,7 @@ Challenger/ITF self-model lane (`tennis-game-model` archetype). Infrastructure o
 | Branded event-store IDs | **Done** | `event-store/brands.ts` |
 | WS on linked corpus / long capture | **Done** | 120s validated: 94 deltas, 64% exchange clock, 0 seq gaps on 24-ticker watch |
 | WS recorder OS cron | **Done** | `tennis:record:ws:register` — `*/30 * * * *`, 300s capture |
-| Alpha join on WS `book_ticks` | **Partial** (live score v0 wired) | `alpha/tennis-game-model/` — DB book_ticks + live_scores → score-adjusted p_model |
+| Alpha join on WS `book_ticks` | **Partial** (match Markov v1) | `match-model.ts` point→game→set→match; opening prior anchor; `run-watch` + `backtest` |
 
 **File naming (WS lane):** `kalshi-*` wire · `tennis-ws-*` ground/artifacts · `tennis-book-*` analytics · `orderbook-*` protocol state · `tools/tennis/tennis-ws-ground-cli.ts`.
 
@@ -240,7 +240,7 @@ Public repos answer plumbing. They do not answer α.
 | T4 | Long WS capture on watch-set | **Done** | — |
 | T5 | Exchange-clock deltas (`source_clock=exchange`) | **Done** | — |
 | T6 | WS recorder cron | **Done** | optional: `tennis:record:ws:preview` / `tennis:record:ws:register` |
-| T7 | `tennis-game-model` signal on WS books | **Partial** (live score v0) | score-adjusted p_model from live_scores; full point/game model next |
+| T7 | `tennis-game-model` signal on WS books | **Partial** (match Markov v1) | opening prior + in-play match prob; `bun src/backtest.ts` on resolved corpus |
 
 ## Execute now (priority order)
 

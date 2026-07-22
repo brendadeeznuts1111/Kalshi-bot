@@ -208,15 +208,17 @@ TENNIS_LIVE_INTERVAL_MS=5000 bun run tennis:live -- --loop
 
 The calendar said where the markets are. The collector is what lets a self-model disagree with them.
 
-### Alpha join — `tennis-game-model` (live score v0)
+### Alpha join — `tennis-game-model` (match Markov v1)
 
-Self-model shadow reads **event-store `book_ticks` + `live_scores`** (no Odds API). Latest tick per ticker prefers `kalshi-ws`, else `kalshi-rest`. Pre-match: `priorP = mid/100` with deep-tail skip (>85¢ / <15¢). In-play: logit adjustment from set/game differential (`score-model.ts`). Fee-aware `decide()` + append-only shadow log.
+Self-model shadow reads **event-store `book_ticks` + `live_scores`**. **Opening prior** = first `book_tick` mid (not rolling mid). Pre-match: `p_model = opening prior`; deep-tail skip (>85¢ / <15¢). In-play: symmetric hold strength inferred from opening prior → **point→game→set→match** Markov (`match-model.ts`) with server + point score from Kalshi live_data.
 
 ```bash
 bun run alpha:run -- --program=tennis-game-model --ticker=KXITFMATCH-26JUL22AAA-BBB --fetch-book
+cd alpha/tennis-game-model && bun src/run-watch.ts          # watch-set batch shadow
+cd alpha/tennis-game-model && bun src/backtest.ts           # Brier vs market mid on resolutions
 ```
 
-Requires prior `tennis:record -- --watch` or `--ws` and `tennis:live` rows in `research/cache/event-store.db`.
+Requires prior `tennis:record` + `tennis:live` rows in `research/cache/event-store.db`.
 
 ### Tour baseline — `tennis-tour-pinnacle-novig`
 

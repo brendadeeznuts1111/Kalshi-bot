@@ -17,7 +17,12 @@ import type { ScoreState } from "./score-model.ts";
 
 export type { ScoreState };
 
-export type ScoreContext = ScoreState;
+export type ScoreContext = ScoreState & {
+  pointsServer: number;
+  pointsReturner: number;
+  serverIsYes: boolean | null;
+  bestOf: 3 | 5;
+};
 
 type EventPlayersRow = {
   player_a: string;
@@ -33,6 +38,9 @@ type MarketRow = {
 type LiveCompetitorRow = {
   competitor1_id: string | null;
   competitor2_id: string | null;
+  server_competitor_id: string | null;
+  points_home: number;
+  points_away: number;
 };
 
 type CompetitorLabelRow = {
@@ -61,7 +69,8 @@ function loadLiveCompetitors(
 ): LiveCompetitorRow | null {
   return db
     .query(
-      `SELECT competitor1_id, competitor2_id
+      `SELECT competitor1_id, competitor2_id, server_competitor_id,
+              points_home, points_away
        FROM live_scores WHERE event_id = $id`,
     )
     .get({ $id: unbrand(eventId) }) as LiveCompetitorRow | null;
@@ -168,14 +177,35 @@ export function loadScoreContext(
 
   const setsYes = side === "home" ? live.setsHome : live.setsAway;
   const setsNo = side === "home" ? live.setsAway : live.setsHome;
-  const gamesYes = side === "home" ? live.gamesHome : live.gamesAway;
-  const gamesNo = side === "home" ? live.gamesAway : live.gamesHome;
+
+  let serverIsYes: boolean | null = null;
+  if (liveIds.server_competitor_id) {
+    if (liveIds.server_competitor_id === liveIds.competitor1_id) {
+      serverIsYes = side === "home";
+    } else if (liveIds.server_competitor_id === liveIds.competitor2_id) {
+      serverIsYes = side === "away";
+    }
+  }
+
+  const pointsHome = liveIds.points_home ?? live.pointsHome;
+  const pointsAway = liveIds.points_away ?? live.pointsAway;
+  const pointsServer = side === "home" ? pointsHome : pointsAway;
+  const pointsReturner = side === "home" ? pointsAway : pointsHome;
+
+  const bestOfRow = db
+    .query(`SELECT best_of FROM events WHERE event_id = $id`)
+    .get({ $id: unbrand(eventId) }) as { best_of: number | null } | null;
+  const bestOf: 3 | 5 = (bestOfRow?.best_of ?? 3) >= 5 ? 5 : 3;
 
   return {
     setsYes,
     setsNo,
-    gamesYes,
-    gamesNo,
+    gamesYes: side === "home" ? live.gamesHome : live.gamesAway,
+    gamesNo: side === "home" ? live.gamesAway : live.gamesHome,
+    pointsServer,
+    pointsReturner,
+    serverIsYes,
+    bestOf,
     isLive: live.isLive,
   };
 }
