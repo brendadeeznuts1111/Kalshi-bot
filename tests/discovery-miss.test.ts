@@ -2,6 +2,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   analyzeDiscoveryMiss,
+  formatDiscoveryMissHtml,
   formatDiscoveryMissMarkdown,
   proposeAlternateDiscoveryQueries,
 } from "../src/research/discovery-miss.ts";
@@ -56,5 +57,14 @@ describe("discovery-miss", () => {
     expect(md).toContain("### Alternate queries");
     expect(md).toContain("### Suggested probe");
     expect(md).toContain("kalshi bot");
+  });
+
+  test("formatDiscoveryMissHtml renders panel", () => {
+    const resolved = resolveDimensionQueries(dimensionsFile, "sports-nba");
+    const miss = analyzeDiscoveryMiss("sports-nba", resolved, gate, dimensionsFile, 0)!;
+    const html = formatDiscoveryMissHtml(miss, { escapeHtml: (s) => s });
+    expect(html).toContain('id="discovery-miss-panel"');
+    expect(html).toContain("Discovery miss");
+    expect(html).toContain("kalshi bot");
   });
 });

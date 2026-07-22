@@ -65,4 +65,4 @@ Built by `buildRepoReport()` in `src/research/evidence.ts`.
 
 Draft adapter: `src/research/audit-adapter.ts` · export: `--export-audit` · [AUDIT_ADAPTER.md](./AUDIT_ADAPTER.md)
 
-Rotor wire ingested; pulse daemon verifies via `bun run pulse:start` in `~/Projects`.
+Optional rotor ingest is write-only via `--export-audit` — this project does not read pulse or audit-catalog.

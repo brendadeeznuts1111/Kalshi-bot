@@ -34,9 +34,7 @@ Deep dive: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns)
 | Audit digests | `Bun.CryptoHasher("sha3-256")` | [`audit-adapter.ts`](../src/research/audit-adapter.ts), [`export-audit.ts`](../src/research/export-audit.ts) |
 | GitHub URL SSOT | `BunURLPattern` + `URLPattern` ([v1.3.4+](https://bun.com/blog/bun-v1.3.4#urlpattern-api)) | [`patterns.ts`](../src/research/patterns.ts) |
 | Report browser | `Bun.serve` routes + `Bun.file` | [`serve.ts`](../src/research/serve.ts), [`views.ts`](../src/research/views.ts) |
-| Agent dashboard | `Bun.serve` + optional headless `Bun.WebView` | [`dashboard.ts`](../src/agent/dashboard.ts), [`docs/DASHBOARD.md`](../docs/DASHBOARD.md) |
-| Dashboard audit PNG | `Bun.Image.metadata()` (zero-copy header) + SHA-256 | [`dashboard-screenshot.ts`](../src/agent/dashboard-screenshot.ts) |
-| Agent CLI | `Bun.WebView` capture + dashboard client | [`cli.ts`](../src/agent/cli.ts), [`docs/AGENT.md`](../docs/AGENT.md) |
+| Agent CLI | status / patterns / blueprint over `cache.db` | [`cli.ts`](../src/agent/cli.ts), [`docs/AGENT.md`](../docs/AGENT.md) |
 | Terminal reports | `Bun.markdown.ansi` | [`report-term.ts`](../src/agent/report-term.ts) |
 | TTY tables + OSC 8 links | `Bun.inspect.table` + `Bun.stringWidth` | [`terminal-out.ts`](../src/research/terminal-out.ts) |
 | Agent IPC research progress | `Bun.spawn` + `process.send` | [`research-runner.ts`](../src/agent/research-runner.ts), [`research-progress.ts`](../src/research/research-progress.ts) |
@@ -73,8 +71,6 @@ Deep dive: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns)
 | `Bun.CryptoHasher` | https://bun.com/docs/runtime/hashing#bun-cryptohasher |
 | `URLPattern` | https://bun.com/blog/bun-v1.3.4#urlpattern-api |
 | `Bun.serve` | https://bun.com/docs/runtime/http/server#basic-setup |
-| `Bun.WebView` | https://bun.com/docs/runtime/webview#new-bun-webview-options |
-| `Bun.Image` | https://bun.com/docs/runtime/image#input |
 | `Bun.markdown.ansi` | https://bun.com/docs/runtime/markdown#ansi-terminal-output |
 | `Bun.inspect.table` | https://bun.com/docs/runtime/utils#bun-inspect-table-tabulardata-properties-options |
 | `Bun.stringWidth` | https://bun.com/docs/runtime/utils#bun-stringwidth |

@@ -1,8 +1,9 @@
 // @see https://bun.com/docs/test/index#run-tests
 import { afterEach, describe, expect, test } from "bun:test";
-import { cacheHash, isProductionRunId, isEligibleProductionRun, listRunSummaries, saveRun, loadRunFromDb, searchCachedPayloads, withCache, loadInspectCache, loadLatestInspectCache, saveInspectCache } from "../src/research/cache.ts";
+import { cacheHash, isProductionRunId, isEligibleProductionRun, listRunSummaries, saveRun, loadRunFromDb, loadLatestRunFromDb, loadResearchRun, searchCachedPayloads, withCache, loadInspectCache, loadLatestInspectCache, saveInspectCache } from "../src/research/cache.ts";
 import { GitHubCacheMissError, resetGitHubRateLimitCircuit, tripGitHubRateLimit } from "../src/research/github-errors.ts";
 import type { InspectionSignals } from "../src/research/types.ts";
+import { freshTestGeneratedAt } from "./fixtures.ts";
 
 describe("isProductionRunId", () => {
   test("accepts ISO pipeline run ids", () => {
@@ -139,7 +140,7 @@ describe("withCache + runs", () => {
     expect(loaded?.runId).toBe("test-run-id");
   });
 
-  test("listRunSummaries returns stats from saved runs", () => {
+  test("listRunSummaries excludes fixture runs", () => {
     saveRun("summary-run", "2099-06-01T00:00:00.000Z", {
       runId: "summary-run",
       generatedAt: "2099-06-01T00:00:00.000Z",
@@ -152,7 +153,69 @@ describe("withCache + runs", () => {
       excludedSdkOnly: [],
     });
     const hit = listRunSummaries().find((s) => s.runId === "summary-run");
-    expect(hit?.discovered).toBe(9);
-    expect(hit?.shortlist).toBe(2);
+    expect(hit).toBeUndefined();
+  });
+
+  test("saveRun stamps fixture kind and excludes from latest resolution", () => {
+    const at = "2099-06-01T00:00:00.000Z";
+    saveRun("fixture-kind-run", at, {
+      runId: "fixture-kind-run",
+      generatedAt: at,
+      dimension: "all",
+      config: { shortlistSize: 12, gate: { minStars: 5, minForks: 3, maxAgeMonths: 18 } },
+      stats: { discovered: 1, gated: 1, inspected: 1, shortlist: 1 },
+      candidates: [],
+      gated: [],
+      scored: [],
+      shortlist: [],
+      excludedSdkOnly: [],
+    });
+    const loaded = loadRunFromDb("fixture-kind-run");
+    expect(loaded?.kind).toBe("fixture");
+    expect(loadLatestRunFromDb({ dimension: "all", includeFixtures: false })?.runId).not.toBe(
+      "fixture-kind-run",
+    );
+  });
+
+  test("loadResearchRun rejects fixture run id for operator views", () => {
+    const at = "2099-06-02T00:00:00.000Z";
+    saveRun("fixture-by-id", at, {
+      runId: "fixture-by-id",
+      kind: "fixture",
+      generatedAt: at,
+      dimension: "all",
+      config: { shortlistSize: 12, gate: { minStars: 5, minForks: 3, maxAgeMonths: 18 } },
+      stats: { discovered: 1, gated: 1, inspected: 1, shortlist: 1 },
+      candidates: [],
+      gated: [],
+      scored: [],
+      shortlist: [],
+      excludedSdkOnly: [],
+    });
+    expect(loadResearchRun({ runId: "fixture-by-id", dimension: "all" })).toBeNull();
+    expect(loadResearchRun({ runId: "fixture-by-id", dimension: "all", includeFixtures: true })?.runId).toBe(
+      "fixture-by-id",
+    );
+  });
+
+  test("loadResearchRun rejects run id when dimension does not match", () => {
+    const at = freshTestGeneratedAt();
+    saveRun("2026-07-22T09-00-00-001Z", at, {
+      runId: "2026-07-22T09-00-00-001Z",
+      kind: "production",
+      generatedAt: at,
+      dimension: "sports-nba",
+      config: { shortlistSize: 12, gate: { minStars: 5, minForks: 3, maxAgeMonths: 18 } },
+      stats: { discovered: 1, gated: 1, inspected: 1, shortlist: 1 },
+      candidates: [],
+      gated: [],
+      scored: [],
+      shortlist: [],
+      excludedSdkOnly: [],
+    });
+    expect(loadResearchRun({ runId: "2026-07-22T09-00-00-001Z", dimension: "all" })).toBeNull();
+    expect(loadResearchRun({ runId: "2026-07-22T09-00-00-001Z", dimension: "sports-nba" })?.runId).toBe(
+      "2026-07-22T09-00-00-001Z",
+    );
   });
 });

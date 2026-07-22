@@ -83,17 +83,17 @@ describe("gate-miss", () => {
     expect(md).toContain("--min-stars=4");
   });
 
-  test("formatGateMissHtml renders dashboard panel with near misses", () => {
+  test("formatGateMissHtml renders panel with near misses", () => {
     const miss = analyzeGateMiss(
       [repo({ fullName: "a/nba-bot", stars: 4, forks: 1, pushedAt: "2026-01-01T00:00:00Z" })],
       [],
       gate,
       { dimension: "sports-nba" },
     )!;
-    const html = formatGateMissHtml(miss, gate, { screenshotRoute: "/api/screenshot" });
+    const html = formatGateMissHtml(miss, gate);
     expect(html).toContain('id="gate-miss-panel"');
     expect(html).toContain("a/nba-bot");
     expect(html).toContain("--min-stars=4");
-    expect(html).toContain("/api/screenshot");
+    expect(html).not.toContain("/api/screenshot");
   });
 });

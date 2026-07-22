@@ -43,8 +43,7 @@ describe("architecture blueprint", () => {
           recommendedBun: ["bun-websocket", "bun-sqlite"],
           referenceRepo: "owner/feed-bot",
           referenceScore: 72,
-          referenceBadge: "⚠ watchlist",
-          referenceFindingId: "finding-123",
+          referenceBadge: "watchlist",
           referenceDimension: "price-data",
           bunFeatures: ["bun-websocket"],
           bunFeatureFile: "src/server.ts",
@@ -58,10 +57,7 @@ describe("architecture blueprint", () => {
               repo: "owner/feed-bot",
               points: 20,
               maxPoints: 25,
-              badge: "⚠ watchlist",
-              verified: false,
-              verification: "watchlist",
-              findingId: "finding-123",
+              badge: "watchlist",
               rationale: "KALSHI access headers in code",
               pattern: {
                 summary: "KALSHI-ACCESS-* headers",
@@ -78,9 +74,6 @@ describe("architecture blueprint", () => {
               auditTier: "watchlist",
               license: "MIT",
               unlicensed: false,
-              verified: false,
-              verification: "watchlist",
-              findingId: "finding-123",
             },
           ],
           liftNotes: ["Primary high-value audit export: owner/feed-bot."],
@@ -96,10 +89,10 @@ describe("architecture blueprint", () => {
     expect(md).toContain("Bun WebSocket");
     expect(md).toContain("Local Bun SSOT");
     expect(md).toContain("owner/feed-bot");
-    expect(md).toContain("⚠ watchlist");
+    expect(md).toContain("watchlist");
     expect(md).toContain("Lift recommendations");
     expect(md).toContain("↳ excerpt:");
-    expect(md).toContain("Shortlist verification");
+    expect(md).toContain("### Shortlist");
     expect(md).toContain("Lift notes");
     expect(md).toContain("src/research/cache.ts");
   });
@@ -118,7 +111,6 @@ describe("architecture blueprint", () => {
           referenceRepo: null,
           referenceScore: null,
           referenceBadge: null,
-          referenceFindingId: null,
           referenceDimension: null,
           bunFeatures: [],
           bunFeatureFile: null,

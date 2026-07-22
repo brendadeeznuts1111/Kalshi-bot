@@ -5,6 +5,7 @@
 import type { EvidenceLine, ResearchRun, ScoredRepo } from "../research/types.ts";
 import type { ScoreComponentKey } from "../research/constants.ts";
 import { buildRepoReport } from "../research/evidence.ts";
+import { resolveAuditExportTier } from "../research/audit-adapter.ts";
 import { fetchRepoFileText } from "../research/repo-content.ts";
 import { loadResearchRun } from "../research/cache.ts";
 import { dimensionArtifactBasename, runDimension } from "../research/dimensions.ts";
@@ -12,7 +13,7 @@ import { PATTERNS_DIR, joinPath } from "../research/paths.ts";
 import { readJsonFile, writeJson } from "../research/io.ts";
 import { ensureGhRateBudget } from "../research/gh.ts";
 import { warmGitHubApiNetwork } from "../research/github-network.ts";
-import { lookupRepoVerification, buildRotorVerificationIndex, formatVerificationBadge, resolveRunDataFreshness } from "./audit-list.ts";
+import { formatTierBadge, resolveRunDataFreshness } from "./freshness.ts";
 import { attachPatternMisses, formatPatternMissMarkdown, patternMissForComponent, formatPatternMissSummary } from "./pattern-miss.ts";
 
 export const MAX_REPOS_PER_REPORT = 5;
@@ -310,7 +311,6 @@ export async function buildPatternReport(
   run: ResearchRun,
   options?: { repoFilter?: string; maxRepos?: number },
 ): Promise<PatternReport> {
-  const rotor = await buildRotorVerificationIndex();
   let items = [...run.shortlist].sort((a, b) => b.score.total - a.score.total);
 
   if (options?.repoFilter?.trim()) {
@@ -328,10 +328,9 @@ export async function buildPatternReport(
   const freshness = resolveRunDataFreshness(run);
   const repos: RepoPatternReport[] = [];
   for (const item of items) {
-    const rotorStatus = lookupRepoVerification(rotor, item.repo.fullName);
-    const badge = formatVerificationBadge({
-      verified: rotorStatus.verified,
-      verification: rotorStatus.verification,
+    const report = item.report ?? buildRepoReport(item, run.generatedAt);
+    const badge = formatTierBadge({
+      auditTier: resolveAuditExportTier(report),
       stale: freshness.stale,
       ageMs: freshness.ageMs,
     });
@@ -481,12 +480,10 @@ export async function loadRepoPatternReport(
     run.scored.find((s) => s.repo.fullName.toLowerCase() === key);
   if (!item) return null;
 
-  const rotor = await buildRotorVerificationIndex();
-  const rotorStatus = lookupRepoVerification(rotor, item.repo.fullName);
   const freshness = resolveRunDataFreshness(run);
-  const badge = formatVerificationBadge({
-    verified: rotorStatus.verified,
-    verification: rotorStatus.verification,
+  const report = item.report ?? buildRepoReport(item, run.generatedAt);
+  const badge = formatTierBadge({
+    auditTier: resolveAuditExportTier(report),
     stale: freshness.stale,
     ageMs: freshness.ageMs,
   });

@@ -6,6 +6,7 @@ import {
   buildResearchSpawnArgs,
   formatProgressLine,
   isResearchProgressMessage,
+  type ResearchProgressSink,
 } from "../research/research-progress.ts";
 import { ROOT, joinPath } from "../research/paths.ts";
 import type { ResearchRun } from "../research/types.ts";
@@ -14,10 +15,16 @@ export type SpawnResearchResult =
   | { ok: true; run: ResearchRun; exitCode: 0 }
   | { ok: false; exitCode: number; message: string };
 
+export type SpawnResearchOptions = CliOptions & {
+  /** Optional in-process progress sink. */
+  onProgress?: ResearchProgressSink;
+};
+
 /** Spawn research as IPC child — structured progress on IPC, stderr inherited for remediation text. */
-export async function spawnResearch(opts: CliOptions): Promise<SpawnResearchResult> {
+export async function spawnResearch(opts: SpawnResearchOptions): Promise<SpawnResearchResult> {
+  const { onProgress, ...cliOpts } = opts;
   const script = joinPath(ROOT, "src/research/cli.ts");
-  const args = buildResearchSpawnArgs(opts);
+  const args = buildResearchSpawnArgs(cliOpts);
 
   return new Promise((resolve) => {
     let completeRunId: string | undefined;
@@ -34,6 +41,7 @@ export async function spawnResearch(opts: CliOptions): Promise<SpawnResearchResu
       serialization: "advanced",
       ipc(message: unknown) {
         if (!isResearchProgressMessage(message)) return;
+        onProgress?.(message);
         if (message.type === "complete") completeRunId = message.runId;
         if (message.type === "error") {
           lastError = message.message;

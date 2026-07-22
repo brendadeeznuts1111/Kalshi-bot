@@ -39,7 +39,7 @@ describe("agent report", () => {
             {
               fullName: "owner/repo",
               total: 69.5,
-              verification: "⚠ watchlist",
+              badge: "watchlist",
               auditTier: "watchlist",
               topPattern: "RSA-PSS, key file",
             },

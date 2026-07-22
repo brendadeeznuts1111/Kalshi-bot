@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-22T06:32:33.402Z",
+  "generatedAt": "2026-07-22T09:03:06.288Z",
   "dimensions": [
     {
       "dimension": "arbitrage",
@@ -16,7 +16,7 @@
         {
           "fullName": "RichardFeynmanEnthusiast/kalshi-polymarket-arbitrage-bot",
           "total": 69.5,
-          "verification": "⚠ watchlist",
+          "badge": "watchlist",
           "auditTier": "watchlist",
           "topPattern": "KALSHI-ACCESS-* headers, RSA-PSS, key file, trade-api/v2"
         }
@@ -38,12 +38,23 @@
         {
           "fullName": "rodlaf/KalshiMarketMaker",
           "total": 67.75,
-          "verification": "✗ unverified",
+          "badge": "watchlist",
           "auditTier": "watchlist",
           "topPattern": "KALSHI-ACCESS-* headers, RSA-PSS, key file, create-order API"
         }
       ],
       "notes": []
+    },
+    {
+      "dimension": "price-data",
+      "label": "Price / market data feeds",
+      "runId": null,
+      "generatedAt": null,
+      "stats": null,
+      "shortlist": [],
+      "notes": [
+        "No cached run — run: bun run research -- --dimension=price-data"
+      ]
     },
     {
       "dimension": "sports-elections",
@@ -80,13 +91,13 @@
     {
       "dimension": "sports-nba",
       "label": "NBA",
-      "runId": "2026-07-22T06-18-19-984Z",
-      "generatedAt": "2026-07-22T06:18:19.984Z",
+      "runId": "2026-07-22T09-00-00-001Z",
+      "generatedAt": "2026-07-22T09:02:52.413Z",
       "stats": {
-        "discovered": 8,
-        "gated": 0,
-        "inspected": 0,
-        "shortlist": 0
+        "discovered": 1,
+        "gated": 1,
+        "inspected": 1,
+        "shortlist": 1
       },
       "shortlist": [],
       "notes": [
@@ -96,23 +107,65 @@
     {
       "dimension": "tracking",
       "label": "Portfolio tracking / monitoring",
-      "runId": "2026-07-22T06-19-27-172Z",
-      "generatedAt": "2026-07-22T06:19:27.172Z",
+      "runId": "2026-07-22T06-34-52-547Z",
+      "generatedAt": "2026-07-22T06:34:52.547Z",
       "stats": {
-        "discovered": 0,
-        "gated": 0,
-        "inspected": 0,
-        "shortlist": 0
+        "discovered": 3,
+        "gated": 3,
+        "inspected": 3,
+        "shortlist": 3
       },
-      "shortlist": [],
-      "notes": [
-        "Zero discovery — broaden dimension queries"
-      ]
+      "shortlist": [
+        {
+          "fullName": "bullmeme777/kalshi-portfolio-tracker",
+          "total": 47.75,
+          "badge": "scored",
+          "auditTier": null,
+          "topPattern": "env secrets, key file, order fields (side/count/price)"
+        },
+        {
+          "fullName": "kevinhjshim/kalshi-pnl",
+          "total": 27.75,
+          "badge": "scored",
+          "auditTier": null,
+          "topPattern": null
+        },
+        {
+          "fullName": "slee8495/kalshi-pnl-dashboard",
+          "total": 29.25,
+          "badge": "scored",
+          "auditTier": null,
+          "topPattern": null
+        }
+      ],
+      "notes": []
+    },
+    {
+      "dimension": "wallet-track",
+      "label": "Wallet / balance tracking",
+      "runId": "2026-07-22T06-34-31-618Z",
+      "generatedAt": "2026-07-22T06:34:31.618Z",
+      "stats": {
+        "discovered": 1,
+        "gated": 1,
+        "inspected": 1,
+        "shortlist": 1
+      },
+      "shortlist": [
+        {
+          "fullName": "bullmeme777/kalshi-portfolio-tracker",
+          "total": 47.75,
+          "badge": "scored",
+          "auditTier": null,
+          "topPattern": "env secrets, key file, order fields (side/count/price)"
+        }
+      ],
+      "notes": []
     }
   ],
   "architectureNotes": [
     "Cross-venue arbitrage: lift candidate RichardFeynmanEnthusiast/kalshi-polymarket-arbitrage-bot (69.5) — watchlist tier",
     "Market making / liquidity: lift candidate rodlaf/KalshiMarketMaker (67.75) — watchlist tier",
-    "Composite bot: mix component lifts across dimensions (see suggest-lift per dimension)."
+    "Composite bot: mix component lifts across dimensions (see agent blueprint / patterns per dimension)."
   ]
 }

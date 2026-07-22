@@ -21,6 +21,8 @@ bun run rate-limit:status -- --gated=49 --uncached=49  # before live research
 | 4 | Staleness badges (🕒) | **B** | **done** | `tests/staleness-badge.test.ts` |
 | 5 | Discovery miss (0 candidates) | **C** | **done** | `tests/discovery-miss.test.ts` |
 | — | Discover vs apply gate split | core | **done** | `tests/discover-gate.test.ts` |
+| — | Live market-making run (V5) | research | **blocked** | `code_search` quota — see [`ROADMAP.md`](ROADMAP.md) |
+| — | Bot scaffold | agent | **planned** | after V5 green |
 | — | Inspect miss (detector rationale) | C+ | pending | extend pattern-miss |
 | — | Verification miss (export-audit cmd) | D | pending | error wire alternative |
 | — | Data fill (price-data run) | **D** | blocked | rate-limit preflight |
@@ -50,14 +52,14 @@ bun run rate-limit:status -- --gated=49 --uncached=49  # before live research
 
 **Touch (disjoint):**
 
-- `src/agent/audit-list.ts` — extend `formatVerificationBadge` or add `formatDataFreshnessSuffix({ stale, ageMs })`
-- `src/agent/suggest-lift.ts`, `src/agent/pattern-extract.ts`, `src/agent/architecture-blueprint.ts` — pass stale flags from run cache stats / run age
+- `src/agent/freshness.ts` — `formatDataFreshnessSuffix` / `formatTierBadge` / `resolveRunDataFreshness`
+- `src/agent/lift.ts`, `src/agent/pattern-extract.ts`, `src/agent/architecture-blueprint.ts` — pass stale flags from run cache stats / run age
 - `tests/staleness-badge.test.ts` — badge strings for fresh vs stale
 
 **Acceptance:**
 
 - Stale inspect/run → badge includes `🕒` and optional age
-- Fresh verified repos unchanged (`✓ verified`)
+- Fresh tier badges unchanged (`high-value` / `watchlist` / `scored`)
 - `bun run check` green
 
 ### Lane C — Discovery miss (#5)

@@ -80,7 +80,7 @@ const LANES: Lane[] = [
     status: "pending",
     proof: ["tests/staleness-badge.test.ts"],
     probes: [
-      { label: "freshness suffix", path: "src/agent/audit-list.ts", pattern: /formatDataFreshnessSuffix|🕒/ },
+      { label: "freshness suffix", path: "src/agent/freshness.ts", pattern: /formatDataFreshnessSuffix|🕒/ },
       { label: "staleness test", path: "tests/staleness-badge.test.ts", pattern: /describe\(/ },
     ],
   },

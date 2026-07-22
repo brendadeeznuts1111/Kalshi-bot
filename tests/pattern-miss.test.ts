@@ -13,7 +13,7 @@ function emptyRepo(overrides: Partial<RepoPatternReport> = {}): RepoPatternRepor
   return {
     fullName: "owner/tracker",
     score: 55,
-    verification: "✗ unverified",
+    verification: "scored",
     evidencePaths: ["README.md"],
     summary: emptyPatternHits(),
     files: [

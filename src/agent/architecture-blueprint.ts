@@ -15,8 +15,8 @@ import {
   type LiftPatternRef,
   type LiftRecommendation,
   type ShortlistSummary,
-} from "./suggest-lift.ts";
-import { buildRotorVerificationIndex, formatVerificationBadge, resolveRunDataFreshness, type DataFreshness } from "./audit-list.ts";
+} from "./lift.ts";
+import { formatTierBadge, resolveRunDataFreshness, type DataFreshness } from "./freshness.ts";
 import {
   bestBunFeatureRepo,
   formatBunFeatureSummary,
@@ -35,9 +35,6 @@ export type BlueprintLiftEntry = {
   points: number;
   maxPoints: number;
   badge: string;
-  verified: boolean;
-  verification: LiftRecommendation["verification"];
-  findingId: string | null;
   rationale: string;
   pattern: LiftPatternRef | null;
 };
@@ -56,7 +53,6 @@ export type BlueprintSection = {
   referenceRepo: string | null;
   referenceScore: number | null;
   referenceBadge: string | null;
-  referenceFindingId: string | null;
   referenceDimension: string | null;
   bunFeatures: string[];
   bunFeatureFile: string | null;
@@ -240,17 +236,12 @@ function toLiftEntry(rec: LiftRecommendation, freshness: DataFreshness): Bluepri
     points: rec.points,
     maxPoints: rec.maxPoints,
     badge: rec.repo
-      ? formatVerificationBadge({
-          verified: rec.verified,
-          verification: rec.verification,
+      ? formatTierBadge({
           auditTier: rec.auditTier,
           stale: freshness.stale,
           ageMs: freshness.ageMs,
         })
       : "—",
-    verified: rec.verified,
-    verification: rec.verification,
-    findingId: rec.findingId,
     rationale: rec.rationale,
     pattern: rec.pattern,
   };
@@ -258,7 +249,6 @@ function toLiftEntry(rec: LiftRecommendation, freshness: DataFreshness): Bluepri
 
 export async function buildArchitectureBlueprint(): Promise<ArchitectureBlueprint> {
   const file = await loadDimensionsFile();
-  const rotor = await buildRotorVerificationIndex();
   const localBunStack = await scanLocalBunStack();
   const patternReports: PatternReport[] = [];
 
@@ -318,12 +308,11 @@ export async function buildArchitectureBlueprint(): Promise<ArchitectureBlueprin
     let shortlistSummary: ShortlistSummary[] = [];
     let liftNotes: string[] = [];
     let referenceBadge: string | null = null;
-    let referenceFindingId: string | null = null;
     let dataFreshness: DataFreshness | null = null;
 
     if (run) {
       dataFreshness = resolveRunDataFreshness(run);
-      const lift = await attachPatternsToLift(suggestLiftFromRun(run, rotor), run);
+      const lift = await attachPatternsToLift(suggestLiftFromRun(run), run);
       liftEntries = lift.recommendations
         .filter((r) => LIFT_COMPONENTS.includes(r.component))
         .map((r) => toLiftEntry(r, dataFreshness!));
@@ -338,14 +327,11 @@ export async function buildArchitectureBlueprint(): Promise<ArchitectureBlueprin
         ? lift.shortlist.find((s) => s.fullName === referenceRepo)
         : null;
       if (shortlistEntry) {
-        referenceBadge = formatVerificationBadge({
-          verified: shortlistEntry.verified,
-          verification: shortlistEntry.verification,
+        referenceBadge = formatTierBadge({
           auditTier: shortlistEntry.auditTier,
           stale: dataFreshness.stale,
           ageMs: dataFreshness.ageMs,
         });
-        referenceFindingId = shortlistEntry.findingId;
       }
     }
 
@@ -385,7 +371,6 @@ export async function buildArchitectureBlueprint(): Promise<ArchitectureBlueprin
       referenceRepo,
       referenceScore: repo?.score ?? run?.shortlist[0]?.score.total ?? null,
       referenceBadge,
-      referenceFindingId,
       referenceDimension: patternReport ? spec.dimension : null,
       bunFeatures: repo?.summary.bunFeatures ?? [],
       bunFeatureFile:
@@ -430,9 +415,6 @@ function formatLiftEntryMarkdown(entry: BlueprintLiftEntry): string[] {
     const excerpt = entry.pattern.excerpt.replace(/\s+/g, " ").trim();
     lines.push(`  - ↳ excerpt: \`${excerpt.slice(0, 200)}${excerpt.length > 200 ? "…" : ""}\``);
   }
-  if (entry.findingId) {
-    lines.push(`  - finding: \`${entry.findingId}\``);
-  }
   return lines;
 }
 
@@ -442,8 +424,8 @@ export function formatArchitectureBlueprintMarkdown(blueprint: ArchitectureBluep
     "",
     `Generated: ${blueprint.generatedAt}`,
     "",
-    "Single reference for **what to lift**, **verification status**, and **which Bun APIs to mirror** per domain slice.",
-    "Grounded in `agent suggest-lift` + `agent patterns` (excerpts below).",
+    "Single reference for **what to lift** and **which Bun APIs to mirror** per domain slice.",
+    "Grounded in `agent patterns` + lift map from cached research runs (excerpts below).",
     "",
     "## Local Bun SSOT (this repo)",
     "",
@@ -476,10 +458,8 @@ export function formatArchitectureBlueprintMarkdown(blueprint: ArchitectureBluep
 
     if (section.referenceRepo) {
       const badge = section.referenceBadge ? ` — ${section.referenceBadge}` : "";
-      const finding =
-        section.referenceFindingId ? ` · \`${section.referenceFindingId}\`` : "";
       lines.push(
-        `**Reference repo:** ${section.referenceRepo}${section.referenceScore != null ? ` (${section.referenceScore})` : ""}${badge}${finding}`,
+        `**Reference repo:** ${section.referenceRepo}${section.referenceScore != null ? ` (${section.referenceScore})` : ""}${badge}`,
       );
     } else {
       lines.push("**Reference repo:** _none yet — run dimension research_");
@@ -513,11 +493,9 @@ export function formatArchitectureBlueprintMarkdown(blueprint: ArchitectureBluep
     }
 
     if (section.shortlistSummary.length) {
-      lines.push("", "### Shortlist verification", "");
+      lines.push("", "### Shortlist", "");
       for (const s of section.shortlistSummary) {
-        const badge = formatVerificationBadge({
-          verified: s.verified,
-          verification: s.verification,
+        const badge = formatTierBadge({
           auditTier: s.auditTier,
           stale: section.dataFreshness?.stale,
           ageMs: section.dataFreshness?.ageMs,

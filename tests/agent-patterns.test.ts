@@ -125,7 +125,7 @@ describe("agent patterns", () => {
         {
           fullName: "owner/repo",
           score: 70,
-          verification: "✗ unverified",
+          verification: "scored",
           evidencePaths: ["src/main.ts"],
           summary: emptyPatternHits(),
           files: [
@@ -149,7 +149,7 @@ describe("agent patterns", () => {
     const repoReport: RepoPatternReport = {
       fullName: "owner/tracker",
       score: 40,
-      verification: "✗ unverified",
+      verification: "scored",
       evidencePaths: ["README.md"],
       summary: emptyPatternHits(),
       files: [
@@ -171,7 +171,7 @@ describe("agent patterns", () => {
     const repoReport: RepoPatternReport = {
       fullName: "owner/repo",
       score: 70,
-      verification: "✗ unverified",
+      verification: "scored",
       evidencePaths: ["src/auth.ts"],
       summary: {
         ...emptyPatternHits(),

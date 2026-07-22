@@ -213,11 +213,10 @@ export function formatGateMissMarkdown(gateMiss: GateMissStats, gate: GateOption
 
 export type FormatGateMissHtmlOptions = {
   panelId?: string;
-  screenshotRoute?: string;
   escapeHtml?: (value: string) => string;
 };
 
-/** Dashboard HTML for gate miss panel (reports use {@link formatGateMissMarkdown}). */
+/** HTML for gate miss panel (reports use {@link formatGateMissMarkdown}). */
 export function formatGateMissHtml(
   gateMiss: GateMissStats,
   gate: GateOptions,
@@ -228,21 +227,18 @@ export function formatGateMissHtml(
 
   const nearMissItems = gateMiss.nearMisses
     .map(
-      (nm, i) =>
+      (nm) =>
         `<li><strong>${esc(nm.fullName)}</strong> — ${esc(nm.summary)} ` +
         `(${nm.stars}★ · ${nm.forks} forks · pushed ${esc(nm.pushedLabel)})</li>`,
     )
     .join("\n");
 
   const probeBlock = gateMiss.retryCommand
-    ? `<p><strong>Suggested probe</strong></p><pre><code>${esc(gateMiss.retryCommand)}</code></pre>`
+    ? `<p><strong>Suggested probe</strong></p>` +
+      `<pre><code>${esc(gateMiss.retryCommand)}</code></pre>`
     : gateMiss.retryHint
       ? `<p><em>${esc(gateMiss.retryHint)}</em></p>`
       : "";
-
-  const screenshotHint = options.screenshotRoute
-    ? `<p class="audit-hint">Capture screenshot evidence: POST ${esc(options.screenshotRoute)}</p>`
-    : "";
 
   return `<div class="gate-miss" id="${esc(panelId)}">
     <h2>Gate miss</h2>
@@ -250,6 +246,5 @@ export function formatGateMissHtml(
     `(min-stars=${gate.minStars}, min-forks=${gate.minForks}, max-age-months=${gate.maxAgeMonths}).</p>
     ${nearMissItems ? `<h3>Near misses</h3><ol>${nearMissItems}</ol>` : ""}
     ${probeBlock}
-    ${screenshotHint}
   </div>`;
 }

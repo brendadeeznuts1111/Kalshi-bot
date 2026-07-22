@@ -1,24 +1,12 @@
 // @see https://bun.com/docs/test/index#run-tests
-import { afterEach, describe, expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
+import { formatAgentStatus, getAgentStatus } from "../src/agent/agent-status.ts";
+import { parseAgentCommand } from "../src/agent/cli.ts";
 import {
-  captureEvidence,
-  normalizeCaptureUrl,
-  sha3HexBytes,
-} from "../src/agent/capture-evidence.ts";
-import {
-  formatAgentStatus,
-  getAgentStatus,
-} from "../src/agent/dashboard-client.ts";
-import { resetDashboardState } from "../src/agent/dashboard-state.ts";
-import {
-  parseAgentCommand,
-  runAgentSuggestLift,
-} from "../src/agent/cli.ts";
-import {
-  formatSuggestLift,
+  formatLift,
   suggestLiftFromRun,
   attachPatternsToLift,
-} from "../src/agent/suggest-lift.ts";
+} from "../src/agent/lift.ts";
 import type { RepoPatternReport } from "../src/agent/pattern-extract.ts";
 import { emptyPatternHits } from "../src/agent/pattern-extract.ts";
 import { saveRun } from "../src/research/cache.ts";
@@ -116,28 +104,12 @@ function mockRun(): ResearchRun {
 }
 
 describe("agent cli", () => {
-  afterEach(() => {
-    resetDashboardState();
-  });
-
   test("parseAgentCommand recognizes subcommands", () => {
     expect(parseAgentCommand(["status", "--json"]).command).toBe("status");
-    expect(parseAgentCommand(["audit-list", "--json"]).command).toBe("audit-list");
     expect(parseAgentCommand(["patterns", "--dimension=market-making"]).command).toBe("patterns");
-    expect(parseAgentCommand(["capture-evidence", "--url=x"]).command).toBe("capture-evidence");
+    expect(parseAgentCommand(["blueprint"]).command).toBe("blueprint");
+    expect(parseAgentCommand(["audit-list", "--json"]).command).toBeNull();
     expect(parseAgentCommand([]).command).toBeNull();
-  });
-
-  test("normalizeCaptureUrl builds kalshi market URL", () => {
-    expect(normalizeCaptureUrl("FOO-BAR")).toBe("https://kalshi.com/markets/FOO-BAR");
-    expect(normalizeCaptureUrl("https://example.com/x")).toBe("https://example.com/x");
-  });
-
-  test("sha3HexBytes is stable", () => {
-    const a = sha3HexBytes(new TextEncoder().encode("abc"));
-    const b = sha3HexBytes(new TextEncoder().encode("abc"));
-    expect(a).toBe(b);
-    expect(a.length).toBe(64);
   });
 
   test("suggestLiftFromRun picks best repo per component", () => {
@@ -150,9 +122,8 @@ describe("agent cli", () => {
     expect(result.recommendations.find((r) => r.component === "orderRealism")?.repo).toBe(
       "openfi-dao/kalshi-trading-bot",
     );
-    expect(result.recommendations[0]?.verification).toBe("unverified");
     expect(result.notes.some((n) => n.includes("License warning"))).toBe(true);
-    expect(formatSuggestLift(result)).toContain("Lift map:");
+    expect(formatLift(result)).toContain("Lift map:");
   });
 
   test("attachPatternsToLift adds pattern refs from injected loader", async () => {
@@ -162,7 +133,7 @@ describe("agent cli", () => {
     const mockRepoPatterns: RepoPatternReport = {
       fullName: "OctagonAI/kalshi-trading-bot-cli",
       score: 78,
-      verification: "✗ unverified",
+      verification: "high-value",
       evidencePaths: ["src/tools/kalshi/api.ts"],
       summary: { ...emptyPatternHits(), auth: ["rsa-pss-signing", "kalshi-access-headers"] },
       files: [
@@ -184,27 +155,10 @@ describe("agent cli", () => {
     const authRec = enriched.recommendations.find((r) => r.component === "authApi");
     expect(authRec?.pattern?.summary).toContain("RSA-PSS");
     expect(authRec?.pattern?.file).toBe("src/tools/kalshi/api.ts");
-    expect(formatSuggestLift(enriched)).toContain("↳ pattern:");
+    expect(formatLift(enriched)).toContain("↳ pattern:");
   });
 
-  test("runAgentSuggestLift prints JSON", async () => {
-    const run = mockRun();
-    run.shortlist = run.scored;
-    saveRun(run.runId, run.generatedAt, run);
-
-    const logs: string[] = [];
-    const orig = console.log;
-    console.log = (msg: string) => logs.push(msg);
-    try {
-      expect(await runAgentSuggestLift(true, run.runId)).toBe(0);
-      const parsed = JSON.parse(logs.join("\n")) as { runId: string };
-      expect(parsed.runId).toBe(run.runId);
-    } finally {
-      console.log = orig;
-    }
-  });
-
-  test("getAgentStatus falls back to local", async () => {
+  test("getAgentStatus reads from cache.db", () => {
     const run = mockRun();
     const at = freshTestGeneratedAt();
     run.runId = TEST_LATEST_RUN_ID;
@@ -212,38 +166,9 @@ describe("agent cli", () => {
     run.shortlist = run.scored;
     saveRun(run.runId, at, run);
 
-    Bun.env.DASHBOARD_URL = "http://127.0.0.1:1";
-    try {
-      const status = await getAgentStatus();
-      expect(status.source).toBe("local");
-      expect(status.latestRun?.runId).toBe(run.runId);
-      expect(formatAgentStatus(status)).toContain("local");
-    } finally {
-      delete Bun.env.DASHBOARD_URL;
-    }
-  });
-
-  test("captureEvidence writes manifest with injected capture", async () => {
-    const outDir = `${import.meta.dir}/.tmp-capture`;
-    // Valid 10×10 PNG — Bun.Image.metadata requires a real decode
-    const png = Buffer.from(
-      "iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVR42mNk+M9Qz0AEYBxVSF+FAAhKDveksU63AAAAAElFTkSuQmCC",
-      "base64",
-    );
-    const manifest = await captureEvidence(
-      { url: "https://kalshi.com/markets/test-market", outDir, slug: "test-capture" },
-      {
-        navigateAndCapture: async () => ({ png, title: "Test Market" }),
-      },
-    );
-    expect(manifest.digest).toBe(sha3HexBytes(png));
-    expect(manifest.title).toBe("Test Market");
-    expect(manifest.width).toBe(10);
-    expect(manifest.height).toBe(10);
-    expect(manifest.format).toBe("png");
-    expect(manifest.size).toBe(png.byteLength);
-    expect(await Bun.file(manifest.imagePath).exists()).toBe(true);
+    const status = getAgentStatus();
+    expect(status.source).toBe("cache.db");
+    expect(status.latestRun?.runId).toBe(run.runId);
+    expect(formatAgentStatus(status)).toContain("cache.db");
   });
 });
-
-

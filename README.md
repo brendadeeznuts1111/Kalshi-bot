@@ -15,10 +15,10 @@ Standalone Bun project for discovering and ranking public [Kalshi](https://kalsh
 cd /path/to/Kalshi-bot
 
 bun run research                         # full pipeline → latest.md
-bun run dashboard                        # agent dashboard (:3457)
-bun run agent status                     # CLI status + rotor verification summary
-bun run agent suggest-lift               # component lift map (✓/⚠/✗ badges)
 bun run serve                            # report browser (:3456, --hot)
+bun run agent status                     # latest run from cache.db
+bun run agent patterns                   # pattern extract from cached run
+bun run agent blueprint                  # architecture blueprint from cache
 bun run report:term                      # ANSI latest.md in terminal
 bun test && bun run typecheck            # posttest restores committed artifacts from fixtures
 ```
@@ -80,10 +80,7 @@ Niche dimensions (`sports-nba`, `tracking`, …) may discover candidates but pro
 | `RESEARCH_CRON_SCHEDULE` | Override cron expression (see CRON.md) |
 | `RESEARCH_CRON_TITLE` | OS cron job title |
 | `PORT` | Serve port (default 3456) |
-| `DASHBOARD_PORT` | Dashboard port (default 3457) |
-| `ROTOR_ROOT` | Monorepo root for `pulse.log` + audit catalog (default `~/Projects`) |
-| `AUDIT_CATALOG_PATH` | Override path to rotor `tools/audit-catalog.json` |
-| `DASHBOARD_URL` | Agent CLI dashboard target |
+| `REPO_CLONE_ROOT` | Local clones for `agent patterns --open` |
 
 ## Scripts
 
@@ -92,7 +89,6 @@ Niche dimensions (`sports-nba`, `tracking`, …) may discover candidates but pro
 | Research | `bun run research` |
 | Audit export | `bun run export-audit` or `bun run audit:export` |
 | Schedule (OS cron) | `bun run schedule:register` / `schedule:remove` / `schedule:preview` |
-| Agent dashboard | `bun run dashboard` — see [`docs/DASHBOARD.md`](docs/DASHBOARD.md) |
 | Agent tools | `bun run agent <cmd>` — see [`docs/AGENT.md`](docs/AGENT.md) |
 | Terminal report | `bun run report:term` / `report:diff` |
 | Serve (hot) | `bun run serve` |
@@ -148,10 +144,10 @@ Kalshi-bot/
 │   │   ├── patterns.ts     # URLPattern SSOT (github-url.ts removed — use patterns.ts)
 │   │   ├── constants.ts    # weights, licenses, audit thresholds, cron
 │   │   └── … cache, diff, evidence, audit-adapter, serve, views
-│   └── agent/              # dashboard, CLI, audit-list, suggest-lift, verify-dashboard
+│   └── agent/              # CLI: status, patterns, blueprint, report, report:term
 ├── tools/
 │   └── restore-latest-report.ts   # posttest: fixture → latest.md
-├── tests/                  # bun:test (126 tests; posttest restores reports)
+├── tests/                  # bun:test (posttest restores reports)
 ├── research/
 │   ├── audit-evidence/     # committed JSONL (high-value + watchlist exports)
 │   ├── reports/            # latest.md + fixtures
@@ -159,7 +155,7 @@ Kalshi-bot/
 │   ├── cache/              # gitignored sqlite
 │   ├── outputs/            # gitignored JSON dumps
 │   └── exports/audit/      # gitignored per-run wire + rotor-ingest.json
-└── docs/                   # AGENT, DASHBOARD, AUDIT_ADAPTER, CRON, FACTOR_STACK, …
+└── docs/                   # AGENT, AUDIT_ADAPTER, CRON, FACTOR_STACK, …
 ```
 
 ## Scoring model
@@ -202,14 +198,13 @@ bun run export-audit -- --latest
 bun run export-audit -- --run 2026-07-22T05-50-48-875Z --repo openfi-dao/kalshi-trading-bot
 ```
 
-After ingest in `~/Projects`, `bun run agent audit-list` shows pulse verification status.
-
-See [`docs/AUDIT_ADAPTER.md`](docs/AUDIT_ADAPTER.md).
+See [`docs/AUDIT_ADAPTER.md`](docs/AUDIT_ADAPTER.md) for the optional write-only rotor ingest wire.
 
 ## Docs
 
-- [`docs/AGENT.md`](docs/AGENT.md) — CLI: status, audit-list, suggest-lift, capture-evidence
-- [`docs/DASHBOARD.md`](docs/DASHBOARD.md) — Bun.serve dashboard + API routes
+- [`docs/ROADMAP.md`](docs/ROADMAP.md) — phases, blockers, proof checklist (**start here**)
+- [`docs/AGENT.md`](docs/AGENT.md) — CLI: status, patterns, blueprint, report
+- [`docs/MISS_TAXONOMY.md`](docs/MISS_TAXONOMY.md) — gate/discovery/rate-limit miss map
 - [`docs/CRON.md`](docs/CRON.md) — OS-level Bun.cron scheduling
 - [`docs/AUDIT_ADAPTER.md`](docs/AUDIT_ADAPTER.md) — audit wire + rotor ingest
 - [`docs/FACTOR_STACK.md`](docs/FACTOR_STACK.md) — scoring SSOT

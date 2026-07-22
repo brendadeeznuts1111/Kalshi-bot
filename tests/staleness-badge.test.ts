@@ -2,10 +2,10 @@
 import { describe, expect, test } from "bun:test";
 import {
   formatDataFreshnessSuffix,
-  formatVerificationBadge,
+  formatTierBadge,
   resolveRunDataFreshness,
   runGeneratedAgeMs,
-} from "../src/agent/audit-list.ts";
+} from "../src/agent/freshness.ts";
 import type { ResearchRun } from "../src/research/types.ts";
 
 function mockRun(overrides: {
@@ -48,35 +48,28 @@ describe("formatDataFreshnessSuffix", () => {
   });
 });
 
-describe("formatVerificationBadge with freshness", () => {
-  test("fresh verified badge unchanged", () => {
-    expect(
-      formatVerificationBadge({
-        verified: true,
-        verification: "verified",
-      }),
-    ).toBe("✓ verified (high-value)");
+describe("formatTierBadge with freshness", () => {
+  test("fresh high-value badge", () => {
+    expect(formatTierBadge({ auditTier: "high-value" })).toBe("high-value");
   });
 
-  test("stale verified badge includes clock suffix", () => {
+  test("stale high-value badge includes clock suffix", () => {
     expect(
-      formatVerificationBadge({
-        verified: true,
-        verification: "verified",
+      formatTierBadge({
+        auditTier: "high-value",
         stale: true,
         ageMs: 120_000,
       }),
-    ).toBe("✓ verified (high-value) 🕒 2m ago");
+    ).toBe("high-value 🕒 2m ago");
   });
 
-  test("stale unverified badge without age", () => {
+  test("stale scored badge without age", () => {
     expect(
-      formatVerificationBadge({
-        verified: false,
-        verification: "unverified",
+      formatTierBadge({
+        auditTier: null,
         stale: true,
       }),
-    ).toBe("✗ unverified 🕒 stale");
+    ).toBe("scored 🕒 stale");
   });
 });
 

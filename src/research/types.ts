@@ -143,9 +143,13 @@ export type ResearchConfig = {
   };
 };
 
+export type ResearchRunKind = "production" | "fixture";
+
 export type ResearchRun = {
   runId: string;
   generatedAt: string;
+  /** `fixture` runs are test harness data — excluded from operator views and latest resolution. */
+  kind?: ResearchRunKind;
   /** Research question slice — see research/dimensions.json (default `all`). */
   dimension?: string;
   config: {

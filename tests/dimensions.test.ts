@@ -220,10 +220,11 @@ describe("dimension reports", () => {
       ...base,
       runId: "2099-dimension-sports",
       generatedAt: at,
-      dimension: "sports",
+      dimension: "sports-test-isolation",
+      kind: "fixture",
     });
 
-    expect(loadLatestRunFromDb({ dimension: "sports", includeFixtures: true })?.runId).toBe(
+    expect(loadLatestRunFromDb({ dimension: "sports-test-isolation", includeFixtures: true })?.runId).toBe(
       "2099-dimension-sports",
     );
     expect(loadLatestRunFromDb({ dimension: "all", includeFixtures: true })?.runId).not.toBe(

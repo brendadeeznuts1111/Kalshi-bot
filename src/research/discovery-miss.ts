@@ -152,3 +152,35 @@ export function formatDiscoveryMissMarkdown(miss: DiscoveryMissStats): string[] 
 
   return lines;
 }
+
+export type FormatDiscoveryMissHtmlOptions = {
+  panelId?: string;
+  escapeHtml?: (value: string) => string;
+};
+
+/** HTML for discovery miss panel (reports use {@link formatDiscoveryMissMarkdown}). */
+export function formatDiscoveryMissHtml(
+  miss: DiscoveryMissStats,
+  options: FormatDiscoveryMissHtmlOptions = {},
+): string {
+  const esc = options.escapeHtml ?? ((value: string) => value);
+  const panelId = options.panelId ?? "discovery-miss-panel";
+
+  const alternateItems = miss.alternateQueries
+    .map(
+      (alt) =>
+        `<li><code>${esc(alt.query)}</code> — ${esc(alt.rationale)}</li>`,
+    )
+    .join("\n");
+
+  return `<div class="gate-miss discovery-miss" id="${esc(panelId)}">
+    <h2>Discovery miss</h2>
+    <p>Dimension <strong>${esc(miss.dimension)}</strong> (${esc(miss.label)}) returned <strong>0</strong> candidates from ` +
+    `${miss.queriesTried.length} configured quer${miss.queriesTried.length === 1 ? "y" : "ies"}.</p>
+    ${alternateItems ? `<h3>Alternate queries</h3><ol>${alternateItems}</ol>` : ""}
+    <h3>Relaxed gate</h3>
+    <p><em>${esc(miss.relaxedGateHint)}</em></p>
+    <p><strong>Suggested probe</strong></p>
+    <pre><code>${esc(miss.retryCommand)}</code></pre>
+  </div>`;
+}

@@ -36,11 +36,12 @@ Kalshi-bot/
   src/
     research/               # discover → gate → inspect → score → diversify → report
       … (see README layout)
-    agent/                  # dashboard, CLI, audit-list, suggest-lift, verify-dashboard
+    agent/                  # CLI: status, patterns, blueprint, report, report:term
   tools/
     restore-latest-report.ts  # posttest: fixture → latest.md
-  tests/                    # bun:test (126 tests; posttest report restore)
+  tests/                    # bun:test (~292 tests; posttest report restore)
   docs/
+    ROADMAP.md              # operator phases, blockers, proof gates
     CRON.md                 # OS-level Bun.cron setup
   research/
     dimensions.json         # dimension query SSOT (all, market-making, sports-nba/…, …)
@@ -134,10 +135,10 @@ Outputs: [`research/reports/latest.diff.md`](../research/reports/latest.diff.md)
 bun run research                      # full pipeline (dimension=all)
 bun run research -- --dimension=market-making
 bun run research -- --dimension=sports-nba --export-audit
-bun run dashboard                     # agent dashboard (:3457)
-bun run agent status                  # CLI status + rotor verification
-bun run agent audit-list              # shortlist vs audit-catalog.json
-bun run agent suggest-lift            # component lift map (rotor badges)
+bun run agent status                  # latest run from cache.db
+bun run agent patterns                # pattern extract from cache
+bun run agent blueprint               # architecture blueprint
+bun run agent report                  # cross-dimension summary
 bun run research -- --json            # stdout JSON
 bun run research -- --shortlist 12
 bun run research -- --diff <run-id>
@@ -183,14 +184,16 @@ bun test && bun run typecheck         # posttest restores latest.md from fixture
 
 ## Audit adapter (optional)
 
-High-value (≥70) and **watchlist** (≥65) shortlist repos export to monorepo-compatible `AuditFinding` wire. Agent CLI cross-references rotor catalog + pulse. See [`docs/AUDIT_ADAPTER.md`](AUDIT_ADAPTER.md) and [`docs/AGENT.md`](AGENT.md).
+High-value (≥70) and **watchlist** (≥65) shortlist repos export to monorepo-compatible `AuditFinding` wire (write-only). See [`docs/AUDIT_ADAPTER.md`](AUDIT_ADAPTER.md). Agent CLI reads `cache.db` only — see [`docs/AGENT.md`](AGENT.md).
 
 ## Testing
 
-- **126 tests** across research + agent (`bun test`; `posttest` restores `latest.md` from fixture)
-- Pure: gate, score, detect, patterns, evidence, validate, cache, audit adapter, agent audit-list
+- Research + agent CLI (`bun test`; `posttest` restores `latest.md` from fixture)
+- Pure: gate, score, detect, patterns, evidence, validate, cache, audit adapter, lift, freshness
 - `mock.module("../src/research/gh.ts")` — inspect tests never hit network
 - Live integration: `bun run research` only
+
+Phase checklist: [`docs/ROADMAP.md`](ROADMAP.md).
 
 ## Scheduling
 

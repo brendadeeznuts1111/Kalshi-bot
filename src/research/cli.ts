@@ -292,6 +292,7 @@ export async function runResearch(opts: CliOptions): Promise<ResearchRun> {
     excludedSdkOnly,
     gateMiss,
     discoveryMiss,
+    kind: "production",
   };
 
   const baseline = opts.diff ? await loadRunById(opts.diff, dimension) : await loadPreviousRun(dimension);

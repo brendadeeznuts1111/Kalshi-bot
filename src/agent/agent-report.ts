@@ -1,16 +1,14 @@
 /**
- * Phase 3 — cross-dimension agent summary for architecture decisions.
+ * Cross-dimension agent summary for architecture decisions.
  */
 import type { ResearchRun } from "../research/types.ts";
 import { loadResearchRun } from "../research/cache.ts";
 import {
   loadDimensionsFile,
   listDimensionIds,
-  runDimension,
   type DimensionsFile,
 } from "../research/dimensions.ts";
-import { buildRotorVerificationIndex, lookupRepoVerification } from "./audit-list.ts";
-import { formatVerificationBadge } from "./audit-list.ts";
+import { formatTierBadge, resolveRunDataFreshness } from "./freshness.ts";
 import { resolveAuditExportTier } from "../research/audit-adapter.ts";
 import { buildRepoReport } from "../research/evidence.ts";
 import { loadPatternReport, formatPatternSummary } from "./pattern-extract.ts";
@@ -25,7 +23,7 @@ export type DimensionSummary = {
   shortlist: Array<{
     fullName: string;
     total: number;
-    verification: string;
+    badge: string;
     auditTier: string | null;
     topPattern: string | null;
   }>;
@@ -86,7 +84,6 @@ export async function buildAgentReport(options?: {
 }): Promise<AgentReport> {
   const file = await loadDimensionsFile();
   const dims = selectReportDimensions(file, options?.dimension);
-  const rotor = await buildRotorVerificationIndex();
   const dimensions: DimensionSummary[] = [];
   const architectureNotes: string[] = [];
 
@@ -114,21 +111,21 @@ export async function buildAgentReport(options?: {
       );
     }
 
+    const freshness = resolveRunDataFreshness(run);
     const shortlist = await Promise.all(
       run.shortlist.slice(0, 3).map(async (item) => {
         const report = item.report ?? buildRepoReport(item, run.generatedAt);
         const tier = resolveAuditExportTier(report);
-        const rotorStatus = lookupRepoVerification(rotor, item.repo.fullName);
-        const badge = formatVerificationBadge({
-          verified: rotorStatus.verified,
-          verification: rotorStatus.verification,
+        const badge = formatTierBadge({
           auditTier: tier,
+          stale: freshness.stale,
+          ageMs: freshness.ageMs,
         });
         const topPattern = await topPatternForRepo(id, item.repo.fullName);
         return {
           fullName: item.repo.fullName,
           total: item.score.total,
-          verification: badge,
+          badge,
           auditTier: tier,
           topPattern,
         };
@@ -155,11 +152,9 @@ export async function buildAgentReport(options?: {
   const withCandidates = dimensions.filter((d) => d.shortlist.length);
   if (withCandidates.length >= 2) {
     architectureNotes.push(
-      "Composite bot: mix component lifts across dimensions (see suggest-lift per dimension).",
+      "Composite bot: mix component lifts across dimensions (see agent blueprint / patterns per dimension).",
     );
   }
-
-  if (rotor.warning) architectureNotes.push(rotor.warning);
 
   return {
     generatedAt: new Date().toISOString(),
@@ -174,7 +169,7 @@ export function formatAgentReportMarkdown(report: AgentReport): string {
     "",
     `Generated: ${report.generatedAt}`,
     "",
-    "Cross-dimension summary for bot architecture decisions. Pair with `agent suggest-lift` and `agent patterns` per dimension.",
+    "Cross-dimension summary for bot architecture decisions. Pair with `agent patterns` and `agent blueprint` per dimension.",
     "",
   ];
 
@@ -194,7 +189,7 @@ export function formatAgentReportMarkdown(report: AgentReport): string {
       continue;
     }
     for (const s of dim.shortlist) {
-      lines.push(`- **${s.fullName}** — ${s.total} — ${s.verification}`);
+      lines.push(`- **${s.fullName}** — ${s.total} — ${s.badge}`);
       if (s.topPattern) lines.push(`  - pattern: ${s.topPattern}`);
     }
     lines.push("");

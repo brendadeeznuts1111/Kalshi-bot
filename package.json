@@ -13,8 +13,6 @@
     "schedule:register": "bun src/research/schedule-cli.ts register",
     "schedule:remove": "bun src/research/schedule-cli.ts remove",
     "schedule:preview": "bun src/research/schedule-cli.ts preview",
-    "dashboard": "bun src/agent/dashboard.ts",
-    "dashboard:webview": "bun src/agent/dashboard.ts --webview --open=false",
     "agent": "bun src/agent/cli.ts",
     "report:term": "bun src/agent/report-term.ts",
     "report:diff": "bun src/agent/report-term.ts research/reports/latest.diff.md",

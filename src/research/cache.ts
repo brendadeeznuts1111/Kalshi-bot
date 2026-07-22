@@ -238,11 +238,32 @@ export function searchCachedPayloads(
   return rows.map((r) => ({ repo: r.repo, pushedAt: r.pushed_at, payload: r.payload }));
 }
 
+export function isFixtureRun(run: ResearchRun): boolean {
+  if (run.kind === "fixture") return true;
+  if (!isProductionRunId(run.runId)) return true;
+  if (run.kind === "production") return false;
+  return !isEligibleProductionRun(run);
+}
+
+export function isProductionRun(run: ResearchRun): boolean {
+  return !isFixtureRun(run);
+}
+
+function stampRunKind(run: ResearchRun): ResearchRun {
+  if (run.kind) return run;
+  return {
+    ...run,
+    kind: isEligibleProductionRun(run) ? "production" : "fixture",
+  };
+}
+
 export function saveRun(runId: string, generatedAt: string, payload: unknown): void {
+  const record =
+    isResearchRun(payload) ? stampRunKind(payload) : payload;
   getDb().run(
     `INSERT INTO runs (run_id, generated_at, payload) VALUES (?, ?, ?)
      ON CONFLICT(run_id) DO UPDATE SET generated_at = excluded.generated_at, payload = excluded.payload`,
-    [runId, generatedAt, JSON.stringify(payload)],
+    [runId, generatedAt, JSON.stringify(record)],
   );
 }
 
@@ -283,9 +304,19 @@ export function isEligibleProductionRun(run: ResearchRun): boolean {
 export function loadResearchRun(options?: {
   runId?: string;
   dimension?: string;
+  includeFixtures?: boolean;
 }): ResearchRun | null {
   const runId = options?.runId?.trim();
-  if (runId) return loadRunFromDb(runId);
+  if (runId) {
+    const run = loadRunFromDb(runId);
+    if (!run) return null;
+    if (!options?.includeFixtures && isFixtureRun(run)) return null;
+    if (options?.dimension) {
+      const target = normalizeDimensionId(options.dimension);
+      if (runDimension(run) !== target) return null;
+    }
+    return run;
+  }
   const dimension = normalizeDimensionId(options?.dimension ?? DEFAULT_DIMENSION);
   return loadLatestRunFromDb({ dimension });
 }
@@ -303,11 +334,38 @@ export function loadLatestRunFromDb(options?: {
   for (const row of rows) {
     const parsed = JSON.parse(row.payload) as unknown;
     if (!isResearchRun(parsed)) continue;
+    if (isFixtureRun(parsed)) {
+      if (options?.includeFixtures && runDimension(parsed) === targetDimension) {
+        fallback ??= parsed;
+      }
+      continue;
+    }
     if (runDimension(parsed) !== targetDimension) continue;
-    if (isEligibleProductionRun(parsed)) return parsed;
+    if (isProductionRun(parsed)) return parsed;
     fallback ??= parsed;
   }
   return options?.includeFixtures ? fallback : null;
+}
+
+/** Latest production run for dimension strictly before `beforeRunId` (for diff baseline). */
+export function loadPriorProductionRun(options: {
+  dimension: string;
+  beforeRunId?: string;
+}): ResearchRun | null {
+  const targetDimension = normalizeDimensionId(options.dimension);
+  const rows = getDb()
+    .query("SELECT payload FROM runs ORDER BY generated_at DESC LIMIT 50")
+    .all() as Array<{ payload: string }>;
+
+  for (const row of rows) {
+    const parsed = JSON.parse(row.payload) as unknown;
+    if (!isResearchRun(parsed)) continue;
+    if (isFixtureRun(parsed)) continue;
+    if (runDimension(parsed) !== targetDimension) continue;
+    if (options.beforeRunId && parsed.runId === options.beforeRunId) continue;
+    if (isProductionRun(parsed)) return parsed;
+  }
+  return null;
 }
 
 /** Latest eligible production run from any dimension other than `dimension`. */
@@ -320,8 +378,9 @@ export function loadFallbackRunFromDb(options: { dimension: string }): ResearchR
   for (const row of rows) {
     const parsed = JSON.parse(row.payload) as unknown;
     if (!isResearchRun(parsed)) continue;
+    if (isFixtureRun(parsed)) continue;
     if (runDimension(parsed) === targetDimension) continue;
-    if (isEligibleProductionRun(parsed)) return parsed;
+    if (isProductionRun(parsed)) return parsed;
   }
   return null;
 }
@@ -352,6 +411,7 @@ export function listRunSummaries(limit = 20): RunSummary[] {
   for (const row of rows) {
     const parsed = JSON.parse(row.payload) as unknown;
     if (!isResearchRun(parsed)) continue;
+    if (isFixtureRun(parsed)) continue;
     out.push({
       runId: row.run_id,
       generatedAt: row.generated_at,

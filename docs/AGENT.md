@@ -1,180 +1,66 @@
 # Agent tools
 
-CLI for pipeline status, research triggers, rotor verification, module lift suggestions, and headless web evidence capture.
+CLI helpers over `cache.db` and committed reports. No HTTP dashboard, no rotor pulse bridge.
 
 ## Commands
 
 ```bash
-bun run agent status                    # dashboard API or local fallback (+ verification summary)
-bun run agent audit-list                # shortlist vs rotor catalog
-bun run agent suggest-lift              # per-component lift map (rotor-aware badges)
+bun run agent status                    # latest run from cache.db
+bun run agent run-research              # spawn research locally (+ audit export)
 bun run agent patterns                  # static pattern report from evidence paths
 bun run agent blueprint                 # Bun stack architecture blueprint
 bun run agent report                    # cross-dimension architecture summary
-bun run agent run-research              # POST /api/research/run if dashboard up
-bun run agent run-research --local        # always in-process (no HTTP)
-bun run agent capture-evidence -- --url=https://kalshi.com/markets/...
-bun run agent capture-evidence -- --market=KXHIGHNY-25JAN01
-bun run agent verify-dashboard [--json] [--max-age-days=N] [--require-pulse]
+bun run report:term                     # ANSI-render latest.md in the terminal
+bun run report:diff                     # ANSI-render latest.diff.md
 ```
 
 JSON on parsed subcommands: append `--json` (no extra `--`).
 
 ```bash
 bun run agent status --json
-bun run agent suggest-lift --json
-bun run agent audit-list --json --run=2026-07-22T05-50-48-875Z
+bun run agent patterns --json --dimension=market-making
+bun run agent blueprint --json --no-write
 ```
-
-Use `--` only when passing through raw flags (e.g. `capture-evidence -- --url=…`).
-
-Start the dashboard first when you want API-backed `status` / `run-research`:
-
-```bash
-bun run dashboard
-# other terminal:
-bun run agent status
-```
-
-## Closed loop (Kalshi-bot ↔ rotor)
-
-```
-research --export-audit  →  rotor ingest (findings + evidence)
-        ↓                           ↓
-   cache.db / latest.md      audit-catalog.json
-        ↓                           ↓
- agent audit-list  ←—— pulse.log (bun run pulse:start in ~/Projects)
-        ↓
- agent suggest-lift (✓ / ⚠ / ✗ per component)
-```
-
-No monorepo imports — the agent reads rotor files as plain JSON (`ROTOR_ROOT`, `AUDIT_CATALOG_PATH`).
 
 ## `status`
 
-Latest run, pulse tick, dashboard phase, and a **one-line rotor verification summary** when a shortlist exists:
+Reads the latest production run from `research/cache/cache.db` (optional `--dimension`). Reports discovered → gated → shortlist and stale/freshness flags. No pulse or audit-catalog reads.
 
-```text
-Rotor verification: 1 verified, 1 watchlist, 4 unverified
-```
+## `run-research`
 
-Missing catalog → warning only (all repos treated as unverified). Same summary is on `GET /api/status` as `verification`.
-
-## `audit-list`
-
-Cross-references the latest shortlist against `tools/audit-catalog.json` under `ROTOR_ROOT`.
+Always runs locally via IPC spawn (TTY) or in-process (`--in-process` / `--json`). Equivalent to `bun run research` with `--export-audit`.
 
 ```bash
-bun run agent audit-list
-bun run agent audit-list --dimension=market-making
-bun run agent audit-list --dimension=arbitrage
-bun run agent audit-list --repo=openfi-dao/kalshi-trading-bot
-bun run agent audit-list --run=2026-07-22T05-50-48-875Z
+bun run agent run-research -- --dimension=price-data
+bun run agent run-research -- --json --in-process
 ```
-
-| `verification` | Meaning |
-|----------------|---------|
-| `verified` | In rotor catalog (high-value tier) and last pulse tick ok |
-| `watchlist` | Watchlist finding in catalog (`meta.tier: watchlist`) |
-| `unverified` | Not in catalog, or high-value but pulse not ok |
-
-## `suggest-lift`
-
-Reads the latest **`all`** run, or `--dimension <id>` / `--run <id>` from `cache.db`, and emits a **component map** — strongest shortlist repo per scoring component (auth, orders, tests, docs, maintenance, risk).
-
-```bash
-bun run agent suggest-lift --dimension=market-making --json
-bun run agent suggest-lift --dimension=arbitrage
-```
-
-Each line includes rotor badges: **✓ verified**, **⚠ watchlist**, **✗ unverified**. JSON includes `verified`, `verification`, and `findingId` on recommendations and shortlist entries.
-
-When a pattern report exists under `research/patterns/` (from `agent patterns`), each recommendation also includes a **`pattern`** object: `summary`, `excerpt`, `file`, and `source` (path to the pattern JSON). Text output shows a one-line `↳ pattern:` summary.
-
-Designed for an LLM or human deciding what to lift into a composite bot.
-
-## `report`
-
-Cross-dimension architecture summary — shortlist, verification badges, and pattern hints for key slices (`market-making`, `arbitrage`, `tracking`, sports sub-dimensions).
-
-```bash
-bun run agent report
-bun run agent report --dimension=market-making --json
-bun run agent report --no-write   # stdout only
-```
-
-Writes `research/reports/agent-report.md` and `.json`.
 
 ## `patterns`
 
-Static pattern extraction from detector evidence paths — reads source via `gh api` (no clone, no test execution).
+Extracts auth/order/Bun-feature patterns from detector evidence paths for a cached run.
 
 ```bash
 bun run agent patterns --dimension=market-making
-bun run agent patterns --dimension=arbitrage --json
-bun run agent patterns --repo=rodlaf/KalshiMarketMaker
-bun run agent patterns --dimension=market-making --no-write   # stdout only
+bun run agent patterns --repo=owner/name --open   # needs REPO_CLONE_ROOT
 ```
 
-Writes `research/patterns/patterns-latest-{dimension}.md` and `.json` (see [`research/patterns/README.md`](../research/patterns/README.md)).
-
-Heuristics cover auth loading, order construction, dry-run defaults, loop style (poll vs WebSocket), error handling, project layout, and **Bun runtime features** (`bunFeatures`).
+Writes `research/patterns/patterns-latest-{dimension}.md` unless `--no-write`.
 
 ## `blueprint`
 
-Cross-dimension architecture blueprint — recommended Bun stack per domain with reference repos and lift links.
+Builds `research/reports/architecture-blueprint.md` from cached runs + pattern reports + lift map (score/tier only — no rotor verification badges).
+
+## `report`
+
+Cross-dimension summary → `research/reports/agent-report.md`.
+
+## Audit export (write-only)
+
+Rotor ingest remains optional and one-way:
 
 ```bash
-bun run agent blueprint
-bun run agent blueprint --json
+bun run research -- --export-audit
+bun run export-audit -- --latest
 ```
 
-Writes `research/reports/architecture-blueprint.md`.
-
-## `capture-evidence`
-
-Uses headless [`Bun.WebView`](https://bun.com/blog/bun-v1.3.12#bun-webview-headless-browser-automation) to:
-
-1. Navigate to a Kalshi market URL
-2. Capture a PNG screenshot
-3. Write sha3-256 digest + manifest under `research/evidence-captures/` (gitignored)
-
-Headless only today (`headless: false` throws). Human UI uses `Bun.serve` + system browser.
-
-## `verify-dashboard`
-
-Pipeline self-check: **`GET /api/status`** plus headless **WebView** load of `/` to confirm `#agent-dashboard-meta` matches the API (run id, timestamp, shortlist).
-
-```bash
-bun run dashboard
-bun run agent verify-dashboard
-bun run agent verify-dashboard --json --require-pulse
-```
-
-Exit **0** = pass, **1** = fail.
-
-## Environment
-
-| Variable | Purpose |
-|----------|---------|
-| `DASHBOARD_URL` | Base URL (default `http://127.0.0.1:3457`) |
-| `DASHBOARD_PORT` | Port when `DASHBOARD_URL` unset |
-| `ROTOR_ROOT` | Monorepo root for `pulse.log` and audit catalog |
-| `AUDIT_CATALOG_PATH` | Override path to `tools/audit-catalog.json` |
-| `DASHBOARD_VERIFY_MAX_AGE_DAYS` | Verify freshness window (default 21) |
-| `DASHBOARD_VERIFY_REQUIRE_PULSE` | Set `1` to require pulse ok |
-| `DASHBOARD_FETCH_TIMEOUT_MS` | API timeout (default 5000) |
-
-## Files
-
-| File | Role |
-|------|------|
-| [`cli.ts`](../src/agent/cli.ts) | Subcommand router |
-| [`dashboard-client.ts`](../src/agent/dashboard-client.ts) | HTTP client + local fallback |
-| [`audit-list.ts`](../src/agent/audit-list.ts) | Rotor catalog cross-reference |
-| [`suggest-lift.ts`](../src/agent/suggest-lift.ts) | Component lift recommendations |
-| [`pattern-extract.ts`](../src/agent/pattern-extract.ts) | Static pattern reports from evidence paths |
-| [`capture-evidence.ts`](../src/agent/capture-evidence.ts) | WebView screenshot + hash |
-| [`verify-dashboard.ts`](../src/agent/verify-dashboard.ts) | WebView + API parity checks |
-
-See also [`DASHBOARD.md`](DASHBOARD.md).
+This project does not read `pulse.log` or `audit-catalog.json`.

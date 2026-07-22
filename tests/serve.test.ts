@@ -22,6 +22,7 @@ const OLD_RUN_ID = "serve-test-run-old";
 function mockRun(runId: string): ResearchRun {
   return {
     runId,
+    kind: runId === RUN_ID ? "production" : "fixture",
     generatedAt: runId === RUN_ID ? freshTestGeneratedAt() : "2026-12-30T00:00:00.000Z",
     dimension: "all",
     config: { shortlistSize: 12, gate: { minStars: 5, minForks: 3, maxAgeMonths: 18 } },
