@@ -9,7 +9,6 @@ import type { Database } from "bun:sqlite";
 import { KalshiMarketWs, type KalshiWsFactory, type KalshiWsWire } from "../../bot/kalshi-ws.ts";
 import { loadKalshiCredentials, type KalshiCredentials } from "../../bot/kalshi-auth.ts";
 import { marketKindFromTicker } from "./tennis-ladder.ts";
-import { mintKalshiEventId } from "./kalshi-event-id.ts";
 import type { CanonicalEventId } from "./types.ts";
 import {
   applyOrderbookDelta,
@@ -50,13 +49,12 @@ export type WsRecorderOptions = {
   wsFactory?: KalshiWsFactory;
 };
 
-function eventIdForTicker(db: Database, ticker: string): CanonicalEventId {
+function eventIdForTicker(db: Database, ticker: string): CanonicalEventId | null {
   const mapped = db
     .query(`SELECT event_id AS eventId FROM markets WHERE ticker = $ticker`)
     .get({ $ticker: ticker }) as { eventId: string } | null;
-  if (mapped?.eventId) return mapped.eventId as CanonicalEventId;
-  const eventTicker = ticker.replace(/-[A-Z0-9]+$/, "");
-  return mintKalshiEventId(eventTicker);
+  if (!mapped?.eventId) return null;
+  return mapped.eventId as CanonicalEventId;
 }
 
 function insertBookTick(
@@ -106,7 +104,7 @@ export function handleOrderbookWire(
   recvTs: number,
   options: { dryRun?: boolean; onTick?: WsRecorderOptions["onTick"] } = {},
 ): {
-  kind: "snapshot" | "delta" | "gap" | "ignore";
+  kind: "snapshot" | "delta" | "gap" | "ignore" | "error";
   ticker?: string;
 } {
   const type = wire.type;
@@ -134,8 +132,10 @@ export function handleOrderbookWire(
     );
     const snap = liveOrderbookToSnapshot(book, recvTs);
     if (snap && db && !options.dryRun) {
+      const eventId = eventIdForTicker(db, ticker);
+      if (!eventId) return { kind: "error", ticker };
       insertBookTick(db, {
-        eventId: eventIdForTicker(db, ticker),
+        eventId,
         ticker,
         seq,
         ts: recvTs,
@@ -165,8 +165,10 @@ export function handleOrderbookWire(
     const sourceClock = exchangeTs != null ? "exchange" : "recv";
     const snap = liveOrderbookToSnapshot(book, ts);
     if (snap && db && !options.dryRun) {
+      const eventId = eventIdForTicker(db, ticker);
+      if (!eventId) return { kind: "error", ticker };
       insertBookTick(db, {
-        eventId: eventIdForTicker(db, ticker),
+        eventId,
         ticker,
         seq,
         ts,
@@ -267,6 +269,7 @@ export async function runKalshiWsWatchRecorder(
           });
           if (result.kind === "snapshot") summary.snapshots++;
           if (result.kind === "delta") summary.deltas++;
+          if (result.kind === "error") summary.errors++;
           if (result.kind === "gap") {
             summary.seqGaps++;
             if (orderbookSid != null && result.ticker) {

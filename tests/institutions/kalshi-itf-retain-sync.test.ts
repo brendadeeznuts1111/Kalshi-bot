@@ -238,6 +238,153 @@ describe("fetchRetainedItfMarkets / syncItfEvents", () => {
     expect(closedCount.n).toBe(0);
   });
 
+  test("occurrence +5m rematerializes same event_id (no source_row_hash abort)", async () => {
+    // Unambiguous singles blob FOOBAR = FOO+BAR (same shape as PENKUL).
+    const event = "KXITFWMATCH-26JUL22FOOBAR";
+    const marketsT0: KalshiMarketWire[] = [
+      wire({
+        ticker: `${event}-FOO`,
+        event_ticker: event,
+        status: "open",
+        yes_sub_title: "Foo",
+        custom_strike: { tennis_competitor: COMP_A },
+        occurrence_datetime: "2026-07-22T10:00:00Z",
+      }),
+      wire({
+        ticker: `${event}-BAR`,
+        event_ticker: event,
+        status: "open",
+        yes_sub_title: "Bar",
+        custom_strike: { tennis_competitor: COMP_B },
+        occurrence_datetime: "2026-07-22T10:00:00Z",
+      }),
+    ];
+    let active = marketsT0;
+    const fetchImpl: KalshiFetchImpl = async (input) => {
+      const q = parseQuery(input);
+      const markets = q.get("series_ticker") === "KXITFWMATCH" ? active : [];
+      return new Response(JSON.stringify({ markets, cursor: undefined }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    };
+    const db = openEventStore({ dbPath: ":memory:" });
+    const first = await syncItfEvents(db, {
+      fetchImpl,
+      retainDays: 0,
+      nowMs: NOW_MS,
+      baseUrl: "https://example.test/trade-api/v2",
+    });
+    expect(first.anomalies).toEqual([]);
+    expect(first.eventsUpserted).toBe(1);
+    const id1 = db
+      .query(
+        `SELECT e.event_id AS id, e.start_ts AS startTs FROM events e
+         JOIN markets m ON m.event_id = e.event_id WHERE m.ticker = $t LIMIT 1`,
+      )
+      .get({ $t: `${event}-FOO` }) as { id: string; startTs: string };
+
+    active = marketsT0.map((m) => ({
+      ...m,
+      occurrence_datetime: "2026-07-22T10:05:00Z",
+    }));
+    const second = await syncItfEvents(db, {
+      fetchImpl,
+      retainDays: 0,
+      nowMs: NOW_MS,
+      baseUrl: "https://example.test/trade-api/v2",
+    });
+    expect(second.anomalies).toEqual([]);
+    expect(second.eventsUpserted).toBe(1);
+    const id2 = db
+      .query(
+        `SELECT e.event_id AS id, e.start_ts AS startTs FROM events e
+         JOIN markets m ON m.event_id = e.event_id WHERE m.ticker = $t LIMIT 1`,
+      )
+      .get({ $t: `${event}-FOO` }) as { id: string; startTs: string };
+    expect(id2.id).toBe(id1.id);
+    expect(id2.startTs).toBe("2026-07-22T10:05:00Z");
+    const n = db.query(`SELECT COUNT(*) AS n FROM events`).get() as { n: number };
+    expect(n.n).toBe(1);
+  });
+
+  test("missing occurrence_datetime skips trading upsert", async () => {
+    const event = "KXITFWMATCH-26JUL22FOOBAR";
+    const fetchImpl: KalshiFetchImpl = async (input) => {
+      const q = parseQuery(input);
+      const markets =
+        q.get("series_ticker") === "KXITFWMATCH"
+          ? [
+              {
+                ticker: `${event}-FOO`,
+                event_ticker: event,
+                status: "open",
+                yes_sub_title: "Foo",
+                custom_strike: { tennis_competitor: COMP_A },
+              },
+              {
+                ticker: `${event}-BAR`,
+                event_ticker: event,
+                status: "open",
+                yes_sub_title: "Bar",
+                custom_strike: { tennis_competitor: COMP_B },
+              },
+            ]
+          : [];
+      return new Response(JSON.stringify({ markets, cursor: undefined }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    };
+    const db = openEventStore({ dbPath: ":memory:" });
+    const summary = await syncItfEvents(db, {
+      fetchImpl,
+      retainDays: 0,
+      nowMs: NOW_MS,
+      baseUrl: "https://example.test/trade-api/v2",
+    });
+    expect(summary.eventsUpserted).toBe(0);
+    expect(summary.eventsSkipped).toBe(1);
+    expect(summary.anomalies.some((a) => a.startsWith("missing_occurrence:"))).toBe(true);
+  });
+
+  test("missing competitor pair refuses trading upsert", async () => {
+    const event = "KXITFWMATCH-26JUL22FOOBAR";
+    const fetchImpl: KalshiFetchImpl = async (input) => {
+      const q = parseQuery(input);
+      const markets =
+        q.get("series_ticker") === "KXITFWMATCH"
+          ? [
+              wire({
+                ticker: `${event}-FOO`,
+                event_ticker: event,
+                status: "open",
+                yes_sub_title: "Foo",
+              }),
+              wire({
+                ticker: `${event}-BAR`,
+                event_ticker: event,
+                status: "open",
+                yes_sub_title: "Bar",
+              }),
+            ]
+          : [];
+      return new Response(JSON.stringify({ markets, cursor: undefined }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    };
+    const db = openEventStore({ dbPath: ":memory:" });
+    const summary = await syncItfEvents(db, {
+      fetchImpl,
+      retainDays: 0,
+      nowMs: NOW_MS,
+      baseUrl: "https://example.test/trade-api/v2",
+    });
+    expect(summary.eventsUpserted).toBe(0);
+    expect(summary.anomalies.some((a) => a.startsWith("ticker_keyed_event_id:"))).toBe(true);
+  });
+
   test("sync preserves existing bridged winner over Kalshi settlement", async () => {
     const { fetchImpl } = mockItfFetch();
     const db = openEventStore({ dbPath: ":memory:" });

@@ -85,6 +85,11 @@ export function kalshiMarketId(ticker: string): string {
   return `kalshi:${ticker}`;
 }
 
+/**
+ * Stable Kalshi venue identity for UNIQUE(source_row_hash).
+ * Ticker-only (not startTs) so occurrence reschedule rematerializes one row
+ * instead of colliding a new competitor event_id against the same hash.
+ */
 export function kalshiSourceRowHash(eventTicker: string): string {
   return sha3Hex(`kalshi-event|${eventTicker}`);
 }

@@ -25,7 +25,6 @@ import {
 import {
   kalshiMarketId,
   kalshiSourceRowHash,
-  mintKalshiEventId,
   tryMintKalshiEventIdFromMarkets,
 } from "./kalshi-event-id.ts";
 import type { CanonicalEventId } from "./types.ts";
@@ -255,17 +254,32 @@ function upsertKalshiEvent(
       anomaly: `ambiguous_itf_blob:${eventTicker} — refuse best-guess side split`,
     };
   }
-  const startTs = sample.occurrence_datetime ?? sample.expected_expiration_time ?? new Date().toISOString();
-  const { eventId, keyedBy } = tryMintKalshiEventIdFromMarkets({
+  const startTs = sample.occurrence_datetime?.trim() ?? "";
+  if (!startTs) {
+    return {
+      ok: false,
+      anomaly: `missing_occurrence:${eventTicker} — refuse expected_expiration / wall-clock mint`,
+    };
+  }
+  const minted = tryMintKalshiEventIdFromMarkets({
     eventTicker,
     series,
     startTs,
     competitorIds: markets.map((m) => m.custom_strike?.tennis_competitor),
   });
-  if (keyedBy === "ticker") {
-    // Still upsert, but surface the landmine — ticker blob is collision-prone.
-    // Prefer competitor UUIDs whenever Kalshi provides them.
+  if (minted.keyedBy === "ticker") {
+    return {
+      ok: false,
+      anomaly: `ticker_keyed_event_id:${eventTicker} — missing tennis_competitor pair; refuse trading upsert`,
+    };
   }
+  const sourceRowHash = kalshiSourceRowHash(eventTicker);
+  // Stable venue row: reuse prior event_id when occurrence drifts a minute (hash is ticker-only).
+  const prior = db
+    .query(`SELECT event_id AS eventId FROM events WHERE source_row_hash = $hash`)
+    .get({ $hash: sourceRowHash }) as { eventId: string } | null;
+  const eventId = (prior?.eventId as CanonicalEventId | undefined) ?? minted.eventId;
+  const keyedBy = minted.keyedBy;
   const playerA = labels?.[0] ?? sideCodes[0]!;
   const playerB = labels?.[1] ?? sideCodes[1]!;
   const rules = parseRulesBlob(markets);
@@ -322,7 +336,7 @@ function upsertKalshiEvent(
     $source: KALSHI_SOURCE,
     $source_url: `${KALSHI_MARKETS_URL}?event_ticker=${encodeURIComponent(eventTicker)}`,
     $fetched_ts: ingestedAt,
-    $source_row_hash: kalshiSourceRowHash(eventTicker),
+    $source_row_hash: sourceRowHash,
     $ingested_at: ingestedAt,
     $corpus: TRADING_CORPUS,
   });
@@ -449,9 +463,6 @@ export async function syncItfEvents(
         anomalies.push(result.anomaly);
         continue;
       }
-      if (result.keyedBy === "ticker") {
-        anomalies.push(`ticker_keyed_event_id:${eventTicker} — missing tennis_competitor pair`);
-      }
       eventsUpserted++;
       marketsUpserted += marketsForEvent.length;
     }
@@ -519,8 +530,12 @@ export async function recordKalshiBookTicks(
     const mapped = db
       .query(`SELECT event_id AS eventId FROM markets WHERE ticker = $ticker`)
       .get({ $ticker: ticker }) as { eventId: string } | null;
-    const eventId =
-      (mapped?.eventId as CanonicalEventId | undefined) ?? mintKalshiEventId(eventTicker);
+    if (!mapped?.eventId) {
+      // Never ticker-mint phantom event_ids — book_ticks must join synced markets.
+      errors++;
+      continue;
+    }
+    const eventId = mapped.eventId as CanonicalEventId;
     const kind = marketKindFromTicker(ticker);
     try {
       const book: BookSnapshot = await fetchBook(ticker);

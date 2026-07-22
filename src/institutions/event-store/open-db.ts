@@ -51,6 +51,8 @@ export function openEventStore(options: OpenEventStoreOptions = {}): Database {
     create: !options.readonly,
     readonly: options.readonly,
   });
+  // Enforce REFERENCES on book_ticks / markets / live_scores (SQLite defaults off).
+  db.run("PRAGMA foreign_keys = ON;");
   if (!options.readonly && dbPath !== ":memory:") {
     db.run("PRAGMA journal_mode = WAL;");
   }
