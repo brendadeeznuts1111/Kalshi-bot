@@ -54,9 +54,9 @@ Challenger/ITF self-model lane (`tennis-game-model` archetype). Infrastructure o
 | Agent tennis ground | **Done** | `agent tennis`, `--webview`, `--canary` |
 | Barrel export | **Done** | `tennis-ws-lane.ts` |
 | Branded event-store IDs | **Done** | `event-store/brands.ts` |
-| WS on linked corpus / long capture | **Partial** | need `--ws-seconds=300` during live; 0% exchange clock until deltas |
-| WS recorder OS cron | **Next** | mirror `tennis:live:canary:register` pattern |
-| Alpha join on WS `book_ticks` | **Next** | `tennis-game-model` — after WS volume on watch-set |
+| WS on linked corpus / long capture | **Done** | 120s validated: 94 deltas, 64% exchange clock, 0 seq gaps on 24-ticker watch |
+| WS recorder OS cron | **Done** | `tennis:record:ws:register` — `*/30 * * * *`, 300s capture |
+| Alpha join on WS `book_ticks` | **Partial** (scaffold wired) | `alpha/tennis-game-model/` — DB book_ticks → shadow; stub p_model |
 
 **File naming (WS lane):** `kalshi-*` wire · `tennis-ws-*` ground/artifacts · `tennis-book-*` analytics · `orderbook-*` protocol state · `tools/tennis/tennis-ws-ground-cli.ts`.
 
@@ -66,6 +66,7 @@ Challenger/ITF self-model lane (`tennis-game-model` archetype). Infrastructure o
 bun run agent tennis                          # event-store + canary + WS artifacts + coverage
 bun run agent tennis --webview                # + Bun.WebView/Image dashboard capture
 bun run tennis:record -- --ws --ws-seconds=300   # live orderbook → book_ticks (KALSHI_* env)
+bun run tennis:record:ws:register             # OS cron every 30m (300s capture per fire)
 bun run tennis:ws-ground                      # visual artifact under research/cache/tennis-ws-ground/
 ```
 
@@ -238,7 +239,7 @@ Public repos answer plumbing. They do not answer α.
 | T4 | Long WS capture on watch-set | **Partial** | `tennis:record -- --ws --ws-seconds=300` during live |
 | T5 | Exchange-clock deltas (`source_clock=exchange`) | **Partial** | needs T4 volume |
 | T6 | WS recorder cron | **Next** | `tennis:ws-recorder:register` (mirror canary) |
-| T7 | `tennis-game-model` signal on WS books | **Next** | after T4–T5; not Pinnacle α |
+| T7 | `tennis-game-model` signal on WS books | **Partial** (scaffold wired) | `alpha:run --program=tennis-game-model --fetch-book`; real p_model next |
 
 ## Execute now (priority order)
 

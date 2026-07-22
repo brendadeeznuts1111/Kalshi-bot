@@ -162,6 +162,21 @@ Override: `TENNIS_LIVE_CANARY_CRON_SCHEDULE`, `TENNIS_LIVE_CANARY_CRON_TITLE`.
 
 **Equivalence check (once, or in CI):** fixture test `dry-run would_* matches real writer against same DB state` in `tests/institutions/live-scores.test.ts`. Against a live event manually: dry-run then real, same tickers — `would_upsert`/`would_snapshots` must match actual writes.
 
+### WS recorder (OS cron)
+
+Authenticated orderbook WebSocket on the watch-set — 5m capture per fire, session artifacts via `tennis-ws-recorder-store`.
+
+**Schedule (OS Bun.cron, every 30m local — or match-hours-only via override):**
+
+```bash
+bun run tennis:record -- --ws --ws-seconds=300   # one-shot
+bun run tennis:record:ws:preview
+bun run tennis:record:ws:register                # launchd / crontab (default */30 * * * *)
+bun run tennis:record:ws:remove
+```
+
+Override: `TENNIS_WS_RECORDER_CRON_SCHEDULE`, `TENNIS_WS_RECORDER_CRON_TITLE`, `TENNIS_WS_RECORDER_WS_SECONDS`.
+
 ### Snapshot cadence (REST vs WebSocket)
 
 Default poll interval: `TENNIS_LIVE_INTERVAL_MS` (10s). `score_snapshots` only appends on fingerprint change. Each poll classifies the coarsest delta (`point` / `game` / `set` / `status` / `server`).
@@ -192,3 +207,15 @@ TENNIS_LIVE_INTERVAL_MS=5000 bun run tennis:live -- --loop
 ```
 
 The calendar said where the markets are. The collector is what lets a self-model disagree with them.
+
+### Alpha join — `tennis-game-model` (shadow scaffold)
+
+Self-model shadow reads **event-store `book_ticks` only** (no Odds API, no live Kalshi fetch in `--fetch-book`). Latest tick per ticker prefers `kalshi-ws`, else `kalshi-rest`; exposes mid, spread, `source_clock`, and `recv_ts`. Stub `p_model = mid/100` until a point/game model exists — honest placeholder with explicit skip reasons and fee-aware `decide()`.
+
+```bash
+bun run alpha:run -- --program=tennis-game-model --ticker=KXITFMATCH-26JUL22AAA-BBB --fetch-book
+# or from tenant dir:
+cd alpha/tennis-game-model && bun src/run-once.ts --ticker=KXITFMATCH-... --fetch-book
+```
+
+Requires prior `tennis:record -- --watch` or `tennis:record -- --ws` rows in `research/cache/event-store.db`.

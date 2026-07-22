@@ -23,7 +23,7 @@ src/bot/kalshi-ws.ts
 src/bot/kalshi-auth.ts
 src/alpha/ticker-formats/itf.ts
 tools/tennis/
-tests/institutions/{itf-stadion,stadion-kalshi-bridge,live-scores,watch-set,tennis-ladder,kalshi-event-id,kalshi-itf-sync,open-db,kalshi-ws-recorder,orderbook-stream,orderbook-live,tennis-book-coverage,tennis-ws-*,live-canary-store}*
+tests/institutions/{itf-stadion,stadion-kalshi-bridge,live-scores,watch-set,tennis-ladder,kalshi-event-id,kalshi-itf-sync,open-db,ws-recorder-schedule,kalshi-ws-recorder,orderbook-stream,orderbook-live,tennis-book-coverage,tennis-ws-*,live-canary-store}*
 tests/bot/{kalshi-live-data,kalshi-auth}.test.ts
 tests/agent/tennis-ground.test.ts
 tests/alpha/ticker-formats/itf.test.ts

@@ -1,5 +1,6 @@
 // @see https://bun.com/docs/runtime/sqlite
 import type { Database } from "bun:sqlite";
+import { asCanonicalEventId, unbrand } from "./brands.ts";
 import { winnerOutcomeBit } from "./event-id.ts";
 import {
   fetchItfStadionDay,
@@ -46,7 +47,7 @@ export function repairStadionToursFromLevel(db: Database): RepairStadionToursSum
         .query(`UPDATE events SET tour = $tour WHERE event_id = $event_id AND source = $source`)
         .run({
           $tour: next,
-          $event_id: row.event_id,
+          $event_id: unbrand(asCanonicalEventId(row.event_id)),
           $source: ITF_STADION_SOURCE,
         });
       if (result.changes > 0) updated++;
@@ -66,7 +67,7 @@ function upsertPrimaryEvent(
 ): "inserted" | "updated" {
   const existed = db
     .query(`SELECT 1 AS ok FROM events WHERE event_id = $event_id`)
-    .get({ $event_id: match.eventId }) as { ok: number } | null;
+    .get({ $event_id: unbrand(match.eventId) }) as { ok: number } | null;
 
   db.query(
     `INSERT INTO events (
@@ -99,7 +100,7 @@ function upsertPrimaryEvent(
       ingested_at = excluded.ingested_at,
       corpus = excluded.corpus`,
   ).run({
-    $event_id: match.eventId,
+    $event_id: unbrand(match.eventId),
     $tour: match.tour,
     $level: match.level,
     $tournament: match.tournament,
@@ -143,7 +144,7 @@ function upsertPrimaryResolution(db: Database, match: PrimaryResultMatch): boole
          resolved_ts = excluded.resolved_ts`,
     )
     .run({
-      $event_id: match.eventId,
+      $event_id: unbrand(match.eventId),
       $outcome: outcome,
       $winner: match.winner,
       $source: ITF_STADION_SOURCE,

@@ -12,8 +12,14 @@ import {
   type CompetitorId,
   type KalshiEventTicker,
   type KalshiMarketTicker,
+  asSeriesTicker,
+  type SeriesTicker,
   unbrand,
 } from "./brands.ts";
+
+/** Display fallback when series prefix is missing on wire markets. */
+export const ITF_CALENDAR_SERIES_FALLBACK = "ITF" as const;
+export type ItfCalendarSeries = SeriesTicker | typeof ITF_CALENDAR_SERIES_FALLBACK;
 
 export type ItfCalendarLeg = {
   ticker: KalshiMarketTicker;
@@ -38,7 +44,7 @@ export type ItfCalendarLeg = {
 
 export type ItfCalendarRow = {
   eventTicker: KalshiEventTicker;
-  series: string;
+  series: ItfCalendarSeries;
   tour: string;
   /** e.g. "Dong / Markovina vs Delaney / Ho Yap" */
   matchup: string;
@@ -195,7 +201,10 @@ export function buildItfCalendarRows(markets: KalshiMarketWire[]): ItfCalendarRo
 
   for (const [eventTicker, eventMarkets] of grouped) {
     const sample = eventMarkets[0]!;
-    const series = parseItfSeriesPrefix(unbrand(sample.ticker)) ?? "ITF";
+    const seriesPrefix = parseItfSeriesPrefix(unbrand(sample.ticker));
+    const series: ItfCalendarSeries = seriesPrefix
+      ? asSeriesTicker(seriesPrefix)
+      : ITF_CALENDAR_SERIES_FALLBACK;
     const startTs = sample.occurrence_datetime ?? sample.expected_expiration_time ?? "";
     const legs = eventMarkets.map(legFromMarket).sort((a, b) => b.volumeFp - a.volumeFp);
     const labels = playerLabels(eventMarkets);
@@ -241,7 +250,7 @@ export function buildItfCalendarRows(markets: KalshiMarketWire[]): ItfCalendarRo
     rows.push({
       eventTicker,
       series,
-      tour: itfTourFromSeries(series),
+      tour: itfTourFromSeries(seriesPrefix ?? ITF_CALENDAR_SERIES_FALLBACK),
       matchup,
       startTs,
       startDate: startTs.slice(0, 10),
@@ -291,7 +300,10 @@ export function filterItfCalendarRows(rows: ItfCalendarRow[], filter: ItfCalenda
     out = out.filter((r) => r.startDate === filter.date || r.startTs.startsWith(filter.date!));
   }
   if (filter.series) {
-    out = out.filter((r) => r.series === filter.series);
+    const want = filter.series;
+    const seriesPlain = (s: ItfCalendarSeries) =>
+      s === ITF_CALENDAR_SERIES_FALLBACK ? s : unbrand(s);
+    out = out.filter((r) => seriesPlain(r.series) === want);
   }
   if (filter.minVolume != null && filter.minVolume > 0) {
     out = out.filter((r) => r.totalVolumeFp >= filter.minVolume!);

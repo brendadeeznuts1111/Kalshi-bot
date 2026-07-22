@@ -166,3 +166,23 @@ export function kalshiEventTickersFromArgv(raw: string): KalshiEventTicker[] {
     .filter(Boolean)
     .map(asKalshiEventTicker);
 }
+
+/** Parse once when loading branded values from SQLite row columns. */
+export const sqlBrand = {
+  marketTicker: asKalshiMarketTicker,
+  eventTicker: asKalshiEventTicker,
+  eventId: asCanonicalEventId,
+  seriesTicker: asSeriesTicker,
+} as const;
+
+/** JSON/cache wire → interior event tickers (e.g. canary artifact). */
+export function parseKalshiEventTickersWire(raw: unknown): KalshiEventTicker[] {
+  if (!Array.isArray(raw)) return [];
+  const out: KalshiEventTicker[] = [];
+  for (const item of raw) {
+    if (typeof item !== "string") continue;
+    const t = tryKalshiEventTicker(item);
+    if (t) out.push(t);
+  }
+  return out;
+}

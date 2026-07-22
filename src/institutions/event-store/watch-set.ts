@@ -5,7 +5,7 @@
 // @see https://bun.com/docs/runtime/sqlite
 import type { Database } from "bun:sqlite";
 import type { CanonicalEventId, KalshiMarketTicker } from "./brands.ts";
-import { asKalshiMarketTicker, unbrand } from "./brands.ts";
+import { asCanonicalEventId, sqlBrand, unbrand } from "./brands.ts";
 import {
   listWatchEvents,
   listWatchEventsForTickers,
@@ -58,7 +58,7 @@ export function listMarketTickersForEventIds(
        ORDER BY ticker ASC`,
     )
     .all(params) as Array<{ ticker: string }>;
-  return rows.map((r) => asKalshiMarketTicker(r.ticker));
+  return rows.map((r) => sqlBrand.marketTicker(r.ticker));
 }
 
 /**

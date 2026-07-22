@@ -28,7 +28,7 @@ import {
   tryMintKalshiEventIdFromMarkets,
 } from "./kalshi-event-id.ts";
 import type { CanonicalEventId, KalshiEventTicker, KalshiMarketTicker, SeriesTicker } from "./brands.ts";
-import { asCanonicalEventId, asKalshiEventTicker, asSeriesTicker, tryKalshiEventTicker, unbrand } from "./brands.ts";
+import { asKalshiEventTicker, asSeriesTicker, sqlBrand, tryKalshiEventTicker, unbrand } from "./brands.ts";
 import type { BookSnapshot } from "../alpha-signal-types.ts";
 import { fetchKalshiBookSnapshot } from "../../bot/kalshi-market-data.ts";
 import {
@@ -283,7 +283,7 @@ function upsertKalshiEvent(
   const prior = db
     .query(`SELECT event_id AS eventId FROM events WHERE source_row_hash = $hash`)
     .get({ $hash: sourceRowHash }) as { eventId: string } | null;
-  const eventId = (prior ? asCanonicalEventId(prior.eventId) : undefined) ?? minted.eventId;
+  const eventId = (prior ? sqlBrand.eventId(prior.eventId) : undefined) ?? minted.eventId;
   const keyedBy = minted.keyedBy;
   const playerA = labels?.[0] ?? sideCodes[0]!;
   const playerB = labels?.[1] ?? sideCodes[1]!;
@@ -554,7 +554,7 @@ export async function recordKalshiBookTicks(
       errors++;
       continue;
     }
-    const eventId = asCanonicalEventId(mapped.eventId);
+    const eventId = sqlBrand.eventId(mapped.eventId);
     const kind = marketKindFromTicker(ticker);
     try {
       const book: BookSnapshot = await fetchBook(ticker);

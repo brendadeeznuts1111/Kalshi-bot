@@ -5,6 +5,8 @@
  * Agent tennis grounds here without re-hitting Kalshi.
  */
 import { CACHE_DIR, joinPath } from "../../research/paths.ts";
+import type { KalshiEventTicker } from "./brands.ts";
+import { parseKalshiEventTickersWire, unbrand } from "./brands.ts";
 import type { LiveCanaryVerdict, LivePollSummary } from "./live-scores.ts";
 
 export const TENNIS_CANARY_DIR = joinPath(CACHE_DIR, "tennis-canary");
@@ -32,7 +34,7 @@ export type TennisCanaryArtifact = {
   };
   reasons: string[];
   warnings: string[];
-  liveTickers: string[];
+  liveTickers: KalshiEventTicker[];
 };
 
 function compactFingerprint(input: {
@@ -56,7 +58,7 @@ export function buildCanaryArtifact(input: {
   summary: LivePollSummary;
   verdict: LiveCanaryVerdict;
   durationMs: number;
-  liveTickers?: string[];
+  liveTickers?: KalshiEventTicker[];
   at?: string;
 }): TennisCanaryArtifact {
   const wireMissingRows = input.summary.rows.filter((r) => r.missingDetailKeys.length > 0)
@@ -73,6 +75,8 @@ export function buildCanaryArtifact(input: {
     wireMissingRows,
   };
   const exitCode = input.verdict.exitCode;
+  const liveTickers =
+    input.liveTickers ?? input.summary.rows.filter((r) => r.isLive).map((r) => r.eventTicker);
   return {
     at: input.at ?? new Date().toISOString(),
     exitCode,
@@ -86,7 +90,17 @@ export function buildCanaryArtifact(input: {
     summary,
     reasons: input.verdict.reasons,
     warnings: input.verdict.warnings,
-    liveTickers: input.liveTickers ?? input.summary.rows.filter((r) => r.isLive).map((r) => r.eventTicker),
+    liveTickers,
+  };
+}
+
+function parseCanaryArtifactWire(raw: unknown): TennisCanaryArtifact | null {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as Record<string, unknown>;
+  if (typeof o.at !== "string" || typeof o.exitCode !== "number") return null;
+  return {
+    ...(o as Omit<TennisCanaryArtifact, "liveTickers">),
+    liveTickers: parseKalshiEventTickersWire(o.liveTickers),
   };
 }
 
@@ -97,20 +111,29 @@ export async function ensureCanaryDir(): Promise<void> {
 /** Write latest.json + append history.jsonl. Returns latest path. */
 export async function writeCanaryArtifact(art: TennisCanaryArtifact): Promise<string> {
   await ensureCanaryDir();
-  const body = JSON.stringify(art, null, 2);
+  const body = JSON.stringify(
+    {
+      ...art,
+      liveTickers: art.liveTickers.map((t) => unbrand(t)),
+    },
+    null,
+    2,
+  );
   await Bun.write(TENNIS_CANARY_LATEST, body);
-  const line = `${JSON.stringify(art)}\n`;
+  const line = `${JSON.stringify({ ...art, liveTickers: art.liveTickers.map((t) => unbrand(t)) })}\n`;
   const hist = Bun.file(TENNIS_CANARY_HISTORY);
   const prev = (await hist.exists()) ? await hist.text() : "";
   await Bun.write(TENNIS_CANARY_HISTORY, prev + line);
   return TENNIS_CANARY_LATEST;
 }
 
-export async function loadLatestCanary(): Promise<TennisCanaryArtifact | null> {
-  const file = Bun.file(TENNIS_CANARY_LATEST);
+export async function loadLatestCanary(
+  latestPath: string = TENNIS_CANARY_LATEST,
+): Promise<TennisCanaryArtifact | null> {
+  const file = Bun.file(latestPath);
   if (!(await file.exists())) return null;
   try {
-    return (await file.json()) as TennisCanaryArtifact;
+    return parseCanaryArtifactWire(await file.json());
   } catch {
     return null;
   }
@@ -126,7 +149,8 @@ export async function loadCanaryHistory(limit = 20): Promise<TennisCanaryArtifac
   const out: TennisCanaryArtifact[] = [];
   for (const line of slice) {
     try {
-      out.push(JSON.parse(line) as TennisCanaryArtifact);
+      const parsed = parseCanaryArtifactWire(JSON.parse(line));
+      if (parsed) out.push(parsed);
     } catch {
       /* skip corrupt */
     }

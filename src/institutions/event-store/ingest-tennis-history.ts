@@ -3,6 +3,7 @@ import type { Database } from "bun:sqlite";
 import { winnerOutcomeBit } from "./event-id.ts";
 import { impliedProbFromDecimal, TENNIS_DATA_SOURCE } from "./parse-tennis-data-csv.ts";
 import type { IngestSummary, TennisHistoryMatch } from "./types.ts";
+import { unbrand, type CanonicalEventId } from "./brands.ts";
 
 type InsertEventResult = "inserted" | "skipped";
 
@@ -23,7 +24,7 @@ function insertEvent(db: Database, match: TennisHistoryMatch, ingestedAt: number
       )`,
     )
     .run({
-      $event_id: match.eventId,
+      $event_id: unbrand(match.eventId),
       $tour: match.tour,
       $level: match.level,
       $tournament: match.tournament,
@@ -50,7 +51,7 @@ function insertEvent(db: Database, match: TennisHistoryMatch, ingestedAt: number
 
 function insertOddsTick(
   db: Database,
-  eventId: string,
+  eventId: CanonicalEventId,
   source: string,
   side: string,
   decimalOdds: number,
@@ -69,7 +70,7 @@ function insertOddsTick(
        )`,
     )
     .run({
-      $event_id: eventId,
+      $event_id: unbrand(eventId),
       $source: source,
       $source_url: "",
       $fetched_ts: ts,
@@ -93,7 +94,7 @@ function insertResolution(db: Database, match: TennisHistoryMatch): boolean {
        )`,
     )
     .run({
-      $event_id: match.eventId,
+      $event_id: unbrand(match.eventId),
       $outcome: outcome,
       $winner: match.winner,
       $source: TENNIS_DATA_SOURCE,

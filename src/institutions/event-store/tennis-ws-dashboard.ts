@@ -7,7 +7,7 @@ import type { Database } from "bun:sqlite";
 import type { BookSnapshot } from "../alpha-signal-types.ts";
 import { midFromBookSnapshot } from "../../bot/kalshi-book-parse.ts";
 import {
-  asKalshiMarketTicker,
+  sqlBrand,
   type KalshiEventTicker,
   type KalshiMarketTicker,
   unbrand,
@@ -87,7 +87,7 @@ export function loadTennisWsDashboardModel(
   const watchSet = new Set(watch.tickers);
   const rows: WsBookRow[] = [];
   for (const raw of latestByTicker) {
-    const ticker = asKalshiMarketTicker(raw.ticker);
+    const ticker = sqlBrand.marketTicker(raw.ticker);
     if (watchSet.size > 0 && !watchSet.has(ticker)) continue;
     const book = parseBook(raw.levels_json);
     const mid = book ? midFromBookSnapshot(book) : null;

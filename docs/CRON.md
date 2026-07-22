@@ -60,3 +60,22 @@ Separate job: dry-run `live_data` poll to the write boundary (zero SQLite score 
 | `bun run tennis:live:canary:remove` | Uninstall |
 
 See [`docs/TENNIS_PROGRAM_ARCHETYPES.md`](TENNIS_PROGRAM_ARCHETYPES.md) (Live dry-run as canary).
+
+Override: `TENNIS_LIVE_CANARY_CRON_SCHEDULE`, `TENNIS_LIVE_CANARY_CRON_TITLE`.
+
+## Tennis WS recorder
+
+Separate job: authenticated orderbook WebSocket on the watch-set → `book_ticks` + session artifacts under `research/cache/tennis-ws-recorder/`. Requires `KALSHI_API_KEY_ID` + private key env.
+
+| Command | Role |
+|---------|------|
+| `bun run tennis:record -- --ws --ws-seconds=300` | One-shot WS capture |
+| `bun run tennis:record:ws:register` | Install OS cron (default `*/30 * * * *` local) |
+| `bun run tennis:record:ws:preview` | Next fire times |
+| `bun run tennis:record:ws:remove` | Uninstall |
+
+Default schedule is every 30 minutes (`*/30 * * * *`) — cheap enough to catch live match windows without hammering the wire. Tighten to match hours only if needed (e.g. `*/30 6-23 * * *` local).
+
+Override: `TENNIS_WS_RECORDER_CRON_SCHEDULE`, `TENNIS_WS_RECORDER_CRON_TITLE`, `TENNIS_WS_RECORDER_WS_SECONDS` (default 300).
+
+See [`docs/TENNIS_PROGRAM_ARCHETYPES.md`](TENNIS_PROGRAM_ARCHETYPES.md) (WS recorder OS cron).

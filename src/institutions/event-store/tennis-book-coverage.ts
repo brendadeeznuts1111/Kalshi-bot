@@ -3,7 +3,7 @@
  * Tennis book_ticks coverage — watch-set vs WS vs REST vs dual-clock.
  */
 import type { Database } from "bun:sqlite";
-import { asKalshiMarketTicker, unbrand, type KalshiMarketTicker } from "./brands.ts";
+import { sqlBrand, unbrand, type KalshiMarketTicker } from "./brands.ts";
 import { listRecordTickers } from "./watch-set.ts";
 
 export type TennisBookCoverageReport = {
@@ -78,7 +78,7 @@ export function analyzeTennisBookCoverage(
 
     const seen = new Set<KalshiMarketTicker>();
     for (const row of perTicker) {
-      const ticker = asKalshiMarketTicker(row.ticker);
+      const ticker = sqlBrand.marketTicker(row.ticker);
       seen.add(ticker);
       const hasWs = row.ws_n > 0;
       const hasRest = row.rest_n > 0;

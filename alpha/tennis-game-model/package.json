@@ -1,0 +1,9 @@
+{
+  "name": "tennis-game-model",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "bun test src/book-context.test.ts",
+    "run-once": "bun src/run-once.ts"
+  }
+}

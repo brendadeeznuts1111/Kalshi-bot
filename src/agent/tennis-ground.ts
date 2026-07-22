@@ -116,6 +116,7 @@ export function buildTennisNextActions(report: Omit<TennisGroundReport, "nextAct
   }
   if (report.bookCoverage.watchWithWs === 0 && report.bookCoverage.watchTickers > 0) {
     actions.push("bun run tennis:record -- --ws --ws-seconds=120   # no WS ticks on current watch-set");
+    actions.push("bun run tennis:record:ws:register   # OS cron every 30m (if not registered)");
   }
   const trend = report.wsRecorderTrend;
   if (trend.sessions > 0 && trend.gapSessionPct != null && trend.gapSessionPct >= 50) {

@@ -47,7 +47,10 @@
     "tennis:live:canary:register": "bun tools/tennis/live-canary-schedule-cli.ts register",
     "tennis:live:canary:remove": "bun tools/tennis/live-canary-schedule-cli.ts remove",
     "tennis:live:canary:preview": "bun tools/tennis/live-canary-schedule-cli.ts preview",
-    "tennis:live:cadence": "bun tools/tennis/live-scores-cli.ts --cadence"
+    "tennis:live:cadence": "bun tools/tennis/live-scores-cli.ts --cadence",
+    "tennis:record:ws:register": "bun tools/tennis/ws-recorder-schedule-cli.ts register",
+    "tennis:record:ws:remove": "bun tools/tennis/ws-recorder-schedule-cli.ts remove",
+    "tennis:record:ws:preview": "bun tools/tennis/ws-recorder-schedule-cli.ts preview"
   },
   "engines": {
     "bun": ">=1.3.13"
