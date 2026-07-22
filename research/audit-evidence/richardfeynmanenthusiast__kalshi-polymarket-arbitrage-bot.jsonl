@@ -1,0 +1,27 @@
+{"scope":"line","query":"KALSHI-ACCESS-KEY","path":"app/clients/kalshi/base.py","component":"authApi"}
+{"scope":"line","query":"KALSHI-ACCESS-KEY","path":"shared_libraries/shared_infra_pkg/shared_infra/kalshi_clients/kalshi_base.py","component":"authApi"}
+{"scope":"line","query":"KALSHI-ACCESS-KEY","path":"shared_libraries/shared_infra_pkg/build/lib/shared_infra/kalshi_clients/kalshi_base.py","component":"authApi"}
+{"scope":"line","query":"KALSHI-ACCESS-SIGNATURE","path":"app/clients/kalshi/base.py","component":"authApi"}
+{"scope":"line","query":"KALSHI-ACCESS-SIGNATURE","path":"shared_libraries/shared_infra_pkg/shared_infra/kalshi_clients/kalshi_base.py","component":"authApi"}
+{"scope":"line","query":"KALSHI-ACCESS-SIGNATURE","path":"shared_libraries/shared_infra_pkg/build/lib/shared_infra/kalshi_clients/kalshi_base.py","component":"authApi"}
+{"scope":"line","query":"trade-api/v2","path":"app/clients/kalshi/kalshi_http_client.py","component":"authApi"}
+{"scope":"line","query":"trade-api/v2","path":"shared_libraries/shared_infra_pkg/shared_infra/kalshi_clients/kalshi_http.py","component":"authApi"}
+{"scope":"line","query":"trade-api/v2","path":"shared_libraries/shared_infra_pkg/build/lib/shared_infra/kalshi_clients/kalshi_http.py","component":"authApi"}
+{"scope":"line","query":"RSA-PSS","path":"app/clients/kalshi/base.py","component":"authApi"}
+{"scope":"line","query":"RSA-PSS","path":"shared_libraries/shared_infra_pkg/shared_infra/kalshi_clients/kalshi_base.py","component":"authApi"}
+{"scope":"line","query":"RSA-PSS","path":"shared_libraries/shared_infra_pkg/build/lib/shared_infra/kalshi_clients/kalshi_base.py","component":"authApi"}
+{"scope":"line","query":"create_order","path":"app/clients/kalshi/kalshi_http_client.py","component":"orderRealism"}
+{"scope":"line","query":"create_order","path":"app/gateways/trade_gateway.py","component":"orderRealism"}
+{"scope":"line","query":"create_order","path":"shared_libraries/shared_infra_pkg/shared_infra/kalshi_clients/kalshi_http.py","component":"orderRealism"}
+{"scope":"line","query":"create_order","path":"shared_libraries/shared_infra_pkg/build/lib/shared_infra/kalshi_clients/kalshi_http.py","component":"orderRealism"}
+{"scope":"line","query":"create_order","path":"app/clients/polymarket/clob_http.py","component":"orderRealism"}
+{"scope":"line","query":"CreateOrder","path":"app/clients/polymarket/clob_http.py","component":"orderRealism"}
+{"scope":"line","query":"CreateOrder","path":"shared_libraries/shared_infra_pkg/shared_infra/polymarket_clients/clob_http.py","component":"orderRealism"}
+{"scope":"line","query":"CreateOrder","path":"shared_libraries/shared_infra_pkg/build/lib/shared_infra/polymarket_clients/clob_http.py","component":"orderRealism"}
+{"scope":"line","query":"/orders","path":"app/clients/kalshi/kalshi_http_client.py","component":"orderRealism"}
+{"scope":"line","query":"/orders","path":"shared_libraries/shared_infra_pkg/shared_infra/kalshi_clients/kalshi_http.py","component":"orderRealism"}
+{"scope":"line","query":"/orders","path":"shared_libraries/shared_infra_pkg/build/lib/shared_infra/kalshi_clients/kalshi_http.py","component":"orderRealism"}
+{"scope":"line","query":"place_order","path":"app/clients/polymarket/clob_http.py","component":"orderRealism"}
+{"scope":"line","query":"place_order","path":"app/gateways/trade_gateway.py","component":"orderRealism"}
+{"scope":"line","query":"place_order","path":"tests/unit-tests/gateways/test_trade_gateway.py","component":"orderRealism"}
+{"scope":"line","query":"risk limit","path":"(readme/code aggregate)","component":"riskControls"}
