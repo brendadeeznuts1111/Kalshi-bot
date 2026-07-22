@@ -87,6 +87,14 @@ export function evidenceExportPath(_runId: string, fullName: string): string {
   return auditEvidenceRelPath(fullName);
 }
 
+/**
+ * Returns whether a repo report meets audit promotion thresholds
+ * ({@link HIGH_VALUE_MIN_TOTAL_SCORE} total, auth + order detectors matched
+ * with {@link HIGH_VALUE_MIN_COMPONENT_POINTS} each).
+ *
+ * @param report - Validated or buildable per-repo SSOT
+ * @returns `true` when the report should export as an AuditFinding candidate
+ */
 export function isHighValueCandidate(report: RepoReport): boolean {
   const auth = report.detectors.find((d) => d.id === DETECTOR_IDS.authApi);
   const orders = report.detectors.find((d) => d.id === DETECTOR_IDS.orderRealism);
@@ -126,6 +134,15 @@ export function shortlistRulesConcept(config: ResearchConfig, publishedAt: strin
   };
 }
 
+/**
+ * Maps a {@link RepoReport} to monorepo `AuditFinding` wire JSON (parse at boundary
+ * with `parseAuditFinding`). Evidence path points at committed JSONL; digest is sha3-256.
+ *
+ * @param report - Per-repo SSOT from `buildRepoReport`
+ * @param runId - Research run id stored in `discoveredIn`
+ * @param options.status - Finding status (default `"open"`)
+ * @returns AuditFinding-compatible wire object (opaque string ids until monorepo parse)
+ */
 export function repoReportToAuditFindingWire(
   report: RepoReport,
   runId: string,
@@ -169,6 +186,9 @@ export function evidenceSha3Fingerprint(lines: EvidenceLine[]): string {
     .join("\n");
   return sha3Hex(payload);
 }
+
+/** Alias for {@link repoReportToAuditFindingWire} — RepoReport → AuditFinding wire. */
+export const adaptToAuditFinding = repoReportToAuditFindingWire;
 
 export function buildAuditRunExport(run: ResearchRun, config: ResearchConfig): AuditRunExport {
   const concept = shortlistRulesConcept(config, run.generatedAt);

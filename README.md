@@ -27,6 +27,7 @@ bun run research -- --shortlist 12       # override shortlist size
 bun run research -- --diff <run-id>      # diff vs a specific prior run
 bun run research -- --export-audit       # also write audit JSONL + rotor bundle
 bun run export-audit -- --latest         # export from latest production run in cache.db
+bun run audit:export -- --latest         # alias for export-audit
 bun run export-audit -- --run <run-id>   # export from explicit run
 bun run export-audit -- --verify research/exports/audit/<run-id>
 ```
@@ -48,7 +49,7 @@ Gate overrides: `--min-stars`, `--min-forks`, `--max-age-months` or env vars bel
 | Script | Command |
 |--------|---------|
 | Research | `bun run research` |
-| Audit export | `bun run export-audit` |
+| Audit export | `bun run export-audit` or `bun run audit:export` |
 | Serve (hot) | `bun run serve` |
 | Serve (once) | `bun run serve:once` |
 | Tests | `bun test` / `bun run test:coverage` |
@@ -61,14 +62,15 @@ Gate overrides: `--min-stars`, `--min-forks`, `--max-age-months` or env vars bel
 | `research/reports/latest.md` | yes | Human shortlist + evidence |
 | `research/reports/latest.diff.md` | yes | Diff vs previous production run |
 | `research/audit-evidence/*.jsonl` | yes | Line evidence (one file per promoted repo) |
-| `research/queries.json`, `weights.json`, `keywords.json` | yes | Config SSOT |
+| `research/queries.json`, `weights.json`, `keywords.json` | yes | Config SSOT (defaults mirrored in code) |
+| `src/research/constants.ts` | yes | Typed SSOT — detector ids, weights, licenses, thresholds |
 | `research/schemas/repo-report.schema.json` | yes | RepoReport wire schema |
 | `research/cache/cache.db` | no | API cache + run history |
 | `research/outputs/` | no | Full JSON run dumps |
 | `research/exports/audit/` | no | Per-run finding wire + `rotor-ingest.json` |
 | `research/reports/run_*.md` | no | Per-run MD (history in sqlite) |
 
-Evidence path SSOT: `src/research/paths.ts` (`auditEvidenceRelPath`, `AUDIT_EVIDENCE_DIR`).
+Evidence path SSOT: [`src/research/paths.ts`](src/research/paths.ts). Pipeline parameters (detector ids, component weights, license markers, audit thresholds): [`src/research/constants.ts`](src/research/constants.ts) — keep aligned with `research/weights.json`.
 
 ## Project layout
 
@@ -81,7 +83,8 @@ Kalshi-bot/
 │   ├── evidence.ts, validate.ts, audit-adapter.ts, export-audit.ts
 │   ├── patterns.ts         # URLPattern SSOT (discover, reports, serve)
 │   ├── serve.ts, views.ts  # Bun.serve report browser
-│   ├── cache.ts, diff.ts, report.ts, paths.ts, constants.ts
+│   ├── cache.ts, diff.ts, report.ts, paths.ts
+│   ├── constants.ts        # typed SSOT: DETECTOR_IDS, COMPONENT_WEIGHTS, licenses
 │   └── gh.ts, pool.ts, preflight.ts, detect.ts, types.ts
 ├── tests/                  # bun:test (61 tests)
 ├── research/

@@ -166,8 +166,9 @@ export function attachRepoReport(item: ScoredRepo, generatedAt?: string): Scored
   return { ...item, report: buildRepoReport(item, generatedAt) };
 }
 
-/** Stable fingerprint for evidence lines (local cache; audit uses sha3 via audit-adapter). */
+/** Stable fingerprint for evidence lines — local cache/dedup only (not tamper-evident). */
 export function evidenceFingerprint(lines: EvidenceLine[]): string {
+  // Bun.hash is fast and fine for in-process dedup; audit export uses sha3-256 via audit-adapter.
   const payload = lines
     .map((l) => `${l.component}:${l.query}:${l.path}`)
     .sort()

@@ -16,7 +16,7 @@ Draft bridge from Kalshi research `RepoReport` → monorepo `AuditFinding` / `Au
 Shortlist repos become audit candidates when:
 
 - `score.total >= 70`
-- `auth-api` and `order-realism` detectors matched
+- `auth-api` and `order-realism` detectors matched (`DETECTOR_IDS` in `constants.ts`)
 - Each contributes ≥ 15 points
 
 Use `--export-audit` on the research CLI to emit after a run.

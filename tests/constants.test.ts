@@ -12,6 +12,11 @@ import {
 } from "../src/research/constants.ts";
 
 describe("constants", () => {
+  test("DETECTOR_ID_LIST length matches COMPONENT_WEIGHTS", () => {
+    expect(DETECTOR_ID_LIST.length).toBe(6);
+    expect(Object.keys(COMPONENT_WEIGHTS).length).toBe(DETECTOR_ID_LIST.length);
+  });
+
   test("DETECTOR_ID_LIST matches DETECTOR_IDS values", () => {
     expect(DETECTOR_ID_LIST).toHaveLength(6);
     expect(DETECTOR_ID_LIST).toContain(DETECTOR_IDS.authApi);

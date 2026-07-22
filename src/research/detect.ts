@@ -1,5 +1,14 @@
 import type { CodeSearchHit, ResearchConfig } from "./types.ts";
-import { DRY_RUN_MARKERS } from "./constants.ts";
+import {
+  AUTH_MARKERS,
+  DEFAULT_STRATEGY_TAG,
+  DRY_RUN_MARKERS,
+  ORDER_MARKERS,
+  PORTFOLIO_ORDERS_MARKER,
+  RSA_PSS_MARKERS,
+  SDK_MARKERS,
+  V2_API_MARKER,
+} from "./constants.ts";
 
 type RootEntry = { name: string };
 
@@ -19,7 +28,7 @@ export function detectStrategyTags(text: string, config: ResearchConfig): string
   const tags = Object.entries(config.keywords.strategyTags)
     .filter(([, keywords]) => keywords.some((k) => text.includes(k.toLowerCase())))
     .map(([tag]) => tag);
-  return tags.length ? tags : ["news_event"];
+  return tags.length ? tags : [DEFAULT_STRATEGY_TAG];
 }
 
 export function detectReadmeSections(readme: string) {
@@ -35,18 +44,6 @@ export function primaryLanguage(languages: Record<string, number>): string | nul
   return entries.sort((a, b) => b[1] - a[1])[0]![0];
 }
 
-const SDK_MARKERS = [
-  "kalshi-python",
-  "kalshi-typescript",
-  "@kalshi/kalshi-js",
-  "kalshi_api",
-  "from kalshi",
-  "import kalshi",
-];
-
-const AUTH_MARKERS = ["KALSHI-ACCESS-KEY", "KALSHI-ACCESS-SIGNATURE"];
-const ORDER_MARKERS = ["create_order", "CreateOrder", "place_order", "PlaceOrder", "/orders"];
-
 export function deriveCodeSignals(
   readme: string,
   authHits: CodeSearchHit[],
@@ -59,11 +56,11 @@ export function deriveCodeSignals(
   const usesOfficialSdk = SDK_MARKERS.some((m) => combinedText.includes(m.toLowerCase()));
   const hasAuthInCode = authHits.some((h) => AUTH_MARKERS.some((k) => h.query.includes(k)));
   const hasV2Api =
-    authHits.some((h) => h.query.includes("trade-api/v2")) || combinedText.includes("trade-api/v2");
-  const hasRsaPss = combinedText.includes("rsa-pss") || combinedText.includes("rsassa-pss");
+    authHits.some((h) => h.query.includes(V2_API_MARKER)) || combinedText.includes(V2_API_MARKER);
+  const hasRsaPss = RSA_PSS_MARKERS.some((m) => combinedText.includes(m));
   const hasLiveOrderPath =
     orderHits.some((h) => ORDER_MARKERS.some((k) => h.query.includes(k))) ||
-    combinedText.includes("portfolio/orders");
+    combinedText.includes(PORTFOLIO_ORDERS_MARKER);
   const hasDryRunDefault = DRY_RUN_MARKERS.some((k) => combinedText.includes(k));
 
   return {

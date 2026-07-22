@@ -7,6 +7,7 @@
   "scripts": {
     "research": "bun src/research/cli.ts",
     "export-audit": "bun src/research/export-audit-cli.ts",
+    "audit:export": "bun src/research/export-audit-cli.ts",
     "serve": "bun --hot src/research/serve.ts",
     "serve:once": "bun src/research/serve.ts",
     "test": "bun test",

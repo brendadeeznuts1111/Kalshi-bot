@@ -1,7 +1,19 @@
 import type { InspectionSignals, RepoCandidate, ResearchConfig, ScoreBreakdown } from "./types.ts";
-import { LICENSE_WEIGHTS, MAX_QUALITY_SCORE } from "./constants.ts";
-
-const MS_PER_DAY = 86_400_000;
+import {
+  AUTH_SCORE_SHARES,
+  DOCS_SCORE_SHARES,
+  LICENSE_WEIGHTS,
+  MAINTENANCE_AGE_DAYS,
+  MAINTENANCE_SCORE_SHARES,
+  MAX_QUALITY_SCORE,
+  MS_PER_DAY,
+  ORDER_SCORE_SHARES,
+  README_SCORE_LONG_CHARS,
+  RISK_HIT_FULL,
+  RISK_SCORE_SHARES,
+  STACK_RANK,
+  TESTS_CI_SCORE_SHARES,
+} from "./constants.ts";
 
 export function scoreRepo(
   repo: RepoCandidate,
@@ -35,50 +47,51 @@ export function scoreRepo(
 
 function scoreAuthApi(signals: InspectionSignals, max: number): number {
   let score = 0;
-  if (signals.hasAuthInCode) score += max * 0.35;
-  if (signals.hasV2Api) score += max * 0.25;
-  if (signals.hasRsaPss) score += max * 0.15;
-  if (signals.usesOfficialSdk) score += max * 0.25;
+  if (signals.hasAuthInCode) score += max * AUTH_SCORE_SHARES.authInCode;
+  if (signals.hasV2Api) score += max * AUTH_SCORE_SHARES.v2Api;
+  if (signals.hasRsaPss) score += max * AUTH_SCORE_SHARES.rsaPss;
+  if (signals.usesOfficialSdk) score += max * AUTH_SCORE_SHARES.officialSdk;
   return Math.min(max, score);
 }
 
 function scoreOrderRealism(signals: InspectionSignals, max: number): number {
   let score = 0;
-  if (signals.hasLiveOrderPath) score += max * 0.6;
-  if (signals.hasDryRunDefault) score += max * 0.4;
+  if (signals.hasLiveOrderPath) score += max * ORDER_SCORE_SHARES.liveOrderPath;
+  if (signals.hasDryRunDefault) score += max * ORDER_SCORE_SHARES.dryRunDefault;
   return Math.min(max, score);
 }
 
 function scoreTestsCi(signals: InspectionSignals, max: number): number {
   let score = 0;
-  if (signals.hasTests) score += max * 0.6;
-  if (signals.hasCi) score += max * 0.4;
+  if (signals.hasTests) score += max * TESTS_CI_SCORE_SHARES.tests;
+  if (signals.hasCi) score += max * TESTS_CI_SCORE_SHARES.ci;
   return Math.min(max, score);
 }
 
 function scoreDocs(signals: InspectionSignals, max: number): number {
   let score = 0;
-  if (signals.readmeLength > 800) score += max * 0.4;
-  if (signals.hasSetupSection) score += max * 0.35;
-  if (signals.hasStrategySection) score += max * 0.25;
+  if (signals.readmeLength > README_SCORE_LONG_CHARS) score += max * DOCS_SCORE_SHARES.longReadme;
+  if (signals.hasSetupSection) score += max * DOCS_SCORE_SHARES.setupSection;
+  if (signals.hasStrategySection) score += max * DOCS_SCORE_SHARES.strategySection;
   return Math.min(max, score);
 }
 
 function scoreMaintenance(signals: InspectionSignals, max: number): number {
-  if (!signals.lastDefaultBranchCommitAt) return max * 0.2;
-  const ageDays = (Date.now() - new Date(signals.lastDefaultBranchCommitAt).getTime()) / MS_PER_DAY;
-  if (ageDays <= 30) return max;
-  if (ageDays <= 90) return max * 0.85;
-  if (ageDays <= 180) return max * 0.65;
-  if (ageDays <= 365) return max * 0.4;
-  return max * 0.15;
+  if (!signals.lastDefaultBranchCommitAt) return max * MAINTENANCE_SCORE_SHARES.unknown;
+  const ageDays =
+    (Date.now() - new Date(signals.lastDefaultBranchCommitAt).getTime()) / MS_PER_DAY;
+  if (ageDays <= MAINTENANCE_AGE_DAYS.fresh) return max * MAINTENANCE_SCORE_SHARES.fresh;
+  if (ageDays <= MAINTENANCE_AGE_DAYS.recent) return max * MAINTENANCE_SCORE_SHARES.recent;
+  if (ageDays <= MAINTENANCE_AGE_DAYS.medium) return max * MAINTENANCE_SCORE_SHARES.medium;
+  if (ageDays <= MAINTENANCE_AGE_DAYS.year) return max * MAINTENANCE_SCORE_SHARES.year;
+  return max * MAINTENANCE_SCORE_SHARES.stale;
 }
 
 function scoreRisk(signals: InspectionSignals, max: number): number {
   const hits = signals.riskKeywordHits.length;
-  if (hits >= 3) return max;
-  if (hits === 2) return max * 0.75;
-  if (hits === 1) return max * 0.45;
+  if (hits >= RISK_HIT_FULL) return max;
+  if (hits === 2) return max * RISK_SCORE_SHARES.twoHits;
+  if (hits === 1) return max * RISK_SCORE_SHARES.oneHit;
   return 0;
 }
 
@@ -90,10 +103,12 @@ function licenseAdjustment(repo: RepoCandidate, config: ResearchConfig): number 
 
 export function stackRank(primaryLanguage: string | null): number {
   const lang = (primaryLanguage ?? "").toLowerCase();
-  if (lang === "typescript" || lang === "javascript") return 3;
-  if (lang === "python") return 2;
-  if (lang === "rust" || lang === "go") return 1;
-  return 0;
+  if (lang === "typescript") return STACK_RANK.typescript;
+  if (lang === "javascript") return STACK_RANK.javascript;
+  if (lang === "python") return STACK_RANK.python;
+  if (lang === "rust") return STACK_RANK.rust;
+  if (lang === "go") return STACK_RANK.go;
+  return STACK_RANK.other;
 }
 
 export function compareScored(
