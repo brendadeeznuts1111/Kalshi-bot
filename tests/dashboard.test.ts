@@ -4,7 +4,9 @@ import { joinPath } from "../src/research/paths.ts";
 import {
   handleDashboardHome,
   handleDashboardPulse,
+  handleDashboardReport,
   handleDashboardStatus,
+  handleDashboardVerifyPost,
   handleRunResearchPost,
 } from "../src/agent/dashboard-server.ts";
 import { resetDashboardState } from "../src/agent/dashboard-state.ts";
@@ -136,7 +138,7 @@ describe("dashboard handlers", () => {
     };
     saveRun(FIXTURE_RUN, at, run);
 
-    const res = await handleDashboardHome();
+    const res = await handleDashboardHome(new Request("http://127.0.0.1:3457/"));
     const html = await res.text();
     expect(html).toContain("Gate miss");
     expect(html).toContain("a/nba-bot");
@@ -151,54 +153,93 @@ describe("dashboard handlers", () => {
     run.shortlist = run.scored;
     saveRun(FIXTURE_RUN, at, run);
 
-    const res = await handleDashboardHome();
+    const res = await handleDashboardHome(new Request("http://127.0.0.1:3457/"));
     expect(res.status).toBe(200);
     const html = await res.text();
     expect(html).toContain("Kalshi Agent Dashboard");
     expect(html).toContain("OctagonAI/kalshi-trading-bot-cli");
     expect(html).toContain("Run research");
+    expect(html).toContain("Verify dashboard");
+    expect(html).toContain("dimension-switch");
+    expect(html).toContain("operator-nav");
+    expect(html).toContain("footer-rate-limit");
     expect(html).toContain("Audit evidence");
   });
 
-  test("handleRunResearchPost uses injected runner", async () => {
-    const res = await handleRunResearchPost({
-      runResearch: async () => ({
-        runId: "injected-run",
-        generatedAt: "2099-01-01T00:00:00.000Z",
-        shortlist: [{ repo: { fullName: "a/b" } }],
+  test("handleRunResearchPost uses injected runner with dimension", async () => {
+    const res = await handleRunResearchPost(
+      new Request("http://127.0.0.1:3457/api/research/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dimension: "sports-nba" }),
       }),
-    });
+      {
+        runResearch: async (opts) => {
+          const run = mockRun();
+          run.runId = "injected-run";
+          run.generatedAt = "2099-01-01T00:00:00.000Z";
+          run.dimension = opts.dimension ?? "all";
+          return run;
+        },
+      },
+    );
     expect(res.status).toBe(200);
     const body = (await res.json()) as { ok: boolean; runId: string };
     expect(body.ok).toBe(true);
     expect(body.runId).toBe("injected-run");
 
     const status = await handleDashboardStatus();
-    const statusBody = (await status.json()) as { state: { lastRunId: string } };
+    const statusBody = (await status.json()) as {
+      state: { lastRunId: string; activeDimension: string };
+    };
     expect(statusBody.state.lastRunId).toBe("injected-run");
+    expect(statusBody.state.activeDimension).toBe("sports-nba");
+  });
+
+  test("handleDashboardReport renders markdown workspace", async () => {
+    const res = await handleDashboardReport(new Request("http://127.0.0.1:3457/report?dimension=all"));
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain("markdown-body");
+    expect(html).toContain("operator-main");
+  });
+
+  test("handleDashboardVerifyPost returns check summary", async () => {
+    const res = await handleDashboardVerifyPost({
+      verifyDashboard: async () => ({
+        ok: true,
+        dashboardUrl: "http://127.0.0.1:3457",
+        checks: [{ id: "api_reachable", ok: true, detail: "ok" }],
+        api: null,
+        page: null,
+      }),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { ok: boolean; summary: string };
+    expect(body.ok).toBe(true);
+    expect(body.summary).toContain("PASS");
   });
 
   test("handleRunResearchPost rejects concurrent runs", async () => {
-    const slow = handleRunResearchPost({
+    const slow = handleRunResearchPost(new Request("http://127.0.0.1:3457/api/research/run", { method: "POST" }), {
       runResearch: () =>
-        new Promise((resolve) => {
-          setTimeout(
-            () =>
-              resolve({
-                runId: "slow",
-                generatedAt: "2099-01-01T00:00:00.000Z",
-                shortlist: [],
-              }),
-            50,
-          );
+        new Promise<ResearchRun>((resolve) => {
+          setTimeout(() => {
+            const run = mockRun();
+            run.runId = "slow";
+            run.generatedAt = "2099-01-01T00:00:00.000Z";
+            run.shortlist = [];
+            run.stats.shortlist = 0;
+            resolve(run);
+          }, 50);
         }),
     });
-    const second = handleRunResearchPost({
-      runResearch: async () => ({
-        runId: "never",
-        generatedAt: "2099-01-01T00:00:00.000Z",
-        shortlist: [],
-      }),
+    const second = handleRunResearchPost(new Request("http://127.0.0.1:3457/api/research/run", { method: "POST" }), {
+      runResearch: async () => {
+        const run = mockRun();
+        run.runId = "never";
+        return run;
+      },
     });
     const [firstRes, secondRes] = await Promise.all([slow, second]);
     expect(firstRes.status).toBe(200);

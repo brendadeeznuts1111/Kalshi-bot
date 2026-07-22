@@ -39,17 +39,39 @@ The UI and [`bun run agent`](AGENT.md) share the same HTTP routes — no npm dep
 | **Headless WebView** | `bun run dashboard:webview` | Automation / verify-dashboard |
 | **Read-only browser** | `bun run serve` | Report browser on `:3456` |
 
+## Operator layout
+
+The dashboard is a **3-zone operator workspace** (header toolbar, left nav, main workspace, footer telemetry):
+
+| Zone | Contents |
+|------|----------|
+| **Top bar** | Dimension switcher, Run research, Verify dashboard, Screenshot, Refresh |
+| **Left nav** | Overview, Report, Diff, Blueprint, Pulse |
+| **Main** | Server-rendered view (`Bun.markdown.html` for reports) |
+| **Footer** | GitHub quota, pulse tick, cache fallback hint (polls `/api/status` every 30s) |
+
+Default dimension: **last completed run** (client also persists selection in `sessionStorage`).
+
 ## Routes
 
 | Route | Method | Purpose |
 |-------|--------|---------|
-| `/` | GET | Dashboard (shortlist tiers, pulse, report iframe) |
-| `/api/status` | GET | Run + pulse + `verification` summary JSON |
-| `/api/research/run` | POST | Full research + audit export |
+| `/` | GET | Overview (same as `/overview`) |
+| `/overview` | GET | Stats, shortlist, gate miss, audit evidence |
+| `/report?dimension=` | GET | Server-rendered `latest-{dimension}.md` |
+| `/diff?dimension=` | GET | Server-rendered diff markdown |
+| `/blueprint` | GET | Architecture blueprint markdown |
+| `/pulse` | GET | Rotor pulse table |
+| `/api/status` | GET | Run + pulse + verification + footer telemetry |
+| `/api/research/run` | POST | Full research + audit export (`{ dimension }` body) |
+| `/api/verify` | POST | Headless WebView dashboard verify |
+| `/api/pulse` | GET | Pulse ticks JSON |
 | `/api/screenshot` | POST | Capture dashboard PNG + thumbnail (audit evidence) |
 | `/evidence/*` | GET | Screenshot files (full + thumb) |
-| `/reports/latest.md` | GET | Markdown report (shared with `serve`) |
+| `/reports/latest.md` | GET | Raw markdown report (shared with `serve`) |
 | `/repo/:owner/:name` | GET | Per-repo detail page |
+
+Add `?partial=1` to view routes for client-side nav fragment swaps.
 
 ### `POST /api/screenshot`
 
@@ -78,7 +100,7 @@ The **Audit evidence** section on `/` shows the latest capture with three verifi
 | **Allowlist** | `assertAllowlistedScreenshotUrl` rejects `file://`, remote hosts, non-`/` paths |
 | **Request body** | POST with `{ url }` or `{ dashboardUrl }` → **400** |
 
-Use **Capture screenshot** on the page or:
+Use **Screenshot** in the toolbar or:
 
 ```bash
 curl -X POST http://127.0.0.1:3457/api/screenshot

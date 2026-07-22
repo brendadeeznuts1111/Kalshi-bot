@@ -72,7 +72,7 @@ function mockApi(overrides: Partial<AgentStatusPayload> = {}): AgentStatusPayloa
   return {
     source: "dashboard-api",
     dashboardUrl: "http://127.0.0.1:3457",
-    state: { phase: "idle", message: null, startedAt: null, finishedAt: null, lastRunId: run.runId },
+    state: { phase: "idle", message: null, startedAt: null, finishedAt: null, lastRunId: run.runId, activeDimension: "all", lastRunDimension: "all" },
     busy: false,
     latestRun: {
       runId: run.runId,
@@ -98,7 +98,7 @@ describe("verify-dashboard", () => {
   test("renderAgentDashboardMeta is embedded in dashboard HTML", async () => {
     const run = mockRun();
     saveRun(run.runId, run.generatedAt, run);
-    const res = await handleDashboardHome();
+    const res = await handleDashboardHome(new Request("http://127.0.0.1:3457/"));
     const html = await res.text();
     expect(html).toContain('id="agent-dashboard-meta"');
     expect(html).toContain(run.runId);

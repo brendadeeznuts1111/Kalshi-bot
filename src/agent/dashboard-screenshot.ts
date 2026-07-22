@@ -183,7 +183,7 @@ export function formatBytes(n: number): string {
 export function renderAuditEvidenceSection(evidence: DashboardScreenshotManifest | null): string {
   if (!evidence) {
     return `<h2>Audit evidence</h2>
-<p><em>No dashboard screenshot yet.</em> Capture one with <button class="action secondary" id="capture-screenshot" type="button">Capture screenshot</button> or <code>POST ${DASHBOARD_ROUTES.screenshot}</code>.</p>
+<p><em>No dashboard screenshot yet.</em> Use <strong>Screenshot</strong> in the toolbar or <code>POST ${DASHBOARD_ROUTES.screenshot}</code>.</p>
 <p class="audit-hint">Evidence chain: visual (thumbnail), cryptographic (SHA-256), structural (dimensions/format).</p>`;
   }
 
@@ -194,7 +194,7 @@ export function renderAuditEvidenceSection(evidence: DashboardScreenshotManifest
     <a href="${evidence.full}" target="_blank" rel="noopener">
       <img src="${evidence.thumbnail}" alt="Dashboard screenshot thumbnail" width="320" />
     </a>
-    <p><button class="action secondary" id="capture-screenshot" type="button">Recapture</button></p>
+    <p><button class="action secondary" type="button" data-capture-screenshot>Recapture</button></p>
   </div>
   <dl class="audit-meta">
     <dt>Captured</dt><dd><code>${evidence.capturedAt}</code></dd>

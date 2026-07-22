@@ -3,9 +3,11 @@
 // @see https://bun.com/docs/runtime/file-io#reading-files-bun-file
 import type { CliOptions } from "../research/cli.ts";
 import { runResearch } from "../research/cli.ts";
+import type { ResearchRun } from "../research/types.ts";
 import { GitHubRateLimitError, serializeGitHubApiError, buildGitHubErrorEnrichment } from "../research/gh.ts";
 import { listRunSummaries, loadLatestRunFromDb } from "../research/cache.ts";
-import { REPORT_DIR, EVIDENCE_DIR, joinPath } from "../research/paths.ts";
+import { runDimension } from "../research/dimensions.ts";
+import { EVIDENCE_DIR, joinPath } from "../research/paths.ts";
 import { ROUTES } from "../research/patterns.ts";
 import {
   handleLatestReport,
@@ -19,17 +21,28 @@ import {
   finishResearch,
   getDashboardState,
   isResearchBusy,
+  resolveDashboardDimension,
 } from "./dashboard-state.ts";
-import { DASHBOARD_ROUTES, renderDashboardPage } from "./dashboard-views.ts";
+import {
+  buildDashboardRenderContext,
+  DASHBOARD_ROUTES,
+  renderDashboardPage,
+} from "./dashboard-views.ts";
+import { dashboardViewFromPath } from "./dashboard-views-routes.ts";
 import {
   captureDashboardScreenshot,
-  loadLatestDashboardScreenshot,
   type CaptureDashboardScreenshotDeps,
   type DashboardScreenshotWire,
   DashboardScreenshotUrlError,
 } from "./dashboard-screenshot.ts";
 import { pulseLogPath, readPulseLog, pulseLogExists } from "./pulse-log.ts";
 import { verificationSummaryForRun } from "./audit-list.ts";
+import {
+  fetchGitHubRateLimitFootprint,
+  formatRateLimitFootprintLine,
+  readCacheFallbackFootprint,
+} from "./dashboard-telemetry.ts";
+import { formatVerifyDashboard, verifyDashboard } from "./verify-dashboard.ts";
 
 export type DashboardServeOptions = {
   port?: number;
@@ -38,8 +51,9 @@ export type DashboardServeOptions = {
 };
 
 export type DashboardDeps = {
-  runResearch?: (opts: CliOptions) => Promise<{ runId: string; generatedAt: string; shortlist: unknown[] }>;
+  runResearch?: (opts: CliOptions) => Promise<ResearchRun>;
   captureScreenshot?: CaptureDashboardScreenshotDeps;
+  verifyDashboard?: typeof verifyDashboard;
 };
 
 function html(body: string, status = 200): Response {
@@ -53,37 +67,76 @@ function json(data: unknown, status = 200): Response {
   return Response.json(data, { status });
 }
 
-async function readLatestDiff(): Promise<string | null> {
-  const file = Bun.file(joinPath(REPORT_DIR, "latest.diff.md"));
-  if (!(await file.exists())) return null;
-  const text = await file.text();
-  return text.trim() ? text : null;
+async function sharedPulseContext() {
+  return {
+    pulseTicks: await readPulseLog(10),
+    pulseLogPresent: await pulseLogExists(),
+  };
 }
 
-export async function handleDashboardHome(): Promise<Response> {
-  const run = loadLatestRunFromDb();
-  const diffMd = await readLatestDiff();
-  const pulseTicks = await readPulseLog(10);
-  const logExists = await pulseLogExists();
-  const auditEvidence = await loadLatestDashboardScreenshot();
-  return html(
-    await renderDashboardPage(run, listRunSummaries(), diffMd, getDashboardState(), pulseTicks, logExists, auditEvidence),
-  );
+async function renderViewResponse(req: Request, viewOverride?: ReturnType<typeof dashboardViewFromPath>): Promise<Response> {
+  const url = new URL(req.url);
+  const view = viewOverride ?? dashboardViewFromPath(url.pathname);
+  const dimension = resolveDashboardDimension(url.searchParams.get("dimension"));
+  const partial = url.searchParams.get("partial") === "1";
+  const pulse = await sharedPulseContext();
+  const rateLimit = await fetchGitHubRateLimitFootprint();
+  const ctx = await buildDashboardRenderContext({
+    view,
+    dimension,
+    runs: listRunSummaries(),
+    ...pulse,
+    rateLimit,
+  });
+  return html(await renderDashboardPage(ctx, { partial }));
+}
+
+export async function handleDashboardHome(req: Request): Promise<Response> {
+  return renderViewResponse(req, "overview");
+}
+
+export async function handleDashboardOverview(req: Request): Promise<Response> {
+  return renderViewResponse(req, "overview");
+}
+
+export async function handleDashboardReport(req: Request): Promise<Response> {
+  return renderViewResponse(req, "report");
+}
+
+export async function handleDashboardDiff(req: Request): Promise<Response> {
+  return renderViewResponse(req, "diff");
+}
+
+export async function handleDashboardBlueprint(req: Request): Promise<Response> {
+  return renderViewResponse(req, "blueprint");
+}
+
+export async function handleDashboardPulsePage(req: Request): Promise<Response> {
+  return renderViewResponse(req, "pulse");
 }
 
 export async function handleDashboardStatus(): Promise<Response> {
-  const run = loadLatestRunFromDb();
+  const urlDimension = resolveDashboardDimension(null);
+  const run = loadLatestRunFromDb({ dimension: urlDimension }) ?? loadLatestRunFromDb();
   const ticks = await readPulseLog(1);
   const pulse = ticks.at(-1) ?? null;
   const verification = run ? await verificationSummaryForRun(run) : null;
+  const rateLimit = await fetchGitHubRateLimitFootprint();
+  const cache = readCacheFallbackFootprint();
+  const pulseLine = pulse
+    ? `Pulse: ${pulse.ok ? "ok" : "FAIL"} · ${pulse.findings} findings · ${pulse.ts}`
+    : "Pulse: no ticks";
+
   return json({
     state: getDashboardState(),
     busy: isResearchBusy(),
+    activeDimension: getDashboardState().activeDimension,
     latestRun: run
       ? {
           runId: run.runId,
           generatedAt: run.generatedAt,
           shortlist: run.stats.shortlist,
+          dimension: runDimension(run),
           gateMiss: run.gateMiss ?? null,
           discoveryMiss: run.discoveryMiss ?? null,
         }
@@ -91,11 +144,32 @@ export async function handleDashboardStatus(): Promise<Response> {
     pulse,
     pulseLog: pulseLogPath(),
     verification,
+    telemetry: {
+      rateLimitLine: formatRateLimitFootprintLine(rateLimit),
+      pulseLine,
+      cacheLine: cache.degradedHint,
+      rateLimit,
+      cacheFallback: cache,
+    },
   });
 }
 
 export async function handleDashboardPulse(): Promise<Response> {
   return json({ ticks: await readPulseLog(20), logPath: pulseLogPath() });
+}
+
+export async function handleDashboardVerifyPost(deps: DashboardDeps = {}): Promise<Response> {
+  if (isResearchBusy()) {
+    return json({ ok: false, error: "Research in progress — try again when idle" }, 409);
+  }
+  const verifyFn = deps.verifyDashboard ?? verifyDashboard;
+  const result = await verifyFn({}, {});
+  const summary = formatVerifyDashboard(result);
+  return json({
+    ok: result.ok,
+    summary,
+    checks: result.checks,
+  }, result.ok ? 200 : 422);
 }
 
 export async function handleDashboardScreenshotPost(
@@ -150,20 +224,31 @@ export async function handleEvidenceFile(req: Request): Promise<Response> {
   return new Response(file, { headers: { "Content-Type": type } });
 }
 
-export async function handleRunResearchPost(deps: DashboardDeps = {}): Promise<Response> {
-  if (!beginResearch()) {
+export async function handleRunResearchPost(req: Request, deps: DashboardDeps = {}): Promise<Response> {
+  let dimension: string | undefined;
+  if (req.headers.get("content-type")?.includes("application/json")) {
+    try {
+      const body = (await req.json()) as { dimension?: string };
+      dimension = body.dimension;
+    } catch {
+      // empty body is fine
+    }
+  }
+  const dim = resolveDashboardDimension(dimension ?? null);
+  if (!beginResearch(dim)) {
     return json({ ok: false, error: "Research already running" }, 409);
   }
 
   const runFn = deps.runResearch ?? runResearch;
   try {
-    const run = await runFn({ json: false, exportAudit: true });
-    finishResearch(run.runId);
+    const run = await runFn({ json: false, exportAudit: true, dimension: dim });
+    finishResearch(run.runId, runDimension(run));
     return json({
       ok: true,
       runId: run.runId,
       shortlist: run.shortlist.length,
       generatedAt: run.generatedAt,
+      dimension: runDimension(run),
     });
   } catch (err) {
     if (err instanceof GitHubRateLimitError) {
@@ -191,14 +276,32 @@ export function createDashboardServer(
       [DASHBOARD_ROUTES.home]: {
         GET: handleDashboardHome,
       },
+      [DASHBOARD_ROUTES.overview]: {
+        GET: handleDashboardOverview,
+      },
+      [DASHBOARD_ROUTES.report]: {
+        GET: handleDashboardReport,
+      },
+      [DASHBOARD_ROUTES.diff]: {
+        GET: handleDashboardDiff,
+      },
+      [DASHBOARD_ROUTES.blueprint]: {
+        GET: handleDashboardBlueprint,
+      },
+      [DASHBOARD_ROUTES.pulse]: {
+        GET: handleDashboardPulsePage,
+      },
       [DASHBOARD_ROUTES.status]: {
         GET: handleDashboardStatus,
       },
-      [DASHBOARD_ROUTES.pulse]: {
+      [DASHBOARD_ROUTES.pulseApi]: {
         GET: handleDashboardPulse,
       },
       [DASHBOARD_ROUTES.runResearch]: {
-        POST: () => handleRunResearchPost(deps),
+        POST: (req) => handleRunResearchPost(req, deps),
+      },
+      [DASHBOARD_ROUTES.verify]: {
+        POST: () => handleDashboardVerifyPost(deps),
       },
       [DASHBOARD_ROUTES.screenshot]: {
         POST: (req) => handleDashboardScreenshotPost(req, deps),

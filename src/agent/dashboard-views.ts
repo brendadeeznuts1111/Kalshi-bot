@@ -5,56 +5,35 @@ import type { DashboardState } from "./dashboard-state.ts";
 import { resolveAuditExportTier } from "../research/audit-adapter.ts";
 import { buildRepoReport } from "../research/evidence.ts";
 import { shortlistTagCoverage } from "../research/diversify.ts";
-import { escapeHtml, renderScoredTable, STYLES } from "../research/views.ts";
+import { escapeHtml, renderScoredTable } from "../research/views.ts";
 import { formatGateMissHtml } from "../research/gate-miss.ts";
 import { DEFAULT_MAX_PER_TAG, MAX_QUALITY_SCORE } from "../research/constants.ts";
-import { localRepoPath, ROUTES } from "../research/patterns.ts";
-import { pulseLogPath, readPulseLog, pulseLogExists, resolveRotorRoot } from "./pulse-log.ts";
-import { loadLatestDashboardScreenshot, renderAuditEvidenceSection, auditEvidenceClientScript } from "./dashboard-screenshot.ts";
+import { localRepoPath } from "../research/patterns.ts";
+import { pulseLogPath, pulseLogExists, resolveRotorRoot } from "./pulse-log.ts";
+import { loadLatestDashboardScreenshot, renderAuditEvidenceSection } from "./dashboard-screenshot.ts";
+import {
+  readBlueprintMarkdown,
+  readDimensionDiffMarkdown,
+  readDimensionReportMarkdown,
+  renderMarkdownBody,
+} from "./dashboard-report.ts";
+import {
+  formatRateLimitFootprintLine,
+  readCacheFallbackFootprint,
+  type RateLimitFootprint,
+} from "./dashboard-telemetry.ts";
+import {
+  renderMainFragment,
+  renderOperatorShell,
+  type DimensionOption,
+} from "./dashboard-layout.ts";
+import { DASHBOARD_ROUTES, type DashboardViewId } from "./dashboard-views-routes.ts";
+import { loadLatestRunFromDb } from "../research/cache.ts";
+import { loadDimensionsFile, listDimensionIds, runDimension } from "../research/dimensions.ts";
+import { getDashboardState, isResearchBusy } from "./dashboard-state.ts";
 
-export const DASHBOARD_ROUTES = {
-  home: "/",
-  status: "/api/status",
-  runResearch: "/api/research/run",
-  pulse: "/api/pulse",
-  screenshot: "/api/screenshot",
-  evidencePrefix: "/evidence/",
-} as const;
-
-const DASHBOARD_STYLES = `
-  ${STYLES}
-  .toolbar { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin: 1rem 0; }
-  button.action { font: inherit; padding: 0.45rem 0.9rem; border-radius: 6px; border: 1px solid #0969da; background: #0969da; color: #fff; cursor: pointer; }
-  button.action:disabled { opacity: 0.55; cursor: wait; }
-  button.action.secondary { background: #fff; color: #0969da; }
-  .banner { padding: 0.75rem; border-radius: 6px; margin: 0.75rem 0; }
-  .banner.busy { background: #eef6ff; border: 1px solid #54aeff; }
-  .banner.error { background: #ffebe9; border: 1px solid #ff8182; }
-  .banner.ok { background: #dafbe1; border: 1px solid #4ac26b; }
-  .pulse-ok { color: #1a7f37; }
-  .pulse-bad { color: #cf222e; }
-  .hv-yes { color: #1a7f37; font-weight: 600; }
-  .hv-watchlist { color: #9a6700; font-weight: 600; }
-  .hv-no { color: #656d76; }
-  iframe.report { width: 100%; height: 28rem; border: 1px solid #ddd; border-radius: 6px; background: #fff; }
-  .audit-evidence { display: flex; flex-wrap: wrap; gap: 1.25rem; align-items: flex-start; margin: 0.75rem 0; }
-  .audit-evidence img { max-width: 320px; border: 1px solid #ddd; border-radius: 6px; background: #f6f8fa; }
-  .audit-meta { margin: 0; flex: 1; min-width: 16rem; }
-  .audit-meta dt { font-weight: 600; margin-top: 0.5rem; color: #656d76; font-size: 0.85rem; }
-  .audit-meta dd { margin: 0.15rem 0 0; word-break: break-all; }
-  .audit-hint { color: #656d76; font-size: 0.9rem; }
-  .gate-miss { background: #fff8c5; border: 1px solid #d4a72c; border-radius: 6px; padding: 0.75rem 1rem; margin: 0.75rem 0; }
-  .gate-miss ol { margin: 0.5rem 0 0; padding-left: 1.25rem; }
-  .gate-miss pre { background: #f6f8fa; padding: 0.5rem; border-radius: 4px; overflow-x: auto; }
-`;
-
-function navLinks(): string {
-  return `<nav>
-    <a href="${DASHBOARD_ROUTES.home}">Dashboard</a>
-    · <a href="${ROUTES.latestReport}" target="_blank">latest.md</a>
-    · <a href="${ROUTES.runsList}">runs.json</a>
-  </nav>`;
-}
+export { DASHBOARD_ROUTES } from "./dashboard-views-routes.ts";
+export type { DashboardViewId } from "./dashboard-views-routes.ts";
 
 function renderPulseTable(ticks: PulseTick[], logExists: boolean): string {
   if (!logExists) {
@@ -127,19 +106,6 @@ function renderTagCoverage(run: ResearchRun): string {
   </table>`;
 }
 
-function statusBanner(state: DashboardState): string {
-  if (state.phase === "running-research") {
-    return `<div class="banner busy" id="status-banner"><strong>Running research…</strong> ${escapeHtml(state.message ?? "")}</div>`;
-  }
-  if (state.phase === "error") {
-    return `<div class="banner error" id="status-banner"><strong>Error</strong> — ${escapeHtml(state.message ?? "unknown")}</div>`;
-  }
-  if (state.message) {
-    return `<div class="banner ok" id="status-banner">${escapeHtml(state.message)}</div>`;
-  }
-  return `<div class="banner ok" id="status-banner">Ready.</div>`;
-}
-
 /** Machine-readable SSOT for agent verify-dashboard (WebView evaluate). */
 export function renderAgentDashboardMeta(run: ResearchRun): string {
   const payload = {
@@ -147,59 +113,101 @@ export function renderAgentDashboardMeta(run: ResearchRun): string {
     generatedAt: run.generatedAt,
     shortlist: run.shortlist.length,
     stats: run.stats,
+    dimension: runDimension(run),
   };
   return `<script type="application/json" id="agent-dashboard-meta">${JSON.stringify(payload)}</script>`;
 }
 
-export async function renderDashboardPage(
-  run: ResearchRun | null,
-  runs: RunSummary[],
-  diffMd: string | null,
-  state: DashboardState,
-  pulseTicks: PulseTick[],
-  pulseLogPresent: boolean,
-  auditEvidence: Awaited<ReturnType<typeof loadLatestDashboardScreenshot>> = null,
-): Promise<string> {
-  if (!auditEvidence) {
-    auditEvidence = await loadLatestDashboardScreenshot();
-  }
+export async function loadDimensionOptions(): Promise<DimensionOption[]> {
+  const file = await loadDimensionsFile();
+  return listDimensionIds(file).map((id) => ({
+    id,
+    label: file.dimensions[id]?.label ?? id,
+  }));
+}
+
+export type DashboardRenderContext = {
+  view: DashboardViewId;
+  dimension: string;
+  dimensions: DimensionOption[];
+  state: DashboardState;
+  run: ResearchRun | null;
+  runs: RunSummary[];
+  pulseTicks: PulseTick[];
+  pulseLogPresent: boolean;
+  rateLimit: RateLimitFootprint | null;
+};
+
+export async function buildDashboardRenderContext(options: {
+  view: DashboardViewId;
+  dimension: string;
+  runs?: RunSummary[];
+  pulseTicks?: PulseTick[];
+  pulseLogPresent?: boolean;
+  rateLimit?: RateLimitFootprint | null;
+}): Promise<DashboardRenderContext> {
+  const dimensions = await loadDimensionOptions();
+  const run = loadLatestRunFromDb({ dimension: options.dimension, includeFixtures: false })
+    ?? loadLatestRunFromDb({ includeFixtures: false });
+  return {
+    view: options.view,
+    dimension: options.dimension,
+    dimensions,
+    state: getDashboardState(),
+    run,
+    runs: options.runs ?? [],
+    pulseTicks: options.pulseTicks ?? [],
+    pulseLogPresent: options.pulseLogPresent ?? false,
+    rateLimit: options.rateLimit ?? null,
+  };
+}
+
+function footerLines(ctx: DashboardRenderContext, pulseTicks: PulseTick[]): {
+  rateLimitLine: string;
+  pulseLine: string;
+  cacheLine: string | null;
+} {
+  const cache = readCacheFallbackFootprint();
+  const pulse = pulseTicks.at(-1);
+  const pulseLine = pulse
+    ? `Pulse: ${pulse.ok ? "ok" : "FAIL"} · ${pulse.findings} findings · ${pulse.ts}`
+    : "Pulse: no ticks";
+  return {
+    rateLimitLine: formatRateLimitFootprintLine(ctx.rateLimit),
+    pulseLine,
+    cacheLine: cache.degradedHint,
+  };
+}
+
+export function renderOverviewContent(
+  ctx: DashboardRenderContext,
+  auditEvidence: Awaited<ReturnType<typeof loadLatestDashboardScreenshot>>,
+): string {
+  const { run, runs, dimension } = ctx;
   if (!run) {
-    const body = `${navLinks()}
-      <h1>Kalshi Agent Dashboard</h1>
-      ${statusBanner(state)}
-      <div class="toolbar">
-        <button class="action" id="run-research" type="button">Run research</button>
-        <button class="action secondary" id="refresh-status" type="button">Refresh</button>
-      </div>
-      <p>No research runs yet. Click <strong>Run research</strong> or run <code>bun run research</code>.</p>
+    return `<h2 class="view-heading">Overview</h2>
+      <p>No research runs yet for dimension <code>${escapeHtml(dimension)}</code>. Click <strong>Run research</strong> or run <code>bun run research -- --dimension=${escapeHtml(dimension)}</code>.</p>
       <h2>Rotor pulse</h2>
-      ${renderPulseTable(pulseTicks, pulseLogPresent)}
-      ${dashboardClientScript(state.phase === "running-research")}
-      ${renderAuditEvidenceSection(auditEvidence)}
-      ${auditEvidenceClientScript()}`;
-    return dashboardLayout("Kalshi Agent Dashboard", body);
+      ${renderPulseTable(ctx.pulseTicks, ctx.pulseLogPresent)}
+      ${renderAuditEvidenceSection(auditEvidence)}`;
   }
 
-  const diffBlock = diffMd
-    ? `<h2>Latest diff</h2><pre class="diff">${escapeHtml(diffMd)}</pre>`
-    : "";
+  const diffNote =
+    runDimension(run) !== dimension
+      ? `<p><em>Showing latest run for <code>${escapeHtml(runDimension(run))}</code> — no run stored for <code>${escapeHtml(dimension)}</code> yet.</em></p>`
+      : "";
 
   const runHistory = runs
+    .filter((r) => r.dimension === dimension)
     .map(
       (r) =>
         `<li><code>${escapeHtml(r.runId)}</code> · ${escapeHtml(r.generatedAt)} · shortlist ${r.shortlist}</li>`,
     )
     .join("\n");
 
-  const body = `${navLinks()}
-  <h1>Kalshi Agent Dashboard</h1>
-  <p>Latest run <code>${escapeHtml(run.runId)}</code> · ${escapeHtml(run.generatedAt)}</p>
-  ${statusBanner(state)}
-  <div class="toolbar">
-    <button class="action" id="run-research" type="button"${state.phase === "running-research" ? " disabled" : ""}>${state.phase === "running-research" ? "Running research…" : "Run research"}</button>
-    <button class="action secondary" id="refresh-status" type="button">Refresh</button>
-    <a class="action secondary" href="${ROUTES.latestReport}" target="_blank" style="text-decoration:none;display:inline-block;">Open latest.md</a>
-  </div>
+  return `<h2 class="view-heading">Overview · ${escapeHtml(dimension)}</h2>
+  ${diffNote}
+  <p>Run <code>${escapeHtml(run.runId)}</code> · ${escapeHtml(run.generatedAt)}</p>
   <div class="stats">
     <div class="stat"><strong>${run.stats.discovered}</strong> discovered</div>
     <div class="stat"><strong>${run.stats.gated}</strong> gated</div>
@@ -213,70 +221,87 @@ export async function renderDashboardPage(
   ${renderTagCoverage(run)}
   <h2>All scored</h2>
   ${renderScoredTable(run)}
-  <h2>Report preview</h2>
-  <iframe class="report" src="${ROUTES.latestReport}" title="latest report"></iframe>
-  ${diffBlock}
-  <h2>Run history</h2>
+  <h2>Run history (${escapeHtml(dimension)})</h2>
   <ul>${runHistory || "<li>none</li>"}</ul>
-  <h2>Rotor pulse</h2>
-  ${renderPulseTable(pulseTicks, pulseLogPresent)}
   ${renderAgentDashboardMeta(run)}
-  ${renderAuditEvidenceSection(auditEvidence)}
-  ${dashboardClientScript(state.phase === "running-research")}
-  ${auditEvidenceClientScript()}`;
-
-  return dashboardLayout("Kalshi Agent Dashboard", body);
+  ${renderAuditEvidenceSection(auditEvidence)}`;
 }
 
-function dashboardClientScript(busy: boolean): string {
-  return `<script>
-(function () {
-  const busy = ${busy ? "true" : "false"};
-  const runBtn = document.getElementById("run-research");
-  const refreshBtn = document.getElementById("refresh-status");
+export async function renderReportContent(dimension: string): Promise<string> {
+  const markdown = await readDimensionReportMarkdown(dimension);
+  if (!markdown) {
+    return `<h2 class="view-heading">Report · ${escapeHtml(dimension)}</h2>
+<p><em>No report for this dimension yet.</em> Run research with <code>--dimension=${escapeHtml(dimension)}</code>.</p>`;
+  }
+  return `<h2 class="view-heading">Report · ${escapeHtml(dimension)}</h2>
+${renderMarkdownBody(markdown)}`;
+}
 
-  async function pollWhileBusy() {
-    while (true) {
-      const res = await fetch("${DASHBOARD_ROUTES.status}");
-      const data = await res.json();
-      if (data.state?.phase !== "running-research") {
-        location.reload();
-        return;
-      }
-      await new Promise((r) => setTimeout(r, 2000));
-    }
+export async function renderDiffContent(dimension: string): Promise<string> {
+  const markdown = await readDimensionDiffMarkdown(dimension);
+  if (!markdown) {
+    return `<h2 class="view-heading">Diff · ${escapeHtml(dimension)}</h2>
+<p><em>No diff report for this dimension yet.</em></p>`;
+  }
+  return `<h2 class="view-heading">Diff · ${escapeHtml(dimension)}</h2>
+${renderMarkdownBody(markdown)}`;
+}
+
+export async function renderBlueprintContent(): Promise<string> {
+  const markdown = await readBlueprintMarkdown();
+  if (!markdown) {
+    return `<h2 class="view-heading">Blueprint</h2>
+<p><em>No architecture blueprint yet.</em> Generate with <code>bun run agent blueprint</code>.</p>`;
+  }
+  return `<h2 class="view-heading">Architecture blueprint</h2>
+${renderMarkdownBody(markdown)}`;
+}
+
+export function renderPulseContent(ctx: DashboardRenderContext): string {
+  return `<h2 class="view-heading">Rotor pulse</h2>
+${renderPulseTable(ctx.pulseTicks, ctx.pulseLogPresent)}`;
+}
+
+async function renderViewMain(ctx: DashboardRenderContext): Promise<string> {
+  switch (ctx.view) {
+    case "report":
+      return renderReportContent(ctx.dimension);
+    case "diff":
+      return renderDiffContent(ctx.dimension);
+    case "blueprint":
+      return renderBlueprintContent();
+    case "pulse":
+      return renderPulseContent(ctx);
+    default:
+      return renderOverviewContent(ctx, await loadLatestDashboardScreenshot());
+  }
+}
+
+export async function renderDashboardPage(
+  ctx: DashboardRenderContext,
+  options: { partial?: boolean } = {},
+): Promise<string> {
+  const mainHtml = await renderViewMain(ctx);
+  const footer = footerLines(ctx, ctx.pulseTicks);
+  const runLabel = ctx.run?.runId ?? null;
+
+  if (options.partial) {
+    return renderMainFragment(ctx.view, ctx.dimension, mainHtml);
   }
 
-  if (busy) pollWhileBusy();
-
-  runBtn?.addEventListener("click", async () => {
-    runBtn.disabled = true;
-    runBtn.textContent = "Running research…";
-    const banner = document.getElementById("status-banner");
-    if (banner) {
-      banner.className = "banner busy";
-      banner.innerHTML = "<strong>Running research…</strong> This may take several minutes.";
-    }
-    try {
-      const res = await fetch("${DASHBOARD_ROUTES.runResearch}", { method: "POST" });
-      const data = await res.json();
-      if (!res.ok || !data.ok) throw new Error(data.error || res.statusText);
-      location.reload();
-    } catch (err) {
-      if (banner) {
-        banner.className = "banner error";
-        banner.innerHTML = "<strong>Error</strong> — " + String(err.message || err);
-      }
-      runBtn.disabled = false;
-      runBtn.textContent = "Run research";
-    }
+  return renderOperatorShell({
+    activeView: ctx.view,
+    dimension: ctx.dimension,
+    dimensions: ctx.dimensions,
+    state: ctx.state,
+    runLabel,
+    mainHtml,
+    footer,
+    busy: isResearchBusy(),
   });
-
-  refreshBtn?.addEventListener("click", () => location.reload());
-})();
-</script>`;
 }
 
+/** @deprecated use dashboardLayout via renderDashboardPage */
 export function dashboardLayout(title: string, body: string): string {
   return `<!DOCTYPE html>
 <html lang="en">
@@ -284,7 +309,6 @@ export function dashboardLayout(title: string, body: string): string {
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>${escapeHtml(title)}</title>
-  <style>${DASHBOARD_STYLES}</style>
 </head>
 <body>${body}</body>
 </html>`;
