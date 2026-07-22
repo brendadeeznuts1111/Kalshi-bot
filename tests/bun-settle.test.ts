@@ -23,6 +23,12 @@ describe("awaitSettled (Bun.peek)", () => {
     await expect(awaitSettled(promise)).rejects.toThrow("peek-reject");
   });
 
+  test("rejected peek fast path attaches handler without external catch", async () => {
+    const promise = Promise.reject(new Error("peek-reject-no-catch"));
+    expect(promiseStatus(promise)).toBe("rejected");
+    await expect(awaitSettled(promise)).rejects.toThrow("peek-reject-no-catch");
+  });
+
   test("awaits pending promises", async () => {
     let resolve!: (value: number) => void;
     const pending = new Promise<number>((r) => {

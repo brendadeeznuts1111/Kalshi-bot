@@ -25,6 +25,8 @@ Deep dive: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns)
 | HTML escaping | `Bun.escapeHTML` | [`bun-native.ts`](../src/research/bun-native.ts), [`views.ts`](../src/research/views.ts) |
 | Evidence compression | `Bun.zstdCompressSync` / `decompress` | [`evidence-io.ts`](../src/research/evidence-io.ts), [`export-audit.ts`](../src/research/export-audit.ts) |
 | Pattern editor jump | `Bun.openInEditor` | [`pattern-editor.ts`](../src/agent/pattern-editor.ts), [`agent/cli.ts`](../src/agent/cli.ts) |
+
+**Pattern excerpts from local clones:** `bun run agent patterns --open` reads source files under `REPO_CLONE_ROOT/{owner}/{repo}` when set (optional — default remains `gh api` reads with no clone). This is an intentional scope extension beyond the original no-clone plan; set `REPO_CLONE_ROOT` only when you maintain local checkouts for excerpt review.
 | Rate-limit backoff | `Bun.sleep` | [`gh.ts`](../src/research/gh.ts) |
 | Bounded concurrency | [`pool.ts`](../src/research/pool.ts) + `Bun.peek` | [`cli.ts`](../src/research/cli.ts), [`inspect.ts`](../src/research/inspect.ts) |
 | Settled-promise fast path | `Bun.peek` / `peek.status` | [`bun-settle.ts`](../src/research/bun-settle.ts) |

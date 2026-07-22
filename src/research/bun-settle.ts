@@ -8,8 +8,12 @@ import { peek } from "bun";
 export async function awaitSettled<T>(input: Promise<T> | T): Promise<T> {
   if (!(input instanceof Promise)) return input;
   const status = peek.status(input);
+  if (status === "rejected") {
+    // Mark handled before re-throwing peek() — avoids unhandled rejection on fast path.
+    input.catch(() => {});
+    throw peek(input);
+  }
   if (status === "pending") return await input;
-  if (status === "rejected") throw peek(input);
   return peek(input) as T;
 }
 
