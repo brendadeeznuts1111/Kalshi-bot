@@ -3,6 +3,9 @@
  */
 // @see https://bun.com/docs/runtime/file-io#writing-files-bun-write
 import type { ScoreComponentKey } from "../research/constants.ts";
+import type { GateOptions } from "../research/gate.ts";
+import type { GateMissStats } from "../research/gate-miss.ts";
+import { formatGateMissMarkdown } from "../research/gate-miss.ts";
 import { loadResearchRun } from "../research/cache.ts";
 import { loadDimensionsFile } from "../research/dimensions.ts";
 import { joinPath, RESEARCH_ROOT, ROOT } from "../research/paths.ts";
@@ -67,6 +70,10 @@ export type BlueprintSection = {
   bunNative: BunNativeHint[];
   notes: string[];
   dataFreshness: DataFreshness | null;
+  /** Gate config for the dimension run (when gateMiss is set). */
+  gate?: GateOptions | null;
+  /** Near misses + probe command when discover > 0 but none pass gate. */
+  gateMiss?: GateMissStats;
 };
 
 export type ArchitectureBlueprint = {
@@ -357,15 +364,12 @@ export async function buildArchitectureBlueprint(): Promise<ArchitectureBlueprin
           notes.push(`Alternate query: \`${alt.query}\` — ${alt.rationale}`);
         }
         notes.push(`Probe: \`${run.discoveryMiss.retryCommand}\``);
-      } else if (run?.gateMiss?.retryHint) {
-        notes.push(run.gateMiss.retryHint);
-        for (const nm of run.gateMiss.nearMisses) {
-          notes.push(`Near miss: **${nm.fullName}** — ${nm.summary}`);
+      } else if (!run?.gateMiss) {
+        if (spec.emptyShortlistNote) {
+          notes.push(spec.emptyShortlistNote);
+        } else {
+          notes.push("No shortlist — run research with --min-stars=1 if niche");
         }
-      } else if (spec.emptyShortlistNote) {
-        notes.push(spec.emptyShortlistNote);
-      } else {
-        notes.push("No shortlist — run research with --min-stars=1 if niche");
       }
     }
 
@@ -398,6 +402,8 @@ export async function buildArchitectureBlueprint(): Promise<ArchitectureBlueprin
       bunNative: bunNativeHintsFor(spec.recommendedBun, localBunStack),
       notes,
       dataFreshness,
+      gate: run?.gateMiss ? run.config.gate : null,
+      gateMiss: run?.gateMiss,
     });
   }
 
@@ -500,6 +506,10 @@ export function formatArchitectureBlueprintMarkdown(blueprint: ArchitectureBluep
     } else if (section.authPattern || section.orderPattern) {
       if (section.authPattern) lines.push(`**Auth pattern:** ${section.authPattern}`);
       if (section.orderPattern) lines.push(`**Order pattern:** ${section.orderPattern}`);
+    }
+
+    if (section.gateMiss && section.gate) {
+      lines.push(...formatGateMissMarkdown(section.gateMiss, section.gate));
     }
 
     if (section.shortlistSummary.length) {

@@ -103,4 +103,58 @@ describe("architecture blueprint", () => {
     expect(md).toContain("Lift notes");
     expect(md).toContain("src/research/cache.ts");
   });
+
+  test("formatArchitectureBlueprintMarkdown renders gate miss probe section", () => {
+    const md = formatArchitectureBlueprintMarkdown({
+      generatedAt: "2099-01-01T00:00:00.000Z",
+      localBunStack: { features: [], sourceFiles: [], featureFiles: {} },
+      sections: [
+        {
+          dimension: "sports-nba",
+          title: "Sports — NBA",
+          runId: "run-gate-miss",
+          runGeneratedAt: "2099-01-01T00:00:00.000Z",
+          recommendedBun: ["bun-http"],
+          referenceRepo: null,
+          referenceScore: null,
+          referenceBadge: null,
+          referenceFindingId: null,
+          referenceDimension: null,
+          bunFeatures: [],
+          bunFeatureFile: null,
+          authPattern: null,
+          orderPattern: null,
+          liftAuth: null,
+          liftOrders: null,
+          liftEntries: [],
+          shortlistSummary: [],
+          liftNotes: [],
+          bunNative: [],
+          notes: [],
+          dataFreshness: null,
+          gate: { minStars: 5, minForks: 3, maxAgeMonths: 18 },
+          gateMiss: {
+            rejected: 2,
+            nearMisses: [
+              {
+                fullName: "a/nba-bot",
+                stars: 4,
+                forks: 1,
+                pushedAt: "2026-01-01T00:00:00Z",
+                pushedLabel: "2026-01",
+                reasons: ["low_popularity"],
+                summary: "4 stars, 1 forks — 1 star(s) below min-stars=5",
+              },
+            ],
+            retryCommand: "bun run research -- --dimension=sports-nba --min-stars=4",
+            retryHint: null,
+          },
+        },
+      ],
+    });
+    expect(md).toContain("## Gate miss");
+    expect(md).toContain("a/nba-bot");
+    expect(md).toContain("### Suggested probe");
+    expect(md).toContain("--min-stars=4");
+  });
 });

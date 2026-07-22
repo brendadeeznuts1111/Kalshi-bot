@@ -210,3 +210,46 @@ export function formatGateMissMarkdown(gateMiss: GateMissStats, gate: GateOption
 
   return lines;
 }
+
+export type FormatGateMissHtmlOptions = {
+  panelId?: string;
+  screenshotRoute?: string;
+  escapeHtml?: (value: string) => string;
+};
+
+/** Dashboard HTML for gate miss panel (reports use {@link formatGateMissMarkdown}). */
+export function formatGateMissHtml(
+  gateMiss: GateMissStats,
+  gate: GateOptions,
+  options: FormatGateMissHtmlOptions = {},
+): string {
+  const esc = options.escapeHtml ?? ((value: string) => value);
+  const panelId = options.panelId ?? "gate-miss-panel";
+
+  const nearMissItems = gateMiss.nearMisses
+    .map(
+      (nm, i) =>
+        `<li><strong>${esc(nm.fullName)}</strong> — ${esc(nm.summary)} ` +
+        `(${nm.stars}★ · ${nm.forks} forks · pushed ${esc(nm.pushedLabel)})</li>`,
+    )
+    .join("\n");
+
+  const probeBlock = gateMiss.retryCommand
+    ? `<p><strong>Suggested probe</strong></p><pre><code>${esc(gateMiss.retryCommand)}</code></pre>`
+    : gateMiss.retryHint
+      ? `<p><em>${esc(gateMiss.retryHint)}</em></p>`
+      : "";
+
+  const screenshotHint = options.screenshotRoute
+    ? `<p class="audit-hint">Capture screenshot evidence: POST ${esc(options.screenshotRoute)}</p>`
+    : "";
+
+  return `<div class="gate-miss" id="${esc(panelId)}">
+    <h2>Gate miss</h2>
+    <p>Discovered <strong>${gateMiss.rejected}</strong> repo(s); <strong>0</strong> passed gate ` +
+    `(min-stars=${gate.minStars}, min-forks=${gate.minForks}, max-age-months=${gate.maxAgeMonths}).</p>
+    ${nearMissItems ? `<h3>Near misses</h3><ol>${nearMissItems}</ol>` : ""}
+    ${probeBlock}
+    ${screenshotHint}
+  </div>`;
+}

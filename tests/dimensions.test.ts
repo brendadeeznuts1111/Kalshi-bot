@@ -143,6 +143,40 @@ describe("dimension reports", () => {
     expect(md).toContain("latest-market-making.diff.md");
   });
 
+  test("formatReportMarkdown includes gate miss near misses and probe", () => {
+    const md = formatReportMarkdown({
+      runId: "2026-07-22T00-00-00-000Z",
+      generatedAt: "2026-07-22T00:00:00.000Z",
+      dimension: "sports-nba",
+      config: { shortlistSize: 12, gate: { minStars: 5, minForks: 3, maxAgeMonths: 18 } },
+      stats: { discovered: 2, gated: 0, inspected: 0, shortlist: 0 },
+      candidates: [],
+      gated: [],
+      scored: [],
+      shortlist: [],
+      excludedSdkOnly: [],
+      gateMiss: {
+        rejected: 2,
+        nearMisses: [
+          {
+            fullName: "a/nba-bot",
+            stars: 4,
+            forks: 1,
+            pushedAt: "2026-01-01T00:00:00Z",
+            pushedLabel: "2026-01",
+            reasons: ["low_popularity"],
+            summary: "4 stars, 1 forks — 1 star(s) below min-stars=5",
+          },
+        ],
+        retryCommand: "bun run research -- --dimension=sports-nba --min-stars=4",
+        retryHint: null,
+      },
+    });
+    expect(md).toContain("## Gate miss");
+    expect(md).toContain("a/nba-bot");
+    expect(md).toContain("--min-stars=4");
+  });
+
   test("writeOutputs writes scoped latest files", async () => {
     const run: ResearchRun = {
       runId: "dim-test-run",

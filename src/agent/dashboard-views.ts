@@ -6,7 +6,7 @@ import { resolveAuditExportTier } from "../research/audit-adapter.ts";
 import { buildRepoReport } from "../research/evidence.ts";
 import { shortlistTagCoverage } from "../research/diversify.ts";
 import { escapeHtml, renderScoredTable, STYLES } from "../research/views.ts";
-import { type GateMissStats } from "../research/gate-miss.ts";
+import { formatGateMissHtml } from "../research/gate-miss.ts";
 import { DEFAULT_MAX_PER_TAG, MAX_QUALITY_SCORE } from "../research/constants.ts";
 import { localRepoPath, ROUTES } from "../research/patterns.ts";
 import { pulseLogPath, readPulseLog, pulseLogExists, resolveRotorRoot } from "./pulse-log.ts";
@@ -85,29 +85,12 @@ function renderPulseTable(ticks: PulseTick[], logExists: boolean): string {
   </table>`;
 }
 
-function renderGateMissSection(gateMiss: GateMissStats, gate: ResearchRun["config"]["gate"]): string {
-  const nearMissItems = gateMiss.nearMisses
-    .map(
-      (nm, i) =>
-        `<li><strong>${escapeHtml(nm.fullName)}</strong> — ${escapeHtml(nm.summary)} ` +
-        `(${nm.stars}★ · ${nm.forks} forks · pushed ${escapeHtml(nm.pushedLabel)})</li>`,
-    )
-    .join("\n");
-
-  const probeBlock = gateMiss.retryCommand
-    ? `<p><strong>Suggested probe</strong></p><pre><code>${escapeHtml(gateMiss.retryCommand)}</code></pre>`
-    : gateMiss.retryHint
-      ? `<p><em>${escapeHtml(gateMiss.retryHint)}</em></p>`
-      : "";
-
-  return `<div class="gate-miss" id="gate-miss-panel">
-    <h2>Gate miss</h2>
-    <p>Discovered <strong>${gateMiss.rejected}</strong> repo(s); <strong>0</strong> passed gate ` +
-    `(min-stars=${gate.minStars}, min-forks=${gate.minForks}, max-age-months=${gate.maxAgeMonths}).</p>
-    ${nearMissItems ? `<h3>Near misses</h3><ol>${nearMissItems}</ol>` : ""}
-    ${probeBlock}
-    <p class="audit-hint">Capture screenshot evidence: POST ${DASHBOARD_ROUTES.screenshot}</p>
-  </div>`;
+function renderGateMissSection(run: ResearchRun): string {
+  if (!run.gateMiss) return "";
+  return formatGateMissHtml(run.gateMiss, run.config.gate, {
+    escapeHtml,
+    screenshotRoute: DASHBOARD_ROUTES.screenshot,
+  });
 }
 
 function renderShortlistWithAudit(run: ResearchRun): string {
@@ -223,7 +206,7 @@ export async function renderDashboardPage(
     <div class="stat"><strong>${run.stats.inspected}</strong> inspected</div>
     <div class="stat"><strong>${run.stats.shortlist}</strong> shortlisted</div>
   </div>
-  ${run.gateMiss ? renderGateMissSection(run.gateMiss, run.config.gate) : ""}
+  ${renderGateMissSection(run)}
   <h2>Shortlist (${run.shortlist.length})</h2>
   ${renderShortlistWithAudit(run)}
   <h2>Tag coverage</h2>

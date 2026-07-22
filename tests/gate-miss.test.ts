@@ -3,6 +3,8 @@ import { describe, expect, test } from "bun:test";
 import {
   analyzeGateMiss,
   buildGateRetryCommand,
+  formatGateMissHtml,
+  formatGateMissMarkdown,
   rankGateNearMisses,
 } from "../src/research/gate-miss.ts";
 import type { RepoCandidate } from "../src/research/types.ts";
@@ -65,5 +67,33 @@ describe("gate-miss", () => {
     expect(miss?.rejected).toBe(1);
     expect(miss?.nearMisses).toHaveLength(1);
     expect(miss?.retryCommand).toContain("sports-nba");
+  });
+
+  test("formatGateMissMarkdown renders near misses and probe command", () => {
+    const miss = analyzeGateMiss(
+      [repo({ fullName: "a/nba-bot", stars: 4, forks: 1, pushedAt: "2026-01-01T00:00:00Z" })],
+      [],
+      gate,
+      { dimension: "sports-nba" },
+    )!;
+    const md = formatGateMissMarkdown(miss, gate).join("\n");
+    expect(md).toContain("## Gate miss");
+    expect(md).toContain("a/nba-bot");
+    expect(md).toContain("### Near misses");
+    expect(md).toContain("--min-stars=4");
+  });
+
+  test("formatGateMissHtml renders dashboard panel with near misses", () => {
+    const miss = analyzeGateMiss(
+      [repo({ fullName: "a/nba-bot", stars: 4, forks: 1, pushedAt: "2026-01-01T00:00:00Z" })],
+      [],
+      gate,
+      { dimension: "sports-nba" },
+    )!;
+    const html = formatGateMissHtml(miss, gate, { screenshotRoute: "/api/screenshot" });
+    expect(html).toContain('id="gate-miss-panel"');
+    expect(html).toContain("a/nba-bot");
+    expect(html).toContain("--min-stars=4");
+    expect(html).toContain("/api/screenshot");
   });
 });
