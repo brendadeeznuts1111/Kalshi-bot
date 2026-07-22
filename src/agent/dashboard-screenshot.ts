@@ -1,6 +1,11 @@
 // @see https://bun.com/docs/runtime/image#input
+// @see https://bun.com/docs/runtime/image#metadata
 // @see https://bun.com/docs/runtime/hashing#bun-cryptohasher
 // @see https://bun.com/docs/runtime/webview#new-bun-webview-options
+import {
+  extractImageEvidenceMeta,
+  resizeScreenshotPng,
+} from "../../../lib/image-metadata.ts";
 import { EVIDENCE_DIR, joinPath } from "../research/paths.ts";
 import { DASHBOARD_ROUTES } from "./dashboard-views.ts";
 import { DASHBOARD_PROBE_EVAL, type DashboardPageProbe } from "./verify-dashboard.ts";
@@ -16,6 +21,8 @@ export type DashboardImageMeta = {
   width: number;
   height: number;
   format: string;
+  size?: number;
+  digest?: string;
 };
 
 export type DashboardScreenshotWire = {
@@ -69,13 +76,15 @@ export function evidenceUrlPath(filename: string): string {
   return `/evidence/${filename}`;
 }
 
-/** Zero-copy header read — no full pixel decode. */
+/** Bun.Image.metadata + sha256 digest via monorepo SSOT. */
 export async function readPngImageMeta(png: Uint8Array): Promise<DashboardImageMeta> {
-  const meta = await new Bun.Image(png).metadata();
+  const meta = await extractImageEvidenceMeta(png, { algorithm: "sha256" });
   return {
     width: meta.width,
     height: meta.height,
-    format: meta.format ?? "png",
+    format: meta.format,
+    size: meta.size,
+    digest: meta.digest,
   };
 }
 
@@ -84,12 +93,8 @@ export async function buildDashboardThumbnail(
   maxWidth = 320,
   maxHeight = 240,
 ): Promise<Uint8Array> {
-  return new Uint8Array(
-    await new Bun.Image(png)
-      .resize(maxWidth, maxHeight, { fit: "inside", withoutEnlargement: true })
-      .png()
-      .bytes(),
-  );
+  const { bytes } = await resizeScreenshotPng(png, { width: maxWidth, height: maxHeight });
+  return bytes;
 }
 
 export async function processDashboardScreenshotBytes(
@@ -107,7 +112,7 @@ export async function processDashboardScreenshotBytes(
     readPngImageMeta(png),
     buildDashboardThumbnail(png, options.thumbMaxWidth, options.thumbMaxHeight),
   ]);
-  const sha256 = sha256HexBytes(png);
+  const sha256 = image.digest ?? sha256HexBytes(png);
   const capturedAt = new Date().toISOString();
 
   await Bun.write(fullPath, png);

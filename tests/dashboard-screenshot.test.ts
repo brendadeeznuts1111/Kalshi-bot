@@ -28,9 +28,13 @@ describe("dashboard-screenshot", () => {
     }
   });
 
-  test("readPngImageMeta reads header without full decode", async () => {
+  test("readPngImageMeta reads Bun.Image metadata", async () => {
     const meta = await readPngImageMeta(TINY_PNG);
-    expect(meta).toEqual({ width: 1, height: 1, format: "png" });
+    expect(meta.width).toBe(1);
+    expect(meta.height).toBe(1);
+    expect(meta.format).toBe("png");
+    expect(meta.size).toBe(TINY_PNG.byteLength);
+    expect(meta.digest).toBe(sha256HexBytes(TINY_PNG));
   });
 
   test("processDashboardScreenshotBytes writes full, thumb, manifest", async () => {
@@ -42,7 +46,10 @@ describe("dashboard-screenshot", () => {
     expect(manifest.thumbnail).toBe(`/evidence/${slug}-thumb.png`);
     expect(manifest.bytes).toBe(TINY_PNG.byteLength);
     expect(manifest.sha256).toBe(sha256HexBytes(TINY_PNG));
-    expect(manifest.image).toEqual({ width: 1, height: 1, format: "png" });
+    expect(manifest.image.width).toBe(1);
+    expect(manifest.image.height).toBe(1);
+    expect(manifest.image.format).toBe("png");
+    expect(manifest.image.digest).toBe(manifest.sha256);
 
     expect(await Bun.file(manifest.fullPath).exists()).toBe(true);
     expect(await Bun.file(manifest.thumbnailPath).exists()).toBe(true);
