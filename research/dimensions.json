@@ -33,7 +33,13 @@
         "Kalshi NBA",
         "NBA player props kalshi",
         "basketball kalshi trading",
-        "NBA Kalshi bot"
+        "NBA Kalshi bot",
+        "polymarket sports bot",
+        "polymarket NBA",
+        "sports betting model basketball",
+        "the odds api basketball",
+        "elo basketball model",
+        "NBA prediction model github"
       ]
     },
     "sports-nfl": {
@@ -42,7 +48,13 @@
         "Kalshi NFL",
         "NFL player props kalshi",
         "football kalshi trading",
-        "NFL Kalshi bot"
+        "NFL Kalshi bot",
+        "polymarket sports NFL",
+        "polymarket NFL bot",
+        "sports betting model NFL",
+        "the odds api football",
+        "elo football model",
+        "NFL prediction model github"
       ]
     },
     "sports-soccer": {
@@ -51,7 +63,13 @@
         "Kalshi soccer",
         "Kalshi EPL",
         "soccer kalshi trading",
-        "football kalshi prediction market"
+        "football kalshi prediction market",
+        "polymarket soccer",
+        "polymarket sports football",
+        "sports betting model soccer",
+        "the odds api soccer",
+        "xg soccer model",
+        "elo soccer model"
       ]
     },
     "sports-other": {
@@ -60,7 +78,12 @@
         "Kalshi MLB",
         "Kalshi NHL",
         "Kalshi tennis",
-        "sports kalshi bot"
+        "sports kalshi bot",
+        "polymarket sports",
+        "sports betting model",
+        "the odds api",
+        "odds api trading bot",
+        "sports prediction model github"
       ]
     },
     "sports-elections": {
