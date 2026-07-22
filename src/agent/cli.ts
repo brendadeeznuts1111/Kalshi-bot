@@ -224,7 +224,7 @@ Environment:
 Examples:
   bun run agent status
   bun run agent verify-dashboard
-  bun run agent suggest-lift -- --json
+  bun run agent suggest-lift --json
   bun run agent audit-list
   bun run agent run-research -- --local
   bun run agent capture-evidence -- --market=KXHIGHNY-25JAN01

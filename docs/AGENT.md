@@ -9,13 +9,21 @@ bun run agent status                    # dashboard API or local fallback (+ ver
 bun run agent audit-list                # shortlist vs rotor catalog
 bun run agent suggest-lift              # per-component lift map (rotor-aware badges)
 bun run agent run-research              # POST /api/research/run if dashboard up
-bun run agent run-research -- --local   # always in-process (no HTTP)
+bun run agent run-research --local        # always in-process (no HTTP)
 bun run agent capture-evidence -- --url=https://kalshi.com/markets/...
 bun run agent capture-evidence -- --market=KXHIGHNY-25JAN01
 bun run agent verify-dashboard [--json] [--max-age-days=N] [--require-pulse]
 ```
 
-JSON on any command: append `-- --json`.
+JSON on parsed subcommands: append `--json` (no extra `--`).
+
+```bash
+bun run agent status --json
+bun run agent suggest-lift --json
+bun run agent audit-list --json --run=2026-07-22T05-50-48-875Z
+```
+
+Use `--` only when passing through raw flags (e.g. `capture-evidence -- --url=…`).
 
 Start the dashboard first when you want API-backed `status` / `run-research`:
 
@@ -55,8 +63,8 @@ Cross-references the latest shortlist against `tools/audit-catalog.json` under `
 
 ```bash
 bun run agent audit-list
-bun run agent audit-list -- --repo=openfi-dao/kalshi-trading-bot
-bun run agent audit-list -- --run=2026-07-22T05-50-48-875Z
+bun run agent audit-list --repo=openfi-dao/kalshi-trading-bot
+bun run agent audit-list --run=2026-07-22T05-50-48-875Z
 ```
 
 | `verification` | Meaning |
@@ -90,7 +98,7 @@ Pipeline self-check: **`GET /api/status`** plus headless **WebView** load of `/`
 ```bash
 bun run dashboard
 bun run agent verify-dashboard
-bun run agent verify-dashboard -- --json --require-pulse
+bun run agent verify-dashboard --json --require-pulse
 ```
 
 Exit **0** = pass, **1** = fail.
