@@ -33,20 +33,13 @@ Kalshi-bot/
   package.json              # no dependencies block
   bunfig.toml               # [run] shell=bun, [test] coverage
   tsconfig.json
-  src/research/
-    cli.ts                  # bun run research
-    export-audit-cli.ts     # bun run export-audit
-    schedule-cli.ts         # bun run schedule:*
-    scheduled.ts            # OS cron worker (export default { scheduled })
-    constants.ts            # typed SSOT (detectors, weights, cron defaults)
-    gh.ts, preflight.ts, pool.ts, io.ts
-    discover.ts, gate.ts, inspect.ts, detect.ts
-    score.ts, diversify.ts, evidence.ts, validate.ts
-    cache.ts, diff.ts, report.ts, serve.ts, views.ts
-    patterns.ts             # URLPattern SSOT
-    audit-adapter.ts, export-audit.ts
-    types.ts, paths.ts
-  tests/                    # bun:test (77 tests)
+  src/
+    research/               # discover → gate → inspect → score → diversify → report
+      … (see README layout)
+    agent/                  # dashboard, CLI, audit-list, suggest-lift, verify-dashboard
+  tools/
+    restore-latest-report.ts  # posttest: fixture → latest.md
+  tests/                    # bun:test (126 tests; posttest report restore)
   docs/
     CRON.md                 # OS-level Bun.cron setup
   research/
@@ -91,7 +84,7 @@ Concurrency **4**. API responses cached in `cache.db` keyed by `repo+pushed_at`.
 
 | Signal | Method |
 |--------|--------|
-| License | repo metadata — unlicensed penalized; MIT/Apache preferred |
+| License | repo metadata — `spdxId` or `key` from gh; unlicensed penalized; MIT/Apache preferred |
 | Auth / API (25 pts) | scoped `gh search code` — `KALSHI-ACCESS-*`, `trade-api/v2`, SDK markers |
 | Order realism (25 pts) | scoped code search — orders paths, dry-run defaults |
 | Tests + CI | tree / contents |
@@ -125,7 +118,8 @@ Queryable: `searchCachedPayloads("readme", "websocket")`.
 
 ## Diff
 
-- Default baseline: latest **production** run in sqlite (fallback `outputs/latest.json`)
+- Default baseline: latest **production** run in sqlite (`isProductionRunId` + `isEligibleProductionRun`; skips test fixtures and far-future ids)
+- Fallback: `outputs/latest.json`
 - **`--diff <run-id>`** — explicit baseline
 
 Outputs: [`research/reports/latest.diff.md`](../research/reports/latest.diff.md).
@@ -134,6 +128,10 @@ Outputs: [`research/reports/latest.diff.md`](../research/reports/latest.diff.md)
 
 ```bash
 bun run research                      # full pipeline
+bun run dashboard                     # agent dashboard (:3457)
+bun run agent status                  # CLI status + rotor verification
+bun run agent audit-list              # shortlist vs audit-catalog.json
+bun run agent suggest-lift            # component lift map (rotor badges)
 bun run research -- --json            # stdout JSON
 bun run research -- --shortlist 12
 bun run research -- --diff <run-id>
@@ -141,7 +139,7 @@ bun run research -- --export-audit    # + audit JSONL + rotor bundle
 bun run export-audit -- --latest      # re-export from cache
 bun run export-audit -- --verify research/exports/audit/<run-id>
 bun run serve                         # local browser (:3456)
-bun test && bun run typecheck
+bun test && bun run typecheck         # posttest restores latest.md from fixture
 ```
 
 ### Env overrides
@@ -177,11 +175,12 @@ bun test && bun run typecheck
 
 ## Audit adapter (optional)
 
-High-value shortlist repos (≥70 pts, auth + order matched) export to monorepo-compatible `AuditFinding` wire. See [`docs/AUDIT_ADAPTER.md`](AUDIT_ADAPTER.md).
+High-value (≥70) and **watchlist** (≥65) shortlist repos export to monorepo-compatible `AuditFinding` wire. Agent CLI cross-references rotor catalog + pulse. See [`docs/AUDIT_ADAPTER.md`](AUDIT_ADAPTER.md) and [`docs/AGENT.md`](AGENT.md).
 
 ## Testing
 
-- Pure: gate, score, detect, patterns, evidence, validate, cache, audit adapter
+- **126 tests** across research + agent (`bun test`; `posttest` restores `latest.md` from fixture)
+- Pure: gate, score, detect, patterns, evidence, validate, cache, audit adapter, agent audit-list
 - `mock.module("../src/research/gh.ts")` — inspect tests never hit network
 - Live integration: `bun run research` only
 

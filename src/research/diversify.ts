@@ -16,7 +16,7 @@ export function shortlistTagCoverage(
 ): TagCoverageRow[] {
   const counts = new Map<string, number>();
   for (const item of shortlist) {
-    const tags = item.signals.strategyTags.filter((t) => t !== SDK_ONLY_TAG);
+    const tags = (item.signals.strategyTags ?? []).filter((t) => t !== SDK_ONLY_TAG);
     if (!tags.length) {
       counts.set(UNTAGGED_BUCKET, (counts.get(UNTAGGED_BUCKET) ?? 0) + 1);
       continue;
@@ -52,13 +52,13 @@ export function buildShortlist(
   const tagCounts = new Map<string, number>();
 
   function canPick(item: ScoredRepo): boolean {
-    const tags = item.signals.strategyTags.filter((t) => t !== SDK_ONLY_TAG);
+    const tags = (item.signals.strategyTags ?? []).filter((t) => t !== SDK_ONLY_TAG);
     if (!tags.length) return (tagCounts.get(UNTAGGED_BUCKET) ?? 0) < maxPerTag;
     return tags.every((tag) => (tagCounts.get(tag) ?? 0) < maxPerTag);
   }
 
   function recordPick(item: ScoredRepo): void {
-    const tags = item.signals.strategyTags.filter((t) => t !== SDK_ONLY_TAG);
+    const tags = (item.signals.strategyTags ?? []).filter((t) => t !== SDK_ONLY_TAG);
     if (!tags.length) {
       tagCounts.set(UNTAGGED_BUCKET, (tagCounts.get(UNTAGGED_BUCKET) ?? 0) + 1);
       return;

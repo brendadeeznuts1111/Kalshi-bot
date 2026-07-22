@@ -40,6 +40,7 @@ export async function writeAuditExports(
     findings: exp.bundles.map((b) => ({
       id: b.finding.id,
       fullName: b.repoReport.fullName,
+      tier: b.finding.meta?.tier ?? "watchlist",
       evidencePath: b.finding.evidence.path,
       digest: b.finding.evidence.digest,
     })),
@@ -84,9 +85,9 @@ export function toRotorFindingWire(finding: AuditFindingWire): AuditFindingWire 
   };
 }
 
-/** Monorepo ingest remaps committed Kalshi evidence paths to rotor layout. */
+/** Monorepo ingest remaps committed Kalshi evidence paths to rotor layout (.ndjson — monorepo gitignores *.jsonl). */
 export function monorepoEvidencePath(localPath: string): string {
-  const rel = localPath.replace(/^research\/audit-evidence\//, "");
+  const rel = localPath.replace(/^research\/audit-evidence\//, "").replace(/\.jsonl$/, ".ndjson");
   return joinPath("tools/audit-evidence/kalshi", rel);
 }
 

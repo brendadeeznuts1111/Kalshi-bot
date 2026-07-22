@@ -16,7 +16,11 @@ import {
   HIGH_VALUE_MIN_COMPONENT_POINTS,
   HIGH_VALUE_MIN_TOTAL_SCORE,
   MAX_QUALITY_SCORE,
+  WATCHLIST_MIN_COMPONENT_POINTS,
+  WATCHLIST_MIN_TOTAL_SCORE,
 } from "./constants.ts";
+
+export type AuditExportTier = "high-value" | "watchlist";
 
 /** AuditFinding-compatible wire (ids are opaque until monorepo parse*). */
 export type AuditFindingWire = {
@@ -30,7 +34,7 @@ export type AuditFindingWire = {
   evidence: AuditEvidenceWire;
   related?: string[];
   relatedDocs?: string[];
-  meta?: { buildPin?: string; emitter?: string };
+  meta?: { buildPin?: string; emitter?: string; tier?: AuditExportTier };
 };
 
 export type AuditEvidenceWire = {
@@ -112,6 +116,45 @@ export function isHighValueCandidate(report: RepoReport): boolean {
   );
 }
 
+function authOrderDetectorPoints(report: RepoReport): {
+  authMatched: boolean;
+  orderMatched: boolean;
+  authPoints: number;
+  orderPoints: number;
+} {
+  const auth = report.detectors.find((d) => d.id === DETECTOR_IDS.authApi);
+  const orders = report.detectors.find((d) => d.id === DETECTOR_IDS.orderRealism);
+  return {
+    authMatched: auth?.matched ?? false,
+    orderMatched: orders?.matched ?? false,
+    authPoints: auth?.pointsContributed ?? 0,
+    orderPoints: orders?.pointsContributed ?? 0,
+  };
+}
+
+/**
+ * Watchlist tier: below high-value bar but still auditable (≥65 total, auth+order ≥12 each).
+ * Mutually exclusive with {@link isHighValueCandidate}.
+ */
+export function isWatchlistCandidate(report: RepoReport): boolean {
+  if (isHighValueCandidate(report)) return false;
+  const { authMatched, orderMatched, authPoints, orderPoints } = authOrderDetectorPoints(report);
+  return (
+    report.score.total >= WATCHLIST_MIN_TOTAL_SCORE &&
+    authMatched &&
+    orderMatched &&
+    authPoints >= WATCHLIST_MIN_COMPONENT_POINTS &&
+    orderPoints >= WATCHLIST_MIN_COMPONENT_POINTS
+  );
+}
+
+/** Highest export tier for this report, or null when not auditable. */
+export function resolveAuditExportTier(report: RepoReport): AuditExportTier | null {
+  if (isHighValueCandidate(report)) return "high-value";
+  if (isWatchlistCandidate(report)) return "watchlist";
+  return null;
+}
+
 function isoDate(iso: string): string {
   return iso.slice(0, 10);
 }
@@ -152,13 +195,18 @@ export function shortlistRulesConcept(config: ResearchConfig, publishedAt: strin
 export function repoReportToAuditFindingWire(
   report: RepoReport,
   runId: string,
-  options?: { status?: AuditFindingWire["status"] },
+  options?: { status?: AuditFindingWire["status"]; tier?: AuditExportTier },
 ): AuditFindingWire {
   validateRepoReport(report);
+  const tier = options?.tier ?? resolveAuditExportTier(report) ?? "watchlist";
   const ndjson = evidenceNdjson(report);
   const body = evidenceFileBody(ndjson);
   const digest = digestEvidenceBody(body);
   const path = evidenceExportPath(runId, report.fullName);
+  const tierNote =
+    tier === "watchlist"
+      ? " Watchlist tier — below high-value export threshold; verify before lift."
+      : "";
 
   return {
     id: findingId(report.fullName),
@@ -168,7 +216,10 @@ export function repoReportToAuditFindingWire(
       `Quality score ${report.score.total}/${MAX_QUALITY_SCORE}.`,
       `Strategy: ${report.strategyTags.join(", ") || "none"}.`,
       report.liftNotes,
-    ].join(" "),
+      tierNote,
+    ]
+      .join(" ")
+      .trim(),
     status: options?.status ?? "open",
     publishedAt: isoDate(report.generatedAt),
     discoveredIn: runId,
@@ -180,7 +231,7 @@ export function repoReportToAuditFindingWire(
     },
     related: [...AUDIT_RELATED_CONCEPT_IDS],
     relatedDocs: [AUDIT_EVIDENCE_RELATED_DOC],
-    meta: { emitter: EMITTER, buildPin: BUILD_PIN },
+    meta: { emitter: EMITTER, buildPin: BUILD_PIN, tier },
   };
 }
 
@@ -208,10 +259,11 @@ export function buildAuditRunExport(
   for (const item of run.shortlist) {
     if (repoFilter && item.repo.fullName.toLowerCase() !== repoFilter) continue;
     const report = item.report ?? buildRepoReport(item, run.generatedAt);
-    if (!isHighValueCandidate(report)) continue;
+    const tier = resolveAuditExportTier(report);
+    if (!tier) continue;
     const ndjson = evidenceNdjson(report);
     bundles.push({
-      finding: repoReportToAuditFindingWire(report, run.runId),
+      finding: repoReportToAuditFindingWire(report, run.runId, { tier, status: "open" }),
       repoReport: report,
       evidenceNdjson: ndjson,
     });

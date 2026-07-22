@@ -14,7 +14,12 @@ Canonical API: [bun.com/docs/runtime/cron](https://bun.com/docs/runtime/cron)
 | `bun run schedule:remove` | Uninstall OS cron job |
 | `bun run schedule:preview` | Preview next fire times (UTC) |
 
+| `bun run dashboard -- --cron` | In-process pulse probe (UTC) |
+| `bun run dashboard -- --cron-research` | In-process weekly research (UTC) |
+
 ## Architecture
+
+### OS-level (primary for desktop)
 
 ```
 OS scheduler (launchd / crontab / Task Scheduler)
@@ -24,16 +29,50 @@ OS scheduler (launchd / crontab / Task Scheduler)
         → runResearch()   ← SSOT (cli.ts)
 ```
 
-**OS-persistent is primary** — survives reboot, fresh process each fire, `gh` auth via user keychain.
+**OS-persistent** — survives reboot, fresh process each fire, `gh` auth via user keychain.
 
-**In-process** `Bun.cron(schedule, handler)` is intentionally **not** used here — research belongs in a standalone worker, not inside `serve.ts`.
+### In-process (dashboard / containers)
+
+```
+bun run dashboard -- --cron [--cron-research]
+  → registerInProcessCron()   # in-process-cron.ts
+    → Bun.cron(schedule, handler)   # UTC, shared state, no overlap
+      → runPulseProbeTick() / runInProcessResearchTick()
+```
+
+Use when the dashboard (or agent daemon) stays up and should share sqlite + module state. See [v1.3.12 in-process cron](https://bun.com/blog/bun-v1.3.12#in-process-buncron-scheduler).
+
+## Two cron forms
+
+| Form | API | Time zone | Kalshi-bot entry |
+|------|-----|-----------|------------------|
+| **OS-level** | `Bun.cron(path, schedule, title)` | System local | `schedule:register` |
+| **In-process** | `Bun.cron(schedule, handler)` | **UTC** | `dashboard --cron` / `--cron-research` |
+
+### In-process behaviors
+
+- **No overlap** — next fire waits until handler + `Promise` settle (Bun runtime); research also uses `beginResearch()` lock.
+- **UTC** — `0 6 * * MON` = Monday 06:00 UTC (not local).
+- **Errors** — sync throws → `uncaughtException`; rejected promises → `unhandledRejection`. Listeners in `in-process-cron.ts` / `scheduled.ts` log and allow reschedule (process does not exit).
+- **`--hot` safe** — in-process jobs cleared on module re-eval when using `bun --hot`.
+- **Disposable** — `using jobs = registerInProcessCron(...)` or dispose returned handles at shutdown.
+- **`ref` / `unref`** — cron jobs `.ref()` by default (keep process alive with `Bun.serve`); call `.unref()` on a job if it should not hold the event loop alone.
+- **Shared state** — direct access to `runResearch()`, cache, pulse log.
+
+```bash
+bun run dashboard -- --cron --open=false
+bun run dashboard -- --cron-research --open=false
+DASHBOARD_CRON_PULSE="0 */4 * * *" bun run dashboard -- --cron --open=false
+```
 
 ## Defaults
 
 | Constant | Value | Meaning |
 |----------|-------|---------|
 | `RESEARCH_CRON_TITLE` | `kalshi-research-weekly` | launchd plist / crontab marker |
-| `RESEARCH_CRON_SCHEDULE` | `0 6 * * MON` | Monday 06:00 **system local** time |
+| `RESEARCH_CRON_SCHEDULE` | `0 6 * * MON` | OS register: Monday 06:00 **local** |
+| `PULSE_PROBE_CRON_UTC` | `0 */6 * * *` | In-process pulse probe (**UTC**) |
+| `RESEARCH_CRON_IN_PROCESS_UTC` | `0 6 * * MON` | In-process research (**UTC**) |
 
 Override via env or CLI flags:
 
@@ -90,6 +129,7 @@ Set `TZ=UTC` in the launchd plist if you need OS and parse preview to agree.
 | File | Purpose |
 |------|---------|
 | [`scheduled.ts`](../src/research/scheduled.ts) | OS worker — `export default { scheduled }` |
+| [`in-process-cron.ts`](../src/agent/in-process-cron.ts) | Dashboard UTC cron handlers |
 | [`schedule-cli.ts`](../src/research/schedule-cli.ts) | register / remove / preview |
 | [`constants.ts`](../src/research/constants.ts) | `RESEARCH_CRON_*` defaults |
 | [`cli.ts`](../src/research/cli.ts) | `runResearch()` SSOT |

@@ -17,7 +17,7 @@ export function escapeHtml(value: string): string {
     .replaceAll('"', "&quot;");
 }
 
-const STYLES = `
+export const STYLES = `
   :root { font-family: system-ui, sans-serif; line-height: 1.5; color: #111; background: #fafafa; }
   body { max-width: 52rem; margin: 0 auto; padding: 1.5rem; }
   a { color: #0969da; }

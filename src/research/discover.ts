@@ -39,7 +39,7 @@ export async function loadConfig(): Promise<ResearchConfig> {
 }
 
 export function normalizeLicense(raw: GhSearchRepo["license"]): string {
-  const normalized = (raw?.spdxId ?? raw?.name ?? "").toLowerCase();
+  const normalized = (raw?.spdxId ?? raw?.key ?? raw?.name ?? "").toLowerCase();
   if (normalized.includes("mit")) return LICENSE_MIT;
   if (normalized.includes("apache")) return LICENSE_APACHE_2_0;
   if (normalized.includes("bsd-3")) return LICENSE_BSD_3_CLAUSE;
@@ -57,8 +57,9 @@ export function parseLicense(
   preferred: boolean;
   unlicensed: boolean;
 } {
-  const spdxId = raw?.spdxId ?? null;
-  const name = raw?.name ?? null;
+  const spdxId = (raw?.spdxId ?? raw?.key ?? null) || null;
+  // gh search often returns license.key (e.g. "mit") without spdxId — normalizeLicense handles both.
+  const name = raw?.name || null;
   const normalized = normalizeLicense(raw);
   const unlicensed = isUnlicensedSpdx(normalized);
   return { spdxId, name, preferred: preferredLicenses.includes(normalized), unlicensed };

@@ -27,6 +27,9 @@ Deep dive: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns)
 | Audit digests | `Bun.CryptoHasher("sha3-256")` | [`audit-adapter.ts`](../src/research/audit-adapter.ts), [`export-audit.ts`](../src/research/export-audit.ts) |
 | GitHub URL SSOT | `BunURLPattern` + `URLPattern` ([v1.3.4+](https://bun.com/blog/bun-v1.3.4#urlpattern-api)) | [`patterns.ts`](../src/research/patterns.ts) |
 | Report browser | `Bun.serve` routes + `Bun.file` | [`serve.ts`](../src/research/serve.ts), [`views.ts`](../src/research/views.ts) |
+| Agent dashboard | `Bun.serve` + optional headless `Bun.WebView` | [`dashboard.ts`](../src/agent/dashboard.ts), [`docs/DASHBOARD.md`](../docs/DASHBOARD.md) |
+| Agent CLI | `Bun.WebView` capture + dashboard client | [`cli.ts`](../src/agent/cli.ts), [`docs/AGENT.md`](../docs/AGENT.md) |
+| Terminal reports | `Bun.markdown.ansi` | [`report-term.ts`](../src/agent/report-term.ts) |
 | CLI flags | `parseArgs` from `node:util` | [`cli.ts`](../src/research/cli.ts) |
 | Unit tests | `bun:test` + `mock.module()` | [`tests/`](../tests/) |
 | Test coverage | `[test] coverage` in `bunfig.toml` | [`bunfig.toml`](../bunfig.toml) |
@@ -51,6 +54,8 @@ Deep dive: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns)
 | `Bun.CryptoHasher` | https://bun.com/docs/runtime/hashing#bun-cryptohasher |
 | `URLPattern` | https://bun.com/blog/bun-v1.3.4#urlpattern-api |
 | `Bun.serve` | https://bun.com/docs/runtime/http/server#basic-setup |
+| `Bun.WebView` | https://bun.com/docs/runtime/webview#new-bun-webview-options |
+| `Bun.markdown.ansi` | https://bun.com/docs/runtime/markdown#ansi-terminal-output |
 
 ## Cache: `bun:sqlite` not JSON blobs
 

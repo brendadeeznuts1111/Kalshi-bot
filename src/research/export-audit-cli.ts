@@ -65,8 +65,8 @@ export async function runExportAuditCli(opts: ExportAuditCliOptions): Promise<nu
   if (!dir) {
     console.error(
       opts.repo
-        ? `No high-value export for repo: ${opts.repo}`
-        : "No high-value shortlist candidates to export",
+        ? `No audit export for repo: ${opts.repo} (needs high-value or watchlist tier)`
+        : "No high-value or watchlist shortlist candidates to export",
     );
     return 2;
   }

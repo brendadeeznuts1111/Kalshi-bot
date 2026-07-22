@@ -13,13 +13,23 @@ Draft bridge from Kalshi research `RepoReport` → monorepo `AuditFinding` / `Au
 
 ## High-value promotion
 
-Shortlist repos become audit candidates when:
+Shortlist repos become **high-value** audit candidates when:
 
 - `score.total >= 70`
-- `auth-api` and `order-realism` detectors matched (`DETECTOR_IDS` in `constants.ts`)
+- `auth-api` and `order-realism` detectors matched
 - Each contributes ≥ 15 points
 
-Use `--export-audit` on the research CLI to emit after a run.
+## Watchlist tier
+
+Repos below the high-value bar but still auditable export as **`meta.tier: "watchlist"`**, `status: "open"`:
+
+- `score.total >= 65`
+- `auth-api` and `order-realism` matched
+- Each contributes ≥ 12 points
+
+High-value takes precedence when both gates match. Constants: `WATCHLIST_MIN_*` in `constants.ts`.
+
+Use `--export-audit` on the research CLI to emit after a run (both tiers).
 
 ## Evidence integrity (Phase 2)
 
@@ -28,11 +38,11 @@ Use `--export-audit` on the research CLI to emit after a run.
 3. **Local cache fingerprint** → still `Bun.hash` in `evidenceFingerprint()` (fast, non-audit).
 4. **Audit fingerprint** → `evidenceSha3Fingerprint()` / export digest (tamper-proof).
 
-Monorepo schema requires `evidence.path` under `tools/audit-evidence/`. On ingest, remap:
+Monorepo schema requires `evidence.path` under `tools/audit-evidence/`. On ingest, remap (same bytes; rotor uses `.ndjson` because the monorepo gitignores `*.jsonl`):
 
 ```
 research/audit-evidence/{owner}__{repo}.jsonl
-  → tools/audit-evidence/kalshi/{owner}__{repo}.jsonl
+  → tools/audit-evidence/kalshi/{owner}__{repo}.ndjson
 ```
 
 Path SSOT: `src/research/paths.ts` (`auditEvidenceRelPath`, `AUDIT_EVIDENCE_DIR`).
@@ -63,7 +73,7 @@ Each export includes `rotor-ingest.json` — monorepo-ready findings (paths unde
 Ingest steps:
 
 1. Validate each `.repo-report.json` with `validateRepoReport` / schema.
-2. Copy NDJSON using `evidenceCopies` from `rotor-ingest.json`.
+2. Copy evidence using `evidenceCopies` from `rotor-ingest.json` (Kalshi: `.jsonl` → rotor: `.ndjson`, same bytes).
 3. Tamper check: `bun run export-audit -- --verify …` (sha3-256 over file bytes).
 4. `parseAuditFinding(wire)` → branded interior types at monorepo boundary.
 5. Append to rotor catalog when emitter SSOT exists in `~/Projects`.

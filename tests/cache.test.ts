@@ -1,6 +1,6 @@
 // @see https://bun.com/docs/test/index#run-tests
 import { describe, expect, test } from "bun:test";
-import { cacheHash, isProductionRunId, listRunSummaries, saveRun, loadRunFromDb, searchCachedPayloads, withCache } from "../src/research/cache.ts";
+import { cacheHash, isProductionRunId, isEligibleProductionRun, listRunSummaries, saveRun, loadRunFromDb, searchCachedPayloads, withCache } from "../src/research/cache.ts";
 
 describe("isProductionRunId", () => {
   test("accepts ISO pipeline run ids", () => {
@@ -9,6 +9,23 @@ describe("isProductionRunId", () => {
 
   test("rejects test fixture ids", () => {
     expect(isProductionRunId("serve-test-run")).toBe(false);
+    expect(isProductionRunId("2099-06-01T00-00-00-000Z")).toBe(false);
+    expect(isProductionRunId("2099-01-02T00-00-00-000Z")).toBe(false);
+  });
+
+  test("isEligibleProductionRun rejects future-dated fixtures", () => {
+    expect(
+      isEligibleProductionRun({
+        runId: "2026-12-30T00-00-00-000Z",
+        generatedAt: "2026-12-30T00:00:00.000Z",
+      } as never),
+    ).toBe(false);
+    expect(
+      isEligibleProductionRun({
+        runId: "2026-07-22T04-59-00-818Z",
+        generatedAt: "2026-07-22T04:59:00.818Z",
+      } as never),
+    ).toBe(true);
   });
 });
 

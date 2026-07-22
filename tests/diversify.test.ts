@@ -94,4 +94,29 @@ describe("diversify", () => {
       expect(row.count).toBeLessThanOrEqual(maxPerTag);
     }
   });
+
+  test("buildShortlist prefers TypeScript tiebreak within stack threshold", async () => {
+    const config = await loadConfig();
+    const threshold = config.weights.stackTiebreakThreshold;
+    const ts = scored("team/ts-bot", 80, ["market_making"]);
+    ts.signals.primaryLanguage = "TypeScript";
+    const py = scored("team/py-bot", 80 - threshold + 1, ["market_making"]);
+    py.signals.primaryLanguage = "Python";
+    const { shortlist } = buildShortlist([py, ts], config, 1);
+    expect(shortlist[0]?.repo.fullName).toBe("team/ts-bot");
+  });
+
+  test("buildShortlist ensures each available major strategy tag appears once", async () => {
+    const config = await loadConfig();
+    const pool = [
+      scored("alpha/mm", 95, ["market_making"]),
+      scored("beta/arb", 72, ["arb"]),
+      scored("gamma/sports", 68, ["sports"]),
+    ];
+    const { shortlist } = buildShortlist(pool, config, 3);
+    const pickedTags = new Set(shortlist.flatMap((s) => s.signals.strategyTags));
+    expect(pickedTags.has("market_making")).toBe(true);
+    expect(pickedTags.has("arb")).toBe(true);
+    expect(pickedTags.has("sports")).toBe(true);
+  });
 });

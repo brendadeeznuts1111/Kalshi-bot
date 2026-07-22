@@ -113,9 +113,16 @@ export function isResearchRun(value: unknown): value is ResearchRun {
   return Array.isArray(run.scored) && Array.isArray(run.shortlist) && typeof run.runId === "string";
 }
 
-/** Pipeline runs use ISO timestamps as runId; test fixtures use named ids. */
+/** Pipeline runs use ISO timestamps as runId; test fixtures use named ids or far-future years. */
+const PRODUCTION_RUN_ID = /^\d{4}-\d{2}-\d{2}T[\d-]+Z$/;
+
 export function isProductionRunId(runId: string): boolean {
-  return /^\d{4}-\d{2}-\d{2}T[\d-]+Z$/.test(runId);
+  if (!PRODUCTION_RUN_ID.test(runId)) return false;
+  const year = Number(runId.slice(0, 4));
+  if (!Number.isFinite(year)) return false;
+  const nowYear = new Date().getFullYear();
+  // Reject test fixtures like 2099-… that match the ISO shape but are not real pipeline runs.
+  return year >= 2020 && year <= nowYear + 1;
 }
 
 export function loadRunFromDb(runId: string): ResearchRun | null {
@@ -127,6 +134,13 @@ export function loadRunFromDb(runId: string): ResearchRun | null {
   return isResearchRun(parsed) ? parsed : null;
 }
 
+/** Pipeline run suitable for “latest” resolution (excludes far-future test fixtures). */
+export function isEligibleProductionRun(run: ResearchRun): boolean {
+  if (!isProductionRunId(run.runId)) return false;
+  const generatedAtMs = Date.parse(run.generatedAt);
+  return Number.isFinite(generatedAtMs) && generatedAtMs <= Date.now() + 86_400_000;
+}
+
 export function loadLatestRunFromDb(options?: { includeFixtures?: boolean }): ResearchRun | null {
   const rows = getDb()
     .query("SELECT payload FROM runs ORDER BY generated_at DESC LIMIT 50")
@@ -136,7 +150,7 @@ export function loadLatestRunFromDb(options?: { includeFixtures?: boolean }): Re
   for (const row of rows) {
     const parsed = JSON.parse(row.payload) as unknown;
     if (!isResearchRun(parsed)) continue;
-    if (isProductionRunId(parsed.runId)) return parsed;
+    if (isEligibleProductionRun(parsed)) return parsed;
     fallback ??= parsed;
   }
   return options?.includeFixtures ? fallback : null;

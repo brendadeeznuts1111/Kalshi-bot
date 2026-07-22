@@ -87,6 +87,10 @@ export const DRY_RUN_DEFAULT_IS_POSITIVE = true;
 export const HIGH_VALUE_MIN_TOTAL_SCORE = 70;
 export const HIGH_VALUE_MIN_COMPONENT_POINTS = 15;
 
+/** Watchlist tier — auditable export below high-value bar (status open, meta.tier watchlist). */
+export const WATCHLIST_MIN_TOTAL_SCORE = 65;
+export const WATCHLIST_MIN_COMPONENT_POINTS = 12;
+
 export const MAX_QUALITY_SCORE = 100;
 
 export const MS_PER_DAY = 86_400_000;
@@ -218,3 +222,9 @@ export const RESEARCH_CRON_TITLE = "kalshi-research-weekly";
 
 /** Default schedule: Monday 06:00 system local time (cross-platform safe). */
 export const RESEARCH_CRON_SCHEDULE = "0 6 * * MON";
+
+/** In-process Bun.cron schedules — always UTC. See docs/CRON.md */
+export const PULSE_PROBE_CRON_UTC = "0 */6 * * *";
+
+/** In-process weekly research (UTC). OS register uses {@link RESEARCH_CRON_SCHEDULE} in local time. */
+export const RESEARCH_CRON_IN_PROCESS_UTC = "0 6 * * MON";

@@ -1,3 +1,4 @@
+{"scope":"line","query":"KALSHI-ACCESS-SIGNATURE","path":"src/tools/kalshi/api.ts","component":"authApi"}
 {"scope":"line","query":"kalshi_api","path":"env.example","component":"authApi"}
 {"scope":"line","query":"kalshi_api","path":"src/commands/status.ts","component":"authApi"}
 {"scope":"line","query":"kalshi_api","path":"src/setup/wizard.ts","component":"authApi"}

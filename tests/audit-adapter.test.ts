@@ -7,6 +7,8 @@ import {
   digestEvidenceBody,
   evidenceSha3Fingerprint,
   isHighValueCandidate,
+  isWatchlistCandidate,
+  resolveAuditExportTier,
   repoReportToAuditFindingWire,
   sha3Hex,
   shortlistRulesConcept,
@@ -95,6 +97,40 @@ describe("audit-adapter", () => {
     expect(isHighValueCandidate(buildRepoReport(highValueScored()))).toBe(true);
   });
 
+  test("isWatchlistCandidate exports 65-69 band when auth+order strong", () => {
+    const watchlist = buildRepoReport({
+      ...highValueScored(),
+      score: {
+        ...highValueScored().score,
+        total: 68,
+        authApi: 18,
+        orderRealism: 18,
+      },
+    });
+    expect(isHighValueCandidate(watchlist)).toBe(false);
+    expect(isWatchlistCandidate(watchlist)).toBe(true);
+    expect(resolveAuditExportTier(watchlist)).toBe("watchlist");
+  });
+
+  test("resolveAuditExportTier rejects below watchlist threshold", () => {
+    const tooLow = buildRepoReport({
+      ...highValueScored(),
+      score: { ...highValueScored().score, total: 62, authApi: 12, orderRealism: 12 },
+    });
+    expect(resolveAuditExportTier(tooLow)).toBeNull();
+  });
+
+  test("watchlist finding wire includes meta.tier", () => {
+    const report = buildRepoReport({
+      ...highValueScored(),
+      score: { ...highValueScored().score, total: 67.5, authApi: 16, orderRealism: 16 },
+    });
+    const finding = repoReportToAuditFindingWire(report, "run-test", { tier: "watchlist" });
+    expect(finding.meta?.tier).toBe("watchlist");
+    expect(finding.status).toBe("open");
+    expect(finding.description).toContain("Watchlist tier");
+  });
+
   test("shortlistRulesConcept references factor stack", async () => {
     const config = await loadConfig();
     const concept = shortlistRulesConcept(config, "2026-07-21T00:00:00.000Z");
@@ -104,7 +140,7 @@ describe("audit-adapter", () => {
     expect(concept.description).toContain(String(config.weights.shortlistSize));
   });
 
-  test("buildAuditRunExport promotes high-value shortlist only", async () => {
+  test("buildAuditRunExport promotes high-value and watchlist tiers", async () => {
     const config = await loadConfig();
     const item = { ...highValueScored(), report: buildRepoReport(highValueScored()) };
     const run: ResearchRun = {
@@ -120,16 +156,43 @@ describe("audit-adapter", () => {
     };
     const exp = buildAuditRunExport(run, config);
     expect(exp.bundles).toHaveLength(1);
+    expect(exp.bundles[0]?.finding.meta?.tier).toBe("high-value");
     expect(exp.bundles[0]?.finding.related).toContain("kalshi-shortlist-diversity");
     expect(exp.bundles[0]?.finding.related).toContain("sha3-integrity");
     expect(exp.bundles[0]?.finding.related).toContain("nagata-map");
     expect(exp.bundles[0]?.finding.evidence.algorithm).toBe("sha3-256");
+
+    const watchlistItem = {
+      ...highValueScored(),
+      repo: {
+        ...highValueScored().repo,
+        fullName: "openfi-dao/kalshi-trading-bot",
+        owner: "openfi-dao",
+        name: "kalshi-trading-bot",
+      },
+      score: { ...highValueScored().score, total: 67.5, authApi: 16, orderRealism: 18 },
+      report: buildRepoReport({
+        ...highValueScored(),
+        repo: {
+          ...highValueScored().repo,
+          fullName: "openfi-dao/kalshi-trading-bot",
+          owner: "openfi-dao",
+          name: "kalshi-trading-bot",
+        },
+        score: { ...highValueScored().score, total: 67.5, authApi: 16, orderRealism: 18 },
+      }),
+    };
+    run.shortlist = [item, watchlistItem];
+    run.scored = run.shortlist;
+    const both = buildAuditRunExport(run, config);
+    expect(both.bundles).toHaveLength(2);
+    expect(both.bundles.some((b) => b.finding.meta?.tier === "watchlist")).toBe(true);
   });
 
   test("monorepoEvidencePath remaps committed evidence path", () => {
     const local = "research/audit-evidence/octagonai__kalshi-trading-bot-cli.jsonl";
     expect(monorepoEvidencePath(local)).toBe(
-      "tools/audit-evidence/kalshi/octagonai__kalshi-trading-bot-cli.jsonl",
+      "tools/audit-evidence/kalshi/octagonai__kalshi-trading-bot-cli.ndjson",
     );
   });
 

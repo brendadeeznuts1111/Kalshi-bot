@@ -133,7 +133,7 @@ export async function runResearch(opts: CliOptions): Promise<ResearchRun> {
     if (auditDir) {
       console.error(`Audit export: ${auditDir}`);
     } else {
-      console.error("Audit export: no high-value shortlist candidates");
+      console.error("Audit export: no high-value or watchlist shortlist candidates");
     }
   }
   return run;

@@ -1,5 +1,5 @@
 // @see https://bun.com/docs/test/index#run-tests
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import type { ResearchRun } from "../src/research/types.ts";
 import { listRunSummaries, saveRun } from "../src/research/cache.ts";
 import {
@@ -14,13 +14,15 @@ import {
 import { REPORT_DIR, joinPath } from "../src/research/paths.ts";
 import { escapeHtml, renderRepoPage } from "../src/research/views.ts";
 
-const RUN_ID = "serve-test-run";
+import { freshTestGeneratedAt, TEST_LATEST_RUN_ID } from "./fixtures.ts";
+
+const RUN_ID = TEST_LATEST_RUN_ID;
 const OLD_RUN_ID = "serve-test-run-old";
 
 function mockRun(runId: string): ResearchRun {
   return {
     runId,
-    generatedAt: runId === RUN_ID ? "2099-12-31T00:00:00.000Z" : "2098-01-01T00:00:00.000Z",
+    generatedAt: runId === RUN_ID ? freshTestGeneratedAt() : "2026-12-30T00:00:00.000Z",
     config: { shortlistSize: 12, gate: { minStars: 5, minForks: 3, maxAgeMonths: 18 } },
     stats: { discovered: 1, gated: 1, inspected: 1, shortlist: 1 },
     candidates: [],
@@ -81,13 +83,28 @@ function mockRun(runId: string): ResearchRun {
 }
 
 describe("serve handlers", () => {
-  beforeAll(async () => {
+  function seedLatestRun() {
+    const at = freshTestGeneratedAt();
     const run = mockRun(RUN_ID);
+    run.generatedAt = at;
     run.shortlist = run.scored;
-    saveRun(RUN_ID, run.generatedAt, run);
+    saveRun(RUN_ID, at, run);
+  }
+
+  beforeAll(async () => {
+    seedLatestRun();
     saveRun(OLD_RUN_ID, mockRun(OLD_RUN_ID).generatedAt, mockRun(OLD_RUN_ID));
     await Bun.write(joinPath(REPORT_DIR, "latest.md"), "# test report\n");
     await Bun.write(joinPath(REPORT_DIR, "latest.diff.md"), "# diff\n- added foo\n");
+  });
+
+  afterAll(async () => {
+    const { restoreLatestReport } = await import("../tools/restore-latest-report.ts");
+    await restoreLatestReport();
+  });
+
+  beforeEach(() => {
+    seedLatestRun();
   });
 
   test("handleHome renders shortlist and diff", async () => {

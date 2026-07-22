@@ -15,8 +15,12 @@ Standalone Bun project for discovering and ranking public [Kalshi](https://kalsh
 cd /path/to/Kalshi-bot
 
 bun run research                         # full pipeline → latest.md
+bun run dashboard                        # agent dashboard (:3457)
+bun run agent status                     # CLI status + rotor verification summary
+bun run agent suggest-lift               # component lift map (✓/⚠/✗ badges)
 bun run serve                            # report browser (:3456, --hot)
-bun test && bun run typecheck
+bun run report:term                      # ANSI latest.md in terminal
+bun test && bun run typecheck            # posttest restores latest.md from fixture
 ```
 
 ### CLI flags
@@ -46,6 +50,10 @@ Gate overrides: `--min-stars`, `--min-forks`, `--max-age-months` or env vars bel
 | `RESEARCH_CRON_SCHEDULE` | Override cron expression (see CRON.md) |
 | `RESEARCH_CRON_TITLE` | OS cron job title |
 | `PORT` | Serve port (default 3456) |
+| `DASHBOARD_PORT` | Dashboard port (default 3457) |
+| `ROTOR_ROOT` | Monorepo root for `pulse.log` + audit catalog (default `~/Projects`) |
+| `AUDIT_CATALOG_PATH` | Override path to rotor `tools/audit-catalog.json` |
+| `DASHBOARD_URL` | Agent CLI dashboard target |
 
 ## Scripts
 
@@ -54,9 +62,13 @@ Gate overrides: `--min-stars`, `--min-forks`, `--max-age-months` or env vars bel
 | Research | `bun run research` |
 | Audit export | `bun run export-audit` or `bun run audit:export` |
 | Schedule (OS cron) | `bun run schedule:register` / `schedule:remove` / `schedule:preview` |
+| Agent dashboard | `bun run dashboard` — see [`docs/DASHBOARD.md`](docs/DASHBOARD.md) |
+| Agent tools | `bun run agent <cmd>` — see [`docs/AGENT.md`](docs/AGENT.md) |
+| Terminal report | `bun run report:term` / `report:diff` |
 | Serve (hot) | `bun run serve` |
 | Serve (once) | `bun run serve:once` |
-| Tests | `bun test` / `bun run test:coverage` |
+| Tests | `bun test` / `bun run test:coverage` (`posttest` restores `latest.md`) |
+| Restore reports | `bun run reports:restore` — copy fixture → `latest.md` |
 | Types | `bun run typecheck` |
 
 ## Cache, diff, and artifacts
@@ -68,6 +80,7 @@ Gate overrides: `--min-stars`, `--min-forks`, `--max-age-months` or env vars bel
 | **Run-to-run diff** | `diff.ts` — baseline = latest production run in sqlite (or `--diff <run-id>`) |
 | **JSON dumps** | `research/outputs/` — gitignored (`run_*.json`, `latest.json`) |
 | **Markdown reports** | `research/reports/latest.md` + `latest.diff.md` — **committed** |
+| **Report fixtures** | `latest.md.fixture` — SSOT for `posttest` restore after tests overwrite reports |
 
 After each `bun run research`, sqlite stores the full run payload; markdown snapshots the human-facing shortlist and diff excerpt.
 
@@ -76,7 +89,9 @@ After each `bun run research`, sqlite stores the full run payload; markdown snap
 | Path | In git? | Notes |
 |------|---------|-------|
 | `research/reports/latest.md` | yes | Human shortlist + evidence |
+| `research/reports/latest.md.fixture` | yes | Test restore SSOT for `latest.md` |
 | `research/reports/latest.diff.md` | yes | Diff vs previous production run |
+| `research/reports/latest.diff.md.fixture` | yes | Test restore SSOT for diff |
 | `research/audit-evidence/*.jsonl` | yes | Line evidence (one file per promoted repo) |
 | `research/queries.json`, `weights.json`, `keywords.json` | yes | Config SSOT (defaults mirrored in code) |
 | `src/research/constants.ts` | yes | Typed SSOT — detector ids, weights, licenses, thresholds |
@@ -92,28 +107,25 @@ Evidence path SSOT: [`src/research/paths.ts`](src/research/paths.ts). Pipeline p
 
 ```
 Kalshi-bot/
-├── src/research/
-│   ├── cli.ts              # bun run research
-│   ├── export-audit-cli.ts # bun run export-audit
-│   ├── schedule-cli.ts     # bun run schedule:*
-│   ├── scheduled.ts        # OS cron worker
-│   ├── discover.ts … diversify.ts, score.ts, inspect.ts
-│   ├── evidence.ts, validate.ts, audit-adapter.ts, export-audit.ts
-│   ├── patterns.ts         # URLPattern SSOT (discover, reports, serve)
-│   ├── serve.ts, views.ts  # Bun.serve report browser
-│   ├── cache.ts, diff.ts, report.ts, paths.ts
-│   ├── constants.ts        # typed SSOT: DETECTOR_IDS, COMPONENT_WEIGHTS, licenses, cron
-│   └── gh.ts, pool.ts, preflight.ts, detect.ts, types.ts
-├── tests/                  # bun:test (77 tests)
+├── src/
+│   ├── research/           # discover → gate → inspect → score → diversify → report
+│   │   ├── cli.ts          # bun run research
+│   │   ├── export-audit-cli.ts, scheduled.ts, schedule-cli.ts
+│   │   ├── patterns.ts     # URLPattern SSOT (github-url.ts removed — use patterns.ts)
+│   │   ├── constants.ts    # weights, licenses, audit thresholds, cron
+│   │   └── … cache, diff, evidence, audit-adapter, serve, views
+│   └── agent/              # dashboard, CLI, audit-list, suggest-lift, verify-dashboard
+├── tools/
+│   └── restore-latest-report.ts   # posttest: fixture → latest.md
+├── tests/                  # bun:test (126 tests; posttest restores reports)
 ├── research/
-│   ├── audit-evidence/     # committed JSONL
-│   ├── reports/            # latest.md + latest.diff.md
-│   ├── schemas/
+│   ├── audit-evidence/     # committed JSONL (high-value + watchlist exports)
+│   ├── reports/            # latest.md + fixtures
 │   ├── queries.json, weights.json, keywords.json
-│   ├── cache/              # gitignored
-│   ├── outputs/            # gitignored
-│   └── exports/            # gitignored
-└── docs/                   # PLAN, FACTOR_STACK, AUDIT_ADAPTER, BUN_*
+│   ├── cache/              # gitignored sqlite
+│   ├── outputs/            # gitignored JSON dumps
+│   └── exports/audit/      # gitignored per-run wire + rotor-ingest.json
+└── docs/                   # AGENT, DASHBOARD, AUDIT_ADAPTER, CRON, FACTOR_STACK, …
 ```
 
 ## Scoring model
@@ -139,26 +151,35 @@ bun run serve
 | `/repo/:owner/:name` | Repo detail + score breakdown (`?run=<id>`) |
 | `/reports/latest.md` | Committed markdown report |
 
-Production runs use ISO timestamp ids (`2026-07-22T04-59-00-818Z`). Test fixture runs in `cache.db` are ignored when resolving “latest” for CLI and serve.
+Production runs use ISO timestamp ids (e.g. `2026-07-22T05-50-48-875Z`). `loadLatestRunFromDb` skips test fixture ids (named runs, year 2099, future `generatedAt`) — see `isProductionRunId` / `isEligibleProductionRun` in `cache.ts`.
 
 ## Audit export (optional)
 
-High-value shortlist repos (≥70 pts, auth + order matched) can export to monorepo-compatible `AuditFinding` wire + sha3-256 JSONL:
+High-value and **watchlist** shortlist repos export to monorepo-compatible `AuditFinding` wire + sha3-256 JSONL:
+
+| Tier | Gate |
+|------|------|
+| high-value | ≥70 total, auth + order matched, ≥15 pts each |
+| watchlist | ≥65 total, auth + order matched, ≥12 pts each |
 
 ```bash
 bun run research -- --export-audit
-# or
-bun run export-audit -- --run 2026-07-22T04-59-00-818Z
+bun run export-audit -- --latest
+bun run export-audit -- --run 2026-07-22T05-50-48-875Z --repo openfi-dao/kalshi-trading-bot
 ```
+
+After ingest in `~/Projects`, `bun run agent audit-list` shows pulse verification status.
 
 See [`docs/AUDIT_ADAPTER.md`](docs/AUDIT_ADAPTER.md).
 
 ## Docs
 
+- [`docs/AGENT.md`](docs/AGENT.md) — CLI: status, audit-list, suggest-lift, capture-evidence
+- [`docs/DASHBOARD.md`](docs/DASHBOARD.md) — Bun.serve dashboard + API routes
 - [`docs/CRON.md`](docs/CRON.md) — OS-level Bun.cron scheduling
-- [`docs/PLAN.md`](docs/PLAN.md) — as-built design
-- [`docs/FACTOR_STACK.md`](docs/FACTOR_STACK.md) — scoring SSOT
 - [`docs/AUDIT_ADAPTER.md`](docs/AUDIT_ADAPTER.md) — audit wire + rotor ingest
+- [`docs/FACTOR_STACK.md`](docs/FACTOR_STACK.md) — scoring SSOT
+- [`docs/PLAN.md`](docs/PLAN.md) — as-built design
 - [`docs/BUN_NATIVE.md`](docs/BUN_NATIVE.md) — API map
 - [`docs/BUN_SHELL.md`](docs/BUN_SHELL.md) — `Bun.$` patterns
 

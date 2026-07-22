@@ -13,12 +13,18 @@ coverage/
 research/cache/
 research/outputs/
 research/exports/
+research/evidence-captures/
+
+# Test artifacts (never commit)
+tests/.tmp-*
 
 # Per-run markdown snapshots (canonical history: cache.db + latest.md)
 research/reports/run_*.md
 
 # Committed on purpose (do not ignore):
 #   research/reports/latest.md
+#   research/reports/latest.md.fixture   ← posttest restore SSOT
 #   research/reports/latest.diff.md
+#   research/reports/latest.diff.md.fixture
 #   research/audit-evidence/*.jsonl
 #   research/queries.json, weights.json, keywords.json, schemas/
