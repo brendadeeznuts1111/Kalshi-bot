@@ -19,8 +19,11 @@
     "report:term": "bun src/agent/report-term.ts",
     "report:diff": "bun src/agent/report-term.ts research/reports/latest.diff.md",
     "test": "bun test",
-    "posttest": "bun tools/restore-latest-report.ts",
-    "reports:restore": "bun tools/restore-latest-report.ts",
+    "posttest": "bun tools/restore-committed-artifacts.ts",
+    "reports:restore": "bun tools/restore-committed-artifacts.ts",
+    "artifacts:restore": "bun tools/restore-committed-artifacts.ts",
+    "check": "bun run typecheck && bun test",
+    "hooks:install": "cp tools/pre-commit.sh .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit",
     "test:coverage": "bun test --coverage",
     "typecheck": "tsc --noEmit"
   },

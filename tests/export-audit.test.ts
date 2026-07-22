@@ -2,6 +2,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { rm } from "node:fs/promises";
 import { join } from "node:path";
+import { restoreCommittedArtifacts } from "../tools/restore-committed-artifacts.ts";
 import { buildRepoReport } from "../src/research/evidence.ts";
 import { loadConfig } from "../src/research/discover.ts";
 import {
@@ -88,7 +89,7 @@ function highValueScored(): ScoredRepo {
 
 async function cleanupExport(): Promise<void> {
   await rm(join(ROOT, "research/exports/audit", TEST_RUN_ID), { recursive: true, force: true });
-  await rm(auditEvidenceAbsPath("OctagonAI/kalshi-trading-bot-cli"), { force: true });
+  await restoreCommittedArtifacts();
 }
 
 describe("export-audit", () => {

@@ -20,8 +20,20 @@ bun run agent status                     # CLI status + rotor verification summa
 bun run agent suggest-lift               # component lift map (✓/⚠/✗ badges)
 bun run serve                            # report browser (:3456, --hot)
 bun run report:term                      # ANSI latest.md in terminal
-bun test && bun run typecheck            # posttest restores latest.md from fixture
+bun test && bun run typecheck            # posttest restores committed artifacts from fixtures
 ```
+
+### Commit flow
+
+Tests can overwrite `latest.md` or audit JSONL — **`posttest` restores from fixtures** automatically. Before committing:
+
+```bash
+bun run check                            # typecheck + test + artifact restore
+bun run hooks:install                    # once: install pre-commit gate
+git add … && git commit                  # pre-commit runs check + deletion guard
+```
+
+Protected paths: `research/reports/latest.md`, `research/reports/latest.diff.md`, `research/audit-evidence/*.jsonl`.
 
 ### CLI flags
 
@@ -72,9 +84,11 @@ Niche dimensions (`sports-nba`, `tracking`, …) may discover candidates but pro
 | Terminal report | `bun run report:term` / `report:diff` |
 | Serve (hot) | `bun run serve` |
 | Serve (once) | `bun run serve:once` |
-| Tests | `bun test` / `bun run test:coverage` (`posttest` restores `latest.md`) |
-| Restore reports | `bun run reports:restore` — copy fixture → `latest.md` |
+| Tests | `bun test` / `bun run test:coverage` (`posttest` restores committed artifacts) |
+| Restore artifacts | `bun run artifacts:restore` — fixtures → reports + audit JSONL |
+| Pre-commit gate | `bun run hooks:install` then `git commit` runs `bun run check` |
 | Types | `bun run typecheck` |
+| Full check | `bun run check` — typecheck + test |
 
 ## Cache, diff, and artifacts
 
