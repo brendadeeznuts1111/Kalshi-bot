@@ -161,6 +161,7 @@ export type ResearchRun = {
       searchEtagHits: number;
       searchDegradedHits: number;
       inspectExactHits: number;
+      inspectContentReuseHits: number;
       inspectDegradedHits: number;
       apiDegradedHits: number;
     };

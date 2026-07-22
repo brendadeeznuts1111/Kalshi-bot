@@ -57,10 +57,12 @@ describe("research progress", () => {
       n: 2,
       total: 10,
       cached: true,
+      brief: '{ lang: "TypeScript", tags: "tracking" }',
     });
     expect(line).toContain("o/r");
     expect(line).toContain("(cached)");
     expect(line).toContain("2/10");
+    expect(line).toContain("TypeScript");
   });
 
   test("isResearchProgressMessage validates wire shape", () => {

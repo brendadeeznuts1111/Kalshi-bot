@@ -4,6 +4,7 @@ export type ResearchCacheStats = {
   searchEtagHits: number;
   searchDegradedHits: number;
   inspectExactHits: number;
+  inspectContentReuseHits: number;
   inspectDegradedHits: number;
   apiDegradedHits: number;
 };
@@ -12,6 +13,7 @@ export type CacheStatEvent =
   | "searchEtag"
   | "searchDegraded"
   | "inspectExact"
+  | "inspectContentReuse"
   | "inspectDegraded"
   | "apiDegraded";
 
@@ -22,6 +24,7 @@ export function beginResearchCacheStats(): ResearchCacheStats {
     searchEtagHits: 0,
     searchDegradedHits: 0,
     inspectExactHits: 0,
+    inspectContentReuseHits: 0,
     inspectDegradedHits: 0,
     apiDegradedHits: 0,
   };
@@ -50,6 +53,9 @@ export function recordCacheStat(event: CacheStatEvent): void {
     case "inspectExact":
       active.inspectExactHits++;
       break;
+    case "inspectContentReuse":
+      active.inspectContentReuseHits++;
+      break;
     case "inspectDegraded":
       active.inspectDegradedHits++;
       break;
@@ -64,6 +70,7 @@ export function formatCacheStatsSummary(stats: ResearchCacheStats): string {
   if (stats.searchEtagHits) parts.push(`search ETag ${stats.searchEtagHits}`);
   if (stats.searchDegradedHits) parts.push(`search stale ${stats.searchDegradedHits}`);
   if (stats.inspectExactHits) parts.push(`inspect exact ${stats.inspectExactHits}`);
+  if (stats.inspectContentReuseHits) parts.push(`inspect reuse ${stats.inspectContentReuseHits}`);
   if (stats.inspectDegradedHits) parts.push(`inspect stale ${stats.inspectDegradedHits}`);
   if (stats.apiDegradedHits) parts.push(`api stale ${stats.apiDegradedHits}`);
   return parts.length ? parts.join(", ") : "no cache hits";

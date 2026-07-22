@@ -9,6 +9,7 @@ import {
   type AuditFindingWire,
 } from "./audit-adapter.ts";
 import type { ResearchConfig, ResearchRun } from "./types.ts";
+import { decodeEvidenceBody, encodeEvidenceBody, evidenceStorageLabel } from "./evidence-io.ts";
 import { validateRepoReport } from "./validate.ts";
 import { AUDIT_EVIDENCE_DIR, AUDIT_EXPORT_DIR, auditEvidenceAbsPath, joinPath, ROOT } from "./paths.ts";
 
@@ -52,7 +53,11 @@ export async function writeAuditExports(
     const evidenceAbs = auditEvidenceAbsPath(bundle.repoReport.fullName);
     await mkdir(AUDIT_EVIDENCE_DIR, { recursive: true });
     const body = evidenceFileBody(bundle.evidenceNdjson);
-    await Bun.write(evidenceAbs, body);
+    const encoded = encodeEvidenceBody(body);
+    await Bun.write(evidenceAbs, encoded);
+    if (evidenceStorageLabel(encoded.byteLength) === "zstd") {
+      console.error(`[audit] zstd evidence ${bundle.repoReport.fullName} (${body.length} → ${encoded.byteLength} bytes)`);
+    }
     await Bun.write(
       join(auditDir, findingFileName(bundle.finding)),
       JSON.stringify(bundle.finding, null, 2) + "\n",
@@ -72,7 +77,8 @@ export async function writeAuditExports(
 export async function hashEvidenceFile(absPath: string): Promise<string> {
   // @see https://bun.com/docs/runtime/hashing#bun-cryptohasher
   const bytes = await Bun.file(absPath).arrayBuffer();
-  return new Bun.CryptoHasher("sha3-256").update(bytes).digest("hex");
+  const logical = decodeEvidenceBody(bytes);
+  return new Bun.CryptoHasher("sha3-256").update(logical).digest("hex");
 }
 
 export function toRotorFindingWire(finding: AuditFindingWire): AuditFindingWire {

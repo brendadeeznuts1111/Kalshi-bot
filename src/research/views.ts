@@ -4,21 +4,15 @@ import { buildRepoReport } from "./evidence.ts";
 import { shortlistTagCoverage } from "./diversify.ts";
 import { githubRepoWebUrl, localRepoPath, ROUTES } from "./patterns.ts";
 import { DEFAULT_MAX_PER_TAG, MAX_QUALITY_SCORE } from "./constants.ts";
+import { escapeHtml } from "./bun-native.ts";
+
+export { escapeHtml };
 
 function reportFor(item: ScoredRepo) {
   return item.report ?? buildRepoReport(item);
 }
 
-export function escapeHtml(value: string): string {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
-}
-
 export const STYLES = `
-  :root { font-family: system-ui, sans-serif; line-height: 1.5; color: #111; background: #fafafa; }
   body { max-width: 52rem; margin: 0 auto; padding: 1.5rem; }
   a { color: #0969da; }
   nav { margin-bottom: 1.5rem; font-size: 0.9rem; }

@@ -10,6 +10,7 @@
  * JSON dumps go to gitignored `research/outputs/`; committed reports are `latest.md` + `latest.diff.md`.
  */
 import { Database } from "bun:sqlite";
+import { awaitSettled } from "./bun-settle.ts";
 import { isGitHubRateLimitError, isGitHubRateLimitTripped, throwCacheMissIfTripped } from "./github-errors.ts";
 import { recordCacheStat } from "./github-cache-stats.ts";
 import { normalizeDimensionId, runDimension, DEFAULT_DIMENSION } from "./dimensions.ts";
@@ -98,7 +99,7 @@ export async function withCache<T>(
 
   let value: T;
   try {
-    value = await fetcher();
+    value = await awaitSettled(fetcher());
   } catch (err) {
     if (isGitHubRateLimitError(err)) throw err;
     throw err;

@@ -10,6 +10,7 @@ import { applyGate } from "./gate.ts";
 import { analyzeGateMiss } from "./gate-miss.ts";
 import { analyzeDiscoveryMiss } from "./discovery-miss.ts";
 import { mapPool } from "./pool.ts";
+import { isGitHubApiAbortError } from "./github-errors.ts";
 import { scoreRepo, stackRank } from "./score.ts";
 import { buildShortlist } from "./diversify.ts";
 import { diffRuns, loadPreviousRun, loadRunById } from "./diff.ts";
@@ -27,10 +28,18 @@ import {
   serializeGitHubApiError,
 } from "./gh.ts";
 import { beginResearchCacheStats, finishResearchCacheStats, formatCacheStatsSummary, hasDegradedCacheUsage } from "./github-cache-stats.ts";
+import {
+  beginInspectPersistStats,
+  finishInspectPersistStats,
+  formatInspectPersistSummary,
+  formatInspectSignalsBrief,
+  inspectionSignalsEqual,
+} from "./inspect-utils.ts";
 import { warmGitHubApiNetwork } from "./github-network.ts";
 import { attachRepoReport } from "./evidence.ts";
 import { DEFAULT_INSPECT_CONCURRENCY } from "./constants.ts";
 import { dimensionArtifactBasename, normalizeDimensionId, runDimension } from "./dimensions.ts";
+import { REPORT_DIR, joinPath } from "./paths.ts";
 import type { ResearchRun } from "./types.ts";
 import { emitResearchProgress, isResearchIpcChild, logResearchProgress, logResearchStatus, type ResearchProgressSink } from "./research-progress.ts";
 import { isTtyStdout, printInspectTable, shortlistTableRows } from "./terminal-out.ts";
@@ -44,6 +53,7 @@ export type CliOptions = {
   minForks?: number;
   maxAgeMonths?: number;
   diff?: string;
+  openReport?: boolean;
   onProgress?: ResearchProgressSink;
 };
 
@@ -66,6 +76,7 @@ export function parseCliOptions(argv: string[]): CliOptions {
       "min-forks": { type: "string" },
       "max-age-months": { type: "string" },
       dimension: { type: "string" },
+      "open-report": { type: "boolean", default: false },
     },
     strict: false,
   });
@@ -84,6 +95,7 @@ export function parseCliOptions(argv: string[]): CliOptions {
     minStars: values["min-stars"] ? Number(values["min-stars"]) : undefined,
     minForks: values["min-forks"] ? Number(values["min-forks"]) : undefined,
     maxAgeMonths: values["max-age-months"] ? Number(values["max-age-months"]) : undefined,
+    openReport: values["open-report"] === true,
   };
 }
 
@@ -121,6 +133,7 @@ export async function runResearch(opts: CliOptions): Promise<ResearchRun> {
   warmGitHubApiNetwork();
   await ensureCacheDir();
   beginResearchCacheStats();
+  beginInspectPersistStats();
 
   const config = await loadConfig();
   const gate = {
@@ -186,29 +199,44 @@ export async function runResearch(opts: CliOptions): Promise<ResearchRun> {
   logResearchStatus(`Inspecting repos (concurrency ${DEFAULT_INSPECT_CONCURRENCY})...`);
   let inspectCacheHits = 0;
   let inspectIndex = 0;
-  const inspected = await mapPool(gated, DEFAULT_INSPECT_CONCURRENCY, async (repo) => {
-    inspectIndex++;
-    const hadCache = loadInspectCache(repo.fullName, repo.pushedAt) !== null;
-    if (hadCache) inspectCacheHits++;
-    progress({
-      type: "inspect",
-      repo: repo.fullName,
-      n: inspectIndex,
-      total: gated.length,
-      cached: hadCache,
-    });
-    const signals = await inspectRepo(repo, config);
-    const score = scoreRepo(repo, signals, config);
-    return attachRepoReport({
-      repo,
-      signals,
-      score,
-      stackRank: stackRank(signals.primaryLanguage),
-    });
-  });
+  const inspected = await mapPool(
+    gated,
+    DEFAULT_INSPECT_CONCURRENCY,
+    async (repo) => {
+      inspectIndex++;
+      const cachedSnapshot = loadInspectCache(repo.fullName, repo.pushedAt);
+      const hadCache = cachedSnapshot !== null;
+      if (hadCache) inspectCacheHits++;
+      const signals = await inspectRepo(repo, config);
+      progress({
+        type: "inspect",
+        repo: repo.fullName,
+        n: inspectIndex,
+        total: gated.length,
+        cached: hadCache,
+        brief: formatInspectSignalsBrief(signals),
+      });
+      if (cachedSnapshot && !inspectionSignalsEqual(cachedSnapshot, signals)) {
+        logResearchStatus(`Inspect cache drift: ${repo.fullName} (Bun.deepEquals mismatch)`);
+      }
+      const score = scoreRepo(repo, signals, config);
+      return attachRepoReport({
+        repo,
+        signals,
+        score,
+        stackRank: stackRank(signals.primaryLanguage),
+      });
+    },
+    { failFast: isGitHubApiAbortError },
+  );
 
   if (inspectCacheHits > 0) {
     logResearchStatus(`Inspect cache: ${inspectCacheHits}/${gated.length} repos skipped gh (unchanged pushed_at)`);
+  }
+
+  const inspectPersistStats = finishInspectPersistStats();
+  if (inspectPersistStats && (inspectPersistStats.inserts || inspectPersistStats.updates || inspectPersistStats.unchanged)) {
+    logResearchStatus(`Inspect persist: ${formatInspectPersistSummary(inspectPersistStats)}`);
   }
 
   const cacheStats = finishResearchCacheStats();
@@ -279,6 +307,11 @@ if (import.meta.main) {
       await Bun.write(Bun.stdout, JSON.stringify(run, null, 2) + "\n");
     } else if (!isResearchIpcChild()) {
       printResearchRunSummary(run);
+      if (opts.openReport) {
+        const reportPath = joinPath(REPORT_DIR, `${dimensionArtifactBasename(runDimension(run))}.md`);
+        // @see https://bun.com/docs/runtime/utils#bun-openineditor
+        Bun.openInEditor(reportPath);
+      }
     }
   } catch (err) {
     finishResearchCacheStats();

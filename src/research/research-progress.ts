@@ -5,7 +5,7 @@
 export type ResearchProgressMessage =
   | { type: "phase"; phase: "discover" | "gate" | "inspect" | "score" | "write"; dimension: string; detail?: string }
   | { type: "stats"; discovered: number; gated: number; label?: string }
-  | { type: "inspect"; repo: string; n: number; total: number; cached: boolean }
+  | { type: "inspect"; repo: string; n: number; total: number; cached: boolean; brief?: string }
   | { type: "complete"; runId: string; dimension: string; shortlist: number }
   | { type: "error"; message: string; exitCode?: number };
 
@@ -81,8 +81,10 @@ export function formatProgressLine(message: ResearchProgressMessage): string | n
       return message.label
         ? `[research] discovered ${message.discovered} (${message.label}), ${message.gated} gated`
         : `[research] discovered ${message.discovered}, ${message.gated} gated`;
-    case "inspect":
-      return `  inspect ${message.repo}${message.cached ? " (cached)" : ""} (${message.n}/${message.total})`;
+    case "inspect": {
+      const tail = message.brief ? ` ${message.brief}` : "";
+      return `  inspect ${message.repo}${message.cached ? " (cached)" : ""} (${message.n}/${message.total})${tail}`;
+    }
     case "complete":
       return `[research] complete run=${message.runId} shortlist=${message.shortlist}`;
     case "error":

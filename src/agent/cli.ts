@@ -47,6 +47,7 @@ import {
   formatAgentReportMarkdown,
   runAgentReport,
 } from "./agent-report.ts";
+import { openPatternExcerpt } from "./pattern-editor.ts";
 import {
   formatArchitectureBlueprintMarkdown,
   runArchitectureBlueprint,
@@ -246,6 +247,7 @@ export async function runAgentPatterns(
   repo?: string,
   dimension?: string,
   noWrite?: boolean,
+  openEditor?: boolean,
 ): Promise<number> {
   const run = loadRunForPatterns(runId, dimension);
   if (!run) {
@@ -275,6 +277,10 @@ export async function runAgentPatterns(
     console.log(formatPatternReportMarkdown(report));
     if (!noWrite) {
       console.error(`\nWrote research/patterns/${patternReportBasename(report.dimension)}.md`);
+    }
+    if (openEditor) {
+      const target = openPatternExcerpt(report, repo);
+      console.error(`Opened in editor (${target.source}): ${target.path}${target.line ? `:${target.line}` : ""}`);
     }
   }
   return 0;
@@ -369,13 +375,14 @@ Usage:
   bun run agent run-research [--json] [--local] [--in-process] [--dimension <id>]
   bun run agent suggest-lift [--json] [--run <run-id>] [--dimension <id>]
   bun run agent audit-list [--json] [--run <run-id>] [--dimension <id>] [--repo <owner/name>]
-  bun run agent patterns [--json] [--run <run-id>] [--dimension <id>] [--repo <owner/name>] [--no-write]
+  bun run agent patterns [--json] [--run <run-id>] [--dimension <id>] [--repo <owner/name>] [--no-write] [--open]
   bun run agent report [--json] [--dimension <id>] [--run <run-id>] [--no-write]
   bun run agent blueprint [--json] [--no-write]
   bun run agent capture-evidence -- --url=<url> | --market=<ticker> [--out=dir] [--wait-ms=N] [--json]
   bun run agent verify-dashboard [--json] [--max-age-days=N] [--require-pulse]
 
 Environment:
+  REPO_CLONE_ROOT               Local clone root for patterns --open (owner/repo subdirs)
   DASHBOARD_URL              Dashboard base (default http://127.0.0.1:3457)
   DASHBOARD_PORT               Port when DASHBOARD_URL unset
   DASHBOARD_VERIFY_MAX_AGE_DAYS  Freshness window (default 21)
@@ -429,6 +436,7 @@ export async function runAgentCli(argv: string[]): Promise<number> {
       "max-age-days": { type: "string" },
       "require-pulse": { type: "boolean", default: false },
       "in-process": { type: "boolean", default: false },
+      open: { type: "boolean", default: false },
     },
     strict: false,
     allowPositionals: true,
@@ -462,6 +470,7 @@ export async function runAgentCli(argv: string[]): Promise<number> {
         stringOpt(values.repo),
         stringOpt(values.dimension),
         values["no-write"] === true,
+        values.open === true,
       );
     case "report":
       return runAgentReportCmd(

@@ -93,6 +93,7 @@ describe("resolveRunDataFreshness", () => {
         searchEtagHits: 0,
         searchDegradedHits: 0,
         inspectExactHits: 1,
+        inspectContentReuseHits: 0,
         inspectDegradedHits: 2,
         apiDegradedHits: 0,
       },

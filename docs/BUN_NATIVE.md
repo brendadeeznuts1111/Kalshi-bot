@@ -21,8 +21,13 @@ Deep dive: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns)
 | Package-root paths | `import.meta.dir` | [`paths.ts`](../src/research/paths.ts) |
 | CLI entry guard | `import.meta.main` + `#!/usr/bin/env bun` | [`cli.ts`](../src/research/cli.ts) |
 | Embedded cache + run history | `bun:sqlite` + `Bun.hash` | [`cache.ts`](../src/research/cache.ts) |
+| Inspect cache equality | `Bun.deepEquals` + `Bun.inspect` | [`inspect-utils.ts`](../src/research/inspect-utils.ts), [`bun-native.ts`](../src/research/bun-native.ts) |
+| HTML escaping | `Bun.escapeHTML` | [`bun-native.ts`](../src/research/bun-native.ts), [`views.ts`](../src/research/views.ts) |
+| Evidence compression | `Bun.zstdCompressSync` / `decompress` | [`evidence-io.ts`](../src/research/evidence-io.ts), [`export-audit.ts`](../src/research/export-audit.ts) |
+| Pattern editor jump | `Bun.openInEditor` | [`pattern-editor.ts`](../src/agent/pattern-editor.ts), [`agent/cli.ts`](../src/agent/cli.ts) |
 | Rate-limit backoff | `Bun.sleep` | [`gh.ts`](../src/research/gh.ts) |
-| Bounded concurrency | [`pool.ts`](../src/research/pool.ts) | [`cli.ts`](../src/research/cli.ts), [`inspect.ts`](../src/research/inspect.ts) |
+| Bounded concurrency | [`pool.ts`](../src/research/pool.ts) + `Bun.peek` | [`cli.ts`](../src/research/cli.ts), [`inspect.ts`](../src/research/inspect.ts) |
+| Settled-promise fast path | `Bun.peek` / `peek.status` | [`bun-settle.ts`](../src/research/bun-settle.ts) |
 | Scheduled research | OS-level `Bun.cron` | [`scheduled.ts`](../src/research/scheduled.ts), [`schedule-cli.ts`](../src/research/schedule-cli.ts) |
 | Audit digests | `Bun.CryptoHasher("sha3-256")` | [`audit-adapter.ts`](../src/research/audit-adapter.ts), [`export-audit.ts`](../src/research/export-audit.ts) |
 | GitHub URL SSOT | `BunURLPattern` + `URLPattern` ([v1.3.4+](https://bun.com/blog/bun-v1.3.4#urlpattern-api)) | [`patterns.ts`](../src/research/patterns.ts) |
@@ -47,6 +52,15 @@ Deep dive: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns)
 | `Bun.write` | https://bun.com/docs/runtime/file-io#writing-files-bun-write |
 | `Bun.env` | https://bun.com/docs/runtime/environment-variables |
 | `Bun.hash` | https://bun.com/docs/runtime/hashing#bun-hash |
+| `Bun.deepEquals` | https://bun.com/docs/runtime/utils#bun-deepequals |
+| `Bun.inspect` | https://bun.com/docs/runtime/utils#bun-inspect |
+| `Bun.peek` | https://bun.com/docs/runtime/utils#bun-peek |
+| `Bun.openInEditor` | https://bun.com/docs/runtime/utils#bun-openineditor |
+| `Bun.escapeHTML` | https://bun.com/docs/runtime/utils#bun-escapehtml |
+| `Bun.zstdCompressSync` | https://bun.com/docs/runtime/utils#bun-zstdcompress-bun-zstdcompresssync |
+| `Bun.zstdDecompressSync` | https://bun.com/docs/runtime/utils#bun-zstddecompress-bun-zstddecompresssync |
+| `Bun.fileURLToPath` | https://bun.com/docs/runtime/utils#bun-fileurltopath |
+| `Bun.pathToFileURL` | https://bun.com/docs/runtime/utils#bun-pathtofileurl |
 | `bun:sqlite` | https://bun.com/docs/runtime/sqlite |
 | `Bun.sleep` | https://bun.com/docs/runtime/utils#bun-sleep |
 | `import.meta.dir` | https://bun.com/docs/runtime/module-resolution#import-meta |

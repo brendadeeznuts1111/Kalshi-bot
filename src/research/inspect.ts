@@ -11,8 +11,13 @@ import {
   isSdkOnlyRepo,
   primaryLanguage,
 } from "./detect.ts";
-import { withCache, loadInspectCache, loadLatestInspectCache, saveInspectCache } from "./cache.ts";
-import { isGitHubRateLimitTripped } from "./github-errors.ts";
+import { withCache, loadInspectCache, loadLatestInspectCache } from "./cache.ts";
+import {
+  canReusePriorInspectSnapshot,
+  persistInspectCache,
+  recordInspectPersist,
+} from "./inspect-utils.ts";
+import { isGitHubApiAbortError, isGitHubRateLimitTripped, throwCacheMissIfTripped } from "./github-errors.ts";
 import { recordCacheStat } from "./github-cache-stats.ts";
 import { DEFAULT_CODE_SEARCH_CONCURRENCY } from "./constants.ts";
 
@@ -37,10 +42,21 @@ export async function inspectRepo(
       console.error(`[inspect] degraded — using prior inspect snapshot for ${repo.fullName}`);
       return stale;
     }
+    throwCacheMissIfTripped("inspect", repo.fullName);
+  }
+
+  const prior = loadLatestInspectCache(repo.fullName);
+  if (prior?.lastDefaultBranchCommitAt) {
+    const lastCommit = await fetchLatestCommit(repo);
+    if (canReusePriorInspectSnapshot(prior, lastCommit)) {
+      recordCacheStat("inspectContentReuse");
+      recordInspectPersist(persistInspectCache(repo.fullName, repo.pushedAt, prior));
+      return prior;
+    }
   }
 
   const signals = await fetchInspectionSignals(repo, config);
-  saveInspectCache(repo.fullName, repo.pushedAt, signals);
+  recordInspectPersist(persistInspectCache(repo.fullName, repo.pushedAt, signals));
   return signals;
 }
 
@@ -110,25 +126,30 @@ async function fetchReadme(repo: RepoCandidate): Promise<string> {
 }
 
 async function searchCode(repo: RepoCandidate, queries: string[], scope: string) {
-  return mapPool(queries, DEFAULT_CODE_SEARCH_CONCURRENCY, async (term) => {
-    return withCache(repo.fullName, repo.pushedAt, `code_${term}`, async () => {
-      try {
-        const rows = await ghJson<GhCodeHit[]>([
-          "search",
-          "code",
-          `${term} ${scope}`,
-          "--json",
-          "path",
-          "--limit",
-          "5",
-        ]);
-        return { query: term, totalCount: rows.length, paths: rows.map((r) => r.path) };
-      } catch (err) {
-        if (isGitHubRateLimitError(err)) throw err;
-        return { query: term, totalCount: 0, paths: [] as string[] };
-      }
-    });
-  });
+  return mapPool(
+    queries,
+    DEFAULT_CODE_SEARCH_CONCURRENCY,
+    async (term) => {
+      return withCache(repo.fullName, repo.pushedAt, `code_${term}`, async () => {
+        try {
+          const rows = await ghJson<GhCodeHit[]>([
+            "search",
+            "code",
+            `${term} ${scope}`,
+            "--json",
+            "path",
+            "--limit",
+            "5",
+          ]);
+          return { query: term, totalCount: rows.length, paths: rows.map((r) => r.path) };
+        } catch (err) {
+          if (isGitHubRateLimitError(err)) throw err;
+          return { query: term, totalCount: 0, paths: [] as string[] };
+        }
+      });
+    },
+    { failFast: isGitHubApiAbortError },
+  );
 }
 
 async function fetchLanguages(repo: RepoCandidate): Promise<Record<string, number>> {

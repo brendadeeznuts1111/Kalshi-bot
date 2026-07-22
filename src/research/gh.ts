@@ -114,8 +114,9 @@ function tripFromSnapshot(
 export async function ghJson<T>(args: string[], retries = DEFAULT_GH_RETRIES): Promise<T> {
   assertGitHubRateBudget(`gh ${args.join(" ")}`);
   const resource = resolveGhRateLimitResource(args);
+  const maxAttempts = shouldWaitForRateLimitReset() ? retries : 1;
 
-  for (let attempt = 0; attempt < retries; attempt++) {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const { exitCode, stdout, stderr } = await $`gh ${args}`.nothrow().quiet();
 
     if (exitCode === 0) {
@@ -130,7 +131,7 @@ export async function ghJson<T>(args: string[], retries = DEFAULT_GH_RETRIES): P
     const snap = await readGitHubRateLimit(resource);
     tripFromSnapshot(snap, `gh ${args[0] ?? "api"}`, resource);
 
-    if (shouldWaitForRateLimitReset() && attempt < retries - 1 && snap) {
+    if (shouldWaitForRateLimitReset() && attempt < maxAttempts - 1 && snap) {
       await pauseUntilRateLimitReset(snap.reset, resource);
       continue;
     }

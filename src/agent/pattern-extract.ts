@@ -36,6 +36,7 @@ export type FilePatternSlice = {
   components: string[];
   hits: PatternHits;
   excerpt: string | null;
+  excerptLine?: number;
   fetchOk: boolean;
 };
 
@@ -209,17 +210,24 @@ export function resolvePatternFetchPaths(
   return ["README.md"];
 }
 
-function excerptAroundMatch(text: string, maxLen = MAX_EXCERPT_CHARS): string | null {
+function excerptAroundMatch(
+  text: string,
+  maxLen = MAX_EXCERPT_CHARS,
+): { excerpt: string; line: number } | null {
   if (!text.trim()) return null;
   for (const rule of RULES) {
     const m = rule.re.exec(text);
     if (m?.index !== undefined) {
       const start = Math.max(0, m.index - 80);
       const end = Math.min(text.length, m.index + maxLen - 80);
-      return text.slice(start, end).replace(/\s+/g, " ").trim();
+      const line = text.slice(0, m.index).split("\n").length;
+      return {
+        excerpt: text.slice(start, end).replace(/\s+/g, " ").trim(),
+        line,
+      };
     }
   }
-  return text.slice(0, maxLen).replace(/\s+/g, " ").trim();
+  return { excerpt: text.slice(0, maxLen).replace(/\s+/g, " ").trim(), line: 1 };
 }
 
 export async function extractRepoPatterns(
@@ -246,11 +254,13 @@ export async function extractRepoPatterns(
       ...new Set(evidenceLines.filter((e) => e.path === path).map((e) => e.component)),
     ];
     summary = mergePatternHits(summary, hits);
+    const slice = text ? excerptAroundMatch(text) : null;
     files.push({
       path,
       components,
       hits,
-      excerpt: text ? excerptAroundMatch(text) : null,
+      excerpt: slice?.excerpt ?? null,
+      excerptLine: slice?.line,
       fetchOk: text !== null,
     });
   }
@@ -261,11 +271,14 @@ export async function extractRepoPatterns(
     if (!text) continue;
     const hits = analyzeSource(text);
     summary = mergePatternHits(summary, hits);
+    const slice = excerptAroundMatch(text);
+    if (!slice) continue;
     files.push({
       path: extra,
       components: [],
       hits,
-      excerpt: excerptAroundMatch(text),
+      excerpt: slice.excerpt,
+      excerptLine: slice.line,
       fetchOk: true,
     });
   }

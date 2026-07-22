@@ -21,6 +21,7 @@ import {
   resolveDimensionQueries,
   type ResolvedDimensionQueries,
 } from "./dimensions.ts";
+import { isGitHubRateLimitTripped } from "./github-errors.ts";
 
 export type { GhSearchRepo } from "./github-search.ts";
 
@@ -115,11 +116,14 @@ export async function discoverCandidates(
   let degradedHits = 0;
 
   for (const query of querySet.queries) {
+    if (isGitHubRateLimitTripped()) break;
+
     const searchQuery = buildRepoSearchQuery(query, searchGate);
     const { items: rows, fromEtagCache, degraded } = await searchGitHubRepos(
       searchQuery,
       DEFAULT_GH_SEARCH_LIMIT,
     );
+
     if (degraded) degradedHits++;
     else if (fromEtagCache) etagHits++;
 
