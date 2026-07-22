@@ -1,7 +1,9 @@
 /**
  * Mint a production-shaped run id near `now` (eligible for loadLatest* resolution).
- * Only use inside `withTempCache` / `enterTempCache`. For intentional operator-excluded
- * rows, set `source: "test"` (or `kind: "fixture"`) on the saved payload.
+ * Only use inside `withTempCache` / `enterTempCache`. Always set `source: "test"`
+ * (or `kind: "fixture"`) unless the test intentionally exercises production resolution —
+ * then use `source: "pipeline"` and avoid the harness mock shape
+ * (`description: "test"` + `stars: 100`), which {@link looksLikeSyntheticFixtureRun} rejects.
  */
 export function mintTestProductionRunId(now = Date.now()): string {
   const d = new Date(now);

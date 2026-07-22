@@ -1,0 +1,23 @@
+---
+description: Tennis event-store lane — identity, clocks, watch set, bridge hard-fail
+globs:
+  - src/institutions/event-store/**
+  - src/bot/kalshi-live-data.ts
+  - tools/tennis/**
+  - docs/TENNIS_PROGRAM_ARCHETYPES.md
+  - alpha/tennis-*/**
+  - tests/institutions/*stadion*
+  - tests/institutions/*live-scores*
+  - tests/institutions/*tennis-ladder*
+alwaysApply: false
+---
+
+# Tennis event-store
+
+- Kalshi `event_id`: competitor UUID pair + series + start (not ticker blob alone).
+- Stadion ids stay in `itf|stadion|*` namespace; join only via `event_links` (surname+day+lane; ambiguous → hard-fail).
+- Live scores: `/milestones` + `/live_data`; `source_clock=recv`; scoreboard = c1/c2 via competitor UUID (not sorted `player_a`/`player_b`).
+- Watch = `outcome=scheduled` and (`start_ts` in `[now−6h, now+lead]` **or** fresh `is_live`); stale `is_live` clears at 45m; not REST `active`.
+- Bridge: surname+day+lane with Stadion day ±1; ambiguous → hard-fail.
+- Provenance on primary facts: `source`, `source_url`, `fetched_ts`, `corpus`.
+- Subagent skills: `tennis-infra-review`, `tennis-infra-integrate`, `tennis-infra-orchestrate`.

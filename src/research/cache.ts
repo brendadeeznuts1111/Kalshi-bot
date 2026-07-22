@@ -377,9 +377,57 @@ export function searchCachedPayloads(
   return rows.map((r) => ({ repo: r.repo, pushedAt: r.pushed_at, payload: r.payload }));
 }
 
+const ELIGIBLE_FUTURE_SLACK_MS = 86_400_000;
+
+/**
+ * Harness mock shape used across agent/serve/audit fixtures:
+ * `description: "test"` + `stars: 100`. Real GitHub repos never match this pair.
+ */
+export function isSyntheticTestRepoCandidate(repo: {
+  description?: string | null;
+  stars?: number;
+}): boolean {
+  return repo.description === "test" && repo.stars === 100;
+}
+
+function scoredOrCandidateRepos(run: ResearchRun): Array<{ description?: string | null; stars?: number }> {
+  const fromShortlist = (run.shortlist ?? [])
+    .map((s) => s.repo)
+    .filter((r): r is NonNullable<typeof r> => Boolean(r));
+  if (fromShortlist.length > 0) return fromShortlist;
+  return (run.scored ?? [])
+    .map((s) => s.repo)
+    .filter((r): r is NonNullable<typeof r> => Boolean(r));
+}
+
+/**
+ * True when the run's shortlist (else scored) is non-empty and every entry matches
+ * the harness `description:"test"` + `stars:100` pattern — operator cache poison.
+ */
+export function looksLikeSyntheticFixtureRun(run: ResearchRun): boolean {
+  const repos = scoredOrCandidateRepos(run);
+  if (repos.length === 0) return false;
+  return repos.every(isSyntheticTestRepoCandidate);
+}
+
+/** Clock eligibility only — used by stampRunKind before source is filled in. */
+function hasEligibleProductionClocks(run: ResearchRun): boolean {
+  if (!isProductionRunId(run.runId)) return false;
+  const generatedAtMs = Date.parse(run.generatedAt);
+  if (!Number.isFinite(generatedAtMs) || generatedAtMs > Date.now() + ELIGIBLE_FUTURE_SLACK_MS) {
+    return false;
+  }
+  const idMs = runIdTimestampMs(run.runId);
+  if (idMs === null || idMs > Date.now() + ELIGIBLE_FUTURE_SLACK_MS) return false;
+  return true;
+}
+
 export function isFixtureRun(run: ResearchRun): boolean {
   // Explicit fixture / test source wins; never trust kind:"production" without eligibility.
   if (run.kind === "fixture" || run.source === "test") return true;
+  // Synthetic shortlist without explicit pipeline source = harness poison (operator cache).
+  // Tests that need production resolution may set source:"pipeline" with mock repos.
+  if (looksLikeSyntheticFixtureRun(run) && run.source !== "pipeline") return true;
   return !isEligibleProductionRun(run);
 }
 
@@ -405,13 +453,16 @@ function stampDiscoverGate(run: ResearchRun): ResearchRun {
 
 function stampRunKind(run: ResearchRun): ResearchRun {
   let stamped: ResearchRun;
-  if (run.source === "test" || run.kind === "fixture") {
+  const syntheticPoison =
+    looksLikeSyntheticFixtureRun(run) && run.source !== "pipeline";
+  if (run.source === "test" || run.kind === "fixture" || syntheticPoison) {
     stamped = {
       ...run,
       kind: "fixture",
-      source: run.source === "test" ? "test" : run.source,
+      // Synthetic shortlists without source:"pipeline" stamp as test so purge/load stay consistent.
+      source: run.source === "test" || syntheticPoison ? "test" : run.source,
     };
-  } else if (isEligibleProductionRun(run)) {
+  } else if (hasEligibleProductionClocks(run)) {
     stamped = {
       ...run,
       kind: "production",
@@ -466,8 +517,14 @@ export function deleteRun(runId: string): void {
 /**
  * Remove fixture / ineligible / key-mismatch rows from the open cache DB.
  * Returns deleted run ids. Safe for operator cache after test pollution.
+ *
+ * Synthetic shortlists (`description:"test"` + `stars:100`) are treated as fixtures
+ * via {@link isFixtureRun} even when clocks look production-shaped.
+ *
+ * @param options.purgeTestInspect — also delete inspect_cache rows whose repo key
+ *   matches obvious harness ids (`cross-dim-*`). Low-risk; does not touch real owners.
  */
-export function purgeIneligibleRuns(): string[] {
+export function purgeIneligibleRuns(options?: { purgeTestInspect?: boolean }): string[] {
   const ids = listRunIds();
   const deleted: string[] = [];
   for (const id of ids) {
@@ -488,6 +545,13 @@ export function purgeIneligibleRuns(): string[] {
       deleteRun(id);
       deleted.push(id);
     }
+  }
+  if (options?.purgeTestInspect) {
+    const db = getDb();
+    db.query("DELETE FROM inspect_cache WHERE repo GLOB 'cross-dim-*'").run();
+    db.query("DELETE FROM inspect_cache WHERE repo GLOB 'mock/*'").run();
+    db.query("DELETE FROM inspect_cache WHERE repo GLOB 'enrich-inspect-*'").run();
+    db.query("DELETE FROM inspect_cache WHERE repo GLOB 'inspect/*'").run();
   }
   return deleted;
 }
@@ -530,19 +594,11 @@ export function loadRunFromDb(runId: string): ResearchRun | null {
   return parsed;
 }
 
-const ELIGIBLE_FUTURE_SLACK_MS = 86_400_000;
-
-/** Pipeline run suitable for “latest” resolution (excludes far-future test fixtures). */
+/** Pipeline run suitable for “latest” resolution (excludes far-future / synthetic fixtures). */
 export function isEligibleProductionRun(run: ResearchRun): boolean {
-  if (!isProductionRunId(run.runId)) return false;
-  const generatedAtMs = Date.parse(run.generatedAt);
-  if (!Number.isFinite(generatedAtMs) || generatedAtMs > Date.now() + ELIGIBLE_FUTURE_SLACK_MS) {
-    return false;
-  }
-  // Reject run ids whose embedded clock is far ahead (e.g. 2026-12-31… mid-year).
-  const idMs = runIdTimestampMs(run.runId);
-  if (idMs === null || idMs > Date.now() + ELIGIBLE_FUTURE_SLACK_MS) return false;
-  return true;
+  if (run.source === "test" || run.kind === "fixture") return false;
+  if (looksLikeSyntheticFixtureRun(run) && run.source !== "pipeline") return false;
+  return hasEligibleProductionClocks(run);
 }
 
 export function loadResearchRun(options?: {

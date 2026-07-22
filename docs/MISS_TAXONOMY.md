@@ -34,11 +34,11 @@ bun run rate-limit:status -- --gated=49 --uncached=49  # before live research
 | 4 | Staleness badges (🕒) | **B** | **done** | `tests/staleness-badge.test.ts` |
 | 5 | Discovery miss (0 candidates) | **C** | **done** | `tests/discovery-miss.test.ts` |
 | — | Discover vs apply gate split | core | **done** | `tests/discover-gate.test.ts` |
-| — | Live market-making run (V5) | research | **blocked** | `code_search` quota — see [`ROADMAP.md`](ROADMAP.md) |
+| — | Live market-making run (V5) | research | **blocked** | `code_search` multi-wave — see [`ROADMAP.md`](ROADMAP.md) |
 | — | Bot scaffold | agent | **planned** | after V5 green |
 | — | Inspect miss (detector rationale) | C+ | pending | extend pattern-miss |
 | — | Verification miss (export-audit cmd) | D | pending | error wire alternative |
-| — | Data fill (price-data run) | **D** | blocked | rate-limit preflight |
+| — | Data fill (price-data run) | **D** | blocked | multi-wave / wait — not empty bucket alone |
 
 ## Sub-agent scopes
 
@@ -94,11 +94,11 @@ bun run rate-limit:status -- --gated=49 --uncached=49  # before live research
 
 ### Lane D — Data fill (blocked)
 
-**Blocked on GitHub `code_search` quota (~1029 calls for price-data).**
+**Blocked on `code_search` economics (~1029 calls for price-data at 21/repo), not an empty bucket.** A full 10/10 window still cannot one-shot the inspect; use multi-wave wait.
 
 ```bash
 bun run rate-limit:status -- --gated=49 --uncached=49
-# when green:
+# proceed with multi-wave (full bucket ≠ enough for one shot):
 GITHUB_RATE_LIMIT_WAIT=1 bun run research -- --dimension=price-data --min-stars=1 --min-forks=0 --export-audit
 bun run agent blueprint
 bun run reports:restore   # if tests touched committed artifacts

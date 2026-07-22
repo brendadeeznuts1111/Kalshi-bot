@@ -1,0 +1,67 @@
+{
+  "milestones": {
+    "cursor": "",
+    "milestones": [
+      {
+        "category": "Sports",
+        "details": {
+          "first_competitor_id": "9eface64-a579-436d-8717-50f2730400e2",
+          "gender": "women",
+          "main_game_event_ticker": "KXITFWMATCH-26JUL22PENKUL",
+          "round": "Round of 32",
+          "second_competitor_id": "2b652366-a7ff-4cc9-8ab9-8a0ba31b68ed",
+          "tour": "ITF",
+          "tournament_name": "W35 Santa Fe"
+        },
+        "id": "ccf4cd8d-78a4-4dba-8d4e-e680d8753895",
+        "primary_event_tickers": ["KXITFWMATCH-26JUL22PENKUL"],
+        "related_event_tickers": ["KXITFWMATCH-26JUL22PENKUL"],
+        "start_date": "2026-07-22T23:00:00Z",
+        "title": "Penickova vs Kulikova",
+        "type": "tennis_tournament_singles"
+      }
+    ]
+  },
+  "live_data_not_started": {
+    "live_data": {
+      "details": {
+        "competitor1_current_round_score": 0,
+        "competitor1_id": "9eface64-a579-436d-8717-50f2730400e2",
+        "competitor1_overall_score": 0,
+        "competitor1_round_scores": null,
+        "competitor2_current_round_score": 0,
+        "competitor2_id": "2b652366-a7ff-4cc9-8ab9-8a0ba31b68ed",
+        "competitor2_overall_score": 0,
+        "competitor2_round_scores": null,
+        "completed_rounds": 0,
+        "server": "",
+        "status": "not_started",
+        "match_status": "",
+        "winner": ""
+      },
+      "milestone_id": "ccf4cd8d-78a4-4dba-8d4e-e680d8753895",
+      "type": "tennis_tournament_singles"
+    }
+  },
+  "live_data_in_progress": {
+    "live_data": {
+      "details": {
+        "competitor1_current_round_score": 30,
+        "competitor1_id": "9eface64-a579-436d-8717-50f2730400e2",
+        "competitor1_overall_score": 0,
+        "competitor1_round_scores": [{ "outcome": "", "score": 2 }],
+        "competitor2_current_round_score": 15,
+        "competitor2_id": "2b652366-a7ff-4cc9-8ab9-8a0ba31b68ed",
+        "competitor2_overall_score": 0,
+        "competitor2_round_scores": [{ "outcome": "", "score": 1 }],
+        "completed_rounds": 0,
+        "server": "9eface64-a579-436d-8717-50f2730400e2",
+        "status": "in_progress",
+        "match_status": "in_play",
+        "winner": ""
+      },
+      "milestone_id": "ccf4cd8d-78a4-4dba-8d4e-e680d8753895",
+      "type": "tennis_tournament_singles"
+    }
+  }
+}

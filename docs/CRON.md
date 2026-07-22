@@ -47,3 +47,16 @@ Set `RESEARCH_EXPORT_AUDIT=1` on scheduled runs to also write audit JSONL + roto
 ## Relation to serve
 
 `bun run serve` is a read-only report browser. Scheduling is separate — register OS cron, do not keep a long-lived dashboard process.
+
+## Tennis live canary
+
+Separate job: dry-run `live_data` poll to the write boundary (zero SQLite score writes). Catches Kalshi schema/API drift before the aging loop is wrong.
+
+| Command | Role |
+|---------|------|
+| `bun run tennis:live:canary` | One-shot `--canary` (exit 2 on fail) |
+| `bun run tennis:live:canary:register` | Install OS cron (default `*/15 * * * *` local) |
+| `bun run tennis:live:canary:preview` | Next fire times |
+| `bun run tennis:live:canary:remove` | Uninstall |
+
+See [`docs/TENNIS_PROGRAM_ARCHETYPES.md`](TENNIS_PROGRAM_ARCHETYPES.md) (Live dry-run as canary).

@@ -1,0 +1,654 @@
+{
+  "data": {
+    "W100 Amstetten#0": {
+      "_name": "W100 Amstetten",
+      "tennisId": "W-ITF-AUT-2026-001",
+      "eventCategory": {
+        "_admin_name": "itf pro wtt - women's 100",
+        "_name": "itf pro wtt - women's 100",
+        "colourCode": "#FF4C62",
+        "createdAt": "2024-12-23T09:06:51Z",
+        "deletedAt": null,
+        "eventOrder": 10,
+        "id": "81501e9d-f49d-48d3-a9f0-38e6fe5c0336",
+        "images": [
+          {
+            "_admin_name": "81501e9d-f49d-48d3-a9f0-38e6fe5c0336 eventCategory image",
+            "_name": "81501e9d-f49d-48d3-a9f0-38e6fe5c0336 eventCategory image",
+            "createdAt": "2024-12-23T20:06:01.144Z",
+            "deletedAt": null,
+            "description": "logo",
+            "entityId": "81501e9d-f49d-48d3-a9f0-38e6fe5c0336",
+            "entityType": "eventCategory",
+            "id": "8db505e2-18fa-4583-aba5-7af334fc9e88",
+            "updatedAt": "2024-12-23T20:06:01.144Z",
+            "url": "https://assetbank.itf-production.sports-data.stadion.io/eventCategory/w100"
+          }
+        ],
+        "name": "itf pro wtt - women's 100",
+        "tennisId": null,
+        "type": "w100",
+        "updatedAt": "2026-06-05T03:00:35.396Z"
+      },
+      "surface": {
+        "_admin_name": "Clay",
+        "_name": "Clay",
+        "createdAt": "2024-12-29T12:14:37Z",
+        "deletedAt": null,
+        "id": "0a79473a-2681-4053-8679-206bc434ff8f",
+        "name": "Clay",
+        "tennisId": null,
+        "updatedAt": "2026-07-22T10:55:59.046Z",
+        "venueType": null
+      },
+      "venue": {
+        "_admin_name": "Utc Amstetten - Amstetten",
+        "_name": "Utc Amstetten - Amstetten",
+        "city": "Amstetten",
+        "country": {
+          "ISOcode": "AUT",
+          "_admin_name": "Austria",
+          "_name": "Austria",
+          "createdAt": "2024-12-18T10:22:44Z",
+          "deletedAt": null,
+          "id": "4e4e108e-3947-4e32-b41a-3860f89406b5",
+          "images": [
+            {
+              "_admin_name": "4e4e108e-3947-4e32-b41a-3860f89406b5 country image",
+              "_name": "4e4e108e-3947-4e32-b41a-3860f89406b5 country image",
+              "createdAt": "2025-06-17T17:31:28.067Z",
+              "deletedAt": null,
+              "description": "nationCoverDc",
+              "entityId": "4e4e108e-3947-4e32-b41a-3860f89406b5",
+              "entityType": "country",
+              "id": "179505a4-c4d7-4f17-a7fb-8956f1b33717",
+              "updatedAt": "2025-06-17T17:31:28.067Z",
+              "url": "https://assetbank.itf-production.sports-data.stadion.io/Nation/Cover/AUT/DC"
+            },
+            {
+              "_admin_name": "4e4e108e-3947-4e32-b41a-3860f89406b5 country image",
+              "_name": "4e4e108e-3947-4e32-b41a-3860f89406b5 country image",
+              "createdAt": "2024-12-29T15:39:42.897Z",
+              "deletedAt": null,
+              "description": "flagStandard",
+              "entityId": "4e4e108e-3947-4e32-b41a-3860f89406b5",
+              "entityType": "country",
+              "id": "50480079-4eb4-425e-bc81-e8b378f56ef0",
+              "updatedAt": "2024-12-29T15:39:42.897Z",
+              "url": "https://assetbank.itf-production.sports-data.stadion.io/Flag/Standard/AUT"
+            },
+            {
+              "_admin_name": "4e4e108e-3947-4e32-b41a-3860f89406b5 country image",
+              "_name": "4e4e108e-3947-4e32-b41a-3860f89406b5 country image",
+              "createdAt": "2025-06-17T17:31:19.018Z",
+              "deletedAt": null,
+              "description": "nationCoverBjkc",
+              "entityId": "4e4e108e-3947-4e32-b41a-3860f89406b5",
+              "entityType": "country",
+              "id": "cad85325-3c63-4e7d-b667-9c59752ce5b9",
+              "updatedAt": "2025-06-17T17:31:19.018Z",
+              "url": "https://assetbank.itf-production.sports-data.stadion.io/Nation/Cover/AUT/BJKC"
+            },
+            {
+              "_admin_name": "4e4e108e-3947-4e32-b41a-3860f89406b5 country image",
+              "_name": "4e4e108e-3947-4e32-b41a-3860f89406b5 country image",
+              "createdAt": "2024-12-29T15:39:42.547Z",
+              "deletedAt": null,
+              "description": "flagRound",
+              "entityId": "4e4e108e-3947-4e32-b41a-3860f89406b5",
+              "entityType": "country",
+              "id": "eb3767da-fae9-4b0c-bb87-69ee5099f416",
+              "updatedAt": "2024-12-29T15:39:42.547Z",
+              "url": "https://assetbank.itf-production.sports-data.stadion.io/Flag/Rounded/AUT"
+            }
+          ],
+          "name": "Austria",
+          "players": null,
+          "region": null,
+          "regionId": null,
+          "teamNominations": null,
+          "teams": null,
+          "tennisId": null,
+          "updatedAt": "2026-07-22T10:55:12.637Z"
+        },
+        "countryId": "4e4e108e-3947-4e32-b41a-3860f89406b5",
+        "createdAt": "2026-06-02T03:00:45Z",
+        "deletedAt": null,
+        "id": "ff1ccf58-0790-43c2-9900-10bc8d3ca917",
+        "name": "utc amstetten",
+        "surface": null,
+        "surfaceId": null,
+        "updatedAt": "2026-07-22T10:36:06.931Z",
+        "utcOffset": "02:00:00",
+        "venueType": null,
+        "venueTypeId": null
+      },
+      "startDate": "2026-07-19T00:00:00Z",
+      "endDate": "2026-07-26T00:00:00Z",
+      "id": "d9e22712-36e6-4676-9e4e-73996428f230",
+      "courts": {
+        "Court 1": [
+          {
+            "id": "6f77bf3d-5f90-4705-8419-19171ece924d",
+            "tennisId": "W-ITF-AUT-2026-001-S-M-1-32-001-E3C94F18-97F3-4629-B474-C43825EEB237",
+            "actualStartDate": "2026-07-21T10:04:12Z",
+            "actualEndDate": "2026-07-21T11:08:19Z",
+            "dateStartLocal": "2026-07-21",
+            "winnerSideId": "75d9ef20-e77d-4172-8a02-b8b1d7b7406f",
+            "matchStatus": {
+              "_admin_name": "COMPLETE",
+              "_name": "COMPLETE",
+              "createdAt": "2024-12-18T11:00:18Z",
+              "deletedAt": null,
+              "displayName": "Complete",
+              "id": "afeb8605-4e2c-4915-a5f2-9bfe0319b7aa",
+              "name": "COMPLETE",
+              "stateType": "post",
+              "tennisId": "",
+              "updatedAt": "2026-07-22T10:56:15.38Z"
+            },
+            "sides": [
+              {
+                "id": "75d9ef20-e77d-4172-8a02-b8b1d7b7406f",
+                "sideOrder": 1,
+                "sideSets": [
+                  {
+                    "setNumber": 2,
+                    "setScore": 6,
+                    "setTieBreakScore": 0
+                  },
+                  {
+                    "setNumber": 1,
+                    "setScore": 6,
+                    "setTieBreakScore": 0
+                  }
+                ],
+                "sidePlayer": [
+                  {
+                    "player": {
+                      "_name": "Julia Grabher",
+                      "person": {
+                        "firstName": "Julia",
+                        "lastName": "Grabher",
+                        "_name": "Julia Grabher"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "c4ed9fe7-c503-4f65-9204-dd2d7656cb01",
+                "sideOrder": 2,
+                "sideSets": [
+                  {
+                    "setNumber": 2,
+                    "setScore": 0,
+                    "setTieBreakScore": 0
+                  },
+                  {
+                    "setNumber": 1,
+                    "setScore": 1,
+                    "setTieBreakScore": 0
+                  }
+                ],
+                "sidePlayer": [
+                  {
+                    "player": {
+                      "_name": "Ekaterina Perelygina",
+                      "person": {
+                        "firstName": "Ekaterina",
+                        "lastName": "Perelygina",
+                        "_name": "Ekaterina Perelygina"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "W100 Amstetten#1": {
+      "_name": "W100 Amstetten",
+      "tennisId": "W-ITF-AUT-2026-001",
+      "eventCategory": {
+        "_admin_name": "itf pro wtt - women's 100",
+        "_name": "itf pro wtt - women's 100",
+        "colourCode": "#FF4C62",
+        "createdAt": "2024-12-23T09:06:51Z",
+        "deletedAt": null,
+        "eventOrder": 10,
+        "id": "81501e9d-f49d-48d3-a9f0-38e6fe5c0336",
+        "images": [
+          {
+            "_admin_name": "81501e9d-f49d-48d3-a9f0-38e6fe5c0336 eventCategory image",
+            "_name": "81501e9d-f49d-48d3-a9f0-38e6fe5c0336 eventCategory image",
+            "createdAt": "2024-12-23T20:06:01.144Z",
+            "deletedAt": null,
+            "description": "logo",
+            "entityId": "81501e9d-f49d-48d3-a9f0-38e6fe5c0336",
+            "entityType": "eventCategory",
+            "id": "8db505e2-18fa-4583-aba5-7af334fc9e88",
+            "updatedAt": "2024-12-23T20:06:01.144Z",
+            "url": "https://assetbank.itf-production.sports-data.stadion.io/eventCategory/w100"
+          }
+        ],
+        "name": "itf pro wtt - women's 100",
+        "tennisId": null,
+        "type": "w100",
+        "updatedAt": "2026-06-05T03:00:35.396Z"
+      },
+      "surface": {
+        "_admin_name": "Clay",
+        "_name": "Clay",
+        "createdAt": "2024-12-29T12:14:37Z",
+        "deletedAt": null,
+        "id": "0a79473a-2681-4053-8679-206bc434ff8f",
+        "name": "Clay",
+        "tennisId": null,
+        "updatedAt": "2026-07-22T10:55:59.046Z",
+        "venueType": null
+      },
+      "venue": {
+        "_admin_name": "Utc Amstetten - Amstetten",
+        "_name": "Utc Amstetten - Amstetten",
+        "city": "Amstetten",
+        "country": {
+          "ISOcode": "AUT",
+          "_admin_name": "Austria",
+          "_name": "Austria",
+          "createdAt": "2024-12-18T10:22:44Z",
+          "deletedAt": null,
+          "id": "4e4e108e-3947-4e32-b41a-3860f89406b5",
+          "images": [
+            {
+              "_admin_name": "4e4e108e-3947-4e32-b41a-3860f89406b5 country image",
+              "_name": "4e4e108e-3947-4e32-b41a-3860f89406b5 country image",
+              "createdAt": "2025-06-17T17:31:28.067Z",
+              "deletedAt": null,
+              "description": "nationCoverDc",
+              "entityId": "4e4e108e-3947-4e32-b41a-3860f89406b5",
+              "entityType": "country",
+              "id": "179505a4-c4d7-4f17-a7fb-8956f1b33717",
+              "updatedAt": "2025-06-17T17:31:28.067Z",
+              "url": "https://assetbank.itf-production.sports-data.stadion.io/Nation/Cover/AUT/DC"
+            },
+            {
+              "_admin_name": "4e4e108e-3947-4e32-b41a-3860f89406b5 country image",
+              "_name": "4e4e108e-3947-4e32-b41a-3860f89406b5 country image",
+              "createdAt": "2024-12-29T15:39:42.897Z",
+              "deletedAt": null,
+              "description": "flagStandard",
+              "entityId": "4e4e108e-3947-4e32-b41a-3860f89406b5",
+              "entityType": "country",
+              "id": "50480079-4eb4-425e-bc81-e8b378f56ef0",
+              "updatedAt": "2024-12-29T15:39:42.897Z",
+              "url": "https://assetbank.itf-production.sports-data.stadion.io/Flag/Standard/AUT"
+            },
+            {
+              "_admin_name": "4e4e108e-3947-4e32-b41a-3860f89406b5 country image",
+              "_name": "4e4e108e-3947-4e32-b41a-3860f89406b5 country image",
+              "createdAt": "2025-06-17T17:31:19.018Z",
+              "deletedAt": null,
+              "description": "nationCoverBjkc",
+              "entityId": "4e4e108e-3947-4e32-b41a-3860f89406b5",
+              "entityType": "country",
+              "id": "cad85325-3c63-4e7d-b667-9c59752ce5b9",
+              "updatedAt": "2025-06-17T17:31:19.018Z",
+              "url": "https://assetbank.itf-production.sports-data.stadion.io/Nation/Cover/AUT/BJKC"
+            },
+            {
+              "_admin_name": "4e4e108e-3947-4e32-b41a-3860f89406b5 country image",
+              "_name": "4e4e108e-3947-4e32-b41a-3860f89406b5 country image",
+              "createdAt": "2024-12-29T15:39:42.547Z",
+              "deletedAt": null,
+              "description": "flagRound",
+              "entityId": "4e4e108e-3947-4e32-b41a-3860f89406b5",
+              "entityType": "country",
+              "id": "eb3767da-fae9-4b0c-bb87-69ee5099f416",
+              "updatedAt": "2024-12-29T15:39:42.547Z",
+              "url": "https://assetbank.itf-production.sports-data.stadion.io/Flag/Rounded/AUT"
+            }
+          ],
+          "name": "Austria",
+          "players": null,
+          "region": null,
+          "regionId": null,
+          "teamNominations": null,
+          "teams": null,
+          "tennisId": null,
+          "updatedAt": "2026-07-22T10:55:12.637Z"
+        },
+        "countryId": "4e4e108e-3947-4e32-b41a-3860f89406b5",
+        "createdAt": "2026-06-02T03:00:45Z",
+        "deletedAt": null,
+        "id": "ff1ccf58-0790-43c2-9900-10bc8d3ca917",
+        "name": "utc amstetten",
+        "surface": null,
+        "surfaceId": null,
+        "updatedAt": "2026-07-22T10:36:06.931Z",
+        "utcOffset": "02:00:00",
+        "venueType": null,
+        "venueTypeId": null
+      },
+      "startDate": "2026-07-19T00:00:00Z",
+      "endDate": "2026-07-26T00:00:00Z",
+      "id": "d9e22712-36e6-4676-9e4e-73996428f230",
+      "courts": {
+        "Court 1": [
+          {
+            "id": "e06a28cf-1b91-4cf3-aa34-420674cd88f8",
+            "tennisId": "W-ITF-AUT-2026-001-S-M-1-32-016-982B5B59-A3B1-4495-B2A8-23CDDCB91EF3",
+            "actualStartDate": "2026-07-21T11:22:58Z",
+            "actualEndDate": "2026-07-21T12:30:41Z",
+            "dateStartLocal": "2026-07-21",
+            "winnerSideId": "89aaef39-f0a9-4b07-8d58-a8e9c5392976",
+            "matchStatus": {
+              "_admin_name": "COMPLETE",
+              "_name": "COMPLETE",
+              "createdAt": "2024-12-18T11:00:18Z",
+              "deletedAt": null,
+              "displayName": "Complete",
+              "id": "afeb8605-4e2c-4915-a5f2-9bfe0319b7aa",
+              "name": "COMPLETE",
+              "stateType": "post",
+              "tennisId": "",
+              "updatedAt": "2026-07-22T10:56:15.38Z"
+            },
+            "sides": [
+              {
+                "id": "89aaef39-f0a9-4b07-8d58-a8e9c5392976",
+                "sideOrder": 2,
+                "sideSets": [
+                  {
+                    "setNumber": 2,
+                    "setScore": 6,
+                    "setTieBreakScore": 0
+                  },
+                  {
+                    "setNumber": 1,
+                    "setScore": 6,
+                    "setTieBreakScore": 0
+                  }
+                ],
+                "sidePlayer": [
+                  {
+                    "player": {
+                      "_name": "Teodora Kostovic",
+                      "person": {
+                        "firstName": "Teodora",
+                        "lastName": "Kostovic",
+                        "_name": "Teodora Kostovic"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "b7ffd44c-7ea3-4366-943a-3c92fdcc81f3",
+                "sideOrder": 1,
+                "sideSets": [
+                  {
+                    "setNumber": 2,
+                    "setScore": 0,
+                    "setTieBreakScore": 0
+                  },
+                  {
+                    "setNumber": 1,
+                    "setScore": 4,
+                    "setTieBreakScore": 0
+                  }
+                ],
+                "sidePlayer": [
+                  {
+                    "player": {
+                      "_name": "Arabella Koller",
+                      "person": {
+                        "firstName": "Arabella",
+                        "lastName": "Koller",
+                        "_name": "Arabella Koller"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "W100 Amstetten#2": {
+      "_name": "W100 Amstetten",
+      "tennisId": "W-ITF-AUT-2026-001",
+      "eventCategory": {
+        "_admin_name": "itf pro wtt - women's 100",
+        "_name": "itf pro wtt - women's 100",
+        "colourCode": "#FF4C62",
+        "createdAt": "2024-12-23T09:06:51Z",
+        "deletedAt": null,
+        "eventOrder": 10,
+        "id": "81501e9d-f49d-48d3-a9f0-38e6fe5c0336",
+        "images": [
+          {
+            "_admin_name": "81501e9d-f49d-48d3-a9f0-38e6fe5c0336 eventCategory image",
+            "_name": "81501e9d-f49d-48d3-a9f0-38e6fe5c0336 eventCategory image",
+            "createdAt": "2024-12-23T20:06:01.144Z",
+            "deletedAt": null,
+            "description": "logo",
+            "entityId": "81501e9d-f49d-48d3-a9f0-38e6fe5c0336",
+            "entityType": "eventCategory",
+            "id": "8db505e2-18fa-4583-aba5-7af334fc9e88",
+            "updatedAt": "2024-12-23T20:06:01.144Z",
+            "url": "https://assetbank.itf-production.sports-data.stadion.io/eventCategory/w100"
+          }
+        ],
+        "name": "itf pro wtt - women's 100",
+        "tennisId": null,
+        "type": "w100",
+        "updatedAt": "2026-06-05T03:00:35.396Z"
+      },
+      "surface": {
+        "_admin_name": "Clay",
+        "_name": "Clay",
+        "createdAt": "2024-12-29T12:14:37Z",
+        "deletedAt": null,
+        "id": "0a79473a-2681-4053-8679-206bc434ff8f",
+        "name": "Clay",
+        "tennisId": null,
+        "updatedAt": "2026-07-22T10:55:59.046Z",
+        "venueType": null
+      },
+      "venue": {
+        "_admin_name": "Utc Amstetten - Amstetten",
+        "_name": "Utc Amstetten - Amstetten",
+        "city": "Amstetten",
+        "country": {
+          "ISOcode": "AUT",
+          "_admin_name": "Austria",
+          "_name": "Austria",
+          "createdAt": "2024-12-18T10:22:44Z",
+          "deletedAt": null,
+          "id": "4e4e108e-3947-4e32-b41a-3860f89406b5",
+          "images": [
+            {
+              "_admin_name": "4e4e108e-3947-4e32-b41a-3860f89406b5 country image",
+              "_name": "4e4e108e-3947-4e32-b41a-3860f89406b5 country image",
+              "createdAt": "2025-06-17T17:31:28.067Z",
+              "deletedAt": null,
+              "description": "nationCoverDc",
+              "entityId": "4e4e108e-3947-4e32-b41a-3860f89406b5",
+              "entityType": "country",
+              "id": "179505a4-c4d7-4f17-a7fb-8956f1b33717",
+              "updatedAt": "2025-06-17T17:31:28.067Z",
+              "url": "https://assetbank.itf-production.sports-data.stadion.io/Nation/Cover/AUT/DC"
+            },
+            {
+              "_admin_name": "4e4e108e-3947-4e32-b41a-3860f89406b5 country image",
+              "_name": "4e4e108e-3947-4e32-b41a-3860f89406b5 country image",
+              "createdAt": "2024-12-29T15:39:42.897Z",
+              "deletedAt": null,
+              "description": "flagStandard",
+              "entityId": "4e4e108e-3947-4e32-b41a-3860f89406b5",
+              "entityType": "country",
+              "id": "50480079-4eb4-425e-bc81-e8b378f56ef0",
+              "updatedAt": "2024-12-29T15:39:42.897Z",
+              "url": "https://assetbank.itf-production.sports-data.stadion.io/Flag/Standard/AUT"
+            },
+            {
+              "_admin_name": "4e4e108e-3947-4e32-b41a-3860f89406b5 country image",
+              "_name": "4e4e108e-3947-4e32-b41a-3860f89406b5 country image",
+              "createdAt": "2025-06-17T17:31:19.018Z",
+              "deletedAt": null,
+              "description": "nationCoverBjkc",
+              "entityId": "4e4e108e-3947-4e32-b41a-3860f89406b5",
+              "entityType": "country",
+              "id": "cad85325-3c63-4e7d-b667-9c59752ce5b9",
+              "updatedAt": "2025-06-17T17:31:19.018Z",
+              "url": "https://assetbank.itf-production.sports-data.stadion.io/Nation/Cover/AUT/BJKC"
+            },
+            {
+              "_admin_name": "4e4e108e-3947-4e32-b41a-3860f89406b5 country image",
+              "_name": "4e4e108e-3947-4e32-b41a-3860f89406b5 country image",
+              "createdAt": "2024-12-29T15:39:42.547Z",
+              "deletedAt": null,
+              "description": "flagRound",
+              "entityId": "4e4e108e-3947-4e32-b41a-3860f89406b5",
+              "entityType": "country",
+              "id": "eb3767da-fae9-4b0c-bb87-69ee5099f416",
+              "updatedAt": "2024-12-29T15:39:42.547Z",
+              "url": "https://assetbank.itf-production.sports-data.stadion.io/Flag/Rounded/AUT"
+            }
+          ],
+          "name": "Austria",
+          "players": null,
+          "region": null,
+          "regionId": null,
+          "teamNominations": null,
+          "teams": null,
+          "tennisId": null,
+          "updatedAt": "2026-07-22T10:55:12.637Z"
+        },
+        "countryId": "4e4e108e-3947-4e32-b41a-3860f89406b5",
+        "createdAt": "2026-06-02T03:00:45Z",
+        "deletedAt": null,
+        "id": "ff1ccf58-0790-43c2-9900-10bc8d3ca917",
+        "name": "utc amstetten",
+        "surface": null,
+        "surfaceId": null,
+        "updatedAt": "2026-07-22T10:36:06.931Z",
+        "utcOffset": "02:00:00",
+        "venueType": null,
+        "venueTypeId": null
+      },
+      "startDate": "2026-07-19T00:00:00Z",
+      "endDate": "2026-07-26T00:00:00Z",
+      "id": "d9e22712-36e6-4676-9e4e-73996428f230",
+      "courts": {
+        "Court 1": [
+          {
+            "id": "3acfb1ed-32f0-458d-a8fc-d21d267dcc62",
+            "tennisId": "W-ITF-AUT-2026-001-D-M-1-16-003-9324642E-B2B6-4D4F-9242-7098BB8E2964",
+            "actualStartDate": "2026-07-21T14:14:31Z",
+            "actualEndDate": "2026-07-21T15:16:44Z",
+            "dateStartLocal": "2026-07-21",
+            "winnerSideId": "f095f50b-0f26-4813-b4bd-4c3b26a9ca34",
+            "matchStatus": {
+              "_admin_name": "COMPLETE",
+              "_name": "COMPLETE",
+              "createdAt": "2024-12-18T11:00:18Z",
+              "deletedAt": null,
+              "displayName": "Complete",
+              "id": "afeb8605-4e2c-4915-a5f2-9bfe0319b7aa",
+              "name": "COMPLETE",
+              "stateType": "post",
+              "tennisId": "",
+              "updatedAt": "2026-07-22T10:56:15.38Z"
+            },
+            "sides": [
+              {
+                "id": "7a904725-f95e-4bb7-b687-84c0c06bf6ae",
+                "sideOrder": 2,
+                "sideSets": [
+                  {
+                    "setNumber": 2,
+                    "setScore": 3,
+                    "setTieBreakScore": 0
+                  },
+                  {
+                    "setNumber": 1,
+                    "setScore": 1,
+                    "setTieBreakScore": 0
+                  }
+                ],
+                "sidePlayer": [
+                  {
+                    "player": {
+                      "_name": "Stefania Bojica",
+                      "person": {
+                        "firstName": "Stefania",
+                        "lastName": "Bojica",
+                        "_name": "Stefania Bojica"
+                      }
+                    }
+                  },
+                  {
+                    "player": {
+                      "_name": "Salma Drugdova",
+                      "person": {
+                        "firstName": "Salma",
+                        "lastName": "Drugdova",
+                        "_name": "Salma Drugdova"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "f095f50b-0f26-4813-b4bd-4c3b26a9ca34",
+                "sideOrder": 1,
+                "sideSets": [
+                  {
+                    "setNumber": 2,
+                    "setScore": 6,
+                    "setTieBreakScore": 0
+                  },
+                  {
+                    "setNumber": 1,
+                    "setScore": 6,
+                    "setTieBreakScore": 0
+                  }
+                ],
+                "sidePlayer": [
+                  {
+                    "player": {
+                      "_name": "Anastasiia Sobolieva",
+                      "person": {
+                        "firstName": "Anastasiia",
+                        "lastName": "Sobolieva",
+                        "_name": "Anastasiia Sobolieva"
+                      }
+                    }
+                  },
+                  {
+                    "player": {
+                      "_name": "Radka Zelnickova",
+                      "person": {
+                        "firstName": "Radka",
+                        "lastName": "Zelnickova",
+                        "_name": "Radka Zelnickova"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "meta": {
+    "fixture": true
+  }
+}

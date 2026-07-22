@@ -54,33 +54,59 @@ export function parseItfEventTicker(ticker: string): string | null {
   return `${series}-${dateMatch[0]}${blob}`;
 }
 
-/** Split compressed blob given the YES side code on this market. */
+/**
+ * Split compressed blob given the YES side code on this market.
+ * Ambiguous prefix∩suffix partitions hard-fail (null) — never best-guess.
+ */
 export function splitItfMatchupBlob(blob: string, yesSideCode: string): [string, string] | null {
   if (!blob || !yesSideCode) return null;
-  if (blob.startsWith(yesSideCode)) {
-    const other = blob.slice(yesSideCode.length);
-    return other ? [yesSideCode, other] : null;
+  const asPrefix = blob.startsWith(yesSideCode) ? blob.slice(yesSideCode.length) : null;
+  const asSuffix = blob.endsWith(yesSideCode) ? blob.slice(0, blob.length - yesSideCode.length) : null;
+  if (asPrefix && asSuffix) {
+    const prefixPair: [string, string] = [yesSideCode, asPrefix];
+    const suffixPair: [string, string] = [asSuffix, yesSideCode];
+    if (prefixPair[0] !== suffixPair[0] || prefixPair[1] !== suffixPair[1]) {
+      return null;
+    }
+    return asPrefix ? prefixPair : null;
   }
-  if (blob.endsWith(yesSideCode)) {
-    const other = blob.slice(0, blob.length - yesSideCode.length);
-    return other ? [other, yesSideCode] : null;
-  }
+  if (asPrefix) return asPrefix ? [yesSideCode, asPrefix] : null;
+  if (asSuffix) return asSuffix ? [asSuffix, yesSideCode] : null;
   return null;
 }
 
+/** True when blob = codeA + codeB in either order with no leftover. */
+export function itfMatchupBlobIsUnambiguous(blob: string, codeA: string, codeB: string): boolean {
+  if (!blob || !codeA || !codeB || codeA === codeB) return false;
+  const forward = codeA + codeB === blob;
+  const reverse = codeB + codeA === blob;
+  if (forward === reverse) return false; // both or neither — ambiguous / invalid
+  const splitA = splitItfMatchupBlob(blob, codeA);
+  const splitB = splitItfMatchupBlob(blob, codeB);
+  if (!splitA || !splitB) return false;
+  const parts = new Set([splitA[0], splitA[1], splitB[0], splitB[1]]);
+  return parts.size === 2 && parts.has(codeA) && parts.has(codeB);
+}
+
+/**
+ * Side codes for an event — hard-fail (null) when the matchup blob cannot be
+ * uniquely partitioned. Never return a best-guess mapping.
+ */
 export function itfSideCodesForEvent(eventTicker: string, marketTickers: string[]): [string, string] | null {
   const codes = marketTickers
     .map((t) => parseItfYesSideCode(t))
     .filter((c): c is string => Boolean(c));
   const unique = [...new Set(codes)];
   if (unique.length !== 2) return null;
-  const blob = parseItfMatchupBlob(marketTickers[0] ?? "");
+  const blob =
+    parseItfMatchupBlob(marketTickers[0] ?? "") ??
+    (() => {
+      const m = eventTicker.match(/\d{2}[A-Z]{3}\d{2}([A-Z]+)$/);
+      return m?.[1] ?? null;
+    })();
   if (!blob) return null;
   const [a, b] = unique.sort((x, y) => x.localeCompare(y));
-  const splitA = splitItfMatchupBlob(blob, a);
-  const splitB = splitItfMatchupBlob(blob, b);
-  if (splitA && splitA[0] === a && splitA[1] === b) return [a, b];
-  if (splitB && splitB[0] === b && splitB[1] === a) return [a, b];
+  if (!itfMatchupBlobIsUnambiguous(blob, a, b)) return null;
   return [a, b];
 }
 

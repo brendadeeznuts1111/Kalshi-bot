@@ -16,6 +16,10 @@ export const OFFICIAL_URLS = {
     tradeApiV2: "https://docs.kalshi.com/api-reference",
     /** Public market data (all markets, no auth). Override with KALSHI_API_BASE. */
     tradeApiV2Base: "https://external-api.kalshi.com/trade-api/v2",
+    /** Authenticated market-data WebSocket. Override with KALSHI_WS_URL. */
+    tradeApiWsV2: "wss://external-api-ws.kalshi.com/trade-api/ws/v2",
+    websocketQuickStart: "https://docs.kalshi.com/getting_started/quick_start_websockets",
+    orderbookWs: "https://docs.kalshi.com/websockets/orderbook-updates",
     orderbookGuide: "https://docs.kalshi.com/getting_started/orderbook_responses",
   },
   oddsApi: {

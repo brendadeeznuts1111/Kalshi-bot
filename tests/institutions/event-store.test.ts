@@ -72,6 +72,15 @@ describe("event-store tennis history", () => {
     const summary = summarizeEventsByTourSurfaceYear(db);
     expect(summary.some((r) => r.tour === "ATP" && r.surface === "Grass" && r.year === "2019")).toBe(true);
     expect(summary.some((r) => r.tour === "WTA" && r.surface === "Grass")).toBe(true);
+
+    // CSV compilations are research-only — never feed p_model.
+    const corpus = db.query(`SELECT DISTINCT corpus FROM events`).all() as Array<{ corpus: string }>;
+    expect(corpus).toEqual([{ corpus: "research-only" }]);
+    const prov = db
+      .query(`SELECT source_url, fetched_ts FROM events LIMIT 1`)
+      .get() as { source_url: string; fetched_ts: number };
+    expect(prov.source_url.startsWith("file://")).toBe(true);
+    expect(prov.fetched_ts).toBeGreaterThan(0);
   });
 
   test("winnerOutcomeBit maps to player_a/player_b", () => {

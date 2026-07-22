@@ -38,7 +38,7 @@ Protected paths: `research/reports/latest.md`, `research/reports/latest.diff.md`
 
 ### GitHub rate limits (preflight before live runs)
 
-Inspect uses `gh search code` — **`code_search` bucket (10/min)**, not `core`. Preflight blocks the run when quota is insufficient:
+Inspect uses `gh search code` — **`code_search` bucket (10/min)**, not `core`. Preflight blocks when the **estimate** exceeds remaining (full 10/10 still fails if uncached repos × ~21 queries ≫ 10):
 
 ```bash
 bun run rate-limit:status                              # read all buckets
@@ -46,7 +46,7 @@ bun run rate-limit:status -- --gated=49 --uncached=49  # price-data inspect esti
 bun run research -- --dimension=price-data             # fails fast if code_search too low
 ```
 
-Optional: `GITHUB_RATE_LIMIT_WAIT=1` opts into `Bun.sleep` until reset (per-bucket cap; code_search ≤2 min/pause).
+`GITHUB_RATE_LIMIT_WAIT=1` opts into multi-wave inspect (`Bun.sleep` until reset; code_search ≤2 min/pause) — use this for V5 / large dimensions instead of waiting for a “fuller” bucket.
 Tests skip preflight: `RESEARCH_SKIP_RATE_PREFLIGHT=1`.
 
 ### CLI flags
@@ -206,6 +206,14 @@ See [`docs/AUDIT_ADAPTER.md`](docs/AUDIT_ADAPTER.md) for the optional write-only
 ## Alpha programs
 
 **July 2026:** NBA is off-season — live baseline is [`alpha/pinnacle-novig-mlb/`](alpha/pinnacle-novig-mlb/) on Kalshi `KXMLBGAME` + Odds API `baseball_mlb`. NBA baseline [`alpha/pinnacle-novig-nba/`](alpha/pinnacle-novig-nba/) resumes when `KXNBAGAME` markets open (~October).
+
+**Tennis — two archetypes (not one):** tour sharp (`tennis-tour-pinnacle-novig`, Odds API / Pinnacle) vs self-model (`tennis-game-model`, Challenger/ITF, no consensus). Same institutions; different hypotheses and graduation metrics. Doctrine: [`docs/TENNIS_PROGRAM_ARCHETYPES.md`](docs/TENNIS_PROGRAM_ARCHETYPES.md).
+
+```bash
+bun run tennis:collect -- --days=3          # ITF primary results → event-store (corpus=trading)
+bun run tennis:record -- --loop --top=15    # ladder book ticks aging loop
+bun run tennis:itf -- --sort=tradable       # mid-band / underdog calendar
+```
 
 Baseline measuring stick: `role: baseline`. Template: [`.bun-create/alpha-program/`](.bun-create/alpha-program/). Engine: [`src/alpha/`](src/alpha/). Institutions: [`src/institutions/`](src/institutions/). Full doctrine: [`.cursor/skills/plan/SKILL.md`](.cursor/skills/plan/SKILL.md).
 

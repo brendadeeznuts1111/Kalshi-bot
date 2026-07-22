@@ -7,8 +7,10 @@ import {
   isFixtureRun,
   isProductionRunId,
   isEligibleProductionRun,
+  looksLikeSyntheticFixtureRun,
   listRunSummaries,
   loadLatestProductionRunAnyDimension,
+  purgeIneligibleRuns,
   resetCacheDbConnection,
   saveRun,
   loadRunFromDb,
@@ -410,6 +412,133 @@ describe("withCache + runs", () => {
     expect(loaded?.kind).toBe("fixture");
     expect(isFixtureRun(loaded!)).toBe(true);
     expect(loadLatestProductionRunAnyDimension()?.runId).not.toBe(id);
+  });
+
+  test("saveRun forces fixture for unmarked production-shaped synthetic shortlist", () => {
+    const at = freshTestGeneratedAt();
+    const synthId = mintTestProductionRunId();
+    const realId = mintTestProductionRunId(Date.now() - 1_000);
+    const syntheticRepo = {
+      fullName: "OctagonAI/kalshi-trading-bot-cli",
+      owner: "OctagonAI",
+      name: "kalshi-trading-bot-cli",
+      htmlUrl: "https://github.com/OctagonAI/kalshi-trading-bot-cli",
+      description: "test",
+      stars: 100,
+      forks: 10,
+      pushedAt: at,
+      archived: false,
+      topics: [] as string[],
+      defaultBranch: "main",
+      license: { spdxId: "MIT", name: "MIT", preferred: true, unlicensed: false },
+    };
+    const scored = [
+      {
+        repo: syntheticRepo,
+        signals: {
+          readmeLength: 1,
+          hasSetupSection: false,
+          hasStrategySection: false,
+          authHits: [],
+          orderHits: [],
+          usesOfficialSdk: false,
+          hasAuthInCode: false,
+          hasV2Api: false,
+          hasRsaPss: false,
+          hasLiveOrderPath: false,
+          hasDryRunDefault: false,
+          hasAuthFreshness: false,
+          hasCentsPriceBounds: false,
+          hasFeeAware: false,
+          feeAwareKeywordHits: [],
+          hasTests: false,
+          hasCi: false,
+          languages: {},
+          primaryLanguage: null,
+          lastDefaultBranchCommitAt: null,
+          strategyTags: [],
+          isSdkOnly: false,
+          riskKeywordHits: [],
+        },
+        score: {
+          authApi: 0,
+          orderRealism: 0,
+          testsCi: 0,
+          docsSetup: 0,
+          maintenance: 0,
+          riskControls: 0,
+          licenseModifier: 0,
+          total: 0,
+        },
+        stackRank: 1,
+      },
+    ];
+    const base = {
+      config: { shortlistSize: 12, gate: { minStars: 5, minForks: 3, maxAgeMonths: 18 } },
+      stats: { discovered: 1, gated: 1, inspected: 1, shortlist: 1 },
+      candidates: [] as never[],
+      gated: [] as never[],
+      excludedSdkOnly: [] as never[],
+    };
+
+    // Unmarked + forged kind:production — still fixture (cache pollution path).
+    saveRun(synthId, at, {
+      ...base,
+      runId: synthId,
+      generatedAt: at,
+      kind: "production" as const,
+      dimension: "market-making",
+      scored,
+      shortlist: scored,
+    });
+    const synthetic = loadRunFromDb(synthId)!;
+    expect(looksLikeSyntheticFixtureRun(synthetic)).toBe(true);
+    expect(synthetic.kind).toBe("fixture");
+    expect(synthetic.source).toBe("test");
+    expect(isEligibleProductionRun(synthetic)).toBe(false);
+    expect(isFixtureRun(synthetic)).toBe(true);
+    expect(loadLatestRunFromDb({ dimension: "market-making" })?.runId).not.toBe(synthId);
+
+    saveRun(realId, at, {
+      ...base,
+      runId: realId,
+      generatedAt: at,
+      kind: "production",
+      source: "pipeline",
+      dimension: "market-making",
+      scored: [
+        {
+          ...scored[0]!,
+          repo: {
+            ...syntheticRepo,
+            fullName: "rodlaf/KalshiMarketMaker",
+            owner: "rodlaf",
+            name: "KalshiMarketMaker",
+            htmlUrl: "https://github.com/rodlaf/KalshiMarketMaker",
+            description: "Kalshi market maker",
+            stars: 67,
+          },
+        },
+      ],
+      shortlist: [
+        {
+          ...scored[0]!,
+          repo: {
+            ...syntheticRepo,
+            fullName: "rodlaf/KalshiMarketMaker",
+            owner: "rodlaf",
+            name: "KalshiMarketMaker",
+            htmlUrl: "https://github.com/rodlaf/KalshiMarketMaker",
+            description: "Kalshi market maker",
+            stars: 67,
+          },
+        },
+      ],
+    });
+    expect(loadLatestRunFromDb({ dimension: "market-making" })?.runId).toBe(realId);
+    expect(purgeIneligibleRuns()).toContain(synthId);
+    expect(loadRunFromDb(synthId)).toBeNull();
+    expect(loadLatestRunFromDb({ dimension: "market-making" })?.runId).toBe(realId);
   });
 
   test("saveRun stamps fixture kind and excludes from latest resolution", () => {

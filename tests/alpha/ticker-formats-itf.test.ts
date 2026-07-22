@@ -7,6 +7,7 @@ import {
   parseItfYesSideCode,
   splitItfMatchupBlob,
   itfSideCodesForEvent,
+  itfMatchupBlobIsUnambiguous,
 } from "../../src/alpha/ticker-formats/itf.ts";
 
 describe("ticker-formats/itf", () => {
@@ -34,5 +35,18 @@ describe("ticker-formats/itf", () => {
     const a = "KXITFDOUBLES-26JUL22JOHSTRBATSCH-JOHSTR";
     expect(parseItfMatchupBlob(a)).toBe("JOHSTRBATSCH");
     expect(splitItfMatchupBlob("JOHSTRBATSCH", "JOHSTR")).toEqual(["JOHSTR", "BATSCH"]);
+  });
+
+  test("hard-fails ambiguous prefix/suffix partitions", () => {
+    // FOO is both prefix and suffix with different remainders
+    expect(splitItfMatchupBlob("FOOBARFOO", "FOO")).toBeNull();
+    expect(itfMatchupBlobIsUnambiguous("ZAKBAK", "ZAK", "BAK")).toBe(true);
+    expect(itfMatchupBlobIsUnambiguous("AAAAAA", "AAA", "AAA")).toBe(false);
+    // codes that do not concatenate to the blob
+    expect(itfMatchupBlobIsUnambiguous("SANALV", "SAN", "XYZ")).toBe(false);
+    const badA = "KXITFMATCH-26JUL22FOOBARFOO-FOO";
+    const badB = "KXITFMATCH-26JUL22FOOBARFOO-BARFOO";
+    // BARFOO + FOO would need to be validated — if sides don't uniquely partition, null
+    expect(itfSideCodesForEvent("KXITFMATCH-26JUL22FOOBARFOO", [badA, badB])).toBeNull();
   });
 });

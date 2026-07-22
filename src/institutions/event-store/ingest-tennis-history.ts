@@ -6,15 +6,20 @@ import type { IngestSummary, TennisHistoryMatch } from "./types.ts";
 
 type InsertEventResult = "inserted" | "skipped";
 
+/** Third-party CSV compilations — never feed p_model / trading graduation. */
+const RESEARCH_CORPUS = "research-only";
+
 function insertEvent(db: Database, match: TennisHistoryMatch, ingestedAt: number): InsertEventResult {
   const result = db
     .query(
       `INSERT OR IGNORE INTO events (
         event_id, tour, level, tournament, location, surface, court, round, best_of,
-        player_a, player_b, winner, loser, start_ts, outcome, source, source_row_hash, ingested_at
+        player_a, player_b, winner, loser, start_ts, outcome, source, source_url, fetched_ts,
+        source_row_hash, ingested_at, corpus
       ) VALUES (
         $event_id, $tour, $level, $tournament, $location, $surface, $court, $round, $best_of,
-        $player_a, $player_b, $winner, $loser, $start_ts, $outcome, $source, $source_row_hash, $ingested_at
+        $player_a, $player_b, $winner, $loser, $start_ts, $outcome, $source, $source_url, $fetched_ts,
+        $source_row_hash, $ingested_at, $corpus
       )`,
     )
     .run({
@@ -34,8 +39,11 @@ function insertEvent(db: Database, match: TennisHistoryMatch, ingestedAt: number
       $start_ts: match.startTs,
       $outcome: match.outcome,
       $source: TENNIS_DATA_SOURCE,
+      $source_url: `file://${match.sourceFile}#row=${match.sourceRow}`,
+      $fetched_ts: ingestedAt,
       $source_row_hash: match.sourceRowHash,
       $ingested_at: ingestedAt,
+      $corpus: RESEARCH_CORPUS,
     });
   return result.changes > 0 ? "inserted" : "skipped";
 }
@@ -51,8 +59,10 @@ function insertOddsTick(
   const implied = impliedProbFromDecimal(decimalOdds);
   const result = db
     .query(
-      `INSERT INTO odds_ticks (event_id, source, ts, side, decimal_odds, implied_prob, limit_context)
-       SELECT $event_id, $source, $ts, $side, $decimal_odds, $implied_prob, 'closing'
+      `INSERT INTO odds_ticks (
+         event_id, source, source_url, fetched_ts, corpus, ts, side, decimal_odds, implied_prob, limit_context
+       )
+       SELECT $event_id, $source, $source_url, $fetched_ts, $corpus, $ts, $side, $decimal_odds, $implied_prob, 'closing'
        WHERE NOT EXISTS (
          SELECT 1 FROM odds_ticks
          WHERE event_id = $event_id AND source = $source AND side = $side AND ts = $ts
@@ -61,6 +71,9 @@ function insertOddsTick(
     .run({
       $event_id: eventId,
       $source: source,
+      $source_url: "",
+      $fetched_ts: ts,
+      $corpus: RESEARCH_CORPUS,
       $ts: ts,
       $side: side,
       $decimal_odds: decimalOdds,
@@ -73,14 +86,20 @@ function insertResolution(db: Database, match: TennisHistoryMatch): boolean {
   const outcome = winnerOutcomeBit(match.winner, match.playerA, match.playerB);
   const result = db
     .query(
-      `INSERT OR IGNORE INTO resolutions (event_id, outcome, winner, source, resolved_ts)
-       VALUES ($event_id, $outcome, $winner, $source, $resolved_ts)`,
+      `INSERT OR IGNORE INTO resolutions (
+         event_id, outcome, winner, source, source_url, fetched_ts, corpus, resolved_ts
+       ) VALUES (
+         $event_id, $outcome, $winner, $source, $source_url, $fetched_ts, $corpus, $resolved_ts
+       )`,
     )
     .run({
       $event_id: match.eventId,
       $outcome: outcome,
       $winner: match.winner,
       $source: TENNIS_DATA_SOURCE,
+      $source_url: `file://${match.sourceFile}#row=${match.sourceRow}`,
+      $fetched_ts: Date.now(),
+      $corpus: RESEARCH_CORPUS,
       $resolved_ts: match.startTs,
     });
   return result.changes > 0;

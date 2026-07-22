@@ -24,8 +24,8 @@ function mockRun(): ResearchRun {
       owner: "OctagonAI",
       name: "kalshi-trading-bot-cli",
       htmlUrl: "https://github.com/OctagonAI/kalshi-trading-bot-cli",
-      description: "test",
-      stars: 100,
+      description: "Kalshi trading bot CLI",
+      stars: 42,
       forks: 10,
       pushedAt: new Date().toISOString(),
       archived: false,
@@ -188,6 +188,8 @@ describe("agent cli", () => {
       const at = freshTestGeneratedAt();
       run.runId = mintTestProductionRunId();
       run.generatedAt = at;
+      run.kind = "production";
+      run.source = "pipeline";
       run.dimension = "market-making";
       run.shortlist = run.scored;
       saveRun(run.runId, at, run);

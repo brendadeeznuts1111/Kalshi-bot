@@ -32,6 +32,8 @@ feeCents = ceil(rate × contracts × P × (1 − P) × 100)
 
 Set `ODDS_API_KEY` in env for live fetches.
 
+**Tennis coverage:** named ATP/WTA tournaments only — no Challenger/ITF sport keys. That boundary defines the two tennis program archetypes — see [`TENNIS_PROGRAM_ARCHETYPES.md`](TENNIS_PROGRAM_ARCHETYPES.md).
+
 ## Bun (runtime)
 
 | Resource | URL |

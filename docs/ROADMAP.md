@@ -22,15 +22,16 @@ Success is a **green live run** on `market-making`, audit export, pattern report
 | **Discover vs apply gate** | broad discover, strict apply for gate-miss proofs | **done** | `tests/discover-gate.test.ts` |
 | **Evidence dual-hash** | `digest` + `contentDigest` on zstd NDJSON | **done** | [`AUDIT_ADAPTER.md`](AUDIT_ADAPTER.md) |
 | **Agent CLI (no dashboard)** | status / patterns / blueprint / report over `cache.db` | **done** | [`AGENT.md`](AGENT.md) |
-| **V5 — Live MM happy path** | Full `market-making` run with inspect when quota allows | **blocked** | `code_search` — wait for reset |
+| **V5 — Live MM happy path** | Full `market-making` run with inspect when quota allows | **blocked** | `code_search` multi-wave (see blockers) |
 | **4 — Bot scaffold** | Composite repo layout from lift + patterns (no live orders) | **planned** | after V5 green run |
 
 ## Current blockers
 
 | Blocker | Impact | Unblock |
 |---------|--------|---------|
-| **`code_search` quota** | Live inspect runs fail or degrade | Wait for reset; `bun run rate-limit:status` |
-| **No CI workflow** | Regressions only caught if pre-commit installed | `bun run hooks:install` locally |
+| **`code_search` economics** | One-shot inspect blocked even when bucket is full (10/10): ~21 queries/repo × N uncached ≫ 10/min | `GITHUB_RATE_LIMIT_WAIT=1` (multi-wave), tighter `--min-stars`, or warm real `inspect_cache`; `bun run rate-limit:status` |
+| **Agent vs report SSOT** | Polluted `cache.db` can make `agent ground` disagree with committed `latest-*.md` | Synthetic shortlists (`description:"test"` + 100★) are fixtures; `purgeIneligibleRuns({ purgeTestInspect: true })` after test leaks |
+| **CI** | Remote PRs need the same gate as local pre-commit | `.github/workflows/check.yml` runs `bun run check`; local: `bun run hooks:install` |
 
 ## Daily operator loop
 
@@ -72,6 +73,7 @@ bun run serve
 | Doc | Role |
 |-----|------|
 | [`ROADMAP.md`](ROADMAP.md) | This file — phases, blockers, proof gates |
+| [`TENNIS_PROGRAM_ARCHETYPES.md`](TENNIS_PROGRAM_ARCHETYPES.md) | Tour sharp vs Challenger/ITF self-model; provenance; ladder recorder |
 | [`PLAN.md`](PLAN.md) | As-built pipeline architecture |
 | [`AGENT.md`](AGENT.md) | CLI over cache.db |
 | [`MISS_TAXONOMY.md`](MISS_TAXONOMY.md) | Miss types + lane ownership |

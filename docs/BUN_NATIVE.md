@@ -37,7 +37,10 @@ Deep dive: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns)
 | Audit digests | `Bun.CryptoHasher("sha3-256")` | [`audit-adapter.ts`](../src/research/audit-adapter.ts), [`export-audit.ts`](../src/research/export-audit.ts) |
 | GitHub URL SSOT | `BunURLPattern` + `URLPattern` ([v1.3.4+](https://bun.com/blog/bun-v1.3.4#urlpattern-api)) | [`patterns.ts`](../src/research/patterns.ts) |
 | Report browser | `Bun.serve` routes + `Bun.file` | [`serve.ts`](../src/research/serve.ts), [`views.ts`](../src/research/views.ts) |
-| Agent CLI | status / patterns / blueprint over `cache.db` | [`cli.ts`](../src/agent/cli.ts), [`docs/AGENT.md`](../docs/AGENT.md) |
+| Agent CLI | status / patterns / blueprint / tennis over `cache.db` + event-store | [`cli.ts`](../src/agent/cli.ts), [`docs/AGENT.md`](../docs/AGENT.md) |
+| Kalshi live poll | `dns.prefetch` + `fetch.preconnect` + `mapPool` + `Bun.nanoseconds` | [`kalshi-network.ts`](../src/bot/kalshi-network.ts), [`live-scores.ts`](../src/institutions/event-store/live-scores.ts) |
+| Tennis canary artifacts | `Bun.write` + `Bun.hash` under `research/cache/tennis-canary/` | [`live-canary-store.ts`](../src/institutions/event-store/live-canary-store.ts) |
+| Cadence / scoreboard tables | `Bun.inspect.table` | [`terminal-out.ts`](../src/research/terminal-out.ts), tennis CLI + `agent tennis` |
 | Terminal reports | `Bun.markdown.ansi` + `Bun.wrapAnsi` | [`report-term.ts`](../src/agent/report-term.ts) |
 | TTY tables + OSC 8 links | `Bun.inspect.table` + `Bun.stringWidth` / `wrapAnsi` / `stripANSI` | [`terminal-out.ts`](../src/research/terminal-out.ts) |
 | Phase timings | `Bun.nanoseconds` | [`phase-timing.ts`](../src/research/phase-timing.ts) |

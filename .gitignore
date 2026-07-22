@@ -1,6 +1,7 @@
 # Dependencies & tooling
 node_modules/
 .bun-cache/
+.cache/
 coverage/
 .DS_Store
 

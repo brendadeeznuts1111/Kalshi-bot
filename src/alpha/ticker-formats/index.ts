@@ -43,6 +43,7 @@ export {
   parseItfSeriesPrefix,
   parseItfYesSideCode,
   splitItfMatchupBlob,
+  itfMatchupBlobIsUnambiguous,
 } from "./itf.ts";
 
 export function detectTickerFormat(ticker: string): TickerSportFormat {

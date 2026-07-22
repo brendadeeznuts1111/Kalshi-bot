@@ -9,6 +9,7 @@ Each command is a focused **sub-agent** grounded in local evidence (`cache.db`, 
 | Sub-agent | Command | Grounding |
 |-----------|---------|-----------|
 | **ground** | `agent ground` | Orchestrates status + cache readiness + miss taxonomy + next actions (cache-only). Coverage: exact → qualifier-normalized → bare phrase. `saveRun` stamps discoverGate (miss queries → else resolveDiscoverGate); unstamped rows also inferred at read time. `pushed:` cutoffs are UTC-month-floored. Partial coverage lists cold queries. |
+| **tennis** | `agent tennis` | Event-store + live canary artifact + score_snapshots cadence triage (default cache-only; `--canary` hits Kalshi dry-run). Next actions for promote / WS cue. |
 | **status** | `agent status` | Newest eligible production run |
 | **patterns** | `agent patterns` | Detector evidence paths from a cached run |
 | **blueprint** | `agent blueprint` | Bun stack / lift from cached runs + pattern reports |
@@ -27,6 +28,8 @@ bun run agent ground --json --dimension=sports-nba
 
 ```bash
 bun run agent ground                    # discovery-grounded triage (sub-agents)
+bun run agent tennis                    # event-store + canary artifact + cadence (no network)
+bun run agent tennis --canary           # live dry-run canary then ground
 bun run agent status                    # newest production run (any dimension)
 bun run agent run-research              # spawn research locally (audit export on by default)
 bun run agent patterns                  # static pattern report from evidence paths
@@ -48,6 +51,23 @@ bun run agent blueprint --json --no-write
 ```
 
 A leading `--` before flags is tolerated for muscle memory (`agent status -- --dimension=x`) but prefer the forms above.
+
+## `tennis`
+
+Event-store grounded triage for the ITF live / record control plane (sibling of `ground`):
+
+1. **store** — events / markets / live_scores / score_snapshots / book_ticks / watch size
+2. **canary** — latest `research/cache/tennis-canary/latest.json` (from `tennis:live:canary` or `agent tennis --canary`)
+3. **cadence** — `analyzeScoreSnapshotCadence` (REST ok/borderline/miss vs `TENNIS_LIVE_INTERVAL_MS`)
+4. **next actions** — sync, promote loop, canary register, record --watch
+
+Default is zero network. `--canary` runs the full dry-run smoke first (Bun-native parallel fetch, write-boundary plan, artifact with `Bun.hash` fingerprint).
+
+```bash
+bun run agent tennis
+bun run agent tennis --canary
+bun run agent tennis --json
+```
 
 ## `ground`
 

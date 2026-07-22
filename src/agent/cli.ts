@@ -28,6 +28,8 @@ import {
   runArchitectureBlueprint,
 } from "./architecture-blueprint.ts";
 import { formatDiscoveryGround, runDiscoveryGround } from "./discovery-ground.ts";
+import { formatTennisGround, runTennisGround } from "./tennis-ground.ts";
+import { runLiveScoresCli } from "../../tools/tennis/live-scores-cli.ts";
 
 export type AgentCommand =
   | "status"
@@ -35,7 +37,8 @@ export type AgentCommand =
   | "patterns"
   | "report"
   | "blueprint"
-  | "ground";
+  | "ground"
+  | "tennis";
 
 /**
  * Drop bare `--` tokens so both `agent status -- --dimension=x` and
@@ -61,11 +64,38 @@ export function parseAgentCommand(argv: string[]): {
     command === "patterns" ||
     command === "report" ||
     command === "blueprint" ||
-    command === "ground"
+    command === "ground" ||
+    command === "tennis"
   ) {
     return { command, rest: stripBareDoubleDashes(rest) };
   }
   return { command: null, rest: argv };
+}
+
+/** Cache-only tennis ground; optional live canary via --canary. */
+export async function runAgentTennis(
+  json: boolean,
+  options?: { canary?: boolean; db?: string },
+): Promise<number> {
+  if (options?.canary) {
+    // Live dry-run smoke first (writes canary artifact under research/cache/tennis-canary/).
+    const code = await runLiveScoresCli(["--canary", ...(options.db ? [`--db=${options.db}`] : [])]);
+    if (code !== 0 && json) {
+      // Still emit ground so agent mesh can triage without a second process.
+      const report = await runTennisGround({ dbPath: options.db });
+      console.log(JSON.stringify({ ok: false, canaryExit: code, ground: report }, null, 2));
+      return code;
+    }
+    if (code !== 0) return code;
+  }
+
+  const report = await runTennisGround({ dbPath: options?.db });
+  if (json) {
+    console.log(JSON.stringify({ ok: true, ...report }, null, 2));
+  } else {
+    console.log(formatTennisGround(report));
+  }
+  return report.canary?.exitCode === 2 ? 2 : 0;
 }
 
 function stringOpt(value: string | boolean | undefined): string | undefined {
@@ -256,6 +286,7 @@ export function printAgentHelp(): void {
 
 Usage:
   bun run agent ground [--json] [--dimension <id>]   # discovery-grounded triage
+  bun run agent tennis [--json] [--canary] [--db path]  # event-store + live canary ground
   bun run agent status [--json] [--dimension <id>]
   bun run agent run-research [--json] [--in-process] [--dimension <id>] [--no-export-audit]
   bun run agent patterns [--json] [--run <run-id>] [--dimension <id>] [--repo <owner/name>] [--no-write] [--open]
@@ -264,14 +295,19 @@ Usage:
 
 Flags go on the subcommand (no inner \`--\` needed):
   bun run agent ground --dimension=market-making
+  bun run agent tennis --canary
   bun run agent status --dimension=market-making
   bun run agent run-research --dimension=price-data --no-export-audit
 
 Environment:
   REPO_CLONE_ROOT   Local clone root for patterns --open (owner/repo subdirs)
+  TENNIS_LIVE_CONCURRENCY  Parallel live_data fetches (default 4)
+  TENNIS_LIVE_INTERVAL_MS  Poll interval for loop + cadence (default 10000)
 
 Examples:
   bun run agent ground
+  bun run agent tennis
+  bun run agent tennis --canary
   bun run agent status
   bun run agent patterns --dimension=market-making
   bun run agent report
@@ -300,6 +336,8 @@ export async function main(argv = Bun.argv.slice(2)): Promise<number> {
       repo: { type: "string" },
       "no-write": { type: "boolean", default: false },
       open: { type: "boolean", default: false },
+      canary: { type: "boolean", default: false },
+      db: { type: "string" },
       help: { type: "boolean", default: false },
     },
     strict: false,
@@ -322,6 +360,11 @@ export async function main(argv = Bun.argv.slice(2)): Promise<number> {
       return runAgentStatus(json, dimension);
     case "ground":
       return runAgentGround(json, dimension);
+    case "tennis":
+      return runAgentTennis(json, {
+        canary: values.canary === true,
+        db: stringOpt(values.db),
+      });
     case "run-research":
       return runAgentResearch(json, {
         dimension,

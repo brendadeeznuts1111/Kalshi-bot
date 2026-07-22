@@ -14,8 +14,15 @@ export type KalshiMarketWire = {
   yes_sub_title?: string;
   no_sub_title?: string;
   volume_fp?: string;
+  /** Trailing 24h contract volume — capacity/flow, not lifetime vanity. */
+  volume_24h_fp?: string;
+  open_interest_fp?: string;
   yes_bid_dollars?: string;
   yes_ask_dollars?: string;
+  /** Resting size at best YES bid (contracts). */
+  yes_bid_size_fp?: string;
+  /** Resting size at best YES ask (contracts). */
+  yes_ask_size_fp?: string;
   occurrence_datetime?: string;
   expected_expiration_time?: string;
   rules_primary?: string;
@@ -70,8 +77,12 @@ export function parseKalshiMarketWire(raw: unknown): KalshiMarketWire | null {
     yes_sub_title: typeof raw.yes_sub_title === "string" ? raw.yes_sub_title : undefined,
     no_sub_title: typeof raw.no_sub_title === "string" ? raw.no_sub_title : undefined,
     volume_fp: typeof raw.volume_fp === "string" ? raw.volume_fp : undefined,
+    volume_24h_fp: typeof raw.volume_24h_fp === "string" ? raw.volume_24h_fp : undefined,
+    open_interest_fp: typeof raw.open_interest_fp === "string" ? raw.open_interest_fp : undefined,
     yes_bid_dollars: typeof raw.yes_bid_dollars === "string" ? raw.yes_bid_dollars : undefined,
     yes_ask_dollars: typeof raw.yes_ask_dollars === "string" ? raw.yes_ask_dollars : undefined,
+    yes_bid_size_fp: typeof raw.yes_bid_size_fp === "string" ? raw.yes_bid_size_fp : undefined,
+    yes_ask_size_fp: typeof raw.yes_ask_size_fp === "string" ? raw.yes_ask_size_fp : undefined,
     occurrence_datetime:
       typeof raw.occurrence_datetime === "string" ? raw.occurrence_datetime : undefined,
     expected_expiration_time:
@@ -86,14 +97,24 @@ export function parseKalshiMarketWire(raw: unknown): KalshiMarketWire | null {
   };
 }
 
+export type KalshiMarketsQuery = {
+  series_ticker?: string;
+  status?: string;
+  limit?: number;
+  cursor?: string;
+  event_ticker?: string;
+  /** Unix seconds — closed markets closed at/after this time. */
+  min_close_ts?: number;
+  /** Unix seconds — closed markets closed at/before this time. */
+  max_close_ts?: number;
+  /** Unix seconds — settled markets settled at/after this time. */
+  min_settled_ts?: number;
+  /** Unix seconds — settled markets settled at/before this time. */
+  max_settled_ts?: number;
+};
+
 export async function fetchKalshiMarketsPage(
-  params: {
-    series_ticker?: string;
-    status?: string;
-    limit?: number;
-    cursor?: string;
-    event_ticker?: string;
-  },
+  params: KalshiMarketsQuery,
   options: { baseUrl?: string; fetchImpl?: KalshiFetchImpl } = {},
 ): Promise<KalshiMarketsPage> {
   const fetchImpl = options.fetchImpl ?? fetch;
@@ -102,6 +123,10 @@ export async function fetchKalshiMarketsPage(
   if (params.series_ticker) q.set("series_ticker", params.series_ticker);
   if (params.status) q.set("status", params.status);
   if (params.event_ticker) q.set("event_ticker", params.event_ticker);
+  if (params.min_close_ts != null) q.set("min_close_ts", String(params.min_close_ts));
+  if (params.max_close_ts != null) q.set("max_close_ts", String(params.max_close_ts));
+  if (params.min_settled_ts != null) q.set("min_settled_ts", String(params.min_settled_ts));
+  if (params.max_settled_ts != null) q.set("max_settled_ts", String(params.max_settled_ts));
   q.set("limit", String(params.limit ?? 200));
   if (params.cursor) q.set("cursor", params.cursor);
   const res = await fetchImpl(`${base}/markets?${q}`, { headers: { Accept: "application/json" } });

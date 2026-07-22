@@ -1,0 +1,19 @@
+{
+  "name": "tennis-game-model",
+  "dimension": "sports-other",
+  "status": "shadow",
+  "role": "alpha",
+  "baseline": "none",
+  "created": "2026-07-22",
+  "shadowLog": "shadow-log.jsonl",
+  "hypothesisFile": "hypothesis.md",
+  "gates": {
+    "shadowMinSignals": 400,
+    "shadowMinWeeks": 2,
+    "pilotMaxContracts": 5,
+    "killBrierDriftPct": 12,
+    "graduationMinRealizedEdgeCentsPerFill": 2,
+    "graduationMinFills": 80,
+    "graduationMinDistinctEvents": 80
+  }
+}
