@@ -6,15 +6,19 @@ import { resolveAuditExportTier } from "../research/audit-adapter.ts";
 import { buildRepoReport } from "../research/evidence.ts";
 import { shortlistTagCoverage } from "../research/diversify.ts";
 import { escapeHtml, renderScoredTable, STYLES } from "../research/views.ts";
+import { type GateMissStats } from "../research/gate-miss.ts";
 import { DEFAULT_MAX_PER_TAG, MAX_QUALITY_SCORE } from "../research/constants.ts";
 import { localRepoPath, ROUTES } from "../research/patterns.ts";
 import { pulseLogPath, readPulseLog, pulseLogExists, resolveRotorRoot } from "./pulse-log.ts";
+import { loadLatestDashboardScreenshot, renderAuditEvidenceSection, auditEvidenceClientScript } from "./dashboard-screenshot.ts";
 
 export const DASHBOARD_ROUTES = {
   home: "/",
   status: "/api/status",
   runResearch: "/api/research/run",
   pulse: "/api/pulse",
+  screenshot: "/api/screenshot",
+  evidencePrefix: "/evidence/",
 } as const;
 
 const DASHBOARD_STYLES = `
@@ -33,6 +37,15 @@ const DASHBOARD_STYLES = `
   .hv-watchlist { color: #9a6700; font-weight: 600; }
   .hv-no { color: #656d76; }
   iframe.report { width: 100%; height: 28rem; border: 1px solid #ddd; border-radius: 6px; background: #fff; }
+  .audit-evidence { display: flex; flex-wrap: wrap; gap: 1.25rem; align-items: flex-start; margin: 0.75rem 0; }
+  .audit-evidence img { max-width: 320px; border: 1px solid #ddd; border-radius: 6px; background: #f6f8fa; }
+  .audit-meta { margin: 0; flex: 1; min-width: 16rem; }
+  .audit-meta dt { font-weight: 600; margin-top: 0.5rem; color: #656d76; font-size: 0.85rem; }
+  .audit-meta dd { margin: 0.15rem 0 0; word-break: break-all; }
+  .audit-hint { color: #656d76; font-size: 0.9rem; }
+  .gate-miss { background: #fff8c5; border: 1px solid #d4a72c; border-radius: 6px; padding: 0.75rem 1rem; margin: 0.75rem 0; }
+  .gate-miss ol { margin: 0.5rem 0 0; padding-left: 1.25rem; }
+  .gate-miss pre { background: #f6f8fa; padding: 0.5rem; border-radius: 4px; overflow-x: auto; }
 `;
 
 function navLinks(): string {
@@ -70,6 +83,31 @@ function renderPulseTable(ticks: PulseTick[], logExists: boolean): string {
     <thead><tr><th>Time (UTC)</th><th>Status</th><th>Findings</th><th>Concepts</th><th>Elapsed</th><th>Errors</th></tr></thead>
     <tbody>${rows}</tbody>
   </table>`;
+}
+
+function renderGateMissSection(gateMiss: GateMissStats, gate: ResearchRun["config"]["gate"]): string {
+  const nearMissItems = gateMiss.nearMisses
+    .map(
+      (nm, i) =>
+        `<li><strong>${escapeHtml(nm.fullName)}</strong> — ${escapeHtml(nm.summary)} ` +
+        `(${nm.stars}★ · ${nm.forks} forks · pushed ${escapeHtml(nm.pushedLabel)})</li>`,
+    )
+    .join("\n");
+
+  const probeBlock = gateMiss.retryCommand
+    ? `<p><strong>Suggested probe</strong></p><pre><code>${escapeHtml(gateMiss.retryCommand)}</code></pre>`
+    : gateMiss.retryHint
+      ? `<p><em>${escapeHtml(gateMiss.retryHint)}</em></p>`
+      : "";
+
+  return `<div class="gate-miss" id="gate-miss-panel">
+    <h2>Gate miss</h2>
+    <p>Discovered <strong>${gateMiss.rejected}</strong> repo(s); <strong>0</strong> passed gate ` +
+    `(min-stars=${gate.minStars}, min-forks=${gate.minForks}, max-age-months=${gate.maxAgeMonths}).</p>
+    ${nearMissItems ? `<h3>Near misses</h3><ol>${nearMissItems}</ol>` : ""}
+    ${probeBlock}
+    <p class="audit-hint">Capture screenshot evidence: POST ${DASHBOARD_ROUTES.screenshot}</p>
+  </div>`;
 }
 
 function renderShortlistWithAudit(run: ResearchRun): string {
@@ -130,14 +168,18 @@ export function renderAgentDashboardMeta(run: ResearchRun): string {
   return `<script type="application/json" id="agent-dashboard-meta">${JSON.stringify(payload)}</script>`;
 }
 
-export function renderDashboardPage(
+export async function renderDashboardPage(
   run: ResearchRun | null,
   runs: RunSummary[],
   diffMd: string | null,
   state: DashboardState,
   pulseTicks: PulseTick[],
   pulseLogPresent: boolean,
-): string {
+  auditEvidence: Awaited<ReturnType<typeof loadLatestDashboardScreenshot>> = null,
+): Promise<string> {
+  if (!auditEvidence) {
+    auditEvidence = await loadLatestDashboardScreenshot();
+  }
   if (!run) {
     const body = `${navLinks()}
       <h1>Kalshi Agent Dashboard</h1>
@@ -149,7 +191,9 @@ export function renderDashboardPage(
       <p>No research runs yet. Click <strong>Run research</strong> or run <code>bun run research</code>.</p>
       <h2>Rotor pulse</h2>
       ${renderPulseTable(pulseTicks, pulseLogPresent)}
-      ${dashboardClientScript(state.phase === "running-research")}`;
+      ${dashboardClientScript(state.phase === "running-research")}
+      ${renderAuditEvidenceSection(auditEvidence)}
+      ${auditEvidenceClientScript()}`;
     return dashboardLayout("Kalshi Agent Dashboard", body);
   }
 
@@ -179,6 +223,7 @@ export function renderDashboardPage(
     <div class="stat"><strong>${run.stats.inspected}</strong> inspected</div>
     <div class="stat"><strong>${run.stats.shortlist}</strong> shortlisted</div>
   </div>
+  ${run.gateMiss ? renderGateMissSection(run.gateMiss, run.config.gate) : ""}
   <h2>Shortlist (${run.shortlist.length})</h2>
   ${renderShortlistWithAudit(run)}
   <h2>Tag coverage</h2>
@@ -193,7 +238,9 @@ export function renderDashboardPage(
   <h2>Rotor pulse</h2>
   ${renderPulseTable(pulseTicks, pulseLogPresent)}
   ${renderAgentDashboardMeta(run)}
-  ${dashboardClientScript(state.phase === "running-research")}`;
+  ${renderAuditEvidenceSection(auditEvidence)}
+  ${dashboardClientScript(state.phase === "running-research")}
+  ${auditEvidenceClientScript()}`;
 
   return dashboardLayout("Kalshi Agent Dashboard", body);
 }

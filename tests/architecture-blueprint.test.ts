@@ -89,6 +89,7 @@ describe("architecture blueprint", () => {
             { feature: "bun-websocket", localFiles: [] },
           ],
           notes: [],
+          dataFreshness: null,
         },
       ],
     });

@@ -12,7 +12,7 @@ import { PATTERNS_DIR, joinPath } from "../research/paths.ts";
 import { readJsonFile, writeJson } from "../research/io.ts";
 import { ensureGhRateBudget } from "../research/gh.ts";
 import { warmGitHubApiNetwork } from "../research/github-network.ts";
-import { lookupRepoVerification, buildRotorVerificationIndex, formatVerificationBadge } from "./audit-list.ts";
+import { lookupRepoVerification, buildRotorVerificationIndex, formatVerificationBadge, resolveRunDataFreshness } from "./audit-list.ts";
 import { attachPatternMisses, formatPatternMissMarkdown, patternMissForComponent, formatPatternMissSummary } from "./pattern-miss.ts";
 
 export const MAX_REPOS_PER_REPORT = 5;
@@ -312,12 +312,15 @@ export async function buildPatternReport(
 
   items = items.slice(0, options?.maxRepos ?? MAX_REPOS_PER_REPORT);
 
+  const freshness = resolveRunDataFreshness(run);
   const repos: RepoPatternReport[] = [];
   for (const item of items) {
     const rotorStatus = lookupRepoVerification(rotor, item.repo.fullName);
     const badge = formatVerificationBadge({
       verified: rotorStatus.verified,
       verification: rotorStatus.verification,
+      stale: freshness.stale,
+      ageMs: freshness.ageMs,
     });
     repos.push(await extractRepoPatterns(item, run.generatedAt, badge));
   }
@@ -467,9 +470,12 @@ export async function loadRepoPatternReport(
 
   const rotor = await buildRotorVerificationIndex();
   const rotorStatus = lookupRepoVerification(rotor, item.repo.fullName);
+  const freshness = resolveRunDataFreshness(run);
   const badge = formatVerificationBadge({
     verified: rotorStatus.verified,
     verification: rotorStatus.verification,
+    stale: freshness.stale,
+    ageMs: freshness.ageMs,
   });
   return extractRepoPatterns(item, run.generatedAt, badge);
 }

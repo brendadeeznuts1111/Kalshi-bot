@@ -46,9 +46,32 @@ The UI and [`bun run agent`](AGENT.md) share the same HTTP routes — no npm dep
 | `/` | GET | Dashboard (shortlist tiers, pulse, report iframe) |
 | `/api/status` | GET | Run + pulse + `verification` summary JSON |
 | `/api/research/run` | POST | Full research + audit export |
-| `/api/pulse` | GET | Rotor pulse log ticks |
+| `/api/screenshot` | POST | Capture dashboard PNG + thumbnail (audit evidence) |
+| `/evidence/*` | GET | Screenshot files (full + thumb) |
 | `/reports/latest.md` | GET | Markdown report (shared with `serve`) |
 | `/repo/:owner/:name` | GET | Per-repo detail page |
+
+### `POST /api/screenshot`
+
+Captures the dashboard via headless WebView, writes PNG + thumbnail under `research/evidence/`, and returns audit metadata. `Bun.Image.metadata()` reads width/height/format from the encoded PNG buffer without decoding pixels.
+
+```json
+{
+  "ok": true,
+  "full": "/evidence/dashboard-2026-07-22T07-37-43-000Z.png",
+  "thumbnail": "/evidence/dashboard-2026-07-22T07-37-43-000Z-thumb.png",
+  "bytes": 98210,
+  "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "image": { "width": 1280, "height": 860, "format": "png" },
+  "capturedAt": "2026-07-22T07:37:43.000Z"
+}
+```
+
+The **Audit evidence** section on `/` shows the latest capture with three verification dimensions: visual (thumbnail), cryptographic (SHA-256), and structural (dimensions/format). Use **Capture screenshot** on the page or:
+
+```bash
+curl -X POST http://127.0.0.1:3457/api/screenshot
+```
 
 ## Environment
 
@@ -90,6 +113,7 @@ Full command reference: [`AGENT.md`](AGENT.md).
 | [`src/agent/in-process-cron.ts`](../src/agent/in-process-cron.ts) | UTC `Bun.cron` pulse + optional research |
 | [`src/agent/dashboard.ts`](../src/agent/dashboard.ts) | Entry: server, browser open, optional WebView |
 | [`src/agent/dashboard-server.ts`](../src/agent/dashboard-server.ts) | Routes + POST handler |
+| [`src/agent/dashboard-screenshot.ts`](../src/agent/dashboard-screenshot.ts) | WebView capture + `Bun.Image.metadata` + audit section |
 | [`src/agent/dashboard-views.ts`](../src/agent/dashboard-views.ts) | HTML + client script |
 | [`src/agent/dashboard-state.ts`](../src/agent/dashboard-state.ts) | In-process research lock |
 | [`src/agent/pulse-log.ts`](../src/agent/pulse-log.ts) | Tail rotor `pulse.log` |

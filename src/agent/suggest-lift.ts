@@ -13,6 +13,8 @@ import {
   buildRotorVerificationIndex,
   formatVerificationBadge,
   lookupRepoVerification,
+  resolveRunDataFreshness,
+  type DataFreshness,
   type RotorVerificationContext,
   type VerificationStatus,
 } from "./audit-list.ts";
@@ -62,6 +64,7 @@ export type SuggestLiftResult = {
   notes: string[];
   rotorCatalogAvailable: boolean;
   pulseOk: boolean | null;
+  dataFreshness: DataFreshness;
 };
 
 function componentPoints(item: ScoredRepo, component: ScoreComponentKey): number {
@@ -191,6 +194,8 @@ export function suggestLiftFromRun(
     );
   }
 
+  const dataFreshness = resolveRunDataFreshness(run);
+
   return {
     runId: run.runId,
     generatedAt: run.generatedAt,
@@ -214,6 +219,7 @@ export function suggestLiftFromRun(
     notes,
     rotorCatalogAvailable: rotor?.catalogAvailable ?? false,
     pulseOk: rotor?.pulseOk ?? null,
+    dataFreshness,
   };
 }
 
@@ -268,6 +274,7 @@ export function loadRunForSuggest(runId?: string, dimension?: string): ResearchR
 }
 
 export function formatSuggestLift(result: SuggestLiftResult): string {
+  const freshness = result.dataFreshness;
   const header =
     result.rotorCatalogAvailable && result.pulseOk !== false
       ? "Lift map (rotor-aware):"
@@ -290,6 +297,8 @@ export function formatSuggestLift(result: SuggestLiftResult): string {
               verified: rec.verified,
               verification: rec.verification,
               auditTier: rec.auditTier,
+              stale: freshness.stale,
+              ageMs: freshness.ageMs,
             })
           : "—",
     })),
@@ -313,6 +322,8 @@ export function formatSuggestLift(result: SuggestLiftResult): string {
               verified: rec.verified,
               verification: rec.verification,
               auditTier: rec.auditTier,
+              stale: freshness.stale,
+              ageMs: freshness.ageMs,
             })}`
           : "";
       lines.push(
@@ -337,6 +348,8 @@ export function formatSuggestLift(result: SuggestLiftResult): string {
               verified: s.verified,
               verification: s.verification,
               auditTier: s.auditTier,
+              stale: freshness.stale,
+              ageMs: freshness.ageMs,
             }),
             license: s.unlicensed ? "UNLICENSED" : (s.license ?? "ok"),
           })),
@@ -351,6 +364,8 @@ export function formatSuggestLift(result: SuggestLiftResult): string {
         verified: s.verified,
         verification: s.verification,
         auditTier: s.auditTier,
+        stale: freshness.stale,
+        ageMs: freshness.ageMs,
       });
       lines.push(`  ${s.fullName} — ${s.total} — ${badge}${lic}`);
     }

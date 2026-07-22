@@ -13,7 +13,7 @@ import {
   type LiftRecommendation,
   type ShortlistSummary,
 } from "./suggest-lift.ts";
-import { buildRotorVerificationIndex, formatVerificationBadge } from "./audit-list.ts";
+import { buildRotorVerificationIndex, formatVerificationBadge, resolveRunDataFreshness, type DataFreshness } from "./audit-list.ts";
 import {
   bestBunFeatureRepo,
   formatBunFeatureSummary,
@@ -66,6 +66,7 @@ export type BlueprintSection = {
   liftNotes: string[];
   bunNative: BunNativeHint[];
   notes: string[];
+  dataFreshness: DataFreshness | null;
 };
 
 export type ArchitectureBlueprint = {
@@ -225,7 +226,7 @@ function findRepoInReports(
   return repoFromPatternReport(report ?? null);
 }
 
-function toLiftEntry(rec: LiftRecommendation): BlueprintLiftEntry {
+function toLiftEntry(rec: LiftRecommendation, freshness: DataFreshness): BlueprintLiftEntry {
   return {
     component: rec.component,
     repo: rec.repo,
@@ -236,6 +237,8 @@ function toLiftEntry(rec: LiftRecommendation): BlueprintLiftEntry {
           verified: rec.verified,
           verification: rec.verification,
           auditTier: rec.auditTier,
+          stale: freshness.stale,
+          ageMs: freshness.ageMs,
         })
       : "—",
     verified: rec.verified,
@@ -309,12 +312,14 @@ export async function buildArchitectureBlueprint(): Promise<ArchitectureBlueprin
     let liftNotes: string[] = [];
     let referenceBadge: string | null = null;
     let referenceFindingId: string | null = null;
+    let dataFreshness: DataFreshness | null = null;
 
     if (run) {
+      dataFreshness = resolveRunDataFreshness(run);
       const lift = await attachPatternsToLift(suggestLiftFromRun(run, rotor), run);
       liftEntries = lift.recommendations
         .filter((r) => LIFT_COMPONENTS.includes(r.component))
-        .map(toLiftEntry);
+        .map((r) => toLiftEntry(r, dataFreshness!));
       shortlistSummary = lift.shortlist;
       liftNotes = lift.notes;
       liftAuth = lift.recommendations.find((r) => r.component === "authApi")?.repo ?? null;
@@ -330,6 +335,8 @@ export async function buildArchitectureBlueprint(): Promise<ArchitectureBlueprin
           verified: shortlistEntry.verified,
           verification: shortlistEntry.verification,
           auditTier: shortlistEntry.auditTier,
+          stale: dataFreshness.stale,
+          ageMs: dataFreshness.ageMs,
         });
         referenceFindingId = shortlistEntry.findingId;
       }
@@ -342,7 +349,15 @@ export async function buildArchitectureBlueprint(): Promise<ArchitectureBlueprin
     }
 
     if (!run?.shortlist.length) {
-      if (run?.gateMiss?.retryHint) {
+      if (run?.discoveryMiss) {
+        notes.push(
+          `Discovery miss: 0 candidates for ${run.discoveryMiss.label} — ${run.discoveryMiss.relaxedGateHint}`,
+        );
+        for (const alt of run.discoveryMiss.alternateQueries.slice(0, 2)) {
+          notes.push(`Alternate query: \`${alt.query}\` — ${alt.rationale}`);
+        }
+        notes.push(`Probe: \`${run.discoveryMiss.retryCommand}\``);
+      } else if (run?.gateMiss?.retryHint) {
         notes.push(run.gateMiss.retryHint);
         for (const nm of run.gateMiss.nearMisses) {
           notes.push(`Near miss: **${nm.fullName}** — ${nm.summary}`);
@@ -382,6 +397,7 @@ export async function buildArchitectureBlueprint(): Promise<ArchitectureBlueprin
       liftNotes,
       bunNative: bunNativeHintsFor(spec.recommendedBun, localBunStack),
       notes,
+      dataFreshness,
     });
   }
 
@@ -493,6 +509,8 @@ export function formatArchitectureBlueprintMarkdown(blueprint: ArchitectureBluep
           verified: s.verified,
           verification: s.verification,
           auditTier: s.auditTier,
+          stale: section.dataFreshness?.stale,
+          ageMs: section.dataFreshness?.ageMs,
         });
         const lic = s.unlicensed ? " · UNLICENSED" : "";
         lines.push(`- \`${s.fullName}\` — ${s.total} — ${badge}${lic}`);

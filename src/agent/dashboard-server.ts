@@ -5,7 +5,7 @@ import type { CliOptions } from "../research/cli.ts";
 import { runResearch } from "../research/cli.ts";
 import { GitHubRateLimitError, serializeGitHubApiError, buildGitHubErrorEnrichment } from "../research/gh.ts";
 import { listRunSummaries, loadLatestRunFromDb } from "../research/cache.ts";
-import { REPORT_DIR, joinPath } from "../research/paths.ts";
+import { REPORT_DIR, EVIDENCE_DIR, joinPath } from "../research/paths.ts";
 import { ROUTES } from "../research/patterns.ts";
 import {
   handleLatestReport,
@@ -21,7 +21,13 @@ import {
   isResearchBusy,
 } from "./dashboard-state.ts";
 import { DASHBOARD_ROUTES, renderDashboardPage } from "./dashboard-views.ts";
-import { pulseLogPath, readPulseLog, pulseLogExists, resolveRotorRoot } from "./pulse-log.ts";
+import {
+  captureDashboardScreenshot,
+  loadLatestDashboardScreenshot,
+  type CaptureDashboardScreenshotDeps,
+  type DashboardScreenshotWire,
+} from "./dashboard-screenshot.ts";
+import { pulseLogPath, readPulseLog, pulseLogExists } from "./pulse-log.ts";
 import { verificationSummaryForRun } from "./audit-list.ts";
 
 export type DashboardServeOptions = {
@@ -30,6 +36,7 @@ export type DashboardServeOptions = {
 
 export type DashboardDeps = {
   runResearch?: (opts: CliOptions) => Promise<{ runId: string; generatedAt: string; shortlist: unknown[] }>;
+  captureScreenshot?: CaptureDashboardScreenshotDeps;
 };
 
 function html(body: string, status = 200): Response {
@@ -55,8 +62,9 @@ export async function handleDashboardHome(): Promise<Response> {
   const diffMd = await readLatestDiff();
   const pulseTicks = await readPulseLog(10);
   const logExists = await pulseLogExists();
+  const auditEvidence = await loadLatestDashboardScreenshot();
   return html(
-    renderDashboardPage(run, listRunSummaries(), diffMd, getDashboardState(), pulseTicks, logExists),
+    await renderDashboardPage(run, listRunSummaries(), diffMd, getDashboardState(), pulseTicks, logExists, auditEvidence),
   );
 }
 
@@ -69,7 +77,13 @@ export async function handleDashboardStatus(): Promise<Response> {
     state: getDashboardState(),
     busy: isResearchBusy(),
     latestRun: run
-      ? { runId: run.runId, generatedAt: run.generatedAt, shortlist: run.stats.shortlist }
+      ? {
+          runId: run.runId,
+          generatedAt: run.generatedAt,
+          shortlist: run.stats.shortlist,
+          gateMiss: run.gateMiss ?? null,
+          discoveryMiss: run.discoveryMiss ?? null,
+        }
       : null,
     pulse,
     pulseLog: pulseLogPath(),
@@ -79,6 +93,43 @@ export async function handleDashboardStatus(): Promise<Response> {
 
 export async function handleDashboardPulse(): Promise<Response> {
   return json({ ticks: await readPulseLog(20), logPath: pulseLogPath() });
+}
+
+export async function handleDashboardScreenshotPost(deps: DashboardDeps = {}): Promise<Response> {
+  try {
+    const manifest = await captureDashboardScreenshot({}, deps.captureScreenshot ?? {});
+    const wire: DashboardScreenshotWire = {
+      ok: true,
+      full: manifest.full,
+      thumbnail: manifest.thumbnail,
+      bytes: manifest.bytes,
+      sha256: manifest.sha256,
+      image: manifest.image,
+      capturedAt: manifest.capturedAt,
+    };
+    return json(wire);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return json({ ok: false, error: message }, 500);
+  }
+}
+
+export async function handleEvidenceFile(req: Request): Promise<Response> {
+  const url = new URL(req.url);
+  const prefix = DASHBOARD_ROUTES.evidencePrefix;
+  if (!url.pathname.startsWith(prefix)) {
+    return new Response("Not Found", { status: 404 });
+  }
+  const name = url.pathname.slice(prefix.length);
+  if (!name || name.includes("..") || name.includes("/")) {
+    return new Response("Bad Request", { status: 400 });
+  }
+  const file = Bun.file(joinPath(EVIDENCE_DIR, name));
+  if (!(await file.exists())) {
+    return new Response("Not Found", { status: 404 });
+  }
+  const type = name.endsWith(".png") ? "image/png" : "application/octet-stream";
+  return new Response(file, { headers: { "Content-Type": type } });
 }
 
 export async function handleRunResearchPost(deps: DashboardDeps = {}): Promise<Response> {
@@ -129,12 +180,19 @@ export function createDashboardServer(
       [DASHBOARD_ROUTES.runResearch]: {
         POST: () => handleRunResearchPost(deps),
       },
+      [DASHBOARD_ROUTES.screenshot]: {
+        POST: () => handleDashboardScreenshotPost(deps),
+      },
       [ROUTES.runsList]: handleRunsList,
       [ROUTES.runApi]: handleRunApi,
       [ROUTES.repo]: handleRepoPage,
       [ROUTES.latestReport]: handleLatestReport,
     },
     fetch(req) {
+      const url = new URL(req.url);
+      if (url.pathname.startsWith(DASHBOARD_ROUTES.evidencePrefix)) {
+        return handleEvidenceFile(req);
+      }
       return new Response("Not Found", { status: 404 });
     },
   });

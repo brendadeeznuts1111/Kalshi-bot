@@ -18,6 +18,8 @@ export type GitHubResearchErrorContext = {
 export type GitHubErrorEnrichment = GitHubResearchErrorContext & {
   staleDataRunId?: string;
   staleDataAgeMs?: number | null;
+  /** Set when staleDataRunId comes from another dimension's cached run. */
+  staleDataSourceDimension?: string;
   cachedDataAvailable?: boolean;
   blockedOperations?: string[];
 };
@@ -286,10 +288,16 @@ function buildRemediation(
 
   if (action === "use_cached_run" && enrichment.staleDataRunId) {
     const runId = enrichment.staleDataRunId;
+    const sourceDimension = enrichment.staleDataSourceDimension ?? dimension;
+    const crossDimension =
+      enrichment.staleDataSourceDimension !== undefined &&
+      enrichment.staleDataSourceDimension !== dimension;
     return {
       action,
-      command: buildCachedRunCommand(dimension, runId),
-      alternative: `Use cached data from a previous run with --run=${runId}`,
+      command: buildCachedRunCommand(sourceDimension, runId),
+      alternative: crossDimension
+        ? `Use cached data from ${enrichment.staleDataSourceDimension} dimension run with --run=${runId}`
+        : `Use cached data from a previous run with --run=${runId}`,
       eta: null,
     };
   }
@@ -346,6 +354,7 @@ export type GitHubApiErrorWire = {
     cachedDataAvailable: boolean;
     staleDataAge: string | null;
     staleDataRunId?: string;
+    staleDataSourceDimension?: string;
   };
   circuit: {
     tripped: boolean;
@@ -384,6 +393,7 @@ export function serializeGitHubApiError(
         ? `${Math.max(0, Math.round(staleDataAgeMs / 1000))}s`
         : null,
     staleDataRunId: enrichment.staleDataRunId,
+    staleDataSourceDimension: enrichment.staleDataSourceDimension,
   };
 
   const action = pickRemediationAction(err, impact, circuit);
@@ -449,7 +459,15 @@ export function formatRateLimitRemediation(
   }
 
   if (wire.impact.staleDataRunId && wire.remediation.action === "use_cached_run") {
-    lines.push(`  Prior run: ${wire.impact.staleDataRunId} (${wire.impact.staleDataAge ?? "unknown age"})`);
+    const crossDimension =
+      wire.impact.staleDataSourceDimension !== undefined &&
+      wire.impact.staleDataSourceDimension !== wire.impact.dimension;
+    const sourceNote = crossDimension
+      ? ` · from ${wire.impact.staleDataSourceDimension} dimension`
+      : "";
+    lines.push(
+      `  Prior run: ${wire.impact.staleDataRunId} (${wire.impact.staleDataAge ?? "unknown age"})${sourceNote}`,
+    );
   }
 
   return lines.join("\n");

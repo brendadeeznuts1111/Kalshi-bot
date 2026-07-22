@@ -172,6 +172,8 @@ export type ResearchRun = {
   excludedSdkOnly: ScoredRepo[];
   /** Populated when discover > 0 but gate passes 0 — near misses + retry command. */
   gateMiss?: import("./gate-miss.ts").GateMissStats;
+  /** Populated when discover returns 0 — alternate queries + relaxed gate retry. */
+  discoveryMiss?: import("./discovery-miss.ts").DiscoveryMissStats;
 };
 
 export type RunDiff = {

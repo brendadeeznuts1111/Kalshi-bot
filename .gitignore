@@ -13,6 +13,7 @@ coverage/
 research/cache/
 research/outputs/
 research/exports/
+research/evidence/
 research/evidence-captures/
 
 # Test artifacts (never commit)

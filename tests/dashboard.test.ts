@@ -111,6 +111,39 @@ describe("dashboard handlers", () => {
     resetDashboardState();
   });
 
+  test("handleDashboardHome renders gate miss panel when run has gateMiss", async () => {
+    const at = freshTestGeneratedAt();
+    const run = mockRun();
+    run.generatedAt = at;
+    run.shortlist = [];
+    run.stats.shortlist = 0;
+    run.stats.gated = 0;
+    run.gateMiss = {
+      rejected: 3,
+      nearMisses: [
+        {
+          fullName: "a/nba-bot",
+          stars: 4,
+          forks: 1,
+          pushedAt: "2026-01-01T00:00:00Z",
+          pushedLabel: "2026-01",
+          reasons: ["low_popularity"],
+          summary: "4 stars, 1 forks — 1 star(s) below min-stars=5",
+        },
+      ],
+      retryCommand: "bun run research -- --dimension=sports-nba --min-stars=4",
+      retryHint: "Gate probe",
+    };
+    saveRun(FIXTURE_RUN, at, run);
+
+    const res = await handleDashboardHome();
+    const html = await res.text();
+    expect(html).toContain("Gate miss");
+    expect(html).toContain("a/nba-bot");
+    expect(html).toContain("--min-stars=4");
+    expect(html).toContain("gate-miss-panel");
+  });
+
   test("handleDashboardHome renders shortlist when run exists", async () => {
     const at = freshTestGeneratedAt();
     const run = mockRun();
@@ -124,6 +157,7 @@ describe("dashboard handlers", () => {
     expect(html).toContain("Kalshi Agent Dashboard");
     expect(html).toContain("OctagonAI/kalshi-trading-bot-cli");
     expect(html).toContain("Run research");
+    expect(html).toContain("Audit evidence");
   });
 
   test("handleRunResearchPost uses injected runner", async () => {

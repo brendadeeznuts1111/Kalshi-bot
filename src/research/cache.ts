@@ -285,6 +285,22 @@ export function loadLatestRunFromDb(options?: {
   return options?.includeFixtures ? fallback : null;
 }
 
+/** Latest eligible production run from any dimension other than `dimension`. */
+export function loadFallbackRunFromDb(options: { dimension: string }): ResearchRun | null {
+  const targetDimension = normalizeDimensionId(options.dimension);
+  const rows = getDb()
+    .query("SELECT payload FROM runs ORDER BY generated_at DESC LIMIT 50")
+    .all() as Array<{ payload: string }>;
+
+  for (const row of rows) {
+    const parsed = JSON.parse(row.payload) as unknown;
+    if (!isResearchRun(parsed)) continue;
+    if (runDimension(parsed) === targetDimension) continue;
+    if (isEligibleProductionRun(parsed)) return parsed;
+  }
+  return null;
+}
+
 export function listRunIds(): string[] {
   const rows = getDb()
     .query("SELECT run_id FROM runs ORDER BY generated_at DESC")

@@ -7,7 +7,8 @@ import { parseArgs } from "node:util";
 import { inspectRepo } from "./inspect.ts";
 import { discoverCandidates, loadConfig } from "./discover.ts";
 import { applyGate } from "./gate.ts";
-import { analyzeGateMiss, formatGateMissMarkdown } from "./gate-miss.ts";
+import { analyzeGateMiss } from "./gate-miss.ts";
+import { analyzeDiscoveryMiss } from "./discovery-miss.ts";
 import { mapPool } from "./pool.ts";
 import { scoreRepo, stackRank } from "./score.ts";
 import { buildShortlist } from "./diversify.ts";
@@ -145,6 +146,18 @@ export async function runResearch(opts: CliOptions): Promise<ResearchRun> {
   const { candidates, querySet } = await discoverCandidates(config, dimension, gate);
   logResearchStatus(`Discovered ${candidates.length} candidates (${querySet.label})`);
 
+  const discoveryMiss =
+    candidates.length === 0
+      ? analyzeDiscoveryMiss(dimension, querySet, gate, config.dimensions, candidates.length)
+      : undefined;
+  if (discoveryMiss) {
+    logResearchStatus(discoveryMiss.relaxedGateHint);
+    for (const alt of discoveryMiss.alternateQueries) {
+      logResearchStatus(`  alternate query: \`${alt.query}\` — ${alt.rationale}`);
+    }
+    logResearchStatus(`  probe: ${discoveryMiss.retryCommand}`);
+  }
+
   const gated = applyGate(candidates, gate);
   const gateMiss = analyzeGateMiss(candidates, gated, gate, { dimension });
   progress({
@@ -228,6 +241,7 @@ export async function runResearch(opts: CliOptions): Promise<ResearchRun> {
     shortlist,
     excludedSdkOnly,
     gateMiss,
+    discoveryMiss,
   };
 
   const baseline = opts.diff ? await loadRunById(opts.diff, dimension) : await loadPreviousRun(dimension);

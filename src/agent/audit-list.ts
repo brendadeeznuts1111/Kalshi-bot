@@ -6,6 +6,7 @@
  * Maps Kalshi-bot shortlist repos to pulse-verified findings for `audit-list` and `suggest-lift`.
  */
 import type { ResearchRun } from "../research/types.ts";
+import { hasDegradedCacheUsage } from "../research/github-cache-stats.ts";
 import { joinPath } from "../research/paths.ts";
 import { buildRepoReport } from "../research/evidence.ts";
 import {
@@ -300,14 +301,58 @@ export async function auditListFromRun(
   return buildAuditList(run, context, options?.repo);
 }
 
+/** Run-level data freshness for verification badge suffixes (miss taxonomy #4). */
+export type DataFreshness = {
+  stale: boolean;
+  ageMs: number | null;
+};
+
+/** Age of a research run from `generatedAt` to now; null when timestamp is invalid. */
+export function runGeneratedAgeMs(generatedAt: string): number | null {
+  const t = Date.parse(generatedAt);
+  if (!Number.isFinite(t)) return null;
+  return Math.max(0, Date.now() - t);
+}
+
+const STALE_RUN_AGE_MS = 24 * 60 * 60 * 1000;
+
+/** Stale when run used degraded cache or `generatedAt` is older than 24h. */
+export function resolveRunDataFreshness(run: ResearchRun): DataFreshness {
+  const ageMs = runGeneratedAgeMs(run.generatedAt);
+  const cache = run.stats.cache;
+  if (cache && (hasDegradedCacheUsage(cache) || cache.inspectDegradedHits > 0)) {
+    return { stale: true, ageMs };
+  }
+  if (ageMs !== null && ageMs > STALE_RUN_AGE_MS) {
+    return { stale: true, ageMs };
+  }
+  return { stale: false, ageMs };
+}
+
+export function formatDataFreshnessSuffix(opts: {
+  stale: boolean;
+  ageMs?: number | null;
+}): string {
+  if (!opts.stale) return "";
+  if (typeof opts.ageMs === "number" && Number.isFinite(opts.ageMs) && opts.ageMs >= 0) {
+    const minutes = Math.max(1, Math.round(opts.ageMs / 60_000));
+    return ` 🕒 ${minutes}m ago`;
+  }
+  return " 🕒 stale";
+}
+
 export function formatVerificationBadge(entry: {
   verified: boolean;
   verification: VerificationStatus;
   auditTier?: AuditExportTier | null;
+  stale?: boolean;
+  ageMs?: number | null;
 }): string {
-  if (entry.verified) return "✓ verified (high-value)";
-  if (entry.verification === "watchlist") return "⚠ watchlist";
-  return "✗ unverified";
+  let base: string;
+  if (entry.verified) base = "✓ verified (high-value)";
+  else if (entry.verification === "watchlist") base = "⚠ watchlist";
+  else base = "✗ unverified";
+  return base + formatDataFreshnessSuffix({ stale: entry.stale ?? false, ageMs: entry.ageMs });
 }
 
 export type VerificationSummary = {

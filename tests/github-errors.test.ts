@@ -1,5 +1,8 @@
 // @see https://bun.com/docs/test/index#run-tests
 import { afterEach, describe, expect, test } from "bun:test";
+import { Database } from "bun:sqlite";
+import { saveRun, CACHE_DB } from "../src/research/cache.ts";
+import { buildGitHubErrorEnrichment } from "../src/research/github-error-enrichment.ts";
 import {
   assertGitHubRateBudget,
   GitHubCacheMissError,
@@ -16,6 +19,9 @@ import {
   throwCacheMissIfTripped,
   tripGitHubRateLimit,
 } from "../src/research/github-errors.ts";
+import { freshTestGeneratedAt } from "./fixtures.ts";
+
+const CROSS_DIM_RUN_ID = "2026-07-22T12-00-00-001Z";
 
 describe("github errors", () => {
   afterEach(() => {
@@ -110,5 +116,88 @@ describe("github errors", () => {
     expect(text).toContain("tracking blocked");
     expect(text).toContain("bun run agent patterns");
     expect(text).toContain("Circuit tripped");
+  });
+
+  test("serializeGitHubApiError names source dimension for cross-dimension cached run", () => {
+    beginGitHubResearchErrorContext({ dimension: "price-data", minStars: 1, minForks: 0 });
+    tripGitHubRateLimit(Math.ceil((Date.now() + 480_000) / 1000), "search/repositories", {
+      remaining: 0,
+      limit: 30,
+      resource: "search",
+    });
+    const err = new GitHubCacheMissError("blocked", {
+      resetAtMs: Date.now() + 480_000,
+      source: "search/repositories",
+      cacheKind: "search",
+      cacheKey: "kalshi",
+    });
+    const wire = serializeGitHubApiError(err, {
+      staleDataRunId: CROSS_DIM_RUN_ID,
+      staleDataSourceDimension: "market-making",
+      staleDataAgeMs: 7200_000,
+      cachedDataAvailable: true,
+    });
+    finishGitHubResearchErrorContext();
+
+    expect(wire.remediation.action).toBe("use_cached_run");
+    expect(wire.remediation.command).toContain("--dimension=market-making");
+    expect(wire.remediation.command).toContain(`--run=${CROSS_DIM_RUN_ID}`);
+    expect(wire.remediation.alternative).toContain("market-making dimension");
+    expect(wire.impact.staleDataSourceDimension).toBe("market-making");
+  });
+
+  test("formatRateLimitRemediation notes cross-dimension prior run", () => {
+    tripGitHubRateLimit(Math.ceil((Date.now() + 480_000) / 1000), "search/repositories", {
+      remaining: 0,
+      limit: 30,
+      resource: "search",
+    });
+    const err = new GitHubCacheMissError("blocked", {
+      resetAtMs: Date.now() + 480_000,
+      source: "search/repositories",
+      cacheKind: "search",
+      cacheKey: "kalshi",
+      context: { dimension: "price-data" },
+    });
+    const text = formatRateLimitRemediation(err, {
+      staleDataRunId: CROSS_DIM_RUN_ID,
+      staleDataSourceDimension: "market-making",
+      staleDataAgeMs: 7200_000,
+      cachedDataAvailable: true,
+    });
+    expect(text).toContain("market-making dimension");
+    expect(text).toContain("from market-making dimension");
+    expect(text).toContain(CROSS_DIM_RUN_ID);
+  });
+
+  test("buildGitHubErrorEnrichment falls back to cross-dimension production run", () => {
+    const at = freshTestGeneratedAt();
+    saveRun(CROSS_DIM_RUN_ID, at, {
+      runId: CROSS_DIM_RUN_ID,
+      generatedAt: at,
+      dimension: "market-making",
+      config: { shortlistSize: 12, gate: { minStars: 5, minForks: 3, maxAgeMonths: 18 } },
+      stats: { discovered: 1, gated: 1, inspected: 1, shortlist: 0 },
+      candidates: [],
+      gated: [],
+      scored: [],
+      shortlist: [],
+      excludedSdkOnly: [],
+    });
+
+    beginGitHubResearchErrorContext({ dimension: "zzz-cross-dim-test" });
+    const err = new GitHubCacheMissError("blocked", {
+      cacheKind: "search",
+      cacheKey: "kalshi",
+    });
+    const enrichment = buildGitHubErrorEnrichment(err);
+    finishGitHubResearchErrorContext();
+
+    expect(enrichment.staleDataRunId).toBe(CROSS_DIM_RUN_ID);
+    expect(enrichment.staleDataSourceDimension).toBe("market-making");
+    expect(enrichment.cachedDataAvailable).toBe(true);
+
+    const db = new Database(CACHE_DB);
+    db.run("DELETE FROM runs WHERE run_id = ?", [CROSS_DIM_RUN_ID]);
   });
 });

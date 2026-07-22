@@ -24,6 +24,7 @@
     "artifacts:restore": "bun tools/restore-committed-artifacts.ts",
     "check": "bun run typecheck && bun test",
     "rate-limit:status": "bun tools/github-rate-budget.ts",
+    "miss-taxonomy:status": "bun tools/miss-taxonomy-status.ts",
     "hooks:install": "cp tools/pre-commit.sh .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit",
     "test:coverage": "bun test --coverage",
     "typecheck": "tsc --noEmit"

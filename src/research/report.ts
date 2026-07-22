@@ -5,6 +5,7 @@ import { writeJson } from "./io.ts";
 import { githubRepoWebUrl, localRepoPath } from "./patterns.ts";
 import { OUTPUT_DIR, REPORT_DIR, joinPath } from "./paths.ts";
 import { formatDiffMarkdown } from "./diff.ts";
+import { formatDiscoveryMissMarkdown } from "./discovery-miss.ts";
 import { formatGateMissMarkdown } from "./gate-miss.ts";
 import { buildRepoReport } from "./evidence.ts";
 import { shortlistTagCoverage } from "./diversify.ts";
@@ -105,6 +106,10 @@ export function formatReportMarkdown(run: ResearchRun, dimensionLabel?: string):
       : []),
     "",
   ];
+
+  if (run.discoveryMiss) {
+    lines.push(...formatDiscoveryMissMarkdown(run.discoveryMiss));
+  }
 
   if (run.gateMiss) {
     lines.push(...formatGateMissMarkdown(run.gateMiss, run.config.gate));
