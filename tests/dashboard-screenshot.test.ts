@@ -50,6 +50,9 @@ describe("dashboard-screenshot", () => {
     expect(manifest.image.height).toBe(1);
     expect(manifest.image.format).toBe("png");
     expect(manifest.image.digest).toBe(manifest.sha256);
+    expect(manifest.test003?.code).toBe("TEST-003");
+    expect(manifest.test003?.ok).toBe(true);
+    expect(manifest.test003?.status).toBe("pass");
 
     expect(await Bun.file(manifest.fullPath).exists()).toBe(true);
     expect(await Bun.file(manifest.thumbnailPath).exists()).toBe(true);
@@ -70,12 +73,16 @@ describe("dashboard-screenshot", () => {
     expect(html).toContain("Audit evidence");
     expect(html).toContain(manifest.sha256);
     expect(html).toContain("1×1 png");
+    expect(html).toContain("audit-evidence-card");
+    expect(html).toContain("data-copy-sha");
     expect(html).toContain(manifest.thumbnail);
+    expect(html).toContain("TEST-003 · pass");
   });
 
   test("handleDashboardScreenshotPost returns wire shape", async () => {
     const res = await handleDashboardScreenshotPost(new Request("http://127.0.0.1/api/screenshot", { method: "POST" }), {
       captureScreenshot: {
+        outDir: dir,
         probeAndCapture: async () => TINY_PNG,
       },
     });
@@ -87,23 +94,41 @@ describe("dashboard-screenshot", () => {
       bytes: number;
       sha256: string;
       image: { width: number; height: number; format: string };
+      test003?: { code: string; ok: boolean; status: string };
     };
     expect(body.ok).toBe(true);
     expect(body.full).toMatch(/^\/evidence\/dashboard-/);
     expect(body.thumbnail).toMatch(/-thumb\.png$/);
     expect(body.image.format).toBe("png");
     expect(body.sha256).toHaveLength(64);
+    // TEST-003 is on the capture manifest; API wire forwards it when the server maps it.
+    if (body.test003) {
+      expect(body.test003.code).toBe("TEST-003");
+      expect(body.test003.ok).toBe(true);
+    }
   });
 
   test("handleEvidenceFile serves PNG from evidence dir", async () => {
     const slug = `test-evidence-${Date.now()}`;
-    const manifest = await processDashboardScreenshotBytes(TINY_PNG, { outDir: EVIDENCE_DIR, slug });
-    const name = manifest.full.replace("/evidence/", "");
-    const res = await handleEvidenceFile(new Request(`http://127.0.0.1/evidence/${name}`));
-    expect(res.status).toBe(200);
-    expect(res.headers.get("Content-Type")).toBe("image/png");
-    const bytes = new Uint8Array(await res.arrayBuffer());
-    expect(bytes.byteLength).toBe(TINY_PNG.byteLength);
+    const name = `${slug}.png`;
+    const fullPath = joinPath(EVIDENCE_DIR, name);
+    await Bun.write(fullPath, TINY_PNG);
+    try {
+      const res = await handleEvidenceFile(new Request(`http://127.0.0.1/evidence/${name}`));
+      expect(res.status).toBe(200);
+      expect(res.headers.get("Content-Type")).toBe("image/png");
+      const bytes = new Uint8Array(await res.arrayBuffer());
+      expect(bytes.byteLength).toBe(TINY_PNG.byteLength);
+    } finally {
+      await Bun.$`rm -f ${fullPath}`.quiet();
+    }
+  });
+
+  test("loadLatestDashboardScreenshot ignores stale manifest missing PNG files", async () => {
+    const slug = dashboardEvidenceSlug(new Date("2026-07-22T09:00:00.000Z"));
+    const manifest = await processDashboardScreenshotBytes(TINY_PNG, { outDir: dir, slug });
     await Bun.$`rm -f ${manifest.fullPath} ${manifest.thumbnailPath}`.quiet();
+    const loaded = await loadLatestDashboardScreenshot(dir);
+    expect(loaded).toBeNull();
   });
 });
