@@ -26,12 +26,15 @@ import {
   loadLatestDashboardScreenshot,
   type CaptureDashboardScreenshotDeps,
   type DashboardScreenshotWire,
+  DashboardScreenshotUrlError,
 } from "./dashboard-screenshot.ts";
 import { pulseLogPath, readPulseLog, pulseLogExists } from "./pulse-log.ts";
 import { verificationSummaryForRun } from "./audit-list.ts";
 
 export type DashboardServeOptions = {
   port?: number;
+  /** Bind address — default loopback only (never 0.0.0.0). */
+  hostname?: string;
 };
 
 export type DashboardDeps = {
@@ -95,7 +98,21 @@ export async function handleDashboardPulse(): Promise<Response> {
   return json({ ticks: await readPulseLog(20), logPath: pulseLogPath() });
 }
 
-export async function handleDashboardScreenshotPost(deps: DashboardDeps = {}): Promise<Response> {
+export async function handleDashboardScreenshotPost(
+  req: Request,
+  deps: DashboardDeps = {},
+): Promise<Response> {
+  if (req.headers.get("content-type")?.includes("application/json")) {
+    try {
+      const body = (await req.json()) as Record<string, unknown>;
+      if (body && ("url" in body || "dashboardUrl" in body)) {
+        return json({ ok: false, error: "URL parameters are not accepted on /api/screenshot" }, 400);
+      }
+    } catch {
+      // empty body is fine
+    }
+  }
+
   try {
     const manifest = await captureDashboardScreenshot({}, deps.captureScreenshot ?? {});
     const wire: DashboardScreenshotWire = {
@@ -110,7 +127,8 @@ export async function handleDashboardScreenshotPost(deps: DashboardDeps = {}): P
     return json(wire);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    return json({ ok: false, error: message }, 500);
+    const status = err instanceof DashboardScreenshotUrlError ? 400 : 500;
+    return json({ ok: false, error: message }, status);
   }
 }
 
@@ -164,8 +182,10 @@ export function createDashboardServer(
   deps: DashboardDeps = {},
 ) {
   const port = options.port ?? Number(Bun.env.DASHBOARD_PORT ?? 3457);
+  const hostname = options.hostname ?? "127.0.0.1";
 
   return Bun.serve({
+    hostname,
     port,
     routes: {
       [DASHBOARD_ROUTES.home]: {
@@ -181,7 +201,7 @@ export function createDashboardServer(
         POST: () => handleRunResearchPost(deps),
       },
       [DASHBOARD_ROUTES.screenshot]: {
-        POST: () => handleDashboardScreenshotPost(deps),
+        POST: (req) => handleDashboardScreenshotPost(req, deps),
       },
       [ROUTES.runsList]: handleRunsList,
       [ROUTES.runApi]: handleRunApi,

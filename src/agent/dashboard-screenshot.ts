@@ -2,9 +2,15 @@
 // @see https://bun.com/docs/runtime/hashing#bun-cryptohasher
 // @see https://bun.com/docs/runtime/webview#new-bun-webview-options
 import { EVIDENCE_DIR, joinPath } from "../research/paths.ts";
-import { dashboardBaseUrl } from "./dashboard-client.ts";
 import { DASHBOARD_ROUTES } from "./dashboard-views.ts";
 import { DASHBOARD_PROBE_EVAL, type DashboardPageProbe } from "./verify-dashboard.ts";
+import {
+  assertAllowlistedScreenshotUrl,
+  defaultDashboardScreenshotUrl,
+  DashboardScreenshotUrlError,
+} from "./dashboard-screenshot-url.ts";
+
+export { DashboardScreenshotUrlError, assertAllowlistedScreenshotUrl } from "./dashboard-screenshot-url.ts";
 
 export type DashboardImageMeta = {
   width: number;
@@ -128,6 +134,7 @@ async function defaultProbeAndCapture(
   url: string,
   opts: CaptureDashboardScreenshotOptions,
 ): Promise<Buffer> {
+  assertAllowlistedScreenshotUrl(url);
   const backend = process.platform === "darwin" ? "webkit" : "chrome";
   await using view = new Bun.WebView({
     width: opts.width ?? 1280,
@@ -147,7 +154,8 @@ export async function captureDashboardScreenshot(
   options: CaptureDashboardScreenshotOptions = {},
   deps: CaptureDashboardScreenshotDeps = {},
 ): Promise<DashboardScreenshotManifest> {
-  const dashboardUrl = options.dashboardUrl ?? `${dashboardBaseUrl()}${DASHBOARD_ROUTES.home}`;
+  const dashboardUrl = options.dashboardUrl ?? defaultDashboardScreenshotUrl();
+  assertAllowlistedScreenshotUrl(dashboardUrl);
   const capture = deps.probeAndCapture ?? defaultProbeAndCapture;
   const png = await capture(dashboardUrl, options);
   return processDashboardScreenshotBytes(png, { outDir: options.outDir });

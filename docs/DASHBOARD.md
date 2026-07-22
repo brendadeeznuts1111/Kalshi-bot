@@ -67,7 +67,18 @@ Captures the dashboard via headless WebView, writes PNG + thumbnail under `resea
 }
 ```
 
-The **Audit evidence** section on `/` shows the latest capture with three verification dimensions: visual (thumbnail), cryptographic (SHA-256), and structural (dimensions/format). Use **Capture screenshot** on the page or:
+The **Audit evidence** section on `/` shows the latest capture with three verification dimensions: visual (thumbnail), cryptographic (SHA-256), and structural (dimensions/format). **Integrity note:** `sha256` covers the full PNG only; the thumbnail is always regenerated from that full image in `processDashboardScreenshotBytes` (pure function of the hashed bytes — a swapped thumb file would not match a re-capture from the same full PNG, but is not independently hashed).
+
+### Security
+
+| Control | Implementation |
+|---------|----------------|
+| **Bind address** | `Bun.serve({ hostname: "127.0.0.1" })` — never `0.0.0.0` |
+| **Capture URL** | Fixed `http://127.0.0.1:<port>/` only — no client `url` param |
+| **Allowlist** | `assertAllowlistedScreenshotUrl` rejects `file://`, remote hosts, non-`/` paths |
+| **Request body** | POST with `{ url }` or `{ dashboardUrl }` → **400** |
+
+Use **Capture screenshot** on the page or:
 
 ```bash
 curl -X POST http://127.0.0.1:3457/api/screenshot
@@ -77,7 +88,7 @@ curl -X POST http://127.0.0.1:3457/api/screenshot
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `DASHBOARD_PORT` | `3457` | Listen port |
+| `DASHBOARD_PORT` | `3457` | Listen port (loopback only) |
 | `DASHBOARD_URL` | — | Agent CLI target when set |
 | `ROTOR_ROOT` | `~/Projects` | Monorepo root for `pulse.log` and audit catalog |
 | `AUDIT_CATALOG_PATH` | — | Override path to rotor `tools/audit-catalog.json` |

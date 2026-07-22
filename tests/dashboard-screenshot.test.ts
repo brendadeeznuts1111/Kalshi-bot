@@ -67,7 +67,7 @@ describe("dashboard-screenshot", () => {
   });
 
   test("handleDashboardScreenshotPost returns wire shape", async () => {
-    const res = await handleDashboardScreenshotPost({
+    const res = await handleDashboardScreenshotPost(new Request("http://127.0.0.1/api/screenshot", { method: "POST" }), {
       captureScreenshot: {
         probeAndCapture: async () => TINY_PNG,
       },
