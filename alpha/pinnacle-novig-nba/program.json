@@ -1,0 +1,19 @@
+{
+  "name": "pinnacle-novig-nba",
+  "dimension": "sports-nba",
+  "status": "shadow",
+  "baseline": "pinnacle-novig",
+  "role": "baseline",
+  "created": "2026-07-22",
+  "shadowLog": "shadow-log.jsonl",
+  "hypothesisFile": "hypothesis.md",
+  "minContracts": 5,
+  "gates": {
+    "shadowMinSignals": 100,
+    "shadowMinWeeks": 3,
+    "pilotMaxContracts": 5,
+    "killBrierDriftPct": 15,
+    "graduationMinRealizedEdgeCentsPerFill": 2,
+    "graduationMinFills": 30
+  }
+}

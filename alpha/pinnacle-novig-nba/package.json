@@ -1,0 +1,9 @@
+{
+  "name": "pinnacle-novig-nba",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "bun test src/signal.test.ts",
+    "run-once": "bun src/run-once.ts"
+  }
+}
