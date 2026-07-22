@@ -13,6 +13,7 @@
     "pilotMaxContracts": 5,
     "killBrierDriftPct": 15,
     "graduationMinRealizedEdgeCentsPerFill": 2,
-    "graduationMinFills": 30
+    "graduationMinFills": 30,
+    "graduationMinDistinctEvents": 40
   }
 }

@@ -21,6 +21,7 @@ function manifest(overrides: Partial<ProgramManifest> = {}): ProgramManifest {
       killBrierDriftPct: 15,
       graduationMinRealizedEdgeCentsPerFill: 2,
       graduationMinFills: 30,
+      graduationMinDistinctEvents: 40,
     },
     ...overrides,
   };
@@ -108,7 +109,7 @@ describe("calibration watcher", () => {
   test("graduation requires realized edge after fees, not Brier alone", () => {
     const fills: ShadowLine[] = [];
     for (let i = 0; i < 100; i++) {
-      fills.push(tradeLine(i, i === 0 ? "0" : `h${i - 1}`));
+      fills.push(tradeLine(i, i === 0 ? "0" : `h${i - 1}`, { eventId: `evt-${i % 40}` }));
     }
     const goodEdge = {
       ...computeMetrics(fills, 0.25),
@@ -175,6 +176,38 @@ describe("calibration watcher", () => {
     };
     const artifacts = evaluateProgram(manifest({ role: "baseline", name: "pinnacle-novig-nba" }), metrics);
     expect(artifacts.some((a) => a.kind === "graduation-proposal")).toBe(false);
+  });
+
+  test("graduation blocked when distinct resolved events below gate", () => {
+    const fills: ShadowLine[] = [];
+    for (let i = 0; i < 100; i++) {
+      fills.push(tradeLine(i, i === 0 ? "0" : `h${i - 1}`, { eventId: "same-game" }));
+    }
+    const metrics = {
+      ...computeMetrics(fills, 0.25),
+      hashChainValid: true,
+      spanWeeks: 4,
+      distinctResolvedEvents: 1,
+    };
+    expect(
+      evaluateProgram(manifest(), metrics).some((a) => a.kind === "graduation-proposal"),
+    ).toBe(false);
+  });
+
+  test("graduation requires breadth across distinct events", () => {
+    const fills: ShadowLine[] = [];
+    for (let i = 0; i < 100; i++) {
+      fills.push(tradeLine(i, i === 0 ? "0" : `h${i - 1}`, { eventId: `evt-${i % 40}` }));
+    }
+    const metrics = {
+      ...computeMetrics(fills, 0.25),
+      hashChainValid: true,
+      spanWeeks: 4,
+    };
+    expect(metrics.distinctResolvedEvents).toBe(40);
+    expect(
+      evaluateProgram(manifest(), metrics).some((a) => a.kind === "graduation-proposal"),
+    ).toBe(true);
   });
 
   test("empirical baseline Brier uses pinnacle components not 0.25 placeholder", () => {

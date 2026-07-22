@@ -23,6 +23,7 @@ export function setOddsEvents(events: OddsEvent[]): void {
 }
 
 export function midCents(book: BookSnapshot): number | null {
+  if (book.crossed) return null;
   const bestBid = book.bids[0]?.priceCents;
   const bestAsk = book.asks[0]?.priceCents;
   if (bestBid == null || bestAsk == null) return null;
@@ -49,6 +50,12 @@ export async function buildSignalContext(input: {
 }
 
 export function decide(ctx: SignalContext, minContracts: number): Decision {
+  if (ctx.book.crossed) {
+    return {
+      action: "skip",
+      reason: "crossed book — yesBid+noBid>100 (transient anomaly)",
+    };
+  }
   const contracts = ctx.contracts ?? minContracts;
   if (!ctx.components || Object.keys(ctx.components).length === 0) {
     return { action: "skip", reason: "missing components breakdown" };

@@ -2,9 +2,10 @@
 // @see https://bun.com/docs/runtime/file-io#writing-files-bun-write
 import { simulateFillVwap } from "../../../src/institutions/shadow-sim.ts";
 import {
-  applyToxicityMark,
   hashShadowLineBody,
-  type ShadowLine,
+  readShadowLogPrevHash,
+  TOXICITY_DUE_OFFSET_MS,
+  type ShadowPredictionLine,
   type ToxicityMark,
 } from "../../../src/institutions/shadow-line.ts";
 import { loadProgramManifest, type ProgramManifest } from "./program.ts";
@@ -12,8 +13,8 @@ import { feePerContractCents, FEE, rawEdgeCents } from "./fees.ts";
 import type { SignalContext, Decision } from "./signal.ts";
 import { midCents } from "./signal.ts";
 
-export type { ShadowLine, ToxicityMark };
-export { applyToxicityMark } from "../../../src/institutions/shadow-line.ts";
+export type { ShadowPredictionLine as ShadowLine, ToxicityMark };
+export { buildToxicityMarkFields } from "../../../src/institutions/shadow-line.ts";
 export { simulateFillVwap, toxicityMovedAgainst } from "../../../src/institutions/shadow-sim.ts";
 
 export type ShadowAppendInput = {
@@ -27,36 +28,27 @@ function resolveLogPath(manifest: ProgramManifest, programRoot = "."): string {
   return `${programRoot}/${manifest.shadowLog}`.replace(/\/+/g, "/");
 }
 
-async function readPrevHash(logPath: string): Promise<string> {
-  const file = Bun.file(logPath);
-  if (!(await file.exists())) return "0";
-  const text = (await file.text()).trim();
-  if (!text) return "0";
-  const lines = text.split("\n");
-  const last = JSON.parse(lines[lines.length - 1]!) as ShadowLine;
-  return last.lineHash;
-}
-
 export async function appendShadowLine(
   input: ShadowAppendInput,
   options?: { manifestPath?: string; programRoot?: string },
-): Promise<ShadowLine> {
+): Promise<ShadowPredictionLine> {
   const manifest = await loadProgramManifest(options?.manifestPath ?? "program.json");
   const logPath = resolveLogPath(manifest, options?.programRoot ?? ".");
-  const prevHash = await readPrevHash(logPath);
+  const prevHash = await readShadowLogPrevHash(logPath);
 
   const contracts = input.decision.contracts ?? 0;
   const levels =
     input.decision.side === "no" ? input.ctx.book.bids : input.ctx.book.asks;
   const { vwapFillCents, filledContracts } =
-    input.decision.action === "trade" && contracts > 0
+    input.decision.action === "trade" && contracts > 0 && !input.ctx.book.crossed
       ? simulateFillVwap(levels, contracts)
       : { vwapFillCents: null, filledContracts: 0 };
 
   const midAtFill = midCents(input.ctx.book);
   const ts = Date.now();
 
-  const body: Omit<ShadowLine, "lineHash"> = {
+  const body: Omit<ShadowPredictionLine, "lineHash"> = {
+    kind: "prediction",
     prevHash,
     ts,
     program: manifest.name,
@@ -75,7 +67,7 @@ export async function appendShadowLine(
     filledContracts,
     midAtFillCents: midAtFill,
     toxicity: {
-      dueTs: ts + 60_000,
+      dueTs: ts + TOXICITY_DUE_OFFSET_MS,
       markedTs: null,
       midCents: null,
       movedAgainst: null,
@@ -83,7 +75,7 @@ export async function appendShadowLine(
     outcome: null,
   };
 
-  const line: ShadowLine = { ...body, lineHash: hashShadowLineBody(body) };
+  const line: ShadowPredictionLine = { ...body, lineHash: hashShadowLineBody(body) };
   await Bun.write(logPath, `${JSON.stringify(line)}\n`, { createPath: true, append: true });
   return line;
 }

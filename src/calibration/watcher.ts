@@ -10,10 +10,11 @@ import {
   brierScore,
   brierStdErr,
   baselineBrierScore,
-  readShadowLog,
+  materializeShadowLines,
+  readShadowLogEntries,
   realizedEdgeMetrics,
-  verifyHashChain,
-  type ShadowLine,
+  verifyHashChainEntries,
+  type ShadowPredictionLine,
 } from "../institutions/shadow-line.ts";
 
 export type CalibrationArtifactKind =
@@ -51,6 +52,7 @@ export type ProgramMetrics = {
   filledContracts: number;
   fillCount: number;
   meanRealizedEdgeCentsPerFill: number | null;
+  distinctResolvedEvents: number;
 };
 
 const ROOT = joinPath(import.meta.dir, "../..");
@@ -90,7 +92,7 @@ export async function listAlphaPrograms(
   return out;
 }
 
-export function computeMetrics(lines: ShadowLine[], baselineBrier = DEFAULT_BASELINE_BRIER): ProgramMetrics {
+export function computeMetrics(lines: ShadowPredictionLine[], baselineBrier = DEFAULT_BASELINE_BRIER): ProgramMetrics {
   const skipReasons: Record<string, number> = {};
   let tradeLines = 0;
   let skipLines = 0;
@@ -100,6 +102,7 @@ export function computeMetrics(lines: ShadowLine[], baselineBrier = DEFAULT_BASE
   let partialFillCount = 0;
   let requestedContracts = 0;
   let filledContracts = 0;
+  const resolvedEventIds = new Set<string>();
 
   for (const line of lines) {
     if (line.decision.action === "trade") tradeLines++;
@@ -108,6 +111,9 @@ export function computeMetrics(lines: ShadowLine[], baselineBrier = DEFAULT_BASE
       skipReasons[line.decision.reason] = (skipReasons[line.decision.reason] ?? 0) + 1;
     }
     if (line.outcome === 0 || line.outcome === 1) resolvedLines++;
+    if ((line.outcome === 0 || line.outcome === 1) && line.eventId) {
+      resolvedEventIds.add(line.eventId);
+    }
     if (line.toxicity.markedTs != null) {
       toxicityMarked++;
       if (line.toxicity.movedAgainst) toxicityAgainst++;
@@ -135,7 +141,7 @@ export function computeMetrics(lines: ShadowLine[], baselineBrier = DEFAULT_BASE
     skipReasons,
     resolvedLines,
     spanWeeks,
-    hashChainValid: lines.length === 0 ? true : verifyHashChain(lines),
+    hashChainValid: true,
     brier: brierScore(lines),
     brierStdErr: brierStdErr(resolvedLines),
     baselineBrier: effectiveBaseline,
@@ -148,6 +154,7 @@ export function computeMetrics(lines: ShadowLine[], baselineBrier = DEFAULT_BASE
     filledContracts,
     fillCount: edge.fillCount,
     meanRealizedEdgeCentsPerFill: edge.meanRealizedEdgeCentsPerFill,
+    distinctResolvedEvents: resolvedEventIds.size,
   };
 }
 
@@ -195,6 +202,9 @@ export function evaluateProgram(
     metrics.meanRealizedEdgeCentsPerFill != null &&
     metrics.meanRealizedEdgeCentsPerFill >= gates.graduationMinRealizedEdgeCentsPerFill;
 
+  const breadthGraduation =
+    metrics.distinctResolvedEvents >= gates.graduationMinDistinctEvents;
+
   const gradBlock = graduationBlockedReason(manifest, metrics);
 
   if (
@@ -202,6 +212,7 @@ export function evaluateProgram(
     spanAndChainMet &&
     brierSanity &&
     edgeGraduation &&
+    breadthGraduation &&
     gradBlock == null
   ) {
     artifacts.push({
@@ -214,6 +225,7 @@ export function evaluateProgram(
         gates,
         proposedStatus: "pilot",
         graduationDriver: "realized-edge-cents-after-fees",
+        breadthDriver: `${metrics.distinctResolvedEvents} distinct events (min ${gates.graduationMinDistinctEvents})`,
         brierRole: "calibration-sanity-check",
       },
       recommendation:
@@ -251,8 +263,10 @@ export async function scanProgramsForArtifacts(
   const all: CalibrationArtifact[] = [];
   for (const { manifest, dir } of programs) {
     const logPath = joinPath(dir, manifest.shadowLog);
-    const lines = await readShadowLog(logPath);
+    const entries = await readShadowLogEntries(logPath);
+    const lines = materializeShadowLines(entries);
     const metrics = computeMetrics(lines);
+    metrics.hashChainValid = entries.length === 0 ? true : verifyHashChainEntries(entries);
     all.push(...evaluateProgram(manifest, metrics));
   }
   return all;

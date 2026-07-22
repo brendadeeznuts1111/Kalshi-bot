@@ -11,8 +11,10 @@ export type ProgramGates = {
   killBrierDriftPct: number;
   /** Graduation primary metric — mean realized edge after fees, cents per filled contract. */
   graduationMinRealizedEdgeCentsPerFill: number;
-  /** Minimum shadow fills before edge graduation gate applies. */
+  /** Minimum resolved fills before graduation is considered. */
   graduationMinFills: number;
+  /** Minimum distinct eventId values among resolved lines — blocks tick-spam on one game. */
+  graduationMinDistinctEvents: number;
 };
 
 export type ProgramManifest = {
@@ -46,10 +48,11 @@ export async function loadProgramManifest(
   }
   if (
     raw.gates.graduationMinRealizedEdgeCentsPerFill == null ||
-    raw.gates.graduationMinFills == null
+    raw.gates.graduationMinFills == null ||
+    raw.gates.graduationMinDistinctEvents == null
   ) {
     throw new Error(
-      "program.json missing graduationMinRealizedEdgeCentsPerFill / graduationMinFills — watcher needs both eyes",
+      "program.json missing graduationMinRealizedEdgeCentsPerFill / graduationMinFills / graduationMinDistinctEvents — watcher needs breadth + edge gates",
     );
   }
   return raw;

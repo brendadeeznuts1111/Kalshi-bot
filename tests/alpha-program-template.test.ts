@@ -18,12 +18,13 @@ describe("alpha-program template", () => {
     expect(await Bun.file(joinPath(SMOKE_DIR, "program.json")).exists()).toBe(true);
     const manifest = (await Bun.file(joinPath(SMOKE_DIR, "program.json")).json()) as {
       name: string;
-      gates: { shadowMinSignals: number; killBrierDriftPct: number; graduationMinRealizedEdgeCentsPerFill: number; graduationMinFills: number };
+      gates: { shadowMinSignals: number; killBrierDriftPct: number; graduationMinRealizedEdgeCentsPerFill: number; graduationMinFills: number; graduationMinDistinctEvents: number };
     };
     expect(manifest.gates.shadowMinSignals).toBe(100);
     expect(manifest.gates.killBrierDriftPct).toBe(15);
     expect(manifest.gates.graduationMinRealizedEdgeCentsPerFill).toBe(2);
     expect(manifest.gates.graduationMinFills).toBe(30);
+    expect(manifest.gates.graduationMinDistinctEvents).toBe(40);
     expect(await Bun.file(joinPath(SMOKE_DIR, "hypothesis.md")).exists()).toBe(true);
     const pkg = (await Bun.file(joinPath(SMOKE_DIR, "package.json")).json()) as { name: string };
     expect(pkg.name).toBe("_template-smoke");

@@ -10,6 +10,8 @@ export interface BookSnapshot {
   bids: BookLevel[];
   asks: BookLevel[];
   seq: number;
+  /** Transient yesBid+noBid>100 — skip mid/VWAP; do not treat as tradeable. */
+  crossed?: boolean;
 }
 
 export interface Decision {

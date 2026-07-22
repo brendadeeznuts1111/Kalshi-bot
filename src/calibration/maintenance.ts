@@ -28,7 +28,7 @@ if (import.meta.main) {
       manualMids,
     });
     console.log(
-      `Toxicity: marked=${tox.marked} pending=${tox.pending} fetched=[${tox.fetched.join(",")}] chainValid=${tox.chainValid}`,
+      `Toxicity: marked=${tox.marked} pending=${tox.pending} missed=${tox.missed} fetched=[${tox.fetched.join(",")}] chainValid=${tox.chainValid}`,
     );
   }
 

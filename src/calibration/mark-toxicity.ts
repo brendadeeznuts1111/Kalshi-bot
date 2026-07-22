@@ -10,6 +10,11 @@ if (import.meta.main) {
     process.exit(1);
   }
   const forceDue = Bun.argv.includes("--force-due");
+  if (forceDue && Bun.env.NODE_ENV !== "test") {
+    console.error(
+      "WARNING: --force-due marks outside the T+60s window — toxicity data will be wrong. Test env only.",
+    );
+  }
   const fetch = Bun.argv.includes("--fetch");
   const manualMids = parseMidArgs(Bun.argv);
 
@@ -20,7 +25,7 @@ if (import.meta.main) {
       manualMids,
     });
     console.log(
-      `Toxicity: marked=${result.marked} pending=${result.pending} fetched=[${result.fetched.join(",")}] chainValid=${result.chainValid}`,
+      `Toxicity: marked=${result.marked} pending=${result.pending} missed=${result.missed} fetched=[${result.fetched.join(",")}] chainValid=${result.chainValid}`,
     );
   } else {
     if (!Object.keys(manualMids).length) {
@@ -29,7 +34,7 @@ if (import.meta.main) {
     }
     const result = await runToxicityMark(program, manualMids, { forceDue });
     console.log(
-      `Toxicity: marked=${result.marked} pending=${result.pending} chainValid=${result.chainValid}`,
+      `Toxicity: marked=${result.marked} pending=${result.pending} missed=${result.missed} chainValid=${result.chainValid}`,
     );
   }
 }

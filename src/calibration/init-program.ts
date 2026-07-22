@@ -43,6 +43,7 @@ export async function initAlphaProgram(options: InitProgramOptions): Promise<str
       killBrierDriftPct: 15,
       graduationMinRealizedEdgeCentsPerFill: 2,
       graduationMinFills: 30,
+      graduationMinDistinctEvents: 40,
       ...options.gates,
     },
   };
