@@ -9,9 +9,11 @@ import { buildRepoReport } from "./evidence.ts";
 import { validateRepoReport } from "./validate.ts";
 import { auditEvidenceRelPath } from "./paths.ts";
 import {
+  AUDIT_CONCEPT_SHORTLIST_ID,
   DETECTOR_IDS,
   HIGH_VALUE_MIN_COMPONENT_POINTS,
   HIGH_VALUE_MIN_TOTAL_SCORE,
+  MAX_QUALITY_SCORE,
 } from "./constants.ts";
 
 /** AuditFinding-compatible wire (ids are opaque until monorepo parse*). */
@@ -118,7 +120,7 @@ function findingId(fullName: string): string {
 export function shortlistRulesConcept(config: ResearchConfig, publishedAt: string): AuditConceptWire {
   const majors = config.keywords.majorStrategyTags.join(", ");
   return {
-    id: "kalshi-shortlist-diversity",
+    id: AUDIT_CONCEPT_SHORTLIST_ID,
     kind: "AuditConcept",
     title: "Kalshi bot shortlist diversity constraints",
     description: [
@@ -159,7 +161,7 @@ export function repoReportToAuditFindingWire(
     kind: "AuditFinding",
     title: `Kalshi bot candidate: ${report.fullName}`,
     description: [
-      `Quality score ${report.score.total}/100.`,
+      `Quality score ${report.score.total}/${MAX_QUALITY_SCORE}.`,
       `Strategy: ${report.strategyTags.join(", ") || "none"}.`,
       report.liftNotes,
     ].join(" "),
@@ -172,7 +174,7 @@ export function repoReportToAuditFindingWire(
       digest,
       mediaType: "application/jsonl",
     },
-    related: ["kalshi-shortlist-diversity"],
+    related: [AUDIT_CONCEPT_SHORTLIST_ID],
     relatedDocs: ["URLPattern", "docs/FACTOR_STACK.md"],
     meta: { emitter: EMITTER, buildPin: BUILD_PIN },
   };

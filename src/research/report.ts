@@ -5,6 +5,7 @@ import { githubRepoWebUrl, localRepoPath } from "./patterns.ts";
 import { OUTPUT_DIR, REPORT_DIR, joinPath } from "./paths.ts";
 import { formatDiffMarkdown } from "./diff.ts";
 import { buildRepoReport } from "./evidence.ts";
+import { MAX_QUALITY_SCORE } from "./constants.ts";
 
 function reportFor(item: ScoredRepo): NonNullable<ScoredRepo["report"]> {
   return item.report ?? buildRepoReport(item);
@@ -48,7 +49,7 @@ function formatRepoSection(item: ScoredRepo, rank: number): string[] {
     `- License: ${licenseBadge(item)}`,
     `- Stack: ${item.signals.primaryLanguage ?? "unknown"}`,
     `- Strategy tags: ${item.signals.strategyTags.join(", ")}`,
-    `- Quality score: **${item.score.total}/100**`,
+    `- Quality score: **${item.score.total}/${MAX_QUALITY_SCORE}**`,
     `- Breakdown: auth ${item.score.authApi}, orders ${item.score.orderRealism}, tests ${item.score.testsCi}, docs ${item.score.docsSetup}, maintenance ${item.score.maintenance}, risk ${item.score.riskControls}, license -${item.score.licenseModifier}`,
     `- Last default-branch commit: ${item.signals.lastDefaultBranchCommitAt ?? "unknown"}`,
   );

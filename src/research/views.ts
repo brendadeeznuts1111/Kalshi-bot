@@ -3,6 +3,7 @@ import type { ResearchRun, ScoredRepo } from "./types.ts";
 import type { RunSummary } from "./cache.ts";
 import { buildRepoReport } from "./evidence.ts";
 import { githubRepoWebUrl, localRepoPath, ROUTES } from "./patterns.ts";
+import { MAX_QUALITY_SCORE } from "./constants.ts";
 
 function reportFor(item: ScoredRepo) {
   return item.report ?? buildRepoReport(item);
@@ -62,7 +63,7 @@ export function renderIndex(run: ResearchRun, runs: RunSummary[], diffMd: string
     .map((item, i) => {
       const lic = item.repo.license.unlicensed ? ' <span class="warn">UNLICENSED</span>' : "";
       const href = localRepoPath(item.repo.owner, item.repo.name);
-      return `<li><a href="${href}">${i + 1}. ${escapeHtml(item.repo.fullName)}</a> — ${item.score.total}/100${lic}</li>`;
+      return `<li><a href="${href}">${i + 1}. ${escapeHtml(item.repo.fullName)}</a> — ${item.score.total}/${MAX_QUALITY_SCORE}${lic}</li>`;
     })
     .join("\n");
 
@@ -122,7 +123,7 @@ export function renderRepoPage(item: ScoredRepo, run: ResearchRun): string {
 
   const body = `${navLinks()}
   <h1>${escapeHtml(item.repo.fullName)}</h1>
-  <p>Score <strong>${sc.total}/100</strong> · run <code>${escapeHtml(run.runId)}</code></p>
+  <p>Score <strong>${sc.total}/${MAX_QUALITY_SCORE}</strong> · run <code>${escapeHtml(run.runId)}</code></p>
   ${licWarn}
   <p><a href="${escapeHtml(item.repo.htmlUrl)}">GitHub</a></p>
   ${item.repo.description ? `<p>${escapeHtml(item.repo.description)}</p>` : ""}
