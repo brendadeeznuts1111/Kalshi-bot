@@ -1,4 +1,8 @@
-/** Mint a production-shaped run id near `now` (eligible for loadLatest* resolution). */
+/**
+ * Mint a production-shaped run id near `now` (eligible for loadLatest* resolution).
+ * Only use inside `withTempCache` / `enterTempCache`. For intentional operator-excluded
+ * rows, set `source: "test"` (or `kind: "fixture"`) on the saved payload.
+ */
 export function mintTestProductionRunId(now = Date.now()): string {
   const d = new Date(now);
   const pad = (n: number, w = 2) => String(n).padStart(w, "0");

@@ -1,9 +1,9 @@
 // @see https://bun.com/docs/test/index#run-tests
 import { afterEach, describe, expect, test } from "bun:test";
-import { Database } from "bun:sqlite";
-import { saveRun, CACHE_DB, saveInspectCache } from "../src/research/cache.ts";
+import { saveRun, saveInspectCache } from "../src/research/cache.ts";
 import type { InspectionSignals } from "../src/research/types.ts";
 import { buildGitHubErrorEnrichment, probeCrossDimensionCacheFallback } from "../src/research/github-error-enrichment.ts";
+import { withTempCache } from "./temp-cache.ts";
 import {
   assertGitHubRateBudget,
   GitHubCacheMissError,
@@ -171,84 +171,88 @@ describe("github errors", () => {
     expect(text).toContain(CROSS_DIM_RUN_ID);
   });
 
-  test("probeCrossDimensionCacheFallback detects inspect_cache without prior run", () => {
-    const repo = `enrich-inspect-${Date.now()}`;
-    const signals: InspectionSignals = {
-      readmeLength: 1,
-      hasSetupSection: false,
-      hasStrategySection: false,
-      authHits: [],
-      orderHits: [],
-      usesOfficialSdk: false,
-      hasAuthInCode: false,
-      hasV2Api: false,
-      hasRsaPss: false,
-      hasLiveOrderPath: false,
-      hasDryRunDefault: false,
-      hasAuthFreshness: false,
-      hasCentsPriceBounds: false,
-      hasTests: false,
-      hasCi: false,
-      languages: {},
-      primaryLanguage: null,
-      lastDefaultBranchCommitAt: null,
-      strategyTags: [],
-      isSdkOnly: false,
-      riskKeywordHits: [],
-    };
-    saveInspectCache(repo, "2026-01-01T00:00:00Z", signals);
+  test("probeCrossDimensionCacheFallback detects inspect_cache without prior run", async () => {
+    await withTempCache(async () => {
+      const repo = `enrich-inspect-${Date.now()}`;
+      const signals: InspectionSignals = {
+        readmeLength: 1,
+        hasSetupSection: false,
+        hasStrategySection: false,
+        authHits: [],
+        orderHits: [],
+        usesOfficialSdk: false,
+        hasAuthInCode: false,
+        hasV2Api: false,
+        hasRsaPss: false,
+        hasLiveOrderPath: false,
+        hasDryRunDefault: false,
+        hasAuthFreshness: false,
+        hasCentsPriceBounds: false,
+        hasTests: false,
+        hasCi: false,
+        languages: {},
+        primaryLanguage: null,
+        lastDefaultBranchCommitAt: null,
+        strategyTags: [],
+        isSdkOnly: false,
+        riskKeywordHits: [],
+        hasFeeAware: false,
+        feeAwareKeywordHits: [],
+      };
+      saveInspectCache(repo, "2026-01-01T00:00:00Z", signals);
 
-    const err = new GitHubCacheMissError("no inspect row for new repo", {
-      cacheKind: "inspect",
-      cacheKey: "other/no-cache",
+      const err = new GitHubCacheMissError("no inspect row for new repo", {
+        cacheKind: "inspect",
+        cacheKey: "other/no-cache",
+      });
+      const probe = probeCrossDimensionCacheFallback(err);
+      expect(probe.available).toBe(true);
+      expect(probe.source).toBe("inspect_cache");
+      expect(probe.inspectCacheRepoCount).toBeGreaterThan(0);
+
+      beginGitHubResearchErrorContext({ dimension: "price-data" });
+      const wire = serializeGitHubApiError(err, {
+        dimension: "price-data",
+        cachedDataAvailable: true,
+        cacheFallbackSource: "inspect_cache",
+        inspectCacheRepoCount: probe.inspectCacheRepoCount,
+      });
+      finishGitHubResearchErrorContext();
+
+      expect(wire.remediation.action).toBe("use_cached_run");
+      expect(wire.remediation.alternative).toContain("Cross-dimension inspect cache");
+      expect(wire.impact.cacheFallbackSource).toBe("inspect_cache");
     });
-    const probe = probeCrossDimensionCacheFallback(err);
-    expect(probe.available).toBe(true);
-    expect(probe.source).toBe("inspect_cache");
-    expect(probe.inspectCacheRepoCount).toBeGreaterThan(0);
-
-    beginGitHubResearchErrorContext({ dimension: "price-data" });
-    const wire = serializeGitHubApiError(err, {
-      dimension: "price-data",
-      cachedDataAvailable: true,
-      cacheFallbackSource: "inspect_cache",
-      inspectCacheRepoCount: probe.inspectCacheRepoCount,
-    });
-    finishGitHubResearchErrorContext();
-
-    expect(wire.remediation.action).toBe("use_cached_run");
-    expect(wire.remediation.alternative).toContain("Cross-dimension inspect cache");
-    expect(wire.impact.cacheFallbackSource).toBe("inspect_cache");
   });
 
-  test("buildGitHubErrorEnrichment falls back to cross-dimension production run", () => {
-    const at = freshTestGeneratedAt();
-    saveRun(CROSS_DIM_RUN_ID, at, {
-      runId: CROSS_DIM_RUN_ID,
-      generatedAt: at,
-      dimension: "market-making",
-      config: { shortlistSize: 12, gate: { minStars: 5, minForks: 3, maxAgeMonths: 18 } },
-      stats: { discovered: 1, gated: 1, inspected: 1, shortlist: 0 },
-      candidates: [],
-      gated: [],
-      scored: [],
-      shortlist: [],
-      excludedSdkOnly: [],
+  test("buildGitHubErrorEnrichment falls back to cross-dimension production run", async () => {
+    await withTempCache(async () => {
+      const at = freshTestGeneratedAt();
+      saveRun(CROSS_DIM_RUN_ID, at, {
+        runId: CROSS_DIM_RUN_ID,
+        generatedAt: at,
+        dimension: "market-making",
+        kind: "production",
+        config: { shortlistSize: 12, gate: { minStars: 5, minForks: 3, maxAgeMonths: 18 } },
+        stats: { discovered: 1, gated: 1, inspected: 1, shortlist: 0 },
+        candidates: [],
+        gated: [],
+        scored: [],
+        shortlist: [],
+        excludedSdkOnly: [],
+      });
+
+      beginGitHubResearchErrorContext({ dimension: "zzz-cross-dim-test" });
+      const err = new GitHubCacheMissError("blocked", {
+        cacheKind: "search",
+        cacheKey: "kalshi",
+      });
+      const enrichment = buildGitHubErrorEnrichment(err);
+      finishGitHubResearchErrorContext();
+
+      expect(enrichment.staleDataRunId).toBe(CROSS_DIM_RUN_ID);
+      expect(enrichment.staleDataSourceDimension).toBe("market-making");
+      expect(enrichment.cachedDataAvailable).toBe(true);
     });
-
-    beginGitHubResearchErrorContext({ dimension: "zzz-cross-dim-test" });
-    const err = new GitHubCacheMissError("blocked", {
-      cacheKind: "search",
-      cacheKey: "kalshi",
-    });
-    const enrichment = buildGitHubErrorEnrichment(err);
-    finishGitHubResearchErrorContext();
-
-    expect(enrichment.staleDataRunId).toBe(CROSS_DIM_RUN_ID);
-    expect(enrichment.staleDataSourceDimension).toBe("market-making");
-    expect(enrichment.cachedDataAvailable).toBe(true);
-
-    const db = new Database(CACHE_DB);
-    db.run("DELETE FROM runs WHERE run_id = ?", [CROSS_DIM_RUN_ID]);
   });
 });

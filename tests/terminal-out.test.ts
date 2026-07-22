@@ -2,9 +2,12 @@
 import { describe, expect, test } from "bun:test";
 import {
   formatInspectTable,
+  padDisplay,
+  plainDisplay,
   repoTerminalLink,
   shortlistTableRows,
   terminalLink,
+  wrapDisplay,
 } from "../src/research/terminal-out.ts";
 import {
   buildResearchSpawnArgs,
@@ -47,6 +50,30 @@ describe("terminal-out", () => {
   test("formatInspectTable returns empty string for no rows", () => {
     expect(formatInspectTable([], ["a"])).toBe("");
   });
+
+  test("padDisplay pads by Bun.stringWidth", () => {
+    expect(padDisplay("auth", 8)).toBe("auth    ");
+    expect(Bun.stringWidth(padDisplay("auth", 8))).toBe(8);
+    expect(padDisplay("orders", 4).endsWith("…")).toBe(true);
+  });
+
+  test("padDisplay truncates ANSI-colored text without leaving escapes", () => {
+    const colored = "\u001b[31morders\u001b[0m";
+    const truncated = padDisplay(colored, 4);
+    expect(plainDisplay(truncated)).toBe("ord…");
+    expect(truncated.includes("\u001b[")).toBe(false);
+  });
+
+  test("wrapDisplay preserves ANSI across soft wraps", () => {
+    const colored = "\u001b[31mThe quick brown fox jumps over the lazy dog\u001b[0m";
+    const wrapped = wrapDisplay(colored, 20);
+    expect(wrapped.includes("\n")).toBe(true);
+    expect(plainDisplay(wrapped).replace(/\n/g, " ")).toContain("quick brown");
+  });
+
+  test("plainDisplay strips ANSI via Bun.stripANSI", () => {
+    expect(plainDisplay("\u001b[1mBold\u001b[0m")).toBe("Bold");
+  });
 });
 
 describe("research progress", () => {
@@ -86,6 +113,10 @@ describe("research progress", () => {
       "--dimension=price-data",
       "--min-stars=1",
       "--min-forks=0",
+    ]);
+    expect(buildResearchSpawnArgs({ dryRun: true, dimension: "sports-nba" })).toEqual([
+      "--dry-run",
+      "--dimension=sports-nba",
     ]);
   });
 });

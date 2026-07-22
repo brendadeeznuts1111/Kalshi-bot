@@ -17,7 +17,13 @@ import {
   resolveRunDataFreshness,
   type DataFreshness,
 } from "./freshness.ts";
-import { isTtyStdout, formatInspectTable, liftTableRows, shortlistSummaryTableRows } from "../research/terminal-out.ts";
+import {
+  isTtyStdout,
+  formatInspectTable,
+  liftTableRows,
+  padDisplay,
+  shortlistSummaryTableRows,
+} from "../research/terminal-out.ts";
 import {
   loadRepoPatternReport,
   patternReportSourceRel,
@@ -280,7 +286,7 @@ export function formatLift(result: SuggestLiftResult): string {
             })}`
           : "";
       lines.push(
-        `  ${rec.component.padEnd(14)} ← ${rec.repo || "—"} (${rec.points}/${rec.maxPoints})${badge}`,
+        `  ${padDisplay(rec.component, 14)} ← ${rec.repo || "—"} (${rec.points}/${rec.maxPoints})${badge}`,
       );
       lines.push(`    ${rec.rationale}`);
       if (rec.pattern?.summary) {

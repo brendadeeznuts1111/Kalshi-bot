@@ -47,6 +47,8 @@ function scored(overrides: Partial<ScoredRepo> = {}): ScoredRepo {
     strategyTags: ["market_making"],
     isSdkOnly: false,
     riskKeywordHits: ["kelly"],
+    hasFeeAware: false,
+    feeAwareKeywordHits: [],
   };
   return {
     repo,
@@ -67,10 +69,24 @@ function scored(overrides: Partial<ScoredRepo> = {}): ScoredRepo {
 }
 
 describe("buildRepoReport", () => {
-  test("produces six detectors", () => {
+  test("produces seven detectors", () => {
     const report = buildRepoReport(scored());
-    expect(report.detectors).toHaveLength(6);
+    expect(report.detectors).toHaveLength(7);
     expect(report.fullName).toBe("OctagonAI/kalshi-trading-bot-cli");
+  });
+
+  test("feeAware detector when fee keywords present", () => {
+    const item = scored({
+      signals: {
+        ...scored().signals,
+        hasFeeAware: true,
+        feeAwareKeywordHits: ["taker fee", "net edge"],
+      },
+    });
+    const fee = buildDetectors(item).find((d) => d.id === DETECTOR_IDS.feeAware)!;
+    expect(fee.matched).toBe(true);
+    expect(fee.evidence[0]?.component).toBe("feeAware");
+    expect(fee.pointsContributed).toBeGreaterThan(0);
   });
 
   test("EvidenceLine from code search hits", () => {

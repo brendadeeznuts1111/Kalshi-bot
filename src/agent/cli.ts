@@ -9,7 +9,7 @@ import {
   formatRateLimitRemediation,
   serializeGitHubApiError,
 } from "../research/gh.ts";
-import { isTtyStdout } from "../research/terminal-out.ts";
+import { isTtyStdout, wrapDisplay } from "../research/terminal-out.ts";
 import { spawnResearch } from "./research-runner.ts";
 import { formatAgentStatus, getAgentStatus } from "./agent-status.ts";
 import {
@@ -27,19 +27,27 @@ import {
   formatArchitectureBlueprintMarkdown,
   runArchitectureBlueprint,
 } from "./architecture-blueprint.ts";
+import { formatDiscoveryGround, runDiscoveryGround } from "./discovery-ground.ts";
 
 export type AgentCommand =
   | "status"
   | "run-research"
   | "patterns"
   | "report"
-  | "blueprint";
+  | "blueprint"
+  | "ground";
 
-/** Drop leading `--` tokens so `agent status -- --dimension=x` still parses flags. */
+/**
+ * Drop bare `--` tokens so both `agent status -- --dimension=x` and
+ * `agent status --json -- --dimension=x` still parse flags.
+ */
+export function stripBareDoubleDashes(args: string[]): string[] {
+  return args.filter((a) => a !== "--");
+}
+
+/** @deprecated Prefer {@link stripBareDoubleDashes} — kept for tests/callers. */
 export function stripLeadingDoubleDashes(args: string[]): string[] {
-  let i = 0;
-  while (i < args.length && args[i] === "--") i++;
-  return args.slice(i);
+  return stripBareDoubleDashes(args);
 }
 
 export function parseAgentCommand(argv: string[]): {
@@ -52,9 +60,10 @@ export function parseAgentCommand(argv: string[]): {
     command === "run-research" ||
     command === "patterns" ||
     command === "report" ||
-    command === "blueprint"
+    command === "blueprint" ||
+    command === "ground"
   ) {
-    return { command, rest: stripLeadingDoubleDashes(rest) };
+    return { command, rest: stripBareDoubleDashes(rest) };
   }
   return { command: null, rest: argv };
 }
@@ -73,6 +82,16 @@ export async function runAgentStatus(json: boolean, dimension?: string): Promise
   return 0;
 }
 
+export async function runAgentGround(json: boolean, dimension?: string): Promise<number> {
+  const report = await runDiscoveryGround({ dimension });
+  if (json) {
+    console.log(JSON.stringify(report, null, 2));
+  } else {
+    console.log(formatDiscoveryGround(report));
+  }
+  return 0;
+}
+
 export async function runAgentResearch(
   json: boolean,
   options?: { dimension?: string; inProcess?: boolean; exportAudit?: boolean },
@@ -80,6 +99,7 @@ export async function runAgentResearch(
   const researchOpts = {
     json: false,
     exportAudit: options?.exportAudit !== false,
+    dryRun: false,
     dimension: options?.dimension,
   };
 
@@ -138,7 +158,7 @@ export async function runAgentResearch(
       if (json) {
         console.log(JSON.stringify({ ok: false, runOrigin: "local", ...wire }, null, 2));
       } else {
-        console.error(formatRateLimitRemediation(err, enrichment));
+        console.error(wrapDisplay(formatRateLimitRemediation(err, enrichment)));
       }
       return 2;
     }
@@ -160,7 +180,7 @@ export async function runAgentPatterns(
   const run = loadRunForPatterns(runId, dimension);
   if (!run) {
     const scope = dimension ? `dimension=${dimension}` : runId ? `run=${runId}` : "latest";
-    const msg = `No research run for ${scope}. Run: bun run research --dimension=<id>`;
+    const msg = `No research run for ${scope}. Run: bun run research -- --dimension=<id>`;
     if (json) console.log(JSON.stringify({ ok: false, error: msg }));
     else console.error(msg);
     return 1;
@@ -231,9 +251,11 @@ export async function runAgentBlueprint(json: boolean, noWrite?: boolean): Promi
 }
 
 export function printAgentHelp(): void {
-  console.log(`Kalshi agent tools (CLI over cache.db — no dashboard)
+  console.log(
+    wrapDisplay(`Kalshi agent tools — sub-agent mesh over cache.db (no dashboard)
 
 Usage:
+  bun run agent ground [--json] [--dimension <id>]   # discovery-grounded triage
   bun run agent status [--json] [--dimension <id>]
   bun run agent run-research [--json] [--in-process] [--dimension <id>] [--no-export-audit]
   bun run agent patterns [--json] [--run <run-id>] [--dimension <id>] [--repo <owner/name>] [--no-write] [--open]
@@ -241,6 +263,7 @@ Usage:
   bun run agent blueprint [--json] [--no-write]
 
 Flags go on the subcommand (no inner \`--\` needed):
+  bun run agent ground --dimension=market-making
   bun run agent status --dimension=market-making
   bun run agent run-research --dimension=price-data --no-export-audit
 
@@ -248,12 +271,14 @@ Environment:
   REPO_CLONE_ROOT   Local clone root for patterns --open (owner/repo subdirs)
 
 Examples:
+  bun run agent ground
   bun run agent status
   bun run agent patterns --dimension=market-making
   bun run agent report
   bun run agent blueprint
   bun run agent run-research --dimension=price-data
-`);
+`),
+  );
 }
 
 export async function main(argv = Bun.argv.slice(2)): Promise<number> {
@@ -295,6 +320,8 @@ export async function main(argv = Bun.argv.slice(2)): Promise<number> {
   switch (command) {
     case "status":
       return runAgentStatus(json, dimension);
+    case "ground":
+      return runAgentGround(json, dimension);
     case "run-research":
       return runAgentResearch(json, {
         dimension,

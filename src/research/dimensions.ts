@@ -1,7 +1,21 @@
 // @see https://bun.com/docs/runtime/file-io#reading-files-bun-file
 import { RESEARCH_ROOT, joinPath } from "./paths.ts";
 
-export const DEFAULT_DIMENSION = "all";
+/** Branded research slice id (dimensions.json key). */
+export type DimensionId = string & { readonly __brand: "DimensionId" };
+
+export const DEFAULT_DIMENSION = "all" as DimensionId;
+
+export function asDimensionId(raw: string): DimensionId {
+  const id = raw.trim();
+  if (!id) throw new Error("DimensionId required");
+  return id as DimensionId;
+}
+
+export function tryDimensionId(raw: string | undefined | null): DimensionId | undefined {
+  if (!raw?.trim()) return undefined;
+  return asDimensionId(raw);
+}
 
 export type DimensionDef = {
   label: string;
@@ -16,19 +30,21 @@ export type DimensionsFile = {
 };
 
 export type ResolvedDimensionQueries = {
-  dimension: string;
+  dimension: DimensionId;
   label: string;
   queries: string[];
   candidateCap: number;
 };
 
-export function normalizeDimensionId(raw: string | undefined | null): string {
+export function normalizeDimensionId(raw: string | undefined | null): DimensionId {
   const trimmed = raw?.trim();
-  return trimmed && trimmed.length > 0 ? trimmed : DEFAULT_DIMENSION;
+  return trimmed && trimmed.length > 0 ? (trimmed as DimensionId) : DEFAULT_DIMENSION;
 }
 
-export function listDimensionIds(file: DimensionsFile): string[] {
-  return Object.keys(file.dimensions).sort();
+export function listDimensionIds(file: DimensionsFile): DimensionId[] {
+  return Object.keys(file.dimensions)
+    .sort()
+    .map((id) => id as DimensionId);
 }
 
 export function resolveDimensionQueries(
@@ -67,7 +83,7 @@ export async function loadDimensionsFile(): Promise<DimensionsFile> {
 }
 
 /** Dimension tag on a run payload (legacy runs without field → all). */
-export function runDimension(run: { dimension?: string | null }): string {
+export function runDimension(run: { dimension?: string | null }): DimensionId {
   return normalizeDimensionId(run.dimension ?? DEFAULT_DIMENSION);
 }
 

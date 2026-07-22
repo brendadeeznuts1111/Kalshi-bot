@@ -2,7 +2,12 @@
 // @see https://bun.com/docs/runtime/http/server#basic-setup
 // @see https://bun.com/docs/runtime/file-io#reading-files-bun-file
 import type { ResearchRun, ScoredRepo } from "./types.ts";
-import { listRunSummaries, loadLatestRunFromDb, loadRunFromDb } from "./cache.ts";
+import {
+  isFixtureRun,
+  listRunSummaries,
+  loadLatestProductionRunAnyDimension,
+  loadRunFromDb,
+} from "./cache.ts";
 import { REPORT_DIR, joinPath } from "./paths.ts";
 import { fullNameFromRouteParams, ROUTES } from "./patterns.ts";
 import { pageLayout, renderIndex, renderRepoPage } from "./views.ts";
@@ -38,13 +43,22 @@ async function readLatestDiff(): Promise<string | null> {
   return text.trim() ? text : null;
 }
 
+/** Latest production run across dimensions (matches `agent status` — no fixture fallback). */
+function resolveLatestRun(): ResearchRun | null {
+  return loadLatestProductionRunAnyDimension();
+}
+
 function resolveRun(runId: string | null): ResearchRun | null {
-  if (runId) return loadRunFromDb(runId);
-  return loadLatestRunFromDb();
+  if (runId) {
+    const run = loadRunFromDb(runId);
+    if (!run || isFixtureRun(run)) return null;
+    return run;
+  }
+  return resolveLatestRun();
 }
 
 export async function handleHome(): Promise<Response> {
-  const run = loadLatestRunFromDb();
+  const run = resolveLatestRun();
   if (!run) {
     return html(
       pageLayout(
@@ -65,7 +79,7 @@ export function handleRunsList(): Response {
 
 export function handleRunApi(req: RouteRequest<{ id: string }>): Response {
   const run = loadRunFromDb(req.params.id);
-  if (!run) return json({ error: "run not found" }, 404);
+  if (!run || isFixtureRun(run)) return json({ error: "run not found" }, 404);
   return json(run);
 }
 

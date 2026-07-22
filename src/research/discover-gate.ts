@@ -86,3 +86,41 @@ export function formatDiscoverGateNote(apply: GateOptions, discover: GateOptions
     `(min-stars=${apply.minStars}, min-forks=${apply.minForks}, max-age-months=${apply.maxAgeMonths}).`
   );
 }
+
+export function parseSearchQueryPopularity(query: string): {
+  minStars: number;
+  minForks: number;
+} {
+  const stars = /\bstars:>=(\d+)/i.exec(query);
+  const forks = /\bforks:>=(\d+)/i.exec(query);
+  return {
+    minStars: stars ? Number(stars[1]) : 0,
+    minForks: forks ? Number(forks[1]) : 0,
+  };
+}
+
+/**
+ * Mode of stars/forks qualifiers across stored/search query strings.
+ * maxAgeMonths inherited from apply (pushed dates are not recoverable).
+ */
+export function inferDiscoverGateFromSearchQueries(
+  searchQueries: string[],
+  apply: GateOptions,
+): GateOptions | null {
+  if (searchQueries.length === 0) return null;
+  const tallies = new Map<string, { n: number; minStars: number; minForks: number }>();
+  for (const q of searchQueries) {
+    const { minStars, minForks } = parseSearchQueryPopularity(q);
+    const key = `${minStars}:${minForks}`;
+    const cur = tallies.get(key) ?? { n: 0, minStars, minForks };
+    cur.n += 1;
+    tallies.set(key, cur);
+  }
+  const best = [...tallies.values()].sort((a, b) => b.n - a.n)[0];
+  if (!best) return null;
+  return {
+    minStars: best.minStars,
+    minForks: best.minForks,
+    maxAgeMonths: apply.maxAgeMonths,
+  };
+}

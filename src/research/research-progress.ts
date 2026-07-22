@@ -98,6 +98,8 @@ export function formatProgressLine(message: ResearchProgressMessage): string | n
 export function buildResearchSpawnArgs(options: {
   json?: boolean;
   exportAudit?: boolean;
+  dryRun?: boolean;
+  offline?: boolean;
   dimension?: string;
   shortlist?: number;
   minStars?: number;
@@ -108,6 +110,8 @@ export function buildResearchSpawnArgs(options: {
   const args: string[] = [];
   if (options.json) args.push("--json");
   if (options.exportAudit) args.push("--export-audit");
+  if (options.dryRun) args.push("--dry-run");
+  if (options.offline) args.push("--offline");
   if (options.dimension) args.push(`--dimension=${options.dimension}`);
   if (options.shortlist !== undefined) args.push(`--shortlist=${options.shortlist}`);
   if (options.minStars !== undefined) args.push(`--min-stars=${options.minStars}`);

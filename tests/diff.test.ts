@@ -42,6 +42,8 @@ function scored(fullName: string, total: number): ScoredRepo {
       strategyTags: ["arb"],
       isSdkOnly: false,
       riskKeywordHits: [],
+      hasFeeAware: false,
+      feeAwareKeywordHits: [],
     },
     score: {
       authApi: 0,

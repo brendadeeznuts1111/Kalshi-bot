@@ -25,6 +25,7 @@ export async function runScheduledResearch(deps: ScheduledDeps = {}): Promise<Re
   return runFn({
     json: false,
     exportAudit: Bun.env.RESEARCH_EXPORT_AUDIT === "1",
+    dryRun: false,
     dimension: normalizeDimensionId(Bun.env.RESEARCH_DIMENSION),
   });
 }

@@ -3,6 +3,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { Database } from "bun:sqlite";
 import {
   DEFAULT_DIMENSION,
+  asDimensionId,
   dimensionArtifactBasename,
   listDimensionIds,
   normalizeDimensionId,
@@ -17,7 +18,7 @@ import { loadLatestRunFromDb, loadResearchRun, saveRun, CACHE_DB } from "../src/
 import { diffRuns } from "../src/research/diff.ts";
 import type { ResearchRun } from "../src/research/types.ts";
 import { REPORT_DIR, joinPath } from "../src/research/paths.ts";
-import { freshTestGeneratedAt } from "./fixtures.ts";
+import { freshTestGeneratedAt, mintTestProductionRunId } from "./fixtures.ts";
 
 const SAMPLE_DIMENSIONS = {
   candidateCap: 50,
@@ -30,15 +31,21 @@ const SAMPLE_DIMENSIONS = {
 };
 
 describe("dimensions", () => {
+  test("normalizeDimensionId returns branded DimensionId", () => {
+    const id = normalizeDimensionId("market-making");
+    expect(id).toBe(asDimensionId("market-making"));
+    expect(typeof id).toBe("string");
+  });
+
   test("normalizeDimensionId defaults to all", () => {
     expect(normalizeDimensionId(undefined)).toBe(DEFAULT_DIMENSION);
     expect(normalizeDimensionId("  ")).toBe(DEFAULT_DIMENSION);
-    expect(normalizeDimensionId("sports")).toBe("sports");
+    expect(normalizeDimensionId("sports")).toBe(asDimensionId("sports"));
   });
 
   test("resolveDimensionQueries returns queries and cap", () => {
     const resolved = resolveDimensionQueries(SAMPLE_DIMENSIONS, "market-making");
-    expect(resolved.dimension).toBe("market-making");
+    expect(resolved.dimension).toBe(asDimensionId("market-making"));
     expect(resolved.label).toBe("MM");
     expect(resolved.queries).toHaveLength(2);
     expect(resolved.candidateCap).toBe(50);
@@ -56,12 +63,24 @@ describe("dimensions", () => {
   });
 
   test("runDimension treats legacy runs as all", () => {
-    expect(runDimension({})).toBe("all");
-    expect(runDimension({ dimension: "sports" })).toBe("sports");
+    expect(runDimension({})).toBe(DEFAULT_DIMENSION);
+    expect(runDimension({ dimension: "sports" })).toBe(asDimensionId("sports"));
   });
 
   test("listDimensionIds is sorted", () => {
-    expect(listDimensionIds(SAMPLE_DIMENSIONS)).toEqual(["all", "market-making", "sports"]);
+    expect(listDimensionIds(SAMPLE_DIMENSIONS)).toEqual([
+      asDimensionId("all"),
+      asDimensionId("market-making"),
+      asDimensionId("sports"),
+    ]);
+  });
+
+  test("dimensions.json defines odds-feed only (not ticker-mapper / shadow-bot)", async () => {
+    const file = await loadDimensionsFile();
+    expect(file.dimensions["odds-feed"]?.queries.length).toBeGreaterThan(0);
+    expect(file.dimensions["ticker-mapper"]).toBeUndefined();
+    expect(file.dimensions["shadow-bot"]).toBeUndefined();
+    expect(listDimensionIds(file)).toContain(asDimensionId("odds-feed"));
   });
 
   test("dimensions.json defines sports sub-slices (no broad sports)", async () => {
@@ -72,12 +91,13 @@ describe("dimensions", () => {
     expect(file.dimensions["sports-elections"]?.queries.length).toBeGreaterThan(0);
     const ids = listDimensionIds(file);
     expect(ids.filter((id) => id.startsWith("sports-"))).toEqual([
-      "sports-elections",
-      "sports-macro",
-      "sports-nba",
-      "sports-nfl",
-      "sports-other",
-      "sports-soccer",
+      asDimensionId("sports-elections"),
+      asDimensionId("sports-macro"),
+      asDimensionId("sports-nba"),
+      asDimensionId("sports-nfl"),
+      asDimensionId("sports-other"),
+      asDimensionId("sports-soccer"),
+      asDimensionId("sports-tennis"),
     ]);
   });
 
@@ -94,6 +114,18 @@ describe("dimensions", () => {
 describe("parseCliOptions dimension", () => {
   test("parses --dimension flag", () => {
     expect(parseCliOptions(["--dimension=market-making"]).dimension).toBe("market-making");
+  });
+
+  test("parses --dry-run flag", () => {
+    expect(parseCliOptions([]).dryRun).toBe(false);
+    expect(parseCliOptions(["--dry-run"]).dryRun).toBe(true);
+    expect(parseCliOptions(["--dry-run", "--dimension=sports-nba"]).dryRun).toBe(true);
+  });
+
+  test("parses --offline flag", () => {
+    expect(parseCliOptions([]).offline).toBe(false);
+    expect(parseCliOptions(["--offline"]).offline).toBe(true);
+    expect(parseCliOptions(["--dry-run", "--offline"]).offline).toBe(true);
   });
 
   test("reads RESEARCH_DIMENSION env", () => {
@@ -199,36 +231,57 @@ describe("dimension reports", () => {
     expect(text).toContain("Dimension: `sports`");
   });
 
-  test("loadResearchRun loads latest run for a dimension", () => {
-    const run = loadResearchRun({ dimension: "arbitrage" });
-    expect(run).not.toBeNull();
-    expect(runDimension(run!)).toBe("arbitrage");
+  test("loadResearchRun loads latest run for a dimension", async () => {
+    const { withTempCache } = await import("./temp-cache.ts");
+    await withTempCache(async () => {
+      const runId = mintTestProductionRunId();
+      const at = freshTestGeneratedAt();
+      saveRun(runId, at, {
+        runId,
+        generatedAt: at,
+        dimension: "arbitrage",
+        kind: "production",
+        config: { shortlistSize: 12, gate: { minStars: 5, minForks: 3, maxAgeMonths: 18 } },
+        stats: { discovered: 1, gated: 1, inspected: 1, shortlist: 0 },
+        candidates: [],
+        gated: [],
+        scored: [],
+        shortlist: [],
+        excludedSdkOnly: [],
+      });
+      const run = loadResearchRun({ dimension: "arbitrage" });
+      expect(run).not.toBeNull();
+      expect(runDimension(run!)).toBe(asDimensionId("arbitrage"));
+    });
   });
 
-  test("loadLatestRunFromDb filters by dimension", () => {
-    const at = freshTestGeneratedAt();
-    const base = {
-      config: { shortlistSize: 12, gate: { minStars: 5, minForks: 3, maxAgeMonths: 18 } },
-      stats: { discovered: 1, gated: 1, inspected: 1, shortlist: 0 },
-      candidates: [],
-      gated: [],
-      scored: [],
-      shortlist: [],
-      excludedSdkOnly: [],
-    };
-    saveRun("2099-dimension-sports", at, {
-      ...base,
-      runId: "2099-dimension-sports",
-      generatedAt: at,
-      dimension: "sports-test-isolation",
-      kind: "fixture",
-    });
+  test("loadLatestRunFromDb filters by dimension", async () => {
+    const { withTempCache } = await import("./temp-cache.ts");
+    await withTempCache(async () => {
+      const at = freshTestGeneratedAt();
+      const base = {
+        config: { shortlistSize: 12, gate: { minStars: 5, minForks: 3, maxAgeMonths: 18 } },
+        stats: { discovered: 1, gated: 1, inspected: 1, shortlist: 0 },
+        candidates: [],
+        gated: [],
+        scored: [],
+        shortlist: [],
+        excludedSdkOnly: [],
+      };
+      saveRun("2099-dimension-sports", at, {
+        ...base,
+        runId: "2099-dimension-sports",
+        generatedAt: at,
+        dimension: "sports-test-isolation",
+        kind: "fixture",
+      });
 
-    expect(loadLatestRunFromDb({ dimension: "sports-test-isolation", includeFixtures: true })?.runId).toBe(
-      "2099-dimension-sports",
-    );
-    expect(loadLatestRunFromDb({ dimension: "all", includeFixtures: true })?.runId).not.toBe(
-      "2099-dimension-sports",
-    );
+      expect(loadLatestRunFromDb({ dimension: "sports-test-isolation", includeFixtures: true })?.runId).toBe(
+        "2099-dimension-sports",
+      );
+      expect(loadLatestRunFromDb({ dimension: "all", includeFixtures: true })?.runId).not.toBe(
+        "2099-dimension-sports",
+      );
+    });
   });
 });

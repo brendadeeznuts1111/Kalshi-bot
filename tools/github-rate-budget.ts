@@ -46,7 +46,7 @@ if (import.meta.main) {
 
   const wire = await fetchRateLimitWire();
   if (!wire) {
-    console.error("failed to read gh api rate_limit — is gh authenticated?");
+    console.error("failed to read GitHub rate_limit — is GH_TOKEN / gh auth set?");
     process.exit(1);
   }
 

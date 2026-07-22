@@ -72,6 +72,23 @@
         "elo soccer model"
       ]
     },
+    "sports-tennis": {
+      "label": "Tennis (ATP / WTA / Kalshi)",
+      "queries": [
+        "Kalshi tennis",
+        "Kalshi ATP",
+        "Kalshi WTA",
+        "prediction market tennis bot",
+        "tennis betting model github",
+        "ATP odds api",
+        "WTA odds pinnacle",
+        "the odds api tennis",
+        "tennis_atp trading bot",
+        "tennis match winner model",
+        "polymarket tennis",
+        "kalshi tennis bot"
+      ]
+    },
     "sports-other": {
       "label": "Other sports (MLB, NHL, tennis, …)",
       "queries": [
@@ -166,6 +183,19 @@
         "\"cross venue\" kalshi",
         "kalshi prediction market arb",
         "kalshi cross exchange"
+      ]
+    },
+    "odds-feed": {
+      "label": "Odds API integration",
+      "queries": [
+        "\"the odds api\" sports",
+        "\"pinnacle\" odds fetcher",
+        "\"odds api\" client typescript",
+        "\"vig\" stripping",
+        "\"implied probability\" american odds",
+        "the-odds-api.com client",
+        "pinnacle odds api",
+        "strip overround sports betting"
       ]
     }
   }

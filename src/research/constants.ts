@@ -26,6 +26,7 @@ export const UNLICENSED_SPDX_MARKERS = ["noassertion", "unlicense"] as const;
 export const DETECTOR_IDS = {
   authApi: "auth-api",
   orderRealism: "order-realism",
+  feeAware: "fee-aware",
   testsCi: "tests-ci",
   docsSetup: "docs-setup",
   maintenance: "maintenance",
@@ -98,7 +99,7 @@ export const MS_PER_DAY = 86_400_000;
 /** Inspect pool concurrency in CLI. */
 export const DEFAULT_INSPECT_CONCURRENCY = 4;
 
-/** Parallel `gh search code` queries per repo — keep low (code_search is 10/min). */
+/** Parallel code-search queries per repo — keep low (code_search is 10/min). */
 export const DEFAULT_CODE_SEARCH_CONCURRENCY = 1;
 
 /** `gh search repos --limit`. */
@@ -159,6 +160,28 @@ export const CENTS_PRICE_MARKERS = [
   "cent_price",
 ] as const;
 
+/** Kalshi fee schedule / net-edge handling (positive order-realism signal). */
+export const FEE_AWARE_MARKERS = [
+  "taker fee",
+  "taker_fee",
+  "maker fee",
+  "maker_fee",
+  "kalshi fee",
+  "kalshi_fee",
+  "fee schedule",
+  "fee_schedule",
+  "trading fee",
+  "fee_cents",
+  "fee_amount",
+  "after fees",
+  "after_fees",
+  "minus fees",
+  "net edge",
+  "net_edge",
+  "raw_edge",
+  "fees(price)",
+] as const;
+
 /** README length thresholds (chars). */
 export const README_SCORE_LONG_CHARS = 800;
 export const README_DOCS_MATCH_CHARS = 500;
@@ -173,9 +196,10 @@ export const AUTH_SCORE_SHARES = {
 } as const;
 
 export const ORDER_SCORE_SHARES = {
-  liveOrderPath: 0.5,
-  dryRunDefault: 0.3,
-  centsBounds: 0.2,
+  liveOrderPath: 0.42,
+  dryRunDefault: 0.25,
+  centsBounds: 0.18,
+  feeAware: 0.15,
 } as const;
 
 export const TESTS_CI_SCORE_SHARES = {

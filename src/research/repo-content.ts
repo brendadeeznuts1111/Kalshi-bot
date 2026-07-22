@@ -1,6 +1,8 @@
 // @see https://bun.com/docs/runtime/file-io#reading-files-bun-file
+// @see https://bun.com/docs/runtime/networking/fetch#sending-an-http-request
 import { decodeBase64 } from "./io.ts";
-import { ghJson, isGitHubRateLimitError } from "./gh.ts";
+import { isGitHubRateLimitError } from "./gh.ts";
+import { githubApiJson } from "./github-api.ts";
 import { withCache } from "./cache.ts";
 
 export const MAX_REPO_FILE_BYTES = 80_000;
@@ -18,7 +20,7 @@ export type RepoFileRef = {
   defaultBranch?: string;
 };
 
-/** Fetch a single text file from GitHub via gh API (cached per repo+pushed_at). */
+/** Fetch a single text file from GitHub REST (cached per repo+pushed_at). */
 export async function fetchRepoFileText(
   repo: RepoFileRef,
   filePath: string,
@@ -32,7 +34,7 @@ export async function fetchRepoFileText(
       const pathArg = ref
         ? `repos/${repo.fullName}/contents/${normalized}?ref=${encodeURIComponent(ref)}`
         : `repos/${repo.fullName}/contents/${normalized}`;
-      const data = await ghJson<GhFileContent>(["api", pathArg]);
+      const data = await githubApiJson<GhFileContent>(pathArg);
       if (data.type !== "file") return null;
       if (typeof data.size === "number" && data.size > MAX_REPO_FILE_BYTES) return null;
       if (!data.content) return null;

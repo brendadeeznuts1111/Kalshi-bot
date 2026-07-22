@@ -1,7 +1,11 @@
 // @see https://bun.com/docs/test/index#run-tests
 import { describe, expect, test } from "bun:test";
 import { formatAgentStatus, getAgentStatus } from "../src/agent/agent-status.ts";
-import { parseAgentCommand, stripLeadingDoubleDashes } from "../src/agent/cli.ts";
+import {
+  parseAgentCommand,
+  stripBareDoubleDashes,
+  stripLeadingDoubleDashes,
+} from "../src/agent/cli.ts";
 import {
   formatLift,
   suggestLiftFromRun,
@@ -51,6 +55,8 @@ function mockRun(): ResearchRun {
       strategyTags: ["market_making"],
       isSdkOnly: false,
       riskKeywordHits: [],
+    hasFeeAware: false,
+    feeAwareKeywordHits: [],
     },
     stackRank: 1,
   };
@@ -112,12 +118,20 @@ describe("agent cli", () => {
     expect(parseAgentCommand([]).command).toBeNull();
   });
 
-  test("stripLeadingDoubleDashes keeps flags after bare --", () => {
+  test("stripBareDoubleDashes removes leading and mid-argv bare --", () => {
     expect(stripLeadingDoubleDashes(["--", "--dimension=market-making"])).toEqual([
+      "--dimension=market-making",
+    ]);
+    expect(stripBareDoubleDashes(["--json", "--", "--dimension=market-making"])).toEqual([
+      "--json",
       "--dimension=market-making",
     ]);
     expect(parseAgentCommand(["status", "--", "--dimension=market-making"]).rest).toEqual([
       "--dimension=market-making",
+    ]);
+    expect(parseAgentCommand(["status", "--json", "--", "--dimension=mm"]).rest).toEqual([
+      "--json",
+      "--dimension=mm",
     ]);
   });
 
@@ -167,20 +181,23 @@ describe("agent cli", () => {
     expect(formatLift(enriched)).toContain("↳ pattern:");
   });
 
-  test("getAgentStatus reads newest production run across dimensions", () => {
-    const run = mockRun();
-    const at = freshTestGeneratedAt();
-    run.runId = mintTestProductionRunId();
-    run.generatedAt = at;
-    run.dimension = "market-making";
-    run.shortlist = run.scored;
-    saveRun(run.runId, at, run);
+  test("getAgentStatus reads newest production run across dimensions", async () => {
+    const { withTempCache } = await import("./temp-cache.ts");
+    await withTempCache(async () => {
+      const run = mockRun();
+      const at = freshTestGeneratedAt();
+      run.runId = mintTestProductionRunId();
+      run.generatedAt = at;
+      run.dimension = "market-making";
+      run.shortlist = run.scored;
+      saveRun(run.runId, at, run);
 
-    const status = getAgentStatus();
-    expect(status.source).toBe("cache.db");
-    expect(status.latestRun?.runId).toBe(run.runId);
-    expect(status.latestRun?.dimension).toBe("market-making");
-    expect(formatAgentStatus(status)).toContain("cache.db");
+      const status = getAgentStatus();
+      expect(status.source).toBe("cache.db");
+      expect(status.latestRun?.runId).toBe(run.runId);
+      expect(status.latestRun?.dimension).toBe("market-making");
+      expect(formatAgentStatus(status)).toContain("cache.db");
+    });
   });
 
   test("getAgentStatus with dimension does not cross-fallback", () => {
@@ -188,5 +205,16 @@ describe("agent cli", () => {
     expect(status.latestRun).toBeNull();
     expect(status.requestedDimension).toBe("dimension-that-does-not-exist-zz");
     expect(formatAgentStatus(status)).toContain("none for dimension=");
+    expect(formatAgentStatus(status)).toContain(
+      "bun run research -- --dimension=dimension-that-does-not-exist-zz",
+    );
+    expect(formatAgentStatus(status)).toContain(
+      "bun run agent ground --dimension=dimension-that-does-not-exist-zz",
+    );
+    expect(formatAgentStatus(status)).toContain("research:dry");
+  });
+
+  test("parseAgentCommand recognizes ground", () => {
+    expect(parseAgentCommand(["ground"]).command).toBe("ground");
   });
 });

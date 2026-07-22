@@ -49,6 +49,8 @@ function scored(
       strategyTags: tags,
       isSdkOnly,
       riskKeywordHits: [],
+      hasFeeAware: false,
+      feeAwareKeywordHits: [],
     },
     score: {
       authApi: 15,

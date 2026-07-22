@@ -64,16 +64,31 @@ export function getAgentStatus(dimension?: string): AgentStatus {
   };
 }
 
-export function formatAgentStatus(status: AgentStatus): string {
-  const lines = ["Kalshi agent status", `Source: ${status.source}`];
+export function formatAgentStatus(
+  status: AgentStatus,
+  options?: { compact?: boolean },
+): string {
+  const compact = options?.compact === true;
+  const lines = compact
+    ? ["(embedded status)"]
+    : ["Kalshi agent status", `Source: ${status.source}`];
   if (!status.latestRun) {
     if (status.requestedDimension) {
-      lines.push(
-        `Latest run: none for dimension=${status.requestedDimension}`,
-        `Run: bun run research --dimension=${status.requestedDimension}`,
-      );
+      lines.push(`Latest run: none for dimension=${status.requestedDimension}`);
+      if (!compact) {
+        lines.push(
+          `Run: bun run research -- --dimension=${status.requestedDimension}`,
+          `Offline probe: bun run research:dry -- --dimension=${status.requestedDimension}`,
+          `Triage: bun run agent ground --dimension=${status.requestedDimension}`,
+        );
+      }
+    } else if (compact) {
+      lines.push("Latest run: none");
     } else {
-      lines.push("Latest run: none — run: bun run research");
+      lines.push(
+        "Latest run: none — run: bun run research",
+        "Triage: bun run agent ground",
+      );
     }
     return lines.join("\n");
   }
@@ -84,7 +99,17 @@ export function formatAgentStatus(status: AgentStatus): string {
     `Dimension: ${r.dimension}`,
     `Discovered ${r.discovered} → gated ${r.gated} → shortlist ${r.shortlist}${stale}`,
   );
-  if (r.gateMiss) lines.push("Gate miss: yes (see report / agent blueprint)");
-  if (r.discoveryMiss) lines.push("Discovery miss: yes (see report)");
+  if (r.gateMiss) {
+    lines.push("Gate miss: yes");
+    if (!compact) {
+      lines.push(`Triage: bun run agent ground --dimension=${r.dimension}`);
+    }
+  }
+  if (r.discoveryMiss) {
+    lines.push("Discovery miss: yes");
+    if (!compact) {
+      lines.push(`Triage: bun run agent ground --dimension=${r.dimension}`);
+    }
+  }
   return lines.join("\n");
 }

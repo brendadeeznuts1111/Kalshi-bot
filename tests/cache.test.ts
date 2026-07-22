@@ -1,10 +1,15 @@
 // @see https://bun.com/docs/test/index#run-tests
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
+import { Database } from "bun:sqlite";
 import {
+  backfillDiscoverGates,
   cacheHash,
+  isFixtureRun,
   isProductionRunId,
   isEligibleProductionRun,
   listRunSummaries,
+  loadLatestProductionRunAnyDimension,
+  resetCacheDbConnection,
   saveRun,
   loadRunFromDb,
   loadLatestRunFromDb,
@@ -19,6 +24,8 @@ import {
 import { GitHubCacheMissError, resetGitHubRateLimitCircuit, tripGitHubRateLimit } from "../src/research/github-errors.ts";
 import type { InspectionSignals } from "../src/research/types.ts";
 import { freshTestGeneratedAt, mintTestProductionRunId } from "./fixtures.ts";
+import { enterTempCache, exitTempCache } from "./temp-cache.ts";
+import { tempSqlitePath, unlinkSqlite } from "./tmp-db.ts";
 
 describe("isProductionRunId", () => {
   test("accepts ISO pipeline run ids", () => {
@@ -53,6 +60,16 @@ describe("isProductionRunId", () => {
       } as never),
     ).toBe(true);
   });
+
+  test("isFixtureRun ignores forged kind:production on far-future run ids", () => {
+    const forged = {
+      runId: "2026-12-31T23-59-59-000Z",
+      generatedAt: new Date().toISOString(),
+      kind: "production" as const,
+    };
+    expect(isEligibleProductionRun(forged as never)).toBe(false);
+    expect(isFixtureRun(forged as never)).toBe(true);
+  });
 });
 
 describe("cacheHash", () => {
@@ -70,6 +87,12 @@ describe("cacheHash", () => {
 });
 
 describe("withCache + runs", () => {
+  beforeAll(async () => {
+    await enterTempCache();
+  });
+  afterAll(() => {
+    exitTempCache();
+  });
   afterEach(() => {
     resetGitHubRateLimitCircuit();
   });
@@ -123,6 +146,8 @@ describe("withCache + runs", () => {
       strategyTags: ["tracking"],
       isSdkOnly: false,
       riskKeywordHits: [],
+      hasFeeAware: false,
+      feeAwareKeywordHits: [],
     };
     expect(loadInspectCache(repo, pushedAt)).toBeNull();
     saveInspectCache(repo, pushedAt, signals);
@@ -177,6 +202,214 @@ describe("withCache + runs", () => {
     });
     const hit = listRunSummaries().find((s) => s.runId === "summary-run");
     expect(hit).toBeUndefined();
+  });
+
+  test("listRunSummaries over-fetches past future-dated fixtures", () => {
+    const base = {
+      config: { shortlistSize: 12, gate: { minStars: 5, minForks: 3, maxAgeMonths: 18 } },
+      stats: { discovered: 1, gated: 1, inspected: 1, shortlist: 1 },
+      candidates: [] as never[],
+      gated: [] as never[],
+      scored: [] as never[],
+      shortlist: [] as never[],
+      excludedSdkOnly: [] as never[],
+    };
+    for (let i = 0; i < 25; i++) {
+      const id = `fixture-starvation-${i}`;
+      saveRun(id, "2099-06-01T00:00:00.000Z", {
+        ...base,
+        runId: id,
+        generatedAt: "2099-06-01T00:00:00.000Z",
+        kind: "fixture" as const,
+        dimension: "all",
+      });
+    }
+    const prodId = mintTestProductionRunId();
+    const at = freshTestGeneratedAt();
+    saveRun(prodId, at, {
+      ...base,
+      runId: prodId,
+      generatedAt: at,
+      kind: "production",
+      dimension: "all",
+    });
+    const summaries = listRunSummaries(5);
+    expect(summaries.length).toBeGreaterThan(0);
+    expect(summaries.some((s) => s.runId === prodId)).toBe(true);
+  });
+
+  test("loadLatestProductionRunAnyDimension survives many future fixtures", () => {
+    const base = {
+      config: { shortlistSize: 12, gate: { minStars: 5, minForks: 3, maxAgeMonths: 18 } },
+      stats: { discovered: 1, gated: 1, inspected: 1, shortlist: 1 },
+      candidates: [] as never[],
+      gated: [] as never[],
+      scored: [] as never[],
+      shortlist: [] as never[],
+      excludedSdkOnly: [] as never[],
+    };
+    for (let i = 0; i < 60; i++) {
+      const id = `latest-starvation-${i}`;
+      saveRun(id, "2099-07-01T00:00:00.000Z", {
+        ...base,
+        runId: id,
+        generatedAt: "2099-07-01T00:00:00.000Z",
+        kind: "fixture" as const,
+        dimension: "all",
+      });
+    }
+    const prodId = mintTestProductionRunId();
+    const at = freshTestGeneratedAt();
+    saveRun(prodId, at, {
+      ...base,
+      runId: prodId,
+      generatedAt: at,
+      kind: "production",
+      dimension: "all",
+    });
+    expect(loadLatestProductionRunAnyDimension()?.runId).toBe(prodId);
+    expect(loadLatestRunFromDb({ dimension: "all" })?.runId).toBe(prodId);
+  });
+
+  test("saveRun rewrites forged kind:production to fixture when ineligible", () => {
+    const at = freshTestGeneratedAt();
+    saveRun("2026-12-31T23-59-59-000Z", at, {
+      runId: "2026-12-31T23-59-59-000Z",
+      generatedAt: at,
+      kind: "production",
+      dimension: "all",
+      config: { shortlistSize: 12, gate: { minStars: 5, minForks: 3, maxAgeMonths: 18 } },
+      stats: { discovered: 1, gated: 1, inspected: 1, shortlist: 1 },
+      candidates: [],
+      gated: [],
+      scored: [],
+      shortlist: [],
+      excludedSdkOnly: [],
+    });
+    const loaded = loadRunFromDb("2026-12-31T23-59-59-000Z");
+    expect(loaded?.kind).toBe("fixture");
+    expect(listRunSummaries().some((s) => s.runId === "2026-12-31T23-59-59-000Z")).toBe(false);
+  });
+
+  test("saveRun stamps discoverGate when missing", () => {
+    const at = freshTestGeneratedAt();
+    const id = mintTestProductionRunId();
+    saveRun(id, at, {
+      runId: id,
+      generatedAt: at,
+      kind: "production",
+      source: "pipeline",
+      dimension: "all",
+      config: { shortlistSize: 12, gate: { minStars: 5, minForks: 3, maxAgeMonths: 18 } },
+      stats: { discovered: 1, gated: 1, inspected: 1, shortlist: 1 },
+      candidates: [],
+      gated: [],
+      scored: [],
+      shortlist: [],
+      excludedSdkOnly: [],
+    });
+    const loaded = loadRunFromDb(id);
+    expect(loaded?.config.discoverGate).toEqual({
+      minStars: 0,
+      minForks: 0,
+      maxAgeMonths: 18,
+    });
+  });
+
+  test("backfillDiscoverGates stamps previously bare configs", () => {
+    // :memory: cannot be reopened from a second connection — use an on-disk temp DB.
+    const path = tempSqlitePath("backfill-dg");
+    const prev = Bun.env.RESEARCH_CACHE_DB;
+    Bun.env.RESEARCH_CACHE_DB = path;
+    resetCacheDbConnection();
+    try {
+      const at = freshTestGeneratedAt();
+      const id = mintTestProductionRunId();
+      saveRun(id, at, {
+        runId: id,
+        generatedAt: at,
+        kind: "production",
+        source: "pipeline",
+        dimension: "all",
+        config: { shortlistSize: 12, gate: { minStars: 5, minForks: 3, maxAgeMonths: 18 } },
+        stats: { discovered: 1, gated: 1, inspected: 1, shortlist: 1 },
+        candidates: [],
+        gated: [],
+        scored: [],
+        shortlist: [],
+        excludedSdkOnly: [],
+      });
+      resetCacheDbConnection();
+      const db = new Database(path);
+      const row = db.query("SELECT payload FROM runs WHERE run_id = ?").get(id) as {
+        payload: string;
+      };
+      const parsed = JSON.parse(row.payload) as {
+        config: { discoverGate?: unknown };
+      };
+      delete parsed.config.discoverGate;
+      db.query("UPDATE runs SET payload = ? WHERE run_id = ?").run(JSON.stringify(parsed), id);
+      db.close();
+      resetCacheDbConnection();
+
+      expect(backfillDiscoverGates()).toEqual([id]);
+      expect(loadRunFromDb(id)?.config.discoverGate).toEqual({
+        minStars: 0,
+        minForks: 0,
+        maxAgeMonths: 18,
+      });
+    } finally {
+      resetCacheDbConnection();
+      if (prev === undefined) delete Bun.env.RESEARCH_CACHE_DB;
+      else Bun.env.RESEARCH_CACHE_DB = prev;
+      resetCacheDbConnection();
+      unlinkSqlite(path);
+    }
+  });
+
+  test("saveRun forces payload.runId to match the row key", () => {
+    const at = freshTestGeneratedAt();
+    const key = mintTestProductionRunId();
+    saveRun(key, at, {
+      runId: "2026-07-21T12-00-00-000Z",
+      generatedAt: at,
+      kind: "production",
+      source: "pipeline",
+      dimension: "all",
+      config: { shortlistSize: 12, gate: { minStars: 5, minForks: 3, maxAgeMonths: 18 } },
+      stats: { discovered: 1, gated: 1, inspected: 1, shortlist: 1 },
+      candidates: [],
+      gated: [],
+      scored: [],
+      shortlist: [],
+      excludedSdkOnly: [],
+    });
+    const loaded = loadRunFromDb(key);
+    expect(loaded?.runId).toBe(key);
+    expect(loadRunFromDb("2026-07-21T12-00-00-000Z")).toBeNull();
+  });
+
+  test("source:test is treated as fixture even with eligible production id", () => {
+    const at = freshTestGeneratedAt();
+    const id = mintTestProductionRunId();
+    saveRun(id, at, {
+      runId: id,
+      generatedAt: at,
+      kind: "production",
+      source: "test",
+      dimension: "all",
+      config: { shortlistSize: 12, gate: { minStars: 5, minForks: 3, maxAgeMonths: 18 } },
+      stats: { discovered: 1, gated: 1, inspected: 1, shortlist: 1 },
+      candidates: [],
+      gated: [],
+      scored: [],
+      shortlist: [],
+      excludedSdkOnly: [],
+    });
+    const loaded = loadRunFromDb(id);
+    expect(loaded?.kind).toBe("fixture");
+    expect(isFixtureRun(loaded!)).toBe(true);
+    expect(loadLatestProductionRunAnyDimension()?.runId).not.toBe(id);
   });
 
   test("saveRun stamps fixture kind and excludes from latest resolution", () => {

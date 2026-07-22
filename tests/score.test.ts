@@ -56,6 +56,8 @@ function signals(overrides: Partial<InspectionSignals> = {}): InspectionSignals 
     strategyTags: ["arb"],
     isSdkOnly: false,
     riskKeywordHits: ["kelly", "position size", "drawdown"],
+    hasFeeAware: false,
+    feeAwareKeywordHits: [],
     ...overrides,
   };
 }
@@ -106,5 +108,11 @@ describe("scoreRepo", () => {
       config,
     );
     expect(strong.total).toBeGreaterThan(weak.total);
+  });
+
+  test("rewards fee-aware order signals", () => {
+    const withFees = scoreRepo(candidate(), signals({ hasFeeAware: true }), config);
+    const withoutFees = scoreRepo(candidate(), signals({ hasFeeAware: false }), config);
+    expect(withFees.orderRealism).toBeGreaterThan(withoutFees.orderRealism);
   });
 });

@@ -5,6 +5,7 @@ import {
   CENTS_PRICE_MARKERS,
   DEFAULT_STRATEGY_TAG,
   DRY_RUN_MARKERS,
+  FEE_AWARE_MARKERS,
   MS_PER_DAY,
   ORDER_MARKERS,
   PORTFOLIO_ORDERS_MARKER,
@@ -95,6 +96,10 @@ export function deriveCodeSignals(
     combinedText.includes(PORTFOLIO_ORDERS_MARKER);
   const hasDryRunDefault = DRY_RUN_MARKERS.some((k) => combinedText.includes(k));
   const hasCentsPriceBounds = hasCentsPriceSignals(combinedText, orderHits);
+  const feeAwareKeywordHits = FEE_AWARE_MARKERS.filter((m) =>
+    combinedText.includes(m.toLowerCase()),
+  );
+  const hasFeeAware = feeAwareKeywordHits.length > 0;
 
   return {
     combinedText,
@@ -105,6 +110,8 @@ export function deriveCodeSignals(
     hasLiveOrderPath,
     hasDryRunDefault,
     hasCentsPriceBounds,
+    hasFeeAware,
+    feeAwareKeywordHits,
     riskKeywordHits: config.keywords.riskKeywords.filter((k) => combinedText.includes(k.toLowerCase())),
   };
 }

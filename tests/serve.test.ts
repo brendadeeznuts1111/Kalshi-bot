@@ -14,16 +14,19 @@ import {
 import { REPORT_DIR, joinPath } from "../src/research/paths.ts";
 import { escapeHtml, renderRepoPage } from "../src/research/views.ts";
 
-import { freshTestGeneratedAt, TEST_LATEST_RUN_ID } from "./fixtures.ts";
+import { freshTestGeneratedAt, mintTestProductionRunId, TEST_LATEST_RUN_ID } from "./fixtures.ts";
+import { enterTempCache, exitTempCache } from "./temp-cache.ts";
 
 const RUN_ID = TEST_LATEST_RUN_ID;
-const OLD_RUN_ID = "serve-test-run-old";
+/** Older production-shaped id for `?run=` (fixtures are no longer served). */
+const OLD_RUN_ID = mintTestProductionRunId(Date.now() - 60_000);
 
 function mockRun(runId: string): ResearchRun {
   return {
     runId,
-    kind: runId === RUN_ID ? "production" : "fixture",
-    generatedAt: runId === RUN_ID ? freshTestGeneratedAt() : "2026-12-30T00:00:00.000Z",
+    kind: "production",
+    source: "pipeline",
+    generatedAt: runId === RUN_ID ? freshTestGeneratedAt() : new Date(Date.now() - 60_000).toISOString(),
     dimension: "all",
     config: { shortlistSize: 12, gate: { minStars: 5, minForks: 3, maxAgeMonths: 18 } },
     stats: { discovered: 1, gated: 1, inspected: 1, shortlist: 1 },
@@ -67,6 +70,8 @@ function mockRun(runId: string): ResearchRun {
           strategyTags: ["market_making"],
           isSdkOnly: false,
           riskKeywordHits: [],
+          hasFeeAware: false,
+          feeAwareKeywordHits: [],
         },
         score: {
           authApi: 20,
@@ -86,27 +91,29 @@ function mockRun(runId: string): ResearchRun {
   };
 }
 
+function seedLatestRun() {
+  const at = freshTestGeneratedAt();
+  const run = mockRun(RUN_ID);
+  run.generatedAt = at;
+  run.shortlist = run.scored;
+  saveRun(RUN_ID, at, run);
+}
+
+beforeAll(async () => {
+  await enterTempCache();
+  seedLatestRun();
+  saveRun(OLD_RUN_ID, mockRun(OLD_RUN_ID).generatedAt, mockRun(OLD_RUN_ID));
+  await Bun.write(joinPath(REPORT_DIR, "latest.md"), "# test report\n");
+  await Bun.write(joinPath(REPORT_DIR, "latest.diff.md"), "# diff\n- added foo\n");
+});
+
+afterAll(async () => {
+  exitTempCache();
+  const { restoreLatestReport } = await import("../tools/restore-latest-report.ts");
+  await restoreLatestReport();
+});
+
 describe("serve handlers", () => {
-  function seedLatestRun() {
-    const at = freshTestGeneratedAt();
-    const run = mockRun(RUN_ID);
-    run.generatedAt = at;
-    run.shortlist = run.scored;
-    saveRun(RUN_ID, at, run);
-  }
-
-  beforeAll(async () => {
-    seedLatestRun();
-    saveRun(OLD_RUN_ID, mockRun(OLD_RUN_ID).generatedAt, mockRun(OLD_RUN_ID));
-    await Bun.write(joinPath(REPORT_DIR, "latest.md"), "# test report\n");
-    await Bun.write(joinPath(REPORT_DIR, "latest.diff.md"), "# diff\n- added foo\n");
-  });
-
-  afterAll(async () => {
-    const { restoreLatestReport } = await import("../tools/restore-latest-report.ts");
-    await restoreLatestReport();
-  });
-
   beforeEach(() => {
     seedLatestRun();
   });

@@ -2,6 +2,7 @@
 import {
   COMPONENT_WEIGHTS,
   DETECTOR_IDS,
+  ORDER_SCORE_SHARES,
   README_DOCS_MATCH_CHARS,
 } from "./constants.ts";
 import type {
@@ -11,6 +12,20 @@ import type {
   ScoredRepo,
   ScoreComponent,
 } from "./types.ts";
+
+function feeAwareEvidence(s: ScoredRepo["signals"]): EvidenceLine[] {
+  return (s.feeAwareKeywordHits ?? []).map((k) => ({
+    scope: "line" as const,
+    query: k,
+    path: "(readme/code aggregate)",
+    component: "feeAware" as const,
+  }));
+}
+
+function feeAwarePoints(s: ScoredRepo["signals"]): number {
+  if (!s.hasFeeAware) return 0;
+  return COMPONENT_WEIGHTS.orderRealism * ORDER_SCORE_SHARES.feeAware;
+}
 
 function evidenceFromHits(
   hits: ScoredRepo["signals"]["authHits"] | ScoredRepo["signals"]["orderHits"],
@@ -55,6 +70,7 @@ export function deriveLiftNotes(item: ScoredRepo): string {
   }
 
   if (s.hasDryRunDefault) parts.push("Dry-run default detected — safe to sandbox.");
+  if (s.hasFeeAware) parts.push("Fee-aware edge math — aligns with Kalshi fee schedule.");
   if (s.hasTests && s.hasCi) parts.push("Tests + CI — lower integration risk when extracting.");
   if (!s.hasTests) parts.push("Missing test coverage on extracted paths.");
 
@@ -101,6 +117,18 @@ export function buildDetectors(item: ScoredRepo): DetectorResult[] {
       ]
         .filter(Boolean)
         .join("; ") || "no order signals",
+    ),
+    detector(
+      DETECTOR_IDS.feeAware,
+      "orderRealism",
+      "line",
+      s.hasFeeAware,
+      feeAwarePoints(s),
+      COMPONENT_WEIGHTS.orderRealism * ORDER_SCORE_SHARES.feeAware,
+      feeAwareEvidence(s),
+      s.feeAwareKeywordHits.length
+        ? s.feeAwareKeywordHits.join(", ")
+        : "no fee-aware edge signals",
     ),
     detector(
       DETECTOR_IDS.testsCi,

@@ -1,8 +1,9 @@
 // @see https://bun.com/docs/test/index#run-tests
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
 import { mapGitHubSearchItem, searchGitHubRepos } from "../src/research/github-search.ts";
 import { loadSearchCache, saveSearchCache, searchQueryKey } from "../src/research/cache.ts";
 import { GitHubCacheMissError, resetGitHubRateLimitCircuit, tripGitHubRateLimit } from "../src/research/github-errors.ts";
+import { enterTempCache, exitTempCache } from "./temp-cache.ts";
 
 describe("mapGitHubSearchItem", () => {
   test("maps GitHub REST snake_case to discover shape", () => {
@@ -27,6 +28,13 @@ describe("mapGitHubSearchItem", () => {
 describe("searchGitHubRepos ETag cache", () => {
   const originalFetch = globalThis.fetch;
   const originalToken = Bun.env.GH_TOKEN;
+
+  beforeAll(async () => {
+    await enterTempCache();
+  });
+  afterAll(() => {
+    exitTempCache();
+  });
 
   afterEach(() => {
     globalThis.fetch = originalFetch;

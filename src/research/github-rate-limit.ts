@@ -1,10 +1,19 @@
 // @see https://bun.com/docs/runtime/utils#bun-sleep
+// @see https://bun.com/docs/runtime/networking/fetch#sending-an-http-request
 // @see https://docs.github.com/en/rest/rate-limit/rate-limit
+// @see https://bun.com/docs/runtime/utils#bun-inspect-table-tabulardata-properties-options
 /** GitHub rate-limit buckets — pure helpers + preflight (no live calls in tests). */
 
-import { $ } from "bun";
-import { GitHubRateLimitError } from "./github-errors.ts";
+import { GitHubRateLimitError, shouldWaitForRateLimitReset } from "./github-errors.ts";
+import { GITHUB_API_ORIGIN, resolveGitHubToken } from "./github-network.ts";
 import type { ResearchConfig } from "./types.ts";
+import type { DimensionId } from "./dimensions.ts";
+import type { PhaseTimingsMs } from "./phase-timing.ts";
+import { phaseTimingTableRows } from "./phase-timing.ts";
+import { formatInspectTable } from "./terminal-out.ts";
+
+const GITHUB_API_VERSION = "2022-11-28";
+const USER_AGENT = "kalshi-bot-research";
 
 export type GitHubRateLimitResource = "core" | "search" | "code_search";
 
@@ -123,7 +132,7 @@ export function evaluateInspectRateBudget(input: {
   }
 
   if (!snap) {
-    return { ...base, canProceed: false, reason: "code_search quota unavailable (gh api rate_limit failed)" };
+    return { ...base, canProceed: false, reason: "code_search quota unavailable (rate_limit fetch failed)" };
   }
 
   if (snap.remaining < minRemaining) {
@@ -172,6 +181,199 @@ export function formatInspectBudgetEstimate(est: InspectBudgetEstimate): string 
   return lines.join("\n");
 }
 
+export type InspectAllowance = {
+  allowed: boolean;
+  /** Why live inspect may proceed even when fail-fast budget says no. */
+  mode: "within_budget" | "multi_wave_wait" | "blocked";
+  detail: string;
+};
+
+/**
+ * Whether inspect may start. Fail-fast budget alone is not enough when the operator
+ * opted into `GITHUB_RATE_LIMIT_WAIT=1` (multi-wave crawl with Bun.sleep on 403).
+ */
+export function resolveInspectAllowance(
+  est: InspectBudgetEstimate,
+  opts?: { waitForReset?: boolean },
+): InspectAllowance {
+  if (est.canProceed) {
+    return {
+      allowed: true,
+      mode: "within_budget",
+      detail: est.reason ?? "inspect fits current code_search remaining",
+    };
+  }
+  const wait = opts?.waitForReset ?? shouldWaitForRateLimitReset();
+  if (wait) {
+    const waves =
+      est.codeSearchLimit && est.codeSearchLimit > 0
+        ? Math.ceil(est.estimatedCodeSearchCalls / est.codeSearchLimit)
+        : null;
+    return {
+      allowed: true,
+      mode: "multi_wave_wait",
+      detail:
+        `GITHUB_RATE_LIMIT_WAIT=1 — multi-wave inspect allowed` +
+        (waves !== null ? ` (~${waves} min at ${est.codeSearchLimit}/min)` : ""),
+    };
+  }
+  return {
+    allowed: false,
+    mode: "blocked",
+    detail: est.reason ?? "inspect rate budget blocked",
+  };
+}
+
+/**
+ * Synthetic code_search quota for `--offline` dry-runs (no live rate_limit fetch).
+ * Sized so estimated inspect calls fit — answers cache readiness, not live rate limits.
+ */
+export function offlineCodeSearchSnapshot(estimatedCalls = 0): GitHubRateLimitSnapshot {
+  const minRemaining = 3;
+  const remaining = estimatedCalls === 0 ? 10 : Math.max(estimatedCalls, minRemaining);
+  // Keep remaining ≤ limit so the table reads coherently (e.g. 294/294, not 294/10).
+  const limit = Math.max(10, remaining);
+  return {
+    resource: "code_search",
+    limit,
+    remaining,
+    reset: Math.floor(Date.now() / 1000) + 3600,
+  };
+}
+
+export type DryRunPlan = {
+  dimension: DimensionId;
+  label: string;
+  discovered: number;
+  gated: number;
+  uncached: number;
+  shortlistSize: number;
+  gate: { minStars: number; minForks: number; maxAgeMonths: number };
+  budget: InspectBudgetEstimate;
+  allowance: InspectAllowance;
+  timings?: PhaseTimingsMs;
+  /** True when plan was built with --offline (cache-only, no live GitHub). */
+  offline?: boolean;
+  /** Offline/ETag search_cache hits during discover. */
+  searchCacheHits?: number;
+};
+
+export function formatDryRunPlan(plan: DryRunPlan): string {
+  const { budget, allowance } = plan;
+  const chunk =
+    budget.codeSearchPerRepo > 0 && budget.codeSearchRemaining !== null
+      ? Math.max(1, Math.floor(budget.codeSearchRemaining / budget.codeSearchPerRepo))
+      : null;
+  const waves =
+    budget.codeSearchLimit && budget.codeSearchLimit > 0
+      ? Math.ceil(budget.estimatedCodeSearchCalls / budget.codeSearchLimit)
+      : null;
+
+  const discoveryRows: Array<{ metric: string; value: string | number }> = [
+    { metric: "candidates", value: plan.discovered },
+    { metric: "passed gate", value: plan.gated },
+    {
+      metric: "apply gate",
+      value: `min-stars=${plan.gate.minStars} min-forks=${plan.gate.minForks} max-age-months=${plan.gate.maxAgeMonths}`,
+    },
+  ];
+  if (plan.searchCacheHits !== undefined) {
+    discoveryRows.push({
+      metric: plan.offline ? "search_cache hits" : "search ETag hits",
+      value: plan.searchCacheHits,
+    });
+  }
+
+  const budgetRows: Array<{ metric: string; value: string | number }> = [
+    { metric: "uncached repos", value: `${plan.uncached}/${plan.gated}` },
+    { metric: "code_search/repo", value: budget.codeSearchPerRepo },
+    { metric: "estimated calls", value: `~${budget.estimatedCodeSearchCalls}` },
+    {
+      metric: plan.offline ? "quota (synthetic)" : "quota",
+      value:
+        `${budget.codeSearchRemaining ?? "?"}/${budget.codeSearchLimit ?? "?"}` +
+        (plan.offline
+          ? " — offline sized to estimate"
+          : budget.codeSearchResetIso
+            ? ` (reset ${budget.codeSearchResetIso})`
+            : ""),
+    },
+  ];
+  if (!plan.offline && chunk !== null && plan.uncached > chunk) {
+    budgetRows.push({ metric: "this window", value: `≤${chunk} uncached repo${chunk === 1 ? "" : "s"}` });
+  }
+
+  const sections = [
+    `Research dry-run${plan.offline ? " (offline)" : ""} — ${plan.dimension} (${plan.label})`,
+    "",
+    "Discovery",
+    formatInspectTable(discoveryRows, ["metric", "value"]).trimEnd(),
+    "",
+    "Inspect budget",
+    formatInspectTable(budgetRows, ["metric", "value"]).trimEnd(),
+  ];
+  if (plan.offline) {
+    sections.push("", "Mode: offline — search_cache only; synthetic code_search quota (no live GitHub)");
+  }
+
+  if (plan.timings && phaseTimingTableRows(plan.timings).length) {
+    sections.push("", "Timing", formatInspectTable(phaseTimingTableRows(plan.timings), ["phase", "duration"]).trimEnd());
+  }
+
+  sections.push("");
+
+  if (plan.offline) {
+    if (allowance.allowed) {
+      sections.push(
+        `Verdict: offline plan ready — inspect would need ~${budget.estimatedCodeSearchCalls} code_search calls ` +
+          `(${plan.uncached} uncached; live quota not checked)`,
+      );
+    } else {
+      sections.push("Verdict: offline plan incomplete — see budget reason");
+      if (budget.reason) sections.push(`  ${budget.reason}`);
+    }
+    sections.push("");
+    sections.push("Next (live — spends GitHub quota):");
+    sections.push(`  bun run research -- --dimension=${plan.dimension} --min-stars=${plan.gate.minStars}`);
+    sections.push(`  bun run rate-limit:status -- --gated=${plan.gated} --uncached=${plan.uncached}`);
+  } else if (allowance.allowed) {
+    if (allowance.mode === "within_budget") {
+      sections.push("Verdict: allowed — inspect fits current code_search quota");
+    } else {
+      sections.push(
+        "Verdict: allowed — multi-wave inspect (GITHUB_RATE_LIMIT_WAIT=1)" +
+          (waves !== null ? `, ~${waves} min at ${budget.codeSearchLimit}/min` : ""),
+      );
+    }
+    sections.push("");
+    sections.push("Next:");
+    if (allowance.mode === "multi_wave_wait") {
+      sections.push(
+        `  GITHUB_RATE_LIMIT_WAIT=1 bun run research -- --dimension=${plan.dimension} --min-stars=${plan.gate.minStars}`,
+      );
+    } else {
+      sections.push(`  bun run research -- --dimension=${plan.dimension} --min-stars=${plan.gate.minStars}`);
+    }
+  } else {
+    sections.push("Verdict: blocked — inspect would exceed code_search quota");
+    if (waves !== null) {
+      sections.push(`  need ~${budget.estimatedCodeSearchCalls} calls; ~${waves} min with GITHUB_RATE_LIMIT_WAIT=1`);
+    }
+    sections.push("");
+    sections.push("Next:");
+    if (chunk !== null && plan.uncached > chunk) {
+      sections.push(`  wait for reset, raise --min-stars, or inspect ≤${chunk} repo(s) this window`);
+    } else {
+      sections.push("  wait for code_search reset or raise --min-stars");
+    }
+    sections.push(
+      `  GITHUB_RATE_LIMIT_WAIT=1 bun run research -- --dimension=${plan.dimension} --min-stars=${plan.gate.minStars}`,
+    );
+  }
+
+  return sections.join("\n");
+}
+
 export function skipRatePreflight(): boolean {
   const raw = Bun.env.RESEARCH_SKIP_RATE_PREFLIGHT?.trim().toLowerCase();
   return raw === "1" || raw === "true" || raw === "yes";
@@ -180,10 +382,18 @@ export function skipRatePreflight(): boolean {
 export async function readGitHubRateLimit(
   resource: GitHubRateLimitResource,
 ): Promise<GitHubRateLimitSnapshot | null> {
-  const { exitCode, stdout } = await $`gh api rate_limit`.nothrow().quiet();
-  if (exitCode !== 0) return null;
   try {
-    return snapshotFromWire(JSON.parse(stdout.toString()) as GitHubRateLimitWire, resource);
+    const token = await resolveGitHubToken();
+    const res = await fetch(`${GITHUB_API_ORIGIN}/rate_limit`, {
+      headers: {
+        Accept: "application/vnd.github+json",
+        Authorization: `Bearer ${token}`,
+        "X-GitHub-Api-Version": GITHUB_API_VERSION,
+        "User-Agent": USER_AGENT,
+      },
+    });
+    if (!res.ok) return null;
+    return snapshotFromWire((await res.json()) as GitHubRateLimitWire, resource);
   } catch {
     return null;
   }
@@ -221,11 +431,20 @@ export async function ensureInspectRateBudget(input: {
     minRemaining: input.minRemaining,
   });
 
-  if (!est.canProceed) {
-    throw new GitHubRateLimitError(est.reason ?? "inspect rate budget blocked", {
+  const allowance = resolveInspectAllowance(est);
+  if (!allowance.allowed) {
+    throw new GitHubRateLimitError(allowance.detail, {
       resetAtMs: codeSearch ? codeSearch.reset * 1000 : null,
       source: "code_search/preflight",
     });
+  }
+
+  if (allowance.mode === "multi_wave_wait") {
+    return {
+      ...est,
+      canProceed: true,
+      reason: allowance.detail,
+    };
   }
 
   return est;

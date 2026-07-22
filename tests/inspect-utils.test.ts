@@ -1,5 +1,5 @@
 // @see https://bun.com/docs/test/index#run-tests
-import { describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import type { InspectionSignals } from "../src/research/types.ts";
 import {
   formatInspectPersistSummary,
@@ -12,6 +12,7 @@ import {
   repoNeedsLiveInspect,
 } from "../src/research/inspect-utils.ts";
 import { loadInspectCache, saveInspectCache } from "../src/research/cache.ts";
+import { enterTempCache, exitTempCache } from "./temp-cache.ts";
 
 function sampleSignals(overrides: Partial<InspectionSignals> = {}): InspectionSignals {
   return {
@@ -36,11 +37,20 @@ function sampleSignals(overrides: Partial<InspectionSignals> = {}): InspectionSi
     strategyTags: ["tracking"],
     isSdkOnly: false,
     riskKeywordHits: [],
+    hasFeeAware: false,
+    feeAwareKeywordHits: [],
     ...overrides,
   };
 }
 
 describe("inspect-utils", () => {
+  beforeAll(async () => {
+    await enterTempCache();
+  });
+  afterAll(() => {
+    exitTempCache();
+  });
+
   test("inspectionSignalsEqual uses Bun.deepEquals", () => {
     const a = sampleSignals();
     const b = sampleSignals();

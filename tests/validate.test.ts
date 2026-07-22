@@ -41,6 +41,8 @@ function scored(): ScoredRepo {
     strategyTags: ["arb"],
     isSdkOnly: false,
     riskKeywordHits: [],
+    hasFeeAware: false,
+    feeAwareKeywordHits: [],
   };
   return {
     repo,

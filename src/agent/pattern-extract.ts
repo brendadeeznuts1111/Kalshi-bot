@@ -101,6 +101,9 @@ const PATTERN_LABEL_DISPLAY: Record<string, string> = {
   "bun-hash": "Bun.CryptoHasher",
   "bun-timer": "Bun.sleep",
   "bun-file": "Bun.file / Bun.write",
+  "fee-aware-edge": "fee-aware net edge",
+  "odds-api": "The Odds API client",
+  "vig-strip": "vig / overround strip",
 };
 
 const AGGREGATE_PATH = /\(readme\/code aggregate\)/i;
@@ -114,6 +117,7 @@ const RULES: Array<{ category: PatternCategory; label: string; re: RegExp }> = [
   { category: "orders", label: "create-order-call", re: /create_order|CreateOrder|place_order|PlaceOrder|post.*orders/i },
   { category: "orders", label: "order-fields", re: /(side|count|price|type).*?(buy|sell|yes|no|limit|market)/i },
   { category: "orders", label: "portfolio-orders-path", re: /portfolio\/orders|\/orders/i },
+  { category: "orders", label: "fee-aware-edge", re: /taker[_\s-]?fee|maker[_\s-]?fee|kalshi[_\s-]?fee|fee[_\s-]?schedule|after[_\s-]?fees|net[_\s-]?edge|raw[_\s-]?edge|fees\s*\(\s*price/i },
   { category: "dryRun", label: "dry-run-default", re: /DRY_RUN|dry_run|dry-run|paper_trading|PAPER/i },
   { category: "loop", label: "websocket", re: /websocket|WebSocket|ws\.|onmessage/i },
   { category: "loop", label: "polling-loop", re: /setInterval|setTimeout|while\s+True|asyncio\.|poll/i },
@@ -124,6 +128,8 @@ const RULES: Array<{ category: PatternCategory; label: string; re: RegExp }> = [
   { category: "structure", label: "config-module", re: /config\.(py|ts|js)|settings\.(py|ts)|from config import/i },
   { category: "structure", label: "strategy-module", re: /strategy|strategies\//i },
   { category: "structure", label: "client-wrapper", re: /class\s+\w*(Client|Api|API)|KalshiClient/i },
+  { category: "structure", label: "odds-api", re: /the-odds-api|theoddsapi|api\.the-odds-api\.com|pinnacle.*odds/i },
+  { category: "structure", label: "vig-strip", re: /strip[_\s-]?vig|overround|implied[_\s-]?prob|american[_\s-]?odds|remove[_\s-]?vig/i },
   { category: "tests", label: "test-import", re: /pytest|unittest|describe\(|from jest|bun:test/i },
   { category: "bunFeatures", label: "bun-websocket", re: /Bun\.connect|websocket:\s*true|upgrade:\s*websocket/i },
   { category: "bunFeatures", label: "bun-http", re: /Bun\.serve\s*\(/ },

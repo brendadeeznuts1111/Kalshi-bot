@@ -1,6 +1,14 @@
 // @see https://bun.com/docs/test/index#run-tests
 import { describe, expect, test } from "bun:test";
-import { parseLicense, buildRepoSearchQuery } from "../src/research/discover.ts";
+import {
+  parseLicense,
+  buildRepoSearchQuery,
+  gateCutoffIsoDate,
+  hasBarePhraseInStrippedQueries,
+  inferDiscoverGateFromCachedQueries,
+  inferDiscoverGateFromSearchQueries,
+  stripRepoSearchQualifiers,
+} from "../src/research/discover.ts";
 
 describe("buildRepoSearchQuery", () => {
   test("appends stars and pushed filters when absent", () => {
@@ -27,6 +35,68 @@ describe("buildRepoSearchQuery", () => {
     const q = buildRepoSearchQuery("kalshi", { minStars: 0, minForks: 3, maxAgeMonths: 12 });
     expect(q).toContain("forks:>=3");
     expect(q).not.toContain("stars:");
+  });
+});
+
+describe("gateCutoffIsoDate", () => {
+  test("is stable within a UTC calendar month", () => {
+    const jul1 = gateCutoffIsoDate(18, Date.UTC(2026, 6, 1));
+    const jul22 = gateCutoffIsoDate(18, Date.UTC(2026, 6, 22));
+    const aug1 = gateCutoffIsoDate(18, Date.UTC(2026, 7, 1));
+    expect(jul1).toBe("2025-01-01");
+    expect(jul22).toBe("2025-01-01");
+    expect(aug1).toBe("2025-02-01");
+  });
+});
+
+describe("stripRepoSearchQualifiers", () => {
+  test("normalizes stars/forks/pushed eras to the bare query", () => {
+    expect(
+      stripRepoSearchQualifiers("kalshi websocket stars:>=1 pushed:>=2025-01-22"),
+    ).toBe("kalshi websocket");
+    expect(
+      stripRepoSearchQualifiers("kalshi websocket pushed:>=2025-01-22"),
+    ).toBe("kalshi websocket");
+  });
+});
+
+describe("inferDiscoverGateFromSearchQueries", () => {
+  const apply = { minStars: 5, minForks: 3, maxAgeMonths: 18 };
+
+  test("takes mode of stars/forks qualifiers", () => {
+    const gate = inferDiscoverGateFromSearchQueries(
+      [
+        "kalshi websocket stars:>=1 pushed:>=2025-01-01",
+        "kalshi orderbook feed stars:>=1 pushed:>=2025-01-01",
+        "other query pushed:>=2025-01-01",
+      ],
+      apply,
+    );
+    expect(gate).toEqual({ minStars: 1, minForks: 0, maxAgeMonths: 18 });
+  });
+
+  test("infers from cache rows matching dimension bares", () => {
+    const gate = inferDiscoverGateFromCachedQueries(
+      ["kalshi websocket", "kalshi orderbook feed"],
+      [
+        "kalshi websocket stars:>=1 pushed:>=2025-01-01",
+        "unrelated stars:>=99 pushed:>=2025-01-01",
+      ],
+      apply,
+    );
+    expect(gate).toEqual({ minStars: 1, minForks: 0, maxAgeMonths: 18 });
+  });
+});
+
+describe("hasBarePhraseInStrippedQueries", () => {
+  test("requires whitespace boundaries and min length", () => {
+    expect(hasBarePhraseInStrippedQueries("nba", ["kalshi nba bot"])).toBe(false);
+    expect(
+      hasBarePhraseInStrippedQueries("kalshi nba", ["polymarket kalshi nba model"]),
+    ).toBe(true);
+    expect(
+      hasBarePhraseInStrippedQueries("kalshi nba", ["polymarketkalshinbamodel"]),
+    ).toBe(false);
   });
 });
 

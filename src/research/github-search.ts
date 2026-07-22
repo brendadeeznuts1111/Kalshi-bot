@@ -110,6 +110,13 @@ function staleSearchCache(query: string, cached: NonNullable<ReturnType<typeof l
   return { items: cached.payload, fromEtagCache: true, degraded: true };
 }
 
+/** Cache-only search — zero network. Returns null when search_cache has no row. */
+export function searchGitHubReposFromCache(query: string): GitHubSearchResult | null {
+  const cached = loadSearchCache(searchQueryKey(query));
+  if (!cached) return null;
+  return { items: cached.payload, fromEtagCache: true };
+}
+
 export async function searchGitHubRepos(
   query: string,
   perPage: number,

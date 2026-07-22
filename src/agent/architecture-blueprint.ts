@@ -164,6 +164,13 @@ export const BLUEPRINT_DIMENSIONS: BlueprintDimensionSpec[] = [
     fallbackDimensions: ["market-making", "arbitrage"],
     emptyShortlistNote: "No gated candidates yet — probe with `--min-stars=2`",
   },
+  {
+    dimension: "odds-feed",
+    title: "Odds API integration",
+    recommendedBun: ["bun-http", "bun-sqlite", "bun-cron"],
+    fallbackDimensions: ["sports-nba", "sports-other"],
+    emptyShortlistNote: "Probe odds-feed repos — improves `src/alpha/odds-feed.ts`; does not unblock it",
+  },
 ];
 
 const LIFT_COMPONENTS: ScoreComponentKey[] = ["authApi", "orderRealism"];
@@ -441,6 +448,29 @@ export function formatArchitectureBlueprintMarkdown(blueprint: ArchitectureBluep
     "| Portfolio | tracking shortlist | `bun-file` + `bun-hash` |",
     "| Execution / orders | market-making shortlist | `bun-http` + `bun-websocket` |",
     "| Sports | sports-* dimensions (probe) | `bun-http` + `bun-cron` |",
+    "| Alpha (odds) | `odds-feed` dimension (lift only) | `src/alpha/odds-feed.ts` + `bun-http` + `bun-sqlite` |",
+    "",
+    "## Alpha pipeline (`src/alpha/`)",
+    "",
+    "Product code — build by hand in parallel with harness runs. Only **`odds-feed`** is a research dimension (vig strip, Odds API clients). Ticker mapping, shadow logging, and calibration are **not** GitHub-discovery targets.",
+    "",
+    "| Component | Source | Module |",
+    "|-----------|--------|--------|",
+    "| Odds feed + vig strip | `odds-feed` dimension (when quota allows) + hand-built | `src/alpha/odds-feed.ts`, `vig-strip.ts` |",
+    "| Ticker mapping | Hand-built (Kalshi-specific glue) | `src/alpha/ticker-mapper.ts` + `research/ticker-overrides.json` |",
+    "| Fee-aware edge | `feeAware` detector + locked `/plan` math | `src/alpha/edge.ts` |",
+    "| Shadow + calibration | Standalone tools (not research dimensions) | `research/cache/shadow-log.jsonl`; Brier tool TBD |",
+    "",
+    "```bash",
+    "# Harness — offline understanding first (zero live GitHub)",
+    "bun run research:dry -- --dimension=odds-feed",
+    "# Live dry-run (search + rate_limit only) when warming cache:",
+    "# bun run research -- --dry-run --dimension=odds-feed",
+    "bun run agent patterns --dimension=odds-feed",
+    "",
+    "# Product (now — not blocked on research)",
+    "bun test tests/vig-strip.test.ts tests/odds-feed.test.ts tests/ticker-mapper.test.ts",
+    "```",
     "",
   ];
 

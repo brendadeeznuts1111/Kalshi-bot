@@ -19,7 +19,18 @@ import { writeAuditExports } from "./export-audit.ts";
 import { ensureCacheDir, saveRun, loadInspectCache } from "./cache.ts";
 import { ensureGh } from "./preflight.ts";
 import { ensureGhRateBudget, GitHubRateLimitError } from "./gh.ts";
-import { ensureInspectRateBudget, formatInspectBudgetEstimate } from "./github-rate-limit.ts";
+import {
+  ensureInspectRateBudget,
+  estimateCodeSearchCallsPerRepo,
+  evaluateInspectRateBudget,
+  formatDryRunPlan,
+  formatInspectBudgetEstimate,
+  offlineCodeSearchSnapshot,
+  readGitHubRateLimit,
+  resolveInspectAllowance,
+  type DryRunPlan,
+} from "./github-rate-limit.ts";
+import { shouldWaitForRateLimitReset } from "./github-errors.ts";
 import {
   beginGitHubResearchErrorContext,
   buildGitHubErrorEnrichment,
@@ -44,11 +55,16 @@ import { resolveGates } from "./discover-gate.ts";
 import { REPORT_DIR, joinPath } from "./paths.ts";
 import type { ResearchRun } from "./types.ts";
 import { emitResearchProgress, isResearchIpcChild, logResearchProgress, logResearchStatus, type ResearchProgressSink } from "./research-progress.ts";
-import { isTtyStdout, printInspectTable, shortlistTableRows } from "./terminal-out.ts";
+import { isTtyStdout, printInspectTable, shortlistTableRows, wrapDisplay } from "./terminal-out.ts";
+import { createPhaseTimer, formatPhaseTimings } from "./phase-timing.ts";
 
 export type CliOptions = {
   json: boolean;
   exportAudit: boolean;
+  /** Discover + gate + inspect budget only — never inspect or write reports. */
+  dryRun: boolean;
+  /** Cache-only discover + synthetic rate budget — zero live GitHub. */
+  offline?: boolean;
   dimension?: string;
   shortlist?: number;
   minStars?: number;
@@ -61,6 +77,13 @@ export type CliOptions = {
   diff?: string;
   openReport?: boolean;
   onProgress?: ResearchProgressSink;
+};
+
+/** Result of `--dry-run` (no inspect, no artifact writes). */
+export type ResearchDryRunResult = {
+  ok: true;
+  dryRun: true;
+  plan: DryRunPlan;
 };
 
 function envNumber(key: string): number | undefined {
@@ -76,6 +99,8 @@ export function parseCliOptions(argv: string[]): CliOptions {
     options: {
       json: { type: "boolean", default: false },
       "export-audit": { type: "boolean", default: false },
+      "dry-run": { type: "boolean", default: false },
+      offline: { type: "boolean", default: false },
       shortlist: { type: "string" },
       diff: { type: "string" },
       "min-stars": { type: "string" },
@@ -99,6 +124,8 @@ export function parseCliOptions(argv: string[]): CliOptions {
   return {
     json: values.json === true,
     exportAudit: values["export-audit"] === true,
+    dryRun: values["dry-run"] === true,
+    offline: values.offline === true,
     dimension: dimensionRaw,
     shortlist: values.shortlist ? Number(values.shortlist) : undefined,
     diff: typeof values.diff === "string" ? values.diff : undefined,
@@ -124,6 +151,10 @@ export { buildResearchSpawnArgs } from "./research-progress.ts";
 export function printResearchRunSummary(run: ResearchRun): void {
   const dimension = runDimension(run);
   console.log(`Run complete: ${run.runId} (dimension=${dimension})`);
+  if (run.stats.timings) {
+    const line = formatPhaseTimings(run.stats.timings);
+    if (line) console.log(line);
+  }
   if (isTtyStdout() && run.shortlist.length) {
     console.log(`Shortlist (${run.shortlist.length}):`);
     printInspectTable(
@@ -142,7 +173,87 @@ export function printResearchRunSummary(run: ResearchRun): void {
   console.log("Browse:  bun run serve");
 }
 
+export async function runResearchDryRun(opts: CliOptions): Promise<ResearchDryRunResult> {
+  const offline = opts.offline === true;
+  if (!offline) {
+    ensureGh();
+    warmGitHubApiNetwork();
+  }
+  await ensureCacheDir();
+
+  const config = await loadConfig();
+  const gateInput = {
+    minStars: opts.minStars ?? envNumber("RESEARCH_MIN_STARS") ?? config.weights.gate.minStars,
+    minForks: opts.minForks ?? envNumber("RESEARCH_MIN_FORKS") ?? config.weights.gate.minForks,
+    maxAgeMonths:
+      opts.maxAgeMonths ?? envNumber("RESEARCH_MAX_AGE_MONTHS") ?? config.weights.gate.maxAgeMonths,
+  };
+  const { apply: gate, discover: discoverGate } = resolveGates(gateInput, {
+    discoverMinStars: opts.discoverMinStars ?? envNumber("RESEARCH_DISCOVER_MIN_STARS"),
+    discoverMinForks: opts.discoverMinForks ?? envNumber("RESEARCH_DISCOVER_MIN_FORKS"),
+    discoverMaxAgeMonths: opts.discoverMaxAgeMonths ?? envNumber("RESEARCH_DISCOVER_MAX_AGE_MONTHS"),
+    discoverBroad: opts.discoverBroad || Bun.env.RESEARCH_DISCOVER_BROAD === "1",
+  });
+  const shortlistSize =
+    opts.shortlist ?? envNumber("RESEARCH_SHORTLIST") ?? config.weights.shortlistSize;
+  const dimension = normalizeDimensionId(opts.dimension ?? config.dimensions.defaultDimension);
+
+  const timer = createPhaseTimer();
+  timer.start("discover");
+  if (!offline) await ensureGhRateBudget();
+  const { candidates, querySet, searchCache } = await discoverCandidates(
+    config,
+    dimension,
+    discoverGate,
+    { offline },
+  );
+  timer.end("discover");
+
+  timer.start("gate");
+  const gated = applyGate(candidates, gate);
+  const uncached = gated.filter((repo) => repoNeedsLiveInspect(repo)).length;
+  const codeSearchPerRepo = estimateCodeSearchCallsPerRepo(config);
+  const estimatedCalls = uncached * codeSearchPerRepo;
+  const codeSearch = offline
+    ? offlineCodeSearchSnapshot(estimatedCalls)
+    : await readGitHubRateLimit("code_search");
+  const budget = evaluateInspectRateBudget({
+    repoCount: gated.length,
+    uncachedRepoCount: uncached,
+    codeSearchPerRepo,
+    codeSearch,
+  });
+  const allowance = resolveInspectAllowance(budget, {
+    waitForReset: offline ? false : shouldWaitForRateLimitReset(),
+  });
+  timer.end("gate");
+
+  const plan: DryRunPlan = {
+    dimension,
+    label: querySet.label,
+    discovered: candidates.length,
+    gated: gated.length,
+    uncached,
+    shortlistSize,
+    gate: {
+      minStars: gate.minStars,
+      minForks: gate.minForks,
+      maxAgeMonths: gate.maxAgeMonths,
+    },
+    budget,
+    allowance,
+    timings: timer.snapshot(),
+    offline,
+    searchCacheHits: searchCache.etagHits,
+  };
+
+  return { ok: true, dryRun: true, plan };
+}
+
 export async function runResearch(opts: CliOptions): Promise<ResearchRun> {
+  if (opts.dryRun) {
+    throw new Error("runResearch does not support dryRun — use runResearchDryRun()");
+  }
   const progress = (message: Parameters<typeof logResearchProgress>[0]) =>
     logResearchProgress(message, opts.onProgress);
   ensureGh();
@@ -175,6 +286,9 @@ export async function runResearch(opts: CliOptions): Promise<ResearchRun> {
     minForks: gate.minForks,
   });
 
+  const timer = createPhaseTimer();
+
+  timer.start("discover");
   progress({ type: "phase", phase: "discover", dimension });
   logResearchStatus(`Discovering candidates (dimension=${dimension})...`);
   await ensureGhRateBudget();
@@ -192,7 +306,9 @@ export async function runResearch(opts: CliOptions): Promise<ResearchRun> {
     }
     logResearchStatus(`  probe: ${discoveryMiss.retryCommand}`);
   }
+  timer.end("discover");
 
+  timer.start("gate");
   const gated = applyGate(candidates, gate);
   const gateMiss = analyzeGateMiss(candidates, gated, gate, { dimension });
   progress({
@@ -209,7 +325,9 @@ export async function runResearch(opts: CliOptions): Promise<ResearchRun> {
       logResearchStatus(`  near miss: ${nm.fullName} — ${nm.summary}`);
     }
   }
+  timer.end("gate");
 
+  timer.start("inspect");
   progress({ type: "phase", phase: "inspect", dimension, detail: `concurrency ${DEFAULT_INSPECT_CONCURRENCY}` });
   const uncachedCount = gated.filter((repo) => repoNeedsLiveInspect(repo)).length;
   const inspectBudget = await ensureInspectRateBudget({
@@ -251,9 +369,10 @@ export async function runResearch(opts: CliOptions): Promise<ResearchRun> {
     },
     { failFast: isGitHubApiAbortError },
   );
+  timer.end("inspect");
 
   if (inspectCacheHits > 0) {
-    logResearchStatus(`Inspect cache: ${inspectCacheHits}/${gated.length} repos skipped gh (unchanged pushed_at)`);
+    logResearchStatus(`Inspect cache: ${inspectCacheHits}/${gated.length} repos skipped live GitHub (unchanged pushed_at)`);
   }
 
   const inspectPersistStats = finishInspectPersistStats();
@@ -269,10 +388,13 @@ export async function runResearch(opts: CliOptions): Promise<ResearchRun> {
     }
   }
 
+  timer.start("score");
   const scored = inspected.sort((a, b) => b.score.total - a.score.total);
   progress({ type: "phase", phase: "score", dimension });
   const { shortlist, excludedSdkOnly } = buildShortlist(scored, config, shortlistSize);
+  timer.end("score");
 
+  const timings = timer.snapshot();
   const run: ResearchRun = {
     runId: runId(),
     generatedAt: new Date().toISOString(),
@@ -284,6 +406,7 @@ export async function runResearch(opts: CliOptions): Promise<ResearchRun> {
       inspected: inspected.length,
       shortlist: shortlist.length,
       cache: cacheStats ?? undefined,
+      timings,
     },
     candidates,
     gated,
@@ -293,6 +416,7 @@ export async function runResearch(opts: CliOptions): Promise<ResearchRun> {
     gateMiss,
     discoveryMiss,
     kind: "production",
+    source: "pipeline",
   };
 
   const baseline = opts.diff ? await loadRunById(opts.diff, dimension) : await loadPreviousRun(dimension);
@@ -301,8 +425,8 @@ export async function runResearch(opts: CliOptions): Promise<ResearchRun> {
   }
 
   const diff = diffRuns(baseline, run);
+  timer.start("write");
   progress({ type: "phase", phase: "write", dimension });
-  saveRun(run.runId, run.generatedAt, run);
   await writeOutputs(run, diff, { dimensionLabel: querySet.label });
   if (opts.exportAudit) {
     const auditDir = await writeAuditExports(run, config);
@@ -312,6 +436,11 @@ export async function runResearch(opts: CliOptions): Promise<ResearchRun> {
       logResearchStatus("Audit export: no high-value or watchlist shortlist candidates");
     }
   }
+  timer.end("write");
+  run.stats.timings = timer.snapshot();
+  saveRun(run.runId, run.generatedAt, run);
+  const timingLine = formatPhaseTimings(run.stats.timings);
+  if (timingLine) logResearchStatus(timingLine);
   progress({
     type: "complete",
     runId: run.runId,
@@ -325,6 +454,19 @@ export async function runResearch(opts: CliOptions): Promise<ResearchRun> {
 if (import.meta.main) {
   const opts = parseCliOptions(Bun.argv.slice(2));
   try {
+    if (opts.offline && !opts.dryRun) {
+      throw new Error("--offline requires --dry-run (cache-only budget plan; no inspect)");
+    }
+    if (opts.dryRun) {
+      const result = await runResearchDryRun(opts);
+      if (opts.json) {
+        await Bun.write(Bun.stdout, JSON.stringify(result, null, 2) + "\n");
+      } else if (!isResearchIpcChild()) {
+        console.log(wrapDisplay(formatDryRunPlan(result.plan)));
+      }
+      process.exit(result.plan.allowance.allowed ? 0 : 2);
+    }
+
     const run = await runResearch(opts);
     if (opts.json) {
       await Bun.write(Bun.stdout, JSON.stringify(run, null, 2) + "\n");
@@ -348,7 +490,7 @@ if (import.meta.main) {
       if (opts.json) {
         console.error(JSON.stringify({ ok: false, ...wire }, null, 2));
       } else {
-        console.error(formatRateLimitRemediation(err, enrichment));
+        console.error(wrapDisplay(formatRateLimitRemediation(err, enrichment)));
       }
       finishGitHubResearchErrorContext();
       process.exit(2);

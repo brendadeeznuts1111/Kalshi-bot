@@ -55,6 +55,8 @@ function highValueScored(): ScoredRepo {
     strategyTags: ["market_making"],
     isSdkOnly: false,
     riskKeywordHits: ["kelly"],
+    hasFeeAware: false,
+    feeAwareKeywordHits: [],
   };
   return {
     repo,

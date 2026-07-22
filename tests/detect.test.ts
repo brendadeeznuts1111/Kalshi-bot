@@ -83,6 +83,17 @@ describe("deriveCodeSignals", () => {
     );
     expect(result.hasCentsPriceBounds).toBe(true);
   });
+
+  test("detects fee-aware edge markers", () => {
+    const result = deriveCodeSignals(
+      "Trade when net edge exceeds taker fee after fees",
+      [],
+      [],
+      config,
+    );
+    expect(result.hasFeeAware).toBe(true);
+    expect(result.feeAwareKeywordHits.length).toBeGreaterThan(0);
+  });
 });
 
 describe("deriveAuthFreshness", () => {

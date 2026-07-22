@@ -25,9 +25,10 @@ import { RESEARCH_ROOT, joinPath } from "../src/research/paths.ts";
 
 describe("constants", () => {
   test("DETECTOR_ID_LIST matches DETECTOR_IDS values", () => {
-    expect(DETECTOR_ID_LIST).toHaveLength(6);
+    expect(DETECTOR_ID_LIST).toHaveLength(7);
     expect(DETECTOR_ID_LIST).toContain(DETECTOR_IDS.authApi);
     expect(DETECTOR_ID_LIST).toContain(DETECTOR_IDS.orderRealism);
+    expect(DETECTOR_ID_LIST).toContain(DETECTOR_IDS.feeAware);
   });
 
   test("SCORE_COMPONENTS align with COMPONENT_WEIGHTS keys", () => {

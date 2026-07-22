@@ -11,6 +11,7 @@ import { formatGateMissMarkdown } from "./gate-miss.ts";
 import { buildRepoReport } from "./evidence.ts";
 import { shortlistTagCoverage } from "./diversify.ts";
 import { DEFAULT_MAX_PER_TAG, MAX_QUALITY_SCORE } from "./constants.ts";
+import { formatPhaseTimings } from "./phase-timing.ts";
 
 function reportFor(item: ScoredRepo): NonNullable<ScoredRepo["report"]> {
   return item.report ?? buildRepoReport(item);
@@ -105,6 +106,10 @@ export function formatReportMarkdown(run: ResearchRun, dimensionLabel?: string):
           `- Cache: ETag ${run.stats.cache.searchEtagHits}, search stale ${run.stats.cache.searchDegradedHits}, inspect exact ${run.stats.cache.inspectExactHits}, inspect reuse ${run.stats.cache.inspectContentReuseHits}, inspect stale ${run.stats.cache.inspectDegradedHits}, api stale ${run.stats.cache.apiDegradedHits}`,
         ]
       : []),
+    ...(() => {
+      const timingLine = formatPhaseTimings(run.stats.timings ?? {});
+      return timingLine ? [`- ${timingLine}`] : [];
+    })(),
     "",
   ];
 

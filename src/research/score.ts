@@ -60,6 +60,7 @@ function scoreOrderRealism(signals: InspectionSignals, max: number): number {
   if (signals.hasLiveOrderPath) score += max * ORDER_SCORE_SHARES.liveOrderPath;
   if (signals.hasDryRunDefault) score += max * ORDER_SCORE_SHARES.dryRunDefault;
   if (signals.hasCentsPriceBounds) score += max * ORDER_SCORE_SHARES.centsBounds;
+  if (signals.hasFeeAware) score += max * ORDER_SCORE_SHARES.feeAware;
   return Math.min(max, score);
 }
 

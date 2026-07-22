@@ -46,5 +46,5 @@ function isEvidenceLine(e: EvidenceLine): boolean {
   if (!e || typeof e !== "object") return false;
   if (e.scope !== "line") return false;
   if (typeof e.query !== "string" || typeof e.path !== "string") return false;
-  return ["authApi", "orderRealism", "riskControls", "strategy"].includes(e.component);
+  return ["authApi", "orderRealism", "feeAware", "riskControls", "strategy"].includes(e.component);
 }

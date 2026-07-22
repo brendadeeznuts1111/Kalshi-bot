@@ -42,6 +42,9 @@ export type InspectionSignals = {
   hasAuthFreshness: boolean;
   /** Order paths reference Kalshi-style cent prices (1–99) or explicit price_cents fields. */
   hasCentsPriceBounds: boolean;
+  /** README/code mentions Kalshi fee schedule or net-edge after fees. */
+  hasFeeAware: boolean;
+  feeAwareKeywordHits: string[];
   hasTests: boolean;
   hasCi: boolean;
   languages: Record<string, number>;
@@ -68,7 +71,7 @@ export type EvidenceLine = {
   scope: "line";
   query: string;
   path: string;
-  component: "authApi" | "orderRealism" | "riskControls" | "strategy";
+  component: "authApi" | "orderRealism" | "feeAware" | "riskControls" | "strategy";
 };
 
 export type DetectorScope = "line" | "file" | "repo" | "strategy";
@@ -145,11 +148,16 @@ export type ResearchConfig = {
 
 export type ResearchRunKind = "production" | "fixture";
 
+/** Who wrote the run — `test` is always excluded from operator latest/summaries. */
+export type ResearchRunSource = "pipeline" | "test";
+
 export type ResearchRun = {
   runId: string;
   generatedAt: string;
   /** `fixture` runs are test harness data — excluded from operator views and latest resolution. */
   kind?: ResearchRunKind;
+  /** Pipeline CLI stamps `pipeline`; tests should stamp `test` when writing production-shaped ids. */
+  source?: ResearchRunSource;
   /** Research question slice — see research/dimensions.json (default `all`). */
   dimension?: string;
   config: {
@@ -171,6 +179,8 @@ export type ResearchRun = {
       inspectDegradedHits: number;
       apiDegradedHits: number;
     };
+    /** Wall-clock ms per pipeline phase (`Bun.nanoseconds`). */
+    timings?: import("./phase-timing.ts").PhaseTimingsMs;
   };
   candidates: RepoCandidate[];
   gated: RepoCandidate[];
