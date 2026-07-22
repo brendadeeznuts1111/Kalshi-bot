@@ -223,7 +223,8 @@ async function loadRepoPatternsForLift(
   repoFullName: string,
   run: ResearchRun,
 ): Promise<RepoPatternReport | null> {
-  return loadRepoPatternReport(dimension, repoFullName, run, { allowLiveFetch: true });
+  // Cache-only — blueprint/lift must not spend code_search quota.
+  return loadRepoPatternReport(dimension, repoFullName, run, { allowLiveFetch: false });
 }
 
 export function loadRunForLift(runId?: string, dimension?: string): ResearchRun | null {

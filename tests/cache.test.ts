@@ -1,13 +1,29 @@
 // @see https://bun.com/docs/test/index#run-tests
 import { afterEach, describe, expect, test } from "bun:test";
-import { cacheHash, isProductionRunId, isEligibleProductionRun, listRunSummaries, saveRun, loadRunFromDb, loadLatestRunFromDb, loadResearchRun, searchCachedPayloads, withCache, loadInspectCache, loadLatestInspectCache, saveInspectCache } from "../src/research/cache.ts";
+import {
+  cacheHash,
+  isProductionRunId,
+  isEligibleProductionRun,
+  listRunSummaries,
+  saveRun,
+  loadRunFromDb,
+  loadLatestRunFromDb,
+  loadResearchRun,
+  runIdTimestampMs,
+  searchCachedPayloads,
+  withCache,
+  loadInspectCache,
+  loadLatestInspectCache,
+  saveInspectCache,
+} from "../src/research/cache.ts";
 import { GitHubCacheMissError, resetGitHubRateLimitCircuit, tripGitHubRateLimit } from "../src/research/github-errors.ts";
 import type { InspectionSignals } from "../src/research/types.ts";
-import { freshTestGeneratedAt } from "./fixtures.ts";
+import { freshTestGeneratedAt, mintTestProductionRunId } from "./fixtures.ts";
 
 describe("isProductionRunId", () => {
   test("accepts ISO pipeline run ids", () => {
     expect(isProductionRunId("2026-07-22T04-59-00-818Z")).toBe(true);
+    expect(runIdTimestampMs("2026-07-22T04-59-00-818Z")).toBe(Date.parse("2026-07-22T04:59:00.818Z"));
   });
 
   test("rejects test fixture ids", () => {
@@ -25,8 +41,15 @@ describe("isProductionRunId", () => {
     ).toBe(false);
     expect(
       isEligibleProductionRun({
-        runId: "2026-07-22T04-59-00-818Z",
-        generatedAt: "2026-07-22T04:59:00.818Z",
+        runId: "2026-12-31T23-59-59-000Z",
+        generatedAt: new Date().toISOString(),
+      } as never),
+    ).toBe(false);
+    const recentId = mintTestProductionRunId();
+    expect(
+      isEligibleProductionRun({
+        runId: recentId,
+        generatedAt: new Date().toISOString(),
       } as never),
     ).toBe(true);
   });

@@ -35,6 +35,13 @@ export type AgentCommand =
   | "report"
   | "blueprint";
 
+/** Drop leading `--` tokens so `agent status -- --dimension=x` still parses flags. */
+export function stripLeadingDoubleDashes(args: string[]): string[] {
+  let i = 0;
+  while (i < args.length && args[i] === "--") i++;
+  return args.slice(i);
+}
+
 export function parseAgentCommand(argv: string[]): {
   command: AgentCommand | null;
   rest: string[];
@@ -47,7 +54,7 @@ export function parseAgentCommand(argv: string[]): {
     command === "report" ||
     command === "blueprint"
   ) {
-    return { command, rest };
+    return { command, rest: stripLeadingDoubleDashes(rest) };
   }
   return { command: null, rest: argv };
 }
@@ -68,11 +75,11 @@ export async function runAgentStatus(json: boolean, dimension?: string): Promise
 
 export async function runAgentResearch(
   json: boolean,
-  options?: { dimension?: string; inProcess?: boolean },
+  options?: { dimension?: string; inProcess?: boolean; exportAudit?: boolean },
 ): Promise<number> {
   const researchOpts = {
     json: false,
-    exportAudit: true as const,
+    exportAudit: options?.exportAudit !== false,
     dimension: options?.dimension,
   };
 
@@ -152,8 +159,8 @@ export async function runAgentPatterns(
 ): Promise<number> {
   const run = loadRunForPatterns(runId, dimension);
   if (!run) {
-    const scope = dimension ? `dimension=${dimension}` : runId ? `run=${runId}` : "latest (all)";
-    const msg = `No research run for ${scope}. Run: bun run research -- --dimension=<id>`;
+    const scope = dimension ? `dimension=${dimension}` : runId ? `run=${runId}` : "latest";
+    const msg = `No research run for ${scope}. Run: bun run research --dimension=<id>`;
     if (json) console.log(JSON.stringify({ ok: false, error: msg }));
     else console.error(msg);
     return 1;
@@ -228,10 +235,14 @@ export function printAgentHelp(): void {
 
 Usage:
   bun run agent status [--json] [--dimension <id>]
-  bun run agent run-research [--json] [--in-process] [--dimension <id>]
+  bun run agent run-research [--json] [--in-process] [--dimension <id>] [--no-export-audit]
   bun run agent patterns [--json] [--run <run-id>] [--dimension <id>] [--repo <owner/name>] [--no-write] [--open]
   bun run agent report [--json] [--dimension <id>] [--run <run-id>] [--no-write]
   bun run agent blueprint [--json] [--no-write]
+
+Flags go on the subcommand (no inner \`--\` needed):
+  bun run agent status --dimension=market-making
+  bun run agent run-research --dimension=price-data --no-export-audit
 
 Environment:
   REPO_CLONE_ROOT   Local clone root for patterns --open (owner/repo subdirs)
@@ -241,7 +252,7 @@ Examples:
   bun run agent patterns --dimension=market-making
   bun run agent report
   bun run agent blueprint
-  bun run agent run-research -- --dimension=price-data
+  bun run agent run-research --dimension=price-data
 `);
 }
 
@@ -257,20 +268,29 @@ export async function main(argv = Bun.argv.slice(2)): Promise<number> {
     options: {
       json: { type: "boolean", default: false },
       "in-process": { type: "boolean", default: false },
+      "export-audit": { type: "boolean", default: true },
+      "no-export-audit": { type: "boolean", default: false },
       dimension: { type: "string" },
       run: { type: "string" },
       repo: { type: "string" },
       "no-write": { type: "boolean", default: false },
       open: { type: "boolean", default: false },
+      help: { type: "boolean", default: false },
     },
     strict: false,
   });
+
+  if (values.help === true) {
+    printAgentHelp();
+    return 0;
+  }
 
   const json = values.json === true;
   const dimension = stringOpt(values.dimension);
   const runId = stringOpt(values.run);
   const repo = stringOpt(values.repo);
   const noWrite = values["no-write"] === true;
+  const exportAudit = values["no-export-audit"] !== true && values["export-audit"] !== false;
 
   switch (command) {
     case "status":
@@ -279,6 +299,7 @@ export async function main(argv = Bun.argv.slice(2)): Promise<number> {
       return runAgentResearch(json, {
         dimension,
         inProcess: values["in-process"] === true,
+        exportAudit,
       });
     case "patterns":
       return runAgentPatterns(json, runId, repo, dimension, noWrite, values.open === true);

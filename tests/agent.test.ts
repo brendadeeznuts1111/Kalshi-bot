@@ -1,7 +1,7 @@
 // @see https://bun.com/docs/test/index#run-tests
 import { describe, expect, test } from "bun:test";
 import { formatAgentStatus, getAgentStatus } from "../src/agent/agent-status.ts";
-import { parseAgentCommand } from "../src/agent/cli.ts";
+import { parseAgentCommand, stripLeadingDoubleDashes } from "../src/agent/cli.ts";
 import {
   formatLift,
   suggestLiftFromRun,
@@ -11,7 +11,7 @@ import type { RepoPatternReport } from "../src/agent/pattern-extract.ts";
 import { emptyPatternHits } from "../src/agent/pattern-extract.ts";
 import { saveRun } from "../src/research/cache.ts";
 import type { ResearchRun } from "../src/research/types.ts";
-import { freshTestGeneratedAt, TEST_LATEST_RUN_ID } from "./fixtures.ts";
+import { freshTestGeneratedAt, mintTestProductionRunId } from "./fixtures.ts";
 
 function mockRun(): ResearchRun {
   const base = {
@@ -112,6 +112,15 @@ describe("agent cli", () => {
     expect(parseAgentCommand([]).command).toBeNull();
   });
 
+  test("stripLeadingDoubleDashes keeps flags after bare --", () => {
+    expect(stripLeadingDoubleDashes(["--", "--dimension=market-making"])).toEqual([
+      "--dimension=market-making",
+    ]);
+    expect(parseAgentCommand(["status", "--", "--dimension=market-making"]).rest).toEqual([
+      "--dimension=market-making",
+    ]);
+  });
+
   test("suggestLiftFromRun picks best repo per component", () => {
     const run = mockRun();
     run.shortlist = run.scored;
@@ -158,17 +167,26 @@ describe("agent cli", () => {
     expect(formatLift(enriched)).toContain("↳ pattern:");
   });
 
-  test("getAgentStatus reads from cache.db", () => {
+  test("getAgentStatus reads newest production run across dimensions", () => {
     const run = mockRun();
     const at = freshTestGeneratedAt();
-    run.runId = TEST_LATEST_RUN_ID;
+    run.runId = mintTestProductionRunId();
     run.generatedAt = at;
+    run.dimension = "market-making";
     run.shortlist = run.scored;
     saveRun(run.runId, at, run);
 
     const status = getAgentStatus();
     expect(status.source).toBe("cache.db");
     expect(status.latestRun?.runId).toBe(run.runId);
+    expect(status.latestRun?.dimension).toBe("market-making");
     expect(formatAgentStatus(status)).toContain("cache.db");
+  });
+
+  test("getAgentStatus with dimension does not cross-fallback", () => {
+    const status = getAgentStatus("dimension-that-does-not-exist-zz");
+    expect(status.latestRun).toBeNull();
+    expect(status.requestedDimension).toBe("dimension-that-does-not-exist-zz");
+    expect(formatAgentStatus(status)).toContain("none for dimension=");
   });
 });

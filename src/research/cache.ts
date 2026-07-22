@@ -274,10 +274,20 @@ export function isResearchRun(value: unknown): value is ResearchRun {
 }
 
 /** Pipeline runs use ISO timestamps as runId; test fixtures use named ids or far-future years. */
-const PRODUCTION_RUN_ID = /^\d{4}-\d{2}-\d{2}T[\d-]+Z$/;
+const PRODUCTION_RUN_ID = /^(\d{4})-(\d{2})-(\d{2})T(\d{2})-(\d{2})-(\d{2})-(\d{3})Z$/;
+
+/** Parse pipeline runId → UTC ms, or null when shape is not a timestamp id. */
+export function runIdTimestampMs(runId: string): number | null {
+  const m = PRODUCTION_RUN_ID.exec(runId);
+  if (!m) return null;
+  const iso = `${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6]}.${m[7]}Z`;
+  const t = Date.parse(iso);
+  return Number.isFinite(t) ? t : null;
+}
 
 export function isProductionRunId(runId: string): boolean {
-  if (!PRODUCTION_RUN_ID.test(runId)) return false;
+  const t = runIdTimestampMs(runId);
+  if (t === null) return false;
   const year = Number(runId.slice(0, 4));
   if (!Number.isFinite(year)) return false;
   const nowYear = new Date().getFullYear();
@@ -294,11 +304,19 @@ export function loadRunFromDb(runId: string): ResearchRun | null {
   return isResearchRun(parsed) ? parsed : null;
 }
 
+const ELIGIBLE_FUTURE_SLACK_MS = 86_400_000;
+
 /** Pipeline run suitable for “latest” resolution (excludes far-future test fixtures). */
 export function isEligibleProductionRun(run: ResearchRun): boolean {
   if (!isProductionRunId(run.runId)) return false;
   const generatedAtMs = Date.parse(run.generatedAt);
-  return Number.isFinite(generatedAtMs) && generatedAtMs <= Date.now() + 86_400_000;
+  if (!Number.isFinite(generatedAtMs) || generatedAtMs > Date.now() + ELIGIBLE_FUTURE_SLACK_MS) {
+    return false;
+  }
+  // Reject run ids whose embedded clock is far ahead (e.g. 2026-12-31… mid-year).
+  const idMs = runIdTimestampMs(run.runId);
+  if (idMs === null || idMs > Date.now() + ELIGIBLE_FUTURE_SLACK_MS) return false;
+  return true;
 }
 
 export function loadResearchRun(options?: {
@@ -345,6 +363,21 @@ export function loadLatestRunFromDb(options?: {
     fallback ??= parsed;
   }
   return options?.includeFixtures ? fallback : null;
+}
+
+/** Latest eligible production run across all dimensions (operator “what ran last”). */
+export function loadLatestProductionRunAnyDimension(): ResearchRun | null {
+  const rows = getDb()
+    .query("SELECT payload FROM runs ORDER BY generated_at DESC LIMIT 50")
+    .all() as Array<{ payload: string }>;
+
+  for (const row of rows) {
+    const parsed = JSON.parse(row.payload) as unknown;
+    if (!isResearchRun(parsed)) continue;
+    if (isFixtureRun(parsed)) continue;
+    if (isProductionRun(parsed)) return parsed;
+  }
+  return null;
 }
 
 /** Latest production run for dimension strictly before `beforeRunId` (for diff baseline). */

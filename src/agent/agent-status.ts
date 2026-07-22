@@ -1,7 +1,10 @@
 /**
  * Local agent status from cache.db — no dashboard / rotor.
  */
-import { loadLatestRunFromDb, loadFallbackRunFromDb } from "../research/cache.ts";
+import {
+  loadLatestProductionRunAnyDimension,
+  loadLatestRunFromDb,
+} from "../research/cache.ts";
 import { runDimension } from "../research/dimensions.ts";
 import { resolveRunDataFreshness } from "./freshness.ts";
 import type { ResearchRun } from "../research/types.ts";
@@ -19,6 +22,8 @@ export type AgentStatus = {
     gateMiss: boolean;
     discoveryMiss: boolean;
   } | null;
+  /** Set when `--dimension` was requested but no run exists for that slice. */
+  requestedDimension?: string;
   source: "cache.db";
 };
 
@@ -38,10 +43,21 @@ function summarizeRun(run: ResearchRun) {
   };
 }
 
+/**
+ * Latest production run. With `dimension`, only that slice (no cross-dimension fallback).
+ * Without `dimension`, newest production run across all dimensions.
+ */
 export function getAgentStatus(dimension?: string): AgentStatus {
-  const run = dimension
-    ? (loadLatestRunFromDb({ dimension }) ?? loadFallbackRunFromDb({ dimension }))
-    : loadLatestRunFromDb();
+  const requested = dimension?.trim();
+  if (requested) {
+    const run = loadLatestRunFromDb({ dimension: requested });
+    return {
+      latestRun: run ? summarizeRun(run) : null,
+      requestedDimension: requested,
+      source: "cache.db",
+    };
+  }
+  const run = loadLatestProductionRunAnyDimension();
   return {
     latestRun: run ? summarizeRun(run) : null,
     source: "cache.db",
@@ -51,7 +67,14 @@ export function getAgentStatus(dimension?: string): AgentStatus {
 export function formatAgentStatus(status: AgentStatus): string {
   const lines = ["Kalshi agent status", `Source: ${status.source}`];
   if (!status.latestRun) {
-    lines.push("Latest run: none — run: bun run research");
+    if (status.requestedDimension) {
+      lines.push(
+        `Latest run: none for dimension=${status.requestedDimension}`,
+        `Run: bun run research --dimension=${status.requestedDimension}`,
+      );
+    } else {
+      lines.push("Latest run: none — run: bun run research");
+    }
     return lines.join("\n");
   }
   const r = status.latestRun;

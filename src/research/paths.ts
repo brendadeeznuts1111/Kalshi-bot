@@ -21,7 +21,7 @@ export const AUDIT_EVIDENCE_DIR = joinPath(RESEARCH_ROOT, "audit-evidence");
 /** Ephemeral per-run audit bundles (manifest, findings wire, rotor-ingest). */
 export const AUDIT_EXPORT_DIR = joinPath(RESEARCH_ROOT, "exports", "audit");
 
-/** Dashboard screenshot evidence (PNG + thumb + manifest). */
+/** Legacy screenshot capture dir (gitignored; no longer written by agent). */
 export const EVIDENCE_DIR = joinPath(RESEARCH_ROOT, "evidence");
 
 export function auditEvidenceSlug(fullName: string): string {
