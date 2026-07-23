@@ -61,4 +61,34 @@ describe("ExperimentRunner", () => {
 
     await Bun.$`rm -f ${dbPath}`.nothrow().quiet();
   });
+
+  test("dailyCheckAll iterates active experiments", async () => {
+    const dbPath = tempSqlitePath("experiment-check-all");
+    const runner = ExperimentRunner.open(dbPath);
+
+    const id1 = runner.launch({
+      name: "active-a",
+      factors: PHASE1_FACTORS,
+      minDurationDays: 999,
+    });
+    const id2 = runner.launch({
+      name: "active-b",
+      factors: PHASE1_FACTORS,
+      minDurationDays: 999,
+    });
+
+    const results = await runner.dailyCheckAll();
+    expect(results).toHaveLength(2);
+    expect(results.map((r) => r.experimentId).sort()).toEqual([id1, id2].sort());
+    for (const { result } of results) {
+      expect(result.status).toBe("running");
+    }
+
+    runner.conclude(id1, "cancelled", "test cleanup");
+    const after = await runner.dailyCheckAll();
+    expect(after).toHaveLength(1);
+    expect(after[0]!.experimentId).toBe(id2);
+
+    await Bun.$`rm -f ${dbPath}`.nothrow().quiet();
+  });
 });

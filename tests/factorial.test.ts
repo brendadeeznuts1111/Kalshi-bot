@@ -5,7 +5,9 @@ import {
   analyzeFactorial,
   assignBalanced,
   generateDesign,
+  isAllBinaryTwoLevel,
   parseVariantId,
+  satisfiesHalfFractionRelation,
   variantId,
   type Factor,
   type Variant,
@@ -65,21 +67,36 @@ describe("generateDesign", () => {
     expect(ids).toEqual(["color=blue", "color=green", "color=purple", "color=red", "color=yellow"]);
   });
 
-  test("1/2 fraction of 2×2×2 = 4 variants", () => {
+  test("1/2 fraction of 2×2×2 = 4 variants (Resolution half-replicate)", () => {
     const d = generateDesign(THREE_FACTOR, 2);
-    expect(d.variants.length).toBeLessThan(8);
-    expect(d.variants.length).toBeGreaterThanOrEqual(2);
+    expect(d.variants).toHaveLength(4);
     expect(d.fraction).toBe(2);
     expect(d.fullCount).toBe(8);
+    expect(d.method).toBe("resolution-half");
+    for (const v of d.variants) {
+      expect(satisfiesHalfFractionRelation(v, THREE_FACTOR)).toBe(true);
+    }
   });
 
-  test("1/3 fraction of 3×3 = 3 variants", () => {
+  test("1/2 fraction of 2×2 uses resolution-half when binary", () => {
+    const binaryTwo: Factor[] = [
+      { name: "routing", levels: ["static", "dynamic"] },
+      { name: "cut", levels: [0.1, 0.15] },
+    ];
+    expect(isAllBinaryTwoLevel(binaryTwo)).toBe(true);
+    const d = generateDesign(binaryTwo, 2);
+    expect(d.variants).toHaveLength(2);
+    expect(d.method).toBe("resolution-half");
+  });
+
+  test("non-binary fraction uses naive subsample", () => {
     const factors: Factor[] = [
       { name: "a", levels: ["a1", "a2", "a3"] },
       { name: "b", levels: ["b1", "b2", "b3"] },
     ];
     const d = generateDesign(factors, 3);
     expect(d.variants.length).toBe(3);
+    expect(d.method).toBe("naive-subsample");
   });
 
   test("throws on <2 levels", () => {

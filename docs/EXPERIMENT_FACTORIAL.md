@@ -38,7 +38,7 @@ Reversible `factor=level&…` strings (sorted keys), e.g. `cut=0.1&routing=dynam
 | 3 | + stake method | 8 | 8 |
 | 4 | + timing | 16 | 12 |
 
-Use **≤4 factors** per experiment. Fractional designs in code are naive subsamples — prefer full factorial at these sizes.
+Use **≤4 factors** per experiment. For binary (2-level) factors with `--fraction=2`, the engine uses a **Resolution-IV half-replicate** (generator: last factor = product of others). Non-binary or other fractions fall back to naive subsampling.
 
 ## System factors (do not randomize per partner)
 
@@ -56,7 +56,7 @@ bun run tennis:experiment -- launch --name=phase1 --routing=static,dynamic --jso
 bun run tennis:experiment -- launch --name=phase2 --routing=static,dynamic --cut=0.1,0.15 --json
 
 bun run tennis:experiment -- assign --experiment=<id> --partner=<eventId>
-bun run tennis:experiment -- record --experiment=<id> --partner=<eventId> --outcome=1
+bun run tennis:experiment -- record --experiment=<id> --partner=<eventId> --outcome=1 [--metric-id=<id>]
 bun run tennis:experiment -- status --experiment=<id>
 bun run tennis:experiment -- check --experiment=<id>
 bun run tennis:experiment -- check-all
