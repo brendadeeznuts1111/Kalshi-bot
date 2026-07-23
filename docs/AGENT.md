@@ -9,7 +9,7 @@ Each command is a focused **sub-agent** grounded in local evidence (`cache.db`, 
 | Sub-agent | Command | Grounding |
 |-----------|---------|-----------|
 | **ground** | `agent ground` | Orchestrates status + cache readiness + miss taxonomy + next actions (cache-only). Coverage: exact → qualifier-normalized → bare phrase. `saveRun` stamps discoverGate (miss queries → else resolveDiscoverGate); unstamped rows also inferred at read time. `pushed:` cutoffs are UTC-month-floored. Partial coverage lists cold queries. |
-| **tennis** | `agent tennis` | Event-store + live canary artifact + score_snapshots cadence triage (default cache-only; `--canary` hits Kalshi dry-run). `--webview` captures book dashboard via `Bun.WebView` + `Bun.Image`. |
+| **tennis** | `agent tennis` | Event-store + canary + WS ground + book coverage + WS recorder trend + cadence (cache-only; `--canary` dry-run; `--webview` capture). SSOT: [`tennis-lane-constants.ts`](../src/institutions/event-store/tennis-lane-constants.ts). |
 | **status** | `agent status` | Newest eligible production run |
 | **patterns** | `agent patterns` | Detector evidence paths from a cached run |
 | **blueprint** | `agent blueprint` | Bun stack / lift from cached runs + pattern reports |
@@ -56,19 +56,26 @@ A leading `--` before flags is tolerated for muscle memory (`agent status -- --d
 
 ## `tennis`
 
-Event-store grounded triage for the ITF live / record control plane (sibling of `ground`):
+Event-store grounded triage for the ITF live / record control plane (sibling of `ground`). Report sections:
 
-1. **store** — events / markets / live_scores / score_snapshots / book_ticks / watch size
+1. **store** — events / markets / live_scores / score_snapshots / book_ticks / watch size / live_now
 2. **canary** — latest `research/cache/tennis-canary/latest.json` (from `tennis:live:canary` or `agent tennis --canary`)
-3. **cadence** — `analyzeScoreSnapshotCadence` (REST ok/borderline/miss vs `TENNIS_LIVE_INTERVAL_MS`)
-4. **next actions** — sync, promote loop, canary register, record --watch
+3. **WS ground** — latest `research/cache/tennis-ws-ground/` artifact (WebView + Image flags)
+4. **book tick coverage** — watch-set tickers with `kalshi-ws` vs `kalshi-rest` rows; exchange-clock share; linked events with WS
+5. **WS recorder** — latest session + trend table (deltas, seq gaps, resyncs, `wsErrors`) from `research/cache/tennis-ws-recorder/`
+6. **experiments** — latest factorial artifact from `research/cache/tennis-experiments/latest.json` (`tennis:experiment -- check` / `latest`)
+7. **cadence** — `analyzeScoreSnapshotCadence` (REST ok/borderline/miss vs `TENNIS_LIVE_INTERVAL_MS`)
+8. **next actions** — ordered operator commands (sync, loop, record --ws, cron register, webview, experiment)
 
-Default is zero network. `--canary` runs the full dry-run smoke first (Bun-native parallel fetch, write-boundary plan, artifact with `Bun.hash` fingerprint).
+Default is zero network. `--canary` runs the full dry-run smoke first (Bun-native parallel fetch, write-boundary plan, artifact with `Bun.hash` fingerprint). `--json` emits the full structured report (same fields as terminal sections).
+
+Filter tests during lane work: `bun test --grep "live-scores|tennis-"`.
 
 ```bash
 bun run agent tennis
 bun run agent tennis --canary
 bun run agent tennis --json
+bun run agent tennis --webview
 ```
 
 ## `ground`

@@ -9,6 +9,7 @@ import {
   type KalshiMarketTicker,
   unbrand,
 } from "../../../src/institutions/event-store/brands.ts";
+import { KALSHI_BOOK_SOURCE_PREFERENCE } from "../../../src/institutions/event-store/tennis-lane-constants.ts";
 
 type TickRow = {
   levels_json: string;
@@ -31,7 +32,7 @@ export function openingMidCents(
   ticker: KalshiMarketTicker,
   eventId: CanonicalEventId,
 ): number | null {
-  for (const source of ["kalshi-ws", "kalshi-rest"] as const) {
+  for (const source of KALSHI_BOOK_SOURCE_PREFERENCE) {
     const row = db
       .query(
         `SELECT levels_json, ts, seq FROM book_ticks

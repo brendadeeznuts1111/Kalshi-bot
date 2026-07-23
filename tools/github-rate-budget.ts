@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 // @see https://bun.com/docs/runtime/utils#bun-main
+// @see https://bun.com/docs/runtime/child-process#spawning-a-process-bun-spawn
 /**
  * Read GitHub rate-limit buckets + inspect cost estimate — no research run.
  *

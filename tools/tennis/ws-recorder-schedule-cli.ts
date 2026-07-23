@@ -8,11 +8,17 @@
 import { join } from "node:path";
 import { parseArgs } from "node:util";
 import { previewFireTimes } from "../../src/research/schedule-cli.ts";
+import {
+  TENNIS_WS_RECORDER_CRON_SCHEDULE,
+  TENNIS_WS_RECORDER_DEFAULT_WS_SECONDS,
+} from "../../src/institutions/event-store/tennis-lane-constants.ts";
 
 /** Every 30m local — dense enough for watch-set book_ticks during match hours. */
-export const TENNIS_WS_RECORDER_CRON_SCHEDULE = "*/30 * * * *";
+export {
+  TENNIS_WS_RECORDER_CRON_SCHEDULE,
+  TENNIS_WS_RECORDER_DEFAULT_WS_SECONDS,
+} from "../../src/institutions/event-store/tennis-lane-constants.ts";
 export const TENNIS_WS_RECORDER_CRON_TITLE = "kalshi-tennis-ws-recorder";
-export const TENNIS_WS_RECORDER_DEFAULT_WS_SECONDS = 300;
 export const TENNIS_WS_RECORDER_WORKER_PATH = join(
   import.meta.dir,
   "ws-recorder-scheduled.ts",

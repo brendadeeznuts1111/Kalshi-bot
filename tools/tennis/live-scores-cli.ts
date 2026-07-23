@@ -1,5 +1,8 @@
 #!/usr/bin/env bun
 // @see https://bun.com/docs/guides/process/argv
+// @see https://bun.com/docs/runtime/utils#bun-sleep
+// @see https://bun.com/docs/runtime/environment-variables
+// @see https://bun.com/docs/runtime/file-io#writing-files-bun-write
 /**
  * Poll Kalshi /milestones + /live_data for watch-set ITF events.
  * Watch = occurrence within --lead minutes OR already is_live (early start).
@@ -27,6 +30,11 @@ import {
   type SnapshotCadenceReport,
 } from "../../src/institutions/event-store/live-scores.ts";
 import { ensureEventStoreDir, openEventStore } from "../../src/institutions/event-store/open-db.ts";
+import {
+  resolveTennisLeadMinutes,
+  resolveTennisWatchLimit,
+  TENNIS_LIVE_INTERVAL_MS_DEFAULT,
+} from "../../src/institutions/event-store/tennis-lane-constants.ts";
 import { DEFAULT_EVENT_STORE_DB } from "../../src/institutions/event-store/paths.ts";
 import { bridgeStadionToKalshi } from "../../src/institutions/event-store/stadion-kalshi-bridge.ts";
 import {
@@ -109,9 +117,9 @@ export async function runLiveScoresCli(argv: string[]): Promise<number> {
   await ensureEventStoreDir();
   const dbPath = typeof values.db === "string" ? values.db : DEFAULT_EVENT_STORE_DB;
   const db = openEventStore({ dbPath });
-  const leadMinutes = values.lead ? Number(values.lead) : 5;
-  const limit = values.top ? Number(values.top) : 40;
-  const intervalMs = Number(Bun.env.TENNIS_LIVE_INTERVAL_MS ?? 10_000);
+  const leadMinutes = resolveTennisLeadMinutes(values.lead ? Number(values.lead) : undefined);
+  const limit = resolveTennisWatchLimit(values.top ? Number(values.top) : undefined);
+  const intervalMs = Number(Bun.env.TENNIS_LIVE_INTERVAL_MS ?? TENNIS_LIVE_INTERVAL_MS_DEFAULT);
   const canary = values.canary === true;
   const cadenceOnly = values.cadence === true;
   // Canary is always dry-run at the write boundary (zero write risk).

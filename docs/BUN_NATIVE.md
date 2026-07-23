@@ -33,21 +33,25 @@ Deep dive: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns)
 | Rate-limit backoff | `Bun.sleep` | [`gh.ts`](../src/research/gh.ts) |
 | Bounded concurrency | [`pool.ts`](../src/research/pool.ts) + `Bun.peek` | [`cli.ts`](../src/research/cli.ts), [`inspect.ts`](../src/research/inspect.ts) |
 | Settled-promise fast path | `Bun.peek` / `peek.status` | [`bun-settle.ts`](../src/research/bun-settle.ts) |
-| Scheduled research | OS-level `Bun.cron` | [`scheduled.ts`](../src/research/scheduled.ts), [`schedule-cli.ts`](../src/research/schedule-cli.ts) |
+| Scheduled research | OS-level `Bun.cron` + `.parse` / `.remove` | [`scheduled.ts`](../src/research/scheduled.ts), [`schedule-cli.ts`](../src/research/schedule-cli.ts) |
+| Tennis / toxicity OS cron | `Bun.cron` + `export default { scheduled }` | [`ws-recorder-scheduled.ts`](../tools/tennis/ws-recorder-scheduled.ts), [`live-canary-scheduled.ts`](../tools/tennis/live-canary-scheduled.ts), [`toxicity-scheduled.ts`](../src/calibration/toxicity-scheduled.ts), tennis/toxicity `*-schedule-cli.ts` |
 | Audit digests | `Bun.CryptoHasher("sha3-256")` | [`audit-adapter.ts`](../src/research/audit-adapter.ts), [`export-audit.ts`](../src/research/export-audit.ts) |
 | GitHub URL SSOT | `BunURLPattern` + `URLPattern` ([v1.3.4+](https://bun.com/blog/bun-v1.3.4#urlpattern-api)) | [`patterns.ts`](../src/research/patterns.ts) |
 | Report browser | `Bun.serve` routes + `Bun.file` | [`serve.ts`](../src/research/serve.ts), [`views.ts`](../src/research/views.ts) |
 | Agent CLI | status / patterns / blueprint / tennis over `cache.db` + event-store | [`cli.ts`](../src/agent/cli.ts), [`docs/AGENT.md`](../docs/AGENT.md) |
 | Kalshi live poll | `dns.prefetch` + `fetch.preconnect` + `mapPool` + `Bun.nanoseconds` | [`kalshi-network.ts`](../src/bot/kalshi-network.ts), [`live-scores.ts`](../src/institutions/event-store/live-scores.ts) |
 | Tennis canary artifacts | `Bun.write` + `Bun.hash` under `research/cache/tennis-canary/` | [`live-canary-store.ts`](../src/institutions/event-store/live-canary-store.ts) |
-| Tennis WS dashboard ground | `Bun.WebView` + `Bun.Image` under `research/cache/tennis-ws-ground/` | [`tennis-ws-ground.ts`](../src/institutions/event-store/tennis-ws-ground.ts), [`tennis-ws-dashboard.ts`](../src/institutions/event-store/tennis-ws-dashboard.ts), [`tennis-book-coverage.ts`](../src/institutions/event-store/tennis-book-coverage.ts) |
-| Kalshi WS orderbook | Bun client `WebSocket` + handshake headers | [`kalshi-ws.ts`](../src/bot/kalshi-ws.ts), [`kalshi-ws-recorder.ts`](../src/institutions/event-store/kalshi-ws-recorder.ts), [`tennis-ws-recorder-store.ts`](../src/institutions/event-store/tennis-ws-recorder-store.ts) |
+| Tennis WS dashboard ground | `Bun.WebView` (`backend`: webkit on macOS, chrome elsewhere; `url` + `data:text/html`) + `Bun.file().image()` chain | [`tennis-ws-ground.ts`](../src/institutions/event-store/tennis-ws-ground.ts), [`tennis-ws-dashboard.ts`](../src/institutions/event-store/tennis-ws-dashboard.ts), [`tennis-book-coverage.ts`](../src/institutions/event-store/tennis-book-coverage.ts) |
+| Kalshi WS orderbook | Bun client `WebSocket` + RSA handshake headers; JSON-only wire; official error codes 1–25; ping keepalive; reconnect jitter; `NO_PROXY` + proxy/TLS env | [`kalshi-ws.ts`](../src/bot/kalshi-ws.ts), [`kalshi-ws-errors.ts`](../src/bot/kalshi-ws-errors.ts), [`kalshi-ws-recorder.ts`](../src/institutions/event-store/kalshi-ws-recorder.ts), [`tennis-ws-recorder-store.ts`](../src/institutions/event-store/tennis-ws-recorder-store.ts) |
 | Cadence / scoreboard tables | `Bun.inspect.table` | [`terminal-out.ts`](../src/research/terminal-out.ts), tennis CLI + `agent tennis` |
 | Terminal reports | `Bun.markdown.ansi` + `Bun.wrapAnsi` | [`report-term.ts`](../src/agent/report-term.ts) |
 | TTY tables + OSC 8 links | `Bun.inspect.table` + `Bun.stringWidth` / `wrapAnsi` / `stripANSI` | [`terminal-out.ts`](../src/research/terminal-out.ts) |
 | Phase timings | `Bun.nanoseconds` | [`phase-timing.ts`](../src/research/phase-timing.ts) |
 | Agent IPC research progress | `Bun.spawn` + `process.send` | [`research-runner.ts`](../src/agent/research-runner.ts), [`research-progress.ts`](../src/research/research-progress.ts) |
+| GitHub rate budget probe | `Bun.spawn` (stdout/stderr pipes) | [`github-rate-budget.ts`](../tools/github-rate-budget.ts) |
+| Repo / alpha file scan | `Bun.Glob` | [`watcher.ts`](../src/calibration/watcher.ts), [`architecture-blueprint.ts`](../src/agent/architecture-blueprint.ts) |
 | CLI flags | `parseArgs` from `node:util` | [`cli.ts`](../src/research/cli.ts) |
+| Package install (none today) | `bun install` / `bun ci` | N/A — zero deps; see [Package manager](#package-manager) |
 | Unit tests | `bun:test` + `mock.module()` | [`tests/`](../tests/) |
 | Test coverage | `[test] coverage` in `bunfig.toml` | [`bunfig.toml`](../bunfig.toml) |
 
@@ -77,6 +81,8 @@ Deep dive: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns)
 | `bun:test` | https://bun.com/docs/test/index#run-tests |
 | `mock.module` | https://bun.com/docs/test/mocks |
 | `Bun.cron` | https://bun.com/docs/runtime/cron |
+| `Bun.cron.parse` / `.remove` | https://bun.com/docs/runtime/cron |
+| `Bun.Glob` | https://bun.com/docs/runtime/glob |
 | `Bun.CryptoHasher` | https://bun.com/docs/runtime/hashing#bun-cryptohasher |
 | `URLPattern` | https://bun.com/blog/bun-v1.3.4#urlpattern-api |
 | `Bun.serve` | https://bun.com/docs/runtime/http/server#basic-setup |
@@ -88,11 +94,117 @@ Deep dive: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns)
 | `Bun.nanoseconds` | https://bun.com/docs/runtime/utils#bun-nanoseconds |
 | `Bun.fetch` / `fetch.preconnect` | https://bun.com/docs/runtime/networking/fetch#sending-an-http-request · [preconnect](https://bun.com/docs/runtime/networking/fetch#preconnect-to-a-host) |
 | `Bun.spawn` IPC | https://bun.com/docs/runtime/child-process#inter-process-communication-ipc · [reference](https://bun.com/docs/runtime/child-process#reference) |
+| `Bun.spawn` (pipes) | https://bun.com/docs/runtime/child-process#spawning-a-process-bun-spawn |
 | `Bun.Terminal` (PTY) | https://bun.com/docs/runtime/child-process#terminal-pty-support |
 | `Bun.spawnSync` | https://bun.com/docs/runtime/child-process#blocking-api-bun-spawnsync |
 | `Bun.WebView` | https://bun.com/docs/runtime/webview |
 | `Bun.Image` | https://bun.com/docs/runtime/image |
-| Client `WebSocket` (headers) | https://bun.com/docs/runtime/http/websockets |
+| Client `WebSocket` (headers, `proxy`) | https://bun.com/docs/runtime/http/websockets · [proxy v1.3.6](https://bun.com/docs/blog/bun-v1.3.6#httphttps-proxy-support-for-websocket) |
+| `bun install` | https://bun.com/docs/pm/cli/install |
+| `bun.lock` / lockfile | https://bun.com/docs/pm/lockfile |
+| `bunfig.toml` `[install]` | https://bun.com/docs/runtime/bunfig |
+| Isolated installs | https://bun.com/docs/pm/isolated-installs |
+| `Buffer.indexOf` / `Buffer.includes` | https://bun.com/docs/blog/bun-v1.3.6#faster-bufferindexof |
+| `bun test --grep` | https://bun.com/docs/blog/bun-v1.3.6#grep-flag-for-bun-test |
+| `Response.json()` perf | https://bun.com/docs/blog/bun-v1.3.6#responsejsonobject-is-now-35x-faster |
+
+## Runtime notes (Bun v1.3.6+)
+
+### Faster `Response.json()`
+
+`Response.json()` now uses JavaScriptCore’s SIMD-optimized **FastStringifier** (v1.3.6+). Before, it was much slower than `new Response(JSON.stringify(obj))`; they are now at parity on large payloads.
+
+```typescript
+const obj = {
+  items: Array.from({ length: 100 }, (_, i) => ({ id: i, value: `item-${i}` })),
+};
+
+Response.json(obj);                      // preferred — sets Content-Type
+new Response(JSON.stringify(obj));       // equivalent perf after v1.3.6
+```
+
+| Approach | Before (v1.3.5) | After (v1.3.6) |
+|----------|-----------------|----------------|
+| `Response.json()` | 2415 ms | ~700 ms |
+| `JSON.stringify()` + `new Response()` | 689 ms | ~700 ms |
+| Ratio | **3.50× slower** | **~1.0× (parity)** |
+
+**This repo:** [`serve.ts`](../src/research/serve.ts) already uses `Response.json(data, { status })` for JSON routes. Test mocks still use `new Response(JSON.stringify(…))` — fine on v1.3.6+; no need to rewrite unless you want explicit `Content-Type`. See [Bun v1.3.6 — Response.json() is now 3.5× faster](https://bun.com/docs/blog/bun-v1.3.6#responsejsonobject-is-now-35x-faster).
+
+### Faster `Buffer.indexOf` / `Buffer.includes`
+
+`Buffer.indexOf` and `Buffer.includes` use SIMD-optimized search (v1.3.6+). Largest wins on **large buffers** and **miss paths** (pattern not found) — up to ~2× in Bun’s benchmark (~44 KB buffer, 99,999 iterations):
+
+| Case | Bun 1.3.5 | Bun 1.3.6 |
+|------|-----------|-----------|
+| `.includes` true | 25.52 ms | 21.90 ms |
+| `.includes` false | 3.25 s | 1.42 s |
+
+```typescript
+const buffer = Buffer.from("a".repeat(1_000_000) + "needle");
+
+buffer.indexOf("needle");   // single- and multi-byte patterns
+buffer.includes("needle");
+```
+
+**This repo:** no `Buffer.indexOf` / `includes` call sites today. Prefer these over manual byte scans when parsing binary wire (WS frames, tarball sniffing, etc.). See [Bun v1.3.6 — Faster Buffer.indexOf](https://bun.com/docs/blog/bun-v1.3.6#faster-bufferindexof).
+
+### WebSocket `proxy` option (HTTP/HTTPS)
+
+Bun’s client `WebSocket` constructor accepts a `proxy` option (v1.3.6+) for corporate / gated networks.
+
+```typescript
+// Simple proxy URL
+new WebSocket("wss://example.com", {
+  proxy: "http://proxy:8080",
+});
+
+// With authentication
+new WebSocket("wss://example.com", {
+  proxy: "http://user:pass@proxy:8080",
+});
+
+// Object format with custom headers
+new WebSocket("wss://example.com", {
+  proxy: {
+    url: "http://proxy:8080",
+    headers: { "Proxy-Authorization": "Bearer token" },
+  },
+});
+
+// HTTPS proxy with TLS options
+new WebSocket("wss://example.com", {
+  proxy: "https://proxy:8443",
+  tls: { rejectUnauthorized: false },
+});
+```
+
+All combinations of `ws://` and `wss://` connections through both HTTP and HTTPS proxies are supported, along with Basic authentication and custom proxy headers. The `tls` option now also supports full TLS configuration (`ca`, `cert`, `key`, `passphrase`, etc.) matching the options available in `fetch`.
+
+| Option | Type | Purpose |
+|--------|------|---------|
+| `ca` | string / Buffer / BunFile / array | Trust store (replaces default Mozilla CAs when set) |
+| `cert` | string / Buffer / BunFile / array | Client certificate chain (PEM) |
+| `key` | string / Buffer / BunFile / `{ pem, passphrase? }[]` | Private key(s) |
+| `passphrase` | string | Decrypt encrypted `key` PEM |
+| `rejectUnauthorized` | boolean | `false` accepts any cert (dev/self-signed) |
+| `checkServerIdentity` | function | Custom hostname validation (**fetch only**) |
+| `serverName` | string | TLS SNI override |
+| `requestCert` | boolean | Request client cert from server |
+| `ciphers` | string | OpenSSL cipher list |
+| `secureOptions` | number | `SSL_OP_*` bitmask |
+| `ALPNProtocols` | string / Buffer | ALPN negotiation |
+| `dhParamsFile` | string | Custom DH params PEM path |
+| `clientRenegotiationLimit` / `Window` | number | TLS renegotiation limits |
+| `lowMemoryMode` | boolean | `OPENSSL_RELEASE_BUFFERS=1` |
+
+**This repo:** [`kalshi-ws.ts`](../src/bot/kalshi-ws.ts) passes handshake `headers` for Kalshi RSA auth (fresh signature per `connect()`). Wire format is **JSON only** per [Kalshi WS docs](https://docs.kalshi.com/getting_started/quick_start_websockets) — no documented protobuf subprotocols. Server errors use `{ type: "error", msg: { code, msg } }` with codes 1–25 parsed in [`kalshi-ws-errors.ts`](../src/bot/kalshi-ws-errors.ts).
+
+Reliability: client ping every 20s (`pingIntervalMs`); recorder reconnect via `kalshiWsReconnectBackoffMs` (exponential + jitter); `AbortSignal` closes WS on SIGTERM; OS cron via [`ws-recorder-scheduled.ts`](../tools/tennis/ws-recorder-scheduled.ts).
+
+Net env: `resolveKalshiWsNetOptions()` reads `KALSHI_WS_PROXY` → `HTTPS_PROXY` → `HTTP_PROXY`, honoring `NO_PROXY` / `no_proxy` for the WS host (`KALSHI_WS_PROXY` explicit override wins). TLS via `KALSHI_WS_TLS_*` (`REJECT_UNAUTHORIZED`, `CA_FILE`, `CERT_FILE`, `KEY_FILE`, `PASSPHRASE`, `SERVER_NAME`, `CIPHERS`) in `defaultWsFactory`. Per-instance override via constructor `net: { proxy, tls }`; full control with injectable `wsFactory`.
+
+See [Bun v1.3.6 — HTTP/HTTPS Proxy Support for WebSocket](https://bun.com/docs/blog/bun-v1.3.6#httphttps-proxy-support-for-websocket) · [WebSocket client](https://bun.com/docs/runtime/http/websockets).
 
 ## Cache: `bun:sqlite` not JSON blobs
 
@@ -223,9 +335,215 @@ Colocated under [`tests/`](../tests/):
 ```bash
 bun test
 bun test --coverage
+bun test --grep "live-scores"
+bun test tests/institutions/live-scores.test.ts --grep "poll"
 ```
 
+- Use `bun test --grep "pattern"` (v1.3.6+) or `bun test -t "pattern"` to filter by test name.
+- `--grep` is an alias for `--test-name-pattern`.
+
+Filters on **`test()` / `describe()` names**, not file paths; pass a file path separately to narrow scope. Works with `--isolate` (this repo’s default via [`package.json`](../package.json) `"test"` script). See [Bun v1.3.6](https://bun.com/docs/blog/bun-v1.3.6#grep-flag-for-bun-test).
+
 Integration (live `gh`) is `bun run research` only.
+
+## Package manager
+
+This repo has **zero runtime npm dependencies** — no `dependencies`, `devDependencies`, or `peerDependencies` in [`package.json`](../package.json). You do **not** need `node_modules/` at the project root for `bun run check`, tests, the agent CLI, or the tennis institution lane.
+
+### When `bun install` matters
+
+| Situation | Action |
+|-----------|--------|
+| Today (no npm deps) | `bun install` is a no-op (~ms). CI runs `bun run check` without installing packages. |
+| First `bun add <pkg>` | Create and **commit** `bun.lock`. Use `bun ci` or `bun install --frozen-lockfile` in CI for reproducible builds. |
+| Lockfile out of sync | `frozenLockfile = true` in [`bunfig.toml`](../bunfig.toml) makes install fail until `package.json` and `bun.lock` agree. |
+
+**Footgun:** `frozenLockfile = true` with **no** `bun.lock` is fine while deps stay empty. The first time you add a package, either allow lockfile creation (default on first install) or temporarily disable frozen — otherwise install fails per Bun docs.
+
+### Project `bunfig.toml`
+
+[`bunfig.toml`](../bunfig.toml) holds **project-only** overrides (not machine linker/cache policy — that lives in the monorepo `~/.bunfig.toml` when applicable):
+
+| Key | Value | Purpose |
+|-----|-------|---------|
+| `[install] frozenLockfile` | `true` | Reproducible installs once deps exist |
+| `[run] shell` | `"bun"` | `bun run …` uses Bun Shell — see [`BUN_SHELL.md`](BUN_SHELL.md) |
+| `[test] coverage` | enabled | Coverage gate — see [Testing](#testing) |
+
+### Install pipeline (when deps exist)
+
+Bun install is not “download into `node_modules`” directly — it is **resolve → cache → link**:
+
+```text
+package.json + bun.lock
+        │
+        ▼
+   Resolve graph (registry / git / tarball)
+        │
+        ├── no lock or deps changed → eager: fetch tarballs while resolving
+        └── lock + unchanged deps     → lazy: fetch only missing packages
+        │
+        ▼
+   Extract to global store
+   ~/.bun/install/cache/${name}@${version}
+   (pre/build semver tags → hashed dir name)
+        │
+        ▼
+   Link into node_modules (--backend / platform default)
+        │
+        ▼
+   Optional: project lifecycle scripts (pre/post install on *root* only)
+```
+
+**Kalshi-bot today:** the pipeline stops at resolve — empty graph, no cache writes, no `node_modules` tree.
+
+### Eager vs lazy resolution
+
+| Condition | Behavior |
+|-----------|----------|
+| No `bun.lock`, or `package.json` deps changed | **Eager** — download and extract tarballs during resolution |
+| `bun.lock` present and deps unchanged | **Lazy** — skip packages already satisfied in `node_modules` (name+version check below) |
+
+[`frozenLockfile = true`](../bunfig.toml) adds a gate: install fails if lockfile would change, regardless of eager/lazy path.
+
+### Global cache vs project `node_modules`
+
+Two layers (only matter once you add npm deps):
+
+| Layer | Location | Role |
+|-------|----------|------|
+| **Global store** | `~/.bun/install/cache/${name}@${version}` | Canonical extracted package bytes (shared across projects on the machine) |
+| **Project tree** | `./node_modules/` (gitignored here) | Per-project layout — hoisted flat or isolated `.bun/` + symlinks |
+
+Monorepo **machine** policy ([`docs/UNIFIED.md`](../../docs/UNIFIED.md) on the parent `Projects` tree) sets absolute `[install.cache].dir`, `globalStore = true`, and `linker = isolated` in `~/.bunfig.toml`. **This repo’s** [`bunfig.toml`](bunfig.toml) does not duplicate those — only `frozenLockfile`, `[run]`, `[test]`.
+
+Registry metadata (versions, dist-tags) is cached separately as binary `~/.bun/install/cache/*.npm` (hashed package name). Bun ignores `Cache-Control: Age` on registry responses — metadata can lag npm by ~5 minutes.
+
+### Cache directory layout (finding packages on disk)
+
+Canonical layout ([bun install — global cache](https://bun.com/docs/pm/cli/install), [global cache](https://bun.com/docs/pm/global-cache)):
+
+```text
+$(bun pm cache)/                    # default ~/.bun/install/cache
+├── ${name}@${version}@@@1/         # extracted tarball (release semver)
+├── ${name}@${hash}@@@1/            # pre/build semver → hash, not literal version
+├── ${hash(packageName)}.npm        # registry metadata blobs (scoped names hashed)
+└── links/                          # global virtual store (globalStore = true only)
+    └── ${name}@${version}-${entry_hash}/
+        └── node_modules/           # linked dep closure for this project graph
+```
+
+**Release semver** — directory name matches lockfile version, often with an `@@@1` suffix on the extracted cache entry (e.g. `esbuild@0.28.1@@@1`). Scoped packages use the scope in the name: `@types/node@20.0.0@@@1`.
+
+**Pre-release or build metadata** — if the version string has a pre suffix (`1.0.0-beta.0`) or build suffix (`1.0.0+20220101`), Bun **replaces that semver segment with a hash** in the cache path. This avoids OS errors from overlong paths, but you cannot `ls ~/.bun/install/cache/foo@1.0.0-beta.0` and expect a hit.
+
+**Registry metadata** — `*.npm` files use `${hash(packageName)}.npm` so scoped packages do not need extra directory nesting ([install docs](https://bun.com/docs/pm/cli/install)).
+
+**Global virtual store** — when `globalStore = true` (monorepo machine default in [`docs/UNIFIED.md`](../../docs/UNIFIED.md)), isolated installs also materialize under `cache/links/` with a 16-hex `entry_hash` suffix encoding the resolved dependency closure ([global virtual store](https://bun.com/docs/pm/global-store)). Project `node_modules/.bun/<pkg>@<version>` symlinks there; `readlink` on those paths is the reliable way to see the canonical on-disk tree.
+
+**Practical lookup** (once deps exist):
+
+| Goal | Command / path |
+|------|----------------|
+| Cache root | `bun pm cache` |
+| Why a package is installed | `bun pm why <pkg>` |
+| Version in the tree | `node_modules/<pkg>/package.json` → `"version"` |
+| Canonical path (isolated + global store) | `readlink node_modules/.bun/<pkg>@<version>` |
+| Clear everything | `bun pm cache rm` |
+
+**Kalshi-bot today:** zero npm deps — `bun pm cache` may exist from other projects on the machine, but this repo never writes cache entries.
+
+### Name + version skip (existing `node_modules`)
+
+When `node_modules/` already exists and `bun.lock` matches `package.json`, Bun **lazy-installs**: for each resolved package it checks whether `node_modules/<pkg>/package.json` has the expected `"name"` and `"version"`. A custom JSON parser reads **only those two fields** and stops — it does not hash file contents.
+
+Implications:
+
+- **Fast path:** repeat `bun install` on a warm tree skips tarball fetch when name+version match.
+- **Stale tree:** edited files under `node_modules/` still “pass” until version string changes — symptoms look like “wrong runtime behavior” not “install failed”. Fix: `rm -rf node_modules && bun install`.
+- **Cross-platform:** same lockfile on macOS (clonefile) vs Linux CI (hardlink) still agrees on name+version; backend affects *how* bytes appear in `node_modules`, not resolution.
+- **Today:** irrelevant — no npm deps, no committed `node_modules`.
+
+### Linker strategies (`--linker`)
+
+Backends (`clonefile` / `hardlink`) control **how files land** from cache. **Linker** controls **layout**:
+
+| Linker | Layout | Default when |
+|--------|--------|--------------|
+| `hoisted` | Flat shared `node_modules` (npm/Yarn classic) | Existing pre-v1.3.2 projects; new single-package projects |
+| `isolated` | Central `node_modules/.bun/` + symlinks; blocks phantom imports | New workspaces; monorepo machine policy |
+
+Lockfile `configVersion` records the chosen strategy. First `bun add` in this single-package repo would default to **hoisted** unless machine `~/.bunfig.toml` overrides `linker = isolated`.
+
+See [isolated installs](https://bun.com/docs/pm/isolated-installs).
+
+### Install backends (platform) — deep dive
+
+After extract, Bun populates `node_modules` from the global cache using the **fastest platform backend**. On failure, `clonefile` and `hardlink` **automatically fall back** to copy ([bun install — platform backends](https://bun.com/docs/pm/cli/install)).
+
+| Backend | OS | Mechanism | When to use |
+|---------|-----|-----------|-------------|
+| `clonefile` | macOS (default) | APFS `clonefile()` — CoW, one syscall per tree | Default local dev on Darwin |
+| `clonefile_each_dir` | macOS | Per-directory clone; slower than `clonefile` | Debugging clonefile edge cases |
+| `hardlink` | Linux (default) | Same inode, multiple directory entries | Default on CI (`ubuntu-latest`) |
+| `copyfile` | all | `fcopyfile()` (macOS) / `copy_file_range()` (Linux) | Slowest; explicit fallback or `--backend copyfile` |
+| `symlink` | special | Used for `file:` deps; not normal npm layout | Requires `--preserve-symlinks` for Node-compatible resolution if forced globally |
+
+**Why backends matter:** they avoid duplicating megabytes per project. Hardlinks and clones share disk blocks with the global cache; copies do not. All backends must still present a normal `node_modules` tree to Bun’s resolver.
+
+**Force a backend:**
+
+```bash
+rm -rf node_modules
+bun install --backend hardlink    # Linux-style on any OS
+bun install --backend clonefile   # macOS-only; errors elsewhere
+bun install --backend copyfile    # portable slow path
+```
+
+**Kalshi-bot mapping:**
+
+| Environment | Would use (after first `bun add`) |
+|-------------|-----------------------------------|
+| Your Mac | `clonefile` → cache at `~/.bun/install/cache/…` |
+| GitHub Actions `ubuntu-latest` | `hardlink` (no install step today) |
+| Docker / exotic FS (no hardlink) | silent fallback to `copyfile` |
+
+### Lifecycle scripts and security
+
+Bun **does not** run `postinstall` / `preinstall` on **dependency** packages by default (supply-chain risk). Root project scripts in `package.json` still run. To allow a specific dependency’s scripts: add it to `trustedDependencies` in `package.json`, then reinstall.
+
+Popular native addons (`esbuild`, `sharp`) get Bun optimizations. Irrelevant until this repo adds npm deps.
+
+### CI
+
+[`.github/workflows/check.yml`](../.github/workflows/check.yml) uses `oven-sh/setup-bun` then `bun run check` — **no `bun install` step**. That is intentional for a zero-deps tree.
+
+If deps are added later:
+
+```yaml
+- run: bun ci   # == bun install --frozen-lockfile; requires committed bun.lock
+```
+
+### Debugging (when deps exist)
+
+```bash
+bun install --dry-run              # resolve only; ~4ms today
+bun install --verbose              # debug logging
+rm -rf node_modules && bun install # bust stale name+version skip
+bun pm cache rm                    # clear ~/.bun/install/cache
+```
+
+### Canonical references
+
+| Topic | Doc |
+|-------|-----|
+| `bun install` / backends / CI | https://bun.com/docs/pm/cli/install |
+| Global cache / pre-build hashing | https://bun.com/docs/pm/global-cache |
+| Global virtual store (`links/`) | https://bun.com/docs/pm/global-store |
+| Lockfile / `configVersion` | https://bun.com/docs/pm/lockfile |
+| Isolated vs hoisted | https://bun.com/docs/pm/isolated-installs |
+| `bunfig.toml` `[install]` | https://bun.com/docs/runtime/bunfig |
+| Monorepo machine install policy | [`docs/UNIFIED.md`](../../docs/UNIFIED.md) (parent `Projects` repo) |
 
 ## TypeScript
 

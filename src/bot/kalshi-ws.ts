@@ -1,4 +1,5 @@
 // @see https://bun.com/docs/runtime/http/websockets
+// @see https://bun.com/docs/blog/bun-v1.3.6#httphttps-proxy-support-for-websocket
 // @see https://docs.kalshi.com/getting_started/quick_start_websockets
 // @see https://docs.kalshi.com/websockets/orderbook-updates
 /**
@@ -14,6 +15,10 @@ import {
   loadKalshiCredentials,
   type KalshiCredentials,
 } from "./kalshi-auth.ts";
+import {
+  parseKalshiWsErrorWire,
+  type KalshiWsServerError,
+} from "./kalshi-ws-errors.ts";
 
 export const KALSHI_WS_URL_DEFAULT = OFFICIAL_URLS.kalshi.tradeApiWsV2;
 
@@ -29,6 +34,7 @@ export type KalshiWsHandlers = {
   onOpen?: () => void;
   onClose?: (code: number, reason: string) => void;
   onError?: (err: Error) => void;
+  onKalshiError?: (err: KalshiWsServerError, wire: KalshiWsWire) => void;
   onMessage?: (wire: KalshiWsWire, recvTs: number, raw: string) => void;
 };
 
@@ -45,13 +51,178 @@ export type KalshiWsSocket = {
 
 export type KalshiWsFactory = (url: string, headers: Record<string, string>) => KalshiWsSocket;
 
-function defaultWsFactory(url: string, headers: Record<string, string>): KalshiWsSocket {
-  // Bun extension: headers on client WebSocket constructor (not in DOM lib typings).
+/**
+ * Proxy control values for the client WebSocket (Bun v1.3.6+).
+ * All ws:// and wss:// combinations work through HTTP and HTTPS proxies.
+ * @see https://bun.com/blog/bun-v1.3.6#http-https-proxy-support-for-websocket
+ */
+export type KalshiWsProxyOptions = string | { url: string; headers?: Record<string, string> };
+
+/**
+ * Granular TLS control values for the client WebSocket `tls` option.
+ * Subset of Bun's TLSOptions relevant to a wss:// client; matches `fetch` TLS.
+ * @see https://bun.com/docs/runtime/networking/fetch
+ */
+export type KalshiWsTlsOptions = {
+  /** Override trusted CA certs (replaces Mozilla bundle). File path or PEM. */
+  ca?: string | Bun.BunFile | Array<string | Bun.BunFile>;
+  /** Client certificate chain (mTLS). File path or PEM. */
+  cert?: string | Bun.BunFile;
+  /** Client private key (mTLS). File path or PEM. */
+  key?: string | Bun.BunFile;
+  /** Passphrase for an encrypted `key`. */
+  passphrase?: string;
+  /** false accepts any certificate — corp-proxy/dev debugging only. */
+  rejectUnauthorized?: boolean;
+  /** Explicit SNI server name (defaults to URL host). */
+  serverName?: string;
+  /** OpenSSL cipher suite list. */
+  ciphers?: string;
+  /** Custom certificate validation; return an Error to reject. */
+  checkServerIdentity?: (hostname: string, peerCertificate: unknown) => Error | undefined;
+  /** Sets OPENSSL_RELEASE_BUFFERS=1: saves memory, hurts performance. */
+  lowMemoryMode?: boolean;
+};
+
+export type KalshiWsNetOptions = {
+  proxy?: KalshiWsProxyOptions;
+  tls?: KalshiWsTlsOptions;
+};
+
+type BunClientWebSocketOptions = {
+  headers: Record<string, string>;
+  proxy?: KalshiWsProxyOptions;
+  tls?: KalshiWsTlsOptions;
+};
+
+function kalshiWsTargetHost(
+  env: Record<string, string | undefined>,
+  targetHost?: string,
+): string {
+  if (targetHost?.trim()) return targetHost.trim().toLowerCase();
+  const urlOverride = env.KALSHI_WS_URL?.trim();
+  if (urlOverride) {
+    try {
+      return new URL(urlOverride).hostname.toLowerCase();
+    } catch {
+      /* fall through */
+    }
+  }
+  try {
+    return new URL(KALSHI_WS_URL_DEFAULT).hostname.toLowerCase();
+  } catch {
+    return "external-api-ws.kalshi.com";
+  }
+}
+
+/** NO_PROXY / no_proxy comma list — host exact match or domain suffix (`.kalshi.com`). */
+export function parseNoProxyHosts(raw: string | undefined): string[] {
+  if (!raw?.trim()) return [];
+  return raw
+    .split(",")
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+export function hostMatchesNoProxy(host: string, noProxyEntry: string): boolean {
+  const h = host.toLowerCase();
+  const entry = noProxyEntry.toLowerCase();
+  if (!entry) return false;
+  if (entry === h) return true;
+  if (entry.startsWith(".")) return h === entry.slice(1) || h.endsWith(entry);
+  if (entry.includes(".")) return h === entry || h.endsWith(`.${entry}`);
+  return false;
+}
+
+export function isHostInNoProxy(host: string, noProxyList: string[]): boolean {
+  return noProxyList.some((entry) => hostMatchesNoProxy(host, entry));
+}
+
+/**
+ * Env proxy for Kalshi WS — KALSHI_WS_PROXY overrides HTTPS_PROXY / HTTP_PROXY.
+ * NO_PROXY / no_proxy suppresses proxy when target host matches.
+ */
+export function resolveKalshiWsProxy(
+  env: Record<string, string | undefined> = Bun.env as Record<string, string | undefined>,
+  targetHost?: string,
+): string | undefined {
+  const explicit = env.KALSHI_WS_PROXY?.trim();
+  if (explicit) return explicit;
+
+  const host = kalshiWsTargetHost(env, targetHost);
+  const noProxy = parseNoProxyHosts(env.NO_PROXY ?? env.no_proxy);
+  if (isHostInNoProxy(host, noProxy)) return undefined;
+
+  return (
+    env.HTTPS_PROXY?.trim() ||
+    env.https_proxy?.trim() ||
+    env.HTTP_PROXY?.trim() ||
+    env.http_proxy?.trim() ||
+    undefined
+  );
+}
+
+/** Exponential reconnect backoff with jitter (WS session drops). */
+export function kalshiWsReconnectBackoffMs(
+  attempt: number,
+  baseMs = 1_000,
+  maxMs = 30_000,
+  random: () => number = Math.random,
+): number {
+  const exp = Math.min(maxMs, baseMs * 2 ** Math.min(attempt, 5));
+  return exp + Math.floor(random() * Math.min(250, exp * 0.1));
+}
+
+/**
+ * Granular TLS control values from env (constructor `net.tls` overrides win):
+ * - KALSHI_WS_TLS_REJECT_UNAUTHORIZED "0"/"false"/"no" disables cert validation
+ * - KALSHI_WS_TLS_CA_FILE / _CERT_FILE / _KEY_FILE → Bun.file() for ca/cert/key
+ * - KALSHI_WS_TLS_PASSPHRASE / _SERVER_NAME / _CIPHERS → passed through
+ */
+export function resolveKalshiWsTls(
+  env: Record<string, string | undefined> = Bun.env as Record<string, string | undefined>,
+): KalshiWsTlsOptions | undefined {
+  const tls: KalshiWsTlsOptions = {};
+  const reject = env.KALSHI_WS_TLS_REJECT_UNAUTHORIZED?.trim().toLowerCase();
+  if (reject === "0" || reject === "false" || reject === "no") tls.rejectUnauthorized = false;
+  const caFile = env.KALSHI_WS_TLS_CA_FILE?.trim();
+  if (caFile) tls.ca = Bun.file(caFile);
+  const certFile = env.KALSHI_WS_TLS_CERT_FILE?.trim();
+  if (certFile) tls.cert = Bun.file(certFile);
+  const keyFile = env.KALSHI_WS_TLS_KEY_FILE?.trim();
+  if (keyFile) tls.key = Bun.file(keyFile);
+  if (env.KALSHI_WS_TLS_PASSPHRASE) tls.passphrase = env.KALSHI_WS_TLS_PASSPHRASE;
+  const serverName = env.KALSHI_WS_TLS_SERVER_NAME?.trim();
+  if (serverName) tls.serverName = serverName;
+  const ciphers = env.KALSHI_WS_TLS_CIPHERS?.trim();
+  if (ciphers) tls.ciphers = ciphers;
+  return Object.keys(tls).length > 0 ? tls : undefined;
+}
+
+/** Combined granular net control values from env (proxy + TLS). */
+export function resolveKalshiWsNetOptions(
+  env: Record<string, string | undefined> = Bun.env as Record<string, string | undefined>,
+): KalshiWsNetOptions {
+  const net: KalshiWsNetOptions = {};
+  const proxy = resolveKalshiWsProxy(env);
+  if (proxy) net.proxy = proxy;
+  const tls = resolveKalshiWsTls(env);
+  if (tls) net.tls = tls;
+  return net;
+}
+
+function defaultWsFactory(
+  url: string,
+  headers: Record<string, string>,
+  net: KalshiWsNetOptions = resolveKalshiWsNetOptions(),
+): KalshiWsSocket {
+  const opts: BunClientWebSocketOptions = { headers, ...net };
+  // Bun extension: headers + optional proxy/tls on client WebSocket (not in DOM lib typings).
   const BunWebSocket = WebSocket as unknown as new (
     url: string,
-    opts: { headers: Record<string, string> },
+    opts: BunClientWebSocketOptions,
   ) => KalshiWsSocket;
-  return new BunWebSocket(url, { headers });
+  return new BunWebSocket(url, opts);
 }
 
 export function resolveKalshiWsUrl(
@@ -80,6 +251,11 @@ export class KalshiMarketWs {
       wsFactory?: KalshiWsFactory;
       /** Client ping interval ms (default 20s). 0 disables. */
       pingIntervalMs?: number;
+      /**
+       * Granular proxy/TLS control values for the default factory.
+       * Overrides env (KALSHI_WS_PROXY, KALSHI_WS_TLS_*). Ignored with a custom wsFactory.
+       */
+      net?: KalshiWsNetOptions;
     } = {},
   ) {}
 
@@ -92,7 +268,9 @@ export class KalshiMarketWs {
     const creds = this.options.creds ?? loadKalshiCredentials();
     const url = this.options.url ?? resolveKalshiWsUrl();
     const headers = kalshiWsAccessHeaders(creds) as unknown as Record<string, string>;
-    const factory = this.options.wsFactory ?? defaultWsFactory;
+    const factory =
+      this.options.wsFactory ??
+      ((u, h) => defaultWsFactory(u, h, this.options.net ?? resolveKalshiWsNetOptions()));
     const ws = factory(url, headers);
     this.ws = ws;
 
@@ -110,6 +288,8 @@ export class KalshiMarketWs {
       } catch {
         return;
       }
+      const kalshiErr = parseKalshiWsErrorWire(wire);
+      if (kalshiErr) this.options.handlers?.onKalshiError?.(kalshiErr, wire);
       this.options.handlers?.onMessage?.(wire, recvTs, raw);
     });
     ws.addEventListener("error", () => {

@@ -151,16 +151,78 @@ function yesScoreSide(
   return null;
 }
 
+type SnapshotScoreRow = {
+  status: string;
+  sets_home: number;
+  sets_away: number;
+  games_home: number;
+  games_away: number;
+  points_home: number;
+  points_away: number;
+  ts: number;
+};
+
+/**
+ * Latest append-only score_snapshot at or before `asOfTs` (recv-clock epoch ms —
+ * the same clock axis as book_ticks.ts). Used by backtests so evaluation at time
+ * T never sees score state recorded after T (final-score lookahead).
+ */
+function getScoreSnapshotAsOf(
+  db: Database,
+  eventId: CanonicalEventId,
+  asOfTs: number,
+): {
+  status: string;
+  isLive: boolean;
+  setsHome: number;
+  setsAway: number;
+  gamesHome: number;
+  gamesAway: number;
+  pointsHome: number;
+  pointsAway: number;
+  updatedTs: number;
+} | null {
+  const row = db
+    .query(
+      `SELECT status, sets_home, sets_away, games_home, games_away,
+              points_home, points_away, ts
+       FROM score_snapshots
+       WHERE event_id = $id AND ts <= $ts
+       ORDER BY ts DESC, id DESC
+       LIMIT 1`,
+    )
+    .get({ $id: unbrand(eventId), $ts: asOfTs }) as SnapshotScoreRow | null;
+  if (!row) return null;
+  return {
+    status: row.status,
+    // Presence of a snapshot at/before T means the match was being scored; the
+    // caller only asks for snapshots on in-play ticks.
+    isLive: true,
+    setsHome: row.sets_home,
+    setsAway: row.sets_away,
+    gamesHome: row.games_home,
+    gamesAway: row.games_away,
+    pointsHome: row.points_home,
+    pointsAway: row.points_away,
+    updatedTs: row.ts,
+  };
+}
+
 /**
  * Latest live score mapped to YES/NO set-game axes. Null when no live_scores row
  * or YES side cannot be aligned to the scoreboard — caller uses market mid prior only.
+ *
+ * When `asOfTs` is given, score state comes from score_snapshots (ts ≤ asOfTs)
+ * instead of the latest-only live_scores row; competitor UUID identity still
+ * comes from live_scores (stable identity, not score state — no lookahead).
  */
 export function loadScoreContext(
   db: Database,
   eventId: CanonicalEventId,
   ticker: KalshiMarketTicker,
+  asOfTs?: number,
 ): ScoreContext | null {
-  const live = getLiveScore(db, eventId);
+  const live = asOfTs != null ? getScoreSnapshotAsOf(db, eventId, asOfTs) : getLiveScore(db, eventId);
   if (!live) return null;
 
   const yesSideCode = parseItfYesSideCode(unbrand(ticker));

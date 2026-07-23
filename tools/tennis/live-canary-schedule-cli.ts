@@ -8,9 +8,10 @@
 import { join } from "node:path";
 import { parseArgs } from "node:util";
 import { previewFireTimes } from "../../src/research/schedule-cli.ts";
+import { TENNIS_LIVE_CANARY_CRON_SCHEDULE } from "../../src/institutions/event-store/tennis-lane-constants.ts";
 
 /** Every 15m local — dense enough to catch API renames during a match day. */
-export const TENNIS_LIVE_CANARY_CRON_SCHEDULE = "*/15 * * * *";
+export { TENNIS_LIVE_CANARY_CRON_SCHEDULE } from "../../src/institutions/event-store/tennis-lane-constants.ts";
 export const TENNIS_LIVE_CANARY_CRON_TITLE = "kalshi-tennis-live-canary";
 export const TENNIS_LIVE_CANARY_WORKER_PATH = join(
   import.meta.dir,

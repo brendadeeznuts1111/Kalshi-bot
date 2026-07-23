@@ -14,6 +14,13 @@ import {
 } from "./brands.ts";
 import { eventTickerFromMarketTicker, listWatchEvents } from "./live-scores.ts";
 import { analyzeTennisBookCoverage, type TennisBookCoverageReport } from "./tennis-book-coverage.ts";
+import {
+  KALSHI_BOOK_SOURCE_REST,
+  KALSHI_BOOK_SOURCE_WS,
+  resolveTennisLeadMinutes,
+  resolveTennisWatchLimit,
+  TENNIS_DASHBOARD_MAX_ROWS,
+} from "./tennis-lane-constants.ts";
 import { listRecordTickers } from "./watch-set.ts";
 
 export type WsBookRow = {
@@ -52,8 +59,8 @@ export function loadTennisWsDashboardModel(
   db: Database,
   options: { leadMinutes?: number; limit?: number } = {},
 ): TennisWsDashboardModel {
-  const leadMinutes = options.leadMinutes ?? 5;
-  const limit = options.limit ?? 40;
+  const leadMinutes = resolveTennisLeadMinutes(options.leadMinutes);
+  const limit = resolveTennisWatchLimit(options.limit);
   const watch = listRecordTickers(db, { leadMinutes, limit });
   const events = listWatchEvents(db, { leadMinutes, limit, clearStale: false });
 
@@ -61,28 +68,7 @@ export function loadTennisWsDashboardModel(
   const wsTicks = coverage.wsTicksTotal;
   const restTicks = coverage.restTicksTotal;
 
-  const latestByTicker = db
-    .query(
-      `SELECT bt.ticker, bt.ts, bt.recv_ts, bt.source, bt.source_clock, bt.seq, bt.levels_json,
-              m.yes_side_label AS label
-       FROM book_ticks bt
-       LEFT JOIN markets m ON m.ticker = bt.ticker
-       WHERE bt.id IN (
-         SELECT MAX(id) FROM book_ticks GROUP BY ticker
-       )
-       ORDER BY bt.ts DESC
-       LIMIT 48`,
-    )
-    .all() as Array<{
-    ticker: string;
-    ts: number;
-    recv_ts: number;
-    source: string;
-    source_clock: string;
-    seq: number | null;
-    levels_json: string;
-    label: string | null;
-  }>;
+  const latestByTicker = loadLatestBookTicksForWatch(db, watch.tickers);
 
   const watchSet = new Set(watch.tickers);
   const rows: WsBookRow[] = [];
@@ -96,11 +82,15 @@ export function loadTennisWsDashboardModel(
     const countRow = db
       .query(
         `SELECT COUNT(*) AS n,
-                SUM(CASE WHEN source = 'kalshi-ws' THEN 1 ELSE 0 END) AS ws_n,
-                SUM(CASE WHEN source = 'kalshi-rest' THEN 1 ELSE 0 END) AS rest_n
+                SUM(CASE WHEN source = $ws THEN 1 ELSE 0 END) AS ws_n,
+                SUM(CASE WHEN source = $rest THEN 1 ELSE 0 END) AS rest_n
          FROM book_ticks WHERE ticker = $t`,
       )
-      .get({ $t: unbrand(ticker) }) as { n: number; ws_n: number; rest_n: number };
+      .get({
+        $t: unbrand(ticker),
+        $ws: KALSHI_BOOK_SOURCE_WS,
+        $rest: KALSHI_BOOK_SOURCE_REST,
+      }) as { n: number; ws_n: number; rest_n: number };
     rows.push({
       ticker,
       eventTicker,
@@ -125,8 +115,44 @@ export function loadTennisWsDashboardModel(
     wsTicks,
     restTicks,
     coverage,
-    rows: rows.slice(0, 24),
+    rows: rows.slice(0, TENNIS_DASHBOARD_MAX_ROWS),
   };
+}
+
+type LatestWatchBookRow = {
+  ticker: string;
+  ts: number;
+  recv_ts: number;
+  source: string;
+  source_clock: string;
+  seq: number | null;
+  levels_json: string;
+  label: string | null;
+};
+
+/** Latest book_tick per watch ticker only (no global LIMIT 48 drift). */
+function loadLatestBookTicksForWatch(
+  db: Database,
+  tickers: readonly KalshiMarketTicker[],
+): LatestWatchBookRow[] {
+  if (tickers.length === 0) return [];
+  const placeholders = tickers.map((_, i) => `$t${i}`).join(", ");
+  const params: Record<string, string> = {};
+  for (let i = 0; i < tickers.length; i++) {
+    params[`$t${i}`] = unbrand(tickers[i]!);
+  }
+  return db
+    .query(
+      `SELECT bt.ticker, bt.ts, bt.recv_ts, bt.source, bt.source_clock, bt.seq, bt.levels_json,
+              m.yes_side_label AS label
+       FROM book_ticks bt
+       LEFT JOIN markets m ON m.ticker = bt.ticker
+       WHERE bt.id IN (
+         SELECT MAX(id) FROM book_ticks WHERE ticker IN (${placeholders}) GROUP BY ticker
+       )
+       ORDER BY bt.ts DESC`,
+    )
+    .all(params) as LatestWatchBookRow[];
 }
 
 function esc(s: string): string {
@@ -182,8 +208,8 @@ export function renderTennisWsDashboardHtml(model: TennisWsDashboardModel): stri
   <h1>Kalshi tennis — watch-set books</h1>
   <div class="meta">${esc(model.at)} · watch ${model.watchEvents} events / ${model.watchTickers} tickers</div>
   <div class="meta">
-    <span class="pill">kalshi-ws ticks: ${model.wsTicks}</span>
-    <span class="pill">kalshi-rest ticks: ${model.restTicks}</span>
+    <span class="pill">${esc(KALSHI_BOOK_SOURCE_WS)} ticks: ${model.wsTicks}</span>
+    <span class="pill">${esc(KALSHI_BOOK_SOURCE_REST)} ticks: ${model.restTicks}</span>
     <span class="pill">watch WS coverage: ${c.watchWithWs}/${c.watchTickers}</span>
     <span class="pill">exchange clock: ${exchPct}</span>
     <span class="pill">linked+ws events: ${c.linkedEventsWithWs}/${c.linkedEventsTotal}</span>

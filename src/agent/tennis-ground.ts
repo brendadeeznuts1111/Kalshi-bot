@@ -28,7 +28,19 @@ import {
   type TennisWsRecorderSessionArtifact,
   type TennisWsRecorderTrend,
 } from "../institutions/event-store/tennis-ws-recorder-store.ts";
+import {
+  loadLatestExperimentSession,
+  type ExperimentSessionArtifact,
+} from "../operations/experiment-store.ts";
 import { analyzeTennisBookCoverage, type TennisBookCoverageReport } from "../institutions/event-store/tennis-book-coverage.ts";
+import {
+  resolveTennisLeadMinutes,
+  TENNIS_CANARY_ARTIFACT_STALE_MS,
+  TENNIS_EXPERIMENT_ARTIFACT_STALE_MS,
+  TENNIS_LIVE_INTERVAL_MS_DEFAULT,
+  TENNIS_WATCH_LIMIT,
+  TENNIS_WS_GROUND_ARTIFACT_STALE_MS,
+} from "../institutions/event-store/tennis-lane-constants.ts";
 import { formatInspectTable } from "../research/terminal-out.ts";
 
 export type TennisGroundOptions = {
@@ -55,6 +67,7 @@ export type TennisGroundReport = {
   wsSession: TennisWsRecorderSessionArtifact | null;
   wsSessionHistory: TennisWsRecorderSessionArtifact[];
   wsRecorderTrend: TennisWsRecorderTrend;
+  experiments: ExperimentSessionArtifact | null;
   bookCoverage: TennisBookCoverageReport;
   cadence: SnapshotCadenceReport;
   nextActions: string[];
@@ -78,7 +91,7 @@ export function buildTennisNextActions(report: Omit<TennisGroundReport, "nextAct
     actions.push("bun run tennis:live -- --dry-run --verbose --json");
   } else {
     const ageMs = Date.now() - Date.parse(c.at);
-    if (!Number.isFinite(ageMs) || ageMs > 30 * 60_000) {
+    if (!Number.isFinite(ageMs) || ageMs > TENNIS_CANARY_ARTIFACT_STALE_MS) {
       actions.push("bun run tennis:live:canary   # last canary >30m old");
     }
   }
@@ -110,7 +123,7 @@ export function buildTennisNextActions(report: Omit<TennisGroundReport, "nextAct
     actions.push("bun run tennis:ws-ground   # last run html-only — re-capture WebView png");
   } else {
     const wsAgeMs = Date.now() - Date.parse(w.at);
-    if (!Number.isFinite(wsAgeMs) || wsAgeMs > 60 * 60_000) {
+    if (!Number.isFinite(wsAgeMs) || wsAgeMs > TENNIS_WS_GROUND_ARTIFACT_STALE_MS) {
       actions.push("bun run tennis:ws-ground   # WS ground artifact >1h old");
     }
   }
@@ -129,8 +142,28 @@ export function buildTennisNextActions(report: Omit<TennisGroundReport, "nextAct
       "bun run tennis:record -- --ws --ws-seconds=300   # last session snapshots-only — need live deltas",
     );
   }
+  const exp = report.experiments;
+  if (!exp) {
+    actions.push(
+      "bun run tennis:experiment -- launch --name=phase1 --routing=static,dynamic   # no experiment artifact",
+    );
+  } else if (exp.status === "active") {
+    actions.push(
+      `bun run tennis:experiment -- check --experiment=${exp.experimentId}   # daily check active experiment`,
+    );
+    if (exp.totalObservations === 0) {
+      actions.push(
+        `bun run tennis:experiment -- assign --experiment=${exp.experimentId} --partner=<id>`,
+      );
+    }
+    const expAgeMs = Date.now() - Date.parse(exp.at);
+    if (!Number.isFinite(expAgeMs) || expAgeMs > TENNIS_EXPERIMENT_ARTIFACT_STALE_MS) {
+      actions.push("bun run tennis:experiment -- check-all   # experiment artifact stale");
+    }
+  }
   actions.push("bun run agent tennis --webview   # ground + refresh visual artifact");
   actions.push("bun run tennis:live:canary:register   # OS cron every 15m (if not registered)");
+  actions.push("bun run tennis:experiment:register   # OS cron daily experiment check");
   actions.push("bun run agent tennis --json   # re-ground after action");
 
   // de-dupe preserve order
@@ -143,10 +176,11 @@ export async function runTennisGround(
 ): Promise<TennisGroundReport> {
   const dbPath = options.dbPath ?? DEFAULT_EVENT_STORE_DB;
   const db = openEventStore({ dbPath });
-  const leadMinutes = options.leadMinutes ?? 5;
-  const intervalMs = options.intervalMs ?? Number(Bun.env.TENNIS_LIVE_INTERVAL_MS ?? 10_000);
+  const leadMinutes = resolveTennisLeadMinutes(options.leadMinutes);
+  const intervalMs =
+    options.intervalMs ?? Number(Bun.env.TENNIS_LIVE_INTERVAL_MS ?? TENNIS_LIVE_INTERVAL_MS_DEFAULT);
 
-  const watch = listWatchEvents(db, { leadMinutes, limit: 40, clearStale: false });
+  const watch = listWatchEvents(db, { leadMinutes, limit: TENNIS_WATCH_LIMIT, clearStale: false });
   const liveNow = listLiveEventIds(db).length;
   const cadence = analyzeScoreSnapshotCadence(db, { intervalMs });
   const canary = await loadLatestCanary();
@@ -154,7 +188,8 @@ export async function runTennisGround(
   const wsSession = await loadLatestTennisWsRecorderSession();
   const wsSessionHistory = await loadTennisWsRecorderHistory(8);
   const wsRecorderTrend = summarizeTennisWsRecorderTrend(wsSessionHistory);
-  const bookCoverage = analyzeTennisBookCoverage(db, { leadMinutes, limit: 40 });
+  const experiments = await loadLatestExperimentSession();
+  const bookCoverage = analyzeTennisBookCoverage(db, { leadMinutes, limit: TENNIS_WATCH_LIMIT });
 
   const partial = {
     source: "event-store" as const,
@@ -174,6 +209,7 @@ export async function runTennisGround(
     wsSession,
     wsSessionHistory,
     wsRecorderTrend,
+    experiments,
     bookCoverage,
     cadence,
   };
@@ -243,8 +279,25 @@ export function formatTennisGround(report: TennisGroundReport): string {
       "WS recorder (latest session)",
       `  at=${s.at}  duration=${s.durationMs}ms  subscribed=${s.subscribedTickers}  fp=${s.fingerprint}`,
       `  ticks=${s.ticksRecorded} snapshots=${s.snapshots} deltas=${s.deltas}` +
-        ` gaps=${s.seqGaps} dup=${s.duplicates} resync=${s.resyncRequests} errors=${s.errors}`,
+        ` gaps=${s.seqGaps} dup=${s.duplicates} resync=${s.resyncRequests}` +
+        ` wsErrors=${s.wsErrors ?? 0} errors=${s.errors}`,
     );
+  }
+
+  if (report.experiments) {
+    const e = report.experiments;
+    lines.push(
+      "",
+      "Experiments (latest artifact)",
+      `  status=${e.status}  at=${e.at}  id=${e.experimentId}  fp=${e.fingerprint}`,
+      `  n=${e.totalObservations} mean=${e.grandMean.toFixed(3)} r²=${e.rSquared.toFixed(3)}`,
+    );
+    for (const me of e.mainEffects.slice(0, 4)) {
+      lines.push(`  ${me.factor}=${me.level} effect=${me.effect.toFixed(3)} n=${me.n}`);
+    }
+    if (e.reason) lines.push(`  reason: ${e.reason}`);
+  } else {
+    lines.push("", "Experiments: none — bun run tennis:experiment -- latest");
   }
 
   const tr = report.wsRecorderTrend;

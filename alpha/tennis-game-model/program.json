@@ -7,6 +7,7 @@
   "created": "2026-07-22",
   "shadowLog": "shadow-log.jsonl",
   "hypothesisFile": "hypothesis.md",
+  "minContracts": 5,
   "gates": {
     "shadowMinSignals": 400,
     "shadowMinWeeks": 2,

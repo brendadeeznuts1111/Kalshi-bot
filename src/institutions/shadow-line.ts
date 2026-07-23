@@ -1,3 +1,4 @@
+// @see https://bun.com/docs/runtime/file-io#reading-files-bun-file
 import { appendFile } from "node:fs/promises";
 import type { BookSnapshot, Decision } from "./alpha-signal-types.ts";
 import { toxicityMovedAgainst } from "./shadow-sim.ts";

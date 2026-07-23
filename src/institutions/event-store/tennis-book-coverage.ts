@@ -4,6 +4,12 @@
  */
 import type { Database } from "bun:sqlite";
 import { sqlBrand, unbrand, type KalshiMarketTicker } from "./brands.ts";
+import {
+  KALSHI_BOOK_SOURCE_REST,
+  KALSHI_BOOK_SOURCE_WS,
+  resolveTennisLeadMinutes,
+  resolveTennisWatchLimit,
+} from "./tennis-lane-constants.ts";
 import { listRecordTickers } from "./watch-set.ts";
 
 export type TennisBookCoverageReport = {
@@ -30,8 +36,8 @@ export function analyzeTennisBookCoverage(
   db: Database,
   options: { leadMinutes?: number; limit?: number; nowMs?: number } = {},
 ): TennisBookCoverageReport {
-  const leadMinutes = options.leadMinutes ?? 5;
-  const limit = options.limit ?? 40;
+  const leadMinutes = resolveTennisLeadMinutes(options.leadMinutes);
+  const limit = resolveTennisWatchLimit(options.limit);
   const watch = listRecordTickers(db, {
     leadMinutes,
     limit,
@@ -47,11 +53,11 @@ export function analyzeTennisBookCoverage(
   let restTicksTotal = 0;
   let wsExchangeClockTicks = 0;
   for (const row of bySource) {
-    if (row.source === "kalshi-ws") {
+    if (row.source === KALSHI_BOOK_SOURCE_WS) {
       wsTicksTotal += row.n;
       if (row.source_clock === "exchange") wsExchangeClockTicks += row.n;
     }
-    if (row.source === "kalshi-rest") restTicksTotal += row.n;
+    if (row.source === KALSHI_BOOK_SOURCE_REST) restTicksTotal += row.n;
   }
 
   let watchWithWs = 0;
@@ -68,13 +74,13 @@ export function analyzeTennisBookCoverage(
     const perTicker = db
       .query(
         `SELECT ticker,
-                SUM(CASE WHEN source = 'kalshi-ws' THEN 1 ELSE 0 END) AS ws_n,
-                SUM(CASE WHEN source = 'kalshi-rest' THEN 1 ELSE 0 END) AS rest_n
+                SUM(CASE WHEN source = $ws THEN 1 ELSE 0 END) AS ws_n,
+                SUM(CASE WHEN source = $rest THEN 1 ELSE 0 END) AS rest_n
          FROM book_ticks
          WHERE ticker IN (${placeholders})
          GROUP BY ticker`,
       )
-      .all(params) as Array<{ ticker: string; ws_n: number; rest_n: number }>;
+      .all({ ...params, $ws: KALSHI_BOOK_SOURCE_WS, $rest: KALSHI_BOOK_SOURCE_REST }) as Array<{ ticker: string; ws_n: number; rest_n: number }>;
 
     const seen = new Set<KalshiMarketTicker>();
     for (const row of perTicker) {
@@ -99,9 +105,9 @@ export function analyzeTennisBookCoverage(
         `SELECT COUNT(DISTINCT bt.event_id) AS n
          FROM book_ticks bt
          INNER JOIN event_links el ON el.kalshi_event_id = bt.event_id AND el.status = 'linked'
-         WHERE bt.source = 'kalshi-ws'`,
+         WHERE bt.source = $ws`,
       )
-      .get() as { n: number }).n ?? 0;
+      .get({ $ws: KALSHI_BOOK_SOURCE_WS }) as { n: number }).n ?? 0;
 
   return {
     watchEvents: watch.events.length,

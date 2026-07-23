@@ -10,6 +10,10 @@ import { parseArgs } from "node:util";
 import { ensureEventStoreDir, openEventStore } from "../../src/institutions/event-store/open-db.ts";
 import { DEFAULT_EVENT_STORE_DB } from "../../src/institutions/event-store/paths.ts";
 import {
+  resolveTennisLeadMinutes,
+  resolveTennisWatchLimit,
+} from "../../src/institutions/event-store/tennis-lane-constants.ts";
+import {
   captureTennisWsGround,
   formatTennisWsGroundLines,
   persistTennisWsGroundArtifact,
@@ -32,8 +36,8 @@ export async function runTennisWsGroundCli(argv: string[]): Promise<number> {
   await ensureEventStoreDir();
   const dbPath = typeof values.db === "string" ? values.db : DEFAULT_EVENT_STORE_DB;
   const db = openEventStore({ dbPath });
-  const leadMinutes = values.lead ? Number(values.lead) : 5;
-  const limit = values.limit ? Number(values.limit) : 40;
+  const leadMinutes = resolveTennisLeadMinutes(values.lead ? Number(values.lead) : undefined);
+  const limit = resolveTennisWatchLimit(values.limit ? Number(values.limit) : undefined);
 
   const artifact = await captureTennisWsGround(db, {
     leadMinutes,

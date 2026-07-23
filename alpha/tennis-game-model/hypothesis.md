@@ -6,7 +6,7 @@ Doctrine: [`docs/TENNIS_PROGRAM_ARCHETYPES.md`](../../docs/TENNIS_PROGRAM_ARCHET
 
 ## 1. What is the edge, in one sentence?
 
-_A point/game model priced against Kalshi Challenger/ITF (and ladder when present) after fees, where no Pinnacle/Odds-API reference exists — edge from better state estimation than recreational books._
+_A point/game model priced against Kalshi Challenger/ITF (and ladder when present) after fees, where no Pinnacle/Odds-API reference exists — edge from better state estimation than recreational books. Pre-match `p_model` is a REAL prior: player strengths estimated from the Stadion resolutions corpus (rolling, no lookahead) driving the fixed match Markov — never the market mid (kept as an unblended component only)._
 
 ## 2. Who is on the other side, and why are they willingly losing it to me?
 

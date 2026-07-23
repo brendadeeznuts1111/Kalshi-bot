@@ -7,8 +7,13 @@
  * Always stores recv_ts at message receipt.
  */
 import type { Database } from "bun:sqlite";
-import { KalshiMarketWs, type KalshiWsFactory, type KalshiWsWire } from "../../bot/kalshi-ws.ts";
+import { KalshiMarketWs, kalshiWsReconnectBackoffMs, type KalshiWsFactory, type KalshiWsWire } from "../../bot/kalshi-ws.ts";
 import { loadKalshiCredentials, type KalshiCredentials } from "../../bot/kalshi-auth.ts";
+import {
+  parseKalshiWsErrorWire,
+  shouldReconnectKalshiWsError,
+  type KalshiWsServerError,
+} from "../../bot/kalshi-ws-errors.ts";
 import { marketKindFromTicker } from "./tennis-ladder.ts";
 import {
   asCanonicalEventId,
@@ -32,10 +37,14 @@ import {
 } from "./orderbook-stream.ts";
 import { listRecordTickers } from "./watch-set.ts";
 import { persistTennisWsRecorderSession } from "./tennis-ws-recorder-store.ts";
+import {
+  KALSHI_BOOK_SOURCE_WS,
+  TENNIS_WS_WATCH_REFRESH_MS,
+} from "./tennis-lane-constants.ts";
 
 import { OFFICIAL_URLS } from "../official-urls.ts";
 
-const SOURCE = "kalshi-ws";
+const SOURCE = KALSHI_BOOK_SOURCE_WS;
 const SOURCE_URL = OFFICIAL_URLS.kalshi.tradeApiWsV2;
 
 export type WsRecorderSummary = {
@@ -45,6 +54,8 @@ export type WsRecorderSummary = {
   seqGaps: number;
   duplicates: number;
   errors: number;
+  /** Kalshi wire `{ type: "error" }` frames (distinct from local book/DB errors). */
+  wsErrors: number;
   subscribed: number;
   resyncRequests: number;
 };
@@ -107,6 +118,19 @@ function insertBookTick(
 
 function asMsg(wire: KalshiWsWire): Record<string, unknown> | null {
   return wire.msg && typeof wire.msg === "object" ? wire.msg : null;
+}
+
+/**
+ * Apply a parsed Kalshi wire error to recorder counters.
+ * Returns true when the session should reconnect (close WS).
+ */
+export function applyKalshiWsWireError(
+  summary: WsRecorderSummary,
+  err: KalshiWsServerError,
+): boolean {
+  summary.wsErrors++;
+  summary.errors++;
+  return shouldReconnectKalshiWsError(err.code);
 }
 
 /**
@@ -229,11 +253,12 @@ export async function runKalshiWsWatchRecorder(
     seqGaps: 0,
     duplicates: 0,
     errors: 0,
+    wsErrors: 0,
     subscribed: 0,
     resyncRequests: 0,
   };
   const dryRun = options.dryRun === true;
-  const refreshMs = options.refreshMs ?? 30_000;
+  const refreshMs = options.refreshMs ?? TENNIS_WS_WATCH_REFRESH_MS;
   const reconnectBaseMs = options.reconnectBaseMs ?? 1_000;
   const durationMs = options.durationMs ?? 0;
   const started = Date.now();
@@ -262,6 +287,7 @@ export async function runKalshiWsWatchRecorder(
     attempt++;
     let refreshTimer: ReturnType<typeof setInterval> | null = null;
     let sessionDone: (() => void) | null = null;
+    let onAbort: (() => void) | null = null;
     const sessionPromise = new Promise<void>((resolve) => {
       sessionDone = resolve;
     });
@@ -297,7 +323,15 @@ export async function runKalshiWsWatchRecorder(
             }
           }, refreshMs);
         },
+        onKalshiError: (err) => {
+          const reconnect = applyKalshiWsWireError(summary, err);
+          if (reconnect) client.close();
+        },
         onMessage: (wire, recvTs) => {
+          if (wire.type === "error") {
+            if (!parseKalshiWsErrorWire(wire)) summary.errors++;
+            return;
+          }
           if (wire.type === "subscribed" && typeof wire.sid === "number") {
             orderbookSid = wire.sid;
             stream.sid = wire.sid;
@@ -340,10 +374,14 @@ export async function runKalshiWsWatchRecorder(
         },
         onClose: () => {
           if (refreshTimer) clearInterval(refreshTimer);
+          if (onAbort && options.signal) options.signal.removeEventListener("abort", onAbort);
           sessionDone?.();
         },
       },
     });
+
+    onAbort = () => client.close();
+    options.signal?.addEventListener("abort", onAbort, { once: true });
 
     if (dryRun && !options.wsFactory) {
       // Dry-run without credentials/factory: report watch-set only.
@@ -355,15 +393,13 @@ export async function runKalshiWsWatchRecorder(
       client.connect();
     } catch {
       summary.errors++;
-      const backoff = Math.min(30_000, reconnectBaseMs * 2 ** Math.min(attempt, 5));
-      await Bun.sleep(backoff);
+      await Bun.sleep(kalshiWsReconnectBackoffMs(attempt, reconnectBaseMs));
       continue;
     }
 
     await sessionPromise;
     if (shouldStop()) break;
-    const backoff = Math.min(30_000, reconnectBaseMs * 2 ** Math.min(attempt, 5));
-    await Bun.sleep(backoff);
+    await Bun.sleep(kalshiWsReconnectBackoffMs(attempt, reconnectBaseMs));
   }
 
   if (!dryRun && summary.subscribed > 0) {

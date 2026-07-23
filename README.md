@@ -8,6 +8,7 @@ Standalone Bun project for discovering and ranking public [Kalshi](https://kalsh
 
 - [Bun](https://bun.sh) >= 1.3.13 ([`URLPattern`](https://bun.com/blog/bun-v1.3.4#urlpattern-api), [`Bun.cron`](https://bun.com/docs/runtime/cron), [SHA3-256](https://bun.com/blog/bun-v1.3.13#sha3-support-in-webcrypto-and-node-crypto))
 - GitHub CLI on PATH (`gh auth login`)
+- No `bun install` required — zero npm deps; see [`docs/BUN_NATIVE.md` — Package manager](docs/BUN_NATIVE.md#package-manager)
 
 ## Quick start
 
@@ -97,7 +98,7 @@ Niche dimensions (`sports-nba`, `tracking`, …) may discover candidates but pro
 | Terminal report | `bun run report:term` / `report:diff` |
 | Serve (hot) | `bun run serve` |
 | Serve (once) | `bun run serve:once` |
-| Tests | `bun test` / `bun run test:coverage` (`posttest` restores committed artifacts) |
+| Tests | `bun test` / `bun run test:coverage` (`posttest` restores committed artifacts); filter: `bun test --grep "pattern"` or `-t "pattern"` (v1.3.6+, alias for `--test-name-pattern`) |
 | Restore artifacts | `bun run artifacts:restore` — fixtures → reports + audit JSONL |
 | Pre-commit gate | `bun run hooks:install` then `git commit` runs `bun run check` |
 | Types | `bun run typecheck` |

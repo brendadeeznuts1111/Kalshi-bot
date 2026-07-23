@@ -13,6 +13,7 @@ import {
   unbrand,
 } from "../../../src/institutions/event-store/brands.ts";
 import { listRecordTickers } from "../../../src/institutions/event-store/watch-set.ts";
+import { KALSHI_BOOK_SOURCE_PREFERENCE } from "../../../src/institutions/event-store/tennis-lane-constants.ts";
 
 export type BookTickContext = {
   ticker: KalshiMarketTicker;
@@ -88,7 +89,7 @@ export function latestBookTickForTicker(
   db: Database,
   ticker: KalshiMarketTicker,
 ): BookTickContext | null {
-  for (const source of ["kalshi-ws", "kalshi-rest"] as const) {
+  for (const source of KALSHI_BOOK_SOURCE_PREFERENCE) {
     const row = db.query(LATEST_BY_SOURCE_SQL).get({
       $ticker: unbrand(ticker),
       $source: source,

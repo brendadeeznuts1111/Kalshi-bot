@@ -37,9 +37,20 @@ import {
   tryMilestoneId,
   unbrand,
 } from "./brands.ts";
+import {
+  KALSHI_EVENT_SOURCE,
+  KALSHI_LIVE_SCORE_SOURCE,
+  resolveTennisLeadMinutes,
+  resolveTennisWatchLimit,
+  TENNIS_LIVE_STALE_MS,
+  TENNIS_WATCH_LIMIT,
+  TENNIS_WATCH_PAST_GRACE_HOURS,
+} from "./tennis-lane-constants.ts";
 
-const KALSHI_SOURCE = "kalshi-api";
-const LIVE_SOURCE = "kalshi-live-data";
+const KALSHI_SOURCE = KALSHI_EVENT_SOURCE;
+const LIVE_SOURCE = KALSHI_LIVE_SCORE_SOURCE;
+
+export { TENNIS_LIVE_STALE_MS } from "./tennis-lane-constants.ts";
 
 export type CompetitorLabel = {
   competitorId: CompetitorId;
@@ -497,7 +508,7 @@ export function analyzeScoreSnapshotCadence(
   const intervalMs = options.intervalMs ?? Number(Bun.env.TENNIS_LIVE_INTERVAL_MS ?? 10_000);
   const windowMs = options.windowMs ?? 6 * 3600_000;
   const floorTs = Date.now() - windowMs;
-  const limitEvents = options.limitEvents ?? 40;
+  const limitEvents = options.limitEvents ?? TENNIS_WATCH_LIMIT;
 
   const tickerFilter = options.eventTicker
     ? `AND event_ticker = $ticker`
@@ -646,9 +657,8 @@ export function eventTickerFromMarketTicker(
 }
 
 /** Hours after start_ts a non-live scheduled event stays on the watch set. */
-const WATCH_PAST_GRACE_HOURS = 6;
-/** Clear is_live when live_scores.updated_ts older than this (stuck in_progress). */
-export const LIVE_STALE_MS = 45 * 60_000;
+/** @deprecated import TENNIS_LIVE_STALE_MS from tennis-lane-constants.ts */
+export const LIVE_STALE_MS = TENNIS_LIVE_STALE_MS;
 
 function isTerminalLiveStatus(status: string): boolean {
   const s = status.trim().toLowerCase();
@@ -684,7 +694,7 @@ export function clearStaleLiveFlags(
   db: Database,
   options: { staleMs?: number; nowMs?: number } = {},
 ): number {
-  const staleMs = options.staleMs ?? LIVE_STALE_MS;
+  const staleMs = options.staleMs ?? TENNIS_LIVE_STALE_MS;
   const nowMs = options.nowMs ?? Date.now();
   const cutoff = nowMs - staleMs;
   const result = db
@@ -716,9 +726,9 @@ export function listWatchEvents(
     clearStale?: boolean;
   } = {},
 ): WatchEvent[] {
-  const leadMinutes = options.leadMinutes ?? 5;
-  const limit = options.limit ?? 40;
-  const pastGraceHours = options.pastGraceHours ?? WATCH_PAST_GRACE_HOURS;
+  const leadMinutes = resolveTennisLeadMinutes(options.leadMinutes);
+  const limit = resolveTennisWatchLimit(options.limit);
+  const pastGraceHours = options.pastGraceHours ?? TENNIS_WATCH_PAST_GRACE_HOURS;
   const nowMs = options.nowMs ?? Date.now();
   if (options.clearStale !== false) {
     clearStaleLiveFlags(db, { staleMs: options.staleMs, nowMs });
@@ -726,7 +736,7 @@ export function listWatchEvents(
   const leadMs = leadMinutes * 60_000;
   const cutoffIso = new Date(nowMs + leadMs).toISOString();
   const floorIso = new Date(nowMs - pastGraceHours * 3600_000).toISOString();
-  const staleFloor = nowMs - (options.staleMs ?? LIVE_STALE_MS);
+  const staleFloor = nowMs - (options.staleMs ?? TENNIS_LIVE_STALE_MS);
 
   const rows = db
     .query(

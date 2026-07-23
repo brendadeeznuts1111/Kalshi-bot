@@ -1,9 +1,35 @@
 // @see https://bun.com/docs/test/index#run-tests
 import { describe, expect, test } from "bun:test";
-import { handleOrderbookWire } from "../../src/institutions/event-store/kalshi-ws-recorder.ts";
+import {
+  applyKalshiWsWireError,
+  handleOrderbookWire,
+} from "../../src/institutions/event-store/kalshi-ws-recorder.ts";
 import { openEventStore } from "../../src/institutions/event-store/open-db.ts";
 
 describe("kalshi-ws-recorder", () => {
+  test("applyKalshiWsWireError counts wsErrors and signals reconnect for code 9", () => {
+    const summary = {
+      ticksRecorded: 0,
+      snapshots: 0,
+      deltas: 0,
+      seqGaps: 0,
+      duplicates: 0,
+      errors: 0,
+      wsErrors: 0,
+      subscribed: 0,
+      resyncRequests: 0,
+    };
+    expect(
+      applyKalshiWsWireError(summary, { code: 9, message: "Authentication required", userError: true }),
+    ).toBe(true);
+    expect(summary.wsErrors).toBe(1);
+    expect(summary.errors).toBe(1);
+    expect(
+      applyKalshiWsWireError(summary, { code: 2, message: "Params required", userError: true }),
+    ).toBe(false);
+    expect(summary.wsErrors).toBe(2);
+  });
+
   test("delta with ts_ms stamps source_clock=exchange and ts=ts_ms", () => {
     const db = openEventStore({ dbPath: ":memory:" });
     db.query(

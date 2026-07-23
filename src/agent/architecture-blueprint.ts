@@ -2,6 +2,7 @@
  * Architecture blueprint — dimension-scoped Bun stack recommendations from pattern + lift data.
  */
 // @see https://bun.com/docs/runtime/file-io#writing-files-bun-write
+// @see https://bun.com/docs/runtime/glob
 import type { ScoreComponentKey } from "../research/constants.ts";
 import type { GateOptions } from "../research/gate.ts";
 import type { GateMissStats } from "../research/gate-miss.ts";

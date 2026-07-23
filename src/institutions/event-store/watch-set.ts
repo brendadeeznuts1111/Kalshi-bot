@@ -11,6 +11,12 @@ import {
   listWatchEventsForTickers,
   type WatchEvent,
 } from "./live-scores.ts";
+import {
+  resolveTennisLeadMinutes,
+  resolveTennisWatchLimit,
+  TENNIS_DEFAULT_LEAD_MINUTES,
+  TENNIS_WATCH_LIMIT,
+} from "./tennis-lane-constants.ts";
 
 export {
   listWatchEvents,
@@ -18,10 +24,15 @@ export {
   type WatchEvent,
 };
 
+export {
+  TENNIS_DEFAULT_LEAD_MINUTES,
+  TENNIS_WATCH_LIMIT,
+} from "./tennis-lane-constants.ts";
+
 export type WatchSetOptions = {
-  /** Minutes before occurrence_ts (default 5) — aligned with tennis:live --lead. */
+  /** Minutes before occurrence_ts (default {@link TENNIS_DEFAULT_LEAD_MINUTES}). */
   leadMinutes?: number;
-  /** Cap watch-set events (default 40). */
+  /** Cap watch-set events (default {@link TENNIS_WATCH_LIMIT}). */
   limit?: number;
   pastGraceHours?: number;
   staleMs?: number;
@@ -70,8 +81,8 @@ export function listRecordTickers(
   options: WatchSetOptions = {},
 ): RecordTickersResult {
   const events = listWatchEvents(db, {
-    leadMinutes: options.leadMinutes,
-    limit: options.limit,
+    leadMinutes: resolveTennisLeadMinutes(options.leadMinutes),
+    limit: resolveTennisWatchLimit(options.limit),
     pastGraceHours: options.pastGraceHours,
     staleMs: options.staleMs,
     nowMs: options.nowMs,

@@ -1,5 +1,7 @@
 #!/usr/bin/env bun
 // @see https://bun.com/docs/guides/process/argv
+// @see https://bun.com/docs/runtime/utils#bun-sleep
+// @see https://bun.com/docs/runtime/environment-variables
 /**
  * Record Kalshi book ticks for ITF / tennis ladder markets.
  *
@@ -29,6 +31,10 @@ import { ensureEventStoreDir, openEventStore } from "../../src/institutions/even
 import { DEFAULT_EVENT_STORE_DB } from "../../src/institutions/event-store/paths.ts";
 import { bridgeStadionToKalshi, type BridgeSummary } from "../../src/institutions/event-store/stadion-kalshi-bridge.ts";
 import { listRecordTickers } from "../../src/institutions/event-store/watch-set.ts";
+import {
+  resolveTennisLeadMinutes,
+  resolveTennisWatchLimit,
+} from "../../src/institutions/event-store/tennis-lane-constants.ts";
 import { runKalshiWsWatchRecorder } from "../../src/institutions/event-store/kalshi-ws-recorder.ts";
 import {
   asKalshiEventTicker,
@@ -90,7 +96,8 @@ export async function runTennisRecordCli(argv: string[]): Promise<number> {
   const dbPath = typeof values.db === "string" ? values.db : DEFAULT_EVENT_STORE_DB;
   const db = openEventStore({ dbPath });
   const minVolume = values["min-volume"] ? Number(values["min-volume"]) : undefined;
-  const leadMinutes = values.lead ? Number(values.lead) : 5;
+  const leadMinutes = resolveTennisLeadMinutes(values.lead ? Number(values.lead) : undefined);
+  const watchLimit = resolveTennisWatchLimit(undefined);
   const dryRun = values["dry-run"] === true;
   const doBridge = values.bridge !== false && !dryRun;
   const retainDays =
@@ -126,7 +133,7 @@ export async function runTennisRecordCli(argv: string[]): Promise<number> {
     }
     const { events, tickers } = listRecordTickers(db, {
       leadMinutes,
-      limit: 40,
+      limit: watchLimit,
       clearStale: !dryRun,
     });
     if (dryRun) {
@@ -161,17 +168,20 @@ export async function runTennisRecordCli(argv: string[]): Promise<number> {
     try {
       const summary = await runKalshiWsWatchRecorder(db, {
         leadMinutes,
-        limit: 40,
+        limit: watchLimit,
         durationMs: wsSeconds > 0 ? wsSeconds * 1000 : 0,
         signal: ac.signal,
       });
+      if (ac.signal.aborted && !values.json) {
+        console.log("WS recorder stopped (signal)");
+      }
       if (values.json) {
         console.log(JSON.stringify({ mode: "ws-watch", summary }, null, 2));
       } else {
         console.log(
           `WS: ticks=${summary.ticksRecorded} snapshots=${summary.snapshots} deltas=${summary.deltas}` +
             ` gaps=${summary.seqGaps} dup=${summary.duplicates} resync=${summary.resyncRequests}` +
-            ` errors=${summary.errors} subscribed=${summary.subscribed}`,
+            ` wsErrors=${summary.wsErrors} errors=${summary.errors} subscribed=${summary.subscribed}`,
         );
       }
     } finally {
@@ -298,7 +308,7 @@ export async function runTennisRecordCli(argv: string[]): Promise<number> {
       const bridge = maybeBridge(sync != null);
       const { events, tickers } = listRecordTickers(db, {
         leadMinutes,
-        limit: 40,
+        limit: watchLimit,
         clearStale: !dryRun,
       });
       if (dryRun) {

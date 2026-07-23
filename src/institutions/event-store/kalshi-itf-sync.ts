@@ -1,4 +1,5 @@
 // @see https://docs.kalshi.com/api-reference/market/get-markets
+// @see https://bun.com/docs/runtime/utils#bun-sleep
 import type { Database } from "bun:sqlite";
 import {
   ITF_SERIES_TICKERS,
@@ -41,6 +42,10 @@ import {
   summarizeLadderCoverage,
   type LadderCoverage,
 } from "./tennis-ladder.ts";
+import {
+  KALSHI_BOOK_SOURCE_REST,
+  KALSHI_EVENT_SOURCE,
+} from "./tennis-lane-constants.ts";
 
 export type { ItfCalendarLeg, ItfCalendarRow, ItfCalendarStats, ItfCalendarFilter } from "./itf-calendar.ts";
 export {
@@ -83,7 +88,7 @@ export type ItfFetchOptions = {
 export const DEFAULT_ITF_RETAIN_DAYS = 3;
 
 const KALSHI_VENUE = "kalshi";
-const KALSHI_SOURCE = "kalshi-api";
+const KALSHI_SOURCE = KALSHI_EVENT_SOURCE;
 const KALSHI_MARKETS_URL = `${OFFICIAL_URLS.kalshi.tradeApiV2Base}/markets`;
 const KALSHI_ORDERBOOK_URL = (ticker: KalshiMarketTicker) =>
   `${OFFICIAL_URLS.kalshi.tradeApiV2Base}/markets/${encodeURIComponent(unbrand(ticker))}/orderbook`;
@@ -564,7 +569,7 @@ export async function recordKalshiBookTicks(
         `INSERT INTO book_ticks (
            event_id, ticker, market_kind, ts, recv_ts, source_clock, seq, levels_json, source, source_url
          ) VALUES (
-           $event_id, $ticker, $market_kind, $ts, $recv_ts, 'recv', NULL, $levels_json, 'kalshi-rest', $source_url
+           $event_id, $ticker, $market_kind, $ts, $recv_ts, 'recv', NULL, $levels_json, $source, $source_url
          )`,
       ).run({
         $event_id: unbrand(eventId),
@@ -573,6 +578,7 @@ export async function recordKalshiBookTicks(
         $ts: recvTs,
         $recv_ts: recvTs,
         $levels_json: JSON.stringify(book),
+        $source: KALSHI_BOOK_SOURCE_REST,
         $source_url: KALSHI_ORDERBOOK_URL(ticker),
       });
       ticksRecorded++;

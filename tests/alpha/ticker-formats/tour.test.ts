@@ -15,6 +15,7 @@ import {
   tourSideCodesForEvent,
   tourMatchupBlobIsUnambiguous,
   tourFromSeries,
+  tourIsChallengerSeries,
 } from "../../../src/alpha/ticker-formats/tour.ts";
 
 describe("tour", () => {
@@ -68,5 +69,23 @@ describe("tour", () => {
     const badA = "KXATPMATCH-26JUL22FOOBARFOO-FOO";
     const badB = "KXATPMATCH-26JUL22FOOBARFOO-BARFOO";
     expect(tourSideCodesForEvent("KXATPMATCH-26JUL22FOOBARFOO", [badA, badB])).toBeNull();
+  });
+
+  test("parses Challenger series and labels tours", () => {
+    const a = "KXATPCHALLENGERMATCH-26JUL22MOLTIR-MOL";
+    const b = "KXATPCHALLENGERMATCH-26JUL22MOLTIR-TIR";
+    expect(isTourKalshiTicker(a)).toBe(true);
+    expect(detectTickerFormat(a)).toBe("tour");
+    expect(parseTourMatchupBlob(a)).toBe("MOLTIR");
+    expect(splitTourMatchupBlob("MOLTIR", "MOL")).toEqual(["MOL", "TIR"]);
+    expect(parseTourEventTicker(a)).toBe("KXATPCHALLENGERMATCH-26JUL22MOLTIR");
+    expect(tourSideCodesForEvent(parseTourEventTicker(a)!, [a, b])).toEqual(["MOL", "TIR"]);
+    expect(tourFromSeries("KXATPCHALLENGERMATCH")).toBe("ATP-CH");
+    expect(tourFromSeries("KXWTACHALLENGERMATCH")).toBe("WTA-CH");
+    expect(tourIsChallengerSeries("KXWTACHALLENGERMATCH")).toBe(true);
+    expect(tourIsChallengerSeries("KXATPMATCH")).toBe(false);
+    const w = "KXWTACHALLENGERMATCH-26JUL22KENBOL-KEN";
+    expect(isTourKalshiTicker(w)).toBe(true);
+    expect(parseTourYesSideCode(w)).toBe("KEN");
   });
 });

@@ -22,8 +22,9 @@ import {
 } from "./brands.ts";
 import { ITF_STADION_SOURCE, tourFromStadionLevel } from "./itf-stadion.ts";
 import { winnerOutcomeBit } from "./event-id.ts";
+import { KALSHI_EVENT_SOURCE } from "./tennis-lane-constants.ts";
 
-const KALSHI_SOURCE = "kalshi-api";
+const KALSHI_SOURCE = KALSHI_EVENT_SOURCE;
 const METHOD = "surname_day_lane";
 
 export type BridgeStatus = "linked" | "ambiguous" | "unmatched";

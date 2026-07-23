@@ -1,6 +1,7 @@
 // @see https://bun.com/docs/runtime/webview
 // @see https://bun.com/docs/runtime/image
 // @see https://bun.com/docs/runtime/file-io#writing-files-bun-write
+// @see https://bun.com/docs/runtime/file-io#reading-files-bun-file
 /**
  * Visual ground for tennis WS book pipeline: WebView dashboard + Bun.Image thumb.
  */
@@ -14,6 +15,15 @@ import {
   renderTennisWsDashboardHtml,
   type TennisWsDashboardModel,
 } from "./tennis-ws-dashboard.ts";
+import {
+  resolveTennisLeadMinutes,
+  resolveTennisWatchLimit,
+  TENNIS_WS_GROUND_THUMB_HEIGHT,
+  TENNIS_WS_GROUND_THUMB_WIDTH,
+  TENNIS_WS_GROUND_WEBP_QUALITY,
+  TENNIS_WS_GROUND_WEBVIEW_HEIGHT,
+  TENNIS_WS_GROUND_WEBVIEW_WIDTH,
+} from "./tennis-lane-constants.ts";
 
 export const TENNIS_WS_GROUND_DIR = joinPath("research/cache/tennis-ws-ground");
 export const TENNIS_WS_GROUND_LATEST = join(TENNIS_WS_GROUND_DIR, "latest.json");
@@ -46,15 +56,21 @@ export type TennisWsGroundLatest = {
   linkedEventsWithWs: number;
 };
 
+type WebViewOptions = NonNullable<ConstructorParameters<typeof Bun.WebView>[0]>;
+
+function resolveWebViewBackend(): WebViewOptions["backend"] {
+  return process.platform === "darwin" ? "webkit" : "chrome";
+}
+
 function hasWebView(): boolean {
-  return typeof (Bun as { WebView?: unknown }).WebView === "function";
+  return typeof Bun.WebView === "function";
 }
 
 function hasImagePipeline(): boolean {
-  return typeof (Bun as { Image?: unknown }).Image === "function";
+  return typeof Bun.Image === "function";
 }
 
-/** Write dashboard PNG + WebP thumb via Bun.WebView + Bun.Image (macOS WebKit default). */
+/** Write dashboard PNG + WebP thumb via Bun.WebView + Bun.Image (webkit on macOS, chrome elsewhere). */
 export async function captureTennisWsGround(
   db: Database,
   options: {
@@ -70,8 +86,8 @@ export async function captureTennisWsGround(
   mkdirSync(outDir, { recursive: true });
 
   const model = loadTennisWsDashboardModel(db, {
-    leadMinutes: options.leadMinutes,
-    limit: options.limit,
+    leadMinutes: resolveTennisLeadMinutes(options.leadMinutes),
+    limit: resolveTennisWatchLimit(options.limit),
   });
   const html = renderTennisWsDashboardHtml(model);
   const dashboardHtml = join(outDir, "dashboard.html");
@@ -79,27 +95,38 @@ export async function captureTennisWsGround(
   const thumbWebp = join(outDir, "dashboard-thumb.webp");
   await Bun.write(dashboardHtml, html);
 
-  const webview = hasWebView();
-  const image = hasImagePipeline();
+  let webviewCaptured = false;
+  let imageCaptured = false;
 
-  if (!options.htmlOnly && webview) {
+  if (!options.htmlOnly && hasWebView()) {
     // @see https://bun.com/docs/runtime/webview — data: URL navigation + screenshot
     const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
-    await using view = new Bun.WebView({ width: 1280, height: 720 });
-    await view.navigate(dataUrl);
-    await view.evaluate("document.fonts.ready");
-    await Bun.write(
-      dashboardPng,
-      await view.screenshot({ format: "png", encoding: "buffer" }),
-    );
+    const viewOptions: WebViewOptions = {
+      width: TENNIS_WS_GROUND_WEBVIEW_WIDTH,
+      height: TENNIS_WS_GROUND_WEBVIEW_HEIGHT,
+      backend: resolveWebViewBackend(),
+      url: dataUrl,
+    };
+    try {
+      await using view = new Bun.WebView(viewOptions);
+      await view.evaluate("document.fonts.ready.then(() => true)");
+      await Bun.write(
+        dashboardPng,
+        await view.screenshot({ format: "png", encoding: "buffer" }),
+      );
+      webviewCaptured = true;
 
-    if (image) {
-      // @see https://bun.com/docs/runtime/image — chain resize + webp encode
-      await Bun.file(dashboardPng)
-        .image()
-        .resize(480, 270, { fit: "inside" })
-        .webp({ quality: 82 })
-        .write(thumbWebp);
+      if (hasImagePipeline()) {
+        // @see https://bun.com/docs/runtime/image — chain resize + webp encode
+        await Bun.file(dashboardPng)
+          .image()
+          .resize(TENNIS_WS_GROUND_THUMB_WIDTH, TENNIS_WS_GROUND_THUMB_HEIGHT, { fit: "inside" })
+          .webp({ quality: TENNIS_WS_GROUND_WEBP_QUALITY })
+          .write(thumbWebp);
+        imageCaptured = true;
+      }
+    } catch {
+      // WebView or Image unavailable at runtime — HTML artifact still written
     }
   }
 
@@ -108,8 +135,8 @@ export async function captureTennisWsGround(
     dashboardHtml,
     dashboardPng,
     thumbWebp,
-    webview: webview && !options.htmlOnly,
-    image: image && !options.htmlOnly && webview,
+    webview: webviewCaptured,
+    image: imageCaptured,
     model,
   };
 }

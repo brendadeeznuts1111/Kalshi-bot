@@ -1,5 +1,6 @@
 // @see https://docs.kalshi.com/getting_started/quick_start_websockets
 // @see https://docs.kalshi.com/api-reference
+// @see https://bun.com/docs/runtime/environment-variables
 /**
  * Kalshi API key RSA-PSS signing for REST + WebSocket handshake.
  * Env: KALSHI_API_KEY_ID (or KALSHI_ACCESS_KEY) + KALSHI_PRIVATE_KEY_PATH | KALSHI_PRIVATE_KEY.

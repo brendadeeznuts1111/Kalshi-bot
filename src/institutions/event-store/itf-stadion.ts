@@ -1,3 +1,5 @@
+// @see https://bun.com/docs/runtime/file-io#reading-files-bun-file
+// @see https://bun.com/docs/runtime/file-io#writing-files-bun-write
 /**
  * ITF World Tennis Tour primary results — Stadion sports-data feed used by
  * https://www.itftennis.com/en/world-tennis-tour-live/

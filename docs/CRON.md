@@ -67,6 +67,17 @@ Override: `TENNIS_LIVE_CANARY_CRON_SCHEDULE`, `TENNIS_LIVE_CANARY_CRON_TITLE`.
 
 Separate job: authenticated orderbook WebSocket on the watch-set → `book_ticks` + session artifacts under `research/cache/tennis-ws-recorder/`. Requires `KALSHI_API_KEY_ID` + private key env.
 
+### Tennis factorial experiment (daily check)
+
+| Action | Command |
+|--------|---------|
+| Manual check all active | `bun run tennis:experiment -- check-all` |
+| Register OS cron | `bun run tennis:experiment:register` |
+| Preview fires | `bun run tennis:experiment:preview` |
+| Remove | `bun run tennis:experiment:remove` |
+
+Default schedule: `0 9 * * *` (09:00 local). Worker: [`tools/tennis/experiment-scheduled.ts`](../tools/tennis/experiment-scheduled.ts). Persists artifacts via `dailyCheck` → `research/cache/tennis-experiments/`.
+
 | Command | Role |
 |---------|------|
 | `bun run tennis:record -- --ws --ws-seconds=300` | One-shot WS capture |

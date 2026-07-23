@@ -1,6 +1,8 @@
 #!/usr/bin/env bun
 // @see https://bun.com/docs/guides/process/argv
 // @see https://bun.com/docs/runtime/utils#bun-main
+// @see https://bun.com/docs/runtime/webview
+// @see https://bun.com/docs/runtime/image
 import { parseArgs } from "node:util";
 import { runResearch, printResearchRunSummary } from "../research/cli.ts";
 import {

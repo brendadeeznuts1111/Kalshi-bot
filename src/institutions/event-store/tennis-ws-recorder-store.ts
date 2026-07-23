@@ -29,6 +29,7 @@ function sessionFingerprint(summary: WsRecorderSummary): string {
         g: summary.seqGaps,
         r: summary.resyncRequests,
         e: summary.errors,
+        w: summary.wsErrors,
       }),
     ),
   );

@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+// @see https://bun.com/docs/runtime/file-io#reading-files-bun-file
 /**
  * Miss taxonomy proof/status — lane checklist with symbol probes.
  * @see docs/MISS_TAXONOMY.md

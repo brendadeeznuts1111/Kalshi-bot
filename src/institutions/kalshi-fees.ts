@@ -24,6 +24,35 @@ export const DEFAULT_SLIPPAGE_MARGIN_CENTS = 2;
 
 export const KALSHI_FEE_DOCS = OFFICIAL_URLS.kalshi.feeSchedule;
 
+/**
+ * Series whose resting maker orders pay 0 — fee_type "quadratic", verified
+ * live from series metadata 2026-07-22. Tour match series (KXATPMATCH /
+ * KXWTAMATCH) are "quadratic_with_maker_fees" (maker = 25% of taker).
+ */
+export const MAKER_FREE_SERIES: ReadonlySet<string> = new Set([
+  "KXITFMATCH",
+  "KXITFWMATCH",
+  "KXITFDOUBLES",
+  "KXITFWDOUBLES",
+  "KXATPCHALLENGERMATCH",
+  "KXWTACHALLENGERMATCH",
+]);
+
+/** Series prefix of a full market/event ticker (segment before first "-"). */
+export function seriesPrefixFromTicker(ticker: string): string {
+  return ticker.split("-", 1)[0] ?? ticker;
+}
+
+/** Maker rate for a series (accepts full tickers — prefix is extracted). */
+export function makerRateForSeries(seriesTicker: string): number {
+  return MAKER_FREE_SERIES.has(seriesPrefixFromTicker(seriesTicker)) ? 0 : FEE.makerRate;
+}
+
+/** Taker rate is uniform today (0.07) — hook exists for per-series divergence. */
+export function takerRateForSeries(_seriesTicker?: string): number {
+  return FEE.takerRate;
+}
+
 /** Total taker fee in cents — exchange round-up to next cent. */
 export function feeCents(rate: number, contracts: number, priceCents: number): number {
   if (contracts <= 0 || priceCents <= 0 || priceCents >= 100) return 0;
@@ -50,12 +79,36 @@ export function passesThreshold(
   priceCents: number,
   contracts: number,
   slippageMarginCents = DEFAULT_SLIPPAGE_MARGIN_CENTS,
-  rate = FEE.takerRate,
+  rate?: number,
+  series?: string,
 ): boolean {
   if (contracts < MIN_CONTRACTS) return false;
+  // Default stays the conservative taker gate; pass series only to opt into
+  // per-series resolution (today taker is uniform — makers use the helper).
+  const effectiveRate = rate ?? (series ? takerRateForSeries(series) : FEE.takerRate);
   return (
     rawEdgeCents(pModel, priceCents) >
-    feePerContractCents(rate, contracts, priceCents) + slippageMarginCents
+    feePerContractCents(effectiveRate, contracts, priceCents) + slippageMarginCents
+  );
+}
+
+/**
+ * Maker-first entry gate — resting post_only orders pay makerRateForSeries
+ * (0 on ITF/Challenger series), so maker-free entries price correctly.
+ */
+export function makerPassesThreshold(
+  pModel: number,
+  priceCents: number,
+  contracts: number,
+  series?: string,
+  slippageMarginCents = DEFAULT_SLIPPAGE_MARGIN_CENTS,
+): boolean {
+  return passesThreshold(
+    pModel,
+    priceCents,
+    contracts,
+    slippageMarginCents,
+    makerRateForSeries(series ?? ""),
   );
 }
 

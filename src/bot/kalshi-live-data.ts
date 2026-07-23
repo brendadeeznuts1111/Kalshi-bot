@@ -1,3 +1,4 @@
+// @see https://bun.com/docs/runtime/environment-variables
 /**
  * Kalshi milestones + live_data (public market-data API).
  * Tennis details expose competitor UUIDs aligned with custom_strike.tennis_competitor.

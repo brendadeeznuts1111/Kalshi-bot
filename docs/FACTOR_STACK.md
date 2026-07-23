@@ -1,4 +1,6 @@
-# Factor stack — scoring SSOT
+# Factor stack — GitHub research scoring SSOT
+
+> **Not** operational factorial experiments (design factors, partners, variants). For ops DOE see [`EXPERIMENT_FACTORIAL.md`](EXPERIMENT_FACTORIAL.md).
 
 Hierarchical evidence model for Kalshi GitHub bot research. Locked as part of **2+4** (local types + this doc). Local audit adapter is **implemented**; monorepo catalog ingest is wired via rotor (`tools/audit-findings/`).
 

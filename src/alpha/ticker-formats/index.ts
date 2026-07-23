@@ -64,6 +64,7 @@ export {
   tourMatchupBlobIsUnambiguous,
   tourFromSeries,
   tourFormatLabel,
+  tourIsChallengerSeries,
 } from "./tour.ts";
 
 export function detectTickerFormat(ticker: string): TickerSportFormat {

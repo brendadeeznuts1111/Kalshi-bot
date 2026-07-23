@@ -45,6 +45,8 @@ export async function buildSignalContext(input: {
     eventId,
     currentMidCents: mid,
     score: input.scoreContext ?? null,
+    // Book recv-ts is the evaluation clock — strengths never see the future.
+    asOfMs: input.book.ts ?? Date.now(),
   });
   if (!model) {
     return null;
@@ -92,6 +94,12 @@ export function decide(ctx: SignalContext, minContracts: number): Decision {
   }
 
   const isLive = ctx.components.live === 1;
+  if (!isLive && ctx.components.players_known === 0) {
+    return {
+      action: "skip",
+      reason: "no independent player information — both players unknown to corpus (default-vs-default prior)",
+    };
+  }
   if (!isLive && (mid > 85 || mid < 15)) {
     return {
       action: "skip",

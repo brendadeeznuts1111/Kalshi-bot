@@ -25,6 +25,13 @@ export function clampProb(p: number): number {
   return p;
 }
 
+/** Terminal game value for states beyond the memo cap (deep games). */
+function gameTerminal(s: number, r: number): number {
+  if (s >= 4 && s - r >= 2) return 1;
+  if (r >= 4 && r - s >= 2) return 0;
+  return 0.5;
+}
+
 function gameWinProbTable(pPoint: number, maxPoints: number): Map<string, number> {
   const p = clampProb(pPoint);
   const memo = new Map<string, number>();
@@ -40,7 +47,15 @@ function gameWinProbTable(pPoint: number, maxPoints: number): Map<string, number
         memo.set(`${s},${r}`, 0);
         continue;
       }
-      const win = (memo.get(`${s + 1},${r}`) ?? 0) * p + (memo.get(`${s},${r + 1}`) ?? 0) * (1 - p);
+      if (s === maxPoints && r === maxPoints) {
+        // Cap the deep-deuce chain at its closed-form value — recursing past the
+        // cap would silently treat surviving mass as lost.
+        memo.set(`${s},${r}`, (p * p) / (p * p + (1 - p) * (1 - p)));
+        continue;
+      }
+      const win =
+        (memo.get(`${s + 1},${r}`) ?? gameTerminal(s + 1, r)) * p +
+        (memo.get(`${s},${r + 1}`) ?? gameTerminal(s, r + 1)) * (1 - p);
       memo.set(`${s},${r}`, win);
     }
   }
@@ -53,8 +68,12 @@ export function probServerWinsGame(pPoint: number, pointsServer: number, pointsR
   return table.get(`${Math.max(0, pointsServer)},${Math.max(0, pointsReturner)}`) ?? 0.5;
 }
 
-function tiebreakWinProbTable(pPoint: number): Map<string, number> {
-  const p = clampProb(pPoint);
+/** P(YES wins tiebreak) — alternating serve (1st server takes point 0, then every 2). */
+export function probYesWinsTiebreak(
+  pHoldYes: number,
+  pHoldNo: number,
+  yesServesFirst: boolean,
+): number {
   const memo = new Map<string, number>();
   const MAX = 16;
   for (let sum = MAX * 2; sum >= 0; sum--) {
@@ -69,16 +88,17 @@ function tiebreakWinProbTable(pPoint: number): Map<string, number> {
         memo.set(`${s},${r}`, 0);
         continue;
       }
-      const win = (memo.get(`${s + 1},${r}`) ?? 0) * p + (memo.get(`${s},${r + 1}`) ?? 0) * (1 - p);
+      const n = s + r;
+      const aServes = n === 0 || Math.ceil(n / 2) % 2 === 0;
+      const yesServes = yesServesFirst ? aServes : !aServes;
+      const p = clampProb(yesServes ? pHoldYes : 1 - pHoldNo);
+      const win =
+        (memo.get(`${s + 1},${r}`) ?? gameTerminal(s + 1, r)) * p +
+        (memo.get(`${s},${r + 1}`) ?? gameTerminal(s, r + 1)) * (1 - p);
       memo.set(`${s},${r}`, win);
     }
   }
-  return memo;
-}
-
-/** P(server wins tiebreak) — first to 7 by 2, i.i.d. points at p. */
-export function probServerWinsTiebreak(pPoint: number): number {
-  return tiebreakWinProbTable(pPoint).get("0,0") ?? 0.5;
+  return memo.get("0,0") ?? 0.5;
 }
 
 function setsToWin(bestOf: 3 | 5): number {
@@ -104,13 +124,13 @@ function probWinSetFromGamesMemo(
 
   let val: number;
   if (gamesYes === 6 && gamesNo === 6) {
-    const pTb = serverIsYes ? probServerWinsTiebreak(pHoldYes) : probServerWinsTiebreak(pHoldNo);
-    val = serverIsYes ? pTb : 1 - pTb;
+    // serverIsYes = YES serves the first tiebreak point.
+    val = probYesWinsTiebreak(pHoldYes, pHoldNo, serverIsYes);
   } else {
-    const pServe = serverIsYes
+    // When NO serves, 1 − P(NO holds) is ALREADY P(YES wins the game) — no second inversion.
+    const pYesWinsGame = serverIsYes
       ? probServerWinsGame(pHoldYes, pointsYes, pointsNo)
       : 1 - probServerWinsGame(pHoldNo, pointsNo, pointsYes);
-    const pYesWinsGame = serverIsYes ? pServe : 1 - pServe;
     const nextServerIsYes = !serverIsYes;
     const pIfYesWins = probWinSetFromGamesMemo(
       gamesYes + 1,
@@ -206,7 +226,7 @@ function probWinMatchFromSetsMemo(
   return val;
 }
 
-/** P(YES wins match) from live score state and symmetric hold probs derived from opening prior. */
+/** P(YES wins match) from live score state and hold probs derived from opening prior. */
 export function matchWinProbYes(state: MatchScoreState, pHoldYes: number, pHoldNo: number): number {
   const pointsYes = state.serverIsYes ? state.pointsServer : state.pointsReturner;
   const pointsNo = state.serverIsYes ? state.pointsReturner : state.pointsServer;
@@ -227,11 +247,24 @@ export function matchWinProbYes(state: MatchScoreState, pHoldYes: number, pHoldN
   );
 }
 
-/** Binary-search symmetric point-win prob so pre-match P(YES) ≈ priorP. */
-export function inferSymmetricHoldFromMatchPrior(priorP: number, bestOf: 3 | 5 = 3): number {
+/**
+ * Baseline per-point serve win prob (ITF/Challenger ≈ 0.62). Hold strengths are
+ * expressed as a symmetric differential around this anchor: the opening prior
+ * moves the PAIR apart; it cannot move a single symmetric hold off 0.5.
+ */
+export const BASE_SERVE_POINT_WIN = 0.62;
+
+export type HoldPair = { pHoldYes: number; pHoldNo: number };
+
+/**
+ * Binary-search the hold differential so pre-match P(YES) ≈ priorP with YES
+ * serving first. priorP = 0.5 → identical holds at the baseline anchor.
+ */
+export function inferHoldsFromMatchPrior(priorP: number, bestOf: 3 | 5 = 3): HoldPair {
   const target = clampProb(priorP);
-  let lo = 0.5;
-  let hi = 0.75;
+  const base = BASE_SERVE_POINT_WIN;
+  let lo = 0;
+  let hi = 0.25;
   for (let i = 0; i < 40; i++) {
     const mid = (lo + hi) / 2;
     const pMatch = matchWinProbYes(
@@ -245,11 +278,12 @@ export function inferSymmetricHoldFromMatchPrior(priorP: number, bestOf: 3 | 5 =
         serverIsYes: true,
         bestOf,
       },
-      mid,
-      mid,
+      base + mid,
+      base - mid,
     );
     if (pMatch < target) lo = mid;
     else hi = mid;
   }
-  return clampProb((lo + hi) / 2);
+  const d = (lo + hi) / 2;
+  return { pHoldYes: clampProb(base + d), pHoldNo: clampProb(base - d) };
 }

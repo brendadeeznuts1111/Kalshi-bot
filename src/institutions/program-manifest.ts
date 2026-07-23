@@ -1,3 +1,4 @@
+// @see https://bun.com/docs/runtime/file-io#reading-files-bun-file
 export type ProgramStatus = "shadow" | "pilot" | "live" | "killed";
 
 /** baseline = measuring-stick tenant (pinnacle-novig); never graduates. */

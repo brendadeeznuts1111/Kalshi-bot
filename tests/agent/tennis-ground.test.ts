@@ -41,6 +41,7 @@ describe("tennis-ground", () => {
         totalResyncs: 0,
         gapSessionPct: null,
       },
+      experiments: null,
       bookCoverage: {
         watchEvents: 0,
         watchTickers: 3,

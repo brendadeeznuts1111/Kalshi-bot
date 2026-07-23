@@ -1,5 +1,13 @@
 /**
- * Self-model v1 — opening prior → hold strength → match win probability.
+ * Self-model v2 — REAL prior from player strengths (Stadion ITF corpus) →
+ * hold strength → match win probability. The pre-match "market echo" (opening
+ * mid as p_model) is replaced: the model now carries independent information.
+ *
+ * model_kind: 0 = pre-match self-model prior (strengths → Markov);
+ *             1 = live but unscored (fallback to prior);
+ *             2 = live match Markov on self-model holds.
+ * components.market_opening_prior stays as information only — v1 never blends
+ * it into p_model (standalone calibration must be measurable first).
  */
 import type { Database } from "bun:sqlite";
 import {
@@ -9,10 +17,11 @@ import {
 } from "../../../src/institutions/event-store/brands.ts";
 import { openingPriorP } from "./opening-prior.ts";
 import {
-  inferSymmetricHoldFromMatchPrior,
+  inferHoldsFromMatchPrior,
   matchWinProbYes,
   type MatchScoreState,
 } from "./match-model.ts";
+import { resolveSelfPrior } from "./self-prior.ts";
 import type { ScoreContext } from "./score-context.ts";
 
 export type GameModelResult = {
@@ -50,46 +59,57 @@ export function buildGameModelP(input: {
   eventId: CanonicalEventId;
   currentMidCents: number | null;
   score: ScoreContext | null;
+  /** Evaluation clock (recv-clock epoch ms). Strengths use only resolutions
+   *  known before this instant. Defaults to now (live path). */
+  asOfMs?: number;
 }): GameModelResult | null {
+  const asOfMs = input.asOfMs ?? Date.now();
+  const bestOf = input.score?.bestOf ?? loadBestOf(input.db, input.eventId);
+
+  const prior = resolveSelfPrior({
+    db: input.db,
+    eventId: input.eventId,
+    ticker: input.ticker,
+    asOfMs,
+    bestOf,
+  });
+  // Ambiguous identity → labeled skip (null). Never a guessed pair.
+  if (prior.kind === "ambiguous") return null;
+
   const openingP =
     openingPriorP(input.db, input.ticker, input.eventId) ??
     (input.currentMidCents != null ? input.currentMidCents / 100 : null);
-  if (openingP == null) return null;
 
-  const bestOf = input.score?.bestOf ?? loadBestOf(input.db, input.eventId);
-  const pHold = inferSymmetricHoldFromMatchPrior(openingP, bestOf);
+  const components: Record<string, number> = {
+    self_prior: prior.pYes,
+    players_known: prior.playersKnown,
+    strength_yes: prior.strengthYes,
+    strength_no: prior.strengthNo,
+    hold_prob_yes: prior.holds.pHoldYes,
+    hold_prob_no: prior.holds.pHoldNo,
+  };
+  if (openingP != null) components.market_opening_prior = openingP;
 
   if (!input.score?.isLive) {
     return {
-      pModel: openingP,
-      components: {
-        market_opening_prior: openingP,
-        hold_prob_symmetric: pHold,
-        live: 0,
-        model_kind: 0,
-      },
+      pModel: prior.pYes,
+      components: { ...components, live: 0, model_kind: 0 },
     };
   }
 
   const state = toMatchState({ ...input.score, bestOf }, bestOf);
   if (!state) {
     return {
-      pModel: openingP,
-      components: {
-        market_opening_prior: openingP,
-        hold_prob_symmetric: pHold,
-        live: 1,
-        model_kind: 1,
-      },
+      pModel: prior.pYes,
+      components: { ...components, live: 1, model_kind: 1 },
     };
   }
 
-  const pModel = matchWinProbYes(state, pHold, pHold);
+  const pModel = matchWinProbYes(state, prior.holds.pHoldYes, prior.holds.pHoldNo);
   return {
     pModel,
     components: {
-      market_opening_prior: openingP,
-      hold_prob_symmetric: pHold,
+      ...components,
       match_win_prob: pModel,
       live: 1,
       set_delta: input.score.setsYes - input.score.setsNo,
@@ -98,3 +118,6 @@ export function buildGameModelP(input: {
     },
   };
 }
+
+/** Re-exported for callers that only need the market echo as a component. */
+export { inferHoldsFromMatchPrior };

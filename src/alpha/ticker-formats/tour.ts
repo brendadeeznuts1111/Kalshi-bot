@@ -10,7 +10,12 @@ import {
   splitMatchupBlob,
 } from "./series-parse.ts";
 
-export const TOUR_SERIES_TICKERS = ["KXATPMATCH", "KXWTAMATCH"] as const;
+export const TOUR_SERIES_TICKERS = [
+  "KXATPMATCH",
+  "KXWTAMATCH",
+  "KXATPCHALLENGERMATCH",
+  "KXWTACHALLENGERMATCH",
+] as const;
 
 export type TourSeriesTicker = (typeof TOUR_SERIES_TICKERS)[number];
 
@@ -54,17 +59,37 @@ export function tourSideCodesForEvent(eventTicker: string, marketTickers: string
   return sideCodesForEvent(TOUR_SERIES_TICKERS, eventTicker, marketTickers);
 }
 
-export function tourFromSeries(series: string): "ATP" | "WTA" | "TOUR" {
+export function tourFromSeries(series: string): "ATP" | "WTA" | "ATP-CH" | "WTA-CH" | "TOUR" {
   switch (series) {
     case "KXATPMATCH":
       return "ATP";
     case "KXWTAMATCH":
       return "WTA";
+    case "KXATPCHALLENGERMATCH":
+      return "ATP-CH";
+    case "KXWTACHALLENGERMATCH":
+      return "WTA-CH";
     default:
       return "TOUR";
   }
 }
 
-export function tourFormatLabel(series: string): "atp-match" | "wta-match" {
-  return series === "KXWTAMATCH" ? "wta-match" : "atp-match";
+export function tourFormatLabel(
+  series: string,
+): "atp-match" | "wta-match" | "atp-challenger-match" | "wta-challenger-match" {
+  switch (series) {
+    case "KXWTAMATCH":
+      return "wta-match";
+    case "KXATPCHALLENGERMATCH":
+      return "atp-challenger-match";
+    case "KXWTACHALLENGERMATCH":
+      return "wta-challenger-match";
+    default:
+      return "atp-match";
+  }
+}
+
+/** Challenger series are maker-free (quadratic); tour series carry maker fees. */
+export function tourIsChallengerSeries(series: string): boolean {
+  return series.includes("CHALLENGER");
 }

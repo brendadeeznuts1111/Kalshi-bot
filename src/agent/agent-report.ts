@@ -1,3 +1,4 @@
+// @see https://bun.com/docs/runtime/file-io#writing-files-bun-write
 /**
  * Cross-dimension agent summary for architecture decisions.
  */
