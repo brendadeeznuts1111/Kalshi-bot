@@ -22,6 +22,10 @@ export type ShadowBridgeConfig = {
   tradesOnly?: boolean;
   dryRun?: boolean;
   alphaRoot?: string;
+  /** Override experiments DB (tests). */
+  dbPath?: string;
+  /** Override shadow log path (tests; skips manifest resolve). */
+  logPath?: string;
 };
 
 export function resolveShadowPartnerId(
@@ -46,11 +50,13 @@ export async function ingestShadowMetrics(
 ): Promise<{ inserted: number; skipped: number; errors: number }> {
   const partnerKey = config.partnerKey ?? "eventId";
   const tradesOnly = config.tradesOnly !== false;
-  const { logPath } = await resolveProgramShadow(config.programName, config.alphaRoot);
+  const logPath = config.logPath
+    ? config.logPath
+    : (await resolveProgramShadow(config.programName, config.alphaRoot)).logPath;
   const entries = await readShadowLogEntries(logPath);
   const lines = materializeShadowLines(entries);
 
-  const runner = ExperimentRunner.open();
+  const runner = ExperimentRunner.open(config.dbPath);
   let inserted = 0;
   let skipped = 0;
   let errors = 0;

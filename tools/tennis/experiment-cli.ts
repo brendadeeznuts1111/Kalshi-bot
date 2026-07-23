@@ -62,6 +62,7 @@ export async function runExperimentCli(argv: string[]): Promise<number> {
       cut: { type: "string" },
       fraction: { type: "string" },
       outcome: { type: "string" },
+      "metric-id": { type: "string" },
       "min-days": { type: "string" },
       program: { type: "string" },
       "partner-key": { type: "string" },
@@ -184,7 +185,12 @@ export async function runExperimentCli(argv: string[]): Promise<number> {
       console.error("--outcome must be 0 or 1");
       return 1;
     }
-    runner.recordMetric(experimentId, partnerId, outcome);
+    runner.recordMetric(
+      experimentId,
+      partnerId,
+      outcome,
+      typeof values["metric-id"] === "string" ? values["metric-id"] : undefined,
+    );
     if (json) console.log(JSON.stringify({ ok: true }));
     else console.log(`recorded outcome=${outcome} for ${partnerId}`);
     return 0;

@@ -20,6 +20,8 @@ export type FactorialDesign = {
   variants: Variant[];
   fullCount: number;
   fraction: number;
+  /** How variants were chosen when fraction > 1. */
+  method?: "full" | "resolution-half" | "naive-subsample";
 };
 
 export type FactorialAssignment = {
@@ -62,6 +64,60 @@ function cartesianProduct(factors: Factor[]): Variant[] {
   return out;
 }
 
+/** All factors exactly two levels (binary DOE). */
+export function isAllBinaryTwoLevel(factors: Factor[]): boolean {
+  return factors.length >= 2 && factors.every((f) => f.levels.length === 2);
+}
+
+function levelSign(level: string | number, levels: (string | number)[]): -1 | 1 {
+  const idx = levels.findIndex((l) => String(l) === String(level));
+  return idx <= 0 ? -1 : 1;
+}
+
+function signToLevel(sign: -1 | 1, levels: (string | number)[]): string | number {
+  return sign === -1 ? levels[0]! : levels[1]!;
+}
+
+/**
+ * 2^(k−1) half-replicate for k binary factors.
+ * Generator: last factor = product of all others (Resolution IV when k ≥ 4).
+ */
+export function generateHalfFraction2k(factors: Factor[]): Variant[] {
+  if (!isAllBinaryTwoLevel(factors)) {
+    throw new Error("half fraction requires ≥2 binary (2-level) factors");
+  }
+  const base = factors.slice(0, -1);
+  const generated = factors[factors.length - 1]!;
+  const partials = cartesianProduct(base);
+
+  return partials.map((partial) => {
+    let productSign: -1 | 1 = 1;
+    for (const f of base) {
+      productSign = (productSign * levelSign(partial[f.name]!, f.levels)) as -1 | 1;
+    }
+    return {
+      ...partial,
+      [generated.name]: signToLevel(productSign, generated.levels),
+    };
+  });
+}
+
+/** Defining relation check: generated factor sign = product of base factor signs. */
+export function satisfiesHalfFractionRelation(
+  variant: Variant,
+  factors: Factor[],
+): boolean {
+  if (factors.length < 2) return true;
+  const base = factors.slice(0, -1);
+  const generated = factors[factors.length - 1]!;
+  let productSign: -1 | 1 = 1;
+  for (const f of base) {
+    productSign = (productSign * levelSign(variant[f.name]!, f.levels)) as -1 | 1;
+  }
+  const genSign = levelSign(variant[generated.name]!, generated.levels);
+  return productSign === genSign;
+}
+
 /** Reversible variant key — sorted factor names, URL-encoded levels. */
 export function variantId(v: Variant): string {
   return Object.entries(v)
@@ -94,7 +150,8 @@ export function parseVariantId(id: string, factors: Factor[]): Variant | null {
 
 /**
  * Full (or fractional) factorial design.
- * Fractional = systematic subsample (not Resolution IV) — use ≤4 factors in production.
+ * When fraction=2 and all factors are binary 2-level, uses a Resolution-IV half-replicate
+ * (generator: last factor = product of others). Otherwise falls back to naive subsample.
  */
 export function generateDesign(factors: Factor[], fraction = 1): FactorialDesign {
   if (factors.length === 0) throw new Error("at least one factor required");
@@ -110,13 +167,22 @@ export function generateDesign(factors: Factor[], fraction = 1): FactorialDesign
     throw new Error(`fraction ${fraction} exceeds full design count ${fullCount}`);
   }
 
+  if (fraction === 1) {
+    return { factors, variants: full, fullCount, fraction: 1, method: "full" };
+  }
+
+  if (fraction === 2 && isAllBinaryTwoLevel(factors)) {
+    const variants = generateHalfFraction2k(factors);
+    return { factors, variants, fullCount, fraction: 2, method: "resolution-half" };
+  }
+
   const step = Math.max(1, Math.floor(fullCount / Math.ceil(fullCount / fraction)));
   const variants: Variant[] = [];
   for (let i = 0; i < fullCount; i += step) {
     variants.push(full[i]!);
   }
 
-  return { factors, variants, fullCount, fraction };
+  return { factors, variants, fullCount, fraction, method: "naive-subsample" };
 }
 
 /** Assign partner to least-used variant; idempotent per (experiment, partner). */
