@@ -153,7 +153,10 @@ export function buildTennisNextActions(report: Omit<TennisGroundReport, "nextAct
     );
     if (exp.totalObservations === 0) {
       actions.push(
-        `bun run tennis:experiment -- assign --experiment=${exp.experimentId} --partner=<id>`,
+        `bun run tennis:experiment -- assign --experiment=${exp.experimentId} --partner=<eventId>`,
+      );
+      actions.push(
+        `bun run tennis:experiment -- ingest --experiment=${exp.experimentId} --program=tennis-game-model   # shadow → metrics`,
       );
     }
     const expAgeMs = Date.now() - Date.parse(exp.at);

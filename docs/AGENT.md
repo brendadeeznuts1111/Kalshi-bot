@@ -9,7 +9,7 @@ Each command is a focused **sub-agent** grounded in local evidence (`cache.db`, 
 | Sub-agent | Command | Grounding |
 |-----------|---------|-----------|
 | **ground** | `agent ground` | Orchestrates status + cache readiness + miss taxonomy + next actions (cache-only). Coverage: exact → qualifier-normalized → bare phrase. `saveRun` stamps discoverGate (miss queries → else resolveDiscoverGate); unstamped rows also inferred at read time. `pushed:` cutoffs are UTC-month-floored. Partial coverage lists cold queries. |
-| **tennis** | `agent tennis` | Event-store + canary + WS ground + book coverage + WS recorder trend + cadence (cache-only; `--canary` dry-run; `--webview` capture). SSOT: [`tennis-lane-constants.ts`](../src/institutions/event-store/tennis-lane-constants.ts). |
+| **tennis** | `agent tennis` | Event-store + canary + WS ground + book coverage + WS recorder trend + factorial experiments + cadence (cache-only; `--canary` dry-run; `--webview` capture). SSOT: [`tennis-lane-constants.ts`](../src/institutions/event-store/tennis-lane-constants.ts). |
 | **status** | `agent status` | Newest eligible production run |
 | **patterns** | `agent patterns` | Detector evidence paths from a cached run |
 | **blueprint** | `agent blueprint` | Bun stack / lift from cached runs + pattern reports |
@@ -63,9 +63,9 @@ Event-store grounded triage for the ITF live / record control plane (sibling of 
 3. **WS ground** — latest `research/cache/tennis-ws-ground/` artifact (WebView + Image flags)
 4. **book tick coverage** — watch-set tickers with `kalshi-ws` vs `kalshi-rest` rows; exchange-clock share; linked events with WS
 5. **WS recorder** — latest session + trend table (deltas, seq gaps, resyncs, `wsErrors`) from `research/cache/tennis-ws-recorder/`
-6. **experiments** — latest factorial artifact from `research/cache/tennis-experiments/latest.json` (`tennis:experiment -- check` / `latest`)
+6. **experiments** — latest factorial artifact from `research/cache/tennis-experiments/latest.json` (`tennis:experiment -- latest`; refresh with `check` / `check-all`; shadow outcomes via `ingest`). Ops design: [`EXPERIMENT_FACTORIAL.md`](EXPERIMENT_FACTORIAL.md).
 7. **cadence** — `analyzeScoreSnapshotCadence` (REST ok/borderline/miss vs `TENNIS_LIVE_INTERVAL_MS`)
-8. **next actions** — ordered operator commands (sync, loop, record --ws, cron register, webview, experiment)
+8. **next actions** — ordered operator commands (sync, loop, record --ws, canary/experiment cron register, webview, experiment launch/check/ingest)
 
 Default is zero network. `--canary` runs the full dry-run smoke first (Bun-native parallel fetch, write-boundary plan, artifact with `Bun.hash` fingerprint). `--json` emits the full structured report (same fields as terminal sections).
 
@@ -76,6 +76,10 @@ bun run agent tennis
 bun run agent tennis --canary
 bun run agent tennis --json
 bun run agent tennis --webview
+
+bun run tennis:experiment -- check-all
+bun run tennis:experiment -- ingest --experiment=<id> --program=tennis-game-model
+bun run tennis:experiment:register
 ```
 
 ## `ground`

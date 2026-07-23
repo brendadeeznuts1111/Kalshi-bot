@@ -67,19 +67,8 @@ Override: `TENNIS_LIVE_CANARY_CRON_SCHEDULE`, `TENNIS_LIVE_CANARY_CRON_TITLE`.
 
 Separate job: authenticated orderbook WebSocket on the watch-set → `book_ticks` + session artifacts under `research/cache/tennis-ws-recorder/`. Requires `KALSHI_API_KEY_ID` + private key env.
 
-### Tennis factorial experiment (daily check)
-
-| Action | Command |
-|--------|---------|
-| Manual check all active | `bun run tennis:experiment -- check-all` |
-| Register OS cron | `bun run tennis:experiment:register` |
-| Preview fires | `bun run tennis:experiment:preview` |
-| Remove | `bun run tennis:experiment:remove` |
-
-Default schedule: `0 9 * * *` (09:00 local). Worker: [`tools/tennis/experiment-scheduled.ts`](../tools/tennis/experiment-scheduled.ts). Persists artifacts via `dailyCheck` → `research/cache/tennis-experiments/`.
-
 | Command | Role |
-|---------|------|
+|--------|------|
 | `bun run tennis:record -- --ws --ws-seconds=300` | One-shot WS capture |
 | `bun run tennis:record:ws:register` | Install OS cron (default `*/30 * * * *` local) |
 | `bun run tennis:record:ws:preview` | Next fire times |
@@ -90,3 +79,20 @@ Default schedule is every 30 minutes (`*/30 * * * *`) — cheap enough to catch 
 Override: `TENNIS_WS_RECORDER_CRON_SCHEDULE`, `TENNIS_WS_RECORDER_CRON_TITLE`, `TENNIS_WS_RECORDER_WS_SECONDS` (default 300).
 
 See [`docs/TENNIS_PROGRAM_ARCHETYPES.md`](TENNIS_PROGRAM_ARCHETYPES.md) (WS recorder OS cron).
+
+## Tennis factorial experiment (daily check)
+
+| Action | Command |
+|--------|---------|
+| Manual check all active | `bun run tennis:experiment -- check-all` |
+| Register OS cron | `bun run tennis:experiment:register` |
+| Preview fires | `bun run tennis:experiment:preview` |
+| Remove | `bun run tennis:experiment:remove` |
+
+Default schedule: `0 9 * * *` (09:00 local). Worker: [`tools/tennis/experiment-scheduled.ts`](../tools/tennis/experiment-scheduled.ts). Persists artifacts via `dailyCheckAll` → `research/cache/tennis-experiments/` (each active experiment runs `dailyCheck`).
+
+Override: `TENNIS_EXPERIMENT_CRON_SCHEDULE`, `TENNIS_EXPERIMENT_CRON_TITLE`.
+
+Shadow metrics (not cron): `bun run tennis:experiment -- ingest --experiment=<id> --program=tennis-game-model`.
+
+See [`docs/EXPERIMENT_FACTORIAL.md`](EXPERIMENT_FACTORIAL.md).

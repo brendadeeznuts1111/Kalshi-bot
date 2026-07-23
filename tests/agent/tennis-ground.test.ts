@@ -76,6 +76,76 @@ describe("tennis-ground", () => {
     expect(actions.some((a) => a.includes("tennis:live -- --sync --loop"))).toBe(true);
   });
 
+  test("buildTennisNextActions suggests ingest when active experiment has no observations", () => {
+    const report = {
+      source: "event-store" as const,
+      dbPath: ":memory:",
+      at: new Date().toISOString(),
+      store: {
+        events: 10,
+        markets: 20,
+        liveScores: 0,
+        scoreSnapshots: 0,
+        bookTicks: 0,
+        watchSize: 3,
+        liveNow: 0,
+      },
+      canary: null,
+      wsGround: null,
+      wsSession: null,
+      wsSessionHistory: [],
+      wsRecorderTrend: {
+        sessions: 0,
+        totalGaps: 0,
+        totalDeltas: 0,
+        totalResyncs: 0,
+        gapSessionPct: null,
+      },
+      experiments: {
+        experimentId: "exp-test",
+        at: new Date().toISOString(),
+        status: "active" as const,
+        fingerprint: "fp",
+        totalObservations: 0,
+        grandMean: 0,
+        rSquared: 0,
+        mainEffects: [],
+        interactions: [],
+        variants: [],
+      },
+      bookCoverage: {
+        watchEvents: 0,
+        watchTickers: 3,
+        watchWithWs: 0,
+        watchWithRest: 0,
+        watchWithBoth: 0,
+        watchWithNeither: 3,
+        wsTicksTotal: 0,
+        restTicksTotal: 0,
+        wsExchangeClockTicks: 0,
+        wsExchangeClockPct: null,
+        linkedEventsWithWs: 0,
+        linkedEventsTotal: 0,
+      },
+      cadence: {
+        assumedIntervalMs: 10_000,
+        events: [],
+        totals: {
+          events: 0,
+          snapshots: 0,
+          gameTransitions: 0,
+          setTransitions: 0,
+          pointTransitions: 0,
+          restMiss: 0,
+          restBorderline: 0,
+        },
+      },
+    };
+    const actions = buildTennisNextActions(report);
+    expect(actions.some((a) => a.includes("tennis:experiment -- ingest"))).toBe(true);
+    expect(actions.some((a) => a.includes("assign --experiment=exp-test"))).toBe(true);
+  });
+
   test("runTennisGround over empty store", async () => {
     const dbPath = tempSqlitePath("tennis-ground");
     try {
