@@ -137,3 +137,26 @@ describe("kalshi-ws-recorder", () => {
     expect(rows[1]!.seq).toBe(2);
   });
 });
+
+describe("probeKalshiAuth", () => {
+  test("401 surfaces status for E_AUTH; signed headers sent", async () => {
+    const { probeKalshiAuth } = await import("../../src/bot/kalshi-auth.ts");
+    const { generateKeyPairSync } = await import("node:crypto");
+    const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+    const seen: string[] = [];
+    const server = Bun.serve({
+      port: 0,
+      fetch(req) {
+        seen.push(req.headers.get("KALSHI-ACCESS-KEY") ?? "");
+        const url = new URL(req.url);
+        return Response.json({ error: "bad key" }, { status: 401 });
+      },
+    });
+    const creds = { keyId: "test-key-id", privateKey } as never;
+    const badProbe = await probeKalshiAuth(creds, { base: `http://127.0.0.1:${server.port}/trade-api/v2` });
+    expect(badProbe.status).toBe(401);
+    expect(badProbe.ok).toBe(false);
+    expect(seen.some(h => h === "test-key-id")).toBe(true);
+    server.stop(true);
+  });
+});

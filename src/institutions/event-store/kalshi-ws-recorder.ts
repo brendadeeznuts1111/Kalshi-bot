@@ -8,7 +8,7 @@
  */
 import type { Database } from "bun:sqlite";
 import { KalshiMarketWs, kalshiWsReconnectBackoffMs, type KalshiWsFactory, type KalshiWsWire } from "../../bot/kalshi-ws.ts";
-import { loadKalshiCredentials, type KalshiCredentials } from "../../bot/kalshi-auth.ts";
+import { loadKalshiCredentials, probeKalshiAuth, type KalshiCredentials } from "../../bot/kalshi-auth.ts";
 import {
   KALSHI_WS_ERROR_LABELS,
   parseKalshiWsErrorWire,
@@ -334,6 +334,20 @@ export async function runKalshiWsWatchRecorder(
       summary.errors++;
       recordProbeErrorCode(summary, classifyProbeError(err));
       return summary;
+    }
+    // Pre-flight: a signed REST probe surfaces a bad key as E_AUTH now, instead
+    // of WS retries that only report "Expected 101" (E_HANDSHAKE/E_NET).
+    try {
+      const probe = await probeKalshiAuth(creds);
+      if (probe.status === 401 || probe.status === 403) {
+        summary.errors++;
+        recordProbeErrorCode(summary, "E_AUTH");
+        return summary;
+      }
+    } catch (err) {
+      // Probe itself failed (network/timeout) — record and still attempt WS;
+      // the socket path classifies the real outcome.
+      recordProbeErrorCode(summary, classifyProbeError(err));
     }
   }
 
