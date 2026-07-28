@@ -1,0 +1,55 @@
+# Kalshi Bot vault map — Bun-native TOML (sibling to Projects config/vault-map.toml)
+# Display + path chrome only — never secret values.
+#
+# Load:
+#   import map from "./vault-map.toml" with { type: "toml" }
+#   Bun.TOML.parse(await Bun.file("config/vault-map.toml").text())
+#
+# @see https://bun.com/docs/guides/runtime/import-toml
+# @see https://bun.com/docs/runtime/toml
+# @see https://protonpass.github.io/pass-cli/commands/contents/secret-references/
+# @see docs/PROTONPASS.md
+
+[metadata]
+version = 1
+generated = "2026-07-28T00:00:00Z"
+description = "Kalshi Bot env → Proton Pass vault mapping"
+vault = "Kalshi Bot"
+
+[env.KALSHI_API_KEY_ID]
+vault = "Kalshi Bot"
+item = "Kalshi API"
+field = "keyId"
+label = "Kalshi API Key ID"
+color = "#00D4AA"
+type = "token"
+
+[env.KALSHI_PRIVATE_KEY]
+vault = "Kalshi Bot"
+item = "Kalshi API"
+field = "privateKey"
+label = "Kalshi Private Key (PEM)"
+color = "#00D4AA"
+type = "key"
+
+[env.ODDS_API_KEY]
+vault = "Kalshi Bot"
+item = "The Odds API"
+field = "apiKey"
+label = "The Odds API Key"
+color = "#6366F1"
+type = "token"
+
+[env.GH_TOKEN]
+vault = "Kalshi Bot"
+item = "GitHub"
+field = "token"
+label = "GitHub Token"
+color = "#2DA44E"
+type = "pat"
+
+[backlog]
+# DONE 2026-07-28: minted kalshi-bot-agent PAT (viewer on "Kalshi Bot", expires
+# 2027-07-28), stored as PROTON_PASS_KALSHI_BOT_TOKEN in ~/Projects/.env.pass-tokens
+agent_pat = []
+human_only = ["KALSHI_API_KEY_ID — keyId field on 'Kalshi API' item is empty; fill from Kalshi dashboard"]

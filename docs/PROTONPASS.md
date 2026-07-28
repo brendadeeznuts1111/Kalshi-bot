@@ -206,17 +206,27 @@ Source: `protonpass/pass-cli` — `login_pat.rs`, `main.rs`, `access/grant.rs`
 (verified against installed CLI 2.2.3).
 
 Interactive browser login is **not** the only path. The CLI accepts a
-Personal Access Token (format `pst_<token>::<key>`) two ways:
+Personal Access Token (format `pst_<token>::<key>`):
 
 ```bash
-# Flag
-pass-cli login --pat 'pst_<token>::<key>'
-
-# Env var (any login invocation routes to PAT auth when set)
-export PROTON_PASS_PERSONAL_ACCESS_TOKEN='pst_<token>::<key>'
+pass-cli login --pat 'pst_<token>::<key>'   # creates a PAT session in the session dir
 ```
 
-PAT login skips the `can_use_cli` account gate that browser login enforces.
+Verified behavior (CLI 2.2.3, 2026-07-28):
+
+- `PROTON_PASS_PERSONAL_ACCESS_TOKEN` only routes the **login** command to
+  PAT auth — `run`/`item`/etc. still require an existing session. The
+  headless pattern is `login --pat` once, then `run`.
+- PAT sessions must set `PROTON_PASS_AGENT_REASON="..."` for item commands
+  (audit trail; enforced: "Agent sessions must set PROTON_PASS_AGENT_REASON").
+- PAT sessions cannot manage PATs, create vaults, or self-grant access.
+- PAT login skips the `can_use_cli` account gate browser login enforces.
+- **Session-dir gotcha:** `PROTON_PASS_SESSION_DIR` (see `utils.rs`) redirects
+  the session store. This machine's `~/.zshrc` sets it to
+  `/tmp/pass-agent-admin` for interactive shells — a login there is invisible
+  to shells/cron using the default
+  `~/Library/Application Support/proton-pass-cli`. Pick ONE dir per consumer;
+  `/tmp` is wiped on reboot, so automation must use the default dir.
 
 ### Fixing "PAT has no vault access"
 
@@ -227,21 +237,32 @@ Granting requires an authenticated session with manage rights on the vault
 ```bash
 pass-cli login                                   # main account, browser, one time
 pass-cli vault list                              # confirm "Kalshi Bot" vault visible
-pass-cli pat list                                # find the service PAT name/id
+pass-cli pat create --name kalshi-bot-agent --expiration 1y --output json
 pass-cli pat access grant \
-  --personal-access-token-name '<service-pat-name>' \
+  --personal-access-token-id '<pat-id>' \
   --vault-name 'Kalshi Bot' \
   --role viewer                                  # viewer is enough for run/inject
-pass-cli pat access list-access --personal-access-token-name '<service-pat-name>'
 ```
 
-After the grant, the service PAT works fully headless — no keyring, no
-browser, cron-safe:
+After the grant, the PAT works headless — no keyring, no browser, cron-safe:
 
 ```bash
-PROTON_PASS_PERSONAL_ACCESS_TOKEN="$(cat /path/to/pat)" \
+pass-cli login --pat "$PROTON_PASS_KALSHI_BOT_TOKEN"   # once per session store
+PROTON_PASS_AGENT_REASON="kalshi data plane" \
   pass-cli run --env-file .env.protonpass -- bun run tennis:record -- --ws --ws-seconds=300
 ```
+
+### As-built state (2026-07-28)
+
+- Vault `Kalshi Bot` (note: an empty duplicate `Kalshi-bot` hyphen vault also
+  exists) contains item `Kalshi API` with `privateKey` (PEM verified resolving),
+  `privateKeyPath`, and `keyId` **empty** — pending the Kalshi dashboard key ID.
+- PAT `kalshi-bot-agent` (viewer on `Kalshi Bot`, expires 2027-07-28) is stored
+  as `PROTON_PASS_KALSHI_BOT_TOKEN` in `~/Projects/.env.pass-tokens`, with an
+  active session in the default session dir.
+- Still missing items for full `.env.protonpass` resolution: `The Odds API`
+  (apiKey) and `GitHub` (token) — create them in `Kalshi Bot` when the keys
+  are available, or scope env files per-lane (see `research/cache/.env.kalshi-only`).
 
 Manage PATs: `pass-cli pat create|list|renew|delete`, and per-item scoping
 via `pat access grant --item-title 'Kalshi API'`.

@@ -241,3 +241,13 @@ Daily entries from the data-plane keeper run. Newest at the bottom.
 - **Test results**: 16 pass / 0 fail across `snapshot-data-plane.test.ts` + `snapshot-data-plane.types.test.ts`. Typecheck clean for all snapshot files.
 - No orders placed, no src/ changes, no commit.
 
+
+---
+
+## 2026-07-28 15:15 CDT (ProtonPass vault setup — Kalshi lane unblocked)
+
+- Root-caused session "loss": `~/.zshrc` sets `PROTON_PASS_SESSION_DIR=/tmp/pass-agent-admin`; interactive logins land there, agent shells use the default store. Not a login failure — a session-dir split. Also found 5 pass-cli crash reports (2026-07-27 03:35–03:46): SIGKILL "Code Signature Invalid" — worth watching.
+- Main-account session (apexbiolabsdirect): vault `Kalshi Bot` + item `Kalshi API` imported (privateKey PEM + privateKeyPath; keyId EMPTY pending Kalshi dashboard ID). Note duplicate empty `Kalshi-bot` hyphen vault exists.
+- Minted PAT `kalshi-bot-agent` (viewer on Kalshi Bot, expires 2027-07-28), stored as `PROTON_PASS_KALSHI_BOT_TOKEN` in `~/Projects/.env.pass-tokens`; active session in default store.
+- Verified headless: `pass-cli run` resolves `KALSHI_PRIVATE_KEY` (1674-char PEM) with zero interactive auth. Remaining for full .env.protonpass: `The Odds API` + `GitHub` items.
+- Unblocks: WS recorder capture (`tennis:record -- --ws`) once KALSHI_API_KEY_ID lands.
