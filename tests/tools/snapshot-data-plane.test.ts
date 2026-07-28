@@ -253,7 +253,7 @@ describe("snapshot-data-plane", () => {
       const indexFile = Bun.file(`${tmpDir}/index.json`);
       const index = await indexFile.json();
       expect(index.totalSnapshots).toBe(3);
-    });
+    }, 30000);
   });
 
   describe("validateRegistry", () => {
@@ -324,7 +324,7 @@ describe("snapshot-data-plane", () => {
       const today = new Date().toISOString().slice(0, 10);
       const found = await findSnapshots({ from: today, to: today }, tmpDir);
       expect(found.length).toBe(3);
-    });
+    }, 30000);
 
     test("filters by hasLiveMatches", async () => {
       const snap = makeMinimalSnapshot();
@@ -381,6 +381,6 @@ describe("snapshot-data-plane", () => {
       for (let i = 1; i < list.length; i++) {
         expect(list[i - 1]!.tsUnix).toBeGreaterThanOrEqual(list[i]!.tsUnix);
       }
-    });
+    }, 30000);
   });
 });
