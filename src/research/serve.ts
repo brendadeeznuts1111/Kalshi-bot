@@ -7,9 +7,9 @@ import {
   loadLatestProductionRunAnyDimension,
   loadRunFromDb,
 } from "./cache.ts";
-import { REPORT_DIR, joinPath } from "./paths.ts";
+import { REPORT_DIR, CACHE_DIR, joinPath } from "./paths.ts";
 import { fullNameFromRouteParams, ROUTES } from "./patterns.ts";
-import { pageLayout, renderIndex, renderRepoPage } from "./views.ts";
+import { pageLayout, renderIndex, renderOps, renderRepoPage } from "./views.ts";
 import { Database } from "bun:sqlite";
 import { partnerDetailHandler } from "../regulatory/routes/ops/partners";
 import { requireStateCompliance } from "../regulatory/middleware/state-compliance";
@@ -240,6 +240,112 @@ function handlePolymarketLineMoves(_req: Request): Response {
   return json({ lineMoves: agent.recentLineMoves(50) });
 }
 
+// ── Ops dashboard (/ops) ──
+
+const OPS_CRON_FLOWS = [
+  {
+    label: "tennis-live-canary",
+    logPath: "/tmp/bun.cron.kalshi-tennis-live-canary.stdout.log",
+    launchdLabel: "bun.cron.kalshi-tennis-live-canary",
+  },
+  {
+    label: "tennis-ws-recorder",
+    logPath: "/tmp/bun.cron.kalshi-tennis-ws-recorder.stdout.log",
+    launchdLabel: "bun.cron.kalshi-tennis-ws-recorder",
+  },
+] as const;
+
+/** launchctl list, 2s timeout; null on any failure. */
+async function probeLaunchdLabels(): Promise<Set<string> | null> {
+  try {
+    const proc = Bun.spawn(["launchctl", "list"], { stdout: "pipe", stderr: "ignore" });
+    const text = (await Promise.race([
+      new Response(proc.stdout).text(),
+      Bun.sleep(2_000).then(() => null),
+    ])) as string | null;
+    if (text == null) {
+      proc.kill();
+      return null;
+    }
+    await proc.exited;
+    return new Set(
+      text
+        .split("\n")
+        .map((l) => l.trim().split(/\s+/).pop() ?? "")
+        .filter((l) => l.startsWith("bun.cron.")),
+    );
+  } catch {
+    return null;
+  }
+}
+
+async function readCronFlow(
+  spec: (typeof OPS_CRON_FLOWS)[number],
+  launchd: Set<string> | null,
+) {
+  const file = Bun.file(spec.logPath);
+  let lastFireAt: string | null = null;
+  let lastLines: string[] = [];
+  if (await file.exists()) {
+    lastFireAt = new Date(file.lastModified).toISOString();
+    const text = await file.text();
+    lastLines = text.split("\n").filter((l) => l.trim().length > 0).slice(-3);
+  }
+  return {
+    label: spec.label,
+    logPath: spec.logPath,
+    lastFireAt,
+    lastLines,
+    launchdLoaded: launchd == null ? null : launchd.has(spec.launchdLabel),
+  };
+}
+
+async function readCanaryArtifact() {
+  const file = Bun.file(joinPath(CACHE_DIR, "tennis-canary", "latest.json"));
+  if (!(await file.exists())) return null;
+  try {
+    const raw = (await file.json()) as Record<string, unknown>;
+    const s = (raw.summary ?? {}) as Record<string, number>;
+    return {
+      at: String(raw.at ?? ""),
+      exitCode: Number(raw.exitCode ?? -1),
+      dryRun: raw.dryRun === true,
+      watched: Number(s.watched ?? 0),
+      polled: Number(s.polled ?? 0),
+      upserted: Number(s.upserted ?? 0),
+      live: Number(s.live ?? 0),
+      errors: Number(s.errors ?? 0),
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function handleOpsPage(_req: Request): Promise<Response> {
+  const roles = orchestrator.listRoles();
+  const marketData = new MarketDataAgent(regDb);
+  const launchd = await probeLaunchdLabels();
+  const flows = await Promise.all(OPS_CRON_FLOWS.map((f) => readCronFlow(f, launchd)));
+
+  return html(
+    renderOps({
+      generatedAt: new Date().toISOString(),
+      agents: {
+        orchestrator: true,
+        market_data: roles.includes("market_data"),
+        compliance: roles.includes("compliance"),
+        ops: roles.includes("ops"),
+        admin: roles.includes("admin"),
+      },
+      ticks: marketData.latestTicks(10),
+      lineMoves: marketData.recentLineMoves(10),
+      canary: await readCanaryArtifact(),
+      flows,
+      runs: listRunSummaries(5),
+    }),
+  );
+}
+
 async function handleAgentDispatch(req: Request): Promise<Response> {
   const body = (await req.json()) as Record<string, unknown>;
   const task = body.task as Parameters<typeof orchestrator.dispatch>[0];
@@ -266,6 +372,11 @@ export function createResearchServer(options: ServeOptions = {}) {
     },
     async fetch(req) {
       const url = new URL(req.url);
+
+      // Ops dashboard (read-only management page)
+      if (url.pathname === "/ops") {
+        return handleOpsPage(req);
+      }
 
       // Regulatory ops dashboard (no compliance gate, but rate-limited)
       if (url.pathname.startsWith("/ops/partners/")) {

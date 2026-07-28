@@ -31,13 +31,16 @@ export const STYLES = `
   ul.checks li.no::before { content: "✗ "; color: #cf222e; }
 `;
 
-export function pageLayout(title: string, body: string): string {
+export function pageLayout(title: string, body: string, opts?: { refreshSeconds?: number }): string {
+  const refresh = opts?.refreshSeconds
+    ? `  <meta http-equiv="refresh" content="${opts.refreshSeconds}" />\n`
+    : "";
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>${escapeHtml(title)}</title>
+${refresh}  <title>${escapeHtml(title)}</title>
   <style>${STYLES}</style>
 </head>
 <body>${body}</body>
@@ -49,6 +52,7 @@ function navLinks(): string {
     <a href="${ROUTES.home}">Home</a>
     · <a href="${ROUTES.latestReport}">latest.md</a>
     · <a href="${ROUTES.runsList}">runs.json</a>
+    · <a href="/ops">Ops</a>
   </nav>`;
 }
 
@@ -185,4 +189,157 @@ export function renderScoredTable(run: ResearchRun): string {
     <thead><tr><th>#</th><th>Repo</th><th>Score</th><th></th></tr></thead>
     <tbody>${rows}</tbody>
   </table>`;
+}
+
+// ── Ops dashboard (/ops) ──
+
+export type OpsCronFlow = {
+  label: string;
+  logPath: string;
+  lastFireAt: string | null; // log mtime ISO
+  lastLines: string[];
+  launchdLoaded: boolean | null; // null = launchd probe failed
+};
+
+export type OpsDashboardData = {
+  generatedAt: string;
+  agents: Record<string, boolean>;
+  ticks: Array<{
+    slug: string;
+    yesPrice: number;
+    spread: number;
+    volume24hr: number;
+    timestamp: number;
+  }>;
+  lineMoves: Array<{
+    slug: string;
+    direction: string;
+    oldPrice: number;
+    newPrice: number;
+    deltaBp: number;
+    detectedAt: number;
+  }>;
+  canary: {
+    at: string;
+    exitCode: number;
+    dryRun: boolean;
+    watched: number;
+    polled: number;
+    upserted: number;
+    live: number;
+    errors: number;
+  } | null;
+  flows: OpsCronFlow[];
+  runs: RunSummary[];
+};
+
+function fmtTs(ts: number): string {
+  return ts > 0 ? new Date(ts).toISOString().replace("T", " ").slice(0, 19) + "Z" : "—";
+}
+
+function renderOpsAgents(agents: Record<string, boolean>): string {
+  const rows = Object.entries(agents)
+    .map(
+      ([name, ok]) =>
+        `<li class="${ok ? "" : "no"}">${escapeHtml(name)} ${ok ? "up" : "down"}</li>`,
+    )
+    .join("\n");
+  return `<ul class="checks">${rows}</ul>`;
+}
+
+function renderOpsSignals(data: OpsDashboardData): string {
+  const tickRows = data.ticks
+    .map(
+      (t) =>
+        `<tr><td>${escapeHtml(t.slug)}</td><td>${t.yesPrice}</td><td>${t.spread}</td><td>${t.volume24hr}</td><td>${escapeHtml(fmtTs(t.timestamp))}</td></tr>`,
+    )
+    .join("\n");
+  const moveRows = data.lineMoves
+    .map(
+      (m) =>
+        `<tr><td>${escapeHtml(m.slug)}</td><td>${escapeHtml(m.direction)}</td><td>${m.oldPrice} → ${m.newPrice}</td><td>${m.deltaBp} bp</td><td>${escapeHtml(fmtTs(m.detectedAt))}</td></tr>`,
+    )
+    .join("\n");
+
+  const ticksTable = data.ticks.length
+    ? `<table>
+    <thead><tr><th>Slug</th><th>Yes</th><th>Spread</th><th>Vol 24h</th><th>At</th></tr></thead>
+    <tbody>${tickRows}</tbody>
+  </table>`
+    : `<p><em>No ticks yet — ingest via <code>POST /polymarket/ingest</code>.</em></p>`;
+
+  const movesTable = data.lineMoves.length
+    ? `<table>
+    <thead><tr><th>Slug</th><th>Dir</th><th>Price</th><th>Δ</th><th>Detected</th></tr></thead>
+    <tbody>${moveRows}</tbody>
+  </table>`
+    : `<p><em>No line moves recorded.</em></p>`;
+
+  return `<h3>Ticks (latest per market)</h3>${ticksTable}
+  <h3>Line moves</h3>${movesTable}
+  <p><a href="/polymarket/ticks">ticks.json</a> · <a href="/polymarket/line-moves">line-moves.json</a></p>`;
+}
+
+function renderOpsData(data: OpsDashboardData): string {
+  if (!data.canary) {
+    return `<p><em>No canary artifact at <code>research/cache/tennis-canary/latest.json</code> yet.</em></p>`;
+  }
+  const c = data.canary;
+  return `<p>Tennis live canary · ${escapeHtml(c.at)} · exit ${c.exitCode}${c.dryRun ? " · dry-run" : ""}</p>
+  <div class="stats">
+    <div class="stat"><strong>${c.watched}</strong> watched</div>
+    <div class="stat"><strong>${c.polled}</strong> polled</div>
+    <div class="stat"><strong>${c.upserted}</strong> upserted</div>
+    <div class="stat"><strong>${c.live}</strong> live</div>
+    <div class="stat"><strong>${c.errors}</strong> errors</div>
+  </div>`;
+}
+
+function renderOpsFlows(flows: OpsCronFlow[]): string {
+  const blocks = flows
+    .map((f) => {
+      const launchd =
+        f.launchdLoaded === null
+          ? "unknown (launchctl probe failed)"
+          : f.launchdLoaded
+            ? "loaded"
+            : "not loaded";
+      const lines = f.lastLines.length
+        ? `<pre class="diff">${escapeHtml(f.lastLines.join("\n"))}</pre>`
+        : `<p><em>No log output at <code>${escapeHtml(f.logPath)}</code>.</em></p>`;
+      return `<h3>${escapeHtml(f.label)}</h3>
+  <p>launchd: <strong>${launchd}</strong> · last fire: ${f.lastFireAt ? escapeHtml(f.lastFireAt) : "never (no log)"}</p>
+  ${lines}`;
+    })
+    .join("\n");
+  return blocks || `<p><em>No flows configured.</em></p>`;
+}
+
+function renderOpsRuns(runs: RunSummary[]): string {
+  const items = runs
+    .map(
+      (r) =>
+        `<li><code>${escapeHtml(r.runId)}</code> · ${escapeHtml(r.dimension)} · shortlist ${r.shortlist} · <a href="/api/runs/${encodeURIComponent(r.runId)}">json</a></li>`,
+    )
+    .join("\n");
+  return `<ul>${items || "<li>none</li>"}</ul>`;
+}
+
+export function renderOps(data: OpsDashboardData): string {
+  const body = `${navLinks()}
+  <h1>Ops dashboard</h1>
+  <p>Generated ${escapeHtml(data.generatedAt)} · <a href="/ops">Refresh</a> (auto 60s)</p>
+  <h2>Bot &amp; agents</h2>
+  ${renderOpsAgents(data.agents)}
+  <p><a href="/polymarket/status">status.json</a> · <a href="/regulatory/health">regulatory health</a></p>
+  <h2>Signals</h2>
+  ${renderOpsSignals(data)}
+  <h2>Data</h2>
+  ${renderOpsData(data)}
+  <h2>Flows</h2>
+  ${renderOpsFlows(data.flows)}
+  <h2>Research runs (last ${data.runs.length})</h2>
+  ${renderOpsRuns(data.runs)}`;
+
+  return pageLayout("Ops — Kalshi Bot Research", body, { refreshSeconds: 60 });
 }
