@@ -32,6 +32,11 @@ export const OFFICIAL_URLS = {
     rateLimit: "https://docs.github.com/en/rest/rate-limit/rate-limit",
     codeSearch: "https://docs.github.com/en/rest/search/search#search-code",
   },
+  polymarket: {
+    home: "https://polymarket.com/",
+    docs: "https://docs.polymarket.com/",
+    gammaApiBase: "https://gamma-api.polymarket.com",
+  },
   bun: {
     create: "https://bun.com/docs/runtime/templating/create",
     test: "https://bun.com/docs/test/index#run-tests",

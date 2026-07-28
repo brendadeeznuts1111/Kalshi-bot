@@ -12,8 +12,10 @@ import {
   type KeyObject,
 } from "node:crypto";
 import { readFileSync } from "node:fs";
+import { OFFICIAL_URLS } from "../institutions/official-urls.ts";
 
-export const KALSHI_WS_PATH = "/trade-api/ws/v2";
+const KALSHI_WS_URL = new URL(OFFICIAL_URLS.kalshi.tradeApiWsV2);
+export const KALSHI_WS_PATH = KALSHI_WS_URL.pathname;
 
 export type KalshiAccessHeaders = {
   "KALSHI-ACCESS-KEY": string;
@@ -59,7 +61,7 @@ export function signKalshiPss(privateKey: KeyObject, message: string): string {
 
 /**
  * Build access headers for method+path (path without query).
- * WebSocket handshake: method GET, path `/trade-api/ws/v2`.
+ * WebSocket handshake: method GET, path from OFFICIAL_URLS.kalshi.tradeApiWsV2.
  */
 export function kalshiAccessHeaders(
   creds: KalshiCredentials,

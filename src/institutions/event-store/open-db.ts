@@ -23,6 +23,11 @@ const SCHEMA_COLUMN_MIGRATIONS: Array<{ table: string; column: string; decl: str
   { table: "markets", column: "source", decl: "TEXT NOT NULL DEFAULT ''" },
   { table: "markets", column: "source_url", decl: "TEXT NOT NULL DEFAULT ''" },
   { table: "markets", column: "fetched_ts", decl: "INTEGER" },
+  { table: "markets", column: "volume_fp", decl: "TEXT" },
+  { table: "markets", column: "volume_24h_fp", decl: "TEXT" },
+  { table: "markets", column: "open_interest_fp", decl: "TEXT" },
+  { table: "markets", column: "yes_bid_size_fp", decl: "TEXT" },
+  { table: "markets", column: "yes_ask_size_fp", decl: "TEXT" },
   { table: "book_ticks", column: "market_kind", decl: "TEXT NOT NULL DEFAULT ''" },
   { table: "book_ticks", column: "source_url", decl: "TEXT NOT NULL DEFAULT ''" },
   { table: "book_ticks", column: "recv_ts", decl: "INTEGER" },
@@ -68,6 +73,21 @@ export function openEventStore(options: OpenEventStoreOptions = {}): Database {
 export function applyEventStoreSchema(db: Database): void {
   const sql = readFileSync(SCHEMA_SQL_PATH, "utf8");
   db.exec(sql);
+  // Player profiles table — not in schema.sql because it was added post-hoc.
+  db.run(`CREATE TABLE IF NOT EXISTS player_profiles (
+    player_name TEXT PRIMARY KEY,
+    first_seen_ts INTEGER NOT NULL,
+    last_seen_ts INTEGER NOT NULL,
+    appearances INTEGER NOT NULL DEFAULT 0,
+    wins INTEGER NOT NULL DEFAULT 0,
+    losses INTEGER NOT NULL DEFAULT 0,
+    win_rate REAL,
+    surfaces TEXT NOT NULL DEFAULT '{}',
+    avg_kalshi_volume_fp REAL,
+    best_of INTEGER,
+    corpus TEXT NOT NULL DEFAULT 'trading'
+  )`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_player_profiles_win_rate ON player_profiles (win_rate)`);
   migrateEventStoreColumns(db);
 }
 

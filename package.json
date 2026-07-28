@@ -54,9 +54,23 @@
     "tennis:experiment": "bun tools/tennis/experiment-cli.ts",
     "tennis:experiment:register": "bun tools/tennis/experiment-schedule-cli.ts register",
     "tennis:experiment:remove": "bun tools/tennis/experiment-schedule-cli.ts remove",
-    "tennis:experiment:preview": "bun tools/tennis/experiment-schedule-cli.ts preview"
+    "tennis:experiment:preview": "bun tools/tennis/experiment-schedule-cli.ts preview",
+    "tennis:profiles:build": "bun tools/tennis/build-player-profiles.ts",
+    "tennis:profiles:dry": "bun tools/tennis/build-player-profiles.ts --dry-run",
+    "regulatory:admin": "bun src/regulatory/scripts/admin.ts",
+    "regulatory:migrate": "bun src/regulatory/scripts/migrate.ts",
+    "regulatory:sweep": "bun src/regulatory/scripts/sweep-violations.ts",
+    "db:generate": "bunx drizzle-kit generate",
+    "db:push": "bunx drizzle-kit push",
+    "db:studio": "bunx drizzle-kit studio",
+    "db:check": "bunx drizzle-kit check",
+    "protonpass:check": "bun tools/protonpass-run.ts --env-check",
+    "protonpass:run": "bun tools/protonpass-run.ts --"
   },
   "engines": {
     "bun": ">=1.3.13"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.45.2"
   }
 }

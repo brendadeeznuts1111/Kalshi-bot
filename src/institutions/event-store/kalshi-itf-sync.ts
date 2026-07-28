@@ -10,6 +10,14 @@ import {
   parseItfYesSideCode,
 } from "../../alpha/ticker-formats/itf.ts";
 import {
+  TOUR_SERIES_TICKERS,
+  tourFromSeries,
+  tourSideCodesForEvent,
+  parseTourEventTicker,
+  parseTourSeriesPrefix,
+  parseTourYesSideCode,
+} from "../../alpha/ticker-formats/tour.ts";
+import {
   fetchAllKalshiMarkets,
   fetchKalshiEvent,
   type KalshiFetchImpl,
@@ -94,6 +102,9 @@ const KALSHI_ORDERBOOK_URL = (ticker: KalshiMarketTicker) =>
   `${OFFICIAL_URLS.kalshi.tradeApiV2Base}/markets/${encodeURIComponent(unbrand(ticker))}/orderbook`;
 const TRADING_CORPUS = "trading";
 
+/** All tennis series Kalshi offers — ITF + Tour + Challenger. */
+export const ALL_TENNIS_SERIES = [...ITF_SERIES_TICKERS, ...TOUR_SERIES_TICKERS] as const;
+
 function parseRulesBlob(markets: KalshiMarketWire[]): string {
   const primary = markets[0]?.rules_primary ?? "";
   const secondary = markets[0]?.rules_secondary ?? "";
@@ -110,6 +121,34 @@ function extractTournament(title: string, subTitle: string): string {
   const m = title.match(/:\s*(.+?)\s+(?:Round|match)/i);
   if (m?.[1]) return m[1].trim();
   return subTitle.split("(")[0]?.trim() || title;
+}
+
+/** Extract location from Kalshi event sub_title (e.g. "Wimbledon (London)") or product metadata. */
+function extractLocation(subTitle: string): string {
+  const fromParen = subTitle.match(/\(([^)]+)\)/);
+  if (fromParen?.[1]) return fromParen[1].trim();
+  return "";
+}
+
+/** Resolve series-specific side-code parser and tour label. */
+function seriesHelpers(series: SeriesTicker) {
+  const plain = unbrand(series);
+  if (ITF_SERIES_TICKERS.includes(plain as (typeof ITF_SERIES_TICKERS)[number])) {
+    return {
+      tourLabel: (s: SeriesTicker) => itfTourFromSeries(unbrand(s)),
+      sideCodesForEvent: itfSideCodesForEvent,
+      parseYesSideCode: parseItfYesSideCode,
+      parseEventTicker: parseItfEventTicker,
+      parseSeriesPrefix: parseItfSeriesPrefix,
+    };
+  }
+  return {
+    tourLabel: (s: SeriesTicker) => tourFromSeries(unbrand(s)),
+    sideCodesForEvent: tourSideCodesForEvent,
+    parseYesSideCode: parseTourYesSideCode,
+    parseEventTicker: parseTourEventTicker,
+    parseSeriesPrefix: parseTourSeriesPrefix,
+  };
 }
 
 async function fetchAllKalshiMarketsRetry(
@@ -138,12 +177,12 @@ function dedupeMarketsByTicker(markets: KalshiMarketWire[]): KalshiMarketWire[] 
   return [...byTicker.values()];
 }
 
-export async function fetchOpenItfMarkets(
+export async function fetchOpenTennisMarkets(
+  seriesList: readonly string[] = ALL_TENNIS_SERIES,
   options: ItfFetchOptions = {},
 ): Promise<KalshiMarketWire[]> {
-  // Sequential — parallel series fan-out trips public rate limits.
   const out: KalshiMarketWire[] = [];
-  for (const series of ITF_SERIES_TICKERS) {
+  for (const series of seriesList) {
     out.push(
       ...(await fetchAllKalshiMarketsRetry(
         { series_ticker: asSeriesTicker(series), status: "open" },
@@ -154,21 +193,25 @@ export async function fetchOpenItfMarkets(
   return out;
 }
 
-export type RetainedItfMarkets = {
+/** @deprecated Use `fetchOpenTennisMarkets(ITF_SERIES_TICKERS)` */
+export async function fetchOpenItfMarkets(
+  options: ItfFetchOptions = {},
+): Promise<KalshiMarketWire[]> {
+  return fetchOpenTennisMarkets(ITF_SERIES_TICKERS, options);
+}
+
+export type RetainedTennisMarkets = {
   markets: KalshiMarketWire[];
   byStatus: ItfMarketsByStatus;
 };
 
-/**
- * Open ITF markets plus closed/settled within retainDays (default 3).
- * Sequential per series × status — rate-limit safe. Dedupes by market ticker.
- */
-export async function fetchRetainedItfMarkets(
+export async function fetchRetainedTennisMarkets(
+  seriesList: readonly string[] = ALL_TENNIS_SERIES,
   options: ItfFetchOptions & { retainDays?: number } = {},
-): Promise<RetainedItfMarkets> {
+): Promise<RetainedTennisMarkets> {
   const retainDays = options.retainDays ?? DEFAULT_ITF_RETAIN_DAYS;
   if (retainDays <= 0) {
-    const open = await fetchOpenItfMarkets(options);
+    const open = await fetchOpenTennisMarkets(seriesList, options);
     return { markets: open, byStatus: { open: open.length, closed: 0, settled: 0 } };
   }
   const nowMs = options.nowMs ?? Date.now();
@@ -176,8 +219,7 @@ export async function fetchRetainedItfMarkets(
   const open: KalshiMarketWire[] = [];
   const closed: KalshiMarketWire[] = [];
   const settled: KalshiMarketWire[] = [];
-  // Sequential — parallel series fan-out trips public rate limits.
-  for (const series of ITF_SERIES_TICKERS) {
+  for (const series of seriesList) {
     const seriesTicker = asSeriesTicker(series);
     open.push(
       ...(await fetchAllKalshiMarketsRetry({ series_ticker: seriesTicker, status: "open" }, options)),
@@ -199,6 +241,13 @@ export async function fetchRetainedItfMarkets(
     markets: dedupeMarketsByTicker([...open, ...closed, ...settled]),
     byStatus: { open: open.length, closed: closed.length, settled: settled.length },
   };
+}
+
+/** @deprecated Use `fetchRetainedTennisMarkets(ITF_SERIES_TICKERS)` */
+export async function fetchRetainedItfMarkets(
+  options: ItfFetchOptions & { retainDays?: number } = {},
+): Promise<RetainedTennisMarkets> {
+  return fetchRetainedTennisMarkets(ITF_SERIES_TICKERS, options);
 }
 
 /** Map Kalshi yes/no settlement onto yes_side_label competitors. */
@@ -252,16 +301,17 @@ function upsertKalshiEvent(
   ingestedAt: number,
 ): UpsertKalshiEventResult {
   const sample = markets[0]!;
-  const series = asSeriesTicker(parseItfSeriesPrefix(unbrand(sample.ticker)) ?? "KXITFMATCH");
+  const series = asSeriesTicker(parseTennisSeriesPrefix(unbrand(sample.ticker)) ?? "KXITFMATCH");
+  const helpers = seriesHelpers(series);
   const labels = playerLabels(markets);
-  const sideCodes = itfSideCodesForEvent(
+  const sideCodes = helpers.sideCodesForEvent(
     unbrand(eventTicker),
     markets.map((m) => unbrand(m.ticker)),
   );
   if (!sideCodes) {
     return {
       ok: false,
-      anomaly: `ambiguous_itf_blob:${unbrand(eventTicker)} — refuse best-guess side split`,
+      anomaly: `ambiguous_blob:${unbrand(eventTicker)} — refuse best-guess side split`,
     };
   }
   const startTs = sample.occurrence_datetime?.trim() ?? "";
@@ -284,7 +334,6 @@ function upsertKalshiEvent(
     };
   }
   const sourceRowHash = kalshiSourceRowHash(eventTicker);
-  // Stable venue row: reuse prior event_id when occurrence drifts a minute (hash is ticker-only).
   const prior = db
     .query(`SELECT event_id AS eventId FROM events WHERE source_row_hash = $hash`)
     .get({ $hash: sourceRowHash }) as { eventId: string } | null;
@@ -298,15 +347,13 @@ function upsertKalshiEvent(
   const loser = settlement?.loser ?? "";
   const outcome = settlement?.outcome ?? "scheduled";
 
-  // Preserve bridged Stadion winner/outcome/score_text across re-sync (INSERT OR REPLACE wiped them).
-  // When no bridge yet, closed/settled Kalshi result fills winner/outcome via excluded.*.
   db.query(
     `INSERT INTO events (
       event_id, tour, level, tournament, location, surface, court, round, best_of,
       player_a, player_b, winner, loser, start_ts, outcome, score_text, source, source_url, fetched_ts,
       source_row_hash, ingested_at, corpus
     ) VALUES (
-      $event_id, $tour, $level, $tournament, '', 'unknown', '', $round, NULL,
+      $event_id, $tour, $level, $tournament, $location, 'unknown', '', $round, NULL,
       $player_a, $player_b, $winner, $loser, $start_ts, $outcome, '', $source, $source_url, $fetched_ts,
       $source_row_hash, $ingested_at, $corpus
     )
@@ -314,6 +361,7 @@ function upsertKalshiEvent(
       tour = excluded.tour,
       level = excluded.level,
       tournament = excluded.tournament,
+      location = CASE WHEN length(excluded.location) > 0 THEN excluded.location ELSE events.location END,
       round = excluded.round,
       player_a = excluded.player_a,
       player_b = excluded.player_b,
@@ -333,9 +381,10 @@ function upsertKalshiEvent(
       END`,
   ).run({
     $event_id: unbrand(eventId),
-    $tour: itfTourFromSeries(series),
-    $level: eventSubTitle || series,
+    $tour: helpers.tourLabel(series),
+    $level: eventSubTitle || unbrand(series),
     $tournament: extractTournament(eventTitle, eventSubTitle),
+    $location: extractLocation(eventSubTitle),
     $round: extractRound(eventTitle, rules),
     $player_a: playerA,
     $player_b: playerB,
@@ -352,15 +401,17 @@ function upsertKalshiEvent(
   });
 
   for (const m of markets) {
-    const sideCode = parseItfYesSideCode(unbrand(m.ticker)) ?? "";
+    const sideCode = helpers.parseYesSideCode(unbrand(m.ticker)) ?? "";
     const mSeries = asSeriesTicker(parseTennisSeriesPrefix(unbrand(m.ticker)) ?? unbrand(series));
     db.query(
       `INSERT OR REPLACE INTO markets (
         market_id, event_id, venue, ticker, series, market_kind, yes_side_label, side_code,
-        competitor_id, rules_blob, settlement_ts, source, source_url, fetched_ts
+        competitor_id, rules_blob, settlement_ts, source, source_url, fetched_ts,
+        volume_fp, volume_24h_fp, open_interest_fp, yes_bid_size_fp, yes_ask_size_fp
       ) VALUES (
         $market_id, $event_id, $venue, $ticker, $series, $market_kind, $yes_side_label, $side_code,
-        $competitor_id, $rules_blob, NULL, $source, $source_url, $fetched_ts
+        $competitor_id, $rules_blob, NULL, $source, $source_url, $fetched_ts,
+        $volume_fp, $volume_24h_fp, $open_interest_fp, $yes_bid_size_fp, $yes_ask_size_fp
       )`,
     ).run({
       $market_id: unbrand(kalshiMarketId(m.ticker)),
@@ -376,6 +427,11 @@ function upsertKalshiEvent(
       $source: KALSHI_SOURCE,
       $source_url: `${KALSHI_MARKETS_URL}?ticker=${encodeURIComponent(unbrand(m.ticker))}`,
       $fetched_ts: ingestedAt,
+      $volume_fp: m.volume_fp ?? null,
+      $volume_24h_fp: m.volume_24h_fp ?? null,
+      $open_interest_fp: m.open_interest_fp ?? null,
+      $yes_bid_size_fp: m.yes_bid_size_fp ?? null,
+      $yes_ask_size_fp: m.yes_ask_size_fp ?? null,
     });
   }
 
@@ -396,7 +452,6 @@ export async function fetchLadderMarketsForEvent(
       coverage: summarizeLadderCoverage(family, blob, []),
     };
   }
-  // Sequential — parallel fan-out across ~20 ATP ladder series trips public rate limits.
   const markets: KalshiMarketWire[] = [];
   for (const series of seriesList) {
     try {
@@ -417,22 +472,25 @@ export async function fetchLadderMarketsForEvent(
   return { markets, coverage: summarizeLadderCoverage(family, blob, tickers) };
 }
 
-export type SyncItfEventsOptions = ItfFetchOptions & {
+export type SyncTennisEventsOptions = ItfFetchOptions & {
   fetchEventDetails?: boolean;
   eventTickers?: KalshiEventTicker[];
-  /**
-   * Days of closed/settled markets to retain (default 3).
-   * `0` = open-only (legacy behavior).
-   */
+  /** Days of closed/settled markets to retain (default 3). `0` = open-only. */
   retainDays?: number;
+  /** Series to scan — defaults to all tennis (ITF + Tour + Challenger). */
+  series?: readonly string[];
 };
 
-export async function syncItfEvents(
+/** @deprecated Prefer `SyncTennisEventsOptions` */
+export type SyncItfEventsOptions = SyncTennisEventsOptions;
+
+export async function syncTennisEvents(
   db: Database,
-  options: SyncItfEventsOptions = {},
+  options: SyncTennisEventsOptions = {},
 ): Promise<ItfSyncSummary> {
+  const seriesList = options.series ?? ALL_TENNIS_SERIES;
   const retainDays = options.retainDays ?? DEFAULT_ITF_RETAIN_DAYS;
-  const retained = await fetchRetainedItfMarkets({
+  const retained = await fetchRetainedTennisMarkets(seriesList, {
     fetchImpl: options.fetchImpl,
     baseUrl: options.baseUrl,
     nowMs: options.nowMs,
@@ -488,7 +546,7 @@ export async function syncItfEvents(
   }
 
   return {
-    seriesScanned: ITF_SERIES_TICKERS.length,
+    seriesScanned: seriesList.length,
     marketsSeen: markets.length,
     marketsSeenByStatus: retained.byStatus,
     retainDays,
@@ -499,10 +557,18 @@ export async function syncItfEvents(
   };
 }
 
-/** @deprecated Prefer `syncItfEvents` — retainDays defaults to 3; pass `retainDays: 0` for open-only. */
+/** @deprecated Prefer `syncTennisEvents` — pass `series: ITF_SERIES_TICKERS` for ITF-only. */
+export async function syncItfEvents(
+  db: Database,
+  options: SyncTennisEventsOptions = {},
+): Promise<ItfSyncSummary> {
+  return syncTennisEvents(db, { ...options, series: ITF_SERIES_TICKERS });
+}
+
+/** @deprecated Prefer `syncTennisEvents` */
 export async function syncOpenItfEvents(
   db: Database,
-  options: SyncItfEventsOptions = {},
+  options: SyncTennisEventsOptions = {},
 ): Promise<ItfSyncSummary> {
   return syncItfEvents(db, options);
 }
@@ -532,7 +598,7 @@ export async function recordKalshiBookTicks(
 
   if (options.syncFirst && tickers.length > 0) {
     const events = tickers
-      .map((t) => parseItfEventTicker(unbrand(t)))
+      .map((t) => parseItfEventTicker(unbrand(t)) ?? parseTourEventTicker(unbrand(t)))
       .filter((e): e is string => Boolean(e))
       .map((e) => asKalshiEventTicker(e));
     if (events.length) {
@@ -544,7 +610,7 @@ export async function recordKalshiBookTicks(
   for (const ticker of tickers) {
     const tickerPlain = unbrand(ticker);
     const eventTickerWire =
-      parseItfEventTicker(tickerPlain) ?? tickerPlain.replace(/-[A-Z0-9]+$/, "");
+      parseItfEventTicker(tickerPlain) ?? parseTourEventTicker(tickerPlain) ?? tickerPlain.replace(/-[A-Z0-9]+$/, "");
     const eventTicker = tryKalshiEventTicker(eventTickerWire);
     if (!eventTicker) {
       errors++;
@@ -555,7 +621,6 @@ export async function recordKalshiBookTicks(
       .query(`SELECT event_id AS eventId FROM markets WHERE ticker = $ticker`)
       .get({ $ticker: tickerPlain }) as { eventId: string } | null;
     if (!mapped?.eventId) {
-      // Never ticker-mint phantom event_ids — book_ticks must join synced markets.
       errors++;
       continue;
     }
@@ -563,7 +628,6 @@ export async function recordKalshiBookTicks(
     const kind = marketKindFromTicker(ticker);
     try {
       const book: BookSnapshot = await fetchBook(ticker);
-      // Per-ticker wall clock after REST response — not one stamp for the whole pass.
       const recvTs = Date.now();
       db.query(
         `INSERT INTO book_ticks (

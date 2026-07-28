@@ -8,6 +8,77 @@ Canonical URLs: [Bun docs index](https://bun.com/docs/llms.txt) — use the [@se
 
 Deep dive: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns)
 
+## `bunx` — zero-install CLI tools
+
+For dev-time or one-off utilities, prefer `bunx` over adding to `package.json`:
+
+```bash
+# Schema introspection / migration (dev only — not in package.json deps)
+bunx drizzle-kit generate   # generate migration from schema.ts
+bunx drizzle-kit push       # push schema to DB
+bunx drizzle-kit studio     # browse tables in browser
+
+# Lint / audit (run on demand)
+bunx @biomejs/biome check src/
+bunx knip                   # find unused exports
+```
+
+Rule: if a tool is **not imported at runtime**, it stays out of `dependencies`/`devDependencies` — use `bunx`.
+
+## Drizzle ORM — type-safe SQLite
+
+This project uses **`drizzle-orm`** (~12 KB runtime) over `bun:sqlite` for type-safe queries. `drizzle-kit` is **never** a project dependency — run it via `bunx`.
+
+| Layer | File | Role |
+|-------|------|------|
+| Schema SSOT | [`src/db/schema.ts`](../src/db/schema.ts) | Drizzle table definitions (parallel to `schema.sql`) |
+| Client | [`src/db/client.ts`](../src/db/client.ts) | `drizzle(bun:sqlite)` wrapper with lazy init + reset for tests |
+| Raw SQL fallback | [`open-db.ts`](../src/institutions/event-store/open-db.ts) | Existing `db.query()` / `db.run()` still works |
+
+**Query examples:**
+
+```typescript
+import { db, schema } from "../db/client.ts";
+import { eq, gt, and } from "drizzle-orm";
+
+// Type-safe select
+const itfEvents = await db
+  .select()
+  .from(schema.events)
+  .where(eq(schema.events.tour, "ITF-M"));
+
+// Relational: events with their markets
+const eventWithMarkets = await db.query.events.findMany({
+  where: eq(schema.events.tour, "ITF-M"),
+  with: { markets: true },   // defined in schema relations
+});
+
+// Aggregate
+const topPlayers = await db
+  .select()
+  .from(schema.playerProfiles)
+  .where(gt(schema.playerProfiles.winRate, 0.6))
+  .orderBy(schema.playerProfiles.avgKalshiVolumeFp);
+```
+
+**Migration workflow (dev-only, via bunx):**
+
+```bash
+# 1. Edit src/db/schema.ts
+# 2. Generate migration
+bunx drizzle-kit generate
+
+# 3. Push to local DB
+bunx drizzle-kit push
+
+# 4. (Optional) browse
+bunx drizzle-kit studio
+```
+
+Legacy raw SQL in `kalshi-itf-sync.ts`, `cache.ts`, etc. is preserved — Drizzle is additive, not a rewrite mandate.
+
+Deep dive: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns)
+
 ## Bun API map
 
 | Capability | Runtime utility | Used in |
@@ -550,6 +621,17 @@ bun pm cache rm                    # clear ~/.bun/install/cache
 [`tsconfig.json`](../tsconfig.json): `"module": "Preserve"`, `"moduleResolution": "bundler"`, `"noEmit": true`, `"types": ["bun"]`.
 
 ## Dependency smell test
+
+| If you need… | Use instead |
+|--------------|-------------|
+| GitHub HTTP | `gh.ts` (`Bun.$`) |
+| File cache | `cache.ts` (`bun:sqlite`) |
+| Read/write JSON artifacts | `io.ts` |
+| Parallel map | `pool.ts` |
+| CLI flags | `parseArgs` |
+| Unit tests | `bun:test` + `mock.module` |
+| Type-safe SQLite queries | `src/db/schema.ts` + `src/db/client.ts` (`drizzle-orm`) |
+| SQLite migration tool (dev) | `bunx drizzle-kit` (not in package.json) |
 
 | If you need… | Use instead |
 |--------------|-------------|

@@ -50,6 +50,11 @@ CREATE TABLE IF NOT EXISTS markets (
   source TEXT NOT NULL DEFAULT '',
   source_url TEXT NOT NULL DEFAULT '',
   fetched_ts INTEGER,
+  volume_fp TEXT,
+  volume_24h_fp TEXT,
+  open_interest_fp TEXT,
+  yes_bid_size_fp TEXT,
+  yes_ask_size_fp TEXT,
   UNIQUE (ticker)
 );
 

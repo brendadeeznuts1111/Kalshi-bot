@@ -1,0 +1,34 @@
+# Proton Pass secret references for the Kalshi Bot project.
+# Copy to .env.protonpass (gitignored) and adjust vault/item names if yours differ.
+# See docs/PROTONPASS.md for setup instructions.
+#
+# Format: pass://<vault-name>/<item-title>/<field-name>
+# pass-cli resolves these at runtime from your encrypted Proton Pass vault.
+
+# === KALSHI API (REST + WebSocket auth) ===
+# Item: "Kalshi API" in your vault
+# Fields: keyId, privateKey (inline PEM), privateKeyPath (absolute path)
+KALSHI_API_KEY_ID=pass://Kalshi Bot/Kalshi API/keyId
+KALSHI_PRIVATE_KEY=pass://Kalshi Bot/Kalshi API/privateKey
+# KALSHI_PRIVATE_KEY_PATH=pass://Kalshi Bot/Kalshi API/privateKeyPath
+
+# === THE ODDS API (Pinnacle consensus feed) ===
+# Item: "The Odds API" in your vault
+# Field: apiKey
+ODDS_API_KEY=pass://Kalshi Bot/The Odds API/apiKey
+
+# === GITHUB (rate-limit checks + research pipeline) ===
+# Item: "GitHub" in your vault
+# Field: token
+GH_TOKEN=pass://Kalshi Bot/GitHub/token
+
+# === ENVIRONMENT GATES (optional) ===
+# Item: "Kalshi Environment" in your vault
+# KALSHI_ENV=pass://Kalshi Bot/Kalshi Environment/env
+# KALSHI_PROD_ARMED=pass://Kalshi Bot/Kalshi Environment/prodArmed
+
+# === RESEARCH PIPELINE (optional non-secret overrides) ===
+# These can stay in a plain .env file if you prefer
+# RESEARCH_MIN_STARS=5
+# RESEARCH_SHORTLIST=12
+# PORT=3456

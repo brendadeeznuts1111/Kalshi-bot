@@ -17,6 +17,20 @@ function arg(name: string): string | undefined {
   return Bun.argv.find((a) => a.startsWith(`--${name}=`))?.slice(name.length + 3);
 }
 
+/** Map Kalshi series prefix → The Odds API sport key. */
+function oddsSportFromTicker(ticker: string): string {
+  const prefix = ticker.split("-", 1)[0] ?? "";
+  if (prefix.startsWith("KXWTAMATCH")) return "tennis_wta";
+  if (prefix.startsWith("KXATPCHALLENGER")) return "tennis_atp_challenger";
+  if (prefix.startsWith("KXWTACHALLENGER")) return "tennis_wta_challenger";
+  // Default: ATP tour (most common)
+  if (prefix.startsWith("KXATPMATCH")) return "tennis_atp";
+  // Fallback for any other KX…MATCH prefix
+  if (prefix.includes("WTA")) return "tennis_wta";
+  if (prefix.includes("CHALLENGER")) return "tennis_atp_challenger";
+  return "tennis_atp";
+}
+
 async function loadEvents(offline: boolean, sport: string) {
   if (offline) {
     console.error("Refusing --offline for baseline — live ODDS_API_KEY required for measuring stick data.");
@@ -29,7 +43,7 @@ async function loadEvents(offline: boolean, sport: string) {
 if (import.meta.main) {
   const ticker = arg("ticker");
   const priceArg = arg("price");
-  const sport = arg("sport") ?? "tennis";
+  const explicitSport = arg("sport");
   const eventId = arg("event") ?? "pending-map";
   const live = Bun.argv.includes("--live");
   const offline = Bun.argv.includes("--offline");
@@ -37,11 +51,12 @@ if (import.meta.main) {
 
   if (!ticker || (!priceArg && !fetchBook)) {
     console.error(
-      "Usage: bun src/run-once.ts --ticker=KXATPMATCH-... (--price=55 | --fetch-book) [--sport=tennis] [--live]",
+      "Usage: bun src/run-once.ts --ticker=KXATPMATCH-... (--price=55 | --fetch-book) [--sport=tennis_atp] [--live]",
     );
     process.exit(1);
   }
 
+  const sport = explicitSport ?? oddsSportFromTicker(ticker);
   const events = await loadEvents(offline, sport);
   setOddsEvents(events);
 

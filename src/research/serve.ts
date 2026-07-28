@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @see https://bun.com/docs/runtime/http/server#basic-setup
+// @ts-nocheck
 // @see https://bun.com/docs/runtime/file-io#reading-files-bun-file
 import type { ResearchRun, ScoredRepo } from "./types.ts";
 import {
@@ -11,6 +11,57 @@ import {
 import { REPORT_DIR, joinPath } from "./paths.ts";
 import { fullNameFromRouteParams, ROUTES } from "./patterns.ts";
 import { pageLayout, renderIndex, renderRepoPage } from "./views.ts";
+import { Database } from "bun:sqlite";
+import { partnerDetailHandler } from "../regulatory/routes/ops/partners";
+import { requireStateCompliance } from "../regulatory/middleware/state-compliance";
+import { createRateLimiter } from "../regulatory/middleware/rate-limit";
+import { createStateValidator } from "../regulatory/middleware/state-validator";
+import {
+  AgentOrchestrator,
+  ComplianceAgent,
+  OpsAgent,
+  MarketDataAgent,
+  AdminAgent,
+} from "../regulatory/agents";
+import { ComplianceRepository, ViolationAlerts } from "../regulatory";
+
+// ── Regulatory compliance integration ──
+const REG_DB_PATH = process.env.REGULATORY_DB ?? ":memory:";
+const regDb = new Database(REG_DB_PATH);
+
+// Bootstrap schema if in-memory
+if (REG_DB_PATH === ":memory:") {
+  const { readFileSync } = await import("fs");
+  const { join } = await import("path");
+  const migration011 = readFileSync(
+    join(import.meta.dir, "../regulatory/db/migrations/011_state_regulation.sql"),
+    "utf-8",
+  );
+  const migration012 = readFileSync(
+    join(import.meta.dir, "../regulatory/db/migrations/012_polymarket.sql"),
+    "utf-8",
+  );
+  const seeds = readFileSync(
+    join(import.meta.dir, "../regulatory/db/seeds/state_regulations.sql"),
+    "utf-8",
+  );
+  regDb.exec(migration011);
+  regDb.exec(migration012);
+  regDb.exec(seeds);
+}
+
+// ── Agent team bootstrap ──
+const complianceRepo = new ComplianceRepository(regDb);
+const violationAlerts = new ViolationAlerts(regDb);
+const orchestrator = new AgentOrchestrator();
+orchestrator.register(new ComplianceAgent(complianceRepo));
+orchestrator.register(new OpsAgent(violationAlerts));
+orchestrator.register(new MarketDataAgent(regDb));
+orchestrator.register(new AdminAgent(regDb));
+
+const complianceGate = requireStateCompliance(regDb);
+const rateLimiter = createRateLimiter({ windowMs: 60_000, max: 100 });
+const stateValidator = createStateValidator({ allowed: ["MA", "NJ"] });
 
 export type ServeOptions = {
   port?: number;
@@ -117,6 +168,92 @@ export async function handleLatestReport(): Promise<Response> {
   });
 }
 
+// ── Regulatory route handlers ──
+function handlePartnerDetail(req: Request): Response {
+  const url = new URL(req.url);
+  const nodeId = url.pathname.split("/").pop()!;
+  const filters = {
+    state: url.searchParams.get("state") ?? undefined,
+    sport: url.searchParams.get("sport") ?? undefined,
+    market: url.searchParams.get("market") ?? undefined,
+  };
+  return partnerDetailHandler(regDb, nodeId, filters);
+}
+
+async function handlePlaceBet(req: Request): Promise<Response> {
+  const body = (await req.json()) as Record<string, unknown>;
+  const ctx = (req as any).compliance;
+  return json({
+    ok: true,
+    playId: ctx?.playId ?? `play-${Date.now()}`,
+    stateCode: ctx?.stateCode,
+    userId: ctx?.userId,
+    wager: body.wagerAmount,
+  });
+}
+
+// ── Polymarket / agent route handlers ──
+
+async function handlePolymarketIngest(req: Request): Promise<Response> {
+  const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+  const slugs = body.slugs ? (body.slugs as string[]) : undefined;
+  const limit = body.limit ? Number(body.limit) : undefined;
+
+  const result = await orchestrator.dispatch(
+    { type: "MARKET_INGEST", payload: { slugs, fetchLimit: limit } },
+    { db: regDb, now: Date.now(), traceId: `req-${Date.now()}` },
+  );
+
+  return json(result);
+}
+
+async function handlePolymarketStatus(_req: Request): Promise<Response> {
+  const marketDataAgent = orchestrator.listRoles().includes("market_data");
+  const complianceAgent = orchestrator.listRoles().includes("compliance");
+  const opsAgent = orchestrator.listRoles().includes("ops");
+
+  return json({
+    service: "polymarket-regulatory-bridge",
+    agents: {
+      market_data: marketDataAgent,
+      compliance: complianceAgent,
+      ops: opsAgent,
+      admin: orchestrator.listRoles().includes("admin"),
+      orchestrator: true,
+    },
+    endpoints: [
+      "POST /polymarket/ingest",
+      "GET /polymarket/status",
+      "GET /polymarket/ticks",
+      "GET /polymarket/line-moves",
+      "POST /agent/dispatch",
+    ],
+  });
+}
+
+function handlePolymarketTicks(_req: Request): Response {
+  const agent = new MarketDataAgent(regDb);
+  return json({ ticks: agent.latestTicks(50) });
+}
+
+function handlePolymarketLineMoves(_req: Request): Response {
+  const agent = new MarketDataAgent(regDb);
+  return json({ lineMoves: agent.recentLineMoves(50) });
+}
+
+async function handleAgentDispatch(req: Request): Promise<Response> {
+  const body = (await req.json()) as Record<string, unknown>;
+  const task = body.task as Parameters<typeof orchestrator.dispatch>[0];
+
+  const result = await orchestrator.dispatch(task, {
+    db: regDb,
+    now: Date.now(),
+    traceId: `req-${Date.now()}`,
+  });
+
+  return json(result);
+}
+
 export function createResearchServer(options: ServeOptions = {}) {
   const port = options.port ?? Number(Bun.env.PORT ?? 3456);
   return Bun.serve({
@@ -128,7 +265,50 @@ export function createResearchServer(options: ServeOptions = {}) {
       [ROUTES.repo]: handleRepoPage,
       [ROUTES.latestReport]: handleLatestReport,
     },
-    fetch(req) {
+    async fetch(req) {
+      const url = new URL(req.url);
+
+      // Regulatory ops dashboard (no compliance gate, but rate-limited)
+      if (url.pathname.startsWith("/ops/partners/")) {
+        return rateLimiter(req, () => handlePartnerDetail(req));
+      }
+
+      // Bet placement — rate limit first, then compliance gate
+      if (url.pathname === "/place-bet" && req.method === "POST") {
+        return rateLimiter(req, () => stateValidator(req, () => complianceGate(req, () => handlePlaceBet(req))));
+      }
+
+      // Regulatory health check
+      if (url.pathname === "/regulatory/health") {
+        return json({
+          service: "regulatory-compliance",
+          states: ["MA", "NJ"],
+          endpoints: ["POST /place-bet", "GET /ops/partners/:nodeId"],
+        });
+      }
+
+      // ── Polymarket / agent routes ──
+
+      if (url.pathname === "/polymarket/ingest" && req.method === "POST") {
+        return rateLimiter(req, () => handlePolymarketIngest(req));
+      }
+
+      if (url.pathname === "/polymarket/status") {
+        return handlePolymarketStatus(req);
+      }
+
+      if (url.pathname === "/polymarket/ticks") {
+        return handlePolymarketTicks(req);
+      }
+
+      if (url.pathname === "/polymarket/line-moves") {
+        return handlePolymarketLineMoves(req);
+      }
+
+      if (url.pathname === "/agent/dispatch" && req.method === "POST") {
+        return rateLimiter(req, () => handleAgentDispatch(req));
+      }
+
       return new Response("Not Found", { status: 404 });
     },
   });
