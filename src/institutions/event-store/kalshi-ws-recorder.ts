@@ -10,6 +10,7 @@ import type { Database } from "bun:sqlite";
 import { KalshiMarketWs, kalshiWsReconnectBackoffMs, type KalshiWsFactory, type KalshiWsWire } from "../../bot/kalshi-ws.ts";
 import { loadKalshiCredentials, type KalshiCredentials } from "../../bot/kalshi-auth.ts";
 import {
+  KALSHI_WS_ERROR_LABELS,
   parseKalshiWsErrorWire,
   shouldReconnectKalshiWsError,
   type KalshiWsServerError,
@@ -58,7 +59,61 @@ export type WsRecorderSummary = {
   wsErrors: number;
   subscribed: number;
   resyncRequests: number;
+  /**
+   * Classified error occurrences. Numeric keys ("9") = official Kalshi wire codes
+   * (see KALSHI_WS_ERROR_LABELS); E_* keys = local probe taxonomy (classifyProbeError).
+   */
+  errorCodes?: Record<string, number>;
 };
+
+/** Local probe error taxonomy (keys of WsRecorderSummary.errorCodes). */
+export type ProbeErrorCode =
+  | "E_PARSE" // wire frame / payload parse failure
+  | "E_DB" // sqlite write / DB mapping failure
+  | "E_TIMEOUT" // command / fetch timeout
+  | "E_HANDSHAKE" // WS connect/handshake failure (incl. HTTP 401 on upgrade)
+  | "E_AUTH" // credential load / signing / 401 signature failures
+  | "E_NET" // other socket / network failure
+  | "E_UNKNOWN";
+
+/** Classify a local (non-wire) error into the probe taxonomy from its message. */
+export function classifyProbeError(err: unknown): ProbeErrorCode {
+  const msg = err instanceof Error ? err.message : String(err);
+  if (/INCORRECT_API_KEY_SIGNATURE|\b401\b|Missing KALSHI_\w+|authentication/i.test(msg)) {
+    return "E_AUTH";
+  }
+  if (/timeout|timed out/i.test(msg)) return "E_TIMEOUT";
+  if (/SQLITE|sqlite/i.test(msg)) return "E_DB";
+  if (/Expected 101|handshake|upgrade/i.test(msg)) return "E_HANDSHAKE";
+  if (/JSON|parse/i.test(msg)) return "E_PARSE";
+  if (/ECONNREFUSED|ENOTFOUND|EAI_AGAIN|network|socket|WebSocket|fetch failed/i.test(msg)) return "E_NET";
+  return "E_UNKNOWN";
+}
+
+/** Bump one error-code bucket (tolerates summaries built before errorCodes existed). */
+export function recordProbeErrorCode(summary: WsRecorderSummary, code: string): void {
+  const map = (summary.errorCodes ??= {});
+  map[code] = (map[code] ?? 0) + 1;
+}
+
+/**
+ * Bracketed top-N error codes for the one-line summary, e.g.
+ * ` [E_AUTH×13]` or ` [9:Authentication required×9,E_TIMEOUT×4]`. "" when clean.
+ */
+export function formatProbeErrorCodes(
+  summary: Pick<WsRecorderSummary, "errorCodes">,
+  max = 3,
+): string {
+  const entries = Object.entries(summary.errorCodes ?? {}).sort((a, b) => b[1] - a[1]);
+  if (entries.length === 0) return "";
+  const parts = entries.slice(0, max).map(([code, n]) => {
+    const label = /^\d+$/.test(code)
+      ? KALSHI_WS_ERROR_LABELS[Number(code) as keyof typeof KALSHI_WS_ERROR_LABELS]
+      : undefined;
+    return label ? `${code}:${label}×${n}` : `${code}×${n}`;
+  });
+  return ` [${parts.join(",")}]`;
+}
 
 export type WsRecorderOptions = {
   leadMinutes?: number;
@@ -130,6 +185,7 @@ export function applyKalshiWsWireError(
 ): boolean {
   summary.wsErrors++;
   summary.errors++;
+  recordProbeErrorCode(summary, String(err.code));
   return shouldReconnectKalshiWsError(err.code);
 }
 
@@ -256,6 +312,7 @@ export async function runKalshiWsWatchRecorder(
     wsErrors: 0,
     subscribed: 0,
     resyncRequests: 0,
+    errorCodes: {},
   };
   const dryRun = options.dryRun === true;
   const refreshMs = options.refreshMs ?? TENNIS_WS_WATCH_REFRESH_MS;
@@ -268,7 +325,17 @@ export async function runKalshiWsWatchRecorder(
   let orderbookSid: number | null = null;
   let attempt = 0;
 
-  const creds = options.creds ?? (dryRun ? undefined : loadKalshiCredentials());
+  let creds = options.creds;
+  if (!creds && !dryRun) {
+    try {
+      creds = loadKalshiCredentials();
+    } catch (err) {
+      // No credentials at all — classify and bail instead of throwing away the summary.
+      summary.errors++;
+      recordProbeErrorCode(summary, classifyProbeError(err));
+      return summary;
+    }
+  }
 
   const shouldStop = () =>
     options.signal?.aborted === true ||
@@ -329,7 +396,10 @@ export async function runKalshiWsWatchRecorder(
         },
         onMessage: (wire, recvTs) => {
           if (wire.type === "error") {
-            if (!parseKalshiWsErrorWire(wire)) summary.errors++;
+            if (!parseKalshiWsErrorWire(wire)) {
+              summary.errors++;
+              recordProbeErrorCode(summary, "E_PARSE");
+            }
             return;
           }
           if (wire.type === "subscribed" && typeof wire.sid === "number") {
@@ -345,7 +415,11 @@ export async function runKalshiWsWatchRecorder(
           if (result.kind === "snapshot") summary.snapshots++;
           if (result.kind === "delta") summary.deltas++;
           if (result.kind === "duplicate") summary.duplicates++;
-          if (result.kind === "error") summary.errors++;
+          if (result.kind === "error") {
+            summary.errors++;
+            // Book/DB handling failure (missing event mapping, delta apply, insert).
+            recordProbeErrorCode(summary, "E_DB");
+          }
           if (result.kind === "gap") {
             summary.seqGaps++;
             const book = result.ticker ? books.get(result.ticker) : undefined;
@@ -355,8 +429,9 @@ export async function runKalshiWsWatchRecorder(
               try {
                 client.requestSnapshots(orderbookSid, [result.ticker]);
                 summary.resyncRequests++;
-              } catch {
+              } catch (err) {
                 summary.errors++;
+                recordProbeErrorCode(summary, classifyProbeError(err));
               }
             }
           }
@@ -369,10 +444,16 @@ export async function runKalshiWsWatchRecorder(
           }
           if (shouldStop()) client.close();
         },
-        onError: () => {
+        onError: (err) => {
           summary.errors++;
+          recordProbeErrorCode(summary, classifyProbeError(err));
         },
-        onClose: () => {
+        onClose: (code, reason) => {
+          // Handshake failures (e.g. HTTP 401 on upgrade → close 1002 "Expected 101")
+          // carry the cause only in the close frame — classify without double-counting errors.
+          if (code === 1002 || /Expected 101|handshake|401/i.test(reason)) {
+            recordProbeErrorCode(summary, classifyProbeError(reason));
+          }
           if (refreshTimer) clearInterval(refreshTimer);
           if (onAbort && options.signal) options.signal.removeEventListener("abort", onAbort);
           sessionDone?.();
@@ -391,8 +472,9 @@ export async function runKalshiWsWatchRecorder(
 
     try {
       client.connect();
-    } catch {
+    } catch (err) {
       summary.errors++;
+      recordProbeErrorCode(summary, classifyProbeError(err));
       await Bun.sleep(kalshiWsReconnectBackoffMs(attempt, reconnectBaseMs));
       continue;
     }

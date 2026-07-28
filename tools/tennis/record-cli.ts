@@ -35,7 +35,7 @@ import {
   resolveTennisLeadMinutes,
   resolveTennisWatchLimit,
 } from "../../src/institutions/event-store/tennis-lane-constants.ts";
-import { runKalshiWsWatchRecorder } from "../../src/institutions/event-store/kalshi-ws-recorder.ts";
+import { formatProbeErrorCodes, runKalshiWsWatchRecorder } from "../../src/institutions/event-store/kalshi-ws-recorder.ts";
 import {
   asKalshiEventTicker,
   asKalshiMarketTicker,
@@ -181,7 +181,8 @@ export async function runTennisRecordCli(argv: string[]): Promise<number> {
         console.log(
           `WS: ticks=${summary.ticksRecorded} snapshots=${summary.snapshots} deltas=${summary.deltas}` +
             ` gaps=${summary.seqGaps} dup=${summary.duplicates} resync=${summary.resyncRequests}` +
-            ` wsErrors=${summary.wsErrors} errors=${summary.errors} subscribed=${summary.subscribed}`,
+            ` wsErrors=${summary.wsErrors} errors=${summary.errors} subscribed=${summary.subscribed}` +
+            formatProbeErrorCodes(summary),
         );
       }
     } finally {

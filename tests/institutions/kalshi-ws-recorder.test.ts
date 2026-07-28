@@ -2,6 +2,8 @@
 import { describe, expect, test } from "bun:test";
 import {
   applyKalshiWsWireError,
+  classifyProbeError,
+  formatProbeErrorCodes,
   handleOrderbookWire,
 } from "../../src/institutions/event-store/kalshi-ws-recorder.ts";
 import { openEventStore } from "../../src/institutions/event-store/open-db.ts";
@@ -18,16 +20,48 @@ describe("kalshi-ws-recorder", () => {
       wsErrors: 0,
       subscribed: 0,
       resyncRequests: 0,
+      errorCodes: {} as Record<string, number>,
     };
     expect(
       applyKalshiWsWireError(summary, { code: 9, message: "Authentication required", userError: true }),
     ).toBe(true);
     expect(summary.wsErrors).toBe(1);
     expect(summary.errors).toBe(1);
+    expect(summary.errorCodes["9"]).toBe(1);
     expect(
       applyKalshiWsWireError(summary, { code: 2, message: "Params required", userError: true }),
     ).toBe(false);
     expect(summary.wsErrors).toBe(2);
+    expect(summary.errorCodes["2"]).toBe(1);
+  });
+
+  test("classifyProbeError: parse failure → E_PARSE", () => {
+    expect(classifyProbeError(new Error("Unexpected token < in JSON at position 0"))).toBe("E_PARSE");
+    expect(classifyProbeError("frame parse failed")).toBe("E_PARSE");
+  });
+
+  test("classifyProbeError: 401-style error → E_AUTH", () => {
+    expect(classifyProbeError(new Error("INCORRECT_API_KEY_SIGNATURE"))).toBe("E_AUTH");
+    expect(classifyProbeError(new Error("HTTP 401 on upgrade"))).toBe("E_AUTH");
+    expect(classifyProbeError(new Error("Missing KALSHI_API_KEY_ID (or KALSHI_ACCESS_KEY)"))).toBe("E_AUTH");
+  });
+
+  test("classifyProbeError: remaining taxonomy buckets", () => {
+    expect(classifyProbeError(new Error("Expected 101 status code"))).toBe("E_HANDSHAKE");
+    expect(classifyProbeError(new Error("SQLITE_BUSY: database is locked"))).toBe("E_DB");
+    expect(classifyProbeError(new Error("command timed out"))).toBe("E_TIMEOUT");
+    expect(classifyProbeError(new Error("fetch failed"))).toBe("E_NET");
+    expect(classifyProbeError(new Error("connect ECONNREFUSED 127.0.0.1"))).toBe("E_NET");
+    expect(classifyProbeError(new Error("something odd"))).toBe("E_UNKNOWN");
+  });
+
+  test("formatProbeErrorCodes brackets top-3 with wire-code labels", () => {
+    expect(
+      formatProbeErrorCodes({ errorCodes: { "9": 9, E_TIMEOUT: 4, E_NET: 2, E_PARSE: 1 } }),
+    ).toBe(" [9:Authentication required×9,E_TIMEOUT×4,E_NET×2]");
+    expect(formatProbeErrorCodes({ errorCodes: { E_AUTH: 13 } })).toBe(" [E_AUTH×13]");
+    expect(formatProbeErrorCodes({ errorCodes: {} })).toBe("");
+    expect(formatProbeErrorCodes({})).toBe("");
   });
 
   test("delta with ts_ms stamps source_clock=exchange and ts=ts_ms", () => {

@@ -28,6 +28,7 @@ import {
   type TennisWsRecorderSessionArtifact,
   type TennisWsRecorderTrend,
 } from "../institutions/event-store/tennis-ws-recorder-store.ts";
+import { formatProbeErrorCodes } from "../institutions/event-store/kalshi-ws-recorder.ts";
 import {
   loadLatestExperimentSession,
   type ExperimentSessionArtifact,
@@ -283,7 +284,8 @@ export function formatTennisGround(report: TennisGroundReport): string {
       `  at=${s.at}  duration=${s.durationMs}ms  subscribed=${s.subscribedTickers}  fp=${s.fingerprint}`,
       `  ticks=${s.ticksRecorded} snapshots=${s.snapshots} deltas=${s.deltas}` +
         ` gaps=${s.seqGaps} dup=${s.duplicates} resync=${s.resyncRequests}` +
-        ` wsErrors=${s.wsErrors ?? 0} errors=${s.errors}`,
+        ` wsErrors=${s.wsErrors ?? 0} errors=${s.errors}` +
+        formatProbeErrorCodes(s),
     );
   }
 
