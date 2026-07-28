@@ -10,3 +10,18 @@ shell = "bun"
 coverage = true
 coverageReporter = ["text"]
 coverageDir = "coverage"
+
+# ============================================================================
+# TOML Configuration
+# ============================================================================
+# This project uses Bun.TOML.parse() for native TOML loading (no extra deps).
+# Runtime config lives in ./config.toml and is loaded by src/lib/config.ts.
+#
+# Override any key at runtime via env vars:
+#   KALSHI__REGULATORY__DATABASE_PATH=/tmp/test.db bun run script.ts
+#
+# Native API reference:
+#   Bun.TOML.parse(string) -> object
+#   Bun.TOML.stringify(object) -> string
+# @see https://bun.com/docs/api/toml
+# ============================================================================

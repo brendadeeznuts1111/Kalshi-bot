@@ -5,13 +5,15 @@
  * Re-exports:
  *   - Constants (PLAY_STATUS, LICENSE_STATUS, BET_TYPE, HEADER, HTTP_STATUS, etc.)
  *   - ScopedRepository, Scope, ScopedRow
- *   - ComplianceRepository, BetCheckParams, BetCheckResult, BetBlockedError
+ *   - ComplianceRepository, BetCheckParams, BetCheckResult
  *   - requireStateCompliance middleware + ComplianceContext
  *   - createRateLimiter middleware
  *   - ViolationAlerts
  *   - partnerDetailHandler route
  *   - Polymarket integration (fetchers, line tracker)
  *   - Agent team (orchestrator, compliance, ops, market-data, admin)
+ *   - Typed error hierarchy (RegulatoryError, BetBlockedError, etc.)
+ *   - Audit trail (AuditTrail, AuditEntry)
  *
  * Usage:
  *   import { ComplianceRepository, requireStateCompliance, createRateLimiter, PLAY_STATUS } from "./regulatory";
@@ -45,7 +47,6 @@ export {
 
 export {
   ComplianceRepository,
-  BetBlockedError,
   type BetCheckParams,
   type BetCheckResult,
 } from "./lib/compliance-repo";
@@ -112,6 +113,7 @@ export {
 // ── Typed errors ──
 export {
   RegulatoryError,
+  BetBlockedError,
   BetTypeNotAllowedError,
   WagerOutOfBoundsError,
   SelfExcludedError,
@@ -128,3 +130,5 @@ export {
   type ErrorContext,
 } from "./lib/errors";
 
+// ── Audit trail ──
+export { AuditTrail, type AuditEntry } from "./lib/audit";

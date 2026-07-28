@@ -1,0 +1,21 @@
+{
+  "v": 1,
+  "createdAt": "2026-07-28T17:36:10.179Z",
+  "updatedAt": "2026-07-28T17:36:10.179Z",
+  "totalSnapshots": 1,
+  "totalBytes": 1558,
+  "compressedBytes": 0,
+  "latestRun": "keeper-2026-07-28-173609-599",
+  "entries": [
+    {
+      "run": "keeper-2026-07-28-173609-599",
+      "ts": "2026-07-28T17:36:09.599Z",
+      "tsUnix": 1785260169599,
+      "fingerprint": "e78581ab",
+      "file": "snapshots/keeper-2026-07-28-173609-599-e78581ab.json",
+      "sizeBytes": 1558,
+      "compressed": false,
+      "hasLiveMatches": true
+    }
+  ]
+}

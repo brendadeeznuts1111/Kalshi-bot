@@ -7,7 +7,8 @@
 import { Database } from "bun:sqlite";
 import { AGENT_ROLE, TABLE, POLYMARKET, PLAY_STATUS, SQL_UNIXEPOCH } from "../constants";
 import type { Agent, AgentContext, AgentResult, AgentTask } from "./orchestrator.ts";
-import { ComplianceRepository, BetBlockedError } from "../lib/compliance-repo.ts";
+import { ComplianceRepository } from "../lib/compliance-repo.ts";
+import { BetBlockedError } from "../lib/errors.ts";
 
 export class ComplianceAgent implements Agent {
   readonly role = AGENT_ROLE.COMPLIANCE;

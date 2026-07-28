@@ -2,8 +2,12 @@
 # Copy to .env.protonpass (gitignored) and adjust vault/item names if yours differ.
 # See docs/PROTONPASS.md for setup instructions.
 #
-# Format: pass://<vault-name>/<item-title>/<field-name>
-# pass-cli resolves these at runtime from your encrypted Proton Pass vault.
+# Format (bare URI for `pass-cli run --env-file`):
+#   pass://<vault-name>/<item-title>/<field-name>
+# Docs:
+#   https://protonpass.github.io/pass-cli/commands/contents/secret-references/
+#   https://protonpass.github.io/pass-cli/commands/contents/run/
+# Note: `pass-cli inject` uses {{ pass://... }} — this file is for `run`, not inject.
 
 # === KALSHI API (REST + WebSocket auth) ===
 # Item: "Kalshi API" in your vault

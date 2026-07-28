@@ -39,6 +39,8 @@
     "alpha:run": "bun src/alpha/run-shadow-once.ts",
     "tennis:events": "bun tools/tennis/events-cli.ts",
     "tennis:itf": "bun tools/tennis/itf-calendar-cli.ts",
+    "tennis:tour": "bun tools/tennis/tour-sync-cli.ts",
+    "tennis:outcomes": "bun tools/tennis/backfill-outcomes.ts",
     "tennis:record": "bun tools/tennis/record-cli.ts",
     "tennis:ws-ground": "bun tools/tennis/tennis-ws-ground-cli.ts",
     "tennis:collect": "bun tools/tennis/collect-results-cli.ts",
@@ -71,6 +73,7 @@
     "bun": ">=1.3.13"
   },
   "dependencies": {
-    "drizzle-orm": "^0.45.2"
+    "drizzle-orm": "^0.45.2",
+    "zod": "^4.4.3"
   }
 }

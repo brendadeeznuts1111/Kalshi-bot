@@ -14,7 +14,8 @@
 
 import { describe, expect, test, beforeAll, afterAll } from "bun:test";
 import { Database } from "bun:sqlite";
-import { ComplianceRepository, BetBlockedError } from "../../src/regulatory/lib/compliance-repo";
+import { ComplianceRepository } from "../../src/regulatory/lib/compliance-repo";
+import { BetBlockedError } from "../../src/regulatory/lib/errors";
 import { ScopedRepository, type Scope } from "../../src/regulatory/lib/repository";
 import { createRateLimiter } from "../../src/regulatory/middleware/rate-limit";
 import { ViolationAlerts } from "../../src/regulatory/lib/alerting";

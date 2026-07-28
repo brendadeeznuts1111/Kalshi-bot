@@ -18,6 +18,7 @@
 import { Database } from "bun:sqlite";
 import { readFileSync, readdirSync } from "fs";
 import { join, basename } from "path";
+import { databasePath, migration } from "../config";
 
 const RESET = "\x1b[0m";
 function colorize(text: string, color: string): string {
@@ -33,11 +34,11 @@ const c = {
   bold: (t: string) => `\x1b[1m${t}${RESET}`,
 };
 
-const MIGRATIONS_DIR = join(import.meta.dir, "../db/migrations");
+const MIGRATIONS_DIR = join(import.meta.dir, "..", migration.migrationsDir);
 
 function parseArgs(argv: string[]): { dbPath: string } {
   const idx = argv.indexOf("--db");
-  return { dbPath: idx >= 0 ? argv[idx + 1] : (process.env.REGULATORY_DB ?? ":memory:") };
+  return { dbPath: idx >= 0 ? argv[idx + 1] : databasePath };
 }
 
 function ensureMigrationsTable(db: Database): void {

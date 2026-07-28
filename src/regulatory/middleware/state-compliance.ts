@@ -11,7 +11,8 @@
  */
 
 import type { Database } from "bun:sqlite";
-import { ComplianceRepository, BetBlockedError } from "../lib/compliance-repo";
+import { ComplianceRepository } from "../lib/compliance-repo";
+import { BetBlockedError } from "../lib/errors";
 import { HEADER, HTTP_STATUS, CONTENT_TYPE, DEFAULT_USER_ID } from "../constants";
 
 export interface BetRequestBody {

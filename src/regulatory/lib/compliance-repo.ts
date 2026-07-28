@@ -6,6 +6,7 @@
  */
 
 import { Database } from "bun:sqlite";
+import { BetBlockedError } from "./errors";
 import {
   PLAY_STATUS,
   DEFAULT_COUNTRY_CODE,
@@ -305,13 +306,3 @@ export class ComplianceRepository {
   }
 }
 
-/** Thrown when a bet is blocked by compliance. */
-export class BetBlockedError extends Error {
-  constructor(
-    message: string,
-    public readonly ruleId?: number,
-  ) {
-    super(message);
-    this.name = "BetBlockedError";
-  }
-}

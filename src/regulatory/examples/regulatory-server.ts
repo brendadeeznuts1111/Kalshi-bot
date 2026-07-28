@@ -16,9 +16,10 @@ import { requireStateCompliance } from "../middleware/state-compliance";
 import { partnerDetailHandler } from "../routes/ops/partners";
 import { readFileSync } from "fs";
 import { join } from "path";
+import { databasePath } from "../config";
+import { config } from "../../lib/config";
 
-const DB_PATH = process.env.REGULATORY_DB ?? ":memory:";
-const db = new Database(DB_PATH);
+const db = new Database(databasePath);
 
 // ── Bootstrap schema + seeds (in-memory or file) ──
 const migration011 = readFileSync(
@@ -75,7 +76,7 @@ function json(data: unknown, status = 200): Response {
 
 // ── Server ──
 const server = Bun.serve({
-  port: Number(process.env.PORT ?? 7100),
+  port: config.server.port,
   async fetch(req) {
     const url = new URL(req.url);
 

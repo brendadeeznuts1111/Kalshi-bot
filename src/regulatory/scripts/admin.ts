@@ -12,8 +12,7 @@
 
 import { Database } from "bun:sqlite";
 import { TABLE, SQL_UNIXEPOCH } from "../constants";
-
-const DB_PATH = process.env.REGULATORY_DB ?? ":memory:";
+import { databasePath } from "../config";
 
 // ── ANSI color helpers via Bun.color ──
 const RESET = "\x1b[0m";
@@ -75,11 +74,11 @@ ${c.info("Commands:")}
 }
 
 function getDb(): Database {
-  if (DB_PATH !== ":memory:" && !Bun.file(DB_PATH).exists()) {
-    console.error(c.err(`✖ Database not found: ${DB_PATH}`));
+  if (databasePath !== ":memory:" && !Bun.file(databasePath).exists()) {
+    console.error(c.err(`✖ Database not found: ${databasePath}`));
     process.exit(1);
   }
-  return new Database(DB_PATH, { create: true });
+  return new Database(databasePath, { create: true });
 }
 
 // ── Self-exclusion commands ──

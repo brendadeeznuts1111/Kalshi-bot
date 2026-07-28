@@ -6,6 +6,7 @@
  */
 
 import { OFFICIAL_URLS } from "../../institutions/official-urls.ts";
+import { fetchWithRetry, type RetryOptions } from "../../institutions/resilient-fetch.ts";
 
 export type PolymarketFetchImpl = (
   input: string | URL | Request,
@@ -87,7 +88,7 @@ export type PolymarketLineMove = {
 export type PolymarketClientOptions = {
   baseUrl?: string;
   fetchImpl?: PolymarketFetchImpl;
-};
+} & Omit<RetryOptions, "fetchImpl">;
 
 function resolveBaseUrl(explicit?: string): string {
   return (
@@ -105,8 +106,13 @@ function resolveFetch(options: PolymarketClientOptions): PolymarketFetchImpl {
 async function getJson<T>(
   fetchImpl: PolymarketFetchImpl,
   url: string,
+  retryOptions?: Omit<RetryOptions, "fetchImpl">,
 ): Promise<T> {
-  const res = await fetchImpl(url, { headers: { Accept: "application/json" } });
+  const res = await fetchWithRetry(
+    url,
+    { headers: { Accept: "application/json" } },
+    { ...retryOptions, fetchImpl },
+  );
   if (!res.ok) {
     throw new Error(`Polymarket API ${url}: ${res.status} ${res.statusText}`);
   }

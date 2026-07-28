@@ -218,3 +218,14 @@ Daily entries from the data-plane keeper run. Newest at the bottom.
 - **Snapshot registry created**: `research/registry/data-plane-snapshots.jsonl` + `tools/snapshot-data-plane.ts` — structured point-in-time capture of data-plane state (rows, file sizes, coverage, canary, blockers, sources)."Kalshi Bot" vault. KALSHI_API_KEY_ID and ODDS_API_KEY remain inaccessible until main-account `pass-cli login` is completed (needs browser flow or main-account PAT). No orders placed, no src/ changes, no commit.
 
 ---
+
+## 2026-07-28 12:36 CDT (snapshot-enhanced keeper)
+
+- `tennis:itf -- --sync`: OK (exit 0); synced 928 events / 1856 markets (1860 legs: open=304, settled=1556, retainDays=3). Bridge linked=831, unmatched=286, resolutions+=831. Skipped 2 ambiguous blobs (hard-fail by design).
+- `tennis:collect -- --days=1`: OK — 2026-07-28 +0 inserted, 132 updated; bridge linked=831, resolutions+=831.
+- `tennis:live -- --canary`: OK, exit 0, wire_ok=true — watch=3, polled=3, live=2, would_upsert=2. Live: Mecarelli/Orlov (ITF-M), Haavisto-Nuudi/Ottavia-Stagno (ITF-WD).
+- `rate-limit:status`: OK — code_search=10/10 (reset 17:36Z), core=4931/5000, search=30/30. G0 unblocked.
+- Row counts (event-store.db): events=3567 (+32), markets=4896 (+70), resolutions=1950 (trading=1950), book_ticks=1967 (kalshi-rest=1788 / kalshi-ws=179), event_links=1117, live_scores=10, score_snapshots=10, player_profiles=2790.
+- **Snapshot captured**: `keeper-2026-07-28-173609-599` → artifact + index + hot registry at `research/registry/`. 16 snapshot tests pass (compression, fingerprint, prune, validate, find, list). `SnapshotIndex` type exported; `findSnapshots`/`listSnapshots` return `DataPlaneSnapshot[]`.
+- Drift/errors: no canary drift (exit 0); WS gap still open (kalshi-ws=179, 0% watch-set coverage); no orders placed, no src/ changes, no commit.
+

@@ -171,6 +171,19 @@ bun tools/protonpass-run.ts -- bun run alpha:run -- --program=tennis-tour-pinnac
 ```bash
 bun run protonpass:check
 # or: bun tools/protonpass-run.ts --env-check
+# Prints: session, vaults, env-file URIs, parallel fetch results, cache status
+```
+
+### Audit secret health
+
+```bash
+bun tools/protonpass-run.ts --health-check
+# Scores all secrets 0–100 on accessibility, speed, and cache hits
+```
+
+```bash
+bun run protonpass:check
+# or: bun tools/protonpass-run.ts --env-check
 # Prints: session, vaults, env-file URIs, first-URI resolve (values masked)
 ```
 
@@ -254,6 +267,94 @@ If you previously used `.env` for secrets:
 4. `.env` remains gitignored — `.env.protonpass` is also gitignored
 
 Optional FactoryWager-style path: use [`inject`](https://protonpass.github.io/pass-cli/commands/contents/inject/) with `{{ pass://… }}` in an `env.template` to materialize a plain `.env` cache. This repo's default remains `run` + `.env.protonpass`.
+
+## Bun-native capabilities (v2)
+
+The wrapper (`tools/protonpass-run.ts`) is built entirely on Bun-native APIs with zero external dependencies.
+
+| Capability | Bun API | Module |
+|------------|---------|--------|
+| **Parallel secret fetch** | `Promise.allSettled` | `src/protonpass/parallel-fetch.ts` |
+| **Secret caching (TTL)** | `Bun.file` + `Bun.write` | `src/protonpass/cache.ts` |
+| **Retry with backoff** | `Bun.sleep` | `src/protonpass/retry.ts` |
+| **Command timeout** | `Promise.race` + `proc.kill()` | `src/protonpass/timeout.ts` |
+| **Structured logging** | `Bun.inspect` | `src/protonpass/logger.ts` |
+| **Secret health score** | `Bun.inspect.table` | `src/protonpass/health.ts` |
+| **CLI discovery** | `Bun.which()` | `tools/protonpass-run.ts` |
+| **Telemetry timing** | `Bun.nanoseconds()` | `src/protonpass/parallel-fetch.ts` |
+| **Subprocess execution** | `Bun.spawn()` | `tools/protonpass-run.ts` |
+
+### Parallel secret fetch
+
+All `pass://` URIs in `.env.protonpass` are resolved concurrently via `Promise.allSettled`, then cached. A single 4-secret env file drops from ~12s (sequential) to ~3s (parallel).
+
+```bash
+# 4 URIs fetched in parallel, not one-by-one
+bun tools/protonpass-run.ts -- bun run rate-limit:status
+```
+
+### Secret caching with TTL
+
+Resolved secrets are cached in `.protonpass-cache.json` (gitignored) with configurable TTL. Subsequent runs skip ProtonPass API calls entirely for cached secrets.
+
+```bash
+# Cache for 1 hour (3600 seconds)
+bun tools/protonpass-run.ts --cache-ttl=3600 -- bun run research
+
+# Default TTL is 15 minutes (900s)
+```
+
+The cache auto-purges expired entries on every `--env-check` run.
+
+### Retry with exponential backoff
+
+Each `pass-cli item view` is wrapped in `withRetry` with jitter:
+- Base delay: 500ms
+- Max delay: 10s
+- Jitter: up to 30% random variance
+- Max attempts: 2 (fast path; increase for CI)
+
+### Command timeout
+
+All `pass-cli` subprocesses have a 15s timeout. If they hang, they receive `SIGTERM`, then `SIGKILL` after 2s.
+
+### Structured logging
+
+Three modes: `pretty` (colorized terminal), `json` (machine-parseable), `quiet` (errors only). Controlled by the logger, not CLI flags today.
+
+```typescript
+import { createLogger } from "./src/protonpass/logger.ts";
+const log = createLogger({ prefix: "my-module", mode: "json" });
+log.info("Fetched secret", { uri, durationMs: 1200 });
+```
+
+### Secret health score
+
+Audit all secrets for accessibility, speed, and cache hit rate. Returns a 0–100 score.
+
+```bash
+bun tools/protonpass-run.ts --health-check
+# Output:
+# === Secret Health Audit ===
+# Health Score: 75/100
+# Total Secrets: 4
+# Accessible: 3
+# Errors: 1
+# Cache Hits: 2
+# Avg Fetch: 2300ms
+# Overall: 🟡 Good
+```
+
+### SSH temp file (PEM auto-detection)
+
+When `KALSHI_PRIVATE_KEY` resolves to inline PEM content, the wrapper automatically:
+1. Writes it to a temp file with `0o600` permissions
+2. Sets `KALSHI_PRIVATE_KEY_PATH` to that temp file
+3. Cleans up the temp file on process exit
+
+This avoids multiline string handling issues in child processes.
+
+---.
 
 ## Troubleshooting
 
