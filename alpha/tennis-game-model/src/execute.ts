@@ -20,6 +20,7 @@ export type ExecuteOptions = {
   ticker: string;
   eventId?: string;
   dbPath?: string;
+  batchMode?: boolean;
 };
 
 export function liveArmed(programName: string, cliLive: boolean): boolean {
@@ -78,6 +79,7 @@ export async function executeOnce(options: ExecuteOptions): Promise<void> {
     decision,
     priceCents,
     side: decision.side ?? "yes",
+    batchMode: options.batchMode,
   });
 
   console.log(

@@ -105,6 +105,7 @@ export async function runBatchShadow(
         ticker: row.ticker,
         eventId: row.event_id,
         dbPath: options.dbPath,
+        batchMode: true,
       });
       processed++;
     } catch (err) {

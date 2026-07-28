@@ -198,9 +198,12 @@ Daily entries from the data-plane keeper run. Newest at the bottom.
 - `research -- --dimension=market-making --export-audit`: **PARTIAL** — discover=93 candidates, gate=7 passed, inspect blocked — needs ~147 code_search calls (7 repos × 21 queries), only 10 available. Retry after 14:35Z reset or use `--offline`.
 - `tennis:record -- --ws --duration=300`: **BLOCKED** — Missing KALSHI_API_KEY_ID. Live match window present but WS recorder cannot authenticate. ProtonPass `pass-cli` session exists but not logged in.
 - Row counts (event-store.db): events=3535, resolutions=1950, book_ticks=1967 (kalshi-rest=1794, kalshi-ws=179), event_links=1117, player_profiles=2790.
-- Shadow predictions (ITF): 130 lines in `alpha/tennis-game-model/shadow-log.jsonl` (unchanged this session).
+- `alpha/tennis-game-model/batch-shadow.ts`: **FIXED + OK** — previous run failed with "Missing program manifest" because CWD was project root; running from `alpha/tennis-game-model/` fixes path resolution. 78 ITF tickers processed, 0 skipped. Shadow-log grew from 130 → 174 lines (+44 new predictions). Many skipped due to "both players unknown to corpus" (default-vs-default prior) — expected for new/lesser-known ITF players.
+- Shadow predictions (ITF): 174 lines in `alpha/tennis-game-model/shadow-log.jsonl` (+44 this session).
 - No orders placed, no prod arming, no src/ changes after commit.
 - **Next actions**: (1) `pass-cli login` → `bun tools/protonpass-run.ts -- bun run tennis:record -- --ws` during live windows; (2) after 14:35Z code_search reset, retry `research --dimension=market-making`; (3) `ODDS_API_KEY` for tour-series shadow loop.
+- **Snapshot registry**: `research/registry/data-plane-snapshots.jsonl` — new structured snapshot system capturing point-in-time data-plane state. First entry: `keeper-2026-07-28-1451` (events=3535, markets=4832, resolutions=1950, book_ticks=1967, canary live=1). Tool: `bun tools/snapshot-data-plane.ts`.
+- No orders placed, no prod arming. Committing weave + this log on `main` (not pushing).
 - No orders placed, no prod arming. Committing weave + this log on `main` (not pushing).
 
 ## 2026-07-28 09:01 CDT (post-fix re-run)
@@ -212,5 +215,6 @@ Daily entries from the data-plane keeper run. Newest at the bottom.
 - `rate-limit:status`: **FIXED** — code_search 10/10, core 5000/5000, search 30/30. G0 unblocked.
 - Row counts (event-store.db): events=3535 (+29), resolutions=1950 (+2), book_ticks=1961 (+8), live_scores=10, canary history=401 entries.
 - **Remaining blockers**: ProtonPass `pass-cli` session for Kalshi Bot vault still missing. Desktop app is running (logged into main account) but CLI has no session. Tested all 5 service-account PATs from `.env.pass-tokens` — none grant access to "Kalshi Bot" vault. KALSHI_API_KEY_ID and ODDS_API_KEY remain inaccessible until main-account `pass-cli login` is completed (needs browser flow or main-account PAT). No orders placed, no src/ changes, no commit.
+- **Snapshot registry created**: `research/registry/data-plane-snapshots.jsonl` + `tools/snapshot-data-plane.ts` — structured point-in-time capture of data-plane state (rows, file sizes, coverage, canary, blockers, sources)."Kalshi Bot" vault. KALSHI_API_KEY_ID and ODDS_API_KEY remain inaccessible until main-account `pass-cli login` is completed (needs browser flow or main-account PAT). No orders placed, no src/ changes, no commit.
 
 ---

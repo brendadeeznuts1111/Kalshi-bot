@@ -313,6 +313,10 @@ export function selectDueToxicityMarks(
     if (line.decision.action !== "trade") continue;
     if (markedRefs.has(line.lineHash)) continue;
     if (line.toxicity.markedTs != null) continue;
+    if (line.toxicity.dueTs < 0) continue; // batch mode — no toxicity mark needed
+    if (line.decision.action !== "trade") continue;
+    if (markedRefs.has(line.lineHash)) continue;
+    if (line.toxicity.markedTs != null) continue;
 
     if (options?.forceDue && options.allowStaleMark) {
       toMark.push(line);

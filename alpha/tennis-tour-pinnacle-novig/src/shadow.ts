@@ -24,6 +24,8 @@ export type ShadowAppendInput = {
   decision: Decision;
   priceCents: number;
   side: "yes" | "no";
+  /** When true, disables toxicity mark tracking (batch/backtest mode). */
+  batchMode?: boolean;
 };
 
 function resolveLogPath(manifest: ProgramManifest, programRoot = "."): string {
@@ -68,12 +70,14 @@ export async function appendShadowLine(
     vwapFillCents,
     filledContracts,
     midAtFillCents: midAtFill,
-    toxicity: {
-      dueTs: ts + TOXICITY_DUE_OFFSET_MS,
-      markedTs: null,
-      midCents: null,
-      movedAgainst: null,
-    },
+    toxicity: input.batchMode
+      ? { dueTs: -1, markedTs: null, midCents: null, movedAgainst: null }
+      : {
+          dueTs: ts + TOXICITY_DUE_OFFSET_MS,
+          markedTs: null,
+          midCents: null,
+          movedAgainst: null,
+        },
     outcome: null,
   };
 

@@ -14,6 +14,7 @@ import {
   type KalshiCredentials,
 } from "./kalshi-auth.ts";
 import type { KalshiFetchImpl } from "./kalshi-events-api.ts";
+import { OFFICIAL_URLS } from "../institutions/official-urls.ts";
 
 export type KalshiOrderSide = "yes" | "no";
 
@@ -34,8 +35,8 @@ export type KalshiOrderResult = {
 };
 
 export const KALSHI_REST_BASE = {
-  demo: "https://external-api.demo.kalshi.co/trade-api/v2",
-  prod: "https://external-api.kalshi.com/trade-api/v2",
+  demo: OFFICIAL_URLS.kalshi.tradeApiV2BaseDemo,
+  prod: OFFICIAL_URLS.kalshi.tradeApiV2Base,
 } as const;
 
 export type KalshiEnvironment = keyof typeof KALSHI_REST_BASE;

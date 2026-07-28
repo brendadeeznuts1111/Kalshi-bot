@@ -95,6 +95,7 @@ export const TABLE = {
   POLYMARKET_MARKETS: "polymarket_markets",
   POLYMARKET_TICKS: "polymarket_ticks",
   POLYMARKET_LINE_MOVES: "polymarket_line_moves",
+  REGULATORY_AUDIT_LOG: "regulatory_audit_log",
 } as const;
 
 // ── Special rule keys ──

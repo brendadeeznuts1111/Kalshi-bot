@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * admin.ts — Regulatory admin CLI for managing self-exclusions and limits.
+ * admin.ts — Regulatory admin CLI with colorized output.
  *
  * Usage:
  *   bun src/regulatory/scripts/admin.ts self-exclusion add --user user-1 --node partner-alpha --reason "problem-gambling"
@@ -11,23 +11,63 @@
  */
 
 import { Database } from "bun:sqlite";
-import { TABLE, SQL_UNIXEPOCH, LICENSE_STATUS, PLAY_STATUS } from "../constants";
+import { TABLE, SQL_UNIXEPOCH } from "../constants";
 
 const DB_PATH = process.env.REGULATORY_DB ?? ":memory:";
+
+// ── ANSI color helpers via Bun.color ──
+const RESET = "\x1b[0m";
+
+function colorize(text: string, color: string): string {
+  const code = Bun.color(color, "ansi") || Bun.color(color, "ansi-256") || "";
+  return code ? `${code}${text}${RESET}` : text;
+}
+
+const c = {
+  ok: (t: string) => colorize(t, "green"),
+  err: (t: string) => colorize(t, "red"),
+  warn: (t: string) => colorize(t, "orange"),
+  info: (t: string) => colorize(t, "cyan"),
+  bold: (t: string) => `\x1b[1m${t}${RESET}`,
+  dim: (t: string) => colorize(t, "gray"),
+  accent: (t: string) => colorize(t, "purple"),
+};
+
+// ── Table rendering ──
+
+function renderTable(headers: string[], rows: string[][]): void {
+  const colWidths = headers.map((h, i) =>
+    Math.max(h.length, ...rows.map((r) => (r[i] ?? "").length)),
+  );
+  const sep = "─".repeat(colWidths.reduce((a, b) => a + b + 3, 1));
+
+  const fmtRow = (cells: string[]) =>
+    "│ " + cells.map((cell, i) => (cell ?? "").padEnd(colWidths[i])).join(" │ ") + " │";
+
+  console.log(c.dim(sep));
+  console.log(c.bold(fmtRow(headers)));
+  console.log(c.dim(sep));
+  for (const row of rows) {
+    console.log(fmtRow(row));
+  }
+  console.log(c.dim(sep));
+}
+
+// ── CLI ──
 
 type Command = "self-exclusion" | "limits";
 type SubCommand = "add" | "remove" | "list" | "set";
 
 function printUsage(): void {
   console.log(`
-Regulatory Admin CLI
+${c.bold("Regulatory Admin CLI")}
 
-Commands:
-  self-exclusion add    --user <id> --node <id> --reason <text> [--expires <ISO-date>]
-  self-exclusion remove --user <id> --node <id>
-  self-exclusion list   [--user <id>] [--node <id>]
-  limits list           [--state <code>] [--sport <id>]
-  limits set            --state <code> --sport <id> --market <id>
+${c.info("Commands:")}
+  ${c.accent("self-exclusion add")}    --user <id> --node <id> --reason <text> [--expires <ISO-date>]
+  ${c.accent("self-exclusion remove")} --user <id> --node <id>
+  ${c.accent("self-exclusion list")}   [--user <id>] [--node <id>]
+  ${c.accent("limits list")}           [--state <code>] [--sport <id>]
+  ${c.accent("limits set")}            --state <code> --sport <id> --market <id>
                         --max-wager <amount> --min-wager <amount>
                         --bet-types <json-array>
                         [--special-rules <json-object>]
@@ -36,7 +76,7 @@ Commands:
 
 function getDb(): Database {
   if (DB_PATH !== ":memory:" && !Bun.file(DB_PATH).exists()) {
-    console.error(`Database not found: ${DB_PATH}`);
+    console.error(c.err(`✖ Database not found: ${DB_PATH}`));
     process.exit(1);
   }
   return new Database(DB_PATH, { create: true });
@@ -51,7 +91,7 @@ function seAdd(argv: string[]): number {
   const expiresIdx = argv.indexOf("--expires");
 
   if (userIdx < 0 || nodeIdx < 0 || reasonIdx < 0) {
-    console.error("Missing required flags: --user, --node, --reason");
+    console.error(c.err("✖ Missing required flags: --user, --node, --reason"));
     return 1;
   }
 
@@ -70,7 +110,7 @@ function seAdd(argv: string[]): number {
        expires_at = excluded.expires_at`,
     [userId, nodeId, reason, expiresAt],
   );
-  console.log(`Self-exclusion added: user=${userId} node=${nodeId} reason=${reason}${expiresAt ? ` expires=${new Date(expiresAt * 1000).toISOString()}` : ""}`);
+  console.log(c.ok(`✓ Self-exclusion added:`) + ` user=${c.bold(userId)} node=${c.bold(nodeId)} reason=${c.warn(reason)}${expiresAt ? ` expires=${new Date(expiresAt * 1000).toISOString()}` : ""}`);
   db.close();
   return 0;
 }
@@ -80,7 +120,7 @@ function seRemove(argv: string[]): number {
   const nodeIdx = argv.indexOf("--node");
 
   if (userIdx < 0 || nodeIdx < 0) {
-    console.error("Missing required flags: --user, --node");
+    console.error(c.err("✖ Missing required flags: --user, --node"));
     return 1;
   }
 
@@ -92,7 +132,7 @@ function seRemove(argv: string[]): number {
     `DELETE FROM ${TABLE.SELF_EXCLUSIONS} WHERE user_id = ? AND node_id = ?`,
     [userId, nodeId],
   );
-  console.log(`Removed ${result.changes} self-exclusion(s): user=${userId} node=${nodeId}`);
+  console.log(c.ok(`✓ Removed ${result.changes} self-exclusion(s):`) + ` user=${c.bold(userId)} node=${c.bold(nodeId)}`);
   db.close();
   return 0;
 }
@@ -108,31 +148,29 @@ function seList(argv: string[]): number {
   let sql = `SELECT user_id, node_id, reason, excluded_at, expires_at FROM ${TABLE.SELF_EXCLUSIONS} WHERE 1=1`;
   const params: (string | null)[] = [];
 
-  if (userId) {
-    sql += " AND user_id = ?";
-    params.push(userId);
-  }
-  if (nodeId) {
-    sql += " AND node_id = ?";
-    params.push(nodeId);
-  }
+  if (userId) { sql += " AND user_id = ?"; params.push(userId); }
+  if (nodeId) { sql += " AND node_id = ?"; params.push(nodeId); }
   sql += ` ORDER BY excluded_at DESC`;
 
   const rows = db.query<{ user_id: string; node_id: string; reason: string; excluded_at: number; expires_at: number | null }, any>(sql).all(...params);
 
   if (rows.length === 0) {
-    console.log("No self-exclusions found.");
+    console.log(c.dim("No self-exclusions found."));
     db.close();
     return 0;
   }
 
-  console.log("User\t\tNode\t\tReason\t\t\tExcluded\t\tExpires");
-  console.log("─".repeat(100));
-  for (const r of rows) {
-    const excluded = new Date(r.excluded_at * 1000).toISOString();
-    const expires = r.expires_at ? new Date(r.expires_at * 1000).toISOString() : "never";
-    console.log(`${r.user_id}\t${r.node_id}\t${r.reason}\t${excluded}\t${expires}`);
-  }
+  const headers = ["User", "Node", "Reason", "Excluded", "Expires"];
+  const data = rows.map((r) => [
+    r.user_id,
+    r.node_id,
+    r.reason,
+    new Date(r.excluded_at * 1000).toISOString(),
+    r.expires_at ? new Date(r.expires_at * 1000).toISOString() : c.dim("never"),
+  ]);
+
+  console.log(c.info(`Self-exclusions (${rows.length}):`));
+  renderTable(headers, data);
   db.close();
   return 0;
 }
@@ -147,48 +185,37 @@ function limitsList(argv: string[]): number {
   const sportId = sportIdx >= 0 ? argv[sportIdx + 1] : null;
 
   const db = getDb();
-  let sql = `SELECT state_code, sport_id, market_id, max_wager, min_wager, allowed_bet_types, special_rules, effective_from, effective_to
-             FROM ${TABLE.REGULATORY_LIMITS} WHERE 1=1`;
+  let sql = `SELECT state_code, sport_id, market_id, max_wager, min_wager, allowed_bet_types, special_rules, effective_from, effective_to FROM ${TABLE.REGULATORY_LIMITS} WHERE 1=1`;
   const params: (string | null)[] = [];
 
-  if (stateCode) {
-    sql += " AND state_code = ?";
-    params.push(stateCode);
-  }
-  if (sportId) {
-    sql += " AND sport_id = ?";
-    params.push(sportId);
-  }
+  if (stateCode) { sql += " AND state_code = ?"; params.push(stateCode); }
+  if (sportId) { sql += " AND sport_id = ?"; params.push(sportId); }
   sql += ` ORDER BY state_code, sport_id, market_id, effective_from DESC`;
 
   const rows = db.query<
-    {
-      state_code: string;
-      sport_id: string;
-      market_id: string;
-      max_wager: number | null;
-      min_wager: number;
-      allowed_bet_types: string;
-      special_rules: string | null;
-      effective_from: number;
-      effective_to: number | null;
-    },
+    { state_code: string; sport_id: string; market_id: string; max_wager: number | null; min_wager: number; allowed_bet_types: string; special_rules: string | null; effective_from: number; effective_to: number | null },
     any
   >(sql).all(...params);
 
   if (rows.length === 0) {
-    console.log("No regulatory limits found.");
+    console.log(c.dim("No regulatory limits found."));
     db.close();
     return 0;
   }
 
-  console.log("State\tSport\t\tMarket\t\tMax\tMin\tBet Types\t\t\tSpecial Rules");
-  console.log("─".repeat(120));
-  for (const r of rows) {
-    const types = r.allowed_bet_types;
-    const special = r.special_rules ?? "—";
-    console.log(`${r.state_code}\t${r.sport_id}\t${r.market_id}\t\t${r.max_wager ?? "∞"}\t${r.min_wager}\t${types}\t${special}`);
-  }
+  const headers = ["State", "Sport", "Market", "Max", "Min", "Bet Types", "Special"];
+  const data = rows.map((r) => [
+    r.state_code,
+    r.sport_id,
+    r.market_id,
+    r.max_wager !== null ? `$${r.max_wager}` : c.dim("∞"),
+    `$${r.min_wager}`,
+    r.allowed_bet_types,
+    r.special_rules ?? c.dim("—"),
+  ]);
+
+  console.log(c.info(`Regulatory limits (${rows.length}):`));
+  renderTable(headers, data);
   db.close();
   return 0;
 }
@@ -203,7 +230,7 @@ function limitsSet(argv: string[]): number {
   const specialIdx = argv.indexOf("--special-rules");
 
   if (stateIdx < 0 || sportIdx < 0 || marketIdx < 0 || maxIdx < 0 || minIdx < 0 || typesIdx < 0) {
-    console.error("Missing required flags: --state, --sport, --market, --max-wager, --min-wager, --bet-types");
+    console.error(c.err("✖ Missing required flags: --state, --sport, --market, --max-wager, --min-wager, --bet-types"));
     return 1;
   }
 
@@ -215,12 +242,11 @@ function limitsSet(argv: string[]): number {
   const betTypes = argv[typesIdx + 1];
   const specialRules = specialIdx >= 0 ? argv[specialIdx + 1] : null;
 
-  // Validate JSON
   try {
     JSON.parse(betTypes);
     if (specialRules) JSON.parse(specialRules);
   } catch {
-    console.error("Invalid JSON in --bet-types or --special-rules");
+    console.error(c.err("✖ Invalid JSON in --bet-types or --special-rules"));
     return 1;
   }
 
@@ -230,7 +256,7 @@ function limitsSet(argv: string[]): number {
      VALUES (?, ?, ?, ?, ?, ?, ?, ${SQL_UNIXEPOCH}, NULL)`,
     [stateCode, sportId, marketId, maxWager, minWager, betTypes, specialRules],
   );
-  console.log(`Limit set: ${stateCode} / ${sportId} / ${marketId} — max=$${maxWager} min=$${minWager}`);
+  console.log(c.ok(`✓ Limit set:`) + ` ${c.bold(stateCode)} / ${c.bold(sportId)} / ${c.bold(marketId)} — max=${c.warn(`$${maxWager}`)} min=${c.warn(`$${minWager}`)}`);
   db.close();
   return 0;
 }
@@ -250,18 +276,18 @@ function main(): number {
     if (sub === "add") return seAdd(argv);
     if (sub === "remove") return seRemove(argv);
     if (sub === "list") return seList(argv);
-    console.error(`Unknown subcommand: ${sub}`);
+    console.error(c.err(`✖ Unknown subcommand: ${sub}`));
     return 1;
   }
 
   if (cmd === "limits") {
     if (sub === "list") return limitsList(argv);
     if (sub === "set") return limitsSet(argv);
-    console.error(`Unknown subcommand: ${sub}`);
+    console.error(c.err(`✖ Unknown subcommand: ${sub}`));
     return 1;
   }
 
-  console.error(`Unknown command: ${cmd}`);
+  console.error(c.err(`✖ Unknown command: ${cmd}`));
   return 1;
 }
 

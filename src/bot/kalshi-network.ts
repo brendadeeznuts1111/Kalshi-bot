@@ -15,7 +15,8 @@ function resolveKalshiOrigin(): { host: string; origin: string } {
     const u = new URL(base.includes("://") ? base : `https://${base}`);
     return { host: u.hostname, origin: u.origin };
   } catch {
-    return { host: "external-api.kalshi.com", origin: "https://external-api.kalshi.com" };
+    const fallback = new URL(OFFICIAL_URLS.kalshi.tradeApiV2Base);
+    return { host: fallback.hostname, origin: fallback.origin };
   }
 }
 

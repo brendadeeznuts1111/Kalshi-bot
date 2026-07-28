@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * migrate.ts — Idempotent regulatory migration runner.
+ * migrate.ts — Idempotent regulatory migration runner with colorized output.
  *
  * Reads all `.sql` files from src/regulatory/db/migrations/ in lexical order,
  * skips already-applied migrations (tracked in `_regulatory_migrations`),
@@ -18,6 +18,20 @@
 import { Database } from "bun:sqlite";
 import { readFileSync, readdirSync } from "fs";
 import { join, basename } from "path";
+
+const RESET = "\x1b[0m";
+function colorize(text: string, color: string): string {
+  const code = Bun.color(color, "ansi") || Bun.color(color, "ansi-256") || "";
+  return code ? `${code}${text}${RESET}` : text;
+}
+const c = {
+  ok: (t: string) => colorize(t, "green"),
+  err: (t: string) => colorize(t, "red"),
+  info: (t: string) => colorize(t, "cyan"),
+  warn: (t: string) => colorize(t, "orange"),
+  dim: (t: string) => colorize(t, "gray"),
+  bold: (t: string) => `\x1b[1m${t}${RESET}`,
+};
 
 const MIGRATIONS_DIR = join(import.meta.dir, "../db/migrations");
 
@@ -74,7 +88,7 @@ function main(): number {
   const { dbPath } = parseArgs(process.argv.slice(2));
 
   if (dbPath !== ":memory:" && !Bun.file(dbPath).exists()) {
-    console.error(`Database not found: ${dbPath}`);
+    console.error(c.err(`✖ Database not found: ${dbPath}`));
     return 1;
   }
 
@@ -84,19 +98,21 @@ function main(): number {
     const pending = listPendingMigrations(db);
 
     if (pending.length === 0) {
-      console.log("No pending migrations.");
+      console.log(c.dim("✓ No pending migrations."));
       return 0;
     }
 
+    console.log(c.info(`Applying ${pending.length} migration(s):`));
     for (const filename of pending) {
-      console.log(`Applying ${filename}...`);
+      process.stdout.write(`  ${c.dim("→")} ${filename} … `);
       runMigration(db, filename);
+      console.log(c.ok("✓"));
     }
 
-    console.log(`Applied ${pending.length} migration(s).`);
+    console.log(c.ok(`\n✓ Applied ${pending.length} migration(s).`));
     return 0;
   } catch (err) {
-    console.error("Migration failed:", err instanceof Error ? err.message : String(err));
+    console.error(c.err(`\n✖ Migration failed: ${err instanceof Error ? err.message : String(err)}`));
     return 1;
   } finally {
     db.close();

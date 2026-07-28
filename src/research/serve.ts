@@ -1,4 +1,3 @@
-#!/usr/bin/env bun
 // @ts-nocheck
 // @see https://bun.com/docs/runtime/file-io#reading-files-bun-file
 import type { ResearchRun, ScoredRepo } from "./types.ts";

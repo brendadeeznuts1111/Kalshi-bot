@@ -28,12 +28,6 @@ export function createStateValidator(options: StateValidatorOptions) {
     const url = new URL(req.url);
     let stateCode = url.searchParams.get("state") ?? req.headers.get("x-state-code") ?? null;
 
-    // If not in URL/header, try to peek at JSON body (only for POST/PUT/PATCH)
-    if (!stateCode && ["POST", "PUT", "PATCH"].includes(req.method)) {
-      const cloned = req.clone();
-      // We can't await here synchronously, so skip body parsing in sync validator
-      // The compliance middleware will catch missing state codes later
-    }
 
     if (!stateCode) {
       // No state code present — let downstream handlers decide

@@ -15,6 +15,20 @@
 
 import { Database } from "bun:sqlite";
 
+const RESET = "\x1b[0m";
+function colorize(text: string, color: string): string {
+  const code = Bun.color(color, "ansi") || Bun.color(color, "ansi-256") || "";
+  return code ? `${code}${text}${RESET}` : text;
+}
+const c = {
+  ok: (t: string) => colorize(t, "green"),
+  err: (t: string) => colorize(t, "red"),
+  info: (t: string) => colorize(t, "cyan"),
+  warn: (t: string) => colorize(t, "orange"),
+  dim: (t: string) => colorize(t, "gray"),
+  bold: (t: string) => `\x1b[1m${t}${RESET}`,
+};
+
 function parseArgs(argv: string[]): { dbPath: string; retentionDays: number } {
   const dbIdx = argv.indexOf("--db");
   const retentionIdx = argv.indexOf("--retention-days");
@@ -30,7 +44,7 @@ function main(): number {
   const { dbPath, retentionDays } = parseArgs(process.argv.slice(2));
 
   if (dbPath !== ":memory:" && !Bun.file(dbPath).exists()) {
-    console.error(`Database not found: ${dbPath}`);
+    console.error(c.err(`✖ Database not found: ${dbPath}`));
     return 1;
   }
 
@@ -46,7 +60,7 @@ function main(): number {
       .get()!.c;
 
     if (!tableExists) {
-      console.log("regulatory_violations table does not exist yet. Nothing to sweep.");
+      console.log(c.dim("regulatory_violations table does not exist yet. Nothing to sweep."));
       return 0;
     }
 
@@ -61,10 +75,14 @@ function main(): number {
       .get()!.c;
 
     const deleted = beforeCount - afterCount;
-    console.log(`Sweep complete: ${deleted} violation(s) deleted (retention: ${retentionDays} days, cutoff: ${cutoff})`);
+    if (deleted > 0) {
+      console.log(c.ok(`✓ Sweep complete:`) + ` ${c.warn(String(deleted))} violation(s) deleted (retention: ${retentionDays} days)`);
+    } else {
+      console.log(c.dim(`✓ Sweep complete: 0 violations deleted (retention: ${retentionDays} days)`));
+    }
     return 0;
   } catch (err) {
-    console.error("Sweep failed:", err instanceof Error ? err.message : String(err));
+    console.error(c.err(`✖ Sweep failed: ${err instanceof Error ? err.message : String(err)}`));
     return 1;
   } finally {
     db.close();

@@ -53,3 +53,20 @@ CREATE TABLE IF NOT EXISTS polymarket_line_moves (
 );
 CREATE INDEX IF NOT EXISTS idx_pm_line_moves_slug ON polymarket_line_moves(slug, detected_at DESC);
 CREATE INDEX IF NOT EXISTS idx_pm_line_moves_detected ON polymarket_line_moves(detected_at DESC);
+
+-- 4. Regulatory audit log — immutable action trail -----------------------------
+CREATE TABLE IF NOT EXISTS regulatory_audit_log (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  trace_id    TEXT NOT NULL,
+  actor       TEXT NOT NULL,                      -- e.g. "compliance-agent"
+  action      TEXT NOT NULL,                      -- e.g. "BET_PLACED"
+  target      TEXT,                               -- e.g. "play-123"
+  outcome     TEXT NOT NULL CHECK(outcome IN ('ok','blocked','error','flagged')),
+  details     TEXT,                               -- JSON blob
+  latency_ms  INTEGER,
+  created_at  INTEGER NOT NULL DEFAULT (unixepoch())
+);
+CREATE INDEX IF NOT EXISTS idx_audit_trace ON regulatory_audit_log(trace_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_actor ON regulatory_audit_log(actor, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_action ON regulatory_audit_log(action, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_pm_line_moves_detected ON polymarket_line_moves(detected_at DESC);

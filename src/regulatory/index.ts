@@ -108,3 +108,23 @@ export {
   type AdminActionTask,
   type LineMoveEvalTask,
 } from "./agents";
+
+// ── Typed errors ──
+export {
+  RegulatoryError,
+  BetTypeNotAllowedError,
+  WagerOutOfBoundsError,
+  SelfExcludedError,
+  IdentityVerificationError,
+  LicenseError,
+  RateLimitError,
+  PolymarketApiError,
+  SteamAlertError,
+  MarketDataStaleError,
+  AgentNotFoundError,
+  AgentTaskError,
+  MigrationError,
+  DatabaseIntegrityError,
+  type ErrorContext,
+} from "./lib/errors";
+
