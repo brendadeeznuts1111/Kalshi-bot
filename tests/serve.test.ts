@@ -256,11 +256,11 @@ describe("ops dashboard", () => {
       },
     });
     expect(html).toContain("<h2>Server</h2>");
-    expect(html).toContain("uptime <strong>2m</strong>");
+    expect(html).toContain('uptime <strong data-f="server.uptimeSec">2m</strong>');
     expect(html).toContain("Bun 1.4.0");
-    expect(html).toContain("<strong>123.5</strong> rss MB");
-    expect(html).toContain("<strong>45.7</strong> heap MB");
-    expect(html).toContain("<strong>7</strong> ticks in DB");
+    expect(html).toContain('<strong data-f="server.rssMb">123.5</strong> rss MB');
+    expect(html).toContain('<strong data-f="server.heapUsedMb">45.7</strong> heap MB');
+    expect(html).toContain('<strong data-f="server.tickCount">7</strong> ticks in DB');
   });
 
   test("renderOps colors flow staleness against expected period", () => {
@@ -292,6 +292,53 @@ describe("ops dashboard", () => {
     expect(html).toContain("fired 3h ago · stale");
     expect(html).toContain("fresh ≤2×");
     expect(html).toContain("stale &gt;4×");
+  });
+
+  test("renderOps uses in-place refresh: no meta tag, data-f fields tagged", () => {
+    const html = renderOps({
+      ...baseOps,
+      canary: { at: "2026-07-28T00:00:00Z", exitCode: 0, dryRun: true, watched: 1, polled: 1, upserted: 1, live: 0, errors: 0, periodMin: 15 },
+      store: null,
+      kalshiAuth: { state: "valid", status: 200, checkedAt: "2026-07-28T21:00:00.000Z", cacheTtlSec: 300 },
+      server: {
+        bootAt: "2026-07-28T20:00:00.000Z",
+        uptimeSec: 5,
+        bunVersion: "1.4.0",
+        rssMb: 40,
+        heapUsedMb: 2,
+        tickCount: 1,
+        lineMoveCount: 0,
+      },
+      flows: [
+        {
+          label: "f1",
+          logPath: "/tmp/f1.log",
+          lastFireAt: "2026-07-28T00:00:00Z",
+          lastLines: [],
+          launchdLoaded: true,
+          periodMin: 15,
+        },
+      ],
+    });
+    expect(html).not.toContain('http-equiv="refresh"');
+    expect(html).toContain('data-f="generatedAt"');
+    expect(html).toContain('data-f="kalshiAuth.badge"');
+    expect(html).toContain('data-f="server.uptimeSec"');
+    expect(html).toContain('data-f="server.rssMb"');
+    expect(html).toContain('data-f="server.heapUsedMb"');
+    expect(html).toContain('data-f="server.tickCount"');
+    expect(html).toContain('data-f="server.lineMoveCount"');
+    expect(html).toContain('data-f="canary.ageBadge"');
+    expect(html).toContain('data-f="flows.0.ageBadge"');
+    expect(html).toContain('data-f="flows.0.lastFireAt"');
+    expect(html).toContain('id="ops-fetch-state"');
+    expect(html).toContain('setInterval(tick, 60000)');
+  });
+
+  test("pageLayout still emits meta refresh for pages that opt in", async () => {
+    const { pageLayout } = await import("../src/research/views.ts");
+    expect(pageLayout("t", "b", { refreshSeconds: 30 })).toContain('<meta http-equiv="refresh" content="30" />');
+    expect(pageLayout("t", "b")).not.toContain('http-equiv="refresh"');
   });
 });
 

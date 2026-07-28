@@ -300,11 +300,12 @@ const STALENESS_BADGE: Record<Staleness, string> = {
 };
 
 /** Age badge for a periodic job: "fired 4m ago" colored by age vs expected period. */
-function ageBadge(atIso: string | null, periodMin: number, nowMs: number): string {
-  if (!atIso) return `<span class="badge bad">never fired</span>`;
+function ageBadge(atIso: string | null, periodMin: number, nowMs: number, dataF?: string): string {
+  const attr = dataF ? ` data-f="${dataF}"` : "";
+  if (!atIso) return `<span class="badge bad"${attr}>never fired</span>`;
   const ageMs = nowMs - Date.parse(atIso);
   const state = stalenessOf(ageMs, periodMin);
-  return `<span class="badge ${STALENESS_BADGE[state]}">fired ${escapeHtml(fmtAgeMs(ageMs))} ago · ${state}</span>`;
+  return `<span class="badge ${STALENESS_BADGE[state]}"${attr}>fired ${escapeHtml(fmtAgeMs(ageMs))} ago · ${state}</span>`;
 }
 
 function renderOpsAgents(agents: Record<string, boolean>): string {
@@ -381,19 +382,19 @@ function renderOpsServer(data: OpsDashboardData, nowMs: number): string {
   if (!s) return "";
   const ages: string[] = [];
   if (data.canary?.periodMin != null) {
-    ages.push(`canary ${ageBadge(data.canary.at, data.canary.periodMin, nowMs)}`);
+    ages.push(`canary ${ageBadge(data.canary.at, data.canary.periodMin, nowMs, "canary.ageBadge")}`);
   }
-  for (const f of data.flows) {
+  data.flows.forEach((f, i) => {
     if (f.periodMin != null) {
-      ages.push(`${escapeHtml(f.label)} ${ageBadge(f.lastFireAt, f.periodMin, nowMs)}`);
+      ages.push(`${escapeHtml(f.label)} ${ageBadge(f.lastFireAt, f.periodMin, nowMs, `flows.${i}.ageBadge`)}`);
     }
-  }
-  return `<p>boot ${escapeHtml(s.bootAt)} · uptime <strong>${escapeHtml(fmtAgeMs(s.uptimeSec * 1000))}</strong> · Bun ${escapeHtml(s.bunVersion)}</p>
+  });
+  return `<p>boot ${escapeHtml(s.bootAt)} · uptime <strong data-f="server.uptimeSec">${escapeHtml(fmtAgeMs(s.uptimeSec * 1000))}</strong> · Bun ${escapeHtml(s.bunVersion)}</p>
   <div class="stats">
-    <div class="stat"><strong>${s.rssMb.toFixed(1)}</strong> rss MB</div>
-    <div class="stat"><strong>${s.heapUsedMb.toFixed(1)}</strong> heap MB</div>
-    <div class="stat"><strong>${s.tickCount}</strong> ticks in DB</div>
-    <div class="stat"><strong>${s.lineMoveCount}</strong> line moves in DB</div>
+    <div class="stat"><strong data-f="server.rssMb">${s.rssMb.toFixed(1)}</strong> rss MB</div>
+    <div class="stat"><strong data-f="server.heapUsedMb">${s.heapUsedMb.toFixed(1)}</strong> heap MB</div>
+    <div class="stat"><strong data-f="server.tickCount">${s.tickCount}</strong> ticks in DB</div>
+    <div class="stat"><strong data-f="server.lineMoveCount">${s.lineMoveCount}</strong> line moves in DB</div>
   </div>
   ${ages.length ? `<p>data plane: ${ages.join(" · ")}</p>` : ""}`;
 }
@@ -408,7 +409,7 @@ const KALSHI_AUTH_BADGE: Record<string, { cls: string; label: string }> = {
 function kalshiAuthBadge(auth: NonNullable<OpsDashboardData["kalshiAuth"]>): string {
   const b = KALSHI_AUTH_BADGE[auth.state] ?? { cls: "warn", label: auth.state };
   const title = `checked ${auth.checkedAt} · cache ${auth.cacheTtlSec}s${auth.status != null ? ` · HTTP ${auth.status}` : ""}`;
-  return `<span class="badge ${b.cls}" title="${escapeHtml(title)}">${escapeHtml(b.label)}</span>`;
+  return `<span class="badge ${b.cls}" title="${escapeHtml(title)}" data-f="kalshiAuth.badge">${escapeHtml(b.label)}</span>`;
 }
 
 function renderOpsData(data: OpsDashboardData, nowMs: number): string {
@@ -419,7 +420,7 @@ function renderOpsData(data: OpsDashboardData, nowMs: number): string {
   <p><em>No canary artifact at <code>research/cache/tennis-canary/latest.json</code> yet.</em></p>`;
   }
   const c = data.canary;
-  const age = c.periodMin != null ? ` · ${ageBadge(c.at, c.periodMin, nowMs)}` : "";
+  const age = c.periodMin != null ? ` · ${ageBadge(c.at, c.periodMin, nowMs, "canary.ageBadge")}` : "";
   return `${authLine}${storeBlock}
   <h3>Live canary</h3>
   <p>${canaryBadge(c)} · ${escapeHtml(c.at)}${c.dryRun ? " · dry-run" : ""}${age}</p>
@@ -434,19 +435,19 @@ function renderOpsData(data: OpsDashboardData, nowMs: number): string {
 
 function renderOpsFlows(flows: OpsCronFlow[], nowMs: number): string {
   const blocks = flows
-    .map((f) => {
+    .map((f, i) => {
       const launchd =
         f.launchdLoaded === null
           ? `<span class="badge warn">unknown (launchctl probe failed)</span>`
           : f.launchdLoaded
             ? `<span class="badge ok">loaded</span>`
             : `<span class="badge bad">not loaded</span>`;
-      const age = f.periodMin != null ? ` · ${ageBadge(f.lastFireAt, f.periodMin, nowMs)}` : "";
+      const age = f.periodMin != null ? ` · ${ageBadge(f.lastFireAt, f.periodMin, nowMs, `flows.${i}.ageBadge`)}` : "";
       const lines = f.lastLines.length
         ? `<pre class="diff">${escapeHtml(f.lastLines.join("\n"))}</pre>`
         : `<p><em>No log output at <code>${escapeHtml(f.logPath)}</code>.</em></p>`;
       return `<h3>${escapeHtml(f.label)}</h3>
-  <p>launchd: ${launchd} · last fire: ${f.lastFireAt ? escapeHtml(f.lastFireAt) : "never (no log)"}${age}</p>
+  <p>launchd: ${launchd} · last fire: <span data-f="flows.${i}.lastFireAt">${f.lastFireAt ? escapeHtml(f.lastFireAt) : "never (no log)"}</span>${age}</p>
   ${lines}`;
     })
     .join("\n");
@@ -722,11 +723,97 @@ export function renderOpsActions(): string {
 </script>`;
 }
 
+/**
+ * In-place partial refresh for /ops — fetches /ops.json every 60s and patches
+ * the `data-f` fields via textContent. Replaces the old full-page meta refresh
+ * (scroll jump). The class/label/format maps below MIRROR the server-side
+ * STALENESS_BADGE / KALSHI_AUTH_BADGE / fmtAgeMs in this file — keep in sync.
+ */
+function renderOpsRefresher(): string {
+  return `<script>
+(function () {
+  var AUTH_CLS = { valid: "ok", invalid: "bad", unreachable: "warn", "no-creds": "dim" };
+  var AUTH_LABEL = { valid: "valid", invalid: "invalid (rotate key)", unreachable: "unreachable", "no-creds": "no creds" };
+  var STALE_CLS = { fresh: "ok", overdue: "warn", stale: "bad" };
+
+  function fmtAge(ms) {
+    var sec = Math.max(0, Math.round(ms / 1000));
+    if (sec < 60) return sec + "s";
+    var min = Math.floor(sec / 60);
+    if (min < 60) return min + "m";
+    var hr = Math.floor(min / 60);
+    if (hr < 48) return hr + "h" + (min % 60 > 0 ? (min % 60) + "m" : "");
+    return Math.floor(hr / 24) + "d" + (hr % 24 > 0 ? (hr % 24) + "h" : "");
+  }
+  function staleness(ageMs, periodMin) {
+    var p = periodMin * 60000;
+    if (ageMs <= 2 * p) return "fresh";
+    if (ageMs <= 4 * p) return "overdue";
+    return "stale";
+  }
+  function each(path, fn) {
+    var els = document.querySelectorAll('[data-f="' + path + '"]');
+    for (var i = 0; i < els.length; i++) fn(els[i]);
+  }
+  function ageBadgeInto(el, atIso, periodMin) {
+    if (!atIso) { el.className = "badge bad"; el.textContent = "never fired"; return; }
+    var ageMs = Date.now() - Date.parse(atIso);
+    var state = staleness(ageMs, periodMin);
+    el.className = "badge " + STALE_CLS[state];
+    el.textContent = "fired " + fmtAge(ageMs) + " ago · " + state;
+  }
+
+  function apply(d) {
+    each("generatedAt", function (el) { el.textContent = d.generatedAt; });
+    if (d.server) {
+      each("server.uptimeSec", function (el) { el.textContent = fmtAge(d.server.uptimeSec * 1000); });
+      each("server.rssMb", function (el) { el.textContent = d.server.rssMb.toFixed(1); });
+      each("server.heapUsedMb", function (el) { el.textContent = d.server.heapUsedMb.toFixed(1); });
+      each("server.tickCount", function (el) { el.textContent = String(d.server.tickCount); });
+      each("server.lineMoveCount", function (el) { el.textContent = String(d.server.lineMoveCount); });
+    }
+    if (d.kalshiAuth) {
+      each("kalshiAuth.badge", function (el) {
+        var st = d.kalshiAuth.state;
+        el.className = "badge " + (AUTH_CLS[st] || "warn");
+        el.textContent = AUTH_LABEL[st] || st;
+        el.setAttribute("title", "checked " + d.kalshiAuth.checkedAt + " · cache " + d.kalshiAuth.cacheTtlSec + "s" + (d.kalshiAuth.status != null ? " · HTTP " + d.kalshiAuth.status : ""));
+      });
+    }
+    if (d.canary && d.canary.periodMin != null) {
+      each("canary.ageBadge", function (el) { ageBadgeInto(el, d.canary.at, d.canary.periodMin); });
+    }
+    (d.flows || []).forEach(function (f, i) {
+      if (f.periodMin != null) {
+        each("flows." + i + ".ageBadge", function (el) { ageBadgeInto(el, f.lastFireAt, f.periodMin); });
+      }
+      each("flows." + i + ".lastFireAt", function (el) { el.textContent = f.lastFireAt || "never (no log)"; });
+    });
+  }
+
+  var state = document.getElementById("ops-fetch-state");
+  function tick() {
+    fetch("/ops.json").then(function (res) {
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return res.json();
+    }).then(function (d) {
+      apply(d);
+      if (state) state.textContent = "";
+    }).catch(function () {
+      // Keep old values; flag the miss until the next success.
+      if (state) state.textContent = "stale fetch";
+    });
+  }
+  setInterval(tick, 60000);
+})();
+</script>`;
+}
+
 export function renderOps(data: OpsDashboardData): string {
   const nowMs = Date.parse(data.generatedAt);
   const body = `${navLinks()}
   <h1>Ops dashboard</h1>
-  <p>Generated ${escapeHtml(data.generatedAt)} · <a href="/ops">Refresh</a> (auto 60s) · <a href="/ops.json">ops.json</a></p>
+  <p>Generated <span data-f="generatedAt">${escapeHtml(data.generatedAt)}</span> · <a href="/ops">Refresh</a> (auto-refresh 60s, in-place) · <a href="/ops.json">ops.json</a> <span class="dim" id="ops-fetch-state"></span></p>
   <h2>Bot &amp; agents</h2>
   ${renderOpsAgents(data.agents)}
   <p><a href="/polymarket/status">status.json</a> · <a href="/regulatory/health">regulatory health</a></p>
@@ -739,7 +826,8 @@ export function renderOps(data: OpsDashboardData): string {
   <h2>Flows</h2>
   ${renderOpsFlows(data.flows, nowMs)}
   <h2>Research runs (last ${data.runs.length})</h2>
-  ${renderOpsRuns(data.runs)}`;
+  ${renderOpsRuns(data.runs)}
+  ${renderOpsRefresher()}`;
 
-  return pageLayout("Ops — Kalshi Bot Research", body, { refreshSeconds: 60 });
+  return pageLayout("Ops — Kalshi Bot Research", body);
 }
