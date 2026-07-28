@@ -146,7 +146,7 @@ describe("probeKalshiAuth", () => {
     const seen: string[] = [];
     const server = Bun.serve({
       port: 0,
-      fetch(req) {
+      fetch(req: any) {
         seen.push(req.headers.get("KALSHI-ACCESS-KEY") ?? "");
         const url = new URL(req.url);
         return Response.json({ error: "bad key" }, { status: 401 });
