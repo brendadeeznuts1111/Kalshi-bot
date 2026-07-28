@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<!-- @see docs/portal-foundation.md -->
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Account Catalog · FactoryWager</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/portal/style.css" />
+  <style>
+    .hidden { display: none; }
+    .catalog-dashboard { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+    .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+    .stat-card .stat-num { font-size: 28px; font-weight: 600; }
+    .stat-card .stat-label { font-size: 13px; color: var(--text-dim); margin-top: 2px; }
+    .filter-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 24px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+    .filter-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+    .filter-chip { font-size: 12px; padding: 4px 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); color: var(--text-dim); cursor: pointer; }
+    .filter-chip.active { background: var(--accent-glow); border-color: var(--accent); color: var(--accent); }
+    #sort-select { padding: 4px 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); color: var(--text); font-size: 12px; }
+    #search { padding: 6px 12px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); color: var(--text); font-size: 13px; width: 240px; }
+    .account-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
+    .account-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; transition: border-color .15s; }
+    .account-card:hover { border-color: var(--accent); }
+    .account-card.active { border-left: 4px solid var(--green); }
+    .account-card.inactive { border-left: 4px solid var(--yellow); }
+    .account-card.limited { border-left: 4px solid var(--red); }
+    .account-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+    .account-platform { font-size: 16px; font-weight: 600; color: var(--accent); }
+    .account-identifier { font-size: 12px; font-family: monospace; color: var(--text-dim); }
+    .account-meta { display: flex; gap: 12px; margin-bottom: 8px; }
+    .account-category { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; padding: 2px 8px; border-radius: 4px; background: var(--accent-glow); color: var(--accent); }
+    .account-balance { font-size: 18px; font-weight: 600; }
+    .account-footer { display: flex; justify-content: space-between; align-items: center; padding-top: 12px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-dim); }
+    .status-badge { font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 600; }
+    .status-active { background: rgba(46,204,113,.15); color: var(--green); }
+    .status-inactive { background: rgba(243,156,18,.15); color: var(--yellow); }
+    .status-limited { background: rgba(231,76,60,.15); color: var(--red); }
+    .partner-name { color: var(--text-dim); }
+    @media (max-width: 768px) { .stats-row { grid-template-columns: repeat(2, 1fr); } .account-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <h1 class="logo">
+        <span class="logo-icon">■</span>
+        <span class="brand-wordmark">FactoryWager</span>
+        <span class="brand-badge">ops</span>
+        <span class="logo-page">Catalog</span>
+      </h1>
+      <nav class="topbar-nav" aria-label="Primary">
+        <a href="/" class="nav-link">Home</a>
+        <a href="/portal/ops" class="nav-link">Ops</a>
+        <a href="/portal/" class="nav-link">Registry</a>
+        <a href="/portal/health" class="nav-link">Health</a>
+        <a href="/portal/dod" class="nav-link">DOD</a>
+        <div class="nav-overflow">
+          <button type="button" class="nav-more" aria-label="More navigation" aria-expanded="false" aria-haspopup="true">⋯</button>
+          <div class="nav-dropdown" role="menu">
+            <a href="/portal/catalog" class="nav-link active" role="menuitem">Catalog</a>
+            <a href="/portal/skills" class="nav-link" role="menuitem">Skills</a>
+            <a href="/portal/env" class="nav-link" role="menuitem">Env</a>
+            <a href="/portal/dashboard" class="nav-link" role="menuitem">Dashboard</a>
+            <a href="/monitoring" class="nav-link" role="menuitem">Monitoring</a>
+            <a href="https://wiki.factory-wager.com" class="nav-link" target="_blank" rel="noopener noreferrer" role="menuitem">Wiki</a>
+          </div>
+        </div>
+      </nav>
+      <div class="topbar-status">
+        <a href="/portal/catalog.md" class="nav-link nav-md" title="Markdown view">MD</a>
+        <a href="/portal/health" class="topbar-health-link" title="System health">
+          <span id="health-dot" class="health-dot unknown"></span>
+          <span id="health-label" class="health-label">…</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="catalog-dashboard">
+    <div id="error-banner" class="ops-banner error hidden"></div>
+    <div id="loading" class="ops-loading"><div class="spinner"></div><p>Loading catalog…</p></div>
+    <div id="dashboard" class="hidden">
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-num" id="stat-total">0</div><div class="stat-label">accounts</div></div>
+        <div class="stat-card"><div class="stat-num" id="stat-active">0</div><div class="stat-label">active</div></div>
+        <div class="stat-card"><div class="stat-num" id="stat-categories">0</div><div class="stat-label">categories</div></div>
+        <div class="stat-card"><div class="stat-num" id="stat-balance">$0</div><div class="stat-label">total balance</div></div>
+      </div>
+      <div class="filter-row">
+        <input type="text" id="search" placeholder="Search platform, partner, account…" />
+        <div id="filter-chips" class="filter-chips"></div>
+        <select id="sort-select">
+          <option value="name">Name</option>
+          <option value="balance">Balance</option>
+          <option value="date">Opened</option>
+        </select>
+      </div>
+      <div id="account-grid" class="account-grid"></div>
+    </div>
+  </main>
+
+  <script type="module">
+    const $ = id => document.getElementById(id);
+    let accounts = [];
+
+    async function load() {
+      try {
+        const res = await fetch('/api/catalog');
+        if (res.ok) { accounts = (await res.json()).accounts; render(); return; }
+      } catch {}
+      try {
+        const res = await fetch('/registry/catalog-snapshot.json');
+        if (res.ok) { accounts = (await res.json()).accounts; render(); return; }
+      } catch {}
+      $('error-banner').innerHTML = '<p>⚠️ Could not load catalog. Deploy a static snapshot or connect the database.</p>';
+      $('error-banner').classList.remove('hidden');
+      $('loading').classList.add('hidden');
+    }
+
+    function render() {
+      $('loading').classList.add('hidden');
+      $('dashboard').classList.remove('hidden');
+      renderStats();
+      renderFilters();
+      renderGrid();
+    }
+
+    function renderStats() {
+      const active = accounts.filter(a => a.status === 'active').length;
+      const cats = new Set(accounts.map(a => a.category));
+      const bal = accounts.reduce((s, a) => s + (a.balance || 0), 0);
+      $('stat-total').textContent = accounts.length;
+      $('stat-active').textContent = active;
+      $('stat-categories').textContent = cats.size;
+      $('stat-balance').textContent = '$' + bal.toLocaleString();
+    }
+
+    function renderFilters() {
+      const cats = [...new Set(accounts.map(a => a.category))].sort();
+      const active = new Set([...document.querySelectorAll('#filter-chips .active')].map(el => el.dataset.cat));
+      $('filter-chips').innerHTML = cats.map(c => `
+        <button class="filter-chip ${active.has(c) || active.size === 0 ? 'active' : ''}" data-cat="${c}">${c}</button>
+      `).join('');
+      $('filter-chips').querySelectorAll('button').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (active.size === 0) cats.forEach(c => active.add(c));
+          active.has(btn.dataset.cat) ? active.delete(btn.dataset.cat) : active.add(btn.dataset.cat);
+          render();
+        });
+      });
+    }
+
+    function renderGrid() {
+      const q = ($('search').value || '').toLowerCase();
+      const activeFilters = new Set([...document.querySelectorAll('#filter-chips .active')].map(el => el.dataset.cat));
+      if (activeFilters.size === 0) [...new Set(accounts.map(a => a.category))].forEach(c => activeFilters.add(c));
+
+      let filtered = accounts.filter(a =>
+        activeFilters.has(a.category) &&
+        (!q || a.platform?.toLowerCase().includes(q) || a.account_identifier?.toLowerCase().includes(q) || a.partner_name?.toLowerCase().includes(q))
+      );
+
+      const sort = $('sort-select').value;
+      if (sort === 'balance') filtered.sort((a, b) => (b.balance || 0) - (a.balance || 0));
+      else if (sort === 'date') filtered.sort((a, b) => new Date(b.opened_at || 0) - new Date(a.opened_at || 0));
+      else filtered.sort((a, b) => (a.platform || '').localeCompare(b.platform || ''));
+
+      $('account-grid').innerHTML = filtered.length
+        ? filtered.map(a => `
+          <div class="account-card ${a.status}">
+            <div class="account-header">
+              <span class="account-platform">${a.platform || '—'}</span>
+              <span class="account-identifier">${a.account_identifier || '—'}</span>
+            </div>
+            <div class="account-meta">
+              <span class="account-category">${a.category}${a.sub_category ? ' · ' + a.sub_category : ''}</span>
+              <span class="status-badge status-${a.status}">${a.status}</span>
+            </div>
+            <div class="account-balance">$${(a.balance || 0).toLocaleString()}</div>
+            <div class="account-footer">
+              <span class="partner-name">${a.partner_name || '—'} (${a.partner_type || '—'})</span>
+              <span>${a.opened_at ? new Date(a.opened_at).toLocaleDateString() : '—'}</span>
+            </div>
+          </div>
+        `).join('')
+        : '<div style="grid-column:1/-1;text-align:center;padding:60px 0;color:var(--text-dim)">No accounts match.</div>';
+    }
+
+    $('search').addEventListener('input', renderGrid);
+    $('sort-select').addEventListener('change', renderGrid);
+    load();
+  </script>
+  <script type="module" src="/portal/data.js"></script>
+  <script type="module" src="/portal/topbar.js"></script>
+</body>
+</html>

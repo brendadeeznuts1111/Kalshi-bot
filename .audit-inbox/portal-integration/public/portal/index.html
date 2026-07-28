@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<!-- @see docs/portal-foundation.md -->
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="portal-poll-ms" content="30000" />
+  <title>Factory Registry · project-R-score</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <h1 class="logo">
+        <span class="logo-icon">■</span>
+        <span class="brand-wordmark">FactoryWager</span>
+        <span class="brand-badge">ops</span>
+        <span class="logo-page">Registry</span>
+      </h1>
+      <nav id="tenant-sidebar" class="tenant-sidebar" aria-label="Tenants"></nav>
+      <nav class="topbar-nav" aria-label="Primary">
+        <a href="/" class="nav-link">Home</a>
+        <a href="/portal/ops" class="nav-link">Ops</a>
+        <a href="/portal/" class="nav-link active">Registry</a>
+        <a href="/portal/health" class="nav-link">Health</a>
+        <a href="/portal/dod" class="nav-link">DOD</a>
+        <div class="nav-overflow">
+          <button type="button" class="nav-more" aria-label="More navigation" aria-expanded="false" aria-haspopup="true">⋯</button>
+          <div class="nav-dropdown" role="menu">
+            <a href="/portal/catalog" class="nav-link" role="menuitem">Catalog</a>
+            <a href="/portal/skills" class="nav-link" role="menuitem">Skills</a>
+            <a href="/portal/env" class="nav-link" role="menuitem">Env</a>
+            <a href="/portal/dashboard" class="nav-link" role="menuitem">Dashboard</a>
+            <a href="/monitoring" class="nav-link" role="menuitem">Monitoring</a>
+            <a href="https://wiki.factory-wager.com" class="nav-link" target="_blank" rel="noopener noreferrer" role="menuitem">Wiki</a>
+          </div>
+        </div>
+      </nav>
+      <div class="topbar-status">
+        <a href="/portal/index.md" class="nav-link nav-md" title="Markdown view">MD</a>
+        <a href="/portal/health" class="topbar-health-link" title="System health">
+        <span id="health-dot" class="health-dot unknown" title="Checking…"></span>
+        <span id="health-label" class="health-label">Connecting…</span></a>
+        <span id="proof-badge" class="proof-badge hidden" title="APIs verified">✓</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="main">
+    <section class="hero">
+      <h2>Artifact Registry</h2>
+      <p class="hero-sub">R2-backed package index · <span id="pkg-count">—</span> packages</p>
+      <div class="search-box">
+        <input type="text" id="search" placeholder="Search by name, description, or tag…" />
+      </div>
+    </section>
+
+    <section id="error-banner" class="error-banner hidden">
+      <p>⚠️ <span id="error-text">Could not load registry.</span></p>
+      <p class="error-hint">Bind <code>REGISTRY_BUCKET</code> on Pages Functions, or deploy a static snapshot to <code>public/registry/registry.json</code>.</p>
+    </section>
+
+    <section id="loading" class="loading-panel">
+      <div class="spinner"></div>
+      <p>Loading registry…</p>
+    </section>
+
+    <section id="dashboard" class="dashboard hidden">
+      <div class="stats-row">
+        <div class="stat-card" id="stat-packages">0 <span>packages</span></div>
+        <div class="stat-card" id="stat-versions">0 <span>versions</span></div>
+        <div class="stat-card" id="stat-types">0 <span>types</span></div>
+        <div class="stat-card" id="stat-health">— <span>avg health</span></div>
+      </div>
+      <div class="registry-banner" id="registry-banner">
+        <span id="banner-text">Registry snapshot — no live connection</span>
+      </div>
+      <div class="filter-row">
+        <div class="filter-section">
+          <span class="filter-label">Type:</span>
+          <div id="filter-types" class="filter-chips"></div>
+        </div>
+        <div class="sort-section">
+          <span class="filter-label">Sort:</span>
+          <select id="sort-select">
+            <option value="name">Name</option>
+            <option value="version">Version</option>
+            <option value="date">Publish date</option>
+          </select>
+        </div>
+      </div>
+      <div id="package-grid" class="package-grid"></div>
+    </section>
+  </main>
+
+  <notification-center aria-live="polite"></notification-center>
+
+  <footer class="footer">
+    <p>FactoryWager · <a href="https://github.com/brendadeeznuts1111/project-R-score">GitHub</a></p>
+  </footer>
+
+  <script type="module" src="/portal/data.js"></script>
+  <script type="module" src="/portal/topbar.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,187 @@
+---
+name: partner-gateway-integrator
+description: >
+  Use when changing partner profile, Telegram, sharp-signal, data-source,
+  settlement, dashboard, SOR, balance, risk, compliance, or operator UI flows.
+  Enforces PartnerGateway as the single policy module and packages/ui as the
+  shared UI surface. Part of the bet-ticker-worker autophagy team.
+---
+
+# PartnerGateway Integrator
+
+Use this skill before changing any human partner flow or operator UI surface that displays partner/risk/SDN state.
+
+## Rule
+
+`PartnerGateway` is the single policy module for partner rules. Do not copy lifecycle, KYC, balance, source, bookmaker, tier, alert, commission, exposure, or margin-call checks into zone code.
+
+Zones may adapt inputs and outputs, but partner decisions go through:
+
+- `partnerProfileService.getGateway(partnerId)`
+- `gateway.evaluate(signal)`
+- `gateway.shouldAlert(type, stake)`
+- `gateway.getAlertGroups(type)`
+- `gateway.authorizeSource(sourceId, sourceType)`
+- `gateway.calculateCommission(...)`
+- `gateway.checkMarginCall()`
+- `gateway.recordExposure(stake)`
+- `gateway.releaseExposure(stake)`
+- `gateway.recordSettlement(pnl)`
+- `gateway.transition(event)`
+- `partnerProfileService.updateRuntime(partnerId, patch)`
+
+## Control Plane Protocol
+
+Admin/control actions use the shared protocol in `shared/admin-action-protocol.ts`. Do not add one-off POST result shapes for partner operations.
+
+- Request shape: `AdminActionRequest<TAction>`
+- Response shape: `AdminActionResult<TAction>`
+- Partner actions: `PartnerGatewayAdminAction` from `shared/partner-gateway-dashboard-types.ts`
+- API execution entry: `executePartnerGatewayAdminAction(...)`
+- Preferred route: `POST /api/admin/partner-gateway/:partner_id/actions`
+
+Legacy action routes may remain as adapters, but should call the same protocol executor.
+
+Wave 7 native auth is additive over the Wave 6 control plane:
+
+- `dispatcher-v7.ts` keeps the Wave 6 `/api/v1/*` and `/api/admin/*` routes and adds `POST /api/v1/auth/login`, `POST /api/v1/auth/register`, and `GET /api/v1/native`.
+- `lib/bun-native-auth.ts` owns `Bun.password` bcrypt, HMAC API keys, and JWT verification. Do not add `bcrypt`, `jsonwebtoken`, or ad hoc token checks.
+- Authenticated Wave 7 calls may use `Authorization: Bearer <jwt>` or `X-API-Key: st_*`; `dispatcher-v7.ts` adapts those into the existing `AdminGateway` identity path.
+- Native WebSocket push runs on `WS_PORT` through `lib/bun-native-ws.ts`; topic mapping is `signals` for `signal_evaluated`, `admin` for `admin_*`, `odds` for `line_movement_detected`, and `*` for all broadcasts.
+
+## Identity Contract
+
+- `partner_id`: human partner/person/entity.
+- `source_id`: partner-owned account/source.
+- `bookmaker_id` or `bookId`: shared bookmaker/venue identity.
+
+Never use a bookmaker ID as a partner ID.
+
+## Shared UI Surface
+
+`packages/ui` is the shared operator UI surface. It is the frontend twin of the gateway pattern: reusable interface, consistent behavior, no zone policy.
+
+- `shared/`: backend/frontend contracts only. No React and no CSS.
+- `@sports-terminal/ui/primitives`: visual building blocks.
+- `@sports-terminal/ui/operational`: reusable operator workflows such as panel, filters, table/detail/action layout, state rows, and timeline.
+- Feature panels adapt typed zone payloads into `packages/ui`.
+
+Do not import PartnerGateway, zone modules, backend clients, operational SQLite, or contract-specific policy into `packages/ui`.
+
+## Operational Hooks
+
+Frontend operator screens should use shared hook shapes before adding local loading/action state:
+
+- `useOperationalResource(...)` for typed dashboard/detail resource loading.
+- `useOperationalAction(...)` for admin actions, retries, and long-running mutations.
+
+Feature adapters still own domain mapping. Hooks should not import backend zone modules.
+
+## Kernel Plug Manifest
+
+When wiring a zone into the partner OS, register or update the plug manifest:
+
+- `src/zones/partner-profile/kernel-plugs.ts`
+- `PARTNER_KERNEL_PLUGS`
+- `assertPartnerKernelCoverage()`
+
+The manifest is the quick audit that profile materialization, signal gating, source authorization, Telegram routing, settlement, admin actions, cultivation override, dashboard, and operator UI are all plugged into the kernel.
+
+## Canonical Imports
+
+Prefer the zone barrel for cross-zone consumers:
+
+```ts
+import {
+  partnerProfileService,
+  processSignal,
+  authorizeSourceConnection,
+  processSettlement,
+} from './src/zones/partner-profile';
+```
+
+Use root implementation files only when editing the module internals:
+
+- `src/partner-gateway.ts`
+- `src/partner-profile/partner-profile-service.ts`
+- `src/partner-profile/partner-profile-schema.ts`
+- `src/partner-profile/partner-profile-materializer.ts`
+- `src/partner-profile/partner-profile-loader.ts`
+- `src/zones/partner-profile/kernel-plugs.ts`
+
+## Required Checks
+
+For behavior changes, run:
+
+```bash
+bun test ./src/zones/partner-profile/cross-zone-integration.test.ts
+bun test ./src/partner-profile/partner-profile-service.test.ts
+bun scripts/smoke-test-partner-gateway-integration.ts
+npm run partner:gateway:smoke
+npm run partner:gateway:worker-smoke
+npm run typecheck
+```
+
+For worker-pool or control-plane changes, also run:
+
+```bash
+npm run control:v7:smoke
+npm run control:v7 -- native
+npm run control:v7 -- ws
+npm run control:v7 -- spawn
+npm run lint:knip
+```
+
+For operator UI package changes, also run:
+
+```bash
+bunx tsc -p packages/ui/tsconfig.json --noEmit
+cd frontend && npm run typecheck
+cd frontend && bun run build
+```
+
+For schema or documentation changes, also run:
+
+```bash
+bun scripts/audit-docs.mjs --skip-urls --skip-test-counts
+git diff --check
+```
+
+## Documentation
+
+Update these when changing the interface:
+
+- `docs/partner-profile-hub.md`
+- `packages/ui/README.md` and `frontend/README.md` for shared UI interface changes
+- `CONTEXT.md` if adding a new domain term
+- `docs/architecture.md` if adding a new zone adapter or materialized table
+- `AGENTS.md` when adding operator commands, env vars, or canonical smoke checks
+
+## Operator Surface
+
+Use the gateway CLI for persisted gate decisions and partner operations checks:
+
+```bash
+npm run partner:gateway -- dashboard
+npm run partner:gateway -- summary PARTNER_ID
+npm run partner:gateway -- sources PARTNER_ID
+npm run partner:gateway -- topics PARTNER_ID
+npm run partner:gateway:worker-smoke
+npm run control:v7:smoke
+```
+
+Most CLI commands are read-only. `hydrate` materializes a persisted partner into the in-memory gateway for debugging, and `smoke` creates `CLI_SMOKE_001` plus gate events. Use `OPERATIONAL_DB_PATH=/private/tmp/...` for isolated materialization and smoke runs.
+
+`partner:gateway:worker-smoke` is the fast confirmation for the Bun worker path.
+`partner:gateway -- worker-status` is the read-only operator snapshot.
+`partner:gateway -- worker-reload` builds a fresh default worker pool.
+`bun run scripts/worker-status.ts --health|--audit|--diverge` is the dense production operator CLI.
+`bun run scripts/control-cli.ts overview` reads the one-stop control-plane summary.
+`npm run control:serve` starts the additive Wave 7 server with native auth endpoints.
+`npm run control:v7:smoke` is the canonical local verification for root dispatchers, lib/ adapters, worker-pool/feed tests, worker smoke, and v4 status probes.
+
+## Deletion Test
+
+Before adding a helper module, ask: if this helper disappeared, would its logic spread across Telegram, SDN, settlement, dashboard, and source modules? If yes, it belongs behind `PartnerGateway` or `partnerProfileService`. If no, keep it as a small adapter.
+
+For UI modules, ask the same question across PartnerGateway, Risk Decisions, SDN, cultivation, and settlement screens. If the layout behavior would spread, put it in `packages/ui/operational`; if the domain mapping would spread, keep it in the feature adapter.

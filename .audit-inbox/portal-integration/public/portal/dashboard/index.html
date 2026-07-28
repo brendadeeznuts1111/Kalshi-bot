@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<!-- @see docs/portal-foundation.md -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="refresh" content="60" />
+  <title>Operations Dashboard · FactoryWager</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/portal/style.css" />
+  <style>
+    .dash { max-width: 1400px; margin: 0 auto; padding: 0 24px; }
+    .dash h1 { display: flex; align-items: center; gap: 12px; font-size: 22px; }
+    .dash .sub { color: var(--text-dim); font-size: 13px; margin: -8px 0 24px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; margin: 20px 0; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
+    .card .lbl { font-size: 11px; text-transform: uppercase; color: var(--text-dim); letter-spacing: .5px; }
+    .card .val { font-size: 26px; font-weight: 600; margin: 4px 0 6px; }
+    .card .d { font-size: 12px; color: var(--text-dim); }
+    .ok { color: var(--green); } .warn { color: var(--yellow); } .err { color: var(--red); }
+    .section { margin: 28px 0; }
+    .section h2 { font-size: 16px; margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+    table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 12px; }
+    th { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); color: var(--text-dim); font-weight: 500; background: var(--surface-hover); }
+    td { padding: 7px 10px; border-bottom: 1px solid var(--border); }
+    .mono { font-family: monospace; font-size: 11px; }
+    .phash { font-family: monospace; background: var(--surface-hover); padding: 2px 8px; border-radius: 4px; font-size: 11px; }
+    .btn { background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 6px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+    .btn:hover { background: var(--surface-hover); }
+    .top { display: flex; gap: 12px; align-items: center; margin-bottom: 8px; }
+    .err-box { background: rgba(248,81,73,.1); border: 1px solid var(--red); border-radius: var(--radius); padding: 12px 16px; margin: 12px 0; font-size: 13px; color: var(--red); }
+    .nav-links { margin: 16px 0; display: flex; gap: 12px; flex-wrap: wrap; font-size: 13px; }
+    .nav-links a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <h1 class="logo">
+        <span class="logo-icon">■</span>
+        <span class="brand-wordmark">FactoryWager</span>
+        <span class="brand-badge">ops</span>
+        <span class="logo-page">Dashboard</span>
+      </h1>
+      <nav class="topbar-nav" aria-label="Primary">
+        <a href="/" class="nav-link">Home</a>
+        <a href="/portal/ops" class="nav-link">Ops</a>
+        <a href="/portal/" class="nav-link">Registry</a>
+        <a href="/portal/health" class="nav-link">Health</a>
+        <a href="/portal/dod" class="nav-link">DOD</a>
+        <div class="nav-overflow">
+          <button type="button" class="nav-more" aria-label="More navigation" aria-expanded="false" aria-haspopup="true">⋯</button>
+          <div class="nav-dropdown" role="menu">
+            <a href="/portal/catalog" class="nav-link" role="menuitem">Catalog</a>
+            <a href="/portal/skills" class="nav-link" role="menuitem">Skills</a>
+            <a href="/portal/env" class="nav-link" role="menuitem">Env</a>
+            <a href="/portal/dashboard" class="nav-link active" role="menuitem">Dashboard</a>
+            <a href="/monitoring" class="nav-link" role="menuitem">Monitoring</a>
+            <a href="https://wiki.factory-wager.com" class="nav-link" target="_blank" rel="noopener noreferrer" role="menuitem">Wiki</a>
+          </div>
+        </div>
+      </nav>
+      <div class="topbar-status">
+        <a href="/portal/health" class="topbar-health-link" title="System health">
+          <span id="health-dot" class="health-dot unknown"></span>
+          <span id="health-label" class="health-label">…</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="dash">
+    <div class="top">
+      <h1>📊 Operations Dashboard</h1>
+      <button class="btn" onclick="window.location.reload()">🔄 Refresh</button>
+      <span id="ts" style="color:var(--text-dim);font-size:12px"></span>
+    </div>
+
+    <div class="grid" id="cards"></div>
+    <div id="net" class="section"></div>
+    <div id="defaults-tbl" class="section"></div>
+    <div id="proofs" class="section"></div>
+    <div id="errors"></div>
+  </main>
+
+  <script>
+    async function load() {
+      const $ = id => document.getElementById(id);
+
+      const res = await Promise.all([
+        fetch('/api/defaults').then(r => r.json()).catch(() => ({})),
+        fetch('/api/monitoring').then(r => r.json()).catch(() => ({})),
+        fetch('/api/registry').then(r => r.json()).catch(() => ({})),
+        fetch('/api/release').then(r => r.json()).catch(() => ({})),
+      ]);
+      const [def, mon, reg, rel] = res;
+
+      const pkgCount = reg?.packages ? Object.keys(reg.packages).length : mon?.packageCount || 0;
+      const verCount = reg?.packages ? Object.values(reg.packages).reduce((s, p) => s + (p.versions?.length || 0), 0) : mon?.versionCount || 0;
+
+      const cards = [
+        { lbl: 'Registry Packages', val: pkgCount || '—', d: verCount + ' versions', cls: pkgCount > 0 ? 'ok' : 'err' },
+        { lbl: 'Bun Defaults', val: (def.passed ?? '?') + '/' + (def.total ?? '?'), d: def.status || 'N/A', cls: def.passed === def.total ? 'ok' : 'warn' },
+        { lbl: 'DOD Queue', val: mon?.dodQueue ?? 0, d: 'pending reviews', cls: mon?.dodQueue === 0 ? 'ok' : 'warn' },
+        { lbl: 'Platforms', val: mon?.platformSummary ? Object.values(mon.platformSummary).reduce((a,b) => a+b, 0) : '—', d: mon?.platformApiAvailable?.yes + ' API up', cls: mon?.platformApiAvailable?.yes > 0 ? 'ok' : 'warn' },
+        { lbl: 'Experiments', val: mon?.experimentsActive ?? 0, d: 'active', cls: 'ok' },
+        { lbl: 'Prediction', val: mon?.predictionN ?? 0, d: 'data points', cls: (mon?.predictionN ?? 0) > 0 ? 'ok' : 'warn' },
+      ];
+      $('cards').innerHTML = cards.map(c => '<div class="card"><div class="lbl">'+c.lbl+'</div><div class="val '+c.cls+'">'+c.val+'</div><div class="d">'+c.d+'</div></div>').join('');
+
+      // Defaults table
+      if (def.tests?.length) {
+        $('defaults-tbl').innerHTML = '<h2>🔍 Bun Defaults Verification</h2><table><thead><tr><th>Test</th><th>Expected</th><th>Result</th></tr></thead><tbody>' +
+          def.tests.map(t => '<tr><td>'+t.name+'</td><td>'+t.expected+'</td><td>'+(t.passed ? '✅' : '❌')+'</td></tr>').join('') +
+          '</tbody></table><p style="margin-top:8px"><span class="phash">🔒 Proof hash: '+(def.proofHash||'N/A')+'</span></p>';
+      }
+
+      // Proof hashes
+      const hashes = [];
+      if (def.proofHash) hashes.push(['Defaults', def.proofHash]);
+      if (mon?.env?.summary) hashes.push(['Env checks', mon.env.summary.ok + '/' + mon.env.summary.total + ' ok']);
+      const r = rel?.results?.[0] || {};
+      const chan = r.channel || '—';
+      const tgt = r.targetVersion || '—';
+      const lat = r.latestAtTestTime || '—';
+      hashes.push(['Bun runtime', `${def.bunVersion || '?'} · channel:${chan} · target:${tgt} · latest:${lat}`]);
+      $('proofs').innerHTML = '<h2>🔐 Proof Hashes & Channels</h2><table><thead><tr><th>Proof</th><th>Value</th></tr></thead><tbody>' +
+        hashes.map(h => '<tr><td>'+h[0]+'</td><td class="mono">'+h[1]+'</td></tr>').join('') + '</tbody></table>';
+
+      $('ts').textContent = new Date().toLocaleTimeString();
+    }
+    load();
+  </script>
+  <script type="module" src="/portal/data.js"></script>
+  <script type="module" src="/portal/topbar.js"></script>
+</body>
+</html>
