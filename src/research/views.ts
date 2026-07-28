@@ -33,6 +33,7 @@ export const STYLES = `
   .badge.ok { background: #dafbe1; color: #1a7f37; }
   .badge.warn { background: #fff8c5; color: #9a6700; }
   .badge.bad { background: #ffebe9; color: #cf222e; }
+  .badge.dim { background: #eaeef2; color: #57606a; }
   .dim { color: #57606a; font-size: 0.85rem; }
   form.ops { display: grid; gap: 0.5rem; max-width: 34rem; margin: 0.5rem 0 1rem; }
   form.ops textarea { font-family: monospace; }
@@ -247,6 +248,13 @@ export type OpsDashboardData = {
     dbPath: string;
     counts: Record<string, number>; // table → rows; -1 = table missing
   } | null;
+  /** Cached Kalshi credential probe (server-side, 5-min TTL). */
+  kalshiAuth?: {
+    state: "valid" | "invalid" | "unreachable" | "no-creds";
+    status?: number;
+    checkedAt: string;
+    cacheTtlSec: number;
+  };
   /** Process/service self-metrics; panel is skipped when absent. */
   server?: {
     bootAt: string;
@@ -390,15 +398,29 @@ function renderOpsServer(data: OpsDashboardData, nowMs: number): string {
   ${ages.length ? `<p>data plane: ${ages.join(" · ")}</p>` : ""}`;
 }
 
+const KALSHI_AUTH_BADGE: Record<string, { cls: string; label: string }> = {
+  valid: { cls: "ok", label: "valid" },
+  invalid: { cls: "bad", label: "invalid (rotate key)" },
+  unreachable: { cls: "warn", label: "unreachable" },
+  "no-creds": { cls: "dim", label: "no creds" },
+};
+
+function kalshiAuthBadge(auth: NonNullable<OpsDashboardData["kalshiAuth"]>): string {
+  const b = KALSHI_AUTH_BADGE[auth.state] ?? { cls: "warn", label: auth.state };
+  const title = `checked ${auth.checkedAt} · cache ${auth.cacheTtlSec}s${auth.status != null ? ` · HTTP ${auth.status}` : ""}`;
+  return `<span class="badge ${b.cls}" title="${escapeHtml(title)}">${escapeHtml(b.label)}</span>`;
+}
+
 function renderOpsData(data: OpsDashboardData, nowMs: number): string {
   const storeBlock = renderOpsStore(data.store);
+  const authLine = data.kalshiAuth ? `<p>Kalshi auth: ${kalshiAuthBadge(data.kalshiAuth)}</p>\n  ` : "";
   if (!data.canary) {
-    return `${storeBlock}
+    return `${authLine}${storeBlock}
   <p><em>No canary artifact at <code>research/cache/tennis-canary/latest.json</code> yet.</em></p>`;
   }
   const c = data.canary;
   const age = c.periodMin != null ? ` · ${ageBadge(c.at, c.periodMin, nowMs)}` : "";
-  return `${storeBlock}
+  return `${authLine}${storeBlock}
   <h3>Live canary</h3>
   <p>${canaryBadge(c)} · ${escapeHtml(c.at)}${c.dryRun ? " · dry-run" : ""}${age}</p>
   <div class="stats">
@@ -458,14 +480,14 @@ const OPS_DISPATCH_TYPES = [
 export function renderOpsActions(): string {
   const typeOptions = OPS_DISPATCH_TYPES.map((t) => `<option value="${t}">${t}</option>`).join("");
   return `<h2>Actions</h2>
-  <p class="dim">Synthetic probes against this server's own endpoints — the compliance bet check runs the regulatory pipeline and returns a synthetic playId; it is NOT a live Kalshi order. Page auto-refreshes every 60s; form state resets on refresh.</p>
+  <p class="dim">Synthetic probes against this server's own endpoints — the compliance bet check runs the regulatory pipeline and returns a synthetic playId; it is NOT a live Kalshi order. Form values persist across auto-refresh; confirmation resets deliberately.</p>
   <h3>Agent dispatch</h3>
   <form class="ops" id="ops-dispatch-form">
     <label>Task type
       <select id="ops-dispatch-type">${typeOptions}</select>
     </label>
     <label>Payload (JSON, optional)
-      <textarea id="ops-dispatch-payload" rows="3" placeholder='{"slugs":["…"],"fetchLimit":5}'>{}</textarea>
+      <textarea id="ops-dispatch-payload" rows="4" placeholder="{}"></textarea>
     </label>
     <label><input type="checkbox" id="ops-dispatch-confirm" /> I confirm dispatch</label>
     <button type="submit" id="ops-dispatch-submit" disabled>Dispatch</button>
@@ -492,6 +514,64 @@ export function renderOpsActions(): string {
   <pre class="diff" id="ops-bet-result" hidden></pre>
 <script>
 (function () {
+  // Minimal working payload per task type, derived from the agents' run() payload usage.
+  var PAYLOAD_EXAMPLES = {
+    COMPLIANCE_CHECK: '{\\n  "nodeId": "node-1",\\n  "userId": "ops-dashboard",\\n  "stateCode": "MA",\\n  "sportId": "tennis",\\n  "marketId": "KXITF-1",\\n  "wagerAmount": 10,\\n  "betType": "single"\\n}',
+    SPIKE_DETECT: '{\\n  "windowSeconds": 300,\\n  "threshold": 10\\n}',
+    MARKET_INGEST: '{\\n  "fetchLimit": 5\\n}',
+    ADMIN_ACTION: '{\\n  "action": "remove_exclusion",\\n  "nodeId": "node-1",\\n  "userId": "ops-dashboard"\\n}',
+    LINE_MOVE_EVAL: '{\\n  "slug": "example-market",\\n  "oldPrice": 0.42,\\n  "newPrice": 0.47,\\n  "deltaBp": 500\\n}',
+  };
+  var PAYLOAD_PLACEHOLDERS = {
+    COMPLIANCE_CHECK: "placeBetAtomic fields — all required",
+    SPIKE_DETECT: "optional — defaults windowSeconds=300 threshold=10",
+    MARKET_INGEST: "optional — { slugs?: string[], fetchLimit?: number }",
+    ADMIN_ACTION: "action + nodeId + userId (+ action-specific payload)",
+    LINE_MOVE_EVAL: "slug/oldPrice/newPrice/deltaBp (+ detectedAt)",
+  };
+
+  // Field values persist across the 60s auto-refresh via sessionStorage.
+  // Confirm checkboxes are deliberately NOT restored — confirmation must be
+  // re-asserted after every reload.
+  var STORAGE_KEY = "ops-actions-form-v1";
+  var FIELD_IDS = ["ops-dispatch-type", "ops-dispatch-payload", "ops-bet-state", "ops-bet-wager", "ops-bet-user"];
+
+  function saveFields() {
+    try {
+      var data = {};
+      for (var i = 0; i < FIELD_IDS.length; i++) {
+        var el = document.getElementById(FIELD_IDS[i]);
+        if (el) data[FIELD_IDS[i]] = el.value;
+      }
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch (e) { /* storage unavailable — non-fatal */ }
+  }
+
+  function restoreFields() {
+    var data;
+    try { data = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || "{}"); } catch (e) { data = {}; }
+    for (var i = 0; i < FIELD_IDS.length; i++) {
+      var el = document.getElementById(FIELD_IDS[i]);
+      if (el && typeof data[FIELD_IDS[i]] === "string") el.value = data[FIELD_IDS[i]];
+    }
+  }
+
+  var typeSelect = document.getElementById("ops-dispatch-type");
+  var payloadBox = document.getElementById("ops-dispatch-payload");
+  var prevExample = null;
+
+  function syncPayloadExample() {
+    var type = typeSelect.value;
+    var example = PAYLOAD_EXAMPLES[type];
+    payloadBox.placeholder = PAYLOAD_PLACEHOLDERS[type] || "{}";
+    // Prefill only when the box is empty or still holds the previous type's
+    // example — never clobber an operator's edit.
+    if (example && (payloadBox.value.trim() === "" || payloadBox.value === prevExample)) {
+      payloadBox.value = example;
+    }
+    prevExample = example || null;
+  }
+
   function show(out, status, body) {
     out.hidden = false;
     out.textContent = "HTTP " + status + (status === 429 ? " (rate limited — wait a moment)" : "") + "\\n" + body;
@@ -527,7 +607,7 @@ export function renderOpsActions(): string {
     });
   }
   wire("ops-dispatch-form", "ops-dispatch-confirm", "ops-dispatch-submit", "ops-dispatch-result", function (out) {
-    var raw = document.getElementById("ops-dispatch-payload").value.trim() || "{}";
+    var raw = payloadBox.value.trim() || "{}";
     var payload;
     try { payload = JSON.parse(raw); } catch (e) {
       show(out, 0, "payload is not valid JSON: " + e.message);
@@ -539,7 +619,7 @@ export function renderOpsActions(): string {
       init: {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ task: { type: document.getElementById("ops-dispatch-type").value, payload: payload } }),
+        body: JSON.stringify({ task: { type: typeSelect.value, payload: payload } }),
       },
     };
   });
@@ -559,6 +639,17 @@ export function renderOpsActions(): string {
       },
     };
   });
+
+  restoreFields();
+  syncPayloadExample();
+  typeSelect.addEventListener("change", function () { syncPayloadExample(); saveFields(); });
+  for (var i = 0; i < FIELD_IDS.length; i++) {
+    var el = document.getElementById(FIELD_IDS[i]);
+    if (el) {
+      el.addEventListener("input", saveFields);
+      el.addEventListener("change", saveFields);
+    }
+  }
 })();
 </script>`;
 }

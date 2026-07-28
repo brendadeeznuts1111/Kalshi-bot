@@ -31,9 +31,10 @@ describe("ops actions panel", () => {
     expect(html).toContain('id="ops-bet-confirm"');
     expect(html).toContain('id="ops-bet-submit" disabled');
     expect(html).toContain('id="ops-bet-result" hidden');
-    // labeling + refresh hint
+    // labeling + persistence hint
     expect(html).toContain("NOT a live Kalshi order");
-    expect(html).toContain("form state resets");
+    expect(html).toContain("Form values persist across auto-refresh");
+    expect(html).toContain("confirmation resets deliberately");
   });
 
   test("posts to existing endpoints only (no new routes)", () => {

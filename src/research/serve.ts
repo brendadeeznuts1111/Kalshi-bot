@@ -26,6 +26,7 @@ import {
 } from "../regulatory/agents";
 import { ComplianceRepository, ViolationAlerts } from "../regulatory";
 import { TABLE } from "../regulatory/constants";
+import { loadKalshiCredentials, probeKalshiAuth } from "../bot/kalshi-auth.ts";
 
 // ── Regulatory compliance integration ──
 const REG_DB_PATH = process.env.REGULATORY_DB ?? ":memory:";
@@ -248,6 +249,65 @@ function handlePolymarketLineMoves(_req: Request): Response {
 /** Process boot time for the Server panel (module load ≈ server start). */
 const OPS_BOOT_AT = new Date();
 
+// ── Kalshi auth badge (cached probe) ──
+
+export type OpsKalshiAuth = {
+  state: "valid" | "invalid" | "unreachable" | "no-creds";
+  status?: number;
+  checkedAt: string;
+  cacheTtlSec: number;
+};
+
+const KALSHI_AUTH_CACHE_TTL_SEC = 300;
+let kalshiAuthCache: { value: OpsKalshiAuth; expiresAtMs: number } | null = null;
+
+/** Test hook — drop the cached probe so each case re-fetches. */
+export function resetKalshiAuthCache(): void {
+  kalshiAuthCache = null;
+}
+
+/**
+ * Kalshi credential probe with a 5-minute module-scope cache. The /ops page
+ * meta-refreshes every 60s — probing on every render would hammer the Kalshi
+ * API (and looks like credential brute-forcing), so a render within the TTL
+ * reuses the last result.
+ */
+export async function probeKalshiAuthCached(
+  opts: { base?: string; timeoutMs?: number; nowMs?: number } = {},
+): Promise<OpsKalshiAuth> {
+  const nowMs = opts.nowMs ?? Date.now();
+  if (kalshiAuthCache && nowMs < kalshiAuthCache.expiresAtMs) {
+    return kalshiAuthCache.value;
+  }
+  const checkedAt = new Date(nowMs).toISOString();
+  let value: OpsKalshiAuth;
+  let creds: ReturnType<typeof loadKalshiCredentials> | null = null;
+  try {
+    creds = loadKalshiCredentials();
+  } catch {
+    value = { state: "no-creds", checkedAt, cacheTtlSec: KALSHI_AUTH_CACHE_TTL_SEC };
+  }
+  if (creds) {
+    try {
+      const probe = await probeKalshiAuth(creds, {
+        base: opts.base,
+        timeoutMs: opts.timeoutMs ?? 2_000,
+      });
+      const state =
+        probe.status === 200
+          ? "valid"
+          : probe.status === 401 || probe.status === 403
+            ? "invalid"
+            : "unreachable";
+      value = { state, status: probe.status, checkedAt, cacheTtlSec: KALSHI_AUTH_CACHE_TTL_SEC };
+    } catch {
+      value = { state: "unreachable", checkedAt, cacheTtlSec: KALSHI_AUTH_CACHE_TTL_SEC };
+    }
+  }
+  kalshiAuthCache = { value: value!, expiresAtMs: nowMs + KALSHI_AUTH_CACHE_TTL_SEC * 1000 };
+  return value!;
+}
+
 /** Process self-metrics + in-memory regDb signal counts. */
 function readOpsServerStats() {
   const mem = process.memoryUsage();
@@ -406,6 +466,7 @@ async function handleOpsPage(_req: Request): Promise<Response> {
       lineMoves: marketData.recentLineMoves(10),
       canary: canary && { ...canary, periodMin: OPS_CRON_FLOWS[0].periodMin },
       store: await readEventStoreCounts(),
+      kalshiAuth: await probeKalshiAuthCached(),
       server: readOpsServerStats(),
       flows,
       runs: listRunSummaries(5),
@@ -434,6 +495,7 @@ async function handleOpsJson(_req: Request): Promise<Response> {
     lineMoves: marketData.recentLineMoves(10),
     canary: canary && { ...canary, periodMin: OPS_CRON_FLOWS[0].periodMin },
     store: await readEventStoreCounts(),
+    kalshiAuth: await probeKalshiAuthCached(),
     server: readOpsServerStats(),
     flows,
     runs: listRunSummaries(5),
