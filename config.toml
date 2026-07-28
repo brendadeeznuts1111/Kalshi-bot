@@ -1,0 +1,113 @@
+# ============================================================================
+# Kalshi Bot Research — Runtime Configuration
+# ============================================================================
+# Load via:  import { loadConfig } from "./src/lib/config"
+# Override:  KALSHI__SECTION__KEY=value  (double-underscore delimiter)
+# Native:    Bun.TOML.parse(await Bun.file("config.toml").text())
+# ============================================================================
+
+[meta]
+name = "kalshi-bot-research"
+version = "0.2.0"
+environment = "development"  # development | staging | production
+
+# ----------------------------------------------------------------------------
+# Regulatory Compliance Module
+# ----------------------------------------------------------------------------
+[regulatory]
+
+# SQLite database path. Use ":memory:" for ephemeral test runs.
+# Override: KALSHI__REGULATORY__DATABASE_PATH
+database-path = "./data/regulatory.db"
+
+# Default country code for new plays.
+default-country-code = "US"
+
+# Default anonymous user identifier.
+default-user-id = "anonymous"
+
+# ----------------------------------------------------------------------------
+# Rate Limiter — Token-bucket per IP / user / node
+# ----------------------------------------------------------------------------
+[regulatory.rate-limiter]
+
+# Refill window in milliseconds.
+window-ms = 60_000
+
+# Maximum requests allowed per window.
+max-requests = 100
+
+# Fallback identifier when IP headers are absent.
+fallback-ip = "unknown"
+
+# ----------------------------------------------------------------------------
+# Violation Alerting — Spike detection + ops summaries
+# ----------------------------------------------------------------------------
+[regulatory.alerts]
+
+# Sliding-window size for spike detection (seconds).
+violation-window-seconds = 300
+
+# Violation count that triggers a spike alert.
+violation-threshold = 10
+
+# Default lookback for summary queries (minutes).
+summary-minutes = 60
+
+# Ranked-reason list cap in spike results.
+top-reasons-limit = 5
+
+# Ranked-state list cap in spike results.
+top-states-limit = 5
+
+# Recent-violations cap in summary results.
+recent-limit = 20
+
+# ----------------------------------------------------------------------------
+# Polymarket Integration — Line-movement + steam detection
+# ----------------------------------------------------------------------------
+[regulatory.polymarket]
+
+# Basis-point threshold for significant line moves (500 = 5%).
+delta-bp-threshold = 500
+
+# Minimum 24-hour USD volume to consider a market liquid.
+min-volume-24hr = 1_000
+
+# How long to track each slug after a tick (seconds).
+tracking-window-seconds = 300
+
+# Max allowed bid-ask spread for steam-flagging.
+max-spread = 0.05
+
+# Page size for Gamma API market fetches.
+fetch-limit = 50
+
+# Bets placed within this window before a line move are flagged (seconds).
+steam-lookback-seconds = 60
+
+# ----------------------------------------------------------------------------
+# Migration + Data Retention
+# ----------------------------------------------------------------------------
+[regulatory.migration]
+
+# How long to keep regulatory_violations rows before sweep (days).
+retention-days = 90
+
+# Directory containing ordered .sql migration files (relative to regulatory module root).
+migrations-dir = "db/migrations"
+
+[server]
+port = 7_100
+host = "0.0.0.0"
+
+# ----------------------------------------------------------------------------
+# Logging + Diagnostics
+# ----------------------------------------------------------------------------
+[logging]
+
+# Bun.serve log level: debug | info | warn | error
+level = "info"
+
+# Enable ANSI color output in CLI scripts.
+colors-enabled = true

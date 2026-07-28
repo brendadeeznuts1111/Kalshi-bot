@@ -349,8 +349,8 @@ async function main(): Promise<void> {
   log.info("Running command with resolved secrets", { command: realCommand.join(" ") });
   console.log(`🔐 ProtonPass → ${realCommand.join(" ")}`);
 
-  const proc = Bun.spawn([passCli, "run", "--env-file", resolvedPath, "--", ...realCommand], {
-    stdio: "inherit",
+  const proc = Bun.spawn([passCli!, "run", "--env-file", resolvedPath, "--", ...realCommand], {
+    stdio: ["inherit", "inherit", "inherit"] as ["inherit", "inherit", "inherit"],
     cwd: process.cwd(),
   });
 

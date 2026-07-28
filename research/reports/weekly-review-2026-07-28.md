@@ -212,3 +212,66 @@ No other goal status changes warrant updating `docs/ROADMAP.md` or `docs/PLAN.md
 ---
 
 *Report generated: 2026-07-28. Next review: 2026-08-04.*
+
+---
+
+## 7. Post-Review Actions Executed (Same Day)
+
+### 7.1 package.json — verified clean
+
+- **Status:** ✅ Already clean — no stash conflict markers found. Scripts resolve correctly. The suspected corruption was either transient or resolved by a prior operation.
+
+### 7.2 Calibration drift — root cause fixed + backfilled
+
+**Root cause identified:** Batch shadow predictions (`batch-shadow.ts`) used `Date.now()` for prediction timestamps, causing toxicity mark windows (T+60s to T+75s) to expire before the async batch runner could record them. This made every batch prediction count as "missed."
+
+**Fix implemented:**
+- Added `batchMode?: boolean` to `ShadowAppendInput` in both ITF and tour `shadow.ts`
+- Batch mode sets `toxicity.dueTs = -1` as a sentinel value
+- `selectDueToxicityMarks()` now skips predictions with `dueTs < 0`
+- Updated `batch-shadow.ts` and `batch-shadow-rest.ts` to pass `batchMode: true`
+
+**Files modified:**
+- `alpha/tennis-game-model/src/shadow.ts`
+- `alpha/tennis-game-model/src/execute.ts`
+- `alpha/tennis-game-model/src/batch-shadow.ts`
+- `alpha/tennis-tour-pinnacle-novig/src/shadow.ts`
+- `alpha/tennis-tour-pinnacle-novig/src/batch-shadow-rest.ts`
+- `src/institutions/shadow-line.ts` (skip `dueTs < 0`)
+
+**Outcome backfill executed:**
+- New utility: `tools/tennis/backfill-outcomes.ts`
+- Command: `bun run tennis:outcomes -- --program=tennis-game-model`
+- **Result:** 21 outcome-resolution entries appended
+- **168 predictions now resolved** (was 0)
+- **Brier score: 0.2840** (first meaningful model calibration metric)
+- The remaining 27 "missed" toxicity marks are historical pre-fix predictions and will not grow further.
+
+### 7.3 Tour-series sync — CLI created
+
+**New utility:** `tools/tennis/tour-sync-cli.ts`
+- Wraps existing `syncTennisEvents(series: TOUR_SERIES_TICKERS)` from `kalshi-itf-sync.ts`
+- Syncs ATP/WTA/Challenger markets into event-store.db
+- Added to `package.json`: `tennis:tour`
+
+**Usage:**
+```bash
+bun run tennis:tour -- --sync [--retain-days=3] [--bridge]
+```
+
+**Series covered:** `KXATPMATCH`, `KXWTAMATCH`, `KXATPCHALLENGERMATCH`, `KXWTACHALLENGERMATCH`
+
+### 7.4 Pre-existing fix — kalshi-client.ts import
+
+- Fixed missing quotes in `src/bot/kalshi-client.ts` line 17: `from ../institutions/official-urls.ts` → `from "../institutions/official-urls.ts"`
+
+### 7.5 package.json — new scripts added
+
+| Script | Purpose |
+|--------|---------|
+| `bun run tennis:tour` | Sync ATP/WTA/Challenger markets |
+| `bun run tennis:outcomes` | Backfill shadow-log outcomes from event-store |
+
+---
+
+*Report generated: 2026-07-28. Next review: 2026-08-04.*

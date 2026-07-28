@@ -99,6 +99,32 @@ describe("fetchPolymarketMarkets", () => {
     expect(capturedUrl).toContain(OFFICIAL_URLS.polymarket.gammaApiBase);
   });
 
+  test("retries on 429 and succeeds", async () => {
+    let calls = 0;
+    const retryFetch: PolymarketFetchImpl = async () => {
+      calls++;
+      if (calls === 1) {
+        return new Response(JSON.stringify({ error: "Rate limited" }), { status: 429 });
+      }
+      return new Response(
+        JSON.stringify([{
+          id: "m1", slug: "retry-test", question: "Q", conditionId: "c1",
+          outcomes: '["Yes","No"]', outcomePrices: '["0.6","0.4"]',
+          volume: "1000", volume24hr: "100", liquidity: "500",
+          lastTradePrice: "0.6", active: true, closed: false,
+          createdAt: "2026-01-01T00:00:00Z", updatedAt: "2026-01-02T00:00:00Z",
+        }]),
+        { status: 200 },
+      );
+    };
+
+    const markets = await fetchPolymarketMarkets({
+      fetchImpl: retryFetch, retries: 2, backoffMs: 1, jitter: 0,
+    });
+    expect(calls).toBe(2);
+    expect(markets[0].slug).toBe("retry-test");
+  });
+
   test("throws on non-2xx response", async () => {
     const badFetch = mockFetch({ error: "Rate limited" }, 429);
     await expect(fetchPolymarketMarkets({ fetchImpl: badFetch })).rejects.toThrow("Polymarket API");

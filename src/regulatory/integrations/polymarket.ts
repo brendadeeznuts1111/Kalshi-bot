@@ -160,8 +160,9 @@ export async function fetchPolymarketMarkets(
   if (options.active !== undefined) params.set("active", String(options.active));
   if (options.closed !== undefined) params.set("closed", String(options.closed));
 
+  const { fetchImpl: _, baseUrl: __, ...retryOptions } = options;
   const url = `${base}/markets?${params.toString()}`;
-  const raw = await getJson<Record<string, unknown>[]>(fetchImpl, url);
+  const raw = await getJson<Record<string, unknown>[]>(fetchImpl, url, retryOptions);
 
   return raw.map(normalizeMarketWire);
 }
@@ -173,8 +174,9 @@ export async function fetchPolymarketMarket(
 ): Promise<PolymarketMarket> {
   const fetchImpl = resolveFetch(options);
   const base = resolveBaseUrl(options.baseUrl);
+  const { fetchImpl: _, baseUrl: __, ...retryOptions } = options;
   const url = `${base}/markets/${encodeURIComponent(marketId)}`;
-  const raw = await getJson<Record<string, unknown>>(fetchImpl, url);
+  const raw = await getJson<Record<string, unknown>>(fetchImpl, url, retryOptions);
   return normalizeMarketWire(raw);
 }
 
