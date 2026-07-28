@@ -10,6 +10,8 @@ import {
 import { REPORT_DIR, CACHE_DIR, joinPath } from "./paths.ts";
 import { fullNameFromRouteParams, ROUTES } from "./patterns.ts";
 import { pageLayout, renderIndex, renderOps, renderRepoPage } from "./views.ts";
+import { openEventStore } from "../institutions/event-store/open-db.ts";
+import { DEFAULT_EVENT_STORE_DB } from "../institutions/event-store/paths.ts";
 import { Database } from "bun:sqlite";
 import { partnerDetailHandler } from "../regulatory/routes/ops/partners";
 import { requireStateCompliance } from "../regulatory/middleware/state-compliance";
@@ -321,6 +323,39 @@ async function readCanaryArtifact() {
   }
 }
 
+const EVENT_STORE_TABLES = [
+  "events",
+  "markets",
+  "resolutions",
+  "book_ticks",
+  "score_snapshots",
+  "odds_ticks",
+] as const;
+
+/** Read-only row counts from the tennis event store; null when the DB is absent/unreadable. */
+async function readEventStoreCounts() {
+  try {
+    if (!(await Bun.file(DEFAULT_EVENT_STORE_DB).exists())) return null;
+    const db = openEventStore({ readonly: true });
+    try {
+      const counts: Record<string, number> = {};
+      for (const table of EVENT_STORE_TABLES) {
+        try {
+          const row = db.query(`SELECT COUNT(*) AS n FROM ${table}`).get() as { n: number } | null;
+          counts[table] = row?.n ?? 0;
+        } catch {
+          counts[table] = -1; // table missing in older DBs
+        }
+      }
+      return { dbPath: DEFAULT_EVENT_STORE_DB, counts };
+    } finally {
+      db.close();
+    }
+  } catch {
+    return null;
+  }
+}
+
 async function handleOpsPage(_req: Request): Promise<Response> {
   const roles = orchestrator.listRoles();
   const marketData = new MarketDataAgent(regDb);
@@ -340,10 +375,36 @@ async function handleOpsPage(_req: Request): Promise<Response> {
       ticks: marketData.latestTicks(10),
       lineMoves: marketData.recentLineMoves(10),
       canary: await readCanaryArtifact(),
+      store: await readEventStoreCounts(),
       flows,
       runs: listRunSummaries(5),
     }),
   );
+}
+
+/** Machine-readable companion to /ops (same data, JSON). */
+async function handleOpsJson(_req: Request): Promise<Response> {
+  const roles = orchestrator.listRoles();
+  const marketData = new MarketDataAgent(regDb);
+  const launchd = await probeLaunchdLabels();
+  const flows = await Promise.all(OPS_CRON_FLOWS.map((f) => readCronFlow(f, launchd)));
+
+  return json({
+    generatedAt: new Date().toISOString(),
+    agents: {
+      orchestrator: true,
+      market_data: roles.includes("market_data"),
+      compliance: roles.includes("compliance"),
+      ops: roles.includes("ops"),
+      admin: roles.includes("admin"),
+    },
+    ticks: marketData.latestTicks(10),
+    lineMoves: marketData.recentLineMoves(10),
+    canary: await readCanaryArtifact(),
+    store: await readEventStoreCounts(),
+    flows,
+    runs: listRunSummaries(5),
+  });
 }
 
 async function handleAgentDispatch(req: Request): Promise<Response> {
@@ -376,6 +437,11 @@ export function createResearchServer(options: ServeOptions = {}) {
       // Ops dashboard (read-only management page)
       if (url.pathname === "/ops") {
         return handleOpsPage(req);
+      }
+
+      // Ops dashboard JSON companion
+      if (url.pathname === "/ops.json") {
+        return handleOpsJson(req);
       }
 
       // Regulatory ops dashboard (no compliance gate, but rate-limited)

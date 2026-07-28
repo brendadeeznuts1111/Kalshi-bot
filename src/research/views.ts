@@ -29,6 +29,10 @@ export const STYLES = `
   ul.checks { list-style: none; padding: 0; }
   ul.checks li::before { content: "✓ "; color: #1a7f37; }
   ul.checks li.no::before { content: "✗ "; color: #cf222e; }
+  .badge { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 999px; font-size: 0.8rem; font-weight: 600; }
+  .badge.ok { background: #dafbe1; color: #1a7f37; }
+  .badge.warn { background: #fff8c5; color: #9a6700; }
+  .badge.bad { background: #ffebe9; color: #cf222e; }
 `;
 
 export function pageLayout(title: string, body: string, opts?: { refreshSeconds?: number }): string {
@@ -229,6 +233,10 @@ export type OpsDashboardData = {
     live: number;
     errors: number;
   } | null;
+  store: {
+    dbPath: string;
+    counts: Record<string, number>; // table → rows; -1 = table missing
+  } | null;
   flows: OpsCronFlow[];
   runs: RunSummary[];
 };
@@ -280,12 +288,42 @@ function renderOpsSignals(data: OpsDashboardData): string {
   <p><a href="/polymarket/ticks">ticks.json</a> · <a href="/polymarket/line-moves">line-moves.json</a></p>`;
 }
 
+/** exit 0 = OK · exit 2 = DRIFT (report loudly) · anything else = FAIL */
+function canaryBadge(c: NonNullable<OpsDashboardData["canary"]>): string {
+  if (c.exitCode === 2) return `<span class="badge bad">DRIFT — exit 2</span>`;
+  if (c.exitCode === 0 && c.errors === 0) return `<span class="badge ok">OK</span>`;
+  if (c.exitCode === 0) return `<span class="badge warn">OK · ${c.errors} errors</span>`;
+  return `<span class="badge bad">FAIL — exit ${c.exitCode}</span>`;
+}
+
+function renderOpsStore(store: OpsDashboardData["store"]): string {
+  if (!store) {
+    return `<p><em>No event store at <code>research/cache/event-store.db</code> yet — run <code>bun run tennis:itf -- --sync</code>.</em></p>`;
+  }
+  const cells = Object.entries(store.counts)
+    .map(([table, n]) => {
+      const value = n < 0 ? "—" : n;
+      const cls = n < 0 ? ` class="warn"` : "";
+      return `<div class="stat"${cls}><strong>${value}</strong> ${escapeHtml(table)}</div>`;
+    })
+    .join("\n    ");
+  return `<h3>Event store (data plane)</h3>
+  <div class="stats">
+    ${cells}
+  </div>
+  <p><code>${escapeHtml(store.dbPath)}</code></p>`;
+}
+
 function renderOpsData(data: OpsDashboardData): string {
+  const storeBlock = renderOpsStore(data.store);
   if (!data.canary) {
-    return `<p><em>No canary artifact at <code>research/cache/tennis-canary/latest.json</code> yet.</em></p>`;
+    return `${storeBlock}
+  <p><em>No canary artifact at <code>research/cache/tennis-canary/latest.json</code> yet.</em></p>`;
   }
   const c = data.canary;
-  return `<p>Tennis live canary · ${escapeHtml(c.at)} · exit ${c.exitCode}${c.dryRun ? " · dry-run" : ""}</p>
+  return `${storeBlock}
+  <h3>Live canary</h3>
+  <p>${canaryBadge(c)} · ${escapeHtml(c.at)}${c.dryRun ? " · dry-run" : ""}</p>
   <div class="stats">
     <div class="stat"><strong>${c.watched}</strong> watched</div>
     <div class="stat"><strong>${c.polled}</strong> polled</div>
@@ -300,15 +338,15 @@ function renderOpsFlows(flows: OpsCronFlow[]): string {
     .map((f) => {
       const launchd =
         f.launchdLoaded === null
-          ? "unknown (launchctl probe failed)"
+          ? `<span class="badge warn">unknown (launchctl probe failed)</span>`
           : f.launchdLoaded
-            ? "loaded"
-            : "not loaded";
+            ? `<span class="badge ok">loaded</span>`
+            : `<span class="badge bad">not loaded</span>`;
       const lines = f.lastLines.length
         ? `<pre class="diff">${escapeHtml(f.lastLines.join("\n"))}</pre>`
         : `<p><em>No log output at <code>${escapeHtml(f.logPath)}</code>.</em></p>`;
       return `<h3>${escapeHtml(f.label)}</h3>
-  <p>launchd: <strong>${launchd}</strong> · last fire: ${f.lastFireAt ? escapeHtml(f.lastFireAt) : "never (no log)"}</p>
+  <p>launchd: ${launchd} · last fire: ${f.lastFireAt ? escapeHtml(f.lastFireAt) : "never (no log)"}</p>
   ${lines}`;
     })
     .join("\n");
@@ -328,7 +366,7 @@ function renderOpsRuns(runs: RunSummary[]): string {
 export function renderOps(data: OpsDashboardData): string {
   const body = `${navLinks()}
   <h1>Ops dashboard</h1>
-  <p>Generated ${escapeHtml(data.generatedAt)} · <a href="/ops">Refresh</a> (auto 60s)</p>
+  <p>Generated ${escapeHtml(data.generatedAt)} · <a href="/ops">Refresh</a> (auto 60s) · <a href="/ops.json">ops.json</a></p>
   <h2>Bot &amp; agents</h2>
   ${renderOpsAgents(data.agents)}
   <p><a href="/polymarket/status">status.json</a> · <a href="/regulatory/health">regulatory health</a></p>

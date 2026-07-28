@@ -12,7 +12,7 @@ import {
   type RouteRequest,
 } from "../src/research/serve.ts";
 import { REPORT_DIR, joinPath } from "../src/research/paths.ts";
-import { escapeHtml, renderRepoPage } from "../src/research/views.ts";
+import { escapeHtml, renderOps, renderRepoPage } from "../src/research/views.ts";
 
 import { freshTestGeneratedAt, mintTestProductionRunId, TEST_LATEST_RUN_ID } from "./fixtures.ts";
 import { enterTempCache, exitTempCache } from "./temp-cache.ts";
@@ -178,6 +178,69 @@ describe("views", () => {
   });
 });
 
+describe("ops dashboard", () => {
+  const baseOps = {
+    generatedAt: new Date().toISOString(),
+    agents: { orchestrator: true },
+    ticks: [],
+    lineMoves: [],
+    flows: [],
+    runs: [],
+  };
+
+  test("renderOps flags canary drift (exit 2) loudly", () => {
+    const html = renderOps({
+      ...baseOps,
+      canary: { at: "2026-07-28T00:00:00Z", exitCode: 2, dryRun: true, watched: 1, polled: 1, upserted: 0, live: 0, errors: 0 },
+      store: null,
+    });
+    expect(html).toContain("DRIFT — exit 2");
+    expect(html).toContain("badge bad");
+  });
+
+  test("renderOps shows OK badge for clean canary", () => {
+    const html = renderOps({
+      ...baseOps,
+      canary: { at: "2026-07-28T00:00:00Z", exitCode: 0, dryRun: true, watched: 3, polled: 3, upserted: 3, live: 1, errors: 0 },
+      store: null,
+    });
+    expect(html).toContain("badge ok");
+    expect(html).toContain(">OK</span>");
+  });
+
+  test("renderOps renders event-store counts and missing-table marker", () => {
+    const html = renderOps({
+      ...baseOps,
+      canary: null,
+      store: { dbPath: "/tmp/event-store.db", counts: { events: 12, resolutions: 4, book_ticks: -1 } },
+    });
+    expect(html).toContain("Event store");
+    expect(html).toContain("<strong>12</strong> events");
+    expect(html).toContain("<strong>4</strong> resolutions");
+    expect(html).toContain("<strong>—</strong> book_ticks");
+  });
+
+  test("renderOps empty states when no store and no canary", () => {
+    const html = renderOps({ ...baseOps, canary: null, store: null });
+    expect(html).toContain("No event store");
+    expect(html).toContain("No canary artifact");
+  });
+
+  test("renderOps badges launchd state", () => {
+    const html = renderOps({
+      ...baseOps,
+      canary: null,
+      store: null,
+      flows: [
+        { label: "f1", logPath: "/tmp/f1.log", lastFireAt: null, lastLines: [], launchdLoaded: false },
+        { label: "f2", logPath: "/tmp/f2.log", lastFireAt: null, lastLines: [], launchdLoaded: true },
+      ],
+    });
+    expect(html).toContain("not loaded");
+    expect(html).toContain(">loaded</span>");
+  });
+});
+
 describe("createResearchServer", () => {
   let server: ReturnType<typeof createResearchServer>;
 
@@ -200,5 +263,26 @@ describe("createResearchServer", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(Array.isArray(body.runs)).toBe(true);
+  });
+
+  test("GET /ops renders dashboard HTML", async () => {
+    const res = await fetch(`${server.url}ops`);
+    expect(res.status).toBe(200);
+    const text = await res.text();
+    expect(res.headers.get("content-type")).toContain("text/html");
+    expect(text).toContain("Ops dashboard");
+    expect(text).toContain("ops.json");
+  });
+
+  test("GET /ops.json returns dashboard JSON", async () => {
+    const res = await fetch(`${server.url}ops.json`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.generatedAt).toBeDefined();
+    expect(body.agents.orchestrator).toBe(true);
+    expect(Array.isArray(body.flows)).toBe(true);
+    expect(Array.isArray(body.runs)).toBe(true);
+    // temp-cache test env has no event-store.db → store is null, page must still render
+    expect(body.store === null || typeof body.store.counts === "object").toBe(true);
   });
 });
