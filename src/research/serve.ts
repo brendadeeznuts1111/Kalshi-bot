@@ -27,6 +27,12 @@ import {
 import { ComplianceRepository, ViolationAlerts } from "../regulatory";
 import { TABLE } from "../regulatory/constants";
 import { loadKalshiCredentials, probeKalshiAuth } from "../bot/kalshi-auth.ts";
+import { rotateKalshiKey } from "../bot/kalshi-rotate.ts";
+import { buildHqPayload, resetTradingCache } from "./hq-data.ts";
+import { renderHq } from "./hq-view.ts";
+import { placeOrder, cancelOrder } from "../bot/kalshi-client.ts";
+import { codedError, httpStatusFor, type ErrorCode } from "../institutions/error-codes.ts";
+import { fetchKalshiBookSnapshot, midFromBookSnapshot } from "../bot/kalshi-market-data.ts";
 
 // ── Regulatory compliance integration ──
 const REG_DB_PATH = process.env.REGULATORY_DB ?? ":memory:";
@@ -193,6 +199,109 @@ async function handlePlaceBet(req: Request): Promise<Response> {
     userId: ctx?.userId,
     wager: body.wagerAmount,
   });
+}
+
+// ── HQ order entry (dry-run by default; live only on explicit dryRun:false) ──
+
+function badOrder(code: ErrorCode, upstream?: string): Response {
+  return json(codedError(code, upstream), httpStatusFor(code));
+}
+
+async function handleTradingOrder(req: Request): Promise<Response> {
+  let body: Record<string, unknown>;
+  try {
+    body = (await req.json()) as Record<string, unknown>;
+  } catch {
+    return badOrder("E_BODY_INVALID");
+  }
+
+  const ticker = typeof body.ticker === "string" ? body.ticker.trim() : "";
+  if (!ticker) return badOrder("E_TICKER_REQUIRED");
+  const side = body.side === "no" ? "no" : body.side === "yes" ? "yes" : null;
+  if (!side) return badOrder("E_SIDE_INVALID");
+  const count = Number(body.count);
+  if (!Number.isInteger(count) || count < 1 || count > 10_000) {
+    return badOrder("E_COUNT_RANGE");
+  }
+  const priceCents = Number(body.priceCents);
+  if (!Number.isInteger(priceCents) || priceCents < 1 || priceCents > 99) {
+    return badOrder("E_PRICE_RANGE");
+  }
+  // Safety rail: anything other than explicit `false` stays dry-run.
+  const dryRun = body.dryRun !== false;
+
+  try {
+    const result = await placeOrder({
+      ticker,
+      side,
+      count,
+      priceCents,
+      dryRun,
+      postOnly: body.postOnly !== false,
+    });
+    resetTradingCache();
+    return json({ ok: true, dryRun, orderId: result.orderId, ticker, side, count, priceCents });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return badOrder("E_UPSTREAM", msg.slice(0, 200));
+  }
+}
+
+async function handleTradingCancel(req: Request): Promise<Response> {
+  let body: Record<string, unknown>;
+  try {
+    body = (await req.json()) as Record<string, unknown>;
+  } catch {
+    return badOrder("E_BODY_INVALID");
+  }
+  const orderId = typeof body.orderId === "string" ? body.orderId.trim() : "";
+  if (!orderId) return badOrder("E_ORDER_ID_REQUIRED");
+  try {
+    await cancelOrder(orderId);
+    resetTradingCache();
+    return json({ ok: true, cancelled: orderId });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return badOrder("E_UPSTREAM", msg.slice(0, 200));
+  }
+}
+
+// ── HQ orderbook preview (public market data, short per-ticker cache) ──
+
+const BOOK_CACHE_TTL_MS = 5_000;
+const bookCache = new Map<string, { value: unknown; expiresAtMs: number }>();
+
+async function handleTradingBook(req: Request): Promise<Response> {
+  const url = new URL(req.url);
+  const ticker = (url.searchParams.get("ticker") ?? "").trim();
+  if (!ticker) return badOrder("E_TICKER_REQUIRED");
+  const depth = Math.min(Math.max(Number(url.searchParams.get("depth")) || 10, 1), 100);
+  const key = `${ticker}:${depth}`;
+  const nowMs = Date.now();
+  const hit = bookCache.get(key);
+  if (hit && nowMs < hit.expiresAtMs) return json(hit.value);
+  try {
+    const book = await fetchKalshiBookSnapshot(ticker as never, { depth });
+    const bestBid = book.bids[0]?.priceCents ?? null;
+    const bestAsk = book.asks[0]?.priceCents ?? null;
+    const value = {
+      ok: true,
+      ticker,
+      mid: midFromBookSnapshot(book),
+      spreadCents: bestBid != null && bestAsk != null ? bestAsk - bestBid : null,
+      crossed: book.crossed === true,
+      bids: book.bids.slice(0, 10),
+      asks: book.asks.slice(0, 10),
+      checkedAt: new Date(nowMs).toISOString(),
+    };
+    bookCache.set(key, { value, expiresAtMs: nowMs + BOOK_CACHE_TTL_MS });
+    return json(value);
+  } catch (err) {
+    return json(
+      { ok: false, ticker, error: err instanceof Error ? err.message : String(err) },
+      502,
+    );
+  }
 }
 
 // ── Polymarket / agent route handlers ──
@@ -515,6 +624,37 @@ async function handleAgentDispatch(req: Request): Promise<Response> {
   return json(result);
 }
 
+/**
+ * POST /ops/kalshi-rotate-key — install a new Kalshi API key from the dashboard.
+ * confirm:true is required for a real apply; dryRun:true previews (planned
+ * writes + probe) without confirmation. Response never echoes pem and masks
+ * keyId to its first 8 chars.
+ */
+async function handleKalshiRotateKey(req: Request): Promise<Response> {
+  const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+  const keyId = typeof body.keyId === "string" ? body.keyId.trim() : "";
+  const pem = typeof body.pem === "string" ? body.pem : "";
+  const dryRun = body.dryRun === true;
+  const confirm = body.confirm === true;
+
+  if (!keyId || !pem) {
+    return json({ ok: false, error: "keyId and pem are required" }, 400);
+  }
+  if (!dryRun && !confirm) {
+    return json(
+      { ok: false, error: "confirm:true is required to apply rotation (dryRun:true previews without it)" },
+      400,
+    );
+  }
+
+  const result = await rotateKalshiKey({ keyId, pemText: pem, dryRun });
+  if (!dryRun) {
+    // Badge reflects the new key on the very next /ops render.
+    resetKalshiAuthCache();
+  }
+  return json({ ...result, keyId: `${keyId.slice(0, 8)}…` });
+}
+
 export function createResearchServer(options: ServeOptions = {}) {
   const port = options.port ?? Number(Bun.env.PORT ?? 3456);
   return Bun.serve({
@@ -528,6 +668,16 @@ export function createResearchServer(options: ServeOptions = {}) {
     },
     async fetch(req) {
       const url = new URL(req.url);
+
+      // HQ headquarters dashboard (research + alpha + trading)
+      if (url.pathname === "/hq") {
+        return html(renderHq());
+      }
+
+      // HQ aggregate data feed (JSON)
+      if (url.pathname === "/api/hq") {
+        return json(await buildHqPayload());
+      }
 
       // Ops dashboard (read-only management page)
       if (url.pathname === "/ops") {
@@ -547,6 +697,21 @@ export function createResearchServer(options: ServeOptions = {}) {
       // Bet placement — rate limit first, then compliance gate
       if (url.pathname === "/place-bet" && req.method === "POST") {
         return rateLimiter(req, () => stateValidator(req, () => complianceGate(req, () => handlePlaceBet(req))));
+      }
+
+      // HQ order entry — same middleware stack as /place-bet; dry-run unless explicit dryRun:false
+      if (url.pathname === "/api/trading/order" && req.method === "POST") {
+        return rateLimiter(req, () => stateValidator(req, () => complianceGate(req, () => handleTradingOrder(req))));
+      }
+
+      // HQ order cancel
+      if (url.pathname === "/api/trading/cancel" && req.method === "POST") {
+        return rateLimiter(req, () => handleTradingCancel(req));
+      }
+
+      // HQ orderbook preview (public market data)
+      if (url.pathname === "/api/trading/book") {
+        return rateLimiter(req, () => handleTradingBook(req));
       }
 
       // Regulatory health check
@@ -578,6 +743,10 @@ export function createResearchServer(options: ServeOptions = {}) {
 
       if (url.pathname === "/agent/dispatch" && req.method === "POST") {
         return rateLimiter(req, () => handleAgentDispatch(req));
+      }
+
+      if (url.pathname === "/ops/kalshi-rotate-key" && req.method === "POST") {
+        return rateLimiter(req, () => handleKalshiRotateKey(req));
       }
 
       return new Response("Not Found", { status: 404 });

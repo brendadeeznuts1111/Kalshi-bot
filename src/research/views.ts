@@ -413,7 +413,7 @@ function kalshiAuthBadge(auth: NonNullable<OpsDashboardData["kalshiAuth"]>): str
 
 function renderOpsData(data: OpsDashboardData, nowMs: number): string {
   const storeBlock = renderOpsStore(data.store);
-  const authLine = data.kalshiAuth ? `<p>Kalshi auth: ${kalshiAuthBadge(data.kalshiAuth)}</p>\n  ` : "";
+  const authLine = data.kalshiAuth ? `<p>Kalshi auth: ${kalshiAuthBadge(data.kalshiAuth)} <a href="#ops-rotate">(rotate ↓)</a></p>\n  ` : "";
   if (!data.canary) {
     return `${authLine}${storeBlock}
   <p><em>No canary artifact at <code>research/cache/tennis-canary/latest.json</code> yet.</em></p>`;
@@ -512,6 +512,21 @@ export function renderOpsActions(): string {
     <button type="submit" id="ops-bet-submit" disabled>Run compliance check</button>
   </form>
   <pre class="diff" id="ops-bet-result" hidden></pre>
+  <h3 id="ops-rotate">Rotate Kalshi key</h3>
+  <form class="ops" id="ops-rotate-form">
+    <label>Key ID
+      <input type="text" id="ops-rotate-keyid" autocomplete="off" />
+    </label>
+    <label>Private key (PEM)
+      <textarea id="ops-rotate-pem" rows="4" placeholder="BEGIN … PRIVATE KEY"></textarea>
+    </label>
+    <label><input type="checkbox" id="ops-rotate-confirm" /> I confirm key rotation</label>
+    <div>
+      <button type="button" id="ops-rotate-preview">Preview (dry-run)</button>
+      <button type="submit" id="ops-rotate-submit" disabled>Apply rotation</button>
+    </div>
+  </form>
+  <pre class="diff" id="ops-rotate-result" hidden></pre>
 <script>
 (function () {
   // Minimal working payload per task type, derived from the agents' run() payload usage.
@@ -532,7 +547,8 @@ export function renderOpsActions(): string {
 
   // Field values persist across the 60s auto-refresh via sessionStorage.
   // Confirm checkboxes are deliberately NOT restored — confirmation must be
-  // re-asserted after every reload.
+  // re-asserted after every reload. Rotate-key fields are excluded on purpose:
+  // PEM material must never touch storage.
   var STORAGE_KEY = "ops-actions-form-v1";
   var FIELD_IDS = ["ops-dispatch-type", "ops-dispatch-payload", "ops-bet-state", "ops-bet-wager", "ops-bet-user"];
 
@@ -638,6 +654,58 @@ export function renderOpsActions(): string {
         }),
       },
     };
+  });
+
+  // ── Rotate key ──
+  var rotateOut = document.getElementById("ops-rotate-result");
+  var rotateConfirm = document.getElementById("ops-rotate-confirm");
+  var rotateSubmit = document.getElementById("ops-rotate-submit");
+  rotateConfirm.addEventListener("change", function () { rotateSubmit.disabled = !rotateConfirm.checked; });
+
+  function postRotate(dryRun) {
+    var body = {
+      keyId: document.getElementById("ops-rotate-keyid").value.trim(),
+      pem: document.getElementById("ops-rotate-pem").value,
+      dryRun: dryRun,
+    };
+    if (!dryRun) body.confirm = true;
+    rotateSubmit.disabled = true;
+    rotateOut.hidden = false;
+    rotateOut.classList.remove("ok", "bad");
+    rotateOut.textContent = "…";
+    fetch("/ops/kalshi-rotate-key", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }).then(function (res) {
+      return res.text().then(function (text) {
+        var data = null;
+        var bodyText = text;
+        try { data = JSON.parse(text); bodyText = JSON.stringify(data, null, 2); } catch (e) { /* raw */ }
+        var head = "";
+        if (data && data.probe) {
+          if (data.probe.state === "valid") {
+            head = dryRun ? "auth valid — apply would succeed\\n" : "auth valid — badge updated\\n";
+          } else {
+            head = "probe " + data.probe.state + " (HTTP " + data.probe.status + ")\\n";
+          }
+          if (dryRun && data.planned) head += "planned: " + data.planned.join(", ") + "\\n";
+          if (!dryRun && data.written) head += "written: " + data.written.join(", ") + "\\n";
+        }
+        show(rotateOut, res.status, head + bodyText);
+      });
+    }).catch(function (err) {
+      show(rotateOut, 0, "request failed: " + (err && err.message ? err.message : String(err)));
+      rotateOut.classList.add("bad");
+    }).finally(function () {
+      rotateSubmit.disabled = !rotateConfirm.checked;
+    });
+  }
+
+  document.getElementById("ops-rotate-preview").addEventListener("click", function () { postRotate(true); });
+  document.getElementById("ops-rotate-form").addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    postRotate(false);
   });
 
   restoreFields();
