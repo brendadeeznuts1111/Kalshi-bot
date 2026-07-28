@@ -3,7 +3,7 @@
  * Zero dependencies.
  */
 
-import { type ChildProcess, spawn } from "node:child_process";
+import { spawn } from "node:child_process";
 
 export type SpawnResult = {
   code: number | null;
@@ -14,8 +14,11 @@ export type SpawnResult = {
 };
 
 export class TimeoutError extends Error {
-  constructor(public readonly timeoutMs: number) {
-    super(`Command timed out after ${timeoutMs}ms`);
+  constructor(
+    public readonly timeoutMs: number,
+    label?: string,
+  ) {
+    super(`Command timed out after ${timeoutMs}ms${label ? ` (${label})` : ""}`);
   }
 }
 
@@ -39,7 +42,6 @@ export async function spawnWithTimeout(
   let stdout = "";
   let stderr = "";
   let killed = false;
-  let timedOut = false;
 
   proc.stdout?.on("data", (d) => {
     stdout += d;
@@ -60,7 +62,6 @@ export async function spawnWithTimeout(
     new Promise<{ code: null; timedOut: true }>((resolve) => {
       timer = setTimeout(() => {
         killed = true;
-        timedOut = true;
         proc.kill("SIGTERM");
         setTimeout(() => proc.kill("SIGKILL"), 2_000);
         resolve({ code: null, timedOut: true });
@@ -84,7 +85,9 @@ export function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label?: s
   return Promise.race([
     promise,
     new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new TimeoutError(timeoutMs)), timeoutMs);
+      setTimeout(() => {
+        reject(label ? new TimeoutError(timeoutMs, label) : new TimeoutError(timeoutMs));
+      }, timeoutMs);
     }),
   ]);
 }

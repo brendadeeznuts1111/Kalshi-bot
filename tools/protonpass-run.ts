@@ -19,6 +19,10 @@
  *   bun tools/protonpass-run.ts --cache-ttl=900 -- bun run rate-limit:status
  *
  * @see docs/PROTONPASS.md
+ * @see https://protonpass.github.io/pass-cli/
+ * @see https://protonpass.github.io/pass-cli/commands/login/
+ * @see https://protonpass.github.io/pass-cli/commands/personal-access-token/
+ * @see https://protonpass.github.io/pass-cli/commands/contents/run/
  */
 import { join } from "node:path";
 import { homedir } from "node:os";
@@ -30,7 +34,7 @@ import {
   printHealthTable,
   spawnWithTimeout,
   writePemTemp,
-  type SecretFetchResult,
+  ensureKalshiAgentSession,
 } from "../src/protonpass/index.ts";
 
 const DEFAULT_ENV_FILE = ".env.protonpass";
@@ -94,18 +98,29 @@ async function checkEnvFile(path: string): Promise<{ ok: boolean; lines: number;
 async function runEnvCheck(passCli: string, envFile: string, cache: SecretCacheManager): Promise<void> {
   log.info("Starting environment check");
 
+  const agent = await ensureKalshiAgentSession(passCli);
+  console.log(
+    `${agent.ok ? "✅" : "❌"} Agent session: ${agent.mode} — ${agent.detail}`,
+  );
+  console.log(`   Session dir: ${agent.sessionDir}`);
+  if (agent.mode === "missing-token") {
+    console.log("   Mint: pass-cli pat create --name kalshi-bot --expiration 1y");
+    console.log('   Grant: pass-cli pat access grant --pat-name kalshi-bot --vault-name "Kalshi Bot" --role viewer');
+    console.log("   Register: PROTON_PASS_KALSHI_BOT_TOKEN in ~/Projects/.env.pass-tokens");
+  }
+
   // Session check with timeout
   const sessionResult = await spawnWithTimeout(passCli, ["vault", "list"], { timeoutMs: 10_000 });
 
   if (sessionResult.timedOut || sessionResult.code !== 0 || sessionResult.stderr.includes("login")) {
     log.error("Session not logged in", { timedOut: sessionResult.timedOut });
     console.log("❌ Session: NOT logged in");
-    console.log("   Run: pass-cli login");
+    console.log("   Run: pass-cli login  (main account) or register PROTON_PASS_KALSHI_BOT_TOKEN");
   } else {
     const vaults = sessionResult.stdout
       .split("\n")
-      .map((l) => l.trim())
-      .filter((l) => l.length > 0 && !l.startsWith("-"));
+      .map((l) => l.trim().replace(/^-\s*/, ""))
+      .filter((l) => l.length > 0);
     log.info("Session active", { vaultCount: vaults.length });
     console.log(`✅ Session: active (${vaults.length} vault(s) accessible)`);
     for (const v of vaults) {
@@ -134,9 +149,8 @@ async function runEnvCheck(passCli: string, envFile: string, cache: SecretCacheM
   }
   console.log(`\n💾 Cache: ${remaining} valid entr${remaining === 1 ? "y" : "ies"} (${purged} expired purged)`);
 
-  // URI resolution test (parallel fetch first secret)
+  // URI resolution test (parallel fetch over all URIs)
   if (envCheck.uris.length > 0 && sessionResult.code === 0) {
-    const firstUri = envCheck.uris[0];
     console.log(`\n🔍 Testing parallel resolution of ${envCheck.uris.length} URI(s)...`);
     const startNs = Bun.nanoseconds();
     const results = await fetchSecretsParallel(envCheck.uris, {
@@ -271,8 +285,9 @@ async function resolveEnvFile(
 async function main(): Promise<void> {
   const passCli = await findPassCli();
   const envFile = arg("env-file") ?? DEFAULT_ENV_FILE;
-  const cacheTtlMs = argNumber("cache-ttl", DEFAULT_CACHE_TTL_MS);
-  const cache = new SecretCacheManager({ defaultTtlMs: cacheTtlMs });
+  // --cache-ttl is documented in seconds; SecretCacheManager takes ms.
+  const cacheTtlSeconds = argNumber("cache-ttl", DEFAULT_CACHE_TTL_MS / 1000);
+  const cache = new SecretCacheManager({ defaultTtlMs: cacheTtlSeconds * 1000 });
 
   // --env-check
   if (hasFlag("env-check")) {
@@ -289,6 +304,11 @@ async function main(): Promise<void> {
   if (hasFlag("health-check")) {
     if (!passCli) {
       log.error("pass-cli not found");
+      process.exit(1);
+    }
+    const agent = await ensureKalshiAgentSession(passCli);
+    if (!agent.ok) {
+      console.error(`❌ ${agent.detail}`);
       process.exit(1);
     }
     await runHealthCheck(passCli, envFile, cache);
@@ -340,6 +360,17 @@ async function main(): Promise<void> {
     log.error("No env file found", { searched: envFile });
     console.error(`❌ No ProtonPass env file found (${envFile}).`);
     console.error("   Copy template: cp env-protonpass.template .env.protonpass");
+    process.exit(1);
+  }
+
+  const agent = await ensureKalshiAgentSession(passCli);
+  if (!agent.ok) {
+    log.error("Agent session unavailable", { mode: agent.mode, detail: agent.detail });
+    console.error(`❌ ProtonPass session: ${agent.detail}`);
+    if (agent.mode === "missing-token") {
+      console.error("   Mint + grant (main account), then add PROTON_PASS_KALSHI_BOT_TOKEN to ~/Projects/.env.pass-tokens");
+      console.error("   Docs: docs/PROTONPASS.md#agent-pat-recommended-for-automation");
+    }
     process.exit(1);
   }
 

@@ -4,9 +4,6 @@
  */
 
 import { appendFile } from "node:fs/promises";
-import { createLogger } from "./logger.ts";
-
-const log = createLogger({ prefix: "telemetry" });
 
 export type SecretTelemetryEvent = {
   ts: string;

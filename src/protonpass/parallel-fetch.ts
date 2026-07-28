@@ -124,10 +124,13 @@ export async function fetchSecret(
 
     const value = parseSecretValue(result.stdout);
     if (value == null) {
+      const emptyField = result.stdout.trim().length === 0;
       const r: SecretFetchResult = {
         uri,
         status: "error",
-        error: "Could not parse secret value from pass-cli output",
+        error: emptyField
+          ? "Secret field is empty in vault"
+          : "Could not parse secret value from pass-cli output",
         durationMs: Math.round((Bun.nanoseconds() - startNs) / 1_000_000),
         fromCache: false,
       };

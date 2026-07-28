@@ -36,3 +36,11 @@ export {
 export { runStartupGate, assertGate, DEFAULT_GATE_CHECKS, type GateCheck, type GateResult } from "./gate.ts";
 export { CircuitBreaker, CircuitOpenError, type CircuitState } from "./circuit.ts";
 export { SecretTelemetry, type SecretTelemetryEvent, type TelemetrySummary } from "./telemetry.ts";
+export {
+  ensureKalshiAgentSession,
+  loadKalshiBotToken,
+  KALSHI_SESSION_DIR,
+  KALSHI_TOKEN_ENV,
+  PASS_TOKENS_FILE,
+  type AgentSessionResult,
+} from "./agent-session.ts";

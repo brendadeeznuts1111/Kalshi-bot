@@ -3,7 +3,7 @@
  * Uses Bun.inspect.table for rich terminal output.
  */
 
-import { fetchSecretsParallel, type ParallelFetchOptions } from "./parallel-fetch.ts";
+import { fetchSecretsParallel } from "./parallel-fetch.ts";
 import { SecretCacheManager } from "./cache.ts";
 import { createLogger } from "./logger.ts";
 
