@@ -170,8 +170,15 @@ export function renderTennisWsDashboardHtml(model: TennisWsDashboardModel): stri
       const mid = r.midCents == null ? "—" : `${r.midCents}¢`;
       const age = r.lastTs ? `${Math.round((Date.now() - r.lastTs) / 1000)}s ago` : "—";
       const seq = r.lastSeq == null ? "—" : String(r.lastSeq);
-      return `<tr>
-        <td>${esc(r.label.slice(0, 28))}</td>
+      const ageSec = r.lastTs ? Math.round((Date.now() - r.lastTs) / 1000) : Infinity;
+      const isLive = ageSec < 60;
+      const wsClass = r.wsTicks > 0 ? "ws-ok" : r.restTicks > 0 ? "ws-miss" : "ws-empty";
+      const liveClass = isLive ? "live" : "";
+      const badge = isLive
+        ? '<span class="badge badge-live">LIVE</span>'
+        : '<span class="badge badge-stale">stale</span>';
+      return `<tr class="${liveClass} ${wsClass}">
+        <td>${esc(r.label.slice(0, 28))}${badge}</td>
         <td>${esc(r.eventTicker.slice(0, 32))}</td>
         <td class="num">${mid}</td>
         <td class="num">${r.wsTicks}/${r.restTicks}</td>
@@ -185,34 +192,65 @@ export function renderTennisWsDashboardHtml(model: TennisWsDashboardModel): stri
 
   const c = model.coverage;
   const exchPct = c.wsExchangeClockPct == null ? "—" : `${c.wsExchangeClockPct}%`;
+  const wsPct = c.watchTickers > 0 ? Math.round((c.watchWithWs / c.watchTickers) * 100) : 0;
+  const restPct = c.watchTickers > 0 ? Math.round((c.watchWithRest / c.watchTickers) * 100) : 0;
+  const nonePct = 100 - wsPct - restPct;
+
+  const meterHtml = c.watchTickers > 0
+    ? `<div class="meta">
+        <span class="pill">watch-set coverage</span>
+        <span class="meter-wrap" title="WS ${wsPct}% | REST-only ${restPct}% | None ${nonePct}%">
+          <div class="meter-fill meter-ws" style="width:${wsPct}%;display:inline-block;"></div>
+          <div class="meter-fill meter-rest" style="width:${restPct}%;display:inline-block;"></div>
+          <div class="meter-fill meter-none" style="width:${nonePct}%;display:inline-block;"></div>
+        </span>
+        <span style="color:#3fb950;margin-left:8px;">${wsPct}% WS</span>
+        <span style="color:#d29922;margin-left:8px;">${restPct}% REST-only</span>
+        <span style="color:#f85149;margin-left:8px;">${nonePct}% none</span>
+       </div>`
+    : "";
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8"/>
+  <meta http-equiv="refresh" content="30"/>
   <title>Tennis WS ground</title>
   <style>
     :root { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background: #0d1117; color: #e6edf3; }
     body { margin: 24px; }
     h1 { font-size: 18px; font-weight: 600; margin: 0 0 8px; }
-    .meta { color: #8b949e; font-size: 12px; margin-bottom: 20px; }
+    .meta { color: #8b949e; font-size: 12px; margin-bottom: 16px; }
     table { border-collapse: collapse; width: 100%; font-size: 12px; }
     th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid #21262d; }
     th { color: #8b949e; font-weight: 500; }
     .num { text-align: right; font-variant-numeric: tabular-nums; }
     .muted { color: #6e7681; }
     .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; background: #161b22; margin-right: 8px; }
+    .meter-wrap { width: 240px; height: 6px; background: #21262d; border-radius: 3px; overflow: hidden; display: inline-block; vertical-align: middle; margin-left: 6px; }
+    .meter-fill { height: 100%; border-radius: 3px; }
+    .meter-ws { background: #3fb950; }
+    .meter-rest { background: #d29922; }
+    .meter-none { background: #f85149; }
+    tr.live { background: rgba(47, 129, 247, 0.08); }
+    tr.ws-ok td:first-child { border-left: 3px solid #3fb950; }
+    tr.ws-miss td:first-child { border-left: 3px solid #d29922; }
+    tr.ws-empty td:first-child { border-left: 3px solid #f85149; }
+    .badge { font-size: 10px; padding: 1px 5px; border-radius: 4px; margin-left: 6px; }
+    .badge-live { background: #238636; color: #fff; }
+    .badge-stale { background: #6e7681; color: #fff; }
   </style>
 </head>
 <body>
   <h1>Kalshi tennis — watch-set books</h1>
   <div class="meta">${esc(model.at)} · watch ${model.watchEvents} events / ${model.watchTickers} tickers</div>
+  ${meterHtml}
   <div class="meta">
     <span class="pill">${esc(KALSHI_BOOK_SOURCE_WS)} ticks: ${model.wsTicks}</span>
     <span class="pill">${esc(KALSHI_BOOK_SOURCE_REST)} ticks: ${model.restTicks}</span>
-    <span class="pill">watch WS coverage: ${c.watchWithWs}/${c.watchTickers}</span>
+    <span class="pill">watch WS: ${c.watchWithWs}/${c.watchTickers}</span>
     <span class="pill">exchange clock: ${exchPct}</span>
-    <span class="pill">linked+ws events: ${c.linkedEventsWithWs}/${c.linkedEventsTotal}</span>
+    <span class="pill">linked+ws: ${c.linkedEventsWithWs}/${c.linkedEventsTotal}</span>
   </div>
   <table>
     <thead><tr>
