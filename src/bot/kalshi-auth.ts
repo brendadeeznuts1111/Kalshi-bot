@@ -85,3 +85,39 @@ export function kalshiWsAccessHeaders(
 ): KalshiAccessHeaders {
   return kalshiAccessHeaders(creds, "GET", KALSHI_WS_PATH, nowMs);
 }
+
+export type KalshiAuthProbe = {
+  ok: boolean;
+  status: number;
+  endpoint: string;
+};
+
+/**
+ * Pre-flight auth probe — signed GET to an authenticated REST endpoint
+ * (portfolio/balance) before opening a WebSocket. Lets callers classify a
+ * bad key as E_AUTH immediately instead of burning WS retries that surface
+ * only as "Expected 101 status code" (E_HANDSHAKE/E_NET).
+ */
+export async function probeKalshiAuth(
+  creds: KalshiCredentials,
+  opts?: { base?: string; timeoutMs?: number },
+): Promise<KalshiAuthProbe> {
+  const env = Bun.env as Record<string, string | undefined>;
+  const base = (
+    opts?.base?.trim() ||
+    env.KALSHI_API_BASE?.trim() ||
+    (env.KALSHI_ENV === "demo"
+      ? OFFICIAL_URLS.kalshi.tradeApiV2BaseDemo
+      : OFFICIAL_URLS.kalshi.tradeApiV2Base)
+  ).replace(/\/$/, "");
+  const path = "/portfolio/balance";
+  const endpoint = `${base}${path}`;
+  // Kalshi signs the full request path (host excluded).
+  const signPath = `${new URL(endpoint).pathname}`;
+  const headers = kalshiAccessHeaders(creds, "GET", signPath);
+  const res = await fetch(endpoint, {
+    headers: { ...headers, accept: "application/json" },
+    signal: AbortSignal.timeout(opts?.timeoutMs ?? 3000),
+  });
+  return { ok: res.ok, status: res.status, endpoint };
+}

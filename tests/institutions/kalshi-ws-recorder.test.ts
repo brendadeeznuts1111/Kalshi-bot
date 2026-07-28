@@ -2,6 +2,8 @@
 import { describe, expect, test } from "bun:test";
 import {
   applyKalshiWsWireError,
+  classifyProbeError,
+  formatProbeErrorCodes,
   handleOrderbookWire,
 } from "../../src/institutions/event-store/kalshi-ws-recorder.ts";
 import { openEventStore } from "../../src/institutions/event-store/open-db.ts";
@@ -18,16 +20,48 @@ describe("kalshi-ws-recorder", () => {
       wsErrors: 0,
       subscribed: 0,
       resyncRequests: 0,
+      errorCodes: {} as Record<string, number>,
     };
     expect(
       applyKalshiWsWireError(summary, { code: 9, message: "Authentication required", userError: true }),
     ).toBe(true);
     expect(summary.wsErrors).toBe(1);
     expect(summary.errors).toBe(1);
+    expect(summary.errorCodes["9"]).toBe(1);
     expect(
       applyKalshiWsWireError(summary, { code: 2, message: "Params required", userError: true }),
     ).toBe(false);
     expect(summary.wsErrors).toBe(2);
+    expect(summary.errorCodes["2"]).toBe(1);
+  });
+
+  test("classifyProbeError: parse failure → E_PARSE", () => {
+    expect(classifyProbeError(new Error("Unexpected token < in JSON at position 0"))).toBe("E_PARSE");
+    expect(classifyProbeError("frame parse failed")).toBe("E_PARSE");
+  });
+
+  test("classifyProbeError: 401-style error → E_AUTH", () => {
+    expect(classifyProbeError(new Error("INCORRECT_API_KEY_SIGNATURE"))).toBe("E_AUTH");
+    expect(classifyProbeError(new Error("HTTP 401 on upgrade"))).toBe("E_AUTH");
+    expect(classifyProbeError(new Error("Missing KALSHI_API_KEY_ID (or KALSHI_ACCESS_KEY)"))).toBe("E_AUTH");
+  });
+
+  test("classifyProbeError: remaining taxonomy buckets", () => {
+    expect(classifyProbeError(new Error("Expected 101 status code"))).toBe("E_HANDSHAKE");
+    expect(classifyProbeError(new Error("SQLITE_BUSY: database is locked"))).toBe("E_DB");
+    expect(classifyProbeError(new Error("command timed out"))).toBe("E_TIMEOUT");
+    expect(classifyProbeError(new Error("fetch failed"))).toBe("E_NET");
+    expect(classifyProbeError(new Error("connect ECONNREFUSED 127.0.0.1"))).toBe("E_NET");
+    expect(classifyProbeError(new Error("something odd"))).toBe("E_UNKNOWN");
+  });
+
+  test("formatProbeErrorCodes brackets top-3 with wire-code labels", () => {
+    expect(
+      formatProbeErrorCodes({ errorCodes: { "9": 9, E_TIMEOUT: 4, E_NET: 2, E_PARSE: 1 } }),
+    ).toBe(" [9:Authentication required×9,E_TIMEOUT×4,E_NET×2]");
+    expect(formatProbeErrorCodes({ errorCodes: { E_AUTH: 13 } })).toBe(" [E_AUTH×13]");
+    expect(formatProbeErrorCodes({ errorCodes: {} })).toBe("");
+    expect(formatProbeErrorCodes({})).toBe("");
   });
 
   test("delta with ts_ms stamps source_clock=exchange and ts=ts_ms", () => {
@@ -101,5 +135,28 @@ describe("kalshi-ws-recorder", () => {
     expect(rows[1]!.ts).toBe(1_700_000_000_500);
     expect(rows[1]!.recv_ts).toBe(1_700_000_000_999);
     expect(rows[1]!.seq).toBe(2);
+  });
+});
+
+describe("probeKalshiAuth", () => {
+  test("401 surfaces status for E_AUTH; signed headers sent", async () => {
+    const { probeKalshiAuth } = await import("../../src/bot/kalshi-auth.ts");
+    const { generateKeyPairSync } = await import("node:crypto");
+    const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+    const seen: string[] = [];
+    const server = Bun.serve({
+      port: 0,
+      fetch(req) {
+        seen.push(req.headers.get("KALSHI-ACCESS-KEY") ?? "");
+        const url = new URL(req.url);
+        return Response.json({ error: "bad key" }, { status: 401 });
+      },
+    });
+    const creds = { keyId: "test-key-id", privateKey } as never;
+    const badProbe = await probeKalshiAuth(creds, { base: `http://127.0.0.1:${server.port}/trade-api/v2` });
+    expect(badProbe.status).toBe(401);
+    expect(badProbe.ok).toBe(false);
+    expect(seen.some(h => h === "test-key-id")).toBe(true);
+    server.stop(true);
   });
 });

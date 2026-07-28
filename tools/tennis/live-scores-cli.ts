@@ -29,6 +29,7 @@ import {
   type LivePollRow,
   type SnapshotCadenceReport,
 } from "../../src/institutions/event-store/live-scores.ts";
+import { classifyProbeError } from "../../src/institutions/event-store/kalshi-ws-recorder.ts";
 import { ensureEventStoreDir, openEventStore } from "../../src/institutions/event-store/open-db.ts";
 import {
   resolveTennisLeadMinutes,
@@ -204,6 +205,15 @@ export async function runLiveScoresCli(argv: string[]): Promise<number> {
     };
   };
 
+  /** Bracketed probe-error tag for canary failure lines (e.g. `canary FAIL [E_NET] …`). */
+  const canaryFailTag = (reason: string): string => {
+    if (reason.startsWith("errors=")) return `[${classifyProbeError(reason)}] `;
+    if (/fetch path dead/i.test(reason)) return "[E_NET] ";
+    if (/wire_shape_drift/i.test(reason)) return "[E_PARSE] ";
+    if (/write-boundary/i.test(reason)) return "[E_DB] ";
+    return "[E_UNKNOWN] ";
+  };
+
   const emit = (payload: Awaited<ReturnType<typeof runOnce>>) => {
     if (values.json) {
       void Bun.write(Bun.stdout, `${JSON.stringify(payload, null, 2)}\n`);
@@ -227,7 +237,7 @@ export async function runLiveScoresCli(argv: string[]): Promise<number> {
           ` set=${tr.set} status=${tr.status} server=${tr.server} none=${tr.none}`,
       );
     }
-    for (const e of s.errors.slice(0, 10)) console.log(`  ! ${e}`);
+    for (const e of s.errors.slice(0, 10)) console.log(`  ! [${classifyProbeError(e)}] ${e}`);
     for (const row of rowsToShow(s.rows, { verbose, singleEvent })) {
       const delta =
         row.transition && row.transition !== "none" && row.transition !== "first"
@@ -267,7 +277,7 @@ export async function runLiveScoresCli(argv: string[]): Promise<number> {
       }
       if (!verdict.ok) {
         for (const r of verdict.reasons) {
-          console.error(`canary FAIL: ${r}`);
+          console.error(`canary FAIL ${canaryFailTag(r)}${r}`);
         }
         console.error(`canary artifact: ${path}  fp=${art.fingerprint}`);
         return verdict.exitCode;
