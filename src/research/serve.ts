@@ -25,6 +25,7 @@ import {
   AdminAgent,
 } from "../regulatory/agents";
 import { ComplianceRepository, ViolationAlerts } from "../regulatory";
+import { TABLE } from "../regulatory/constants";
 
 // ── Regulatory compliance integration ──
 const REG_DB_PATH = process.env.REGULATORY_DB ?? ":memory:";
@@ -244,16 +245,43 @@ function handlePolymarketLineMoves(_req: Request): Response {
 
 // ── Ops dashboard (/ops) ──
 
+/** Process boot time for the Server panel (module load ≈ server start). */
+const OPS_BOOT_AT = new Date();
+
+/** Process self-metrics + in-memory regDb signal counts. */
+function readOpsServerStats() {
+  const mem = process.memoryUsage();
+  const count = (table: string): number => {
+    try {
+      const row = regDb.query(`SELECT COUNT(*) AS n FROM ${table}`).get() as { n: number } | null;
+      return row?.n ?? 0;
+    } catch {
+      return 0; // table absent before migrations/ingest
+    }
+  };
+  return {
+    bootAt: OPS_BOOT_AT.toISOString(),
+    uptimeSec: Math.round(process.uptime()),
+    bunVersion: Bun.version,
+    rssMb: mem.rss / 1_048_576,
+    heapUsedMb: mem.heapUsed / 1_048_576,
+    tickCount: count(TABLE.POLYMARKET_TICKS),
+    lineMoveCount: count(TABLE.POLYMARKET_LINE_MOVES),
+  };
+}
+
 const OPS_CRON_FLOWS = [
   {
     label: "tennis-live-canary",
     logPath: "/tmp/bun.cron.kalshi-tennis-live-canary.stdout.log",
     launchdLabel: "bun.cron.kalshi-tennis-live-canary",
+    periodMin: 15,
   },
   {
     label: "tennis-ws-recorder",
     logPath: "/tmp/bun.cron.kalshi-tennis-ws-recorder.stdout.log",
     launchdLabel: "bun.cron.kalshi-tennis-ws-recorder",
+    periodMin: 30,
   },
 ] as const;
 
@@ -299,6 +327,7 @@ async function readCronFlow(
     lastFireAt,
     lastLines,
     launchdLoaded: launchd == null ? null : launchd.has(spec.launchdLabel),
+    periodMin: spec.periodMin,
   };
 }
 
@@ -361,6 +390,7 @@ async function handleOpsPage(_req: Request): Promise<Response> {
   const marketData = new MarketDataAgent(regDb);
   const launchd = await probeLaunchdLabels();
   const flows = await Promise.all(OPS_CRON_FLOWS.map((f) => readCronFlow(f, launchd)));
+  const canary = await readCanaryArtifact();
 
   return html(
     renderOps({
@@ -374,8 +404,9 @@ async function handleOpsPage(_req: Request): Promise<Response> {
       },
       ticks: marketData.latestTicks(10),
       lineMoves: marketData.recentLineMoves(10),
-      canary: await readCanaryArtifact(),
+      canary: canary && { ...canary, periodMin: OPS_CRON_FLOWS[0].periodMin },
       store: await readEventStoreCounts(),
+      server: readOpsServerStats(),
       flows,
       runs: listRunSummaries(5),
     }),
@@ -388,6 +419,7 @@ async function handleOpsJson(_req: Request): Promise<Response> {
   const marketData = new MarketDataAgent(regDb);
   const launchd = await probeLaunchdLabels();
   const flows = await Promise.all(OPS_CRON_FLOWS.map((f) => readCronFlow(f, launchd)));
+  const canary = await readCanaryArtifact();
 
   return json({
     generatedAt: new Date().toISOString(),
@@ -400,8 +432,9 @@ async function handleOpsJson(_req: Request): Promise<Response> {
     },
     ticks: marketData.latestTicks(10),
     lineMoves: marketData.recentLineMoves(10),
-    canary: await readCanaryArtifact(),
+    canary: canary && { ...canary, periodMin: OPS_CRON_FLOWS[0].periodMin },
     store: await readEventStoreCounts(),
+    server: readOpsServerStats(),
     flows,
     runs: listRunSummaries(5),
   });

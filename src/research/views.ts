@@ -203,6 +203,8 @@ export type OpsCronFlow = {
   lastFireAt: string | null; // log mtime ISO
   lastLines: string[];
   launchdLoaded: boolean | null; // null = launchd probe failed
+  /** Expected cadence in minutes — drives staleness coloring when present. */
+  periodMin?: number;
 };
 
 export type OpsDashboardData = {
@@ -232,17 +234,63 @@ export type OpsDashboardData = {
     upserted: number;
     live: number;
     errors: number;
+    /** Expected canary cadence in minutes — drives staleness coloring when present. */
+    periodMin?: number;
   } | null;
   store: {
     dbPath: string;
     counts: Record<string, number>; // table → rows; -1 = table missing
   } | null;
+  /** Process/service self-metrics; panel is skipped when absent. */
+  server?: {
+    bootAt: string;
+    uptimeSec: number;
+    bunVersion: string;
+    rssMb: number;
+    heapUsedMb: number;
+    tickCount: number;
+    lineMoveCount: number;
+  };
   flows: OpsCronFlow[];
   runs: RunSummary[];
 };
 
 function fmtTs(ts: number): string {
   return ts > 0 ? new Date(ts).toISOString().replace("T", " ").slice(0, 19) + "Z" : "—";
+}
+
+/** Humanized age: "45s" · "4m" · "1h12m" · "2d3h". */
+export function fmtAgeMs(ms: number): string {
+  const sec = Math.max(0, Math.round(ms / 1000));
+  if (sec < 60) return `${sec}s`;
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}m`;
+  const hr = Math.floor(min / 60);
+  if (hr < 48) return `${hr}h${min % 60 > 0 ? `${min % 60}m` : ""}`;
+  return `${Math.floor(hr / 24)}d${hr % 24 > 0 ? `${hr % 24}h` : ""}`;
+}
+
+type Staleness = "fresh" | "overdue" | "stale";
+
+function stalenessOf(ageMs: number, periodMin: number): Staleness {
+  const periodMs = periodMin * 60_000;
+  if (ageMs <= 2 * periodMs) return "fresh";
+  if (ageMs <= 4 * periodMs) return "overdue";
+  return "stale";
+}
+
+const STALENESS_BADGE: Record<Staleness, string> = {
+  fresh: "ok",
+  overdue: "warn",
+  stale: "bad",
+};
+
+/** Age badge for a periodic job: "fired 4m ago" colored by age vs expected period. */
+function ageBadge(atIso: string | null, periodMin: number, nowMs: number): string {
+  if (!atIso) return `<span class="badge bad">never fired</span>`;
+  const ageMs = nowMs - Date.parse(atIso);
+  const state = stalenessOf(ageMs, periodMin);
+  return `<span class="badge ${STALENESS_BADGE[state]}">fired ${escapeHtml(fmtAgeMs(ageMs))} ago · ${state}</span>`;
 }
 
 function renderOpsAgents(agents: Record<string, boolean>): string {
@@ -314,16 +362,39 @@ function renderOpsStore(store: OpsDashboardData["store"]): string {
   <p><code>${escapeHtml(store.dbPath)}</code></p>`;
 }
 
-function renderOpsData(data: OpsDashboardData): string {
+function renderOpsServer(data: OpsDashboardData, nowMs: number): string {
+  const s = data.server;
+  if (!s) return "";
+  const ages: string[] = [];
+  if (data.canary?.periodMin != null) {
+    ages.push(`canary ${ageBadge(data.canary.at, data.canary.periodMin, nowMs)}`);
+  }
+  for (const f of data.flows) {
+    if (f.periodMin != null) {
+      ages.push(`${escapeHtml(f.label)} ${ageBadge(f.lastFireAt, f.periodMin, nowMs)}`);
+    }
+  }
+  return `<p>boot ${escapeHtml(s.bootAt)} · uptime <strong>${escapeHtml(fmtAgeMs(s.uptimeSec * 1000))}</strong> · Bun ${escapeHtml(s.bunVersion)}</p>
+  <div class="stats">
+    <div class="stat"><strong>${s.rssMb.toFixed(1)}</strong> rss MB</div>
+    <div class="stat"><strong>${s.heapUsedMb.toFixed(1)}</strong> heap MB</div>
+    <div class="stat"><strong>${s.tickCount}</strong> ticks in DB</div>
+    <div class="stat"><strong>${s.lineMoveCount}</strong> line moves in DB</div>
+  </div>
+  ${ages.length ? `<p>data plane: ${ages.join(" · ")}</p>` : ""}`;
+}
+
+function renderOpsData(data: OpsDashboardData, nowMs: number): string {
   const storeBlock = renderOpsStore(data.store);
   if (!data.canary) {
     return `${storeBlock}
   <p><em>No canary artifact at <code>research/cache/tennis-canary/latest.json</code> yet.</em></p>`;
   }
   const c = data.canary;
+  const age = c.periodMin != null ? ` · ${ageBadge(c.at, c.periodMin, nowMs)}` : "";
   return `${storeBlock}
   <h3>Live canary</h3>
-  <p>${canaryBadge(c)} · ${escapeHtml(c.at)}${c.dryRun ? " · dry-run" : ""}</p>
+  <p>${canaryBadge(c)} · ${escapeHtml(c.at)}${c.dryRun ? " · dry-run" : ""}${age}</p>
   <div class="stats">
     <div class="stat"><strong>${c.watched}</strong> watched</div>
     <div class="stat"><strong>${c.polled}</strong> polled</div>
@@ -333,7 +404,7 @@ function renderOpsData(data: OpsDashboardData): string {
   </div>`;
 }
 
-function renderOpsFlows(flows: OpsCronFlow[]): string {
+function renderOpsFlows(flows: OpsCronFlow[], nowMs: number): string {
   const blocks = flows
     .map((f) => {
       const launchd =
@@ -342,15 +413,20 @@ function renderOpsFlows(flows: OpsCronFlow[]): string {
           : f.launchdLoaded
             ? `<span class="badge ok">loaded</span>`
             : `<span class="badge bad">not loaded</span>`;
+      const age = f.periodMin != null ? ` · ${ageBadge(f.lastFireAt, f.periodMin, nowMs)}` : "";
       const lines = f.lastLines.length
         ? `<pre class="diff">${escapeHtml(f.lastLines.join("\n"))}</pre>`
         : `<p><em>No log output at <code>${escapeHtml(f.logPath)}</code>.</em></p>`;
       return `<h3>${escapeHtml(f.label)}</h3>
-  <p>launchd: ${launchd} · last fire: ${f.lastFireAt ? escapeHtml(f.lastFireAt) : "never (no log)"}</p>
+  <p>launchd: ${launchd} · last fire: ${f.lastFireAt ? escapeHtml(f.lastFireAt) : "never (no log)"}${age}</p>
   ${lines}`;
     })
     .join("\n");
-  return blocks || `<p><em>No flows configured.</em></p>`;
+  const legend = flows.some((f) => f.periodMin != null)
+    ? `<p><em><span class="badge ok">fresh ≤2×</span> <span class="badge warn">overdue ≤4×</span> <span class="badge bad">stale &gt;4×</span> expected period</em></p>`
+    : "";
+  return `${blocks || `<p><em>No flows configured.</em></p>`}
+  ${legend}`;
 }
 
 function renderOpsRuns(runs: RunSummary[]): string {
@@ -364,18 +440,20 @@ function renderOpsRuns(runs: RunSummary[]): string {
 }
 
 export function renderOps(data: OpsDashboardData): string {
+  const nowMs = Date.parse(data.generatedAt);
   const body = `${navLinks()}
   <h1>Ops dashboard</h1>
   <p>Generated ${escapeHtml(data.generatedAt)} · <a href="/ops">Refresh</a> (auto 60s) · <a href="/ops.json">ops.json</a></p>
   <h2>Bot &amp; agents</h2>
   ${renderOpsAgents(data.agents)}
   <p><a href="/polymarket/status">status.json</a> · <a href="/regulatory/health">regulatory health</a></p>
+  ${data.server ? `<h2>Server</h2>\n  ${renderOpsServer(data, nowMs)}` : ""}
   <h2>Signals</h2>
   ${renderOpsSignals(data)}
   <h2>Data</h2>
-  ${renderOpsData(data)}
+  ${renderOpsData(data, nowMs)}
   <h2>Flows</h2>
-  ${renderOpsFlows(data.flows)}
+  ${renderOpsFlows(data.flows, nowMs)}
   <h2>Research runs (last ${data.runs.length})</h2>
   ${renderOpsRuns(data.runs)}`;
 

@@ -239,6 +239,60 @@ describe("ops dashboard", () => {
     expect(html).toContain("not loaded");
     expect(html).toContain(">loaded</span>");
   });
+
+  test("renderOps renders Server panel with process metrics", () => {
+    const html = renderOps({
+      ...baseOps,
+      canary: null,
+      store: null,
+      server: {
+        bootAt: "2026-07-28T20:00:00.000Z",
+        uptimeSec: 125,
+        bunVersion: "1.4.0",
+        rssMb: 123.456,
+        heapUsedMb: 45.678,
+        tickCount: 7,
+        lineMoveCount: 3,
+      },
+    });
+    expect(html).toContain("<h2>Server</h2>");
+    expect(html).toContain("uptime <strong>2m</strong>");
+    expect(html).toContain("Bun 1.4.0");
+    expect(html).toContain("<strong>123.5</strong> rss MB");
+    expect(html).toContain("<strong>45.7</strong> heap MB");
+    expect(html).toContain("<strong>7</strong> ticks in DB");
+  });
+
+  test("renderOps colors flow staleness against expected period", () => {
+    const now = Date.parse(baseOps.generatedAt);
+    const html = renderOps({
+      ...baseOps,
+      canary: null,
+      store: null,
+      flows: [
+        {
+          label: "fresh-flow",
+          logPath: "/tmp/a.log",
+          lastFireAt: new Date(now - 10 * 60_000).toISOString(), // 10m ≤ 2×15m
+          lastLines: [],
+          launchdLoaded: true,
+          periodMin: 15,
+        },
+        {
+          label: "stale-flow",
+          logPath: "/tmp/b.log",
+          lastFireAt: new Date(now - 3 * 3_600_000).toISOString(), // 3h > 4×30m
+          lastLines: [],
+          launchdLoaded: true,
+          periodMin: 30,
+        },
+      ],
+    });
+    expect(html).toContain("fired 10m ago · fresh");
+    expect(html).toContain("fired 3h ago · stale");
+    expect(html).toContain("fresh ≤2×");
+    expect(html).toContain("stale &gt;4×");
+  });
 });
 
 describe("createResearchServer", () => {
