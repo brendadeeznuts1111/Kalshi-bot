@@ -33,6 +33,12 @@ export const STYLES = `
   .badge.ok { background: #dafbe1; color: #1a7f37; }
   .badge.warn { background: #fff8c5; color: #9a6700; }
   .badge.bad { background: #ffebe9; color: #cf222e; }
+  .dim { color: #57606a; font-size: 0.85rem; }
+  form.ops { display: grid; gap: 0.5rem; max-width: 34rem; margin: 0.5rem 0 1rem; }
+  form.ops textarea { font-family: monospace; }
+  form.ops button { width: fit-content; padding: 0.3rem 1rem; }
+  pre.diff.ok { border-color: #1a7f37; }
+  pre.diff.bad { border-color: #cf222e; }
 `;
 
 export function pageLayout(title: string, body: string, opts?: { refreshSeconds?: number }): string {
@@ -439,6 +445,124 @@ function renderOpsRuns(runs: RunSummary[]): string {
   return `<ul>${items || "<li>none</li>"}</ul>`;
 }
 
+// ── Actions panel (synthetic probes against existing endpoints) ──
+
+const OPS_DISPATCH_TYPES = [
+  "COMPLIANCE_CHECK",
+  "SPIKE_DETECT",
+  "MARKET_INGEST",
+  "ADMIN_ACTION",
+  "LINE_MOVE_EVAL",
+] as const;
+
+export function renderOpsActions(): string {
+  const typeOptions = OPS_DISPATCH_TYPES.map((t) => `<option value="${t}">${t}</option>`).join("");
+  return `<h2>Actions</h2>
+  <p class="dim">Synthetic probes against this server's own endpoints — the compliance bet check runs the regulatory pipeline and returns a synthetic playId; it is NOT a live Kalshi order. Page auto-refreshes every 60s; form state resets on refresh.</p>
+  <h3>Agent dispatch</h3>
+  <form class="ops" id="ops-dispatch-form">
+    <label>Task type
+      <select id="ops-dispatch-type">${typeOptions}</select>
+    </label>
+    <label>Payload (JSON, optional)
+      <textarea id="ops-dispatch-payload" rows="3" placeholder='{"slugs":["…"],"fetchLimit":5}'>{}</textarea>
+    </label>
+    <label><input type="checkbox" id="ops-dispatch-confirm" /> I confirm dispatch</label>
+    <button type="submit" id="ops-dispatch-submit" disabled>Dispatch</button>
+  </form>
+  <pre class="diff" id="ops-dispatch-result" hidden></pre>
+  <h3>Compliance bet check</h3>
+  <form class="ops" id="ops-bet-form">
+    <label>State
+      <select id="ops-bet-state">
+        <option value="MA">MA</option>
+        <option value="NJ">NJ</option>
+        <option value="XX">OTHER (demo block path)</option>
+      </select>
+    </label>
+    <label>Wager amount
+      <input type="number" id="ops-bet-wager" min="0" step="0.01" value="10" />
+    </label>
+    <label>User ID
+      <input type="text" id="ops-bet-user" value="ops-dashboard" />
+    </label>
+    <label><input type="checkbox" id="ops-bet-confirm" /> I confirm this compliance check</label>
+    <button type="submit" id="ops-bet-submit" disabled>Run compliance check</button>
+  </form>
+  <pre class="diff" id="ops-bet-result" hidden></pre>
+<script>
+(function () {
+  function show(out, status, body) {
+    out.hidden = false;
+    out.textContent = "HTTP " + status + (status === 429 ? " (rate limited — wait a moment)" : "") + "\\n" + body;
+    out.classList.toggle("ok", status >= 200 && status < 300);
+    out.classList.toggle("bad", status >= 400);
+  }
+  function wire(formId, confirmId, submitId, resultId, build) {
+    var form = document.getElementById(formId);
+    var confirmBox = document.getElementById(confirmId);
+    var submit = document.getElementById(submitId);
+    var out = document.getElementById(resultId);
+    confirmBox.addEventListener("change", function () { submit.disabled = !confirmBox.checked; });
+    form.addEventListener("submit", function (ev) {
+      ev.preventDefault();
+      var req = build(out);
+      if (!req) return;
+      submit.disabled = true;
+      out.hidden = false;
+      out.classList.remove("ok", "bad");
+      out.textContent = "…";
+      fetch(req.url, req.init).then(function (res) {
+        return res.text().then(function (text) {
+          var body = text;
+          try { body = JSON.stringify(JSON.parse(text), null, 2); } catch (e) { /* raw text */ }
+          show(out, res.status, body);
+        });
+      }).catch(function (err) {
+        show(out, 0, "request failed: " + (err && err.message ? err.message : String(err)));
+        out.classList.add("bad");
+      }).finally(function () {
+        submit.disabled = !confirmBox.checked;
+      });
+    });
+  }
+  wire("ops-dispatch-form", "ops-dispatch-confirm", "ops-dispatch-submit", "ops-dispatch-result", function (out) {
+    var raw = document.getElementById("ops-dispatch-payload").value.trim() || "{}";
+    var payload;
+    try { payload = JSON.parse(raw); } catch (e) {
+      show(out, 0, "payload is not valid JSON: " + e.message);
+      out.classList.add("bad");
+      return null;
+    }
+    return {
+      url: "/agent/dispatch",
+      init: {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ task: { type: document.getElementById("ops-dispatch-type").value, payload: payload } }),
+      },
+    };
+  });
+  wire("ops-bet-form", "ops-bet-confirm", "ops-bet-submit", "ops-bet-result", function () {
+    return {
+      url: "/place-bet",
+      init: {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-state-code": document.getElementById("ops-bet-state").value,
+        },
+        body: JSON.stringify({
+          wagerAmount: Number(document.getElementById("ops-bet-wager").value),
+          userId: document.getElementById("ops-bet-user").value,
+        }),
+      },
+    };
+  });
+})();
+</script>`;
+}
+
 export function renderOps(data: OpsDashboardData): string {
   const nowMs = Date.parse(data.generatedAt);
   const body = `${navLinks()}
@@ -447,6 +571,7 @@ export function renderOps(data: OpsDashboardData): string {
   <h2>Bot &amp; agents</h2>
   ${renderOpsAgents(data.agents)}
   <p><a href="/polymarket/status">status.json</a> · <a href="/regulatory/health">regulatory health</a></p>
+  ${renderOpsActions()}
   ${data.server ? `<h2>Server</h2>\n  ${renderOpsServer(data, nowMs)}` : ""}
   <h2>Signals</h2>
   ${renderOpsSignals(data)}
