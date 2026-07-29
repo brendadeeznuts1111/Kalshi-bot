@@ -9,7 +9,7 @@ Each command is a focused **sub-agent** grounded in local evidence (`cache.db`, 
 | Sub-agent | Command | Grounding |
 |-----------|---------|-----------|
 | **ground** | `agent ground` | Orchestrates status + cache readiness + miss taxonomy + next actions (cache-only). Coverage: exact → qualifier-normalized → bare phrase. `saveRun` stamps discoverGate (miss queries → else resolveDiscoverGate); unstamped rows also inferred at read time. `pushed:` cutoffs are UTC-month-floored. Partial coverage lists cold queries. |
-| **tennis** | `agent tennis` | Event-store + canary + WS ground + book coverage + WS recorder trend + factorial experiments + cadence (cache-only; `--canary` dry-run; `--webview` capture). SSOT: [`tennis-lane-constants.ts`](../src/institutions/event-store/tennis-lane-constants.ts). |
+| **tennis** | `agent tennis` | Event-store + canary + WS ground + book coverage + WS recorder trend + factorial experiments + cadence (cache-only; `--canary` dry-run; `--webview` capture). SSOT: [`tennis-lane-constants.ts`](../src/institutions/event-store/tennis-lane-constants.ts). Warehouse one-liner: `bun run warehouse:summary` / package bin `tennis-warehouse` ([`scripts/warehouse-summary.ts`](../scripts/warehouse-summary.ts)). |
 | **status** | `agent status` | Newest eligible production run |
 | **patterns** | `agent patterns` | Detector evidence paths from a cached run |
 | **blueprint** | `agent blueprint` | Bun stack / lift from cached runs + pattern reports |

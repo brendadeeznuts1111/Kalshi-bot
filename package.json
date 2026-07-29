@@ -4,7 +4,12 @@
   "private": true,
   "description": "Discover and rank public Kalshi trading bots on GitHub (Bun + gh CLI)",
   "type": "module",
+  "bin": {
+    "tennis-warehouse": "./scripts/warehouse-summary.ts"
+  },
   "scripts": {
+    "warehouse:summary": "bun scripts/warehouse-summary.ts",
+    "tennis:warehouse": "bun scripts/warehouse-summary.ts",
     "research": "bun src/research/cli.ts",
     "research:dry": "bun src/research/cli.ts --dry-run --offline",
     "export-audit": "bun src/research/export-audit-cli.ts",
