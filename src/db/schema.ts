@@ -174,6 +174,28 @@ export const playerProfiles = sqliteTable("player_profiles", {
   corpus: text("corpus").notNull().default("trading"),
 });
 
+/**
+ * Per-(player, opponent) head-to-head aggregates — derived from events+markets.
+ * The opponent dimension player_profiles lacks: match count, W/L, and average
+ * Kalshi market volume for the matchup. Wipe-and-rebuild derived table.
+ */
+export const playerOpponentProfiles = sqliteTable(
+  "player_opponent_profiles",
+  {
+    playerName: text("player_name").notNull(),
+    opponentName: text("opponent_name").notNull(),
+    firstSeenTs: integer("first_seen_ts", { mode: "number" }).notNull(),
+    lastSeenTs: integer("last_seen_ts", { mode: "number" }).notNull(),
+    matches: integer("matches", { mode: "number" }).notNull().default(0),
+    wins: integer("wins", { mode: "number" }).notNull().default(0),
+    losses: integer("losses", { mode: "number" }).notNull().default(0),
+    winRate: real("win_rate"),
+    avgKalshiVolumeFp: real("avg_kalshi_volume_fp"),
+    corpus: text("corpus").notNull().default("trading"),
+  },
+  (t) => [uniqueIndex("player_opponent_profiles_pk").on(t.playerName, t.opponentName)],
+);
+
 // ─────────────────────────────────────────────────────────────────────────────
 //  Regulatory compliance tables (state-level + per-user)
 // ─────────────────────────────────────────────────────────────────────────────

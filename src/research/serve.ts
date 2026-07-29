@@ -9,6 +9,7 @@ import {
 import { REPORT_DIR, CACHE_DIR, joinPath } from "./paths.ts";
 import { fullNameFromRouteParams, ROUTES } from "./patterns.ts";
 import { pageLayout, renderIndex, renderOps, renderRepoPage, type KalshiAuthState } from "./views.ts";
+import { renderArchitecture } from "./architecture-view.ts";
 import { openEventStore } from "../institutions/event-store/open-db.ts";
 import { DEFAULT_EVENT_STORE_DB } from "../institutions/event-store/paths.ts";
 import { Database } from "bun:sqlite";
@@ -35,6 +36,9 @@ import {
 } from "./ops-json.ts";
 import { buildHqPayload, resetTradingCache } from "./hq-data.ts";
 import { renderHq } from "./hq-view.ts";
+import { fetchTennisBoard } from "./tennis-events.ts";
+import { readPlayerProfiles } from "./player-profiles.ts";
+import { readOpponentProfiles } from "./player-opponent-profiles.ts";
 import { placeOrder, cancelOrder } from "../bot/kalshi-client.ts";
 import { codedError, httpStatusFor, type ErrorCode } from "../institutions/error-codes.ts";
 import { designAgent } from "../agent/design-agent.ts";
@@ -181,6 +185,10 @@ export async function handleLatestReport(): Promise<Response> {
   return new Response(file, {
     headers: { "Content-Type": "text/markdown; charset=utf-8" },
   });
+}
+
+export async function handleArchitecture(): Promise<Response> {
+  return html(renderArchitecture());
 }
 
 // ── Regulatory route handlers ──
@@ -702,6 +710,7 @@ export function createResearchServer(options: ServeOptions = {}) {
       [ROUTES.runApi]: handleRunApi,
       [ROUTES.repo]: handleRepoPage,
       [ROUTES.latestReport]: handleLatestReport,
+      [ROUTES.architecture]: handleArchitecture,
     },
     async fetch(req: Request) {
       const url = new URL(req.url);
@@ -714,6 +723,32 @@ export function createResearchServer(options: ServeOptions = {}) {
       // HQ aggregate data feed (JSON)
       if (url.pathname === "/api/hq") {
         return json(await buildHqPayload());
+      }
+
+      // Tennis event board — all open match events w/ nested markets (60s cache)
+      if (url.pathname === "/api/events") {
+        return json(await fetchTennisBoard());
+      }
+
+      // Player profiles derived from the event store
+      if (url.pathname === "/api/profiles") {
+        return json(
+          readPlayerProfiles({
+            limit: Number(url.searchParams.get("limit") ?? 50),
+            search: url.searchParams.get("search") ?? undefined,
+          }),
+        );
+      }
+
+      // Player↔opponent head-to-head (volume per matchup) from the event store
+      if (url.pathname === "/api/opponent-profiles") {
+        return json(
+          readOpponentProfiles({
+            limit: Number(url.searchParams.get("limit") ?? 50),
+            player: url.searchParams.get("player") ?? undefined,
+            opponent: url.searchParams.get("opponent") ?? undefined,
+          }),
+        );
       }
 
       // Ops dashboard (read-only management page)

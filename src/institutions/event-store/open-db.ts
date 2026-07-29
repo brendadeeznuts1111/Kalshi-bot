@@ -38,6 +38,7 @@ const SCHEMA_COLUMN_MIGRATIONS: Array<{ table: string; column: string; decl: str
   { table: "resolutions", column: "source_url", decl: "TEXT NOT NULL DEFAULT ''" },
   { table: "resolutions", column: "fetched_ts", decl: "INTEGER" },
   { table: "resolutions", column: "corpus", decl: "TEXT NOT NULL DEFAULT 'trading'" },
+  { table: "player_profiles", column: "country", decl: "TEXT" },
 ];
 
 export async function ensureEventStoreDir(): Promise<void> {
@@ -88,6 +89,22 @@ export function applyEventStoreSchema(db: Database): void {
     corpus TEXT NOT NULL DEFAULT 'trading'
   )`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_player_profiles_win_rate ON player_profiles (win_rate)`);
+  // Per-(player, opponent) head-to-head — derived from events+markets
+  db.run(`CREATE TABLE IF NOT EXISTS player_opponent_profiles (
+    player_name TEXT NOT NULL,
+    opponent_name TEXT NOT NULL,
+    first_seen_ts INTEGER NOT NULL,
+    last_seen_ts INTEGER NOT NULL,
+    matches INTEGER NOT NULL DEFAULT 0,
+    wins INTEGER NOT NULL DEFAULT 0,
+    losses INTEGER NOT NULL DEFAULT 0,
+    win_rate REAL,
+    avg_kalshi_volume_fp REAL,
+    corpus TEXT NOT NULL DEFAULT 'trading',
+    PRIMARY KEY (player_name, opponent_name)
+  )`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_player_opponent_profiles_player ON player_opponent_profiles (player_name)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_player_opponent_profiles_opponent ON player_opponent_profiles (opponent_name)`);
   migrateEventStoreColumns(db);
 }
 
