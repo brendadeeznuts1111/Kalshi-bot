@@ -1,4 +1,3 @@
-// @ts-nocheck
 // @see https://bun.com/docs/runtime/file-io#reading-files-bun-file
 import type { ResearchRun, ScoredRepo } from "./types.ts";
 import {
@@ -9,12 +8,12 @@ import {
 } from "./cache.ts";
 import { REPORT_DIR, CACHE_DIR, joinPath } from "./paths.ts";
 import { fullNameFromRouteParams, ROUTES } from "./patterns.ts";
-import { pageLayout, renderIndex, renderOps, renderRepoPage } from "./views.ts";
+import { pageLayout, renderIndex, renderOps, renderRepoPage, type KalshiAuthState } from "./views.ts";
 import { openEventStore } from "../institutions/event-store/open-db.ts";
 import { DEFAULT_EVENT_STORE_DB } from "../institutions/event-store/paths.ts";
 import { Database } from "bun:sqlite";
 import { partnerDetailHandler } from "../regulatory/routes/ops/partners";
-import { requireStateCompliance } from "../regulatory/middleware/state-compliance";
+import { requireStateCompliance, type ComplianceContext } from "../regulatory/middleware/state-compliance";
 import { createRateLimiter } from "../regulatory/middleware/rate-limit";
 import { createStateValidator } from "../regulatory/middleware/state-validator";
 import {
@@ -28,10 +27,17 @@ import { ComplianceRepository, ViolationAlerts } from "../regulatory";
 import { TABLE } from "../regulatory/constants";
 import { loadKalshiCredentials, probeKalshiAuth } from "../bot/kalshi-auth.ts";
 import { rotateKalshiKey } from "../bot/kalshi-rotate.ts";
+import {
+  OPS_JSON_KIND,
+  OPS_JSON_SCHEMA_VERSION,
+  validateOpsDashboardJson,
+  type OpsDashboardJson,
+} from "./ops-json.ts";
 import { buildHqPayload, resetTradingCache } from "./hq-data.ts";
 import { renderHq } from "./hq-view.ts";
 import { placeOrder, cancelOrder } from "../bot/kalshi-client.ts";
 import { codedError, httpStatusFor, type ErrorCode } from "../institutions/error-codes.ts";
+import { designAgent } from "../agent/design-agent.ts";
 import { fetchKalshiBookSnapshot, midFromBookSnapshot } from "../bot/kalshi-market-data.ts";
 
 // ── Regulatory compliance integration ──
@@ -189,9 +195,16 @@ function handlePartnerDetail(req: Request): Response {
   return partnerDetailHandler(regDb, nodeId, filters);
 }
 
+/** POST /place-bet payload (only the fields the handler reads). */
+type PlaceBetBody = {
+  wagerAmount?: number;
+  userId?: string;
+};
+
 async function handlePlaceBet(req: Request): Promise<Response> {
-  const body = (await req.json()) as Record<string, unknown>;
-  const ctx = (req as any).compliance;
+  const body = (await req.json()) as PlaceBetBody;
+  // Attached by the compliance gate upstream in the middleware chain.
+  const ctx = (req as Request & { compliance?: ComplianceContext }).compliance;
   return json({
     ok: true,
     playId: ctx?.playId ?? `play-${Date.now()}`,
@@ -361,7 +374,7 @@ const OPS_BOOT_AT = new Date();
 // ── Kalshi auth badge (cached probe) ──
 
 export type OpsKalshiAuth = {
-  state: "valid" | "invalid" | "unreachable" | "no-creds";
+  state: KalshiAuthState;
   status?: number;
   checkedAt: string;
   cacheTtlSec: number;
@@ -591,7 +604,9 @@ async function handleOpsJson(_req: Request): Promise<Response> {
   const flows = await Promise.all(OPS_CRON_FLOWS.map((f) => readCronFlow(f, launchd)));
   const canary = await readCanaryArtifact();
 
-  return json({
+  const payload: OpsDashboardJson = {
+    kind: OPS_JSON_KIND,
+    schemaVersion: OPS_JSON_SCHEMA_VERSION,
     generatedAt: new Date().toISOString(),
     agents: {
       orchestrator: true,
@@ -608,14 +623,28 @@ async function handleOpsJson(_req: Request): Promise<Response> {
     server: readOpsServerStats(),
     flows,
     runs: listRunSummaries(5),
-  });
+  };
+
+  // Self-check: log schema drift but never break the endpoint on its own validator.
+  const validation = validateOpsDashboardJson(payload);
+  if (!validation.ok) {
+    console.error(`[ops.json] schema self-check failed: ${validation.errors.join("; ")}`);
+  }
+  return json(payload);
 }
 
-async function handleAgentDispatch(req: Request): Promise<Response> {
-  const body = (await req.json()) as Record<string, unknown>;
-  const task = body.task as Parameters<typeof orchestrator.dispatch>[0];
+/** POST /agent/dispatch payload — the orchestrator task envelope. */
+type AgentDispatchBody = {
+  task?: Parameters<typeof orchestrator.dispatch>[0];
+};
 
-  const result = await orchestrator.dispatch(task, {
+async function handleAgentDispatch(req: Request): Promise<Response> {
+  const body = (await req.json()) as AgentDispatchBody;
+  if (!body.task) {
+    return json({ ok: false, error: "task is required: { task: { type, payload } }" }, 400);
+  }
+
+  const result = await orchestrator.dispatch(body.task, {
     db: regDb,
     now: Date.now(),
     traceId: `req-${Date.now()}`,
@@ -630,8 +659,16 @@ async function handleAgentDispatch(req: Request): Promise<Response> {
  * writes + probe) without confirmation. Response never echoes pem and masks
  * keyId to its first 8 chars.
  */
+/** POST /ops/kalshi-rotate-key payload (fields validated by typeof below). */
+type KalshiRotateBody = {
+  keyId?: unknown;
+  pem?: unknown;
+  dryRun?: unknown;
+  confirm?: unknown;
+};
+
 async function handleKalshiRotateKey(req: Request): Promise<Response> {
-  const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+  const body = (await req.json().catch(() => ({}))) as KalshiRotateBody;
   const keyId = typeof body.keyId === "string" ? body.keyId.trim() : "";
   const pem = typeof body.pem === "string" ? body.pem : "";
   const dryRun = body.dryRun === true;
@@ -657,7 +694,7 @@ async function handleKalshiRotateKey(req: Request): Promise<Response> {
 
 export function createResearchServer(options: ServeOptions = {}) {
   const port = options.port ?? Number(Bun.env.PORT ?? 3456);
-  return Bun.serve({
+  const serveOptions = {
     port,
     routes: {
       [ROUTES.home]: handleHome,
@@ -666,7 +703,7 @@ export function createResearchServer(options: ServeOptions = {}) {
       [ROUTES.repo]: handleRepoPage,
       [ROUTES.latestReport]: handleLatestReport,
     },
-    async fetch(req) {
+    async fetch(req: Request) {
       const url = new URL(req.url);
 
       // HQ headquarters dashboard (research + alpha + trading)
@@ -714,6 +751,16 @@ export function createResearchServer(options: ServeOptions = {}) {
         return rateLimiter(req, () => handleTradingBook(req));
       }
 
+      // Design system manifest (tokens, components, brand)
+      if (url.pathname === "/api/design") {
+        return json(designAgent.manifest());
+      }
+
+      // Design agent audit of the live HQ page (self-check)
+      if (url.pathname === "/api/design/audit") {
+        return json(designAgent.audit(renderHq()));
+      }
+
       // Regulatory health check
       if (url.pathname === "/regulatory/health") {
         return json({
@@ -751,7 +798,12 @@ export function createResearchServer(options: ServeOptions = {}) {
 
       return new Response("Not Found", { status: 404 });
     },
-  });
+  };
+  // bun-types 1.3.x lag: inside `declare module "bun"`, the `Request` used by
+  // Bun.serve's route/fetch signatures is the headers-only Bun.Request — it
+  // lacks url/method even though the runtime passes a full DOM Request. Cast
+  // the config once here instead of sprinkling casts through every handler.
+  return Bun.serve(serveOptions as Bun.Serve.Options<undefined, string>);
 }
 
 if (import.meta.main) {

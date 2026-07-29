@@ -5,6 +5,8 @@ import { shortlistTagCoverage } from "./diversify.ts";
 import { githubRepoWebUrl, localRepoPath, ROUTES } from "./patterns.ts";
 import { DEFAULT_MAX_PER_TAG, MAX_QUALITY_SCORE } from "./constants.ts";
 import { escapeHtml } from "./bun-native.ts";
+import { TOKENS, baseCssVars } from "../institutions/design-tokens.ts";
+import { badge, componentCss, dataTable, statCard } from "../institutions/hq-ui.ts";
 
 export { escapeHtml };
 
@@ -12,34 +14,42 @@ function reportFor(item: ScoredRepo) {
   return item.report ?? buildRepoReport(item);
 }
 
+const c = TOKENS.color;
+
+/** Legacy research/ops pages, reskinned onto the HQ design system (dark). */
 export const STYLES = `
-  body { max-width: 52rem; margin: 0 auto; padding: 1.5rem; }
-  a { color: #0969da; }
+${baseCssVars()}
+${componentCss()}
+  body { max-width: 52rem; margin: 0 auto; padding: 1.5rem;
+    background: ${c.bg}; color: ${c.fg};
+    font: ${TOKENS.font.sizeBody}/1.5 ${TOKENS.font.body}; }
+  a { color: ${c.acc}; }
   nav { margin-bottom: 1.5rem; font-size: 0.9rem; }
+  nav a { text-decoration: none; }
+  code { font-family: ${TOKENS.font.mono}; font-size: 0.85em; }
   .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin: 1rem 0; }
-  .stat { background: #fff; border: 1px solid #ddd; border-radius: 6px; padding: 0.75rem; }
-  .stat strong { display: block; font-size: 1.25rem; }
-  .warn { background: #fff8e1; border: 1px solid #f0c040; padding: 0.75rem; border-radius: 6px; }
-  table { width: 100%; border-collapse: collapse; background: #fff; }
-  th, td { border: 1px solid #ddd; padding: 0.4rem 0.6rem; text-align: left; }
-  th { background: #f0f0f0; }
-  pre.diff { background: #fff; border: 1px solid #ddd; padding: 1rem; overflow-x: auto; font-size: 0.85rem; }
+  .stat { background: ${c.panel}; border: 1px solid ${c.line}; border-radius: 6px; padding: 0.75rem; }
+  .stat strong { display: block; font-size: 1.25rem; font-family: ${TOKENS.font.mono}; }
+  .warn { background: ${c.warnTint}; border: 1px solid ${c.warn}; padding: 0.75rem; border-radius: 6px; }
+  table { width: 100%; border-collapse: collapse; background: ${c.panel}; }
+  th, td { border: 1px solid ${c.line}; padding: 0.4rem 0.6rem; text-align: left; }
+  th { background: ${c.panel2}; }
+  pre.diff { background: ${c.panel}; border: 1px solid ${c.line}; padding: 1rem; overflow-x: auto; font-size: 0.85rem; }
   .score-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
-  .score-grid div { background: #fff; border: 1px solid #eee; padding: 0.5rem; border-radius: 4px; }
+  .score-grid div { background: ${c.panel}; border: 1px solid ${c.line}; padding: 0.5rem; border-radius: 4px; }
   ul.checks { list-style: none; padding: 0; }
-  ul.checks li::before { content: "✓ "; color: #1a7f37; }
-  ul.checks li.no::before { content: "✗ "; color: #cf222e; }
-  .badge { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 999px; font-size: 0.8rem; font-weight: 600; }
-  .badge.ok { background: #dafbe1; color: #1a7f37; }
-  .badge.warn { background: #fff8c5; color: #9a6700; }
-  .badge.bad { background: #ffebe9; color: #cf222e; }
-  .badge.dim { background: #eaeef2; color: #57606a; }
-  .dim { color: #57606a; font-size: 0.85rem; }
+  ul.checks li::before { content: "✓ "; color: ${c.ok}; }
+  ul.checks li.no::before { content: "✗ "; color: ${c.bad}; }
+  .dim { color: ${c.dim}; font-size: 0.85rem; }
   form.ops { display: grid; gap: 0.5rem; max-width: 34rem; margin: 0.5rem 0 1rem; }
-  form.ops textarea { font-family: monospace; }
-  form.ops button { width: fit-content; padding: 0.3rem 1rem; }
-  pre.diff.ok { border-color: #1a7f37; }
-  pre.diff.bad { border-color: #cf222e; }
+  form.ops textarea { font-family: ${TOKENS.font.mono}; background: ${c.panel2};
+    border: 1px solid ${c.line}; color: ${c.fg}; border-radius: 6px; }
+  form.ops button { width: fit-content; padding: 0.3rem 1rem; background: ${c.acc};
+    border: none; color: ${c.onAccent}; border-radius: 6px; font-weight: 600; }
+  form.ops input, form.ops select { background: ${c.panel2}; border: 1px solid ${c.line};
+    color: ${c.fg}; border-radius: 6px; padding: 0.3rem 0.5rem; }
+  pre.diff.ok { border-color: ${c.ok}; }
+  pre.diff.bad { border-color: ${c.bad}; }
 `;
 
 export function pageLayout(title: string, body: string, opts?: { refreshSeconds?: number }): string {
@@ -60,7 +70,8 @@ ${refresh}  <title>${escapeHtml(title)}</title>
 
 function navLinks(): string {
   return `<nav>
-    <a href="${ROUTES.home}">Home</a>
+    <a href="/hq">HQ</a>
+    · <a href="${ROUTES.home}">Home</a>
     · <a href="${ROUTES.latestReport}">latest.md</a>
     · <a href="${ROUTES.runsList}">runs.json</a>
     · <a href="/ops">Ops</a>
@@ -70,7 +81,7 @@ function navLinks(): string {
 export function renderIndex(run: ResearchRun, runs: RunSummary[], diffMd: string | null): string {
   const shortlist = run.shortlist
     .map((item, i) => {
-      const lic = item.repo.license.unlicensed ? ' <span class="warn">UNLICENSED</span>' : "";
+      const lic = item.repo.license.unlicensed ? ` ${badge("warn", "UNLICENSED")}` : "";
       const href = localRepoPath(item.repo.owner, item.repo.name);
       return `<li><a href="${href}">${i + 1}. ${escapeHtml(item.repo.fullName)}</a> — ${item.score.total}/${MAX_QUALITY_SCORE}${lic}</li>`;
     })
@@ -90,11 +101,11 @@ export function renderIndex(run: ResearchRun, runs: RunSummary[], diffMd: string
   const body = `${navLinks()}
   <h1>Kalshi Bot Research</h1>
   <p>Latest run <code>${escapeHtml(run.runId)}</code> · ${escapeHtml(run.generatedAt)}</p>
-  <div class="stats">
-    <div class="stat"><strong>${run.stats.discovered}</strong> discovered</div>
-    <div class="stat"><strong>${run.stats.gated}</strong> gated</div>
-    <div class="stat"><strong>${run.stats.inspected}</strong> inspected</div>
-    <div class="stat"><strong>${run.stats.shortlist}</strong> shortlisted</div>
+  <div class="grid">
+    ${statCard({ title: "discovered", value: String(run.stats.discovered) })}
+    ${statCard({ title: "gated", value: String(run.stats.gated) })}
+    ${statCard({ title: "inspected", value: String(run.stats.inspected) })}
+    ${statCard({ title: "shortlisted", value: String(run.stats.shortlist) })}
   </div>
   <h2>Shortlist (${run.shortlist.length})</h2>
   <ol>${shortlist || "<li>empty</li>"}</ol>
@@ -112,17 +123,17 @@ export function renderIndex(run: ResearchRun, runs: RunSummary[], diffMd: string
 function renderTagCoverageTable(run: ResearchRun): string {
   const rows = shortlistTagCoverage(run.shortlist, DEFAULT_MAX_PER_TAG);
   if (!rows.length) return "<p><em>No strategy tags in shortlist.</em></p>";
-  const body = rows
-    .map(
-      (r) =>
-        `<tr><td>${escapeHtml(r.tag)}</td><td>${r.count}</td><td>${r.cap}</td><td>${r.atCap ? "yes" : "no"}</td></tr>`,
-    )
-    .join("\n");
   return `<p>Per-tag cap: <strong>${DEFAULT_MAX_PER_TAG}</strong> (multi-tag repos count toward each tag).</p>
-  <table>
-    <thead><tr><th>Tag</th><th>Count</th><th>Cap</th><th>At cap</th></tr></thead>
-    <tbody>${body}</tbody>
-  </table>`;
+  ${dataTable(
+    [
+      { label: "Tag" },
+      { label: "Count", num: true },
+      { label: "Cap", num: true },
+      { label: "At cap" },
+    ],
+    rows.map((r) => [r.tag, r.count, r.cap, r.atCap ? badge("warn", "yes") : "no"]),
+    "none",
+  )}`;
 }
 
 function signalChecks(item: ScoredRepo): string {
@@ -187,19 +198,19 @@ export function renderScoredTable(run: ResearchRun): string {
     .map((s, i) => {
       const local = localRepoPath(s.repo.owner, s.repo.name);
       const gh = githubRepoWebUrl(s.repo.owner, s.repo.name);
-      return `<tr>
-        <td>${i + 1}</td>
-        <td><a href="${local}">${escapeHtml(s.repo.fullName)}</a></td>
-        <td>${s.score.total}</td>
-        <td><a href="${gh}">gh</a></td>
-      </tr>`;
-    })
-    .join("\n");
+      return [
+        i + 1,
+        `<a href="${local}">${escapeHtml(s.repo.fullName)}</a>`,
+        s.score.total,
+        `<a href="${gh}">gh</a>`,
+      ] as Array<string | number>;
+    });
 
-  return `<table>
-    <thead><tr><th>#</th><th>Repo</th><th>Score</th><th></th></tr></thead>
-    <tbody>${rows}</tbody>
-  </table>`;
+  return dataTable(
+    [{ label: "#", num: true }, { label: "Repo" }, { label: "Score", num: true }, { label: "" }],
+    rows,
+    "none scored",
+  );
 }
 
 // ── Ops dashboard (/ops) ──
@@ -250,7 +261,7 @@ export type OpsDashboardData = {
   } | null;
   /** Cached Kalshi credential probe (server-side, 5-min TTL). */
   kalshiAuth?: {
-    state: "valid" | "invalid" | "unreachable" | "no-creds";
+    state: KalshiAuthState;
     status?: number;
     checkedAt: string;
     cacheTtlSec: number;
@@ -285,6 +296,12 @@ export function fmtAgeMs(ms: number): string {
 }
 
 type Staleness = "fresh" | "overdue" | "stale";
+
+/** Staleness states for periodic-job age badges (exported for ops.json typing). */
+export type OpsStaleness = Staleness;
+
+/** Kalshi auth probe states (shared by the badge renderer and ops.json). */
+export type KalshiAuthState = "valid" | "invalid" | "unreachable" | "no-creds";
 
 function stalenessOf(ageMs: number, periodMin: number): Staleness {
   const periodMs = periodMin * 60_000;
@@ -399,7 +416,7 @@ function renderOpsServer(data: OpsDashboardData, nowMs: number): string {
   ${ages.length ? `<p>data plane: ${ages.join(" · ")}</p>` : ""}`;
 }
 
-const KALSHI_AUTH_BADGE: Record<string, { cls: string; label: string }> = {
+const KALSHI_AUTH_BADGE: Record<KalshiAuthState, { cls: string; label: string }> = {
   valid: { cls: "ok", label: "valid" },
   invalid: { cls: "bad", label: "invalid (rotate key)" },
   unreachable: { cls: "warn", label: "unreachable" },
