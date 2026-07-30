@@ -58,8 +58,8 @@ function seedEvents(db: Database): void {
     `INSERT INTO markets (market_id, event_id, volume_fp, volume_24h_fp) VALUES (?, ?, ?, ?)`,
   );
   mv.run("m1", "e1", "1000000", null);
-  mv.run("m2", "e2", "1000000", "3000000"); // prefer 24h
-  // e3 no market → volume count only from e1+e2
+  mv.run("m2", "e2", "1000000", "3000000"); // prefer 24h when > 0
+  mv.run("m2z", "e3", "4000000", "0.00"); // 0.00 24h → fall back to lifetime
   mv.run("m4", "e4", "9999999", null); // research-only event excluded
 }
 
@@ -96,8 +96,8 @@ describe("build-player-profiles", () => {
     expect(alice.wins).toBe(2);
     expect(alice.losses).toBe(1);
     expect(alice.win_rate).toBeCloseTo(2 / 3, 5);
-    // (1M + 3M) / 2  — e3 has no market volume
-    expect(alice.avg_kalshi_volume_fp).toBe(2_000_000);
+    // e1=1M, e2=3M (24h), e3=4M (lifetime; 24h was "0.00") → avg 8M/3, rounded 2dp
+    expect(alice.avg_kalshi_volume_fp).toBe(2_666_666.67);
     expect(alice.last_seen_ts).toBe(new Date("2026-01-10T12:00:00Z").getTime());
   });
 

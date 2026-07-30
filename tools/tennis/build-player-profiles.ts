@@ -116,14 +116,18 @@ export function buildPlayerProfiles(db: Database, dryRun = false, nowMs = Date.n
     outcome: string;
   }>;
 
-  // Pre-fetch volume per event from markets (24h preferred, then lifetime volume_fp)
+  // Pre-fetch volume per event from markets (24h preferred when > 0, else lifetime volume_fp).
+  // Note: Kalshi often stores volume_24h_fp as "0.00" — do not let that mask volume_fp.
   const volumeByEvent = new Map<string, number>();
   const volRows = db.query(`
     SELECT event_id,
-           COALESCE(
-             SUM(CAST(COALESCE(NULLIF(volume_24h_fp, ''), volume_fp, '0') AS REAL)),
-             0
-           ) as vol
+           COALESCE(SUM(
+             CASE
+               WHEN CAST(COALESCE(NULLIF(volume_24h_fp, ''), '0') AS REAL) > 0
+                 THEN CAST(volume_24h_fp AS REAL)
+               ELSE CAST(COALESCE(NULLIF(volume_fp, ''), '0') AS REAL)
+             END
+           ), 0) as vol
     FROM markets
     GROUP BY event_id
   `).all() as Array<{ event_id: string; vol: number }>;
@@ -199,9 +203,27 @@ export function buildPlayerProfiles(db: Database, dryRun = false, nowMs = Date.n
   }
 
   if (dryRun) {
+    // Preview top-by-volume without writing (operator check for non-zero ranking)
+    const ranked = [...agg.entries()]
+      .map(([name, p]) => ({
+        name,
+        avgVol: p.volumeFpCount > 0 ? Math.round((p.volumeFpSum / p.volumeFpCount) * 100) / 100 : 0,
+        apps: p.appearances,
+      }))
+      .filter((r) => r.avgVol > 0)
+      .sort((a, b) => b.avgVol - a.avgVol)
+      .slice(0, 8);
     console.log(
       `Would upsert ${agg.size} player profiles · volume markets=${volumeFromMarkets} snapshots=${volumeFromSnapshots}`,
     );
+    if (ranked.length > 0) {
+      console.log("Top by volume (dry-run preview):");
+      for (const r of ranked) {
+        console.log(`  ${r.name.padEnd(28)} vol=${String(r.avgVol).padStart(12)} apps=${r.apps}`);
+      }
+    } else {
+      console.log("Top by volume (dry-run preview): (none — markets/snapshots empty)");
+    }
     return {
       playersUpserted: agg.size,
       playersDeleted: 0,

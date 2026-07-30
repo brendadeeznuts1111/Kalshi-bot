@@ -78,7 +78,8 @@
     "protonpass:run": "bun tools/protonpass-run.ts --",
     "protonpass:health": "bun tools/protonpass-run.ts --health-check",
     "protonpass:mint": "bun tools/protonpass-mint-pat.ts",
-    "protonpass:mint:check": "bun tools/protonpass-mint-pat.ts --check"
+    "protonpass:mint:check": "bun tools/protonpass-mint-pat.ts --check",
+    "logging:dry": "bun scripts/price-logger.ts -- --dry-run"
   },
   "engines": {
     "bun": ">=1.4.0-canary.1"

@@ -732,10 +732,13 @@ export function createResearchServer(options: ServeOptions = {}) {
 
       // Player profiles derived from the event store
       if (url.pathname === "/api/profiles") {
+        const sortParam = url.searchParams.get("sort");
+        const sort = sortParam === "appearances" ? "appearances" : "volume";
         return json(
           readPlayerProfiles({
             limit: Number(url.searchParams.get("limit") ?? 50),
             search: url.searchParams.get("search") ?? undefined,
+            sort,
           }),
         );
       }
