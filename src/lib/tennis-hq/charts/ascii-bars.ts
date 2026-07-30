@@ -68,6 +68,34 @@ export function renderBarChart(
   return lines.join("\n");
 }
 
+/** Bucket mid prices (cents 1–99) into fixed ranges for charts / CLI. */
+export function bucketMidCents(
+  mids: readonly number[],
+): Array<{ range: string; count: number; pct: number }> {
+  const ranges: Array<{ range: string; lo: number; hi: number }> = [
+    { range: "1–20¢", lo: 1, hi: 20 },
+    { range: "21–40¢", lo: 21, hi: 40 },
+    { range: "41–60¢", lo: 41, hi: 60 },
+    { range: "61–80¢", lo: 61, hi: 80 },
+    { range: "81–99¢", lo: 81, hi: 99 },
+  ];
+  const counts = ranges.map(() => 0);
+  let n = 0;
+  for (const m of mids) {
+    if (!Number.isFinite(m)) continue;
+    const c = Math.round(m);
+    if (c < 1 || c > 99) continue;
+    n++;
+    const i = ranges.findIndex((r) => c >= r.lo && c <= r.hi);
+    if (i >= 0) counts[i]!++;
+  }
+  return ranges.map((r, i) => ({
+    range: r.range,
+    count: counts[i]!,
+    pct: n > 0 ? Math.round((counts[i]! / n) * 100) : 0,
+  }));
+}
+
 export function renderMidDistribution(
   buckets: Array<{ range: string; count: number; pct: number }>,
   width = 40,

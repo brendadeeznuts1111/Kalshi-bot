@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+  bucketMidCents,
   chartLineVisibleWidths,
   chartRowsAligned,
   renderBarChart,
@@ -27,6 +28,22 @@ describe("renderBarChart alignment", () => {
 
   test("empty data → empty string", () => {
     expect(renderBarChart([])).toBe("");
+  });
+});
+
+describe("bucketMidCents", () => {
+  test("groups into five ranges with pct sum ~100", () => {
+    const mids = [
+      ...Array(10).fill(10),
+      ...Array(10).fill(30),
+      ...Array(10).fill(50),
+      ...Array(10).fill(70),
+      ...Array(10).fill(90),
+    ];
+    const b = bucketMidCents(mids);
+    expect(b).toHaveLength(5);
+    expect(b.every((x) => x.count === 10)).toBe(true);
+    expect(b.reduce((s, x) => s + x.pct, 0)).toBe(100);
   });
 });
 
