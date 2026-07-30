@@ -1,7 +1,7 @@
 {
   "name": "kalshi-bot-research",
   "version": "0.2.0",
-  "packageManager": "bun@1.4.0",
+  "packageManager": "bun@1.4.0-canary.1",
   "private": true,
   "description": "Discover and rank public Kalshi trading bots on GitHub (Bun + gh CLI)",
   "type": "module",
@@ -81,7 +81,7 @@
     "protonpass:mint:check": "bun tools/protonpass-mint-pat.ts --check"
   },
   "engines": {
-    "bun": ">=1.4.0"
+    "bun": ">=1.4.0-canary.1"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.2",

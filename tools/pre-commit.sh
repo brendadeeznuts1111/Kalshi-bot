@@ -12,7 +12,12 @@ protected=(
   research/reports/latest.md
   research/reports/latest.diff.md
 )
-deleted="$(git diff --name-only --diff-filter=D -- "${protected[@]}" 2>/dev/null || true)"
+deleted="$(
+  {
+    git diff --name-only --diff-filter=D -- "${protected[@]}"
+    git diff --cached --name-only --diff-filter=D -- "${protected[@]}"
+  } 2>/dev/null | sort -u
+)"
 if [[ -n "$deleted" ]]; then
   echo "pre-commit: tests deleted committed artifacts:"
   echo "$deleted"

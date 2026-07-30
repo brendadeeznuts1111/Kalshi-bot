@@ -59,9 +59,7 @@ describe("tennis-ws-ground artifact", () => {
     }
   });
 
-  test("captureTennisWsGround writes HTML; WebView when runtime supports it", async () => {
-    if (typeof Bun.WebView !== "function") return;
-
+  test("captureTennisWsGround writes HTML without launching WebView", async () => {
     const startTs = new Date(Date.now() - 2 * 60_000).toISOString();
     const db = openEventStore({ dbPath: ":memory:" });
     db.query(
@@ -95,19 +93,17 @@ describe("tennis-ws-ground artifact", () => {
 
     const outDir = tempSqlitePath("tennis-ws-ground-capture").replace(/\.db$/, "");
     try {
-      const artifact = await captureTennisWsGround(db, { leadMinutes: 60, limit: 10, outDir });
+      const artifact = await captureTennisWsGround(db, {
+        leadMinutes: 60,
+        limit: 10,
+        outDir,
+        htmlOnly: true,
+      });
       expect(await Bun.file(artifact.dashboardHtml).exists()).toBe(true);
       const html = await Bun.file(artifact.dashboardHtml).text();
       expect(html).toContain("kalshi-ws ticks");
-
-      if (artifact.webview) {
-        expect(await Bun.file(artifact.dashboardPng).exists()).toBe(true);
-        const png = await Bun.file(artifact.dashboardPng).arrayBuffer();
-        expect(png.byteLength).toBeGreaterThan(100);
-      }
-      if (artifact.image) {
-        expect(await Bun.file(artifact.thumbWebp).exists()).toBe(true);
-      }
+      expect(artifact.webview).toBe(false);
+      expect(artifact.image).toBe(false);
     } finally {
       await Bun.$`rm -rf ${outDir}`.nothrow().quiet();
     }

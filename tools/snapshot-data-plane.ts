@@ -9,6 +9,8 @@
  *   bun tools/snapshot-data-plane.ts --scope=prediction --dry-run
  *   bun tools/snapshot-data-plane.ts --list
  *   bun tools/snapshot-data-plane.ts --grep="mae>0.1"
+ *
+ * @see https://bun.com/docs/runtime/child-process#spawn-a-process-bun-spawn
  */
 import { createHash } from "node:crypto";
 import { mkdirSync } from "node:fs";
@@ -103,6 +105,20 @@ export type PruneOptions = {
 };
 
 export type ValidationResult = { ok: boolean; errors: string[] };
+
+export type SnapshotEnvironment = {
+  ghAuthOk: boolean;
+  protonpassSession: boolean;
+  kalshiWs: boolean;
+  oddsApi: boolean;
+};
+
+export type CaptureSnapshotOptions = {
+  dbPath?: string;
+  registryDir?: string;
+  dryRun?: boolean;
+  environment?: SnapshotEnvironment;
+};
 
 export type RegistryIndex = {
   v: 1;
@@ -224,12 +240,36 @@ function ensureDir(dir: string): void {
   } catch { /* ignore */ }
 }
 
+async function commandSucceeds(command: string[]): Promise<boolean> {
+  try {
+    const proc = Bun.spawn(command, { stdout: "ignore", stderr: "ignore" });
+    return (await proc.exited) === 0;
+  } catch {
+    return false;
+  }
+}
+
+async function probeSnapshotEnvironment(): Promise<SnapshotEnvironment> {
+  const [ghAuthOk, protonpassTest, protonpassVault] = await Promise.all([
+    commandSucceeds(["gh", "auth", "status"]),
+    commandSucceeds(["pass-cli", "test"]),
+    commandSucceeds(["pass-cli", "vault", "list"]),
+  ]);
+
+  return {
+    ghAuthOk,
+    protonpassSession: protonpassTest && protonpassVault,
+    kalshiWs: Boolean(Bun.env.KALSHI_API_KEY_ID || Bun.env.KALSHI_ACCESS_KEY),
+    oddsApi: Boolean(Bun.env.ODDS_API_KEY),
+  };
+}
+
 /* ------------------------------------------------------------------ */
 /*  Core capture — data plane                                          */
 /* ------------------------------------------------------------------ */
 
 export async function captureSnapshot(
-  options: { dbPath?: string; registryDir?: string; dryRun?: boolean } = {},
+  options: CaptureSnapshotOptions = {},
 ): Promise<DataPlaneSnapshot> {
   const dbPath = options.dbPath ?? DEFAULT_EVENT_STORE_DB;
   const registryDir = options.registryDir ?? defaultRegistryDir();
@@ -290,18 +330,13 @@ export async function captureSnapshot(
   } catch { /* leave defaults */ }
 
   // Blockers
-  const ghProc = Bun.spawn(["gh", "auth", "status"], { stdout: "pipe", stderr: "pipe" });
-  const ghAuthOk = (await ghProc.exited) === 0;
-
-  let protonpass_session = false;
-  try {
-    const ppTest = await Bun.spawn(["pass-cli", "test"], { stdout: "pipe", stderr: "pipe" }).exited;
-    const ppVault = await Bun.spawn(["pass-cli", "vault", "list"], { stdout: "pipe", stderr: "pipe" }).exited;
-    protonpass_session = ppTest === 0 && ppVault === 0;
-  } catch { /* leave false */ }
-
-  const kalshi_ws = !!(Bun.env.KALSHI_API_KEY_ID || Bun.env.KALSHI_ACCESS_KEY);
-  const odds_api = !!Bun.env.ODDS_API_KEY;
+  const environment = options.environment ?? await probeSnapshotEnvironment();
+  const {
+    ghAuthOk,
+    protonpassSession: protonpass_session,
+    kalshiWs: kalshi_ws,
+    oddsApi: odds_api,
+  } = environment;
 
   // Sources map
   const sources: DataPlaneSnapshot["sources"] = {

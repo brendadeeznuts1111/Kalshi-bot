@@ -127,7 +127,9 @@ describe("fetchPolymarketMarkets", () => {
 
   test("throws on non-2xx response", async () => {
     const badFetch = mockFetch({ error: "Rate limited" }, 429);
-    await expect(fetchPolymarketMarkets({ fetchImpl: badFetch })).rejects.toThrow("Polymarket API");
+    await expect(
+      fetchPolymarketMarkets({ fetchImpl: badFetch, retries: 0 }),
+    ).rejects.toThrow("Polymarket API");
   });
 });
 

@@ -14,11 +14,28 @@ import {
   pruneSnapshots,
   readRegistry,
   validateRegistry,
+  type CaptureSnapshotOptions,
   type DataPlaneSnapshot,
+  type SnapshotEnvironment,
 } from "../../tools/snapshot-data-plane.ts";
 
 function makeTempDir(): string {
   return mkdtempSync(join(tmpdir(), "snapshot-test-"));
+}
+
+const TEST_ENVIRONMENT: SnapshotEnvironment = {
+  ghAuthOk: true,
+  protonpassSession: true,
+  kalshiWs: false,
+  oddsApi: false,
+};
+
+function snapshotOptions(registryDir: string): CaptureSnapshotOptions {
+  return {
+    registryDir,
+    dbPath: join(registryDir, "event-store.db"),
+    environment: TEST_ENVIRONMENT,
+  };
 }
 
 function makeMinimalSnapshot(ts = Date.now()): DataPlaneSnapshot {
@@ -122,12 +139,18 @@ describe("snapshot-data-plane", () => {
     });
 
     test("writes artifact, registry, and index", async () => {
-      const snapshot = await captureSnapshot({ registryDir: tmpDir });
+      const snapshot = await captureSnapshot(snapshotOptions(tmpDir));
 
       expect(snapshot.v).toBe(1);
       expect(snapshot.run).toMatch(/^keeper-\d{4}-\d{2}-\d{2}-\d{6}(-\d{3})?$/);
       expect(snapshot.fingerprint).toHaveLength(8);
-      expect(snapshot.rows.events).toBeGreaterThan(0);
+      expect(snapshot.rows.events).toBe(0);
+      expect(snapshot.blockers).toEqual({
+        gh_auth: false,
+        protonpass_session: false,
+        kalshi_ws: true,
+        odds_api: true,
+      });
 
       // Check artifact file exists
       const artifactFile = Bun.file(`${tmpDir}/snapshots/${snapshot.run}-${snapshot.fingerprint}.json`);
@@ -152,18 +175,18 @@ describe("snapshot-data-plane", () => {
     });
 
     test("captureDataPlane is alias for captureSnapshot", async () => {
-      const s1 = await captureSnapshot({ registryDir: tmpDir });
+      const s1 = await captureSnapshot(snapshotOptions(tmpDir));
       await new Promise((r) => setTimeout(r, 100));
-      const s2 = await captureDataPlane({ registryDir: tmpDir });
+      const s2 = await captureDataPlane(snapshotOptions(tmpDir));
       expect(s1.v).toBe(1);
       expect(s2.v).toBe(1);
     });
 
     // @ts-expect-error — bun-types lags runtime: test options timeout supported since Bun 1.2
     test("multiple captures append without collision", { timeout: 20000 }, async () => {
-      const s1 = await captureSnapshot({ registryDir: tmpDir });
+      const s1 = await captureSnapshot(snapshotOptions(tmpDir));
       await new Promise((r) => setTimeout(r, 100));
-      const s2 = await captureSnapshot({ registryDir: tmpDir });
+      const s2 = await captureSnapshot(snapshotOptions(tmpDir));
 
       expect(s1.run).not.toBe(s2.run);
       expect(s1.fingerprint).not.toBe(s2.fingerprint);
@@ -191,9 +214,9 @@ describe("snapshot-data-plane", () => {
     });
 
     test("reads and sorts entries by timestamp desc", async () => {
-      await captureSnapshot({ registryDir: tmpDir });
+      await captureSnapshot(snapshotOptions(tmpDir));
       await new Promise((r) => setTimeout(r, 100));
-      await captureSnapshot({ registryDir: tmpDir });
+      await captureSnapshot(snapshotOptions(tmpDir));
 
       const entries = await readRegistry(tmpDir);
       expect(entries.length).toBe(2);
@@ -213,7 +236,7 @@ describe("snapshot-data-plane", () => {
     });
 
     test("compresses entries older than threshold", async () => {
-      const s1 = await captureSnapshot({ registryDir: tmpDir });
+      const s1 = await captureSnapshot(snapshotOptions(tmpDir));
 
       // Manually override the artifact's timestamp to be 8 days old
       const artifactPath = `${tmpDir}/snapshots/${s1.run}-${s1.fingerprint}.json`;
@@ -229,7 +252,7 @@ describe("snapshot-data-plane", () => {
       index.entries[0].ts = artifact.ts;
       await Bun.write(`${tmpDir}/index.json`, JSON.stringify(index, null, 2) + "\n");
 
-      await captureSnapshot({ registryDir: tmpDir });
+      await captureSnapshot(snapshotOptions(tmpDir));
 
       const result = await pruneSnapshots(tmpDir, { compressAfterMs: 7 * 24 * 60 * 60 * 1000 });
       expect(result.compressed).toBe(1);
@@ -244,7 +267,7 @@ describe("snapshot-data-plane", () => {
 
     test("deletes oldest when over maxTotalSnapshots", async () => {
       for (let i = 0; i < 5; i++) {
-        await captureSnapshot({ registryDir: tmpDir });
+        await captureSnapshot(snapshotOptions(tmpDir));
         await new Promise((r) => setTimeout(r, 50));
       }
 
@@ -269,14 +292,14 @@ describe("snapshot-data-plane", () => {
     });
 
     test("passes on valid fresh registry", async () => {
-      await captureSnapshot({ registryDir: tmpDir });
+      await captureSnapshot(snapshotOptions(tmpDir));
       const result = await validateRegistry(tmpDir);
       expect(result.ok).toBe(true);
       expect(result.errors).toHaveLength(0);
     });
 
     test("detects duplicate runs", async () => {
-      await captureSnapshot({ registryDir: tmpDir });
+      await captureSnapshot(snapshotOptions(tmpDir));
       const hotFile = Bun.file(`${tmpDir}/data-plane-snapshots.jsonl`);
       const existing = await hotFile.text();
       await Bun.write(`${tmpDir}/data-plane-snapshots.jsonl`, existing + existing);
@@ -293,7 +316,7 @@ describe("snapshot-data-plane", () => {
     });
 
     test("detects missing artifact files", async () => {
-      await captureSnapshot({ registryDir: tmpDir });
+      await captureSnapshot(snapshotOptions(tmpDir));
       const indexFile = Bun.file(`${tmpDir}/index.json`);
       const index = await indexFile.json();
       index.entries[0].file = "snapshots/nonexistent.json";
@@ -318,7 +341,7 @@ describe("snapshot-data-plane", () => {
 
     test("filters by date range", async () => {
       for (let i = 0; i < 3; i++) {
-        await captureSnapshot({ registryDir: tmpDir });
+        await captureSnapshot(snapshotOptions(tmpDir));
         await new Promise((r) => setTimeout(r, 50));
       }
 
@@ -373,7 +396,7 @@ describe("snapshot-data-plane", () => {
 
     test("returns newest first", async () => {
       for (let i = 0; i < 3; i++) {
-        await captureSnapshot({ registryDir: tmpDir });
+        await captureSnapshot(snapshotOptions(tmpDir));
         await new Promise((r) => setTimeout(r, 50));
       }
 

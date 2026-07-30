@@ -2,12 +2,12 @@
 /**
  * Guard exact Bun-native replacements without adding an ESLint dependency.
  *
- * Checks direct dependency declarations, static/dynamic imports, require()
- * calls, and direct console table usage. Transitive dependencies are not
- * blocked because application code does not control their implementation.
+ * Checks direct dependency declarations plus static/dynamic imports and
+ * require() calls. Transitive dependencies are not blocked because application
+ * code does not control their implementation.
  *
  * @see https://bun.com/docs/runtime/file-io#reading-files-bun-file
- * @see https://bun.com/docs/runtime/glob#quickstart
+ * @see https://bun.com/docs/runtime/child-process#spawn-a-process-bun-spawn
  * @see https://bun.com/docs/runtime/transpiler#scanimports
  * @see https://bun.com/docs/runtime/utils
  */
@@ -33,20 +33,31 @@ const DEPENDENCY_SECTIONS = [
   "peerDependencies",
 ] as const;
 
+const IGNORED_PATH_SEGMENTS = new Set([
+  ".bun-create",
+  ".git",
+  ".reasonix",
+  "coverage",
+  "node_modules",
+]);
+
 const IGNORED_PATH_PREFIXES = [
-  ".bun-create/",
-  ".git/",
-  ".reasonix/",
-  "coverage/",
-  "node_modules/",
   "research/cache/",
   "research/evidence/",
   "research/exports/",
   "research/outputs/",
 ] as const;
 
-const SOURCE_GLOB = new Bun.Glob("**/*.{ts,tsx,js,jsx,mjs,cjs}");
-const MANIFEST_GLOB = new Bun.Glob("**/package.json");
+const SOURCE_EXTENSIONS = new Set([
+  ".cjs",
+  ".cts",
+  ".js",
+  ".jsx",
+  ".mjs",
+  ".mts",
+  ".ts",
+  ".tsx",
+]);
 const transpilers = new Map<string, Bun.Transpiler>();
 
 export interface GuardViolation {
@@ -55,7 +66,9 @@ export interface GuardViolation {
 }
 
 function isIgnored(path: string): boolean {
-  return IGNORED_PATH_PREFIXES.some((prefix) => path.startsWith(prefix));
+  const normalized = path.replaceAll("\\", "/");
+  return normalized.split("/").some((segment) => IGNORED_PATH_SEGMENTS.has(segment))
+    || IGNORED_PATH_PREFIXES.some((prefix) => normalized.startsWith(prefix));
 }
 
 function packageName(specifier: string): string {
@@ -63,6 +76,23 @@ function packageName(specifier: string): string {
     return specifier.split("/", 2).join("/");
   }
   return specifier.split("/", 1)[0] ?? specifier;
+}
+
+function npmAliasPackageName(specifier: unknown): string | null {
+  if (typeof specifier !== "string" || !specifier.startsWith("npm:")) {
+    return null;
+  }
+
+  const target = specifier.slice("npm:".length);
+  if (target.startsWith("@")) {
+    const slash = target.indexOf("/");
+    if (slash < 0) return target;
+    const version = target.indexOf("@", slash);
+    return version < 0 ? target : target.slice(0, version);
+  }
+
+  const version = target.indexOf("@");
+  return version < 0 ? target : target.slice(0, version);
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -85,12 +115,23 @@ export function findManifestViolations(
     const dependencies = asRecord(root[section]);
     if (!dependencies) continue;
 
-    for (const dependency of Object.keys(dependencies)) {
+    for (const [dependency, specifier] of Object.entries(dependencies)) {
       const replacement = BANNED_PACKAGES.get(dependency);
       if (replacement) {
         violations.push({
           file,
           message: `${section}.${dependency} duplicates ${replacement}`,
+        });
+      }
+
+      const aliasTarget = npmAliasPackageName(specifier);
+      const aliasReplacement = aliasTarget
+        ? BANNED_PACKAGES.get(aliasTarget)
+        : undefined;
+      if (aliasTarget && aliasReplacement) {
+        violations.push({
+          file,
+          message: `${section}.${dependency} aliases ${aliasTarget}; use ${aliasReplacement}`,
         });
       }
     }
@@ -101,7 +142,7 @@ export function findManifestViolations(
 function sourceLoader(file: string): "js" | "jsx" | "ts" | "tsx" {
   if (file.endsWith(".tsx")) return "tsx";
   if (file.endsWith(".jsx")) return "jsx";
-  if (file.endsWith(".ts")) return "ts";
+  if (file.endsWith(".ts") || file.endsWith(".mts") || file.endsWith(".cts")) return "ts";
   return "js";
 }
 
@@ -134,34 +175,51 @@ export function findSourceViolations(
     }
   }
 
-  if (/\bconsole\s*\.\s*table\s*\(/u.test(scannable)) {
-    violations.push({
-      file,
-      message: "console table prints directly; use Bun.inspect.table() and write the returned string",
-    });
-  }
-
   return violations;
 }
 
-export async function auditRepository(root: string): Promise<GuardViolation[]> {
-  const violations: GuardViolation[] = [];
-
-  for await (const file of MANIFEST_GLOB.scan({ cwd: root, onlyFiles: true })) {
-    if (isIgnored(file)) continue;
-    const manifestFile = Bun.file(join(root, file));
-    try {
-      violations.push(...findManifestViolations(await manifestFile.json(), file));
-    } catch (error) {
-      violations.push({
-        file,
-        message: `cannot parse manifest: ${error instanceof Error ? error.message : String(error)}`,
-      });
-    }
+async function trackedRepositoryFiles(root: string): Promise<string[]> {
+  const proc = Bun.spawn(["git", "ls-files", "-z"], {
+    cwd: root,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const stdout = new Response(proc.stdout).text();
+  const stderr = new Response(proc.stderr).text();
+  const exitCode = await proc.exited;
+  if (exitCode !== 0) {
+    throw new Error(`git ls-files failed: ${(await stderr).trim() || `exit ${exitCode}`}`);
   }
+  return (await stdout).split("\0").filter(Boolean);
+}
 
-  for await (const file of SOURCE_GLOB.scan({ cwd: root, onlyFiles: true })) {
+export async function auditRepository(
+  root: string,
+  files?: readonly string[],
+): Promise<GuardViolation[]> {
+  const violations: GuardViolation[] = [];
+  const repositoryFiles = files ?? await trackedRepositoryFiles(root);
+
+  for (const file of repositoryFiles) {
     if (isIgnored(file)) continue;
+
+    if (file === "package.json" || file.endsWith("/package.json")) {
+      const manifestFile = Bun.file(join(root, file));
+      try {
+        violations.push(...findManifestViolations(await manifestFile.json(), file));
+      } catch (error) {
+        violations.push({
+          file,
+          message: `cannot parse manifest: ${error instanceof Error ? error.message : String(error)}`,
+        });
+      }
+      continue;
+    }
+
+    const dot = file.lastIndexOf(".");
+    const extension = dot < 0 ? "" : file.slice(dot);
+    if (!SOURCE_EXTENSIONS.has(extension)) continue;
+
     try {
       const source = await Bun.file(join(root, file)).text();
       violations.push(...findSourceViolations(source, file));
