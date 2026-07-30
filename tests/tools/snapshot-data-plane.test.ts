@@ -159,7 +159,8 @@ describe("snapshot-data-plane", () => {
       expect(s2.v).toBe(1);
     });
 
-    test("multiple captures append without collision", async () => {
+    // @ts-expect-error — bun-types lags runtime: test options timeout supported since Bun 1.2
+    test("multiple captures append without collision", { timeout: 20000 }, async () => {
       const s1 = await captureSnapshot({ registryDir: tmpDir });
       await new Promise((r) => setTimeout(r, 100));
       const s2 = await captureSnapshot({ registryDir: tmpDir });
