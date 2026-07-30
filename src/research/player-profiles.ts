@@ -11,7 +11,9 @@ import { existsSync } from "node:fs";
 import { DEFAULT_EVENT_STORE_DB } from "../institutions/event-store/paths.ts";
 import {
   capLastSeenAtMs,
+  parseSurfaceStats,
   type ProfilesSource,
+  type SurfaceStats,
 } from "./player-profile-meta.ts";
 
 export type PlayerProfileView = {
@@ -22,7 +24,8 @@ export type PlayerProfileView = {
   wins: number;
   losses: number;
   winRate: number | null;
-  surfaces: Record<string, number>;
+  /** Per-surface nested stats (not bare apps counts). */
+  surfaces: Record<string, SurfaceStats>;
   /** Mean resolved Kalshi contract volume; null = no volume data. */
   avgKalshiVolumeFp: number | null;
   /** Epoch millis of latest event; null unknown; capped ≤ now. */
@@ -97,7 +100,7 @@ export function readPlayerProfiles(options: {
       wins: r.wins,
       losses: r.losses,
       winRate: r.win_rate,
-      surfaces: r.surfaces ? (JSON.parse(r.surfaces) as Record<string, number>) : {},
+      surfaces: parseSurfaceStats(r.surfaces),
       avgKalshiVolumeFp: r.avg_kalshi_volume_fp,
       lastSeenAtMs: capLastSeenAtMs(r.last_seen_ts, now),
     }));

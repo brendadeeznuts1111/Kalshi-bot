@@ -601,10 +601,19 @@ async function renderEvents() {
     "<tr><td>" + esc(p.name) + (p.country ? ' <span class="muted" style="font-size:.75rem">' + esc(p.country) + "</span>" : "") + "</td><td class='num'>" + p.appearances + "</td>" +
     "<td class='num'>" + p.wins + "–" + p.losses + "</td>" +
     "<td class='num'>" + (p.winRate != null ? (p.winRate * 100).toFixed(0) + "%" : "—") + "</td>" +
-    "<td class='muted'>" + esc(Object.entries(p.surfaces).map(([k, v]) => k + " " + v).join(", ")) + "</td>" +
-    "<td class='num'>" + fmtVol(p.avgKalshiVolumeFp ?? p.avgKalshiVolume) + "</td></tr>").join("") : "";
+    "<td class='muted'>" + esc(Object.entries(p.surfaces || {}).map(([k, v]) => {
+      if (v != null && typeof v === "object") {
+        const apps = v.apps != null ? v.apps : (v.wins || 0) + (v.losses || 0);
+        return (v.wins || 0) + (v.losses || 0) > 0
+          ? k + " " + apps + " (" + v.wins + "–" + v.losses + ")"
+          : k + " " + apps;
+      }
+      return k + " " + v;
+    }).join(" · ")) + "</td>" +
+    "<td class='num'>" + fmtVol(p.avgKalshiVolumeFp) + "</td>" +
+    "<td class='muted' style='font-size:.75rem'>" + (p.lastSeenAtMs ? esc(new Date(p.lastSeenAtMs).toISOString().slice(0, 10)) : "—") + "</td></tr>").join("") : "";
   $("#profiles-table").innerHTML = profRows
-    ? "<table><tr><th>Player</th><th class='num'>Apps</th><th class='num'>W–L</th><th class='num'>Win%</th><th>Surfaces</th><th class='num'>Avg Vol (Fp)</th></tr>" + profRows + "</table>"
+    ? "<table><tr><th>Player</th><th class='num'>Apps</th><th class='num'>W–L</th><th class='num'>Win%</th><th>Surfaces</th><th class='num'>Avg Vol (Fp)</th><th>Last seen</th></tr>" + profRows + "</table>"
     : '<div class="muted">' + esc(profiles && profiles.reason ? profiles.reason : "profiles unavailable — run bun run tennis:profiles:build") + "</div>";
 
   const filterForm = $("#events-filter");

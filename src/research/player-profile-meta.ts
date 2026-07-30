@@ -74,3 +74,111 @@ export function formatLastSeenDate(ms: number | null | undefined): string | null
   const capped = capLastSeenAtMs(ms ?? null);
   return capped != null ? new Date(capped).toISOString().slice(0, 10) : null;
 }
+
+/** Per-surface W/L stored in player_profiles.surfaces JSON. */
+export type SurfaceStats = { wins: number; losses: number; apps: number };
+
+/**
+ * Parse surfaces JSON from SQLite.
+ * Accepts nested SurfaceStats (current) or legacy Record&lt;surface, apps count&gt;.
+ */
+export function parseSurfaceStats(
+  raw: string | null | undefined,
+): Record<string, SurfaceStats> {
+  if (!raw?.trim()) return {};
+  try {
+    const obj = JSON.parse(raw) as Record<string, unknown>;
+    const out: Record<string, SurfaceStats> = {};
+    for (const [k, v] of Object.entries(obj)) {
+      if (v != null && typeof v === "object" && !Array.isArray(v)) {
+        const o = v as Record<string, unknown>;
+        const apps = Number(o.apps ?? 0) || 0;
+        const wins = Number(o.wins ?? 0) || 0;
+        const losses = Number(o.losses ?? 0) || 0;
+        out[k] = { apps, wins, losses };
+      } else if (typeof v === "number" && Number.isFinite(v)) {
+        out[k] = { apps: v, wins: 0, losses: 0 };
+      }
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+/** HQ/table display: "hard 3 (2–1) · clay 1 (0–1)". */
+export function formatSurfacesDisplay(surfaces: Record<string, SurfaceStats | number>): string {
+  return Object.entries(surfaces)
+    .map(([k, v]) => {
+      if (typeof v === "number") return `${k} ${v}`;
+      const apps = v.apps || v.wins + v.losses || 0;
+      if (v.wins + v.losses > 0) return `${k} ${apps} (${v.wins}–${v.losses})`;
+      return `${k} ${apps}`;
+    })
+    .join(" · ");
+}
+
+/**
+ * Per-event volume SQL: match_winner legs only, SUM of resolved vol.
+ * (Two match_winner tickers = both sides' contract volume, not double-count of one book.)
+ * When `market_kind` column is absent (minimal test DBs), omit the kind filter.
+ */
+export const SQL_EVENT_VOLUME_FP = `
+  COALESCE(SUM(
+    CASE
+      WHEN market_kind IS NULL OR market_kind = '' OR market_kind = 'match_winner'
+        THEN (${SQL_MARKET_VOLUME_FP})
+      ELSE 0
+    END
+  ), 0)
+`.trim();
+
+/** Fallback when markets has no market_kind column. */
+export const SQL_EVENT_VOLUME_FP_NO_KIND = `
+  COALESCE(SUM(${SQL_MARKET_VOLUME_FP}), 0)
+`.trim();
+
+function marketsColumnNames(db: {
+  query: (sql: string) => { all: () => Array<{ name: string }> };
+}): string[] {
+  try {
+    return db.query(`PRAGMA table_info(markets)`).all().map((c) => c.name);
+  } catch {
+    return [];
+  }
+}
+
+/** Per-market resolve SQL adapted to available columns (test DBs may omit 24h). */
+export function marketVolumeSqlForDb(db: {
+  query: (sql: string) => { all: () => Array<{ name: string }> };
+}): string {
+  const cols = marketsColumnNames(db);
+  if (cols.includes("volume_24h_fp") && cols.includes("volume_fp")) return SQL_MARKET_VOLUME_FP;
+  if (cols.includes("volume_fp")) {
+    return `CAST(COALESCE(NULLIF(volume_fp, ''), '0') AS REAL)`;
+  }
+  if (cols.includes("volume_24h_fp")) {
+    return `CAST(COALESCE(NULLIF(volume_24h_fp, ''), '0') AS REAL)`;
+  }
+  return `0`;
+}
+
+/** Pick event-volume SQL fragment for the live schema. */
+export function eventVolumeSqlForDb(db: {
+  query: (sql: string) => { all: () => Array<{ name: string }> };
+}): string {
+  const cols = marketsColumnNames(db);
+  const perMarket = marketVolumeSqlForDb(db);
+  if (cols.includes("market_kind")) {
+    return `
+  COALESCE(SUM(
+    CASE
+      WHEN market_kind IS NULL OR market_kind = '' OR market_kind = 'match_winner'
+        THEN (${perMarket})
+      ELSE 0
+    END
+  ), 0)
+`.trim();
+  }
+  return `COALESCE(SUM(${perMarket}), 0)`;
+}

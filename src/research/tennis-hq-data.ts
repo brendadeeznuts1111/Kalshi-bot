@@ -24,6 +24,12 @@ import {
   type TennisMarketView,
 } from "./tennis-events.ts";
 import {
+  capLastSeenAtMs,
+  eventVolumeSqlForDb,
+  parseSurfaceStats,
+  type SurfaceStats,
+} from "./player-profile-meta.ts";
+import {
   computeSurfaceEdge,
   hasReliableSurfaceSample,
   MIN_SURFACE_EDGE_APPEARANCES,
@@ -62,8 +68,8 @@ export type PlayerProfileStub = {
   winRate: number | null;
   /** Same contract as /api/profiles — see player-profile-meta.ts */
   avgKalshiVolumeFp: number | null;
-  surfaces: Record<string, number>;
-  lastSeenAtMs: number;
+  surfaces: Record<string, SurfaceStats>;
+  lastSeenAtMs: number | null;
 };
 
 export type TennisHqSide = {
@@ -235,13 +241,8 @@ function inClause(prefix: string, values: readonly string[]): { placeholders: st
   return { placeholders, params };
 }
 
-function parseSurfaces(raw: string | null | undefined): Record<string, number> {
-  if (!raw?.trim()) return {};
-  try {
-    return JSON.parse(raw) as Record<string, number>;
-  } catch {
-    return {};
-  }
+function parseSurfaces(raw: string | null | undefined) {
+  return parseSurfaceStats(raw);
 }
 
 function parseBookJson(json: string): BookSnapshot | null {
@@ -445,7 +446,7 @@ function toProfileStub(
     winRate: row.win_rate,
     avgKalshiVolumeFp: row.avg_kalshi_volume_fp,
     surfaces: parseSurfaces(row.surfaces),
-    lastSeenAtMs: row.last_seen_ts,
+    lastSeenAtMs: capLastSeenAtMs(row.last_seen_ts),
   };
 }
 
@@ -807,11 +808,12 @@ export function getPlayerDetail(
       )
       .get(name) as ProfileRow | null;
 
+    const eventVolSql = eventVolumeSqlForDb(db);
     const eventRows = db
       .query(
         `SELECT e.event_id, e.player_a, e.player_b, e.start_ts, e.outcome,
                 e.winner, e.loser, e.score_text, e.surface,
-                (SELECT COALESCE(SUM(CAST(volume_fp AS REAL)), 0)
+                (SELECT ${eventVolSql}
                    FROM markets m WHERE m.event_id = e.event_id) AS volume_fp
          FROM events e
          WHERE e.corpus = 'trading'
@@ -848,7 +850,7 @@ export function getPlayerDetail(
           winRate: null,
           avgKalshiVolumeFp: null,
           surfaces: {},
-          lastSeenAtMs: 0,
+          lastSeenAtMs: null,
         };
 
     const recentEvents: PlayerRecentEvent[] = eventRows.map((row) => {

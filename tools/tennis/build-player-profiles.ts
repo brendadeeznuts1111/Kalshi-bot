@@ -16,8 +16,8 @@
 import { Database } from "bun:sqlite";
 import { openEventStore } from "../../src/institutions/event-store/open-db.ts";
 import {
+  eventVolumeSqlForDb,
   roundVolumeFp,
-  SQL_MARKET_VOLUME_FP,
   SNAPSHOT_SQL,
 } from "../../src/research/player-profile-meta.ts";
 import { countryForPlayer } from "../../src/research/tennis-meta.ts";
@@ -97,6 +97,8 @@ export function buildPlayerProfiles(db: Database, dryRun = false, nowMs = Date.n
   playersDeleted: number;
   volumeFromMarkets: number;
   volumeFromSnapshots: number;
+  playersWithVolume: number;
+  fillRate: number;
 } {
   const agg = new Map<string, PlayerAgg>();
 
@@ -116,11 +118,11 @@ export function buildPlayerProfiles(db: Database, dryRun = false, nowMs = Date.n
     outcome: string;
   }>;
 
-  // Per-event volume via meta SQL_MARKET_VOLUME_FP (24h>0 else lifetime).
+  // Per-event volume: match_winner legs × SQL_MARKET_VOLUME_FP (meta eventVolumeSqlForDb).
   const volumeByEvent = new Map<string, number>();
+  const eventVolSql = eventVolumeSqlForDb(db);
   const volRows = db.query(`
-    SELECT event_id,
-           COALESCE(SUM(${SQL_MARKET_VOLUME_FP}), 0) as vol
+    SELECT event_id, ${eventVolSql} as vol
     FROM markets
     GROUP BY event_id
   `).all() as Array<{ event_id: string; vol: number }>;
@@ -185,15 +187,19 @@ export function buildPlayerProfiles(db: Database, dryRun = false, nowMs = Date.n
     const fromSnap = snapshotVol.get(name) ?? null;
     if (fromMarkets != null && fromMarkets > 0) volumeFromMarkets++;
     if (fromSnap != null && fromSnap > 0) volumeFromSnapshots++;
-    // Prefer the stronger positive signal so ranking is not cosmetic zeros
-    if (fromMarkets != null && fromSnap != null) {
-      p.volumeFpSum = Math.max(fromMarkets, fromSnap);
-      p.volumeFpCount = 1;
-    } else if (fromSnap != null && fromSnap > 0 && (fromMarkets == null || fromMarkets <= 0)) {
+    // Markets are SSOT when present; snapshots only fill gaps (do not max-merge estimators).
+    if (fromMarkets != null && fromMarkets > 0) {
+      /* leave volumeFpSum / Count as market accumulation */
+    } else if (fromSnap != null && fromSnap > 0) {
       p.volumeFpSum = fromSnap;
       p.volumeFpCount = 1;
     }
   }
+
+  const playersWithVolume = [...agg.values()].filter(
+    (p) => p.volumeFpCount > 0 && p.volumeFpSum > 0,
+  ).length;
+  const fillRate = agg.size > 0 ? playersWithVolume / agg.size : 0;
 
   if (dryRun) {
     // Preview top-by-volume without writing (operator check for non-zero ranking)
@@ -206,8 +212,10 @@ export function buildPlayerProfiles(db: Database, dryRun = false, nowMs = Date.n
       .filter((r) => r.avgVol > 0)
       .sort((a, b) => b.avgVol - a.avgVol)
       .slice(0, 8);
+    const fillPct = (fillRate * 100).toFixed(1);
     console.log(
-      `Would upsert ${agg.size} player profiles · volume markets=${volumeFromMarkets} snapshots=${volumeFromSnapshots}`,
+      `Would upsert ${agg.size} player profiles · fill=${fillPct}% (${playersWithVolume}/${agg.size})` +
+        ` · volume markets=${volumeFromMarkets} snapshots=${volumeFromSnapshots}`,
     );
     if (ranked.length > 0) {
       console.log("Top by volume (dry-run preview):");
@@ -222,6 +230,8 @@ export function buildPlayerProfiles(db: Database, dryRun = false, nowMs = Date.n
       playersDeleted: 0,
       volumeFromMarkets,
       volumeFromSnapshots,
+      playersWithVolume,
+      fillRate,
     };
   }
 
@@ -269,6 +279,8 @@ export function buildPlayerProfiles(db: Database, dryRun = false, nowMs = Date.n
     playersDeleted: 0,
     volumeFromMarkets,
     volumeFromSnapshots,
+    playersWithVolume,
+    fillRate,
   };
 }
 
@@ -276,9 +288,11 @@ if (import.meta.main) {
   const dryRun = Bun.argv.includes("--dry-run");
   const db = openEventStore();
   const result = buildPlayerProfiles(db, dryRun);
+  const fillPct = (result.fillRate * 100).toFixed(1);
   console.log(
     `Player profiles: ${result.playersUpserted} upserted` +
       (dryRun ? " (dry-run)" : "") +
+      ` · fill=${fillPct}% (${result.playersWithVolume}/${result.playersUpserted})` +
       ` · volume markets=${result.volumeFromMarkets} snapshots=${result.volumeFromSnapshots}`,
   );
 }

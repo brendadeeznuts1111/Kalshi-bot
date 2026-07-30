@@ -3,8 +3,11 @@ import { describe, expect, test } from "bun:test";
 import {
   capLastSeenAtMs,
   formatLastSeenDate,
+  formatSurfacesDisplay,
+  parseSurfaceStats,
   PROFILE_SQL,
   roundVolumeFp,
+  SQL_EVENT_VOLUME_FP,
   SQL_MARKET_VOLUME_FP,
   SNAPSHOT_SQL,
 } from "../../src/research/player-profile-meta.ts";
@@ -34,5 +37,18 @@ describe("player-profile-meta contract", () => {
 
   test("formatLastSeenDate is UI-only ISO date", () => {
     expect(formatLastSeenDate(Date.UTC(2026, 6, 30))).toBe("2026-07-30");
+  });
+
+  test("parseSurfaceStats accepts nested and legacy counts", () => {
+    const nested = parseSurfaceStats(JSON.stringify({ hard: { wins: 2, losses: 1, apps: 3 } }));
+    expect(nested.hard).toEqual({ wins: 2, losses: 1, apps: 3 });
+    const legacy = parseSurfaceStats(JSON.stringify({ clay: 4 }));
+    expect(legacy.clay).toEqual({ apps: 4, wins: 0, losses: 0 });
+    expect(formatSurfacesDisplay(nested)).toContain("hard 3 (2–1)");
+  });
+
+  test("SQL_EVENT_VOLUME_FP scopes match_winner", () => {
+    expect(SQL_EVENT_VOLUME_FP).toContain("match_winner");
+    expect(SQL_EVENT_VOLUME_FP).toContain("volume_24h_fp");
   });
 });

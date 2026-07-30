@@ -24,12 +24,23 @@ Unit rules: [`docs/GLOSSARY.md`](GLOSSARY.md) (`countFp`, `atMs`).
 resolved_vol = volume_24h_fp if cast(volume_24h_fp) > 0 else volume_fp
 ```
 
-SQL fragment: `SQL_MARKET_VOLUME_FP` in the meta module. Used by:
+SQL fragments in the meta module:
 
-- `tools/tennis/build-player-profiles.ts` (per-event → player average)
+| Constant | Role |
+|----------|------|
+| `SQL_MARKET_VOLUME_FP` | Per-market resolve (ticker / logger) |
+| `SQL_EVENT_VOLUME_FP` | Per-event SUM of match_winner legs only |
+
+Used by:
+
+- `tools/tennis/build-player-profiles.ts` (event → player average)
+- `tools/tennis/build-player-opponent-profiles.ts` (H2H average)
 - `scripts/price-logger.ts` (ticker → snapshot `kalshi_volume_24h`)
+- `tennis-hq-data` player detail recent events
 
-Secondary: average `price_snapshots.kalshi_volume_24h` per player when logger has filled it.
+**Secondary snapshots:** if markets yield no volume for a player, average `price_snapshots.kalshi_volume_24h` is used. Markets win when both exist (no `max` merge of estimators).
+
+**Surfaces JSON:** nested `{ wins, losses, apps }` per surface (not bare counts). UI formats via `formatSurfacesDisplay`.
 
 ## Sort
 

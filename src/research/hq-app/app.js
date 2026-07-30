@@ -669,7 +669,7 @@ async function renderEvents() {
     '<div id="events-list"></div>' +
     '<div class="panel"><h2>Player profiles' + tip("playerProfiles") + "</h2><div id='profiles-table'></div></div>";
 
-  // Meta contract: avgKalshiVolumeFp + lastSeenAtMs + profilesSource (docs/PLAYER_PROFILES_META.md)
+  // Meta: avgKalshiVolumeFp + lastSeenAtMs + profilesSource (docs/PLAYER_PROFILES_META.md)
   const profilesSource = (profiles && profiles.profilesSource) || (profiles && profiles.state === "ok" ? "warehouse" : "seed");
   const sourceBadge = '<span class="badge ' + (profilesSource === "warehouse" ? "ok" : "dim") + '" title="profilesSource">' +
     (profilesSource === "warehouse" ? "warehouse" : "seed") + "</span>";
@@ -678,13 +678,23 @@ async function renderEvents() {
     if (ms == null || !(ms > 0)) return "—";
     try { return esc(new Date(ms).toISOString().slice(0, 10)); } catch { return "—"; }
   };
-  const volFp = (p) => p.avgKalshiVolumeFp ?? p.avgKalshiVolume /* legacy */ ?? null;
+  const fmtSurfaces = (s) => {
+    if (!s || typeof s !== "object") return "—";
+    return Object.entries(s).map(([k, v]) => {
+      if (v != null && typeof v === "object") {
+        const apps = v.apps != null ? v.apps : (v.wins || 0) + (v.losses || 0);
+        if ((v.wins || 0) + (v.losses || 0) > 0) return k + " " + apps + " (" + v.wins + "–" + v.losses + ")";
+        return k + " " + apps;
+      }
+      return k + " " + v;
+    }).join(" · ");
+  };
   const profRows = profiles && profiles.state === "ok" ? profiles.players.map((p) =>
     "<tr><td>" + esc(p.name) + (p.country ? ' <span class="muted" style="font-size:.75rem">' + esc(p.country) + "</span>" : "") + "</td><td class='num'>" + p.appearances + "</td>" +
     "<td class='num'>" + p.wins + "–" + p.losses + "</td>" +
     "<td class='num'>" + (p.winRate != null ? (p.winRate * 100).toFixed(0) + "%" : "—") + "</td>" +
-    "<td class='muted'>" + esc(Object.entries(p.surfaces).map(([k, v]) => k + " " + v).join(", ")) + "</td>" +
-    "<td class='num'>" + fmtVol(volFp(p)) + "</td>" +
+    "<td class='muted'>" + esc(fmtSurfaces(p.surfaces)) + "</td>" +
+    "<td class='num'>" + fmtVol(p.avgKalshiVolumeFp) + "</td>" +
     "<td class='muted' style='font-size:.75rem'>" + lastSeenDate(p) + "</td></tr>").join("") : "";
   $("#profiles-table").innerHTML = profRows
     ? "<div style='margin-bottom:.4rem;font-size:.8rem' class='muted'>Source " + sourceBadge +
