@@ -1,6 +1,6 @@
 # Bun-native API grounding
 
-This project uses **zero runtime npm dependencies**. Every capability maps to a Bun builtin or Node stdlib (`node:util` for `parseArgs` only).
+This project is **Bun-native first**. Runtime dependencies are limited to the two domain libraries that earn their weight: `drizzle-orm` for typed SQL and `zod` for boundary schemas. Process, file, TOML, terminal, test, and other platform capabilities map directly to Bun or the Node-compatible standard library.
 
 **Rule:** before adding any package, check the [Bun API map](#bun-api-map) below — the runtime almost certainly already provides it.
 
@@ -23,7 +23,7 @@ bunx @biomejs/biome check src/
 bunx knip                   # find unused exports
 ```
 
-Rule: if a tool is **not imported at runtime**, it stays out of `dependencies`/`devDependencies` — use `bunx`.
+Rule: if a tool is **not needed for a reproducible local or CI check**, keep it out of `dependencies`/`devDependencies` and use `bunx`. The compiler and Bun types remain pinned dev dependencies because `bun run typecheck` must not borrow them from a parent workspace.
 
 ## Drizzle ORM — type-safe SQLite
 
@@ -122,9 +122,9 @@ Deep dive: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns)
 | GitHub rate budget probe | `Bun.spawn` (stdout/stderr pipes) | [`github-rate-budget.ts`](../tools/github-rate-budget.ts) |
 | Repo / alpha file scan | `Bun.Glob` | [`watcher.ts`](../src/calibration/watcher.ts), [`architecture-blueprint.ts`](../src/agent/architecture-blueprint.ts) |
 | CLI flags | `parseArgs` from `node:util` | [`cli.ts`](../src/research/cli.ts) |
-| Package install (none today) | `bun install` / `bun ci` | N/A — zero deps; see [Package manager](#package-manager) |
+| Reproducible package install | `bun install --frozen-lockfile` | [`package.json`](../package.json), [`bun.lock`](../bun.lock) |
 | Unit tests | `bun:test` + `mock.module()` | [`tests/`](../tests/) |
-| Test coverage | `[test] coverage` in `bunfig.toml` | [`bunfig.toml`](../bunfig.toml) |
+| Test coverage | `bun run test:coverage` | [`package.json`](../package.json) |
 
 ### Canonical `@see` links
 
@@ -419,17 +419,22 @@ Integration (live `gh`) is `bun run research` only.
 
 ## Package manager
 
-This repo has **zero runtime npm dependencies** — no `dependencies`, `devDependencies`, or `peerDependencies` in [`package.json`](../package.json). You do **not** need `node_modules/` at the project root for `bun run check`, tests, the agent CLI, or the tennis institution lane.
+This repo keeps a deliberately small dependency surface in [`package.json`](../package.json):
+
+- Runtime: `drizzle-orm` and `zod`.
+- Development: pinned `typescript` and `@types/bun` for a self-contained typecheck.
+
+Run `bun install --frozen-lockfile` before `bun run check`. The committed [`bun.lock`](../bun.lock) makes the same graph available locally and in CI.
 
 ### When `bun install` matters
 
 | Situation | Action |
 |-----------|--------|
-| Today (no npm deps) | `bun install` is a no-op (~ms). CI runs `bun run check` without installing packages. |
-| First `bun add <pkg>` | Create and **commit** `bun.lock`. Use `bun ci` or `bun install --frozen-lockfile` in CI for reproducible builds. |
+| Normal setup / CI | `bun install --frozen-lockfile`, then `bun run check`. |
+| Intentional dependency change | Temporarily permit lockfile updates, run `bun install`, review and commit both `package.json` and `bun.lock`, then restore frozen mode. |
 | Lockfile out of sync | `frozenLockfile = true` in [`bunfig.toml`](../bunfig.toml) makes install fail until `package.json` and `bun.lock` agree. |
 
-**Footgun:** `frozenLockfile = true` with **no** `bun.lock` is fine while deps stay empty. The first time you add a package, either allow lockfile creation (default on first install) or temporarily disable frozen — otherwise install fails per Bun docs.
+**Footgun:** do not delete `bun.lock` or loosen frozen mode as a permanent workaround. A manifest change and its reviewed lockfile update are one change.
 
 ### Project `bunfig.toml`
 
@@ -437,11 +442,13 @@ This repo has **zero runtime npm dependencies** — no `dependencies`, `devDepen
 
 | Key | Value | Purpose |
 |-----|-------|---------|
-| `[install] frozenLockfile` | `true` | Reproducible installs once deps exist |
+| `[install] frozenLockfile` | `true` | Reproducible installs |
 | `[run] shell` | `"bun"` | `bun run …` uses Bun Shell — see [`BUN_SHELL.md`](BUN_SHELL.md) |
-| `[test] coverage` | enabled | Coverage gate — see [Testing](#testing) |
+| `[console] depth` | `3` | Consistent inspect depth; override per run when needed |
 
-### Install pipeline (when deps exist)
+The canonical `bun run test` command carries the 15-second integration timeout explicitly, so local, hook, and CI runs cannot drift with their working directory. Coverage is explicit through `bun run test:coverage`; the default test path optimizes for rapid feedback.
+
+### Install pipeline
 
 Bun install is not “download into `node_modules`” directly — it is **resolve → cache → link**:
 
@@ -466,7 +473,7 @@ package.json + bun.lock
    Optional: project lifecycle scripts (pre/post install on *root* only)
 ```
 
-**Kalshi-bot today:** the pipeline stops at resolve — empty graph, no cache writes, no `node_modules` tree.
+**Kalshi-bot today:** the lock resolves the two runtime libraries, the pinned compiler toolchain, and their type dependencies into a project-local `node_modules` layout.
 
 ### Eager vs lazy resolution
 
@@ -479,14 +486,14 @@ package.json + bun.lock
 
 ### Global cache vs project `node_modules`
 
-Two layers (only matter once you add npm deps):
+Two layers:
 
 | Layer | Location | Role |
 |-------|----------|------|
 | **Global store** | `~/.bun/install/cache/${name}@${version}` | Canonical extracted package bytes (shared across projects on the machine) |
 | **Project tree** | `./node_modules/` (gitignored here) | Per-project layout — hoisted flat or isolated `.bun/` + symlinks |
 
-Monorepo **machine** policy ([`docs/UNIFIED.md`](../../docs/UNIFIED.md) on the parent `Projects` tree) sets absolute `[install.cache].dir`, `globalStore = true`, and `linker = isolated` in `~/.bunfig.toml`. **This repo’s** [`bunfig.toml`](bunfig.toml) does not duplicate those — only `frozenLockfile`, `[run]`, `[test]`.
+Monorepo **machine** policy ([`docs/UNIFIED.md`](../../docs/UNIFIED.md) on the parent `Projects` tree) sets absolute `[install.cache].dir`, `globalStore = true`, and `linker = isolated` in `~/.bunfig.toml`. **This repo’s** [`bunfig.toml`](../bunfig.toml) does not duplicate those machine-owned keys; it only carries project install, run, and console behavior.
 
 Registry metadata (versions, dist-tags) is cached separately as binary `~/.bun/install/cache/*.npm` (hashed package name). Bun ignores `Cache-Control: Age` on registry responses — metadata can lag npm by ~5 minutes.
 
@@ -522,7 +529,7 @@ $(bun pm cache)/                    # default ~/.bun/install/cache
 | Canonical path (isolated + global store) | `readlink node_modules/.bun/<pkg>@<version>` |
 | Clear everything | `bun pm cache rm` |
 
-**Kalshi-bot today:** zero npm deps — `bun pm cache` may exist from other projects on the machine, but this repo never writes cache entries.
+**Kalshi-bot today:** the shared cache contains the resolved runtime and compiler packages; `node_modules` remains project-local and gitignored.
 
 ### Name + version skip (existing `node_modules`)
 
@@ -533,7 +540,7 @@ Implications:
 - **Fast path:** repeat `bun install` on a warm tree skips tarball fetch when name+version match.
 - **Stale tree:** edited files under `node_modules/` still “pass” until version string changes — symptoms look like “wrong runtime behavior” not “install failed”. Fix: `rm -rf node_modules && bun install`.
 - **Cross-platform:** same lockfile on macOS (clonefile) vs Linux CI (hardlink) still agrees on name+version; backend affects *how* bytes appear in `node_modules`, not resolution.
-- **Today:** irrelevant — no npm deps, no committed `node_modules`.
+- **Today:** repeat installs take the lazy path when `bun.lock` and the local package versions agree.
 
 ### Linker strategies (`--linker`)
 
@@ -544,7 +551,7 @@ Backends (`clonefile` / `hardlink`) control **how files land** from cache. **Lin
 | `hoisted` | Flat shared `node_modules` (npm/Yarn classic) | Existing pre-v1.3.2 projects; new single-package projects |
 | `isolated` | Central `node_modules/.bun/` + symlinks; blocks phantom imports | New workspaces; monorepo machine policy |
 
-Lockfile `configVersion` records the chosen strategy. First `bun add` in this single-package repo would default to **hoisted** unless machine `~/.bunfig.toml` overrides `linker = isolated`.
+Lockfile `configVersion` records the chosen strategy. The machine `~/.bunfig.toml` supplies `linker = isolated`, so this project does not repeat that key.
 
 See [isolated installs](https://bun.com/docs/pm/isolated-installs).
 
@@ -573,32 +580,26 @@ bun install --backend copyfile    # portable slow path
 
 **Kalshi-bot mapping:**
 
-| Environment | Would use (after first `bun add`) |
+| Environment | Install backend |
 |-------------|-----------------------------------|
 | Your Mac | `clonefile` → cache at `~/.bun/install/cache/…` |
-| GitHub Actions `ubuntu-latest` | `hardlink` (no install step today) |
+| GitHub Actions `ubuntu-latest` | `hardlink` during the frozen install |
 | Docker / exotic FS (no hardlink) | silent fallback to `copyfile` |
 
 ### Lifecycle scripts and security
 
 Bun **does not** run `postinstall` / `preinstall` on **dependency** packages by default (supply-chain risk). Root project scripts in `package.json` still run. To allow a specific dependency’s scripts: add it to `trustedDependencies` in `package.json`, then reinstall.
 
-Popular native addons (`esbuild`, `sharp`) get Bun optimizations. Irrelevant until this repo adds npm deps.
+Popular native addons (`esbuild`, `sharp`) get Bun optimizations. Neither is part of this project’s dependency graph.
 
 ### CI
 
-[`.github/workflows/check.yml`](../.github/workflows/check.yml) uses `oven-sh/setup-bun` then `bun run check` — **no `bun install` step**. That is intentional for a zero-deps tree.
-
-If deps are added later:
-
-```yaml
-- run: bun ci   # == bun install --frozen-lockfile; requires committed bun.lock
-```
+[`.github/workflows/check.yml`](../.github/workflows/check.yml) uses `oven-sh/setup-bun`, runs `bun install --frozen-lockfile`, then invokes the same `bun run check` entry point used by the hook and local development.
 
 ### Debugging (when deps exist)
 
 ```bash
-bun install --dry-run              # resolve only; ~4ms today
+bun install --dry-run              # preview resolution
 bun install --verbose              # debug logging
 rm -rf node_modules && bun install # bust stale name+version skip
 bun pm cache rm                    # clear ~/.bun/install/cache

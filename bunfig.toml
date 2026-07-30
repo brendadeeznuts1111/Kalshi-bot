@@ -1,15 +1,15 @@
 [install]
+# Project hardening; machine linker/global-store/cache policy stays in ~/.bunfig.toml.
 frozenLockfile = true
 
 [run]
 # @see https://bun.com/docs/runtime/bunfig#run-shell-use-the-system-shell-or-buns-shell
 shell = "bun"
 
-[test]
-# @see https://bun.com/docs/test/code-coverage
-coverage = true
-coverageReporter = ["text"]
-coverageDir = "coverage"
+[console]
+# Default depth for Bun.inspect / console.log.
+# Override per-run: bun --console-depth 5 run <script>
+depth = 3
 
 # ============================================================================
 # TOML Configuration

@@ -107,24 +107,30 @@ export function printHealthTable(score: SecretHealthScore): void {
   if (score.errors > 0) {
     console.log("\n❌ Failed secrets:");
     const failures = score.results.filter((r) => r.status === "error");
-    console.table(
-      failures.map((r) => ({
-        URI: r.uri,
-        Duration: `${r.durationMs}ms`,
-        Error: r.error?.slice(0, 60) ?? "unknown",
-      })),
+    console.log(
+      Bun.inspect.table(
+        failures.map((r) => ({
+          URI: r.uri,
+          Duration: `${r.durationMs}ms`,
+          Error: r.error?.slice(0, 60) ?? "unknown",
+        })),
+        { colors: Boolean(process.stdout.isTTY) },
+      ),
     );
   }
 
   if (score.ok > 0) {
     console.log("\n✅ Accessible secrets:");
     const okays = score.results.filter((r) => r.status === "ok");
-    console.table(
-      okays.map((r) => ({
-        URI: r.uri,
-        Duration: `${r.durationMs}ms`,
-        Cached: r.fromCache ? "✅" : "❌",
-      })),
+    console.log(
+      Bun.inspect.table(
+        okays.map((r) => ({
+          URI: r.uri,
+          Duration: `${r.durationMs}ms`,
+          Cached: r.fromCache ? "✅" : "❌",
+        })),
+        { colors: Boolean(process.stdout.isTTY) },
+      ),
     );
   }
 

@@ -4,14 +4,8 @@ set -euo pipefail
 root="$(git rev-parse --show-toplevel)"
 cd "$root"
 
-echo "pre-commit: typecheck"
-bun run typecheck
-
-echo "pre-commit: test"
-bun test
-
-echo "pre-commit: restore committed artifacts"
-bun tools/restore-committed-artifacts.ts
+echo "pre-commit: check"
+bun run check
 
 protected=(
   research/audit-evidence/*.jsonl
