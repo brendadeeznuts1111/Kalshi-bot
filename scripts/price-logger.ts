@@ -26,6 +26,7 @@ import {
   queryCompletedMatches,
   SURFACE_INDEX,
 } from "../scripts/train-elo.ts";
+import { SQL_MARKET_VOLUME_FP } from "../src/research/player-profile-meta.ts";
 
 // ── Types ──────────────────────────────────────────────────────
 
@@ -123,16 +124,11 @@ export function loadMarketLiquidityByTicker(
 ): Map<string, MarketLiquidity> {
   const map = new Map<string, MarketLiquidity>();
   try {
-    // Prefer 24h volume when > 0; Kalshi often stores volume_24h_fp as "0.00"
-    // which must NOT block fallback to lifetime volume_fp.
+    // SQL_MARKET_VOLUME_FP: 24h>0 else lifetime (masks "0.00" 24h).
     const rows = db
       .query(
         `SELECT ticker,
-                CASE
-                  WHEN CAST(COALESCE(NULLIF(volume_24h_fp, ''), '0') AS REAL) > 0
-                    THEN CAST(volume_24h_fp AS REAL)
-                  ELSE CAST(COALESCE(NULLIF(volume_fp, ''), '0') AS REAL)
-                END AS vol,
+                ${SQL_MARKET_VOLUME_FP} AS vol,
                 CAST(COALESCE(NULLIF(open_interest_fp, ''), '0') AS REAL) AS oi
          FROM markets
          WHERE ticker IS NOT NULL AND ticker != ''`,

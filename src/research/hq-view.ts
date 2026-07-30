@@ -1,11 +1,91 @@
-import {
-  normalizeTennisFilterKey,
-  passesMinimumSurfaceEdge,
-  surfaceEdgePresentation,
-} from "./surface-edge.ts";
+// @ts-nocheck
+/** HQ dashboard page — dark, tabbed single-page UI fed by /api/hq + /ops.json. */
+import { TOOLTIPS } from "../institutions/glossary.ts";
+import { BRAND } from "../institutions/design-tokens.ts";
+import { baseCssVars } from "../institutions/design-tokens.ts";
+import { componentCss } from "../institutions/hq-ui.ts";
 
-let TOOLTIPS = {};
-fetch('/api/glossary').then((r) => r.json()).then((t) => { TOOLTIPS = t; }).catch(() => {});
+export function renderHq(): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>${BRAND.name} — ${BRAND.tagline}</title>
+<style>
+${baseCssVars()}
+${componentCss()}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg);
+  font: 14px/1.5 -apple-system, "SF Pro Text", Segoe UI, sans-serif; }
+header { display: flex; align-items: baseline; gap: 1rem; padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--bg); z-index: 5; }
+header h1 { font-size: 1.1rem; margin: 0; letter-spacing: 0.04em; }
+header h1 span { color: var(--acc); }
+header .stamp { color: var(--dim); font-size: 0.8rem; font-family: var(--mono); }
+header .links { margin-left: auto; font-size: 0.8rem; }
+header .links a { color: var(--dim); margin-left: 0.9rem; text-decoration: none; }
+header .links a:hover { color: var(--acc); }
+nav.tabs { display: flex; gap: 0.25rem; padding: 0 1.5rem; border-bottom: 1px solid var(--line); }
+nav.tabs button { background: none; border: none; color: var(--dim); padding: 0.7rem 1rem;
+  font: inherit; cursor: pointer; border-bottom: 2px solid transparent; }
+nav.tabs button.active { color: var(--fg); border-bottom-color: var(--acc); }
+main { padding: 1.25rem 1.5rem 3rem; }
+section.tab { display: none; }
+section.tab.active { display: block; }
+.grid { display: grid; gap: 0.9rem; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+a { color: var(--acc); text-decoration: none; }
+.mono { font-family: var(--mono); }
+.cols { display: grid; gap: 0.9rem; grid-template-columns: 1fr 1fr; }
+@media (max-width: 900px) { .cols { grid-template-columns: 1fr; } }
+pre.log { background: var(--panel2); border: 1px solid var(--line); border-radius: 6px;
+  padding: 0.6rem; font-size: 0.75rem; overflow-x: auto; margin: 0.4rem 0 0; }
+.err { color: var(--bad); font-size: 0.85rem; }
+form.order { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: flex-end; }
+form.order label { display: flex; flex-direction: column; gap: 0.2rem;
+  font-size: 0.72rem; color: var(--dim); text-transform: uppercase; letter-spacing: 0.05em; }
+form.order input, form.order select { background: var(--panel2); border: 1px solid var(--line);
+  border-radius: 6px; color: var(--fg); padding: 0.4rem 0.6rem; font: inherit; width: 9rem; }
+form.order input[type=checkbox] { width: auto; }
+form.order button, button.cancel { background: var(--acc); border: none; color: var(--on-accent);
+  border-radius: 6px; padding: 0.45rem 1rem; font-weight: 600; cursor: pointer; }
+button.cancel { background: transparent; border: 1px solid var(--bad); color: var(--bad);
+button.linklike { background: none; border: none; color: var(--acc); font: inherit; cursor: pointer; padding: 0; text-align: left; }
+button.linklike:hover { text-decoration: underline; }
+  padding: 0.2rem 0.6rem; font-size: 0.75rem; }
+button:disabled { opacity: 0.5; cursor: default; }
+#order-result { margin-top: 0.6rem; font-size: 0.85rem; }
+</style>
+</head>
+<body>
+<header>
+  <h1>${BRAND.wordmark} <span>${BRAND.accentWord}</span></h1>
+  <span class="stamp" id="stamp">loading…</span>
+  <span class="links">
+    <a href="/">Research</a><a href="/ops">Ops</a><a href="/api/hq">API</a><a href="/api/design">Design</a><a href="/reports/latest.md">Report</a>
+  </span>
+</header>
+<div id="freshness" style="display:flex;gap:.5rem;flex-wrap:wrap;padding:.5rem 1.5rem;border-bottom:1px solid var(--line);font-size:.75rem"></div>
+<nav class="tabs">
+  <button data-tab="overview" class="active">Overview</button>
+  <button data-tab="research">Research</button>
+  <button data-tab="trading">Trading</button>
+  <button data-tab="events">Events</button>
+  <button data-tab="monitor">Monitor</button>
+  <button data-tab="alpha">Alpha & Calibration</button>
+  <button data-tab="ops">Ops</button>
+</nav>
+<main>
+  <section id="tab-overview" class="tab active"></section>
+  <section id="tab-research" class="tab"></section>
+  <section id="tab-trading" class="tab"></section>
+  <section id="tab-events" class="tab"></section>
+  <section id="tab-monitor" class="tab"></section>
+  <section id="tab-alpha" class="tab"></section>
+  <section id="tab-ops" class="tab"></section>
+</main>
+<script>
+const TOOLTIPS = ${JSON.stringify(TOOLTIPS)};
 const tip = (key) => TOOLTIPS[key] ? ' <span class="hint" title="' + TOOLTIPS[key].replace(/"/g, "&quot;") + '">?</span>' : "";
 const $ = (s) => document.querySelector(s);
 const esc = (v) => String(v ?? "").replace(/[&<>"]/g, (c) =>
@@ -14,57 +94,6 @@ const fmtCents = (c) => c == null ? "—" : "$" + (c / 100).toLocaleString("en-U
 const fmtTime = (iso) => iso ? new Date(iso).toLocaleString() : "—";
 const fmtMs = (ms) => ms ? new Date(ms).toLocaleString() : "—";
 const badge = (cls, txt) => '<span class="badge ' + cls + '">' + esc(txt) + "</span>";
-
-/**
- * Aligned bar chart (CSS grid: 72px | 1fr | 64px).
- * Tabular nums on values prevent jitter; width % locks relative scale.
- * @param {{ label: string, value: number, display?: string, color?: string }[]} data
- * @param {{ title: string, subtitle?: string }} opts
- */
-function barChartHtml(data, { title, subtitle = "" } = {}) {
-  if (!data.length) return "";
-  const maxVal = Math.max(...data.map((d) => d.value), 0);
-  const rows = data.map((d) => {
-    const pct = maxVal > 0 ? (d.value / maxVal) * 100 : 0;
-    const display = d.display ?? d.value.toLocaleString();
-    const barStyle =
-      "width:" + pct.toFixed(1) + "%" +
-      (d.color ? ";background:" + d.color : "");
-    return (
-      '<div class="bar-chart-row">' +
-      '<div class="bar-chart-label" title="' + esc(d.label) + '">' + esc(d.label) + "</div>" +
-      '<div class="bar-chart-track"><div class="bar-chart-bar" style="' + barStyle + '"></div></div>' +
-      '<div class="bar-chart-value">' + esc(display) + "</div>" +
-      "</div>"
-    );
-  }).join("");
-  return (
-    '<div class="bar-chart">' +
-    '<div class="bar-chart-header">' +
-    '<div class="bar-chart-title">' + esc(title) + "</div>" +
-    (subtitle ? '<div class="bar-chart-subtitle">' + esc(subtitle) + "</div>" : "") +
-    "</div>" +
-    '<div class="bar-chart-bars">' + rows + "</div>" +
-    "</div>"
-  );
-}
-
-/**
- * KPI card — strict three-tier structure:
- *   1. h3 label (+ optional badges)
- *   2. hero value (+ optional muted unit)
- *   3. secondary stats, one row each (label left, mono value right)
- * footer: mono caption line (run id, timestamp, …)
- */
-const kpiCard = (label, { badges = "", value = "—", unit = "", stats = [], footer = "" } = {}) =>
-  '<div class="card kpi"><h3>' + esc(label) + (badges ? " " + badges : "") + "</h3>" +
-  '<div class="kpi-value">' + value + (unit ? '<span class="unit">' + esc(unit) + "</span>" : "") + "</div>" +
-  (stats.length
-    ? '<div class="kpi-stats">' + stats.map(([k, v]) =>
-        '<div class="kpi-stat"><span>' + esc(k) + '</span><span class="mono">' + v + "</span></div>").join("") + "</div>"
-    : "") +
-  (footer ? '<div class="kpi-foot">' + footer + "</div>" : "") +
-  "</div>";
 
 function authBadge(a) {
   if (!a) return badge("dim", "auth ?");
@@ -80,104 +109,36 @@ function renderOverview(hq, ops) {
     ? badge("ok", "connected") : badge("warn", t.state === "unavailable" ? "unavailable" : t.state);
   $("#tab-overview").innerHTML =
     '<div class="grid">' +
-    (r
-      ? kpiCard("Research — latest run", {
-          value: esc(r.shortlisted), unit: "shortlisted",
-          stats: [["Discovered", r.discovered], ["Gated", r.gated], ["Inspected", r.inspected]],
-          footer: esc(r.runId),
-        })
-      : kpiCard("Research — latest run", { value: '<span class="muted">—</span>', footer: "no production runs" })) +
-    (t.state === "ok"
-      ? kpiCard("Trading", {
-          badges: tradingBadge,
-          value: fmtCents(t.balanceCents),
-          stats: [["Positions", t.positions.length], ["Open orders", t.openOrders.length], ["Fills", t.fillCount]],
-          footer: authBadge(ops && ops.kalshiAuth),
-        })
-      : kpiCard("Trading", {
-          badges: tradingBadge,
-          value: '<span class="muted">—</span>',
-          footer: esc(t.reason ?? "credentials not configured or API unreachable") + " · " + authBadge(ops && ops.kalshiAuth),
-        })) +
-    kpiCard("Alpha programs", {
-      value: hq.alpha.length,
-      stats: hq.alpha.map((p) => [p.name, badge(p.status === "shadow" ? "warn" : "dim", p.status)]),
-    }) +
-    (hq.calibration
-      ? kpiCard("Calibration", {
-          value: hq.calibration.totalRuns, unit: "runs",
-          footer: esc(hq.calibration.runId),
-        })
-      : kpiCard("Calibration", { value: '<span class="muted">—</span>', footer: "no calibration artifacts" })) +
-    (ops && ops.server
-      ? kpiCard("Server", {
-          value: Math.round(ops.server.uptimeSec / 60), unit: "min up",
-          stats: [["Bun", esc(ops.server.bunVersion)], ["RSS", ops.server.rssMb.toFixed(0) + " MB"], ["Ticks", ops.server.tickCount]],
-        })
-      : kpiCard("Server", { value: '<span class="muted">—</span>', footer: "ops unavailable" })) +
-    (ops && ops.store
-      ? kpiCard("Event store", {
-          value: ops.store.counts.events ?? 0, unit: "events",
-          stats: Object.entries(ops.store.counts)
-            .filter(([k]) => k !== "events").slice(0, 5)
-            .map(([k, v]) => [k.replace(/_/g, " "), v]),
-        })
-      : kpiCard("Event store", { value: '<span class="muted">—</span>', footer: "event store absent" })) +
-    "</div>" +
-    renderOverviewCharts(hq);
-}
-
-/** Volume / mid distribution panels when tennis board data is present. */
-function renderOverviewCharts(hq) {
-  const board = hq.tennis?.board ?? hq.board ?? null;
-  const series = board?.series;
-  if (!Array.isArray(series) || !series.length) {
-    // Demo-aligned sample so layout is always verifiable in HQ
-    return (
-      '<div class="cols" style="margin-top:0.9rem">' +
-      barChartHtml(
-        [
-          { label: "ATP", value: 3_200_000, display: "3.2M" },
-          { label: "WTA", value: 1_800_000, display: "1.8M" },
-          { label: "ITF W", value: 950_000, display: "950K" },
-          { label: "ITF M", value: 420_000, display: "420K" },
-        ],
-        { title: "Volume by series", subtitle: "sample layout — live board when tennis events load" },
-      ) +
-      barChartHtml(
-        [
-          { label: "1–20¢", value: 124, display: "124" },
-          { label: "21–40¢", value: 89, display: "89" },
-          { label: "41–60¢", value: 67, display: "67" },
-          { label: "61–80¢", value: 45, display: "45" },
-          { label: "81–99¢", value: 28, display: "28" },
-        ],
-        { title: "Mid distribution", subtitle: "latest book_ticks mid cents (sample)" },
-      ) +
-      "</div>"
-    );
-  }
-
-  const volRows = series.map((s) => {
-    const events = s.events ?? [];
-    const vol = events.reduce(
-      (sum, e) =>
-        sum +
-        (e.markets ?? []).reduce((mSum, m) => mSum + (m.volume24h ?? 0), 0),
-      0,
-    );
-    return { label: s.series || "—", value: vol, display: fmtVol(vol) };
-  }).filter((r) => r.value > 0);
-  if (!volRows.length) return "";
-
-  return (
-    '<div style="margin-top:0.9rem">' +
-    barChartHtml(volRows, {
-      title: "Volume by series",
-      subtitle: "24h volume across tennis board series",
-    }) +
-    "</div>"
-  );
+    '<div class="card"><h3>Research — latest run</h3>' +
+      (r ? '<div class="big">' + esc(r.shortlisted) + '<span class="muted" style="font-size:.9rem"> shortlisted</span></div>' +
+        '<div class="muted mono">' + esc(r.runId) + "</div>" +
+        '<div class="muted">' + r.discovered + " discovered · " + r.gated + " gated · " + r.inspected + ' inspected</div>'
+      : '<div class="muted">no production runs</div>') + "</div>" +
+    '<div class="card"><h3>Trading ' + tradingBadge + "</h3>" +
+      (t.state === "ok"
+        ? '<div class="big">' + fmtCents(t.balanceCents) + "</div>" +
+          '<div class="muted">' + t.positions.length + " positions · " + t.openOrders.length + " open orders · " + t.fillCount + " fills</div>"
+        : '<div class="muted">' + esc(t.reason ?? "credentials not configured or API unreachable") + "</div>") +
+      "<div class='muted' style='margin-top:.3rem'>" + authBadge(ops && ops.kalshiAuth) + "</div></div>" +
+    '<div class="card"><h3>Alpha programs</h3>' +
+      '<div class="big">' + hq.alpha.length + "</div>" +
+      '<div class="muted">' + hq.alpha.map((p) => esc(p.name) + " " + badge(p.status === "shadow" ? "warn" : "dim", p.status)).join(" ") + "</div></div>" +
+    '<div class="card"><h3>Calibration</h3>' +
+      (hq.calibration
+        ? '<div class="big">' + hq.calibration.totalRuns + '<span class="muted" style="font-size:.9rem"> runs</span></div>' +
+          '<div class="muted mono">' + esc(hq.calibration.runId) + "</div>"
+        : '<div class="muted">no calibration artifacts</div>') + "</div>" +
+    '<div class="card"><h3>Server</h3>' +
+      (ops && ops.server
+        ? '<div class="big">' + Math.round(ops.server.uptimeSec / 60) + '<span class="muted" style="font-size:.9rem"> min up</span></div>' +
+          '<div class="muted">Bun ' + esc(ops.server.bunVersion) + " · RSS " + ops.server.rssMb.toFixed(0) + " MB · ticks " + ops.server.tickCount + "</div>"
+        : '<div class="muted">ops unavailable</div>') + "</div>" +
+    '<div class="card"><h3>Event store</h3>' +
+      (ops && ops.store
+        ? '<div class="big">' + (ops.store.counts.events ?? 0) + '<span class="muted" style="font-size:.9rem"> events</span></div>' +
+          '<div class="muted mono" style="font-size:.75rem">' + Object.entries(ops.store.counts).map(([k, v]) => k + ": " + v).join(" · ") + "</div>"
+        : '<div class="muted">event store absent</div>') + "</div>" +
+    "</div>";
 }
 
 function renderResearch(hq) {
@@ -228,10 +189,10 @@ function renderTrading(hq) {
     "<td class='muted'>" + fmtMs(f.createdAtMs) + "</td></tr>").join("");
   $("#tab-trading").innerHTML =
     '<div class="grid">' +
-    kpiCard("Balance", { value: fmtCents(t.balanceCents), badges: tip("balanceCents") }) +
-    kpiCard("Positions", { value: t.positions.length, badges: tip("position") }) +
-    kpiCard("Open orders", { value: t.openOrders.length }) +
-    kpiCard("Fills", { value: t.fillCount }) +
+    '<div class="card"><h3>Balance</h3><div class="big">' + fmtCents(t.balanceCents) + "</div></div>" +
+    '<div class="card"><h3>Positions</h3><div class="big">' + t.positions.length + "</div></div>" +
+    '<div class="card"><h3>Open orders</h3><div class="big">' + t.openOrders.length + "</div></div>" +
+    '<div class="card"><h3>Fills</h3><div class="big">' + t.fillCount + "</div></div>" +
     "</div>" +
     '<div class="panel" style="margin-top:.9rem"><h2>Balance & exposure history' + tip("balanceCents") + "</h2>" +
     '<canvas id="history-chart" width="900" height="180" style="width:100%;height:180px"></canvas>' +
@@ -455,22 +416,20 @@ const __filters = {
   liquidity: "all",   // all | priced | active
   minVol: 0,          // min 24h volume (contracts)
   maxAsk: 0,          // only show markets with ask ≤ N¢ (0 = off)
-  minSurfaceEdge: 0,  // Player A surface edge floor (0 = off)
   sort: "time",       // time | volume | alpha
 };
 let __filtersHydrated = false;
 
 const FILTER_KEYS = ["q", "league", "tournament", "country", "round", "surface", "tier", "when",
-  "liquidity", "minVol", "maxAsk", "minSurfaceEdge", "sort"];
-const NUMERIC_FILTER_KEYS = new Set(["minVol", "maxAsk", "minSurfaceEdge"]);
+  "liquidity", "minVol", "maxAsk", "sort"];
 
 function filtersFromHash() {
   if (!location.hash.startsWith("#events")) return;
   const params = new URLSearchParams(location.hash.slice(location.hash.indexOf("?") + 1));
-  for (const [rawKey, v] of params) {
-    const k = normalizeTennisFilterKey(rawKey);
-    if (!FILTER_KEYS.includes(k)) continue;
-    __filters[k] = NUMERIC_FILTER_KEYS.has(k) ? Number(v) || 0 : v;
+  for (const k of FILTER_KEYS) {
+    const v = params.get(k);
+    if (v == null) continue;
+    __filters[k] = (k === "minVol" || k === "maxAsk") ? Number(v) || 0 : v;
   }
 }
 
@@ -490,11 +449,6 @@ function eventVol(e) {
   return e.markets.reduce((s, m) => s + (m.volume24h ?? 0), 0);
 }
 
-function surfaceEdgeBadge(event) {
-  const presentation = surfaceEdgePresentation(event);
-  return `<span class="surface-edge ${presentation.tone}" title="${esc(presentation.title)}">${presentation.label}</span>`;
-}
-
 function eventMatches(e, nowMs) {
   const f = __filters;
   if (f.league && e.league !== f.league) return false;
@@ -508,7 +462,6 @@ function eventMatches(e, nowMs) {
   if (f.liquidity === "active" && !e.markets.some((m) => m.status === "active")) return false;
   if (f.minVol > 0 && eventVol(e) < f.minVol) return false;
   if (f.maxAsk > 0 && !e.markets.some((m) => m.yesAskCents != null && m.yesAskCents <= f.maxAsk)) return false;
-  if (!passesMinimumSurfaceEdge(e, f.minSurfaceEdge)) return false;
   if (f.when !== "all") {
     const DAY = 86_400_000;
     if (f.when === "live") {
@@ -526,7 +479,7 @@ function eventMatches(e, nowMs) {
   if (f.q) {
     const hay = [e.title, e.eventTicker, e.tournament, e.competition, e.city, e.country, e.round,
       ...e.markets.map((m) => m.player)].filter(Boolean).join(" ").toLowerCase();
-    if (!f.q.toLowerCase().split(/s+/).every((tok) => hay.includes(tok))) return false;
+    if (!f.q.toLowerCase().split(/\s+/).every((tok) => hay.includes(tok))) return false;
   }
   return true;
 }
@@ -561,18 +514,16 @@ function renderEventList() {
         (m.playerCountry ? ' <span class="muted" style="font-size:.75rem">' + esc(m.playerCountry) + "</span>" : "") + "</td>" +
         "<td class='num'>" + px(m.yesBidCents) + "</td><td class='num'>" + px(m.yesAskCents) + "</td>" +
         "<td class='num'>" + px(m.lastCents) + "</td><td class='num'>" + fmtVol(m.volume24h) + "</td>" +
-        "<td></td>" +
         "<td>" + (m.status === "active" ? badge("ok", "live") : badge("dim", m.status)) + "</td></tr>").join("");
-      return "<tr class='event-summary'><td colspan='5' style='padding-top:.7rem'><strong>" + esc(e.title ?? e.eventTicker) + "</strong> " +
+      return "<tr><td colspan='6' style='padding-top:.7rem'><strong>" + esc(e.title ?? e.eventTicker) + "</strong> " +
         (e.round ? badge("dim", e.round) + " " : "") +
         (e.tier ? badge("dim", e.tier) + " " : "") +
         (e.surface ? badge("dim", e.surface) + " " : "") +
         "<span class='muted'>" + esc(e.tournament ?? e.competition ?? "") + (geo ? " · " + esc(geo) : "") + " · " + fmtMs(e.occurrenceMs) + " · </span>" +
-        "<span class='mono muted' style='font-size:.75rem'>" + esc(e.eventTicker) + "</span></td>" +
-        "<td class='num'>" + surfaceEdgeBadge(e) + "</td><td></td></tr>" + legs;
+        "<span class='mono muted' style='font-size:.75rem'>" + esc(e.eventTicker) + "</span></td></tr>" + legs;
     }).join("");
     return '<div class="panel"><h2>' + esc(s.series) + " " + badge("ok", events.length + " events") + "</h2>" +
-      "<table><tr><th>Player</th><th class='num'>Bid</th><th class='num'>Ask</th><th class='num'>Last</th><th class='num'>24h Vol</th><th class='num'>SrfE</th><th>Status</th></tr>" + rows + "</table></div>";
+      "<table><tr><th>Player</th><th class='num'>Bid</th><th class='num'>Ask</th><th class='num'>Last</th><th class='num'>24h Vol</th><th>Status</th></tr>" + rows + "</table></div>";
   }).filter(Boolean).join("");
   const countEl = $("#events-count");
   if (countEl) countEl.textContent = shown + " of " + total + " events";
@@ -584,33 +535,11 @@ function renderEventList() {
 async function renderEvents() {
   const el = $("#tab-events");
   if (!__filtersHydrated) { __filtersHydrated = true; filtersFromHash(); }
-  let profiles = null, metaAudit = null, tennisHq = null;
+  let profiles = null, metaAudit = null;
   try { __board = await (await fetch("/api/events")).json(); } catch (e) {}
-  try { tennisHq = await (await fetch("/api/hq/tennis")).json(); } catch (e) {}
   try { profiles = await (await fetch("/api/profiles?limit=15")).json(); } catch (e) {}
   try { metaAudit = await (await fetch("/api/meta/audit")).json(); } catch (e) {}
   if (!__board) { el.innerHTML = '<div class="panel"><div class="err">/api/events unavailable</div></div>'; return; }
-
-  const enrichmentByTicker = new Map(
-    (tennisHq?.liveBoard ?? []).map((event) => [event.eventTicker, event]),
-  );
-  for (const series of __board.series) {
-    for (const event of series.events) {
-      const enriched = enrichmentByTicker.get(event.eventTicker);
-      event.surfaceEdge = enriched?.surfaceEdge ?? 0;
-      event.surfaceEdgePlayers = enriched?.surfaceEdgePlayers ?? [
-        event.markets[0]?.player ?? null,
-        event.markets[1]?.player ?? null,
-      ];
-      event.surfaceEdgeSamples = enriched?.surfaceEdgeSamples ?? [0, 0];
-      event.surfaceEdgeReliable = enriched?.surfaceEdgeReliable ?? false;
-      event.surfaceEdgeEvidence = enriched?.surfaceEdgeEvidence ?? (
-        event.surface ? "insufficient-sample" : "missing-surface"
-      );
-      event.surfaceEdgeScaling = enriched?.surfaceEdgeScaling ?? "dampened";
-      event.surface ??= enriched?.surface ?? null;
-    }
-  }
 
   const allEvents = __board.series.flatMap((s) => s.events);
   const leagues = [...new Set(allEvents.map((e) => e.league).filter(Boolean))].sort();
@@ -618,7 +547,7 @@ async function renderEvents() {
   const countries = [...new Set(allEvents.flatMap((e) =>
     [e.country, ...e.markets.map((m) => m.playerCountry)]).filter(Boolean))].sort();
   const rounds = [...new Set(allEvents.map((e) => e.round).filter(Boolean))].sort((a, b) => {
-    const order = (r) => (/Round [Oo]f (d+)/.exec(r)?.[1] ?? (r.startsWith("Quarter") ? 8 : r.startsWith("Semi") ? 4 : r.startsWith("Final") ? 2 : 999));
+    const order = (r) => (/Round [Oo]f (\d+)/.exec(r)?.[1] ?? (r.startsWith("Quarter") ? 8 : r.startsWith("Semi") ? 4 : r.startsWith("Final") ? 2 : 999));
     return Number(order(b)) - Number(order(a));
   });
   const surfaces = [...new Set(allEvents.map((e) => e.surface).filter(Boolean))].sort();
@@ -660,7 +589,6 @@ async function renderEvents() {
     sel("Liquidity", __filters.liquidity, [["all", "all"], ["priced", "has quotes"], ["active", "trading live"]]) +
     '<label>Min 24h vol<input name="minVol" type="number" min="0" step="1000" value="' + __filters.minVol + '" /></label>' +
     '<label>Max ask ¢<input name="maxAsk" type="number" min="0" max="99" value="' + __filters.maxAsk + '" /></label>' +
-    '<label>Min surface edge<input name="minSurfaceEdge" type="number" min="0" max="100" step="1" value="' + __filters.minSurfaceEdge + '" /></label>' +
     sel("Sort", __filters.sort, [["time", "start time"], ["volume", "24h volume"], ["alpha", "A–Z"]]) +
     '<button type="button" id="events-clear" class="cancel" style="align-self:flex-end">clear</button>' +
     '<button type="button" id="events-preset-value" style="align-self:flex-end">value ≤ 25¢</button>' +
@@ -669,30 +597,15 @@ async function renderEvents() {
     '<div id="events-list"></div>' +
     '<div class="panel"><h2>Player profiles' + tip("playerProfiles") + "</h2><div id='profiles-table'></div></div>";
 
-  // Meta contract: avgKalshiVolumeFp + lastSeenAtMs + profilesSource (docs/PLAYER_PROFILES_META.md)
-  const profilesSource = (profiles && profiles.profilesSource) || (profiles && profiles.state === "ok" ? "warehouse" : "seed");
-  const sourceBadge = '<span class="badge ' + (profilesSource === "warehouse" ? "ok" : "dim") + '" title="profilesSource">' +
-    (profilesSource === "warehouse" ? "warehouse" : "seed") + "</span>";
-  const lastSeenDate = (p) => {
-    const ms = p.lastSeenAtMs;
-    if (ms == null || !(ms > 0)) return "—";
-    try { return esc(new Date(ms).toISOString().slice(0, 10)); } catch { return "—"; }
-  };
-  const volFp = (p) => p.avgKalshiVolumeFp ?? p.avgKalshiVolume /* legacy */ ?? null;
   const profRows = profiles && profiles.state === "ok" ? profiles.players.map((p) =>
     "<tr><td>" + esc(p.name) + (p.country ? ' <span class="muted" style="font-size:.75rem">' + esc(p.country) + "</span>" : "") + "</td><td class='num'>" + p.appearances + "</td>" +
     "<td class='num'>" + p.wins + "–" + p.losses + "</td>" +
     "<td class='num'>" + (p.winRate != null ? (p.winRate * 100).toFixed(0) + "%" : "—") + "</td>" +
     "<td class='muted'>" + esc(Object.entries(p.surfaces).map(([k, v]) => k + " " + v).join(", ")) + "</td>" +
-    "<td class='num'>" + fmtVol(volFp(p)) + "</td>" +
-    "<td class='muted' style='font-size:.75rem'>" + lastSeenDate(p) + "</td></tr>").join("") : "";
+    "<td class='num'>" + fmtVol(p.avgKalshiVolumeFp ?? p.avgKalshiVolume) + "</td></tr>").join("") : "";
   $("#profiles-table").innerHTML = profRows
-    ? "<div style='margin-bottom:.4rem;font-size:.8rem' class='muted'>Source " + sourceBadge +
-      " · sorted by avgKalshiVolumeFp · rebuild: <code>bun run tennis:profiles:build</code></div>" +
-      "<table><tr><th>Player</th><th class='num'>Apps</th><th class='num'>W–L</th><th class='num'>Win%</th><th>Surfaces</th><th class='num'>Avg Vol (Fp)</th><th>Last seen</th></tr>" +
-      profRows + "</table>"
-    : '<div class="muted">' + esc(profiles && profiles.reason ? profiles.reason : "profiles unavailable — run bun run tennis:profiles:build") +
-      ' · source ' + sourceBadge + "</div>";
+    ? "<table><tr><th>Player</th><th class='num'>Apps</th><th class='num'>W–L</th><th class='num'>Win%</th><th>Surfaces</th><th class='num'>Avg Vol (Fp)</th></tr>" + profRows + "</table>"
+    : '<div class="muted">' + esc(profiles && profiles.reason ? profiles.reason : "profiles unavailable — run bun run tennis:profiles:build") + "</div>";
 
   const filterForm = $("#events-filter");
   const readForm = () => {
@@ -707,7 +620,6 @@ async function renderEvents() {
     __filters.liquidity = filterForm.liquidity.value;
     __filters.minVol = Number(filterForm.minvol?.value ?? filterForm.minVol?.value ?? 0) || 0;
     __filters.maxAsk = Number(filterForm.maxask?.value ?? filterForm.maxAsk?.value ?? 0) || 0;
-    __filters.minSurfaceEdge = Number(filterForm.minSurfaceEdge?.value ?? 0) || 0;
     __filters.sort = filterForm.sort.value;
   };
   let debounce = null;
@@ -717,8 +629,7 @@ async function renderEvents() {
   });
   $("#events-clear").addEventListener("click", () => {
     Object.assign(__filters, { q: "", league: "", tournament: "", country: "", round: "",
-      surface: "", tier: "", when: "all", liquidity: "all", minVol: 0, maxAsk: 0,
-      minSurfaceEdge: 0, sort: "time" });
+      surface: "", tier: "", when: "all", liquidity: "all", minVol: 0, maxAsk: 0, sort: "time" });
     filtersToHash();
     renderEvents();
   });
@@ -736,24 +647,17 @@ async function renderEvents() {
 }
 
 function renderAlpha(hq) {  const cards = hq.alpha.map((p) => {
-    const hasGate = Boolean(p.gates.shadowMinSignals);
-    const signals = p.shadow ? p.shadow.signals : 0;
+    const gate = p.gates.shadowMinSignals
+      ? (p.shadow ? p.shadow.signals : 0) + " / " + p.gates.shadowMinSignals + " signals"
+      : "—";
     return '<div class="panel"><h2>' + esc(p.name) + " " +
       badge(p.status === "shadow" ? "warn" : "dim", p.status) + " " + badge("dim", p.role) + "</h2>" +
       (p.hypothesis ? '<div class="muted" style="margin-bottom:.5rem">' + esc(p.hypothesis) + "</div>" : "") +
       '<div class="grid">' +
-      kpiCard("Shadow progress", {
-        value: hasGate ? signals : "—",
-        unit: hasGate ? "of " + p.gates.shadowMinSignals + " signals" : "",
-        stats: p.shadow
-          ? [["Resolutions", p.shadow.resolutions], ["Last signal", fmtTime(p.shadow.lastAt)]]
-          : [],
-        footer: p.shadow ? "" : "no shadow log",
-      }) +
-      kpiCard("Gates", {
-        value: Object.keys(p.gates).length, unit: "rules",
-        stats: Object.entries(p.gates).map(([k, v]) => [k, esc(v)]),
-      }) +
+      '<div class="card"><h3>Shadow progress</h3><div class="big">' + esc(gate) + "</div>" +
+      (p.shadow ? '<div class="muted">' + p.shadow.resolutions + " resolutions · last " + fmtTime(p.shadow.lastAt) + "</div>" : '<div class="muted">no shadow log</div>') + "</div>" +
+      '<div class="card"><h3>Gates</h3><div class="mono" style="font-size:.78rem">' +
+      Object.entries(p.gates).map(([k, v]) => esc(k) + ": " + esc(v)).join("<br>") + "</div></div>" +
       "</div></div>";
   }).join("");
   const cal = hq.calibration;
@@ -837,3 +741,7 @@ if (location.hash.startsWith("#events")) {
 
 refresh();
 setInterval(refresh, 30_000);
+</script>
+</body>
+</html>`;
+}

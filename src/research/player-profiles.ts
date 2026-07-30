@@ -2,11 +2,17 @@
  * Player profiles read plane — serves the derived player_profiles table
  * (built by tools/tennis/build-player-profiles.ts from the events SSOT).
  * Read-only, failure-isolated: a missing DB/table degrades to "unavailable".
+ *
+ * Field names: src/research/player-profile-meta.ts · docs/PLAYER_PROFILES_META.md
  */
 // @see https://bun.com/docs/runtime/sqlite
 import { Database } from "bun:sqlite";
 import { existsSync } from "node:fs";
 import { DEFAULT_EVENT_STORE_DB } from "../institutions/event-store/paths.ts";
+import {
+  capLastSeenAtMs,
+  type ProfilesSource,
+} from "./player-profile-meta.ts";
 
 export type PlayerProfileView = {
   name: string;
@@ -17,8 +23,10 @@ export type PlayerProfileView = {
   losses: number;
   winRate: number | null;
   surfaces: Record<string, number>;
-  avgKalshiVolume: number | null;
-  lastSeenAt: string | null;
+  /** Mean resolved Kalshi contract volume; null = no volume data. */
+  avgKalshiVolumeFp: number | null;
+  /** Epoch millis of latest event; null unknown; capped ≤ now. */
+  lastSeenAtMs: number | null;
 };
 
 export type PlayerProfilesResult =
@@ -27,9 +35,9 @@ export type PlayerProfilesResult =
       count: number;
       players: PlayerProfileView[];
       /** warehouse = event-store derived; seed = fixture/unavailable path */
-      profilesSource: "warehouse" | "seed";
+      profilesSource: ProfilesSource;
     }
-  | { state: "unavailable"; reason: string; profilesSource?: "seed" };
+  | { state: "unavailable"; reason: string; profilesSource: ProfilesSource };
 
 type Row = {
   player_name: string;
@@ -82,22 +90,17 @@ export function readPlayerProfiles(options: {
       )
       .all(...(search ? [`%${search}%`, limit] : [limit])) as Row[];
     const now = Date.now();
-    const players: PlayerProfileView[] = rows.map((r) => {
-      let lastMs = r.last_seen_ts;
-      // Cap future lastSeen (stale-coloring / clock skew)
-      if (lastMs != null && lastMs > now) lastMs = now;
-      return {
-        name: r.player_name,
-        country: r.country ?? null,
-        appearances: r.appearances,
-        wins: r.wins,
-        losses: r.losses,
-        winRate: r.win_rate,
-        surfaces: r.surfaces ? (JSON.parse(r.surfaces) as Record<string, number>) : {},
-        avgKalshiVolume: r.avg_kalshi_volume_fp,
-        lastSeenAt: lastMs ? new Date(lastMs).toISOString() : null,
-      };
-    });
+    const players: PlayerProfileView[] = rows.map((r) => ({
+      name: r.player_name,
+      country: r.country ?? null,
+      appearances: r.appearances,
+      wins: r.wins,
+      losses: r.losses,
+      winRate: r.win_rate,
+      surfaces: r.surfaces ? (JSON.parse(r.surfaces) as Record<string, number>) : {},
+      avgKalshiVolumeFp: r.avg_kalshi_volume_fp,
+      lastSeenAtMs: capLastSeenAtMs(r.last_seen_ts, now),
+    }));
     return {
       state: "ok",
       count: players.length,

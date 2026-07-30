@@ -8,6 +8,7 @@
 import { Database } from "bun:sqlite";
 import { existsSync } from "node:fs";
 import { DEFAULT_EVENT_STORE_DB } from "../institutions/event-store/paths.ts";
+import { capLastSeenAtMs } from "./player-profile-meta.ts";
 
 export type OpponentProfileView = {
   player: string;
@@ -16,8 +17,8 @@ export type OpponentProfileView = {
   wins: number;
   losses: number;
   winRate: number | null;
-  avgKalshiVolume: number | null;
-  lastSeenAt: string | null;
+  avgKalshiVolumeFp: number | null;
+  lastSeenAtMs: number | null;
 };
 
 export type OpponentProfilesResult =
@@ -43,8 +44,8 @@ function toView(r: Row): OpponentProfileView {
     wins: r.wins,
     losses: r.losses,
     winRate: r.win_rate,
-    avgKalshiVolume: r.avg_kalshi_volume_fp,
-    lastSeenAt: r.last_seen_ts ? new Date(r.last_seen_ts).toISOString() : null,
+    avgKalshiVolumeFp: r.avg_kalshi_volume_fp,
+    lastSeenAtMs: capLastSeenAtMs(r.last_seen_ts),
   };
 }
 

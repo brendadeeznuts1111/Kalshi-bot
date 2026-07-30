@@ -197,16 +197,16 @@ describe("readPlayerProfiles", () => {
     if (r.state !== "ok") return;
     expect(r.profilesSource).toBe("warehouse");
     expect(r.players[0]?.name).toBe("HighVol");
-    expect(r.players[0]?.avgKalshiVolume).toBe(9_000_000);
+    expect(r.players[0]?.avgKalshiVolumeFp).toBe(9_000_000);
   });
 
-  test("caps future lastSeenAt at read time", () => {
+  test("caps future lastSeenAtMs at read time", () => {
     const r = readPlayerProfiles({ dbPath, search: "HighVol" });
     expect(r.state).toBe("ok");
     if (r.state !== "ok") return;
-    const last = r.players[0]?.lastSeenAt;
+    const last = r.players[0]?.lastSeenAtMs;
     expect(last).toBeTruthy();
-    expect(new Date(last!).getTime()).toBeLessThanOrEqual(Date.now() + 1000);
+    expect(last!).toBeLessThanOrEqual(Date.now() + 1000);
   });
 
   test("unavailable when DB missing", () => {

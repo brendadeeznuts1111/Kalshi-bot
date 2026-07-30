@@ -8,13 +8,18 @@
  *   bun tools/tennis/build-player-profiles.ts --dry-run
  *   bun run tennis:profiles:build   # package.json alias
  *
- * Volume ranking (P0): avg_kalshi_volume_fp is populated from:
- *   1) markets volume_24h_fp / volume_fp per event (primary when present)
- *   2) price_snapshots.kalshi_volume_24h averaged per player via event join (when logger fills it)
- * Prefer the larger non-null source so "Top by volume" is not stuck at 0.
+ * Volume ranking (P0): player_profiles.avg_kalshi_volume_fp ← avgKalshiVolumeFp meta.
+ *   1) markets via SQL_MARKET_VOLUME_FP (volume_24h_fp > 0 else volume_fp)
+ *   2) price_snapshots.kalshi_volume_24h per player via event join (when logger fills it)
+ * Prefer the larger non-null source. Naming SSOT: src/research/player-profile-meta.ts
  */
 import { Database } from "bun:sqlite";
 import { openEventStore } from "../../src/institutions/event-store/open-db.ts";
+import {
+  roundVolumeFp,
+  SQL_MARKET_VOLUME_FP,
+  SNAPSHOT_SQL,
+} from "../../src/research/player-profile-meta.ts";
 import { countryForPlayer } from "../../src/research/tennis-meta.ts";
 
 function arg(name: string): string | undefined {
@@ -40,8 +45,8 @@ function parseEventTs(startTs: string): number {
 }
 
 /**
- * Prefer price_history (price_snapshots) avg volume per player when present.
- * Schema has kalshi_volume_24h (no poly_volume column in event-store today).
+ * Average price_snapshots.kalshi_volume_24h per player (event join).
+ * No poly_volume column — see player-profile-meta SNAPSHOT_SQL.
  */
 export function loadVolumeMapFromPriceSnapshots(db: Database): Map<string, number> {
   const volumeMap = new Map<string, number>();
@@ -55,14 +60,9 @@ export function loadVolumeMapFromPriceSnapshots(db: Database): Map<string, numbe
   const cols = (
     db.query(`PRAGMA table_info(price_snapshots)`).all() as Array<{ name: string }>
   ).map((c) => c.name);
-  const volCol = cols.includes("kalshi_volume_24h")
-    ? "kalshi_volume_24h"
-    : cols.includes("poly_volume")
-      ? "poly_volume"
-      : null;
-  if (!volCol) return volumeMap;
+  const volCol = SNAPSHOT_SQL.kalshiVolume24h;
+  if (!cols.includes(volCol)) return volumeMap;
 
-  // Average snapshot volume for each side of the event.
   const sql = `
     SELECT name, AVG(avgVol) AS avgVol FROM (
       SELECT e.player_a AS name, s.${volCol} AS avgVol
@@ -116,18 +116,11 @@ export function buildPlayerProfiles(db: Database, dryRun = false, nowMs = Date.n
     outcome: string;
   }>;
 
-  // Pre-fetch volume per event from markets (24h preferred when > 0, else lifetime volume_fp).
-  // Note: Kalshi often stores volume_24h_fp as "0.00" — do not let that mask volume_fp.
+  // Per-event volume via meta SQL_MARKET_VOLUME_FP (24h>0 else lifetime).
   const volumeByEvent = new Map<string, number>();
   const volRows = db.query(`
     SELECT event_id,
-           COALESCE(SUM(
-             CASE
-               WHEN CAST(COALESCE(NULLIF(volume_24h_fp, ''), '0') AS REAL) > 0
-                 THEN CAST(volume_24h_fp AS REAL)
-               ELSE CAST(COALESCE(NULLIF(volume_fp, ''), '0') AS REAL)
-             END
-           ), 0) as vol
+           COALESCE(SUM(${SQL_MARKET_VOLUME_FP}), 0) as vol
     FROM markets
     GROUP BY event_id
   `).all() as Array<{ event_id: string; vol: number }>;
@@ -248,8 +241,7 @@ export function buildPlayerProfiles(db: Database, dryRun = false, nowMs = Date.n
     for (const [name, p] of agg) {
       const winRate = p.appearances > 0 ? p.wins / p.appearances : null;
       const rawVol = p.volumeFpCount > 0 ? p.volumeFpSum / p.volumeFpCount : null;
-      // Round to 2 dp so JSON/UI ranks stay stable (avoids 2016990.8900000001)
-      const avgVol = rawVol != null && Number.isFinite(rawVol) ? Math.round(rawVol * 100) / 100 : null;
+      const avgVol = roundVolumeFp(rawVol);
       const surfacesObj = Object.fromEntries(p.surfaces);
       stmt.run(
         name,
