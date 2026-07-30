@@ -669,15 +669,23 @@ async function renderEvents() {
     '<div id="events-list"></div>' +
     '<div class="panel"><h2>Player profiles' + tip("playerProfiles") + "</h2><div id='profiles-table'></div></div>";
 
+  const profilesSource = (profiles && profiles.profilesSource) || (profiles && profiles.state === "ok" ? "warehouse" : "seed");
+  const sourceBadge = '<span class="badge ' + (profilesSource === "warehouse" ? "ok" : "dim") + '" title="profilesSource">' +
+    (profilesSource === "warehouse" ? "warehouse" : "seed") + "</span>";
   const profRows = profiles && profiles.state === "ok" ? profiles.players.map((p) =>
     "<tr><td>" + esc(p.name) + (p.country ? ' <span class="muted" style="font-size:.75rem">' + esc(p.country) + "</span>" : "") + "</td><td class='num'>" + p.appearances + "</td>" +
     "<td class='num'>" + p.wins + "–" + p.losses + "</td>" +
     "<td class='num'>" + (p.winRate != null ? (p.winRate * 100).toFixed(0) + "%" : "—") + "</td>" +
     "<td class='muted'>" + esc(Object.entries(p.surfaces).map(([k, v]) => k + " " + v).join(", ")) + "</td>" +
-    "<td class='num'>" + fmtVol(p.avgKalshiVolume) + "</td></tr>").join("") : "";
+    "<td class='num'>" + fmtVol(p.avgKalshiVolume) + "</td>" +
+    "<td class='muted' style='font-size:.75rem'>" + (p.lastSeenAt ? esc(String(p.lastSeenAt).slice(0, 10)) : "—") + "</td></tr>").join("") : "";
   $("#profiles-table").innerHTML = profRows
-    ? "<table><tr><th>Player</th><th class='num'>Apps</th><th class='num'>W–L</th><th class='num'>Win%</th><th>Surfaces</th><th class='num'>Avg Vol</th></tr>" + profRows + "</table>"
-    : '<div class="muted">' + esc(profiles && profiles.reason ? profiles.reason : "profiles unavailable — run bun run tennis:profiles:build") + "</div>";
+    ? "<div style='margin-bottom:.4rem;font-size:.8rem' class='muted'>Source " + sourceBadge +
+      " · sorted by avg volume · rebuild: <code>bun run tennis:profiles:build</code></div>" +
+      "<table><tr><th>Player</th><th class='num'>Apps</th><th class='num'>W–L</th><th class='num'>Win%</th><th>Surfaces</th><th class='num'>Avg Vol</th><th>Last seen</th></tr>" +
+      profRows + "</table>"
+    : '<div class="muted">' + esc(profiles && profiles.reason ? profiles.reason : "profiles unavailable — run bun run tennis:profiles:build") +
+      ' · source ' + sourceBadge + "</div>";
 
   const filterForm = $("#events-filter");
   const readForm = () => {
