@@ -6,9 +6,11 @@
     "types": ["bun"],
     "strict": true,
     "noEmit": true,
+    "incremental": true,
+    "tsBuildInfoFile": "./node_modules/.cache/kalshi-bot/typecheck.tsbuildinfo",
     "skipLibCheck": true,
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts", "alpha/**/*.ts", "tools/**/*.ts"]
+  "include": ["src/**/*.ts", "tests/**/*.ts", "alpha/**/*.ts", "tools/**/*.ts", "scripts/train-elo.ts"]
 }
