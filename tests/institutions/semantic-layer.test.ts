@@ -84,10 +84,20 @@ describe("semantic layer — glossary root, registry consumer", () => {
     expect(errs.some((e) => e.includes("wrong kind"))).toBe(true);
   });
 
-  test("API payload schemaVersion 3 includes kind + seeAlso + status + unit", () => {
+  test("API payload schemaVersion 4 — concepts is an array with id on each row", () => {
     const p = buildGlossaryApiPayload();
-    expect(p.schemaVersion).toBe(3);
-    const mid = p.entries.find((e) => e.id === "mid");
+    expect(p.schemaVersion).toBe(4);
+    expect(Array.isArray(p.concepts)).toBe(true);
+    expect(p.concepts.length).toBe(GLOSSARY_ENTRIES.length);
+    expect(p.concepts.every((c) => typeof c.id === "string" && c.id.length > 0)).toBe(true);
+    // entries is a back-compat alias of concepts
+    expect(p.entries).toEqual(p.concepts);
+    expect(Array.isArray(p.filterConceptIds)).toBe(true);
+    expect(p.filterConceptIds).toContain("ui.sort.events");
+    expect(Array.isArray(p.pendingRegistryConcepts)).toBe(true);
+    expect(Array.isArray(p.conceptIdsByKind.registry)).toBe(true);
+
+    const mid = p.concepts.find((e) => e.id === "mid");
     expect(mid?.kind).toBe("ui");
     expect(mid?.mapsTo).toBe("kalshi_mu");
     expect(mid?.status).toBe("active");

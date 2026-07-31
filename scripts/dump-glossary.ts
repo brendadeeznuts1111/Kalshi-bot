@@ -2,14 +2,24 @@
 /**
  * Agent-facing glossary dump (self-describing concepts + registry columns).
  *   bun run glossary:dump
+ *
+ * Concepts are always an **array** of records with `id` on each element.
+ * `conceptsById` is a secondary index for O(1) lookup.
+ *
+ * @see src/institutions/glossary.ts listConcepts / docs/SEMANTIC_LAYER.md
  */
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { buildDeskColumnRegistry } from "../src/institutions/column-registry.ts";
 import {
+  FILTER_CATALOG_IDS,
   GLOSSARY_ENTRIES,
   PENDING_REGISTRY_CONCEPTS,
   buildGlossaryApiPayload,
+  conceptIdsByKind,
+  conceptsById,
+  listConcepts,
+  type GlossaryConceptRecord,
 } from "../src/institutions/glossary.ts";
 import {
   glossaryMapFromEntries,
@@ -25,33 +35,36 @@ const integrityErrors = validateGlossaryIntegrity(registry, glossary, {
   pendingRegistryConcepts: PENDING_REGISTRY_CONCEPTS,
 });
 
-const concepts: Record<string, unknown> = {};
-for (const e of GLOSSARY_ENTRIES) {
-  const meta = e.kind === "registry" ? registry.byFeature.get(e.id) : undefined;
-  concepts[e.id] = {
-    label: e.label,
-    description: e.description,
-    category: e.category,
-    kind: e.kind,
-    mapsTo: e.mapsTo ?? null,
-    synonyms: e.synonyms ?? [],
-    values: e.values ?? null,
-    valueLabels: e.valueLabels ?? null,
-    seeAlso: e.seeAlso ?? [],
-    status: e.status ?? "active",
-    deprecatedBy: e.deprecatedBy ?? null,
-    unit: e.unit ?? null,
+/** Concept array + desk-registry enrichment (still an array, never a bare map). */
+export type DumpConceptRecord = GlossaryConceptRecord & {
+  registryColumn: number | null;
+  source: string | null;
+  featurePurpose: string | null;
+};
+
+const concepts: DumpConceptRecord[] = listConcepts().map((c) => {
+  const meta = c.kind === "registry" ? registry.byFeature.get(c.id) : undefined;
+  return {
+    ...c,
     registryColumn: meta?.column ?? null,
     source: meta?.source ?? null,
     featurePurpose: meta?.featurePurpose ?? null,
   };
-}
+});
 
 const dump = {
-  schemaVersion: 3,
+  schemaVersion: 4,
   generatedAt: new Date().toISOString(),
   integrityOk: integrityErrors.length === 0,
   integrityErrors,
+  /** Ordered concept array — primary agent surface */
+  concepts,
+  /** Secondary id → record index */
+  conceptsById: conceptsById(concepts),
+  /** Kind → id arrays */
+  conceptIdsByKind: conceptIdsByKind(concepts),
+  /** Board filter concept ids (closed values[]) */
+  filterConceptIds: [...FILTER_CATALOG_IDS],
   pendingRegistryConcepts: [...PENDING_REGISTRY_CONCEPTS],
   deskRegistry: {
     schema: registry.schema,
@@ -65,14 +78,13 @@ const dump = {
       nullable: m.nullable,
     })),
   },
-  concepts,
   api: buildGlossaryApiPayload(),
 };
 
 mkdirSync(join(root, "research/registry"), { recursive: true });
 await Bun.write(outPath, JSON.stringify(dump, null, 2) + "\n");
 console.log(
-  `glossary:dump → ${outPath} · concepts=${Object.keys(concepts).length} · integrity=${
+  `glossary:dump → ${outPath} · concepts[]=${concepts.length} · integrity=${
     integrityErrors.length === 0 ? "ok" : `${integrityErrors.length} errs`
   }`,
 );

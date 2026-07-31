@@ -11,7 +11,7 @@ Wire shapes verified against Kalshi API docs 2026-07-28.
 | **Panel** | Header **Glossary (?)** — slide-over, search, grouped by category |
 | **Inline tips** | `tip("id")` → `?` with title + click opens panel at entry |
 | **Deeplink** | `#glossary` or `#glossary:avgKalshiVolumeFp` |
-| **API** | `GET /api/glossary` → `{ schemaVersion: 3, tooltips, entries, filterCatalog, categories, statuses, codes, units }` |
+| **API** | `GET /api/glossary` → `{ schemaVersion: 4, concepts[], entries (=concepts), filterConceptIds[], pendingRegistryConcepts[], conceptIdsByKind, filterCatalog, … }` |
 | **Related** | Entry `seeAlso[]` → panel “related” chips (click opens target) |
 | **Status** | `active` (default) · `deprecated` (+ `deprecatedBy`) · `draft` |
 | **Unit** | Entry `unit` ∈ `UNITS` — cents · usd · pp · pct · count · … (chart/export) |

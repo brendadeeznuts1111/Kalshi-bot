@@ -868,7 +868,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     label: "Poly Dropout",
     description: "kalshiOnly % exceeds threshold (>30% default) for N logger cycles. Polymarket matching failing.",
     category: "pipeline",
-    values: ["CRITICAL: >30% for 3+ ticks"],
+    values: ["CRITICAL: kalshiOnly/total > poly-dropout-pct for poly-dropout-ticks"],
     resolveValues: ["kalshiOnly/total ≤ poly-dropout-pct"],
     resolveLabel: "Poly Dropout — Resolved",
     seeAlso: ["alert.feed_frozen", "alert.volume_gap", "alert.delivery", "alert.severity"],
@@ -881,7 +881,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     label: "Volume Gap",
     description: "midOnly exceeds threshold (>10 default) for N cycles. Many mids but zero volume — stale volume_fp.",
     category: "pipeline",
-    values: ["WARNING: >10 for 3+ ticks"],
+    values: ["WARNING: midOnly > volume-gap-count for volume-gap-ticks"],
     resolveValues: ["midOnly ≤ volume-gap-count"],
     resolveLabel: "Volume Gap — Resolved",
     seeAlso: ["alert.poly_dropout", "alert.feed_frozen", "kalshi_volume"],
@@ -895,7 +895,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     label: "Poly Feed Frozen",
     description: "polyMatched=0 for N consecutive cycles. Polymarket feed completely frozen.",
     category: "pipeline",
-    values: ["CRITICAL: 0 polyMatched for 6+ ticks"],
+    values: ["CRITICAL: polyMatched=0 for feed-frozen-ticks"],
     resolveValues: ["polyMatched > 0"],
     resolveLabel: "Poly Frozen — Resolved",
     seeAlso: ["alert.poly_dropout", "alert.volume_gap", "alert.stale_feed"],
@@ -909,7 +909,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     label: "Feed Stale",
     description: "No snapshots within staleness-threshold-ms (120s). Logger stuck or crashed.",
     category: "pipeline",
-    values: ["CRITICAL: >120s since last snapshot"],
+    values: ["CRITICAL: no snapshot within staleness-threshold-ms"],
     resolveValues: ["logger cycle succeeds (reaches this code path)"],
     resolveLabel: "Feed Stale — Resolved",
     seeAlso: ["alert.feed_frozen", "alert.delivery", "alert.severity"],
@@ -923,7 +923,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     label: "Price Divergence",
     description: "Kalshi mid deviates from Poly implied prob > divergence-cents (15¢). Cross-venue mispricing.",
     category: "pipeline",
-    values: ["INFO: |kalshiMid - polyProb*100| > 15¢"],
+    values: ["INFO: |kalshiMid - polyProb×100| > divergence-cents"],
     resolveValues: ["manual only — no auto-resolution"],
     seeAlso: ["kalshi_mu", "poly_mid", "arb_hint", "alert.severity"],
     status: "active",
@@ -988,8 +988,10 @@ export function glossaryEntriesByCategory(): Map<GlossaryCategory, GlossaryEntry
   return map;
 }
 
-/** Concepts whose `values` drive board filter dropdowns (API + audit SSOT). */
-/** Closed-set board filters — every id must declare `values[]` (audit via glossary:check). */
+/**
+ * Closed-set board filters — every id must declare `values[]` (audit via glossary:check).
+ * Array of concept ids (not a map) — single write path for board dropdowns.
+ */
 export const FILTER_CATALOG_IDS = [
   "league",
   "surface",
@@ -1001,11 +1003,75 @@ export const FILTER_CATALOG_IDS = [
 
 export type FilterCatalogId = (typeof FILTER_CATALOG_IDS)[number];
 
+/** Pending registry concepts (board/HQ) not yet on desk CSV columns[]. */
+export const PENDING_REGISTRY_CONCEPTS = ["tier", "round"] as const;
+
 export type FilterCatalogEntry = {
   label: string;
   values: readonly string[];
   valueLabels: Record<string, string>;
 };
+
+/**
+ * Wire shape for one glossary concept (API `concepts[]` / dump `concepts[]`).
+ * Always an array element with stable `id` — never a bare map value without id.
+ */
+export type GlossaryConceptRecord = {
+  id: string;
+  label: string;
+  description: string;
+  category: GlossaryCategory;
+  kind: GlossaryKind;
+  mapsTo: string | null;
+  synonyms: string[];
+  values: string[] | null;
+  valueLabels: Record<string, string> | null;
+  seeAlso: string[];
+  status: GlossaryStatus;
+  deprecatedBy: string | null;
+  unit: UnitKey | null;
+};
+
+/** Ordered concept array — SSOT list for agents, API, dump. */
+export function listConcepts(): GlossaryConceptRecord[] {
+  return GLOSSARY_ENTRIES.map((e) => ({
+    id: e.id,
+    label: e.label,
+    description: e.description,
+    category: e.category,
+    kind: e.kind,
+    mapsTo: e.mapsTo ?? null,
+    synonyms: e.synonyms ?? [],
+    values: e.values ?? null,
+    valueLabels: e.valueLabels ?? null,
+    seeAlso: e.seeAlso ?? [],
+    status: (e.status ?? "active") as GlossaryStatus,
+    deprecatedBy: e.deprecatedBy ?? null,
+    unit: e.unit ?? null,
+  }));
+}
+
+/** O(1) index over `listConcepts()` — secondary to the array. */
+export function conceptsById(
+  concepts: readonly GlossaryConceptRecord[] = listConcepts(),
+): Record<string, GlossaryConceptRecord> {
+  return Object.fromEntries(concepts.map((c) => [c.id, c]));
+}
+
+/** Kind → concept id arrays (browse / governance). */
+export function conceptIdsByKind(
+  concepts: readonly GlossaryConceptRecord[] = listConcepts(),
+): Record<GlossaryKind, string[]> {
+  const out: Record<GlossaryKind, string[]> = {
+    registry: [],
+    ui: [],
+    composite: [],
+  };
+  for (const c of concepts) {
+    out[c.kind].push(c.id);
+  }
+  return out;
+}
 
 /** Closed-set catalogs for board filters — single write path via glossary `values`. */
 export function buildFilterCatalog(): Record<string, FilterCatalogEntry> {
@@ -1023,26 +1089,27 @@ export function buildFilterCatalog(): Record<string, FilterCatalogEntry> {
   return filterCatalog;
 }
 
-/** Payload for GET /api/glossary — panel + tips + codes. */
+/**
+ * Payload for GET /api/glossary — panel + tips + codes.
+ * schemaVersion 4: primary list is `concepts[]` (array); `entries` aliases it.
+ */
 export function buildGlossaryApiPayload() {
+  const concepts = listConcepts();
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     tooltips: TOOLTIPS,
-    entries: GLOSSARY_ENTRIES.map((e) => ({
-      id: e.id,
-      label: e.label,
-      description: e.description,
-      category: e.category,
-      kind: e.kind,
-      mapsTo: e.mapsTo ?? null,
-      synonyms: e.synonyms ?? [],
-      values: e.values ?? null,
-      valueLabels: e.valueLabels ?? null,
-      seeAlso: e.seeAlso ?? [],
-      status: (e.status ?? "active") as GlossaryStatus,
-      deprecatedBy: e.deprecatedBy ?? null,
-      unit: e.unit ?? null,
-    })),
+    /** Primary ordered concept array (id on every element). */
+    concepts,
+    /**
+     * @deprecated alias of `concepts` — keep for HQ clients that read `entries`
+     */
+    entries: concepts,
+    /** Concept id arrays by structural kind */
+    conceptIdsByKind: conceptIdsByKind(concepts),
+    /** Board filter concept ids (must have values[]) */
+    filterConceptIds: [...FILTER_CATALOG_IDS],
+    /** Registry-kind ids not yet on desk columns */
+    pendingRegistryConcepts: [...PENDING_REGISTRY_CONCEPTS],
     /** Closed-set filter catalogs (single write path for board dropdowns) */
     filterCatalog: buildFilterCatalog(),
     categories: (Object.keys(GLOSSARY_CATEGORY_LABELS) as GlossaryCategory[]).map((id) => ({
@@ -1054,9 +1121,6 @@ export function buildGlossaryApiPayload() {
     units: UNITS,
   };
 }
-
-/** Pending registry concepts (board/HQ) not yet on desk CSV columns[]. */
-export const PENDING_REGISTRY_CONCEPTS = ["tier", "round"] as const;
 
 // ── Resolution helpers (filter enums / UI labels) ──
 

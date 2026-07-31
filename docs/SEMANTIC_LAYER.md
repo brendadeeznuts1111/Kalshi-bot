@@ -83,7 +83,7 @@ Registry changes for CSV order / SQLite migrations. Glossary concepts are **sema
 | HQ panel + tips | `src/research/hq-app/app.js` (uses `filterCatalog` from API) |
 | API | `GET /api/glossary` → `entries` + `filterCatalog` |
 | Gate | `bun run glossary:check` · pre-commit (includes `auditBoardFilterValues`) |
-| Agent dump | `bun run glossary:dump` → `research/registry/glossary-dump.json` |
+| Agent dump | `bun run glossary:dump` → `concepts[]` + `conceptsById` + id arrays |
 | Desk export facts | `artifacts-browser/SCHEMA.md` + `*.meta.json` columns |
 
 ## HQ tip keys vs registry
@@ -163,6 +163,30 @@ Integrity (`glossary:check`) fails on missing seeAlso targets, unknown units, or
 2. Never invent SQL for `ui.*` ids.  
 3. For desk fields, use registry `feature` names; attach `concept` when exposing.  
 4. For new tips, add glossary entry first, then `tip("id")`.
+
+## Concept arrays (agent / API shape)
+
+Prefer **arrays of records with `id`**, not bare maps as the primary surface.
+
+| Field | Type | Role |
+|-------|------|------|
+| `concepts` | `GlossaryConceptRecord[]` | Primary ordered list (every element has `id`) |
+| `conceptsById` | `Record<id, record>` | Secondary O(1) index (dump only; optional) |
+| `conceptIdsByKind` | `{ registry, ui, composite: string[] }` | Kind browse |
+| `filterConceptIds` | `string[]` | Board filters that must have `values[]` |
+| `pendingRegistryConcepts` | `string[]` | Registry-kind not yet on desk columns |
+| `entries` | same as `concepts` | API back-compat alias |
+
+```ts
+import { listConcepts, FILTER_CATALOG_IDS } from "./glossary.ts";
+
+const concepts = listConcepts();           // array
+const league = concepts.find((c) => c.id === "league");
+// filters
+for (const id of FILTER_CATALOG_IDS) { … }
+```
+
+Dump (`glossary:dump`) and `GET /api/glossary` share this shape (`schemaVersion: 4`).
 
 ## Naming lanes (alignment audit)
 

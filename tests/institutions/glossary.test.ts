@@ -25,20 +25,24 @@ describe("glossary SSOT", () => {
     }
   });
 
-  test("API payload schemaVersion 3", () => {
+  test("API payload schemaVersion 4 — concepts[] primary", () => {
     const p = buildGlossaryApiPayload();
-    expect(p.schemaVersion).toBe(3);
-    expect(p.entries.length).toBe(GLOSSARY_ENTRIES.length);
+    expect(p.schemaVersion).toBe(4);
+    expect(Array.isArray(p.concepts)).toBe(true);
+    expect(p.concepts.length).toBe(GLOSSARY_ENTRIES.length);
+    expect(p.entries).toBe(p.concepts); // same reference alias
     expect(p.tooltips.mid).toBe(getGlossaryEntry("mid")!.description);
     expect(p.categories.some((c) => c.id === "warehouse")).toBe(true);
-    expect(p.entries.every((e) => e.kind === "ui" || e.kind === "registry" || e.kind === "composite")).toBe(
+    expect(p.concepts.every((e) => e.kind === "ui" || e.kind === "registry" || e.kind === "composite")).toBe(
       true,
     );
-    expect(p.entries.every((e) => e.status === "active" || e.status === "deprecated" || e.status === "draft")).toBe(
+    expect(p.concepts.every((e) => e.status === "active" || e.status === "deprecated" || e.status === "draft")).toBe(
       true,
     );
     expect(p.units.cents).toBeTruthy();
     expect(p.statuses).toEqual(["active", "deprecated", "draft"]);
+    expect(p.filterConceptIds.length).toBeGreaterThan(0);
+    expect(p.conceptIdsByKind.ui.length).toBeGreaterThan(0);
   });
 
   test("groups by category", () => {
