@@ -5,11 +5,160 @@
  * KALSHI__SECTION__SUBSECTION__KEY env overrides, and deep-freezes
  * the result. Any section may be omitted; schema defaults fill gaps.
  *
+ * Environment (Bun-native — no dotenv):
+ *   Auto-load order: .env → .env.{NODE_ENV} → .env.local (increasing precedence)
+ *   Read via Bun.env (alias of process.env / import.meta.env)
+ *   Override files: bun --env-file=.env.1 · disable: --no-env-file · bunfig `env = false`
+ *
  *   import { config, loadConfig } from "./src/lib/config.ts";
+ *
+ * @see https://bun.com/docs/runtime/environment-variables
+ * @see https://bun.com/docs/runtime/utils#bun-env
+ * @see https://bun.com/docs/api/toml
  */
 
 import { readFileSync } from "node:fs";
 import { z } from "zod";
+
+// ── Typed env interface (autocompletion + compile-time catch) ──
+// Interface merging: keys become typed on Bun.env / process.env
+// @see https://bun.com/docs/runtime/environment-variables#typescript
+declare module "bun" {
+  interface Env {
+    // ── API credentials ──
+    /** Kalshi API key ID for REST + WebSocket auth */
+    KALSHI_API_KEY_ID?: string;
+    /** Inline PEM private key for Kalshi auth */
+    KALSHI_PRIVATE_KEY?: string;
+    /** Path to PEM file for Kalshi auth */
+    KALSHI_PRIVATE_KEY_PATH?: string;
+    /** Legacy key alias (prefer KALSHI_API_KEY_ID) */
+    KALSHI_ACCESS_KEY?: string;
+    /** Kalshi API base URL override */
+    KALSHI_API_BASE?: string;
+    /** The Odds API key for Pinnacle consensus feed */
+    ODDS_API_KEY?: string;
+    /** GitHub token for rate-limit checks and research pipeline */
+    GITHUB_TOKEN?: string;
+
+    // ── Environment gates ──
+    /** Kalshi client environment: demo (default) or prod */
+    KALSHI_ENV?: string;
+    /** Must be "1" to enable live trading when ALPHA_LIVE is set */
+    KALSHI_PROD_ARMED?: string;
+    /** Alpha live trading flag */
+    ALPHA_LIVE?: string;
+    /** Node environment: development | production | test */
+    NODE_ENV?: string;
+
+    // ── Server & networking ──
+    /** Listen port (Bun.serve also honors BUN_PORT / --port) */
+    PORT?: string;
+    /** Bun.serve port (built-in, also reads --port, PORT, NODE_PORT) */
+    BUN_PORT?: string;
+    /** Bind hostname for research server patterns / docs */
+    SERVE_HOST?: string;
+    /** Public URL of the ops dashboard for alert links */
+    SERVE_URL?: string;
+    /** Regulatory service compliance URL */
+    COMPLIANCE_URL?: string;
+    /** GitHub rate-limit wait mode ("1" = block until budget available) */
+    GITHUB_RATE_LIMIT_WAIT?: string;
+
+    // ── Telegram bot & alerts ──
+    /** Telegram Bot API token */
+    TELEGRAM_BOT_TOKEN?: string;
+    /** Telegram channel/group chat ID for alerts */
+    TELEGRAM_ALERT_CHAT_ID?: string;
+    /** Telegram forum thread ID for alerts */
+    TELEGRAM_ALERT_THREAD_ID?: string;
+    /** Discord/Slack webhook URL for alerts */
+    ALERT_WEBHOOK_URL?: string;
+    /** Set to "1" to create forum topics during setup */
+    TELEGRAM_SETUP_TOPICS?: string;
+
+    // ── Research pipeline ──
+    /** Dimension override for research runs */
+    RESEARCH_DIMENSION?: string;
+    /** Set to "1" to export audit after research */
+    RESEARCH_EXPORT_AUDIT?: string;
+    /** Set to "1" to skip GitHub rate-limit preflight */
+    RESEARCH_SKIP_RATE_PREFLIGHT?: string;
+    /** Cron schedule for research (e.g. "0 6 * * MON") */
+    RESEARCH_CRON_SCHEDULE?: string;
+    /** Cron title for OS-level registration */
+    RESEARCH_CRON_TITLE?: string;
+    /** Set to "1" to enable broad discovery sweep */
+    RESEARCH_DISCOVER_BROAD?: string;
+    /** Override research cache DB path */
+    RESEARCH_CACHE_DB?: string;
+    /** Root directory for repo clones */
+    REPO_CLONE_ROOT?: string;
+
+    // ── Calibration & toxicity ──
+    /** Toxicity sweep cron schedule */
+    TOXICITY_CRON_SCHEDULE?: string;
+    /** Toxicity sweep cron title */
+    TOXICITY_CRON_TITLE?: string;
+
+    // ── Tennis pipeline ──
+    /** Live poll interval in ms */
+    TENNIS_LIVE_INTERVAL_MS?: string;
+    /** Live poll concurrency */
+    TENNIS_LIVE_CONCURRENCY?: string;
+    /** Recording interval in ms */
+    TENNIS_RECORD_INTERVAL_MS?: string;
+    /** WS recorder session duration in seconds */
+    TENNIS_WS_RECORDER_WS_SECONDS?: string;
+    /** WS recorder cron schedule */
+    TENNIS_WS_RECORDER_CRON_SCHEDULE?: string;
+    /** WS recorder cron title */
+    TENNIS_WS_RECORDER_CRON_TITLE?: string;
+    /** Live canary cron schedule */
+    TENNIS_LIVE_CANARY_CRON_SCHEDULE?: string;
+    /** Live canary cron title */
+    TENNIS_LIVE_CANARY_CRON_TITLE?: string;
+    /** Experiment cron schedule */
+    TENNIS_EXPERIMENT_CRON_SCHEDULE?: string;
+    /** Experiment cron title */
+    TENNIS_EXPERIMENT_CRON_TITLE?: string;
+
+    // ── ProtonPass secrets ──
+    /** ProtonPass key provider */
+    PROTON_PASS_KEY_PROVIDER?: string;
+    /** ProtonPass personal access token */
+    PROTON_PASS_PERSONAL_ACCESS_TOKEN?: string;
+    /** ProtonPass session directory */
+    PROTON_PASS_SESSION_DIR?: string;
+
+    // ── Storage ──
+    /** Regulatory database path */
+    REGULATORY_DB?: string;
+
+    // ── Bun runtime (built-in, listed for awareness) ──
+    // @see https://bun.com/docs/runtime/environment-variables#configuring-bun
+    /** Disable TLS cert validation (testing only) */
+    NODE_TLS_REJECT_UNAUTHORIZED?: string;
+    /** Log fetch calls as curl commands (`curl` or `1`) */
+    BUN_CONFIG_VERBOSE_FETCH?: string;
+    /** Transpiler cache directory (`0` or `""` disables) */
+    BUN_RUNTIME_TRANSPILER_CACHE_PATH?: string;
+    /** Max concurrent HTTP requests (default 256) */
+    BUN_CONFIG_MAX_HTTP_REQUESTS?: string;
+    /** Don't clear terminal on --watch reload */
+    BUN_CONFIG_NO_CLEAR_TERMINAL_ON_RELOAD?: string;
+    /** Intermediate assets dir during bundling */
+    TMPDIR?: string;
+    /** Disable ANSI color output */
+    NO_COLOR?: string;
+    /** Force ANSI color on */
+    FORCE_COLOR?: string;
+    /** Prepends CLI args to every bun invocation */
+    BUN_OPTIONS?: string;
+    /** Disable crash report uploads */
+    DO_NOT_TRACK?: string;
+  }
+}
 
 // ═════════════════════════════════════════════════════════════════════════════
 //  Zod schema (kebab-case keys, mirroring config.toml)
@@ -72,12 +221,25 @@ const LoggingSchema = z.object({
   "colors-enabled": z.boolean().default(true),
 });
 
+const PipelineAlertsSchema = z.object({
+  "debounce-ms": z.number().int().positive().default(300_000),
+  "staleness-threshold-ms": z.number().int().positive().default(120_000),
+  "poly-dropout-pct": z.number().min(0).max(100).default(30),
+  "poly-dropout-ticks": z.number().int().min(1).default(3),
+  "volume-gap-count": z.number().int().min(1).default(10),
+  "volume-gap-ticks": z.number().int().min(1).default(3),
+  "feed-frozen-ticks": z.number().int().min(1).default(6),
+  "divergence-cents": z.number().int().positive().default(15),
+  "rolling-buffer-size": z.number().int().min(2).max(20).default(5),
+});
+
 /** Root TOML schema — any section can be omitted; defaults fill gaps. */
 const TomlSchema = z.object({
   meta: MetaSchema.prefault({}),
   regulatory: RegulatorySchema.prefault({}),
   server: ServerSchema.prefault({}),
   logging: LoggingSchema.prefault({}),
+  "pipeline-alerts": PipelineAlertsSchema.prefault({}),
 });
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -132,6 +294,17 @@ export interface Config {
     level: "debug" | "info" | "warn" | "error";
     colorsEnabled: boolean;
   };
+  pipelineAlerts: {
+    debounceMs: number;
+    stalenessThresholdMs: number;
+    polyDropoutPct: number;
+    polyDropoutTicks: number;
+    volumeGapCount: number;
+    volumeGapTicks: number;
+    feedFrozenTicks: number;
+    divergenceCents: number;
+    rollingBufferSize: number;
+  };
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -174,10 +347,11 @@ function coerceValue(raw: string): unknown {
   return raw;
 }
 
-/** Apply KALSHI__SECTION__SUBSECTION__KEY overrides from process.env. */
+/** Apply KALSHI__SECTION__SUBSECTION__KEY overrides from Bun.env. */
 function applyEnvOverrides(config: Config): void {
   const prefix = "KALSHI__";
-  for (const [key, value] of Object.entries(process.env)) {
+  // Bun.env ≡ process.env ≡ import.meta.env
+  for (const [key, value] of Object.entries(Bun.env)) {
     if (!key.startsWith(prefix) || value === undefined) continue;
     const path = key
       .slice(prefix.length)
@@ -237,6 +411,17 @@ function normalize(raw: RawTomlConfig): Config {
       level: raw.logging.level,
       colorsEnabled: raw.logging["colors-enabled"],
     },
+    pipelineAlerts: {
+      debounceMs: raw["pipeline-alerts"]["debounce-ms"],
+      stalenessThresholdMs: raw["pipeline-alerts"]["staleness-threshold-ms"],
+      polyDropoutPct: raw["pipeline-alerts"]["poly-dropout-pct"],
+      polyDropoutTicks: raw["pipeline-alerts"]["poly-dropout-ticks"],
+      volumeGapCount: raw["pipeline-alerts"]["volume-gap-count"],
+      volumeGapTicks: raw["pipeline-alerts"]["volume-gap-ticks"],
+      feedFrozenTicks: raw["pipeline-alerts"]["feed-frozen-ticks"],
+      divergenceCents: raw["pipeline-alerts"]["divergence-cents"],
+      rollingBufferSize: raw["pipeline-alerts"]["rolling-buffer-size"],
+    },
   };
 }
 
@@ -248,7 +433,17 @@ export function loadConfig(configPath = "config.toml"): Config {
   let raw: RawTomlConfig;
 
   try {
-    const text = readFileSync(configPath, "utf-8");
+    let text = readFileSync(configPath, "utf-8");
+    // Interpolate $VAR and ${VAR} (mirrors .env expansion; Bun already expands .env itself)
+    text = text.replace(/\$(\w+|\{[^}]*\})/g, (match, name) => {
+      const key = name.replace(/[{}]/g, "");
+      const val = Bun.env[key];
+      if (val === undefined) {
+        console.warn(`[config] Env var \$${key} referenced in ${configPath} but not set — leaving as-is`);
+        return match;
+      }
+      return val;
+    });
     const parsed = Bun.TOML.parse(text) as unknown;
     const validated = TomlSchema.safeParse(parsed);
 

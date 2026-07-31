@@ -8,6 +8,25 @@ Canonical URLs: [Bun docs index](https://bun.com/docs/llms.txt) — use the [@se
 
 Deep dive: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns)
 
+## Environment variables
+
+[@see Bun docs](https://bun.com/docs/runtime/environment-variables) · index: [llms.txt](https://bun.com/docs/llms.txt)
+
+| Concern | Practice in this repo |
+|---------|------------------------|
+| Load `.env` | **Automatic** — no `dotenv` / `dotenv-expand` |
+| Precedence | `.env` → `.env.{NODE_ENV}` → `.env.local` (later wins) |
+| Read | `Bun.env.KEY` (≡ `process.env` ≡ `import.meta.env`) |
+| Types | `declare module "bun" { interface Env { … } }` in [`config.ts`](../src/lib/config.ts) |
+| CLI override | `bun --env-file=.env.ci run …` · disable defaults: `--no-env-file` |
+| bunfig | `env = false` disables auto `.env` (explicit `--env-file` still loads) |
+| Expansion | `BAR=hello$FOO` in `.env`; escape with `\$` |
+| Print | `bun --print process.env` |
+| Config overrides | `KALSHI__SECTION__KEY=…` → TOML via [`loadConfig`](../src/lib/config.ts) |
+| Secrets | Proton Pass inject → `.env` (gitignored); see [`PROTONPASS.md`](PROTONPASS.md) |
+
+Template: [`.env.example`](../.env.example). Smoke: `bun test tests/lib/bun-env.test.ts`.
+
 ## `bunx` — zero-install CLI tools
 
 For dev-time or one-off utilities, prefer `bunx` over adding to `package.json`:
@@ -91,7 +110,7 @@ Deep dive: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns)
 | Config load | `Bun.file(…).json()` | [`discover.ts`](../src/research/discover.ts) |
 | Artifact write | `Bun.write` | [`io.ts`](../src/research/io.ts), [`report.ts`](../src/research/report.ts) |
 | CLI JSON stdout | `Bun.write(Bun.stdout, …)` | [`cli.ts`](../src/research/cli.ts) |
-| Env overrides | `Bun.env` (`RESEARCH_*`) | [`cli.ts`](../src/research/cli.ts) |
+| Env overrides | `Bun.env` (`RESEARCH_*`, `KALSHI__*`) | [`cli.ts`](../src/research/cli.ts), [`config.ts`](../src/lib/config.ts) |
 | Package-root paths | `import.meta.dir` | [`paths.ts`](../src/research/paths.ts) |
 | CLI entry guard | `import.meta.main` + `#!/usr/bin/env bun` | [`cli.ts`](../src/research/cli.ts) |
 | Embedded cache + run history | `bun:sqlite` + `Bun.hash` | [`cache.ts`](../src/research/cache.ts) |
@@ -134,7 +153,7 @@ Deep dive: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns)
 | `Bun.which` | https://bun.com/docs/runtime/utils#bun-which |
 | `Bun.file` | https://bun.com/docs/runtime/file-io#reading-files-bun-file |
 | `Bun.write` | https://bun.com/docs/runtime/file-io#writing-files-bun-write |
-| `Bun.env` | https://bun.com/docs/runtime/environment-variables |
+| `Bun.env` / `.env` load | https://bun.com/docs/runtime/environment-variables |
 | `Bun.hash` | https://bun.com/docs/runtime/hashing#bun-hash |
 | `Bun.deepEquals` | https://bun.com/docs/runtime/utils#bun-deepequals |
 | `Bun.inspect` | https://bun.com/docs/runtime/utils#bun-inspect |
