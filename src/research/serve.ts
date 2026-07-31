@@ -7,7 +7,7 @@ import {
   loadRunFromDb,
 } from "./cache.ts";
 import { REPORT_DIR, CACHE_DIR, joinPath } from "./paths.ts";
-import { fullNameFromRouteParams, ROUTES } from "./patterns.ts";
+import { fullNameFromRouteParams, ROUTES, SERVE_PATTERNS } from "./patterns.ts";
 import { pageLayout, renderIndex, renderOps, renderRepoPage, type KalshiAuthState } from "./views.ts";
 import { renderArchitecture } from "./architecture-view.ts";
 import { openEventStore } from "../institutions/event-store/open-db.ts";
@@ -39,6 +39,7 @@ import { renderHq } from "./hq-view.ts";
 import { fetchTennisBoard } from "./tennis-events.ts";
 import { buildGlossaryApiPayload } from "../institutions/glossary.ts";
 import { readPlayerProfiles } from "./player-profiles.ts";
+import { getPlayerDetail } from "./tennis-hq-data.ts";
 import { readOpponentProfiles } from "./player-opponent-profiles.ts";
 import { placeOrder, cancelOrder } from "../bot/kalshi-client.ts";
 import { codedError, httpStatusFor, type ErrorCode } from "../institutions/error-codes.ts";
@@ -193,9 +194,8 @@ export async function handleArchitecture(): Promise<Response> {
 }
 
 // ── Regulatory route handlers ──
-function handlePartnerDetail(req: Request): Response {
+function handlePartnerDetail(req: Request, nodeId: string): Response {
   const url = new URL(req.url);
-  const nodeId = url.pathname.split("/").pop()!;
   const filters = {
     state: url.searchParams.get("state") ?? undefined,
     sport: url.searchParams.get("sport") ?? undefined,
@@ -716,6 +716,31 @@ export function createResearchServer(options: ServeOptions = {}) {
     async fetch(req: Request) {
       const url = new URL(req.url);
 
+      // ── URLPattern routes (parameterized) — SERVE_PATTERNS in patterns.ts ──
+      // @see https://bun.com/blog/bun-v1.3.4#urlpattern-api
+      {
+        const g = SERVE_PATTERNS.opsPartner.groups(url);
+        if (g?.nodeId) {
+          return rateLimiter(req, () => handlePartnerDetail(req, g.nodeId!));
+        }
+      }
+      {
+        const g = SERVE_PATTERNS.tennisPlayer.groups(url);
+        if (g?.name) {
+          const name = decodeURIComponent(g.name);
+          const result = getPlayerDetail(name);
+          return json(result, result.state === "not_found" ? 404 : 200);
+        }
+      }
+      if (url.pathname === "/api/hq/tennis/player") {
+        const name = url.searchParams.get("name")?.trim() ?? "";
+        if (!name) {
+          return json({ state: "not_found", playerName: "", error: "name query param required" }, 400);
+        }
+        const result = getPlayerDetail(name);
+        return json(result, result.state === "not_found" ? 404 : 200);
+      }
+
       // HQ headquarters dashboard (research + alpha + trading)
       if (url.pathname === "/hq") {
         return html(renderHq());
@@ -771,10 +796,7 @@ if (url.pathname === "/api/hq") {
         return handleOpsJson(req);
       }
 
-      // Regulatory ops dashboard (no compliance gate, but rate-limited)
-      if (url.pathname.startsWith("/ops/partners/")) {
-        return rateLimiter(req, () => handlePartnerDetail(req));
-      }
+      // /ops/partners/:nodeId — SERVE_PATTERNS.opsPartner (above)
 
       // Bet placement — rate limit first, then compliance gate
       if (url.pathname === "/place-bet" && req.method === "POST") {

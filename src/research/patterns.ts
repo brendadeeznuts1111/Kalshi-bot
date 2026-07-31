@@ -1,6 +1,13 @@
 // @see https://bun.com/blog/bun-v1.3.4#urlpattern-api
+// @see https://bun.com/blog/bun-v1.3.12#urlpattern-is-up-to-2-3x-faster
 // @see https://bun.com/docs/runtime/http/server#basic-setup
-/** Shared URLPattern SSOT — discover, reports, and Bun.serve routes. */
+/**
+ * Shared URLPattern SSOT — GitHub parse, Bun.serve routes, research fetch handlers.
+ *
+ * Blog vectors (v1.3.4):
+ *   new URLPattern({ pathname: "/users/:id" }).exec(...).pathname.groups.id
+ *   new URLPattern({ pathname: "/files/*" }).exec(...).pathname.groups[0]
+ */
 
 /** Thin wrapper so URLPattern usage stays consistent across modules. */
 export class BunURLPattern {
@@ -10,12 +17,18 @@ export class BunURLPattern {
     this.pattern = init instanceof URLPattern ? init : new URLPattern(init);
   }
 
-  test(input: string | URL): boolean {
-    return this.pattern.test(input);
+  test(input: string | URL | URLPatternInit): boolean {
+    return this.pattern.test(input as string | URL);
   }
 
-  exec(input: string | URL): URLPatternResult | null {
-    return this.pattern.exec(input);
+  exec(input: string | URL | URLPatternInit): URLPatternResult | null {
+    return this.pattern.exec(input as string | URL);
+  }
+
+  /** Named (or indexed) pathname groups, or null if no match. */
+  groups(input: string | URL): Record<string, string | undefined> | null {
+    const m = this.exec(input);
+    return m ? m.pathname.groups : null;
   }
 }
 
@@ -31,6 +44,23 @@ export const GITHUB_REPO_DEEP = new BunURLPattern({
   pathname: "/:owner/:repo/*",
 });
 
+/**
+ * Research server parameterized paths (fetch-handler matching).
+ * Prefer these over `pathname.startsWith` / `split("/").pop()`.
+ */
+export const SERVE_PATTERNS = {
+  /** GET /ops/partners/:nodeId */
+  opsPartner: new BunURLPattern({ pathname: "/ops/partners/:nodeId" }),
+  /** GET /api/hq/tennis/player/:name (name may be URL-encoded) */
+  tennisPlayer: new BunURLPattern({ pathname: "/api/hq/tennis/player/:name" }),
+  /** GET /api/runs/:id — same shape as ROUTES.runApi */
+  runApi: new BunURLPattern({ pathname: "/api/runs/:id" }),
+  /** GET /repo/:owner/:name */
+  repo: new BunURLPattern({ pathname: "/repo/:owner/:name" }),
+  /** Wildcard: /reports/* → groups[0] is the relative path under reports */
+  reports: new BunURLPattern({ pathname: "/reports/*" }),
+} as const;
+
 /** Local report browser routes (Bun.serve `routes` keys). Max ~5 — see docs/PLAN.md. */
 export const ROUTES = {
   home: "/",
@@ -38,6 +68,7 @@ export const ROUTES = {
   runApi: "/api/runs/:id",
   repo: "/repo/:owner/:name",
   latestReport: "/reports/latest.md",
+  architecture: "/architecture",
 } as const;
 
 export type GitHubRepoRef = {
