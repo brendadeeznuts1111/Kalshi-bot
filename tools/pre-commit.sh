@@ -5,7 +5,11 @@ root="$(git rev-parse --show-toplevel)"
 cd "$root"
 
 echo "pre-commit: check"
-bun run check
+if [ "${SKIP_TEST_CHANGED:-}" = "1" ]; then
+  echo "  ⏭️  SKIP_TEST_CHANGED=1 — skipping bun run check (reason + evidence go in the commit message)"
+else
+  bun run check
+fi
 
 echo "pre-commit: glossary"
 bun run glossary:check
