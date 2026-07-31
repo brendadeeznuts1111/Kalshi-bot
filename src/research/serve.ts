@@ -879,13 +879,44 @@ if (url.pathname === "/api/hq") {
         return json(designAgent.audit(renderHq()));
       }
 
-      // Regulatory health check
+      // Regulatory health check (+ live Kalshi exchange probe)
       if (url.pathname === "/regulatory/health") {
+        const { probeKalshiExchange } = await import("../institutions/url-health.ts");
+        const exchange = await probeKalshiExchange("prod");
         return json({
           service: "regulatory-compliance",
           states: ["MA", "NJ"],
-          endpoints: ["POST /place-bet", "GET /ops/partners/:nodeId"],
-        });
+          endpoints: [
+            "POST /place-bet",
+            "GET /ops/partners/:nodeId",
+            "GET /api/health/urls",
+            "GET /api/health/kalshi",
+          ],
+          kalshiExchange: {
+            ok: exchange.ok,
+            status: exchange.status,
+            latencyMs: exchange.latencyMs,
+            probeUrl: exchange.probeUrl,
+          },
+        }, exchange.ok ? 200 : 503);
+      }
+
+      // Full OFFICIAL_URLS (+ optional glossary) liveness report
+      if (url.pathname === "/api/health/urls") {
+        const { probeOfficialCatalog } = await import("../institutions/url-health.ts");
+        const includeGlossary = url.searchParams.get("glossary") === "1";
+        const report = await probeOfficialCatalog({ includeGlossary });
+        return json(report, report.ok ? 200 : 503);
+      }
+
+      // Kalshi exchange status — ?env=prod|demo|elections
+      if (url.pathname === "/api/health/kalshi") {
+        const { probeKalshiExchange } = await import("../institutions/url-health.ts");
+        const env = url.searchParams.get("env");
+        const which =
+          env === "demo" || env === "elections" ? env : "prod";
+        const row = await probeKalshiExchange(which);
+        return json(row, row.ok ? 200 : 503);
       }
 
       // ── Polymarket / agent routes ──

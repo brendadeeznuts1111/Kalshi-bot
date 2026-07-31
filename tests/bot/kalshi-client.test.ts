@@ -35,6 +35,8 @@ function makeClient(overrides: {
     return res;
   };
   const client = createKalshiClient({
+    // Hermetic: local .env may set KALSHI_ENV=prod + PROD_ARMED — force demo.
+    env: "demo",
     credentials,
     fetchImpl,
     sleep: async (ms) => {

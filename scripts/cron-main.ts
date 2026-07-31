@@ -62,18 +62,21 @@ async function jobAnalysis(): Promise<void> {
   }
 }
 
-/** HEAD/GET check for OFFICIAL_URLS + glossary entry urls. */
+/** HEAD/GET check for OFFICIAL_URLS + glossary entry urls (hard via probe engine). */
 async function jobGlossaryUrls(): Promise<void> {
   const start = Date.now();
   try {
-    const proc = Bun.spawn(["bun", "run", "glossary:urls:soft"], {
+    // Prefer hard check; soft only if GLOSSARY_URLS_SOFT=1 (flaky networks)
+    const soft = Bun.env.GLOSSARY_URLS_SOFT === "1";
+    const script = soft ? "glossary:urls:soft" : "glossary:urls";
+    const proc = Bun.spawn(["bun", "run", script], {
       cwd: import.meta.dir + "/..",
       stdout: "inherit",
       stderr: "inherit",
     });
     const code = await proc.exited;
-    if (code !== 0) throw new Error(`glossary:urls exited ${code}`);
-    console.error(`[cron:glossary-urls] ok · ${Date.now() - start}ms`);
+    if (code !== 0) throw new Error(`${script} exited ${code}`);
+    console.error(`[cron:glossary-urls] ok (${script}) · ${Date.now() - start}ms`);
   } catch (err) {
     console.error(`[cron:glossary-urls] Error: ${err}`);
   }

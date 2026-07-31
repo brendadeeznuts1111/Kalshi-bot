@@ -180,6 +180,10 @@ export const SERVE_PATTERNS = {
     design:          "/api/design",
     designAudit:     "/api/design/audit",
     regulatoryHealth:"/regulatory/health",
+    /** Live OFFICIAL_URLS catalog probe (+ optional ?glossary=1) */
+    healthUrls:      "/api/health/urls",
+    /** Kalshi exchange status (prod/demo/elections) */
+    healthKalshi:    "/api/health/kalshi",
     agentDispatch:   "/agent/dispatch",
     /** Same path as ROUTES.latestReport — research browser SSOT for path string */
     reportsLatest:   "/reports/latest.md",

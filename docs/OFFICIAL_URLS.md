@@ -4,7 +4,18 @@ Canonical external links for this repo. **Code SSOT:** [`src/institutions/offici
 
 Last verified: **2026-07-31**
 
-**Liveness:** `bun run glossary:urls` uses [`OFFICIAL_URL_PROBES`](../src/institutions/official-urls.ts) so API bases are checked at a real path (`/exchange/status`, `/sports`, …). Bare API roots often 404. Soft + OG: `bun run glossary:urls:og`.
+**Liveness:**
+
+| Command / route | Role |
+|-----------------|------|
+| `bun run glossary:urls` | Hard catalog check (CLI) |
+| `bun run glossary:urls:json` / `health:urls` | Machine `UrlHealthReport` |
+| `bun run glossary:urls:og` | Soft + Open Graph sample |
+| `GET /api/health/urls` | Same probe via research server (`?glossary=1` optional) |
+| `GET /api/health/kalshi?env=prod` | Kalshi `/exchange/status` only |
+| `GET /regulatory/health` | Compliance + live Kalshi exchange |
+
+Probes: [`OFFICIAL_URL_PROBES`](../src/institutions/official-urls.ts) · engine: [`url-health.ts`](../src/institutions/url-health.ts).
 
 ## Kalshi
 

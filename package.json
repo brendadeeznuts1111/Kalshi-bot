@@ -115,6 +115,8 @@
     "glossary:urls": "bun scripts/validate-glossary-urls.ts",
     "glossary:urls:soft": "bun scripts/validate-glossary-urls.ts -- --soft",
     "glossary:urls:og": "bun scripts/validate-glossary-urls.ts -- --soft --og",
+    "glossary:urls:json": "bun scripts/validate-glossary-urls.ts -- --json",
+    "health:urls": "bun scripts/validate-glossary-urls.ts -- --json",
     "semantic:audit": "bun scripts/check-glossary-usage.ts -- --hard",
     "glossary:report": "bun scripts/check-glossary-usage.ts -- --report-only"
   },
