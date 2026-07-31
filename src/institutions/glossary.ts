@@ -73,227 +73,442 @@ export const GLOSSARY_CATEGORY_LABELS: Record<GlossaryCategory, string> = {
   other: "Other",
 };
 
+/**
+ * kind:
+ *   registry  — desk/export feature name (snake_case id = feature)
+ *   ui        — HQ tip keys / pure chrome (camelCase or ui.*)
+ *   composite — derived multi-field concepts
+ * @see docs/SEMANTIC_LAYER.md
+ */
+export type GlossaryKind = "registry" | "ui" | "composite";
+
 export type GlossaryEntry = {
-  /** Stable id — tip("id") and #glossary:id */
+  /** Stable id — tip("id"), #glossary:id, registry.concept FK */
   id: string;
   label: string;
   description: string;
   category: GlossaryCategory;
-  /** Alternate labels (governance / search) */
+  kind: GlossaryKind;
+  /** UI concept that shadows a registry concept */
+  mapsTo?: string;
+  /** Alternate labels (search / governance) */
   synonyms?: string[];
   example?: string;
-  /** Optional enum values for filters */
   values?: string[];
 };
 
+function ui(
+  e: Omit<GlossaryEntry, "kind"> & { kind?: GlossaryKind },
+): GlossaryEntry {
+  return { kind: "ui", ...e };
+}
+
+function reg(
+  e: Omit<GlossaryEntry, "kind" | "category"> & {
+    category?: GlossaryCategory;
+    kind?: GlossaryKind;
+  },
+): GlossaryEntry {
+  return { kind: "registry", category: e.category ?? "other", ...e };
+}
+
 /**
- * Canonical UI glossary. Every tip() key used in HQ should appear here.
- * Order within a category is display order.
+ * Canonical glossary — semantic authority.
+ * tip() keys must appear here. Desk export columns with concept FKs need kind=registry.
  */
 export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
-  // ── market ──
-  {
+  // ── market (HQ UI tips) ──
+  ui({
     id: "mid",
     label: "Mid",
     description:
       "Midpoint of best yes-bid and yes-ask. Untradeable reference price.",
     category: "market",
+    mapsTo: "kalshi_mu",
     synonyms: ["mid price", "market price"],
-  },
-  {
+  }),
+  ui({
     id: "spreadCents",
     label: "Spread",
     description: "Best ask − best bid (¢). Wide spreads = poor liquidity; prefer postOnly.",
     category: "market",
+    mapsTo: "kalshi_spread",
     synonyms: ["bid-ask", "spread"],
-  },
-  {
+  }),
+  ui({
     id: "crossed",
     label: "Crossed book",
     description: "Transient book state (yesBid + noBid > 100). Do not treat mid as tradeable.",
     category: "market",
-  },
-  {
+  }),
+  ui({
     id: "avgKalshiVolumeFp",
     label: "Avg volume (Fp)",
     description:
-      "Mean resolved Kalshi contract volume over trading appearances (player_profiles.avg_kalshi_volume_fp). Not poly; not live board volume24h.",
+      "Mean resolved Kalshi contract volume over trading appearances (player_profiles). Not poly; not a single-tick kalshi_volume.",
     category: "market",
+    mapsTo: "kalshi_volume",
     synonyms: ["avg vol", "volume", "avgKalshiVolume"],
-    example: "avgKalshiVolumeFp",
-  },
-  {
+  }),
+  ui({
     id: "yesPriceCents",
     label: "Yes price ¢",
     description: "Limit price for YES contracts, 1–99¢. NO price = 100 − yes.",
     category: "market",
-  },
+  }),
 
-  // ── trading ──
-  {
+  // ── trading UI ──
+  ui({
     id: "balanceCents",
     label: "Balance",
     description:
       "Available-to-trade cash. Does not include value locked in open positions.",
     category: "trading",
-  },
-  {
+  }),
+  ui({
     id: "portfolioValueCents",
     label: "Portfolio value",
     description: "Current mark value of all held positions, separate from cash balance.",
     category: "trading",
-  },
-  {
+  }),
+  ui({
     id: "position",
     label: "Position",
     description: "Signed contracts: positive = long YES, negative = long NO (Kalshi convention).",
     category: "trading",
-  },
-  {
+  }),
+  ui({
     id: "exposureCents",
     label: "Exposure",
     description: "Cash at risk in this market at current marks.",
     category: "trading",
-  },
-  {
+  }),
+  ui({
     id: "realizedPnlCents",
     label: "Realized P&L",
     description: "Locked-in profit/loss from closed trades in this market.",
     category: "trading",
-  },
-  {
+  }),
+  ui({
     id: "feesPaidCents",
     label: "Fees paid",
     description: "Total exchange fees paid in this market, all time.",
     category: "trading",
-  },
-  {
+  }),
+  ui({
     id: "remainingCount",
     label: "Remaining",
     description: "Contracts still working on the book (not yet filled or canceled).",
     category: "trading",
-  },
-  {
+  }),
+  ui({
     id: "fillCount",
     label: "Fill count",
     description: "Contracts already executed from this order.",
     category: "trading",
-  },
-  {
+  }),
+  ui({
     id: "isTaker",
     label: "Taker",
     description: "True = crossed the spread (taker fee); false = rested on book (maker fee, lower).",
     category: "trading",
-  },
-  {
+  }),
+  ui({
     id: "feeCents",
     label: "Fee ¢",
     description: "Exchange fee on this fill. Maker < taker — postOnly orders target maker fees.",
     category: "trading",
-  },
-  {
+  }),
+  ui({
     id: "postOnly",
     label: "Post-only",
     description: "Maker-first: order rests on book or is rejected; never crosses the spread.",
     category: "trading",
-  },
-  {
+  }),
+  ui({
     id: "dryRun",
     label: "Dry-run",
     description: "Simulated order — no funds move, no API write. Live requires explicit opt-in.",
     category: "trading",
     synonyms: ["dry run", "simulate"],
-  },
+  }),
 
-  // ── model ──
-  {
+  // ── model UI gates ──
+  ui({
     id: "shadowMinSignals",
     label: "Shadow min signals",
     description: "Gate: minimum shadow signals before a program may graduate to pilot.",
     category: "model",
-  },
-  {
+  }),
+  ui({
     id: "killBrierDriftPct",
     label: "Kill Brier drift %",
     description: "Gate: kill program if Brier score drifts this % above baseline.",
     category: "model",
-  },
-  {
+  }),
+  ui({
     id: "graduationMinRealizedEdgeCentsPerFill",
     label: "Graduation edge ¢/fill",
     description: "Gate: realized edge per fill needed for pilot→live.",
     category: "model",
-  },
+  }),
 
-  // ── tournament ──
-  {
+  // ── tournament (registry-aligned ids — same as desk export features) ──
+  reg({
     id: "league",
     label: "League",
     description: "Professional circuit derived from Kalshi series (ATP, WTA, Challenger, ITF).",
     category: "tournament",
     synonyms: ["series", "tour"],
     values: ["ATP", "WTA", "ATP Challenger", "WTA 125", "ITF Men", "ITF Women"],
-  },
-  {
-    id: "tier",
-    label: "Tier",
-    description: "Competition level (GS, 1000, 500, 250, CH, ITF15–100, …).",
-    category: "tournament",
-    synonyms: ["level"],
-  },
-  {
+  }),
+  reg({
     id: "surface",
     label: "Surface",
     description: "Court type: Hard, Clay, Grass, Carpet (from event or tournament seed).",
     category: "tournament",
     values: ["Hard", "Clay", "Grass", "Carpet"],
-  },
-  {
+  }),
+  // tier / round appear on board + HQ filters; not always in desk export columns[]
+  reg({
+    id: "tier",
+    label: "Tier",
+    description: "Competition level (GS, 1000, 500, 250, CH, ITF15–100, …).",
+    category: "tournament",
+    synonyms: ["level"],
+  }),
+  reg({
     id: "round",
     label: "Round",
     description: "Match round within the tournament (R16, QF, SF, F, …).",
     category: "tournament",
-  },
+  }),
+  reg({
+    id: "series",
+    label: "Series",
+    description: "Kalshi series ticker family (e.g. KXATPMATCH).",
+    category: "tournament",
+  }),
+  reg({
+    id: "gender",
+    label: "Gender",
+    description: "Competition gender classification on the desk export.",
+    category: "tournament",
+  }),
+  reg({
+    id: "age_group",
+    label: "Age group",
+    description: "Age band when present (junior/senior); often empty on tour.",
+    category: "tournament",
+  }),
 
-  // ── warehouse ──
-  {
+  // ── desk export identity / market / model (registry) ──
+  reg({
+    id: "match_uuid",
+    label: "Match UUID",
+    description: "Stable match identity for desk joins.",
+    category: "warehouse",
+  }),
+  reg({
+    id: "event_ticker",
+    label: "Event ticker",
+    description: "Kalshi event ticker (market grouping key).",
+    category: "warehouse",
+  }),
+  reg({
+    id: "timestamp",
+    label: "Timestamp",
+    description: "Snapshot capture time for the desk row.",
+    category: "warehouse",
+  }),
+  reg({
+    id: "player_a",
+    label: "Player A",
+    description: "Side A player display name on the desk row.",
+    category: "warehouse",
+  }),
+  reg({
+    id: "player_b",
+    label: "Player B",
+    description: "Side B player display name on the desk row.",
+    category: "warehouse",
+  }),
+  reg({
+    id: "title",
+    label: "Title",
+    description: "Match / event title string on the desk export.",
+    category: "warehouse",
+  }),
+  reg({
+    id: "kalshi_mu",
+    label: "Kalshi µ",
+    description: "Kalshi mid (implied probability cents) on the desk snapshot.",
+    category: "market",
+    synonyms: ["kalshi mid", "mu"],
+  }),
+  reg({
+    id: "kalshi_spread",
+    label: "Kalshi spread",
+    description: "Kalshi bid–ask spread on the desk snapshot.",
+    category: "market",
+  }),
+  reg({
+    id: "kalshi_volume",
+    label: "Kalshi volume",
+    description: "Kalshi contract volume on the desk tick (not player-profile average).",
+    category: "market",
+  }),
+  reg({
+    id: "poly_mid",
+    label: "Poly mid",
+    description: "Polymarket mid price, cents; null when venue absent.",
+    category: "market",
+  }),
+  reg({
+    id: "poly_volume",
+    label: "Poly volume",
+    description: "Polymarket volume USD; null = venue absent, 0 = joined with zero trades.",
+    category: "market",
+  }),
+  reg({
+    id: "pinny_no_vig",
+    label: "Pinnacle no-vig",
+    description: "Pinnacle no-vig probability in cents; null when unavailable.",
+    category: "market",
+  }),
+  reg({
+    id: "pinny_source",
+    label: "Pinnacle source",
+    description: "mock | live — origin of pinny_no_vig.",
+    category: "market",
+    values: ["mock", "live"],
+  }),
+  reg({
+    id: "elo_prob",
+    label: "Elo prob",
+    description: "Elo win probability for player A (0–1); interpret with elo_source.",
+    category: "model",
+  }),
+  reg({
+    id: "elo_source",
+    label: "Elo source",
+    description: "model | fallback_50 | missing — provenance of elo_prob.",
+    category: "model",
+    values: ["model", "fallback_50", "missing"],
+  }),
+  reg({
+    id: "blend_fair_cents",
+    label: "Blend fair ¢",
+    description: "Blended fair price in cents (core priced output).",
+    category: "model",
+  }),
+  reg({
+    id: "eff_edge",
+    label: "Eff edge",
+    description: "Effective edge vs blend (cents); tick-bound, can drift.",
+    category: "model",
+  }),
+  reg({
+    id: "liquidity_ok",
+    label: "Liquidity OK",
+    description: "Desk liquidity gate (necessary, not sufficient for tradable).",
+    category: "market",
+  }),
+  reg({
+    id: "total_volume_usd",
+    label: "Total volume USD",
+    description: "Combined venue volume in USD for the match snapshot.",
+    category: "market",
+  }),
+  reg({
+    id: "multi_venue",
+    label: "Multi-venue",
+    description: "Whether more than one venue is joined on the row.",
+    category: "warehouse",
+  }),
+  reg({
+    id: "arb_hint",
+    label: "Arb hint",
+    description: "Directional arb signal (kalshi-cheap | poly-cheap | none | watch).",
+    category: "model",
+  }),
+  reg({
+    id: "arb_actionable",
+    label: "Arb actionable",
+    description: "Hard arb gate (net edge > 0 on real venue-vs-venue).",
+    category: "model",
+  }),
+  reg({
+    id: "rps_flag",
+    label: "RPS flag",
+    description: "Research process signal flag on the desk row.",
+    category: "model",
+  }),
+  reg({
+    id: "graph_divergence",
+    label: "Graph divergence",
+    description: "Graph/model divergence indicator on the desk export.",
+    category: "model",
+  }),
+  reg({
+    id: "research_flag",
+    label: "Research flag",
+    description: "Research gating reason (e.g. DATA_INCOMPLETE, thin-data).",
+    category: "warehouse",
+  }),
+  reg({
+    id: "export_note",
+    label: "Export note",
+    description: "Per-row provenance string (e.g. mock pinny caveat).",
+    category: "warehouse",
+  }),
+
+  // ── warehouse UI (not desk CSV columns) ──
+  ui({
     id: "playerProfiles",
     label: "Player profiles",
     description:
-      "Derived from event-store player_profiles (SSOT): appearances, W–L, surfaces, avgKalshiVolumeFp. Rebuild: bun run tennis:profiles:build. Meta: docs/PLAYER_PROFILES_META.md",
+      "Derived from event-store player_profiles (SSOT). Rebuild: bun run tennis:profiles:build.",
     category: "warehouse",
     synonyms: ["profiles"],
-  },
-  {
+  }),
+  ui({
     id: "lastSeenAtMs",
     label: "Last seen",
     description:
-      "Epoch millis of latest event start for this player (player_profiles.last_seen_ts). Capped ≤ now. Event-store ms, not Kalshi wire seconds.",
+      "Epoch millis of latest event start for this player. Capped ≤ now. Event-store ms.",
     category: "warehouse",
     synonyms: ["last seen", "lastSeenMs"],
-  },
-  {
+  }),
+  ui({
     id: "profilesSource",
     label: "Profiles source",
     description:
-      "warehouse = rows from event-store; seed = unavailable / fixture path (no live profiles).",
+      "warehouse = rows from event-store; seed = unavailable / fixture path.",
     category: "warehouse",
     values: ["warehouse", "seed"],
-  },
-  {
+  }),
+  ui({
     id: "coverage",
     label: "Coverage",
     description: "Data completeness for a tour/surface slice (events with books, links, scores).",
     category: "warehouse",
-  },
-  {
+  }),
+  ui({
     id: "surfaceEdge",
     label: "Surface edge",
     description:
       "Dampened percentage-point edge from each player's historical surface win rates vs the match surface.",
     category: "warehouse",
     synonyms: ["surface edge"],
-  },
+  }),
+  ui({
+    id: "ui.events.filter.reset",
+    label: "Reset filters",
+    description: "Clear all active Events facet selections and sort order.",
+    category: "ui",
+    synonyms: ["clear", "reset"],
+  }),
 ] as const;
 
 export type GlossaryId = (typeof GLOSSARY_ENTRIES)[number]["id"];
@@ -322,9 +537,18 @@ export function glossaryEntriesByCategory(): Map<GlossaryCategory, GlossaryEntry
 /** Payload for GET /api/glossary — panel + tips + codes. */
 export function buildGlossaryApiPayload() {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     tooltips: TOOLTIPS,
-    entries: GLOSSARY_ENTRIES.map((e) => ({ ...e })),
+    entries: GLOSSARY_ENTRIES.map((e) => ({
+      id: e.id,
+      label: e.label,
+      description: e.description,
+      category: e.category,
+      kind: e.kind,
+      mapsTo: e.mapsTo ?? null,
+      synonyms: e.synonyms ?? [],
+      values: e.values ?? null,
+    })),
     categories: (Object.keys(GLOSSARY_CATEGORY_LABELS) as GlossaryCategory[]).map((id) => ({
       id,
       label: GLOSSARY_CATEGORY_LABELS[id],
@@ -333,3 +557,6 @@ export function buildGlossaryApiPayload() {
     units: UNITS,
   };
 }
+
+/** Pending registry concepts (board/HQ) not yet on desk CSV columns[]. */
+export const PENDING_REGISTRY_CONCEPTS = ["tier", "round"] as const;

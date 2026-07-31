@@ -25,12 +25,15 @@ describe("glossary SSOT", () => {
     }
   });
 
-  test("API payload schemaVersion 1", () => {
+  test("API payload schemaVersion 2", () => {
     const p = buildGlossaryApiPayload();
-    expect(p.schemaVersion).toBe(1);
+    expect(p.schemaVersion).toBe(2);
     expect(p.entries.length).toBe(GLOSSARY_ENTRIES.length);
     expect(p.tooltips.mid).toBe(getGlossaryEntry("mid")!.description);
     expect(p.categories.some((c) => c.id === "warehouse")).toBe(true);
+    expect(p.entries.every((e) => e.kind === "ui" || e.kind === "registry" || e.kind === "composite")).toBe(
+      true,
+    );
   });
 
   test("groups by category", () => {

@@ -11,7 +11,17 @@
  */
 import { readdirSync, statSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
-import { GLOSSARY_ENTRIES, TOOLTIPS, buildGlossaryApiPayload } from "../src/institutions/glossary.ts";
+import { buildDeskColumnRegistry } from "../src/institutions/column-registry.ts";
+import {
+  GLOSSARY_ENTRIES,
+  PENDING_REGISTRY_CONCEPTS,
+  TOOLTIPS,
+  buildGlossaryApiPayload,
+} from "../src/institutions/glossary.ts";
+import {
+  glossaryMapFromEntries,
+  validateGlossaryIntegrity,
+} from "../src/institutions/validate-glossary-integrity.ts";
 
 const root = join(import.meta.dir, "..");
 const scanRoots = [
@@ -87,10 +97,25 @@ function main() {
   }
 
   const payload = buildGlossaryApiPayload();
-  if (payload.schemaVersion !== 1 || !payload.entries.length || !Object.keys(TOOLTIPS).length) {
+  if (payload.schemaVersion < 2 || !payload.entries.length || !Object.keys(TOOLTIPS).length) {
     console.error("glossary:check FAIL — payload invalid");
     process.exit(1);
   }
+
+  // Bidirectional registry ↔ glossary integrity
+  const registry = buildDeskColumnRegistry();
+  const gmap = glossaryMapFromEntries(GLOSSARY_ENTRIES);
+  const integrity = validateGlossaryIntegrity(registry, gmap, {
+    pendingRegistryConcepts: PENDING_REGISTRY_CONCEPTS,
+  });
+  if (integrity.length) {
+    console.error("glossary:check FAIL — registry/glossary integrity:");
+    for (const e of integrity) console.error(" ", e);
+    process.exit(1);
+  }
+  console.log(
+    `glossary:check integrity OK — desk columns=${registry.byIndex.length} · registry-kind entries audited`,
+  );
 }
 
 main();

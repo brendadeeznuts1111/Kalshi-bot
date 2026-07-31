@@ -1,0 +1,1792 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-31T01:58:08.663Z",
+  "integrityOk": true,
+  "integrityErrors": [],
+  "pendingRegistryConcepts": [
+    "tier",
+    "round"
+  ],
+  "deskRegistry": {
+    "schema": "hq-desk/v1",
+    "columnCount": 31,
+    "features": [
+      {
+        "column": 0,
+        "feature": "match_uuid",
+        "concept": "match_uuid",
+        "featurePurpose": "identity",
+        "source": "desk",
+        "nullable": false
+      },
+      {
+        "column": 1,
+        "feature": "event_ticker",
+        "concept": "event_ticker",
+        "featurePurpose": "identity",
+        "source": "kalshi",
+        "nullable": false
+      },
+      {
+        "column": 2,
+        "feature": "timestamp",
+        "concept": "timestamp",
+        "featurePurpose": "provenance",
+        "source": "desk",
+        "nullable": false
+      },
+      {
+        "column": 3,
+        "feature": "player_a",
+        "concept": "player_a",
+        "featurePurpose": "identity",
+        "source": "desk",
+        "nullable": false
+      },
+      {
+        "column": 4,
+        "feature": "player_b",
+        "concept": "player_b",
+        "featurePurpose": "identity",
+        "source": "desk",
+        "nullable": false
+      },
+      {
+        "column": 5,
+        "feature": "title",
+        "concept": "title",
+        "featurePurpose": "schedule",
+        "source": "desk",
+        "nullable": true
+      },
+      {
+        "column": 6,
+        "feature": "league",
+        "concept": "league",
+        "featurePurpose": "schedule",
+        "source": "desk",
+        "nullable": true
+      },
+      {
+        "column": 7,
+        "feature": "series",
+        "concept": "series",
+        "featurePurpose": "schedule",
+        "source": "kalshi",
+        "nullable": true
+      },
+      {
+        "column": 8,
+        "feature": "surface",
+        "concept": "surface",
+        "featurePurpose": "schedule",
+        "source": "desk",
+        "nullable": true
+      },
+      {
+        "column": 9,
+        "feature": "gender",
+        "concept": "gender",
+        "featurePurpose": "schedule",
+        "source": "desk",
+        "nullable": true
+      },
+      {
+        "column": 10,
+        "feature": "age_group",
+        "concept": "age_group",
+        "featurePurpose": "schedule",
+        "source": "desk",
+        "nullable": true
+      },
+      {
+        "column": 11,
+        "feature": "kalshi_mu",
+        "concept": "kalshi_mu",
+        "featurePurpose": "market",
+        "source": "kalshi",
+        "nullable": true
+      },
+      {
+        "column": 12,
+        "feature": "kalshi_spread",
+        "concept": "kalshi_spread",
+        "featurePurpose": "market",
+        "source": "kalshi",
+        "nullable": true
+      },
+      {
+        "column": 13,
+        "feature": "kalshi_volume",
+        "concept": "kalshi_volume",
+        "featurePurpose": "market",
+        "source": "kalshi",
+        "nullable": true
+      },
+      {
+        "column": 14,
+        "feature": "poly_mid",
+        "concept": "poly_mid",
+        "featurePurpose": "market",
+        "source": "polymarket",
+        "nullable": true
+      },
+      {
+        "column": 15,
+        "feature": "poly_volume",
+        "concept": "poly_volume",
+        "featurePurpose": "market",
+        "source": "polymarket",
+        "nullable": true
+      },
+      {
+        "column": 16,
+        "feature": "pinny_no_vig",
+        "concept": "pinny_no_vig",
+        "featurePurpose": "market",
+        "source": "pinnacle",
+        "nullable": true
+      },
+      {
+        "column": 17,
+        "feature": "pinny_source",
+        "concept": "pinny_source",
+        "featurePurpose": "provenance",
+        "source": "pinnacle",
+        "nullable": false
+      },
+      {
+        "column": 18,
+        "feature": "elo_prob",
+        "concept": "elo_prob",
+        "featurePurpose": "model",
+        "source": "elo",
+        "nullable": true
+      },
+      {
+        "column": 19,
+        "feature": "elo_source",
+        "concept": "elo_source",
+        "featurePurpose": "provenance",
+        "source": "elo",
+        "nullable": false
+      },
+      {
+        "column": 20,
+        "feature": "blend_fair_cents",
+        "concept": "blend_fair_cents",
+        "featurePurpose": "model",
+        "source": "desk",
+        "nullable": true
+      },
+      {
+        "column": 21,
+        "feature": "eff_edge",
+        "concept": "eff_edge",
+        "featurePurpose": "model",
+        "source": "desk",
+        "nullable": true
+      },
+      {
+        "column": 22,
+        "feature": "liquidity_ok",
+        "concept": "liquidity_ok",
+        "featurePurpose": "gate",
+        "source": "desk",
+        "nullable": false
+      },
+      {
+        "column": 23,
+        "feature": "total_volume_usd",
+        "concept": "total_volume_usd",
+        "featurePurpose": "market",
+        "source": "desk",
+        "nullable": true
+      },
+      {
+        "column": 24,
+        "feature": "multi_venue",
+        "concept": "multi_venue",
+        "featurePurpose": "gate",
+        "source": "desk",
+        "nullable": false
+      },
+      {
+        "column": 25,
+        "feature": "arb_hint",
+        "concept": "arb_hint",
+        "featurePurpose": "model",
+        "source": "desk",
+        "nullable": false
+      },
+      {
+        "column": 26,
+        "feature": "arb_actionable",
+        "concept": "arb_actionable",
+        "featurePurpose": "gate",
+        "source": "desk",
+        "nullable": false
+      },
+      {
+        "column": 27,
+        "feature": "rps_flag",
+        "concept": "rps_flag",
+        "featurePurpose": "model",
+        "source": "desk",
+        "nullable": false
+      },
+      {
+        "column": 28,
+        "feature": "graph_divergence",
+        "concept": "graph_divergence",
+        "featurePurpose": "model",
+        "source": "desk",
+        "nullable": false
+      },
+      {
+        "column": 29,
+        "feature": "research_flag",
+        "concept": "research_flag",
+        "featurePurpose": "gate",
+        "source": "desk",
+        "nullable": true
+      },
+      {
+        "column": 30,
+        "feature": "export_note",
+        "concept": "export_note",
+        "featurePurpose": "provenance",
+        "source": "desk",
+        "nullable": false
+      }
+    ]
+  },
+  "concepts": {
+    "mid": {
+      "label": "Mid",
+      "description": "Midpoint of best yes-bid and yes-ask. Untradeable reference price.",
+      "category": "market",
+      "kind": "ui",
+      "mapsTo": "kalshi_mu",
+      "synonyms": [
+        "mid price",
+        "market price"
+      ],
+      "values": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "spreadCents": {
+      "label": "Spread",
+      "description": "Best ask − best bid (¢). Wide spreads = poor liquidity; prefer postOnly.",
+      "category": "market",
+      "kind": "ui",
+      "mapsTo": "kalshi_spread",
+      "synonyms": [
+        "bid-ask",
+        "spread"
+      ],
+      "values": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "crossed": {
+      "label": "Crossed book",
+      "description": "Transient book state (yesBid + noBid > 100). Do not treat mid as tradeable.",
+      "category": "market",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "avgKalshiVolumeFp": {
+      "label": "Avg volume (Fp)",
+      "description": "Mean resolved Kalshi contract volume over trading appearances (player_profiles). Not poly; not a single-tick kalshi_volume.",
+      "category": "market",
+      "kind": "ui",
+      "mapsTo": "kalshi_volume",
+      "synonyms": [
+        "avg vol",
+        "volume",
+        "avgKalshiVolume"
+      ],
+      "values": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "yesPriceCents": {
+      "label": "Yes price ¢",
+      "description": "Limit price for YES contracts, 1–99¢. NO price = 100 − yes.",
+      "category": "market",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "balanceCents": {
+      "label": "Balance",
+      "description": "Available-to-trade cash. Does not include value locked in open positions.",
+      "category": "trading",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "portfolioValueCents": {
+      "label": "Portfolio value",
+      "description": "Current mark value of all held positions, separate from cash balance.",
+      "category": "trading",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "position": {
+      "label": "Position",
+      "description": "Signed contracts: positive = long YES, negative = long NO (Kalshi convention).",
+      "category": "trading",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "exposureCents": {
+      "label": "Exposure",
+      "description": "Cash at risk in this market at current marks.",
+      "category": "trading",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "realizedPnlCents": {
+      "label": "Realized P&L",
+      "description": "Locked-in profit/loss from closed trades in this market.",
+      "category": "trading",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "feesPaidCents": {
+      "label": "Fees paid",
+      "description": "Total exchange fees paid in this market, all time.",
+      "category": "trading",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "remainingCount": {
+      "label": "Remaining",
+      "description": "Contracts still working on the book (not yet filled or canceled).",
+      "category": "trading",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "fillCount": {
+      "label": "Fill count",
+      "description": "Contracts already executed from this order.",
+      "category": "trading",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "isTaker": {
+      "label": "Taker",
+      "description": "True = crossed the spread (taker fee); false = rested on book (maker fee, lower).",
+      "category": "trading",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "feeCents": {
+      "label": "Fee ¢",
+      "description": "Exchange fee on this fill. Maker < taker — postOnly orders target maker fees.",
+      "category": "trading",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "postOnly": {
+      "label": "Post-only",
+      "description": "Maker-first: order rests on book or is rejected; never crosses the spread.",
+      "category": "trading",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "dryRun": {
+      "label": "Dry-run",
+      "description": "Simulated order — no funds move, no API write. Live requires explicit opt-in.",
+      "category": "trading",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [
+        "dry run",
+        "simulate"
+      ],
+      "values": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "shadowMinSignals": {
+      "label": "Shadow min signals",
+      "description": "Gate: minimum shadow signals before a program may graduate to pilot.",
+      "category": "model",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "killBrierDriftPct": {
+      "label": "Kill Brier drift %",
+      "description": "Gate: kill program if Brier score drifts this % above baseline.",
+      "category": "model",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "graduationMinRealizedEdgeCentsPerFill": {
+      "label": "Graduation edge ¢/fill",
+      "description": "Gate: realized edge per fill needed for pilot→live.",
+      "category": "model",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "league": {
+      "label": "League",
+      "description": "Professional circuit derived from Kalshi series (ATP, WTA, Challenger, ITF).",
+      "category": "tournament",
+      "kind": "registry",
+      "mapsTo": null,
+      "synonyms": [
+        "series",
+        "tour"
+      ],
+      "values": [
+        "ATP",
+        "WTA",
+        "ATP Challenger",
+        "WTA 125",
+        "ITF Men",
+        "ITF Women"
+      ],
+      "registryColumn": 6,
+      "source": "desk",
+      "featurePurpose": "schedule"
+    },
+    "surface": {
+      "label": "Surface",
+      "description": "Court type: Hard, Clay, Grass, Carpet (from event or tournament seed).",
+      "category": "tournament",
+      "kind": "registry",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": [
+        "Hard",
+        "Clay",
+        "Grass",
+        "Carpet"
+      ],
+      "registryColumn": 8,
+      "source": "desk",
+      "featurePurpose": "schedule"
+    },
+    "tier": {
+      "label": "Tier",
+      "description": "Competition level (GS, 1000, 500, 250, CH, ITF15–100, …).",
+      "category": "tournament",
+      "kind": "registry",
+      "mapsTo": null,
+      "synonyms": [
+        "level"
+      ],
+      "values": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "round": {
+      "label": "Round",
+      "description": "Match round within the tournament (R16, QF, SF, F, …).",
+      "category": "tournament",
+      "kind": "registry",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "series": {
+      "label": "Series",
+      "description": "Kalshi series ticker family (e.g. KXATPMATCH).",
+      "category": "tournament",
+      "kind": "registry",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": null,
+      "registryColumn": 7,
+      "source": "kalshi",
+      "featurePurpose": "schedule"
+    },
+    "gender": {
+      "label": "Gender",
+      "description": "Competition gender classification on the desk export.",
+      "category": "tournament",
+      "kind": "registry",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": null,
+      "registryColumn": 9,
+      "source": "desk",
+      "featurePurpose": "schedule"
+    },
+    "age_group": {
+      "label": "Age group",
+      "description": "Age band when present (junior/senior); often empty on tour.",
+      "category": "tournament",
+      "kind": "registry",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": null,
+      "registryColumn": 10,
+      "source": "desk",
+      "featurePurpose": "schedule"
+    },
+    "match_uuid": {
+      "label": "Match UUID",
+      "description": "Stable match identity for desk joins.",
+      "category": "warehouse",
+      "kind": "registry",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": null,
+      "registryColumn": 0,
+      "source": "desk",
+      "featurePurpose": "identity"
+    },
+    "event_ticker": {
+      "label": "Event ticker",
+      "description": "Kalshi event ticker (market grouping key).",
+      "category": "warehouse",
+      "kind": "registry",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": null,
+      "registryColumn": 1,
+      "source": "kalshi",
+      "featurePurpose": "identity"
+    },
+    "timestamp": {
+      "label": "Timestamp",
+      "description": "Snapshot capture time for the desk row.",
+      "category": "warehouse",
+      "kind": "registry",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": null,
+      "registryColumn": 2,
+      "source": "desk",
+      "featurePurpose": "provenance"
+    },
+    "player_a": {
+      "label": "Player A",
+      "description": "Side A player display name on the desk row.",
+      "category": "warehouse",
+      "kind": "registry",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": null,
+      "registryColumn": 3,
+      "source": "desk",
+      "featurePurpose": "identity"
+    },
+    "player_b": {
+      "label": "Player B",
+      "description": "Side B player display name on the desk row.",
+      "category": "warehouse",
+      "kind": "registry",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": null,
+      "registryColumn": 4,
+      "source": "desk",
+      "featurePurpose": "identity"
+    },
+    "title": {
+      "label": "Title",
+      "description": "Match / event title string on the desk export.",
+      "category": "warehouse",
+      "kind": "registry",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": null,
+      "registryColumn": 5,
+      "source": "desk",
+      "featurePurpose": "schedule"
+    },
+    "kalshi_mu": {
+      "label": "Kalshi µ",
+      "description": "Kalshi mid (implied probability cents) on the desk snapshot.",
+      "category": "market",
+      "kind": "registry",
+      "mapsTo": null,
+      "synonyms": [
+        "kalshi mid",
+        "mu"
+      ],
+      "values": null,
+      "registryColumn": 11,
+      "source": "kalshi",
+      "featurePurpose": "market"
+    },
+    "kalshi_spread": {
+      "label": "Kalshi spread",
+      "description": "Kalshi bid–ask spread on the desk snapshot.",
+      "category": "market",
+      "kind": "registry",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": null,
+      "registryColumn": 12,
+      "source": "kalshi",
+      "featurePurpose": "market"
+    },
+    "kalshi_volume": {
+      "label": "Kalshi volume",
+      "description": "Kalshi contract volume on the desk tick (not player-profile average).",
+      "category": "market",
+      "kind": "registry",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": null,
+      "registryColumn": 13,
+      "source": "kalshi",
+      "featurePurpose": "market"
+    },
+    "poly_mid": {
+      "label": "Poly mid",
+      "description": "Polymarket mid price, cents; null when venue absent.",
+      "category": "market",
+      "kind": "registry",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": null,
+      "registryColumn": 14,
+      "source": "polymarket",
+      "featurePurpose": "market"
+    },
+    "poly_volume": {
+      "label": "Poly volume",
+      "description": "Polymarket volume USD; null = venue absent, 0 = joined with zero trades.",
+      "category": "market",
+      "kind": "registry",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": null,
+      "registryColumn": 15,
+      "source": "polymarket",
+      "featurePurpose": "market"
+    },
+    "pinny_no_vig": {
+      "label": "Pinnacle no-vig",
+      "description": "Pinnacle no-vig probability in cents; null when unavailable.",
+      "category": "market",
+      "kind": "registry",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": null,
+      "registryColumn": 16,
+      "source": "pinnacle",
+      "featurePurpose": "market"
+    },
+    "pinny_source": {
+      "label": "Pinnacle source",
+      "description": "mock | live — origin of pinny_no_vig.",
+      "category": "market",
+      "kind": "registry",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": [
+        "mock",
+        "live"
+      ],
+      "registryColumn": 17,
+      "source": "pinnacle",
+      "featurePurpose": "provenance"
+    },
+    "elo_prob": {
+      "label": "Elo prob",
+      "description": "Elo win probability for player A (0–1); interpret with elo_source.",
+      "category": "model",
+      "kind": "registry",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": null,
+      "registryColumn": 18,
+      "source": "elo",
+      "featurePurpose": "model"
+    },
+    "elo_source": {
+      "label": "Elo source",
+      "description": "model | fallback_50 | missing — provenance of elo_prob.",
+      "category": "model",
+      "kind": "registry",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": [
+        "model",
+        "fallback_50",
+        "missing"
+      ],
+      "registryColumn": 19,
+      "source": "elo",
+      "featurePurpose": "provenance"
+    },
+    "blend_fair_cents": {
+      "label": "Blend fair ¢",
+      "description": "Blended fair price in cents (core priced output).",
+      "category": "model",
+      "kind": "registry",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": null,
+      "registryColumn": 20,
+      "source": "desk",
+      "featurePurpose": "model"
+    },
+    "eff_edge": {
+      "label": "Eff edge",
+      "description": "Effective edge vs blend (cents); tick-bound, can drift.",
+      "category": "model",
+      "kind": "registry",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": null,
+      "registryColumn": 21,
+      "source": "desk",
+      "featurePurpose": "model"
+    },
+    "liquidity_ok": {
+      "label": "Liquidity OK",
+      "description": "Desk liquidity gate (necessary, not sufficient for tradable).",
+      "category": "market",
+      "kind": "registry",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": null,
+      "registryColumn": 22,
+      "source": "desk",
+      "featurePurpose": "gate"
+    },
+    "total_volume_usd": {
+      "label": "Total volume USD",
+      "description": "Combined venue volume in USD for the match snapshot.",
+      "category": "market",
+      "kind": "registry",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": null,
+      "registryColumn": 23,
+      "source": "desk",
+      "featurePurpose": "market"
+    },
+    "multi_venue": {
+      "label": "Multi-venue",
+      "description": "Whether more than one venue is joined on the row.",
+      "category": "warehouse",
+      "kind": "registry",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": null,
+      "registryColumn": 24,
+      "source": "desk",
+      "featurePurpose": "gate"
+    },
+    "arb_hint": {
+      "label": "Arb hint",
+      "description": "Directional arb signal (kalshi-cheap | poly-cheap | none | watch).",
+      "category": "model",
+      "kind": "registry",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": null,
+      "registryColumn": 25,
+      "source": "desk",
+      "featurePurpose": "model"
+    },
+    "arb_actionable": {
+      "label": "Arb actionable",
+      "description": "Hard arb gate (net edge > 0 on real venue-vs-venue).",
+      "category": "model",
+      "kind": "registry",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": null,
+      "registryColumn": 26,
+      "source": "desk",
+      "featurePurpose": "gate"
+    },
+    "rps_flag": {
+      "label": "RPS flag",
+      "description": "Research process signal flag on the desk row.",
+      "category": "model",
+      "kind": "registry",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": null,
+      "registryColumn": 27,
+      "source": "desk",
+      "featurePurpose": "model"
+    },
+    "graph_divergence": {
+      "label": "Graph divergence",
+      "description": "Graph/model divergence indicator on the desk export.",
+      "category": "model",
+      "kind": "registry",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": null,
+      "registryColumn": 28,
+      "source": "desk",
+      "featurePurpose": "model"
+    },
+    "research_flag": {
+      "label": "Research flag",
+      "description": "Research gating reason (e.g. DATA_INCOMPLETE, thin-data).",
+      "category": "warehouse",
+      "kind": "registry",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": null,
+      "registryColumn": 29,
+      "source": "desk",
+      "featurePurpose": "gate"
+    },
+    "export_note": {
+      "label": "Export note",
+      "description": "Per-row provenance string (e.g. mock pinny caveat).",
+      "category": "warehouse",
+      "kind": "registry",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": null,
+      "registryColumn": 30,
+      "source": "desk",
+      "featurePurpose": "provenance"
+    },
+    "playerProfiles": {
+      "label": "Player profiles",
+      "description": "Derived from event-store player_profiles (SSOT). Rebuild: bun run tennis:profiles:build.",
+      "category": "warehouse",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [
+        "profiles"
+      ],
+      "values": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "lastSeenAtMs": {
+      "label": "Last seen",
+      "description": "Epoch millis of latest event start for this player. Capped ≤ now. Event-store ms.",
+      "category": "warehouse",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [
+        "last seen",
+        "lastSeenMs"
+      ],
+      "values": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "profilesSource": {
+      "label": "Profiles source",
+      "description": "warehouse = rows from event-store; seed = unavailable / fixture path.",
+      "category": "warehouse",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": [
+        "warehouse",
+        "seed"
+      ],
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "coverage": {
+      "label": "Coverage",
+      "description": "Data completeness for a tour/surface slice (events with books, links, scores).",
+      "category": "warehouse",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "surfaceEdge": {
+      "label": "Surface edge",
+      "description": "Dampened percentage-point edge from each player's historical surface win rates vs the match surface.",
+      "category": "warehouse",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [
+        "surface edge"
+      ],
+      "values": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "ui.events.filter.reset": {
+      "label": "Reset filters",
+      "description": "Clear all active Events facet selections and sort order.",
+      "category": "ui",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [
+        "clear",
+        "reset"
+      ],
+      "values": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    }
+  },
+  "api": {
+    "schemaVersion": 2,
+    "tooltips": {
+      "mid": "Midpoint of best yes-bid and yes-ask. Untradeable reference price.",
+      "spreadCents": "Best ask − best bid (¢). Wide spreads = poor liquidity; prefer postOnly.",
+      "crossed": "Transient book state (yesBid + noBid > 100). Do not treat mid as tradeable.",
+      "avgKalshiVolumeFp": "Mean resolved Kalshi contract volume over trading appearances (player_profiles). Not poly; not a single-tick kalshi_volume.",
+      "yesPriceCents": "Limit price for YES contracts, 1–99¢. NO price = 100 − yes.",
+      "balanceCents": "Available-to-trade cash. Does not include value locked in open positions.",
+      "portfolioValueCents": "Current mark value of all held positions, separate from cash balance.",
+      "position": "Signed contracts: positive = long YES, negative = long NO (Kalshi convention).",
+      "exposureCents": "Cash at risk in this market at current marks.",
+      "realizedPnlCents": "Locked-in profit/loss from closed trades in this market.",
+      "feesPaidCents": "Total exchange fees paid in this market, all time.",
+      "remainingCount": "Contracts still working on the book (not yet filled or canceled).",
+      "fillCount": "Contracts already executed from this order.",
+      "isTaker": "True = crossed the spread (taker fee); false = rested on book (maker fee, lower).",
+      "feeCents": "Exchange fee on this fill. Maker < taker — postOnly orders target maker fees.",
+      "postOnly": "Maker-first: order rests on book or is rejected; never crosses the spread.",
+      "dryRun": "Simulated order — no funds move, no API write. Live requires explicit opt-in.",
+      "shadowMinSignals": "Gate: minimum shadow signals before a program may graduate to pilot.",
+      "killBrierDriftPct": "Gate: kill program if Brier score drifts this % above baseline.",
+      "graduationMinRealizedEdgeCentsPerFill": "Gate: realized edge per fill needed for pilot→live.",
+      "league": "Professional circuit derived from Kalshi series (ATP, WTA, Challenger, ITF).",
+      "surface": "Court type: Hard, Clay, Grass, Carpet (from event or tournament seed).",
+      "tier": "Competition level (GS, 1000, 500, 250, CH, ITF15–100, …).",
+      "round": "Match round within the tournament (R16, QF, SF, F, …).",
+      "series": "Kalshi series ticker family (e.g. KXATPMATCH).",
+      "gender": "Competition gender classification on the desk export.",
+      "age_group": "Age band when present (junior/senior); often empty on tour.",
+      "match_uuid": "Stable match identity for desk joins.",
+      "event_ticker": "Kalshi event ticker (market grouping key).",
+      "timestamp": "Snapshot capture time for the desk row.",
+      "player_a": "Side A player display name on the desk row.",
+      "player_b": "Side B player display name on the desk row.",
+      "title": "Match / event title string on the desk export.",
+      "kalshi_mu": "Kalshi mid (implied probability cents) on the desk snapshot.",
+      "kalshi_spread": "Kalshi bid–ask spread on the desk snapshot.",
+      "kalshi_volume": "Kalshi contract volume on the desk tick (not player-profile average).",
+      "poly_mid": "Polymarket mid price, cents; null when venue absent.",
+      "poly_volume": "Polymarket volume USD; null = venue absent, 0 = joined with zero trades.",
+      "pinny_no_vig": "Pinnacle no-vig probability in cents; null when unavailable.",
+      "pinny_source": "mock | live — origin of pinny_no_vig.",
+      "elo_prob": "Elo win probability for player A (0–1); interpret with elo_source.",
+      "elo_source": "model | fallback_50 | missing — provenance of elo_prob.",
+      "blend_fair_cents": "Blended fair price in cents (core priced output).",
+      "eff_edge": "Effective edge vs blend (cents); tick-bound, can drift.",
+      "liquidity_ok": "Desk liquidity gate (necessary, not sufficient for tradable).",
+      "total_volume_usd": "Combined venue volume in USD for the match snapshot.",
+      "multi_venue": "Whether more than one venue is joined on the row.",
+      "arb_hint": "Directional arb signal (kalshi-cheap | poly-cheap | none | watch).",
+      "arb_actionable": "Hard arb gate (net edge > 0 on real venue-vs-venue).",
+      "rps_flag": "Research process signal flag on the desk row.",
+      "graph_divergence": "Graph/model divergence indicator on the desk export.",
+      "research_flag": "Research gating reason (e.g. DATA_INCOMPLETE, thin-data).",
+      "export_note": "Per-row provenance string (e.g. mock pinny caveat).",
+      "playerProfiles": "Derived from event-store player_profiles (SSOT). Rebuild: bun run tennis:profiles:build.",
+      "lastSeenAtMs": "Epoch millis of latest event start for this player. Capped ≤ now. Event-store ms.",
+      "profilesSource": "warehouse = rows from event-store; seed = unavailable / fixture path.",
+      "coverage": "Data completeness for a tour/surface slice (events with books, links, scores).",
+      "surfaceEdge": "Dampened percentage-point edge from each player's historical surface win rates vs the match surface.",
+      "ui.events.filter.reset": "Clear all active Events facet selections and sort order."
+    },
+    "entries": [
+      {
+        "id": "mid",
+        "label": "Mid",
+        "description": "Midpoint of best yes-bid and yes-ask. Untradeable reference price.",
+        "category": "market",
+        "kind": "ui",
+        "mapsTo": "kalshi_mu",
+        "synonyms": [
+          "mid price",
+          "market price"
+        ],
+        "values": null
+      },
+      {
+        "id": "spreadCents",
+        "label": "Spread",
+        "description": "Best ask − best bid (¢). Wide spreads = poor liquidity; prefer postOnly.",
+        "category": "market",
+        "kind": "ui",
+        "mapsTo": "kalshi_spread",
+        "synonyms": [
+          "bid-ask",
+          "spread"
+        ],
+        "values": null
+      },
+      {
+        "id": "crossed",
+        "label": "Crossed book",
+        "description": "Transient book state (yesBid + noBid > 100). Do not treat mid as tradeable.",
+        "category": "market",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": null
+      },
+      {
+        "id": "avgKalshiVolumeFp",
+        "label": "Avg volume (Fp)",
+        "description": "Mean resolved Kalshi contract volume over trading appearances (player_profiles). Not poly; not a single-tick kalshi_volume.",
+        "category": "market",
+        "kind": "ui",
+        "mapsTo": "kalshi_volume",
+        "synonyms": [
+          "avg vol",
+          "volume",
+          "avgKalshiVolume"
+        ],
+        "values": null
+      },
+      {
+        "id": "yesPriceCents",
+        "label": "Yes price ¢",
+        "description": "Limit price for YES contracts, 1–99¢. NO price = 100 − yes.",
+        "category": "market",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": null
+      },
+      {
+        "id": "balanceCents",
+        "label": "Balance",
+        "description": "Available-to-trade cash. Does not include value locked in open positions.",
+        "category": "trading",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": null
+      },
+      {
+        "id": "portfolioValueCents",
+        "label": "Portfolio value",
+        "description": "Current mark value of all held positions, separate from cash balance.",
+        "category": "trading",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": null
+      },
+      {
+        "id": "position",
+        "label": "Position",
+        "description": "Signed contracts: positive = long YES, negative = long NO (Kalshi convention).",
+        "category": "trading",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": null
+      },
+      {
+        "id": "exposureCents",
+        "label": "Exposure",
+        "description": "Cash at risk in this market at current marks.",
+        "category": "trading",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": null
+      },
+      {
+        "id": "realizedPnlCents",
+        "label": "Realized P&L",
+        "description": "Locked-in profit/loss from closed trades in this market.",
+        "category": "trading",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": null
+      },
+      {
+        "id": "feesPaidCents",
+        "label": "Fees paid",
+        "description": "Total exchange fees paid in this market, all time.",
+        "category": "trading",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": null
+      },
+      {
+        "id": "remainingCount",
+        "label": "Remaining",
+        "description": "Contracts still working on the book (not yet filled or canceled).",
+        "category": "trading",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": null
+      },
+      {
+        "id": "fillCount",
+        "label": "Fill count",
+        "description": "Contracts already executed from this order.",
+        "category": "trading",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": null
+      },
+      {
+        "id": "isTaker",
+        "label": "Taker",
+        "description": "True = crossed the spread (taker fee); false = rested on book (maker fee, lower).",
+        "category": "trading",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": null
+      },
+      {
+        "id": "feeCents",
+        "label": "Fee ¢",
+        "description": "Exchange fee on this fill. Maker < taker — postOnly orders target maker fees.",
+        "category": "trading",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": null
+      },
+      {
+        "id": "postOnly",
+        "label": "Post-only",
+        "description": "Maker-first: order rests on book or is rejected; never crosses the spread.",
+        "category": "trading",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": null
+      },
+      {
+        "id": "dryRun",
+        "label": "Dry-run",
+        "description": "Simulated order — no funds move, no API write. Live requires explicit opt-in.",
+        "category": "trading",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [
+          "dry run",
+          "simulate"
+        ],
+        "values": null
+      },
+      {
+        "id": "shadowMinSignals",
+        "label": "Shadow min signals",
+        "description": "Gate: minimum shadow signals before a program may graduate to pilot.",
+        "category": "model",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": null
+      },
+      {
+        "id": "killBrierDriftPct",
+        "label": "Kill Brier drift %",
+        "description": "Gate: kill program if Brier score drifts this % above baseline.",
+        "category": "model",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": null
+      },
+      {
+        "id": "graduationMinRealizedEdgeCentsPerFill",
+        "label": "Graduation edge ¢/fill",
+        "description": "Gate: realized edge per fill needed for pilot→live.",
+        "category": "model",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": null
+      },
+      {
+        "id": "league",
+        "label": "League",
+        "description": "Professional circuit derived from Kalshi series (ATP, WTA, Challenger, ITF).",
+        "category": "tournament",
+        "kind": "registry",
+        "mapsTo": null,
+        "synonyms": [
+          "series",
+          "tour"
+        ],
+        "values": [
+          "ATP",
+          "WTA",
+          "ATP Challenger",
+          "WTA 125",
+          "ITF Men",
+          "ITF Women"
+        ]
+      },
+      {
+        "id": "surface",
+        "label": "Surface",
+        "description": "Court type: Hard, Clay, Grass, Carpet (from event or tournament seed).",
+        "category": "tournament",
+        "kind": "registry",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": [
+          "Hard",
+          "Clay",
+          "Grass",
+          "Carpet"
+        ]
+      },
+      {
+        "id": "tier",
+        "label": "Tier",
+        "description": "Competition level (GS, 1000, 500, 250, CH, ITF15–100, …).",
+        "category": "tournament",
+        "kind": "registry",
+        "mapsTo": null,
+        "synonyms": [
+          "level"
+        ],
+        "values": null
+      },
+      {
+        "id": "round",
+        "label": "Round",
+        "description": "Match round within the tournament (R16, QF, SF, F, …).",
+        "category": "tournament",
+        "kind": "registry",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": null
+      },
+      {
+        "id": "series",
+        "label": "Series",
+        "description": "Kalshi series ticker family (e.g. KXATPMATCH).",
+        "category": "tournament",
+        "kind": "registry",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": null
+      },
+      {
+        "id": "gender",
+        "label": "Gender",
+        "description": "Competition gender classification on the desk export.",
+        "category": "tournament",
+        "kind": "registry",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": null
+      },
+      {
+        "id": "age_group",
+        "label": "Age group",
+        "description": "Age band when present (junior/senior); often empty on tour.",
+        "category": "tournament",
+        "kind": "registry",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": null
+      },
+      {
+        "id": "match_uuid",
+        "label": "Match UUID",
+        "description": "Stable match identity for desk joins.",
+        "category": "warehouse",
+        "kind": "registry",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": null
+      },
+      {
+        "id": "event_ticker",
+        "label": "Event ticker",
+        "description": "Kalshi event ticker (market grouping key).",
+        "category": "warehouse",
+        "kind": "registry",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": null
+      },
+      {
+        "id": "timestamp",
+        "label": "Timestamp",
+        "description": "Snapshot capture time for the desk row.",
+        "category": "warehouse",
+        "kind": "registry",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": null
+      },
+      {
+        "id": "player_a",
+        "label": "Player A",
+        "description": "Side A player display name on the desk row.",
+        "category": "warehouse",
+        "kind": "registry",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": null
+      },
+      {
+        "id": "player_b",
+        "label": "Player B",
+        "description": "Side B player display name on the desk row.",
+        "category": "warehouse",
+        "kind": "registry",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": null
+      },
+      {
+        "id": "title",
+        "label": "Title",
+        "description": "Match / event title string on the desk export.",
+        "category": "warehouse",
+        "kind": "registry",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": null
+      },
+      {
+        "id": "kalshi_mu",
+        "label": "Kalshi µ",
+        "description": "Kalshi mid (implied probability cents) on the desk snapshot.",
+        "category": "market",
+        "kind": "registry",
+        "mapsTo": null,
+        "synonyms": [
+          "kalshi mid",
+          "mu"
+        ],
+        "values": null
+      },
+      {
+        "id": "kalshi_spread",
+        "label": "Kalshi spread",
+        "description": "Kalshi bid–ask spread on the desk snapshot.",
+        "category": "market",
+        "kind": "registry",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": null
+      },
+      {
+        "id": "kalshi_volume",
+        "label": "Kalshi volume",
+        "description": "Kalshi contract volume on the desk tick (not player-profile average).",
+        "category": "market",
+        "kind": "registry",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": null
+      },
+      {
+        "id": "poly_mid",
+        "label": "Poly mid",
+        "description": "Polymarket mid price, cents; null when venue absent.",
+        "category": "market",
+        "kind": "registry",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": null
+      },
+      {
+        "id": "poly_volume",
+        "label": "Poly volume",
+        "description": "Polymarket volume USD; null = venue absent, 0 = joined with zero trades.",
+        "category": "market",
+        "kind": "registry",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": null
+      },
+      {
+        "id": "pinny_no_vig",
+        "label": "Pinnacle no-vig",
+        "description": "Pinnacle no-vig probability in cents; null when unavailable.",
+        "category": "market",
+        "kind": "registry",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": null
+      },
+      {
+        "id": "pinny_source",
+        "label": "Pinnacle source",
+        "description": "mock | live — origin of pinny_no_vig.",
+        "category": "market",
+        "kind": "registry",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": [
+          "mock",
+          "live"
+        ]
+      },
+      {
+        "id": "elo_prob",
+        "label": "Elo prob",
+        "description": "Elo win probability for player A (0–1); interpret with elo_source.",
+        "category": "model",
+        "kind": "registry",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": null
+      },
+      {
+        "id": "elo_source",
+        "label": "Elo source",
+        "description": "model | fallback_50 | missing — provenance of elo_prob.",
+        "category": "model",
+        "kind": "registry",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": [
+          "model",
+          "fallback_50",
+          "missing"
+        ]
+      },
+      {
+        "id": "blend_fair_cents",
+        "label": "Blend fair ¢",
+        "description": "Blended fair price in cents (core priced output).",
+        "category": "model",
+        "kind": "registry",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": null
+      },
+      {
+        "id": "eff_edge",
+        "label": "Eff edge",
+        "description": "Effective edge vs blend (cents); tick-bound, can drift.",
+        "category": "model",
+        "kind": "registry",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": null
+      },
+      {
+        "id": "liquidity_ok",
+        "label": "Liquidity OK",
+        "description": "Desk liquidity gate (necessary, not sufficient for tradable).",
+        "category": "market",
+        "kind": "registry",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": null
+      },
+      {
+        "id": "total_volume_usd",
+        "label": "Total volume USD",
+        "description": "Combined venue volume in USD for the match snapshot.",
+        "category": "market",
+        "kind": "registry",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": null
+      },
+      {
+        "id": "multi_venue",
+        "label": "Multi-venue",
+        "description": "Whether more than one venue is joined on the row.",
+        "category": "warehouse",
+        "kind": "registry",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": null
+      },
+      {
+        "id": "arb_hint",
+        "label": "Arb hint",
+        "description": "Directional arb signal (kalshi-cheap | poly-cheap | none | watch).",
+        "category": "model",
+        "kind": "registry",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": null
+      },
+      {
+        "id": "arb_actionable",
+        "label": "Arb actionable",
+        "description": "Hard arb gate (net edge > 0 on real venue-vs-venue).",
+        "category": "model",
+        "kind": "registry",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": null
+      },
+      {
+        "id": "rps_flag",
+        "label": "RPS flag",
+        "description": "Research process signal flag on the desk row.",
+        "category": "model",
+        "kind": "registry",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": null
+      },
+      {
+        "id": "graph_divergence",
+        "label": "Graph divergence",
+        "description": "Graph/model divergence indicator on the desk export.",
+        "category": "model",
+        "kind": "registry",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": null
+      },
+      {
+        "id": "research_flag",
+        "label": "Research flag",
+        "description": "Research gating reason (e.g. DATA_INCOMPLETE, thin-data).",
+        "category": "warehouse",
+        "kind": "registry",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": null
+      },
+      {
+        "id": "export_note",
+        "label": "Export note",
+        "description": "Per-row provenance string (e.g. mock pinny caveat).",
+        "category": "warehouse",
+        "kind": "registry",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": null
+      },
+      {
+        "id": "playerProfiles",
+        "label": "Player profiles",
+        "description": "Derived from event-store player_profiles (SSOT). Rebuild: bun run tennis:profiles:build.",
+        "category": "warehouse",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [
+          "profiles"
+        ],
+        "values": null
+      },
+      {
+        "id": "lastSeenAtMs",
+        "label": "Last seen",
+        "description": "Epoch millis of latest event start for this player. Capped ≤ now. Event-store ms.",
+        "category": "warehouse",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [
+          "last seen",
+          "lastSeenMs"
+        ],
+        "values": null
+      },
+      {
+        "id": "profilesSource",
+        "label": "Profiles source",
+        "description": "warehouse = rows from event-store; seed = unavailable / fixture path.",
+        "category": "warehouse",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": [
+          "warehouse",
+          "seed"
+        ]
+      },
+      {
+        "id": "coverage",
+        "label": "Coverage",
+        "description": "Data completeness for a tour/surface slice (events with books, links, scores).",
+        "category": "warehouse",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": null
+      },
+      {
+        "id": "surfaceEdge",
+        "label": "Surface edge",
+        "description": "Dampened percentage-point edge from each player's historical surface win rates vs the match surface.",
+        "category": "warehouse",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [
+          "surface edge"
+        ],
+        "values": null
+      },
+      {
+        "id": "ui.events.filter.reset",
+        "label": "Reset filters",
+        "description": "Clear all active Events facet selections and sort order.",
+        "category": "ui",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [
+          "clear",
+          "reset"
+        ],
+        "values": null
+      }
+    ],
+    "categories": [
+      {
+        "id": "market",
+        "label": "Market data"
+      },
+      {
+        "id": "model",
+        "label": "Model & calibration"
+      },
+      {
+        "id": "tournament",
+        "label": "Tournament metadata"
+      },
+      {
+        "id": "warehouse",
+        "label": "Warehouse & profiles"
+      },
+      {
+        "id": "trading",
+        "label": "Trading & orders"
+      },
+      {
+        "id": "ui",
+        "label": "UI & ops"
+      },
+      {
+        "id": "other",
+        "label": "Other"
+      }
+    ],
+    "codes": {
+      "DEP": "deposit — funds in via Kalshi web/bank rails; reconciled, never API-initiated",
+      "WDL": "withdrawal — funds out via Kalshi web/bank rails; reconciled, never API-initiated",
+      "TRF": "internal transfer between subaccounts",
+      "ORD": "order — working intent; status resting|pending|executed|canceled",
+      "FILL": "fill — executed quantity against an order; has is_taker + fee_cost",
+      "POS": "position — signed contracts per market (+yes / −no)",
+      "BAL": "balance — available-to-trade cents; portfolio_value is separate",
+      "FEE": "fee — taker or maker, cents (taker_fees / maker_fees / fee_cost)",
+      "SETL": "settlement — market resolution payout",
+      "BOOK": "orderbook snapshot — bids/asks in yes-cents, integer levels",
+      "TICK": "price tick from ingest (polymarket/market_data agent)",
+      "EVT": "canonical event (kalshi:EVENT-TICKER in event store)",
+      "MILE": "Kalshi milestone — groups related event tickers",
+      "RUN": "research run — one discovery+score sweep, id = UTC timestamp",
+      "PROG": "alpha program — alpha/*/program.json, status shadow|pilot|live",
+      "SHDW": "shadow signal — simulated decision, hash-chained in shadow-log.jsonl",
+      "CAL": "calibration run — calibration/artifacts/<ts>"
+    },
+    "units": {
+      "cents": "integer cents, 1–99 for prices; canonical money unit everywhere",
+      "dollarsFp": "fixed-point dollar string e.g. \"0.5600\" — wire only, parse via dollarsToCents",
+      "countFp": "fixed-point contract string e.g. \"10.00\" — fractional flagged, not orderable",
+      "atMs": "epoch milliseconds — canonical time unit (suffix AtMs)",
+      "unixSec": "unix seconds — wire only (updated_ts, ts); multiply by 1000 at boundary"
+    }
+  }
+}
