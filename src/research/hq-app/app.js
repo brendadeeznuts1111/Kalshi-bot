@@ -1,4 +1,9 @@
 import {
+  glossaryHash,
+  parseHqHashRoute,
+  scrollToHqHashTarget,
+} from "./hash-routes.ts";
+import {
   normalizeTennisFilterKey,
   passesMinimumSurfaceEdge,
   surfaceEdgePresentation,
@@ -25,6 +30,7 @@ let GLOSSARY = {
   units: {},
 };
 let TOOLTIPS = {};
+let ACTIVE_GLOSSARY_CONCEPT = null;
 
 function applyGlossaryPayload(payload) {
   if (!payload || typeof payload !== "object") return;
@@ -49,7 +55,7 @@ function applyGlossaryPayload(payload) {
     };
   }
   TOOLTIPS = GLOSSARY.tooltips;
-  renderGlossaryBody();
+  renderGlossaryBody(ACTIVE_GLOSSARY_CONCEPT || undefined);
 }
 
 fetch("/api/glossary")
@@ -212,7 +218,7 @@ function renderOverviewCharts(hq) {
   if (!Array.isArray(series) || !series.length) {
     // Demo-aligned sample so layout is always verifiable in HQ
     return (
-      '<div class="cols" style="margin-top:0.9rem">' +
+      '<div class="cols" id="volume-liquidity-panel" style="margin-top:0.9rem">' +
       barChartHtml(
         [
           { label: "ATP", value: 3_200_000, display: "3.2M" },
@@ -249,7 +255,7 @@ function renderOverviewCharts(hq) {
   if (!volRows.length) return "";
 
   return (
-    '<div style="margin-top:0.9rem">' +
+    '<div id="volume-liquidity-panel" style="margin-top:0.9rem">' +
     barChartHtml(volRows, {
       title: "Volume by series",
       subtitle: "24h volume across tennis board series",
@@ -753,7 +759,7 @@ async function renderEvents() {
   const pair = (list) => list.map((v) => [v, v]);
 
   el.innerHTML =
-    '<div class="panel"><h2>' + esc(glossLabel("ui.live_board.title", "Tennis board")) + tip("ui.live_board.title") + " " +
+    '<div class="panel" id="live-board"><h2>' + esc(glossLabel("ui.live_board.title", "Tennis board")) + tip("ui.live_board.title") + " " +
     badge("ok", __board.eventCount + " events · " + __board.marketCount + " markets") +
     ' <span class="muted" id="events-count" style="font-size:.8rem;font-weight:400"></span></h2>' +
     (metaAudit
@@ -952,7 +958,7 @@ async function refresh() {
   renderOverview(hq, ops);
   renderResearch(hq);
   renderTrading(hq);
-  renderEvents();
+  await renderEvents();
   renderMonitor(hq, ops);
   renderAlpha(hq);
   renderOps(ops);
@@ -1107,14 +1113,15 @@ function openGlossary(focusId) {
   const panel = $("#glossary-panel");
   const backdrop = $("#glossary-backdrop");
   if (!panel) return;
+  ACTIVE_GLOSSARY_CONCEPT = focusId || null;
   panel.hidden = false;
   if (backdrop) backdrop.hidden = false;
   renderGlossaryBody(focusId || undefined);
   if (focusId) {
-    const next = "#glossary:" + focusId;
+    const next = glossaryHash(focusId);
     if (location.hash !== next) history.replaceState(null, "", next);
-  } else if (!location.hash.startsWith("#glossary")) {
-    history.replaceState(null, "", "#glossary");
+  } else if (parseHqHashRoute(location.href)?.kind !== "glossary") {
+    history.replaceState(null, "", glossaryHash());
   }
   $("#glossary-search")?.focus();
 }
@@ -1122,26 +1129,29 @@ function openGlossary(focusId) {
 function closeGlossary() {
   const panel = $("#glossary-panel");
   const backdrop = $("#glossary-backdrop");
+  ACTIVE_GLOSSARY_CONCEPT = null;
   if (panel) panel.hidden = true;
   if (backdrop) backdrop.hidden = true;
-  if (location.hash.startsWith("#glossary")) {
+  if (parseHqHashRoute(location.href)?.kind === "glossary") {
     history.replaceState(null, "", location.pathname + location.search);
   }
 }
 
-function parseGlossaryHash() {
-  const h = location.hash || "";
-  if (h === "#glossary") return { open: true, id: null };
-  // ids may include dots (ui.events.filter.when, alert.poly_dropout)
-  const m = /^#glossary:([A-Za-z0-9_.-]+)$/.exec(h);
-  if (m) return { open: true, id: decodeURIComponent(m[1]) };
-  return { open: false, id: null };
+function applyHashRoute() {
+  const route = parseHqHashRoute(location.href);
+  if (route?.kind === "glossary") {
+    openGlossary(route.concept || undefined);
+    return true;
+  }
+  if ($("#glossary-panel") && !$("#glossary-panel").hidden) closeGlossary();
+  return scrollToHqHashTarget(route, document);
 }
 
 $("#glossary-open")?.addEventListener("click", () => openGlossary());
 $("#glossary-close")?.addEventListener("click", closeGlossary);
 $("#glossary-backdrop")?.addEventListener("click", closeGlossary);
-$("#glossary-search")?.addEventListener("input", () => renderGlossaryBody());
+$("#glossary-search")?.addEventListener("input", () =>
+  renderGlossaryBody(ACTIVE_GLOSSARY_CONCEPT || undefined));
 
 document.addEventListener("click", (ev) => {
   const t = ev.target;
@@ -1166,19 +1176,10 @@ if (location.hash.startsWith("#events")) {
   if (btn) btn.click();
 }
 
-// Deep link: #glossary or #glossary:mid
-{
-  const g = parseGlossaryHash();
-  if (g.open) openGlossary(g.id || undefined);
-}
-window.addEventListener("hashchange", () => {
-  const g = parseGlossaryHash();
-  if (g.open) openGlossary(g.id || undefined);
-  else if ($("#glossary-panel") && !$("#glossary-panel").hidden) closeGlossary();
-});
+window.addEventListener("hashchange", applyHashRoute);
 
 // Profiles column headers use glossary-backed tips
 // (tip already used on playerProfiles panel title)
 
-refresh();
-setInterval(refresh, 30_000);
+refresh().then(applyHashRoute);
+setInterval(() => refresh().then(applyHashRoute), 30_000);

@@ -10,7 +10,9 @@ Wire shapes verified against Kalshi API docs 2026-07-28.
 |---------|-----|
 | **Panel** | Header **Glossary (?)** — slide-over, search, grouped by category |
 | **Inline tips** | `tip("id")` → `?` with title + click opens panel at entry |
-| **Deeplink** | `#glossary` or `#glossary:avgKalshiVolumeFp` |
+| **Glossary deeplink** | `#glossary` or `#glossary:kpi.board_volume` |
+| **Surface alias** | `#live` → Events tab `live-board` |
+| **Component deeplink** | `#volume-liquidity-panel` → Overview chart mount |
 | **API** | `GET /api/glossary` → `{ schemaVersion: 4, concepts[], entries (=concepts), filterConceptIds[], pendingRegistryConcepts[], conceptIdsByKind, filterCatalog, … }` |
 | **Related** | Entry `seeAlso[]` → panel “related” chips (click opens target) |
 | **Status** | `active` (default) · `deprecated` (+ `deprecatedBy`) · `draft` |
@@ -20,6 +22,10 @@ Wire shapes verified against Kalshi API docs 2026-07-28.
 Categories: `market` · `model` · `tournament` · `warehouse` · `trading` · `ui` · `pipeline` · `other`.
 
 Add new terms only in `GLOSSARY_ENTRIES` (ids are stable tip keys).
+
+HQ fragment routing uses `URLPattern.hash`; patterns match the fragment without
+the leading `#`. A literal colon before a named group must be escaped:
+`new URLPattern({ hash: "glossary\\::concept" })`.
 
 ## Golden rules
 
