@@ -74,15 +74,25 @@ for (const key of Object.keys(COLORS) as ColorKey[]) {
   foregroundCache[key] = pickForeground(cache["{rgb}"][key]);
 }
 
-function pickForeground(rgb: RGB): ForegroundCss {
-  // WCAG relative luminance (sRGB), then pick black/white for on-color text.
+function srgbLuminance(rgb: RGB): number {
   const linear = (c: number) => {
     const s = c / 255;
     return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
   };
-  const lum =
-    0.2126 * linear(rgb.r) + 0.7152 * linear(rgb.g) + 0.0722 * linear(rgb.b);
-  return lum > 0.5 ? "#000000" : "#ffffff";
+  return 0.2126 * linear(rgb.r) + 0.7152 * linear(rgb.g) + 0.0722 * linear(rgb.b);
+}
+
+function contrastRatio(a: number, b: number): number {
+  const [L, d] = a > b ? [a, b] : [b, a];
+  return (L + 0.05) / (d + 0.05);
+}
+
+/** Prefer black/white by WCAG contrast (not a raw luminance midpoint). */
+function pickForeground(rgb: RGB): ForegroundCss {
+  const bg = srgbLuminance(rgb);
+  const vsBlack = contrastRatio(bg, 0);
+  const vsWhite = contrastRatio(bg, 1);
+  return vsBlack >= vsWhite ? "#000000" : "#ffffff";
 }
 
 export function cssColor(key: ColorKey): string {
@@ -128,12 +138,7 @@ export function resolveColor(key: ColorKey): ResolvedColor {
 
 /** Relative luminance per WCAG 2.1 (sRGB). 0 (black) to 1 (white). */
 export function luminance(key: ColorKey): number {
-  const { r, g, b } = rgbChannels(key);
-  const linear = (c: number) => {
-    const s = c / 255;
-    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
-  };
-  return 0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b);
+  return srgbLuminance(rgbChannels(key));
 }
 
 /** Contrast ratio per WCAG 2.1 (1–21). AA ≥ 4.5, AAA ≥ 7. */

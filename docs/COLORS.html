@@ -1,0 +1,57 @@
+<h1>Color Palette</h1>
+<blockquote>
+<p>Generated from <code>src/lib/color/</code> — Bun-native kernel SSOT
+Terminal swatches use <code>Bun.color(hex, &quot;ansi-16m&quot;)</code> for true-color output</p>
+</blockquote>
+<h2>Venue Colors</h2>
+<table>
+<thead>
+<tr><th>Name</th><th>Hex</th><th>Swatch</th><th>Lum.</th><th>Contrast (white)</th><th>Contrast (black)</th><th>On-color</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>kalshi</strong></td><td><code>#7DD3FC</code></td><td>[48;2;125;211;252m████████████████████[0m</td><td>0.58</td><td>1.7:1</td><td>12.6:1 ✅✅</td><td><code>#000000</code></td></tr>
+<tr><td><strong>polymarket</strong></td><td><code>#2E5CFF</code></td><td>[48;2;46;92;255m████████████████████[0m</td><td>0.15</td><td>5.1:1 ✅</td><td>4.1:1</td><td><code>#ffffff</code></td></tr>
+<tr><td><strong>pinnacle</strong></td><td><code>#1A73E8</code></td><td>[48;2;26;115;232m████████████████████[0m</td><td>0.18</td><td>4.5:1 ✅</td><td>4.7:1 ✅</td><td><code>#000000</code></td></tr>
+<tr><td><strong>betfair</strong></td><td><code>#F5B942</code></td><td>[48;2;245;185;66m████████████████████[0m</td><td>0.55</td><td>1.8:1</td><td>11.9:1 ✅✅</td><td><code>#000000</code></td></tr>
+<tr><td><strong>unknown</strong></td><td><code>#8B949E</code></td><td>[48;2;139;148;158m████████████████████[0m</td><td>0.29</td><td>3.1:1</td><td>6.8:1 ✅</td><td><code>#000000</code></td></tr>
+</tbody>
+</table>
+<h2>Domain Colors</h2>
+<table>
+<thead>
+<tr><th>Name</th><th>Hex</th><th>Swatch</th><th>Lum.</th><th>Contrast (white)</th><th>Contrast (black)</th><th>On-color</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>trading</strong></td><td><code>#E74C3C</code></td><td>[48;2;231;76;60m████████████████████[0m</td><td>0.22</td><td>3.8:1</td><td>5.5:1 ✅</td><td><code>#000000</code></td></tr>
+<tr><td><strong>middleware</strong></td><td><code>#F1C40F</code></td><td>[48;2;241;196;15m████████████████████[0m</td><td>0.58</td><td>1.7:1</td><td>12.6:1 ✅✅</td><td><code>#000000</code></td></tr>
+<tr><td><strong>tennis</strong></td><td><code>#27AE60</code></td><td>[48;2;39;174;96m████████████████████[0m</td><td>0.32</td><td>2.9:1</td><td>7.3:1 ✅✅</td><td><code>#000000</code></td></tr>
+<tr><td><strong>research</strong></td><td><code>#E67E22</code></td><td>[48;2;230;126;34m████████████████████[0m</td><td>0.32</td><td>2.8:1</td><td>7.4:1 ✅✅</td><td><code>#000000</code></td></tr>
+<tr><td><strong>env</strong></td><td><code>#9B59B6</code></td><td>[48;2;155;89;182m████████████████████[0m</td><td>0.17</td><td>4.7:1 ✅</td><td>4.5:1</td><td><code>#ffffff</code></td></tr>
+<tr><td><strong>misc</strong></td><td><code>#95A5A6</code></td><td>[48;2;149;165;166m████████████████████[0m</td><td>0.36</td><td>2.6:1</td><td>8.2:1 ✅✅</td><td><code>#000000</code></td></tr>
+</tbody>
+</table>
+<h2>Semver / <code>bun update -i</code></h2>
+<table>
+<thead>
+<tr><th>Name</th><th>Hex</th><th>Swatch</th><th>Lum.</th><th>Contrast (white)</th><th>Contrast (black)</th><th>On-color</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>semverMajor</strong></td><td><code>#EF4444</code></td><td>[48;2;239;68;68m████████████████████[0m</td><td>0.23</td><td>3.8:1</td><td>5.6:1 ✅</td><td><code>#000000</code></td></tr>
+<tr><td><strong>semverMinor</strong></td><td><code>#EAB308</code></td><td>[48;2;234;179;8m████████████████████[0m</td><td>0.50</td><td>1.9:1</td><td>11.0:1 ✅✅</td><td><code>#000000</code></td></tr>
+<tr><td><strong>semverPatch</strong></td><td><code>#22C55E</code></td><td>[48;2;34;197;94m████████████████████[0m</td><td>0.41</td><td>2.3:1</td><td>9.2:1 ✅✅</td><td><code>#000000</code></td></tr>
+<tr><td><strong>selected</strong></td><td><code>#A78BFA</code></td><td>[48;2;167;139;250m████████████████████[0m</td><td>0.34</td><td>2.7:1</td><td>7.7:1 ✅✅</td><td><code>#000000</code></td></tr>
+</tbody>
+</table>
+<ul>
+<li>✅ Meets WCAG AA for normal text (4.5:1) on white or black background.</li>
+<li>✅✅ Meets WCAG AAA (7:1).</li>
+<li><code>luminance</code> and <code>contrast</code> calculated per WCAG 2.1 sRGB.</li>
+<li>Sample contrast(trading, misc) = 1.5</li>
+</ul>
+<h2>Usage</h2>
+<pre><code class="language-typescript">import { cssColor, foregroundCss, paint } from &quot;../src/lib/color/index.ts&quot;;
+
+cssColor(&quot;trading&quot;)           // → &quot;#e74c3c&quot;
+foregroundCss(&quot;trading&quot;)      // → &quot;#ffffff&quot;
+paint(&quot;risk&quot;, &quot;trading&quot;)      // → ANSI-colored text
+</code></pre>

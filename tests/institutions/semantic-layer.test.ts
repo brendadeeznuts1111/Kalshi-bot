@@ -84,9 +84,9 @@ describe("semantic layer — glossary root, registry consumer", () => {
     expect(errs.some((e) => e.includes("wrong kind"))).toBe(true);
   });
 
-  test("API payload schemaVersion 4 — concepts is an array with id on each row", () => {
+  test("API payload schemaVersion 5 — concepts is an array with id on each row", () => {
     const p = buildGlossaryApiPayload();
-    expect(p.schemaVersion).toBe(4);
+    expect(p.schemaVersion).toBe(5);
     expect(Array.isArray(p.concepts)).toBe(true);
     expect(p.concepts.length).toBe(GLOSSARY_ENTRIES.length);
     expect(p.concepts.every((c) => typeof c.id === "string" && c.id.length > 0)).toBe(true);

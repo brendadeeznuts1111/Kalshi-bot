@@ -1,0 +1,15 @@
+[38;2;125;211;252m  kalshi      #7DD3FC   on=#000000  [0m
+[38;2;46;92;255m  polymarket  #2E5CFF   on=#ffffff  [0m
+[38;2;26;115;232m  pinnacle    #1A73E8   on=#000000  [0m
+[38;2;245;185;66m  betfair     #F5B942   on=#000000  [0m
+[38;2;139;148;158m  unknown     #8B949E   on=#000000  [0m
+[38;2;231;76;60m  trading     #E74C3C   on=#000000  [0m
+[38;2;241;196;15m  middleware  #F1C40F   on=#000000  [0m
+[38;2;39;174;96m  tennis      #27AE60   on=#000000  [0m
+[38;2;230;126;34m  research    #E67E22   on=#000000  [0m
+[38;2;155;89;182m  env         #9B59B6   on=#ffffff  [0m
+[38;2;149;165;166m  misc        #95A5A6   on=#000000  [0m
+[38;2;239;68;68m  semverMajor #EF4444   on=#000000  [0m
+[38;2;234;179;8m  semverMinor #EAB308   on=#000000  [0m
+[38;2;34;197;94m  semverPatch #22C55E   on=#000000  [0m
+[38;2;167;139;250m  selected    #A78BFA   on=#000000  [0m

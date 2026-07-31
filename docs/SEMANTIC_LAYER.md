@@ -186,7 +186,7 @@ const league = concepts.find((c) => c.id === "league");
 for (const id of FILTER_CATALOG_IDS) { … }
 ```
 
-Dump (`glossary:dump`) and `GET /api/glossary` share this shape (`schemaVersion: 4`).
+Dump (`glossary:dump`) and `GET /api/glossary` share this shape (`schemaVersion: 5`). Concepts may include a resolved `color: { key, css, foregroundCss }` from the Bun-native color kernel (`src/lib/color/`).
 
 ## Naming lanes (alignment audit)
 

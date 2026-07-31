@@ -6,25 +6,29 @@
  *   console.log(inspectDecision(decision, signalCtx));
  */
 import type { Decision, SignalContext } from "./alpha-signal-types.ts";
+import { ansiColor, type ColorKey } from "../lib/color/index.ts";
 
 // ── ANSI color helpers ──────────────────────────────────────────
 
+function c(key: ColorKey): string {
+  return ansiColor(key);
+}
+
 export const ANSI = {
-  reset: "\x1b[0m",
-  bold: "\x1b[1m",
-  dim: "\x1b[2m",
-  green: "\x1b[32m",
-  yellow: "\x1b[33m",
-  red: "\x1b[31m",
-  blue: "\x1b[34m",
-  magenta: "\x1b[35m",
-  cyan: "\x1b[36m",
-  brightGreen: "\x1b[92m",
-  brightRed: "\x1b[91m",
-  brightYellow: "\x1b[93m",
-  /** Venue approx — prefer Bun.color(hex,"ansi") via venue-badge.ts for brand hex. */
-  brightCyan: "\x1b[96m",
-  brightBlue: "\x1b[94m",
+  reset:   "\x1b[0m",
+  bold:    "\x1b[1m",
+  dim:     "\x1b[2m",
+  green:   c("tennis"),
+  yellow:  c("middleware"),
+  red:     c("trading"),
+  blue:    c("polymarket"),
+  magenta: c("env"),
+  cyan:    c("kalshi"),
+  brightGreen:  c("tennis"),
+  brightRed:    c("trading"),
+  brightYellow: c("middleware"),
+  brightCyan:   c("kalshi"),
+  brightBlue:   c("polymarket"),
 } as const;
 
 /** Color a value by edge threshold. */

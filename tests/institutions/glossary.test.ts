@@ -25,9 +25,9 @@ describe("glossary SSOT", () => {
     }
   });
 
-  test("API payload schemaVersion 4 — concepts[] primary", () => {
+  test("API payload schemaVersion 5 — concepts[] primary + resolved color", () => {
     const p = buildGlossaryApiPayload();
-    expect(p.schemaVersion).toBe(4);
+    expect(p.schemaVersion).toBe(5);
     expect(Array.isArray(p.concepts)).toBe(true);
     expect(p.concepts.length).toBe(GLOSSARY_ENTRIES.length);
     expect(p.entries).toBe(p.concepts); // same reference alias

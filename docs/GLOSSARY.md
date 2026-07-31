@@ -13,7 +13,9 @@ Wire shapes verified against Kalshi API docs 2026-07-28.
 | **Glossary deeplink** | `#glossary` or `#glossary:kpi.board_volume` |
 | **Surface alias** | `#live` → Events tab `live-board` |
 | **Component deeplink** | `#volume-liquidity-panel` → Overview chart mount |
-| **API** | `GET /api/glossary` → `{ schemaVersion: 4, concepts[], entries (=concepts), filterConceptIds[], pendingRegistryConcepts[], conceptIdsByKind, filterCatalog, … }` |
+| **API** | `GET /api/glossary` → `{ schemaVersion: 5, concepts[] (+ resolved color + optional url), entries (=concepts), filterConceptIds[], pendingRegistryConcepts[], conceptIdsByKind, filterCatalog, … }` |
+| **Color** | `color?: ColorKey` on entries → wire `{ key, css, foregroundCss }`; CSS vars via `bun run colors:artifacts` → `public/colors.css` / HQ `color-vars.css` |
+| **URLs** | `bun run glossary:urls` — HEAD/GET check of `OFFICIAL_URLS` + entry `url` fields |
 | **Related** | Entry `seeAlso[]` → panel “related” chips (click opens target) |
 | **Status** | `active` (default) · `deprecated` (+ `deprecatedBy`) · `draft` |
 | **Unit** | Entry `unit` ∈ `UNITS` — cents · usd · pp · pct · count · … (chart/export) |

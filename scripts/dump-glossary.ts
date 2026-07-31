@@ -53,7 +53,7 @@ const concepts: DumpConceptRecord[] = listConcepts().map((c) => {
 });
 
 const dump = {
-  schemaVersion: 4,
+  schemaVersion: 5,
   generatedAt: new Date().toISOString(),
   integrityOk: integrityErrors.length === 0,
   integrityErrors,

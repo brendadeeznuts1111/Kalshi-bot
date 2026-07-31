@@ -155,6 +155,8 @@ export type GlossaryEntry = {
   color?: ColorKey;
   /** Output format for ad-hoc glossaryColor() ("hex", "ansi", "css", …) */
   colorFormat?: string;
+  /** Optional canonical docs / product URL (validated by glossary:urls) */
+  url?: string;
   /** Tone / voice category for consistent UX writing */
   tone?: "metric" | "alert" | "registry" | "concept";
 };
@@ -990,6 +992,8 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     category: "ui",
     seeAlso: ["alert.delivery"],
     status: "active",
+    url: "https://bun.com/docs/runtime/color",
+    color: "env",
     // design-system chrome — not a desk CSV column
     tone: "registry",
   },
@@ -1202,6 +1206,8 @@ export type GlossaryConceptRecord = {
    * foregroundCss — never call Bun.color in the HQ bundle.
    */
   color: GlossaryWireColor | null;
+  /** Optional docs / product URL when the entry declares one */
+  url: string | null;
 };
 
 /** Ordered concept array — SSOT list for agents, API, dump. */
@@ -1221,6 +1227,7 @@ export function listConcepts(): GlossaryConceptRecord[] {
     deprecatedBy: e.deprecatedBy ?? null,
     unit: e.unit ?? null,
     color: resolveGlossaryWireColor(e),
+    url: e.url ?? null,
   }));
 }
 

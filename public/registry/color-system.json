@@ -1,0 +1,239 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-07-31T07:39:55.474Z",
+  "keys": [
+    "kalshi",
+    "polymarket",
+    "pinnacle",
+    "betfair",
+    "unknown",
+    "trading",
+    "middleware",
+    "tennis",
+    "research",
+    "env",
+    "misc",
+    "semverMajor",
+    "semverMinor",
+    "semverPatch",
+    "selected"
+  ],
+  "venueKeys": [
+    "kalshi",
+    "polymarket",
+    "pinnacle",
+    "betfair",
+    "unknown"
+  ],
+  "domainKeys": [
+    "trading",
+    "middleware",
+    "tennis",
+    "research",
+    "env",
+    "misc"
+  ],
+  "semverKeys": [
+    "semverMajor",
+    "semverMinor",
+    "semverPatch",
+    "selected"
+  ],
+  "colors": {
+    "kalshi": {
+      "hex": "#7DD3FC",
+      "css": "#7dd3fc",
+      "number": 8246268,
+      "rgb": {
+        "r": 125,
+        "g": 211,
+        "b": 252
+      },
+      "foregroundCss": "#000000",
+      "luminance": 0.5798,
+      "isDark": false
+    },
+    "polymarket": {
+      "hex": "#2E5CFF",
+      "css": "#2e5cff",
+      "number": 3038463,
+      "rgb": {
+        "r": 46,
+        "g": 92,
+        "b": 255
+      },
+      "foregroundCss": "#ffffff",
+      "luminance": 0.1546,
+      "isDark": true
+    },
+    "pinnacle": {
+      "hex": "#1A73E8",
+      "css": "#1a73e8",
+      "number": 1733608,
+      "rgb": {
+        "r": 26,
+        "g": 115,
+        "b": 232
+      },
+      "foregroundCss": "#000000",
+      "luminance": 0.1831,
+      "isDark": true
+    },
+    "betfair": {
+      "hex": "#F5B942",
+      "css": "#f5b942",
+      "number": 16103746,
+      "rgb": {
+        "r": 245,
+        "g": 185,
+        "b": 66
+      },
+      "foregroundCss": "#000000",
+      "luminance": 0.545,
+      "isDark": false
+    },
+    "unknown": {
+      "hex": "#8B949E",
+      "css": "#8b949e",
+      "number": 9147550,
+      "rgb": {
+        "r": 139,
+        "g": 148,
+        "b": 158
+      },
+      "foregroundCss": "#000000",
+      "luminance": 0.2914,
+      "isDark": true
+    },
+    "trading": {
+      "hex": "#E74C3C",
+      "css": "#e74c3c",
+      "number": 15158332,
+      "rgb": {
+        "r": 231,
+        "g": 76,
+        "b": 60
+      },
+      "foregroundCss": "#000000",
+      "luminance": 0.2248,
+      "isDark": true
+    },
+    "middleware": {
+      "hex": "#F1C40F",
+      "css": "#f1c40f",
+      "number": 15844367,
+      "rgb": {
+        "r": 241,
+        "g": 196,
+        "b": 15
+      },
+      "foregroundCss": "#000000",
+      "luminance": 0.5822,
+      "isDark": false
+    },
+    "tennis": {
+      "hex": "#27AE60",
+      "css": "#27ae60",
+      "number": 2600544,
+      "rgb": {
+        "r": 39,
+        "g": 174,
+        "b": 96
+      },
+      "foregroundCss": "#000000",
+      "luminance": 0.3155,
+      "isDark": true
+    },
+    "research": {
+      "hex": "#E67E22",
+      "css": "#e67e22",
+      "number": 15105570,
+      "rgb": {
+        "r": 230,
+        "g": 126,
+        "b": 34
+      },
+      "foregroundCss": "#000000",
+      "luminance": 0.3186,
+      "isDark": true
+    },
+    "env": {
+      "hex": "#9B59B6",
+      "css": "#9b59b6",
+      "number": 10181046,
+      "rgb": {
+        "r": 155,
+        "g": 89,
+        "b": 182
+      },
+      "foregroundCss": "#ffffff",
+      "luminance": 0.1749,
+      "isDark": true
+    },
+    "misc": {
+      "hex": "#95A5A6",
+      "css": "#95a5a6",
+      "number": 9807270,
+      "rgb": {
+        "r": 149,
+        "g": 165,
+        "b": 166
+      },
+      "foregroundCss": "#000000",
+      "luminance": 0.3605,
+      "isDark": true
+    },
+    "semverMajor": {
+      "hex": "#EF4444",
+      "css": "#ef4444",
+      "number": 15680580,
+      "rgb": {
+        "r": 239,
+        "g": 68,
+        "b": 68
+      },
+      "foregroundCss": "#000000",
+      "luminance": 0.229,
+      "isDark": true
+    },
+    "semverMinor": {
+      "hex": "#EAB308",
+      "css": "#eab308",
+      "number": 15381256,
+      "rgb": {
+        "r": 234,
+        "g": 179,
+        "b": 8
+      },
+      "foregroundCss": "#000000",
+      "luminance": 0.4975,
+      "isDark": true
+    },
+    "semverPatch": {
+      "hex": "#22C55E",
+      "css": "#22c55e",
+      "number": 2278750,
+      "rgb": {
+        "r": 34,
+        "g": 197,
+        "b": 94
+      },
+      "foregroundCss": "#000000",
+      "luminance": 0.4108,
+      "isDark": true
+    },
+    "selected": {
+      "hex": "#A78BFA",
+      "css": "#a78bfa",
+      "number": 10980346,
+      "rgb": {
+        "r": 167,
+        "g": 139,
+        "b": 250
+      },
+      "foregroundCss": "#000000",
+      "luminance": 0.3358,
+      "isDark": true
+    }
+  }
+}

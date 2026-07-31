@@ -39,3 +39,4 @@ export {
   semverChangeColor,
   type SemverChange,
 } from "./terminal.ts";
+export { COLOR_CSS, type BrowserColorKey } from "./browser-constants.ts";

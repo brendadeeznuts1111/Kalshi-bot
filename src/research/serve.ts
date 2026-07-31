@@ -6,7 +6,7 @@ import {
   loadLatestProductionRunAnyDimension,
   loadRunFromDb,
 } from "./cache.ts";
-import { REPORT_DIR, CACHE_DIR, joinPath } from "./paths.ts";
+import { REPORT_DIR, CACHE_DIR, ROOT, joinPath } from "./paths.ts";
 import { fullNameFromRouteParams, ROUTES, SERVE_PATTERNS } from "./patterns.ts";
 import { pageLayout, renderIndex, renderOps, renderRepoPage, type KalshiAuthState } from "./views.ts";
 import { renderArchitecture } from "./architecture-view.ts";
@@ -36,6 +36,7 @@ import {
 } from "./ops-json.ts";
 import { buildHqPayload, resetTradingCache } from "./hq-data.ts";
 import { renderHq } from "./hq-view.ts";
+import hqApp from "./hq-app/index.html";
 import { fetchTennisBoard } from "./tennis-events.ts";
 import { buildGlossaryApiPayload } from "../institutions/glossary.ts";
 import { readPlayerProfiles } from "./player-profiles.ts";
@@ -701,11 +702,40 @@ async function handleKalshiRotateKey(req: Request): Promise<Response> {
   return json({ ...result, keyId: `${keyId.slice(0, 8)}…` });
 }
 
+
+async function handleKpi(): Promise<Record<string, number>> {
+  try {
+    const store = openEventStore({ dbPath: DEFAULT_EVENT_STORE_DB });
+    const snapshot = (sql: string) => (store.query(sql).get() as Record<string, number>)?.n ?? 0;
+    return {
+      open_matches: snapshot("SELECT COUNT(*) AS n FROM events WHERE corpus='trading'"),
+      board_volume: snapshot("SELECT COALESCE(SUM(CAST(volume_fp AS REAL)),0) AS n FROM markets WHERE volume_fp IS NOT NULL"),
+      book_watches: snapshot("SELECT COUNT(*) AS n FROM watch_set WHERE active=1"),
+      player_profiles: snapshot("SELECT COUNT(*) AS n FROM player_profiles"),
+      rps_warnings: snapshot("SELECT COUNT(*) AS n FROM events WHERE rps_flag=1"),
+      graph_divergence: snapshot("SELECT COUNT(*) AS n FROM events WHERE graph_divergence=1"),
+      price_archive: snapshot("SELECT COUNT(*) AS n FROM price_snapshots"),
+      server_errors: snapshot("SELECT total_errors AS n FROM logger_health WHERE id=1"),
+      tight_markets: snapshot("SELECT COUNT(*) AS n FROM events WHERE liquidity_ok=1"),
+      store_link_rate: 0,
+      live_scores: 0,
+      elite_conviction: 0,
+      archive_elo_fair: 0,
+      top_edge: 0,
+      median_spread: 0,
+      scanner_alerts: 0,
+    };
+  } catch {
+    return {};
+  }
+}
+
 export function createResearchServer(options: ServeOptions = {}) {
   const port = options.port ?? Number(Bun.env.PORT ?? 3456);
   const serveOptions = {
     port,
     routes: {
+      "/hq": hqApp,
       [ROUTES.home]: handleHome,
       [ROUTES.runsList]: handleRunsList,
       [ROUTES.runApi]: handleRunApi,
@@ -741,16 +771,37 @@ export function createResearchServer(options: ServeOptions = {}) {
         return json(result, result.state === "not_found" ? 404 : 200);
       }
 
-      // HQ headquarters dashboard (research + alpha + trading)
-      if (url.pathname === "/hq") {
-        return html(renderHq());
-      }
+      // HQ headquarters dashboard served via routes["/hq"] = hqApp (HTML import)
 
       // HQ aggregate data feed (JSON)
       
       // Glossary — structured entries + flat tooltips for HQ panel/tips
       if (url.pathname === "/api/glossary") {
         return json(buildGlossaryApiPayload());
+      }
+
+      if (url.pathname === "/api/kpi") {
+        return json(await handleKpi());
+      }
+
+      if (url.pathname === "/colors.css") {
+        const file = Bun.file(joinPath(ROOT, "public/colors.css"));
+        if (!(await file.exists())) {
+          return new Response("colors.css missing — run bun run colors:artifacts", { status: 404 });
+        }
+        return new Response(file, {
+          headers: { "content-type": "text/css; charset=utf-8", "cache-control": "no-cache" },
+        });
+      }
+
+      if (url.pathname === "/registry/color-system.json") {
+        const file = Bun.file(joinPath(ROOT, "public/registry/color-system.json"));
+        if (!(await file.exists())) {
+          return new Response("color-system.json missing — run bun run colors:artifacts", { status: 404 });
+        }
+        return new Response(file, {
+          headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-cache" },
+        });
       }
 
 if (url.pathname === "/api/hq") {

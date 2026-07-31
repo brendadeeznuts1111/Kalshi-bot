@@ -4,6 +4,7 @@
  * @see docs/SEMANTIC_LAYER.md
  */
 import type { ColumnRegistry } from "./column-registry.ts";
+import { isColorKey } from "../lib/color/index.ts";
 import {
   GLOSSARY_STATUSES,
   UNITS,
@@ -74,6 +75,12 @@ export function validateGlossaryIntegrity(
     if (entry.unit != null && !(entry.unit in UNITS)) {
       errs.push(
         `Glossary "${entry.id}" has unknown unit "${entry.unit}" (want keyof UNITS)`,
+      );
+    }
+
+    if (entry.color != null && !isColorKey(entry.color)) {
+      errs.push(
+        `Glossary "${entry.id}" has unknown color key "${entry.color}" (want ColorKey from src/lib/color/palette.ts)`,
       );
     }
 

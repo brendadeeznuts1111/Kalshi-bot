@@ -31,14 +31,21 @@ let GLOSSARY = {
 };
 let TOOLTIPS = {};
 let ACTIVE_GLOSSARY_CONCEPT = null;
+/** @type {Record<string, number>} */
+let KPI_VALUES = {};
 
 function applyGlossaryPayload(payload) {
   if (!payload || typeof payload !== "object") return;
   // Back-compat: old API returned a flat tooltips map
   if (payload.tooltips) {
+    const concepts = Array.isArray(payload.concepts)
+      ? payload.concepts
+      : Array.isArray(payload.entries)
+        ? payload.entries
+        : [];
     GLOSSARY = {
       tooltips: payload.tooltips || {},
-      entries: Array.isArray(payload.entries) ? payload.entries : [],
+      entries: concepts,
       categories: Array.isArray(payload.categories) ? payload.categories : [],
       filterCatalog: payload.filterCatalog && typeof payload.filterCatalog === "object"
         ? payload.filterCatalog
@@ -56,11 +63,34 @@ function applyGlossaryPayload(payload) {
   }
   TOOLTIPS = GLOSSARY.tooltips;
   renderGlossaryBody(ACTIVE_GLOSSARY_CONCEPT || undefined);
+  const kpiStrip = $("#kpi-glossary-strip");
+  if (kpiStrip) renderGlossaryKpiStrip(kpiStrip);
+}
+
+/** Resolve glossary concept color → CSS var or absolute css from wire. */
+function conceptColorStyle(entry) {
+  const key = entry?.color?.key;
+  if (!key) return "";
+  const css = entry?.color?.css;
+  const fg = entry?.color?.foregroundCss;
+  return (
+    "background:var(--color-" + key + "," + (css || "transparent") + ");" +
+    "color:var(--color-" + key + "-on," + (fg || "#fff") + ")"
+  );
 }
 
 fetch("/api/glossary")
   .then((r) => r.json())
   .then(applyGlossaryPayload)
+  .catch(() => {});
+
+fetch("/api/kpi")
+  .then((r) => r.json())
+  .then((payload) => {
+    if (payload && typeof payload === "object") KPI_VALUES = payload;
+    const strip = $("#kpi-glossary-strip");
+    if (strip) renderGlossaryKpiStrip(strip);
+  })
   .catch(() => {});
 
 /** Inline ? hint — title tooltip + click opens glossary panel at entry. */
@@ -139,16 +169,62 @@ function barChartHtml(data, { title, subtitle = "" } = {}) {
  *   2. hero value (+ optional muted unit)
  *   3. secondary stats, one row each (label left, mono value right)
  * footer: mono caption line (run id, timestamp, …)
+ * glossaryId: optional concept id → data-color-key accent + tip
  */
-const kpiCard = (label, { badges = "", value = "—", unit = "", stats = [], footer = "" } = {}) =>
-  '<div class="card kpi"><h3>' + esc(label) + (badges ? " " + badges : "") + "</h3>" +
-  '<div class="kpi-value">' + value + (unit ? '<span class="unit">' + esc(unit) + "</span>" : "") + "</div>" +
-  (stats.length
-    ? '<div class="kpi-stats">' + stats.map(([k, v]) =>
-        '<div class="kpi-stat"><span>' + esc(k) + '</span><span class="mono">' + v + "</span></div>").join("") + "</div>"
-    : "") +
-  (footer ? '<div class="kpi-foot">' + footer + "</div>" : "") +
-  "</div>";
+const kpiCard = (label, { badges = "", value = "—", unit = "", stats = [], footer = "", glossaryId = "" } = {}) => {
+  const entry = glossaryId
+    ? (GLOSSARY.entries || []).find((e) => e.id === glossaryId)
+    : null;
+  const colorKey = entry?.color?.key || "";
+  const accent = colorKey
+    ? '<span class="kpi-swatch" data-color-key="' + esc(colorKey) + '" style="' +
+      conceptColorStyle(entry) + '"></span>'
+    : "";
+  const tipHtml = glossaryId ? tip(glossaryId) : "";
+  return (
+    '<div class="card kpi"' +
+    (colorKey ? ' data-color-key="' + esc(colorKey) + '"' : "") +
+    (glossaryId ? ' data-glossary-id="' + esc(glossaryId) + '"' : "") +
+    ">" +
+    "<h3>" + accent + esc(label) + tipHtml + (badges ? " " + badges : "") + "</h3>" +
+    '<div class="kpi-value">' + value + (unit ? '<span class="unit">' + esc(unit) + "</span>" : "") + "</div>" +
+    (stats.length
+      ? '<div class="kpi-stats">' + stats.map(([k, v]) =>
+          '<div class="kpi-stat"><span>' + esc(k) + '</span><span class="mono">' + v + "</span></div>").join("") + "</div>"
+      : "") +
+    (footer ? '<div class="kpi-foot">' + footer + "</div>" : "") +
+    "</div>"
+  );
+};
+
+/** Glossary-governed KPI strip — values from /api/kpi, colors from concept wire. */
+function renderGlossaryKpiStrip(target) {
+  if (!target) return;
+  const concepts = (GLOSSARY.entries || []).filter(
+    (e) => e.id?.startsWith("kpi.") && e.status !== "deprecated",
+  );
+  if (!concepts.length) {
+    target.innerHTML = "";
+    return;
+  }
+  target.innerHTML =
+    '<div class="grid kpi-glossary-grid">' +
+    concepts.map((e) => {
+      const metricKey = e.id.replace(/^kpi\./, "");
+      const raw = KPI_VALUES[metricKey];
+      const display =
+        raw == null
+          ? '<span class="muted">—</span>'
+          : typeof raw === "number"
+            ? raw.toLocaleString()
+            : esc(raw);
+      return kpiCard(e.label, {
+        glossaryId: e.id,
+        value: display,
+      });
+    }).join("") +
+    "</div>";
+}
 
 function authBadge(a) {
   if (!a) return badge("dim", "auth ?");
@@ -163,6 +239,7 @@ function renderOverview(hq, ops) {
   const tradingBadge = t.state === "ok"
     ? badge("ok", "connected") : badge("warn", t.state === "unavailable" ? "unavailable" : t.state);
   $("#tab-overview").innerHTML =
+    '<div id="kpi-glossary-strip" class="kpi-glossary-strip"></div>' +
     '<div class="grid">' +
     (r
       ? kpiCard("Research — latest run", {
@@ -209,6 +286,7 @@ function renderOverview(hq, ops) {
       : kpiCard("Event store", { value: '<span class="muted">—</span>', footer: "event store absent" })) +
     "</div>" +
     renderOverviewCharts(hq);
+  renderGlossaryKpiStrip($("#kpi-glossary-strip"));
 }
 
 /** Volume / mid distribution panels when tennis board data is present. */
@@ -1063,6 +1141,21 @@ function renderGlossaryBody(highlightId) {
           );
         })
         .join("");
+      const colorKey = e.color?.key || "";
+      const swatch = colorKey
+        ? '<span class="g-swatch" data-color-key="' +
+          esc(colorKey) +
+          '" style="' +
+          conceptColorStyle(e) +
+          '" title="' +
+          esc(colorKey) +
+          '"></span>'
+        : "";
+      const urlChip = e.url
+        ? '<a class="g-url" href="' +
+          esc(e.url) +
+          '" target="_blank" rel="noopener noreferrer">docs</a>'
+        : "";
       html +=
         '<div class="glossary-entry' +
         hi +
@@ -1072,14 +1165,18 @@ function renderGlossaryBody(highlightId) {
         esc(e.id) +
         '" data-id="' +
         esc(e.id) +
-        '">' +
+        '"' +
+        (colorKey ? ' data-color-key="' + esc(colorKey) + '"' : "") +
+        ">" +
         "<h3>" +
+        swatch +
         esc(e.label) +
         ' <span class="gid">' +
         esc(e.id) +
         "</span>" +
         statusBadge +
         unitChip +
+        urlChip +
         "</h3>" +
         "<p>" +
         esc(e.description) +

@@ -7,7 +7,7 @@
  * @see https://bun.com/docs/runtime/color
  */
 
-import { ANSI } from './terminal-utils.ts';
+import { paint, type ColorKey } from '../lib/color/index.ts';
 
 export type MarketVenue =
   | 'kalshi'
@@ -18,13 +18,13 @@ export type MarketVenue =
 
 const META: Record<
   MarketVenue,
-  { label: string; short: string; /** brand hex for Bun.color */ hex: string }
+  { label: string; short: string; /** ColorKey — paint() via color kernel */ key: ColorKey }
 > = {
-  kalshi: { label: 'Kalshi', short: 'KX', hex: '#7DD3FC' },
-  polymarket: { label: 'Poly', short: 'PM', hex: '#2E5CFF' },
-  pinnacle: { label: 'Pinnacle', short: 'PN', hex: '#1A73E8' },
-  betfair: { label: 'Betfair', short: 'BF', hex: '#F5B942' },
-  unknown: { label: 'Unknown', short: '??', hex: '#8b949e' },
+  kalshi: { label: 'Kalshi', short: 'KX', key: 'kalshi' },
+  polymarket: { label: 'Poly', short: 'PM', key: 'polymarket' },
+  pinnacle: { label: 'Pinnacle', short: 'PN', key: 'pinnacle' },
+  betfair: { label: 'Betfair', short: 'BF', key: 'betfair' },
+  unknown: { label: 'Unknown', short: '??', key: 'unknown' },
 };
 
 const ALIASES: Record<string, MarketVenue> = {
@@ -46,11 +46,6 @@ export function parseMarketVenue(raw: unknown): MarketVenue {
   return ALIASES[key] ?? 'unknown';
 }
 
-function paint(text: string, hex: string): string {
-  const open = Bun.color(hex, 'ansi') || '';
-  return open ? `${open}${text}${ANSI.reset}` : text;
-}
-
 /** @example fmtVenueBadge('polymarket', false) → "● PM" */
 export function fmtVenueBadge(
   venue: MarketVenue | string,
@@ -59,7 +54,7 @@ export function fmtVenueBadge(
   const id = typeof venue === 'string' ? parseMarketVenue(venue) : venue;
   const v = META[id] ?? META.unknown;
   const label = showLabel ? v.label : v.short;
-  return `${paint('●', v.hex)} ${paint(label, v.hex)}`;
+  return `${paint('●', v.key)} ${paint(label, v.key)}`;
 }
 
 export function fmtVenueLegend(): string {

@@ -41,6 +41,19 @@
 .kpi-stat > .mono { color: var(--fg); font-size: 0.8rem; text-align: right; }
 .kpi-foot { margin-top: 0.55rem; font-size: 0.72rem; font-family: var(--mono);
   color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kpi-swatch, .g-swatch {
+  display: inline-block; width: 0.65rem; height: 0.65rem; border-radius: 999px;
+  flex: 0 0 auto; border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+  vertical-align: middle;
+}
+.kpi-glossary-strip { margin-bottom: 0.9rem; }
+.kpi-glossary-grid { margin-bottom: 0; }
+.g-url {
+  font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  padding: 0.1rem 0.35rem; border-radius: 999px; border: 1px solid var(--line);
+  color: var(--acc); text-decoration: none; background: var(--bg);
+}
+.g-url:hover { border-color: var(--acc); }
 .panel { background: #12161f; border: 1px solid #232a3a;
   border-radius: 8px; padding: 1rem; margin-bottom: 0.9rem; }
 .panel h2 { margin: 0 0 0.75rem; font-size: 0.95rem; }
