@@ -157,27 +157,29 @@ declare module "bun" {
     /** Regulatory database path */
     REGULATORY_DATABASE_PATH?: string;
 
-    // ── Bun runtime (built-in, listed for awareness) ──
-    // @see https://bun.com/docs/runtime/environment-variables#configuring-bun
+    /**
+     * Bun runtime knobs — Configuring Bun table.
+     * @see https://bun.com/docs/runtime/environment-variables#configuring-bun
+     */
     /** Disable TLS cert validation (testing only) */
     NODE_TLS_REJECT_UNAUTHORIZED?: string;
-    /** Log fetch calls as curl commands (`curl` or `1`) */
+    /** Log fetch as curl (`curl`) or headers-only (`1`) */
     BUN_CONFIG_VERBOSE_FETCH?: string;
-    /** Transpiler cache directory (`0` or `""` disables) */
+    /** Transpiler cache dir (`0` / `""` disables; Docker images disable by default) */
     BUN_RUNTIME_TRANSPILER_CACHE_PATH?: string;
-    /** Max concurrent HTTP requests (default 256) */
+    /** Max concurrent HTTP (fetch + bun install); default 256 */
     BUN_CONFIG_MAX_HTTP_REQUESTS?: string;
-    /** Don't clear terminal on --watch reload */
+    /** bun --watch: do not clear console on reload */
     BUN_CONFIG_NO_CLEAR_TERMINAL_ON_RELOAD?: string;
-    /** Intermediate assets dir during bundling */
+    /** Intermediate assets during bundling */
     TMPDIR?: string;
-    /** Disable ANSI color output */
+    /** Disable ANSI (`NO_COLOR=1`) — also dims Bun.color("…","ansi") */
     NO_COLOR?: string;
-    /** Force ANSI color on */
+    /** Force ANSI even if NO_COLOR set */
     FORCE_COLOR?: string;
-    /** Prepends CLI args to every bun invocation */
+    /** Prepend CLI args to every bun run (e.g. `--hot`) */
     BUN_OPTIONS?: string;
-    /** Disable crash report uploads */
+    /** Disable crash report uploads + telemetry */
     DO_NOT_TRACK?: string;
   }
 }

@@ -10,7 +10,7 @@ Deep dive: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns)
 
 ## Environment variables
 
-[@see Bun docs](https://bun.com/docs/runtime/environment-variables) · index: [llms.txt](https://bun.com/docs/llms.txt)
+[@see Bun docs](https://bun.com/docs/runtime/environment-variables) · [Configuring Bun](https://bun.com/docs/runtime/environment-variables#configuring-bun) · index: [llms.txt](https://bun.com/docs/llms.txt)
 
 | Concern | Practice in this repo |
 |---------|------------------------|
@@ -25,7 +25,25 @@ Deep dive: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns)
 | Config overrides | `KALSHI__SECTION__KEY=…` → TOML via [`loadConfig`](../src/lib/config.ts) |
 | Secrets | Proton Pass inject → `.env` (gitignored); see [`PROTONPASS.md`](PROTONPASS.md) |
 
+**Configuring Bun** knobs typed on `Env`: `BUN_OPTIONS`, `BUN_CONFIG_VERBOSE_FETCH`, `BUN_RUNTIME_TRANSPILER_CACHE_PATH`, `BUN_CONFIG_MAX_HTTP_REQUESTS`, `BUN_CONFIG_NO_CLEAR_TERMINAL_ON_RELOAD`, `NO_COLOR` / `FORCE_COLOR`, `TMPDIR`, `DO_NOT_TRACK`, `NODE_TLS_REJECT_UNAUTHORIZED`.
+
 Template: [`.env.example`](../.env.example). Smoke: `bun test tests/lib/bun-env.test.ts`.
+
+## Color · dep-update visuals · social HTML
+
+| Doc | What | Repo |
+|-----|------|------|
+| [runtime/color](https://bun.com/docs/runtime/color) | `Bun.color(input, format)` — css/ansi/hex/`{rgb}`/… | [`src/lib/color/`](../src/lib/color/) · facade [`design-colors.ts`](../src/lib/design-colors.ts) |
+| [update § visual indicators](https://bun.com/docs/pm/cli/update#visual-indicators) | red major / yellow minor / green patch · □/■ selection | `COLORS.semverMajor|Minor|Patch` + `paintSemverChange()` |
+| [HTMLRewriter social meta](https://bun.com/docs/guides/html-rewriter/extract-social-meta#extract-social-share-images-and-open-graph-tags) | OG + Twitter + title/description fallbacks | Factory monorepo: [`lib/docs/extract-metadata.ts`](../../lib/docs/extract-metadata.ts) · journey `tests/journey/blog-extraction.test.ts` |
+| Operator CLI | interactive dep review | `bun update -i` · monorepo: `bun update -i -r` |
+
+```ts
+import { paintSemverChange, cssColor, ansi16mColor } from "../src/lib/color/index.ts";
+console.log(paintSemverChange("major", "react 17 → 18")); // red
+console.log(ansi16mColor("tennis"));                     // true-color open seq
+console.log(cssColor("kalshi"));                         // "#7dd3fc" (cached)
+```
 
 ## `bunx` — zero-install CLI tools
 
@@ -154,6 +172,11 @@ Deep dive: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns)
 | `Bun.file` | https://bun.com/docs/runtime/file-io#reading-files-bun-file |
 | `Bun.write` | https://bun.com/docs/runtime/file-io#writing-files-bun-write |
 | `Bun.env` / `.env` load | https://bun.com/docs/runtime/environment-variables |
+| Configuring Bun (`BUN_*`, `NO_COLOR`, …) | https://bun.com/docs/runtime/environment-variables#configuring-bun |
+| `Bun.color` | https://bun.com/docs/runtime/color |
+| `bun update` interactive visuals | https://bun.com/docs/pm/cli/update#visual-indicators |
+| HTMLRewriter social / OG meta | https://bun.com/docs/guides/html-rewriter/extract-social-meta |
+| `HTMLRewriter` | https://bun.com/docs/runtime/html-rewriter |
 | `Bun.hash` | https://bun.com/docs/runtime/hashing#bun-hash |
 | `Bun.deepEquals` | https://bun.com/docs/runtime/utils#bun-deepequals |
 | `Bun.inspect` | https://bun.com/docs/runtime/utils#bun-inspect |
