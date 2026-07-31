@@ -37,12 +37,14 @@ Template: [`.env.example`](../.env.example). Smoke: `bun test tests/lib/bun-env.
 | [update § visual indicators](https://bun.com/docs/pm/cli/update#visual-indicators) | red major / yellow minor / green patch · □/■ selection | `COLORS.semverMajor|Minor|Patch` + `paintSemverChange()` |
 | [HTMLRewriter social meta](https://bun.com/docs/guides/html-rewriter/extract-social-meta#extract-social-share-images-and-open-graph-tags) | OG + Twitter + title/description fallbacks | Factory monorepo: [`lib/docs/extract-metadata.ts`](../../lib/docs/extract-metadata.ts) · journey `tests/journey/blog-extraction.test.ts` |
 | Operator CLI | interactive dep review | `bun update -i` · monorepo: `bun update -i -r` |
+| Colorized outdated | `bun outdated` + semver paint | `bun run deps:outdated` · `deps:outdated:latest` |
 
 ```ts
 import { paintSemverChange, cssColor, ansi16mColor } from "../src/lib/color/index.ts";
 console.log(paintSemverChange("major", "react 17 → 18")); // red
 console.log(ansi16mColor("tennis"));                     // true-color open seq
 console.log(cssColor("kalshi"));                         // "#7dd3fc" (cached)
+// CLI: bun run deps:outdated · bun run deps:outdated:latest
 ```
 
 ## `bunx` — zero-install CLI tools

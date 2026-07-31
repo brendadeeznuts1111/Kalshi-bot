@@ -104,6 +104,8 @@
     "colors:artifacts": "bun scripts/generate-color-artifacts.ts",
     "colors:contrast": "bun scripts/check-contrast.ts",
     "colors:bench": "bun scripts/benchmark-color.ts",
+    "deps:outdated": "bun scripts/deps-outdated.ts",
+    "deps:outdated:latest": "bun scripts/deps-outdated.ts -- --latest",
     "glossary:check": "bun scripts/check-glossary-usage.ts -- --hard",
     "glossary:dump": "bun scripts/dump-glossary.ts",
     "glossary:generate": "bun scripts/generate-glossary-types.ts",

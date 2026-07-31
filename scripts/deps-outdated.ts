@@ -1,0 +1,154 @@
+#!/usr/bin/env bun
+/**
+ * Colorized dependency outdated report (bun update visual language).
+ *
+ *   bun run deps:outdated
+ *   bun run deps:outdated -- --json
+ *
+ * Uses `bun outdated` + Bun.color via paintSemverChange (red major / yellow minor / green patch).
+ *
+ * @see https://bun.com/docs/pm/cli/update#visual-indicators
+ * @see https://bun.com/docs/runtime/color
+ * @see https://bun.com/docs/runtime/environment-variables#configuring-bun
+ */
+import { paintSemverChange, type SemverChange } from "../src/lib/color/index.ts";
+
+type OutdatedRow = {
+  package: string;
+  current: string;
+  update: string;
+  latest: string;
+  workspace?: string;
+};
+
+function parseSemver(v: string): [number, number, number] | null {
+  const m = /^v?(\d+)\.(\d+)\.(\d+)/.exec(v.trim());
+  if (!m) return null;
+  return [Number(m[1]), Number(m[2]), Number(m[3])];
+}
+
+/** Classify bump from current → target (prefer latest when asked). */
+export function classifySemverChange(current: string, target: string): SemverChange {
+  const a = parseSemver(current);
+  const b = parseSemver(target);
+  if (!a || !b) return "unknown";
+  if (b[0] !== a[0]) return "major";
+  if (b[1] !== a[1]) return "minor";
+  if (b[2] !== a[2]) return "patch";
+  return "same";
+}
+
+/**
+ * Parse `bun outdated` table text (ASCII table with | separators).
+ * Stable enough for operator TTY; --json uses structured path when available.
+ */
+export function parseOutdatedTable(text: string): OutdatedRow[] {
+  const rows: OutdatedRow[] = [];
+  for (const line of text.split("\n")) {
+    if (!line.includes("|") || line.includes("---") || /Package/i.test(line)) continue;
+    const cells = line
+      .split("|")
+      .map((c) => c.trim())
+      .filter(Boolean);
+    // Package | Current | Update | Latest  OR  + Workspace
+    if (cells.length < 4) continue;
+    const [pkg, current, update, latest] = cells;
+    if (!pkg || !current || !latest) continue;
+    if (pkg === "Package") continue;
+    rows.push({
+      package: pkg
+        .replace(/\s*\((dev|peer|optional)\)\s*$/i, "")
+        .replace(/\s+(dev|peer|optional)$/i, "")
+        .trim(),
+      current,
+      update: update || current,
+      latest,
+    });
+  }
+  return rows;
+}
+
+async function runBunOutdated(): Promise<string> {
+  const proc = Bun.spawn(["bun", "outdated"], {
+    stdout: "pipe",
+    stderr: "pipe",
+    env: { ...Bun.env, NO_COLOR: "1" }, // parse plain table
+  });
+  const [stdout, stderr, code] = await Promise.all([
+    new Response(proc.stdout).text(),
+    new Response(proc.stderr).text(),
+    proc.exited,
+  ]);
+  // bun outdated exits 0 with empty table or non-zero when outdated — accept both
+  if (code !== 0 && !stdout.includes("Package")) {
+    throw new Error(stderr.trim() || `bun outdated exited ${code}`);
+  }
+  return stdout;
+}
+
+async function main() {
+  const json = Bun.argv.includes("--json");
+  const preferLatest = Bun.argv.includes("--latest");
+
+  const text = await runBunOutdated();
+  const rows = parseOutdatedTable(text);
+
+  if (json) {
+    const enriched = rows.map((r) => {
+      const target = preferLatest ? r.latest : r.update;
+      return {
+        ...r,
+        target,
+        change: classifySemverChange(r.current, target),
+      };
+    });
+    console.log(JSON.stringify({ schemaVersion: 1, packages: enriched }, null, 2));
+    return;
+  }
+
+  if (!rows.length) {
+    console.log(paintSemverChange("patch", "All dependencies within range (bun outdated empty)."));
+    console.log("  Tip: bun update -i     interactive · bun update -i -r  monorepo workspaces");
+    return;
+  }
+
+  console.log("Outdated packages  (color = major/minor/patch vs target)\n");
+  console.log(
+    "  " +
+      "Package".padEnd(28) +
+      "Current".padEnd(12) +
+      "Update".padEnd(12) +
+      "Latest".padEnd(12) +
+      "Bump",
+  );
+  console.log("  " + "─".repeat(72));
+
+  for (const r of rows) {
+    const target = preferLatest ? r.latest : r.update;
+    const change = classifySemverChange(r.current, target);
+    const bump = paintSemverChange(change, change.padEnd(8));
+    console.log(
+      "  " +
+        r.package.padEnd(28) +
+        r.current.padEnd(12) +
+        r.update.padEnd(12) +
+        r.latest.padEnd(12) +
+        bump,
+    );
+  }
+
+  console.log("\n  Legend: " +
+    paintSemverChange("major", "major") + "  " +
+    paintSemverChange("minor", "minor") + "  " +
+    paintSemverChange("patch", "patch"));
+  console.log("  Next:   bun update -i          # interactive (□/■ selection)");
+  console.log("          bun update -i -r       # all workspaces");
+  console.log("          bun update --latest    # ignore range caps");
+}
+
+if (import.meta.main) {
+  main().catch((err) => {
+    console.error(err instanceof Error ? err.message : err);
+    process.exit(1);
+  });
+}
