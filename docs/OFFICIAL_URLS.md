@@ -2,7 +2,9 @@
 
 Canonical external links for this repo. **Code SSOT:** [`src/institutions/official-urls.ts`](../src/institutions/official-urls.ts).
 
-Last verified: **2026-07-22**
+Last verified: **2026-07-31**
+
+**Liveness:** `bun run glossary:urls` uses [`OFFICIAL_URL_PROBES`](../src/institutions/official-urls.ts) so API bases are checked at a real path (`/exchange/status`, `/sports`, …). Bare API roots often 404. Soft + OG: `bun run glossary:urls:og`.
 
 ## Kalshi
 
@@ -13,6 +15,26 @@ Last verified: **2026-07-22**
 | Fee rounding | [docs.kalshi.com/.../fee_rounding](https://docs.kalshi.com/getting_started/fee_rounding) | Centicent trade fee + rebate accumulator |
 | Event fee overrides | [get-event-fee-changes](https://docs.kalshi.com/api-reference/events/get-event-fee-changes) | Series/event multipliers |
 | Trade API | [docs.kalshi.com](https://docs.kalshi.com/) | v2 REST + auth headers |
+| Series list | [market/get-series-list](https://docs.kalshi.com/api-reference/market/get-series-list) | not under `/series/` |
+| Portfolio: balance | [get-balance](https://docs.kalshi.com/api-reference/portfolio/get-balance) | cents ints + `*_dollars` fp strings |
+| Portfolio: positions | [get-positions](https://docs.kalshi.com/api-reference/portfolio/get-positions) | `market_positions` + `event_positions`; signed `position`/`position_fp` |
+| Portfolio: fills | [get-fills](https://docs.kalshi.com/api-reference/portfolio/get-fills) | `count_fp`, `fee_cost` dollars, `is_taker` |
+| Orders | [orders/get-orders](https://docs.kalshi.com/api-reference/orders/get-orders) | (docs moved off `/portfolio/orders`) |
+| API base (prod) | `…/trade-api/v2` | probe: `/exchange/status` |
+| API base (demo) | demo host | probe: `/exchange/status` |
+
+**Fixed-point migration (verified 2026-07-28):** portfolio endpoints ship BOTH
+legacy integer cents (`balance`, `yes_price`) and fixed-point strings
+(`balance_dollars`, `yes_price_dollars`, `position_fp`, `count_fp`). Parse at
+the boundary only — `src/institutions/ledger-types.ts` (normalized types) and
+`docs/GLOSSARY.md` (field conventions). Fractional contracts are display-only;
+order entry stays integer.
+
+**Error envelope:** all 4xx/5xx return `{ code, message, details, service }` —
+mapped in `src/institutions/error-codes.ts` (`upstream` field).
+
+**Deposits/withdrawals:** NO programmatic endpoints — bank rails via web UI.
+Ledger codes `DEP`/`WDL` are reconciliation-only (see GLOSSARY.md).
 
 **Fee math in code** (`src/institutions/kalshi-fees.ts`):
 
@@ -43,6 +65,11 @@ Set `ODDS_API_KEY` in env for live fetches.
 | `bun:sqlite` | [sqlite](https://bun.com/docs/runtime/sqlite) |
 | `Bun.fetch` | [fetch](https://bun.com/docs/runtime/networking/fetch#sending-an-http-request) |
 | `Bun.CryptoHasher` (sha3) | [hashing](https://bun.com/docs/runtime/hashing#bun-cryptohasher) |
+| `Bun.color` | [runtime/color](https://bun.com/docs/runtime/color) |
+| `HTMLRewriter` | [html-rewriter](https://bun.com/docs/runtime/html-rewriter) |
+| Environment variables | [environment-variables](https://bun.com/docs/runtime/environment-variables) |
+| `URLPattern` | [blog v1.3.4](https://bun.com/blog/bun-v1.3.4#urlpattern-api) |
+| `bun update` | [pm/cli/update](https://bun.com/docs/pm/cli/update) |
 
 Full Bun map: [`docs/BUN_NATIVE.md`](BUN_NATIVE.md).
 

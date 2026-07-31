@@ -5,7 +5,9 @@
  *
  * Run: bun run glossary:urls
  * Soft: bun run glossary:urls -- --soft
- * OG sample: bun run glossary:urls -- --og
+ * OG sample: bun run glossary:urls -- --soft --og
+ *
+ * API bases use OFFICIAL_URL_PROBES (bare roots often 404).
  *
  * @see https://bun.com/docs/runtime/networking/fetch#sending-an-http-request
  * @see https://bun.com/docs/guides/html-rewriter/extract-social-meta#extract-social-share-images-and-open-graph-tags
@@ -13,34 +15,80 @@
  * @see src/lib/extract-social-meta.ts
  */
 import { GLOSSARY_ENTRIES } from "../src/institutions/glossary.ts";
-import { OFFICIAL_URLS } from "../src/institutions/official-urls.ts";
+import {
+  OFFICIAL_URLS,
+  resolveProbeUrl,
+} from "../src/institutions/official-urls.ts";
 import { extractSocialMetadataFromResponse } from "../src/lib/extract-social-meta.ts";
 
 const soft = Bun.argv.includes("--soft");
 const withOg = Bun.argv.includes("--og");
 const timeoutMs = Number(Bun.env.GLOSSARY_URL_TIMEOUT_MS ?? 8_000);
 
-type Check = { label: string; url: string; og?: boolean };
+type Check = {
+  label: string;
+  /** Catalog / display URL */
+  url: string;
+  /** Actual HTTP target (may include probe path) */
+  probeUrl: string;
+  okStatuses: readonly number[];
+  og?: boolean;
+  skipped?: boolean;
+  skipReason?: string;
+};
 
 function collectOfficial(): Check[] {
   const out: Check[] = [];
   for (const [cat, urls] of Object.entries(OFFICIAL_URLS)) {
     for (const [key, url] of Object.entries(urls)) {
-      if (typeof url === "string" && /^https?:\/\//i.test(url)) {
-        // Marketing / docs pages are good OG candidates; skip pure API bases & WSS
-        const og =
-          withOg &&
-          !url.includes("api.") &&
-          !url.includes("trade-api") &&
-          !url.startsWith("wss:") &&
-          (key === "home" ||
-            key.includes("Schedule") ||
-            key.includes("Docs") ||
-            key.includes("guide") ||
-            key.includes("Guide") ||
-            cat === "github");
-        out.push({ label: `official:${cat}.${key}`, url, og });
+      if (typeof url !== "string" || !/^https?:\/\//i.test(url) && !url.startsWith("wss:")) {
+        continue;
       }
+      if (url.startsWith("wss:") || url.startsWith("ws:")) {
+        out.push({
+          label: `official:${cat}.${key}`,
+          url,
+          probeUrl: url,
+          okStatuses: [],
+          skipped: true,
+          skipReason: "websocket — no HTTP probe",
+        });
+        continue;
+      }
+      const resolved = resolveProbeUrl(cat, key, url);
+      if (!resolved) {
+        out.push({
+          label: `official:${cat}.${key}`,
+          url,
+          probeUrl: url,
+          okStatuses: [],
+          skipped: true,
+          skipReason: "probe skipped",
+        });
+        continue;
+      }
+      const og =
+        withOg &&
+        !url.includes("trade-api") &&
+        !url.includes("gamma-api") &&
+        !url.includes("api.the-odds") &&
+        (key === "home" ||
+          key.includes("Schedule") ||
+          key.includes("Docs") ||
+          key.includes("guide") ||
+          key.includes("Guide") ||
+          key === "tradeApiDocs" ||
+          key === "color" ||
+          key === "env" ||
+          cat === "github" ||
+          cat === "bun");
+      out.push({
+        label: `official:${cat}.${key}`,
+        url,
+        probeUrl: resolved.url,
+        okStatuses: resolved.okStatuses,
+        og,
+      });
     }
   }
   return out;
@@ -50,13 +98,22 @@ function collectGlossary(): Check[] {
   return GLOSSARY_ENTRIES.filter((e) => typeof e.url === "string" && e.url).map((e) => ({
     label: `glossary:${e.id}`,
     url: e.url!,
+    probeUrl: e.url!,
+    okStatuses: [200, 204, 301, 302, 304, 429] as const,
     og: withOg && /^https?:\/\//i.test(e.url!) && !e.url!.includes("/api-reference/"),
   }));
 }
 
+function statusOk(status: number, okStatuses: readonly number[]): boolean {
+  if (okStatuses.includes(status)) return true;
+  // Default success class
+  return status >= 200 && status < 400;
+}
+
 async function probe(
   url: string,
-): Promise<{ ok: boolean; status: number; error?: string; res?: Response }> {
+  okStatuses: readonly number[],
+): Promise<{ ok: boolean; status: number; error?: string }> {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
@@ -66,7 +123,13 @@ async function probe(
       signal: ctrl.signal,
       headers: { "user-agent": "kalshi-bot-glossary-url-check/1" },
     });
-    if (res.status === 405 || res.status === 501) {
+    // Many APIs reject HEAD (404/405/501) but answer GET on the same path.
+    if (
+      res.status === 404 ||
+      res.status === 405 ||
+      res.status === 501 ||
+      !statusOk(res.status, okStatuses)
+    ) {
       res = await fetch(url, {
         method: "GET",
         redirect: "follow",
@@ -74,7 +137,10 @@ async function probe(
         headers: { "user-agent": "kalshi-bot-glossary-url-check/1" },
       });
     }
-    return { ok: res.ok || res.status === 429, status: res.status, res };
+    return {
+      ok: statusOk(res.status, okStatuses) || res.status === 429,
+      status: res.status,
+    };
   } catch (err) {
     return {
       ok: false,
@@ -89,12 +155,11 @@ async function probe(
 async function probeWithOg(
   item: Check,
 ): Promise<{ ok: boolean; status: number; error?: string; ogLine?: string }> {
-  const result = await probe(item.url);
+  const result = await probe(item.probeUrl, item.okStatuses);
   if (!result.ok || !item.og) {
     return { ok: result.ok, status: result.status, error: result.error };
   }
 
-  // Need a body for HTMLRewriter — GET if HEAD succeeded without body
   try {
     const res = await fetch(item.url, {
       method: "GET",
@@ -102,8 +167,8 @@ async function probeWithOg(
       headers: { "user-agent": "kalshi-bot-glossary-url-check/1" },
       signal: AbortSignal.timeout(timeoutMs),
     });
-    if (!res.ok) {
-      return { ok: result.ok, status: res.status, error: `OG GET ${res.status}` };
+    if (!res.ok && res.status !== 429) {
+      return { ok: result.ok, status: res.status, ogLine: `(OG GET ${res.status})` };
     }
     const ct = res.headers.get("content-type") ?? "";
     if (!ct.includes("html") && !ct.includes("text/")) {
@@ -112,7 +177,7 @@ async function probeWithOg(
     const meta = await extractSocialMetadataFromResponse(res, item.url);
     const bits = [
       meta.title ? `title=${JSON.stringify(meta.title.slice(0, 60))}` : null,
-      meta.image ? `image=yes` : "image=no",
+      meta.image ? "image=yes" : "image=no",
       meta.description ? "desc=yes" : null,
     ].filter(Boolean);
     return {
@@ -131,7 +196,10 @@ async function probeWithOg(
 }
 
 const checks = [...collectOfficial(), ...collectGlossary()];
-console.log(`Checking ${checks.length} URL(s)${withOg ? " (+OG sample)" : ""}…`);
+const skipped = checks.filter((c) => c.skipped).length;
+console.log(
+  `Checking ${checks.length - skipped} URL(s)${withOg ? " (+OG)" : ""} · skip ${skipped}…`,
+);
 
 let failures = 0;
 const CONCURRENCY = 6;
@@ -140,14 +208,22 @@ async function worker() {
   while (i < checks.length) {
     const idx = i++;
     const item = checks[idx]!;
-    const result = item.og ? await probeWithOg(item) : await probe(item.url);
+    if (item.skipped) {
+      console.log(`⏭  ${item.label} — ${item.skipReason}`);
+      continue;
+    }
+    const result = item.og
+      ? await probeWithOg(item)
+      : await probe(item.probeUrl, item.okStatuses);
+    const probeNote =
+      item.probeUrl !== item.url ? `  probe=${item.probeUrl.replace(item.url, "…")}` : "";
     if (result.ok) {
-      const og = "ogLine" in result && result.ogLine ? `  ${result.ogLine}` : "";
-      console.log(`✅ ${item.label} → ${result.status}${og}`);
+      const og = result.ogLine ? `  ${result.ogLine}` : "";
+      console.log(`✅ ${item.label} → ${result.status}${og}${probeNote}`);
     } else {
       failures++;
       console.error(
-        `❌ ${item.label} → ${result.status || "ERR"} ${result.error ?? ""} ${item.url}`,
+        `❌ ${item.label} → ${result.status || "ERR"} ${result.error ?? ""} ${item.probeUrl}`,
       );
     }
   }
@@ -160,4 +236,6 @@ if (failures) {
   if (!soft) process.exit(1);
   console.error("(soft mode — exit 0)");
 }
-console.log(`\n✅ URL check complete (${checks.length - failures}/${checks.length} ok)`);
+console.log(
+  `\n✅ URL check complete (${checks.length - skipped - failures}/${checks.length - skipped} ok)`,
+);
