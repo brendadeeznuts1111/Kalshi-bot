@@ -2,13 +2,33 @@
 
 **Authority:** glossary owns **meaning**. Registry owns **structure** (column index, feature name, nullability). UI owns **placement**.
 
+You are closest to: **controlled vocabulary + data dictionary + UI copy tokens**, not a full ontology.
+
 ```
 Glossary (semantic authority)          ids never rename for schema churn
     │
     ├─► Desk column registry  ── concept?: GlossaryId (FK, kind=registry)
     ├─► HQ tip("id") / panel  ── id is GlossaryId (ui | registry | composite)
+    ├─► Filter enums          ── resolveValues / orderChoicesByGlossary
     └─► Integrity audit       ── bidirectional (orphans + kind mismatch)
 ```
+
+## Pattern map (industry → Tennis HQ)
+
+| Pattern | Your stack |
+|---------|------------|
+| Controlled vocabulary | `GLOSSARY_ENTRIES` + hard tip/controlled-label gate |
+| Concept / term split | stable `id` · mutable `label` · `description` summary |
+| Synonym / alias | `synonyms` on entries |
+| Faceted taxonomy | `category` (domain) × `kind` (role: registry\|ui\|composite) |
+| Foreign-key semantics | `ColumnMeta.concept` → glossary |
+| Soft relations | `mapsTo` (ui → registry/composite); not full SKOS |
+| Data dictionary | registry + `featurePurpose` + glossary |
+| UI copy tokens | `ui.*` ids |
+| Governance | `glossary:check` / `:report` |
+| Agent dump | `glossary-dump.json` |
+
+**kind = structural consumer; category = browse facet.** Don’t conflate `category: "ui"` with `kind: "ui"`.
 
 ## Why glossary is root
 

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-07-31T02:06:42.995Z",
+  "generatedAt": "2026-07-31T02:10:55.037Z",
   "integrityOk": true,
   "integrityErrors": [],
   "pendingRegistryConcepts": [
@@ -563,7 +563,23 @@
       "synonyms": [
         "level"
       ],
-      "values": null,
+      "values": [
+        "GS",
+        "SPECIAL",
+        "1000",
+        "500",
+        "250",
+        "CH",
+        "W125",
+        "ITF100",
+        "ITF75",
+        "ITF60",
+        "ITF50",
+        "ITF40",
+        "ITF35",
+        "ITF25",
+        "ITF15"
+      ],
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -1144,7 +1160,13 @@
         "time",
         "window"
       ],
-      "values": null,
+      "values": [
+        "all",
+        "live",
+        "today",
+        "24h",
+        "week"
+      ],
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -1159,7 +1181,11 @@
         "quotes",
         "book"
       ],
-      "values": null,
+      "values": [
+        "all",
+        "priced",
+        "active"
+      ],
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -1347,6 +1373,125 @@
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
+    },
+    "alert.poly_dropout": {
+      "label": "Poly Dropout",
+      "description": "kalshiOnly % exceeds threshold (>30% default) for N logger cycles. Polymarket matching failing.",
+      "category": "pipeline",
+      "kind": "composite",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": [
+        "CRITICAL: >30% for 3+ ticks"
+      ],
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "alert.volume_gap": {
+      "label": "Volume Gap",
+      "description": "midOnly exceeds threshold (>10 default) for N cycles. Many mids but zero volume — stale volume_fp.",
+      "category": "pipeline",
+      "kind": "composite",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": [
+        "WARNING: >10 for 3+ ticks"
+      ],
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "alert.feed_frozen": {
+      "label": "Poly Feed Frozen",
+      "description": "polyMatched=0 for N consecutive cycles. Polymarket feed completely frozen.",
+      "category": "pipeline",
+      "kind": "composite",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": [
+        "CRITICAL: 0 polyMatched for 6+ ticks"
+      ],
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "alert.stale_feed": {
+      "label": "Feed Stale",
+      "description": "No snapshots within staleness-threshold-ms (120s). Logger stuck or crashed.",
+      "category": "pipeline",
+      "kind": "composite",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": [
+        "CRITICAL: >120s since last snapshot"
+      ],
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "alert.divergence": {
+      "label": "Price Divergence",
+      "description": "Kalshi mid deviates from Poly implied prob > divergence-cents (15¢). Cross-venue mispricing.",
+      "category": "pipeline",
+      "kind": "composite",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": [
+        "INFO: |kalshiMid - polyProb*100| > 15¢"
+      ],
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "alert.resolution": {
+      "label": "Alert Resolution",
+      "description": "Auto-sent when active alert clears. Includes duration, replies original, clears debounce.",
+      "category": "pipeline",
+      "kind": "composite",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": [
+        "stale_feed_resolved",
+        "poly_dropout_resolved",
+        "volume_gap_resolved",
+        "poly_feed_frozen_resolved"
+      ],
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "alert.delivery": {
+      "label": "Alert Delivery",
+      "description": "Telegram (HTML, threaded, keyboard CRITICAL), Discord/Slack webhook, console stderr.",
+      "category": "pipeline",
+      "kind": "composite",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": [
+        "telegram",
+        "discord",
+        "console"
+      ],
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "alert.severity": {
+      "label": "Alert Severity",
+      "description": "CRITICAL: feed down (keyboard). WARNING: degraded. INFO: informational, silent.",
+      "category": "pipeline",
+      "kind": "composite",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": [
+        "CRITICAL",
+        "WARNING",
+        "INFO"
+      ],
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
     }
   },
   "api": {
@@ -1432,7 +1577,15 @@
       "composite.scanner": "Abstract scanner / divergence-alert concept used by live board UI.",
       "composite.divergence": "Abstract market-vs-model divergence concept.",
       "composite.edge_score": "Abstract composite edge strength concept.",
-      "composite.model_suspect": "Abstract model-trust flag concept."
+      "composite.model_suspect": "Abstract model-trust flag concept.",
+      "alert.poly_dropout": "kalshiOnly % exceeds threshold (>30% default) for N logger cycles. Polymarket matching failing.",
+      "alert.volume_gap": "midOnly exceeds threshold (>10 default) for N cycles. Many mids but zero volume — stale volume_fp.",
+      "alert.feed_frozen": "polyMatched=0 for N consecutive cycles. Polymarket feed completely frozen.",
+      "alert.stale_feed": "No snapshots within staleness-threshold-ms (120s). Logger stuck or crashed.",
+      "alert.divergence": "Kalshi mid deviates from Poly implied prob > divergence-cents (15¢). Cross-venue mispricing.",
+      "alert.resolution": "Auto-sent when active alert clears. Includes duration, replies original, clears debounce.",
+      "alert.delivery": "Telegram (HTML, threaded, keyboard CRITICAL), Discord/Slack webhook, console stderr.",
+      "alert.severity": "CRITICAL: feed down (keyboard). WARNING: degraded. INFO: informational, silent."
     },
     "entries": [
       {
@@ -1693,7 +1846,23 @@
         "synonyms": [
           "level"
         ],
-        "values": null
+        "values": [
+          "GS",
+          "SPECIAL",
+          "1000",
+          "500",
+          "250",
+          "CH",
+          "W125",
+          "ITF100",
+          "ITF75",
+          "ITF60",
+          "ITF50",
+          "ITF40",
+          "ITF35",
+          "ITF25",
+          "ITF15"
+        ]
       },
       {
         "id": "round",
@@ -2186,7 +2355,13 @@
           "time",
           "window"
         ],
-        "values": null
+        "values": [
+          "all",
+          "live",
+          "today",
+          "24h",
+          "week"
+        ]
       },
       {
         "id": "ui.events.filter.liquidity",
@@ -2199,7 +2374,11 @@
           "quotes",
           "book"
         ],
-        "values": null
+        "values": [
+          "all",
+          "priced",
+          "active"
+        ]
       },
       {
         "id": "ui.events.filter.min_vol",
@@ -2358,6 +2537,109 @@
         "mapsTo": null,
         "synonyms": [],
         "values": null
+      },
+      {
+        "id": "alert.poly_dropout",
+        "label": "Poly Dropout",
+        "description": "kalshiOnly % exceeds threshold (>30% default) for N logger cycles. Polymarket matching failing.",
+        "category": "pipeline",
+        "kind": "composite",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": [
+          "CRITICAL: >30% for 3+ ticks"
+        ]
+      },
+      {
+        "id": "alert.volume_gap",
+        "label": "Volume Gap",
+        "description": "midOnly exceeds threshold (>10 default) for N cycles. Many mids but zero volume — stale volume_fp.",
+        "category": "pipeline",
+        "kind": "composite",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": [
+          "WARNING: >10 for 3+ ticks"
+        ]
+      },
+      {
+        "id": "alert.feed_frozen",
+        "label": "Poly Feed Frozen",
+        "description": "polyMatched=0 for N consecutive cycles. Polymarket feed completely frozen.",
+        "category": "pipeline",
+        "kind": "composite",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": [
+          "CRITICAL: 0 polyMatched for 6+ ticks"
+        ]
+      },
+      {
+        "id": "alert.stale_feed",
+        "label": "Feed Stale",
+        "description": "No snapshots within staleness-threshold-ms (120s). Logger stuck or crashed.",
+        "category": "pipeline",
+        "kind": "composite",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": [
+          "CRITICAL: >120s since last snapshot"
+        ]
+      },
+      {
+        "id": "alert.divergence",
+        "label": "Price Divergence",
+        "description": "Kalshi mid deviates from Poly implied prob > divergence-cents (15¢). Cross-venue mispricing.",
+        "category": "pipeline",
+        "kind": "composite",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": [
+          "INFO: |kalshiMid - polyProb*100| > 15¢"
+        ]
+      },
+      {
+        "id": "alert.resolution",
+        "label": "Alert Resolution",
+        "description": "Auto-sent when active alert clears. Includes duration, replies original, clears debounce.",
+        "category": "pipeline",
+        "kind": "composite",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": [
+          "stale_feed_resolved",
+          "poly_dropout_resolved",
+          "volume_gap_resolved",
+          "poly_feed_frozen_resolved"
+        ]
+      },
+      {
+        "id": "alert.delivery",
+        "label": "Alert Delivery",
+        "description": "Telegram (HTML, threaded, keyboard CRITICAL), Discord/Slack webhook, console stderr.",
+        "category": "pipeline",
+        "kind": "composite",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": [
+          "telegram",
+          "discord",
+          "console"
+        ]
+      },
+      {
+        "id": "alert.severity",
+        "label": "Alert Severity",
+        "description": "CRITICAL: feed down (keyboard). WARNING: degraded. INFO: informational, silent.",
+        "category": "pipeline",
+        "kind": "composite",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": [
+          "CRITICAL",
+          "WARNING",
+          "INFO"
+        ]
       }
     ],
     "categories": [
@@ -2411,7 +2693,9 @@
       "RUN": "research run — one discovery+score sweep, id = UTC timestamp",
       "PROG": "alpha program — alpha/*/program.json, status shadow|pilot|live",
       "SHDW": "shadow signal — simulated decision, hash-chained in shadow-log.jsonl",
-      "CAL": "calibration run — calibration/artifacts/<ts>"
+      "CAL": "calibration run — calibration/artifacts/<ts>",
+      "ALERT": "pipeline alert — fired by price-logger when feed quality degrades",
+      "RESV": "alert resolution — auto-sent when active alert conditions clear"
     },
     "units": {
       "cents": "integer cents, 1–99 for prices; canonical money unit everywhere",

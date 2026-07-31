@@ -38,6 +38,8 @@ export const CODES = {
   PROG: "alpha program — alpha/*/program.json, status shadow|pilot|live",
   SHDW: "shadow signal — simulated decision, hash-chained in shadow-log.jsonl",
   CAL: "calibration run — calibration/artifacts/<ts>",
+  ALERT: "pipeline alert — fired by price-logger when feed quality degrades",
+  RESV: "alert resolution — auto-sent when active alert conditions clear",
 } as const;
 
 export type ShortCode = keyof typeof CODES;
@@ -278,6 +280,10 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     description: "Competition level (GS, 1000, 500, 250, CH, ITF15–100, …).",
     category: "tournament",
     synonyms: ["level"],
+    values: [
+      "GS", "SPECIAL", "1000", "500", "250", "CH", "W125",
+      "ITF100", "ITF75", "ITF60", "ITF50", "ITF40", "ITF35", "ITF25", "ITF15",
+    ],
   }),
   reg({
     id: "round",
@@ -579,6 +585,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     description: "Time window filter: live, today, next 24h, this week.",
     category: "ui",
     synonyms: ["time", "window"],
+    values: ["all", "live", "today", "24h", "week"],
   }),
   ui({
     id: "ui.events.filter.liquidity",
@@ -586,6 +593,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     description: "Filter by quote presence: priced or actively trading.",
     category: "market",
     synonyms: ["quotes", "book"],
+    values: ["all", "priced", "active"],
   }),
   ui({
     id: "ui.events.filter.min_vol",
@@ -685,6 +693,72 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     description: "Abstract model-trust flag concept.",
     category: "model",
   },
+
+  // ── Pipeline & alerts (composite concepts — not desk CSV columns) ──
+  {
+    id: "alert.poly_dropout",
+    kind: "composite",
+    label: "Poly Dropout",
+    description: "kalshiOnly % exceeds threshold (>30% default) for N logger cycles. Polymarket matching failing.",
+    category: "pipeline",
+    values: ["CRITICAL: >30% for 3+ ticks"],
+  },
+  {
+    id: "alert.volume_gap",
+    kind: "composite",
+    label: "Volume Gap",
+    description: "midOnly exceeds threshold (>10 default) for N cycles. Many mids but zero volume — stale volume_fp.",
+    category: "pipeline",
+    values: ["WARNING: >10 for 3+ ticks"],
+  },
+  {
+    id: "alert.feed_frozen",
+    kind: "composite",
+    label: "Poly Feed Frozen",
+    description: "polyMatched=0 for N consecutive cycles. Polymarket feed completely frozen.",
+    category: "pipeline",
+    values: ["CRITICAL: 0 polyMatched for 6+ ticks"],
+  },
+  {
+    id: "alert.stale_feed",
+    kind: "composite",
+    label: "Feed Stale",
+    description: "No snapshots within staleness-threshold-ms (120s). Logger stuck or crashed.",
+    category: "pipeline",
+    values: ["CRITICAL: >120s since last snapshot"],
+  },
+  {
+    id: "alert.divergence",
+    kind: "composite",
+    label: "Price Divergence",
+    description: "Kalshi mid deviates from Poly implied prob > divergence-cents (15¢). Cross-venue mispricing.",
+    category: "pipeline",
+    values: ["INFO: |kalshiMid - polyProb*100| > 15¢"],
+  },
+  {
+    id: "alert.resolution",
+    kind: "composite",
+    label: "Alert Resolution",
+    description: "Auto-sent when active alert clears. Includes duration, replies original, clears debounce.",
+    category: "pipeline",
+    values: ["stale_feed_resolved", "poly_dropout_resolved", "volume_gap_resolved", "poly_feed_frozen_resolved"],
+  },
+  {
+    id: "alert.delivery",
+    kind: "composite",
+    label: "Alert Delivery",
+    description: "Telegram (HTML, threaded, keyboard CRITICAL), Discord/Slack webhook, console stderr.",
+    category: "pipeline",
+    values: ["telegram", "discord", "console"],
+  },
+  {
+    id: "alert.severity",
+    kind: "composite",
+    label: "Alert Severity",
+    description: "CRITICAL: feed down (keyboard). WARNING: degraded. INFO: informational, silent.",
+    category: "pipeline",
+    values: ["CRITICAL", "WARNING", "INFO"],
+  },
 ] as const;
 
 export type GlossaryId = (typeof GLOSSARY_ENTRIES)[number]["id"];
@@ -736,3 +810,60 @@ export function buildGlossaryApiPayload() {
 
 /** Pending registry concepts (board/HQ) not yet on desk CSV columns[]. */
 export const PENDING_REGISTRY_CONCEPTS = ["tier", "round"] as const;
+
+// ── Resolution helpers (filter enums / UI labels) ──
+
+/** Human label for a concept id (falls back to id). */
+export function resolveLabel(id: string): string {
+  return getGlossaryEntry(id)?.label ?? id;
+}
+
+/** One-line meaning (description) for tooltips / panel. */
+export function resolveSummary(id: string): string | undefined {
+  return getGlossaryEntry(id)?.description;
+}
+
+/**
+ * Closed value list for enum-like concepts (filter options).
+ * Empty if the concept is free-text (tournament names, etc.).
+ */
+export function resolveValues(id: string): readonly string[] {
+  return getGlossaryEntry(id)?.values ?? [];
+}
+
+/**
+ * Order live option values using glossary closed-set order when present.
+ * Values not in the glossary list append alphabetically (or keep input order).
+ *
+ * @param conceptId glossary id with optional `values`
+ * @param live live distinct values from the board
+ * @returns ordered unique list for select options (excludes empty/all)
+ */
+export function orderChoicesByGlossary(
+  conceptId: string,
+  live: readonly string[],
+): string[] {
+  const preferred = resolveValues(conceptId);
+  const set = new Set(live.filter(Boolean));
+  const out: string[] = [];
+  for (const v of preferred) {
+    if (set.has(v)) {
+      out.push(v);
+      set.delete(v);
+    }
+  }
+  const rest = [...set].sort((a, b) => a.localeCompare(b));
+  return [...out, ...rest];
+}
+
+/**
+ * Build select choice pairs for a glossary-backed filter.
+ * Always prefixes ["", "all"] for the clear option.
+ */
+export function glossaryFilterChoices(
+  conceptId: string,
+  live: readonly string[],
+): Array<[string, string]> {
+  const ordered = orderChoicesByGlossary(conceptId, live);
+  return [["", "all"], ...ordered.map((v) => [v, v] as [string, string])];
+}

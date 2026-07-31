@@ -9,6 +9,10 @@ import {
   PENDING_REGISTRY_CONCEPTS,
   buildGlossaryApiPayload,
   getGlossaryEntry,
+  glossaryFilterChoices,
+  orderChoicesByGlossary,
+  resolveLabel,
+  resolveValues,
 } from "../../src/institutions/glossary.ts";
 import {
   glossaryMapFromEntries,
@@ -78,5 +82,28 @@ describe("semantic layer — glossary root, registry consumer", () => {
   test("ids unique", () => {
     const ids = GLOSSARY_ENTRIES.map((e) => e.id);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  test("resolveLabel / resolveValues", () => {
+    expect(resolveLabel("kalshi_mu")).toBe("Kalshi µ");
+    expect(resolveValues("surface")).toContain("Hard");
+    expect(resolveValues("league").length).toBeGreaterThan(0);
+  });
+
+  test("orderChoicesByGlossary prefers closed-set order", () => {
+    const live = ["Grass", "Hard", "Clay", "Mystery"];
+    const ordered = orderChoicesByGlossary("surface", live);
+    expect(ordered.slice(0, 3)).toEqual(["Hard", "Clay", "Grass"]);
+    expect(ordered).toContain("Mystery");
+  });
+
+  test("glossaryFilterChoices prefixes all", () => {
+    const choices = glossaryFilterChoices("surface", ["Clay"]);
+    expect(choices[0]).toEqual(["", "all"]);
+    expect(choices.some(([v]) => v === "Clay")).toBe(true);
+  });
+
+  test("alert.* concepts are composite not registry", () => {
+    expect(getGlossaryEntry("alert.poly_dropout")?.kind).toBe("composite");
   });
 });

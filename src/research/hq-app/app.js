@@ -667,7 +667,7 @@ async function renderEvents() {
   }
 
   const allEvents = __board.series.flatMap((s) => s.events);
-  const leagues = [...new Set(allEvents.map((e) => e.league).filter(Boolean))].sort();
+  const liveLeagues = [...new Set(allEvents.map((e) => e.league).filter(Boolean))];
   const tournaments = [...new Set(allEvents.map((e) => e.tournament ?? e.competition).filter(Boolean))].sort();
   const countries = [...new Set(allEvents.flatMap((e) =>
     [e.country, ...e.markets.map((m) => m.playerCountry)]).filter(Boolean))].sort();
@@ -675,27 +675,50 @@ async function renderEvents() {
     const order = (r) => (/Round [Oo]f (d+)/.exec(r)?.[1] ?? (r.startsWith("Quarter") ? 8 : r.startsWith("Semi") ? 4 : r.startsWith("Final") ? 2 : 999));
     return Number(order(b)) - Number(order(a));
   });
-  const surfaces = [...new Set(allEvents.map((e) => e.surface).filter(Boolean))].sort();
+  const liveSurfaces = [...new Set(allEvents.map((e) => e.surface).filter(Boolean))];
   const TIER_ORDER = ["GS", "SPECIAL", "1000", "500", "250", "CH", "W125",
     "ITF100", "ITF75", "ITF60", "ITF50", "ITF40", "ITF35", "ITF25", "ITF15"];
-  const tiers = [...new Set(allEvents.map((e) => e.tier).filter(Boolean))]
-    .sort((a, b) => TIER_ORDER.indexOf(a) - TIER_ORDER.indexOf(b));
-  const opts = (list, cur) => list.map((v) =>
-    "<option" + (v === cur ? " selected" : "") + ">" + esc(v) + "</option>").join("");
+  const liveTiers = [...new Set(allEvents.map((e) => e.tier).filter(Boolean))];
+  // Glossary closed-set order when entry.values present; else live sorted (pattern: enum-as-vocabulary)
+  const orderByGloss = (conceptId, live, fallbackSort) => {
+    const entry = (GLOSSARY.entries || []).find((e) => e.id === conceptId);
+    const preferred = entry?.values || [];
+    if (!preferred.length) {
+      return fallbackSort ? [...live].sort(fallbackSort) : [...live].sort();
+    }
+    const set = new Set(live);
+    const out = [];
+    for (const v of preferred) {
+      if (set.has(v)) { out.push(v); set.delete(v); }
+    }
+    const rest = [...set].sort(fallbackSort || ((a, b) => a.localeCompare(b)));
+    return [...out, ...rest];
+  };
+  const leagues = orderByGloss("league", liveLeagues);
+  const surfaces = orderByGloss("surface", liveSurfaces);
+  const tiers = orderByGloss("tier", liveTiers, (a, b) => {
+    const ia = TIER_ORDER.indexOf(a); const ib = TIER_ORDER.indexOf(b);
+    return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib);
+  });
+  const glossLabel = (id, fallback) => {
+    const e = (GLOSSARY.entries || []).find((x) => x.id === id);
+    return e?.label || fallback;
+  };
   /** Ungoverned select — prefer selGloss for controlled labels */
   const sel = (name, cur, choices) =>
     '<label>' + esc(name) + '<select name="' + name.toLowerCase() + '">' +
     choices.map(([v, lbl]) => "<option value='" + v + "'" + (v === cur ? " selected" : "") + ">" + lbl + "</option>").join("") +
     "</select></label>";
-  /** Governed select — label + tip(glossaryId) from semantic layer */
+  /** Governed select — label from glossary when possible + tip(glossaryId) */
   const selGloss = (glossaryId, name, cur, choices) =>
-    '<label>' + esc(name) + tip(glossaryId) +
+    '<label>' + esc(glossLabel(glossaryId, name)) + tip(glossaryId) +
     '<select name="' + name.toLowerCase() + '">' +
     choices.map(([v, lbl]) => "<option value='" + v + "'" + (v === cur ? " selected" : "") + ">" + lbl + "</option>").join("") +
     "</select></label>";
+  const pair = (list) => list.map((v) => [v, v]);
 
   el.innerHTML =
-    '<div class="panel"><h2>' + esc("Tennis board") + tip("ui.live_board.title") + " " +
+    '<div class="panel"><h2>' + esc(glossLabel("ui.live_board.title", "Tennis board")) + tip("ui.live_board.title") + " " +
     badge("ok", __board.eventCount + " events · " + __board.marketCount + " markets") +
     ' <span class="muted" id="events-count" style="font-size:.8rem;font-weight:400"></span></h2>' +
     (metaAudit
@@ -712,12 +735,12 @@ async function renderEvents() {
     '<div class="muted">open match markets across ATP/WTA/Challenger/ITF · click a player to load the order ticket · updated ' + fmtTime(__board.generatedAt) + "</div>" +
     '<form class="order" id="events-filter" style="margin-top:.6rem">' +
     '<label>Search<input name="q" placeholder="player, event, city…" value="' + esc(__filters.q) + '" /></label>' +
-    selGloss("league", "League", __filters.league, [["", "all"], ...leagues.map((l) => [l, l])]) +
-    selGloss("ui.events.filter.tournament", "Tournament", __filters.tournament, [["", "all"], ...tournaments.map((t) => [t, t])]) +
-    selGloss("ui.events.filter.country", "Country", __filters.country, [["", "all"], ...countries.map((c) => [c, c])]) +
-    selGloss("round", "Round", __filters.round, [["", "all"], ...rounds.map((r) => [r, r])]) +
-    selGloss("surface", "Surface", __filters.surface, [["", "all"], ...surfaces.map((s) => [s, s])]) +
-    selGloss("tier", "Tier", __filters.tier, [["", "all"], ...tiers.map((t) => [t, t])]) +
+    selGloss("league", "League", __filters.league, [["", "all"], ...pair(leagues)]) +
+    selGloss("ui.events.filter.tournament", "Tournament", __filters.tournament, [["", "all"], ...pair(tournaments)]) +
+    selGloss("ui.events.filter.country", "Country", __filters.country, [["", "all"], ...pair(countries)]) +
+    selGloss("round", "Round", __filters.round, [["", "all"], ...pair(rounds)]) +
+    selGloss("surface", "Surface", __filters.surface, [["", "all"], ...pair(surfaces)]) +
+    selGloss("tier", "Tier", __filters.tier, [["", "all"], ...pair(tiers)]) +
     selGloss("ui.events.filter.when", "When", __filters.when, [["all", "all"], ["live", "in play now"], ["today", "today"], ["24h", "next 24h"], ["week", "this week"]]) +
     selGloss("ui.events.filter.liquidity", "Liquidity", __filters.liquidity, [["all", "all"], ["priced", "has quotes"], ["active", "trading live"]]) +
     '<label>Min 24h vol' + tip("ui.events.filter.min_vol") +
