@@ -732,6 +732,7 @@ async function renderEvents() {
   const tierChoices = choicesFromCatalog("tier", liveTiers);
   const whenChoices = choicesFromCatalog("ui.events.filter.when", ["all", "live", "today", "24h", "week"]);
   const liqChoices = choicesFromCatalog("ui.events.filter.liquidity", ["all", "priced", "active"]);
+  const sortChoices = choicesFromCatalog("ui.sort.events", ["time", "volume", "alpha"]);
   const glossLabel = (id, fallback) => {
     const cat = GLOSSARY.filterCatalog?.[id];
     if (cat?.label) return cat.label;
@@ -783,7 +784,7 @@ async function renderEvents() {
     '<input name="maxAsk" type="number" min="0" max="99" value="' + __filters.maxAsk + '" /></label>' +
     '<label>Min surface edge' + tip("ui.events.filter.min_surface_edge") +
     '<input name="minSurfaceEdge" type="number" min="0" max="100" step="1" value="' + __filters.minSurfaceEdge + '" /></label>' +
-    selGloss("ui.sort.events", "Sort", __filters.sort, [["time", "start time"], ["volume", "24h volume"], ["alpha", "A–Z"]]) +
+    selGloss("ui.sort.events", "Sort", __filters.sort, sortChoices) +
     '<button type="button" id="events-clear" class="cancel" style="align-self:flex-end" title="' +
     esc(TOOLTIPS["ui.events.filter.reset"] || "clear") + '">clear' + tip("ui.events.filter.reset") + "</button>" +
     '<button type="button" id="events-preset-value" style="align-self:flex-end">value ≤ 25¢</button>' +

@@ -161,6 +161,26 @@ describe("semantic layer — glossary root, registry consumer", () => {
     expect(p.filterCatalog["ui.events.filter.when"].valueLabels.live).toBe(
       "in play now",
     );
+    expect(p.filterCatalog["ui.sort.events"].values).toEqual([
+      "time",
+      "volume",
+      "alpha",
+    ]);
+    expect(p.filterCatalog["ui.sort.events"].valueLabels.volume).toBe(
+      "24h volume",
+    );
+  });
+
+  test("league closed set matches leagueFromSeries board labels", () => {
+    // board league strings (not ITF-M tour codes)
+    expect(resolveValues("league")).toEqual([
+      "ATP",
+      "WTA",
+      "ATP Challenger",
+      "WTA 125",
+      "ITF Men",
+      "ITF Women",
+    ]);
   });
 
   test("displayTier maps unknown to Unclassified", () => {

@@ -163,3 +163,37 @@ Integrity (`glossary:check`) fails on missing seeAlso targets, unknown units, or
 2. Never invent SQL for `ui.*` ids.  
 3. For desk fields, use registry `feature` names; attach `concept` when exposing.  
 4. For new tips, add glossary entry first, then `tip("id")`.
+
+## Naming lanes (alignment audit)
+
+Keep these namespaces separate — same English word can mean different lanes.
+
+| Lane | Example | Authority |
+|------|---------|-----------|
+| **Glossary id** | `league`, `ui.events.filter.when`, `kalshi_mu` | `GLOSSARY_ENTRIES` |
+| **Registry feature** | `kalshi_mu`, `poly_volume` | desk column registry (snake_case) |
+| **UI tip / camel** | `balanceCents`, `avgKalshiVolumeFp` | glossary `kind: ui`; often `mapsTo` registry |
+| **Filter catalog** | `FILTER_CATALOG_IDS` | must have `values[]` (+ optional `valueLabels`) |
+| **ROUTES** | `ROUTES.home = "/"` | research **report browser** only |
+| **SERVE_PATTERNS** | `EXACT.hq = "/hq"`, `opsPartner` | HQ / ops / tennis **fetch** paths |
+| **GitHub parse** | `:owner` / `:repo` | external URLs only — not `ROUTES.repo`’s `:name` |
+| **Env** | `GITHUB_TOKEN` / `GH_TOKEN` | `declare module "bun" { interface Env }` in `config.ts` |
+| **Tests** | `tests/research/patterns.test.ts` | mirror `src/<domain>/` — not flat `tests/patterns.test.ts` |
+
+### Fixed / intentional duals
+
+| Pair | Status |
+|------|--------|
+| `ROUTES.home` (`/`) vs HQ (`/hq`) | Intentional — EXACT key is **`hq`**, never `home` |
+| `ROUTES.repo` `:name` vs GitHub `:repo` | Intentional — different lanes |
+| `GITHUB_TOKEN` vs `GH_TOKEN` | Dual accepted; both on `Env` |
+| `SERVE_URL` vs `OPS_DASHBOARD_URL` | Prefer `OPS_DASHBOARD_URL`; `SERVE_URL` legacy alias |
+| `league` values | Must match `leagueFromSeries` (`ATP`, `WTA`, `ATP Challenger`, `WTA 125`, `ITF Men`, `ITF Women`) |
+| `ITF-M` / `ITF-W` | **Tour** codes in event-store — not board `league` labels |
+
+### When adding a board filter
+
+1. Glossary entry with `values` (+ `valueLabels` if display ≠ code)  
+2. Add id to `FILTER_CATALOG_IDS`  
+3. HQ: `liveFilterChoices` / `choicesFromCatalog` only — no hardcode pairs  
+4. `bun run glossary:check`

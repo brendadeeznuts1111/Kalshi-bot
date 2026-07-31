@@ -1,6 +1,6 @@
 {
   "schemaVersion": 3,
-  "generatedAt": "2026-07-31T02:30:06.373Z",
+  "generatedAt": "2026-07-31T03:43:24.970Z",
   "integrityOk": true,
   "integrityErrors": [],
   "pendingRegistryConcepts": [
@@ -1796,8 +1796,16 @@
         "sort events",
         "order"
       ],
-      "values": null,
-      "valueLabels": null,
+      "values": [
+        "time",
+        "volume",
+        "alpha"
+      ],
+      "valueLabels": {
+        "time": "start time",
+        "volume": "24h volume",
+        "alpha": "A–Z"
+      },
       "seeAlso": [
         "ui.events.filter.when",
         "ui.events.filter.min_vol"
@@ -3720,8 +3728,16 @@
           "sort events",
           "order"
         ],
-        "values": null,
-        "valueLabels": null,
+        "values": [
+          "time",
+          "volume",
+          "alpha"
+        ],
+        "valueLabels": {
+          "time": "start time",
+          "volume": "24h volume",
+          "alpha": "A–Z"
+        },
         "seeAlso": [
           "ui.events.filter.when",
           "ui.events.filter.min_vol"
@@ -4188,6 +4204,19 @@
           "all": "all",
           "priced": "has quotes",
           "active": "trading live"
+        }
+      },
+      "ui.sort.events": {
+        "label": "Sort",
+        "values": [
+          "time",
+          "volume",
+          "alpha"
+        ],
+        "valueLabels": {
+          "time": "start time",
+          "volume": "24h volume",
+          "alpha": "A–Z"
         }
       }
     },

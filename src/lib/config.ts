@@ -40,14 +40,18 @@ declare module "bun" {
     ODDS_API_KEY?: string;
     /** GitHub token for rate-limit checks and research pipeline */
     GITHUB_TOKEN?: string;
+    /** Alias preferred by `gh` / some scripts (same as GITHUB_TOKEN) */
+    GH_TOKEN?: string;
 
     // ── Environment gates ──
     /** Kalshi client environment: demo (default) or prod */
     KALSHI_ENV?: string;
-    /** Must be "1" to enable live trading when ALPHA_LIVE is set */
+    /** Must be "1" to enable live trading when KALSHI_ALPHA_LIVE is set */
     KALSHI_PROD_ARMED?: string;
-    /** Alpha live trading flag */
+    /** Alpha live trading flag (prefer KALSHI_ALPHA_LIVE) */
     ALPHA_LIVE?: string;
+    /** Alpha live trading flag */
+    KALSHI_ALPHA_LIVE?: string;
     /** Node environment: development | production | test */
     NODE_ENV?: string;
 
@@ -58,10 +62,14 @@ declare module "bun" {
     BUN_PORT?: string;
     /** Bind hostname for research server patterns / docs */
     SERVE_HOST?: string;
-    /** Public URL of the ops dashboard for alert links */
+    /** Public URL of the ops dashboard for alert links (prefer OPS_DASHBOARD_URL) */
     SERVE_URL?: string;
-    /** Regulatory service compliance URL */
+    /** Public URL of the ops dashboard for alert links */
+    OPS_DASHBOARD_URL?: string;
+    /** Regulatory service compliance URL (prefer REGULATORY_COMPLIANCE_URL) */
     COMPLIANCE_URL?: string;
+    /** Regulatory service compliance URL */
+    REGULATORY_COMPLIANCE_URL?: string;
     /** GitHub rate-limit wait mode ("1" = block until budget available) */
     GITHUB_RATE_LIMIT_WAIT?: string;
 
@@ -92,8 +100,20 @@ declare module "bun" {
     RESEARCH_DISCOVER_BROAD?: string;
     /** Override research cache DB path */
     RESEARCH_CACHE_DB?: string;
-    /** Root directory for repo clones */
+    /** Discovery shortlist size */
+    RESEARCH_SHORTLIST?: string;
+    /** Min stars gate */
+    RESEARCH_MIN_STARS?: string;
+    /** Min forks gate */
+    RESEARCH_MIN_FORKS?: string;
+    /** Max repo age months gate */
+    RESEARCH_MAX_AGE_MONTHS?: string;
+    /** Root directory for repo clones (prefer RESEARCH_REPO_CLONE_ROOT) */
     REPO_CLONE_ROOT?: string;
+    /** Root directory for repo clones */
+    RESEARCH_REPO_CLONE_ROOT?: string;
+    /** Home override for kalshi key rotate journal/files */
+    KALSHI_ROTATE_HOME?: string;
 
     // ── Calibration & toxicity ──
     /** Toxicity sweep cron schedule */
@@ -132,8 +152,10 @@ declare module "bun" {
     PROTON_PASS_SESSION_DIR?: string;
 
     // ── Storage ──
-    /** Regulatory database path */
+    /** Regulatory database path (prefer REGULATORY_DATABASE_PATH) */
     REGULATORY_DB?: string;
+    /** Regulatory database path */
+    REGULATORY_DATABASE_PATH?: string;
 
     // ── Bun runtime (built-in, listed for awareness) ──
     // @see https://bun.com/docs/runtime/environment-variables#configuring-bun

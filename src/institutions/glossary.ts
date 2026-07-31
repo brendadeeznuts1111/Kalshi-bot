@@ -763,6 +763,12 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     description: "Ordering of the match list: start time, volume, or name.",
     category: "ui",
     synonyms: ["sort events", "order"],
+    values: ["time", "volume", "alpha"],
+    valueLabels: {
+      time: "start time",
+      volume: "24h volume",
+      alpha: "A–Z",
+    },
     seeAlso: ["ui.events.filter.when", "ui.events.filter.min_vol"],
   }),
   ui({
@@ -983,12 +989,14 @@ export function glossaryEntriesByCategory(): Map<GlossaryCategory, GlossaryEntry
 }
 
 /** Concepts whose `values` drive board filter dropdowns (API + audit SSOT). */
+/** Closed-set board filters — every id must declare `values[]` (audit via glossary:check). */
 export const FILTER_CATALOG_IDS = [
   "league",
   "surface",
   "tier",
   "ui.events.filter.when",
   "ui.events.filter.liquidity",
+  "ui.sort.events",
 ] as const;
 
 export type FilterCatalogId = (typeof FILTER_CATALOG_IDS)[number];

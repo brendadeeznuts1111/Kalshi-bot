@@ -118,6 +118,15 @@ describe("SERVE_PATTERNS — research fetch handlers", () => {
     const repo = SERVE_PATTERNS.repo.groups("http://x/repo/foo/bar");
     expect(repo).toEqual({ owner: "foo", name: "bar" });
   });
+
+  test("EXACT.hq is /hq — never collides with ROUTES.home /", () => {
+    expect(ROUTES.home).toBe("/");
+    expect(SERVE_PATTERNS.EXACT.hq).toBe("/hq");
+    expect(SERVE_PATTERNS.EXACT.reportsLatest).toBe(ROUTES.latestReport);
+    expect(SERVE_PATTERNS.EXACT.architecture).toBe(ROUTES.architecture);
+    // @ts-expect-error home is not an EXACT key (was renamed to hq)
+    expect(SERVE_PATTERNS.EXACT.home).toBeUndefined();
+  });
 });
 
 describe("BunURLPattern GitHub repo SSOT", () => {

@@ -562,6 +562,7 @@ async function renderEvents() {
   const tierChoices = liveFilterChoices("tier", liveTiers);
   const whenChoices = liveFilterChoices("ui.events.filter.when", ["all", "live", "today", "24h", "week"]);
   const liqChoices = liveFilterChoices("ui.events.filter.liquidity", ["all", "priced", "active"]);
+  const sortChoices = liveFilterChoices("ui.sort.events", ["time", "volume", "alpha"]);
   const pair = (list) => list.map((v) => [v, v]);
   const selGloss = (glossaryId, name, cur, choices) =>
     '<label>' + esc(filterLabel(glossaryId, name)) + tip(glossaryId) +
@@ -599,7 +600,7 @@ async function renderEvents() {
     '<input name="minVol" type="number" min="0" step="1000" value="' + __filters.minVol + '" /></label>' +
     '<label>Max ask ¢' + tip("yesPriceCents") +
     '<input name="maxAsk" type="number" min="0" max="99" value="' + __filters.maxAsk + '" /></label>' +
-    selGloss("ui.sort.events", "Sort", __filters.sort, [["time", "start time"], ["volume", "24h volume"], ["alpha", "A–Z"]]) +
+    selGloss("ui.sort.events", "Sort", __filters.sort, sortChoices) +
     '<button type="button" id="events-clear" class="cancel" style="align-self:flex-end">clear' + tip("ui.events.filter.reset") + "</button>" +
     '<button type="button" id="events-preset-value" style="align-self:flex-end">value ≤ 25¢</button>' +
     '<button type="button" id="events-preset-live" style="align-self:flex-end">live & liquid</button>' +

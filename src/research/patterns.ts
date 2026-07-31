@@ -119,8 +119,22 @@ export const GITHUB_REPO_DEEP = new BunURLPattern({
  * Use multi-component URLPatternInit only when you intentionally constrain host
  * (see GITHUB_REPO_CANON) or search/hash (componentGroups).
  *
+ * Naming lanes (do not conflate):
+ *   ROUTES          — research report browser only (`Bun.serve` routes map keys)
+ *   SERVE_PATTERNS  — HQ / ops / tennis fetch handlers (URLPattern + EXACT path SSOT)
+ *   GITHUB_REPO_*   — external github.com parse (`:owner` / `:repo`)
+ *   glossary ids    — semantic concepts (tip keys, filter catalogs) — not URL paths
+ *
+ * Param convention (path segments):
+ *   :id      generic resource (run timestamps)
+ *   :name    human / route display name (player, repo name on ROUTES.repo)
+ *   :nodeId  regulatory partner node
+ *   :owner   GitHub owner
+ *   :repo    GitHub repo (GITHUB patterns only — ROUTES uses :name for the same slot)
+ *
  * @see Pattern properties: protocol, username, password, hostname, port, pathname, search, hash
  *   https://bun.com/blog/bun-v1.3.4#urlpattern-api
+ * @see docs/SEMANTIC_LAYER.md — glossary naming
  */
 export const SERVE_PATTERNS = {
   // ── Research & reports ──
@@ -142,13 +156,17 @@ export const SERVE_PATTERNS = {
   polyTicks:     new BunURLPattern({ pathname: "/polymarket/ticks" }),
   polyLineMoves: new BunURLPattern({ pathname: "/polymarket/line-moves" }),
 
-  // ── Conventions ──
-  /** Static paths where `===` is simpler than URLPattern. Listed for completeness. */
+  /**
+   * Static pathnames (exact `===` match). Keys are camelCase route roles.
+   * Do **not** name a key `home` — that collides with ROUTES.home (`"/"`).
+   * HQ app shell is `hq` → `/hq`.
+   */
   EXACT: {
-    home:            "/hq",
+    hq:              "/hq",
     hqData:          "/api/hq",
     glossary:        "/api/glossary",
     tennisBoard:     "/api/hq/tennis",
+    tennisPlayerQuery: "/api/hq/tennis/player", // ?name= form; path form is tennisPlayer pattern
     events:          "/api/events",
     metaAudit:       "/api/meta/audit",
     profiles:        "/api/profiles",
@@ -163,16 +181,23 @@ export const SERVE_PATTERNS = {
     designAudit:     "/api/design/audit",
     regulatoryHealth:"/regulatory/health",
     agentDispatch:   "/agent/dispatch",
+    /** Same path as ROUTES.latestReport — research browser SSOT for path string */
     reportsLatest:   "/reports/latest.md",
+    /** Same path as ROUTES.architecture */
     architecture:    "/architecture",
   },
 } as const;
 
-/** Local report browser routes (Bun.serve `routes` keys). Max ~5 — see docs/PLAN.md. */
+/**
+ * Research **report browser** routes only (`Bun.serve` `routes` map).
+ * Not the HQ SPA — that lives under SERVE_PATTERNS.EXACT.hq (`/hq`).
+ */
 export const ROUTES = {
+  /** Report browser index (not HQ) */
   home: "/",
   runsList: "/api/runs",
   runApi: "/api/runs/:id",
+  /** Second segment is `:name` here; GitHub parse uses `:repo` (different lane) */
   repo: "/repo/:owner/:name",
   latestReport: "/reports/latest.md",
   architecture: "/architecture",
