@@ -1,6 +1,10 @@
 // @ts-nocheck
 /** HQ dashboard page — dark, tabbed single-page UI fed by /api/hq + /ops.json. */
-import { TOOLTIPS } from "../institutions/glossary.ts";
+import { TOOLTIPS, resolveLabel } from "../institutions/glossary.ts";
+import {
+  liveFilterChoices,
+  filterLabel,
+} from "../institutions/filter-catalog.ts";
 import { BRAND } from "../institutions/design-tokens.ts";
 import { baseCssVars } from "../institutions/design-tokens.ts";
 import { componentCss } from "../institutions/hq-ui.ts";
@@ -542,7 +546,7 @@ async function renderEvents() {
   if (!__board) { el.innerHTML = '<div class="panel"><div class="err">/api/events unavailable</div></div>'; return; }
 
   const allEvents = __board.series.flatMap((s) => s.events);
-  const leagues = [...new Set(allEvents.map((e) => e.league).filter(Boolean))].sort();
+  const liveLeagues = [...new Set(allEvents.map((e) => e.league).filter(Boolean))];
   const tournaments = [...new Set(allEvents.map((e) => e.tournament ?? e.competition).filter(Boolean))].sort();
   const countries = [...new Set(allEvents.flatMap((e) =>
     [e.country, ...e.markets.map((m) => m.playerCountry)]).filter(Boolean))].sort();
@@ -550,25 +554,23 @@ async function renderEvents() {
     const order = (r) => (/Round [Oo]f (\d+)/.exec(r)?.[1] ?? (r.startsWith("Quarter") ? 8 : r.startsWith("Semi") ? 4 : r.startsWith("Final") ? 2 : 999));
     return Number(order(b)) - Number(order(a));
   });
-  const surfaces = [...new Set(allEvents.map((e) => e.surface).filter(Boolean))].sort();
-  const TIER_ORDER = ["GS", "SPECIAL", "1000", "500", "250", "CH", "W125",
-    "ITF100", "ITF75", "ITF60", "ITF50", "ITF40", "ITF35", "ITF25", "ITF15"];
-  const tiers = [...new Set(allEvents.map((e) => e.tier).filter(Boolean))]
-    .sort((a, b) => TIER_ORDER.indexOf(a) - TIER_ORDER.indexOf(b));
-  const opts = (list, cur) => list.map((v) =>
-    "<option" + (v === cur ? " selected" : "") + ">" + esc(v) + "</option>").join("");
-  const sel = (name, cur, choices) =>
-    '<label>' + esc(name) + '<select name="' + name.toLowerCase() + '">' +
-    choices.map(([v, lbl]) => "<option value='" + v + "'" + (v === cur ? " selected" : "") + ">" + lbl + "</option>").join("") +
-    "</select></label>";
+  const liveSurfaces = [...new Set(allEvents.map((e) => e.surface).filter(Boolean))];
+  const liveTiers = [...new Set(allEvents.map((e) => e.tier).filter(Boolean))];
+  // Single write path: glossary values[] order ∩ live board values
+  const leagueChoices = liveFilterChoices("league", liveLeagues);
+  const surfaceChoices = liveFilterChoices("surface", liveSurfaces);
+  const tierChoices = liveFilterChoices("tier", liveTiers);
+  const whenChoices = liveFilterChoices("ui.events.filter.when", ["all", "live", "today", "24h", "week"]);
+  const liqChoices = liveFilterChoices("ui.events.filter.liquidity", ["all", "priced", "active"]);
+  const pair = (list) => list.map((v) => [v, v]);
   const selGloss = (glossaryId, name, cur, choices) =>
-    '<label>' + esc(name) + tip(glossaryId) +
+    '<label>' + esc(filterLabel(glossaryId, name)) + tip(glossaryId) +
     '<select name="' + name.toLowerCase() + '">' +
     choices.map(([v, lbl]) => "<option value='" + v + "'" + (v === cur ? " selected" : "") + ">" + lbl + "</option>").join("") +
     "</select></label>";
 
   el.innerHTML =
-    '<div class="panel"><h2>' + esc("Tennis board") + tip("ui.live_board.title") + " " +
+    '<div class="panel"><h2>' + esc(resolveLabel("ui.live_board.title", "Tennis board")) + tip("ui.live_board.title") + " " +
     badge("ok", __board.eventCount + " events · " + __board.marketCount + " markets") +
     ' <span class="muted" id="events-count" style="font-size:.8rem;font-weight:400"></span></h2>' +
     (metaAudit
@@ -585,14 +587,14 @@ async function renderEvents() {
     '<div class="muted">open match markets across ATP/WTA/Challenger/ITF · click a player to load the order ticket · updated ' + fmtTime(__board.generatedAt) + "</div>" +
     '<form class="order" id="events-filter" style="margin-top:.6rem">' +
     '<label>Search<input name="q" placeholder="player, event, city…" value="' + esc(__filters.q) + '" /></label>' +
-    selGloss("league", "League", __filters.league, [["", "all"], ...leagues.map((l) => [l, l])]) +
-    selGloss("ui.events.filter.tournament", "Tournament", __filters.tournament, [["", "all"], ...tournaments.map((t) => [t, t])]) +
-    selGloss("ui.events.filter.country", "Country", __filters.country, [["", "all"], ...countries.map((c) => [c, c])]) +
-    selGloss("round", "Round", __filters.round, [["", "all"], ...rounds.map((r) => [r, r])]) +
-    selGloss("surface", "Surface", __filters.surface, [["", "all"], ...surfaces.map((s) => [s, s])]) +
-    selGloss("tier", "Tier", __filters.tier, [["", "all"], ...tiers.map((t) => [t, t])]) +
-    selGloss("ui.events.filter.when", "When", __filters.when, [["all", "all"], ["live", "in play now"], ["today", "today"], ["24h", "next 24h"], ["week", "this week"]]) +
-    selGloss("ui.events.filter.liquidity", "Liquidity", __filters.liquidity, [["all", "all"], ["priced", "has quotes"], ["active", "trading live"]]) +
+    selGloss("league", "League", __filters.league, leagueChoices) +
+    selGloss("ui.events.filter.tournament", "Tournament", __filters.tournament, [["", "all"], ...pair(tournaments)]) +
+    selGloss("ui.events.filter.country", "Country", __filters.country, [["", "all"], ...pair(countries)]) +
+    selGloss("round", "Round", __filters.round, [["", "all"], ...pair(rounds)]) +
+    selGloss("surface", "Surface", __filters.surface, surfaceChoices) +
+    selGloss("tier", "Tier", __filters.tier, tierChoices) +
+    selGloss("ui.events.filter.when", "When", __filters.when, whenChoices) +
+    selGloss("ui.events.filter.liquidity", "Liquidity", __filters.liquidity, liqChoices) +
     '<label>Min 24h vol' + tip("ui.events.filter.min_vol") +
     '<input name="minVol" type="number" min="0" step="1000" value="' + __filters.minVol + '" /></label>' +
     '<label>Max ask ¢' + tip("yesPriceCents") +

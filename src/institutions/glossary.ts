@@ -98,7 +98,17 @@ export type GlossaryEntry = {
   /** Alternate labels (search / governance) */
   synonyms?: string[];
   example?: string;
+  /** Closed-set option codes (filter enums, severity ladders, …) */
   values?: string[];
+  /**
+   * Optional display text for a value code (option labels in selects).
+   * Defaults to the code string when omitted.
+   */
+  valueLabels?: Record<string, string>;
+  /** Condition that resolves this alert (empty = manual-only) */
+  resolveValues?: string[];
+  /** Label shown on resolution messages */
+  resolveLabel?: string;
 };
 
 function ui(
@@ -586,6 +596,13 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     category: "ui",
     synonyms: ["time", "window"],
     values: ["all", "live", "today", "24h", "week"],
+    valueLabels: {
+      all: "all",
+      live: "in play now",
+      today: "today",
+      "24h": "next 24h",
+      week: "this week",
+    },
   }),
   ui({
     id: "ui.events.filter.liquidity",
@@ -594,6 +611,11 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     category: "market",
     synonyms: ["quotes", "book"],
     values: ["all", "priced", "active"],
+    valueLabels: {
+      all: "all",
+      priced: "has quotes",
+      active: "trading live",
+    },
   }),
   ui({
     id: "ui.events.filter.min_vol",
@@ -702,6 +724,8 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     description: "kalshiOnly % exceeds threshold (>30% default) for N logger cycles. Polymarket matching failing.",
     category: "pipeline",
     values: ["CRITICAL: >30% for 3+ ticks"],
+    resolveValues: ["kalshiOnly/total ≤ poly-dropout-pct"],
+    resolveLabel: "Poly Dropout — Resolved",
   },
   {
     id: "alert.volume_gap",
@@ -710,6 +734,8 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     description: "midOnly exceeds threshold (>10 default) for N cycles. Many mids but zero volume — stale volume_fp.",
     category: "pipeline",
     values: ["WARNING: >10 for 3+ ticks"],
+    resolveValues: ["midOnly ≤ volume-gap-count"],
+    resolveLabel: "Volume Gap — Resolved",
   },
   {
     id: "alert.feed_frozen",
@@ -718,6 +744,8 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     description: "polyMatched=0 for N consecutive cycles. Polymarket feed completely frozen.",
     category: "pipeline",
     values: ["CRITICAL: 0 polyMatched for 6+ ticks"],
+    resolveValues: ["polyMatched > 0"],
+    resolveLabel: "Poly Frozen — Resolved",
   },
   {
     id: "alert.stale_feed",
@@ -726,6 +754,8 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     description: "No snapshots within staleness-threshold-ms (120s). Logger stuck or crashed.",
     category: "pipeline",
     values: ["CRITICAL: >120s since last snapshot"],
+    resolveValues: ["logger cycle succeeds (reaches this code path)"],
+    resolveLabel: "Feed Stale — Resolved",
   },
   {
     id: "alert.divergence",
@@ -734,6 +764,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     description: "Kalshi mid deviates from Poly implied prob > divergence-cents (15¢). Cross-venue mispricing.",
     category: "pipeline",
     values: ["INFO: |kalshiMid - polyProb*100| > 15¢"],
+    resolveValues: ["manual only — no auto-resolution"],
   },
   {
     id: "alert.resolution",
@@ -784,6 +815,39 @@ export function glossaryEntriesByCategory(): Map<GlossaryCategory, GlossaryEntry
   return map;
 }
 
+/** Concepts whose `values` drive board filter dropdowns (API + audit SSOT). */
+export const FILTER_CATALOG_IDS = [
+  "league",
+  "surface",
+  "tier",
+  "ui.events.filter.when",
+  "ui.events.filter.liquidity",
+] as const;
+
+export type FilterCatalogId = (typeof FILTER_CATALOG_IDS)[number];
+
+export type FilterCatalogEntry = {
+  label: string;
+  values: readonly string[];
+  valueLabels: Record<string, string>;
+};
+
+/** Closed-set catalogs for board filters — single write path via glossary `values`. */
+export function buildFilterCatalog(): Record<string, FilterCatalogEntry> {
+  const filterCatalog: Record<string, FilterCatalogEntry> = {};
+  for (const id of FILTER_CATALOG_IDS) {
+    const e = getGlossaryEntry(id);
+    if (e) {
+      filterCatalog[id] = {
+        label: e.label,
+        values: e.values ?? [],
+        valueLabels: e.valueLabels ?? {},
+      };
+    }
+  }
+  return filterCatalog;
+}
+
 /** Payload for GET /api/glossary — panel + tips + codes. */
 export function buildGlossaryApiPayload() {
   return {
@@ -798,7 +862,10 @@ export function buildGlossaryApiPayload() {
       mapsTo: e.mapsTo ?? null,
       synonyms: e.synonyms ?? [],
       values: e.values ?? null,
+      valueLabels: e.valueLabels ?? null,
     })),
+    /** Closed-set filter catalogs (single write path for board dropdowns) */
+    filterCatalog: buildFilterCatalog(),
     categories: (Object.keys(GLOSSARY_CATEGORY_LABELS) as GlossaryCategory[]).map((id) => ({
       id,
       label: GLOSSARY_CATEGORY_LABELS[id],
@@ -813,9 +880,9 @@ export const PENDING_REGISTRY_CONCEPTS = ["tier", "round"] as const;
 
 // ── Resolution helpers (filter enums / UI labels) ──
 
-/** Human label for a concept id (falls back to id). */
-export function resolveLabel(id: string): string {
-  return getGlossaryEntry(id)?.label ?? id;
+/** Human label for a concept id (falls back to fallback, then id). */
+export function resolveLabel(id: string, fallback?: string): string {
+  return getGlossaryEntry(id)?.label ?? fallback ?? id;
 }
 
 /** One-line meaning (description) for tooltips / panel. */
@@ -858,12 +925,26 @@ export function orderChoicesByGlossary(
 
 /**
  * Build select choice pairs for a glossary-backed filter.
- * Always prefixes ["", "all"] for the clear option.
+ * Uses `valueLabels` when present. Prefixes `["", "all"]` only when the
+ * closed set does **not** already include an `"all"` code (when/liquidity do).
  */
 export function glossaryFilterChoices(
   conceptId: string,
   live: readonly string[],
 ): Array<[string, string]> {
+  const entry = getGlossaryEntry(conceptId);
+  const preferred = entry?.values ?? [];
+  const labels = entry?.valueLabels ?? {};
   const ordered = orderChoicesByGlossary(conceptId, live);
-  return [["", "all"], ...ordered.map((v) => [v, v] as [string, string])];
+  const pairs = ordered.map((v) => [v, labels[v] ?? v] as [string, string]);
+  if (preferred.includes("all") || ordered.includes("all")) {
+    return pairs;
+  }
+  return [["", "all"], ...pairs];
+}
+
+/** Display label for one value code of a concept (falls back to the code). */
+export function resolveValueLabel(conceptId: string, value: string): string {
+  const entry = getGlossaryEntry(conceptId);
+  return entry?.valueLabels?.[value] ?? value;
 }

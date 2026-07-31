@@ -26,6 +26,7 @@ import {
   glossaryMapFromEntries,
   validateGlossaryIntegrity,
 } from "../src/institutions/validate-glossary-integrity.ts";
+import { auditBoardFilterValues } from "../src/institutions/filter-catalog.ts";
 
 const root = join(import.meta.dir, "..");
 const scanRoots = [
@@ -235,6 +236,13 @@ function main() {
     if (integrity.length) {
       console.error("glossary:check FAIL — registry/glossary integrity:");
       for (const e of integrity) console.error(" ", e);
+      process.exit(1);
+    }
+
+    const filterErrs = auditBoardFilterValues();
+    if (filterErrs.length) {
+      console.error("glossary:check FAIL — board filter catalogs:");
+      for (const e of filterErrs) console.error(" ", e);
       process.exit(1);
     }
   }

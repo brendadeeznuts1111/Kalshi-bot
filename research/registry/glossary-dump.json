@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-07-31T02:10:55.037Z",
+  "generatedAt": "2026-07-31T02:16:24.783Z",
   "integrityOk": true,
   "integrityErrors": [],
   "pendingRegistryConcepts": [
@@ -1599,7 +1599,8 @@
           "mid price",
           "market price"
         ],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "spreadCents",
@@ -1612,7 +1613,8 @@
           "bid-ask",
           "spread"
         ],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "crossed",
@@ -1622,7 +1624,8 @@
         "kind": "ui",
         "mapsTo": null,
         "synonyms": [],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "avgKalshiVolumeFp",
@@ -1636,7 +1639,8 @@
           "volume",
           "avgKalshiVolume"
         ],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "yesPriceCents",
@@ -1646,7 +1650,8 @@
         "kind": "ui",
         "mapsTo": null,
         "synonyms": [],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "balanceCents",
@@ -1656,7 +1661,8 @@
         "kind": "ui",
         "mapsTo": null,
         "synonyms": [],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "portfolioValueCents",
@@ -1666,7 +1672,8 @@
         "kind": "ui",
         "mapsTo": null,
         "synonyms": [],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "position",
@@ -1676,7 +1683,8 @@
         "kind": "ui",
         "mapsTo": null,
         "synonyms": [],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "exposureCents",
@@ -1686,7 +1694,8 @@
         "kind": "ui",
         "mapsTo": null,
         "synonyms": [],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "realizedPnlCents",
@@ -1696,7 +1705,8 @@
         "kind": "ui",
         "mapsTo": null,
         "synonyms": [],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "feesPaidCents",
@@ -1706,7 +1716,8 @@
         "kind": "ui",
         "mapsTo": null,
         "synonyms": [],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "remainingCount",
@@ -1716,7 +1727,8 @@
         "kind": "ui",
         "mapsTo": null,
         "synonyms": [],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "fillCount",
@@ -1726,7 +1738,8 @@
         "kind": "ui",
         "mapsTo": null,
         "synonyms": [],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "isTaker",
@@ -1736,7 +1749,8 @@
         "kind": "ui",
         "mapsTo": null,
         "synonyms": [],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "feeCents",
@@ -1746,7 +1760,8 @@
         "kind": "ui",
         "mapsTo": null,
         "synonyms": [],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "postOnly",
@@ -1756,7 +1771,8 @@
         "kind": "ui",
         "mapsTo": null,
         "synonyms": [],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "dryRun",
@@ -1769,7 +1785,8 @@
           "dry run",
           "simulate"
         ],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "shadowMinSignals",
@@ -1779,7 +1796,8 @@
         "kind": "ui",
         "mapsTo": null,
         "synonyms": [],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "killBrierDriftPct",
@@ -1789,7 +1807,8 @@
         "kind": "ui",
         "mapsTo": null,
         "synonyms": [],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "graduationMinRealizedEdgeCentsPerFill",
@@ -1799,7 +1818,8 @@
         "kind": "ui",
         "mapsTo": null,
         "synonyms": [],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "league",
@@ -1819,7 +1839,8 @@
           "WTA 125",
           "ITF Men",
           "ITF Women"
-        ]
+        ],
+        "valueLabels": null
       },
       {
         "id": "surface",
@@ -1834,7 +1855,8 @@
           "Clay",
           "Grass",
           "Carpet"
-        ]
+        ],
+        "valueLabels": null
       },
       {
         "id": "tier",
@@ -1862,7 +1884,8 @@
           "ITF35",
           "ITF25",
           "ITF15"
-        ]
+        ],
+        "valueLabels": null
       },
       {
         "id": "round",
@@ -1872,7 +1895,8 @@
         "kind": "registry",
         "mapsTo": null,
         "synonyms": [],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "series",
@@ -1882,7 +1906,8 @@
         "kind": "registry",
         "mapsTo": null,
         "synonyms": [],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "gender",
@@ -1892,7 +1917,8 @@
         "kind": "registry",
         "mapsTo": null,
         "synonyms": [],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "age_group",
@@ -1902,7 +1928,8 @@
         "kind": "registry",
         "mapsTo": null,
         "synonyms": [],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "match_uuid",
@@ -1912,7 +1939,8 @@
         "kind": "registry",
         "mapsTo": null,
         "synonyms": [],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "event_ticker",
@@ -1922,7 +1950,8 @@
         "kind": "registry",
         "mapsTo": null,
         "synonyms": [],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "timestamp",
@@ -1932,7 +1961,8 @@
         "kind": "registry",
         "mapsTo": null,
         "synonyms": [],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "player_a",
@@ -1942,7 +1972,8 @@
         "kind": "registry",
         "mapsTo": null,
         "synonyms": [],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "player_b",
@@ -1952,7 +1983,8 @@
         "kind": "registry",
         "mapsTo": null,
         "synonyms": [],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "title",
@@ -1962,7 +1994,8 @@
         "kind": "registry",
         "mapsTo": null,
         "synonyms": [],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "kalshi_mu",
@@ -1975,7 +2008,8 @@
           "kalshi mid",
           "mu"
         ],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "kalshi_spread",
@@ -1985,7 +2019,8 @@
         "kind": "registry",
         "mapsTo": null,
         "synonyms": [],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "kalshi_volume",
@@ -1995,7 +2030,8 @@
         "kind": "registry",
         "mapsTo": null,
         "synonyms": [],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "poly_mid",
@@ -2005,7 +2041,8 @@
         "kind": "registry",
         "mapsTo": null,
         "synonyms": [],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "poly_volume",
@@ -2015,7 +2052,8 @@
         "kind": "registry",
         "mapsTo": null,
         "synonyms": [],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "pinny_no_vig",
@@ -2025,7 +2063,8 @@
         "kind": "registry",
         "mapsTo": null,
         "synonyms": [],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "pinny_source",
@@ -2038,7 +2077,8 @@
         "values": [
           "mock",
           "live"
-        ]
+        ],
+        "valueLabels": null
       },
       {
         "id": "elo_prob",
@@ -2048,7 +2088,8 @@
         "kind": "registry",
         "mapsTo": null,
         "synonyms": [],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "elo_source",
@@ -2062,7 +2103,8 @@
           "model",
           "fallback_50",
           "missing"
-        ]
+        ],
+        "valueLabels": null
       },
       {
         "id": "blend_fair_cents",
@@ -2072,7 +2114,8 @@
         "kind": "registry",
         "mapsTo": null,
         "synonyms": [],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "eff_edge",
@@ -2082,7 +2125,8 @@
         "kind": "registry",
         "mapsTo": null,
         "synonyms": [],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "liquidity_ok",
@@ -2092,7 +2136,8 @@
         "kind": "registry",
         "mapsTo": null,
         "synonyms": [],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "total_volume_usd",
@@ -2102,7 +2147,8 @@
         "kind": "registry",
         "mapsTo": null,
         "synonyms": [],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "multi_venue",
@@ -2112,7 +2158,8 @@
         "kind": "registry",
         "mapsTo": null,
         "synonyms": [],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "arb_hint",
@@ -2122,7 +2169,8 @@
         "kind": "registry",
         "mapsTo": null,
         "synonyms": [],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "arb_actionable",
@@ -2132,7 +2180,8 @@
         "kind": "registry",
         "mapsTo": null,
         "synonyms": [],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "rps_flag",
@@ -2142,7 +2191,8 @@
         "kind": "registry",
         "mapsTo": null,
         "synonyms": [],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "graph_divergence",
@@ -2152,7 +2202,8 @@
         "kind": "registry",
         "mapsTo": null,
         "synonyms": [],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "research_flag",
@@ -2162,7 +2213,8 @@
         "kind": "registry",
         "mapsTo": null,
         "synonyms": [],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "export_note",
@@ -2172,7 +2224,8 @@
         "kind": "registry",
         "mapsTo": null,
         "synonyms": [],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "playerProfiles",
@@ -2184,7 +2237,8 @@
         "synonyms": [
           "profiles"
         ],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "lastSeenAtMs",
@@ -2197,7 +2251,8 @@
           "last seen",
           "lastSeenMs"
         ],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "profilesSource",
@@ -2210,7 +2265,8 @@
         "values": [
           "warehouse",
           "seed"
-        ]
+        ],
+        "valueLabels": null
       },
       {
         "id": "coverage",
@@ -2220,7 +2276,8 @@
         "kind": "ui",
         "mapsTo": null,
         "synonyms": [],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "surfaceEdge",
@@ -2232,7 +2289,8 @@
         "synonyms": [
           "surface edge"
         ],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "ui.events.filter.reset",
@@ -2245,7 +2303,8 @@
           "clear",
           "reset"
         ],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "ui.live_board.title",
@@ -2260,7 +2319,8 @@
           "monitor",
           "tennis board"
         ],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "ui.live_board.scanner",
@@ -2274,7 +2334,8 @@
           "signal",
           "flag"
         ],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "ui.live_board.divergence",
@@ -2288,7 +2349,8 @@
           "edge",
           "gap"
         ],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "ui.live_board.edge_score",
@@ -2302,7 +2364,8 @@
           "score",
           "strength"
         ],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "ui.live_board.model_suspect",
@@ -2316,7 +2379,8 @@
           "stale",
           "untrusted"
         ],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "ui.events.filter.tournament",
@@ -2329,7 +2393,8 @@
           "competition",
           "event name"
         ],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "ui.events.filter.country",
@@ -2342,7 +2407,8 @@
           "nation",
           "geo"
         ],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "ui.events.filter.when",
@@ -2361,7 +2427,14 @@
           "today",
           "24h",
           "week"
-        ]
+        ],
+        "valueLabels": {
+          "all": "all",
+          "live": "in play now",
+          "today": "today",
+          "24h": "next 24h",
+          "week": "this week"
+        }
       },
       {
         "id": "ui.events.filter.liquidity",
@@ -2378,7 +2451,12 @@
           "all",
           "priced",
           "active"
-        ]
+        ],
+        "valueLabels": {
+          "all": "all",
+          "priced": "has quotes",
+          "active": "trading live"
+        }
       },
       {
         "id": "ui.events.filter.min_vol",
@@ -2391,7 +2469,8 @@
           "min volume",
           "volume floor"
         ],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "ui.events.filter.min_surface_edge",
@@ -2401,7 +2480,8 @@
         "kind": "ui",
         "mapsTo": "surfaceEdge",
         "synonyms": [],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "ui.sort.events",
@@ -2414,7 +2494,8 @@
           "sort events",
           "order"
         ],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "ui.filter.unclassified",
@@ -2429,7 +2510,8 @@
           "NA",
           "unknown"
         ],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "ui.warehouse.coverage",
@@ -2442,7 +2524,8 @@
           "venues",
           "sources"
         ],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "ui.warehouse.poly_link",
@@ -2456,7 +2539,8 @@
           "gamma",
           "matched"
         ],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "ui.warehouse.event_status",
@@ -2469,7 +2553,8 @@
           "status",
           "state"
         ],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "ui.warehouse.fleet_count",
@@ -2483,7 +2568,8 @@
           "N events",
           "fleet"
         ],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "ui.warehouse.fleet_volume",
@@ -2496,7 +2582,8 @@
           "volume",
           "X total vol"
         ],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "composite.scanner",
@@ -2506,7 +2593,8 @@
         "kind": "composite",
         "mapsTo": null,
         "synonyms": [],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "composite.divergence",
@@ -2516,7 +2604,8 @@
         "kind": "composite",
         "mapsTo": null,
         "synonyms": [],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "composite.edge_score",
@@ -2526,7 +2615,8 @@
         "kind": "composite",
         "mapsTo": null,
         "synonyms": [],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "composite.model_suspect",
@@ -2536,7 +2626,8 @@
         "kind": "composite",
         "mapsTo": null,
         "synonyms": [],
-        "values": null
+        "values": null,
+        "valueLabels": null
       },
       {
         "id": "alert.poly_dropout",
@@ -2548,7 +2639,8 @@
         "synonyms": [],
         "values": [
           "CRITICAL: >30% for 3+ ticks"
-        ]
+        ],
+        "valueLabels": null
       },
       {
         "id": "alert.volume_gap",
@@ -2560,7 +2652,8 @@
         "synonyms": [],
         "values": [
           "WARNING: >10 for 3+ ticks"
-        ]
+        ],
+        "valueLabels": null
       },
       {
         "id": "alert.feed_frozen",
@@ -2572,7 +2665,8 @@
         "synonyms": [],
         "values": [
           "CRITICAL: 0 polyMatched for 6+ ticks"
-        ]
+        ],
+        "valueLabels": null
       },
       {
         "id": "alert.stale_feed",
@@ -2584,7 +2678,8 @@
         "synonyms": [],
         "values": [
           "CRITICAL: >120s since last snapshot"
-        ]
+        ],
+        "valueLabels": null
       },
       {
         "id": "alert.divergence",
@@ -2596,7 +2691,8 @@
         "synonyms": [],
         "values": [
           "INFO: |kalshiMid - polyProb*100| > 15¢"
-        ]
+        ],
+        "valueLabels": null
       },
       {
         "id": "alert.resolution",
@@ -2611,7 +2707,8 @@
           "poly_dropout_resolved",
           "volume_gap_resolved",
           "poly_feed_frozen_resolved"
-        ]
+        ],
+        "valueLabels": null
       },
       {
         "id": "alert.delivery",
@@ -2625,7 +2722,8 @@
           "telegram",
           "discord",
           "console"
-        ]
+        ],
+        "valueLabels": null
       },
       {
         "id": "alert.severity",
@@ -2639,9 +2737,85 @@
           "CRITICAL",
           "WARNING",
           "INFO"
-        ]
+        ],
+        "valueLabels": null
       }
     ],
+    "filterCatalog": {
+      "league": {
+        "label": "League",
+        "values": [
+          "ATP",
+          "WTA",
+          "ATP Challenger",
+          "WTA 125",
+          "ITF Men",
+          "ITF Women"
+        ],
+        "valueLabels": {}
+      },
+      "surface": {
+        "label": "Surface",
+        "values": [
+          "Hard",
+          "Clay",
+          "Grass",
+          "Carpet"
+        ],
+        "valueLabels": {}
+      },
+      "tier": {
+        "label": "Tier",
+        "values": [
+          "GS",
+          "SPECIAL",
+          "1000",
+          "500",
+          "250",
+          "CH",
+          "W125",
+          "ITF100",
+          "ITF75",
+          "ITF60",
+          "ITF50",
+          "ITF40",
+          "ITF35",
+          "ITF25",
+          "ITF15"
+        ],
+        "valueLabels": {}
+      },
+      "ui.events.filter.when": {
+        "label": "When",
+        "values": [
+          "all",
+          "live",
+          "today",
+          "24h",
+          "week"
+        ],
+        "valueLabels": {
+          "all": "all",
+          "live": "in play now",
+          "today": "today",
+          "24h": "next 24h",
+          "week": "this week"
+        }
+      },
+      "ui.events.filter.liquidity": {
+        "label": "Liquidity",
+        "values": [
+          "all",
+          "priced",
+          "active"
+        ],
+        "valueLabels": {
+          "all": "all",
+          "priced": "has quotes",
+          "active": "trading live"
+        }
+      }
+    },
     "categories": [
       {
         "id": "market",

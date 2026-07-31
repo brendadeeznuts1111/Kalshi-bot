@@ -7,13 +7,22 @@ import {
 import {
   GLOSSARY_ENTRIES,
   PENDING_REGISTRY_CONCEPTS,
+  buildFilterCatalog,
   buildGlossaryApiPayload,
   getGlossaryEntry,
   glossaryFilterChoices,
   orderChoicesByGlossary,
   resolveLabel,
+  resolveValueLabel,
   resolveValues,
 } from "../../src/institutions/glossary.ts";
+import {
+  auditBoardFilterValues,
+  displayTier,
+  leagueOptions,
+  surfaceOptions,
+  tierOptions,
+} from "../../src/institutions/filter-catalog.ts";
 import {
   glossaryMapFromEntries,
   validateGlossaryIntegrity,
@@ -86,6 +95,7 @@ describe("semantic layer — glossary root, registry consumer", () => {
 
   test("resolveLabel / resolveValues", () => {
     expect(resolveLabel("kalshi_mu")).toBe("Kalshi µ");
+    expect(resolveLabel("missing", "fallback")).toBe("fallback");
     expect(resolveValues("surface")).toContain("Hard");
     expect(resolveValues("league").length).toBeGreaterThan(0);
   });
@@ -97,10 +107,56 @@ describe("semantic layer — glossary root, registry consumer", () => {
     expect(ordered).toContain("Mystery");
   });
 
-  test("glossaryFilterChoices prefixes all", () => {
+  test("glossaryFilterChoices prefixes empty-all for domain enums", () => {
     const choices = glossaryFilterChoices("surface", ["Clay"]);
     expect(choices[0]).toEqual(["", "all"]);
     expect(choices.some(([v]) => v === "Clay")).toBe(true);
+  });
+
+  test("glossaryFilterChoices preserves when/liquidity all + valueLabels", () => {
+    const when = glossaryFilterChoices("ui.events.filter.when", [
+      "all",
+      "live",
+      "today",
+      "24h",
+      "week",
+    ]);
+    expect(when[0]).toEqual(["all", "all"]);
+    expect(when.some(([v, l]) => v === "live" && l === "in play now")).toBe(true);
+    expect(when.some(([v, l]) => v === "24h" && l === "next 24h")).toBe(true);
+    expect(when.some(([v]) => v === "")).toBe(false);
+
+    const liq = glossaryFilterChoices("ui.events.filter.liquidity", [
+      "all",
+      "priced",
+      "active",
+    ]);
+    expect(liq.some(([v, l]) => v === "priced" && l === "has quotes")).toBe(true);
+    expect(resolveValueLabel("ui.events.filter.when", "live")).toBe("in play now");
+  });
+
+  test("filter-catalog options are glossary-driven (no parallel arrays)", () => {
+    expect(leagueOptions()).toEqual(resolveValues("league"));
+    expect(surfaceOptions()).toEqual(resolveValues("surface"));
+    expect(tierOptions()).toEqual(resolveValues("tier"));
+    expect(tierOptions()[0]).toBe("GS");
+    expect(auditBoardFilterValues()).toEqual([]);
+  });
+
+  test("API filterCatalog mirrors glossary closed sets", () => {
+    const p = buildGlossaryApiPayload();
+    const cat = buildFilterCatalog();
+    expect(p.filterCatalog).toEqual(cat);
+    expect(p.filterCatalog.tier.values).toContain("GS");
+    expect(p.filterCatalog["ui.events.filter.when"].valueLabels.live).toBe(
+      "in play now",
+    );
+  });
+
+  test("displayTier maps unknown to Unclassified", () => {
+    expect(displayTier("GS")).toBe("GS");
+    expect(displayTier("Unc")).toBe("Unclassified");
+    expect(displayTier(null)).toBe("Unclassified");
   });
 
   test("alert.* concepts are composite not registry", () => {

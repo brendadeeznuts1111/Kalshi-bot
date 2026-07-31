@@ -9,7 +9,7 @@ Glossary (semantic authority)          ids never rename for schema churn
     │
     ├─► Desk column registry  ── concept?: GlossaryId (FK, kind=registry)
     ├─► HQ tip("id") / panel  ── id is GlossaryId (ui | registry | composite)
-    ├─► Filter enums          ── resolveValues / orderChoicesByGlossary
+    ├─► Filter enums          ── resolveValues / filter-catalog / filterCatalog API
     └─► Integrity audit       ── bidirectional (orphans + kind mismatch)
 ```
 
@@ -73,11 +73,12 @@ Registry changes for CSV order / SQLite migrations. Glossary concepts are **sema
 | Piece | Path |
 |-------|------|
 | Glossary SSOT | `src/institutions/glossary.ts` |
+| Filter catalogs | `src/institutions/filter-catalog.ts` (`resolveValues` · no `LEAGUE_OPTIONS` mirrors) |
 | Desk column registry | `src/institutions/column-registry.ts` |
 | Integrity | `src/institutions/validate-glossary-integrity.ts` |
-| HQ panel + tips | `src/research/hq-app/app.js` |
-| API | `GET /api/glossary` |
-| Gate | `bun run glossary:check` · pre-commit |
+| HQ panel + tips | `src/research/hq-app/app.js` (uses `filterCatalog` from API) |
+| API | `GET /api/glossary` → `entries` + `filterCatalog` |
+| Gate | `bun run glossary:check` · pre-commit (includes `auditBoardFilterValues`) |
 | Agent dump | `bun run glossary:dump` → `research/registry/glossary-dump.json` |
 | Desk export facts | `artifacts-browser/SCHEMA.md` + `*.meta.json` columns |
 
@@ -102,13 +103,37 @@ bun run glossary:check    # hard: tip keys + integrity + controlled labels
 Controlled catalog lives in `scripts/check-glossary-usage.ts` (`GOVERNED_SURFACES`).  
 HQ uses `selGloss(id, label, …)` + `tip(id)` so labels stay linked to glossary ids.
 
+## Filter options (single write path)
+
+Board dropdowns read **glossary `values`** (and optional `valueLabels`), never parallel constants:
+
+| Before | After |
+|--------|--------|
+| `TIER_ORDER` / `LEAGUE_OPTIONS` in HQ | `resolveValues("tier")` / `liveFilterChoices("league", live)` |
+| Hardcoded when labels in `app.js` | `valueLabels` on `ui.events.filter.when` |
+| Filter label `"League"` | `resolveLabel("league")` / `filterCatalog.league.label` |
+
+```ts
+// Server / SSR
+import { liveFilterChoices, filterLabel } from "../institutions/filter-catalog.ts";
+liveFilterChoices("surface", liveSurfaces);
+
+// Browser — from GET /api/glossary
+GLOSSARY.filterCatalog.tier.values; // closed set order
+```
+
+`glossary:check` fails if any `FILTER_CATALOG_IDS` concept lacks `values[]`.
+
+Unknown tier display: `displayTier(raw)` → `resolveLabel("ui.filter.unclassified")`.
+
 ## Ship order
 
 1. ✅ Glossary `kind` + registry entries for desk columns  
 2. ✅ Column registry + bidirectional validation  
 3. ✅ `glossary:check` / dump  
 4. ✅ Events `selGloss` + report/hard gate  
-5. Later: generate `RegistryConceptId` types; warehouse UI facets from registry  
+5. ✅ Filter options from glossary `values` (kill duplicate catalogs)  
+6. Later: generate `RegistryConceptId` types; warehouse UI facets from registry  
 
 ## What agents should do
 
