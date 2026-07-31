@@ -1,6 +1,6 @@
 {
   "schemaVersion": 5,
-  "generatedAt": "2026-07-31T07:39:55.713Z",
+  "generatedAt": "2026-07-31T13:43:54.333Z",
   "integrityOk": true,
   "integrityErrors": [],
   "concepts": [
@@ -2650,6 +2650,931 @@
       "color": {
         "key": "middleware",
         "css": "#f1c40f",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    {
+      "id": "partner.phase.operator_ready",
+      "label": "Operator ready",
+      "description": "Partner cleared for live trading — handshake complete, operator can run desk.",
+      "category": "pipeline",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [
+        "ready",
+        "live",
+        "operator ready"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "partner.phase.onboarding",
+        "partner.phase.incomplete",
+        "partner.phase.paused"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
+      "color": {
+        "key": "tennis",
+        "css": "#27ae60",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    {
+      "id": "partner.phase.onboarding",
+      "label": "Onboarding",
+      "description": "Partner in setup flow — CODE registered or forum wiring in progress.",
+      "category": "pipeline",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [
+        "onboarding",
+        "forum_ready",
+        "designated"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "partner.phase.operator_ready",
+        "partner.phase.incomplete"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
+      "color": {
+        "key": "middleware",
+        "css": "#f1c40f",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    {
+      "id": "partner.phase.incomplete",
+      "label": "Incomplete",
+      "description": "Partner setup missing required fields or blocked gates.",
+      "category": "pipeline",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [
+        "incomplete",
+        "blocked"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "partner.phase.onboarding",
+        "partner.phase.operator_ready"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
+      "color": {
+        "key": "trading",
+        "css": "#e74c3c",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    {
+      "id": "partner.phase.paused",
+      "label": "Paused",
+      "description": "Partner temporarily suspended — no FUND pressure.",
+      "category": "pipeline",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [
+        "paused"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "partner.phase.operator_ready",
+        "out.status.paused"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
+      "color": {
+        "key": "misc",
+        "css": "#95a5a6",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    {
+      "id": "book.type.legal",
+      "label": "Legal book",
+      "description": "State-licensed / US-regulated sportsbook.",
+      "category": "trading",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [
+        "legal book",
+        "US book"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "book.type.offshore",
+        "book.type.pph",
+        "book.type.crypto"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
+      "color": {
+        "key": "kalshi",
+        "css": "#7dd3fc",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    {
+      "id": "book.type.offshore",
+      "label": "Offshore book",
+      "description": "Non-US regulated retail sportsbook.",
+      "category": "trading",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [
+        "offshore book"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "book.type.legal",
+        "book.type.pph"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
+      "color": {
+        "key": "polymarket",
+        "css": "#2e5cff",
+        "foregroundCss": "#ffffff"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    {
+      "id": "book.type.pph",
+      "label": "PPH desk",
+      "description": "Pay-per-head bookmaking service.",
+      "category": "trading",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [
+        "PPH",
+        "pay per head"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "book.type.offshore",
+        "book.type.legal"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
+      "color": {
+        "key": "pinnacle",
+        "css": "#1a73e8",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    {
+      "id": "book.type.crypto",
+      "label": "Crypto book",
+      "description": "Cryptocurrency-accepting / crypto-settled sportsbook.",
+      "category": "trading",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [
+        "crypto book"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "book.type.offshore",
+        "deposit.method.crypto"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
+      "color": {
+        "key": "middleware",
+        "css": "#f1c40f",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    {
+      "id": "deposit.method.venmo",
+      "label": "Venmo",
+      "description": "Venmo peer-to-peer transfer funding rail.",
+      "category": "trading",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [
+        "Venmo"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "deposit.method.crypto",
+        "deposit.method.wire",
+        "accounting.deposit"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
+      "color": {
+        "key": "trading",
+        "css": "#e74c3c",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    {
+      "id": "deposit.method.crypto",
+      "label": "Crypto",
+      "description": "Cryptocurrency transfer funding rail.",
+      "category": "trading",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [
+        "crypto rail",
+        "BTC",
+        "USDC"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "book.type.crypto",
+        "deposit.method.venmo",
+        "accounting.deposit"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
+      "color": {
+        "key": "tennis",
+        "css": "#27ae60",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    {
+      "id": "deposit.method.wire",
+      "label": "Wire transfer",
+      "description": "Bank wire transfer funding rail.",
+      "category": "trading",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [
+        "wire",
+        "bank wire"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "deposit.method.credit",
+        "accounting.deposit"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
+      "color": {
+        "key": "kalshi",
+        "css": "#7dd3fc",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    {
+      "id": "deposit.method.credit",
+      "label": "Credit line",
+      "description": "Seat-extended / house credit line (not a cash deposit).",
+      "category": "trading",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [
+        "credit line",
+        "house credit"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "accounting.credit",
+        "deposit.method.wire"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
+      "color": {
+        "key": "research",
+        "css": "#e67e22",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    {
+      "id": "out.status.ready",
+      "label": "Ready",
+      "description": "Out active and accepting bets.",
+      "category": "pipeline",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [
+        "out ready",
+        "ready"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "out.status.deferred",
+        "out.status.paused",
+        "partner.phase.operator_ready"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
+      "color": {
+        "key": "tennis",
+        "css": "#27ae60",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    {
+      "id": "out.status.deferred",
+      "label": "Deferred",
+      "description": "Out pending activation / warming.",
+      "category": "pipeline",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [
+        "deferred out",
+        "warming"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "out.status.ready",
+        "out.status.paused"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
+      "color": {
+        "key": "middleware",
+        "css": "#f1c40f",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    {
+      "id": "out.status.paused",
+      "label": "Paused",
+      "description": "Out temporarily inactive.",
+      "category": "pipeline",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [
+        "paused out"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "out.status.deferred",
+        "partner.phase.paused"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
+      "color": {
+        "key": "misc",
+        "css": "#95a5a6",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    {
+      "id": "accounting.deposit",
+      "label": "Deposit received",
+      "description": "Incoming funds confirmed against a funding target.",
+      "category": "trading",
+      "kind": "composite",
+      "mapsTo": null,
+      "synonyms": [
+        "deposit received",
+        "DEPOSIT_RECEIVED"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "accounting.credit",
+        "accounting.free_roll",
+        "deposit.method.venmo"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "usd",
+      "color": {
+        "key": "tennis",
+        "css": "#27ae60",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    {
+      "id": "accounting.withdrawal",
+      "label": "Withdrawal processed",
+      "description": "Outgoing funds sent.",
+      "category": "trading",
+      "kind": "composite",
+      "mapsTo": null,
+      "synonyms": [
+        "withdrawal",
+        "cashout"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "accounting.deposit",
+        "accounting.settlement"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "usd",
+      "color": {
+        "key": "trading",
+        "css": "#e74c3c",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    {
+      "id": "accounting.credit",
+      "label": "Credit extended",
+      "description": "Credit line issued to partner.",
+      "category": "trading",
+      "kind": "composite",
+      "mapsTo": null,
+      "synonyms": [
+        "credit extended",
+        "CREDIT_EXTENDED"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "accounting.deposit",
+        "deposit.method.credit"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "usd",
+      "color": {
+        "key": "kalshi",
+        "css": "#7dd3fc",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    {
+      "id": "accounting.free_roll",
+      "label": "Free-roll applied",
+      "description": "Risk-free stake / freeplay percent applied.",
+      "category": "trading",
+      "kind": "composite",
+      "mapsTo": null,
+      "synonyms": [
+        "free-roll",
+        "freeplay",
+        "FREE_ROLL_APPLIED",
+        "FP%"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "accounting.deposit",
+        "out.status.ready"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "pct",
+      "color": {
+        "key": "research",
+        "css": "#e67e22",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    {
+      "id": "accounting.settlement",
+      "label": "Settlement confirmed",
+      "description": "Bet settled, funds moved — factory mirror event only.",
+      "category": "trading",
+      "kind": "composite",
+      "mapsTo": null,
+      "synonyms": [
+        "settlement",
+        "SETTLEMENT_PROCESSED"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "accounting.deposit",
+        "accounting.withdrawal"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "usd",
+      "color": {
+        "key": "polymarket",
+        "css": "#2e5cff",
+        "foregroundCss": "#ffffff"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    {
+      "id": "event.partner.registered",
+      "label": "Partner registered",
+      "description": "Factory mirror: partner CODE registered (onboarding).",
+      "category": "pipeline",
+      "kind": "composite",
+      "mapsTo": null,
+      "synonyms": [
+        "PARTNER_REGISTERED"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "partner.phase.onboarding",
+        "event.partner.phase_change"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
+      "color": {
+        "key": "middleware",
+        "css": "#f1c40f",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    {
+      "id": "event.partner.phase_change",
+      "label": "Partner phase change",
+      "description": "Factory mirror: partner lifecycle phase changed.",
+      "category": "pipeline",
+      "kind": "composite",
+      "mapsTo": null,
+      "synonyms": [
+        "PARTNER_PHASE_CHANGE"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "partner.phase.operator_ready",
+        "event.partner.registered"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
+      "color": {
+        "key": "tennis",
+        "css": "#27ae60",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    {
+      "id": "event.out.created",
+      "label": "Out created",
+      "description": "Factory mirror: new out row created on the seat desk.",
+      "category": "pipeline",
+      "kind": "composite",
+      "mapsTo": null,
+      "synonyms": [
+        "OUT_CREATED"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "out.status.ready",
+        "event.out.status_change"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
+      "color": {
+        "key": "tennis",
+        "css": "#27ae60",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    {
+      "id": "event.out.status_change",
+      "label": "Out status change",
+      "description": "Factory mirror: out status transitioned.",
+      "category": "pipeline",
+      "kind": "composite",
+      "mapsTo": null,
+      "synonyms": [
+        "OUT_STATUS_CHANGE"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "out.status.deferred",
+        "event.out.created"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
+      "color": {
+        "key": "middleware",
+        "css": "#f1c40f",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    {
+      "id": "event.deposit.received",
+      "label": "Deposit received event",
+      "description": "Factory mirror: deposit confirmed (soft ledger stays in ct).",
+      "category": "trading",
+      "kind": "composite",
+      "mapsTo": null,
+      "synonyms": [
+        "DEPOSIT_RECEIVED"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "accounting.deposit",
+        "event.deposit.allocated"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "usd",
+      "color": {
+        "key": "tennis",
+        "css": "#27ae60",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    {
+      "id": "event.deposit.allocated",
+      "label": "Deposit allocated",
+      "description": "Factory mirror: deposit allocated to an out / rail.",
+      "category": "trading",
+      "kind": "composite",
+      "mapsTo": null,
+      "synonyms": [
+        "DEPOSIT_ALLOCATED"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "accounting.deposit",
+        "event.deposit.received"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "usd",
+      "color": {
+        "key": "kalshi",
+        "css": "#7dd3fc",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    {
+      "id": "event.credit.extended",
+      "label": "Credit extended event",
+      "description": "Factory mirror: credit line extended.",
+      "category": "trading",
+      "kind": "composite",
+      "mapsTo": null,
+      "synonyms": [
+        "CREDIT_EXTENDED"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "accounting.credit",
+        "event.deposit.received"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "usd",
+      "color": {
+        "key": "kalshi",
+        "css": "#7dd3fc",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    {
+      "id": "event.free_roll.applied",
+      "label": "Free-roll applied event",
+      "description": "Factory mirror: free-roll / freeplay applied.",
+      "category": "trading",
+      "kind": "composite",
+      "mapsTo": null,
+      "synonyms": [
+        "FREE_ROLL_APPLIED"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "accounting.free_roll",
+        "event.deposit.received"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "pct",
+      "color": {
+        "key": "research",
+        "css": "#e67e22",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    {
+      "id": "event.settlement.processed",
+      "label": "Settlement processed",
+      "description": "Factory mirror: settlement confirmed.",
+      "category": "trading",
+      "kind": "composite",
+      "mapsTo": null,
+      "synonyms": [
+        "SETTLEMENT_PROCESSED"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "accounting.settlement",
+        "event.deposit.received"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "usd",
+      "color": {
+        "key": "polymarket",
+        "css": "#2e5cff",
+        "foregroundCss": "#ffffff"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    {
+      "id": "event.telegram.invite_sent",
+      "label": "Telegram invite sent",
+      "description": "Factory mirror: Telegram invite dispatched for partner forum.",
+      "category": "pipeline",
+      "kind": "composite",
+      "mapsTo": null,
+      "synonyms": [
+        "TELEGRAM_INVITE_SENT"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "event.telegram.message_pinned",
+        "partner.phase.onboarding"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
+      "color": {
+        "key": "middleware",
+        "css": "#f1c40f",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    {
+      "id": "event.telegram.message_pinned",
+      "label": "Telegram message pinned",
+      "description": "Factory mirror: Telegram message pinned (desk home / accounting).",
+      "category": "pipeline",
+      "kind": "composite",
+      "mapsTo": null,
+      "synonyms": [
+        "TELEGRAM_MESSAGE_PINNED"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "event.telegram.invite_sent",
+        "accounting.deposit"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
+      "color": {
+        "key": "tennis",
+        "css": "#27ae60",
         "foregroundCss": "#000000"
       },
       "url": null,
@@ -5311,6 +6236,931 @@
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
+    },
+    "partner.phase.operator_ready": {
+      "id": "partner.phase.operator_ready",
+      "label": "Operator ready",
+      "description": "Partner cleared for live trading — handshake complete, operator can run desk.",
+      "category": "pipeline",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [
+        "ready",
+        "live",
+        "operator ready"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "partner.phase.onboarding",
+        "partner.phase.incomplete",
+        "partner.phase.paused"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
+      "color": {
+        "key": "tennis",
+        "css": "#27ae60",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "partner.phase.onboarding": {
+      "id": "partner.phase.onboarding",
+      "label": "Onboarding",
+      "description": "Partner in setup flow — CODE registered or forum wiring in progress.",
+      "category": "pipeline",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [
+        "onboarding",
+        "forum_ready",
+        "designated"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "partner.phase.operator_ready",
+        "partner.phase.incomplete"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
+      "color": {
+        "key": "middleware",
+        "css": "#f1c40f",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "partner.phase.incomplete": {
+      "id": "partner.phase.incomplete",
+      "label": "Incomplete",
+      "description": "Partner setup missing required fields or blocked gates.",
+      "category": "pipeline",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [
+        "incomplete",
+        "blocked"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "partner.phase.onboarding",
+        "partner.phase.operator_ready"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
+      "color": {
+        "key": "trading",
+        "css": "#e74c3c",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "partner.phase.paused": {
+      "id": "partner.phase.paused",
+      "label": "Paused",
+      "description": "Partner temporarily suspended — no FUND pressure.",
+      "category": "pipeline",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [
+        "paused"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "partner.phase.operator_ready",
+        "out.status.paused"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
+      "color": {
+        "key": "misc",
+        "css": "#95a5a6",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "book.type.legal": {
+      "id": "book.type.legal",
+      "label": "Legal book",
+      "description": "State-licensed / US-regulated sportsbook.",
+      "category": "trading",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [
+        "legal book",
+        "US book"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "book.type.offshore",
+        "book.type.pph",
+        "book.type.crypto"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
+      "color": {
+        "key": "kalshi",
+        "css": "#7dd3fc",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "book.type.offshore": {
+      "id": "book.type.offshore",
+      "label": "Offshore book",
+      "description": "Non-US regulated retail sportsbook.",
+      "category": "trading",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [
+        "offshore book"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "book.type.legal",
+        "book.type.pph"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
+      "color": {
+        "key": "polymarket",
+        "css": "#2e5cff",
+        "foregroundCss": "#ffffff"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "book.type.pph": {
+      "id": "book.type.pph",
+      "label": "PPH desk",
+      "description": "Pay-per-head bookmaking service.",
+      "category": "trading",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [
+        "PPH",
+        "pay per head"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "book.type.offshore",
+        "book.type.legal"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
+      "color": {
+        "key": "pinnacle",
+        "css": "#1a73e8",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "book.type.crypto": {
+      "id": "book.type.crypto",
+      "label": "Crypto book",
+      "description": "Cryptocurrency-accepting / crypto-settled sportsbook.",
+      "category": "trading",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [
+        "crypto book"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "book.type.offshore",
+        "deposit.method.crypto"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
+      "color": {
+        "key": "middleware",
+        "css": "#f1c40f",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "deposit.method.venmo": {
+      "id": "deposit.method.venmo",
+      "label": "Venmo",
+      "description": "Venmo peer-to-peer transfer funding rail.",
+      "category": "trading",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [
+        "Venmo"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "deposit.method.crypto",
+        "deposit.method.wire",
+        "accounting.deposit"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
+      "color": {
+        "key": "trading",
+        "css": "#e74c3c",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "deposit.method.crypto": {
+      "id": "deposit.method.crypto",
+      "label": "Crypto",
+      "description": "Cryptocurrency transfer funding rail.",
+      "category": "trading",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [
+        "crypto rail",
+        "BTC",
+        "USDC"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "book.type.crypto",
+        "deposit.method.venmo",
+        "accounting.deposit"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
+      "color": {
+        "key": "tennis",
+        "css": "#27ae60",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "deposit.method.wire": {
+      "id": "deposit.method.wire",
+      "label": "Wire transfer",
+      "description": "Bank wire transfer funding rail.",
+      "category": "trading",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [
+        "wire",
+        "bank wire"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "deposit.method.credit",
+        "accounting.deposit"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
+      "color": {
+        "key": "kalshi",
+        "css": "#7dd3fc",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "deposit.method.credit": {
+      "id": "deposit.method.credit",
+      "label": "Credit line",
+      "description": "Seat-extended / house credit line (not a cash deposit).",
+      "category": "trading",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [
+        "credit line",
+        "house credit"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "accounting.credit",
+        "deposit.method.wire"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
+      "color": {
+        "key": "research",
+        "css": "#e67e22",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "out.status.ready": {
+      "id": "out.status.ready",
+      "label": "Ready",
+      "description": "Out active and accepting bets.",
+      "category": "pipeline",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [
+        "out ready",
+        "ready"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "out.status.deferred",
+        "out.status.paused",
+        "partner.phase.operator_ready"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
+      "color": {
+        "key": "tennis",
+        "css": "#27ae60",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "out.status.deferred": {
+      "id": "out.status.deferred",
+      "label": "Deferred",
+      "description": "Out pending activation / warming.",
+      "category": "pipeline",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [
+        "deferred out",
+        "warming"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "out.status.ready",
+        "out.status.paused"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
+      "color": {
+        "key": "middleware",
+        "css": "#f1c40f",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "out.status.paused": {
+      "id": "out.status.paused",
+      "label": "Paused",
+      "description": "Out temporarily inactive.",
+      "category": "pipeline",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [
+        "paused out"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "out.status.deferred",
+        "partner.phase.paused"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
+      "color": {
+        "key": "misc",
+        "css": "#95a5a6",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "accounting.deposit": {
+      "id": "accounting.deposit",
+      "label": "Deposit received",
+      "description": "Incoming funds confirmed against a funding target.",
+      "category": "trading",
+      "kind": "composite",
+      "mapsTo": null,
+      "synonyms": [
+        "deposit received",
+        "DEPOSIT_RECEIVED"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "accounting.credit",
+        "accounting.free_roll",
+        "deposit.method.venmo"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "usd",
+      "color": {
+        "key": "tennis",
+        "css": "#27ae60",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "accounting.withdrawal": {
+      "id": "accounting.withdrawal",
+      "label": "Withdrawal processed",
+      "description": "Outgoing funds sent.",
+      "category": "trading",
+      "kind": "composite",
+      "mapsTo": null,
+      "synonyms": [
+        "withdrawal",
+        "cashout"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "accounting.deposit",
+        "accounting.settlement"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "usd",
+      "color": {
+        "key": "trading",
+        "css": "#e74c3c",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "accounting.credit": {
+      "id": "accounting.credit",
+      "label": "Credit extended",
+      "description": "Credit line issued to partner.",
+      "category": "trading",
+      "kind": "composite",
+      "mapsTo": null,
+      "synonyms": [
+        "credit extended",
+        "CREDIT_EXTENDED"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "accounting.deposit",
+        "deposit.method.credit"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "usd",
+      "color": {
+        "key": "kalshi",
+        "css": "#7dd3fc",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "accounting.free_roll": {
+      "id": "accounting.free_roll",
+      "label": "Free-roll applied",
+      "description": "Risk-free stake / freeplay percent applied.",
+      "category": "trading",
+      "kind": "composite",
+      "mapsTo": null,
+      "synonyms": [
+        "free-roll",
+        "freeplay",
+        "FREE_ROLL_APPLIED",
+        "FP%"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "accounting.deposit",
+        "out.status.ready"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "pct",
+      "color": {
+        "key": "research",
+        "css": "#e67e22",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "accounting.settlement": {
+      "id": "accounting.settlement",
+      "label": "Settlement confirmed",
+      "description": "Bet settled, funds moved — factory mirror event only.",
+      "category": "trading",
+      "kind": "composite",
+      "mapsTo": null,
+      "synonyms": [
+        "settlement",
+        "SETTLEMENT_PROCESSED"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "accounting.deposit",
+        "accounting.withdrawal"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "usd",
+      "color": {
+        "key": "polymarket",
+        "css": "#2e5cff",
+        "foregroundCss": "#ffffff"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "event.partner.registered": {
+      "id": "event.partner.registered",
+      "label": "Partner registered",
+      "description": "Factory mirror: partner CODE registered (onboarding).",
+      "category": "pipeline",
+      "kind": "composite",
+      "mapsTo": null,
+      "synonyms": [
+        "PARTNER_REGISTERED"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "partner.phase.onboarding",
+        "event.partner.phase_change"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
+      "color": {
+        "key": "middleware",
+        "css": "#f1c40f",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "event.partner.phase_change": {
+      "id": "event.partner.phase_change",
+      "label": "Partner phase change",
+      "description": "Factory mirror: partner lifecycle phase changed.",
+      "category": "pipeline",
+      "kind": "composite",
+      "mapsTo": null,
+      "synonyms": [
+        "PARTNER_PHASE_CHANGE"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "partner.phase.operator_ready",
+        "event.partner.registered"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
+      "color": {
+        "key": "tennis",
+        "css": "#27ae60",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "event.out.created": {
+      "id": "event.out.created",
+      "label": "Out created",
+      "description": "Factory mirror: new out row created on the seat desk.",
+      "category": "pipeline",
+      "kind": "composite",
+      "mapsTo": null,
+      "synonyms": [
+        "OUT_CREATED"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "out.status.ready",
+        "event.out.status_change"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
+      "color": {
+        "key": "tennis",
+        "css": "#27ae60",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "event.out.status_change": {
+      "id": "event.out.status_change",
+      "label": "Out status change",
+      "description": "Factory mirror: out status transitioned.",
+      "category": "pipeline",
+      "kind": "composite",
+      "mapsTo": null,
+      "synonyms": [
+        "OUT_STATUS_CHANGE"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "out.status.deferred",
+        "event.out.created"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
+      "color": {
+        "key": "middleware",
+        "css": "#f1c40f",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "event.deposit.received": {
+      "id": "event.deposit.received",
+      "label": "Deposit received event",
+      "description": "Factory mirror: deposit confirmed (soft ledger stays in ct).",
+      "category": "trading",
+      "kind": "composite",
+      "mapsTo": null,
+      "synonyms": [
+        "DEPOSIT_RECEIVED"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "accounting.deposit",
+        "event.deposit.allocated"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "usd",
+      "color": {
+        "key": "tennis",
+        "css": "#27ae60",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "event.deposit.allocated": {
+      "id": "event.deposit.allocated",
+      "label": "Deposit allocated",
+      "description": "Factory mirror: deposit allocated to an out / rail.",
+      "category": "trading",
+      "kind": "composite",
+      "mapsTo": null,
+      "synonyms": [
+        "DEPOSIT_ALLOCATED"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "accounting.deposit",
+        "event.deposit.received"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "usd",
+      "color": {
+        "key": "kalshi",
+        "css": "#7dd3fc",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "event.credit.extended": {
+      "id": "event.credit.extended",
+      "label": "Credit extended event",
+      "description": "Factory mirror: credit line extended.",
+      "category": "trading",
+      "kind": "composite",
+      "mapsTo": null,
+      "synonyms": [
+        "CREDIT_EXTENDED"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "accounting.credit",
+        "event.deposit.received"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "usd",
+      "color": {
+        "key": "kalshi",
+        "css": "#7dd3fc",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "event.free_roll.applied": {
+      "id": "event.free_roll.applied",
+      "label": "Free-roll applied event",
+      "description": "Factory mirror: free-roll / freeplay applied.",
+      "category": "trading",
+      "kind": "composite",
+      "mapsTo": null,
+      "synonyms": [
+        "FREE_ROLL_APPLIED"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "accounting.free_roll",
+        "event.deposit.received"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "pct",
+      "color": {
+        "key": "research",
+        "css": "#e67e22",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "event.settlement.processed": {
+      "id": "event.settlement.processed",
+      "label": "Settlement processed",
+      "description": "Factory mirror: settlement confirmed.",
+      "category": "trading",
+      "kind": "composite",
+      "mapsTo": null,
+      "synonyms": [
+        "SETTLEMENT_PROCESSED"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "accounting.settlement",
+        "event.deposit.received"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "usd",
+      "color": {
+        "key": "polymarket",
+        "css": "#2e5cff",
+        "foregroundCss": "#ffffff"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "event.telegram.invite_sent": {
+      "id": "event.telegram.invite_sent",
+      "label": "Telegram invite sent",
+      "description": "Factory mirror: Telegram invite dispatched for partner forum.",
+      "category": "pipeline",
+      "kind": "composite",
+      "mapsTo": null,
+      "synonyms": [
+        "TELEGRAM_INVITE_SENT"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "event.telegram.message_pinned",
+        "partner.phase.onboarding"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
+      "color": {
+        "key": "middleware",
+        "css": "#f1c40f",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "event.telegram.message_pinned": {
+      "id": "event.telegram.message_pinned",
+      "label": "Telegram message pinned",
+      "description": "Factory mirror: Telegram message pinned (desk home / accounting).",
+      "category": "pipeline",
+      "kind": "composite",
+      "mapsTo": null,
+      "synonyms": [
+        "TELEGRAM_MESSAGE_PINNED"
+      ],
+      "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "event.telegram.invite_sent",
+        "accounting.deposit"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
+      "color": {
+        "key": "tennis",
+        "css": "#27ae60",
+        "foregroundCss": "#000000"
+      },
+      "url": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
     }
   },
   "conceptIdsByKind": {
@@ -5410,7 +7260,22 @@
       "kpi.top_edge",
       "kpi.median_spread",
       "kpi.tight_markets",
-      "kpi.scanner_alerts"
+      "kpi.scanner_alerts",
+      "partner.phase.operator_ready",
+      "partner.phase.onboarding",
+      "partner.phase.incomplete",
+      "partner.phase.paused",
+      "book.type.legal",
+      "book.type.offshore",
+      "book.type.pph",
+      "book.type.crypto",
+      "deposit.method.venmo",
+      "deposit.method.crypto",
+      "deposit.method.wire",
+      "deposit.method.credit",
+      "out.status.ready",
+      "out.status.deferred",
+      "out.status.paused"
     ],
     "composite": [
       "composite.scanner",
@@ -5424,7 +7289,23 @@
       "alert.divergence",
       "alert.resolution",
       "alert.delivery",
-      "alert.severity"
+      "alert.severity",
+      "accounting.deposit",
+      "accounting.withdrawal",
+      "accounting.credit",
+      "accounting.free_roll",
+      "accounting.settlement",
+      "event.partner.registered",
+      "event.partner.phase_change",
+      "event.out.created",
+      "event.out.status_change",
+      "event.deposit.received",
+      "event.deposit.allocated",
+      "event.credit.extended",
+      "event.free_roll.applied",
+      "event.settlement.processed",
+      "event.telegram.invite_sent",
+      "event.telegram.message_pinned"
     ]
   },
   "filterConceptIds": [
@@ -5801,7 +7682,38 @@
       "kpi.top_edge": "Maximum effective edge observed across all live board events.",
       "kpi.median_spread": "Median bid-ask spread across all live board events in cents.",
       "kpi.tight_markets": "Count of events where the bid-ask spread is below the liquidity threshold and both sides are non-null.",
-      "kpi.scanner_alerts": "Count of active price divergence scanner flags on the live board."
+      "kpi.scanner_alerts": "Count of active price divergence scanner flags on the live board.",
+      "partner.phase.operator_ready": "Partner cleared for live trading — handshake complete, operator can run desk.",
+      "partner.phase.onboarding": "Partner in setup flow — CODE registered or forum wiring in progress.",
+      "partner.phase.incomplete": "Partner setup missing required fields or blocked gates.",
+      "partner.phase.paused": "Partner temporarily suspended — no FUND pressure.",
+      "book.type.legal": "State-licensed / US-regulated sportsbook.",
+      "book.type.offshore": "Non-US regulated retail sportsbook.",
+      "book.type.pph": "Pay-per-head bookmaking service.",
+      "book.type.crypto": "Cryptocurrency-accepting / crypto-settled sportsbook.",
+      "deposit.method.venmo": "Venmo peer-to-peer transfer funding rail.",
+      "deposit.method.crypto": "Cryptocurrency transfer funding rail.",
+      "deposit.method.wire": "Bank wire transfer funding rail.",
+      "deposit.method.credit": "Seat-extended / house credit line (not a cash deposit).",
+      "out.status.ready": "Out active and accepting bets.",
+      "out.status.deferred": "Out pending activation / warming.",
+      "out.status.paused": "Out temporarily inactive.",
+      "accounting.deposit": "Incoming funds confirmed against a funding target.",
+      "accounting.withdrawal": "Outgoing funds sent.",
+      "accounting.credit": "Credit line issued to partner.",
+      "accounting.free_roll": "Risk-free stake / freeplay percent applied.",
+      "accounting.settlement": "Bet settled, funds moved — factory mirror event only.",
+      "event.partner.registered": "Factory mirror: partner CODE registered (onboarding).",
+      "event.partner.phase_change": "Factory mirror: partner lifecycle phase changed.",
+      "event.out.created": "Factory mirror: new out row created on the seat desk.",
+      "event.out.status_change": "Factory mirror: out status transitioned.",
+      "event.deposit.received": "Factory mirror: deposit confirmed (soft ledger stays in ct).",
+      "event.deposit.allocated": "Factory mirror: deposit allocated to an out / rail.",
+      "event.credit.extended": "Factory mirror: credit line extended.",
+      "event.free_roll.applied": "Factory mirror: free-roll / freeplay applied.",
+      "event.settlement.processed": "Factory mirror: settlement confirmed.",
+      "event.telegram.invite_sent": "Factory mirror: Telegram invite dispatched for partner forum.",
+      "event.telegram.message_pinned": "Factory mirror: Telegram message pinned (desk home / accounting)."
     },
     "concepts": [
       {
@@ -8135,6 +10047,838 @@
         "color": {
           "key": "middleware",
           "css": "#f1c40f",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "partner.phase.operator_ready",
+        "label": "Operator ready",
+        "description": "Partner cleared for live trading — handshake complete, operator can run desk.",
+        "category": "pipeline",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [
+          "ready",
+          "live",
+          "operator ready"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "partner.phase.onboarding",
+          "partner.phase.incomplete",
+          "partner.phase.paused"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null,
+        "color": {
+          "key": "tennis",
+          "css": "#27ae60",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "partner.phase.onboarding",
+        "label": "Onboarding",
+        "description": "Partner in setup flow — CODE registered or forum wiring in progress.",
+        "category": "pipeline",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [
+          "onboarding",
+          "forum_ready",
+          "designated"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "partner.phase.operator_ready",
+          "partner.phase.incomplete"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null,
+        "color": {
+          "key": "middleware",
+          "css": "#f1c40f",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "partner.phase.incomplete",
+        "label": "Incomplete",
+        "description": "Partner setup missing required fields or blocked gates.",
+        "category": "pipeline",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [
+          "incomplete",
+          "blocked"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "partner.phase.onboarding",
+          "partner.phase.operator_ready"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null,
+        "color": {
+          "key": "trading",
+          "css": "#e74c3c",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "partner.phase.paused",
+        "label": "Paused",
+        "description": "Partner temporarily suspended — no FUND pressure.",
+        "category": "pipeline",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [
+          "paused"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "partner.phase.operator_ready",
+          "out.status.paused"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null,
+        "color": {
+          "key": "misc",
+          "css": "#95a5a6",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "book.type.legal",
+        "label": "Legal book",
+        "description": "State-licensed / US-regulated sportsbook.",
+        "category": "trading",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [
+          "legal book",
+          "US book"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "book.type.offshore",
+          "book.type.pph",
+          "book.type.crypto"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null,
+        "color": {
+          "key": "kalshi",
+          "css": "#7dd3fc",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "book.type.offshore",
+        "label": "Offshore book",
+        "description": "Non-US regulated retail sportsbook.",
+        "category": "trading",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [
+          "offshore book"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "book.type.legal",
+          "book.type.pph"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null,
+        "color": {
+          "key": "polymarket",
+          "css": "#2e5cff",
+          "foregroundCss": "#ffffff"
+        },
+        "url": null
+      },
+      {
+        "id": "book.type.pph",
+        "label": "PPH desk",
+        "description": "Pay-per-head bookmaking service.",
+        "category": "trading",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [
+          "PPH",
+          "pay per head"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "book.type.offshore",
+          "book.type.legal"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null,
+        "color": {
+          "key": "pinnacle",
+          "css": "#1a73e8",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "book.type.crypto",
+        "label": "Crypto book",
+        "description": "Cryptocurrency-accepting / crypto-settled sportsbook.",
+        "category": "trading",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [
+          "crypto book"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "book.type.offshore",
+          "deposit.method.crypto"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null,
+        "color": {
+          "key": "middleware",
+          "css": "#f1c40f",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "deposit.method.venmo",
+        "label": "Venmo",
+        "description": "Venmo peer-to-peer transfer funding rail.",
+        "category": "trading",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [
+          "Venmo"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "deposit.method.crypto",
+          "deposit.method.wire",
+          "accounting.deposit"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null,
+        "color": {
+          "key": "trading",
+          "css": "#e74c3c",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "deposit.method.crypto",
+        "label": "Crypto",
+        "description": "Cryptocurrency transfer funding rail.",
+        "category": "trading",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [
+          "crypto rail",
+          "BTC",
+          "USDC"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "book.type.crypto",
+          "deposit.method.venmo",
+          "accounting.deposit"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null,
+        "color": {
+          "key": "tennis",
+          "css": "#27ae60",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "deposit.method.wire",
+        "label": "Wire transfer",
+        "description": "Bank wire transfer funding rail.",
+        "category": "trading",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [
+          "wire",
+          "bank wire"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "deposit.method.credit",
+          "accounting.deposit"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null,
+        "color": {
+          "key": "kalshi",
+          "css": "#7dd3fc",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "deposit.method.credit",
+        "label": "Credit line",
+        "description": "Seat-extended / house credit line (not a cash deposit).",
+        "category": "trading",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [
+          "credit line",
+          "house credit"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "accounting.credit",
+          "deposit.method.wire"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null,
+        "color": {
+          "key": "research",
+          "css": "#e67e22",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "out.status.ready",
+        "label": "Ready",
+        "description": "Out active and accepting bets.",
+        "category": "pipeline",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [
+          "out ready",
+          "ready"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "out.status.deferred",
+          "out.status.paused",
+          "partner.phase.operator_ready"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null,
+        "color": {
+          "key": "tennis",
+          "css": "#27ae60",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "out.status.deferred",
+        "label": "Deferred",
+        "description": "Out pending activation / warming.",
+        "category": "pipeline",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [
+          "deferred out",
+          "warming"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "out.status.ready",
+          "out.status.paused"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null,
+        "color": {
+          "key": "middleware",
+          "css": "#f1c40f",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "out.status.paused",
+        "label": "Paused",
+        "description": "Out temporarily inactive.",
+        "category": "pipeline",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [
+          "paused out"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "out.status.deferred",
+          "partner.phase.paused"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null,
+        "color": {
+          "key": "misc",
+          "css": "#95a5a6",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "accounting.deposit",
+        "label": "Deposit received",
+        "description": "Incoming funds confirmed against a funding target.",
+        "category": "trading",
+        "kind": "composite",
+        "mapsTo": null,
+        "synonyms": [
+          "deposit received",
+          "DEPOSIT_RECEIVED"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "accounting.credit",
+          "accounting.free_roll",
+          "deposit.method.venmo"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "usd",
+        "color": {
+          "key": "tennis",
+          "css": "#27ae60",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "accounting.withdrawal",
+        "label": "Withdrawal processed",
+        "description": "Outgoing funds sent.",
+        "category": "trading",
+        "kind": "composite",
+        "mapsTo": null,
+        "synonyms": [
+          "withdrawal",
+          "cashout"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "accounting.deposit",
+          "accounting.settlement"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "usd",
+        "color": {
+          "key": "trading",
+          "css": "#e74c3c",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "accounting.credit",
+        "label": "Credit extended",
+        "description": "Credit line issued to partner.",
+        "category": "trading",
+        "kind": "composite",
+        "mapsTo": null,
+        "synonyms": [
+          "credit extended",
+          "CREDIT_EXTENDED"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "accounting.deposit",
+          "deposit.method.credit"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "usd",
+        "color": {
+          "key": "kalshi",
+          "css": "#7dd3fc",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "accounting.free_roll",
+        "label": "Free-roll applied",
+        "description": "Risk-free stake / freeplay percent applied.",
+        "category": "trading",
+        "kind": "composite",
+        "mapsTo": null,
+        "synonyms": [
+          "free-roll",
+          "freeplay",
+          "FREE_ROLL_APPLIED",
+          "FP%"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "accounting.deposit",
+          "out.status.ready"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "pct",
+        "color": {
+          "key": "research",
+          "css": "#e67e22",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "accounting.settlement",
+        "label": "Settlement confirmed",
+        "description": "Bet settled, funds moved — factory mirror event only.",
+        "category": "trading",
+        "kind": "composite",
+        "mapsTo": null,
+        "synonyms": [
+          "settlement",
+          "SETTLEMENT_PROCESSED"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "accounting.deposit",
+          "accounting.withdrawal"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "usd",
+        "color": {
+          "key": "polymarket",
+          "css": "#2e5cff",
+          "foregroundCss": "#ffffff"
+        },
+        "url": null
+      },
+      {
+        "id": "event.partner.registered",
+        "label": "Partner registered",
+        "description": "Factory mirror: partner CODE registered (onboarding).",
+        "category": "pipeline",
+        "kind": "composite",
+        "mapsTo": null,
+        "synonyms": [
+          "PARTNER_REGISTERED"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "partner.phase.onboarding",
+          "event.partner.phase_change"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null,
+        "color": {
+          "key": "middleware",
+          "css": "#f1c40f",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "event.partner.phase_change",
+        "label": "Partner phase change",
+        "description": "Factory mirror: partner lifecycle phase changed.",
+        "category": "pipeline",
+        "kind": "composite",
+        "mapsTo": null,
+        "synonyms": [
+          "PARTNER_PHASE_CHANGE"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "partner.phase.operator_ready",
+          "event.partner.registered"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null,
+        "color": {
+          "key": "tennis",
+          "css": "#27ae60",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "event.out.created",
+        "label": "Out created",
+        "description": "Factory mirror: new out row created on the seat desk.",
+        "category": "pipeline",
+        "kind": "composite",
+        "mapsTo": null,
+        "synonyms": [
+          "OUT_CREATED"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "out.status.ready",
+          "event.out.status_change"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null,
+        "color": {
+          "key": "tennis",
+          "css": "#27ae60",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "event.out.status_change",
+        "label": "Out status change",
+        "description": "Factory mirror: out status transitioned.",
+        "category": "pipeline",
+        "kind": "composite",
+        "mapsTo": null,
+        "synonyms": [
+          "OUT_STATUS_CHANGE"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "out.status.deferred",
+          "event.out.created"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null,
+        "color": {
+          "key": "middleware",
+          "css": "#f1c40f",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "event.deposit.received",
+        "label": "Deposit received event",
+        "description": "Factory mirror: deposit confirmed (soft ledger stays in ct).",
+        "category": "trading",
+        "kind": "composite",
+        "mapsTo": null,
+        "synonyms": [
+          "DEPOSIT_RECEIVED"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "accounting.deposit",
+          "event.deposit.allocated"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "usd",
+        "color": {
+          "key": "tennis",
+          "css": "#27ae60",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "event.deposit.allocated",
+        "label": "Deposit allocated",
+        "description": "Factory mirror: deposit allocated to an out / rail.",
+        "category": "trading",
+        "kind": "composite",
+        "mapsTo": null,
+        "synonyms": [
+          "DEPOSIT_ALLOCATED"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "accounting.deposit",
+          "event.deposit.received"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "usd",
+        "color": {
+          "key": "kalshi",
+          "css": "#7dd3fc",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "event.credit.extended",
+        "label": "Credit extended event",
+        "description": "Factory mirror: credit line extended.",
+        "category": "trading",
+        "kind": "composite",
+        "mapsTo": null,
+        "synonyms": [
+          "CREDIT_EXTENDED"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "accounting.credit",
+          "event.deposit.received"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "usd",
+        "color": {
+          "key": "kalshi",
+          "css": "#7dd3fc",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "event.free_roll.applied",
+        "label": "Free-roll applied event",
+        "description": "Factory mirror: free-roll / freeplay applied.",
+        "category": "trading",
+        "kind": "composite",
+        "mapsTo": null,
+        "synonyms": [
+          "FREE_ROLL_APPLIED"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "accounting.free_roll",
+          "event.deposit.received"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "pct",
+        "color": {
+          "key": "research",
+          "css": "#e67e22",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "event.settlement.processed",
+        "label": "Settlement processed",
+        "description": "Factory mirror: settlement confirmed.",
+        "category": "trading",
+        "kind": "composite",
+        "mapsTo": null,
+        "synonyms": [
+          "SETTLEMENT_PROCESSED"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "accounting.settlement",
+          "event.deposit.received"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "usd",
+        "color": {
+          "key": "polymarket",
+          "css": "#2e5cff",
+          "foregroundCss": "#ffffff"
+        },
+        "url": null
+      },
+      {
+        "id": "event.telegram.invite_sent",
+        "label": "Telegram invite sent",
+        "description": "Factory mirror: Telegram invite dispatched for partner forum.",
+        "category": "pipeline",
+        "kind": "composite",
+        "mapsTo": null,
+        "synonyms": [
+          "TELEGRAM_INVITE_SENT"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "event.telegram.message_pinned",
+          "partner.phase.onboarding"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null,
+        "color": {
+          "key": "middleware",
+          "css": "#f1c40f",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "event.telegram.message_pinned",
+        "label": "Telegram message pinned",
+        "description": "Factory mirror: Telegram message pinned (desk home / accounting).",
+        "category": "pipeline",
+        "kind": "composite",
+        "mapsTo": null,
+        "synonyms": [
+          "TELEGRAM_MESSAGE_PINNED"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "event.telegram.invite_sent",
+          "accounting.deposit"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null,
+        "color": {
+          "key": "tennis",
+          "css": "#27ae60",
           "foregroundCss": "#000000"
         },
         "url": null
@@ -10475,6 +13219,838 @@
           "foregroundCss": "#000000"
         },
         "url": null
+      },
+      {
+        "id": "partner.phase.operator_ready",
+        "label": "Operator ready",
+        "description": "Partner cleared for live trading — handshake complete, operator can run desk.",
+        "category": "pipeline",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [
+          "ready",
+          "live",
+          "operator ready"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "partner.phase.onboarding",
+          "partner.phase.incomplete",
+          "partner.phase.paused"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null,
+        "color": {
+          "key": "tennis",
+          "css": "#27ae60",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "partner.phase.onboarding",
+        "label": "Onboarding",
+        "description": "Partner in setup flow — CODE registered or forum wiring in progress.",
+        "category": "pipeline",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [
+          "onboarding",
+          "forum_ready",
+          "designated"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "partner.phase.operator_ready",
+          "partner.phase.incomplete"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null,
+        "color": {
+          "key": "middleware",
+          "css": "#f1c40f",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "partner.phase.incomplete",
+        "label": "Incomplete",
+        "description": "Partner setup missing required fields or blocked gates.",
+        "category": "pipeline",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [
+          "incomplete",
+          "blocked"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "partner.phase.onboarding",
+          "partner.phase.operator_ready"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null,
+        "color": {
+          "key": "trading",
+          "css": "#e74c3c",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "partner.phase.paused",
+        "label": "Paused",
+        "description": "Partner temporarily suspended — no FUND pressure.",
+        "category": "pipeline",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [
+          "paused"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "partner.phase.operator_ready",
+          "out.status.paused"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null,
+        "color": {
+          "key": "misc",
+          "css": "#95a5a6",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "book.type.legal",
+        "label": "Legal book",
+        "description": "State-licensed / US-regulated sportsbook.",
+        "category": "trading",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [
+          "legal book",
+          "US book"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "book.type.offshore",
+          "book.type.pph",
+          "book.type.crypto"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null,
+        "color": {
+          "key": "kalshi",
+          "css": "#7dd3fc",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "book.type.offshore",
+        "label": "Offshore book",
+        "description": "Non-US regulated retail sportsbook.",
+        "category": "trading",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [
+          "offshore book"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "book.type.legal",
+          "book.type.pph"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null,
+        "color": {
+          "key": "polymarket",
+          "css": "#2e5cff",
+          "foregroundCss": "#ffffff"
+        },
+        "url": null
+      },
+      {
+        "id": "book.type.pph",
+        "label": "PPH desk",
+        "description": "Pay-per-head bookmaking service.",
+        "category": "trading",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [
+          "PPH",
+          "pay per head"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "book.type.offshore",
+          "book.type.legal"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null,
+        "color": {
+          "key": "pinnacle",
+          "css": "#1a73e8",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "book.type.crypto",
+        "label": "Crypto book",
+        "description": "Cryptocurrency-accepting / crypto-settled sportsbook.",
+        "category": "trading",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [
+          "crypto book"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "book.type.offshore",
+          "deposit.method.crypto"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null,
+        "color": {
+          "key": "middleware",
+          "css": "#f1c40f",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "deposit.method.venmo",
+        "label": "Venmo",
+        "description": "Venmo peer-to-peer transfer funding rail.",
+        "category": "trading",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [
+          "Venmo"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "deposit.method.crypto",
+          "deposit.method.wire",
+          "accounting.deposit"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null,
+        "color": {
+          "key": "trading",
+          "css": "#e74c3c",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "deposit.method.crypto",
+        "label": "Crypto",
+        "description": "Cryptocurrency transfer funding rail.",
+        "category": "trading",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [
+          "crypto rail",
+          "BTC",
+          "USDC"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "book.type.crypto",
+          "deposit.method.venmo",
+          "accounting.deposit"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null,
+        "color": {
+          "key": "tennis",
+          "css": "#27ae60",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "deposit.method.wire",
+        "label": "Wire transfer",
+        "description": "Bank wire transfer funding rail.",
+        "category": "trading",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [
+          "wire",
+          "bank wire"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "deposit.method.credit",
+          "accounting.deposit"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null,
+        "color": {
+          "key": "kalshi",
+          "css": "#7dd3fc",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "deposit.method.credit",
+        "label": "Credit line",
+        "description": "Seat-extended / house credit line (not a cash deposit).",
+        "category": "trading",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [
+          "credit line",
+          "house credit"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "accounting.credit",
+          "deposit.method.wire"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null,
+        "color": {
+          "key": "research",
+          "css": "#e67e22",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "out.status.ready",
+        "label": "Ready",
+        "description": "Out active and accepting bets.",
+        "category": "pipeline",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [
+          "out ready",
+          "ready"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "out.status.deferred",
+          "out.status.paused",
+          "partner.phase.operator_ready"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null,
+        "color": {
+          "key": "tennis",
+          "css": "#27ae60",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "out.status.deferred",
+        "label": "Deferred",
+        "description": "Out pending activation / warming.",
+        "category": "pipeline",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [
+          "deferred out",
+          "warming"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "out.status.ready",
+          "out.status.paused"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null,
+        "color": {
+          "key": "middleware",
+          "css": "#f1c40f",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "out.status.paused",
+        "label": "Paused",
+        "description": "Out temporarily inactive.",
+        "category": "pipeline",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [
+          "paused out"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "out.status.deferred",
+          "partner.phase.paused"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null,
+        "color": {
+          "key": "misc",
+          "css": "#95a5a6",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "accounting.deposit",
+        "label": "Deposit received",
+        "description": "Incoming funds confirmed against a funding target.",
+        "category": "trading",
+        "kind": "composite",
+        "mapsTo": null,
+        "synonyms": [
+          "deposit received",
+          "DEPOSIT_RECEIVED"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "accounting.credit",
+          "accounting.free_roll",
+          "deposit.method.venmo"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "usd",
+        "color": {
+          "key": "tennis",
+          "css": "#27ae60",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "accounting.withdrawal",
+        "label": "Withdrawal processed",
+        "description": "Outgoing funds sent.",
+        "category": "trading",
+        "kind": "composite",
+        "mapsTo": null,
+        "synonyms": [
+          "withdrawal",
+          "cashout"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "accounting.deposit",
+          "accounting.settlement"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "usd",
+        "color": {
+          "key": "trading",
+          "css": "#e74c3c",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "accounting.credit",
+        "label": "Credit extended",
+        "description": "Credit line issued to partner.",
+        "category": "trading",
+        "kind": "composite",
+        "mapsTo": null,
+        "synonyms": [
+          "credit extended",
+          "CREDIT_EXTENDED"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "accounting.deposit",
+          "deposit.method.credit"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "usd",
+        "color": {
+          "key": "kalshi",
+          "css": "#7dd3fc",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "accounting.free_roll",
+        "label": "Free-roll applied",
+        "description": "Risk-free stake / freeplay percent applied.",
+        "category": "trading",
+        "kind": "composite",
+        "mapsTo": null,
+        "synonyms": [
+          "free-roll",
+          "freeplay",
+          "FREE_ROLL_APPLIED",
+          "FP%"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "accounting.deposit",
+          "out.status.ready"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "pct",
+        "color": {
+          "key": "research",
+          "css": "#e67e22",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "accounting.settlement",
+        "label": "Settlement confirmed",
+        "description": "Bet settled, funds moved — factory mirror event only.",
+        "category": "trading",
+        "kind": "composite",
+        "mapsTo": null,
+        "synonyms": [
+          "settlement",
+          "SETTLEMENT_PROCESSED"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "accounting.deposit",
+          "accounting.withdrawal"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "usd",
+        "color": {
+          "key": "polymarket",
+          "css": "#2e5cff",
+          "foregroundCss": "#ffffff"
+        },
+        "url": null
+      },
+      {
+        "id": "event.partner.registered",
+        "label": "Partner registered",
+        "description": "Factory mirror: partner CODE registered (onboarding).",
+        "category": "pipeline",
+        "kind": "composite",
+        "mapsTo": null,
+        "synonyms": [
+          "PARTNER_REGISTERED"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "partner.phase.onboarding",
+          "event.partner.phase_change"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null,
+        "color": {
+          "key": "middleware",
+          "css": "#f1c40f",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "event.partner.phase_change",
+        "label": "Partner phase change",
+        "description": "Factory mirror: partner lifecycle phase changed.",
+        "category": "pipeline",
+        "kind": "composite",
+        "mapsTo": null,
+        "synonyms": [
+          "PARTNER_PHASE_CHANGE"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "partner.phase.operator_ready",
+          "event.partner.registered"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null,
+        "color": {
+          "key": "tennis",
+          "css": "#27ae60",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "event.out.created",
+        "label": "Out created",
+        "description": "Factory mirror: new out row created on the seat desk.",
+        "category": "pipeline",
+        "kind": "composite",
+        "mapsTo": null,
+        "synonyms": [
+          "OUT_CREATED"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "out.status.ready",
+          "event.out.status_change"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null,
+        "color": {
+          "key": "tennis",
+          "css": "#27ae60",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "event.out.status_change",
+        "label": "Out status change",
+        "description": "Factory mirror: out status transitioned.",
+        "category": "pipeline",
+        "kind": "composite",
+        "mapsTo": null,
+        "synonyms": [
+          "OUT_STATUS_CHANGE"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "out.status.deferred",
+          "event.out.created"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null,
+        "color": {
+          "key": "middleware",
+          "css": "#f1c40f",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "event.deposit.received",
+        "label": "Deposit received event",
+        "description": "Factory mirror: deposit confirmed (soft ledger stays in ct).",
+        "category": "trading",
+        "kind": "composite",
+        "mapsTo": null,
+        "synonyms": [
+          "DEPOSIT_RECEIVED"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "accounting.deposit",
+          "event.deposit.allocated"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "usd",
+        "color": {
+          "key": "tennis",
+          "css": "#27ae60",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "event.deposit.allocated",
+        "label": "Deposit allocated",
+        "description": "Factory mirror: deposit allocated to an out / rail.",
+        "category": "trading",
+        "kind": "composite",
+        "mapsTo": null,
+        "synonyms": [
+          "DEPOSIT_ALLOCATED"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "accounting.deposit",
+          "event.deposit.received"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "usd",
+        "color": {
+          "key": "kalshi",
+          "css": "#7dd3fc",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "event.credit.extended",
+        "label": "Credit extended event",
+        "description": "Factory mirror: credit line extended.",
+        "category": "trading",
+        "kind": "composite",
+        "mapsTo": null,
+        "synonyms": [
+          "CREDIT_EXTENDED"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "accounting.credit",
+          "event.deposit.received"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "usd",
+        "color": {
+          "key": "kalshi",
+          "css": "#7dd3fc",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "event.free_roll.applied",
+        "label": "Free-roll applied event",
+        "description": "Factory mirror: free-roll / freeplay applied.",
+        "category": "trading",
+        "kind": "composite",
+        "mapsTo": null,
+        "synonyms": [
+          "FREE_ROLL_APPLIED"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "accounting.free_roll",
+          "event.deposit.received"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "pct",
+        "color": {
+          "key": "research",
+          "css": "#e67e22",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "event.settlement.processed",
+        "label": "Settlement processed",
+        "description": "Factory mirror: settlement confirmed.",
+        "category": "trading",
+        "kind": "composite",
+        "mapsTo": null,
+        "synonyms": [
+          "SETTLEMENT_PROCESSED"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "accounting.settlement",
+          "event.deposit.received"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "usd",
+        "color": {
+          "key": "polymarket",
+          "css": "#2e5cff",
+          "foregroundCss": "#ffffff"
+        },
+        "url": null
+      },
+      {
+        "id": "event.telegram.invite_sent",
+        "label": "Telegram invite sent",
+        "description": "Factory mirror: Telegram invite dispatched for partner forum.",
+        "category": "pipeline",
+        "kind": "composite",
+        "mapsTo": null,
+        "synonyms": [
+          "TELEGRAM_INVITE_SENT"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "event.telegram.message_pinned",
+          "partner.phase.onboarding"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null,
+        "color": {
+          "key": "middleware",
+          "css": "#f1c40f",
+          "foregroundCss": "#000000"
+        },
+        "url": null
+      },
+      {
+        "id": "event.telegram.message_pinned",
+        "label": "Telegram message pinned",
+        "description": "Factory mirror: Telegram message pinned (desk home / accounting).",
+        "category": "pipeline",
+        "kind": "composite",
+        "mapsTo": null,
+        "synonyms": [
+          "TELEGRAM_MESSAGE_PINNED"
+        ],
+        "values": null,
+        "valueLabels": null,
+        "seeAlso": [
+          "event.telegram.invite_sent",
+          "accounting.deposit"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null,
+        "color": {
+          "key": "tennis",
+          "css": "#27ae60",
+          "foregroundCss": "#000000"
+        },
+        "url": null
       }
     ],
     "conceptIdsByKind": {
@@ -10574,7 +14150,22 @@
         "kpi.top_edge",
         "kpi.median_spread",
         "kpi.tight_markets",
-        "kpi.scanner_alerts"
+        "kpi.scanner_alerts",
+        "partner.phase.operator_ready",
+        "partner.phase.onboarding",
+        "partner.phase.incomplete",
+        "partner.phase.paused",
+        "book.type.legal",
+        "book.type.offshore",
+        "book.type.pph",
+        "book.type.crypto",
+        "deposit.method.venmo",
+        "deposit.method.crypto",
+        "deposit.method.wire",
+        "deposit.method.credit",
+        "out.status.ready",
+        "out.status.deferred",
+        "out.status.paused"
       ],
       "composite": [
         "composite.scanner",
@@ -10588,7 +14179,23 @@
         "alert.divergence",
         "alert.resolution",
         "alert.delivery",
-        "alert.severity"
+        "alert.severity",
+        "accounting.deposit",
+        "accounting.withdrawal",
+        "accounting.credit",
+        "accounting.free_roll",
+        "accounting.settlement",
+        "event.partner.registered",
+        "event.partner.phase_change",
+        "event.out.created",
+        "event.out.status_change",
+        "event.deposit.received",
+        "event.deposit.allocated",
+        "event.credit.extended",
+        "event.free_roll.applied",
+        "event.settlement.processed",
+        "event.telegram.invite_sent",
+        "event.telegram.message_pinned"
       ]
     },
     "filterConceptIds": [
