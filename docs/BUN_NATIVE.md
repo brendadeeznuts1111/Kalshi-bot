@@ -35,7 +35,7 @@ Template: [`.env.example`](../.env.example). Smoke: `bun test tests/lib/bun-env.
 |-----|------|------|
 | [runtime/color](https://bun.com/docs/runtime/color) | `Bun.color(input, format)` — css/ansi/hex/`{rgb}`/… | [`src/lib/color/`](../src/lib/color/) · facade [`design-colors.ts`](../src/lib/design-colors.ts) |
 | [update § visual indicators](https://bun.com/docs/pm/cli/update#visual-indicators) | red major / yellow minor / green patch · □/■ selection | `COLORS.semverMajor|Minor|Patch` + `paintSemverChange()` |
-| [HTMLRewriter social meta](https://bun.com/docs/guides/html-rewriter/extract-social-meta#extract-social-share-images-and-open-graph-tags) | OG + Twitter + title/description fallbacks | [`src/lib/extract-social-meta.ts`](../src/lib/extract-social-meta.ts) · `bun run social:meta [url]` · monorepo twin `lib/docs/extract-metadata.ts` |
+| [HTMLRewriter social meta](https://bun.com/docs/guides/html-rewriter/extract-social-meta#extract-social-share-images-and-open-graph-tags) | OG + Twitter + title/description fallbacks | [`src/lib/extract-social-meta.ts`](../src/lib/extract-social-meta.ts) · `bun run social:meta [url]` · `bun run glossary:urls:og` |
 | Operator CLI | interactive dep review | `bun update -i` · monorepo: `bun update -i -r` |
 | Colorized outdated | `bun outdated` + semver paint | `bun run deps:outdated` · `deps:outdated:latest` · monorepo `bun run deps:outdated` (all workspaces) |
 | Color bake gate | palette → CSS/JSON/MD | `bun run colors:artifacts` · `colors:check` (pre-commit when color staged) |
