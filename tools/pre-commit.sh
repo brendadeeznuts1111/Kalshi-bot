@@ -10,6 +10,9 @@ bun run check
 echo "pre-commit: glossary"
 bun run glossary:check
 
+echo "pre-commit: partners"
+bun run partners:validate
+
 # Color bake gate when palette / kernel staged
 color_staged="$(
   git diff --cached --name-only --diff-filter=ACM -- \
