@@ -1,4 +1,5 @@
 // @see https://bun.com/blog/bun-v1.3.4#urlpattern-api
+// @see https://bun.com/blog/bun-v1.3.4#urlpattern-api:~:text=Pattern%20properties%3A%20protocol%2C%20username%2C%20password%2C%20hostname%2C%20port%2C%20pathname%2C%20search%2C%20hash
 // @see https://bun.com/blog/bun-v1.3.12#urlpattern-is-up-to-2-3x-faster
 // @see https://bun.com/docs/runtime/http/server#basic-setup
 /**
@@ -7,6 +8,8 @@
  * Blog vectors (v1.3.4):
  *   new URLPattern({ pathname: "/users/:id" }).exec(...).pathname.groups.id
  *   new URLPattern({ pathname: "/files/*" }).exec(...).pathname.groups[0]
+ *   Pattern properties: protocol, username, password, hostname, port,
+ *     pathname, search, hash (+ hasRegExpGroups)
  */
 
 /** Thin wrapper so URLPattern usage stays consistent across modules. */
@@ -15,6 +18,37 @@ export class BunURLPattern {
 
   constructor(init: URLPatternInit | string | URLPattern) {
     this.pattern = init instanceof URLPattern ? init : new URLPattern(init);
+  }
+
+  // ── Pattern properties (read-only component patterns) ──
+  // @see Pattern properties: protocol, username, password, hostname, port, pathname, search, hash
+  get protocol(): string {
+    return this.pattern.protocol;
+  }
+  get username(): string {
+    return this.pattern.username;
+  }
+  get password(): string {
+    return this.pattern.password;
+  }
+  get hostname(): string {
+    return this.pattern.hostname;
+  }
+  get port(): string {
+    return this.pattern.port;
+  }
+  get pathname(): string {
+    return this.pattern.pathname;
+  }
+  get search(): string {
+    return this.pattern.search;
+  }
+  get hash(): string {
+    return this.pattern.hash;
+  }
+  /** True when any component uses a custom regular-expression group. */
+  get hasRegExpGroups(): boolean {
+    return this.pattern.hasRegExpGroups;
   }
 
   test(input: string | URL | URLPatternInit): boolean {
@@ -29,6 +63,24 @@ export class BunURLPattern {
   groups(input: string | URL): Record<string, string | undefined> | null {
     const m = this.exec(input);
     return m ? m.pathname.groups : null;
+  }
+
+  /**
+   * Full component group bag after a match (pathname + search + hash).
+   * Useful when patterns constrain more than pathname alone.
+   */
+  componentGroups(input: string | URL): {
+    pathname: Record<string, string | undefined>;
+    search: Record<string, string | undefined>;
+    hash: Record<string, string | undefined>;
+  } | null {
+    const m = this.exec(input);
+    if (!m) return null;
+    return {
+      pathname: m.pathname.groups,
+      search: m.search.groups,
+      hash: m.hash.groups,
+    };
   }
 }
 
@@ -60,6 +112,16 @@ export const GITHUB_REPO_DEEP = new BunURLPattern({
  *   :id        — generic resource id
  *   :runId     — timestamp-based run identifier
  */
+
+/**
+ * Server routes: pathname-only (protocol/hostname/port stay `*`).
+ * Pinning origin would break 127.0.0.1 vs localhost and non-default ports.
+ * Use multi-component URLPatternInit only when you intentionally constrain host
+ * (see GITHUB_REPO_CANON) or search/hash (componentGroups).
+ *
+ * @see Pattern properties: protocol, username, password, hostname, port, pathname, search, hash
+ *   https://bun.com/blog/bun-v1.3.4#urlpattern-api
+ */
 export const SERVE_PATTERNS = {
   // ── Research & reports ──
   runApi:    new BunURLPattern({ pathname: "/api/runs/:id" }),
@@ -71,7 +133,7 @@ export const SERVE_PATTERNS = {
   tennisPlayer: new BunURLPattern({ pathname: "/api/hq/tennis/player/:name" }),
 
   // ── Ops dashboard ──
-  opsPartner: new BunURLPattern({ pathname: "/ops/partners/:nodeId" }),
+  opsPartner:     new BunURLPattern({ pathname: "/ops/partners/:nodeId" }),
   kalshiRotateKey: new BunURLPattern({ pathname: "/ops/kalshi-rotate-key" }),
 
   // ── Polymarket ──

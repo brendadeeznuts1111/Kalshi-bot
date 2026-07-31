@@ -1,5 +1,6 @@
 // @see https://bun.com/docs/test/index#run-tests
 // @see https://bun.com/blog/bun-v1.3.4#urlpattern-api
+// @see https://bun.com/blog/bun-v1.3.4#urlpattern-api:~:text=Pattern%20properties%3A%20protocol%2C%20username%2C%20password%2C%20hostname%2C%20port%2C%20pathname%2C%20search%2C%20hash
 import { describe, expect, test } from "bun:test";
 import {
   BunURLPattern,
@@ -29,14 +30,68 @@ describe("URLPattern blog vectors (v1.3.4)", () => {
     const match = filesPattern.exec("https://example.com/files/image.png");
     expect(match?.pathname.groups[0]).toBe("image.png");
   });
+
+  test("pattern properties: protocol hostname pathname search hash", () => {
+    // Pattern properties: protocol, username, password, hostname, port, pathname, search, hash
+    const pattern = new BunURLPattern({
+      protocol: "https",
+      hostname: "example.com",
+      pathname: "/users/:id",
+      search: "q=:q",
+      hash: "section-:s",
+    });
+
+    expect(pattern.protocol).toBe("https");
+    expect(pattern.hostname).toBe("example.com");
+    expect(pattern.pathname).toBe("/users/:id");
+    expect(pattern.search).toBe("q=:q");
+    expect(pattern.hash).toBe("section-:s");
+    // Unconstrained components stay as wildcards
+    expect(pattern.username).toBe("*");
+    expect(pattern.password).toBe("*");
+    expect(pattern.port).toBe("*");
+    expect(pattern.hasRegExpGroups).toBe(false);
+
+    const href = "https://example.com/users/9?q=tennis#section-a";
+    expect(pattern.test(href)).toBe(true);
+    expect(pattern.test("http://example.com/users/9?q=tennis#section-a")).toBe(false);
+
+    const parts = pattern.componentGroups(href);
+    expect(parts?.pathname.id).toBe("9");
+    expect(parts?.search.q).toBe("tennis");
+    expect(parts?.hash.s).toBe("a");
+  });
+
+  test("GITHUB_REPO_CANON exposes hostname + pathname properties", () => {
+    // Multi-component init (hostname constrained) — not pathname-only
+    const p = new BunURLPattern({
+      hostname: "github.com",
+      pathname: "/:owner/:repo",
+    });
+    expect(p.hostname).toBe("github.com");
+    expect(p.pathname).toBe("/:owner/:repo");
+    expect(p.protocol).toBe("*");
+    expect(p.test("https://github.com/a/b")).toBe(true);
+    expect(p.test("https://gitlab.com/a/b")).toBe(false);
+  });
 });
 
 describe("SERVE_PATTERNS — research fetch handlers", () => {
-  test("ops partner extracts nodeId", () => {
+  test("ops partner extracts nodeId (pathname-only — any host/port)", () => {
+    // Unconstrained host: pattern.hostname is "*"
+    expect(SERVE_PATTERNS.opsPartner.hostname).toBe("*");
+    expect(SERVE_PATTERNS.opsPartner.protocol).toBe("*");
+    expect(SERVE_PATTERNS.opsPartner.port).toBe("*");
+    expect(SERVE_PATTERNS.opsPartner.pathname).toBe("/ops/partners/:nodeId");
+
     const g = SERVE_PATTERNS.opsPartner.groups(
       "http://127.0.0.1:3456/ops/partners/acme?state=MA",
     );
     expect(g?.nodeId).toBe("acme");
+    // Same path on another origin still matches (pathname-only pattern)
+    expect(
+      SERVE_PATTERNS.opsPartner.groups("https://ops.example.com/ops/partners/acme")?.nodeId,
+    ).toBe("acme");
     expect(SERVE_PATTERNS.opsPartner.test("http://127.0.0.1:3456/ops/partners/")).toBe(false);
   });
 
