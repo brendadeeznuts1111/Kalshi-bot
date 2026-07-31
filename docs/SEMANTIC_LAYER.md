@@ -10,7 +10,9 @@ Glossary (semantic authority)          ids never rename for schema churn
     ├─► Desk column registry  ── concept?: GlossaryId (FK, kind=registry)
     ├─► HQ tip("id") / panel  ── id is GlossaryId (ui | registry | composite)
     ├─► Filter enums          ── resolveValues / filter-catalog / filterCatalog API
-    └─► Integrity audit       ── bidirectional (orphans + kind mismatch)
+    ├─► Related terms         ── seeAlso[] → panel chips
+    ├─► Units / lifecycle     ── unit ∈ UNITS · status active|deprecated|draft
+    └─► Integrity audit       ── bidirectional + seeAlso/unit/status
 ```
 
 ## Pattern map (industry → Tennis HQ)
@@ -22,7 +24,9 @@ Glossary (semantic authority)          ids never rename for schema churn
 | Synonym / alias | `synonyms` on entries |
 | Faceted taxonomy | `category` (domain) × `kind` (role: registry\|ui\|composite) |
 | Foreign-key semantics | `ColumnMeta.concept` → glossary |
-| Soft relations | `mapsTo` (ui → registry/composite); not full SKOS |
+| Soft relations | `mapsTo` (ui → registry/composite); `seeAlso[]` for panel discoverability |
+| Lifecycle | `status`: active (default) · deprecated (+ `deprecatedBy`) · draft |
+| Units | `unit` ∈ `UNITS` keys — cents · usd · pp · pct · count · atMs · … |
 | Data dictionary | registry + `featurePurpose` + glossary |
 | UI copy tokens | `ui.*` ids |
 | Governance | `glossary:check` / `:report` |
@@ -133,7 +137,25 @@ Unknown tier display: `displayTier(raw)` → `resolveLabel("ui.filter.unclassifi
 3. ✅ `glossary:check` / dump  
 4. ✅ Events `selGloss` + report/hard gate  
 5. ✅ Filter options from glossary `values` (kill duplicate catalogs)  
-6. Later: generate `RegistryConceptId` types; warehouse UI facets from registry  
+6. ✅ seeAlso · status · unit annotations (panel + integrity)  
+7. Later: warehouse UI facets from registry; hide draft from hard consumers  
+
+## seeAlso / status / unit
+
+| Field | Role | Consumers |
+|-------|------|-----------|
+| `seeAlso: string[]` | Soft related terms (not inheritance) | HQ panel “related” chips · dump · search |
+| `status` | `active` (default) · `deprecated` · `draft` | Panel badges · agents skip deprecated |
+| `deprecatedBy` | Required when `status: "deprecated"` | Panel “replaced by” link |
+| `unit` | Key of `UNITS` (cents, usd, pp, …) | Charts, exports, tooltips |
+
+```ts
+resolveSeeAlso("mid");     // → ["kalshi_mu", "spreadCents", "poly_mid"]
+resolveUnit("surfaceEdge"); // → "pp"
+resolveStatus("kalshi_mu"); // → "active"
+```
+
+Integrity (`glossary:check`) fails on missing seeAlso targets, unknown units, or deprecated without `deprecatedBy`.
 
 ## What agents should do
 

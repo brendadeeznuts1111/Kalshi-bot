@@ -7,12 +7,17 @@ import {
 import {
   GLOSSARY_ENTRIES,
   PENDING_REGISTRY_CONCEPTS,
+  UNITS,
   buildFilterCatalog,
   buildGlossaryApiPayload,
   getGlossaryEntry,
   glossaryFilterChoices,
+  isGlossaryUnit,
   orderChoicesByGlossary,
   resolveLabel,
+  resolveSeeAlso,
+  resolveStatus,
+  resolveUnit,
   resolveValueLabel,
   resolveValues,
 } from "../../src/institutions/glossary.ts";
@@ -79,12 +84,17 @@ describe("semantic layer — glossary root, registry consumer", () => {
     expect(errs.some((e) => e.includes("wrong kind"))).toBe(true);
   });
 
-  test("API payload schemaVersion 2 includes kind", () => {
+  test("API payload schemaVersion 3 includes kind + seeAlso + status + unit", () => {
     const p = buildGlossaryApiPayload();
-    expect(p.schemaVersion).toBe(2);
+    expect(p.schemaVersion).toBe(3);
     const mid = p.entries.find((e) => e.id === "mid");
     expect(mid?.kind).toBe("ui");
     expect(mid?.mapsTo).toBe("kalshi_mu");
+    expect(mid?.status).toBe("active");
+    expect(mid?.unit).toBe("cents");
+    expect(mid?.seeAlso).toContain("kalshi_mu");
+    expect(p.units.cents).toBeTruthy();
+    expect(p.statuses).toContain("deprecated");
     expect(getGlossaryEntry("kalshi_mu")?.kind).toBe("registry");
   });
 
@@ -161,5 +171,54 @@ describe("semantic layer — glossary root, registry consumer", () => {
 
   test("alert.* concepts are composite not registry", () => {
     expect(getGlossaryEntry("alert.poly_dropout")?.kind).toBe("composite");
+  });
+
+  test("seeAlso / status / unit resolution + integrity", () => {
+    expect(resolveStatus("kalshi_mu")).toBe("active");
+    expect(resolveUnit("surfaceEdge")).toBe("pp");
+    expect(resolveUnit("total_volume_usd")).toBe("usd");
+    expect(resolveUnit("yesPriceCents")).toBe("cents");
+    expect(resolveSeeAlso("mid")).toContain("kalshi_mu");
+    expect(isGlossaryUnit("cents")).toBe(true);
+    expect(isGlossaryUnit("furlongs")).toBe(false);
+    expect(UNITS.pp).toMatch(/percentage points/i);
+
+    // integrity catches bad seeAlso / unit
+    const reg = buildDeskColumnRegistry();
+    const g = glossaryMapFromEntries([
+      ...GLOSSARY_ENTRIES,
+      {
+        id: "__bad_see",
+        label: "Bad",
+        description: "test",
+        category: "other",
+        kind: "ui",
+        seeAlso: ["does_not_exist"],
+        unit: "cents",
+      },
+    ]);
+    const errs = validateGlossaryIntegrity(reg, g, {
+      pendingRegistryConcepts: PENDING_REGISTRY_CONCEPTS,
+    });
+    expect(errs.some((e) => e.includes("seeAlso missing"))).toBe(true);
+  });
+
+  test("deprecated requires deprecatedBy", () => {
+    const reg = buildDeskColumnRegistry();
+    const g = glossaryMapFromEntries([
+      ...GLOSSARY_ENTRIES,
+      {
+        id: "__old_mid",
+        label: "Old mid",
+        description: "deprecated test",
+        category: "market",
+        kind: "ui",
+        status: "deprecated",
+      },
+    ]);
+    const errs = validateGlossaryIntegrity(reg, g, {
+      pendingRegistryConcepts: PENDING_REGISTRY_CONCEPTS,
+    });
+    expect(errs.some((e) => e.includes("missing deprecatedBy"))).toBe(true);
   });
 });

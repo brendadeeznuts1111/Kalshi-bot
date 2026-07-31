@@ -132,6 +132,35 @@ header .links a:hover { color: var(--acc); }
   font-weight: 500; }
 .glossary-entry p { margin: 0; font-size: 0.8rem; color: var(--fg); line-height: 1.45; }
 .glossary-entry .syn { margin-top: 0.3rem; font-size: 0.72rem; color: var(--dim); }
+.glossary-entry.is-deprecated { opacity: 0.72; border-style: dashed; }
+.glossary-entry.is-draft { border-style: dotted; }
+.g-status {
+  font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  padding: 0.1rem 0.35rem; border-radius: 999px; border: 1px solid var(--line);
+  color: var(--dim); background: var(--bg);
+}
+.g-status-deprecated { color: #f0b429; border-color: #f0b42955; }
+.g-status-draft { color: #7aa2ff; border-color: #7aa2ff55; }
+.g-unit {
+  font-family: var(--mono); font-size: 0.62rem; font-weight: 600;
+  padding: 0.1rem 0.35rem; border-radius: 4px;
+  background: color-mix(in srgb, var(--acc) 14%, transparent);
+  color: var(--acc); border: 1px solid color-mix(in srgb, var(--acc) 35%, transparent);
+}
+.g-related-row {
+  margin-top: 0.4rem; display: flex; flex-wrap: wrap; gap: 0.3rem; align-items: center;
+}
+.g-related-label {
+  font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--dim); margin-right: 0.15rem;
+}
+.g-related {
+  font: inherit; font-size: 0.7rem; cursor: pointer;
+  background: var(--bg); color: var(--acc);
+  border: 1px solid var(--line); border-radius: 999px;
+  padding: 0.12rem 0.5rem;
+}
+.g-related:hover { border-color: var(--acc); background: color-mix(in srgb, var(--acc) 12%, transparent); }
 .glossary-empty { color: var(--dim); font-size: 0.85rem; padding: 1rem 0; }
 header .links a:hover { color: var(--acc); }
 nav.tabs { display: flex; gap: 0.25rem; padding: 0 1.5rem; border-bottom: 1px solid var(--line); }

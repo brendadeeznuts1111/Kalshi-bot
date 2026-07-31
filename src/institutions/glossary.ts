@@ -44,15 +44,31 @@ export const CODES = {
 
 export type ShortCode = keyof typeof CODES;
 
-// ── Unit conventions ──
+// ── Unit conventions (chart / export / wire annotations) ──
 
+/**
+ * Canonical unit keys for `GlossaryEntry.unit`.
+ * Interior money is always integer cents; USD/pp/pct are display or delta scales.
+ */
 export const UNITS = {
   cents: "integer cents, 1–99 for prices; canonical money unit everywhere",
+  usd: "US dollars (chart/export display; prefer cents interior)",
   dollarsFp: "fixed-point dollar string e.g. \"0.5600\" — wire only, parse via dollarsToCents",
   countFp: "fixed-point contract string e.g. \"10.00\" — fractional flagged, not orderable",
-  atMs: "epoch milliseconds — canonical time unit (suffix AtMs)",
+  count: "integer count (contracts, events, gaps, appearances)",
+  pp: "percentage points — edge / probability delta (e.g. surface edge)",
+  pct: "percent 0–100 scale (thresholds, share of total)",
+  probability: "probability on 0–1 scale (Elo, model outputs)",
+  atMs: "epoch milliseconds — canonical absolute time (suffix AtMs)",
+  ms: "duration in milliseconds (staleness windows, intervals)",
   unixSec: "unix seconds — wire only (updated_ts, ts); multiply by 1000 at boundary",
 } as const;
+
+export type UnitKey = keyof typeof UNITS;
+
+/** Lifecycle for safe evolution — omit on entry = active. */
+export const GLOSSARY_STATUSES = ["active", "deprecated", "draft"] as const;
+export type GlossaryStatus = (typeof GLOSSARY_STATUSES)[number];
 
 // ── Structured glossary entries (HQ panel + tip keys) ──
 
@@ -109,6 +125,25 @@ export type GlossaryEntry = {
   resolveValues?: string[];
   /** Label shown on resolution messages */
   resolveLabel?: string;
+  /**
+   * Related glossary ids for panel discoverability (soft links, not inheritance).
+   * Validated: every id must exist; no self-links.
+   */
+  seeAlso?: string[];
+  /**
+   * Lifecycle — omit means `active`.
+   * `deprecated` should set `deprecatedBy` to the replacement id.
+   * `draft` = WIP; may be hidden from hard consumers later.
+   */
+  status?: GlossaryStatus;
+  /** When status is deprecated, preferred replacement concept id */
+  deprecatedBy?: string;
+  /** Unit annotation for chart/export consumers (`keyof UNITS`) */
+  unit?: UnitKey;
+  /** ISO date when entry was first added (YYYY-MM-DD) */
+  added?: string;
+  /** ISO date when entry was deprecated (YYYY-MM-DD) */
+  deprecatedAt?: string;
 };
 
 function ui(
@@ -140,6 +175,8 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     category: "market",
     mapsTo: "kalshi_mu",
     synonyms: ["mid price", "market price"],
+    unit: "cents",
+    seeAlso: ["kalshi_mu", "spreadCents", "poly_mid"],
   }),
   ui({
     id: "spreadCents",
@@ -148,12 +185,15 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     category: "market",
     mapsTo: "kalshi_spread",
     synonyms: ["bid-ask", "spread"],
+    unit: "cents",
+    seeAlso: ["mid", "kalshi_spread", "liquidity_ok"],
   }),
   ui({
     id: "crossed",
     label: "Crossed book",
     description: "Transient book state (yesBid + noBid > 100). Do not treat mid as tradeable.",
     category: "market",
+    seeAlso: ["mid", "spreadCents"],
   }),
   ui({
     id: "avgKalshiVolumeFp",
@@ -163,12 +203,16 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     category: "market",
     mapsTo: "kalshi_volume",
     synonyms: ["avg vol", "volume", "avgKalshiVolume"],
+    unit: "countFp",
+    seeAlso: ["kalshi_volume", "playerProfiles", "lastSeenAtMs"],
   }),
   ui({
     id: "yesPriceCents",
     label: "Yes price ¢",
     description: "Limit price for YES contracts, 1–99¢. NO price = 100 − yes.",
     category: "market",
+    unit: "cents",
+    seeAlso: ["mid", "feeCents", "postOnly"],
   }),
 
   // ── trading UI ──
@@ -178,66 +222,86 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     description:
       "Available-to-trade cash. Does not include value locked in open positions.",
     category: "trading",
+    unit: "cents",
+    seeAlso: ["portfolioValueCents", "exposureCents"],
   }),
   ui({
     id: "portfolioValueCents",
     label: "Portfolio value",
     description: "Current mark value of all held positions, separate from cash balance.",
     category: "trading",
+    unit: "cents",
+    seeAlso: ["balanceCents", "position", "exposureCents"],
   }),
   ui({
     id: "position",
     label: "Position",
     description: "Signed contracts: positive = long YES, negative = long NO (Kalshi convention).",
     category: "trading",
+    unit: "count",
+    seeAlso: ["exposureCents", "fillCount"],
   }),
   ui({
     id: "exposureCents",
     label: "Exposure",
     description: "Cash at risk in this market at current marks.",
     category: "trading",
+    unit: "cents",
+    seeAlso: ["position", "balanceCents", "realizedPnlCents"],
   }),
   ui({
     id: "realizedPnlCents",
     label: "Realized P&L",
     description: "Locked-in profit/loss from closed trades in this market.",
     category: "trading",
+    unit: "cents",
+    seeAlso: ["feesPaidCents", "exposureCents"],
   }),
   ui({
     id: "feesPaidCents",
     label: "Fees paid",
     description: "Total exchange fees paid in this market, all time.",
     category: "trading",
+    unit: "cents",
+    seeAlso: ["feeCents", "realizedPnlCents", "isTaker"],
   }),
   ui({
     id: "remainingCount",
     label: "Remaining",
     description: "Contracts still working on the book (not yet filled or canceled).",
     category: "trading",
+    unit: "count",
+    seeAlso: ["fillCount", "postOnly"],
   }),
   ui({
     id: "fillCount",
     label: "Fill count",
     description: "Contracts already executed from this order.",
     category: "trading",
+    unit: "count",
+    seeAlso: ["remainingCount", "feeCents", "isTaker"],
   }),
   ui({
     id: "isTaker",
     label: "Taker",
     description: "True = crossed the spread (taker fee); false = rested on book (maker fee, lower).",
     category: "trading",
+    seeAlso: ["feeCents", "postOnly"],
   }),
   ui({
     id: "feeCents",
     label: "Fee ¢",
     description: "Exchange fee on this fill. Maker < taker — postOnly orders target maker fees.",
     category: "trading",
+    unit: "cents",
+    seeAlso: ["feesPaidCents", "isTaker", "postOnly"],
   }),
   ui({
     id: "postOnly",
     label: "Post-only",
     description: "Maker-first: order rests on book or is rejected; never crosses the spread.",
     category: "trading",
+    seeAlso: ["isTaker", "feeCents", "dryRun"],
   }),
   ui({
     id: "dryRun",
@@ -245,6 +309,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     description: "Simulated order — no funds move, no API write. Live requires explicit opt-in.",
     category: "trading",
     synonyms: ["dry run", "simulate"],
+    seeAlso: ["postOnly"],
   }),
 
   // ── model UI gates ──
@@ -253,18 +318,24 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     label: "Shadow min signals",
     description: "Gate: minimum shadow signals before a program may graduate to pilot.",
     category: "model",
+    unit: "count",
+    seeAlso: ["killBrierDriftPct", "graduationMinRealizedEdgeCentsPerFill"],
   }),
   ui({
     id: "killBrierDriftPct",
     label: "Kill Brier drift %",
     description: "Gate: kill program if Brier score drifts this % above baseline.",
     category: "model",
+    unit: "pct",
+    seeAlso: ["shadowMinSignals", "graduationMinRealizedEdgeCentsPerFill"],
   }),
   ui({
     id: "graduationMinRealizedEdgeCentsPerFill",
     label: "Graduation edge ¢/fill",
     description: "Gate: realized edge per fill needed for pilot→live.",
     category: "model",
+    unit: "cents",
+    seeAlso: ["shadowMinSignals", "eff_edge", "realizedPnlCents"],
   }),
 
   // ── tournament (registry-aligned ids — same as desk export features) ──
@@ -275,6 +346,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     category: "tournament",
     synonyms: ["series", "tour"],
     values: ["ATP", "WTA", "ATP Challenger", "WTA 125", "ITF Men", "ITF Women"],
+    seeAlso: ["surface", "tier", "series"],
   }),
   reg({
     id: "surface",
@@ -282,6 +354,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     description: "Court type: Hard, Clay, Grass, Carpet (from event or tournament seed).",
     category: "tournament",
     values: ["Hard", "Clay", "Grass", "Carpet"],
+    seeAlso: ["league", "tier", "surfaceEdge"],
   }),
   // tier / round appear on board + HQ filters; not always in desk export columns[]
   reg({
@@ -294,30 +367,35 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
       "GS", "SPECIAL", "1000", "500", "250", "CH", "W125",
       "ITF100", "ITF75", "ITF60", "ITF50", "ITF40", "ITF35", "ITF25", "ITF15",
     ],
+    seeAlso: ["league", "surface", "round"],
   }),
   reg({
     id: "round",
     label: "Round",
     description: "Match round within the tournament (R16, QF, SF, F, …).",
     category: "tournament",
+    seeAlso: ["tier", "league"],
   }),
   reg({
     id: "series",
     label: "Series",
     description: "Kalshi series ticker family (e.g. KXATPMATCH).",
     category: "tournament",
+    seeAlso: ["league", "event_ticker"],
   }),
   reg({
     id: "gender",
     label: "Gender",
     description: "Competition gender classification on the desk export.",
     category: "tournament",
+    seeAlso: ["league", "age_group"],
   }),
   reg({
     id: "age_group",
     label: "Age group",
     description: "Age band when present (junior/senior); often empty on tour.",
     category: "tournament",
+    seeAlso: ["gender", "league"],
   }),
 
   // ── desk export identity / market / model (registry) ──
@@ -363,36 +441,48 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     description: "Kalshi mid (implied probability cents) on the desk snapshot.",
     category: "market",
     synonyms: ["kalshi mid", "mu"],
+    unit: "cents",
+    seeAlso: ["mid", "poly_mid", "pinny_no_vig", "blend_fair_cents"],
   }),
   reg({
     id: "kalshi_spread",
     label: "Kalshi spread",
     description: "Kalshi bid–ask spread on the desk snapshot.",
     category: "market",
+    unit: "cents",
+    seeAlso: ["spreadCents", "kalshi_mu", "liquidity_ok"],
   }),
   reg({
     id: "kalshi_volume",
     label: "Kalshi volume",
     description: "Kalshi contract volume on the desk tick (not player-profile average).",
     category: "market",
+    unit: "countFp",
+    seeAlso: ["avgKalshiVolumeFp", "poly_volume", "total_volume_usd"],
   }),
   reg({
     id: "poly_mid",
     label: "Poly mid",
     description: "Polymarket mid price, cents; null when venue absent.",
     category: "market",
+    unit: "cents",
+    seeAlso: ["kalshi_mu", "poly_volume", "alert.divergence"],
   }),
   reg({
     id: "poly_volume",
     label: "Poly volume",
     description: "Polymarket volume USD; null = venue absent, 0 = joined with zero trades.",
     category: "market",
+    unit: "usd",
+    seeAlso: ["kalshi_volume", "total_volume_usd", "poly_mid"],
   }),
   reg({
     id: "pinny_no_vig",
     label: "Pinnacle no-vig",
     description: "Pinnacle no-vig probability in cents; null when unavailable.",
     category: "market",
+    unit: "cents",
+    seeAlso: ["pinny_source", "kalshi_mu", "blend_fair_cents"],
   }),
   reg({
     id: "pinny_source",
@@ -400,12 +490,15 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     description: "mock | live — origin of pinny_no_vig.",
     category: "market",
     values: ["mock", "live"],
+    seeAlso: ["pinny_no_vig", "export_note"],
   }),
   reg({
     id: "elo_prob",
     label: "Elo prob",
     description: "Elo win probability for player A (0–1); interpret with elo_source.",
     category: "model",
+    unit: "probability",
+    seeAlso: ["elo_source", "blend_fair_cents", "eff_edge"],
   }),
   reg({
     id: "elo_source",
@@ -413,72 +506,87 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     description: "model | fallback_50 | missing — provenance of elo_prob.",
     category: "model",
     values: ["model", "fallback_50", "missing"],
+    seeAlso: ["elo_prob"],
   }),
   reg({
     id: "blend_fair_cents",
     label: "Blend fair ¢",
     description: "Blended fair price in cents (core priced output).",
     category: "model",
+    unit: "cents",
+    seeAlso: ["eff_edge", "kalshi_mu", "elo_prob", "pinny_no_vig"],
   }),
   reg({
     id: "eff_edge",
     label: "Eff edge",
     description: "Effective edge vs blend (cents); tick-bound, can drift.",
     category: "model",
+    unit: "cents",
+    seeAlso: ["blend_fair_cents", "surfaceEdge", "arb_hint"],
   }),
   reg({
     id: "liquidity_ok",
     label: "Liquidity OK",
     description: "Desk liquidity gate (necessary, not sufficient for tradable).",
     category: "market",
+    seeAlso: ["kalshi_spread", "kalshi_volume", "ui.events.filter.liquidity"],
   }),
   reg({
     id: "total_volume_usd",
     label: "Total volume USD",
     description: "Combined venue volume in USD for the match snapshot.",
     category: "market",
+    unit: "usd",
+    seeAlso: ["kalshi_volume", "poly_volume", "multi_venue"],
   }),
   reg({
     id: "multi_venue",
     label: "Multi-venue",
     description: "Whether more than one venue is joined on the row.",
     category: "warehouse",
+    seeAlso: ["total_volume_usd", "arb_hint", "coverage"],
   }),
   reg({
     id: "arb_hint",
     label: "Arb hint",
     description: "Directional arb signal (kalshi-cheap | poly-cheap | none | watch).",
     category: "model",
+    seeAlso: ["arb_actionable", "alert.divergence", "eff_edge"],
   }),
   reg({
     id: "arb_actionable",
     label: "Arb actionable",
     description: "Hard arb gate (net edge > 0 on real venue-vs-venue).",
     category: "model",
+    seeAlso: ["arb_hint", "liquidity_ok", "eff_edge"],
   }),
   reg({
     id: "rps_flag",
     label: "RPS flag",
     description: "Research process signal flag on the desk row.",
     category: "model",
+    seeAlso: ["research_flag", "graph_divergence"],
   }),
   reg({
     id: "graph_divergence",
     label: "Graph divergence",
     description: "Graph/model divergence indicator on the desk export.",
     category: "model",
+    seeAlso: ["composite.divergence", "alert.divergence", "rps_flag"],
   }),
   reg({
     id: "research_flag",
     label: "Research flag",
     description: "Research gating reason (e.g. DATA_INCOMPLETE, thin-data).",
     category: "warehouse",
+    seeAlso: ["export_note", "rps_flag", "coverage"],
   }),
   reg({
     id: "export_note",
     label: "Export note",
     description: "Per-row provenance string (e.g. mock pinny caveat).",
     category: "warehouse",
+    seeAlso: ["pinny_source", "research_flag"],
   }),
 
   // ── warehouse UI (not desk CSV columns) ──
@@ -489,6 +597,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
       "Derived from event-store player_profiles (SSOT). Rebuild: bun run tennis:profiles:build.",
     category: "warehouse",
     synonyms: ["profiles"],
+    seeAlso: ["avgKalshiVolumeFp", "lastSeenAtMs", "profilesSource"],
   }),
   ui({
     id: "lastSeenAtMs",
@@ -497,6 +606,8 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
       "Epoch millis of latest event start for this player. Capped ≤ now. Event-store ms.",
     category: "warehouse",
     synonyms: ["last seen", "lastSeenMs"],
+    unit: "atMs",
+    seeAlso: ["playerProfiles", "avgKalshiVolumeFp"],
   }),
   ui({
     id: "profilesSource",
@@ -505,12 +616,15 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
       "warehouse = rows from event-store; seed = unavailable / fixture path.",
     category: "warehouse",
     values: ["warehouse", "seed"],
+    seeAlso: ["playerProfiles"],
   }),
   ui({
     id: "coverage",
     label: "Coverage",
     description: "Data completeness for a tour/surface slice (events with books, links, scores).",
     category: "warehouse",
+    unit: "pct",
+    seeAlso: ["multi_venue", "ui.warehouse.coverage"],
   }),
   ui({
     id: "surfaceEdge",
@@ -519,6 +633,8 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
       "Dampened percentage-point edge from each player's historical surface win rates vs the match surface.",
     category: "warehouse",
     synonyms: ["surface edge"],
+    unit: "pp",
+    seeAlso: ["surface", "eff_edge", "ui.events.filter.min_surface_edge"],
   }),
   ui({
     id: "ui.events.filter.reset",
@@ -546,6 +662,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     category: "ui",
     mapsTo: "composite.scanner",
     synonyms: ["alert", "signal", "flag"],
+    seeAlso: ["composite.scanner", "ui.live_board.divergence", "alert.divergence"],
   }),
   ui({
     id: "ui.live_board.divergence",
@@ -554,6 +671,8 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     category: "ui",
     mapsTo: "composite.divergence",
     synonyms: ["delta", "edge", "gap"],
+    unit: "cents",
+    seeAlso: ["composite.divergence", "alert.divergence", "eff_edge"],
   }),
   ui({
     id: "ui.live_board.edge_score",
@@ -563,6 +682,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     category: "ui",
     mapsTo: "composite.edge_score",
     synonyms: ["edge", "score", "strength"],
+    seeAlso: ["composite.edge_score", "eff_edge", "surfaceEdge"],
   }),
   ui({
     id: "ui.live_board.model_suspect",
@@ -572,6 +692,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     category: "ui",
     mapsTo: "composite.model_suspect",
     synonyms: ["suspect", "stale", "untrusted"],
+    seeAlso: ["composite.model_suspect", "elo_source", "alert.stale_feed"],
   }),
 
   // ── Events filter chrome ──
@@ -624,6 +745,8 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     category: "market",
     mapsTo: "kalshi_volume",
     synonyms: ["min volume", "volume floor"],
+    unit: "countFp",
+    seeAlso: ["kalshi_volume", "ui.events.filter.liquidity"],
   }),
   ui({
     id: "ui.events.filter.min_surface_edge",
@@ -631,6 +754,8 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     description: "Minimum surface-edge points required to keep a match on the board.",
     category: "warehouse",
     mapsTo: "surfaceEdge",
+    unit: "pp",
+    seeAlso: ["surfaceEdge", "surface"],
   }),
   ui({
     id: "ui.sort.events",
@@ -638,6 +763,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     description: "Ordering of the match list: start time, volume, or name.",
     category: "ui",
     synonyms: ["sort events", "order"],
+    seeAlso: ["ui.events.filter.when", "ui.events.filter.min_vol"],
   }),
   ui({
     id: "ui.filter.unclassified",
@@ -645,6 +771,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     description: "Placeholder when a value cannot be mapped to a known category.",
     category: "ui",
     synonyms: ["Unc", "Other", "NA", "unknown"],
+    seeAlso: ["tier"],
   }),
 
   // ── Warehouse fleet chrome ──
@@ -655,6 +782,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     category: "warehouse",
     mapsTo: "coverage",
     synonyms: ["venues", "sources"],
+    seeAlso: ["coverage", "multi_venue", "ui.warehouse.poly_link"],
   }),
   ui({
     id: "ui.warehouse.poly_link",
@@ -662,6 +790,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     description: "Polymarket market link status: linked or unlinked.",
     category: "warehouse",
     synonyms: ["polymarket", "gamma", "matched"],
+    seeAlso: ["poly_mid", "poly_volume", "ui.warehouse.coverage"],
   }),
   ui({
     id: "ui.warehouse.event_status",
@@ -669,6 +798,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     description: "Match lifecycle: Scheduled, Live, or Ended.",
     category: "warehouse",
     synonyms: ["status", "state"],
+    seeAlso: ["ui.events.filter.when", "ui.live_board.title"],
   }),
   ui({
     id: "ui.warehouse.fleet_count",
@@ -676,6 +806,8 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     description: "Number of matches in the current filtered view.",
     category: "ui",
     synonyms: ["count", "N events", "fleet"],
+    unit: "count",
+    seeAlso: ["ui.warehouse.fleet_volume"],
   }),
   ui({
     id: "ui.warehouse.fleet_volume",
@@ -684,6 +816,8 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     category: "market",
     mapsTo: "total_volume_usd",
     synonyms: ["volume", "X total vol"],
+    unit: "usd",
+    seeAlso: ["total_volume_usd", "ui.warehouse.fleet_count"],
   }),
 
   // ── Composite concepts (semantic targets for mapsTo; not tip keys) ──
@@ -693,6 +827,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     label: "Scanner signal",
     description: "Abstract scanner / divergence-alert concept used by live board UI.",
     category: "model",
+    seeAlso: ["ui.live_board.scanner", "composite.divergence", "alert.divergence"],
   },
   {
     id: "composite.divergence",
@@ -700,6 +835,8 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     label: "Price divergence",
     description: "Abstract market-vs-model divergence concept.",
     category: "model",
+    unit: "cents",
+    seeAlso: ["ui.live_board.divergence", "alert.divergence", "eff_edge"],
   },
   {
     id: "composite.edge_score",
@@ -707,6 +844,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     label: "Edge score",
     description: "Abstract composite edge strength concept.",
     category: "model",
+    seeAlso: ["ui.live_board.edge_score", "eff_edge", "surfaceEdge"],
   },
   {
     id: "composite.model_suspect",
@@ -714,6 +852,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     label: "Model suspect",
     description: "Abstract model-trust flag concept.",
     category: "model",
+    seeAlso: ["ui.live_board.model_suspect", "elo_source"],
   },
 
   // ── Pipeline & alerts (composite concepts — not desk CSV columns) ──
@@ -726,6 +865,9 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     values: ["CRITICAL: >30% for 3+ ticks"],
     resolveValues: ["kalshiOnly/total ≤ poly-dropout-pct"],
     resolveLabel: "Poly Dropout — Resolved",
+    seeAlso: ["alert.feed_frozen", "alert.volume_gap", "alert.delivery", "alert.severity"],
+    status: "active",
+    unit: "pct",
   },
   {
     id: "alert.volume_gap",
@@ -736,6 +878,10 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     values: ["WARNING: >10 for 3+ ticks"],
     resolveValues: ["midOnly ≤ volume-gap-count"],
     resolveLabel: "Volume Gap — Resolved",
+    seeAlso: ["alert.poly_dropout", "alert.feed_frozen", "kalshi_volume"],
+    status: "active",
+    unit: "count",
+    added: "2026-07-30",
   },
   {
     id: "alert.feed_frozen",
@@ -746,6 +892,10 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     values: ["CRITICAL: 0 polyMatched for 6+ ticks"],
     resolveValues: ["polyMatched > 0"],
     resolveLabel: "Poly Frozen — Resolved",
+    seeAlso: ["alert.poly_dropout", "alert.volume_gap", "alert.stale_feed"],
+    status: "active",
+    unit: "count",
+    added: "2026-07-30",
   },
   {
     id: "alert.stale_feed",
@@ -756,6 +906,10 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     values: ["CRITICAL: >120s since last snapshot"],
     resolveValues: ["logger cycle succeeds (reaches this code path)"],
     resolveLabel: "Feed Stale — Resolved",
+    seeAlso: ["alert.feed_frozen", "alert.delivery", "alert.severity"],
+    status: "active",
+    unit: "ms",
+    added: "2026-07-30",
   },
   {
     id: "alert.divergence",
@@ -765,6 +919,10 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     category: "pipeline",
     values: ["INFO: |kalshiMid - polyProb*100| > 15¢"],
     resolveValues: ["manual only — no auto-resolution"],
+    seeAlso: ["kalshi_mu", "poly_mid", "arb_hint", "alert.severity"],
+    status: "active",
+    unit: "cents",
+    added: "2026-07-30",
   },
   {
     id: "alert.resolution",
@@ -773,6 +931,9 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     description: "Auto-sent when active alert clears. Includes duration, replies original, clears debounce.",
     category: "pipeline",
     values: ["stale_feed_resolved", "poly_dropout_resolved", "volume_gap_resolved", "poly_feed_frozen_resolved"],
+    seeAlso: ["alert.stale_feed", "alert.poly_dropout", "alert.volume_gap", "alert.feed_frozen"],
+    status: "active",
+    added: "2026-07-30",
   },
   {
     id: "alert.delivery",
@@ -781,6 +942,9 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     description: "Telegram (HTML, threaded, keyboard CRITICAL), Discord/Slack webhook, console stderr.",
     category: "pipeline",
     values: ["telegram", "discord", "console"],
+    seeAlso: ["alert.severity", "alert.stale_feed"],
+    status: "active",
+    added: "2026-07-30",
   },
   {
     id: "alert.severity",
@@ -789,10 +953,13 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     description: "CRITICAL: feed down (keyboard). WARNING: degraded. INFO: informational, silent.",
     category: "pipeline",
     values: ["CRITICAL", "WARNING", "INFO"],
+    seeAlso: ["alert.poly_dropout", "alert.volume_gap", "alert.feed_frozen", "alert.stale_feed", "alert.divergence", "alert.delivery"],
+    status: "active",
+    added: "2026-07-30",
   },
 ] as const;
 
-export type GlossaryId = (typeof GLOSSARY_ENTRIES)[number]["id"];
+export type { GlossaryId, RegistryId, UiId, CompositeId } from "../generated/glossary-ids.ts";
 
 /** Flat tip map for HQ (backward compatible with tip(key) consumers). */
 export const TOOLTIPS: Record<string, string> = Object.fromEntries(
@@ -851,7 +1018,7 @@ export function buildFilterCatalog(): Record<string, FilterCatalogEntry> {
 /** Payload for GET /api/glossary — panel + tips + codes. */
 export function buildGlossaryApiPayload() {
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     tooltips: TOOLTIPS,
     entries: GLOSSARY_ENTRIES.map((e) => ({
       id: e.id,
@@ -863,6 +1030,10 @@ export function buildGlossaryApiPayload() {
       synonyms: e.synonyms ?? [],
       values: e.values ?? null,
       valueLabels: e.valueLabels ?? null,
+      seeAlso: e.seeAlso ?? [],
+      status: (e.status ?? "active") as GlossaryStatus,
+      deprecatedBy: e.deprecatedBy ?? null,
+      unit: e.unit ?? null,
     })),
     /** Closed-set filter catalogs (single write path for board dropdowns) */
     filterCatalog: buildFilterCatalog(),
@@ -870,6 +1041,7 @@ export function buildGlossaryApiPayload() {
       id,
       label: GLOSSARY_CATEGORY_LABELS[id],
     })),
+    statuses: [...GLOSSARY_STATUSES],
     codes: CODES,
     units: UNITS,
   };
@@ -947,4 +1119,33 @@ export function glossaryFilterChoices(
 export function resolveValueLabel(conceptId: string, value: string): string {
   const entry = getGlossaryEntry(conceptId);
   return entry?.valueLabels?.[value] ?? value;
+}
+
+/** Lifecycle status (omit on entry → active). */
+export function resolveStatus(id: string): GlossaryStatus {
+  return getGlossaryEntry(id)?.status ?? "active";
+}
+
+/** Unit key for chart/export consumers (undefined if free-form / categorical). */
+export function resolveUnit(id: string): UnitKey | undefined {
+  return getGlossaryEntry(id)?.unit;
+}
+
+/** Human unit convention string from UNITS. */
+export function resolveUnitDescription(id: string): string | undefined {
+  const unit = resolveUnit(id);
+  return unit ? UNITS[unit] : undefined;
+}
+
+/** Related term ids for panel discoverability. */
+export function resolveSeeAlso(id: string): readonly string[] {
+  return getGlossaryEntry(id)?.seeAlso ?? [];
+}
+
+export function isActiveConcept(id: string): boolean {
+  return resolveStatus(id) === "active";
+}
+
+export function isGlossaryUnit(value: string): value is UnitKey {
+  return Object.prototype.hasOwnProperty.call(UNITS, value);
 }

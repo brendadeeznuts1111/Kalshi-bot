@@ -36,6 +36,11 @@ for (const e of GLOSSARY_ENTRIES) {
     mapsTo: e.mapsTo ?? null,
     synonyms: e.synonyms ?? [],
     values: e.values ?? null,
+    valueLabels: e.valueLabels ?? null,
+    seeAlso: e.seeAlso ?? [],
+    status: e.status ?? "active",
+    deprecatedBy: e.deprecatedBy ?? null,
+    unit: e.unit ?? null,
     registryColumn: meta?.column ?? null,
     source: meta?.source ?? null,
     featurePurpose: meta?.featurePurpose ?? null,
@@ -43,7 +48,7 @@ for (const e of GLOSSARY_ENTRIES) {
 }
 
 const dump = {
-  schemaVersion: 2,
+  schemaVersion: 3,
   generatedAt: new Date().toISOString(),
   integrityOk: integrityErrors.length === 0,
   integrityErrors,

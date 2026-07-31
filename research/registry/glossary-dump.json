@@ -1,6 +1,6 @@
 {
-  "schemaVersion": 2,
-  "generatedAt": "2026-07-31T02:16:24.783Z",
+  "schemaVersion": 3,
+  "generatedAt": "2026-07-31T02:30:06.373Z",
   "integrityOk": true,
   "integrityErrors": [],
   "pendingRegistryConcepts": [
@@ -273,6 +273,15 @@
         "market price"
       ],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "kalshi_mu",
+        "spreadCents",
+        "poly_mid"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "cents",
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -288,6 +297,15 @@
         "spread"
       ],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "mid",
+        "kalshi_spread",
+        "liquidity_ok"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "cents",
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -300,6 +318,14 @@
       "mapsTo": null,
       "synonyms": [],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "mid",
+        "spreadCents"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -316,6 +342,15 @@
         "avgKalshiVolume"
       ],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "kalshi_volume",
+        "playerProfiles",
+        "lastSeenAtMs"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "countFp",
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -328,6 +363,15 @@
       "mapsTo": null,
       "synonyms": [],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "mid",
+        "feeCents",
+        "postOnly"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "cents",
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -340,6 +384,14 @@
       "mapsTo": null,
       "synonyms": [],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "portfolioValueCents",
+        "exposureCents"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "cents",
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -352,6 +404,15 @@
       "mapsTo": null,
       "synonyms": [],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "balanceCents",
+        "position",
+        "exposureCents"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "cents",
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -364,6 +425,14 @@
       "mapsTo": null,
       "synonyms": [],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "exposureCents",
+        "fillCount"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "count",
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -376,6 +445,15 @@
       "mapsTo": null,
       "synonyms": [],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "position",
+        "balanceCents",
+        "realizedPnlCents"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "cents",
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -388,6 +466,14 @@
       "mapsTo": null,
       "synonyms": [],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "feesPaidCents",
+        "exposureCents"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "cents",
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -400,6 +486,15 @@
       "mapsTo": null,
       "synonyms": [],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "feeCents",
+        "realizedPnlCents",
+        "isTaker"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "cents",
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -412,6 +507,14 @@
       "mapsTo": null,
       "synonyms": [],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "fillCount",
+        "postOnly"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "count",
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -424,6 +527,15 @@
       "mapsTo": null,
       "synonyms": [],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "remainingCount",
+        "feeCents",
+        "isTaker"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "count",
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -436,6 +548,14 @@
       "mapsTo": null,
       "synonyms": [],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "feeCents",
+        "postOnly"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -448,6 +568,15 @@
       "mapsTo": null,
       "synonyms": [],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "feesPaidCents",
+        "isTaker",
+        "postOnly"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "cents",
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -460,6 +589,15 @@
       "mapsTo": null,
       "synonyms": [],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "isTaker",
+        "feeCents",
+        "dryRun"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -475,6 +613,13 @@
         "simulate"
       ],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "postOnly"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -487,6 +632,14 @@
       "mapsTo": null,
       "synonyms": [],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "killBrierDriftPct",
+        "graduationMinRealizedEdgeCentsPerFill"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "count",
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -499,6 +652,14 @@
       "mapsTo": null,
       "synonyms": [],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "shadowMinSignals",
+        "graduationMinRealizedEdgeCentsPerFill"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "pct",
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -511,6 +672,15 @@
       "mapsTo": null,
       "synonyms": [],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "shadowMinSignals",
+        "eff_edge",
+        "realizedPnlCents"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "cents",
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -533,6 +703,15 @@
         "ITF Men",
         "ITF Women"
       ],
+      "valueLabels": null,
+      "seeAlso": [
+        "surface",
+        "tier",
+        "series"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
       "registryColumn": 6,
       "source": "desk",
       "featurePurpose": "schedule"
@@ -550,6 +729,15 @@
         "Grass",
         "Carpet"
       ],
+      "valueLabels": null,
+      "seeAlso": [
+        "league",
+        "tier",
+        "surfaceEdge"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
       "registryColumn": 8,
       "source": "desk",
       "featurePurpose": "schedule"
@@ -580,6 +768,15 @@
         "ITF25",
         "ITF15"
       ],
+      "valueLabels": null,
+      "seeAlso": [
+        "league",
+        "surface",
+        "round"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -592,6 +789,14 @@
       "mapsTo": null,
       "synonyms": [],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "tier",
+        "league"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -604,6 +809,14 @@
       "mapsTo": null,
       "synonyms": [],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "league",
+        "event_ticker"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
       "registryColumn": 7,
       "source": "kalshi",
       "featurePurpose": "schedule"
@@ -616,6 +829,14 @@
       "mapsTo": null,
       "synonyms": [],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "league",
+        "age_group"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
       "registryColumn": 9,
       "source": "desk",
       "featurePurpose": "schedule"
@@ -628,6 +849,14 @@
       "mapsTo": null,
       "synonyms": [],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "gender",
+        "league"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
       "registryColumn": 10,
       "source": "desk",
       "featurePurpose": "schedule"
@@ -640,6 +869,11 @@
       "mapsTo": null,
       "synonyms": [],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
       "registryColumn": 0,
       "source": "desk",
       "featurePurpose": "identity"
@@ -652,6 +886,11 @@
       "mapsTo": null,
       "synonyms": [],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
       "registryColumn": 1,
       "source": "kalshi",
       "featurePurpose": "identity"
@@ -664,6 +903,11 @@
       "mapsTo": null,
       "synonyms": [],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
       "registryColumn": 2,
       "source": "desk",
       "featurePurpose": "provenance"
@@ -676,6 +920,11 @@
       "mapsTo": null,
       "synonyms": [],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
       "registryColumn": 3,
       "source": "desk",
       "featurePurpose": "identity"
@@ -688,6 +937,11 @@
       "mapsTo": null,
       "synonyms": [],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
       "registryColumn": 4,
       "source": "desk",
       "featurePurpose": "identity"
@@ -700,6 +954,11 @@
       "mapsTo": null,
       "synonyms": [],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
       "registryColumn": 5,
       "source": "desk",
       "featurePurpose": "schedule"
@@ -715,6 +974,16 @@
         "mu"
       ],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "mid",
+        "poly_mid",
+        "pinny_no_vig",
+        "blend_fair_cents"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "cents",
       "registryColumn": 11,
       "source": "kalshi",
       "featurePurpose": "market"
@@ -727,6 +996,15 @@
       "mapsTo": null,
       "synonyms": [],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "spreadCents",
+        "kalshi_mu",
+        "liquidity_ok"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "cents",
       "registryColumn": 12,
       "source": "kalshi",
       "featurePurpose": "market"
@@ -739,6 +1017,15 @@
       "mapsTo": null,
       "synonyms": [],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "avgKalshiVolumeFp",
+        "poly_volume",
+        "total_volume_usd"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "countFp",
       "registryColumn": 13,
       "source": "kalshi",
       "featurePurpose": "market"
@@ -751,6 +1038,15 @@
       "mapsTo": null,
       "synonyms": [],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "kalshi_mu",
+        "poly_volume",
+        "alert.divergence"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "cents",
       "registryColumn": 14,
       "source": "polymarket",
       "featurePurpose": "market"
@@ -763,6 +1059,15 @@
       "mapsTo": null,
       "synonyms": [],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "kalshi_volume",
+        "total_volume_usd",
+        "poly_mid"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "usd",
       "registryColumn": 15,
       "source": "polymarket",
       "featurePurpose": "market"
@@ -775,6 +1080,15 @@
       "mapsTo": null,
       "synonyms": [],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "pinny_source",
+        "kalshi_mu",
+        "blend_fair_cents"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "cents",
       "registryColumn": 16,
       "source": "pinnacle",
       "featurePurpose": "market"
@@ -790,6 +1104,14 @@
         "mock",
         "live"
       ],
+      "valueLabels": null,
+      "seeAlso": [
+        "pinny_no_vig",
+        "export_note"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
       "registryColumn": 17,
       "source": "pinnacle",
       "featurePurpose": "provenance"
@@ -802,6 +1124,15 @@
       "mapsTo": null,
       "synonyms": [],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "elo_source",
+        "blend_fair_cents",
+        "eff_edge"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "probability",
       "registryColumn": 18,
       "source": "elo",
       "featurePurpose": "model"
@@ -818,6 +1149,13 @@
         "fallback_50",
         "missing"
       ],
+      "valueLabels": null,
+      "seeAlso": [
+        "elo_prob"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
       "registryColumn": 19,
       "source": "elo",
       "featurePurpose": "provenance"
@@ -830,6 +1168,16 @@
       "mapsTo": null,
       "synonyms": [],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "eff_edge",
+        "kalshi_mu",
+        "elo_prob",
+        "pinny_no_vig"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "cents",
       "registryColumn": 20,
       "source": "desk",
       "featurePurpose": "model"
@@ -842,6 +1190,15 @@
       "mapsTo": null,
       "synonyms": [],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "blend_fair_cents",
+        "surfaceEdge",
+        "arb_hint"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "cents",
       "registryColumn": 21,
       "source": "desk",
       "featurePurpose": "model"
@@ -854,6 +1211,15 @@
       "mapsTo": null,
       "synonyms": [],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "kalshi_spread",
+        "kalshi_volume",
+        "ui.events.filter.liquidity"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
       "registryColumn": 22,
       "source": "desk",
       "featurePurpose": "gate"
@@ -866,6 +1232,15 @@
       "mapsTo": null,
       "synonyms": [],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "kalshi_volume",
+        "poly_volume",
+        "multi_venue"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "usd",
       "registryColumn": 23,
       "source": "desk",
       "featurePurpose": "market"
@@ -878,6 +1253,15 @@
       "mapsTo": null,
       "synonyms": [],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "total_volume_usd",
+        "arb_hint",
+        "coverage"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
       "registryColumn": 24,
       "source": "desk",
       "featurePurpose": "gate"
@@ -890,6 +1274,15 @@
       "mapsTo": null,
       "synonyms": [],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "arb_actionable",
+        "alert.divergence",
+        "eff_edge"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
       "registryColumn": 25,
       "source": "desk",
       "featurePurpose": "model"
@@ -902,6 +1295,15 @@
       "mapsTo": null,
       "synonyms": [],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "arb_hint",
+        "liquidity_ok",
+        "eff_edge"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
       "registryColumn": 26,
       "source": "desk",
       "featurePurpose": "gate"
@@ -914,6 +1316,14 @@
       "mapsTo": null,
       "synonyms": [],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "research_flag",
+        "graph_divergence"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
       "registryColumn": 27,
       "source": "desk",
       "featurePurpose": "model"
@@ -926,6 +1336,15 @@
       "mapsTo": null,
       "synonyms": [],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "composite.divergence",
+        "alert.divergence",
+        "rps_flag"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
       "registryColumn": 28,
       "source": "desk",
       "featurePurpose": "model"
@@ -938,6 +1357,15 @@
       "mapsTo": null,
       "synonyms": [],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "export_note",
+        "rps_flag",
+        "coverage"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
       "registryColumn": 29,
       "source": "desk",
       "featurePurpose": "gate"
@@ -950,6 +1378,14 @@
       "mapsTo": null,
       "synonyms": [],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "pinny_source",
+        "research_flag"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
       "registryColumn": 30,
       "source": "desk",
       "featurePurpose": "provenance"
@@ -964,6 +1400,15 @@
         "profiles"
       ],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "avgKalshiVolumeFp",
+        "lastSeenAtMs",
+        "profilesSource"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -979,6 +1424,14 @@
         "lastSeenMs"
       ],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "playerProfiles",
+        "avgKalshiVolumeFp"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "atMs",
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -994,6 +1447,13 @@
         "warehouse",
         "seed"
       ],
+      "valueLabels": null,
+      "seeAlso": [
+        "playerProfiles"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -1006,6 +1466,14 @@
       "mapsTo": null,
       "synonyms": [],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "multi_venue",
+        "ui.warehouse.coverage"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "pct",
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -1020,6 +1488,15 @@
         "surface edge"
       ],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "surface",
+        "eff_edge",
+        "ui.events.filter.min_surface_edge"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "pp",
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -1035,6 +1512,11 @@
         "reset"
       ],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -1052,6 +1534,11 @@
         "tennis board"
       ],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -1068,6 +1555,15 @@
         "flag"
       ],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "composite.scanner",
+        "ui.live_board.divergence",
+        "alert.divergence"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -1084,6 +1580,15 @@
         "gap"
       ],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "composite.divergence",
+        "alert.divergence",
+        "eff_edge"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "cents",
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -1100,6 +1605,15 @@
         "strength"
       ],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "composite.edge_score",
+        "eff_edge",
+        "surfaceEdge"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -1116,6 +1630,15 @@
         "untrusted"
       ],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "composite.model_suspect",
+        "elo_source",
+        "alert.stale_feed"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -1131,6 +1654,11 @@
         "event name"
       ],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -1146,6 +1674,11 @@
         "geo"
       ],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -1167,6 +1700,17 @@
         "24h",
         "week"
       ],
+      "valueLabels": {
+        "all": "all",
+        "live": "in play now",
+        "today": "today",
+        "24h": "next 24h",
+        "week": "this week"
+      },
+      "seeAlso": [],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -1186,6 +1730,15 @@
         "priced",
         "active"
       ],
+      "valueLabels": {
+        "all": "all",
+        "priced": "has quotes",
+        "active": "trading live"
+      },
+      "seeAlso": [],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -1201,6 +1754,14 @@
         "volume floor"
       ],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "kalshi_volume",
+        "ui.events.filter.liquidity"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "countFp",
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -1213,6 +1774,14 @@
       "mapsTo": "surfaceEdge",
       "synonyms": [],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "surfaceEdge",
+        "surface"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "pp",
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -1228,6 +1797,14 @@
         "order"
       ],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "ui.events.filter.when",
+        "ui.events.filter.min_vol"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -1245,6 +1822,13 @@
         "unknown"
       ],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "tier"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -1260,6 +1844,15 @@
         "sources"
       ],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "coverage",
+        "multi_venue",
+        "ui.warehouse.poly_link"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -1276,6 +1869,15 @@
         "matched"
       ],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "poly_mid",
+        "poly_volume",
+        "ui.warehouse.coverage"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -1291,6 +1893,14 @@
         "state"
       ],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "ui.events.filter.when",
+        "ui.live_board.title"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -1307,6 +1917,13 @@
         "fleet"
       ],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "ui.warehouse.fleet_volume"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "count",
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -1322,6 +1939,14 @@
         "X total vol"
       ],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "total_volume_usd",
+        "ui.warehouse.fleet_count"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "usd",
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -1334,6 +1959,15 @@
       "mapsTo": null,
       "synonyms": [],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "ui.live_board.scanner",
+        "composite.divergence",
+        "alert.divergence"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -1346,6 +1980,15 @@
       "mapsTo": null,
       "synonyms": [],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "ui.live_board.divergence",
+        "alert.divergence",
+        "eff_edge"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "cents",
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -1358,6 +2001,15 @@
       "mapsTo": null,
       "synonyms": [],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "ui.live_board.edge_score",
+        "eff_edge",
+        "surfaceEdge"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -1370,6 +2022,14 @@
       "mapsTo": null,
       "synonyms": [],
       "values": null,
+      "valueLabels": null,
+      "seeAlso": [
+        "ui.live_board.model_suspect",
+        "elo_source"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -1384,6 +2044,16 @@
       "values": [
         "CRITICAL: >30% for 3+ ticks"
       ],
+      "valueLabels": null,
+      "seeAlso": [
+        "alert.feed_frozen",
+        "alert.volume_gap",
+        "alert.delivery",
+        "alert.severity"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "pct",
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -1398,6 +2068,15 @@
       "values": [
         "WARNING: >10 for 3+ ticks"
       ],
+      "valueLabels": null,
+      "seeAlso": [
+        "alert.poly_dropout",
+        "alert.feed_frozen",
+        "kalshi_volume"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "count",
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -1412,6 +2091,15 @@
       "values": [
         "CRITICAL: 0 polyMatched for 6+ ticks"
       ],
+      "valueLabels": null,
+      "seeAlso": [
+        "alert.poly_dropout",
+        "alert.volume_gap",
+        "alert.stale_feed"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "count",
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -1426,6 +2114,15 @@
       "values": [
         "CRITICAL: >120s since last snapshot"
       ],
+      "valueLabels": null,
+      "seeAlso": [
+        "alert.feed_frozen",
+        "alert.delivery",
+        "alert.severity"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "ms",
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -1440,6 +2137,16 @@
       "values": [
         "INFO: |kalshiMid - polyProb*100| > 15¢"
       ],
+      "valueLabels": null,
+      "seeAlso": [
+        "kalshi_mu",
+        "poly_mid",
+        "arb_hint",
+        "alert.severity"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": "cents",
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -1457,6 +2164,16 @@
         "volume_gap_resolved",
         "poly_feed_frozen_resolved"
       ],
+      "valueLabels": null,
+      "seeAlso": [
+        "alert.stale_feed",
+        "alert.poly_dropout",
+        "alert.volume_gap",
+        "alert.feed_frozen"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -1473,6 +2190,14 @@
         "discord",
         "console"
       ],
+      "valueLabels": null,
+      "seeAlso": [
+        "alert.severity",
+        "alert.stale_feed"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
@@ -1489,13 +2214,25 @@
         "WARNING",
         "INFO"
       ],
+      "valueLabels": null,
+      "seeAlso": [
+        "alert.poly_dropout",
+        "alert.volume_gap",
+        "alert.feed_frozen",
+        "alert.stale_feed",
+        "alert.divergence",
+        "alert.delivery"
+      ],
+      "status": "active",
+      "deprecatedBy": null,
+      "unit": null,
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
     }
   },
   "api": {
-    "schemaVersion": 2,
+    "schemaVersion": 3,
     "tooltips": {
       "mid": "Midpoint of best yes-bid and yes-ask. Untradeable reference price.",
       "spreadCents": "Best ask − best bid (¢). Wide spreads = poor liquidity; prefer postOnly.",
@@ -1600,7 +2337,15 @@
           "market price"
         ],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "kalshi_mu",
+          "spreadCents",
+          "poly_mid"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "cents"
       },
       {
         "id": "spreadCents",
@@ -1614,7 +2359,15 @@
           "spread"
         ],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "mid",
+          "kalshi_spread",
+          "liquidity_ok"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "cents"
       },
       {
         "id": "crossed",
@@ -1625,7 +2378,14 @@
         "mapsTo": null,
         "synonyms": [],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "mid",
+          "spreadCents"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null
       },
       {
         "id": "avgKalshiVolumeFp",
@@ -1640,7 +2400,15 @@
           "avgKalshiVolume"
         ],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "kalshi_volume",
+          "playerProfiles",
+          "lastSeenAtMs"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "countFp"
       },
       {
         "id": "yesPriceCents",
@@ -1651,7 +2419,15 @@
         "mapsTo": null,
         "synonyms": [],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "mid",
+          "feeCents",
+          "postOnly"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "cents"
       },
       {
         "id": "balanceCents",
@@ -1662,7 +2438,14 @@
         "mapsTo": null,
         "synonyms": [],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "portfolioValueCents",
+          "exposureCents"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "cents"
       },
       {
         "id": "portfolioValueCents",
@@ -1673,7 +2456,15 @@
         "mapsTo": null,
         "synonyms": [],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "balanceCents",
+          "position",
+          "exposureCents"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "cents"
       },
       {
         "id": "position",
@@ -1684,7 +2475,14 @@
         "mapsTo": null,
         "synonyms": [],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "exposureCents",
+          "fillCount"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "count"
       },
       {
         "id": "exposureCents",
@@ -1695,7 +2493,15 @@
         "mapsTo": null,
         "synonyms": [],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "position",
+          "balanceCents",
+          "realizedPnlCents"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "cents"
       },
       {
         "id": "realizedPnlCents",
@@ -1706,7 +2512,14 @@
         "mapsTo": null,
         "synonyms": [],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "feesPaidCents",
+          "exposureCents"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "cents"
       },
       {
         "id": "feesPaidCents",
@@ -1717,7 +2530,15 @@
         "mapsTo": null,
         "synonyms": [],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "feeCents",
+          "realizedPnlCents",
+          "isTaker"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "cents"
       },
       {
         "id": "remainingCount",
@@ -1728,7 +2549,14 @@
         "mapsTo": null,
         "synonyms": [],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "fillCount",
+          "postOnly"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "count"
       },
       {
         "id": "fillCount",
@@ -1739,7 +2567,15 @@
         "mapsTo": null,
         "synonyms": [],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "remainingCount",
+          "feeCents",
+          "isTaker"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "count"
       },
       {
         "id": "isTaker",
@@ -1750,7 +2586,14 @@
         "mapsTo": null,
         "synonyms": [],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "feeCents",
+          "postOnly"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null
       },
       {
         "id": "feeCents",
@@ -1761,7 +2604,15 @@
         "mapsTo": null,
         "synonyms": [],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "feesPaidCents",
+          "isTaker",
+          "postOnly"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "cents"
       },
       {
         "id": "postOnly",
@@ -1772,7 +2623,15 @@
         "mapsTo": null,
         "synonyms": [],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "isTaker",
+          "feeCents",
+          "dryRun"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null
       },
       {
         "id": "dryRun",
@@ -1786,7 +2645,13 @@
           "simulate"
         ],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "postOnly"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null
       },
       {
         "id": "shadowMinSignals",
@@ -1797,7 +2662,14 @@
         "mapsTo": null,
         "synonyms": [],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "killBrierDriftPct",
+          "graduationMinRealizedEdgeCentsPerFill"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "count"
       },
       {
         "id": "killBrierDriftPct",
@@ -1808,7 +2680,14 @@
         "mapsTo": null,
         "synonyms": [],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "shadowMinSignals",
+          "graduationMinRealizedEdgeCentsPerFill"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "pct"
       },
       {
         "id": "graduationMinRealizedEdgeCentsPerFill",
@@ -1819,7 +2698,15 @@
         "mapsTo": null,
         "synonyms": [],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "shadowMinSignals",
+          "eff_edge",
+          "realizedPnlCents"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "cents"
       },
       {
         "id": "league",
@@ -1840,7 +2727,15 @@
           "ITF Men",
           "ITF Women"
         ],
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "surface",
+          "tier",
+          "series"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null
       },
       {
         "id": "surface",
@@ -1856,7 +2751,15 @@
           "Grass",
           "Carpet"
         ],
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "league",
+          "tier",
+          "surfaceEdge"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null
       },
       {
         "id": "tier",
@@ -1885,7 +2788,15 @@
           "ITF25",
           "ITF15"
         ],
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "league",
+          "surface",
+          "round"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null
       },
       {
         "id": "round",
@@ -1896,7 +2807,14 @@
         "mapsTo": null,
         "synonyms": [],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "tier",
+          "league"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null
       },
       {
         "id": "series",
@@ -1907,7 +2825,14 @@
         "mapsTo": null,
         "synonyms": [],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "league",
+          "event_ticker"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null
       },
       {
         "id": "gender",
@@ -1918,7 +2843,14 @@
         "mapsTo": null,
         "synonyms": [],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "league",
+          "age_group"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null
       },
       {
         "id": "age_group",
@@ -1929,7 +2861,14 @@
         "mapsTo": null,
         "synonyms": [],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "gender",
+          "league"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null
       },
       {
         "id": "match_uuid",
@@ -1940,7 +2879,11 @@
         "mapsTo": null,
         "synonyms": [],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null
       },
       {
         "id": "event_ticker",
@@ -1951,7 +2894,11 @@
         "mapsTo": null,
         "synonyms": [],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null
       },
       {
         "id": "timestamp",
@@ -1962,7 +2909,11 @@
         "mapsTo": null,
         "synonyms": [],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null
       },
       {
         "id": "player_a",
@@ -1973,7 +2924,11 @@
         "mapsTo": null,
         "synonyms": [],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null
       },
       {
         "id": "player_b",
@@ -1984,7 +2939,11 @@
         "mapsTo": null,
         "synonyms": [],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null
       },
       {
         "id": "title",
@@ -1995,7 +2954,11 @@
         "mapsTo": null,
         "synonyms": [],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null
       },
       {
         "id": "kalshi_mu",
@@ -2009,7 +2972,16 @@
           "mu"
         ],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "mid",
+          "poly_mid",
+          "pinny_no_vig",
+          "blend_fair_cents"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "cents"
       },
       {
         "id": "kalshi_spread",
@@ -2020,7 +2992,15 @@
         "mapsTo": null,
         "synonyms": [],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "spreadCents",
+          "kalshi_mu",
+          "liquidity_ok"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "cents"
       },
       {
         "id": "kalshi_volume",
@@ -2031,7 +3011,15 @@
         "mapsTo": null,
         "synonyms": [],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "avgKalshiVolumeFp",
+          "poly_volume",
+          "total_volume_usd"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "countFp"
       },
       {
         "id": "poly_mid",
@@ -2042,7 +3030,15 @@
         "mapsTo": null,
         "synonyms": [],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "kalshi_mu",
+          "poly_volume",
+          "alert.divergence"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "cents"
       },
       {
         "id": "poly_volume",
@@ -2053,7 +3049,15 @@
         "mapsTo": null,
         "synonyms": [],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "kalshi_volume",
+          "total_volume_usd",
+          "poly_mid"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "usd"
       },
       {
         "id": "pinny_no_vig",
@@ -2064,7 +3068,15 @@
         "mapsTo": null,
         "synonyms": [],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "pinny_source",
+          "kalshi_mu",
+          "blend_fair_cents"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "cents"
       },
       {
         "id": "pinny_source",
@@ -2078,7 +3090,14 @@
           "mock",
           "live"
         ],
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "pinny_no_vig",
+          "export_note"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null
       },
       {
         "id": "elo_prob",
@@ -2089,7 +3108,15 @@
         "mapsTo": null,
         "synonyms": [],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "elo_source",
+          "blend_fair_cents",
+          "eff_edge"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "probability"
       },
       {
         "id": "elo_source",
@@ -2104,7 +3131,13 @@
           "fallback_50",
           "missing"
         ],
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "elo_prob"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null
       },
       {
         "id": "blend_fair_cents",
@@ -2115,7 +3148,16 @@
         "mapsTo": null,
         "synonyms": [],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "eff_edge",
+          "kalshi_mu",
+          "elo_prob",
+          "pinny_no_vig"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "cents"
       },
       {
         "id": "eff_edge",
@@ -2126,7 +3168,15 @@
         "mapsTo": null,
         "synonyms": [],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "blend_fair_cents",
+          "surfaceEdge",
+          "arb_hint"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "cents"
       },
       {
         "id": "liquidity_ok",
@@ -2137,7 +3187,15 @@
         "mapsTo": null,
         "synonyms": [],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "kalshi_spread",
+          "kalshi_volume",
+          "ui.events.filter.liquidity"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null
       },
       {
         "id": "total_volume_usd",
@@ -2148,7 +3206,15 @@
         "mapsTo": null,
         "synonyms": [],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "kalshi_volume",
+          "poly_volume",
+          "multi_venue"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "usd"
       },
       {
         "id": "multi_venue",
@@ -2159,7 +3225,15 @@
         "mapsTo": null,
         "synonyms": [],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "total_volume_usd",
+          "arb_hint",
+          "coverage"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null
       },
       {
         "id": "arb_hint",
@@ -2170,7 +3244,15 @@
         "mapsTo": null,
         "synonyms": [],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "arb_actionable",
+          "alert.divergence",
+          "eff_edge"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null
       },
       {
         "id": "arb_actionable",
@@ -2181,7 +3263,15 @@
         "mapsTo": null,
         "synonyms": [],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "arb_hint",
+          "liquidity_ok",
+          "eff_edge"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null
       },
       {
         "id": "rps_flag",
@@ -2192,7 +3282,14 @@
         "mapsTo": null,
         "synonyms": [],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "research_flag",
+          "graph_divergence"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null
       },
       {
         "id": "graph_divergence",
@@ -2203,7 +3300,15 @@
         "mapsTo": null,
         "synonyms": [],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "composite.divergence",
+          "alert.divergence",
+          "rps_flag"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null
       },
       {
         "id": "research_flag",
@@ -2214,7 +3319,15 @@
         "mapsTo": null,
         "synonyms": [],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "export_note",
+          "rps_flag",
+          "coverage"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null
       },
       {
         "id": "export_note",
@@ -2225,7 +3338,14 @@
         "mapsTo": null,
         "synonyms": [],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "pinny_source",
+          "research_flag"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null
       },
       {
         "id": "playerProfiles",
@@ -2238,7 +3358,15 @@
           "profiles"
         ],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "avgKalshiVolumeFp",
+          "lastSeenAtMs",
+          "profilesSource"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null
       },
       {
         "id": "lastSeenAtMs",
@@ -2252,7 +3380,14 @@
           "lastSeenMs"
         ],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "playerProfiles",
+          "avgKalshiVolumeFp"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "atMs"
       },
       {
         "id": "profilesSource",
@@ -2266,7 +3401,13 @@
           "warehouse",
           "seed"
         ],
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "playerProfiles"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null
       },
       {
         "id": "coverage",
@@ -2277,7 +3418,14 @@
         "mapsTo": null,
         "synonyms": [],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "multi_venue",
+          "ui.warehouse.coverage"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "pct"
       },
       {
         "id": "surfaceEdge",
@@ -2290,7 +3438,15 @@
           "surface edge"
         ],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "surface",
+          "eff_edge",
+          "ui.events.filter.min_surface_edge"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "pp"
       },
       {
         "id": "ui.events.filter.reset",
@@ -2304,7 +3460,11 @@
           "reset"
         ],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null
       },
       {
         "id": "ui.live_board.title",
@@ -2320,7 +3480,11 @@
           "tennis board"
         ],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null
       },
       {
         "id": "ui.live_board.scanner",
@@ -2335,7 +3499,15 @@
           "flag"
         ],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "composite.scanner",
+          "ui.live_board.divergence",
+          "alert.divergence"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null
       },
       {
         "id": "ui.live_board.divergence",
@@ -2350,7 +3522,15 @@
           "gap"
         ],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "composite.divergence",
+          "alert.divergence",
+          "eff_edge"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "cents"
       },
       {
         "id": "ui.live_board.edge_score",
@@ -2365,7 +3545,15 @@
           "strength"
         ],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "composite.edge_score",
+          "eff_edge",
+          "surfaceEdge"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null
       },
       {
         "id": "ui.live_board.model_suspect",
@@ -2380,7 +3568,15 @@
           "untrusted"
         ],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "composite.model_suspect",
+          "elo_source",
+          "alert.stale_feed"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null
       },
       {
         "id": "ui.events.filter.tournament",
@@ -2394,7 +3590,11 @@
           "event name"
         ],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null
       },
       {
         "id": "ui.events.filter.country",
@@ -2408,7 +3608,11 @@
           "geo"
         ],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null
       },
       {
         "id": "ui.events.filter.when",
@@ -2434,7 +3638,11 @@
           "today": "today",
           "24h": "next 24h",
           "week": "this week"
-        }
+        },
+        "seeAlso": [],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null
       },
       {
         "id": "ui.events.filter.liquidity",
@@ -2456,7 +3664,11 @@
           "all": "all",
           "priced": "has quotes",
           "active": "trading live"
-        }
+        },
+        "seeAlso": [],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null
       },
       {
         "id": "ui.events.filter.min_vol",
@@ -2470,7 +3682,14 @@
           "volume floor"
         ],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "kalshi_volume",
+          "ui.events.filter.liquidity"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "countFp"
       },
       {
         "id": "ui.events.filter.min_surface_edge",
@@ -2481,7 +3700,14 @@
         "mapsTo": "surfaceEdge",
         "synonyms": [],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "surfaceEdge",
+          "surface"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "pp"
       },
       {
         "id": "ui.sort.events",
@@ -2495,7 +3721,14 @@
           "order"
         ],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "ui.events.filter.when",
+          "ui.events.filter.min_vol"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null
       },
       {
         "id": "ui.filter.unclassified",
@@ -2511,7 +3744,13 @@
           "unknown"
         ],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "tier"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null
       },
       {
         "id": "ui.warehouse.coverage",
@@ -2525,7 +3764,15 @@
           "sources"
         ],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "coverage",
+          "multi_venue",
+          "ui.warehouse.poly_link"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null
       },
       {
         "id": "ui.warehouse.poly_link",
@@ -2540,7 +3787,15 @@
           "matched"
         ],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "poly_mid",
+          "poly_volume",
+          "ui.warehouse.coverage"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null
       },
       {
         "id": "ui.warehouse.event_status",
@@ -2554,7 +3809,14 @@
           "state"
         ],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "ui.events.filter.when",
+          "ui.live_board.title"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null
       },
       {
         "id": "ui.warehouse.fleet_count",
@@ -2569,7 +3831,13 @@
           "fleet"
         ],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "ui.warehouse.fleet_volume"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "count"
       },
       {
         "id": "ui.warehouse.fleet_volume",
@@ -2583,7 +3851,14 @@
           "X total vol"
         ],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "total_volume_usd",
+          "ui.warehouse.fleet_count"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "usd"
       },
       {
         "id": "composite.scanner",
@@ -2594,7 +3869,15 @@
         "mapsTo": null,
         "synonyms": [],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "ui.live_board.scanner",
+          "composite.divergence",
+          "alert.divergence"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null
       },
       {
         "id": "composite.divergence",
@@ -2605,7 +3888,15 @@
         "mapsTo": null,
         "synonyms": [],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "ui.live_board.divergence",
+          "alert.divergence",
+          "eff_edge"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "cents"
       },
       {
         "id": "composite.edge_score",
@@ -2616,7 +3907,15 @@
         "mapsTo": null,
         "synonyms": [],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "ui.live_board.edge_score",
+          "eff_edge",
+          "surfaceEdge"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null
       },
       {
         "id": "composite.model_suspect",
@@ -2627,7 +3926,14 @@
         "mapsTo": null,
         "synonyms": [],
         "values": null,
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "ui.live_board.model_suspect",
+          "elo_source"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null
       },
       {
         "id": "alert.poly_dropout",
@@ -2640,7 +3946,16 @@
         "values": [
           "CRITICAL: >30% for 3+ ticks"
         ],
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "alert.feed_frozen",
+          "alert.volume_gap",
+          "alert.delivery",
+          "alert.severity"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "pct"
       },
       {
         "id": "alert.volume_gap",
@@ -2653,7 +3968,15 @@
         "values": [
           "WARNING: >10 for 3+ ticks"
         ],
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "alert.poly_dropout",
+          "alert.feed_frozen",
+          "kalshi_volume"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "count"
       },
       {
         "id": "alert.feed_frozen",
@@ -2666,7 +3989,15 @@
         "values": [
           "CRITICAL: 0 polyMatched for 6+ ticks"
         ],
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "alert.poly_dropout",
+          "alert.volume_gap",
+          "alert.stale_feed"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "count"
       },
       {
         "id": "alert.stale_feed",
@@ -2679,7 +4010,15 @@
         "values": [
           "CRITICAL: >120s since last snapshot"
         ],
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "alert.feed_frozen",
+          "alert.delivery",
+          "alert.severity"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "ms"
       },
       {
         "id": "alert.divergence",
@@ -2692,7 +4031,16 @@
         "values": [
           "INFO: |kalshiMid - polyProb*100| > 15¢"
         ],
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "kalshi_mu",
+          "poly_mid",
+          "arb_hint",
+          "alert.severity"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": "cents"
       },
       {
         "id": "alert.resolution",
@@ -2708,7 +4056,16 @@
           "volume_gap_resolved",
           "poly_feed_frozen_resolved"
         ],
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "alert.stale_feed",
+          "alert.poly_dropout",
+          "alert.volume_gap",
+          "alert.feed_frozen"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null
       },
       {
         "id": "alert.delivery",
@@ -2723,7 +4080,14 @@
           "discord",
           "console"
         ],
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "alert.severity",
+          "alert.stale_feed"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null
       },
       {
         "id": "alert.severity",
@@ -2738,7 +4102,18 @@
           "WARNING",
           "INFO"
         ],
-        "valueLabels": null
+        "valueLabels": null,
+        "seeAlso": [
+          "alert.poly_dropout",
+          "alert.volume_gap",
+          "alert.feed_frozen",
+          "alert.stale_feed",
+          "alert.divergence",
+          "alert.delivery"
+        ],
+        "status": "active",
+        "deprecatedBy": null,
+        "unit": null
       }
     ],
     "filterCatalog": {
@@ -2850,6 +4225,11 @@
         "label": "Other"
       }
     ],
+    "statuses": [
+      "active",
+      "deprecated",
+      "draft"
+    ],
     "codes": {
       "DEP": "deposit — funds in via Kalshi web/bank rails; reconciled, never API-initiated",
       "WDL": "withdrawal — funds out via Kalshi web/bank rails; reconciled, never API-initiated",
@@ -2873,9 +4253,15 @@
     },
     "units": {
       "cents": "integer cents, 1–99 for prices; canonical money unit everywhere",
+      "usd": "US dollars (chart/export display; prefer cents interior)",
       "dollarsFp": "fixed-point dollar string e.g. \"0.5600\" — wire only, parse via dollarsToCents",
       "countFp": "fixed-point contract string e.g. \"10.00\" — fractional flagged, not orderable",
-      "atMs": "epoch milliseconds — canonical time unit (suffix AtMs)",
+      "count": "integer count (contracts, events, gaps, appearances)",
+      "pp": "percentage points — edge / probability delta (e.g. surface edge)",
+      "pct": "percent 0–100 scale (thresholds, share of total)",
+      "probability": "probability on 0–1 scale (Elo, model outputs)",
+      "atMs": "epoch milliseconds — canonical absolute time (suffix AtMs)",
+      "ms": "duration in milliseconds (staleness windows, intervals)",
       "unixSec": "unix seconds — wire only (updated_ts, ts); multiply by 1000 at boundary"
     }
   }

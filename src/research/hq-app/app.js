@@ -14,9 +14,16 @@ const esc = (v) => String(v ?? "").replace(/[&<>"]/g, (c) =>
  *   entries: any[],
  *   categories: any[],
  *   filterCatalog: Record<string, { label: string, values: string[], valueLabels?: Record<string,string> }>,
+ *   units: Record<string,string>,
  * }}
  */
-let GLOSSARY = { tooltips: {}, entries: [], categories: [], filterCatalog: {} };
+let GLOSSARY = {
+  tooltips: {},
+  entries: [],
+  categories: [],
+  filterCatalog: {},
+  units: {},
+};
 let TOOLTIPS = {};
 
 function applyGlossaryPayload(payload) {
@@ -30,9 +37,16 @@ function applyGlossaryPayload(payload) {
       filterCatalog: payload.filterCatalog && typeof payload.filterCatalog === "object"
         ? payload.filterCatalog
         : {},
+      units: payload.units && typeof payload.units === "object" ? payload.units : {},
     };
   } else {
-    GLOSSARY = { tooltips: payload, entries: [], categories: [], filterCatalog: {} };
+    GLOSSARY = {
+      tooltips: payload,
+      entries: [],
+      categories: [],
+      filterCatalog: {},
+      units: {},
+    };
   }
   TOOLTIPS = GLOSSARY.tooltips;
   renderGlossaryBody();
@@ -961,6 +975,8 @@ function renderGlossaryBody(highlightId) {
   if (!body) return;
   const q = glossaryQuery();
   const entries = GLOSSARY.entries || [];
+  const byId = new Map(entries.map((e) => [e.id, e]));
+  const unitCatalog = GLOSSARY.units || {};
   const cats = GLOSSARY.categories?.length
     ? GLOSSARY.categories
     : [...new Set(entries.map((e) => e.category))].map((id) => ({
@@ -980,7 +996,15 @@ function renderGlossaryBody(highlightId) {
     const list = entries.filter((e) => {
       if (e.category !== cat.id) return false;
       if (!q) return true;
-      const hay = [e.id, e.label, e.description, ...(e.synonyms || [])]
+      const hay = [
+        e.id,
+        e.label,
+        e.description,
+        e.unit || "",
+        e.status || "active",
+        ...(e.synonyms || []),
+        ...(e.seeAlso || []),
+      ]
         .join(" ")
         .toLowerCase();
       return hay.includes(q);
@@ -990,9 +1014,53 @@ function renderGlossaryBody(highlightId) {
     html += '<div class="glossary-cat">' + esc(cat.label) + "</div>";
     for (const e of list) {
       const hi = highlightId && e.id === highlightId ? " highlight" : "";
+      const status = e.status || "active";
+      const statusBadge =
+        status !== "active"
+          ? '<span class="g-status g-status-' +
+            esc(status) +
+            '">' +
+            esc(status) +
+            "</span>"
+          : "";
+      const unitTitle = e.unit && unitCatalog[e.unit]
+        ? unitCatalog[e.unit]
+        : e.unit || "";
+      const unitChip = e.unit
+        ? '<span class="g-unit" title="' +
+          esc(unitTitle) +
+          '">' +
+          esc(e.unit) +
+          "</span>"
+        : "";
+      const deprecatedNote =
+        status === "deprecated" && e.deprecatedBy
+          ? '<div class="syn">replaced by ' +
+            '<button type="button" class="g-related" data-glossary="' +
+            esc(e.deprecatedBy) +
+            '">' +
+            esc(byId.get(e.deprecatedBy)?.label || e.deprecatedBy) +
+            "</button></div>"
+          : "";
+      const related = (e.seeAlso || [])
+        .map((id) => {
+          const rel = byId.get(id);
+          return (
+            '<button type="button" class="g-related" data-glossary="' +
+            esc(id) +
+            '" title="' +
+            esc(rel?.description || id) +
+            '">' +
+            esc(rel?.label || id) +
+            "</button>"
+          );
+        })
+        .join("");
       html +=
         '<div class="glossary-entry' +
         hi +
+        (status === "deprecated" ? " is-deprecated" : "") +
+        (status === "draft" ? " is-draft" : "") +
         '" id="glossary-entry-' +
         esc(e.id) +
         '" data-id="' +
@@ -1002,15 +1070,24 @@ function renderGlossaryBody(highlightId) {
         esc(e.label) +
         ' <span class="gid">' +
         esc(e.id) +
-        "</span></h3>" +
+        "</span>" +
+        statusBadge +
+        unitChip +
+        "</h3>" +
         "<p>" +
         esc(e.description) +
         "</p>" +
+        deprecatedNote +
         (e.synonyms?.length
           ? '<div class="syn">also: ' + esc(e.synonyms.join(", ")) + "</div>"
           : "") +
         (e.values?.length
           ? '<div class="syn">values: ' + esc(e.values.join(" · ")) + "</div>"
+          : "") +
+        (related
+          ? '<div class="g-related-row"><span class="g-related-label">related</span> ' +
+            related +
+            "</div>"
           : "") +
         "</div>";
     }
@@ -1054,8 +1131,9 @@ function closeGlossary() {
 function parseGlossaryHash() {
   const h = location.hash || "";
   if (h === "#glossary") return { open: true, id: null };
-  const m = /^#glossary:([A-Za-z0-9_]+)$/.exec(h);
-  if (m) return { open: true, id: m[1] };
+  // ids may include dots (ui.events.filter.when, alert.poly_dropout)
+  const m = /^#glossary:([A-Za-z0-9_.-]+)$/.exec(h);
+  if (m) return { open: true, id: decodeURIComponent(m[1]) };
   return { open: false, id: null };
 }
 

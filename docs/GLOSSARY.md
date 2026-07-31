@@ -11,10 +11,13 @@ Wire shapes verified against Kalshi API docs 2026-07-28.
 | **Panel** | Header **Glossary (?)** — slide-over, search, grouped by category |
 | **Inline tips** | `tip("id")` → `?` with title + click opens panel at entry |
 | **Deeplink** | `#glossary` or `#glossary:avgKalshiVolumeFp` |
-| **API** | `GET /api/glossary` → `{ schemaVersion, tooltips, entries, categories, codes, units }` |
-| **Governance** | `bun run glossary:check` — fails if `tip("unknown")` / `data-glossary` not in `GLOSSARY_ENTRIES` |
+| **API** | `GET /api/glossary` → `{ schemaVersion: 3, tooltips, entries, filterCatalog, categories, statuses, codes, units }` |
+| **Related** | Entry `seeAlso[]` → panel “related” chips (click opens target) |
+| **Status** | `active` (default) · `deprecated` (+ `deprecatedBy`) · `draft` |
+| **Unit** | Entry `unit` ∈ `UNITS` — cents · usd · pp · pct · count · … (chart/export) |
+| **Governance** | `bun run glossary:check` — tips + integrity (seeAlso/unit/status) + filter catalogs |
 
-Categories: `market` · `model` · `tournament` · `warehouse` · `trading` · `ui` · `other`.
+Categories: `market` · `model` · `tournament` · `warehouse` · `trading` · `ui` · `pipeline` · `other`.
 
 Add new terms only in `GLOSSARY_ENTRIES` (ids are stable tip keys).
 
@@ -57,13 +60,29 @@ Add new terms only in `GLOSSARY_ENTRIES` (ids are stable tip keys).
 
 ## Units (`UNITS`)
 
+Attach as `unit` on glossary entries for chart/export consumers.
+
 | Unit | Convention |
 |---|---|
 | `cents` | integer; prices 1–99; canonical money unit |
+| `usd` | US dollars (display/export; prefer cents interior) |
 | `dollarsFp` | fixed-point dollar string — wire only |
 | `countFp` | fixed-point contract string — fractional flagged, not orderable |
-| `atMs` | epoch millis — canonical time |
+| `count` | integer count (contracts, events, gaps) |
+| `pp` | percentage points (edge / probability delta) |
+| `pct` | percent 0–100 (thresholds, shares) |
+| `probability` | 0–1 model outputs (Elo) |
+| `atMs` | epoch millis — canonical absolute time |
+| `ms` | duration milliseconds (staleness windows) |
 | `unixSec` | wire only; ×1000 at boundary |
+
+## Lifecycle (`status`)
+
+| Status | Meaning |
+|--------|---------|
+| `active` | Default when omitted — safe for consumers |
+| `deprecated` | Do not use for new work; set `deprecatedBy` to replacement id |
+| `draft` | WIP entry; may be excluded from hard surfaces later |
 
 ## Player profiles (volume / recency)
 

@@ -1,9 +1,15 @@
 /**
  * Bidirectional glossary ↔ column-registry integrity.
+ * Also validates seeAlso / unit / status / deprecatedBy.
  * @see docs/SEMANTIC_LAYER.md
  */
 import type { ColumnRegistry } from "./column-registry.ts";
-import type { GlossaryEntry } from "./glossary.ts";
+import {
+  GLOSSARY_STATUSES,
+  UNITS,
+  type GlossaryEntry,
+  type GlossaryStatus,
+} from "./glossary.ts";
 
 export function glossaryMapFromEntries(
   entries: readonly GlossaryEntry[],
@@ -25,6 +31,7 @@ export function validateGlossaryIntegrity(
 ): string[] {
   const errs: string[] = [];
   const pending = new Set(options.pendingRegistryConcepts ?? []);
+  const statusSet = new Set<string>(GLOSSARY_STATUSES);
 
   for (const meta of registry.byIndex) {
     if (!meta.concept) continue;
@@ -56,12 +63,61 @@ export function validateGlossaryIntegrity(
     }
   }
 
-  // unique glossary ids already enforced by construction elsewhere; check mapsTo targets
+  // mapsTo · seeAlso · unit · status · deprecatedBy
   for (const entry of glossary.values()) {
     if (entry.mapsTo && !glossary.has(entry.mapsTo)) {
       errs.push(
         `Glossary "${entry.id}" mapsTo missing concept "${entry.mapsTo}"`,
       );
+    }
+
+    if (entry.unit != null && !(entry.unit in UNITS)) {
+      errs.push(
+        `Glossary "${entry.id}" has unknown unit "${entry.unit}" (want keyof UNITS)`,
+      );
+    }
+
+    const status: GlossaryStatus = entry.status ?? "active";
+    if (entry.status != null && !statusSet.has(entry.status)) {
+      errs.push(
+        `Glossary "${entry.id}" has invalid status "${entry.status}" (want ${GLOSSARY_STATUSES.join("|")})`,
+      );
+    }
+
+    if (status === "deprecated") {
+      if (!entry.deprecatedBy) {
+        errs.push(
+          `Glossary "${entry.id}" is deprecated but missing deprecatedBy replacement id`,
+        );
+      } else if (!glossary.has(entry.deprecatedBy)) {
+        errs.push(
+          `Glossary "${entry.id}" deprecatedBy missing concept "${entry.deprecatedBy}"`,
+        );
+      } else if (entry.deprecatedBy === entry.id) {
+        errs.push(`Glossary "${entry.id}" deprecatedBy cannot be self`);
+      }
+    } else if (entry.deprecatedBy) {
+      errs.push(
+        `Glossary "${entry.id}" has deprecatedBy but status is "${status}" (only valid when deprecated)`,
+      );
+    }
+
+    const seen = new Set<string>();
+    for (const rel of entry.seeAlso ?? []) {
+      if (rel === entry.id) {
+        errs.push(`Glossary "${entry.id}" seeAlso cannot include self`);
+        continue;
+      }
+      if (seen.has(rel)) {
+        errs.push(`Glossary "${entry.id}" seeAlso duplicates "${rel}"`);
+        continue;
+      }
+      seen.add(rel);
+      if (!glossary.has(rel)) {
+        errs.push(
+          `Glossary "${entry.id}" seeAlso missing concept "${rel}"`,
+        );
+      }
     }
   }
 
