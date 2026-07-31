@@ -37,6 +37,7 @@ import {
 import { buildHqPayload, resetTradingCache } from "./hq-data.ts";
 import { renderHq } from "./hq-view.ts";
 import { fetchTennisBoard } from "./tennis-events.ts";
+import { buildGlossaryApiPayload } from "../institutions/glossary.ts";
 import { readPlayerProfiles } from "./player-profiles.ts";
 import { readOpponentProfiles } from "./player-opponent-profiles.ts";
 import { placeOrder, cancelOrder } from "../bot/kalshi-client.ts";
@@ -721,7 +722,13 @@ export function createResearchServer(options: ServeOptions = {}) {
       }
 
       // HQ aggregate data feed (JSON)
-      if (url.pathname === "/api/hq") {
+      
+      // Glossary — structured entries + flat tooltips for HQ panel/tips
+      if (url.pathname === "/api/glossary") {
+        return json(buildGlossaryApiPayload());
+      }
+
+if (url.pathname === "/api/hq") {
         return json(await buildHqPayload());
       }
 
