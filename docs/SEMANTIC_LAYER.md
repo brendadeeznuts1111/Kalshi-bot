@@ -72,12 +72,22 @@ Registry changes for CSV order / SQLite migrations. Glossary concepts are **sema
 
 Prefer **same id** for “field is the concept.” Use `ui.*` only for pure presentation chrome. Use `mapsTo` when UI shadows a different registry feature.
 
+## Govern controlled UI labels
+
+```bash
+bun run glossary:report   # soft: list ungoverned sel()/label surfaces
+bun run glossary:check    # hard: tip keys + integrity + controlled labels
+```
+
+Controlled catalog lives in `scripts/check-glossary-usage.ts` (`GOVERNED_SURFACES`).  
+HQ uses `selGloss(id, label, …)` + `tip(id)` so labels stay linked to glossary ids.
+
 ## Ship order
 
 1. ✅ Glossary `kind` + registry entries for desk columns  
 2. ✅ Column registry + bidirectional validation  
 3. ✅ `glossary:check` / dump  
-4. Next: wire Events `sel(..., "league")` etc.  
+4. ✅ Events `selGloss` + report/hard gate  
 5. Later: generate `RegistryConceptId` types; warehouse UI facets from registry  
 
 ## What agents should do

@@ -98,9 +98,10 @@
     "logging:dry": "bun scripts/price-logger.ts -- --dry-run",
     "tennis:profiles:opponents:build": "bun tools/tennis/build-player-opponent-profiles.ts",
     "tennis:profiles:opponents:dry": "bun tools/tennis/build-player-opponent-profiles.ts --dry-run",
-    "glossary:check": "bun scripts/check-glossary-usage.ts",
+    "glossary:check": "bun scripts/check-glossary-usage.ts -- --hard",
     "glossary:dump": "bun scripts/dump-glossary.ts",
-    "semantic:audit": "bun scripts/check-glossary-usage.ts"
+    "semantic:audit": "bun scripts/check-glossary-usage.ts -- --hard",
+    "glossary:report": "bun scripts/check-glossary-usage.ts -- --report-only"
   },
   "engines": {
     "bun": ">=1.4.0-canary.1"

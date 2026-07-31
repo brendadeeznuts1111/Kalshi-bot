@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-07-31T01:58:08.663Z",
+  "generatedAt": "2026-07-31T02:06:42.995Z",
   "integrityOk": true,
   "integrityErrors": [],
   "pendingRegistryConcepts": [
@@ -1022,6 +1022,331 @@
       "registryColumn": null,
       "source": null,
       "featurePurpose": null
+    },
+    "ui.live_board.title": {
+      "label": "Tennis board",
+      "description": "Real-time match monitor: open Kalshi markets with filters, surface edge, and player profiles.",
+      "category": "ui",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [
+        "live board",
+        "board",
+        "monitor",
+        "tennis board"
+      ],
+      "values": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "ui.live_board.scanner": {
+      "label": "Scanner",
+      "description": "Price divergence alert: when market mid deviates from model fair by more than threshold.",
+      "category": "ui",
+      "kind": "ui",
+      "mapsTo": "composite.scanner",
+      "synonyms": [
+        "alert",
+        "signal",
+        "flag"
+      ],
+      "values": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "ui.live_board.divergence": {
+      "label": "Divergence",
+      "description": "Cents difference between market price and model fair price.",
+      "category": "ui",
+      "kind": "ui",
+      "mapsTo": "composite.divergence",
+      "synonyms": [
+        "delta",
+        "edge",
+        "gap"
+      ],
+      "values": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "ui.live_board.edge_score": {
+      "label": "Edge score",
+      "description": "Composite signal strength: divergence weighted by liquidity and model confidence.",
+      "category": "ui",
+      "kind": "ui",
+      "mapsTo": "composite.edge_score",
+      "synonyms": [
+        "edge",
+        "score",
+        "strength"
+      ],
+      "values": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "ui.live_board.model_suspect": {
+      "label": "Model suspect",
+      "description": "Flag when model inputs are stale, incomplete, or conflict with market consensus.",
+      "category": "ui",
+      "kind": "ui",
+      "mapsTo": "composite.model_suspect",
+      "synonyms": [
+        "suspect",
+        "stale",
+        "untrusted"
+      ],
+      "values": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "ui.events.filter.tournament": {
+      "label": "Tournament",
+      "description": "Filter matches by tournament / competition name.",
+      "category": "tournament",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [
+        "competition",
+        "event name"
+      ],
+      "values": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "ui.events.filter.country": {
+      "label": "Country",
+      "description": "Filter by tournament or player nationality code/name.",
+      "category": "tournament",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [
+        "nation",
+        "geo"
+      ],
+      "values": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "ui.events.filter.when": {
+      "label": "When",
+      "description": "Time window filter: live, today, next 24h, this week.",
+      "category": "ui",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [
+        "time",
+        "window"
+      ],
+      "values": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "ui.events.filter.liquidity": {
+      "label": "Liquidity",
+      "description": "Filter by quote presence: priced or actively trading.",
+      "category": "market",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [
+        "quotes",
+        "book"
+      ],
+      "values": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "ui.events.filter.min_vol": {
+      "label": "Min 24h vol",
+      "description": "Minimum trailing volume gate for board rows (desk liquidity).",
+      "category": "market",
+      "kind": "ui",
+      "mapsTo": "kalshi_volume",
+      "synonyms": [
+        "min volume",
+        "volume floor"
+      ],
+      "values": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "ui.events.filter.min_surface_edge": {
+      "label": "Min surface edge",
+      "description": "Minimum surface-edge points required to keep a match on the board.",
+      "category": "warehouse",
+      "kind": "ui",
+      "mapsTo": "surfaceEdge",
+      "synonyms": [],
+      "values": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "ui.sort.events": {
+      "label": "Sort",
+      "description": "Ordering of the match list: start time, volume, or name.",
+      "category": "ui",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [
+        "sort events",
+        "order"
+      ],
+      "values": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "ui.filter.unclassified": {
+      "label": "Unclassified",
+      "description": "Placeholder when a value cannot be mapped to a known category.",
+      "category": "ui",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [
+        "Unc",
+        "Other",
+        "NA",
+        "unknown"
+      ],
+      "values": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "ui.warehouse.coverage": {
+      "label": "Coverage",
+      "description": "Data completeness badge: Kalshi-only, Polymarket-only, or hybrid.",
+      "category": "warehouse",
+      "kind": "ui",
+      "mapsTo": "coverage",
+      "synonyms": [
+        "venues",
+        "sources"
+      ],
+      "values": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "ui.warehouse.poly_link": {
+      "label": "Poly",
+      "description": "Polymarket market link status: linked or unlinked.",
+      "category": "warehouse",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [
+        "polymarket",
+        "gamma",
+        "matched"
+      ],
+      "values": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "ui.warehouse.event_status": {
+      "label": "Event status",
+      "description": "Match lifecycle: Scheduled, Live, or Ended.",
+      "category": "warehouse",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [
+        "status",
+        "state"
+      ],
+      "values": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "ui.warehouse.fleet_count": {
+      "label": "Events",
+      "description": "Number of matches in the current filtered view.",
+      "category": "ui",
+      "kind": "ui",
+      "mapsTo": null,
+      "synonyms": [
+        "count",
+        "N events",
+        "fleet"
+      ],
+      "values": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "ui.warehouse.fleet_volume": {
+      "label": "Total volume",
+      "description": "Aggregated volume across the filtered match set.",
+      "category": "market",
+      "kind": "ui",
+      "mapsTo": "total_volume_usd",
+      "synonyms": [
+        "volume",
+        "X total vol"
+      ],
+      "values": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "composite.scanner": {
+      "label": "Scanner signal",
+      "description": "Abstract scanner / divergence-alert concept used by live board UI.",
+      "category": "model",
+      "kind": "composite",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "composite.divergence": {
+      "label": "Price divergence",
+      "description": "Abstract market-vs-model divergence concept.",
+      "category": "model",
+      "kind": "composite",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "composite.edge_score": {
+      "label": "Edge score",
+      "description": "Abstract composite edge strength concept.",
+      "category": "model",
+      "kind": "composite",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
+    },
+    "composite.model_suspect": {
+      "label": "Model suspect",
+      "description": "Abstract model-trust flag concept.",
+      "category": "model",
+      "kind": "composite",
+      "mapsTo": null,
+      "synonyms": [],
+      "values": null,
+      "registryColumn": null,
+      "source": null,
+      "featurePurpose": null
     }
   },
   "api": {
@@ -1085,7 +1410,29 @@
       "profilesSource": "warehouse = rows from event-store; seed = unavailable / fixture path.",
       "coverage": "Data completeness for a tour/surface slice (events with books, links, scores).",
       "surfaceEdge": "Dampened percentage-point edge from each player's historical surface win rates vs the match surface.",
-      "ui.events.filter.reset": "Clear all active Events facet selections and sort order."
+      "ui.events.filter.reset": "Clear all active Events facet selections and sort order.",
+      "ui.live_board.title": "Real-time match monitor: open Kalshi markets with filters, surface edge, and player profiles.",
+      "ui.live_board.scanner": "Price divergence alert: when market mid deviates from model fair by more than threshold.",
+      "ui.live_board.divergence": "Cents difference between market price and model fair price.",
+      "ui.live_board.edge_score": "Composite signal strength: divergence weighted by liquidity and model confidence.",
+      "ui.live_board.model_suspect": "Flag when model inputs are stale, incomplete, or conflict with market consensus.",
+      "ui.events.filter.tournament": "Filter matches by tournament / competition name.",
+      "ui.events.filter.country": "Filter by tournament or player nationality code/name.",
+      "ui.events.filter.when": "Time window filter: live, today, next 24h, this week.",
+      "ui.events.filter.liquidity": "Filter by quote presence: priced or actively trading.",
+      "ui.events.filter.min_vol": "Minimum trailing volume gate for board rows (desk liquidity).",
+      "ui.events.filter.min_surface_edge": "Minimum surface-edge points required to keep a match on the board.",
+      "ui.sort.events": "Ordering of the match list: start time, volume, or name.",
+      "ui.filter.unclassified": "Placeholder when a value cannot be mapped to a known category.",
+      "ui.warehouse.coverage": "Data completeness badge: Kalshi-only, Polymarket-only, or hybrid.",
+      "ui.warehouse.poly_link": "Polymarket market link status: linked or unlinked.",
+      "ui.warehouse.event_status": "Match lifecycle: Scheduled, Live, or Ended.",
+      "ui.warehouse.fleet_count": "Number of matches in the current filtered view.",
+      "ui.warehouse.fleet_volume": "Aggregated volume across the filtered match set.",
+      "composite.scanner": "Abstract scanner / divergence-alert concept used by live board UI.",
+      "composite.divergence": "Abstract market-vs-model divergence concept.",
+      "composite.edge_score": "Abstract composite edge strength concept.",
+      "composite.model_suspect": "Abstract model-trust flag concept."
     },
     "entries": [
       {
@@ -1730,6 +2077,287 @@
           "reset"
         ],
         "values": null
+      },
+      {
+        "id": "ui.live_board.title",
+        "label": "Tennis board",
+        "description": "Real-time match monitor: open Kalshi markets with filters, surface edge, and player profiles.",
+        "category": "ui",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [
+          "live board",
+          "board",
+          "monitor",
+          "tennis board"
+        ],
+        "values": null
+      },
+      {
+        "id": "ui.live_board.scanner",
+        "label": "Scanner",
+        "description": "Price divergence alert: when market mid deviates from model fair by more than threshold.",
+        "category": "ui",
+        "kind": "ui",
+        "mapsTo": "composite.scanner",
+        "synonyms": [
+          "alert",
+          "signal",
+          "flag"
+        ],
+        "values": null
+      },
+      {
+        "id": "ui.live_board.divergence",
+        "label": "Divergence",
+        "description": "Cents difference between market price and model fair price.",
+        "category": "ui",
+        "kind": "ui",
+        "mapsTo": "composite.divergence",
+        "synonyms": [
+          "delta",
+          "edge",
+          "gap"
+        ],
+        "values": null
+      },
+      {
+        "id": "ui.live_board.edge_score",
+        "label": "Edge score",
+        "description": "Composite signal strength: divergence weighted by liquidity and model confidence.",
+        "category": "ui",
+        "kind": "ui",
+        "mapsTo": "composite.edge_score",
+        "synonyms": [
+          "edge",
+          "score",
+          "strength"
+        ],
+        "values": null
+      },
+      {
+        "id": "ui.live_board.model_suspect",
+        "label": "Model suspect",
+        "description": "Flag when model inputs are stale, incomplete, or conflict with market consensus.",
+        "category": "ui",
+        "kind": "ui",
+        "mapsTo": "composite.model_suspect",
+        "synonyms": [
+          "suspect",
+          "stale",
+          "untrusted"
+        ],
+        "values": null
+      },
+      {
+        "id": "ui.events.filter.tournament",
+        "label": "Tournament",
+        "description": "Filter matches by tournament / competition name.",
+        "category": "tournament",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [
+          "competition",
+          "event name"
+        ],
+        "values": null
+      },
+      {
+        "id": "ui.events.filter.country",
+        "label": "Country",
+        "description": "Filter by tournament or player nationality code/name.",
+        "category": "tournament",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [
+          "nation",
+          "geo"
+        ],
+        "values": null
+      },
+      {
+        "id": "ui.events.filter.when",
+        "label": "When",
+        "description": "Time window filter: live, today, next 24h, this week.",
+        "category": "ui",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [
+          "time",
+          "window"
+        ],
+        "values": null
+      },
+      {
+        "id": "ui.events.filter.liquidity",
+        "label": "Liquidity",
+        "description": "Filter by quote presence: priced or actively trading.",
+        "category": "market",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [
+          "quotes",
+          "book"
+        ],
+        "values": null
+      },
+      {
+        "id": "ui.events.filter.min_vol",
+        "label": "Min 24h vol",
+        "description": "Minimum trailing volume gate for board rows (desk liquidity).",
+        "category": "market",
+        "kind": "ui",
+        "mapsTo": "kalshi_volume",
+        "synonyms": [
+          "min volume",
+          "volume floor"
+        ],
+        "values": null
+      },
+      {
+        "id": "ui.events.filter.min_surface_edge",
+        "label": "Min surface edge",
+        "description": "Minimum surface-edge points required to keep a match on the board.",
+        "category": "warehouse",
+        "kind": "ui",
+        "mapsTo": "surfaceEdge",
+        "synonyms": [],
+        "values": null
+      },
+      {
+        "id": "ui.sort.events",
+        "label": "Sort",
+        "description": "Ordering of the match list: start time, volume, or name.",
+        "category": "ui",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [
+          "sort events",
+          "order"
+        ],
+        "values": null
+      },
+      {
+        "id": "ui.filter.unclassified",
+        "label": "Unclassified",
+        "description": "Placeholder when a value cannot be mapped to a known category.",
+        "category": "ui",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [
+          "Unc",
+          "Other",
+          "NA",
+          "unknown"
+        ],
+        "values": null
+      },
+      {
+        "id": "ui.warehouse.coverage",
+        "label": "Coverage",
+        "description": "Data completeness badge: Kalshi-only, Polymarket-only, or hybrid.",
+        "category": "warehouse",
+        "kind": "ui",
+        "mapsTo": "coverage",
+        "synonyms": [
+          "venues",
+          "sources"
+        ],
+        "values": null
+      },
+      {
+        "id": "ui.warehouse.poly_link",
+        "label": "Poly",
+        "description": "Polymarket market link status: linked or unlinked.",
+        "category": "warehouse",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [
+          "polymarket",
+          "gamma",
+          "matched"
+        ],
+        "values": null
+      },
+      {
+        "id": "ui.warehouse.event_status",
+        "label": "Event status",
+        "description": "Match lifecycle: Scheduled, Live, or Ended.",
+        "category": "warehouse",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [
+          "status",
+          "state"
+        ],
+        "values": null
+      },
+      {
+        "id": "ui.warehouse.fleet_count",
+        "label": "Events",
+        "description": "Number of matches in the current filtered view.",
+        "category": "ui",
+        "kind": "ui",
+        "mapsTo": null,
+        "synonyms": [
+          "count",
+          "N events",
+          "fleet"
+        ],
+        "values": null
+      },
+      {
+        "id": "ui.warehouse.fleet_volume",
+        "label": "Total volume",
+        "description": "Aggregated volume across the filtered match set.",
+        "category": "market",
+        "kind": "ui",
+        "mapsTo": "total_volume_usd",
+        "synonyms": [
+          "volume",
+          "X total vol"
+        ],
+        "values": null
+      },
+      {
+        "id": "composite.scanner",
+        "label": "Scanner signal",
+        "description": "Abstract scanner / divergence-alert concept used by live board UI.",
+        "category": "model",
+        "kind": "composite",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": null
+      },
+      {
+        "id": "composite.divergence",
+        "label": "Price divergence",
+        "description": "Abstract market-vs-model divergence concept.",
+        "category": "model",
+        "kind": "composite",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": null
+      },
+      {
+        "id": "composite.edge_score",
+        "label": "Edge score",
+        "description": "Abstract composite edge strength concept.",
+        "category": "model",
+        "kind": "composite",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": null
+      },
+      {
+        "id": "composite.model_suspect",
+        "label": "Model suspect",
+        "description": "Abstract model-trust flag concept.",
+        "category": "model",
+        "kind": "composite",
+        "mapsTo": null,
+        "synonyms": [],
+        "values": null
       }
     ],
     "categories": [
@@ -1756,6 +2384,10 @@
       {
         "id": "ui",
         "label": "UI & ops"
+      },
+      {
+        "id": "pipeline",
+        "label": "Pipeline & alerts"
       },
       {
         "id": "other",

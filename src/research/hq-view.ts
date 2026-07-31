@@ -558,12 +558,18 @@ async function renderEvents() {
   const opts = (list, cur) => list.map((v) =>
     "<option" + (v === cur ? " selected" : "") + ">" + esc(v) + "</option>").join("");
   const sel = (name, cur, choices) =>
-    '<label>' + name + '<select name="' + name.toLowerCase() + '">' +
+    '<label>' + esc(name) + '<select name="' + name.toLowerCase() + '">' +
+    choices.map(([v, lbl]) => "<option value='" + v + "'" + (v === cur ? " selected" : "") + ">" + lbl + "</option>").join("") +
+    "</select></label>";
+  const selGloss = (glossaryId, name, cur, choices) =>
+    '<label>' + esc(name) + tip(glossaryId) +
+    '<select name="' + name.toLowerCase() + '">' +
     choices.map(([v, lbl]) => "<option value='" + v + "'" + (v === cur ? " selected" : "") + ">" + lbl + "</option>").join("") +
     "</select></label>";
 
   el.innerHTML =
-    '<div class="panel"><h2>Tennis board ' + badge("ok", __board.eventCount + " events · " + __board.marketCount + " markets") +
+    '<div class="panel"><h2>' + esc("Tennis board") + tip("ui.live_board.title") + " " +
+    badge("ok", __board.eventCount + " events · " + __board.marketCount + " markets") +
     ' <span class="muted" id="events-count" style="font-size:.8rem;font-weight:400"></span></h2>' +
     (metaAudit
       ? '<div style="margin:.3rem 0">metadata ' +
@@ -579,18 +585,20 @@ async function renderEvents() {
     '<div class="muted">open match markets across ATP/WTA/Challenger/ITF · click a player to load the order ticket · updated ' + fmtTime(__board.generatedAt) + "</div>" +
     '<form class="order" id="events-filter" style="margin-top:.6rem">' +
     '<label>Search<input name="q" placeholder="player, event, city…" value="' + esc(__filters.q) + '" /></label>' +
-    sel("League", __filters.league, [["", "all"], ...leagues.map((l) => [l, l])]) +
-    sel("Tournament", __filters.tournament, [["", "all"], ...tournaments.map((t) => [t, t])]) +
-    sel("Country", __filters.country, [["", "all"], ...countries.map((c) => [c, c])]) +
-    sel("Round", __filters.round, [["", "all"], ...rounds.map((r) => [r, r])]) +
-    sel("Surface", __filters.surface, [["", "all"], ...surfaces.map((s) => [s, s])]) +
-    sel("Tier", __filters.tier, [["", "all"], ...tiers.map((t) => [t, t])]) +
-    sel("When", __filters.when, [["all", "all"], ["live", "in play now"], ["today", "today"], ["24h", "next 24h"], ["week", "this week"]]) +
-    sel("Liquidity", __filters.liquidity, [["all", "all"], ["priced", "has quotes"], ["active", "trading live"]]) +
-    '<label>Min 24h vol<input name="minVol" type="number" min="0" step="1000" value="' + __filters.minVol + '" /></label>' +
-    '<label>Max ask ¢<input name="maxAsk" type="number" min="0" max="99" value="' + __filters.maxAsk + '" /></label>' +
-    sel("Sort", __filters.sort, [["time", "start time"], ["volume", "24h volume"], ["alpha", "A–Z"]]) +
-    '<button type="button" id="events-clear" class="cancel" style="align-self:flex-end">clear</button>' +
+    selGloss("league", "League", __filters.league, [["", "all"], ...leagues.map((l) => [l, l])]) +
+    selGloss("ui.events.filter.tournament", "Tournament", __filters.tournament, [["", "all"], ...tournaments.map((t) => [t, t])]) +
+    selGloss("ui.events.filter.country", "Country", __filters.country, [["", "all"], ...countries.map((c) => [c, c])]) +
+    selGloss("round", "Round", __filters.round, [["", "all"], ...rounds.map((r) => [r, r])]) +
+    selGloss("surface", "Surface", __filters.surface, [["", "all"], ...surfaces.map((s) => [s, s])]) +
+    selGloss("tier", "Tier", __filters.tier, [["", "all"], ...tiers.map((t) => [t, t])]) +
+    selGloss("ui.events.filter.when", "When", __filters.when, [["all", "all"], ["live", "in play now"], ["today", "today"], ["24h", "next 24h"], ["week", "this week"]]) +
+    selGloss("ui.events.filter.liquidity", "Liquidity", __filters.liquidity, [["all", "all"], ["priced", "has quotes"], ["active", "trading live"]]) +
+    '<label>Min 24h vol' + tip("ui.events.filter.min_vol") +
+    '<input name="minVol" type="number" min="0" step="1000" value="' + __filters.minVol + '" /></label>' +
+    '<label>Max ask ¢' + tip("yesPriceCents") +
+    '<input name="maxAsk" type="number" min="0" max="99" value="' + __filters.maxAsk + '" /></label>' +
+    selGloss("ui.sort.events", "Sort", __filters.sort, [["time", "start time"], ["volume", "24h volume"], ["alpha", "A–Z"]]) +
+    '<button type="button" id="events-clear" class="cancel" style="align-self:flex-end">clear' + tip("ui.events.filter.reset") + "</button>" +
     '<button type="button" id="events-preset-value" style="align-self:flex-end">value ≤ 25¢</button>' +
     '<button type="button" id="events-preset-live" style="align-self:flex-end">live & liquid</button>' +
     "</form></div>" +

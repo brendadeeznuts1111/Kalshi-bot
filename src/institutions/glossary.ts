@@ -61,6 +61,7 @@ export type GlossaryCategory =
   | "warehouse"
   | "trading"
   | "ui"
+  | "pipeline"
   | "other";
 
 export const GLOSSARY_CATEGORY_LABELS: Record<GlossaryCategory, string> = {
@@ -70,6 +71,7 @@ export const GLOSSARY_CATEGORY_LABELS: Record<GlossaryCategory, string> = {
   warehouse: "Warehouse & profiles",
   trading: "Trading & orders",
   ui: "UI & ops",
+  pipeline: "Pipeline & alerts",
   other: "Other",
 };
 
@@ -509,6 +511,180 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     category: "ui",
     synonyms: ["clear", "reset"],
   }),
+
+  // ── Live board / Events chrome ──
+  ui({
+    id: "ui.live_board.title",
+    kind: "ui",
+    label: "Tennis board",
+    description:
+      "Real-time match monitor: open Kalshi markets with filters, surface edge, and player profiles.",
+    category: "ui",
+    synonyms: ["live board", "board", "monitor", "tennis board"],
+  }),
+  ui({
+    id: "ui.live_board.scanner",
+    label: "Scanner",
+    description:
+      "Price divergence alert: when market mid deviates from model fair by more than threshold.",
+    category: "ui",
+    mapsTo: "composite.scanner",
+    synonyms: ["alert", "signal", "flag"],
+  }),
+  ui({
+    id: "ui.live_board.divergence",
+    label: "Divergence",
+    description: "Cents difference between market price and model fair price.",
+    category: "ui",
+    mapsTo: "composite.divergence",
+    synonyms: ["delta", "edge", "gap"],
+  }),
+  ui({
+    id: "ui.live_board.edge_score",
+    label: "Edge score",
+    description:
+      "Composite signal strength: divergence weighted by liquidity and model confidence.",
+    category: "ui",
+    mapsTo: "composite.edge_score",
+    synonyms: ["edge", "score", "strength"],
+  }),
+  ui({
+    id: "ui.live_board.model_suspect",
+    label: "Model suspect",
+    description:
+      "Flag when model inputs are stale, incomplete, or conflict with market consensus.",
+    category: "ui",
+    mapsTo: "composite.model_suspect",
+    synonyms: ["suspect", "stale", "untrusted"],
+  }),
+
+  // ── Events filter chrome ──
+  ui({
+    id: "ui.events.filter.tournament",
+    label: "Tournament",
+    description: "Filter matches by tournament / competition name.",
+    category: "tournament",
+    synonyms: ["competition", "event name"],
+  }),
+  ui({
+    id: "ui.events.filter.country",
+    label: "Country",
+    description: "Filter by tournament or player nationality code/name.",
+    category: "tournament",
+    synonyms: ["nation", "geo"],
+  }),
+  ui({
+    id: "ui.events.filter.when",
+    label: "When",
+    description: "Time window filter: live, today, next 24h, this week.",
+    category: "ui",
+    synonyms: ["time", "window"],
+  }),
+  ui({
+    id: "ui.events.filter.liquidity",
+    label: "Liquidity",
+    description: "Filter by quote presence: priced or actively trading.",
+    category: "market",
+    synonyms: ["quotes", "book"],
+  }),
+  ui({
+    id: "ui.events.filter.min_vol",
+    label: "Min 24h vol",
+    description: "Minimum trailing volume gate for board rows (desk liquidity).",
+    category: "market",
+    mapsTo: "kalshi_volume",
+    synonyms: ["min volume", "volume floor"],
+  }),
+  ui({
+    id: "ui.events.filter.min_surface_edge",
+    label: "Min surface edge",
+    description: "Minimum surface-edge points required to keep a match on the board.",
+    category: "warehouse",
+    mapsTo: "surfaceEdge",
+  }),
+  ui({
+    id: "ui.sort.events",
+    label: "Sort",
+    description: "Ordering of the match list: start time, volume, or name.",
+    category: "ui",
+    synonyms: ["sort events", "order"],
+  }),
+  ui({
+    id: "ui.filter.unclassified",
+    label: "Unclassified",
+    description: "Placeholder when a value cannot be mapped to a known category.",
+    category: "ui",
+    synonyms: ["Unc", "Other", "NA", "unknown"],
+  }),
+
+  // ── Warehouse fleet chrome ──
+  ui({
+    id: "ui.warehouse.coverage",
+    label: "Coverage",
+    description: "Data completeness badge: Kalshi-only, Polymarket-only, or hybrid.",
+    category: "warehouse",
+    mapsTo: "coverage",
+    synonyms: ["venues", "sources"],
+  }),
+  ui({
+    id: "ui.warehouse.poly_link",
+    label: "Poly",
+    description: "Polymarket market link status: linked or unlinked.",
+    category: "warehouse",
+    synonyms: ["polymarket", "gamma", "matched"],
+  }),
+  ui({
+    id: "ui.warehouse.event_status",
+    label: "Event status",
+    description: "Match lifecycle: Scheduled, Live, or Ended.",
+    category: "warehouse",
+    synonyms: ["status", "state"],
+  }),
+  ui({
+    id: "ui.warehouse.fleet_count",
+    label: "Events",
+    description: "Number of matches in the current filtered view.",
+    category: "ui",
+    synonyms: ["count", "N events", "fleet"],
+  }),
+  ui({
+    id: "ui.warehouse.fleet_volume",
+    label: "Total volume",
+    description: "Aggregated volume across the filtered match set.",
+    category: "market",
+    mapsTo: "total_volume_usd",
+    synonyms: ["volume", "X total vol"],
+  }),
+
+  // ── Composite concepts (semantic targets for mapsTo; not tip keys) ──
+  {
+    id: "composite.scanner",
+    kind: "composite",
+    label: "Scanner signal",
+    description: "Abstract scanner / divergence-alert concept used by live board UI.",
+    category: "model",
+  },
+  {
+    id: "composite.divergence",
+    kind: "composite",
+    label: "Price divergence",
+    description: "Abstract market-vs-model divergence concept.",
+    category: "model",
+  },
+  {
+    id: "composite.edge_score",
+    kind: "composite",
+    label: "Edge score",
+    description: "Abstract composite edge strength concept.",
+    category: "model",
+  },
+  {
+    id: "composite.model_suspect",
+    kind: "composite",
+    label: "Model suspect",
+    description: "Abstract model-trust flag concept.",
+    category: "model",
+  },
 ] as const;
 
 export type GlossaryId = (typeof GLOSSARY_ENTRIES)[number]["id"];
