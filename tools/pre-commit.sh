@@ -7,6 +7,9 @@ cd "$root"
 echo "pre-commit: check"
 bun run check
 
+echo "pre-commit: glossary"
+bun run glossary:check
+
 protected=(
   research/audit-evidence/*.jsonl
   research/reports/latest.md

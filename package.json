@@ -97,7 +97,8 @@
     "protonpass:mint:check": "bun tools/protonpass-mint-pat.ts --check",
     "logging:dry": "bun scripts/price-logger.ts -- --dry-run",
     "tennis:profiles:opponents:build": "bun tools/tennis/build-player-opponent-profiles.ts",
-    "tennis:profiles:opponents:dry": "bun tools/tennis/build-player-opponent-profiles.ts --dry-run"
+    "tennis:profiles:opponents:dry": "bun tools/tennis/build-player-opponent-profiles.ts --dry-run",
+    "glossary:check": "bun scripts/check-glossary-usage.ts"
   },
   "engines": {
     "bun": ">=1.4.0-canary.1"

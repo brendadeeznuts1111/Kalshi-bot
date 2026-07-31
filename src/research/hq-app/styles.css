@@ -76,8 +76,63 @@ header { display: flex; align-items: baseline; gap: 1rem; padding: 1rem 1.5rem;
 header h1 { font-size: 1.1rem; margin: 0; letter-spacing: 0.04em; }
 header h1 span { color: var(--acc); }
 header .stamp { color: var(--dim); font-size: 0.8rem; font-family: var(--mono); }
-header .links { margin-left: auto; font-size: 0.8rem; }
+header .links { margin-left: auto; font-size: 0.8rem; display: flex; align-items: center; flex-wrap: wrap; gap: 0.15rem 0; }
 header .links a { color: var(--dim); margin-left: 0.9rem; text-decoration: none; }
+header .links a:hover { color: var(--acc); }
+.glossary-open {
+  margin-left: 0.5rem; background: var(--panel2); color: var(--acc);
+  border: 1px solid var(--line); border-radius: 999px; padding: 0.2rem 0.7rem;
+  font-size: 0.75rem; font-weight: 600; cursor: pointer;
+}
+.glossary-open:hover { border-color: var(--acc); }
+.hint { cursor: pointer; }
+.hint:hover { color: var(--acc); border-color: var(--acc); }
+.glossary-label { display: inline; }
+.glossary-label .gl-name { color: var(--dim); font-size: 0.85em; margin-right: 0.25rem; }
+
+/* Glossary slide-over */
+.glossary-backdrop {
+  position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 40;
+}
+.glossary-panel {
+  position: fixed; top: 0; right: 0; bottom: 0; width: min(420px, 100vw);
+  background: var(--panel); border-left: 1px solid var(--line);
+  z-index: 50; display: flex; flex-direction: column;
+  box-shadow: -8px 0 32px rgba(0,0,0,.35);
+}
+.glossary-panel[hidden], .glossary-backdrop[hidden] { display: none !important; }
+.glossary-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1rem 1.1rem; border-bottom: 1px solid var(--line);
+}
+.glossary-head h2 { margin: 0; font-size: 1rem; }
+.glossary-close {
+  background: transparent; border: 1px solid var(--line); color: var(--dim);
+  border-radius: 6px; width: 2rem; height: 2rem; cursor: pointer; font-size: 0.9rem;
+}
+.glossary-close:hover { color: var(--fg); border-color: var(--dim); }
+.glossary-search {
+  margin: 0.75rem 1rem 0.5rem; padding: 0.5rem 0.7rem;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 6px;
+  color: var(--fg); font-size: 0.85rem;
+}
+.glossary-body { overflow: auto; padding: 0.5rem 1rem 1.5rem; flex: 1; }
+.glossary-cat { margin: 1rem 0 0.4rem; font-size: 0.72rem; text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--dim); font-weight: 600; }
+.glossary-entry {
+  padding: 0.55rem 0.65rem; border: 1px solid var(--line); border-radius: 8px;
+  margin-bottom: 0.45rem; background: var(--panel2); scroll-margin-top: 1rem;
+}
+.glossary-entry.highlight {
+  border-color: var(--acc); box-shadow: 0 0 0 1px var(--acc);
+}
+.glossary-entry h3 { margin: 0 0 0.25rem; font-size: 0.88rem; display: flex;
+  align-items: baseline; gap: 0.4rem; flex-wrap: wrap; }
+.glossary-entry .gid { font-family: var(--mono); font-size: 0.68rem; color: var(--dim);
+  font-weight: 500; }
+.glossary-entry p { margin: 0; font-size: 0.8rem; color: var(--fg); line-height: 1.45; }
+.glossary-entry .syn { margin-top: 0.3rem; font-size: 0.72rem; color: var(--dim); }
+.glossary-empty { color: var(--dim); font-size: 0.85rem; padding: 1rem 0; }
 header .links a:hover { color: var(--acc); }
 nav.tabs { display: flex; gap: 0.25rem; padding: 0 1.5rem; border-bottom: 1px solid var(--line); }
 nav.tabs button { background: none; border: none; color: var(--dim); padding: 0.7rem 1rem;

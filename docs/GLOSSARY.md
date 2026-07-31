@@ -4,6 +4,20 @@ Mirror of `src/institutions/glossary.ts` + `ledger-types.ts` + `error-codes.ts`.
 The modules are the source of truth; this doc is the human view.
 Wire shapes verified against Kalshi API docs 2026-07-28.
 
+## HQ UI (living glossary)
+
+| Surface | How |
+|---------|-----|
+| **Panel** | Header **Glossary (?)** — slide-over, search, grouped by category |
+| **Inline tips** | `tip("id")` → `?` with title + click opens panel at entry |
+| **Deeplink** | `#glossary` or `#glossary:avgKalshiVolumeFp` |
+| **API** | `GET /api/glossary` → `{ schemaVersion, tooltips, entries, categories, codes, units }` |
+| **Governance** | `bun run glossary:check` — fails if `tip("unknown")` / `data-glossary` not in `GLOSSARY_ENTRIES` |
+
+Categories: `market` · `model` · `tournament` · `warehouse` · `trading` · `ui` · `other`.
+
+Add new terms only in `GLOSSARY_ENTRIES` (ids are stable tip keys).
+
 ## Golden rules
 
 1. **Wire at the boundary, normalized inside.** Parsers in `ledger-types.ts`

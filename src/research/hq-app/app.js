@@ -4,12 +4,66 @@ import {
   surfaceEdgePresentation,
 } from "./surface-edge.ts";
 
-let TOOLTIPS = {};
-fetch('/api/glossary').then((r) => r.json()).then((t) => { TOOLTIPS = t; }).catch(() => {});
-const tip = (key) => TOOLTIPS[key] ? ' <span class="hint" title="' + TOOLTIPS[key].replace(/"/g, "&quot;") + '">?</span>' : "";
 const $ = (s) => document.querySelector(s);
 const esc = (v) => String(v ?? "").replace(/[&<>"]/g, (c) =>
   ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+/** @type {{ tooltips: Record<string,string>, entries: any[], categories: any[] }} */
+let GLOSSARY = { tooltips: {}, entries: [], categories: [] };
+let TOOLTIPS = {};
+
+function applyGlossaryPayload(payload) {
+  if (!payload || typeof payload !== "object") return;
+  // Back-compat: old API returned a flat tooltips map
+  if (payload.tooltips) {
+    GLOSSARY = {
+      tooltips: payload.tooltips || {},
+      entries: Array.isArray(payload.entries) ? payload.entries : [],
+      categories: Array.isArray(payload.categories) ? payload.categories : [],
+    };
+  } else {
+    GLOSSARY = { tooltips: payload, entries: [], categories: [] };
+  }
+  TOOLTIPS = GLOSSARY.tooltips;
+  renderGlossaryBody();
+}
+
+fetch("/api/glossary")
+  .then((r) => r.json())
+  .then(applyGlossaryPayload)
+  .catch(() => {});
+
+/** Inline ? hint — title tooltip + click opens glossary panel at entry. */
+const tip = (key) => {
+  const desc = TOOLTIPS[key];
+  if (!desc) return "";
+  return (
+    ' <span class="hint" role="button" tabindex="0" data-glossary="' +
+    esc(key) +
+    '" title="' +
+    desc.replace(/"/g, "&quot;") +
+    '">?</span>'
+  );
+};
+
+/** Label + value with glossary-backed name (tooltip on label). */
+function glossaryLabel(key, valueHtml) {
+  const entry = (GLOSSARY.entries || []).find((e) => e.id === key);
+  const label = entry?.label || key;
+  const desc = TOOLTIPS[key] || entry?.description || "";
+  return (
+    '<span class="glossary-label">' +
+    '<span class="gl-name" data-glossary="' +
+    esc(key) +
+    '" title="' +
+    (desc || "").replace(/"/g, "&quot;") +
+    '">' +
+    esc(label) +
+    ":</span> " +
+    valueHtml +
+    "</span>"
+  );
+}
 const fmtCents = (c) => c == null ? "—" : "$" + (c / 100).toLocaleString("en-US", { minimumFractionDigits: 2 });
 const fmtTime = (iso) => iso ? new Date(iso).toLocaleString() : "—";
 const fmtMs = (ms) => ms ? new Date(ms).toLocaleString() : "—";
@@ -699,10 +753,12 @@ async function renderEvents() {
   $("#profiles-table").innerHTML = profRows
     ? "<div style='margin-bottom:.4rem;font-size:.8rem' class='muted'>Source " + sourceBadge +
       " · sorted by avgKalshiVolumeFp · rebuild: <code>bun run tennis:profiles:build</code></div>" +
-      "<table><tr><th>Player</th><th class='num'>Apps</th><th class='num'>W–L</th><th class='num'>Win%</th><th>Surfaces</th><th class='num'>Avg Vol (Fp)</th><th>Last seen</th></tr>" +
+      "<table><tr><th>Player</th><th class='num'>Apps</th><th class='num'>W–L</th><th class='num'>Win%</th><th>Surfaces</th>" +
+      "<th class='num'>Avg Vol (Fp)" + tip("avgKalshiVolumeFp") + "</th>" +
+      "<th>Last seen" + tip("lastSeenAtMs") + "</th></tr>" +
       profRows + "</table>"
     : '<div class="muted">' + esc(profiles && profiles.reason ? profiles.reason : "profiles unavailable — run bun run tennis:profiles:build") +
-      ' · source ' + sourceBadge + "</div>";
+      ' · source ' + sourceBadge + tip("profilesSource") + "</div>";
 
   const filterForm = $("#events-filter");
   const readForm = () => {
@@ -839,11 +895,156 @@ document.querySelectorAll("nav.tabs button").forEach((b) =>
       s.classList.toggle("active", s.id === "tab-" + b.dataset.tab));
   }));
 
+// ── Glossary panel (slide-over) + #glossary:id deeplinks ──
+
+function glossaryQuery() {
+  return ($("#glossary-search")?.value || "").trim().toLowerCase();
+}
+
+function renderGlossaryBody(highlightId) {
+  const body = $("#glossary-body");
+  if (!body) return;
+  const q = glossaryQuery();
+  const entries = GLOSSARY.entries || [];
+  const cats = GLOSSARY.categories?.length
+    ? GLOSSARY.categories
+    : [...new Set(entries.map((e) => e.category))].map((id) => ({
+        id,
+        label: id,
+      }));
+
+  if (!entries.length) {
+    body.innerHTML =
+      '<div class="glossary-empty">Loading glossary… (or GET /api/glossary failed)</div>';
+    return;
+  }
+
+  let html = "";
+  let any = false;
+  for (const cat of cats) {
+    const list = entries.filter((e) => {
+      if (e.category !== cat.id) return false;
+      if (!q) return true;
+      const hay = [e.id, e.label, e.description, ...(e.synonyms || [])]
+        .join(" ")
+        .toLowerCase();
+      return hay.includes(q);
+    });
+    if (!list.length) continue;
+    any = true;
+    html += '<div class="glossary-cat">' + esc(cat.label) + "</div>";
+    for (const e of list) {
+      const hi = highlightId && e.id === highlightId ? " highlight" : "";
+      html +=
+        '<div class="glossary-entry' +
+        hi +
+        '" id="glossary-entry-' +
+        esc(e.id) +
+        '" data-id="' +
+        esc(e.id) +
+        '">' +
+        "<h3>" +
+        esc(e.label) +
+        ' <span class="gid">' +
+        esc(e.id) +
+        "</span></h3>" +
+        "<p>" +
+        esc(e.description) +
+        "</p>" +
+        (e.synonyms?.length
+          ? '<div class="syn">also: ' + esc(e.synonyms.join(", ")) + "</div>"
+          : "") +
+        (e.values?.length
+          ? '<div class="syn">values: ' + esc(e.values.join(" · ")) + "</div>"
+          : "") +
+        "</div>";
+    }
+  }
+  body.innerHTML = any
+    ? html
+    : '<div class="glossary-empty">No terms match “' + esc(q) + '”.</div>';
+
+  if (highlightId) {
+    const el = document.getElementById("glossary-entry-" + highlightId);
+    if (el) el.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+}
+
+function openGlossary(focusId) {
+  const panel = $("#glossary-panel");
+  const backdrop = $("#glossary-backdrop");
+  if (!panel) return;
+  panel.hidden = false;
+  if (backdrop) backdrop.hidden = false;
+  renderGlossaryBody(focusId || undefined);
+  if (focusId) {
+    const next = "#glossary:" + focusId;
+    if (location.hash !== next) history.replaceState(null, "", next);
+  } else if (!location.hash.startsWith("#glossary")) {
+    history.replaceState(null, "", "#glossary");
+  }
+  $("#glossary-search")?.focus();
+}
+
+function closeGlossary() {
+  const panel = $("#glossary-panel");
+  const backdrop = $("#glossary-backdrop");
+  if (panel) panel.hidden = true;
+  if (backdrop) backdrop.hidden = true;
+  if (location.hash.startsWith("#glossary")) {
+    history.replaceState(null, "", location.pathname + location.search);
+  }
+}
+
+function parseGlossaryHash() {
+  const h = location.hash || "";
+  if (h === "#glossary") return { open: true, id: null };
+  const m = /^#glossary:([A-Za-z0-9_]+)$/.exec(h);
+  if (m) return { open: true, id: m[1] };
+  return { open: false, id: null };
+}
+
+$("#glossary-open")?.addEventListener("click", () => openGlossary());
+$("#glossary-close")?.addEventListener("click", closeGlossary);
+$("#glossary-backdrop")?.addEventListener("click", closeGlossary);
+$("#glossary-search")?.addEventListener("input", () => renderGlossaryBody());
+
+document.addEventListener("click", (ev) => {
+  const t = ev.target;
+  if (!(t instanceof Element)) return;
+  const el = t.closest("[data-glossary]");
+  if (!el) return;
+  const id = el.getAttribute("data-glossary");
+  if (id) {
+    ev.preventDefault();
+    openGlossary(id);
+  }
+});
+document.addEventListener("keydown", (ev) => {
+  if (ev.key === "Escape" && $("#glossary-panel") && !$("#glossary-panel").hidden) {
+    closeGlossary();
+  }
+});
+
 // Deep link: #events?… opens the Events tab with filters hydrated
 if (location.hash.startsWith("#events")) {
   const btn = document.querySelector('nav.tabs button[data-tab="events"]');
   if (btn) btn.click();
 }
+
+// Deep link: #glossary or #glossary:mid
+{
+  const g = parseGlossaryHash();
+  if (g.open) openGlossary(g.id || undefined);
+}
+window.addEventListener("hashchange", () => {
+  const g = parseGlossaryHash();
+  if (g.open) openGlossary(g.id || undefined);
+  else if ($("#glossary-panel") && !$("#glossary-panel").hidden) closeGlossary();
+});
+
+// Profiles column headers use glossary-backed tips
+// (tip already used on playerProfiles panel title)
 
 refresh();
 setInterval(refresh, 30_000);

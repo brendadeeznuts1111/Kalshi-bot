@@ -1,12 +1,13 @@
 /**
  * glossary.ts — single source of truth for domain short codes, unit
- * conventions, and UI tooltip copy. docs/GLOSSARY.md is generated from this
- * module; do not fork definitions into views.
+ * conventions, and HQ UI glossary entries (tooltips + panel).
+ * docs/GLOSSARY.md is the human mirror; do not fork definitions into views.
  *
  * Convention:
  *   - Short codes are 3–5 uppercase letters, stable forever (append-only).
  *   - Money fields end in `Cents` (integer) or `Dollars` (fixed-point string).
  *   - Times end in `AtMs` (epoch millis). Wire `*_ts` is unix SECONDS.
+ *   - UI concepts use camelCase ids matching tip() keys / #glossary:id.
  */
 
 // ── Ledger / entity short codes ──
@@ -51,36 +52,284 @@ export const UNITS = {
   unixSec: "unix seconds — wire only (updated_ts, ts); multiply by 1000 at boundary",
 } as const;
 
-// ── UI tooltips (HQ renders these; keyed by canonical field) ──
+// ── Structured glossary entries (HQ panel + tip keys) ──
 
-export const TOOLTIPS = {
-  balanceCents: "Available-to-trade cash. Does not include value locked in open positions.",
-  portfolioValueCents: "Current mark value of all held positions, separate from cash balance.",
-  position: "Signed contracts: positive = long YES, negative = long NO (Kalshi convention).",
-  exposureCents: "Cash at risk in this market at current marks.",
-  realizedPnlCents: "Locked-in profit/loss from closed trades in this market.",
-  feesPaidCents: "Total exchange fees paid in this market, all time.",
-  yesPriceCents: "Limit price for YES contracts, 1–99¢. NO price = 100 − yes.",
-  remainingCount: "Contracts still working on the book (not yet filled or canceled).",
-  fillCount: "Contracts already executed from this order.",
-  isTaker: "True = crossed the spread (taker fee); false = rested on book (maker fee, lower).",
-  feeCents: "Exchange fee on this fill. Maker < taker — postOnly orders target maker fees.",
-  postOnly: "Maker-first: order rests on book or is rejected; never crosses the spread.",
-  dryRun: "Simulated order — no funds move, no API write. Live requires explicit opt-in.",
-  mid: "Midpoint of best yes-bid and yes-ask. Untradeable reference price.",
-  spreadCents: "Best ask − best bid. Wide spreads = poor liquidity; prefer postOnly.",
-  crossed: "Transient book state (yesBid + noBid > 100). Do not treat mid as tradeable.",
-  shadowMinSignals: "Gate: minimum shadow signals before a program may graduate to pilot.",
-  killBrierDriftPct: "Gate: kill program if Brier score drifts this % above baseline.",
-  graduationMinRealizedEdgeCentsPerFill: "Gate: realized edge per fill needed for pilot→live.",
-  playerProfiles:
-    "Derived from event-store player_profiles (SSOT): appearances, W–L, surfaces, avgKalshiVolumeFp. Rebuild: bun run tennis:profiles:build. Meta: docs/PLAYER_PROFILES_META.md",
-  avgKalshiVolumeFp:
-    "Mean resolved Kalshi contract volume over trading appearances (player_profiles.avg_kalshi_volume_fp). Not poly; not live board volume24h.",
-  lastSeenAtMs:
-    "Epoch millis of latest event start for this player (player_profiles.last_seen_ts). Capped ≤ now. Event-store ms, not Kalshi wire seconds.",
-  profilesSource:
-    "warehouse = rows from event-store; seed = unavailable / fixture path (no live profiles).",
-} as const;
+export type GlossaryCategory =
+  | "market"
+  | "model"
+  | "tournament"
+  | "warehouse"
+  | "trading"
+  | "ui"
+  | "other";
+
+export const GLOSSARY_CATEGORY_LABELS: Record<GlossaryCategory, string> = {
+  market: "Market data",
+  model: "Model & calibration",
+  tournament: "Tournament metadata",
+  warehouse: "Warehouse & profiles",
+  trading: "Trading & orders",
+  ui: "UI & ops",
+  other: "Other",
+};
+
+export type GlossaryEntry = {
+  /** Stable id — tip("id") and #glossary:id */
+  id: string;
+  label: string;
+  description: string;
+  category: GlossaryCategory;
+  /** Alternate labels (governance / search) */
+  synonyms?: string[];
+  example?: string;
+  /** Optional enum values for filters */
+  values?: string[];
+};
+
+/**
+ * Canonical UI glossary. Every tip() key used in HQ should appear here.
+ * Order within a category is display order.
+ */
+export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
+  // ── market ──
+  {
+    id: "mid",
+    label: "Mid",
+    description:
+      "Midpoint of best yes-bid and yes-ask. Untradeable reference price.",
+    category: "market",
+    synonyms: ["mid price", "market price"],
+  },
+  {
+    id: "spreadCents",
+    label: "Spread",
+    description: "Best ask − best bid (¢). Wide spreads = poor liquidity; prefer postOnly.",
+    category: "market",
+    synonyms: ["bid-ask", "spread"],
+  },
+  {
+    id: "crossed",
+    label: "Crossed book",
+    description: "Transient book state (yesBid + noBid > 100). Do not treat mid as tradeable.",
+    category: "market",
+  },
+  {
+    id: "avgKalshiVolumeFp",
+    label: "Avg volume (Fp)",
+    description:
+      "Mean resolved Kalshi contract volume over trading appearances (player_profiles.avg_kalshi_volume_fp). Not poly; not live board volume24h.",
+    category: "market",
+    synonyms: ["avg vol", "volume", "avgKalshiVolume"],
+    example: "avgKalshiVolumeFp",
+  },
+  {
+    id: "yesPriceCents",
+    label: "Yes price ¢",
+    description: "Limit price for YES contracts, 1–99¢. NO price = 100 − yes.",
+    category: "market",
+  },
+
+  // ── trading ──
+  {
+    id: "balanceCents",
+    label: "Balance",
+    description:
+      "Available-to-trade cash. Does not include value locked in open positions.",
+    category: "trading",
+  },
+  {
+    id: "portfolioValueCents",
+    label: "Portfolio value",
+    description: "Current mark value of all held positions, separate from cash balance.",
+    category: "trading",
+  },
+  {
+    id: "position",
+    label: "Position",
+    description: "Signed contracts: positive = long YES, negative = long NO (Kalshi convention).",
+    category: "trading",
+  },
+  {
+    id: "exposureCents",
+    label: "Exposure",
+    description: "Cash at risk in this market at current marks.",
+    category: "trading",
+  },
+  {
+    id: "realizedPnlCents",
+    label: "Realized P&L",
+    description: "Locked-in profit/loss from closed trades in this market.",
+    category: "trading",
+  },
+  {
+    id: "feesPaidCents",
+    label: "Fees paid",
+    description: "Total exchange fees paid in this market, all time.",
+    category: "trading",
+  },
+  {
+    id: "remainingCount",
+    label: "Remaining",
+    description: "Contracts still working on the book (not yet filled or canceled).",
+    category: "trading",
+  },
+  {
+    id: "fillCount",
+    label: "Fill count",
+    description: "Contracts already executed from this order.",
+    category: "trading",
+  },
+  {
+    id: "isTaker",
+    label: "Taker",
+    description: "True = crossed the spread (taker fee); false = rested on book (maker fee, lower).",
+    category: "trading",
+  },
+  {
+    id: "feeCents",
+    label: "Fee ¢",
+    description: "Exchange fee on this fill. Maker < taker — postOnly orders target maker fees.",
+    category: "trading",
+  },
+  {
+    id: "postOnly",
+    label: "Post-only",
+    description: "Maker-first: order rests on book or is rejected; never crosses the spread.",
+    category: "trading",
+  },
+  {
+    id: "dryRun",
+    label: "Dry-run",
+    description: "Simulated order — no funds move, no API write. Live requires explicit opt-in.",
+    category: "trading",
+    synonyms: ["dry run", "simulate"],
+  },
+
+  // ── model ──
+  {
+    id: "shadowMinSignals",
+    label: "Shadow min signals",
+    description: "Gate: minimum shadow signals before a program may graduate to pilot.",
+    category: "model",
+  },
+  {
+    id: "killBrierDriftPct",
+    label: "Kill Brier drift %",
+    description: "Gate: kill program if Brier score drifts this % above baseline.",
+    category: "model",
+  },
+  {
+    id: "graduationMinRealizedEdgeCentsPerFill",
+    label: "Graduation edge ¢/fill",
+    description: "Gate: realized edge per fill needed for pilot→live.",
+    category: "model",
+  },
+
+  // ── tournament ──
+  {
+    id: "league",
+    label: "League",
+    description: "Professional circuit derived from Kalshi series (ATP, WTA, Challenger, ITF).",
+    category: "tournament",
+    synonyms: ["series", "tour"],
+    values: ["ATP", "WTA", "ATP Challenger", "WTA 125", "ITF Men", "ITF Women"],
+  },
+  {
+    id: "tier",
+    label: "Tier",
+    description: "Competition level (GS, 1000, 500, 250, CH, ITF15–100, …).",
+    category: "tournament",
+    synonyms: ["level"],
+  },
+  {
+    id: "surface",
+    label: "Surface",
+    description: "Court type: Hard, Clay, Grass, Carpet (from event or tournament seed).",
+    category: "tournament",
+    values: ["Hard", "Clay", "Grass", "Carpet"],
+  },
+  {
+    id: "round",
+    label: "Round",
+    description: "Match round within the tournament (R16, QF, SF, F, …).",
+    category: "tournament",
+  },
+
+  // ── warehouse ──
+  {
+    id: "playerProfiles",
+    label: "Player profiles",
+    description:
+      "Derived from event-store player_profiles (SSOT): appearances, W–L, surfaces, avgKalshiVolumeFp. Rebuild: bun run tennis:profiles:build. Meta: docs/PLAYER_PROFILES_META.md",
+    category: "warehouse",
+    synonyms: ["profiles"],
+  },
+  {
+    id: "lastSeenAtMs",
+    label: "Last seen",
+    description:
+      "Epoch millis of latest event start for this player (player_profiles.last_seen_ts). Capped ≤ now. Event-store ms, not Kalshi wire seconds.",
+    category: "warehouse",
+    synonyms: ["last seen", "lastSeenMs"],
+  },
+  {
+    id: "profilesSource",
+    label: "Profiles source",
+    description:
+      "warehouse = rows from event-store; seed = unavailable / fixture path (no live profiles).",
+    category: "warehouse",
+    values: ["warehouse", "seed"],
+  },
+  {
+    id: "coverage",
+    label: "Coverage",
+    description: "Data completeness for a tour/surface slice (events with books, links, scores).",
+    category: "warehouse",
+  },
+  {
+    id: "surfaceEdge",
+    label: "Surface edge",
+    description:
+      "Dampened percentage-point edge from each player's historical surface win rates vs the match surface.",
+    category: "warehouse",
+    synonyms: ["surface edge"],
+  },
+] as const;
+
+export type GlossaryId = (typeof GLOSSARY_ENTRIES)[number]["id"];
+
+/** Flat tip map for HQ (backward compatible with tip(key) consumers). */
+export const TOOLTIPS: Record<string, string> = Object.fromEntries(
+  GLOSSARY_ENTRIES.map((e) => [e.id, e.description]),
+);
 
 export type TooltipKey = keyof typeof TOOLTIPS;
+
+export function getGlossaryEntry(id: string): GlossaryEntry | undefined {
+  return GLOSSARY_ENTRIES.find((e) => e.id === id);
+}
+
+export function glossaryEntriesByCategory(): Map<GlossaryCategory, GlossaryEntry[]> {
+  const map = new Map<GlossaryCategory, GlossaryEntry[]>();
+  for (const e of GLOSSARY_ENTRIES) {
+    const list = map.get(e.category) ?? [];
+    list.push(e);
+    map.set(e.category, list);
+  }
+  return map;
+}
+
+/** Payload for GET /api/glossary — panel + tips + codes. */
+export function buildGlossaryApiPayload() {
+  return {
+    schemaVersion: 1,
+    tooltips: TOOLTIPS,
+    entries: GLOSSARY_ENTRIES.map((e) => ({ ...e })),
+    categories: (Object.keys(GLOSSARY_CATEGORY_LABELS) as GlossaryCategory[]).map((id) => ({
+      id,
+      label: GLOSSARY_CATEGORY_LABELS[id],
+    })),
+    codes: CODES,
+    units: UNITS,
+  };
+}

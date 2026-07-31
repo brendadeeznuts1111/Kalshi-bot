@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Kalshi HQ — Research · Alpha · Trading</title>
+<link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+<header>
+  <h1>KALSHI <span>HQ</span></h1>
+  <span class="stamp" id="stamp">loading…</span>
+  <span class="links">
+    <button type="button" class="glossary-open" id="glossary-open" title="Glossary">Glossary (?)</button>
+    <a href="/">Research</a><a href="/ops">Ops</a><a href="/api/hq">API</a><a href="/api/glossary">Glossary API</a><a href="/api/design">Design</a><a href="/reports/latest.md">Report</a>
+  </span>
+</header>
+<div id="glossary-backdrop" class="glossary-backdrop" hidden></div>
+<aside id="glossary-panel" class="glossary-panel" hidden aria-label="Glossary">
+  <div class="glossary-head">
+    <h2>Glossary</h2>
+    <button type="button" class="glossary-close" id="glossary-close" aria-label="Close">✕</button>
+  </div>
+  <input type="search" id="glossary-search" class="glossary-search" placeholder="Search terms…" autocomplete="off" />
+  <div id="glossary-body" class="glossary-body"></div>
+</aside>
+<div id="freshness" style="display:flex;gap:.5rem;flex-wrap:wrap;padding:.5rem 1.5rem;border-bottom:1px solid var(--line);font-size:.75rem"></div>
+<nav class="tabs">
+  <button data-tab="overview" class="active">Overview</button>
+  <button data-tab="research">Research</button>
+  <button data-tab="trading">Trading</button>
+  <button data-tab="events">Events</button>
+  <button data-tab="monitor">Monitor</button>
+  <button data-tab="alpha">Alpha & Calibration</button>
+  <button data-tab="ops">Ops</button>
+</nav>
+<main>
+  <section id="tab-overview" class="tab active"></section>
+  <section id="tab-research" class="tab"></section>
+  <section id="tab-trading" class="tab"></section>
+  <section id="tab-events" class="tab"></section>
+  <section id="tab-monitor" class="tab"></section>
+  <section id="tab-alpha" class="tab"></section>
+  <section id="tab-ops" class="tab"></section>
+</main>
+<script type="module" src="./app.js"></script>
+</body>
+</html>
