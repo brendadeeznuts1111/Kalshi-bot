@@ -10,7 +10,7 @@ import {
   parseGitHubRepoRef,
   ROUTES,
   SERVE_PATTERNS,
-} from "../src/research/patterns.ts";
+} from "../../src/research/patterns.ts";
 
 describe("URLPattern blog vectors (v1.3.4)", () => {
   test("named group /users/:id", () => {

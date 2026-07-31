@@ -389,7 +389,7 @@ Colocated under [`tests/`](../tests/):
 | `detect.test.ts` | detector pure functions |
 | `gh.test.ts` | rate-limit + JSON parse helpers |
 | `cache.test.ts` | sqlite cache + run storage |
-| `patterns.test.ts` | `BunURLPattern` GitHub SSOT |
+| `research/patterns.test.ts` | `BunURLPattern` / `SERVE_PATTERNS` (mirrors `src/research/patterns.ts`) |
 | `serve.test.ts` | `Bun.serve` report browser handlers |
 | `inspect.mock.test.ts` | `mock.module("../src/research/gh.ts")` — no network |
 | `preflight.test.ts` | `Bun.which("gh")` |

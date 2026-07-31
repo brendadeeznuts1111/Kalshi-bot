@@ -45,20 +45,65 @@ export const GITHUB_REPO_DEEP = new BunURLPattern({
 });
 
 /**
- * Research server parameterized paths (fetch-handler matching).
- * Prefer these over `pathname.startsWith` / `split("/").pop()`.
+ * Research server pattern taxonomy — one SSOT for all routes.
+ * Organized by domain. Each entry has: pattern, method, handler hint.
+ *
+ * ── Pattern types ──
+ *   ExactMap[MAX_PATTERNS]     → static pathname (=== is faster, keep)
+ *   BunURLPattern               → parameterized or wildcard paths
+ *
+ * ── Param naming convention ──
+ *   :nodeId    — resource identifier (alphanumeric + hyphen/underscore)
+ *   :name      — human-readable name (may contain spaces, URL-encoded)
+ *   :owner     — GitHub owner (alphanumeric + hyphen, no dot)
+ *   :repo      — GitHub repo name (alphanumeric + hyphen/dot)
+ *   :id        — generic resource id
+ *   :runId     — timestamp-based run identifier
  */
 export const SERVE_PATTERNS = {
-  /** GET /ops/partners/:nodeId */
-  opsPartner: new BunURLPattern({ pathname: "/ops/partners/:nodeId" }),
-  /** GET /api/hq/tennis/player/:name (name may be URL-encoded) */
+  // ── Research & reports ──
+  runApi:    new BunURLPattern({ pathname: "/api/runs/:id" }),
+  // Param names must match ROUTES.repo (`:owner` / `:name`) for Bun.serve handlers.
+  repo:      new BunURLPattern({ pathname: "/repo/:owner/:name" }),
+  reports:   new BunURLPattern({ pathname: "/reports/*" }),
+
+  // ── Tennis HQ ──
   tennisPlayer: new BunURLPattern({ pathname: "/api/hq/tennis/player/:name" }),
-  /** GET /api/runs/:id — same shape as ROUTES.runApi */
-  runApi: new BunURLPattern({ pathname: "/api/runs/:id" }),
-  /** GET /repo/:owner/:name */
-  repo: new BunURLPattern({ pathname: "/repo/:owner/:name" }),
-  /** Wildcard: /reports/* → groups[0] is the relative path under reports */
-  reports: new BunURLPattern({ pathname: "/reports/*" }),
+
+  // ── Ops dashboard ──
+  opsPartner: new BunURLPattern({ pathname: "/ops/partners/:nodeId" }),
+  kalshiRotateKey: new BunURLPattern({ pathname: "/ops/kalshi-rotate-key" }),
+
+  // ── Polymarket ──
+  polyIngest:    new BunURLPattern({ pathname: "/polymarket/ingest" }),
+  polyStatus:    new BunURLPattern({ pathname: "/polymarket/status" }),
+  polyTicks:     new BunURLPattern({ pathname: "/polymarket/ticks" }),
+  polyLineMoves: new BunURLPattern({ pathname: "/polymarket/line-moves" }),
+
+  // ── Conventions ──
+  /** Static paths where `===` is simpler than URLPattern. Listed for completeness. */
+  EXACT: {
+    home:            "/hq",
+    hqData:          "/api/hq",
+    glossary:        "/api/glossary",
+    tennisBoard:     "/api/hq/tennis",
+    events:          "/api/events",
+    metaAudit:       "/api/meta/audit",
+    profiles:        "/api/profiles",
+    opponentProfiles:"/api/opponent-profiles",
+    ops:             "/ops",
+    opsJson:         "/ops.json",
+    placeBet:        "/place-bet",
+    tradingOrder:    "/api/trading/order",
+    tradingCancel:   "/api/trading/cancel",
+    tradingBook:     "/api/trading/book",
+    design:          "/api/design",
+    designAudit:     "/api/design/audit",
+    regulatoryHealth:"/regulatory/health",
+    agentDispatch:   "/agent/dispatch",
+    reportsLatest:   "/reports/latest.md",
+    architecture:    "/architecture",
+  },
 } as const;
 
 /** Local report browser routes (Bun.serve `routes` keys). Max ~5 — see docs/PLAN.md. */
