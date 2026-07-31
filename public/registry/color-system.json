@@ -1,6 +1,5 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-31T07:39:55.474Z",
   "keys": [
     "kalshi",
     "polymarket",
@@ -235,5 +234,6 @@
       "luminance": 0.3358,
       "isDark": true
     }
-  }
+  },
+  "generatedAt": "2026-07-31T11:28:24.146Z"
 }

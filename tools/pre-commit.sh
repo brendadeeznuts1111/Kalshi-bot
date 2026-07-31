@@ -10,6 +10,19 @@ bun run check
 echo "pre-commit: glossary"
 bun run glossary:check
 
+# Color bake gate when palette / kernel staged
+color_staged="$(
+  git diff --cached --name-only --diff-filter=ACM -- \
+    'src/lib/color/' 'src/lib/design-colors.ts' \
+    'scripts/generate-color-artifacts.ts' \
+    'public/colors.css' 'public/registry/color-system.json' \
+    'docs/COLORS.md' 'src/research/hq-app/color-vars.css' 2>/dev/null || true
+)"
+if [[ -n "$color_staged" ]]; then
+  echo "pre-commit: colors:check (palette/kernel staged)"
+  bun run colors:check
+fi
+
 protected=(
   research/audit-evidence/*.jsonl
   research/reports/latest.md
