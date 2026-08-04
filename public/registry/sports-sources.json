@@ -1,0 +1,1913 @@
+{
+  "schema": "sports-source-registry/v1",
+  "generatedAt": "2026-08-04T12:47:06.525Z",
+  "sports": [
+    {
+      "key": "tennis",
+      "label": "Tennis",
+      "family": "racquet",
+      "aliases": [
+        "lawn tennis"
+      ]
+    },
+    {
+      "key": "table_tennis",
+      "label": "Table tennis",
+      "family": "racquet",
+      "aliases": [
+        "table-tennis",
+        "ping pong",
+        "ping-pong"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "key": "kalshi",
+      "label": "Kalshi"
+    },
+    {
+      "key": "polymarket",
+      "label": "Polymarket"
+    }
+  ],
+  "adapters": [
+    {
+      "id": "kalshi-events-v1",
+      "source": "kalshi",
+      "idNamespace": "source_global",
+      "parserVersion": 1,
+      "selectorKinds": [
+        "kalshi_series"
+      ],
+      "metadataSelectorKinds": [
+        "kalshi_series_metadata"
+      ],
+      "cachePolicy": {
+        "freshForMs": 60000,
+        "staleForMs": 300000,
+        "failureThreshold": 3,
+        "circuitResetMs": 30000
+      },
+      "metadataCachePolicy": {
+        "freshForMs": 1800000,
+        "staleForMs": 86400000,
+        "failureThreshold": 3,
+        "circuitResetMs": 60000
+      },
+      "metadataDiscovery": {
+        "kind": "kalshi_series_metadata",
+        "scope": "kalshi:metadata:series",
+        "parameters": {
+          "endpoint": "/series",
+          "relation": "category_tag",
+          "category": "Sports",
+          "includeProductMetadata": "true"
+        }
+      }
+    },
+    {
+      "id": "polymarket-gamma-v1",
+      "source": "polymarket",
+      "idNamespace": "source_global",
+      "parserVersion": 1,
+      "selectorKinds": [
+        "polymarket_tag"
+      ],
+      "metadataSelectorKinds": [
+        "polymarket_sports_metadata"
+      ],
+      "cachePolicy": {
+        "freshForMs": 60000,
+        "staleForMs": 300000,
+        "failureThreshold": 3,
+        "circuitResetMs": 30000
+      },
+      "metadataCachePolicy": {
+        "freshForMs": 1800000,
+        "staleForMs": 86400000,
+        "failureThreshold": 3,
+        "circuitResetMs": 60000
+      },
+      "metadataDiscovery": {
+        "kind": "polymarket_sports_metadata",
+        "scope": "polymarket:metadata:sports",
+        "parameters": {
+          "endpoint": "/sports",
+          "relation": "tag"
+        }
+      }
+    }
+  ],
+  "integrations": [
+    {
+      "integration": "kalshi:tennis",
+      "sport": "tennis",
+      "source": "kalshi",
+      "state": "enabled",
+      "adapter": "kalshi-events-v1",
+      "declaredCapabilities": [
+        "inventory",
+        "quotes",
+        "reconciliation",
+        "trade"
+      ],
+      "operationalCapabilities": [
+        "inventory",
+        "quotes",
+        "reconciliation",
+        "trade"
+      ],
+      "metadataPolicy": {
+        "entityKind": "kalshi_series_metadata",
+        "requiredAttributes": {
+          "category": "Sports"
+        },
+        "candidateFacet": "tags",
+        "candidateSelectorParameter": "tag",
+        "registrationMatch": {
+          "kind": "metadata_id",
+          "selectorParameter": "series"
+        },
+        "nonCandidate": {
+          "disposition": "ignored",
+          "reasonCode": "sport_facet_absent"
+        }
+      },
+      "competitions": [
+        {
+          "competition": "itf_men",
+          "semanticConfidence": "exact",
+          "eventTypes": [
+            "match"
+          ],
+          "participantFormats": [
+            "singles"
+          ],
+          "marketKinds": [
+            "match_winner"
+          ],
+          "identityFields": [
+            "tennis_competitor"
+          ],
+          "sourceMarketMappings": [],
+          "unmappedMarketPolicy": "quarantine",
+          "declaredUse": "trade",
+          "selector": {
+            "kind": "kalshi_series",
+            "scope": "kalshi:series:KXITFMATCH",
+            "sport": "tennis",
+            "parameters": {
+              "series": "KXITFMATCH",
+              "category": "Sports",
+              "tag": "Tennis",
+              "sport": "tennis",
+              "endpoint": "/events",
+              "status": "open",
+              "withNestedMarkets": "true"
+            }
+          }
+        },
+        {
+          "competition": "itf_women",
+          "semanticConfidence": "exact",
+          "eventTypes": [
+            "match"
+          ],
+          "participantFormats": [
+            "singles"
+          ],
+          "marketKinds": [
+            "match_winner"
+          ],
+          "identityFields": [
+            "tennis_competitor"
+          ],
+          "sourceMarketMappings": [],
+          "unmappedMarketPolicy": "quarantine",
+          "declaredUse": "trade",
+          "selector": {
+            "kind": "kalshi_series",
+            "scope": "kalshi:series:KXITFWMATCH",
+            "sport": "tennis",
+            "parameters": {
+              "series": "KXITFWMATCH",
+              "category": "Sports",
+              "tag": "Tennis",
+              "sport": "tennis",
+              "endpoint": "/events",
+              "status": "open",
+              "withNestedMarkets": "true"
+            }
+          }
+        },
+        {
+          "competition": "itf_men",
+          "semanticConfidence": "exact",
+          "eventTypes": [
+            "match"
+          ],
+          "participantFormats": [
+            "doubles"
+          ],
+          "marketKinds": [
+            "match_winner"
+          ],
+          "identityFields": [
+            "tennis_competitor"
+          ],
+          "sourceMarketMappings": [],
+          "unmappedMarketPolicy": "quarantine",
+          "declaredUse": "trade",
+          "selector": {
+            "kind": "kalshi_series",
+            "scope": "kalshi:series:KXITFDOUBLES",
+            "sport": "tennis",
+            "parameters": {
+              "series": "KXITFDOUBLES",
+              "category": "Sports",
+              "tag": "Tennis",
+              "sport": "tennis",
+              "endpoint": "/events",
+              "status": "open",
+              "withNestedMarkets": "true"
+            }
+          }
+        },
+        {
+          "competition": "itf_women",
+          "semanticConfidence": "exact",
+          "eventTypes": [
+            "match"
+          ],
+          "participantFormats": [
+            "doubles"
+          ],
+          "marketKinds": [
+            "match_winner"
+          ],
+          "identityFields": [
+            "tennis_competitor"
+          ],
+          "sourceMarketMappings": [],
+          "unmappedMarketPolicy": "quarantine",
+          "declaredUse": "trade",
+          "selector": {
+            "kind": "kalshi_series",
+            "scope": "kalshi:series:KXITFWDOUBLES",
+            "sport": "tennis",
+            "parameters": {
+              "series": "KXITFWDOUBLES",
+              "category": "Sports",
+              "tag": "Tennis",
+              "sport": "tennis",
+              "endpoint": "/events",
+              "status": "open",
+              "withNestedMarkets": "true"
+            }
+          }
+        },
+        {
+          "competition": "atp",
+          "semanticConfidence": "exact",
+          "eventTypes": [
+            "match"
+          ],
+          "participantFormats": [
+            "singles"
+          ],
+          "marketKinds": [
+            "match_winner"
+          ],
+          "identityFields": [
+            "tennis_competitor"
+          ],
+          "sourceMarketMappings": [],
+          "unmappedMarketPolicy": "quarantine",
+          "declaredUse": "trade",
+          "selector": {
+            "kind": "kalshi_series",
+            "scope": "kalshi:series:KXATPMATCH",
+            "sport": "tennis",
+            "parameters": {
+              "series": "KXATPMATCH",
+              "category": "Sports",
+              "tag": "Tennis",
+              "sport": "tennis",
+              "endpoint": "/events",
+              "status": "open",
+              "withNestedMarkets": "true"
+            }
+          }
+        },
+        {
+          "competition": "atp",
+          "semanticConfidence": "exact",
+          "eventTypes": [
+            "match"
+          ],
+          "participantFormats": [
+            "singles"
+          ],
+          "marketKinds": [
+            "match_winner"
+          ],
+          "identityFields": [
+            "none"
+          ],
+          "sourceMarketMappings": [],
+          "unmappedMarketPolicy": "quarantine",
+          "declaredUse": "inventory",
+          "selector": {
+            "kind": "kalshi_series",
+            "scope": "kalshi:series:KXATPGAME",
+            "sport": "tennis",
+            "parameters": {
+              "series": "KXATPGAME",
+              "category": "Sports",
+              "tag": "Tennis",
+              "sport": "tennis",
+              "endpoint": "/events",
+              "status": "open",
+              "withNestedMarkets": "true"
+            }
+          }
+        },
+        {
+          "competition": "atp",
+          "semanticConfidence": "exact",
+          "eventTypes": [
+            "match"
+          ],
+          "participantFormats": [
+            "singles"
+          ],
+          "marketKinds": [
+            "set_winner"
+          ],
+          "identityFields": [
+            "tennis_competitor"
+          ],
+          "sourceMarketMappings": [],
+          "unmappedMarketPolicy": "quarantine",
+          "declaredUse": "inventory",
+          "selector": {
+            "kind": "kalshi_series",
+            "scope": "kalshi:series:KXATPSETWINNER",
+            "sport": "tennis",
+            "parameters": {
+              "series": "KXATPSETWINNER",
+              "category": "Sports",
+              "tag": "Tennis",
+              "sport": "tennis",
+              "endpoint": "/events",
+              "status": "open",
+              "withNestedMarkets": "true"
+            }
+          }
+        },
+        {
+          "competition": "atp",
+          "semanticConfidence": "exact",
+          "eventTypes": [
+            "match"
+          ],
+          "participantFormats": [
+            "singles"
+          ],
+          "marketKinds": [
+            "s1_game"
+          ],
+          "identityFields": [
+            "none"
+          ],
+          "sourceMarketMappings": [],
+          "unmappedMarketPolicy": "quarantine",
+          "declaredUse": "inventory",
+          "selector": {
+            "kind": "kalshi_series",
+            "scope": "kalshi:series:KXATPS1GWINNER",
+            "sport": "tennis",
+            "parameters": {
+              "series": "KXATPS1GWINNER",
+              "category": "Sports",
+              "tag": "Tennis",
+              "sport": "tennis",
+              "endpoint": "/events",
+              "status": "open",
+              "withNestedMarkets": "true"
+            }
+          }
+        },
+        {
+          "competition": "atp",
+          "semanticConfidence": "exact",
+          "eventTypes": [
+            "match"
+          ],
+          "participantFormats": [
+            "singles"
+          ],
+          "marketKinds": [
+            "s2_game"
+          ],
+          "identityFields": [
+            "none"
+          ],
+          "sourceMarketMappings": [],
+          "unmappedMarketPolicy": "quarantine",
+          "declaredUse": "inventory",
+          "selector": {
+            "kind": "kalshi_series",
+            "scope": "kalshi:series:KXATPS2GWINNER",
+            "sport": "tennis",
+            "parameters": {
+              "series": "KXATPS2GWINNER",
+              "category": "Sports",
+              "tag": "Tennis",
+              "sport": "tennis",
+              "endpoint": "/events",
+              "status": "open",
+              "withNestedMarkets": "true"
+            }
+          }
+        },
+        {
+          "competition": "atp",
+          "semanticConfidence": "exact",
+          "eventTypes": [
+            "match"
+          ],
+          "participantFormats": [
+            "singles"
+          ],
+          "marketKinds": [
+            "s3_game"
+          ],
+          "identityFields": [
+            "none"
+          ],
+          "sourceMarketMappings": [],
+          "unmappedMarketPolicy": "quarantine",
+          "declaredUse": "inventory",
+          "selector": {
+            "kind": "kalshi_series",
+            "scope": "kalshi:series:KXATPS3GWINNER",
+            "sport": "tennis",
+            "parameters": {
+              "series": "KXATPS3GWINNER",
+              "category": "Sports",
+              "tag": "Tennis",
+              "sport": "tennis",
+              "endpoint": "/events",
+              "status": "open",
+              "withNestedMarkets": "true"
+            }
+          }
+        },
+        {
+          "competition": "atp",
+          "semanticConfidence": "exact",
+          "eventTypes": [
+            "match"
+          ],
+          "participantFormats": [
+            "singles"
+          ],
+          "marketKinds": [
+            "s4_game"
+          ],
+          "identityFields": [
+            "none"
+          ],
+          "sourceMarketMappings": [],
+          "unmappedMarketPolicy": "quarantine",
+          "declaredUse": "inventory",
+          "selector": {
+            "kind": "kalshi_series",
+            "scope": "kalshi:series:KXATPS4GWINNER",
+            "sport": "tennis",
+            "parameters": {
+              "series": "KXATPS4GWINNER",
+              "category": "Sports",
+              "tag": "Tennis",
+              "sport": "tennis",
+              "endpoint": "/events",
+              "status": "open",
+              "withNestedMarkets": "true"
+            }
+          }
+        },
+        {
+          "competition": "atp",
+          "semanticConfidence": "exact",
+          "eventTypes": [
+            "match"
+          ],
+          "participantFormats": [
+            "singles"
+          ],
+          "marketKinds": [
+            "s5_game"
+          ],
+          "identityFields": [
+            "none"
+          ],
+          "sourceMarketMappings": [],
+          "unmappedMarketPolicy": "quarantine",
+          "declaredUse": "inventory",
+          "selector": {
+            "kind": "kalshi_series",
+            "scope": "kalshi:series:KXATPS5GWINNER",
+            "sport": "tennis",
+            "parameters": {
+              "series": "KXATPS5GWINNER",
+              "category": "Sports",
+              "tag": "Tennis",
+              "sport": "tennis",
+              "endpoint": "/events",
+              "status": "open",
+              "withNestedMarkets": "true"
+            }
+          }
+        },
+        {
+          "competition": "atp",
+          "semanticConfidence": "exact",
+          "eventTypes": [
+            "match"
+          ],
+          "participantFormats": [
+            "singles"
+          ],
+          "marketKinds": [
+            "game_winner"
+          ],
+          "identityFields": [
+            "none"
+          ],
+          "sourceMarketMappings": [],
+          "unmappedMarketPolicy": "quarantine",
+          "declaredUse": "inventory",
+          "selector": {
+            "kind": "kalshi_series",
+            "scope": "kalshi:series:KXATPGWINNER",
+            "sport": "tennis",
+            "parameters": {
+              "series": "KXATPGWINNER",
+              "category": "Sports",
+              "tag": "Tennis",
+              "sport": "tennis",
+              "endpoint": "/events",
+              "status": "open",
+              "withNestedMarkets": "true"
+            }
+          }
+        },
+        {
+          "competition": "atp",
+          "semanticConfidence": "exact",
+          "eventTypes": [
+            "match"
+          ],
+          "participantFormats": [
+            "singles"
+          ],
+          "marketKinds": [
+            "game_spread"
+          ],
+          "identityFields": [
+            "none"
+          ],
+          "sourceMarketMappings": [],
+          "unmappedMarketPolicy": "quarantine",
+          "declaredUse": "inventory",
+          "selector": {
+            "kind": "kalshi_series",
+            "scope": "kalshi:series:KXATPGAMESPREAD",
+            "sport": "tennis",
+            "parameters": {
+              "series": "KXATPGAMESPREAD",
+              "category": "Sports",
+              "tag": "Tennis",
+              "sport": "tennis",
+              "endpoint": "/events",
+              "status": "open",
+              "withNestedMarkets": "true"
+            }
+          }
+        },
+        {
+          "competition": "atp",
+          "semanticConfidence": "exact",
+          "eventTypes": [
+            "match"
+          ],
+          "participantFormats": [
+            "singles"
+          ],
+          "marketKinds": [
+            "game_spread"
+          ],
+          "identityFields": [
+            "none"
+          ],
+          "sourceMarketMappings": [],
+          "unmappedMarketPolicy": "quarantine",
+          "declaredUse": "inventory",
+          "selector": {
+            "kind": "kalshi_series",
+            "scope": "kalshi:series:KXATPGSPREAD",
+            "sport": "tennis",
+            "parameters": {
+              "series": "KXATPGSPREAD",
+              "category": "Sports",
+              "tag": "Tennis",
+              "sport": "tennis",
+              "endpoint": "/events",
+              "status": "open",
+              "withNestedMarkets": "true"
+            }
+          }
+        },
+        {
+          "competition": "atp",
+          "semanticConfidence": "exact",
+          "eventTypes": [
+            "match"
+          ],
+          "participantFormats": [
+            "singles"
+          ],
+          "marketKinds": [
+            "game_total"
+          ],
+          "identityFields": [
+            "none"
+          ],
+          "sourceMarketMappings": [],
+          "unmappedMarketPolicy": "quarantine",
+          "declaredUse": "inventory",
+          "selector": {
+            "kind": "kalshi_series",
+            "scope": "kalshi:series:KXATPGAMETOTAL",
+            "sport": "tennis",
+            "parameters": {
+              "series": "KXATPGAMETOTAL",
+              "category": "Sports",
+              "tag": "Tennis",
+              "sport": "tennis",
+              "endpoint": "/events",
+              "status": "open",
+              "withNestedMarkets": "true"
+            }
+          }
+        },
+        {
+          "competition": "atp",
+          "semanticConfidence": "exact",
+          "eventTypes": [
+            "match"
+          ],
+          "participantFormats": [
+            "singles"
+          ],
+          "marketKinds": [
+            "game_total"
+          ],
+          "identityFields": [
+            "none"
+          ],
+          "sourceMarketMappings": [],
+          "unmappedMarketPolicy": "quarantine",
+          "declaredUse": "inventory",
+          "selector": {
+            "kind": "kalshi_series",
+            "scope": "kalshi:series:KXATPGTOTAL",
+            "sport": "tennis",
+            "parameters": {
+              "series": "KXATPGTOTAL",
+              "category": "Sports",
+              "tag": "Tennis",
+              "sport": "tennis",
+              "endpoint": "/events",
+              "status": "open",
+              "withNestedMarkets": "true"
+            }
+          }
+        },
+        {
+          "competition": "atp",
+          "semanticConfidence": "exact",
+          "eventTypes": [
+            "match"
+          ],
+          "participantFormats": [
+            "singles"
+          ],
+          "marketKinds": [
+            "exact_score"
+          ],
+          "identityFields": [
+            "none"
+          ],
+          "sourceMarketMappings": [],
+          "unmappedMarketPolicy": "quarantine",
+          "declaredUse": "inventory",
+          "selector": {
+            "kind": "kalshi_series",
+            "scope": "kalshi:series:KXATPEXACTMATCH",
+            "sport": "tennis",
+            "parameters": {
+              "series": "KXATPEXACTMATCH",
+              "category": "Sports",
+              "tag": "Tennis",
+              "sport": "tennis",
+              "endpoint": "/events",
+              "status": "open",
+              "withNestedMarkets": "true"
+            }
+          }
+        },
+        {
+          "competition": "atp",
+          "semanticConfidence": "exact",
+          "eventTypes": [
+            "match"
+          ],
+          "participantFormats": [
+            "singles"
+          ],
+          "marketKinds": [
+            "exact_sets"
+          ],
+          "identityFields": [
+            "none"
+          ],
+          "sourceMarketMappings": [],
+          "unmappedMarketPolicy": "quarantine",
+          "declaredUse": "inventory",
+          "selector": {
+            "kind": "kalshi_series",
+            "scope": "kalshi:series:KXATPEXACTSETS",
+            "sport": "tennis",
+            "parameters": {
+              "series": "KXATPEXACTSETS",
+              "category": "Sports",
+              "tag": "Tennis",
+              "sport": "tennis",
+              "endpoint": "/events",
+              "status": "open",
+              "withNestedMarkets": "true"
+            }
+          }
+        },
+        {
+          "competition": "atp",
+          "semanticConfidence": "exact",
+          "eventTypes": [
+            "match"
+          ],
+          "participantFormats": [
+            "singles"
+          ],
+          "marketKinds": [
+            "total_sets"
+          ],
+          "identityFields": [
+            "none"
+          ],
+          "sourceMarketMappings": [],
+          "unmappedMarketPolicy": "quarantine",
+          "declaredUse": "inventory",
+          "selector": {
+            "kind": "kalshi_series",
+            "scope": "kalshi:series:KXATPTOTALSETS",
+            "sport": "tennis",
+            "parameters": {
+              "series": "KXATPTOTALSETS",
+              "category": "Sports",
+              "tag": "Tennis",
+              "sport": "tennis",
+              "endpoint": "/events",
+              "status": "open",
+              "withNestedMarkets": "true"
+            }
+          }
+        },
+        {
+          "competition": "atp",
+          "semanticConfidence": "exact",
+          "eventTypes": [
+            "match"
+          ],
+          "participantFormats": [
+            "singles"
+          ],
+          "marketKinds": [
+            "tiebreak"
+          ],
+          "identityFields": [
+            "none"
+          ],
+          "sourceMarketMappings": [],
+          "unmappedMarketPolicy": "quarantine",
+          "declaredUse": "inventory",
+          "selector": {
+            "kind": "kalshi_series",
+            "scope": "kalshi:series:KXATPTIEBREAK",
+            "sport": "tennis",
+            "parameters": {
+              "series": "KXATPTIEBREAK",
+              "category": "Sports",
+              "tag": "Tennis",
+              "sport": "tennis",
+              "endpoint": "/events",
+              "status": "open",
+              "withNestedMarkets": "true"
+            }
+          }
+        },
+        {
+          "competition": "atp",
+          "semanticConfidence": "exact",
+          "eventTypes": [
+            "match"
+          ],
+          "participantFormats": [
+            "singles"
+          ],
+          "marketKinds": [
+            "set_winner"
+          ],
+          "identityFields": [
+            "none"
+          ],
+          "sourceMarketMappings": [],
+          "unmappedMarketPolicy": "quarantine",
+          "declaredUse": "inventory",
+          "selector": {
+            "kind": "kalshi_series",
+            "scope": "kalshi:series:KXATPANYSET",
+            "sport": "tennis",
+            "parameters": {
+              "series": "KXATPANYSET",
+              "category": "Sports",
+              "tag": "Tennis",
+              "sport": "tennis",
+              "endpoint": "/events",
+              "status": "open",
+              "withNestedMarkets": "true"
+            }
+          }
+        },
+        {
+          "competition": "atp",
+          "semanticConfidence": "exact",
+          "eventTypes": [
+            "match"
+          ],
+          "participantFormats": [
+            "doubles"
+          ],
+          "marketKinds": [
+            "match_winner"
+          ],
+          "identityFields": [
+            "tennis_doubles_competitor"
+          ],
+          "sourceMarketMappings": [],
+          "unmappedMarketPolicy": "quarantine",
+          "declaredUse": "match",
+          "selector": {
+            "kind": "kalshi_series",
+            "scope": "kalshi:series:KXATPDOUBLES",
+            "sport": "tennis",
+            "parameters": {
+              "series": "KXATPDOUBLES",
+              "category": "Sports",
+              "tag": "Tennis",
+              "sport": "tennis",
+              "endpoint": "/events",
+              "status": "open",
+              "withNestedMarkets": "true"
+            }
+          }
+        },
+        {
+          "competition": "wta",
+          "semanticConfidence": "exact",
+          "eventTypes": [
+            "match"
+          ],
+          "participantFormats": [
+            "singles"
+          ],
+          "marketKinds": [
+            "match_winner"
+          ],
+          "identityFields": [
+            "tennis_competitor"
+          ],
+          "sourceMarketMappings": [],
+          "unmappedMarketPolicy": "quarantine",
+          "declaredUse": "trade",
+          "selector": {
+            "kind": "kalshi_series",
+            "scope": "kalshi:series:KXWTAMATCH",
+            "sport": "tennis",
+            "parameters": {
+              "series": "KXWTAMATCH",
+              "category": "Sports",
+              "tag": "Tennis",
+              "sport": "tennis",
+              "endpoint": "/events",
+              "status": "open",
+              "withNestedMarkets": "true"
+            }
+          }
+        },
+        {
+          "competition": "wta",
+          "semanticConfidence": "exact",
+          "eventTypes": [
+            "match"
+          ],
+          "participantFormats": [
+            "singles"
+          ],
+          "marketKinds": [
+            "match_winner"
+          ],
+          "identityFields": [
+            "none"
+          ],
+          "sourceMarketMappings": [],
+          "unmappedMarketPolicy": "quarantine",
+          "declaredUse": "inventory",
+          "selector": {
+            "kind": "kalshi_series",
+            "scope": "kalshi:series:KXWTAGAME",
+            "sport": "tennis",
+            "parameters": {
+              "series": "KXWTAGAME",
+              "category": "Sports",
+              "tag": "Tennis",
+              "sport": "tennis",
+              "endpoint": "/events",
+              "status": "open",
+              "withNestedMarkets": "true"
+            }
+          }
+        },
+        {
+          "competition": "wta",
+          "semanticConfidence": "exact",
+          "eventTypes": [
+            "match"
+          ],
+          "participantFormats": [
+            "singles"
+          ],
+          "marketKinds": [
+            "set_winner"
+          ],
+          "identityFields": [
+            "tennis_competitor"
+          ],
+          "sourceMarketMappings": [],
+          "unmappedMarketPolicy": "quarantine",
+          "declaredUse": "inventory",
+          "selector": {
+            "kind": "kalshi_series",
+            "scope": "kalshi:series:KXWTASETWINNER",
+            "sport": "tennis",
+            "parameters": {
+              "series": "KXWTASETWINNER",
+              "category": "Sports",
+              "tag": "Tennis",
+              "sport": "tennis",
+              "endpoint": "/events",
+              "status": "open",
+              "withNestedMarkets": "true"
+            }
+          }
+        },
+        {
+          "competition": "wta",
+          "semanticConfidence": "exact",
+          "eventTypes": [
+            "match"
+          ],
+          "participantFormats": [
+            "singles"
+          ],
+          "marketKinds": [
+            "exact_score"
+          ],
+          "identityFields": [
+            "none"
+          ],
+          "sourceMarketMappings": [],
+          "unmappedMarketPolicy": "quarantine",
+          "declaredUse": "inventory",
+          "selector": {
+            "kind": "kalshi_series",
+            "scope": "kalshi:series:KXWTAEXACTMATCH",
+            "sport": "tennis",
+            "parameters": {
+              "series": "KXWTAEXACTMATCH",
+              "category": "Sports",
+              "tag": "Tennis",
+              "sport": "tennis",
+              "endpoint": "/events",
+              "status": "open",
+              "withNestedMarkets": "true"
+            }
+          }
+        },
+        {
+          "competition": "wta",
+          "semanticConfidence": "exact",
+          "eventTypes": [
+            "match"
+          ],
+          "participantFormats": [
+            "doubles"
+          ],
+          "marketKinds": [
+            "match_winner"
+          ],
+          "identityFields": [
+            "tennis_doubles_competitor"
+          ],
+          "sourceMarketMappings": [],
+          "unmappedMarketPolicy": "quarantine",
+          "declaredUse": "match",
+          "selector": {
+            "kind": "kalshi_series",
+            "scope": "kalshi:series:KXWTADOUBLES",
+            "sport": "tennis",
+            "parameters": {
+              "series": "KXWTADOUBLES",
+              "category": "Sports",
+              "tag": "Tennis",
+              "sport": "tennis",
+              "endpoint": "/events",
+              "status": "open",
+              "withNestedMarkets": "true"
+            }
+          }
+        },
+        {
+          "competition": "challenger",
+          "semanticConfidence": "exact",
+          "eventTypes": [
+            "match"
+          ],
+          "participantFormats": [
+            "singles"
+          ],
+          "marketKinds": [
+            "match_winner"
+          ],
+          "identityFields": [
+            "tennis_competitor"
+          ],
+          "sourceMarketMappings": [],
+          "unmappedMarketPolicy": "quarantine",
+          "declaredUse": "trade",
+          "selector": {
+            "kind": "kalshi_series",
+            "scope": "kalshi:series:KXATPCHALLENGERMATCH",
+            "sport": "tennis",
+            "parameters": {
+              "series": "KXATPCHALLENGERMATCH",
+              "category": "Sports",
+              "tag": "Tennis",
+              "sport": "tennis",
+              "endpoint": "/events",
+              "status": "open",
+              "withNestedMarkets": "true"
+            }
+          }
+        },
+        {
+          "competition": "challenger",
+          "semanticConfidence": "exact",
+          "eventTypes": [
+            "match"
+          ],
+          "participantFormats": [
+            "singles"
+          ],
+          "marketKinds": [
+            "match_winner"
+          ],
+          "identityFields": [
+            "none"
+          ],
+          "sourceMarketMappings": [],
+          "unmappedMarketPolicy": "quarantine",
+          "declaredUse": "inventory",
+          "selector": {
+            "kind": "kalshi_series",
+            "scope": "kalshi:series:KXCHALLENGERMATCH",
+            "sport": "tennis",
+            "parameters": {
+              "series": "KXCHALLENGERMATCH",
+              "category": "Sports",
+              "tag": "Tennis",
+              "sport": "tennis",
+              "endpoint": "/events",
+              "status": "open",
+              "withNestedMarkets": "true"
+            }
+          }
+        },
+        {
+          "competition": "challenger",
+          "semanticConfidence": "exact",
+          "eventTypes": [
+            "match"
+          ],
+          "participantFormats": [
+            "singles"
+          ],
+          "marketKinds": [
+            "match_winner"
+          ],
+          "identityFields": [
+            "tennis_competitor"
+          ],
+          "sourceMarketMappings": [],
+          "unmappedMarketPolicy": "quarantine",
+          "declaredUse": "trade",
+          "selector": {
+            "kind": "kalshi_series",
+            "scope": "kalshi:series:KXWTACHALLENGERMATCH",
+            "sport": "tennis",
+            "parameters": {
+              "series": "KXWTACHALLENGERMATCH",
+              "category": "Sports",
+              "tag": "Tennis",
+              "sport": "tennis",
+              "endpoint": "/events",
+              "status": "open",
+              "withNestedMarkets": "true"
+            }
+          }
+        },
+        {
+          "competition": "exhibition",
+          "semanticConfidence": "exact",
+          "eventTypes": [
+            "match"
+          ],
+          "participantFormats": [
+            "singles"
+          ],
+          "marketKinds": [
+            "match_winner"
+          ],
+          "identityFields": [
+            "none"
+          ],
+          "sourceMarketMappings": [],
+          "unmappedMarketPolicy": "quarantine",
+          "declaredUse": "inventory",
+          "selector": {
+            "kind": "kalshi_series",
+            "scope": "kalshi:series:KXEXHIBITIONMEN",
+            "sport": "tennis",
+            "parameters": {
+              "series": "KXEXHIBITIONMEN",
+              "category": "Sports",
+              "tag": "Tennis",
+              "sport": "tennis",
+              "endpoint": "/events",
+              "status": "open",
+              "withNestedMarkets": "true"
+            }
+          }
+        },
+        {
+          "competition": "exhibition",
+          "semanticConfidence": "exact",
+          "eventTypes": [
+            "match"
+          ],
+          "participantFormats": [
+            "singles"
+          ],
+          "marketKinds": [
+            "match_winner"
+          ],
+          "identityFields": [
+            "none"
+          ],
+          "sourceMarketMappings": [],
+          "unmappedMarketPolicy": "quarantine",
+          "declaredUse": "inventory",
+          "selector": {
+            "kind": "kalshi_series",
+            "scope": "kalshi:series:KXEXHIBITIONWOMEN",
+            "sport": "tennis",
+            "parameters": {
+              "series": "KXEXHIBITIONWOMEN",
+              "category": "Sports",
+              "tag": "Tennis",
+              "sport": "tennis",
+              "endpoint": "/events",
+              "status": "open",
+              "withNestedMarkets": "true"
+            }
+          }
+        },
+        {
+          "competition": "exhibition",
+          "semanticConfidence": "exact",
+          "eventTypes": [
+            "match"
+          ],
+          "participantFormats": [
+            "singles"
+          ],
+          "marketKinds": [
+            "match_winner"
+          ],
+          "identityFields": [
+            "none"
+          ],
+          "sourceMarketMappings": [],
+          "unmappedMarketPolicy": "quarantine",
+          "declaredUse": "inventory",
+          "selector": {
+            "kind": "kalshi_series",
+            "scope": "kalshi:series:KXTENNISEXHIBITION",
+            "sport": "tennis",
+            "parameters": {
+              "series": "KXTENNISEXHIBITION",
+              "category": "Sports",
+              "tag": "Tennis",
+              "sport": "tennis",
+              "endpoint": "/events",
+              "status": "open",
+              "withNestedMarkets": "true"
+            }
+          }
+        },
+        {
+          "competition": "davis_cup",
+          "semanticConfidence": "exact",
+          "eventTypes": [
+            "match"
+          ],
+          "participantFormats": [
+            "team"
+          ],
+          "marketKinds": [
+            "other"
+          ],
+          "identityFields": [
+            "none"
+          ],
+          "sourceMarketMappings": [],
+          "unmappedMarketPolicy": "quarantine",
+          "declaredUse": "inventory",
+          "selector": {
+            "kind": "kalshi_series",
+            "scope": "kalshi:series:KXDAVISCUPMATCH",
+            "sport": "tennis",
+            "parameters": {
+              "series": "KXDAVISCUPMATCH",
+              "category": "Sports",
+              "tag": "Tennis",
+              "sport": "tennis",
+              "endpoint": "/events",
+              "status": "open",
+              "withNestedMarkets": "true"
+            }
+          }
+        },
+        {
+          "competition": "united_cup",
+          "semanticConfidence": "exact",
+          "eventTypes": [
+            "match"
+          ],
+          "participantFormats": [
+            "team"
+          ],
+          "marketKinds": [
+            "other"
+          ],
+          "identityFields": [
+            "none"
+          ],
+          "sourceMarketMappings": [],
+          "unmappedMarketPolicy": "quarantine",
+          "declaredUse": "inventory",
+          "selector": {
+            "kind": "kalshi_series",
+            "scope": "kalshi:series:KXUNITEDCUPMATCH",
+            "sport": "tennis",
+            "parameters": {
+              "series": "KXUNITEDCUPMATCH",
+              "category": "Sports",
+              "tag": "Tennis",
+              "sport": "tennis",
+              "endpoint": "/events",
+              "status": "open",
+              "withNestedMarkets": "true"
+            }
+          }
+        },
+        {
+          "competition": "exhibition",
+          "semanticConfidence": "exact",
+          "eventTypes": [
+            "match"
+          ],
+          "participantFormats": [
+            "singles"
+          ],
+          "marketKinds": [
+            "other"
+          ],
+          "identityFields": [
+            "none"
+          ],
+          "sourceMarketMappings": [],
+          "unmappedMarketPolicy": "quarantine",
+          "declaredUse": "inventory",
+          "selector": {
+            "kind": "kalshi_series",
+            "scope": "kalshi:series:KXSIXKINGSMATCH",
+            "sport": "tennis",
+            "parameters": {
+              "series": "KXSIXKINGSMATCH",
+              "category": "Sports",
+              "tag": "Tennis",
+              "sport": "tennis",
+              "endpoint": "/events",
+              "status": "open",
+              "withNestedMarkets": "true"
+            }
+          }
+        },
+        {
+          "competition": "exhibition",
+          "semanticConfidence": "exact",
+          "eventTypes": [
+            "match"
+          ],
+          "participantFormats": [
+            "singles"
+          ],
+          "marketKinds": [
+            "other"
+          ],
+          "identityFields": [
+            "none"
+          ],
+          "sourceMarketMappings": [],
+          "unmappedMarketPolicy": "quarantine",
+          "declaredUse": "inventory",
+          "selector": {
+            "kind": "kalshi_series",
+            "scope": "kalshi:series:KXSIXKINGSSLAMMATCH",
+            "sport": "tennis",
+            "parameters": {
+              "series": "KXSIXKINGSSLAMMATCH",
+              "category": "Sports",
+              "tag": "Tennis",
+              "sport": "tennis",
+              "endpoint": "/events",
+              "status": "open",
+              "withNestedMarkets": "true"
+            }
+          }
+        },
+        {
+          "competition": "exhibition",
+          "semanticConfidence": "exact",
+          "eventTypes": [
+            "match"
+          ],
+          "participantFormats": [
+            "mixed"
+          ],
+          "marketKinds": [
+            "other"
+          ],
+          "identityFields": [
+            "none"
+          ],
+          "sourceMarketMappings": [],
+          "unmappedMarketPolicy": "quarantine",
+          "declaredUse": "inventory",
+          "selector": {
+            "kind": "kalshi_series",
+            "scope": "kalshi:series:KXBATTLEOFSEXES",
+            "sport": "tennis",
+            "parameters": {
+              "series": "KXBATTLEOFSEXES",
+              "category": "Sports",
+              "tag": "Tennis",
+              "sport": "tennis",
+              "endpoint": "/events",
+              "status": "open",
+              "withNestedMarkets": "true"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "integration": "kalshi:table_tennis",
+      "sport": "table_tennis",
+      "source": "kalshi",
+      "state": "discovering",
+      "adapter": "kalshi-events-v1",
+      "declaredCapabilities": [
+        "inventory",
+        "quotes",
+        "reconciliation"
+      ],
+      "operationalCapabilities": [
+        "inventory"
+      ],
+      "metadataPolicy": {
+        "entityKind": "kalshi_series_metadata",
+        "requiredAttributes": {
+          "category": "Sports"
+        },
+        "candidateFacet": "tags",
+        "candidateSelectorParameter": "tag",
+        "registrationMatch": {
+          "kind": "metadata_id",
+          "selectorParameter": "series"
+        },
+        "nonCandidate": {
+          "disposition": "ignored",
+          "reasonCode": "sport_facet_absent"
+        }
+      },
+      "reason": "Inventory is operational; quote, reconciliation, and persistence wiring is pending.",
+      "competitions": [
+        {
+          "competition": "ittf",
+          "semanticConfidence": "exact",
+          "eventTypes": [
+            "match"
+          ],
+          "participantFormats": [
+            "singles"
+          ],
+          "marketKinds": [
+            "match_winner"
+          ],
+          "identityFields": [
+            "none"
+          ],
+          "sourceMarketMappings": [],
+          "unmappedMarketPolicy": "quarantine",
+          "declaredUse": "inventory",
+          "selector": {
+            "kind": "kalshi_series",
+            "scope": "kalshi:series:KXITTFMENMATCH",
+            "sport": "table_tennis",
+            "parameters": {
+              "series": "KXITTFMENMATCH",
+              "category": "Sports",
+              "tag": "Table Tennis",
+              "sport": "table_tennis",
+              "endpoint": "/events",
+              "status": "open",
+              "withNestedMarkets": "true"
+            }
+          }
+        },
+        {
+          "competition": "ittf",
+          "semanticConfidence": "exact",
+          "eventTypes": [
+            "tournament"
+          ],
+          "participantFormats": [
+            "field"
+          ],
+          "marketKinds": [
+            "tournament_winner"
+          ],
+          "identityFields": [
+            "none"
+          ],
+          "sourceMarketMappings": [],
+          "unmappedMarketPolicy": "quarantine",
+          "declaredUse": "inventory",
+          "selector": {
+            "kind": "kalshi_series",
+            "scope": "kalshi:series:KXITTFMEN",
+            "sport": "table_tennis",
+            "parameters": {
+              "series": "KXITTFMEN",
+              "category": "Sports",
+              "tag": "Table Tennis",
+              "sport": "table_tennis",
+              "endpoint": "/events",
+              "status": "open",
+              "withNestedMarkets": "true"
+            }
+          }
+        },
+        {
+          "competition": "wtt",
+          "semanticConfidence": "exact",
+          "eventTypes": [
+            "match"
+          ],
+          "participantFormats": [
+            "singles"
+          ],
+          "marketKinds": [
+            "match_winner"
+          ],
+          "identityFields": [
+            "none"
+          ],
+          "sourceMarketMappings": [],
+          "unmappedMarketPolicy": "quarantine",
+          "declaredUse": "inventory",
+          "selector": {
+            "kind": "kalshi_series",
+            "scope": "kalshi:series:KXWTABLETENNISMATCH",
+            "sport": "table_tennis",
+            "parameters": {
+              "series": "KXWTABLETENNISMATCH",
+              "category": "Sports",
+              "tag": "Table Tennis",
+              "sport": "table_tennis",
+              "endpoint": "/events",
+              "status": "open",
+              "withNestedMarkets": "true"
+            }
+          }
+        },
+        {
+          "competition": "ittf",
+          "semanticConfidence": "exact",
+          "eventTypes": [
+            "match"
+          ],
+          "participantFormats": [
+            "singles"
+          ],
+          "marketKinds": [
+            "match_winner"
+          ],
+          "identityFields": [
+            "none"
+          ],
+          "sourceMarketMappings": [],
+          "unmappedMarketPolicy": "quarantine",
+          "declaredUse": "inventory",
+          "selector": {
+            "kind": "kalshi_series",
+            "scope": "kalshi:series:KXITTFWOMENMATCH",
+            "sport": "table_tennis",
+            "parameters": {
+              "series": "KXITTFWOMENMATCH",
+              "category": "Sports",
+              "tag": "Table Tennis",
+              "sport": "table_tennis",
+              "endpoint": "/events",
+              "status": "open",
+              "withNestedMarkets": "true"
+            }
+          }
+        },
+        {
+          "competition": "tt_elite",
+          "semanticConfidence": "exact",
+          "eventTypes": [
+            "match"
+          ],
+          "participantFormats": [
+            "singles"
+          ],
+          "marketKinds": [
+            "match_winner"
+          ],
+          "identityFields": [
+            "none"
+          ],
+          "sourceMarketMappings": [],
+          "unmappedMarketPolicy": "quarantine",
+          "declaredUse": "inventory",
+          "selector": {
+            "kind": "kalshi_series",
+            "scope": "kalshi:series:KXTTELITEGAME",
+            "sport": "table_tennis",
+            "parameters": {
+              "series": "KXTTELITEGAME",
+              "category": "Sports",
+              "tag": "Table Tennis",
+              "sport": "table_tennis",
+              "endpoint": "/events",
+              "status": "open",
+              "withNestedMarkets": "true"
+            }
+          }
+        },
+        {
+          "competition": "table_tennis",
+          "semanticConfidence": "exact",
+          "eventTypes": [
+            "match"
+          ],
+          "participantFormats": [
+            "singles"
+          ],
+          "marketKinds": [
+            "match_winner"
+          ],
+          "identityFields": [
+            "none"
+          ],
+          "sourceMarketMappings": [],
+          "unmappedMarketPolicy": "quarantine",
+          "declaredUse": "inventory",
+          "selector": {
+            "kind": "kalshi_series",
+            "scope": "kalshi:series:KXTABLETENNIS",
+            "sport": "table_tennis",
+            "parameters": {
+              "series": "KXTABLETENNIS",
+              "category": "Sports",
+              "tag": "Table Tennis",
+              "sport": "table_tennis",
+              "endpoint": "/events",
+              "status": "open",
+              "withNestedMarkets": "true"
+            }
+          }
+        },
+        {
+          "competition": "table_tennis",
+          "semanticConfidence": "exact",
+          "eventTypes": [
+            "match"
+          ],
+          "participantFormats": [
+            "singles"
+          ],
+          "marketKinds": [
+            "match_winner"
+          ],
+          "identityFields": [
+            "table_tennis_competitor"
+          ],
+          "sourceMarketMappings": [],
+          "unmappedMarketPolicy": "quarantine",
+          "declaredUse": "match",
+          "selector": {
+            "kind": "kalshi_series",
+            "scope": "kalshi:series:KXTABLETENNISMATCH",
+            "sport": "table_tennis",
+            "parameters": {
+              "series": "KXTABLETENNISMATCH",
+              "category": "Sports",
+              "tag": "Table Tennis",
+              "sport": "table_tennis",
+              "endpoint": "/events",
+              "status": "open",
+              "withNestedMarkets": "true"
+            }
+          }
+        },
+        {
+          "competition": "ittf",
+          "semanticConfidence": "exact",
+          "eventTypes": [
+            "tournament"
+          ],
+          "participantFormats": [
+            "field"
+          ],
+          "marketKinds": [
+            "tournament_winner"
+          ],
+          "identityFields": [
+            "none"
+          ],
+          "sourceMarketMappings": [],
+          "unmappedMarketPolicy": "quarantine",
+          "declaredUse": "inventory",
+          "selector": {
+            "kind": "kalshi_series",
+            "scope": "kalshi:series:KXITTFWOMEN",
+            "sport": "table_tennis",
+            "parameters": {
+              "series": "KXITTFWOMEN",
+              "category": "Sports",
+              "tag": "Table Tennis",
+              "sport": "table_tennis",
+              "endpoint": "/events",
+              "status": "open",
+              "withNestedMarkets": "true"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "integration": "polymarket:tennis",
+      "sport": "tennis",
+      "source": "polymarket",
+      "state": "enabled",
+      "adapter": "polymarket-gamma-v1",
+      "declaredCapabilities": [
+        "inventory",
+        "quotes",
+        "reconciliation"
+      ],
+      "operationalCapabilities": [
+        "inventory",
+        "quotes",
+        "reconciliation"
+      ],
+      "metadataPolicy": {
+        "entityKind": "polymarket_sports_metadata",
+        "requiredAttributes": {},
+        "candidateFacet": "tag_ids",
+        "candidateSelectorParameter": "tagId",
+        "registrationMatch": {
+          "kind": "candidate_facet"
+        },
+        "nonCandidate": {
+          "disposition": "ignored",
+          "reasonCode": "sport_facet_absent"
+        }
+      },
+      "competitions": [
+        {
+          "competition": "tennis",
+          "semanticConfidence": "discovery",
+          "eventTypes": [
+            "match",
+            "tournament"
+          ],
+          "participantFormats": [
+            "singles",
+            "doubles",
+            "team",
+            "mixed",
+            "field"
+          ],
+          "marketKinds": [
+            "match_winner",
+            "tournament_winner",
+            "set_winner",
+            "other"
+          ],
+          "identityFields": [
+            "literal_outcome"
+          ],
+          "sourceMarketMappings": [
+            {
+              "sourceMarketType": "moneyline",
+              "marketKind": "match_winner"
+            },
+            {
+              "sourceMarketType": "tennis_first_set_totals",
+              "marketKind": "other"
+            },
+            {
+              "sourceMarketType": "tennis_match_totals",
+              "marketKind": "other"
+            },
+            {
+              "sourceMarketType": "tennis_set_games_totals",
+              "marketKind": "other"
+            },
+            {
+              "sourceMarketType": "tennis_set_handicap",
+              "marketKind": "other"
+            },
+            {
+              "sourceMarketType": "tennis_completed_match",
+              "marketKind": "other"
+            },
+            {
+              "sourceMarketType": "tennis_set_totals",
+              "marketKind": "other"
+            },
+            {
+              "sourceMarketType": "tennis_first_set_winner",
+              "marketKind": "set_winner"
+            },
+            {
+              "sourceMarketType": "tennis_set_winner",
+              "marketKind": "set_winner"
+            }
+          ],
+          "unmappedMarketPolicy": "quarantine",
+          "declaredUse": "match",
+          "selector": {
+            "kind": "polymarket_tag",
+            "scope": "polymarket:tag:864",
+            "sport": "tennis",
+            "parameters": {
+              "tagId": "864",
+              "tagSlug": "tennis",
+              "sport": "tennis"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "integration": "polymarket:table_tennis",
+      "sport": "table_tennis",
+      "source": "polymarket",
+      "state": "enabled",
+      "adapter": "polymarket-gamma-v1",
+      "declaredCapabilities": [
+        "inventory",
+        "quotes",
+        "reconciliation"
+      ],
+      "operationalCapabilities": [
+        "inventory",
+        "quotes",
+        "reconciliation"
+      ],
+      "metadataPolicy": {
+        "entityKind": "polymarket_sports_metadata",
+        "requiredAttributes": {},
+        "candidateFacet": "tag_ids",
+        "candidateSelectorParameter": "tagId",
+        "registrationMatch": {
+          "kind": "candidate_facet"
+        },
+        "nonCandidate": {
+          "disposition": "ignored",
+          "reasonCode": "sport_facet_absent"
+        }
+      },
+      "competitions": [
+        {
+          "competition": "table_tennis",
+          "semanticConfidence": "discovery",
+          "eventTypes": [
+            "match",
+            "tournament"
+          ],
+          "participantFormats": [
+            "singles",
+            "doubles",
+            "team",
+            "mixed",
+            "field"
+          ],
+          "marketKinds": [
+            "match_winner",
+            "tournament_winner",
+            "other"
+          ],
+          "identityFields": [
+            "literal_outcome"
+          ],
+          "sourceMarketMappings": [
+            {
+              "sourceMarketType": "moneyline",
+              "marketKind": "match_winner"
+            },
+            {
+              "sourceMarketType": "table_tennis_match_totals",
+              "marketKind": "other"
+            },
+            {
+              "sourceMarketType": "table_tennis_game_handicap",
+              "marketKind": "other"
+            }
+          ],
+          "unmappedMarketPolicy": "quarantine",
+          "declaredUse": "match",
+          "selector": {
+            "kind": "polymarket_tag",
+            "scope": "polymarket:tag:103767",
+            "sport": "table_tennis",
+            "parameters": {
+              "tagId": "103767",
+              "tagSlug": "table-tennis",
+              "sport": "table_tennis"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
