@@ -322,12 +322,67 @@ export function validateSportsSourceRegistry(registry: SportsSourceRegistry): st
           errors.push(`${id}: source market mapping targets an undeclared market kind`);
         }
       }
+      const semanticMappingKeys = (binding.eventSemanticMappings ?? []).map((mapping) =>
+        JSON.stringify(Object.entries(mapping.requiredAttributes).sort()),
+      );
+      unique(`${id} event semantic mapping`, semanticMappingKeys);
+      const eventSemanticMappings = binding.eventSemanticMappings ?? [];
+      for (const [mappingIndex, mapping] of eventSemanticMappings.entries()) {
+        if (Object.keys(mapping.requiredAttributes).length === 0) {
+          errors.push(`${id}: event semantic mapping requires source attributes`);
+        }
+        if (
+          Object.entries(mapping.requiredAttributes).some(
+            ([key, value]) => !key.trim() || !value.trim(),
+          )
+        ) {
+          errors.push(`${id}: event semantic mapping attributes must be non-empty`);
+        }
+        for (const other of eventSemanticMappings.slice(mappingIndex + 1)) {
+          const sharedKeys = Object.keys(mapping.requiredAttributes).filter((key) =>
+            Object.hasOwn(other.requiredAttributes, key),
+          );
+          if (
+            sharedKeys.every(
+              (key) => mapping.requiredAttributes[key] === other.requiredAttributes[key],
+            )
+          ) {
+            errors.push(`${id}: event semantic mappings overlap`);
+          }
+        }
+        if (!binding.eventTypes.includes(mapping.eventType)) {
+          errors.push(`${id}: event semantic mapping targets an undeclared event type`);
+        }
+        if (!binding.participantFormats.includes(mapping.participantFormat)) {
+          errors.push(`${id}: event semantic mapping targets an undeclared participant format`);
+        }
+      }
+      const eventSemanticMarketMappings = binding.eventSemanticMarketMappings ?? [];
+      unique(
+        `${id} semantic market mapping`,
+        eventSemanticMarketMappings.map(
+          (mapping) =>
+            `${mapping.eventType}:${mapping.participantFormat}:${unbrand(mapping.marketKind)}`,
+        ),
+      );
+      for (const mapping of eventSemanticMarketMappings) {
+        if (!binding.eventTypes.includes(mapping.eventType)) {
+          errors.push(`${id}: semantic market mapping targets an undeclared event type`);
+        }
+        if (!binding.participantFormats.includes(mapping.participantFormat)) {
+          errors.push(`${id}: semantic market mapping targets an undeclared participant format`);
+        }
+        if (!binding.marketKinds.includes(mapping.marketKind)) {
+          errors.push(`${id}: semantic market mapping targets an undeclared market kind`);
+        }
+      }
       if (
         binding.semanticConfidence === "discovery" &&
         hasOperational("reconciliation") &&
-        binding.sourceMarketMappings.length === 0
+        (binding.sourceMarketMappings.length === 0 ||
+          (binding.eventSemanticMappings ?? []).length === 0)
       ) {
-        errors.push(`${id}: discovery reconciliation requires source market mappings`);
+        errors.push(`${id}: discovery reconciliation requires market and event semantic mappings`);
       }
       if (registration.source === SOURCE.kalshi && binding.semanticConfidence !== "exact") {
         errors.push(`${id}: Kalshi series selector must have exact semantics`);

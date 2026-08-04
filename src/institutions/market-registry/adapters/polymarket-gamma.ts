@@ -9,6 +9,7 @@ import {
   asOutcomeKey,
   asSourceEventId,
   asSourceMarketId,
+  asSourceParticipantId,
   asSourceMarketType,
   asSourceTagId,
   ADAPTER,
@@ -16,7 +17,7 @@ import {
   SOURCE,
   unbrand,
 } from '../brands.ts';
-import { ADAPTERS } from '../registry.ts';
+import { ADAPTERS, resolveEventSemantics } from '../registry.ts';
 import {
   inventorySourceAdapter,
   type AdapterDefinition,
@@ -27,6 +28,8 @@ import {
   type SourceAdapter,
   type SourceFetchRequest,
   type SourcePage,
+  type EventType,
+  type ParticipantFormat,
 } from '../types.ts';
 import { SourceAdapterHealthState } from './health.ts';
 
@@ -117,6 +120,8 @@ function projectEvent(
   definition: AdapterDefinition
 ): CompleteSourceObservation {
   const sourceUpdatedAtMs = dateMs(event.updatedAt);
+  const semantics = classifyPolymarketEventSemantics(event, binding);
+  const participants = projectParticipants(event, semantics);
   return {
     source: SOURCE.polymarket,
     sport: page.request.selector.sport!,
@@ -127,10 +132,13 @@ function projectEvent(
     closesAtMs: dateMs(event.endDate) ?? null,
     result: null,
     startsAtMs: dateMs(event.startDate) ?? null,
-    eventType: null,
-    participantFormat: null,
-    participants: [],
-    markets: event.markets.map(market => projectMarket(market, event, binding)),
+    eventType: semantics.disposition === 'resolved' ? semantics.eventType : null,
+    participantFormat:
+      semantics.disposition === 'resolved' ? semantics.participantFormat : null,
+    participants,
+    markets: event.markets.map(market =>
+      projectMarket(market, event, binding, semantics, participants)
+    ),
     provenance: {
       adapter: definition.id,
       selector: page.request.selector,
@@ -143,10 +151,203 @@ function projectEvent(
   };
 }
 
+export type PolymarketEventSemanticResolution =
+  | {
+      disposition: 'resolved';
+      eventType: EventType;
+      participantFormat: ParticipantFormat;
+      evidence: 'registered_series_moneyline' | 'tournament_winner_contract';
+    }
+  | {
+      disposition: 'quarantined';
+      reason:
+        | 'selector_tag_missing'
+        | 'series_evidence_conflict'
+        | 'unsupported_series'
+        | 'moneyline_shape_unresolved'
+        | 'participant_format_conflict'
+        | 'participant_identity_conflict'
+        | 'unsupported_event_type';
+    };
+
+/**
+ * Source-specific semantic gate shared by durable inventory and live matching.
+ * A broad sport tag is acquisition scope only; reconciliation requires a
+ * registered series plus a coherent two-participant moneyline.
+ */
+export function classifyPolymarketEventSemantics(
+  event: PolymarketEvent,
+  binding: CompetitionBinding,
+): PolymarketEventSemanticResolution {
+  const requestedTagId = binding.selector.parameters.tagId;
+  if (!requestedTagId || !event.tags.some((tag) => tag.id === requestedTagId)) {
+    return { disposition: 'quarantined', reason: 'selector_tag_missing' };
+  }
+  if (event.seriesConflict) {
+    return { disposition: 'quarantined', reason: 'series_evidence_conflict' };
+  }
+  if (isTournamentWinnerContract(event)) {
+    if (!binding.eventTypes.includes('tournament') || !binding.participantFormats.includes('field')) {
+      return { disposition: 'quarantined', reason: 'unsupported_event_type' };
+    }
+    return {
+      disposition: 'resolved',
+      eventType: 'tournament',
+      participantFormat: 'field',
+      evidence: 'tournament_winner_contract',
+    };
+  }
+  const seriesSlug = event.seriesSlug;
+  const resolved = seriesSlug
+    ? resolveEventSemantics(binding, { seriesSlug })
+    : null;
+  if (!resolved) return { disposition: 'quarantined', reason: 'unsupported_series' };
+
+  const moneylines = event.markets.filter(
+    (market) => market.sportsMarketType === 'moneyline'
+  );
+  if (moneylines.length !== 1) {
+    return { disposition: 'quarantined', reason: 'moneyline_shape_unresolved' };
+  }
+  const outcomes = moneylines[0]!.outcomes.map((outcome) => outcome.trim());
+  if (
+    outcomes.length !== 2 ||
+    outcomes.some((outcome) => !outcome || /^(yes|no|over|under)$/i.test(outcome)) ||
+    new Set(outcomes.map(literalOutcomeKey)).size !== 2
+  ) {
+    return { disposition: 'quarantined', reason: 'moneyline_shape_unresolved' };
+  }
+  const paired = outcomes.map((outcome) => outcome.includes('/'));
+  if (
+    (resolved.participantFormat === 'doubles' && !paired.every(Boolean)) ||
+    (resolved.participantFormat === 'singles' && paired.some(Boolean))
+  ) {
+    return { disposition: 'quarantined', reason: 'participant_format_conflict' };
+  }
+  const completeTeams = event.teams.filter(
+    (team): team is typeof team & { id: string; name: string } =>
+      team.id !== null && team.name !== null,
+  );
+  if (
+    event.teams.length > 0 &&
+    (completeTeams.length !== 2 || !participantSetsAgree(completeTeams.map(team => team.name), outcomes))
+  ) {
+    return { disposition: 'quarantined', reason: 'participant_identity_conflict' };
+  }
+  return {
+    disposition: 'resolved',
+    eventType: resolved.eventType,
+    participantFormat: resolved.participantFormat,
+    evidence: 'registered_series_moneyline',
+  };
+}
+
+function isTournamentWinnerContract(event: PolymarketEvent): boolean {
+  if (event.markets.some((market) => market.sportsMarketType !== undefined)) return false;
+  if (!/\bwinner(?:\s*\(tennis\))?$/i.test(event.title.trim())) return false;
+  const description = event.description?.toLowerCase() ?? '';
+  if (
+    !/(?:\bwinner\b|\bwins?\b|\bsingles title\b)/.test(description) ||
+    !/(?:\btournament\b|\bopen\b|\bmasters\b)/.test(description)
+  ) {
+    return false;
+  }
+  return tournamentParticipantMarkets(event).length >= 2;
+}
+
+function tournamentParticipantMarkets(event: PolymarketEvent): PolymarketMarket[] {
+  return event.markets.filter(isTournamentParticipantMarket);
+}
+
+function isTournamentParticipantMarket(market: PolymarketMarket): boolean {
+  return (
+    Boolean(market.groupItemTitle) &&
+    market.outcomes.length === 2 &&
+    market.outcomes.every((outcome) => /^(yes|no)$/i.test(outcome.trim()))
+  );
+}
+
+function participantSetsAgree(left: readonly string[], right: readonly string[]): boolean {
+  if (left.length !== right.length) return false;
+  const remaining = [...left];
+  for (const candidate of right) {
+    const index = remaining.findIndex(value => participantIdentityMatches(value, candidate));
+    if (index < 0) return false;
+    remaining.splice(index, 1);
+  }
+  return remaining.length === 0;
+}
+
+function participantIdentityMatches(left: string, right: string): boolean {
+  const normalizedLeft = normalizeParticipantLabel(left);
+  const normalizedRight = normalizeParticipantLabel(right);
+  if (normalizedLeft === normalizedRight) return true;
+  const leftPair = normalizedLeft.split('/').map(value => value.trim()).sort();
+  const rightPair = normalizedRight.split('/').map(value => value.trim()).sort();
+  if (leftPair.length === 2 || rightPair.length === 2) {
+    return (
+      leftPair.length === 2 &&
+      rightPair.length === 2 &&
+      leftPair.every((value, index) => value === rightPair[index])
+    );
+  }
+  const leftTokens = normalizedLeft.split(' ');
+  const rightTokens = normalizedRight.split(' ');
+  return (
+    (leftTokens.length === 1 || rightTokens.length === 1) &&
+    leftTokens.at(-1) === rightTokens.at(-1)
+  );
+}
+
+function normalizeParticipantLabel(value: string): string {
+  return value
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9/]+/g, ' ')
+    .trim()
+    .replace(/\s+/g, ' ');
+}
+
+function projectParticipants(
+  event: PolymarketEvent,
+  semantics: PolymarketEventSemanticResolution,
+): CompleteSourceObservation['participants'] {
+  if (semantics.disposition !== 'resolved') return [];
+  if (semantics.eventType === 'tournament') {
+    return tournamentParticipantMarkets(event).map((market, ordinal) => ({
+      id: asSourceParticipantId(`market:${market.id}`),
+      ordinal,
+      label: market.groupItemTitle!,
+    }));
+  }
+  const moneyline = event.markets.find(market => market.sportsMarketType === 'moneyline');
+  if (!moneyline) return [];
+  const completeTeams = event.teams.filter(
+    (team): team is typeof team & { id: string; name: string } =>
+      team.id !== null && team.name !== null,
+  );
+  if (completeTeams.length === 2) {
+    return moneyline.outcomes.map((outcome, ordinal) => {
+      const team = completeTeams.find(
+        candidate => participantIdentityMatches(candidate.name, outcome)
+      )!;
+      return { id: asSourceParticipantId(team.id), ordinal, label: team.name };
+    });
+  }
+  return moneyline.outcomes.map((label, ordinal) => ({
+    id: asSourceParticipantId(`outcome:${literalOutcomeKey(label)}`),
+    ordinal,
+    label,
+  }));
+}
+
 function projectMarket(
   market: PolymarketMarket,
   event: PolymarketEvent,
-  binding: CompetitionBinding
+  binding: CompetitionBinding,
+  semantics: PolymarketEventSemanticResolution,
+  participants: CompleteSourceObservation['participants'],
 ): CompleteSourceMarket {
   const sourceMarketType = market.sportsMarketType
     ? asSourceMarketType(market.sportsMarketType)
@@ -154,6 +355,16 @@ function projectMarket(
   const mapping = sourceMarketType
     ? binding.sourceMarketMappings.find(row => row.sourceMarketType === sourceMarketType)
     : undefined;
+  const semanticMapping =
+    !sourceMarketType &&
+    semantics.disposition === 'resolved' &&
+    (semantics.eventType !== 'tournament' || isTournamentParticipantMarket(market))
+      ? binding.eventSemanticMarketMappings?.find(
+          row =>
+            row.eventType === semantics.eventType &&
+            row.participantFormat === semantics.participantFormat
+        )
+      : undefined;
   if (sourceMarketType && !mapping && binding.unmappedMarketPolicy === 'reject') {
     throw new Error(`unmapped Polymarket market type: ${unbrand(sourceMarketType)}`);
   }
@@ -163,13 +374,18 @@ function projectMarket(
   return {
     id: asSourceMarketId(market.id),
     sourceMarketType,
-    marketKind: mapping?.marketKind ?? null,
+    marketKind: mapping?.marketKind ?? semanticMapping?.marketKind ?? null,
     title: market.question,
     status: market.closed ? 'closed' : market.active ? 'active' : 'inactive',
     closesAtMs: dateMs(market.endDate ?? event.endDate) ?? null,
     result: null,
     ...(sourceUpdatedAtMs === undefined ? {} : { sourceUpdatedAtMs }),
-    subjectParticipantId: null,
+    subjectParticipantId:
+      semantics.disposition === 'resolved' &&
+      semantics.eventType === 'tournament' &&
+      market.groupItemTitle
+        ? asSourceParticipantId(`market:${market.id}`)
+        : null,
     volume: market.volume,
     volume24h: market.volume24hr,
     liquidity: market.liquidity,
@@ -185,7 +401,12 @@ function projectMarket(
         outcome: asOutcomeKey(key),
         ordinal,
         label,
-        participantId: null,
+        participantId:
+          semantics.disposition === 'resolved' &&
+          semantics.eventType === 'match' &&
+          market.sportsMarketType === 'moneyline'
+            ? participants[ordinal]?.id ?? null
+            : null,
         probability: market.outcomePrices[ordinal] ?? null,
         bid: binary ? binaryQuote(market.bestBid, market.bestAsk, ordinal, 'bid') : null,
         ask: binary ? binaryQuote(market.bestBid, market.bestAsk, ordinal, 'ask') : null,

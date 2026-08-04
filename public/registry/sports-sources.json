@@ -1,6 +1,6 @@
 {
   "schema": "sports-source-registry/v1",
-  "generatedAt": "2026-08-04T13:48:07.905Z",
+  "generatedAt": "2026-08-04T20:47:06.842Z",
   "sports": [
     {
       "key": "tennis",
@@ -153,6 +153,8 @@
             "tennis_competitor"
           ],
           "sourceMarketMappings": [],
+          "eventSemanticMappings": [],
+          "eventSemanticMarketMappings": [],
           "unmappedMarketPolicy": "quarantine",
           "declaredUse": "trade",
           "selector": {
@@ -186,6 +188,8 @@
             "tennis_competitor"
           ],
           "sourceMarketMappings": [],
+          "eventSemanticMappings": [],
+          "eventSemanticMarketMappings": [],
           "unmappedMarketPolicy": "quarantine",
           "declaredUse": "trade",
           "selector": {
@@ -219,6 +223,8 @@
             "tennis_competitor"
           ],
           "sourceMarketMappings": [],
+          "eventSemanticMappings": [],
+          "eventSemanticMarketMappings": [],
           "unmappedMarketPolicy": "quarantine",
           "declaredUse": "trade",
           "selector": {
@@ -252,6 +258,8 @@
             "tennis_competitor"
           ],
           "sourceMarketMappings": [],
+          "eventSemanticMappings": [],
+          "eventSemanticMarketMappings": [],
           "unmappedMarketPolicy": "quarantine",
           "declaredUse": "trade",
           "selector": {
@@ -285,6 +293,8 @@
             "tennis_competitor"
           ],
           "sourceMarketMappings": [],
+          "eventSemanticMappings": [],
+          "eventSemanticMarketMappings": [],
           "unmappedMarketPolicy": "quarantine",
           "declaredUse": "trade",
           "selector": {
@@ -318,6 +328,8 @@
             "none"
           ],
           "sourceMarketMappings": [],
+          "eventSemanticMappings": [],
+          "eventSemanticMarketMappings": [],
           "unmappedMarketPolicy": "quarantine",
           "declaredUse": "inventory",
           "selector": {
@@ -351,6 +363,8 @@
             "tennis_competitor"
           ],
           "sourceMarketMappings": [],
+          "eventSemanticMappings": [],
+          "eventSemanticMarketMappings": [],
           "unmappedMarketPolicy": "quarantine",
           "declaredUse": "inventory",
           "selector": {
@@ -384,6 +398,8 @@
             "none"
           ],
           "sourceMarketMappings": [],
+          "eventSemanticMappings": [],
+          "eventSemanticMarketMappings": [],
           "unmappedMarketPolicy": "quarantine",
           "declaredUse": "inventory",
           "selector": {
@@ -417,6 +433,8 @@
             "none"
           ],
           "sourceMarketMappings": [],
+          "eventSemanticMappings": [],
+          "eventSemanticMarketMappings": [],
           "unmappedMarketPolicy": "quarantine",
           "declaredUse": "inventory",
           "selector": {
@@ -450,6 +468,8 @@
             "none"
           ],
           "sourceMarketMappings": [],
+          "eventSemanticMappings": [],
+          "eventSemanticMarketMappings": [],
           "unmappedMarketPolicy": "quarantine",
           "declaredUse": "inventory",
           "selector": {
@@ -483,6 +503,8 @@
             "none"
           ],
           "sourceMarketMappings": [],
+          "eventSemanticMappings": [],
+          "eventSemanticMarketMappings": [],
           "unmappedMarketPolicy": "quarantine",
           "declaredUse": "inventory",
           "selector": {
@@ -516,6 +538,8 @@
             "none"
           ],
           "sourceMarketMappings": [],
+          "eventSemanticMappings": [],
+          "eventSemanticMarketMappings": [],
           "unmappedMarketPolicy": "quarantine",
           "declaredUse": "inventory",
           "selector": {
@@ -549,6 +573,8 @@
             "none"
           ],
           "sourceMarketMappings": [],
+          "eventSemanticMappings": [],
+          "eventSemanticMarketMappings": [],
           "unmappedMarketPolicy": "quarantine",
           "declaredUse": "inventory",
           "selector": {
@@ -582,6 +608,8 @@
             "none"
           ],
           "sourceMarketMappings": [],
+          "eventSemanticMappings": [],
+          "eventSemanticMarketMappings": [],
           "unmappedMarketPolicy": "quarantine",
           "declaredUse": "inventory",
           "selector": {
@@ -615,6 +643,8 @@
             "none"
           ],
           "sourceMarketMappings": [],
+          "eventSemanticMappings": [],
+          "eventSemanticMarketMappings": [],
           "unmappedMarketPolicy": "quarantine",
           "declaredUse": "inventory",
           "selector": {
@@ -648,6 +678,8 @@
             "none"
           ],
           "sourceMarketMappings": [],
+          "eventSemanticMappings": [],
+          "eventSemanticMarketMappings": [],
           "unmappedMarketPolicy": "quarantine",
           "declaredUse": "inventory",
           "selector": {
@@ -681,6 +713,8 @@
             "none"
           ],
           "sourceMarketMappings": [],
+          "eventSemanticMappings": [],
+          "eventSemanticMarketMappings": [],
           "unmappedMarketPolicy": "quarantine",
           "declaredUse": "inventory",
           "selector": {
@@ -714,6 +748,8 @@
             "none"
           ],
           "sourceMarketMappings": [],
+          "eventSemanticMappings": [],
+          "eventSemanticMarketMappings": [],
           "unmappedMarketPolicy": "quarantine",
           "declaredUse": "inventory",
           "selector": {
@@ -747,6 +783,8 @@
             "none"
           ],
           "sourceMarketMappings": [],
+          "eventSemanticMappings": [],
+          "eventSemanticMarketMappings": [],
           "unmappedMarketPolicy": "quarantine",
           "declaredUse": "inventory",
           "selector": {
@@ -780,6 +818,8 @@
             "none"
           ],
           "sourceMarketMappings": [],
+          "eventSemanticMappings": [],
+          "eventSemanticMarketMappings": [],
           "unmappedMarketPolicy": "quarantine",
           "declaredUse": "inventory",
           "selector": {
@@ -813,6 +853,8 @@
             "none"
           ],
           "sourceMarketMappings": [],
+          "eventSemanticMappings": [],
+          "eventSemanticMarketMappings": [],
           "unmappedMarketPolicy": "quarantine",
           "declaredUse": "inventory",
           "selector": {
@@ -846,6 +888,8 @@
             "none"
           ],
           "sourceMarketMappings": [],
+          "eventSemanticMappings": [],
+          "eventSemanticMarketMappings": [],
           "unmappedMarketPolicy": "quarantine",
           "declaredUse": "inventory",
           "selector": {
@@ -879,6 +923,8 @@
             "tennis_doubles_competitor"
           ],
           "sourceMarketMappings": [],
+          "eventSemanticMappings": [],
+          "eventSemanticMarketMappings": [],
           "unmappedMarketPolicy": "quarantine",
           "declaredUse": "match",
           "selector": {
@@ -912,6 +958,8 @@
             "tennis_competitor"
           ],
           "sourceMarketMappings": [],
+          "eventSemanticMappings": [],
+          "eventSemanticMarketMappings": [],
           "unmappedMarketPolicy": "quarantine",
           "declaredUse": "trade",
           "selector": {
@@ -945,6 +993,8 @@
             "none"
           ],
           "sourceMarketMappings": [],
+          "eventSemanticMappings": [],
+          "eventSemanticMarketMappings": [],
           "unmappedMarketPolicy": "quarantine",
           "declaredUse": "inventory",
           "selector": {
@@ -978,6 +1028,8 @@
             "tennis_competitor"
           ],
           "sourceMarketMappings": [],
+          "eventSemanticMappings": [],
+          "eventSemanticMarketMappings": [],
           "unmappedMarketPolicy": "quarantine",
           "declaredUse": "inventory",
           "selector": {
@@ -1011,6 +1063,8 @@
             "none"
           ],
           "sourceMarketMappings": [],
+          "eventSemanticMappings": [],
+          "eventSemanticMarketMappings": [],
           "unmappedMarketPolicy": "quarantine",
           "declaredUse": "inventory",
           "selector": {
@@ -1044,6 +1098,8 @@
             "tennis_doubles_competitor"
           ],
           "sourceMarketMappings": [],
+          "eventSemanticMappings": [],
+          "eventSemanticMarketMappings": [],
           "unmappedMarketPolicy": "quarantine",
           "declaredUse": "match",
           "selector": {
@@ -1077,6 +1133,8 @@
             "tennis_competitor"
           ],
           "sourceMarketMappings": [],
+          "eventSemanticMappings": [],
+          "eventSemanticMarketMappings": [],
           "unmappedMarketPolicy": "quarantine",
           "declaredUse": "trade",
           "selector": {
@@ -1110,6 +1168,8 @@
             "none"
           ],
           "sourceMarketMappings": [],
+          "eventSemanticMappings": [],
+          "eventSemanticMarketMappings": [],
           "unmappedMarketPolicy": "quarantine",
           "declaredUse": "inventory",
           "selector": {
@@ -1143,6 +1203,8 @@
             "tennis_competitor"
           ],
           "sourceMarketMappings": [],
+          "eventSemanticMappings": [],
+          "eventSemanticMarketMappings": [],
           "unmappedMarketPolicy": "quarantine",
           "declaredUse": "trade",
           "selector": {
@@ -1176,6 +1238,8 @@
             "none"
           ],
           "sourceMarketMappings": [],
+          "eventSemanticMappings": [],
+          "eventSemanticMarketMappings": [],
           "unmappedMarketPolicy": "quarantine",
           "declaredUse": "inventory",
           "selector": {
@@ -1209,6 +1273,8 @@
             "none"
           ],
           "sourceMarketMappings": [],
+          "eventSemanticMappings": [],
+          "eventSemanticMarketMappings": [],
           "unmappedMarketPolicy": "quarantine",
           "declaredUse": "inventory",
           "selector": {
@@ -1242,6 +1308,8 @@
             "none"
           ],
           "sourceMarketMappings": [],
+          "eventSemanticMappings": [],
+          "eventSemanticMarketMappings": [],
           "unmappedMarketPolicy": "quarantine",
           "declaredUse": "inventory",
           "selector": {
@@ -1275,6 +1343,8 @@
             "none"
           ],
           "sourceMarketMappings": [],
+          "eventSemanticMappings": [],
+          "eventSemanticMarketMappings": [],
           "unmappedMarketPolicy": "quarantine",
           "declaredUse": "inventory",
           "selector": {
@@ -1308,6 +1378,8 @@
             "none"
           ],
           "sourceMarketMappings": [],
+          "eventSemanticMappings": [],
+          "eventSemanticMarketMappings": [],
           "unmappedMarketPolicy": "quarantine",
           "declaredUse": "inventory",
           "selector": {
@@ -1341,6 +1413,8 @@
             "none"
           ],
           "sourceMarketMappings": [],
+          "eventSemanticMappings": [],
+          "eventSemanticMarketMappings": [],
           "unmappedMarketPolicy": "quarantine",
           "declaredUse": "inventory",
           "selector": {
@@ -1374,6 +1448,8 @@
             "none"
           ],
           "sourceMarketMappings": [],
+          "eventSemanticMappings": [],
+          "eventSemanticMarketMappings": [],
           "unmappedMarketPolicy": "quarantine",
           "declaredUse": "inventory",
           "selector": {
@@ -1407,6 +1483,8 @@
             "none"
           ],
           "sourceMarketMappings": [],
+          "eventSemanticMappings": [],
+          "eventSemanticMarketMappings": [],
           "unmappedMarketPolicy": "quarantine",
           "declaredUse": "inventory",
           "selector": {
@@ -1474,6 +1552,8 @@
             "none"
           ],
           "sourceMarketMappings": [],
+          "eventSemanticMappings": [],
+          "eventSemanticMarketMappings": [],
           "unmappedMarketPolicy": "quarantine",
           "declaredUse": "inventory",
           "selector": {
@@ -1507,6 +1587,8 @@
             "none"
           ],
           "sourceMarketMappings": [],
+          "eventSemanticMappings": [],
+          "eventSemanticMarketMappings": [],
           "unmappedMarketPolicy": "quarantine",
           "declaredUse": "inventory",
           "selector": {
@@ -1540,6 +1622,8 @@
             "none"
           ],
           "sourceMarketMappings": [],
+          "eventSemanticMappings": [],
+          "eventSemanticMarketMappings": [],
           "unmappedMarketPolicy": "quarantine",
           "declaredUse": "inventory",
           "selector": {
@@ -1573,6 +1657,8 @@
             "none"
           ],
           "sourceMarketMappings": [],
+          "eventSemanticMappings": [],
+          "eventSemanticMarketMappings": [],
           "unmappedMarketPolicy": "quarantine",
           "declaredUse": "inventory",
           "selector": {
@@ -1606,6 +1692,8 @@
             "none"
           ],
           "sourceMarketMappings": [],
+          "eventSemanticMappings": [],
+          "eventSemanticMarketMappings": [],
           "unmappedMarketPolicy": "quarantine",
           "declaredUse": "inventory",
           "selector": {
@@ -1639,6 +1727,8 @@
             "none"
           ],
           "sourceMarketMappings": [],
+          "eventSemanticMappings": [],
+          "eventSemanticMarketMappings": [],
           "unmappedMarketPolicy": "quarantine",
           "declaredUse": "inventory",
           "selector": {
@@ -1672,6 +1762,8 @@
             "table_tennis_competitor"
           ],
           "sourceMarketMappings": [],
+          "eventSemanticMappings": [],
+          "eventSemanticMarketMappings": [],
           "unmappedMarketPolicy": "quarantine",
           "declaredUse": "match",
           "selector": {
@@ -1705,6 +1797,8 @@
             "none"
           ],
           "sourceMarketMappings": [],
+          "eventSemanticMappings": [],
+          "eventSemanticMarketMappings": [],
           "unmappedMarketPolicy": "quarantine",
           "declaredUse": "inventory",
           "selector": {
@@ -1815,6 +1909,50 @@
               "marketKind": "set_winner"
             }
           ],
+          "eventSemanticMappings": [
+            {
+              "requiredAttributes": {
+                "seriesSlug": "atp"
+              },
+              "eventType": "match",
+              "participantFormat": "singles"
+            },
+            {
+              "requiredAttributes": {
+                "seriesSlug": "wta"
+              },
+              "eventType": "match",
+              "participantFormat": "singles"
+            },
+            {
+              "requiredAttributes": {
+                "seriesSlug": "itf"
+              },
+              "eventType": "match",
+              "participantFormat": "singles"
+            },
+            {
+              "requiredAttributes": {
+                "seriesSlug": "atp-doubles"
+              },
+              "eventType": "match",
+              "participantFormat": "doubles"
+            },
+            {
+              "requiredAttributes": {
+                "seriesSlug": "wta-doubles"
+              },
+              "eventType": "match",
+              "participantFormat": "doubles"
+            }
+          ],
+          "eventSemanticMarketMappings": [
+            {
+              "eventType": "tournament",
+              "participantFormat": "field",
+              "marketKind": "tournament_winner"
+            }
+          ],
           "unmappedMarketPolicy": "quarantine",
           "declaredUse": "match",
           "selector": {
@@ -1896,6 +2034,44 @@
               "marketKind": "other"
             }
           ],
+          "eventSemanticMappings": [
+            {
+              "requiredAttributes": {
+                "seriesSlug": "ttelite-games"
+              },
+              "eventType": "match",
+              "participantFormat": "singles"
+            },
+            {
+              "requiredAttributes": {
+                "seriesSlug": "setkameua-games"
+              },
+              "eventType": "match",
+              "participantFormat": "singles"
+            },
+            {
+              "requiredAttributes": {
+                "seriesSlug": "setkamemd-games"
+              },
+              "eventType": "match",
+              "participantFormat": "singles"
+            },
+            {
+              "requiredAttributes": {
+                "seriesSlug": "setkamecz-games"
+              },
+              "eventType": "match",
+              "participantFormat": "singles"
+            },
+            {
+              "requiredAttributes": {
+                "seriesSlug": "setkawoua-games"
+              },
+              "eventType": "match",
+              "participantFormat": "singles"
+            }
+          ],
+          "eventSemanticMarketMappings": [],
           "unmappedMarketPolicy": "quarantine",
           "declaredUse": "match",
           "selector": {

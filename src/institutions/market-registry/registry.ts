@@ -35,12 +35,19 @@ import { defineAdapter, defineIntegration, defineSource, defineSport } from "./d
 import { assertSportsSourceRegistry } from "./validate.ts";
 import type {
   CompetitionBinding,
+  EventType,
+  ParticipantFormat,
   RegistrationMode,
   SourceSelector,
   SportsSourceRegistry,
   SportsSourceRegistryArtifact,
   SportSourceRegistration,
 } from "./types.ts";
+
+export type ResolvedEventSemantics = {
+  eventType: EventType;
+  participantFormat: ParticipantFormat;
+};
 
 export const SPORTS = [
   defineSport({
@@ -384,6 +391,22 @@ function polymarketBinding(
           ? MARKET.setWinner
           : MARKET.other,
   }));
+  const seriesSlugs =
+    sport === SPORT.tableTennis
+      ? [
+          "ttelite-games",
+          "setkameua-games",
+          "setkamemd-games",
+          "setkamecz-games",
+          "setkawoua-games",
+        ].map((seriesSlug) => ({ seriesSlug, participantFormat: "singles" as const }))
+      : [
+          { seriesSlug: "atp", participantFormat: "singles" as const },
+          { seriesSlug: "wta", participantFormat: "singles" as const },
+          { seriesSlug: "itf", participantFormat: "singles" as const },
+          { seriesSlug: "atp-doubles", participantFormat: "doubles" as const },
+          { seriesSlug: "wta-doubles", participantFormat: "doubles" as const },
+        ];
   return {
     competition: asCompetitionKey(unbrand(sport)),
     selector: selector(SELECTOR.polymarketTag, `polymarket:tag:${unbrand(tagId)}`, {
@@ -400,6 +423,19 @@ function polymarketBinding(
         : [MARKET.matchWinner, MARKET.tournamentWinner, MARKET.other],
     identityFields: [IDENTITY.literalOutcome],
     sourceMarketMappings,
+    eventSemanticMappings: seriesSlugs.map(({ seriesSlug, participantFormat }) => ({
+      requiredAttributes: { seriesSlug },
+      eventType: "match",
+      participantFormat,
+    })),
+    eventSemanticMarketMappings:
+      sport === SPORT.tennis
+        ? [{
+            eventType: "tournament",
+            participantFormat: "field",
+            marketKind: MARKET.tournamentWinner,
+          }]
+        : [],
     unmappedMarketPolicy: "quarantine",
     declaredUse: "match",
   };
@@ -468,6 +504,56 @@ export function registrationFor(
   registry: SportsSourceRegistry = SPORTS_SOURCE_REGISTRY,
 ): SportSourceRegistration | undefined {
   return registry.integrations.find((row) => row.source === source && row.sport === sport);
+}
+
+/** Resolve only explicitly registered source attributes; no missing value is a default. */
+export function resolveEventSemantics(
+  binding: CompetitionBinding,
+  attributes: Readonly<Record<string, string>>,
+): ResolvedEventSemantics | null {
+  const matches = (binding.eventSemanticMappings ?? []).filter((mapping) =>
+    Object.entries(mapping.requiredAttributes).every(
+      ([key, value]) => attributes[key] === value,
+    ),
+  );
+  if (matches.length !== 1) return null;
+  const [mapping] = matches;
+  return {
+    eventType: mapping!.eventType,
+    participantFormat: mapping!.participantFormat,
+  };
+}
+
+/** Exact Kalshi series carry one authoritative event lane in the registry. */
+export function kalshiReconciliationSemanticsForSeries(
+  series: SeriesTicker,
+  registry: SportsSourceRegistry = SPORTS_SOURCE_REGISTRY,
+): (ResolvedEventSemantics & { sport: SportKey }) | null {
+  const registration = registry.integrations.find(
+    (candidate) =>
+      candidate.source === SOURCE.kalshi &&
+      candidate.competitions.some((binding) => kalshiSeriesFromBinding(binding) === series),
+  );
+  const binding = registration?.competitions.find(
+    (candidate) => kalshiSeriesFromBinding(candidate) === series,
+  );
+  if (
+    !registration ||
+    registration.state !== "enabled" ||
+    !registration.operationalCapabilities.includes("reconciliation") ||
+    !binding ||
+    (binding.declaredUse !== "match" && binding.declaredUse !== "trade") ||
+    binding.semanticConfidence !== "exact" ||
+    binding.eventTypes.length !== 1 ||
+    binding.participantFormats.length !== 1
+  ) {
+    return null;
+  }
+  return {
+    sport: registration.sport,
+    eventType: binding.eventTypes[0]!,
+    participantFormat: binding.participantFormats[0]!,
+  };
 }
 
 function kalshiSeriesFromBinding(binding: CompetitionBinding): SeriesTicker | undefined {
@@ -678,6 +764,18 @@ export function buildSportsSourceRegistryArtifact(
           sourceMarketType: unbrand(mapping.sourceMarketType),
           marketKind: unbrand(mapping.marketKind),
         })),
+        eventSemanticMappings: (binding.eventSemanticMappings ?? []).map((mapping) => ({
+          requiredAttributes: mapping.requiredAttributes,
+          eventType: mapping.eventType,
+          participantFormat: mapping.participantFormat,
+        })),
+        eventSemanticMarketMappings: (binding.eventSemanticMarketMappings ?? []).map(
+          (mapping) => ({
+            eventType: mapping.eventType,
+            participantFormat: mapping.participantFormat,
+            marketKind: unbrand(mapping.marketKind),
+          }),
+        ),
         unmappedMarketPolicy: binding.unmappedMarketPolicy,
         declaredUse: binding.declaredUse,
         selector: serializeSelector(binding.selector),

@@ -14,6 +14,7 @@ import { openEventStore } from "../institutions/event-store/open-db.ts";
 import { DEFAULT_EVENT_STORE_DB } from "../institutions/event-store/paths.ts";
 import { fetchLiveCrossMarketOdds } from "../institutions/event-store/cross-market-live.ts";
 import type { CrossMarketOdds } from "../institutions/event-store/types.ts";
+import { asSeriesTicker } from "../institutions/event-store/brands.ts";
 import { SPORT, type SportKey } from "../institutions/market-registry/brands.ts";
 import {
   KALSHI_BOOK_SOURCE_REST,
@@ -951,7 +952,7 @@ export async function buildTennisHqPayload(
                       playerA: event.markets[0]?.player ?? "",
                       playerB: event.markets[1]?.player ?? "",
                       tournament: event.tournament ?? event.competition ?? undefined,
-                      sport: event.sport,
+                      series: asSeriesTicker(event.series),
                     })),
                 ));
       if (oddsByTicker) {

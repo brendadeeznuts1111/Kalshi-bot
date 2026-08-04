@@ -794,6 +794,16 @@ function assertObservationRegistry(
     if (binding.unmappedMarketPolicy === "reject" && market.sourceMarketType) {
       throw new Error("source market type is not registered for selector");
     }
+    const semanticMarketMapping =
+      !market.sourceMarketType && observation.eventType && observation.participantFormat
+        ? binding.eventSemanticMarketMappings?.find(
+            (candidate) =>
+              candidate.eventType === observation.eventType &&
+              candidate.participantFormat === observation.participantFormat &&
+              candidate.marketKind === market.marketKind,
+          )
+        : undefined;
+    if (semanticMarketMapping) continue;
     if (market.marketKind) {
       throw new Error("unmapped source market type must remain quarantined");
     }

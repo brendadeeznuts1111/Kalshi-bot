@@ -9,7 +9,9 @@ import {
   resetLiveOddsCacheForTests,
   slugCodes,
 } from "../../src/institutions/event-store/cross-market-live.ts";
-import { SPORT } from "../../src/institutions/market-registry/brands.ts";
+import { SOURCE, SPORT } from "../../src/institutions/market-registry/brands.ts";
+import { asSeriesTicker } from "../../src/institutions/event-store/brands.ts";
+import { registrationFor } from "../../src/institutions/market-registry/registry.ts";
 import {
   diceCoefficient,
   findPolymarketMatch,
@@ -19,12 +21,31 @@ import {
 } from "../../src/institutions/event-store/matcher-v2.ts";
 import type { PolymarketEvent } from "../../src/regulatory/integrations/polymarket.ts";
 
+const ATP_SERIES = { series: asSeriesTicker("KXATPMATCH") } as const;
+const ITF_SERIES = { series: asSeriesTicker("KXITFMATCH") } as const;
+const ITF_WOMEN_SERIES = { series: asSeriesTicker("KXITFWMATCH") } as const;
+const ITF_WOMEN_DOUBLES_SERIES = { series: asSeriesTicker("KXITFWDOUBLES") } as const;
+const TABLE_TENNIS_SERIES = { series: asSeriesTicker("KXTABLETENNISMATCH") } as const;
+const tennisBinding = registrationFor(SOURCE.polymarket, SPORT.tennis)!.competitions[0]!;
+
+function eventSeriesSlug(slug: string): string | undefined {
+  if (slug.startsWith("atp-doubles-")) return "atp-doubles";
+  if (slug.startsWith("wta-doubles-")) return "wta-doubles";
+  if (slug.startsWith("atp-")) return "atp";
+  if (slug.startsWith("wta-")) return "wta";
+  if (slug.startsWith("itf-")) return "itf";
+  if (slug.startsWith("wtt-")) return "ttelite-games";
+  return undefined;
+}
+
 function polyEvent(
   slug: string,
   title: string,
   outcomes: [string, string],
   overrides: Partial<PolymarketEvent> = {},
 ): PolymarketEvent {
+  const tableTennis = slug.startsWith("wtt-");
+  const seriesSlug = eventSeriesSlug(slug);
   return {
     id: slug,
     ticker: slug,
@@ -37,6 +58,21 @@ function polyEvent(
     liquidityClob: 40,
     active: true,
     closed: false,
+    ...(seriesSlug ? { seriesSlug } : {}),
+    tags: [
+      {
+        id: tableTennis ? "103767" : "864",
+        slug: tableTennis ? "table-tennis" : "tennis",
+        label: tableTennis ? "Table Tennis" : "Tennis",
+      },
+    ],
+    teams: outcomes.map((name, index) => ({
+      id: `${slug}-team-${index}`,
+      name,
+      abbreviation: null,
+      league: seriesSlug ?? null,
+      ordering: index === 0 ? "home" : "away",
+    })),
     markets: [
       {
         id: `${slug}-moneyline`,
@@ -132,6 +168,7 @@ describe("matcher V2", () => {
         playerB: "Terence Atmane",
         date: "2026-08-04",
         tournament: "ATP Toronto",
+        ...ATP_SERIES,
       },
       [
         polyEvent(
@@ -140,6 +177,7 @@ describe("matcher V2", () => {
           ["Stefanos Tsitsipas", "Terence Atmane"],
         ),
       ],
+      tennisBinding,
     );
     expect(match?.method).toBe("surname");
     expect(match?.playerAOutcomeIndex).toBe(0);
@@ -157,8 +195,10 @@ describe("matcher V2", () => {
         playerA: "Alex Michelsen",
         playerB: "Learner Tien",
         date: "2026-08-04",
+        ...ATP_SERIES,
       },
       [event],
+      tennisBinding,
     );
     expect(levenshtein("alex michelsen", "alex michelson")).toBe(1);
     expect(match?.method).toBe("fuzzy-name");
@@ -171,6 +211,7 @@ describe("matcher V2", () => {
         playerA: "Andre Souza",
         playerB: "Nicolas Oliveira",
         date: "2026-08-04",
+        ...ITF_SERIES,
       },
       [
         polyEvent(
@@ -179,6 +220,7 @@ describe("matcher V2", () => {
           ["Andre Souza Pinto De Camargo E Silva", "Nicolas Oliveira"],
         ),
       ],
+      tennisBinding,
     );
     expect(match?.method).toBe("fuzzy-name");
     expect(match?.playerAOutcomeIndex).toBe(0);
@@ -191,6 +233,7 @@ describe("matcher V2", () => {
         playerA: "Junhan Zhang",
         playerB: "Tiantian Sun",
         date: "2026-08-04",
+        ...ITF_WOMEN_SERIES,
       },
       [
         polyEvent(
@@ -199,6 +242,7 @@ describe("matcher V2", () => {
           ["Sun Tiantian", "Junhan Zhang"],
         ),
       ],
+      tennisBinding,
     );
     expect(match?.method).toBe("fuzzy-name");
     expect(match?.playerAOutcomeIndex).toBe(1);
@@ -212,6 +256,7 @@ describe("matcher V2", () => {
         playerB: "Yann Receck",
         date: "2026-08-04",
         tournament: "ITF Lexington",
+        ...ITF_SERIES,
       },
       [
         polyEvent(
@@ -220,6 +265,7 @@ describe("matcher V2", () => {
           ["Martin Damm", "Dalibor Recek"],
         ),
       ],
+      tennisBinding,
     );
     expect(match?.method).toBe("date-tournament");
   });
@@ -232,6 +278,7 @@ describe("matcher V2", () => {
         playerB: "Manon Favier",
         date: "2026-07-28",
         tournament: "W15 Savitaipale",
+        ...ITF_WOMEN_SERIES,
       },
       [
         polyEvent(
@@ -240,6 +287,7 @@ describe("matcher V2", () => {
           ["Nithesa Selvaraj", "Elizabeth Prangley"],
         ),
       ],
+      tennisBinding,
     );
     expect(match).toBeNull();
   });
@@ -252,6 +300,7 @@ describe("matcher V2", () => {
         playerB: "Marie Desvignes / Ying Shek",
         date: "2026-08-04",
         tournament: "W15 Tianjin",
+        ...ITF_WOMEN_DOUBLES_SERIES,
       },
       [
         polyEvent(
@@ -260,8 +309,30 @@ describe("matcher V2", () => {
           ["Xi Luo", "Meng-Yi Chen"],
         ),
       ],
+      tennisBinding,
     );
     expect(match).toBeNull();
+  });
+
+  test("reconciles doubles only when series and paired outcomes agree", () => {
+    const match = findPolymarketMatch(
+      {
+        ticker: "KXITFWDOUBLES-26AUG04GUOXUMARYIN",
+        playerA: "Guo / Xu",
+        playerB: "Marie / Ying",
+        date: "2026-08-04",
+        ...ITF_WOMEN_DOUBLES_SERIES,
+      },
+      [
+        polyEvent(
+          "atp-doubles-guoxu-maryin-2026-08-04",
+          "Tianjin (Doubles): Guo/Xu vs Marie/Ying",
+          ["Guo / Xu", "Marie / Ying"],
+        ),
+      ],
+      tennisBinding,
+    );
+    expect(match?.method).toBe("surname");
   });
 
   test("never treats a two-outcome handicap as a moneyline", () => {
@@ -278,8 +349,10 @@ describe("matcher V2", () => {
           playerA: "Stefanos Tsitsipas",
           playerB: "Terence Atmane",
           date: "2026-08-04",
+          ...ATP_SERIES,
         },
         [event],
+        tennisBinding,
       ),
     ).toBeNull();
   });
@@ -298,8 +371,32 @@ describe("matcher V2", () => {
           playerA: "Carlos Alcaraz",
           playerB: "Jannik Sinner",
           date: "2026-08-04",
+          ...ATP_SERIES,
         },
         [event],
+        tennisBinding,
+      ),
+    ).toBeNull();
+  });
+
+  test("does not turn an unknown source series into an implicit singles lane", () => {
+    const event = polyEvent(
+      "mystery-event-2026-08-04",
+      "Mystery: Carlos Alcaraz vs Jannik Sinner",
+      ["Carlos Alcaraz", "Jannik Sinner"],
+    );
+    expect(event.markets[0]?.sportsMarketType).toBe("moneyline");
+    expect(
+      findPolymarketMatch(
+        {
+          ticker: "KXATPMATCH-26AUG04ALCSIN",
+          playerA: "Carlos Alcaraz",
+          playerB: "Jannik Sinner",
+          date: "2026-08-04",
+          ...ATP_SERIES,
+        },
+        [event],
+        tennisBinding,
       ),
     ).toBeNull();
   });
@@ -340,6 +437,7 @@ describe("live feed pagination and cache", () => {
       playerA: "Stefanos Tsitsipas",
       playerB: "Terence Atmane",
       tournament: "ATP Toronto",
+      ...ATP_SERIES,
     };
 
     const first = await fetchLiveCrossMarketOdds([target], {
@@ -365,7 +463,7 @@ describe("live feed pagination and cache", () => {
     });
   });
 
-  test("keeps tennis and table-tennis tag inventories in separate cache scopes", async () => {
+  test("keeps non-operational table-tennis reconciliation out of the live path", async () => {
     const tagIds: string[] = [];
     const fetchImpl = async (input: string | URL | Request): Promise<Response> => {
       const url = new URL(String(input));
@@ -384,60 +482,21 @@ describe("live feed pagination and cache", () => {
         ticker: "KXATPMATCH-26AUG04SMIJON",
         playerA: "Alice Smith",
         playerB: "Bob Jones",
-        sport: SPORT.tennis,
+        ...ATP_SERIES,
       },
       {
         ticker: "KXTABLETENNISMATCH-26AUG04SMIJON",
         playerA: "Alice Smith",
         playerB: "Bob Jones",
-        sport: SPORT.tableTennis,
+        ...TABLE_TENNIS_SERIES,
       },
     ];
     const first = await fetchLiveCrossMarketOdds(targets, { fetchImpl, nowMs: 1_000 });
     const second = await fetchLiveCrossMarketOdds(targets, { fetchImpl, nowMs: 2_000 });
-    expect(tagIds.sort()).toEqual(["103767", "864"]);
+    expect(tagIds).toEqual(["864"]);
     expect(first.get(targets[0]!.ticker)?.polymarketProb).toBe(0.62);
-    expect(first.get(targets[1]!.ticker)?.polymarketProb).toBe(0.62);
+    expect(first.get(targets[1]!.ticker)?.polymarketProb).toBeNull();
     expect(second).toEqual(first);
-  });
-
-  test("isolates one cold sport failure without discarding the other sport", async () => {
-    const fetchImpl = async (input: string | URL | Request): Promise<Response> => {
-      const tagId = new URL(String(input)).searchParams.get("tag_id");
-      if (tagId === "864") throw new Error("tennis unavailable");
-      return Response.json({
-        events: [
-          eventWire(
-            polyEvent(
-              "wtt-smith-jones-2026-08-04",
-              "WTT: Alice Smith vs Bob Jones",
-              ["Alice Smith", "Bob Jones"],
-            ),
-          ),
-        ],
-      });
-    };
-    const tennisTicker = "KXATPMATCH-26AUG04SMIJON";
-    const tableTicker = "KXTABLETENNISMATCH-26AUG04SMIJON";
-    const result = await fetchLiveCrossMarketOdds(
-      [
-        {
-          ticker: tennisTicker,
-          playerA: "Alice Smith",
-          playerB: "Bob Jones",
-          sport: SPORT.tennis,
-        },
-        {
-          ticker: tableTicker,
-          playerA: "Alice Smith",
-          playerB: "Bob Jones",
-          sport: SPORT.tableTennis,
-        },
-      ],
-      { fetchImpl, nowMs: 1_000, retries: 0 },
-    );
-    expect(result.get(tennisTicker)?.polymarketProb).toBeNull();
-    expect(result.get(tableTicker)?.polymarketProb).toBe(0.62);
   });
 
   test("serves stale immediately while a successful refresh swaps the scoped cache", async () => {
@@ -456,6 +515,7 @@ describe("live feed pagination and cache", () => {
       ticker: "KXATPMATCH-26AUG04SMIJON",
       playerA: "Alice Smith",
       playerB: "Bob Jones",
+      ...ATP_SERIES,
     };
     const initial = await fetchLiveCrossMarketOdds([target], { fetchImpl, nowMs: 1_000 });
     const stale = await fetchLiveCrossMarketOdds([target], { fetchImpl, nowMs: 62_000 });
@@ -489,6 +549,7 @@ describe("live feed pagination and cache", () => {
       ticker: "KXATPMATCH-26AUG04SMIJON",
       playerA: "Alice Smith",
       playerB: "Bob Jones",
+      ...ATP_SERIES,
     };
     await fetchLiveCrossMarketOdds([target], { fetchImpl, nowMs: 1_000, retries: 0 });
     for (const nowMs of [62_000, 63_000, 64_000]) {
@@ -514,6 +575,7 @@ describe("live feed pagination and cache", () => {
       ticker: "KXATPMATCH-26AUG04SMIJON",
       playerA: "Alice Smith",
       playerB: "Bob Jones",
+      ...ATP_SERIES,
     };
     for (const nowMs of [1_000, 2_000, 3_000]) {
       await expect(

@@ -91,6 +91,24 @@ export type SourceMarketMapping = {
   marketKind: MarketKind;
 };
 
+/**
+ * Source-owned event attributes that resolve one discovery selector into an
+ * actionable event lane. Every attribute must match; unknown values remain
+ * quarantined rather than inheriting a default lane.
+ */
+export type EventSemanticMapping = {
+  requiredAttributes: Readonly<Record<string, string>>;
+  eventType: EventType;
+  participantFormat: ParticipantFormat;
+};
+
+/** Market meaning derived from an already resolved event lane when the source omits a market type. */
+export type EventSemanticMarketMapping = {
+  eventType: EventType;
+  participantFormat: ParticipantFormat;
+  marketKind: MarketKind;
+};
+
 export type CompetitionBinding = {
   competition: CompetitionKey;
   selector: SourceSelector;
@@ -100,6 +118,8 @@ export type CompetitionBinding = {
   marketKinds: readonly MarketKind[];
   identityFields: readonly IdentityFieldKey[];
   sourceMarketMappings: readonly SourceMarketMapping[];
+  eventSemanticMappings?: readonly EventSemanticMapping[];
+  eventSemanticMarketMappings?: readonly EventSemanticMarketMapping[];
   unmappedMarketPolicy: 'quarantine' | 'reject';
   declaredUse: RegistrationMode;
 };
@@ -441,6 +461,16 @@ export type SportsSourceRegistryArtifact = {
       marketKinds: readonly string[];
       identityFields: readonly string[];
       sourceMarketMappings: ReadonlyArray<{ sourceMarketType: string; marketKind: string }>;
+      eventSemanticMappings: ReadonlyArray<{
+        requiredAttributes: Readonly<Record<string, string>>;
+        eventType: EventType;
+        participantFormat: ParticipantFormat;
+      }>;
+      eventSemanticMarketMappings: ReadonlyArray<{
+        eventType: EventType;
+        participantFormat: ParticipantFormat;
+        marketKind: string;
+      }>;
       unmappedMarketPolicy: 'quarantine' | 'reject';
       declaredUse: RegistrationMode;
       selector: {

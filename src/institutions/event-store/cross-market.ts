@@ -9,7 +9,7 @@ import type { Database } from "bun:sqlite";
 import type { BookSnapshot } from "../alpha-signal-types.ts";
 import type { CrossMarketOdds, CrossMarketSignal } from "./types.ts";
 import type { SeriesTicker } from "./brands.ts";
-import { unbrand } from "./brands.ts";
+import { asSeriesTicker, unbrand } from "./brands.ts";
 
 // ── Helpers ─────────────────────────────────────────────────────
 
@@ -37,7 +37,10 @@ export type EventBookRow = {
   playerB: string;
   surface: string;
   levelsJson: string;
+  series: SeriesTicker;
 };
+
+type EventBookWireRow = Omit<EventBookRow, "series"> & { series: string };
 
 /**
  * Query the event store for all events that have at least one book_tick,
@@ -54,7 +57,7 @@ export function queryEventsWithBooks(
   const seriesFilter = allowedSeries
     ? `AND m.series IN (${allowedSeries.map((_, index) => `$series${index}`).join(", ")})`
     : "";
-  return db
+  const rows = db
     .query(
       `SELECT e.event_id   AS eventId,
               b.ticker      AS ticker,
@@ -62,7 +65,8 @@ export function queryEventsWithBooks(
               e.player_a    AS playerA,
               e.player_b    AS playerB,
               e.surface     AS surface,
-              b.levels_json AS levelsJson
+              b.levels_json AS levelsJson,
+              m.series      AS series
        FROM events e
        JOIN (
          SELECT event_id, MAX(ts) AS max_ts
@@ -75,7 +79,8 @@ export function queryEventsWithBooks(
          ${seriesFilter}
        ORDER BY e.start_ts DESC`,
     )
-    .all(params) as EventBookRow[];
+    .all(params) as EventBookWireRow[];
+  return rows.map((row) => ({ ...row, series: asSeriesTicker(row.series) }));
 }
 
 /**

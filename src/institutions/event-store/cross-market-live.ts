@@ -6,12 +6,14 @@ import {
 } from "../../regulatory/integrations/polymarket.ts";
 import {
   SOURCE,
-  SPORT,
   unbrand as unbrandRegistry,
   type SportKey,
 } from "../market-registry/brands.ts";
+import type { CompetitionBinding } from "../market-registry/types.ts";
+import type { SeriesTicker } from "./brands.ts";
 import {
   ADAPTERS,
+  kalshiReconciliationSemanticsForSeries,
   polymarketTagsForSport,
   registrationFor,
   sourceSelectorCacheKey,
@@ -67,7 +69,7 @@ export type LiveOddsTarget = {
   playerA: string;
   playerB: string;
   tournament?: string;
-  sport?: SportKey;
+  series: SeriesTicker;
 };
 
 export type FetchLiveCrossMarketOddsOptions = Omit<
@@ -146,6 +148,7 @@ export function initialPrefixMatches(prefix: string, code: string): boolean {
 function cacheForSport(sport: SportKey): {
   key: string;
   tag: ReturnType<typeof polymarketTagsForSport>[number];
+  binding: CompetitionBinding;
 } {
   const registration = registrationFor(SOURCE.polymarket, sport);
   if (
@@ -156,7 +159,9 @@ function cacheForSport(sport: SportKey): {
   }
   const tag = polymarketTagsForSport(sport)[0];
   if (!tag) throw new Error(`No Polymarket tag registered for ${unbrandRegistry(sport)}`);
-  return { key: sourceSelectorCacheKey(SOURCE.polymarket, tag), tag };
+  const binding = registration.competitions[0];
+  if (!binding) throw new Error(`No Polymarket binding registered for ${unbrandRegistry(sport)}`);
+  return { key: sourceSelectorCacheKey(SOURCE.polymarket, tag), tag, binding };
 }
 
 function startRefresh(
@@ -294,7 +299,8 @@ export async function fetchLiveCrossMarketOdds(
   const targetsBySport = new Map<SportKey, LiveOddsTarget[]>();
   for (const target of targets) {
     result.set(target.ticker, emptyOdds());
-    const sport = target.sport ?? SPORT.tennis;
+    const sport = kalshiReconciliationSemanticsForSeries(target.series)?.sport;
+    if (!sport) continue;
     const group = targetsBySport.get(sport);
     if (group) group.push(target);
     else targetsBySport.set(sport, [target]);
@@ -303,10 +309,12 @@ export async function fetchLiveCrossMarketOdds(
   const settlements = await Promise.allSettled(
     [...targetsBySport].map(async ([sport, sportTargets]) => {
       const events = await fetchCachedEvents(sport, options);
+      const { binding } = cacheForSport(sport);
       for (const target of sportTargets) {
         const match = findPolymarketMatch(
           { ...target, date: parseKalshiDate(target.ticker) },
           events,
+          binding,
         );
         if (!match) continue;
         const probability = match.market.outcomePrices[match.playerAOutcomeIndex];

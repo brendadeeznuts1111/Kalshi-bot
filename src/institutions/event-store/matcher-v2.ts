@@ -2,6 +2,15 @@ import type {
   PolymarketEvent,
   PolymarketMarket,
 } from "../../regulatory/integrations/polymarket.ts";
+import { classifyPolymarketEventSemantics } from "../market-registry/adapters/polymarket-gamma.ts";
+import type {
+  CompetitionBinding,
+} from "../market-registry/types.ts";
+import type { SeriesTicker } from "./brands.ts";
+import {
+  kalshiReconciliationSemanticsForSeries,
+  type ResolvedEventSemantics,
+} from "../market-registry/registry.ts";
 
 const GENERIC_OUTCOMES = new Set(["yes", "no", "over", "under"]);
 const PROP_QUESTION =
@@ -25,6 +34,7 @@ export type KalshiMatchTarget = {
   playerB: string;
   date: string | null;
   tournament?: string;
+  series: SeriesTicker;
 };
 
 export type PolymarketMatchMethod =
@@ -336,26 +346,33 @@ function candidateBase(
   };
 }
 
-function doublesLaneMatches(target: KalshiMatchTarget, event: PolymarketEvent): boolean {
-  const targetDoubles =
-    /doubles/i.test(target.ticker) ||
-    target.playerA.includes("/") ||
-    target.playerB.includes("/");
-  const eventDoubles = /^(?:atp|wta|itf)-doubles-/.test(event.slug);
-  return targetDoubles === eventDoubles;
+function semanticLaneMatches(
+  target: KalshiMatchTarget & ResolvedEventSemantics,
+  event: PolymarketEvent,
+  binding: CompetitionBinding,
+): boolean {
+  const semantics = classifyPolymarketEventSemantics(event, binding);
+  return (
+    semantics.disposition === "resolved" &&
+    semantics.eventType === target.eventType &&
+    semantics.participantFormat === target.participantFormat
+  );
 }
 
 /** Three-tier event reconciliation with ambiguity rejection at every tier. */
 export function findPolymarketMatch(
   target: KalshiMatchTarget,
   events: readonly PolymarketEvent[],
+  binding: CompetitionBinding,
 ): PolymarketMatch | null {
+  const targetSemantics = kalshiReconciliationSemanticsForSeries(target.series);
+  if (!targetSemantics || binding.selector.sport !== targetSemantics.sport) return null;
   const targetSurnameA = tennisSurname(target.playerA);
   const targetSurnameB = tennisSurname(target.playerB);
 
   const surnameCandidates: Candidate[] = [];
   for (const event of events) {
-    if (!doublesLaneMatches(target, event)) continue;
+    if (!semanticLaneMatches({ ...target, ...targetSemantics }, event, binding)) continue;
     const eventDate = polymarketSlugDate(event.slug);
     if (target.date && eventDate && target.date !== eventDate) continue;
     const codes = polymarketSlugCodes(event.slug);
@@ -393,7 +410,7 @@ export function findPolymarketMatch(
   const normalizedB = normalizeTennisName(target.playerB);
   const fuzzyCandidates: Candidate[] = [];
   for (const event of events) {
-    if (!doublesLaneMatches(target, event)) continue;
+    if (!semanticLaneMatches({ ...target, ...targetSemantics }, event, binding)) continue;
     const eventDate = polymarketSlugDate(event.slug);
     if (target.date && eventDate && target.date !== eventDate) continue;
     for (const market of moneylineMarkets(event)) {
@@ -433,7 +450,7 @@ export function findPolymarketMatch(
   if (!target.date || !target.tournament) return null;
   const fallbackCandidates: Candidate[] = [];
   for (const event of events) {
-    if (!doublesLaneMatches(target, event)) continue;
+    if (!semanticLaneMatches({ ...target, ...targetSemantics }, event, binding)) continue;
     if (polymarketSlugDate(event.slug) !== target.date) continue;
     if (!tournamentMatches(target.tournament, event)) continue;
     const market = moneylineMarkets(event)[0];

@@ -209,6 +209,85 @@ describe("fetchAllPolymarketEvents", () => {
     expect(urls[1]!.searchParams.get("after_cursor")).toBe("cursor-2");
   });
 
+  test("retains an unpriced child market without failing the complete event page", async () => {
+    const events = await fetchAllPolymarketEvents({
+      tagSlug: "table-tennis",
+      fetchImpl: mockFetch({
+        events: [
+          {
+            id: "unpriced-event",
+            slug: "unpriced-event",
+            title: "Player A vs Player B",
+            active: true,
+            closed: false,
+            markets: [
+              {
+                id: "unpriced-market",
+                slug: "unpriced-market",
+                question: "Total games",
+                conditionId: "unpriced-condition",
+                outcomes: '["Over","Under"]',
+                active: true,
+                closed: false,
+                sportsMarketType: "table_tennis_match_totals",
+              },
+            ],
+          },
+        ],
+      }),
+    });
+    expect(events[0]?.markets[0]?.outcomePrices).toEqual([null, null]);
+  });
+
+  test("accepts nullable tag display fields and direct series fallback", async () => {
+    const events = await fetchAllPolymarketEvents({
+      tagSlug: "tennis",
+      fetchImpl: mockFetch({
+        events: [
+          {
+            id: "nullable-relations",
+            slug: "atp-player-a-player-b-2026-08-04",
+            title: "Player A vs Player B",
+            active: true,
+            closed: false,
+            seriesSlug: "atp",
+            series: [{ id: "series-atp", slug: null, title: null }],
+            tags: [{ id: "864", slug: null, label: null }],
+            teams: [{ id: 1, name: null, abbreviation: null }],
+            markets: [],
+          },
+        ],
+      }),
+    });
+    expect(events[0]).toMatchObject({
+      seriesSlug: "atp",
+      tags: [{ id: "864", slug: null, label: null }],
+      teams: [{ id: "1", name: null, abbreviation: null }],
+    });
+  });
+
+  test("retains contradictory series evidence for event-level quarantine", async () => {
+    const events = await fetchAllPolymarketEvents({
+      tagSlug: "tennis",
+      fetchImpl: mockFetch({
+        events: [
+          {
+            id: "series-conflict",
+            slug: "series-conflict",
+            title: "Series conflict",
+            active: true,
+            closed: false,
+            seriesSlug: "atp",
+            series: [{ id: "series-wta", slug: "wta", title: "WTA" }],
+            markets: [],
+          },
+        ],
+      }),
+    });
+    expect(events[0]?.seriesSlug).toBeUndefined();
+    expect(events[0]?.seriesConflict).toBe(true);
+  });
+
   test("rejects malformed boolean and numeric wire values", async () => {
     await expect(
       fetchAllPolymarketEvents({

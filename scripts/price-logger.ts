@@ -23,7 +23,9 @@ import {
 import { fetchLiveCrossMarketOdds } from "../src/institutions/event-store/cross-market-live.ts";
 import type { CrossMarketOdds } from "../src/institutions/event-store/types.ts";
 import { SPORT } from "../src/institutions/market-registry/brands.ts";
-import { kalshiTradeSeriesForSport } from "../src/institutions/market-registry/registry.ts";
+import {
+  kalshiTradeSeriesForSport,
+} from "../src/institutions/market-registry/registry.ts";
 import {
   fetchTennisTradeBoard,
   type TennisBoard,
@@ -178,6 +180,7 @@ export function linkCurrentBoardEvents(
         playerB: store.playerB,
         surface: store.surface,
         levelsJson,
+        series: series.series,
       });
     }
   }
@@ -441,7 +444,7 @@ export async function runSnapshotCycleDetailed(
     playerA: e.playerA,
     playerB: e.playerB,
     tournament: e.tournament,
-    sport: SPORT.tennis,
+    series: e.series,
   }));
   let oddsMap: Map<string, CrossMarketOdds>;
   try {

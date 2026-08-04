@@ -33,7 +33,26 @@ export type PolymarketEvent = {
   endDate?: string;
   createdAt?: string;
   updatedAt?: string;
+  /** Provider-owned sport series discriminator (for example `atp-doubles`). */
+  seriesSlug?: string;
+  seriesConflict?: boolean;
+  tags: PolymarketTag[];
+  teams: PolymarketTeam[];
   markets: PolymarketMarket[];
+};
+
+export type PolymarketTeam = {
+  id: string | null;
+  name: string | null;
+  abbreviation: string | null;
+  league: string | null;
+  ordering: string | null;
+};
+
+export type PolymarketTag = {
+  id: string;
+  slug: string | null;
+  label: string | null;
 };
 
 export type PolymarketMarket = {
@@ -44,7 +63,8 @@ export type PolymarketMarket = {
   conditionId: string;
   resolutionSource?: string;
   outcomes: string[];       // parsed from JSON string
-  outcomePrices: number[];  // parsed from JSON string
+  /** Null entries are source-declared but not priced yet. */
+  outcomePrices: Array<number | null>; // parsed from JSON string
   volume: number | null;
   volume24hr: number | null;
   volume1wk: number | null;
@@ -57,6 +77,7 @@ export type PolymarketMarket = {
   bestAsk?: number;
   spread?: number;
   sportsMarketType?: string;
+  groupItemTitle?: string;
   active: boolean;
   closed: boolean;
   createdAt: string;
@@ -371,15 +392,18 @@ function normalizeMarketWire(raw: Record<string, unknown>): PolymarketMarket {
     }
     return value;
   });
-  const outcomePrices = parseJsonArray(raw.outcomePrices, "market.outcomePrices").map(
-    (value, index) => {
-      const price = toNumber(value, `market.outcomePrices[${index}]`);
-      if (price < 0 || price > 1) {
-        throw new Error(`Polymarket market.outcomePrices[${index}]: probability out of range`);
-      }
-      return price;
-    },
-  );
+  const outcomePrices =
+    raw.outcomePrices === undefined || raw.outcomePrices === null || raw.outcomePrices === ""
+      ? outcomes.map(() => null)
+      : parseJsonArray(raw.outcomePrices, "market.outcomePrices").map((value, index) => {
+          const price = toNumber(value, `market.outcomePrices[${index}]`);
+          if (price < 0 || price > 1) {
+            throw new Error(
+              `Polymarket market.outcomePrices[${index}]: probability out of range`,
+            );
+          }
+          return price;
+        });
   if (outcomes.length !== outcomePrices.length || outcomes.length < 2) {
     throw new Error("Polymarket market outcomes/prices length mismatch");
   }
@@ -406,6 +430,7 @@ function normalizeMarketWire(raw: Record<string, unknown>): PolymarketMarket {
     spread: raw.spread != null ? toNumber(raw.spread, "market.spread") : undefined,
     sportsMarketType:
       typeof raw.sportsMarketType === "string" ? raw.sportsMarketType : undefined,
+    groupItemTitle: optionalString(raw.groupItemTitle, "market.groupItemTitle"),
     active: toBoolean(raw.active, "market.active"),
     closed: toBoolean(raw.closed, "market.closed"),
     createdAt: String(raw.createdAt ?? ""),
@@ -418,6 +443,21 @@ function normalizeEventWire(raw: Record<string, unknown>): PolymarketEvent {
   const marketRows = Array.isArray(raw.markets)
     ? (raw.markets as Record<string, unknown>[])
     : [];
+  const tagRows = raw.tags === undefined ? [] : recordArray(raw.tags, "event.tags");
+  const seriesRows = raw.series === undefined ? [] : recordArray(raw.series, "event.series");
+  const teamRows = raw.teams === undefined ? [] : recordArray(raw.teams, "event.teams");
+  const relationSeriesSlugs = [
+    ...new Set(
+      seriesRows
+        .map((row, index) => optionalString(row.slug, `event.series[${index}].slug`))
+        .filter((slug): slug is string => slug !== undefined),
+    ),
+  ];
+  const directSeriesSlug = optionalString(raw.seriesSlug, "event.seriesSlug");
+  const relationSeriesSlug = relationSeriesSlugs[0];
+  const seriesConflict =
+    relationSeriesSlugs.length > 1 ||
+    Boolean(directSeriesSlug && relationSeriesSlug && directSeriesSlug !== relationSeriesSlug);
   return {
     id: requiredString(raw.id, "event.id"),
     ticker: String(raw.ticker ?? ""),
@@ -435,8 +475,50 @@ function normalizeEventWire(raw: Record<string, unknown>): PolymarketEvent {
     endDate: raw.endDate ? String(raw.endDate) : undefined,
     createdAt: raw.createdAt ? String(raw.createdAt) : undefined,
     updatedAt: raw.updatedAt ? String(raw.updatedAt) : undefined,
+    ...(!seriesConflict && (directSeriesSlug ?? relationSeriesSlug)
+      ? { seriesSlug: directSeriesSlug ?? relationSeriesSlug }
+      : {}),
+    ...(seriesConflict ? { seriesConflict: true } : {}),
+    tags: tagRows.map((row, index) => ({
+      id: requiredString(row.id, `event.tags[${index}].id`),
+      slug: optionalString(row.slug, `event.tags[${index}].slug`) ?? null,
+      label: optionalString(row.label, `event.tags[${index}].label`) ?? null,
+    })),
+    teams: teamRows.map((row, index) => ({
+      id: optionalIdentifier(row.id, `event.teams[${index}].id`),
+      name: optionalString(row.name, `event.teams[${index}].name`) ?? null,
+      abbreviation:
+        optionalString(row.abbreviation, `event.teams[${index}].abbreviation`) ?? null,
+      league: optionalString(row.league, `event.teams[${index}].league`) ?? null,
+      ordering: optionalString(row.ordering, `event.teams[${index}].ordering`) ?? null,
+    })),
     markets: marketRows.map(normalizeMarketWire),
   };
+}
+
+function recordArray(raw: unknown, field: string): Record<string, unknown>[] {
+  if (!Array.isArray(raw) || raw.some((row) => !isRecord(row))) {
+    throw new Error(`Polymarket ${field}: object array required`);
+  }
+  return raw as Record<string, unknown>[];
+}
+
+function optionalString(raw: unknown, field: string): string | undefined {
+  if (raw === undefined || raw === null || raw === "") return undefined;
+  if (typeof raw !== "string" || !raw.trim()) {
+    throw new Error(`Polymarket ${field}: non-empty string required`);
+  }
+  return raw.trim();
+}
+
+function optionalIdentifier(raw: unknown, field: string): string | null {
+  if (raw === undefined || raw === null || raw === "") return null;
+  if (typeof raw !== "string" && typeof raw !== "number") {
+    throw new Error(`Polymarket ${field}: string required`);
+  }
+  const value = String(raw).trim();
+  if (!value) return null;
+  return value;
 }
 
 // ── Line-movement detection ──

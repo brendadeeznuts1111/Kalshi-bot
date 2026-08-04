@@ -3,6 +3,7 @@ import { openEventStore } from '../../src/institutions/event-store/open-db.ts';
 import { runRegisteredSourceInventory } from '../../src/institutions/event-store/source-inventory-runner.ts';
 import { listSourceEvents } from '../../src/institutions/event-store/source-market-store.ts';
 import {
+  classifyPolymarketEventSemantics,
   createPolymarketGammaInventoryAdapter,
   createPolymarketGammaSourceAdapter,
 } from '../../src/institutions/market-registry/adapters/polymarket-gamma.ts';
@@ -18,6 +19,7 @@ import type { SourceFetchRequest } from '../../src/institutions/market-registry/
 
 const registration = registrationFor(SOURCE.polymarket, SPORT.tableTennis)!;
 const binding = registration.competitions[0]!;
+const tennisBinding = registrationFor(SOURCE.polymarket, SPORT.tennis)!.competitions[0]!;
 
 function request(overrides: Partial<SourceFetchRequest> = {}): SourceFetchRequest {
   return {
@@ -44,6 +46,9 @@ function eventWire(markets: unknown = [marketWire()]) {
     startDate: '2026-08-04T12:00:00Z',
     endDate: '2026-08-04T13:00:00Z',
     updatedAt: '2026-08-04T11:00:00Z',
+    seriesSlug: 'ttelite-games',
+    series: [{ id: '12324', slug: 'ttelite-games', title: 'TT Elite Series' }],
+    tags: [{ id: '103767', slug: 'table-tennis', label: 'Table Tennis' }],
     markets,
   };
 }
@@ -78,7 +83,19 @@ describe('Polymarket Gamma inventory adapter', () => {
     const db = openEventStore({ dbPath: ':memory:' });
     const adapter = createPolymarketGammaInventoryAdapter({
       now: () => 1_000,
-      fetchImpl: async () => Response.json({ events: [eventWire()], next_cursor: null }),
+      fetchImpl: async () =>
+        Response.json({
+          events: [
+            eventWire([
+              {
+                ...marketWire(),
+                outcomes: '["Player A","Player B"]',
+                outcomePrices: '["0.7","0.3"]',
+              },
+            ]),
+          ],
+          next_cursor: null,
+        }),
     });
     const results = await runRegisteredSourceInventory(db, {
       adapters: [adapter],
@@ -91,6 +108,16 @@ describe('Polymarket Gamma inventory adapter', () => {
     expect(results).toMatchObject([{ state: 'complete', observedEventCount: 1 }]);
     expect(listSourceEvents(db, { source: SOURCE.polymarket, sport: SPORT.tableTennis })).toEqual([
       expect.objectContaining({ title: 'Player A vs Player B' }),
+    ]);
+    expect(
+      db.query(
+        `SELECT source_participant_id AS participantId
+         FROM source_market_outcomes
+         ORDER BY ordinal`,
+      ).all(),
+    ).toEqual([
+      { participantId: 'outcome:player a' },
+      { participantId: 'outcome:player b' },
     ]);
     db.close();
   });
@@ -138,6 +165,183 @@ describe('Polymarket Gamma inventory adapter', () => {
       { key: 'no', label: 'No', probability: 0.3, bid: 0.28, ask: 0.32, last: 0.3 },
       { key: 'yes', label: 'Yes', probability: 0.7, bid: 0.68, ask: 0.72, last: 0.7 },
     ]);
+  });
+
+  test('resolves a registered series only with a literal participant moneyline', () => {
+    const adapter = createPolymarketGammaSourceAdapter({ now: () => 1_000 });
+    const sourceRequest = request();
+    const page = adapter.parsePage(
+      {
+        payload: {
+          events: [
+            eventWire([
+              {
+                ...marketWire(),
+                outcomes: '["Player A","Player B"]',
+                outcomePrices: '["0.7","0.3"]',
+              },
+            ]),
+          ],
+        },
+        observedAtMs: 1_000,
+      },
+      sourceRequest,
+    );
+    const [observation] = adapter.project(page, binding);
+    expect(classifyPolymarketEventSemantics(page.records[0]!, binding)).toMatchObject({
+      disposition: 'resolved',
+      eventType: 'match',
+      participantFormat: 'singles',
+    });
+    expect(observation).toMatchObject({
+      eventType: 'match',
+      participantFormat: 'singles',
+    });
+    expect(observation?.participants.map(participant => ({
+      ...participant,
+      id: String(participant.id),
+    }))).toEqual([
+      { id: 'outcome:player a', ordinal: 0, label: 'Player A' },
+      { id: 'outcome:player b', ordinal: 1, label: 'Player B' },
+    ]);
+    expect(
+      observation?.markets[0]?.outcomes.map(outcome => String(outcome.participantId)),
+    ).toEqual(['outcome:player a', 'outcome:player b']);
+  });
+
+  test('keeps durable match semantics when the unique moneyline has closed', () => {
+    const adapter = createPolymarketGammaSourceAdapter({ now: () => 1_000 });
+    const sourceRequest = request();
+    const page = adapter.parsePage(
+      {
+        payload: {
+          events: [
+            eventWire([
+              {
+                ...marketWire(),
+                outcomes: '["Player A","Player B"]',
+                closed: true,
+              },
+            ]),
+          ],
+        },
+        observedAtMs: 1_000,
+      },
+      sourceRequest,
+    );
+    expect(classifyPolymarketEventSemantics(page.records[0]!, binding)).toMatchObject({
+      disposition: 'resolved',
+      eventType: 'match',
+      participantFormat: 'singles',
+    });
+  });
+
+  test('resolves strict tournament-winner contracts and keeps propositions quarantined', () => {
+    const adapter = createPolymarketGammaSourceAdapter({ now: () => 1_000 });
+    const sourceRequest: SourceFetchRequest = {
+      selector: tennisBinding.selector,
+      pageIndex: 0,
+      limit: 100,
+    };
+    const participantMarket = (id: string, player: string) => ({
+      ...marketWire(),
+      id,
+      slug: id,
+      question: `Will ${player} win?`,
+      conditionId: `condition-${id}`,
+      outcomes: '["Yes","No"]',
+      outcomePrices: '["0.4","0.6"]',
+      sportsMarketType: undefined,
+      groupItemTitle: player,
+    });
+    const tournament = {
+      ...eventWire([
+        participantMarket('player-a-market', 'Player A'),
+        participantMarket('player-b-market', 'Player B'),
+      ]),
+      title: 'Cincinnati Open: Winner',
+      description:
+        "This market resolves to the winner of the men's singles title in the tournament.",
+      seriesSlug: undefined,
+      series: [],
+      tags: [{ id: '864', slug: null, label: null }],
+    };
+    const page = adapter.parsePage(
+      { payload: { events: [tournament] }, observedAtMs: 1_000 },
+      sourceRequest,
+    );
+    const [observation] = adapter.project(page, tennisBinding);
+    expect(classifyPolymarketEventSemantics(page.records[0]!, tennisBinding)).toMatchObject({
+      disposition: 'resolved',
+      eventType: 'tournament',
+      participantFormat: 'field',
+    });
+    expect(observation?.participants.map(participant => ({
+      ...participant,
+      id: String(participant.id),
+    }))).toEqual([
+      { id: 'market:player-a-market', ordinal: 0, label: 'Player A' },
+      { id: 'market:player-b-market', ordinal: 1, label: 'Player B' },
+    ]);
+    expect(observation?.markets.map(market => String(market.subjectParticipantId))).toEqual([
+      'market:player-a-market',
+      'market:player-b-market',
+    ]);
+    expect(observation?.markets.map(market => market.marketKind)).toEqual([
+      MARKET.tournamentWinner,
+      MARKET.tournamentWinner,
+    ]);
+
+    const propositionPage = adapter.parsePage(
+      {
+        payload: {
+          events: [
+            {
+              ...tournament,
+              id: 'ranking-prop',
+              title: 'Will Player A finish 2026 as world #1?',
+            },
+          ],
+        },
+        observedAtMs: 1_001,
+      },
+      sourceRequest,
+    );
+    expect(
+      classifyPolymarketEventSemantics(propositionPage.records[0]!, tennisBinding),
+    ).toMatchObject({ disposition: 'quarantined' });
+  });
+
+  test('quarantines selector drift and unknown series instead of defaulting to singles', () => {
+    const adapter = createPolymarketGammaSourceAdapter({ now: () => 1_000 });
+    const sourceRequest = request();
+    const project = (wire: ReturnType<typeof eventWire>) => {
+      const page = adapter.parsePage(
+        { payload: { events: [wire] }, observedAtMs: 1_000 },
+        sourceRequest,
+      );
+      return { event: page.records[0]!, observation: adapter.project(page, binding)[0]! };
+    };
+
+    const missingTag = project({ ...eventWire(), tags: [] });
+    expect(classifyPolymarketEventSemantics(missingTag.event, binding)).toEqual({
+      disposition: 'quarantined',
+      reason: 'selector_tag_missing',
+    });
+    expect(missingTag.observation).toMatchObject({
+      eventType: null,
+      participantFormat: null,
+    });
+
+    const unknownSeries = project({
+      ...eventWire(),
+      seriesSlug: 'future-team-league',
+      series: [{ id: 'future', slug: 'future-team-league', title: 'Future league' }],
+    });
+    expect(classifyPolymarketEventSemantics(unknownSeries.event, binding)).toEqual({
+      disposition: 'quarantined',
+      reason: 'unsupported_series',
+    });
   });
 
   test('rejects missing nested markets instead of authoritatively retiring them', async () => {

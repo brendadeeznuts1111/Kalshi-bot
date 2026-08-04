@@ -22,6 +22,7 @@ import {
   kalshiDeclaredReconciliationSeriesForSport,
   kalshiIdentityFieldForSeries,
   kalshiInventorySeriesForSport,
+  kalshiReconciliationSemanticsForSeries,
   kalshiReconciliationSeriesForSport,
   kalshiSeriesForSport,
   kalshiSportForSeries,
@@ -105,6 +106,17 @@ describe("sports/source registry", () => {
       SPORT.tableTennis,
     );
     expect(kalshiSportForSeries(asSeriesTicker("KXUNKNOWN"))).toBeUndefined();
+    expect(kalshiReconciliationSemanticsForSeries(asSeriesTicker("KXATPMATCH"))).toEqual({
+      sport: SPORT.tennis,
+      eventType: "match",
+      participantFormat: "singles",
+    });
+    expect(
+      kalshiReconciliationSemanticsForSeries(asSeriesTicker("KXATPSETWINNER")),
+    ).toBeNull();
+    expect(
+      kalshiReconciliationSemanticsForSeries(asSeriesTicker("KXTABLETENNISMATCH")),
+    ).toBeNull();
   });
 
   test("acquires all known Kalshi series and narrows explicitly for downstream modes", () => {
@@ -186,6 +198,36 @@ describe("sports/source registry", () => {
         unbrand(mapping.sourceMarketType),
       ),
     ).toEqual(["moneyline", "table_tennis_match_totals", "table_tennis_game_handicap"]);
+  });
+
+  test("rejects overlapping or blank discovery semantic mappings", () => {
+    const drifted: SportsSourceRegistry = {
+      ...SPORTS_SOURCE_REGISTRY,
+      integrations: SPORTS_SOURCE_REGISTRY.integrations.map((integration) =>
+        integration.source === SOURCE.polymarket && integration.sport === SPORT.tennis
+          ? {
+              ...integration,
+              competitions: integration.competitions.map((binding) => ({
+                ...binding,
+                eventSemanticMappings: [
+                  ...(binding.eventSemanticMappings ?? []),
+                  {
+                    requiredAttributes: { seriesSlug: "atp", league: "" },
+                    eventType: "match" as const,
+                    participantFormat: "singles" as const,
+                  },
+                ],
+              })),
+            }
+          : integration,
+      ),
+    };
+    expect(validateSportsSourceRegistry(drifted)).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("event semantic mapping attributes must be non-empty"),
+        expect.stringContaining("event semantic mappings overlap"),
+      ]),
+    );
   });
 
   test("validates injectable registries and rejects cross-field drift", () => {
