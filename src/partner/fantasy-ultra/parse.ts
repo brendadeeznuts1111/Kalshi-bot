@@ -1,10 +1,16 @@
 import type {
+  PartnerBetGroup,
   PartnerBookedEvent,
+  PartnerComponentBet,
+  PartnerExecutionResult,
   PartnerLiveEvent,
   PartnerLiveUrlSet,
   PartnerSportLeague,
 } from "../types.ts";
 import type {
+  FantasyBetGroupWire,
+  FantasyBetGroupsResponseWire,
+  FantasyComponentBetWire,
   FantasyRenewTokenWire,
   FantasySportsLeaguesWire,
   FantasyStreamEventWire,
@@ -335,4 +341,138 @@ export function normalizeClientEventIdCandidates(raw: string): string[] {
     out.push(id.slice(0, -1));
   }
   return [...new Set(out)];
+}
+
+function asFinite(v: unknown): number | null {
+  if (v == null || v === "") return null;
+  const n = typeof v === "number" ? v : Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+function parseComponentBet(row: FantasyComponentBetWire): PartnerComponentBet {
+  return {
+    betId: asFinite(row.betId) ?? 0,
+    sequenceNumber: asFinite(row.sequenceNumber) ?? 0,
+    sportId: asFinite(row.sportId),
+    leagueId: asFinite(row.leagueId),
+    leagueName: row.leagueName?.trim() || null,
+    eventId: String(row.eventId ?? "").trim(),
+    marketId:
+      row.marketId != null && String(row.marketId) !== ""
+        ? String(row.marketId)
+        : null,
+    periodId: row.periodId != null ? String(row.periodId) : null,
+    key: row.key != null && String(row.key) !== "" ? String(row.key) : null,
+    subKey: row.subKey != null ? String(row.subKey) : null,
+    team1: row.team1?.trim() || null,
+    team2: row.team2?.trim() || null,
+    finalOdds: asFinite(row.finalOdds),
+    canCashout: row.canCashout === true,
+    state: asFinite(row.state),
+  };
+}
+
+function parseBetGroup(row: FantasyBetGroupWire): PartnerBetGroup {
+  const legs = Array.isArray(row.componentBets)
+    ? row.componentBets.map(parseComponentBet)
+    : [];
+  return {
+    betGroupId: asFinite(row.betGroupId) ?? 0,
+    ticketNumber: String(row.ticketNumber ?? "").trim(),
+    finalOdds: asFinite(row.finalOdds),
+    risk: asFinite(row.risk) ?? 0,
+    toWin: asFinite(row.toWin) ?? 0,
+    currency: row.currency?.trim() || null,
+    betType: asFinite(row.betType),
+    state: asFinite(row.state),
+    acceptTime: asFinite(row.acceptTime),
+    delay: asFinite(row.delay),
+    legs,
+  };
+}
+
+/**
+ * Parse place-bet / open-ticket response:
+ * `{ betGroups: [...], e: 0, d: "" }`
+ */
+export function parseBetGroupsResponse(wire: unknown): {
+  groups: PartnerBetGroup[];
+  errorCode: number;
+  detail: string;
+} {
+  if (!wire || typeof wire !== "object") {
+    throw new Error("fantasy402: betGroups response non-object");
+  }
+  const w = wire as FantasyBetGroupsResponseWire;
+  const errorCode = asFinite(w.e) ?? -1;
+  const detail = typeof w.d === "string" ? w.d : "";
+  const groups = Array.isArray(w.betGroups)
+    ? w.betGroups.map(parseBetGroup)
+    : [];
+  return { groups, errorCode, detail };
+}
+
+/**
+ * Map a successful betGroups response → PartnerExecutionResult.
+ * success when e===0 and at least one group with ticketNumber.
+ */
+export function executionResultFromBetGroups(
+  wire: unknown,
+): PartnerExecutionResult {
+  const { groups, errorCode, detail } = parseBetGroupsResponse(wire);
+  const g = groups[0];
+  const leg = g?.legs[0];
+  if (errorCode !== 0 || !g?.ticketNumber) {
+    return {
+      success: false,
+      wireErrorCode: errorCode,
+      error:
+        detail ||
+        `fantasy402: bet response e=${errorCode}` +
+          (g ? ` ticket=${g.ticketNumber || "none"}` : ""),
+      raw: wire,
+    };
+  }
+  return {
+    success: true,
+    transactionId: String(g.ticketNumber),
+    ticketNumber: String(g.ticketNumber),
+    betGroupId: g.betGroupId || undefined,
+    betId: leg?.betId || undefined,
+    finalOdds: g.finalOdds ?? leg?.finalOdds ?? undefined,
+    risk: g.risk,
+    toWin: g.toWin,
+    currency: g.currency ?? undefined,
+    wireErrorCode: errorCode,
+    raw: wire,
+  };
+}
+
+/**
+ * Build a minimal place-intent snapshot from a captured ticket leg
+ * (for dry-run / replay tests — not a substitute for the live POST body).
+ */
+export function orderIntentFromComponentBet(
+  leg: PartnerComponentBet,
+  stake: number,
+): {
+  eventId: string;
+  marketId: string | undefined;
+  key: string | undefined;
+  periodId: string | undefined;
+  stake: number;
+  price: number | undefined;
+  team1: string | undefined;
+  team2: string | undefined;
+} {
+  return {
+    eventId: leg.eventId,
+    marketId: leg.marketId ?? undefined,
+    key: leg.key ?? undefined,
+    periodId: leg.periodId ?? undefined,
+    stake,
+    price: leg.finalOdds ?? undefined,
+    team1: leg.team1 ?? undefined,
+    team2: leg.team2 ?? undefined,
+  };
 }

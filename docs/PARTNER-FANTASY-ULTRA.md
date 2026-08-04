@@ -122,12 +122,51 @@ Adapter methods:
 | `statscore id` | booked_events[].id | Internal Statscore event id |
 | `ls_id` | get_pushes (when path known) | Live score pushes |
 
-### Where the priced UI likely comes from (still open)
+### Bet ticket wire (captured place/open response)
 
-1. **Pandora WebSocket** — `wss://pandora.ganchrow.com/socket.io/` after `streamToken.php`  
-2. **XHR when the slip loads a line** — must contain `"price": -115` or `+117` (not just bet_status)  
-3. **Manager book** — `getGames` / `getLinesProps` (full ticketwriter body)  
-4. **Place Bet POST** — still missing
+```json
+{
+  "betGroups": [{
+    "betGroupId": 307200153,
+    "ticketNumber": 1036636660,
+    "finalOdds": 1.8928569555282593,
+    "risk": 68,
+    "toWin": 60.71,
+    "currency": "USD",
+    "componentBets": [{
+      "betId": 335749942,
+      "eventId": 196878741,
+      "periodId": "m",
+      "marketId": "3",
+      "key": "2",
+      "team1": "Kyryl Darin",
+      "team2": "Jiri Plachy",
+      "finalOdds": 1.8928569555282593
+    }]
+  }],
+  "e": 0,
+  "d": ""
+}
+```
+
+| Field | Meaning |
+|-------|---------|
+| `finalOdds` | **Decimal** (~1.89), not American |
+| `risk` / `toWin` | Stake / profit |
+| `eventId` + `marketId` + `key` + `periodId` | Selection coordinates |
+| `e` | 0 = ok |
+
+| API | Role |
+|-----|------|
+| `parseBetGroupsResponse` / `executionResultFromBetGroups` | Boundary parse |
+| `interpretBetTicketResponse(wire)` | Offline → `PartnerExecutionResult` |
+| `placeOrder` | Needs **POST URL** still; dry-run logs intent |
+
+### Where pre-bet line prices still hide
+
+1. XHR/WS **before** accept that returns board lines  
+2. Pandora after streamToken  
+3. Manager getGames / lines  
 
 Do **not** merge stream-list or Statscore livescorepro into Kalshi `match_liquidity` as “odds”.
 

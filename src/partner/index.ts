@@ -1,7 +1,9 @@
 export type {
   FantasySessionAdapter,
   PartnerAccountStatus,
+  PartnerBetGroup,
   PartnerBookedEvent,
+  PartnerComponentBet,
   PartnerExecutionResult,
   PartnerId,
   PartnerLimits,
@@ -24,9 +26,12 @@ export {
 export { FantasyUltraAdapter } from "./fantasy-ultra/adapter.ts";
 export { CookieJar } from "./fantasy-ultra/cookie-jar.ts";
 export {
+  executionResultFromBetGroups,
   inspectStreamListCapabilities,
   normalizeClientEventIdCandidates,
+  orderIntentFromComponentBet,
   originFromLiveUrl,
+  parseBetGroupsResponse,
   parseRenewTokenResponse,
   parseSportsLeagues,
   parseStatscoreBookedEvents,

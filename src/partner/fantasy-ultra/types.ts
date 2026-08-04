@@ -113,6 +113,63 @@ export type StatscoreBookedEventsResponse = {
   };
 };
 
+/**
+ * Place-bet / open-ticket wire (captured Ultra response).
+ * Decimal odds; risk = stake; e=0 success.
+ */
+export type FantasyComponentBetWire = {
+  betId?: number;
+  sequenceNumber?: number;
+  sportId?: number;
+  countryId?: number;
+  leagueId?: number;
+  leagueName?: string;
+  eventId?: number | string;
+  logTime?: number;
+  betType?: number;
+  eventStartTime?: number;
+  finalOdds?: number;
+  uncorrFinalOdds?: number;
+  periodId?: string;
+  marketId?: string | number;
+  marketStyleId?: number;
+  key?: string | number;
+  subKey?: string;
+  team1?: string;
+  team2?: string;
+  description?: string;
+  state?: number;
+  isCashout?: boolean;
+  canCashout?: boolean;
+  premiumizedOdds?: number;
+};
+
+export type FantasyBetGroupWire = {
+  betGroupId?: number;
+  ticketNumber?: number | string;
+  finalOdds?: number;
+  risk?: number;
+  toWin?: number;
+  toWinTaxAmount?: number;
+  result?: number;
+  state?: number;
+  acceptTime?: number;
+  betType?: number;
+  currency?: string;
+  delay?: number;
+  isFreePlay?: boolean;
+  isWin?: number;
+  ifableAmount?: number;
+  componentBets?: FantasyComponentBetWire[];
+};
+
+export type FantasyBetGroupsResponseWire = {
+  betGroups?: FantasyBetGroupWire[];
+  /** 0 = ok */
+  e?: number;
+  d?: string;
+};
+
 /** One row from Get_SportsLeagues.Leagues[] */
 export type FantasySportsLeagueWire = {
   SportType?: string;

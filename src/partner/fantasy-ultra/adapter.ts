@@ -24,9 +24,11 @@ import type {
 } from "../types.ts";
 import { CookieJar } from "./cookie-jar.ts";
 import {
+  executionResultFromBetGroups,
   inspectStreamListCapabilities,
   normalizeClientEventIdCandidates,
   originFromLiveUrl,
+  parseBetGroupsResponse,
   parseRenewTokenResponse,
   parseSportsLeagues,
   parseStatscoreBookedEvents,
@@ -410,20 +412,49 @@ export class FantasyUltraAdapter implements FantasySessionAdapter {
     };
   }
 
+  /**
+   * Place bet — **POST URL still unmapped**.
+   *
+   * Response wire is known (`betGroups` + `e`); use {@link interpretBetTicketResponse}
+   * when you have a captured body. Live POST requires Network capture of Place Bet.
+   */
   async placeOrder(order: PartnerOrder): Promise<PartnerExecutionResult> {
     if (order.dryRun !== false) {
       return {
         success: false,
         dryRun: true,
         error:
-          "fantasy402: placeOrder not mapped to a bet wire — dry-run only (capture PlaceBet HAR to implement)",
+          "fantasy402: placeOrder dry-run — response shape known (betGroups/ticketNumber/finalOdds/risk/toWin); POST URL not mapped. Capture Place Bet request.",
+        raw: {
+          intent: {
+            eventId: order.eventId,
+            marketId: order.marketId,
+            key: order.key,
+            periodId: order.periodId,
+            stake: order.stake,
+            price: order.price,
+          },
+        },
       };
     }
     return {
       success: false,
       dryRun: false,
       error:
-        "fantasy402: placeOrder blocked — no PlaceBet endpoint mapped (stream catalog ≠ ticket API)",
+        "fantasy402: placeOrder blocked — implement POST from Place Bet HAR; parser ready via interpretBetTicketResponse()",
     };
+  }
+
+  /**
+   * Parse a captured place-bet / open-ticket JSON into execution result.
+   * Does not call the network.
+   */
+  interpretBetTicketResponse(wire: unknown): PartnerExecutionResult {
+    return executionResultFromBetGroups(wire);
+  }
+
+  /** List groups from a captured open-bets / place response. */
+  parseOpenTickets(wire: unknown) {
+    return parseBetGroupsResponse(wire);
   }
 }

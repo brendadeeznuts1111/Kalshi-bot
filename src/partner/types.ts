@@ -16,23 +16,87 @@ export type PartnerLimits = {
   note?: string;
 };
 
+/**
+ * Order intent for Ultra / bet-factory style tickets.
+ * Field names align with captured componentBets (eventId, marketId, key, periodId).
+ */
 export type PartnerOrder = {
+  /** Widget / book event id (e.g. 196878741) */
   eventId: string;
+  /** Market id string (e.g. "3") */
   marketId?: string;
+  /** Selection key (e.g. "2" for away/side) */
+  key?: string;
+  subKey?: string;
+  /** Period id (e.g. "m" match) */
+  periodId?: string;
   side: "home" | "away" | "yes" | "no" | string;
+  /** Stake / risk amount in account currency */
   stake: number;
+  /**
+   * Decimal odds when known (e.g. 1.892… from finalOdds).
+   * Not American; convert at boundary if UI shows +117.
+   */
   price?: number;
   currency?: string;
   dryRun?: boolean;
+  sportId?: number;
+  leagueId?: number;
+  team1?: string;
+  team2?: string;
 };
 
 export type PartnerExecutionResult = {
   success: boolean;
   transactionId?: string;
+  ticketNumber?: string;
+  betGroupId?: number;
+  betId?: number;
+  /** Decimal odds accepted */
+  finalOdds?: number;
+  risk?: number;
+  toWin?: number;
+  currency?: string;
   remainingBalance?: number;
   dryRun?: boolean;
   error?: string;
+  /** e from wire (0 = ok) */
+  wireErrorCode?: number;
   raw?: unknown;
+};
+
+/** One leg from componentBets[] */
+export type PartnerComponentBet = {
+  betId: number;
+  sequenceNumber: number;
+  sportId: number | null;
+  leagueId: number | null;
+  leagueName: string | null;
+  eventId: string;
+  marketId: string | null;
+  periodId: string | null;
+  key: string | null;
+  subKey: string | null;
+  team1: string | null;
+  team2: string | null;
+  finalOdds: number | null;
+  canCashout: boolean;
+  state: number | null;
+};
+
+/** Accepted / open bet group (betGroups[] row) */
+export type PartnerBetGroup = {
+  betGroupId: number;
+  ticketNumber: string;
+  finalOdds: number | null;
+  risk: number;
+  toWin: number;
+  currency: string | null;
+  betType: number | null;
+  state: number | null;
+  acceptTime: number | null;
+  delay: number | null;
+  legs: PartnerComponentBet[];
 };
 
 /** Normalized live-coverage row (stream catalog — not price odds). */

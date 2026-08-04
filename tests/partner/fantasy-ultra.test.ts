@@ -2,12 +2,15 @@
 import { describe, expect, test } from "bun:test";
 import {
   CookieJar,
+  executionResultFromBetGroups,
   FantasyUltraAdapter,
   getFantasySessionAdapter,
   getPartnerAdapter,
   inspectStreamListCapabilities,
   normalizeClientEventIdCandidates,
+  orderIntentFromComponentBet,
   originFromLiveUrl,
+  parseBetGroupsResponse,
   parseRenewTokenResponse,
   parseSportsLeagues,
   parseStatscoreBookedEvents,
@@ -16,6 +19,48 @@ import {
   statscorePayloadHasPrices,
   type PartnerAccountProfile,
 } from "../../src/partner/index.ts";
+
+/** Captured place/open ticket response (redacted dummy desk). */
+const betTicketWire = {
+  betGroups: [
+    {
+      betGroupId: 307200153,
+      ticketNumber: 1036636660,
+      finalOdds: 1.8928569555282593,
+      risk: 68,
+      toWin: 60.71,
+      toWinTaxAmount: 0,
+      result: 0,
+      state: 0,
+      acceptTime: 1785845383.544,
+      betType: 0,
+      currency: "USD",
+      delay: 5,
+      componentBets: [
+        {
+          betId: 335749942,
+          sequenceNumber: 1,
+          sportId: 93,
+          countryId: 20,
+          leagueId: 23367,
+          leagueName: "Czech Republic Pro League Men",
+          eventId: 196878741,
+          periodId: "m",
+          marketId: "3",
+          key: "2",
+          subKey: "",
+          team1: "Kyryl Darin",
+          team2: "Jiri Plachy",
+          finalOdds: 1.8928569555282593,
+          canCashout: true,
+          state: 0,
+        },
+      ],
+    },
+  ],
+  e: 0,
+  d: "",
+};
 
 const ultraWire = {
   URL: {
@@ -329,6 +374,52 @@ describe("FantasyUltraAdapter session blueprint", () => {
     const booked = await adapter.fetchBookedEvent("19690946");
     expect(booked?.name).toBe("A - B");
     await expect(adapter.fetchOdds("19690946")).rejects.toThrow(/no prices/i);
+  });
+
+  test("parseBetGroupsResponse + executionResultFromBetGroups (captured ticket)", () => {
+    const { groups, errorCode } = parseBetGroupsResponse(betTicketWire);
+    expect(errorCode).toBe(0);
+    expect(groups.length).toBe(1);
+    expect(groups[0]!.ticketNumber).toBe("1036636660");
+    expect(groups[0]!.risk).toBe(68);
+    expect(groups[0]!.toWin).toBe(60.71);
+    expect(groups[0]!.finalOdds).toBeCloseTo(1.8928, 3);
+    const leg = groups[0]!.legs[0]!;
+    expect(leg.eventId).toBe("196878741");
+    expect(leg.marketId).toBe("3");
+    expect(leg.key).toBe("2");
+    expect(leg.periodId).toBe("m");
+    expect(leg.team1).toBe("Kyryl Darin");
+
+    const exec = executionResultFromBetGroups(betTicketWire);
+    expect(exec.success).toBe(true);
+    expect(exec.ticketNumber).toBe("1036636660");
+    expect(exec.transactionId).toBe("1036636660");
+    expect(exec.betId).toBe(335749942);
+    expect(exec.risk).toBe(68);
+
+    const intent = orderIntentFromComponentBet(leg, 68);
+    expect(intent.eventId).toBe("196878741");
+    expect(intent.marketId).toBe("3");
+    expect(intent.stake).toBe(68);
+  });
+
+  test("interpretBetTicketResponse on adapter", () => {
+    const adapter = new FantasyUltraAdapter({
+      credentials: {
+        customerID: "C",
+        agentID: "A",
+        password: "p",
+        bearerToken: "t",
+        domain: "https://fantasy402.com",
+        skin: 2,
+        currency: "USD",
+      },
+      warmSession: false,
+    });
+    const exec = adapter.interpretBetTicketResponse(betTicketWire);
+    expect(exec.success).toBe(true);
+    expect(exec.finalOdds).toBeCloseTo(1.89, 2);
   });
 
   test("getPartnerAdapter / getFantasySessionAdapter route fantasy402", async () => {
