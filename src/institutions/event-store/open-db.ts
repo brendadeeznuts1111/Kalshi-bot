@@ -129,6 +129,38 @@ export function applyEventStoreSchema(db: Database): void {
   db.run(
     `CREATE INDEX IF NOT EXISTS idx_partner_events_last_updated ON partner_events (last_updated)`,
   );
+  // Partner financial registry (outs) — secrets stay in env, not here
+  db.run(`CREATE TABLE IF NOT EXISTS partners (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    active INTEGER NOT NULL DEFAULT 1,
+    profit_split REAL,
+    commission_rate REAL,
+    notes TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  )`);
+  db.run(`CREATE TABLE IF NOT EXISTS betting_accounts (
+    id TEXT PRIMARY KEY,
+    partner_id TEXT NOT NULL,
+    provider TEXT NOT NULL,
+    url TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'active',
+    env_prefix TEXT,
+    max_stake REAL NOT NULL DEFAULT 0,
+    max_win REAL NOT NULL DEFAULT 0,
+    currency TEXT NOT NULL DEFAULT 'USD',
+    skin INTEGER,
+    meta_json TEXT NOT NULL DEFAULT '{}',
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  )`);
+  db.run(
+    `CREATE INDEX IF NOT EXISTS idx_betting_accounts_partner ON betting_accounts (partner_id)`,
+  );
+  db.run(
+    `CREATE INDEX IF NOT EXISTS idx_betting_accounts_provider ON betting_accounts (provider)`,
+  );
   migrateEventStoreColumns(db);
 }
 

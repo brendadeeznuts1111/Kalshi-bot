@@ -62,6 +62,20 @@ export {
   type PartnerEventUpsertResult,
 } from "./partner-events-store.ts";
 
+export {
+  computeProviderCapacity,
+  ensurePartnerRegistrySchema,
+  listActiveBettingAccounts,
+  listBettingAccountsByProvider,
+  seedFantasy402FromEnv,
+  upsertBettingAccount,
+  upsertPartner,
+  type BettingAccountRow,
+  type PartnerEntity,
+  type ProviderCapacity,
+  type ProviderId,
+} from "./registry.ts";
+
 import type { PartnerAccountProfile } from "./account-profile.ts";
 import { credentialsFromFantasyProfile } from "./account-profile.ts";
 import { FantasyUltraAdapter } from "./fantasy-ultra/adapter.ts";

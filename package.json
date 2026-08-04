@@ -63,6 +63,7 @@
     "partner:test-fantasy": "bun tools/partner-test-fantasy.ts",
     "partner:watch-events": "bun tools/watch-fantasy-events.ts",
     "partner:sync": "bun tools/partner-sync.ts",
+    "partner:registry": "bun tools/partner-registry.ts",
     "tennis:events": "bun tools/tennis/events-cli.ts",
     "tennis:itf": "bun tools/tennis/itf-calendar-cli.ts",
     "tennis:tour": "bun tools/tennis/tour-sync-cli.ts",

@@ -237,6 +237,31 @@ Live probe: **403 Forbidden** without a valid session `auth`. Use stream-list fo
 
 **Not auto-filled:** `client_event_id` / odds — stream-list has no prices; enrich later.
 
+## Liquidity sources map (partners / outs / providers)
+
+| Entity | Table / type | Role |
+|--------|--------------|------|
+| **Partner** | `partners` | Financial owner (profit split, commission) |
+| **Account (out)** | `betting_accounts` | Place to bet: provider + limits + `env_prefix` for secrets |
+| **Provider** | adapter id (`fantasy402`, `kalshi`) | Book / feed implementation |
+| **Stream inventory** | `partner_events` | Detected events (not priced book) |
+| **Desk liquidity** | `match_liquidity` | Kalshi-priced gates (`tradable` / `liq_ok`) |
+
+```bash
+# Seed BB55113-style out from env (no secrets in DB)
+export FANTASY402_CUSTOMER_ID=BB55113 FANTASY402_MAX_STAKE=1000 FANTASY402_MAX_WIN=5000
+bun run partner:registry -- --seed --json
+```
+
+**Capacity** = Σ `max_stake` per provider across active accounts.  
+That is **not** market `tradable` — only stake capacity until a priced line exists.
+
+| Ready | Not ready |
+|-------|-----------|
+| Registry + capacity rollup | Partner markets in `liquidity:ground` |
+| Fantasy402 inventory sync | Concentration scoring from DB accounts |
+| Ticket response parse | placeOrder POST |
+
 ## Unified sync module (ground truth)
 
 ```bash
