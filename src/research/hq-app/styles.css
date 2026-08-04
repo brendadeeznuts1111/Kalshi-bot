@@ -25,6 +25,15 @@
 .desk-liq-toggles .liq-toggle.on {
   background: rgba(77,163,255,.15); border-color: var(--acc); color: var(--acc);
 }
+
+/* Overview desk chips → Events board filter jump */
+.desk-liq-chips .desk-chip-jump {
+  border: 0; cursor: pointer; font: inherit;
+}
+.desk-liq-chips .desk-chip-jump:hover {
+  outline: 1px solid var(--acc);
+  outline-offset: 1px;
+}
 .tag { display: inline-block; background: #171c28; border: 1px solid #232a3a;
   border-radius: 4px; padding: 0 0.4rem; font-size: 0.72rem;
   color: #7d8798; margin: 0.1rem; }

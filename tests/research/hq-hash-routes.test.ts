@@ -71,7 +71,10 @@ describe('HQ URLPattern hash routes', () => {
     expect(app).toContain('id="live-board"');
     expect(app).toContain('id="volume-liquidity-panel"');
     expect(app).toContain('await renderEvents()');
-    expect(app).toContain('window.addEventListener("hashchange", applyHashRoute)');
+    // hashchange: Events deep links first, then glossary/surface routes
+    expect(app).toContain('window.addEventListener("hashchange"');
+    expect(app).toContain('if (openEventsFromHash()) return');
+    expect(app).toContain('applyHashRoute()');
     expect(app).not.toContain('function parseGlossaryHash');
   });
 
@@ -83,5 +86,13 @@ describe('HQ URLPattern hash routes', () => {
     expect(app).toContain('"tradable"');
     expect(app).toContain('"liq_ok"');
     expect(app).toContain('"quoted"');
+  });
+
+  test('overview desk chips jump to filtered Events board', async () => {
+    const app = await Bun.file(new URL('../../src/research/hq-app/app.js', import.meta.url)).text();
+    expect(app).toContain('function jumpToEventsLiquidity');
+    expect(app).toContain('data-liq-jump');
+    expect(app).toContain('function openEventsFromHash');
+    expect(app).toContain('desk-chip-jump');
   });
 });
