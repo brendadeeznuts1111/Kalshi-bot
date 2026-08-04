@@ -96,3 +96,18 @@ Override: `TENNIS_EXPERIMENT_CRON_SCHEDULE`, `TENNIS_EXPERIMENT_CRON_TITLE`.
 Shadow metrics (not cron): `bun run tennis:experiment -- ingest --experiment=<id> --program=tennis-game-model`.
 
 See [`docs/EXPERIMENT_FACTORIAL.md`](EXPERIMENT_FACTORIAL.md).
+
+## Match liquidity (reactive ground)
+
+Time-based pipeline (Bun.cron) is still the volume-backfill / snapshot owner.
+For **immediate HTML ground after local ingest**, use `fs.watch` on the event-store:
+
+```bash
+bun run liquidity:ground:watch-db              # debounce 750ms, recompute + html-only ground
+bun run liquidity:ground:watch-db -- --once    # one rebuild then exit
+bun run liquidity:pipeline:register            # OS cron every 30m (volume optional)
+```
+
+SQLite WAL writes burst across `event-store.db`, `-wal`, and `-shm`; the watcher
+coalesces events and serializes rebuilds.
+
