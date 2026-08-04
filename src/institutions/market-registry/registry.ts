@@ -73,7 +73,14 @@ function selector(
 
 function validateKalshiSelector(row: SourceSelector): string[] {
   if (row.kind === SELECTOR.kalshiSeriesMetadata) {
-    return row.parameters.endpoint === "/series" ? [] : ["series metadata endpoint must be /series"];
+    const errors: string[] = [];
+    if (row.parameters.endpoint !== "/series") errors.push("series metadata endpoint must be /series");
+    if (row.parameters.relation !== "category_tag") errors.push("series metadata relation must be category_tag");
+    if (row.parameters.category !== "Sports") errors.push("series metadata category must be Sports");
+    if (row.parameters.includeProductMetadata !== "true") {
+      errors.push("series metadata must include product metadata");
+    }
+    return errors;
   }
   if (row.kind !== SELECTOR.kalshiSeries) return ["unsupported Kalshi selector kind"];
   const errors: string[] = [];
@@ -94,7 +101,10 @@ function validateKalshiSelector(row: SourceSelector): string[] {
 
 function validatePolymarketSelector(row: SourceSelector): string[] {
   if (row.kind === SELECTOR.polymarketSportsMetadata) {
-    return row.parameters.endpoint === "/sports" ? [] : ["sports metadata endpoint must be /sports"];
+    const errors: string[] = [];
+    if (row.parameters.endpoint !== "/sports") errors.push("sports metadata endpoint must be /sports");
+    if (row.parameters.relation !== "tag") errors.push("sports metadata relation must be tag");
+    return errors;
   }
   if (row.kind !== SELECTOR.polymarketTag) return ["unsupported Polymarket selector kind"];
   const tagId = row.parameters.tagId;
@@ -118,9 +128,22 @@ export const ADAPTERS = [
     metadataDiscovery: selector(SELECTOR.kalshiSeriesMetadata, "kalshi:metadata:series", {
       endpoint: "/series",
       relation: "category_tag",
+      category: "Sports",
+      includeProductMetadata: "true",
     }),
     validateSelector: validateKalshiSelector,
-    cachePolicy: { freshForMs: 60_000, staleForMs: 300_000, failureThreshold: 3 },
+    cachePolicy: {
+      freshForMs: 60_000,
+      staleForMs: 300_000,
+      failureThreshold: 3,
+      circuitResetMs: 30_000,
+    },
+    metadataCachePolicy: {
+      freshForMs: 1_800_000,
+      staleForMs: 86_400_000,
+      failureThreshold: 3,
+      circuitResetMs: 60_000,
+    },
   }),
   defineAdapter({
     id: ADAPTER.polymarketGamma,
@@ -135,7 +158,18 @@ export const ADAPTERS = [
       { endpoint: "/sports", relation: "tag" },
     ),
     validateSelector: validatePolymarketSelector,
-    cachePolicy: { freshForMs: 60_000, staleForMs: 300_000, failureThreshold: 3 },
+    cachePolicy: {
+      freshForMs: 60_000,
+      staleForMs: 300_000,
+      failureThreshold: 3,
+      circuitResetMs: 30_000,
+    },
+    metadataCachePolicy: {
+      freshForMs: 1_800_000,
+      staleForMs: 86_400_000,
+      failureThreshold: 3,
+      circuitResetMs: 60_000,
+    },
   }),
 ] as const;
 
@@ -599,6 +633,9 @@ export function buildSportsSourceRegistryArtifact(
       selectorKinds: adapter.selectorKinds.map(unbrand),
       metadataSelectorKinds: adapter.metadataSelectorKinds.map(unbrand),
       cachePolicy: adapter.cachePolicy,
+      ...(adapter.metadataCachePolicy
+        ? { metadataCachePolicy: adapter.metadataCachePolicy }
+        : {}),
       ...(adapter.metadataDiscovery
         ? { metadataDiscovery: serializeSelector(adapter.metadataDiscovery) }
         : {}),

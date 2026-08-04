@@ -39,11 +39,14 @@ export function validateSportsSourceRegistry(registry: SportsSourceRegistry): st
     if (adapter.cachePolicy.freshForMs < 0 || adapter.cachePolicy.staleForMs < adapter.cachePolicy.freshForMs) {
       errors.push(`${unbrand(adapter.id)}: invalid cache freshness window`);
     }
-    if (adapter.cachePolicy.failureThreshold < 1) {
+    if (adapter.cachePolicy.failureThreshold < 1 || adapter.cachePolicy.circuitResetMs < 1) {
       errors.push(`${unbrand(adapter.id)}: failure threshold must be positive`);
     }
     const metadata = adapter.metadataDiscovery;
     if (metadata) {
+      if (!adapter.metadataCachePolicy) {
+        errors.push(`${unbrand(adapter.id)}: metadata discovery requires a cache policy`);
+      }
       if (!unbrand(metadata.scope).startsWith(`${unbrand(adapter.source)}:`)) {
         errors.push(`${unbrand(adapter.id)}: metadata scope source mismatch`);
       }
@@ -57,6 +60,18 @@ export function validateSportsSourceRegistry(registry: SportsSourceRegistry): st
           adapter.validateSelector(metadata),
         ),
       );
+    }
+    if (
+      adapter.metadataCachePolicy &&
+      (adapter.metadataCachePolicy.freshForMs < 0 ||
+        adapter.metadataCachePolicy.staleForMs < adapter.metadataCachePolicy.freshForMs ||
+        adapter.metadataCachePolicy.failureThreshold < 1 ||
+        adapter.metadataCachePolicy.circuitResetMs < 1)
+    ) {
+      errors.push(`${unbrand(adapter.id)}: invalid metadata cache policy`);
+    }
+    if (adapter.metadataCachePolicy && !metadata) {
+      errors.push(`${unbrand(adapter.id)}: metadata cache policy requires discovery`);
     }
   }
 

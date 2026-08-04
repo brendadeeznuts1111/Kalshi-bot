@@ -207,7 +207,12 @@ describe("sports/source registry", () => {
           selectorKinds: [asSelectorKind("pinnacle_league")],
           metadataSelectorKinds: [],
           validateSelector: () => [],
-          cachePolicy: { freshForMs: 60_000, staleForMs: 300_000, failureThreshold: 3 },
+          cachePolicy: {
+            freshForMs: 60_000,
+            staleForMs: 300_000,
+            failureThreshold: 3,
+            circuitResetMs: 30_000,
+          },
         },
       ],
       integrations: [

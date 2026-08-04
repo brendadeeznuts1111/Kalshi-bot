@@ -1,5 +1,7 @@
 import type { AdapterDefinition, AdapterHealth } from "../types.ts";
 
+type CachePolicy = AdapterDefinition["cachePolicy"];
+
 /** Shared adapter health/circuit state; success means fetch + parse + projection completed. */
 export class SourceAdapterHealthState {
   private consecutiveFailures = 0;
@@ -10,12 +12,13 @@ export class SourceAdapterHealthState {
     private readonly label: string,
     private readonly definition: AdapterDefinition,
     private readonly now: () => number,
+    private readonly policy: CachePolicy = definition.cachePolicy,
   ) {}
 
   beforeRequest(): void {
     if (
       this.circuitOpenedAtMs !== undefined &&
-      this.now() - this.circuitOpenedAtMs < this.definition.cachePolicy.staleForMs
+      this.now() - this.circuitOpenedAtMs < this.policy.circuitResetMs
     ) {
       throw new Error(`${this.label} adapter circuit is open`);
     }
@@ -37,7 +40,7 @@ export class SourceAdapterHealthState {
 
   fail(): void {
     this.consecutiveFailures += 1;
-    if (this.consecutiveFailures >= this.definition.cachePolicy.failureThreshold) {
+    if (this.consecutiveFailures >= this.policy.failureThreshold) {
       this.circuitOpenedAtMs = this.now();
     }
   }
@@ -46,7 +49,7 @@ export class SourceAdapterHealthState {
     const now = this.now();
     if (
       this.circuitOpenedAtMs !== undefined &&
-      now - this.circuitOpenedAtMs < this.definition.cachePolicy.staleForMs
+      now - this.circuitOpenedAtMs < this.policy.circuitResetMs
     ) {
       return {
         state: "circuit_open",
@@ -64,13 +67,13 @@ export class SourceAdapterHealthState {
     }
     if (
       this.lastSuccessAtMs !== undefined &&
-      now - this.lastSuccessAtMs > this.definition.cachePolicy.freshForMs
+      now - this.lastSuccessAtMs > this.policy.freshForMs
     ) {
       return {
         state: "stale",
         consecutiveFailures: 0,
         lastSuccessAtMs: this.lastSuccessAtMs,
-        staleSinceMs: this.lastSuccessAtMs + this.definition.cachePolicy.freshForMs,
+        staleSinceMs: this.lastSuccessAtMs + this.policy.freshForMs,
       };
     }
     return this.lastSuccessAtMs === undefined

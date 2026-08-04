@@ -14,6 +14,7 @@ import type {
   SourceParticipantId,
   SourceMarketType,
   SourceMetadataId,
+  SourceMetadataRunId,
   SourceScopeId,
   SourceRegistryFingerprint,
   SportFamilyKey,
@@ -75,6 +76,13 @@ export type AdapterDefinition = {
     freshForMs: number;
     staleForMs: number;
     failureThreshold: number;
+    circuitResetMs: number;
+  };
+  metadataCachePolicy?: {
+    freshForMs: number;
+    staleForMs: number;
+    failureThreshold: number;
+    circuitResetMs: number;
   };
 };
 
@@ -132,6 +140,55 @@ export type SourceMetadataClassification = SourceMetadataClassificationDecision 
   registryFingerprint: SourceRegistryFingerprint;
   classifiedAtMs: number;
 };
+
+export type MetadataFetchRequest<Cursor extends string = string> = {
+  selector: SourceSelector;
+  metadataRunId?: SourceMetadataRunId;
+  pageIndex: number;
+  cursor?: Cursor;
+};
+
+export type MetadataPage<Row extends object, Cursor extends string = string> = {
+  request: MetadataFetchRequest<Cursor>;
+  observedAtMs: number;
+  records: readonly Row[];
+  completeness: 'complete' | 'partial';
+  nextCursor?: Cursor;
+  exhausted: boolean;
+};
+
+export interface MetadataSourceAdapter<
+  Row extends object,
+  Cursor extends string = string,
+> {
+  readonly definition: AdapterDefinition;
+  fetchPage(request: MetadataFetchRequest<Cursor>): Promise<unknown>;
+  parsePage(wire: unknown, request: MetadataFetchRequest<Cursor>): MetadataPage<Row, Cursor>;
+  project(page: MetadataPage<Row, Cursor>): readonly NormalizedSourceMetadata[];
+  health(): AdapterHealth;
+}
+
+export interface RuntimeMetadataSourceAdapter {
+  readonly definition: AdapterDefinition;
+  acquirePage(request: MetadataFetchRequest): Promise<MetadataPage<NormalizedSourceMetadata>>;
+  health(): AdapterHealth;
+}
+
+export function runtimeMetadataSourceAdapter<
+  Row extends object,
+  Cursor extends string = string,
+>(adapter: MetadataSourceAdapter<Row, Cursor>): RuntimeMetadataSourceAdapter {
+  return {
+    definition: adapter.definition,
+    async acquirePage(request) {
+      const typedRequest = request as MetadataFetchRequest<Cursor>;
+      const wire = await adapter.fetchPage(typedRequest);
+      const page = adapter.parsePage(wire, typedRequest);
+      return { ...page, records: adapter.project(page) };
+    },
+    health: () => adapter.health(),
+  };
+}
 
 export type SportsSourceRegistry = {
   sports: readonly SportDefinition[];
@@ -337,7 +394,18 @@ export type SportsSourceRegistryArtifact = {
     parserVersion: number;
     selectorKinds: readonly string[];
     metadataSelectorKinds: readonly string[];
-    cachePolicy: { freshForMs: number; staleForMs: number; failureThreshold: number };
+    cachePolicy: {
+      freshForMs: number;
+      staleForMs: number;
+      failureThreshold: number;
+      circuitResetMs: number;
+    };
+    metadataCachePolicy?: {
+      freshForMs: number;
+      staleForMs: number;
+      failureThreshold: number;
+      circuitResetMs: number;
+    };
     metadataDiscovery?: {
       kind: string;
       scope: string;
