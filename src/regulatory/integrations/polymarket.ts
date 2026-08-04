@@ -21,12 +21,18 @@ export type PolymarketEvent = {
   slug: string;
   title: string;
   description?: string;
-  volume?: number;
-  volume24hr?: number;
-  openInterest?: number;
-  liquidityClob?: number;
+  volume: number;
+  volume24hr: number;
+  openInterest: number;
+  liquidity: number;
+  liquidityClob: number;
+  active: boolean;
+  closed: boolean;
+  startDate?: string;
+  endDate?: string;
   createdAt?: string;
   updatedAt?: string;
+  markets: PolymarketMarket[];
 };
 
 export type PolymarketMarket = {
@@ -145,6 +151,7 @@ function toNumber(raw: unknown): number {
 
 export type FetchMarketsOptions = {
   limit?: number;
+  offset?: number;
   active?: boolean;
   closed?: boolean;
 };
@@ -157,6 +164,7 @@ export async function fetchPolymarketMarkets(
   const base = resolveBaseUrl(options.baseUrl);
   const limit = options.limit ?? 50;
   const params = new URLSearchParams({ limit: String(limit) });
+  if (options.offset !== undefined) params.set("offset", String(options.offset));
   if (options.active !== undefined) params.set("active", String(options.active));
   if (options.closed !== undefined) params.set("closed", String(options.closed));
 
@@ -165,6 +173,62 @@ export async function fetchPolymarketMarkets(
   const raw = await getJson<Record<string, unknown>[]>(fetchImpl, url, retryOptions);
 
   return raw.map(normalizeMarketWire);
+}
+
+export type FetchAllTennisEventsOptions = PolymarketClientOptions & {
+  /** Gamma currently caps event pages at 100 even when a larger limit is sent. */
+  pageSize?: number;
+  tagSlug?: string;
+};
+
+/**
+ * Fetch every active tennis event from Gamma using offset pagination.
+ *
+ * Pagination ends on an empty page instead of `rows.length < requestedLimit`:
+ * Gamma may clamp the requested limit, which would otherwise truncate the feed.
+ */
+export async function fetchAllPolymarketTennisEvents(
+  options: FetchAllTennisEventsOptions = {},
+): Promise<PolymarketEvent[]> {
+  const fetchImpl = resolveFetch(options);
+  const base = resolveBaseUrl(options.baseUrl);
+  const pageSize = Math.max(1, Math.min(100, Math.floor(options.pageSize ?? 100)));
+  const tagSlug = options.tagSlug ?? "tennis";
+  const { fetchImpl: _, baseUrl: __, pageSize: ___, tagSlug: ____, ...retryOptions } = options;
+  const events: PolymarketEvent[] = [];
+  const seenIds = new Set<string>();
+  let offset = 0;
+
+  for (let page = 0; page < 1_000; page++) {
+    const params = new URLSearchParams({
+      tag_slug: tagSlug,
+      active: "true",
+      closed: "false",
+      limit: String(pageSize),
+      offset: String(offset),
+    });
+    const raw = await getJson<Record<string, unknown>[]>(
+      fetchImpl,
+      `${base}/events?${params.toString()}`,
+      retryOptions,
+    );
+    if (raw.length === 0) return events;
+
+    let added = 0;
+    for (const row of raw) {
+      const event = normalizeEventWire(row);
+      if (seenIds.has(event.id)) continue;
+      seenIds.add(event.id);
+      events.push(event);
+      added++;
+    }
+    if (added === 0) {
+      throw new Error(`Polymarket pagination repeated a page at offset ${offset}`);
+    }
+    offset += raw.length;
+  }
+
+  throw new Error("Polymarket pagination exceeded 1000 pages");
 }
 
 /** Fetch a single market by its numeric ID. */
@@ -236,6 +300,31 @@ function normalizeMarketWire(raw: Record<string, unknown>): PolymarketMarket {
     endDate: raw.endDate ? String(raw.endDate) : undefined,
     event,
     events,
+  };
+}
+
+function normalizeEventWire(raw: Record<string, unknown>): PolymarketEvent {
+  const marketRows = Array.isArray(raw.markets)
+    ? (raw.markets as Record<string, unknown>[])
+    : [];
+  return {
+    id: String(raw.id ?? ""),
+    ticker: String(raw.ticker ?? ""),
+    slug: String(raw.slug ?? ""),
+    title: String(raw.title ?? ""),
+    description: raw.description ? String(raw.description) : undefined,
+    volume: toNumber(raw.volume),
+    volume24hr: toNumber(raw.volume24hr),
+    openInterest: toNumber(raw.openInterest),
+    liquidity: toNumber(raw.liquidity),
+    liquidityClob: toNumber(raw.liquidityClob),
+    active: Boolean(raw.active),
+    closed: Boolean(raw.closed),
+    startDate: raw.startDate ? String(raw.startDate) : undefined,
+    endDate: raw.endDate ? String(raw.endDate) : undefined,
+    createdAt: raw.createdAt ? String(raw.createdAt) : undefined,
+    updatedAt: raw.updatedAt ? String(raw.updatedAt) : undefined,
+    markets: marketRows.map(normalizeMarketWire),
   };
 }
 

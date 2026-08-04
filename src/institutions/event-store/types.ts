@@ -83,3 +83,45 @@ export type EventStoreSummaryRow = {
   year: string;
   count: number;
 };
+
+/** External venue probs for a Kalshi event (null = unmatched / unavailable). */
+export type CrossMarketOdds = {
+  polymarketProb: number | null;
+  polymarketVolume24h: number | null;
+  polymarketVolumeLifetime: number | null;
+  polymarketLiquidity: number | null;
+  polymarketOpenInterest: number | null;
+  polymarketEventId: string | null; // brand-ok — opaque external provider primary key
+  polymarketMatchMethod: "surname" | "fuzzy-name" | "date-tournament" | null;
+  pinnacleProb: number | null;
+};
+
+/** Persisted price-logger snapshot after both venue boundaries are parsed. */
+export type SnapshotRecord = {
+  timestamp: Date;
+  kalshiProb: number | null;
+  kalshiVolume24h: number;
+  kalshiVolumeLifetime: number;
+  kalshiOpenInterest: number;
+  staleVolume: boolean;
+  polymarketProb: number | null;
+  polymarketVolume24h: number;
+  polymarketVolumeLifetime: number;
+  polymarketLiquidity: number;
+  polymarketOpenInterest: number;
+};
+
+/** Kalshi mid vs Polymarket/Pinnacle deviation signal (warehouse / price-logger). */
+export type CrossMarketSignal = {
+  eventId: string; // brand-ok — event-store opaque PK string from SQL join
+  title: string;
+  playerA: string;
+  playerB: string;
+  kalshiMidCents: number;
+  kalshiProb: number;
+  polymarketProb: number | null;
+  pinnacleProb: number | null;
+  deviationPoly: number;
+  deviationPinny: number;
+  absDeviation: number;
+};
