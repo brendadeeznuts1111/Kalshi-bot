@@ -15,9 +15,11 @@ import { DEFAULT_EVENT_STORE_DB } from "../institutions/event-store/paths.ts";
 import {
   buildLiquidityBoardPayload,
   getMatchLiquidity,
+  listDeskLiquidityByEventId,
   listMatchLiquidityByTournament,
   recomputeMatchLiquidity,
   toLiquidityApiPayload,
+  type DeskLiquidityFlags,
 } from "../institutions/event-store/match-liquidity.ts";
 import { Database } from "bun:sqlite";
 import { partnerDetailHandler } from "../regulatory/routes/ops/partners";
@@ -44,7 +46,7 @@ import {
 import { buildHqPayload, resetTradingCache } from "./hq-data.ts";
 import { renderHq } from "./hq-view.ts";
 import hqApp from "./hq-app/index.html";
-import { fetchTennisBoard } from "./tennis-events.ts";
+import { attachDeskLiquidityToBoard, fetchTennisBoard } from "./tennis-events.ts";
 import { buildGlossaryApiPayload } from "../institutions/glossary.ts";
 import { readPlayerProfiles } from "./player-profiles.ts";
 import { getPlayerDetail } from "./tennis-hq-data.ts";
@@ -787,6 +789,32 @@ function handleLiquidityBoard(url: URL): Response {
   }
 }
 
+/**
+ * GET /api/events — Kalshi open board + deskLiquidity join.
+ * Optional server filters: liquidity, minVolume/minVol (HQ still filters client-side too).
+ */
+async function handleEventsBoard(url: URL): Promise<unknown> {
+  const board = await fetchTennisBoard();
+  let deskIndex = new Map<string, DeskLiquidityFlags>();
+  try {
+    const store = openEventStore({ dbPath: DEFAULT_EVENT_STORE_DB });
+    deskIndex = listDeskLiquidityByEventId(store);
+  } catch {
+    // Event-store optional — board still serves without desk flags.
+  }
+  const liquidity =
+    url.searchParams.get("liquidity") ??
+    (url.searchParams.get("tradable") === "1" ? "tradable" : "all");
+  const minRaw = url.searchParams.get("minVolume") ?? url.searchParams.get("minVol");
+  const minVolume = minRaw != null && minRaw !== "" ? Number(minRaw) : 0;
+  return attachDeskLiquidityToBoard(board, deskIndex, {
+    liquidity,
+    minVolume: Number.isFinite(minVolume) ? minVolume : 0,
+    // Keep empty series so HQ series panels still render "unavailable" / empty.
+    dropEmptySeries: false,
+  });
+}
+
 function openLiquidityStore(): Database {
   return openEventStore({ dbPath: DEFAULT_EVENT_STORE_DB });
 }
@@ -953,8 +981,10 @@ if (url.pathname === "/api/hq") {
       }
 
       // Tennis event board — all open match events w/ nested markets (60s cache)
+      // + desk match_liquidity flags for HQ filters/badges.
+      // Query: ?liquidity=all|priced|active|quoted|liq_ok|tradable&minVolume=N
       if (url.pathname === "/api/events") {
-        return json(await fetchTennisBoard());
+        return json(await handleEventsBoard(url));
       }
 
       // Player profiles derived from the event store

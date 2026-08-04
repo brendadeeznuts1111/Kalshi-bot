@@ -764,15 +764,20 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
   ui({
     id: "ui.events.filter.liquidity",
     label: "Liquidity",
-    description: "Filter by quote presence: priced or actively trading.",
+    description:
+      "Filter board rows by quote presence or desk gates: priced/active (wire), quoted (desk.quoted), liq_ok (liquidity_ok), tradable (desk.tradable).",
     category: "market",
-    synonyms: ["quotes", "book"],
-    values: ["all", "priced", "active"],
+    synonyms: ["quotes", "book", "tradable", "liquid"],
+    values: ["all", "priced", "active", "quoted", "liq_ok", "tradable"],
     valueLabels: {
       all: "all",
       priced: "has quotes",
       active: "trading live",
+      quoted: "desk quoted",
+      liq_ok: "liquidity ok",
+      tradable: "desk tradable",
     },
+    seeAlso: ["liquidity_ok", "desk.tradable", "desk.quoted", "kpi.tradable_matches"],
     tone: "concept",
   }),
   ui({

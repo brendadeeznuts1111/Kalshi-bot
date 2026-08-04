@@ -5,6 +5,8 @@
  * turn into an upstream burst.
  *
  * Money in = Kalshi wire strings (`*_dollars`, `*_fp`); money out = cents ints.
+ * Desk liquidity flags (`deskLiquidity`) are attached at the serve boundary
+ * from match_liquidity — not part of the Kalshi cache payload.
  */
 // @see https://docs.kalshi.com/api-reference/market/get-markets
 // @see https://docs.kalshi.com/api-reference/events/get-events
@@ -19,6 +21,7 @@ import {
   unbrand,
   type SeriesTicker,
 } from "../institutions/event-store/brands.ts";
+import type { DeskLiquidityFlags } from "../institutions/event-store/match-liquidity.ts";
 import {
   cityFromTournament,
   geoForTournament,
@@ -89,6 +92,11 @@ export type TennisEventView = {
   /** First market's occurrence_datetime, epoch ms. */
   occurrenceMs: number | null;
   markets: TennisMarketView[];
+  /**
+   * Desk match_liquidity join (optional). Present when serve attaches
+   * event-store flags for board filters / per-row badges.
+   */
+  deskLiquidity?: DeskLiquidityFlags;
 };
 
 export type TennisBoardSeries = {
@@ -241,4 +249,85 @@ export async function fetchTennisBoard(options: {
   };
   if (!options.series) boardCache = { value: board, expiresAtMs: nowMs + BOARD_CACHE_TTL_MS };
   return board;
+}
+
+/** Desk liquidity filter values for GET /api/events?liquidity=… and HQ select. */
+export type EventsBoardLiquidityFilter =
+  | "all"
+  | "priced"
+  | "active"
+  | "quoted"
+  | "liq_ok"
+  | "tradable";
+
+export type EventsBoardFilterOptions = {
+  /** Desk + quote filters (glossary ui.events.filter.liquidity). */
+  liquidity?: EventsBoardLiquidityFilter | string | null;
+  /** Min gate volume (24h preferred, else lifetime from desk; else board 24h sum). */
+  minVolume?: number | null;
+  /** Alias used by HQ form (`minVol`). */
+  minVol?: number | null;
+  /** When true, drop series with zero matching events. Default true. */
+  dropEmptySeries?: boolean;
+};
+
+function eventMatchesDeskLiquidity(
+  event: TennisEventView,
+  liquidity: string,
+): boolean {
+  if (!liquidity || liquidity === "all") return true;
+  const desk = event.deskLiquidity;
+  if (liquidity === "priced") {
+    return event.markets.some((m) => m.yesBidCents != null && m.yesAskCents != null);
+  }
+  if (liquidity === "active") {
+    return event.markets.some((m) => m.status === "active");
+  }
+  if (liquidity === "quoted") return desk?.quoted === true;
+  if (liquidity === "liq_ok" || liquidity === "liquidity_ok") return desk?.liquidityOk === true;
+  if (liquidity === "tradable") return desk?.tradable === true;
+  return true;
+}
+
+function eventVolumeForMinGate(event: TennisEventView): number {
+  if (event.deskLiquidity) {
+    return event.deskLiquidity.volumeForGate;
+  }
+  return event.markets.reduce((s, m) => s + (m.volume24h ?? 0), 0);
+}
+
+/**
+ * Attach desk flags by eventTicker and optionally filter (server query params).
+ * Returns a new board; does not mutate the cached Kalshi payload.
+ */
+export function attachDeskLiquidityToBoard(
+  board: TennisBoard,
+  byEvent: ReadonlyMap<string, DeskLiquidityFlags>,
+  filters: EventsBoardFilterOptions = {},
+): TennisBoard {
+  const liquidity = (filters.liquidity ?? "all").trim() || "all";
+  const minVolume = Number(filters.minVolume ?? filters.minVol ?? 0) || 0;
+  const dropEmpty = filters.dropEmptySeries !== false;
+
+  const series: TennisBoardSeries[] = board.series.map((s) => {
+    if (s.state !== "ok") return s;
+    const events = s.events
+      .map((e) => {
+        const desk = byEvent.get(e.eventTicker);
+        return desk ? { ...e, deskLiquidity: desk } : { ...e };
+      })
+      .filter((e) => eventMatchesDeskLiquidity(e, liquidity))
+      .filter((e) => (minVolume > 0 ? eventVolumeForMinGate(e) >= minVolume : true));
+    return { ...s, events };
+  }).filter((s) => (dropEmpty && s.state === "ok" ? s.events.length > 0 : true));
+
+  return {
+    generatedAt: board.generatedAt,
+    eventCount: series.reduce((n, s) => n + s.events.length, 0),
+    marketCount: series.reduce(
+      (n, s) => n + s.events.reduce((m, e) => m + e.markets.length, 0),
+      0,
+    ),
+    series,
+  };
 }
