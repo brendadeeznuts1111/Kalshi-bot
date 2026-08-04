@@ -42,7 +42,6 @@ export type MetadataClassificationPolicy = {
     reasonCode: MetadataReasonCode;
   };
 };
-
 export type SportDefinition = {
   key: SportKey;
   label: string;
@@ -71,6 +70,7 @@ export type AdapterDefinition = {
   selectorKinds: readonly SelectorKind[];
   metadataSelectorKinds: readonly SelectorKind[];
   metadataDiscovery?: SourceSelector;
+  metadataPageMode?: 'atomic' | 'cursor';
   validateSelector: (selector: SourceSelector) => readonly string[];
   cachePolicy: {
     freshForMs: number;
@@ -394,6 +394,7 @@ export type SportsSourceRegistryArtifact = {
     parserVersion: number;
     selectorKinds: readonly string[];
     metadataSelectorKinds: readonly string[];
+    metadataPageMode?: 'atomic' | 'cursor';
     cachePolicy: {
       freshForMs: number;
       staleForMs: number;

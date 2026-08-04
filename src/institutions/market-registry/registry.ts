@@ -125,6 +125,7 @@ export const ADAPTERS = [
     parserVersion: 1,
     selectorKinds: [SELECTOR.kalshiSeries],
     metadataSelectorKinds: [SELECTOR.kalshiSeriesMetadata],
+    metadataPageMode: "atomic",
     metadataDiscovery: selector(SELECTOR.kalshiSeriesMetadata, "kalshi:metadata:series", {
       endpoint: "/series",
       relation: "category_tag",
@@ -152,6 +153,7 @@ export const ADAPTERS = [
     parserVersion: 1,
     selectorKinds: [SELECTOR.polymarketTag],
     metadataSelectorKinds: [SELECTOR.polymarketSportsMetadata],
+    metadataPageMode: "atomic",
     metadataDiscovery: selector(
       SELECTOR.polymarketSportsMetadata,
       "polymarket:metadata:sports",
@@ -632,6 +634,7 @@ export function buildSportsSourceRegistryArtifact(
       parserVersion: adapter.parserVersion,
       selectorKinds: adapter.selectorKinds.map(unbrand),
       metadataSelectorKinds: adapter.metadataSelectorKinds.map(unbrand),
+      ...(adapter.metadataPageMode ? { metadataPageMode: adapter.metadataPageMode } : {}),
       cachePolicy: adapter.cachePolicy,
       ...(adapter.metadataCachePolicy
         ? { metadataCachePolicy: adapter.metadataCachePolicy }

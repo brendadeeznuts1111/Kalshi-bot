@@ -1,6 +1,6 @@
 {
   "schema": "sports-source-registry/v1",
-  "generatedAt": "2026-08-04T12:47:06.525Z",
+  "generatedAt": "2026-08-04T13:48:07.905Z",
   "sports": [
     {
       "key": "tennis",
@@ -43,6 +43,7 @@
       "metadataSelectorKinds": [
         "kalshi_series_metadata"
       ],
+      "metadataPageMode": "atomic",
       "cachePolicy": {
         "freshForMs": 60000,
         "staleForMs": 300000,
@@ -77,6 +78,7 @@
       "metadataSelectorKinds": [
         "polymarket_sports_metadata"
       ],
+      "metadataPageMode": "atomic",
       "cachePolicy": {
         "freshForMs": 60000,
         "staleForMs": 300000,

@@ -1,10 +1,13 @@
 import type { Database } from 'bun:sqlite';
 import { createHash } from 'node:crypto';
 import {
+  asAdapterId,
   asSelectorKind,
   asSourceKey,
   asSourceMetadataId,
+  asSourceMetadataRunId,
   asSourceRegistryFingerprint,
+  asSourceScopeId,
   unbrand,
   type AdapterId,
   type SourceMetadataRunId,
@@ -32,7 +35,7 @@ type PersistSourceMetadataInput = {
   registryFingerprint: SourceRegistryFingerprint;
 };
 
-export type SourceMetadataPublisher = {
+type SourceMetadataPublisher = {
   registryFingerprint: SourceRegistryFingerprint;
   persist(db: Database, input: Omit<PersistSourceMetadataInput, 'registryFingerprint'>): number;
 };
@@ -53,6 +56,26 @@ export type StoredSourceMetadataWireRow = {
   sourceUpdatedAtMs: number | null;
 };
 
+type StagedSourceMetadataWireRow = StoredSourceMetadataWireRow & { observedAtMs: number };
+
+type PromotionRunWireRow = {
+  sourceKey: string;
+  runId: string; // brand-ok -- parsed immediately after the SQLite boundary
+  adapterId: string; // brand-ok -- parsed immediately after the SQLite boundary
+  selectorScope: string;
+  registryFingerprint: string;
+  state: string;
+  exhausted: number;
+  partialPageCount: number;
+  checkpointAtMs: number | null;
+};
+
+export type PromoteSourceMetadataResult = {
+  entityCount: number;
+  classificationCount: number;
+  registryFingerprint: SourceRegistryFingerprint;
+};
+
 /** Stable fingerprint of registry semantics; generation time is deliberately fixed. */
 export function sourceRegistryFingerprint(
   registry: SportsSourceRegistry = SPORTS_SOURCE_REGISTRY
@@ -64,7 +87,7 @@ export function sourceRegistryFingerprint(
 }
 
 /** Bind publication to one validated registry fingerprint for the whole promotion transaction. */
-export function createSourceMetadataPublisher(
+function createSourceMetadataPublisher(
   registry: SportsSourceRegistry = SPORTS_SOURCE_REGISTRY
 ): SourceMetadataPublisher {
   const registryFingerprint = sourceRegistryFingerprint(registry);
@@ -73,6 +96,99 @@ export function createSourceMetadataPublisher(
     persist(db, input) {
       return persistSourceMetadataEntity(db, { ...input, registryFingerprint }, registry);
     },
+  };
+}
+
+/** Promote only the latest terminal-complete run; failed or superseded runs cannot call through. */
+export function promoteCompletedSourceMetadataRun(
+  db: Database,
+  input: {
+    source: NormalizedSourceMetadata['source'];
+    runId: SourceMetadataRunId;
+    classifiedAtMs: number;
+  },
+  registry: SportsSourceRegistry = SPORTS_SOURCE_REGISTRY
+): PromoteSourceMetadataResult {
+  assertTimestamp(input.classifiedAtMs, 'classifiedAtMs');
+  const wire = db
+    .query(
+      `SELECT source_key AS sourceKey, metadata_run_id AS runId,
+              adapter_id AS adapterId, selector_scope AS selectorScope,
+              registry_fingerprint AS registryFingerprint, state, exhausted,
+              partial_page_count AS partialPageCount,
+              checkpoint_at_ms AS checkpointAtMs
+       FROM source_metadata_runs
+       WHERE source_key = $source AND metadata_run_id = $runId`
+    )
+    .get({
+      $source: unbrand(input.source),
+      $runId: unbrand(input.runId),
+    }) as PromotionRunWireRow | null;
+  if (
+    !wire ||
+    wire.state !== 'complete' ||
+    wire.exhausted !== 1 ||
+    wire.partialPageCount !== 0 ||
+    wire.checkpointAtMs === null
+  ) {
+    throw new Error('source metadata promotion requires a terminal-complete run');
+  }
+  const newer = db
+    .query(
+      `SELECT 1 AS present
+       FROM source_metadata_runs
+       WHERE source_key = $source
+         AND selector_scope = $selectorScope
+         AND state = 'complete'
+         AND checkpoint_at_ms > $checkpointAtMs
+       LIMIT 1`
+    )
+    .get({
+      $source: wire.sourceKey,
+      $selectorScope: wire.selectorScope,
+      $checkpointAtMs: wire.checkpointAtMs,
+    });
+  if (newer) throw new Error('source metadata run has been superseded');
+
+  const runId = asSourceMetadataRunId(wire.runId);
+  const source = asSourceKey(wire.sourceKey);
+  const adapter = asAdapterId(wire.adapterId);
+  const selectorScope = asSourceScopeId(wire.selectorScope);
+  const pinnedFingerprint = asSourceRegistryFingerprint(wire.registryFingerprint);
+  const publisher = createSourceMetadataPublisher(registry);
+  if (publisher.registryFingerprint !== pinnedFingerprint) {
+    throw new Error('source metadata registry changed during publication');
+  }
+  const rows = db
+    .query(
+      `SELECT source_key AS sourceKey, metadata_id AS metadataId,
+              metadata_kind AS metadataKind, label,
+              attributes_json AS attributesJson, facets_json AS facetsJson,
+              source_updated_at_ms AS sourceUpdatedAtMs,
+              observed_at_ms AS observedAtMs
+       FROM source_metadata_run_entities
+       WHERE source_key = $source AND metadata_run_id = $runId
+       ORDER BY metadata_kind, metadata_id`
+    )
+    .all({ $source: unbrand(source), $runId: unbrand(runId) }) as StagedSourceMetadataWireRow[];
+  if (rows.length === 0) throw new Error('source metadata promotion requires staged entities');
+  let classificationCount = 0;
+  for (const row of rows) {
+    const entity = sourceMetadataFromStoredRow(row);
+    assertProviderTimestampDoesNotRegress(db, entity);
+    classificationCount += publisher.persist(db, {
+      entity,
+      adapter,
+      selectorScope,
+      runId,
+      observedAtMs: row.observedAtMs,
+      classifiedAtMs: input.classifiedAtMs,
+    });
+  }
+  return {
+    entityCount: rows.length,
+    classificationCount,
+    registryFingerprint: pinnedFingerprint,
   };
 }
 
@@ -229,6 +345,32 @@ function replaceClassifications(
       $registryFingerprint: unbrand(fingerprint),
       $classifiedAtMs: classifiedAtMs,
     });
+  }
+}
+
+function assertProviderTimestampDoesNotRegress(
+  db: Database,
+  entity: NormalizedSourceMetadata
+): void {
+  const prior = db
+    .query(
+      `SELECT source_updated_at_ms AS sourceUpdatedAtMs
+       FROM source_metadata_entities
+       WHERE source_key = $source
+         AND metadata_kind = $metadataKind
+         AND metadata_id = $metadataId`
+    )
+    .get({
+      $source: unbrand(entity.source),
+      $metadataKind: unbrand(entity.metadataKind),
+      $metadataId: unbrand(entity.metadataId),
+    }) as { sourceUpdatedAtMs: number | null } | null;
+  if (!prior || prior.sourceUpdatedAtMs === null) return;
+  if (entity.sourceUpdatedAtMs === undefined) {
+    throw new Error(`metadata provider timestamp disappeared: ${unbrand(entity.metadataId)}`);
+  }
+  if (entity.sourceUpdatedAtMs < prior.sourceUpdatedAtMs) {
+    throw new Error(`metadata provider timestamp regressed: ${unbrand(entity.metadataId)}`);
   }
 }
 

@@ -88,6 +88,14 @@ export const mintSourceInventoryRunId = (
   entropy = crypto.randomUUID()
 ): SourceInventoryRunId =>
   asSourceInventoryRunId(`${unbrand(source)}:${unbrand(sport)}:${unbrand(scope)}:${entropy}`);
+export const mintSourceMetadataRunId = (
+  source: SourceKey,
+  scope: SourceScopeId,
+  entropy: string = crypto.randomUUID()
+): SourceMetadataRunId => {
+  const token = required(entropy, 'SourceMetadataRunId entropy');
+  return asSourceMetadataRunId(`${unbrand(source)}:metadata:${unbrand(scope)}:${token}`);
+};
 export const asOutcomeKey = (raw: string): OutcomeKey => required(raw, 'OutcomeKey') as OutcomeKey;
 export const asSourceCacheKey = (raw: string): SourceCacheKey =>
   required(raw, 'SourceCacheKey') as SourceCacheKey;

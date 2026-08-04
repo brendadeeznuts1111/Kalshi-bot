@@ -346,6 +346,16 @@ describe("sports/source registry", () => {
       "kalshi:tennis: metadata discovery requires a classification policy",
     );
 
+    const missingMetadataPageMode: SportsSourceRegistry = {
+      ...SPORTS_SOURCE_REGISTRY,
+      adapters: SPORTS_SOURCE_REGISTRY.adapters.map((adapter, index) =>
+        index === 0 ? { ...adapter, metadataPageMode: undefined } : adapter,
+      ),
+    };
+    expect(validateSportsSourceRegistry(missingMetadataPageMode)).toContain(
+      "kalshi-events-v1: metadata discovery requires a page mode",
+    );
+
     const policyKindDrift: SportsSourceRegistry = {
       ...SPORTS_SOURCE_REGISTRY,
       adapters: SPORTS_SOURCE_REGISTRY.adapters.map((adapter, index) =>
@@ -383,6 +393,7 @@ describe("sports/source registry", () => {
     expect(first).toEqual(second);
     expect(first.schema).toBe("sports-source-registry/v1");
     expect(first.integrations).toHaveLength(4);
+    expect(first.adapters.every((adapter) => adapter.metadataPageMode === "atomic")).toBe(true);
     expect(JSON.stringify(first)).toContain("polymarket:metadata:sports");
     expect(first.integrations[0]?.metadataPolicy).toMatchObject({
       candidateFacet: "tags",

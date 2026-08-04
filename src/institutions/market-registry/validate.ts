@@ -4,7 +4,6 @@ import type { SourceCapability, SourceSelector, SportsSourceRegistry } from "./t
 function selectorErrors(prefix: string, selector: SourceSelector, errors: readonly string[]): string[] {
   return errors.map((error) => `${prefix}: ${error}`);
 }
-
 export function validateSportsSourceRegistry(registry: SportsSourceRegistry): string[] {
   const errors: string[] = [];
   const unique = (label: string, values: readonly string[]) => {
@@ -44,6 +43,9 @@ export function validateSportsSourceRegistry(registry: SportsSourceRegistry): st
     }
     const metadata = adapter.metadataDiscovery;
     if (metadata) {
+      if (!adapter.metadataPageMode) {
+        errors.push(`${unbrand(adapter.id)}: metadata discovery requires a page mode`);
+      }
       if (!adapter.metadataCachePolicy) {
         errors.push(`${unbrand(adapter.id)}: metadata discovery requires a cache policy`);
       }
@@ -72,6 +74,9 @@ export function validateSportsSourceRegistry(registry: SportsSourceRegistry): st
     }
     if (adapter.metadataCachePolicy && !metadata) {
       errors.push(`${unbrand(adapter.id)}: metadata cache policy requires discovery`);
+    }
+    if (adapter.metadataPageMode && !metadata) {
+      errors.push(`${unbrand(adapter.id)}: metadata page mode requires discovery`);
     }
   }
 

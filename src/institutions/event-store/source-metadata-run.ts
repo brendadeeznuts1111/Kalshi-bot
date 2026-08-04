@@ -25,11 +25,9 @@ import type {
 } from '../market-registry/types.ts';
 import { assertSportsSourceRegistry } from '../market-registry/validate.ts';
 import {
-  createSourceMetadataPublisher,
   parseStoredStringRecord,
-  sourceMetadataFromStoredRow,
+  promoteCompletedSourceMetadataRun,
   sourceRegistryFingerprint,
-  type StoredSourceMetadataWireRow,
 } from './source-metadata-store.ts';
 
 export type SourceMetadataRunState = 'running' | 'complete' | 'failed' | 'abandoned';
@@ -80,8 +78,6 @@ type RunWireRow = Omit<
   selectorKind: string;
   registryFingerprint: string;
 };
-
-type StagedEntityWireRow = StoredSourceMetadataWireRow & { observedAtMs: number };
 
 export function beginSourceMetadataRun(
   db: Database,
@@ -166,6 +162,7 @@ export function commitSourceMetadataPage(
       throw new Error('source metadata registry changed during the run');
     }
     assertPageMatchesRun(page, run, selector);
+    assertMetadataPageMode(page, run, registry);
     for (const entity of page.records) {
       assertEntityMatchesRun(entity, run);
       classifySourceMetadata(entity, registry);
@@ -236,9 +233,6 @@ export function commitSourceMetadataPage(
     const partialPageCount = run.partialPageCount + (page.completeness === 'partial' ? 1 : 0);
     const terminalState: SourceMetadataRunState = partialPageCount === 0 ? 'complete' : 'failed';
     const nextState = page.exhausted ? terminalState : 'running';
-    if (nextState === 'complete') {
-      publishStagedMetadata(db, run, page.observedAtMs, registry);
-    }
     db.query(
       `UPDATE source_metadata_runs
        SET state = $state,
@@ -268,6 +262,11 @@ export function commitSourceMetadataPage(
     });
 
     if (nextState === 'complete') {
+      promoteCompletedSourceMetadataRun(
+        db,
+        { source: run.source, runId: run.runId, classifiedAtMs: page.observedAtMs },
+        registry
+      );
       db.query(
         `UPDATE source_metadata_entities
          SET active = 1, retired_at_ms = NULL
@@ -326,72 +325,6 @@ function stageMetadataPage(
       $sourceUpdatedAtMs: entity.sourceUpdatedAtMs ?? null,
       $observedAtMs: page.observedAtMs,
     });
-  }
-}
-
-function publishStagedMetadata(
-  db: Database,
-  run: RunRow,
-  classifiedAtMs: number,
-  registry: SportsSourceRegistry
-): void {
-  const publisher = createSourceMetadataPublisher(registry);
-  if (publisher.registryFingerprint !== run.registryFingerprint) {
-    throw new Error('source metadata registry changed during publication');
-  }
-  const rows = db
-    .query(
-      `SELECT source_key AS sourceKey, metadata_id AS metadataId,
-              metadata_kind AS metadataKind, label,
-              attributes_json AS attributesJson, facets_json AS facetsJson,
-              source_updated_at_ms AS sourceUpdatedAtMs,
-              observed_at_ms AS observedAtMs
-       FROM source_metadata_run_entities
-       WHERE source_key = $source AND metadata_run_id = $runId
-       ORDER BY metadata_kind, metadata_id`
-    )
-    .all({
-      $source: unbrand(run.source),
-      $runId: unbrand(run.runId),
-    }) as StagedEntityWireRow[];
-  for (const row of rows) {
-    const entity = sourceMetadataFromStoredRow(row);
-    assertProviderTimestampDoesNotRegress(db, entity);
-    publisher.persist(db, {
-      entity,
-      adapter: run.adapter,
-      selectorScope: run.selectorScope,
-      runId: run.runId,
-      observedAtMs: row.observedAtMs,
-      classifiedAtMs,
-    });
-  }
-}
-
-function assertProviderTimestampDoesNotRegress(
-  db: Database,
-  entity: NormalizedSourceMetadata
-): void {
-  if (entity.sourceUpdatedAtMs === undefined) return;
-  const prior = db
-    .query(
-      `SELECT source_updated_at_ms AS sourceUpdatedAtMs
-       FROM source_metadata_entities
-       WHERE source_key = $source
-         AND metadata_kind = $metadataKind
-         AND metadata_id = $metadataId`
-    )
-    .get({
-      $source: unbrand(entity.source),
-      $metadataKind: unbrand(entity.metadataKind),
-      $metadataId: unbrand(entity.metadataId),
-    }) as { sourceUpdatedAtMs: number | null } | null;
-  if (
-    prior?.sourceUpdatedAtMs !== null &&
-    prior?.sourceUpdatedAtMs !== undefined &&
-    entity.sourceUpdatedAtMs < prior.sourceUpdatedAtMs
-  ) {
-    throw new Error(`metadata provider timestamp regressed: ${unbrand(entity.metadataId)}`);
   }
 }
 
@@ -552,6 +485,27 @@ function assertPageMatchesRun(
     !recordsEqual(page.request.selector.parameters, selector.parameters)
   ) {
     throw new Error('metadata page request does not match source metadata run');
+  }
+}
+
+function assertMetadataPageMode(
+  page: MetadataPage<NormalizedSourceMetadata>,
+  run: RunRow,
+  registry: SportsSourceRegistry
+): void {
+  const adapter = registry.adapters.find(candidate => candidate.id === run.adapter);
+  if (!adapter?.metadataPageMode) {
+    throw new Error('metadata adapter page mode is not registered');
+  }
+  if (
+    adapter.metadataPageMode === 'atomic' &&
+    (page.request.pageIndex !== 0 ||
+      page.request.cursor !== undefined ||
+      page.nextCursor !== undefined ||
+      !page.exhausted ||
+      page.completeness !== 'complete')
+  ) {
+    throw new Error('atomic metadata discovery requires one complete terminal page');
   }
 }
 

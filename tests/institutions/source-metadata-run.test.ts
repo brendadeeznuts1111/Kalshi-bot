@@ -7,6 +7,7 @@ import {
   resumeSourceMetadataRun,
 } from '../../src/institutions/event-store/source-metadata-run.ts';
 import {
+  promoteCompletedSourceMetadataRun,
   reclassifySourceMetadata,
   sourceRegistryFingerprint,
 } from '../../src/institutions/event-store/source-metadata-store.ts';
@@ -21,12 +22,19 @@ import type {
   MetadataPage,
   NormalizedSourceMetadata,
   SourceSelector,
+  SportsSourceRegistry,
 } from '../../src/institutions/market-registry/types.ts';
 
 const adapter = SPORTS_SOURCE_REGISTRY.adapters.find(
   candidate => candidate.source === SOURCE.kalshi
 )!;
 const selector = adapter.metadataDiscovery!;
+const CURSOR_METADATA_REGISTRY: SportsSourceRegistry = {
+  ...SPORTS_SOURCE_REGISTRY,
+  adapters: SPORTS_SOURCE_REGISTRY.adapters.map(candidate =>
+    candidate.id === adapter.id ? { ...candidate, metadataPageMode: 'cursor' } : candidate
+  ),
+};
 
 function series(ticker: string, tags: readonly string[] = ['Tennis']): NormalizedSourceMetadata {
   return {
@@ -43,15 +51,20 @@ function begin(
   db: ReturnType<typeof openEventStore>,
   runId: ReturnType<typeof asSourceMetadataRunId>,
   startedAtMs: number,
-  runSelector: SourceSelector = selector
+  runSelector: SourceSelector = selector,
+  registry: SportsSourceRegistry = SPORTS_SOURCE_REGISTRY
 ) {
-  return beginSourceMetadataRun(db, {
-    runId,
-    source: SOURCE.kalshi,
-    adapter: adapter.id,
-    selector: runSelector,
-    startedAtMs,
-  });
+  return beginSourceMetadataRun(
+    db,
+    {
+      runId,
+      source: SOURCE.kalshi,
+      adapter: adapter.id,
+      selector: runSelector,
+      startedAtMs,
+    },
+    registry
+  );
 }
 
 function page(input: {
@@ -146,17 +159,21 @@ describe('source metadata runs', () => {
     });
 
     const partialRun = asSourceMetadataRunId('metadata-partial');
-    begin(db, partialRun, 300);
+    begin(db, partialRun, 300, selector, CURSOR_METADATA_REGISTRY);
     expect(
-      commitSourceMetadataPage(db, {
-        source: SOURCE.kalshi,
-        page: page({
-          runId: partialRun,
-          observedAtMs: 400,
-          records: [series('KXUNREGISTERED')],
-          completeness: 'partial',
-        }),
-      })
+      commitSourceMetadataPage(
+        db,
+        {
+          source: SOURCE.kalshi,
+          page: page({
+            runId: partialRun,
+            observedAtMs: 400,
+            records: [series('KXUNREGISTERED')],
+            completeness: 'partial',
+          }),
+        },
+        CURSOR_METADATA_REGISTRY
+      )
     ).toMatchObject({ state: 'failed', partialPageCount: 1 });
     expect(
       db
@@ -180,6 +197,27 @@ describe('source metadata runs', () => {
     ).toEqual({ count: 2 });
   });
 
+  test('an atomic discovery adapter cannot be persisted as a fabricated multi-page run', () => {
+    const db = openEventStore({ dbPath: ':memory:' });
+    const runId = asSourceMetadataRunId('metadata-atomic-shape');
+    begin(db, runId, 100);
+    expect(() =>
+      commitSourceMetadataPage(db, {
+        source: SOURCE.kalshi,
+        page: page({
+          runId,
+          observedAtMs: 200,
+          records: [series('KXATPSETWINNER')],
+          nextCursor: 'forged-cursor',
+        }),
+      })
+    ).toThrow('atomic metadata discovery requires one complete terminal page');
+    expect(resumeSourceMetadataRun(db, SOURCE.kalshi, runId)).toMatchObject({ pageCount: 0 });
+    expect(db.query('SELECT COUNT(*) AS count FROM source_metadata_run_entities').get()).toEqual({
+      count: 0,
+    });
+  });
+
   test('a failed partial revision cannot overwrite published entity truth', () => {
     const db = openEventStore({ dbPath: ':memory:' });
     const completeRun = asSourceMetadataRunId('metadata-current');
@@ -193,22 +231,26 @@ describe('source metadata runs', () => {
       }),
     });
     const partialRun = asSourceMetadataRunId('metadata-overwrite');
-    begin(db, partialRun, 300);
-    commitSourceMetadataPage(db, {
-      source: SOURCE.kalshi,
-      page: page({
-        runId: partialRun,
-        observedAtMs: 400,
-        completeness: 'partial',
-        records: [
-          {
-            ...series('KXATPSETWINNER', []),
-            label: 'partial-overwrite',
-            sourceUpdatedAtMs: 600,
-          },
-        ],
-      }),
-    });
+    begin(db, partialRun, 300, selector, CURSOR_METADATA_REGISTRY);
+    commitSourceMetadataPage(
+      db,
+      {
+        source: SOURCE.kalshi,
+        page: page({
+          runId: partialRun,
+          observedAtMs: 400,
+          completeness: 'partial',
+          records: [
+            {
+              ...series('KXATPSETWINNER', []),
+              label: 'partial-overwrite',
+              sourceUpdatedAtMs: 600,
+            },
+          ],
+        }),
+      },
+      CURSOR_METADATA_REGISTRY
+    );
     expect(
       db
         .query(
@@ -227,6 +269,13 @@ describe('source metadata runs', () => {
         )
         .get()
     ).toEqual({ disposition: 'registered', reasonCode: 'exact_registry_match' });
+    expect(() =>
+      promoteCompletedSourceMetadataRun(db, {
+        source: SOURCE.kalshi,
+        runId: partialRun,
+        classifiedAtMs: 500,
+      })
+    ).toThrow('promotion requires a terminal-complete run');
   });
 
   test('replays the last committed page idempotently and fences a mutated replay', () => {
@@ -379,14 +428,33 @@ describe('source metadata runs', () => {
       detail: 'non-monotonic snapshot',
     });
 
+    const missingVersionRun = asSourceMetadataRunId('metadata-provider-missing');
+    begin(db, missingVersionRun, 600);
+    expect(() =>
+      commitSourceMetadataPage(db, {
+        source: SOURCE.kalshi,
+        page: page({
+          runId: missingVersionRun,
+          observedAtMs: 800,
+          records: [series('KXATPSETWINNER')],
+        }),
+      })
+    ).toThrow('metadata provider timestamp disappeared');
+    failSourceMetadataRun(db, {
+      source: SOURCE.kalshi,
+      runId: missingVersionRun,
+      failedAtMs: 801,
+      detail: 'provider version missing',
+    });
+
     const regressedRun = asSourceMetadataRunId('metadata-provider-regressed');
-    begin(db, regressedRun, 600);
+    begin(db, regressedRun, 850);
     expect(() =>
       commitSourceMetadataPage(db, {
         source: SOURCE.kalshi,
         page: page({
           runId: regressedRun,
-          observedAtMs: 800,
+          observedAtMs: 900,
           records: [{ ...series('KXATPSETWINNER'), sourceUpdatedAtMs: 650 }],
         }),
       })
@@ -437,16 +505,20 @@ describe('source metadata runs', () => {
       page: page({ runId, observedAtMs: 200, records: [series('KXATPSETWINNER')] }),
     });
     const partialRun = asSourceMetadataRunId('metadata-reclassify-partial');
-    begin(db, partialRun, 220);
-    commitSourceMetadataPage(db, {
-      source: SOURCE.kalshi,
-      page: page({
-        runId: partialRun,
-        observedAtMs: 250,
-        completeness: 'partial',
-        records: [series('KXUNPUBLISHED')],
-      }),
-    });
+    begin(db, partialRun, 220, selector, CURSOR_METADATA_REGISTRY);
+    commitSourceMetadataPage(
+      db,
+      {
+        source: SOURCE.kalshi,
+        page: page({
+          runId: partialRun,
+          observedAtMs: 250,
+          completeness: 'partial',
+          records: [series('KXUNPUBLISHED')],
+        }),
+      },
+      CURSOR_METADATA_REGISTRY
+    );
     db.query("UPDATE source_metadata_classifications SET registry_fingerprint = 'stale'").run();
     const result = reclassifySourceMetadata(db, {
       source: SOURCE.kalshi,
