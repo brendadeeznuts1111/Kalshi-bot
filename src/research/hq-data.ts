@@ -1,0 +1,336 @@
+// @ts-nocheck
+/**
+ * HQ dashboard data plane — aggregates research, trading, alpha, calibration,
+ * and ops signals into one machine-readable payload for /api/hq.
+ *
+ * Every section is failure-isolated: a missing credential, absent DB, or
+ * unreachable upstream degrades that section to a typed "unavailable" state
+ * instead of failing the whole payload.
+ */
+import { readdirSync, existsSync, statSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { listRunSummaries, loadLatestProductionRunAnyDimension } from "./cache.ts";
+import { CACHE_DIR, REPORT_DIR, joinPath } from "./paths.ts";
+import { getBalance, getOrders, getFills, getPositions } from "../bot/kalshi-client.ts";
+import { isWorkingOrder } from "../institutions/ledger-types.ts";
+import { recordTradingSnapshot, readTradingHistory } from "./hq-store.ts";
+
+const ROOT = joinPath(import.meta.dir, "../..");
+const ALPHA_DIR = joinPath(ROOT, "alpha");
+const CALIBRATION_DIR = joinPath(ROOT, "calibration", "artifacts");
+
+// ── Trading section (short-TTL cache so a dashboard refresh burst does not
+//    turn into an API burst against Kalshi) ──
+
+const TRADING_CACHE_TTL_MS = 15_000;
+let tradingCache: { value: unknown; expiresAtMs: number } | null = null;
+
+/** Test hook — drop the cached trading snapshot. */
+export function resetTradingCache(): void {
+  tradingCache = null;
+}
+
+async function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    p,
+    Bun.sleep(ms).then(() => {
+      throw new Error("timeout");
+    }),
+  ]) as Promise<T>;
+}
+
+async function fetchTradingSection(nowMs: number) {
+  if (tradingCache && nowMs < tradingCache.expiresAtMs) return tradingCache.value;
+  const checkedAt = new Date(nowMs).toISOString();
+  let value;
+  try {
+    const [balance, positions, orders, fills] = await Promise.allSettled([
+      withTimeout(getBalance(), 3_000),
+      withTimeout(getPositions(), 3_000),
+      withTimeout(getOrders(), 3_000),
+      withTimeout(getFills(), 3_000),
+    ]);
+    const orderList = orders.status === "fulfilled" ? orders.value : [];
+    const positionList = positions.status === "fulfilled" ? positions.value : [];
+    const openOrders = orderList.filter(isWorkingOrder);
+    const fillList = fills.status === "fulfilled" ? fills.value : [];
+    const allFailed = [balance, positions, orders, fills].every((r) => r.status === "rejected");
+    if (allFailed) {
+      const first = balance.status === "rejected" ? balance.reason : null;
+      value = {
+        state: "unavailable",
+        checkedAt,
+        reason: first instanceof Error ? first.message : String(first ?? "all portfolio reads failed"),
+      };
+      tradingCache = { value, expiresAtMs: nowMs + TRADING_CACHE_TTL_MS };
+      return value;
+    }
+    try {
+      recordTradingSnapshot({
+        atMs: nowMs,
+        balanceCents: balance.status === "fulfilled" ? balance.value.balanceCents : null,
+        portfolioValueCents:
+          balance.status === "fulfilled" ? balance.value.portfolioValueCents : null,
+        positions: positionList,
+        openOrderCount: openOrders.length,
+        fillCount: fillList.length,
+      });
+    } catch {
+      // persistence is best-effort — never fail the payload
+    }
+    value = {
+      state: "ok",
+      checkedAt,
+      balanceCents: balance.status === "fulfilled" ? balance.value.balanceCents : null,
+      portfolioValueCents:
+        balance.status === "fulfilled" ? balance.value.portfolioValueCents : null,
+      positions: positionList,
+      openOrders,
+      orderCount: orderList.length,
+      recentFills: fillList.slice(0, 25),
+      fillCount: fillList.length,
+    };
+  } catch (err) {
+    value = {
+      state: "unavailable",
+      checkedAt,
+      reason: err instanceof Error ? err.message : String(err),
+    };
+  }
+  tradingCache = { value, expiresAtMs: nowMs + TRADING_CACHE_TTL_MS };
+  return value;
+}
+
+// ── Alpha programs section ──
+
+type AlphaProgramView = {
+  name: string;
+  status: string;
+  role: string;
+  dimension: string;
+  created: string | null;
+  gates: Record<string, number>;
+  shadow: { signals: number; resolutions: number; lastAt: string | null } | null;
+  hypothesis: string | null;
+};
+
+function readShadowStats(dir: string, shadowLog: string | undefined) {
+  if (!shadowLog) return null;
+  const path = joinPath(dir, shadowLog);
+  if (!existsSync(path)) return null;
+  let signals = 0;
+  let resolutions = 0;
+  let lastAt: string | null = null;
+  try {
+    const lines = readFileSync(path, "utf-8").split("\n").filter(Boolean);
+    for (const line of lines) {
+      try {
+        const rec = JSON.parse(line);
+        if (rec.kind === "outcome-resolution") resolutions += 1;
+        else signals += 1;
+        if (typeof rec.ts === "number") lastAt = new Date(rec.ts).toISOString();
+      } catch {
+        // skip malformed line
+      }
+    }
+  } catch {
+    return null;
+  }
+  return { signals, resolutions, lastAt };
+}
+
+function readAlphaPrograms(): AlphaProgramView[] {
+  if (!existsSync(ALPHA_DIR)) return [];
+  const out: AlphaProgramView[] = [];
+  for (const name of readdirSync(ALPHA_DIR).sort()) {
+    const dir = joinPath(ALPHA_DIR, name);
+    const programPath = joinPath(dir, "program.json");
+    if (!existsSync(programPath)) continue;
+    try {
+      const p = JSON.parse(readFileSync(programPath, "utf-8"));
+      const hypPath = joinPath(dir, p.hypothesisFile ?? "hypothesis.md");
+      out.push({
+        name: p.name ?? name,
+        status: p.status ?? "unknown",
+        role: p.role ?? "unknown",
+        dimension: p.dimension ?? "unknown",
+        created: p.created ?? null,
+        gates: p.gates ?? {},
+        shadow: readShadowStats(dir, p.shadowLog),
+        hypothesis: existsSync(hypPath)
+          ? readFileSync(hypPath, "utf-8").split("\n").find((l) => l.trim().length > 0) ?? null
+          : null,
+      });
+    } catch {
+      // skip unreadable program
+    }
+  }
+  return out;
+}
+
+// ── Calibration section ──
+
+function readCalibrationLatest() {
+  const latestPath = joinPath(CALIBRATION_DIR, "latest-run.json");
+  if (!existsSync(latestPath)) return null;
+  try {
+    const latest = JSON.parse(readFileSync(latestPath, "utf-8"));
+    let runs = 0;
+    try {
+      runs = readdirSync(CALIBRATION_DIR).filter((d) =>
+        statSync(joinPath(CALIBRATION_DIR, d)).isDirectory(),
+      ).length;
+    } catch {
+      runs = 0;
+    }
+    const manifestPath = joinPath(CALIBRATION_DIR, latest.runId, "manifest.json");
+    let manifest: unknown = null;
+    if (existsSync(manifestPath)) {
+      try {
+        manifest = JSON.parse(readFileSync(manifestPath, "utf-8"));
+      } catch {
+        manifest = null;
+      }
+    }
+    return { runId: latest.runId, at: latest.at, totalRuns: runs, manifest };
+  } catch {
+    return null;
+  }
+}
+
+// ── Research section ──
+
+function readResearchSection() {
+  const run = loadLatestProductionRunAnyDimension();
+  const summaries = listRunSummaries(10);
+  return {
+    latest: run
+      ? {
+          runId: run.runId,
+          generatedAt: run.generatedAt ?? null,
+          discovered: run.discovered?.length ?? 0,
+          gated: run.gated?.length ?? 0,
+          inspected: run.inspected?.length ?? 0,
+          shortlisted: run.scored?.filter((s) => s.shortlisted).length ?? 0,
+          top: (run.scored ?? [])
+            .slice()
+            .sort((a, b) => (b.qualityScore ?? 0) - (a.qualityScore ?? 0))
+            .slice(0, 8)
+            .map((s) => ({
+              fullName: s.repo.fullName,
+              stars: s.repo.stars,
+              qualityScore: s.qualityScore,
+              strategyTags: s.strategyTags ?? [],
+            })),
+        }
+      : null,
+    runs: summaries,
+  };
+}
+
+// ── Freshness tracking (cadence per section; stale = older than cadence) ──
+
+export const FRESHNESS_CADENCE_MIN = {
+  research: 7 * 24 * 60, // weekly cron
+  trading: 5, // 15s cache + fetch latency
+  alpha: 24 * 60, // shadow logs update daily at best
+  calibration: 7 * 24 * 60, // weekly-ish maintenance
+} as const;
+
+type FreshnessEntry = {
+  at: string | null;
+  ageMinutes: number | null;
+  staleAfterMinutes: number;
+  stale: boolean;
+};
+
+function freshness(atIso: string | null, staleAfterMinutes: number, nowMs: number): FreshnessEntry {
+  if (!atIso) return { at: null, ageMinutes: null, staleAfterMinutes, stale: true };
+  const ms = Date.parse(atIso);
+  if (!Number.isFinite(ms)) return { at: atIso, ageMinutes: null, staleAfterMinutes, stale: true };
+  const ageMinutes = Math.max(0, Math.round((nowMs - ms) / 60_000));
+  return { at: atIso, ageMinutes, staleAfterMinutes, stale: ageMinutes > staleAfterMinutes };
+}
+
+// ── Cross-site event monitor ──
+
+/** Kalshi market ticker → event ticker (strip trailing -SUFFIX leg). */
+export function eventTickerFromMarket(ticker: string): string {
+  const i = ticker.lastIndexOf("-");
+  return i > 0 ? ticker.slice(0, i) : ticker;
+}
+
+function buildMonitorSection(trading: unknown) {
+  if ((trading as { state?: string }).state !== "ok") return { kalshi: [], crossSite: [] };
+  const t = trading as {
+    positions: Array<{ ticker: string; position: number; exposureCents: number | null }>;
+    openOrders: Array<{ ticker: string }>;
+  };
+  const openTickers = new Set(t.openOrders.map((o) => o.ticker));
+  const kalshi = t.positions.map((p) => ({
+    ticker: p.ticker,
+    eventTicker: eventTickerFromMarket(p.ticker),
+    position: p.position,
+    exposureCents: p.exposureCents,
+    hasOpenOrders: openTickers.has(p.ticker),
+  }));
+  // Group exposure by event for the event-level view
+  const byEvent = new Map<string, { exposureCents: number; markets: number }>();
+  for (const k of kalshi) {
+    const e = byEvent.get(k.eventTicker) ?? { exposureCents: 0, markets: 0 };
+    e.exposureCents += Math.abs(k.exposureCents ?? 0);
+    e.markets += 1;
+    byEvent.set(k.eventTicker, e);
+  }
+  const crossSite = [...byEvent.entries()]
+    .map(([eventTicker, v]) => ({ eventTicker, ...v }))
+    .sort((a, b) => b.exposureCents - a.exposureCents);
+  return { kalshi, crossSite };
+}
+
+// ── Aggregate ──
+
+export async function buildHqPayload(nowMs = Date.now()) {
+  const [trading] = await Promise.all([fetchTradingSection(nowMs)]);
+  const research = readResearchSection();
+  const alpha = readAlphaPrograms();
+  const calibration = readCalibrationLatest();
+  const alphaLastAt = alpha
+    .map((p) => p.shadow?.lastAt)
+    .filter((x): x is string => typeof x === "string")
+    .sort()
+    .pop() ?? null;
+  return {
+    generatedAt: new Date(nowMs).toISOString(),
+    research,
+    trading,
+    alpha,
+    calibration,
+    history: readTradingHistory(200),
+    monitor: buildMonitorSection(trading),
+    freshness: {
+      research: freshness(
+        research.latest?.generatedAt ?? null,
+        FRESHNESS_CADENCE_MIN.research,
+        nowMs,
+      ),
+      trading: freshness(
+        trading.state === "ok" ? (trading as { checkedAt?: string }).checkedAt ?? null : null,
+        FRESHNESS_CADENCE_MIN.trading,
+        nowMs,
+      ),
+      alpha: freshness(alphaLastAt, FRESHNESS_CADENCE_MIN.alpha, nowMs),
+      calibration: freshness(
+        calibration?.at ?? null,
+        FRESHNESS_CADENCE_MIN.calibration,
+        nowMs,
+      ),
+    },
+    links: {
+      ops: "/ops",
+      opsJson: "/ops.json",
+      latestReport: "/reports/latest.md",
+      polymarketStatus: "/polymarket/status",
+    },
+  };
+}
