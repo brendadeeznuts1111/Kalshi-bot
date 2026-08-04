@@ -118,7 +118,7 @@ export async function runMatchLiquidityDbWatchMain(
   try {
     watchers.push(
       watch(watchDir, { persistent: true }, (eventType, filename) => {
-        const name = typeof filename === "string" ? filename : filename?.toString();
+        const name = typeof filename === "string" ? filename : null;
         if (!isEventStoreWatchFilename(name, dbBase)) return;
         scheduler.schedule(`${eventType}${name ? ` ${name}` : ""}`);
       }),
@@ -127,7 +127,7 @@ export async function runMatchLiquidityDbWatchMain(
     console.error(`[liquidity:watch-db] dir watch failed, falling back to file:`, err);
     watchers.push(
       watch(opts.dbPath, { persistent: true }, (eventType, filename) => {
-        const name = typeof filename === "string" ? filename : filename?.toString();
+        const name = typeof filename === "string" ? filename : null;
         scheduler.schedule(`${eventType}${name ? ` ${name}` : ""}`);
       }),
     );
