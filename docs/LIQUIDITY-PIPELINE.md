@@ -69,6 +69,7 @@ No rate limit on liquidity GETs (bulk HQ polls).
 | Query `liquidity=` | `all` \| `priced` \| `active` \| `quoted` \| `liq_ok` \| `tradable` (server filter; HQ also filters client-side) |
 | Query `minVolume` / `minVol` | Min gate volume (desk 24h\|lifetime, else board 24h sum) |
 | HQ UI | Liquidity select + quick toggles (Quoted / Liquid / Tradable counts) + per-row chips |
+| Overview chips | Click quoted / liq_ok / tradable → Events tab with matching `liquidity=` filter (`#events?liquidity=…`) |
 
 ### Domain concepts (glossary)
 

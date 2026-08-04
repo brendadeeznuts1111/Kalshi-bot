@@ -309,13 +309,24 @@ function renderOverview(hq, ops) {
 }
 
 
-/** Desk liquidity chips — glossary concept ids on badges. */
+/** Open Events tab with a desk liquidity filter (overview chip → board). */
+function jumpToEventsLiquidity(mode) {
+  __filters.liquidity = mode && mode !== "all" ? mode : "all";
+  __filtersHydrated = true;
+  filtersToHash();
+  const btn = document.querySelector('nav.tabs button[data-tab="events"]');
+  if (btn) btn.click();
+  // Ensure Events tab mounts filters from hash + deskLiquidity payload
+  void renderEvents();
+}
+
+/** Desk liquidity chips — glossary concept ids; click jumps to filtered board. */
 function renderDeskLiquidityChips() {
   const b = LIQUIDITY_BOARD;
   const s = b && b.summary;
   const tipOk = tip("liquidity_ok");
   const tipTr = tip("desk.tradable");
-  const tipQ = tip("kalshi_spread");
+  const tipQ = tip("desk.quoted");
   if (!s) {
     return (
       '<div id="desk-liquidity-chips" class="desk-liq-chips muted" style="margin:0.6rem 0 0.2rem">' +
@@ -323,20 +334,34 @@ function renderDeskLiquidityChips() {
       "</div>"
     );
   }
-  const chip = (conceptId, cls, label, value) =>
-    '<span class="badge ' + cls + '" data-concept-id="' + esc(conceptId) +
-    '" title="' + esc(TOOLTIPS[conceptId] || label) + '">' +
-    esc(label) + ': <strong class="mono">' + value + "</strong></span>";
+  const chip = (conceptId, cls, label, value, liqMode) => {
+    const title = (TOOLTIPS[conceptId] || label) +
+      (liqMode ? " · click → Events board filter" : "");
+    if (!liqMode) {
+      return (
+        '<span class="badge ' + cls + '" data-concept-id="' + esc(conceptId) +
+        '" title="' + esc(title) + '">' +
+        esc(label) + ': <strong class="mono">' + value + "</strong></span>"
+      );
+    }
+    return (
+      '<button type="button" class="badge ' + cls + ' desk-chip-jump" data-liq-jump="' +
+      esc(liqMode) + '" data-concept-id="' + esc(conceptId) +
+      '" title="' + esc(title) + '">' +
+      esc(label) + ': <strong class="mono">' + value + "</strong></button>"
+    );
+  };
   return (
     '<div id="desk-liquidity-chips" class="desk-liq-chips" style="margin:0.6rem 0 0.2rem;display:flex;flex-wrap:wrap;gap:0.4rem;align-items:center">' +
     '<span class="muted" style="margin-right:0.25rem">Desk liquidity</span>' +
-    chip("kpi.quoted_books", "dim", "quoted", s.quoted) + tipQ +
-    chip("liquidity_ok", s.liquidityOk > 0 ? "ok" : "warn", "liq_ok", s.liquidityOk) + tipOk +
-    chip("desk.tradable", s.tradable > 0 ? "ok" : "warn", "tradable", s.tradable) + tipTr +
+    chip("kpi.quoted_books", "dim", "quoted", s.quoted, "quoted") + tipQ +
+    chip("liquidity_ok", s.liquidityOk > 0 ? "ok" : "warn", "liq_ok", s.liquidityOk, "liq_ok") + tipOk +
+    chip("desk.tradable", s.tradable > 0 ? "ok" : "warn", "tradable", s.tradable, "tradable") + tipTr +
     (b.medianSpreadCents != null
-      ? chip("kalshi_spread", "dim", "med spread", b.medianSpreadCents + "¢")
+      ? chip("kalshi_spread", "dim", "med spread", b.medianSpreadCents + "¢", null)
       : "") +
     '<a class="muted" href="#volume-liquidity-panel" style="margin-left:0.35rem">panel ↓</a>' +
+    ' <a class="muted" href="#events" data-liq-jump="all" style="margin-left:0.15rem">board →</a>' +
     "</div>"
   );
 }
@@ -1460,13 +1485,35 @@ document.addEventListener("keydown", (ev) => {
   }
 });
 
-// Deep link: #events?… opens the Events tab with filters hydrated
-if (location.hash.startsWith("#events")) {
+/** Deep link / chip jump: #events?liquidity=… opens Events with filters. */
+function openEventsFromHash() {
+  if (!location.hash.startsWith("#events")) return false;
+  filtersFromHash();
+  __filtersHydrated = true;
   const btn = document.querySelector('nav.tabs button[data-tab="events"]');
   if (btn) btn.click();
+  void renderEvents();
+  return true;
 }
 
-window.addEventListener("hashchange", applyHashRoute);
+// Deep link: #events?… opens the Events tab with filters hydrated
+openEventsFromHash();
+
+window.addEventListener("hashchange", () => {
+  if (openEventsFromHash()) return;
+  applyHashRoute();
+});
+
+document.addEventListener("click", (ev) => {
+  const t = ev.target;
+  if (!(t instanceof Element)) return;
+  const jump = t.closest("[data-liq-jump]");
+  if (!jump) return;
+  // Don't steal glossary ? hints
+  if (t.closest("[data-glossary]")) return;
+  ev.preventDefault();
+  jumpToEventsLiquidity(jump.getAttribute("data-liq-jump") || "all");
+});
 
 // Profiles column headers use glossary-backed tips
 // (tip already used on playerProfiles panel title)
