@@ -7,6 +7,9 @@ import {
   linkCurrentBoardEvents,
   parseLoggerArgv,
 } from "../../scripts/price-logger.ts";
+import { queryEventsWithBooks } from "../../src/institutions/event-store/cross-market.ts";
+import { asSeriesTicker } from "../../src/institutions/event-store/brands.ts";
+import { SPORT } from "../../src/institutions/market-registry/brands.ts";
 
 function seedDb(): Database {
   const db = new Database(":memory:");
@@ -78,6 +81,7 @@ describe("price-logger volume wiring", () => {
           state: "ok",
           events: [
             {
+              sport: SPORT.tennis,
               markets: [
                 {
                   ticker: "KXATPMATCH-26AUG04ONETWO-TWO",
@@ -109,5 +113,49 @@ describe("price-logger volume wiring", () => {
       volume24h: 30,
       openInterest: 9,
     });
+
+    const tableBoard = structuredClone(board);
+    tableBoard.series[0]!.events[0]!.sport = SPORT.tableTennis;
+    expect(() => linkCurrentBoardEvents(db as never, tableBoard as never)).toThrow(
+      "cannot ingest a non-tennis board",
+    );
+  });
+
+  test("book fallback stays inside the registry trade-series allowlist", () => {
+    db.run(`CREATE TABLE events (
+      event_id TEXT PRIMARY KEY,
+      tournament TEXT,
+      player_a TEXT,
+      player_b TEXT,
+      surface TEXT,
+      start_ts TEXT
+    )`);
+    db.run(`ALTER TABLE markets ADD COLUMN event_id TEXT`);
+    db.run(`ALTER TABLE markets ADD COLUMN series TEXT NOT NULL DEFAULT ''`);
+    db.run(`CREATE TABLE book_ticks (
+      id INTEGER PRIMARY KEY,
+      event_id TEXT,
+      ticker TEXT,
+      ts INTEGER,
+      levels_json TEXT
+    )`);
+    db.run(
+      `INSERT INTO events VALUES
+       ('tennis-event', 'Toronto', 'Alpha', 'Beta', 'Hard', '2026-08-04'),
+       ('table-event', 'WTT', 'Gamma', 'Delta', '', '2026-08-04')`,
+    );
+    db.run(
+      `INSERT INTO markets (market_id, event_id, ticker, series) VALUES
+       ('tennis-market', 'tennis-event', 'KXATPMATCH-26AUG04ALPBET-ALP', 'KXATPMATCH'),
+       ('table-market', 'table-event', 'KXTABLETENNISMATCH-26AUG04GAMDEL-GAM', 'KXTABLETENNISMATCH')`,
+    );
+    db.run(
+      `INSERT INTO book_ticks (event_id, ticker, ts, levels_json) VALUES
+       ('tennis-event', 'KXATPMATCH-26AUG04ALPBET-ALP', 1, '{"bids":[],"asks":[]}'),
+       ('table-event', 'KXTABLETENNISMATCH-26AUG04GAMDEL-GAM', 1, '{"bids":[],"asks":[]}')`,
+    );
+
+    const rows = queryEventsWithBooks(db, [asSeriesTicker("KXATPMATCH")]);
+    expect(rows.map((row) => row.eventId)).toEqual(["tennis-event"]);
   });
 });

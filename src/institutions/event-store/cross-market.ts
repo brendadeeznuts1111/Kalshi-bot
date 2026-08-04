@@ -8,6 +8,8 @@
 import type { Database } from "bun:sqlite";
 import type { BookSnapshot } from "../alpha-signal-types.ts";
 import type { CrossMarketOdds, CrossMarketSignal } from "./types.ts";
+import type { SeriesTicker } from "./brands.ts";
+import { unbrand } from "./brands.ts";
 
 // ── Helpers ─────────────────────────────────────────────────────
 
@@ -41,7 +43,17 @@ export type EventBookRow = {
  * Query the event store for all events that have at least one book_tick,
  * returning the latest levels_json for each.
  */
-export function queryEventsWithBooks(db: Database): EventBookRow[] {
+export function queryEventsWithBooks(
+  db: Database,
+  allowedSeries?: readonly SeriesTicker[],
+): EventBookRow[] {
+  if (allowedSeries?.length === 0) return [];
+  const params = Object.fromEntries(
+    (allowedSeries ?? []).map((series, index) => [`$series${index}`, unbrand(series)]),
+  );
+  const seriesFilter = allowedSeries
+    ? `AND m.series IN (${allowedSeries.map((_, index) => `$series${index}`).join(", ")})`
+    : "";
   return db
     .query(
       `SELECT e.event_id   AS eventId,
@@ -58,10 +70,12 @@ export function queryEventsWithBooks(db: Database): EventBookRow[] {
          GROUP BY event_id
        ) latest ON latest.event_id = e.event_id
        JOIN book_ticks b ON b.event_id = latest.event_id AND b.ts = latest.max_ts
+       JOIN markets m ON m.ticker = b.ticker
        WHERE b.levels_json IS NOT NULL
+         ${seriesFilter}
        ORDER BY e.start_ts DESC`,
     )
-    .all() as EventBookRow[];
+    .all(params) as EventBookRow[];
 }
 
 /**

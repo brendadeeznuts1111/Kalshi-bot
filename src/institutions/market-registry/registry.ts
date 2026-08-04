@@ -346,9 +346,9 @@ export const INTEGRATIONS = [
     state: "discovering",
     adapter: asAdapterId("kalshi-markets-v1"),
     declaredCapabilities: ["inventory", "quotes", "reconciliation"],
-    operationalCapabilities: [],
+    operationalCapabilities: ["inventory"],
     competitions: KALSHI_TABLE_TENNIS_BINDINGS,
-    reason: "Inventory declared; runtime quote and reconciliation wiring is pending.",
+    reason: "Inventory is operational; quote, reconciliation, and persistence wiring is pending.",
   }),
   defineIntegration({
     integration: asIntegrationId("polymarket:tennis"),
@@ -405,6 +405,24 @@ export function kalshiBindingForSeries(
     .find((binding) => kalshiSeriesFromBinding(binding) === series);
 }
 
+export function kalshiSportForSeries(
+  series: SeriesTicker,
+  registry: SportsSourceRegistry = SPORTS_SOURCE_REGISTRY,
+): SportKey | undefined {
+  return registry.integrations.find(
+    (row) =>
+      row.source === SOURCE.kalshi &&
+      row.competitions.some((binding) => kalshiSeriesFromBinding(binding) === series),
+  )?.sport;
+}
+
+export function kalshiIdentityFieldForSeries(
+  series: SeriesTicker,
+  registry: SportsSourceRegistry = SPORTS_SOURCE_REGISTRY,
+): CompetitionBinding["identityFields"][number] | undefined {
+  return kalshiBindingForSeries(series, registry)?.identityFields[0];
+}
+
 export function kalshiSeriesForSport(
   sport: SportKey,
   modes: readonly RegistrationMode[] = ["inventory", "match", "trade"],
@@ -421,6 +439,22 @@ export function kalshiSeriesForSport(
 
 export const kalshiDeclaredReconciliationSeriesForSport = (sport: SportKey): SeriesTicker[] =>
   kalshiSeriesForSport(sport, ["match", "trade"]);
+
+export function kalshiInventorySeriesForSport(
+  sport: SportKey,
+  registry: SportsSourceRegistry = SPORTS_SOURCE_REGISTRY,
+): SeriesTicker[] {
+  const registration = registrationFor(SOURCE.kalshi, sport, registry);
+  if (
+    !registration ||
+    registration.state === "disabled" ||
+    registration.state === "unsupported" ||
+    !registration.operationalCapabilities.includes("inventory")
+  ) {
+    return [];
+  }
+  return kalshiSeriesForSport(sport, ["inventory", "match", "trade"], registry);
+}
 
 function operationalKalshiSeriesForSport(
   sport: SportKey,

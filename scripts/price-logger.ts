@@ -22,8 +22,10 @@ import {
 } from "../src/institutions/event-store/cross-market.ts";
 import { fetchLiveCrossMarketOdds } from "../src/institutions/event-store/cross-market-live.ts";
 import type { CrossMarketOdds } from "../src/institutions/event-store/types.ts";
+import { SPORT } from "../src/institutions/market-registry/brands.ts";
+import { kalshiTradeSeriesForSport } from "../src/institutions/market-registry/registry.ts";
 import {
-  fetchTennisBoard,
+  fetchTennisTradeBoard,
   type TennisBoard,
   type TennisMarketView,
 } from "../src/research/tennis-events.ts";
@@ -109,6 +111,13 @@ export function linkCurrentBoardEvents(
   db: ReturnType<typeof openEventStore>,
   board: TennisBoard,
 ): EventBookRow[] {
+  if (
+    board.series.some((series) =>
+      series.events.some((event) => event.sport !== SPORT.tennis),
+    )
+  ) {
+    throw new Error("Tennis price logger cannot ingest a non-tennis board");
+  }
   const lookup = db.prepare(
     `SELECT m.event_id AS eventId,
             e.tournament AS tournament,
@@ -402,12 +411,14 @@ export async function runSnapshotCycleDetailed(
   // 1. Prefer the current tradable board; retain recorded books as an outage fallback.
   let events: EventBookRow[] = [];
   try {
-    const board = await fetchTennisBoard({ nowMs: ts });
+    const board = await fetchTennisTradeBoard({ nowMs: ts });
     events = linkCurrentBoardEvents(db, board);
   } catch (error) {
     console.error(`[${new Date(ts).toISOString()}] Kalshi board fetch failed: ${error}`);
   }
-  if (events.length === 0) events = queryEventsWithBooks(db);
+  if (events.length === 0) {
+    events = queryEventsWithBooks(db, kalshiTradeSeriesForSport(SPORT.tennis));
+  }
   if (events.length === 0) {
     console.error(`[${new Date(ts).toISOString()}] No events with book data.`);
     return {
@@ -430,6 +441,7 @@ export async function runSnapshotCycleDetailed(
     playerA: e.playerA,
     playerB: e.playerB,
     tournament: e.tournament,
+    sport: SPORT.tennis,
   }));
   let oddsMap: Map<string, CrossMarketOdds>;
   try {

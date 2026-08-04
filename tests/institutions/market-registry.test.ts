@@ -8,6 +8,7 @@ import {
   asSportFamilyKey,
   asSportKey,
   MARKET,
+  IDENTITY,
   parseSportKey,
   SELECTOR,
   SOURCE,
@@ -19,8 +20,11 @@ import {
   classifyKalshiSeriesDrift,
   kalshiBindingForSeries,
   kalshiDeclaredReconciliationSeriesForSport,
+  kalshiIdentityFieldForSeries,
+  kalshiInventorySeriesForSport,
   kalshiReconciliationSeriesForSport,
   kalshiSeriesForSport,
+  kalshiSportForSeries,
   kalshiTradeSeriesForSport,
   polymarketTagsForSport,
   sourceSelectorCacheKey,
@@ -79,6 +83,13 @@ describe("sports/source registry", () => {
       participantFormats: ["field"],
       declaredUse: "inventory",
     });
+    expect(unbrand(kalshiIdentityFieldForSeries(asSeriesTicker("KXATPDOUBLES"))!)).toBe(
+      "tennis_doubles_competitor",
+    );
+    expect(kalshiSportForSeries(asSeriesTicker("KXTABLETENNISMATCH"))).toBe(
+      SPORT.tableTennis,
+    );
+    expect(kalshiSportForSeries(asSeriesTicker("KXUNKNOWN"))).toBeUndefined();
   });
 
   test("acquires all known Kalshi series and narrows explicitly for downstream modes", () => {
@@ -105,11 +116,21 @@ describe("sports/source registry", () => {
       "KXITTFWOMEN",
     ].sort();
     expect(kalshiSeriesForSport(SPORT.tableTennis).map(unbrandSeries).sort()).toEqual(expected);
+    expect(kalshiInventorySeriesForSport(SPORT.tableTennis).map(unbrandSeries).sort()).toEqual(
+      expected,
+    );
     expect(kalshiReconciliationSeriesForSport(SPORT.tableTennis).map(unbrandSeries)).toEqual([
     ]);
     expect(
       kalshiDeclaredReconciliationSeriesForSport(SPORT.tableTennis).map(unbrandSeries),
     ).toEqual(["KXTABLETENNISMATCH"]);
+    const registration = SPORTS_SOURCE_REGISTRY.integrations.find(
+      (row) => row.source === SOURCE.kalshi && row.sport === SPORT.tableTennis,
+    );
+    expect(registration).toMatchObject({
+      state: "discovering",
+      operationalCapabilities: ["inventory"],
+    });
     const drift = classifyKalshiSeriesDrift(SPORT.tableTennis, [
       asSeriesTicker("KXTABLETENNISMATCH"),
       asSeriesTicker("KXWTTNEWGAME"),
@@ -241,6 +262,47 @@ describe("sports/source registry", () => {
     };
     expect(validateSportsSourceRegistry(enabledWithoutInventory)).toContain(
       "kalshi:tennis: enabled integration lacks operational inventory",
+    );
+
+    const discoveringWithoutSelectors: SportsSourceRegistry = {
+      ...SPORTS_SOURCE_REGISTRY,
+      integrations: SPORTS_SOURCE_REGISTRY.integrations.map((row, index) =>
+        index === 1 ? { ...row, competitions: [] } : row,
+      ),
+    };
+    expect(validateSportsSourceRegistry(discoveringWithoutSelectors)).toContain(
+      "kalshi:table_tennis: operational inventory has no selectors",
+    );
+
+    const discoveringTrade: SportsSourceRegistry = {
+      ...SPORTS_SOURCE_REGISTRY,
+      integrations: SPORTS_SOURCE_REGISTRY.integrations.map((row, index) =>
+        index === 1
+          ? { ...row, operationalCapabilities: ["inventory", "trade"] }
+          : row,
+      ),
+    };
+    expect(validateSportsSourceRegistry(discoveringTrade)).toContain(
+      "kalshi:table_tennis: non-enabled integration may operate inventory only",
+    );
+
+    const literalKalshiIdentity: SportsSourceRegistry = {
+      ...SPORTS_SOURCE_REGISTRY,
+      integrations: SPORTS_SOURCE_REGISTRY.integrations.map((row, index) =>
+        index === 0
+          ? {
+              ...row,
+              competitions: row.competitions.map((binding, bindingIndex) =>
+                bindingIndex === 0
+                  ? { ...binding, identityFields: [IDENTITY.literalOutcome] }
+                  : binding,
+              ),
+            }
+          : row,
+      ),
+    };
+    expect(validateSportsSourceRegistry(literalKalshiIdentity)).toContain(
+      "kalshi:tennis: unsupported Kalshi identity field",
     );
   });
 

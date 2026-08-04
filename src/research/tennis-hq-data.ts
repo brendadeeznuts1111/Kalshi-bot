@@ -14,6 +14,7 @@ import { openEventStore } from "../institutions/event-store/open-db.ts";
 import { DEFAULT_EVENT_STORE_DB } from "../institutions/event-store/paths.ts";
 import { fetchLiveCrossMarketOdds } from "../institutions/event-store/cross-market-live.ts";
 import type { CrossMarketOdds } from "../institutions/event-store/types.ts";
+import { SPORT, type SportKey } from "../institutions/market-registry/brands.ts";
 import {
   KALSHI_BOOK_SOURCE_REST,
   KALSHI_BOOK_SOURCE_WS,
@@ -114,6 +115,7 @@ export type TennisHqScore = {
 };
 
 export type TennisHqEvent = {
+  sport: SportKey;
   eventTicker: string;
   eventId: string | null;
   title: string | null;
@@ -596,6 +598,7 @@ function enrichEvent(
         ? "ready"
         : "insufficient-sample";
   return {
+    sport: event.sport,
     eventTicker: event.eventTicker,
     eventId,
     title: event.title,
@@ -839,6 +842,9 @@ export async function buildTennisHqPayload(
 
   const kalshiBoardOk = board.series.some((s) => s.state === "ok");
   const flatEvents = collectBoardEvents(board);
+  if (flatEvents.some((event) => event.sport !== SPORT.tennis)) {
+    throw new Error("Tennis HQ cannot ingest a non-tennis board");
+  }
 
   const allMarketTickers = flatEvents.flatMap((e) => e.markets.map((m) => m.ticker));
   const allPlayerNames = [
@@ -861,6 +867,7 @@ export async function buildTennisHqPayload(
       },
       dataHealth: unavailableDataHealth(flatEvents.length),
       liveBoard: flatEvents.map((e) => ({
+        sport: e.sport,
         eventTicker: e.eventTicker,
         eventId: null,
         title: e.title,
@@ -944,6 +951,7 @@ export async function buildTennisHqPayload(
                       playerA: event.markets[0]?.player ?? "",
                       playerB: event.markets[1]?.player ?? "",
                       tournament: event.tournament ?? event.competition ?? undefined,
+                      sport: event.sport,
                     })),
                 ));
       if (oddsByTicker) {

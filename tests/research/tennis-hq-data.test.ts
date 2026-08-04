@@ -12,6 +12,7 @@ import {
   normalizeTennisSurface,
 } from "../../src/research/tennis-surface-edge.ts";
 import type { TennisBoard } from "../../src/research/tennis-events.ts";
+import { SPORT } from "../../src/institutions/market-registry/brands.ts";
 
 const EVENT_TICKER = "KXITFMATCH-26JUL28RODGAM";
 const TICKER_A = "KXITFMATCH-26JUL28RODGAM-ROD";
@@ -153,6 +154,7 @@ function mockBoard(): TennisBoard {
         state: "ok",
         events: [
           {
+            sport: SPORT.tennis,
             eventTicker: EVENT_TICKER,
             title: `${PLAYER_A} vs ${PLAYER_B}`,
             subTitle: null,
@@ -215,6 +217,7 @@ function mockBoardUnsynced(): TennisBoard {
         state: "ok",
         events: [
           {
+            sport: SPORT.tennis,
             eventTicker: "KXITFMATCH-26JUL99UNKNOWN",
             title: "Unknown vs Unknown",
             subTitle: null,
@@ -359,6 +362,14 @@ describe("tennis-hq-data", () => {
     expect(payload.dataHealth.state).toBe("unavailable");
     expect(payload.liveBoard[0]!.eventId).toBeNull();
     expect(payload.profilesIndex.total).toBe(0);
+  });
+
+  test("rejects a table-tennis board at the Tennis HQ boundary", async () => {
+    const board = mockBoard();
+    board.series[0]!.events[0]!.sport = SPORT.tableTennis;
+    await expect(buildTennisHqPayload({ board })).rejects.toThrow(
+      "cannot ingest a non-tennis board",
+    );
   });
 
   test("getPlayerDetail returns profile and recent events", () => {

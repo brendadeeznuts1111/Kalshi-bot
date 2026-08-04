@@ -28,6 +28,12 @@ export function validateSportsSourceRegistry(registry: SportsSourceRegistry): st
   const sources = new Set(registry.sources.map((row) => unbrand(row.key)));
   const adapters = new Map(registry.adapters.map((row) => [unbrand(row.id), row]));
   const scopes: string[] = [];
+  const kalshiIdentityFields = new Set([
+    IDENTITY.tennisCompetitor,
+    IDENTITY.tennisDoublesCompetitor,
+    IDENTITY.tableTennisCompetitor,
+    IDENTITY.none,
+  ]);
 
   for (const adapter of registry.adapters) {
     if (adapter.cachePolicy.freshForMs < 0 || adapter.cachePolicy.staleForMs < adapter.cachePolicy.freshForMs) {
@@ -68,11 +74,22 @@ export function validateSportsSourceRegistry(registry: SportsSourceRegistry): st
       errors.push(`${id}: enabled integration has no selectors`);
     }
     if (
+      registration.operationalCapabilities.includes("inventory") &&
+      registration.competitions.length === 0
+    ) {
+      errors.push(`${id}: operational inventory has no selectors`);
+    }
+    if (
       registration.state === "enabled" &&
-      registration.competitions.length > 0 &&
       !registration.operationalCapabilities.includes("inventory")
     ) {
       errors.push(`${id}: enabled integration lacks operational inventory`);
+    }
+    if (
+      registration.state !== "enabled" &&
+      registration.operationalCapabilities.some((capability) => capability !== "inventory")
+    ) {
+      errors.push(`${id}: non-enabled integration may operate inventory only`);
     }
     if (registration.state !== "enabled" && !registration.reason) {
       errors.push(`${id}: non-enabled integration requires a reason`);
@@ -89,7 +106,29 @@ export function validateSportsSourceRegistry(registry: SportsSourceRegistry): st
       }
     }
     const hasOperational = (capability: SourceCapability) =>
-      registration.state === "enabled" && registration.operationalCapabilities.includes(capability);
+      registration.operationalCapabilities.includes(capability);
+    if (
+      hasOperational("trade") &&
+      !["quotes", "reconciliation"].every((capability) =>
+        hasOperational(capability as SourceCapability),
+      )
+    ) {
+      errors.push(`${id}: operational trade requires quotes and reconciliation`);
+    }
+    if (
+      hasOperational("reconciliation") &&
+      !registration.competitions.some((binding) =>
+        binding.declaredUse === "match" || binding.declaredUse === "trade"
+      )
+    ) {
+      errors.push(`${id}: operational reconciliation has no actionable selector`);
+    }
+    if (
+      hasOperational("trade") &&
+      !registration.competitions.some((binding) => binding.declaredUse === "trade")
+    ) {
+      errors.push(`${id}: operational trade has no trade selector`);
+    }
 
     for (const binding of registration.competitions) {
       const scope = unbrand(binding.selector.scope);
@@ -101,6 +140,21 @@ export function validateSportsSourceRegistry(registry: SportsSourceRegistry): st
       }
       if (adapter) {
         errors.push(...selectorErrors(id, binding.selector, adapter.validateSelector(binding.selector)));
+      }
+      if (registration.source === SOURCE.kalshi && binding.identityFields.length !== 1) {
+        errors.push(`${id}: Kalshi binding must declare exactly one identity field`);
+      }
+      if (
+        registration.source === SOURCE.kalshi &&
+        binding.identityFields.includes(IDENTITY.literalOutcome)
+      ) {
+        errors.push(`${id}: Kalshi binding cannot use literal outcome identity`);
+      }
+      if (
+        registration.source === SOURCE.kalshi &&
+        binding.identityFields.some((field) => !kalshiIdentityFields.has(field))
+      ) {
+        errors.push(`${id}: unsupported Kalshi identity field`);
       }
       if (
         binding.declaredUse === "match" &&
@@ -124,10 +178,9 @@ export function validateSportsSourceRegistry(registry: SportsSourceRegistry): st
       }
       if (
         binding.declaredUse !== "inventory" &&
-        binding.marketKinds.includes(MARKET.matchWinner) &&
         binding.identityFields.includes(IDENTITY.none)
       ) {
-        errors.push(`${id}: actionable match winner has no identity field`);
+        errors.push(`${id}: actionable binding has no identity field`);
       }
       if (binding.marketKinds.includes(MARKET.matchWinner) && !binding.eventTypes.includes("match")) {
         errors.push(`${id}: match winner must include a match event`);
