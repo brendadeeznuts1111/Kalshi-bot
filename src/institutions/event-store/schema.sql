@@ -295,6 +295,54 @@ CREATE TABLE IF NOT EXISTS source_events (
 CREATE INDEX IF NOT EXISTS idx_source_events_inventory
   ON source_events (sport_key, source_key, source_event_id);
 
+CREATE TABLE IF NOT EXISTS source_inventory_runs (
+  source_key TEXT NOT NULL,
+  inventory_run_id TEXT NOT NULL,
+  sport_key TEXT NOT NULL,
+  selector_scope TEXT NOT NULL,
+  adapter_id TEXT NOT NULL,
+  selector_kind TEXT NOT NULL,
+  selector_parameters_json TEXT NOT NULL CHECK (json_valid(selector_parameters_json)),
+  state TEXT NOT NULL CHECK (state IN ('running', 'complete', 'failed', 'abandoned')),
+  started_at_ms INTEGER NOT NULL CHECK (started_at_ms >= 0),
+  checkpoint_at_ms INTEGER CHECK (checkpoint_at_ms IS NULL OR checkpoint_at_ms >= started_at_ms),
+  finished_at_ms INTEGER CHECK (finished_at_ms IS NULL OR finished_at_ms >= started_at_ms),
+  next_cursor TEXT,
+  last_request_cursor TEXT,
+  last_page_fingerprint TEXT,
+  page_count INTEGER NOT NULL DEFAULT 0 CHECK (page_count >= 0),
+  observed_event_count INTEGER NOT NULL DEFAULT 0 CHECK (observed_event_count >= 0),
+  exhausted INTEGER NOT NULL DEFAULT 0 CHECK (exhausted IN (0, 1)),
+  error_detail TEXT,
+  CHECK (state = 'running' OR finished_at_ms IS NOT NULL),
+  CHECK (state != 'running' OR finished_at_ms IS NULL),
+  CHECK (state != 'complete' OR exhausted = 1),
+  CHECK (page_count = 0 OR exhausted = 1 OR next_cursor IS NOT NULL),
+  PRIMARY KEY (source_key, inventory_run_id),
+  UNIQUE (source_key, selector_scope, inventory_run_id)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_source_inventory_one_running
+  ON source_inventory_runs (source_key, selector_scope)
+  WHERE state = 'running';
+
+CREATE TABLE IF NOT EXISTS source_inventory_run_pages (
+  source_key TEXT NOT NULL,
+  inventory_run_id TEXT NOT NULL,
+  page_index INTEGER NOT NULL CHECK (page_index >= 0),
+  request_cursor TEXT,
+  next_cursor TEXT,
+  observed_at_ms INTEGER NOT NULL CHECK (observed_at_ms >= 0),
+  event_count INTEGER NOT NULL CHECK (event_count >= 0),
+  exhausted INTEGER NOT NULL CHECK (exhausted IN (0, 1)),
+  page_fingerprint TEXT NOT NULL,
+  PRIMARY KEY (source_key, inventory_run_id, page_index),
+  UNIQUE (source_key, inventory_run_id, request_cursor),
+  UNIQUE (source_key, inventory_run_id, next_cursor),
+  FOREIGN KEY (source_key, inventory_run_id)
+    REFERENCES source_inventory_runs (source_key, inventory_run_id)
+);
+
 CREATE TABLE IF NOT EXISTS source_event_selectors (
   source_key TEXT NOT NULL,
   source_event_id TEXT NOT NULL,
@@ -302,11 +350,16 @@ CREATE TABLE IF NOT EXISTS source_event_selectors (
   adapter_id TEXT NOT NULL,
   selector_kind TEXT NOT NULL,
   selector_parameters_json TEXT NOT NULL CHECK (json_valid(selector_parameters_json)),
+  active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+  retired_at_ms INTEGER CHECK (retired_at_ms IS NULL OR retired_at_ms >= 0),
+  last_seen_run_id TEXT,
   first_observed_at_ms INTEGER NOT NULL CHECK (first_observed_at_ms >= 0),
   last_observed_at_ms INTEGER NOT NULL CHECK (last_observed_at_ms >= first_observed_at_ms),
   PRIMARY KEY (source_key, source_event_id, selector_scope),
   FOREIGN KEY (source_key, source_event_id)
-    REFERENCES source_events (source_key, source_event_id)
+    REFERENCES source_events (source_key, source_event_id),
+  FOREIGN KEY (source_key, selector_scope, last_seen_run_id)
+    REFERENCES source_inventory_runs (source_key, selector_scope, inventory_run_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_source_event_selectors_scope

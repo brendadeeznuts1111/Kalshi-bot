@@ -77,7 +77,7 @@ export function upsertSourceObservation(
   observation: NormalizedSourceObservation,
   registry: SportsSourceRegistry = SPORTS_SOURCE_REGISTRY,
 ): SourceObservationWriteResult {
-  assertObservationInput(observation, registry);
+  assertSourceObservationInput(observation, registry);
   const write = db.transaction((): SourceObservationWriteResult => {
     const source = unbrand(observation.source);
     const eventId = unbrand(observation.eventId);
@@ -596,7 +596,7 @@ function upsertEventSelector(
   });
 }
 
-function assertObservationInput(
+export function assertSourceObservationInput(
   observation: NormalizedSourceObservation,
   registry: SportsSourceRegistry,
 ): void {
@@ -726,6 +726,12 @@ function assertObservationRegistry(
   }
   const registration = registrationFor(observation.source, observation.sport, registry);
   if (!registration) throw new Error("source/sport integration is not registered");
+  if (
+    (registration.state !== "enabled" && registration.state !== "discovering") ||
+    !registration.operationalCapabilities.includes("inventory")
+  ) {
+    throw new Error("source/sport integration is not operational for inventory");
+  }
   if (registration.adapter !== observation.provenance.adapter) {
     throw new Error("adapter must match registered source/sport integration");
   }

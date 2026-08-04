@@ -17,9 +17,11 @@ import {
   SOURCE,
   SPORT,
 } from "../../src/institutions/market-registry/brands.ts";
+import { SPORTS_SOURCE_REGISTRY } from "../../src/institutions/market-registry/registry.ts";
 import type {
   CompleteSourceObservation,
   NormalizedSourceObservation,
+  SportsSourceRegistry,
 } from "../../src/institutions/market-registry/types.ts";
 
 function observation(input: {
@@ -522,6 +524,25 @@ describe("provider-scoped source market store", () => {
         })),
       }),
     ).toThrow("unmapped source market type must remain quarantined");
+    const registration = SPORTS_SOURCE_REGISTRY.integrations.find(
+      (row) => row.source === base.source && row.sport === base.sport,
+    )!;
+    const disabledRegistry: SportsSourceRegistry = {
+      ...SPORTS_SOURCE_REGISTRY,
+      integrations: SPORTS_SOURCE_REGISTRY.integrations.map((row) =>
+        row === registration
+          ? {
+              ...row,
+              state: "disabled",
+              operationalCapabilities: [],
+              reason: "test",
+            }
+          : row,
+      ),
+    };
+    expect(() => upsertSourceObservation(db, base, disabledRegistry)).toThrow(
+      "not operational for inventory",
+    );
     expect(db.query("SELECT COUNT(*) AS count FROM source_events").get()).toEqual({ count: 0 });
   });
 

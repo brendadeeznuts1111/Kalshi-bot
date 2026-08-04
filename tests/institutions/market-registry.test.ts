@@ -287,6 +287,16 @@ describe("sports/source registry", () => {
       "kalshi:table_tennis: non-enabled integration may operate inventory only",
     );
 
+    const selectorScopedOperational: SportsSourceRegistry = {
+      ...SPORTS_SOURCE_REGISTRY,
+      adapters: SPORTS_SOURCE_REGISTRY.adapters.map((adapter, index) =>
+        index === 0 ? { ...adapter, idNamespace: "selector_scoped" } : adapter,
+      ),
+    };
+    expect(validateSportsSourceRegistry(selectorScopedOperational)).toContain(
+      "kalshi:tennis: selector-scoped adapter cannot be operational without canonical ids",
+    );
+
     const literalKalshiIdentity: SportsSourceRegistry = {
       ...SPORTS_SOURCE_REGISTRY,
       integrations: SPORTS_SOURCE_REGISTRY.integrations.map((row, index) =>

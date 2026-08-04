@@ -70,6 +70,12 @@ export function validateSportsSourceRegistry(registry: SportsSourceRegistry): st
     const adapter = adapters.get(unbrand(registration.adapter));
     if (!adapter) errors.push(`${id}: unknown adapter`);
     if (adapter && adapter.source !== registration.source) errors.push(`${id}: adapter source mismatch`);
+    if (
+      adapter?.idNamespace === "selector_scoped" &&
+      registration.operationalCapabilities.length > 0
+    ) {
+      errors.push(`${id}: selector-scoped adapter cannot be operational without canonical ids`);
+    }
     if (registration.state === "enabled" && registration.competitions.length === 0) {
       errors.push(`${id}: enabled integration has no selectors`);
     }
