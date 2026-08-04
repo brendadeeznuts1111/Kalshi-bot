@@ -70,6 +70,38 @@ export function validateSportsSourceRegistry(registry: SportsSourceRegistry): st
     const adapter = adapters.get(unbrand(registration.adapter));
     if (!adapter) errors.push(`${id}: unknown adapter`);
     if (adapter && adapter.source !== registration.source) errors.push(`${id}: adapter source mismatch`);
+    const metadataPolicy = registration.metadataPolicy;
+    if (adapter?.metadataDiscovery && !metadataPolicy) {
+      errors.push(`${id}: metadata discovery requires a classification policy`);
+    }
+    if (metadataPolicy) {
+      if (!adapter?.metadataDiscovery) {
+        errors.push(`${id}: metadata policy requires adapter discovery`);
+      }
+      if (!adapter?.metadataSelectorKinds.includes(metadataPolicy.entityKind)) {
+        errors.push(`${id}: metadata entity kind unsupported by adapter`);
+      }
+      if (
+        adapter?.metadataDiscovery &&
+        metadataPolicy.entityKind !== adapter.metadataDiscovery.kind
+      ) {
+        errors.push(`${id}: metadata policy kind must match adapter discovery`);
+      }
+      if (!metadataPolicy.candidateFacet.trim()) {
+        errors.push(`${id}: metadata candidate facet required`);
+      }
+      if (!metadataPolicy.candidateSelectorParameter.trim()) {
+        errors.push(`${id}: metadata candidate selector parameter required`);
+      }
+      if (!unbrand(metadataPolicy.nonCandidate.reasonCode).trim()) {
+        errors.push(`${id}: metadata non-candidate reason required`);
+      }
+      for (const [key, value] of Object.entries(metadataPolicy.requiredAttributes)) {
+        if (!key.trim() || !value.trim()) {
+          errors.push(`${id}: metadata required attributes must be nonblank`);
+        }
+      }
+    }
     if (
       adapter?.idNamespace === "selector_scoped" &&
       registration.operationalCapabilities.length > 0
@@ -146,6 +178,18 @@ export function validateSportsSourceRegistry(registry: SportsSourceRegistry): st
       }
       if (adapter) {
         errors.push(...selectorErrors(id, binding.selector, adapter.validateSelector(binding.selector)));
+      }
+      if (
+        metadataPolicy &&
+        !binding.selector.parameters[metadataPolicy.candidateSelectorParameter]
+      ) {
+        errors.push(`${id}: metadata candidate parameter missing from selector`);
+      }
+      if (
+        metadataPolicy?.registrationMatch.kind === "metadata_id" &&
+        !binding.selector.parameters[metadataPolicy.registrationMatch.selectorParameter]
+      ) {
+        errors.push(`${id}: metadata identity parameter missing from selector`);
       }
       if (registration.source === SOURCE.kalshi && binding.identityFields.length !== 1) {
         errors.push(`${id}: Kalshi binding must declare exactly one identity field`);

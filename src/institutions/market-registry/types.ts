@@ -4,6 +4,7 @@ import type {
   IdentityFieldKey,
   IntegrationId,
   MarketKind,
+  MetadataReasonCode,
   OutcomeKey,
   SelectorKind,
   SourceEventId,
@@ -12,7 +13,9 @@ import type {
   SourceMarketId,
   SourceParticipantId,
   SourceMarketType,
+  SourceMetadataId,
   SourceScopeId,
+  SourceRegistryFingerprint,
   SportFamilyKey,
   SportKey,
 } from './brands.ts';
@@ -23,6 +26,21 @@ export type EventType = 'match' | 'tournament';
 export type ParticipantFormat = 'singles' | 'doubles' | 'team' | 'mixed' | 'field';
 export type SourceCapability = 'inventory' | 'quotes' | 'reconciliation' | 'trade';
 export type SemanticConfidence = 'exact' | 'discovery';
+export type SourceMetadataDisposition = 'registered' | 'quarantined' | 'ignored';
+
+export type MetadataClassificationPolicy = {
+  entityKind: SelectorKind;
+  requiredAttributes: Readonly<Record<string, string>>;
+  candidateFacet: string;
+  candidateSelectorParameter: string;
+  registrationMatch:
+    | { kind: 'metadata_id'; selectorParameter: string }
+    | { kind: 'candidate_facet' };
+  nonCandidate: {
+    disposition: 'ignored';
+    reasonCode: MetadataReasonCode;
+  };
+};
 
 export type SportDefinition = {
   key: SportKey;
@@ -86,8 +104,33 @@ export type SportSourceRegistration = {
   adapter: AdapterId;
   declaredCapabilities: readonly SourceCapability[];
   operationalCapabilities: readonly SourceCapability[];
+  metadataPolicy?: MetadataClassificationPolicy;
   competitions: readonly CompetitionBinding[];
   reason?: string;
+};
+
+export type NormalizedSourceMetadata = {
+  source: SourceKey;
+  metadataId: SourceMetadataId;
+  metadataKind: SelectorKind;
+  label: string;
+  attributes: Readonly<Record<string, string>>;
+  facets: Readonly<Record<string, readonly string[]>>;
+  sourceUpdatedAtMs?: number;
+};
+
+export type SourceMetadataClassificationDecision = {
+  source: SourceKey;
+  sport: SportKey;
+  metadataId: SourceMetadataId;
+  disposition: SourceMetadataDisposition;
+  reasonCode: MetadataReasonCode;
+  matchedSelectorScope?: SourceScopeId;
+};
+
+export type SourceMetadataClassification = SourceMetadataClassificationDecision & {
+  registryFingerprint: SourceRegistryFingerprint;
+  classifiedAtMs: number;
 };
 
 export type SportsSourceRegistry = {
@@ -311,6 +354,16 @@ export type SportsSourceRegistryArtifact = {
     declaredCapabilities: readonly SourceCapability[];
     operationalCapabilities: readonly SourceCapability[];
     reason?: string;
+    metadataPolicy?: {
+      entityKind: string;
+      requiredAttributes: Readonly<Record<string, string>>;
+      candidateFacet: string;
+      candidateSelectorParameter: string;
+      registrationMatch:
+        | { kind: 'metadata_id'; selectorParameter: string }
+        | { kind: 'candidate_facet' };
+      nonCandidate: { disposition: 'ignored'; reasonCode: string };
+    };
     competitions: ReadonlyArray<{
       competition: string;
       semanticConfidence: SemanticConfidence;

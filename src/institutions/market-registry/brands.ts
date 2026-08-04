@@ -18,6 +18,10 @@ export type SourceEventId = Brand<string, 'SourceEventId'>;
 export type SourceParticipantId = Brand<string, 'SourceParticipantId'>;
 export type SourceMarketId = Brand<string, 'SourceMarketId'>;
 export type SourceInventoryRunId = Brand<string, 'SourceInventoryRunId'>;
+export type SourceMetadataId = Brand<string, 'SourceMetadataId'>;
+export type SourceMetadataRunId = Brand<string, 'SourceMetadataRunId'>;
+export type MetadataReasonCode = Brand<string, 'MetadataReasonCode'>;
+export type SourceRegistryFingerprint = Brand<string, 'SourceRegistryFingerprint'>;
 export type OutcomeKey = Brand<string, 'OutcomeKey'>;
 export type SourceCacheKey = Brand<string, 'SourceCacheKey'>;
 
@@ -65,6 +69,14 @@ export const asSourceMarketId = (raw: string): SourceMarketId =>
   required(raw, 'SourceMarketId') as SourceMarketId;
 export const asSourceInventoryRunId = (raw: string): SourceInventoryRunId =>
   required(raw, 'SourceInventoryRunId') as SourceInventoryRunId;
+export const asSourceMetadataId = (raw: string): SourceMetadataId =>
+  required(raw, 'SourceMetadataId') as SourceMetadataId;
+export const asSourceMetadataRunId = (raw: string): SourceMetadataRunId =>
+  required(raw, 'SourceMetadataRunId') as SourceMetadataRunId;
+export const asMetadataReasonCode = (raw: string): MetadataReasonCode =>
+  canonicalKey(raw, 'MetadataReasonCode') as MetadataReasonCode;
+export const asSourceRegistryFingerprint = (raw: string): SourceRegistryFingerprint =>
+  required(raw, 'SourceRegistryFingerprint') as SourceRegistryFingerprint;
 export const parseSourceInventoryRunId = (raw: unknown): SourceInventoryRunId => {
   if (typeof raw !== 'string') throw new Error('SourceInventoryRunId: expected string');
   return asSourceInventoryRunId(raw);

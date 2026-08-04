@@ -330,6 +330,45 @@ describe("sports/source registry", () => {
     expect(validateSportsSourceRegistry(literalKalshiIdentity)).toContain(
       "kalshi:tennis: unsupported Kalshi identity field",
     );
+
+    const missingMetadataPolicy: SportsSourceRegistry = {
+      ...SPORTS_SOURCE_REGISTRY,
+      integrations: SPORTS_SOURCE_REGISTRY.integrations.map((row, index) =>
+        index === 0 ? { ...row, metadataPolicy: undefined } : row,
+      ),
+    };
+    expect(validateSportsSourceRegistry(missingMetadataPolicy)).toContain(
+      "kalshi:tennis: metadata discovery requires a classification policy",
+    );
+
+    const policyKindDrift: SportsSourceRegistry = {
+      ...SPORTS_SOURCE_REGISTRY,
+      adapters: SPORTS_SOURCE_REGISTRY.adapters.map((adapter, index) =>
+        index === 0
+          ? {
+              ...adapter,
+              metadataSelectorKinds: [
+                SELECTOR.kalshiSeriesMetadata,
+                SELECTOR.polymarketSportsMetadata,
+              ],
+            }
+          : adapter,
+      ),
+      integrations: SPORTS_SOURCE_REGISTRY.integrations.map((row, index) =>
+        index === 0 && row.metadataPolicy
+          ? {
+              ...row,
+              metadataPolicy: {
+                ...row.metadataPolicy,
+                entityKind: SELECTOR.polymarketSportsMetadata,
+              },
+            }
+          : row,
+      ),
+    };
+    expect(validateSportsSourceRegistry(policyKindDrift)).toContain(
+      "kalshi:tennis: metadata policy kind must match adapter discovery",
+    );
   });
 
   test("builds a deterministic, versioned public artifact", () => {
@@ -340,5 +379,10 @@ describe("sports/source registry", () => {
     expect(first.schema).toBe("sports-source-registry/v1");
     expect(first.integrations).toHaveLength(4);
     expect(JSON.stringify(first)).toContain("polymarket:metadata:sports");
+    expect(first.integrations[0]?.metadataPolicy).toMatchObject({
+      candidateFacet: "tags",
+      candidateSelectorParameter: "tag",
+      registrationMatch: { kind: "metadata_id", selectorParameter: "series" },
+    });
   });
 });

@@ -12,6 +12,7 @@ import {
   asIdentityFieldKey,
   asIntegrationId,
   asMarketKind,
+  asMetadataReasonCode,
   asSelectorKind,
   asSourceMarketType,
   asSourceCacheKey,
@@ -141,6 +142,30 @@ export const ADAPTERS = [
 const KALSHI_TAG = {
   [SPORT.tennis]: "Tennis",
   [SPORT.tableTennis]: "Table Tennis",
+} as const;
+
+const KALSHI_METADATA_POLICY = {
+  entityKind: SELECTOR.kalshiSeriesMetadata,
+  requiredAttributes: { category: "Sports" },
+  candidateFacet: "tags",
+  candidateSelectorParameter: "tag",
+  registrationMatch: { kind: "metadata_id", selectorParameter: "series" },
+  nonCandidate: {
+    disposition: "ignored",
+    reasonCode: asMetadataReasonCode("sport_facet_absent"),
+  },
+} as const;
+
+const POLYMARKET_METADATA_POLICY = {
+  entityKind: SELECTOR.polymarketSportsMetadata,
+  requiredAttributes: {},
+  candidateFacet: "tag_ids",
+  candidateSelectorParameter: "tagId",
+  registrationMatch: { kind: "candidate_facet" },
+  nonCandidate: {
+    disposition: "ignored",
+    reasonCode: asMetadataReasonCode("sport_facet_absent"),
+  },
 } as const;
 
 type KalshiBindingInput = {
@@ -353,6 +378,7 @@ export const INTEGRATIONS = [
     adapter: ADAPTER.kalshiEvents,
     declaredCapabilities: ["inventory", "quotes", "reconciliation", "trade"],
     operationalCapabilities: ["inventory", "quotes", "reconciliation", "trade"],
+    metadataPolicy: KALSHI_METADATA_POLICY,
     competitions: KALSHI_TENNIS_BINDINGS,
   }),
   defineIntegration({
@@ -363,6 +389,7 @@ export const INTEGRATIONS = [
     adapter: ADAPTER.kalshiEvents,
     declaredCapabilities: ["inventory", "quotes", "reconciliation"],
     operationalCapabilities: ["inventory"],
+    metadataPolicy: KALSHI_METADATA_POLICY,
     competitions: KALSHI_TABLE_TENNIS_BINDINGS,
     reason: "Inventory is operational; quote, reconciliation, and persistence wiring is pending.",
   }),
@@ -374,6 +401,7 @@ export const INTEGRATIONS = [
     adapter: ADAPTER.polymarketGamma,
     declaredCapabilities: ["inventory", "quotes", "reconciliation"],
     operationalCapabilities: ["inventory", "quotes", "reconciliation"],
+    metadataPolicy: POLYMARKET_METADATA_POLICY,
     competitions: [polymarketBinding(SPORT.tennis, asSourceTagId("864"), "tennis")],
   }),
   defineIntegration({
@@ -384,6 +412,7 @@ export const INTEGRATIONS = [
     adapter: ADAPTER.polymarketGamma,
     declaredCapabilities: ["inventory", "quotes", "reconciliation"],
     operationalCapabilities: ["inventory", "quotes", "reconciliation"],
+    metadataPolicy: POLYMARKET_METADATA_POLICY,
     competitions: [
       polymarketBinding(SPORT.tableTennis, asSourceTagId("103767"), "table-tennis"),
     ],
@@ -582,6 +611,21 @@ export function buildSportsSourceRegistryArtifact(
       adapter: unbrand(integration.adapter),
       declaredCapabilities: integration.declaredCapabilities,
       operationalCapabilities: integration.operationalCapabilities,
+      ...(integration.metadataPolicy
+        ? {
+            metadataPolicy: {
+              entityKind: unbrand(integration.metadataPolicy.entityKind),
+              requiredAttributes: integration.metadataPolicy.requiredAttributes,
+              candidateFacet: integration.metadataPolicy.candidateFacet,
+              candidateSelectorParameter: integration.metadataPolicy.candidateSelectorParameter,
+              registrationMatch: integration.metadataPolicy.registrationMatch,
+              nonCandidate: {
+                disposition: integration.metadataPolicy.nonCandidate.disposition,
+                reasonCode: unbrand(integration.metadataPolicy.nonCandidate.reasonCode),
+              },
+            },
+          }
+        : {}),
       ...(integration.reason ? { reason: integration.reason } : {}),
       competitions: integration.competitions.map((binding) => ({
         competition: unbrand(binding.competition),
