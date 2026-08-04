@@ -4,6 +4,7 @@ import {
   asAdapterId,
   asSourceKey,
   asSourceInventoryRunId,
+  asSourceRegistryFingerprint,
   asSelectorKind,
   asSourceScopeId,
   asSportKey,
@@ -12,10 +13,12 @@ import {
   type SelectorKind,
   type SourceInventoryRunId,
   type SourceKey,
+  type SourceRegistryFingerprint,
   type SourceScopeId,
   type SportKey,
 } from "../market-registry/brands.ts";
 import { registrationFor, SPORTS_SOURCE_REGISTRY } from "../market-registry/registry.ts";
+import { sourceRegistryFingerprint } from "../market-registry/fingerprint.ts";
 import type {
   NormalizedSourceObservation,
   SourcePage,
@@ -59,6 +62,7 @@ type RunRow = {
   adapterId: AdapterId;
   selectorKind: SelectorKind;
   selectorParametersJson: string;
+  registryFingerprint: SourceRegistryFingerprint;
   state: SourceInventoryRunState;
   startedAtMs: number;
   checkpointAtMs: number | null;
@@ -71,7 +75,13 @@ type RunRow = {
 
 type RunWireRow = Omit<
   RunRow,
-  "inventoryRunId" | "sourceKey" | "sportKey" | "selectorScope" | "adapterId" | "selectorKind"
+  | "inventoryRunId"
+  | "sourceKey"
+  | "sportKey"
+  | "selectorScope"
+  | "adapterId"
+  | "selectorKind"
+  | "registryFingerprint"
 > & {
   inventoryRunId: string; // brand-ok -- parsed immediately after the SQLite boundary
   sourceKey: string; // brand-ok -- parsed immediately after the SQLite boundary
@@ -79,6 +89,7 @@ type RunWireRow = Omit<
   selectorScope: string;
   adapterId: string; // brand-ok -- parsed immediately after the SQLite boundary
   selectorKind: string;
+  registryFingerprint: string;
 };
 
 export function beginSourceInventoryRun(
@@ -88,13 +99,16 @@ export function beginSourceInventoryRun(
 ): SourceInventoryRunCheckpoint {
   assertTimestamp(input.startedAtMs, "startedAtMs");
   assertRegisteredRun(input, registry);
+  const registryFingerprint = sourceRegistryFingerprint(registry);
   db.query(
     `INSERT INTO source_inventory_runs (
        source_key, inventory_run_id, sport_key, selector_scope, adapter_id,
-       selector_kind, selector_parameters_json, state, started_at_ms
+       selector_kind, selector_parameters_json, registry_fingerprint,
+       state, started_at_ms
      ) VALUES (
        $source, $runId, $sport, $selectorScope, $adapter,
-       $selectorKind, $selectorParameters, 'running', $startedAtMs
+       $selectorKind, $selectorParameters, $registryFingerprint,
+       'running', $startedAtMs
      )`,
   ).run({
     $source: unbrand(input.source),
@@ -104,6 +118,7 @@ export function beginSourceInventoryRun(
     $adapter: unbrand(input.adapter),
     $selectorKind: unbrand(input.selector.kind),
     $selectorParameters: JSON.stringify(input.selector.parameters),
+    $registryFingerprint: unbrand(registryFingerprint),
     $startedAtMs: input.startedAtMs,
   });
   return {
@@ -159,6 +174,9 @@ export function commitSourceInventoryPage(
       },
       registry,
     );
+    if (sourceRegistryFingerprint(registry) !== run.registryFingerprint) {
+      throw new Error("source inventory registry changed during the run");
+    }
     assertSelectorMatches(page.request.selector, selector, "inventory page request");
     for (const observation of page.records) {
       assertObservationMatchesRun(observation, run, selector, page.observedAtMs);
@@ -300,10 +318,14 @@ export function resumeSourceInventoryRun(
   db: Database,
   source: SourceKey,
   runId: SourceInventoryRunId,
+  registry: SportsSourceRegistry = SPORTS_SOURCE_REGISTRY,
 ): SourceInventoryRunCheckpoint {
   const run = readRun(db, source, runId);
   if (!run) throw new Error("source inventory run not found");
   if (run.state !== "running") throw new Error(`source inventory run is ${run.state}`);
+  if (sourceRegistryFingerprint(registry) !== run.registryFingerprint) {
+    throw new Error("source inventory registry changed during the run");
+  }
   return checkpoint(run);
 }
 
@@ -340,7 +362,8 @@ function readRun(db: Database, source: SourceKey, runId: SourceInventoryRunId): 
       `SELECT inventory_run_id AS inventoryRunId, source_key AS sourceKey,
             sport_key AS sportKey, selector_scope AS selectorScope,
             adapter_id AS adapterId, selector_kind AS selectorKind,
-            selector_parameters_json AS selectorParametersJson, state,
+            selector_parameters_json AS selectorParametersJson,
+            registry_fingerprint AS registryFingerprint, state,
             started_at_ms AS startedAtMs, checkpoint_at_ms AS checkpointAtMs,
             next_cursor AS nextCursor,
             last_request_cursor AS lastRequestCursor,
@@ -359,6 +382,7 @@ function readRun(db: Database, source: SourceKey, runId: SourceInventoryRunId): 
     selectorScope: asSourceScopeId(row.selectorScope),
     adapterId: asAdapterId(row.adapterId),
     selectorKind: asSelectorKind(row.selectorKind),
+    registryFingerprint: asSourceRegistryFingerprint(row.registryFingerprint),
   };
 }
 

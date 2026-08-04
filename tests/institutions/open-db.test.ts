@@ -1,5 +1,6 @@
 // @see https://bun.com/docs/test/index#run-tests
 import { describe, expect, test } from "bun:test";
+import { Database } from "bun:sqlite";
 import {
   applyEventStoreSchema,
   migrateEventStoreColumns,
@@ -50,6 +51,62 @@ describe("open-db", () => {
     expect(cols).toContain("source_url");
     expect(cols).toContain("recv_ts");
     expect(cols).toContain("source_clock");
+  });
+
+  test("adds inventory registry fingerprints and abandons unpinned legacy runs", () => {
+    const db = new Database(":memory:");
+    db.exec(`CREATE TABLE source_inventory_runs (
+      source_key TEXT NOT NULL,
+      inventory_run_id TEXT NOT NULL,
+      sport_key TEXT NOT NULL,
+      selector_scope TEXT NOT NULL,
+      adapter_id TEXT NOT NULL,
+      selector_kind TEXT NOT NULL,
+      selector_parameters_json TEXT NOT NULL,
+      state TEXT NOT NULL,
+      started_at_ms INTEGER NOT NULL,
+      checkpoint_at_ms INTEGER,
+      finished_at_ms INTEGER,
+      next_cursor TEXT,
+      last_request_cursor TEXT,
+      last_page_fingerprint TEXT,
+      page_count INTEGER NOT NULL DEFAULT 0,
+      observed_event_count INTEGER NOT NULL DEFAULT 0,
+      exhausted INTEGER NOT NULL DEFAULT 0,
+      error_detail TEXT,
+      PRIMARY KEY (source_key, inventory_run_id),
+      UNIQUE (source_key, selector_scope, inventory_run_id)
+    )`);
+    db.run(
+      `INSERT INTO source_inventory_runs (
+         source_key, inventory_run_id, sport_key, selector_scope, adapter_id,
+         selector_kind, selector_parameters_json, state, started_at_ms
+       ) VALUES (
+         'polymarket', 'legacy-unpinned', 'tennis', 'polymarket:tag:864',
+         'polymarket-gamma-v1', 'polymarket_tag', '{}', 'running', 100
+       )`,
+    );
+
+    applyEventStoreSchema(db);
+
+    expect(
+      (db.query("PRAGMA table_info(source_inventory_runs)").all() as Array<{ name: string }>).map(
+        (row) => row.name,
+      ),
+    ).toContain("registry_fingerprint");
+    expect(
+      db.query(
+        `SELECT registry_fingerprint AS fingerprint, state,
+                finished_at_ms AS finishedAtMs, error_detail AS detail
+         FROM source_inventory_runs WHERE inventory_run_id = 'legacy-unpinned'`,
+      ).get(),
+    ).toEqual({
+      fingerprint: "legacy:unversioned",
+      state: "abandoned",
+      finishedAtMs: 100,
+      detail: "migration: inventory run lacked registry fingerprint",
+    });
+    db.close();
   });
 
   test("adds provider-scoped inventory tables without rebuilding legacy events", () => {

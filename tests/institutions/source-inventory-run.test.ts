@@ -10,6 +10,7 @@ import {
   listSourceEvents,
   upsertSourceObservation,
 } from "../../src/institutions/event-store/source-market-store.ts";
+import { sourceRegistryFingerprint } from "../../src/institutions/market-registry/fingerprint.ts";
 import {
   asOutcomeKey,
   asSourceEventId,
@@ -153,6 +154,13 @@ describe("source inventory runs", () => {
       );
     }
     begin(db, asSourceInventoryRunId("run-1"));
+    expect(
+      db.query(
+        `SELECT registry_fingerprint AS registryFingerprint
+         FROM source_inventory_runs
+         WHERE inventory_run_id = 'run-1'`,
+      ).get(),
+    ).toEqual({ registryFingerprint: sourceRegistryFingerprint() });
     expect(
       commitSourceInventoryPage(db, {
         source: SOURCE.polymarket,
@@ -505,6 +513,46 @@ describe("source inventory runs", () => {
         driftedRegistry,
       ),
     ).toThrow("not an exact registered binding");
+
+    const semanticDriftRegistry: SportsSourceRegistry = {
+      ...SPORTS_SOURCE_REGISTRY,
+      integrations: SPORTS_SOURCE_REGISTRY.integrations.map((integration) =>
+        integration === registration
+          ? {
+              ...integration,
+              competitions: integration.competitions.map((binding) => ({
+                ...binding,
+                eventSemanticMappings: [
+                  ...(binding.eventSemanticMappings ?? []),
+                  {
+                    requiredAttributes: { seriesSlug: "future-table-series" },
+                    eventType: "match",
+                    participantFormat: "singles",
+                  },
+                ],
+              })),
+            }
+          : integration,
+      ),
+    };
+    expect(() =>
+      commitSourceInventoryPage(
+        db,
+        {
+          source: SOURCE.polymarket,
+          page: inventoryPage({ runId, pageIndex: 0, observedAtMs: 200, records: [] }),
+        },
+        semanticDriftRegistry,
+      ),
+    ).toThrow("registry changed during the run");
+    expect(() =>
+      resumeSourceInventoryRun(
+        db,
+        SOURCE.polymarket,
+        runId,
+        semanticDriftRegistry,
+      ),
+    ).toThrow("registry changed during the run");
     expect(
       db.query("SELECT active FROM source_event_selectors WHERE source_event_id = $eventId").get({
         $eventId: "registry-drift-event",

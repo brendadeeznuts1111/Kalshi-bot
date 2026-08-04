@@ -16,6 +16,7 @@ import {
   type SourceScopeId,
 } from '../market-registry/brands.ts';
 import { classifySourceMetadata } from '../market-registry/metadata-classification.ts';
+import { sourceRegistryFingerprint } from '../market-registry/fingerprint.ts';
 import { SPORTS_SOURCE_REGISTRY } from '../market-registry/registry.ts';
 import type {
   MetadataPage,
@@ -27,7 +28,6 @@ import { assertSportsSourceRegistry } from '../market-registry/validate.ts';
 import {
   parseStoredStringRecord,
   promoteCompletedSourceMetadataRun,
-  sourceRegistryFingerprint,
 } from './source-metadata-store.ts';
 
 export type SourceMetadataRunState = 'running' | 'complete' | 'failed' | 'abandoned';

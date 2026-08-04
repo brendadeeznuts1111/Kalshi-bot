@@ -86,7 +86,7 @@ No scheduler, read-model, API, or catalog code should need a source-specific bra
 - Empty, partial, replay-mutated, clock-regressed, or registry-drifted snapshots cannot retire active truth.
 - Latest attempt and serving complete snapshot are separate health concepts.
 - Registered/quarantined detail is public; ignored bulk is counted in SQL and not emitted.
-- Registry-run and classification fingerprints are separate, so reclassification is not mislabeled as mixed source data.
+- Metadata and inventory runs pin the registry fingerprint that interpreted their pages; classification fingerprints remain separate so reclassification is not mislabeled as mixed source data.
 
 ## Verification
 

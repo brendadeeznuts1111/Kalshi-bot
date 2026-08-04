@@ -55,6 +55,11 @@ const SCHEMA_COLUMN_MIGRATIONS: Array<{ table: string; column: string; decl: str
   { table: "price_snapshots", column: "participant_format", decl: "TEXT" },
   { table: "price_snapshots", column: "poly_observed_at_ms", decl: "INTEGER" },
   { table: "price_snapshots", column: "poly_cache_state", decl: "TEXT" },
+  {
+    table: "source_inventory_runs",
+    column: "registry_fingerprint",
+    decl: "TEXT NOT NULL DEFAULT 'legacy:unversioned'",
+  },
 ];
 
 export async function ensureEventStoreDir(): Promise<void> {
@@ -124,10 +129,22 @@ export function applyEventStoreSchema(db: Database): void {
   migrateEventStoreColumns(db);
   migrateSourceEventSelectors(db);
   abandonLegacyKalshiInventoryRuns(db);
+  abandonUnpinnedSourceInventoryRuns(db);
   db.run(
     `CREATE INDEX IF NOT EXISTS idx_price_snapshots_match_health
      ON price_snapshots (poly_prob, stale_volume, ts)`,
   );
+}
+
+/** An in-flight legacy run cannot prove which registry semantics interpreted earlier pages. */
+function abandonUnpinnedSourceInventoryRuns(db: Database): void {
+  db.query(
+    `UPDATE source_inventory_runs
+     SET state = 'abandoned',
+         finished_at_ms = MAX(started_at_ms, COALESCE(checkpoint_at_ms, started_at_ms)),
+         error_detail = 'migration: inventory run lacked registry fingerprint'
+     WHERE state = 'running' AND registry_fingerprint = 'legacy:unversioned'`,
+  ).run();
 }
 
 /** New event-page adapters cannot safely resume cursors minted by the old market-page contract. */

@@ -9,8 +9,8 @@ import {
 import {
   promoteCompletedSourceMetadataRun,
   reclassifySourceMetadata,
-  sourceRegistryFingerprint,
 } from '../../src/institutions/event-store/source-metadata-store.ts';
+import { sourceRegistryFingerprint } from '../../src/institutions/market-registry/fingerprint.ts';
 import {
   asSourceMetadataId,
   asSourceMetadataRunId,

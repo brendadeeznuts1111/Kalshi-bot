@@ -1,5 +1,4 @@
 import type { Database } from 'bun:sqlite';
-import { createHash } from 'node:crypto';
 import {
   asAdapterId,
   asSelectorKind,
@@ -15,15 +14,15 @@ import {
   type SourceScopeId,
 } from '../market-registry/brands.ts';
 import { classifySourceMetadata } from '../market-registry/metadata-classification.ts';
-import {
-  buildSportsSourceRegistryArtifact,
-  SPORTS_SOURCE_REGISTRY,
-} from '../market-registry/registry.ts';
+import { sourceRegistryFingerprint } from '../market-registry/fingerprint.ts';
+import { SPORTS_SOURCE_REGISTRY } from '../market-registry/registry.ts';
 import type {
   NormalizedSourceMetadata,
   SourceMetadataClassificationDecision,
   SportsSourceRegistry,
 } from '../market-registry/types.ts';
+
+export { sourceRegistryFingerprint };
 
 type PersistSourceMetadataInput = {
   entity: NormalizedSourceMetadata;
@@ -75,16 +74,6 @@ export type PromoteSourceMetadataResult = {
   classificationCount: number;
   registryFingerprint: SourceRegistryFingerprint;
 };
-
-/** Stable fingerprint of registry semantics; generation time is deliberately fixed. */
-export function sourceRegistryFingerprint(
-  registry: SportsSourceRegistry = SPORTS_SOURCE_REGISTRY
-): SourceRegistryFingerprint {
-  const artifact = buildSportsSourceRegistryArtifact('1970-01-01T00:00:00.000Z', registry);
-  return asSourceRegistryFingerprint(
-    createHash('sha256').update(canonicalJson(artifact)).digest('hex')
-  );
-}
 
 /** Bind publication to one validated registry fingerprint for the whole promotion transaction. */
 function createSourceMetadataPublisher(

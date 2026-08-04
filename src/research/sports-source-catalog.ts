@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import type { Database } from "bun:sqlite";
 import { openEventStore } from "../institutions/event-store/open-db.ts";
 import { DEFAULT_EVENT_STORE_DB } from "../institutions/event-store/paths.ts";
-import { sourceRegistryFingerprint } from "../institutions/event-store/source-metadata-store.ts";
+import { sourceRegistryFingerprint } from "../institutions/market-registry/fingerprint.ts";
 import {
   buildSportsSourceDiscoveryArtifact,
   type SportsSourceDiscoveryArtifact,

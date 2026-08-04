@@ -3,7 +3,7 @@ import { unbrand } from '../market-registry/brands.ts';
 import { SPORTS_SOURCE_REGISTRY } from '../market-registry/registry.ts';
 import type { SportsSourceRegistry } from '../market-registry/types.ts';
 import { assertSportsSourceRegistry } from '../market-registry/validate.ts';
-import { sourceRegistryFingerprint } from './source-metadata-store.ts';
+import { sourceRegistryFingerprint } from '../market-registry/fingerprint.ts';
 
 export type SourceMetadataDiscoveryRecord = {
   metadataKind: string;

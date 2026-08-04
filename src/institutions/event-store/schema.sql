@@ -454,6 +454,8 @@ CREATE TABLE IF NOT EXISTS source_inventory_runs (
   adapter_id TEXT NOT NULL,
   selector_kind TEXT NOT NULL,
   selector_parameters_json TEXT NOT NULL CHECK (json_valid(selector_parameters_json)),
+  registry_fingerprint TEXT NOT NULL DEFAULT 'legacy:unversioned'
+    CHECK (length(registry_fingerprint) > 0),
   state TEXT NOT NULL CHECK (state IN ('running', 'complete', 'failed', 'abandoned')),
   started_at_ms INTEGER NOT NULL CHECK (started_at_ms >= 0),
   checkpoint_at_ms INTEGER CHECK (checkpoint_at_ms IS NULL OR checkpoint_at_ms >= started_at_ms),
