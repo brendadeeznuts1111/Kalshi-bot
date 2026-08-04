@@ -260,6 +260,29 @@ normalizeOdds(1.8928, "decimal"); // dual american + truncated decimal
 
 `bun run partner:registry -- --seed` also seeds `provider_sport_mappings`.
 
+### Pandora Socket.IO (live odds transport)
+
+```text
+wss://pandora.ganchrow.com/socket.io/?EIO=4&transport=websocket
+```
+
+| Handshake (live-probed) | Meaning |
+|-------------------------|---------|
+| `← 0{sid,pingInterval,…}` | Engine.IO open |
+| `→ 40` | Socket.IO connect `/` |
+| `← 40{sid}` | namespace connected |
+| `← 2` / `→ 3` | ping / pong |
+
+```bash
+bun run partner:pandora-probe -- --seconds=12
+# after capturing Messages tab:
+bun run partner:pandora-probe -- --emit=subscribe --arg='{"sport":220}'
+bun run partner:pandora-probe -- --raw='42["subscribe",{"sport":220}]'
+```
+
+Code: `PandoraSocket` · `FantasyUltraAdapter.connectWebSocket()`.  
+**Subscription emit + odds payload still TBD** — paste DevTools WS Messages to finish parsing / `priced: true`.
+
 ## Liquidity sources map (partners / outs / providers)
 
 | Entity | Table / type | Role |

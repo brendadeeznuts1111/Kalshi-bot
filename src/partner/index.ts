@@ -99,6 +99,19 @@ export {
   type OddsFormat,
 } from "./odds-format.ts";
 
+export {
+  PandoraSocket,
+  defaultPandoraSocketUrl,
+  encodeSocketIoEmit,
+  parseEngineOpen,
+  parseSocketIoEvent,
+  EIO,
+  SIO,
+  type PandoraOpenInfo,
+  type PandoraSocketHandlers,
+  type PandoraSocketOptions,
+} from "./fantasy-ultra/pandora-socket.ts";
+
 import type { PartnerAccountProfile } from "./account-profile.ts";
 import { credentialsFromFantasyProfile } from "./account-profile.ts";
 import { FantasyUltraAdapter } from "./fantasy-ultra/adapter.ts";

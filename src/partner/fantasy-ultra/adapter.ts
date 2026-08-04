@@ -41,6 +41,11 @@ import {
   FANTASY_ULTRA_DEFAULTS,
   type FantasyUltraCredentials,
 } from "./types.ts";
+import {
+  PandoraSocket,
+  type PandoraSocketHandlers,
+  type PandoraSocketOptions,
+} from "./pandora-socket.ts";
 
 export type FantasyUltraAdapterOptions = {
   credentials: FantasyUltraCredentials;
@@ -68,6 +73,7 @@ export class FantasyUltraAdapter implements FantasySessionAdapter {
   private bearerToken: string;
   private liveUrls: PartnerLiveUrlSet | null = null;
   private warmed = false;
+  private pandora: PandoraSocket | null = null;
 
   constructor(options: FantasyUltraAdapterOptions) {
     this.credentials = options.credentials;
@@ -458,5 +464,37 @@ export class FantasyUltraAdapter implements FantasySessionAdapter {
   /** List groups from a captured open-bets / place response. */
   parseOpenTickets(wire: unknown) {
     return parseBetGroupsResponse(wire);
+  }
+
+  /**
+   * Connect to Pandora Socket.IO (live odds transport).
+   * Subscription payload is **unknown** until DevTools Messages are captured —
+   * use {@link PandoraSocket.subscribePlaceholder} with a raw frame when known.
+   */
+  connectWebSocket(
+    handlers: PandoraSocketHandlers = {},
+    options: Omit<PandoraSocketOptions, "handlers"> = {},
+  ): PandoraSocket {
+    this.disconnectWebSocket();
+    this.pandora = new PandoraSocket({
+      ...options,
+      handlers: {
+        ...handlers,
+        onLog: (line) => {
+          handlers.onLog?.(line);
+        },
+      },
+    });
+    this.pandora.connect();
+    return this.pandora;
+  }
+
+  getWebSocket(): PandoraSocket | null {
+    return this.pandora;
+  }
+
+  disconnectWebSocket(): void {
+    this.pandora?.close();
+    this.pandora = null;
   }
 }
