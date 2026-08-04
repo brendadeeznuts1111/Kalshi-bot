@@ -33,6 +33,7 @@ export type SourceEventInventoryQuery = {
   sport: SportKey;
   afterEventId?: SourceEventId;
   limit?: number;
+  includeRetired?: boolean;
 };
 
 type ExistingEventRow = {
@@ -91,7 +92,8 @@ export function upsertSourceObservation(
     if (existing && existing.sport_key !== unbrand(observation.sport)) {
       throw new Error(`source event sport drift: ${source}:${eventId}`);
     }
-    if (!existing && observation.title === undefined) {
+    const eventTitle = observation.title ?? existing?.title;
+    if (eventTitle === undefined) {
       throw new Error("partial event insert requires title");
     }
     const participants = observation.participants ?? [];
@@ -169,7 +171,7 @@ export function upsertSourceObservation(
       $source: source,
       $eventId: eventId,
       $sport: unbrand(observation.sport),
-      $title: observation.title ?? existing?.title,
+      $title: eventTitle,
       $status: observation.status ?? null,
       $closesAtMs: observation.closesAtMs ?? null,
       $result: observation.result ?? null,
@@ -416,7 +418,8 @@ export function upsertSourceObservation(
       if (existingMarket && existingMarket.eventId !== eventId) {
         throw new Error(`source market event drift: ${source}:${marketId}`);
       }
-      if (!existingMarket && market.title === undefined) {
+      const marketTitle = market.title ?? existingMarket?.title;
+      if (marketTitle === undefined) {
         throw new Error("partial market insert requires title");
       }
       if (
@@ -468,7 +471,7 @@ export function upsertSourceObservation(
         $eventId: eventId,
         $sourceMarketType: market.sourceMarketType ? unbrand(market.sourceMarketType) : null,
         $marketKind: market.marketKind ? unbrand(market.marketKind) : null,
-        $title: market.title ?? existingMarket?.title,
+        $title: marketTitle,
         $status: market.status ?? null,
         $closesAtMs: market.closesAtMs ?? null,
         $result: market.result ?? null,
@@ -509,7 +512,9 @@ export function upsertSourceObservation(
           .get({ $source: source, $marketId: marketId, $outcome: outcomeKey }) as
           | ExistingOutcomeRow
           | null;
-        if (!existingOutcome && (outcome.ordinal === undefined || outcome.label === undefined)) {
+        const outcomeOrdinal = outcome.ordinal ?? existingOutcome?.ordinal;
+        const outcomeLabel = outcome.label ?? existingOutcome?.label;
+        if (outcomeOrdinal === undefined || outcomeLabel === undefined) {
           throw new Error("partial outcome insert requires ordinal and label");
         }
         outcomeStatement.run({
@@ -518,8 +523,8 @@ export function upsertSourceObservation(
           $outcome: outcomeKey,
           $eventId: eventId,
           $participantId: outcome.participantId ? unbrand(outcome.participantId) : null,
-          $ordinal: outcome.ordinal ?? existingOutcome?.ordinal,
-          $label: outcome.label ?? existingOutcome?.label,
+          $ordinal: outcomeOrdinal,
+          $label: outcomeLabel,
           $probability: outcome.probability ?? null,
           $bid: outcome.bid ?? null,
           $ask: outcome.ask ?? null,
@@ -552,15 +557,23 @@ function upsertEventSelector(
   db.query(
     `INSERT INTO source_event_selectors (
        source_key, source_event_id, selector_scope, adapter_id, selector_kind,
-       selector_parameters_json, first_observed_at_ms, last_observed_at_ms
+       selector_parameters_json, active, retired_at_ms, last_seen_run_id,
+       first_observed_at_ms, last_observed_at_ms
      ) VALUES (
        $source, $eventId, $selectorScope, $adapter, $selectorKind,
-       $selectorParameters, $observedAtMs, $observedAtMs
+       $selectorParameters, 1, NULL, $inventoryRunId,
+       $observedAtMs, $observedAtMs
      )
      ON CONFLICT(source_key, source_event_id, selector_scope) DO UPDATE SET
        adapter_id = excluded.adapter_id,
        selector_kind = excluded.selector_kind,
        selector_parameters_json = excluded.selector_parameters_json,
+       active = 1,
+       retired_at_ms = NULL,
+       last_seen_run_id = COALESCE(
+         excluded.last_seen_run_id,
+         source_event_selectors.last_seen_run_id
+       ),
        first_observed_at_ms = MIN(
          source_event_selectors.first_observed_at_ms,
          excluded.first_observed_at_ms
@@ -576,6 +589,9 @@ function upsertEventSelector(
     $adapter: unbrand(observation.provenance.adapter),
     $selectorKind: unbrand(observation.provenance.selector.kind),
     $selectorParameters: JSON.stringify(observation.provenance.selector.parameters),
+    $inventoryRunId: observation.provenance.inventoryRunId
+      ? unbrand(observation.provenance.inventoryRunId)
+      : null,
     $observedAtMs: observedAtMs,
   });
 }
@@ -738,7 +754,7 @@ function assertObservationRegistry(
   ) {
     throw new Error("selector must exactly match the registered binding");
   }
-  for (const market of observation.markets) {
+  for (const market of observation.markets ?? []) {
     if (binding.sourceMarketMappings.length === 0) {
       if (market.marketKind && !binding.marketKinds.includes(market.marketKind)) {
         throw new Error("market kind is not registered for selector");
@@ -840,7 +856,16 @@ export function listSourceEvents(
   const baseSql =
     `SELECT source_key, source_event_id, sport_key, title, starts_at_ms, last_observed_at_ms
      FROM source_events
-     WHERE source_key = $source AND sport_key = $sport`;
+     WHERE source_key = $source AND sport_key = $sport${
+       query.includeRetired
+         ? ""
+         : ` AND EXISTS (
+             SELECT 1 FROM source_event_selectors ses
+             WHERE ses.source_key = source_events.source_key
+               AND ses.source_event_id = source_events.source_event_id
+               AND ses.active = 1
+           )`
+     }`;
   const params = {
     $source: unbrand(query.source),
     $sport: unbrand(query.sport),

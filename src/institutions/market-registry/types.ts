@@ -7,6 +7,7 @@ import type {
   OutcomeKey,
   SelectorKind,
   SourceEventId,
+  SourceInventoryRunId,
   SourceKey,
   SourceMarketId,
   SourceParticipantId,
@@ -98,13 +99,18 @@ export type SportsSourceRegistry = {
 
 export type SourceFetchRequest<Cursor extends string = string> = {
   selector: SourceSelector;
+  inventoryRunId?: SourceInventoryRunId;
+  pageIndex?: number;
   cursor?: Cursor;
   limit: number;
 };
 
 export type SourcePage<Row extends object, Cursor extends string = string> = {
+  request: SourceFetchRequest<Cursor>;
+  observedAtMs: number;
   records: readonly Row[];
   nextCursor?: Cursor;
+  exhausted: boolean;
 };
 
 export type SourceProvenance = {
@@ -112,37 +118,72 @@ export type SourceProvenance = {
   selector: SourceSelector;
   observedAtMs: number;
   sourceUpdatedAtMs?: number;
+  inventoryRunId?: SourceInventoryRunId;
 };
 
-export type NormalizedOutcomeQuote = {
-  outcome: OutcomeKey;
+type SourceOutcomeIdentity = { outcome: OutcomeKey };
+
+export type CompleteSourceOutcomeQuote = SourceOutcomeIdentity & {
   ordinal: number;
   label: string;
-  participantId?: SourceParticipantId;
+  participantId: SourceParticipantId | null;
   probability: number | null;
   bid: number | null;
   ask: number | null;
   last: number | null;
-  lastTradeAtMs?: number;
+  lastTradeAtMs: number | null;
 };
 
-export type NormalizedSourceMarket = {
-  id: SourceMarketId;
-  sourceMarketType?: SourceMarketType;
-  marketKind?: MarketKind;
+export type PartialSourceOutcomeQuote = SourceOutcomeIdentity & {
+  ordinal?: number;
+  label?: string;
+  participantId?: SourceParticipantId | null;
+  probability?: number | null;
+  bid?: number | null;
+  ask?: number | null;
+  last?: number | null;
+  lastTradeAtMs?: number | null;
+};
+
+export type NormalizedOutcomeQuote = CompleteSourceOutcomeQuote | PartialSourceOutcomeQuote;
+
+type SourceMarketIdentity = { id: SourceMarketId };
+
+export type CompleteSourceMarket = SourceMarketIdentity & {
+  sourceMarketType: SourceMarketType | null;
+  marketKind: MarketKind | null;
   title: string;
-  status?: string;
-  closesAtMs?: number;
-  result?: string;
+  status: string | null;
+  closesAtMs: number | null;
+  result: string | null;
   sourceUpdatedAtMs?: number;
-  subjectParticipantId?: SourceParticipantId;
+  subjectParticipantId: SourceParticipantId | null;
   volume: number | null;
   volume24h: number | null;
   liquidity: number | null;
   clobLiquidity: number | null;
   openInterest: number | null;
-  outcomes: readonly NormalizedOutcomeQuote[];
+  outcomes: readonly CompleteSourceOutcomeQuote[];
 };
+
+export type PartialSourceMarket = SourceMarketIdentity & {
+  sourceMarketType?: SourceMarketType | null;
+  marketKind?: MarketKind | null;
+  title?: string;
+  status?: string | null;
+  closesAtMs?: number | null;
+  result?: string | null;
+  sourceUpdatedAtMs?: number;
+  subjectParticipantId?: SourceParticipantId | null;
+  volume?: number | null;
+  volume24h?: number | null;
+  liquidity?: number | null;
+  clobLiquidity?: number | null;
+  openInterest?: number | null;
+  outcomes?: readonly PartialSourceOutcomeQuote[];
+};
+
+export type NormalizedSourceMarket = CompleteSourceMarket | PartialSourceMarket;
 
 export type NormalizedSourceParticipant = {
   id: SourceParticipantId;
@@ -150,22 +191,40 @@ export type NormalizedSourceParticipant = {
   label: string;
 };
 
-export type NormalizedSourceObservation = {
+type SourceObservationIdentity = {
   source: SourceKey;
   sport: SportKey;
   eventId: SourceEventId;
-  title: string;
-  status?: string;
-  closesAtMs?: number;
-  result?: string;
-  startsAtMs?: number;
-  eventType?: EventType;
-  participantFormat?: ParticipantFormat;
-  snapshotCompleteness: "complete" | "partial";
-  participants: readonly NormalizedSourceParticipant[];
-  markets: readonly NormalizedSourceMarket[];
   provenance: SourceProvenance;
 };
+
+export type CompleteSourceObservation = SourceObservationIdentity & {
+  snapshotCompleteness: "complete";
+  title: string;
+  status: string | null;
+  closesAtMs: number | null;
+  result: string | null;
+  startsAtMs: number | null;
+  eventType: EventType | null;
+  participantFormat: ParticipantFormat | null;
+  participants: readonly NormalizedSourceParticipant[];
+  markets: readonly CompleteSourceMarket[];
+};
+
+export type PartialSourceObservation = SourceObservationIdentity & {
+  snapshotCompleteness: "partial";
+  title?: string;
+  status?: string | null;
+  closesAtMs?: number | null;
+  result?: string | null;
+  startsAtMs?: number | null;
+  eventType?: EventType | null;
+  participantFormat?: ParticipantFormat | null;
+  participants?: readonly NormalizedSourceParticipant[];
+  markets?: readonly PartialSourceMarket[];
+};
+
+export type NormalizedSourceObservation = CompleteSourceObservation | PartialSourceObservation;
 
 export type AdapterHealth = {
   state: "healthy" | "stale" | "degraded" | "circuit_open";

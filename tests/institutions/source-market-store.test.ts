@@ -17,7 +17,10 @@ import {
   SOURCE,
   SPORT,
 } from "../../src/institutions/market-registry/brands.ts";
-import type { NormalizedSourceObservation } from "../../src/institutions/market-registry/types.ts";
+import type {
+  CompleteSourceObservation,
+  NormalizedSourceObservation,
+} from "../../src/institutions/market-registry/types.ts";
 
 function observation(input: {
   eventId?: string;
@@ -37,7 +40,7 @@ function observation(input: {
   probability?: number | null;
   bid?: number | null;
   ask?: number | null;
-} = {}): NormalizedSourceObservation {
+} = {}): CompleteSourceObservation {
   const source = input.source ?? SOURCE.polymarket;
   const eventId = input.eventId ?? "event-001";
   const polymarketTagId = input.selectorScope?.split(":").at(-1) ?? "103767";
@@ -47,6 +50,9 @@ function observation(input: {
     sport: input.sport ?? SPORT.tableTennis,
     eventId: asSourceEventId(eventId),
     title: input.title ?? "Alpha vs Beta",
+    status: "open",
+    closesAtMs: 1_785_805_200_000,
+    result: null,
     startsAtMs: 1_785_801_600_000,
     eventType: "match",
     participantFormat: "singles",
@@ -59,10 +65,14 @@ function observation(input: {
       {
         id: asSourceMarketId(input.marketId ?? "market-001"),
         sourceMarketType: input.missingSourceMarketType
-          ? undefined
+          ? null
           : asSourceMarketType("moneyline"),
-        marketKind: input.missingSourceMarketType ? undefined : MARKET.matchWinner,
+        marketKind: input.missingSourceMarketType ? null : MARKET.matchWinner,
         title: "Alpha vs Beta winner",
+        status: "open",
+        closesAtMs: 1_785_805_200_000,
+        result: null,
+        subjectParticipantId: null,
         volume: input.volume === undefined ? null : input.volume,
         volume24h: input.volume24h === undefined ? 0 : input.volume24h,
         liquidity: input.liquidity === undefined ? null : input.liquidity,
@@ -73,15 +83,18 @@ function observation(input: {
             outcome: asOutcomeKey("no"),
             ordinal: 0,
             label: "No",
+            participantId: null,
             probability: 0.42,
             bid: null,
             ask: null,
             last: null,
+            lastTradeAtMs: null,
           },
           {
             outcome: asOutcomeKey("yes"),
             ordinal: 1,
             label: "Yes",
+            participantId: null,
             probability: input.probability === undefined ? 0.58 : input.probability,
             bid: input.bid === undefined ? 0.57 : input.bid,
             ask: input.ask === undefined ? 0.59 : input.ask,
@@ -364,10 +377,12 @@ describe("provider-scoped source market store", () => {
             outcome: asOutcomeKey("retired"),
             ordinal: 2,
             label: "Retired",
+            participantId: null,
             probability: null,
             bid: null,
             ask: null,
             last: null,
+            lastTradeAtMs: null,
           },
         ],
       })),
@@ -574,6 +589,125 @@ describe("provider-scoped source market store", () => {
     });
   });
 
+  test("patches only present partial fields and supports explicit null clears", () => {
+    const db = openEventStore({ dbPath: ":memory:" });
+    const initial = observation({ observedAtMs: 100, sourceUpdatedAtMs: 90 });
+    upsertSourceObservation(db, {
+      ...initial,
+      result: "pending",
+      markets: initial.markets.map((market) => ({
+        ...market,
+        status: "trading",
+        subjectParticipantId: asSourceParticipantId("alpha"),
+        volume: 25,
+        liquidity: 50,
+        outcomes: market.outcomes.map((outcome) =>
+          String(outcome.outcome) === "yes"
+            ? { ...outcome, participantId: asSourceParticipantId("alpha") }
+            : outcome,
+        ),
+      })),
+    });
+    const partial: NormalizedSourceObservation = {
+      source: initial.source,
+      sport: initial.sport,
+      eventId: initial.eventId,
+      snapshotCompleteness: "partial",
+      status: null,
+      markets: [
+        {
+          id: initial.markets[0]!.id,
+          outcomes: [
+            {
+              outcome: asOutcomeKey("yes"),
+              bid: 0.58,
+              lastTradeAtMs: null,
+            },
+          ],
+        },
+      ],
+      provenance: {
+        ...initial.provenance,
+        observedAtMs: 200,
+        sourceUpdatedAtMs: 190,
+      },
+    };
+    expect(upsertSourceObservation(db, partial)).toBe("updated");
+    expect(
+      db.query(
+        `SELECT title, status, closes_at_ms AS closesAtMs, result, starts_at_ms AS startsAtMs
+         FROM source_events`,
+      ).get(),
+    ).toEqual({
+      title: "Alpha vs Beta",
+      status: null,
+      closesAtMs: 1_785_805_200_000,
+      result: "pending",
+      startsAtMs: 1_785_801_600_000,
+    });
+    expect(
+      db.query(
+        `SELECT title, status, subject_participant_id AS participantId,
+                volume, liquidity, active
+         FROM source_markets`,
+      ).get(),
+    ).toEqual({
+      title: "Alpha vs Beta winner",
+      status: "trading",
+      participantId: "alpha",
+      volume: 25,
+      liquidity: 50,
+      active: 1,
+    });
+    expect(
+      db.query(
+        `SELECT ordinal, label, source_participant_id AS participantId,
+                probability, bid, ask, last, last_trade_at_ms AS lastTradeAtMs
+         FROM source_market_outcomes WHERE outcome_key = 'yes'`,
+      ).get(),
+    ).toEqual({
+      ordinal: 1,
+      label: "Yes",
+      participantId: "alpha",
+      probability: 0.58,
+      bid: 0.58,
+      ask: 0.59,
+      last: 0.58,
+      lastTradeAtMs: null,
+    });
+  });
+
+  test("rejects ambiguous partial inserts and explicit undefined atomically", () => {
+    const db = openEventStore({ dbPath: ":memory:" });
+    const base = observation();
+    const missingTitle: NormalizedSourceObservation = {
+      source: base.source,
+      sport: base.sport,
+      eventId: asSourceEventId("partial-new"),
+      snapshotCompleteness: "partial",
+      provenance: base.provenance,
+    };
+    expect(() => upsertSourceObservation(db, missingTitle)).toThrow(
+      "partial event insert requires title",
+    );
+    const explicitUndefined = {
+      ...missingTitle,
+      title: undefined,
+    } as unknown as NormalizedSourceObservation;
+    expect(() => upsertSourceObservation(db, explicitUndefined)).toThrow(
+      "cannot be explicitly undefined",
+    );
+    const missingMarketTitle: NormalizedSourceObservation = {
+      ...missingTitle,
+      title: "Partial event",
+      markets: [{ id: asSourceMarketId("partial-market") }],
+    };
+    expect(() => upsertSourceObservation(db, missingMarketTitle)).toThrow(
+      "partial market insert requires title",
+    );
+    expect(db.query("SELECT COUNT(*) AS count FROM source_events").get()).toEqual({ count: 0 });
+  });
+
   test("rejects duplicate stable identities and non-finite source numbers", () => {
     const db = openEventStore({ dbPath: ":memory:" });
     const base = observation();
@@ -683,6 +817,20 @@ describe("provider-scoped source market store", () => {
     ).toThrow();
   });
 
+  test("rejects an outcome whose event does not own its market", () => {
+    const db = openEventStore({ dbPath: ":memory:" });
+    upsertSourceObservation(db, observation({ eventId: "event-a", marketId: "market-a" }));
+    upsertSourceObservation(db, observation({ eventId: "event-b", marketId: "market-b" }));
+    expect(() =>
+      db.query(
+        `INSERT INTO source_market_outcomes (
+           source_key, source_market_id, outcome_key, source_event_id,
+           ordinal, label, first_observed_at_ms, last_observed_at_ms
+         ) VALUES ('polymarket', 'market-a', 'cross-event', 'event-b', 2, 'Bad', 1, 1)`,
+      ).run(),
+    ).toThrow();
+  });
+
   test("stores tournament fields without forcing a two-participant match", () => {
     const db = openEventStore({ dbPath: ":memory:" });
     const base = observation({
@@ -710,10 +858,12 @@ describe("provider-scoped source market store", () => {
             outcome: asOutcomeKey("gamma"),
             ordinal: 2,
             label: "Gamma",
+            participantId: null,
             probability: null,
             bid: null,
             ask: null,
             last: null,
+            lastTradeAtMs: null,
           },
         ],
       })),
