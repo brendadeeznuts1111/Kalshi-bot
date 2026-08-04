@@ -1,11 +1,11 @@
 {
   "v": 1,
   "createdAt": "2026-07-28T17:36:10.179Z",
-  "updatedAt": "2026-07-28T17:36:10.179Z",
-  "totalSnapshots": 1,
-  "totalBytes": 1558,
+  "updatedAt": "2026-08-04T10:37:52.717Z",
+  "totalSnapshots": 2,
+  "totalBytes": 3170,
   "compressedBytes": 0,
-  "latestRun": "keeper-2026-07-28-173609-599",
+  "latestRun": "keeper-2026-08-04-103750-278",
   "entries": [
     {
       "run": "keeper-2026-07-28-173609-599",
@@ -16,6 +16,16 @@
       "sizeBytes": 1558,
       "compressed": false,
       "hasLiveMatches": true
+    },
+    {
+      "run": "keeper-2026-08-04-103750-278",
+      "ts": "2026-08-04T10:37:50.278Z",
+      "tsUnix": 1785839870278,
+      "fingerprint": "5c7a6b82",
+      "file": "snapshots/keeper-2026-08-04-103750-278-5c7a6b82.json",
+      "sizeBytes": 1612,
+      "compressed": false,
+      "hasLiveMatches": false
     }
   ]
 }
