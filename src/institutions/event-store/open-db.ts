@@ -39,6 +39,17 @@ const SCHEMA_COLUMN_MIGRATIONS: Array<{ table: string; column: string; decl: str
   { table: "resolutions", column: "fetched_ts", decl: "INTEGER" },
   { table: "resolutions", column: "corpus", decl: "TEXT NOT NULL DEFAULT 'trading'" },
   { table: "player_profiles", column: "country", decl: "TEXT" },
+  { table: "price_snapshots", column: "match_key", decl: "TEXT NOT NULL DEFAULT ''" },
+  { table: "price_snapshots", column: "market_source", decl: "TEXT NOT NULL DEFAULT 'kalshi'" },
+  { table: "price_snapshots", column: "surface_edge", decl: "INTEGER NOT NULL DEFAULT 0" },
+  { table: "price_snapshots", column: "kalshi_volume_lifetime", decl: "REAL NOT NULL DEFAULT 0" },
+  { table: "price_snapshots", column: "stale_volume", decl: "INTEGER NOT NULL DEFAULT 0" },
+  { table: "price_snapshots", column: "poly_volume_24h", decl: "REAL" },
+  { table: "price_snapshots", column: "poly_volume_lifetime", decl: "REAL" },
+  { table: "price_snapshots", column: "poly_liquidity", decl: "REAL" },
+  { table: "price_snapshots", column: "poly_open_interest", decl: "REAL" },
+  { table: "price_snapshots", column: "polymarket_event_id", decl: "TEXT" },
+  { table: "price_snapshots", column: "polymarket_match_method", decl: "TEXT" },
 ];
 
 export async function ensureEventStoreDir(): Promise<void> {
@@ -106,6 +117,10 @@ export function applyEventStoreSchema(db: Database): void {
   db.run(`CREATE INDEX IF NOT EXISTS idx_player_opponent_profiles_player ON player_opponent_profiles (player_name)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_player_opponent_profiles_opponent ON player_opponent_profiles (opponent_name)`);
   migrateEventStoreColumns(db);
+  db.run(
+    `CREATE INDEX IF NOT EXISTS idx_price_snapshots_match_health
+     ON price_snapshots (poly_prob, stale_volume, ts)`,
+  );
 }
 
 export function migrateEventStoreColumns(db: Database): void {

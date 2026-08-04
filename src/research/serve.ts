@@ -46,7 +46,7 @@ import hqApp from "./hq-app/index.html";
 import { fetchTennisBoard } from "./tennis-events.ts";
 import { buildGlossaryApiPayload } from "../institutions/glossary.ts";
 import { readPlayerProfiles } from "./player-profiles.ts";
-import { getPlayerDetail } from "./tennis-hq-data.ts";
+import { buildTennisHqPayload, getPlayerDetail } from "./tennis-hq-data.ts";
 import { readOpponentProfiles } from "./player-opponent-profiles.ts";
 import { placeOrder, cancelOrder } from "../bot/kalshi-client.ts";
 import { codedError, httpStatusFor, type ErrorCode } from "../institutions/error-codes.ts";
@@ -862,7 +862,10 @@ export function createResearchServer(options: ServeOptions = {}) {
       // HQ headquarters dashboard served via routes["/hq"] = hqApp (HTML import)
 
       // HQ aggregate data feed (JSON)
-      
+      if (url.pathname === "/api/hq/tennis") {
+        return json(await buildTennisHqPayload());
+      }
+
       // Glossary — structured entries + flat tooltips for HQ panel/tips
       if (url.pathname === "/api/glossary") {
         return json(buildGlossaryApiPayload());

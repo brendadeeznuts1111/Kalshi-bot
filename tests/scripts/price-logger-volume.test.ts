@@ -28,7 +28,7 @@ describe("price-logger volume wiring", () => {
     db.close();
   });
 
-  test("loadMarketLiquidityByTicker prefers volume_24h_fp over volume_fp", () => {
+  test("loadMarketLiquidityByTicker preserves 24h zero separately from lifetime", () => {
     db.run(
       `INSERT INTO markets (market_id, ticker, volume_fp, volume_24h_fp, open_interest_fp)
        VALUES ('m1', 'KX-A', '100', '250', '40'),
@@ -37,11 +37,10 @@ describe("price-logger volume wiring", () => {
               ('m4', 'KX-D', '500', '0.00', '1')`,
     );
     const map = loadMarketLiquidityByTicker(db as never);
-    expect(map.get("KX-A")).toEqual({ volume24h: 250, openInterest: 40 });
-    expect(map.get("KX-B")).toEqual({ volume24h: 90, openInterest: 10 });
-    expect(map.get("KX-C")).toEqual({ volume24h: null, openInterest: null });
-    // "0.00" 24h must fall back to lifetime volume_fp
-    expect(map.get("KX-D")).toEqual({ volume24h: 500, openInterest: 1 });
+    expect(map.get("KX-A")).toEqual({ volume24h: 250, volumeLifetime: 100, openInterest: 40 });
+    expect(map.get("KX-B")).toEqual({ volume24h: 0, volumeLifetime: 90, openInterest: 10 });
+    expect(map.get("KX-C")).toEqual({ volume24h: 0, volumeLifetime: 0, openInterest: 0 });
+    expect(map.get("KX-D")).toEqual({ volume24h: 0, volumeLifetime: 500, openInterest: 1 });
   });
 
   test("parseLoggerArgv accepts --dry-run as once + dryRun", () => {

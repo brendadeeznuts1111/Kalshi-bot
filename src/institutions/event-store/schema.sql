@@ -217,3 +217,50 @@ CREATE INDEX IF NOT EXISTS idx_match_liquidity_tournament ON match_liquidity (to
 CREATE INDEX IF NOT EXISTS idx_match_liquidity_tour ON match_liquidity (tour);
 CREATE INDEX IF NOT EXISTS idx_match_liquidity_ok ON match_liquidity (liquidity_ok);
 CREATE INDEX IF NOT EXISTS idx_match_liquidity_sport ON match_liquidity (sport_key);
+
+/** Cross-venue price and capacity snapshots written by scripts/price-logger.ts. */
+CREATE TABLE IF NOT EXISTS price_snapshots (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  event_id TEXT NOT NULL REFERENCES events (event_id),
+  match_key TEXT NOT NULL DEFAULT '',
+  market_source TEXT NOT NULL DEFAULT 'kalshi',
+  ticker TEXT NOT NULL,
+  ts INTEGER NOT NULL,
+  kalshi_mid_cents INTEGER,
+  kalshi_bid_cents INTEGER,
+  kalshi_ask_cents INTEGER,
+  kalshi_volume_24h REAL NOT NULL DEFAULT 0,
+  kalshi_volume_lifetime REAL NOT NULL DEFAULT 0,
+  kalshi_open_interest REAL NOT NULL DEFAULT 0,
+  stale_volume INTEGER NOT NULL DEFAULT 0,
+  poly_prob REAL,
+  poly_volume_24h REAL,
+  poly_volume_lifetime REAL,
+  poly_liquidity REAL,
+  poly_open_interest REAL,
+  polymarket_event_id TEXT,
+  polymarket_match_method TEXT,
+  pinny_prob REAL,
+  elo_prob REAL,
+  elo_surface TEXT,
+  elo_a REAL,
+  elo_b REAL,
+  rps_flag INTEGER NOT NULL DEFAULT 0,
+  div_flag INTEGER NOT NULL DEFAULT 0,
+  surface_edge INTEGER NOT NULL DEFAULT 0,
+  source TEXT NOT NULL DEFAULT 'price-logger'
+);
+
+CREATE INDEX IF NOT EXISTS idx_price_snapshots_event_ts ON price_snapshots (event_id, ts);
+CREATE INDEX IF NOT EXISTS idx_price_snapshots_ticker_ts ON price_snapshots (ticker, ts);
+CREATE TABLE IF NOT EXISTS logger_health (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  booted_at INTEGER NOT NULL,
+  last_snapshot_at INTEGER,
+  total_snapshots INTEGER NOT NULL DEFAULT 0,
+  total_errors INTEGER NOT NULL DEFAULT 0,
+  last_error TEXT,
+  last_error_at INTEGER
+);
+
+INSERT OR IGNORE INTO logger_health (id, booted_at) VALUES (1, unixepoch() * 1000);

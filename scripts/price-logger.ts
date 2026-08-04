@@ -20,13 +20,13 @@ import {
   surfaceEdgeFor,
 } from "../src/institutions/event-store/cross-market.ts";
 import { fetchLiveCrossMarketOdds } from "../src/institutions/event-store/cross-market-live.ts";
+import type { CrossMarketOdds } from "../src/institutions/event-store/types.ts";
 import {
   computeSurfaceElo,
   expectedScore,
   queryCompletedMatches,
   SURFACE_INDEX,
 } from "../scripts/train-elo.ts";
-import { SQL_MARKET_VOLUME_FP } from "../src/research/player-profile-meta.ts";
 
 // ── Types ──────────────────────────────────────────────────────
 
@@ -50,8 +50,16 @@ type SnapshotRow = {
   kalshiBidCents: number | null;
   kalshiAskCents: number | null;
   kalshiVolume24h: number | null;
+  kalshiVolumeLifetime: number;
   kalshiOpenInterest: number | null;
+  staleVolume: number;
   polyProb: number | null;
+  polyVolume24h: number | null;
+  polyVolumeLifetime: number | null;
+  polyLiquidity: number | null;
+  polyOpenInterest: number | null;
+  polymarketEventId: string | null; // brand-ok — opaque external provider primary key
+  polymarketMatchMethod: CrossMarketOdds["polymarketMatchMethod"];
   pinnyProb: number | null;
   eloProb: number | null;
   eloSurface: string | null;
@@ -89,10 +97,10 @@ function extractMidFromLevelsJson(levelsJson: string): BookMid {
     const mid = bestBid != null && bestAsk != null ? Math.round((bestBid + bestAsk) / 2) : null;
     // Prefer explicit volume fields if a book serializer ever embeds them; else null
     // (filled from markets table in runSnapshotCycle).
-    const volRaw = book.volume24h ?? book.volume_24h ?? book.volume ?? null;
+    const volRaw = book.volume24h ?? book.volume_24h ?? null;
     const oiRaw = book.openInterest ?? book.open_interest ?? null;
     const volume24h =
-      volRaw != null && Number.isFinite(Number(volRaw)) && Number(volRaw) > 0
+      volRaw != null && Number.isFinite(Number(volRaw)) && Number(volRaw) >= 0
         ? Number(volRaw)
         : null;
     const openInterest =
@@ -113,31 +121,41 @@ function extractMidFromLevelsJson(levelsJson: string): BookMid {
   }
 }
 
-type MarketLiquidity = { volume24h: number | null; openInterest: number | null };
+type MarketLiquidity = {
+  volume24h: number;
+  volumeLifetime: number;
+  openInterest: number;
+};
 
 /**
- * Map ticker → 24h volume + OI from markets (SSOT for capacity when books omit volume).
- * Prefers volume_24h_fp, falls back to lifetime volume_fp.
+ * Map ticker → independently parsed 24h volume, lifetime volume, and OI.
+ * A real 24h zero remains zero and is never replaced with lifetime volume.
  */
 export function loadMarketLiquidityByTicker(
   db: ReturnType<typeof openEventStore>,
 ): Map<string, MarketLiquidity> {
   const map = new Map<string, MarketLiquidity>();
   try {
-    // SQL_MARKET_VOLUME_FP: 24h>0 else lifetime (masks "0.00" 24h).
     const rows = db
       .query(
         `SELECT ticker,
-                ${SQL_MARKET_VOLUME_FP} AS vol,
+                CAST(COALESCE(NULLIF(TRIM(volume_24h_fp), ''), '0') AS REAL) AS vol24,
+                CAST(COALESCE(NULLIF(TRIM(volume_fp), ''), '0') AS REAL) AS volLifetime,
                 CAST(COALESCE(NULLIF(open_interest_fp, ''), '0') AS REAL) AS oi
          FROM markets
          WHERE ticker IS NOT NULL AND ticker != ''`,
       )
-      .all() as Array<{ ticker: string; vol: number; oi: number }>;
+      .all() as Array<{
+        ticker: string;
+        vol24: number;
+        volLifetime: number;
+        oi: number;
+      }>;
     for (const r of rows) {
       map.set(r.ticker, {
-        volume24h: r.vol > 0 ? r.vol : null,
-        openInterest: r.oi > 0 ? r.oi : null,
+        volume24h: r.vol24,
+        volumeLifetime: r.volLifetime,
+        openInterest: r.oi,
       });
     }
   } catch {
@@ -174,15 +192,17 @@ const INSERT_SNAPSHOT = `
   INSERT INTO price_snapshots
     (event_id, match_key, market_source, ticker, ts,
      kalshi_mid_cents, kalshi_bid_cents, kalshi_ask_cents,
-     kalshi_volume_24h, kalshi_open_interest,
-     poly_prob, pinny_prob,
+     kalshi_volume_24h, kalshi_volume_lifetime, kalshi_open_interest, stale_volume,
+     poly_prob, poly_volume_24h, poly_volume_lifetime, poly_liquidity,
+     poly_open_interest, polymarket_event_id, polymarket_match_method, pinny_prob,
      elo_prob, elo_surface, elo_a, elo_b,
      rps_flag, div_flag, surface_edge, source)
   VALUES
     ($event_id, $match_key, $market_source, $ticker, $ts,
      $kalshi_mid_cents, $kalshi_bid_cents, $kalshi_ask_cents,
-     $kalshi_volume_24h, $kalshi_open_interest,
-     $poly_prob, $pinny_prob,
+     $kalshi_volume_24h, $kalshi_volume_lifetime, $kalshi_open_interest, $stale_volume,
+     $poly_prob, $poly_volume_24h, $poly_volume_lifetime, $poly_liquidity,
+     $poly_open_interest, $polymarket_event_id, $polymarket_match_method, $pinny_prob,
      $elo_prob, $elo_surface, $elo_a, $elo_b,
      $rps_flag, $div_flag, $surface_edge, 'price-logger')
 `;
@@ -303,13 +323,32 @@ export async function runSnapshotCycleDetailed(
 
   // 2. Live cross-market odds (Polymarket gamma; Pinnacle null until keyed).
   //    On failure: all-null — never fabricated (Enrichment Lock).
-  const targets = events.map((e) => ({ ticker: e.ticker, playerA: e.playerA, playerB: e.playerB }));
-  let oddsMap: Map<string, { polymarketProb: number | null; pinnacleProb: number | null }>;
+  const targets = events.map((e) => ({
+    ticker: e.ticker,
+    playerA: e.playerA,
+    playerB: e.playerB,
+    tournament: e.tournament,
+  }));
+  let oddsMap: Map<string, CrossMarketOdds>;
   try {
     oddsMap = await fetchLiveCrossMarketOdds(targets);
   } catch (err) {
     console.error(`[${new Date(ts).toISOString()}] Live odds fetch failed (using nulls): ${err}`);
-    oddsMap = new Map(targets.map((t) => [t.ticker, { polymarketProb: null, pinnacleProb: null }]));
+    oddsMap = new Map(
+      targets.map((target) => [
+        target.ticker,
+        {
+          polymarketProb: null,
+          polymarketVolume24h: null,
+          polymarketVolumeLifetime: null,
+          polymarketLiquidity: null,
+          polymarketOpenInterest: null,
+          polymarketEventId: null,
+          polymarketMatchMethod: null,
+          pinnacleProb: null,
+        },
+      ]),
+    );
   }
 
   // 3. Elo fair at capture time — train on all completed matches, predict current board.
@@ -343,8 +382,16 @@ export async function runSnapshotCycleDetailed(
         $kalshi_bid_cents: row.kalshiBidCents,
         $kalshi_ask_cents: row.kalshiAskCents,
         $kalshi_volume_24h: row.kalshiVolume24h,
+        $kalshi_volume_lifetime: row.kalshiVolumeLifetime,
         $kalshi_open_interest: row.kalshiOpenInterest,
+        $stale_volume: row.staleVolume,
         $poly_prob: row.polyProb,
+        $poly_volume_24h: row.polyVolume24h,
+        $poly_volume_lifetime: row.polyVolumeLifetime,
+        $poly_liquidity: row.polyLiquidity,
+        $poly_open_interest: row.polyOpenInterest,
+        $polymarket_event_id: row.polymarketEventId,
+        $polymarket_match_method: row.polymarketMatchMethod,
         $pinny_prob: row.pinnyProb,
         $elo_prob: row.eloProb,
         $elo_surface: row.eloSurface,
@@ -382,7 +429,8 @@ export async function runSnapshotCycleDetailed(
   for (const e of events) {
     const book = tickerOverrides?.get(e.ticker) ?? extractMidFromLevelsJson(e.levelsJson);
     const liq = marketLiq.get(e.ticker);
-    const volume24h = book.volume24h ?? liq?.volume24h ?? null;
+    const volume24h = book.volume24h ?? liq?.volume24h ?? 0;
+    const volumeLifetime = liq?.volumeLifetime ?? 0;
     const openInterest = book.openInterest ?? liq?.openInterest ?? null;
     const odds = oddsMap.get(e.ticker);
     const polyProb = odds?.polymarketProb ?? null;
@@ -407,8 +455,16 @@ export async function runSnapshotCycleDetailed(
       kalshiBidCents: book.bidCents,
       kalshiAskCents: book.askCents,
       kalshiVolume24h: volume24h,
+      kalshiVolumeLifetime: volumeLifetime,
       kalshiOpenInterest: openInterest,
+      staleVolume: volume24h === 0 && volumeLifetime > 0 ? 1 : 0,
       polyProb,
+      polyVolume24h: odds?.polymarketVolume24h ?? null,
+      polyVolumeLifetime: odds?.polymarketVolumeLifetime ?? null,
+      polyLiquidity: odds?.polymarketLiquidity ?? null,
+      polyOpenInterest: odds?.polymarketOpenInterest ?? null,
+      polymarketEventId: odds?.polymarketEventId ?? null,
+      polymarketMatchMethod: odds?.polymarketMatchMethod ?? null,
       pinnyProb,
       eloProb: fair.prob,
       eloSurface: e.surface ?? null,
