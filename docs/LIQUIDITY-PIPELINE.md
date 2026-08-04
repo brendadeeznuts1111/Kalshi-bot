@@ -55,10 +55,20 @@ GET /api/liquidity/summary         # alias of board
 GET /api/liquidity/:eventId
 GET /api/liquidity/by-tournament/:key?limit=50&recompute=1
 GET /api/kpi                       # tight_markets / tradable_matches / quoted_books from match_liquidity
+GET /api/events?liquidity=…&minVolume=N  # open board + deskLiquidity join (HQ filters/badges)
 GET /ops/partners/:nodeId          # includes deskLiquidity board (same concepts)
 ```
 
 No rate limit on liquidity GETs (bulk HQ polls).
+
+### Live events board (Phase 2)
+
+| Piece | Behavior |
+|-------|----------|
+| `GET /api/events` | Joins `match_liquidity` → each event may include `deskLiquidity` `{ liquidityOk, tradable, quoted, … }` |
+| Query `liquidity=` | `all` \| `priced` \| `active` \| `quoted` \| `liq_ok` \| `tradable` (server filter; HQ also filters client-side) |
+| Query `minVolume` / `minVol` | Min gate volume (desk 24h\|lifetime, else board 24h sum) |
+| HQ UI | Liquidity select + quick toggles (Quoted / Liquid / Tradable counts) + per-row chips |
 
 ### Domain concepts (glossary)
 
@@ -66,7 +76,9 @@ No rate limit on liquidity GETs (bulk HQ polls).
 |---------|------|
 | `liquidity_ok` | Volume + tight non-empty book |
 | `desk.tradable` | liquidity_ok + mid band 20–80¢ |
+| `desk.quoted` | Non-empty two-sided top-of-book |
 | `kpi.tight_markets` / `kpi.tradable_matches` / `kpi.quoted_books` | HQ KPI strip chips |
+| `ui.events.filter.liquidity` | Board filter enum (priced/active + desk gates) |
 | `kalshi_spread` / `kalshi_volume` | Spread / volume metrics |
 
 HQ overview loads `/api/liquidity/summary` for desk chips + `#volume-liquidity-panel`.

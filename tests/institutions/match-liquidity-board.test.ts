@@ -4,9 +4,16 @@ import type { BookSnapshot } from "../../src/institutions/alpha-signal-types.ts"
 import { openEventStore } from "../../src/institutions/event-store/open-db.ts";
 import {
   buildLiquidityBoardPayload,
+  deskFlagsFromRow,
+  getMatchLiquidity,
+  listDeskLiquidityByEventId,
   recomputeMatchLiquidity,
 } from "../../src/institutions/event-store/match-liquidity.ts";
 import { createResearchServer } from "../../src/research/serve.ts";
+import {
+  attachDeskLiquidityToBoard,
+  type TennisBoard,
+} from "../../src/research/tennis-events.ts";
 
 const tightBook: BookSnapshot = {
   ts: Date.now(),
@@ -69,5 +76,132 @@ describe("liquidity board + HQ API", () => {
     } finally {
       server.stop(true);
     }
+  });
+
+  test("listDeskLiquidityByEventId + attachDeskLiquidityToBoard filters tradable", () => {
+    const db = openEventStore({ dbPath: ":memory:" });
+    const now = Date.now();
+    db.query(
+      `INSERT INTO events (
+         event_id, tour, level, tournament, location, surface, court, round,
+         player_a, player_b, winner, loser, start_ts, outcome,
+         source, source_row_hash, ingested_at, corpus
+       ) VALUES (
+         'desk-evt-1', 'ATP', 'MS', 'Desk Cup', '', 'Hard', '', 'R16',
+         'A', 'B', '', '', '2026-08-01T12:00:00.000Z', '',
+         'test', 'h-desk1', $ing, 'trading'
+       )`,
+    ).run({ $ing: now });
+    db.query(
+      `INSERT INTO markets (
+         market_id, event_id, venue, ticker, market_kind,
+         volume_fp, volume_24h_fp, source
+       ) VALUES ('m-d1', 'desk-evt-1', 'kalshi', 'TICK-D1', 'match_winner', '3000', '1000', 'test')`,
+    ).run();
+    db.query(
+      `INSERT INTO book_ticks (
+         event_id, ticker, market_kind, ts, levels_json, source
+       ) VALUES ('desk-evt-1', 'TICK-D1', 'match_winner', $ts, $json, 'test')`,
+    ).run({ $ts: now, $json: JSON.stringify(tightBook) });
+    recomputeMatchLiquidity(db, "desk-evt-1");
+
+    const index = listDeskLiquidityByEventId(db);
+    expect(index.get("desk-evt-1")?.tradable).toBe(true);
+    expect(index.get("desk-evt-1")?.quoted).toBe(true);
+
+    const row = getMatchLiquidity(db, "desk-evt-1");
+    expect(row).not.toBeNull();
+    expect(deskFlagsFromRow(row!).tradable).toBe(true);
+
+    const stub: TennisBoard = {
+      generatedAt: new Date().toISOString(),
+      eventCount: 2,
+      marketCount: 2,
+      series: [
+        {
+          series: "KXATPMATCH" as TennisBoard["series"][0]["series"],
+          state: "ok",
+          events: [
+            {
+              eventTicker: "desk-evt-1",
+              title: "A vs B",
+              subTitle: null,
+              series: "KXATPMATCH",
+              league: "ATP",
+              tour: "ATP",
+              level: "tour",
+              competition: null,
+              tournament: "Desk Cup",
+              round: "R16",
+              city: null,
+              country: null,
+              countryCode: null,
+              tier: "250",
+              surface: "Hard",
+              occurrenceMs: now,
+              markets: [
+                {
+                  ticker: "TICK-D1",
+                  player: "A",
+                  playerCountry: null,
+                  playerCountryCode: null,
+                  status: "active",
+                  yesBidCents: 48,
+                  yesAskCents: 51,
+                  lastCents: 50,
+                  volume24h: 1000,
+                  openInterest: null,
+                  competitorId: null,
+                },
+              ],
+            },
+            {
+              eventTicker: "desk-evt-thin",
+              title: "Thin",
+              subTitle: null,
+              series: "KXATPMATCH",
+              league: "ATP",
+              tour: "ATP",
+              level: "tour",
+              competition: null,
+              tournament: "Desk Cup",
+              round: null,
+              city: null,
+              country: null,
+              countryCode: null,
+              tier: "250",
+              surface: "Hard",
+              occurrenceMs: now,
+              markets: [
+                {
+                  ticker: "TICK-THIN",
+                  player: "X",
+                  playerCountry: null,
+                  playerCountryCode: null,
+                  status: "active",
+                  yesBidCents: null,
+                  yesAskCents: null,
+                  lastCents: null,
+                  volume24h: 0,
+                  openInterest: null,
+                  competitorId: null,
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    const attached = attachDeskLiquidityToBoard(stub, index, { liquidity: "all" });
+    expect(attached.series[0]!.events[0]!.deskLiquidity?.tradable).toBe(true);
+    expect(attached.series[0]!.events[1]!.deskLiquidity).toBeUndefined();
+
+    const tradableOnly = attachDeskLiquidityToBoard(stub, index, {
+      liquidity: "tradable",
+      dropEmptySeries: false,
+    });
+    expect(tradableOnly.eventCount).toBe(1);
+    expect(tradableOnly.series[0]!.events[0]!.eventTicker).toBe("desk-evt-1");
   });
 });

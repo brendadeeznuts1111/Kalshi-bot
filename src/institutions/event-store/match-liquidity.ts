@@ -392,6 +392,64 @@ export function getMatchLiquidity(db: Database, eventId: string): MatchLiquidity
   return mapSqlRow(row);
 }
 
+/**
+ * Compact desk flags for live board join (eventTicker → match_liquidity).
+ * `quoted` is book_tick_count > 0 (glossary desk.quoted).
+ */
+export type DeskLiquidityFlags = {
+  liquidityOk: boolean;
+  tradable: boolean;
+  quoted: boolean;
+  spreadCents: number | null;
+  midCents: number | null;
+  volume24hFp: number;
+  volumeFp: number;
+  volumeForGate: number;
+};
+
+export function deskFlagsFromRow(row: MatchLiquidityRow): DeskLiquidityFlags {
+  return {
+    liquidityOk: row.liquidityOk,
+    tradable: row.tradable,
+    quoted: row.bookTickCount > 0,
+    spreadCents: row.spreadCents,
+    midCents: row.midCents,
+    volume24hFp: row.volume24hFp,
+    volumeFp: row.volumeFp,
+    volumeForGate: effectiveVolumeForGate(row.volume24hFp, row.volumeFp),
+  };
+}
+
+/** Full-table index for O(1) board enrichment. Empty when table missing. */
+export function listDeskLiquidityByEventId(db: Database): Map<string, DeskLiquidityFlags> {
+  const out = new Map<string, DeskLiquidityFlags>();
+  if (!matchLiquidityTablePresent(db)) return out;
+  const rows = db
+    .query(
+      `SELECT event_id, liquidity_ok, tradable, book_tick_count,
+              spread_cents, mid_cents, volume_24h_fp, volume_fp
+       FROM match_liquidity`,
+    )
+    .all() as Array<Record<string, unknown>>;
+  for (const r of rows) {
+    const eventId = String(r.event_id ?? "");
+    if (!eventId) continue;
+    const volume24hFp = fpNumber(r.volume_24h_fp as number);
+    const volumeFp = fpNumber(r.volume_fp as number);
+    out.set(eventId, {
+      liquidityOk: Number(r.liquidity_ok) === 1,
+      tradable: Number(r.tradable) === 1,
+      quoted: (Number(r.book_tick_count) || 0) > 0,
+      spreadCents: r.spread_cents == null ? null : fpNumber(r.spread_cents as number),
+      midCents: r.mid_cents == null ? null : fpNumber(r.mid_cents as number),
+      volume24hFp,
+      volumeFp,
+      volumeForGate: effectiveVolumeForGate(volume24hFp, volumeFp),
+    });
+  }
+  return out;
+}
+
 export function listMatchLiquidityByTournament(
   db: Database,
   tournamentKey: string,

@@ -768,12 +768,48 @@ function filtersToHash() {
 }
 
 function eventVol(e) {
+  if (e.deskLiquidity && (e.deskLiquidity.volumeForGate > 0 || e.deskLiquidity.volume24hFp > 0)) {
+    return e.deskLiquidity.volumeForGate || e.deskLiquidity.volume24hFp || 0;
+  }
   return e.markets.reduce((s, m) => s + (m.volume24h ?? 0), 0);
 }
 
 function surfaceEdgeBadge(event) {
   const presentation = surfaceEdgePresentation(event);
   return `<span class="surface-edge ${presentation.tone}" title="${esc(presentation.title)}">${presentation.label}</span>`;
+}
+
+/** Per-row desk liquidity chip (event grain = match_liquidity). */
+function liquidityBadge(event) {
+  const d = event.deskLiquidity;
+  if (!d) {
+    return '<span class="badge dim" data-concept-id="desk.quoted" title="no match_liquidity row">—</span>';
+  }
+  if (d.tradable) {
+    return '<span class="badge ok" data-concept-id="desk.tradable" title="desk.tradable — liquidity_ok + mid band">tradable</span>';
+  }
+  if (d.liquidityOk) {
+    return '<span class="badge warn" data-concept-id="liquidity_ok" title="liquidity_ok — volume + tight book">liquid</span>';
+  }
+  if (d.quoted) {
+    return '<span class="badge dim" data-concept-id="desk.quoted" title="desk.quoted — non-empty top-of-book">quoted</span>';
+  }
+  return '<span class="badge dim" title="no two-sided quote">thin</span>';
+}
+
+function eventMatchesLiquidity(e, mode) {
+  if (!mode || mode === "all") return true;
+  const d = e.deskLiquidity;
+  if (mode === "priced") {
+    return e.markets.some((m) => m.yesBidCents != null && m.yesAskCents != null);
+  }
+  if (mode === "active") {
+    return e.markets.some((m) => m.status === "active");
+  }
+  if (mode === "quoted") return d?.quoted === true;
+  if (mode === "liq_ok" || mode === "liquidity_ok") return d?.liquidityOk === true;
+  if (mode === "tradable") return d?.tradable === true;
+  return true;
 }
 
 function eventMatches(e, nowMs) {
@@ -785,8 +821,7 @@ function eventMatches(e, nowMs) {
   if (f.tier && e.tier !== f.tier) return false;
   if (f.country && e.country !== f.country &&
       !e.markets.some((m) => m.playerCountry === f.country)) return false;
-  if (f.liquidity === "priced" && !e.markets.some((m) => m.yesBidCents != null && m.yesAskCents != null)) return false;
-  if (f.liquidity === "active" && !e.markets.some((m) => m.status === "active")) return false;
+  if (!eventMatchesLiquidity(e, f.liquidity)) return false;
   if (f.minVol > 0 && eventVol(e) < f.minVol) return false;
   if (f.maxAsk > 0 && !e.markets.some((m) => m.yesAskCents != null && m.yesAskCents <= f.maxAsk)) return false;
   if (!passesMinimumSurfaceEdge(e, f.minSurfaceEdge)) return false;
@@ -837,23 +872,27 @@ function renderEventList() {
     if (events.length === 0) return "";
     const rows = events.map((e) => {
       const geo = [e.city, e.country].filter(Boolean).join(", ");
+      const liq = liquidityBadge(e);
       const legs = e.markets.map((m) =>
         "<tr><td style='padding-left:1.2rem'><button class='linklike' data-ticker='" + esc(m.ticker) + "'>" + esc(m.player ?? m.ticker) + "</button>" +
         (m.playerCountry ? ' <span class="muted" style="font-size:.75rem">' + esc(m.playerCountry) + "</span>" : "") + "</td>" +
         "<td class='num'>" + px(m.yesBidCents) + "</td><td class='num'>" + px(m.yesAskCents) + "</td>" +
         "<td class='num'>" + px(m.lastCents) + "</td><td class='num'>" + fmtVol(m.volume24h) + "</td>" +
-        "<td></td>" +
+        "<td class='num muted' style='font-size:.7rem'>" + liq + "</td>" +
+        "<td class='num'>" + surfaceEdgeBadge(e) + "</td>" +
         "<td>" + (m.status === "active" ? badge("ok", "live") : badge("dim", m.status)) + "</td></tr>").join("");
       return "<tr class='event-summary'><td colspan='5' style='padding-top:.7rem'><strong>" + esc(e.title ?? e.eventTicker) + "</strong> " +
+        liq + " " +
         (e.round ? badge("dim", e.round) + " " : "") +
         (e.tier ? badge("dim", e.tier) + " " : "") +
         (e.surface ? badge("dim", e.surface) + " " : "") +
         "<span class='muted'>" + esc(e.tournament ?? e.competition ?? "") + (geo ? " · " + esc(geo) : "") + " · " + fmtMs(e.occurrenceMs) + " · </span>" +
         "<span class='mono muted' style='font-size:.75rem'>" + esc(e.eventTicker) + "</span></td>" +
+        "<td class='num'>" + liq + "</td>" +
         "<td class='num'>" + surfaceEdgeBadge(e) + "</td><td></td></tr>" + legs;
     }).join("");
     return '<div class="panel"><h2>' + esc(s.series) + " " + badge("ok", events.length + " events") + "</h2>" +
-      "<table><tr><th>Player</th><th class='num'>Bid</th><th class='num'>Ask</th><th class='num'>Last</th><th class='num'>24h Vol</th><th class='num'>SrfE</th><th>Status</th></tr>" + rows + "</table></div>";
+      "<table><tr><th>Player</th><th class='num'>Bid</th><th class='num'>Ask</th><th class='num'>Last</th><th class='num'>24h Vol</th><th class='num'>Liq</th><th class='num'>SrfE</th><th>Status</th></tr>" + rows + "</table></div>";
   }).filter(Boolean).join("");
   const countEl = $("#events-count");
   if (countEl) countEl.textContent = shown + " of " + total + " events";
@@ -934,8 +973,22 @@ async function renderEvents() {
   const surfaceChoices = choicesFromCatalog("surface", liveSurfaces);
   const tierChoices = choicesFromCatalog("tier", liveTiers);
   const whenChoices = choicesFromCatalog("ui.events.filter.when", ["all", "live", "today", "24h", "week"]);
-  const liqChoices = choicesFromCatalog("ui.events.filter.liquidity", ["all", "priced", "active"]);
+  const liqChoices = choicesFromCatalog("ui.events.filter.liquidity", [
+    "all", "priced", "active", "quoted", "liq_ok", "tradable",
+  ]);
   const sortChoices = choicesFromCatalog("ui.sort.events", ["time", "volume", "alpha"]);
+  const deskCounts = {
+    quoted: allEvents.filter((e) => e.deskLiquidity?.quoted).length,
+    liqOk: allEvents.filter((e) => e.deskLiquidity?.liquidityOk).length,
+    tradable: allEvents.filter((e) => e.deskLiquidity?.tradable).length,
+  };
+  const liqToggle = (mode, label, count, conceptId) => {
+    const on = __filters.liquidity === mode;
+    return '<button type="button" class="liq-toggle' + (on ? " on" : "") +
+      '" data-liq-mode="' + mode + '" data-concept-id="' + esc(conceptId) + '"' +
+      ' title="' + esc(conceptId) + '">' +
+      esc(label) + ' <span class="muted">' + count + "</span></button>";
+  };
   const glossLabel = (id, fallback) => {
     const cat = GLOSSARY.filterCatalog?.[id];
     if (cat?.label) return cat.label;
@@ -992,7 +1045,15 @@ async function renderEvents() {
     esc(TOOLTIPS["ui.events.filter.reset"] || "clear") + '">clear' + tip("ui.events.filter.reset") + "</button>" +
     '<button type="button" id="events-preset-value" style="align-self:flex-end">value ≤ 25¢</button>' +
     '<button type="button" id="events-preset-live" style="align-self:flex-end">live & liquid</button>' +
-    "</form></div>" +
+    '<button type="button" id="events-preset-tradable" style="align-self:flex-end">desk tradable</button>' +
+    "</form>" +
+    '<div class="desk-liq-toggles" style="margin-top:.45rem;display:flex;flex-wrap:wrap;gap:.35rem;align-items:center">' +
+    '<span class="muted" style="font-size:.8rem">Desk gates' + tip("liquidity_ok") + "</span>" +
+    liqToggle("quoted", "Quoted", deskCounts.quoted, "desk.quoted") +
+    liqToggle("liq_ok", "Liquid", deskCounts.liqOk, "liquidity_ok") +
+    liqToggle("tradable", "Tradable", deskCounts.tradable, "desk.tradable") +
+    liqToggle("all", "All", allEvents.length, "ui.events.filter.liquidity") +
+    "</div></div>" +
     '<div id="events-list"></div>' +
     '<div class="panel"><h2>Player profiles' + tip("playerProfiles") + "</h2><div id='profiles-table'></div></div>";
 
@@ -1067,9 +1128,22 @@ async function renderEvents() {
     renderEvents();
   });
   $("#events-preset-live").addEventListener("click", () => {
-    Object.assign(__filters, { when: "live", liquidity: "active", sort: "volume" });
+    Object.assign(__filters, { when: "live", liquidity: "liq_ok", sort: "volume" });
     filtersToHash();
     renderEvents();
+  });
+  $("#events-preset-tradable")?.addEventListener("click", () => {
+    Object.assign(__filters, { liquidity: "tradable", sort: "volume" });
+    filtersToHash();
+    renderEvents();
+  });
+  el.querySelectorAll("[data-liq-mode]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const mode = btn.getAttribute("data-liq-mode") || "all";
+      __filters.liquidity = mode === __filters.liquidity && mode !== "all" ? "all" : mode;
+      filtersToHash();
+      renderEvents();
+    });
   });
   renderEventList();
 }

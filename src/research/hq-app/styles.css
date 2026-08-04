@@ -14,6 +14,17 @@
 .badge.warn { background: rgba(224,169,62,.15); color: #e0a93e; }
 .badge.bad { background: rgba(224,94,94,.15); color: #e05e5e; }
 .badge.dim { background: #171c28; color: #7d8798; }
+
+/* Desk liquidity quick toggles on the live events board */
+.desk-liq-toggles .liq-toggle {
+  background: var(--panel2); color: var(--fg); border: 1px solid var(--line);
+  border-radius: 999px; padding: 0.15rem 0.65rem; font-size: 0.75rem;
+  cursor: pointer;
+}
+.desk-liq-toggles .liq-toggle:hover { border-color: var(--acc); }
+.desk-liq-toggles .liq-toggle.on {
+  background: rgba(77,163,255,.15); border-color: var(--acc); color: var(--acc);
+}
 .tag { display: inline-block; background: #171c28; border: 1px solid #232a3a;
   border-radius: 4px; padding: 0 0.4rem; font-size: 0.72rem;
   color: #7d8798; margin: 0.1rem; }

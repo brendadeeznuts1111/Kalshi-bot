@@ -74,4 +74,14 @@ describe('HQ URLPattern hash routes', () => {
     expect(app).toContain('window.addEventListener("hashchange", applyHashRoute)');
     expect(app).not.toContain('function parseGlossaryHash');
   });
+
+  test('events board wires desk liquidity badges and filter toggles', async () => {
+    const app = await Bun.file(new URL('../../src/research/hq-app/app.js', import.meta.url)).text();
+    expect(app).toContain('function liquidityBadge');
+    expect(app).toContain('data-liq-mode');
+    expect(app).toContain('desk.tradable');
+    expect(app).toContain('"tradable"');
+    expect(app).toContain('"liq_ok"');
+    expect(app).toContain('"quoted"');
+  });
 });
