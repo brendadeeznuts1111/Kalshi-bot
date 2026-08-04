@@ -13,7 +13,10 @@ import { midFromBookSnapshot } from "../../bot/kalshi-book-parse.ts";
 
 /** Desk gates — necessary for liquidity_ok (not sufficient for desk trade). */
 export const LIQUIDITY_GATES = {
-  /** Min trailing 24h volume (Kalshi volume_24h_fp contracts ≈ notional). */
+  /**
+   * Min volume (contracts ≈ notional). Prefer trailing 24h (`volume_24h_fp`);
+   * fall back to lifetime `volume_fp` when 24h is zero/missing (common on ITF sync).
+   */
   minVolume24hFp: 500,
   /** Max bid–ask spread on preferred match-winner book (cents). */
   maxSpreadCents: 15,
@@ -21,6 +24,22 @@ export const LIQUIDITY_GATES = {
   midBandMinCents: 20,
   midBandMaxCents: 80,
 } as const;
+
+/**
+ * Volume used for desk gates: 24h when present, else lifetime.
+ * Stores both columns on the row; only the gate uses this blend.
+ */
+export function effectiveVolumeForGate(volume24hFp: number, volumeFp: number): number {
+  if (volume24hFp > 0) return volume24hFp;
+  return volumeFp > 0 ? volumeFp : 0;
+}
+
+/** True when book has a two-sided top of book (empty bids/asks do not count). */
+export function bookHasTopOfBook(book: BookSnapshot): boolean {
+  const bid = book.bids[0]?.priceCents;
+  const ask = book.asks[0]?.priceCents;
+  return bid != null && ask != null && Number.isFinite(bid) && Number.isFinite(ask);
+}
 
 export type MatchLiquidityRow = {
   eventId: string;
@@ -90,15 +109,18 @@ export function spreadCentsFromBook(book: BookSnapshot): number | null {
 
 export function evaluateLiquidityGates(input: {
   volume24hFp: number;
+  /** Lifetime volume — used when volume24hFp is 0. */
+  volumeFp?: number;
   spreadCents: number | null;
   midCents: number | null;
   crossed: boolean;
   gates?: typeof LIQUIDITY_GATES;
-}): { liquidityOk: boolean; tradable: boolean } {
+}): { liquidityOk: boolean; tradable: boolean; volumeForGate: number } {
   const g = input.gates ?? LIQUIDITY_GATES;
+  const volumeForGate = effectiveVolumeForGate(input.volume24hFp, input.volumeFp ?? 0);
   const liquidityOk =
     !input.crossed &&
-    input.volume24hFp >= g.minVolume24hFp &&
+    volumeForGate >= g.minVolume24hFp &&
     input.spreadCents != null &&
     input.spreadCents <= g.maxSpreadCents;
   const midOk =
@@ -108,6 +130,7 @@ export function evaluateLiquidityGates(input: {
   return {
     liquidityOk,
     tradable: liquidityOk && midOk,
+    volumeForGate,
   };
 }
 
@@ -143,6 +166,9 @@ function loadMarketAgg(db: Database, eventId?: string): MarketAgg[] {
 /**
  * Prefer latest match_winner book tick; fall back to any latest tick for the event.
  * Picks the tightest non-crossed spread among latest-per-ticker rows.
+ *
+ * Empty books (`bids:[]`/`asks:[]`) are ignored — they do not inflate bookTickCount
+ * and never produce a spread.
  */
 function loadBookAgg(db: Database, eventId: string): BookAgg {
   const rows = db
@@ -169,11 +195,15 @@ function loadBookAgg(db: Database, eventId: string): BookAgg {
   }
 
   let anyCrossed = false;
+  let quotedCount = 0;
   let best: { spread: number; mid: number | null; kindScore: number } | null = null;
 
   for (const row of rows) {
     const book = parseBookSnapshot(row.levelsJson);
     if (!book) continue;
+    // Empty shell ticks from REST when market has no depth — not a quote.
+    if (!bookHasTopOfBook(book)) continue;
+    quotedCount++;
     if (book.crossed) {
       anyCrossed = true;
       continue;
@@ -194,7 +224,7 @@ function loadBookAgg(db: Database, eventId: string): BookAgg {
   return {
     spreadCents: best?.spread ?? null,
     midCents: best?.mid ?? null,
-    bookTickCount: rows.length,
+    bookTickCount: quotedCount,
     crossed: anyCrossed && best == null,
   };
 }
@@ -261,6 +291,7 @@ function buildRow(db: Database, market: MarketAgg, now: number): MatchLiquidityR
   const book = loadBookAgg(db, market.eventId);
   const gates = evaluateLiquidityGates({
     volume24hFp: market.volume24hFp,
+    volumeFp: market.volumeFp,
     spreadCents: book.spreadCents,
     midCents: book.midCents,
     crossed: book.crossed,
@@ -347,14 +378,17 @@ export function listMatchLiquidityByTournament(
 ): MatchLiquidityRow[] {
   const limit = Math.min(Math.max(options.limit ?? 100, 1), 500);
   const sport = options.sportKey?.trim();
+  // Rank by gate volume (24h preferred, else lifetime) so zero-vol24 rows still surface.
   const sql = sport
     ? `SELECT * FROM match_liquidity
        WHERE tournament = $t AND sport_key = $s
-       ORDER BY volume_24h_fp DESC, updated_ts DESC
+       ORDER BY CASE WHEN volume_24h_fp > 0 THEN volume_24h_fp ELSE volume_fp END DESC,
+                updated_ts DESC
        LIMIT $lim`
     : `SELECT * FROM match_liquidity
        WHERE tournament = $t
-       ORDER BY volume_24h_fp DESC, updated_ts DESC
+       ORDER BY CASE WHEN volume_24h_fp > 0 THEN volume_24h_fp ELSE volume_fp END DESC,
+                updated_ts DESC
        LIMIT $lim`;
   const rows = sport
     ? (db.query(sql).all({ $t: tournamentKey, $s: sport, $lim: limit }) as Record<string, unknown>[])
@@ -380,6 +414,7 @@ export function assertMatchLiquidityHealthy(db: Database): {
   }
   const probe = evaluateLiquidityGates({
     volume24hFp: LIQUIDITY_GATES.minVolume24hFp,
+    volumeFp: 0,
     spreadCents: LIQUIDITY_GATES.maxSpreadCents,
     midCents: 50,
     crossed: false,
@@ -389,12 +424,23 @@ export function assertMatchLiquidityHealthy(db: Database): {
   }
   const fail = evaluateLiquidityGates({
     volume24hFp: LIQUIDITY_GATES.minVolume24hFp - 1,
+    volumeFp: 0,
     spreadCents: LIQUIDITY_GATES.maxSpreadCents,
     midCents: 50,
     crossed: false,
   });
   if (fail.liquidityOk) {
     throw new Error("liquidity gate self-check: expected volume under min to fail");
+  }
+  const lifetimeFallback = evaluateLiquidityGates({
+    volume24hFp: 0,
+    volumeFp: LIQUIDITY_GATES.minVolume24hFp,
+    spreadCents: 5,
+    midCents: 50,
+    crossed: false,
+  });
+  if (!lifetimeFallback.liquidityOk) {
+    throw new Error("liquidity gate self-check: lifetime volume fallback should pass");
   }
   const count = (db.query(`SELECT COUNT(*) AS n FROM match_liquidity`).get() as { n: number }).n;
   return { ok: true, table: "match_liquidity", rowCount: count };
