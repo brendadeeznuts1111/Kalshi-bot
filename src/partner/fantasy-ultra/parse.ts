@@ -1,10 +1,17 @@
-import type { PartnerLiveEvent, PartnerLiveUrlSet, PartnerSportLeague } from "../types.ts";
+import type {
+  PartnerBookedEvent,
+  PartnerLiveEvent,
+  PartnerLiveUrlSet,
+  PartnerSportLeague,
+} from "../types.ts";
 import type {
   FantasyRenewTokenWire,
   FantasySportsLeaguesWire,
   FantasyStreamEventWire,
   FantasyStreamListWire,
   FantasyUltraLiveUrlWire,
+  StatscoreBookedEventWire,
+  StatscoreBookedEventsResponse,
 } from "./types.ts";
 import { FANTASY_ULTRA_DEFAULTS } from "./types.ts";
 
@@ -249,4 +256,83 @@ export function parseRenewTokenResponse(wire: unknown): string {
     "";
   if (!raw) throw new Error("fantasy402: renewToken missing code/token");
   return raw.replace(/^Bearer\s+/i, "");
+}
+
+function asInt(v: unknown): number | null {
+  if (v == null || v === "") return null;
+  const n = typeof v === "number" ? v : Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+export function parseStatscoreBookedEvent(
+  row: StatscoreBookedEventWire,
+): PartnerBookedEvent | null {
+  const clientEventId = String(row.client_event_id ?? "").trim();
+  const statscoreId = asInt(row.id);
+  if (!clientEventId || statscoreId == null) return null;
+  return {
+    partner: FANTASY_ULTRA_DEFAULTS.partnerId,
+    statscoreId,
+    clientEventId,
+    name: String(row.name ?? "").trim() || clientEventId,
+    sportName: String(row.sport_name ?? "").trim() || "unknown",
+    sportId: asInt(row.sport_id),
+    competition:
+      String(row.competition_short_name ?? row.competition_name ?? "").trim() ||
+      null,
+    startDate: row.start_date != null ? String(row.start_date) : null,
+    statusName: row.status_name != null ? String(row.status_name) : null,
+    statusType: row.status_type != null ? String(row.status_type) : null,
+    betStatus: row.bet_status != null ? String(row.bet_status) : null,
+    relationStatus:
+      row.relation_status != null ? String(row.relation_status) : null,
+  };
+}
+
+/**
+ * Parse Statscore booked-events.index JSON.
+ * Throws if api.error present. Returns [] when no matches.
+ */
+export function parseStatscoreBookedEvents(wire: unknown): PartnerBookedEvent[] {
+  if (!wire || typeof wire !== "object") {
+    throw new Error("statscore: booked-events returned non-object");
+  }
+  const w = wire as StatscoreBookedEventsResponse;
+  if (w.api?.error?.message) {
+    throw new Error(
+      `statscore: booked-events error: ${w.api.error.message} (status=${w.api.error.status ?? "?"})`,
+    );
+  }
+  const list = w.api?.data?.booked_events;
+  if (!Array.isArray(list)) return [];
+  const out: PartnerBookedEvent[] = [];
+  for (const row of list) {
+    const parsed = parseStatscoreBookedEvent(row);
+    if (parsed) out.push(parsed);
+  }
+  return out;
+}
+
+/**
+ * Probe whether a Statscore payload contains pricing fields.
+ * livescorepro booked-events: false (verified live).
+ */
+export function statscorePayloadHasPrices(wire: unknown): boolean {
+  const s = JSON.stringify(wire ?? {});
+  // bet_status is not a price
+  return /"price"\s*:|"odds"\s*:|"markets"\s*:|"american_odds"\s*:/i.test(s);
+}
+
+/**
+ * Heuristic: strip trailing digit sometimes present on widget hash event ids
+ * (e.g. 196907981 → 19690798) when the shorter id is the client_event_id.
+ */
+export function normalizeClientEventIdCandidates(raw: string): string[] {
+  const id = raw.trim();
+  if (!id) return [];
+  const out = [id];
+  if (/^\d{8,}$/.test(id) && id.length >= 9) {
+    out.push(id.slice(0, -1));
+  }
+  return [...new Set(out)];
 }

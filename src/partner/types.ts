@@ -48,6 +48,42 @@ export type PartnerLiveEvent = {
   donbestId: string | null;
 };
 
+/**
+ * Statscore booked-events row (livescorepro product).
+ * Metadata + bet_status only — **no American prices** on this product.
+ */
+export type PartnerBookedEvent = {
+  partner: PartnerId;
+  /** Statscore internal id */
+  statscoreId: number;
+  /** Widget / client event id (query client_event_id) */
+  clientEventId: string;
+  name: string;
+  sportName: string;
+  sportId: number | null;
+  competition: string | null;
+  startDate: string | null;
+  statusName: string | null;
+  statusType: string | null;
+  /** e.g. suspended | active — coverage bet flag, not a price */
+  betStatus: string | null;
+  relationStatus: string | null;
+};
+
+/** Priced market row — only when a real odds wire is mapped (not Statscore livescorepro). */
+export type PartnerMarket = {
+  partner: PartnerId;
+  ticker: string;
+  name: string;
+  eventClientId: string;
+  marketId: string;
+  homePrice: number | null;
+  awayPrice: number | null;
+  label: string;
+  limits: PartnerLimits;
+  source: string;
+};
+
 export type PartnerLiveUrlSet = {
   desktop: string;
   mobile: string;
@@ -83,4 +119,11 @@ export interface FantasySessionAdapter extends PartnerOrderAdapter {
   fetchSports(): Promise<PartnerSportLeague[]>;
   getBearerToken(): string;
   getLiveUrls(): PartnerLiveUrlSet | null;
+  /** Statscore livescore booking metadata by client_event_id */
+  fetchBookedEvent(clientEventId: string): Promise<PartnerBookedEvent | null>;
+  /** List booked events (optional sport filter on sport_name) */
+  listBookedEvents(options?: {
+    sport?: string;
+    limit?: number;
+  }): Promise<PartnerBookedEvent[]>;
 }

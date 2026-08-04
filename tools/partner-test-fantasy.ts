@@ -150,6 +150,54 @@ async function main(): Promise<void> {
     ),
   );
 
+  const bookedId = argValue("booked") ?? argValue("client-event-id");
+  if (bookedId && "fetchBookedEvent" in adapter) {
+    const booked = await (
+      adapter as {
+        fetchBookedEvent: (id: string) => Promise<unknown>;
+      }
+    ).fetchBookedEvent(bookedId);
+    console.log(JSON.stringify({ bookedEvent: booked }, null, 2));
+    try {
+      const odds = await (
+        adapter as { fetchOdds: (id: string) => Promise<unknown> }
+      ).fetchOdds(bookedId);
+      console.log(JSON.stringify({ odds }, null, 2));
+    } catch (err) {
+      console.log(
+        JSON.stringify(
+          {
+            fetchOdds: {
+              ok: false,
+              error: err instanceof Error ? err.message : String(err),
+            },
+          },
+          null,
+          2,
+        ),
+      );
+    }
+  } else if ("listBookedEvents" in adapter) {
+    const bookedList = await (
+      adapter as {
+        listBookedEvents: (o: {
+          sport?: string;
+          limit?: number;
+        }) => Promise<unknown[]>;
+      }
+    ).listBookedEvents({ sport, limit: Math.min(limit, 5) });
+    console.log(
+      JSON.stringify(
+        {
+          bookedSample: bookedList,
+          note: "Statscore livescorepro — metadata only, not American prices",
+        },
+        null,
+        2,
+      ),
+    );
+  }
+
   if (events[0]) {
     const limits = await adapter.fetchLimits(events[0].eventId);
     console.log(JSON.stringify({ limits }, null, 2));

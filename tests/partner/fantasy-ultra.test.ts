@@ -6,11 +6,14 @@ import {
   getFantasySessionAdapter,
   getPartnerAdapter,
   inspectStreamListCapabilities,
+  normalizeClientEventIdCandidates,
   originFromLiveUrl,
   parseRenewTokenResponse,
   parseSportsLeagues,
+  parseStatscoreBookedEvents,
   parseStreamList,
   parseUltraLiveUrlResponse,
+  statscorePayloadHasPrices,
   type PartnerAccountProfile,
 } from "../../src/partner/index.ts";
 
@@ -154,6 +157,41 @@ describe("fantasy ultra parse", () => {
     expect(cap.sampleEventKeys).not.toContain("markets");
     expect(cap.note).toContain("Coverage-only");
   });
+
+  test("parseStatscoreBookedEvents maps livescorepro metadata (no prices)", () => {
+    const wire = {
+      api: {
+        method: { total_items: 1 },
+        data: {
+          booked_events: [
+            {
+              id: 6679023,
+              client_event_id: "19690946",
+              name: "Player A - Player B",
+              sport_id: 4,
+              sport_name: "Tennis",
+              competition_short_name: "ITF",
+              start_date: "2026-08-04 11:40",
+              status_name: "Live",
+              status_type: "live",
+              bet_status: "suspended",
+              relation_status: "in_progress",
+            },
+          ],
+        },
+      },
+    };
+    const rows = parseStatscoreBookedEvents(wire);
+    expect(rows.length).toBe(1);
+    expect(rows[0]!.clientEventId).toBe("19690946");
+    expect(rows[0]!.statscoreId).toBe(6679023);
+    expect(rows[0]!.betStatus).toBe("suspended");
+    expect(statscorePayloadHasPrices(wire)).toBe(false);
+    expect(normalizeClientEventIdCandidates("196907981")).toEqual([
+      "196907981",
+      "19690798",
+    ]);
+  });
 });
 
 describe("FantasyUltraAdapter session blueprint", () => {
@@ -239,6 +277,58 @@ describe("FantasyUltraAdapter session blueprint", () => {
     expect(dry.dryRun).toBe(true);
 
     await expect(adapter.fetchMarkets()).rejects.toThrow(/coverage-only|fetchMarkets unavailable/i);
+  });
+
+  test("fetchBookedEvent + fetchOdds diagnostic with mock Statscore", async () => {
+    const fetchImpl = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("getUltraLiveURL")) {
+        return new Response(JSON.stringify(ultraWire), { status: 200 });
+      }
+      if (url.includes("plive")) {
+        return new Response("ok", { status: 200 });
+      }
+      if (url.includes("booked-events")) {
+        return new Response(
+          JSON.stringify({
+            api: {
+              data: {
+                booked_events: [
+                  {
+                    id: 1,
+                    client_event_id: "19690946",
+                    name: "A - B",
+                    sport_name: "Tennis",
+                    bet_status: "active",
+                    status_name: "Live",
+                  },
+                ],
+              },
+            },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 200 });
+    }) as typeof fetch;
+
+    const adapter = new FantasyUltraAdapter({
+      credentials: {
+        customerID: "C",
+        agentID: "A",
+        password: "p",
+        bearerToken: "t",
+        domain: "https://fantasy402.com",
+        skin: 2,
+        currency: "USD",
+      },
+      fetchImpl,
+      warmSession: false,
+    });
+
+    const booked = await adapter.fetchBookedEvent("19690946");
+    expect(booked?.name).toBe("A - B");
+    await expect(adapter.fetchOdds("19690946")).rejects.toThrow(/no prices/i);
   });
 
   test("getPartnerAdapter / getFantasySessionAdapter route fantasy402", async () => {

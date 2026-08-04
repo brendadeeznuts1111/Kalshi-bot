@@ -13,21 +13,26 @@
  */
 import type {
   FantasySessionAdapter,
+  PartnerBookedEvent,
   PartnerExecutionResult,
   PartnerLimits,
   PartnerLiveEvent,
   PartnerLiveUrlSet,
+  PartnerMarket,
   PartnerOrder,
   PartnerSportLeague,
 } from "../types.ts";
 import { CookieJar } from "./cookie-jar.ts";
 import {
   inspectStreamListCapabilities,
+  normalizeClientEventIdCandidates,
   originFromLiveUrl,
   parseRenewTokenResponse,
   parseSportsLeagues,
+  parseStatscoreBookedEvents,
   parseStreamList,
   parseUltraLiveUrlResponse,
+  statscorePayloadHasPrices,
   type StreamListCapabilities,
 } from "./parse.ts";
 import {
@@ -42,6 +47,7 @@ export type FantasyUltraAdapterOptions = {
   ultraLiveUrl?: string;
   sportsLeaguesUrl?: string;
   renewTokenUrl?: string;
+  statscoreBookedEventsUrl?: string;
   /** When true (default), GET the desktop live URL after login to collect cookies. */
   warmSession?: boolean;
 };
@@ -54,6 +60,7 @@ export class FantasyUltraAdapter implements FantasySessionAdapter {
   private readonly streamListUrl: string;
   private readonly sportsLeaguesUrl: string;
   private readonly renewTokenUrl: string;
+  private readonly statscoreBookedEventsUrl: string;
   private readonly autoWarm: boolean;
   private readonly jar = new CookieJar();
   private bearerToken: string;
@@ -78,6 +85,9 @@ export class FantasyUltraAdapter implements FantasySessionAdapter {
     this.renewTokenUrl =
       options.renewTokenUrl ??
       `${domain}${FANTASY_ULTRA_DEFAULTS.renewTokenPath}`;
+    this.statscoreBookedEventsUrl =
+      options.statscoreBookedEventsUrl ??
+      FANTASY_ULTRA_DEFAULTS.statscoreBookedEventsUrl;
     this.autoWarm = options.warmSession !== false;
   }
 
@@ -289,6 +299,106 @@ export class FantasyUltraAdapter implements FantasySessionAdapter {
         `(hasPricingKeys=${cap.hasPricingKeys}, sampleEventKeys=${cap.sampleEventKeys.join(",")}). ` +
         `Capture the widget's odds/PlaceBet XHR or pandora WS to implement priced markets.`,
     );
+  }
+
+  private statscoreHeaders(): Record<string, string> {
+    const origin = this.liveUrls
+      ? originFromLiveUrl(this.liveUrls.desktop)
+      : FANTASY_ULTRA_DEFAULTS.streamOrigin;
+    return {
+      accept: "application/json, text/plain, */*",
+      referer: `${origin}/`,
+      origin,
+    };
+  }
+
+  private async fetchStatscoreBookedRaw(
+    params: Record<string, string>,
+  ): Promise<unknown> {
+    const q = new URLSearchParams({
+      client_id: FANTASY_ULTRA_DEFAULTS.statscoreClientId,
+      product: FANTASY_ULTRA_DEFAULTS.statscoreProduct,
+      events_details: "yes",
+      ...params,
+    });
+    const url = `${this.statscoreBookedEventsUrl}?${q.toString()}`;
+    const res = await this.request(url, {
+      method: "GET",
+      headers: this.statscoreHeaders(),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(
+        `statscore: booked-events HTTP ${res.status}${text ? ` — ${text.slice(0, 200)}` : ""}`,
+      );
+    }
+    return res.json();
+  }
+
+  /**
+   * Statscore livescore booking row for a widget client_event_id.
+   * Tries raw id then normalized candidates (strip trailing digit).
+   */
+  async fetchBookedEvent(
+    clientEventId: string,
+  ): Promise<PartnerBookedEvent | null> {
+    for (const id of normalizeClientEventIdCandidates(clientEventId)) {
+      const raw = await this.fetchStatscoreBookedRaw({
+        client_event_id: id,
+      });
+      const rows = parseStatscoreBookedEvents(raw);
+      if (rows.length) return rows[0]!;
+    }
+    return null;
+  }
+
+  /**
+   * List Statscore booked events (first page). Optional sport_name filter.
+   */
+  async listBookedEvents(
+    options: { sport?: string; limit?: number } = {},
+  ): Promise<PartnerBookedEvent[]> {
+    const raw = await this.fetchStatscoreBookedRaw({ lang: "en" });
+    let rows = parseStatscoreBookedEvents(raw);
+    const want = options.sport?.trim().toLowerCase();
+    if (want && want !== "all") {
+      rows = rows.filter(
+        (r) =>
+          r.sportName.toLowerCase() === want ||
+          r.sportName.toLowerCase().includes(want),
+      );
+    }
+    const limit = Math.min(Math.max(options.limit ?? 50, 1), 200);
+    return rows.slice(0, limit);
+  }
+
+  /**
+   * **Not prices.** Statscore `product=livescorepro` booked-events is event
+   * metadata (name, status, bet_status). product=odds is rejected for client_id=311.
+   *
+   * Returns PartnerMarket[] only if a future response actually contains prices;
+   * otherwise throws with a clear diagnostic.
+   */
+  async fetchOdds(clientEventId: string): Promise<PartnerMarket[]> {
+    const raw = await this.fetchStatscoreBookedRaw({
+      client_event_id: normalizeClientEventIdCandidates(clientEventId)[0]!,
+    });
+    const booked = parseStatscoreBookedEvents(raw);
+    const hasPrices = statscorePayloadHasPrices(raw);
+    if (!hasPrices) {
+      const sample = booked[0];
+      throw new Error(
+        `statscore: booked-events (livescorepro) has no prices ` +
+          `(client_event_id=${clientEventId}` +
+          (sample
+            ? `, name=${sample.name}, bet_status=${sample.betStatus}, status=${sample.statusName}`
+            : ", no booked row") +
+          `). Capture the XHR that returns American odds (+117 / -115) — ` +
+          `this endpoint is livescore booking metadata only.`,
+      );
+    }
+    // Future: parse priced payload when product/wire actually carries it.
+    return [];
   }
 
   async fetchLimits(_eventId: string): Promise<PartnerLimits> {

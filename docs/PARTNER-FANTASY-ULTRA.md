@@ -87,13 +87,49 @@ So:
 - `fetchMarkets()` → **throws** with schema diagnostic (do not invent prices)  
 - `inspectStreamCapabilities()` / CLI prints the capability probe  
 
-### Where the priced UI likely comes from (next capture)
+### Statscore `booked-events` (integrated — still not prices)
+
+```text
+GET https://api.statscore.com/v2/booked-events
+  ?client_id=311&product=livescorepro&events_details=yes
+  &client_event_id=19690946
+Referer: https://plive.sportswidgets.pro/
+```
+
+| Fact | Live result |
+|------|-------------|
+| HTTP | 200 for valid `client_event_id` |
+| Shape | `api.data.booked_events[]` |
+| Fields | id, client_event_id, name, sport_*, competition_*, start_date, status_*, **bet_status** |
+| American `price` / markets / lines | **Absent** |
+| `product=odds` / `liveodds` | **400** “The selected product is invalid” for client_id=311 |
+
+Adapter methods:
+
+| Method | Behavior |
+|--------|----------|
+| `fetchBookedEvent(clientEventId)` | Metadata row (or null) |
+| `listBookedEvents({ sport, limit })` | First page of booked events |
+| `fetchOdds(clientEventId)` | **Throws** until payload has real prices |
+
+### ID map (do not conflate)
+
+| ID | Source | Example use |
+|----|--------|-------------|
+| `stream_id` | stream-list-v2 | Video / stream inventory |
+| `feed_id` | stream-list-v2 | Often 0 or large int — not always client_event_id |
+| `client_event_id` | Statscore / widget hash `#!event/…` | booked-events lookup |
+| `statscore id` | booked_events[].id | Internal Statscore event id |
+| `ls_id` | get_pushes (when path known) | Live score pushes |
+
+### Where the priced UI likely comes from (still open)
 
 1. **Pandora WebSocket** — `wss://pandora.ganchrow.com/socket.io/` after `streamToken.php`  
-2. **XHR when the slip loads a line** — filter Network by `price`, `odds`, `line`, `PlaceBet`  
-3. **Manager book** (different product surface) — `getGames` / `getLinesProps` (needs full form body; stub calls return Invalid Data)
+2. **XHR when the slip loads a line** — must contain `"price": -115` or `+117` (not just bet_status)  
+3. **Manager book** — `getGames` / `getLinesProps` (full ticketwriter body)  
+4. **Place Bet POST** — still missing
 
-Do **not** merge stream-list into Kalshi `match_liquidity` until a real price wire is mapped.
+Do **not** merge stream-list or Statscore livescorepro into Kalshi `match_liquidity` as “odds”.
 
 ## Credentials (never commit)
 

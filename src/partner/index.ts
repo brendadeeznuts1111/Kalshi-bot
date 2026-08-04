@@ -1,11 +1,13 @@
 export type {
   FantasySessionAdapter,
   PartnerAccountStatus,
+  PartnerBookedEvent,
   PartnerExecutionResult,
   PartnerId,
   PartnerLimits,
   PartnerLiveEvent,
   PartnerLiveUrlSet,
+  PartnerMarket,
   PartnerOrder,
   PartnerOrderAdapter,
   PartnerSportLeague,
@@ -23,11 +25,14 @@ export { FantasyUltraAdapter } from "./fantasy-ultra/adapter.ts";
 export { CookieJar } from "./fantasy-ultra/cookie-jar.ts";
 export {
   inspectStreamListCapabilities,
+  normalizeClientEventIdCandidates,
   originFromLiveUrl,
   parseRenewTokenResponse,
   parseSportsLeagues,
+  parseStatscoreBookedEvents,
   parseStreamList,
   parseUltraLiveUrlResponse,
+  statscorePayloadHasPrices,
   type StreamListCapabilities,
 } from "./fantasy-ultra/parse.ts";
 export {

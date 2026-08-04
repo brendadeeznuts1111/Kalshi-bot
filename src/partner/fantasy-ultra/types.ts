@@ -73,12 +73,45 @@ export const FANTASY_ULTRA_DEFAULTS = {
   streamListUrl: "https://api-gs.player-us.xyz/stream-list-v2/?tv=usa",
   streamOrigin: "https://plive.sportswidgets.pro",
   streamReferer: "https://plive.sportswidgets.pro/",
+  /**
+   * Statscore public livescore booking API (widget referer).
+   * product=livescorepro only — product=odds is rejected for this client_id.
+   */
+  statscoreBookedEventsUrl: "https://api.statscore.com/v2/booked-events",
+  statscoreClientId: "311",
+  statscoreProduct: "livescorepro",
   skin: 2,
   currency: "USD",
   lang: "English",
   module: "sports.html",
   partnerId: "fantasy402" as const,
 } as const;
+
+/** api.statscore.com/v2/booked-events wire (subset). */
+export type StatscoreBookedEventWire = {
+  id?: number | string;
+  client_event_id?: string | number;
+  name?: string;
+  sport_id?: number | string;
+  sport_name?: string;
+  competition_short_name?: string;
+  competition_name?: string;
+  start_date?: string;
+  status_name?: string;
+  status_type?: string;
+  bet_status?: string;
+  relation_status?: string;
+};
+
+export type StatscoreBookedEventsResponse = {
+  api?: {
+    error?: { message?: string; status?: number };
+    method?: { total_items?: number | string };
+    data?: {
+      booked_events?: StatscoreBookedEventWire[];
+    };
+  };
+};
 
 /** One row from Get_SportsLeagues.Leagues[] */
 export type FantasySportsLeagueWire = {
