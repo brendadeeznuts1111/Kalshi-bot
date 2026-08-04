@@ -61,6 +61,7 @@ describe("open-db", () => {
     expect(tables).toContain("source_inventory_runs");
     expect(tables).toContain("source_inventory_run_pages");
     expect(tables).toContain("source_metadata_runs");
+    expect(tables).toContain("source_metadata_run_attempts");
     expect(tables).toContain("source_metadata_run_pages");
     expect(tables).toContain("source_metadata_run_entities");
     expect(tables).toContain("source_metadata_entities");

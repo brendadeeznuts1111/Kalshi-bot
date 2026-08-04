@@ -87,26 +87,37 @@ export function beginSourceMetadataRun(
   assertTimestamp(input.startedAtMs, 'startedAtMs');
   assertRegisteredMetadataRun(input, registry);
   const registryFingerprint = sourceRegistryFingerprint(registry);
-  db.query(
-    `INSERT INTO source_metadata_runs (
-       source_key, metadata_run_id, selector_scope, adapter_id,
-       selector_kind, selector_parameters_json, registry_fingerprint,
-       state, started_at_ms
-     ) VALUES (
-       $source, $runId, $selectorScope, $adapter,
-       $selectorKind, $selectorParameters, $registryFingerprint,
-       'running', $startedAtMs
-     )`
-  ).run({
-    $source: unbrand(input.source),
-    $runId: unbrand(input.runId),
-    $selectorScope: unbrand(input.selector.scope),
-    $adapter: unbrand(input.adapter),
-    $selectorKind: unbrand(input.selector.kind),
-    $selectorParameters: canonicalJson(input.selector.parameters),
-    $registryFingerprint: unbrand(registryFingerprint),
-    $startedAtMs: input.startedAtMs,
+  const begin = db.transaction(() => {
+    const parameters = {
+      $source: unbrand(input.source),
+      $runId: unbrand(input.runId),
+      $selectorScope: unbrand(input.selector.scope),
+      $adapter: unbrand(input.adapter),
+      $selectorKind: unbrand(input.selector.kind),
+      $selectorParameters: canonicalJson(input.selector.parameters),
+      $registryFingerprint: unbrand(registryFingerprint),
+      $startedAtMs: input.startedAtMs,
+    };
+    db.query(
+      `INSERT INTO source_metadata_runs (
+         source_key, metadata_run_id, selector_scope, adapter_id,
+         selector_kind, selector_parameters_json, registry_fingerprint,
+         state, started_at_ms
+       ) VALUES (
+         $source, $runId, $selectorScope, $adapter,
+         $selectorKind, $selectorParameters, $registryFingerprint,
+         'running', $startedAtMs
+       )`
+    ).run(parameters);
+    db.query(
+      `INSERT INTO source_metadata_run_attempts (source_key, metadata_run_id)
+       VALUES ($source, $runId)`
+    ).run({
+      $source: unbrand(input.source),
+      $runId: unbrand(input.runId),
+    });
   });
+  begin.immediate();
   return {
     runId: input.runId,
     state: 'running',

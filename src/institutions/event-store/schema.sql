@@ -301,6 +301,15 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_source_metadata_one_running
   ON source_metadata_runs (source_key, selector_scope)
   WHERE state = 'running';
 
+CREATE TABLE IF NOT EXISTS source_metadata_run_attempts (
+  attempt_sequence INTEGER PRIMARY KEY AUTOINCREMENT,
+  source_key TEXT NOT NULL,
+  metadata_run_id TEXT NOT NULL,
+  UNIQUE (source_key, metadata_run_id),
+  FOREIGN KEY (source_key, metadata_run_id)
+    REFERENCES source_metadata_runs (source_key, metadata_run_id)
+);
+
 CREATE TABLE IF NOT EXISTS source_metadata_run_pages (
   source_key TEXT NOT NULL,
   metadata_run_id TEXT NOT NULL,
