@@ -18,9 +18,15 @@ import { DEFAULT_EVENT_STORE_DB } from "../src/institutions/event-store/paths.ts
 import {
   queryEventsWithBooks,
   surfaceEdgeFor,
+  type EventBookRow,
 } from "../src/institutions/event-store/cross-market.ts";
 import { fetchLiveCrossMarketOdds } from "../src/institutions/event-store/cross-market-live.ts";
 import type { CrossMarketOdds } from "../src/institutions/event-store/types.ts";
+import {
+  fetchTennisBoard,
+  type TennisBoard,
+  type TennisMarketView,
+} from "../src/research/tennis-events.ts";
 import {
   computeSurfaceElo,
   expectedScore,
@@ -87,6 +93,86 @@ function buildMatchKey(playerA: string, playerB: string, eventId: string): strin
   const a = normalizePlayer(playerA);
   const b = normalizePlayer(playerB);
   return `${[a, b].sort().join("|")}|${eventId.slice(-8)}`;
+}
+
+type LinkedBoardMarket = {
+  eventId: string;
+  tournament: string;
+  playerA: string;
+  playerB: string;
+  surface: string;
+  yesSideLabel: string;
+};
+
+/** Join the current Kalshi board to event-store identity and build logger inputs. */
+export function linkCurrentBoardEvents(
+  db: ReturnType<typeof openEventStore>,
+  board: TennisBoard,
+): EventBookRow[] {
+  const lookup = db.prepare(
+    `SELECT m.event_id AS eventId,
+            e.tournament AS tournament,
+            e.player_a AS playerA,
+            e.player_b AS playerB,
+            e.surface AS surface,
+            m.yes_side_label AS yesSideLabel
+     FROM markets m
+     JOIN events e ON e.event_id = m.event_id
+     WHERE m.ticker = $ticker
+     LIMIT 1`,
+  );
+  const rows: EventBookRow[] = [];
+  const seenEventIds = new Set<string>();
+
+  for (const series of board.series) {
+    if (series.state !== "ok") continue;
+    for (const event of series.events) {
+      const linked = event.markets
+        .map((market) => ({
+          market,
+          store: lookup.get({ $ticker: market.ticker }) as LinkedBoardMarket | null,
+        }))
+        .filter(
+          (entry): entry is { market: TennisMarketView; store: LinkedBoardMarket } =>
+            entry.store !== null,
+        );
+      if (linked.length === 0) continue;
+      const preferred =
+        linked.find(
+          ({ market, store }) =>
+            normalizePlayer(market.player ?? store.yesSideLabel) ===
+            normalizePlayer(store.playerA),
+        ) ?? linked[0]!;
+      if (seenEventIds.has(preferred.store.eventId)) continue;
+      seenEventIds.add(preferred.store.eventId);
+
+      const { market, store } = preferred;
+      const levelsJson = JSON.stringify({
+        eventId: store.eventId,
+        ticker: market.ticker,
+        bids:
+          market.yesBidCents === null
+            ? []
+            : [{ priceCents: market.yesBidCents, size: 0 }],
+        asks:
+          market.yesAskCents === null
+            ? []
+            : [{ priceCents: market.yesAskCents, size: 0 }],
+        volume24h: market.volume24h ?? 0,
+        openInterest: market.openInterest ?? 0,
+      });
+      rows.push({
+        eventId: store.eventId,
+        ticker: market.ticker,
+        tournament: store.tournament,
+        playerA: store.playerA,
+        playerB: store.playerB,
+        surface: store.surface,
+        levelsJson,
+      });
+    }
+  }
+  return rows;
 }
 
 function extractMidFromLevelsJson(levelsJson: string): BookMid {
@@ -291,6 +377,8 @@ export type SnapshotCycleResult = {
   written: number;
   built: number;
   withVolume: number;
+  withPolymarket: number;
+  staleVolume: number;
   dryRun: boolean;
 };
 
@@ -311,11 +399,25 @@ export async function runSnapshotCycleDetailed(
   const dryRun = opts.dryRun === true;
   const ts = Date.now();
 
-  // 1. Get events with book data
-  const events = queryEventsWithBooks(db);
+  // 1. Prefer the current tradable board; retain recorded books as an outage fallback.
+  let events: EventBookRow[] = [];
+  try {
+    const board = await fetchTennisBoard({ nowMs: ts });
+    events = linkCurrentBoardEvents(db, board);
+  } catch (error) {
+    console.error(`[${new Date(ts).toISOString()}] Kalshi board fetch failed: ${error}`);
+  }
+  if (events.length === 0) events = queryEventsWithBooks(db);
   if (events.length === 0) {
     console.error(`[${new Date(ts).toISOString()}] No events with book data.`);
-    return { written: 0, built: 0, withVolume: 0, dryRun };
+    return {
+      written: 0,
+      built: 0,
+      withVolume: 0,
+      withPolymarket: 0,
+      staleVolume: 0,
+      dryRun,
+    };
   }
 
   // 1b. Market liquidity (volume/OI) — levels_json does not carry volume today
@@ -477,6 +579,8 @@ export async function runSnapshotCycleDetailed(
   }
 
   const withVolume = rows.filter((r) => r.kalshiVolume24h != null && r.kalshiVolume24h > 0).length;
+  const withPolymarket = rows.filter((row) => row.polyProb !== null).length;
+  const staleVolume = rows.filter((row) => row.staleVolume === 1).length;
 
   if (rows.length > 0 && !dryRun) {
     insertMany(rows);
@@ -490,6 +594,8 @@ export async function runSnapshotCycleDetailed(
       `[${new Date(ts).toISOString()}] ${rows.length} snapshots ${verb}` +
         (dryRun ? " (dry-run)" : "") +
         ` · volume=${withVolume}/${rows.length}` +
+        ` · poly=${withPolymarket}/${rows.length}` +
+        ` · stale-volume=${staleVolume}` +
         ` (${first.ticker}: ${first.kalshiMidCents ?? "?"}¢` +
         ` vol=${first.kalshiVolume24h ?? "—"}` +
         ` Poly: ${first.polyProb != null ? (first.polyProb * 100).toFixed(0) + "%" : "—"}` +
@@ -497,7 +603,14 @@ export async function runSnapshotCycleDetailed(
     );
   }
 
-  return { written, built: rows.length, withVolume, dryRun };
+  return {
+    written,
+    built: rows.length,
+    withVolume,
+    withPolymarket,
+    staleVolume,
+    dryRun,
+  };
 }
 
 export async function runLogger(opts: LoggerOptions): Promise<void> {
@@ -592,7 +705,10 @@ export async function runLogger(opts: LoggerOptions): Promise<void> {
         }
       } else if (dryRun) {
         console.error(
-          `[${new Date().toISOString()}] dry-run complete · built=${result.built} withVolume=${result.withVolume}`,
+          `[${new Date().toISOString()}] dry-run complete · built=${result.built}` +
+            ` withVolume=${result.withVolume}` +
+            ` withPolymarket=${result.withPolymarket}` +
+            ` staleVolume=${result.staleVolume}`,
         );
       }
     } catch (err) {
