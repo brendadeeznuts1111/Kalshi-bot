@@ -218,6 +218,46 @@ describe('source metadata runs', () => {
     });
   });
 
+  test('a cursor snapshot can terminate with an empty tail after staging earlier records', () => {
+    const db = openEventStore({ dbPath: ':memory:' });
+    const runId = asSourceMetadataRunId('metadata-cursor-empty-tail');
+    begin(db, runId, 100, selector, CURSOR_METADATA_REGISTRY);
+    expect(
+      commitSourceMetadataPage(
+        db,
+        {
+          source: SOURCE.kalshi,
+          page: page({
+            runId,
+            observedAtMs: 200,
+            records: [series('KXATPSETWINNER')],
+            nextCursor: 'cursor-1',
+          }),
+        },
+        CURSOR_METADATA_REGISTRY
+      )
+    ).toMatchObject({ state: 'running', observedMetadataCount: 1 });
+    expect(
+      commitSourceMetadataPage(
+        db,
+        {
+          source: SOURCE.kalshi,
+          page: page({
+            runId,
+            pageIndex: 1,
+            requestCursor: 'cursor-1',
+            observedAtMs: 300,
+            records: [],
+          }),
+        },
+        CURSOR_METADATA_REGISTRY
+      )
+    ).toMatchObject({ state: 'complete', pageCount: 2, observedMetadataCount: 1 });
+    expect(
+      db.query('SELECT COUNT(*) AS count FROM source_metadata_entities WHERE active = 1').get()
+    ).toEqual({ count: 1 });
+  });
+
   test('a failed partial revision cannot overwrite published entity truth', () => {
     const db = openEventStore({ dbPath: ':memory:' });
     const completeRun = asSourceMetadataRunId('metadata-current');

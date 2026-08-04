@@ -356,6 +356,20 @@ describe("sports/source registry", () => {
       "kalshi-events-v1: metadata discovery requires a page mode",
     );
 
+    const duplicateMetadataAuthority: SportsSourceRegistry = {
+      ...SPORTS_SOURCE_REGISTRY,
+      adapters: [
+        ...SPORTS_SOURCE_REGISTRY.adapters,
+        {
+          ...SPORTS_SOURCE_REGISTRY.adapters[0]!,
+          id: asAdapterId("kalshi-metadata-duplicate-v1"),
+        },
+      ],
+    };
+    expect(validateSportsSourceRegistry(duplicateMetadataAuthority)).toContain(
+      "duplicate metadata discovery source: kalshi",
+    );
+
     const policyKindDrift: SportsSourceRegistry = {
       ...SPORTS_SOURCE_REGISTRY,
       adapters: SPORTS_SOURCE_REGISTRY.adapters.map((adapter, index) =>

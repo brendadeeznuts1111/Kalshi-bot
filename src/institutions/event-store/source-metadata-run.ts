@@ -171,7 +171,11 @@ export function commitSourceMetadataPage(
       return checkpoint(run);
     }
     if (run.state !== 'running') throw new Error(`source metadata run is ${run.state}`);
-    if (page.exhausted && page.completeness === 'complete' && page.records.length === 0) {
+    if (
+      page.exhausted &&
+      page.completeness === 'complete' &&
+      run.observedMetadataCount + page.records.length === 0
+    ) {
       throw new Error('complete metadata snapshot must not be empty');
     }
     if (page.observedAtMs < run.startedAtMs) {

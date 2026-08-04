@@ -22,6 +22,12 @@ export function validateSportsSourceRegistry(registry: SportsSourceRegistry): st
     "sport/source cell",
     registry.integrations.map((row) => `${unbrand(row.source)}:${unbrand(row.sport)}`),
   );
+  unique(
+    "metadata discovery source",
+    registry.adapters
+      .filter((adapter) => adapter.metadataDiscovery !== undefined)
+      .map((adapter) => unbrand(adapter.source)),
+  );
 
   const sports = new Set(registry.sports.map((row) => unbrand(row.key)));
   const sources = new Set(registry.sources.map((row) => unbrand(row.key)));

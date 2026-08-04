@@ -259,7 +259,7 @@ describe('source metadata runner', () => {
     ).toThrow('SourceMetadataRunId entropy required');
   });
 
-  test('rejects ambiguous discovery authority when one source owns multiple adapters', () => {
+  test('rejects ambiguous discovery authority as a registry invariant', () => {
     const secondDefinition: AdapterDefinition = {
       ...kalshiDefinition,
       id: asAdapterId('kalshi-table-metadata-v1'),
@@ -283,7 +283,7 @@ describe('source metadata runner', () => {
           observedAtMs: 300,
         }),
       ])
-    ).toThrow('ambiguous metadata discovery adapters for source: kalshi');
+    ).toThrow('duplicate metadata discovery source: kalshi');
   });
 
   test('invalid adapter clocks and blank errors finalize the owned run', async () => {
