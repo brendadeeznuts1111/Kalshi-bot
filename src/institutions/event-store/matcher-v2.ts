@@ -241,6 +241,7 @@ function moneylineMarkets(event: PolymarketEvent): PolymarketMarket[] {
   const eventTitle = normalizeTennisName(event.title);
   return event.markets
     .filter((market) => market.active && !market.closed)
+    .filter((market) => market.sportsMarketType === "moneyline")
     .filter((market) => !PROP_QUESTION.test(market.question))
     .filter((market) => market.outcomes.length === 2 && market.outcomePrices.length === 2)
     .filter(

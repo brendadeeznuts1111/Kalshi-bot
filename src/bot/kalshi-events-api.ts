@@ -12,6 +12,10 @@ import {
   unbrand,
 } from "../institutions/event-store/brands.ts";
 import { OFFICIAL_URLS } from "../institutions/official-urls.ts";
+import {
+  IDENTITY,
+  type IdentityFieldKey,
+} from "../institutions/market-registry/brands.ts";
 
 export type KalshiFetchImpl = (
   input: string | URL | Request,
@@ -38,7 +42,11 @@ export type KalshiMarketWire = {
   expected_expiration_time?: string;
   rules_primary?: string;
   rules_secondary?: string;
-  custom_strike?: { tennis_competitor?: CompetitorId };
+  custom_strike?: {
+    tennis_competitor?: CompetitorId;
+    tennis_doubles_competitor?: CompetitorId;
+    table_tennis_competitor?: CompetitorId;
+  };
   result?: string;
 };
 
@@ -85,6 +93,26 @@ export function parseKalshiMarketWire(raw: unknown): KalshiMarketWire | null {
     custom && typeof custom.tennis_competitor === "string"
       ? tryCompetitorId(custom.tennis_competitor)
       : undefined;
+  const tennisDoublesCompetitor =
+    custom && typeof custom.tennis_doubles_competitor === "string"
+      ? tryCompetitorId(custom.tennis_doubles_competitor)
+      : undefined;
+  const tableTennisCompetitor =
+    custom && typeof custom.table_tennis_competitor === "string"
+      ? tryCompetitorId(custom.table_tennis_competitor)
+      : undefined;
+  const customStrike =
+    tennisCompetitor || tennisDoublesCompetitor || tableTennisCompetitor
+      ? {
+          ...(tennisCompetitor ? { tennis_competitor: tennisCompetitor } : {}),
+          ...(tennisDoublesCompetitor
+            ? { tennis_doubles_competitor: tennisDoublesCompetitor }
+            : {}),
+          ...(tableTennisCompetitor
+            ? { table_tennis_competitor: tableTennisCompetitor }
+            : {}),
+        }
+      : undefined;
   return {
     ticker: asKalshiMarketTicker(ticker),
     event_ticker: asKalshiEventTicker(event_ticker),
@@ -104,9 +132,26 @@ export function parseKalshiMarketWire(raw: unknown): KalshiMarketWire | null {
       typeof raw.expected_expiration_time === "string" ? raw.expected_expiration_time : undefined,
     rules_primary: typeof raw.rules_primary === "string" ? raw.rules_primary : undefined,
     rules_secondary: typeof raw.rules_secondary === "string" ? raw.rules_secondary : undefined,
-    custom_strike: tennisCompetitor ? { tennis_competitor: tennisCompetitor } : undefined,
+    custom_strike: customStrike,
     result: typeof raw.result === "string" ? raw.result : undefined,
   };
+}
+
+/** Resolve the participant identifier using the registry-declared source field. */
+export function competitorIdForMarket(
+  market: KalshiMarketWire,
+  identityField: IdentityFieldKey,
+): CompetitorId | undefined {
+  if (identityField === IDENTITY.tennisCompetitor) {
+    return market.custom_strike?.tennis_competitor;
+  }
+  if (identityField === IDENTITY.tennisDoublesCompetitor) {
+    return market.custom_strike?.tennis_doubles_competitor;
+  }
+  if (identityField === IDENTITY.tableTennisCompetitor) {
+    return market.custom_strike?.table_tennis_competitor;
+  }
+  return undefined;
 }
 
 export type KalshiMarketsQuery = {

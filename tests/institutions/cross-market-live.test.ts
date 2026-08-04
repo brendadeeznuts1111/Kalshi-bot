@@ -3,11 +3,13 @@ import {
   fetchLiveCrossMarketOdds,
   firstInitial,
   lastName,
+  liveOddsCacheHealth,
   parseKalshiDate,
   parseSlugDate,
   resetLiveOddsCacheForTests,
   slugCodes,
 } from "../../src/institutions/event-store/cross-market-live.ts";
+import { SPORT } from "../../src/institutions/market-registry/brands.ts";
 import {
   diceCoefficient,
   findPolymarketMatch,
@@ -51,6 +53,7 @@ function polyEvent(
         liquidityClob: 35,
         openInterest: 12,
         lastTradePrice: 0.62,
+        sportsMarketType: "moneyline",
         active: true,
         closed: false,
         createdAt: "2026-08-04T00:00:00Z",
@@ -260,6 +263,46 @@ describe("matcher V2", () => {
     );
     expect(match).toBeNull();
   });
+
+  test("never treats a two-outcome handicap as a moneyline", () => {
+    const event = polyEvent(
+      "atp-tsitsip-atmane-2026-08-04",
+      "ATP Toronto: Stefanos Tsitsipas vs Terence Atmane",
+      ["Stefanos Tsitsipas", "Terence Atmane"],
+    );
+    event.markets[0]!.sportsMarketType = "tennis_set_handicap";
+    expect(
+      findPolymarketMatch(
+        {
+          ticker: "KXATPMATCH-26AUG04TSITSIPATMANE",
+          playerA: "Stefanos Tsitsipas",
+          playerB: "Terence Atmane",
+          date: "2026-08-04",
+        },
+        [event],
+      ),
+    ).toBeNull();
+  });
+
+  test("does not treat an undated missing-type proposition as a legacy moneyline", () => {
+    const event = polyEvent(
+      "will-alcaraz-or-sinner-win-more-grand-slams-in-2026",
+      "Will Alcaraz or Sinner win more Grand Slams in 2026?",
+      ["Alcaraz", "Sinner"],
+    );
+    event.markets[0]!.sportsMarketType = undefined;
+    expect(
+      findPolymarketMatch(
+        {
+          ticker: "KXATPMATCH-26AUG04ALCSIN",
+          playerA: "Carlos Alcaraz",
+          playerB: "Jannik Sinner",
+          date: "2026-08-04",
+        },
+        [event],
+      ),
+    ).toBeNull();
+  });
 });
 
 describe("live feed pagination and cache", () => {
@@ -275,13 +318,22 @@ describe("live feed pagination and cache", () => {
         ["Stefanos Tsitsipas", "Terence Atmane"],
       ),
     ];
-    const offsets: number[] = [];
+    const cursors: Array<string | null> = [];
     const fetchImpl = async (input: string | URL | Request): Promise<Response> => {
       const url = new URL(String(input));
-      const offset = Number(url.searchParams.get("offset") ?? 0);
+      const cursor = url.searchParams.get("after_cursor");
       const limit = Number(url.searchParams.get("limit") ?? 2);
-      offsets.push(offset);
-      return Response.json(rows.slice(offset, offset + limit).map(eventWire));
+      cursors.push(cursor);
+      expect(url.pathname).toBe("/events/keyset");
+      expect(url.searchParams.has("offset")).toBe(false);
+      expect(url.searchParams.get("active")).toBe("true");
+      expect(url.searchParams.get("closed")).toBe("false");
+      const offset = cursor === "page-2" ? 2 : 0;
+      const page = rows.slice(offset, offset + limit).map(eventWire);
+      return Response.json({
+        events: page,
+        ...(offset === 0 ? { next_cursor: "page-2" } : {}),
+      });
     };
     const target = {
       ticker: "KXATPMATCH-26AUG04TSITSIPATMANE",
@@ -301,7 +353,7 @@ describe("live feed pagination and cache", () => {
       nowMs: 31_000,
     });
 
-    expect(offsets).toEqual([0, 2, 3]);
+    expect(cursors).toEqual([null, "page-2"]);
     expect(second).toEqual(first);
     expect(first.get(target.ticker)).toMatchObject({
       polymarketProb: 0.62,
@@ -311,5 +363,170 @@ describe("live feed pagination and cache", () => {
       polymarketOpenInterest: 12,
       polymarketMatchMethod: "surname",
     });
+  });
+
+  test("keeps tennis and table-tennis tag inventories in separate cache scopes", async () => {
+    const tagIds: string[] = [];
+    const fetchImpl = async (input: string | URL | Request): Promise<Response> => {
+      const url = new URL(String(input));
+      const tagId = url.searchParams.get("tag_id") ?? "";
+      tagIds.push(tagId);
+      const tableTennis = tagId === "103767";
+      const event = polyEvent(
+        tableTennis ? "wtt-smith-jones-2026-08-04" : "atp-smith-jones-2026-08-04",
+        `${tableTennis ? "WTT" : "ATP"}: Alice Smith vs Bob Jones`,
+        ["Alice Smith", "Bob Jones"],
+      );
+      return Response.json({ events: [eventWire(event)] });
+    };
+    const targets = [
+      {
+        ticker: "KXATPMATCH-26AUG04SMIJON",
+        playerA: "Alice Smith",
+        playerB: "Bob Jones",
+        sport: SPORT.tennis,
+      },
+      {
+        ticker: "KXTABLETENNISMATCH-26AUG04SMIJON",
+        playerA: "Alice Smith",
+        playerB: "Bob Jones",
+        sport: SPORT.tableTennis,
+      },
+    ];
+    const first = await fetchLiveCrossMarketOdds(targets, { fetchImpl, nowMs: 1_000 });
+    const second = await fetchLiveCrossMarketOdds(targets, { fetchImpl, nowMs: 2_000 });
+    expect(tagIds.sort()).toEqual(["103767", "864"]);
+    expect(first.get(targets[0]!.ticker)?.polymarketProb).toBe(0.62);
+    expect(first.get(targets[1]!.ticker)?.polymarketProb).toBe(0.62);
+    expect(second).toEqual(first);
+  });
+
+  test("isolates one cold sport failure without discarding the other sport", async () => {
+    const fetchImpl = async (input: string | URL | Request): Promise<Response> => {
+      const tagId = new URL(String(input)).searchParams.get("tag_id");
+      if (tagId === "864") throw new Error("tennis unavailable");
+      return Response.json({
+        events: [
+          eventWire(
+            polyEvent(
+              "wtt-smith-jones-2026-08-04",
+              "WTT: Alice Smith vs Bob Jones",
+              ["Alice Smith", "Bob Jones"],
+            ),
+          ),
+        ],
+      });
+    };
+    const tennisTicker = "KXATPMATCH-26AUG04SMIJON";
+    const tableTicker = "KXTABLETENNISMATCH-26AUG04SMIJON";
+    const result = await fetchLiveCrossMarketOdds(
+      [
+        {
+          ticker: tennisTicker,
+          playerA: "Alice Smith",
+          playerB: "Bob Jones",
+          sport: SPORT.tennis,
+        },
+        {
+          ticker: tableTicker,
+          playerA: "Alice Smith",
+          playerB: "Bob Jones",
+          sport: SPORT.tableTennis,
+        },
+      ],
+      { fetchImpl, nowMs: 1_000, retries: 0 },
+    );
+    expect(result.get(tennisTicker)?.polymarketProb).toBeNull();
+    expect(result.get(tableTicker)?.polymarketProb).toBe(0.62);
+  });
+
+  test("serves stale immediately while a successful refresh swaps the scoped cache", async () => {
+    let calls = 0;
+    const fetchImpl = async (): Promise<Response> => {
+      calls++;
+      const event = polyEvent(
+        "atp-smith-jones-2026-08-04",
+        "ATP: Alice Smith vs Bob Jones",
+        ["Alice Smith", "Bob Jones"],
+      );
+      event.markets[0]!.outcomePrices = calls === 1 ? [0.62, 0.38] : [0.7, 0.3];
+      return Response.json({ events: [eventWire(event)] });
+    };
+    const target = {
+      ticker: "KXATPMATCH-26AUG04SMIJON",
+      playerA: "Alice Smith",
+      playerB: "Bob Jones",
+    };
+    const initial = await fetchLiveCrossMarketOdds([target], { fetchImpl, nowMs: 1_000 });
+    const stale = await fetchLiveCrossMarketOdds([target], { fetchImpl, nowMs: 62_000 });
+    expect(initial.get(target.ticker)?.polymarketProb).toBe(0.62);
+    expect(stale.get(target.ticker)?.polymarketProb).toBe(0.62);
+    await Bun.sleep(0);
+    const refreshed = await fetchLiveCrossMarketOdds([target], { fetchImpl, nowMs: 62_001 });
+    expect(refreshed.get(target.ticker)?.polymarketProb).toBe(0.7);
+    expect(calls).toBe(2);
+    expect(liveOddsCacheHealth(SPORT.tennis, 62_001).state).toBe("healthy");
+  });
+
+  test("opens a circuit after three refresh failures and keeps the last valid snapshot", async () => {
+    let calls = 0;
+    const fetchImpl = async (): Promise<Response> => {
+      calls++;
+      if (calls > 1) throw new Error("upstream unavailable");
+      return Response.json({
+        events: [
+          eventWire(
+            polyEvent(
+              "atp-smith-jones-2026-08-04",
+              "ATP: Alice Smith vs Bob Jones",
+              ["Alice Smith", "Bob Jones"],
+            ),
+          ),
+        ],
+      });
+    };
+    const target = {
+      ticker: "KXATPMATCH-26AUG04SMIJON",
+      playerA: "Alice Smith",
+      playerB: "Bob Jones",
+    };
+    await fetchLiveCrossMarketOdds([target], { fetchImpl, nowMs: 1_000, retries: 0 });
+    for (const nowMs of [62_000, 63_000, 64_000]) {
+      const fallback = await fetchLiveCrossMarketOdds([target], { fetchImpl, nowMs, retries: 0 });
+      expect(fallback.get(target.ticker)?.polymarketProb).toBe(0.62);
+      await Bun.sleep(0);
+    }
+    expect(liveOddsCacheHealth(SPORT.tennis, 64_001)).toMatchObject({
+      state: "circuit_open",
+      consecutiveFailures: 3,
+    });
+    await fetchLiveCrossMarketOdds([target], { fetchImpl, nowMs: 65_000, retries: 0 });
+    expect(calls).toBe(4);
+  });
+
+  test("opens a cold-cache circuit and blocks additional upstream calls", async () => {
+    let calls = 0;
+    const fetchImpl = async (): Promise<Response> => {
+      calls++;
+      throw new Error("cold upstream unavailable");
+    };
+    const target = {
+      ticker: "KXATPMATCH-26AUG04SMIJON",
+      playerA: "Alice Smith",
+      playerB: "Bob Jones",
+    };
+    for (const nowMs of [1_000, 2_000, 3_000]) {
+      await expect(
+        fetchLiveCrossMarketOdds([target], { fetchImpl, nowMs, retries: 0 }),
+      ).rejects.toThrow("Every Polymarket sport scope failed");
+    }
+    expect(liveOddsCacheHealth(SPORT.tennis, 3_001)).toMatchObject({
+      state: "circuit_open",
+      consecutiveFailures: 3,
+    });
+    await expect(
+      fetchLiveCrossMarketOdds([target], { fetchImpl, nowMs: 4_000, retries: 0 }),
+    ).rejects.toThrow("Every Polymarket sport scope failed");
+    expect(calls).toBe(3);
   });
 });

@@ -7,6 +7,7 @@
 
 import { describe, expect, test } from "bun:test";
 import {
+  fetchAllPolymarketEvents,
   fetchPolymarketMarkets,
   fetchPolymarketMarket,
   marketToTick,
@@ -15,6 +16,7 @@ import {
   type PolymarketFetchImpl,
 } from "../../src/regulatory/integrations/polymarket";
 import { OFFICIAL_URLS } from "../../src/institutions/official-urls";
+import { asSourceTagId } from "../../src/institutions/market-registry/brands.ts";
 
 function mockFetch(responseBody: unknown, status = 200): PolymarketFetchImpl {
   return async () =>
@@ -86,6 +88,7 @@ describe("fetchPolymarketMarkets", () => {
     expect(markets[0].outcomes).toEqual(["Yes", "No"]);
     expect(markets[0].outcomePrices).toEqual([0.6, 0.4]);
     expect(markets[0].volume).toBe(100000);
+    expect(markets[0].volume1wk).toBeNull();
   });
 
   test("uses OFFICIAL_URLS.polymarket.gammaApiBase as default base", async () => {
@@ -158,6 +161,123 @@ describe("fetchPolymarketMarket", () => {
   });
 });
 
+describe("fetchAllPolymarketEvents", () => {
+  test("uses opaque keyset cursors and preserves sports market types", async () => {
+    const urls: URL[] = [];
+    const event = (id: string, sportsMarketType: string) => ({
+      id,
+      slug: `event-${id}`,
+      title: `Event ${id}`,
+      active: "true",
+      closed: "false",
+      markets: [
+        {
+          id: `market-${id}`,
+          slug: `market-${id}`,
+          question: `Question ${id}`,
+          conditionId: `condition-${id}`,
+          outcomes: '["Player A","Player B"]',
+          outcomePrices: '["0.6","0.4"]',
+          active: "true",
+          closed: "false",
+          sportsMarketType,
+        },
+      ],
+    });
+    const fetchImpl: PolymarketFetchImpl = async (input) => {
+      const url = new URL(String(input));
+      urls.push(url);
+      return url.searchParams.get("after_cursor") === "cursor-2"
+        ? Response.json({ events: [event("2", "table_tennis_game_handicap")] })
+        : Response.json({
+            events: [event("1", "moneyline")],
+            next_cursor: "cursor-2",
+          });
+    };
+    const events = await fetchAllPolymarketEvents({
+      fetchImpl,
+      tagId: asSourceTagId("103767"),
+      pageSize: 1,
+    });
+    expect(events.map((row) => row.id)).toEqual(["1", "2"]);
+    expect(events[1]!.markets[0]!.sportsMarketType).toBe("table_tennis_game_handicap");
+    expect(urls.map((url) => url.pathname)).toEqual(["/events/keyset", "/events/keyset"]);
+    expect(urls[0]!.searchParams.get("tag_id")).toBe("103767");
+    expect(urls[0]!.searchParams.get("active")).toBe("true");
+    expect(urls[0]!.searchParams.get("closed")).toBe("false");
+    expect(urls[0]!.searchParams.has("offset")).toBe(false);
+    expect(urls[1]!.searchParams.get("after_cursor")).toBe("cursor-2");
+  });
+
+  test("rejects malformed boolean and numeric wire values", async () => {
+    await expect(
+      fetchAllPolymarketEvents({
+        tagSlug: "tennis",
+        fetchImpl: mockFetch({
+          events: [
+            {
+              id: "bad",
+              slug: "bad",
+              title: "Bad",
+              active: "maybe",
+              closed: false,
+              markets: [],
+            },
+          ],
+        }),
+      }),
+    ).rejects.toThrow("expected a boolean");
+    await expect(
+      fetchPolymarketMarkets({
+        fetchImpl: mockFetch([
+          {
+            id: "bad",
+            slug: "bad",
+            question: "Bad",
+            conditionId: "bad-condition",
+            active: true,
+            closed: false,
+            outcomes: '["Yes","No"]',
+            outcomePrices: '["not-a-price","0.4"]',
+          },
+        ]),
+      }),
+    ).rejects.toThrow("expected a finite number");
+  });
+
+  test("rejects malformed cursors and outcome arrays instead of truncating inventory", async () => {
+    await expect(
+      fetchAllPolymarketEvents({
+        tagSlug: "tennis",
+        pageSize: Number.NaN,
+        fetchImpl: mockFetch({ events: [] }),
+      }),
+    ).rejects.toThrow("pageSize must be finite");
+    await expect(
+      fetchAllPolymarketEvents({
+        tagSlug: "tennis",
+        fetchImpl: mockFetch({ events: [], next_cursor: 42 }),
+      }),
+    ).rejects.toThrow("next_cursor");
+    await expect(
+      fetchPolymarketMarkets({
+        fetchImpl: mockFetch([
+          {
+            id: "bad-array",
+            slug: "bad-array",
+            question: "Bad array",
+            conditionId: "bad-condition",
+            active: true,
+            closed: false,
+            outcomes: "not-json",
+            outcomePrices: '["0.6","0.4"]',
+          },
+        ]),
+      }),
+    ).rejects.toThrow("malformed JSON array");
+  });
+});
+
 describe("marketToTick", () => {
   test("converts market to tick snapshot", () => {
     const market = mockMarket({
@@ -196,6 +316,27 @@ describe("marketToTick", () => {
     const tick = marketToTick(market);
     expect(tick.yesPrice).toBe(0.65);
     expect(tick.noPrice).toBe(0.35);
+  });
+
+  test("normalizes literal Yes/No sides independently of provider index order", () => {
+    const tick = marketToTick(
+      mockMarket({
+        outcomes: ["No", "Yes"],
+        outcomePrices: [0.3, 0.7],
+        bestBid: 0.28,
+        bestAsk: 0.32,
+      }),
+    );
+    expect(tick.yesPrice).toBe(0.7);
+    expect(tick.noPrice).toBe(0.3);
+    expect(tick.bestBid).toBe(0.68);
+    expect(tick.bestAsk).toBe(0.72);
+  });
+
+  test("refuses to label competitor outcomes as literal Yes/No ticks", () => {
+    expect(() =>
+      marketToTick(mockMarket({ outcomes: ["Player A", "Player B"] })),
+    ).toThrow("requires literal Yes/No outcomes");
   });
 });
 

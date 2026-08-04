@@ -1,9 +1,21 @@
 /** Live cross-market enrichment. Unmatched events remain null; values are never fabricated. */
 import {
-  fetchAllPolymarketTennisEvents,
-  type FetchAllTennisEventsOptions,
+  fetchAllPolymarketEvents,
+  type FetchAllEventsOptions,
   type PolymarketEvent,
 } from "../../regulatory/integrations/polymarket.ts";
+import {
+  SOURCE,
+  SPORT,
+  unbrand as unbrandRegistry,
+  type SportKey,
+} from "../market-registry/brands.ts";
+import {
+  ADAPTERS,
+  polymarketTagsForSport,
+  registrationFor,
+  sourceSelectorCacheKey,
+} from "../market-registry/registry.ts";
 import {
   findPolymarketMatch,
   normalizeTennisName,
@@ -27,27 +39,51 @@ const MONTH_TO_NUM: Record<string, number> = {
   NOV: 11,
   DEC: 12,
 };
-const DEFAULT_CACHE_TTL_MS = 60_000;
+const DEFAULT_CIRCUIT_COOLDOWN_MS = 60_000;
+const POLYMARKET_CACHE_POLICY = (() => {
+  const policy = ADAPTERS.find((adapter) => adapter.source === SOURCE.polymarket)?.cachePolicy;
+  if (!policy) throw new Error("Polymarket cache policy missing from registry");
+  return policy;
+})();
 
 type LiveOddsCache = {
-  expiresAt: number;
   baseUrl: string | undefined;
-  fetchImpl: FetchAllTennisEventsOptions["fetchImpl"];
-  events: Promise<PolymarketEvent[]>;
+  fetchImpl: FetchAllEventsOptions["fetchImpl"];
+  pageSize: number | undefined;
+  hasValue: boolean;
+  events: PolymarketEvent[];
+  freshUntilMs: number;
+  staleUntilMs: number;
+  refresh?: Promise<PolymarketEvent[]>;
+  consecutiveFailures: number;
+  circuitOpenUntilMs: number;
+  lastSuccessAtMs?: number;
 };
 
-let liveOddsCache: LiveOddsCache | null = null;
+const liveOddsCaches = new Map<string, LiveOddsCache>();
 
 export type LiveOddsTarget = {
   ticker: string;
   playerA: string;
   playerB: string;
   tournament?: string;
+  sport?: SportKey;
 };
 
-export type FetchLiveCrossMarketOddsOptions = FetchAllTennisEventsOptions & {
+export type FetchLiveCrossMarketOddsOptions = Omit<
+  FetchAllEventsOptions,
+  "tagId" | "tagSlug"
+> & {
   cacheTtlMs?: number;
+  staleTtlMs?: number;
+  circuitCooldownMs?: number;
   nowMs?: number;
+};
+
+export type LiveOddsCacheHealth = {
+  state: "empty" | "healthy" | "stale" | "degraded" | "circuit_open";
+  consecutiveFailures: number;
+  lastSuccessAtMs?: number;
 };
 
 function emptyOdds(): CrossMarketOdds {
@@ -86,10 +122,7 @@ export function parseSlugDate(slug: string): string | null {
   return polymarketSlugDate(slug);
 }
 
-/**
- * Parse the Kalshi `YYMMMDD` token after the series prefix.
- * `KXITFMATCH-26AUG04…` is August 4, 2026.
- */
+/** Parse the Kalshi `YYMMMDD` token after the series prefix. */
 export function parseKalshiDate(ticker: string): string | null {
   const match = ticker.match(
     /^[A-Z]+-(\d{2})(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)(\d{2})/i,
@@ -110,78 +143,198 @@ export function initialPrefixMatches(prefix: string, code: string): boolean {
   return code.startsWith(prefix) || prefix === code;
 }
 
+function cacheForSport(sport: SportKey): {
+  key: string;
+  tag: ReturnType<typeof polymarketTagsForSport>[number];
+} {
+  const registration = registrationFor(SOURCE.polymarket, sport);
+  if (
+    registration?.state !== "enabled" ||
+    !registration.operationalCapabilities.includes("inventory")
+  ) {
+    throw new Error(`Polymarket inventory is not operational for ${unbrandRegistry(sport)}`);
+  }
+  const tag = polymarketTagsForSport(sport)[0];
+  if (!tag) throw new Error(`No Polymarket tag registered for ${unbrandRegistry(sport)}`);
+  return { key: sourceSelectorCacheKey(SOURCE.polymarket, tag), tag };
+}
+
+function startRefresh(
+  cache: LiveOddsCache,
+  tag: ReturnType<typeof polymarketTagsForSport>[number],
+  options: FetchLiveCrossMarketOddsOptions,
+  nowMs: number,
+): Promise<PolymarketEvent[]> {
+  if (cache.refresh) return cache.refresh;
+  const cacheTtlMs = Math.max(0, options.cacheTtlMs ?? POLYMARKET_CACHE_POLICY.freshForMs);
+  const staleTtlMs = Math.max(
+    cacheTtlMs,
+    options.staleTtlMs ?? POLYMARKET_CACHE_POLICY.staleForMs,
+  );
+  const { cacheTtlMs: _, staleTtlMs: __, circuitCooldownMs: ___, nowMs: ____, ...fetchOptions } =
+    options;
+  const refresh = fetchAllPolymarketEvents({
+    ...fetchOptions,
+    tagId: tag.tagId,
+    tagSlug: tag.tagSlug,
+  })
+    .then((events) => {
+      cache.events = events;
+      cache.hasValue = true;
+      cache.freshUntilMs = nowMs + cacheTtlMs;
+      cache.staleUntilMs = nowMs + staleTtlMs;
+      cache.consecutiveFailures = 0;
+      cache.circuitOpenUntilMs = 0;
+      cache.lastSuccessAtMs = nowMs;
+      return events;
+    })
+    .catch((error) => {
+      cache.consecutiveFailures++;
+      if (cache.consecutiveFailures >= POLYMARKET_CACHE_POLICY.failureThreshold) {
+        const failureAtMs = options.nowMs ?? Date.now();
+        cache.circuitOpenUntilMs =
+          failureAtMs + Math.max(0, options.circuitCooldownMs ?? DEFAULT_CIRCUIT_COOLDOWN_MS);
+      }
+      throw error;
+    })
+    .finally(() => {
+      cache.refresh = undefined;
+    });
+  cache.refresh = refresh;
+  return refresh;
+}
+
 async function fetchCachedEvents(
+  sport: SportKey,
   options: FetchLiveCrossMarketOddsOptions,
 ): Promise<PolymarketEvent[]> {
   const nowMs = options.nowMs ?? Date.now();
-  const cacheTtlMs = Math.max(0, options.cacheTtlMs ?? DEFAULT_CACHE_TTL_MS);
+  const { key, tag } = cacheForSport(sport);
+  let cache = liveOddsCaches.get(key);
   if (
-    liveOddsCache &&
-    liveOddsCache.expiresAt > nowMs &&
-    liveOddsCache.baseUrl === options.baseUrl &&
-    liveOddsCache.fetchImpl === options.fetchImpl
+    !cache ||
+    cache.baseUrl !== options.baseUrl ||
+    cache.fetchImpl !== options.fetchImpl ||
+    cache.pageSize !== options.pageSize
   ) {
-    return liveOddsCache.events;
+    cache = {
+      baseUrl: options.baseUrl,
+      fetchImpl: options.fetchImpl,
+      pageSize: options.pageSize,
+      hasValue: false,
+      events: [],
+      freshUntilMs: 0,
+      staleUntilMs: 0,
+      consecutiveFailures: 0,
+      circuitOpenUntilMs: 0,
+    };
+    liveOddsCaches.set(key, cache);
   }
-
-  const { cacheTtlMs: _, nowMs: __, ...fetchOptions } = options;
-  const events = fetchAllPolymarketTennisEvents(fetchOptions).catch((error) => {
-    if (liveOddsCache?.events === events) liveOddsCache = null;
+  if (cache.hasValue && nowMs < cache.freshUntilMs) return cache.events;
+  if (nowMs < cache.circuitOpenUntilMs) {
+    if (cache.hasValue) return cache.events;
+    throw new Error(`Polymarket circuit open for ${unbrandRegistry(sport)} with no cached snapshot`);
+  }
+  if (cache.hasValue && nowMs < cache.staleUntilMs) {
+    void startRefresh(cache, tag, options, nowMs).catch(() => undefined);
+    return cache.events;
+  }
+  try {
+    return await startRefresh(cache, tag, options, nowMs);
+  } catch (error) {
+    if (cache.hasValue) return cache.events;
     throw error;
-  });
-  liveOddsCache = {
-    expiresAt: nowMs + cacheTtlMs,
-    baseUrl: options.baseUrl,
-    fetchImpl: options.fetchImpl,
-    events,
-  };
-  return events;
+  }
 }
 
 export function resetLiveOddsCacheForTests(): void {
-  liveOddsCache = null;
+  liveOddsCaches.clear();
 }
 
-/**
- * Fetch the complete active tennis inventory once, then reconcile every Kalshi target.
- * The inventory promise is shared for 60 seconds across logger cycles.
- */
+export function liveOddsCacheHealth(
+  sport: SportKey,
+  nowMs = Date.now(),
+): LiveOddsCacheHealth {
+  const { key } = cacheForSport(sport);
+  const cache = liveOddsCaches.get(key);
+  if (!cache) {
+    return { state: "empty", consecutiveFailures: 0 };
+  }
+  if (nowMs < cache.circuitOpenUntilMs) {
+    return {
+      state: "circuit_open",
+      consecutiveFailures: cache.consecutiveFailures,
+      ...(cache.lastSuccessAtMs !== undefined ? { lastSuccessAtMs: cache.lastSuccessAtMs } : {}),
+    };
+  }
+  if (!cache.hasValue) {
+    return { state: "empty", consecutiveFailures: cache?.consecutiveFailures ?? 0 };
+  }
+  const state =
+    nowMs < cache.circuitOpenUntilMs
+      ? "circuit_open"
+      : cache.consecutiveFailures > 0
+        ? "degraded"
+        : nowMs >= cache.freshUntilMs
+          ? "stale"
+          : "healthy";
+  return {
+    state,
+    consecutiveFailures: cache.consecutiveFailures,
+    ...(cache.lastSuccessAtMs !== undefined ? { lastSuccessAtMs: cache.lastSuccessAtMs } : {}),
+  };
+}
+
+/** Fetch each sport's complete tagged inventory once, then reconcile its Kalshi targets. */
 export async function fetchLiveCrossMarketOdds(
   targets: readonly LiveOddsTarget[],
   options: FetchLiveCrossMarketOddsOptions = {},
 ): Promise<Map<string, CrossMarketOdds>> {
   const result = new Map<string, CrossMarketOdds>();
-  for (const target of targets) result.set(target.ticker, emptyOdds());
-
-  const events = await fetchCachedEvents(options);
+  const targetsBySport = new Map<SportKey, LiveOddsTarget[]>();
   for (const target of targets) {
-    const match = findPolymarketMatch(
-      {
-        ...target,
-        date: parseKalshiDate(target.ticker),
-      },
-      events,
-    );
-    if (!match) continue;
-
-    const probability = match.market.outcomePrices[match.playerAOutcomeIndex];
-    if (probability === undefined || !Number.isFinite(probability)) continue;
-    const liquidity =
-      match.market.liquidityClob > 0
-        ? match.market.liquidityClob
-        : match.market.liquidity;
-    result.set(target.ticker, {
-      polymarketProb: probability,
-      polymarketVolume24h: match.market.volume24hr,
-      polymarketVolumeLifetime: match.market.volume,
-      polymarketLiquidity: liquidity,
-      polymarketOpenInterest:
-        match.market.openInterest ?? match.event.openInterest,
-      polymarketEventId: match.event.id,
-      polymarketMatchMethod: match.method,
-      pinnacleProb: null,
-    });
+    result.set(target.ticker, emptyOdds());
+    const sport = target.sport ?? SPORT.tennis;
+    const group = targetsBySport.get(sport);
+    if (group) group.push(target);
+    else targetsBySport.set(sport, [target]);
   }
 
+  const settlements = await Promise.allSettled(
+    [...targetsBySport].map(async ([sport, sportTargets]) => {
+      const events = await fetchCachedEvents(sport, options);
+      for (const target of sportTargets) {
+        const match = findPolymarketMatch(
+          { ...target, date: parseKalshiDate(target.ticker) },
+          events,
+        );
+        if (!match) continue;
+        const probability = match.market.outcomePrices[match.playerAOutcomeIndex];
+        if (probability === undefined || !Number.isFinite(probability)) continue;
+        const liquidity =
+          (match.market.liquidityClob ?? 0) > 0
+            ? match.market.liquidityClob
+            : match.market.liquidity;
+        result.set(target.ticker, {
+          polymarketProb: probability,
+          polymarketVolume24h: match.market.volume24hr,
+          polymarketVolumeLifetime: match.market.volume,
+          polymarketLiquidity: liquidity,
+          polymarketOpenInterest: match.market.openInterest ?? match.event.openInterest ?? null,
+          polymarketEventId: match.event.id,
+          polymarketMatchMethod: match.method,
+          pinnacleProb: null,
+        });
+      }
+    }),
+  );
+  if (settlements.length > 0 && settlements.every((settlement) => settlement.status === "rejected")) {
+    throw new AggregateError(
+      settlements.map((settlement) =>
+        settlement.status === "rejected" ? settlement.reason : undefined,
+      ),
+      "Every Polymarket sport scope failed",
+    );
+  }
   return result;
 }

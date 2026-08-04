@@ -131,21 +131,25 @@ describe("sports/source registry", () => {
       (row) => row.source === SOURCE.polymarket && row.sport === SPORT.tableTennis,
     );
     expect(registration).toMatchObject({
-      state: "discovering",
-      operationalCapabilities: [],
+      state: "enabled",
+      operationalCapabilities: ["inventory", "quotes", "reconciliation"],
       competitions: [
         {
           semanticConfidence: "discovery",
           eventTypes: ["match", "tournament"],
           participantFormats: ["singles", "doubles", "team", "mixed", "field"],
-          declaredUse: "inventory",
+          declaredUse: "match",
         },
       ],
     });
-    expect(registration?.operationalCapabilities).toEqual([]);
     expect(sourceSelectorCacheKey(SOURCE.polymarket, tennis[0]!).toString()).not.toBe(
       sourceSelectorCacheKey(SOURCE.polymarket, tableTennis[0]!).toString(),
     );
+    expect(
+      registration?.competitions[0]?.sourceMarketMappings.map((mapping) =>
+        unbrand(mapping.sourceMarketType),
+      ),
+    ).toEqual(["moneyline", "table_tennis_match_totals", "table_tennis_game_handicap"]);
   });
 
   test("validates injectable registries and rejects cross-field drift", () => {

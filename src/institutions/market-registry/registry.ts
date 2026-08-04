@@ -283,6 +283,30 @@ function polymarketBinding(
   tagId: SourceTagId,
   tagSlug: string,
 ): CompetitionBinding {
+  const observedMarketTypes =
+    sport === SPORT.tableTennis
+      ? ["moneyline", "table_tennis_match_totals", "table_tennis_game_handicap"]
+      : [
+          "moneyline",
+          "tennis_first_set_totals",
+          "tennis_match_totals",
+          "tennis_set_games_totals",
+          "tennis_set_handicap",
+          "tennis_completed_match",
+          "tennis_set_totals",
+          "tennis_first_set_winner",
+          "tennis_set_winner",
+        ];
+  const sourceMarketMappings = observedMarketTypes.map((sourceMarketType) => ({
+    sourceMarketType: asSourceMarketType(sourceMarketType),
+    marketKind:
+      sourceMarketType === "moneyline"
+        ? MARKET.matchWinner
+        : sourceMarketType === "tennis_first_set_winner" ||
+            sourceMarketType === "tennis_set_winner"
+          ? MARKET.setWinner
+          : MARKET.other,
+  }));
   return {
     competition: asCompetitionKey(unbrand(sport)),
     selector: selector(SELECTOR.polymarketTag, `polymarket:tag:${unbrand(tagId)}`, {
@@ -293,16 +317,14 @@ function polymarketBinding(
     semanticConfidence: "discovery",
     eventTypes: ["match", "tournament"],
     participantFormats: ["singles", "doubles", "team", "mixed", "field"],
-    marketKinds: [MARKET.matchWinner, MARKET.tournamentWinner, MARKET.other],
+    marketKinds:
+      sport === SPORT.tennis
+        ? [MARKET.matchWinner, MARKET.tournamentWinner, MARKET.setWinner, MARKET.other]
+        : [MARKET.matchWinner, MARKET.tournamentWinner, MARKET.other],
     identityFields: [IDENTITY.literalOutcome],
-    sourceMarketMappings: [
-      {
-        sourceMarketType: asSourceMarketType("moneyline"),
-        marketKind: MARKET.matchWinner,
-      },
-    ],
+    sourceMarketMappings,
     unmappedMarketPolicy: "quarantine",
-    declaredUse: sport === SPORT.tennis ? "match" : "inventory",
+    declaredUse: "match",
   };
 }
 
@@ -342,14 +364,13 @@ export const INTEGRATIONS = [
     integration: asIntegrationId("polymarket:table_tennis"),
     sport: SPORT.tableTennis,
     source: SOURCE.polymarket,
-    state: "discovering",
+    state: "enabled",
     adapter: asAdapterId("polymarket-gamma-v1"),
     declaredCapabilities: ["inventory", "quotes", "reconciliation"],
-    operationalCapabilities: [],
+    operationalCapabilities: ["inventory", "quotes", "reconciliation"],
     competitions: [
       polymarketBinding(SPORT.tableTennis, asSourceTagId("103767"), "table-tennis"),
     ],
-    reason: "Tag inventory declared; runtime market-type classification is pending.",
   }),
 ] as const satisfies readonly SportSourceRegistration[];
 
