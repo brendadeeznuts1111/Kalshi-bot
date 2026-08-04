@@ -81,35 +81,45 @@ describe("liquidity board + HQ API", () => {
   test("listDeskLiquidityByEventId + attachDeskLiquidityToBoard filters tradable", () => {
     const db = openEventStore({ dbPath: ":memory:" });
     const now = Date.now();
+    // Internal hash event_id (store) + Kalshi market tickers (board joins on eventTicker)
+    const hashId = "hash-desk-evt-1";
+    const eventTicker = "KXATPMATCH-26AUG01SONGRI";
+    const marketA = `${eventTicker}-SON`;
+    const marketB = `${eventTicker}-GRI`;
     db.query(
       `INSERT INTO events (
          event_id, tour, level, tournament, location, surface, court, round,
          player_a, player_b, winner, loser, start_ts, outcome,
          source, source_row_hash, ingested_at, corpus
        ) VALUES (
-         'desk-evt-1', 'ATP', 'MS', 'Desk Cup', '', 'Hard', '', 'R16',
+         $id, 'ATP', 'MS', 'Desk Cup', '', 'Hard', '', 'R16',
          'A', 'B', '', '', '2026-08-01T12:00:00.000Z', '',
          'test', 'h-desk1', $ing, 'trading'
        )`,
-    ).run({ $ing: now });
+    ).run({ $id: hashId, $ing: now });
     db.query(
       `INSERT INTO markets (
          market_id, event_id, venue, ticker, market_kind,
          volume_fp, volume_24h_fp, source
-       ) VALUES ('m-d1', 'desk-evt-1', 'kalshi', 'TICK-D1', 'match_winner', '3000', '1000', 'test')`,
-    ).run();
+       ) VALUES
+         ('m-d1', $id, 'kalshi', $t1, 'match_winner', '3000', '1000', 'test'),
+         ('m-d2', $id, 'kalshi', $t2, 'match_winner', '3000', '1000', 'test')`,
+    ).run({ $id: hashId, $t1: marketA, $t2: marketB });
     db.query(
       `INSERT INTO book_ticks (
          event_id, ticker, market_kind, ts, levels_json, source
-       ) VALUES ('desk-evt-1', 'TICK-D1', 'match_winner', $ts, $json, 'test')`,
-    ).run({ $ts: now, $json: JSON.stringify(tightBook) });
-    recomputeMatchLiquidity(db, "desk-evt-1");
+       ) VALUES ($id, $t1, 'match_winner', $ts, $json, 'test')`,
+    ).run({ $id: hashId, $t1: marketA, $ts: now, $json: JSON.stringify(tightBook) });
+    recomputeMatchLiquidity(db, hashId);
 
     const index = listDeskLiquidityByEventId(db);
-    expect(index.get("desk-evt-1")?.tradable).toBe(true);
-    expect(index.get("desk-evt-1")?.quoted).toBe(true);
+    // Internal id + market ticker + stripped event ticker (board key)
+    expect(index.get(hashId)?.tradable).toBe(true);
+    expect(index.get(marketA)?.tradable).toBe(true);
+    expect(index.get(eventTicker)?.tradable).toBe(true);
+    expect(index.get(eventTicker)?.quoted).toBe(true);
 
-    const row = getMatchLiquidity(db, "desk-evt-1");
+    const row = getMatchLiquidity(db, hashId);
     expect(row).not.toBeNull();
     expect(deskFlagsFromRow(row!).tradable).toBe(true);
 
@@ -123,7 +133,7 @@ describe("liquidity board + HQ API", () => {
           state: "ok",
           events: [
             {
-              eventTicker: "desk-evt-1",
+              eventTicker,
               title: "A vs B",
               subTitle: null,
               series: "KXATPMATCH",
@@ -141,7 +151,7 @@ describe("liquidity board + HQ API", () => {
               occurrenceMs: now,
               markets: [
                 {
-                  ticker: "TICK-D1",
+                  ticker: marketA,
                   player: "A",
                   playerCountry: null,
                   playerCountryCode: null,
@@ -202,6 +212,6 @@ describe("liquidity board + HQ API", () => {
       dropEmptySeries: false,
     });
     expect(tradableOnly.eventCount).toBe(1);
-    expect(tradableOnly.series[0]!.events[0]!.eventTicker).toBe("desk-evt-1");
+    expect(tradableOnly.series[0]!.events[0]!.eventTicker).toBe(eventTicker);
   });
 });
