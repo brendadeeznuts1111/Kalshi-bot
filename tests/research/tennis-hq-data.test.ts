@@ -1,10 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import { asSeriesTicker } from "../../src/institutions/event-store/brands.ts";
 import { openEventStore } from "../../src/institutions/event-store/open-db.ts";
+import type { CrossMarketOdds } from "../../src/institutions/event-store/types.ts";
 import {
   buildTennisHqPayload,
   classifyTennisDataHealth,
   getPlayerDetail,
+  loadTennisDataHealth,
 } from "../../src/research/tennis-hq-data.ts";
 import {
   computeSurfaceEdge,
@@ -131,9 +133,13 @@ function seedFixtureDb() {
   db.query(
     `INSERT INTO price_snapshots (
        event_id, ticker, ts, kalshi_volume_24h, kalshi_volume_lifetime,
-       stale_volume, poly_prob, poly_volume_24h, poly_volume_lifetime
+       stale_volume, poly_prob, poly_volume_24h, poly_volume_lifetime,
+       polymarket_event_id, polymarket_match_method,
+       kalshi_series, event_type, participant_format,
+       poly_observed_at_ms, poly_cache_state
      ) VALUES (
-       $event_id, $ticker, $ts, 1900, 5000, 0, 0.62, 125.5, 900
+       $event_id, $ticker, $ts, 1900, 5000, 0, 0.62, 125.5, 900,
+       'poly-1', 'surname', 'KXITFMATCH', 'match', 'singles', $ts, 'healthy'
      )`,
   ).run({
     $event_id: EVENT_ID,
@@ -318,24 +324,35 @@ describe("tennis-hq-data", () => {
 
   test("live-cache health overrides stale match counts while retaining snapshot durability", async () => {
     const db = seedFixtureDb();
+    const nowMs = Date.now();
+    const crossMarketOdds = new Map<string, CrossMarketOdds>([
+      [
+        EVENT_TICKER,
+        {
+          polymarketProb: 0.62,
+          polymarketVolume24h: 20,
+          polymarketVolumeLifetime: 100,
+          polymarketLiquidity: 35,
+          polymarketOpenInterest: 12,
+          polymarketEventId: "poly-1",
+          polymarketMatchMethod: "surname" as const,
+          reconciliation: {
+            sport: SPORT.tennis,
+            eventType: "match" as const,
+            participantFormat: "singles" as const,
+            kalshiSeries: asSeriesTicker("KXITFMATCH"),
+            polymarketObservedAtMs: nowMs,
+            polymarketCacheState: "healthy" as const,
+          },
+          pinnacleProb: null,
+        },
+      ],
+    ]);
     const payload = await buildTennisHqPayload({
       db,
       board: mockBoard(),
-      crossMarketOdds: new Map([
-        [
-          EVENT_TICKER,
-          {
-            polymarketProb: 0.62,
-            polymarketVolume24h: 20,
-            polymarketVolumeLifetime: 100,
-            polymarketLiquidity: 35,
-            polymarketOpenInterest: 12,
-            polymarketEventId: "poly-1",
-            polymarketMatchMethod: "surname",
-            pinnacleProb: null,
-          },
-        ],
-      ]),
+      nowMs,
+      crossMarketOdds,
     });
 
     expect(payload.dataHealth.source).toBe("live-cache");
@@ -343,13 +360,72 @@ describe("tennis-hq-data", () => {
     expect(payload.dataHealth.kalshiVolume24h).toBe(1900);
     expect(payload.dataHealth.polymarketVolume24h).toBe(20);
     expect(payload.dataHealth.kalshiVolumeLifetime).toBe(5000);
+
+    crossMarketOdds.get(EVENT_TICKER)!.reconciliation!.polymarketCacheState = "circuit_open";
+    const degraded = await buildTennisHqPayload({
+      db,
+      board: mockBoard(),
+      nowMs,
+      crossMarketOdds,
+    });
+    expect(degraded.dataHealth).toMatchObject({
+      state: "degraded",
+      matchedEvents: 1,
+      staleQuoteEvents: 1,
+    });
   });
 
   test("classifies venue health by coverage rate instead of an absolute match count", () => {
     expect(classifyTennisDataHealth(10_000, 50)).toBe("degraded");
     expect(classifyTennisDataHealth(49, 49)).toBe("healthy");
+    expect(classifyTennisDataHealth(49, 49, 1)).toBe("degraded");
     expect(classifyTennisDataHealth(235, 0)).toBe("critical");
     expect(classifyTennisDataHealth(0, 0)).toBe("unavailable");
+  });
+
+  test("snapshot health requires exact lane and fresh venue provenance", () => {
+    const db = seedFixtureDb();
+    const nowMs = 1_000_000;
+    db.run(
+      `UPDATE price_snapshots
+       SET kalshi_series = NULL,
+           event_type = NULL,
+           participant_format = NULL,
+           poly_observed_at_ms = NULL,
+           poly_cache_state = NULL`,
+    );
+    expect(loadTennisDataHealth(db, [EVENT_ID], nowMs)).toMatchObject({
+      state: "critical",
+      matchedEvents: 0,
+      staleQuoteEvents: 0,
+    });
+
+    db.query(
+      `UPDATE price_snapshots
+       SET kalshi_series = 'KXITFMATCH',
+           event_type = 'match',
+           participant_format = 'singles',
+           poly_observed_at_ms = $observed,
+           poly_cache_state = 'circuit_open'`,
+    ).run({ $observed: nowMs - 1_000 });
+    expect(loadTennisDataHealth(db, [EVENT_ID], nowMs)).toMatchObject({
+      state: "degraded",
+      matchedEvents: 1,
+      staleQuoteEvents: 1,
+    });
+
+    db.query(
+      `UPDATE price_snapshots
+       SET poly_observed_at_ms = $observed,
+           poly_cache_state = 'healthy'`,
+    ).run({ $observed: nowMs - 300_001 });
+    expect(loadTennisDataHealth(db, [EVENT_ID], nowMs)).toMatchObject({
+      state: "critical",
+      matchedEvents: 0,
+      staleQuoteEvents: 1,
+    });
+
+    db.close();
   });
 
   test("buildTennisHqPayload degrades when event store absent", async () => {

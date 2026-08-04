@@ -50,6 +50,11 @@ const SCHEMA_COLUMN_MIGRATIONS: Array<{ table: string; column: string; decl: str
   { table: "price_snapshots", column: "poly_open_interest", decl: "REAL" },
   { table: "price_snapshots", column: "polymarket_event_id", decl: "TEXT" },
   { table: "price_snapshots", column: "polymarket_match_method", decl: "TEXT" },
+  { table: "price_snapshots", column: "kalshi_series", decl: "TEXT" },
+  { table: "price_snapshots", column: "event_type", decl: "TEXT" },
+  { table: "price_snapshots", column: "participant_format", decl: "TEXT" },
+  { table: "price_snapshots", column: "poly_observed_at_ms", decl: "INTEGER" },
+  { table: "price_snapshots", column: "poly_cache_state", decl: "TEXT" },
 ];
 
 export async function ensureEventStoreDir(): Promise<void> {

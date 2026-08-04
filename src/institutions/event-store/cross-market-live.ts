@@ -25,7 +25,7 @@ import {
   polymarketSlugDate,
   tennisSurname,
 } from "./matcher-v2.ts";
-import type { CrossMarketOdds } from "./types.ts";
+import type { CrossMarketCacheState, CrossMarketOdds } from "./types.ts";
 
 const MONTH_TO_NUM: Record<string, number> = {
   JAN: 1,
@@ -88,6 +88,12 @@ export type LiveOddsCacheHealth = {
   lastSuccessAtMs?: number;
 };
 
+type CachedEvents = {
+  events: PolymarketEvent[];
+  observedAtMs: number;
+  state: CrossMarketCacheState;
+};
+
 function emptyOdds(): CrossMarketOdds {
   return {
     polymarketProb: null,
@@ -97,6 +103,7 @@ function emptyOdds(): CrossMarketOdds {
     polymarketOpenInterest: null,
     polymarketEventId: null,
     polymarketMatchMethod: null,
+    reconciliation: null,
     pinnacleProb: null,
   };
 }
@@ -209,10 +216,29 @@ function startRefresh(
   return refresh;
 }
 
+function cachedEvents(cache: LiveOddsCache, nowMs: number): CachedEvents {
+  const observedAtMs = cache.lastSuccessAtMs;
+  if (observedAtMs === undefined) throw new Error("Polymarket cache has no successful observation");
+  const state = liveCacheState(cache, nowMs);
+  if (state === "empty") throw new Error("Polymarket cache has no events");
+  return { events: cache.events, observedAtMs, state };
+}
+
+function liveCacheState(
+  cache: LiveOddsCache,
+  nowMs: number,
+): LiveOddsCacheHealth["state"] {
+  if (nowMs < cache.circuitOpenUntilMs) return "circuit_open";
+  if (!cache.hasValue) return "empty";
+  if (cache.consecutiveFailures > 0) return "degraded";
+  if (nowMs >= cache.freshUntilMs) return "stale";
+  return "healthy";
+}
+
 async function fetchCachedEvents(
   sport: SportKey,
   options: FetchLiveCrossMarketOddsOptions,
-): Promise<PolymarketEvent[]> {
+): Promise<CachedEvents> {
   const nowMs = options.nowMs ?? Date.now();
   const { key, tag } = cacheForSport(sport);
   let cache = liveOddsCaches.get(key);
@@ -235,19 +261,20 @@ async function fetchCachedEvents(
     };
     liveOddsCaches.set(key, cache);
   }
-  if (cache.hasValue && nowMs < cache.freshUntilMs) return cache.events;
+  if (cache.hasValue && nowMs < cache.freshUntilMs) return cachedEvents(cache, nowMs);
   if (nowMs < cache.circuitOpenUntilMs) {
-    if (cache.hasValue) return cache.events;
+    if (cache.hasValue) return cachedEvents(cache, nowMs);
     throw new Error(`Polymarket circuit open for ${unbrandRegistry(sport)} with no cached snapshot`);
   }
   if (cache.hasValue && nowMs < cache.staleUntilMs) {
     void startRefresh(cache, tag, options, nowMs).catch(() => undefined);
-    return cache.events;
+    return cachedEvents(cache, nowMs);
   }
   try {
-    return await startRefresh(cache, tag, options, nowMs);
+    await startRefresh(cache, tag, options, nowMs);
+    return cachedEvents(cache, nowMs);
   } catch (error) {
-    if (cache.hasValue) return cache.events;
+    if (cache.hasValue) return cachedEvents(cache, nowMs);
     throw error;
   }
 }
@@ -275,14 +302,7 @@ export function liveOddsCacheHealth(
   if (!cache.hasValue) {
     return { state: "empty", consecutiveFailures: cache?.consecutiveFailures ?? 0 };
   }
-  const state =
-    nowMs < cache.circuitOpenUntilMs
-      ? "circuit_open"
-      : cache.consecutiveFailures > 0
-        ? "degraded"
-        : nowMs >= cache.freshUntilMs
-          ? "stale"
-          : "healthy";
+  const state = liveCacheState(cache, nowMs);
   return {
     state,
     consecutiveFailures: cache.consecutiveFailures,
@@ -308,12 +328,14 @@ export async function fetchLiveCrossMarketOdds(
 
   const settlements = await Promise.allSettled(
     [...targetsBySport].map(async ([sport, sportTargets]) => {
-      const events = await fetchCachedEvents(sport, options);
+      const cached = await fetchCachedEvents(sport, options);
       const { binding } = cacheForSport(sport);
       for (const target of sportTargets) {
+        const targetSemantics = kalshiReconciliationSemanticsForSeries(target.series);
+        if (!targetSemantics || targetSemantics.sport !== sport) continue;
         const match = findPolymarketMatch(
           { ...target, date: parseKalshiDate(target.ticker) },
-          events,
+          cached.events,
           binding,
         );
         if (!match) continue;
@@ -331,6 +353,12 @@ export async function fetchLiveCrossMarketOdds(
           polymarketOpenInterest: match.market.openInterest ?? match.event.openInterest ?? null,
           polymarketEventId: match.event.id,
           polymarketMatchMethod: match.method,
+          reconciliation: {
+            ...targetSemantics,
+            kalshiSeries: target.series,
+            polymarketObservedAtMs: cached.observedAtMs,
+            polymarketCacheState: cached.state,
+          },
           pinnacleProb: null,
         });
       }

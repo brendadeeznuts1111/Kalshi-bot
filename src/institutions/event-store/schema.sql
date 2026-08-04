@@ -240,6 +240,15 @@ CREATE TABLE IF NOT EXISTS price_snapshots (
   poly_open_interest REAL,
   polymarket_event_id TEXT,
   polymarket_match_method TEXT,
+  kalshi_series TEXT,
+  event_type TEXT CHECK (event_type IS NULL OR event_type IN ('match', 'tournament')),
+  participant_format TEXT CHECK (
+    participant_format IS NULL OR participant_format IN ('singles', 'doubles', 'team', 'mixed', 'field')
+  ),
+  poly_observed_at_ms INTEGER CHECK (poly_observed_at_ms IS NULL OR poly_observed_at_ms >= 0),
+  poly_cache_state TEXT CHECK (
+    poly_cache_state IS NULL OR poly_cache_state IN ('healthy', 'stale', 'degraded', 'circuit_open')
+  ),
   pinny_prob REAL,
   elo_prob REAL,
   elo_surface TEXT,

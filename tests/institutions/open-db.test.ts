@@ -25,6 +25,18 @@ describe("open-db", () => {
     );
     expect(bookCols).toContain("recv_ts");
     expect(bookCols).toContain("source_clock");
+    const snapshotCols = (
+      db.query("PRAGMA table_info(price_snapshots)").all() as Array<{ name: string }>
+    ).map((r) => r.name);
+    expect(snapshotCols).toEqual(
+      expect.arrayContaining([
+        "kalshi_series",
+        "event_type",
+        "participant_format",
+        "poly_observed_at_ms",
+        "poly_cache_state",
+      ]),
+    );
   });
 
   test("migrateEventStoreColumns is idempotent", () => {

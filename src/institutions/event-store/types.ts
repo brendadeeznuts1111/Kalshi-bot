@@ -33,7 +33,9 @@ export {
   unbrand,
 } from "./brands.ts";
 
-import type { CanonicalEventId } from "./brands.ts";
+import type { EventType, ParticipantFormat } from "../market-registry/types.ts";
+import type { SportKey } from "../market-registry/brands.ts";
+import type { CanonicalEventId, SeriesTicker } from "./brands.ts";
 
 export type TennisTour = "ATP" | "WTA";
 
@@ -85,6 +87,17 @@ export type EventStoreSummaryRow = {
 };
 
 /** External venue probs for a Kalshi event (null = unmatched / unavailable). */
+export type CrossMarketCacheState = "healthy" | "stale" | "degraded" | "circuit_open";
+
+export type CrossMarketReconciliation = {
+  sport: SportKey;
+  eventType: EventType;
+  participantFormat: ParticipantFormat;
+  kalshiSeries: SeriesTicker;
+  polymarketObservedAtMs: number;
+  polymarketCacheState: CrossMarketCacheState;
+};
+
 export type CrossMarketOdds = {
   polymarketProb: number | null;
   polymarketVolume24h: number | null;
@@ -93,6 +106,7 @@ export type CrossMarketOdds = {
   polymarketOpenInterest: number | null;
   polymarketEventId: string | null; // brand-ok — opaque external provider primary key
   polymarketMatchMethod: "surname" | "fuzzy-name" | "date-tournament" | null;
+  reconciliation: CrossMarketReconciliation | null;
   pinnacleProb: number | null;
 };
 

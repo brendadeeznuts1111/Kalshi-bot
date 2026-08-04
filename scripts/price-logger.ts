@@ -21,9 +21,16 @@ import {
   type EventBookRow,
 } from "../src/institutions/event-store/cross-market.ts";
 import { fetchLiveCrossMarketOdds } from "../src/institutions/event-store/cross-market-live.ts";
-import type { CrossMarketOdds } from "../src/institutions/event-store/types.ts";
+import type {
+  CrossMarketCacheState,
+  CrossMarketOdds,
+} from "../src/institutions/event-store/types.ts";
+import type { SeriesTicker } from "../src/institutions/event-store/brands.ts";
+import { unbrand as unbrandSeries } from "../src/institutions/event-store/brands.ts";
 import { SPORT } from "../src/institutions/market-registry/brands.ts";
+import type { EventType, ParticipantFormat } from "../src/institutions/market-registry/types.ts";
 import {
+  kalshiReconciliationSemanticsForSeries,
   kalshiTradeSeriesForSport,
 } from "../src/institutions/market-registry/registry.ts";
 import {
@@ -50,7 +57,7 @@ type BookMid = {
   openInterest: number | null;
 };
 
-type SnapshotRow = {
+export type SnapshotRow = {
   eventId: string;
   matchKey: string;
   marketSource: string;
@@ -70,6 +77,11 @@ type SnapshotRow = {
   polyOpenInterest: number | null;
   polymarketEventId: string | null; // brand-ok — opaque external provider primary key
   polymarketMatchMethod: CrossMarketOdds["polymarketMatchMethod"];
+  kalshiSeries: SeriesTicker;
+  eventType: EventType;
+  participantFormat: ParticipantFormat;
+  polyObservedAtMs: number | null;
+  polyCacheState: CrossMarketCacheState | null;
   pinnyProb: number | null;
   eloProb: number | null;
   eloSurface: string | null;
@@ -79,6 +91,40 @@ type SnapshotRow = {
   divFlag: number;
   surfaceEdge: number;
 };
+
+type SnapshotReconciliation = Pick<
+  SnapshotRow,
+  "kalshiSeries" | "eventType" | "participantFormat" | "polyObservedAtMs" | "polyCacheState"
+>;
+
+/** Revalidate the registry lane at the durable boundary; injected or stale callers cannot relabel it. */
+export function snapshotReconciliationFor(
+  series: SeriesTicker,
+  odds: CrossMarketOdds | undefined,
+): SnapshotReconciliation {
+  const semantics = kalshiReconciliationSemanticsForSeries(series);
+  if (!semantics) {
+    throw new Error(`price snapshot series is not operational for reconciliation: ${series}`);
+  }
+  const proof = odds?.reconciliation;
+  const exactProof =
+    proof?.kalshiSeries === series &&
+    proof.sport === semantics.sport &&
+    proof.eventType === semantics.eventType &&
+    proof.participantFormat === semantics.participantFormat &&
+    Number.isFinite(proof.polymarketObservedAtMs) &&
+    proof.polymarketObservedAtMs >= 0 &&
+    ["healthy", "stale", "degraded", "circuit_open"].includes(
+      proof.polymarketCacheState,
+    );
+  return {
+    kalshiSeries: series,
+    eventType: semantics.eventType,
+    participantFormat: semantics.participantFormat,
+    polyObservedAtMs: exactProof ? proof.polymarketObservedAtMs : null,
+    polyCacheState: exactProof ? proof.polymarketCacheState : null,
+  };
+}
 
 // ── Helpers ─────────────────────────────────────────────────────
 
@@ -292,7 +338,9 @@ const INSERT_SNAPSHOT = `
      kalshi_mid_cents, kalshi_bid_cents, kalshi_ask_cents,
      kalshi_volume_24h, kalshi_volume_lifetime, kalshi_open_interest, stale_volume,
      poly_prob, poly_volume_24h, poly_volume_lifetime, poly_liquidity,
-     poly_open_interest, polymarket_event_id, polymarket_match_method, pinny_prob,
+     poly_open_interest, polymarket_event_id, polymarket_match_method,
+     kalshi_series, event_type, participant_format, poly_observed_at_ms, poly_cache_state,
+     pinny_prob,
      elo_prob, elo_surface, elo_a, elo_b,
      rps_flag, div_flag, surface_edge, source)
   VALUES
@@ -300,10 +348,59 @@ const INSERT_SNAPSHOT = `
      $kalshi_mid_cents, $kalshi_bid_cents, $kalshi_ask_cents,
      $kalshi_volume_24h, $kalshi_volume_lifetime, $kalshi_open_interest, $stale_volume,
      $poly_prob, $poly_volume_24h, $poly_volume_lifetime, $poly_liquidity,
-     $poly_open_interest, $polymarket_event_id, $polymarket_match_method, $pinny_prob,
+     $poly_open_interest, $polymarket_event_id, $polymarket_match_method,
+     $kalshi_series, $event_type, $participant_format, $poly_observed_at_ms, $poly_cache_state,
+     $pinny_prob,
      $elo_prob, $elo_surface, $elo_a, $elo_b,
      $rps_flag, $div_flag, $surface_edge, 'price-logger')
 `;
+
+/** Persist an already normalized batch atomically. */
+export function writeSnapshotRows(
+  db: ReturnType<typeof openEventStore>,
+  rows: readonly SnapshotRow[],
+): void {
+  const stmt = db.prepare(INSERT_SNAPSHOT);
+  const insertMany = db.transaction((batch: readonly SnapshotRow[]) => {
+    for (const row of batch) {
+      stmt.run({
+        $event_id: row.eventId,
+        $match_key: row.matchKey,
+        $market_source: row.marketSource,
+        $ticker: row.ticker,
+        $ts: row.ts,
+        $kalshi_mid_cents: row.kalshiMidCents,
+        $kalshi_bid_cents: row.kalshiBidCents,
+        $kalshi_ask_cents: row.kalshiAskCents,
+        $kalshi_volume_24h: row.kalshiVolume24h,
+        $kalshi_volume_lifetime: row.kalshiVolumeLifetime,
+        $kalshi_open_interest: row.kalshiOpenInterest,
+        $stale_volume: row.staleVolume,
+        $poly_prob: row.polyProb,
+        $poly_volume_24h: row.polyVolume24h,
+        $poly_volume_lifetime: row.polyVolumeLifetime,
+        $poly_liquidity: row.polyLiquidity,
+        $poly_open_interest: row.polyOpenInterest,
+        $polymarket_event_id: row.polymarketEventId,
+        $polymarket_match_method: row.polymarketMatchMethod,
+        $kalshi_series: unbrandSeries(row.kalshiSeries),
+        $event_type: row.eventType,
+        $participant_format: row.participantFormat,
+        $poly_observed_at_ms: row.polyObservedAtMs,
+        $poly_cache_state: row.polyCacheState,
+        $pinny_prob: row.pinnyProb,
+        $elo_prob: row.eloProb,
+        $elo_surface: row.eloSurface,
+        $elo_a: row.eloA,
+        $elo_b: row.eloB,
+        $rps_flag: row.rpsFlag,
+        $div_flag: row.divFlag,
+        $surface_edge: row.surfaceEdge,
+      });
+    }
+  });
+  insertMany(rows);
+}
 
 // ── Main loop ──────────────────────────────────────────────────
 
@@ -462,6 +559,7 @@ export async function runSnapshotCycleDetailed(
           polymarketOpenInterest: null,
           polymarketEventId: null,
           polymarketMatchMethod: null,
+          reconciliation: null,
           pinnacleProb: null,
         },
       ]),
@@ -486,41 +584,6 @@ export async function runSnapshotCycleDetailed(
 
   // 4. Build and write snapshots
   let written = 0;
-  const stmt = db.prepare(INSERT_SNAPSHOT);
-  const insertMany = db.transaction((rows: SnapshotRow[]) => {
-    for (const row of rows) {
-      stmt.run({
-        $event_id: row.eventId,
-        $match_key: row.matchKey,
-        $market_source: row.marketSource,
-        $ticker: row.ticker,
-        $ts: row.ts,
-        $kalshi_mid_cents: row.kalshiMidCents,
-        $kalshi_bid_cents: row.kalshiBidCents,
-        $kalshi_ask_cents: row.kalshiAskCents,
-        $kalshi_volume_24h: row.kalshiVolume24h,
-        $kalshi_volume_lifetime: row.kalshiVolumeLifetime,
-        $kalshi_open_interest: row.kalshiOpenInterest,
-        $stale_volume: row.staleVolume,
-        $poly_prob: row.polyProb,
-        $poly_volume_24h: row.polyVolume24h,
-        $poly_volume_lifetime: row.polyVolumeLifetime,
-        $poly_liquidity: row.polyLiquidity,
-        $poly_open_interest: row.polyOpenInterest,
-        $polymarket_event_id: row.polymarketEventId,
-        $polymarket_match_method: row.polymarketMatchMethod,
-        $pinny_prob: row.pinnyProb,
-        $elo_prob: row.eloProb,
-        $elo_surface: row.eloSurface,
-        $elo_a: row.eloA,
-        $elo_b: row.eloB,
-        $rps_flag: row.rpsFlag,
-        $div_flag: row.divFlag,
-        $surface_edge: row.surfaceEdge,
-      });
-    }
-  });
-
   // LRU-bounded profile cache (max 5000 entries — covers active players)
   const getProfileSurface = db.prepare(
     "SELECT surfaces FROM player_profiles WHERE player_name = ?",
@@ -550,7 +613,9 @@ export async function runSnapshotCycleDetailed(
     const volumeLifetime = liq?.volumeLifetime ?? 0;
     const openInterest = book.openInterest ?? liq?.openInterest ?? null;
     const odds = oddsMap.get(e.ticker);
-    const polyProb = odds?.polymarketProb ?? null;
+    const reconciliation = snapshotReconciliationFor(e.series, odds);
+    const hasExactPolyProof = reconciliation.polyObservedAtMs !== null;
+    const polyProb = hasExactPolyProof ? odds?.polymarketProb ?? null : null;
     const pinnyProb = odds?.pinnacleProb ?? null;
     const fair = eloFairFor(e.playerA, e.playerB, e.surface ?? "");
     const surf = e.surface?.trim();
@@ -576,12 +641,13 @@ export async function runSnapshotCycleDetailed(
       kalshiOpenInterest: openInterest,
       staleVolume: volume24h === 0 && volumeLifetime > 0 ? 1 : 0,
       polyProb,
-      polyVolume24h: odds?.polymarketVolume24h ?? null,
-      polyVolumeLifetime: odds?.polymarketVolumeLifetime ?? null,
-      polyLiquidity: odds?.polymarketLiquidity ?? null,
-      polyOpenInterest: odds?.polymarketOpenInterest ?? null,
-      polymarketEventId: odds?.polymarketEventId ?? null,
-      polymarketMatchMethod: odds?.polymarketMatchMethod ?? null,
+      polyVolume24h: hasExactPolyProof ? odds?.polymarketVolume24h ?? null : null,
+      polyVolumeLifetime: hasExactPolyProof ? odds?.polymarketVolumeLifetime ?? null : null,
+      polyLiquidity: hasExactPolyProof ? odds?.polymarketLiquidity ?? null : null,
+      polyOpenInterest: hasExactPolyProof ? odds?.polymarketOpenInterest ?? null : null,
+      polymarketEventId: hasExactPolyProof ? odds?.polymarketEventId ?? null : null,
+      polymarketMatchMethod: hasExactPolyProof ? odds?.polymarketMatchMethod ?? null : null,
+      ...reconciliation,
       pinnyProb,
       eloProb: fair.prob,
       eloSurface: e.surface ?? null,
@@ -598,7 +664,7 @@ export async function runSnapshotCycleDetailed(
   const staleVolume = rows.filter((row) => row.staleVolume === 1).length;
 
   if (rows.length > 0 && !dryRun) {
-    insertMany(rows);
+    writeSnapshotRows(db, rows);
     written = rows.length;
   }
 

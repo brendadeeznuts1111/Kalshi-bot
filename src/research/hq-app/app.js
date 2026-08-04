@@ -610,6 +610,7 @@ function dataHealthBannerHtml(health) {
   const target = Number(health?.targetEvents ?? 0);
   const unmatched = Number(health?.unmatchedEvents ?? target);
   const stale = Number(health?.staleVolumeEvents ?? 0);
+  const staleQuotes = Number(health?.staleQuoteEvents ?? 0);
   const label = state === "healthy" ? "coverage healthy" : state === "critical" ? "venue coverage critical" : state === "degraded" ? "partial coverage" : "snapshot unavailable";
   return (
     '<section class="health-banner health-' + tone + '" aria-live="polite">' +
@@ -617,6 +618,7 @@ function dataHealthBannerHtml(health) {
     '<strong>' + esc(matched) + ' / ' + esc(target) + ' events matched</strong></div>' +
     badge(tone, label) +
     (stale > 0 ? badge("warn", "⚠ " + stale + " stale volume") : "") +
+    (staleQuotes > 0 ? badge("warn", "⚠ " + staleQuotes + " stale venue quote") : "") +
     (state === "critical" || state === "degraded" ? '<button type="button" id="health-debug" class="health-debug">Inspect coverage payload</button>' : "") +
     '</div>' +
     '<div class="health-grid">' +

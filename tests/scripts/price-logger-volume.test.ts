@@ -6,10 +6,14 @@ import {
   loadMarketLiquidityByTicker,
   linkCurrentBoardEvents,
   parseLoggerArgv,
+  snapshotReconciliationFor,
+  writeSnapshotRows,
 } from "../../scripts/price-logger.ts";
 import { queryEventsWithBooks } from "../../src/institutions/event-store/cross-market.ts";
+import { openEventStore } from "../../src/institutions/event-store/open-db.ts";
 import { asSeriesTicker } from "../../src/institutions/event-store/brands.ts";
 import { SPORT } from "../../src/institutions/market-registry/brands.ts";
+import type { CrossMarketOdds } from "../../src/institutions/event-store/types.ts";
 
 function seedDb(): Database {
   const db = new Database(":memory:");
@@ -157,5 +161,112 @@ describe("price-logger volume wiring", () => {
 
     const rows = queryEventsWithBooks(db, [asSeriesTicker("KXATPMATCH")]);
     expect(rows.map((row) => row.eventId)).toEqual(["tennis-event"]);
+  });
+
+  test("pins each snapshot to an exact operational registry lane", () => {
+    const series = asSeriesTicker("KXATPMATCH");
+    const odds: CrossMarketOdds = {
+      polymarketProb: 0.62,
+      polymarketVolume24h: 20,
+      polymarketVolumeLifetime: 100,
+      polymarketLiquidity: 35,
+      polymarketOpenInterest: 12,
+      polymarketEventId: "poly-1",
+      polymarketMatchMethod: "surname",
+      reconciliation: {
+        sport: SPORT.tennis,
+        eventType: "match",
+        participantFormat: "singles",
+        kalshiSeries: series,
+        polymarketObservedAtMs: 1_000,
+        polymarketCacheState: "healthy",
+      },
+      pinnacleProb: null,
+    };
+
+    expect(snapshotReconciliationFor(series, odds)).toEqual({
+      kalshiSeries: series,
+      eventType: "match",
+      participantFormat: "singles",
+      polyObservedAtMs: 1_000,
+      polyCacheState: "healthy",
+    });
+    expect(
+      snapshotReconciliationFor(asSeriesTicker("KXWTADOUBLES"), odds),
+    ).toMatchObject({
+      eventType: "match",
+      participantFormat: "doubles",
+      polyObservedAtMs: null,
+      polyCacheState: null,
+    });
+    expect(() =>
+      snapshotReconciliationFor(asSeriesTicker("KXTABLETENNISMATCH"), undefined),
+    ).toThrow("not operational for reconciliation");
+  });
+
+  test("persists lane and venue freshness without replacing observation time", () => {
+    db.close();
+    db = openEventStore({ dbPath: ":memory:" });
+    db.run(
+      `INSERT INTO events (
+         event_id, tour, level, tournament, surface, round, player_a, player_b,
+         winner, loser, start_ts, outcome, source, source_row_hash, ingested_at
+       ) VALUES (
+         'event-1', 'ATP', 'tour', 'Toronto', 'Hard', 'R32', 'Alpha', 'Beta',
+         '', '', '2026-08-04T00:00:00Z', 'scheduled', 'fixture', 'event-1-hash', 1
+       )`,
+    );
+    writeSnapshotRows(db as never, [
+      {
+        eventId: "event-1",
+        matchKey: "alpha|beta|event-1",
+        marketSource: "kalshi",
+        ticker: "KXATPMATCH-26AUG04ALPBET-ALP",
+        ts: 10_000,
+        kalshiMidCents: 60,
+        kalshiBidCents: 59,
+        kalshiAskCents: 61,
+        kalshiVolume24h: 20,
+        kalshiVolumeLifetime: 100,
+        kalshiOpenInterest: 12,
+        staleVolume: 0,
+        polyProb: 0.62,
+        polyVolume24h: 10,
+        polyVolumeLifetime: 50,
+        polyLiquidity: 25,
+        polyOpenInterest: 8,
+        polymarketEventId: "poly-1",
+        polymarketMatchMethod: "surname",
+        kalshiSeries: asSeriesTicker("KXATPMATCH"),
+        eventType: "match",
+        participantFormat: "singles",
+        polyObservedAtMs: 1_000,
+        polyCacheState: "stale",
+        pinnyProb: null,
+        eloProb: null,
+        eloSurface: null,
+        eloA: null,
+        eloB: null,
+        rpsFlag: 0,
+        divFlag: 0,
+        surfaceEdge: 0,
+      },
+    ]);
+    expect(
+      db.query(
+        `SELECT ts, kalshi_series AS kalshiSeries, event_type AS eventType,
+                participant_format AS participantFormat,
+                poly_observed_at_ms AS polyObservedAtMs,
+                poly_cache_state AS polyCacheState
+         FROM price_snapshots`,
+      ).get(),
+    ).toEqual({
+      ts: 10_000,
+      kalshiSeries: "KXATPMATCH",
+      eventType: "match",
+      participantFormat: "singles",
+      polyObservedAtMs: 1_000,
+      polyCacheState: "stale",
+    });
   });
 });

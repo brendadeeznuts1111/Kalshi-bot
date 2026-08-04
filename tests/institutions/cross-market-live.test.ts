@@ -460,6 +460,14 @@ describe("live feed pagination and cache", () => {
       polymarketLiquidity: 35,
       polymarketOpenInterest: 12,
       polymarketMatchMethod: "surname",
+      reconciliation: {
+        sport: SPORT.tennis,
+        eventType: "match",
+        participantFormat: "singles",
+        kalshiSeries: ATP_SERIES.series,
+        polymarketObservedAtMs: 1_000,
+        polymarketCacheState: "healthy",
+      },
     });
   });
 
@@ -521,9 +529,17 @@ describe("live feed pagination and cache", () => {
     const stale = await fetchLiveCrossMarketOdds([target], { fetchImpl, nowMs: 62_000 });
     expect(initial.get(target.ticker)?.polymarketProb).toBe(0.62);
     expect(stale.get(target.ticker)?.polymarketProb).toBe(0.62);
+    expect(stale.get(target.ticker)?.reconciliation).toMatchObject({
+      polymarketObservedAtMs: 1_000,
+      polymarketCacheState: "stale",
+    });
     await Bun.sleep(0);
     const refreshed = await fetchLiveCrossMarketOdds([target], { fetchImpl, nowMs: 62_001 });
     expect(refreshed.get(target.ticker)?.polymarketProb).toBe(0.7);
+    expect(refreshed.get(target.ticker)?.reconciliation).toMatchObject({
+      polymarketObservedAtMs: 62_000,
+      polymarketCacheState: "healthy",
+    });
     expect(calls).toBe(2);
     expect(liveOddsCacheHealth(SPORT.tennis, 62_001).state).toBe("healthy");
   });
@@ -561,7 +577,14 @@ describe("live feed pagination and cache", () => {
       state: "circuit_open",
       consecutiveFailures: 3,
     });
-    await fetchLiveCrossMarketOdds([target], { fetchImpl, nowMs: 65_000, retries: 0 });
+    const circuitFallback = await fetchLiveCrossMarketOdds(
+      [target],
+      { fetchImpl, nowMs: 65_000, retries: 0 },
+    );
+    expect(circuitFallback.get(target.ticker)?.reconciliation).toMatchObject({
+      polymarketObservedAtMs: 1_000,
+      polymarketCacheState: "circuit_open",
+    });
     expect(calls).toBe(4);
   });
 
