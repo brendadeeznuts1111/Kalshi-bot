@@ -15,14 +15,14 @@ import type {
   SourceScopeId,
   SportFamilyKey,
   SportKey,
-} from "./brands.ts";
+} from './brands.ts';
 
-export type IntegrationState = "enabled" | "disabled" | "unsupported" | "discovering";
-export type RegistrationMode = "inventory" | "match" | "trade";
-export type EventType = "match" | "tournament";
-export type ParticipantFormat = "singles" | "doubles" | "team" | "mixed" | "field";
-export type SourceCapability = "inventory" | "quotes" | "reconciliation" | "trade";
-export type SemanticConfidence = "exact" | "discovery";
+export type IntegrationState = 'enabled' | 'disabled' | 'unsupported' | 'discovering';
+export type RegistrationMode = 'inventory' | 'match' | 'trade';
+export type EventType = 'match' | 'tournament';
+export type ParticipantFormat = 'singles' | 'doubles' | 'team' | 'mixed' | 'field';
+export type SourceCapability = 'inventory' | 'quotes' | 'reconciliation' | 'trade';
+export type SemanticConfidence = 'exact' | 'discovery';
 
 export type SportDefinition = {
   key: SportKey;
@@ -47,7 +47,7 @@ export type SourceSelector = {
 export type AdapterDefinition = {
   id: AdapterId;
   source: SourceKey;
-  idNamespace: "source_global" | "selector_scoped";
+  idNamespace: 'source_global' | 'selector_scoped';
   parserVersion: number;
   selectorKinds: readonly SelectorKind[];
   metadataSelectorKinds: readonly SelectorKind[];
@@ -74,7 +74,7 @@ export type CompetitionBinding = {
   marketKinds: readonly MarketKind[];
   identityFields: readonly IdentityFieldKey[];
   sourceMarketMappings: readonly SourceMarketMapping[];
-  unmappedMarketPolicy: "quarantine" | "reject";
+  unmappedMarketPolicy: 'quarantine' | 'reject';
   declaredUse: RegistrationMode;
 };
 
@@ -199,7 +199,7 @@ type SourceObservationIdentity = {
 };
 
 export type CompleteSourceObservation = SourceObservationIdentity & {
-  snapshotCompleteness: "complete";
+  snapshotCompleteness: 'complete';
   title: string;
   status: string | null;
   closesAtMs: number | null;
@@ -212,7 +212,7 @@ export type CompleteSourceObservation = SourceObservationIdentity & {
 };
 
 export type PartialSourceObservation = SourceObservationIdentity & {
-  snapshotCompleteness: "partial";
+  snapshotCompleteness: 'partial';
   title?: string;
   status?: string | null;
   closesAtMs?: number | null;
@@ -227,7 +227,7 @@ export type PartialSourceObservation = SourceObservationIdentity & {
 export type NormalizedSourceObservation = CompleteSourceObservation | PartialSourceObservation;
 
 export type AdapterHealth = {
-  state: "healthy" | "stale" | "degraded" | "circuit_open";
+  state: 'healthy' | 'stale' | 'degraded' | 'circuit_open';
   consecutiveFailures: number;
   lastSuccessAtMs?: number;
   staleSinceMs?: number;
@@ -246,15 +246,49 @@ export interface SourceAdapter<
   health(): AdapterHealth;
 }
 
+/**
+ * Type-erased runtime handle used by the registry orchestrator. The wrapper
+ * keeps source-specific wire rows inside the adapter and exposes only parsed,
+ * normalized observations to persistence.
+ */
+export interface InventorySourceAdapter {
+  readonly definition: AdapterDefinition;
+  acquirePage(
+    request: SourceFetchRequest,
+    binding: CompetitionBinding
+  ): Promise<SourcePage<NormalizedSourceObservation>>;
+  health(): AdapterHealth;
+}
+
+export function inventorySourceAdapter<
+  Row extends object,
+  Observation extends NormalizedSourceObservation,
+  Cursor extends string = string,
+>(adapter: SourceAdapter<Row, Observation, Cursor>): InventorySourceAdapter {
+  return {
+    definition: adapter.definition,
+    async acquirePage(request, binding) {
+      const typedRequest = request as SourceFetchRequest<Cursor>;
+      const wire = await adapter.fetchPage(typedRequest);
+      const parsed = adapter.parsePage(wire, typedRequest);
+      return {
+        ...parsed,
+        records: adapter.project(parsed, binding),
+      };
+    },
+    health: () => adapter.health(),
+  };
+}
+
 export type SportsSourceRegistryArtifact = {
-  schema: "sports-source-registry/v1";
+  schema: 'sports-source-registry/v1';
   generatedAt: string;
   sports: ReadonlyArray<{ key: string; label: string; family: string; aliases: readonly string[] }>;
   sources: ReadonlyArray<{ key: string; label: string }>;
   adapters: ReadonlyArray<{
     id: string;
     source: string;
-    idNamespace: "source_global" | "selector_scoped";
+    idNamespace: 'source_global' | 'selector_scoped';
     parserVersion: number;
     selectorKinds: readonly string[];
     metadataSelectorKinds: readonly string[];
@@ -283,7 +317,7 @@ export type SportsSourceRegistryArtifact = {
       marketKinds: readonly string[];
       identityFields: readonly string[];
       sourceMarketMappings: ReadonlyArray<{ sourceMarketType: string; marketKind: string }>;
-      unmappedMarketPolicy: "quarantine" | "reject";
+      unmappedMarketPolicy: 'quarantine' | 'reject';
       declaredUse: RegistrationMode;
       selector: {
         kind: string;
