@@ -14,6 +14,7 @@
  *   - Contrast gate:     daily at 04:00 UTC
  *   - Glossary URLs:     daily at 02:00 UTC
  *   - Match liquidity:   every 30 minutes (recompute + ground; volume via env)
+ *   - Partner inventory: every 1 minute when PARTNER_SYNC=1 (stream-list → partner_events)
  */
 import { ensureEventStoreDir, openEventStore } from "../src/institutions/event-store/open-db.ts";
 import { DEFAULT_EVENT_STORE_DB } from "../src/institutions/event-store/paths.ts";
@@ -30,6 +31,13 @@ const INTERVAL_CONTRAST = "0 4 * * *";
 /** Match liquidity recompute + HTML ground (volume backfill opt-in via env). */
 const INTERVAL_LIQUIDITY =
   Bun.env.LIQUIDITY_PIPELINE_CRON_SCHEDULE?.trim() || "*/30 * * * *";
+/**
+ * Partner stream inventory (Fantasy402 table tennis by default).
+ * Enable with PARTNER_SYNC=1. Public inventory works with dummy FANTASY402_* env.
+ */
+const INTERVAL_PARTNER_SYNC =
+  Bun.env.PARTNER_SYNC_CRON_SCHEDULE?.trim() || "*/1 * * * *";
+const PARTNER_SYNC_ENABLED = Bun.env.PARTNER_SYNC === "1";
 
 // ── Jobs ────────────────────────────────────────────────────────
 
@@ -92,6 +100,71 @@ async function jobLiquidityPipeline(): Promise<void> {
     );
   } catch (err) {
     console.error(`[cron:liquidity] Error: ${err}`);
+  }
+}
+
+/**
+ * Partner inventory sync — stream-list → partner_events (new stream_id detection).
+ * Opt-in: PARTNER_SYNC=1. Sport: PARTNER_SYNC_SPORT (default table_tennis).
+ * Enrich: PARTNER_SYNC_ENRICH_BOOKED=1 (soft Statscore name match, no prices).
+ */
+async function jobPartnerSync(): Promise<void> {
+  if (!PARTNER_SYNC_ENABLED) return;
+  const start = Date.now();
+  try {
+    const { loadFantasy402ProfileFromEnv } = await import("../src/partner/account-profile.ts");
+    const { getFantasySessionAdapter } = await import("../src/partner/index.ts");
+    const { runPartnerInventorySync, formatSyncReport } = await import("../src/partner/sync.ts");
+
+    // Inventory is public; allow dummy credentials when PARTNER_SYNC_PUBLIC=1
+    let profile = loadFantasy402ProfileFromEnv();
+    if (!profile && Bun.env.PARTNER_SYNC_PUBLIC === "1") {
+      profile = {
+        id: "fantasy402-public",
+        partner: "fantasy402",
+        url: "https://fantasy402.com",
+        status: "active",
+        meta: {
+          customerID: "public",
+          agentID: "public",
+          password: "public",
+          token: "public",
+          skin: 2,
+          currency: "USD",
+        },
+      };
+    }
+    if (!profile) {
+      console.error(
+        "[cron:partner] skip — set FANTASY402_* env or PARTNER_SYNC_PUBLIC=1",
+      );
+      return;
+    }
+
+    const sport = Bun.env.PARTNER_SYNC_SPORT?.trim() || "table_tennis";
+    const enrichBooked = Bun.env.PARTNER_SYNC_ENRICH_BOOKED === "1";
+    const adapter = getFantasySessionAdapter(profile, { warmSession: false });
+    try {
+      await adapter.login();
+    } catch {
+      /* stream-list does not require login */
+    }
+    const report = await runPartnerInventorySync(getDb(), adapter, {
+      sport,
+      enrichBooked,
+    });
+    console.error(
+      `[cron:partner] ${formatSyncReport(report).split("\n")[0]} · ${Date.now() - start}ms`,
+    );
+    if (report.inserted > 0) {
+      for (const line of report.newEvents.slice(0, 8)) {
+        console.error(
+          `[cron:partner] + ${line.sport} · ${line.league} · ${line.home} vs ${line.away} · ${line.streamId}`,
+        );
+      }
+    }
+  } catch (err) {
+    console.error(`[cron:partner] Error: ${err}`);
   }
 }
 
@@ -177,6 +250,7 @@ if (once) {
   await jobColorArtifacts();
   await jobContrast();
   await jobLiquidityPipeline();
+  await jobPartnerSync();
   console.error("[cron] All jobs complete.");
   process.exit(0);
 }
@@ -188,7 +262,8 @@ console.error(`[cron] Registering jobs:
   urls:     ${INTERVAL_GLOSSARY_URLS}
   colors:   ${INTERVAL_COLOR_ARTIFACTS}
   contrast: ${INTERVAL_CONTRAST}
-  liquidity:${INTERVAL_LIQUIDITY}`);
+  liquidity:${INTERVAL_LIQUIDITY}
+  partner:  ${PARTNER_SYNC_ENABLED ? INTERVAL_PARTNER_SYNC : "off (PARTNER_SYNC=1)"}`);
 console.error("[cron] Process running — use SIGTERM to stop.");
 
 Bun.cron(INTERVAL_LOGGER, jobLogger);
@@ -197,6 +272,9 @@ Bun.cron(INTERVAL_GLOSSARY_URLS, jobGlossaryUrls);
 Bun.cron(INTERVAL_COLOR_ARTIFACTS, jobColorArtifacts);
 Bun.cron(INTERVAL_CONTRAST, jobContrast);
 Bun.cron(INTERVAL_LIQUIDITY, jobLiquidityPipeline);
+if (PARTNER_SYNC_ENABLED) {
+  Bun.cron(INTERVAL_PARTNER_SYNC, jobPartnerSync);
+}
 
 // Keep process alive
 await new Promise(() => {});
