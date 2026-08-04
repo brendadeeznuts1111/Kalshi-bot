@@ -188,3 +188,32 @@ CREATE TABLE IF NOT EXISTS score_snapshots (
 );
 
 CREATE INDEX IF NOT EXISTS idx_score_snapshots_event_ts ON score_snapshots (event_id, ts);
+
+/**
+ * Derived match-level liquidity — recomputed after market/book ingest.
+ * Keys by event_id (event-store SSOT). Not a second wire identity.
+ * liquidity_ok aligns with glossary concept liquidity_ok (desk gate).
+ */
+CREATE TABLE IF NOT EXISTS match_liquidity (
+  event_id TEXT PRIMARY KEY REFERENCES events (event_id),
+  tournament TEXT NOT NULL DEFAULT '',
+  tour TEXT NOT NULL DEFAULT '',
+  sport_key TEXT NOT NULL DEFAULT 'tennis',
+  volume_fp REAL NOT NULL DEFAULT 0,
+  volume_24h_fp REAL NOT NULL DEFAULT 0,
+  open_interest_fp REAL NOT NULL DEFAULT 0,
+  spread_cents REAL,
+  mid_cents REAL,
+  market_count INTEGER NOT NULL DEFAULT 0,
+  book_tick_count INTEGER NOT NULL DEFAULT 0,
+  crossed INTEGER NOT NULL DEFAULT 0,
+  liquidity_ok INTEGER NOT NULL DEFAULT 0,
+  tradable INTEGER NOT NULL DEFAULT 0,
+  updated_ts INTEGER NOT NULL,
+  source TEXT NOT NULL DEFAULT 'event-store'
+);
+
+CREATE INDEX IF NOT EXISTS idx_match_liquidity_tournament ON match_liquidity (tournament);
+CREATE INDEX IF NOT EXISTS idx_match_liquidity_tour ON match_liquidity (tour);
+CREATE INDEX IF NOT EXISTS idx_match_liquidity_ok ON match_liquidity (liquidity_ok);
+CREATE INDEX IF NOT EXISTS idx_match_liquidity_sport ON match_liquidity (sport_key);

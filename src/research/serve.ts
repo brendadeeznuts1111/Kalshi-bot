@@ -12,6 +12,12 @@ import { pageLayout, renderIndex, renderOps, renderRepoPage, type KalshiAuthStat
 import { renderArchitecture } from "./architecture-view.ts";
 import { openEventStore } from "../institutions/event-store/open-db.ts";
 import { DEFAULT_EVENT_STORE_DB } from "../institutions/event-store/paths.ts";
+import {
+  getMatchLiquidity,
+  listMatchLiquidityByTournament,
+  recomputeMatchLiquidity,
+  toLiquidityApiPayload,
+} from "../institutions/event-store/match-liquidity.ts";
 import { Database } from "bun:sqlite";
 import { partnerDetailHandler } from "../regulatory/routes/ops/partners";
 import { requireStateCompliance, type ComplianceContext } from "../regulatory/middleware/state-compliance";
@@ -716,7 +722,9 @@ async function handleKpi(): Promise<Record<string, number>> {
       graph_divergence: snapshot("SELECT COUNT(*) AS n FROM events WHERE graph_divergence=1"),
       price_archive: snapshot("SELECT COUNT(*) AS n FROM price_snapshots"),
       server_errors: snapshot("SELECT total_errors AS n FROM logger_health WHERE id=1"),
-      tight_markets: snapshot("SELECT COUNT(*) AS n FROM events WHERE liquidity_ok=1"),
+      tight_markets: snapshot(
+        "SELECT COUNT(*) AS n FROM match_liquidity WHERE liquidity_ok=1",
+      ),
       store_link_rate: 0,
       live_scores: 0,
       elite_conviction: 0,
@@ -727,6 +735,72 @@ async function handleKpi(): Promise<Record<string, number>> {
     };
   } catch {
     return {};
+  }
+}
+
+function openLiquidityStore(): Database {
+  return openEventStore({ dbPath: DEFAULT_EVENT_STORE_DB });
+}
+
+/** GET /api/liquidity/:eventId — optional ?recompute=1 to refresh from markets/books. */
+function handleLiquidityByEvent(eventIdRaw: string, url: URL): Response {
+  const eventId = decodeURIComponent(eventIdRaw).trim();
+  if (!eventId) {
+    return json({ error: "eventId required" }, 400);
+  }
+  try {
+    const store = openLiquidityStore();
+    if (url.searchParams.get("recompute") === "1") {
+      recomputeMatchLiquidity(store, eventId);
+    }
+    const row = getMatchLiquidity(store, eventId);
+    if (!row) {
+      // Lazy recompute once if table empty for this event but event exists
+      const exists = store
+        .query(`SELECT 1 AS ok FROM events WHERE event_id = $id`)
+        .get({ $id: eventId }) as { ok: number } | null;
+      if (exists) {
+        recomputeMatchLiquidity(store, eventId);
+        const again = getMatchLiquidity(store, eventId);
+        if (again) return json(toLiquidityApiPayload(again));
+      }
+      return json({ error: "not_found", eventId }, 404);
+    }
+    return json(toLiquidityApiPayload(row));
+  } catch (err) {
+    return json(
+      { error: "liquidity_store_unavailable", detail: err instanceof Error ? err.message : String(err) },
+      503,
+    );
+  }
+}
+
+/** GET /api/liquidity/by-tournament/:key — optional ?sport=tennis&limit=50&recompute=1 */
+function handleLiquidityByTournament(keyRaw: string, url: URL): Response {
+  const key = decodeURIComponent(keyRaw).trim();
+  if (!key) {
+    return json({ error: "tournament key required" }, 400);
+  }
+  try {
+    const store = openLiquidityStore();
+    if (url.searchParams.get("recompute") === "1") {
+      recomputeMatchLiquidity(store);
+    }
+    const sportKey = url.searchParams.get("sport")?.trim() || undefined;
+    const limitRaw = Number(url.searchParams.get("limit") ?? "100");
+    const limit = Number.isFinite(limitRaw) ? limitRaw : 100;
+    const rows = listMatchLiquidityByTournament(store, key, { sportKey, limit });
+    return json({
+      tournament: key,
+      sportKey: sportKey ?? null,
+      count: rows.length,
+      matches: rows.map(toLiquidityApiPayload),
+    });
+  } catch (err) {
+    return json(
+      { error: "liquidity_store_unavailable", detail: err instanceof Error ? err.message : String(err) },
+      503,
+    );
   }
 }
 
@@ -769,6 +843,20 @@ export function createResearchServer(options: ServeOptions = {}) {
         }
         const result = getPlayerDetail(name);
         return json(result, result.state === "not_found" ? 404 : 200);
+      }
+
+      // Match liquidity — derived from markets + book_ticks (event-store SSOT)
+      {
+        const g = SERVE_PATTERNS.liquidityByEvent.groups(url);
+        if (g?.eventId) {
+          return rateLimiter(req, () => handleLiquidityByEvent(g.eventId!, url));
+        }
+      }
+      {
+        const g = SERVE_PATTERNS.liquidityByTournament.groups(url);
+        if (g?.key) {
+          return rateLimiter(req, () => handleLiquidityByTournament(g.key!, url));
+        }
       }
 
       // HQ headquarters dashboard served via routes["/hq"] = hqApp (HTML import)

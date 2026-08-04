@@ -118,7 +118,9 @@
     "glossary:urls:json": "bun scripts/validate-glossary-urls.ts -- --json",
     "health:urls": "bun scripts/validate-glossary-urls.ts -- --json",
     "semantic:audit": "bun scripts/check-glossary-usage.ts -- --hard",
-    "glossary:report": "bun scripts/check-glossary-usage.ts -- --report-only"
+    "glossary:report": "bun scripts/check-glossary-usage.ts -- --report-only",
+    "check:liquidity": "bun scripts/check-liquidity.ts",
+    "liquidity:recompute": "bun scripts/check-liquidity.ts -- --recompute"
   },
   "engines": {
     "bun": ">=1.4.0-canary.1"

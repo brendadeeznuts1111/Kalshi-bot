@@ -146,6 +146,10 @@ export const SERVE_PATTERNS = {
   // ── Tennis HQ ──
   tennisPlayer: new BunURLPattern({ pathname: "/api/hq/tennis/player/:name" }),
 
+  // ── Match liquidity (derived event-store table) ──
+  liquidityByEvent:      new BunURLPattern({ pathname: "/api/liquidity/:eventId" }),
+  liquidityByTournament: new BunURLPattern({ pathname: "/api/liquidity/by-tournament/:key" }),
+
   // ── Ops dashboard ──
   opsPartner:     new BunURLPattern({ pathname: "/ops/partners/:nodeId" }),
   kalshiRotateKey: new BunURLPattern({ pathname: "/ops/kalshi-rotate-key" }),
