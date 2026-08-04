@@ -400,6 +400,83 @@ export function toLiquidityApiPayload(row: MatchLiquidityRow): MatchLiquidityApi
   return { ...row, gates: LIQUIDITY_GATES };
 }
 
+/** Machine summary for data-plane snapshot + WebView ground KPIs. */
+export type MatchLiquiditySummary = {
+  total: number;
+  liquidityOk: number;
+  tradable: number;
+  quoted: number;
+  withSpread: number;
+  vol24Pos: number;
+  lifetimeOnly500: number;
+  tablePresent: boolean;
+};
+
+export function matchLiquidityTablePresent(db: Database): boolean {
+  const tables = db
+    .query(`SELECT name FROM sqlite_master WHERE type='table' AND name='match_liquidity'`)
+    .all() as Array<{ name: string }>;
+  return tables.length === 1;
+}
+
+export function summarizeMatchLiquidity(db: Database): MatchLiquiditySummary {
+  if (!matchLiquidityTablePresent(db)) {
+    return {
+      total: 0,
+      liquidityOk: 0,
+      tradable: 0,
+      quoted: 0,
+      withSpread: 0,
+      vol24Pos: 0,
+      lifetimeOnly500: 0,
+      tablePresent: false,
+    };
+  }
+  const row = db
+    .query(
+      `SELECT
+         COUNT(*) AS total,
+         COALESCE(SUM(liquidity_ok), 0) AS liquidityOk,
+         COALESCE(SUM(tradable), 0) AS tradable,
+         COALESCE(SUM(CASE WHEN book_tick_count > 0 THEN 1 ELSE 0 END), 0) AS quoted,
+         COALESCE(SUM(CASE WHEN spread_cents IS NOT NULL THEN 1 ELSE 0 END), 0) AS withSpread,
+         COALESCE(SUM(CASE WHEN volume_24h_fp > 0 THEN 1 ELSE 0 END), 0) AS vol24Pos,
+         COALESCE(SUM(CASE WHEN volume_24h_fp = 0 AND volume_fp >= 500 THEN 1 ELSE 0 END), 0) AS lifetimeOnly500
+       FROM match_liquidity`,
+    )
+    .get() as Record<string, number>;
+  return {
+    total: Number(row.total) || 0,
+    liquidityOk: Number(row.liquidityOk) || 0,
+    tradable: Number(row.tradable) || 0,
+    quoted: Number(row.quoted) || 0,
+    withSpread: Number(row.withSpread) || 0,
+    vol24Pos: Number(row.vol24Pos) || 0,
+    lifetimeOnly500: Number(row.lifetimeOnly500) || 0,
+    tablePresent: true,
+  };
+}
+
+/** Top rows for dashboards — effective volume desc. */
+export function listTopMatchLiquidity(
+  db: Database,
+  options: { limit?: number; onlyQuoted?: boolean; onlyOk?: boolean } = {},
+): MatchLiquidityRow[] {
+  if (!matchLiquidityTablePresent(db)) return [];
+  const limit = Math.min(Math.max(options.limit ?? 40, 1), 200);
+  const where: string[] = [];
+  if (options.onlyQuoted) where.push("book_tick_count > 0");
+  if (options.onlyOk) where.push("liquidity_ok = 1");
+  const sql = `
+    SELECT * FROM match_liquidity
+    ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
+    ORDER BY CASE WHEN volume_24h_fp > 0 THEN volume_24h_fp ELSE volume_fp END DESC,
+             updated_ts DESC
+    LIMIT $lim`;
+  const rows = db.query(sql).all({ $lim: limit }) as Record<string, unknown>[];
+  return rows.map(mapSqlRow);
+}
+
 /** Schema presence + gate math for offline proof (`bun run check:liquidity`). */
 export function assertMatchLiquidityHealthy(db: Database): {
   ok: true;

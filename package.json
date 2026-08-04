@@ -120,7 +120,9 @@
     "semantic:audit": "bun scripts/check-glossary-usage.ts -- --hard",
     "glossary:report": "bun scripts/check-glossary-usage.ts -- --report-only",
     "check:liquidity": "bun scripts/check-liquidity.ts",
-    "liquidity:recompute": "bun scripts/check-liquidity.ts -- --recompute"
+    "liquidity:recompute": "bun scripts/check-liquidity.ts -- --recompute",
+    "liquidity:ground": "bun tools/match-liquidity-ground-cli.ts",
+    "liquidity:ground:html": "bun tools/match-liquidity-ground-cli.ts -- --html-only"
   },
   "engines": {
     "bun": ">=1.4.0-canary.1"
