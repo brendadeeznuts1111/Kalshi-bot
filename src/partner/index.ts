@@ -101,12 +101,15 @@ export {
 
 export {
   PandoraSocket,
+  PANDORA_DEFAULT_SESSION,
+  buildPliveSubscribeSequence,
   defaultPandoraSocketUrl,
   encodeSocketIoEmit,
   parseEngineOpen,
   parseSocketIoEvent,
   EIO,
   SIO,
+  type PandoraLiveSessionIds,
   type PandoraOpenInfo,
   type PandoraSocketHandlers,
   type PandoraSocketOptions,

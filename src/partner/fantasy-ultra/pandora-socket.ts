@@ -76,6 +76,79 @@ export function defaultPandoraSocketUrl(): string {
   return `${base}/socket.io/?EIO=4&transport=websocket`;
 }
 
+/**
+ * Subscription sequence captured via Bun.WebView CDP on plive.sportswidgets.pro
+ * (anonymous session: partnerId 118, groupId 97360).
+ *
+ * Channel prefix `U0VWU1NWUkJSMFU9` base64-decodes to brand token (→ HERITAGE).
+ * Odds rooms look like:
+ *   live.main.{TOKEN}.eventCoefficients.{eventId}
+ */
+export type PandoraLiveSessionIds = {
+  partnerId?: string;
+  groupId?: number | string;
+  /** Base64 channel segment after live.main. */
+  mainToken?: string;
+  /** Optional event ids to subscribe for coefficients */
+  eventIds?: Array<string | number>;
+};
+
+export const PANDORA_DEFAULT_SESSION: Required<
+  Pick<PandoraLiveSessionIds, "partnerId" | "groupId" | "mainToken">
+> = {
+  partnerId: "118",
+  groupId: 97360,
+  mainToken: "U0VWU1NWUkJSMFU9",
+};
+
+/** Build the emit sequence observed after Socket.IO connect on plive. */
+export function buildPliveSubscribeSequence(
+  ids: PandoraLiveSessionIds = {},
+): Array<{ eventName: string; args: unknown[] }> {
+  const partnerId = ids.partnerId ?? PANDORA_DEFAULT_SESSION.partnerId;
+  const groupId = ids.groupId ?? PANDORA_DEFAULT_SESSION.groupId;
+  const mainToken = ids.mainToken ?? PANDORA_DEFAULT_SESSION.mainToken;
+  const main = `live.main.${mainToken}`;
+
+  const rooms: string[] = [
+    `live.groupProfile.${groupId}`,
+    "all.translations",
+    "live.sportPeriod",
+    `live.fixedParlay.${partnerId}`,
+    `live.circle.${partnerId}`,
+    `live.featuredBet.${partnerId}`,
+    "live.appVersion",
+    `live.activeCircle.${groupId}`,
+    `${main}.eventData`,
+    `${main}.user.alphas.0`,
+    `${main}.group.alphas.${groupId}`,
+    `${main}.partner.alphas.${partnerId}`,
+    "live.countries",
+    "live.leagues",
+    "live.sports",
+    "live.wagerTypes",
+  ];
+
+  for (const eid of ids.eventIds ?? []) {
+    rooms.push(`${main}.eventCoefficients.${eid}`);
+  }
+
+  return [
+    {
+      eventName: "setSocketMetadata",
+      args: [{ partnerId, flavor: "live" }],
+    },
+    {
+      eventName: "subscribeSystemEvents",
+      args: [{ partnerId, groupId }],
+    },
+    ...rooms.map((room) => ({
+      eventName: "subscribe",
+      args: [[room]],
+    })),
+  ];
+}
+
 export function parseEngineOpen(packet: string): PandoraOpenInfo | null {
   if (!packet.startsWith(EIO.open)) return null;
   try {
@@ -208,16 +281,34 @@ export class PandoraSocket {
   }
 
   /**
-   * Placeholder subscription until Messages tab is captured.
-   * Does nothing unless `rawEmit` is provided.
+   * Subscribe using captured plive sequence (setSocketMetadata + rooms).
+   * For odds, pass eventIds → live.main.{token}.eventCoefficients.{id}
+   */
+  subscribeLive(ids: PandoraLiveSessionIds = {}): void {
+    const seq = buildPliveSubscribeSequence(ids);
+    for (const step of seq) {
+      this.emit(step.eventName, ...step.args);
+    }
+    this.handlers.onLog?.(
+      `pandora: subscribeLive sent ${seq.length} emits (partner=${ids.partnerId ?? PANDORA_DEFAULT_SESSION.partnerId})`,
+    );
+  }
+
+  /**
+   * Low-level: raw frame or single emit (debug / probe CLI).
    */
   subscribePlaceholder(options: {
-    /** When set, send this exact Engine.IO/Socket.IO frame string */
     rawFrame?: string;
-    /** Or emit known event once format is known */
     eventName?: string;
     args?: unknown[];
+    /** If true, run full plive subscribe sequence */
+    plive?: boolean;
+    session?: PandoraLiveSessionIds;
   } = {}): void {
+    if (options.plive) {
+      this.subscribeLive(options.session);
+      return;
+    }
     if (options.rawFrame) {
       if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
         throw new Error("pandora: not connected");
@@ -231,7 +322,7 @@ export class PandoraSocket {
       return;
     }
     this.handlers.onLog?.(
-      "pandora: subscribePlaceholder no-op — capture widget WS Messages (emit name + payload)",
+      "pandora: use subscribeLive() or --plive on partner:pandora-probe",
     );
   }
 

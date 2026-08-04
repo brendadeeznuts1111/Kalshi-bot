@@ -65,6 +65,7 @@
     "partner:sync": "bun tools/partner-sync.ts",
     "partner:registry": "bun tools/partner-registry.ts",
     "partner:pandora-probe": "bun tools/partner-pandora-probe.ts",
+    "partner:webview-ws-capture": "bun tools/partner-webview-ws-capture.ts",
     "tennis:events": "bun tools/tennis/events-cli.ts",
     "tennis:itf": "bun tools/tennis/itf-calendar-cli.ts",
     "tennis:tour": "bun tools/tennis/tour-sync-cli.ts",
