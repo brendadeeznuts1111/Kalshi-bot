@@ -22,6 +22,7 @@ bun run agent ground                     # discovery-grounded triage (cache-only
 bun run agent status                     # latest run from cache.db
 bun run agent patterns                   # pattern extract from cached run
 bun run agent blueprint                  # architecture blueprint from cache
+bun run sports:metadata:sync             # refresh Kalshi + Polymarket sport metadata
 bun run report:term                      # ANSI latest.md in terminal
 bun test && bun run typecheck            # posttest restores committed artifacts from fixtures
 ```
@@ -99,6 +100,7 @@ Niche dimensions (`sports-nba`, `tracking`, …) may discover candidates but pro
 | Terminal report | `bun run report:term` / `report:diff` |
 | Serve (hot) | `bun run serve` |
 | Serve (once) | `bun run serve:once` |
+| Sports/source registry | `bun run sports:registry:check` / `sports:metadata:sync` — see [`docs/SPORTS_SOURCE_REGISTRY.md`](docs/SPORTS_SOURCE_REGISTRY.md) |
 | Tests | `bun test` / `bun run test:coverage` (`posttest` restores committed artifacts); filter: `bun test --grep "pattern"` or `-t "pattern"` (v1.3.6+, alias for `--test-name-pattern`) |
 | Restore artifacts | `bun run artifacts:restore` — fixtures → reports + audit JSONL |
 | Pre-commit gate | `bun run hooks:install` then `git commit` runs `bun run check` |
@@ -183,6 +185,8 @@ bun run serve
 | `/` | Stats, shortlist, scored table, diff excerpt, run history |
 | `/api/runs` | Run summaries JSON |
 | `/api/runs/:id` | Full run JSON |
+| `/api/registry/sports-sources` | Declared integrations plus live per-sport source discovery health |
+| `/registry/sports-sources.json` | Stable declaration artifact |
 | `/repo/:owner/:name` | Repo detail + score breakdown (`?run=<id>`) |
 | `/reports/latest.md` | Committed markdown report |
 

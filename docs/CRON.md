@@ -48,6 +48,18 @@ Set `RESEARCH_EXPORT_AUDIT=1` on scheduled runs to also write audit JSONL + roto
 
 `bun run serve` is a read-only report browser. Scheduling is separate — register OS cron, do not keep a long-lived dashboard process.
 
+## Master sports metadata loop
+
+`bun run cron:start` owns the long-lived source metadata refresh alongside the price logger. It runs Kalshi and Polymarket source-global metadata discovery every 15 minutes, before the registry's 30-minute freshness deadline.
+
+| Command | Role |
+|---|---|
+| `bun run sports:metadata:sync` | One-shot migration + both-venue acquisition + catalog projection |
+| `bun run cron:start` | Start the in-process 15-minute metadata job |
+| `bun run cron:once` | Run every master job once; exits nonzero if metadata venues fail |
+
+The metadata job is single-flight, drains on graceful shutdown, and recovers abandoned cross-process runs after a five-minute no-progress lease. Adapter instances persist for the cron process lifetime so retry/circuit state survives individual ticks. Full registry mechanics: [`SPORTS_SOURCE_REGISTRY.md`](SPORTS_SOURCE_REGISTRY.md).
+
 ## Tennis live canary
 
 Separate job: dry-run `live_data` poll to the write boundary (zero SQLite score writes). Catches Kalshi schema/API drift before the aging loop is wrong.
