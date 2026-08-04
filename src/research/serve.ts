@@ -845,17 +845,18 @@ export function createResearchServer(options: ServeOptions = {}) {
         return json(result, result.state === "not_found" ? 404 : 200);
       }
 
-      // Match liquidity — derived from markets + book_ticks (event-store SSOT)
+      // Match liquidity — derived from markets + book_ticks (event-store SSOT).
+      // No rateLimiter: read-only HQ JSON; bulk board polls must not 429 at 100/min.
       {
         const g = SERVE_PATTERNS.liquidityByEvent.groups(url);
         if (g?.eventId) {
-          return rateLimiter(req, () => handleLiquidityByEvent(g.eventId!, url));
+          return handleLiquidityByEvent(g.eventId!, url);
         }
       }
       {
         const g = SERVE_PATTERNS.liquidityByTournament.groups(url);
         if (g?.key) {
-          return rateLimiter(req, () => handleLiquidityByTournament(g.key!, url));
+          return handleLiquidityByTournament(g.key!, url);
         }
       }
 

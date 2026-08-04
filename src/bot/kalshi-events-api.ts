@@ -170,6 +170,29 @@ export async function fetchAllKalshiMarkets(
   return out;
 }
 
+/**
+ * Public GET /markets/{ticker} — volume + sizes for a single market (no auth).
+ * @see https://docs.kalshi.com/api-reference/market/get-market
+ */
+export async function fetchKalshiMarket(
+  ticker: KalshiMarketTicker,
+  options: { baseUrl?: string; fetchImpl?: KalshiFetchImpl } = {},
+): Promise<KalshiMarketWire | null> {
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const base = resolveBaseUrl(options.baseUrl);
+  const res = await fetchImpl(`${base}/markets/${encodeURIComponent(unbrand(ticker))}`, {
+    headers: { Accept: "application/json" },
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    throw new Error(`Kalshi market ${unbrand(ticker)}: ${res.status} ${res.statusText}`);
+  }
+  const body: unknown = await res.json();
+  // Wire may be { market: {...} } or the market object itself.
+  const raw = isRecord(body) && isRecord(body.market) ? body.market : body;
+  return parseKalshiMarketWire(raw);
+}
+
 export async function fetchKalshiEvent(
   eventTicker: KalshiEventTicker,
   options: { baseUrl?: string; fetchImpl?: KalshiFetchImpl } = {},
