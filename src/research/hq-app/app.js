@@ -181,6 +181,13 @@ function barChartHtml(data, { title, subtitle = "" } = {}) {
   );
 }
 
+/** Desk KPI strip cards → Events board liquidity filter (same modes as desk chips). */
+const KPI_LIQ_JUMP = {
+  "kpi.tradable_matches": "tradable",
+  "kpi.tight_markets": "liq_ok",
+  "kpi.quoted_books": "quoted",
+};
+
 /**
  * KPI card — strict three-tier structure:
  *   1. h3 label (+ optional badges)
@@ -188,8 +195,9 @@ function barChartHtml(data, { title, subtitle = "" } = {}) {
  *   3. secondary stats, one row each (label left, mono value right)
  * footer: mono caption line (run id, timestamp, …)
  * glossaryId: optional concept id → data-color-key accent + tip
+ * liqJump: optional Events board liquidity mode → data-liq-jump (desk KPI strip)
  */
-const kpiCard = (label, { badges = "", value = "—", unit = "", stats = [], footer = "", glossaryId = "" } = {}) => {
+const kpiCard = (label, { badges = "", value = "—", unit = "", stats = [], footer = "", glossaryId = "", liqJump = "" } = {}) => {
   const entry = glossaryId
     ? (GLOSSARY.entries || []).find((e) => e.id === glossaryId)
     : null;
@@ -199,10 +207,17 @@ const kpiCard = (label, { badges = "", value = "—", unit = "", stats = [], foo
       conceptColorStyle(entry) + '"></span>'
     : "";
   const tipHtml = glossaryId ? tip(glossaryId) : "";
+  const jumpTitle = liqJump
+    ? (TOOLTIPS[glossaryId] || label) + " · click → Events board filter"
+    : "";
   return (
-    '<div class="card kpi"' +
+    '<div class="card kpi' + (liqJump ? " kpi-liq-jump" : "") + '"' +
     (colorKey ? ' data-color-key="' + esc(colorKey) + '"' : "") +
     (glossaryId ? ' data-glossary-id="' + esc(glossaryId) + '"' : "") +
+    (liqJump
+      ? ' data-liq-jump="' + esc(liqJump) + '" role="button" tabindex="0" title="' +
+        esc(jumpTitle) + '"'
+      : "") +
     ">" +
     "<h3>" + accent + esc(label) + tipHtml + (badges ? " " + badges : "") + "</h3>" +
     '<div class="kpi-value">' + value + (unit ? '<span class="unit">' + esc(unit) + "</span>" : "") + "</div>" +
@@ -239,6 +254,7 @@ function renderGlossaryKpiStrip(target) {
       return kpiCard(e.label, {
         glossaryId: e.id,
         value: display,
+        liqJump: KPI_LIQ_JUMP[e.id] || "",
       });
     }).join("") +
     "</div>";
@@ -872,12 +888,27 @@ function eventMatches(e, nowMs) {
   return true;
 }
 
+/** Desk ladder for sort=desk: tradable → liq_ok → quoted → thin/none (lower is better). */
+function deskScoreRank(e) {
+  const d = e.deskLiquidity;
+  if (d?.tradable) return 0;
+  if (d?.liquidityOk) return 1;
+  if (d?.quoted) return 2;
+  return 3;
+}
+
 function sortEvents(events) {
   const f = __filters;
   const arr = events.slice();
   if (f.sort === "volume") arr.sort((a, b) => eventVol(b) - eventVol(a));
   else if (f.sort === "alpha") arr.sort((a, b) => (a.title ?? "").localeCompare(b.title ?? ""));
-  else arr.sort((a, b) => (a.occurrenceMs ?? Infinity) - (b.occurrenceMs ?? Infinity));
+  else if (f.sort === "desk") {
+    arr.sort((a, b) => {
+      const dr = deskScoreRank(a) - deskScoreRank(b);
+      if (dr !== 0) return dr;
+      return eventVol(b) - eventVol(a);
+    });
+  } else arr.sort((a, b) => (a.occurrenceMs ?? Infinity) - (b.occurrenceMs ?? Infinity));
   return arr;
 }
 
@@ -1001,7 +1032,7 @@ async function renderEvents() {
   const liqChoices = choicesFromCatalog("ui.events.filter.liquidity", [
     "all", "priced", "active", "quoted", "liq_ok", "tradable",
   ]);
-  const sortChoices = choicesFromCatalog("ui.sort.events", ["time", "volume", "alpha"]);
+  const sortChoices = choicesFromCatalog("ui.sort.events", ["time", "volume", "alpha", "desk"]);
   const deskCounts = {
     quoted: allEvents.filter((e) => e.deskLiquidity?.quoted).length,
     liqOk: allEvents.filter((e) => e.deskLiquidity?.liquidityOk).length,

@@ -34,6 +34,13 @@
   outline: 1px solid var(--acc);
   outline-offset: 1px;
 }
+/* Glossary KPI strip cards with desk → Events jump */
+.kpi-glossary-grid .kpi-liq-jump {
+  cursor: pointer;
+}
+.kpi-glossary-grid .kpi-liq-jump:hover {
+  border-color: var(--acc);
+}
 .tag { display: inline-block; background: #171c28; border: 1px solid #232a3a;
   border-radius: 4px; padding: 0 0.4rem; font-size: 0.72rem;
   color: #7d8798; margin: 0.1rem; }

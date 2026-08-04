@@ -420,15 +420,48 @@ export function deskFlagsFromRow(row: MatchLiquidityRow): DeskLiquidityFlags {
   };
 }
 
-/** Full-table index for O(1) board enrichment. Empty when table missing. */
+/**
+ * Keys under which a desk row is findable from the live board:
+ * - internal `event_id` (hash) for store-native callers
+ * - full market ticker (KX…-SIDE)
+ * - Kalshi event ticker (strip last `-SIDE` segment — board `eventTicker`)
+ */
+export function deskLiquidityIndexKeys(eventId: string, marketTicker?: string | null): string[] {
+  const keys = [eventId];
+  const t = marketTicker?.trim();
+  if (!t) return keys;
+  keys.push(t);
+  const dash = t.lastIndexOf("-");
+  if (dash > 0) {
+    const eventTicker = t.slice(0, dash);
+    if (eventTicker && eventTicker !== t) keys.push(eventTicker);
+  }
+  return keys;
+}
+
+/**
+ * Full-table index for O(1) board enrichment.
+ * Indexed by internal event_id **and** Kalshi event/market tickers from `markets`
+ * (live `/api/events` uses `eventTicker` like `KXATPMATCH-26AUG01SONGRI`, while
+ * match_liquidity.event_id is often a corpus hash).
+ */
 export function listDeskLiquidityByEventId(db: Database): Map<string, DeskLiquidityFlags> {
   const out = new Map<string, DeskLiquidityFlags>();
   if (!matchLiquidityTablePresent(db)) return out;
   const rows = db
     .query(
-      `SELECT event_id, liquidity_ok, tradable, book_tick_count,
-              spread_cents, mid_cents, volume_24h_fp, volume_fp
-       FROM match_liquidity`,
+      `SELECT
+         ml.event_id AS event_id,
+         ml.liquidity_ok AS liquidity_ok,
+         ml.tradable AS tradable,
+         ml.book_tick_count AS book_tick_count,
+         ml.spread_cents AS spread_cents,
+         ml.mid_cents AS mid_cents,
+         ml.volume_24h_fp AS volume_24h_fp,
+         ml.volume_fp AS volume_fp,
+         m.ticker AS market_ticker
+       FROM match_liquidity ml
+       LEFT JOIN markets m ON m.event_id = ml.event_id`,
     )
     .all() as Array<Record<string, unknown>>;
   for (const r of rows) {
@@ -436,7 +469,7 @@ export function listDeskLiquidityByEventId(db: Database): Map<string, DeskLiquid
     if (!eventId) continue;
     const volume24hFp = fpNumber(r.volume_24h_fp as number);
     const volumeFp = fpNumber(r.volume_fp as number);
-    out.set(eventId, {
+    const flags: DeskLiquidityFlags = {
       liquidityOk: Number(r.liquidity_ok) === 1,
       tradable: Number(r.tradable) === 1,
       quoted: (Number(r.book_tick_count) || 0) > 0,
@@ -445,7 +478,12 @@ export function listDeskLiquidityByEventId(db: Database): Map<string, DeskLiquid
       volume24hFp,
       volumeFp,
       volumeForGate: effectiveVolumeForGate(volume24hFp, volumeFp),
-    });
+    };
+    const marketTicker = r.market_ticker != null ? String(r.market_ticker) : null;
+    for (const key of deskLiquidityIndexKeys(eventId, marketTicker)) {
+      // Prefer first write; all market legs of one event share the same desk row.
+      if (!out.has(key)) out.set(key, flags);
+    }
   }
   return out;
 }

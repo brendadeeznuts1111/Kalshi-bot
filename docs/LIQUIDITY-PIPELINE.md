@@ -65,11 +65,12 @@ No rate limit on liquidity GETs (bulk HQ polls).
 
 | Piece | Behavior |
 |-------|----------|
-| `GET /api/events` | Joins `match_liquidity` → each event may include `deskLiquidity` `{ liquidityOk, tradable, quoted, … }` |
+| `GET /api/events` | Joins `match_liquidity` → each event may include `deskLiquidity` `{ liquidityOk, tradable, quoted, … }` (index keys: internal `event_id` **and** Kalshi event ticker derived from `markets.ticker`) |
 | Query `liquidity=` | `all` \| `priced` \| `active` \| `quoted` \| `liq_ok` \| `tradable` (server filter; HQ also filters client-side) |
 | Query `minVolume` / `minVol` | Min gate volume (desk 24h\|lifetime, else board 24h sum) |
-| HQ UI | Liquidity select + quick toggles (Quoted / Liquid / Tradable counts) + per-row chips |
+| HQ UI | Liquidity select + quick toggles (Quoted / Liquid / Tradable counts) + per-row chips; sort **desk score** ranks tradable → liq_ok → quoted → thin (volume tiebreak) |
 | Overview chips | Click quoted / liq_ok / tradable → Events tab with matching `liquidity=` filter (`#events?liquidity=…`) |
+| Overview KPI strip | Desk KPIs (`kpi.quoted_books` / `kpi.tight_markets` / `kpi.tradable_matches`) click through the same `data-liq-jump` → Events board |
 
 ### Domain concepts (glossary)
 

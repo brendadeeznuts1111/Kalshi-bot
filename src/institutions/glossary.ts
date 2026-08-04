@@ -802,17 +802,18 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
   ui({
     id: "ui.sort.events",
     label: "Sort",
-    description: "Ordering of the match list: start time, volume, or name.",
+    description: "Ordering of the match list: start time, volume, name, or desk score.",
     category: "ui",
-    synonyms: ["sort events", "order"],
-    values: ["time", "volume", "alpha"],
+    synonyms: ["sort events", "order", "desk score"],
+    values: ["time", "volume", "alpha", "desk"],
     valueLabels: {
       time: "start time",
       volume: "24h volume",
       alpha: "A–Z",
+      desk: "desk score",
     },
     tone: "concept",
-    seeAlso: ["ui.events.filter.when", "ui.events.filter.min_vol"],
+    seeAlso: ["ui.events.filter.when", "ui.events.filter.min_vol", "liquidity_ok", "desk.tradable"],
   }),
   ui({
     id: "ui.filter.unclassified",
