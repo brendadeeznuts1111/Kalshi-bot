@@ -46,6 +46,7 @@ describe("liquidity board + HQ API", () => {
     const board = buildLiquidityBoardPayload(db);
     expect(board.schemaVersion).toBe(1);
     expect(board.concepts.tradable).toBe("desk.tradable");
+    expect(board.concepts.quoted).toBe("desk.quoted");
     expect(board.concepts.liquidityOk).toBe("liquidity_ok");
     expect(board.summary.tradable).toBe(1);
     expect(board.top.length).toBeGreaterThanOrEqual(1);

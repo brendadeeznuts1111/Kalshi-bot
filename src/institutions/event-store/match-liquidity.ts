@@ -425,6 +425,7 @@ export function toLiquidityApiPayload(row: MatchLiquidityRow): MatchLiquidityApi
 export const LIQUIDITY_BOARD_CONCEPTS = {
   liquidityOk: "liquidity_ok",
   tradable: "desk.tradable",
+  quoted: "desk.quoted",
   volume: "kalshi_volume",
   spread: "kalshi_spread",
   totalVolume: "total_volume_usd",

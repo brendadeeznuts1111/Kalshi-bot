@@ -81,7 +81,9 @@ Allowlist for `kind: "registry"` ids that board/HQ already use but are **not** y
 | `tier` | HQ / filter catalog only — desk export schema has not grown a tier column |
 | `round` | Same — tournament round is a board filter, not a desk feature yet |
 
-Do **not** remove from the allowlist until `column-registry.ts` gains matching features. Integrity still requires the glossary entry itself to exist.
+**Phase 1 decision (glossary polish):** keep `tier` / `round` **pending** — do not promote until desk CSV export actually emits those columns. Integrity still requires the glossary entries themselves to exist.
+
+Do **not** remove from the allowlist until `column-registry.ts` gains matching features.
 
 ## Code map (this repo)
 
