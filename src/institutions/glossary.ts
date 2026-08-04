@@ -552,9 +552,19 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     description:
       "Match clears liquidity_ok and mid is in the desk tradable band (default 20–80¢). Necessary for chip 'tradable' on HQ / partners.",
     category: "market",
-    seeAlso: ["liquidity_ok", "kalshi_spread", "kalshi_volume", "kpi.tradable_matches"],
+    seeAlso: ["liquidity_ok", "desk.quoted", "kalshi_spread", "kalshi_volume", "kpi.tradable_matches"],
     tone: "registry",
     color: "tennis",
+  }),
+  reg({
+    id: "desk.quoted",
+    label: "Desk quoted",
+    description:
+      "Event has a non-empty two-sided top-of-book quote in match_liquidity (book_tick_count > 0 after empty-shell filter). Necessary for spread/mid gates; not sufficient for liquidity_ok.",
+    category: "market",
+    seeAlso: ["liquidity_ok", "desk.tradable", "kalshi_spread", "kpi.quoted_books"],
+    tone: "registry",
+    color: "kalshi",
   }),
   reg({
     id: "total_volume_usd",
@@ -1025,8 +1035,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
   { id: "kpi.median_spread", kind: "ui", label: "Median spread", description: "Median bid-ask spread across all live board events in cents.", category: "market", mapsTo: "kalshi_spread" , color: "research" , tone: "metric" },
   { id: "kpi.tight_markets", kind: "ui", label: "Tight markets", description: "Count of match_liquidity rows with liquidity_ok (volume + tight non-empty book).", category: "market", mapsTo: "liquidity_ok" , color: "tennis" , tone: "metric" },
   { id: "kpi.tradable_matches", kind: "ui", label: "Tradable matches", description: "Count of match_liquidity rows with desk.tradable (liquidity_ok + mid band).", category: "market", mapsTo: "desk.tradable" , color: "tennis" , tone: "metric" },
-  // Derived KPI (no mapsTo alias — count of non-empty books, not a single registry column)
-  { id: "kpi.quoted_books", kind: "ui", label: "Quoted books", description: "Count of events with a non-empty top-of-book quote in match_liquidity.", category: "market", color: "kalshi" , tone: "metric" },
+  { id: "kpi.quoted_books", kind: "ui", label: "Quoted books", description: "Count of events with a non-empty top-of-book quote in match_liquidity.", category: "market", mapsTo: "desk.quoted" , color: "kalshi" , tone: "metric" },
   { id: "kpi.scanner_alerts", kind: "ui", label: "Scanner alerts", description: "Count of active price divergence scanner flags on the live board.", category: "pipeline", mapsTo: "ui.live_board.scanner" , color: "middleware" , tone: "metric" },
 
   // ── Partner-ops taxonomy (factory mirror; soft ledger stays in ct) ──
@@ -1461,14 +1470,14 @@ export const PAGE_SURFACES = {
     "kalshi_mu", "kalshi_spread", "kalshi_volume",
     "poly_mid", "poly_volume",
     "elo_prob", "eff_edge", "rps_flag", "graph_divergence",
-    "liquidity_ok", "desk.tradable", "total_volume_usd",
+    "liquidity_ok", "desk.tradable", "desk.quoted", "total_volume_usd",
     "ops.palette",
   ],
   /** Ops dashboard */
   ops: [
     "ops.palette",
     // Desk liquidity (HQ chips + /api/liquidity + partners payload)
-    "liquidity_ok", "desk.tradable", "kalshi_spread", "kalshi_volume",
+    "liquidity_ok", "desk.tradable", "desk.quoted", "kalshi_spread", "kalshi_volume",
     "kpi.tight_markets", "kpi.tradable_matches", "kpi.quoted_books",
     "alert.poly_dropout", "alert.volume_gap", "alert.feed_frozen",
     "alert.stale_feed", "alert.divergence",
