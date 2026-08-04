@@ -274,14 +274,29 @@ wss://pandora.ganchrow.com/socket.io/?EIO=4&transport=websocket
 | `← 2` / `→ 3` | ping / pong |
 
 ```bash
+# Handshake only
 bun run partner:pandora-probe -- --seconds=12
-# after capturing Messages tab:
-bun run partner:pandora-probe -- --emit=subscribe --arg='{"sport":220}'
-bun run partner:pandora-probe -- --raw='42["subscribe",{"sport":220}]'
+# Full plive subscribe sequence (captured via WebView CDP)
+bun run partner:pandora-probe -- --plive --seconds=15
+# Automated CDP capture from the widget (writes JSONL under research/cache/)
+bun run partner:webview-ws-capture -- --seconds=20
 ```
 
-Code: `PandoraSocket` · `FantasyUltraAdapter.connectWebSocket()`.  
-**Subscription emit + odds payload still TBD** — paste DevTools WS Messages to finish parsing / `priced: true`.
+**Captured subscribe emits (plive anonymous):**
+```text
+42["setSocketMetadata",{"partnerId":"118","flavor":"live"}]
+42["subscribeSystemEvents",{"partnerId":"118","groupId":97360}]
+42["subscribe",["live.sports"]]
+42["subscribe",["live.leagues"]]
+42["subscribe",["live.wagerTypes"]]
+42["subscribe",["live.main.U0VWU1NWUkJSMFU9.eventData"]]
+42["subscribe",["live.main.U0VWU1NWUkJSMFU9.eventCoefficients.{eventId}"]]
+```
+
+Large payloads arrive as Socket.IO binary attachments (`451-` + gzip/base64 body).  
+Still needed: **decode eventCoefficients → American prices** for `tradable`.
+
+Code: `PandoraSocket` · `buildPliveSubscribeSequence` · `Bun.WebView` capture tool.
 
 ## Liquidity sources map (partners / outs / providers)
 

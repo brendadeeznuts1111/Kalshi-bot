@@ -21,6 +21,7 @@ const seconds = Math.min(Math.max(Number(argValue("seconds") ?? "12") || 12, 3),
 const emitName = argValue("emit");
 const emitArg = argValue("arg");
 const rawFrame = argValue("raw");
+const plive = process.argv.includes("--plive");
 
 const packets: string[] = [];
 
@@ -39,6 +40,8 @@ const sock = new PandoraSocket({
         else if (emitName) {
           const args = emitArg ? [JSON.parse(emitArg)] : [];
           sock.subscribePlaceholder({ eventName: emitName, args });
+        } else if (plive) {
+          sock.subscribeLive();
         } else {
           sock.subscribePlaceholder();
         }

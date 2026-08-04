@@ -46,3 +46,4 @@ research/reports/run_*.md
 #   research/reports/latest.diff.md.fixture
 #   research/audit-evidence/*.jsonl
 #   research/weights.json, keywords.json, schemas/
+research/cache/partner-ws-capture/
