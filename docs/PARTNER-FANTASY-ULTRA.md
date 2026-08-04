@@ -187,31 +187,55 @@ export FANTASY402_CURRENCY=USD
 bun run partner:test-fantasy
 bun run partner:test-fantasy -- --sport=tennis --limit=5 --renew
 bun run partner:watch-events -- --once --sport=table_tennis --json
-bun run partner:watch-events -- --loop --sport=table_tennis --interval-ms=60000
+bun run partner:watch-events -- --loop --sport=table_tennis --interval-ms=30000
 bun test tests/partner/fantasy-ultra.test.ts tests/partner/partner-events-store.test.ts
 ```
 
 ## Detect new table tennis events
 
+**Primary feed:** `GET https://api-gs.player-us.xyz/stream-list-v2/?tv=usa`  
+**Bucket:** `sports.table_tennis.events` — **not** `sports.tennis` (court tennis).
+
+| Bucket | Live sample | `event.sport` |
+|--------|-------------|---------------|
+| `tennis` | ~45 | Tennis |
+| `table_tennis` | ~33 | Table Tennis |
+
 `partner_events` table (created with event-store schema) stores stream inventory:
 
 | Column | Source |
 |--------|--------|
-| `partner` + `stream_id` | UNIQUE key |
-| sport / league / home / away | stream-list |
+| `partner` + `stream_id` | UNIQUE key (detection key) |
+| sport / league / home / away | stream-list (`competitiors` typo upstream) |
 | `client_event_id` / `ls_id` | nullable until mapping exists |
 
 ```bash
-# one-shot diff + upsert
+# one-shot (inventory is public — dummy env is fine)
+export FANTASY402_BEARER_TOKEN=x FANTASY402_CUSTOMER_ID=x FANTASY402_AGENT_ID=x FANTASY402_PASSWORD=x
 bun run partner:watch-events -- --once --sport=table_tennis --json
 
-# long poll
-bun run partner:watch-events -- --loop --interval-ms=60000
+# long poll every 30s (default)
+bun run partner:watch-events -- --loop --sport=table_tennis --interval-ms=30000
 ```
 
-New rows print as `+ Table tennis · …`. Optional Telegram: `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID`.
+New rows print as `+ Table Tennis · …`. Optional Telegram: `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID`.
 
-**Not auto-filled:** `client_event_id` (odds/Statscore) — stream-list does not include it; enrich later.
+```text
+stream-list-v2  ──every 30s──▶  new stream_id?  ──▶  partner_events + notify
+                                      │
+                                      ▼ (optional, needs real auth)
+                              get_pushes / booked-events / PlaceBet
+```
+
+### get_pushes (stats — not for discovery)
+
+```
+https://events-d.pc.statscore.com/get_pushes/{stream_id}?messageId=…&auth=…&poll=true
+```
+
+Live probe: **403 Forbidden** without a valid session `auth`. Use stream-list for detection only.
+
+**Not auto-filled:** `client_event_id` / odds — stream-list has no prices; enrich later.
 
 ## Security
 
