@@ -1,5 +1,7 @@
-import type { PartnerLiveEvent, PartnerLiveUrlSet } from "../types.ts";
+import type { PartnerLiveEvent, PartnerLiveUrlSet, PartnerSportLeague } from "../types.ts";
 import type {
+  FantasyRenewTokenWire,
+  FantasySportsLeaguesWire,
   FantasyStreamEventWire,
   FantasyStreamListWire,
   FantasyUltraLiveUrlWire,
@@ -118,4 +120,48 @@ export function originFromLiveUrl(liveUrl: string): string {
   } catch {
     return FANTASY_ULTRA_DEFAULTS.streamOrigin;
   }
+}
+
+/** Parse Get_SportsLeagues → normalized league rows. */
+export function parseSportsLeagues(wire: unknown): PartnerSportLeague[] {
+  if (!wire || typeof wire !== "object") {
+    throw new Error("fantasy402: Get_SportsLeagues returned non-object");
+  }
+  const w = wire as FantasySportsLeaguesWire;
+  const list = Array.isArray(w.Leagues) ? w.Leagues : [];
+  const out: PartnerSportLeague[] = [];
+  for (const row of list) {
+    const sportType = String(row.SportType ?? "").trim();
+    if (!sportType) continue;
+    out.push({
+      sportType,
+      sportSubType: String(row.SportSubType ?? "").trim() || null,
+      display:
+        String(row.SportSubTypeDisplay ?? row.SportTypeDisplay ?? sportType).trim() ||
+        sportType,
+      sequence: Number(row.SequenceNumber) || 0,
+      active: Number(row.Active) === 1,
+      periodDescription: String(row.PeriodDescription ?? "").trim() || null,
+    });
+  }
+  return out;
+}
+
+/**
+ * Extract refreshed Bearer JWT from renewToken JSON.
+ * Observed: `{ "code": "<jwt>" }`.
+ */
+export function parseRenewTokenResponse(wire: unknown): string {
+  if (!wire || typeof wire !== "object") {
+    throw new Error("fantasy402: renewToken returned non-object");
+  }
+  const w = wire as FantasyRenewTokenWire;
+  const raw =
+    w.code?.trim() ||
+    w.token?.trim() ||
+    w.access_token?.trim() ||
+    w.authorization?.trim() ||
+    "";
+  if (!raw) throw new Error("fantasy402: renewToken missing code/token");
+  return raw.replace(/^Bearer\s+/i, "");
 }

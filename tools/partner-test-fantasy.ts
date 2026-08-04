@@ -10,17 +10,21 @@
  *
  * Usage:
  *   bun run partner:test-fantasy
- *   bun run partner:test-fantasy -- --sport=tennis --limit=8
+ *   bun run partner:test-fantasy -- --sport=tennis --limit=8 --renew
  */
 // @see https://bun.com/docs/runtime/utils#bun-env
 import {
-  getPartnerAdapter,
+  getFantasySessionAdapter,
   requireFantasy402ProfileFromEnv,
 } from "../src/partner/index.ts";
 
 function argValue(name: string): string | undefined {
   const hit = process.argv.find((a) => a.startsWith(`--${name}=`));
   return hit ? hit.slice(name.length + 3) : undefined;
+}
+
+function hasFlag(name: string): boolean {
+  return process.argv.includes(`--${name}`);
 }
 
 function redactUrl(u: string): string {
@@ -33,9 +37,18 @@ function redactUrl(u: string): string {
   }
 }
 
+function redactJwt(t: string): string {
+  if (t.length < 20) return "(short)";
+  return `${t.slice(0, 12)}…(len=${t.length})`;
+}
+
 async function main(): Promise<void> {
   const sport = argValue("sport") ?? "tennis";
-  const limit = Math.min(Math.max(Number(argValue("limit") ?? "10") || 10, 1), 50);
+  const limit = Math.min(
+    Math.max(Number(argValue("limit") ?? "10") || 10, 1),
+    50,
+  );
+  const doRenew = hasFlag("renew");
 
   const profile = requireFantasy402ProfileFromEnv();
   console.log(
@@ -55,7 +68,15 @@ async function main(): Promise<void> {
     ),
   );
 
-  const adapter = getPartnerAdapter(profile);
+  const adapter = getFantasySessionAdapter(profile);
+
+  if (doRenew) {
+    const next = await adapter.renewToken();
+    console.log(
+      JSON.stringify({ renewed: true, bearer: redactJwt(next) }, null, 2),
+    );
+  }
+
   const urls = await adapter.login();
   if (urls && typeof urls === "object" && "desktop" in urls) {
     console.log(
@@ -65,12 +86,40 @@ async function main(): Promise<void> {
             desktop: redactUrl(urls.desktop),
             mobile: redactUrl(urls.mobile),
           },
+          warmed: "isWarmed" in adapter
+            ? (adapter as { isWarmed(): boolean }).isWarmed()
+            : undefined,
+          cookies:
+            "cookieCount" in adapter
+              ? (adapter as { cookieCount(): number }).cookieCount()
+              : undefined,
         },
         null,
         2,
       ),
     );
   }
+
+  const sports = await adapter.fetchSports();
+  const tennisLeagues = sports.filter((s) =>
+    s.sportType.toUpperCase().includes("TENNIS"),
+  );
+  console.log(
+    JSON.stringify(
+      {
+        leaguesTotal: sports.length,
+        tennisLeagues: tennisLeagues.length,
+        tennisSample: tennisLeagues.slice(0, 8).map((s) => ({
+          type: s.sportType,
+          sub: s.sportSubType,
+          display: s.display,
+          active: s.active,
+        })),
+      },
+      null,
+      2,
+    ),
+  );
 
   const events = await adapter.fetchEvents({ sport });
   console.log(

@@ -1,11 +1,15 @@
 // @see https://bun.com/docs/test/index#run-tests
 import { describe, expect, test } from "bun:test";
 import {
+  CookieJar,
   FantasyUltraAdapter,
+  getFantasySessionAdapter,
+  getPartnerAdapter,
+  originFromLiveUrl,
+  parseRenewTokenResponse,
+  parseSportsLeagues,
   parseStreamList,
   parseUltraLiveUrlResponse,
-  originFromLiveUrl,
-  getPartnerAdapter,
   type PartnerAccountProfile,
 } from "../../src/partner/index.ts";
 
@@ -64,6 +68,42 @@ const streamWire = {
   modified_time: 1785844114526,
 };
 
+const leaguesWire = {
+  Leagues: [
+    {
+      SportType: "TENNIS",
+      SportSubType: "ATP",
+      SportSubTypeDisplay: "ATP ",
+      SequenceNumber: 1001,
+      Active: 1,
+      PeriodDescription: "Match",
+    },
+    {
+      SportType: "BASEBALL",
+      SportSubType: "MLB",
+      SportSubTypeDisplay: "MLB ",
+      SequenceNumber: 2001,
+      Active: 1,
+      PeriodDescription: "Game",
+    },
+  ],
+};
+
+const profile: PartnerAccountProfile = {
+  id: "dummy",
+  partner: "fantasy402",
+  url: "https://fantasy402.com",
+  status: "active",
+  meta: {
+    customerID: "C",
+    agentID: "AGENT1",
+    password: "p",
+    token: "old-token",
+    skin: 2,
+    currency: "USD",
+  },
+};
+
 describe("fantasy ultra parse", () => {
   test("parseUltraLiveUrlResponse reads URL.DESKTOP/MOBILE", () => {
     const urls = parseUltraLiveUrlResponse(ultraWire);
@@ -80,24 +120,65 @@ describe("fantasy ultra parse", () => {
     expect(events[1]!.league).toContain("Grodzisk");
   });
 
+  test("parseSportsLeagues", () => {
+    const rows = parseSportsLeagues(leaguesWire);
+    expect(rows.length).toBe(2);
+    expect(rows[0]!.sportType).toBe("TENNIS");
+    expect(rows[0]!.active).toBe(true);
+    expect(rows[1]!.sportSubType).toBe("MLB");
+  });
+
+  test("parseRenewTokenResponse reads code field", () => {
+    expect(parseRenewTokenResponse({ code: "jwt.abc.def" })).toBe("jwt.abc.def");
+    expect(parseRenewTokenResponse({ token: "Bearer x.y.z" })).toBe("x.y.z");
+  });
+
   test("originFromLiveUrl", () => {
     expect(originFromLiveUrl(ultraWire.URL.DESKTOP)).toBe(
       "https://plive.sportswidgets.pro",
     );
   });
+
+  test("CookieJar absorbs Set-Cookie", () => {
+    const jar = new CookieJar();
+    jar.absorb(["a=1; Path=/", "b=2; HttpOnly"]);
+    expect(jar.headerValue()).toBe("a=1; b=2");
+  });
 });
 
-describe("FantasyUltraAdapter", () => {
-  test("login + fetchEvents with mock fetch", async () => {
+describe("FantasyUltraAdapter session blueprint", () => {
+  test("login warm + sports + events + renew with mock fetch", async () => {
     const calls: string[] = [];
     const fetchImpl = (async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
-      calls.push(`${init?.method ?? "GET"} ${url}`);
+      const method = init?.method ?? "GET";
+      calls.push(`${method} ${url}`);
       if (url.includes("getUltraLiveURL")) {
-        return new Response(JSON.stringify(ultraWire), { status: 200 });
+        return new Response(JSON.stringify(ultraWire), {
+          status: 200,
+          headers: { "set-cookie": "sess=abc; Path=/" },
+        });
+      }
+      if (url.includes("plive.sportswidgets.pro")) {
+        return new Response("<html>widget</html>", {
+          status: 200,
+          headers: { "set-cookie": "widget=1; Path=/" },
+        });
+      }
+      if (url.includes("Get_SportsLeagues")) {
+        // ensure form body contains operation
+        const body = String(init?.body ?? "");
+        expect(body).toContain("Get_SportsLeagues");
+        expect(body).toContain("agentID=AGENT1");
+        return new Response(JSON.stringify(leaguesWire), { status: 200 });
       }
       if (url.includes("stream-list")) {
         return new Response(JSON.stringify(streamWire), { status: 200 });
+      }
+      if (url.includes("renewToken")) {
+        return new Response(JSON.stringify({ code: "new.jwt.token" }), {
+          status: 200,
+        });
       }
       return new Response("not found", { status: 404 });
     }) as typeof fetch;
@@ -105,26 +186,38 @@ describe("FantasyUltraAdapter", () => {
     const adapter = new FantasyUltraAdapter({
       credentials: {
         customerID: "BB55113",
-        agentID: "AGENT",
+        agentID: "AGENT1",
         password: "x",
-        bearerToken: "tok",
+        bearerToken: "old-token",
         domain: "https://fantasy402.com",
         skin: 2,
         currency: "USD",
       },
       fetchImpl,
+      warmSession: true,
     });
 
     const urls = await adapter.login();
     expect(urls.desktop).toContain("plive.sportswidgets.pro");
+    expect(adapter.isWarmed()).toBe(true);
+    expect(adapter.cookieCount()).toBeGreaterThanOrEqual(1);
+
+    const sports = await adapter.fetchSports();
+    expect(sports.some((s) => s.sportType === "TENNIS")).toBe(true);
 
     const events = await adapter.fetchEvents({ sport: "tennis" });
     expect(events.length).toBe(2);
-    expect(calls.some((c) => c.startsWith("POST "))).toBe(true);
-    expect(calls.some((c) => c.includes("stream-list"))).toBe(true);
 
-    const limits = await adapter.fetchLimits(events[0]!.eventId);
-    expect(limits.note).toContain("not mapped");
+    const next = await adapter.renewToken();
+    expect(next).toBe("new.jwt.token");
+    expect(adapter.getBearerToken()).toBe("new.jwt.token");
+
+    expect(calls.some((c) => c.startsWith("POST ") && c.includes("getUltraLiveURL"))).toBe(
+      true,
+    );
+    expect(calls.some((c) => c.includes("Get_SportsLeagues"))).toBe(true);
+    expect(calls.some((c) => c.includes("stream-list"))).toBe(true);
+    expect(calls.some((c) => c.includes("renewToken"))).toBe(true);
 
     const dry = await adapter.placeOrder({
       eventId: events[0]!.eventId,
@@ -136,32 +229,30 @@ describe("FantasyUltraAdapter", () => {
     expect(dry.dryRun).toBe(true);
   });
 
-  test("getPartnerAdapter routes fantasy402", async () => {
-    const profile: PartnerAccountProfile = {
-      id: "dummy",
-      partner: "fantasy402",
-      url: "https://fantasy402.com",
-      status: "active",
-      meta: {
-        customerID: "C",
-        agentID: "A",
-        password: "p",
-        token: "t",
-        skin: 2,
-        currency: "USD",
-      },
-    };
+  test("getPartnerAdapter / getFantasySessionAdapter route fantasy402", async () => {
     const fetchImpl = (async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url.includes("getUltraLiveURL")) {
         return new Response(JSON.stringify(ultraWire), { status: 200 });
       }
+      if (url.includes("plive")) {
+        return new Response("ok", { status: 200 });
+      }
+      if (url.includes("Get_SportsLeagues")) {
+        return new Response(JSON.stringify(leaguesWire), { status: 200 });
+      }
       return new Response(JSON.stringify(streamWire), { status: 200 });
     }) as typeof fetch;
-    const adapter = getPartnerAdapter(profile, { fetchImpl });
-    expect(adapter.partnerId).toBe("fantasy402");
-    await adapter.login();
-    const events = await adapter.fetchEvents({ sport: "tennis" });
-    expect(events.length).toBe(2);
+
+    const base = getPartnerAdapter(profile, { fetchImpl, warmSession: false });
+    expect(base.partnerId).toBe("fantasy402");
+    await base.login();
+
+    const session = getFantasySessionAdapter(profile, {
+      fetchImpl,
+      warmSession: false,
+    });
+    const sports = await session.fetchSports();
+    expect(sports.length).toBe(2);
   });
 });

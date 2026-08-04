@@ -64,6 +64,12 @@ export type FantasyStreamListWire = {
 export const FANTASY_ULTRA_DEFAULTS = {
   domain: "https://fantasy402.com",
   ultraLivePath: "/cloud/api/Provider/getUltraLiveURL",
+  /** POST application/x-www-form-urlencoded */
+  sportsLeaguesPath: "/cloud/api/League/Get_SportsLeagues",
+  /** POST empty form body; response { code: jwt } */
+  renewTokenPath: "/cloud/api/System/renewToken",
+  /** Optional stream token for pandora/ganchrow (path observed in network captures). */
+  streamTokenPath: "/betFactoryV2/api/streamToken.php",
   streamListUrl: "https://api-gs.player-us.xyz/stream-list-v2/?tv=usa",
   streamOrigin: "https://plive.sportswidgets.pro",
   streamReferer: "https://plive.sportswidgets.pro/",
@@ -73,3 +79,30 @@ export const FANTASY_ULTRA_DEFAULTS = {
   module: "sports.html",
   partnerId: "fantasy402" as const,
 } as const;
+
+/** One row from Get_SportsLeagues.Leagues[] */
+export type FantasySportsLeagueWire = {
+  SportType?: string;
+  SportSubType?: string;
+  SportSubTypeDisplay?: string;
+  SportTypeDisplay?: string;
+  SequenceNumber?: number;
+  Active?: number;
+  PeriodDescription?: string;
+  PeriodNumber?: number;
+  Grouping?: string;
+  SportSubTypeBind?: string;
+  SportSubType2?: string;
+};
+
+export type FantasySportsLeaguesWire = {
+  Leagues?: FantasySportsLeagueWire[];
+};
+
+export type FantasyRenewTokenWire = {
+  /** Observed field name for refreshed JWT */
+  code?: string;
+  token?: string;
+  authorization?: string;
+  access_token?: string;
+};

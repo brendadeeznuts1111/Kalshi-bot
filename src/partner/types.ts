@@ -53,6 +53,16 @@ export type PartnerLiveUrlSet = {
   mobile: string;
 };
 
+/** Fantasy Get_SportsLeagues row (normalized). */
+export type PartnerSportLeague = {
+  sportType: string;
+  sportSubType: string | null;
+  display: string;
+  sequence: number;
+  active: boolean;
+  periodDescription: string | null;
+};
+
 export interface PartnerOrderAdapter {
   readonly partnerId: PartnerId;
   /** Authenticate / refresh live session material. */
@@ -61,4 +71,16 @@ export interface PartnerOrderAdapter {
   fetchEvents(options?: { sport?: string }): Promise<PartnerLiveEvent[]>;
   fetchLimits(eventId: string): Promise<PartnerLimits>;
   placeOrder(order: PartnerOrder): Promise<PartnerExecutionResult>;
+}
+
+/**
+ * Extended Fantasy session surface (optional on other partners).
+ * Network-capture blueprint: login → warm widget → leagues → stream → renew.
+ */
+export interface FantasySessionAdapter extends PartnerOrderAdapter {
+  renewToken(): Promise<string>;
+  warmSession(): Promise<void>;
+  fetchSports(): Promise<PartnerSportLeague[]>;
+  getBearerToken(): string;
+  getLiveUrls(): PartnerLiveUrlSet | null;
 }
