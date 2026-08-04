@@ -48,6 +48,26 @@ Set `RESEARCH_EXPORT_AUDIT=1` on scheduled runs to also write audit JSONL + roto
 
 `bun run serve` is a read-only report browser. Scheduling is separate — register OS cron, do not keep a long-lived dashboard process.
 
+## Partner inventory (Fantasy402 stream-list)
+
+In-process job on `cron:start` (opt-in). Polls `stream-list-v2` → `partner_events` (new table tennis by default).
+
+| Env | Role |
+|-----|------|
+| `PARTNER_SYNC=1` | Enable job |
+| `PARTNER_SYNC_PUBLIC=1` | No real Fantasy login (inventory only) |
+| `PARTNER_SYNC_SPORT` | Default `table_tennis` |
+| `PARTNER_SYNC_CRON_SCHEDULE` | Default every minute |
+
+```bash
+PARTNER_SYNC=1 PARTNER_SYNC_PUBLIC=1 bun run cron:once   # includes partner job
+PARTNER_SYNC=1 PARTNER_SYNC_PUBLIC=1 bun run cron:start
+# or standalone:
+bun run partner:sync -- --loop --sport=table_tennis
+```
+
+See [`docs/PARTNER-FANTASY-ULTRA.md`](PARTNER-FANTASY-ULTRA.md).
+
 ## Tennis live canary
 
 Separate job: dry-run `live_data` poll to the write boundary (zero SQLite score writes). Catches Kalshi schema/API drift before the aging loop is wrong.

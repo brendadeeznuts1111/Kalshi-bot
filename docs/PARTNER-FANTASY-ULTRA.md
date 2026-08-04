@@ -268,7 +268,20 @@ That is **not** market `tradable` — only stake capacity until a priced line ex
 bun run partner:sync -- --sport=table_tennis --once --json
 bun run partner:sync -- --sport=table_tennis --loop --interval-ms=30000
 bun run partner:sync -- --enrich-booked --once   # soft name→client_event_id (metadata only)
+
+# In-process cron (with other desk jobs)
+PARTNER_SYNC=1 PARTNER_SYNC_PUBLIC=1 PARTNER_SYNC_SPORT=table_tennis bun run cron:start
+# or one-shot all cron jobs including partner when PARTNER_SYNC=1:
+PARTNER_SYNC=1 PARTNER_SYNC_PUBLIC=1 bun run cron:once
 ```
+
+| Env | Default | Meaning |
+|-----|---------|---------|
+| `PARTNER_SYNC` | off | Set `1` to register partner inventory job |
+| `PARTNER_SYNC_SPORT` | `table_tennis` | Stream-list sport filter |
+| `PARTNER_SYNC_CRON_SCHEDULE` | `*/1 * * * *` | Bun.cron expression (min 1m) |
+| `PARTNER_SYNC_PUBLIC` | off | Dummy credentials for public inventory only |
+| `PARTNER_SYNC_ENRICH_BOOKED` | off | Soft Statscore name match |
 
 | Capability | Status |
 |------------|--------|
