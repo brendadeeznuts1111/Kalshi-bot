@@ -110,7 +110,7 @@ function observation(input: {
       adapter:
         source === SOURCE.polymarket
           ? asAdapterId("polymarket-gamma-v1")
-          : asAdapterId("kalshi-markets-v1"),
+          : asAdapterId("kalshi-events-v1"),
       selector: {
         kind:
           source === SOURCE.polymarket
@@ -130,6 +130,9 @@ function observation(input: {
                 category: "Sports",
                 tag: input.sport === SPORT.tennis ? "Tennis" : "Table Tennis",
                 sport: input.sport === SPORT.tennis ? "tennis" : "table_tennis",
+                endpoint: "/events",
+                status: "open",
+                withNestedMarkets: "true",
               },
       },
       observedAtMs: input.observedAtMs ?? 100,
@@ -460,7 +463,7 @@ describe("provider-scoped source market store", () => {
     expect(() =>
       upsertSourceObservation(db, {
         ...base,
-        provenance: { ...base.provenance, adapter: asAdapterId("kalshi-markets-v1") },
+        provenance: { ...base.provenance, adapter: asAdapterId("kalshi-events-v1") },
       }),
     ).toThrow("adapter must match registered source/sport integration");
     expect(() =>
@@ -608,6 +611,129 @@ describe("provider-scoped source market store", () => {
       active: 0,
       retired_at_ms: 300,
     });
+  });
+
+  test("separates scalar patches from authoritative child membership", () => {
+    const db = openEventStore({ dbPath: ":memory:" });
+    const initial = observation({ observedAtMs: 100, sourceUpdatedAtMs: 90 });
+    upsertSourceObservation(db, initial);
+    upsertSourceObservation(db, {
+      source: initial.source,
+      sport: initial.sport,
+      eventId: initial.eventId,
+      snapshotCompleteness: "partial",
+      collectionCompleteness: "complete",
+      title: "Atomic child refresh",
+      participants: [],
+      markets: [],
+      provenance: { ...initial.provenance, observedAtMs: 200, sourceUpdatedAtMs: 190 },
+    });
+
+    expect(db.query("SELECT title, status FROM source_events").get()).toEqual({
+      title: "Atomic child refresh",
+      status: "open",
+    });
+    expect(db.query("SELECT active FROM source_markets").get()).toEqual({ active: 0 });
+    expect(db.query("SELECT active FROM source_market_outcomes LIMIT 1").get()).toEqual({
+      active: 0,
+    });
+    expect(db.query("SELECT active FROM source_event_participants LIMIT 1").get()).toEqual({
+      active: 0,
+    });
+    db.close();
+  });
+
+  test("rejects omitted authoritative collections without retiring stored children", () => {
+    const db = openEventStore({ dbPath: ":memory:" });
+    const initial = observation({ observedAtMs: 100, sourceUpdatedAtMs: 90 });
+    upsertSourceObservation(db, initial);
+
+    expect(() =>
+      upsertSourceObservation(db, {
+        source: initial.source,
+        sport: initial.sport,
+        eventId: initial.eventId,
+        snapshotCompleteness: "partial",
+        collectionCompleteness: "complete",
+        provenance: { ...initial.provenance, observedAtMs: 200, sourceUpdatedAtMs: 190 },
+      }),
+    ).toThrow("complete collections require participant and market arrays");
+
+    expect(() =>
+      upsertSourceObservation(
+        db,
+        {
+          source: initial.source,
+          sport: initial.sport,
+          eventId: initial.eventId,
+          snapshotCompleteness: "partial",
+          collectionCompleteness: "complete",
+          participants: undefined,
+          markets: undefined,
+          provenance: { ...initial.provenance, observedAtMs: 250, sourceUpdatedAtMs: 240 },
+        } as unknown as NormalizedSourceObservation,
+      ),
+    ).toThrow("complete collections require participant and market arrays");
+
+    expect(() =>
+      upsertSourceObservation(db, {
+        source: initial.source,
+        sport: initial.sport,
+        eventId: initial.eventId,
+        snapshotCompleteness: "partial",
+        collectionCompleteness: "complete",
+        participants: initial.participants,
+        markets: [{ id: initial.markets[0]!.id }],
+        provenance: { ...initial.provenance, observedAtMs: 300, sourceUpdatedAtMs: 290 },
+      }),
+    ).toThrow("complete collection requires an outcomes array");
+
+    expect(() =>
+      upsertSourceObservation(
+        db,
+        {
+          source: initial.source,
+          sport: initial.sport,
+          eventId: initial.eventId,
+          snapshotCompleteness: "complete",
+          title: "Malformed complete event",
+          status: "open",
+          closesAtMs: null,
+          result: null,
+          startsAtMs: null,
+          eventType: "match",
+          participantFormat: "singles",
+          participants: null,
+          markets: null,
+          provenance: { ...initial.provenance, observedAtMs: 400, sourceUpdatedAtMs: 390 },
+        } as unknown as NormalizedSourceObservation,
+      ),
+    ).toThrow("complete collections require participant and market arrays");
+
+    expect(() =>
+      upsertSourceObservation(
+        db,
+        {
+          source: initial.source,
+          sport: initial.sport,
+          eventId: initial.eventId,
+          snapshotCompleteness: "partial",
+          collectionCompleteness: "complete",
+          participants: initial.participants,
+          markets: [{ id: initial.markets[0]!.id, outcomes: null }],
+          provenance: { ...initial.provenance, observedAtMs: 500, sourceUpdatedAtMs: 490 },
+        } as unknown as NormalizedSourceObservation,
+      ),
+    ).toThrow("complete collection requires an outcomes array");
+
+    expect(db.query("SELECT active FROM source_markets").get()).toEqual({ active: 1 });
+    expect(db.query("SELECT active FROM source_market_outcomes LIMIT 1").get()).toEqual({
+      active: 1,
+    });
+    expect(db.query("SELECT active FROM source_event_participants LIMIT 1").get()).toEqual({
+      active: 1,
+    });
+    db.close();
   });
 
   test("patches only present partial fields and supports explicit null clears", () => {

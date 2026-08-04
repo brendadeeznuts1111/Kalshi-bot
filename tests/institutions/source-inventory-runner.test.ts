@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { openEventStore } from '../../src/institutions/event-store/open-db.ts';
+import { beginSourceInventoryRun } from '../../src/institutions/event-store/source-inventory-run.ts';
 import {
   planRegisteredSourceInventory,
   runRegisteredSourceInventory,
@@ -241,6 +242,56 @@ describe('registered source inventory runner', () => {
         unbrand(row.eventId)
       )
     ).toEqual(['event-survivor']);
+    db.close();
+  });
+
+  test('does not let one busy selector abort or finalize a sibling-owned run', async () => {
+    const db = openEventStore({ dbPath: ':memory:' });
+    const secondBinding: CompetitionBinding = {
+      ...baseBinding,
+      selector: {
+        ...baseBinding.selector,
+        scope: asSourceScopeId('polymarket:tag:second'),
+        parameters: { ...baseBinding.selector.parameters, tagId: 'second' },
+      },
+    };
+    const registry = registryWithBindings([baseBinding, secondBinding]);
+    beginSourceInventoryRun(
+      db,
+      {
+        runId: asSourceInventoryRunId('other-worker'),
+        source: SOURCE.polymarket,
+        sport: SPORT.tableTennis,
+        adapter: baseRegistration.adapter,
+        selector: baseBinding.selector,
+        startedAtMs: 800,
+      },
+      registry
+    );
+    const adapter = fakeAdapter(sourceRequest => ({
+      request: sourceRequest,
+      observedAtMs: 1_000,
+      records: [{ event: 'second-scope-event' }],
+      exhausted: true,
+    }));
+
+    const results = await runRegisteredSourceInventory(db, {
+      registry,
+      adapters: [adapter],
+      now: () => 900,
+      mintRunId: (_source, _sport, targetBinding) =>
+        asSourceInventoryRunId(`new:${unbrand(targetBinding.selector.scope)}`),
+    });
+
+    expect(results.map(row => [unbrand(row.binding.selector.scope), row.state])).toEqual([
+      [unbrand(baseBinding.selector.scope), 'failed'],
+      [unbrand(secondBinding.selector.scope), 'complete'],
+    ]);
+    expect(
+      db.query(
+        "SELECT state FROM source_inventory_runs WHERE inventory_run_id = 'other-worker'"
+      ).get()
+    ).toEqual({ state: 'running' });
     db.close();
   });
 

@@ -118,10 +118,22 @@ export function applyEventStoreSchema(db: Database): void {
   db.run(`CREATE INDEX IF NOT EXISTS idx_player_opponent_profiles_opponent ON player_opponent_profiles (opponent_name)`);
   migrateEventStoreColumns(db);
   migrateSourceEventSelectors(db);
+  abandonLegacyKalshiInventoryRuns(db);
   db.run(
     `CREATE INDEX IF NOT EXISTS idx_price_snapshots_match_health
      ON price_snapshots (poly_prob, stale_volume, ts)`,
   );
+}
+
+/** New event-page adapters cannot safely resume cursors minted by the old market-page contract. */
+function abandonLegacyKalshiInventoryRuns(db: Database): void {
+  db.query(
+    `UPDATE source_inventory_runs
+     SET state = 'abandoned',
+         finished_at_ms = MAX(started_at_ms, COALESCE(checkpoint_at_ms, started_at_ms)),
+         error_detail = 'migration: kalshi-markets-v1 replaced by kalshi-events-v1'
+     WHERE state = 'running' AND adapter_id = 'kalshi-markets-v1'`,
+  ).run();
 }
 
 /** Rebuild the additive selector table once to add run fencing and its composite FK safely. */

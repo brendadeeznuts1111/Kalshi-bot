@@ -1,4 +1,4 @@
-import { IDENTITY, MARKET, SOURCE, unbrand } from "./brands.ts";
+import { ADAPTER, IDENTITY, MARKET, SOURCE, SPORT, unbrand } from "./brands.ts";
 import type { SourceCapability, SourceSelector, SportsSourceRegistry } from "./types.ts";
 
 function selectorErrors(prefix: string, selector: SourceSelector, errors: readonly string[]): string[] {
@@ -150,6 +150,15 @@ export function validateSportsSourceRegistry(registry: SportsSourceRegistry): st
       if (registration.source === SOURCE.kalshi && binding.identityFields.length !== 1) {
         errors.push(`${id}: Kalshi binding must declare exactly one identity field`);
       }
+      if (registration.adapter === ADAPTER.kalshiEvents && binding.eventTypes.length !== 1) {
+        errors.push(`${id}: Kalshi binding must declare exactly one event type`);
+      }
+      if (registration.adapter === ADAPTER.kalshiEvents && binding.participantFormats.length !== 1) {
+        errors.push(`${id}: Kalshi binding must declare exactly one participant format`);
+      }
+      if (registration.adapter === ADAPTER.kalshiEvents && binding.marketKinds.length !== 1) {
+        errors.push(`${id}: Kalshi binding must declare exactly one market kind`);
+      }
       if (
         registration.source === SOURCE.kalshi &&
         binding.identityFields.includes(IDENTITY.literalOutcome)
@@ -161,6 +170,43 @@ export function validateSportsSourceRegistry(registry: SportsSourceRegistry): st
         binding.identityFields.some((field) => !kalshiIdentityFields.has(field))
       ) {
         errors.push(`${id}: unsupported Kalshi identity field`);
+      }
+      if (
+        registration.source === SOURCE.kalshi &&
+        binding.selector.parameters.sport !== sport
+      ) {
+        errors.push(`${id}: Kalshi selector sport parameter mismatch`);
+      }
+      if (
+        registration.source === SOURCE.kalshi &&
+        registration.sport === SPORT.tennis &&
+        binding.selector.parameters.tag !== "Tennis"
+      ) {
+        errors.push(`${id}: Kalshi tennis selector tag mismatch`);
+      }
+      if (
+        registration.source === SOURCE.kalshi &&
+        registration.sport === SPORT.tableTennis &&
+        binding.selector.parameters.tag !== "Table Tennis"
+      ) {
+        errors.push(`${id}: Kalshi table-tennis selector tag mismatch`);
+      }
+      if (
+        registration.source === SOURCE.kalshi &&
+        registration.sport === SPORT.tennis &&
+        binding.identityFields.includes(IDENTITY.tableTennisCompetitor)
+      ) {
+        errors.push(`${id}: tennis selector cannot use table-tennis identity`);
+      }
+      if (
+        registration.source === SOURCE.kalshi &&
+        registration.sport === SPORT.tableTennis &&
+        binding.identityFields.some(
+          (field) =>
+            field === IDENTITY.tennisCompetitor || field === IDENTITY.tennisDoublesCompetitor,
+        )
+      ) {
+        errors.push(`${id}: table-tennis selector cannot use tennis identity`);
       }
       if (
         binding.declaredUse === "match" &&

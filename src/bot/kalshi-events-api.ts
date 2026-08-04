@@ -12,6 +12,7 @@ import {
   unbrand,
 } from "../institutions/event-store/brands.ts";
 import { OFFICIAL_URLS } from "../institutions/official-urls.ts";
+import { fetchWithRetry, type RetryOptions } from "../institutions/resilient-fetch.ts";
 import {
   IDENTITY,
   type IdentityFieldKey,
@@ -25,6 +26,8 @@ export type KalshiFetchImpl = (
 export type KalshiMarketWire = {
   ticker: KalshiMarketTicker;
   event_ticker: KalshiEventTicker;
+  title?: string;
+  market_type?: string;
   status: string;
   yes_sub_title?: string;
   no_sub_title?: string;
@@ -34,11 +37,16 @@ export type KalshiMarketWire = {
   open_interest_fp?: string;
   yes_bid_dollars?: string;
   yes_ask_dollars?: string;
+  no_bid_dollars?: string;
+  no_ask_dollars?: string;
+  last_price_dollars?: string;
   /** Resting size at best YES bid (contracts). */
   yes_bid_size_fp?: string;
   /** Resting size at best YES ask (contracts). */
   yes_ask_size_fp?: string;
   occurrence_datetime?: string;
+  close_time?: string;
+  updated_time?: string;
   expected_expiration_time?: string;
   rules_primary?: string;
   rules_secondary?: string;
@@ -68,6 +76,29 @@ export type KalshiEventWire = {
 export type KalshiEventResponse = {
   event: KalshiEventWire;
   markets: KalshiMarketWire[];
+};
+
+export type KalshiInventoryEvent = {
+  event_ticker: KalshiEventTicker;
+  series_ticker: SeriesTicker;
+  title: string;
+  sub_title?: string;
+  last_updated_ts?: string;
+  markets: KalshiMarketWire[];
+};
+
+export type KalshiEventsPage = {
+  events: KalshiInventoryEvent[];
+  nextCursor?: string;
+};
+
+export type FetchKalshiEventsPageOptions = Omit<RetryOptions, "fetchImpl"> & {
+  seriesTicker: SeriesTicker;
+  status?: string;
+  limit: number;
+  cursor?: string;
+  baseUrl?: string;
+  fetchImpl?: KalshiFetchImpl;
 };
 
 function resolveBaseUrl(explicit?: string): string {
@@ -116,6 +147,8 @@ export function parseKalshiMarketWire(raw: unknown): KalshiMarketWire | null {
   return {
     ticker: asKalshiMarketTicker(ticker),
     event_ticker: asKalshiEventTicker(event_ticker),
+    title: typeof raw.title === "string" ? raw.title : undefined,
+    market_type: typeof raw.market_type === "string" ? raw.market_type : undefined,
     status,
     yes_sub_title: typeof raw.yes_sub_title === "string" ? raw.yes_sub_title : undefined,
     no_sub_title: typeof raw.no_sub_title === "string" ? raw.no_sub_title : undefined,
@@ -124,10 +157,16 @@ export function parseKalshiMarketWire(raw: unknown): KalshiMarketWire | null {
     open_interest_fp: typeof raw.open_interest_fp === "string" ? raw.open_interest_fp : undefined,
     yes_bid_dollars: typeof raw.yes_bid_dollars === "string" ? raw.yes_bid_dollars : undefined,
     yes_ask_dollars: typeof raw.yes_ask_dollars === "string" ? raw.yes_ask_dollars : undefined,
+    no_bid_dollars: typeof raw.no_bid_dollars === "string" ? raw.no_bid_dollars : undefined,
+    no_ask_dollars: typeof raw.no_ask_dollars === "string" ? raw.no_ask_dollars : undefined,
+    last_price_dollars:
+      typeof raw.last_price_dollars === "string" ? raw.last_price_dollars : undefined,
     yes_bid_size_fp: typeof raw.yes_bid_size_fp === "string" ? raw.yes_bid_size_fp : undefined,
     yes_ask_size_fp: typeof raw.yes_ask_size_fp === "string" ? raw.yes_ask_size_fp : undefined,
     occurrence_datetime:
       typeof raw.occurrence_datetime === "string" ? raw.occurrence_datetime : undefined,
+    close_time: typeof raw.close_time === "string" ? raw.close_time : undefined,
+    updated_time: typeof raw.updated_time === "string" ? raw.updated_time : undefined,
     expected_expiration_time:
       typeof raw.expected_expiration_time === "string" ? raw.expected_expiration_time : undefined,
     rules_primary: typeof raw.rules_primary === "string" ? raw.rules_primary : undefined,
@@ -152,6 +191,172 @@ export function competitorIdForMarket(
     return market.custom_strike?.table_tennis_competitor;
   }
   return undefined;
+}
+
+/** Fetch one event page with atomic nested markets for retirement-safe inventory. */
+export async function fetchKalshiEventsPageWire(
+  options: FetchKalshiEventsPageOptions,
+): Promise<unknown> {
+  if (!Number.isSafeInteger(options.limit) || options.limit < 1 || options.limit > 200) {
+    throw new Error("Kalshi events page limit must be a safe integer in [1, 200]");
+  }
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const base = resolveBaseUrl(options.baseUrl);
+  const params = new URLSearchParams({
+    series_ticker: unbrand(options.seriesTicker),
+    status: options.status ?? "open",
+    with_nested_markets: "true",
+    limit: String(options.limit),
+  });
+  if (options.cursor) params.set("cursor", options.cursor);
+  const {
+    seriesTicker: _,
+    status: __,
+    limit: ___,
+    cursor: ____,
+    baseUrl: _____,
+    fetchImpl: ______,
+    ...retryOptions
+  } = options;
+  const response = await fetchWithRetry(
+    `${base}/events?${params.toString()}`,
+    { headers: { Accept: "application/json" } },
+    { ...retryOptions, fetchImpl },
+  );
+  if (!response.ok) {
+    throw new Error(`Kalshi events: ${response.status} ${response.statusText}`);
+  }
+  return response.json() as Promise<unknown>;
+}
+
+/** Strict parse-once boundary. No malformed row may masquerade as empty inventory. */
+export function parseKalshiEventsPageWire(
+  raw: unknown,
+  expectedSeries: SeriesTicker,
+): KalshiEventsPage {
+  if (!isRecord(raw) || !Array.isArray(raw.events)) {
+    throw new Error("Kalshi events page: events array required");
+  }
+  if (typeof raw.cursor !== "string") {
+    throw new Error("Kalshi events page: cursor string required");
+  }
+  const eventIds = new Set<string>();
+  const events = raw.events.map((value, eventIndex): KalshiInventoryEvent => {
+    if (!isRecord(value)) throw new Error(`Kalshi events[${eventIndex}]: object required`);
+    const eventTicker = requiredWireString(value.event_ticker, `events[${eventIndex}].event_ticker`);
+    const seriesTicker = requiredWireString(
+      value.series_ticker,
+      `events[${eventIndex}].series_ticker`,
+    );
+    if (seriesTicker !== unbrand(expectedSeries)) {
+      throw new Error(`Kalshi events[${eventIndex}]: series selector drift`);
+    }
+    if (eventIds.has(eventTicker)) {
+      throw new Error(`Kalshi events page: duplicate event ${eventTicker}`);
+    }
+    eventIds.add(eventTicker);
+    if (!Array.isArray(value.markets)) {
+      throw new Error(`Kalshi events[${eventIndex}].markets array required`);
+    }
+    if (value.markets.length === 0) {
+      throw new Error(`Kalshi events[${eventIndex}].markets must not be empty`);
+    }
+    const marketIds = new Set<string>();
+    const markets = value.markets.map((market, marketIndex) => {
+      const parsed = parseStrictNestedMarket(market, eventIndex, marketIndex);
+      if (unbrand(parsed.event_ticker) !== eventTicker) {
+        throw new Error(`Kalshi events[${eventIndex}].markets[${marketIndex}]: parent drift`);
+      }
+      const marketTicker = unbrand(parsed.ticker);
+      if (marketIds.has(marketTicker)) {
+        throw new Error(`Kalshi events[${eventIndex}]: duplicate market ${marketTicker}`);
+      }
+      marketIds.add(marketTicker);
+      return parsed;
+    });
+    return {
+      event_ticker: asKalshiEventTicker(eventTicker),
+      series_ticker: asSeriesTicker(seriesTicker),
+      title: requiredWireString(value.title, `events[${eventIndex}].title`),
+      ...optionalWireField(value, "sub_title", `events[${eventIndex}].sub_title`),
+      ...optionalWireField(value, "last_updated_ts", `events[${eventIndex}].last_updated_ts`),
+      markets,
+    };
+  });
+  return {
+    events,
+    ...(raw.cursor ? { nextCursor: raw.cursor } : {}),
+  };
+}
+
+function parseStrictNestedMarket(
+  raw: unknown,
+  eventIndex: number,
+  marketIndex: number,
+): KalshiMarketWire {
+  const label = `events[${eventIndex}].markets[${marketIndex}]`;
+  if (!isRecord(raw)) throw new Error(`Kalshi ${label}: object required`);
+  const parsed = parseKalshiMarketWire(raw);
+  if (!parsed) throw new Error(`Kalshi ${label}: ticker, event_ticker, and status required`);
+  parsed.title = requiredWireString(raw.title, `${label}.title`);
+  parsed.market_type = requiredWireString(raw.market_type, `${label}.market_type`);
+  for (const field of [
+    "yes_sub_title",
+    "no_sub_title",
+    "volume_fp",
+    "volume_24h_fp",
+    "open_interest_fp",
+    "yes_bid_dollars",
+    "yes_ask_dollars",
+    "no_bid_dollars",
+    "no_ask_dollars",
+    "last_price_dollars",
+    "yes_bid_size_fp",
+    "yes_ask_size_fp",
+    "occurrence_datetime",
+    "close_time",
+    "updated_time",
+    "expected_expiration_time",
+    "rules_primary",
+    "rules_secondary",
+    "result",
+  ] as const) {
+    if (raw[field] !== undefined && typeof raw[field] !== "string") {
+      throw new Error(`Kalshi ${label}.${field}: string required`);
+    }
+  }
+  if (isRecord(raw.custom_strike)) {
+    for (const field of [
+      "tennis_competitor",
+      "tennis_doubles_competitor",
+      "table_tennis_competitor",
+    ] as const) {
+      if (raw.custom_strike[field] !== undefined) {
+        if (typeof raw.custom_strike[field] !== "string" || !tryCompetitorId(raw.custom_strike[field])) {
+          throw new Error(`Kalshi ${label}.custom_strike.${field}: valid competitor id required`);
+        }
+      }
+    }
+  } else if (raw.custom_strike !== undefined && raw.custom_strike !== null) {
+    throw new Error(`Kalshi ${label}.custom_strike: object required`);
+  }
+  return parsed;
+}
+
+function requiredWireString(raw: unknown, field: string): string {
+  if (typeof raw !== "string" || !raw.trim()) throw new Error(`Kalshi ${field}: string required`);
+  return raw.trim();
+}
+
+function optionalWireField<Key extends "sub_title" | "last_updated_ts">(
+  row: Record<string, unknown>,
+  key: Key,
+  field: string,
+): Partial<Record<Key, string>> {
+  const raw = row[key];
+  if (raw === undefined || raw === null) return {};
+  if (typeof raw !== "string") throw new Error(`Kalshi ${field}: string required`);
+  return { [key]: raw } as Partial<Record<Key, string>>;
 }
 
 export type KalshiMarketsQuery = {

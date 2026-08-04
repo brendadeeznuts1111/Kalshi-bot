@@ -8,7 +8,6 @@ import {
   TENNIS_LADDER_SERIES,
 } from "../event-store/tennis-ladder.ts";
 import {
-  asAdapterId,
   asCompetitionKey,
   asIdentityFieldKey,
   asIntegrationId,
@@ -18,6 +17,7 @@ import {
   asSourceCacheKey,
   asSourceScopeId,
   asSourceTagId,
+  ADAPTER,
   asSportFamilyKey,
   IDENTITY,
   MARKET,
@@ -78,6 +78,11 @@ function validateKalshiSelector(row: SourceSelector): string[] {
   const errors: string[] = [];
   const series = row.parameters.series;
   if (!series) errors.push("series required");
+  if (row.parameters.endpoint !== "/events") errors.push("endpoint must be /events");
+  if (row.parameters.status !== "open") errors.push("status must be open");
+  if (row.parameters.withNestedMarkets !== "true") {
+    errors.push("withNestedMarkets must be true");
+  }
   if (row.parameters.category !== "Sports") errors.push("category must be Sports");
   if (!row.parameters.tag) errors.push("tag required");
   if (series && unbrand(row.scope) !== `kalshi:series:${series}`) {
@@ -103,7 +108,7 @@ function validatePolymarketSelector(row: SourceSelector): string[] {
 
 export const ADAPTERS = [
   defineAdapter({
-    id: asAdapterId("kalshi-markets-v1"),
+    id: ADAPTER.kalshiEvents,
     source: SOURCE.kalshi,
     idNamespace: "source_global",
     parserVersion: 1,
@@ -117,7 +122,7 @@ export const ADAPTERS = [
     cachePolicy: { freshForMs: 60_000, staleForMs: 300_000, failureThreshold: 3 },
   }),
   defineAdapter({
-    id: asAdapterId("polymarket-gamma-v1"),
+    id: ADAPTER.polymarketGamma,
     source: SOURCE.polymarket,
     idNamespace: "source_global",
     parserVersion: 1,
@@ -160,6 +165,9 @@ function kalshiBinding(input: KalshiBindingInput): CompetitionBinding {
       category: "Sports",
       tag,
       sport: unbrand(input.sport),
+      endpoint: "/events",
+      status: "open",
+      withNestedMarkets: "true",
     }, input.sport),
     semanticConfidence: "exact",
     eventTypes: input.eventTypes,
@@ -221,8 +229,14 @@ function tennisParticipantFormat(series: string): CompetitionBinding["participan
   return "singles";
 }
 
-function tennisIdentity(series: string, mode: RegistrationMode) {
-  if (mode === "inventory") return IDENTITY.none;
+const VERIFIED_TENNIS_IDENTITY_SERIES = new Set([
+  ...VERIFIED_MATCH_TENNIS_SERIES,
+  "KXATPSETWINNER",
+  "KXWTASETWINNER",
+]);
+
+function tennisIdentity(series: string) {
+  if (!VERIFIED_TENNIS_IDENTITY_SERIES.has(series)) return IDENTITY.none;
   if (series === "KXATPDOUBLES" || series === "KXWTADOUBLES") {
     return IDENTITY.tennisDoublesCompetitor;
   }
@@ -245,7 +259,7 @@ const KALSHI_TENNIS_BINDINGS = ALL_TENNIS_SERIES.map((rawSeries) => {
     eventTypes: ["match"],
     participantFormats: [tennisParticipantFormat(rawSeries)],
     marketKinds: [kind],
-    identityFields: [tennisIdentity(rawSeries, mode)],
+    identityFields: [tennisIdentity(rawSeries)],
     mode,
   });
 });
@@ -336,7 +350,7 @@ export const INTEGRATIONS = [
     sport: SPORT.tennis,
     source: SOURCE.kalshi,
     state: "enabled",
-    adapter: asAdapterId("kalshi-markets-v1"),
+    adapter: ADAPTER.kalshiEvents,
     declaredCapabilities: ["inventory", "quotes", "reconciliation", "trade"],
     operationalCapabilities: ["inventory", "quotes", "reconciliation", "trade"],
     competitions: KALSHI_TENNIS_BINDINGS,
@@ -346,7 +360,7 @@ export const INTEGRATIONS = [
     sport: SPORT.tableTennis,
     source: SOURCE.kalshi,
     state: "discovering",
-    adapter: asAdapterId("kalshi-markets-v1"),
+    adapter: ADAPTER.kalshiEvents,
     declaredCapabilities: ["inventory", "quotes", "reconciliation"],
     operationalCapabilities: ["inventory"],
     competitions: KALSHI_TABLE_TENNIS_BINDINGS,
@@ -357,7 +371,7 @@ export const INTEGRATIONS = [
     sport: SPORT.tennis,
     source: SOURCE.polymarket,
     state: "enabled",
-    adapter: asAdapterId("polymarket-gamma-v1"),
+    adapter: ADAPTER.polymarketGamma,
     declaredCapabilities: ["inventory", "quotes", "reconciliation"],
     operationalCapabilities: ["inventory", "quotes", "reconciliation"],
     competitions: [polymarketBinding(SPORT.tennis, asSourceTagId("864"), "tennis")],
@@ -367,7 +381,7 @@ export const INTEGRATIONS = [
     sport: SPORT.tableTennis,
     source: SOURCE.polymarket,
     state: "enabled",
-    adapter: asAdapterId("polymarket-gamma-v1"),
+    adapter: ADAPTER.polymarketGamma,
     declaredCapabilities: ["inventory", "quotes", "reconciliation"],
     operationalCapabilities: ["inventory", "quotes", "reconciliation"],
     competitions: [

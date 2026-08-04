@@ -83,6 +83,21 @@ describe("sports/source registry", () => {
       participantFormats: ["field"],
       declaredUse: "inventory",
     });
+    expect(kalshiBindingForSeries(asSeriesTicker("KXATPSETWINNER"))).toMatchObject({
+      declaredUse: "inventory",
+      identityFields: [IDENTITY.tennisCompetitor],
+      selector: {
+        parameters: {
+          endpoint: "/events",
+          status: "open",
+          withNestedMarkets: "true",
+        },
+      },
+    });
+    expect(kalshiBindingForSeries(asSeriesTicker("KXWTASETWINNER"))).toMatchObject({
+      declaredUse: "inventory",
+      identityFields: [IDENTITY.tennisCompetitor],
+    });
     expect(unbrand(kalshiIdentityFieldForSeries(asSeriesTicker("KXATPDOUBLES"))!)).toBe(
       "tennis_doubles_competitor",
     );

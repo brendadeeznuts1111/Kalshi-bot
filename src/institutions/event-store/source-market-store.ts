@@ -78,6 +78,8 @@ export function upsertSourceObservation(
   registry: SportsSourceRegistry = SPORTS_SOURCE_REGISTRY,
 ): SourceObservationWriteResult {
   assertSourceObservationInput(observation, registry);
+  const collectionsComplete =
+    (observation.collectionCompleteness ?? observation.snapshotCompleteness) === "complete";
   const write = db.transaction((): SourceObservationWriteResult => {
     const source = unbrand(observation.source);
     const eventId = unbrand(observation.eventId);
@@ -216,7 +218,7 @@ export function upsertSourceObservation(
          last_observed_at_ms = excluded.last_observed_at_ms
        WHERE excluded.last_observed_at_ms >= source_event_participants.last_observed_at_ms`,
     );
-    if (observation.snapshotCompleteness === "complete") {
+    if (collectionsComplete) {
       db.query(
         `UPDATE source_event_participants
          SET active = 0, retired_at_ms = $observedAtMs
@@ -370,7 +372,7 @@ export function upsertSourceObservation(
     );
     const previouslyActiveMarketIds = new Set<string>();
     const previouslyActiveOutcomes = new Map<string, ActiveOutcomeRow[]>();
-    if (observation.snapshotCompleteness === "complete") {
+    if (collectionsComplete) {
       for (const row of db
         .query(
           `SELECT source_market_id AS marketId
@@ -431,7 +433,7 @@ export function upsertSourceObservation(
           existingMarket.lastObservedAtMs,
         )
       ) {
-        if (observation.snapshotCompleteness === "complete") {
+        if (collectionsComplete) {
           const activeOutcomes = previouslyActiveOutcomes.get(marketId) ?? [];
           const referencedParticipants = [
             existingMarket.subjectParticipantId,
@@ -607,6 +609,14 @@ export function assertSourceObservationInput(
   assertOptionalTimestamp(observation.closesAtMs, "closesAtMs");
   const participants = observation.participants ?? [];
   const markets = observation.markets ?? [];
+  const collectionsComplete =
+    (observation.collectionCompleteness ?? observation.snapshotCompleteness) === "complete";
+  if (
+    collectionsComplete &&
+    (!Array.isArray(observation.participants) || !Array.isArray(observation.markets))
+  ) {
+    throw new Error("complete collections require participant and market arrays");
+  }
   if (observation.snapshotCompleteness === "partial") {
     assertNoExplicitUndefined(
       observation,
@@ -631,6 +641,9 @@ export function assertSourceObservationInput(
   );
   for (const market of markets) {
     const label = `outcome ${unbrand(market.id)}`;
+    if (collectionsComplete && !Array.isArray(market.outcomes)) {
+      throw new Error(`${label} complete collection requires an outcomes array`);
+    }
     if (observation.snapshotCompleteness === "partial") {
       assertNoExplicitUndefined(
         market,
@@ -663,7 +676,7 @@ export function assertSourceObservationInput(
     assertOptionalTimestamp(market.closesAtMs, `${label} closesAtMs`);
     assertOptionalTimestamp(market.sourceUpdatedAtMs, `${label} sourceUpdatedAtMs`);
     if (
-      observation.snapshotCompleteness === "complete" &&
+      collectionsComplete &&
       market.subjectParticipantId &&
       !participantIds.has(unbrand(market.subjectParticipantId))
     ) {
@@ -687,7 +700,7 @@ export function assertSourceObservationInput(
       }
       assertOptionalTimestamp(outcome.lastTradeAtMs, `${label} lastTradeAtMs`);
       if (
-        observation.snapshotCompleteness === "complete" &&
+        collectionsComplete &&
         outcome.participantId &&
         !participantIds.has(unbrand(outcome.participantId))
       ) {

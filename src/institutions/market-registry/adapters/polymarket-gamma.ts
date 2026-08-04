@@ -11,6 +11,7 @@ import {
   asSourceMarketId,
   asSourceMarketType,
   asSourceTagId,
+  ADAPTER,
   SELECTOR,
   SOURCE,
   unbrand,
@@ -19,7 +20,6 @@ import { ADAPTERS } from '../registry.ts';
 import {
   inventorySourceAdapter,
   type AdapterDefinition,
-  type AdapterHealth,
   type CompetitionBinding,
   type CompleteSourceMarket,
   type CompleteSourceObservation,
@@ -28,6 +28,7 @@ import {
   type SourceFetchRequest,
   type SourcePage,
 } from '../types.ts';
+import { SourceAdapterHealthState } from './health.ts';
 
 type PolymarketAdapterWire = {
   payload: unknown;
@@ -46,7 +47,7 @@ export function createPolymarketGammaSourceAdapter(
 ): SourceAdapter<PolymarketEvent, CompleteSourceObservation> {
   const definition = polymarketDefinition();
   const now = options.now ?? Date.now;
-  const health = new AdapterHealthState(definition, now);
+  const health = new SourceAdapterHealthState('Polymarket', definition, now);
   return {
     definition,
     async fetchPage(request) {
@@ -244,7 +245,7 @@ function assertBinding(binding: CompetitionBinding, request: SourceFetchRequest)
 }
 
 function polymarketDefinition(): AdapterDefinition {
-  const definition = ADAPTERS.find(row => row.source === SOURCE.polymarket);
+  const definition = ADAPTERS.find(row => row.id === ADAPTER.polymarketGamma);
   if (!definition) throw new Error('Polymarket adapter definition missing');
   return definition;
 }
@@ -281,81 +282,4 @@ function recordsEqual(
 
 function isRecord(raw: unknown): raw is Record<string, unknown> {
   return typeof raw === 'object' && raw !== null && !Array.isArray(raw);
-}
-
-class AdapterHealthState {
-  private consecutiveFailures = 0;
-  private lastSuccessAtMs: number | undefined;
-  private circuitOpenedAtMs: number | undefined;
-
-  constructor(
-    private readonly definition: AdapterDefinition,
-    private readonly now: () => number
-  ) {}
-
-  beforeRequest(): void {
-    if (
-      this.circuitOpenedAtMs !== undefined &&
-      this.now() - this.circuitOpenedAtMs < this.definition.cachePolicy.staleForMs
-    ) {
-      throw new Error('Polymarket adapter circuit is open');
-    }
-  }
-
-  observedAtMs(): number {
-    const value = this.now();
-    if (!Number.isSafeInteger(value) || value < 0) {
-      throw new Error('Polymarket adapter clock must return a timestamp');
-    }
-    return value;
-  }
-
-  succeed(observedAtMs: number): void {
-    this.consecutiveFailures = 0;
-    this.circuitOpenedAtMs = undefined;
-    this.lastSuccessAtMs = observedAtMs;
-  }
-
-  fail(): void {
-    this.consecutiveFailures += 1;
-    if (this.consecutiveFailures >= this.definition.cachePolicy.failureThreshold) {
-      this.circuitOpenedAtMs = this.now();
-    }
-  }
-
-  read(): AdapterHealth {
-    const now = this.now();
-    if (
-      this.circuitOpenedAtMs !== undefined &&
-      now - this.circuitOpenedAtMs < this.definition.cachePolicy.staleForMs
-    ) {
-      return {
-        state: 'circuit_open',
-        consecutiveFailures: this.consecutiveFailures,
-        ...(this.lastSuccessAtMs === undefined ? {} : { lastSuccessAtMs: this.lastSuccessAtMs }),
-        staleSinceMs: this.circuitOpenedAtMs,
-      };
-    }
-    if (this.consecutiveFailures > 0) {
-      return {
-        state: 'degraded',
-        consecutiveFailures: this.consecutiveFailures,
-        ...(this.lastSuccessAtMs === undefined ? {} : { lastSuccessAtMs: this.lastSuccessAtMs }),
-      };
-    }
-    if (
-      this.lastSuccessAtMs !== undefined &&
-      now - this.lastSuccessAtMs > this.definition.cachePolicy.freshForMs
-    ) {
-      return {
-        state: 'stale',
-        consecutiveFailures: 0,
-        lastSuccessAtMs: this.lastSuccessAtMs,
-        staleSinceMs: this.lastSuccessAtMs + this.definition.cachePolicy.freshForMs,
-      };
-    }
-    return this.lastSuccessAtMs === undefined
-      ? { state: 'stale', consecutiveFailures: 0, staleSinceMs: now }
-      : { state: 'healthy', consecutiveFailures: 0, lastSuccessAtMs: this.lastSuccessAtMs };
-  }
 }

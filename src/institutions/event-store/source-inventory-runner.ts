@@ -84,21 +84,22 @@ export async function runRegisteredSourceInventory(
   for (const target of targets) {
     const runId = mintRunId(target.source, target.sport, target.binding);
     const startedAtMs = timestamp(now(), 'startedAtMs');
-    let checkpoint = beginSourceInventoryRun(
-      db,
-      {
-        runId,
-        source: target.source,
-        sport: target.sport,
-        adapter: target.adapter.definition.id,
-        selector: target.binding.selector,
-        startedAtMs,
-      },
-      registry
-    );
+    let checkpoint: SourceInventoryRunCheckpoint | undefined;
     let lastObservedAtMs = startedAtMs;
 
     try {
+      checkpoint = beginSourceInventoryRun(
+        db,
+        {
+          runId,
+          source: target.source,
+          sport: target.sport,
+          adapter: target.adapter.definition.id,
+          selector: target.binding.selector,
+          startedAtMs,
+        },
+        registry
+      );
       while (checkpoint.state === 'running') {
         if (checkpoint.pageCount >= maxPages) {
           throw new Error(`inventory scope exceeded ${maxPages} pages`);
@@ -117,13 +118,19 @@ export async function runRegisteredSourceInventory(
       }
       results.push(scopeResult(target, checkpoint));
     } catch (cause) {
-      const error = errorDetail(cause);
-      failSourceInventoryRun(db, {
-        source: target.source,
-        runId,
-        failedAtMs: Math.max(lastObservedAtMs, timestamp(now(), 'failedAtMs')),
-        detail: error,
-      });
+      let error = errorDetail(cause);
+      if (checkpoint?.state === 'running') {
+        try {
+          failSourceInventoryRun(db, {
+            source: target.source,
+            runId,
+            failedAtMs: Math.max(lastObservedAtMs, timestamp(now(), 'failedAtMs')),
+            detail: error,
+          });
+        } catch (finalizeCause) {
+          error = `${error}; failed to finalize owned run: ${errorDetail(finalizeCause)}`;
+        }
+      }
       results.push({
         runId,
         integration: target.integration,
@@ -131,8 +138,8 @@ export async function runRegisteredSourceInventory(
         sport: target.sport,
         binding: target.binding,
         state: 'failed',
-        pageCount: checkpoint.pageCount,
-        observedEventCount: checkpoint.observedEventCount,
+        pageCount: checkpoint?.pageCount ?? 0,
+        observedEventCount: checkpoint?.observedEventCount ?? 0,
         error,
       });
     }

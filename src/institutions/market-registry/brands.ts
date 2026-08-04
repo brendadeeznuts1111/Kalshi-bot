@@ -90,6 +90,11 @@ export const SOURCE = {
   polymarket: asSourceKey('polymarket'),
 } as const;
 
+export const ADAPTER = {
+  kalshiEvents: asAdapterId("kalshi-events-v1"),
+  polymarketGamma: asAdapterId("polymarket-gamma-v1"),
+} as const;
+
 export const SELECTOR = {
   kalshiSeries: asSelectorKind('kalshi_series'),
   polymarketTag: asSelectorKind('polymarket_tag'),

@@ -196,6 +196,8 @@ type SourceObservationIdentity = {
   sport: SportKey;
   eventId: SourceEventId;
   provenance: SourceProvenance;
+  /** Child membership authority, independent from scalar field completeness. */
+  collectionCompleteness?: "complete" | "partial";
 };
 
 export type CompleteSourceObservation = SourceObservationIdentity & {

@@ -202,4 +202,31 @@ describe("open-db", () => {
     ).toEqual({ active: 1, retiredAtMs: null, lastSeenRunId: "resume-run" });
     expect(db.query("PRAGMA foreign_key_check").all()).toEqual([]);
   });
+
+  test("abandons running Kalshi scans that cannot resume under the event-page adapter", () => {
+    const db = openEventStore({ dbPath: ":memory:" });
+    db.query(
+      `INSERT INTO source_inventory_runs (
+         source_key, inventory_run_id, sport_key, selector_scope, adapter_id,
+         selector_kind, selector_parameters_json, state, started_at_ms
+       ) VALUES (
+         'kalshi', 'legacy-kalshi-run', 'tennis', 'kalshi:series:KXATPMATCH',
+         'kalshi-markets-v1', 'kalshi_series', '{"series":"KXATPMATCH"}',
+         'running', 100
+       )`,
+    ).run();
+
+    applyEventStoreSchema(db);
+    expect(
+      db.query(
+        `SELECT state, finished_at_ms AS finishedAtMs, error_detail AS detail
+         FROM source_inventory_runs WHERE inventory_run_id = 'legacy-kalshi-run'`,
+      ).get(),
+    ).toEqual({
+      state: "abandoned",
+      finishedAtMs: 100,
+      detail: "migration: kalshi-markets-v1 replaced by kalshi-events-v1",
+    });
+    db.close();
+  });
 });
