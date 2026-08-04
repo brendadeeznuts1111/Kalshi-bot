@@ -42,10 +42,58 @@ Kalshi-bot partner surface for a **PPH / Fantasy402** dummy desk.
 | `fetchLimits` | ⏳ stub |
 | `placeOrder` | ⏳ blocked (need PlaceBet HAR) |
 
-## What is **not** odds
+## What is **not** odds (critical — re-verified live)
 
-`stream-list-v2` rows are `{ sport, league, competitiors, stream_id, feed_id }`.  
-Do **not** merge into Kalshi `match_liquidity` until a real price/book wire is mapped.
+The Ultra UI shows Over/Under, prices (−115), and max bet. That does **not** mean
+`stream-list-v2` carries those fields.
+
+### Actual `stream-list-v2` shape (live 2026-08)
+
+```json
+{
+  "sports": {
+    "tennis": {
+      "count": 33,
+      "events": {
+        "39778041": {
+          "sport": "Tennis",
+          "league": "ATT. Saransk",
+          "competitiors": { "home": "…", "away": "…" },
+          "stream_id": 39778041,
+          "feed_id": 0,
+          "donbest_id": "0",
+          "donbest_id_multi": []
+        }
+      }
+    }
+  },
+  "error": false,
+  "modified_time": 1785844114526
+}
+```
+
+| Claim (from HTML inference) | Live JSON fact |
+|-----------------------------|----------------|
+| Root `events[]` with `markets[]` / `lines[]` / `odds[]` | **Absent** |
+| `homeTeam` / `awayTeam` / `startTime` | **Absent** (uses `competitiors.home/away`) |
+| `price` / American odds | **Absent** |
+| `limit.maxStake` | **Absent** |
+
+Deep key scan for odds/market/line/price: **0 pricing hits** (only sport bucket name `american_football`).
+
+So:
+
+- `fetchEvents()` → coverage catalog only  
+- `fetchMarkets()` → **throws** with schema diagnostic (do not invent prices)  
+- `inspectStreamCapabilities()` / CLI prints the capability probe  
+
+### Where the priced UI likely comes from (next capture)
+
+1. **Pandora WebSocket** — `wss://pandora.ganchrow.com/socket.io/` after `streamToken.php`  
+2. **XHR when the slip loads a line** — filter Network by `price`, `odds`, `line`, `PlaceBet`  
+3. **Manager book** (different product surface) — `getGames` / `getLinesProps` (needs full form body; stub calls return Invalid Data)
+
+Do **not** merge stream-list into Kalshi `match_liquidity` until a real price wire is mapped.
 
 ## Credentials (never commit)
 

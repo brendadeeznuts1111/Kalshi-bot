@@ -22,11 +22,13 @@ export {
 export { FantasyUltraAdapter } from "./fantasy-ultra/adapter.ts";
 export { CookieJar } from "./fantasy-ultra/cookie-jar.ts";
 export {
+  inspectStreamListCapabilities,
   originFromLiveUrl,
   parseRenewTokenResponse,
   parseSportsLeagues,
   parseStreamList,
   parseUltraLiveUrlResponse,
+  type StreamListCapabilities,
 } from "./fantasy-ultra/parse.ts";
 export {
   FANTASY_ULTRA_DEFAULTS,

@@ -22,11 +22,13 @@ import type {
 } from "../types.ts";
 import { CookieJar } from "./cookie-jar.ts";
 import {
+  inspectStreamListCapabilities,
   originFromLiveUrl,
   parseRenewTokenResponse,
   parseSportsLeagues,
   parseStreamList,
   parseUltraLiveUrlResponse,
+  type StreamListCapabilities,
 } from "./parse.ts";
 import {
   FANTASY_ULTRA_DEFAULTS,
@@ -236,9 +238,8 @@ export class FantasyUltraAdapter implements FantasySessionAdapter {
     return parseSportsLeagues(json);
   }
 
-  async fetchEvents(
-    options: { sport?: string } = {},
-  ): Promise<PartnerLiveEvent[]> {
+  /** Raw stream-list JSON (after session warm). */
+  async fetchStreamListRaw(): Promise<unknown> {
     await this.ensureSession();
     const origin = this.liveUrls
       ? originFromLiveUrl(this.liveUrls.desktop)
@@ -258,8 +259,36 @@ export class FantasyUltraAdapter implements FantasySessionAdapter {
         `fantasy402: stream-list HTTP ${res.status}${text ? ` — ${text.slice(0, 200)}` : ""}`,
       );
     }
-    const json: unknown = await res.json();
+    return res.json();
+  }
+
+  async fetchEvents(
+    options: { sport?: string } = {},
+  ): Promise<PartnerLiveEvent[]> {
+    const json = await this.fetchStreamListRaw();
     return parseStreamList(json, { sport: options.sport ?? "tennis" });
+  }
+
+  /**
+   * Priced markets are **not** on stream-list-v2 (verified live).
+   * Call this to confirm schema; do not invent odds from HTML.
+   */
+  async inspectStreamCapabilities(): Promise<StreamListCapabilities> {
+    const json = await this.fetchStreamListRaw();
+    return inspectStreamListCapabilities(json);
+  }
+
+  /**
+   * Intentionally not implemented from stream-list.
+   * Throws with capability note so callers do not assume odds exist.
+   */
+  async fetchMarkets(): Promise<never> {
+    const cap = await this.inspectStreamCapabilities();
+    throw new Error(
+      `fantasy402: fetchMarkets unavailable — stream-list-v2 is coverage-only ` +
+        `(hasPricingKeys=${cap.hasPricingKeys}, sampleEventKeys=${cap.sampleEventKeys.join(",")}). ` +
+        `Capture the widget's odds/PlaceBet XHR or pandora WS to implement priced markets.`,
+    );
   }
 
   async fetchLimits(_eventId: string): Promise<PartnerLimits> {

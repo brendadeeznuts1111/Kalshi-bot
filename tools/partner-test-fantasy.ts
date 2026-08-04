@@ -121,12 +121,22 @@ async function main(): Promise<void> {
     ),
   );
 
+  if ("inspectStreamCapabilities" in adapter) {
+    const cap = await (
+      adapter as {
+        inspectStreamCapabilities: () => Promise<unknown>;
+      }
+    ).inspectStreamCapabilities();
+    console.log(JSON.stringify({ streamCapabilities: cap }, null, 2));
+  }
+
   const events = await adapter.fetchEvents({ sport });
   console.log(
     JSON.stringify(
       {
         sport,
         eventCount: events.length,
+        note: "coverage rows only — not priced markets",
         sample: events.slice(0, limit).map((e) => ({
           eventId: e.eventId,
           league: e.league,

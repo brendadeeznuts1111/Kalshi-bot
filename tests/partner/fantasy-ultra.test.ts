@@ -5,6 +5,7 @@ import {
   FantasyUltraAdapter,
   getFantasySessionAdapter,
   getPartnerAdapter,
+  inspectStreamListCapabilities,
   originFromLiveUrl,
   parseRenewTokenResponse,
   parseSportsLeagues,
@@ -144,6 +145,15 @@ describe("fantasy ultra parse", () => {
     jar.absorb(["a=1; Path=/", "b=2; HttpOnly"]);
     expect(jar.headerValue()).toBe("a=1; b=2");
   });
+
+  test("inspectStreamListCapabilities reports coverage-only (no invented markets)", () => {
+    const cap = inspectStreamListCapabilities(streamWire);
+    expect(cap.hasRootEventsArray).toBe(false);
+    expect(cap.hasPricingKeys).toBe(false);
+    expect(cap.sampleEventKeys).toContain("competitiors");
+    expect(cap.sampleEventKeys).not.toContain("markets");
+    expect(cap.note).toContain("Coverage-only");
+  });
 });
 
 describe("FantasyUltraAdapter session blueprint", () => {
@@ -227,6 +237,8 @@ describe("FantasyUltraAdapter session blueprint", () => {
     });
     expect(dry.success).toBe(false);
     expect(dry.dryRun).toBe(true);
+
+    await expect(adapter.fetchMarkets()).rejects.toThrow(/coverage-only|fetchMarkets unavailable/i);
   });
 
   test("getPartnerAdapter / getFantasySessionAdapter route fantasy402", async () => {
