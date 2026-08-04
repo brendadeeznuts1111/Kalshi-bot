@@ -14,7 +14,7 @@ describe("OFFICIAL_URLS probes", () => {
       OFFICIAL_URLS.kalshi.tradeApiV2Base,
     );
     expect(prod?.url).toBe(
-      "https://external-api.kalshi.com/trade-api/v2/exchange/status",
+      "https://api.elections.kalshi.com/trade-api/v2/exchange/status",
     );
 
     const odds = resolveProbeUrl(

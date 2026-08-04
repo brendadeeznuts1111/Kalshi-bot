@@ -61,7 +61,7 @@ describe("kalshi-client environment", () => {
   test("defaults to demo base URL", () => {
     expect(resolveKalshiEnvironment({})).toBe("demo");
     expect(KALSHI_REST_BASE.demo).toBe("https://external-api.demo.kalshi.co/trade-api/v2");
-    expect(KALSHI_REST_BASE.prod).toBe("https://external-api.kalshi.com/trade-api/v2");
+    expect(KALSHI_REST_BASE.prod).toBe("https://api.elections.kalshi.com/trade-api/v2");
   });
 
   test("prod requires KALSHI_PROD_ARMED=1", () => {

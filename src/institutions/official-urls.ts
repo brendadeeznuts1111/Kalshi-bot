@@ -34,8 +34,10 @@ export const OFFICIAL_URLS = {
     /** Orders live under /orders (not /portfolio/orders docs page). */
     portfolioOrders: "https://docs.kalshi.com/api-reference/orders/get-orders",
     exchangeStatus: "https://docs.kalshi.com/api-reference/exchange/get-exchange-status",
-    /** Public market data (all markets, no auth). Override with KALSHI_API_BASE. */
-    tradeApiV2Base: "https://external-api.kalshi.com/trade-api/v2",
+    /** Public market data (all markets, no auth). Override with KALSHI_API_BASE.
+     *  Canonical prod host — external-api.kalshi.com hard-403s since 2026-08-01
+     *  (edge block, all clients); api.elections.kalshi.com serves the full v2 API. */
+    tradeApiV2Base: "https://api.elections.kalshi.com/trade-api/v2",
     /** Demo environment — no real money. */
     tradeApiV2BaseDemo: "https://external-api.demo.kalshi.co/trade-api/v2",
     /** Election markets API — separate domain for CFTC-regulated event contracts. */
