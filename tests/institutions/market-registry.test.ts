@@ -1,0 +1,252 @@
+import { describe, expect, test } from "bun:test";
+import {
+  asAdapterId,
+  asIntegrationId,
+  asSelectorKind,
+  asSourceKey,
+  asSourceScopeId,
+  asSportFamilyKey,
+  asSportKey,
+  MARKET,
+  parseSportKey,
+  SELECTOR,
+  SOURCE,
+  SPORT,
+  unbrand,
+} from "../../src/institutions/market-registry/brands.ts";
+import {
+  buildSportsSourceRegistryArtifact,
+  classifyKalshiSeriesDrift,
+  kalshiBindingForSeries,
+  kalshiDeclaredReconciliationSeriesForSport,
+  kalshiReconciliationSeriesForSport,
+  kalshiSeriesForSport,
+  kalshiTradeSeriesForSport,
+  polymarketTagsForSport,
+  sourceSelectorCacheKey,
+  SPORTS_SOURCE_REGISTRY,
+} from "../../src/institutions/market-registry/registry.ts";
+import { validateSportsSourceRegistry } from "../../src/institutions/market-registry/validate.ts";
+import { asSeriesTicker, unbrand as unbrandSeries } from "../../src/institutions/event-store/brands.ts";
+import type { SportsSourceRegistry } from "../../src/institutions/market-registry/types.ts";
+
+describe("sports/source registry", () => {
+  test("represents every current Kalshi/Polymarket × tennis/table-tennis cell", () => {
+    expect(validateSportsSourceRegistry(SPORTS_SOURCE_REGISTRY)).toEqual([]);
+    expect(
+      SPORTS_SOURCE_REGISTRY.integrations
+        .map((row) => `${unbrand(row.source)}:${unbrand(row.sport)}`)
+        .sort(),
+    ).toEqual([
+      "kalshi:table_tennis",
+      "kalshi:tennis",
+      "polymarket:table_tennis",
+      "polymarket:tennis",
+    ]);
+  });
+
+  test("keeps table tennis distinct while permitting newly registered keys", () => {
+    expect(parseSportKey("tennis")).toBe(SPORT.tennis);
+    expect(parseSportKey("table tennis")).toBe(SPORT.tableTennis);
+    expect(parseSportKey("ping pong")).toBe(SPORT.tableTennis);
+    expect(parseSportKey("table tennis")).not.toBe(parseSportKey("tennis"));
+    expect(unbrand(parseSportKey("beach soccer"))).toBe("beach_soccer");
+    expect(unbrand(asSourceKey("pinnacle"))).toBe("pinnacle");
+    expect(() => asSportKey("---")).toThrow("required after normalization");
+  });
+
+  test("classifies exact Kalshi identities without ticker-family guesses", () => {
+    expect(kalshiBindingForSeries(asSeriesTicker("KXITFMATCH"))).toMatchObject({
+      participantFormats: ["singles"],
+      marketKinds: [MARKET.matchWinner],
+      declaredUse: "trade",
+    });
+    expect(kalshiBindingForSeries(asSeriesTicker("KXITFDOUBLES"))).toMatchObject({
+      participantFormats: ["doubles"],
+      identityFields: ["tennis_competitor"],
+    });
+    expect(kalshiBindingForSeries(asSeriesTicker("KXATPDOUBLES"))).toMatchObject({
+      participantFormats: ["doubles"],
+      identityFields: ["tennis_doubles_competitor"],
+    });
+    expect(kalshiBindingForSeries(asSeriesTicker("KXTABLETENNISMATCH"))).toMatchObject({
+      participantFormats: ["singles"],
+      identityFields: ["table_tennis_competitor"],
+      declaredUse: "match",
+    });
+    expect(kalshiBindingForSeries(asSeriesTicker("KXITTFMEN"))).toMatchObject({
+      eventTypes: ["tournament"],
+      participantFormats: ["field"],
+      declaredUse: "inventory",
+    });
+  });
+
+  test("acquires all known Kalshi series and narrows explicitly for downstream modes", () => {
+    const tennis = kalshiSeriesForSport(SPORT.tennis).map(unbrandSeries);
+    const reconciled = kalshiReconciliationSeriesForSport(SPORT.tennis).map(unbrandSeries);
+    const traded = kalshiTradeSeriesForSport(SPORT.tennis).map(unbrandSeries);
+    expect(tennis).toContain("KXATPSETWINNER");
+    expect(tennis).toContain("KXDAVISCUPMATCH");
+    expect(reconciled).not.toContain("KXATPSETWINNER");
+    expect(reconciled).toContain("KXATPDOUBLES");
+    expect(traded).toContain("KXITFDOUBLES");
+    expect(traded).not.toContain("KXATPDOUBLES");
+  });
+
+  test("registers all eight observed table-tennis series and quarantines drift", () => {
+    const expected = [
+      "KXITTFMENMATCH",
+      "KXITTFMEN",
+      "KXWTABLETENNISMATCH",
+      "KXITTFWOMENMATCH",
+      "KXTTELITEGAME",
+      "KXTABLETENNIS",
+      "KXTABLETENNISMATCH",
+      "KXITTFWOMEN",
+    ].sort();
+    expect(kalshiSeriesForSport(SPORT.tableTennis).map(unbrandSeries).sort()).toEqual(expected);
+    expect(kalshiReconciliationSeriesForSport(SPORT.tableTennis).map(unbrandSeries)).toEqual([
+    ]);
+    expect(
+      kalshiDeclaredReconciliationSeriesForSport(SPORT.tableTennis).map(unbrandSeries),
+    ).toEqual(["KXTABLETENNISMATCH"]);
+    const drift = classifyKalshiSeriesDrift(SPORT.tableTennis, [
+      asSeriesTicker("KXTABLETENNISMATCH"),
+      asSeriesTicker("KXWTTNEWGAME"),
+    ]);
+    expect(drift.registered.map(unbrandSeries)).toEqual(["KXTABLETENNISMATCH"]);
+    expect(drift.quarantine.map(unbrandSeries)).toEqual(["KXWTTNEWGAME"]);
+  });
+
+  test("keeps broad Polymarket tags as acquisition scopes, not exact event semantics", () => {
+    const tennis = polymarketTagsForSport(SPORT.tennis);
+    const tableTennis = polymarketTagsForSport(SPORT.tableTennis);
+    expect(tennis).toMatchObject([
+      { scope: "polymarket:tag:864", tagId: "864", tagSlug: "tennis" },
+    ]);
+    expect(tableTennis).toMatchObject([
+      { scope: "polymarket:tag:103767", tagId: "103767", tagSlug: "table-tennis" },
+    ]);
+    const registration = SPORTS_SOURCE_REGISTRY.integrations.find(
+      (row) => row.source === SOURCE.polymarket && row.sport === SPORT.tableTennis,
+    );
+    expect(registration).toMatchObject({
+      state: "discovering",
+      operationalCapabilities: [],
+      competitions: [
+        {
+          semanticConfidence: "discovery",
+          eventTypes: ["match", "tournament"],
+          participantFormats: ["singles", "doubles", "team", "mixed", "field"],
+          declaredUse: "inventory",
+        },
+      ],
+    });
+    expect(registration?.operationalCapabilities).toEqual([]);
+    expect(sourceSelectorCacheKey(SOURCE.polymarket, tennis[0]!).toString()).not.toBe(
+      sourceSelectorCacheKey(SOURCE.polymarket, tableTennis[0]!).toString(),
+    );
+  });
+
+  test("validates injectable registries and rejects cross-field drift", () => {
+    const soccer = asSportKey("soccer");
+    const pinnacle = asSourceKey("pinnacle");
+    const extended: SportsSourceRegistry = {
+      sports: [
+        ...SPORTS_SOURCE_REGISTRY.sports,
+        { key: soccer, label: "Soccer", family: asSportFamilyKey("football"), aliases: [] },
+      ],
+      sources: [...SPORTS_SOURCE_REGISTRY.sources, { key: pinnacle, label: "Pinnacle" }],
+      adapters: [
+        ...SPORTS_SOURCE_REGISTRY.adapters,
+        {
+          id: asAdapterId("pinnacle-v1"),
+          source: pinnacle,
+          parserVersion: 1,
+          selectorKinds: [asSelectorKind("pinnacle_league")],
+          metadataSelectorKinds: [],
+          validateSelector: () => [],
+          cachePolicy: { freshForMs: 60_000, staleForMs: 300_000, failureThreshold: 3 },
+        },
+      ],
+      integrations: [
+        ...SPORTS_SOURCE_REGISTRY.integrations,
+        {
+          integration: asIntegrationId("pinnacle:soccer"),
+          sport: soccer,
+          source: pinnacle,
+          state: "discovering",
+          adapter: asAdapterId("pinnacle-v1"),
+          declaredCapabilities: ["inventory"],
+          operationalCapabilities: [],
+          competitions: [],
+          reason: "Adapter template only; no runtime acquisition is wired.",
+        },
+      ],
+    };
+    expect(validateSportsSourceRegistry(extended)).toEqual([]);
+
+    const duplicate: SportsSourceRegistry = {
+      ...SPORTS_SOURCE_REGISTRY,
+      integrations: [
+        ...SPORTS_SOURCE_REGISTRY.integrations,
+        { ...SPORTS_SOURCE_REGISTRY.integrations[0]!, integration: asIntegrationId("bad:id") },
+      ],
+    };
+    expect(validateSportsSourceRegistry(duplicate)).toContain(
+      "duplicate sport/source cell: kalshi:tennis",
+    );
+    expect(validateSportsSourceRegistry(duplicate)).toContain("bad:id: integration id mismatch");
+
+    const wrongSelector: SportsSourceRegistry = {
+      ...SPORTS_SOURCE_REGISTRY,
+      integrations: SPORTS_SOURCE_REGISTRY.integrations.map((row, index) =>
+        index === 0
+          ? {
+              ...row,
+              competitions: [
+                {
+                  ...row.competitions[0]!,
+                  selector: {
+                    kind: SELECTOR.polymarketTag,
+                    scope: asSourceScopeId("polymarket:tag:864"),
+                    sport: SPORT.tennis,
+                    parameters: { tagId: "864", tagSlug: "tennis" },
+                  },
+                },
+              ],
+            }
+          : row,
+      ),
+    };
+    expect(validateSportsSourceRegistry(wrongSelector)).toContain(
+      "kalshi:tennis: selector scope source mismatch",
+    );
+    expect(validateSportsSourceRegistry(wrongSelector)).toContain(
+      "kalshi:tennis: selector kind unsupported by adapter",
+    );
+    expect(() => buildSportsSourceRegistryArtifact(undefined, wrongSelector)).toThrow(
+      "Invalid sports/source registry",
+    );
+
+    const enabledWithoutInventory: SportsSourceRegistry = {
+      ...SPORTS_SOURCE_REGISTRY,
+      integrations: SPORTS_SOURCE_REGISTRY.integrations.map((row, index) =>
+        index === 0 ? { ...row, operationalCapabilities: [] } : row,
+      ),
+    };
+    expect(validateSportsSourceRegistry(enabledWithoutInventory)).toContain(
+      "kalshi:tennis: enabled integration lacks operational inventory",
+    );
+  });
+
+  test("builds a deterministic, versioned public artifact", () => {
+    const generatedAt = "2026-08-04T00:00:00.000Z";
+    const first = buildSportsSourceRegistryArtifact(generatedAt);
+    const second = buildSportsSourceRegistryArtifact(generatedAt);
+    expect(first).toEqual(second);
+    expect(first.schema).toBe("sports-source-registry/v1");
+    expect(first.integrations).toHaveLength(4);
+    expect(JSON.stringify(first)).toContain("polymarket:metadata:sports");
+  });
+});
