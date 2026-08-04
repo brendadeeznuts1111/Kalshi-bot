@@ -1,5 +1,6 @@
 import type { Database } from 'bun:sqlite';
 import {
+  asSourceMetadataRunId,
   mintSourceMetadataRunId,
   unbrand,
   type AdapterId,
@@ -18,10 +19,13 @@ import type {
 import { assertSportsSourceRegistry } from '../market-registry/validate.ts';
 import {
   beginSourceMetadataRun,
+  abandonSourceMetadataRun,
   commitSourceMetadataPage,
   failSourceMetadataRun,
   type SourceMetadataRunCheckpoint,
 } from './source-metadata-run.ts';
+
+type StaleRunWireRow = { runId: string; startedAtMs: number };
 
 export type SourceMetadataTarget = {
   source: SourceKey;
@@ -155,6 +159,49 @@ export async function runRegisteredSourceMetadata(
   }
 
   return results;
+}
+
+/** Recover scheduler crashes after one full metadata freshness window. */
+export function abandonStaleRegisteredSourceMetadataRuns(
+  db: Database,
+  nowMs: number,
+  targets: readonly SourceMetadataTarget[],
+  leaseMs = 5 * 60_000
+): number {
+  if (!Number.isSafeInteger(nowMs) || nowMs < 0) throw new Error('nowMs must be a timestamp');
+  if (!Number.isSafeInteger(leaseMs) || leaseMs < 1) {
+    throw new Error('leaseMs must be a positive integer');
+  }
+  let abandoned = 0;
+  const recover = db.transaction(() => {
+    for (const target of targets) {
+      const rows = db
+        .query(
+          `SELECT metadata_run_id AS runId, started_at_ms AS startedAtMs
+           FROM source_metadata_runs
+           WHERE source_key = $source AND selector_scope = $selectorScope
+             AND state = 'running'
+             AND COALESCE(checkpoint_at_ms, started_at_ms) <= $staleBeforeMs
+           ORDER BY started_at_ms, metadata_run_id`
+        )
+        .all({
+          $source: unbrand(target.source),
+          $selectorScope: unbrand(target.selector.scope),
+          $staleBeforeMs: nowMs - leaseMs,
+        }) as StaleRunWireRow[];
+      for (const row of rows) {
+        abandonSourceMetadataRun(db, {
+          source: target.source,
+          runId: asSourceMetadataRunId(row.runId),
+          abandonedAtMs: nowMs,
+          detail: `scheduler recovery: metadata run lease expired after ${leaseMs}ms`,
+        });
+        abandoned++;
+      }
+    }
+  });
+  recover.immediate();
+  return abandoned;
 }
 
 export function planRegisteredSourceMetadata(

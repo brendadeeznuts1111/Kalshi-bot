@@ -9,6 +9,7 @@ import {
   handleRepoPage,
   handleRunApi,
   handleRunsList,
+  resetSportsSourceCatalogCache,
   type RouteRequest,
 } from "../src/research/serve.ts";
 import { REPORT_DIR, joinPath } from "../src/research/paths.ts";
@@ -364,6 +365,33 @@ describe("createResearchServer", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(Array.isArray(body.runs)).toBe(true);
+  });
+
+  test("GET /api/registry/sports-sources returns declaration plus discovery health", async () => {
+    resetSportsSourceCatalogCache();
+    const res = await fetch(`${server.url}api/registry/sports-sources`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("cache-control")).toBe("no-store");
+    expect(res.headers.get("x-sports-source-catalog-cache")).toBe("miss");
+    const body = await res.json();
+    expect(body.schema).toBe("sports-source-catalog/v1");
+    expect(body.registry.schema).toBe("sports-source-registry/v1");
+    expect(body.registry.integrations).toHaveLength(4);
+    expect(["ready", "unavailable", "degraded"]).toContain(body.store.state);
+
+    const cached = await fetch(`${server.url}api/registry/sports-sources`);
+    expect(cached.headers.get("cache-control")).toBe("no-store");
+    expect(cached.headers.get("x-sports-source-catalog-cache")).toBe("hit");
+    expect(await cached.json()).toEqual(body);
+  });
+
+  test("GET /registry/sports-sources.json serves the stable declaration artifact", async () => {
+    const res = await fetch(`${server.url}registry/sports-sources.json`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("application/json");
+    const body = await res.json();
+    expect(body.schema).toBe("sports-source-registry/v1");
+    expect(body.integrations).toHaveLength(4);
   });
 
   test("GET /ops renders dashboard HTML", async () => {

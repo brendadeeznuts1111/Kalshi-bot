@@ -52,6 +52,7 @@ import { placeOrder, cancelOrder } from "../bot/kalshi-client.ts";
 import { codedError, httpStatusFor, type ErrorCode } from "../institutions/error-codes.ts";
 import { designAgent } from "../agent/design-agent.ts";
 import { fetchKalshiBookSnapshot, midFromBookSnapshot } from "../bot/kalshi-market-data.ts";
+import { buildSportsSourceCatalogPayload } from "./sports-source-catalog.ts";
 
 // ── Regulatory compliance integration ──
 const REG_DB_PATH = process.env.REGULATORY_DB ?? ":memory:";
@@ -109,6 +110,36 @@ function html(body: string, status = 200): Response {
 
 function json(data: unknown, status = 200): Response {
   return Response.json(data, { status });
+}
+
+const SPORTS_SOURCE_CATALOG_CACHE_MS = 5_000;
+let sportsSourceCatalogCache:
+  | { expiresAtMs: number; payload: ReturnType<typeof buildSportsSourceCatalogPayload> }
+  | undefined;
+
+export function resetSportsSourceCatalogCache(): void {
+  sportsSourceCatalogCache = undefined;
+}
+
+function sportsSourceCatalogResponse(): Response {
+  const nowMs = Date.now();
+  const cached = sportsSourceCatalogCache;
+  const cacheHit = cached !== undefined && nowMs < cached.expiresAtMs;
+  const payload = cacheHit
+    ? cached.payload
+    : buildSportsSourceCatalogPayload({
+        nowMs,
+        onError: (error) => console.error("sports/source catalog read failed", error),
+      });
+  if (!cacheHit) {
+    sportsSourceCatalogCache = { expiresAtMs: nowMs + SPORTS_SOURCE_CATALOG_CACHE_MS, payload };
+  }
+  return Response.json(payload, {
+    headers: {
+      "Cache-Control": "no-store",
+      "X-Sports-Source-Catalog-Cache": cacheHit ? "hit" : "miss",
+    },
+  });
 }
 
 function findScored(run: ResearchRun, fullName: string): ScoredRepo | undefined {
@@ -866,6 +897,10 @@ export function createResearchServer(options: ServeOptions = {}) {
         return json(await buildTennisHqPayload());
       }
 
+      if (url.pathname === "/api/registry/sports-sources") {
+        return sportsSourceCatalogResponse();
+      }
+
       // Glossary — structured entries + flat tooltips for HQ panel/tips
       if (url.pathname === "/api/glossary") {
         return json(buildGlossaryApiPayload());
@@ -889,6 +924,18 @@ export function createResearchServer(options: ServeOptions = {}) {
         const file = Bun.file(joinPath(ROOT, "public/registry/color-system.json"));
         if (!(await file.exists())) {
           return new Response("color-system.json missing — run bun run colors:artifacts", { status: 404 });
+        }
+        return new Response(file, {
+          headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-cache" },
+        });
+      }
+
+      if (url.pathname === "/registry/sports-sources.json") {
+        const file = Bun.file(joinPath(ROOT, "public/registry/sports-sources.json"));
+        if (!(await file.exists())) {
+          return new Response("sports-sources.json missing — run bun run sports:registry:bake", {
+            status: 404,
+          });
         }
         return new Response(file, {
           headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-cache" },
