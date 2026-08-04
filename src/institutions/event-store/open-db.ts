@@ -105,6 +105,30 @@ export function applyEventStoreSchema(db: Database): void {
   )`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_player_opponent_profiles_player ON player_opponent_profiles (player_name)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_player_opponent_profiles_opponent ON player_opponent_profiles (opponent_name)`);
+  // Partner stream inventory (Fantasy402 stream-list-v2, etc.)
+  db.run(`CREATE TABLE IF NOT EXISTS partner_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    partner TEXT NOT NULL,
+    stream_id TEXT NOT NULL,
+    ls_id TEXT,
+    client_event_id TEXT,
+    sport TEXT NOT NULL DEFAULT '',
+    league TEXT NOT NULL DEFAULT '',
+    home TEXT,
+    away TEXT,
+    feed_id TEXT,
+    start_time INTEGER,
+    status TEXT NOT NULL DEFAULT 'unknown',
+    first_seen INTEGER NOT NULL,
+    last_updated INTEGER NOT NULL,
+    UNIQUE(partner, stream_id)
+  )`);
+  db.run(
+    `CREATE INDEX IF NOT EXISTS idx_partner_events_partner_sport ON partner_events (partner, sport)`,
+  );
+  db.run(
+    `CREATE INDEX IF NOT EXISTS idx_partner_events_last_updated ON partner_events (last_updated)`,
+  );
   migrateEventStoreColumns(db);
 }
 

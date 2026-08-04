@@ -61,6 +61,7 @@
     "calibration:toxicity:preview": "bun src/calibration/toxicity-schedule-cli.ts preview",
     "alpha:run": "bun src/alpha/run-shadow-once.ts",
     "partner:test-fantasy": "bun tools/partner-test-fantasy.ts",
+    "partner:watch-events": "bun tools/watch-fantasy-events.ts",
     "tennis:events": "bun tools/tennis/events-cli.ts",
     "tennis:itf": "bun tools/tennis/itf-calendar-cli.ts",
     "tennis:tour": "bun tools/tennis/tour-sync-cli.ts",

@@ -186,8 +186,32 @@ export FANTASY402_CURRENCY=USD
 ```bash
 bun run partner:test-fantasy
 bun run partner:test-fantasy -- --sport=tennis --limit=5 --renew
-bun test tests/partner/fantasy-ultra.test.ts
+bun run partner:watch-events -- --once --sport=table_tennis --json
+bun run partner:watch-events -- --loop --sport=table_tennis --interval-ms=60000
+bun test tests/partner/fantasy-ultra.test.ts tests/partner/partner-events-store.test.ts
 ```
+
+## Detect new table tennis events
+
+`partner_events` table (created with event-store schema) stores stream inventory:
+
+| Column | Source |
+|--------|--------|
+| `partner` + `stream_id` | UNIQUE key |
+| sport / league / home / away | stream-list |
+| `client_event_id` / `ls_id` | nullable until mapping exists |
+
+```bash
+# one-shot diff + upsert
+bun run partner:watch-events -- --once --sport=table_tennis --json
+
+# long poll
+bun run partner:watch-events -- --loop --interval-ms=60000
+```
+
+New rows print as `+ Table tennis · …`. Optional Telegram: `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID`.
+
+**Not auto-filled:** `client_event_id` (odds/Statscore) — stream-list does not include it; enrich later.
 
 ## Security
 

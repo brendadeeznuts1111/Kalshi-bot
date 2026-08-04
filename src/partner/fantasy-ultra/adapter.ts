@@ -250,9 +250,11 @@ export class FantasyUltraAdapter implements FantasySessionAdapter {
     return parseSportsLeagues(json);
   }
 
-  /** Raw stream-list JSON (after session warm). */
+  /**
+   * Raw stream-list JSON.
+   * Does **not** require Fantasy login — feed is public with widget origin/referer.
+   */
   async fetchStreamListRaw(): Promise<unknown> {
-    await this.ensureSession();
     const origin = this.liveUrls
       ? originFromLiveUrl(this.liveUrls.desktop)
       : FANTASY_ULTRA_DEFAULTS.streamOrigin;
