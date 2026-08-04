@@ -237,6 +237,29 @@ Live probe: **403 Forbidden** without a valid session `auth`. Use stream-list fo
 
 **Not auto-filled:** `client_event_id` / odds — stream-list has no prices; enrich later.
 
+## Widget runtime config (HTML source)
+
+| Setting | Value | Implication |
+|---------|-------|-------------|
+| `sportOrder` | `[214, 1, 2, 4, 220]` | UI only; 214 = favorites |
+| Table tennis widget id | **220** | Sidebar |
+| Table tennis API / ticket `sportId` | **93** | betGroups, Get_SportsLeagues |
+| stream-list bucket | `table_tennis` | Detection |
+| `customWebSocketUrl` | `wss://pandora.ganchrow.com` | Live odds (message format **not** captured yet) |
+| `oddsFormat` | `american` | Display/wire preference |
+| `roundUSOddsDown` | `true` | Use `roundUsOddsDown` / `normalizeOdds` |
+| `oddsDecimalPlaces` | `3` | Truncate decimals |
+| `liveStreamLastWagerToleranceSec` | `86400` | Stream UI soft gate (not data sync) |
+
+```ts
+import { fantasySportByApiId, normalizeOdds, FANTASY_WIDGET_CONFIG } from "./src/partner/index.ts";
+fantasySportByApiId(93); // table_tennis, widget 220
+normalizeOdds(1.8928, "decimal"); // dual american + truncated decimal
+// WS: FANTASY_WIDGET_CONFIG.customWebSocketUrl — connect after capturing message schema
+```
+
+`bun run partner:registry -- --seed` also seeds `provider_sport_mappings`.
+
 ## Liquidity sources map (partners / outs / providers)
 
 | Entity | Table / type | Role |

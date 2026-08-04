@@ -161,6 +161,18 @@ export function applyEventStoreSchema(db: Database): void {
   db.run(
     `CREATE INDEX IF NOT EXISTS idx_betting_accounts_provider ON betting_accounts (provider)`,
   );
+  db.run(`CREATE TABLE IF NOT EXISTS provider_sport_mappings (
+    provider TEXT NOT NULL,
+    canonical TEXT NOT NULL,
+    stream_bucket TEXT,
+    api_sport_id INTEGER,
+    widget_sport_id INTEGER,
+    label TEXT NOT NULL DEFAULT '',
+    PRIMARY KEY (provider, canonical)
+  )`);
+  db.run(
+    `CREATE INDEX IF NOT EXISTS idx_provider_sport_api ON provider_sport_mappings (provider, api_sport_id)`,
+  );
   migrateEventStoreColumns(db);
 }
 

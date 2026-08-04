@@ -68,6 +68,7 @@ export {
   listActiveBettingAccounts,
   listBettingAccountsByProvider,
   seedFantasy402FromEnv,
+  seedFantasySportMappings,
   upsertBettingAccount,
   upsertPartner,
   type BettingAccountRow,
@@ -75,6 +76,28 @@ export {
   type ProviderCapacity,
   type ProviderId,
 } from "./registry.ts";
+
+export {
+  FANTASY_SPORT_MAPPINGS,
+  FANTASY_WIDGET_CONFIG,
+  WIDGET_FAVORITES_SPORT_ID,
+  WIDGET_SPORT_ORDER,
+  fantasySportByApiId,
+  fantasySportByCanonical,
+  fantasySportByStreamBucket,
+  fantasySportByWidgetId,
+  type FantasySportMapping,
+} from "./fantasy-ultra/widget-config.ts";
+
+export {
+  americanToDecimal,
+  decimalToAmerican,
+  normalizeOdds,
+  roundUsOddsDown,
+  truncateDecimal,
+  type DualOdds,
+  type OddsFormat,
+} from "./odds-format.ts";
 
 import type { PartnerAccountProfile } from "./account-profile.ts";
 import { credentialsFromFantasyProfile } from "./account-profile.ts";
