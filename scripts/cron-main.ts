@@ -13,6 +13,7 @@
  *   - Color artifacts:   daily at 03:00 UTC
  *   - Contrast gate:     daily at 04:00 UTC
  *   - Glossary URLs:     daily at 02:00 UTC
+ *   - Match liquidity:   every 30 minutes (recompute + ground; volume via env)
  */
 import { ensureEventStoreDir, openEventStore } from "../src/institutions/event-store/open-db.ts";
 import { DEFAULT_EVENT_STORE_DB } from "../src/institutions/event-store/paths.ts";
@@ -26,6 +27,9 @@ const INTERVAL_ANALYSIS = "0 8 * * *";
 const INTERVAL_GLOSSARY_URLS = "0 2 * * *";
 const INTERVAL_COLOR_ARTIFACTS = "0 3 * * *";
 const INTERVAL_CONTRAST = "0 4 * * *";
+/** Match liquidity recompute + HTML ground (volume backfill opt-in via env). */
+const INTERVAL_LIQUIDITY =
+  Bun.env.LIQUIDITY_PIPELINE_CRON_SCHEDULE?.trim() || "*/30 * * * *";
 
 // ── Jobs ────────────────────────────────────────────────────────
 
@@ -59,6 +63,35 @@ async function jobAnalysis(): Promise<void> {
     console.error(`[cron:analysis] Complete · ${Date.now() - start}ms`);
   } catch (err) {
     console.error(`[cron:analysis] Error: ${err}`);
+  }
+}
+
+/**
+ * Match liquidity desk loop — recompute + optional volume backfill + ground HTML.
+ * Network backfill: LIQUIDITY_PIPELINE_FETCH_VOLUME=1 (default off in long-running cron).
+ * Snapshot write: LIQUIDITY_PIPELINE_SNAPSHOT=1 (default off — use OS cron worker for full loop).
+ */
+async function jobLiquidityPipeline(): Promise<void> {
+  const start = Date.now();
+  try {
+    const { runMatchLiquidityPipeline, formatMatchLiquidityPipelineLines } = await import(
+      "../src/institutions/event-store/match-liquidity-pipeline.ts"
+    );
+    const fetchVolume = Bun.env.LIQUIDITY_PIPELINE_FETCH_VOLUME === "1";
+    const snapshot = Bun.env.LIQUIDITY_PIPELINE_SNAPSHOT === "1";
+    const volumeLimit = Number(Bun.env.LIQUIDITY_PIPELINE_VOLUME_LIMIT ?? "40");
+    const result = await runMatchLiquidityPipeline({
+      fetchVolume,
+      volumeLimit: Number.isFinite(volumeLimit) && volumeLimit > 0 ? volumeLimit : 40,
+      groundHtml: true,
+      snapshot,
+      dryRunSnapshot: false,
+    });
+    console.error(
+      `[cron:liquidity] ${formatMatchLiquidityPipelineLines(result).join(" · ")} · ${Date.now() - start}ms`,
+    );
+  } catch (err) {
+    console.error(`[cron:liquidity] Error: ${err}`);
   }
 }
 
@@ -143,6 +176,7 @@ if (once) {
   await jobGlossaryUrls();
   await jobColorArtifacts();
   await jobContrast();
+  await jobLiquidityPipeline();
   console.error("[cron] All jobs complete.");
   process.exit(0);
 }
@@ -153,7 +187,8 @@ console.error(`[cron] Registering jobs:
   analysis: ${INTERVAL_ANALYSIS}
   urls:     ${INTERVAL_GLOSSARY_URLS}
   colors:   ${INTERVAL_COLOR_ARTIFACTS}
-  contrast: ${INTERVAL_CONTRAST}`);
+  contrast: ${INTERVAL_CONTRAST}
+  liquidity:${INTERVAL_LIQUIDITY}`);
 console.error("[cron] Process running — use SIGTERM to stop.");
 
 Bun.cron(INTERVAL_LOGGER, jobLogger);
@@ -161,6 +196,7 @@ Bun.cron(INTERVAL_ANALYSIS, jobAnalysis);
 Bun.cron(INTERVAL_GLOSSARY_URLS, jobGlossaryUrls);
 Bun.cron(INTERVAL_COLOR_ARTIFACTS, jobColorArtifacts);
 Bun.cron(INTERVAL_CONTRAST, jobContrast);
+Bun.cron(INTERVAL_LIQUIDITY, jobLiquidityPipeline);
 
 // Keep process alive
 await new Promise(() => {});
