@@ -23,6 +23,12 @@ export const LIQUIDITY_GATES = {
   /** Mid band for tradable (deep favorites / longshots out). */
   midBandMinCents: 20,
   midBandMaxCents: 80,
+  /**
+   * Max age of a non-empty book quote used for gates (ms).
+   * Default 14d — offline event-store snapshots are often multi-day old;
+   * set lower (e.g. 15–60m) for live desk.
+   */
+  quoteMaxAgeMs: 14 * 24 * 60 * 60 * 1000,
 } as const;
 
 /**
@@ -164,24 +170,25 @@ function loadMarketAgg(db: Database, eventId?: string): MarketAgg[] {
 }
 
 /**
- * Prefer latest match_winner book tick; fall back to any latest tick for the event.
- * Picks the tightest non-crossed spread among latest-per-ticker rows.
+ * Per ticker: walk ticks newest→oldest and take the first non-empty top-of-book
+ * within {@link LIQUIDITY_GATES.quoteMaxAgeMs}. Empty latest shells no longer
+ * hide a good prior quote (common after REST polls with no depth).
  *
- * Empty books (`bids:[]`/`asks:[]`) are ignored — they do not inflate bookTickCount
- * and never produce a spread.
+ * Across tickers: prefer match_winner, then tightest spread.
  */
-function loadBookAgg(db: Database, eventId: string): BookAgg {
+function loadBookAgg(
+  db: Database,
+  eventId: string,
+  options: { maxAgeMs?: number; nowMs?: number } = {},
+): BookAgg {
+  const maxAgeMs = options.maxAgeMs ?? LIQUIDITY_GATES.quoteMaxAgeMs;
+  const nowMs = options.nowMs ?? Date.now();
   const rows = db
     .query(
-      `SELECT bt.ticker, bt.market_kind AS marketKind, bt.levels_json AS levelsJson, bt.ts
-       FROM book_ticks bt
-       INNER JOIN (
-         SELECT ticker, MAX(ts) AS max_ts
-         FROM book_ticks
-         WHERE event_id = $eventId
-         GROUP BY ticker
-       ) latest ON latest.ticker IS bt.ticker AND latest.max_ts = bt.ts
-       WHERE bt.event_id = $eventId`,
+      `SELECT ticker, market_kind AS marketKind, levels_json AS levelsJson, ts
+       FROM book_ticks
+       WHERE event_id = $eventId
+       ORDER BY ticker ASC, ts DESC`,
     )
     .all({ $eventId: eventId }) as Array<{
     ticker: string | null;
@@ -194,15 +201,29 @@ function loadBookAgg(db: Database, eventId: string): BookAgg {
     return { spreadCents: null, midCents: null, bookTickCount: 0, crossed: false };
   }
 
+  // First non-empty quote per ticker (rows already newest-first within ticker).
+  const quoteByTicker = new Map<
+    string,
+    { marketKind: string; book: ReturnType<typeof parseBookSnapshot> & object; ts: number }
+  >();
+  for (const row of rows) {
+    const key = row.ticker ?? "";
+    if (quoteByTicker.has(key)) continue;
+    if (nowMs - row.ts > maxAgeMs) continue;
+    const book = parseBookSnapshot(row.levelsJson);
+    if (!book || !bookHasTopOfBook(book)) continue;
+    quoteByTicker.set(key, { marketKind: row.marketKind, book, ts: row.ts });
+  }
+
+  if (quoteByTicker.size === 0) {
+    return { spreadCents: null, midCents: null, bookTickCount: 0, crossed: false };
+  }
+
   let anyCrossed = false;
   let quotedCount = 0;
   let best: { spread: number; mid: number | null; kindScore: number } | null = null;
 
-  for (const row of rows) {
-    const book = parseBookSnapshot(row.levelsJson);
-    if (!book) continue;
-    // Empty shell ticks from REST when market has no depth — not a quote.
-    if (!bookHasTopOfBook(book)) continue;
+  for (const { marketKind, book } of quoteByTicker.values()) {
     quotedCount++;
     if (book.crossed) {
       anyCrossed = true;
@@ -211,7 +232,7 @@ function loadBookAgg(db: Database, eventId: string): BookAgg {
     const spread = spreadCentsFromBook(book);
     const mid = midFromBookSnapshot(book);
     if (spread == null) continue;
-    const kindScore = row.marketKind === "match_winner" || row.marketKind === "" ? 0 : 1;
+    const kindScore = marketKind === "match_winner" || marketKind === "" ? 0 : 1;
     if (
       !best ||
       kindScore < best.kindScore ||

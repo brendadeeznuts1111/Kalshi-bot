@@ -231,6 +231,36 @@ describe("match-liquidity", () => {
     expect(tight!.liquidityOk).toBe(true);
     expect(tight!.tradable).toBe(true);
   });
+
+  test("last non-empty book recovers when latest tick is empty shell", () => {
+    const db = openEventStore({ dbPath: ":memory:" });
+    const now = Date.now();
+    seedEvent(db, {
+      eventId: "evt-stale-quote",
+      tournament: "Recover Cup",
+      volume: "8000",
+      volume24h: "0",
+      book: tightBook,
+    });
+    // Overwrite timeline: insert empty shell *after* the tight book
+    db.query(
+      `INSERT INTO book_ticks (
+         event_id, ticker, market_kind, ts, recv_ts, source_clock, levels_json, source
+       ) VALUES (
+         'evt-stale-quote', 'TICK-evt-stale-quote', 'match_winner', $ts, $ts, 'recv', $json, 'test'
+       )`,
+    ).run({
+      $ts: now + 10_000,
+      $json: JSON.stringify(emptyBook),
+    });
+
+    recomputeMatchLiquidity(db, "evt-stale-quote");
+    const row = getMatchLiquidity(db, "evt-stale-quote");
+    expect(row!.bookTickCount).toBe(1);
+    expect(row!.spreadCents).toBe(3);
+    expect(row!.liquidityOk).toBe(true);
+    expect(row!.tradable).toBe(true);
+  });
 });
 
 describe("match-liquidity REST (no rate limit)", () => {
