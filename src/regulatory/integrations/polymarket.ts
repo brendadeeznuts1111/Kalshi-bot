@@ -164,6 +164,10 @@ function requiredString(raw: unknown, field: string): string {
   return value;
 }
 
+function isRecord(raw: unknown): raw is Record<string, unknown> {
+  return typeof raw === "object" && raw !== null && !Array.isArray(raw);
+}
+
 function toBoolean(raw: unknown, field: string): boolean {
   if (typeof raw === "boolean") return raw;
   if (raw === "true") return true;
@@ -208,13 +212,19 @@ export type FetchAllTennisEventsOptions = PolymarketClientOptions & {
 
 export type FetchAllEventsOptions = FetchAllTennisEventsOptions;
 
-/**
- * Fetch every active event for one tag using Gamma keyset pagination.
- * The opaque `next_cursor` is passed back as `after_cursor`; offsets are never used.
- */
-export async function fetchAllPolymarketEvents(
-  options: FetchAllEventsOptions,
-): Promise<PolymarketEvent[]> {
+export type FetchEventsPageOptions = FetchAllEventsOptions & {
+  afterCursor?: string;
+};
+
+export type PolymarketEventsPage = {
+  events: PolymarketEvent[];
+  nextCursor?: string;
+};
+
+/** Fetch one opaque-cursor wire page. Parsing remains a separate pure boundary. */
+export async function fetchPolymarketEventsPageWire(
+  options: FetchEventsPageOptions,
+): Promise<unknown> {
   const fetchImpl = resolveFetch(options);
   const base = resolveBaseUrl(options.baseUrl);
   const rawPageSize = options.pageSize ?? 500;
@@ -229,43 +239,70 @@ export async function fetchAllPolymarketEvents(
     pageSize: ___,
     tagId: ____,
     tagSlug: _____,
+    afterCursor: ______,
     ...retryOptions
   } = options;
+  const params = new URLSearchParams({
+    active: "true",
+    closed: "false",
+    limit: String(pageSize),
+  });
+  if (options.tagId) params.set("tag_id", options.tagId);
+  else if (options.tagSlug) params.set("tag_slug", options.tagSlug);
+  if (options.afterCursor) params.set("after_cursor", options.afterCursor);
+  return getJson<unknown>(fetchImpl, `${base}/events/keyset?${params.toString()}`, retryOptions);
+}
+
+/** Strict parse-once boundary for a Gamma inventory page. */
+export function parsePolymarketEventsPageWire(raw: unknown): PolymarketEventsPage {
+  if (!isRecord(raw)) throw new Error("Polymarket keyset page: object required");
+  const rows = Array.isArray(raw.events) ? (raw.events as Record<string, unknown>[]) : null;
+  if (!rows) throw new Error("Polymarket keyset page: events array required");
+  const nextCursor =
+    typeof raw.next_cursor === "string" && raw.next_cursor ? raw.next_cursor : undefined;
+  if (raw.next_cursor !== undefined && raw.next_cursor !== null && !nextCursor) {
+    throw new Error("Polymarket keyset page: next_cursor must be a non-empty string or null");
+  }
+  for (const [index, row] of rows.entries()) {
+    if (!isRecord(row) || !Array.isArray(row.markets)) {
+      throw new Error(`Polymarket keyset page: events[${index}].markets array required`);
+    }
+  }
+  return {
+    events: rows.map(normalizeEventWire),
+    ...(nextCursor ? { nextCursor } : {}),
+  };
+}
+
+/** Fetch and parse one opaque-cursor event page for a registered sports tag. */
+export async function fetchPolymarketEventsPage(
+  options: FetchEventsPageOptions,
+): Promise<PolymarketEventsPage> {
+  return parsePolymarketEventsPageWire(await fetchPolymarketEventsPageWire(options));
+}
+
+/**
+ * Fetch every active event for one tag using Gamma keyset pagination.
+ * The opaque `next_cursor` is passed back as `after_cursor`; offsets are never used.
+ */
+export async function fetchAllPolymarketEvents(
+  options: FetchAllEventsOptions,
+): Promise<PolymarketEvent[]> {
   const events: PolymarketEvent[] = [];
   const seenIds = new Set<string>();
   const seenCursors = new Set<string>();
   let afterCursor: string | undefined;
 
   for (let page = 0; page < 1_000; page++) {
-    const params = new URLSearchParams({
-      active: "true",
-      closed: "false",
-      limit: String(pageSize),
-    });
-    if (options.tagId) params.set("tag_id", options.tagId);
-    else if (options.tagSlug) params.set("tag_slug", options.tagSlug);
-    if (afterCursor) params.set("after_cursor", afterCursor);
-    const raw = await getJson<Record<string, unknown>>(
-      fetchImpl,
-      `${base}/events/keyset?${params.toString()}`,
-      retryOptions,
-    );
-    const rows = Array.isArray(raw.events) ? (raw.events as Record<string, unknown>[]) : null;
-    if (!rows) throw new Error("Polymarket keyset page: events array required");
-
-    for (const row of rows) {
-      const event = normalizeEventWire(row);
+    const result = await fetchPolymarketEventsPage({ ...options, afterCursor });
+    for (const event of result.events) {
       if (seenIds.has(event.id)) {
         throw new Error(`Polymarket keyset pagination repeated event ${event.id}`);
       }
       seenIds.add(event.id);
       events.push(event);
     }
-    const nextCursor =
-      typeof raw.next_cursor === "string" && raw.next_cursor ? raw.next_cursor : undefined;
-    if (raw.next_cursor !== undefined && raw.next_cursor !== null && !nextCursor) {
-      throw new Error("Polymarket keyset page: next_cursor must be a non-empty string or null");
-    }
+    const nextCursor = result.nextCursor;
     if (!nextCursor) return events;
     if (seenCursors.has(nextCursor)) {
       throw new Error(`Polymarket keyset pagination repeated cursor ${nextCursor}`);
