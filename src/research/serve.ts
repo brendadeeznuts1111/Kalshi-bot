@@ -13,6 +13,7 @@ import { renderArchitecture } from "./architecture-view.ts";
 import { openEventStore } from "../institutions/event-store/open-db.ts";
 import { DEFAULT_EVENT_STORE_DB } from "../institutions/event-store/paths.ts";
 import {
+  buildLiquidityBoardPayload,
   getMatchLiquidity,
   listMatchLiquidityByTournament,
   recomputeMatchLiquidity,
@@ -208,7 +209,16 @@ function handlePartnerDetail(req: Request, nodeId: string): Response {
     sport: url.searchParams.get("sport") ?? undefined,
     market: url.searchParams.get("market") ?? undefined,
   };
-  return partnerDetailHandler(regDb, nodeId, filters);
+  let deskLiquidity: ReturnType<typeof buildLiquidityBoardPayload> | null = null;
+  try {
+    deskLiquidity = buildLiquidityBoardPayload(openEventStore({ dbPath: DEFAULT_EVENT_STORE_DB }), {
+      topLimit: 8,
+      tournamentLimit: 8,
+    });
+  } catch {
+    deskLiquidity = null;
+  }
+  return partnerDetailHandler(regDb, nodeId, filters, { deskLiquidity });
 }
 
 /** POST /place-bet payload (only the fields the handler reads). */
@@ -712,29 +722,68 @@ async function handleKalshiRotateKey(req: Request): Promise<Response> {
 async function handleKpi(): Promise<Record<string, number>> {
   try {
     const store = openEventStore({ dbPath: DEFAULT_EVENT_STORE_DB });
-    const snapshot = (sql: string) => (store.query(sql).get() as Record<string, number>)?.n ?? 0;
+    /** Soft SQL — missing tables/columns (watch_set, rps_flag, …) return 0. */
+    const snapshot = (sql: string): number => {
+      try {
+        return (store.query(sql).get() as Record<string, number> | null)?.n ?? 0;
+      } catch {
+        return 0;
+      }
+    };
+    let board: ReturnType<typeof buildLiquidityBoardPayload> | null = null;
+    try {
+      board = buildLiquidityBoardPayload(store, { topLimit: 1, tournamentLimit: 1 });
+    } catch {
+      board = null;
+    }
+    const s = board?.summary;
     return {
       open_matches: snapshot("SELECT COUNT(*) AS n FROM events WHERE corpus='trading'"),
-      board_volume: snapshot("SELECT COALESCE(SUM(CAST(volume_fp AS REAL)),0) AS n FROM markets WHERE volume_fp IS NOT NULL"),
+      board_volume: board?.boardVolume ||
+        snapshot("SELECT COALESCE(SUM(CAST(volume_fp AS REAL)),0) AS n FROM markets WHERE volume_fp IS NOT NULL"),
       book_watches: snapshot("SELECT COUNT(*) AS n FROM watch_set WHERE active=1"),
       player_profiles: snapshot("SELECT COUNT(*) AS n FROM player_profiles"),
       rps_warnings: snapshot("SELECT COUNT(*) AS n FROM events WHERE rps_flag=1"),
       graph_divergence: snapshot("SELECT COUNT(*) AS n FROM events WHERE graph_divergence=1"),
       price_archive: snapshot("SELECT COUNT(*) AS n FROM price_snapshots"),
       server_errors: snapshot("SELECT total_errors AS n FROM logger_health WHERE id=1"),
-      tight_markets: snapshot(
-        "SELECT COUNT(*) AS n FROM match_liquidity WHERE liquidity_ok=1",
-      ),
+      // match_liquidity → glossary kpi.* chips
+      tight_markets: s?.liquidityOk ?? 0,
+      tradable_matches: s?.tradable ?? 0,
+      quoted_books: s?.quoted ?? 0,
+      median_spread: board?.medianSpreadCents ?? 0,
       store_link_rate: 0,
       live_scores: 0,
       elite_conviction: 0,
       archive_elo_fair: 0,
       top_edge: 0,
-      median_spread: 0,
       scanner_alerts: 0,
     };
   } catch {
     return {};
+  }
+}
+
+function handleLiquidityBoard(url: URL): Response {
+  try {
+    const store = openEventStore({ dbPath: DEFAULT_EVENT_STORE_DB });
+    if (url.searchParams.get("recompute") === "1") {
+      recomputeMatchLiquidity(store);
+    }
+    const topLimit = Number(url.searchParams.get("limit") ?? "24");
+    return json(
+      buildLiquidityBoardPayload(store, {
+        topLimit: Number.isFinite(topLimit) ? topLimit : 24,
+      }),
+    );
+  } catch (err) {
+    return json(
+      {
+        error: "liquidity_store_unavailable",
+        detail: err instanceof Error ? err.message : String(err),
+      },
+      503,
+    );
   }
 }
 
@@ -845,11 +894,17 @@ export function createResearchServer(options: ServeOptions = {}) {
         return json(result, result.state === "not_found" ? 404 : 200);
       }
 
-      // Match liquidity — derived from markets + book_ticks (event-store SSOT).
-      // No rateLimiter: read-only HQ JSON; bulk board polls must not 429 at 100/min.
+      // Match liquidity board (exact paths before :eventId)
+      if (
+        url.pathname === SERVE_PATTERNS.EXACT.liquidityBoard ||
+        url.pathname === SERVE_PATTERNS.EXACT.liquiditySummary
+      ) {
+        return handleLiquidityBoard(url);
+      }
+      // Derived from markets + book_ticks — no rateLimiter
       {
         const g = SERVE_PATTERNS.liquidityByEvent.groups(url);
-        if (g?.eventId) {
+        if (g?.eventId && g.eventId !== "summary" && g.eventId !== "by-tournament") {
           return handleLiquidityByEvent(g.eventId!, url);
         }
       }
