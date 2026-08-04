@@ -7,6 +7,7 @@
  * Secrets stay in env / vault — never persist password or bearer JWT.
  */
 import type { Database } from "bun:sqlite";
+import { FANTASY_SPORT_MAPPINGS } from "./fantasy-ultra/widget-config.ts";
 
 export type ProviderId = "fantasy402" | "kalshi" | (string & {});
 
@@ -79,6 +80,46 @@ export function ensurePartnerRegistrySchema(db: Database): void {
   db.run(
     `CREATE INDEX IF NOT EXISTS idx_betting_accounts_status ON betting_accounts (status)`,
   );
+  db.run(`CREATE TABLE IF NOT EXISTS provider_sport_mappings (
+    provider TEXT NOT NULL,
+    canonical TEXT NOT NULL,
+    stream_bucket TEXT,
+    api_sport_id INTEGER,
+    widget_sport_id INTEGER,
+    label TEXT NOT NULL DEFAULT '',
+    PRIMARY KEY (provider, canonical)
+  )`);
+  db.run(
+    `CREATE INDEX IF NOT EXISTS idx_provider_sport_api ON provider_sport_mappings (provider, api_sport_id)`,
+  );
+}
+
+/** Seed Fantasy402 sport id maps (widget HTML + Get_SportsLeagues / tickets). */
+export function seedFantasySportMappings(db: Database): number {
+  ensurePartnerRegistrySchema(db);
+  const upsert = db.query(`
+    INSERT INTO provider_sport_mappings (
+      provider, canonical, stream_bucket, api_sport_id, widget_sport_id, label
+    ) VALUES ($provider, $canonical, $stream, $api, $widget, $label)
+    ON CONFLICT(provider, canonical) DO UPDATE SET
+      stream_bucket = excluded.stream_bucket,
+      api_sport_id = excluded.api_sport_id,
+      widget_sport_id = excluded.widget_sport_id,
+      label = excluded.label
+  `);
+  let n = 0;
+  for (const m of FANTASY_SPORT_MAPPINGS) {
+    upsert.run({
+      $provider: "fantasy402",
+      $canonical: m.canonical,
+      $stream: m.streamBucket,
+      $api: m.apiSportId,
+      $widget: m.widgetSportId,
+      $label: m.label,
+    });
+    n++;
+  }
+  return n;
 }
 
 export function upsertPartner(

@@ -13,6 +13,7 @@ import {
   ensurePartnerRegistrySchema,
   listActiveBettingAccounts,
   seedFantasy402FromEnv,
+  seedFantasySportMappings,
 } from "../src/partner/registry.ts";
 
 function hasFlag(name: string): boolean {
@@ -24,14 +25,18 @@ function main(): void {
   ensurePartnerRegistrySchema(db);
 
   if (hasFlag("seed")) {
+    const sportsN = seedFantasySportMappings(db);
+    console.error(`seeded ${sportsN} fantasy402 sport mappings`);
     const acc = seedFantasy402FromEnv(db);
     if (!acc) {
       console.error(
-        "seed failed: set FANTASY402_CUSTOMER_ID (and optional MAX_STAKE/MAX_WIN)",
+        "account seed skipped: set FANTASY402_CUSTOMER_ID (and optional MAX_STAKE/MAX_WIN)",
       );
-      process.exit(1);
+    } else {
+      console.error(
+        `seeded account ${acc.id} provider=${acc.provider} maxStake=${acc.maxStake}`,
+      );
     }
-    console.error(`seeded account ${acc.id} provider=${acc.provider} maxStake=${acc.maxStake}`);
   }
 
   const accounts = listActiveBettingAccounts(db);
