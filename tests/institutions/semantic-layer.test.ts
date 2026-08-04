@@ -175,9 +175,13 @@ describe("semantic layer — glossary root, registry consumer", () => {
       "time",
       "volume",
       "alpha",
+      "desk",
     ]);
     expect(p.filterCatalog["ui.sort.events"].valueLabels.volume).toBe(
       "24h volume",
+    );
+    expect(p.filterCatalog["ui.sort.events"].valueLabels.desk).toBe(
+      "desk score",
     );
   });
 

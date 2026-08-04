@@ -488,12 +488,26 @@ function eventMatches(e, nowMs) {
   return true;
 }
 
+function deskScoreRank(e) {
+  const d = e.deskLiquidity;
+  if (d?.tradable) return 0;
+  if (d?.liquidityOk) return 1;
+  if (d?.quoted) return 2;
+  return 3;
+}
+
 function sortEvents(events) {
   const f = __filters;
   const arr = events.slice();
   if (f.sort === "volume") arr.sort((a, b) => eventVol(b) - eventVol(a));
   else if (f.sort === "alpha") arr.sort((a, b) => (a.title ?? "").localeCompare(b.title ?? ""));
-  else arr.sort((a, b) => (a.occurrenceMs ?? Infinity) - (b.occurrenceMs ?? Infinity));
+  else if (f.sort === "desk") {
+    arr.sort((a, b) => {
+      const dr = deskScoreRank(a) - deskScoreRank(b);
+      if (dr !== 0) return dr;
+      return eventVol(b) - eventVol(a);
+    });
+  } else arr.sort((a, b) => (a.occurrenceMs ?? Infinity) - (b.occurrenceMs ?? Infinity));
   return arr;
 }
 
@@ -562,7 +576,7 @@ async function renderEvents() {
   const tierChoices = liveFilterChoices("tier", liveTiers);
   const whenChoices = liveFilterChoices("ui.events.filter.when", ["all", "live", "today", "24h", "week"]);
   const liqChoices = liveFilterChoices("ui.events.filter.liquidity", ["all", "priced", "active"]);
-  const sortChoices = liveFilterChoices("ui.sort.events", ["time", "volume", "alpha"]);
+  const sortChoices = liveFilterChoices("ui.sort.events", ["time", "volume", "alpha", "desk"]);
   const pair = (list) => list.map((v) => [v, v]);
   const selGloss = (glossaryId, name, cur, choices) =>
     '<label>' + esc(filterLabel(glossaryId, name)) + tip(glossaryId) +

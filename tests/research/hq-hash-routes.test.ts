@@ -95,4 +95,28 @@ describe('HQ URLPattern hash routes', () => {
     expect(app).toContain('function openEventsFromHash');
     expect(app).toContain('desk-chip-jump');
   });
+
+  test('glossary KPI strip desk cards wire data-liq-jump', async () => {
+    const app = await Bun.file(new URL('../../src/research/hq-app/app.js', import.meta.url)).text();
+    expect(app).toContain('KPI_LIQ_JUMP');
+    expect(app).toContain('"kpi.tradable_matches": "tradable"');
+    expect(app).toContain('"kpi.tight_markets": "liq_ok"');
+    expect(app).toContain('"kpi.quoted_books": "quoted"');
+    expect(app).toContain('liqJump: KPI_LIQ_JUMP[e.id]');
+    expect(app).toContain('kpi-liq-jump');
+    // ? hints must not steal the jump (shared handler)
+    expect(app).toContain('if (t.closest("[data-glossary]")) return');
+  });
+
+  test('events board sort includes desk score ladder', async () => {
+    const app = await Bun.file(new URL('../../src/research/hq-app/app.js', import.meta.url)).text();
+    expect(app).toContain('function deskScoreRank');
+    expect(app).toContain('f.sort === "desk"');
+    expect(app).toContain('["time", "volume", "alpha", "desk"]');
+    const glossary = await Bun.file(
+      new URL('../../src/institutions/glossary.ts', import.meta.url),
+    ).text();
+    expect(glossary).toContain('desk: "desk score"');
+    expect(glossary).toMatch(/values:\s*\[[^\]]*\"desk\"/);
+  });
 });
