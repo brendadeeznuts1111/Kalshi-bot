@@ -122,7 +122,8 @@
     "check:liquidity": "bun scripts/check-liquidity.ts",
     "liquidity:recompute": "bun scripts/check-liquidity.ts -- --recompute",
     "liquidity:ground": "bun tools/match-liquidity-ground-cli.ts",
-    "liquidity:ground:html": "bun tools/match-liquidity-ground-cli.ts -- --html-only"
+    "liquidity:ground:html": "bun tools/match-liquidity-ground-cli.ts -- --html-only",
+    "liquidity:backfill-volume": "bun scripts/backfill-liquidity-volume.ts"
   },
   "engines": {
     "bun": ">=1.4.0-canary.1"
