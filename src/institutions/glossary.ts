@@ -553,7 +553,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
       "Match clears liquidity_ok and mid is in the desk tradable band (default 20–80¢). Necessary for chip 'tradable' on HQ / partners.",
     category: "market",
     seeAlso: ["liquidity_ok", "kalshi_spread", "kalshi_volume", "kpi.tradable_matches"],
-    tone: "concept",
+    tone: "registry",
     color: "tennis",
   }),
   reg({
@@ -1004,8 +1004,8 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     status: "active",
     url: "https://bun.com/docs/runtime/color",
     color: "env",
-    // design-system chrome — not a desk CSV column
-    tone: "registry",
+    // design-system chrome — not a desk CSV column (tone ≠ registry)
+    tone: "concept",
   },
 
   // KPI dashboard cards (ui kind)
@@ -1025,7 +1025,8 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
   { id: "kpi.median_spread", kind: "ui", label: "Median spread", description: "Median bid-ask spread across all live board events in cents.", category: "market", mapsTo: "kalshi_spread" , color: "research" , tone: "metric" },
   { id: "kpi.tight_markets", kind: "ui", label: "Tight markets", description: "Count of match_liquidity rows with liquidity_ok (volume + tight non-empty book).", category: "market", mapsTo: "liquidity_ok" , color: "tennis" , tone: "metric" },
   { id: "kpi.tradable_matches", kind: "ui", label: "Tradable matches", description: "Count of match_liquidity rows with desk.tradable (liquidity_ok + mid band).", category: "market", mapsTo: "desk.tradable" , color: "tennis" , tone: "metric" },
-  { id: "kpi.quoted_books", kind: "ui", label: "Quoted books", description: "Count of events with a non-empty top-of-book quote in match_liquidity.", category: "market", mapsTo: "kalshi_spread" , color: "kalshi" , tone: "metric" },
+  // Derived KPI (no mapsTo alias — count of non-empty books, not a single registry column)
+  { id: "kpi.quoted_books", kind: "ui", label: "Quoted books", description: "Count of events with a non-empty top-of-book quote in match_liquidity.", category: "market", color: "kalshi" , tone: "metric" },
   { id: "kpi.scanner_alerts", kind: "ui", label: "Scanner alerts", description: "Count of active price divergence scanner flags on the live board.", category: "pipeline", mapsTo: "ui.live_board.scanner" , color: "middleware" , tone: "metric" },
 
   // ── Partner-ops taxonomy (factory mirror; soft ledger stays in ct) ──
@@ -1621,7 +1622,11 @@ export const FILTER_CATALOG_IDS = [
 
 export type FilterCatalogId = (typeof FILTER_CATALOG_IDS)[number];
 
-/** Pending registry concepts (board/HQ) not yet on desk CSV columns[]. */
+/**
+ * Pending registry concepts (board/HQ filters) not yet on desk CSV columns[].
+ * Keep until desk export schema gains tier/round columns — integrity allowlist only.
+ * @see docs/SEMANTIC_LAYER.md (pending registry)
+ */
 export const PENDING_REGISTRY_CONCEPTS = ["tier", "round"] as const;
 
 export type FilterCatalogEntry = {
