@@ -136,8 +136,9 @@ async function main(): Promise<void> {
   const sport = argValue("sport") ?? "table_tennis";
   const json = hasFlag("json");
   const once = hasFlag("once") || !hasFlag("loop");
+  // Default 30s — near-real-time inventory without hammering the feed
   const intervalMs = Math.max(
-    Number(argValue("interval-ms") ?? "60000") || 60_000,
+    Number(argValue("interval-ms") ?? "30000") || 30_000,
     5_000,
   );
 
