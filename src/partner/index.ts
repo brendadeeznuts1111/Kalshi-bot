@@ -45,6 +45,23 @@ export {
   type FantasyUltraCredentials,
 } from "./fantasy-ultra/types.ts";
 
+export {
+  formatSyncReport,
+  matchBookedClientEventId,
+  runPartnerInventorySync,
+  type PartnerSyncOptions,
+  type PartnerSyncReport,
+} from "./sync.ts";
+
+export {
+  filterLiveEventsBySport,
+  formatPartnerEventLine,
+  listPartnerStreamIds,
+  upsertPartnerLiveEvents,
+  type PartnerEventRow,
+  type PartnerEventUpsertResult,
+} from "./partner-events-store.ts";
+
 import type { PartnerAccountProfile } from "./account-profile.ts";
 import { credentialsFromFantasyProfile } from "./account-profile.ts";
 import { FantasyUltraAdapter } from "./fantasy-ultra/adapter.ts";

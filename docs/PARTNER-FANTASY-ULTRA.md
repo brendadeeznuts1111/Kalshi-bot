@@ -237,6 +237,26 @@ Live probe: **403 Forbidden** without a valid session `auth`. Use stream-list fo
 
 **Not auto-filled:** `client_event_id` / odds — stream-list has no prices; enrich later.
 
+## Unified sync module (ground truth)
+
+```bash
+bun run partner:sync -- --sport=table_tennis --once --json
+bun run partner:sync -- --sport=table_tennis --loop --interval-ms=30000
+bun run partner:sync -- --enrich-booked --once   # soft name→client_event_id (metadata only)
+```
+
+| Capability | Status |
+|------------|--------|
+| Inventory (`stream-list-v2`) | ✅ |
+| New event detection → `partner_events` | ✅ |
+| Soft Statscore name → `client_event_id` | ✅ optional `--enrich-booked` |
+| Markets / lines / American odds tables | ❌ not in live feeds yet |
+| placeOrder POST | ❌ response parser only |
+| Merge into Kalshi `liquidity:ground` | ❌ deferred until priced markets |
+
+Code: `src/partner/sync.ts` · CLI `partner:sync`.  
+Do **not** invent a full sports/leagues/markets/odds schema until a price wire is captured.
+
 ## Security
 
 - Tokens/passwords must not land in git or fixtures.
