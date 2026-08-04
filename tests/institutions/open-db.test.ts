@@ -60,10 +60,18 @@ describe("open-db", () => {
     expect(tables).toContain("source_events");
     expect(tables).toContain("source_inventory_runs");
     expect(tables).toContain("source_inventory_run_pages");
+    expect(tables).toContain("source_metadata_runs");
+    expect(tables).toContain("source_metadata_run_pages");
+    expect(tables).toContain("source_metadata_run_entities");
+    expect(tables).toContain("source_metadata_entities");
+    expect(tables).toContain("source_metadata_classifications");
     expect(tables).toContain("source_event_selectors");
     expect(tables).toContain("source_event_participants");
     expect(tables).toContain("source_markets");
     expect(tables).toContain("source_market_outcomes");
+    expect(
+      db.query("SELECT name FROM sqlite_master WHERE type = 'view' ORDER BY name").all(),
+    ).toContainEqual({ name: "active_source_metadata_classifications" });
     expect(db.query("SELECT COUNT(*) AS count FROM events").get()).toEqual({ count: 1 });
     const indexes = new Set(
       (db.query("SELECT name FROM sqlite_master WHERE type = 'index'").all() as Array<{ name: string }>)
@@ -71,6 +79,10 @@ describe("open-db", () => {
     );
     expect(indexes).toContain("idx_source_events_inventory");
     expect(indexes).toContain("idx_source_inventory_one_running");
+    expect(indexes).toContain("idx_source_metadata_one_running");
+    expect(indexes).toContain("idx_source_metadata_entities_active");
+    expect(indexes).toContain("idx_source_metadata_classification_state");
+    expect(indexes).toContain("idx_source_metadata_classification_registry");
     const selectorColumns = new Set(
       (db.query("PRAGMA table_info(source_event_selectors)").all() as Array<{ name: string }>).map(
         (row) => row.name,
@@ -79,6 +91,7 @@ describe("open-db", () => {
     expect(selectorColumns).toContain("active");
     expect(selectorColumns).toContain("retired_at_ms");
     expect(selectorColumns).toContain("last_seen_run_id");
+    expect(db.query("PRAGMA foreign_key_check").all()).toEqual([]);
   });
 
   test("rebuilds a lifecycle-era selector table that lacks run fencing", () => {
