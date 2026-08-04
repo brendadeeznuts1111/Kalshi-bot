@@ -40,6 +40,7 @@ import type { CanonicalEventId, KalshiEventTicker, KalshiMarketTicker, SeriesTic
 import { asKalshiEventTicker, asSeriesTicker, sqlBrand, tryKalshiEventTicker, unbrand } from "./brands.ts";
 import type { BookSnapshot } from "../alpha-signal-types.ts";
 import { fetchKalshiBookSnapshot } from "../../bot/kalshi-market-data.ts";
+import { recomputeMatchLiquidityForEvents } from "./match-liquidity.ts";
 import {
   extractMatchupDateBlob,
   formatLadderCoverage,
@@ -595,6 +596,7 @@ export async function recordKalshiBookTicks(
   let ticksRecorded = 0;
   let errors = 0;
   const eventTickers = new Set<KalshiEventTicker>();
+  const eventIdsForLiquidity = new Set<string>();
 
   if (options.syncFirst && tickers.length > 0) {
     const events = tickers
@@ -625,6 +627,7 @@ export async function recordKalshiBookTicks(
       continue;
     }
     const eventId = sqlBrand.eventId(mapped.eventId);
+    eventIdsForLiquidity.add(unbrand(eventId));
     const kind = marketKindFromTicker(ticker);
     try {
       const book: BookSnapshot = await fetchBook(ticker);
@@ -649,6 +652,11 @@ export async function recordKalshiBookTicks(
     } catch {
       errors++;
     }
+  }
+
+  // Derived match_liquidity after batch (REST consumers read this table).
+  if (eventIdsForLiquidity.size > 0) {
+    recomputeMatchLiquidityForEvents(db, [...eventIdsForLiquidity]);
   }
 
   const coverage = options.coverage;
