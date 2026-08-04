@@ -105,6 +105,7 @@ export const ADAPTERS = [
   defineAdapter({
     id: asAdapterId("kalshi-markets-v1"),
     source: SOURCE.kalshi,
+    idNamespace: "source_global",
     parserVersion: 1,
     selectorKinds: [SELECTOR.kalshiSeries],
     metadataSelectorKinds: [SELECTOR.kalshiSeriesMetadata],
@@ -118,6 +119,7 @@ export const ADAPTERS = [
   defineAdapter({
     id: asAdapterId("polymarket-gamma-v1"),
     source: SOURCE.polymarket,
+    idNamespace: "source_global",
     parserVersion: 1,
     selectorKinds: [SELECTOR.polymarketTag],
     metadataSelectorKinds: [SELECTOR.polymarketSportsMetadata],
@@ -549,6 +551,7 @@ export function buildSportsSourceRegistryArtifact(
     adapters: registry.adapters.map((adapter) => ({
       id: unbrand(adapter.id),
       source: unbrand(adapter.source),
+      idNamespace: adapter.idNamespace,
       parserVersion: adapter.parserVersion,
       selectorKinds: adapter.selectorKinds.map(unbrand),
       metadataSelectorKinds: adapter.metadataSelectorKinds.map(unbrand),

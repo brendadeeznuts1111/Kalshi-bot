@@ -264,3 +264,122 @@ CREATE TABLE IF NOT EXISTS logger_health (
 );
 
 INSERT OR IGNORE INTO logger_health (id, booted_at) VALUES (1, unixepoch() * 1000);
+
+/**
+ * Provider-scoped inventory seam. These tables preserve source truth beside the
+ * legacy tennis warehouse; they do not imply canonical cross-source matching.
+ */
+CREATE TABLE IF NOT EXISTS source_events (
+  source_key TEXT NOT NULL,
+  source_event_id TEXT NOT NULL,
+  sport_key TEXT NOT NULL,
+  title TEXT NOT NULL,
+  status TEXT,
+  closes_at_ms INTEGER CHECK (closes_at_ms IS NULL OR closes_at_ms >= 0),
+  result TEXT,
+  starts_at_ms INTEGER CHECK (starts_at_ms IS NULL OR starts_at_ms >= 0),
+  event_type TEXT CHECK (event_type IS NULL OR event_type IN ('match', 'tournament')),
+  participant_format TEXT CHECK (
+    participant_format IS NULL OR participant_format IN ('singles', 'doubles', 'team', 'mixed', 'field')
+  ),
+  adapter_id TEXT NOT NULL,
+  selector_kind TEXT NOT NULL,
+  selector_scope TEXT NOT NULL,
+  selector_parameters_json TEXT NOT NULL CHECK (json_valid(selector_parameters_json)),
+  source_updated_at_ms INTEGER CHECK (source_updated_at_ms IS NULL OR source_updated_at_ms >= 0),
+  first_observed_at_ms INTEGER NOT NULL CHECK (first_observed_at_ms >= 0),
+  last_observed_at_ms INTEGER NOT NULL CHECK (last_observed_at_ms >= first_observed_at_ms),
+  PRIMARY KEY (source_key, source_event_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_source_events_inventory
+  ON source_events (sport_key, source_key, source_event_id);
+
+CREATE TABLE IF NOT EXISTS source_event_selectors (
+  source_key TEXT NOT NULL,
+  source_event_id TEXT NOT NULL,
+  selector_scope TEXT NOT NULL,
+  adapter_id TEXT NOT NULL,
+  selector_kind TEXT NOT NULL,
+  selector_parameters_json TEXT NOT NULL CHECK (json_valid(selector_parameters_json)),
+  first_observed_at_ms INTEGER NOT NULL CHECK (first_observed_at_ms >= 0),
+  last_observed_at_ms INTEGER NOT NULL CHECK (last_observed_at_ms >= first_observed_at_ms),
+  PRIMARY KEY (source_key, source_event_id, selector_scope),
+  FOREIGN KEY (source_key, source_event_id)
+    REFERENCES source_events (source_key, source_event_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_source_event_selectors_scope
+  ON source_event_selectors (source_key, selector_scope, source_event_id);
+
+CREATE TABLE IF NOT EXISTS source_event_participants (
+  source_key TEXT NOT NULL,
+  source_event_id TEXT NOT NULL,
+  source_participant_id TEXT NOT NULL,
+  ordinal INTEGER NOT NULL CHECK (ordinal >= 0),
+  label TEXT NOT NULL,
+  active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+  retired_at_ms INTEGER CHECK (retired_at_ms IS NULL OR retired_at_ms >= 0),
+  first_observed_at_ms INTEGER NOT NULL CHECK (first_observed_at_ms >= 0),
+  last_observed_at_ms INTEGER NOT NULL CHECK (last_observed_at_ms >= first_observed_at_ms),
+  PRIMARY KEY (source_key, source_event_id, source_participant_id),
+  FOREIGN KEY (source_key, source_event_id)
+    REFERENCES source_events (source_key, source_event_id)
+);
+
+CREATE TABLE IF NOT EXISTS source_markets (
+  source_key TEXT NOT NULL,
+  source_market_id TEXT NOT NULL,
+  source_event_id TEXT NOT NULL,
+  source_market_type TEXT,
+  market_kind TEXT,
+  title TEXT NOT NULL,
+  status TEXT,
+  closes_at_ms INTEGER CHECK (closes_at_ms IS NULL OR closes_at_ms >= 0),
+  result TEXT,
+  source_updated_at_ms INTEGER CHECK (source_updated_at_ms IS NULL OR source_updated_at_ms >= 0),
+  subject_participant_id TEXT,
+  volume REAL CHECK (volume IS NULL OR volume >= 0),
+  volume_24h REAL CHECK (volume_24h IS NULL OR volume_24h >= 0),
+  liquidity REAL CHECK (liquidity IS NULL OR liquidity >= 0),
+  clob_liquidity REAL CHECK (clob_liquidity IS NULL OR clob_liquidity >= 0),
+  open_interest REAL CHECK (open_interest IS NULL OR open_interest >= 0),
+  active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+  retired_at_ms INTEGER CHECK (retired_at_ms IS NULL OR retired_at_ms >= 0),
+  first_observed_at_ms INTEGER NOT NULL CHECK (first_observed_at_ms >= 0),
+  last_observed_at_ms INTEGER NOT NULL CHECK (last_observed_at_ms >= first_observed_at_ms),
+  PRIMARY KEY (source_key, source_market_id),
+  UNIQUE (source_key, source_market_id, source_event_id),
+  FOREIGN KEY (source_key, source_event_id)
+    REFERENCES source_events (source_key, source_event_id),
+  FOREIGN KEY (source_key, source_event_id, subject_participant_id)
+    REFERENCES source_event_participants (source_key, source_event_id, source_participant_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_source_markets_event
+  ON source_markets (source_key, source_event_id, source_market_id);
+
+CREATE TABLE IF NOT EXISTS source_market_outcomes (
+  source_key TEXT NOT NULL,
+  source_market_id TEXT NOT NULL,
+  outcome_key TEXT NOT NULL,
+  source_event_id TEXT NOT NULL,
+  source_participant_id TEXT,
+  ordinal INTEGER NOT NULL CHECK (ordinal >= 0),
+  label TEXT NOT NULL,
+  probability REAL CHECK (probability IS NULL OR (probability >= 0 AND probability <= 1)),
+  bid REAL CHECK (bid IS NULL OR (bid >= 0 AND bid <= 1)),
+  ask REAL CHECK (ask IS NULL OR (ask >= 0 AND ask <= 1)),
+  last REAL CHECK (last IS NULL OR (last >= 0 AND last <= 1)),
+  last_trade_at_ms INTEGER CHECK (last_trade_at_ms IS NULL OR last_trade_at_ms >= 0),
+  active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+  retired_at_ms INTEGER CHECK (retired_at_ms IS NULL OR retired_at_ms >= 0),
+  first_observed_at_ms INTEGER NOT NULL CHECK (first_observed_at_ms >= 0),
+  last_observed_at_ms INTEGER NOT NULL CHECK (last_observed_at_ms >= first_observed_at_ms),
+  CHECK (bid IS NULL OR ask IS NULL OR bid <= ask),
+  PRIMARY KEY (source_key, source_market_id, outcome_key),
+  FOREIGN KEY (source_key, source_market_id, source_event_id)
+    REFERENCES source_markets (source_key, source_market_id, source_event_id),
+  FOREIGN KEY (source_key, source_event_id, source_participant_id)
+    REFERENCES source_event_participants (source_key, source_event_id, source_participant_id)
+);

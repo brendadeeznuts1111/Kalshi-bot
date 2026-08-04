@@ -9,6 +9,7 @@ import type {
   SourceEventId,
   SourceKey,
   SourceMarketId,
+  SourceParticipantId,
   SourceMarketType,
   SourceScopeId,
   SportFamilyKey,
@@ -45,6 +46,7 @@ export type SourceSelector = {
 export type AdapterDefinition = {
   id: AdapterId;
   source: SourceKey;
+  idNamespace: "source_global" | "selector_scoped";
   parserVersion: number;
   selectorKinds: readonly SelectorKind[];
   metadataSelectorKinds: readonly SelectorKind[];
@@ -114,7 +116,9 @@ export type SourceProvenance = {
 
 export type NormalizedOutcomeQuote = {
   outcome: OutcomeKey;
+  ordinal: number;
   label: string;
+  participantId?: SourceParticipantId;
   probability: number | null;
   bid: number | null;
   ask: number | null;
@@ -124,10 +128,26 @@ export type NormalizedOutcomeQuote = {
 
 export type NormalizedSourceMarket = {
   id: SourceMarketId;
-  sourceMarketType: SourceMarketType;
+  sourceMarketType?: SourceMarketType;
   marketKind?: MarketKind;
   title: string;
+  status?: string;
+  closesAtMs?: number;
+  result?: string;
+  sourceUpdatedAtMs?: number;
+  subjectParticipantId?: SourceParticipantId;
+  volume: number | null;
+  volume24h: number | null;
+  liquidity: number | null;
+  clobLiquidity: number | null;
+  openInterest: number | null;
   outcomes: readonly NormalizedOutcomeQuote[];
+};
+
+export type NormalizedSourceParticipant = {
+  id: SourceParticipantId;
+  ordinal: number;
+  label: string;
 };
 
 export type NormalizedSourceObservation = {
@@ -135,9 +155,14 @@ export type NormalizedSourceObservation = {
   sport: SportKey;
   eventId: SourceEventId;
   title: string;
+  status?: string;
+  closesAtMs?: number;
+  result?: string;
   startsAtMs?: number;
   eventType?: EventType;
   participantFormat?: ParticipantFormat;
+  snapshotCompleteness: "complete" | "partial";
+  participants: readonly NormalizedSourceParticipant[];
   markets: readonly NormalizedSourceMarket[];
   provenance: SourceProvenance;
 };
@@ -170,6 +195,7 @@ export type SportsSourceRegistryArtifact = {
   adapters: ReadonlyArray<{
     id: string;
     source: string;
+    idNamespace: "source_global" | "selector_scoped";
     parserVersion: number;
     selectorKinds: readonly string[];
     metadataSelectorKinds: readonly string[];

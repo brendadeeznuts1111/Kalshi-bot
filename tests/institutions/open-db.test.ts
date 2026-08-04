@@ -1,6 +1,10 @@
 // @see https://bun.com/docs/test/index#run-tests
 import { describe, expect, test } from "bun:test";
-import { migrateEventStoreColumns, openEventStore } from "../../src/institutions/event-store/open-db.ts";
+import {
+  applyEventStoreSchema,
+  migrateEventStoreColumns,
+  openEventStore,
+} from "../../src/institutions/event-store/open-db.ts";
 
 describe("open-db", () => {
   test("new databases expose provenance columns", () => {
@@ -34,5 +38,34 @@ describe("open-db", () => {
     expect(cols).toContain("source_url");
     expect(cols).toContain("recv_ts");
     expect(cols).toContain("source_clock");
+  });
+
+  test("adds provider-scoped inventory tables without rebuilding legacy events", () => {
+    const db = openEventStore({ dbPath: ":memory:" });
+    db.run(
+      `INSERT INTO events (
+         event_id, tour, level, tournament, surface, round, player_a, player_b,
+         winner, loser, start_ts, outcome, source, source_row_hash, ingested_at
+       ) VALUES (
+         'legacy-event', 'ATP', 'tour', 'Toronto', 'Hard', 'R32', 'A', 'B',
+         'A', 'B', '2026-08-04T00:00:00Z', '1', 'fixture', 'legacy-hash', 1
+       )`,
+    );
+    applyEventStoreSchema(db);
+
+    const tables = new Set(
+      (db.query("SELECT name FROM sqlite_master WHERE type = 'table'").all() as Array<{ name: string }>)
+        .map((row) => row.name),
+    );
+    expect(tables).toContain("source_events");
+    expect(tables).toContain("source_event_participants");
+    expect(tables).toContain("source_markets");
+    expect(tables).toContain("source_market_outcomes");
+    expect(db.query("SELECT COUNT(*) AS count FROM events").get()).toEqual({ count: 1 });
+    const indexes = new Set(
+      (db.query("SELECT name FROM sqlite_master WHERE type = 'index'").all() as Array<{ name: string }>)
+        .map((row) => row.name),
+    );
+    expect(indexes).toContain("idx_source_events_inventory");
   });
 });

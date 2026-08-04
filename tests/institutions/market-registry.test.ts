@@ -187,6 +187,7 @@ describe("sports/source registry", () => {
         {
           id: asAdapterId("pinnacle-v1"),
           source: pinnacle,
+          idNamespace: "source_global",
           parserVersion: 1,
           selectorKinds: [asSelectorKind("pinnacle_league")],
           metadataSelectorKinds: [],

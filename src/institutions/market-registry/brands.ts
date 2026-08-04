@@ -15,7 +15,9 @@ export type MarketKind = Brand<string, "MarketKind">;
 export type IdentityFieldKey = Brand<string, "IdentityFieldKey">;
 export type SourceMarketType = Brand<string, "SourceMarketType">;
 export type SourceEventId = Brand<string, "SourceEventId">;
+export type SourceParticipantId = Brand<string, "SourceParticipantId">;
 export type SourceMarketId = Brand<string, "SourceMarketId">;
+export type SourceInventoryRunId = Brand<string, "SourceInventoryRunId">;
 export type OutcomeKey = Brand<string, "OutcomeKey">;
 export type SourceCacheKey = Brand<string, "SourceCacheKey">;
 
@@ -57,8 +59,12 @@ export const asSourceMarketType = (raw: string): SourceMarketType =>
   canonicalKey(raw, "SourceMarketType") as SourceMarketType;
 export const asSourceEventId = (raw: string): SourceEventId =>
   required(raw, "SourceEventId") as SourceEventId;
+export const asSourceParticipantId = (raw: string): SourceParticipantId =>
+  required(raw, "SourceParticipantId") as SourceParticipantId;
 export const asSourceMarketId = (raw: string): SourceMarketId =>
   required(raw, "SourceMarketId") as SourceMarketId;
+export const asSourceInventoryRunId = (raw: string): SourceInventoryRunId =>
+  required(raw, "SourceInventoryRunId") as SourceInventoryRunId;
 export const asOutcomeKey = (raw: string): OutcomeKey =>
   required(raw, "OutcomeKey") as OutcomeKey;
 export const asSourceCacheKey = (raw: string): SourceCacheKey =>
