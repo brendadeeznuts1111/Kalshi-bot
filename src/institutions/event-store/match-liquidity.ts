@@ -421,6 +421,124 @@ export function toLiquidityApiPayload(row: MatchLiquidityRow): MatchLiquidityApi
   return { ...row, gates: LIQUIDITY_GATES };
 }
 
+/** Glossary concept ids bound to the desk liquidity board (HQ + partners). */
+export const LIQUIDITY_BOARD_CONCEPTS = {
+  liquidityOk: "liquidity_ok",
+  tradable: "desk.tradable",
+  volume: "kalshi_volume",
+  spread: "kalshi_spread",
+  totalVolume: "total_volume_usd",
+  kpis: [
+    "kpi.tight_markets",
+    "kpi.tradable_matches",
+    "kpi.quoted_books",
+    "kpi.median_spread",
+    "kpi.board_volume",
+  ],
+} as const;
+
+export type LiquidityTournamentRollup = {
+  tournament: string;
+  count: number;
+  liquidityOk: number;
+  tradable: number;
+  volume: number;
+};
+
+export type LiquidityBoardPayload = {
+  schemaVersion: 1;
+  summary: MatchLiquiditySummary;
+  gates: typeof LIQUIDITY_GATES;
+  concepts: typeof LIQUIDITY_BOARD_CONCEPTS;
+  medianSpreadCents: number | null;
+  boardVolume: number;
+  top: MatchLiquidityApiPayload[];
+  byTournament: LiquidityTournamentRollup[];
+};
+
+/** HQ / partners board payload from match_liquidity (+ glossary concept map). */
+export function buildLiquidityBoardPayload(
+  db: Database,
+  options: { topLimit?: number; tournamentLimit?: number } = {},
+): LiquidityBoardPayload {
+  const summary = summarizeMatchLiquidity(db);
+  const topLimit = Math.min(Math.max(options.topLimit ?? 24, 1), 100);
+  const tournamentLimit = Math.min(Math.max(options.tournamentLimit ?? 16, 1), 50);
+
+  let medianSpreadCents: number | null = null;
+  let boardVolume = 0;
+  let byTournament: LiquidityTournamentRollup[] = [];
+
+  if (summary.tablePresent) {
+    const mid = db
+      .query(
+        `SELECT spread_cents AS s FROM match_liquidity
+         WHERE spread_cents IS NOT NULL
+         ORDER BY spread_cents`,
+      )
+      .all() as Array<{ s: number }>;
+    if (mid.length) {
+      medianSpreadCents = mid[Math.floor(mid.length / 2)]!.s;
+    }
+    boardVolume =
+      (
+        db
+          .query(
+            `SELECT COALESCE(SUM(
+               CASE WHEN volume_24h_fp > 0 THEN volume_24h_fp ELSE volume_fp END
+             ), 0) AS v FROM match_liquidity`,
+          )
+          .get() as { v: number }
+      ).v ?? 0;
+
+    byTournament = (
+      db
+        .query(
+          `SELECT
+             tournament AS tournament,
+             COUNT(*) AS count,
+             COALESCE(SUM(liquidity_ok), 0) AS liquidityOk,
+             COALESCE(SUM(tradable), 0) AS tradable,
+             COALESCE(SUM(CASE WHEN volume_24h_fp > 0 THEN volume_24h_fp ELSE volume_fp END), 0) AS volume
+           FROM match_liquidity
+           GROUP BY tournament
+           ORDER BY volume DESC
+           LIMIT $lim`,
+        )
+        .all({ $lim: tournamentLimit }) as Array<Record<string, number | string>>
+    ).map((r) => ({
+      tournament: String(r.tournament ?? ""),
+      count: Number(r.count) || 0,
+      liquidityOk: Number(r.liquidityOk) || 0,
+      tradable: Number(r.tradable) || 0,
+      volume: Number(r.volume) || 0,
+    }));
+  }
+
+  const topRows = listTopMatchLiquidity(db, { limit: topLimit * 2 });
+  topRows.sort((a, b) => {
+    const score = (r: MatchLiquidityRow) =>
+      (r.tradable ? 4 : 0) + (r.liquidityOk ? 2 : 0) + (r.bookTickCount > 0 ? 1 : 0);
+    const d = score(b) - score(a);
+    if (d !== 0) return d;
+    const va = a.volume24hFp > 0 ? a.volume24hFp : a.volumeFp;
+    const vb = b.volume24hFp > 0 ? b.volume24hFp : b.volumeFp;
+    return vb - va;
+  });
+
+  return {
+    schemaVersion: 1,
+    summary,
+    gates: LIQUIDITY_GATES,
+    concepts: LIQUIDITY_BOARD_CONCEPTS,
+    medianSpreadCents,
+    boardVolume,
+    top: topRows.slice(0, topLimit).map(toLiquidityApiPayload),
+    byTournament,
+  };
+}
+
+
 /** Machine summary for data-plane snapshot + WebView ground KPIs. */
 export type MatchLiquiditySummary = {
   total: number;

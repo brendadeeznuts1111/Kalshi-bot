@@ -13,10 +13,16 @@ export interface PartnerDetailFilters {
   market?: string;
 }
 
+export type PartnerDetailExtras = {
+  /** Desk match_liquidity board (HQ domain concepts + KPIs). */
+  deskLiquidity?: unknown;
+};
+
 export function partnerDetailHandler(
   db: Database,
   nodeId: string,
   filters: PartnerDetailFilters,
+  extras: PartnerDetailExtras = {},
 ): Response {
   // ── Base partner info (stub — extend with real partner table if you have one) ──
   const partner = db
@@ -38,6 +44,10 @@ export function partnerDetailHandler(
     nodeId: partner.node_id,
     createdAt: partner.created_at,
   };
+
+  if (extras.deskLiquidity != null) {
+    result.deskLiquidity = extras.deskLiquidity;
+  }
 
   // ── State-scoped regulatory payload ──
   if (filters.state) {

@@ -50,11 +50,26 @@ Complements cron: time-based volume/snapshot vs instant HTML after local DB writ
 ## REST
 
 ```text
+GET /api/liquidity                 # board: summary + top + byTournament + concepts
+GET /api/liquidity/summary         # alias of board
 GET /api/liquidity/:eventId
 GET /api/liquidity/by-tournament/:key?limit=50&recompute=1
+GET /api/kpi                       # tight_markets / tradable_matches / quoted_books from match_liquidity
+GET /ops/partners/:nodeId          # includes deskLiquidity board (same concepts)
 ```
 
-No rate limit on these GETs (bulk HQ polls).
+No rate limit on liquidity GETs (bulk HQ polls).
+
+### Domain concepts (glossary)
+
+| Concept | Role |
+|---------|------|
+| `liquidity_ok` | Volume + tight non-empty book |
+| `desk.tradable` | liquidity_ok + mid band 20–80¢ |
+| `kpi.tight_markets` / `kpi.tradable_matches` / `kpi.quoted_books` | HQ KPI strip chips |
+| `kalshi_spread` / `kalshi_volume` | Spread / volume metrics |
+
+HQ overview loads `/api/liquidity/summary` for desk chips + `#volume-liquidity-panel`.
 
 ## Gates (glossary-aligned)
 

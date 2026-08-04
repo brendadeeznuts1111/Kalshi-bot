@@ -261,6 +261,20 @@ Combined maintenance (outcomes + optional mid fetch): `bun run calibration:maint
 
 **Graduation breadth gate:** `graduationMinDistinctEvents` (default 40) — resolved lines must span ≥40 distinct games; one-game tick-spam cannot graduate.
 
+
+## Match liquidity (event-store)
+
+Reactive HTML ground after local ingest (debounced `fs.watch` on `event-store.db` + WAL):
+
+```bash
+bun run liquidity:ground:watch-db           # recompute + html-only ground on DB change
+bun run liquidity:ground:watch-db -- --once # one rebuild, exit
+bun run liquidity:ground:html               # manual html-only ground
+bun run liquidity:pipeline:register         # OS Bun.cron every 30m (volume/snapshot)
+```
+
+Details: [`docs/CRON.md`](docs/CRON.md) · Bun map: [`docs/BUN_NATIVE.md`](docs/BUN_NATIVE.md).
+
 ## Docs
 
 - [`docs/ROADMAP.md`](docs/ROADMAP.md) — phases, blockers, proof checklist (**start here**)
