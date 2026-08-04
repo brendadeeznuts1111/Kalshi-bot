@@ -41,6 +41,7 @@ import {
 } from "./tennis-surface-edge.ts";
 
 const LIVE_SCORE_STALE_MS = 15 * 60 * 1000;
+export const HEALTHY_CROSS_VENUE_MATCH_RATE = 0.85;
 
 // ── Payload types ──
 
@@ -673,6 +674,17 @@ function unavailableDataHealth(targetEvents: number): TennisDataHealth {
   };
 }
 
+export function classifyTennisDataHealth(
+  targetEvents: number,
+  matchedEvents: number,
+): TennisDataHealth["state"] {
+  if (targetEvents <= 0) return "unavailable";
+  if (matchedEvents <= 0) return "critical";
+  return matchedEvents / targetEvents >= HEALTHY_CROSS_VENUE_MATCH_RATE
+    ? "healthy"
+    : "degraded";
+}
+
 export function loadTennisDataHealth(
   db: Database,
   eventIds: readonly string[],
@@ -726,12 +738,7 @@ export function loadTennisDataHealth(
     const targetEvents = uniqueEventIds.length;
     return {
       source: "snapshots",
-      state:
-        matchedEvents >= 50
-          ? "healthy"
-          : matchedEvents === 0
-            ? "critical"
-            : "degraded",
+      state: classifyTennisDataHealth(targetEvents, matchedEvents),
       targetEvents,
       matchedEvents,
       unmatchedEvents: Math.max(0, targetEvents - matchedEvents),
@@ -777,12 +784,7 @@ function liveDataHealth(
   const targetEvents = targets.length;
   return {
     source: "live-cache",
-    state:
-      matchedEvents >= 50
-        ? "healthy"
-        : matchedEvents === 0
-          ? "critical"
-          : "degraded",
+    state: classifyTennisDataHealth(targetEvents, matchedEvents),
     targetEvents,
     matchedEvents,
     unmatchedEvents: Math.max(0, targetEvents - matchedEvents),

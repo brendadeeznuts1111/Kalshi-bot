@@ -3,6 +3,7 @@ import { asSeriesTicker } from "../../src/institutions/event-store/brands.ts";
 import { openEventStore } from "../../src/institutions/event-store/open-db.ts";
 import {
   buildTennisHqPayload,
+  classifyTennisDataHealth,
   getPlayerDetail,
 } from "../../src/research/tennis-hq-data.ts";
 import {
@@ -265,7 +266,7 @@ describe("tennis-hq-data", () => {
     expect(payload.sources.eventStore).toBe("ok");
     expect(payload.sources.liveScores).toBe("ok");
     expect(payload.sources.books.wsWatch).toBe(1);
-    expect(payload.dataHealth.state).toBe("degraded");
+    expect(payload.dataHealth.state).toBe("healthy");
     expect(payload.dataHealth.matchedEvents).toBe(1);
     expect(payload.dataHealth.unmatchedEvents).toBe(0);
     expect(payload.dataHealth.kalshiVolume24h).toBe(1900);
@@ -339,6 +340,13 @@ describe("tennis-hq-data", () => {
     expect(payload.dataHealth.kalshiVolume24h).toBe(1900);
     expect(payload.dataHealth.polymarketVolume24h).toBe(20);
     expect(payload.dataHealth.kalshiVolumeLifetime).toBe(5000);
+  });
+
+  test("classifies venue health by coverage rate instead of an absolute match count", () => {
+    expect(classifyTennisDataHealth(10_000, 50)).toBe("degraded");
+    expect(classifyTennisDataHealth(49, 49)).toBe("healthy");
+    expect(classifyTennisDataHealth(235, 0)).toBe("critical");
+    expect(classifyTennisDataHealth(0, 0)).toBe("unavailable");
   });
 
   test("buildTennisHqPayload degrades when event store absent", async () => {

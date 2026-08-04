@@ -17,6 +17,7 @@ const TOURNAMENT_STOP_WORDS = new Set([
   "qualifying",
   "doubles",
 ]);
+const FUZZY_NAME_MIN_SCORE = 0.88;
 
 export type KalshiMatchTarget = {
   ticker: string;
@@ -51,6 +52,13 @@ export function normalizeTennisName(value: string): string {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
+    // These Latin letters do not decompose under NFD.
+    .replace(/[łđðþø]/g, (letter) =>
+      ({ ł: "l", đ: "d", ð: "d", þ: "th", ø: "o" })[letter]!,
+    )
+    .replace(/æ/g, "ae")
+    .replace(/œ/g, "oe")
+    .replace(/ß/g, "ss")
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
 }
@@ -78,6 +86,137 @@ export function levenshtein(left: string, right: string): number {
     previous = current;
   }
   return previous[right.length]!;
+}
+
+/** Prefix-aware similarity for short, transposed, or truncated tennis names. */
+export function jaroWinkler(left: string, right: string): number {
+  if (left === right) return 1;
+  if (!left || !right) return 0;
+
+  const matchDistance = Math.max(0, Math.floor(Math.max(left.length, right.length) / 2) - 1);
+  const leftMatches = new Array<boolean>(left.length).fill(false);
+  const rightMatches = new Array<boolean>(right.length).fill(false);
+  let matches = 0;
+
+  for (let i = 0; i < left.length; i++) {
+    const start = Math.max(0, i - matchDistance);
+    const end = Math.min(i + matchDistance + 1, right.length);
+    for (let j = start; j < end; j++) {
+      if (rightMatches[j] || left[i] !== right[j]) continue;
+      leftMatches[i] = true;
+      rightMatches[j] = true;
+      matches++;
+      break;
+    }
+  }
+  if (matches === 0) return 0;
+
+  let transpositions = 0;
+  let rightIndex = 0;
+  for (let i = 0; i < left.length; i++) {
+    if (!leftMatches[i]) continue;
+    while (!rightMatches[rightIndex]) rightIndex++;
+    if (left[i] !== right[rightIndex]) transpositions++;
+    rightIndex++;
+  }
+
+  const jaro =
+    (matches / left.length +
+      matches / right.length +
+      (matches - transpositions / 2) / matches) /
+    3;
+  let prefixLength = 0;
+  while (
+    prefixLength < 4 &&
+    prefixLength < left.length &&
+    prefixLength < right.length &&
+    left[prefixLength] === right[prefixLength]
+  ) {
+    prefixLength++;
+  }
+  return jaro + prefixLength * 0.1 * (1 - jaro);
+}
+
+/** Sørensen-Dice character n-gram overlap. */
+export function diceCoefficient(left: string, right: string, gramSize = 2): number {
+  if (left === right) return 1;
+  if (!left || !right || gramSize < 1) return 0;
+  if (left.length < gramSize || right.length < gramSize) return 0;
+
+  const grams = new Map<string, number>();
+  for (let i = 0; i <= left.length - gramSize; i++) {
+    const gram = left.slice(i, i + gramSize);
+    grams.set(gram, (grams.get(gram) ?? 0) + 1);
+  }
+  let overlap = 0;
+  for (let i = 0; i <= right.length - gramSize; i++) {
+    const gram = right.slice(i, i + gramSize);
+    const remaining = grams.get(gram) ?? 0;
+    if (remaining === 0) continue;
+    overlap++;
+    grams.set(gram, remaining - 1);
+  }
+  const leftCount = left.length - gramSize + 1;
+  const rightCount = right.length - gramSize + 1;
+  return (2 * overlap) / (leftCount + rightCount);
+}
+
+function nameTokens(value: string): string[] {
+  return normalizeTennisName(value).split(" ").filter(Boolean);
+}
+
+function sameTokenSet(left: readonly string[], right: readonly string[]): boolean {
+  if (left.length !== right.length) return false;
+  const sortedLeft = [...left].sort();
+  const sortedRight = [...right].sort();
+  return sortedLeft.every((token, index) => token === sortedRight[index]);
+}
+
+function isTokenSubset(shorter: readonly string[], longer: readonly string[]): boolean {
+  return shorter.length >= 2 && shorter.every((token) => longer.includes(token));
+}
+
+/**
+ * Tennis-name similarity with explicit handling for initials, reordered names,
+ * compound surnames, diacritics, truncation, and small spelling errors.
+ */
+export function tennisNameSimilarity(left: string, right: string): number {
+  const normalizedLeft = normalizeTennisName(left);
+  const normalizedRight = normalizeTennisName(right);
+  if (!normalizedLeft || !normalizedRight) return 0;
+  if (normalizedLeft === normalizedRight) return 1;
+
+  const leftTokens = nameTokens(normalizedLeft);
+  const rightTokens = nameTokens(normalizedRight);
+  if (sameTokenSet(leftTokens, rightTokens)) return 0.995;
+  if (
+    isTokenSubset(leftTokens, rightTokens) ||
+    isTokenSubset(rightTokens, leftTokens)
+  ) {
+    return 0.96;
+  }
+
+  const leftFirst = leftTokens[0] ?? "";
+  const rightFirst = rightTokens[0] ?? "";
+  const leftSurname = leftTokens.at(-1) ?? "";
+  const rightSurname = rightTokens.at(-1) ?? "";
+  if (
+    leftSurname === rightSurname &&
+    leftFirst[0] !== undefined &&
+    leftFirst[0] === rightFirst[0]
+  ) {
+    return 0.98;
+  }
+
+  const editScore =
+    1 - levenshtein(normalizedLeft, normalizedRight) /
+      Math.max(normalizedLeft.length, normalizedRight.length);
+  return Math.max(
+    editScore,
+    jaroWinkler(normalizedLeft, normalizedRight),
+    diceCoefficient(normalizedLeft, normalizedRight, 2),
+    diceCoefficient(normalizedLeft, normalizedRight, 3),
+  );
 }
 
 export function polymarketSlugCodes(slug: string): [string, string] | null {
@@ -258,15 +397,22 @@ export function findPolymarketMatch(
     if (target.date && eventDate && target.date !== eventDate) continue;
     for (const market of moneylineMarkets(event)) {
       const [outcomeA, outcomeB] = market.outcomes.map(normalizeTennisName);
-      const forwardA = levenshtein(normalizedA, outcomeA!);
-      const forwardB = levenshtein(normalizedB, outcomeB!);
-      const reverseA = levenshtein(normalizedA, outcomeB!);
-      const reverseB = levenshtein(normalizedB, outcomeA!);
-      const forward = forwardA + forwardB;
-      const reverse = reverseA + reverseB;
-      const orientation = forward <= reverse ? 0 : 1;
-      const distances = orientation === 0 ? [forwardA, forwardB] : [reverseA, reverseB];
-      if (Math.max(...distances) >= 3) continue;
+      const forwardScores = [
+        tennisNameSimilarity(normalizedA, outcomeA!),
+        tennisNameSimilarity(normalizedB, outcomeB!),
+      ];
+      const reverseScores = [
+        tennisNameSimilarity(normalizedA, outcomeB!),
+        tennisNameSimilarity(normalizedB, outcomeA!),
+      ];
+      const forwardValid = Math.min(...forwardScores) >= FUZZY_NAME_MIN_SCORE;
+      const reverseValid = Math.min(...reverseScores) >= FUZZY_NAME_MIN_SCORE;
+      if (!forwardValid && !reverseValid) continue;
+      const forward = forwardScores[0]! + forwardScores[1]!;
+      const reverse = reverseScores[0]! + reverseScores[1]!;
+      if (forwardValid && reverseValid && forward === reverse) continue;
+      const orientation = forwardValid && (!reverseValid || forward > reverse) ? 0 : 1;
+      const scores = orientation === 0 ? forwardScores : reverseScores;
       fuzzyCandidates.push(
         candidateBase(
           target,
@@ -274,7 +420,7 @@ export function findPolymarketMatch(
           market,
           orientation,
           "fuzzy-name",
-          distances[0]! + distances[1]!,
+          Math.round((2 - scores[0]! - scores[1]!) * 10_000),
         ),
       );
       break;

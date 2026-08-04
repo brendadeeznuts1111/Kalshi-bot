@@ -12,7 +12,8 @@ describe("Tennis HQ data health surface", () => {
     expect(app).toContain("Kalshi 24h");
     expect(app).toContain("Polymarket 24h");
     expect(app).toContain("their units differ");
-    expect(app).toContain("Fix matcher");
+    expect(app).toContain("Inspect coverage payload");
+    expect(app).toContain("without a cross-venue link");
   });
 
   test("uses a two-column health-first desk grid with a mobile fallback", async () => {

@@ -610,20 +610,20 @@ function dataHealthBannerHtml(health) {
   const target = Number(health?.targetEvents ?? 0);
   const unmatched = Number(health?.unmatchedEvents ?? target);
   const stale = Number(health?.staleVolumeEvents ?? 0);
-  const label = state === "healthy" ? "healthy" : state === "critical" ? "matcher critical" : state === "degraded" ? "partial match" : "snapshot unavailable";
+  const label = state === "healthy" ? "coverage healthy" : state === "critical" ? "venue coverage critical" : state === "degraded" ? "partial coverage" : "snapshot unavailable";
   return (
     '<section class="health-banner health-' + tone + '" aria-live="polite">' +
     '<div class="health-summary"><div><span class="health-kicker">Cross-market data health</span>' +
     '<strong>' + esc(matched) + ' / ' + esc(target) + ' events matched</strong></div>' +
     badge(tone, label) +
     (stale > 0 ? badge("warn", "⚠ " + stale + " stale volume") : "") +
-    (state === "critical" ? '<button type="button" id="health-debug" class="health-debug">Fix matcher</button>' : "") +
+    (state === "critical" || state === "degraded" ? '<button type="button" id="health-debug" class="health-debug">Inspect coverage payload</button>' : "") +
     '</div>' +
     '<div class="health-grid">' +
     '<div class="kalshi-metrics"><span>Kalshi 24h</span><strong>' + fmtHealthVolume(health?.kalshiVolume24h) + '</strong><small>contracts</small></div>' +
     '<div class="poly-metrics"><span>Polymarket 24h</span><strong>$' + fmtHealthVolume(health?.polymarketVolume24h) + '</strong><small>USDC</small></div>' +
     '</div>' +
-    '<div class="health-foot">' + esc(unmatched) + ' unmatched · source ' + esc(health?.source ?? "unavailable") + ' · volumes are shown side-by-side because their units differ</div>' +
+    '<div class="health-foot">' + esc(unmatched) + ' without a cross-venue link · source ' + esc(health?.source ?? "unavailable") + ' · volumes are shown side-by-side because their units differ</div>' +
     '</section>'
   );
 }

@@ -9,8 +9,11 @@ import {
   slugCodes,
 } from "../../src/institutions/event-store/cross-market-live.ts";
 import {
+  diceCoefficient,
   findPolymarketMatch,
+  jaroWinkler,
   levenshtein,
+  normalizeTennisName,
 } from "../../src/institutions/event-store/matcher-v2.ts";
 import type { PolymarketEvent } from "../../src/regulatory/integrations/polymarket.ts";
 
@@ -75,6 +78,14 @@ describe("name and slug parsing", () => {
   test("normalizes initials and surnames", () => {
     expect(firstInitial("Benoît Paire")).toBe("b");
     expect(lastName("Novak Djokovic (1)")).toBe("djokovic");
+    expect(normalizeTennisName("Łukasz Kubot / Jan-Lennard Struff")).toBe(
+      "lukasz kubot jan lennard struff",
+    );
+  });
+
+  test("scores prefix typos and n-gram overlap without case sensitivity", () => {
+    expect(jaroWinkler("zverev", "zverevv")).toBeGreaterThan(0.95);
+    expect(diceCoefficient("tsitsipas", "tsitsip", 2)).toBeGreaterThan(0.8);
   });
 
   test("extracts variable-length surname codes", () => {
@@ -148,6 +159,46 @@ describe("matcher V2", () => {
     );
     expect(levenshtein("alex michelsen", "alex michelson")).toBe(1);
     expect(match?.method).toBe("fuzzy-name");
+  });
+
+  test("matches a compound provider name from a stable two-token identity", () => {
+    const match = findPolymarketMatch(
+      {
+        ticker: "KXITFMATCH-26AUG04SOUOLI-SOU",
+        playerA: "Andre Souza",
+        playerB: "Nicolas Oliveira",
+        date: "2026-08-04",
+      },
+      [
+        polyEvent(
+          "itf-andreso-oliveir-2026-08-04",
+          "ITF Londrina: Andre Souza Pinto De Camargo E Silva vs Nicolas Oliveira",
+          ["Andre Souza Pinto De Camargo E Silva", "Nicolas Oliveira"],
+        ),
+      ],
+    );
+    expect(match?.method).toBe("fuzzy-name");
+    expect(match?.playerAOutcomeIndex).toBe(0);
+  });
+
+  test("matches East-Asian display-order changes and preserves outcome orientation", () => {
+    const match = findPolymarketMatch(
+      {
+        ticker: "KXITFWMATCH-26AUG04SUNZHA-ZHA",
+        playerA: "Junhan Zhang",
+        playerB: "Tiantian Sun",
+        date: "2026-08-04",
+      },
+      [
+        polyEvent(
+          "itf-tiantia-zhan-2026-08-04",
+          "ITF Tianjin: Sun Tiantian vs Junhan Zhang",
+          ["Sun Tiantian", "Junhan Zhang"],
+        ),
+      ],
+    );
+    expect(match?.method).toBe("fuzzy-name");
+    expect(match?.playerAOutcomeIndex).toBe(1);
   });
 
   test("uses a unique date+tournament fallback when names fail", () => {
