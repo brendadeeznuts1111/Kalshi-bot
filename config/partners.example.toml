@@ -1,0 +1,62 @@
+# Partner domain config (non-secret). Copy to config/partners.toml and edit.
+#
+# Load:
+#   bun run partner:toml -- --path=config/partners.toml --seed
+#   Bun.TOML.parse(await Bun.file("config/partners.toml").text())
+#
+# Secrets never live here — only env_prefix / vault_id pointers.
+# Asset naming (per-out):
+#   env_prefix = "{BOOK}_{CODE}_{N}_"  e.g. FANTASY402_SPEN_1_
+#   vault_id   = "vault-{outId}"       e.g. vault-out-SPEN-1
+#   out id     = "out-{CODE}-{n}"
+# Bare FANTASY402_ / partner-only FANTASY402_SPEN_ auto-upgrade to per-out on seed.
+# Secrets: {prefix}BEARER_TOKEN · CUSTOMER_ID · AGENT_ID · PASSWORD · DOMAIN · …
+# @see https://bun.com/docs/runtime/toml
+# @see docs/PARTNER-DOMAIN.md
+
+version = 1
+title = "Kalshi-bot partner registry"
+
+[[partners]]
+code = "SPEN"
+id = "partner-spen"
+name = "Partner SPEN"
+active = true
+# profit_split = 0.5
+# commission_rate = 0.0
+# telegram_chat_id = ""   # planned: Communication layer
+
+[[partners]]
+code = "ASH"
+id = "partner-ash"
+name = "Partner ASH"
+active = true
+
+[[outs]]
+id = "out-SPEN-1"
+partner_code = "SPEN"
+provider = "fantasy402"
+env_prefix = "FANTASY402_SPEN_1_"
+currency = "USD"
+url = "https://fantasy402.com"
+working_balance = 5000
+vault_id = "vault-out-SPEN-1"
+status = "active"
+skins = [
+  { name = "ezlive", per_bet_max = 500, max_win = 2500, active = true },
+  { name = "dark", per_bet_max = 1000, max_win = 5000, active = true },
+]
+
+[[outs]]
+id = "out-ASH-1"
+partner_code = "ASH"
+provider = "fantasy402"
+env_prefix = "FANTASY402_ASH_1_"
+currency = "USD"
+url = "https://fantasy402.com"
+working_balance = 2000
+vault_id = "vault-out-ASH-1"
+status = "active"
+skins = [
+  { name = "ezlive", per_bet_max = 300, max_win = 1500, active = true },
+]

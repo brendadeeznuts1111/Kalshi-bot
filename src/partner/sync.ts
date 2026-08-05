@@ -7,11 +7,15 @@
  *  - optional soft enrich: Statscore booked-events list by name match → client_event_id
  *
  * NOT real yet (do not invent):
- *  - markets / lines / American odds from stream-list or livescorepro booked-events
+ *  - markets / lines from stream-list or livescorepro booked-events
  *  - placeOrder POST
  *  - merge into Kalshi match_liquidity
+ *
+ * Pandora priced book (optional): when `coefficientStore` (or adapter store)
+ * has moneyline lines, report `pricedOdds: true` — still no liquidity merge.
  */
 import type { Database } from "bun:sqlite";
+import type { CoefficientStore } from "./fantasy-ultra/coefficient-store.ts";
 import type { FantasySessionAdapter, PartnerLiveEvent } from "./types.ts";
 import {
   filterLiveEventsBySport,
@@ -26,6 +30,8 @@ export type PartnerSyncOptions = {
   /** Soft-match Statscore booked names for NEW rows only (metadata, not odds). */
   enrichBooked?: boolean;
   nowMs?: number;
+  /** Explicit Pandora book; else adapter.getCoefficientStore() when present. */
+  coefficientStore?: CoefficientStore;
 };
 
 export type PartnerSyncReport = {
@@ -39,12 +45,26 @@ export type PartnerSyncReport = {
     inventory: true;
     eventDetection: true;
     bookedMetadata: boolean;
-    pricedOdds: false;
+    pricedOdds: boolean;
     placeBetRequest: false;
     liquidityMerge: false;
   };
   notes: string[];
 };
+
+function resolveCoefficientStore(
+  adapter: FantasySessionAdapter,
+  options: PartnerSyncOptions,
+): CoefficientStore | null {
+  if (options.coefficientStore) return options.coefficientStore;
+  const maybe = adapter as FantasySessionAdapter & {
+    getCoefficientStore?: () => CoefficientStore;
+  };
+  if (typeof maybe.getCoefficientStore === "function") {
+    return maybe.getCoefficientStore();
+  }
+  return null;
+}
 
 function normalizeName(s: string): string {
   return s
@@ -149,11 +169,25 @@ export async function runPartnerInventorySync(
     notes.push("booked enrich: no new rows to match");
   }
 
-  notes.push(
-    "priced odds: not available from stream-list or Statscore livescorepro",
-  );
+  const store = resolveCoefficientStore(adapter, options);
+  const pricedEvents = store?.pricedEventCount() ?? 0;
+  const pricedLines = store?.lineCount() ?? 0;
+  const pricedOdds = pricedEvents > 0;
+  if (pricedOdds) {
+    notes.push(
+      `priced odds: Pandora store has ${pricedEvents} event(s), ${pricedLines} line(s) (ML via fetchMarkets; no liquidity merge)`,
+    );
+  } else {
+    notes.push(
+      "priced odds: not available from stream-list or Statscore livescorepro; Pandora store empty",
+    );
+  }
   notes.push("placeBet POST: still unmapped (ticket response parser ready)");
-  notes.push("liquidity:ground merge: deferred until priced markets exist");
+  notes.push(
+    pricedOdds
+      ? "liquidity:ground merge: deferred (priced book in store only)"
+      : "liquidity:ground merge: deferred until priced markets exist",
+  );
 
   return {
     sport,
@@ -166,7 +200,7 @@ export async function runPartnerInventorySync(
       inventory: true,
       eventDetection: true,
       bookedMetadata: options.enrichBooked === true,
-      pricedOdds: false,
+      pricedOdds,
       placeBetRequest: false,
       liquidityMerge: false,
     },

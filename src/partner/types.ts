@@ -93,7 +93,11 @@ export type PartnerBetGroup = {
   toWin: number;
   currency: string | null;
   betType: number | null;
+  /** Wire settlement marker; 0 = open / not decided */
+  result: number | null;
   state: number | null;
+  /** 0/1 when book marks win; null when unknown */
+  isWin: number | null;
   acceptTime: number | null;
   delay: number | null;
   legs: PartnerComponentBet[];

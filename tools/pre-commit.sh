@@ -17,6 +17,22 @@ bun run glossary:check
 echo "pre-commit: partners"
 bun run partners:validate
 
+# Partner domain TOML gate when config / toml-config / example staged
+partner_toml_staged="$(
+  git diff --cached --name-only --diff-filter=ACM -- \
+    'config/partners.toml' 'config/partners.example.toml' \
+    'src/partner/toml-config.ts' 'tools/partner-toml.ts' \
+    'tests/partner/toml-config.test.ts' 2>/dev/null || true
+)"
+if [[ -n "$partner_toml_staged" ]]; then
+  echo "pre-commit: partner:toml:validate (partner TOML path staged)"
+  bun run partner:toml:validate
+  # Prefer live config if present; still validate example via script above
+  if [[ -f config/partners.toml ]]; then
+    bun run partner:toml -- --validate --path=config/partners.toml
+  fi
+fi
+
 # Color bake gate when palette / kernel staged
 color_staged="$(
   git diff --cached --name-only --diff-filter=ACM -- \

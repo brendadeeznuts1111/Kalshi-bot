@@ -11,31 +11,41 @@
  *   ← 40{"sid":"..."}
  *   ← 2 / → 3  (Engine.IO ping/pong)
  *
- * Subscription emit + odds payload format: **not yet captured** — pass raw
- * frames via onPacket / onEvent once DevTools Messages are available.
+ * Subscription sequence: captured via Bun.WebView CDP
+ * (`partner:webview-ws-capture`) — see {@link buildPliveSubscribeSequence}.
+ * Odds bodies arrive as Socket.IO binary attachments (`451-` + gzip JSON);
+ * see {@link decodePandoraAttachment} / {@link extractCoefficientLines}.
  */
-import { FANTASY_WIDGET_CONFIG } from "./widget-config.ts";
+import {
+  decodePandoraAttachment,
+  eventIdFromCoefficientRoom,
+  extractCoefficientLines,
+  parseBinaryEventHeader,
+  type CoefficientEnvelope,
+  type CoefficientLine,
+} from './coefficients.ts';
+import { FANTASY_WIDGET_CONFIG } from './widget-config.ts';
 
 /** Engine.IO packet types (EIO=4). */
 export const EIO = {
-  open: "0",
-  close: "1",
-  ping: "2",
-  pong: "3",
-  message: "4",
-  upgrade: "5",
-  noop: "6",
+  open: '0',
+  close: '1',
+  ping: '2',
+  pong: '3',
+  message: '4',
+  upgrade: '5',
+  noop: '6',
 } as const;
 
 /** Socket.IO packet types (inside Engine.IO message). */
 export const SIO = {
-  connect: "0",
-  disconnect: "1",
-  event: "2",
-  ack: "3",
-  connectError: "4",
-  binaryEvent: "5",
-  binaryAck: "6",
+  connect: '0',
+  disconnect: '1',
+  event: '2',
+  ack: '3',
+  connectError: '4',
+  binaryEvent: '5',
+  binaryAck: '6',
 } as const;
 
 export type PandoraOpenInfo = {
@@ -52,9 +62,18 @@ export type PandoraSocketHandlers = {
   onPacket?: (raw: string) => void;
   /**
    * Socket.IO EVENT (42...) payloads: event name + args array.
-   * Unknown until widget Messages are captured.
    */
   onEvent?: (eventName: string, args: unknown[]) => void;
+  /**
+   * Decoded eventCoefficients attachment (full snapshot or diff envelope).
+   * `lines` is empty for diffs / non-coefficient rooms.
+   */
+  onCoefficients?: (info: {
+    room: string;
+    eventId: number | null;
+    envelope: CoefficientEnvelope;
+    lines: CoefficientLine[];
+  }) => void;
   onClose?: (code: number, reason: string) => void;
   onError?: (err: unknown) => void;
   onLog?: (line: string) => void;
@@ -72,7 +91,7 @@ export type PandoraSocketOptions = {
 };
 
 export function defaultPandoraSocketUrl(): string {
-  const base = FANTASY_WIDGET_CONFIG.customWebSocketUrl.replace(/\/$/, "");
+  const base = FANTASY_WIDGET_CONFIG.customWebSocketUrl.replace(/\/$/, '');
   return `${base}/socket.io/?EIO=4&transport=websocket`;
 }
 
@@ -94,16 +113,16 @@ export type PandoraLiveSessionIds = {
 };
 
 export const PANDORA_DEFAULT_SESSION: Required<
-  Pick<PandoraLiveSessionIds, "partnerId" | "groupId" | "mainToken">
+  Pick<PandoraLiveSessionIds, 'partnerId' | 'groupId' | 'mainToken'>
 > = {
-  partnerId: "118",
+  partnerId: '118',
   groupId: 97360,
-  mainToken: "U0VWU1NWUkJSMFU9",
+  mainToken: 'U0VWU1NWUkJSMFU9',
 };
 
 /** Build the emit sequence observed after Socket.IO connect on plive. */
 export function buildPliveSubscribeSequence(
-  ids: PandoraLiveSessionIds = {},
+  ids: PandoraLiveSessionIds = {}
 ): Array<{ eventName: string; args: unknown[] }> {
   const partnerId = ids.partnerId ?? PANDORA_DEFAULT_SESSION.partnerId;
   const groupId = ids.groupId ?? PANDORA_DEFAULT_SESSION.groupId;
@@ -112,21 +131,21 @@ export function buildPliveSubscribeSequence(
 
   const rooms: string[] = [
     `live.groupProfile.${groupId}`,
-    "all.translations",
-    "live.sportPeriod",
+    'all.translations',
+    'live.sportPeriod',
     `live.fixedParlay.${partnerId}`,
     `live.circle.${partnerId}`,
     `live.featuredBet.${partnerId}`,
-    "live.appVersion",
+    'live.appVersion',
     `live.activeCircle.${groupId}`,
     `${main}.eventData`,
     `${main}.user.alphas.0`,
     `${main}.group.alphas.${groupId}`,
     `${main}.partner.alphas.${partnerId}`,
-    "live.countries",
-    "live.leagues",
-    "live.sports",
-    "live.wagerTypes",
+    'live.countries',
+    'live.leagues',
+    'live.sports',
+    'live.wagerTypes',
   ];
 
   for (const eid of ids.eventIds ?? []) {
@@ -135,15 +154,15 @@ export function buildPliveSubscribeSequence(
 
   return [
     {
-      eventName: "setSocketMetadata",
-      args: [{ partnerId, flavor: "live" }],
+      eventName: 'setSocketMetadata',
+      args: [{ partnerId, flavor: 'live' }],
     },
     {
-      eventName: "subscribeSystemEvents",
+      eventName: 'subscribeSystemEvents',
       args: [{ partnerId, groupId }],
     },
-    ...rooms.map((room) => ({
-      eventName: "subscribe",
+    ...rooms.map(room => ({
+      eventName: 'subscribe',
       args: [[room]],
     })),
   ];
@@ -153,14 +172,13 @@ export function parseEngineOpen(packet: string): PandoraOpenInfo | null {
   if (!packet.startsWith(EIO.open)) return null;
   try {
     const json = JSON.parse(packet.slice(1)) as Record<string, unknown>;
-    const sid = String(json.sid ?? "");
+    const sid = String(json.sid ?? '');
     if (!sid) return null;
     return {
       sid,
       pingInterval: Number(json.pingInterval) || 25_000,
       pingTimeout: Number(json.pingTimeout) || 20_000,
-      maxPayload:
-        json.maxPayload != null ? Number(json.maxPayload) : undefined,
+      maxPayload: json.maxPayload != null ? Number(json.maxPayload) : undefined,
     };
   } catch {
     return null;
@@ -172,7 +190,7 @@ export function parseEngineOpen(packet: string): PandoraOpenInfo | null {
  * Returns null if not an event packet.
  */
 export function parseSocketIoEvent(
-  engineMessage: string,
+  engineMessage: string
 ): { eventName: string; args: unknown[] } | null {
   // Engine.IO message wrapper: type "4" + Socket.IO packet
   if (!engineMessage.startsWith(EIO.message)) return null;
@@ -182,7 +200,7 @@ export function parseSocketIoEvent(
   if (!eventMatch) return null;
   try {
     const arr = JSON.parse(eventMatch[1]!) as unknown[];
-    if (!Array.isArray(arr) || typeof arr[0] !== "string") return null;
+    if (!Array.isArray(arr) || typeof arr[0] !== 'string') return null;
     return { eventName: arr[0], args: arr.slice(1) };
   } catch {
     return null;
@@ -206,6 +224,11 @@ export class PandoraSocket {
   private closedByUser = false;
   private reconnectAttempt = 0;
   private namespaceConnected = false;
+  /** Pending Socket.IO binary attachments after a `451-` header. */
+  private pendingBinary: {
+    remaining: number;
+    eventName: string;
+  } | null = null;
 
   constructor(options: PandoraSocketOptions = {}) {
     this.url = options.url ?? defaultPandoraSocketUrl();
@@ -229,24 +252,40 @@ export class PandoraSocket {
     const ws = new this.WebSocketImpl(this.url);
     this.ws = ws;
 
-    ws.addEventListener("open", () => {
-      this.handlers.onLog?.("pandora: websocket open (await Engine.IO 0 packet)");
+    ws.addEventListener('open', () => {
+      this.handlers.onLog?.('pandora: websocket open (await Engine.IO 0 packet)');
     });
 
-    ws.addEventListener("message", (ev) => {
-      const raw = String((ev as MessageEvent).data ?? "");
-      this.handleRaw(raw);
+    ws.addEventListener('message', (ev) => {
+      const data = (ev as MessageEvent).data;
+      if (data instanceof ArrayBuffer) {
+        this.handleBinaryAttachment(new Uint8Array(data));
+        return;
+      }
+      if (ArrayBuffer.isView(data)) {
+        this.handleBinaryAttachment(
+          new Uint8Array(data.buffer, data.byteOffset, data.byteLength),
+        );
+        return;
+      }
+      if (typeof Blob !== 'undefined' && data instanceof Blob) {
+        void data.arrayBuffer().then((ab) => {
+          this.handleBinaryAttachment(new Uint8Array(ab));
+        });
+        return;
+      }
+      this.handleRaw(String(data ?? ''));
     });
 
-    ws.addEventListener("error", (ev) => {
+    ws.addEventListener('error', ev => {
       this.handlers.onError?.(ev);
     });
 
-    ws.addEventListener("close", (ev) => {
+    ws.addEventListener('close', ev => {
       this.stopPing();
       this.namespaceConnected = false;
       const ce = ev as CloseEvent;
-      this.handlers.onClose?.(ce.code, ce.reason ?? "");
+      this.handlers.onClose?.(ce.code, ce.reason ?? '');
       this.ws = null;
       if (!this.closedByUser && this.reconnect) {
         this.scheduleReconnect();
@@ -259,7 +298,7 @@ export class PandoraSocket {
     this.closedByUser = true;
     this.stopPing();
     try {
-      this.ws?.close(1000, "client close");
+      this.ws?.close(1000, 'client close');
     } catch {
       /* ignore */
     }
@@ -267,13 +306,10 @@ export class PandoraSocket {
     this.namespaceConnected = false;
   }
 
-  /**
-   * Emit a Socket.IO event once connected.
-   * Subscription shape is **TBD** — e.g. emit("subscribe", { sport: 220 }).
-   */
+  /** Emit a Socket.IO event once connected (e.g. subscribe / setSocketMetadata). */
   emit(eventName: string, ...args: unknown[]): void {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      throw new Error("pandora: not connected");
+      throw new Error('pandora: not connected');
     }
     const frame = encodeSocketIoEmit(eventName, ...args);
     this.ws.send(frame);
@@ -290,28 +326,30 @@ export class PandoraSocket {
       this.emit(step.eventName, ...step.args);
     }
     this.handlers.onLog?.(
-      `pandora: subscribeLive sent ${seq.length} emits (partner=${ids.partnerId ?? PANDORA_DEFAULT_SESSION.partnerId})`,
+      `pandora: subscribeLive sent ${seq.length} emits (partner=${ids.partnerId ?? PANDORA_DEFAULT_SESSION.partnerId})`
     );
   }
 
   /**
    * Low-level: raw frame or single emit (debug / probe CLI).
    */
-  subscribePlaceholder(options: {
-    rawFrame?: string;
-    eventName?: string;
-    args?: unknown[];
-    /** If true, run full plive subscribe sequence */
-    plive?: boolean;
-    session?: PandoraLiveSessionIds;
-  } = {}): void {
+  subscribePlaceholder(
+    options: {
+      rawFrame?: string;
+      eventName?: string;
+      args?: unknown[];
+      /** If true, run full plive subscribe sequence */
+      plive?: boolean;
+      session?: PandoraLiveSessionIds;
+    } = {}
+  ): void {
     if (options.plive) {
       this.subscribeLive(options.session);
       return;
     }
     if (options.rawFrame) {
       if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-        throw new Error("pandora: not connected");
+        throw new Error('pandora: not connected');
       }
       this.ws.send(options.rawFrame);
       this.handlers.onLog?.(`pandora: raw subscribe frame sent`);
@@ -321,13 +359,67 @@ export class PandoraSocket {
       this.emit(options.eventName, ...(options.args ?? []));
       return;
     }
-    this.handlers.onLog?.(
-      "pandora: use subscribeLive() or --plive on partner:pandora-probe",
-    );
+    this.handlers.onLog?.('pandora: use subscribeLive() or --plive on partner:pandora-probe');
+  }
+
+  private handleBinaryAttachment(body: Uint8Array | string): void {
+    const pending = this.pendingBinary;
+    if (!pending) {
+      // Text frame that looks like base64 gzip without a header (CDP-style).
+      if (typeof body === 'string' && body.startsWith('H4sI')) {
+        this.consumeAttachmentBody(body, 'unknown');
+      }
+      return;
+    }
+    pending.remaining -= 1;
+    if (pending.remaining <= 0) this.pendingBinary = null;
+    this.consumeAttachmentBody(body, pending.eventName);
+  }
+
+  private consumeAttachmentBody(
+    body: Uint8Array | string,
+    room: string,
+  ): void {
+    try {
+      const envelope = decodePandoraAttachment(body);
+      const eventId = eventIdFromCoefficientRoom(room);
+      const lines =
+        !envelope.isDiff && eventId != null
+          ? extractCoefficientLines(eventId, envelope.payload)
+          : [];
+      this.handlers.onCoefficients?.({ room, eventId, envelope, lines });
+      if (lines.length > 0) {
+        this.handlers.onLog?.(
+          `pandora: coefficients ${room} lines=${lines.length}`,
+        );
+      }
+    } catch (err) {
+      this.handlers.onError?.(err);
+      this.handlers.onLog?.(
+        `pandora: attachment decode failed for ${room}: ${String(err)}`,
+      );
+    }
   }
 
   private handleRaw(raw: string): void {
     this.handlers.onPacket?.(raw);
+
+    // Socket.IO binary event header — next N frames are attachments.
+    const binHeader = parseBinaryEventHeader(raw);
+    if (binHeader) {
+      this.pendingBinary = {
+        remaining: binHeader.attachmentCount,
+        eventName: binHeader.eventName,
+      };
+      this.handlers.onEvent?.(binHeader.eventName, binHeader.args);
+      return;
+    }
+
+    // Some transports deliver the gzip body as a text WS frame (base64).
+    if (this.pendingBinary && raw.startsWith('H4sI')) {
+      this.handleBinaryAttachment(raw);
+      return;
+    }
 
     if (raw.startsWith(EIO.open)) {
       const info = parseEngineOpen(raw);
@@ -350,16 +442,16 @@ export class PandoraSocket {
     if (raw.startsWith(EIO.message + SIO.connect)) {
       // 40 or 40{"sid":"..."}
       this.namespaceConnected = true;
-      let nsSid = "";
+      let nsSid = '';
       try {
         const rest = raw.slice(2);
-        if (rest.startsWith("{")) {
-          nsSid = String((JSON.parse(rest) as { sid?: string }).sid ?? "");
+        if (rest.startsWith('{')) {
+          nsSid = String((JSON.parse(rest) as { sid?: string }).sid ?? '');
         }
       } catch {
         /* ignore */
       }
-      this.handlers.onNamespaceConnect?.(nsSid || this.openInfo?.sid || "");
+      this.handlers.onNamespaceConnect?.(nsSid || this.openInfo?.sid || '');
       return;
     }
 
@@ -389,14 +481,12 @@ export class PandoraSocket {
 
   private scheduleReconnect(): void {
     if (this.reconnectAttempt >= this.maxReconnectAttempts) {
-      this.handlers.onLog?.("pandora: max reconnect attempts reached");
+      this.handlers.onLog?.('pandora: max reconnect attempts reached');
       return;
     }
     this.reconnectAttempt++;
     const delay = Math.min(30_000, 500 * 2 ** (this.reconnectAttempt - 1));
-    this.handlers.onLog?.(
-      `pandora: reconnect in ${delay}ms (attempt ${this.reconnectAttempt})`,
-    );
+    this.handlers.onLog?.(`pandora: reconnect in ${delay}ms (attempt ${this.reconnectAttempt})`);
     setTimeout(() => {
       if (!this.closedByUser) this.connect();
     }, delay);
