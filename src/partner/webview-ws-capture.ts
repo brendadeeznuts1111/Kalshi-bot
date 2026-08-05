@@ -1,0 +1,189 @@
+/**
+ * Bun.WebView + Chrome CDP capture of Pandora Socket.IO frames.
+ * Library form of tools/partner-webview-ws-capture.ts.
+ *
+ * @see https://bun.com/docs/runtime/webview
+ * @see https://bun.com/docs/runtime/webview#cdp
+ */
+// @see https://bun.com/docs/runtime/webview
+import { mkdirSync } from "node:fs";
+import { join } from "node:path";
+import type { WebViewWsFrame } from "./webview-ws-ingest.ts";
+
+export type WebViewCaptureOptions = {
+  /** plive sport widget id (default 220 table tennis) */
+  sport?: string;
+  /** Override full start URL (e.g. signed LIVE_DESKTOP_URL) */
+  url?: string;
+  seconds?: number;
+  outDir?: string;
+};
+
+export type WebViewCaptureResult = {
+  startUrl: string;
+  finalUrl: string;
+  seconds: number;
+  frames: WebViewWsFrame[];
+  outPath: string;
+  summaryPath: string;
+  subscribeMsg: string | null;
+  coeffSubscribeCount: number;
+  frameCount: number;
+};
+
+export async function capturePandoraViaWebView(
+  options: WebViewCaptureOptions = {},
+): Promise<WebViewCaptureResult> {
+  if (typeof Bun.WebView !== "function") {
+    throw new Error("Bun.WebView unavailable — need Bun ≥1.4 with WebView");
+  }
+
+  const seconds = Math.min(
+    Math.max(Number(options.seconds ?? 25) || 25, 5),
+    120,
+  );
+  const sport = options.sport ?? "220";
+  const startUrl =
+    options.url ??
+    `https://plive.sportswidgets.pro/live/?#!/sport/${sport}`;
+  const outDir =
+    options.outDir ??
+    join(process.cwd(), "research/cache/partner-ws-capture");
+  mkdirSync(outDir, { recursive: true });
+  const stamp = Date.now();
+  const outPath = join(outDir, `ws-${stamp}.jsonl`);
+  const summaryPath = join(outDir, `ws-${stamp}-summary.json`);
+
+  const frames: WebViewWsFrame[] = [];
+  const requestUrlById = new Map<string, string>();
+
+  await using view = new Bun.WebView({
+    backend: { type: "chrome", url: false },
+    width: 1280,
+    height: 800,
+    console: (type, ...args) => {
+      if (type === "error" || type === "warn") {
+        console.error(`[page:${type}]`, ...args);
+      }
+    },
+  });
+
+  await view.navigate("about:blank");
+  await view.cdp("Network.enable", {});
+
+  view.addEventListener("Network.webSocketCreated", (ev) => {
+    const d = (ev as unknown as CustomEvent).detail ?? (ev as MessageEvent).data;
+    const data = d as { url?: string; requestId?: string };
+    if (data?.requestId && data.url) requestUrlById.set(data.requestId, data.url);
+    frames.push({
+      t: Date.now(),
+      dir: "created",
+      url: data?.url,
+      requestId: data?.requestId,
+    });
+  });
+
+  const pushFrame = (
+    dir: "sent" | "recv",
+    data: {
+      response?: { payloadData?: string };
+      requestId?: string;
+    },
+  ) => {
+    const payload = data?.response?.payloadData ?? "";
+    frames.push({
+      t: Date.now(),
+      dir,
+      payload,
+      requestId: data?.requestId,
+      url: data?.requestId
+        ? requestUrlById.get(data.requestId)
+        : undefined,
+    });
+  };
+
+  view.addEventListener("Network.webSocketFrameSent", (ev) => {
+    const d = (ev as unknown as CustomEvent).detail ?? (ev as MessageEvent).data;
+    pushFrame("sent", d as { response?: { payloadData?: string }; requestId?: string });
+  });
+
+  view.addEventListener("Network.webSocketFrameReceived", (ev) => {
+    const d = (ev as unknown as CustomEvent).detail ?? (ev as MessageEvent).data;
+    pushFrame("recv", d as { response?: { payloadData?: string }; requestId?: string });
+  });
+
+  view.addEventListener("Network.webSocketClosed", (ev) => {
+    const d = (ev as unknown as CustomEvent).detail ?? (ev as MessageEvent).data;
+    const data = d as { requestId?: string };
+    frames.push({
+      t: Date.now(),
+      dir: "closed",
+      requestId: data?.requestId,
+      url: data?.requestId
+        ? requestUrlById.get(data.requestId)
+        : undefined,
+    });
+  });
+
+  await view.navigate(startUrl);
+
+  const wantHash = `#!/sport/${sport}`;
+  try {
+    await view.evaluate(`
+      (() => {
+        if (!location.hash.includes("sport/${sport}")) {
+          location.hash = ${JSON.stringify(wantHash)};
+        }
+        return location.href;
+      })()
+    `);
+  } catch {
+    /* non-fatal */
+  }
+
+  await Bun.sleep(seconds * 1000);
+
+  await Bun.write(
+    outPath,
+    frames.map((f) => JSON.stringify(f)).join("\n") + "\n",
+  );
+
+  const sent42 = frames.filter(
+    (f) => f.dir === "sent" && (f.payload?.startsWith("42") ?? false),
+  );
+  const subscribeMsgs = sent42.filter((f) => {
+    const p = f.payload ?? "";
+    return (
+      p.includes("setSocketMetadata") ||
+      p.includes("subscribeSystemEvents") ||
+      p.includes('"subscribe"')
+    );
+  });
+  const coeffSubscribes = sent42.filter((f) =>
+    (f.payload ?? "").includes("eventCoefficients"),
+  );
+
+  const summary = {
+    outPath,
+    summaryPath,
+    startUrl,
+    finalUrl: view.url,
+    seconds,
+    frameCount: frames.length,
+    subscribeMsg: subscribeMsgs[0]?.payload ?? null,
+    coeffSubscribeCount: coeffSubscribes.length,
+  };
+  await Bun.write(summaryPath, JSON.stringify(summary, null, 2) + "\n");
+
+  return {
+    startUrl,
+    finalUrl: String(view.url ?? startUrl),
+    seconds,
+    frames,
+    outPath,
+    summaryPath,
+    subscribeMsg: summary.subscribeMsg,
+    coeffSubscribeCount: coeffSubscribes.length,
+    frameCount: frames.length,
+  };
+}

@@ -31,6 +31,30 @@ GH_TOKEN=pass://Kalshi Bot/GitHub/token
 # KALSHI_ENV=pass://Kalshi Bot/Kalshi Environment/env
 # KALSHI_PROD_ARMED=pass://Kalshi Bot/Kalshi Environment/prodArmed
 
+# === Fantasy402 Ultra Live (per-out assets) ===
+# Pattern: FANTASY402_{CODE}_{N}_{KEY}
+# Item titles: "Fantasy402 SPEN 1", "Fantasy402 ASH 1" (one Proton item per out)
+# Fallback: out → partner (FANTASY402_SPEN_*) → book (FANTASY402_*)
+# Note: Proton vault "partners" / Partner ASH is FactoryWager seat identity — different product.
+
+# --- SPEN out-1 (env_prefix=FANTASY402_SPEN_1_ · vault-out-SPEN-1) ---
+FANTASY402_SPEN_1_CUSTOMER_ID=pass://Kalshi Bot/Fantasy402 SPEN 1/customerID
+FANTASY402_SPEN_1_AGENT_ID=pass://Kalshi Bot/Fantasy402 SPEN 1/agentID
+FANTASY402_SPEN_1_PASSWORD=pass://Kalshi Bot/Fantasy402 SPEN 1/password
+FANTASY402_SPEN_1_BEARER_TOKEN=pass://Kalshi Bot/Fantasy402 SPEN 1/bearerToken
+
+# --- ASH out-1 (env_prefix=FANTASY402_ASH_1_ · vault-out-ASH-1) ---
+FANTASY402_ASH_1_CUSTOMER_ID=pass://Kalshi Bot/Fantasy402 ASH 1/customerID
+FANTASY402_ASH_1_AGENT_ID=pass://Kalshi Bot/Fantasy402 ASH 1/agentID
+FANTASY402_ASH_1_PASSWORD=pass://Kalshi Bot/Fantasy402 ASH 1/password
+FANTASY402_ASH_1_BEARER_TOKEN=pass://Kalshi Bot/Fantasy402 ASH 1/bearerToken
+
+# --- Legacy book fallback (optional) ---
+# FANTASY402_CUSTOMER_ID=pass://Kalshi Bot/Fantasy402/customerID
+# FANTASY402_AGENT_ID=pass://Kalshi Bot/Fantasy402/agentID
+# FANTASY402_PASSWORD=pass://Kalshi Bot/Fantasy402/password
+# FANTASY402_BEARER_TOKEN=pass://Kalshi Bot/Fantasy402/bearerToken
+
 # === RESEARCH PIPELINE (optional non-secret overrides) ===
 # These can stay in a plain .env file if you prefer
 # RESEARCH_MIN_STARS=5

@@ -15,6 +15,7 @@
  *   - Glossary URLs:     daily at 02:00 UTC
  *   - Match liquidity:   every 30 minutes (recompute + ground; volume via env)
  *   - Partner inventory: every 1 minute when PARTNER_SYNC=1 (stream-list → partner_events)
+ *   - Partner desk/finance: when PARTNER_FINANCE_CRON=1 (registry → capacity → optional Telegram)
  */
 import { ensureEventStoreDir, openEventStore } from "../src/institutions/event-store/open-db.ts";
 import { DEFAULT_EVENT_STORE_DB } from "../src/institutions/event-store/paths.ts";
@@ -38,6 +39,10 @@ const INTERVAL_LIQUIDITY =
 const INTERVAL_PARTNER_SYNC =
   Bun.env.PARTNER_SYNC_CRON_SCHEDULE?.trim() || "*/1 * * * *";
 const PARTNER_SYNC_ENABLED = Bun.env.PARTNER_SYNC === "1";
+/** Registry desk report (capacity + env + inventory). Default daily 09:00 UTC. */
+const INTERVAL_PARTNER_FINANCE =
+  Bun.env.PARTNER_FINANCE_CRON_SCHEDULE?.trim() || "0 9 * * *";
+const PARTNER_FINANCE_ENABLED = Bun.env.PARTNER_FINANCE_CRON === "1";
 
 // ── Jobs ────────────────────────────────────────────────────────
 
@@ -168,6 +173,34 @@ async function jobPartnerSync(): Promise<void> {
   }
 }
 
+/**
+ * Partner desk / finance report from SQLite registry.
+ * Opt-in: PARTNER_FINANCE_CRON=1. Notify: PARTNER_FINANCE_NOTIFY=1.
+ */
+async function jobPartnerFinance(): Promise<void> {
+  if (!PARTNER_FINANCE_ENABLED) return;
+  const start = Date.now();
+  try {
+    const { runFinanceCron, formatFinanceCronReportText } = await import(
+      "../src/partner/finance-cron.ts"
+    );
+    const report = await runFinanceCron(getDb(), {
+      strictEnv: Bun.env.PARTNER_FINANCE_STRICT_ENV === "1",
+      partnerFilter: Bun.env.PARTNER_FINANCE_PARTNER?.trim(),
+      probeLogin: Bun.env.PARTNER_FINANCE_PROBE_LOGIN === "1",
+      probeInventory: Bun.env.PARTNER_FINANCE_PROBE_INVENTORY !== "0",
+      notify:
+        Bun.env.PARTNER_FINANCE_NOTIFY === "1" ||
+        Bun.env.PARTNER_TELEGRAM_NOTIFY === "true",
+    });
+    console.error(
+      `[cron:partner-finance] ${formatFinanceCronReportText(report).split("\n")[0]} · notified=${report.notified} · ${Date.now() - start}ms`,
+    );
+  } catch (err) {
+    console.error(`[cron:partner-finance] Error: ${err}`);
+  }
+}
+
 /** HEAD/GET check for OFFICIAL_URLS + glossary entry urls (hard via probe engine). */
 async function jobGlossaryUrls(): Promise<void> {
   const start = Date.now();
@@ -251,6 +284,7 @@ if (once) {
   await jobContrast();
   await jobLiquidityPipeline();
   await jobPartnerSync();
+  await jobPartnerFinance();
   console.error("[cron] All jobs complete.");
   process.exit(0);
 }
@@ -263,7 +297,8 @@ console.error(`[cron] Registering jobs:
   colors:   ${INTERVAL_COLOR_ARTIFACTS}
   contrast: ${INTERVAL_CONTRAST}
   liquidity:${INTERVAL_LIQUIDITY}
-  partner:  ${PARTNER_SYNC_ENABLED ? INTERVAL_PARTNER_SYNC : "off (PARTNER_SYNC=1)"}`);
+  partner:  ${PARTNER_SYNC_ENABLED ? INTERVAL_PARTNER_SYNC : "off (PARTNER_SYNC=1)"}
+  finance:  ${PARTNER_FINANCE_ENABLED ? INTERVAL_PARTNER_FINANCE : "off (PARTNER_FINANCE_CRON=1)"}`);
 console.error("[cron] Process running — use SIGTERM to stop.");
 
 Bun.cron(INTERVAL_LOGGER, jobLogger);
@@ -274,6 +309,9 @@ Bun.cron(INTERVAL_CONTRAST, jobContrast);
 Bun.cron(INTERVAL_LIQUIDITY, jobLiquidityPipeline);
 if (PARTNER_SYNC_ENABLED) {
   Bun.cron(INTERVAL_PARTNER_SYNC, jobPartnerSync);
+}
+if (PARTNER_FINANCE_ENABLED) {
+  Bun.cron(INTERVAL_PARTNER_FINANCE, jobPartnerFinance);
 }
 
 // Keep process alive

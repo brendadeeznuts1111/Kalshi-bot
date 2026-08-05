@@ -124,6 +124,53 @@ Create these items in your `Kalshi Bot` vault. Use **exact item titles** — the
 | `env` | Text | `demo` or `prod` |
 | `prodArmed` | Text | `1` to enable live trading (requires `--live` + `ALPHA_LIVE`) |
 
+### Item: `Fantasy402` (Ultra Live partner desk)
+
+**Custom item** (not a bare Login). Live `pass-cli item create login` only has
+username/password/url — no `--field`. Multi-field desk secrets use
+`item create custom --from-template`.
+
+| Field | Type | Env |
+|-------|------|-----|
+| `customerID` | Text | `FANTASY402_CUSTOMER_ID` |
+| `agentID` | Text | `FANTASY402_AGENT_ID` |
+| `password` | Hidden | `FANTASY402_PASSWORD` |
+| `bearerToken` | Hidden | `FANTASY402_BEARER_TOKEN` (browser JWT; short-lived) |
+| `domain` | Text | `FANTASY402_DOMAIN` (optional; default `https://fantasy402.com`) |
+| `skin` | Text | `FANTASY402_SKIN` (optional; default `2`) |
+| `currency` | Text | `FANTASY402_CURRENCY` (optional; default `USD`) |
+
+Provision helper (dry-run by default; never prints secret values):
+
+```bash
+# After pass-cli login — export real values into this shell only:
+export FANTASY402_CUSTOMER_ID='…'
+export FANTASY402_AGENT_ID='…'
+export FANTASY402_PASSWORD='…'
+export FANTASY402_BEARER_TOKEN='…'   # DevTools Authorization: Bearer eyJ…
+
+bun run partner:vault:provision              # dry-run + print pass:// map
+bun run partner:vault:provision -- --apply   # create custom item in "Kalshi Bot"
+bun run partner:vault:provision -- --update  # patch fields on existing item
+
+# Runtime (preferred — no secrets in shell history):
+bun run protonpass:run -- bun run partner:test-fantasy
+```
+
+**Not the same as vault `partners` / `Partner ASH`:** those items are
+FactoryWager seat identity for the monorepo partner desk. Fantasy402 Ultra Live
+JWT + agent body live under **Kalshi Bot / Fantasy402**.
+
+Optional per-out isolation (only if you truly need a separate vault — PAT
+viewer sessions **cannot** create vaults):
+
+```bash
+# Main account session required
+bun run partner:vault:provision -- \
+  --create-vault --vault=vault-out-ASH-1 --title=Fantasy402 --apply
+# Then point .env.protonpass URIs at that vault name.
+```
+
 ## Configuration file
 
 The file `.env.protonpass` (gitignored) maps [secret references](https://protonpass.github.io/pass-cli/commands/contents/secret-references/) to environment variables. For [`run`](https://protonpass.github.io/pass-cli/commands/contents/run/), use **bare** `pass://` URIs (no `{{ }}`):

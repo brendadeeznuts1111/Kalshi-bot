@@ -6,6 +6,7 @@ import type {
   PartnerBookedEvent,
   PartnerLiveEvent,
 } from "../../src/partner/types.ts";
+import { CoefficientStore } from "../../src/partner/fantasy-ultra/coefficient-store.ts";
 import {
   matchBookedClientEventId,
   runPartnerInventorySync,
@@ -108,5 +109,27 @@ describe("partner sync", () => {
       )
       .get() as { cid: string | null };
     expect(row.cid).toBe("999");
+  });
+
+  test("pricedOdds true when coefficientStore has ML lines", async () => {
+    const db = openEventStore({ dbPath: ":memory:" });
+    const events = [live(1, "table_tennis", "A", "B")];
+    const store = new CoefficientStore();
+    store.ingest({
+      room: "live.main.TOK.eventCoefficients.99",
+      eventId: 99,
+      envelope: {
+        isDiff: false,
+        payload: { id: 99, c: { m: { "3": { o: { "1": 1.8, "2": 2.0 } } } } },
+      },
+      lines: [],
+    });
+    const report = await runPartnerInventorySync(db, mockAdapter(events), {
+      sport: "table_tennis",
+      coefficientStore: store,
+      nowMs: 1,
+    });
+    expect(report.capabilities.pricedOdds).toBe(true);
+    expect(report.notes.some((n) => /Pandora store has/i.test(n))).toBe(true);
   });
 });

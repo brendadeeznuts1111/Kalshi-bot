@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "generatedAt": "2026-08-04T14:42:24.490Z",
+  "source": {
+    "harPath": "research/tickets/sample-placebet.har.json",
+    "entryIndex": 0,
+    "pageRef": "page_1"
+  },
+  "url": "https://fantasy402.com/cloud/api/Bet/PlaceBet",
+  "method": "POST",
+  "contentType": "application/json",
+  "encoding": "json",
+  "requestKeys": [
+    "eventId",
+    "marketId",
+    "key",
+    "periodId",
+    "risk",
+    "finalOdds",
+    "currency",
+    "customerID",
+    "agentID"
+  ],
+  "requestBodySample": {
+    "eventId": 196878741,
+    "marketId": "3",
+    "key": "2",
+    "periodId": "m",
+    "risk": 68,
+    "finalOdds": 1.8928569555282593,
+    "currency": "USD",
+    "customerID": "SPEN_CUST",
+    "agentID": "SPEN_AGENT"
+  },
+  "responseOk": true,
+  "responseGroupCount": 1,
+  "sampleTicketNumbers": [
+    "1036636660"
+  ],
+  "score": 1,
+  "notes": [
+    "Derived from HAR response matching betGroups wire — verify request body before live placeOrder.",
+    "Set FANTASY402_PLACE_BET_URL to map.url (or pass placeOrderUrl to adapter) only after review."
+  ]
+}

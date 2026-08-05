@@ -1,0 +1,32 @@
+{
+  "betGroups": [
+    {
+      "betGroupId": 307200153,
+      "ticketNumber": 1036636660,
+      "finalOdds": 1.8928569555282593,
+      "risk": 68,
+      "toWin": 60.71,
+      "toWinTaxAmount": 0,
+      "result": 0,
+      "state": 0,
+      "currency": "USD",
+      "componentBets": [
+        {
+          "betId": 335749942,
+          "sequenceNumber": 1,
+          "sportId": 93,
+          "eventId": 196878741,
+          "periodId": "m",
+          "marketId": "3",
+          "key": "2",
+          "team1": "Kyryl Darin",
+          "team2": "Jiri Plachy",
+          "finalOdds": 1.8928569555282593,
+          "state": 0
+        }
+      ]
+    }
+  ],
+  "e": 0,
+  "d": ""
+}

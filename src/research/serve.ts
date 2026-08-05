@@ -976,7 +976,39 @@ export function createResearchServer(options: ServeOptions = {}) {
         });
       }
 
-if (url.pathname === "/api/hq") {
+      // Partner ops static board (bake: bun run partner:dashboard)
+      // Paths: /partner-dashboard[/] → index.html · /partner-dashboard/state.json
+      if (
+        url.pathname === SERVE_PATTERNS.EXACT.partnerDashboard ||
+        url.pathname === SERVE_PATTERNS.EXACT.partnerDashboardSlash ||
+        url.pathname === SERVE_PATTERNS.EXACT.partnerDashboardState
+      ) {
+        const name =
+          url.pathname === SERVE_PATTERNS.EXACT.partnerDashboardState
+            ? "state.json"
+            : "index.html";
+        const file = Bun.file(
+          joinPath(ROOT, "public/partner-dashboard", name),
+        );
+        if (!(await file.exists())) {
+          return new Response(
+            "partner-dashboard missing — run: bun run partner:dashboard",
+            { status: 404 },
+          );
+        }
+        const contentType =
+          name === "state.json"
+            ? "application/json; charset=utf-8"
+            : "text/html; charset=utf-8";
+        return new Response(file, {
+          headers: {
+            "content-type": contentType,
+            "cache-control": "no-cache",
+          },
+        });
+      }
+
+      if (url.pathname === "/api/hq") {
         return json(await buildHqPayload());
       }
 

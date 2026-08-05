@@ -2,12 +2,22 @@
 /**
  * Partners (financial entities) → Betting accounts (outs) → Providers (adapters).
  *
- * Capacity liquidity = sum of account maxStake for a provider.
+ * Capacity is an (out × skin) matrix:
+ *   - out = account (shared workingBalance + vault credentials)
+ *   - skin = live interface (ezlive / dark / "2") with its own perBetMax
+ * Vertical capacity = sum of active skins' perBetMax across active outs.
  * That is NOT market tradable until the provider offers a priced line.
  * Secrets stay in env / vault — never persist password or bearer JWT.
  */
 import type { Database } from "bun:sqlite";
 import { FANTASY_SPORT_MAPPINGS } from "./fantasy-ultra/widget-config.ts";
+import {
+  buildSkinsMeta,
+  outCapacityFromAccount,
+  parseSkinWire,
+  type OutCapacity,
+  type OutSkinLimit,
+} from "./skins.ts";
 
 export type ProviderId = "fantasy402" | "kalshi" | (string & {});
 
@@ -28,20 +38,34 @@ export type BettingAccountRow = {
   status: "active" | "inactive" | "pending";
   /** Env var prefix for secrets, e.g. FANTASY402_ */
   envPrefix: string | null;
+  /**
+   * Legacy single-skin ceiling (max over skins when meta.skins present;
+   * used when meta.skins is empty as the sole perBetMax).
+   */
   maxStake: number;
   maxWin: number;
   currency: string;
+  /**
+   * Legacy numeric default skin wire id (nullable).
+   * Named skins live in meta.skins[].name (ezlive, dark, …).
+   */
   skin: number | null;
-  /** Non-secret meta only (office, labels) */
+  /** Non-secret meta only (skins[], workingBalance, vaultId, office) */
   metaJson: string;
 };
 
 export type ProviderCapacity = {
   provider: ProviderId;
+  /** Distinct outs (betting_accounts rows) */
   accountCount: number;
+  /** Active (out, skin) pairs contributing capacity */
+  skinPairCount: number;
+  /** Sum of perBetMax across all active skins of all outs */
   totalMaxStake: number;
   totalMaxWin: number;
   accountIds: string[];
+  /** Per-out breakdown (skins summed) */
+  outs: OutCapacity[];
 };
 
 /** Ensure partners + betting_accounts tables exist. */
@@ -200,6 +224,21 @@ export function listActiveBettingAccounts(db: Database): BettingAccountRow[] {
   return rows.map(mapAccountRow);
 }
 
+/** Lookup one out by id (active or not). */
+export function getBettingAccountById(
+  db: Database,
+  id: string,
+): BettingAccountRow | null {
+  const row = db
+    .query(
+      `SELECT id, partner_id AS partnerId, provider, url, status, env_prefix AS envPrefix,
+              max_stake AS maxStake, max_win AS maxWin, currency, skin, meta_json AS metaJson
+       FROM betting_accounts WHERE id = $id`,
+    )
+    .get({ $id: id }) as Record<string, unknown> | null;
+  return row ? mapAccountRow(row) : null;
+}
+
 export function listBettingAccountsByProvider(
   db: Database,
   provider: string,
@@ -231,7 +270,8 @@ function mapAccountRow(r: Record<string, unknown>): BettingAccountRow {
 }
 
 /**
- * Capacity liquidity by provider = sum of maxStake across active accounts.
+ * Capacity by provider = sum of **active skins' perBetMax** across outs.
+ * When meta.skins is absent, falls back to account maxStake as a single skin.
  * This is stake capacity, not market depth.
  */
 export function computeProviderCapacity(
@@ -240,30 +280,70 @@ export function computeProviderCapacity(
   const by = new Map<string, ProviderCapacity>();
   for (const a of accounts) {
     if (a.status !== "active") continue;
+    const out = outCapacityFromAccount(a);
     let row = by.get(a.provider);
     if (!row) {
       row = {
         provider: a.provider,
         accountCount: 0,
+        skinPairCount: 0,
         totalMaxStake: 0,
         totalMaxWin: 0,
         accountIds: [],
+        outs: [],
       };
       by.set(a.provider, row);
     }
     row.accountCount++;
-    row.totalMaxStake += a.maxStake;
-    row.totalMaxWin += a.maxWin;
+    row.skinPairCount += out.skins.length;
+    row.totalMaxStake += out.totalPerBetMax;
+    row.totalMaxWin += out.totalMaxWin;
     row.accountIds.push(a.id);
+    row.outs.push(out);
+  }
+  for (const row of by.values()) {
+    row.outs.sort((x, y) => y.totalPerBetMax - x.totalPerBetMax || x.outId.localeCompare(y.outId));
   }
   return [...by.values()].sort((a, b) =>
     a.provider.localeCompare(b.provider),
   );
 }
 
+/** Parse FANTASY402_SKINS_JSON → OutSkinLimit[] (empty if unset/invalid). */
+export function parseSkinsJsonEnv(
+  raw: string | undefined,
+): OutSkinLimit[] {
+  if (!raw?.trim()) return [];
+  try {
+    const v = JSON.parse(raw) as unknown;
+    if (!Array.isArray(v)) return [];
+    return v
+      .map((row): OutSkinLimit | null => {
+        if (!row || typeof row !== "object") return null;
+        const r = row as Record<string, unknown>;
+        const name = String(r.name ?? r.skin ?? "").trim();
+        if (!name) return null;
+        return {
+          name,
+          perBetMax: Number(r.perBetMax ?? r.maxStake ?? 0) || 0,
+          maxWin: Number(r.maxWin ?? 0) || 0,
+          active: r.active !== false,
+        };
+      })
+      .filter((s): s is OutSkinLimit => s != null);
+  } catch {
+    return [];
+  }
+}
+
 /**
  * Seed registry from Fantasy402 env (non-secret fields + env_prefix pointer).
  * Does not store password/token.
+ *
+ * Multi-skin (preferred):
+ *   FANTASY402_SKINS_JSON='[{"name":"ezlive","perBetMax":500,"maxWin":2500},{"name":"dark","perBetMax":1000,"maxWin":5000}]'
+ * Single-skin fallback: FANTASY402_SKIN + MAX_STAKE + MAX_WIN
+ * Optional: FANTASY402_WORKING_BALANCE, FANTASY402_VAULT_ID, FANTASY402_ACCOUNT_ID=out-SPEN-1
  */
 export function seedFantasy402FromEnv(
   db: Database,
@@ -274,10 +354,14 @@ export function seedFantasy402FromEnv(
   const customerID = envMap.FANTASY402_CUSTOMER_ID?.trim();
   if (!customerID) return null;
 
+  const partnerCode =
+    envMap.FANTASY402_PARTNER_CODE?.trim()?.toUpperCase() || null;
   const partnerId =
-    envMap.FANTASY402_PARTNER_ID?.trim() || "partner-default";
+    envMap.FANTASY402_PARTNER_ID?.trim() ||
+    (partnerCode ? `partner-${partnerCode.toLowerCase()}` : "partner-default");
   const partnerName =
-    envMap.FANTASY402_PARTNER_NAME?.trim() || "Default Partner";
+    envMap.FANTASY402_PARTNER_NAME?.trim() ||
+    (partnerCode ? `Partner ${partnerCode}` : "Default Partner");
   upsertPartner(
     db,
     {
@@ -291,15 +375,41 @@ export function seedFantasy402FromEnv(
     nowMs,
   );
 
-  const maxStake = Number(envMap.FANTASY402_MAX_STAKE ?? "1000") || 0;
-  const maxWin = Number(envMap.FANTASY402_MAX_WIN ?? "5000") || 0;
-  const skinRaw = envMap.FANTASY402_SKIN?.trim();
-  const skin = skinRaw ? Number(skinRaw) : 2;
+  const skinsFromJson = parseSkinsJsonEnv(envMap.FANTASY402_SKINS_JSON);
+  const maxStakeEnv = Number(envMap.FANTASY402_MAX_STAKE ?? "1000") || 0;
+  const maxWinEnv = Number(envMap.FANTASY402_MAX_WIN ?? "5000") || 0;
+  const skinWire = parseSkinWire(envMap.FANTASY402_SKIN, 2);
+  const skins: OutSkinLimit[] =
+    skinsFromJson.length > 0
+      ? skinsFromJson
+      : [
+          {
+            name: String(skinWire),
+            perBetMax: maxStakeEnv,
+            maxWin: maxWinEnv,
+            active: true,
+          },
+        ];
+
+  const maxStake = Math.max(...skins.map((s) => s.perBetMax), 0);
+  const maxWin = Math.max(...skins.map((s) => s.maxWin), 0);
   const currency = envMap.FANTASY402_CURRENCY?.trim() || "USD";
   const url =
     envMap.FANTASY402_DOMAIN?.trim() || "https://fantasy402.com";
   const accountId =
-    envMap.FANTASY402_ACCOUNT_ID?.trim() || customerID;
+    envMap.FANTASY402_ACCOUNT_ID?.trim() ||
+    (partnerCode ? `out-${partnerCode}-1` : customerID);
+
+  const workingBalanceRaw = envMap.FANTASY402_WORKING_BALANCE?.trim();
+  const workingBalance = workingBalanceRaw
+    ? Number(workingBalanceRaw)
+    : undefined;
+  const vaultId =
+    envMap.FANTASY402_VAULT_ID?.trim() ||
+    (accountId.startsWith("out-") ? `vault-${accountId}` : undefined);
+
+  /** Numeric wire id only; named skins (ezlive) live solely in meta.skins. */
+  const legacySkinCol = typeof skinWire === "number" ? skinWire : null;
 
   const account: BettingAccountRow = {
     id: accountId,
@@ -311,13 +421,36 @@ export function seedFantasy402FromEnv(
     maxStake,
     maxWin,
     currency,
-    skin: Number.isFinite(skin) ? skin : 2,
-    metaJson: JSON.stringify({
+    skin: legacySkinCol,
+    metaJson: buildSkinsMeta({
+      skins,
+      workingBalance:
+        workingBalance != null && Number.isFinite(workingBalance)
+          ? workingBalance
+          : undefined,
+      vaultId,
+      partnerCode: partnerCode ?? undefined,
       customerID,
-      agentID: envMap.FANTASY402_AGENT_ID?.trim() || null,
-      // secrets: use env FANTASY402_PASSWORD / FANTASY402_BEARER_TOKEN
+      agentID: envMap.FANTASY402_AGENT_ID?.trim() || undefined,
+      defaultSkin: String(skins[0]?.name ?? skinWire),
     }),
   };
   upsertBettingAccount(db, account, nowMs);
   return account;
 }
+
+/** Re-export skin helpers for registry consumers. */
+export {
+  concentrationByOut,
+  listEligibleOutSkinPairs,
+  liquidityKey,
+  outCapacityFromAccount,
+  pickBestSkinForOut,
+  resolveOutSkins,
+} from "./skins.ts";
+export type {
+  OutCapacity,
+  OutExposureShare,
+  OutSkinLimit,
+  OutSkinPair,
+} from "./skins.ts";

@@ -40,7 +40,7 @@ Kalshi-bot partner surface for a **PPH / Fantasy402** dummy desk.
 | `fetchEvents({ sport })` | ✅ stream-list-v2 (coverage rows) |
 | `renewToken()` | ✅ updates in-memory Bearer from `code` |
 | `fetchLimits` | ⏳ stub |
-| `placeOrder` | ⏳ blocked (need PlaceBet HAR) |
+| `placeOrder` | ✅ dry-run always; live POST only when `FANTASY402_PLACE_BET_URL` / HAR map set |
 
 ## What is **not** odds (critical — re-verified live)
 
@@ -84,7 +84,7 @@ Deep key scan for odds/market/line/price: **0 pricing hits** (only sport bucket 
 So:
 
 - `fetchEvents()` → coverage catalog only  
-- `fetchMarkets()` → **throws** with schema diagnostic (do not invent prices)  
+- `fetchMarkets()` → Pandora coefficient store (ML); **throws** when store empty (stream-list never prices)  
 - `inspectStreamCapabilities()` / CLI prints the capability probe  
 
 ### Statscore `booked-events` (integrated — still not prices)
@@ -160,7 +160,17 @@ Adapter methods:
 |-----|------|
 | `parseBetGroupsResponse` / `executionResultFromBetGroups` | Boundary parse |
 | `interpretBetTicketResponse(wire)` | Offline → `PartnerExecutionResult` |
-| `placeOrder` | Needs **POST URL** still; dry-run logs intent |
+| `partner:placebet-har` | Chrome HAR → `place-bet-map.json` (URL + body keys) |
+| `placeOrder` | Dry-run default; live POST when map/env URL set (never invents path) |
+
+```bash
+# 1. Chrome DevTools → Network → place a tiny bet → Save all as HAR with content
+bun run partner:placebet-har -- --har=~/Downloads/fantasy.har
+# 2. Review research/tickets/place-bet-map.json
+export FANTASY402_PLACE_BET_URL='…'   # only the observed URL
+# 3. Optional: ingest response bodies from the same HAR
+bun run partner:placebet-har -- --har=… --ingest --out-id=out-SPEN-1
+```
 
 ### Where pre-bet line prices still hide
 
@@ -172,8 +182,27 @@ Do **not** merge stream-list or Statscore livescorepro into Kalshi `match_liquid
 
 ## Credentials (never commit)
 
+**Preferred:** store once in Proton Pass custom item `Kalshi Bot` / `Fantasy402`,
+then inject via `pass-cli run` (see [`PROTONPASS.md`](PROTONPASS.md) ·
+`partner:vault:provision`).
+
 ```bash
+# One-time provision (export values only in this shell; never commit)
 export FANTASY402_BEARER_TOKEN='…'   # browser JWT (short-lived; renew often)
+export FANTASY402_CUSTOMER_ID='…'
+export FANTASY402_AGENT_ID='…'
+export FANTASY402_PASSWORD='…'
+bun run partner:vault:provision -- --apply
+# Merge pass:// lines from env-protonpass.template into .env.protonpass
+
+# Runtime — secrets stay in Pass
+bun run protonpass:run -- bun run partner:test-fantasy
+```
+
+Shell export path (dev only):
+
+```bash
+export FANTASY402_BEARER_TOKEN='…'
 export FANTASY402_CUSTOMER_ID='…'
 export FANTASY402_AGENT_ID='…'
 export FANTASY402_PASSWORD='…'
@@ -294,9 +323,22 @@ bun run partner:webview-ws-capture -- --seconds=20
 ```
 
 Large payloads arrive as Socket.IO binary attachments (`451-` + gzip/base64 body).  
-Still needed: **decode eventCoefficients → American prices** for `tradable`.
+Decode: `decodePandoraAttachment` → `extractCoefficientLines` (decimal + American via `normalizeOdds`). Diffs use JSON-patch ops (`isDiff: true`).
 
-Code: `PandoraSocket` · `buildPliveSubscribeSequence` · `Bun.WebView` capture tool.
+**Book path (wired):** `onCoefficients` → `CoefficientStore` → `fetchMarkets()` / `fetchOdds(clientEventId)` (match ML `marketType=3`).  
+Inventory sync sets `pricedOdds: true` when the store has lines. Still **no** `match_liquidity` merge.
+
+```bash
+bun run partner:pandora-probe -- --plive --event-ids=174125551 --seconds=20
+```
+
+Code: `PandoraSocket` · `coefficients.ts` · `coefficient-store.ts` · `buildPliveSubscribeSequence` · `bun run partner:webview-ws-capture`.
+
+## Domain architecture (five layers)
+
+Partner → Communication → Accounts/Outs → Assets → Finance.
+
+**Full map + maturity:** [`PARTNER-DOMAIN.md`](PARTNER-DOMAIN.md) · `bun run partner:domain`
 
 ## Liquidity sources map (partners / outs / providers)
 
@@ -304,23 +346,78 @@ Code: `PandoraSocket` · `buildPliveSubscribeSequence` · `Bun.WebView` capture 
 |--------|--------------|------|
 | **Partner** | `partners` | Financial owner (profit split, commission) |
 | **Account (out)** | `betting_accounts` | Place to bet: provider + limits + `env_prefix` for secrets |
+| **Skin** | `meta_json.skins[]` | Live interface (`ezlive` / `dark` / `2`) with own perBetMax |
 | **Provider** | adapter id (`fantasy402`, `kalshi`) | Book / feed implementation |
+| **Sports map** | `provider_sport_mappings` + `FANTASY_SPORT_MAPPINGS` | ~30 stream buckets; **4 primary** with API/widget ids |
 | **Stream inventory** | `partner_events` | Detected events (not priced book) |
 | **Desk liquidity** | `match_liquidity` | Kalshi-priced gates (`tradable` / `liq_ok`) |
 
+### Sports + leagues inventory
+
 ```bash
-# Seed BB55113-style out from env (no secrets in DB)
-export FANTASY402_CUSTOMER_ID=BB55113 FANTASY402_MAX_STAKE=1000 FANTASY402_MAX_WIN=5000
-bun run partner:registry -- --seed --json
+bun run partner:sports                 # live stream-list sports (non-zero events)
+bun run partner:sports -- --all        # include empty buckets
+bun run partner:sports -- --leagues=table_tennis
+bun run partner:sports -- --leagues=all --json
+bun run partner:sports -- --map        # offline static map
+bun run partner:sports -- --seed       # refresh provider_sport_mappings
+bun run partner:sync -- --sport=all    # upsert all buckets into partner_events
 ```
 
-**Capacity** = Σ `max_stake` per provider across active accounts.  
+- **Primary** (★): soccer, tennis, basketball, table_tennis — confirmed `apiSportId` + widget id.  
+- **Mapped**: all known stream-list buckets (cricket, ice_hockey, …) — league names from events.  
+- **Not yet**: full Get_SportsLeagues catalog / Pandora `live.leagues` decode (needs auth / binary parse).
+
+### Out × skin matrix (PPH)
+
+Out = account (vault credentials + shared `workingBalance`).  
+Skin = live provider surface — same credentials, different limits / often different lines.
+
+| Layer | Naming | Example |
+|-------|--------|---------|
+| Out | `out-{PARTNER}-{n}` | `out-SPEN-1` |
+| Book / vertical | `{bookId}` | `fantasy402` |
+| Skin | provider name | `ezlive`, `dark` |
+| Liquidity key | `{outId}@{skin}` | `out-SPEN-1@ezlive` |
+| Vault | credentials **per out** | `vault-out-SPEN-1` |
+
+```json
+{
+  "vaultId": "vault-out-SPEN-1",
+  "partnerCode": "SPEN",
+  "workingBalance": 5000,
+  "skins": [
+    { "name": "ezlive", "perBetMax": 500, "maxWin": 2500, "active": true },
+    { "name": "dark", "perBetMax": 1000, "maxWin": 5000, "active": true }
+  ]
+}
+```
+
+**Capacity** = Σ active skins' `perBetMax` across active outs (fallback: single-skin `max_stake`).  
+Concentration groups exposure by **out** (across skins). Execution: pick out → best skin ≥ stake → adapter `{ skin }`.  
 That is **not** market `tradable` — only stake capacity until a priced line exists.
+
+```bash
+# Single-skin seed
+export FANTASY402_CUSTOMER_ID=BB55113 FANTASY402_MAX_STAKE=1000 FANTASY402_MAX_WIN=5000
+bun run partner:registry -- --seed --json
+
+# Multi-skin out
+export FANTASY402_PARTNER_CODE=SPEN FANTASY402_ACCOUNT_ID=out-SPEN-1
+export FANTASY402_WORKING_BALANCE=5000
+export FANTASY402_SKINS_JSON='[{"name":"ezlive","perBetMax":500,"maxWin":2500},{"name":"dark","perBetMax":1000,"maxWin":5000}]'
+bun run partner:registry -- --seed
+bun run partner:capacity
+bun run partner:capacity -- --stake=800 --json
+```
+
+Code: `src/partner/skins.ts` · `computeProviderCapacity` · `listEligibleOutSkinPairs` ·
+`concentrationByOut` · `getFantasySessionAdapter(profile, { skin })`.
 
 | Ready | Not ready |
 |-------|-----------|
-| Registry + capacity rollup | Partner markets in `liquidity:ground` |
-| Fantasy402 inventory sync | Concentration scoring from DB accounts |
+| Registry + capacity rollup (out×skin) | Partner markets in `liquidity:ground` |
+| Fantasy402 inventory sync | Full seat-capital concentration scorer |
 | Ticket response parse | placeOrder POST |
 
 ## Unified sync module (ground truth)

@@ -41,11 +41,19 @@ import {
   FANTASY_ULTRA_DEFAULTS,
   type FantasyUltraCredentials,
 } from "./types.ts";
+import { CoefficientStore } from "./coefficient-store.ts";
 import {
   PandoraSocket,
+  type PandoraLiveSessionIds,
   type PandoraSocketHandlers,
   type PandoraSocketOptions,
 } from "./pandora-socket.ts";
+import type { PlaceBetEndpointMap } from "./place-bet-har.ts";
+import {
+  buildPlaceBetBody,
+  encodePlaceBetBody,
+  resolvePlaceBetUrl,
+} from "./place-bet-body.ts";
 
 export type FantasyUltraAdapterOptions = {
   credentials: FantasyUltraCredentials;
@@ -55,8 +63,28 @@ export type FantasyUltraAdapterOptions = {
   sportsLeaguesUrl?: string;
   renewTokenUrl?: string;
   statscoreBookedEventsUrl?: string;
+  /**
+   * Absolute PlaceBet POST URL from a real HAR map only.
+   * Also read from env `FANTASY402_PLACE_BET_URL` when unset.
+   * Never invents a path.
+   */
+  placeOrderUrl?: string;
+  /** Optional HAR-derived endpoint map (body keys / encoding). */
+  placeBetMap?: PlaceBetEndpointMap | null;
   /** When true (default), GET the desktop live URL after login to collect cookies. */
   warmSession?: boolean;
+  /** Optional shared/in-memory Pandora book (tests / sync). */
+  coefficientStore?: CoefficientStore;
+};
+
+export type ConnectWebSocketOptions = Omit<PandoraSocketOptions, "handlers"> & {
+  /** Subscribe `eventCoefficients.{id}` rooms after namespace connect. */
+  eventIds?: Array<string | number>;
+  /**
+   * When true/object, call {@link PandoraSocket.subscribeLive} on connect.
+   * Defaults to true when `eventIds` is non-empty.
+   */
+  subscribeLive?: boolean | PandoraLiveSessionIds;
 };
 
 export class FantasyUltraAdapter implements FantasySessionAdapter {
@@ -69,11 +97,14 @@ export class FantasyUltraAdapter implements FantasySessionAdapter {
   private readonly renewTokenUrl: string;
   private readonly statscoreBookedEventsUrl: string;
   private readonly autoWarm: boolean;
+  private readonly placeOrderUrlOpt: string | undefined;
+  private readonly placeBetMap: PlaceBetEndpointMap | null;
   private readonly jar = new CookieJar();
   private bearerToken: string;
   private liveUrls: PartnerLiveUrlSet | null = null;
   private warmed = false;
   private pandora: PandoraSocket | null = null;
+  private readonly coefficientStore: CoefficientStore;
 
   constructor(options: FantasyUltraAdapterOptions) {
     this.credentials = options.credentials;
@@ -96,7 +127,26 @@ export class FantasyUltraAdapter implements FantasySessionAdapter {
     this.statscoreBookedEventsUrl =
       options.statscoreBookedEventsUrl ??
       FANTASY_ULTRA_DEFAULTS.statscoreBookedEventsUrl;
+    this.placeOrderUrlOpt = options.placeOrderUrl?.trim() || undefined;
+    this.placeBetMap = options.placeBetMap ?? null;
     this.autoWarm = options.warmSession !== false;
+    this.coefficientStore = options.coefficientStore ?? new CoefficientStore();
+  }
+
+  /** Resolved PlaceBet URL (constructor / map / env) or null if unmapped. */
+  getPlaceOrderUrl(): string | null {
+    return resolvePlaceBetUrl({
+      placeOrderUrl: this.placeOrderUrlOpt,
+      map: this.placeBetMap,
+    });
+  }
+
+  getCoefficientStore(): CoefficientStore {
+    return this.coefficientStore;
+  }
+
+  pricedEventCount(): number {
+    return this.coefficientStore.pricedEventCount();
   }
 
   getLiveUrls(): PartnerLiveUrlSet | null {
@@ -299,15 +349,23 @@ export class FantasyUltraAdapter implements FantasySessionAdapter {
   }
 
   /**
-   * Intentionally not implemented from stream-list.
-   * Throws with capability note so callers do not assume odds exist.
+   * Priced markets from the in-memory Pandora coefficient store.
+   * Stream-list never supplies prices — connect WS + subscribeLive({ eventIds }) first.
    */
-  async fetchMarkets(): Promise<never> {
+  async fetchMarkets(): Promise<PartnerMarket[]> {
+    const markets = this.coefficientStore.toPartnerMarkets(this.partnerId, {
+      maxStake: 0,
+      maxWin: 0,
+      currency: this.credentials.currency,
+      note: "fantasy402: limits not mapped",
+    });
+    if (markets.length > 0) return markets;
     const cap = await this.inspectStreamCapabilities();
     throw new Error(
       `fantasy402: fetchMarkets unavailable — stream-list-v2 is coverage-only ` +
-        `(hasPricingKeys=${cap.hasPricingKeys}, sampleEventKeys=${cap.sampleEventKeys.join(",")}). ` +
-        `Capture the widget's odds/PlaceBet XHR or pandora WS to implement priced markets.`,
+        `(hasPricingKeys=${cap.hasPricingKeys}, sampleEventKeys=${cap.sampleEventKeys.join(",")}) ` +
+        `and Pandora coefficient store is empty. ` +
+        `connectWebSocket({ eventIds }) + subscribeLive, then retry.`,
     );
   }
 
@@ -383,13 +441,22 @@ export class FantasyUltraAdapter implements FantasySessionAdapter {
   }
 
   /**
-   * **Not prices.** Statscore `product=livescorepro` booked-events is event
-   * metadata (name, status, bet_status). product=odds is rejected for client_id=311.
-   *
-   * Returns PartnerMarket[] only if a future response actually contains prices;
-   * otherwise throws with a clear diagnostic.
+   * Prefer Pandora coefficient store (moneyline). Falls back to Statscore
+   * booked-events only if that payload ever carries prices (livescorepro does not).
    */
   async fetchOdds(clientEventId: string): Promise<PartnerMarket[]> {
+    const fromStore = this.coefficientStore.marketsForEvent(
+      clientEventId,
+      this.partnerId,
+      {
+        maxStake: 0,
+        maxWin: 0,
+        currency: this.credentials.currency,
+        note: "fantasy402: limits not mapped",
+      },
+    );
+    if (fromStore.length > 0) return fromStore;
+
     const raw = await this.fetchStatscoreBookedRaw({
       client_event_id: normalizeClientEventIdCandidates(clientEventId)[0]!,
     });
@@ -403,11 +470,10 @@ export class FantasyUltraAdapter implements FantasySessionAdapter {
           (sample
             ? `, name=${sample.name}, bet_status=${sample.betStatus}, status=${sample.statusName}`
             : ", no booked row") +
-          `). Capture the XHR that returns American odds (+117 / -115) — ` +
-          `this endpoint is livescore booking metadata only.`,
+          `); Pandora store also empty for this id. ` +
+          `Subscribe eventCoefficients via connectWebSocket({ eventIds: [${clientEventId}] }).`,
       );
     }
-    // Future: parse priced payload when product/wire actually carries it.
     return [];
   }
 
@@ -421,36 +487,94 @@ export class FantasyUltraAdapter implements FantasySessionAdapter {
   }
 
   /**
-   * Place bet — **POST URL still unmapped**.
+   * Place bet.
    *
-   * Response wire is known (`betGroups` + `e`); use {@link interpretBetTicketResponse}
-   * when you have a captured body. Live POST requires Network capture of Place Bet.
+   * - Response wire is known (`betGroups` + `e`) via {@link interpretBetTicketResponse}.
+   * - POST URL only when operator-supplied from a real HAR map
+   *   (`placeOrderUrl` / `placeBetMap` / `FANTASY402_PLACE_BET_URL`).
+   * - Default `dryRun !== false` never hits the network.
+   *
+   * Extract a map: `bun run partner:placebet-har -- --har=capture.har`
    */
   async placeOrder(order: PartnerOrder): Promise<PartnerExecutionResult> {
+    const url = this.getPlaceOrderUrl();
+    const built = buildPlaceBetBody(
+      order,
+      this.credentials,
+      this.placeBetMap,
+    );
+    const intent = {
+      url: url ?? null,
+      method: this.placeBetMap?.method ?? "POST",
+      encoding: built.encoding,
+      contentType: built.contentType,
+      bodyKeys: Object.keys(built.body),
+      eventId: order.eventId,
+      marketId: order.marketId,
+      key: order.key,
+      periodId: order.periodId,
+      stake: order.stake,
+      price: order.price,
+    };
+
     if (order.dryRun !== false) {
       return {
         success: false,
         dryRun: true,
-        error:
-          "fantasy402: placeOrder dry-run — response shape known (betGroups/ticketNumber/finalOdds/risk/toWin); POST URL not mapped. Capture Place Bet request.",
-        raw: {
-          intent: {
-            eventId: order.eventId,
-            marketId: order.marketId,
-            key: order.key,
-            periodId: order.periodId,
-            stake: order.stake,
-            price: order.price,
-          },
-        },
+        error: url
+          ? "fantasy402: placeOrder dry-run — URL mapped; pass dryRun:false to POST"
+          : "fantasy402: placeOrder dry-run — POST URL unmapped. Capture Place Bet HAR → partner:placebet-har → FANTASY402_PLACE_BET_URL",
+        raw: { intent, bodyPreview: built.body },
       };
     }
-    return {
-      success: false,
-      dryRun: false,
-      error:
-        "fantasy402: placeOrder blocked — implement POST from Place Bet HAR; parser ready via interpretBetTicketResponse()",
-    };
+
+    if (!url) {
+      return {
+        success: false,
+        dryRun: false,
+        error:
+          "fantasy402: placeOrder blocked — no PlaceBet URL. Run partner:placebet-har on a Chrome HAR, then set FANTASY402_PLACE_BET_URL or adapter.placeOrderUrl",
+        raw: { intent },
+      };
+    }
+
+    if (!this.bearerToken) {
+      return {
+        success: false,
+        error: "fantasy402: placeOrder requires bearerToken",
+      };
+    }
+
+    await this.ensureSession();
+    const payload = encodePlaceBetBody(built.body, built.encoding);
+    const res = await this.request(url, {
+      method: (this.placeBetMap?.method ?? "POST").toUpperCase(),
+      headers: this.authHeaders({ "content-type": built.contentType }),
+      body: payload,
+    });
+
+    const text = await res.text().catch(() => "");
+    let json: unknown;
+    try {
+      json = text ? JSON.parse(text) : null;
+    } catch {
+      return {
+        success: false,
+        error: `fantasy402: placeOrder non-JSON HTTP ${res.status}`,
+        raw: { intent, status: res.status, text: text.slice(0, 400) },
+      };
+    }
+
+    if (!res.ok) {
+      return {
+        success: false,
+        error: `fantasy402: placeOrder HTTP ${res.status}`,
+        raw: { intent, status: res.status, body: json },
+      };
+    }
+
+    const result = executionResultFromBetGroups(json);
+    return { ...result, raw: result.raw ?? json };
   }
 
   /**
@@ -468,18 +592,38 @@ export class FantasyUltraAdapter implements FantasySessionAdapter {
 
   /**
    * Connect to Pandora Socket.IO (live odds transport).
-   * Subscription payload is **unknown** until DevTools Messages are captured —
-   * use {@link PandoraSocket.subscribePlaceholder} with a raw frame when known.
+   * Default `onCoefficients` upserts into {@link getCoefficientStore};
+   * optional `eventIds` / `subscribeLive` auto-subscribes after namespace connect.
    */
   connectWebSocket(
     handlers: PandoraSocketHandlers = {},
-    options: Omit<PandoraSocketOptions, "handlers"> = {},
+    options: ConnectWebSocketOptions = {},
   ): PandoraSocket {
     this.disconnectWebSocket();
+    const { eventIds, subscribeLive: subOpt, ...sockOpts } = options;
+    const shouldSubscribe =
+      subOpt === true ||
+      (typeof subOpt === "object" && subOpt != null) ||
+      (subOpt !== false && (eventIds?.length ?? 0) > 0);
+    const session: PandoraLiveSessionIds =
+      typeof subOpt === "object" && subOpt != null
+        ? { ...subOpt, eventIds: subOpt.eventIds ?? eventIds }
+        : { eventIds };
+
     this.pandora = new PandoraSocket({
-      ...options,
+      ...sockOpts,
       handlers: {
         ...handlers,
+        onCoefficients: (info) => {
+          this.coefficientStore.ingest(info);
+          handlers.onCoefficients?.(info);
+        },
+        onNamespaceConnect: (sid) => {
+          handlers.onNamespaceConnect?.(sid);
+          if (shouldSubscribe) {
+            this.pandora?.subscribeLive(session);
+          }
+        },
         onLog: (line) => {
           handlers.onLog?.(line);
         },

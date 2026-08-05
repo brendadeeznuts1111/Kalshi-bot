@@ -324,6 +324,38 @@ describe("FantasyUltraAdapter session blueprint", () => {
     await expect(adapter.fetchMarkets()).rejects.toThrow(/coverage-only|fetchMarkets unavailable/i);
   });
 
+  test("fetchMarkets / fetchOdds from coefficient store after ingest", async () => {
+    const adapter = new FantasyUltraAdapter({
+      credentials: {
+        customerID: "C",
+        agentID: "A",
+        password: "p",
+        bearerToken: "t",
+        domain: "https://fantasy402.com",
+        skin: 2,
+        currency: "USD",
+      },
+      warmSession: false,
+      fetchImpl: (async () => new Response("{}", { status: 200 })) as unknown as typeof fetch,
+    });
+    const payload = {
+      id: 42,
+      c: { m: { "3": { o: { "1": 1.9, "2": 1.95 } } } },
+    };
+    adapter.getCoefficientStore().ingest({
+      room: "live.main.TOK.eventCoefficients.42",
+      eventId: 42,
+      envelope: { isDiff: false, payload },
+      lines: [],
+    });
+    const markets = await adapter.fetchMarkets();
+    expect(markets).toHaveLength(1);
+    expect(markets[0]!.eventClientId).toBe("42");
+    expect(adapter.pricedEventCount()).toBe(1);
+    const odds = await adapter.fetchOdds("42");
+    expect(odds[0]!.homePrice).toBeTypeOf("number");
+  });
+
   test("fetchBookedEvent + fetchOdds diagnostic with mock Statscore", async () => {
     const fetchImpl = (async (input: RequestInfo | URL) => {
       const url = String(input);

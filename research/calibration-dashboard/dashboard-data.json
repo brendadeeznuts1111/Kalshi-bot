@@ -1,0 +1,105 @@
+{
+  "programs": [
+    {
+      "name": "pinnacle-novig-mlb",
+      "status": "shadow",
+      "role": "baseline",
+      "baseline": "pinnacle-novig",
+      "totalSignals": 0,
+      "trades": 0,
+      "skips": 0,
+      "resolved": 0,
+      "distinctEvents": 0,
+      "brier": null,
+      "meanEdgeCents": null,
+      "toxicityMarked": 0,
+      "toxicityAgainst": 0,
+      "toxicityRate": null,
+      "gates": {
+        "shadowMinSignals": 100,
+        "shadowMinWeeks": 3,
+        "pilotMaxContracts": 5,
+        "killBrierDriftPct": 15,
+        "graduationMinRealizedEdgeCentsPerFill": 2,
+        "graduationMinFills": 30,
+        "graduationMinDistinctEvents": 40
+      }
+    },
+    {
+      "name": "pinnacle-novig-nba",
+      "status": "shadow",
+      "role": "baseline",
+      "baseline": "pinnacle-novig",
+      "totalSignals": 0,
+      "trades": 0,
+      "skips": 0,
+      "resolved": 0,
+      "distinctEvents": 0,
+      "brier": null,
+      "meanEdgeCents": null,
+      "toxicityMarked": 0,
+      "toxicityAgainst": 0,
+      "toxicityRate": null,
+      "gates": {
+        "shadowMinSignals": 100,
+        "shadowMinWeeks": 3,
+        "pilotMaxContracts": 5,
+        "killBrierDriftPct": 15,
+        "graduationMinRealizedEdgeCentsPerFill": 2,
+        "graduationMinFills": 30,
+        "graduationMinDistinctEvents": 40
+      }
+    },
+    {
+      "name": "tennis-game-model",
+      "status": "shadow",
+      "role": "alpha",
+      "baseline": "none",
+      "totalSignals": 174,
+      "trades": 27,
+      "skips": 147,
+      "resolved": 168,
+      "distinctEvents": 23,
+      "brier": 0.284029,
+      "meanEdgeCents": 18.5072,
+      "toxicityMarked": 0,
+      "toxicityAgainst": 0,
+      "toxicityRate": null,
+      "gates": {
+        "shadowMinSignals": 400,
+        "shadowMinWeeks": 2,
+        "pilotMaxContracts": 5,
+        "killBrierDriftPct": 12,
+        "graduationMinRealizedEdgeCentsPerFill": 2,
+        "graduationMinFills": 80,
+        "graduationMinDistinctEvents": 80
+      }
+    },
+    {
+      "name": "tennis-tour-pinnacle-novig",
+      "status": "shadow",
+      "role": "baseline",
+      "baseline": "tennis-tour-pinnacle-novig",
+      "totalSignals": 0,
+      "trades": 0,
+      "skips": 0,
+      "resolved": 0,
+      "distinctEvents": 0,
+      "brier": null,
+      "meanEdgeCents": null,
+      "toxicityMarked": 0,
+      "toxicityAgainst": 0,
+      "toxicityRate": null,
+      "gates": {
+        "shadowMinSignals": 200,
+        "shadowMinWeeks": 2,
+        "pilotMaxContracts": 5,
+        "killBrierDriftPct": 15,
+        "graduationMinRealizedEdgeCentsPerFill": 2,
+        "graduationMinFills": 40,
+        "graduationMinDistinctEvents": 40
+      }
+    }
+  ],
+  "generatedAt": "2026-07-28T21:22:04.072305Z"
+}

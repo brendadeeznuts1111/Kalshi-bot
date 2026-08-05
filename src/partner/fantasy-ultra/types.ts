@@ -10,7 +10,11 @@ export type FantasyUltraCredentials = {
   /** Browser JWT used as Authorization: Bearer … */
   bearerToken: string;
   domain: string;
-  skin: number;
+  /**
+   * Live interface for getUltraLiveURL — numeric wire id (`2`) or named skin
+   * (`ezlive`, `dark`). Credentials are per-out; skin only changes limits/payload.
+   */
+  skin: string | number;
   currency: string;
   lang?: string;
   module?: string;

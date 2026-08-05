@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Partner desk</title>
+  <style>
+    :root { --bg:#0b0f14; --panel:#121820; --text:#e7eef7; --muted:#8b9bb0; --border:#1e2a38; --warn:#f59e0b; --err:#ef4444; --ok:#22c55e; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif; background:var(--bg); color:var(--text); line-height:1.45; }
+    header { padding:1.25rem 1.5rem; border-bottom:1px solid var(--border); display:flex; flex-wrap:wrap; gap:1rem; align-items:center; justify-content:space-between; }
+    h1 { font-size:1.15rem; margin:0; font-weight:650; letter-spacing:.02em; }
+    .badge { display:inline-flex; align-items:center; gap:.4rem; padding:.25rem .65rem; border-radius:999px; font-size:.8rem; font-weight:600; background:#1a2430; border:1px solid var(--border); }
+    .badge .dot { width:.55rem; height:.55rem; border-radius:50%; background:#ef4444; box-shadow:0 0 8px #ef4444; }
+    main { padding:1.25rem 1.5rem 3rem; max-width:1100px; margin:0 auto; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:.75rem; margin:1rem 0 1.5rem; }
+    .kpi { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:.9rem 1rem; }
+    .kpi .k { color:var(--muted); font-size:.75rem; text-transform:uppercase; letter-spacing:.06em; }
+    .kpi .v { font-size:1.35rem; font-weight:700; margin-top:.2rem; }
+    .kpi .s { color:var(--muted); font-size:.8rem; margin-top:.15rem; }
+    section { margin:1.75rem 0; }
+    h2 { font-size:.95rem; margin:0 0 .75rem; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; font-weight:600; }
+    table { width:100%; border-collapse:collapse; background:var(--panel); border:1px solid var(--border); border-radius:12px; overflow:hidden; font-size:.88rem; }
+    th, td { text-align:left; padding:.55rem .75rem; border-bottom:1px solid var(--border); vertical-align:top; }
+    th { color:var(--muted); font-weight:600; font-size:.75rem; text-transform:uppercase; letter-spacing:.05em; background:#0e141c; }
+    tr:last-child td { border-bottom:none; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size:.8rem; color:#a5d6ff; }
+    .sev-error td:first-child { color:var(--err); font-weight:700; }
+    .sev-warn td:first-child { color:var(--warn); font-weight:700; }
+    .sev-info td:first-child { color:var(--muted); }
+    .chip { display:inline-block; padding:.2rem .55rem; border-radius:8px; font-size:.75rem; font-weight:700; margin:.15rem; }
+    .dot { display:inline-block; width:.55rem; height:.55rem; border-radius:50%; margin-right:.35rem; vertical-align:middle; }
+    footer { color:var(--muted); font-size:.75rem; margin-top:2rem; }
+    a { color:#7dd3fc; }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Partner desk</h1>
+      <div style="color:var(--muted);font-size:.8rem;margin-top:.25rem">2026-08-04T14:29:42.110Z</div>
+    </div>
+    <div class="badge"><span class="dot"></span>DEGRADED</div>
+  </header>
+  <main>
+    <div class="grid">
+      <div class="kpi"><div class="k">Partners</div><div class="v">3</div></div>
+      <div class="kpi"><div class="k">Active outs</div><div class="v">3</div></div>
+      <div class="kpi"><div class="k">Risk errors</div><div class="v" style="color:var(--err)">1</div><div class="s">warns 3 · thr warn</div></div>
+      <div class="kpi"><div class="k">Env gaps</div><div class="v" style="color:var(--warn)">12</div></div>
+      <div class="kpi"><div class="k">Domain</div><div class="v">12</div><div class="s">built · 11 partial · 1 planned</div></div>
+      <div class="kpi"><div class="k">Tickets 2026-08-04</div><div class="v">1</div><div class="s">risk $68 · toWin $60.71</div></div>
+      <div class="kpi"><div class="k">fantasy402</div><div class="v">$2800</div><div class="s">3 outs · 4 skins</div></div>
+    </div>
+
+    <section>
+      <h2>Partners</h2>
+      <div><span class="chip" style="background:#e64dcc;color:#fff">AS ASH</span> <span class="chip" style="background:#ba4de6;color:#fff">BB BB55113</span> <span class="chip" style="background:#cce64d;color:#111">SP SPEN</span></div>
+    </section>
+
+    <section>
+      <h2>Risk findings</h2>
+      <table>
+        <thead><tr><th>Sev</th><th>Code</th><th>Out</th><th>Message</th></tr></thead>
+        <tbody>
+          <tr class="sev-error"><td>error</td><td><code>odds_without_secrets</code></td><td>out-SPEN-1</td><td>priced book available (58 lines) but secrets missing — cannot execute</td></tr>
+<tr class="sev-warn"><td>warn</td><td><code>capacity_without_odds</code></td><td>BB55113</td><td>capacity $1000 but no odds_book lines today — run partner:ws-ingest</td></tr>
+<tr class="sev-warn"><td>warn</td><td><code>capacity_without_odds</code></td><td>out-ASH-1</td><td>capacity $300 but no odds_book lines today — run partner:ws-ingest</td></tr>
+<tr class="sev-warn"><td>warn</td><td><code>tickets_without_secrets</code></td><td>out-SPEN-1</td><td>1 ticket(s) today but secrets missing — live place/settle blocked</td></tr>
+<tr class="sev-info"><td>info</td><td><code>odds_never</code></td><td>BB55113</td><td>no odds_book row yet for this out</td></tr>
+<tr class="sev-info"><td>info</td><td><code>odds_never</code></td><td>out-ASH-1</td><td>no odds_book row yet for this out</td></tr>
+<tr class="sev-info"><td>info</td><td><code>open_ticket_exposure</code></td><td>out-SPEN-1</td><td>1 open ticket(s) risk=$68 (settled=0)</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Outs / capacity</h2>
+      <table>
+        <thead><tr><th>Out</th><th>Partner</th><th>Provider</th><th>Capacity</th></tr></thead>
+        <tbody><tr><td><span class="dot" style="background:#ba4de6"></span> BB55113</td><td>BB55113</td><td>fantasy402</td><td>$1000</td></tr>
+<tr><td><span class="dot" style="background:#cce64d"></span> out-SPEN-1</td><td>SPEN</td><td>fantasy402</td><td>$1500</td></tr>
+<tr><td><span class="dot" style="background:#e64dcc"></span> out-ASH-1</td><td>ASH</td><td>fantasy402</td><td>$300</td></tr></tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Ledger freshness</h2>
+      <table>
+        <thead><tr><th>Out</th><th>Desk</th><th>Odds</th><th>Lines today</th><th>Tickets today</th></tr></thead>
+        <tbody><tr><td>BB55113</td><td>2026-08-04T14:22:45.281Z</td><td>—</td><td>0</td><td>0</td></tr>
+<tr><td>_global</td><td>—</td><td>—</td><td>0</td><td>0</td></tr>
+<tr><td>out-ASH-1</td><td>2026-08-04T14:22:45.283Z</td><td>—</td><td>0</td><td>0</td></tr>
+<tr><td>out-SPEN-1</td><td>2026-08-04T14:22:45.283Z</td><td>2026-08-04T14:09:29.448Z</td><td>58</td><td>1</td></tr></tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Operator catalog</h2>
+      <table>
+        <thead><tr><th>Command</th><th>Purpose</th></tr></thead>
+        <tbody><tr><td><code>bun run partner:domain</code></td><td>Five-layer maturity map</td></tr>
+<tr><td><code>bun run partner:toml -- --diff</code></td><td>TOML vs SQLite plan (no write)</td></tr>
+<tr><td><code>bun run partner:toml -- --check-env</code></td><td>Secret presence per env_prefix</td></tr>
+<tr><td><code>bun run partner:toml -- --seed</code></td><td>Upsert partners + outs from TOML</td></tr>
+<tr><td><code>bun run partner:capacity</code></td><td>Out × skin capacity tree</td></tr>
+<tr><td><code>bun run partner:health</code></td><td>Registry + env + risk + ledger freshness</td></tr>
+<tr><td><code>bun run partner:health -- --json</code></td><td>Machine snapshot (alert payload)</td></tr>
+<tr><td><code>bun run partner:finance-cron</code></td><td>Desk report + optional Telegram</td></tr>
+<tr><td><code>bun run partner:ws-ingest -- --capture</code></td><td>WebView Pandora odds → odds_book</td></tr>
+<tr><td><code>bun run partner:webview-ws-capture</code></td><td>Raw CDP JSONL only</td></tr>
+<tr><td><code>bun run partner:sports</code></td><td>Live stream-list sports/leagues</td></tr>
+<tr><td><code>bun run partner:sync -- --sport=all</code></td><td>Inventory → partner_events</td></tr>
+<tr><td><code>bun run partner:profile -- --codes=SPEN,ASH --png</code></td><td>Bun.color avatars</td></tr>
+<tr><td><code>bun run partner:dashboard</code></td><td>Bake this static board</td></tr>
+<tr><td><code>bun run serve</code></td><td>Serve public/ (open /partner-dashboard/)</td></tr></tbody>
+      </table>
+    </section>
+
+    <footer>
+      Bun-native static board · no Vite · data from SQLite registry + partner_ledger ·
+      regenerate with <code>bun run partner:dashboard</code>
+       · toml config/partners.example.toml +0 ~2 -2
+    </footer>
+  </main>
+  <script type="application/json" id="partner-dashboard-data">{"generatedAt":"2026-08-04T14:29:42.110Z","ok":false,"registry":{"partners":3,"outs":3,"activeOuts":3},"capacity":[{"provider":"fantasy402","totalMaxStake":2800,"outCount":3,"skinPairCount":4}],"env":{"ok":false,"missingCount":12,"outs":[{"outId":"BB55113","envPrefix":"FANTASY402_","missing":["BEARER_TOKEN","CUSTOMER_ID","AGENT_ID","PASSWORD"],"present":[]},{"outId":"out-SPEN-1","envPrefix":"FANTASY402_","missing":["BEARER_TOKEN","CUSTOMER_ID","AGENT_ID","PASSWORD"],"present":[]},{"outId":"out-ASH-1","envPrefix":"FANTASY402_ASH_","missing":["BEARER_TOKEN","CUSTOMER_ID","AGENT_ID","PASSWORD"],"present":[]}]},"risk":{"ok":false,"threshold":"warn","errorCount":1,"warnCount":3,"findings":[{"severity":"error","code":"odds_without_secrets","outId":"out-SPEN-1","message":"priced book available (58 lines) but secrets missing — cannot execute"},{"severity":"warn","code":"capacity_without_odds","outId":"BB55113","message":"capacity $1000 but no odds_book lines today — run partner:ws-ingest"},{"severity":"warn","code":"capacity_without_odds","outId":"out-ASH-1","message":"capacity $300 but no odds_book lines today — run partner:ws-ingest"},{"severity":"warn","code":"tickets_without_secrets","outId":"out-SPEN-1","message":"1 ticket(s) today but secrets missing — live place/settle blocked"},{"severity":"info","code":"odds_never","outId":"BB55113","message":"no odds_book row yet for this out"},{"severity":"info","code":"odds_never","outId":"out-ASH-1","message":"no odds_book row yet for this out"},{"severity":"info","code":"open_ticket_exposure","outId":"out-SPEN-1","message":"1 open ticket(s) risk=$68 (settled=0)"}],"snapshot":{"generatedAt":"2026-08-04T14:29:42.100Z","ok":false,"errorCount":1,"warnCount":3,"infoCount":0,"threshold":"warn","findings":[{"severity":"error","code":"odds_without_secrets","outId":"out-SPEN-1","partnerCode":"SPEN","message":"priced book available (58 lines) but secrets missing — cannot execute"},{"severity":"warn","code":"capacity_without_odds","outId":"BB55113","partnerCode":"JOHN","message":"capacity $1000 but no odds_book lines today — run partner:ws-ingest"},{"severity":"warn","code":"capacity_without_odds","outId":"out-ASH-1","partnerCode":"ASH","message":"capacity $300 but no odds_book lines today — run partner:ws-ingest"},{"severity":"warn","code":"tickets_without_secrets","outId":"out-SPEN-1","partnerCode":"SPEN","message":"1 ticket(s) today but secrets missing — live place/settle blocked"}],"outs":[{"outId":"BB55113","partnerCode":"JOHN","capacity":1000,"workingBalance":null,"envOk":false,"oddsLinesToday":0,"pricedEventsToday":0,"deskFreshMs":416819,"oddsFreshMs":null,"oddsAgeMs":null},{"outId":"_global","partnerCode":"_GLOBAL","capacity":0,"workingBalance":null,"envOk":false,"oddsLinesToday":0,"pricedEventsToday":0,"deskFreshMs":null,"oddsFreshMs":null,"oddsAgeMs":null},{"outId":"out-ASH-1","partnerCode":"ASH","capacity":300,"workingBalance":2000,"envOk":false,"oddsLinesToday":0,"pricedEventsToday":0,"deskFreshMs":416817,"oddsFreshMs":null,"oddsAgeMs":null},{"outId":"out-SPEN-1","partnerCode":"SPEN","capacity":1500,"workingBalance":5000,"envOk":false,"oddsLinesToday":58,"pricedEventsToday":3,"deskFreshMs":416817,"oddsFreshMs":1212652,"oddsAgeMs":1212652}]}},"ledger":[{"outId":"BB55113","lastDeskSnapshotAt":"2026-08-04T14:22:45.281Z","lastOddsBookAt":null,"lastTicketAt":null,"oddsLinesToday":0,"ticketsToday":0},{"outId":"_global","lastDeskSnapshotAt":null,"lastOddsBookAt":null,"lastTicketAt":null,"oddsLinesToday":0,"ticketsToday":0},{"outId":"out-ASH-1","lastDeskSnapshotAt":"2026-08-04T14:22:45.283Z","lastOddsBookAt":null,"lastTicketAt":null,"oddsLinesToday":0,"ticketsToday":0},{"outId":"out-SPEN-1","lastDeskSnapshotAt":"2026-08-04T14:22:45.283Z","lastOddsBookAt":"2026-08-04T14:09:29.448Z","lastTicketAt":"2026-08-04T14:22:44.538Z","oddsLinesToday":58,"ticketsToday":1}],"tickets":{"dayUtc":"2026-08-04","ticketCount":1,"totalRisk":68,"totalToWin":60.71},"partners":[{"code":"ASH","hex":"#e64dcc","hsl":"hsl(310, 75%, 60%)","initials":"AS"},{"code":"BB55113","hex":"#ba4de6","hsl":"hsl(283, 75%, 60%)","initials":"BB"},{"code":"SPEN","hex":"#cce64d","hsl":"hsl(70, 75%, 60%)","initials":"SP"}],"outs":[{"id":"BB55113","partnerCode":"BB55113","provider":"fantasy402","capacity":1000,"hex":"#ba4de6"},{"id":"out-SPEN-1","partnerCode":"SPEN","provider":"fantasy402","capacity":1500,"hex":"#cce64d"},{"id":"out-ASH-1","partnerCode":"ASH","provider":"fantasy402","capacity":300,"hex":"#e64dcc"}],"domain":{"built":12,"partial":11,"planned":1},"toml":{"path":"config/partners.example.toml","drift":{"added":0,"changed":2,"removed":2},"error":null},"commands":[{"cmd":"bun run partner:domain","purpose":"Five-layer maturity map"},{"cmd":"bun run partner:toml -- --diff","purpose":"TOML vs SQLite plan (no write)"},{"cmd":"bun run partner:toml -- --check-env","purpose":"Secret presence per env_prefix"},{"cmd":"bun run partner:toml -- --seed","purpose":"Upsert partners + outs from TOML"},{"cmd":"bun run partner:capacity","purpose":"Out × skin capacity tree"},{"cmd":"bun run partner:health","purpose":"Registry + env + risk + ledger freshness"},{"cmd":"bun run partner:health -- --json","purpose":"Machine snapshot (alert payload)"},{"cmd":"bun run partner:finance-cron","purpose":"Desk report + optional Telegram"},{"cmd":"bun run partner:ws-ingest -- --capture","purpose":"WebView Pandora odds → odds_book"},{"cmd":"bun run partner:webview-ws-capture","purpose":"Raw CDP JSONL only"},{"cmd":"bun run partner:sports","purpose":"Live stream-list sports/leagues"},{"cmd":"bun run partner:sync -- --sport=all","purpose":"Inventory → partner_events"},{"cmd":"bun run partner:profile -- --codes=SPEN,ASH --png","purpose":"Bun.color avatars"},{"cmd":"bun run partner:dashboard","purpose":"Bake this static board"},{"cmd":"bun run serve","purpose":"Serve public/ (open /partner-dashboard/)"}]}</script>
+</body>
+</html>

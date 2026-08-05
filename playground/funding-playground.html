@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+  <meta charset='UTF-8'>
+  <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+  <title>Kalshi Funding Playground</title>
+  <style>
+    :root { color-scheme: dark; }
+    body { font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif; margin: 2rem; background: #0b0b1a; color: #e5e7eb; line-height: 1.5; }
+    h1 { font-size: 1.6rem; margin-bottom: 0.25rem; font-weight: 700; }
+    p.meta { color: #9ca3af; margin-top: 0; }
+    button, select, input { font: inherit; }
+    button { background: #00d4aa; color: #052e16; border: none; padding: 0.6rem 1.2rem; border-radius: 0.5rem; cursor: pointer; font-weight: 600; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    select, input[type='date'], input[type='text'] { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: #e5e7eb; padding: 0.4rem 0.6rem; border-radius: 0.4rem; }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin: 1rem 0; }
+    .toolbar label { color: #9ca3af; font-size: 0.85rem; }
+    #status { color: #cbd5e1; min-height: 1.5rem; }
+    .banner { background: linear-gradient(90deg, rgba(0, 212, 170, 0.15), rgba(0, 166, 255, 0.15)); border: 1px solid rgba(0, 212, 170, 0.25); border-radius: 0.75rem; padding: 1rem 1.25rem; margin-bottom: 1.5rem; display: none; }
+    .banner strong { color: #00d4aa; }
+    .summary { display: none; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+    .kpi { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); padding: 1rem; border-radius: 0.75rem; }
+    .kpi .label { font-size: 0.7rem; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.05em; }
+    .kpi .value { font-size: 1.3rem; font-weight: 700; margin-top: 0.25rem; }
+    .green { color: #00d4aa; }
+    .red { color: #ff416c; }
+    .gold { color: #fbbf24; }
+    .white { color: #f3f4f6; }
+    .section-title { font-size: 1.1rem; font-weight: 600; margin: 2rem 0 0.75rem 0; color: #d1d5db; }
+    .schema { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 0.75rem; padding: 1rem; margin-bottom: 1.25rem; overflow-x: auto; }
+    .schema h3 { margin-top: 0; font-size: 0.95rem; color: #d1d5db; }
+    pre { margin: 0; color: #9ca3af; font-size: 0.8rem; }
+    .table-wrapper { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 0.75rem; overflow-x: auto; margin-bottom: 2rem; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; min-width: 700px; }
+    thead { background: rgba(255,255,255,0.04); border-bottom: 1px solid rgba(255,255,255,0.08); }
+    th { text-align: left; padding: 0.8rem 1rem; font-weight: 600; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; white-space: nowrap; }
+    td { padding: 0.7rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.04); vertical-align: middle; color: #e5e7eb; }
+    tbody tr:nth-child(even) { background: rgba(255,255,255,0.02); }
+    tbody tr:hover td { background: rgba(255,255,255,0.04); }
+    .right { text-align: right; font-variant-numeric: tabular-nums; }
+    .mono { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.75rem; color: #9ca3af; }
+    .applied { color: #00d4aa; font-weight: 600; }
+    .failed { color: #ff416c; font-weight: 600; }
+    .chart { width: 100%; height: 120px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 0.75rem; margin-bottom: 2rem; }
+    .note { color: #9ca3af; font-size: 0.85rem; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.08); }
+    a { color: #00d4aa; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class='banner' id='mode-banner'>
+    <strong>Demo mode</strong> — sample data, no server or API key required. For live data run the local server.
+  </div>
+
+  <h1>Kalshi Funding Playground</h1>
+  <p class='meta'>Environment: <strong id='env'>...</strong> | Base: <code id='base' class='mono'>...</code></p>
+
+  <div class='toolbar'>
+    <button id='load'>Load from Kalshi API</button>
+    <button id='export'>Export CSV</button>
+    <label>Type
+      <select id='filter-type' class='filter'>
+        <option value=''>All</option>
+        <option value='crypto'>crypto</option>
+        <option value='debit'>debit</option>
+        <option value='wire'>wire</option>
+      </select>
+    </label>
+    <label>Status
+      <select id='filter-status' class='filter'>
+        <option value=''>All</option>
+        <option value='applied'>applied</option>
+        <option value='failed'>failed</option>
+      </select>
+    </label>
+    <label>From <input id='filter-from' type='date' class='filter'></label>
+    <label>To <input id='filter-to' type='date' class='filter'></label>
+    <label>Search <input id='filter-search' type='text' class='filter' placeholder='id...'></label>
+    <label>Sort by
+      <select id='sort-col' class='sort'>
+        <option value='created_ts'>created</option>
+        <option value='amount_cents'>amount</option>
+        <option value='status'>status</option>
+        <option value='type'>type</option>
+      </select>
+    </label>
+    <label>
+      <select id='sort-dir' class='sort'>
+        <option value='desc'>desc</option>
+        <option value='asc'>asc</option>
+      </select>
+    </label>
+  </div>
+  <div id='status'></div>
+
+  <div class='summary' id='summary'></div>
+
+  <h2 class='section-title'>Net Applied Flow Timeline</h2>
+  <svg class='chart' id='chart' width='100%' height='120' preserveAspectRatio='none'></svg>
+
+  <h2 class='section-title'>Confirmed Kalshi API Field Mapping</h2>
+  <div class='schema'>
+    <h3>GET /portfolio/deposits</h3>
+    <pre>deposits[].id              string
+deposits[].amount_cents    integer
+deposits[].created_ts      integer (ms)
+deposits[].finalized_ts    integer (ms)
+cursor                     string</pre>
+  </div>
+  <div class='schema'>
+    <h3>GET /portfolio/withdrawals</h3>
+    <pre>withdrawals[].id           string
+withdrawals[].amount_cents integer
+withdrawals[].fee_cents    integer
+withdrawals[].created_ts   integer (ms)
+withdrawals[].finalized_ts integer (ms)
+cursor                     string</pre>
+  </div>
+
+  <h2 class='section-title'>Deposits</h2>
+  <div class='table-wrapper'>
+    <table>
+      <thead>
+        <tr>
+          <th>id</th>
+          <th>amount_cents</th>
+          <th class='right'>Amount ($)</th>
+          <th>created_ts</th>
+          <th>finalized_ts</th>
+          <th>status</th>
+          <th>type</th>
+        </tr>
+      </thead>
+      <tbody id='deposits'><tr><td colspan='7' style='color:#64748b'>Click load to fetch.</td></tr></tbody>
+    </table>
+  </div>
+
+  <h2 class='section-title'>Withdrawals</h2>
+  <div class='table-wrapper'>
+    <table>
+      <thead>
+        <tr>
+          <th>id</th>
+          <th>amount_cents</th>
+          <th class='right'>Amount ($)</th>
+          <th>fee_cents</th>
+          <th class='right'>Fee ($)</th>
+          <th>created_ts</th>
+          <th>finalized_ts</th>
+          <th>status</th>
+          <th>type</th>
+        </tr>
+      </thead>
+      <tbody id='withdrawals'><tr><td colspan='9' style='color:#64748b'>Click load to fetch.</td></tr></tbody>
+    </table>
+  </div>
+
+  <p class='note'>
+    Source: <a href='https://docs.kalshi.com/api-reference/portfolio/get-deposits'>/portfolio/deposits</a> and
+    <a href='https://docs.kalshi.com/api-reference/portfolio/get-withdrawals'>/portfolio/withdrawals</a>.
+    All monetary values are in cents on the API; this page divides by 100 for display.
+  </p>
+
+  <script src='funding-playground.js'></script>
+</body>
+</html>
