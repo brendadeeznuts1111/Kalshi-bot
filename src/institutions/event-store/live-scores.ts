@@ -399,15 +399,45 @@ export type LiveCanaryVerdict = {
   warnings: string[];
 };
 
+/** Closed/delisted tickers often 403 on milestones — membership hygiene, not network death. */
+export function isHttpForbiddenClosedError(msg: string): boolean {
+  return /:\s*403\b|\b403 Forbidden\b|:\s*410\b|\b410 Gone\b/i.test(msg);
+}
+
+export function isHttp5xxError(msg: string): boolean {
+  return /:\s*5\d\d\b|\b50[0-9]\s/i.test(msg);
+}
+
 export function evaluateLiveCanary(summary: LivePollSummary): LiveCanaryVerdict {
   const reasons: string[] = [];
   const warnings: string[] = [];
-  if (summary.errors.length > 0) {
-    reasons.push(`errors=${summary.errors.length}: ${summary.errors.slice(0, 3).join("; ")}`);
+  const errors = summary.errors;
+  const allErrorsForbidden =
+    errors.length > 0 && errors.every((e) => isHttpForbiddenClosedError(e));
+
+  if (errors.length > 0) {
+    if (allErrorsForbidden) {
+      // Single closed ticker (or a handful) 403 — soft; do not fail cron or dual-tag E_NET.
+      warnings.push(
+        `closed_or_forbidden: ${errors.length} ticker(s) — ${errors.slice(0, 2).join("; ")}`,
+      );
+    } else {
+      reasons.push(`errors=${errors.length}: ${errors.slice(0, 3).join("; ")}`);
+    }
   }
+
   if (summary.watched > 0 && summary.polled === 0) {
-    reasons.push("watched>0 but polled=0 (fetch path dead)");
+    if (allErrorsForbidden) {
+      // Already warned as closed_or_forbidden — not "fetch path dead".
+    } else if (errors.length === 0) {
+      reasons.push("watched>0 but polled=0 (no successful milestone fetch)");
+    } else if (errors.every((e) => isHttp5xxError(e) || isHttpForbiddenClosedError(e))) {
+      reasons.push("all_fetches_failed (upstream HTTP)");
+    } else {
+      reasons.push("all_fetches_failed");
+    }
   }
+
   if (summary.live > 0 && summary.upserted === 0) {
     reasons.push("live>0 but would_upsert/upserted=0 (write-boundary plan dead)");
   }
@@ -441,6 +471,17 @@ export function evaluateLiveCanary(summary: LivePollSummary): LiveCanaryVerdict 
   // Daytime watch with zero would_upsert is fatal only when something looks live-ish.
   if (summary.watched >= 5 && summary.upserted === 0 && summary.polled > 0) {
     warnings.push("watched>=5 polled>0 but would_upsert=0 (unexpected — check filters)");
+  }
+
+  if (summary.watched === 0) {
+    warnings.push("empty_watch_vacuous — no events in lead/grace (wire not exercised)");
+  } else if (
+    summary.wouldRetire >= Math.ceil(summary.watched * 0.8) &&
+    summary.live === 0
+  ) {
+    warnings.push(
+      `watch_mostly_terminal: wouldRetire=${summary.wouldRetire}/${summary.watched} live=0`,
+    );
   }
 
   return {
@@ -995,6 +1036,24 @@ async function resolveMilestoneId(
   return pick.id;
 }
 
+/**
+ * Drop closed/delisted events that 403 on milestones so watch-set cleans up
+ * without waiting for the 6h past-grace floor.
+ */
+export function softRetireForbiddenEvent(
+  db: Database,
+  eventId: CanonicalEventId,
+): void {
+  db.query(
+    `UPDATE events SET outcome = CASE
+       WHEN winner != '' AND outcome = 'scheduled' THEN 'completed'
+       WHEN outcome = 'scheduled' THEN 'unknown'
+       ELSE outcome
+     END
+     WHERE event_id = $id AND source = $source`,
+  ).run({ $id: unbrand(eventId), $source: KALSHI_SOURCE });
+}
+
 function emptyPollRow(w: WatchEvent, patch: Partial<LivePollRow> = {}): LivePollRow {
   return {
     eventTicker: w.eventTicker,
@@ -1135,7 +1194,19 @@ export async function pollLiveScores(
     const { w, milestoneId, data, sourceUrl, fetchedTs, fetchError } = f;
     if (fetchError) {
       summary.errors.push(`${w.eventTicker}:${fetchError}`);
-      summary.rows.push(emptyPollRow(w, { error: fetchError }));
+      // Closed/delisted events 403 on milestones — retire from watch when writing.
+      if (isHttpForbiddenClosedError(fetchError)) {
+        summary.wouldRetire++;
+        if (!dryRun) {
+          softRetireForbiddenEvent(db, w.eventId);
+        }
+      }
+      summary.rows.push(
+        emptyPollRow(w, {
+          error: fetchError,
+          wouldRetire: isHttpForbiddenClosedError(fetchError),
+        }),
+      );
       continue;
     }
     if (!milestoneId) {

@@ -207,8 +207,16 @@ export async function runLiveScoresCli(argv: string[]): Promise<number> {
 
   /** Bracketed probe-error tag for canary failure lines (e.g. `canary FAIL [E_NET] …`). */
   const canaryFailTag = (reason: string): string => {
-    if (reason.startsWith("errors=")) return `[${classifyProbeError(reason)}] `;
-    if (/fetch path dead/i.test(reason)) return "[E_NET] ";
+    if (/closed_or_forbidden|403 Forbidden|410 Gone/i.test(reason)) {
+      return "[E_HTTP_FORBIDDEN] ";
+    }
+    if (/all_fetches_failed/i.test(reason)) return "[E_HTTP_UPSTREAM] ";
+    if (reason.startsWith("errors=")) {
+      if (/403|410|Forbidden|Gone/i.test(reason)) return "[E_HTTP_FORBIDDEN] ";
+      if (/:\s*5\d\d\b/.test(reason)) return "[E_HTTP_UPSTREAM] ";
+      return `[${classifyProbeError(reason)}] `;
+    }
+    if (/fetch path dead|no successful milestone/i.test(reason)) return "[E_HTTP_UPSTREAM] ";
     if (/wire_shape_drift/i.test(reason)) return "[E_PARSE] ";
     if (/write-boundary/i.test(reason)) return "[E_DB] ";
     return "[E_UNKNOWN] ";
