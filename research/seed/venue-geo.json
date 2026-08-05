@@ -1,0 +1,179 @@
+{
+  "$comment": "Harvested from ITF Stadion (venue.city + venue.country). city (normalized) → {iso3, country}. Regenerate: bun tools/tennis/harvest-nationalities.ts",
+  "aldershot": {
+    "iso3": "GBR",
+    "country": "Great Britain"
+  },
+  "amstetten": {
+    "iso3": "AUT",
+    "country": "Austria"
+  },
+  "astana": {
+    "iso3": "KAZ",
+    "country": "Kazakhstan"
+  },
+  "bacau": {
+    "iso3": "ROU",
+    "country": "Romania"
+  },
+  "bali": {
+    "iso3": "INA",
+    "country": "Indonesia"
+  },
+  "bielsko biala": {
+    "iso3": "POL",
+    "country": "Poland"
+  },
+  "bolzano": {
+    "iso3": "ITA",
+    "country": "Italy"
+  },
+  "brisbane": {
+    "iso3": "AUS",
+    "country": "Australia"
+  },
+  "cluj napoca": {
+    "iso3": "ROU",
+    "country": "Romania"
+  },
+  "copenhagnen gentofte": {
+    "iso3": "DEN",
+    "country": "Denmark"
+  },
+  "cordenons": {
+    "iso3": "ITA",
+    "country": "Italy"
+  },
+  "denia": {
+    "iso3": "ESP",
+    "country": "Spain"
+  },
+  "dublin": {
+    "iso3": "IRL",
+    "country": "Ireland"
+  },
+  "edwardsville": {
+    "iso3": "USA",
+    "country": "USA"
+  },
+  "evansville": {
+    "iso3": "USA",
+    "country": "USA"
+  },
+  "florence": {
+    "iso3": "USA",
+    "country": "USA"
+  },
+  "gentofte": {
+    "iso3": "DEN",
+    "country": "Denmark"
+  },
+  "gran canaria maspalomas": {
+    "iso3": "ESP",
+    "country": "Spain"
+  },
+  "hechingen": {
+    "iso3": "GER",
+    "country": "Germany"
+  },
+  "horb": {
+    "iso3": "GER",
+    "country": "Germany"
+  },
+  "huamantla": {
+    "iso3": "MEX",
+    "country": "Mexico"
+  },
+  "knokke heist": {
+    "iso3": "BEL",
+    "country": "Belgium"
+  },
+  "koszalin": {
+    "iso3": "POL",
+    "country": "Poland"
+  },
+  "kursumlijska banja": {
+    "iso3": "SRB",
+    "country": "Serbia"
+  },
+  "las palmas de gran canaria": {
+    "iso3": "ESP",
+    "country": "Spain"
+  },
+  "lexington": {
+    "iso3": "USA",
+    "country": "USA"
+  },
+  "metzingen": {
+    "iso3": "GER",
+    "country": "Germany"
+  },
+  "nogent sur marne": {
+    "iso3": "FRA",
+    "country": "France"
+  },
+  "ollersbach": {
+    "iso3": "AUT",
+    "country": "Austria"
+  },
+  "pergamino": {
+    "iso3": "ARG",
+    "country": "Argentina"
+  },
+  "pitesti": {
+    "iso3": "ROU",
+    "country": "Romania"
+  },
+  "rogaska slatina": {
+    "iso3": "SLO",
+    "country": "Slovenia"
+  },
+  "rognac": {
+    "iso3": "FRA",
+    "country": "France"
+  },
+  "santa fe": {
+    "iso3": "USA",
+    "country": "USA"
+  },
+  "sao paulo": {
+    "iso3": "BRA",
+    "country": "Brazil"
+  },
+  "saskatoon": {
+    "iso3": "CAN",
+    "country": "Canada"
+  },
+  "savitaipale": {
+    "iso3": "FIN",
+    "country": "Finland"
+  },
+  "segrate": {
+    "iso3": "ITA",
+    "country": "Italy"
+  },
+  "strasbourg": {
+    "iso3": "FRA",
+    "country": "France"
+  },
+  "urbana": {
+    "iso3": "USA",
+    "country": "USA"
+  },
+  "vacaria": {
+    "iso3": "BRA",
+    "country": "Brazil"
+  },
+  "wels": {
+    "iso3": "AUT",
+    "country": "Austria"
+  },
+  "wetzlar": {
+    "iso3": "GER",
+    "country": "Germany"
+  },
+  "xativa": {
+    "iso3": "ESP",
+    "country": "Spain"
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "log": {
+    "version": "1.2",
+    "creator": {
+      "name": "kalshi-bot-fixture",
+      "version": "1",
+      "comment": "SYNTHETIC — URL path is not production-verified. Replace with a real Chrome HAR before setting FANTASY402_PLACE_BET_URL."
+    },
+    "entries": [
+      {
+        "pageref": "page_1",
+        "startedDateTime": "2026-08-04T12:00:00.000Z",
+        "request": {
+          "method": "POST",
+          "url": "https://fantasy402.com/cloud/api/Bet/PlaceBet",
+          "headers": [
+            { "name": "content-type", "value": "application/json" },
+            { "name": "authorization", "value": "Bearer FAKESECRET_g2h3i4j5k6l7m8n9o0p1" }
+          ],
+          "postData": {
+            "mimeType": "application/json",
+            "text": "{\"eventId\":196878741,\"marketId\":\"3\",\"key\":\"2\",\"periodId\":\"m\",\"risk\":68,\"finalOdds\":1.8928569555282593,\"currency\":\"USD\",\"customerID\":\"SPEN_CUST\",\"agentID\":\"SPEN_AGENT\"}"
+          }
+        },
+        "response": {
+          "status": 200,
+          "headers": [
+            { "name": "content-type", "value": "application/json" }
+          ],
+          "content": {
+            "mimeType": "application/json",
+            "text": "{\"betGroups\":[{\"betGroupId\":307200153,\"ticketNumber\":1036636660,\"finalOdds\":1.8928569555282593,\"risk\":68,\"toWin\":60.71,\"currency\":\"USD\",\"result\":0,\"state\":0,\"componentBets\":[{\"betId\":335749942,\"eventId\":196878741,\"periodId\":\"m\",\"marketId\":\"3\",\"key\":\"2\",\"team1\":\"A\",\"team2\":\"B\",\"finalOdds\":1.8928569555282593,\"state\":0}]}],\"e\":0,\"d\":\"\"}"
+          }
+        }
+      },
+      {
+        "request": {
+          "method": "GET",
+          "url": "https://example.com/unrelated"
+        },
+        "response": {
+          "status": 200,
+          "content": { "mimeType": "text/plain", "text": "ok" }
+        }
+      }
+    ]
+  }
+}

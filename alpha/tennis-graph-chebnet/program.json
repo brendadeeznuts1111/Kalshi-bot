@@ -1,0 +1,20 @@
+{
+  "name": "tennis-graph-chebnet",
+  "dimension": "sports-tennis",
+  "status": "shadow",
+  "role": "alpha",
+  "baseline": "none",
+  "created": "2026-07-29",
+  "shadowLog": "shadow-log.jsonl",
+  "hypothesisFile": "hypothesis.md",
+  "minContracts": 5,
+  "gates": {
+    "shadowMinSignals": 400,
+    "shadowMinWeeks": 2,
+    "pilotMaxContracts": 5,
+    "killBrierDriftPct": 12,
+    "graduationMinRealizedEdgeCentsPerFill": 2,
+    "graduationMinFills": 80,
+    "graduationMinDistinctEvents": 80
+  }
+}

@@ -1,0 +1,917 @@
+{
+  "generatedAt": "2026-07-30T10:06:51.201Z",
+  "dataPeriod": {
+    "from": 1785391702951,
+    "to": 1785405800577
+  },
+  "threshold": 5,
+  "stats": {
+    "count": 155,
+    "avgGap": 3,
+    "maxGap": 55,
+    "pctOverpriced": 55,
+    "pctUnderpriced": 45
+  },
+  "inefficiencies": [
+    {
+      "ticker": "KXITFWMATCH-26JUL28PANLAZ-PAN",
+      "ts": "2026-07-30T06:08:22.951Z",
+      "kalshiCents": 97,
+      "eloPct": 55,
+      "gapCents": 42,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWMATCH-26JUL22ZANROD-ROD",
+      "ts": "2026-07-30T06:08:22.951Z",
+      "kalshiCents": 28,
+      "eloPct": 44,
+      "gapCents": -16,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWMATCH-26JUL22ZANROD-ZAN",
+      "ts": "2026-07-30T06:08:22.951Z",
+      "kalshiCents": 71,
+      "eloPct": 44,
+      "gapCents": 27,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWMATCH-26JUL22ZELRIN-ZEL",
+      "ts": "2026-07-30T06:08:22.951Z",
+      "kalshiCents": 57,
+      "eloPct": 52,
+      "gapCents": 5,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWMATCH-26JUL22ZELRIN-RIN",
+      "ts": "2026-07-30T06:08:22.951Z",
+      "kalshiCents": 43,
+      "eloPct": 52,
+      "gapCents": -9,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFMATCH-26JUL22HANLOP-HAN",
+      "ts": "2026-07-30T06:08:22.951Z",
+      "kalshiCents": 33,
+      "eloPct": 52,
+      "gapCents": -19,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFMATCH-26JUL22HANLOP-LOP",
+      "ts": "2026-07-30T06:08:22.951Z",
+      "kalshiCents": 67,
+      "eloPct": 52,
+      "gapCents": 15,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFMATCH-26JUL22DULBEC-BEC",
+      "ts": "2026-07-30T06:08:22.951Z",
+      "kalshiCents": 54,
+      "eloPct": 48,
+      "gapCents": 6,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWMATCH-26JUL22NGUEBE-EBE",
+      "ts": "2026-07-30T06:08:22.951Z",
+      "kalshiCents": 39,
+      "eloPct": 62,
+      "gapCents": -23,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWMATCH-26JUL22CURTSY-CUR",
+      "ts": "2026-07-30T06:08:22.951Z",
+      "kalshiCents": 75,
+      "eloPct": 43,
+      "gapCents": 32,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWMATCH-26JUL22CURTSY-TSY",
+      "ts": "2026-07-30T06:08:22.951Z",
+      "kalshiCents": 26,
+      "eloPct": 43,
+      "gapCents": -17,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWMATCH-26JUL22SINPUS-SIN",
+      "ts": "2026-07-30T06:08:22.951Z",
+      "kalshiCents": 80,
+      "eloPct": 54,
+      "gapCents": 26,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWMATCH-26JUL22SINPUS-PUS",
+      "ts": "2026-07-30T06:08:22.951Z",
+      "kalshiCents": 23,
+      "eloPct": 54,
+      "gapCents": -31,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWMATCH-26JUL22GARMAI-MAI",
+      "ts": "2026-07-30T06:08:22.951Z",
+      "kalshiCents": 52,
+      "eloPct": 43,
+      "gapCents": 9,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFMATCH-26JUL22ORLMAS-ORL",
+      "ts": "2026-07-30T06:08:22.951Z",
+      "kalshiCents": 98,
+      "eloPct": 43,
+      "gapCents": 55,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFMATCH-26JUL22ORLMAS-MAS",
+      "ts": "2026-07-30T06:08:22.951Z",
+      "kalshiCents": 3,
+      "eloPct": 43,
+      "gapCents": -40,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFMATCH-26JUL22CIUBER-BER",
+      "ts": "2026-07-30T06:08:22.951Z",
+      "kalshiCents": 28,
+      "eloPct": 50,
+      "gapCents": -22,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFMATCH-26JUL22CIUBER-CIU",
+      "ts": "2026-07-30T06:08:22.951Z",
+      "kalshiCents": 74,
+      "eloPct": 50,
+      "gapCents": 24,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFMATCH-26JUL22OBRBJE-BJE",
+      "ts": "2026-07-30T06:08:22.951Z",
+      "kalshiCents": 2,
+      "eloPct": 55,
+      "gapCents": -53,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFMATCH-26JUL22OBRBJE-OBR",
+      "ts": "2026-07-30T06:08:22.951Z",
+      "kalshiCents": 98,
+      "eloPct": 55,
+      "gapCents": 43,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWMATCH-26JUL22HERDIA-DIA",
+      "ts": "2026-07-30T06:08:22.951Z",
+      "kalshiCents": 78,
+      "eloPct": 43,
+      "gapCents": 35,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWMATCH-26JUL22HERDIA-HER",
+      "ts": "2026-07-30T06:08:22.951Z",
+      "kalshiCents": 23,
+      "eloPct": 43,
+      "gapCents": -20,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFDOUBLES-26JUL22CAMMCFCHAJON-CHAJON",
+      "ts": "2026-07-30T06:08:22.951Z",
+      "kalshiCents": 51,
+      "eloPct": 43,
+      "gapCents": 8,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFDOUBLES-26JUL22FERHAZKAWMOC-FERHAZ",
+      "ts": "2026-07-30T06:08:22.951Z",
+      "kalshiCents": 52,
+      "eloPct": 43,
+      "gapCents": 9,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWDOUBLES-26JUL22ALAALAFAIGIL-ALAALA",
+      "ts": "2026-07-30T06:08:22.951Z",
+      "kalshiCents": 45,
+      "eloPct": 50,
+      "gapCents": -5,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFDOUBLES-26JUL22JONZHAPADSHE-PADSHE",
+      "ts": "2026-07-30T06:08:22.951Z",
+      "kalshiCents": 47,
+      "eloPct": 54,
+      "gapCents": -7,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFDOUBLES-26JUL21EGETAKHOOTRI-HOOTRI",
+      "ts": "2026-07-30T06:08:22.951Z",
+      "kalshiCents": 43,
+      "eloPct": 48,
+      "gapCents": -5,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWDOUBLES-26JUL21OTWYOSCOMSWA-OTWYOS",
+      "ts": "2026-07-30T06:08:22.951Z",
+      "kalshiCents": 57,
+      "eloPct": 45,
+      "gapCents": 12,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWDOUBLES-26JUL21OTWYOSCOMSWA-OTWYOS",
+      "ts": "2026-07-30T06:08:22.951Z",
+      "kalshiCents": 57,
+      "eloPct": 45,
+      "gapCents": 12,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFMATCH-26JUL21DEMDIN-DEM",
+      "ts": "2026-07-30T06:08:22.951Z",
+      "kalshiCents": 30,
+      "eloPct": 52,
+      "gapCents": -22,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFMATCH-26JUL21DEMDIN-DIN",
+      "ts": "2026-07-30T06:08:22.951Z",
+      "kalshiCents": 69,
+      "eloPct": 52,
+      "gapCents": 17,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWMATCH-26JUL28PANLAZ-PAN",
+      "ts": "2026-07-30T09:23:21.839Z",
+      "kalshiCents": 97,
+      "eloPct": 55,
+      "gapCents": 42,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWMATCH-26JUL22ZANROD-ROD",
+      "ts": "2026-07-30T09:23:21.839Z",
+      "kalshiCents": 28,
+      "eloPct": 44,
+      "gapCents": -16,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWMATCH-26JUL22ZANROD-ZAN",
+      "ts": "2026-07-30T09:23:21.839Z",
+      "kalshiCents": 71,
+      "eloPct": 44,
+      "gapCents": 27,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWMATCH-26JUL22ZELRIN-ZEL",
+      "ts": "2026-07-30T09:23:21.839Z",
+      "kalshiCents": 57,
+      "eloPct": 52,
+      "gapCents": 5,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWMATCH-26JUL22ZELRIN-RIN",
+      "ts": "2026-07-30T09:23:21.839Z",
+      "kalshiCents": 43,
+      "eloPct": 52,
+      "gapCents": -9,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFMATCH-26JUL22HANLOP-HAN",
+      "ts": "2026-07-30T09:23:21.839Z",
+      "kalshiCents": 33,
+      "eloPct": 52,
+      "gapCents": -19,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFMATCH-26JUL22HANLOP-LOP",
+      "ts": "2026-07-30T09:23:21.839Z",
+      "kalshiCents": 67,
+      "eloPct": 52,
+      "gapCents": 15,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFMATCH-26JUL22DULBEC-BEC",
+      "ts": "2026-07-30T09:23:21.839Z",
+      "kalshiCents": 54,
+      "eloPct": 48,
+      "gapCents": 6,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWMATCH-26JUL22NGUEBE-EBE",
+      "ts": "2026-07-30T09:23:21.839Z",
+      "kalshiCents": 39,
+      "eloPct": 62,
+      "gapCents": -23,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWMATCH-26JUL22CURTSY-CUR",
+      "ts": "2026-07-30T09:23:21.839Z",
+      "kalshiCents": 75,
+      "eloPct": 43,
+      "gapCents": 32,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWMATCH-26JUL22CURTSY-TSY",
+      "ts": "2026-07-30T09:23:21.839Z",
+      "kalshiCents": 26,
+      "eloPct": 43,
+      "gapCents": -17,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWMATCH-26JUL22SINPUS-SIN",
+      "ts": "2026-07-30T09:23:21.839Z",
+      "kalshiCents": 80,
+      "eloPct": 54,
+      "gapCents": 26,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWMATCH-26JUL22SINPUS-PUS",
+      "ts": "2026-07-30T09:23:21.839Z",
+      "kalshiCents": 23,
+      "eloPct": 54,
+      "gapCents": -31,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWMATCH-26JUL22GARMAI-MAI",
+      "ts": "2026-07-30T09:23:21.839Z",
+      "kalshiCents": 52,
+      "eloPct": 43,
+      "gapCents": 9,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFMATCH-26JUL22ORLMAS-ORL",
+      "ts": "2026-07-30T09:23:21.839Z",
+      "kalshiCents": 98,
+      "eloPct": 43,
+      "gapCents": 55,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFMATCH-26JUL22ORLMAS-MAS",
+      "ts": "2026-07-30T09:23:21.839Z",
+      "kalshiCents": 3,
+      "eloPct": 43,
+      "gapCents": -40,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFMATCH-26JUL22CIUBER-BER",
+      "ts": "2026-07-30T09:23:21.839Z",
+      "kalshiCents": 28,
+      "eloPct": 50,
+      "gapCents": -22,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFMATCH-26JUL22CIUBER-CIU",
+      "ts": "2026-07-30T09:23:21.839Z",
+      "kalshiCents": 74,
+      "eloPct": 50,
+      "gapCents": 24,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFMATCH-26JUL22OBRBJE-BJE",
+      "ts": "2026-07-30T09:23:21.839Z",
+      "kalshiCents": 2,
+      "eloPct": 55,
+      "gapCents": -53,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFMATCH-26JUL22OBRBJE-OBR",
+      "ts": "2026-07-30T09:23:21.839Z",
+      "kalshiCents": 98,
+      "eloPct": 55,
+      "gapCents": 43,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWMATCH-26JUL22HERDIA-DIA",
+      "ts": "2026-07-30T09:23:21.839Z",
+      "kalshiCents": 78,
+      "eloPct": 43,
+      "gapCents": 35,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWMATCH-26JUL22HERDIA-HER",
+      "ts": "2026-07-30T09:23:21.839Z",
+      "kalshiCents": 23,
+      "eloPct": 43,
+      "gapCents": -20,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFDOUBLES-26JUL22CAMMCFCHAJON-CHAJON",
+      "ts": "2026-07-30T09:23:21.839Z",
+      "kalshiCents": 51,
+      "eloPct": 43,
+      "gapCents": 8,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFDOUBLES-26JUL22FERHAZKAWMOC-FERHAZ",
+      "ts": "2026-07-30T09:23:21.839Z",
+      "kalshiCents": 52,
+      "eloPct": 43,
+      "gapCents": 9,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWDOUBLES-26JUL22ALAALAFAIGIL-ALAALA",
+      "ts": "2026-07-30T09:23:21.839Z",
+      "kalshiCents": 45,
+      "eloPct": 50,
+      "gapCents": -5,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFDOUBLES-26JUL22JONZHAPADSHE-PADSHE",
+      "ts": "2026-07-30T09:23:21.839Z",
+      "kalshiCents": 47,
+      "eloPct": 54,
+      "gapCents": -7,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFDOUBLES-26JUL21EGETAKHOOTRI-HOOTRI",
+      "ts": "2026-07-30T09:23:21.839Z",
+      "kalshiCents": 43,
+      "eloPct": 48,
+      "gapCents": -5,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWDOUBLES-26JUL21OTWYOSCOMSWA-OTWYOS",
+      "ts": "2026-07-30T09:23:21.839Z",
+      "kalshiCents": 57,
+      "eloPct": 45,
+      "gapCents": 12,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWDOUBLES-26JUL21OTWYOSCOMSWA-OTWYOS",
+      "ts": "2026-07-30T09:23:21.839Z",
+      "kalshiCents": 57,
+      "eloPct": 45,
+      "gapCents": 12,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFMATCH-26JUL21DEMDIN-DEM",
+      "ts": "2026-07-30T09:23:21.839Z",
+      "kalshiCents": 30,
+      "eloPct": 52,
+      "gapCents": -22,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFMATCH-26JUL21DEMDIN-DIN",
+      "ts": "2026-07-30T09:23:21.839Z",
+      "kalshiCents": 69,
+      "eloPct": 52,
+      "gapCents": 17,
+      "surfaceEdge": null,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWMATCH-26JUL28PANLAZ-PAN",
+      "ts": "2026-07-30T10:00:10.011Z",
+      "kalshiCents": 97,
+      "eloPct": 55,
+      "gapCents": 42,
+      "surfaceEdge": 0,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWMATCH-26JUL22ZANROD-ROD",
+      "ts": "2026-07-30T10:00:10.011Z",
+      "kalshiCents": 28,
+      "eloPct": 44,
+      "gapCents": -16,
+      "surfaceEdge": 0,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWMATCH-26JUL22ZANROD-ZAN",
+      "ts": "2026-07-30T10:00:10.011Z",
+      "kalshiCents": 71,
+      "eloPct": 44,
+      "gapCents": 27,
+      "surfaceEdge": 0,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWMATCH-26JUL22ZELRIN-ZEL",
+      "ts": "2026-07-30T10:00:10.011Z",
+      "kalshiCents": 57,
+      "eloPct": 52,
+      "gapCents": 5,
+      "surfaceEdge": 0,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWMATCH-26JUL22ZELRIN-RIN",
+      "ts": "2026-07-30T10:00:10.011Z",
+      "kalshiCents": 43,
+      "eloPct": 52,
+      "gapCents": -9,
+      "surfaceEdge": 0,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFMATCH-26JUL22HANLOP-HAN",
+      "ts": "2026-07-30T10:00:10.011Z",
+      "kalshiCents": 33,
+      "eloPct": 52,
+      "gapCents": -19,
+      "surfaceEdge": 0,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFMATCH-26JUL22HANLOP-LOP",
+      "ts": "2026-07-30T10:00:10.011Z",
+      "kalshiCents": 67,
+      "eloPct": 52,
+      "gapCents": 15,
+      "surfaceEdge": 0,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFMATCH-26JUL22DULBEC-BEC",
+      "ts": "2026-07-30T10:00:10.011Z",
+      "kalshiCents": 54,
+      "eloPct": 48,
+      "gapCents": 6,
+      "surfaceEdge": 0,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWMATCH-26JUL22NGUEBE-EBE",
+      "ts": "2026-07-30T10:00:10.011Z",
+      "kalshiCents": 39,
+      "eloPct": 62,
+      "gapCents": -23,
+      "surfaceEdge": 0,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWMATCH-26JUL22CURTSY-CUR",
+      "ts": "2026-07-30T10:00:10.011Z",
+      "kalshiCents": 75,
+      "eloPct": 43,
+      "gapCents": 32,
+      "surfaceEdge": 0,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWMATCH-26JUL22CURTSY-TSY",
+      "ts": "2026-07-30T10:00:10.011Z",
+      "kalshiCents": 26,
+      "eloPct": 43,
+      "gapCents": -17,
+      "surfaceEdge": 0,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWMATCH-26JUL22SINPUS-SIN",
+      "ts": "2026-07-30T10:00:10.011Z",
+      "kalshiCents": 80,
+      "eloPct": 54,
+      "gapCents": 26,
+      "surfaceEdge": 0,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWMATCH-26JUL22SINPUS-PUS",
+      "ts": "2026-07-30T10:00:10.011Z",
+      "kalshiCents": 23,
+      "eloPct": 54,
+      "gapCents": -31,
+      "surfaceEdge": 0,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWMATCH-26JUL22GARMAI-MAI",
+      "ts": "2026-07-30T10:00:10.011Z",
+      "kalshiCents": 52,
+      "eloPct": 43,
+      "gapCents": 9,
+      "surfaceEdge": 0,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFMATCH-26JUL22ORLMAS-ORL",
+      "ts": "2026-07-30T10:00:10.011Z",
+      "kalshiCents": 98,
+      "eloPct": 43,
+      "gapCents": 55,
+      "surfaceEdge": 0,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFMATCH-26JUL22ORLMAS-MAS",
+      "ts": "2026-07-30T10:00:10.011Z",
+      "kalshiCents": 3,
+      "eloPct": 43,
+      "gapCents": -40,
+      "surfaceEdge": 0,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFMATCH-26JUL22CIUBER-BER",
+      "ts": "2026-07-30T10:00:10.011Z",
+      "kalshiCents": 28,
+      "eloPct": 50,
+      "gapCents": -22,
+      "surfaceEdge": 0,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFMATCH-26JUL22CIUBER-CIU",
+      "ts": "2026-07-30T10:00:10.011Z",
+      "kalshiCents": 74,
+      "eloPct": 50,
+      "gapCents": 24,
+      "surfaceEdge": 0,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFMATCH-26JUL22OBRBJE-BJE",
+      "ts": "2026-07-30T10:00:10.011Z",
+      "kalshiCents": 2,
+      "eloPct": 55,
+      "gapCents": -53,
+      "surfaceEdge": 0,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFMATCH-26JUL22OBRBJE-OBR",
+      "ts": "2026-07-30T10:00:10.011Z",
+      "kalshiCents": 98,
+      "eloPct": 55,
+      "gapCents": 43,
+      "surfaceEdge": 0,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWMATCH-26JUL22HERDIA-DIA",
+      "ts": "2026-07-30T10:00:10.011Z",
+      "kalshiCents": 78,
+      "eloPct": 43,
+      "gapCents": 35,
+      "surfaceEdge": 0,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWMATCH-26JUL22HERDIA-HER",
+      "ts": "2026-07-30T10:00:10.011Z",
+      "kalshiCents": 23,
+      "eloPct": 43,
+      "gapCents": -20,
+      "surfaceEdge": 0,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFDOUBLES-26JUL22CAMMCFCHAJON-CHAJON",
+      "ts": "2026-07-30T10:00:10.011Z",
+      "kalshiCents": 51,
+      "eloPct": 43,
+      "gapCents": 8,
+      "surfaceEdge": 0,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFDOUBLES-26JUL22FERHAZKAWMOC-FERHAZ",
+      "ts": "2026-07-30T10:00:10.011Z",
+      "kalshiCents": 52,
+      "eloPct": 43,
+      "gapCents": 9,
+      "surfaceEdge": 0,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWDOUBLES-26JUL22ALAALAFAIGIL-ALAALA",
+      "ts": "2026-07-30T10:00:10.011Z",
+      "kalshiCents": 45,
+      "eloPct": 50,
+      "gapCents": -5,
+      "surfaceEdge": 0,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFDOUBLES-26JUL22JONZHAPADSHE-PADSHE",
+      "ts": "2026-07-30T10:00:10.011Z",
+      "kalshiCents": 47,
+      "eloPct": 54,
+      "gapCents": -7,
+      "surfaceEdge": 0,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFDOUBLES-26JUL21EGETAKHOOTRI-HOOTRI",
+      "ts": "2026-07-30T10:00:10.011Z",
+      "kalshiCents": 43,
+      "eloPct": 48,
+      "gapCents": -5,
+      "surfaceEdge": 0,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWDOUBLES-26JUL21OTWYOSCOMSWA-OTWYOS",
+      "ts": "2026-07-30T10:00:10.011Z",
+      "kalshiCents": 57,
+      "eloPct": 45,
+      "gapCents": 12,
+      "surfaceEdge": 0,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWDOUBLES-26JUL21OTWYOSCOMSWA-OTWYOS",
+      "ts": "2026-07-30T10:00:10.011Z",
+      "kalshiCents": 57,
+      "eloPct": 45,
+      "gapCents": 12,
+      "surfaceEdge": 0,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFMATCH-26JUL21DEMDIN-DEM",
+      "ts": "2026-07-30T10:00:10.011Z",
+      "kalshiCents": 30,
+      "eloPct": 52,
+      "gapCents": -22,
+      "surfaceEdge": 0,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFMATCH-26JUL21DEMDIN-DIN",
+      "ts": "2026-07-30T10:00:10.011Z",
+      "kalshiCents": 69,
+      "eloPct": 52,
+      "gapCents": 17,
+      "surfaceEdge": 0,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWMATCH-26JUL28PANLAZ-PAN",
+      "ts": "2026-07-30T10:00:42.634Z",
+      "kalshiCents": 97,
+      "eloPct": 55,
+      "gapCents": 42,
+      "surfaceEdge": 0,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWMATCH-26JUL22ZANROD-ROD",
+      "ts": "2026-07-30T10:00:42.634Z",
+      "kalshiCents": 28,
+      "eloPct": 44,
+      "gapCents": -16,
+      "surfaceEdge": -33,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWMATCH-26JUL22ZANROD-ZAN",
+      "ts": "2026-07-30T10:00:42.634Z",
+      "kalshiCents": 71,
+      "eloPct": 44,
+      "gapCents": 27,
+      "surfaceEdge": -33,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWMATCH-26JUL22ZELRIN-ZEL",
+      "ts": "2026-07-30T10:00:42.634Z",
+      "kalshiCents": 57,
+      "eloPct": 52,
+      "gapCents": 5,
+      "surfaceEdge": 28,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFWMATCH-26JUL22ZELRIN-RIN",
+      "ts": "2026-07-30T10:00:42.634Z",
+      "kalshiCents": 43,
+      "eloPct": 52,
+      "gapCents": -9,
+      "surfaceEdge": 28,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFMATCH-26JUL22HANLOP-HAN",
+      "ts": "2026-07-30T10:00:42.634Z",
+      "kalshiCents": 33,
+      "eloPct": 52,
+      "gapCents": -19,
+      "surfaceEdge": 0,
+      "surface": "unknown"
+    },
+    {
+      "ticker": "KXITFMATCH-26JUL22HANLOP-LOP",
+      "ts": "2026-07-30T10:00:42.634Z",
+      "kalshiCents": 67,
+      "eloPct": 52,
+      "gapCents": 15,
+      "surfaceEdge": 0,
+      "surface": "unknown"
+    }
+  ]
+}
