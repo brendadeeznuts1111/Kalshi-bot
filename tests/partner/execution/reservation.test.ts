@@ -37,6 +37,8 @@ import {
   releaseExpiredReservations,
   settleConfirmedReservation,
 } from "../../../src/partner/execution/reservation.ts";
+import { reconcileKalshiUnknownReservations } from "../../../src/partner/execution/reconciliation.ts";
+import { executionIdempotencyKeyToUuid } from "../../../src/partner/execution/kalshi.ts";
 import {
   EXECUTION_MIGRATIONS,
   migrateExecutionSchema,
@@ -267,5 +269,77 @@ describe("execution exposure reservations", () => {
       }),
     ).toBe(0);
     db.close();
+  });
+});
+
+describe("Kalshi unknown-outcome reconciliation", () => {
+  function unknownKalshi() {
+    const { db, authorization } = setup();
+    const created = pending(db, authorization, "unknown-kalshi").reservation;
+    const owner = asPlacementOwner("worker-1");
+    claimReservationForPlacement(db, { id: created.id, placementOwner: owner, nowMs: NOW_MS + 1 });
+    markReservationUnknown(db, {
+      id: created.id,
+      placementOwner: owner,
+      reason: "socket reset after write",
+      nowMs: NOW_MS + 2,
+    });
+    db.query("UPDATE exposure_reservations SET provider = 'kalshi' WHERE id = $id").run({
+      $id: created.id,
+    });
+    return { db, reservation: getReservation(db, created.id)! };
+  }
+
+  test("confirms an exact deterministic client-order match", async () => {
+    const { db, reservation } = unknownKalshi();
+    const clientOrderId = executionIdempotencyKeyToUuid(reservation.idempotencyKey);
+    const result = await reconcileKalshiUnknownReservations(db, {
+      now: () => NOW_MS + 10,
+      resolveClient: () => ({
+        environment: "demo",
+        findOrderByClientOrderId: async () => ({
+          order_id: "order-recovered",
+          client_order_id: clientOrderId,
+          ticker: reservation.marketId,
+          status: "resting",
+          fill_count_fp: "0.00",
+          remaining_count_fp: "4.00",
+        }),
+      }),
+    });
+    expect(result).toEqual({ scanned: 1, confirmed: 1, unresolved: 0, conflicts: 0, errors: 0 });
+    expect(getReservation(db, reservation.id)).toMatchObject({
+      status: "confirmed",
+      ticketId: "order-recovered",
+    });
+  });
+
+  test("keeps exposure unknown when the provider has no conclusive match", async () => {
+    const { db, reservation } = unknownKalshi();
+    const result = await reconcileKalshiUnknownReservations(db, {
+      resolveClient: () => ({
+        environment: "demo",
+        findOrderByClientOrderId: async () => null,
+      }),
+    });
+    expect(result.unresolved).toBe(1);
+    expect(getReservation(db, reservation.id)?.status).toBe("unknown");
+    expect(computeOutstandingExposure(db, reservation)).toBe(800);
+  });
+
+  test("keeps malformed or conflicting provider evidence unknown", async () => {
+    const { db, reservation } = unknownKalshi();
+    const result = await reconcileKalshiUnknownReservations(db, {
+      resolveClient: () => ({
+        environment: "demo",
+        findOrderByClientOrderId: async () => ({
+          order_id: "order-wrong",
+          client_order_id: executionIdempotencyKeyToUuid(reservation.idempotencyKey),
+          ticker: "DIFFERENT-MARKET",
+        }),
+      }),
+    });
+    expect(result.conflicts).toBe(1);
+    expect(getReservation(db, reservation.id)?.status).toBe("unknown");
   });
 });

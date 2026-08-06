@@ -337,6 +337,7 @@ export function buildDomainStatusReport(
         "partner:toml",
         "partner:health",
         "partner:finance-cron",
+        "partner:reconcile-kalshi",
         "partner:sports",
         "partner:registry",
         "partner:sync",
@@ -348,7 +349,6 @@ export function buildDomainStatusReport(
         "partners.telegram_chat_id + topic preferences",
         "Telegram /capacity /add command router",
         "partner_ledger + split → report pipeline",
-        "Kalshi unknown-outcome reconciliation poller",
       ],
     },
   };

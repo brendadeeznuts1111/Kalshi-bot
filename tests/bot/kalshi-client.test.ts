@@ -172,6 +172,42 @@ describe("kalshi-client placeOrder", () => {
   });
 });
 
+describe("kalshi-client order reconciliation lookup", () => {
+  test("paginates ticker orders until the deterministic client order ID is found", async () => {
+    const { client, calls } = makeClient({
+      responses: [
+        new Response(JSON.stringify({
+          orders: [{ order_id: "other", client_order_id: "other-key" }],
+          cursor: "next page",
+        })),
+        new Response(JSON.stringify({
+          orders: [{
+            order_id: "order-123",
+            client_order_id: "wanted-key",
+            ticker: ORDER.ticker,
+          }],
+          cursor: "",
+        })),
+      ],
+    });
+
+    expect(await client.findOrderByClientOrderId(ORDER.ticker, "wanted-key")).toMatchObject({
+      order_id: "order-123",
+    });
+    expect(calls).toHaveLength(2);
+    expect(calls[0]!.url).toContain(`ticker=${encodeURIComponent(ORDER.ticker)}`);
+    expect(calls[0]!.url).toContain("limit=1000");
+    expect(calls[1]!.url).toContain("cursor=next+page");
+  });
+
+  test("returns null only after exhausting a complete cursor chain", async () => {
+    const { client } = makeClient({
+      responses: [new Response(JSON.stringify({ orders: [], cursor: "" }))],
+    });
+    expect(await client.findOrderByClientOrderId(ORDER.ticker, "missing")).toBeNull();
+  });
+});
+
 describe("kalshi-client portfolio reads", () => {
   test("cancelOrder signs DELETE on the order path", async () => {
     const { client, calls } = makeClient({

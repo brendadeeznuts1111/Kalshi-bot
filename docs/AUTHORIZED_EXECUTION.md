@@ -69,7 +69,9 @@ supplies available balance to the gate.
   risk state: denied before reservation or provider placement.
 - Known provider rejection: reservation failed and exposure released.
 - Ambiguous provider outcome: reservation remains unknown and exposure remains
-  held for reconciliation.
+  held until the reconciler finds an exact deterministic client-order match.
+- Missing, malformed, conflicting, or failed reconciliation evidence never
+  releases exposure and never converts the reservation to a rejection.
 - Fantasy402: HTTP 501 with no provider call.
 
 Credit lines and dedicated partner wallets are not modeled in the current
@@ -82,15 +84,23 @@ and executable-liquidity limits.
 ```bash
 bun test tests/partner/authorization tests/partner/execution tests/research/trading-order.test.ts
 bun run bun:ci
+bun run partner:reconcile-kalshi -- --limit=100
 ```
 
 `Bun.TOML.stringify` is optional on the stable runtime: the governed
 `src/partner/toml-stringify.ts` boundary uses the native API when present and a
 tested compatibility serializer otherwise.
 
+The reconciler pages the active Kalshi order feed by ticker, matches the UUID
+derived from the execution idempotency key, persists a sanitized provider
+summary, and queues a deduplicated confirmation receipt. It is a bounded
+one-shot operator command so scheduling policy can be added without changing
+the execution authority boundary.
+
 ## Remaining work
 
-- Build the Kalshi unknown-outcome reconciliation poller.
+- Add an operator-owned schedule for the one-shot reconciliation command after
+  demo soak evidence establishes the desired cadence and alert thresholds.
 - Keep Fantasy402 unwired until provider-side idempotency is proven.
 - Add credit-line or dedicated-wallet accounting only when an owned domain
   contract and ledger source exist.

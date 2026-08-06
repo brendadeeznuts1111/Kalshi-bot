@@ -89,6 +89,10 @@ export type KalshiClient = {
   placeOrder(request: KalshiOrderRequest): Promise<KalshiOrderResult>;
   cancelOrder(orderId: string): Promise<void>;
   getOrders(ticker?: string): Promise<Record<string, unknown>[]>;
+  findOrderByClientOrderId(
+    ticker: string,
+    clientOrderId: string,
+  ): Promise<Record<string, unknown> | null>;
   getFills(ticker?: string): Promise<Record<string, unknown>[]>;
   getPositions(): Promise<Record<string, unknown>[]>;
   getBalance(): Promise<{ balanceCents: number | null }>;
@@ -278,6 +282,30 @@ export function createKalshiClient(options: KalshiClientOptions = {}): KalshiCli
     return res[key].filter(isRecord);
   }
 
+  async function findOrderByClientOrderId(
+    ticker: string,
+    clientOrderId: string,
+  ): Promise<Record<string, unknown> | null> {
+    let cursor = "";
+    for (let page = 0; page < 10; page++) {
+      const query = new URLSearchParams({ ticker, limit: "1000" });
+      if (cursor) query.set("cursor", cursor);
+      const response = await signedRequest("GET", `/portfolio/orders?${query}`);
+      if (!isRecord(response) || !Array.isArray(response.orders)) {
+        throw new KalshiRequestOutcomeUnknownError("Kalshi order lookup returned an invalid response");
+      }
+      const match = response.orders
+        .filter(isRecord)
+        .find((order) => order.client_order_id === clientOrderId);
+      if (match) return match;
+      cursor = typeof response.cursor === "string" ? response.cursor : "";
+      if (!cursor) return null;
+    }
+    throw new KalshiRequestOutcomeUnknownError(
+      "Kalshi order lookup exceeded the bounded pagination limit",
+    );
+  }
+
   return {
     environment,
     baseUrl,
@@ -285,6 +313,7 @@ export function createKalshiClient(options: KalshiClientOptions = {}): KalshiCli
     cancelOrder,
     getOrders: (ticker?: string) =>
       listPath(`/portfolio/orders${ticker ? `?ticker=${encodeURIComponent(ticker)}` : ""}`, "orders"),
+    findOrderByClientOrderId,
     getFills: (ticker?: string) =>
       listPath(`/portfolio/fills${ticker ? `?ticker=${encodeURIComponent(ticker)}` : ""}`, "fills"),
     getPositions: () => listPath("/portfolio/positions", "market_positions"),

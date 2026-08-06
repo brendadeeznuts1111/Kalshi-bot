@@ -4,5 +4,6 @@ export * from "./kalshi.ts";
 export * from "./kalshi-live.ts";
 export * from "./kalshi-snapshot.ts";
 export * from "./maintenance.ts";
+export * from "./reconciliation.ts";
 export * from "./reservation.ts";
 export * from "./sql.ts";
