@@ -544,8 +544,28 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     label: "Liquidity OK",
     description: "Desk liquidity gate (necessary, not sufficient for tradable).",
     category: "market",
-    seeAlso: ["kalshi_spread", "kalshi_volume", "ui.events.filter.liquidity"],
+    seeAlso: ["desk.tradable", "kalshi_spread", "kalshi_volume", "ui.events.filter.liquidity", "kpi.tight_markets"],
     tone: "registry" }),
+  reg({
+    id: "desk.tradable",
+    label: "Desk tradable",
+    description:
+      "Match clears liquidity_ok and mid is in the desk tradable band (default 20–80¢). Necessary for chip 'tradable' on HQ / partners.",
+    category: "market",
+    seeAlso: ["liquidity_ok", "desk.quoted", "kalshi_spread", "kalshi_volume", "kpi.tradable_matches"],
+    tone: "registry",
+    color: "tennis",
+  }),
+  reg({
+    id: "desk.quoted",
+    label: "Desk quoted",
+    description:
+      "Event has a non-empty two-sided top-of-book quote in match_liquidity (book_tick_count > 0 after empty-shell filter). Necessary for spread/mid gates; not sufficient for liquidity_ok.",
+    category: "market",
+    seeAlso: ["liquidity_ok", "desk.tradable", "kalshi_spread", "kpi.quoted_books"],
+    tone: "registry",
+    color: "kalshi",
+  }),
   reg({
     id: "total_volume_usd",
     label: "Total volume USD",
@@ -744,15 +764,20 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
   ui({
     id: "ui.events.filter.liquidity",
     label: "Liquidity",
-    description: "Filter by quote presence: priced or actively trading.",
+    description:
+      "Filter board rows by quote presence or desk gates: priced/active (wire), quoted (desk.quoted), liq_ok (liquidity_ok), tradable (desk.tradable).",
     category: "market",
-    synonyms: ["quotes", "book"],
-    values: ["all", "priced", "active"],
+    synonyms: ["quotes", "book", "tradable", "liquid"],
+    values: ["all", "priced", "active", "quoted", "liq_ok", "tradable"],
     valueLabels: {
       all: "all",
       priced: "has quotes",
       active: "trading live",
+      quoted: "desk quoted",
+      liq_ok: "liquidity ok",
+      tradable: "desk tradable",
     },
+    seeAlso: ["liquidity_ok", "desk.tradable", "desk.quoted", "kpi.tradable_matches"],
     tone: "concept",
   }),
   ui({
@@ -777,17 +802,18 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
   ui({
     id: "ui.sort.events",
     label: "Sort",
-    description: "Ordering of the match list: start time, volume, or name.",
+    description: "Ordering of the match list: start time, volume, name, or desk score.",
     category: "ui",
-    synonyms: ["sort events", "order"],
-    values: ["time", "volume", "alpha"],
+    synonyms: ["sort events", "order", "desk score"],
+    values: ["time", "volume", "alpha", "desk"],
     valueLabels: {
       time: "start time",
       volume: "24h volume",
       alpha: "A–Z",
+      desk: "desk score",
     },
     tone: "concept",
-    seeAlso: ["ui.events.filter.when", "ui.events.filter.min_vol"],
+    seeAlso: ["ui.events.filter.when", "ui.events.filter.min_vol", "liquidity_ok", "desk.tradable"],
   }),
   ui({
     id: "ui.filter.unclassified",
@@ -994,8 +1020,8 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     status: "active",
     url: "https://bun.com/docs/runtime/color",
     color: "env",
-    // design-system chrome — not a desk CSV column
-    tone: "registry",
+    // design-system chrome — not a desk CSV column (tone ≠ registry)
+    tone: "concept",
   },
 
   // KPI dashboard cards (ui kind)
@@ -1013,7 +1039,9 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
   { id: "kpi.server_errors", kind: "ui", label: "Server errors", description: "Count of logger error events recorded in the last 24 hours.", category: "pipeline" , color: "trading" , tone: "metric" },
   { id: "kpi.top_edge", kind: "ui", label: "Top edge", description: "Maximum effective edge observed across all live board events.", category: "pipeline", mapsTo: "eff_edge" , color: "research" , tone: "metric" },
   { id: "kpi.median_spread", kind: "ui", label: "Median spread", description: "Median bid-ask spread across all live board events in cents.", category: "market", mapsTo: "kalshi_spread" , color: "research" , tone: "metric" },
-  { id: "kpi.tight_markets", kind: "ui", label: "Tight markets", description: "Count of events where the bid-ask spread is below the liquidity threshold and both sides are non-null.", category: "market", mapsTo: "liquidity_ok" , color: "tennis" , tone: "metric" },
+  { id: "kpi.tight_markets", kind: "ui", label: "Tight markets", description: "Count of match_liquidity rows with liquidity_ok (volume + tight non-empty book).", category: "market", mapsTo: "liquidity_ok" , color: "tennis" , tone: "metric" },
+  { id: "kpi.tradable_matches", kind: "ui", label: "Tradable matches", description: "Count of match_liquidity rows with desk.tradable (liquidity_ok + mid band).", category: "market", mapsTo: "desk.tradable" , color: "tennis" , tone: "metric" },
+  { id: "kpi.quoted_books", kind: "ui", label: "Quoted books", description: "Count of events with a non-empty top-of-book quote in match_liquidity.", category: "market", mapsTo: "desk.quoted" , color: "kalshi" , tone: "metric" },
   { id: "kpi.scanner_alerts", kind: "ui", label: "Scanner alerts", description: "Count of active price divergence scanner flags on the live board.", category: "pipeline", mapsTo: "ui.live_board.scanner" , color: "middleware" , tone: "metric" },
 
   // ── Partner-ops taxonomy (factory mirror; soft ledger stays in ct) ──
@@ -1443,17 +1471,20 @@ export const PAGE_SURFACES = {
     "kpi.book_watches", "kpi.player_profiles", "kpi.live_scores",
     "kpi.rps_warnings", "kpi.graph_divergence",
     "kpi.price_archive", "kpi.archive_elo_fair", "kpi.server_errors",
-    "kpi.top_edge", "kpi.median_spread", "kpi.tight_markets", "kpi.scanner_alerts",
+    "kpi.top_edge", "kpi.median_spread", "kpi.tight_markets", "kpi.tradable_matches", "kpi.quoted_books", "kpi.scanner_alerts",
     "kpi.elite_conviction", // deprecated, kept for backward audit compat
     "kalshi_mu", "kalshi_spread", "kalshi_volume",
     "poly_mid", "poly_volume",
     "elo_prob", "eff_edge", "rps_flag", "graph_divergence",
-    "liquidity_ok", "total_volume_usd",
+    "liquidity_ok", "desk.tradable", "desk.quoted", "total_volume_usd",
     "ops.palette",
   ],
   /** Ops dashboard */
   ops: [
     "ops.palette",
+    // Desk liquidity (HQ chips + /api/liquidity + partners payload)
+    "liquidity_ok", "desk.tradable", "desk.quoted", "kalshi_spread", "kalshi_volume",
+    "kpi.tight_markets", "kpi.tradable_matches", "kpi.quoted_books",
     "alert.poly_dropout", "alert.volume_gap", "alert.feed_frozen",
     "alert.stale_feed", "alert.divergence",
     "alert.resolution", "alert.delivery", "alert.severity",
@@ -1606,7 +1637,11 @@ export const FILTER_CATALOG_IDS = [
 
 export type FilterCatalogId = (typeof FILTER_CATALOG_IDS)[number];
 
-/** Pending registry concepts (board/HQ) not yet on desk CSV columns[]. */
+/**
+ * Pending registry concepts (board/HQ filters) not yet on desk CSV columns[].
+ * Keep until desk export schema gains tier/round columns — integrity allowlist only.
+ * @see docs/SEMANTIC_LAYER.md (pending registry)
+ */
 export const PENDING_REGISTRY_CONCEPTS = ["tier", "round"] as const;
 
 export type FilterCatalogEntry = {

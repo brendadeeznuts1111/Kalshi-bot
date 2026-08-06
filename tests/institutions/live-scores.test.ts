@@ -314,6 +314,39 @@ describe("live-scores", () => {
     ).toContain("would_upsert");
   });
 
+  test("evaluateLiveCanary softs 403 closed tickers (no dual E_NET fail)", () => {
+    const v = evaluateLiveCanary(
+      canarySummary({
+        watched: 1,
+        polled: 0,
+        errors: [
+          "KXITFWDOUBLES-26JUL31BROCOLGOTLEE:Kalshi milestones KXITFWDOUBLES-26JUL31BROCOLGOTLEE: 403 Forbidden",
+        ],
+      }),
+    );
+    expect(v.ok).toBe(true);
+    expect(v.exitCode).toBe(0);
+    expect(v.reasons.some((r) => /fetch path dead|all_fetches_failed/i.test(r))).toBe(false);
+    expect(v.warnings.some((w) => /closed_or_forbidden/i.test(w))).toBe(true);
+  });
+
+  test("evaluateLiveCanary hard-fails multi 5xx as all_fetches_failed", () => {
+    const v = evaluateLiveCanary(
+      canarySummary({
+        watched: 3,
+        polled: 0,
+        errors: [
+          "A:Kalshi milestones A: 500 Internal Server Error",
+          "B:Kalshi milestones B: 503 Service Unavailable",
+          "C:Kalshi milestones C: 500 Internal Server Error",
+        ],
+      }),
+    );
+    expect(v.ok).toBe(false);
+    expect(v.exitCode).toBe(2);
+    expect(v.reasons.some((r) => /all_fetches_failed|errors=/i.test(r))).toBe(true);
+  });
+
   test("classifyScoreTransition prefers coarsest structural change", () => {
     const base = {
       status: "in_progress",

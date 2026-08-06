@@ -404,8 +404,10 @@ function upsertKalshiEvent(
   for (const m of markets) {
     const sideCode = helpers.parseYesSideCode(unbrand(m.ticker)) ?? "";
     const mSeries = asSeriesTicker(parseTennisSeriesPrefix(unbrand(m.ticker)) ?? unbrand(series));
+    // Preserve prior volume/size when wire omits fields — INSERT OR REPLACE was
+    // nulling volume_fp after book-only syncs and zeroing match_liquidity gates.
     db.query(
-      `INSERT OR REPLACE INTO markets (
+      `INSERT INTO markets (
         market_id, event_id, venue, ticker, series, market_kind, yes_side_label, side_code,
         competitor_id, rules_blob, settlement_ts, source, source_url, fetched_ts,
         volume_fp, volume_24h_fp, open_interest_fp, yes_bid_size_fp, yes_ask_size_fp
@@ -413,7 +415,29 @@ function upsertKalshiEvent(
         $market_id, $event_id, $venue, $ticker, $series, $market_kind, $yes_side_label, $side_code,
         $competitor_id, $rules_blob, NULL, $source, $source_url, $fetched_ts,
         $volume_fp, $volume_24h_fp, $open_interest_fp, $yes_bid_size_fp, $yes_ask_size_fp
-      )`,
+      )
+      ON CONFLICT(market_id) DO UPDATE SET
+        event_id = excluded.event_id,
+        venue = excluded.venue,
+        ticker = excluded.ticker,
+        series = excluded.series,
+        market_kind = excluded.market_kind,
+        yes_side_label = CASE
+          WHEN length(excluded.yes_side_label) > 0 THEN excluded.yes_side_label
+          ELSE markets.yes_side_label END,
+        side_code = CASE
+          WHEN length(excluded.side_code) > 0 THEN excluded.side_code
+          ELSE markets.side_code END,
+        competitor_id = COALESCE(excluded.competitor_id, markets.competitor_id),
+        rules_blob = COALESCE(excluded.rules_blob, markets.rules_blob),
+        source = excluded.source,
+        source_url = excluded.source_url,
+        fetched_ts = excluded.fetched_ts,
+        volume_fp = COALESCE(excluded.volume_fp, markets.volume_fp),
+        volume_24h_fp = COALESCE(excluded.volume_24h_fp, markets.volume_24h_fp),
+        open_interest_fp = COALESCE(excluded.open_interest_fp, markets.open_interest_fp),
+        yes_bid_size_fp = COALESCE(excluded.yes_bid_size_fp, markets.yes_bid_size_fp),
+        yes_ask_size_fp = COALESCE(excluded.yes_ask_size_fp, markets.yes_ask_size_fp)`,
     ).run({
       $market_id: unbrand(kalshiMarketId(m.ticker)),
       $event_id: unbrand(eventId),

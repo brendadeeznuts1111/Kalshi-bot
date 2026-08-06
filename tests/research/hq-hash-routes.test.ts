@@ -71,7 +71,52 @@ describe('HQ URLPattern hash routes', () => {
     expect(app).toContain('id="live-board"');
     expect(app).toContain('id="volume-liquidity-panel"');
     expect(app).toContain('await renderEvents()');
-    expect(app).toContain('window.addEventListener("hashchange", applyHashRoute)');
+    // hashchange: Events deep links first, then glossary/surface routes
+    expect(app).toContain('window.addEventListener("hashchange"');
+    expect(app).toContain('if (openEventsFromHash()) return');
+    expect(app).toContain('applyHashRoute()');
     expect(app).not.toContain('function parseGlossaryHash');
+  });
+
+  test('events board wires desk liquidity badges and filter toggles', async () => {
+    const app = await Bun.file(new URL('../../src/research/hq-app/app.js', import.meta.url)).text();
+    expect(app).toContain('function liquidityBadge');
+    expect(app).toContain('data-liq-mode');
+    expect(app).toContain('desk.tradable');
+    expect(app).toContain('"tradable"');
+    expect(app).toContain('"liq_ok"');
+    expect(app).toContain('"quoted"');
+  });
+
+  test('overview desk chips jump to filtered Events board', async () => {
+    const app = await Bun.file(new URL('../../src/research/hq-app/app.js', import.meta.url)).text();
+    expect(app).toContain('function jumpToEventsLiquidity');
+    expect(app).toContain('data-liq-jump');
+    expect(app).toContain('function openEventsFromHash');
+    expect(app).toContain('desk-chip-jump');
+  });
+
+  test('glossary KPI strip desk cards wire data-liq-jump', async () => {
+    const app = await Bun.file(new URL('../../src/research/hq-app/app.js', import.meta.url)).text();
+    expect(app).toContain('KPI_LIQ_JUMP');
+    expect(app).toContain('"kpi.tradable_matches": "tradable"');
+    expect(app).toContain('"kpi.tight_markets": "liq_ok"');
+    expect(app).toContain('"kpi.quoted_books": "quoted"');
+    expect(app).toContain('liqJump: KPI_LIQ_JUMP[e.id]');
+    expect(app).toContain('kpi-liq-jump');
+    // ? hints must not steal the jump (shared handler)
+    expect(app).toContain('if (t.closest("[data-glossary]")) return');
+  });
+
+  test('events board sort includes desk score ladder', async () => {
+    const app = await Bun.file(new URL('../../src/research/hq-app/app.js', import.meta.url)).text();
+    expect(app).toContain('function deskScoreRank');
+    expect(app).toContain('f.sort === "desk"');
+    expect(app).toContain('["time", "volume", "alpha", "desk"]');
+    const glossary = await Bun.file(
+      new URL('../../src/institutions/glossary.ts', import.meta.url),
+    ).text();
+    expect(glossary).toContain('desk: "desk score"');
+    expect(glossary).toMatch(/values:\s*\[[^\]]*\"desk\"/);
   });
 });

@@ -294,6 +294,7 @@ export const CRON_JOBS = [
   { name: "Tennis live canary", schedule: "*/15 * * * *", entrypoint: "tools/tennis/live-canary-scheduled.ts", purpose: "Dry-run live_data poll" },
   { name: "Tennis WS recorder", schedule: "*/30 * * * *", entrypoint: "tools/tennis/ws-recorder-scheduled.ts", purpose: "Orderbook capture → book_ticks" },
   { name: "Tennis factorial experiment", schedule: "0 9 * * *", entrypoint: "tools/tennis/experiment-scheduled.ts", purpose: "DailyCheckAll → experiment JSON" },
+  { name: "Match liquidity pipeline", schedule: "*/30 * * * *", entrypoint: "tools/match-liquidity-scheduled.ts", purpose: "recompute + volume backfill + ground + snapshot" },
 ] as const;
 
 // ── Aggregate Stats ─────────────────────────────────────────────

@@ -6,18 +6,40 @@
  * if these disagree, the board is lying to operators.
  */
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { deleteRun, saveRun } from "../src/research/cache.ts";
 import { createResearchServer } from "../src/research/serve.ts";
+import type { ResearchRun } from "../src/research/types.ts";
+import { freshTestGeneratedAt, mintTestProductionRunId } from "./fixtures.ts";
 
 let server: ReturnType<typeof createResearchServer>;
 let base: string;
+/** Worktree/operator caches may have zero production runs; seed one for prefix alignment. */
+const SEED_RUN_ID = mintTestProductionRunId();
 
 beforeAll(() => {
+  const at = freshTestGeneratedAt();
+  const run: ResearchRun = {
+    runId: SEED_RUN_ID,
+    kind: "production",
+    source: "pipeline",
+    generatedAt: at,
+    dimension: "all",
+    config: { shortlistSize: 12, gate: { minStars: 5, minForks: 3, maxAgeMonths: 18 } },
+    stats: { discovered: 1, gated: 1, inspected: 1, shortlist: 0 },
+    candidates: [],
+    gated: [],
+    scored: [],
+    shortlist: [],
+    excludedSdkOnly: [],
+  };
+  saveRun(SEED_RUN_ID, at, run);
   server = createResearchServer({ port: 0 });
   base = `http://127.0.0.1:${server.port}`;
 });
 
 afterAll(() => {
   server.stop(true);
+  deleteRun(SEED_RUN_ID);
 });
 
 async function json<T = Record<string, unknown>>(path: string): Promise<T> {

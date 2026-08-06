@@ -82,11 +82,16 @@ export function classifyProbeError(err: unknown): ProbeErrorCode {
   if (/INCORRECT_API_KEY_SIGNATURE|\b401\b|Missing KALSHI_\w+|authentication/i.test(msg)) {
     return "E_AUTH";
   }
+  // Closed/delisted REST: not network — use E_UNKNOWN at taxonomy layer; canary tags E_HTTP_FORBIDDEN
+  if (/\b403\b|\b410\b|Forbidden|Gone/i.test(msg) && !/Expected 101|handshake/i.test(msg)) {
+    return "E_UNKNOWN";
+  }
   if (/timeout|timed out/i.test(msg)) return "E_TIMEOUT";
   if (/SQLITE|sqlite/i.test(msg)) return "E_DB";
   if (/Expected 101|handshake|upgrade/i.test(msg)) return "E_HANDSHAKE";
   if (/JSON|parse/i.test(msg)) return "E_PARSE";
   if (/ECONNREFUSED|ENOTFOUND|EAI_AGAIN|network|socket|WebSocket|fetch failed/i.test(msg)) return "E_NET";
+  if (/:\s*5\d\d\b|\b50[0-9]\b/.test(msg)) return "E_UNKNOWN"; // upstream 5xx — not local socket
   return "E_UNKNOWN";
 }
 

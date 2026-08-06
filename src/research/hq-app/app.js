@@ -33,6 +33,8 @@ let TOOLTIPS = {};
 let ACTIVE_GLOSSARY_CONCEPT = null;
 /** @type {Record<string, number>} */
 let KPI_VALUES = {};
+/** @type {null | any} */
+let LIQUIDITY_BOARD = null;
 
 function applyGlossaryPayload(payload) {
   if (!payload || typeof payload !== "object") return;
@@ -90,6 +92,22 @@ fetch("/api/kpi")
     if (payload && typeof payload === "object") KPI_VALUES = payload;
     const strip = $("#kpi-glossary-strip");
     if (strip) renderGlossaryKpiStrip(strip);
+  })
+  .catch(() => {});
+
+fetch("/api/liquidity/summary?limit=24")
+  .then((r) => (r.ok ? r.json() : null))
+  .then((payload) => {
+    if (payload && payload.schemaVersion === 1) {
+      LIQUIDITY_BOARD = payload;
+      const panel = $("#volume-liquidity-panel");
+      if (panel) {
+        const next = renderDeskLiquidityPanel();
+        if (next) panel.outerHTML = next;
+      }
+      const chipHost = $("#desk-liquidity-chips");
+      if (chipHost) chipHost.outerHTML = renderDeskLiquidityChips();
+    }
   })
   .catch(() => {});
 
@@ -163,6 +181,13 @@ function barChartHtml(data, { title, subtitle = "" } = {}) {
   );
 }
 
+/** Desk KPI strip cards → Events board liquidity filter (same modes as desk chips). */
+const KPI_LIQ_JUMP = {
+  "kpi.tradable_matches": "tradable",
+  "kpi.tight_markets": "liq_ok",
+  "kpi.quoted_books": "quoted",
+};
+
 /**
  * KPI card — strict three-tier structure:
  *   1. h3 label (+ optional badges)
@@ -170,8 +195,9 @@ function barChartHtml(data, { title, subtitle = "" } = {}) {
  *   3. secondary stats, one row each (label left, mono value right)
  * footer: mono caption line (run id, timestamp, …)
  * glossaryId: optional concept id → data-color-key accent + tip
+ * liqJump: optional Events board liquidity mode → data-liq-jump (desk KPI strip)
  */
-const kpiCard = (label, { badges = "", value = "—", unit = "", stats = [], footer = "", glossaryId = "" } = {}) => {
+const kpiCard = (label, { badges = "", value = "—", unit = "", stats = [], footer = "", glossaryId = "", liqJump = "" } = {}) => {
   const entry = glossaryId
     ? (GLOSSARY.entries || []).find((e) => e.id === glossaryId)
     : null;
@@ -181,10 +207,17 @@ const kpiCard = (label, { badges = "", value = "—", unit = "", stats = [], foo
       conceptColorStyle(entry) + '"></span>'
     : "";
   const tipHtml = glossaryId ? tip(glossaryId) : "";
+  const jumpTitle = liqJump
+    ? (TOOLTIPS[glossaryId] || label) + " · click → Events board filter"
+    : "";
   return (
-    '<div class="card kpi"' +
+    '<div class="card kpi' + (liqJump ? " kpi-liq-jump" : "") + '"' +
     (colorKey ? ' data-color-key="' + esc(colorKey) + '"' : "") +
     (glossaryId ? ' data-glossary-id="' + esc(glossaryId) + '"' : "") +
+    (liqJump
+      ? ' data-liq-jump="' + esc(liqJump) + '" role="button" tabindex="0" title="' +
+        esc(jumpTitle) + '"'
+      : "") +
     ">" +
     "<h3>" + accent + esc(label) + tipHtml + (badges ? " " + badges : "") + "</h3>" +
     '<div class="kpi-value">' + value + (unit ? '<span class="unit">' + esc(unit) + "</span>" : "") + "</div>" +
@@ -221,6 +254,7 @@ function renderGlossaryKpiStrip(target) {
       return kpiCard(e.label, {
         glossaryId: e.id,
         value: display,
+        liqJump: KPI_LIQ_JUMP[e.id] || "",
       });
     }).join("") +
     "</div>";
@@ -240,6 +274,7 @@ function renderOverview(hq, ops) {
     ? badge("ok", "connected") : badge("warn", t.state === "unavailable" ? "unavailable" : t.state);
   $("#tab-overview").innerHTML =
     '<div id="kpi-glossary-strip" class="kpi-glossary-strip"></div>' +
+    renderDeskLiquidityChips() +
     '<div class="grid">' +
     (r
       ? kpiCard("Research — latest run", {
@@ -289,8 +324,133 @@ function renderOverview(hq, ops) {
   renderGlossaryKpiStrip($("#kpi-glossary-strip"));
 }
 
+
+/** Open Events tab with a desk liquidity filter (overview chip → board). */
+function jumpToEventsLiquidity(mode) {
+  __filters.liquidity = mode && mode !== "all" ? mode : "all";
+  __filtersHydrated = true;
+  filtersToHash();
+  const btn = document.querySelector('nav.tabs button[data-tab="events"]');
+  if (btn) btn.click();
+  // Ensure Events tab mounts filters from hash + deskLiquidity payload
+  void renderEvents();
+}
+
+/** Desk liquidity chips — glossary concept ids; click jumps to filtered board. */
+function renderDeskLiquidityChips() {
+  const b = LIQUIDITY_BOARD;
+  const s = b && b.summary;
+  const tipOk = tip("liquidity_ok");
+  const tipTr = tip("desk.tradable");
+  const tipQ = tip("desk.quoted");
+  if (!s) {
+    return (
+      '<div id="desk-liquidity-chips" class="desk-liq-chips muted" style="margin:0.6rem 0 0.2rem">' +
+      "Desk liquidity: loading <code>/api/liquidity</code>…" +
+      "</div>"
+    );
+  }
+  const chip = (conceptId, cls, label, value, liqMode) => {
+    const title = (TOOLTIPS[conceptId] || label) +
+      (liqMode ? " · click → Events board filter" : "");
+    if (!liqMode) {
+      return (
+        '<span class="badge ' + cls + '" data-concept-id="' + esc(conceptId) +
+        '" title="' + esc(title) + '">' +
+        esc(label) + ': <strong class="mono">' + value + "</strong></span>"
+      );
+    }
+    return (
+      '<button type="button" class="badge ' + cls + ' desk-chip-jump" data-liq-jump="' +
+      esc(liqMode) + '" data-concept-id="' + esc(conceptId) +
+      '" title="' + esc(title) + '">' +
+      esc(label) + ': <strong class="mono">' + value + "</strong></button>"
+    );
+  };
+  return (
+    '<div id="desk-liquidity-chips" class="desk-liq-chips" style="margin:0.6rem 0 0.2rem;display:flex;flex-wrap:wrap;gap:0.4rem;align-items:center">' +
+    '<span class="muted" style="margin-right:0.25rem">Desk liquidity</span>' +
+    chip("kpi.quoted_books", "dim", "quoted", s.quoted, "quoted") + tipQ +
+    chip("liquidity_ok", s.liquidityOk > 0 ? "ok" : "warn", "liq_ok", s.liquidityOk, "liq_ok") + tipOk +
+    chip("desk.tradable", s.tradable > 0 ? "ok" : "warn", "tradable", s.tradable, "tradable") + tipTr +
+    (b.medianSpreadCents != null
+      ? chip("kalshi_spread", "dim", "med spread", b.medianSpreadCents + "¢", null)
+      : "") +
+    '<a class="muted" href="#volume-liquidity-panel" style="margin-left:0.35rem">panel ↓</a>' +
+    ' <a class="muted" href="#events" data-liq-jump="all" style="margin-left:0.15rem">board →</a>' +
+    "</div>"
+  );
+}
+
+function renderDeskLiquidityPanel() {
+  const b = LIQUIDITY_BOARD;
+  if (!b || !Array.isArray(b.byTournament) || !b.byTournament.length) return null;
+  const volRows = b.byTournament
+    .filter((t) => t.volume > 0)
+    .slice(0, 8)
+    .map((t) => ({
+      label: (t.tournament || "—").slice(0, 18),
+      value: t.volume,
+      display: fmtVol(t.volume),
+    }));
+  const midBuckets = [
+    { label: "1–20¢", lo: 1, hi: 20, value: 0 },
+    { label: "21–40¢", lo: 21, hi: 40, value: 0 },
+    { label: "41–60¢", lo: 41, hi: 60, value: 0 },
+    { label: "61–80¢", lo: 61, hi: 80, value: 0 },
+    { label: "81–99¢", lo: 81, hi: 99, value: 0 },
+  ];
+  for (const row of b.top || []) {
+    const m = row.midCents;
+    if (m == null) continue;
+    for (const bucket of midBuckets) {
+      if (m >= bucket.lo && m <= bucket.hi) {
+        bucket.value += 1;
+        break;
+      }
+    }
+  }
+  const midRows = midBuckets
+    .filter((x) => x.value > 0)
+    .map((x) => ({ label: x.label, value: x.value, display: String(x.value) }));
+  const topChips = (b.top || [])
+    .slice(0, 6)
+    .map((r) => {
+      const cls = r.tradable ? "ok" : r.liquidityOk ? "warn" : "dim";
+      const concept = r.tradable ? "desk.tradable" : r.liquidityOk ? "liquidity_ok" : "kalshi_volume";
+      return (
+        '<span class="badge ' + cls + '" data-concept-id="' + concept +
+        '" title="' + esc(r.tournament) + " · mid " + (r.midCents ?? "—") +
+        "¢ · spread " + (r.spreadCents ?? "—") + '¢">' +
+        esc((r.tournament || r.eventId).slice(0, 22)) +
+        (r.tradable ? " ✓" : r.liquidityOk ? " liq" : "") +
+        "</span>"
+      );
+    })
+    .join(" ");
+  return (
+    '<div class="cols" id="volume-liquidity-panel" style="margin-top:0.9rem" data-concept-id="liquidity_ok">' +
+    barChartHtml(volRows.length ? volRows : [{ label: "—", value: 1, display: "0" }], {
+      title: "Volume by tournament",
+      subtitle: "match_liquidity gate vol (24h | lifetime) · /api/liquidity",
+    }) +
+    (midRows.length
+      ? barChartHtml(midRows, {
+          title: "Mid band (top quoted)",
+          subtitle: "desk.tradable mid band is 20–80¢",
+        })
+      : "") +
+    '<div style="margin-top:0.6rem;display:flex;flex-wrap:wrap;gap:0.35rem">' +
+    (topChips || '<span class="muted">No quoted matches — run liquidity:backfill-volume</span>') +
+    "</div></div>"
+  );
+}
+
 /** Volume / mid distribution panels when tennis board data is present. */
 function renderOverviewCharts(hq) {
+  const fromDesk = renderDeskLiquidityPanel();
+  if (fromDesk) return fromDesk;
+
   const board = hq.tennis?.board ?? hq.board ?? null;
   const series = board?.series;
   if (!Array.isArray(series) || !series.length) {
@@ -400,11 +560,18 @@ function renderTrading(hq) {
     '<div class="muted" id="history-caption"></div></div>' +
     '<div class="panel" style="margin-top:.9rem"><h2>Order entry ' + badge("warn", "dry-run default") + "</h2>" +
     '<form class="order" id="order-form">' +
+    '<label>Partner code<input name="partnerCode" placeholder="SPORTS" /></label>' +
+    '<label>Out<input name="outId" placeholder="out-SPORTS-1" /></label>' +
+    '<label>Skin<input name="skin" placeholder="main" /></label>' +
     '<label>Ticker<input name="ticker" required placeholder="KXNBA-…" /></label>' +
     '<label>Side<select name="side"><option value="yes">yes</option><option value="no">no</option></select></label>' +
     '<label>Contracts<input name="count" type="number" min="1" max="10000" value="1" required /></label>' +
     '<label>Limit ¢' + tip("yesPriceCents") + '<input name="priceCents" type="number" min="1" max="99" required /></label>' +
     '<label>Post-only' + tip("postOnly") + '<input name="postOnly" type="checkbox" checked /></label>' +
+    '<label>State<select name="stateCode"><option value="MA">MA</option><option value="NJ">NJ</option></select></label>' +
+    '<label>Sport<input name="sportId" placeholder="nba" /></label>' +
+    '<label>Compliance node<input name="nodeId" placeholder="node-id" /></label>' +
+    '<label>Idempotency key<input name="idempotencyKey" placeholder="generated for live" /></label>' +
     '<label>Live (uncheck = dry-run)' + tip("dryRun") + '<input name="live" type="checkbox" /></label>' +
     '<button type="submit">Place order</button>' +
     "</form>" +
@@ -548,17 +715,49 @@ async function submitOrder(ev) {
   const out = $("#order-result");
   const live = form.live.checked;
   if (live && !confirm("Place a LIVE order with real funds?")) return;
+  if (live) {
+    const missing = ["partnerCode", "outId", "skin", "sportId", "nodeId"]
+      .filter((name) => !form[name].value.trim());
+    if (missing.length) {
+      out.innerHTML = '<span class="err">live order missing: ' + esc(missing.join(", ")) + "</span>";
+      return;
+    }
+    if (form.postOnly.checked) {
+      out.innerHTML = '<span class="err">authorized live orders require post-only to be unchecked</span>';
+      return;
+    }
+  }
+  const idempotencyKey = form.idempotencyKey.value.trim() || crypto.randomUUID();
+  if (live) form.idempotencyKey.value = idempotencyKey;
   btn.disabled = true;
   out.innerHTML = '<span class="muted">submitting…</span>';
   try {
     const res = await fetch("/api/trading/order", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(live ? {
+          "Idempotency-Key": idempotencyKey,
+          "x-state-code": form.stateCode.value,
+          "x-node-id": form.nodeId.value.trim(),
+        } : {}),
+      },
       body: JSON.stringify({
+        partnerCode: form.partnerCode.value.trim(),
+        outId: form.outId.value.trim(),
+        skin: form.skin.value.trim(),
         ticker: form.ticker.value.trim(),
         side: form.side.value,
+        outcome: form.side.value,
         count: Number(form.count.value),
         priceCents: Number(form.priceCents.value),
+        stakeMinorUnits: Number(form.count.value) * Number(form.priceCents.value),
+        idempotencyKey,
+        wagerAmount: Number(form.count.value) * Number(form.priceCents.value) / 100,
+        betType: "straight",
+        sportId: form.sportId.value.trim(),
+        marketId: form.ticker.value.trim(),
+        stateCode: form.stateCode.value,
         postOnly: form.postOnly.checked,
         dryRun: !live,
       }),
@@ -567,6 +766,7 @@ async function submitOrder(ev) {
     if (data.ok) {
       out.innerHTML = badge("ok", (data.dryRun ? "dry-run " : "LIVE ") + "accepted") +
         ' <span class="mono muted">' + esc(data.orderId) + "</span>";
+      if (live) form.idempotencyKey.value = "";
       setTimeout(refresh, 1_500);
     } else {
       out.innerHTML = badge("bad", "rejected") + ' <span class="err">' + esc(data.error) + "</span>";
@@ -679,12 +879,48 @@ function filtersToHash() {
 }
 
 function eventVol(e) {
+  if (e.deskLiquidity && (e.deskLiquidity.volumeForGate > 0 || e.deskLiquidity.volume24hFp > 0)) {
+    return e.deskLiquidity.volumeForGate || e.deskLiquidity.volume24hFp || 0;
+  }
   return e.markets.reduce((s, m) => s + (m.volume24h ?? 0), 0);
 }
 
 function surfaceEdgeBadge(event) {
   const presentation = surfaceEdgePresentation(event);
   return `<span class="surface-edge ${presentation.tone}" title="${esc(presentation.title)}">${presentation.label}</span>`;
+}
+
+/** Per-row desk liquidity chip (event grain = match_liquidity). */
+function liquidityBadge(event) {
+  const d = event.deskLiquidity;
+  if (!d) {
+    return '<span class="badge dim" data-concept-id="desk.quoted" title="no match_liquidity row">—</span>';
+  }
+  if (d.tradable) {
+    return '<span class="badge ok" data-concept-id="desk.tradable" title="desk.tradable — liquidity_ok + mid band">tradable</span>';
+  }
+  if (d.liquidityOk) {
+    return '<span class="badge warn" data-concept-id="liquidity_ok" title="liquidity_ok — volume + tight book">liquid</span>';
+  }
+  if (d.quoted) {
+    return '<span class="badge dim" data-concept-id="desk.quoted" title="desk.quoted — non-empty top-of-book">quoted</span>';
+  }
+  return '<span class="badge dim" title="no two-sided quote">thin</span>';
+}
+
+function eventMatchesLiquidity(e, mode) {
+  if (!mode || mode === "all") return true;
+  const d = e.deskLiquidity;
+  if (mode === "priced") {
+    return e.markets.some((m) => m.yesBidCents != null && m.yesAskCents != null);
+  }
+  if (mode === "active") {
+    return e.markets.some((m) => m.status === "active");
+  }
+  if (mode === "quoted") return d?.quoted === true;
+  if (mode === "liq_ok" || mode === "liquidity_ok") return d?.liquidityOk === true;
+  if (mode === "tradable") return d?.tradable === true;
+  return true;
 }
 
 function eventMatches(e, nowMs) {
@@ -696,8 +932,7 @@ function eventMatches(e, nowMs) {
   if (f.tier && e.tier !== f.tier) return false;
   if (f.country && e.country !== f.country &&
       !e.markets.some((m) => m.playerCountry === f.country)) return false;
-  if (f.liquidity === "priced" && !e.markets.some((m) => m.yesBidCents != null && m.yesAskCents != null)) return false;
-  if (f.liquidity === "active" && !e.markets.some((m) => m.status === "active")) return false;
+  if (!eventMatchesLiquidity(e, f.liquidity)) return false;
   if (f.minVol > 0 && eventVol(e) < f.minVol) return false;
   if (f.maxAsk > 0 && !e.markets.some((m) => m.yesAskCents != null && m.yesAskCents <= f.maxAsk)) return false;
   if (!passesMinimumSurfaceEdge(e, f.minSurfaceEdge)) return false;
@@ -723,12 +958,27 @@ function eventMatches(e, nowMs) {
   return true;
 }
 
+/** Desk ladder for sort=desk: tradable → liq_ok → quoted → thin/none (lower is better). */
+function deskScoreRank(e) {
+  const d = e.deskLiquidity;
+  if (d?.tradable) return 0;
+  if (d?.liquidityOk) return 1;
+  if (d?.quoted) return 2;
+  return 3;
+}
+
 function sortEvents(events) {
   const f = __filters;
   const arr = events.slice();
   if (f.sort === "volume") arr.sort((a, b) => eventVol(b) - eventVol(a));
   else if (f.sort === "alpha") arr.sort((a, b) => (a.title ?? "").localeCompare(b.title ?? ""));
-  else arr.sort((a, b) => (a.occurrenceMs ?? Infinity) - (b.occurrenceMs ?? Infinity));
+  else if (f.sort === "desk") {
+    arr.sort((a, b) => {
+      const dr = deskScoreRank(a) - deskScoreRank(b);
+      if (dr !== 0) return dr;
+      return eventVol(b) - eventVol(a);
+    });
+  } else arr.sort((a, b) => (a.occurrenceMs ?? Infinity) - (b.occurrenceMs ?? Infinity));
   return arr;
 }
 
@@ -748,23 +998,27 @@ function renderEventList() {
     if (events.length === 0) return "";
     const rows = events.map((e) => {
       const geo = [e.city, e.country].filter(Boolean).join(", ");
+      const liq = liquidityBadge(e);
       const legs = e.markets.map((m) =>
         "<tr><td style='padding-left:1.2rem'><button class='linklike' data-ticker='" + esc(m.ticker) + "'>" + esc(m.player ?? m.ticker) + "</button>" +
         (m.playerCountry ? ' <span class="muted" style="font-size:.75rem">' + esc(m.playerCountry) + "</span>" : "") + "</td>" +
         "<td class='num'>" + px(m.yesBidCents) + "</td><td class='num'>" + px(m.yesAskCents) + "</td>" +
         "<td class='num'>" + px(m.lastCents) + "</td><td class='num'>" + fmtVol(m.volume24h) + "</td>" +
-        "<td></td>" +
+        "<td class='num muted' style='font-size:.7rem'>" + liq + "</td>" +
+        "<td class='num'>" + surfaceEdgeBadge(e) + "</td>" +
         "<td>" + (m.status === "active" ? badge("ok", "live") : badge("dim", m.status)) + "</td></tr>").join("");
       return "<tr class='event-summary'><td colspan='5' style='padding-top:.7rem'><strong>" + esc(e.title ?? e.eventTicker) + "</strong> " +
+        liq + " " +
         (e.round ? badge("dim", e.round) + " " : "") +
         (e.tier ? badge("dim", e.tier) + " " : "") +
         (e.surface ? badge("dim", e.surface) + " " : "") +
         "<span class='muted'>" + esc(e.tournament ?? e.competition ?? "") + (geo ? " · " + esc(geo) : "") + " · " + fmtMs(e.occurrenceMs) + " · </span>" +
         "<span class='mono muted' style='font-size:.75rem'>" + esc(e.eventTicker) + "</span></td>" +
+        "<td class='num'>" + liq + "</td>" +
         "<td class='num'>" + surfaceEdgeBadge(e) + "</td><td></td></tr>" + legs;
     }).join("");
     return '<div class="panel"><h2>' + esc(s.series) + " " + badge("ok", events.length + " events") + "</h2>" +
-      "<table><tr><th>Player</th><th class='num'>Bid</th><th class='num'>Ask</th><th class='num'>Last</th><th class='num'>24h Vol</th><th class='num'>SrfE</th><th>Status</th></tr>" + rows + "</table></div>";
+      "<table><tr><th>Player</th><th class='num'>Bid</th><th class='num'>Ask</th><th class='num'>Last</th><th class='num'>24h Vol</th><th class='num'>Liq</th><th class='num'>SrfE</th><th>Status</th></tr>" + rows + "</table></div>";
   }).filter(Boolean).join("");
   const countEl = $("#events-count");
   if (countEl) countEl.textContent = shown + " of " + total + " events";
@@ -845,8 +1099,22 @@ async function renderEvents() {
   const surfaceChoices = choicesFromCatalog("surface", liveSurfaces);
   const tierChoices = choicesFromCatalog("tier", liveTiers);
   const whenChoices = choicesFromCatalog("ui.events.filter.when", ["all", "live", "today", "24h", "week"]);
-  const liqChoices = choicesFromCatalog("ui.events.filter.liquidity", ["all", "priced", "active"]);
-  const sortChoices = choicesFromCatalog("ui.sort.events", ["time", "volume", "alpha"]);
+  const liqChoices = choicesFromCatalog("ui.events.filter.liquidity", [
+    "all", "priced", "active", "quoted", "liq_ok", "tradable",
+  ]);
+  const sortChoices = choicesFromCatalog("ui.sort.events", ["time", "volume", "alpha", "desk"]);
+  const deskCounts = {
+    quoted: allEvents.filter((e) => e.deskLiquidity?.quoted).length,
+    liqOk: allEvents.filter((e) => e.deskLiquidity?.liquidityOk).length,
+    tradable: allEvents.filter((e) => e.deskLiquidity?.tradable).length,
+  };
+  const liqToggle = (mode, label, count, conceptId) => {
+    const on = __filters.liquidity === mode;
+    return '<button type="button" class="liq-toggle' + (on ? " on" : "") +
+      '" data-liq-mode="' + mode + '" data-concept-id="' + esc(conceptId) + '"' +
+      ' title="' + esc(conceptId) + '">' +
+      esc(label) + ' <span class="muted">' + count + "</span></button>";
+  };
   const glossLabel = (id, fallback) => {
     const cat = GLOSSARY.filterCatalog?.[id];
     if (cat?.label) return cat.label;
@@ -905,7 +1173,15 @@ async function renderEvents() {
     esc(TOOLTIPS["ui.events.filter.reset"] || "clear") + '">clear' + tip("ui.events.filter.reset") + "</button>" +
     '<button type="button" id="events-preset-value" style="align-self:flex-end">value ≤ 25¢</button>' +
     '<button type="button" id="events-preset-live" style="align-self:flex-end">live & liquid</button>' +
-    "</form></div>" +
+    '<button type="button" id="events-preset-tradable" style="align-self:flex-end">desk tradable</button>' +
+    "</form>" +
+    '<div class="desk-liq-toggles" style="margin-top:.45rem;display:flex;flex-wrap:wrap;gap:.35rem;align-items:center">' +
+    '<span class="muted" style="font-size:.8rem">Desk gates' + tip("liquidity_ok") + "</span>" +
+    liqToggle("quoted", "Quoted", deskCounts.quoted, "desk.quoted") +
+    liqToggle("liq_ok", "Liquid", deskCounts.liqOk, "liquidity_ok") +
+    liqToggle("tradable", "Tradable", deskCounts.tradable, "desk.tradable") +
+    liqToggle("all", "All", allEvents.length, "ui.events.filter.liquidity") +
+    "</div></div>" +
     '<div id="events-list" class="tennis-board-events"></div>' +
     '<div class="panel tennis-desk-panel"><h2>Player profiles' + tip("playerProfiles") + "</h2><div id='profiles-table'></div></div>" +
     "</div>";
@@ -988,9 +1264,22 @@ async function renderEvents() {
     renderEvents();
   });
   $("#events-preset-live").addEventListener("click", () => {
-    Object.assign(__filters, { when: "live", liquidity: "active", sort: "volume" });
+    Object.assign(__filters, { when: "live", liquidity: "liq_ok", sort: "volume" });
     filtersToHash();
     renderEvents();
+  });
+  $("#events-preset-tradable")?.addEventListener("click", () => {
+    Object.assign(__filters, { liquidity: "tradable", sort: "volume" });
+    filtersToHash();
+    renderEvents();
+  });
+  el.querySelectorAll("[data-liq-mode]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const mode = btn.getAttribute("data-liq-mode") || "all";
+      __filters.liquidity = mode === __filters.liquidity && mode !== "all" ? "all" : mode;
+      filtersToHash();
+      renderEvents();
+    });
   });
   renderEventList();
 }
@@ -1307,13 +1596,35 @@ document.addEventListener("keydown", (ev) => {
   }
 });
 
-// Deep link: #events?… opens the Events tab with filters hydrated
-if (location.hash.startsWith("#events")) {
+/** Deep link / chip jump: #events?liquidity=… opens Events with filters. */
+function openEventsFromHash() {
+  if (!location.hash.startsWith("#events")) return false;
+  filtersFromHash();
+  __filtersHydrated = true;
   const btn = document.querySelector('nav.tabs button[data-tab="events"]');
   if (btn) btn.click();
+  void renderEvents();
+  return true;
 }
 
-window.addEventListener("hashchange", applyHashRoute);
+// Deep link: #events?… opens the Events tab with filters hydrated
+openEventsFromHash();
+
+window.addEventListener("hashchange", () => {
+  if (openEventsFromHash()) return;
+  applyHashRoute();
+});
+
+document.addEventListener("click", (ev) => {
+  const t = ev.target;
+  if (!(t instanceof Element)) return;
+  const jump = t.closest("[data-liq-jump]");
+  if (!jump) return;
+  // Don't steal glossary ? hints
+  if (t.closest("[data-glossary]")) return;
+  ev.preventDefault();
+  jumpToEventsLiquidity(jump.getAttribute("data-liq-jump") || "all");
+});
 
 // Profiles column headers use glossary-backed tips
 // (tip already used on playerProfiles panel title)

@@ -126,6 +126,74 @@ export function applyEventStoreSchema(db: Database): void {
   )`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_player_opponent_profiles_player ON player_opponent_profiles (player_name)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_player_opponent_profiles_opponent ON player_opponent_profiles (opponent_name)`);
+  // Partner stream inventory (Fantasy402 stream-list-v2, etc.)
+  db.run(`CREATE TABLE IF NOT EXISTS partner_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    partner TEXT NOT NULL,
+    stream_id TEXT NOT NULL,
+    ls_id TEXT,
+    client_event_id TEXT,
+    sport TEXT NOT NULL DEFAULT '',
+    league TEXT NOT NULL DEFAULT '',
+    home TEXT,
+    away TEXT,
+    feed_id TEXT,
+    start_time INTEGER,
+    status TEXT NOT NULL DEFAULT 'unknown',
+    first_seen INTEGER NOT NULL,
+    last_updated INTEGER NOT NULL,
+    UNIQUE(partner, stream_id)
+  )`);
+  db.run(
+    `CREATE INDEX IF NOT EXISTS idx_partner_events_partner_sport ON partner_events (partner, sport)`,
+  );
+  db.run(
+    `CREATE INDEX IF NOT EXISTS idx_partner_events_last_updated ON partner_events (last_updated)`,
+  );
+  // Partner financial registry (outs) — secrets stay in env, not here
+  db.run(`CREATE TABLE IF NOT EXISTS partners (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    active INTEGER NOT NULL DEFAULT 1,
+    profit_split REAL,
+    commission_rate REAL,
+    notes TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  )`);
+  db.run(`CREATE TABLE IF NOT EXISTS betting_accounts (
+    id TEXT PRIMARY KEY,
+    partner_id TEXT NOT NULL,
+    provider TEXT NOT NULL,
+    url TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'active',
+    env_prefix TEXT,
+    max_stake REAL NOT NULL DEFAULT 0,
+    max_win REAL NOT NULL DEFAULT 0,
+    currency TEXT NOT NULL DEFAULT 'USD',
+    skin INTEGER,
+    meta_json TEXT NOT NULL DEFAULT '{}',
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  )`);
+  db.run(
+    `CREATE INDEX IF NOT EXISTS idx_betting_accounts_partner ON betting_accounts (partner_id)`,
+  );
+  db.run(
+    `CREATE INDEX IF NOT EXISTS idx_betting_accounts_provider ON betting_accounts (provider)`,
+  );
+  db.run(`CREATE TABLE IF NOT EXISTS provider_sport_mappings (
+    provider TEXT NOT NULL,
+    canonical TEXT NOT NULL,
+    stream_bucket TEXT,
+    api_sport_id INTEGER,
+    widget_sport_id INTEGER,
+    label TEXT NOT NULL DEFAULT '',
+    PRIMARY KEY (provider, canonical)
+  )`);
+  db.run(
+    `CREATE INDEX IF NOT EXISTS idx_provider_sport_api ON provider_sport_mappings (provider, api_sport_id)`,
+  );
   migrateEventStoreColumns(db);
   migrateSourceEventSelectors(db);
   abandonLegacyKalshiInventoryRuns(db);

@@ -72,6 +72,19 @@ Registry changes for CSV order / SQLite migrations. Glossary concepts are **sema
 2. Every `kind: "registry"` entry has a matching registry `feature` (or is marked pending).
 3. HQ `tip("x")` keys exist in glossary (any kind).
 
+### Pending registry (`PENDING_REGISTRY_CONCEPTS`)
+
+Allowlist for `kind: "registry"` ids that board/HQ already use but are **not** yet on desk CSV `columns[]`:
+
+| id | Why pending |
+|----|-------------|
+| `tier` | HQ / filter catalog only — desk export schema has not grown a tier column |
+| `round` | Same — tournament round is a board filter, not a desk feature yet |
+
+**Phase 1 decision (glossary polish):** keep `tier` / `round` **pending** — do not promote until desk CSV export actually emits those columns. Integrity still requires the glossary entries themselves to exist.
+
+Do **not** remove from the allowlist until `column-registry.ts` gains matching features.
+
 ## Code map (this repo)
 
 | Piece | Path |

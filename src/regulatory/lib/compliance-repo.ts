@@ -33,6 +33,12 @@ export interface BetCheckResult {
   ruleId?: number;
 }
 
+export type ExecutionPlayStatus =
+  | typeof PLAY_STATUS.PROPOSED
+  | typeof PLAY_STATUS.CONFIRMED
+  | typeof PLAY_STATUS.REJECTED
+  | typeof PLAY_STATUS.UNKNOWN;
+
 export class ComplianceRepository {
   constructor(private db: Database) {}
 
@@ -207,6 +213,98 @@ export class ComplianceRepository {
   }
 
   /**
+   * Validate and record an execution intent without counting it as an accepted
+   * wager. The idempotency key is the cross-database binding to the execution
+   * reservation that is attached after the gate reserves exposure.
+   */
+  proposeExecutionBetAtomic(
+    params: BetCheckParams & { playId: string; idempotencyKey: string },
+  ): { playId: string; status: typeof PLAY_STATUS.PROPOSED } {
+    if (!params.idempotencyKey.trim()) throw new Error("Execution idempotency key is required");
+
+    const existing = this.db
+      .query<{ play_id: string; status: string }, [string]>(
+        `SELECT play_id, status FROM ${TABLE.PLAYS} WHERE execution_idempotency_key = ?`,
+      )
+      .get(params.idempotencyKey);
+    if (existing) {
+      if (existing.play_id !== params.playId) {
+        throw new Error("Execution idempotency key is already bound to another play");
+      }
+      return { playId: existing.play_id, status: PLAY_STATUS.PROPOSED };
+    }
+
+    const check = this.isBetAllowed(params);
+    if (!check.allowed) {
+      this.logViolation(params.playId, params.nodeId, params.userId, params.stateCode, check.reason!);
+      throw new BetBlockedError(check.reason!, check.ruleId);
+    }
+
+    this.db.run(TX.BEGIN_IMMEDIATE);
+    try {
+      const recheck = this.isBetAllowed(params);
+      if (!recheck.allowed) {
+        this.db.run(TX.ROLLBACK);
+        this.logViolation(params.playId, params.nodeId, params.userId, params.stateCode, recheck.reason!);
+        throw new BetBlockedError(recheck.reason!, recheck.ruleId);
+      }
+      this.db.run(
+        `INSERT INTO ${TABLE.PLAYS}
+          (play_id, node_id, user_id, country_code, sport_id, market_id, state_code,
+           wager_amount, bet_type, status, placed_at, execution_idempotency_key, execution_updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${SQL_UNIXEPOCH}, ?, ${SQL_UNIXEPOCH})`,
+        [params.playId, params.nodeId, params.userId, DEFAULT_COUNTRY_CODE, params.sportId,
+          params.marketId, params.stateCode, params.wagerAmount, params.betType,
+          PLAY_STATUS.PROPOSED, params.idempotencyKey],
+      );
+      this.db.run(TX.COMMIT);
+      return { playId: params.playId, status: PLAY_STATUS.PROPOSED };
+    } catch (err) {
+      try { this.db.run(TX.ROLLBACK); } catch { /* already rolled back */ }
+      throw err;
+    }
+  }
+
+  /** Advance a proposed/unknown play using provider evidence. Terminal states
+   * are immutable; replaying the same transition is idempotent. */
+  transitionExecutionPlay(params: {
+    idempotencyKey: string;
+    status: Exclude<ExecutionPlayStatus, typeof PLAY_STATUS.PROPOSED>;
+    reservationId?: number | null;
+    reason?: string | null;
+  }): { playId: string; status: string } {
+    this.db.run(TX.BEGIN_IMMEDIATE);
+    try {
+      const row = this.db.query<{ play_id: string; status: string }, [string]>(
+        `SELECT play_id, status FROM ${TABLE.PLAYS} WHERE execution_idempotency_key = ?`,
+      ).get(params.idempotencyKey);
+      if (!row) throw new Error("Execution play not found");
+      if (row.status === params.status) {
+        this.db.run(TX.COMMIT);
+        return { playId: row.play_id, status: row.status };
+      }
+      if (row.status === PLAY_STATUS.CONFIRMED || row.status === PLAY_STATUS.REJECTED) {
+        throw new Error(`Cannot transition terminal execution play from ${row.status}`);
+      }
+      if (row.status !== PLAY_STATUS.PROPOSED && row.status !== PLAY_STATUS.UNKNOWN) {
+        throw new Error(`Invalid execution play state: ${row.status}`);
+      }
+      this.db.run(
+        `UPDATE ${TABLE.PLAYS}
+         SET status = ?, execution_reservation_id = COALESCE(?, execution_reservation_id),
+             execution_reason = ?, execution_updated_at = ${SQL_UNIXEPOCH}
+         WHERE execution_idempotency_key = ?`,
+        [params.status, params.reservationId ?? null, params.reason ?? null, params.idempotencyKey],
+      );
+      this.db.run(TX.COMMIT);
+      return { playId: row.play_id, status: params.status };
+    } catch (err) {
+      try { this.db.run(TX.ROLLBACK); } catch { /* already rolled back */ }
+      throw err;
+    }
+  }
+
+  /**
    * Record a regulatory violation for audit / ops dashboard.
    */
   logViolation(
@@ -258,7 +356,9 @@ export class ComplianceRepository {
           .query<{ total: number }, [string, string, number]>(
             `SELECT COALESCE(SUM(wager_amount), 0) as total
              FROM ${TABLE.PLAYS}
-             WHERE user_id = ? AND node_id = ? AND placed_at >= ? AND status = '${PLAY_STATUS.ACCEPTED}'`,
+             WHERE user_id = ? AND node_id = ? AND placed_at >= ?
+               AND status IN ('${PLAY_STATUS.ACCEPTED}', '${PLAY_STATUS.CONFIRMED}',
+                 '${PLAY_STATUS.PROPOSED}', '${PLAY_STATUS.UNKNOWN}')`,
           )
           .get(params.userId, params.nodeId, todayStart);
 
@@ -284,6 +384,8 @@ export class ComplianceRepository {
           .query<{ placed_at: number }, [string, string]>(
             `SELECT placed_at FROM ${TABLE.PLAYS}
              WHERE user_id = ? AND node_id = ?
+               AND status IN ('${PLAY_STATUS.ACCEPTED}', '${PLAY_STATUS.CONFIRMED}',
+                 '${PLAY_STATUS.PROPOSED}', '${PLAY_STATUS.UNKNOWN}')
              ORDER BY placed_at DESC LIMIT 1`,
           )
           .get(params.userId, params.nodeId);
@@ -305,4 +407,3 @@ export class ComplianceRepository {
     }
   }
 }
-

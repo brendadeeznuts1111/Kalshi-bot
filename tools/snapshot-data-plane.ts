@@ -17,6 +17,7 @@ import { mkdirSync } from "node:fs";
 import { gzipSync, gunzipSync } from "node:zlib";
 import { openEventStore } from "../src/institutions/event-store/open-db.ts";
 import { DEFAULT_EVENT_STORE_DB } from "../src/institutions/event-store/paths.ts";
+import { summarizeMatchLiquidity } from "../src/institutions/event-store/match-liquidity.ts";
 import { analyzeTennisBookCoverage } from "../src/institutions/event-store/tennis-book-coverage.ts";
 import { SCOPE_CONFIGS, type SnapshotScope } from "./snapshot-scopes.ts";
 
@@ -43,6 +44,22 @@ export type DataPlaneSnapshot = {
     score_snapshots: number;
     player_profiles: number;
     odds_ticks: number;
+    /** Derived match_liquidity row count (0 if table missing). */
+    match_liquidity?: number;
+  };
+  /**
+   * Desk liquidity KPIs from match_liquidity (optional for older snapshots).
+   * @see src/institutions/event-store/match-liquidity.ts
+   */
+  liquidity?: {
+    tablePresent: boolean;
+    total: number;
+    quoted: number;
+    liquidityOk: number;
+    tradable: number;
+    withSpread: number;
+    vol24Pos: number;
+    lifetimeOnly500: number;
   };
   files: {
     event_store_db: number;
@@ -290,6 +307,9 @@ export async function captureSnapshot(
   const player_profiles = Number((db.query("SELECT COUNT(*) AS n FROM player_profiles").get() as any)?.n ?? 0);
   const odds_ticks = Number((db.query("SELECT COUNT(*) AS n FROM odds_ticks").get() as any)?.n ?? 0);
 
+  const liqSummary = summarizeMatchLiquidity(db);
+  const match_liquidity = liqSummary.total;
+
   const bySource = db
     .query("SELECT source, COUNT(*) AS n FROM book_ticks GROUP BY source")
     .all() as Array<{ source: string; n: number }>;
@@ -349,6 +369,11 @@ export async function captureSnapshot(
       blocker: kalshi_ws ? null : "KALSHI_API_KEY_ID",
     },
     "player-profiles": { active: true, rows: player_profiles, blocker: null },
+    "match-liquidity": {
+      active: liqSummary.tablePresent,
+      rows: match_liquidity,
+      blocker: liqSummary.tablePresent ? null : "match_liquidity schema",
+    },
     "shadow-itf": { active: true, rows: Math.floor(shadow_log_jsonl / 1024), blocker: null },
     "odds-api": { active: odds_api, rows: odds_ticks, blocker: odds_api ? null : "ODDS_API_KEY" },
     "github-research": { active: protonpass_session, rows: 29, blocker: protonpass_session ? null : "GH_TOKEN" },
@@ -360,7 +385,29 @@ export async function captureSnapshot(
     tsUnix: now.getTime(),
     run,
     fingerprint: "",
-    rows: { events, markets, resolutions, book_ticks, book_ticks_by_source, event_links, live_scores, score_snapshots, player_profiles, odds_ticks },
+    rows: {
+      events,
+      markets,
+      resolutions,
+      book_ticks,
+      book_ticks_by_source,
+      event_links,
+      live_scores,
+      score_snapshots,
+      player_profiles,
+      odds_ticks,
+      match_liquidity,
+    },
+    liquidity: {
+      tablePresent: liqSummary.tablePresent,
+      total: liqSummary.total,
+      quoted: liqSummary.quoted,
+      liquidityOk: liqSummary.liquidityOk,
+      tradable: liqSummary.tradable,
+      withSpread: liqSummary.withSpread,
+      vol24Pos: liqSummary.vol24Pos,
+      lifetimeOnly500: liqSummary.lifetimeOnly500,
+    },
     files: { event_store_db, cache_db, ticker_map_db, shadow_log_jsonl },
     coverage: {
       watchEvents: coverage.watchEvents,
@@ -774,6 +821,12 @@ if (import.meta.main) {
   console.log(`events=${snapshot.rows.events} markets=${snapshot.rows.markets} resolutions=${snapshot.rows.resolutions}`);
   console.log(`book_ticks=${snapshot.rows.book_ticks} (rest=${snapshot.rows.book_ticks_by_source["kalshi-rest"] ?? 0} ws=${snapshot.rows.book_ticks_by_source["kalshi-ws"] ?? 0})`);
   console.log(`event_links=${snapshot.rows.event_links} player_profiles=${snapshot.rows.player_profiles}`);
+  if (snapshot.liquidity) {
+    const L = snapshot.liquidity;
+    console.log(
+      `liquidity: total=${L.total} quoted=${L.quoted} liq_ok=${L.liquidityOk} tradable=${L.tradable} lifetime_only_500=${L.lifetimeOnly500}`,
+    );
+  }
   console.log(`canary: watch=${snapshot.canary.watch} polled=${snapshot.canary.polled} live=${snapshot.canary.live}`);
   console.log(`blockers: gh=${snapshot.blockers.gh_auth} pp=${snapshot.blockers.protonpass_session} kalshi_ws=${snapshot.blockers.kalshi_ws} odds_api=${snapshot.blockers.odds_api}`);
 }

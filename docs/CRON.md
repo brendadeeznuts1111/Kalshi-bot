@@ -60,6 +60,27 @@ Set `RESEARCH_EXPORT_AUDIT=1` on scheduled runs to also write audit JSONL + roto
 
 The metadata job is single-flight, drains on graceful shutdown, and recovers abandoned cross-process runs after a five-minute no-progress lease. Adapter instances persist for the cron process lifetime so retry/circuit state survives individual ticks. Full registry mechanics: [`SPORTS_SOURCE_REGISTRY.md`](SPORTS_SOURCE_REGISTRY.md).
 
+## Partner inventory (Fantasy402 stream-list)
+
+In-process job on `cron:start` (opt-in). Polls `stream-list-v2` → `partner_events` (new table tennis by default).
+
+| Env | Role |
+|-----|------|
+| `PARTNER_SYNC=1` | Enable job |
+| `PARTNER_SYNC_PUBLIC=1` | No real Fantasy login (inventory only) |
+| `PARTNER_SYNC_SPORT` | Default `table_tennis` |
+| `PARTNER_SYNC_CRON_SCHEDULE` | Default every minute |
+
+```bash
+PARTNER_SYNC=1 PARTNER_SYNC_PUBLIC=1 bun run cron:once   # includes partner job
+PARTNER_SYNC=1 PARTNER_SYNC_PUBLIC=1 bun run cron:start
+# or standalone:
+bun run partner:sync -- --loop --sport=table_tennis
+```
+
+See [`docs/PARTNER-FANTASY-ULTRA.md`](PARTNER-FANTASY-ULTRA.md).
+
+
 ## Tennis live canary
 
 Separate job: dry-run `live_data` poll to the write boundary (zero SQLite score writes). Catches Kalshi schema/API drift before the aging loop is wrong.
@@ -108,3 +129,18 @@ Override: `TENNIS_EXPERIMENT_CRON_SCHEDULE`, `TENNIS_EXPERIMENT_CRON_TITLE`.
 Shadow metrics (not cron): `bun run tennis:experiment -- ingest --experiment=<id> --program=tennis-game-model`.
 
 See [`docs/EXPERIMENT_FACTORIAL.md`](EXPERIMENT_FACTORIAL.md).
+
+## Match liquidity (reactive ground)
+
+Time-based pipeline (Bun.cron) is still the volume-backfill / snapshot owner.
+For **immediate HTML ground after local ingest**, use `fs.watch` on the event-store:
+
+```bash
+bun run liquidity:ground:watch-db              # debounce 750ms, recompute + html-only ground
+bun run liquidity:ground:watch-db -- --once    # one rebuild then exit
+bun run liquidity:pipeline:register            # OS cron every 30m (volume optional)
+```
+
+SQLite WAL writes burst across `event-store.db`, `-wal`, and `-shm`; the watcher
+coalesces events and serializes rebuilds.
+

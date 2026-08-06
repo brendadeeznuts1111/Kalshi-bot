@@ -13,14 +13,39 @@ import { midFromBookSnapshot } from "../../bot/kalshi-book-parse.ts";
 
 /** Desk gates — necessary for liquidity_ok (not sufficient for desk trade). */
 export const LIQUIDITY_GATES = {
-  /** Min trailing 24h volume (Kalshi volume_24h_fp contracts ≈ notional). */
+  /**
+   * Min volume (contracts ≈ notional). Prefer trailing 24h (`volume_24h_fp`);
+   * fall back to lifetime `volume_fp` when 24h is zero/missing (common on ITF sync).
+   */
   minVolume24hFp: 500,
   /** Max bid–ask spread on preferred match-winner book (cents). */
   maxSpreadCents: 15,
   /** Mid band for tradable (deep favorites / longshots out). */
   midBandMinCents: 20,
   midBandMaxCents: 80,
+  /**
+   * Max age of a non-empty book quote used for gates (ms).
+   * Default 14d — offline event-store snapshots are often multi-day old;
+   * set lower (e.g. 15–60m) for live desk.
+   */
+  quoteMaxAgeMs: 14 * 24 * 60 * 60 * 1000,
 } as const;
+
+/**
+ * Volume used for desk gates: 24h when present, else lifetime.
+ * Stores both columns on the row; only the gate uses this blend.
+ */
+export function effectiveVolumeForGate(volume24hFp: number, volumeFp: number): number {
+  if (volume24hFp > 0) return volume24hFp;
+  return volumeFp > 0 ? volumeFp : 0;
+}
+
+/** True when book has a two-sided top of book (empty bids/asks do not count). */
+export function bookHasTopOfBook(book: BookSnapshot): boolean {
+  const bid = book.bids[0]?.priceCents;
+  const ask = book.asks[0]?.priceCents;
+  return bid != null && ask != null && Number.isFinite(bid) && Number.isFinite(ask);
+}
 
 export type MatchLiquidityRow = {
   eventId: string;
@@ -90,15 +115,18 @@ export function spreadCentsFromBook(book: BookSnapshot): number | null {
 
 export function evaluateLiquidityGates(input: {
   volume24hFp: number;
+  /** Lifetime volume — used when volume24hFp is 0. */
+  volumeFp?: number;
   spreadCents: number | null;
   midCents: number | null;
   crossed: boolean;
   gates?: typeof LIQUIDITY_GATES;
-}): { liquidityOk: boolean; tradable: boolean } {
+}): { liquidityOk: boolean; tradable: boolean; volumeForGate: number } {
   const g = input.gates ?? LIQUIDITY_GATES;
+  const volumeForGate = effectiveVolumeForGate(input.volume24hFp, input.volumeFp ?? 0);
   const liquidityOk =
     !input.crossed &&
-    input.volume24hFp >= g.minVolume24hFp &&
+    volumeForGate >= g.minVolume24hFp &&
     input.spreadCents != null &&
     input.spreadCents <= g.maxSpreadCents;
   const midOk =
@@ -108,6 +136,7 @@ export function evaluateLiquidityGates(input: {
   return {
     liquidityOk,
     tradable: liquidityOk && midOk,
+    volumeForGate,
   };
 }
 
@@ -141,21 +170,25 @@ function loadMarketAgg(db: Database, eventId?: string): MarketAgg[] {
 }
 
 /**
- * Prefer latest match_winner book tick; fall back to any latest tick for the event.
- * Picks the tightest non-crossed spread among latest-per-ticker rows.
+ * Per ticker: walk ticks newest→oldest and take the first non-empty top-of-book
+ * within {@link LIQUIDITY_GATES.quoteMaxAgeMs}. Empty latest shells no longer
+ * hide a good prior quote (common after REST polls with no depth).
+ *
+ * Across tickers: prefer match_winner, then tightest spread.
  */
-function loadBookAgg(db: Database, eventId: string): BookAgg {
+function loadBookAgg(
+  db: Database,
+  eventId: string,
+  options: { maxAgeMs?: number; nowMs?: number } = {},
+): BookAgg {
+  const maxAgeMs = options.maxAgeMs ?? LIQUIDITY_GATES.quoteMaxAgeMs;
+  const nowMs = options.nowMs ?? Date.now();
   const rows = db
     .query(
-      `SELECT bt.ticker, bt.market_kind AS marketKind, bt.levels_json AS levelsJson, bt.ts
-       FROM book_ticks bt
-       INNER JOIN (
-         SELECT ticker, MAX(ts) AS max_ts
-         FROM book_ticks
-         WHERE event_id = $eventId
-         GROUP BY ticker
-       ) latest ON latest.ticker IS bt.ticker AND latest.max_ts = bt.ts
-       WHERE bt.event_id = $eventId`,
+      `SELECT ticker, market_kind AS marketKind, levels_json AS levelsJson, ts
+       FROM book_ticks
+       WHERE event_id = $eventId
+       ORDER BY ticker ASC, ts DESC`,
     )
     .all({ $eventId: eventId }) as Array<{
     ticker: string | null;
@@ -168,12 +201,30 @@ function loadBookAgg(db: Database, eventId: string): BookAgg {
     return { spreadCents: null, midCents: null, bookTickCount: 0, crossed: false };
   }
 
+  // First non-empty quote per ticker (rows already newest-first within ticker).
+  const quoteByTicker = new Map<
+    string,
+    { marketKind: string; book: ReturnType<typeof parseBookSnapshot> & object; ts: number }
+  >();
+  for (const row of rows) {
+    const key = row.ticker ?? "";
+    if (quoteByTicker.has(key)) continue;
+    if (nowMs - row.ts > maxAgeMs) continue;
+    const book = parseBookSnapshot(row.levelsJson);
+    if (!book || !bookHasTopOfBook(book)) continue;
+    quoteByTicker.set(key, { marketKind: row.marketKind, book, ts: row.ts });
+  }
+
+  if (quoteByTicker.size === 0) {
+    return { spreadCents: null, midCents: null, bookTickCount: 0, crossed: false };
+  }
+
   let anyCrossed = false;
+  let quotedCount = 0;
   let best: { spread: number; mid: number | null; kindScore: number } | null = null;
 
-  for (const row of rows) {
-    const book = parseBookSnapshot(row.levelsJson);
-    if (!book) continue;
+  for (const { marketKind, book } of quoteByTicker.values()) {
+    quotedCount++;
     if (book.crossed) {
       anyCrossed = true;
       continue;
@@ -181,7 +232,7 @@ function loadBookAgg(db: Database, eventId: string): BookAgg {
     const spread = spreadCentsFromBook(book);
     const mid = midFromBookSnapshot(book);
     if (spread == null) continue;
-    const kindScore = row.marketKind === "match_winner" || row.marketKind === "" ? 0 : 1;
+    const kindScore = marketKind === "match_winner" || marketKind === "" ? 0 : 1;
     if (
       !best ||
       kindScore < best.kindScore ||
@@ -194,7 +245,7 @@ function loadBookAgg(db: Database, eventId: string): BookAgg {
   return {
     spreadCents: best?.spread ?? null,
     midCents: best?.mid ?? null,
-    bookTickCount: rows.length,
+    bookTickCount: quotedCount,
     crossed: anyCrossed && best == null,
   };
 }
@@ -261,6 +312,7 @@ function buildRow(db: Database, market: MarketAgg, now: number): MatchLiquidityR
   const book = loadBookAgg(db, market.eventId);
   const gates = evaluateLiquidityGates({
     volume24hFp: market.volume24hFp,
+    volumeFp: market.volumeFp,
     spreadCents: book.spreadCents,
     midCents: book.midCents,
     crossed: book.crossed,
@@ -340,6 +392,102 @@ export function getMatchLiquidity(db: Database, eventId: string): MatchLiquidity
   return mapSqlRow(row);
 }
 
+/**
+ * Compact desk flags for live board join (eventTicker → match_liquidity).
+ * `quoted` is book_tick_count > 0 (glossary desk.quoted).
+ */
+export type DeskLiquidityFlags = {
+  liquidityOk: boolean;
+  tradable: boolean;
+  quoted: boolean;
+  spreadCents: number | null;
+  midCents: number | null;
+  volume24hFp: number;
+  volumeFp: number;
+  volumeForGate: number;
+};
+
+export function deskFlagsFromRow(row: MatchLiquidityRow): DeskLiquidityFlags {
+  return {
+    liquidityOk: row.liquidityOk,
+    tradable: row.tradable,
+    quoted: row.bookTickCount > 0,
+    spreadCents: row.spreadCents,
+    midCents: row.midCents,
+    volume24hFp: row.volume24hFp,
+    volumeFp: row.volumeFp,
+    volumeForGate: effectiveVolumeForGate(row.volume24hFp, row.volumeFp),
+  };
+}
+
+/**
+ * Keys under which a desk row is findable from the live board:
+ * - internal `event_id` (hash) for store-native callers
+ * - full market ticker (KX…-SIDE)
+ * - Kalshi event ticker (strip last `-SIDE` segment — board `eventTicker`)
+ */
+export function deskLiquidityIndexKeys(eventId: string, marketTicker?: string | null): string[] {
+  const keys = [eventId];
+  const t = marketTicker?.trim();
+  if (!t) return keys;
+  keys.push(t);
+  const dash = t.lastIndexOf("-");
+  if (dash > 0) {
+    const eventTicker = t.slice(0, dash);
+    if (eventTicker && eventTicker !== t) keys.push(eventTicker);
+  }
+  return keys;
+}
+
+/**
+ * Full-table index for O(1) board enrichment.
+ * Indexed by internal event_id **and** Kalshi event/market tickers from `markets`
+ * (live `/api/events` uses `eventTicker` like `KXATPMATCH-26AUG01SONGRI`, while
+ * match_liquidity.event_id is often a corpus hash).
+ */
+export function listDeskLiquidityByEventId(db: Database): Map<string, DeskLiquidityFlags> {
+  const out = new Map<string, DeskLiquidityFlags>();
+  if (!matchLiquidityTablePresent(db)) return out;
+  const rows = db
+    .query(
+      `SELECT
+         ml.event_id AS event_id,
+         ml.liquidity_ok AS liquidity_ok,
+         ml.tradable AS tradable,
+         ml.book_tick_count AS book_tick_count,
+         ml.spread_cents AS spread_cents,
+         ml.mid_cents AS mid_cents,
+         ml.volume_24h_fp AS volume_24h_fp,
+         ml.volume_fp AS volume_fp,
+         m.ticker AS market_ticker
+       FROM match_liquidity ml
+       LEFT JOIN markets m ON m.event_id = ml.event_id`,
+    )
+    .all() as Array<Record<string, unknown>>;
+  for (const r of rows) {
+    const eventId = String(r.event_id ?? "");
+    if (!eventId) continue;
+    const volume24hFp = fpNumber(r.volume_24h_fp as number);
+    const volumeFp = fpNumber(r.volume_fp as number);
+    const flags: DeskLiquidityFlags = {
+      liquidityOk: Number(r.liquidity_ok) === 1,
+      tradable: Number(r.tradable) === 1,
+      quoted: (Number(r.book_tick_count) || 0) > 0,
+      spreadCents: r.spread_cents == null ? null : fpNumber(r.spread_cents as number),
+      midCents: r.mid_cents == null ? null : fpNumber(r.mid_cents as number),
+      volume24hFp,
+      volumeFp,
+      volumeForGate: effectiveVolumeForGate(volume24hFp, volumeFp),
+    };
+    const marketTicker = r.market_ticker != null ? String(r.market_ticker) : null;
+    for (const key of deskLiquidityIndexKeys(eventId, marketTicker)) {
+      // Prefer first write; all market legs of one event share the same desk row.
+      if (!out.has(key)) out.set(key, flags);
+    }
+  }
+  return out;
+}
+
 export function listMatchLiquidityByTournament(
   db: Database,
   tournamentKey: string,
@@ -347,14 +495,17 @@ export function listMatchLiquidityByTournament(
 ): MatchLiquidityRow[] {
   const limit = Math.min(Math.max(options.limit ?? 100, 1), 500);
   const sport = options.sportKey?.trim();
+  // Rank by gate volume (24h preferred, else lifetime) so zero-vol24 rows still surface.
   const sql = sport
     ? `SELECT * FROM match_liquidity
        WHERE tournament = $t AND sport_key = $s
-       ORDER BY volume_24h_fp DESC, updated_ts DESC
+       ORDER BY CASE WHEN volume_24h_fp > 0 THEN volume_24h_fp ELSE volume_fp END DESC,
+                updated_ts DESC
        LIMIT $lim`
     : `SELECT * FROM match_liquidity
        WHERE tournament = $t
-       ORDER BY volume_24h_fp DESC, updated_ts DESC
+       ORDER BY CASE WHEN volume_24h_fp > 0 THEN volume_24h_fp ELSE volume_fp END DESC,
+                updated_ts DESC
        LIMIT $lim`;
   const rows = sport
     ? (db.query(sql).all({ $t: tournamentKey, $s: sport, $lim: limit }) as Record<string, unknown>[])
@@ -364,6 +515,202 @@ export function listMatchLiquidityByTournament(
 
 export function toLiquidityApiPayload(row: MatchLiquidityRow): MatchLiquidityApiPayload {
   return { ...row, gates: LIQUIDITY_GATES };
+}
+
+/** Glossary concept ids bound to the desk liquidity board (HQ + partners). */
+export const LIQUIDITY_BOARD_CONCEPTS = {
+  liquidityOk: "liquidity_ok",
+  tradable: "desk.tradable",
+  quoted: "desk.quoted",
+  volume: "kalshi_volume",
+  spread: "kalshi_spread",
+  totalVolume: "total_volume_usd",
+  kpis: [
+    "kpi.tight_markets",
+    "kpi.tradable_matches",
+    "kpi.quoted_books",
+    "kpi.median_spread",
+    "kpi.board_volume",
+  ],
+} as const;
+
+export type LiquidityTournamentRollup = {
+  tournament: string;
+  count: number;
+  liquidityOk: number;
+  tradable: number;
+  volume: number;
+};
+
+export type LiquidityBoardPayload = {
+  schemaVersion: 1;
+  summary: MatchLiquiditySummary;
+  gates: typeof LIQUIDITY_GATES;
+  concepts: typeof LIQUIDITY_BOARD_CONCEPTS;
+  medianSpreadCents: number | null;
+  boardVolume: number;
+  top: MatchLiquidityApiPayload[];
+  byTournament: LiquidityTournamentRollup[];
+};
+
+/** HQ / partners board payload from match_liquidity (+ glossary concept map). */
+export function buildLiquidityBoardPayload(
+  db: Database,
+  options: { topLimit?: number; tournamentLimit?: number } = {},
+): LiquidityBoardPayload {
+  const summary = summarizeMatchLiquidity(db);
+  const topLimit = Math.min(Math.max(options.topLimit ?? 24, 1), 100);
+  const tournamentLimit = Math.min(Math.max(options.tournamentLimit ?? 16, 1), 50);
+
+  let medianSpreadCents: number | null = null;
+  let boardVolume = 0;
+  let byTournament: LiquidityTournamentRollup[] = [];
+
+  if (summary.tablePresent) {
+    const mid = db
+      .query(
+        `SELECT spread_cents AS s FROM match_liquidity
+         WHERE spread_cents IS NOT NULL
+         ORDER BY spread_cents`,
+      )
+      .all() as Array<{ s: number }>;
+    if (mid.length) {
+      medianSpreadCents = mid[Math.floor(mid.length / 2)]!.s;
+    }
+    boardVolume =
+      (
+        db
+          .query(
+            `SELECT COALESCE(SUM(
+               CASE WHEN volume_24h_fp > 0 THEN volume_24h_fp ELSE volume_fp END
+             ), 0) AS v FROM match_liquidity`,
+          )
+          .get() as { v: number }
+      ).v ?? 0;
+
+    byTournament = (
+      db
+        .query(
+          `SELECT
+             tournament AS tournament,
+             COUNT(*) AS count,
+             COALESCE(SUM(liquidity_ok), 0) AS liquidityOk,
+             COALESCE(SUM(tradable), 0) AS tradable,
+             COALESCE(SUM(CASE WHEN volume_24h_fp > 0 THEN volume_24h_fp ELSE volume_fp END), 0) AS volume
+           FROM match_liquidity
+           GROUP BY tournament
+           ORDER BY volume DESC
+           LIMIT $lim`,
+        )
+        .all({ $lim: tournamentLimit }) as Array<Record<string, number | string>>
+    ).map((r) => ({
+      tournament: String(r.tournament ?? ""),
+      count: Number(r.count) || 0,
+      liquidityOk: Number(r.liquidityOk) || 0,
+      tradable: Number(r.tradable) || 0,
+      volume: Number(r.volume) || 0,
+    }));
+  }
+
+  const topRows = listTopMatchLiquidity(db, { limit: topLimit * 2 });
+  topRows.sort((a, b) => {
+    const score = (r: MatchLiquidityRow) =>
+      (r.tradable ? 4 : 0) + (r.liquidityOk ? 2 : 0) + (r.bookTickCount > 0 ? 1 : 0);
+    const d = score(b) - score(a);
+    if (d !== 0) return d;
+    const va = a.volume24hFp > 0 ? a.volume24hFp : a.volumeFp;
+    const vb = b.volume24hFp > 0 ? b.volume24hFp : b.volumeFp;
+    return vb - va;
+  });
+
+  return {
+    schemaVersion: 1,
+    summary,
+    gates: LIQUIDITY_GATES,
+    concepts: LIQUIDITY_BOARD_CONCEPTS,
+    medianSpreadCents,
+    boardVolume,
+    top: topRows.slice(0, topLimit).map(toLiquidityApiPayload),
+    byTournament,
+  };
+}
+
+
+/** Machine summary for data-plane snapshot + WebView ground KPIs. */
+export type MatchLiquiditySummary = {
+  total: number;
+  liquidityOk: number;
+  tradable: number;
+  quoted: number;
+  withSpread: number;
+  vol24Pos: number;
+  lifetimeOnly500: number;
+  tablePresent: boolean;
+};
+
+export function matchLiquidityTablePresent(db: Database): boolean {
+  const tables = db
+    .query(`SELECT name FROM sqlite_master WHERE type='table' AND name='match_liquidity'`)
+    .all() as Array<{ name: string }>;
+  return tables.length === 1;
+}
+
+export function summarizeMatchLiquidity(db: Database): MatchLiquiditySummary {
+  if (!matchLiquidityTablePresent(db)) {
+    return {
+      total: 0,
+      liquidityOk: 0,
+      tradable: 0,
+      quoted: 0,
+      withSpread: 0,
+      vol24Pos: 0,
+      lifetimeOnly500: 0,
+      tablePresent: false,
+    };
+  }
+  const row = db
+    .query(
+      `SELECT
+         COUNT(*) AS total,
+         COALESCE(SUM(liquidity_ok), 0) AS liquidityOk,
+         COALESCE(SUM(tradable), 0) AS tradable,
+         COALESCE(SUM(CASE WHEN book_tick_count > 0 THEN 1 ELSE 0 END), 0) AS quoted,
+         COALESCE(SUM(CASE WHEN spread_cents IS NOT NULL THEN 1 ELSE 0 END), 0) AS withSpread,
+         COALESCE(SUM(CASE WHEN volume_24h_fp > 0 THEN 1 ELSE 0 END), 0) AS vol24Pos,
+         COALESCE(SUM(CASE WHEN volume_24h_fp = 0 AND volume_fp >= 500 THEN 1 ELSE 0 END), 0) AS lifetimeOnly500
+       FROM match_liquidity`,
+    )
+    .get() as Record<string, number>;
+  return {
+    total: Number(row.total) || 0,
+    liquidityOk: Number(row.liquidityOk) || 0,
+    tradable: Number(row.tradable) || 0,
+    quoted: Number(row.quoted) || 0,
+    withSpread: Number(row.withSpread) || 0,
+    vol24Pos: Number(row.vol24Pos) || 0,
+    lifetimeOnly500: Number(row.lifetimeOnly500) || 0,
+    tablePresent: true,
+  };
+}
+
+/** Top rows for dashboards — effective volume desc. */
+export function listTopMatchLiquidity(
+  db: Database,
+  options: { limit?: number; onlyQuoted?: boolean; onlyOk?: boolean } = {},
+): MatchLiquidityRow[] {
+  if (!matchLiquidityTablePresent(db)) return [];
+  const limit = Math.min(Math.max(options.limit ?? 40, 1), 200);
+  const where: string[] = [];
+  if (options.onlyQuoted) where.push("book_tick_count > 0");
+  if (options.onlyOk) where.push("liquidity_ok = 1");
+  const sql = `
+    SELECT * FROM match_liquidity
+    ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
+    ORDER BY CASE WHEN volume_24h_fp > 0 THEN volume_24h_fp ELSE volume_fp END DESC,
+             updated_ts DESC
+    LIMIT $lim`;
+  const rows = db.query(sql).all({ $lim: limit }) as Record<string, unknown>[];
+  return rows.map(mapSqlRow);
 }
 
 /** Schema presence + gate math for offline proof (`bun run check:liquidity`). */
@@ -380,6 +727,7 @@ export function assertMatchLiquidityHealthy(db: Database): {
   }
   const probe = evaluateLiquidityGates({
     volume24hFp: LIQUIDITY_GATES.minVolume24hFp,
+    volumeFp: 0,
     spreadCents: LIQUIDITY_GATES.maxSpreadCents,
     midCents: 50,
     crossed: false,
@@ -389,12 +737,23 @@ export function assertMatchLiquidityHealthy(db: Database): {
   }
   const fail = evaluateLiquidityGates({
     volume24hFp: LIQUIDITY_GATES.minVolume24hFp - 1,
+    volumeFp: 0,
     spreadCents: LIQUIDITY_GATES.maxSpreadCents,
     midCents: 50,
     crossed: false,
   });
   if (fail.liquidityOk) {
     throw new Error("liquidity gate self-check: expected volume under min to fail");
+  }
+  const lifetimeFallback = evaluateLiquidityGates({
+    volume24hFp: 0,
+    volumeFp: LIQUIDITY_GATES.minVolume24hFp,
+    spreadCents: 5,
+    midCents: 50,
+    crossed: false,
+  });
+  if (!lifetimeFallback.liquidityOk) {
+    throw new Error("liquidity gate self-check: lifetime volume fallback should pass");
   }
   const count = (db.query(`SELECT COUNT(*) AS n FROM match_liquidity`).get() as { n: number }).n;
   return { ok: true, table: "match_liquidity", rowCount: count };

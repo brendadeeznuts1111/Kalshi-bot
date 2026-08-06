@@ -147,6 +147,7 @@ export const SERVE_PATTERNS = {
   tennisPlayer: new BunURLPattern({ pathname: "/api/hq/tennis/player/:name" }),
 
   // ── Match liquidity (derived event-store table) ──
+  // Exact /api/liquidity (+ /summary) handled before :eventId pattern in serve.ts
   liquidityByEvent:      new BunURLPattern({ pathname: "/api/liquidity/:eventId" }),
   liquidityByTournament: new BunURLPattern({ pathname: "/api/liquidity/by-tournament/:key" }),
 
@@ -169,6 +170,8 @@ export const SERVE_PATTERNS = {
     hq:              "/hq",
     hqData:          "/api/hq",
     glossary:        "/api/glossary",
+    liquidityBoard:  "/api/liquidity",
+    liquiditySummary:"/api/liquidity/summary",
     tennisBoard:     "/api/hq/tennis",
     tennisPlayerQuery: "/api/hq/tennis/player", // ?name= form; path form is tennisPlayer pattern
     events:          "/api/events",
@@ -193,6 +196,10 @@ export const SERVE_PATTERNS = {
     reportsLatest:   "/reports/latest.md",
     /** Same path as ROUTES.architecture */
     architecture:    "/architecture",
+    /** Static partner ops board (baked via `bun run partner:dashboard`) */
+    partnerDashboard: "/partner-dashboard",
+    partnerDashboardSlash: "/partner-dashboard/",
+    partnerDashboardState: "/partner-dashboard/state.json",
   },
 } as const;
 

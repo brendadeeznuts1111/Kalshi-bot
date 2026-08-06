@@ -1,0 +1,5 @@
+"$comment" = "Named tour events without a numeric level in the string → tier. Curated truth table; extend as new tournaments appear on the board. Keys normalized (lowercase)."
+"atp los cabos" = "250"
+"atp washington" = "500"
+"wta washington" = "500"
+

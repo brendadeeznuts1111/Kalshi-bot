@@ -1,0 +1,11 @@
+{
+  "name": "@kalshi-bot/bun-security-scanner",
+  "description": "Bun security scanner for the Kalshi tennis bot project",
+  "version": "1.0.0",
+  "license": "MIT",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": "./src/index.ts"
+  },
+  "keywords": ["bun", "security", "scanner"]
+}

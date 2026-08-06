@@ -13,14 +13,19 @@ import { renderArchitecture } from "./architecture-view.ts";
 import { openEventStore } from "../institutions/event-store/open-db.ts";
 import { DEFAULT_EVENT_STORE_DB } from "../institutions/event-store/paths.ts";
 import {
+  buildLiquidityBoardPayload,
   getMatchLiquidity,
+  listDeskLiquidityByEventId,
   listMatchLiquidityByTournament,
   recomputeMatchLiquidity,
   toLiquidityApiPayload,
+  type DeskLiquidityFlags,
 } from "../institutions/event-store/match-liquidity.ts";
 import { Database } from "bun:sqlite";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { partnerDetailHandler } from "../regulatory/routes/ops/partners";
-import { requireStateCompliance, type ComplianceContext } from "../regulatory/middleware/state-compliance";
+import { requireExecutionStateCompliance, requireStateCompliance, type ComplianceContext } from "../regulatory/middleware/state-compliance";
 import { createRateLimiter } from "../regulatory/middleware/rate-limit";
 import { createStateValidator } from "../regulatory/middleware/state-validator";
 import {
@@ -43,16 +48,34 @@ import {
 import { buildHqPayload, resetTradingCache } from "./hq-data.ts";
 import { renderHq } from "./hq-view.ts";
 import hqApp from "./hq-app/index.html";
-import { fetchTennisBoard } from "./tennis-events.ts";
+import { attachDeskLiquidityToBoard, fetchTennisBoard } from "./tennis-events.ts";
 import { buildGlossaryApiPayload } from "../institutions/glossary.ts";
 import { readPlayerProfiles } from "./player-profiles.ts";
 import { buildTennisHqPayload, getPlayerDetail } from "./tennis-hq-data.ts";
 import { readOpponentProfiles } from "./player-opponent-profiles.ts";
-import { placeOrder, cancelOrder } from "../bot/kalshi-client.ts";
+import {
+  placeOrder,
+  type KalshiClient,
+} from "../bot/kalshi-client.ts";
+import {
+  createKalshiAccountClientResolver,
+  executeKalshiLiveOrder,
+  parseKalshiLiveOrderCommand,
+} from "../partner/execution/kalshi-live.ts";
 import { codedError, httpStatusFor, type ErrorCode } from "../institutions/error-codes.ts";
 import { designAgent } from "../agent/design-agent.ts";
 import { fetchKalshiBookSnapshot, midFromBookSnapshot } from "../bot/kalshi-market-data.ts";
 import { buildSportsSourceCatalogPayload } from "./sports-source-catalog.ts";
+import {
+  requireTradingCancelPrincipal,
+  requireTradingOrderPrincipal,
+} from "./trading-auth.ts";
+import {
+  evaluateStoredExecutionRiskHealth,
+  type ExecutionRiskHealthDecision,
+} from "../partner/execution/risk-health.ts";
+import { executeAuthorizedCancel } from "../partner/execution/cancel.ts";
+import { migrateExecutionSchema } from "../partner/execution/sql.ts";
 
 // ── Regulatory compliance integration ──
 const REG_DB_PATH = process.env.REGULATORY_DB ?? ":memory:";
@@ -60,8 +83,6 @@ const regDb = new Database(REG_DB_PATH);
 
 // Bootstrap schema if in-memory
 if (REG_DB_PATH === ":memory:") {
-  const { readFileSync } = await import("fs");
-  const { join } = await import("path");
   const migration011 = readFileSync(
     join(import.meta.dir, "../regulatory/db/migrations/011_state_regulation.sql"),
     "utf-8",
@@ -70,12 +91,22 @@ if (REG_DB_PATH === ":memory:") {
     join(import.meta.dir, "../regulatory/db/migrations/012_polymarket.sql"),
     "utf-8",
   );
+  const migration013 = readFileSync(
+    join(import.meta.dir, "../regulatory/db/migrations/013_execution_play_lifecycle.sql"),
+    "utf-8",
+  );
+  const migration014 = readFileSync(
+    join(import.meta.dir, "../regulatory/db/migrations/014_execution_reservation_binding.sql"),
+    "utf-8",
+  );
   const seeds = readFileSync(
     join(import.meta.dir, "../regulatory/db/seeds/state_regulations.sql"),
     "utf-8",
   );
   regDb.exec(migration011);
   regDb.exec(migration012);
+  regDb.exec(migration013);
+  regDb.exec(migration014);
   regDb.exec(seeds);
 }
 
@@ -89,11 +120,21 @@ orchestrator.register(new MarketDataAgent(regDb));
 orchestrator.register(new AdminAgent(regDb));
 
 const complianceGate = requireStateCompliance(regDb);
+const executionComplianceGate = requireExecutionStateCompliance(regDb);
 const rateLimiter = createRateLimiter({ windowMs: 60_000, max: 100 });
 const stateValidator = createStateValidator({ allowed: ["MA", "NJ"] });
+const resolveKalshiAccountClient = createKalshiAccountClientResolver();
 
 export type ServeOptions = {
   port?: number;
+  trading?: {
+    db?: Database;
+    /** Lifecycle seam: when db is absent, handler owns and closes this handle. */
+    openExecutionDb?: () => Database;
+    client?: Pick<KalshiClient, "environment" | "placeOrder" | "getBalance"> &
+      Partial<Pick<KalshiClient, "cancelOrder">>;
+    isRiskHealthy?: () => Promise<boolean | ExecutionRiskHealthDecision> | boolean | ExecutionRiskHealthDecision;
+  };
 };
 
 export type RouteRequest<P extends Record<string, string>> = {
@@ -239,7 +280,16 @@ function handlePartnerDetail(req: Request, nodeId: string): Response {
     sport: url.searchParams.get("sport") ?? undefined,
     market: url.searchParams.get("market") ?? undefined,
   };
-  return partnerDetailHandler(regDb, nodeId, filters);
+  let deskLiquidity: ReturnType<typeof buildLiquidityBoardPayload> | null = null;
+  try {
+    deskLiquidity = buildLiquidityBoardPayload(openEventStore({ dbPath: DEFAULT_EVENT_STORE_DB }), {
+      topLimit: 8,
+      tournamentLimit: 8,
+    });
+  } catch {
+    deskLiquidity = null;
+  }
+  return partnerDetailHandler(regDb, nodeId, filters, { deskLiquidity });
 }
 
 /** POST /place-bet payload (only the fields the handler reads). */
@@ -267,12 +317,130 @@ function badOrder(code: ErrorCode, upstream?: string): Response {
   return json(codedError(code, upstream), httpStatusFor(code));
 }
 
-async function handleTradingOrder(req: Request): Promise<Response> {
+function finalizeRegulatoryExecution(
+  req: Request,
+  status: "confirmed" | "rejected" | "unknown",
+  reservationId?: number,
+  reason?: string | null,
+): void {
+  const key = (req as Request & { compliance?: ComplianceContext }).compliance
+    ?.executionIdempotencyKey;
+  if (!key) return;
+  complianceRepo.transitionExecutionPlay({
+    idempotencyKey: key,
+    status,
+    reservationId: reservationId ?? null,
+    reason: reason ?? null,
+  });
+}
+
+export async function handleTradingOrder(
+  req: Request,
+  runtime: ServeOptions["trading"] = {},
+): Promise<Response> {
   let body: Record<string, unknown>;
   try {
     body = (await req.json()) as Record<string, unknown>;
   } catch {
     return badOrder("E_BODY_INVALID");
+  }
+
+  const dryRun = body.dryRun !== false;
+  if (!dryRun) {
+    if (!(req as Request & { compliance?: ComplianceContext }).compliance) {
+      return badOrder("E_AUTH_CONTEXT_REQUIRED", "live order did not pass compliance middleware");
+    }
+    const parsed = parseKalshiLiveOrderCommand(body, req.headers.get("Idempotency-Key"));
+    if (!parsed.ok) {
+      return badOrder(
+        parsed.code === "IDEMPOTENCY_REQUIRED"
+          ? "E_IDEMPOTENCY_REQUIRED"
+          : "E_AUTH_CONTEXT_REQUIRED",
+        parsed.reason,
+      );
+    }
+    const ownsDb = runtime.db === undefined;
+    const executionDb = runtime.db ??
+      (runtime.openExecutionDb ?? (() => openEventStore({ dbPath: DEFAULT_EVENT_STORE_DB })))();
+    let result: Awaited<ReturnType<typeof executeKalshiLiveOrder>>;
+    try {
+      migrateExecutionSchema(executionDb);
+      result = await executeKalshiLiveOrder(executionDb, {
+        ...parsed.command,
+        actorId: req.tradingPrincipal?.actorId,
+      }, {
+        ...(runtime.client
+          ? { client: runtime.client }
+          : { resolveClient: resolveKalshiAccountClient }),
+        isRiskHealthy:
+          runtime.isRiskHealthy ??
+          (() => evaluateStoredExecutionRiskHealth({
+            db: executionDb,
+            outId: parsed.command.outId,
+            ticker: parsed.command.ticker,
+            outEnvPrefix: `KALSHI_${parsed.command.partnerCode}_${parsed.command.outId.split("-").at(-1)}_`,
+          })),
+      });
+    } finally {
+      if (ownsDb) executionDb.close();
+    }
+    if (!result.ok) {
+      if (result.code === "PROVIDER_NOT_IMPLEMENTED") {
+        finalizeRegulatoryExecution(req, "rejected", undefined, result.reason);
+        return badOrder("E_PROVIDER_NOT_IMPLEMENTED", result.reason);
+      }
+      if (result.code === "PROVIDER_SESSION_UNAVAILABLE") {
+        finalizeRegulatoryExecution(req, "rejected", undefined, result.reason);
+        return badOrder(
+          /missing kalshi_(?:api_key_id|access_key|private_key)/i.test(result.reason)
+            ? "E_NO_CREDS"
+            : "E_UPSTREAM",
+          result.reason,
+        );
+      }
+      if (
+        result.code === "ACCOUNT_NOT_FOUND" ||
+        result.code === "ACCOUNT_INACTIVE" ||
+        result.code === "PARTNER_INACTIVE" ||
+        result.code === "PARTNER_MISMATCH" ||
+        result.code === "SKIN_INACTIVE" ||
+        result.code === "CURRENCY_UNSUPPORTED"
+      ) {
+        finalizeRegulatoryExecution(req, "rejected", undefined, result.reason);
+        return badOrder("E_ACCOUNT_INACTIVE", result.reason);
+      }
+      if (result.execution?.code === "PROVIDER_OUTCOME_UNKNOWN") {
+        finalizeRegulatoryExecution(req, "unknown", result.execution.reservationId, result.reason);
+        return badOrder("E_EXECUTION_UNKNOWN", result.reason);
+      }
+      if (result.execution?.code === "PROVIDER_REJECTED") {
+        finalizeRegulatoryExecution(req, "rejected", result.execution.reservationId, result.reason);
+        return badOrder("E_EXECUTION_REJECTED", result.reason);
+      }
+      if (result.execution?.code === "SNAPSHOT_UNAVAILABLE") {
+        finalizeRegulatoryExecution(req, "rejected", result.execution.reservationId, result.reason);
+        return badOrder("E_UPSTREAM", result.reason);
+      }
+      finalizeRegulatoryExecution(req, "rejected", result.execution?.reservationId, result.reason);
+      return badOrder("E_AUTHORIZATION_REQUIRED", result.reason);
+    }
+    resetTradingCache();
+    finalizeRegulatoryExecution(req, "confirmed", result.result.reservationId);
+    return json({
+      ok: true,
+      dryRun: false,
+      orderId: result.result.ticketId,
+      reservationId: result.result.reservationId,
+      effectiveStakeMinorUnits: result.result.effectiveStake,
+      status: result.order?.state ?? "confirmed",
+      fillCount: result.order?.fillCount ?? null,
+      remainingCount: result.order?.remainingCount ?? null,
+      ticker: parsed.command.ticker,
+      outcome: parsed.command.outcome,
+      partnerCode: parsed.command.partnerCode,
+      outId: parsed.command.outId,
+      skin: parsed.command.skin,
+    });
   }
 
   const ticker = typeof body.ticker === "string" ? body.ticker.trim() : "";
@@ -287,9 +455,6 @@ async function handleTradingOrder(req: Request): Promise<Response> {
   if (!Number.isInteger(priceCents) || priceCents < 1 || priceCents > 99) {
     return badOrder("E_PRICE_RANGE");
   }
-  // Safety rail: anything other than explicit `false` stays dry-run.
-  const dryRun = body.dryRun !== false;
-
   try {
     const result = await placeOrder({
       ticker,
@@ -307,7 +472,10 @@ async function handleTradingOrder(req: Request): Promise<Response> {
   }
 }
 
-async function handleTradingCancel(req: Request): Promise<Response> {
+export async function handleTradingCancel(
+  req: Request,
+  runtime: ServeOptions["trading"] = {},
+): Promise<Response> {
   let body: Record<string, unknown>;
   try {
     body = (await req.json()) as Record<string, unknown>;
@@ -316,13 +484,54 @@ async function handleTradingCancel(req: Request): Promise<Response> {
   }
   const orderId = typeof body.orderId === "string" ? body.orderId.trim() : "";
   if (!orderId) return badOrder("E_ORDER_ID_REQUIRED");
+  const principal = req.tradingPrincipal;
+  if (!principal) {
+    return json({ ok: false, code: "E_OPERATOR_AUTH_REQUIRED", error: "operator authentication is required" }, 401);
+  }
+  const headerKey = req.headers.get("Idempotency-Key")?.trim() || "";
+  const bodyKey = typeof body.idempotencyKey === "string" ? body.idempotencyKey.trim() : "";
+  if (!headerKey && !bodyKey) return badOrder("E_IDEMPOTENCY_REQUIRED");
+  if (headerKey && bodyKey && headerKey !== bodyKey) {
+    return badOrder("E_BODY_INVALID", "body and Idempotency-Key header must match");
+  }
+  const idempotencyKey = headerKey || bodyKey;
+  const ownsDb = runtime.db === undefined;
+  const db = runtime.db ??
+    (runtime.openExecutionDb ?? (() => openEventStore({ dbPath: DEFAULT_EVENT_STORE_DB })))();
   try {
-    await cancelOrder(orderId);
+    migrateExecutionSchema(db);
+    const result = await executeAuthorizedCancel(db, {
+      ticketId: orderId,
+      idempotencyKey,
+      principal,
+    }, {
+      resolveClient: runtime.client?.cancelOrder
+        ? () => runtime.client as Pick<KalshiClient, "environment" | "cancelOrder">
+        : resolveKalshiAccountClient,
+      isRiskHealthy:
+        runtime.isRiskHealthy ??
+        ((reservation) => evaluateStoredExecutionRiskHealth({
+          db,
+          outId: reservation.outId,
+          ticker: reservation.marketId,
+          outEnvPrefix: `KALSHI_${reservation.partnerCode}_${reservation.outId.split("-").at(-1)}_`,
+        })),
+    });
+    if (!result.ok) {
+      const status = result.code === "CANCEL_OUTCOME_UNKNOWN" ? 202
+        : result.code === "CANCEL_REJECTED" ? 409
+        : result.code === "RESERVATION_NOT_FOUND" ? 404
+        : result.code === "INVALID_REQUEST" ? 400
+        : 403;
+      return json({ ok: false, code: result.code, error: result.reason }, status);
+    }
     resetTradingCache();
-    return json({ ok: true, cancelled: orderId });
+    return json({ ok: true, cancelled: orderId, reservationId: result.reservationId, code: result.code });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return badOrder("E_UPSTREAM", msg.slice(0, 200));
+  } finally {
+    if (ownsDb) db.close();
   }
 }
 
@@ -743,30 +952,95 @@ async function handleKalshiRotateKey(req: Request): Promise<Response> {
 async function handleKpi(): Promise<Record<string, number>> {
   try {
     const store = openEventStore({ dbPath: DEFAULT_EVENT_STORE_DB });
-    const snapshot = (sql: string) => (store.query(sql).get() as Record<string, number>)?.n ?? 0;
+    /** Soft SQL — missing tables/columns (watch_set, rps_flag, …) return 0. */
+    const snapshot = (sql: string): number => {
+      try {
+        return (store.query(sql).get() as Record<string, number> | null)?.n ?? 0;
+      } catch {
+        return 0;
+      }
+    };
+    let board: ReturnType<typeof buildLiquidityBoardPayload> | null = null;
+    try {
+      board = buildLiquidityBoardPayload(store, { topLimit: 1, tournamentLimit: 1 });
+    } catch {
+      board = null;
+    }
+    const s = board?.summary;
     return {
       open_matches: snapshot("SELECT COUNT(*) AS n FROM events WHERE corpus='trading'"),
-      board_volume: snapshot("SELECT COALESCE(SUM(CAST(volume_fp AS REAL)),0) AS n FROM markets WHERE volume_fp IS NOT NULL"),
+      board_volume: board?.boardVolume ||
+        snapshot("SELECT COALESCE(SUM(CAST(volume_fp AS REAL)),0) AS n FROM markets WHERE volume_fp IS NOT NULL"),
       book_watches: snapshot("SELECT COUNT(*) AS n FROM watch_set WHERE active=1"),
       player_profiles: snapshot("SELECT COUNT(*) AS n FROM player_profiles"),
       rps_warnings: snapshot("SELECT COUNT(*) AS n FROM events WHERE rps_flag=1"),
       graph_divergence: snapshot("SELECT COUNT(*) AS n FROM events WHERE graph_divergence=1"),
       price_archive: snapshot("SELECT COUNT(*) AS n FROM price_snapshots"),
       server_errors: snapshot("SELECT total_errors AS n FROM logger_health WHERE id=1"),
-      tight_markets: snapshot(
-        "SELECT COUNT(*) AS n FROM match_liquidity WHERE liquidity_ok=1",
-      ),
+      // match_liquidity → glossary kpi.* chips
+      tight_markets: s?.liquidityOk ?? 0,
+      tradable_matches: s?.tradable ?? 0,
+      quoted_books: s?.quoted ?? 0,
+      median_spread: board?.medianSpreadCents ?? 0,
       store_link_rate: 0,
       live_scores: 0,
       elite_conviction: 0,
       archive_elo_fair: 0,
       top_edge: 0,
-      median_spread: 0,
       scanner_alerts: 0,
     };
   } catch {
     return {};
   }
+}
+
+function handleLiquidityBoard(url: URL): Response {
+  try {
+    const store = openEventStore({ dbPath: DEFAULT_EVENT_STORE_DB });
+    if (url.searchParams.get("recompute") === "1") {
+      recomputeMatchLiquidity(store);
+    }
+    const topLimit = Number(url.searchParams.get("limit") ?? "24");
+    return json(
+      buildLiquidityBoardPayload(store, {
+        topLimit: Number.isFinite(topLimit) ? topLimit : 24,
+      }),
+    );
+  } catch (err) {
+    return json(
+      {
+        error: "liquidity_store_unavailable",
+        detail: err instanceof Error ? err.message : String(err),
+      },
+      503,
+    );
+  }
+}
+
+/**
+ * GET /api/events — Kalshi open board + deskLiquidity join.
+ * Optional server filters: liquidity, minVolume/minVol (HQ still filters client-side too).
+ */
+async function handleEventsBoard(url: URL): Promise<unknown> {
+  const board = await fetchTennisBoard();
+  let deskIndex = new Map<string, DeskLiquidityFlags>();
+  try {
+    const store = openEventStore({ dbPath: DEFAULT_EVENT_STORE_DB });
+    deskIndex = listDeskLiquidityByEventId(store);
+  } catch {
+    // Event-store optional — board still serves without desk flags.
+  }
+  const liquidity =
+    url.searchParams.get("liquidity") ??
+    (url.searchParams.get("tradable") === "1" ? "tradable" : "all");
+  const minRaw = url.searchParams.get("minVolume") ?? url.searchParams.get("minVol");
+  const minVolume = minRaw != null && minRaw !== "" ? Number(minRaw) : 0;
+  return attachDeskLiquidityToBoard(board, deskIndex, {
+    liquidity,
+    minVolume: Number.isFinite(minVolume) ? minVolume : 0,
+    // Keep empty series so HQ series panels still render "unavailable" / empty.
+    dropEmptySeries: false,
+  });
 }
 
 function openLiquidityStore(): Database {
@@ -876,17 +1150,24 @@ export function createResearchServer(options: ServeOptions = {}) {
         return json(result, result.state === "not_found" ? 404 : 200);
       }
 
-      // Match liquidity — derived from markets + book_ticks (event-store SSOT)
+      // Match liquidity board (exact paths before :eventId)
+      if (
+        url.pathname === SERVE_PATTERNS.EXACT.liquidityBoard ||
+        url.pathname === SERVE_PATTERNS.EXACT.liquiditySummary
+      ) {
+        return handleLiquidityBoard(url);
+      }
+      // Derived from markets + book_ticks — no rateLimiter
       {
         const g = SERVE_PATTERNS.liquidityByEvent.groups(url);
-        if (g?.eventId) {
-          return rateLimiter(req, () => handleLiquidityByEvent(g.eventId!, url));
+        if (g?.eventId && g.eventId !== "summary" && g.eventId !== "by-tournament") {
+          return handleLiquidityByEvent(g.eventId!, url);
         }
       }
       {
         const g = SERVE_PATTERNS.liquidityByTournament.groups(url);
         if (g?.key) {
-          return rateLimiter(req, () => handleLiquidityByTournament(g.key!, url));
+          return handleLiquidityByTournament(g.key!, url);
         }
       }
 
@@ -942,13 +1223,47 @@ export function createResearchServer(options: ServeOptions = {}) {
         });
       }
 
-if (url.pathname === "/api/hq") {
+      // Partner ops static board (bake: bun run partner:dashboard)
+      // Paths: /partner-dashboard[/] → index.html · /partner-dashboard/state.json
+      if (
+        url.pathname === SERVE_PATTERNS.EXACT.partnerDashboard ||
+        url.pathname === SERVE_PATTERNS.EXACT.partnerDashboardSlash ||
+        url.pathname === SERVE_PATTERNS.EXACT.partnerDashboardState
+      ) {
+        const name =
+          url.pathname === SERVE_PATTERNS.EXACT.partnerDashboardState
+            ? "state.json"
+            : "index.html";
+        const file = Bun.file(
+          joinPath(ROOT, "public/partner-dashboard", name),
+        );
+        if (!(await file.exists())) {
+          return new Response(
+            "partner-dashboard missing — run: bun run partner:dashboard",
+            { status: 404 },
+          );
+        }
+        const contentType =
+          name === "state.json"
+            ? "application/json; charset=utf-8"
+            : "text/html; charset=utf-8";
+        return new Response(file, {
+          headers: {
+            "content-type": contentType,
+            "cache-control": "no-cache",
+          },
+        });
+      }
+
+      if (url.pathname === "/api/hq") {
         return json(await buildHqPayload());
       }
 
       // Tennis event board — all open match events w/ nested markets (60s cache)
+      // + desk match_liquidity flags for HQ filters/badges.
+      // Query: ?liquidity=all|priced|active|quoted|liq_ok|tradable&minVolume=N
       if (url.pathname === "/api/events") {
-        return json(await fetchTennisBoard());
+        return json(await handleEventsBoard(url));
       }
 
       // Player profiles derived from the event store
@@ -994,12 +1309,12 @@ if (url.pathname === "/api/hq") {
 
       // HQ order entry — same middleware stack as /place-bet; dry-run unless explicit dryRun:false
       if (url.pathname === "/api/trading/order" && req.method === "POST") {
-        return rateLimiter(req, () => stateValidator(req, () => complianceGate(req, () => handleTradingOrder(req))));
+        return rateLimiter(req, () => requireTradingOrderPrincipal(req, () => stateValidator(req, () => executionComplianceGate(req, () => handleTradingOrder(req, options.trading)))));
       }
 
       // HQ order cancel
       if (url.pathname === "/api/trading/cancel" && req.method === "POST") {
-        return rateLimiter(req, () => handleTradingCancel(req));
+        return rateLimiter(req, () => requireTradingCancelPrincipal(req, () => handleTradingCancel(req, options.trading)));
       }
 
       // HQ orderbook preview (public market data)

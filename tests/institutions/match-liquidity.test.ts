@@ -4,6 +4,8 @@ import type { BookSnapshot } from "../../src/institutions/alpha-signal-types.ts"
 import { openEventStore } from "../../src/institutions/event-store/open-db.ts";
 import {
   assertMatchLiquidityHealthy,
+  bookHasTopOfBook,
+  effectiveVolumeForGate,
   evaluateLiquidityGates,
   getMatchLiquidity,
   LIQUIDITY_GATES,
@@ -87,10 +89,21 @@ const wideBook: BookSnapshot = {
   asks: [{ priceCents: 60, size: 10 }],
 };
 
+const emptyBook: BookSnapshot = {
+  ts: Date.now(),
+  seq: 0,
+  bids: [],
+  asks: [],
+};
+
 describe("match-liquidity", () => {
   test("spreadCentsFromBook and gate math", () => {
     expect(spreadCentsFromBook(tightBook)).toBe(3);
     expect(spreadCentsFromBook(wideBook)).toBe(20);
+    expect(bookHasTopOfBook(tightBook)).toBe(true);
+    expect(bookHasTopOfBook(emptyBook)).toBe(false);
+    expect(effectiveVolumeForGate(0, 900)).toBe(900);
+    expect(effectiveVolumeForGate(100, 900)).toBe(100);
 
     const ok = evaluateLiquidityGates({
       volume24hFp: 500,
@@ -100,9 +113,11 @@ describe("match-liquidity", () => {
     });
     expect(ok.liquidityOk).toBe(true);
     expect(ok.tradable).toBe(true);
+    expect(ok.volumeForGate).toBe(500);
 
     const thin = evaluateLiquidityGates({
       volume24hFp: 499,
+      volumeFp: 0,
       spreadCents: 3,
       midCents: 50,
       crossed: false,
@@ -117,6 +132,18 @@ describe("match-liquidity", () => {
       crossed: false,
     });
     expect(wide.liquidityOk).toBe(false);
+
+    // Lifetime fallback when 24h is zero
+    const lifetime = evaluateLiquidityGates({
+      volume24hFp: 0,
+      volumeFp: 2000,
+      spreadCents: 5,
+      midCents: 45,
+      crossed: false,
+    });
+    expect(lifetime.volumeForGate).toBe(2000);
+    expect(lifetime.liquidityOk).toBe(true);
+    expect(lifetime.tradable).toBe(true);
   });
 
   test("recompute + get + by-tournament", () => {
@@ -171,4 +198,88 @@ describe("match-liquidity", () => {
     const db = openEventStore({ dbPath: ":memory:" });
     expect(assertMatchLiquidityHealthy(db).table).toBe("match_liquidity");
   });
+
+  test("empty books do not count as quotes; lifetime volume can pass gate", () => {
+    const db = openEventStore({ dbPath: ":memory:" });
+    seedEvent(db, {
+      eventId: "evt-empty",
+      tournament: "Shell Cup",
+      volume: "5000",
+      volume24h: "0",
+      book: emptyBook,
+    });
+    seedEvent(db, {
+      eventId: "evt-lifetime-tight",
+      tournament: "Shell Cup",
+      volume: "5000",
+      volume24h: "0",
+      book: tightBook,
+    });
+
+    expect(recomputeMatchLiquidity(db)).toBe(2);
+
+    const empty = getMatchLiquidity(db, "evt-empty");
+    expect(empty!.bookTickCount).toBe(0);
+    expect(empty!.spreadCents).toBeNull();
+    expect(empty!.liquidityOk).toBe(false);
+    expect(empty!.volumeFp).toBe(5000);
+    expect(empty!.volume24hFp).toBe(0);
+
+    const tight = getMatchLiquidity(db, "evt-lifetime-tight");
+    expect(tight!.bookTickCount).toBe(1);
+    expect(tight!.spreadCents).toBe(3);
+    expect(tight!.liquidityOk).toBe(true);
+    expect(tight!.tradable).toBe(true);
+  });
+
+  test("last non-empty book recovers when latest tick is empty shell", () => {
+    const db = openEventStore({ dbPath: ":memory:" });
+    const now = Date.now();
+    seedEvent(db, {
+      eventId: "evt-stale-quote",
+      tournament: "Recover Cup",
+      volume: "8000",
+      volume24h: "0",
+      book: tightBook,
+    });
+    // Overwrite timeline: insert empty shell *after* the tight book
+    db.query(
+      `INSERT INTO book_ticks (
+         event_id, ticker, market_kind, ts, recv_ts, source_clock, levels_json, source
+       ) VALUES (
+         'evt-stale-quote', 'TICK-evt-stale-quote', 'match_winner', $ts, $ts, 'recv', $json, 'test'
+       )`,
+    ).run({
+      $ts: now + 10_000,
+      $json: JSON.stringify(emptyBook),
+    });
+
+    recomputeMatchLiquidity(db, "evt-stale-quote");
+    const row = getMatchLiquidity(db, "evt-stale-quote");
+    expect(row!.bookTickCount).toBe(1);
+    expect(row!.spreadCents).toBe(3);
+    expect(row!.liquidityOk).toBe(true);
+    expect(row!.tradable).toBe(true);
+  });
 });
+
+describe("match-liquidity REST (no rate limit)", () => {
+  test("100 concurrent GETs all 200", async () => {
+    const { createResearchServer } = await import("../../src/research/serve.ts");
+    const server = createResearchServer({ port: 0 });
+    const url = `http://127.0.0.1:${server.port}/api/liquidity/by-tournament/${encodeURIComponent("NoSuch")}?limit=1`;
+    try {
+      const results = await Promise.all(
+        Array.from({ length: 100 }, () =>
+          fetch(url).then((r) => r.status),
+        ),
+      );
+      const ok = results.filter((s) => s === 200).length;
+      expect(ok).toBe(100);
+      expect(results.every((s) => s !== 429)).toBe(true);
+    } finally {
+      server.stop(true);
+    }
+  });
+});
+

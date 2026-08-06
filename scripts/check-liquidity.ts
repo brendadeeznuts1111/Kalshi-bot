@@ -42,7 +42,8 @@ console.log(
       dbPath,
       table: health.table,
       rowCount: health.rowCount,
-      gates: "liquidity_ok = volume_24h>=500 && spread_cents<=15 && !crossed",
+      gates:
+        "liquidity_ok = max(vol24h,vol_lifetime if vol24h=0)>=500 && spread_cents<=15 && quoted book && !crossed",
     },
     null,
     2,

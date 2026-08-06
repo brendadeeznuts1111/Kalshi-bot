@@ -1,0 +1,131 @@
+{
+  "v": 1,
+  "ts": "2026-07-28T21:09:35.082Z",
+  "tsUnix": 1785272975082,
+  "run": "keeper-2026-07-28-210935-082",
+  "fingerprint": "adeac02a",
+  "rows": {
+    "events": 3824,
+    "markets": 5064,
+    "resolutions": 2295,
+    "book_ticks": 1967,
+    "book_ticks_by_source": {
+      "kalshi-rest": 1788,
+      "kalshi-ws": 179
+    },
+    "event_links": 1290,
+    "live_scores": 10,
+    "score_snapshots": 10,
+    "player_profiles": 2790,
+    "odds_ticks": 0
+  },
+  "files": {
+    "event_store_db": 17162240,
+    "cache_db": 5394432,
+    "ticker_map_db": 20480,
+    "shadow_log_jsonl": 338325
+  },
+  "coverage": {
+    "watchEvents": 17,
+    "watchTickers": 34,
+    "watchWithWs": 0,
+    "watchWithRest": 0,
+    "watchWithBoth": 0,
+    "watchWithNeither": 34,
+    "wsTicksTotal": 179,
+    "restTicksTotal": 1788,
+    "wsExchangeClockPct": 64.2,
+    "linkedEventsWithWs": 0,
+    "linkedEventsTotal": 1003
+  },
+  "canary": {
+    "exitCode": 0,
+    "watch": 17,
+    "polled": 17,
+    "live": 8,
+    "wouldUpsert": 15,
+    "wireOk": true,
+    "liveMatches": [
+      {
+        "ticker": "KXITFWDOUBLES-26JUL28FAUGREDIAFAV",
+        "summary": "KXITFWDOUBLES-26JUL28FAUGREDIAFAV"
+      },
+      {
+        "ticker": "KXITFMATCH-26JUL28WEBBRA",
+        "summary": "KXITFMATCH-26JUL28WEBBRA"
+      },
+      {
+        "ticker": "KXITFMATCH-26JUL28DUSFIL",
+        "summary": "KXITFMATCH-26JUL28DUSFIL"
+      },
+      {
+        "ticker": "KXITFMATCH-26JUL28JOHSAR",
+        "summary": "KXITFMATCH-26JUL28JOHSAR"
+      },
+      {
+        "ticker": "KXITFMATCH-26JUL28SEIWOE",
+        "summary": "KXITFMATCH-26JUL28SEIWOE"
+      },
+      {
+        "ticker": "KXITFMATCH-26JUL28BELSAK",
+        "summary": "KXITFMATCH-26JUL28BELSAK"
+      },
+      {
+        "ticker": "KXITFDOUBLES-26JUL28PARRISFIGTOF",
+        "summary": "KXITFDOUBLES-26JUL28PARRISFIGTOF"
+      },
+      {
+        "ticker": "KXITFDOUBLES-26JUL28TADVACANDPRI",
+        "summary": "KXITFDOUBLES-26JUL28TADVACANDPRI"
+      }
+    ]
+  },
+  "blockers": {
+    "gh_auth": false,
+    "protonpass_session": false,
+    "kalshi_ws": true,
+    "odds_api": true
+  },
+  "sources": {
+    "kalshi-rest-itf": {
+      "active": true,
+      "rows": 3824,
+      "blocker": null
+    },
+    "itf-stadion": {
+      "active": true,
+      "rows": 2295,
+      "blocker": null
+    },
+    "kalshi-rest-books": {
+      "active": true,
+      "rows": 1788,
+      "blocker": null
+    },
+    "kalshi-ws-books": {
+      "active": true,
+      "rows": 179,
+      "blocker": "KALSHI_API_KEY_ID"
+    },
+    "player-profiles": {
+      "active": true,
+      "rows": 2790,
+      "blocker": null
+    },
+    "shadow-itf": {
+      "active": true,
+      "rows": 330,
+      "blocker": null
+    },
+    "odds-api": {
+      "active": false,
+      "rows": 0,
+      "blocker": "ODDS_API_KEY"
+    },
+    "github-research": {
+      "active": true,
+      "rows": 29,
+      "blocker": null
+    }
+  }
+}
