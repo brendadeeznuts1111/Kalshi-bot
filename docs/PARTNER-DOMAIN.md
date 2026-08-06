@@ -5,6 +5,7 @@ the local SSOT for registry + Fantasy Ultra until a separate seat-capital
 service is the only writer.
 
 Machine status: `bun run partner:domain` · `bun run partner:domain -- --json`  
+Expansion map: `bun run partner:map` · [`PARTNER-EXECUTION-EXPANSION.md`](PARTNER-EXECUTION-EXPANSION.md)
 Code map: [`src/partner/domain.ts`](../src/partner/domain.ts)
 
 ---
@@ -189,6 +190,7 @@ bun run serve
 | Command                                               | Layer                                                                 |
 | ----------------------------------------------------- | --------------------------------------------------------------------- |
 | `partner:domain`                                      | All (status)                                                          |
+| `partner:map`                                         | Telegram → authorization → provider expansion map (Mermaid)           |
 | `partner:toml`                                        | Partner + Accounts (Bun.TOML config seed/export)                      |
 | `partner:health`                                      | Registry + env + risk + ledger freshness                              |
 | `partner:desk-smoke`                                  | Per-out secret readiness + optional signed `login()`                  |
@@ -223,6 +225,13 @@ bun run serve
 | package.json deps | Domain runtime (`drizzle-orm`, `zod`, …) |
 | devDependencies   | Reproducible CI (`typescript`, types)    |
 | `bunx`            | One-off CLIs (`drizzle-kit`, generators) |
+
+## See also
+
+- [Partner execution expansion map](PARTNER-EXECUTION-EXPANSION.md)
+- [Authorized partner execution](AUTHORIZED_EXECUTION.md)
+- [Regulatory agents and Polymarket intelligence](regulatory-agents.md)
+- [Partner/Fantasy Ultra provider boundary](PARTNER-FANTASY-ULTRA.md)
 
 ### Partners TOML (`Bun.TOML`)
 

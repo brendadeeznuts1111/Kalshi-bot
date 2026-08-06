@@ -68,6 +68,7 @@
     "partner:capacity": "bun tools/partner-registry.ts",
     "partner:sports": "bun tools/partner-sports.ts",
     "partner:domain": "bun tools/partner-domain.ts",
+    "partner:map": "bun tools/partner-domain.ts --map",
     "partner:profile": "bun tools/partner-profile.ts",
     "partner:avatars": "bun tools/partner-profile.ts --png",
     "partner:toml": "bun tools/partner-toml.ts",

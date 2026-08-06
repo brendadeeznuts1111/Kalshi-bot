@@ -11,6 +11,7 @@ Standalone Bun project for discovering and ranking public [Kalshi](https://kalsh
 - `bun install --frozen-lockfile`
 - Optional secrets via [Proton Pass CLI](https://protonpass.github.io/pass-cli/) — see [`docs/PROTONPASS.md`](docs/PROTONPASS.md)
 - Authorized execution operators: [`docs/AUTHORIZED_EXECUTION.md`](docs/AUTHORIZED_EXECUTION.md)
+- Partner/Telegram/provider expansion map: [`docs/PARTNER-EXECUTION-EXPANSION.md`](docs/PARTNER-EXECUTION-EXPANSION.md) (`bun run partner:map`)
 
 ## Quick start
 
@@ -293,6 +294,7 @@ Details: [`docs/CRON.md`](docs/CRON.md) · Bun map: [`docs/BUN_NATIVE.md`](docs/
 - [`docs/PLAN.md`](docs/PLAN.md) — as-built design
 - [`docs/BUN_NATIVE.md`](docs/BUN_NATIVE.md) — API map
 - [`docs/BUN_SHELL.md`](docs/BUN_SHELL.md) — `Bun.$` patterns
+- [`docs/PARTNER-EXECUTION-EXPANSION.md`](docs/PARTNER-EXECUTION-EXPANSION.md) — Telegram → partner authorization → Kalshi, with honest Polymarket expansion gates
 
 ## Dependency rule
 

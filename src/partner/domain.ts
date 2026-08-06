@@ -399,3 +399,40 @@ export function formatDomainStatusText(report: DomainStatusReport): string {
   lines.push(`  liquidity: ${PARTNER_NAMING.liquidityKeyExample}`);
   return lines.join('\n');
 }
+
+/**
+ * Reusable architecture map for the permissioned partner execution boundary.
+ * Dashed edges are expansion contracts, never claims of live provider wiring.
+ */
+export function formatPartnerExpansionMermaid(): string {
+  return `flowchart LR
+    PARTNER[Partner representative]
+    TELEGRAM[Telegram group/topic]
+    REQUEST[Authorization request + policy hash]
+    GRANT[Active SQLite grant]
+    HTTP[Authenticated compliance boundary]
+    GATE[Authorization + risk + stake gate]
+    KALSHI[Kalshi V2 execution]
+    LIFECYCLE[Reconciliation + lifecycle]
+    JOURNAL[Immutable journal]
+    RECEIPT[Durable receipt outbox]
+    POLYDATA[Polymarket Gamma market data]
+    REGINTEL[Regulatory line-move intelligence]
+    POLYEXEC["Polymarket execution adapter<br/>not implemented"]
+    FANTASY["Fantasy402 execution<br/>not authorized/wired"]
+
+    PARTNER --> TELEGRAM
+    TELEGRAM --> REQUEST
+    REQUEST --> GRANT
+    GRANT --> GATE
+    HTTP --> GATE
+    GATE --> KALSHI
+    KALSHI --> LIFECYCLE
+    LIFECYCLE --> JOURNAL
+    JOURNAL --> RECEIPT
+    RECEIPT --> TELEGRAM
+    POLYDATA --> REGINTEL
+    REGINTEL -. intelligence only .-> HTTP
+    GATE -. future provider-parity contract .-> POLYEXEC
+    GATE -. blocked pending idempotency contract .-> FANTASY`;
+}

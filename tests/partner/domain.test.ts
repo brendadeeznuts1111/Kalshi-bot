@@ -5,6 +5,7 @@ import {
   PARTNER_NAMING,
   buildDomainStatusReport,
   formatDomainStatusText,
+  formatPartnerExpansionMermaid,
 } from "../../src/partner/domain.ts";
 
 describe("partner domain architecture", () => {
@@ -24,5 +25,15 @@ describe("partner domain architecture", () => {
     expect(report.orchestration.missingForBotLoop.length).toBeGreaterThan(0);
     expect(PARTNER_NAMING.outIdExample).toBe("out-SPEN-1");
     expect(formatDomainStatusText(report)).toContain("partner domain");
+  });
+
+  test("expansion map distinguishes built execution from intelligence and unwired providers", () => {
+    const map = formatPartnerExpansionMermaid();
+    expect(map).toContain("Telegram group/topic");
+    expect(map).toContain("Kalshi V2 execution");
+    expect(map).toContain("Polymarket Gamma market data");
+    expect(map).toContain("Polymarket execution adapter<br/>not implemented");
+    expect(map).toContain("future provider-parity contract");
+    expect(map).toContain("blocked pending idempotency contract");
   });
 });
