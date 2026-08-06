@@ -6,17 +6,21 @@ reservation, Kalshi placement, snapshot, and initial unknown-outcome
 reconciliation increments.
 
 The existing safety boundary remains authoritative: documentation, agents, CI,
-and schedules cannot enable trading. Keep
-`KALSHI_AUTHORIZED_EXECUTION_ENABLED` unset for live funds until every P0 item
-and the demo graduation proof below pass.
+and schedules cannot enable trading. Keep `KALSHI_AUTHORIZED_EXECUTION_ENABLED`
+unset for live funds until every P0 item and the demo graduation proof below
+pass.
 
-Implementation update (2026-08-06): Waves 0–2 and the Wave 3 evidence harness
-are implemented on the authorized-execution branch: operator principals,
-regulatory lifecycle/sync, leased reconciliation and stale recovery, full
-Kalshi evidence binding, fail-closed risk health, authorized cancellation,
-independent workers, canonical provider lifecycle, and the immutable journal.
-The only inherently open graduation item is seven consecutive real elapsed
-demo days with reviewed artifacts. This status does not arm production.
+Implementation update (2026-08-06): Waves 0–2 and the Wave 3 authoritative demo
+evidence collector, deterministic failure-scenario runner, daily evidence
+compiler, and seven-day chain verifier are implemented on the
+authorized-execution branch: operator principals, regulatory lifecycle/sync,
+leased reconciliation and stale recovery, full Kalshi evidence binding,
+fail-closed risk health, authorized cancellation, independent workers, canonical
+provider lifecycle, and the immutable journal. The collector binds
+cursor-complete demo-provider evidence to SQLite reservations, lifecycle rows,
+receipts, and journal projections, then emits a redacted chained daily artifact.
+The only open graduation requirement is seven consecutive real elapsed demo days
+with reviewed artifacts. This status does not arm production.
 
 ## Delivery order
 
@@ -36,6 +40,25 @@ Wave 3: demo soak, reconciliation proof, production review
 One integration owner controls shared types and migrations. Sub-agents must
 claim the file sets below, avoid cross-lane edits, and hand off focused proof
 before integration.
+
+## Current closure audit
+
+| Lane | State | Authoritative implementation evidence |
+| --- | --- | --- |
+| W0 operator identity | closed | `src/research/trading-auth.ts`; actor-bound order/cancel rows and route tests |
+| W0 regulatory lifecycle | closed | proposed/confirmed/rejected/unknown play lifecycle, reservation binding, and execution-play sync |
+| W0 reconciliation/risk | closed | migrations, leased claims, stored fail-closed health signals, stable risk codes |
+| W1 authenticated cancellation | closed | `executeAuthorizedCancel`, scoped credentials, current grant/risk recheck, durable intent/receipt |
+| W1 stale placement/evidence | closed | stale placing recovery plus cursor-complete active/historical exact-term reconciliation |
+| W1 workers/alerts | closed | independent reconcile/lifecycle/receipt jobs, Bun cron register/remove/preview, deduplicated breaker receipts |
+| W2 provider lifecycle | closed | cursor-complete account order/fill ingestion and provider-positive settlement accounting |
+| W2 immutable projections | closed | append-only integer journal, deterministic source keys, reversals, partner/out/skin projections and drift |
+| W3 tooling | closed | authoritative demo collector, deterministic service scenarios, daily compiler, seven-day chain verifier |
+| W3 elapsed graduation | **open** | seven consecutive real passing demo days and human artifact review have not elapsed |
+
+“Closed” above means the repository behavior and focused proof exist. It does
+not mean production is armed. The elapsed graduation row is intentionally open
+and cannot be closed with generated fixtures or accelerated time.
 
 ## Wave 0 — shared contracts
 
@@ -94,13 +117,13 @@ Acceptance:
 
 ### W0.3 Reconciliation persistence contract — P0
 
-Owner: execution DB agent. Integration owner approves the migration shape
-before other reconciliation work begins.
+Owner: execution DB agent. Integration owner approves the migration shape before
+other reconciliation work begins.
 
-Implementation status: built on the reconciliation PR with migration 003,
-owner leases, attempt/retry metadata, fair claims, guarded completion, and
-atomic confirmation plus receipt persistence. Stale-`placing` recovery remains
-in Lane B.
+Implementation status: built on the reconciliation PR with migration 003, owner
+leases, attempt/retry metadata, fair claims, guarded completion, and atomic
+confirmation plus receipt persistence. Stale-`placing` recovery remains in Lane
+B.
 
 Files:
 
@@ -174,8 +197,8 @@ Scope:
 - Use out-scoped credentials.
 - Persist idempotent cancellation intent, confirmed/rejected/unknown result,
   actor provenance, and receipt.
-- Make DB ownership explicit: the server owns long-lived handles and closes
-  them on shutdown; handler-created fallbacks close in `finally`.
+- Make DB ownership explicit: the server owns long-lived handles and closes them
+  on shutdown; handler-created fallbacks close in `finally`.
 
 Acceptance:
 
@@ -215,8 +238,8 @@ Acceptance:
 
 ### Lane C: complete Kalshi evidence and term binding — P0/P1
 
-Owner: Kalshi API agent. May proceed alongside Lane B after W0.3 interfaces
-are stable.
+Owner: Kalshi API agent. May proceed alongside Lane B after W0.3 interfaces are
+stable.
 
 Files:
 
@@ -259,8 +282,8 @@ Scope:
 - Keep bounded one-shot commands as the worker unit.
 - Schedule reconciliation and receipt delivery independently of Telegram long
   polling.
-- Emit structured metrics for oldest placing/unknown/outbox age, backlog by
-  out, attempts/errors, fill lag, and balance drift.
+- Emit structured metrics for oldest placing/unknown/outbox age, backlog by out,
+  attempts/errors, fill lag, and balance drift.
 - Add deduplicated reconciliation-conflict and breaker receipts.
 
 Demo defaults:
@@ -290,8 +313,8 @@ Scope:
   objects.
 - Store fill rows idempotently by provider source key.
 - Model ordered, filled, remaining, cancelled, and settled quantities.
-- Release only unfilled working exposure on cancellation; retain filled
-  position exposure until provider-positive settlement.
+- Release only unfilled working exposure on cancellation; retain filled position
+  exposure until provider-positive settlement.
 
 Acceptance scenarios:
 
@@ -360,12 +383,12 @@ Owner: documentation/governance agent after each behavior lands.
 
 After Wave 0 interface review:
 
-| Agent | Primary ownership | Must not edit without coordination |
-|---|---|---|
-| A — HTTP/compliance | principal middleware, route/cancel service, regulatory transitions | reconciliation schema and Kalshi wire parser |
-| B — reconciliation DB | migrations, leases, claims, retry state, stale placing | HTTP routes and ledger projections |
-| C — Kalshi/operations | normalized lookup, term projection, workers, schedules, alerts | regulatory schema and finance journal |
-| Integration owner | shared domain types, interface resolution, final proof | no unrelated cleanup |
+| Agent                 | Primary ownership                                                  | Must not edit without coordination           |
+| --------------------- | ------------------------------------------------------------------ | -------------------------------------------- |
+| A — HTTP/compliance   | principal middleware, route/cancel service, regulatory transitions | reconciliation schema and Kalshi wire parser |
+| B — reconciliation DB | migrations, leases, claims, retry state, stale placing             | HTTP routes and ledger projections           |
+| C — Kalshi/operations | normalized lookup, term projection, workers, schedules, alerts     | regulatory schema and finance journal        |
+| Integration owner     | shared domain types, interface resolution, final proof             | no unrelated cleanup                         |
 
 The finance/ledger and demo-soak lanes begin only after the canonical provider
 lifecycle event contract is merged.

@@ -8,6 +8,7 @@ import {
   executeAuthorizedCancel,
   type CancellationPrincipal,
 } from '../../../src/partner/execution/cancel.ts';
+import type { ExecutionRiskHealthDecision } from '../../../src/partner/execution/risk-health.ts';
 import { migrateExecutionSchema } from '../../../src/partner/execution/sql.ts';
 import { ingestProviderLifecycleBatch } from '../../../src/partner/execution/provider-lifecycle.ts';
 import { computeOutstandingExposure } from '../../../src/partner/execution/reservation.ts';
@@ -224,6 +225,24 @@ describe('authorized cancellation', () => {
       expect(calls).toBe(0);
       db.close();
     }
+  });
+
+  test('deduplicates partner-visible receipts for the same breaker state', async () => {
+    const db = database();
+    const risk: ExecutionRiskHealthDecision = {
+      healthy: false,
+      codes: ['PROVIDER_UNHEALTHY'],
+      findings: [{ code: 'PROVIDER_UNHEALTHY', reason: 'provider unhealthy' }],
+    };
+    const input = { ticketId: 'ticket-1', idempotencyKey: 'cancel-risk', principal };
+    const deps = dependencies(async () => {}, { isRiskHealthy: () => risk });
+    expect((await executeAuthorizedCancel(db, input, deps)).code).toBe('RISK_UNHEALTHY');
+    expect((await executeAuthorizedCancel(db, input, deps)).code).toBe('RISK_UNHEALTHY');
+    expect(db.query(
+      `SELECT COUNT(*) AS count FROM account_authorization_receipt_outbox
+       WHERE dedupe_key LIKE 'execution:out-SPORTS-1:breaker:%'`,
+    ).get()).toEqual({ count: 1 });
+    db.close();
   });
 
   test('keeps exposure confirmed when provider outcome is unknown', async () => {

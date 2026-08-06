@@ -6,6 +6,7 @@ export const EXECUTION_RISK_CODES = [
   "PROD_NOT_ARMED",
   "PROVIDER_SESSION_UNHEALTHY",
   "PROVIDER_UNHEALTHY",
+  "PERSISTENT_PROVIDER_ERRORS",
   "BOOK_STALE",
   "UNKNOWN_BACKLOG_COUNT",
   "UNKNOWN_BACKLOG_AGE",
@@ -21,6 +22,7 @@ export type ExecutionEnvironment = "demo" | "prod";
 
 export interface ExecutionRiskThresholds {
   maxUnknownCount: number;
+  maxPersistentProviderErrors: number;
   maxUnknownAgeMs: number;
   maxStalePlacingCount: number;
   maxBalanceExposureDriftCents: number;
@@ -30,6 +32,7 @@ export interface ExecutionRiskThresholds {
 
 export const DEFAULT_EXECUTION_RISK_THRESHOLDS: ExecutionRiskThresholds = {
   maxUnknownCount: 0,
+  maxPersistentProviderErrors: 0,
   maxUnknownAgeMs: 2 * 60_000,
   maxStalePlacingCount: 0,
   maxBalanceExposureDriftCents: 0,
@@ -40,6 +43,8 @@ export const DEFAULT_EXECUTION_RISK_THRESHOLDS: ExecutionRiskThresholds = {
 export interface ExecutionRiskSignals {
   providerSessionHealthy: boolean | null;
   providerHealthy: boolean | null;
+  /** Global count of unresolved rows with at least three provider lookup errors. */
+  persistentProviderErrorCount: number | null;
   bookFresh: boolean | null;
   unknownCount: number | null;
   oldestUnknownAgeMs: number | null;
@@ -90,6 +95,18 @@ export function evaluateExecutionRiskHealth(
 
   requiredBoolean(input.providerSessionHealthy, "provider session health", deny, "PROVIDER_SESSION_UNHEALTHY");
   requiredBoolean(input.providerHealthy, "provider health", deny, "PROVIDER_UNHEALTHY");
+  const persistentErrors = requiredNonNegativeInteger(
+    input.persistentProviderErrorCount,
+    "persistent provider error count",
+    deny,
+  );
+  if (persistentErrors !== null &&
+      persistentErrors > input.thresholds.maxPersistentProviderErrors) {
+    deny(
+      "PERSISTENT_PROVIDER_ERRORS",
+      `persistent provider error count ${persistentErrors} exceeds ${input.thresholds.maxPersistentProviderErrors}`,
+    );
+  }
   requiredBoolean(input.bookFresh, "executable book freshness", deny, "BOOK_STALE");
   requiredBoolean(input.migrationHealthy, "execution migration health", deny, "MIGRATION_UNHEALTHY");
 
@@ -205,6 +222,11 @@ export function evaluateStoredExecutionRiskHealth(options: {
     unknownCount: number | null; oldestUnknownAtMs: number | null;
     stalePlacingCount: number | null; oldestStalePlacingAtMs: number | null;
   };
+  const globalProviderErrors = options.db.query(
+    `SELECT COUNT(*) AS count FROM exposure_reservations
+     WHERE status = 'unknown' AND reconciliation_result = 'error'
+       AND reconciliation_attempts >= 3`,
+  ).get() as { count: number };
   let book: { observedAtMs: number } | null = null;
   try {
     book = options.db.query(
@@ -219,19 +241,41 @@ export function evaluateStoredExecutionRiskHealth(options: {
   ).get({ $id: EXECUTION_MIGRATIONS.at(-1)?.id ?? "" }) as { ok: number } | null;
   const maintenanceAt = env[`${prefix}MAINTENANCE_AT_MS`];
   const telemetryAt = env[`${prefix}TELEMETRY_AT_MS`];
+  let storedDrift: { cashDriftMinor: number; positionDriftContracts: number } | null = null;
+  try {
+    storedDrift = options.db.query(
+      `SELECT ABS(cash_drift_minor) AS cashDriftMinor,
+              position_drift_contracts AS positionDriftContracts
+         FROM provider_accounting_observations
+        WHERE provider = 'kalshi' AND out_id = $outId
+        ORDER BY observed_at_ms DESC, id DESC LIMIT 1`,
+    ).get({ $outId: options.outId }) as {
+      cashDriftMinor: number;
+      positionDriftContracts: number;
+    } | null;
+  } catch {
+    // An absent observation table is unavailable evidence and fails closed below.
+  }
+  const configuredDrift = integerEnv(env[`${prefix}BALANCE_EXPOSURE_DRIFT_CENTS`]);
+  const effectiveDrift = storedDrift === null
+    ? configuredDrift
+    : Math.max(storedDrift.cashDriftMinor, storedDrift.positionDriftContracts > 0
+      ? DEFAULT_EXECUTION_RISK_THRESHOLDS.maxBalanceExposureDriftCents + 1
+      : 0);
   return loadAndEvaluateExecutionRiskHealth({
     env,
     outEnvPrefix: prefix,
     signals: {
       providerSessionHealthy: explicitHealthy(env[`${prefix}PROVIDER_SESSION_HEALTHY`]),
       providerHealthy: explicitHealthy(env[`${prefix}PROVIDER_HEALTHY`]),
+      persistentProviderErrorCount: globalProviderErrors.count,
       bookFresh: book === null ? null : nowMs - book.observedAtMs >= 0 &&
         nowMs - book.observedAtMs <= (options.bookMaxAgeMs ?? 5_000),
       unknownCount: backlog.unknownCount ?? 0,
       oldestUnknownAgeMs: age(nowMs, backlog.oldestUnknownAtMs),
       stalePlacingCount: backlog.stalePlacingCount ?? 0,
       oldestStalePlacingAgeMs: age(nowMs, backlog.oldestStalePlacingAtMs),
-      balanceExposureDriftCents: integerEnv(env[`${prefix}BALANCE_EXPOSURE_DRIFT_CENTS`]),
+      balanceExposureDriftCents: effectiveDrift,
       migrationHealthy: migration?.ok === 1,
       maintenanceAgeMs: age(nowMs, integerEnv(maintenanceAt)),
       telemetryAgeMs: age(nowMs, integerEnv(telemetryAt)),

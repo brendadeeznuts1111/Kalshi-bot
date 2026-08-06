@@ -47,11 +47,13 @@ export class KalshiOrderMappingError extends Error {
 /** The exact immutable provider terms shared by placement and reconciliation. */
 export function expectedKalshiOrder(
   environment: KalshiClient["environment"],
+  outId: string,
   order: KalshiExecutionOrder,
   clientOrderId: string,
 ): KalshiExpectedOrder {
   return {
     environment,
+    outId,
     ticker: order.ticker,
     clientOrderId,
     outcome: order.side,
@@ -96,13 +98,13 @@ export function createKalshiExecutionPlacer(
       return {
         accepted: false as const,
         reason: "Kalshi processed the order without a fill or resting quantity",
-        responseSummary: summarizeKalshiOrderResult(client.environment, result, order),
+        responseSummary: summarizeKalshiOrderResult(client.environment, input.request.outId, result, order),
       };
     }
     return {
       accepted: true as const,
       ticketId: asTicketId(result.orderId),
-      responseSummary: summarizeKalshiOrderResult(client.environment, result, order),
+      responseSummary: summarizeKalshiOrderResult(client.environment, input.request.outId, result, order),
     };
   };
 }
@@ -168,10 +170,11 @@ export function decimalOddsToKalshiPriceCents(decimalOdds: number): number {
 
 function summarizeKalshiOrderResult(
   environment: KalshiClient["environment"],
+  outId: string,
   result: Awaited<ReturnType<KalshiClient["placeOrder"]>>,
   order: KalshiExecutionOrder,
 ): KalshiOrderResponseSummary {
-  const expected = expectedKalshiOrder(environment, order, result.clientOrderId);
+  const expected = expectedKalshiOrder(environment, outId, order, result.clientOrderId);
   const state =
     result.fillCount > 0 && result.remainingCount > 0
       ? "partially_filled"

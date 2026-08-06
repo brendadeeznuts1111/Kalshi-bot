@@ -137,9 +137,10 @@ describe("Kalshi authorized execution adapter", () => {
       decimalOdds: 2.5,
       side: "no",
     });
-    const expected = expectedKalshiOrder("demo", order, "client-1");
+    const expected = expectedKalshiOrder("demo", "out-SPORTS-1", order, "client-1");
     expect(expected).toEqual({
       environment: "demo",
+      outId: "out-SPORTS-1",
       ticker: "KXTEST",
       clientOrderId: "client-1",
       outcome: "no",
@@ -163,11 +164,11 @@ describe("Kalshi authorized execution adapter", () => {
         status: "executed",
       },
     };
-    expect(verifyKalshiOrderEvidence(expected, "demo", found)).toMatchObject({
+    expect(verifyKalshiOrderEvidence(expected, "demo", "out-SPORTS-1", found)).toMatchObject({
       kind: "confirmed",
       source: "historical",
     });
-    expect(verifyKalshiOrderEvidence(expected, "prod", {
+    expect(verifyKalshiOrderEvidence(expected, "prod", "out-OTHER-1", {
       ...found,
       order: {
         ...found.order,
@@ -183,6 +184,7 @@ describe("Kalshi authorized execution adapter", () => {
       source: "historical",
       mismatches: [
         "environment",
+        "account",
         "ticker",
         "client_order_id",
         "outcome",

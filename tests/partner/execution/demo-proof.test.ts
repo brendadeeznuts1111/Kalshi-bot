@@ -30,6 +30,7 @@ function input(): DemoProofInput {
     }],
     providerFills: [{ fillId: "fill-1", orderId: "order-1", count: 1, priceCents: 50 }],
     providerPositions: [{ ticker: "DEMO-MARKET", position: 1 }],
+    localPositions: [{ ticker: "DEMO-MARKET", position: 1 }],
     journal: {
       reservationEntries: 1,
       orderEntries: 1,
@@ -44,6 +45,16 @@ function input(): DemoProofInput {
       deliveredAtMs: 1800,
     }],
     balances: { providerBalanceCents: 10_000, localBalanceCents: 10_000 },
+    limits: { unknownResolutionSlaMs: 60_000 },
+    productionBreakers: {
+      productionExecutionEnabled: false,
+      productionArmed: false,
+    },
+    provenance: {
+      localEvidenceSha256: "a".repeat(64),
+      providerEvidenceSha256: "b".repeat(64),
+      scenarioEvidenceSha256: "c".repeat(64),
+    },
     scenarios: {
       duplicate_requests: { exercised: true, passed: true, evidence: "one reservation and order" },
       crash_after_dispatch: { exercised: true, passed: true, evidence: "lease recovery confirmed order" },
@@ -65,6 +76,10 @@ describe("demo execution proof artifact", () => {
       balanceDriftCents: 0,
       maxReconciliationLagMs: 500,
       maxReceiptLagMs: 200,
+      maxUnknownAgeMs: 0,
+      unknownSlaBreaches: 0,
+      positionDriftContracts: 0,
+      productionBreakersClosed: true,
     });
     expect(demoProofJson(artifact)).toBe(demoProofJson(buildDemoProofArtifact(input())));
     expect(demoProofMarkdown(artifact)).toContain("Environment: **demo**");
@@ -95,6 +110,21 @@ describe("demo execution proof artifact", () => {
     expect(artifact.integrity).toMatchObject({
       orphanProviderOrders: 1,
       balanceDriftCents: 1,
+    });
+  });
+
+  test("fails for position drift, overdue unknowns, or open production breakers", () => {
+    const value = input();
+    value.localPositions[0]!.position = 0;
+    value.reservations[0]!.status = "unknown";
+    value.reservations[0]!.createdAtMs = value.generatedAtMs - 60_001;
+    value.productionBreakers.productionArmed = true;
+    const artifact = buildDemoProofArtifact(value);
+    expect(artifact.passed).toBeFalse();
+    expect(artifact.integrity).toMatchObject({
+      positionDriftContracts: 1,
+      unknownSlaBreaches: 1,
+      productionBreakersClosed: false,
     });
   });
 

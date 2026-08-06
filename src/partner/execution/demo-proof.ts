@@ -1,4 +1,4 @@
-export const DEMO_PROOF_SCHEMA_VERSION = 1 as const;
+export const DEMO_PROOF_SCHEMA_VERSION = 2 as const;
 
 export const DEMO_PROOF_SCENARIOS = [
   "duplicate_requests",
@@ -25,7 +25,7 @@ export interface DemoProofInput {
   }>;
   providerOrders: Array<{
     orderId: string;
-    clientOrderId: string;
+    clientOrderId: string | null;
     ticker: string;
     status: string;
     count: number;
@@ -38,6 +38,10 @@ export interface DemoProofInput {
     priceCents: number;
   }>;
   providerPositions: Array<{
+    ticker: string;
+    position: number;
+  }>;
+  localPositions: Array<{
     ticker: string;
     position: number;
   }>;
@@ -58,6 +62,18 @@ export interface DemoProofInput {
     providerBalanceCents: number;
     localBalanceCents: number;
   };
+  limits: {
+    unknownResolutionSlaMs: number;
+  };
+  productionBreakers: {
+    productionExecutionEnabled: boolean;
+    productionArmed: boolean;
+  };
+  provenance: {
+    localEvidenceSha256: string;
+    providerEvidenceSha256: string;
+    scenarioEvidenceSha256: string;
+  };
   scenarios: Record<DemoProofScenario, {
     exercised: boolean;
     passed: boolean;
@@ -76,6 +92,7 @@ export interface DemoProofArtifact {
     providerOrders: number;
     providerFills: number;
     providerPositions: number;
+    localPositions: number;
     journal: DemoProofInput["journal"];
   };
   integrity: {
@@ -84,6 +101,10 @@ export interface DemoProofArtifact {
     balanceDriftCents: number;
     maxReconciliationLagMs: number;
     maxReceiptLagMs: number;
+    maxUnknownAgeMs: number;
+    unknownSlaBreaches: number;
+    positionDriftContracts: number;
+    productionBreakersClosed: boolean;
   };
   scenarios: Array<{
     id: DemoProofScenario;
@@ -95,7 +116,11 @@ export interface DemoProofArtifact {
   providerOrders: DemoProofInput["providerOrders"];
   providerFills: DemoProofInput["providerFills"];
   providerPositions: DemoProofInput["providerPositions"];
+  localPositions: DemoProofInput["localPositions"];
   receipts: DemoProofInput["receipts"];
+  limits: DemoProofInput["limits"];
+  productionBreakers: DemoProofInput["productionBreakers"];
+  provenance: DemoProofInput["provenance"];
 }
 
 /** Compile one sanitized day of demo evidence. This boundary can never bless prod. */
@@ -111,13 +136,14 @@ export function buildDemoProofArtifact(input: DemoProofInput): DemoProofArtifact
   const providerOrders = [...input.providerOrders].sort(compareBy("orderId"));
   const providerFills = [...input.providerFills].sort(compareBy("fillId"));
   const providerPositions = [...input.providerPositions].sort(compareBy("ticker"));
+  const localPositions = [...input.localPositions].sort(compareBy("ticker"));
   const receipts = [...input.receipts].sort(compareBy("dedupeKey"));
   const reservationClientIds = new Set(
     reservations.flatMap((row) => row.clientOrderId === null ? [] : [row.clientOrderId]),
   );
   const providerOrderIds = new Set(providerOrders.map((row) => row.orderId));
   const orphanProviderOrders = providerOrders.filter(
-    (row) => !reservationClientIds.has(row.clientOrderId),
+    (row) => row.clientOrderId === null || !reservationClientIds.has(row.clientOrderId),
   ).length;
   const orphanConfirmedReservations = reservations.filter(
     (row) => row.status === "confirmed" &&
@@ -143,10 +169,24 @@ export function buildDemoProofArtifact(input: DemoProofInput): DemoProofArtifact
   const balanceDriftCents = Math.abs(
     input.balances.providerBalanceCents - input.balances.localBalanceCents,
   );
+  const positionDriftContracts = positionDrift(providerPositions, localPositions);
+  const unknownAges = reservations
+    .filter((row) => row.status === "unknown")
+    .map((row) => Math.max(0, input.generatedAtMs - row.createdAtMs));
+  const maxUnknownAgeMs = maximum(unknownAges);
+  const unknownSlaBreaches = unknownAges.filter(
+    (age) => age > input.limits.unknownResolutionSlaMs,
+  ).length;
+  const productionBreakersClosed =
+    !input.productionBreakers.productionExecutionEnabled &&
+    !input.productionBreakers.productionArmed;
   const passed =
     orphanProviderOrders === 0 &&
     orphanConfirmedReservations === 0 &&
     balanceDriftCents === 0 &&
+    positionDriftContracts === 0 &&
+    unknownSlaBreaches === 0 &&
+    productionBreakersClosed &&
     scenarios.every((scenario) => scenario.exercised && scenario.passed);
 
   return {
@@ -160,6 +200,7 @@ export function buildDemoProofArtifact(input: DemoProofInput): DemoProofArtifact
       providerOrders: providerOrders.length,
       providerFills: providerFills.length,
       providerPositions: providerPositions.length,
+      localPositions: localPositions.length,
       journal: { ...input.journal },
     },
     integrity: {
@@ -168,13 +209,21 @@ export function buildDemoProofArtifact(input: DemoProofInput): DemoProofArtifact
       balanceDriftCents,
       maxReconciliationLagMs,
       maxReceiptLagMs,
+      maxUnknownAgeMs,
+      unknownSlaBreaches,
+      positionDriftContracts,
+      productionBreakersClosed,
     },
     scenarios,
     reservations,
     providerOrders,
     providerFills,
     providerPositions,
+    localPositions,
     receipts,
+    limits: { ...input.limits },
+    productionBreakers: { ...input.productionBreakers },
+    provenance: { ...input.provenance },
   };
 }
 
@@ -201,11 +250,16 @@ export function demoProofMarkdown(artifact: DemoProofArtifact): string {
 | Provider orders | ${artifact.totals.providerOrders} |
 | Provider fills | ${artifact.totals.providerFills} |
 | Provider positions | ${artifact.totals.providerPositions} |
+| Local positions | ${artifact.totals.localPositions} |
 | Orphan provider orders | ${artifact.integrity.orphanProviderOrders} |
 | Orphan confirmed reservations | ${artifact.integrity.orphanConfirmedReservations} |
 | Balance drift (cents) | ${artifact.integrity.balanceDriftCents} |
 | Max reconciliation lag (ms) | ${artifact.integrity.maxReconciliationLagMs} |
 | Max receipt lag (ms) | ${artifact.integrity.maxReceiptLagMs} |
+| Max unknown age (ms) | ${artifact.integrity.maxUnknownAgeMs} |
+| Unknown SLA breaches | ${artifact.integrity.unknownSlaBreaches} |
+| Position drift (contracts) | ${artifact.integrity.positionDriftContracts} |
+| Production breakers closed | ${artifact.integrity.productionBreakersClosed ? "yes" : "no"} |
 
 ## Required scenarios
 
@@ -232,6 +286,9 @@ function validateInput(input: DemoProofInput): void {
     assertNonNegativeInteger(row.count, "provider fill count");
     assertNonNegativeInteger(row.priceCents, "provider fill price");
   }
+  for (const row of [...input.providerPositions, ...input.localPositions]) {
+    if (!Number.isSafeInteger(row.position)) throw new TypeError("position must be an integer");
+  }
   for (const row of input.receipts) {
     assertNonNegativeInteger(row.createdAtMs, "receipt createdAtMs");
     if (row.deliveredAtMs !== null) assertNonNegativeInteger(row.deliveredAtMs, "receipt deliveredAtMs");
@@ -239,12 +296,32 @@ function validateInput(input: DemoProofInput): void {
   for (const [name, value] of Object.entries(input.journal)) assertNonNegativeInteger(value, name);
   assertNonNegativeInteger(input.balances.providerBalanceCents, "provider balance");
   assertNonNegativeInteger(input.balances.localBalanceCents, "local balance");
+  assertNonNegativeInteger(input.limits.unknownResolutionSlaMs, "unknown resolution SLA");
+  for (const [name, digest] of Object.entries(input.provenance)) {
+    if (!/^[a-f0-9]{64}$/.test(digest)) throw new TypeError(`${name} must be a SHA-256 digest`);
+  }
   for (const id of DEMO_PROOF_SCENARIOS) {
     const scenario = input.scenarios[id];
     if (!scenario || typeof scenario.evidence !== "string" || !scenario.evidence.trim()) {
       throw new TypeError(`scenario ${id} requires bounded evidence`);
     }
   }
+}
+
+function positionDrift(
+  provider: DemoProofInput["providerPositions"],
+  local: DemoProofInput["localPositions"],
+): number {
+  const byTicker = new Map<string, { provider: number; local: number }>();
+  for (const row of provider) byTicker.set(row.ticker, { provider: row.position, local: 0 });
+  for (const row of local) {
+    const value = byTicker.get(row.ticker) ?? { provider: 0, local: 0 };
+    value.local += row.position;
+    byTicker.set(row.ticker, value);
+  }
+  let drift = 0;
+  for (const value of byTicker.values()) drift += Math.abs(value.provider - value.local);
+  return drift;
 }
 
 function compareBy<K extends string>(key: K) {

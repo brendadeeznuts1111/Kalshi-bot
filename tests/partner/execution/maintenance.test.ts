@@ -135,7 +135,32 @@ describe("execution maintenance", () => {
        VALUES ('maintenance-receipt', '-1', '{"text":"pending"}', 'pending', 0,
         $createdAtMs, $createdAtMs, $createdAtMs)`,
     ).run({ $createdAtMs: NOW_MS - 45_000 });
-    const result = runExecutionMaintenance(db, NOW_MS, { placingStaleAfterMs: 60_000 });
+    db.query(
+      `UPDATE exposure_reservations SET reconciliation_attempts = 2,
+       reconciliation_result = 'conflict' WHERE idempotency_key = 'due-unknown'`,
+    ).run();
+    db.exec(`
+      INSERT INTO provider_order_lifecycle (
+        provider, out_id, environment, provider_order_id, ticker, side, action,
+        unit_price_minor, ordered_quantity, filled_quantity, remaining_quantity,
+        cancelled_quantity, provider_status, first_observed_at_ms, last_observed_at_ms
+      ) VALUES (
+        'kalshi', 'out-SPORTS-1', 'demo', 'order-fill-lag', 'market-1', 'yes', 'buy',
+        40, 1, 1, 0, 0, 'executed', ${NOW_MS - 5_000}, ${NOW_MS}
+      );
+      INSERT INTO provider_order_fills (
+        order_lifecycle_id, provider, out_id, source_key, provider_order_id,
+        ticker, side, action, quantity, unit_price_minor,
+        provider_created_at_ms, observed_at_ms
+      ) VALUES (
+        last_insert_rowid(), 'kalshi', 'out-SPORTS-1', 'fill-lag', 'order-fill-lag',
+        'market-1', 'yes', 'buy', 1, 40, ${NOW_MS - 2_500}, ${NOW_MS}
+      );
+    `);
+    const result = runExecutionMaintenance(db, NOW_MS, {
+      placingStaleAfterMs: 60_000,
+      balanceExposureDriftByOut: { "out-SPORTS-1": 7 },
+    });
     expect(result).toEqual({
       releasedPending: 0,
       recoveredStalePlacing: 1,
@@ -149,6 +174,23 @@ describe("execution maintenance", () => {
       leasedReceipts: 0,
       deadReceipts: 0,
       oldestPendingReceiptAgeMs: 45_000,
+      accountingDriftOuts: 0,
+      maximumCashDriftMinor: 0,
+      maximumPositionDriftContracts: 0,
+      outs: [{
+        outId: "out-SPORTS-1",
+        placing: 0,
+        unknown: 3,
+        dueUnknown: 2,
+        leasedUnknown: 1,
+        oldestPlacingAgeMs: null,
+        oldestUnknownAgeMs: 30_000,
+        reconciliationAttempts: 2,
+        reconciliationErrors: 0,
+        reconciliationConflicts: 1,
+        maxFillLagMs: 2_500,
+        balanceExposureDriftCents: 7,
+      }],
     });
     db.close();
   });

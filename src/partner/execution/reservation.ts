@@ -38,6 +38,7 @@ type ReservationRow = {
   provider: string;
   authorization_id: number;
   actor_id: string | null;
+  partner_split_bps: number;
   requested_stake: number;
   effective_stake: number;
   market_id: string; // brand-ok — SQLite wire value; parsed by mapReservation
@@ -272,6 +273,7 @@ export function createPendingReservation(
     authorization: ApprovedAuthorization;
     request: BetRequest;
     effectiveStake: number;
+    partnerSplitBps?: number;
     expiresAtMs: number;
     nowMs: number;
   },
@@ -282,6 +284,10 @@ export function createPendingReservation(
     if (input.expiresAtMs <= input.nowMs) throw new TypeError("reservation expiry must be future");
     assertPositiveMinorUnits(input.request.requestedStake, "requested stake");
     assertPositiveMinorUnits(input.effectiveStake, "effective stake");
+    if (!Number.isSafeInteger(input.partnerSplitBps ?? 0) ||
+        (input.partnerSplitBps ?? 0) < 0 || (input.partnerSplitBps ?? 0) > 10_000) {
+      throw new TypeError("partner split basis points must be from 0 to 10000");
+    }
     if (!Number.isFinite(input.request.decimalOdds) || input.request.decimalOdds <= 1) {
       throw new TypeError("decimal odds must be finite and greater than one");
     }
@@ -293,11 +299,11 @@ export function createPendingReservation(
     .query(
       `INSERT INTO exposure_reservations (
         idempotency_key, partner_code, out_id, skin, provider, authorization_id,
-        actor_id, requested_stake, effective_stake, market_id, selection, decimal_odds,
+        actor_id, partner_split_bps, requested_stake, effective_stake, market_id, selection, decimal_odds,
         status, reservation_expires_at_ms, created_at_ms, updated_at_ms
       ) VALUES (
         $idempotencyKey, $partnerCode, $outId, $skin, $provider, $authorizationId,
-        $actorId, $requestedStake, $effectiveStake, $marketId, $selection, $decimalOdds,
+        $actorId, $partnerSplitBps, $requestedStake, $effectiveStake, $marketId, $selection, $decimalOdds,
         'pending', $expiresAtMs, $nowMs, $nowMs
       )
       ON CONFLICT(idempotency_key) DO NOTHING
@@ -311,6 +317,7 @@ export function createPendingReservation(
       $provider: input.authorization.provider,
       $authorizationId: input.authorization.id,
       $actorId: input.request.actorId?.trim() || null,
+      $partnerSplitBps: input.partnerSplitBps ?? 0,
       $requestedStake: input.request.requestedStake,
       $effectiveStake: input.effectiveStake,
       $marketId: input.request.marketId,
@@ -723,6 +730,7 @@ function mapReservation(row: ReservationRow): ExposureReservation {
     provider: asProviderId(row.provider),
     authorizationId: asAuthorizationId(row.authorization_id),
     actorId: row.actor_id,
+    partnerSplitBps: row.partner_split_bps,
     requestedStake: row.requested_stake,
     effectiveStake: row.effective_stake,
     marketId: asMarketId(row.market_id),

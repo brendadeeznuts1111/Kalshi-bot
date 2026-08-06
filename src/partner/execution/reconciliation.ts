@@ -105,8 +105,14 @@ export async function reconcileKalshiUnknownReservations(
       });
       const persistedExpected = placementExpectation(reservation.providerResponse);
       const evidence = verifyKalshiOrderEvidence(
-        persistedExpected ?? expectedKalshiOrder(client.environment, projected, clientOrderId),
+        persistedExpected ?? expectedKalshiOrder(
+          client.environment,
+          reservation.outId,
+          projected,
+          clientOrderId,
+        ),
         client.environment,
+        reservation.outId,
         await client.lookupOrderByClientOrderId(reservation.marketId, clientOrderId),
       );
       if (evidence.kind !== "confirmed") {
@@ -133,7 +139,10 @@ export async function reconcileKalshiUnknownReservations(
           result.leaseLost++;
           continue;
         }
-        if (resultKind === "conflict") result.conflicts++;
+        if (resultKind === "conflict") {
+          enqueueReconciliationConflictReceipt(db, reservation, detail, clock());
+          result.conflicts++;
+        }
         else if (resultKind === "error") result.errors++;
         else result.unresolved++;
         continue;
@@ -197,6 +206,7 @@ function placementExpectation(value: unknown): KalshiExpectedOrder | null {
   const row = expected as Record<string, unknown>;
   if (
     (row.environment !== "demo" && row.environment !== "prod") ||
+    typeof row.outId !== "string" || row.outId.length === 0 ||
     typeof row.ticker !== "string" || typeof row.clientOrderId !== "string" ||
     (row.outcome !== "yes" && row.outcome !== "no") ||
     (row.bookSide !== "bid" && row.bookSide !== "ask") ||
@@ -263,6 +273,45 @@ function enqueueReconciliationReceipt(
         `Market: <code>${Bun.escapeHTML(reservation.marketId)}</code>\n` +
         `Ticket: <code>${Bun.escapeHTML(reservation.ticketId ?? "missing")}</code>\n` +
         `Stake: <code>${reservation.effectiveStake}</code> minor units`,
+    },
+  }, nowMs);
+}
+
+/** A deterministic outbox key makes a persistent evidence conflict noisy once
+ * without flooding the partner topic on every bounded retry. */
+function enqueueReconciliationConflictReceipt(
+  db: Database,
+  reservation: ExposureReservation,
+  detail: string,
+  nowMs: number,
+): void {
+  const destination = db
+    .query(
+      `SELECT telegram_chat_id AS telegramChatId, telegram_topic_id AS telegramTopicId
+       FROM account_authorizations WHERE id = $id`,
+    )
+    .get({ $id: reservation.authorizationId }) as {
+      telegramChatId: string;
+      telegramTopicId: string | null;
+    } | null;
+  if (destination === null) return;
+  const fingerprint = Bun.SHA256.hash(detail, "hex").slice(0, 16);
+  enqueueAuthorizationReceipt(db, {
+    dedupeKey: asAuthorizationReceiptDedupeKey(
+      `execution:${reservation.id}:reconciliation-conflict:${fingerprint}`,
+    ),
+    telegramChatId: asTelegramChatId(destination.telegramChatId),
+    telegramTopicId: destination.telegramTopicId === null
+      ? null
+      : asTelegramTopicId(destination.telegramTopicId),
+    payload: {
+      parseMode: "HTML",
+      text:
+        "⛔ <b>Execution reconciliation conflict</b>\n" +
+        `Out: <code>${Bun.escapeHTML(reservation.outId)}</code>\n` +
+        `Market: <code>${Bun.escapeHTML(reservation.marketId)}</code>\n` +
+        `Reservation: <code>${reservation.id}</code>\n` +
+        `Evidence: ${Bun.escapeHTML(detail.slice(0, 512))}`,
     },
   }, nowMs);
 }

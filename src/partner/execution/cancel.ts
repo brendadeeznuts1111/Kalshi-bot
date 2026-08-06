@@ -1,6 +1,7 @@
 import type { Database } from 'bun:sqlite';
 import { KalshiRequestRejectedError, type KalshiClient } from '../../bot/kalshi-client.ts';
 import { getActiveLiveTradeAuthorization } from '../authorization/sql.ts';
+import { asTelegramChatId, asTelegramTopicId } from '../authorization/domain.ts';
 import {
   asAuthorizationReceiptDedupeKey,
   enqueueAuthorizationReceipt,
@@ -10,6 +11,7 @@ import { asExposureReservationId, type ExposureReservation } from './domain.ts';
 import { getReservation } from './reservation.ts';
 import { migrateAuthorizedCancellationSchema } from './cancel-sql.ts';
 import type { ExecutionRiskHealthDecision } from './risk-health.ts';
+import { enqueueExecutionRiskBreakerReceipt } from './risk-alert.ts';
 
 export interface CancellationPrincipal {
   actorId: string;
@@ -51,6 +53,48 @@ export type AuthorizedCancelResult =
     };
 
 type CancellationRow = { status: 'intent' | 'confirmed' | 'rejected' | 'unknown' };
+
+/** Cursor-complete provider evidence may confirm an earlier ambiguous cancel exactly once. */
+export function reconcileUnknownCancellationFromLifecycle(
+  db: Database,
+  input: { reservationId: number; providerOrderId: string; observedAtMs: number },
+): boolean {
+  migrateAuthorizedCancellationSchema(db);
+  const transaction = db.transaction(() => {
+    const row = db.query(
+      `UPDATE authorized_cancellations
+          SET status = 'confirmed', failure_reason = NULL,
+              provider_response_json = $response, updated_at_ms = $nowMs
+        WHERE reservation_id = $reservationId AND ticket_id = $providerOrderId
+          AND status = 'unknown'
+        RETURNING authorization_id AS authorizationId, actor_id AS actorId`,
+    ).get({
+      $reservationId: input.reservationId,
+      $providerOrderId: input.providerOrderId,
+      $response: serialize({ reconciledFromLifecycle: true, providerOrderId: input.providerOrderId }),
+      $nowMs: input.observedAtMs,
+    }) as { authorizationId: number; actorId: string } | null;
+    if (row === null) return false;
+    const destination = db.query(
+      `SELECT telegram_chat_id AS chatId, telegram_topic_id AS topicId
+         FROM account_authorizations WHERE id = $id`,
+    ).get({ $id: row.authorizationId }) as { chatId: string; topicId: string | null } | null;
+    if (destination === null) throw new Error('cancellation authorization no longer exists');
+    enqueueAuthorizationReceipt(db, {
+      dedupeKey: asAuthorizationReceiptDedupeKey(`cancel:${input.reservationId}:reconciled-confirmed`),
+      telegramChatId: asTelegramChatId(destination.chatId),
+      telegramTopicId: destination.topicId === null ? null : asTelegramTopicId(destination.topicId),
+      payload: {
+        parseMode: 'HTML',
+        text: `✅ <b>Cancellation confirmed by lifecycle reconciliation</b>\n` +
+          `Ticket: <code>${Bun.escapeHTML(input.providerOrderId)}</code>\n` +
+          `Actor: <code>${Bun.escapeHTML(row.actorId)}</code>`,
+      },
+    }, input.observedAtMs);
+    return true;
+  });
+  return transaction.immediate();
+}
 
 function scopeAllows(scopes: ReadonlySet<string>, value: string): boolean {
   return scopes.has('*') || scopes.has(value);
@@ -177,6 +221,9 @@ export async function executeAuthorizedCancel(
   }
   const riskDecision = await dependencies.isRiskHealthy(reservation);
   if (!(typeof riskDecision === 'boolean' ? riskDecision : riskDecision.healthy)) {
+    if (typeof riskDecision !== 'boolean') {
+      enqueueExecutionRiskBreakerReceipt(db, auth, riskDecision, nowMs);
+    }
     return {
       ok: false,
       code: 'RISK_UNHEALTHY',

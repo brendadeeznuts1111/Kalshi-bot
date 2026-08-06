@@ -8,6 +8,7 @@ import { getBettingAccountById } from "../src/partner/registry.ts";
 import { asReconciliationOwner } from "../src/partner/execution/domain.ts";
 import { Database } from "bun:sqlite";
 import { syncRegulatoryExecutionPlays } from "../src/regulatory/lib/execution-play-sync.ts";
+import { runExecutionMaintenance } from "../src/partner/execution/maintenance.ts";
 
 export async function runKalshiReconciliationJob(options: {
   limit?: number;
@@ -20,6 +21,10 @@ export async function runKalshiReconciliationJob(options: {
   const db = openEventStore({ dbPath: DEFAULT_EVENT_STORE_DB });
   try {
     migrateExecutionSchema(db);
+    // Recovery must not depend on the Telegram long-polling process. Move old
+    // placing rows to exposure-bearing unknown before this worker claims due
+    // reconciliation work; maintenance never infers provider rejection.
+    const maintenance = runExecutionMaintenance(db, Date.now(), { provider: "kalshi" });
     const resolveAccountClient = createKalshiAccountClientResolver();
     const result = await reconcileKalshiUnknownReservations(db, {
     limit,
@@ -43,7 +48,7 @@ export async function runKalshiReconciliationJob(options: {
         regulatoryDb.close();
       }
     }
-    return { reconciliation: result, regulatory };
+    return { maintenance, reconciliation: result, regulatory };
   } finally {
     db.close();
   }

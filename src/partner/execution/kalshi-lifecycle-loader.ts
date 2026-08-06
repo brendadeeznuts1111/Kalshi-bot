@@ -122,6 +122,7 @@ export function normalizeKalshiLifecycleOrder(
   wire: Record<string, unknown>,
   reservationForClientOrderId?: (clientOrderId: string) => ExposureReservationId | null,
 ): ProviderOrderSnapshot {
+  assertPrimarySubaccount(wire.subaccount_number ?? wire.subaccount, "order");
   const providerOrderId = requiredString(wire.order_id, "order ID");
   const clientOrderId = optionalString(wire.client_order_id);
   const ticker = requiredString(wire.ticker, "ticker");
@@ -155,6 +156,7 @@ export function normalizeKalshiLifecycleOrder(
 export function normalizeKalshiLifecycleFill(
   wire: Record<string, unknown>,
 ): ProviderFillSnapshot {
+  assertPrimarySubaccount(wire.subaccount_number ?? wire.subaccount, "fill");
   const fillId = optionalString(wire.fill_id);
   const tradeId = optionalString(wire.trade_id);
   if (!fillId && !tradeId) throw new KalshiLifecycleNormalizationError("fill has no stable ID");
@@ -172,6 +174,12 @@ export function normalizeKalshiLifecycleFill(
     feeMinor: optionalFeeMinor(wire.fee_cost),
     providerCreatedAtMs: optionalTime(wire.created_time) ?? optionalUnixSeconds(wire.ts),
   };
+}
+
+function assertPrimarySubaccount(value: unknown, label: string): void {
+  if (value !== undefined && value !== null && value !== 0) {
+    throw new KalshiLifecycleNormalizationError(`${label} is not from primary subaccount 0`);
+  }
 }
 
 class KalshiLifecycleNormalizationError extends Error {}

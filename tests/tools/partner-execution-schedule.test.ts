@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+  EXECUTION_LIFECYCLE_TITLE,
   EXECUTION_RECEIPTS_TITLE,
   EXECUTION_RECONCILE_TITLE,
   parseExecutionScheduleArgs,
@@ -13,6 +14,11 @@ describe("partner execution worker schedule", () => {
       count: 3,
     });
     expect(EXECUTION_RECONCILE_TITLE).not.toBe(EXECUTION_RECEIPTS_TITLE);
+    expect(new Set([
+      EXECUTION_RECONCILE_TITLE,
+      EXECUTION_RECEIPTS_TITLE,
+      EXECUTION_LIFECYCLE_TITLE,
+    ]).size).toBe(3);
   });
 
   test("parses preview overrides and rejects unknown commands", () => {

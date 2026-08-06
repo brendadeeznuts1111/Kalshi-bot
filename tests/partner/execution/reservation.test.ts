@@ -79,6 +79,8 @@ function setup(): { db: Database; authorization: ApprovedAuthorization } {
     "005_execution_journal",
     "006_authorized_cancellations",
     "007_execution_actor_provenance",
+    "008_reservation_partner_split_snapshot",
+    "009_provider_accounting_observations",
   ]);
   expect(migrateExecutionSchema(db, NOW_MS + 1)).toEqual([]);
   const p = policy();
@@ -152,6 +154,8 @@ describe("execution exposure reservations", () => {
       "005_execution_journal",
       "006_authorized_cancellations",
       "007_execution_actor_provenance",
+      "008_reservation_partner_split_snapshot",
+      "009_provider_accounting_observations",
     ]);
     const columns = db.query("PRAGMA table_info(exposure_reservations)").all() as Array<{
       name: string;
@@ -381,17 +385,34 @@ describe("Kalshi unknown-outcome reconciliation", () => {
 
   test("keeps malformed or conflicting provider evidence unknown", async () => {
     const { db, reservation } = unknownKalshi();
+    const conflictClient = () => ({
+      environment: "demo" as const,
+      lookupOrderByClientOrderId: async () => foundOrder(reservation, {
+        ticker: "DIFFERENT-MARKET",
+      }),
+    });
     const result = await reconcileKalshiUnknownReservations(db, {
       owner: asReconciliationOwner("kalshi-poller-conflict"),
-      resolveClient: () => ({
-        environment: "demo",
-        lookupOrderByClientOrderId: async () => foundOrder(reservation, {
-          ticker: "DIFFERENT-MARKET",
-        }),
-      }),
+      now: () => NOW_MS,
+      resolveClient: conflictClient,
     });
     expect(result.conflicts).toBe(1);
     expect(getReservation(db, reservation.id)?.status).toBe("unknown");
+    expect(db.query(
+      `SELECT dedupe_key, status FROM account_authorization_receipt_outbox
+       WHERE dedupe_key LIKE $key`,
+    ).get({ $key: `execution:${reservation.id}:reconciliation-conflict:%` })).toMatchObject({
+      status: "pending",
+    });
+    await reconcileKalshiUnknownReservations(db, {
+      owner: asReconciliationOwner("kalshi-poller-conflict-retry"),
+      now: () => NOW_MS + 1_000,
+      resolveClient: conflictClient,
+    });
+    expect(db.query(
+      `SELECT COUNT(*) AS count FROM account_authorization_receipt_outbox
+       WHERE dedupe_key LIKE $key`,
+    ).get({ $key: `execution:${reservation.id}:reconciliation-conflict:%` })).toEqual({ count: 1 });
   });
 
   test("rolls confirmation back and defers when receipt persistence fails", async () => {

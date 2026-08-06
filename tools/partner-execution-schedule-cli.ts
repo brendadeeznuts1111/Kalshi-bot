@@ -5,8 +5,10 @@ import { previewFireTimes } from "../src/research/schedule-cli.ts";
 
 export const EXECUTION_RECONCILE_TITLE = "kalshi-partner-reconcile";
 export const EXECUTION_RECEIPTS_TITLE = "kalshi-partner-receipts";
+export const EXECUTION_LIFECYCLE_TITLE = "kalshi-partner-lifecycle";
 export const EXECUTION_RECONCILE_WORKER = join(import.meta.dir, "partner-reconcile-scheduled.ts");
 export const EXECUTION_RECEIPTS_WORKER = join(import.meta.dir, "partner-receipts-scheduled.ts");
+export const EXECUTION_LIFECYCLE_WORKER = join(import.meta.dir, "partner-lifecycle-scheduled.ts");
 
 export function parseExecutionScheduleArgs(argv: string[]) {
   const command = argv.find(arg => !arg.startsWith("-"));
@@ -32,16 +34,19 @@ if (import.meta.main) {
   if (options.command === "register") {
     await Bun.cron(EXECUTION_RECONCILE_WORKER, options.schedule, EXECUTION_RECONCILE_TITLE);
     await Bun.cron(EXECUTION_RECEIPTS_WORKER, options.schedule, EXECUTION_RECEIPTS_TITLE);
-    console.log(`Registered ${EXECUTION_RECONCILE_TITLE} and ${EXECUTION_RECEIPTS_TITLE}`);
+    await Bun.cron(EXECUTION_LIFECYCLE_WORKER, options.schedule, EXECUTION_LIFECYCLE_TITLE);
+    console.log(`Registered ${EXECUTION_RECONCILE_TITLE}, ${EXECUTION_RECEIPTS_TITLE}, and ${EXECUTION_LIFECYCLE_TITLE}`);
   } else if (options.command === "remove") {
     await Bun.cron.remove(EXECUTION_RECONCILE_TITLE);
     await Bun.cron.remove(EXECUTION_RECEIPTS_TITLE);
+    await Bun.cron.remove(EXECUTION_LIFECYCLE_TITLE);
     console.log("Removed partner execution workers");
   } else {
     console.log(JSON.stringify({
       schedule: options.schedule,
       reconcileTitle: EXECUTION_RECONCILE_TITLE,
       receiptsTitle: EXECUTION_RECEIPTS_TITLE,
+      lifecycleTitle: EXECUTION_LIFECYCLE_TITLE,
       fires: previewFireTimes(options.schedule, options.count).map(date => date.toISOString()),
     }, null, 2));
   }

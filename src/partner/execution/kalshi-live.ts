@@ -7,6 +7,7 @@ import {
   asSkinId,
   policyFromAuthorization,
 } from "../authorization/domain.ts";
+import { getActiveLiveTradeAuthorization } from "../authorization/sql.ts";
 import { getBettingAccountById, type BettingAccountRow } from "../registry.ts";
 import { parseOutMeta, resolveOutSkins } from "../skins.ts";
 import { envPrefixFallbackChain } from "../toml-config.ts";
@@ -29,6 +30,7 @@ import {
 } from "./kalshi.ts";
 import { createKalshiExecutionSnapshotLoader } from "./kalshi-snapshot.ts";
 import type { ExecutionRiskHealthDecision } from "./risk-health.ts";
+import { enqueueExecutionRiskBreakerReceipt } from "./risk-alert.ts";
 
 export interface KalshiLiveOrderCommand {
   actorId?: string;
@@ -158,10 +160,20 @@ export async function executeKalshiLiveOrder(
     return { ok: false, code: "ACCOUNT_INACTIVE", reason: "Execution out is not active" };
   }
   const partner = db
-    .query("SELECT active FROM partners WHERE id = $partnerId")
-    .get({ $partnerId: account.partnerId }) as { active: number } | null;
+    .query("SELECT active, profit_split AS profitSplit FROM partners WHERE id = $partnerId")
+    .get({ $partnerId: account.partnerId }) as { active: number; profitSplit: number | null } | null;
   if (partner?.active !== 1) {
     return { ok: false, code: "PARTNER_INACTIVE", reason: "Partner is not active" };
+  }
+  let partnerSplitBps: number;
+  try {
+    partnerSplitBps = profitSplitToBasisPoints(partner.profitSplit);
+  } catch (error) {
+    return {
+      ok: false,
+      code: "EXECUTION_DENIED",
+      reason: error instanceof Error ? error.message : "partner profit split is invalid",
+    };
   }
   const accountPartnerCode = resolveAccountPartnerCode(account.id, account.partnerId, account.metaJson);
   if (accountPartnerCode !== command.partnerCode) {
@@ -192,6 +204,17 @@ export async function executeKalshiLiveOrder(
   const riskDecision = await dependencies.isRiskHealthy();
   const riskHealthy = typeof riskDecision === "boolean" ? riskDecision : riskDecision.healthy;
   if (!riskHealthy) {
+    if (typeof riskDecision !== "boolean") {
+      const riskAuthorization = getActiveLiveTradeAuthorization(db, {
+        partnerCode: command.partnerCode,
+        outId: command.outId,
+        skin: command.skin,
+        nowMs: (dependencies.now ?? Date.now)(),
+      });
+      if (riskAuthorization !== null) {
+        enqueueExecutionRiskBreakerReceipt(db, riskAuthorization, riskDecision);
+      }
+    }
     return {
       ok: false,
       code: "EXECUTION_DENIED",
@@ -263,9 +286,11 @@ export async function executeKalshiLiveOrder(
   });
   const result = await executeAuthorizedBet(db, request, {
     now,
+    partnerSplitBps,
     loadSnapshot,
     capturePlacementExpectation: ({ effectiveStake, idempotencyKey }) => expectedKalshiOrder(
       client.environment,
+      command.outId,
       projectKalshiBuyOrder({
         ticker: command.ticker,
         selection: command.outcome,
@@ -295,6 +320,18 @@ export async function executeKalshiLiveOrder(
       ? result.providerResponse
       : null,
   };
+}
+
+function profitSplitToBasisPoints(value: number | null): number {
+  if (value === null) return 0;
+  if (!Number.isFinite(value) || value < 0 || value > 1) {
+    throw new TypeError("partner profit split must be between 0 and 1");
+  }
+  const basisPoints = Math.round(value * 10_000);
+  if (Math.abs(value - basisPoints / 10_000) > Number.EPSILON * 8) {
+    throw new TypeError("partner profit split exceeds basis-point precision");
+  }
+  return basisPoints;
 }
 
 /** Resolve out-scoped Kalshi credentials with out → partner → KALSHI_ fallback. */

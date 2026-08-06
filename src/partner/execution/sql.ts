@@ -281,6 +281,49 @@ export const EXECUTION_MIGRATIONS = [
         WHERE actor_id IS NOT NULL;
     `,
   },
+  {
+    id: "008_reservation_partner_split_snapshot",
+    sql: `
+      ALTER TABLE exposure_reservations ADD COLUMN partner_split_bps INTEGER NOT NULL DEFAULT 0
+        CHECK (typeof(partner_split_bps) = 'integer' AND partner_split_bps BETWEEN 0 AND 10000);
+    `,
+  },
+  {
+    id: "009_provider_accounting_observations",
+    sql: `
+      CREATE TABLE provider_accounting_observations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        provider TEXT NOT NULL,
+        out_id TEXT NOT NULL,
+        environment TEXT NOT NULL,
+        observed_at_ms INTEGER NOT NULL,
+        cash_baseline_minor INTEGER NOT NULL,
+        journal_cash_at_baseline_minor INTEGER NOT NULL,
+        journal_cash_minor INTEGER NOT NULL,
+        expected_cash_minor INTEGER NOT NULL,
+        provider_cash_minor INTEGER NOT NULL,
+        cash_drift_minor INTEGER NOT NULL,
+        position_drift_contracts INTEGER NOT NULL,
+        position_drift_json TEXT NOT NULL CHECK (json_valid(position_drift_json)),
+        is_baseline INTEGER NOT NULL CHECK (is_baseline IN (0, 1))
+      );
+      CREATE INDEX idx_provider_accounting_observations_lane
+        ON provider_accounting_observations(provider, out_id, environment, observed_at_ms, id);
+
+      CREATE TABLE provider_lifecycle_sync_runs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        provider TEXT NOT NULL,
+        out_id TEXT NOT NULL,
+        environment TEXT,
+        status TEXT NOT NULL CHECK (status IN ('ok', 'failed')),
+        observed_at_ms INTEGER NOT NULL,
+        metrics_json TEXT NOT NULL CHECK (json_valid(metrics_json)),
+        error TEXT
+      );
+      CREATE INDEX idx_provider_lifecycle_sync_runs_lane
+        ON provider_lifecycle_sync_runs(provider, out_id, observed_at_ms, id);
+    `,
+  },
 ] as const;
 
 type MigrationRow = { migrationId: string }; // brand-ok — internal migration wire value

@@ -141,6 +141,8 @@ export type KalshiClient = {
     cursor?: string,
     limit?: number,
   ): Promise<KalshiLifecyclePage>;
+  getSettlementPage(cursor?: string, limit?: number): Promise<KalshiLifecyclePage>;
+  getPositionsPage(cursor?: string, limit?: number): Promise<KalshiLifecyclePage>;
   getFills(ticker?: string): Promise<Record<string, unknown>[]>;
   getPositions(): Promise<Record<string, unknown>[]>;
   getBalance(): Promise<{ balanceCents: number | null }>;
@@ -312,6 +314,7 @@ export function createKalshiClient(options: KalshiClientOptions = {}): KalshiCli
       post_only: request.postOnly ?? true,
       cancel_order_on_pause: true,
       self_trade_prevention_type: "taker_at_cross",
+      subaccount: 0,
     };
     const res = await signedRequest("POST", "/portfolio/events/orders", body);
     const orderId = isRecord(res) && typeof res.order_id === "string" ? res.order_id : null;
@@ -341,7 +344,10 @@ export function createKalshiClient(options: KalshiClientOptions = {}): KalshiCli
   }
 
   async function cancelOrder(orderId: string): Promise<void> {
-    await signedRequest("DELETE", `/portfolio/orders/${encodeURIComponent(orderId)}`);
+    await signedRequest(
+      "DELETE",
+      `/portfolio/events/orders/${encodeURIComponent(orderId)}?subaccount=0`,
+    );
   }
 
   async function listPath(path: string, key: string): Promise<Record<string, unknown>[]> {
@@ -378,7 +384,7 @@ export function createKalshiClient(options: KalshiClientOptions = {}): KalshiCli
       const path = source === "active" ? "/portfolio/orders" : "/historical/orders";
       let cursor = "";
       for (let page = 0; page < 10; page++) {
-        const query = new URLSearchParams({ ticker, limit: "1000" });
+        const query = new URLSearchParams({ ticker, limit: "1000", subaccount: "0" });
         if (cursor) query.set("cursor", cursor);
         let response: unknown;
         try {
@@ -441,7 +447,7 @@ export function createKalshiClient(options: KalshiClientOptions = {}): KalshiCli
       throw new TypeError("Kalshi lifecycle page limit must be from 1 to 1000");
     }
     const prefix = source === "active" ? "/portfolio" : "/historical";
-    const query = new URLSearchParams({ limit: String(limit) });
+    const query = new URLSearchParams({ limit: String(limit), subaccount: "0" });
     if (cursor) query.set("cursor", cursor);
     const response = await signedRequest("GET", `${prefix}/${feed}?${query}`);
     if (!isRecord(response) || !Array.isArray(response[feed])) {
@@ -456,21 +462,65 @@ export function createKalshiClient(options: KalshiClientOptions = {}): KalshiCli
     };
   }
 
+  async function getSettlementPage(cursor = "", limit = 1_000): Promise<KalshiLifecyclePage> {
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 1_000) {
+      throw new TypeError("Kalshi settlement page limit must be from 1 to 1000");
+    }
+    const query = new URLSearchParams({ limit: String(limit), subaccount: "0" });
+    if (cursor) query.set("cursor", cursor);
+    const response = await signedRequest("GET", `/portfolio/settlements?${query}`);
+    if (!isRecord(response) || !Array.isArray(response.settlements)) {
+      throw new KalshiLifecyclePageMalformedError("Kalshi settlement page is malformed");
+    }
+    if (response.cursor !== undefined && typeof response.cursor !== "string") {
+      throw new KalshiLifecyclePageMalformedError("Kalshi settlement cursor is malformed");
+    }
+    return {
+      items: response.settlements.filter(isRecord),
+      cursor: typeof response.cursor === "string" ? response.cursor : "",
+    };
+  }
+
+  async function getPositionsPage(cursor = "", limit = 1_000): Promise<KalshiLifecyclePage> {
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 1_000) {
+      throw new TypeError("Kalshi positions page limit must be from 1 to 1000");
+    }
+    const query = new URLSearchParams({ limit: String(limit), subaccount: "0" });
+    if (cursor) query.set("cursor", cursor);
+    const response = await signedRequest("GET", `/portfolio/positions?${query}`);
+    if (!isRecord(response) || !Array.isArray(response.market_positions)) {
+      throw new KalshiLifecyclePageMalformedError("Kalshi positions page is malformed");
+    }
+    if (response.cursor !== undefined && typeof response.cursor !== "string") {
+      throw new KalshiLifecyclePageMalformedError("Kalshi positions cursor is malformed");
+    }
+    return {
+      items: response.market_positions.filter(isRecord),
+      cursor: typeof response.cursor === "string" ? response.cursor : "",
+    };
+  }
+
   return {
     environment,
     baseUrl,
     placeOrder,
     cancelOrder,
-    getOrders: (ticker?: string) =>
-      listPath(`/portfolio/orders${ticker ? `?ticker=${encodeURIComponent(ticker)}` : ""}`, "orders"),
+    getOrders: (ticker?: string) => listPath(
+      `/portfolio/orders?${new URLSearchParams({ ...(ticker ? { ticker } : {}), subaccount: "0" })}`,
+      "orders",
+    ),
     findOrderByClientOrderId,
     lookupOrderByClientOrderId,
     getLifecyclePage,
-    getFills: (ticker?: string) =>
-      listPath(`/portfolio/fills${ticker ? `?ticker=${encodeURIComponent(ticker)}` : ""}`, "fills"),
-    getPositions: () => listPath("/portfolio/positions", "market_positions"),
+    getSettlementPage,
+    getPositionsPage,
+    getFills: (ticker?: string) => listPath(
+      `/portfolio/fills?${new URLSearchParams({ ...(ticker ? { ticker } : {}), subaccount: "0" })}`,
+      "fills",
+    ),
+    getPositions: () => listPath("/portfolio/positions?subaccount=0", "market_positions"),
     getBalance: async () => {
-      const res = await signedRequest("GET", "/portfolio/balance");
+      const res = await signedRequest("GET", "/portfolio/balance?subaccount=0");
       return {
         balanceCents:
           isRecord(res) && typeof res.balance === "number" ? res.balance : null,

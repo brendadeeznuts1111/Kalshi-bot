@@ -81,6 +81,15 @@ describe("Kalshi cursor-complete lifecycle loader", () => {
       .toMatchObject({ ok: false, kind: "malformed" });
   });
 
+  test("rejects lifecycle evidence from a non-primary subaccount", () => {
+    expect(() => normalizeKalshiLifecycleOrder({
+      ...orderWire(), subaccount_number: 1,
+    })).toThrow(/primary subaccount 0/);
+    expect(() => normalizeKalshiLifecycleFill({
+      ...fillWire(), subaccount_number: 1,
+    })).toThrow(/primary subaccount 0/);
+  });
+
   test("NO buys and sells normalize to their maximum per-contract exposure", () => {
     expect(normalizeKalshiLifecycleOrder(orderWire()).unitPriceMinor).toBe(40);
     expect(normalizeKalshiLifecycleOrder({

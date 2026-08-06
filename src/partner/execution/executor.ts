@@ -214,6 +214,7 @@ export async function executeAuthorizedBet(
         authorization,
         request,
         effectiveStake,
+        partnerSplitBps: dependencies.partnerSplitBps,
         expiresAtMs,
         nowMs,
       });

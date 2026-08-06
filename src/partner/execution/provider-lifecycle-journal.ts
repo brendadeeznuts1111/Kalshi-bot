@@ -34,6 +34,24 @@ export interface ProviderLifecycleJournalResult {
   projection: ExecutionJournalProjection;
 }
 
+/**
+ * Persist an account-wide provider snapshot and derive each linked order's
+ * journal lane from its immutable reservation. This is the operational entry
+ * point for accounts that expose more than one skin.
+ */
+export function ingestProviderLifecycleAccountWithJournal(
+  db: Database,
+  batch: ProviderLifecycleBatch,
+): ProviderLifecycleJournalResult & { linkedOrders: number; orphanOrders: number } {
+  const linkedOrders = batch.orders.filter((order) => order.reservationId !== null).length;
+  const orphanOrders = batch.orders.length - linkedOrders;
+  const result = ingestWithContextResolver(db, batch, (order) => {
+    if (order.reservationId === null) return null;
+    return reservationJournalContext(db, batch, order);
+  });
+  return { ...result, linkedOrders, orphanOrders };
+}
+
 /** Atomically persist a complete lifecycle batch and its immutable journal deltas. */
 export function ingestProviderLifecycleWithJournal(
   db: Database,
@@ -41,6 +59,19 @@ export function ingestProviderLifecycleWithJournal(
   context: ProviderLifecycleJournalContext,
 ): ProviderLifecycleJournalResult {
   validateContext(context);
+  const result = ingestWithContextResolver(db, batch, (order) => {
+    if (order.reservationId === null) return null;
+    assertReservationContext(db, batch, context, order);
+    return context;
+  });
+  return { ...result, projection: projection(db, batch, context) };
+}
+
+function ingestWithContextResolver(
+  db: Database,
+  batch: ProviderLifecycleBatch,
+  resolveContext: (order: ProviderOrderLifecycle) => ProviderLifecycleJournalContext | null,
+): ProviderLifecycleJournalResult {
   const transaction = db.transaction(() => {
     const before = new Map<string, ProviderOrderLifecycle | null>();
     for (const order of batch.orders) {
@@ -60,7 +91,9 @@ export function ingestProviderLifecycleWithJournal(
       );
       if (order === null) throw new Error("provider lifecycle order disappeared during ingestion");
       if (order.reservationId === null) continue;
-      assertReservationContext(db, batch, context, order);
+      const context = resolveContext(order);
+      if (context === null) throw new Error("linked provider lifecycle order has no journal context");
+      validateContext(context);
       const identity = journalIdentity(batch, context, order);
       const orderSource = lifecycleSource(batch, order.providerOrderId, "order");
       const orderResult = appendOrderJournalEntry(db, {
@@ -121,7 +154,9 @@ export function ingestProviderLifecycleWithJournal(
       const order = getProviderOrderLifecycle(db, batch.provider, batch.outId, fill.providerOrderId);
       if (order === null) throw new Error("provider fill order disappeared during ingestion");
       if (order.reservationId === null) continue;
-      assertReservationContext(db, batch, context, order);
+      const context = resolveContext(order);
+      if (context === null) throw new Error("linked provider lifecycle fill has no journal context");
+      validateContext(context);
       const baseSource = lifecycleSource(batch, fill.providerOrderId, fill.sourceKey);
       if (getExecutionJournalEntryBySourceKey(db, `${baseSource}:principal`) !== null) continue;
       appendBinaryFillJournalEntries(db, {
@@ -138,10 +173,65 @@ export function ingestProviderLifecycleWithJournal(
     return {
       ingest,
       journalEntriesAppended,
-      projection: projection(db, batch, context),
+      projection: aggregateAccountProjection(db, batch),
     };
   });
   return transaction.immediate();
+}
+
+function reservationJournalContext(
+  db: Database,
+  batch: { outId: string },
+  order: ProviderOrderLifecycle,
+): ProviderLifecycleJournalContext {
+  if (order.reservationId === null) throw new Error("provider order has no reservation");
+  const row = db.query(
+    `SELECT r.partner_code AS partnerCode, r.out_id AS outId, r.skin,
+            a.currency, r.partner_split_bps AS partnerSplitBps
+       FROM exposure_reservations r
+       JOIN account_authorizations a ON a.id = r.authorization_id
+      WHERE r.id = $id`,
+  ).get({ $id: order.reservationId }) as {
+    partnerCode: string;
+    outId: string;
+    skin: string;
+    currency: string;
+    partnerSplitBps: number;
+  } | null;
+  if (row === null) throw new Error("provider order reservation no longer exists");
+  if (row.outId !== batch.outId) throw new Error("provider lifecycle out does not match reservation");
+  return {
+    partnerCode: row.partnerCode,
+    skin: row.skin,
+    currency: row.currency,
+    partnerSplitBps: row.partnerSplitBps,
+  };
+}
+
+function aggregateAccountProjection(
+  db: Database,
+  batch: { provider: string; outId: string },
+): ExecutionJournalProjection {
+  const row = db.query(
+    `SELECT COUNT(*) AS entryCount,
+            COALESCE(SUM(cash_delta_minor), 0) AS cashDeltaMinor,
+            COALESCE(SUM(open_exposure_delta_minor), 0) AS openExposureMinor,
+            COALESCE(SUM(realized_pnl_delta_minor), 0) AS realizedPnlMinor,
+            COALESCE(SUM(fee_delta_minor), 0) AS feesMinor,
+            COALESCE(SUM(partner_split_delta_minor), 0) AS partnerSplitMinor
+       FROM execution_journal_entries
+      WHERE provider = $provider AND out_id = $outId`,
+  ).get({ $provider: batch.provider, $outId: batch.outId }) as Omit<
+    ExecutionJournalProjection,
+    "partnerCode" | "outId" | "skin" | "currency"
+  >;
+  return {
+    partnerCode: "*",
+    outId: batch.outId,
+    skin: "*",
+    currency: "*",
+    ...row,
+  };
 }
 
 /** Provider-positive settlement updates lifecycle and journal in one transaction. */
@@ -204,6 +294,26 @@ export function settleProviderLifecycleWithJournal(
     };
   });
   return transaction.immediate();
+}
+
+/** Settle one linked account order using its reservation-snapshotted journal lane. */
+export function settleProviderLifecycleAccountOrderWithJournal(
+  db: Database,
+  input: {
+    provider: string;
+    outId: string;
+    providerOrderId: string;
+    evidenceKey: string;
+    settledQuantity: number;
+    marketResult: ProviderLifecycleSide;
+    evidenceAtMs: number;
+  },
+): ReturnType<typeof settleProviderLifecycleWithJournal> {
+  const order = getProviderOrderLifecycle(db, input.provider, input.outId, input.providerOrderId);
+  if (order === null) throw new Error("provider lifecycle order not found");
+  if (order.reservationId === null) throw new Error("unlinked provider order cannot enter partner settlement journal");
+  const context = reservationJournalContext(db, { outId: input.outId }, order);
+  return settleProviderLifecycleWithJournal(db, input, context);
 }
 
 function appendReservationBindingAdjustment(

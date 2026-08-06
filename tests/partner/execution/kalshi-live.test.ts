@@ -88,6 +88,7 @@ describe("Kalshi live execution orchestration", () => {
       db.query(
         `SELECT partner_code, out_id, skin, provider, market_id, selection,
                 requested_stake, effective_stake, status
+                , partner_split_bps
          FROM exposure_reservations`,
       ).get(),
     ).toEqual({
@@ -100,6 +101,7 @@ describe("Kalshi live execution orchestration", () => {
       requested_stake: 125,
       effective_stake: 120,
       status: "confirmed",
+      partner_split_bps: 2500,
     });
     db.close();
   });
@@ -242,7 +244,7 @@ function setup(variant?: "inactive" | "partner" | "provider"): Database {
     id: "partner-sports",
     name: "Sports Partner",
     active: variant !== "partner",
-    profitSplit: null,
+    profitSplit: 0.25,
     commissionRate: null,
     notes: null,
   }, NOW_MS);

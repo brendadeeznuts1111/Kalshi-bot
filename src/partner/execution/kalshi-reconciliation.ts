@@ -7,6 +7,8 @@ import type {
 
 export interface KalshiExpectedOrder {
   environment: KalshiEnvironment;
+  /** Local execution account authority used to resolve the signed client. */
+  outId: string;
   ticker: string;
   clientOrderId: string;
   outcome: KalshiOrderSide;
@@ -25,18 +27,20 @@ export type KalshiOrderEvidence =
   | {
       kind: "conflict";
       source: "active" | "historical";
-      mismatches: Array<"environment" | "ticker" | "client_order_id" | "outcome" | "book_side" | "count" | "price">;
+      mismatches: Array<"environment" | "account" | "ticker" | "client_order_id" | "outcome" | "book_side" | "count" | "price">;
     };
 
 /** Bind provider evidence to every immutable term sent during placement. */
 export function verifyKalshiOrderEvidence(
   expected: KalshiExpectedOrder,
   actualEnvironment: KalshiEnvironment,
+  actualOutId: string,
   lookup: KalshiOrderLookupResult,
 ): KalshiOrderEvidence {
   if (lookup.kind !== "found") return lookup;
   const mismatches: Extract<KalshiOrderEvidence, { kind: "conflict" }>["mismatches"] = [];
   if (actualEnvironment !== expected.environment) mismatches.push("environment");
+  if (actualOutId !== expected.outId) mismatches.push("account");
   if (lookup.order.ticker !== expected.ticker) mismatches.push("ticker");
   if (lookup.order.clientOrderId !== expected.clientOrderId) mismatches.push("client_order_id");
   if (lookup.order.outcome !== expected.outcome) mismatches.push("outcome");

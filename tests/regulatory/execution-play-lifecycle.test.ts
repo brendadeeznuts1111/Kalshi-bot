@@ -17,6 +17,7 @@ describe("regulatory execution play lifecycle", () => {
     db = new Database(":memory:");
     db.exec(migration("011_state_regulation.sql"));
     db.exec(migration("013_execution_play_lifecycle.sql"));
+    db.exec(migration("014_execution_reservation_binding.sql"));
     db.run(
       "INSERT INTO partner_state_licenses (node_id, state_code, status) VALUES (?, ?, 'active')",
       ["partner-a", "MA"],
@@ -71,6 +72,27 @@ describe("regulatory execution play lifecycle", () => {
   test("idempotency keys cannot bind different plays", () => {
     repo.proposeExecutionBetAtomic(proposal());
     expect(() => repo.proposeExecutionBetAtomic(proposal({ playId: "play-2" }))).toThrow("another play");
+  });
+
+  test("an execution reservation cannot prove two regulatory plays", () => {
+    repo.proposeExecutionBetAtomic(proposal());
+    repo.proposeExecutionBetAtomic(proposal({
+      playId: "play-2",
+      idempotencyKey: "idem-2",
+    }));
+    repo.transitionExecutionPlay({
+      idempotencyKey: "idem-1",
+      status: "confirmed",
+      reservationId: 41,
+    });
+    expect(() => repo.transitionExecutionPlay({
+      idempotencyKey: "idem-2",
+      status: "confirmed",
+      reservationId: 41,
+    })).toThrow("UNIQUE constraint failed");
+    expect(db.query(
+      "SELECT status, execution_reservation_id FROM plays WHERE play_id = 'play-2'",
+    ).get()).toEqual({ status: "proposed", execution_reservation_id: null });
   });
 
   test("proposed and unknown exposure consume regulatory daily limits", () => {

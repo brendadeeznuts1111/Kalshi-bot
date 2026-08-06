@@ -94,6 +94,10 @@ if (REG_DB_PATH === ":memory:") {
     join(import.meta.dir, "../regulatory/db/migrations/013_execution_play_lifecycle.sql"),
     "utf-8",
   );
+  const migration014 = readFileSync(
+    join(import.meta.dir, "../regulatory/db/migrations/014_execution_reservation_binding.sql"),
+    "utf-8",
+  );
   const seeds = readFileSync(
     join(import.meta.dir, "../regulatory/db/seeds/state_regulations.sql"),
     "utf-8",
@@ -101,6 +105,7 @@ if (REG_DB_PATH === ":memory:") {
   regDb.exec(migration011);
   regDb.exec(migration012);
   regDb.exec(migration013);
+  regDb.exec(migration014);
   regDb.exec(seeds);
 }
 
@@ -123,6 +128,8 @@ export type ServeOptions = {
   port?: number;
   trading?: {
     db?: Database;
+    /** Lifecycle seam: when db is absent, handler owns and closes this handle. */
+    openExecutionDb?: () => Database;
     client?: Pick<KalshiClient, "environment" | "placeOrder" | "getBalance"> &
       Partial<Pick<KalshiClient, "cancelOrder">>;
     isRiskHealthy?: () => Promise<boolean | ExecutionRiskHealthDecision> | boolean | ExecutionRiskHealthDecision;
@@ -322,10 +329,11 @@ export async function handleTradingOrder(
       );
     }
     const ownsDb = runtime.db === undefined;
-    const executionDb = runtime.db ?? openEventStore({ dbPath: DEFAULT_EVENT_STORE_DB });
-    migrateExecutionSchema(executionDb);
+    const executionDb = runtime.db ??
+      (runtime.openExecutionDb ?? (() => openEventStore({ dbPath: DEFAULT_EVENT_STORE_DB })))();
     let result: Awaited<ReturnType<typeof executeKalshiLiveOrder>>;
     try {
+      migrateExecutionSchema(executionDb);
       result = await executeKalshiLiveOrder(executionDb, {
         ...parsed.command,
         actorId: req.tradingPrincipal?.actorId,
@@ -457,9 +465,10 @@ export async function handleTradingCancel(
   }
   const idempotencyKey = headerKey || bodyKey;
   const ownsDb = runtime.db === undefined;
-  const db = runtime.db ?? openEventStore({ dbPath: DEFAULT_EVENT_STORE_DB });
-  migrateExecutionSchema(db);
+  const db = runtime.db ??
+    (runtime.openExecutionDb ?? (() => openEventStore({ dbPath: DEFAULT_EVENT_STORE_DB })))();
   try {
+    migrateExecutionSchema(db);
     const result = await executeAuthorizedCancel(db, {
       ticketId: orderId,
       idempotencyKey,

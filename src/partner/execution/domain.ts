@@ -99,6 +99,8 @@ export interface ExecutionDependencies {
   capturePlacementExpectation?: (input: ProviderPlacementInput) => unknown;
   now?: () => number;
   reservationTtlMs?: number;
+  /** Immutable partner economics captured on the reservation before dispatch. */
+  partnerSplitBps?: number;
 }
 
 export interface ExposureReservation {
@@ -110,6 +112,7 @@ export interface ExposureReservation {
   provider: ProviderId;
   authorizationId: ApprovedAuthorization["id"];
   actorId: string | null;
+  partnerSplitBps: number;
   requestedStake: number;
   effectiveStake: number;
   marketId: MarketId;

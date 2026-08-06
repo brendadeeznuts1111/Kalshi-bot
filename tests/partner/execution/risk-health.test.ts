@@ -13,6 +13,7 @@ import { migrateExecutionSchema } from "../../../src/partner/execution/sql.ts";
 const signals: ExecutionRiskSignals = {
   providerSessionHealthy: true,
   providerHealthy: true,
+  persistentProviderErrorCount: 0,
   bookFresh: true,
   unknownCount: 0,
   oldestUnknownAgeMs: null,
@@ -34,6 +35,7 @@ function healthy(overrides: Partial<ExecutionRiskHealthInput> = {}): ExecutionRi
     outKillSwitch: false,
     thresholds: {
       maxUnknownCount: 0,
+      maxPersistentProviderErrors: 0,
       maxUnknownAgeMs: 120_000,
       maxStalePlacingCount: 0,
       maxBalanceExposureDriftCents: 0,
@@ -89,6 +91,12 @@ describe("authorized execution risk health", () => {
       "MAINTENANCE_STALE",
       "TELEMETRY_STALE",
     ]);
+  });
+
+  test("a persistent provider-error backlog opens the global breaker", () => {
+    expect(evaluateExecutionRiskHealth(healthy({
+      persistentProviderErrorCount: 1,
+    })).codes).toContain("PERSISTENT_PROVIDER_ERRORS");
   });
 
   test("enforces ambiguous outcome, stale placement, and drift thresholds", () => {
@@ -176,6 +184,19 @@ describe("authorized execution risk health", () => {
       db, outId: "out-SPORTS-1", ticker: "KXTEST", outEnvPrefix: "KALSHI_SPORTS_1_",
       env, nowMs: 10_000,
     })).toMatchObject({ healthy: true, codes: [] });
+    db.exec(`INSERT INTO provider_accounting_observations (
+      provider, out_id, environment, observed_at_ms, cash_baseline_minor,
+      journal_cash_at_baseline_minor, journal_cash_minor, expected_cash_minor,
+      provider_cash_minor, cash_drift_minor, position_drift_contracts,
+      position_drift_json, is_baseline
+    ) VALUES (
+      'kalshi', 'out-SPORTS-1', 'demo', 9999, 1000, 0, 0, 1000, 1000, 0, 1,
+      '{"KXTEST":{"local":0,"provider":1,"drift":1}}', 1
+    )`);
+    expect(evaluateStoredExecutionRiskHealth({
+      db, outId: "out-SPORTS-1", ticker: "KXTEST", outEnvPrefix: "KALSHI_SPORTS_1_",
+      env, nowMs: 10_000,
+    }).codes).toContain("BALANCE_EXPOSURE_DRIFT");
     expect(evaluateStoredExecutionRiskHealth({
       db, outId: "out-SPORTS-1", ticker: "KXTEST", outEnvPrefix: "KALSHI_SPORTS_1_",
       env: { ...env, KALSHI_SPORTS_1_TELEMETRY_AT_MS: undefined }, nowMs: 10_000,
