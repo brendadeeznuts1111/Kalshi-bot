@@ -24,6 +24,11 @@ import {
   TENNIS_WS_GROUND_WEBVIEW_HEIGHT,
   TENNIS_WS_GROUND_WEBVIEW_WIDTH,
 } from "./tennis-lane-constants.ts";
+import {
+  buildVisualSnapshotMeta,
+  type BunWebViewOptions,
+  type VisualSnapshotMeta,
+} from "./visual-snapshot-meta.ts";
 
 export const TENNIS_WS_GROUND_DIR = joinPath("research/cache/tennis-ws-ground");
 export const TENNIS_WS_GROUND_LATEST = join(TENNIS_WS_GROUND_DIR, "latest.json");
@@ -35,6 +40,8 @@ export type TennisWsGroundArtifact = {
   thumbWebp: string;
   webview: boolean;
   image: boolean;
+  /** Bun-native capture provenance; absent only on legacy/injected artifacts. */
+  snapshotMeta?: VisualSnapshotMeta;
   model: TennisWsDashboardModel;
 };
 
@@ -46,6 +53,7 @@ export type TennisWsGroundLatest = {
   thumbWebp: string;
   webview: boolean;
   image: boolean;
+  snapshotMeta: VisualSnapshotMeta;
   watchEvents: number;
   watchTickers: number;
   wsTicks: number;
@@ -56,9 +64,7 @@ export type TennisWsGroundLatest = {
   linkedEventsWithWs: number;
 };
 
-type WebViewOptions = NonNullable<ConstructorParameters<typeof Bun.WebView>[0]>;
-
-function resolveWebViewBackend(): WebViewOptions["backend"] {
+function resolveWebViewBackend(): BunWebViewOptions["backend"] {
   return process.platform === "darwin" ? "webkit" : "chrome";
 }
 
@@ -101,7 +107,7 @@ export async function captureTennisWsGround(
   if (!options.htmlOnly && hasWebView()) {
     // @see https://bun.com/docs/runtime/webview — data: URL navigation + screenshot
     const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
-    const viewOptions: WebViewOptions = {
+    const viewOptions: BunWebViewOptions = {
       width: TENNIS_WS_GROUND_WEBVIEW_WIDTH,
       height: TENNIS_WS_GROUND_WEBVIEW_HEIGHT,
       backend: resolveWebViewBackend(),
@@ -130,6 +136,17 @@ export async function captureTennisWsGround(
     }
   }
 
+  const snapshotMeta = await buildVisualSnapshotMeta({
+    capturedAt: model.at,
+    backend: resolveWebViewBackend(),
+    width: TENNIS_WS_GROUND_WEBVIEW_WIDTH,
+    height: TENNIS_WS_GROUND_WEBVIEW_HEIGHT,
+    webviewCaptured,
+    imageGenerated: imageCaptured,
+    sourcePath: dashboardPng,
+    thumbnailPath: thumbWebp,
+  });
+
   return {
     at: model.at,
     dashboardHtml,
@@ -137,6 +154,7 @@ export async function captureTennisWsGround(
     thumbWebp,
     webview: webviewCaptured,
     image: imageCaptured,
+    snapshotMeta,
     model,
   };
 }
@@ -145,6 +163,18 @@ export async function persistTennisWsGroundArtifact(
   artifact: TennisWsGroundArtifact,
   latestPath: string = TENNIS_WS_GROUND_LATEST,
 ): Promise<TennisWsGroundLatest> {
+  const snapshotMeta =
+    artifact.snapshotMeta ??
+    (await buildVisualSnapshotMeta({
+      capturedAt: artifact.at,
+      backend: resolveWebViewBackend(),
+      width: TENNIS_WS_GROUND_WEBVIEW_WIDTH,
+      height: TENNIS_WS_GROUND_WEBVIEW_HEIGHT,
+      webviewCaptured: artifact.webview,
+      imageGenerated: artifact.image,
+      sourcePath: artifact.dashboardPng,
+      thumbnailPath: artifact.thumbWebp,
+    }));
   const latest: TennisWsGroundLatest = {
     at: artifact.at,
     dashboardHtml: artifact.dashboardHtml,
@@ -152,6 +182,7 @@ export async function persistTennisWsGroundArtifact(
     thumbWebp: artifact.thumbWebp,
     webview: artifact.webview,
     image: artifact.image,
+    snapshotMeta,
     watchEvents: artifact.model.watchEvents,
     watchTickers: artifact.model.watchTickers,
     wsTicks: artifact.model.wsTicks,

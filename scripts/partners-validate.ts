@@ -55,6 +55,7 @@ export const KALSHI_PARTNER_OPS_CONCEPT_IDS = [
   'partner.execution.journal',
   'partner.execution.receipt',
   'provider.polymarket.intelligence_only',
+  'snapshot.visual.provenance',
 ] as const;
 
 const EXPECTED_KIND: Record<(typeof KALSHI_PARTNER_OPS_CONCEPT_IDS)[number], 'ui' | 'composite'> = {
@@ -97,6 +98,7 @@ const EXPECTED_KIND: Record<(typeof KALSHI_PARTNER_OPS_CONCEPT_IDS)[number], 'ui
   'partner.execution.journal': 'composite',
   'partner.execution.receipt': 'composite',
   'provider.polymarket.intelligence_only': 'composite',
+  'snapshot.visual.provenance': 'composite',
 };
 
 const errs: string[] = [];

@@ -107,6 +107,12 @@ read-only boundary machine-discoverable. Inspect these entries through the HQ
 glossary, `GET /api/glossary`, or `bun run glossary:dump`; validate the graph
 with `bun run glossary:check` and `bun run partners:validate`.
 
+Visual evidence produced from partner/liquidity dashboards carries
+`snapshot.visual.provenance`: native `Bun.WebView` backend/viewport and runtime
+identity plus `Bun.Image.metadata()` for the screenshot and thumbnail. This is
+review evidence only; execution freshness continues to come from the typed
+market/account `ExecutionSnapshot` immediately before reservation.
+
 ## External references
 
 - [Telegram Bot API](https://core.telegram.org/bots/api)

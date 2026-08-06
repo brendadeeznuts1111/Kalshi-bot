@@ -38,6 +38,12 @@ it is deliberately linked to market-data concepts and the execution gate, but
 does not represent a Polymarket order adapter. See the
 [partner execution expansion map](PARTNER-EXECUTION-EXPANSION.md).
 
+`snapshot.visual.provenance` describes the audit-only metadata emitted by the
+native WebView/Image visual-ground pipeline. It records Bun version/revision,
+browser backend and viewport, capture outcome, and decoded image dimensions and
+format. It never substitutes for an executable quote, authorization, or
+provider lifecycle evidence.
+
 HQ fragment routing uses `URLPattern.hash`; patterns match the fragment without
 the leading `#`. A literal colon before a named group must be escaped:
 `new URLPattern({ hash: "glossary\\::concept" })`.
