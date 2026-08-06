@@ -799,6 +799,36 @@ async function cancelOrderById(orderId, btn) {
 
 const px = (c) => c == null ? "—" : c + "¢";
 const fmtVol = (v) => v == null ? "—" : v >= 1e6 ? (v / 1e6).toFixed(1) + "M" : v >= 1e3 ? (v / 1e3).toFixed(1) + "K" : String(Math.round(v));
+const fmtHealthVolume = (value) => Number(value ?? 0).toLocaleString("en-US", {
+  maximumFractionDigits: 2,
+});
+
+function dataHealthBannerHtml(health) {
+  const state = health?.state ?? "unavailable";
+  const tone = state === "healthy" ? "ok" : state === "critical" ? "bad" : state === "degraded" ? "warn" : "dim";
+  const matched = Number(health?.matchedEvents ?? 0);
+  const target = Number(health?.targetEvents ?? 0);
+  const unmatched = Number(health?.unmatchedEvents ?? target);
+  const stale = Number(health?.staleVolumeEvents ?? 0);
+  const staleQuotes = Number(health?.staleQuoteEvents ?? 0);
+  const label = state === "healthy" ? "coverage healthy" : state === "critical" ? "venue coverage critical" : state === "degraded" ? "partial coverage" : "snapshot unavailable";
+  return (
+    '<section class="health-banner health-' + tone + '" aria-live="polite">' +
+    '<div class="health-summary"><div><span class="health-kicker">Cross-market data health</span>' +
+    '<strong>' + esc(matched) + ' / ' + esc(target) + ' events matched</strong></div>' +
+    badge(tone, label) +
+    (stale > 0 ? badge("warn", "⚠ " + stale + " stale volume") : "") +
+    (staleQuotes > 0 ? badge("warn", "⚠ " + staleQuotes + " stale venue quote") : "") +
+    (state === "critical" || state === "degraded" ? '<button type="button" id="health-debug" class="health-debug">Inspect coverage payload</button>' : "") +
+    '</div>' +
+    '<div class="health-grid">' +
+    '<div class="kalshi-metrics"><span>Kalshi 24h</span><strong>' + fmtHealthVolume(health?.kalshiVolume24h) + '</strong><small>contracts</small></div>' +
+    '<div class="poly-metrics"><span>Polymarket 24h</span><strong>$' + fmtHealthVolume(health?.polymarketVolume24h) + '</strong><small>USDC</small></div>' +
+    '</div>' +
+    '<div class="health-foot">' + esc(unmatched) + ' without a cross-venue link · source ' + esc(health?.source ?? "unavailable") + ' · volumes are shown side-by-side because their units differ</div>' +
+    '</section>'
+  );
+}
 
 function tradeTicker(ticker) {
   document.querySelector('nav.tabs button[data-tab="trading"]').click();
@@ -1105,7 +1135,9 @@ async function renderEvents() {
   const pair = (list) => list.map((v) => [v, v]);
 
   el.innerHTML =
-    '<div class="panel" id="live-board"><h2>' + esc(glossLabel("ui.live_board.title", "Tennis board")) + tip("ui.live_board.title") + " " +
+    '<div class="tennis-desk-shell">' +
+    dataHealthBannerHtml(tennisHq?.dataHealth) +
+    '<div class="panel tennis-board-controls" id="live-board"><h2>' + esc(glossLabel("ui.live_board.title", "Tennis board")) + tip("ui.live_board.title") + " " +
     badge("ok", __board.eventCount + " events · " + __board.marketCount + " markets") +
     ' <span class="muted" id="events-count" style="font-size:.8rem;font-weight:400"></span></h2>' +
     (metaAudit
@@ -1150,8 +1182,9 @@ async function renderEvents() {
     liqToggle("tradable", "Tradable", deskCounts.tradable, "desk.tradable") +
     liqToggle("all", "All", allEvents.length, "ui.events.filter.liquidity") +
     "</div></div>" +
-    '<div id="events-list"></div>' +
-    '<div class="panel"><h2>Player profiles' + tip("playerProfiles") + "</h2><div id='profiles-table'></div></div>";
+    '<div id="events-list" class="tennis-board-events"></div>' +
+    '<div class="panel tennis-desk-panel"><h2>Player profiles' + tip("playerProfiles") + "</h2><div id='profiles-table'></div></div>" +
+    "</div>";
 
   // Meta: avgKalshiVolumeFp + lastSeenAtMs + profilesSource (docs/PLAYER_PROFILES_META.md)
   const profilesSource = (profiles && profiles.profilesSource) || (profiles && profiles.state === "ok" ? "warehouse" : "seed");
@@ -1189,6 +1222,13 @@ async function renderEvents() {
       profRows + "</table>"
     : '<div class="muted">' + esc(profiles && profiles.reason ? profiles.reason : "profiles unavailable — run bun run tennis:profiles:build") +
       ' · source ' + sourceBadge + tip("profilesSource") + "</div>";
+
+  const healthDebug = $("#health-debug");
+  if (healthDebug) {
+    healthDebug.addEventListener("click", () => {
+      window.open("/api/hq/tennis", "_blank", "noopener");
+    });
+  }
 
   const filterForm = $("#events-filter");
   const readForm = () => {

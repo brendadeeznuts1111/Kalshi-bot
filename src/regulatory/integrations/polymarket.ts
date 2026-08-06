@@ -6,6 +6,7 @@
  */
 
 import { OFFICIAL_URLS } from "../../institutions/official-urls.ts";
+import type { SourceTagId } from "../../institutions/market-registry/brands.ts";
 import { fetchWithRetry, type RetryOptions } from "../../institutions/resilient-fetch.ts";
 
 export type PolymarketFetchImpl = (
@@ -21,12 +22,37 @@ export type PolymarketEvent = {
   slug: string;
   title: string;
   description?: string;
-  volume?: number;
-  volume24hr?: number;
-  openInterest?: number;
-  liquidityClob?: number;
+  volume: number | null;
+  volume24hr: number | null;
+  openInterest?: number | null;
+  liquidity: number | null;
+  liquidityClob: number | null;
+  active: boolean;
+  closed: boolean;
+  startDate?: string;
+  endDate?: string;
   createdAt?: string;
   updatedAt?: string;
+  /** Provider-owned sport series discriminator (for example `atp-doubles`). */
+  seriesSlug?: string;
+  seriesConflict?: boolean;
+  tags: PolymarketTag[];
+  teams: PolymarketTeam[];
+  markets: PolymarketMarket[];
+};
+
+export type PolymarketTeam = {
+  id: string | null;
+  name: string | null;
+  abbreviation: string | null;
+  league: string | null;
+  ordering: string | null;
+};
+
+export type PolymarketTag = {
+  id: string;
+  slug: string | null;
+  label: string | null;
 };
 
 export type PolymarketMarket = {
@@ -37,18 +63,21 @@ export type PolymarketMarket = {
   conditionId: string;
   resolutionSource?: string;
   outcomes: string[];       // parsed from JSON string
-  outcomePrices: number[];  // parsed from JSON string
-  volume: number;
-  volume24hr: number;
-  volume1wk: number;
-  volume1mo: number;
-  liquidity: number;
-  liquidityClob: number;
-  openInterest?: number;
-  lastTradePrice: number;
+  /** Null entries are source-declared but not priced yet. */
+  outcomePrices: Array<number | null>; // parsed from JSON string
+  volume: number | null;
+  volume24hr: number | null;
+  volume1wk: number | null;
+  volume1mo: number | null;
+  liquidity: number | null;
+  liquidityClob: number | null;
+  openInterest?: number | null;
+  lastTradePrice: number | null;
   bestBid?: number;
   bestAsk?: number;
   spread?: number;
+  sportsMarketType?: string;
+  groupItemTitle?: string;
   active: boolean;
   closed: boolean;
   createdAt: string;
@@ -119,32 +148,59 @@ async function getJson<T>(
   return res.json() as Promise<T>;
 }
 
-/** Parse JSON array fields that Polymarket returns as strings. */
-function parseJsonField<T>(raw: unknown): T[] {
-  if (Array.isArray(raw)) return raw as T[];
+/** Parse JSON array fields that Gamma may return serialized. */
+function parseJsonArray(raw: unknown, field: string): unknown[] {
+  if (Array.isArray(raw)) return raw;
   if (typeof raw === "string") {
     try {
-      return JSON.parse(raw) as T[];
+      const parsed: unknown = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
     } catch {
-      return [];
+      throw new Error(`Polymarket ${field}: malformed JSON array`);
     }
   }
-  return [];
+  throw new Error(`Polymarket ${field}: array required`);
 }
 
-function toNumber(raw: unknown): number {
-  if (typeof raw === "number") return raw;
+function toNumber(raw: unknown, field: string): number {
+  if (typeof raw === "number" && Number.isFinite(raw)) return raw;
   if (typeof raw === "string") {
     const n = Number(raw);
-    return Number.isNaN(n) ? 0 : n;
+    if (Number.isFinite(n)) return n;
   }
-  return 0;
+  throw new Error(`Polymarket ${field}: expected a finite number`);
+}
+
+function toOptionalNumber(raw: unknown, field: string): number | null {
+  if (raw === undefined || raw === null || raw === "") return null;
+  return toNumber(raw, field);
+}
+
+function requiredString(raw: unknown, field: string): string {
+  if (typeof raw !== "string" && typeof raw !== "number") {
+    throw new Error(`Polymarket ${field}: string required`);
+  }
+  const value = String(raw).trim();
+  if (!value) throw new Error(`Polymarket ${field}: string required`);
+  return value;
+}
+
+function isRecord(raw: unknown): raw is Record<string, unknown> {
+  return typeof raw === "object" && raw !== null && !Array.isArray(raw);
+}
+
+function toBoolean(raw: unknown, field: string): boolean {
+  if (typeof raw === "boolean") return raw;
+  if (raw === "true") return true;
+  if (raw === "false") return false;
+  throw new Error(`Polymarket ${field}: expected a boolean`);
 }
 
 // ── Public fetch functions ──
 
 export type FetchMarketsOptions = {
   limit?: number;
+  offset?: number;
   active?: boolean;
   closed?: boolean;
 };
@@ -157,6 +213,7 @@ export async function fetchPolymarketMarkets(
   const base = resolveBaseUrl(options.baseUrl);
   const limit = options.limit ?? 50;
   const params = new URLSearchParams({ limit: String(limit) });
+  if (options.offset !== undefined) params.set("offset", String(options.offset));
   if (options.active !== undefined) params.set("active", String(options.active));
   if (options.closed !== undefined) params.set("closed", String(options.closed));
 
@@ -165,6 +222,124 @@ export async function fetchPolymarketMarkets(
   const raw = await getJson<Record<string, unknown>[]>(fetchImpl, url, retryOptions);
 
   return raw.map(normalizeMarketWire);
+}
+
+export type FetchAllTennisEventsOptions = PolymarketClientOptions & {
+  /** Keyset pages support up to 500 events. */
+  pageSize?: number;
+  tagId?: SourceTagId;
+  tagSlug?: string;
+};
+
+export type FetchAllEventsOptions = FetchAllTennisEventsOptions;
+
+export type FetchEventsPageOptions = FetchAllEventsOptions & {
+  afterCursor?: string;
+};
+
+export type PolymarketEventsPage = {
+  events: PolymarketEvent[];
+  nextCursor?: string;
+};
+
+/** Fetch one opaque-cursor wire page. Parsing remains a separate pure boundary. */
+export async function fetchPolymarketEventsPageWire(
+  options: FetchEventsPageOptions,
+): Promise<unknown> {
+  const fetchImpl = resolveFetch(options);
+  const base = resolveBaseUrl(options.baseUrl);
+  const rawPageSize = options.pageSize ?? 500;
+  if (!Number.isFinite(rawPageSize)) throw new Error("Polymarket pageSize must be finite");
+  const pageSize = Math.max(1, Math.min(500, Math.floor(rawPageSize)));
+  if (!options.tagId && !options.tagSlug) {
+    throw new Error("Polymarket event scope requires tagId or tagSlug");
+  }
+  const {
+    fetchImpl: _,
+    baseUrl: __,
+    pageSize: ___,
+    tagId: ____,
+    tagSlug: _____,
+    afterCursor: ______,
+    ...retryOptions
+  } = options;
+  const params = new URLSearchParams({
+    active: "true",
+    closed: "false",
+    limit: String(pageSize),
+  });
+  if (options.tagId) params.set("tag_id", options.tagId);
+  else if (options.tagSlug) params.set("tag_slug", options.tagSlug);
+  if (options.afterCursor) params.set("after_cursor", options.afterCursor);
+  return getJson<unknown>(fetchImpl, `${base}/events/keyset?${params.toString()}`, retryOptions);
+}
+
+/** Strict parse-once boundary for a Gamma inventory page. */
+export function parsePolymarketEventsPageWire(raw: unknown): PolymarketEventsPage {
+  if (!isRecord(raw)) throw new Error("Polymarket keyset page: object required");
+  const rows = Array.isArray(raw.events) ? (raw.events as Record<string, unknown>[]) : null;
+  if (!rows) throw new Error("Polymarket keyset page: events array required");
+  const nextCursor =
+    typeof raw.next_cursor === "string" && raw.next_cursor ? raw.next_cursor : undefined;
+  if (raw.next_cursor !== undefined && raw.next_cursor !== null && !nextCursor) {
+    throw new Error("Polymarket keyset page: next_cursor must be a non-empty string or null");
+  }
+  for (const [index, row] of rows.entries()) {
+    if (!isRecord(row) || !Array.isArray(row.markets)) {
+      throw new Error(`Polymarket keyset page: events[${index}].markets array required`);
+    }
+  }
+  return {
+    events: rows.map(normalizeEventWire),
+    ...(nextCursor ? { nextCursor } : {}),
+  };
+}
+
+/** Fetch and parse one opaque-cursor event page for a registered sports tag. */
+export async function fetchPolymarketEventsPage(
+  options: FetchEventsPageOptions,
+): Promise<PolymarketEventsPage> {
+  return parsePolymarketEventsPageWire(await fetchPolymarketEventsPageWire(options));
+}
+
+/**
+ * Fetch every active event for one tag using Gamma keyset pagination.
+ * The opaque `next_cursor` is passed back as `after_cursor`; offsets are never used.
+ */
+export async function fetchAllPolymarketEvents(
+  options: FetchAllEventsOptions,
+): Promise<PolymarketEvent[]> {
+  const events: PolymarketEvent[] = [];
+  const seenIds = new Set<string>();
+  const seenCursors = new Set<string>();
+  let afterCursor: string | undefined;
+
+  for (let page = 0; page < 1_000; page++) {
+    const result = await fetchPolymarketEventsPage({ ...options, afterCursor });
+    for (const event of result.events) {
+      if (seenIds.has(event.id)) {
+        throw new Error(`Polymarket keyset pagination repeated event ${event.id}`);
+      }
+      seenIds.add(event.id);
+      events.push(event);
+    }
+    const nextCursor = result.nextCursor;
+    if (!nextCursor) return events;
+    if (seenCursors.has(nextCursor)) {
+      throw new Error(`Polymarket keyset pagination repeated cursor ${nextCursor}`);
+    }
+    seenCursors.add(nextCursor);
+    afterCursor = nextCursor;
+  }
+
+  throw new Error("Polymarket pagination exceeded 1000 pages");
+}
+
+/** Compatibility wrapper for existing tennis consumers. */
+export async function fetchAllPolymarketTennisEvents(
+  options: FetchAllTennisEventsOptions = {},
+): Promise<PolymarketEvent[]> {
+  return fetchAllPolymarketEvents({ ...options, tagSlug: options.tagSlug ?? "tennis" });
 }
 
 /** Fetch a single market by its numeric ID. */
@@ -183,18 +358,27 @@ export async function fetchPolymarketMarket(
 /** Build a tick snapshot from a market object. */
 export function marketToTick(market: PolymarketMarket, now = Date.now()): PolymarketTick {
   const prices = market.outcomePrices;
-  const yesPrice = prices[0] ?? market.lastTradePrice ?? 0;
-  const noPrice = prices[1] ?? (1 - yesPrice);
+  const yesIndex = market.outcomes.findIndex((outcome) => outcome.trim().toLowerCase() === "yes");
+  const noIndex = market.outcomes.findIndex((outcome) => outcome.trim().toLowerCase() === "no");
+  if (yesIndex < 0 || noIndex < 0) {
+    throw new Error(`Polymarket marketToTick requires literal Yes/No outcomes: ${market.slug}`);
+  }
+  const yesPrice = prices[yesIndex] ?? market.lastTradePrice ?? 0;
+  const noPrice = prices[noIndex] ?? 1 - yesPrice;
+  const bestBid =
+    yesIndex === 0 ? (market.bestBid ?? yesPrice) : 1 - (market.bestAsk ?? noPrice);
+  const bestAsk =
+    yesIndex === 0 ? (market.bestAsk ?? yesPrice) : 1 - (market.bestBid ?? noPrice);
   return {
     slug: market.slug,
     yesPrice: Number(yesPrice.toFixed(4)),
     noPrice: Number(noPrice.toFixed(4)),
-    bestBid: market.bestBid ?? yesPrice,
-    bestAsk: market.bestAsk ?? yesPrice,
-    spread: market.spread ?? Math.abs((market.bestAsk ?? yesPrice) - (market.bestBid ?? yesPrice)),
-    volume24hr: market.volume24hr,
-    volumeTotal: market.volume,
-    liquidity: market.liquidityClob ?? market.liquidity,
+    bestBid: Number(bestBid.toFixed(4)),
+    bestAsk: Number(bestAsk.toFixed(4)),
+    spread: Number((market.spread ?? Math.abs(bestAsk - bestBid)).toFixed(4)),
+    volume24hr: market.volume24hr ?? 0,
+    volumeTotal: market.volume ?? 0,
+    liquidity: market.liquidityClob ?? market.liquidity ?? 0,
     timestamp: Math.floor(now / 1000),
   };
 }
@@ -202,41 +386,139 @@ export function marketToTick(market: PolymarketMarket, now = Date.now()): Polyma
 // ── Normalization ──
 
 function normalizeMarketWire(raw: Record<string, unknown>): PolymarketMarket {
-  const outcomes = parseJsonField<string>(raw.outcomes);
-  const outcomePrices = parseJsonField<string | number>(raw.outcomePrices).map(toNumber);
-
-  // Build event from nested events array or single event field
-  const events = (raw.events as PolymarketEvent[] | undefined) ?? [];
-  const event = events[0] ?? (raw.event as PolymarketEvent | undefined);
+  const outcomes = parseJsonArray(raw.outcomes, "market.outcomes").map((value, index) => {
+    if (typeof value !== "string" || !value.trim()) {
+      throw new Error(`Polymarket market.outcomes[${index}]: non-empty string required`);
+    }
+    return value;
+  });
+  const outcomePrices =
+    raw.outcomePrices === undefined || raw.outcomePrices === null || raw.outcomePrices === ""
+      ? outcomes.map(() => null)
+      : parseJsonArray(raw.outcomePrices, "market.outcomePrices").map((value, index) => {
+          const price = toNumber(value, `market.outcomePrices[${index}]`);
+          if (price < 0 || price > 1) {
+            throw new Error(
+              `Polymarket market.outcomePrices[${index}]: probability out of range`,
+            );
+          }
+          return price;
+        });
+  if (outcomes.length !== outcomePrices.length || outcomes.length < 2) {
+    throw new Error("Polymarket market outcomes/prices length mismatch");
+  }
 
   return {
-    id: String(raw.id ?? ""),
-    slug: String(raw.slug ?? ""),
-    question: String(raw.question ?? ""),
+    id: requiredString(raw.id, "market.id"),
+    slug: requiredString(raw.slug, "market.slug"),
+    question: requiredString(raw.question, "market.question"),
     description: raw.description ? String(raw.description) : undefined,
-    conditionId: String(raw.conditionId ?? ""),
+    conditionId: requiredString(raw.conditionId, "market.conditionId"),
     resolutionSource: raw.resolutionSource ? String(raw.resolutionSource) : undefined,
     outcomes,
     outcomePrices,
-    volume: toNumber(raw.volume),
-    volume24hr: toNumber(raw.volume24hr),
-    volume1wk: toNumber(raw.volume1wk),
-    volume1mo: toNumber(raw.volume1mo),
-    liquidity: toNumber(raw.liquidity),
-    liquidityClob: toNumber(raw.liquidityClob),
-    openInterest: raw.openInterest ? toNumber(raw.openInterest) : undefined,
-    lastTradePrice: toNumber(raw.lastTradePrice),
-    bestBid: raw.bestBid ? toNumber(raw.bestBid) : undefined,
-    bestAsk: raw.bestAsk ? toNumber(raw.bestAsk) : undefined,
-    spread: raw.spread ? toNumber(raw.spread) : undefined,
-    active: Boolean(raw.active),
-    closed: Boolean(raw.closed),
+    volume: toOptionalNumber(raw.volume, "market.volume"),
+    volume24hr: toOptionalNumber(raw.volume24hr, "market.volume24hr"),
+    volume1wk: toOptionalNumber(raw.volume1wk, "market.volume1wk"),
+    volume1mo: toOptionalNumber(raw.volume1mo, "market.volume1mo"),
+    liquidity: toOptionalNumber(raw.liquidity, "market.liquidity"),
+    liquidityClob: toOptionalNumber(raw.liquidityClob, "market.liquidityClob"),
+    openInterest: toOptionalNumber(raw.openInterest, "market.openInterest"),
+    lastTradePrice: toOptionalNumber(raw.lastTradePrice, "market.lastTradePrice"),
+    bestBid: raw.bestBid != null ? toNumber(raw.bestBid, "market.bestBid") : undefined,
+    bestAsk: raw.bestAsk != null ? toNumber(raw.bestAsk, "market.bestAsk") : undefined,
+    spread: raw.spread != null ? toNumber(raw.spread, "market.spread") : undefined,
+    sportsMarketType:
+      typeof raw.sportsMarketType === "string" ? raw.sportsMarketType : undefined,
+    groupItemTitle: optionalString(raw.groupItemTitle, "market.groupItemTitle"),
+    active: toBoolean(raw.active, "market.active"),
+    closed: toBoolean(raw.closed, "market.closed"),
     createdAt: String(raw.createdAt ?? ""),
     updatedAt: String(raw.updatedAt ?? ""),
     endDate: raw.endDate ? String(raw.endDate) : undefined,
-    event,
-    events,
   };
+}
+
+function normalizeEventWire(raw: Record<string, unknown>): PolymarketEvent {
+  const marketRows = Array.isArray(raw.markets)
+    ? (raw.markets as Record<string, unknown>[])
+    : [];
+  const tagRows = raw.tags === undefined ? [] : recordArray(raw.tags, "event.tags");
+  const seriesRows = raw.series === undefined ? [] : recordArray(raw.series, "event.series");
+  const teamRows = raw.teams === undefined ? [] : recordArray(raw.teams, "event.teams");
+  const relationSeriesSlugs = [
+    ...new Set(
+      seriesRows
+        .map((row, index) => optionalString(row.slug, `event.series[${index}].slug`))
+        .filter((slug): slug is string => slug !== undefined),
+    ),
+  ];
+  const directSeriesSlug = optionalString(raw.seriesSlug, "event.seriesSlug");
+  const relationSeriesSlug = relationSeriesSlugs[0];
+  const seriesConflict =
+    relationSeriesSlugs.length > 1 ||
+    Boolean(directSeriesSlug && relationSeriesSlug && directSeriesSlug !== relationSeriesSlug);
+  return {
+    id: requiredString(raw.id, "event.id"),
+    ticker: String(raw.ticker ?? ""),
+    slug: requiredString(raw.slug, "event.slug"),
+    title: requiredString(raw.title, "event.title"),
+    description: raw.description ? String(raw.description) : undefined,
+    volume: toOptionalNumber(raw.volume, "event.volume"),
+    volume24hr: toOptionalNumber(raw.volume24hr, "event.volume24hr"),
+    openInterest: toOptionalNumber(raw.openInterest, "event.openInterest"),
+    liquidity: toOptionalNumber(raw.liquidity, "event.liquidity"),
+    liquidityClob: toOptionalNumber(raw.liquidityClob, "event.liquidityClob"),
+    active: toBoolean(raw.active, "event.active"),
+    closed: toBoolean(raw.closed, "event.closed"),
+    startDate: raw.startDate ? String(raw.startDate) : undefined,
+    endDate: raw.endDate ? String(raw.endDate) : undefined,
+    createdAt: raw.createdAt ? String(raw.createdAt) : undefined,
+    updatedAt: raw.updatedAt ? String(raw.updatedAt) : undefined,
+    ...(!seriesConflict && (directSeriesSlug ?? relationSeriesSlug)
+      ? { seriesSlug: directSeriesSlug ?? relationSeriesSlug }
+      : {}),
+    ...(seriesConflict ? { seriesConflict: true } : {}),
+    tags: tagRows.map((row, index) => ({
+      id: requiredString(row.id, `event.tags[${index}].id`),
+      slug: optionalString(row.slug, `event.tags[${index}].slug`) ?? null,
+      label: optionalString(row.label, `event.tags[${index}].label`) ?? null,
+    })),
+    teams: teamRows.map((row, index) => ({
+      id: optionalIdentifier(row.id, `event.teams[${index}].id`),
+      name: optionalString(row.name, `event.teams[${index}].name`) ?? null,
+      abbreviation:
+        optionalString(row.abbreviation, `event.teams[${index}].abbreviation`) ?? null,
+      league: optionalString(row.league, `event.teams[${index}].league`) ?? null,
+      ordering: optionalString(row.ordering, `event.teams[${index}].ordering`) ?? null,
+    })),
+    markets: marketRows.map(normalizeMarketWire),
+  };
+}
+
+function recordArray(raw: unknown, field: string): Record<string, unknown>[] {
+  if (!Array.isArray(raw) || raw.some((row) => !isRecord(row))) {
+    throw new Error(`Polymarket ${field}: object array required`);
+  }
+  return raw as Record<string, unknown>[];
+}
+
+function optionalString(raw: unknown, field: string): string | undefined {
+  if (raw === undefined || raw === null || raw === "") return undefined;
+  if (typeof raw !== "string" || !raw.trim()) {
+    throw new Error(`Polymarket ${field}: non-empty string required`);
+  }
+  return raw.trim();
+}
+
+function optionalIdentifier(raw: unknown, field: string): string | null {
+  if (raw === undefined || raw === null || raw === "") return null;
+  if (typeof raw !== "string" && typeof raw !== "number") {
+    throw new Error(`Polymarket ${field}: string required`);
+  }
+  const value = String(raw).trim();
+  if (!value) return null;
+  return value;
 }
 
 // ── Line-movement detection ──
@@ -288,7 +570,7 @@ export class PolymarketLineTracker {
     const deltaBp = oldPrice > 0 ? Math.round((deltaAbs / oldPrice) * 10_000) : 0;
 
     const exceedsThreshold = Math.abs(deltaBp) >= this.deltaBpThreshold;
-    const liquidEnough = tick.volume24hr >= this.minVolume24hr;
+    const liquidEnough = (tick.volume24hr ?? 0) >= this.minVolume24hr;
     const tightSpread = tick.spread <= this.maxSpread;
 
     if (exceedsThreshold && liquidEnough && tightSpread) {
@@ -299,7 +581,7 @@ export class PolymarketLineTracker {
         newPrice: Number(newPrice.toFixed(4)),
         deltaBp,
         deltaAbs: Number(Math.abs(deltaAbs).toFixed(4)),
-        volumeAtMove: tick.volume24hr,
+        volumeAtMove: tick.volume24hr ?? 0,
         detectedAt: tick.timestamp,
         windowSeconds: this.windowSeconds,
       });

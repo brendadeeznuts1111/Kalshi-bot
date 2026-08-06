@@ -9,6 +9,7 @@
  *
  * Registered jobs:
  *   - Price logger:      every 5 minutes
+ *   - Sports metadata:   every 15 minutes
  *   - Daily analysis:    daily at 08:00 UTC
  *   - Color artifacts:   daily at 03:00 UTC
  *   - Contrast gate:     daily at 04:00 UTC
@@ -19,12 +20,16 @@
  */
 import { ensureEventStoreDir, openEventStore } from "../src/institutions/event-store/open-db.ts";
 import { DEFAULT_EVENT_STORE_DB } from "../src/institutions/event-store/paths.ts";
-import { runSnapshotCycle } from "../scripts/price-logger.ts";
-import { runAnalysis } from "../scripts/market-inefficiency.ts";
+import { existsSync } from "node:fs";
+import { runSnapshotCycle } from "./price-logger.ts";
+import { syncSportsSourceMetadata } from "./sync-sports-source-metadata.ts";
+import { createSportsSourceRuntime } from "../src/institutions/market-registry/runtime.ts";
+import { unbrand } from "../src/institutions/market-registry/brands.ts";
 
 // ── Config ──────────────────────────────────────────────────────
 
 const INTERVAL_LOGGER = "*/5 * * * *";
+export const INTERVAL_SPORTS_METADATA = "*/15 * * * *";
 const INTERVAL_ANALYSIS = "0 8 * * *";
 const INTERVAL_GLOSSARY_URLS = "0 2 * * *";
 const INTERVAL_COLOR_ARTIFACTS = "0 3 * * *";
@@ -47,6 +52,7 @@ const PARTNER_FINANCE_ENABLED = Bun.env.PARTNER_FINANCE_CRON === "1";
 // ── Jobs ────────────────────────────────────────────────────────
 
 let db: ReturnType<typeof openEventStore> | null = null;
+const sportsSourceRuntime = createSportsSourceRuntime();
 
 function getDb() {
   if (!db) {
@@ -68,11 +74,74 @@ async function jobLogger(): Promise<void> {
   }
 }
 
+export function createSingleFlight<T>(work: () => Promise<T>): {
+  run: () => Promise<T>;
+  drain: () => Promise<void>;
+} {
+  let active: Promise<T> | undefined;
+  return {
+    run() {
+      if (active) return active;
+      const current = work().finally(() => {
+        if (active === current) active = undefined;
+      });
+      active = current;
+      return current;
+    },
+    async drain() {
+      if (active) await active;
+    },
+  };
+}
+
+/** Refresh source-global Kalshi and Polymarket catalogs before their 30m freshness deadline. */
+async function runSportsMetadata(): Promise<boolean> {
+  const start = Date.now();
+  try {
+    const result = await syncSportsSourceMetadata({
+      db: getDb(),
+      adapters: sportsSourceRuntime.metadataAdapters,
+    });
+    const failures = result.runs
+      .filter((run) => run.state === "failed")
+      .map((run) => `${unbrand(run.source)}=${run.error}`)
+      .join("; ");
+    console.error(
+      `[cron:sports-metadata] ${result.completed} complete · ${result.failed} failed · ${result.abandoned} abandoned · ${Date.now() - start}ms${failures ? ` · ${failures}` : ""}`,
+    );
+    return result.failed === 0;
+  } catch (err) {
+    console.error(`[cron:sports-metadata] Error: ${err}`);
+    return false;
+  }
+}
+
+const sportsMetadataFlight = createSingleFlight(runSportsMetadata);
+
+export function jobSportsMetadata(): Promise<boolean> {
+  return sportsMetadataFlight.run();
+}
+
+export function drainSportsMetadataJob(): Promise<void> {
+  return sportsMetadataFlight.drain();
+}
+
 /** Daily market inefficiency analysis. */
 async function jobAnalysis(): Promise<void> {
   const start = Date.now();
   try {
-    await runAnalysis(getDb());
+    const script = `${import.meta.dir}/market-inefficiency.ts`;
+    if (!existsSync(script)) {
+      console.error("[cron:analysis] Skipped · scripts/market-inefficiency.ts is not installed");
+      return;
+    }
+    const proc = Bun.spawn(["bun", script], {
+      cwd: import.meta.dir + "/..",
+      stdout: "inherit",
+      stderr: "inherit",
+    });
+    const code = await proc.exited;
+    if (code !== 0) throw new Error(`market-inefficiency exited ${code}`);
     console.error(`[cron:analysis] Complete · ${Date.now() - start}ms`);
   } catch (err) {
     console.error(`[cron:analysis] Error: ${err}`);
@@ -257,41 +326,44 @@ async function jobContrast(): Promise<void> {
 
 // ── CLI ────────────────────────────────────────────────────────
 
-const args = process.argv.slice(2);
-const once = args.includes("--once");
-
-// Graceful shutdown — close DB and exit on SIGTERM/SIGHUP/SIGINT.
-let shuttingDown = false;
-for (const sig of ["SIGHUP", "SIGTERM", "SIGINT"] as const) {
-  process.on(sig, () => {
+async function main(): Promise<void> {
+  const once = process.argv.slice(2).includes("--once");
+  let shuttingDown = false;
+  const shutdown = async (signal: "SIGHUP" | "SIGTERM" | "SIGINT") => {
     if (shuttingDown) return;
     shuttingDown = true;
-    console.error(`[cron] received ${sig}, shutting down`);
+    console.error(`[cron] received ${signal}, draining sports metadata`);
+    await drainSportsMetadataJob();
     if (db) {
-      try { db.close(); } catch {}
+      try {
+        db.close();
+      } catch {}
     }
     process.exit(0);
-  });
-}
+  };
+  for (const signal of ["SIGHUP", "SIGTERM", "SIGINT"] as const) {
+    process.on(signal, () => void shutdown(signal));
+  }
 
-if (once) {
-  // Run each job once for testing
-  console.error("[cron] Once mode — running all jobs...");
-  await jobLogger();
-  await jobAnalysis();
-  await jobGlossaryUrls();
-  await jobColorArtifacts();
-  await jobContrast();
-  await jobLiquidityPipeline();
-  await jobPartnerSync();
-  await jobPartnerFinance();
-  console.error("[cron] All jobs complete.");
-  process.exit(0);
-}
+  if (once) {
+    console.error("[cron] Once mode — running all jobs...");
+    await jobLogger();
+    const metadataOk = await jobSportsMetadata();
+    await jobAnalysis();
+    await jobGlossaryUrls();
+    await jobColorArtifacts();
+    await jobContrast();
+    await jobLiquidityPipeline();
+    await jobPartnerSync();
+    await jobPartnerFinance();
+    console.error(`[cron] All jobs complete · sports metadata ${metadataOk ? "ok" : "failed"}.`);
+    process.exitCode = metadataOk ? 0 : 1;
+    return;
+  }
 
-// Register cron jobs
-console.error(`[cron] Registering jobs:
+  console.error(`[cron] Registering jobs:
   logger:   ${INTERVAL_LOGGER}
+  metadata: ${INTERVAL_SPORTS_METADATA}
   analysis: ${INTERVAL_ANALYSIS}
   urls:     ${INTERVAL_GLOSSARY_URLS}
   colors:   ${INTERVAL_COLOR_ARTIFACTS}
@@ -299,20 +371,22 @@ console.error(`[cron] Registering jobs:
   liquidity:${INTERVAL_LIQUIDITY}
   partner:  ${PARTNER_SYNC_ENABLED ? INTERVAL_PARTNER_SYNC : "off (PARTNER_SYNC=1)"}
   finance:  ${PARTNER_FINANCE_ENABLED ? INTERVAL_PARTNER_FINANCE : "off (PARTNER_FINANCE_CRON=1)"}`);
-console.error("[cron] Process running — use SIGTERM to stop.");
+  console.error("[cron] Process running — use SIGTERM to stop.");
 
-Bun.cron(INTERVAL_LOGGER, jobLogger);
-Bun.cron(INTERVAL_ANALYSIS, jobAnalysis);
-Bun.cron(INTERVAL_GLOSSARY_URLS, jobGlossaryUrls);
-Bun.cron(INTERVAL_COLOR_ARTIFACTS, jobColorArtifacts);
-Bun.cron(INTERVAL_CONTRAST, jobContrast);
-Bun.cron(INTERVAL_LIQUIDITY, jobLiquidityPipeline);
-if (PARTNER_SYNC_ENABLED) {
-  Bun.cron(INTERVAL_PARTNER_SYNC, jobPartnerSync);
-}
-if (PARTNER_FINANCE_ENABLED) {
-  Bun.cron(INTERVAL_PARTNER_FINANCE, jobPartnerFinance);
+  Bun.cron(INTERVAL_LOGGER, jobLogger);
+  Bun.cron(INTERVAL_SPORTS_METADATA, jobSportsMetadata);
+  Bun.cron(INTERVAL_ANALYSIS, jobAnalysis);
+  Bun.cron(INTERVAL_GLOSSARY_URLS, jobGlossaryUrls);
+  Bun.cron(INTERVAL_COLOR_ARTIFACTS, jobColorArtifacts);
+  Bun.cron(INTERVAL_CONTRAST, jobContrast);
+  Bun.cron(INTERVAL_LIQUIDITY, jobLiquidityPipeline);
+  if (PARTNER_SYNC_ENABLED) {
+    Bun.cron(INTERVAL_PARTNER_SYNC, jobPartnerSync);
+  }
+  if (PARTNER_FINANCE_ENABLED) {
+    Bun.cron(INTERVAL_PARTNER_FINANCE, jobPartnerFinance);
+  }
+  await new Promise(() => {});
 }
 
-// Keep process alive
-await new Promise(() => {});
+if (import.meta.main) await main();

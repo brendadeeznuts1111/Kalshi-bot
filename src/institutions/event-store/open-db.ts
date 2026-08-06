@@ -39,6 +39,27 @@ const SCHEMA_COLUMN_MIGRATIONS: Array<{ table: string; column: string; decl: str
   { table: "resolutions", column: "fetched_ts", decl: "INTEGER" },
   { table: "resolutions", column: "corpus", decl: "TEXT NOT NULL DEFAULT 'trading'" },
   { table: "player_profiles", column: "country", decl: "TEXT" },
+  { table: "price_snapshots", column: "match_key", decl: "TEXT NOT NULL DEFAULT ''" },
+  { table: "price_snapshots", column: "market_source", decl: "TEXT NOT NULL DEFAULT 'kalshi'" },
+  { table: "price_snapshots", column: "surface_edge", decl: "INTEGER NOT NULL DEFAULT 0" },
+  { table: "price_snapshots", column: "kalshi_volume_lifetime", decl: "REAL NOT NULL DEFAULT 0" },
+  { table: "price_snapshots", column: "stale_volume", decl: "INTEGER NOT NULL DEFAULT 0" },
+  { table: "price_snapshots", column: "poly_volume_24h", decl: "REAL" },
+  { table: "price_snapshots", column: "poly_volume_lifetime", decl: "REAL" },
+  { table: "price_snapshots", column: "poly_liquidity", decl: "REAL" },
+  { table: "price_snapshots", column: "poly_open_interest", decl: "REAL" },
+  { table: "price_snapshots", column: "polymarket_event_id", decl: "TEXT" },
+  { table: "price_snapshots", column: "polymarket_match_method", decl: "TEXT" },
+  { table: "price_snapshots", column: "kalshi_series", decl: "TEXT" },
+  { table: "price_snapshots", column: "event_type", decl: "TEXT" },
+  { table: "price_snapshots", column: "participant_format", decl: "TEXT" },
+  { table: "price_snapshots", column: "poly_observed_at_ms", decl: "INTEGER" },
+  { table: "price_snapshots", column: "poly_cache_state", decl: "TEXT" },
+  {
+    table: "source_inventory_runs",
+    column: "registry_fingerprint",
+    decl: "TEXT NOT NULL DEFAULT 'legacy:unversioned'",
+  },
 ];
 
 export async function ensureEventStoreDir(): Promise<void> {
@@ -174,6 +195,123 @@ export function applyEventStoreSchema(db: Database): void {
     `CREATE INDEX IF NOT EXISTS idx_provider_sport_api ON provider_sport_mappings (provider, api_sport_id)`,
   );
   migrateEventStoreColumns(db);
+  migrateSourceEventSelectors(db);
+  abandonLegacyKalshiInventoryRuns(db);
+  abandonUnpinnedSourceInventoryRuns(db);
+  db.run(
+    `CREATE INDEX IF NOT EXISTS idx_price_snapshots_match_health
+     ON price_snapshots (poly_prob, stale_volume, ts)`,
+  );
+}
+
+/** An in-flight legacy run cannot prove which registry semantics interpreted earlier pages. */
+function abandonUnpinnedSourceInventoryRuns(db: Database): void {
+  db.query(
+    `UPDATE source_inventory_runs
+     SET state = 'abandoned',
+         finished_at_ms = MAX(started_at_ms, COALESCE(checkpoint_at_ms, started_at_ms)),
+         error_detail = 'migration: inventory run lacked registry fingerprint'
+     WHERE state = 'running' AND registry_fingerprint = 'legacy:unversioned'`,
+  ).run();
+}
+
+/** New event-page adapters cannot safely resume cursors minted by the old market-page contract. */
+function abandonLegacyKalshiInventoryRuns(db: Database): void {
+  db.query(
+    `UPDATE source_inventory_runs
+     SET state = 'abandoned',
+         finished_at_ms = MAX(started_at_ms, COALESCE(checkpoint_at_ms, started_at_ms)),
+         error_detail = 'migration: kalshi-markets-v1 replaced by kalshi-events-v1'
+     WHERE state = 'running' AND adapter_id = 'kalshi-markets-v1'`,
+  ).run();
+}
+
+/** Rebuild the additive selector table once to add run fencing and its composite FK safely. */
+function migrateSourceEventSelectors(db: Database): void {
+  const hasActive = tableHasColumn(db, "source_event_selectors", "active");
+  const hasRetiredAt = tableHasColumn(db, "source_event_selectors", "retired_at_ms");
+  const hasRunFence = tableHasColumn(db, "source_event_selectors", "last_seen_run_id");
+  const hasRunForeignKey = (
+    db.query("PRAGMA foreign_key_list(source_event_selectors)").all() as Array<{
+      table: string;
+      from: string;
+    }>
+  ).some((row) => row.table === "source_inventory_runs" && row.from === "last_seen_run_id");
+  if (hasActive && hasRetiredAt && hasRunFence && hasRunForeignKey) {
+    db.run(
+      `CREATE INDEX IF NOT EXISTS idx_source_event_selectors_active
+       ON source_event_selectors (source_key, selector_scope, active, source_event_id)`,
+    );
+    return;
+  }
+  const migrate = db.transaction(() => {
+    db.run("DROP TABLE IF EXISTS source_event_selectors_next");
+    db.run(`CREATE TABLE source_event_selectors_next (
+      source_key TEXT NOT NULL,
+      source_event_id TEXT NOT NULL,
+      selector_scope TEXT NOT NULL,
+      adapter_id TEXT NOT NULL,
+      selector_kind TEXT NOT NULL,
+      selector_parameters_json TEXT NOT NULL CHECK (json_valid(selector_parameters_json)),
+      active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+      retired_at_ms INTEGER CHECK (retired_at_ms IS NULL OR retired_at_ms >= 0),
+      last_seen_run_id TEXT,
+      first_observed_at_ms INTEGER NOT NULL CHECK (first_observed_at_ms >= 0),
+      last_observed_at_ms INTEGER NOT NULL CHECK (last_observed_at_ms >= first_observed_at_ms),
+      PRIMARY KEY (source_key, source_event_id, selector_scope),
+      FOREIGN KEY (source_key, source_event_id)
+        REFERENCES source_events (source_key, source_event_id),
+      FOREIGN KEY (source_key, selector_scope, last_seen_run_id)
+        REFERENCES source_inventory_runs (source_key, selector_scope, inventory_run_id)
+    )`);
+    db.run(
+      hasActive && hasRetiredAt && hasRunFence
+        ? `INSERT INTO source_event_selectors_next (
+             source_key, source_event_id, selector_scope, adapter_id, selector_kind,
+             selector_parameters_json, active, retired_at_ms, last_seen_run_id,
+             first_observed_at_ms, last_observed_at_ms
+           )
+           SELECT ses.source_key, ses.source_event_id, ses.selector_scope,
+                  ses.adapter_id, ses.selector_kind, ses.selector_parameters_json,
+                  ses.active, ses.retired_at_ms,
+                  CASE WHEN EXISTS (
+                    SELECT 1 FROM source_inventory_runs sir
+                    WHERE sir.source_key = ses.source_key
+                      AND sir.selector_scope = ses.selector_scope
+                      AND sir.inventory_run_id = ses.last_seen_run_id
+                  ) THEN ses.last_seen_run_id ELSE NULL END,
+                  ses.first_observed_at_ms, ses.last_observed_at_ms
+           FROM source_event_selectors ses`
+        : hasActive && hasRetiredAt
+        ? `INSERT INTO source_event_selectors_next (
+             source_key, source_event_id, selector_scope, adapter_id, selector_kind,
+             selector_parameters_json, active, retired_at_ms,
+             first_observed_at_ms, last_observed_at_ms
+           )
+           SELECT source_key, source_event_id, selector_scope, adapter_id, selector_kind,
+                  selector_parameters_json, active, retired_at_ms,
+                  first_observed_at_ms, last_observed_at_ms
+           FROM source_event_selectors`
+        : `INSERT INTO source_event_selectors_next (
+             source_key, source_event_id, selector_scope, adapter_id, selector_kind,
+             selector_parameters_json, first_observed_at_ms, last_observed_at_ms
+           )
+           SELECT source_key, source_event_id, selector_scope, adapter_id, selector_kind,
+                  selector_parameters_json, first_observed_at_ms, last_observed_at_ms
+           FROM source_event_selectors`,
+    );
+    db.run("DROP TABLE source_event_selectors");
+    db.run("ALTER TABLE source_event_selectors_next RENAME TO source_event_selectors");
+    db.run(
+      `CREATE INDEX idx_source_event_selectors_scope
+       ON source_event_selectors (source_key, selector_scope, source_event_id)`,
+    );
+    db.run(
+      `CREATE INDEX idx_source_event_selectors_active
+       ON source_event_selectors (source_key, selector_scope, active, source_event_id)`,
+    );
+  });
+  migrate.immediate();
 }
 
 export function migrateEventStoreColumns(db: Database): void {

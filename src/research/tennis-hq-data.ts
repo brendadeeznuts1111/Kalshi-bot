@@ -12,6 +12,14 @@ import { midFromBookSnapshot } from "../bot/kalshi-book-parse.ts";
 import type { BookSnapshot } from "../institutions/alpha-signal-types.ts";
 import { openEventStore } from "../institutions/event-store/open-db.ts";
 import { DEFAULT_EVENT_STORE_DB } from "../institutions/event-store/paths.ts";
+import { fetchLiveCrossMarketOdds } from "../institutions/event-store/cross-market-live.ts";
+import type { CrossMarketOdds } from "../institutions/event-store/types.ts";
+import { asSeriesTicker, trySeriesTicker } from "../institutions/event-store/brands.ts";
+import { SOURCE, SPORT, type SportKey } from "../institutions/market-registry/brands.ts";
+import {
+  ADAPTERS,
+  kalshiReconciliationSemanticsForSeries,
+} from "../institutions/market-registry/registry.ts";
 import {
   KALSHI_BOOK_SOURCE_REST,
   KALSHI_BOOK_SOURCE_WS,
@@ -39,6 +47,12 @@ import {
 } from "./tennis-surface-edge.ts";
 
 const LIVE_SCORE_STALE_MS = 15 * 60 * 1000;
+export const HEALTHY_CROSS_VENUE_MATCH_RATE = 0.85;
+const POLYMARKET_STALE_FOR_MS = (() => {
+  const policy = ADAPTERS.find((adapter) => adapter.source === SOURCE.polymarket)?.cachePolicy;
+  if (!policy) throw new Error("Polymarket cache policy missing from registry");
+  return policy.staleForMs;
+})();
 
 // ── Payload types ──
 
@@ -49,6 +63,22 @@ export type TennisHqSources = {
   eventStore: "ok" | "absent";
   liveScores: "ok" | "stale" | "empty";
   books: { restWatch: number; wsWatch: number };
+};
+
+export type TennisDataHealth = {
+  source: "live-cache" | "snapshots" | "unavailable";
+  state: "healthy" | "degraded" | "critical" | "unavailable";
+  targetEvents: number;
+  matchedEvents: number;
+  unmatchedEvents: number;
+  matchRate: number;
+  staleVolumeEvents: number;
+  staleQuoteEvents: number;
+  kalshiVolume24h: number;
+  kalshiVolumeLifetime: number;
+  polymarketVolume24h: number;
+  polymarketVolumeLifetime: number;
+  lastSnapshotAt: number | null;
 };
 
 export type TennisSideBook = {
@@ -96,6 +126,7 @@ export type TennisHqScore = {
 };
 
 export type TennisHqEvent = {
+  sport: SportKey;
   eventTicker: string;
   eventId: string | null;
   title: string | null;
@@ -122,6 +153,7 @@ export type TennisHqEvent = {
 export type TennisHqPayload = {
   generatedAt: string;
   sources: TennisHqSources;
+  dataHealth: TennisDataHealth;
   liveBoard: TennisHqEvent[];
   profilesIndex: {
     total: number;
@@ -158,6 +190,8 @@ export type BuildTennisHqPayloadOptions = {
   /** Test hook — inject board without Kalshi fetch. */
   board?: TennisBoard;
   fetchBoard?: typeof fetchTennisBoard;
+  /** Test hook. Inject a result map, or false to keep the payload snapshot-only. */
+  crossMarketOdds?: Map<string, CrossMarketOdds> | false;
   surfaceEdge?: {
     minSampleSize?: number;
     scaling?: EdgeScaling;
@@ -575,6 +609,7 @@ function enrichEvent(
         ? "ready"
         : "insufficient-sample";
   return {
+    sport: event.sport,
     eventTicker: event.eventTicker,
     eventId,
     title: event.title,
@@ -636,6 +671,222 @@ function deriveBooksSource(events: TennisHqEvent[]): TennisHqSources["books"] {
   return { restWatch, wsWatch };
 }
 
+function unavailableDataHealth(targetEvents: number): TennisDataHealth {
+  return {
+    source: "unavailable",
+    state: "unavailable",
+    targetEvents,
+    matchedEvents: 0,
+    unmatchedEvents: targetEvents,
+    matchRate: 0,
+    staleVolumeEvents: 0,
+    staleQuoteEvents: 0,
+    kalshiVolume24h: 0,
+    kalshiVolumeLifetime: 0,
+    polymarketVolume24h: 0,
+    polymarketVolumeLifetime: 0,
+    lastSnapshotAt: null,
+  };
+}
+
+export function classifyTennisDataHealth(
+  targetEvents: number,
+  matchedEvents: number,
+  staleQuoteEvents = 0,
+): TennisDataHealth["state"] {
+  if (targetEvents <= 0) return "unavailable";
+  if (matchedEvents <= 0) return "critical";
+  if (matchedEvents / targetEvents < HEALTHY_CROSS_VENUE_MATCH_RATE) return "degraded";
+  return staleQuoteEvents > 0 ? "degraded" : "healthy";
+}
+
+export function loadTennisDataHealth(
+  db: Database,
+  eventIds: readonly string[],
+  nowMs = Date.now(),
+): TennisDataHealth {
+  const uniqueEventIds = [...new Set(eventIds.filter(Boolean))];
+  const unavailable = unavailableDataHealth(uniqueEventIds.length);
+  if (uniqueEventIds.length === 0) return unavailable;
+  const exists = db
+    .query(
+      "SELECT 1 AS ok FROM sqlite_master WHERE type = 'table' AND name = 'price_snapshots'",
+    )
+    .get() as { ok: number } | null;
+  if (!exists) return unavailable;
+
+  try {
+    const { placeholders, params } = inClause("health", uniqueEventIds);
+    const rows = db
+      .query(
+        `WITH ranked AS (
+           SELECT event_id, ts, poly_prob, kalshi_volume_24h,
+                  kalshi_volume_lifetime, stale_volume,
+                  poly_volume_24h, poly_volume_lifetime,
+                  polymarket_event_id, polymarket_match_method,
+                  kalshi_series, event_type, participant_format,
+                  poly_observed_at_ms, poly_cache_state,
+                  ROW_NUMBER() OVER (
+                    PARTITION BY event_id ORDER BY ts DESC, id DESC
+                  ) AS rank
+           FROM price_snapshots
+           WHERE event_id IN (${placeholders})
+         )
+         SELECT ts,
+                poly_prob AS polyProb,
+                stale_volume AS staleVolume,
+                kalshi_volume_24h AS kalshiVolume24h,
+                kalshi_volume_lifetime AS kalshiVolumeLifetime,
+                poly_volume_24h AS polymarketVolume24h,
+                poly_volume_lifetime AS polymarketVolumeLifetime,
+                polymarket_event_id AS polymarketEventId,
+                polymarket_match_method AS polymarketMatchMethod,
+                kalshi_series AS kalshiSeries,
+                event_type AS eventType,
+                participant_format AS participantFormat,
+                poly_observed_at_ms AS polyObservedAtMs,
+                poly_cache_state AS polyCacheState
+         FROM ranked
+         WHERE rank = 1`,
+      )
+      .all(params) as Array<{
+      ts: number;
+      polyProb: number | null;
+      staleVolume: number;
+      kalshiVolume24h: number;
+      kalshiVolumeLifetime: number;
+      polymarketVolume24h: number;
+      polymarketVolumeLifetime: number;
+      polymarketEventId: string | null; // brand-ok — opaque external provider primary key
+      polymarketMatchMethod: string | null;
+      kalshiSeries: string | null;
+      eventType: string | null;
+      participantFormat: string | null;
+      polyObservedAtMs: number | null;
+      polyCacheState: string | null;
+    }>;
+    let matchedEvents = 0;
+    let staleQuoteEvents = 0;
+    let staleVolumeEvents = 0;
+    let kalshiVolume24h = 0;
+    let kalshiVolumeLifetime = 0;
+    let polymarketVolume24h = 0;
+    let polymarketVolumeLifetime = 0;
+    let lastSnapshotAt: number | null = null;
+    for (const row of rows) {
+      staleVolumeEvents += row.staleVolume === 1 ? 1 : 0;
+      kalshiVolume24h += row.kalshiVolume24h ?? 0;
+      kalshiVolumeLifetime += row.kalshiVolumeLifetime ?? 0;
+      lastSnapshotAt = Math.max(lastSnapshotAt ?? 0, row.ts);
+      const series = trySeriesTicker(row.kalshiSeries);
+      const semantics = series ? kalshiReconciliationSemanticsForSeries(series) : null;
+      const exactLane =
+        semantics?.sport === SPORT.tennis &&
+        semantics.eventType === row.eventType &&
+        semantics.participantFormat === row.participantFormat;
+      const hasQuoteIdentity =
+        row.polyProb !== null &&
+        row.polymarketEventId !== null &&
+        row.polymarketMatchMethod !== null;
+      const quoteAgeMs =
+        row.polyObservedAtMs === null ? null : nowMs - row.polyObservedAtMs;
+      const withinStaleWindow =
+        quoteAgeMs !== null && quoteAgeMs >= 0 && quoteAgeMs <= POLYMARKET_STALE_FOR_MS;
+      if (!exactLane || !hasQuoteIdentity) continue;
+      if (!withinStaleWindow) {
+        staleQuoteEvents++;
+        continue;
+      }
+      matchedEvents++;
+      polymarketVolume24h += row.polymarketVolume24h ?? 0;
+      polymarketVolumeLifetime += row.polymarketVolumeLifetime ?? 0;
+      if (row.polyCacheState !== "healthy") staleQuoteEvents++;
+    }
+    const targetEvents = uniqueEventIds.length;
+    return {
+      source: "snapshots",
+      state: classifyTennisDataHealth(targetEvents, matchedEvents, staleQuoteEvents),
+      targetEvents,
+      matchedEvents,
+      unmatchedEvents: Math.max(0, targetEvents - matchedEvents),
+      matchRate: targetEvents > 0 ? matchedEvents / targetEvents : 0,
+      staleVolumeEvents,
+      staleQuoteEvents,
+      kalshiVolume24h,
+      kalshiVolumeLifetime,
+      polymarketVolume24h,
+      polymarketVolumeLifetime,
+      lastSnapshotAt,
+    };
+  } catch {
+    return unavailable;
+  }
+}
+
+function liveDataHealth(
+  events: readonly TennisEventView[],
+  oddsByTicker: Map<string, CrossMarketOdds>,
+  snapshots: TennisDataHealth,
+  nowMs: number,
+): TennisDataHealth {
+  const targets = events.filter(
+    (event) =>
+      event.markets.length >= 2 &&
+      Boolean(event.markets[0]?.player) &&
+      Boolean(event.markets[1]?.player),
+  );
+  let matchedEvents = 0;
+  let kalshiVolume24h = 0;
+  let polymarketVolume24h = 0;
+  let polymarketVolumeLifetime = 0;
+  let staleQuoteEvents = 0;
+  for (const event of targets) {
+    kalshiVolume24h += event.markets.reduce(
+      (sum, market) => sum + (market.volume24h ?? 0),
+      0,
+    );
+    const odds = oddsByTicker.get(event.eventTicker);
+    const series = trySeriesTicker(event.series);
+    const semantics = series ? kalshiReconciliationSemanticsForSeries(series) : null;
+    const proof = odds?.reconciliation;
+    const exactLane =
+      semantics !== null &&
+      proof !== null &&
+      proof !== undefined &&
+      proof.kalshiSeries === series &&
+      proof.sport === SPORT.tennis &&
+      proof.sport === semantics.sport &&
+      proof.eventType === semantics.eventType &&
+      proof.participantFormat === semantics.participantFormat;
+    if (!exactLane || odds?.polymarketProb === null || odds?.polymarketProb === undefined) continue;
+    const quoteAgeMs = nowMs - proof.polymarketObservedAtMs;
+    if (quoteAgeMs < 0 || quoteAgeMs > POLYMARKET_STALE_FOR_MS) {
+      staleQuoteEvents++;
+      continue;
+    }
+    matchedEvents++;
+    polymarketVolume24h += odds.polymarketVolume24h ?? 0;
+    polymarketVolumeLifetime += odds.polymarketVolumeLifetime ?? 0;
+    if (proof.polymarketCacheState !== "healthy") staleQuoteEvents++;
+  }
+  const targetEvents = targets.length;
+  return {
+    source: "live-cache",
+    state: classifyTennisDataHealth(targetEvents, matchedEvents, staleQuoteEvents),
+    targetEvents,
+    matchedEvents,
+    unmatchedEvents: Math.max(0, targetEvents - matchedEvents),
+    matchRate: targetEvents > 0 ? matchedEvents / targetEvents : 0,
+    staleVolumeEvents: snapshots.staleVolumeEvents,
+    staleQuoteEvents,
+    kalshiVolume24h,
+    kalshiVolumeLifetime: snapshots.kalshiVolumeLifetime,
+    polymarketVolume24h,
+    polymarketVolumeLifetime,
+    lastSnapshotAt: snapshots.lastSnapshotAt,
+  };
+}
+
 function openReadonlyDb(dbPath: string): Database | null {
   if (!existsSync(dbPath)) return null;
   try {
@@ -677,6 +928,9 @@ export async function buildTennisHqPayload(
 
   const kalshiBoardOk = board.series.some((s) => s.state === "ok");
   const flatEvents = collectBoardEvents(board);
+  if (flatEvents.some((event) => event.sport !== SPORT.tennis)) {
+    throw new Error("Tennis HQ cannot ingest a non-tennis board");
+  }
 
   const allMarketTickers = flatEvents.flatMap((e) => e.markets.map((m) => m.ticker));
   const allPlayerNames = [
@@ -697,7 +951,9 @@ export async function buildTennisHqPayload(
         liveScores: "empty",
         books: { restWatch: 0, wsWatch: 0 },
       },
+      dataHealth: unavailableDataHealth(flatEvents.length),
       liveBoard: flatEvents.map((e) => ({
+        sport: e.sport,
         eventTicker: e.eventTicker,
         eventId: null,
         title: e.title,
@@ -761,6 +1017,36 @@ export async function buildTennisHqPayload(
     };
 
     const liveBoard = flatEvents.map((e) => enrichEvent(e, ctx));
+    const snapshotHealth = loadTennisDataHealth(
+      db,
+      liveBoard.map((event) => event.eventId).filter((id): id is string => id !== null),
+      nowMs,
+    );
+    let dataHealth = snapshotHealth;
+    try {
+      const oddsByTicker =
+        options.crossMarketOdds === false
+          ? null
+          : options.crossMarketOdds ??
+            (options.board
+              ? null
+              : await fetchLiveCrossMarketOdds(
+                  flatEvents
+                    .filter((event) => event.markets.length >= 2)
+                    .map((event) => ({
+                      ticker: event.eventTicker,
+                      playerA: event.markets[0]?.player ?? "",
+                      playerB: event.markets[1]?.player ?? "",
+                      tournament: event.tournament ?? event.competition ?? undefined,
+                      series: asSeriesTicker(event.series),
+                    })),
+                ));
+      if (oddsByTicker) {
+        dataHealth = liveDataHealth(flatEvents, oddsByTicker, snapshotHealth, nowMs);
+      }
+    } catch {
+      // Persisted snapshot health remains available when the live venue is down.
+    }
     const topRows = loadTopProfileRows(db, 20);
     const allCompetitorIds = loadCompetitorIdsByName(
       db,
@@ -775,6 +1061,7 @@ export async function buildTennisHqPayload(
         liveScores: deriveLiveScoresSource(liveBoard, nowMs),
         books: deriveBooksSource(liveBoard),
       },
+      dataHealth,
       liveBoard,
       profilesIndex: {
         total: countProfiles(db),

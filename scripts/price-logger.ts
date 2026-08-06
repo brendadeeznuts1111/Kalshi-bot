@@ -18,15 +18,32 @@ import { DEFAULT_EVENT_STORE_DB } from "../src/institutions/event-store/paths.ts
 import {
   queryEventsWithBooks,
   surfaceEdgeFor,
+  type EventBookRow,
 } from "../src/institutions/event-store/cross-market.ts";
 import { fetchLiveCrossMarketOdds } from "../src/institutions/event-store/cross-market-live.ts";
+import type {
+  CrossMarketCacheState,
+  CrossMarketOdds,
+} from "../src/institutions/event-store/types.ts";
+import type { SeriesTicker } from "../src/institutions/event-store/brands.ts";
+import { unbrand as unbrandSeries } from "../src/institutions/event-store/brands.ts";
+import { SPORT } from "../src/institutions/market-registry/brands.ts";
+import type { EventType, ParticipantFormat } from "../src/institutions/market-registry/types.ts";
+import {
+  kalshiReconciliationSemanticsForSeries,
+  kalshiTradeSeriesForSport,
+} from "../src/institutions/market-registry/registry.ts";
+import {
+  fetchTennisTradeBoard,
+  type TennisBoard,
+  type TennisMarketView,
+} from "../src/research/tennis-events.ts";
 import {
   computeSurfaceElo,
   expectedScore,
   queryCompletedMatches,
   SURFACE_INDEX,
 } from "../scripts/train-elo.ts";
-import { SQL_MARKET_VOLUME_FP } from "../src/research/player-profile-meta.ts";
 
 // ── Types ──────────────────────────────────────────────────────
 
@@ -40,7 +57,7 @@ type BookMid = {
   openInterest: number | null;
 };
 
-type SnapshotRow = {
+export type SnapshotRow = {
   eventId: string;
   matchKey: string;
   marketSource: string;
@@ -50,8 +67,21 @@ type SnapshotRow = {
   kalshiBidCents: number | null;
   kalshiAskCents: number | null;
   kalshiVolume24h: number | null;
+  kalshiVolumeLifetime: number;
   kalshiOpenInterest: number | null;
+  staleVolume: number;
   polyProb: number | null;
+  polyVolume24h: number | null;
+  polyVolumeLifetime: number | null;
+  polyLiquidity: number | null;
+  polyOpenInterest: number | null;
+  polymarketEventId: string | null; // brand-ok — opaque external provider primary key
+  polymarketMatchMethod: CrossMarketOdds["polymarketMatchMethod"];
+  kalshiSeries: SeriesTicker;
+  eventType: EventType;
+  participantFormat: ParticipantFormat;
+  polyObservedAtMs: number | null;
+  polyCacheState: CrossMarketCacheState | null;
   pinnyProb: number | null;
   eloProb: number | null;
   eloSurface: string | null;
@@ -61,6 +91,40 @@ type SnapshotRow = {
   divFlag: number;
   surfaceEdge: number;
 };
+
+type SnapshotReconciliation = Pick<
+  SnapshotRow,
+  "kalshiSeries" | "eventType" | "participantFormat" | "polyObservedAtMs" | "polyCacheState"
+>;
+
+/** Revalidate the registry lane at the durable boundary; injected or stale callers cannot relabel it. */
+export function snapshotReconciliationFor(
+  series: SeriesTicker,
+  odds: CrossMarketOdds | undefined,
+): SnapshotReconciliation {
+  const semantics = kalshiReconciliationSemanticsForSeries(series);
+  if (!semantics) {
+    throw new Error(`price snapshot series is not operational for reconciliation: ${series}`);
+  }
+  const proof = odds?.reconciliation;
+  const exactProof =
+    proof?.kalshiSeries === series &&
+    proof.sport === semantics.sport &&
+    proof.eventType === semantics.eventType &&
+    proof.participantFormat === semantics.participantFormat &&
+    Number.isFinite(proof.polymarketObservedAtMs) &&
+    proof.polymarketObservedAtMs >= 0 &&
+    ["healthy", "stale", "degraded", "circuit_open"].includes(
+      proof.polymarketCacheState,
+    );
+  return {
+    kalshiSeries: series,
+    eventType: semantics.eventType,
+    participantFormat: semantics.participantFormat,
+    polyObservedAtMs: exactProof ? proof.polymarketObservedAtMs : null,
+    polyCacheState: exactProof ? proof.polymarketCacheState : null,
+  };
+}
 
 // ── Helpers ─────────────────────────────────────────────────────
 
@@ -81,6 +145,94 @@ function buildMatchKey(playerA: string, playerB: string, eventId: string): strin
   return `${[a, b].sort().join("|")}|${eventId.slice(-8)}`;
 }
 
+type LinkedBoardMarket = {
+  eventId: string;
+  tournament: string;
+  playerA: string;
+  playerB: string;
+  surface: string;
+  yesSideLabel: string;
+};
+
+/** Join the current Kalshi board to event-store identity and build logger inputs. */
+export function linkCurrentBoardEvents(
+  db: ReturnType<typeof openEventStore>,
+  board: TennisBoard,
+): EventBookRow[] {
+  if (
+    board.series.some((series) =>
+      series.events.some((event) => event.sport !== SPORT.tennis),
+    )
+  ) {
+    throw new Error("Tennis price logger cannot ingest a non-tennis board");
+  }
+  const lookup = db.prepare(
+    `SELECT m.event_id AS eventId,
+            e.tournament AS tournament,
+            e.player_a AS playerA,
+            e.player_b AS playerB,
+            e.surface AS surface,
+            m.yes_side_label AS yesSideLabel
+     FROM markets m
+     JOIN events e ON e.event_id = m.event_id
+     WHERE m.ticker = $ticker
+     LIMIT 1`,
+  );
+  const rows: EventBookRow[] = [];
+  const seenEventIds = new Set<string>();
+
+  for (const series of board.series) {
+    if (series.state !== "ok") continue;
+    for (const event of series.events) {
+      const linked = event.markets
+        .map((market) => ({
+          market,
+          store: lookup.get({ $ticker: market.ticker }) as LinkedBoardMarket | null,
+        }))
+        .filter(
+          (entry): entry is { market: TennisMarketView; store: LinkedBoardMarket } =>
+            entry.store !== null,
+        );
+      if (linked.length === 0) continue;
+      const preferred =
+        linked.find(
+          ({ market, store }) =>
+            normalizePlayer(market.player ?? store.yesSideLabel) ===
+            normalizePlayer(store.playerA),
+        ) ?? linked[0]!;
+      if (seenEventIds.has(preferred.store.eventId)) continue;
+      seenEventIds.add(preferred.store.eventId);
+
+      const { market, store } = preferred;
+      const levelsJson = JSON.stringify({
+        eventId: store.eventId,
+        ticker: market.ticker,
+        bids:
+          market.yesBidCents === null
+            ? []
+            : [{ priceCents: market.yesBidCents, size: 0 }],
+        asks:
+          market.yesAskCents === null
+            ? []
+            : [{ priceCents: market.yesAskCents, size: 0 }],
+        volume24h: market.volume24h ?? 0,
+        openInterest: market.openInterest ?? 0,
+      });
+      rows.push({
+        eventId: store.eventId,
+        ticker: market.ticker,
+        tournament: store.tournament,
+        playerA: store.playerA,
+        playerB: store.playerB,
+        surface: store.surface,
+        levelsJson,
+        series: series.series,
+      });
+    }
+  }
+  return rows;
+}
+
 function extractMidFromLevelsJson(levelsJson: string): BookMid {
   try {
     const book = JSON.parse(levelsJson);
@@ -89,10 +241,10 @@ function extractMidFromLevelsJson(levelsJson: string): BookMid {
     const mid = bestBid != null && bestAsk != null ? Math.round((bestBid + bestAsk) / 2) : null;
     // Prefer explicit volume fields if a book serializer ever embeds them; else null
     // (filled from markets table in runSnapshotCycle).
-    const volRaw = book.volume24h ?? book.volume_24h ?? book.volume ?? null;
+    const volRaw = book.volume24h ?? book.volume_24h ?? null;
     const oiRaw = book.openInterest ?? book.open_interest ?? null;
     const volume24h =
-      volRaw != null && Number.isFinite(Number(volRaw)) && Number(volRaw) > 0
+      volRaw != null && Number.isFinite(Number(volRaw)) && Number(volRaw) >= 0
         ? Number(volRaw)
         : null;
     const openInterest =
@@ -113,31 +265,41 @@ function extractMidFromLevelsJson(levelsJson: string): BookMid {
   }
 }
 
-type MarketLiquidity = { volume24h: number | null; openInterest: number | null };
+type MarketLiquidity = {
+  volume24h: number;
+  volumeLifetime: number;
+  openInterest: number;
+};
 
 /**
- * Map ticker → 24h volume + OI from markets (SSOT for capacity when books omit volume).
- * Prefers volume_24h_fp, falls back to lifetime volume_fp.
+ * Map ticker → independently parsed 24h volume, lifetime volume, and OI.
+ * A real 24h zero remains zero and is never replaced with lifetime volume.
  */
 export function loadMarketLiquidityByTicker(
   db: ReturnType<typeof openEventStore>,
 ): Map<string, MarketLiquidity> {
   const map = new Map<string, MarketLiquidity>();
   try {
-    // SQL_MARKET_VOLUME_FP: 24h>0 else lifetime (masks "0.00" 24h).
     const rows = db
       .query(
         `SELECT ticker,
-                ${SQL_MARKET_VOLUME_FP} AS vol,
+                CAST(COALESCE(NULLIF(TRIM(volume_24h_fp), ''), '0') AS REAL) AS vol24,
+                CAST(COALESCE(NULLIF(TRIM(volume_fp), ''), '0') AS REAL) AS volLifetime,
                 CAST(COALESCE(NULLIF(open_interest_fp, ''), '0') AS REAL) AS oi
          FROM markets
          WHERE ticker IS NOT NULL AND ticker != ''`,
       )
-      .all() as Array<{ ticker: string; vol: number; oi: number }>;
+      .all() as Array<{
+        ticker: string;
+        vol24: number;
+        volLifetime: number;
+        oi: number;
+      }>;
     for (const r of rows) {
       map.set(r.ticker, {
-        volume24h: r.vol > 0 ? r.vol : null,
-        openInterest: r.oi > 0 ? r.oi : null,
+        volume24h: r.vol24,
+        volumeLifetime: r.volLifetime,
+        openInterest: r.oi,
       });
     }
   } catch {
@@ -174,18 +336,71 @@ const INSERT_SNAPSHOT = `
   INSERT INTO price_snapshots
     (event_id, match_key, market_source, ticker, ts,
      kalshi_mid_cents, kalshi_bid_cents, kalshi_ask_cents,
-     kalshi_volume_24h, kalshi_open_interest,
-     poly_prob, pinny_prob,
+     kalshi_volume_24h, kalshi_volume_lifetime, kalshi_open_interest, stale_volume,
+     poly_prob, poly_volume_24h, poly_volume_lifetime, poly_liquidity,
+     poly_open_interest, polymarket_event_id, polymarket_match_method,
+     kalshi_series, event_type, participant_format, poly_observed_at_ms, poly_cache_state,
+     pinny_prob,
      elo_prob, elo_surface, elo_a, elo_b,
      rps_flag, div_flag, surface_edge, source)
   VALUES
     ($event_id, $match_key, $market_source, $ticker, $ts,
      $kalshi_mid_cents, $kalshi_bid_cents, $kalshi_ask_cents,
-     $kalshi_volume_24h, $kalshi_open_interest,
-     $poly_prob, $pinny_prob,
+     $kalshi_volume_24h, $kalshi_volume_lifetime, $kalshi_open_interest, $stale_volume,
+     $poly_prob, $poly_volume_24h, $poly_volume_lifetime, $poly_liquidity,
+     $poly_open_interest, $polymarket_event_id, $polymarket_match_method,
+     $kalshi_series, $event_type, $participant_format, $poly_observed_at_ms, $poly_cache_state,
+     $pinny_prob,
      $elo_prob, $elo_surface, $elo_a, $elo_b,
      $rps_flag, $div_flag, $surface_edge, 'price-logger')
 `;
+
+/** Persist an already normalized batch atomically. */
+export function writeSnapshotRows(
+  db: ReturnType<typeof openEventStore>,
+  rows: readonly SnapshotRow[],
+): void {
+  const stmt = db.prepare(INSERT_SNAPSHOT);
+  const insertMany = db.transaction((batch: readonly SnapshotRow[]) => {
+    for (const row of batch) {
+      stmt.run({
+        $event_id: row.eventId,
+        $match_key: row.matchKey,
+        $market_source: row.marketSource,
+        $ticker: row.ticker,
+        $ts: row.ts,
+        $kalshi_mid_cents: row.kalshiMidCents,
+        $kalshi_bid_cents: row.kalshiBidCents,
+        $kalshi_ask_cents: row.kalshiAskCents,
+        $kalshi_volume_24h: row.kalshiVolume24h,
+        $kalshi_volume_lifetime: row.kalshiVolumeLifetime,
+        $kalshi_open_interest: row.kalshiOpenInterest,
+        $stale_volume: row.staleVolume,
+        $poly_prob: row.polyProb,
+        $poly_volume_24h: row.polyVolume24h,
+        $poly_volume_lifetime: row.polyVolumeLifetime,
+        $poly_liquidity: row.polyLiquidity,
+        $poly_open_interest: row.polyOpenInterest,
+        $polymarket_event_id: row.polymarketEventId,
+        $polymarket_match_method: row.polymarketMatchMethod,
+        $kalshi_series: unbrandSeries(row.kalshiSeries),
+        $event_type: row.eventType,
+        $participant_format: row.participantFormat,
+        $poly_observed_at_ms: row.polyObservedAtMs,
+        $poly_cache_state: row.polyCacheState,
+        $pinny_prob: row.pinnyProb,
+        $elo_prob: row.eloProb,
+        $elo_surface: row.eloSurface,
+        $elo_a: row.eloA,
+        $elo_b: row.eloB,
+        $rps_flag: row.rpsFlag,
+        $div_flag: row.divFlag,
+        $surface_edge: row.surfaceEdge,
+      });
+    }
+  });
+  insertMany(rows);
+}
 
 // ── Main loop ──────────────────────────────────────────────────
 
@@ -271,6 +486,8 @@ export type SnapshotCycleResult = {
   written: number;
   built: number;
   withVolume: number;
+  withPolymarket: number;
+  staleVolume: number;
   dryRun: boolean;
 };
 
@@ -291,11 +508,27 @@ export async function runSnapshotCycleDetailed(
   const dryRun = opts.dryRun === true;
   const ts = Date.now();
 
-  // 1. Get events with book data
-  const events = queryEventsWithBooks(db);
+  // 1. Prefer the current tradable board; retain recorded books as an outage fallback.
+  let events: EventBookRow[] = [];
+  try {
+    const board = await fetchTennisTradeBoard({ nowMs: ts });
+    events = linkCurrentBoardEvents(db, board);
+  } catch (error) {
+    console.error(`[${new Date(ts).toISOString()}] Kalshi board fetch failed: ${error}`);
+  }
+  if (events.length === 0) {
+    events = queryEventsWithBooks(db, kalshiTradeSeriesForSport(SPORT.tennis));
+  }
   if (events.length === 0) {
     console.error(`[${new Date(ts).toISOString()}] No events with book data.`);
-    return { written: 0, built: 0, withVolume: 0, dryRun };
+    return {
+      written: 0,
+      built: 0,
+      withVolume: 0,
+      withPolymarket: 0,
+      staleVolume: 0,
+      dryRun,
+    };
   }
 
   // 1b. Market liquidity (volume/OI) — levels_json does not carry volume today
@@ -303,13 +536,34 @@ export async function runSnapshotCycleDetailed(
 
   // 2. Live cross-market odds (Polymarket gamma; Pinnacle null until keyed).
   //    On failure: all-null — never fabricated (Enrichment Lock).
-  const targets = events.map((e) => ({ ticker: e.ticker, playerA: e.playerA, playerB: e.playerB }));
-  let oddsMap: Map<string, { polymarketProb: number | null; pinnacleProb: number | null }>;
+  const targets = events.map((e) => ({
+    ticker: e.ticker,
+    playerA: e.playerA,
+    playerB: e.playerB,
+    tournament: e.tournament,
+    series: e.series,
+  }));
+  let oddsMap: Map<string, CrossMarketOdds>;
   try {
     oddsMap = await fetchLiveCrossMarketOdds(targets);
   } catch (err) {
     console.error(`[${new Date(ts).toISOString()}] Live odds fetch failed (using nulls): ${err}`);
-    oddsMap = new Map(targets.map((t) => [t.ticker, { polymarketProb: null, pinnacleProb: null }]));
+    oddsMap = new Map(
+      targets.map((target) => [
+        target.ticker,
+        {
+          polymarketProb: null,
+          polymarketVolume24h: null,
+          polymarketVolumeLifetime: null,
+          polymarketLiquidity: null,
+          polymarketOpenInterest: null,
+          polymarketEventId: null,
+          polymarketMatchMethod: null,
+          reconciliation: null,
+          pinnacleProb: null,
+        },
+      ]),
+    );
   }
 
   // 3. Elo fair at capture time — train on all completed matches, predict current board.
@@ -330,33 +584,6 @@ export async function runSnapshotCycleDetailed(
 
   // 4. Build and write snapshots
   let written = 0;
-  const stmt = db.prepare(INSERT_SNAPSHOT);
-  const insertMany = db.transaction((rows: SnapshotRow[]) => {
-    for (const row of rows) {
-      stmt.run({
-        $event_id: row.eventId,
-        $match_key: row.matchKey,
-        $market_source: row.marketSource,
-        $ticker: row.ticker,
-        $ts: row.ts,
-        $kalshi_mid_cents: row.kalshiMidCents,
-        $kalshi_bid_cents: row.kalshiBidCents,
-        $kalshi_ask_cents: row.kalshiAskCents,
-        $kalshi_volume_24h: row.kalshiVolume24h,
-        $kalshi_open_interest: row.kalshiOpenInterest,
-        $poly_prob: row.polyProb,
-        $pinny_prob: row.pinnyProb,
-        $elo_prob: row.eloProb,
-        $elo_surface: row.eloSurface,
-        $elo_a: row.eloA,
-        $elo_b: row.eloB,
-        $rps_flag: row.rpsFlag,
-        $div_flag: row.divFlag,
-        $surface_edge: row.surfaceEdge,
-      });
-    }
-  });
-
   // LRU-bounded profile cache (max 5000 entries — covers active players)
   const getProfileSurface = db.prepare(
     "SELECT surfaces FROM player_profiles WHERE player_name = ?",
@@ -382,10 +609,13 @@ export async function runSnapshotCycleDetailed(
   for (const e of events) {
     const book = tickerOverrides?.get(e.ticker) ?? extractMidFromLevelsJson(e.levelsJson);
     const liq = marketLiq.get(e.ticker);
-    const volume24h = book.volume24h ?? liq?.volume24h ?? null;
+    const volume24h = book.volume24h ?? liq?.volume24h ?? 0;
+    const volumeLifetime = liq?.volumeLifetime ?? 0;
     const openInterest = book.openInterest ?? liq?.openInterest ?? null;
     const odds = oddsMap.get(e.ticker);
-    const polyProb = odds?.polymarketProb ?? null;
+    const reconciliation = snapshotReconciliationFor(e.series, odds);
+    const hasExactPolyProof = reconciliation.polyObservedAtMs !== null;
+    const polyProb = hasExactPolyProof ? odds?.polymarketProb ?? null : null;
     const pinnyProb = odds?.pinnacleProb ?? null;
     const fair = eloFairFor(e.playerA, e.playerB, e.surface ?? "");
     const surf = e.surface?.trim();
@@ -407,8 +637,17 @@ export async function runSnapshotCycleDetailed(
       kalshiBidCents: book.bidCents,
       kalshiAskCents: book.askCents,
       kalshiVolume24h: volume24h,
+      kalshiVolumeLifetime: volumeLifetime,
       kalshiOpenInterest: openInterest,
+      staleVolume: volume24h === 0 && volumeLifetime > 0 ? 1 : 0,
       polyProb,
+      polyVolume24h: hasExactPolyProof ? odds?.polymarketVolume24h ?? null : null,
+      polyVolumeLifetime: hasExactPolyProof ? odds?.polymarketVolumeLifetime ?? null : null,
+      polyLiquidity: hasExactPolyProof ? odds?.polymarketLiquidity ?? null : null,
+      polyOpenInterest: hasExactPolyProof ? odds?.polymarketOpenInterest ?? null : null,
+      polymarketEventId: hasExactPolyProof ? odds?.polymarketEventId ?? null : null,
+      polymarketMatchMethod: hasExactPolyProof ? odds?.polymarketMatchMethod ?? null : null,
+      ...reconciliation,
       pinnyProb,
       eloProb: fair.prob,
       eloSurface: e.surface ?? null,
@@ -421,9 +660,11 @@ export async function runSnapshotCycleDetailed(
   }
 
   const withVolume = rows.filter((r) => r.kalshiVolume24h != null && r.kalshiVolume24h > 0).length;
+  const withPolymarket = rows.filter((row) => row.polyProb !== null).length;
+  const staleVolume = rows.filter((row) => row.staleVolume === 1).length;
 
   if (rows.length > 0 && !dryRun) {
-    insertMany(rows);
+    writeSnapshotRows(db, rows);
     written = rows.length;
   }
 
@@ -434,6 +675,8 @@ export async function runSnapshotCycleDetailed(
       `[${new Date(ts).toISOString()}] ${rows.length} snapshots ${verb}` +
         (dryRun ? " (dry-run)" : "") +
         ` · volume=${withVolume}/${rows.length}` +
+        ` · poly=${withPolymarket}/${rows.length}` +
+        ` · stale-volume=${staleVolume}` +
         ` (${first.ticker}: ${first.kalshiMidCents ?? "?"}¢` +
         ` vol=${first.kalshiVolume24h ?? "—"}` +
         ` Poly: ${first.polyProb != null ? (first.polyProb * 100).toFixed(0) + "%" : "—"}` +
@@ -441,7 +684,14 @@ export async function runSnapshotCycleDetailed(
     );
   }
 
-  return { written, built: rows.length, withVolume, dryRun };
+  return {
+    written,
+    built: rows.length,
+    withVolume,
+    withPolymarket,
+    staleVolume,
+    dryRun,
+  };
 }
 
 export async function runLogger(opts: LoggerOptions): Promise<void> {
@@ -536,7 +786,10 @@ export async function runLogger(opts: LoggerOptions): Promise<void> {
         }
       } else if (dryRun) {
         console.error(
-          `[${new Date().toISOString()}] dry-run complete · built=${result.built} withVolume=${result.withVolume}`,
+          `[${new Date().toISOString()}] dry-run complete · built=${result.built}` +
+            ` withVolume=${result.withVolume}` +
+            ` withPolymarket=${result.withPolymarket}` +
+            ` staleVolume=${result.staleVolume}`,
         );
       }
     } catch (err) {

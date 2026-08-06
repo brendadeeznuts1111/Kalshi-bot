@@ -217,3 +217,375 @@ CREATE INDEX IF NOT EXISTS idx_match_liquidity_tournament ON match_liquidity (to
 CREATE INDEX IF NOT EXISTS idx_match_liquidity_tour ON match_liquidity (tour);
 CREATE INDEX IF NOT EXISTS idx_match_liquidity_ok ON match_liquidity (liquidity_ok);
 CREATE INDEX IF NOT EXISTS idx_match_liquidity_sport ON match_liquidity (sport_key);
+
+/** Cross-venue price and capacity snapshots written by scripts/price-logger.ts. */
+CREATE TABLE IF NOT EXISTS price_snapshots (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  event_id TEXT NOT NULL REFERENCES events (event_id),
+  match_key TEXT NOT NULL DEFAULT '',
+  market_source TEXT NOT NULL DEFAULT 'kalshi',
+  ticker TEXT NOT NULL,
+  ts INTEGER NOT NULL,
+  kalshi_mid_cents INTEGER,
+  kalshi_bid_cents INTEGER,
+  kalshi_ask_cents INTEGER,
+  kalshi_volume_24h REAL NOT NULL DEFAULT 0,
+  kalshi_volume_lifetime REAL NOT NULL DEFAULT 0,
+  kalshi_open_interest REAL NOT NULL DEFAULT 0,
+  stale_volume INTEGER NOT NULL DEFAULT 0,
+  poly_prob REAL,
+  poly_volume_24h REAL,
+  poly_volume_lifetime REAL,
+  poly_liquidity REAL,
+  poly_open_interest REAL,
+  polymarket_event_id TEXT,
+  polymarket_match_method TEXT,
+  kalshi_series TEXT,
+  event_type TEXT CHECK (event_type IS NULL OR event_type IN ('match', 'tournament')),
+  participant_format TEXT CHECK (
+    participant_format IS NULL OR participant_format IN ('singles', 'doubles', 'team', 'mixed', 'field')
+  ),
+  poly_observed_at_ms INTEGER CHECK (poly_observed_at_ms IS NULL OR poly_observed_at_ms >= 0),
+  poly_cache_state TEXT CHECK (
+    poly_cache_state IS NULL OR poly_cache_state IN ('healthy', 'stale', 'degraded', 'circuit_open')
+  ),
+  pinny_prob REAL,
+  elo_prob REAL,
+  elo_surface TEXT,
+  elo_a REAL,
+  elo_b REAL,
+  rps_flag INTEGER NOT NULL DEFAULT 0,
+  div_flag INTEGER NOT NULL DEFAULT 0,
+  surface_edge INTEGER NOT NULL DEFAULT 0,
+  source TEXT NOT NULL DEFAULT 'price-logger'
+);
+
+CREATE INDEX IF NOT EXISTS idx_price_snapshots_event_ts ON price_snapshots (event_id, ts);
+CREATE INDEX IF NOT EXISTS idx_price_snapshots_ticker_ts ON price_snapshots (ticker, ts);
+CREATE TABLE IF NOT EXISTS logger_health (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  booted_at INTEGER NOT NULL,
+  last_snapshot_at INTEGER,
+  total_snapshots INTEGER NOT NULL DEFAULT 0,
+  total_errors INTEGER NOT NULL DEFAULT 0,
+  last_error TEXT,
+  last_error_at INTEGER
+);
+
+INSERT OR IGNORE INTO logger_health (id, booted_at) VALUES (1, unixepoch() * 1000);
+
+/**
+ * Provider-scoped inventory seam. These tables preserve source truth beside the
+ * legacy tennis warehouse; they do not imply canonical cross-source matching.
+ */
+CREATE TABLE IF NOT EXISTS source_metadata_runs (
+  source_key TEXT NOT NULL,
+  metadata_run_id TEXT NOT NULL,
+  selector_scope TEXT NOT NULL,
+  adapter_id TEXT NOT NULL,
+  selector_kind TEXT NOT NULL,
+  selector_parameters_json TEXT NOT NULL CHECK (json_valid(selector_parameters_json)),
+  registry_fingerprint TEXT NOT NULL CHECK (length(registry_fingerprint) > 0),
+  state TEXT NOT NULL CHECK (state IN ('running', 'complete', 'failed', 'abandoned')),
+  started_at_ms INTEGER NOT NULL CHECK (started_at_ms >= 0),
+  checkpoint_at_ms INTEGER CHECK (checkpoint_at_ms IS NULL OR checkpoint_at_ms >= started_at_ms),
+  finished_at_ms INTEGER CHECK (finished_at_ms IS NULL OR finished_at_ms >= started_at_ms),
+  next_cursor TEXT,
+  last_request_cursor TEXT,
+  last_page_fingerprint TEXT,
+  page_count INTEGER NOT NULL DEFAULT 0 CHECK (page_count >= 0),
+  partial_page_count INTEGER NOT NULL DEFAULT 0 CHECK (partial_page_count >= 0),
+  observed_metadata_count INTEGER NOT NULL DEFAULT 0 CHECK (observed_metadata_count >= 0),
+  exhausted INTEGER NOT NULL DEFAULT 0 CHECK (exhausted IN (0, 1)),
+  error_detail TEXT,
+  CHECK (state = 'running' OR finished_at_ms IS NOT NULL),
+  CHECK (state != 'running' OR finished_at_ms IS NULL),
+  CHECK (state != 'complete' OR (exhausted = 1 AND partial_page_count = 0)),
+  CHECK (page_count = 0 OR exhausted = 1 OR next_cursor IS NOT NULL),
+  PRIMARY KEY (source_key, metadata_run_id),
+  UNIQUE (source_key, selector_scope, metadata_run_id)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_source_metadata_one_running
+  ON source_metadata_runs (source_key, selector_scope)
+  WHERE state = 'running';
+
+CREATE TABLE IF NOT EXISTS source_metadata_run_attempts (
+  attempt_sequence INTEGER PRIMARY KEY AUTOINCREMENT,
+  source_key TEXT NOT NULL,
+  metadata_run_id TEXT NOT NULL,
+  UNIQUE (source_key, metadata_run_id),
+  FOREIGN KEY (source_key, metadata_run_id)
+    REFERENCES source_metadata_runs (source_key, metadata_run_id)
+);
+
+CREATE TABLE IF NOT EXISTS source_metadata_run_pages (
+  source_key TEXT NOT NULL,
+  metadata_run_id TEXT NOT NULL,
+  page_index INTEGER NOT NULL CHECK (page_index >= 0),
+  request_cursor TEXT,
+  next_cursor TEXT,
+  observed_at_ms INTEGER NOT NULL CHECK (observed_at_ms >= 0),
+  metadata_count INTEGER NOT NULL CHECK (metadata_count >= 0),
+  completeness TEXT NOT NULL CHECK (completeness IN ('complete', 'partial')),
+  exhausted INTEGER NOT NULL CHECK (exhausted IN (0, 1)),
+  page_fingerprint TEXT NOT NULL,
+  PRIMARY KEY (source_key, metadata_run_id, page_index),
+  UNIQUE (source_key, metadata_run_id, request_cursor),
+  UNIQUE (source_key, metadata_run_id, next_cursor),
+  FOREIGN KEY (source_key, metadata_run_id)
+    REFERENCES source_metadata_runs (source_key, metadata_run_id)
+);
+
+CREATE TABLE IF NOT EXISTS source_metadata_run_entities (
+  source_key TEXT NOT NULL,
+  metadata_run_id TEXT NOT NULL,
+  metadata_kind TEXT NOT NULL,
+  metadata_id TEXT NOT NULL,
+  label TEXT NOT NULL,
+  attributes_json TEXT NOT NULL CHECK (json_valid(attributes_json)),
+  facets_json TEXT NOT NULL CHECK (json_valid(facets_json)),
+  source_updated_at_ms INTEGER CHECK (source_updated_at_ms IS NULL OR source_updated_at_ms >= 0),
+  observed_at_ms INTEGER NOT NULL CHECK (observed_at_ms >= 0),
+  PRIMARY KEY (source_key, metadata_run_id, metadata_kind, metadata_id),
+  FOREIGN KEY (source_key, metadata_run_id)
+    REFERENCES source_metadata_runs (source_key, metadata_run_id)
+);
+
+CREATE TABLE IF NOT EXISTS source_metadata_entities (
+  source_key TEXT NOT NULL,
+  metadata_id TEXT NOT NULL,
+  metadata_kind TEXT NOT NULL,
+  adapter_id TEXT NOT NULL,
+  selector_scope TEXT NOT NULL,
+  label TEXT NOT NULL,
+  attributes_json TEXT NOT NULL CHECK (json_valid(attributes_json)),
+  facets_json TEXT NOT NULL CHECK (json_valid(facets_json)),
+  source_updated_at_ms INTEGER CHECK (source_updated_at_ms IS NULL OR source_updated_at_ms >= 0),
+  active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+  retired_at_ms INTEGER CHECK (retired_at_ms IS NULL OR retired_at_ms >= 0),
+  last_seen_run_id TEXT,
+  first_observed_at_ms INTEGER NOT NULL CHECK (first_observed_at_ms >= 0),
+  last_observed_at_ms INTEGER NOT NULL CHECK (last_observed_at_ms >= first_observed_at_ms),
+  PRIMARY KEY (source_key, metadata_kind, metadata_id),
+  FOREIGN KEY (source_key, selector_scope, last_seen_run_id)
+    REFERENCES source_metadata_runs (source_key, selector_scope, metadata_run_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_source_metadata_entities_active
+  ON source_metadata_entities (source_key, selector_scope, active, metadata_id);
+
+CREATE TABLE IF NOT EXISTS source_metadata_classifications (
+  source_key TEXT NOT NULL,
+  metadata_kind TEXT NOT NULL,
+  metadata_id TEXT NOT NULL,
+  sport_key TEXT NOT NULL,
+  disposition TEXT NOT NULL CHECK (disposition IN ('registered', 'quarantined', 'ignored')),
+  reason_code TEXT NOT NULL,
+  matched_selector_scope TEXT,
+  registry_fingerprint TEXT NOT NULL,
+  classified_at_ms INTEGER NOT NULL CHECK (classified_at_ms >= 0),
+  CHECK (
+    (disposition = 'registered' AND matched_selector_scope IS NOT NULL) OR
+    (disposition != 'registered' AND matched_selector_scope IS NULL)
+  ),
+  PRIMARY KEY (source_key, metadata_kind, metadata_id, sport_key),
+  FOREIGN KEY (source_key, metadata_kind, metadata_id)
+    REFERENCES source_metadata_entities (source_key, metadata_kind, metadata_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_source_metadata_classification_state
+  ON source_metadata_classifications (
+    source_key, sport_key, disposition, metadata_kind, metadata_id
+  );
+
+CREATE INDEX IF NOT EXISTS idx_source_metadata_classification_registry
+  ON source_metadata_classifications (registry_fingerprint, source_key, sport_key);
+
+CREATE VIEW IF NOT EXISTS active_source_metadata_classifications AS
+SELECT
+  classification.source_key,
+  classification.metadata_kind,
+  classification.metadata_id,
+  classification.sport_key,
+  classification.disposition,
+  classification.reason_code,
+  classification.matched_selector_scope,
+  classification.registry_fingerprint,
+  classification.classified_at_ms
+FROM source_metadata_classifications AS classification
+JOIN source_metadata_entities AS entity
+  ON entity.source_key = classification.source_key
+ AND entity.metadata_kind = classification.metadata_kind
+ AND entity.metadata_id = classification.metadata_id
+WHERE entity.active = 1;
+
+CREATE TABLE IF NOT EXISTS source_events (
+  source_key TEXT NOT NULL,
+  source_event_id TEXT NOT NULL,
+  sport_key TEXT NOT NULL,
+  title TEXT NOT NULL,
+  status TEXT,
+  closes_at_ms INTEGER CHECK (closes_at_ms IS NULL OR closes_at_ms >= 0),
+  result TEXT,
+  starts_at_ms INTEGER CHECK (starts_at_ms IS NULL OR starts_at_ms >= 0),
+  event_type TEXT CHECK (event_type IS NULL OR event_type IN ('match', 'tournament')),
+  participant_format TEXT CHECK (
+    participant_format IS NULL OR participant_format IN ('singles', 'doubles', 'team', 'mixed', 'field')
+  ),
+  adapter_id TEXT NOT NULL,
+  selector_kind TEXT NOT NULL,
+  selector_scope TEXT NOT NULL,
+  selector_parameters_json TEXT NOT NULL CHECK (json_valid(selector_parameters_json)),
+  source_updated_at_ms INTEGER CHECK (source_updated_at_ms IS NULL OR source_updated_at_ms >= 0),
+  first_observed_at_ms INTEGER NOT NULL CHECK (first_observed_at_ms >= 0),
+  last_observed_at_ms INTEGER NOT NULL CHECK (last_observed_at_ms >= first_observed_at_ms),
+  PRIMARY KEY (source_key, source_event_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_source_events_inventory
+  ON source_events (sport_key, source_key, source_event_id);
+
+CREATE TABLE IF NOT EXISTS source_inventory_runs (
+  source_key TEXT NOT NULL,
+  inventory_run_id TEXT NOT NULL,
+  sport_key TEXT NOT NULL,
+  selector_scope TEXT NOT NULL,
+  adapter_id TEXT NOT NULL,
+  selector_kind TEXT NOT NULL,
+  selector_parameters_json TEXT NOT NULL CHECK (json_valid(selector_parameters_json)),
+  registry_fingerprint TEXT NOT NULL DEFAULT 'legacy:unversioned'
+    CHECK (length(registry_fingerprint) > 0),
+  state TEXT NOT NULL CHECK (state IN ('running', 'complete', 'failed', 'abandoned')),
+  started_at_ms INTEGER NOT NULL CHECK (started_at_ms >= 0),
+  checkpoint_at_ms INTEGER CHECK (checkpoint_at_ms IS NULL OR checkpoint_at_ms >= started_at_ms),
+  finished_at_ms INTEGER CHECK (finished_at_ms IS NULL OR finished_at_ms >= started_at_ms),
+  next_cursor TEXT,
+  last_request_cursor TEXT,
+  last_page_fingerprint TEXT,
+  page_count INTEGER NOT NULL DEFAULT 0 CHECK (page_count >= 0),
+  observed_event_count INTEGER NOT NULL DEFAULT 0 CHECK (observed_event_count >= 0),
+  exhausted INTEGER NOT NULL DEFAULT 0 CHECK (exhausted IN (0, 1)),
+  error_detail TEXT,
+  CHECK (state = 'running' OR finished_at_ms IS NOT NULL),
+  CHECK (state != 'running' OR finished_at_ms IS NULL),
+  CHECK (state != 'complete' OR exhausted = 1),
+  CHECK (page_count = 0 OR exhausted = 1 OR next_cursor IS NOT NULL),
+  PRIMARY KEY (source_key, inventory_run_id),
+  UNIQUE (source_key, selector_scope, inventory_run_id)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_source_inventory_one_running
+  ON source_inventory_runs (source_key, selector_scope)
+  WHERE state = 'running';
+
+CREATE TABLE IF NOT EXISTS source_inventory_run_pages (
+  source_key TEXT NOT NULL,
+  inventory_run_id TEXT NOT NULL,
+  page_index INTEGER NOT NULL CHECK (page_index >= 0),
+  request_cursor TEXT,
+  next_cursor TEXT,
+  observed_at_ms INTEGER NOT NULL CHECK (observed_at_ms >= 0),
+  event_count INTEGER NOT NULL CHECK (event_count >= 0),
+  exhausted INTEGER NOT NULL CHECK (exhausted IN (0, 1)),
+  page_fingerprint TEXT NOT NULL,
+  PRIMARY KEY (source_key, inventory_run_id, page_index),
+  UNIQUE (source_key, inventory_run_id, request_cursor),
+  UNIQUE (source_key, inventory_run_id, next_cursor),
+  FOREIGN KEY (source_key, inventory_run_id)
+    REFERENCES source_inventory_runs (source_key, inventory_run_id)
+);
+
+CREATE TABLE IF NOT EXISTS source_event_selectors (
+  source_key TEXT NOT NULL,
+  source_event_id TEXT NOT NULL,
+  selector_scope TEXT NOT NULL,
+  adapter_id TEXT NOT NULL,
+  selector_kind TEXT NOT NULL,
+  selector_parameters_json TEXT NOT NULL CHECK (json_valid(selector_parameters_json)),
+  active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+  retired_at_ms INTEGER CHECK (retired_at_ms IS NULL OR retired_at_ms >= 0),
+  last_seen_run_id TEXT,
+  first_observed_at_ms INTEGER NOT NULL CHECK (first_observed_at_ms >= 0),
+  last_observed_at_ms INTEGER NOT NULL CHECK (last_observed_at_ms >= first_observed_at_ms),
+  PRIMARY KEY (source_key, source_event_id, selector_scope),
+  FOREIGN KEY (source_key, source_event_id)
+    REFERENCES source_events (source_key, source_event_id),
+  FOREIGN KEY (source_key, selector_scope, last_seen_run_id)
+    REFERENCES source_inventory_runs (source_key, selector_scope, inventory_run_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_source_event_selectors_scope
+  ON source_event_selectors (source_key, selector_scope, source_event_id);
+
+CREATE TABLE IF NOT EXISTS source_event_participants (
+  source_key TEXT NOT NULL,
+  source_event_id TEXT NOT NULL,
+  source_participant_id TEXT NOT NULL,
+  ordinal INTEGER NOT NULL CHECK (ordinal >= 0),
+  label TEXT NOT NULL,
+  active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+  retired_at_ms INTEGER CHECK (retired_at_ms IS NULL OR retired_at_ms >= 0),
+  first_observed_at_ms INTEGER NOT NULL CHECK (first_observed_at_ms >= 0),
+  last_observed_at_ms INTEGER NOT NULL CHECK (last_observed_at_ms >= first_observed_at_ms),
+  PRIMARY KEY (source_key, source_event_id, source_participant_id),
+  FOREIGN KEY (source_key, source_event_id)
+    REFERENCES source_events (source_key, source_event_id)
+);
+
+CREATE TABLE IF NOT EXISTS source_markets (
+  source_key TEXT NOT NULL,
+  source_market_id TEXT NOT NULL,
+  source_event_id TEXT NOT NULL,
+  source_market_type TEXT,
+  market_kind TEXT,
+  title TEXT NOT NULL,
+  status TEXT,
+  closes_at_ms INTEGER CHECK (closes_at_ms IS NULL OR closes_at_ms >= 0),
+  result TEXT,
+  source_updated_at_ms INTEGER CHECK (source_updated_at_ms IS NULL OR source_updated_at_ms >= 0),
+  subject_participant_id TEXT,
+  volume REAL CHECK (volume IS NULL OR volume >= 0),
+  volume_24h REAL CHECK (volume_24h IS NULL OR volume_24h >= 0),
+  liquidity REAL CHECK (liquidity IS NULL OR liquidity >= 0),
+  clob_liquidity REAL CHECK (clob_liquidity IS NULL OR clob_liquidity >= 0),
+  open_interest REAL CHECK (open_interest IS NULL OR open_interest >= 0),
+  active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+  retired_at_ms INTEGER CHECK (retired_at_ms IS NULL OR retired_at_ms >= 0),
+  first_observed_at_ms INTEGER NOT NULL CHECK (first_observed_at_ms >= 0),
+  last_observed_at_ms INTEGER NOT NULL CHECK (last_observed_at_ms >= first_observed_at_ms),
+  PRIMARY KEY (source_key, source_market_id),
+  UNIQUE (source_key, source_market_id, source_event_id),
+  FOREIGN KEY (source_key, source_event_id)
+    REFERENCES source_events (source_key, source_event_id),
+  FOREIGN KEY (source_key, source_event_id, subject_participant_id)
+    REFERENCES source_event_participants (source_key, source_event_id, source_participant_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_source_markets_event
+  ON source_markets (source_key, source_event_id, source_market_id);
+
+CREATE TABLE IF NOT EXISTS source_market_outcomes (
+  source_key TEXT NOT NULL,
+  source_market_id TEXT NOT NULL,
+  outcome_key TEXT NOT NULL,
+  source_event_id TEXT NOT NULL,
+  source_participant_id TEXT,
+  ordinal INTEGER NOT NULL CHECK (ordinal >= 0),
+  label TEXT NOT NULL,
+  probability REAL CHECK (probability IS NULL OR (probability >= 0 AND probability <= 1)),
+  bid REAL CHECK (bid IS NULL OR (bid >= 0 AND bid <= 1)),
+  ask REAL CHECK (ask IS NULL OR (ask >= 0 AND ask <= 1)),
+  last REAL CHECK (last IS NULL OR (last >= 0 AND last <= 1)),
+  last_trade_at_ms INTEGER CHECK (last_trade_at_ms IS NULL OR last_trade_at_ms >= 0),
+  active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+  retired_at_ms INTEGER CHECK (retired_at_ms IS NULL OR retired_at_ms >= 0),
+  first_observed_at_ms INTEGER NOT NULL CHECK (first_observed_at_ms >= 0),
+  last_observed_at_ms INTEGER NOT NULL CHECK (last_observed_at_ms >= first_observed_at_ms),
+  CHECK (bid IS NULL OR ask IS NULL OR bid <= ask),
+  PRIMARY KEY (source_key, source_market_id, outcome_key),
+  FOREIGN KEY (source_key, source_market_id, source_event_id)
+    REFERENCES source_markets (source_key, source_market_id, source_event_id),
+  FOREIGN KEY (source_key, source_event_id, source_participant_id)
+    REFERENCES source_event_participants (source_key, source_event_id, source_participant_id)
+);

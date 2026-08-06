@@ -10,6 +10,7 @@ import {
   recomputeMatchLiquidity,
 } from "../../src/institutions/event-store/match-liquidity.ts";
 import { createResearchServer } from "../../src/research/serve.ts";
+import { SPORT } from "../../src/institutions/market-registry/brands.ts";
 import {
   attachDeskLiquidityToBoard,
   type TennisBoard,
@@ -133,6 +134,7 @@ describe("liquidity board + HQ API", () => {
           state: "ok",
           events: [
             {
+              sport: SPORT.tennis,
               eventTicker,
               title: "A vs B",
               subTitle: null,
@@ -166,6 +168,7 @@ describe("liquidity board + HQ API", () => {
               ],
             },
             {
+              sport: SPORT.tennis,
               eventTicker: "desk-evt-thin",
               title: "Thin",
               subTitle: null,
