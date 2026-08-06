@@ -189,7 +189,7 @@ export const PARTNER_DOMAIN_LAYERS: readonly DomainLayer[] = [
         name: "Live provider execution bindings",
         maturity: "partial",
         where: "src/partner/execution/kalshi*.ts · src/bot/kalshi-client.ts · src/research/serve.ts",
-        notes: "Kalshi V2 mapper, out-scoped client, persisted-book snapshot loader, and authorized HTTP route built; reconciliation poller remains",
+        notes: "Kalshi V2 mapper, out-scoped client, persisted-book snapshot loader, authorized HTTP route, and initial reconciliation built; authenticated cancel, lifecycle accounting, and soak proof remain",
       },
     ],
   },

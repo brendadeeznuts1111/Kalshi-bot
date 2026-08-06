@@ -99,6 +99,9 @@ the execution authority boundary.
 
 ## Remaining work
 
+The dependency-ordered backlog, sub-agent ownership, and acceptance criteria
+live in [`AUTHORIZED_EXECUTION_REMAINING_WORK.md`](AUTHORIZED_EXECUTION_REMAINING_WORK.md).
+
 - Add an operator-owned schedule for the one-shot reconciliation command after
   demo soak evidence establishes the desired cadence and alert thresholds.
 - Keep Fantasy402 unwired until provider-side idempotency is proven.
