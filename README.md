@@ -2,14 +2,15 @@
 
 Standalone Bun project for discovering and ranking public [Kalshi](https://kalshi.com) trading bots on GitHub.
 
-**Zero runtime npm dependencies** — Bun + authenticated [`gh`](https://cli.github.com/) CLI only.
+**Bun-native runtime** with a deliberately small dependency surface.
 
 ## Prerequisites
 
-- [Bun](https://bun.sh) >= 1.3.13 ([`URLPattern`](https://bun.com/blog/bun-v1.3.4#urlpattern-api), [`Bun.cron`](https://bun.com/docs/runtime/cron), [SHA3-256](https://bun.com/blog/bun-v1.3.13#sha3-support-in-webcrypto-and-node-crypto))
+- [Bun](https://bun.sh) >= 1.3.14 ([`URLPattern`](https://bun.com/blog/bun-v1.3.4#urlpattern-api), [`Bun.cron`](https://bun.com/docs/runtime/cron), [SHA3-256](https://bun.com/blog/bun-v1.3.13#sha3-support-in-webcrypto-and-node-crypto))
 - GitHub CLI on PATH (`gh auth login`)
-- No `bun install` required — zero npm deps; see [`docs/BUN_NATIVE.md` — Package manager](docs/BUN_NATIVE.md#package-manager)
+- `bun install --frozen-lockfile`
 - Optional secrets via [Proton Pass CLI](https://protonpass.github.io/pass-cli/) — see [`docs/PROTONPASS.md`](docs/PROTONPASS.md)
+- Authorized execution operators: [`docs/AUTHORIZED_EXECUTION.md`](docs/AUTHORIZED_EXECUTION.md)
 
 ## Quick start
 
@@ -23,7 +24,7 @@ bun run agent status                     # latest run from cache.db
 bun run agent patterns                   # pattern extract from cached run
 bun run agent blueprint                  # architecture blueprint from cache
 bun run report:term                      # ANSI latest.md in terminal
-bun test && bun run typecheck            # posttest restores committed artifacts from fixtures
+bun run bun:ci                           # guard + typecheck + tests + artifact restore
 ```
 
 ### Commit flow
@@ -31,7 +32,7 @@ bun test && bun run typecheck            # posttest restores committed artifacts
 Tests can overwrite `latest.md` or audit JSONL — **`posttest` restores from fixtures** automatically. Before committing:
 
 ```bash
-bun run check                            # typecheck + test + artifact restore
+bun run bun:ci                           # local merge authority
 bun run hooks:install                    # once: install pre-commit gate
 git add … && git commit                  # pre-commit runs check + deletion guard
 ```
@@ -103,7 +104,7 @@ Niche dimensions (`sports-nba`, `tracking`, …) may discover candidates but pro
 | Restore artifacts | `bun run artifacts:restore` — fixtures → reports + audit JSONL |
 | Pre-commit gate | `bun run hooks:install` then `git commit` runs `bun run check` |
 | Types | `bun run typecheck` |
-| Full check | `bun run check` — typecheck + test |
+| Full check | `bun run bun:ci` — guard + typecheck + test; local merge authority |
 
 ## Cache, diff, and artifacts
 

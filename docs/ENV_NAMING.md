@@ -12,7 +12,7 @@ Every env var MUST have a service prefix. Examples:
 
 | Pattern | Example |
 |---------|---------|
-| `KALSHI_*` | `KALSHI_API_KEY_ID`, `KALSHI_PROD_ARMED` |
+| `KALSHI_*` | `KALSHI_API_KEY_ID`, `KALSHI_PROD_ARMED`, `KALSHI_AUTHORIZED_EXECUTION_ENABLED` |
 | `TELEGRAM_*` | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_ALERT_CHAT_ID` |
 | `TENNIS_*` | `TENNIS_LIVE_INTERVAL_MS`, `TENNIS_WS_RECORDER_CRON_SCHEDULE` |
 | `RESEARCH_*` | `RESEARCH_DIMENSION`, `RESEARCH_CRON_SCHEDULE` |
@@ -32,10 +32,10 @@ Every env var MUST have a service prefix. Examples:
 | `_SECONDS` | Duration in seconds | `TENNIS_WS_RECORDER_WS_SECONDS` |
 | `_SCHEDULE` | Cron expression | `RESEARCH_CRON_SCHEDULE` |
 | `_TITLE` | Cron job title | `RESEARCH_CRON_TITLE` |
-| `_LIVE` | Boolean toggle (live mode) | `ALPHA_LIVE` |
+| `_LIVE` | Boolean toggle (live mode) | `KALSHI_ALPHA_LIVE` |
 | `_ARMED` | Safety gate (must be "1") | `KALSHI_PROD_ARMED` |
 | `_WAIT` | Blocking flag | `GITHUB_RATE_LIMIT_WAIT` |
-| `_ENABLED` | Boolean toggle | `RESEARCH_EXPORT_AUDIT` |
+| `_ENABLED` | Boolean toggle | `KALSHI_AUTHORIZED_EXECUTION_ENABLED` |
 
 ## Cron pairs
 
@@ -66,6 +66,20 @@ When renaming, add a backward-compat read wrapper:
 // New name preferred, old name still works
 const hubUrl = Bun.env.OPS_DASHBOARD_URL ?? Bun.env.SERVE_URL;
 ```
+
+## Live execution gates
+
+The flags are independent and conjunctive; none is an alias for another:
+
+| Variable | Owns |
+|----------|------|
+| `KALSHI_ENV=prod` | Selects the production Kalshi API host |
+| `KALSHI_PROD_ARMED=1` | Permits construction of a production Kalshi client |
+| `KALSHI_AUTHORIZED_EXECUTION_ENABLED=1` | Opens the authorized partner HTTP execution breaker |
+| `KALSHI_ALPHA_LIVE=1` | Alpha-program execution only; it does not open the partner route |
+
+All authorization, compliance, balance, liquidity, session, exposure, and risk
+checks still run after the environment gates. Missing or false flags fail closed.
 
 ## Rename log
 
