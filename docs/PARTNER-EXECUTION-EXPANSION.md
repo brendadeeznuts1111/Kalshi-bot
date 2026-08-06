@@ -93,6 +93,20 @@ boundary:
 Public Polymarket data may inform regulatory monitoring today, but it cannot
 grant permission, select an account, or prove a provider execution outcome.
 
+## Canonical concept graph
+
+The glossary models this flow with stable IDs and reciprocal `seeAlso` edges:
+
+`partner.authorization.request` → `partner.authorization.grant` →
+`partner.execution.gate` → `partner.execution.reservation` →
+`partner.execution.provider_lifecycle` → `partner.execution.journal` →
+`partner.execution.receipt`.
+
+The separate `provider.polymarket.intelligence_only` concept makes the
+read-only boundary machine-discoverable. Inspect these entries through the HQ
+glossary, `GET /api/glossary`, or `bun run glossary:dump`; validate the graph
+with `bun run glossary:check` and `bun run partners:validate`.
+
 ## External references
 
 - [Telegram Bot API](https://core.telegram.org/bots/api)
@@ -106,6 +120,7 @@ grant permission, select an account, or prove a provider execution outcome.
 
 - [GitHub Wiki documentation hub](https://github.com/brendadeeznuts1111/Kalshi-bot/wiki)
 - [Partner domain architecture](PARTNER-DOMAIN.md)
+- [Canonical glossary and partner concept graph](GLOSSARY.md)
 - [Authorized partner execution](AUTHORIZED_EXECUTION.md)
 - [Authorized execution delivery record](AUTHORIZED_EXECUTION_REMAINING_WORK.md)
 - [Demo proof schema](EXECUTION_DEMO_PROOF_SCHEMA.md)
