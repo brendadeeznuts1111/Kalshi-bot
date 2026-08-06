@@ -324,6 +324,28 @@ export const EXECUTION_MIGRATIONS = [
         ON provider_lifecycle_sync_runs(provider, out_id, observed_at_ms, id);
     `,
   },
+  {
+    id: "010_canonical_provider_direction",
+    sql: `
+      UPDATE provider_order_lifecycle
+         SET side = CASE
+           WHEN (side = 'yes' AND action = 'buy') OR (side = 'no' AND action = 'sell')
+             THEN 'yes'
+           ELSE 'no'
+         END,
+             action = 'buy'
+       WHERE action != 'buy' OR side NOT IN ('yes', 'no');
+
+      UPDATE provider_order_fills
+         SET side = CASE
+           WHEN (side = 'yes' AND action = 'buy') OR (side = 'no' AND action = 'sell')
+             THEN 'yes'
+           ELSE 'no'
+         END,
+             action = 'buy'
+       WHERE action != 'buy' OR side NOT IN ('yes', 'no');
+    `,
+  },
 ] as const;
 
 type MigrationRow = { migrationId: string }; // brand-ok — internal migration wire value

@@ -233,6 +233,7 @@ describe("kalshi-client order reconciliation lookup", () => {
             remaining_count_fp: "0.00",
             yes_price_dollars: "0.6000",
             status: "executed",
+            subaccount_number: 0,
           }],
           cursor: "",
         })),
@@ -245,6 +246,41 @@ describe("kalshi-client order reconciliation lookup", () => {
       order: { outcome: "no", bookSide: "ask", initialCount: 3, yesPriceCents: 60 },
     });
     expect(calls[1]!.url).toContain("/historical/orders?");
+    expect(calls[1]!.url).not.toContain("subaccount=");
+  });
+
+  test("historical lookup ignores non-primary rows before matching", async () => {
+    const { client } = makeClient({
+      responses: [
+        new Response(JSON.stringify({ orders: [], cursor: "" })),
+        new Response(JSON.stringify({
+          orders: [
+            {
+              order_id: "secondary-order",
+              client_order_id: "shared-key",
+              ticker: ORDER.ticker,
+              subaccount_number: 2,
+            },
+            {
+              order_id: "primary-order",
+              client_order_id: "shared-key",
+              ticker: ORDER.ticker,
+              outcome_side: "yes",
+              book_side: "bid",
+              initial_count_fp: "5.00",
+              fill_count_fp: "5.00",
+              remaining_count_fp: "0.00",
+              yes_price_dollars: "0.4200",
+              status: "executed",
+              subaccount_number: 0,
+            },
+          ],
+          cursor: "",
+        })),
+      ],
+    });
+    expect(await client.lookupOrderByClientOrderId(ORDER.ticker, "shared-key"))
+      .toMatchObject({ kind: "found", source: "historical", order: { orderId: "primary-order" } });
   });
 
   test("accepts exact historical evidence even when the active feed fails", async () => {
@@ -262,6 +298,7 @@ describe("kalshi-client order reconciliation lookup", () => {
             fill_count_fp: "5.00",
             remaining_count_fp: "0.00",
             yes_price_dollars: "0.4200",
+            subaccount_number: 0,
           }],
           cursor: "",
         })),
@@ -371,7 +408,13 @@ describe("kalshi-client portfolio reads", () => {
     const { client, calls } = makeClient({
       responses: [
         new Response(JSON.stringify({ orders: [{ order_id: "o1" }], cursor: "next" })),
-        new Response(JSON.stringify({ orders: [], cursor: "" })),
+        new Response(JSON.stringify({
+          orders: [
+            { order_id: "primary", subaccount_number: 0 },
+            { order_id: "secondary", subaccount_number: 2 },
+          ],
+          cursor: "",
+        })),
         new Response(JSON.stringify({ fills: [{ fill_id: "f1" }], cursor: "" })),
         new Response(JSON.stringify({ fills: [], cursor: "" })),
         new Response(JSON.stringify({ settlements: [{ ticker: "KXTEST" }], cursor: "" })),
@@ -380,7 +423,8 @@ describe("kalshi-client portfolio reads", () => {
     });
     expect(await client.getLifecyclePage("orders", "active", "", 100))
       .toEqual({ items: [{ order_id: "o1" }], cursor: "next" });
-    await client.getLifecyclePage("orders", "historical", "next", 100);
+    expect(await client.getLifecyclePage("orders", "historical", "next", 100))
+      .toEqual({ items: [{ order_id: "primary", subaccount_number: 0 }], cursor: "" });
     await client.getLifecyclePage("fills", "active", "", 100);
     await client.getLifecyclePage("fills", "historical", "", 100);
     expect(await client.getSettlementPage("", 100)).toEqual({
@@ -398,7 +442,24 @@ describe("kalshi-client portfolio reads", () => {
       "/trade-api/v2/portfolio/positions",
     ]);
     expect(calls[1]!.url).toContain("cursor=next");
-    for (const call of calls) expect(call.url).toContain("subaccount=0");
+    for (const index of [0, 2, 4, 5]) expect(calls[index]!.url).toContain("subaccount=0");
+    for (const index of [1, 3]) expect(calls[index]!.url).not.toContain("subaccount=");
+  });
+
+  test("historical lifecycle pages fail closed for malformed subaccount identity", async () => {
+    const { client } = makeClient({
+      responses: [new Response(JSON.stringify({
+        fills: [{ fill_id: "bad", subaccount_number: "0" }], cursor: "",
+      }))],
+    });
+    await expect(client.getLifecyclePage("fills", "historical"))
+      .rejects.toThrow(/historical fill subaccount is malformed/);
+
+    const { client: missingIdentityClient } = makeClient({
+      responses: [new Response(JSON.stringify({ fills: [{ fill_id: "missing" }], cursor: "" }))],
+    });
+    await expect(missingIdentityClient.getLifecyclePage("fills", "historical"))
+      .rejects.toThrow(/historical fill subaccount is malformed/);
   });
 
   test("cancelOrder signs DELETE on the order path", async () => {

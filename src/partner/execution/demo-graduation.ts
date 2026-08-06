@@ -128,6 +128,9 @@ function validateArtifact(artifact: DemoProofArtifact, prefix: string, failures:
     artifact.providerPositions,
     artifact.localPositions,
   );
+  const recomputedBalanceDrift = Math.abs(
+    artifact.balances.providerBalanceCents - artifact.balances.localBalanceCents,
+  );
   const unknownAges = artifact.reservations
     .filter((row) => row.status === 'unknown')
     .map((row) => Math.max(0, artifact.generatedAtMs - row.createdAtMs));
@@ -138,10 +141,22 @@ function validateArtifact(artifact: DemoProofArtifact, prefix: string, failures:
     !artifact.productionBreakers.productionExecutionEnabled &&
     !artifact.productionBreakers.productionArmed;
   if (
+    recomputedBalanceDrift !== artifact.integrity.balanceDriftCents ||
     recomputedPositionDrift !== artifact.integrity.positionDriftContracts ||
     recomputedUnknownBreaches !== artifact.integrity.unknownSlaBreaches ||
     recomputedBreakersClosed !== artifact.integrity.productionBreakersClosed
-  ) failures.push(`${prefix}: drift, SLA, or breaker counters do not match artifact rows`);
+  ) failures.push(`${prefix}: balance, position, SLA, or breaker counters do not match artifact rows`);
+  const duplicateEvidence = [
+    duplicate(artifact.reservations.map((row) => String(row.id)), 'reservation ID'),
+    duplicate(artifact.providerOrders.map((row) => row.orderId), 'provider order ID'),
+    duplicate(artifact.providerFills.map((row) => row.fillId), 'provider fill ID'),
+    duplicate(artifact.providerPositions.map((row) => row.ticker), 'provider position ticker'),
+    duplicate(artifact.localPositions.map((row) => row.ticker), 'local position ticker'),
+    duplicate(artifact.receipts.map((row) => row.dedupeKey), 'receipt dedupe key'),
+  ].filter((value): value is string => value !== null);
+  if (duplicateEvidence.length > 0) {
+    failures.push(`${prefix}: duplicate or empty evidence keys: ${duplicateEvidence.join(', ')}`);
+  }
   const scenarios = new Map(artifact.scenarios.map(scenario => [scenario.id, scenario]));
   for (const id of DEMO_PROOF_SCENARIOS) {
     const scenario = scenarios.get(id);
@@ -149,8 +164,15 @@ function validateArtifact(artifact: DemoProofArtifact, prefix: string, failures:
       failures.push(`${prefix}: scenario ${id} lacks passing bounded evidence`);
     }
   }
-  if (scenarios.size !== DEMO_PROOF_SCENARIOS.length)
+  if (scenarios.size !== DEMO_PROOF_SCENARIOS.length ||
+      artifact.scenarios.length !== DEMO_PROOF_SCENARIOS.length)
     failures.push(`${prefix}: scenario set is not canonical`);
+}
+
+function duplicate(values: string[], label: string): string | null {
+  return values.some((value) => !value.trim()) || new Set(values).size !== values.length
+    ? label
+    : null;
 }
 
 function positionDrift(

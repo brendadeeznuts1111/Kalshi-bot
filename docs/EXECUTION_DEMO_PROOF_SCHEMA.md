@@ -34,12 +34,12 @@ Required scenarios are:
 ## Output
 
 Each run writes `execution-demo-proof-YYYY-MM-DD.json` and `.md`. Schema version
-2 includes:
+3 includes:
 
 - deterministic sanitized row arrays;
 - reservation/order/fill/position and journal totals;
 - orphan provider-order and confirmed-reservation counts;
-- absolute provider-versus-local balance drift;
+- the sanitized provider/local balance pair plus its absolute drift;
 - account-wide provider-versus-local unsettled position drift;
 - unknown-resolution SLA breaches and maximum unknown age;
 - production environment and arming breaker evidence;
@@ -49,6 +49,8 @@ Each run writes `execution-demo-proof-YYYY-MM-DD.json` and `.md`. Schema version
 - structural corroboration for duplicate IDs, reconciliation, partial fills,
   cancellation journal entries, and delayed receipt delivery (a caller-supplied
   `passed=true` cannot override missing structural evidence);
+- unique, nonempty reservation, provider order, provider fill, position, and
+  receipt evidence identities;
 - a daily pass only when all scenarios pass, both orphan counts are zero, and
   balance drift is zero.
 
@@ -99,7 +101,8 @@ bun run partner:execution:demo-graduation -- \
   --input=artifacts/execution-demo-proof/execution-demo-proof-2026-08-07.json
 ```
 
-The verifier independently rechecks daily pass criteria, rejects missing,
+The verifier independently recomputes balance drift from the sanitized balance
+pair, rechecks position, SLA, breaker, and uniqueness evidence, rejects missing,
 duplicate, or nonconsecutive dates, constrains generation timestamps to their
 daily windows, and writes a SHA-256 chain manifest. The chain detects later
 artifact changes; it is not a signature and does not prove observation origin.

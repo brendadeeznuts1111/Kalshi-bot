@@ -384,7 +384,8 @@ export function createKalshiClient(options: KalshiClientOptions = {}): KalshiCli
       const path = source === "active" ? "/portfolio/orders" : "/historical/orders";
       let cursor = "";
       for (let page = 0; page < 10; page++) {
-        const query = new URLSearchParams({ ticker, limit: "1000", subaccount: "0" });
+        const query = new URLSearchParams({ ticker, limit: "1000" });
+        if (source === "active") query.set("subaccount", "0");
         if (cursor) query.set("cursor", cursor);
         let response: unknown;
         try {
@@ -406,9 +407,15 @@ export function createKalshiClient(options: KalshiClientOptions = {}): KalshiCli
           });
           break;
         }
-        const matches = response.orders
-          .filter(isRecord)
-          .filter((order) => order.client_order_id === clientOrderId);
+        let matches: Record<string, unknown>[];
+        try {
+          matches = response.orders
+            .filter(isRecord)
+            .filter((order) => source === "active" || isPrimaryHistoricalRecord(order, "order"))
+            .filter((order) => order.client_order_id === clientOrderId);
+        } catch (error) {
+          return { kind: "malformed", source, reason: sanitizeLookupError(error) };
+        }
         if (matches.length > 1) {
           return { kind: "malformed", source, reason: "duplicate client order ID" };
         }
@@ -447,7 +454,8 @@ export function createKalshiClient(options: KalshiClientOptions = {}): KalshiCli
       throw new TypeError("Kalshi lifecycle page limit must be from 1 to 1000");
     }
     const prefix = source === "active" ? "/portfolio" : "/historical";
-    const query = new URLSearchParams({ limit: String(limit), subaccount: "0" });
+    const query = new URLSearchParams({ limit: String(limit) });
+    if (source === "active") query.set("subaccount", "0");
     if (cursor) query.set("cursor", cursor);
     const response = await signedRequest("GET", `${prefix}/${feed}?${query}`);
     if (!isRecord(response) || !Array.isArray(response[feed])) {
@@ -457,7 +465,9 @@ export function createKalshiClient(options: KalshiClientOptions = {}): KalshiCli
       throw new KalshiLifecyclePageMalformedError(`Kalshi ${source} ${feed} cursor is malformed`);
     }
     return {
-      items: response[feed].filter(isRecord),
+      items: response[feed]
+        .filter(isRecord)
+        .filter((item) => source === "active" || isPrimaryHistoricalRecord(item, feed.slice(0, -1))),
       cursor: typeof response.cursor === "string" ? response.cursor : "",
     };
   }
@@ -527,6 +537,16 @@ export function createKalshiClient(options: KalshiClientOptions = {}): KalshiCli
       };
     },
   };
+}
+
+function isPrimaryHistoricalRecord(
+  wire: Record<string, unknown>,
+  label: string,
+): boolean {
+  const value = wire.subaccount_number ?? wire.subaccount;
+  if (value === 0) return true;
+  if (Number.isSafeInteger(value) && Number(value) > 0) return false;
+  throw new KalshiLifecyclePageMalformedError(`Kalshi historical ${label} subaccount is malformed`);
 }
 
 function parseLookupOrder(

@@ -2,6 +2,7 @@ import { Database } from "bun:sqlite";
 import { describe, expect, test } from "bun:test";
 import {
   computeProviderOrderExposure,
+  getProviderOrderFillTotals,
   getProviderOrderLifecycle,
   ingestProviderLifecycleBatch,
   recordProviderOrderSettlement,
@@ -28,6 +29,23 @@ describe("provider order lifecycle", () => {
     db.close();
   });
 
+  test("migration canonicalizes equivalent legacy sell directions", () => {
+    const db = setup();
+    ingestProviderLifecycleBatch(db, batch({
+      orders: [{ ...batch().orders[0]!, side: "no", action: "sell", unitPriceMinor: 60 }],
+      fills: [{ ...batch().fills[0]!, side: "no", action: "sell", unitPriceMinor: 60 }],
+    }));
+    db.query("DELETE FROM _partner_execution_migrations WHERE id = $id")
+      .run({ $id: "010_canonical_provider_direction" });
+    expect(migrateExecutionSchema(db, NOW + 1)).toEqual(["010_canonical_provider_direction"]);
+    expect(getProviderOrderLifecycle(db, "kalshi", "out-SPORTS-1", "order-1"))
+      .toMatchObject({ side: "yes", action: "buy", unitPriceMinor: 60 });
+    expect(db.query(
+      "SELECT side, action, unit_price_minor AS unitPriceMinor FROM provider_order_fills",
+    ).get()).toEqual({ side: "yes", action: "buy", unitPriceMinor: 60 });
+    db.close();
+  });
+
   test("tracks 10/4/6 partial exposure, releases only six on cancel, then settles four", () => {
     const db = setup();
     ingestProviderLifecycleBatch(db, batch());
@@ -48,6 +66,8 @@ describe("provider order lifecycle", () => {
       filledExposureMinor: 160,
       totalExposureMinor: 400,
     });
+    expect(getProviderOrderFillTotals(db, "kalshi", "out-SPORTS-1", "order-1"))
+      .toEqual({ quantity: 4, costMinor: 160, feesMinor: 2 });
 
     ingestProviderLifecycleBatch(db, batch({
       observedAtMs: NOW + 1,
