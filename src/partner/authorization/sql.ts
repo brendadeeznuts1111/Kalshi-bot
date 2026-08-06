@@ -130,6 +130,80 @@ export const AUTHORIZATION_MIGRATIONS = [
         WHERE out_id IS NOT NULL;
     `,
   },
+  {
+    id: "002_account_authorization_receipt_outbox",
+    sql: `
+      CREATE TABLE IF NOT EXISTS account_authorization_receipt_outbox (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        dedupe_key TEXT NOT NULL UNIQUE CHECK (
+          length(dedupe_key) BETWEEN 1 AND 256
+        ),
+        telegram_chat_id TEXT NOT NULL,
+        telegram_topic_id TEXT,
+        payload_json TEXT NOT NULL CHECK (json_valid(payload_json)),
+        status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'sent', 'dead')),
+        attempts INTEGER NOT NULL DEFAULT 0 CHECK (
+          typeof(attempts) = 'integer' AND attempts >= 0
+        ),
+        available_at_ms INTEGER NOT NULL CHECK (
+          typeof(available_at_ms) = 'integer' AND available_at_ms >= 0
+        ),
+        lease_owner TEXT CHECK (
+          lease_owner IS NULL OR length(lease_owner) BETWEEN 1 AND 128
+        ),
+        lease_expires_at_ms INTEGER CHECK (
+          lease_expires_at_ms IS NULL OR (
+            typeof(lease_expires_at_ms) = 'integer' AND lease_expires_at_ms >= 0
+          )
+        ),
+        last_error TEXT,
+        sent_at_ms INTEGER CHECK (
+          sent_at_ms IS NULL OR (typeof(sent_at_ms) = 'integer' AND sent_at_ms >= 0)
+        ),
+        created_at_ms INTEGER NOT NULL DEFAULT (CAST(unixepoch('subsec') * 1000 AS INTEGER)),
+        updated_at_ms INTEGER NOT NULL DEFAULT (CAST(unixepoch('subsec') * 1000 AS INTEGER)),
+        CHECK (
+          (lease_owner IS NULL AND lease_expires_at_ms IS NULL)
+          OR (lease_owner IS NOT NULL AND lease_expires_at_ms IS NOT NULL)
+        ),
+        CHECK (
+          status = 'pending'
+          OR (lease_owner IS NULL AND lease_expires_at_ms IS NULL)
+        ),
+        CHECK (
+          (status = 'sent' AND sent_at_ms IS NOT NULL)
+          OR (status != 'sent' AND sent_at_ms IS NULL)
+        )
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_auth_receipt_outbox_due
+        ON account_authorization_receipt_outbox (
+          status, available_at_ms, lease_expires_at_ms, id
+        );
+    `,
+  },
+  {
+    id: "003_account_authorization_revocations",
+    sql: `
+      CREATE TABLE IF NOT EXISTS account_authorization_revocations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        authorization_id INTEGER NOT NULL UNIQUE REFERENCES account_authorizations(id),
+        partner_code TEXT NOT NULL,
+        out_id TEXT NOT NULL,
+        skin TEXT NOT NULL,
+        telegram_chat_id TEXT NOT NULL,
+        telegram_topic_id TEXT,
+        telegram_message_id TEXT NOT NULL,
+        telegram_revoking_user_id TEXT NOT NULL,
+        revoked_at_ms INTEGER NOT NULL CHECK (
+          typeof(revoked_at_ms) = 'integer' AND revoked_at_ms >= 0
+        )
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_auth_revocations_out
+        ON account_authorization_revocations (partner_code, out_id, revoked_at_ms);
+    `,
+  },
 ] as const;
 
 type MigrationRow = {

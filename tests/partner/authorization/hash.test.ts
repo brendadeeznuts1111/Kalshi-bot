@@ -5,6 +5,10 @@ import {
   asPartnerCode,
   asProviderId,
   asSkinId,
+  asTelegramChatId,
+  asTelegramMessageId,
+  asTelegramTopicId,
+  asTelegramUserId,
   canonicalPolicySnapshot,
   computePolicyHash,
   type AuthorizationPolicy,
@@ -82,5 +86,15 @@ describe("authorization policy hash", () => {
     expect(() =>
       computePolicyHash(policy({ expiresAtMs: 1_700_000_000_000 })),
     ).toThrow("later than validFromMs");
+  });
+
+  test("allows negative chat IDs but requires positive actor and message IDs", () => {
+    expect(String(asTelegramChatId("-100123"))).toBe("-100123");
+    expect(() => asTelegramChatId("0")).toThrow("numeric Telegram ID");
+    expect(() => asTelegramChatId("-0")).toThrow("numeric Telegram ID");
+    for (const parse of [asTelegramTopicId, asTelegramMessageId, asTelegramUserId]) {
+      expect(() => parse("-1")).toThrow("positive numeric");
+      expect(() => parse("0")).toThrow("positive numeric");
+    }
   });
 });
