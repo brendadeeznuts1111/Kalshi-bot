@@ -19,7 +19,8 @@ describe("partner domain architecture", () => {
     const report = buildDomainStatusReport();
     expect(report.totals.components).toBeGreaterThan(10);
     expect(report.totals.built).toBeGreaterThan(0);
-    expect(report.totals.planned).toBeGreaterThan(0);
+    expect(report.totals.partial).toBeGreaterThan(0);
+    expect(report.totals.planned).toBe(0);
     expect(report.orchestration.missingForBotLoop.length).toBeGreaterThan(0);
     expect(PARTNER_NAMING.outIdExample).toBe("out-SPEN-1");
     expect(formatDomainStatusText(report)).toContain("partner domain");
