@@ -123,11 +123,10 @@ export function normalizeKalshiLifecycleOrder(
   reservationForClientOrderId?: (clientOrderId: string) => ExposureReservationId | null,
 ): ProviderOrderSnapshot {
   assertPrimarySubaccount(wire.subaccount_number ?? wire.subaccount, "order");
+  const direction = canonicalDirection(wire, "order");
   const providerOrderId = requiredString(wire.order_id, "order ID");
   const clientOrderId = optionalString(wire.client_order_id);
   const ticker = requiredString(wire.ticker, "ticker");
-  const side = yesNo(wire.outcome_side ?? wire.side, "order side");
-  const action = buySell(wire.action, "order action");
   const orderedQuantity = integerCount(wire.initial_count_fp ?? wire.initial_count, "ordered quantity");
   const filledQuantity = integerCount(wire.fill_count_fp ?? wire.fill_count, "filled quantity");
   const remainingQuantity = integerCount(
@@ -142,9 +141,8 @@ export function normalizeKalshiLifecycleOrder(
       ? reservationForClientOrderId(clientOrderId)
       : null,
     ticker,
-    side,
-    action,
-    unitPriceMinor: exposureUnitPrice(side, action, yesPrice),
+    ...direction,
+    unitPriceMinor: exposureUnitPrice(direction.side, direction.action, yesPrice),
     orderedQuantity,
     filledQuantity,
     remainingQuantity,
@@ -157,23 +155,66 @@ export function normalizeKalshiLifecycleFill(
   wire: Record<string, unknown>,
 ): ProviderFillSnapshot {
   assertPrimarySubaccount(wire.subaccount_number ?? wire.subaccount, "fill");
+  const direction = canonicalDirection(wire, "fill");
   const fillId = optionalString(wire.fill_id);
   const tradeId = optionalString(wire.trade_id);
   if (!fillId && !tradeId) throw new KalshiLifecycleNormalizationError("fill has no stable ID");
-  const side = yesNo(wire.side, "fill side");
-  const action = buySell(wire.action, "fill action");
   const yesPrice = priceMinor(wire.yes_price_dollars, wire.yes_price, "fill YES price");
   return {
     sourceKey: fillId ? `fill:${fillId}` : `trade:${tradeId}`,
     providerOrderId: requiredString(wire.order_id, "fill order ID"),
     ticker: requiredString(wire.ticker ?? wire.market_ticker, "fill ticker"),
-    side,
-    action,
+    ...direction,
     quantity: integerCount(wire.count_fp ?? wire.count, "fill quantity"),
-    unitPriceMinor: exposureUnitPrice(side, action, yesPrice),
+    unitPriceMinor: exposureUnitPrice(direction.side, direction.action, yesPrice),
     feeMinor: optionalFeeMinor(wire.fee_cost),
     providerCreatedAtMs: optionalTime(wire.created_time) ?? optionalUnixSeconds(wire.ts),
   };
+}
+
+/**
+ * Kalshi's canonical direction is outcome_side/book_side. Legacy side/action
+ * are optional and can express the same exposure through an equivalent sell.
+ * Persist one representation so provider deprecations cannot mutate identity.
+ */
+function canonicalDirection(
+  wire: Record<string, unknown>,
+  label: string,
+): { side: "yes" | "no"; action: "buy" } {
+  const outcome = optionalYesNo(wire.outcome_side);
+  const book = wire.book_side === "bid" ? "yes" : wire.book_side === "ask" ? "no" : null;
+  if (wire.book_side !== undefined && book === null) {
+    throw new KalshiLifecycleNormalizationError(`${label} book side is invalid`);
+  }
+  if (outcome !== null && book !== null && outcome !== book) {
+    throw new KalshiLifecycleNormalizationError(`${label} canonical direction conflicts`);
+  }
+
+  let legacy: "yes" | "no" | null = null;
+  if (wire.side !== undefined || wire.action !== undefined) {
+    if (wire.side !== undefined && wire.action !== undefined) {
+      const side = yesNo(wire.side, `${label} legacy side`);
+      const action = buySell(wire.action, `${label} legacy action`);
+      legacy = action === "buy" ? side : opposite(side);
+    } else if (outcome === null && book === null) {
+      throw new KalshiLifecycleNormalizationError(`${label} legacy direction is incomplete`);
+    }
+  }
+
+  const side = outcome ?? book ?? legacy;
+  if (side === null) throw new KalshiLifecycleNormalizationError(`${label} direction is missing`);
+  if (legacy !== null && legacy !== side) {
+    throw new KalshiLifecycleNormalizationError(`${label} legacy direction conflicts`);
+  }
+  return { side, action: "buy" };
+}
+
+function optionalYesNo(value: unknown): "yes" | "no" | null {
+  return value === "yes" || value === "no" ? value : null;
+}
+
+function opposite(side: "yes" | "no"): "yes" | "no" {
+  return side === "yes" ? "no" : "yes";
 }
 
 function assertPrimarySubaccount(value: unknown, label: string): void {
@@ -272,9 +313,13 @@ function optionalFeeMinor(value: unknown): number | null {
   if (typeof value !== "string" && typeof value !== "number") {
     throw new KalshiLifecycleNormalizationError("fill fee is malformed");
   }
-  const parsed = Math.round(Number(value) * 100);
-  if (!Number.isSafeInteger(parsed) || parsed < 0) {
-    throw new KalshiLifecycleNormalizationError("fill fee is malformed");
+  const match = /^(\d+)(?:\.(\d{1,4}))?$/.exec(String(value));
+  if (!match) throw new KalshiLifecycleNormalizationError("fill fee is malformed");
+  const tenThousandths = Number(match[1]) * 10_000 +
+    Number((match[2] ?? "").padEnd(4, "0"));
+  const parsed = tenThousandths / 100;
+  if (!Number.isSafeInteger(tenThousandths) || !Number.isSafeInteger(parsed)) {
+    throw new KalshiLifecycleNormalizationError("fill fee must be whole minor units");
   }
   return parsed;
 }

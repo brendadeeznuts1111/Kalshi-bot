@@ -81,6 +81,15 @@ describe("Kalshi cursor-complete lifecycle loader", () => {
       .toMatchObject({ ok: false, kind: "malformed" });
   });
 
+  test("rejects fractional-cent fill fees instead of rounding provider evidence", () => {
+    expect(() => normalizeKalshiLifecycleFill({
+      ...fillWire(), fee_cost: "0.0050",
+    })).toThrow(/fee must be whole minor units/);
+    expect(normalizeKalshiLifecycleFill({
+      ...fillWire(), fee_cost: "0.0500",
+    }).feeMinor).toBe(5);
+  });
+
   test("rejects lifecycle evidence from a non-primary subaccount", () => {
     expect(() => normalizeKalshiLifecycleOrder({
       ...orderWire(), subaccount_number: 1,
@@ -94,9 +103,31 @@ describe("Kalshi cursor-complete lifecycle loader", () => {
     expect(normalizeKalshiLifecycleOrder(orderWire()).unitPriceMinor).toBe(40);
     expect(normalizeKalshiLifecycleOrder({
       ...orderWire(),
+      outcome_side: undefined,
+      book_side: undefined,
+      side: "no",
       action: "sell",
-    }).unitPriceMinor).toBe(60);
+    })).toMatchObject({ side: "yes", action: "buy", unitPriceMinor: 60 });
     expect(normalizeKalshiLifecycleFill(fillWire()).sourceKey).toBe("fill:fill-1");
+  });
+
+  test("uses canonical direction after legacy side/action removal", () => {
+    expect(normalizeKalshiLifecycleOrder({
+      ...orderWire(), action: undefined, book_side: "ask",
+    })).toMatchObject({ side: "no", action: "buy", unitPriceMinor: 40 });
+    expect(normalizeKalshiLifecycleFill({
+      ...fillWire(), side: undefined, action: undefined,
+      outcome_side: "yes", book_side: "bid",
+    })).toMatchObject({ side: "yes", action: "buy", unitPriceMinor: 60 });
+  });
+
+  test("rejects conflicting canonical and legacy direction evidence", () => {
+    expect(() => normalizeKalshiLifecycleOrder({
+      ...orderWire(), book_side: "bid",
+    })).toThrow(/canonical direction conflicts/);
+    expect(() => normalizeKalshiLifecycleFill({
+      ...fillWire(), outcome_side: "yes", book_side: "bid",
+    })).toThrow(/legacy direction conflicts/);
   });
 });
 

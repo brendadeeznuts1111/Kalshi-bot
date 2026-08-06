@@ -1,4 +1,4 @@
-export const DEMO_PROOF_SCHEMA_VERSION = 2 as const;
+export const DEMO_PROOF_SCHEMA_VERSION = 3 as const;
 
 export const DEMO_PROOF_SCENARIOS = [
   "duplicate_requests",
@@ -118,6 +118,7 @@ export interface DemoProofArtifact {
   providerPositions: DemoProofInput["providerPositions"];
   localPositions: DemoProofInput["localPositions"];
   receipts: DemoProofInput["receipts"];
+  balances: DemoProofInput["balances"];
   limits: DemoProofInput["limits"];
   productionBreakers: DemoProofInput["productionBreakers"];
   provenance: DemoProofInput["provenance"];
@@ -221,6 +222,7 @@ export function buildDemoProofArtifact(input: DemoProofInput): DemoProofArtifact
     providerPositions,
     localPositions,
     receipts,
+    balances: { ...input.balances },
     limits: { ...input.limits },
     productionBreakers: { ...input.productionBreakers },
     provenance: { ...input.provenance },
@@ -272,6 +274,12 @@ This artifact is demo-only evidence. It does not arm or authorize production exe
 }
 
 function validateInput(input: DemoProofInput): void {
+  assertUnique(input.reservations.map((row) => String(row.id)), "reservation ID");
+  assertUnique(input.providerOrders.map((row) => row.orderId), "provider order ID");
+  assertUnique(input.providerFills.map((row) => row.fillId), "provider fill ID");
+  assertUnique(input.providerPositions.map((row) => row.ticker), "provider position ticker");
+  assertUnique(input.localPositions.map((row) => row.ticker), "local position ticker");
+  assertUnique(input.receipts.map((row) => row.dedupeKey), "receipt dedupe key");
   for (const row of input.reservations) {
     assertPositiveInteger(row.id, "reservation id");
     assertNonNegativeInteger(row.effectiveStake, "effective stake");
@@ -305,6 +313,12 @@ function validateInput(input: DemoProofInput): void {
     if (!scenario || typeof scenario.evidence !== "string" || !scenario.evidence.trim()) {
       throw new TypeError(`scenario ${id} requires bounded evidence`);
     }
+  }
+}
+
+function assertUnique(values: string[], label: string): void {
+  if (values.some((value) => !value.trim()) || new Set(values).size !== values.length) {
+    throw new TypeError(`${label} values must be non-empty and unique`);
   }
 }
 

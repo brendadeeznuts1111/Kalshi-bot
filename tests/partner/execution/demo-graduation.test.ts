@@ -135,4 +135,39 @@ describe('demo graduation verifier', () => {
     expect(result.failures.join(' ')).toContain('scenario cancellation');
     expect(result.failures.join(' ')).toContain('scenario set is not canonical');
   });
+
+  test('recomputes balance drift from preserved provider and local balances', () => {
+    const artifacts = sevenDays();
+    artifacts[5] = {
+      ...artifacts[5]!,
+      passed: true,
+      balances: {
+        ...artifacts[5]!.balances,
+        providerBalanceCents: artifacts[5]!.balances.localBalanceCents + 7,
+      },
+      integrity: { ...artifacts[5]!.integrity, balanceDriftCents: 0 },
+    };
+    const result = verifyDemoGraduation(artifacts);
+    expect(result.passed).toBeFalse();
+    expect(result.failures.join(' ')).toContain('balance, position, SLA, or breaker');
+  });
+
+  test('rejects duplicated evidence keys and scenario rows in parsed artifacts', () => {
+    const artifacts = sevenDays();
+    artifacts[6] = {
+      ...artifacts[6]!,
+      providerFills: [
+        ...artifacts[6]!.providerFills,
+        { ...artifacts[6]!.providerFills[0]! },
+      ],
+      scenarios: [
+        ...artifacts[6]!.scenarios,
+        { ...artifacts[6]!.scenarios[0]! },
+      ],
+    };
+    const result = verifyDemoGraduation(artifacts);
+    expect(result.passed).toBeFalse();
+    expect(result.failures.join(' ')).toContain('duplicate or empty evidence keys');
+    expect(result.failures.join(' ')).toContain('scenario set is not canonical');
+  });
 });

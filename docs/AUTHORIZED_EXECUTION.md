@@ -1,6 +1,6 @@
 # Authorized Partner Execution
 
-Status: implemented, default off. This is the operational work card for the
+Status: implemented, default off. This is the operator contract and runbook for the
 authorization, Telegram approval, exposure reservation, Kalshi mapping, and live
 HTTP orchestration layers.
 
@@ -239,16 +239,29 @@ acknowledgement alone does not release exposure: only normalized provider
 lifecycle evidence releases unfilled working quantity, while filled position
 exposure remains until provider-positive settlement.
 
-The lifecycle worker explicitly binds Kalshi V2 placement, order, fill,
-settlement, position, balance, and cancellation calls to primary subaccount
-`0`; omitted-subaccount reads are forbidden because Kalshi otherwise returns
-orders/fills/settlements across all subaccounts. Signed settlement pages are
-the only automatic settlement evidence. Each run persists durable per-out
-status plus cursor-complete orphan/fill-lag metrics. The first signed balance
-observation establishes an owned cash baseline; later observations compare the
-provider balance to baseline plus journal cash deltas, and compare paginated
-provider positions to linked filled-unsettled lifecycle quantities. Any drift
-opens the execution risk breaker and makes the scheduled worker fail nonzero.
+Kalshi V2 placement, cancellation, and active portfolio reads explicitly bind
+primary subaccount `0`. The current historical order and fill endpoints do not
+accept a subaccount query, so those feeds are cursor-complete and then filtered
+locally by the provider's `subaccount_number`; secondary-account rows are
+ignored and missing or malformed identity fails closed. Signed settlement pages
+are the only automatic settlement evidence. Lifecycle direction is normalized
+from Kalshi's canonical `outcome_side` and `book_side`; deprecated `side` and
+`action` fields are accepted only as a consistent fallback. Provider fee strings
+must resolve to exact whole minor units—fractional-cent evidence is rejected
+rather than rounded into the integer journal.
+
+Each run persists durable per-out status plus cursor-complete orphan/fill-lag
+metrics. The first signed balance observation establishes an owned cash
+baseline; later observations compare the provider balance to baseline plus
+journal cash deltas, and compare paginated provider positions to linked
+filled-unsettled lifecycle quantities. Any drift opens the execution risk
+breaker and makes the scheduled worker fail nonzero.
+
+The provider-field and filtering rules above follow Kalshi's current official
+[OpenAPI contract](https://docs.kalshi.com/openapi.yaml), [order
+reference](https://docs.kalshi.com/api-reference/orders/get-orders), and [fill
+reference](https://docs.kalshi.com/api-reference/portfolio/get-fills). Changes
+to those upstream contracts require normalization tests before runtime adoption.
 
 ## Demo graduation
 

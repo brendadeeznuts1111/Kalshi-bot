@@ -143,4 +143,16 @@ describe("demo execution proof artifact", () => {
     expect(artifact.providerOrders.map((row) => row.orderId)).toEqual(["aaa-order", "order-1"]);
     expect(artifact.providerPositions.map((row) => row.ticker)).toEqual(["AAA", "DEMO-MARKET"]);
   });
+
+  test("rejects duplicate evidence identities", () => {
+    const value = input();
+    expect(() => buildDemoProofArtifact({
+      ...value,
+      providerFills: [...value.providerFills, { ...value.providerFills[0]! }],
+    })).toThrow(/provider fill ID values must be non-empty and unique/);
+    expect(() => buildDemoProofArtifact({
+      ...value,
+      providerPositions: [...value.providerPositions, { ...value.providerPositions[0]! }],
+    })).toThrow(/provider position ticker values must be non-empty and unique/);
+  });
 });
