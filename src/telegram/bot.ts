@@ -18,7 +18,8 @@ import { openEventStore } from "../institutions/event-store/open-db.ts";
 import {
   asAuthorizationReceiptLeaseOwner,
 } from "../partner/authorization/outbox.ts";
-import { migrateAuthorizationSchema } from "../partner/authorization/sql.ts";
+import { runExecutionMaintenance } from "../partner/execution/maintenance.ts";
+import { migrateExecutionSchema } from "../partner/execution/sql.ts";
 import { addSubscriber, removeSubscriber, listSubscribers } from "./subscribers.ts";
 import { joinPath } from "../research/paths.ts";
 import { handleAuthorizationCommand } from "./authorization-commands.ts";
@@ -190,7 +191,7 @@ export async function handleCommand(
 
 async function pollLoop() {
   const authorizationDb = openEventStore();
-  migrateAuthorizationSchema(authorizationDb);
+  migrateExecutionSchema(authorizationDb);
   const bot = await getMe();
   const commandContext: TelegramBotCommandContext = {
     authorizationDb,
@@ -219,6 +220,10 @@ async function pollLoop() {
         limit: 25,
         clock: Date.now,
       });
+      const maintenance = runExecutionMaintenance(authorizationDb);
+      if (maintenance.releasedPending > 0) {
+        console.warn("Execution reservation maintenance", maintenance);
+      }
     } catch (err) {
       console.error("Poll error:", err);
       await Bun.sleep(5000);

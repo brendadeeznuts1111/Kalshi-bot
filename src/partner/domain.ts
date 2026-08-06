@@ -180,9 +180,16 @@ export const PARTNER_DOMAIN_LAYERS: readonly DomainLayer[] = [
       {
         id: "authorized-execution-wrapper",
         name: "Transactional authorized execution wrapper",
+        maturity: "built",
+        where: "src/partner/execution/",
+        notes: "Immediate reservation transaction, gate recheck, idempotent dispatch, ambiguous-outcome reconciliation, and durable receipts",
+      },
+      {
+        id: "provider-execution-bindings",
+        name: "Live provider execution bindings",
         maturity: "planned",
-        where: "—",
-        notes: "Gate recheck, exposure reservation, provider placement, and ticket receipt remain next",
+        where: "src/bot/kalshi-client.ts · src/partner/fantasy-ultra/adapter.ts",
+        notes: "Explicit order translation, balance/liquidity snapshot loader, and reconciliation poller are not wired",
       },
     ],
   },
@@ -322,7 +329,7 @@ export function buildDomainStatusReport(
     totals,
     orchestration: {
       ssot:
-        "event-store SQLite (partners, betting_accounts, partner_events, account_authorizations) + Proton Pass + env",
+        "event-store SQLite (partners, betting_accounts, partner_events, account_authorizations, exposure_reservations) + Proton Pass + env",
       clis: [
         "partner:domain",
         "partner:capacity",
@@ -341,7 +348,7 @@ export function buildDomainStatusReport(
         "partners.telegram_chat_id + topic preferences",
         "Telegram /capacity /add command router",
         "partner_ledger + split → report pipeline",
-        "live placeOrder after real HAR + auto eventCoefficients subscribe",
+        "provider binding into executeAuthorizedBet + reconciliation poller",
       ],
     },
   };

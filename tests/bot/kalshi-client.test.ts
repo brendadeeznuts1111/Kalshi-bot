@@ -108,6 +108,13 @@ describe("kalshi-client placeOrder", () => {
     expect(body.post_only).toBe(false);
   });
 
+  test("forwards an explicit execution idempotency UUID", async () => {
+    const { client, calls } = makeClient({ responses: [okOrder()] });
+    const clientOrderId = "f47ac10b-58cc-5372-a567-0e02b2c3d479";
+    await client.placeOrder({ ...ORDER, dryRun: false, clientOrderId });
+    expect((calls[0]!.body as Record<string, unknown>).client_order_id).toBe(clientOrderId);
+  });
+
   test("429 backs off and retries with the same request", async () => {
     const { client, calls, sleeps } = makeClient({
       responses: [new Response("rate limited", { status: 429 }), okOrder("order-after-retry")],
