@@ -27,6 +27,8 @@ export type KalshiOrderRequest = {
   dryRun: boolean;
   /** Resting-maker entry — default true (maker-first doctrine). */
   postOnly?: boolean;
+  /** Stable UUID used by authorized execution to make provider retries idempotent. */
+  clientOrderId?: string;
 };
 
 export type KalshiOrderResult = {
@@ -164,7 +166,7 @@ export function createKalshiClient(options: KalshiClientOptions = {}): KalshiCli
       side: request.side,
       action: "buy",
       count: request.count,
-      client_order_id: crypto.randomUUID(),
+      client_order_id: request.clientOrderId ?? crypto.randomUUID(),
       time_in_force: "good_till_canceled",
       post_only: request.postOnly ?? true,
       cancel_order_on_pause: true,
