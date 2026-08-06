@@ -55,7 +55,6 @@ import { getPlayerDetail } from "./tennis-hq-data.ts";
 import { readOpponentProfiles } from "./player-opponent-profiles.ts";
 import {
   placeOrder,
-  cancelOrder,
   type KalshiClient,
 } from "../bot/kalshi-client.ts";
 import {
@@ -70,6 +69,12 @@ import {
   requireTradingCancelPrincipal,
   requireTradingOrderPrincipal,
 } from "./trading-auth.ts";
+import {
+  evaluateStoredExecutionRiskHealth,
+  type ExecutionRiskHealthDecision,
+} from "../partner/execution/risk-health.ts";
+import { executeAuthorizedCancel } from "../partner/execution/cancel.ts";
+import { migrateExecutionSchema } from "../partner/execution/sql.ts";
 
 // ── Regulatory compliance integration ──
 const REG_DB_PATH = process.env.REGULATORY_DB ?? ":memory:";
@@ -118,8 +123,9 @@ export type ServeOptions = {
   port?: number;
   trading?: {
     db?: Database;
-    client?: Pick<KalshiClient, "environment" | "placeOrder" | "getBalance">;
-    isRiskHealthy?: () => Promise<boolean> | boolean;
+    client?: Pick<KalshiClient, "environment" | "placeOrder" | "getBalance"> &
+      Partial<Pick<KalshiClient, "cancelOrder">>;
+    isRiskHealthy?: () => Promise<boolean | ExecutionRiskHealthDecision> | boolean | ExecutionRiskHealthDecision;
   };
 };
 
@@ -315,18 +321,30 @@ export async function handleTradingOrder(
         parsed.reason,
       );
     }
-    const result = await executeKalshiLiveOrder(
-      runtime.db ?? openEventStore({ dbPath: DEFAULT_EVENT_STORE_DB }),
-      parsed.command,
-      {
+    const ownsDb = runtime.db === undefined;
+    const executionDb = runtime.db ?? openEventStore({ dbPath: DEFAULT_EVENT_STORE_DB });
+    migrateExecutionSchema(executionDb);
+    let result: Awaited<ReturnType<typeof executeKalshiLiveOrder>>;
+    try {
+      result = await executeKalshiLiveOrder(executionDb, {
+        ...parsed.command,
+        actorId: req.tradingPrincipal?.actorId,
+      }, {
         ...(runtime.client
           ? { client: runtime.client }
           : { resolveClient: resolveKalshiAccountClient }),
         isRiskHealthy:
           runtime.isRiskHealthy ??
-          (() => Bun.env.KALSHI_AUTHORIZED_EXECUTION_ENABLED === "1"),
-      },
-    );
+          (() => evaluateStoredExecutionRiskHealth({
+            db: executionDb,
+            outId: parsed.command.outId,
+            ticker: parsed.command.ticker,
+            outEnvPrefix: `KALSHI_${parsed.command.partnerCode}_${parsed.command.outId.split("-").at(-1)}_`,
+          })),
+      });
+    } finally {
+      if (ownsDb) executionDb.close();
+    }
     if (!result.ok) {
       if (result.code === "PROVIDER_NOT_IMPLEMENTED") {
         finalizeRegulatoryExecution(req, "rejected", undefined, result.reason);
@@ -415,7 +433,10 @@ export async function handleTradingOrder(
   }
 }
 
-async function handleTradingCancel(req: Request): Promise<Response> {
+export async function handleTradingCancel(
+  req: Request,
+  runtime: ServeOptions["trading"] = {},
+): Promise<Response> {
   let body: Record<string, unknown>;
   try {
     body = (await req.json()) as Record<string, unknown>;
@@ -424,13 +445,53 @@ async function handleTradingCancel(req: Request): Promise<Response> {
   }
   const orderId = typeof body.orderId === "string" ? body.orderId.trim() : "";
   if (!orderId) return badOrder("E_ORDER_ID_REQUIRED");
+  const principal = req.tradingPrincipal;
+  if (!principal) {
+    return json({ ok: false, code: "E_OPERATOR_AUTH_REQUIRED", error: "operator authentication is required" }, 401);
+  }
+  const headerKey = req.headers.get("Idempotency-Key")?.trim() || "";
+  const bodyKey = typeof body.idempotencyKey === "string" ? body.idempotencyKey.trim() : "";
+  if (!headerKey && !bodyKey) return badOrder("E_IDEMPOTENCY_REQUIRED");
+  if (headerKey && bodyKey && headerKey !== bodyKey) {
+    return badOrder("E_BODY_INVALID", "body and Idempotency-Key header must match");
+  }
+  const idempotencyKey = headerKey || bodyKey;
+  const ownsDb = runtime.db === undefined;
+  const db = runtime.db ?? openEventStore({ dbPath: DEFAULT_EVENT_STORE_DB });
+  migrateExecutionSchema(db);
   try {
-    await cancelOrder(orderId);
+    const result = await executeAuthorizedCancel(db, {
+      ticketId: orderId,
+      idempotencyKey,
+      principal,
+    }, {
+      resolveClient: runtime.client?.cancelOrder
+        ? () => runtime.client as Pick<KalshiClient, "environment" | "cancelOrder">
+        : resolveKalshiAccountClient,
+      isRiskHealthy:
+        runtime.isRiskHealthy ??
+        ((reservation) => evaluateStoredExecutionRiskHealth({
+          db,
+          outId: reservation.outId,
+          ticker: reservation.marketId,
+          outEnvPrefix: `KALSHI_${reservation.partnerCode}_${reservation.outId.split("-").at(-1)}_`,
+        })),
+    });
+    if (!result.ok) {
+      const status = result.code === "CANCEL_OUTCOME_UNKNOWN" ? 202
+        : result.code === "CANCEL_REJECTED" ? 409
+        : result.code === "RESERVATION_NOT_FOUND" ? 404
+        : result.code === "INVALID_REQUEST" ? 400
+        : 403;
+      return json({ ok: false, code: result.code, error: result.reason }, status);
+    }
     resetTradingCache();
-    return json({ ok: true, cancelled: orderId });
+    return json({ ok: true, cancelled: orderId, reservationId: result.reservationId, code: result.code });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return badOrder("E_UPSTREAM", msg.slice(0, 200));
+  } finally {
+    if (ownsDb) db.close();
   }
 }
 
@@ -1194,7 +1255,7 @@ export function createResearchServer(options: ServeOptions = {}) {
 
       // HQ order cancel
       if (url.pathname === "/api/trading/cancel" && req.method === "POST") {
-        return rateLimiter(req, () => requireTradingCancelPrincipal(req, () => handleTradingCancel(req)));
+        return rateLimiter(req, () => requireTradingCancelPrincipal(req, () => handleTradingCancel(req, options.trading)));
       }
 
       // HQ orderbook preview (public market data)

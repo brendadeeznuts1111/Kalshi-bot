@@ -356,7 +356,9 @@ export class ComplianceRepository {
           .query<{ total: number }, [string, string, number]>(
             `SELECT COALESCE(SUM(wager_amount), 0) as total
              FROM ${TABLE.PLAYS}
-             WHERE user_id = ? AND node_id = ? AND placed_at >= ? AND status = '${PLAY_STATUS.ACCEPTED}'`,
+             WHERE user_id = ? AND node_id = ? AND placed_at >= ?
+               AND status IN ('${PLAY_STATUS.ACCEPTED}', '${PLAY_STATUS.CONFIRMED}',
+                 '${PLAY_STATUS.PROPOSED}', '${PLAY_STATUS.UNKNOWN}')`,
           )
           .get(params.userId, params.nodeId, todayStart);
 
@@ -382,6 +384,8 @@ export class ComplianceRepository {
           .query<{ placed_at: number }, [string, string]>(
             `SELECT placed_at FROM ${TABLE.PLAYS}
              WHERE user_id = ? AND node_id = ?
+               AND status IN ('${PLAY_STATUS.ACCEPTED}', '${PLAY_STATUS.CONFIRMED}',
+                 '${PLAY_STATUS.PROPOSED}', '${PLAY_STATUS.UNKNOWN}')
              ORDER BY placed_at DESC LIMIT 1`,
           )
           .get(params.userId, params.nodeId);

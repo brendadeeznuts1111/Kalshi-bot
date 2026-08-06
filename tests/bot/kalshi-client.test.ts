@@ -333,6 +333,29 @@ describe("kalshi-client order reconciliation lookup", () => {
 });
 
 describe("kalshi-client portfolio reads", () => {
+  test("typed lifecycle pages address active and historical order/fill feeds", async () => {
+    const { client, calls } = makeClient({
+      responses: [
+        new Response(JSON.stringify({ orders: [{ order_id: "o1" }], cursor: "next" })),
+        new Response(JSON.stringify({ orders: [], cursor: "" })),
+        new Response(JSON.stringify({ fills: [{ fill_id: "f1" }], cursor: "" })),
+        new Response(JSON.stringify({ fills: [], cursor: "" })),
+      ],
+    });
+    expect(await client.getLifecyclePage("orders", "active", "", 100))
+      .toEqual({ items: [{ order_id: "o1" }], cursor: "next" });
+    await client.getLifecyclePage("orders", "historical", "next", 100);
+    await client.getLifecyclePage("fills", "active", "", 100);
+    await client.getLifecyclePage("fills", "historical", "", 100);
+    expect(calls.map((call) => new URL(call.url).pathname)).toEqual([
+      "/trade-api/v2/portfolio/orders",
+      "/trade-api/v2/historical/orders",
+      "/trade-api/v2/portfolio/fills",
+      "/trade-api/v2/historical/fills",
+    ]);
+    expect(calls[1]!.url).toContain("cursor=next");
+  });
+
   test("cancelOrder signs DELETE on the order path", async () => {
     const { client, calls } = makeClient({
       responses: [new Response("{}", { status: 200 })],

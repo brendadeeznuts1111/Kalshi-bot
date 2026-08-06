@@ -37,6 +37,7 @@ type ReservationRow = {
   skin: string;
   provider: string;
   authorization_id: number;
+  actor_id: string | null;
   requested_stake: number;
   effective_stake: number;
   market_id: string; // brand-ok — SQLite wire value; parsed by mapReservation
@@ -292,11 +293,11 @@ export function createPendingReservation(
     .query(
       `INSERT INTO exposure_reservations (
         idempotency_key, partner_code, out_id, skin, provider, authorization_id,
-        requested_stake, effective_stake, market_id, selection, decimal_odds,
+        actor_id, requested_stake, effective_stake, market_id, selection, decimal_odds,
         status, reservation_expires_at_ms, created_at_ms, updated_at_ms
       ) VALUES (
         $idempotencyKey, $partnerCode, $outId, $skin, $provider, $authorizationId,
-        $requestedStake, $effectiveStake, $marketId, $selection, $decimalOdds,
+        $actorId, $requestedStake, $effectiveStake, $marketId, $selection, $decimalOdds,
         'pending', $expiresAtMs, $nowMs, $nowMs
       )
       ON CONFLICT(idempotency_key) DO NOTHING
@@ -309,6 +310,7 @@ export function createPendingReservation(
       $skin: input.authorization.skin,
       $provider: input.authorization.provider,
       $authorizationId: input.authorization.id,
+      $actorId: input.request.actorId?.trim() || null,
       $requestedStake: input.request.requestedStake,
       $effectiveStake: input.effectiveStake,
       $marketId: input.request.marketId,
@@ -326,6 +328,7 @@ export function createPendingReservation(
     existing.outId !== input.request.outId ||
     existing.skin !== input.request.skin ||
     existing.authorizationId !== input.authorization.id ||
+    (input.request.actorId !== undefined && existing.actorId !== input.request.actorId) ||
     existing.marketId !== input.request.marketId ||
     existing.selection !== input.request.selection ||
     existing.requestedStake !== input.request.requestedStake ||
@@ -463,11 +466,24 @@ export function releaseExpiredReservations(db: Database, nowMs = Date.now()): nu
 }
 
 export function computeOutstandingExposure(db: Database, lane: ReservationLane): number {
-  return sumExposure(
-    db,
-    lane,
-    "status IN ('pending', 'placing', 'confirmed', 'unknown')",
-  );
+  const row = db.query(
+    `SELECT COALESCE(SUM(
+       CASE WHEN r.status = 'confirmed' THEN COALESCE(
+         (SELECT SUM((p.remaining_quantity + p.filled_quantity - p.settled_quantity)
+           * p.unit_price_minor)
+          FROM provider_order_lifecycle p WHERE p.reservation_id = r.id),
+         r.effective_stake)
+       ELSE r.effective_stake END
+     ), 0) AS total
+     FROM exposure_reservations r
+     WHERE r.partner_code = $partnerCode AND r.out_id = $outId AND r.skin = $skin
+       AND r.status IN ('pending', 'placing', 'confirmed', 'unknown')`,
+  ).get({
+    $partnerCode: lane.partnerCode,
+    $outId: lane.outId,
+    $skin: lane.skin,
+  }) as { total: number };
+  return assertAggregate(row.total);
 }
 
 export function computeReservedMarketLiquidity(
@@ -478,8 +494,11 @@ export function computeReservedMarketLiquidity(
 ): number {
   const row = db
     .query(
-      `SELECT COALESCE(SUM(effective_stake), 0) AS total
-       FROM exposure_reservations
+      `SELECT COALESCE(SUM(CASE WHEN r.status = 'confirmed' THEN COALESCE(
+         (SELECT SUM(p.remaining_quantity * p.unit_price_minor)
+          FROM provider_order_lifecycle p WHERE p.reservation_id = r.id),
+         r.effective_stake) ELSE r.effective_stake END), 0) AS total
+       FROM exposure_reservations r
        WHERE partner_code = $partnerCode
          AND out_id = $outId
          AND skin = $skin
@@ -703,6 +722,7 @@ function mapReservation(row: ReservationRow): ExposureReservation {
     skin: asSkinId(row.skin),
     provider: asProviderId(row.provider),
     authorizationId: asAuthorizationId(row.authorization_id),
+    actorId: row.actor_id,
     requestedStake: row.requested_stake,
     effectiveStake: row.effective_stake,
     marketId: asMarketId(row.market_id),

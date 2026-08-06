@@ -10,12 +10,15 @@ Live provider placement follows one path:
 
 ```text
 HTTP compliance
+  → authenticated operator principal + partner/out scope
+  → proposed regulatory play bound to execution idempotency
   → canonical partnerCode / outId / skin request
   → active SQLite authorization + immutable policy hash
   → fresh executable Kalshi book + live portfolio balance
   → integer stake caps + transactional exposure reservation
   → idempotent Kalshi V2 placement
   → confirmed, rejected, or unknown reservation + durable receipt
+  → cursor-complete order/fill lifecycle + append-only journal
 ```
 
 Skills, agent instructions, documentation, hooks, CI, and dashboard controls do
@@ -33,6 +36,13 @@ environment gates below.
 | `KALSHI_PROD_ARMED=1` | Required in addition to `KALSHI_ENV=prod` |
 | active authorization grant | Must match partner, out, skin, provider, currency, scope, validity, and policy hash |
 | risk health | Must remain healthy before and during snapshot evaluation |
+| `KALSHI_EXECUTION_KILL_SWITCH=1` | Global emergency stop |
+| `KALSHI_<PARTNER>_<N>_EXECUTION_KILL_SWITCH=1` | Per-out emergency stop |
+
+Each out must also publish explicit, fresh health evidence under its canonical
+prefix: `PROVIDER_SESSION_HEALTHY`, `PROVIDER_HEALTHY`,
+`BALANCE_EXPOSURE_DRIFT_CENTS`, `MAINTENANCE_AT_MS`, and `TELEMETRY_AT_MS`.
+Missing, stale, malformed, or misspelled evidence denies execution.
 
 `KALSHI_ALPHA_LIVE` belongs to alpha programs and does not enable this route.
 
@@ -45,6 +55,14 @@ Live `POST /api/trading/order` requests require:
 - an explicit, stable `Idempotency-Key`
 - compliance fields and middleware context: state, node, sport, market, wager,
   and bet type
+- `Authorization: Bearer …` whose SHA-256 digest, actor, role, and scopes are
+  configured through `KALSHI_OPERATOR_*`; the raw token is never configured
+
+Dry-run order previews remain explicitly public. Every cancellation is a live
+mutation and requires the operator principal. `POST /api/trading/cancel`
+resolves the provider ticket through the local reservation before checking
+scope, the original live authorization, risk health, out credentials, and
+production arming. Ambiguous cancellation retains exposure.
 
 The route rejects post-only requests because the authorization snapshot binds
 the order to immediately executable top-of-book liquidity.
@@ -85,25 +103,41 @@ and executable-liquidity limits.
 bun test tests/partner/authorization tests/partner/execution tests/research/trading-order.test.ts
 bun run bun:ci
 bun run partner:reconcile-kalshi -- --limit=100
+bun run partner:deliver-receipts -- --limit=100
+bun run partner:execution:preview -- --count=3
+bun run partner:execution:register
 ```
 
 `Bun.TOML.stringify` is optional on the stable runtime: the governed
 `src/partner/toml-stringify.ts` boundary uses the native API when present and a
 tested compatibility serializer otherwise.
 
-The reconciler pages the active Kalshi order feed by ticker, matches the UUID
-derived from the execution idempotency key, persists a sanitized provider
-summary, and queues a deduplicated confirmation receipt. It is a bounded
-one-shot operator command so scheduling policy can be added without changing
-the execution authority boundary.
+The reconciler searches bounded, cursor-complete active and historical Kalshi
+feeds and verifies environment, ticker, client ID, outcome, book side, count,
+and price against terms persisted before dispatch. Reconciliation and durable
+receipt delivery are separate leased one-shot workers; the OS schedule keeps
+them independently named so Telegram polling is never execution infrastructure.
 
-## Remaining work
+Cursor-complete order/fill ingestion tracks working, filled, cancelled, and
+settled quantities. The append-only integer journal records reservation,
+order, fill, fee, cancellation, settlement, adjustment, and reversal entries.
+Account orders that cannot be linked to a local authorized reservation remain
+visible in provider lifecycle storage but are never attributed to a partner
+journal. Linked orders must match the exact partner/out/skin/currency lane.
+Cancellation acknowledgement alone does not release exposure: only normalized
+provider lifecycle evidence releases unfilled working quantity, while filled
+position exposure remains until provider-positive settlement.
+
+## Demo graduation
 
 The dependency-ordered backlog, sub-agent ownership, and acceptance criteria
 live in [`AUTHORIZED_EXECUTION_REMAINING_WORK.md`](AUTHORIZED_EXECUTION_REMAINING_WORK.md).
 
-- Add an operator-owned schedule for the one-shot reconciliation command after
-  demo soak evidence establishes the desired cadence and alert thresholds.
+- Generate one redacted daily artifact with
+  `bun run partner:execution:demo-proof -- --input=<sanitized.json>`. The
+  harness refuses production and never changes arm flags.
+- Seven consecutive real demo days are still required. Tests and generated
+  fixtures cannot simulate elapsed soak time or authorize production.
 - Keep Fantasy402 unwired until provider-side idempotency is proven.
 - Add credit-line or dedicated-wallet accounting only when an owned domain
   contract and ledger source exist.

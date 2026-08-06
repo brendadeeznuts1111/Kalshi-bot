@@ -28,8 +28,10 @@ import {
   type KalshiOrderResponseSummary,
 } from "./kalshi.ts";
 import { createKalshiExecutionSnapshotLoader } from "./kalshi-snapshot.ts";
+import type { ExecutionRiskHealthDecision } from "./risk-health.ts";
 
 export interface KalshiLiveOrderCommand {
+  actorId?: string;
   partnerCode: BetRequest["partnerCode"];
   outId: BetRequest["outId"];
   skin: BetRequest["skin"];
@@ -73,7 +75,7 @@ export interface KalshiLiveExecutionDependencies {
   ) =>
     | Promise<Pick<KalshiClient, "environment" | "placeOrder" | "getBalance">>
     | Pick<KalshiClient, "environment" | "placeOrder" | "getBalance">;
-  isRiskHealthy: () => Promise<boolean> | boolean;
+  isRiskHealthy: () => Promise<boolean | ExecutionRiskHealthDecision> | boolean | ExecutionRiskHealthDecision;
   now?: () => number;
   maxBookAgeMs?: number;
 }
@@ -187,11 +189,15 @@ export async function executeKalshiLiveOrder(
   if (!skin) {
     return { ok: false, code: "SKIN_INACTIVE", reason: "Requested skin is missing or inactive" };
   }
-  if (!(await dependencies.isRiskHealthy())) {
+  const riskDecision = await dependencies.isRiskHealthy();
+  const riskHealthy = typeof riskDecision === "boolean" ? riskDecision : riskDecision.healthy;
+  if (!riskHealthy) {
     return {
       ok: false,
       code: "EXECUTION_DENIED",
-      reason: "Global authorized-execution circuit breaker is not healthy",
+      reason: typeof riskDecision === "boolean"
+        ? "Global authorized-execution circuit breaker is not healthy"
+        : `Execution risk health denied: ${riskDecision.codes.join(",")}`,
     };
   }
 
@@ -222,6 +228,7 @@ export async function executeKalshiLiveOrder(
   };
   const now = dependencies.now ?? Date.now;
   const request: BetRequest = {
+    ...(command.actorId ? { actorId: command.actorId } : {}),
     partnerCode: command.partnerCode,
     outId: command.outId,
     skin: command.skin,
@@ -252,7 +259,7 @@ export async function executeKalshiLiveOrder(
       return balance.balanceCents;
     },
     isProviderSessionValid: async () => (await loadBalance()).balanceCents !== null,
-    isRiskHealthy: dependencies.isRiskHealthy,
+    isRiskHealthy: () => riskHealthy,
   });
   const result = await executeAuthorizedBet(db, request, {
     now,

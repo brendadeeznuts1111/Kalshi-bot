@@ -33,6 +33,10 @@ import {
   rejectReservation,
   releaseExpiredReservations,
 } from "./reservation.ts";
+import {
+  appendCancellationJournalEntry,
+  appendReservationJournalEntry,
+} from "./execution-journal.ts";
 import { ensureExecutionSchema } from "./sql.ts";
 
 const DEFAULT_RESERVATION_TTL_MS = 30_000;
@@ -229,6 +233,18 @@ export async function executeAuthorizedBet(
       if (!created.created) {
         return { kind: "result" as const, result: replayResult(created.reservation) };
       }
+      appendReservationJournalEntry(db, {
+        partnerCode: request.partnerCode,
+        outId: request.outId,
+        skin: request.skin,
+        provider: authorization.provider,
+        currency: authorization.currency,
+        reservationId: created.reservation.id,
+        providerOrderId: null,
+        sourceKey: `reservation:${created.reservation.id}`,
+        exposureMinor: effectiveStake,
+        createdAtMs: nowMs,
+      });
       const claimed = claimReservationForPlacement(db, {
         id: created.reservation.id,
         placementOwner,
@@ -314,6 +330,19 @@ export async function executeAuthorizedBet(
           nowMs,
         });
         if (rejected === null) throw new Error("reservation ownership changed before rejection");
+        appendCancellationJournalEntry(db, {
+          partnerCode: request.partnerCode,
+          outId: request.outId,
+          skin: request.skin,
+          provider: authorization.provider,
+          currency: authorization.currency,
+          reservationId: reservation.id,
+          providerOrderId: null,
+          sourceKey: `reservation:${reservation.id}:rejected`,
+          cancelledQuantity: 1,
+          unitPriceMinor: reservation.effectiveStake,
+          createdAtMs: nowMs,
+        });
         enqueueExecutionReceipt(
           db,
           authorization,

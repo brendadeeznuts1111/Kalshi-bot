@@ -45,6 +45,12 @@ export type KalshiOrderResult = {
 };
 
 export type KalshiOrderLookupSource = "active" | "historical";
+export type KalshiLifecycleFeed = "orders" | "fills";
+
+export interface KalshiLifecyclePage {
+  items: Record<string, unknown>[];
+  cursor: string;
+}
 
 export type KalshiOrderLookupRecord = {
   orderId: string;
@@ -87,6 +93,13 @@ export class KalshiRequestOutcomeUnknownError extends Error {
   }
 }
 
+export class KalshiLifecyclePageMalformedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "KalshiLifecyclePageMalformedError";
+  }
+}
+
 export const KALSHI_REST_BASE = {
   demo: OFFICIAL_URLS.kalshi.tradeApiV2BaseDemo,
   prod: OFFICIAL_URLS.kalshi.tradeApiV2Base,
@@ -122,6 +135,12 @@ export type KalshiClient = {
     ticker: string,
     clientOrderId: string,
   ): Promise<KalshiOrderLookupResult>;
+  getLifecyclePage(
+    feed: KalshiLifecycleFeed,
+    source: KalshiOrderLookupSource,
+    cursor?: string,
+    limit?: number,
+  ): Promise<KalshiLifecyclePage>;
   getFills(ticker?: string): Promise<Record<string, unknown>[]>;
   getPositions(): Promise<Record<string, unknown>[]>;
   getBalance(): Promise<{ balanceCents: number | null }>;
@@ -412,6 +431,31 @@ export function createKalshiClient(options: KalshiClientOptions = {}): KalshiCli
     return { kind: "not_found", pagesScanned };
   }
 
+  async function getLifecyclePage(
+    feed: KalshiLifecycleFeed,
+    source: KalshiOrderLookupSource,
+    cursor = "",
+    limit = 1_000,
+  ): Promise<KalshiLifecyclePage> {
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 1_000) {
+      throw new TypeError("Kalshi lifecycle page limit must be from 1 to 1000");
+    }
+    const prefix = source === "active" ? "/portfolio" : "/historical";
+    const query = new URLSearchParams({ limit: String(limit) });
+    if (cursor) query.set("cursor", cursor);
+    const response = await signedRequest("GET", `${prefix}/${feed}?${query}`);
+    if (!isRecord(response) || !Array.isArray(response[feed])) {
+      throw new KalshiLifecyclePageMalformedError(`Kalshi ${source} ${feed} page is malformed`);
+    }
+    if (response.cursor !== undefined && typeof response.cursor !== "string") {
+      throw new KalshiLifecyclePageMalformedError(`Kalshi ${source} ${feed} cursor is malformed`);
+    }
+    return {
+      items: response[feed].filter(isRecord),
+      cursor: typeof response.cursor === "string" ? response.cursor : "",
+    };
+  }
+
   return {
     environment,
     baseUrl,
@@ -421,6 +465,7 @@ export function createKalshiClient(options: KalshiClientOptions = {}): KalshiCli
       listPath(`/portfolio/orders${ticker ? `?ticker=${encodeURIComponent(ticker)}` : ""}`, "orders"),
     findOrderByClientOrderId,
     lookupOrderByClientOrderId,
+    getLifecyclePage,
     getFills: (ticker?: string) =>
       listPath(`/portfolio/fills${ticker ? `?ticker=${encodeURIComponent(ticker)}` : ""}`, "fills"),
     getPositions: () => listPath("/portfolio/positions", "market_positions"),

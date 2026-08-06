@@ -130,13 +130,14 @@ describe("HQ trading-order authorization boundary", () => {
     expect(providerCalls).toBe(1);
     expect(
       db.query(
-        "SELECT market_id, selection, effective_stake, status FROM exposure_reservations",
+        "SELECT market_id, selection, effective_stake, status, actor_id FROM exposure_reservations",
       ).get(),
     ).toEqual({
       market_id: "KXTEST",
       selection: "yes",
       effective_stake: 80,
       status: "confirmed",
+      actor_id: "operator-1",
     });
     db.close();
   });
@@ -170,6 +171,12 @@ function attachCompliance(req: Request): void {
     userId: "operator-1",
     playId: "play-1",
     parsedBody: {},
+  };
+  req.tradingPrincipal = {
+    actorId: "operator-1" as never,
+    role: "trade_operator",
+    partnerScopes: new Set(["SPORTS" as never]),
+    outScopes: new Set(["out-SPORTS-1" as never]),
   };
 }
 

@@ -128,6 +128,13 @@ describe("execution maintenance", () => {
       leaseDurationMs: 10_000,
       limit: 1,
     });
+    db.query(
+      `INSERT INTO account_authorization_receipt_outbox
+       (dedupe_key, telegram_chat_id, payload_json, status, attempts,
+        available_at_ms, created_at_ms, updated_at_ms)
+       VALUES ('maintenance-receipt', '-1', '{"text":"pending"}', 'pending', 0,
+        $createdAtMs, $createdAtMs, $createdAtMs)`,
+    ).run({ $createdAtMs: NOW_MS - 45_000 });
     const result = runExecutionMaintenance(db, NOW_MS, { placingStaleAfterMs: 60_000 });
     expect(result).toEqual({
       releasedPending: 0,
@@ -138,6 +145,10 @@ describe("execution maintenance", () => {
       leasedUnknown: 1,
       oldestPlacingAgeMs: null,
       oldestUnknownAgeMs: 30_000,
+      pendingReceipts: 1,
+      leasedReceipts: 0,
+      deadReceipts: 0,
+      oldestPendingReceiptAgeMs: 45_000,
     });
     db.close();
   });

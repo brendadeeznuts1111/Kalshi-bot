@@ -15,6 +15,10 @@ export interface ExecutionMaintenanceResult {
   leasedUnknown: number;
   oldestPlacingAgeMs: number | null;
   oldestUnknownAgeMs: number | null;
+  pendingReceipts: number;
+  leasedReceipts: number;
+  deadReceipts: number;
+  oldestPendingReceiptAgeMs: number | null;
 }
 
 /** Bounded maintenance tick; ambiguous/placing outcomes are reported, never auto-released. */
@@ -56,6 +60,20 @@ export function runExecutionMaintenance(
       oldestPlacingAtMs: number | null;
       oldestUnknownAtMs: number | null;
     };
+  const receipts = db.query(
+    `SELECT
+       SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending,
+       SUM(CASE WHEN status = 'pending' AND lease_owner IS NOT NULL
+         AND lease_expires_at_ms > $nowMs THEN 1 ELSE 0 END) AS leased,
+       SUM(CASE WHEN status = 'dead' THEN 1 ELSE 0 END) AS dead,
+       MIN(CASE WHEN status = 'pending' THEN created_at_ms END) AS oldestPendingAtMs
+     FROM account_authorization_receipt_outbox`,
+  ).get({ $nowMs: nowMs }) as {
+    pending: number | null;
+    leased: number | null;
+    dead: number | null;
+    oldestPendingAtMs: number | null;
+  };
   return {
     releasedPending,
     recoveredStalePlacing,
@@ -65,6 +83,10 @@ export function runExecutionMaintenance(
     leasedUnknown: counts.leasedUnknown ?? 0,
     oldestPlacingAgeMs: ageMs(nowMs, counts.oldestPlacingAtMs),
     oldestUnknownAgeMs: ageMs(nowMs, counts.oldestUnknownAtMs),
+    pendingReceipts: receipts.pending ?? 0,
+    leasedReceipts: receipts.leased ?? 0,
+    deadReceipts: receipts.dead ?? 0,
+    oldestPendingReceiptAgeMs: ageMs(nowMs, receipts.oldestPendingAtMs),
   };
 }
 

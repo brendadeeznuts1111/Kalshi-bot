@@ -42,6 +42,8 @@ export const EXPOSURE_RESERVATION_STATUSES = [
 export type ExposureReservationStatus = (typeof EXPOSURE_RESERVATION_STATUSES)[number];
 
 export interface BetRequest {
+  /** Authenticated operator provenance; absent only for non-HTTP/internal callers. */
+  actorId?: string;
   partnerCode: PartnerCode;
   outId: OutId;
   skin: SkinId;
@@ -107,6 +109,7 @@ export interface ExposureReservation {
   skin: SkinId;
   provider: ProviderId;
   authorizationId: ApprovedAuthorization["id"];
+  actorId: string | null;
   requestedStake: number;
   effectiveStake: number;
   marketId: MarketId;

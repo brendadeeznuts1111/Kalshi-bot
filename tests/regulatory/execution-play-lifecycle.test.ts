@@ -72,4 +72,20 @@ describe("regulatory execution play lifecycle", () => {
     repo.proposeExecutionBetAtomic(proposal());
     expect(() => repo.proposeExecutionBetAtomic(proposal({ playId: "play-2" }))).toThrow("another play");
   });
+
+  test("proposed and unknown exposure consume regulatory daily limits", () => {
+    db.query(
+      `INSERT INTO regulatory_limits
+       (state_code, sport_id, market_id, allowed_bet_types, special_rules)
+       VALUES ('MA', 'politics', 'daily-market', '["straight"]',
+         '{"max_daily_total":1}')`,
+    ).run();
+    repo.proposeExecutionBetAtomic(proposal({
+      marketId: "daily-market", wagerAmount: 0.75,
+    }));
+    repo.transitionExecutionPlay({ idempotencyKey: "idem-1", status: "unknown" });
+    expect(() => repo.proposeExecutionBetAtomic(proposal({
+      playId: "play-2", idempotencyKey: "idem-2", marketId: "daily-market", wagerAmount: 0.75,
+    }))).toThrow(/Daily wager limit/);
+  });
 });

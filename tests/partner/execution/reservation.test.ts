@@ -75,6 +75,10 @@ function setup(): { db: Database; authorization: ApprovedAuthorization } {
     "001_exposure_reservations",
     "002_exposure_reservation_selection",
     "003_exposure_reconciliation_state",
+    "004_provider_order_lifecycle",
+    "005_execution_journal",
+    "006_authorized_cancellations",
+    "007_execution_actor_provenance",
   ]);
   expect(migrateExecutionSchema(db, NOW_MS + 1)).toEqual([]);
   const p = policy();
@@ -144,6 +148,10 @@ describe("execution exposure reservations", () => {
     expect(migrateExecutionSchema(db, NOW_MS)).toEqual([
       "002_exposure_reservation_selection",
       "003_exposure_reconciliation_state",
+      "004_provider_order_lifecycle",
+      "005_execution_journal",
+      "006_authorized_cancellations",
+      "007_execution_actor_provenance",
     ]);
     const columns = db.query("PRAGMA table_info(exposure_reservations)").all() as Array<{
       name: string;

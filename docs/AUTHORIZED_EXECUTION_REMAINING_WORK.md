@@ -10,6 +10,14 @@ and schedules cannot enable trading. Keep
 `KALSHI_AUTHORIZED_EXECUTION_ENABLED` unset for live funds until every P0 item
 and the demo graduation proof below pass.
 
+Implementation update (2026-08-06): Waves 0–2 and the Wave 3 evidence harness
+are implemented on the authorized-execution branch: operator principals,
+regulatory lifecycle/sync, leased reconciliation and stale recovery, full
+Kalshi evidence binding, fail-closed risk health, authorized cancellation,
+independent workers, canonical provider lifecycle, and the immutable journal.
+The only inherently open graduation item is seven consecutive real elapsed
+demo days with reviewed artifacts. This status does not arm production.
+
 ## Delivery order
 
 ```text
