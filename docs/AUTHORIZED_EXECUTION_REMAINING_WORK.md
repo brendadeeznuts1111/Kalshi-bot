@@ -1,9 +1,10 @@
-# Authorized Execution — Remaining Work
+# Authorized Execution — Delivery Record and Graduation Gate
 
-Status: scoped on 2026-08-06. Production arming remains blocked. This card is
-the dependency and ownership plan for work after the authorization, Telegram,
-reservation, Kalshi placement, snapshot, and initial unknown-outcome
-reconciliation increments.
+Status: implementation waves closed on 2026-08-06. Production arming remains
+blocked only by the real-time graduation gate described below. This file keeps
+the completed dependency and ownership plan as an audit record; sections under
+Waves 0–3 are delivered specifications, not an active task queue unless the
+closure audit explicitly marks a row open.
 
 The existing safety boundary remains authoritative: documentation, agents, CI,
 and schedules cannot enable trading. Keep `KALSHI_AUTHORIZED_EXECUTION_ENABLED`
@@ -37,9 +38,9 @@ Wave 2: provider lifecycle + immutable ledger
 Wave 3: demo soak, reconciliation proof, production review
 ```
 
-One integration owner controls shared types and migrations. Sub-agents must
-claim the file sets below, avoid cross-lane edits, and hand off focused proof
-before integration.
+During delivery, one integration owner controlled shared types and migrations;
+parallel lanes claimed disjoint file sets and handed focused proof back for
+integration.
 
 ## Current closure audit
 
