@@ -22,10 +22,13 @@ import {
   asMarketId,
   asMarketSelection,
   asPlacementOwner,
+  asReconciliationOwner,
   asTicketId,
 } from "../../../src/partner/execution/domain.ts";
 import {
   claimReservationForPlacement,
+  claimUnknownReservations,
+  completeReconciliationAttempt,
   computeDailyUsage,
   computeOutstandingExposure,
   confirmReservation,
@@ -33,6 +36,7 @@ import {
   getReservation,
   markReservationUnknown,
   reconcileUnknownAsConfirmed,
+  reconcileClaimedUnknownAsConfirmed,
   rejectReservation,
   releaseExpiredReservations,
   settleConfirmedReservation,
@@ -69,6 +73,7 @@ function setup(): { db: Database; authorization: ApprovedAuthorization } {
   expect(migrateExecutionSchema(db, NOW_MS)).toEqual([
     "001_exposure_reservations",
     "002_exposure_reservation_selection",
+    "003_exposure_reconciliation_state",
   ]);
   expect(migrateExecutionSchema(db, NOW_MS + 1)).toEqual([]);
   const p = policy();
@@ -137,11 +142,14 @@ describe("execution exposure reservations", () => {
     `);
     expect(migrateExecutionSchema(db, NOW_MS)).toEqual([
       "002_exposure_reservation_selection",
+      "003_exposure_reconciliation_state",
     ]);
     const columns = db.query("PRAGMA table_info(exposure_reservations)").all() as Array<{
       name: string;
     }>;
     expect(columns.some((column) => column.name === "selection")).toBeTrue();
+    expect(columns.some((column) => column.name === "reconciliation_owner")).toBeTrue();
+    expect(migrateExecutionSchema(db, NOW_MS + 1)).toEqual([]);
     db.close();
   });
 
@@ -295,6 +303,7 @@ describe("Kalshi unknown-outcome reconciliation", () => {
     const clientOrderId = executionIdempotencyKeyToUuid(reservation.idempotencyKey);
     const result = await reconcileKalshiUnknownReservations(db, {
       now: () => NOW_MS + 10,
+      owner: asReconciliationOwner("kalshi-poller-confirm"),
       resolveClient: () => ({
         environment: "demo",
         findOrderByClientOrderId: async () => ({
@@ -307,7 +316,14 @@ describe("Kalshi unknown-outcome reconciliation", () => {
         }),
       }),
     });
-    expect(result).toEqual({ scanned: 1, confirmed: 1, unresolved: 0, conflicts: 0, errors: 0 });
+    expect(result).toEqual({
+      scanned: 1,
+      confirmed: 1,
+      unresolved: 0,
+      conflicts: 0,
+      errors: 0,
+      leaseLost: 0,
+    });
     expect(getReservation(db, reservation.id)).toMatchObject({
       status: "confirmed",
       ticketId: "order-recovered",
@@ -317,19 +333,34 @@ describe("Kalshi unknown-outcome reconciliation", () => {
   test("keeps exposure unknown when the provider has no conclusive match", async () => {
     const { db, reservation } = unknownKalshi();
     const result = await reconcileKalshiUnknownReservations(db, {
+      owner: asReconciliationOwner("kalshi-poller-missing"),
+      now: () => NOW_MS + 10,
       resolveClient: () => ({
         environment: "demo",
         findOrderByClientOrderId: async () => null,
       }),
     });
     expect(result.unresolved).toBe(1);
-    expect(getReservation(db, reservation.id)?.status).toBe("unknown");
+    expect(getReservation(db, reservation.id)).toMatchObject({
+      status: "unknown",
+      reconciliationAttempts: 1,
+      reconciliationResult: "not_found",
+      nextReconciliationAtMs: NOW_MS + 1_010,
+    });
     expect(computeOutstandingExposure(db, reservation)).toBe(800);
+    expect((await reconcileKalshiUnknownReservations(db, {
+      owner: asReconciliationOwner("kalshi-poller-too-early"),
+      now: () => NOW_MS + 1_009,
+      resolveClient: () => {
+        throw new Error("not due");
+      },
+    })).scanned).toBe(0);
   });
 
   test("keeps malformed or conflicting provider evidence unknown", async () => {
     const { db, reservation } = unknownKalshi();
     const result = await reconcileKalshiUnknownReservations(db, {
+      owner: asReconciliationOwner("kalshi-poller-conflict"),
       resolveClient: () => ({
         environment: "demo",
         findOrderByClientOrderId: async () => ({
@@ -341,5 +372,235 @@ describe("Kalshi unknown-outcome reconciliation", () => {
     });
     expect(result.conflicts).toBe(1);
     expect(getReservation(db, reservation.id)?.status).toBe("unknown");
+  });
+
+  test("rolls confirmation back and defers when receipt persistence fails", async () => {
+    const { db, reservation } = unknownKalshi();
+    const clientOrderId = executionIdempotencyKeyToUuid(reservation.idempotencyKey);
+    db.run("DROP TABLE account_authorization_receipt_outbox");
+    const result = await reconcileKalshiUnknownReservations(db, {
+      owner: asReconciliationOwner("kalshi-poller-receipt-failure"),
+      now: () => NOW_MS + 10,
+      resolveClient: () => ({
+        environment: "demo",
+        findOrderByClientOrderId: async () => ({
+          order_id: "order-needs-receipt",
+          client_order_id: clientOrderId,
+          ticker: reservation.marketId,
+        }),
+      }),
+    });
+    expect(result).toMatchObject({ confirmed: 0, errors: 1, leaseLost: 0 });
+    expect(getReservation(db, reservation.id)).toMatchObject({
+      status: "unknown",
+      ticketId: null,
+      reconciliationResult: "error",
+    });
+  });
+});
+
+describe("unknown reconciliation leases", () => {
+  function unknownKalshi(key = "lease-kalshi") {
+    const { db, authorization } = setup();
+    const created = pending(db, authorization, key).reservation;
+    const placementOwner = asPlacementOwner("placement-worker");
+    claimReservationForPlacement(db, {
+      id: created.id,
+      placementOwner,
+      nowMs: NOW_MS + 1,
+    });
+    markReservationUnknown(db, {
+      id: created.id,
+      placementOwner,
+      reason: "socket reset after write",
+      nowMs: NOW_MS + 2,
+    });
+    db.query("UPDATE exposure_reservations SET provider = 'kalshi' WHERE id = $id").run({
+      $id: created.id,
+    });
+    return { db, authorization, reservation: getReservation(db, created.id)! };
+  }
+
+  test("claims a bounded batch once and permits reclaim only after lease expiry", () => {
+    const { db, reservation } = unknownKalshi();
+    const workerA = asReconciliationOwner("reconciler-a");
+    const workerB = asReconciliationOwner("reconciler-b");
+    expect(() => db.query(
+      "UPDATE exposure_reservations SET reconciliation_owner = 'broken' WHERE id = $id",
+    ).run({ $id: reservation.id })).toThrow(/paired/);
+    const first = claimUnknownReservations(db, {
+      provider: "KALSHI",
+      owner: workerA,
+      nowMs: NOW_MS + 10,
+      leaseDurationMs: 100,
+      limit: 1,
+    });
+    expect(first).toHaveLength(1);
+    expect(first[0]).toMatchObject({
+      id: reservation.id,
+      reconciliationOwner: workerA,
+      reconciliationAttempts: 1,
+      lastReconciliationAtMs: NOW_MS + 10,
+    });
+    expect(claimUnknownReservations(db, {
+      provider: "kalshi",
+      owner: workerB,
+      nowMs: NOW_MS + 50,
+      leaseDurationMs: 100,
+      limit: 1,
+    })).toEqual([]);
+    const reclaimed = claimUnknownReservations(db, {
+      provider: "kalshi",
+      owner: workerB,
+      nowMs: NOW_MS + 110,
+      leaseDurationMs: 100,
+      limit: 1,
+    });
+    expect(reclaimed[0]).toMatchObject({
+      reconciliationOwner: workerB,
+      reconciliationAttempts: 2,
+    });
+    db.close();
+  });
+
+  test("only the live lease owner can complete or confirm an attempt", () => {
+    const { db, reservation } = unknownKalshi();
+    const owner = asReconciliationOwner("reconciler-owner");
+    const loser = asReconciliationOwner("reconciler-loser");
+    claimUnknownReservations(db, {
+      provider: "kalshi",
+      owner,
+      nowMs: NOW_MS + 10,
+      leaseDurationMs: 100,
+      limit: 1,
+    });
+    expect(reconcileClaimedUnknownAsConfirmed(db, {
+      id: reservation.id,
+      owner: loser,
+      ticketId: asTicketId("ticket-loser"),
+      nowMs: NOW_MS + 20,
+    })).toBeNull();
+    expect(completeReconciliationAttempt(db, {
+      id: reservation.id,
+      owner,
+      result: "not_found",
+      nextAttemptAtMs: NOW_MS + 200,
+      nowMs: NOW_MS + 20,
+    })).toMatchObject({
+      status: "unknown",
+      reconciliationOwner: null,
+      reconciliationResult: "not_found",
+      nextReconciliationAtMs: NOW_MS + 200,
+    });
+    expect(reconcileClaimedUnknownAsConfirmed(db, {
+      id: reservation.id,
+      owner,
+      ticketId: asTicketId("ticket-stale-owner"),
+      nowMs: NOW_MS + 21,
+    })).toBeNull();
+    expect(claimUnknownReservations(db, {
+      provider: "kalshi",
+      owner,
+      nowMs: NOW_MS + 199,
+      leaseDurationMs: 100,
+      limit: 1,
+    })).toEqual([]);
+    claimUnknownReservations(db, {
+      provider: "kalshi",
+      owner,
+      nowMs: NOW_MS + 200,
+      leaseDurationMs: 100,
+      limit: 1,
+    });
+    expect(reconcileClaimedUnknownAsConfirmed(db, {
+      id: reservation.id,
+      owner,
+      ticketId: asTicketId("ticket-owner"),
+      providerResponse: { reconciled: true },
+      nowMs: NOW_MS + 201,
+    })).toMatchObject({
+      status: "confirmed",
+      reconciliationOwner: null,
+      reconciliationResult: "confirmed",
+    });
+    db.close();
+  });
+
+  test("attempt errors are bounded and unknown exposure remains reserved", () => {
+    const { db, authorization, reservation } = unknownKalshi();
+    const owner = asReconciliationOwner("reconciler-errors");
+    claimUnknownReservations(db, {
+      provider: "kalshi",
+      owner,
+      nowMs: NOW_MS + 10,
+      leaseDurationMs: 100,
+      limit: 1,
+    });
+    const completed = completeReconciliationAttempt(db, {
+      id: reservation.id,
+      owner,
+      result: "error",
+      error: `  ${"x".repeat(3_000)}  `,
+      nextAttemptAtMs: NOW_MS + 200,
+      nowMs: NOW_MS + 20,
+    });
+    expect(completed?.reconciliationError?.length).toBe(2_048);
+    expect(computeOutstandingExposure(db, {
+      partnerCode: authorization.partnerCode,
+      outId: authorization.outId,
+      skin: authorization.skin,
+    })).toBe(800);
+    expect(computeDailyUsage(db, {
+      partnerCode: authorization.partnerCode,
+      outId: authorization.outId,
+      skin: authorization.skin,
+    }, NOW_MS - 1)).toBe(800);
+    db.close();
+  });
+
+  test("a deferred first row does not starve later due work", () => {
+    const { db, authorization, reservation: first } = unknownKalshi("fair-first");
+    const secondPending = pending(db, authorization, "fair-second").reservation;
+    const placementOwner = asPlacementOwner("placement-worker-second");
+    claimReservationForPlacement(db, {
+      id: secondPending.id,
+      placementOwner,
+      nowMs: NOW_MS + 1,
+    });
+    markReservationUnknown(db, {
+      id: secondPending.id,
+      placementOwner,
+      reason: "second ambiguous placement",
+      nowMs: NOW_MS + 2,
+    });
+    db.query("UPDATE exposure_reservations SET provider = 'kalshi' WHERE id = $id").run({
+      $id: secondPending.id,
+    });
+
+    const owner = asReconciliationOwner("fairness-worker");
+    const firstClaim = claimUnknownReservations(db, {
+      provider: "kalshi",
+      owner,
+      nowMs: NOW_MS + 10,
+      leaseDurationMs: 100,
+      limit: 1,
+    });
+    expect(firstClaim[0]?.id).toBe(first.id);
+    completeReconciliationAttempt(db, {
+      id: first.id,
+      owner,
+      result: "not_found",
+      nextAttemptAtMs: NOW_MS + 1_000,
+      nowMs: NOW_MS + 20,
+    });
+    const secondClaim = claimUnknownReservations(db, {
+      provider: "kalshi",
+      owner,
+      nowMs: NOW_MS + 21,
+      leaseDurationMs: 100,
+      limit: 1,
+    });
+    expect(secondClaim[0]?.id).toBe(secondPending.id);
+    db.close();
   });
 });

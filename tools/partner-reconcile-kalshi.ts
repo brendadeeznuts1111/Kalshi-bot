@@ -5,6 +5,7 @@ import { createKalshiAccountClientResolver } from "../src/partner/execution/kals
 import { reconcileKalshiUnknownReservations } from "../src/partner/execution/reconciliation.ts";
 import { migrateExecutionSchema } from "../src/partner/execution/sql.ts";
 import { getBettingAccountById } from "../src/partner/registry.ts";
+import { asReconciliationOwner } from "../src/partner/execution/domain.ts";
 
 const limitArg = process.argv.find((arg) => arg.startsWith("--limit="))?.slice(8);
 const limit = limitArg === undefined ? 100 : Number(limitArg);
@@ -15,6 +16,7 @@ try {
   const resolveAccountClient = createKalshiAccountClientResolver();
   const result = await reconcileKalshiUnknownReservations(db, {
     limit,
+    owner: asReconciliationOwner(`kalshi-reconciler-${process.pid}-${crypto.randomUUID()}`),
     resolveClient: (reservation) => {
       const account = getBettingAccountById(db, reservation.outId);
       if (account === null) throw new Error(`Execution out ${reservation.outId} no longer exists`);

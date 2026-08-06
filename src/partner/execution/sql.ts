@@ -57,6 +57,55 @@ export const EXECUTION_MIGRATIONS = [
         ON exposure_reservations (market_id, selection, status);
     `,
   },
+  {
+    id: "003_exposure_reconciliation_state",
+    sql: `
+      ALTER TABLE exposure_reservations ADD COLUMN reconciliation_owner TEXT CHECK (
+        reconciliation_owner IS NULL OR length(reconciliation_owner) BETWEEN 1 AND 128
+      );
+      ALTER TABLE exposure_reservations ADD COLUMN reconciliation_lease_expires_at_ms INTEGER CHECK (
+        reconciliation_lease_expires_at_ms IS NULL OR (
+          typeof(reconciliation_lease_expires_at_ms) = 'integer'
+          AND reconciliation_lease_expires_at_ms >= 0
+        )
+      );
+      ALTER TABLE exposure_reservations ADD COLUMN reconciliation_attempts INTEGER NOT NULL DEFAULT 0
+        CHECK (typeof(reconciliation_attempts) = 'integer' AND reconciliation_attempts >= 0);
+      ALTER TABLE exposure_reservations ADD COLUMN last_reconciliation_at_ms INTEGER CHECK (
+        last_reconciliation_at_ms IS NULL OR (
+          typeof(last_reconciliation_at_ms) = 'integer' AND last_reconciliation_at_ms >= 0
+        )
+      );
+      ALTER TABLE exposure_reservations ADD COLUMN next_reconciliation_at_ms INTEGER CHECK (
+        next_reconciliation_at_ms IS NULL OR (
+          typeof(next_reconciliation_at_ms) = 'integer' AND next_reconciliation_at_ms >= 0
+        )
+      );
+      ALTER TABLE exposure_reservations ADD COLUMN reconciliation_result TEXT CHECK (
+        reconciliation_result IS NULL OR reconciliation_result IN ('confirmed', 'not_found', 'conflict', 'error')
+      );
+      ALTER TABLE exposure_reservations ADD COLUMN reconciliation_error TEXT CHECK (
+        reconciliation_error IS NULL OR length(reconciliation_error) <= 2048
+      );
+      CREATE TRIGGER IF NOT EXISTS trg_exposure_reconciliation_lease_pair_insert
+      BEFORE INSERT ON exposure_reservations
+      WHEN (NEW.reconciliation_owner IS NULL) != (NEW.reconciliation_lease_expires_at_ms IS NULL)
+      BEGIN
+        SELECT RAISE(ABORT, 'reconciliation owner and lease expiry must be paired');
+      END;
+      CREATE TRIGGER IF NOT EXISTS trg_exposure_reconciliation_lease_pair_update
+      BEFORE UPDATE OF reconciliation_owner, reconciliation_lease_expires_at_ms ON exposure_reservations
+      WHEN (NEW.reconciliation_owner IS NULL) != (NEW.reconciliation_lease_expires_at_ms IS NULL)
+      BEGIN
+        SELECT RAISE(ABORT, 'reconciliation owner and lease expiry must be paired');
+      END;
+      CREATE INDEX IF NOT EXISTS idx_exposure_reservations_reconciliation_eligible
+        ON exposure_reservations (
+          provider, status, next_reconciliation_at_ms,
+          reconciliation_lease_expires_at_ms, last_reconciliation_at_ms, id
+        ) WHERE status = 'unknown';
+    `,
+  },
 ] as const;
 
 type MigrationRow = { migrationId: string }; // brand-ok — internal migration wire value

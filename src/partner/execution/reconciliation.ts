@@ -5,11 +5,16 @@ import {
   enqueueAuthorizationReceipt,
 } from "../authorization/outbox.ts";
 import { asTelegramChatId, asTelegramTopicId } from "../authorization/domain.ts";
-import { asTicketId, type ExposureReservation } from "./domain.ts";
+import {
+  asTicketId,
+  type ExposureReservation,
+  type ReconciliationOwner,
+} from "./domain.ts";
 import { executionIdempotencyKeyToUuid } from "./kalshi.ts";
 import {
-  getReservation,
-  reconcileUnknownAsConfirmed,
+  claimUnknownReservations,
+  completeReconciliationAttempt,
+  reconcileClaimedUnknownAsConfirmed,
 } from "./reservation.ts";
 
 export interface UnknownReconciliationResult {
@@ -18,6 +23,7 @@ export interface UnknownReconciliationResult {
   unresolved: number;
   conflicts: number;
   errors: number;
+  leaseLost: number;
 }
 
 export interface KalshiUnknownReconciliationDependencies {
@@ -28,6 +34,10 @@ export interface KalshiUnknownReconciliationDependencies {
     | Promise<Pick<KalshiClient, "environment" | "findOrderByClientOrderId">>;
   now?: () => number;
   limit?: number;
+  owner: ReconciliationOwner;
+  leaseDurationMs?: number;
+  retryBaseMs?: number;
+  retryMaxMs?: number;
 }
 
 /**
@@ -42,30 +52,57 @@ export async function reconcileKalshiUnknownReservations(
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 1_000) {
     throw new TypeError("reconciliation limit must be an integer between 1 and 1000");
   }
-  const ids = db
-    .query(
-      `SELECT id FROM exposure_reservations
-       WHERE status = 'unknown' AND lower(provider) = 'kalshi'
-       ORDER BY updated_at_ms, id
-       LIMIT $limit`,
-    )
-    .all({ $limit: limit }) as Array<{ id: number }>;
+  const clock = dependencies.now ?? Date.now;
+  const leaseDurationMs = positiveDuration(
+    dependencies.leaseDurationMs ?? 30_000,
+    "reconciliation lease duration",
+  );
+  const retryBaseMs = positiveDuration(
+    dependencies.retryBaseMs ?? 1_000,
+    "reconciliation retry base",
+  );
+  const retryMaxMs = positiveDuration(
+    dependencies.retryMaxMs ?? 300_000,
+    "reconciliation retry maximum",
+  );
+  if (retryMaxMs < retryBaseMs) {
+    throw new TypeError("reconciliation retry maximum must be at least the retry base");
+  }
+  const reservations = claimUnknownReservations(db, {
+    provider: "kalshi",
+    owner: dependencies.owner,
+    nowMs: clock(),
+    leaseDurationMs,
+    limit,
+  });
   const result: UnknownReconciliationResult = {
-    scanned: ids.length,
+    scanned: reservations.length,
     confirmed: 0,
     unresolved: 0,
     conflicts: 0,
     errors: 0,
+    leaseLost: 0,
   };
 
-  for (const { id } of ids) {
-    const reservation = getReservation(db, id as ExposureReservation["id"]);
-    if (reservation === null || reservation.status !== "unknown") continue;
+  for (const reservation of reservations) {
     try {
       const client = await dependencies.resolveClient(reservation);
       const clientOrderId = executionIdempotencyKeyToUuid(reservation.idempotencyKey);
       const order = await client.findOrderByClientOrderId(reservation.marketId, clientOrderId);
       if (order === null) {
+        if (!deferAttempt(
+          db,
+          reservation,
+          dependencies.owner,
+          "not_found",
+          null,
+          clock(),
+          retryBaseMs,
+          retryMaxMs,
+        )) {
+          result.leaseLost++;
+          continue;
+        }
         result.unresolved++;
         continue;
       }
@@ -73,34 +110,92 @@ export async function reconcileKalshiUnknownReservations(
       const ticker = requiredString(order.ticker);
       const providerClientOrderId = requiredString(order.client_order_id);
       if (!orderId || ticker !== reservation.marketId || providerClientOrderId !== clientOrderId) {
+        if (!deferAttempt(
+          db,
+          reservation,
+          dependencies.owner,
+          "conflict",
+          "Kalshi reconciliation evidence did not match the reservation identity",
+          clock(),
+          retryBaseMs,
+          retryMaxMs,
+        )) {
+          result.leaseLost++;
+          continue;
+        }
         result.conflicts++;
         continue;
       }
-      const confirmed = reconcileUnknownAsConfirmed(db, {
-        id: reservation.id,
-        ticketId: asTicketId(orderId),
-        providerResponse: {
-          environment: client.environment,
-          orderId,
-          clientOrderId,
-          ticker,
-          status: optionalString(order.status),
-          fillCount: fixedCount(order.fill_count_fp ?? order.fill_count),
-          remainingCount: fixedCount(order.remaining_count_fp ?? order.remaining_count),
-          reconciled: true,
-        },
-        nowMs: dependencies.now?.() ?? Date.now(),
+      const nowMs = clock();
+      const transaction = db.transaction(() => {
+        const confirmed = reconcileClaimedUnknownAsConfirmed(db, {
+          id: reservation.id,
+          owner: dependencies.owner,
+          ticketId: asTicketId(orderId),
+          providerResponse: {
+            environment: client.environment,
+            orderId,
+            clientOrderId,
+            ticker,
+            status: optionalString(order.status),
+            fillCount: fixedCount(order.fill_count_fp ?? order.fill_count),
+            remainingCount: fixedCount(order.remaining_count_fp ?? order.remaining_count),
+            reconciled: true,
+          },
+          nowMs,
+        });
+        if (confirmed !== null) enqueueReconciliationReceipt(db, confirmed, nowMs);
+        return confirmed;
       });
-      if (confirmed === null) result.conflicts++;
+      const confirmed = transaction.immediate();
+      if (confirmed === null) result.leaseLost++;
       else {
-        enqueueReconciliationReceipt(db, confirmed, dependencies.now?.() ?? Date.now());
         result.confirmed++;
       }
-    } catch {
+    } catch (error) {
+      if (!deferAttempt(
+        db,
+        reservation,
+        dependencies.owner,
+        "error",
+        errorMessage(error),
+        clock(),
+        retryBaseMs,
+        retryMaxMs,
+      )) {
+        result.leaseLost++;
+        continue;
+      }
       result.errors++;
     }
   }
   return result;
+}
+
+function deferAttempt(
+  db: Database,
+  reservation: ExposureReservation,
+  owner: ReconciliationOwner,
+  result: "not_found" | "conflict" | "error",
+  error: string | null,
+  nowMs: number,
+  retryBaseMs: number,
+  retryMaxMs: number,
+): boolean {
+  const exponent = Math.min(Math.max(reservation.reconciliationAttempts - 1, 0), 30);
+  const delayMs = Math.min(retryMaxMs, retryBaseMs * 2 ** exponent);
+  const nextAttemptAtMs = nowMs + delayMs;
+  if (!Number.isSafeInteger(nextAttemptAtMs)) {
+    throw new TypeError("next reconciliation time is outside the safe integer range");
+  }
+  return completeReconciliationAttempt(db, {
+    id: reservation.id,
+    owner,
+    result,
+    error,
+    nextAttemptAtMs,
+    nowMs,
+  }) !== null;
 }
 
 function enqueueReconciliationReceipt(
@@ -151,4 +246,15 @@ function fixedCount(value: unknown): number | null {
   if (typeof value !== "string" && typeof value !== "number") return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+}
+
+function positiveDuration(value: number, label: string): number {
+  if (!Number.isSafeInteger(value) || value < 1) {
+    throw new TypeError(`${label} must be a positive safe integer`);
+  }
+  return value;
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "Kalshi reconciliation lookup failed";
 }

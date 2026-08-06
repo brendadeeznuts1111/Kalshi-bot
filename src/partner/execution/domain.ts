@@ -13,6 +13,7 @@ declare const ticketIdBrand: unique symbol;
 declare const reservationIdBrand: unique symbol;
 declare const executionKeyBrand: unique symbol;
 declare const placementOwnerBrand: unique symbol;
+declare const reconciliationOwnerBrand: unique symbol;
 
 export type MarketId = string & { readonly [marketIdBrand]: true };
 export type MarketSelection = string & { readonly [marketSelectionBrand]: true };
@@ -20,6 +21,14 @@ export type TicketId = string & { readonly [ticketIdBrand]: true };
 export type ExposureReservationId = number & { readonly [reservationIdBrand]: true };
 export type ExecutionIdempotencyKey = string & { readonly [executionKeyBrand]: true };
 export type PlacementOwner = string & { readonly [placementOwnerBrand]: true };
+export type ReconciliationOwner = string & { readonly [reconciliationOwnerBrand]: true };
+
+export const RECONCILIATION_ATTEMPT_RESULTS = [
+  "not_found",
+  "conflict",
+  "error",
+] as const;
+export type ReconciliationAttemptResult = (typeof RECONCILIATION_ATTEMPT_RESULTS)[number];
 
 export const EXPOSURE_RESERVATION_STATUSES = [
   "pending",
@@ -107,6 +116,13 @@ export interface ExposureReservation {
   ticketId: TicketId | null;
   providerResponse: unknown | null;
   failureReason: string | null;
+  reconciliationOwner: ReconciliationOwner | null;
+  reconciliationLeaseExpiresAtMs: number | null;
+  reconciliationAttempts: number;
+  lastReconciliationAtMs: number | null;
+  nextReconciliationAtMs: number | null;
+  reconciliationResult: ReconciliationAttemptResult | "confirmed" | null;
+  reconciliationError: string | null;
   createdAtMs: number;
   updatedAtMs: number;
 }
@@ -159,6 +175,10 @@ export function asExecutionIdempotencyKey(value: string): ExecutionIdempotencyKe
 
 export function asPlacementOwner(value: string): PlacementOwner {
   return brandBoundedString<PlacementOwner>(value, "placement owner", 128);
+}
+
+export function asReconciliationOwner(value: string): ReconciliationOwner {
+  return brandBoundedString<ReconciliationOwner>(value, "reconciliation owner", 128);
 }
 
 export function asExposureReservationId(value: number): ExposureReservationId {

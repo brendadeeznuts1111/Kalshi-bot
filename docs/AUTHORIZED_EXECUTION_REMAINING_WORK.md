@@ -89,6 +89,11 @@ Acceptance:
 Owner: execution DB agent. Integration owner approves the migration shape
 before other reconciliation work begins.
 
+Implementation status: built on the reconciliation PR with migration 003,
+owner leases, attempt/retry metadata, fair claims, guarded completion, and
+atomic confirmation plus receipt persistence. Stale-`placing` recovery remains
+in Lane B.
+
 Files:
 
 - `src/partner/execution/sql.ts`

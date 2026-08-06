@@ -16,6 +16,7 @@ import {
   asMarketId,
   asMarketSelection,
   asPlacementOwner,
+  asReconciliationOwner,
   asTicketId,
   type BetRequest,
   type ExecutionIdempotencyKey,
@@ -23,6 +24,8 @@ import {
   type ExposureReservationId,
   type ExposureReservationStatus,
   type PlacementOwner,
+  type ReconciliationAttemptResult,
+  type ReconciliationOwner,
   type TicketId,
 } from "./domain.ts";
 
@@ -45,6 +48,13 @@ type ReservationRow = {
   ticket_id: string | null; // brand-ok — SQLite wire value; parsed by mapReservation
   provider_response_json: string | null;
   failure_reason: string | null;
+  reconciliation_owner: string | null;
+  reconciliation_lease_expires_at_ms: number | null;
+  reconciliation_attempts: number;
+  last_reconciliation_at_ms: number | null;
+  next_reconciliation_at_ms: number | null;
+  reconciliation_result: ReconciliationAttemptResult | "confirmed" | null;
+  reconciliation_error: string | null;
   created_at_ms: number;
   updated_at_ms: number;
 };
@@ -58,6 +68,154 @@ export interface ReservationLane {
   partnerCode: PartnerCode;
   outId: OutId;
   skin: SkinId;
+}
+
+export interface ClaimUnknownReservationsInput {
+  provider: string;
+  owner: ReconciliationOwner;
+  nowMs: number;
+  leaseDurationMs: number;
+  limit: number;
+}
+
+/** Atomically lease a fair, bounded batch of due unknown reservations. */
+export function claimUnknownReservations(
+  db: Database,
+  input: ClaimUnknownReservationsInput,
+): ExposureReservation[] {
+  assertTimestamp(input.nowMs, "reconciliation claim time");
+  if (!Number.isSafeInteger(input.leaseDurationMs) || input.leaseDurationMs < 1) {
+    throw new TypeError("reconciliation lease duration must be a positive safe integer");
+  }
+  if (!Number.isSafeInteger(input.limit) || input.limit < 1 || input.limit > 1_000) {
+    throw new TypeError("reconciliation claim limit must be an integer between 1 and 1000");
+  }
+  const provider = input.provider.trim().toLowerCase();
+  if (!provider || provider.length > 128) throw new TypeError("reconciliation provider is invalid");
+  const leaseExpiresAtMs = input.nowMs + input.leaseDurationMs;
+  if (!Number.isSafeInteger(leaseExpiresAtMs)) {
+    throw new TypeError("reconciliation lease expiry is outside the safe integer range");
+  }
+
+  const claim = db.transaction(() => {
+    const ids = db.query(
+      `SELECT id FROM exposure_reservations
+       WHERE status = 'unknown'
+         AND lower(provider) = $provider
+         AND (next_reconciliation_at_ms IS NULL OR next_reconciliation_at_ms <= $nowMs)
+         AND reconciliation_attempts < 9007199254740991
+         AND (
+           reconciliation_owner IS NULL
+           OR reconciliation_lease_expires_at_ms IS NULL
+           OR reconciliation_lease_expires_at_ms <= $nowMs
+         )
+       ORDER BY COALESCE(next_reconciliation_at_ms, 0), id
+       LIMIT $limit`,
+    ).all({ $provider: provider, $nowMs: input.nowMs, $limit: input.limit }) as Array<{ id: number }>;
+    const rows: ReservationRow[] = [];
+    const update = db.query(
+      `UPDATE exposure_reservations
+       SET reconciliation_owner = $owner,
+           reconciliation_lease_expires_at_ms = $leaseExpiresAtMs,
+           reconciliation_attempts = reconciliation_attempts + 1,
+           last_reconciliation_at_ms = $nowMs,
+           reconciliation_result = NULL,
+           reconciliation_error = NULL
+       WHERE id = $id
+         AND status = 'unknown'
+         AND reconciliation_attempts < 9007199254740991
+         AND (
+           reconciliation_owner IS NULL
+           OR reconciliation_lease_expires_at_ms IS NULL
+           OR reconciliation_lease_expires_at_ms <= $nowMs
+         )
+       RETURNING *`,
+    );
+    for (const { id } of ids) {
+      const row = update.get({
+        $id: id,
+        $owner: input.owner,
+        $leaseExpiresAtMs: leaseExpiresAtMs,
+        $nowMs: input.nowMs,
+      }) as ReservationRow | null;
+      if (row !== null) rows.push(row);
+    }
+    return rows;
+  });
+  return claim.immediate().map(mapReservation);
+}
+
+/** Record an inconclusive attempt and release its lease for a scheduled retry. */
+export function completeReconciliationAttempt(
+  db: Database,
+  input: {
+    id: ExposureReservationId;
+    owner: ReconciliationOwner;
+    result: ReconciliationAttemptResult;
+    error?: string | null;
+    nextAttemptAtMs: number;
+    nowMs: number;
+  },
+): ExposureReservation | null {
+  assertTimestamp(input.nowMs, "reconciliation completion time");
+  assertTimestamp(input.nextAttemptAtMs, "next reconciliation time");
+  if (input.nextAttemptAtMs < input.nowMs) {
+    throw new TypeError("next reconciliation time must not be in the past");
+  }
+  const row = db.query(
+    `UPDATE exposure_reservations
+     SET reconciliation_owner = NULL,
+         reconciliation_lease_expires_at_ms = NULL,
+         next_reconciliation_at_ms = $nextAttemptAtMs,
+         reconciliation_result = $result,
+         reconciliation_error = $error
+     WHERE id = $id
+       AND status = 'unknown'
+       AND reconciliation_owner = $owner
+       AND reconciliation_lease_expires_at_ms > $nowMs
+     RETURNING *`,
+  ).get({
+    $id: input.id,
+    $owner: input.owner,
+    $result: input.result,
+    $error: input.error == null ? null : normalizeReason(input.error),
+    $nextAttemptAtMs: input.nextAttemptAtMs,
+    $nowMs: input.nowMs,
+  }) as ReservationRow | null;
+  return row === null ? null : mapReservation(row);
+}
+
+/** Confirm only while holding the live reconciliation lease. */
+export function reconcileClaimedUnknownAsConfirmed(
+  db: Database,
+  input: {
+    id: ExposureReservationId;
+    owner: ReconciliationOwner;
+    ticketId: TicketId;
+    providerResponse?: unknown;
+    nowMs: number;
+  },
+): ExposureReservation | null {
+  assertTimestamp(input.nowMs, "reservation reconciliation time");
+  const row = db.query(
+    `UPDATE exposure_reservations
+     SET status = 'confirmed', ticket_id = $ticketId,
+         provider_response_json = $responseJson, failure_reason = NULL,
+         reconciliation_owner = NULL, reconciliation_lease_expires_at_ms = NULL,
+         next_reconciliation_at_ms = NULL, reconciliation_result = 'confirmed',
+         reconciliation_error = NULL, updated_at_ms = $nowMs
+     WHERE id = $id AND status = 'unknown'
+       AND reconciliation_owner = $owner
+       AND reconciliation_lease_expires_at_ms > $nowMs
+     RETURNING *`,
+  ).get({
+    $id: input.id,
+    $owner: input.owner,
+    $ticketId: input.ticketId,
+    $responseJson: serializeProviderResponse(input.providerResponse),
+    $nowMs: input.nowMs,
+  }) as ReservationRow | null;
+  return row === null ? null : mapReservation(row);
 }
 
 export function createPendingReservation(
@@ -323,7 +481,11 @@ export function getReservationByIdempotencyKey(
   return row === null ? null : mapReservation(row);
 }
 
-/** Reconcile an ambiguous placement after querying the provider by idempotency key. */
+/**
+ * Manual/provider-positive reconciliation path.
+ * @deprecated Automated workers must claim a lease and use
+ * `reconcileClaimedUnknownAsConfirmed`.
+ */
 export function reconcileUnknownAsConfirmed(
   db: Database,
   input: {
@@ -491,6 +653,14 @@ function mapReservation(row: ReservationRow): ExposureReservation {
     providerResponse:
       row.provider_response_json === null ? null : JSON.parse(row.provider_response_json),
     failureReason: row.failure_reason,
+    reconciliationOwner:
+      row.reconciliation_owner === null ? null : asReconciliationOwner(row.reconciliation_owner),
+    reconciliationLeaseExpiresAtMs: row.reconciliation_lease_expires_at_ms,
+    reconciliationAttempts: row.reconciliation_attempts,
+    lastReconciliationAtMs: row.last_reconciliation_at_ms,
+    nextReconciliationAtMs: row.next_reconciliation_at_ms,
+    reconciliationResult: row.reconciliation_result,
+    reconciliationError: row.reconciliation_error,
     createdAtMs: row.created_at_ms,
     updatedAtMs: row.updated_at_ms,
   };
