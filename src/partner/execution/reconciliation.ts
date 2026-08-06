@@ -10,7 +10,13 @@ import {
   type ExposureReservation,
   type ReconciliationOwner,
 } from "./domain.ts";
-import { executionIdempotencyKeyToUuid } from "./kalshi.ts";
+import {
+  executionIdempotencyKeyToUuid,
+  expectedKalshiOrder,
+  projectKalshiBuyOrder,
+} from "./kalshi.ts";
+import { verifyKalshiOrderEvidence } from "./kalshi-reconciliation.ts";
+import type { KalshiExpectedOrder } from "./kalshi-reconciliation.ts";
 import {
   claimUnknownReservations,
   completeReconciliationAttempt,
@@ -30,8 +36,8 @@ export interface KalshiUnknownReconciliationDependencies {
   resolveClient: (
     reservation: ExposureReservation,
   ) =>
-    | Pick<KalshiClient, "environment" | "findOrderByClientOrderId">
-    | Promise<Pick<KalshiClient, "environment" | "findOrderByClientOrderId">>;
+    | Pick<KalshiClient, "environment" | "lookupOrderByClientOrderId">
+    | Promise<Pick<KalshiClient, "environment" | "lookupOrderByClientOrderId">>;
   now?: () => number;
   limit?: number;
   owner: ReconciliationOwner;
@@ -88,14 +94,38 @@ export async function reconcileKalshiUnknownReservations(
     try {
       const client = await dependencies.resolveClient(reservation);
       const clientOrderId = executionIdempotencyKeyToUuid(reservation.idempotencyKey);
-      const order = await client.findOrderByClientOrderId(reservation.marketId, clientOrderId);
-      if (order === null) {
+      const side = reservation.selection.toLowerCase();
+      if (side !== "yes" && side !== "no") throw new Error("invalid Kalshi reservation selection");
+      const projected = projectKalshiBuyOrder({
+        ticker: reservation.marketId,
+        selection: reservation.selection,
+        effectiveStake: reservation.effectiveStake,
+        decimalOdds: reservation.decimalOdds,
+        side,
+      });
+      const persistedExpected = placementExpectation(reservation.providerResponse);
+      const evidence = verifyKalshiOrderEvidence(
+        persistedExpected ?? expectedKalshiOrder(client.environment, projected, clientOrderId),
+        client.environment,
+        await client.lookupOrderByClientOrderId(reservation.marketId, clientOrderId),
+      );
+      if (evidence.kind !== "confirmed") {
+        const resultKind = evidence.kind === "conflict"
+          ? "conflict"
+          : evidence.kind === "not_found" || evidence.kind === "incomplete"
+            ? "not_found"
+            : "error";
+        const detail = evidence.kind === "conflict"
+          ? `Kalshi evidence mismatch: ${evidence.mismatches.join(",")}`
+          : evidence.kind === "malformed" || evidence.kind === "provider_error"
+            ? `Kalshi reconciliation evidence: ${evidence.kind}: ${evidence.reason}`
+          : `Kalshi reconciliation evidence: ${evidence.kind}`;
         if (!deferAttempt(
           db,
           reservation,
           dependencies.owner,
-          "not_found",
-          null,
+          resultKind,
+          detail,
           clock(),
           retryBaseMs,
           retryMaxMs,
@@ -103,43 +133,31 @@ export async function reconcileKalshiUnknownReservations(
           result.leaseLost++;
           continue;
         }
-        result.unresolved++;
+        if (resultKind === "conflict") result.conflicts++;
+        else if (resultKind === "error") result.errors++;
+        else result.unresolved++;
         continue;
       }
-      const orderId = requiredString(order.order_id);
-      const ticker = requiredString(order.ticker);
-      const providerClientOrderId = requiredString(order.client_order_id);
-      if (!orderId || ticker !== reservation.marketId || providerClientOrderId !== clientOrderId) {
-        if (!deferAttempt(
-          db,
-          reservation,
-          dependencies.owner,
-          "conflict",
-          "Kalshi reconciliation evidence did not match the reservation identity",
-          clock(),
-          retryBaseMs,
-          retryMaxMs,
-        )) {
-          result.leaseLost++;
-          continue;
-        }
-        result.conflicts++;
-        continue;
-      }
+      const order = evidence.order;
+      const orderId = order.orderId;
       const nowMs = clock();
       const transaction = db.transaction(() => {
         const confirmed = reconcileClaimedUnknownAsConfirmed(db, {
           id: reservation.id,
           owner: dependencies.owner,
-          ticketId: asTicketId(orderId),
+          ticketId: asTicketId(order.orderId),
           providerResponse: {
             environment: client.environment,
             orderId,
             clientOrderId,
-            ticker,
-            status: optionalString(order.status),
-            fillCount: fixedCount(order.fill_count_fp ?? order.fill_count),
-            remainingCount: fixedCount(order.remaining_count_fp ?? order.remaining_count),
+            ticker: order.ticker,
+            outcome: order.outcome,
+            bookSide: order.bookSide,
+            initialCount: order.initialCount,
+            yesPriceCents: order.yesPriceCents,
+            fillCount: order.fillCount,
+            remainingCount: order.remainingCount,
+            source: evidence.source,
             reconciled: true,
           },
           nowMs,
@@ -170,6 +188,21 @@ export async function reconcileKalshiUnknownReservations(
     }
   }
   return result;
+}
+
+function placementExpectation(value: unknown): KalshiExpectedOrder | null {
+  if (!value || typeof value !== "object" || !("placementExpectation" in value)) return null;
+  const expected = value.placementExpectation;
+  if (!expected || typeof expected !== "object") return null;
+  const row = expected as Record<string, unknown>;
+  if (
+    (row.environment !== "demo" && row.environment !== "prod") ||
+    typeof row.ticker !== "string" || typeof row.clientOrderId !== "string" ||
+    (row.outcome !== "yes" && row.outcome !== "no") ||
+    (row.bookSide !== "bid" && row.bookSide !== "ask") ||
+    !Number.isSafeInteger(row.count) || !Number.isSafeInteger(row.yesPriceCents)
+  ) return null;
+  return row as unknown as KalshiExpectedOrder;
 }
 
 function deferAttempt(
@@ -232,20 +265,6 @@ function enqueueReconciliationReceipt(
         `Stake: <code>${reservation.effectiveStake}</code> minor units`,
     },
   }, nowMs);
-}
-
-function requiredString(value: unknown): string | null {
-  return typeof value === "string" && value.trim() ? value.trim() : null;
-}
-
-function optionalString(value: unknown): string | null {
-  return typeof value === "string" && value.trim() ? value.trim() : null;
-}
-
-function fixedCount(value: unknown): number | null {
-  if (typeof value !== "string" && typeof value !== "number") return null;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }
 
 function positiveDuration(value: number, label: string): number {

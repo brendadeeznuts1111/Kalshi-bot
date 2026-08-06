@@ -1,4 +1,6 @@
 // @see https://docs.kalshi.com/api-reference/orders/create-order-v2
+// @see https://docs.kalshi.com/api-reference/orders/get-orders
+// @see https://docs.kalshi.com/api-reference/historical/get-historical-orders
 // @see https://docs.kalshi.com/getting_started/rate_limits
 // @see https://bun.com/docs/runtime/environment-variables
 /**
@@ -41,6 +43,29 @@ export type KalshiOrderResult = {
   processedAtMs: number | null;
   dryRun: boolean;
 };
+
+export type KalshiOrderLookupSource = "active" | "historical";
+
+export type KalshiOrderLookupRecord = {
+  orderId: string;
+  clientOrderId: string;
+  ticker: string;
+  outcome: KalshiOrderSide;
+  bookSide: "bid" | "ask";
+  initialCount: number;
+  fillCount: number | null;
+  remainingCount: number | null;
+  yesPriceCents: number;
+  status: string | null;
+};
+
+/** Complete, bounded evidence from both current and archived order stores. */
+export type KalshiOrderLookupResult =
+  | { kind: "found"; source: KalshiOrderLookupSource; order: KalshiOrderLookupRecord }
+  | { kind: "not_found"; pagesScanned: number }
+  | { kind: "incomplete"; source: KalshiOrderLookupSource; pagesScanned: number }
+  | { kind: "malformed"; source: KalshiOrderLookupSource; reason: string }
+  | { kind: "provider_error"; source: KalshiOrderLookupSource; reason: string };
 
 /** A provider response that proves the order was not accepted. */
 export class KalshiRequestRejectedError extends Error {
@@ -93,6 +118,10 @@ export type KalshiClient = {
     ticker: string,
     clientOrderId: string,
   ): Promise<Record<string, unknown> | null>;
+  lookupOrderByClientOrderId(
+    ticker: string,
+    clientOrderId: string,
+  ): Promise<KalshiOrderLookupResult>;
   getFills(ticker?: string): Promise<Record<string, unknown>[]>;
   getPositions(): Promise<Record<string, unknown>[]>;
   getBalance(): Promise<{ balanceCents: number | null }>;
@@ -122,11 +151,31 @@ function fixedCount(value: unknown): number {
   return parsed;
 }
 
+function optionalFixedCount(value: unknown): number | null {
+  if (typeof value !== "string" && typeof value !== "number") return null;
+  const parsed = Number(value);
+  return Number.isSafeInteger(Math.trunc(parsed)) && Number.isFinite(parsed) && parsed >= 0
+    ? parsed
+    : null;
+}
+
 function fixedDollarsToCents(value: unknown): number | null {
   if (typeof value !== "string" && typeof value !== "number") return null;
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed < 0) return null;
   return Math.round(parsed * 100);
+}
+
+function fixedDollarsToExactCents(value: unknown): number | null {
+  if (typeof value !== "string" && typeof value !== "number") return null;
+  const match = /^(\d+)(?:\.(\d{1,4}))?$/.exec(String(value));
+  if (!match) return null;
+  const whole = Number(match[1]);
+  const fraction = Number((match[2] ?? "").padEnd(4, "0"));
+  const tenThousandths = whole * 10_000 + fraction;
+  if (!Number.isSafeInteger(tenThousandths)) return null;
+  const cents = tenThousandths / 100;
+  return cents >= 0 && cents <= 100 ? cents : null;
 }
 
 function parseKalshiErrorDetail(text: string): { code: string | null; message: string } {
@@ -286,24 +335,81 @@ export function createKalshiClient(options: KalshiClientOptions = {}): KalshiCli
     ticker: string,
     clientOrderId: string,
   ): Promise<Record<string, unknown> | null> {
-    let cursor = "";
-    for (let page = 0; page < 10; page++) {
-      const query = new URLSearchParams({ ticker, limit: "1000" });
-      if (cursor) query.set("cursor", cursor);
-      const response = await signedRequest("GET", `/portfolio/orders?${query}`);
-      if (!isRecord(response) || !Array.isArray(response.orders)) {
-        throw new KalshiRequestOutcomeUnknownError("Kalshi order lookup returned an invalid response");
-      }
-      const match = response.orders
-        .filter(isRecord)
-        .find((order) => order.client_order_id === clientOrderId);
-      if (match) return match;
-      cursor = typeof response.cursor === "string" ? response.cursor : "";
-      if (!cursor) return null;
-    }
+    const result = await lookupOrderByClientOrderId(ticker, clientOrderId);
+    if (result.kind === "not_found") return null;
+    if (result.kind === "found") return lookupRecordToWire(result.order);
+    const detail =
+      result.kind === "provider_error" || result.kind === "malformed"
+        ? result.reason
+        : "bounded pagination exhausted";
     throw new KalshiRequestOutcomeUnknownError(
-      "Kalshi order lookup exceeded the bounded pagination limit",
+      `Kalshi order lookup ${result.kind}: ${detail}`,
     );
+  }
+
+  async function lookupOrderByClientOrderId(
+    ticker: string,
+    clientOrderId: string,
+  ): Promise<KalshiOrderLookupResult> {
+    let pagesScanned = 0;
+    const inconclusive: Array<
+      Exclude<KalshiOrderLookupResult, { kind: "found" | "not_found" }>
+    > = [];
+    for (const source of ["active", "historical"] as const) {
+      const path = source === "active" ? "/portfolio/orders" : "/historical/orders";
+      let cursor = "";
+      for (let page = 0; page < 10; page++) {
+        const query = new URLSearchParams({ ticker, limit: "1000" });
+        if (cursor) query.set("cursor", cursor);
+        let response: unknown;
+        try {
+          response = await signedRequest("GET", `${path}?${query}`);
+        } catch (error) {
+          inconclusive.push({
+            kind: "provider_error",
+            source,
+            reason: sanitizeLookupError(error),
+          });
+          break;
+        }
+        pagesScanned++;
+        if (!isRecord(response) || !Array.isArray(response.orders)) {
+          inconclusive.push({
+            kind: "malformed",
+            source,
+            reason: "order list envelope is invalid",
+          });
+          break;
+        }
+        const matches = response.orders
+          .filter(isRecord)
+          .filter((order) => order.client_order_id === clientOrderId);
+        if (matches.length > 1) {
+          return { kind: "malformed", source, reason: "duplicate client order ID" };
+        }
+        if (matches.length === 1) {
+          const parsed = parseLookupOrder(matches[0]!);
+          return parsed.ok
+            ? { kind: "found", source, order: parsed.order }
+            : { kind: "malformed", source, reason: parsed.reason };
+        }
+        const nextCursor = response.cursor;
+        if (nextCursor !== undefined && typeof nextCursor !== "string") {
+          inconclusive.push({ kind: "malformed", source, reason: "pagination cursor is invalid" });
+          break;
+        }
+        cursor = typeof nextCursor === "string" ? nextCursor : "";
+        if (!cursor) break;
+        if (page === 9) inconclusive.push({ kind: "incomplete", source, pagesScanned });
+      }
+    }
+    const providerError = inconclusive.find((result) => result.kind === "provider_error");
+    if (providerError) return providerError;
+    const malformed = inconclusive.find((result) => result.kind === "malformed");
+    if (malformed) return malformed;
+    const incomplete = inconclusive.find((result) => result.kind === "incomplete");
+    if (incomplete) return incomplete;
+    return { kind: "not_found", pagesScanned };
   }
 
   return {
@@ -314,6 +420,7 @@ export function createKalshiClient(options: KalshiClientOptions = {}): KalshiCli
     getOrders: (ticker?: string) =>
       listPath(`/portfolio/orders${ticker ? `?ticker=${encodeURIComponent(ticker)}` : ""}`, "orders"),
     findOrderByClientOrderId,
+    lookupOrderByClientOrderId,
     getFills: (ticker?: string) =>
       listPath(`/portfolio/fills${ticker ? `?ticker=${encodeURIComponent(ticker)}` : ""}`, "fills"),
     getPositions: () => listPath("/portfolio/positions", "market_positions"),
@@ -325,6 +432,74 @@ export function createKalshiClient(options: KalshiClientOptions = {}): KalshiCli
       };
     },
   };
+}
+
+function parseLookupOrder(
+  order: Record<string, unknown>,
+): { ok: true; order: KalshiOrderLookupRecord } | { ok: false; reason: string } {
+  const orderId = requiredLookupString(order.order_id);
+  const clientOrderId = requiredLookupString(order.client_order_id);
+  const ticker = requiredLookupString(order.ticker);
+  const outcomeValue = order.outcome_side ?? order.side;
+  const outcome = outcomeValue === "yes" || outcomeValue === "no" ? outcomeValue : null;
+  const bookSideValue = order.book_side;
+  const bookSide = bookSideValue === "bid" || bookSideValue === "ask" ? bookSideValue : null;
+  const initialCount = optionalFixedCount(order.initial_count_fp ?? order.initial_count);
+  const yesPriceCents =
+    fixedDollarsToExactCents(order.yes_price_dollars) ?? optionalFixedCount(order.yes_price);
+  if (
+    !orderId ||
+    !clientOrderId ||
+    !ticker ||
+    !outcome ||
+    !bookSide ||
+    initialCount === null ||
+    yesPriceCents === null ||
+    yesPriceCents > 100
+  ) {
+    return { ok: false, reason: "matched order is missing required identity or term fields" };
+  }
+  return {
+    ok: true,
+    order: {
+      orderId,
+      clientOrderId,
+      ticker,
+      outcome,
+      bookSide,
+      initialCount,
+      fillCount: optionalFixedCount(order.fill_count_fp ?? order.fill_count),
+      remainingCount: optionalFixedCount(order.remaining_count_fp ?? order.remaining_count),
+      yesPriceCents,
+      status: requiredLookupString(order.status),
+    },
+  };
+}
+
+function lookupRecordToWire(order: KalshiOrderLookupRecord): Record<string, unknown> {
+  return {
+    order_id: order.orderId,
+    client_order_id: order.clientOrderId,
+    ticker: order.ticker,
+    outcome_side: order.outcome,
+    book_side: order.bookSide,
+    initial_count_fp: order.initialCount.toFixed(2),
+    fill_count_fp: order.fillCount?.toFixed(2),
+    remaining_count_fp: order.remainingCount?.toFixed(2),
+    yes_price_dollars: (order.yesPriceCents / 100).toFixed(4),
+    status: order.status,
+  };
+}
+
+function requiredLookupString(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim();
+  return normalized && normalized.length <= 512 ? normalized : null;
+}
+
+function sanitizeLookupError(error: unknown): string {
+  const message = error instanceof Error ? error.message : "provider lookup failed";
+  return message.replace(/[\r\n\t]+/g, " ").trim().slice(0, 240) || "provider lookup failed";
 }
 
 let defaultClient: KalshiClient | null = null;

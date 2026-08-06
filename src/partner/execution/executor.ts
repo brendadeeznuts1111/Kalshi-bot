@@ -232,6 +232,18 @@ export async function executeAuthorizedBet(
       const claimed = claimReservationForPlacement(db, {
         id: created.reservation.id,
         placementOwner,
+        ...(dependencies.capturePlacementExpectation
+          ? {
+              providerResponse: {
+                placementExpectation: dependencies.capturePlacementExpectation({
+                  authorization,
+                  request,
+                  effectiveStake,
+                  idempotencyKey: request.idempotencyKey,
+                }),
+              },
+            }
+          : {}),
         nowMs,
       });
       if (claimed === null) throw new Error("new reservation could not be claimed for placement");
@@ -262,6 +274,10 @@ export async function executeAuthorizedBet(
           id: reservation.id,
           placementOwner,
           reason,
+          ...(reservation.providerResponse && typeof reservation.providerResponse === "object"
+            && "placementExpectation" in reservation.providerResponse
+            ? { placementExpectation: reservation.providerResponse.placementExpectation }
+            : {}),
           nowMs,
         });
         if (unknown === null) throw new Error("reservation ownership changed before unknown result");

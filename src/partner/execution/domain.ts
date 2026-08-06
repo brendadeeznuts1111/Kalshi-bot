@@ -93,6 +93,8 @@ export interface ExecutionDependencies {
     request: BetRequest,
   ) => Promise<ExecutionSnapshot> | ExecutionSnapshot;
   placeBet: (input: ProviderPlacementInput) => Promise<ProviderPlacementResult>;
+  /** Secret-free immutable provider terms persisted before any provider I/O. */
+  capturePlacementExpectation?: (input: ProviderPlacementInput) => unknown;
   now?: () => number;
   reservationTtlMs?: number;
 }

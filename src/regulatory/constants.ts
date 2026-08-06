@@ -7,6 +7,9 @@
 // ── Play lifecycle ──
 export const PLAY_STATUS = {
   ACCEPTED: "accepted",
+  PROPOSED: "proposed",
+  CONFIRMED: "confirmed",
+  UNKNOWN: "unknown",
   REJECTED: "rejected",
   PENDING: "pending",
 } as const;

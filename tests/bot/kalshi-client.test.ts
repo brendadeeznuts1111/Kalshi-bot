@@ -185,6 +185,12 @@ describe("kalshi-client order reconciliation lookup", () => {
             order_id: "order-123",
             client_order_id: "wanted-key",
             ticker: ORDER.ticker,
+            outcome_side: "yes",
+            book_side: "bid",
+            initial_count_fp: "5.00",
+            fill_count_fp: "1.00",
+            remaining_count_fp: "4.00",
+            yes_price_dollars: "0.4200",
           }],
           cursor: "",
         })),
@@ -202,9 +208,127 @@ describe("kalshi-client order reconciliation lookup", () => {
 
   test("returns null only after exhausting a complete cursor chain", async () => {
     const { client } = makeClient({
-      responses: [new Response(JSON.stringify({ orders: [], cursor: "" }))],
+      responses: [
+        new Response(JSON.stringify({ orders: [], cursor: "" })),
+        new Response(JSON.stringify({ orders: [], cursor: "" })),
+      ],
     });
     expect(await client.findOrderByClientOrderId(ORDER.ticker, "missing")).toBeNull();
+  });
+
+  test("searches historical orders after a complete active miss", async () => {
+    const { client, calls } = makeClient({
+      responses: [
+        new Response(JSON.stringify({ orders: [], cursor: "" })),
+        new Response(JSON.stringify({
+          orders: [{
+            order_id: "archived-1",
+            client_order_id: "archived-key",
+            ticker: ORDER.ticker,
+            outcome_side: "no",
+            book_side: "ask",
+            initial_count_fp: "3.00",
+            fill_count_fp: "3.00",
+            remaining_count_fp: "0.00",
+            yes_price_dollars: "0.6000",
+            status: "executed",
+          }],
+          cursor: "",
+        })),
+      ],
+    });
+    const result = await client.lookupOrderByClientOrderId(ORDER.ticker, "archived-key");
+    expect(result).toMatchObject({
+      kind: "found",
+      source: "historical",
+      order: { outcome: "no", bookSide: "ask", initialCount: 3, yesPriceCents: 60 },
+    });
+    expect(calls[1]!.url).toContain("/historical/orders?");
+  });
+
+  test("accepts exact historical evidence even when the active feed fails", async () => {
+    const { client } = makeClient({
+      responses: [
+        new Response("active unavailable", { status: 503 }),
+        new Response(JSON.stringify({
+          orders: [{
+            order_id: "archived-after-error",
+            client_order_id: "historical-key",
+            ticker: ORDER.ticker,
+            outcome_side: "yes",
+            book_side: "bid",
+            initial_count_fp: "5.00",
+            fill_count_fp: "5.00",
+            remaining_count_fp: "0.00",
+            yes_price_dollars: "0.4200",
+          }],
+          cursor: "",
+        })),
+      ],
+      options: { maxRetries: 0 },
+    });
+    expect(await client.lookupOrderByClientOrderId(ORDER.ticker, "historical-key"))
+      .toMatchObject({ kind: "found", source: "historical" });
+  });
+
+  test("distinguishes malformed and provider-error lookup evidence", async () => {
+    const malformed = makeClient({
+      responses: [
+        new Response(JSON.stringify({ orders: "bad", cursor: "" })),
+        new Response(JSON.stringify({ orders: [], cursor: "" })),
+      ],
+    }).client;
+    expect(await malformed.lookupOrderByClientOrderId(ORDER.ticker, "key")).toMatchObject({
+      kind: "malformed",
+      source: "active",
+    });
+    const failed = makeClient({
+      responses: [
+        new Response("unavailable", { status: 503 }),
+        new Response(JSON.stringify({ orders: [], cursor: "" })),
+      ],
+      options: { maxRetries: 0 },
+    }).client;
+    expect(await failed.lookupOrderByClientOrderId(ORDER.ticker, "key")).toMatchObject({
+      kind: "provider_error",
+      source: "active",
+    });
+  });
+
+  test("does not promote a matching ID with incomplete terms", async () => {
+    const { client } = makeClient({
+      responses: [new Response(JSON.stringify({
+        orders: [{
+          order_id: "incomplete-order",
+          client_order_id: "incomplete-key",
+          ticker: ORDER.ticker,
+        }],
+        cursor: "",
+      }))],
+    });
+    expect(await client.lookupOrderByClientOrderId(ORDER.ticker, "incomplete-key"))
+      .toMatchObject({
+        kind: "malformed",
+        source: "active",
+        reason: "matched order is missing required identity or term fields",
+      });
+  });
+
+  test("reports incomplete evidence when a bounded feed still has a cursor", async () => {
+    const activePages = Array.from({ length: 10 }, (_, index) =>
+      new Response(JSON.stringify({ orders: [], cursor: `active-${index + 1}` })),
+    );
+    const { client } = makeClient({
+      responses: [
+        ...activePages,
+        new Response(JSON.stringify({ orders: [], cursor: "" })),
+      ],
+    });
+    expect(await client.lookupOrderByClientOrderId(ORDER.ticker, "key")).toMatchObject({
+      kind: "incomplete",
+      source: "active",
+      pagesScanned: 10,
+    });
   });
 });
 

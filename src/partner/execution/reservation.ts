@@ -78,6 +78,53 @@ export interface ClaimUnknownReservationsInput {
   limit: number;
 }
 
+/**
+ * A process may die after dispatching an order but before recording its result.
+ * Move only old `placing` rows to exposure-bearing `unknown`; never infer a
+ * rejection or release capacity from worker age alone.
+ */
+export function recoverStalePlacingReservations(
+  db: Database,
+  input: {
+    nowMs: number;
+    staleAfterMs: number;
+    provider?: string;
+  },
+): number {
+  assertTimestamp(input.nowMs, "stale placement recovery time");
+  if (!Number.isSafeInteger(input.staleAfterMs) || input.staleAfterMs < 1) {
+    throw new TypeError("placing stale threshold must be a positive safe integer");
+  }
+  const cutoffMs = input.nowMs - input.staleAfterMs;
+  if (cutoffMs < 0) return 0;
+  const provider = input.provider?.trim().toLowerCase() ?? null;
+  if (provider !== null && (!provider || provider.length > 128)) {
+    throw new TypeError("stale placement provider is invalid");
+  }
+  return db.query(
+    `UPDATE exposure_reservations
+     SET status = 'unknown',
+         provider_response_json = $responseJson,
+         failure_reason = $failureReason,
+         next_reconciliation_at_ms = $nowMs,
+         reconciliation_result = NULL,
+         reconciliation_error = NULL,
+         updated_at_ms = $nowMs
+     WHERE status = 'placing'
+       AND updated_at_ms <= $cutoffMs
+       AND ($provider IS NULL OR lower(provider) = $provider)`,
+  ).run({
+    $responseJson: JSON.stringify({
+      recovery: "stale_placing",
+      reason: "placement worker did not record a conclusive provider outcome",
+    }),
+    $failureReason: "stale placing recovered for provider reconciliation",
+    $nowMs: input.nowMs,
+    $cutoffMs: cutoffMs,
+    $provider: provider,
+  }).changes;
+}
+
 /** Atomically lease a fair, bounded batch of due unknown reservations. */
 export function claimUnknownReservations(
   db: Database,
@@ -298,6 +345,7 @@ export function claimReservationForPlacement(
   input: {
     id: ExposureReservationId;
     placementOwner: PlacementOwner;
+    providerResponse?: unknown;
     nowMs: number;
   },
 ): ExposureReservation | null {
@@ -305,13 +353,21 @@ export function claimReservationForPlacement(
   const row = db
     .query(
       `UPDATE exposure_reservations
-       SET status = 'placing', placement_owner = $owner, updated_at_ms = $nowMs
+       SET status = 'placing', placement_owner = $owner,
+           provider_response_json = COALESCE($responseJson, provider_response_json), updated_at_ms = $nowMs
        WHERE id = $id
          AND status = 'pending'
          AND reservation_expires_at_ms > $nowMs
        RETURNING *`,
     )
-    .get({ $id: input.id, $owner: input.placementOwner, $nowMs: input.nowMs }) as
+    .get({
+      $id: input.id,
+      $owner: input.placementOwner,
+      $responseJson: input.providerResponse === undefined
+        ? null
+        : serializeProviderResponse(input.providerResponse),
+      $nowMs: input.nowMs,
+    }) as
     | ReservationRow
     | null;
   return row === null ? null : mapReservation(row);
@@ -359,6 +415,7 @@ export function markReservationUnknown(
     id: ExposureReservationId;
     placementOwner: PlacementOwner;
     reason: string;
+    placementExpectation?: unknown;
     nowMs: number;
   },
 ): ExposureReservation | null {
@@ -366,7 +423,12 @@ export function markReservationUnknown(
     ...input,
     status: "unknown",
     ticketId: null,
-    providerResponse: { error: normalizeReason(input.reason) },
+    providerResponse: {
+      ...(input.placementExpectation === undefined
+        ? {}
+        : { placementExpectation: input.placementExpectation }),
+      error: normalizeReason(input.reason),
+    },
     failureReason: input.reason,
   });
 }

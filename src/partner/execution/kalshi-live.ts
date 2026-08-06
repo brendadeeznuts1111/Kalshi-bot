@@ -21,6 +21,9 @@ import { executeAuthorizedBet } from "./executor.ts";
 import {
   createKalshiBuyOrderMapper,
   createKalshiExecutionPlacer,
+  executionIdempotencyKeyToUuid,
+  expectedKalshiOrder,
+  projectKalshiBuyOrder,
   type KalshiExecutionOrder,
   type KalshiOrderResponseSummary,
 } from "./kalshi.ts";
@@ -254,6 +257,17 @@ export async function executeKalshiLiveOrder(
   const result = await executeAuthorizedBet(db, request, {
     now,
     loadSnapshot,
+    capturePlacementExpectation: ({ effectiveStake, idempotencyKey }) => expectedKalshiOrder(
+      client.environment,
+      projectKalshiBuyOrder({
+        ticker: command.ticker,
+        selection: command.outcome,
+        effectiveStake,
+        decimalOdds: request.decimalOdds,
+        side: command.outcome,
+      }),
+      executionIdempotencyKeyToUuid(idempotencyKey),
+    ),
     placeBet: createKalshiExecutionPlacer(
       client,
       createKalshiBuyOrderMapper(command.outcome),

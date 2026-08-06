@@ -25,6 +25,7 @@ import {
   asReconciliationOwner,
   asTicketId,
 } from "../../../src/partner/execution/domain.ts";
+import type { ExposureReservation } from "../../../src/partner/execution/domain.ts";
 import {
   claimReservationForPlacement,
   claimUnknownReservations,
@@ -281,6 +282,26 @@ describe("execution exposure reservations", () => {
 });
 
 describe("Kalshi unknown-outcome reconciliation", () => {
+  function foundOrder(reservation: ExposureReservation, overrides: Record<string, unknown> = {}) {
+    return {
+      kind: "found" as const,
+      source: "active" as const,
+      order: {
+        orderId: "order-recovered",
+        clientOrderId: executionIdempotencyKeyToUuid(reservation.idempotencyKey),
+        ticker: reservation.marketId,
+        outcome: "yes" as const,
+        bookSide: "bid" as const,
+        initialCount: 16,
+        fillCount: 0,
+        remainingCount: 16,
+        yesPriceCents: 50,
+        status: "resting",
+        ...overrides,
+      },
+    };
+  }
+
   function unknownKalshi() {
     const { db, authorization } = setup();
     const created = pending(db, authorization, "unknown-kalshi").reservation;
@@ -306,14 +327,7 @@ describe("Kalshi unknown-outcome reconciliation", () => {
       owner: asReconciliationOwner("kalshi-poller-confirm"),
       resolveClient: () => ({
         environment: "demo",
-        findOrderByClientOrderId: async () => ({
-          order_id: "order-recovered",
-          client_order_id: clientOrderId,
-          ticker: reservation.marketId,
-          status: "resting",
-          fill_count_fp: "0.00",
-          remaining_count_fp: "4.00",
-        }),
+        lookupOrderByClientOrderId: async () => foundOrder(reservation),
       }),
     });
     expect(result).toEqual({
@@ -337,7 +351,7 @@ describe("Kalshi unknown-outcome reconciliation", () => {
       now: () => NOW_MS + 10,
       resolveClient: () => ({
         environment: "demo",
-        findOrderByClientOrderId: async () => null,
+        lookupOrderByClientOrderId: async () => ({ kind: "not_found", pagesScanned: 2 }),
       }),
     });
     expect(result.unresolved).toBe(1);
@@ -363,9 +377,7 @@ describe("Kalshi unknown-outcome reconciliation", () => {
       owner: asReconciliationOwner("kalshi-poller-conflict"),
       resolveClient: () => ({
         environment: "demo",
-        findOrderByClientOrderId: async () => ({
-          order_id: "order-wrong",
-          client_order_id: executionIdempotencyKeyToUuid(reservation.idempotencyKey),
+        lookupOrderByClientOrderId: async () => foundOrder(reservation, {
           ticker: "DIFFERENT-MARKET",
         }),
       }),
@@ -383,10 +395,8 @@ describe("Kalshi unknown-outcome reconciliation", () => {
       now: () => NOW_MS + 10,
       resolveClient: () => ({
         environment: "demo",
-        findOrderByClientOrderId: async () => ({
-          order_id: "order-needs-receipt",
-          client_order_id: clientOrderId,
-          ticker: reservation.marketId,
+        lookupOrderByClientOrderId: async () => foundOrder(reservation, {
+          orderId: "order-needs-receipt",
         }),
       }),
     });

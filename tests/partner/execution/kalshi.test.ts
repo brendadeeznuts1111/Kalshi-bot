@@ -23,8 +23,11 @@ import {
   createKalshiExecutionPlacer,
   createKalshiBuyOrderMapper,
   decimalOddsToKalshiPriceCents,
+  expectedKalshiOrder,
   executionIdempotencyKeyToUuid,
+  projectKalshiBuyOrder,
 } from "../../../src/partner/execution/kalshi.ts";
+import { verifyKalshiOrderEvidence } from "../../../src/partner/execution/kalshi-reconciliation.ts";
 
 describe("Kalshi authorized execution adapter", () => {
   test("maps a stable execution key to a deterministic UUID", () => {
@@ -124,6 +127,70 @@ describe("Kalshi authorized execution adapter", () => {
     expect(() => mapper(executionInput({ effectiveStake: 39, decimalOdds: 2.5, selection: "no" }))).toThrow(
       /below the 40-cent cost/,
     );
+  });
+
+  test("shares exact placement terms with reconciliation and binds every field", () => {
+    const order = projectKalshiBuyOrder({
+      ticker: "KXTEST",
+      selection: "no",
+      effectiveStake: 125,
+      decimalOdds: 2.5,
+      side: "no",
+    });
+    const expected = expectedKalshiOrder("demo", order, "client-1");
+    expect(expected).toEqual({
+      environment: "demo",
+      ticker: "KXTEST",
+      clientOrderId: "client-1",
+      outcome: "no",
+      bookSide: "ask",
+      count: 3,
+      yesPriceCents: 60,
+    });
+    const found = {
+      kind: "found" as const,
+      source: "historical" as const,
+      order: {
+        orderId: "order-1",
+        clientOrderId: "client-1",
+        ticker: "KXTEST",
+        outcome: "no" as const,
+        bookSide: "ask" as const,
+        initialCount: 3,
+        fillCount: 3,
+        remainingCount: 0,
+        yesPriceCents: 60,
+        status: "executed",
+      },
+    };
+    expect(verifyKalshiOrderEvidence(expected, "demo", found)).toMatchObject({
+      kind: "confirmed",
+      source: "historical",
+    });
+    expect(verifyKalshiOrderEvidence(expected, "prod", {
+      ...found,
+      order: {
+        ...found.order,
+        clientOrderId: "other-client",
+        ticker: "OTHER",
+        outcome: "yes",
+        bookSide: "bid",
+        initialCount: 4,
+        yesPriceCents: 61,
+      },
+    })).toEqual({
+      kind: "conflict",
+      source: "historical",
+      mismatches: [
+        "environment",
+        "ticker",
+        "client_order_id",
+        "outcome",
+        "book_side",
+        "count",
+        "price",
+      ],
+    });
   });
 
   test("maps definite provider rejections but leaves ambiguous failures to the executor", async () => {

@@ -25,7 +25,7 @@ import { Database } from "bun:sqlite";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { partnerDetailHandler } from "../regulatory/routes/ops/partners";
-import { requireStateCompliance, type ComplianceContext } from "../regulatory/middleware/state-compliance";
+import { requireExecutionStateCompliance, requireStateCompliance, type ComplianceContext } from "../regulatory/middleware/state-compliance";
 import { createRateLimiter } from "../regulatory/middleware/rate-limit";
 import { createStateValidator } from "../regulatory/middleware/state-validator";
 import {
@@ -66,6 +66,10 @@ import {
 import { codedError, httpStatusFor, type ErrorCode } from "../institutions/error-codes.ts";
 import { designAgent } from "../agent/design-agent.ts";
 import { fetchKalshiBookSnapshot, midFromBookSnapshot } from "../bot/kalshi-market-data.ts";
+import {
+  requireTradingCancelPrincipal,
+  requireTradingOrderPrincipal,
+} from "./trading-auth.ts";
 
 // ── Regulatory compliance integration ──
 const REG_DB_PATH = process.env.REGULATORY_DB ?? ":memory:";
@@ -81,12 +85,17 @@ if (REG_DB_PATH === ":memory:") {
     join(import.meta.dir, "../regulatory/db/migrations/012_polymarket.sql"),
     "utf-8",
   );
+  const migration013 = readFileSync(
+    join(import.meta.dir, "../regulatory/db/migrations/013_execution_play_lifecycle.sql"),
+    "utf-8",
+  );
   const seeds = readFileSync(
     join(import.meta.dir, "../regulatory/db/seeds/state_regulations.sql"),
     "utf-8",
   );
   regDb.exec(migration011);
   regDb.exec(migration012);
+  regDb.exec(migration013);
   regDb.exec(seeds);
 }
 
@@ -100,6 +109,7 @@ orchestrator.register(new MarketDataAgent(regDb));
 orchestrator.register(new AdminAgent(regDb));
 
 const complianceGate = requireStateCompliance(regDb);
+const executionComplianceGate = requireExecutionStateCompliance(regDb);
 const rateLimiter = createRateLimiter({ windowMs: 60_000, max: 100 });
 const stateValidator = createStateValidator({ allowed: ["MA", "NJ"] });
 const resolveKalshiAccountClient = createKalshiAccountClientResolver();
@@ -263,6 +273,23 @@ function badOrder(code: ErrorCode, upstream?: string): Response {
   return json(codedError(code, upstream), httpStatusFor(code));
 }
 
+function finalizeRegulatoryExecution(
+  req: Request,
+  status: "confirmed" | "rejected" | "unknown",
+  reservationId?: number,
+  reason?: string | null,
+): void {
+  const key = (req as Request & { compliance?: ComplianceContext }).compliance
+    ?.executionIdempotencyKey;
+  if (!key) return;
+  complianceRepo.transitionExecutionPlay({
+    idempotencyKey: key,
+    status,
+    reservationId: reservationId ?? null,
+    reason: reason ?? null,
+  });
+}
+
 export async function handleTradingOrder(
   req: Request,
   runtime: ServeOptions["trading"] = {},
@@ -302,9 +329,11 @@ export async function handleTradingOrder(
     );
     if (!result.ok) {
       if (result.code === "PROVIDER_NOT_IMPLEMENTED") {
+        finalizeRegulatoryExecution(req, "rejected", undefined, result.reason);
         return badOrder("E_PROVIDER_NOT_IMPLEMENTED", result.reason);
       }
       if (result.code === "PROVIDER_SESSION_UNAVAILABLE") {
+        finalizeRegulatoryExecution(req, "rejected", undefined, result.reason);
         return badOrder(
           /missing kalshi_(?:api_key_id|access_key|private_key)/i.test(result.reason)
             ? "E_NO_CREDS"
@@ -320,20 +349,26 @@ export async function handleTradingOrder(
         result.code === "SKIN_INACTIVE" ||
         result.code === "CURRENCY_UNSUPPORTED"
       ) {
+        finalizeRegulatoryExecution(req, "rejected", undefined, result.reason);
         return badOrder("E_ACCOUNT_INACTIVE", result.reason);
       }
       if (result.execution?.code === "PROVIDER_OUTCOME_UNKNOWN") {
+        finalizeRegulatoryExecution(req, "unknown", result.execution.reservationId, result.reason);
         return badOrder("E_EXECUTION_UNKNOWN", result.reason);
       }
       if (result.execution?.code === "PROVIDER_REJECTED") {
+        finalizeRegulatoryExecution(req, "rejected", result.execution.reservationId, result.reason);
         return badOrder("E_EXECUTION_REJECTED", result.reason);
       }
       if (result.execution?.code === "SNAPSHOT_UNAVAILABLE") {
+        finalizeRegulatoryExecution(req, "rejected", result.execution.reservationId, result.reason);
         return badOrder("E_UPSTREAM", result.reason);
       }
+      finalizeRegulatoryExecution(req, "rejected", result.execution?.reservationId, result.reason);
       return badOrder("E_AUTHORIZATION_REQUIRED", result.reason);
     }
     resetTradingCache();
+    finalizeRegulatoryExecution(req, "confirmed", result.result.reservationId);
     return json({
       ok: true,
       dryRun: false,
@@ -1154,12 +1189,12 @@ export function createResearchServer(options: ServeOptions = {}) {
 
       // HQ order entry — same middleware stack as /place-bet; dry-run unless explicit dryRun:false
       if (url.pathname === "/api/trading/order" && req.method === "POST") {
-        return rateLimiter(req, () => stateValidator(req, () => complianceGate(req, () => handleTradingOrder(req, options.trading))));
+        return rateLimiter(req, () => requireTradingOrderPrincipal(req, () => stateValidator(req, () => executionComplianceGate(req, () => handleTradingOrder(req, options.trading)))));
       }
 
       // HQ order cancel
       if (url.pathname === "/api/trading/cancel" && req.method === "POST") {
-        return rateLimiter(req, () => handleTradingCancel(req));
+        return rateLimiter(req, () => requireTradingCancelPrincipal(req, () => handleTradingCancel(req)));
       }
 
       // HQ orderbook preview (public market data)
