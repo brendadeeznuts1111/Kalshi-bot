@@ -187,9 +187,9 @@ export const PARTNER_DOMAIN_LAYERS: readonly DomainLayer[] = [
       {
         id: "provider-execution-bindings",
         name: "Live provider execution bindings",
-        maturity: "planned",
-        where: "src/bot/kalshi-client.ts · src/partner/fantasy-ultra/adapter.ts",
-        notes: "Explicit order translation, balance/liquidity snapshot loader, and reconciliation poller are not wired",
+        maturity: "partial",
+        where: "src/partner/execution/kalshi*.ts · src/bot/kalshi-client.ts",
+        notes: "Kalshi V2 mapper + persisted-book snapshot loader built; authorized runtime route composition and reconciliation poller remain",
       },
     ],
   },
