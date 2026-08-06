@@ -17,6 +17,7 @@ import {
 import {
   asExecutionIdempotencyKey,
   asMarketId,
+  asMarketSelection,
 } from "../../../src/partner/execution/domain.ts";
 import {
   createKalshiExecutionPlacer,
@@ -91,6 +92,7 @@ describe("Kalshi authorized execution adapter", () => {
         outId: currentPolicy.outId,
         skin: currentPolicy.skin,
         marketId: asMarketId("KXTEST"),
+        selection: asMarketSelection("yes"),
         idempotencyKey: asExecutionIdempotencyKey("bet-1"),
         requestedStake: 2,
         decimalOdds: 2,
@@ -111,7 +113,7 @@ describe("Kalshi authorized execution adapter", () => {
   test("maps minor-unit risk to contract count and the request's quoted price", () => {
     expect(decimalOddsToKalshiPriceCents(2.5)).toBe(40);
     const mapper = createKalshiBuyOrderMapper("no");
-    const input = executionInput({ effectiveStake: 125, decimalOdds: 2.5 });
+    const input = executionInput({ effectiveStake: 125, decimalOdds: 2.5, selection: "no" });
     expect(mapper(input)).toEqual({
       ticker: "KXTEST",
       side: "no",
@@ -119,7 +121,7 @@ describe("Kalshi authorized execution adapter", () => {
       priceCents: 40,
       postOnly: false,
     });
-    expect(() => mapper(executionInput({ effectiveStake: 39, decimalOdds: 2.5 }))).toThrow(
+    expect(() => mapper(executionInput({ effectiveStake: 39, decimalOdds: 2.5, selection: "no" }))).toThrow(
       /below the 40-cent cost/,
     );
   });
@@ -164,7 +166,9 @@ describe("Kalshi authorized execution adapter", () => {
   });
 });
 
-function executionInput(overrides: { effectiveStake?: number; decimalOdds?: number } = {}) {
+function executionInput(
+  overrides: { effectiveStake?: number; decimalOdds?: number; selection?: "yes" | "no" } = {},
+) {
   const currentPolicy = {
     partnerCode: asPartnerCode("SPORTS"),
     outId: asOutId("out-SPORTS-1"),
@@ -199,6 +203,7 @@ function executionInput(overrides: { effectiveStake?: number; decimalOdds?: numb
       outId: currentPolicy.outId,
       skin: currentPolicy.skin,
       marketId: asMarketId("KXTEST"),
+      selection: asMarketSelection(overrides.selection ?? "yes"),
       idempotencyKey: asExecutionIdempotencyKey("bet-helper"),
       requestedStake: overrides.effectiveStake ?? 100,
       decimalOdds: overrides.decimalOdds ?? 2,

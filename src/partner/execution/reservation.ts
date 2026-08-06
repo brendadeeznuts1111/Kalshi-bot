@@ -14,6 +14,7 @@ import {
   asExecutionIdempotencyKey,
   asExposureReservationId,
   asMarketId,
+  asMarketSelection,
   asPlacementOwner,
   asTicketId,
   type BetRequest,
@@ -36,6 +37,7 @@ type ReservationRow = {
   requested_stake: number;
   effective_stake: number;
   market_id: string; // brand-ok — SQLite wire value; parsed by mapReservation
+  selection: string; // brand-ok — SQLite wire value; parsed by mapReservation
   decimal_odds: number;
   status: ExposureReservationStatus;
   reservation_expires_at_ms: number;
@@ -85,11 +87,11 @@ export function createPendingReservation(
     .query(
       `INSERT INTO exposure_reservations (
         idempotency_key, partner_code, out_id, skin, provider, authorization_id,
-        requested_stake, effective_stake, market_id, decimal_odds,
+        requested_stake, effective_stake, market_id, selection, decimal_odds,
         status, reservation_expires_at_ms, created_at_ms, updated_at_ms
       ) VALUES (
         $idempotencyKey, $partnerCode, $outId, $skin, $provider, $authorizationId,
-        $requestedStake, $effectiveStake, $marketId, $decimalOdds,
+        $requestedStake, $effectiveStake, $marketId, $selection, $decimalOdds,
         'pending', $expiresAtMs, $nowMs, $nowMs
       )
       ON CONFLICT(idempotency_key) DO NOTHING
@@ -105,6 +107,7 @@ export function createPendingReservation(
       $requestedStake: input.request.requestedStake,
       $effectiveStake: input.effectiveStake,
       $marketId: input.request.marketId,
+      $selection: input.request.selection,
       $decimalOdds: input.request.decimalOdds,
       $expiresAtMs: input.expiresAtMs,
       $nowMs: input.nowMs,
@@ -119,6 +122,7 @@ export function createPendingReservation(
     existing.skin !== input.request.skin ||
     existing.authorizationId !== input.authorization.id ||
     existing.marketId !== input.request.marketId ||
+    existing.selection !== input.request.selection ||
     existing.requestedStake !== input.request.requestedStake ||
     existing.decimalOdds !== input.request.decimalOdds
   ) {
@@ -478,6 +482,7 @@ function mapReservation(row: ReservationRow): ExposureReservation {
     requestedStake: row.requested_stake,
     effectiveStake: row.effective_stake,
     marketId: asMarketId(row.market_id),
+    selection: asMarketSelection(row.selection),
     decimalOdds: row.decimal_odds,
     status: row.status,
     reservationExpiresAtMs: row.reservation_expires_at_ms,

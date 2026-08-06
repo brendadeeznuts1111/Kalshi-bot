@@ -14,6 +14,28 @@ export type KalshiExecutionOrderMapper = (
   input: ProviderPlacementInput,
 ) => KalshiExecutionOrder;
 
+export type KalshiPlacementState =
+  | "resting"
+  | "partially_filled"
+  | "filled"
+  | "not_filled";
+
+export interface KalshiOrderResponseSummary {
+  environment: KalshiClient["environment"];
+  orderId: string;
+  clientOrderId: string;
+  ticker: string;
+  outcome: KalshiExecutionOrder["side"];
+  count: number;
+  priceCents: number;
+  state: KalshiPlacementState;
+  fillCount: number;
+  remainingCount: number;
+  averageFillPriceCents: number | null;
+  averageFeePaidCents: number | null;
+  processedAtMs: number | null;
+}
+
 export class KalshiOrderMappingError extends Error {
   constructor(message: string) {
     super(message);
@@ -56,13 +78,13 @@ export function createKalshiExecutionPlacer(
       return {
         accepted: false as const,
         reason: "Kalshi processed the order without a fill or resting quantity",
-        responseSummary: summarizeKalshiOrderResult(client.environment, result),
+        responseSummary: summarizeKalshiOrderResult(client.environment, result, order),
       };
     }
     return {
       accepted: true as const,
       ticketId: asTicketId(result.orderId),
-      responseSummary: summarizeKalshiOrderResult(client.environment, result),
+      responseSummary: summarizeKalshiOrderResult(client.environment, result, order),
     };
   };
 }
@@ -73,6 +95,11 @@ export function createKalshiBuyOrderMapper(
   options: { postOnly?: boolean } = {},
 ): KalshiExecutionOrderMapper {
   return ({ request, effectiveStake }) => {
+    if (request.selection.toLowerCase() !== side) {
+      throw new KalshiOrderMappingError(
+        `Execution selection ${request.selection} does not match Kalshi ${side.toUpperCase()} mapper`,
+      );
+    }
     const priceCents = decimalOddsToKalshiPriceCents(request.decimalOdds);
     const count = Math.floor(effectiveStake / priceCents);
     if (count < 1) {
@@ -109,7 +136,8 @@ export function decimalOddsToKalshiPriceCents(decimalOdds: number): number {
 function summarizeKalshiOrderResult(
   environment: KalshiClient["environment"],
   result: Awaited<ReturnType<KalshiClient["placeOrder"]>>,
-) {
+  order: KalshiExecutionOrder,
+): KalshiOrderResponseSummary {
   const state =
     result.fillCount > 0 && result.remainingCount > 0
       ? "partially_filled"
@@ -122,6 +150,10 @@ function summarizeKalshiOrderResult(
     environment,
     orderId: result.orderId,
     clientOrderId: result.clientOrderId,
+    ticker: order.ticker,
+    outcome: order.side,
+    count: order.count,
+    priceCents: order.priceCents,
     state,
     fillCount: result.fillCount,
     remainingCount: result.remainingCount,

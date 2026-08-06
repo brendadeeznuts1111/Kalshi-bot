@@ -48,6 +48,15 @@ export const EXECUTION_MIGRATIONS = [
         ON exposure_reservations (partner_code, out_id, skin, created_at_ms, status);
     `,
   },
+  {
+    id: "002_exposure_reservation_selection",
+    sql: `
+      ALTER TABLE exposure_reservations
+        ADD COLUMN selection TEXT NOT NULL DEFAULT 'legacy-unknown';
+      CREATE INDEX IF NOT EXISTS idx_exposure_reservations_market_selection
+        ON exposure_reservations (market_id, selection, status);
+    `,
+  },
 ] as const;
 
 type MigrationRow = { migrationId: string }; // brand-ok — internal migration wire value

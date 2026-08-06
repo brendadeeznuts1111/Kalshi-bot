@@ -20,6 +20,7 @@ import {
 import {
   asExecutionIdempotencyKey,
   asMarketId,
+  asMarketSelection,
   asTicketId,
   type BetRequest,
   type ExecutionDependencies,
@@ -87,6 +88,7 @@ function request(key: string, requestedStake = 700): BetRequest {
     outId: asOutId("out-SPORTS-1"),
     skin: asSkinId("main"),
     marketId: asMarketId("market-1"),
+    selection: asMarketSelection("yes"),
     idempotencyKey: asExecutionIdempotencyKey(key),
     requestedStake,
     decimalOdds: 2,

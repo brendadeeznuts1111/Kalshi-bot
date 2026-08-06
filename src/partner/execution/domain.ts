@@ -8,12 +8,14 @@ import type {
 } from "../authorization/domain.ts";
 
 declare const marketIdBrand: unique symbol;
+declare const marketSelectionBrand: unique symbol;
 declare const ticketIdBrand: unique symbol;
 declare const reservationIdBrand: unique symbol;
 declare const executionKeyBrand: unique symbol;
 declare const placementOwnerBrand: unique symbol;
 
 export type MarketId = string & { readonly [marketIdBrand]: true };
+export type MarketSelection = string & { readonly [marketSelectionBrand]: true };
 export type TicketId = string & { readonly [ticketIdBrand]: true };
 export type ExposureReservationId = number & { readonly [reservationIdBrand]: true };
 export type ExecutionIdempotencyKey = string & { readonly [executionKeyBrand]: true };
@@ -35,6 +37,7 @@ export interface BetRequest {
   outId: OutId;
   skin: SkinId;
   marketId: MarketId;
+  selection: MarketSelection;
   idempotencyKey: ExecutionIdempotencyKey;
   requestedStake: number;
   decimalOdds: number;
@@ -96,6 +99,7 @@ export interface ExposureReservation {
   requestedStake: number;
   effectiveStake: number;
   marketId: MarketId;
+  selection: MarketSelection;
   decimalOdds: number;
   status: ExposureReservationStatus;
   reservationExpiresAtMs: number;
@@ -126,6 +130,8 @@ export type AuthorizedBetResult =
       ticketId: TicketId;
       effectiveStake: number;
       reservationId: ExposureReservationId;
+      /** Sanitized provider placement summary, including immediate fill state when available. */
+      providerResponse?: unknown;
     }
   | {
       success: false;
@@ -137,6 +143,10 @@ export type AuthorizedBetResult =
 
 export function asMarketId(value: string): MarketId {
   return brandBoundedString<MarketId>(value, "market ID", 256);
+}
+
+export function asMarketSelection(value: string): MarketSelection {
+  return brandBoundedString<MarketSelection>(value, "market selection", 128);
 }
 
 export function asTicketId(value: string): TicketId {

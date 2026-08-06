@@ -128,6 +128,11 @@ export function createKalshiExecutionSnapshotLoader(
       typeof dependencies.side === "function"
         ? dependencies.side(authorization, request)
         : dependencies.side;
+    if (request.selection.toLowerCase() !== side) {
+      throw new Error(
+        `Execution selection ${request.selection} does not match Kalshi ${side.toUpperCase()} snapshot side`,
+      );
+    }
     const nowMs = dependencies.now?.() ?? Date.now();
     const quote = loadKalshiMarketExecutionQuote(dependencies.db, {
       ticker: request.marketId,

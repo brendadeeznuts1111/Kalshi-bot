@@ -12,6 +12,7 @@ import {
 import {
   asExecutionIdempotencyKey,
   asMarketId,
+  asMarketSelection,
 } from "../../../src/partner/execution/domain.ts";
 import {
   createKalshiExecutionSnapshotLoader,
@@ -125,6 +126,7 @@ describe("Kalshi execution snapshot loader", () => {
       outId: currentPolicy.outId,
       skin: currentPolicy.skin,
       marketId: asMarketId("KXTEST"),
+      selection: asMarketSelection("yes"),
       idempotencyKey: asExecutionIdempotencyKey("quote-bind"),
       requestedStake: 100,
       decimalOdds: 100 / 65,

@@ -20,6 +20,7 @@ import {
 import {
   asExecutionIdempotencyKey,
   asMarketId,
+  asMarketSelection,
   asPlacementOwner,
   asTicketId,
 } from "../../../src/partner/execution/domain.ts";
@@ -36,7 +37,10 @@ import {
   releaseExpiredReservations,
   settleConfirmedReservation,
 } from "../../../src/partner/execution/reservation.ts";
-import { migrateExecutionSchema } from "../../../src/partner/execution/sql.ts";
+import {
+  EXECUTION_MIGRATIONS,
+  migrateExecutionSchema,
+} from "../../../src/partner/execution/sql.ts";
 
 const NOW_MS = 1_700_000_000_000;
 
@@ -60,7 +64,10 @@ function policy(): AuthorizationPolicy {
 
 function setup(): { db: Database; authorization: ApprovedAuthorization } {
   const db = new Database(":memory:");
-  expect(migrateExecutionSchema(db, NOW_MS)).toEqual(["001_exposure_reservations"]);
+  expect(migrateExecutionSchema(db, NOW_MS)).toEqual([
+    "001_exposure_reservations",
+    "002_exposure_reservation_selection",
+  ]);
   expect(migrateExecutionSchema(db, NOW_MS + 1)).toEqual([]);
   const p = policy();
   db.query(
@@ -95,6 +102,7 @@ function request(key = "bet-1", stake = 1_000) {
     outId: asOutId("out-SPORTS-1"),
     skin: asSkinId("main"),
     marketId: asMarketId("market-1"),
+    selection: asMarketSelection("yes"),
     idempotencyKey: asExecutionIdempotencyKey(key),
     requestedStake: stake,
     decimalOdds: 2,
@@ -114,6 +122,27 @@ function pending(db: Database, authorization: ApprovedAuthorization, key = "bet-
 }
 
 describe("execution exposure reservations", () => {
+  test("upgrades existing reservations with an auditable selection column", () => {
+    const db = new Database(":memory:");
+    db.exec(EXECUTION_MIGRATIONS[0].sql);
+    db.exec(`
+      CREATE TABLE _partner_execution_migrations (
+        id TEXT PRIMARY KEY,
+        applied_at_ms INTEGER NOT NULL
+      );
+      INSERT INTO _partner_execution_migrations (id, applied_at_ms)
+      VALUES ('001_exposure_reservations', 1);
+    `);
+    expect(migrateExecutionSchema(db, NOW_MS)).toEqual([
+      "002_exposure_reservation_selection",
+    ]);
+    const columns = db.query("PRAGMA table_info(exposure_reservations)").all() as Array<{
+      name: string;
+    }>;
+    expect(columns.some((column) => column.name === "selection")).toBeTrue();
+    db.close();
+  });
+
   test("migrates prerequisites and creates an idempotent pending reservation", () => {
     const { db, authorization } = setup();
     const first = pending(db, authorization);

@@ -14,6 +14,7 @@ import { getActiveLiveTradeAuthorization } from "../authorization/sql.ts";
 import {
   asExecutionIdempotencyKey,
   asMarketId,
+  asMarketSelection,
   asPlacementOwner,
   type AuthorizedBetResult,
   type BetRequest,
@@ -354,6 +355,9 @@ export async function executeAuthorizedBet(
     ticketId: providerResult.ticketId,
     effectiveStake: reservation.effectiveStake,
     reservationId: reservation.id,
+    ...(providerResult.responseSummary === undefined
+      ? {}
+      : { providerResponse: providerResult.responseSummary }),
   };
 }
 
@@ -370,6 +374,9 @@ function replayResult(reservation: ExposureReservation): AuthorizedBetResult {
       ticketId: reservation.ticketId,
       effectiveStake: reservation.effectiveStake,
       reservationId: reservation.id,
+      ...(reservation.providerResponse === null
+        ? {}
+        : { providerResponse: reservation.providerResponse }),
     };
   }
   if (reservation.status === "unknown") {
@@ -417,6 +424,7 @@ function reservationMatchesRequest(
     reservation.outId === request.outId &&
     reservation.skin === request.skin &&
     reservation.marketId === request.marketId &&
+    reservation.selection === request.selection &&
     reservation.requestedStake === request.requestedStake &&
     reservation.decimalOdds === request.decimalOdds
   );
@@ -453,6 +461,7 @@ function enqueueExecutionReceipt(
           `${headline}\n` +
           `Out: <code>${Bun.escapeHTML(reservation.outId)}</code>\n` +
           `Market: <code>${Bun.escapeHTML(reservation.marketId)}</code>\n` +
+          `Selection: <code>${Bun.escapeHTML(reservation.selection)}</code>\n` +
           `Stake: <code>${reservation.effectiveStake}</code> minor units\n` +
           `Odds: <code>${reservation.decimalOdds}</code>\n` +
           detail,
@@ -469,6 +478,7 @@ function validateRequest(request: BetRequest): string | null {
     asOutId(request.outId);
     asSkinId(request.skin);
     asMarketId(request.marketId);
+    asMarketSelection(request.selection);
     asExecutionIdempotencyKey(request.idempotencyKey);
     if (!Number.isSafeInteger(request.requestedStake) || request.requestedStake <= 0) {
       throw new TypeError("requested stake must be a positive safe integer in minor units");

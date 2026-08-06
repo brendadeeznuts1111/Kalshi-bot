@@ -300,7 +300,7 @@ export function createKalshiClient(options: KalshiClientOptions = {}): KalshiCli
 
 let defaultClient: KalshiClient | null = null;
 
-function getDefaultClient(): KalshiClient {
+export function getDefaultKalshiClient(): KalshiClient {
   defaultClient ??= createKalshiClient();
   return defaultClient;
 }
@@ -323,25 +323,25 @@ export async function placeOrder(request: KalshiOrderRequest): Promise<KalshiOrd
       dryRun: true,
     };
   }
-  return getDefaultClient().placeOrder(request);
+  return getDefaultKalshiClient().placeOrder(request);
 }
 
 export async function cancelOrder(orderId: string): Promise<void> {
-  return getDefaultClient().cancelOrder(orderId);
+  return getDefaultKalshiClient().cancelOrder(orderId);
 }
 
 export async function getOrders(ticker?: string): Promise<Record<string, unknown>[]> {
-  return getDefaultClient().getOrders(ticker);
+  return getDefaultKalshiClient().getOrders(ticker);
 }
 
 export async function getFills(ticker?: string): Promise<Record<string, unknown>[]> {
-  return getDefaultClient().getFills(ticker);
+  return getDefaultKalshiClient().getFills(ticker);
 }
 
 export async function getPositions(): Promise<Record<string, unknown>[]> {
-  return getDefaultClient().getPositions();
+  return getDefaultKalshiClient().getPositions();
 }
 
 export async function getBalance(): Promise<{ balanceCents: number | null }> {
-  return getDefaultClient().getBalance();
+  return getDefaultKalshiClient().getBalance();
 }

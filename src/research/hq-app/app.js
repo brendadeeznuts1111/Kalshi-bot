@@ -560,11 +560,18 @@ function renderTrading(hq) {
     '<div class="muted" id="history-caption"></div></div>' +
     '<div class="panel" style="margin-top:.9rem"><h2>Order entry ' + badge("warn", "dry-run default") + "</h2>" +
     '<form class="order" id="order-form">' +
+    '<label>Partner code<input name="partnerCode" placeholder="SPORTS" /></label>' +
+    '<label>Out<input name="outId" placeholder="out-SPORTS-1" /></label>' +
+    '<label>Skin<input name="skin" placeholder="main" /></label>' +
     '<label>Ticker<input name="ticker" required placeholder="KXNBA-…" /></label>' +
     '<label>Side<select name="side"><option value="yes">yes</option><option value="no">no</option></select></label>' +
     '<label>Contracts<input name="count" type="number" min="1" max="10000" value="1" required /></label>' +
     '<label>Limit ¢' + tip("yesPriceCents") + '<input name="priceCents" type="number" min="1" max="99" required /></label>' +
     '<label>Post-only' + tip("postOnly") + '<input name="postOnly" type="checkbox" checked /></label>' +
+    '<label>State<select name="stateCode"><option value="MA">MA</option><option value="NJ">NJ</option></select></label>' +
+    '<label>Sport<input name="sportId" placeholder="nba" /></label>' +
+    '<label>Compliance node<input name="nodeId" placeholder="node-id" /></label>' +
+    '<label>Idempotency key<input name="idempotencyKey" placeholder="generated for live" /></label>' +
     '<label>Live (uncheck = dry-run)' + tip("dryRun") + '<input name="live" type="checkbox" /></label>' +
     '<button type="submit">Place order</button>' +
     "</form>" +
@@ -708,17 +715,49 @@ async function submitOrder(ev) {
   const out = $("#order-result");
   const live = form.live.checked;
   if (live && !confirm("Place a LIVE order with real funds?")) return;
+  if (live) {
+    const missing = ["partnerCode", "outId", "skin", "sportId", "nodeId"]
+      .filter((name) => !form[name].value.trim());
+    if (missing.length) {
+      out.innerHTML = '<span class="err">live order missing: ' + esc(missing.join(", ")) + "</span>";
+      return;
+    }
+    if (form.postOnly.checked) {
+      out.innerHTML = '<span class="err">authorized live orders require post-only to be unchecked</span>';
+      return;
+    }
+  }
+  const idempotencyKey = form.idempotencyKey.value.trim() || crypto.randomUUID();
+  if (live) form.idempotencyKey.value = idempotencyKey;
   btn.disabled = true;
   out.innerHTML = '<span class="muted">submitting…</span>';
   try {
     const res = await fetch("/api/trading/order", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(live ? {
+          "Idempotency-Key": idempotencyKey,
+          "x-state-code": form.stateCode.value,
+          "x-node-id": form.nodeId.value.trim(),
+        } : {}),
+      },
       body: JSON.stringify({
+        partnerCode: form.partnerCode.value.trim(),
+        outId: form.outId.value.trim(),
+        skin: form.skin.value.trim(),
         ticker: form.ticker.value.trim(),
         side: form.side.value,
+        outcome: form.side.value,
         count: Number(form.count.value),
         priceCents: Number(form.priceCents.value),
+        stakeMinorUnits: Number(form.count.value) * Number(form.priceCents.value),
+        idempotencyKey,
+        wagerAmount: Number(form.count.value) * Number(form.priceCents.value) / 100,
+        betType: "straight",
+        sportId: form.sportId.value.trim(),
+        marketId: form.ticker.value.trim(),
+        stateCode: form.stateCode.value,
         postOnly: form.postOnly.checked,
         dryRun: !live,
       }),
@@ -727,6 +766,7 @@ async function submitOrder(ev) {
     if (data.ok) {
       out.innerHTML = badge("ok", (data.dryRun ? "dry-run " : "LIVE ") + "accepted") +
         ' <span class="mono muted">' + esc(data.orderId) + "</span>";
+      if (live) form.idempotencyKey.value = "";
       setTimeout(refresh, 1_500);
     } else {
       out.innerHTML = badge("bad", "rejected") + ' <span class="err">' + esc(data.error) + "</span>";

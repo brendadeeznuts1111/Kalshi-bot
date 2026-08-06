@@ -22,6 +22,8 @@ import {
   type DeskLiquidityFlags,
 } from "../institutions/event-store/match-liquidity.ts";
 import { Database } from "bun:sqlite";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { partnerDetailHandler } from "../regulatory/routes/ops/partners";
 import { requireStateCompliance, type ComplianceContext } from "../regulatory/middleware/state-compliance";
 import { createRateLimiter } from "../regulatory/middleware/rate-limit";
@@ -51,7 +53,16 @@ import { buildGlossaryApiPayload } from "../institutions/glossary.ts";
 import { readPlayerProfiles } from "./player-profiles.ts";
 import { getPlayerDetail } from "./tennis-hq-data.ts";
 import { readOpponentProfiles } from "./player-opponent-profiles.ts";
-import { placeOrder, cancelOrder } from "../bot/kalshi-client.ts";
+import {
+  placeOrder,
+  cancelOrder,
+  type KalshiClient,
+} from "../bot/kalshi-client.ts";
+import {
+  createKalshiAccountClientResolver,
+  executeKalshiLiveOrder,
+  parseKalshiLiveOrderCommand,
+} from "../partner/execution/kalshi-live.ts";
 import { codedError, httpStatusFor, type ErrorCode } from "../institutions/error-codes.ts";
 import { designAgent } from "../agent/design-agent.ts";
 import { fetchKalshiBookSnapshot, midFromBookSnapshot } from "../bot/kalshi-market-data.ts";
@@ -62,8 +73,6 @@ const regDb = new Database(REG_DB_PATH);
 
 // Bootstrap schema if in-memory
 if (REG_DB_PATH === ":memory:") {
-  const { readFileSync } = await import("fs");
-  const { join } = await import("path");
   const migration011 = readFileSync(
     join(import.meta.dir, "../regulatory/db/migrations/011_state_regulation.sql"),
     "utf-8",
@@ -93,9 +102,15 @@ orchestrator.register(new AdminAgent(regDb));
 const complianceGate = requireStateCompliance(regDb);
 const rateLimiter = createRateLimiter({ windowMs: 60_000, max: 100 });
 const stateValidator = createStateValidator({ allowed: ["MA", "NJ"] });
+const resolveKalshiAccountClient = createKalshiAccountClientResolver();
 
 export type ServeOptions = {
   port?: number;
+  trading?: {
+    db?: Database;
+    client?: Pick<KalshiClient, "environment" | "placeOrder" | "getBalance">;
+    isRiskHealthy?: () => Promise<boolean> | boolean;
+  };
 };
 
 export type RouteRequest<P extends Record<string, string>> = {
@@ -248,12 +263,92 @@ function badOrder(code: ErrorCode, upstream?: string): Response {
   return json(codedError(code, upstream), httpStatusFor(code));
 }
 
-async function handleTradingOrder(req: Request): Promise<Response> {
+export async function handleTradingOrder(
+  req: Request,
+  runtime: ServeOptions["trading"] = {},
+): Promise<Response> {
   let body: Record<string, unknown>;
   try {
     body = (await req.json()) as Record<string, unknown>;
   } catch {
     return badOrder("E_BODY_INVALID");
+  }
+
+  const dryRun = body.dryRun !== false;
+  if (!dryRun) {
+    if (!(req as Request & { compliance?: ComplianceContext }).compliance) {
+      return badOrder("E_AUTH_CONTEXT_REQUIRED", "live order did not pass compliance middleware");
+    }
+    const parsed = parseKalshiLiveOrderCommand(body, req.headers.get("Idempotency-Key"));
+    if (!parsed.ok) {
+      return badOrder(
+        parsed.code === "IDEMPOTENCY_REQUIRED"
+          ? "E_IDEMPOTENCY_REQUIRED"
+          : "E_AUTH_CONTEXT_REQUIRED",
+        parsed.reason,
+      );
+    }
+    const result = await executeKalshiLiveOrder(
+      runtime.db ?? openEventStore({ dbPath: DEFAULT_EVENT_STORE_DB }),
+      parsed.command,
+      {
+        ...(runtime.client
+          ? { client: runtime.client }
+          : { resolveClient: resolveKalshiAccountClient }),
+        isRiskHealthy:
+          runtime.isRiskHealthy ??
+          (() => Bun.env.KALSHI_AUTHORIZED_EXECUTION_ENABLED === "1"),
+      },
+    );
+    if (!result.ok) {
+      if (result.code === "PROVIDER_NOT_IMPLEMENTED") {
+        return badOrder("E_PROVIDER_NOT_IMPLEMENTED", result.reason);
+      }
+      if (result.code === "PROVIDER_SESSION_UNAVAILABLE") {
+        return badOrder(
+          /missing kalshi_(?:api_key_id|access_key|private_key)/i.test(result.reason)
+            ? "E_NO_CREDS"
+            : "E_UPSTREAM",
+          result.reason,
+        );
+      }
+      if (
+        result.code === "ACCOUNT_NOT_FOUND" ||
+        result.code === "ACCOUNT_INACTIVE" ||
+        result.code === "PARTNER_INACTIVE" ||
+        result.code === "PARTNER_MISMATCH" ||
+        result.code === "SKIN_INACTIVE" ||
+        result.code === "CURRENCY_UNSUPPORTED"
+      ) {
+        return badOrder("E_ACCOUNT_INACTIVE", result.reason);
+      }
+      if (result.execution?.code === "PROVIDER_OUTCOME_UNKNOWN") {
+        return badOrder("E_EXECUTION_UNKNOWN", result.reason);
+      }
+      if (result.execution?.code === "PROVIDER_REJECTED") {
+        return badOrder("E_EXECUTION_REJECTED", result.reason);
+      }
+      if (result.execution?.code === "SNAPSHOT_UNAVAILABLE") {
+        return badOrder("E_UPSTREAM", result.reason);
+      }
+      return badOrder("E_AUTHORIZATION_REQUIRED", result.reason);
+    }
+    resetTradingCache();
+    return json({
+      ok: true,
+      dryRun: false,
+      orderId: result.result.ticketId,
+      reservationId: result.result.reservationId,
+      effectiveStakeMinorUnits: result.result.effectiveStake,
+      status: result.order?.state ?? "confirmed",
+      fillCount: result.order?.fillCount ?? null,
+      remainingCount: result.order?.remainingCount ?? null,
+      ticker: parsed.command.ticker,
+      outcome: parsed.command.outcome,
+      partnerCode: parsed.command.partnerCode,
+      outId: parsed.command.outId,
+      skin: parsed.command.skin,
+    });
   }
 
   const ticker = typeof body.ticker === "string" ? body.ticker.trim() : "";
@@ -268,9 +363,6 @@ async function handleTradingOrder(req: Request): Promise<Response> {
   if (!Number.isInteger(priceCents) || priceCents < 1 || priceCents > 99) {
     return badOrder("E_PRICE_RANGE");
   }
-  // Safety rail: anything other than explicit `false` stays dry-run.
-  const dryRun = body.dryRun !== false;
-
   try {
     const result = await placeOrder({
       ticker,
@@ -1062,7 +1154,7 @@ export function createResearchServer(options: ServeOptions = {}) {
 
       // HQ order entry — same middleware stack as /place-bet; dry-run unless explicit dryRun:false
       if (url.pathname === "/api/trading/order" && req.method === "POST") {
-        return rateLimiter(req, () => stateValidator(req, () => complianceGate(req, () => handleTradingOrder(req))));
+        return rateLimiter(req, () => stateValidator(req, () => complianceGate(req, () => handleTradingOrder(req, options.trading))));
       }
 
       // HQ order cancel
