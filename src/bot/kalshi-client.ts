@@ -1,4 +1,6 @@
 // @see https://docs.kalshi.com/api-reference/orders/create-order-v2
+// @see https://docs.kalshi.com/api-reference/orders/get-orders
+// @see https://docs.kalshi.com/api-reference/historical/get-historical-orders
 // @see https://docs.kalshi.com/getting_started/rate_limits
 // @see https://bun.com/docs/runtime/environment-variables
 /**
@@ -42,6 +44,35 @@ export type KalshiOrderResult = {
   dryRun: boolean;
 };
 
+export type KalshiOrderLookupSource = "active" | "historical";
+export type KalshiLifecycleFeed = "orders" | "fills";
+
+export interface KalshiLifecyclePage {
+  items: Record<string, unknown>[];
+  cursor: string;
+}
+
+export type KalshiOrderLookupRecord = {
+  orderId: string;
+  clientOrderId: string;
+  ticker: string;
+  outcome: KalshiOrderSide;
+  bookSide: "bid" | "ask";
+  initialCount: number;
+  fillCount: number | null;
+  remainingCount: number | null;
+  yesPriceCents: number;
+  status: string | null;
+};
+
+/** Complete, bounded evidence from both current and archived order stores. */
+export type KalshiOrderLookupResult =
+  | { kind: "found"; source: KalshiOrderLookupSource; order: KalshiOrderLookupRecord }
+  | { kind: "not_found"; pagesScanned: number }
+  | { kind: "incomplete"; source: KalshiOrderLookupSource; pagesScanned: number }
+  | { kind: "malformed"; source: KalshiOrderLookupSource; reason: string }
+  | { kind: "provider_error"; source: KalshiOrderLookupSource; reason: string };
+
 /** A provider response that proves the order was not accepted. */
 export class KalshiRequestRejectedError extends Error {
   constructor(
@@ -59,6 +90,13 @@ export class KalshiRequestOutcomeUnknownError extends Error {
   constructor(message: string, readonly status: number | null = null) {
     super(message);
     this.name = "KalshiRequestOutcomeUnknownError";
+  }
+}
+
+export class KalshiLifecyclePageMalformedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "KalshiLifecyclePageMalformedError";
   }
 }
 
@@ -89,6 +127,22 @@ export type KalshiClient = {
   placeOrder(request: KalshiOrderRequest): Promise<KalshiOrderResult>;
   cancelOrder(orderId: string): Promise<void>;
   getOrders(ticker?: string): Promise<Record<string, unknown>[]>;
+  findOrderByClientOrderId(
+    ticker: string,
+    clientOrderId: string,
+  ): Promise<Record<string, unknown> | null>;
+  lookupOrderByClientOrderId(
+    ticker: string,
+    clientOrderId: string,
+  ): Promise<KalshiOrderLookupResult>;
+  getLifecyclePage(
+    feed: KalshiLifecycleFeed,
+    source: KalshiOrderLookupSource,
+    cursor?: string,
+    limit?: number,
+  ): Promise<KalshiLifecyclePage>;
+  getSettlementPage(cursor?: string, limit?: number): Promise<KalshiLifecyclePage>;
+  getPositionsPage(cursor?: string, limit?: number): Promise<KalshiLifecyclePage>;
   getFills(ticker?: string): Promise<Record<string, unknown>[]>;
   getPositions(): Promise<Record<string, unknown>[]>;
   getBalance(): Promise<{ balanceCents: number | null }>;
@@ -118,11 +172,31 @@ function fixedCount(value: unknown): number {
   return parsed;
 }
 
+function optionalFixedCount(value: unknown): number | null {
+  if (typeof value !== "string" && typeof value !== "number") return null;
+  const parsed = Number(value);
+  return Number.isSafeInteger(Math.trunc(parsed)) && Number.isFinite(parsed) && parsed >= 0
+    ? parsed
+    : null;
+}
+
 function fixedDollarsToCents(value: unknown): number | null {
   if (typeof value !== "string" && typeof value !== "number") return null;
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed < 0) return null;
   return Math.round(parsed * 100);
+}
+
+function fixedDollarsToExactCents(value: unknown): number | null {
+  if (typeof value !== "string" && typeof value !== "number") return null;
+  const match = /^(\d+)(?:\.(\d{1,4}))?$/.exec(String(value));
+  if (!match) return null;
+  const whole = Number(match[1]);
+  const fraction = Number((match[2] ?? "").padEnd(4, "0"));
+  const tenThousandths = whole * 10_000 + fraction;
+  if (!Number.isSafeInteger(tenThousandths)) return null;
+  const cents = tenThousandths / 100;
+  return cents >= 0 && cents <= 100 ? cents : null;
 }
 
 function parseKalshiErrorDetail(text: string): { code: string | null; message: string } {
@@ -240,6 +314,7 @@ export function createKalshiClient(options: KalshiClientOptions = {}): KalshiCli
       post_only: request.postOnly ?? true,
       cancel_order_on_pause: true,
       self_trade_prevention_type: "taker_at_cross",
+      subaccount: 0,
     };
     const res = await signedRequest("POST", "/portfolio/events/orders", body);
     const orderId = isRecord(res) && typeof res.order_id === "string" ? res.order_id : null;
@@ -269,7 +344,10 @@ export function createKalshiClient(options: KalshiClientOptions = {}): KalshiCli
   }
 
   async function cancelOrder(orderId: string): Promise<void> {
-    await signedRequest("DELETE", `/portfolio/orders/${encodeURIComponent(orderId)}`);
+    await signedRequest(
+      "DELETE",
+      `/portfolio/events/orders/${encodeURIComponent(orderId)}?subaccount=0`,
+    );
   }
 
   async function listPath(path: string, key: string): Promise<Record<string, unknown>[]> {
@@ -278,24 +356,245 @@ export function createKalshiClient(options: KalshiClientOptions = {}): KalshiCli
     return res[key].filter(isRecord);
   }
 
+  async function findOrderByClientOrderId(
+    ticker: string,
+    clientOrderId: string,
+  ): Promise<Record<string, unknown> | null> {
+    const result = await lookupOrderByClientOrderId(ticker, clientOrderId);
+    if (result.kind === "not_found") return null;
+    if (result.kind === "found") return lookupRecordToWire(result.order);
+    const detail =
+      result.kind === "provider_error" || result.kind === "malformed"
+        ? result.reason
+        : "bounded pagination exhausted";
+    throw new KalshiRequestOutcomeUnknownError(
+      `Kalshi order lookup ${result.kind}: ${detail}`,
+    );
+  }
+
+  async function lookupOrderByClientOrderId(
+    ticker: string,
+    clientOrderId: string,
+  ): Promise<KalshiOrderLookupResult> {
+    let pagesScanned = 0;
+    const inconclusive: Array<
+      Exclude<KalshiOrderLookupResult, { kind: "found" | "not_found" }>
+    > = [];
+    for (const source of ["active", "historical"] as const) {
+      const path = source === "active" ? "/portfolio/orders" : "/historical/orders";
+      let cursor = "";
+      for (let page = 0; page < 10; page++) {
+        const query = new URLSearchParams({ ticker, limit: "1000", subaccount: "0" });
+        if (cursor) query.set("cursor", cursor);
+        let response: unknown;
+        try {
+          response = await signedRequest("GET", `${path}?${query}`);
+        } catch (error) {
+          inconclusive.push({
+            kind: "provider_error",
+            source,
+            reason: sanitizeLookupError(error),
+          });
+          break;
+        }
+        pagesScanned++;
+        if (!isRecord(response) || !Array.isArray(response.orders)) {
+          inconclusive.push({
+            kind: "malformed",
+            source,
+            reason: "order list envelope is invalid",
+          });
+          break;
+        }
+        const matches = response.orders
+          .filter(isRecord)
+          .filter((order) => order.client_order_id === clientOrderId);
+        if (matches.length > 1) {
+          return { kind: "malformed", source, reason: "duplicate client order ID" };
+        }
+        if (matches.length === 1) {
+          const parsed = parseLookupOrder(matches[0]!);
+          return parsed.ok
+            ? { kind: "found", source, order: parsed.order }
+            : { kind: "malformed", source, reason: parsed.reason };
+        }
+        const nextCursor = response.cursor;
+        if (nextCursor !== undefined && typeof nextCursor !== "string") {
+          inconclusive.push({ kind: "malformed", source, reason: "pagination cursor is invalid" });
+          break;
+        }
+        cursor = typeof nextCursor === "string" ? nextCursor : "";
+        if (!cursor) break;
+        if (page === 9) inconclusive.push({ kind: "incomplete", source, pagesScanned });
+      }
+    }
+    const providerError = inconclusive.find((result) => result.kind === "provider_error");
+    if (providerError) return providerError;
+    const malformed = inconclusive.find((result) => result.kind === "malformed");
+    if (malformed) return malformed;
+    const incomplete = inconclusive.find((result) => result.kind === "incomplete");
+    if (incomplete) return incomplete;
+    return { kind: "not_found", pagesScanned };
+  }
+
+  async function getLifecyclePage(
+    feed: KalshiLifecycleFeed,
+    source: KalshiOrderLookupSource,
+    cursor = "",
+    limit = 1_000,
+  ): Promise<KalshiLifecyclePage> {
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 1_000) {
+      throw new TypeError("Kalshi lifecycle page limit must be from 1 to 1000");
+    }
+    const prefix = source === "active" ? "/portfolio" : "/historical";
+    const query = new URLSearchParams({ limit: String(limit), subaccount: "0" });
+    if (cursor) query.set("cursor", cursor);
+    const response = await signedRequest("GET", `${prefix}/${feed}?${query}`);
+    if (!isRecord(response) || !Array.isArray(response[feed])) {
+      throw new KalshiLifecyclePageMalformedError(`Kalshi ${source} ${feed} page is malformed`);
+    }
+    if (response.cursor !== undefined && typeof response.cursor !== "string") {
+      throw new KalshiLifecyclePageMalformedError(`Kalshi ${source} ${feed} cursor is malformed`);
+    }
+    return {
+      items: response[feed].filter(isRecord),
+      cursor: typeof response.cursor === "string" ? response.cursor : "",
+    };
+  }
+
+  async function getSettlementPage(cursor = "", limit = 1_000): Promise<KalshiLifecyclePage> {
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 1_000) {
+      throw new TypeError("Kalshi settlement page limit must be from 1 to 1000");
+    }
+    const query = new URLSearchParams({ limit: String(limit), subaccount: "0" });
+    if (cursor) query.set("cursor", cursor);
+    const response = await signedRequest("GET", `/portfolio/settlements?${query}`);
+    if (!isRecord(response) || !Array.isArray(response.settlements)) {
+      throw new KalshiLifecyclePageMalformedError("Kalshi settlement page is malformed");
+    }
+    if (response.cursor !== undefined && typeof response.cursor !== "string") {
+      throw new KalshiLifecyclePageMalformedError("Kalshi settlement cursor is malformed");
+    }
+    return {
+      items: response.settlements.filter(isRecord),
+      cursor: typeof response.cursor === "string" ? response.cursor : "",
+    };
+  }
+
+  async function getPositionsPage(cursor = "", limit = 1_000): Promise<KalshiLifecyclePage> {
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 1_000) {
+      throw new TypeError("Kalshi positions page limit must be from 1 to 1000");
+    }
+    const query = new URLSearchParams({ limit: String(limit), subaccount: "0" });
+    if (cursor) query.set("cursor", cursor);
+    const response = await signedRequest("GET", `/portfolio/positions?${query}`);
+    if (!isRecord(response) || !Array.isArray(response.market_positions)) {
+      throw new KalshiLifecyclePageMalformedError("Kalshi positions page is malformed");
+    }
+    if (response.cursor !== undefined && typeof response.cursor !== "string") {
+      throw new KalshiLifecyclePageMalformedError("Kalshi positions cursor is malformed");
+    }
+    return {
+      items: response.market_positions.filter(isRecord),
+      cursor: typeof response.cursor === "string" ? response.cursor : "",
+    };
+  }
+
   return {
     environment,
     baseUrl,
     placeOrder,
     cancelOrder,
-    getOrders: (ticker?: string) =>
-      listPath(`/portfolio/orders${ticker ? `?ticker=${encodeURIComponent(ticker)}` : ""}`, "orders"),
-    getFills: (ticker?: string) =>
-      listPath(`/portfolio/fills${ticker ? `?ticker=${encodeURIComponent(ticker)}` : ""}`, "fills"),
-    getPositions: () => listPath("/portfolio/positions", "market_positions"),
+    getOrders: (ticker?: string) => listPath(
+      `/portfolio/orders?${new URLSearchParams({ ...(ticker ? { ticker } : {}), subaccount: "0" })}`,
+      "orders",
+    ),
+    findOrderByClientOrderId,
+    lookupOrderByClientOrderId,
+    getLifecyclePage,
+    getSettlementPage,
+    getPositionsPage,
+    getFills: (ticker?: string) => listPath(
+      `/portfolio/fills?${new URLSearchParams({ ...(ticker ? { ticker } : {}), subaccount: "0" })}`,
+      "fills",
+    ),
+    getPositions: () => listPath("/portfolio/positions?subaccount=0", "market_positions"),
     getBalance: async () => {
-      const res = await signedRequest("GET", "/portfolio/balance");
+      const res = await signedRequest("GET", "/portfolio/balance?subaccount=0");
       return {
         balanceCents:
           isRecord(res) && typeof res.balance === "number" ? res.balance : null,
       };
     },
   };
+}
+
+function parseLookupOrder(
+  order: Record<string, unknown>,
+): { ok: true; order: KalshiOrderLookupRecord } | { ok: false; reason: string } {
+  const orderId = requiredLookupString(order.order_id);
+  const clientOrderId = requiredLookupString(order.client_order_id);
+  const ticker = requiredLookupString(order.ticker);
+  const outcomeValue = order.outcome_side ?? order.side;
+  const outcome = outcomeValue === "yes" || outcomeValue === "no" ? outcomeValue : null;
+  const bookSideValue = order.book_side;
+  const bookSide = bookSideValue === "bid" || bookSideValue === "ask" ? bookSideValue : null;
+  const initialCount = optionalFixedCount(order.initial_count_fp ?? order.initial_count);
+  const yesPriceCents =
+    fixedDollarsToExactCents(order.yes_price_dollars) ?? optionalFixedCount(order.yes_price);
+  if (
+    !orderId ||
+    !clientOrderId ||
+    !ticker ||
+    !outcome ||
+    !bookSide ||
+    initialCount === null ||
+    yesPriceCents === null ||
+    yesPriceCents > 100
+  ) {
+    return { ok: false, reason: "matched order is missing required identity or term fields" };
+  }
+  return {
+    ok: true,
+    order: {
+      orderId,
+      clientOrderId,
+      ticker,
+      outcome,
+      bookSide,
+      initialCount,
+      fillCount: optionalFixedCount(order.fill_count_fp ?? order.fill_count),
+      remainingCount: optionalFixedCount(order.remaining_count_fp ?? order.remaining_count),
+      yesPriceCents,
+      status: requiredLookupString(order.status),
+    },
+  };
+}
+
+function lookupRecordToWire(order: KalshiOrderLookupRecord): Record<string, unknown> {
+  return {
+    order_id: order.orderId,
+    client_order_id: order.clientOrderId,
+    ticker: order.ticker,
+    outcome_side: order.outcome,
+    book_side: order.bookSide,
+    initial_count_fp: order.initialCount.toFixed(2),
+    fill_count_fp: order.fillCount?.toFixed(2),
+    remaining_count_fp: order.remainingCount?.toFixed(2),
+    yes_price_dollars: (order.yesPriceCents / 100).toFixed(4),
+    status: order.status,
+  };
+}
+
+function requiredLookupString(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim();
+  return normalized && normalized.length <= 512 ? normalized : null;
+}
+
+function sanitizeLookupError(error: unknown): string {
+  const message = error instanceof Error ? error.message : "provider lookup failed";
+  return message.replace(/[\r\n\t]+/g, " ").trim().slice(0, 240) || "provider lookup failed";
 }
 
 let defaultClient: KalshiClient | null = null;

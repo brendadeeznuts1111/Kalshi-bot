@@ -273,6 +273,9 @@ describe("authorized bet execution", () => {
         skin: authorization.skin,
       });
       expect(exposure).toBe(mode === "unknown" ? 700 : 0);
+      expect(db.query(
+        "SELECT COALESCE(SUM(open_exposure_delta_minor),0) AS exposure FROM execution_journal_entries",
+      ).get()).toEqual({ exposure: mode === "unknown" ? 700 : 0 });
       expect(
         db.query("SELECT count(*) AS count FROM account_authorization_receipt_outbox").get(),
       ).toEqual({ count: 1 });

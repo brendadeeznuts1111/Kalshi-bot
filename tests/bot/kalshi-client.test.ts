@@ -113,6 +113,7 @@ describe("kalshi-client placeOrder", () => {
     expect(body.post_only).toBe(true);
     expect(body.cancel_order_on_pause).toBe(true);
     expect(body.self_trade_prevention_type).toBe("taker_at_cross");
+    expect(body.subaccount).toBe(0);
   });
 
   test("NO buys map to an ask on the V2 YES-denominated book", async () => {
@@ -172,14 +173,243 @@ describe("kalshi-client placeOrder", () => {
   });
 });
 
+describe("kalshi-client order reconciliation lookup", () => {
+  test("paginates ticker orders until the deterministic client order ID is found", async () => {
+    const { client, calls } = makeClient({
+      responses: [
+        new Response(JSON.stringify({
+          orders: [{ order_id: "other", client_order_id: "other-key" }],
+          cursor: "next page",
+        })),
+        new Response(JSON.stringify({
+          orders: [{
+            order_id: "order-123",
+            client_order_id: "wanted-key",
+            ticker: ORDER.ticker,
+            outcome_side: "yes",
+            book_side: "bid",
+            initial_count_fp: "5.00",
+            fill_count_fp: "1.00",
+            remaining_count_fp: "4.00",
+            yes_price_dollars: "0.4200",
+          }],
+          cursor: "",
+        })),
+      ],
+    });
+
+    expect(await client.findOrderByClientOrderId(ORDER.ticker, "wanted-key")).toMatchObject({
+      order_id: "order-123",
+    });
+    expect(calls).toHaveLength(2);
+    expect(calls[0]!.url).toContain(`ticker=${encodeURIComponent(ORDER.ticker)}`);
+    expect(calls[0]!.url).toContain("limit=1000");
+    expect(calls[1]!.url).toContain("cursor=next+page");
+  });
+
+  test("returns null only after exhausting a complete cursor chain", async () => {
+    const { client } = makeClient({
+      responses: [
+        new Response(JSON.stringify({ orders: [], cursor: "" })),
+        new Response(JSON.stringify({ orders: [], cursor: "" })),
+      ],
+    });
+    expect(await client.findOrderByClientOrderId(ORDER.ticker, "missing")).toBeNull();
+  });
+
+  test("searches historical orders after a complete active miss", async () => {
+    const { client, calls } = makeClient({
+      responses: [
+        new Response(JSON.stringify({ orders: [], cursor: "" })),
+        new Response(JSON.stringify({
+          orders: [{
+            order_id: "archived-1",
+            client_order_id: "archived-key",
+            ticker: ORDER.ticker,
+            outcome_side: "no",
+            book_side: "ask",
+            initial_count_fp: "3.00",
+            fill_count_fp: "3.00",
+            remaining_count_fp: "0.00",
+            yes_price_dollars: "0.6000",
+            status: "executed",
+          }],
+          cursor: "",
+        })),
+      ],
+    });
+    const result = await client.lookupOrderByClientOrderId(ORDER.ticker, "archived-key");
+    expect(result).toMatchObject({
+      kind: "found",
+      source: "historical",
+      order: { outcome: "no", bookSide: "ask", initialCount: 3, yesPriceCents: 60 },
+    });
+    expect(calls[1]!.url).toContain("/historical/orders?");
+  });
+
+  test("accepts exact historical evidence even when the active feed fails", async () => {
+    const { client } = makeClient({
+      responses: [
+        new Response("active unavailable", { status: 503 }),
+        new Response(JSON.stringify({
+          orders: [{
+            order_id: "archived-after-error",
+            client_order_id: "historical-key",
+            ticker: ORDER.ticker,
+            outcome_side: "yes",
+            book_side: "bid",
+            initial_count_fp: "5.00",
+            fill_count_fp: "5.00",
+            remaining_count_fp: "0.00",
+            yes_price_dollars: "0.4200",
+          }],
+          cursor: "",
+        })),
+      ],
+      options: { maxRetries: 0 },
+    });
+    expect(await client.lookupOrderByClientOrderId(ORDER.ticker, "historical-key"))
+      .toMatchObject({ kind: "found", source: "historical" });
+  });
+
+  test("distinguishes malformed and provider-error lookup evidence", async () => {
+    const malformed = makeClient({
+      responses: [
+        new Response(JSON.stringify({ orders: "bad", cursor: "" })),
+        new Response(JSON.stringify({ orders: [], cursor: "" })),
+      ],
+    }).client;
+    expect(await malformed.lookupOrderByClientOrderId(ORDER.ticker, "key")).toMatchObject({
+      kind: "malformed",
+      source: "active",
+    });
+    const failed = makeClient({
+      responses: [
+        new Response("unavailable", { status: 503 }),
+        new Response(JSON.stringify({ orders: [], cursor: "" })),
+      ],
+      options: { maxRetries: 0 },
+    }).client;
+    expect(await failed.lookupOrderByClientOrderId(ORDER.ticker, "key")).toMatchObject({
+      kind: "provider_error",
+      source: "active",
+    });
+  });
+
+  test("does not promote a matching ID with incomplete terms", async () => {
+    const { client } = makeClient({
+      responses: [new Response(JSON.stringify({
+        orders: [{
+          order_id: "incomplete-order",
+          client_order_id: "incomplete-key",
+          ticker: ORDER.ticker,
+        }],
+        cursor: "",
+      }))],
+    });
+    expect(await client.lookupOrderByClientOrderId(ORDER.ticker, "incomplete-key"))
+      .toMatchObject({
+        kind: "malformed",
+        source: "active",
+        reason: "matched order is missing required identity or term fields",
+      });
+  });
+
+  test("reports incomplete evidence when a bounded feed still has a cursor", async () => {
+    const activePages = Array.from({ length: 10 }, (_, index) =>
+      new Response(JSON.stringify({ orders: [], cursor: `active-${index + 1}` })),
+    );
+    const { client } = makeClient({
+      responses: [
+        ...activePages,
+        new Response(JSON.stringify({ orders: [], cursor: "" })),
+      ],
+    });
+    expect(await client.lookupOrderByClientOrderId(ORDER.ticker, "key")).toMatchObject({
+      kind: "incomplete",
+      source: "active",
+      pagesScanned: 10,
+    });
+  });
+
+  test("discovers resting, partial, filled, and cancelled account orders", async () => {
+    for (const [status, fillCount, remainingCount] of [
+      ["resting", "0.00", "5.00"],
+      ["partially_filled", "2.00", "3.00"],
+      ["executed", "5.00", "0.00"],
+      ["cancelled", "2.00", "0.00"],
+    ] as const) {
+      const clientOrderId = `status-${status}`;
+      const { client } = makeClient({
+        responses: [new Response(JSON.stringify({
+          orders: [{
+            order_id: `order-${status}`,
+            client_order_id: clientOrderId,
+            ticker: ORDER.ticker,
+            outcome_side: "yes",
+            book_side: "bid",
+            initial_count_fp: "5.00",
+            fill_count_fp: fillCount,
+            remaining_count_fp: remainingCount,
+            yes_price_dollars: "0.4200",
+            status,
+          }],
+          cursor: "",
+        }))],
+      });
+      expect(await client.lookupOrderByClientOrderId(ORDER.ticker, clientOrderId)).toMatchObject({
+        kind: "found",
+        source: "active",
+        order: { status, fillCount: Number(fillCount), remainingCount: Number(remainingCount) },
+      });
+    }
+  });
+});
+
 describe("kalshi-client portfolio reads", () => {
+  test("typed lifecycle pages address order, fill, and settlement feeds", async () => {
+    const { client, calls } = makeClient({
+      responses: [
+        new Response(JSON.stringify({ orders: [{ order_id: "o1" }], cursor: "next" })),
+        new Response(JSON.stringify({ orders: [], cursor: "" })),
+        new Response(JSON.stringify({ fills: [{ fill_id: "f1" }], cursor: "" })),
+        new Response(JSON.stringify({ fills: [], cursor: "" })),
+        new Response(JSON.stringify({ settlements: [{ ticker: "KXTEST" }], cursor: "" })),
+        new Response(JSON.stringify({ market_positions: [{ ticker: "KXTEST" }], cursor: "" })),
+      ],
+    });
+    expect(await client.getLifecyclePage("orders", "active", "", 100))
+      .toEqual({ items: [{ order_id: "o1" }], cursor: "next" });
+    await client.getLifecyclePage("orders", "historical", "next", 100);
+    await client.getLifecyclePage("fills", "active", "", 100);
+    await client.getLifecyclePage("fills", "historical", "", 100);
+    expect(await client.getSettlementPage("", 100)).toEqual({
+      items: [{ ticker: "KXTEST" }], cursor: "",
+    });
+    expect(await client.getPositionsPage("", 100)).toEqual({
+      items: [{ ticker: "KXTEST" }], cursor: "",
+    });
+    expect(calls.map((call) => new URL(call.url).pathname)).toEqual([
+      "/trade-api/v2/portfolio/orders",
+      "/trade-api/v2/historical/orders",
+      "/trade-api/v2/portfolio/fills",
+      "/trade-api/v2/historical/fills",
+      "/trade-api/v2/portfolio/settlements",
+      "/trade-api/v2/portfolio/positions",
+    ]);
+    expect(calls[1]!.url).toContain("cursor=next");
+    for (const call of calls) expect(call.url).toContain("subaccount=0");
+  });
+
   test("cancelOrder signs DELETE on the order path", async () => {
     const { client, calls } = makeClient({
       responses: [new Response("{}", { status: 200 })],
     });
     await client.cancelOrder("order-123");
     expect(calls[0]!.method).toBe("DELETE");
-    expect(calls[0]!.url).toBe(`${KALSHI_REST_BASE.demo}/portfolio/orders/order-123`);
+    expect(calls[0]!.url).toBe(
+      `${KALSHI_REST_BASE.demo}/portfolio/events/orders/order-123?subaccount=0`,
+    );
     expect(calls[0]!.headers["KALSHI-ACCESS-KEY"]).toBe("test-key-id");
   });
 
@@ -194,9 +424,11 @@ describe("kalshi-client portfolio reads", () => {
     const orders = await client.getOrders("KXATPMATCH-26JUL22BORBUR-BUR");
     expect(orders).toHaveLength(1);
     expect(calls[0]!.url).toContain("/portfolio/orders?ticker=KXATPMATCH");
+    expect(calls[0]!.url).toContain("subaccount=0");
     const fills = await client.getFills("KXATPMATCH-26JUL22BORBUR-BUR");
     expect(fills).toHaveLength(1);
     expect(calls[1]!.url).toContain("/portfolio/fills?ticker=");
+    expect(calls[1]!.url).toContain("subaccount=0");
     const balance = await client.getBalance();
     expect(balance.balanceCents).toBe(12_345);
   });

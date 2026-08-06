@@ -4,6 +4,7 @@ import type {
 } from "../../bot/kalshi-client.ts";
 import { KalshiRequestRejectedError } from "../../bot/kalshi-client.ts";
 import { asTicketId, type ProviderPlacementInput } from "./domain.ts";
+import type { KalshiExpectedOrder } from "./kalshi-reconciliation.ts";
 
 export type KalshiExecutionOrder = Omit<
   KalshiOrderRequest,
@@ -43,6 +44,25 @@ export class KalshiOrderMappingError extends Error {
   }
 }
 
+/** The exact immutable provider terms shared by placement and reconciliation. */
+export function expectedKalshiOrder(
+  environment: KalshiClient["environment"],
+  outId: string,
+  order: KalshiExecutionOrder,
+  clientOrderId: string,
+): KalshiExpectedOrder {
+  return {
+    environment,
+    outId,
+    ticker: order.ticker,
+    clientOrderId,
+    outcome: order.side,
+    bookSide: order.side === "yes" ? "bid" : "ask",
+    count: order.count,
+    yesPriceCents: order.side === "yes" ? order.priceCents : 100 - order.priceCents,
+  };
+}
+
 /** Bind the generic authorized executor to the existing signed Kalshi client. */
 export function createKalshiExecutionPlacer(
   client: Pick<KalshiClient, "environment" | "placeOrder">,
@@ -78,13 +98,13 @@ export function createKalshiExecutionPlacer(
       return {
         accepted: false as const,
         reason: "Kalshi processed the order without a fill or resting quantity",
-        responseSummary: summarizeKalshiOrderResult(client.environment, result, order),
+        responseSummary: summarizeKalshiOrderResult(client.environment, input.request.outId, result, order),
       };
     }
     return {
       accepted: true as const,
       ticketId: asTicketId(result.orderId),
-      responseSummary: summarizeKalshiOrderResult(client.environment, result, order),
+      responseSummary: summarizeKalshiOrderResult(client.environment, input.request.outId, result, order),
     };
   };
 }
@@ -94,28 +114,43 @@ export function createKalshiBuyOrderMapper(
   side: KalshiExecutionOrder["side"],
   options: { postOnly?: boolean } = {},
 ): KalshiExecutionOrderMapper {
-  return ({ request, effectiveStake }) => {
-    if (request.selection.toLowerCase() !== side) {
-      throw new KalshiOrderMappingError(
-        `Execution selection ${request.selection} does not match Kalshi ${side.toUpperCase()} mapper`,
-      );
-    }
-    const priceCents = decimalOddsToKalshiPriceCents(request.decimalOdds);
-    const count = Math.floor(effectiveStake / priceCents);
-    if (count < 1) {
-      throw new KalshiOrderMappingError(
-        `Effective stake ${effectiveStake} is below the ${priceCents}-cent cost of one ${side.toUpperCase()} contract`,
-      );
-    }
-    return {
-      ticker: request.marketId,
-      side,
-      count,
-      priceCents,
-      // This helper consumes executable top-of-book liquidity. Callers that
-      // intentionally load a maker quote can opt back into post-only behavior.
-      postOnly: options.postOnly ?? false,
-    };
+  return ({ request, effectiveStake }) => projectKalshiBuyOrder({
+    ticker: request.marketId,
+    selection: request.selection,
+    effectiveStake,
+    decimalOdds: request.decimalOdds,
+    side,
+    postOnly: options.postOnly,
+  });
+}
+
+/** Pure term projection; reconciliation calls the same math as placement. */
+export function projectKalshiBuyOrder(input: {
+  ticker: string;
+  selection: string;
+  effectiveStake: number;
+  decimalOdds: number;
+  side: KalshiExecutionOrder["side"];
+  postOnly?: boolean;
+}): KalshiExecutionOrder {
+  if (input.selection.toLowerCase() !== input.side) {
+    throw new KalshiOrderMappingError(
+      `Execution selection ${input.selection} does not match Kalshi ${input.side.toUpperCase()} mapper`,
+    );
+  }
+  const priceCents = decimalOddsToKalshiPriceCents(input.decimalOdds);
+  const count = Math.floor(input.effectiveStake / priceCents);
+  if (count < 1) {
+    throw new KalshiOrderMappingError(
+      `Effective stake ${input.effectiveStake} is below the ${priceCents}-cent cost of one ${input.side.toUpperCase()} contract`,
+    );
+  }
+  return {
+    ticker: input.ticker,
+    side: input.side,
+    count,
+    priceCents,
+    postOnly: input.postOnly ?? false,
   };
 }
 
@@ -135,9 +170,11 @@ export function decimalOddsToKalshiPriceCents(decimalOdds: number): number {
 
 function summarizeKalshiOrderResult(
   environment: KalshiClient["environment"],
+  outId: string,
   result: Awaited<ReturnType<KalshiClient["placeOrder"]>>,
   order: KalshiExecutionOrder,
 ): KalshiOrderResponseSummary {
+  const expected = expectedKalshiOrder(environment, outId, order, result.clientOrderId);
   const state =
     result.fillCount > 0 && result.remainingCount > 0
       ? "partially_filled"
@@ -147,12 +184,12 @@ function summarizeKalshiOrderResult(
           ? "resting"
           : "not_filled";
   return {
-    environment,
+    environment: expected.environment,
     orderId: result.orderId,
     clientOrderId: result.clientOrderId,
-    ticker: order.ticker,
-    outcome: order.side,
-    count: order.count,
+    ticker: expected.ticker,
+    outcome: expected.outcome,
+    count: expected.count,
     priceCents: order.priceCents,
     state,
     fillCount: result.fillCount,

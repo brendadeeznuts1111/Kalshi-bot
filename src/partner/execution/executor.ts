@@ -33,6 +33,10 @@ import {
   rejectReservation,
   releaseExpiredReservations,
 } from "./reservation.ts";
+import {
+  appendCancellationJournalEntry,
+  appendReservationJournalEntry,
+} from "./execution-journal.ts";
 import { ensureExecutionSchema } from "./sql.ts";
 
 const DEFAULT_RESERVATION_TTL_MS = 30_000;
@@ -210,6 +214,7 @@ export async function executeAuthorizedBet(
         authorization,
         request,
         effectiveStake,
+        partnerSplitBps: dependencies.partnerSplitBps,
         expiresAtMs,
         nowMs,
       });
@@ -229,9 +234,33 @@ export async function executeAuthorizedBet(
       if (!created.created) {
         return { kind: "result" as const, result: replayResult(created.reservation) };
       }
+      appendReservationJournalEntry(db, {
+        partnerCode: request.partnerCode,
+        outId: request.outId,
+        skin: request.skin,
+        provider: authorization.provider,
+        currency: authorization.currency,
+        reservationId: created.reservation.id,
+        providerOrderId: null,
+        sourceKey: `reservation:${created.reservation.id}`,
+        exposureMinor: effectiveStake,
+        createdAtMs: nowMs,
+      });
       const claimed = claimReservationForPlacement(db, {
         id: created.reservation.id,
         placementOwner,
+        ...(dependencies.capturePlacementExpectation
+          ? {
+              providerResponse: {
+                placementExpectation: dependencies.capturePlacementExpectation({
+                  authorization,
+                  request,
+                  effectiveStake,
+                  idempotencyKey: request.idempotencyKey,
+                }),
+              },
+            }
+          : {}),
         nowMs,
       });
       if (claimed === null) throw new Error("new reservation could not be claimed for placement");
@@ -262,6 +291,10 @@ export async function executeAuthorizedBet(
           id: reservation.id,
           placementOwner,
           reason,
+          ...(reservation.providerResponse && typeof reservation.providerResponse === "object"
+            && "placementExpectation" in reservation.providerResponse
+            ? { placementExpectation: reservation.providerResponse.placementExpectation }
+            : {}),
           nowMs,
         });
         if (unknown === null) throw new Error("reservation ownership changed before unknown result");
@@ -298,6 +331,19 @@ export async function executeAuthorizedBet(
           nowMs,
         });
         if (rejected === null) throw new Error("reservation ownership changed before rejection");
+        appendCancellationJournalEntry(db, {
+          partnerCode: request.partnerCode,
+          outId: request.outId,
+          skin: request.skin,
+          provider: authorization.provider,
+          currency: authorization.currency,
+          reservationId: reservation.id,
+          providerOrderId: null,
+          sourceKey: `reservation:${reservation.id}:rejected`,
+          cancelledQuantity: 1,
+          unitPriceMinor: reservation.effectiveStake,
+          createdAtMs: nowMs,
+        });
         enqueueExecutionReceipt(
           db,
           authorization,

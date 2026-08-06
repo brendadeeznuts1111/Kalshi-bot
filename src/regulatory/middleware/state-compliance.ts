@@ -31,6 +31,54 @@ export interface ComplianceContext {
   userId: string;
   playId: string;
   parsedBody: BetRequestBody;
+  executionIdempotencyKey?: string;
+}
+
+/** Live execution creates a proposal; dry runs never create regulatory plays. */
+export function requireExecutionStateCompliance(db: Database) {
+  const compliance = new ComplianceRepository(db);
+  return async (req: Request, next: () => Response | Promise<Response>): Promise<Response> => {
+    const body = await req.clone().json().catch(() => null) as Record<string, unknown> | null;
+    if (!body || body.dryRun !== false) return next();
+    const stateCode = stringField(body.stateCode);
+    const sportId = stringField(body.sportId);
+    const betType = stringField(body.betType);
+    const marketId = stringField(body.ticker);
+    const nodeId = stringField(body.partnerCode);
+    const bodyKey = stringField(body.idempotencyKey);
+    const headerKey = req.headers.get("Idempotency-Key")?.trim() || null;
+    const idempotencyKey = bodyKey ?? headerKey;
+    const stake = body.stakeMinorUnits;
+    const principal = req.tradingPrincipal;
+    if (!stateCode || !sportId || !betType || !marketId || !nodeId || !idempotencyKey ||
+        !Number.isSafeInteger(stake) || (stake as number) <= 0 || !principal) {
+      return Response.json({ error: "Live execution regulatory fields are incomplete" }, { status: 400 });
+    }
+    if (bodyKey && headerKey && bodyKey !== headerKey) {
+      return Response.json({ error: "Idempotency keys do not match" }, { status: 400 });
+    }
+    const playId = `exec-${Bun.SHA256.hash(idempotencyKey, "hex").slice(0, 32)}`;
+    try {
+      compliance.proposeExecutionBetAtomic({
+        nodeId, userId: principal.actorId, stateCode, sportId, marketId,
+        wagerAmount: (stake as number) / 100, betType, playId, idempotencyKey,
+      });
+      (req as Request & { compliance?: ComplianceContext }).compliance = {
+        stateCode, userId: principal.actorId, playId, executionIdempotencyKey: idempotencyKey,
+        parsedBody: { wagerAmount: (stake as number) / 100, betType, sportId, marketId, stateCode },
+      };
+      return next();
+    } catch (err) {
+      if (err instanceof BetBlockedError) {
+        return Response.json({ error: err.message, ruleId: err.ruleId }, { status: 403 });
+      }
+      throw err;
+    }
+  };
+}
+
+function stringField(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
 declare module "bun" {

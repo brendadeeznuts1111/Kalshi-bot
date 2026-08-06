@@ -1,8 +1,8 @@
 # Partner domain architecture
 
-Five interconnected layers. **Seat-capital-shaped** naming; **Kalshi-bot** is the
-local SSOT for registry + Fantasy Ultra until a separate seat-capital service is
-the only writer.
+Five interconnected layers. **Seat-capital-shaped** naming; **Kalshi-bot** is
+the local SSOT for registry + Fantasy Ultra until a separate seat-capital
+service is the only writer.
 
 Machine status: `bun run partner:domain` · `bun run partner:domain -- --json`  
 Code map: [`src/partner/domain.ts`](../src/partner/domain.ts)
@@ -11,21 +11,21 @@ Code map: [`src/partner/domain.ts`](../src/partner/domain.ts)
 
 ## Layers
 
-| Layer | Purpose | Kalshi-bot home |
-|-------|---------|-----------------|
-| **Partner** | Financial owner | `partners` table · profit_split / commission_rate |
-| **Communication** | Chat / bot / alerts | `src/telegram/` · finance-cron notify · `TELEGRAM_TOPIC_ID_{CODE}` |
-| **Accounts / Outs** | Betting accounts + skins | `betting_accounts` · `meta.skins[]` · `partner:capacity` |
-| **Assets** | Credentials & identity | Proton Pass · per-out `env_prefix` · `meta.vaultId` (no secrets in DB) |
-| **Finance** | Ledger & reports | `partner_ledger` (`desk_snapshot` · `odds_book` · `ticket`) · finance-cron |
+| Layer               | Purpose                  | Kalshi-bot home                                                            |
+| ------------------- | ------------------------ | -------------------------------------------------------------------------- |
+| **Partner**         | Financial owner          | `partners` table · profit_split / commission_rate                          |
+| **Communication**   | Chat / bot / alerts      | `src/telegram/` · finance-cron notify · `TELEGRAM_TOPIC_ID_{CODE}`         |
+| **Accounts / Outs** | Betting accounts + skins | `betting_accounts` · `meta.skins[]` · `partner:capacity`                   |
+| **Assets**          | Credentials & identity   | Proton Pass · per-out `env_prefix` · `meta.vaultId` (no secrets in DB)     |
+| **Finance**         | Ledger & reports         | Legacy `partner_ledger` plus the separate authorized-execution journal     |
 
 ### Maturity legend
 
-| Mark | Meaning |
-|------|---------|
-| **built** | Shipped and usable in this repo |
+| Mark        | Meaning                                  |
+| ----------- | ---------------------------------------- |
+| **built**   | Shipped and usable in this repo          |
 | **partial** | Scaffold / one path works; not full loop |
-| **planned** | Named in architecture; not implemented |
+| **planned** | Named in architecture; not implemented   |
 
 Run `bun run partner:domain` for the live component checklist.
 
@@ -66,15 +66,15 @@ graph TD
 
 ## Naming
 
-| Entity | Rule | Example |
-|--------|------|---------|
-| Partner code | Uppercase short | `SPEN` |
-| Out ID | `out-{code}-{n}` | `out-SPEN-1` |
-| Vault | `vault-{outId}` | `vault-out-SPEN-1` |
-| Liquidity key | `{outId}@{skin}` | `out-SPEN-1@ezlive` |
-| Avatar | `{code}.svg/png` | `SPEN.png` |
-| Env prefix | **Per-out** `{BOOK}_{CODE}_{N}_` | `FANTASY402_SPEN_1_` |
-| Env secrets | `{prefix}{KEY}` | `FANTASY402_SPEN_1_BEARER_TOKEN` |
+| Entity        | Rule                             | Example                          |
+| ------------- | -------------------------------- | -------------------------------- |
+| Partner code  | Uppercase short                  | `SPEN`                           |
+| Out ID        | `out-{code}-{n}`                 | `out-SPEN-1`                     |
+| Vault         | `vault-{outId}`                  | `vault-out-SPEN-1`               |
+| Liquidity key | `{outId}@{skin}`                 | `out-SPEN-1@ezlive`              |
+| Avatar        | `{code}.svg/png`                 | `SPEN.png`                       |
+| Env prefix    | **Per-out** `{BOOK}_{CODE}_{N}_` | `FANTASY402_SPEN_1_`             |
+| Env secrets   | `{prefix}{KEY}`                  | `FANTASY402_SPEN_1_BEARER_TOKEN` |
 
 ---
 
@@ -84,45 +84,72 @@ graph TD
 
 - `partners` / `betting_accounts` in event-store
 - Out × skin matrix (`skins.ts`, `partner:capacity`)
-- Fantasy402 adapter: login, stream-list, sports inventory (30 buckets), Pandora coefficients
-- Seed: `FANTASY402_PARTNER_CODE`, `FANTASY402_SKINS_JSON`, `FANTASY402_VAULT_ID`
+- Fantasy402 adapter: login, stream-list, sports inventory (30 buckets), Pandora
+  coefficients
+- Seed: `FANTASY402_PARTNER_CODE`, `FANTASY402_SKINS_JSON`,
+  `FANTASY402_VAULT_ID`
 
 ### Assets
 
 - Secrets via env / Proton Pass only (`partner:vault:provision`)
 - DB holds `env_prefix` + non-secret `meta_json` only
-- **Visuals** (`src/partner/visuals.ts`): deterministic HSL → `Bun.color` hex/rgba/ansi-16m,
-  contrast text, SVG + PNG avatars (`partner:profile` / `partner:avatars`)
+- **Visuals** (`src/partner/visuals.ts`): deterministic HSL → `Bun.color`
+  hex/rgba/ansi-16m, contrast text, SVG + PNG avatars (`partner:profile` /
+  `partner:avatars`)
 
 ### Communication (partial)
 
 - Telegram bot for calibration/dashboard subscribe
 - `partner:finance-cron --notify` with optional `TELEGRAM_TOPIC_ID_{CODE}`
+- Hash-bound authorization approval/revocation and a durable receipt outbox
+- Reconciliation, lifecycle, and receipt delivery run independently of Telegram
+  long polling
 
 ### Finance (partial → live kinds)
 
-- `partner_ledger`: `desk_snapshot` (cron) · `odds_book` (ws-ingest) · `ticket` (ingest-tickets / betGroups)
-- Ticket ingest upserts on ticketNumber; stores legs + open/settled status from wire markers
+- `partner_ledger`: `desk_snapshot` (cron) · `odds_book` (ws-ingest) · `ticket`
+  (ingest-tickets / betGroups)
+- Ticket ingest upserts on ticketNumber; stores legs + open/settled status from
+  wire markers
 - Finance-cron / health report open risk vs settled count when tickets exist
 - Settlement list URL still unmapped — net P&L after settle is planned
+- Kalshi authorized execution has a separate append-only integer journal for
+  reservation, fill, fee, cancellation, settlement, reversal, cash, exposure,
+  realized P&L, and partner-split projections
+
+### Authorized Kalshi execution (built, default off)
+
+- Authenticated order and cancellation routes resolve the exact
+  partner/out/skin/account and require an active hash-bound SQLite grant.
+- Fresh executable book, live balance, liquidity, daily/exposure caps,
+  fail-closed risk health, and transactional reservation all precede provider
+  dispatch.
+- Cursor-complete account order/fill lifecycle ingestion and the immutable
+  execution journal preserve partial-fill and settlement accounting.
+- Independent reconciliation, lifecycle, and receipt workers plus the demo
+  evidence collector are operational tooling; production still requires a
+  separately reviewed arm decision after seven real passing demo days.
+- Fantasy402 execution remains HAR-only and is not connected to this path.
 
 ---
 
 ## Target interaction flows
 
-| Action | Target flow | Today |
-|--------|-------------|--------|
-| Onboard partner | Partner row + Telegram group + avatar | Partner row + seed out; TG/avatar manual |
-| `/add` out | Bot → vault + out + confirm | CLI seed / vault provision |
-| `/capacity` | Bot → capacity tree | `bun run partner:capacity` |
-| Daily report | Cron → desk + tickets → TG | **Built** (`partner:finance-cron`); settlement P&L planned |
-| Bet execution | Route out@skin → place → ledger | Odds live; placeOrder via HAR map only; ticket ingest from betGroups |
+| Action               | Target flow                                                                        | Today                                                                         |
+| -------------------- | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| Onboard partner      | Partner row + Telegram group + avatar                                              | Partner row + seed out; TG/avatar manual                                      |
+| `/add` out           | Bot → vault + out + confirm                                                        | CLI seed / vault provision                                                    |
+| `/capacity`          | Bot → capacity tree                                                                | `bun run partner:capacity`                                                    |
+| Daily report         | Cron → desk + tickets → TG                                                         | **Built** (`partner:finance-cron`); settlement P&L planned                    |
+| Kalshi execution     | Authenticated route → grant/risk gate → reserve → place/cancel → lifecycle journal | **Built, default off**; demo evidence soak remains open                       |
+| Fantasy402 execution | Route out@skin → place → legacy ticket ledger                                      | HAR map only; ticket ingest from betGroups; not wired to authorized execution |
 
 ---
 
 ## Operator catalog (Bun-only)
 
-**Global tool required:** Bun. Everything else is `bun run` / `bunx` (e.g. `bunx drizzle-kit`).  
+**Global tool required:** Bun. Everything else is `bun run` / `bunx` (e.g.
+`bunx drizzle-kit`).
 No Vite/React partner UI — static board baked from SQLite.
 
 ### Daily loop
@@ -159,40 +186,48 @@ bun run serve
 
 ### Full CLI map
 
-| Command | Layer |
-|---------|--------|
-| `partner:domain` | All (status) |
-| `partner:toml` | Partner + Accounts (Bun.TOML config seed/export) |
-| `partner:health` | Registry + env + risk + ledger freshness |
-| `partner:desk-smoke` | Per-out secret readiness + optional signed `login()` |
-| `partner:dashboard` | Static HTML board + `state.json` (no Vite) |
-| `partner:finance-cron` | Desk report + risk Telegram + optional auto-ws |
-| `partner:test-fantasy` | Live Ultra session smoke (`--out=` prefix-aware) |
-| `partner:vault:provision` | Assets — Proton custom item + `pass://` map (`--out=`) |
-| `partner:webview-ws-capture` | Bun.WebView CDP → Pandora JSONL frames |
-| `partner:ws-ingest` | JSONL/capture → coefficients → `odds_book` ledger |
-| `partner:ingest-tickets` | betGroups JSON/JSONL → `ticket` ledger |
-| `partner:placebet-har` | Chrome HAR → PlaceBet URL map (+ optional ticket ingest) |
-| `partner:capacity` / `partner:registry` | Accounts |
-| `partner:profile` / `partner:avatars` | Partner visuals (Bun.color) |
-| `partner:sports` | Accounts (inventory) |
-| `partner:sync` | Accounts (events) |
-| `partner:pandora-probe` | Pandora Socket.IO probe |
-| `bun src/telegram/bot.ts` | Communication |
-| `bunx drizzle-kit …` | DB tooling only (not a global install) |
+| Command                                               | Layer                                                                 |
+| ----------------------------------------------------- | --------------------------------------------------------------------- |
+| `partner:domain`                                      | All (status)                                                          |
+| `partner:toml`                                        | Partner + Accounts (Bun.TOML config seed/export)                      |
+| `partner:health`                                      | Registry + env + risk + ledger freshness                              |
+| `partner:desk-smoke`                                  | Per-out secret readiness + optional signed `login()`                  |
+| `partner:dashboard`                                   | Static HTML board + `state.json` (no Vite)                            |
+| `partner:finance-cron`                                | Desk report + risk Telegram + optional auto-ws                        |
+| `partner:reconcile-kalshi`                            | Leased ambiguous-placement reconciliation                             |
+| `partner:sync-kalshi-lifecycle`                       | Cursor-complete account order/fill/settlement ingestion               |
+| `partner:deliver-receipts`                            | Leased durable Telegram receipt delivery                              |
+| `partner:execution:preview` / `:register` / `:remove` | Independent Bun cron worker lifecycle                                 |
+| `partner:execution:demo-collect`                      | Authoritative demo provider/SQLite evidence + deterministic scenarios |
+| `partner:execution:demo-graduation`                   | Seven-day continuity and artifact-chain verifier                      |
+| `partner:execution:demo-proof`                        | Offline sanitized-input compiler validation only                      |
+| `partner:test-fantasy`                                | Live Ultra session smoke (`--out=` prefix-aware)                      |
+| `partner:vault:provision`                             | Assets — Proton custom item + `pass://` map (`--out=`)                |
+| `partner:webview-ws-capture`                          | Bun.WebView CDP → Pandora JSONL frames                                |
+| `partner:ws-ingest`                                   | JSONL/capture → coefficients → `odds_book` ledger                     |
+| `partner:ingest-tickets`                              | betGroups JSON/JSONL → `ticket` ledger                                |
+| `partner:placebet-har`                                | Chrome HAR → PlaceBet URL map (+ optional ticket ingest)              |
+| `partner:capacity` / `partner:registry`               | Accounts                                                              |
+| `partner:profile` / `partner:avatars`                 | Partner visuals (Bun.color)                                           |
+| `partner:sports`                                      | Accounts (inventory)                                                  |
+| `partner:sync`                                        | Accounts (events)                                                     |
+| `partner:pandora-probe`                               | Pandora Socket.IO probe                                               |
+| `bun src/telegram/bot.ts`                             | Communication                                                         |
+| `bunx drizzle-kit …`                                  | DB tooling only (not a global install)                                |
 
 ### Dependency rule
 
-| Level | Contents |
-|-------|----------|
-| Global | **Bun** only |
+| Level             | Contents                                 |
+| ----------------- | ---------------------------------------- |
+| Global            | **Bun** only                             |
 | package.json deps | Domain runtime (`drizzle-orm`, `zod`, …) |
-| devDependencies | Reproducible CI (`typescript`, types) |
-| `bunx` | One-off CLIs (`drizzle-kit`, generators) |
+| devDependencies   | Reproducible CI (`typescript`, types)    |
+| `bunx`            | One-off CLIs (`drizzle-kit`, generators) |
 
 ### Partners TOML (`Bun.TOML`)
 
-Non-secret registry on disk (v1.1 TOML via Bun native parse/stringify + **Zod** shape check):
+Non-secret registry on disk (v1.1 TOML via Bun native parse/stringify + **Zod**
+shape check):
 
 ```bash
 cp config/partners.example.toml config/partners.toml   # edit outs/skins
@@ -215,24 +250,24 @@ bun run partner:health -- --json          # includes risk.snapshot (alert payloa
 
 **Risk health** (`evaluateRiskHealth`) compares capacity vs odds_book:
 
-| Code | Meaning |
-|------|---------|
-| `capacity_without_odds` | Skins/capacity but no lines today |
-| `odds_without_capacity` | Lines but $0 capacity |
-| `odds_without_secrets` | Lines exist but can't trade (env missing) |
-| `odds_stale` | odds_book older than TTL (default 2h) |
-| `balance_vs_capacity` | workingBalance ≪ sum of skin limits |
-| `tickets_without_secrets` | Ticket rows today but env missing |
-| `open_ticket_exposure` | Open (unsettled) ticket risk on an out |
+| Code                      | Meaning                                   |
+| ------------------------- | ----------------------------------------- |
+| `capacity_without_odds`   | Skins/capacity but no lines today         |
+| `odds_without_capacity`   | Lines but $0 capacity                     |
+| `odds_without_secrets`    | Lines exist but can't trade (env missing) |
+| `odds_stale`              | odds_book older than TTL (default 2h)     |
+| `balance_vs_capacity`     | workingBalance ≪ sum of skin limits       |
+| `tickets_without_secrets` | Ticket rows today but env missing         |
+| `open_ticket_exposure`    | Open (unsettled) ticket risk on an out    |
 
 **Threshold** (`--risk-threshold` / `PARTNER_FINANCE_RISK_THRESHOLD`):
 
-| Value | Alerts on |
-|-------|-----------|
-| `error` | errors only (ignore warns) |
-| `warn` | errors + warns (**default**) |
-| `info` | all findings |
-| `off` | no risk alerts |
+| Value   | Alerts on                    |
+| ------- | ---------------------------- |
+| `error` | errors only (ignore warns)   |
+| `warn`  | errors + warns (**default**) |
+| `info`  | all findings                 |
+| `off`   | no risk alerts               |
 
 Telegram risk messages include a truncated `health.json` block (same shape as
 `partner:health --json` → `risk.snapshot`) unless `--no-health-json`.
@@ -247,14 +282,13 @@ PARTNER_FINANCE_AUTO_WS_INGEST=1 bun run partner:finance-cron
 If `capacity_without_odds` persists with no fresh book for ≥24h, runs one
 WebView capture+ingest. Keep manual unless you trust capture in the cron host.
 
-
 #### What `--seed` writes
 
-| Target | Content |
-|--------|---------|
-| `partners` | Financial entity rows (upsert on `id`) |
-| `betting_accounts` | Outs (upsert on `id`); **skins in `meta_json`**, not a separate table |
-| Capacity | **Not cached** — computed at read time (`computeProviderCapacity` sums skins) |
+| Target             | Content                                                                       |
+| ------------------ | ----------------------------------------------------------------------------- |
+| `partners`         | Financial entity rows (upsert on `id`)                                        |
+| `betting_accounts` | Outs (upsert on `id`); **skins in `meta_json`**, not a separate table         |
+| Capacity           | **Not cached** — computed at read time (`computeProviderCapacity` sums skins) |
 
 Idempotent: re-run seed updates in place (SQLite `ON CONFLICT DO UPDATE`).
 
@@ -266,17 +300,21 @@ Idempotent: re-run seed updates in place (SQLite `ON CONFLICT DO UPDATE`).
 3. book fallback   FANTASY402_BEARER_TOKEN
 ```
 
-Canonical `env_prefix` is **per-out**: `{BOOK}_{CODE}_{N}_`. Bare `FANTASY402_` or partner-only `FANTASY402_SPEN_` auto-upgrade on materialize/seed.  
-Keys (not USER/PASS): `BEARER_TOKEN` · `CUSTOMER_ID` · `AGENT_ID` · `PASSWORD` · `DOMAIN` · `SKIN` · `CURRENCY`.  
+Canonical `env_prefix` is **per-out**: `{BOOK}_{CODE}_{N}_`. Bare `FANTASY402_`
+or partner-only `FANTASY402_SPEN_` auto-upgrade on materialize/seed.
+Keys (not USER/PASS): `BEARER_TOKEN` · `CUSTOMER_ID` · `AGENT_ID` · `PASSWORD` ·
+`DOMAIN` · `SKIN` · `CURRENCY`.
 API base URL lives in TOML `url=` (non-secret), not a `BASE_URL` env key.
 
-Code: `canonicalOutEnvPrefix` · `resolvePartnerEnv` · `validatePartnerAssetPrefixes`.
+Code: `canonicalOutEnvPrefix` · `resolvePartnerEnv` ·
+`validatePartnerAssetPrefixes`.
 
 Secrets stay out of TOML (`env_prefix` + `vault_id` only).
 
 #### Adding a new out (runbook)
 
-1. Partner gives credentials (customerID, agentID, password, bearer token) + optional skin limits.
+1. Partner gives credentials (customerID, agentID, password, bearer token) +
+   optional skin limits.
 2. Pick next out id: `out-{CODE}-{n}` (e.g. `out-SPEN-3`).
 3. Append to `config/partners.toml`:
 
@@ -322,20 +360,21 @@ bun run partner:finance-cron -- --notify --probe-login
 PARTNER_FINANCE_CRON=1 PARTNER_FINANCE_NOTIFY=1 bun run cron:start
 ```
 
-| Env | Role |
-|-----|------|
-| `PARTNER_FINANCE_CRON=1` | Enable job in `cron-main` |
-| `PARTNER_FINANCE_CRON_SCHEDULE` | Default `0 9 * * *` |
-| `PARTNER_FINANCE_NOTIFY=1` | Desk Telegram summary |
-| `PARTNER_FINANCE_RISK_ALERT=1` | Risk-health Telegram (default on if NOTIFY=1; set `0` to disable) |
-| `PARTNER_FINANCE_RISK_DIGEST=1` | Always send risk summary even when clean |
-| `PARTNER_FINANCE_RISK_FORCE=1` | Skip fingerprint dedupe |
-| `PARTNER_FINANCE_STRICT_ENV=1` | Fail if secrets missing |
-| `PARTNER_FINANCE_PROBE_LOGIN=1` | Fantasy `login()` when creds present |
-| `PARTNER_FINANCE_PARTNER` | Filter one partner code |
-| `TELEGRAM_TOPIC_ID_{CODE}` | Optional forum topic per partner |
+| Env                             | Role                                                              |
+| ------------------------------- | ----------------------------------------------------------------- |
+| `PARTNER_FINANCE_CRON=1`        | Enable job in `cron-main`                                         |
+| `PARTNER_FINANCE_CRON_SCHEDULE` | Default `0 9 * * *`                                               |
+| `PARTNER_FINANCE_NOTIFY=1`      | Desk Telegram summary                                             |
+| `PARTNER_FINANCE_RISK_ALERT=1`  | Risk-health Telegram (default on if NOTIFY=1; set `0` to disable) |
+| `PARTNER_FINANCE_RISK_DIGEST=1` | Always send risk summary even when clean                          |
+| `PARTNER_FINANCE_RISK_FORCE=1`  | Skip fingerprint dedupe                                           |
+| `PARTNER_FINANCE_STRICT_ENV=1`  | Fail if secrets missing                                           |
+| `PARTNER_FINANCE_PROBE_LOGIN=1` | Fantasy `login()` when creds present                              |
+| `PARTNER_FINANCE_PARTNER`       | Filter one partner code                                           |
+| `TELEGRAM_TOPIC_ID_{CODE}`      | Optional forum topic per partner                                  |
 
-Pipeline: **registry → `resolvePartnerEnv` → capacity → public inventory → `partner_ledger` desk_snapshot → Telegram**.
+Pipeline: **registry → `resolvePartnerEnv` → capacity → public inventory →
+`partner_ledger` desk_snapshot → Telegram**.
 
 #### Bun.WebView WS → priced book
 
@@ -354,19 +393,19 @@ bun run partner:ws-ingest -- --capture --seconds=25
 PARTNER_FINANCE_WEBVIEW=1 bun run partner:finance-cron
 ```
 
-| Ledger kind | Source |
-|-------------|--------|
-| `desk_snapshot` | capacity / env (finance-cron) |
-| `odds_book` | WebView CDP + Pandora `eventCoefficients` gzip |
-| `ticket` | `partner:ingest-tickets` (betGroups JSON/JSONL) |
+| Ledger kind     | Source                                          |
+| --------------- | ----------------------------------------------- |
+| `desk_snapshot` | capacity / env (finance-cron)                   |
+| `odds_book`     | WebView CDP + Pandora `eventCoefficients` gzip  |
+| `ticket`        | `partner:ingest-tickets` (betGroups JSON/JSONL) |
 
 #### `partner_ledger` (honest shape)
 
-| kind | Written by | `amount` / `secondary` |
-|------|------------|-------------------------|
+| kind            | Written by                           | `amount` / `secondary`    |
+| --------------- | ------------------------------------ | ------------------------- |
 | `desk_snapshot` | finance-cron (daily replace per out) | capacity / workingBalance |
-| `odds_book` | `partner:ws-ingest` | priced lines / events |
-| `ticket` | `partner:ingest-tickets` | risk / toWin |
+| `odds_book`     | `partner:ws-ingest`                  | priced lines / events     |
+| `ticket`        | `partner:ingest-tickets`             | risk / toWin              |
 
 ```bash
 # Offline ingest of captured PlaceBet / open-ticket response (betGroups wire)
@@ -389,12 +428,12 @@ bun run partner:health         # ticketsToday / open_ticket_exposure / tickets_w
 
 Ticket ledger behavior:
 
-| Behavior | Detail |
-|----------|--------|
-| Dedupe key | `out_id` + `external_id` (= ticketNumber) |
-| Re-ingest | Updates `raw_json` / risk / toWin when state·result·isWin change |
-| Status | `open` when result/state are 0; `settled` when isWin set or non-zero markers |
-| Legs | Stored in `raw_json.legs[]` (eventId, market, teams, odds) |
+| Behavior   | Detail                                                                       |
+| ---------- | ---------------------------------------------------------------------------- |
+| Dedupe key | `out_id` + `external_id` (= ticketNumber)                                    |
+| Re-ingest  | Updates `raw_json` / risk / toWin when state·result·isWin change             |
+| Status     | `open` when result/state are 0; `settled` when isWin set or non-zero markers |
+| Legs       | Stored in `raw_json.legs[]` (eventId, market, teams, odds)                   |
 
 **No Fantasy settlement list URL is mapped yet.** Ticket rows use the known
 `betGroups` response shape. placeOrder POST remains unmapped — capture HAR →
@@ -405,6 +444,7 @@ exposure when secrets are missing.
 
 ## Related docs
 
-- [PARTNER-FANTASY-ULTRA.md](PARTNER-FANTASY-ULTRA.md) — Fantasy402 network + sports
+- [PARTNER-FANTASY-ULTRA.md](PARTNER-FANTASY-ULTRA.md) — Fantasy402 network +
+  sports
 - [PROTONPASS.md](PROTONPASS.md) — vault / pass:// injection
 - Glossary partner-ops ids — `bun run partners:validate`
