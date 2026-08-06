@@ -104,7 +104,11 @@ function insertGrant(db: Database, approvedPolicy = policy()): AuthorizationId {
 describe("authorization SQL boundary", () => {
   test("migrates idempotently and records epoch milliseconds", () => {
     const db = new Database(":memory:");
-    expect(migrateAuthorizationSchema(db, NOW_MS)).toEqual(["001_account_authorization_core"]);
+    expect(migrateAuthorizationSchema(db, NOW_MS)).toEqual([
+      "001_account_authorization_core",
+      "002_account_authorization_receipt_outbox",
+      "003_account_authorization_revocations",
+    ]);
     expect(migrateAuthorizationSchema(db, NOW_MS + 1)).toEqual([]);
 
     const migration = db

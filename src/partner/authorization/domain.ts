@@ -51,9 +51,18 @@ function brandNonEmpty<T extends string>(value: string, label: string): T {
   return normalized as T;
 }
 
-function brandTelegramNumericId<T extends string>(value: string, label: string): T {
+function brandTelegramNumericId<T extends string>(
+  value: string,
+  label: string,
+  allowNegative = false,
+): T {
   const normalized = brandNonEmpty<string>(value, label);
-  if (!/^-?\d+$/.test(normalized)) throw new TypeError(`${label} must be a numeric Telegram ID`);
+  const pattern = allowNegative ? /^-?[1-9]\d*$/ : /^[1-9]\d*$/;
+  if (!pattern.test(normalized)) {
+    throw new TypeError(
+      `${label} must be ${allowNegative ? "a numeric" : "a positive numeric"} Telegram ID`,
+    );
+  }
   return normalized as T;
 }
 
@@ -90,7 +99,7 @@ export function asPolicyHash(value: string): PolicyHash {
 }
 
 export function asTelegramChatId(value: string): TelegramChatId {
-  return brandTelegramNumericId(value, "Telegram chat ID");
+  return brandTelegramNumericId(value, "Telegram chat ID", true);
 }
 
 export function asTelegramTopicId(value: string): TelegramTopicId {

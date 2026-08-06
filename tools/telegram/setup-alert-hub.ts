@@ -71,9 +71,12 @@ if (createTopics) {
 
 await setMyCommands(chatId, [
   { command: "status", description: "Current pipeline health snapshot" },
-  { command: "alerts", description: "Recent alert activity" },
+  { command: "dashboard", description: "Latest calibration dashboard" },
   { command: "members", description: "Channel member count and admins" },
-  { command: "dash", description: "Link to ops dashboard" },
+  { command: "subscribe", description: "Subscribe this chat to the digest" },
+  { command: "unsubscribe", description: "Remove this chat from the digest" },
+  { command: "approve", description: "Approve an authorization request by ID" },
+  { command: "revoke_out", description: "Revoke active grants for an out" },
 ]);
 
 console.log("✅ Bot commands registered");

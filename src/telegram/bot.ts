@@ -9,12 +9,30 @@
  *   /dashboard  — send latest calibration chart image
  *   /subscribe  — add chat to weekly digest list
  *   /unsubscribe— remove chat from digest list
+ *   /approve     — approve a pending partner authorization request
+ *   /revoke_out  — revoke all active grants for a permissioned out
  *   /help       — command reference
  */
-import { getUpdates, sendMessage, sendPhoto } from "./api.ts";
+import type { Database } from "bun:sqlite";
+import { openEventStore } from "../institutions/event-store/open-db.ts";
+import {
+  asAuthorizationReceiptLeaseOwner,
+} from "../partner/authorization/outbox.ts";
+import { migrateAuthorizationSchema } from "../partner/authorization/sql.ts";
 import { addSubscriber, removeSubscriber, listSubscribers } from "./subscribers.ts";
 import { joinPath } from "../research/paths.ts";
-import { getChatMemberCount, getChatAdministrators } from "./api.ts";
+import { handleAuthorizationCommand } from "./authorization-commands.ts";
+import { deliverAuthorizationReceiptBatch } from "./authorization-outbox-worker.ts";
+import { parseTelegramCommand } from "./commands.ts";
+import {
+  getChatAdministrators,
+  getChatMemberCount,
+  getMe,
+  getUpdates,
+  sendMessage,
+  sendPhoto,
+  type TelegramMessage,
+} from "./api.ts";
 
 const DASHBOARD_DIR = joinPath(import.meta.dir, "../../research/calibration-dashboard");
 const DASHBOARD_DATA = joinPath(DASHBOARD_DIR, "dashboard-data.json");
@@ -36,16 +54,43 @@ function fmtStatusLine(label: string, value: unknown): string {
   return `${label.padEnd(18)} ${v}`;
 }
 
-async function handleCommand(chatId: number, text: string, username?: string, firstName?: string) {
-  const cmd = text.trim().toLowerCase();
+export interface TelegramBotCommandContext {
+  authorizationDb: Database;
+  botUsername: string;
+}
 
-  if (cmd === "/start") {
+export async function handleCommand(
+  message: TelegramMessage,
+  context: TelegramBotCommandContext,
+): Promise<void> {
+  const parsed = message.text === undefined ? null : parseTelegramCommand(message.text);
+  if (parsed === null) return;
+  if (parsed.botUsername !== null && parsed.botUsername !== context.botUsername.toLowerCase()) {
+    return;
+  }
+  const authorization = handleAuthorizationCommand(
+    {
+      db: context.authorizationDb,
+      botUsername: context.botUsername,
+    },
+    message,
+  );
+  if (authorization.handled) return;
+
+  const cmd = parsed.name;
+  const chatId = message.chat.id;
+  const username = message.from?.username ?? message.chat.username;
+  const firstName = message.from?.first_name ?? message.chat.first_name;
+
+  if (cmd === "start") {
     await sendMessage(chatId,
       `🎯 Kalshi Bot Research Agent\n\n` +
       `Commands:\n` +
       `/status     — program metrics\n` +
       `/dashboard  — calibration charts\n` +
       `/members    — channel member count & admins\n` +
+      `/approve ID — approve partner authorization\n` +
+      `/revoke_out OUT — revoke out authorization\n` +
       `/subscribe  — weekly digest\n` +
       `/unsubscribe— stop digest\n` +
       `/help       — this help`,
@@ -53,20 +98,22 @@ async function handleCommand(chatId: number, text: string, username?: string, fi
     return;
   }
 
-  if (cmd === "/help") {
+  if (cmd === "help") {
     await sendMessage(chatId,
       `*Kalshi Bot Commands*\n\n` +
       `*/status* — live program metrics from shadow logs\n` +
       `*/dashboard* — latest seaborn calibration charts\n` +
       `*/subscribe* — add this chat to weekly Sunday digest\n` +
       `*/unsubscribe* — remove from digest\n\n` +
+      `*/approve ID* — approve a permissioned partner request\n` +
+      `*/revoke_out OUT* — revoke every active grant for an out\n\n` +
       `Dashboard refreshes every Sunday at 07:17 UTC.`,
       { parseMode: "Markdown" },
     );
     return;
   }
 
-  if (cmd === "/subscribe") {
+  if (cmd === "subscribe") {
     const added = await addSubscriber({
       chatId,
       username,
@@ -77,13 +124,13 @@ async function handleCommand(chatId: number, text: string, username?: string, fi
     return;
   }
 
-  if (cmd === "/unsubscribe") {
+  if (cmd === "unsubscribe") {
     const removed = await removeSubscriber(chatId);
     await sendMessage(chatId, removed ? "✅ Unsubscribed from digest." : "ℹ️ Not currently subscribed.");
     return;
   }
 
-  if (cmd === "/status") {
+  if (cmd === "status") {
     const dashboard = await loadDashboard();
     if (!dashboard) {
       await sendMessage(chatId, "❌ No dashboard data found. Run `bun run dashboard:generate` first.");
@@ -105,7 +152,7 @@ async function handleCommand(chatId: number, text: string, username?: string, fi
     return;
   }
 
-  if (cmd === "/dashboard") {
+  if (cmd === "dashboard") {
     const dashboard = await loadDashboard();
     if (!dashboard) {
       await sendMessage(chatId, "❌ No dashboard data. Run `bun run dashboard:generate` first.");
@@ -120,7 +167,7 @@ async function handleCommand(chatId: number, text: string, username?: string, fi
     return;
   }
 
-  if (cmd === "/members") {
+  if (cmd === "members") {
     try {
       const count = await getChatMemberCount(chatId);
       const admins = await getChatAdministrators(chatId);
@@ -142,7 +189,17 @@ async function handleCommand(chatId: number, text: string, username?: string, fi
 }
 
 async function pollLoop() {
-  console.log("🤖 Kalshi Telegram Bot started — long-polling");
+  const authorizationDb = openEventStore();
+  migrateAuthorizationSchema(authorizationDb);
+  const bot = await getMe();
+  const commandContext: TelegramBotCommandContext = {
+    authorizationDb,
+    botUsername: bot.username,
+  };
+  const leaseOwner = asAuthorizationReceiptLeaseOwner(
+    `telegram-authorization-bot-${process.pid}`,
+  );
+  console.log(`🤖 Kalshi Telegram Bot @${bot.username} started — long-polling`);
   let offset = 0;
   // eslint-disable-next-line no-constant-condition
   while (true) {
@@ -153,13 +210,15 @@ async function pollLoop() {
         const msg = u.message;
         if (!msg || !msg.text) continue;
         if (!msg.text.startsWith("/")) continue;
-        await handleCommand(
-          msg.chat.id,
-          msg.text,
-          msg.chat.username,
-          msg.chat.first_name,
-        );
+        await handleCommand(msg, commandContext);
       }
+      await deliverAuthorizationReceiptBatch(authorizationDb, {
+        nowMs: Date.now(),
+        leaseOwner,
+        send: sendMessage,
+        limit: 25,
+        clock: Date.now,
+      });
     } catch (err) {
       console.error("Poll error:", err);
       await Bun.sleep(5000);
