@@ -48,6 +48,8 @@ declare module "bun" {
     KALSHI_ENV?: string;
     /** Must be "1" to enable live trading when KALSHI_ALPHA_LIVE is set */
     KALSHI_PROD_ARMED?: string;
+    /** Independent fail-closed breaker for authorized partner order execution */
+    KALSHI_AUTHORIZED_EXECUTION_ENABLED?: string;
     /** Alpha live trading flag (prefer KALSHI_ALPHA_LIVE) */
     ALPHA_LIVE?: string;
     /** Alpha live trading flag */

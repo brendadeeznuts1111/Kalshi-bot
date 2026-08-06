@@ -4,6 +4,7 @@ import { generateKeyPairSync } from "node:crypto";
 import {
   backoffMs,
   createKalshiClient,
+  KalshiRequestOutcomeUnknownError,
   KALSHI_REST_BASE,
   placeOrder,
   resolveKalshiEnvironment,
@@ -49,8 +50,16 @@ function makeClient(overrides: {
 }
 
 function okOrder(orderId = "order-123"): Response {
-  return new Response(JSON.stringify({ order: { order_id: orderId, status: "resting" } }), {
-    status: 200,
+  return new Response(JSON.stringify({
+    order_id: orderId,
+    client_order_id: "provider-client-id",
+    fill_count: "2.00",
+    remaining_count: "3.00",
+    average_fill_price: "0.4200",
+    average_fee_paid: "0.0100",
+    ts_ms: 1_700_000_000_000,
+  }), {
+    status: 201,
     headers: { "Content-Type": "application/json" },
   });
 }
@@ -75,11 +84,20 @@ describe("kalshi-client placeOrder", () => {
   test("signs request and posts maker-first body to demo", async () => {
     const { client, calls } = makeClient({ responses: [okOrder()] });
     const result = await client.placeOrder({ ...ORDER, dryRun: false });
-    expect(result).toEqual({ orderId: "order-123", dryRun: false });
+    expect(result).toEqual({
+      orderId: "order-123",
+      clientOrderId: "provider-client-id",
+      fillCount: 2,
+      remainingCount: 3,
+      averageFillPriceCents: 42,
+      averageFeePaidCents: 1,
+      processedAtMs: 1_700_000_000_000,
+      dryRun: false,
+    });
 
     expect(calls).toHaveLength(1);
     const call = calls[0]!;
-    expect(call.url).toBe(`${KALSHI_REST_BASE.demo}/portfolio/orders`);
+    expect(call.url).toBe(`${KALSHI_REST_BASE.demo}/portfolio/events/orders`);
     expect(call.method).toBe("POST");
     expect(call.headers["KALSHI-ACCESS-KEY"]).toBe("test-key-id");
     expect(call.headers["KALSHI-ACCESS-TIMESTAMP"]).toMatch(/^\d+$/);
@@ -87,11 +105,9 @@ describe("kalshi-client placeOrder", () => {
 
     const body = call.body as Record<string, unknown>;
     expect(body.ticker).toBe(ORDER.ticker);
-    expect(body.side).toBe("yes");
-    expect(body.action).toBe("buy");
-    expect(body.count).toBe(5);
-    expect(body.yes_price).toBe(42);
-    expect(body.no_price).toBeUndefined();
+    expect(body.side).toBe("bid");
+    expect(body.count).toBe("5.00");
+    expect(body.price).toBe("0.4200");
     expect(typeof body.client_order_id).toBe("string");
     expect(body.time_in_force).toBe("good_till_canceled");
     expect(body.post_only).toBe(true);
@@ -99,13 +115,20 @@ describe("kalshi-client placeOrder", () => {
     expect(body.self_trade_prevention_type).toBe("taker_at_cross");
   });
 
-  test("no-side orders quote no_price; post_only caller-overridable", async () => {
+  test("NO buys map to an ask on the V2 YES-denominated book", async () => {
     const { client, calls } = makeClient({ responses: [okOrder()] });
     await client.placeOrder({ ...ORDER, side: "no", dryRun: false, postOnly: false });
     const body = calls[0]!.body as Record<string, unknown>;
-    expect(body.no_price).toBe(42);
-    expect(body.yes_price).toBeUndefined();
+    expect(body.side).toBe("ask");
+    expect(body.price).toBe("0.5800");
     expect(body.post_only).toBe(false);
+  });
+
+  test("forwards an explicit execution idempotency UUID", async () => {
+    const { client, calls } = makeClient({ responses: [okOrder()] });
+    const clientOrderId = "f47ac10b-58cc-5372-a567-0e02b2c3d479";
+    await client.placeOrder({ ...ORDER, dryRun: false, clientOrderId });
+    expect((calls[0]!.body as Record<string, unknown>).client_order_id).toBe(clientOrderId);
   });
 
   test("429 backs off and retries with the same request", async () => {
@@ -127,6 +150,15 @@ describe("kalshi-client placeOrder", () => {
     });
     await expect(client.placeOrder({ ...ORDER, dryRun: false })).rejects.toThrow(/400/);
     expect(calls).toHaveLength(1);
+  });
+
+  test("a successful but unidentifiable create response is outcome-unknown", async () => {
+    const { client } = makeClient({
+      responses: [new Response(JSON.stringify({ fill_count: "1.00" }), { status: 201 })],
+    });
+    await expect(client.placeOrder({ ...ORDER, dryRun: false })).rejects.toBeInstanceOf(
+      KalshiRequestOutcomeUnknownError,
+    );
   });
 
   test("dryRun never touches fetch or env", async () => {

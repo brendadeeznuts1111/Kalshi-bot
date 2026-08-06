@@ -1,4 +1,4 @@
-// @see https://docs.kalshi.com/api-reference/order/create-order
+// @see https://docs.kalshi.com/api-reference/orders/create-order-v2
 // @see https://docs.kalshi.com/getting_started/rate_limits
 // @see https://bun.com/docs/runtime/environment-variables
 /**
@@ -27,12 +27,40 @@ export type KalshiOrderRequest = {
   dryRun: boolean;
   /** Resting-maker entry — default true (maker-first doctrine). */
   postOnly?: boolean;
+  /** Stable UUID used by authorized execution to make provider retries idempotent. */
+  clientOrderId?: string;
 };
 
 export type KalshiOrderResult = {
   orderId: string;
+  clientOrderId: string;
+  fillCount: number;
+  remainingCount: number;
+  averageFillPriceCents: number | null;
+  averageFeePaidCents: number | null;
+  processedAtMs: number | null;
   dryRun: boolean;
 };
+
+/** A provider response that proves the order was not accepted. */
+export class KalshiRequestRejectedError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly providerCode: string | null = null,
+  ) {
+    super(message);
+    this.name = "KalshiRequestRejectedError";
+  }
+}
+
+/** A transport/server result that cannot prove whether an order was accepted. */
+export class KalshiRequestOutcomeUnknownError extends Error {
+  constructor(message: string, readonly status: number | null = null) {
+    super(message);
+    this.name = "KalshiRequestOutcomeUnknownError";
+  }
+}
 
 export const KALSHI_REST_BASE = {
   demo: OFFICIAL_URLS.kalshi.tradeApiV2BaseDemo,
@@ -82,6 +110,35 @@ export function resolveKalshiEnvironment(
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+function fixedCount(value: unknown): number {
+  const parsed = typeof value === "string" || typeof value === "number" ? Number(value) : 0;
+  if (!Number.isFinite(parsed) || parsed < 0) return 0;
+  return parsed;
+}
+
+function fixedDollarsToCents(value: unknown): number | null {
+  if (typeof value !== "string" && typeof value !== "number") return null;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0) return null;
+  return Math.round(parsed * 100);
+}
+
+function parseKalshiErrorDetail(text: string): { code: string | null; message: string } {
+  const fallback = text.trim().slice(0, 200);
+  if (!fallback) return { code: null, message: "" };
+  try {
+    const parsed: unknown = JSON.parse(text);
+    const envelope = isRecord(parsed) && isRecord(parsed.error) ? parsed.error : parsed;
+    if (!isRecord(envelope)) return { code: null, message: fallback };
+    const code = typeof envelope.code === "string" ? envelope.code.slice(0, 80) : null;
+    const message =
+      typeof envelope.message === "string" ? envelope.message.slice(0, 200) : fallback;
+    return { code, message };
+  } catch {
+    return { code: null, message: fallback };
+  }
 }
 
 /** Exponential backoff with jitter — 429s carry no Retry-After. */
@@ -134,9 +191,12 @@ export function createKalshiClient(options: KalshiClientOptions = {}): KalshiCli
       const retryable = res.status === 429 || res.status >= 500;
       if (!retryable || attempt >= maxRetries) {
         const text = await res.text().catch(() => "");
-        throw new Error(
-          `Kalshi ${method} ${path}: ${res.status} ${res.statusText}${text ? ` — ${text.slice(0, 200)}` : ""}`,
-        );
+        const detail = parseKalshiErrorDetail(text);
+        const message = `Kalshi ${method} ${path}: ${res.status} ${res.statusText}${detail.message ? ` — ${detail.message}` : ""}`;
+        if (res.status >= 400 && res.status < 500) {
+          throw new KalshiRequestRejectedError(message, res.status, detail.code);
+        }
+        throw new KalshiRequestOutcomeUnknownError(message, res.status);
       }
       await sleep(backoffMs(attempt));
     }
@@ -151,7 +211,16 @@ export function createKalshiClient(options: KalshiClientOptions = {}): KalshiCli
 
   async function placeOrder(request: KalshiOrderRequest): Promise<KalshiOrderResult> {
     if (request.dryRun) {
-      return { orderId: `dry-${request.ticker}-${Date.now()}`, dryRun: true };
+      return {
+        orderId: `dry-${request.ticker}-${Date.now()}`,
+        clientOrderId: request.clientOrderId ?? crypto.randomUUID(),
+        fillCount: 0,
+        remainingCount: request.count,
+        averageFillPriceCents: null,
+        averageFeePaidCents: null,
+        processedAtMs: null,
+        dryRun: true,
+      };
     }
     if (request.count < 1 || request.priceCents < 1 || request.priceCents > 99) {
       throw new Error(
@@ -159,28 +228,44 @@ export function createKalshiClient(options: KalshiClientOptions = {}): KalshiCli
       );
     }
     await governCreate();
+    const clientOrderId = request.clientOrderId ?? crypto.randomUUID();
+    const yesPriceCents = request.side === "yes" ? request.priceCents : 100 - request.priceCents;
     const body: Record<string, unknown> = {
       ticker: request.ticker,
-      side: request.side,
-      action: "buy",
-      count: request.count,
-      client_order_id: crypto.randomUUID(),
+      side: request.side === "yes" ? "bid" : "ask",
+      count: `${request.count}.00`,
+      price: (yesPriceCents / 100).toFixed(4),
+      client_order_id: clientOrderId,
       time_in_force: "good_till_canceled",
       post_only: request.postOnly ?? true,
       cancel_order_on_pause: true,
       self_trade_prevention_type: "taker_at_cross",
     };
-    // Price field matches the quoted side (yes_price for YES, no_price for NO).
-    body[request.side === "yes" ? "yes_price" : "no_price"] = request.priceCents;
-    const res = await signedRequest("POST", "/portfolio/orders", body);
-    const orderId =
-      isRecord(res) && isRecord(res.order) && typeof res.order.order_id === "string"
-        ? res.order.order_id
-        : null;
+    const res = await signedRequest("POST", "/portfolio/events/orders", body);
+    const orderId = isRecord(res) && typeof res.order_id === "string" ? res.order_id : null;
     if (!orderId) {
-      throw new Error(`Kalshi order create: missing order_id in response for ${request.ticker}`);
+      throw new KalshiRequestOutcomeUnknownError(
+        `Kalshi order create: missing order_id in response for ${request.ticker}`,
+      );
     }
-    return { orderId, dryRun: false };
+    return {
+      orderId,
+      clientOrderId:
+        isRecord(res) && typeof res.client_order_id === "string"
+          ? res.client_order_id
+          : clientOrderId,
+      fillCount: fixedCount(isRecord(res) ? res.fill_count : null),
+      remainingCount: fixedCount(isRecord(res) ? res.remaining_count : null),
+      averageFillPriceCents: fixedDollarsToCents(
+        isRecord(res) ? res.average_fill_price : null,
+      ),
+      averageFeePaidCents: fixedDollarsToCents(
+        isRecord(res) ? res.average_fee_paid : null,
+      ),
+      processedAtMs:
+        isRecord(res) && Number.isSafeInteger(res.ts_ms) ? (res.ts_ms as number) : null,
+      dryRun: false,
+    };
   }
 
   async function cancelOrder(orderId: string): Promise<void> {
@@ -215,7 +300,7 @@ export function createKalshiClient(options: KalshiClientOptions = {}): KalshiCli
 
 let defaultClient: KalshiClient | null = null;
 
-function getDefaultClient(): KalshiClient {
+export function getDefaultKalshiClient(): KalshiClient {
   defaultClient ??= createKalshiClient();
   return defaultClient;
 }
@@ -227,27 +312,36 @@ function getDefaultClient(): KalshiClient {
  */
 export async function placeOrder(request: KalshiOrderRequest): Promise<KalshiOrderResult> {
   if (request.dryRun) {
-    return { orderId: `dry-${request.ticker}-${Date.now()}`, dryRun: true };
+    return {
+      orderId: `dry-${request.ticker}-${Date.now()}`,
+      clientOrderId: request.clientOrderId ?? crypto.randomUUID(),
+      fillCount: 0,
+      remainingCount: request.count,
+      averageFillPriceCents: null,
+      averageFeePaidCents: null,
+      processedAtMs: null,
+      dryRun: true,
+    };
   }
-  return getDefaultClient().placeOrder(request);
+  return getDefaultKalshiClient().placeOrder(request);
 }
 
 export async function cancelOrder(orderId: string): Promise<void> {
-  return getDefaultClient().cancelOrder(orderId);
+  return getDefaultKalshiClient().cancelOrder(orderId);
 }
 
 export async function getOrders(ticker?: string): Promise<Record<string, unknown>[]> {
-  return getDefaultClient().getOrders(ticker);
+  return getDefaultKalshiClient().getOrders(ticker);
 }
 
 export async function getFills(ticker?: string): Promise<Record<string, unknown>[]> {
-  return getDefaultClient().getFills(ticker);
+  return getDefaultKalshiClient().getFills(ticker);
 }
 
 export async function getPositions(): Promise<Record<string, unknown>[]> {
-  return getDefaultClient().getPositions();
+  return getDefaultKalshiClient().getPositions();
 }
 
 export async function getBalance(): Promise<{ balanceCents: number | null }> {
-  return getDefaultClient().getBalance();
+  return getDefaultKalshiClient().getBalance();
 }

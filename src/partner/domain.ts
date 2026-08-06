@@ -110,7 +110,14 @@ export const PARTNER_DOMAIN_LAYERS: readonly DomainLayer[] = [
         name: "Telegram long-poll bot",
         maturity: "partial",
         where: "src/telegram/bot.ts",
-        notes: "Calibration digest / dashboard — not partner /capacity /add yet",
+        notes: "Calibration digest/dashboard plus permissioned /approve and /revoke_out routing",
+      },
+      {
+        id: "telegram-authorization-flow",
+        name: "Telegram authorization + durable receipt outbox",
+        maturity: "built",
+        where: "src/telegram/authorization-*.ts · src/partner/authorization/",
+        notes: "Numeric chat/topic/user binding, hash-verified grants, revocation evidence, retries",
       },
       {
         id: "telegram-subscribers",
@@ -121,9 +128,9 @@ export const PARTNER_DOMAIN_LAYERS: readonly DomainLayer[] = [
       {
         id: "partner-telegram-link",
         name: "partners.telegram_chat_id / topicId",
-        maturity: "planned",
-        where: "—",
-        notes: "Not on partners row; watch-fantasy-events uses global TELEGRAM_CHAT_ID",
+        maturity: "partial",
+        where: "account_authorization_requests · account_authorizations",
+        notes: "Authorization provenance is bound; partner-level channel preferences remain planned",
       },
       {
         id: "inventory-telegram",
@@ -169,6 +176,20 @@ export const PARTNER_DOMAIN_LAYERS: readonly DomainLayer[] = [
         maturity: "partial",
         where: "listEligibleOutSkinPairs · concentrationByOut",
         notes: "Helpers only — no full proposal router CLI yet",
+      },
+      {
+        id: "authorized-execution-wrapper",
+        name: "Transactional authorized execution wrapper",
+        maturity: "built",
+        where: "src/partner/execution/",
+        notes: "Immediate reservation transaction, gate recheck, idempotent dispatch, ambiguous-outcome reconciliation, and durable receipts",
+      },
+      {
+        id: "provider-execution-bindings",
+        name: "Live provider execution bindings",
+        maturity: "partial",
+        where: "src/partner/execution/kalshi*.ts · src/bot/kalshi-client.ts · src/research/serve.ts",
+        notes: "Kalshi V2 mapper, out-scoped client, persisted-book snapshot loader, and authorized HTTP route built; reconciliation poller remains",
       },
     ],
   },
@@ -307,7 +328,8 @@ export function buildDomainStatusReport(
     layers,
     totals,
     orchestration: {
-      ssot: "event-store SQLite (partners, betting_accounts, partner_events) + Proton Pass + env",
+      ssot:
+        "event-store SQLite (partners, betting_accounts, partner_events, account_authorizations, exposure_reservations) + Proton Pass + env",
       clis: [
         "partner:domain",
         "partner:capacity",
@@ -326,7 +348,7 @@ export function buildDomainStatusReport(
         "partners.telegram_chat_id + topic preferences",
         "Telegram /capacity /add command router",
         "partner_ledger + split → report pipeline",
-        "live placeOrder after real HAR + auto eventCoefficients subscribe",
+        "Kalshi unknown-outcome reconciliation poller",
       ],
     },
   };

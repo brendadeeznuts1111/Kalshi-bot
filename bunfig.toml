@@ -20,7 +20,8 @@ depth = 3
 # Override any key at runtime via env vars:
 #   KALSHI__REGULATORY__DATABASE_PATH=/tmp/test.db bun run script.ts
 #
-# Native API reference:
+# Native API reference. `src/partner/toml-stringify.ts` owns the stable-runtime
+# fallback until the selected stable Bun ships stringify:
 #   Bun.TOML.parse(string) -> object
 #   Bun.TOML.stringify(object) -> string
 # @see https://bun.com/docs/api/toml

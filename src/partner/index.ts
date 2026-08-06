@@ -15,6 +15,8 @@ export type {
   PartnerSportLeague,
 } from "./types.ts";
 
+export * from "./execution/index.ts";
+
 export {
   credentialsFromFantasyProfile,
   fantasyDeskEnvPresence,

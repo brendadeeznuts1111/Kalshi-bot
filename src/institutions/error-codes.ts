@@ -23,6 +23,13 @@ export const ERROR_CODES = {
   E_PRICE_RANGE: { http: 400, message: "priceCents must be an integer 1–99", detail: "Binary contract prices live in (0, 100) cents." },
   E_ORDER_ID_REQUIRED: { http: 400, message: "orderId is required", detail: "Cancel target — the exchange order_id, not client_order_id." },
   E_BODY_INVALID: { http: 400, message: "invalid JSON body", detail: "POST body must parse as JSON." },
+  E_AUTH_CONTEXT_REQUIRED: { http: 400, message: "live authorization context is required", detail: "Live orders require canonical partnerCode, outId, skin, outcome, stakeMinorUnits, and compliance fields." },
+  E_IDEMPOTENCY_REQUIRED: { http: 400, message: "idempotency key is required", detail: "Supply an Idempotency-Key header or matching idempotencyKey body field for every live order." },
+  E_ACCOUNT_INACTIVE: { http: 403, message: "partner execution account is not active", detail: "The partner, out, or requested skin is missing, mismatched, or inactive." },
+  E_AUTHORIZATION_REQUIRED: { http: 403, message: "live-trade authorization denied", detail: "No active matching grant passed policy, balance, liquidity, session, and risk checks." },
+  E_EXECUTION_REJECTED: { http: 409, message: "provider rejected the order", detail: "The rejection is conclusive and reserved exposure has been released." },
+  E_PROVIDER_NOT_IMPLEMENTED: { http: 501, message: "provider live execution is not implemented", detail: "Kalshi is the only provider wired through authorized execution; Fantasy402 remains disabled." },
+  E_EXECUTION_UNKNOWN: { http: 202, message: "provider outcome requires reconciliation", detail: "The provider outcome is ambiguous; exposure remains reserved until reconciliation." },
 
   // ── Upstream / transport (E2xx) ──
   E_UPSTREAM: { http: 502, message: "Kalshi API request failed", detail: "Upstream returned an error or timed out; see `upstream` for its code." },
