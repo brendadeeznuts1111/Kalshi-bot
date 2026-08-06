@@ -88,6 +88,16 @@ export async function executeAuthorizedBet(
   } catch (error) {
     return { success: false, code: "SNAPSHOT_UNAVAILABLE", reason: errorMessage(error) };
   }
+  if (
+    snapshot.stakeQuantum !== undefined &&
+    (!Number.isSafeInteger(snapshot.stakeQuantum) || snapshot.stakeQuantum <= 0)
+  ) {
+    return {
+      success: false,
+      code: "SNAPSHOT_UNAVAILABLE",
+      reason: "Provider stake quantum must be a positive safe integer in minor units",
+    };
+  }
 
   const placementOwner = asPlacementOwner(crypto.randomUUID());
   const ttlMs = dependencies.reservationTtlMs ?? DEFAULT_RESERVATION_TTL_MS;
@@ -182,11 +192,23 @@ export async function executeAuthorizedBet(
         };
       }
 
+      const effectiveStake = quantizeStake(gate.effectiveStake, snapshot.stakeQuantum);
+      if (effectiveStake <= 0) {
+        return {
+          kind: "result" as const,
+          result: {
+            success: false as const,
+            code: "GATE_DENIED" as const,
+            reason: "EFFECTIVE_STAKE_ZERO: Effective stake is below the provider order minimum",
+          },
+        };
+      }
+
       const expiresAtMs = safeAdd(nowMs, ttlMs, "reservation expiry");
       const created = createPendingReservation(db, {
         authorization,
         request,
-        effectiveStake: gate.effectiveStake,
+        effectiveStake,
         expiresAtMs,
         nowMs,
       });
@@ -333,6 +355,11 @@ export async function executeAuthorizedBet(
     effectiveStake: reservation.effectiveStake,
     reservationId: reservation.id,
   };
+}
+
+function quantizeStake(effectiveStake: number, quantum: number | undefined): number {
+  if (quantum === undefined) return effectiveStake;
+  return Math.floor(effectiveStake / quantum) * quantum;
 }
 
 function replayResult(reservation: ExposureReservation): AuthorizedBetResult {

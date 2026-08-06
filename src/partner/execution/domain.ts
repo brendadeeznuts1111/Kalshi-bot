@@ -49,6 +49,8 @@ export interface ExecutionSnapshot {
   sitePerBetMax: number;
   availableBalance: number;
   marketLiquidity: number;
+  /** Optional provider order increment in minor units; effective stake rounds down to it. */
+  stakeQuantum?: number;
 }
 
 export interface ProviderPlacementInput {

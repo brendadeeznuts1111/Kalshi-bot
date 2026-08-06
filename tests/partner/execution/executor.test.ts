@@ -186,6 +186,30 @@ describe("authorized bet execution", () => {
     db.close();
   });
 
+  test("quantizes reservations to the provider's exact minor-unit order increment", async () => {
+    const p = policy({ exposureLimit: null });
+    const { db } = setup(p);
+    let placedStake = 0;
+    const deps = dependencies(p, async ({ effectiveStake }) => {
+      placedStake = effectiveStake;
+      return { accepted: true, ticketId: asTicketId("ticket-quantized") };
+    });
+    deps.loadSnapshot = () => ({
+      currentPolicy: p,
+      oddsFresh: true,
+      providerSessionValid: true,
+      riskHealthy: true,
+      sitePerBetMax: 5_000,
+      availableBalance: 10_000,
+      marketLiquidity: 10_000,
+      stakeQuantum: 40,
+    });
+    const result = await executeAuthorizedBet(db, request("quantized", 125), deps);
+    expect(result).toMatchObject({ success: true, effectiveStake: 120 });
+    expect(placedStake).toBe(120);
+    db.close();
+  });
+
   test("fails closed for stale policy and authorization revoked during snapshot loading", async () => {
     const p = policy();
     for (const mode of ["stale", "revoked"] as const) {
