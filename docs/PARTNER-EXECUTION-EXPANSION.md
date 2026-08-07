@@ -112,6 +112,9 @@ Visual evidence produced from partner/liquidity dashboards carries
 identity plus `Bun.Image.metadata()` for the screenshot and thumbnail. This is
 review evidence only; execution freshness continues to come from the typed
 market/account `ExecutionSnapshot` immediately before reservation.
+The metadata also binds SHA-256 and byte length for generated artifacts;
+partner WebView/CDP summaries use the same runtime/integrity vocabulary and
+strip query/hash credentials from persisted URLs.
 
 ## External references
 

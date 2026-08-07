@@ -8,7 +8,24 @@
 // @see https://bun.com/docs/runtime/webview
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
+import {
+  readArtifactIntegrity,
+  type SnapshotArtifactIntegrity,
+} from "../institutions/event-store/visual-snapshot-meta.ts";
 import type { WebViewWsFrame } from "./webview-ws-ingest.ts";
+
+export type PartnerWebViewSnapshotMeta = {
+  schemaVersion: 1;
+  capturedAt: string;
+  runtime: { bunVersion: string; bunRevision: string };
+  webview: {
+    backend: "chrome";
+    width: 1280;
+    height: 800;
+    cdpNetworkCapture: true;
+  };
+  artifact: SnapshotArtifactIntegrity;
+};
 
 export type WebViewCaptureOptions = {
   /** plive sport widget id (default 220 table tennis) */
@@ -29,6 +46,7 @@ export type WebViewCaptureResult = {
   subscribeMsg: string | null;
   coeffSubscribeCount: number;
   frameCount: number;
+  snapshotMeta: PartnerWebViewSnapshotMeta;
 };
 
 export async function capturePandoraViaWebView(
@@ -74,11 +92,12 @@ export async function capturePandoraViaWebView(
   view.addEventListener("Network.webSocketCreated", (ev) => {
     const d = (ev as unknown as CustomEvent).detail ?? (ev as MessageEvent).data;
     const data = d as { url?: string; requestId?: string };
-    if (data?.requestId && data.url) requestUrlById.set(data.requestId, data.url);
+    const safeUrl = data?.url ? redactCaptureUrl(data.url) : undefined;
+    if (data?.requestId && safeUrl) requestUrlById.set(data.requestId, safeUrl);
     frames.push({
       t: Date.now(),
       dir: "created",
-      url: data?.url,
+      url: safeUrl,
       requestId: data?.requestId,
     });
   });
@@ -147,6 +166,20 @@ export async function capturePandoraViaWebView(
     outPath,
     frames.map((f) => JSON.stringify(f)).join("\n") + "\n",
   );
+  const artifact = await readArtifactIntegrity(outPath);
+  if (!artifact) throw new Error("WebView capture artifact integrity unavailable");
+  const snapshotMeta: PartnerWebViewSnapshotMeta = {
+    schemaVersion: 1,
+    capturedAt: new Date(stamp).toISOString(),
+    runtime: { bunVersion: Bun.version, bunRevision: Bun.revision },
+    webview: {
+      backend: "chrome",
+      width: 1280,
+      height: 800,
+      cdpNetworkCapture: true,
+    },
+    artifact,
+  };
 
   const sent42 = frames.filter(
     (f) => f.dir === "sent" && (f.payload?.startsWith("42") ?? false),
@@ -166,12 +199,13 @@ export async function capturePandoraViaWebView(
   const summary = {
     outPath,
     summaryPath,
-    startUrl,
-    finalUrl: view.url,
+    startUrl: redactCaptureUrl(startUrl),
+    finalUrl: redactCaptureUrl(String(view.url ?? startUrl)),
     seconds,
     frameCount: frames.length,
     subscribeMsg: subscribeMsgs[0]?.payload ?? null,
     coeffSubscribeCount: coeffSubscribes.length,
+    snapshotMeta,
   };
   await Bun.write(summaryPath, JSON.stringify(summary, null, 2) + "\n");
 
@@ -185,5 +219,16 @@ export async function capturePandoraViaWebView(
     subscribeMsg: summary.subscribeMsg,
     coeffSubscribeCount: coeffSubscribes.length,
     frameCount: frames.length,
+    snapshotMeta,
   };
+}
+
+/** Strip credentials/query/hash from persisted capture summaries. Raw capture stays local. */
+export function redactCaptureUrl(value: string): string {
+  try {
+    const url = new URL(value);
+    return `${url.protocol}//${url.host}${url.pathname}`;
+  } catch {
+    return "[redacted-invalid-url]";
+  }
 }

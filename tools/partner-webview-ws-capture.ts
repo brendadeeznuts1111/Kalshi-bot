@@ -18,6 +18,8 @@
  */
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { readArtifactIntegrity } from '../src/institutions/event-store/visual-snapshot-meta.ts';
+import { redactCaptureUrl } from '../src/partner/webview-ws-capture.ts';
 
 function argValue(name: string): string | undefined {
   const hit = process.argv.find(a => a.startsWith(`--${name}=`));
@@ -94,11 +96,12 @@ await view.cdp('Network.enable', {});
 view.addEventListener('Network.webSocketCreated', ev => {
   const d = (ev as unknown as CustomEvent).detail ?? (ev as MessageEvent).data;
   const data = d as { url?: string; requestId?: string };
-  if (data?.requestId && data.url) requestUrlById.set(data.requestId, data.url);
+  const safeUrl = data?.url ? redactCaptureUrl(data.url) : undefined;
+  if (data?.requestId && safeUrl) requestUrlById.set(data.requestId, safeUrl);
   frames.push({
     t: Date.now(),
     dir: 'created',
-    url: data?.url,
+    url: safeUrl,
     requestId: data?.requestId,
   });
   console.error('WS created', data?.url?.slice(0, 120) ?? '(no url)');
@@ -187,6 +190,20 @@ try {
 await Bun.sleep(seconds * 1000);
 
 await Bun.write(outPath, frames.map(f => JSON.stringify(f)).join('\n') + '\n');
+const artifact = await readArtifactIntegrity(outPath);
+if (!artifact) throw new Error('WebView capture artifact integrity unavailable');
+const snapshotMeta = {
+  schemaVersion: 1 as const,
+  capturedAt: new Date(stamp).toISOString(),
+  runtime: { bunVersion: Bun.version, bunRevision: Bun.revision },
+  webview: {
+    backend: 'chrome' as const,
+    width: 1280 as const,
+    height: 800 as const,
+    cdpNetworkCapture: true as const,
+  },
+  artifact,
+};
 
 const sent42 = frames.filter(f => f.dir === 'sent' && (f.payload?.startsWith('42') ?? false));
 const recv42 = frames.filter(f => f.dir === 'recv' && (f.payload?.startsWith('42') ?? false));
@@ -230,11 +247,12 @@ const pandoraCreated = frames.filter(f => f.dir === 'created' && isPandoraUrl(f.
 const summary = {
   outPath,
   summaryPath,
-  startUrl,
-  finalUrl: view.url,
+  startUrl: redactCaptureUrl(startUrl),
+  finalUrl: redactCaptureUrl(String(view.url ?? startUrl)),
   seconds,
   frameCount: frames.length,
-  pandoraSockets: pandoraCreated.map(f => f.url),
+  pandoraSockets: pandoraCreated.map(f => f.url ? redactCaptureUrl(f.url) : undefined),
+  snapshotMeta,
   topics: [...topics].sort(),
   /** Primary client emits that start the live book (paste into adapter / probe). */
   subscribeMsg: subscribeMsgs[0]?.payload ?? null,

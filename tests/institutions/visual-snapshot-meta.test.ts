@@ -40,8 +40,12 @@ test("visual snapshot metadata is derived through Bun.Image and Bun.WebView type
       width: 1280,
       height: 720,
     });
-    expect(meta.image.source).toEqual({ width: 1, height: 1, format: "png" });
-    expect(meta.image.thumbnail).toEqual({ width: 1, height: 1, format: "png" });
+    expect(meta.image.source?.metadata).toEqual({ width: 1, height: 1, format: "png" });
+    expect(meta.image.thumbnail?.metadata).toEqual({ width: 1, height: 1, format: "png" });
+    expect(meta.image.source?.sizeBytes).toBe(onePixelPng.byteLength);
+    expect(meta.image.source?.sha256).toMatch(/^[a-f0-9]{64}$/);
+    expect(meta.webview.attempted).toBe(true);
+    expect(meta.webview.error).toBeNull();
   } finally {
     await Bun.$`rm -rf ${dir}`.nothrow().quiet();
   }

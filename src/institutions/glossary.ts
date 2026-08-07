@@ -1570,7 +1570,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     id: "snapshot.visual.provenance",
     kind: "composite",
     label: "Visual snapshot provenance",
-    description: "Bun-native WebView/Image metadata recording runtime version and revision, browser backend and viewport, capture outcome, and decoded source/thumbnail dimensions and formats. It is audit evidence, never execution authority.",
+    description: "Bun-native WebView/Image metadata recording runtime version and revision, browser backend and viewport, capture outcome, decoded source/thumbnail dimensions and formats, and artifact SHA-256/byte length. Persisted capture URLs are credential-redacted. It is audit evidence, never execution authority.",
     category: "pipeline",
     color: "research",
     status: "active",

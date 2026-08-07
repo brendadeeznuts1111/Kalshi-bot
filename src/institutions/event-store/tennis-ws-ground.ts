@@ -103,6 +103,8 @@ export async function captureTennisWsGround(
 
   let webviewCaptured = false;
   let imageCaptured = false;
+  let webviewError: string | null = null;
+  let imageError: string | null = null;
 
   if (!options.htmlOnly && hasWebView()) {
     // @see https://bun.com/docs/runtime/webview — data: URL navigation + screenshot
@@ -124,15 +126,20 @@ export async function captureTennisWsGround(
 
       if (hasImagePipeline()) {
         // @see https://bun.com/docs/runtime/image — chain resize + webp encode
-        await Bun.file(dashboardPng)
-          .image()
-          .resize(TENNIS_WS_GROUND_THUMB_WIDTH, TENNIS_WS_GROUND_THUMB_HEIGHT, { fit: "inside" })
-          .webp({ quality: TENNIS_WS_GROUND_WEBP_QUALITY })
-          .write(thumbWebp);
-        imageCaptured = true;
+        try {
+          await Bun.file(dashboardPng)
+            .image()
+            .resize(TENNIS_WS_GROUND_THUMB_WIDTH, TENNIS_WS_GROUND_THUMB_HEIGHT, { fit: "inside" })
+            .webp({ quality: TENNIS_WS_GROUND_WEBP_QUALITY })
+            .write(thumbWebp);
+          imageCaptured = true;
+        } catch (error) {
+          imageError = errorMessage(error);
+        }
       }
-    } catch {
+    } catch (error) {
       // WebView or Image unavailable at runtime — HTML artifact still written
+      webviewError = errorMessage(error);
     }
   }
 
@@ -142,7 +149,11 @@ export async function captureTennisWsGround(
     width: TENNIS_WS_GROUND_WEBVIEW_WIDTH,
     height: TENNIS_WS_GROUND_WEBVIEW_HEIGHT,
     webviewCaptured,
+    webviewAttempted: !options.htmlOnly,
+    webviewError,
     imageGenerated: imageCaptured,
+    imageAttempted: webviewCaptured && hasImagePipeline(),
+    imageError,
     sourcePath: dashboardPng,
     thumbnailPath: thumbWebp,
   });
@@ -171,7 +182,9 @@ export async function persistTennisWsGroundArtifact(
       width: TENNIS_WS_GROUND_WEBVIEW_WIDTH,
       height: TENNIS_WS_GROUND_WEBVIEW_HEIGHT,
       webviewCaptured: artifact.webview,
+      webviewAttempted: artifact.webview,
       imageGenerated: artifact.image,
+      imageAttempted: artifact.image,
       sourcePath: artifact.dashboardPng,
       thumbnailPath: artifact.thumbWebp,
     }));
@@ -194,6 +207,10 @@ export async function persistTennisWsGroundArtifact(
   };
   await Bun.write(latestPath, JSON.stringify(latest, null, 2));
   return latest;
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 /** Read latest visual ground artifact (cache-only; no WebView invoke). */

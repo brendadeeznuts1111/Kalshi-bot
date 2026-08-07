@@ -41,7 +41,8 @@ does not represent a Polymarket order adapter. See the
 `snapshot.visual.provenance` describes the audit-only metadata emitted by the
 native WebView/Image visual-ground pipeline. It records Bun version/revision,
 browser backend and viewport, capture outcome, and decoded image dimensions and
-format. It never substitutes for an executable quote, authorization, or
+format, plus artifact byte length and SHA-256 integrity. Persisted WebView/CDP
+summary URLs omit query/hash credentials. It never substitutes for an executable quote, authorization, or
 provider lifecycle evidence.
 
 HQ fragment routing uses `URLPattern.hash`; patterns match the fragment without
