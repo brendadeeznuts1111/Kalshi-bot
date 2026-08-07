@@ -13,6 +13,14 @@ import {
   type SnapshotArtifactIntegrity,
 } from "../institutions/event-store/visual-snapshot-meta.ts";
 import type { WebViewWsFrame } from "./webview-ws-ingest.ts";
+import {
+  parseCdpWebSocketClosed,
+  parseCdpWebSocketCreated,
+  parseCdpWebSocketFrame,
+  type CdpWebSocketClosed,
+  type CdpWebSocketCreated,
+  type CdpWebSocketFrame,
+} from "./webview-cdp-events.ts";
 
 export type PartnerWebViewSnapshotMeta = {
   schemaVersion: 1;
@@ -89,9 +97,8 @@ export async function capturePandoraViaWebView(
   await view.navigate("about:blank");
   await view.cdp("Network.enable", {});
 
-  view.addEventListener("Network.webSocketCreated", (ev) => {
-    const d = (ev as unknown as CustomEvent).detail ?? (ev as MessageEvent).data;
-    const data = d as { url?: string; requestId?: string };
+  view.addEventListener<CdpWebSocketCreated>("Network.webSocketCreated", (ev) => {
+    const data = parseCdpWebSocketCreated(ev);
     const safeUrl = data?.url ? redactCaptureUrl(data.url) : undefined;
     if (data?.requestId && safeUrl) requestUrlById.set(data.requestId, safeUrl);
     frames.push({
@@ -104,10 +111,7 @@ export async function capturePandoraViaWebView(
 
   const pushFrame = (
     dir: "sent" | "recv",
-    data: {
-      response?: { payloadData?: string };
-      requestId?: string;
-    },
+    data: CdpWebSocketFrame,
   ) => {
     const payload = data?.response?.payloadData ?? "";
     frames.push({
@@ -121,19 +125,16 @@ export async function capturePandoraViaWebView(
     });
   };
 
-  view.addEventListener("Network.webSocketFrameSent", (ev) => {
-    const d = (ev as unknown as CustomEvent).detail ?? (ev as MessageEvent).data;
-    pushFrame("sent", d as { response?: { payloadData?: string }; requestId?: string });
+  view.addEventListener<CdpWebSocketFrame>("Network.webSocketFrameSent", (ev) => {
+    pushFrame("sent", parseCdpWebSocketFrame(ev));
   });
 
-  view.addEventListener("Network.webSocketFrameReceived", (ev) => {
-    const d = (ev as unknown as CustomEvent).detail ?? (ev as MessageEvent).data;
-    pushFrame("recv", d as { response?: { payloadData?: string }; requestId?: string });
+  view.addEventListener<CdpWebSocketFrame>("Network.webSocketFrameReceived", (ev) => {
+    pushFrame("recv", parseCdpWebSocketFrame(ev));
   });
 
-  view.addEventListener("Network.webSocketClosed", (ev) => {
-    const d = (ev as unknown as CustomEvent).detail ?? (ev as MessageEvent).data;
-    const data = d as { requestId?: string };
+  view.addEventListener<CdpWebSocketClosed>("Network.webSocketClosed", (ev) => {
+    const data = parseCdpWebSocketClosed(ev);
     frames.push({
       t: Date.now(),
       dir: "closed",

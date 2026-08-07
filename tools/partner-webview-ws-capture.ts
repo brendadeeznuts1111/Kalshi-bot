@@ -20,6 +20,14 @@ import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { readArtifactIntegrity } from '../src/institutions/event-store/visual-snapshot-meta.ts';
 import { redactCaptureUrl } from '../src/partner/webview-ws-capture.ts';
+import {
+  parseCdpWebSocketClosed,
+  parseCdpWebSocketCreated,
+  parseCdpWebSocketFrame,
+  type CdpWebSocketClosed,
+  type CdpWebSocketCreated,
+  type CdpWebSocketFrame,
+} from '../src/partner/webview-cdp-events.ts';
 
 function argValue(name: string): string | undefined {
   const hit = process.argv.find(a => a.startsWith(`--${name}=`));
@@ -93,9 +101,8 @@ await using view = new Bun.WebView({
 await view.navigate('about:blank');
 await view.cdp('Network.enable', {});
 
-view.addEventListener('Network.webSocketCreated', ev => {
-  const d = (ev as unknown as CustomEvent).detail ?? (ev as MessageEvent).data;
-  const data = d as { url?: string; requestId?: string };
+view.addEventListener<CdpWebSocketCreated>('Network.webSocketCreated', ev => {
+  const data = parseCdpWebSocketCreated(ev);
   const safeUrl = data?.url ? redactCaptureUrl(data.url) : undefined;
   if (data?.requestId && safeUrl) requestUrlById.set(data.requestId, safeUrl);
   frames.push({
@@ -104,15 +111,11 @@ view.addEventListener('Network.webSocketCreated', ev => {
     url: safeUrl,
     requestId: data?.requestId,
   });
-  console.error('WS created', data?.url?.slice(0, 120) ?? '(no url)');
+  console.error('WS created', safeUrl?.slice(0, 120) ?? '(no url)');
 });
 
-view.addEventListener('Network.webSocketFrameSent', ev => {
-  const d = (ev as unknown as CustomEvent).detail ?? (ev as MessageEvent).data;
-  const data = d as {
-    response?: { payloadData?: string };
-    requestId?: string;
-  };
+view.addEventListener<CdpWebSocketFrame>('Network.webSocketFrameSent', ev => {
+  const data = parseCdpWebSocketFrame(ev);
   const payload = data?.response?.payloadData ?? '';
   const url = data?.requestId ? requestUrlById.get(data.requestId) : undefined;
   frames.push({
@@ -131,12 +134,8 @@ view.addEventListener('Network.webSocketFrameSent', ev => {
   }
 });
 
-view.addEventListener('Network.webSocketFrameReceived', ev => {
-  const d = (ev as unknown as CustomEvent).detail ?? (ev as MessageEvent).data;
-  const data = d as {
-    response?: { payloadData?: string };
-    requestId?: string;
-  };
+view.addEventListener<CdpWebSocketFrame>('Network.webSocketFrameReceived', ev => {
+  const data = parseCdpWebSocketFrame(ev);
   const payload = data?.response?.payloadData ?? '';
   const url = data?.requestId ? requestUrlById.get(data.requestId) : undefined;
   frames.push({
@@ -159,9 +158,8 @@ view.addEventListener('Network.webSocketFrameReceived', ev => {
   }
 });
 
-view.addEventListener('Network.webSocketClosed', ev => {
-  const d = (ev as unknown as CustomEvent).detail ?? (ev as MessageEvent).data;
-  const data = d as { requestId?: string };
+view.addEventListener<CdpWebSocketClosed>('Network.webSocketClosed', ev => {
+  const data = parseCdpWebSocketClosed(ev);
   frames.push({
     t: Date.now(),
     dir: 'closed',
