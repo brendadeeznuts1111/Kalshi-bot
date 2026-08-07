@@ -104,6 +104,10 @@ describe("tennis-ws-ground artifact", () => {
       expect(html).toContain("kalshi-ws ticks");
       expect(artifact.webview).toBe(false);
       expect(artifact.image).toBe(false);
+      expect(artifact.snapshotMeta?.runtime.bunVersion).toBe(Bun.version);
+      expect(artifact.snapshotMeta?.runtime.bunRevision).toBe(Bun.revision);
+      expect(artifact.snapshotMeta?.webview.captured).toBe(false);
+      expect(artifact.snapshotMeta?.image.source).toBeNull();
     } finally {
       await Bun.$`rm -rf ${outDir}`.nothrow().quiet();
     }

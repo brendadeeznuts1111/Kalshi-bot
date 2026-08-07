@@ -78,6 +78,9 @@ describe("match-liquidity ground + snapshot summary", () => {
     const outDir = mkdtempSync(join(tmpdir(), "liq-ground-"));
     const artifact = await captureMatchLiquidityGround(db, { htmlOnly: true, outDir });
     expect(artifact.webview).toBe(false);
+    expect(artifact.snapshotMeta?.runtime.bunVersion).toBe(Bun.version);
+    expect(artifact.snapshotMeta?.webview.width).toBe(1280);
+    expect(artifact.snapshotMeta?.image.thumbnail).toBeNull();
     expect(await Bun.file(artifact.dashboardHtml).exists()).toBe(true);
     const html = await Bun.file(artifact.dashboardHtml).text();
     expect(html).toContain("liq_ok");
@@ -87,6 +90,7 @@ describe("match-liquidity ground + snapshot summary", () => {
     );
     expect(latest.tradable).toBe(1);
     expect(latest.rows).toBe(1);
+    expect(latest.snapshotMeta.schemaVersion).toBe(1);
     const lines = formatMatchLiquidityGroundLines(artifact);
     expect(lines.some((l) => l.includes("webview=skipped"))).toBe(true);
   });

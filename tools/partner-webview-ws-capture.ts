@@ -18,6 +18,16 @@
  */
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { readArtifactIntegrity } from '../src/institutions/event-store/visual-snapshot-meta.ts';
+import { redactCaptureUrl } from '../src/partner/webview-ws-capture.ts';
+import {
+  parseCdpWebSocketClosed,
+  parseCdpWebSocketCreated,
+  parseCdpWebSocketFrame,
+  type CdpWebSocketClosed,
+  type CdpWebSocketCreated,
+  type CdpWebSocketFrame,
+} from '../src/partner/webview-cdp-events.ts';
 
 function argValue(name: string): string | undefined {
   const hit = process.argv.find(a => a.startsWith(`--${name}=`));
@@ -46,7 +56,7 @@ const frames: Frame[] = [];
 const requestUrlById = new Map<string, string>();
 
 if (typeof Bun.WebView !== 'function') {
-  console.error('Bun.WebView unavailable — need Bun ≥1.4 with WebView');
+  console.error('Bun.WebView unavailable in the active Bun runtime/build');
   process.exit(1);
 }
 
@@ -91,25 +101,21 @@ await using view = new Bun.WebView({
 await view.navigate('about:blank');
 await view.cdp('Network.enable', {});
 
-view.addEventListener('Network.webSocketCreated', ev => {
-  const d = (ev as unknown as CustomEvent).detail ?? (ev as MessageEvent).data;
-  const data = d as { url?: string; requestId?: string };
-  if (data?.requestId && data.url) requestUrlById.set(data.requestId, data.url);
+view.addEventListener<CdpWebSocketCreated>('Network.webSocketCreated', ev => {
+  const data = parseCdpWebSocketCreated(ev);
+  const safeUrl = data?.url ? redactCaptureUrl(data.url) : undefined;
+  if (data?.requestId && safeUrl) requestUrlById.set(data.requestId, safeUrl);
   frames.push({
     t: Date.now(),
     dir: 'created',
-    url: data?.url,
+    url: safeUrl,
     requestId: data?.requestId,
   });
-  console.error('WS created', data?.url?.slice(0, 120) ?? '(no url)');
+  console.error('WS created', safeUrl?.slice(0, 120) ?? '(no url)');
 });
 
-view.addEventListener('Network.webSocketFrameSent', ev => {
-  const d = (ev as unknown as CustomEvent).detail ?? (ev as MessageEvent).data;
-  const data = d as {
-    response?: { payloadData?: string };
-    requestId?: string;
-  };
+view.addEventListener<CdpWebSocketFrame>('Network.webSocketFrameSent', ev => {
+  const data = parseCdpWebSocketFrame(ev);
   const payload = data?.response?.payloadData ?? '';
   const url = data?.requestId ? requestUrlById.get(data.requestId) : undefined;
   frames.push({
@@ -128,12 +134,8 @@ view.addEventListener('Network.webSocketFrameSent', ev => {
   }
 });
 
-view.addEventListener('Network.webSocketFrameReceived', ev => {
-  const d = (ev as unknown as CustomEvent).detail ?? (ev as MessageEvent).data;
-  const data = d as {
-    response?: { payloadData?: string };
-    requestId?: string;
-  };
+view.addEventListener<CdpWebSocketFrame>('Network.webSocketFrameReceived', ev => {
+  const data = parseCdpWebSocketFrame(ev);
   const payload = data?.response?.payloadData ?? '';
   const url = data?.requestId ? requestUrlById.get(data.requestId) : undefined;
   frames.push({
@@ -156,9 +158,8 @@ view.addEventListener('Network.webSocketFrameReceived', ev => {
   }
 });
 
-view.addEventListener('Network.webSocketClosed', ev => {
-  const d = (ev as unknown as CustomEvent).detail ?? (ev as MessageEvent).data;
-  const data = d as { requestId?: string };
+view.addEventListener<CdpWebSocketClosed>('Network.webSocketClosed', ev => {
+  const data = parseCdpWebSocketClosed(ev);
   frames.push({
     t: Date.now(),
     dir: 'closed',
@@ -187,6 +188,20 @@ try {
 await Bun.sleep(seconds * 1000);
 
 await Bun.write(outPath, frames.map(f => JSON.stringify(f)).join('\n') + '\n');
+const artifact = await readArtifactIntegrity(outPath);
+if (!artifact) throw new Error('WebView capture artifact integrity unavailable');
+const snapshotMeta = {
+  schemaVersion: 1 as const,
+  capturedAt: new Date(stamp).toISOString(),
+  runtime: { bunVersion: Bun.version, bunRevision: Bun.revision },
+  webview: {
+    backend: 'chrome' as const,
+    width: 1280 as const,
+    height: 800 as const,
+    cdpNetworkCapture: true as const,
+  },
+  artifact,
+};
 
 const sent42 = frames.filter(f => f.dir === 'sent' && (f.payload?.startsWith('42') ?? false));
 const recv42 = frames.filter(f => f.dir === 'recv' && (f.payload?.startsWith('42') ?? false));
@@ -230,11 +245,12 @@ const pandoraCreated = frames.filter(f => f.dir === 'created' && isPandoraUrl(f.
 const summary = {
   outPath,
   summaryPath,
-  startUrl,
-  finalUrl: view.url,
+  startUrl: redactCaptureUrl(startUrl),
+  finalUrl: redactCaptureUrl(String(view.url ?? startUrl)),
   seconds,
   frameCount: frames.length,
-  pandoraSockets: pandoraCreated.map(f => f.url),
+  pandoraSockets: pandoraCreated.map(f => f.url ? redactCaptureUrl(f.url) : undefined),
+  snapshotMeta,
   topics: [...topics].sort(),
   /** Primary client emits that start the live book (paste into adapter / probe). */
   subscribeMsg: subscribeMsgs[0]?.payload ?? null,

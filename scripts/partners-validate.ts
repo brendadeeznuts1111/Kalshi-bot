@@ -47,6 +47,15 @@ export const KALSHI_PARTNER_OPS_CONCEPT_IDS = [
   'event.settlement.processed',
   'event.telegram.invite_sent',
   'event.telegram.message_pinned',
+  'partner.authorization.request',
+  'partner.authorization.grant',
+  'partner.execution.gate',
+  'partner.execution.reservation',
+  'partner.execution.provider_lifecycle',
+  'partner.execution.journal',
+  'partner.execution.receipt',
+  'provider.polymarket.intelligence_only',
+  'snapshot.visual.provenance',
 ] as const;
 
 const EXPECTED_KIND: Record<(typeof KALSHI_PARTNER_OPS_CONCEPT_IDS)[number], 'ui' | 'composite'> = {
@@ -81,6 +90,15 @@ const EXPECTED_KIND: Record<(typeof KALSHI_PARTNER_OPS_CONCEPT_IDS)[number], 'ui
   'event.settlement.processed': 'composite',
   'event.telegram.invite_sent': 'composite',
   'event.telegram.message_pinned': 'composite',
+  'partner.authorization.request': 'composite',
+  'partner.authorization.grant': 'composite',
+  'partner.execution.gate': 'composite',
+  'partner.execution.reservation': 'composite',
+  'partner.execution.provider_lifecycle': 'composite',
+  'partner.execution.journal': 'composite',
+  'partner.execution.receipt': 'composite',
+  'provider.polymarket.intelligence_only': 'composite',
+  'snapshot.visual.provenance': 'composite',
 };
 
 const errs: string[] = [];

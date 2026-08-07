@@ -2,7 +2,7 @@
 
 Canonical external links for this repo. **Code SSOT:** [`src/institutions/official-urls.ts`](../src/institutions/official-urls.ts).
 
-Last verified: **2026-07-31**
+Last verified: **2026-08-06**
 
 **Liveness:**
 
@@ -64,6 +64,27 @@ feeCents = ceil(rate × contracts × P × (1 − P) × 100)
 | Bookmakers | [bookmaker-apis](https://the-odds-api.com/sports-odds-data/bookmaker-apis.html) | Pinnacle key `pinnacle` — not Circa |
 
 Set `ODDS_API_KEY` in env for live fetches.
+
+## Telegram
+
+| Resource | URL | Notes |
+| --- | --- | --- |
+| Bot API | [core.telegram.org/bots/api](https://core.telegram.org/bots/api) | HTTP bot methods, message/topic identifiers, and request shapes |
+| Bot platform introduction | [core.telegram.org/bots](https://core.telegram.org/bots) | BotFather setup and token-safety guidance |
+
+The partner authorization boundary stores numeric chat, topic, message, and
+approver IDs as validated strings and never stores the bot token in SQLite.
+
+## Polymarket
+
+| Resource | URL | Notes |
+| --- | --- | --- |
+| API introduction | [docs.polymarket.com/api-reference/introduction](https://docs.polymarket.com/api-reference/introduction) | Gamma public market/event metadata surface |
+| Quickstart | [docs.polymarket.com/quickstart](https://docs.polymarket.com/quickstart) | Current public API examples |
+
+Polymarket is currently a read-only regulatory market-intelligence source in
+this repository. It is not an authorized partner execution provider; see
+[`PARTNER-EXECUTION-EXPANSION.md`](PARTNER-EXECUTION-EXPANSION.md).
 
 **Tennis coverage:** named ATP/WTA tournaments only — no Challenger/ITF sport keys. That boundary defines the two tennis program archetypes — see [`TENNIS_PROGRAM_ARCHETYPES.md`](TENNIS_PROGRAM_ARCHETYPES.md).
 

@@ -13,8 +13,8 @@ pass.
 
 Implementation update (2026-08-06): Waves 0–2 and the Wave 3 authoritative demo
 evidence collector, deterministic failure-scenario runner, daily evidence
-compiler, and seven-day chain verifier are implemented on the
-authorized-execution branch: operator principals, regulatory lifecycle/sync,
+compiler, and seven-day chain verifier are merged into `main`: operator
+principals, regulatory lifecycle/sync,
 leased reconciliation and stale recovery, full Kalshi evidence binding,
 fail-closed risk health, authorized cancellation, independent workers, canonical
 provider lifecycle, and the immutable journal. The collector binds
@@ -52,7 +52,7 @@ integration.
 | W1 authenticated cancellation | closed | `executeAuthorizedCancel`, scoped credentials, current grant/risk recheck, durable intent/receipt |
 | W1 stale placement/evidence | closed | stale placing recovery plus cursor-complete active/historical exact-term reconciliation |
 | W1 workers/alerts | closed | independent reconcile/lifecycle/receipt jobs, Bun cron register/remove/preview, deduplicated breaker receipts |
-| W2 provider lifecycle | closed | cursor-complete account order/fill ingestion and provider-positive settlement accounting |
+| W2 provider lifecycle | closed | cursor-complete account order/fill ingestion, canonical provider direction, strict primary-account identity, exact minor-unit fees, and provider-positive settlement accounting |
 | W2 immutable projections | closed | append-only integer journal, deterministic source keys, reversals, partner/out/skin projections and drift |
 | W3 tooling | closed | authoritative demo collector, deterministic service scenarios, daily compiler, seven-day chain verifier |
 | W3 elapsed graduation | **open** | seven consecutive real passing demo days and human artifact review have not elapsed |

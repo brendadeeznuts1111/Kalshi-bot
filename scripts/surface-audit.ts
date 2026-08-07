@@ -32,7 +32,7 @@ const GLOSSARY_ID_RE = /"(kpi\.\w+|alert\.\w+|ops\.\w+|kalshi_\w+|poly_\w+|elo_\
 let violations = 0;
 
 for (const [filePrefix, expectedSurface] of Object.entries(FILE_SURFACE_MAP)) {
-  const allowed = new Set(PAGE_SURFACES[expectedSurface]);
+  const allowed = new Set<string>(PAGE_SURFACES[expectedSurface]);
   const files = await Array.fromAsync(new Bun.Glob(`${filePrefix}*`).scan());
 
   for (const file of files) {

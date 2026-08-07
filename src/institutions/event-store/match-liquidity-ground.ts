@@ -23,6 +23,11 @@ import {
   TENNIS_WS_GROUND_WEBVIEW_HEIGHT,
   TENNIS_WS_GROUND_WEBVIEW_WIDTH,
 } from "./tennis-lane-constants.ts";
+import {
+  buildVisualSnapshotMeta,
+  type BunWebViewOptions,
+  type VisualSnapshotMeta,
+} from "./visual-snapshot-meta.ts";
 
 export const MATCH_LIQUIDITY_GROUND_DIR = joinPath("research/cache/match-liquidity-ground");
 export const MATCH_LIQUIDITY_GROUND_LATEST = join(MATCH_LIQUIDITY_GROUND_DIR, "latest.json");
@@ -34,6 +39,8 @@ export type MatchLiquidityGroundArtifact = {
   thumbWebp: string;
   webview: boolean;
   image: boolean;
+  /** Bun-native capture provenance; absent only on legacy/injected artifacts. */
+  snapshotMeta?: VisualSnapshotMeta;
   model: MatchLiquidityDashboardModel;
 };
 
@@ -44,6 +51,7 @@ export type MatchLiquidityGroundLatest = {
   thumbWebp: string;
   webview: boolean;
   image: boolean;
+  snapshotMeta: VisualSnapshotMeta;
   total: number;
   quoted: number;
   liquidityOk: number;
@@ -51,9 +59,7 @@ export type MatchLiquidityGroundLatest = {
   rows: number;
 };
 
-type WebViewOptions = NonNullable<ConstructorParameters<typeof Bun.WebView>[0]>;
-
-function resolveWebViewBackend(): WebViewOptions["backend"] {
+function resolveWebViewBackend(): BunWebViewOptions["backend"] {
   return process.platform === "darwin" ? "webkit" : "chrome";
 }
 
@@ -62,8 +68,7 @@ function hasWebView(): boolean {
 }
 
 function hasImagePipeline(): boolean {
-  // Prefer file().image() chain (tennis-ws-ground); Bun.Image class may also exist.
-  return typeof Bun.Image === "function" || typeof (Bun.file as unknown) === "function";
+  return typeof Bun.Image === "function";
 }
 
 /** Write dashboard PNG + WebP thumb via Bun.WebView + Bun.Image. */
@@ -88,11 +93,13 @@ export async function captureMatchLiquidityGround(
 
   let webviewCaptured = false;
   let imageCaptured = false;
+  let webviewError: string | null = null;
+  let imageError: string | null = null;
 
   if (!options.htmlOnly && hasWebView()) {
     // @see https://bun.com/docs/runtime/webview
     const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
-    const viewOptions: WebViewOptions = {
+    const viewOptions: BunWebViewOptions = {
       width: TENNIS_WS_GROUND_WEBVIEW_WIDTH,
       height: TENNIS_WS_GROUND_WEBVIEW_HEIGHT,
       backend: resolveWebViewBackend(),
@@ -109,17 +116,37 @@ export async function captureMatchLiquidityGround(
 
       if (hasImagePipeline()) {
         // @see https://bun.com/docs/runtime/image
-        await Bun.file(dashboardPng)
-          .image()
-          .resize(TENNIS_WS_GROUND_THUMB_WIDTH, TENNIS_WS_GROUND_THUMB_HEIGHT, { fit: "inside" })
-          .webp({ quality: TENNIS_WS_GROUND_WEBP_QUALITY })
-          .write(thumbWebp);
-        imageCaptured = true;
+        try {
+          await Bun.file(dashboardPng)
+            .image()
+            .resize(TENNIS_WS_GROUND_THUMB_WIDTH, TENNIS_WS_GROUND_THUMB_HEIGHT, { fit: "inside" })
+            .webp({ quality: TENNIS_WS_GROUND_WEBP_QUALITY })
+            .write(thumbWebp);
+          imageCaptured = true;
+        } catch (error) {
+          imageError = errorMessage(error);
+        }
       }
-    } catch {
+    } catch (error) {
       // HTML still written
+      webviewError = errorMessage(error);
     }
   }
+
+  const snapshotMeta = await buildVisualSnapshotMeta({
+    capturedAt: model.at,
+    backend: resolveWebViewBackend(),
+    width: TENNIS_WS_GROUND_WEBVIEW_WIDTH,
+    height: TENNIS_WS_GROUND_WEBVIEW_HEIGHT,
+    webviewCaptured,
+    webviewAttempted: !options.htmlOnly,
+    webviewError,
+    imageGenerated: imageCaptured,
+    imageAttempted: webviewCaptured && hasImagePipeline(),
+    imageError,
+    sourcePath: dashboardPng,
+    thumbnailPath: thumbWebp,
+  });
 
   return {
     at: model.at,
@@ -128,6 +155,7 @@ export async function captureMatchLiquidityGround(
     thumbWebp,
     webview: webviewCaptured,
     image: imageCaptured,
+    snapshotMeta,
     model,
   };
 }
@@ -136,6 +164,20 @@ export async function persistMatchLiquidityGroundArtifact(
   artifact: MatchLiquidityGroundArtifact,
   latestPath: string = MATCH_LIQUIDITY_GROUND_LATEST,
 ): Promise<MatchLiquidityGroundLatest> {
+  const snapshotMeta =
+    artifact.snapshotMeta ??
+    (await buildVisualSnapshotMeta({
+      capturedAt: artifact.at,
+      backend: resolveWebViewBackend(),
+      width: TENNIS_WS_GROUND_WEBVIEW_WIDTH,
+      height: TENNIS_WS_GROUND_WEBVIEW_HEIGHT,
+      webviewCaptured: artifact.webview,
+      webviewAttempted: artifact.webview,
+      imageGenerated: artifact.image,
+      imageAttempted: artifact.image,
+      sourcePath: artifact.dashboardPng,
+      thumbnailPath: artifact.thumbWebp,
+    }));
   const latest: MatchLiquidityGroundLatest = {
     at: artifact.at,
     dashboardHtml: artifact.dashboardHtml,
@@ -143,6 +185,7 @@ export async function persistMatchLiquidityGroundArtifact(
     thumbWebp: artifact.thumbWebp,
     webview: artifact.webview,
     image: artifact.image,
+    snapshotMeta,
     total: artifact.model.summary.total,
     quoted: artifact.model.summary.quoted,
     liquidityOk: artifact.model.summary.liquidityOk,
@@ -151,6 +194,10 @@ export async function persistMatchLiquidityGroundArtifact(
   };
   await Bun.write(latestPath, JSON.stringify(latest, null, 2));
   return latest;
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 export async function loadLatestMatchLiquidityGround(

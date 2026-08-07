@@ -2,7 +2,7 @@
  * Canonical external URLs — verify when fee/API docs change.
  * Code cites these constants; do not hardcode stale paths in tenants.
  *
- * Last verified: 2026-07-31
+ * Last verified: 2026-08-06
  * Note: portfolio endpoints now ship fixed-point fields (*_fp, *_dollars)
  * alongside legacy integer cents — parse via institutions/ledger-types.ts.
  * No programmatic deposit/withdraw endpoints exist (bank rails only).
@@ -61,7 +61,13 @@ export const OFFICIAL_URLS = {
   polymarket: {
     home: "https://polymarket.com/",
     docs: "https://docs.polymarket.com/",
+    apiIntroduction: "https://docs.polymarket.com/api-reference/introduction",
+    quickstart: "https://docs.polymarket.com/quickstart",
     gammaApiBase: "https://gamma-api.polymarket.com",
+  },
+  telegram: {
+    bots: "https://core.telegram.org/bots",
+    botApi: "https://core.telegram.org/bots/api",
   },
   bun: {
     create: "https://bun.com/docs/runtime/templating/create",

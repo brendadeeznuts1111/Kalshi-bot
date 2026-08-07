@@ -257,7 +257,7 @@ export class PandoraSocket {
     });
 
     ws.addEventListener('message', (ev) => {
-      const data = (ev as MessageEvent).data;
+      const data = ev.data;
       if (data instanceof ArrayBuffer) {
         this.handleBinaryAttachment(new Uint8Array(data));
         return;

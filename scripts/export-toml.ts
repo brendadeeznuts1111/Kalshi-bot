@@ -10,18 +10,19 @@
  * Output: writes file.toml alongside the input JSON.
  * Validates against TOML restrictions (no null/undefined in arrays, no BigInt).
  */
-import { TOML } from "bun";
+import { tomlStringify } from "../src/partner/toml-stringify.ts";
 
 function findUndefinedInArray(value: unknown[], path: string): string | null {
   for (let i = 0; i < value.length; i++) {
-    if (value[i] === undefined) {
+    const item = value[i];
+    if (item === undefined) {
       return `TOML arrays cannot contain undefined (hole). Found at ${path}[${i}]`;
     }
-    if (Array.isArray(value[i])) {
-      const inner = findUndefinedInArray(value[i], `${path}[${i}]`);
+    if (Array.isArray(item)) {
+      const inner = findUndefinedInArray(item, `${path}[${i}]`);
       if (inner) return inner;
-    } else if (typeof value[i] === "object" && value[i] !== null) {
-      for (const [k, v] of Object.entries(value[i] as Record<string, unknown>)) {
+    } else if (typeof item === "object" && item !== null) {
+      for (const [k, v] of Object.entries(item as Record<string, unknown>)) {
         if (v === undefined) {
           return `TOML tables cannot contain undefined. Found at ${path}[${i}].${k}`;
         }
@@ -38,7 +39,7 @@ function validateForToml(data: unknown, path = "$"): string | null {
   }
   if (typeof data === "object") {
     for (const [k, v] of Object.entries(data as Record<string, unknown>)) {
-      if (v === undefined) continue; // skipped by TOML.stringify
+      if (v === undefined) continue; // skipped by the governed serializer
       if (Array.isArray(v)) {
         const err = findUndefinedInArray(v, `${path}.${k}`);
         if (err) return err;
@@ -80,12 +81,12 @@ async function main() {
   }
 
   try {
-    const toml = TOML.stringify(data);
+    const toml = tomlStringify(data).trimEnd();
     const tomlPath = jsonPath.replace(/\.json$/i, ".toml");
     await Bun.write(tomlPath, toml + "\n");
     console.log(`✅ ${jsonPath} → ${tomlPath}`);
   } catch (err) {
-    console.error(`TOML.stringify failed: ${err}`);
+    console.error(`TOML serialization failed: ${err}`);
     process.exit(1);
   }
 }

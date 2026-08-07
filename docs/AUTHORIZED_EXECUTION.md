@@ -1,5 +1,8 @@
 # Authorized Partner Execution
 
+Architecture map: [`PARTNER-EXECUTION-EXPANSION.md`](PARTNER-EXECUTION-EXPANSION.md) ·
+CLI: `bun run partner:map`
+
 Status: implemented, default off. This is the operator contract and runbook for the
 authorization, Telegram approval, exposure reservation, Kalshi mapping, and live
 HTTP orchestration layers.
@@ -283,3 +286,10 @@ live in
 - Keep Fantasy402 unwired until provider-side idempotency is proven.
 - Add credit-line or dedicated-wallet accounting only when an owned domain
   contract and ledger source exist.
+
+## See also
+
+- [Partner execution expansion map](PARTNER-EXECUTION-EXPANSION.md)
+- [Partner domain architecture](PARTNER-DOMAIN.md)
+- [Demo proof schema](EXECUTION_DEMO_PROOF_SCHEMA.md)
+- [Regulatory agents and Polymarket intelligence](regulatory-agents.md)
