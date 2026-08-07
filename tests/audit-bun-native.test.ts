@@ -22,7 +22,7 @@ describe("bun-native guard", () => {
 
     expect(violations.map((item) => item.message)).toEqual([
       "dependencies.wrap-ansi duplicates Bun.wrapAnsi()",
-      "devDependencies.@iarna/toml duplicates Bun.TOML.parse() / Bun.TOML.stringify()",
+      "devDependencies.@iarna/toml duplicates Bun.TOML.parse() / governed tomlStringify()",
     ]);
   });
 
@@ -36,7 +36,7 @@ describe("bun-native guard", () => {
 
     expect(violations.map((item) => item.message)).toEqual([
       "dependencies.ansi aliases wrap-ansi; use Bun.wrapAnsi()",
-      "dependencies.parser aliases @iarna/toml; use Bun.TOML.parse() / Bun.TOML.stringify()",
+      "dependencies.parser aliases @iarna/toml; use Bun.TOML.parse() / governed tomlStringify()",
     ]);
   });
 
@@ -64,6 +64,13 @@ describe("bun-native guard", () => {
     `);
 
     expect(violations).toEqual([]);
+  });
+
+  test("blocks declarations that shadow canonical Bun types", () => {
+    expect(findSourceViolations("declare namespace Bun { interface WebView {} }")[0]?.message)
+      .toContain("canonical bun-types");
+    expect(findSourceViolations("interface Bun { version: string }")[0]?.message)
+      .toContain("canonical runtime/type namespace");
   });
 
   test("audits an explicit Git file universe and ignores nested dependency trees", async () => {

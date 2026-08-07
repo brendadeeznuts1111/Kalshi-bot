@@ -56,7 +56,7 @@ const frames: Frame[] = [];
 const requestUrlById = new Map<string, string>();
 
 if (typeof Bun.WebView !== 'function') {
-  console.error('Bun.WebView unavailable — need Bun ≥1.4 with WebView');
+  console.error('Bun.WebView unavailable in the active Bun runtime/build');
   process.exit(1);
 }
 

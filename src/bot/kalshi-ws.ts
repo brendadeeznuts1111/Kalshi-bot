@@ -56,44 +56,26 @@ export type KalshiWsFactory = (url: string, headers: Record<string, string>) => 
  * All ws:// and wss:// combinations work through HTTP and HTTPS proxies.
  * @see https://bun.com/blog/bun-v1.3.6#http-https-proxy-support-for-websocket
  */
-export type KalshiWsProxyOptions = string | { url: string; headers?: Record<string, string> };
+export type KalshiWsProxyOptions = NonNullable<Bun.WebSocketOptions["proxy"]>;
 
 /**
  * Granular TLS control values for the client WebSocket `tls` option.
  * Subset of Bun's TLSOptions relevant to a wss:// client; matches `fetch` TLS.
  * @see https://bun.com/docs/runtime/networking/fetch
  */
-export type KalshiWsTlsOptions = {
-  /** Override trusted CA certs (replaces Mozilla bundle). File path or PEM. */
-  ca?: string | Bun.BunFile | Array<string | Bun.BunFile>;
-  /** Client certificate chain (mTLS). File path or PEM. */
-  cert?: string | Bun.BunFile;
-  /** Client private key (mTLS). File path or PEM. */
-  key?: string | Bun.BunFile;
-  /** Passphrase for an encrypted `key`. */
-  passphrase?: string;
-  /** false accepts any certificate — corp-proxy/dev debugging only. */
-  rejectUnauthorized?: boolean;
-  /** Explicit SNI server name (defaults to URL host). */
-  serverName?: string;
-  /** OpenSSL cipher suite list. */
-  ciphers?: string;
-  /** Custom certificate validation; return an Error to reject. */
-  checkServerIdentity?: (hostname: string, peerCertificate: unknown) => Error | undefined;
-  /** Sets OPENSSL_RELEASE_BUFFERS=1: saves memory, hurts performance. */
-  lowMemoryMode?: boolean;
-};
+export type KalshiWsTlsOptions = NonNullable<Bun.WebSocketOptions["tls"]>;
 
-export type KalshiWsNetOptions = {
-  proxy?: KalshiWsProxyOptions;
-  tls?: KalshiWsTlsOptions;
-};
+export type KalshiWsNetOptions = Pick<Bun.WebSocketOptions, "proxy" | "tls">;
 
-type BunClientWebSocketOptions = {
-  headers: Record<string, string>;
-  proxy?: KalshiWsProxyOptions;
-  tls?: KalshiWsTlsOptions;
-};
+type BunClientWebSocketOptions = Pick<
+  Bun.WebSocketOptions,
+  "headers" | "proxy" | "tls"
+>;
+
+type BunClientWebSocketConstructor = new (
+  url: string | URL,
+  options?: Bun.WebSocketOptions,
+) => WebSocket;
 
 function kalshiWsTargetHost(
   env: Record<string, string | undefined>,
@@ -217,12 +199,11 @@ function defaultWsFactory(
   net: KalshiWsNetOptions = resolveKalshiWsNetOptions(),
 ): KalshiWsSocket {
   const opts: BunClientWebSocketOptions = { headers, ...net };
-  // Bun extension: headers + optional proxy/tls on client WebSocket (not in DOM lib typings).
-  const BunWebSocket = WebSocket as unknown as new (
-    url: string,
-    opts: BunClientWebSocketOptions,
-  ) => KalshiWsSocket;
-  return new BunWebSocket(url, opts);
+  // lib.dom wins TypeScript's global constructor selection and hides Bun's
+  // canonical options overload. Keep the compatibility cast at this boundary;
+  // the constructor options themselves remain derived from Bun.WebSocketOptions.
+  const BunClientWebSocket = WebSocket as unknown as BunClientWebSocketConstructor;
+  return new BunClientWebSocket(url, opts);
 }
 
 export function resolveKalshiWsUrl(

@@ -12,5 +12,5 @@
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts", "alpha/**/*.ts", "tools/**/*.ts", "scripts/train-elo.ts"]
+  "include": ["src/**/*.ts", "tests/**/*.ts", "alpha/**/*.ts", "tools/**/*.ts", "scripts/**/*.ts"]
 }

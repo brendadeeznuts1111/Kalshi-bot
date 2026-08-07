@@ -12,6 +12,7 @@
  * @see https://bun.com/docs/runtime/utils
  */
 import { join } from "node:path";
+import ts from "typescript";
 
 export const BANNED_PACKAGES = new Map<string, string>([
   ["wrap-ansi", "Bun.wrapAnsi()"],
@@ -21,9 +22,9 @@ export const BANNED_PACKAGES = new Map<string, string>([
   ["cli-table", "Bun.inspect.table()"],
   ["cli-table3", "Bun.inspect.table()"],
   ["cli-table2", "Bun.inspect.table()"],
-  ["toml", "Bun.TOML.parse() / Bun.TOML.stringify()"],
-  ["@iarna/toml", "Bun.TOML.parse() / Bun.TOML.stringify()"],
-  ["@ltd/j-toml", "Bun.TOML.parse() / Bun.TOML.stringify()"],
+  ["toml", "Bun.TOML.parse() / governed tomlStringify()"],
+  ["@iarna/toml", "Bun.TOML.parse() / governed tomlStringify()"],
+  ["@ltd/j-toml", "Bun.TOML.parse() / governed tomlStringify()"],
 ]);
 
 const DEPENDENCY_SECTIONS = [
@@ -163,6 +164,32 @@ export function findSourceViolations(
     ? source.slice(source.indexOf("\n") + 1)
     : source;
   const imports = transpiler(sourceLoader(file)).scanImports(scannable);
+
+  const sourceFile = ts.createSourceFile(
+    file,
+    scannable,
+    ts.ScriptTarget.Latest,
+    false,
+    file.endsWith("x") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+  );
+  const inspectDeclaration = (node: ts.Node): void => {
+    if (ts.isModuleDeclaration(node) && ts.isIdentifier(node.name) && node.name.text === "Bun") {
+      violations.push({
+        file,
+        message: "ambient/local namespace Bun shadows canonical bun-types declarations",
+      });
+    } else if (
+      (ts.isInterfaceDeclaration(node) || ts.isClassDeclaration(node) || ts.isEnumDeclaration(node))
+      && node.name?.text === "Bun"
+    ) {
+      violations.push({
+        file,
+        message: "local Bun declaration shadows the canonical runtime/type namespace",
+      });
+    }
+    ts.forEachChild(node, inspectDeclaration);
+  };
+  inspectDeclaration(sourceFile);
 
   for (const item of imports) {
     const dependency = packageName(item.path);

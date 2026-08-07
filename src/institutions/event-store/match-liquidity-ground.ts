@@ -68,8 +68,7 @@ function hasWebView(): boolean {
 }
 
 function hasImagePipeline(): boolean {
-  // Prefer file().image() chain (tennis-ws-ground); Bun.Image class may also exist.
-  return typeof Bun.Image === "function" || typeof (Bun.file as unknown) === "function";
+  return typeof Bun.Image === "function";
 }
 
 /** Write dashboard PNG + WebP thumb via Bun.WebView + Bun.Image. */

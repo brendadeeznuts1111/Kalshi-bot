@@ -61,7 +61,7 @@ export async function capturePandoraViaWebView(
   options: WebViewCaptureOptions = {},
 ): Promise<WebViewCaptureResult> {
   if (typeof Bun.WebView !== "function") {
-    throw new Error("Bun.WebView unavailable — need Bun ≥1.4 with WebView");
+    throw new Error("Bun.WebView unavailable in the active Bun runtime/build");
   }
 
   const seconds = Math.min(
