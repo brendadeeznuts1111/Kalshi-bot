@@ -98,9 +98,11 @@ export const SKINS = [
       kind: 'unmapped',
       note: 'Live-product coverage not proven yet; offerings declared only',
     },
+    // Live probe 2026-08-09: ASP.NET Login.aspx + sportsbookvip.com shell (parlay21 / lonestar).
+    // Login.aspx is collision-weighted — alone stays < 0.4; sportsbookvip clears review.
     fingerprints: {
-      endpoints: [] as const,
-      assets: [] as const,
+      endpoints: ['/Login.aspx'] as const,
+      assets: ['sportsbookvip.com', 'mm2019.js', 'sportsbookvip'] as const,
     },
   },
   {

@@ -1,6 +1,6 @@
 // @see https://bun.com/docs/test/index#run-tests
 import { describe, expect, test } from 'bun:test';
-import { SKINS } from '../../src/domain/index.ts';
+import { SKINS, getSkinByHost } from '../../src/domain/index.ts';
 import {
   adapterIdForMappedSkin,
   discoverHost,
@@ -31,10 +31,13 @@ describe('host-discover', () => {
     }
   });
 
-  test('buckeye + metallic declare fingerprints', () => {
+  test('buckeye + ace + metallic declare fingerprints', () => {
     const buckeye = SKINS.find(s => s.id === 'buckeye');
+    const ace = SKINS.find(s => s.id === 'ace');
     const metallic = SKINS.find(s => s.id === 'metallic');
     expect(buckeye?.fingerprints?.endpoints.length).toBeGreaterThan(0);
+    expect(ace?.fingerprints?.endpoints).toContain('/Login.aspx');
+    expect(ace?.fingerprints?.assets.some(a => a.includes('sportsbookvip'))).toBe(true);
     expect(metallic?.fingerprints?.endpoints).toContain(
       '/player-api/identity/CustomerLoginRedir'
     );
@@ -179,7 +182,7 @@ describe('host-discover', () => {
     expect(report.weigh.skinScores.some(s => s.skinId === skin!.id && s.score > 0)).toBe(true);
   });
 
-  test('Login.aspx alone does not suggest buckeye', () => {
+  test('Login.aspx alone stays weak (collision weight); not buckeye; action92 unmapped', () => {
     const report = scoreHostDiscovery({
       url: 'https://www.action92.com/',
       host: 'www.action92.com',
@@ -198,9 +201,35 @@ describe('host-discover', () => {
         mx: [],
       },
     });
+    // ACE profile matches Login.aspx at collision weight only — below suggest threshold.
     expect(report.suggestedSkinId).toBe('unknown');
     expect(report.decision).toBe('weak');
     expect(report.weigh.skinScores.every(s => s.score < 0.4)).toBe(true);
+    expect(report.weigh.skinScores.some(s => s.skinId === 'buckeye')).toBe(false);
+    expect(getSkinByHost('www.action92.com')).toBeUndefined();
+  });
+
+  test('ACE sportsbookvip + Login.aspx → ace for review (not HOST_TO_SKIN)', () => {
+    const report = scoreHostDiscovery({
+      url: 'https://mirror-ace.example/',
+      host: 'mirror-ace.example',
+      finalUrl: 'https://mirror-ace.example/',
+      status: 200,
+      headers: {},
+      body: `<html><title>Member Login</title>
+        <form action="https://backend.mirror-ace.example/Login.aspx"></form>
+        <script src="//sportsbookvip.com/mm2019.js"></script>
+        <a href="http://sportsbookvip.com/rules.html">rules</a>
+        </html>`,
+      storedUrls: [
+        'https://backend.mirror-ace.example/Login.aspx',
+        'https://sportsbookvip.com/mm2019.js',
+      ],
+    });
+    expect(report.suggestedSkinId).toBe('ace');
+    expect(report.confidence).toBeGreaterThanOrEqual(0.4);
+    expect(report.fromHostMap).toBe(false);
+    expect(getSkinByHost('mirror-ace.example')).toBeUndefined();
   });
 
   test('generic login HTML → unknown / weak', () => {

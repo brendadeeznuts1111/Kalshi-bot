@@ -28,12 +28,19 @@ export {
 export {
   PLIVE_STREAM_ENDPOINTS,
   STATSCORE_BOOKED_EVENTS,
+  ULTRA_DESK_API_PATHS,
   defaultLiveWidgetUrl,
   defaultUltraStreamEndpoints,
   listLiveProductInfraApexHosts,
   streamEndpointsForLiveProduct,
   type LiveStreamEndpoints,
 } from './live-product-endpoints.ts';
+
+export {
+  buildSkinMatrixRows,
+  formatSkinMatrixText,
+  type SkinMatrixRow,
+} from './skin-matrix.ts';
 
 export {
   HOST_TO_SKIN,

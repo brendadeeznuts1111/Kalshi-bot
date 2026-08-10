@@ -1,6 +1,8 @@
 // @see https://bun.com/docs/test/index#run-tests
 import { describe, expect, test } from 'bun:test';
 import {
+  ULTRA_DESK_API_PATHS,
+  buildSkinMatrixRows,
   PARTNER_DOMAIN_ENV,
   RETIRED_BARE_BOOK_DOMAIN_ENVS,
   assertActiveSkinsHaveHosts,
@@ -159,5 +161,20 @@ describe('domain sports / skins / live products', () => {
       .query(`SELECT DISTINCT provider AS p FROM provider_sport_mappings ORDER BY provider`)
       .all() as Array<{ p: string }>;
     expect(providers.map(r => r.p)).toEqual(['ezlive', 'plive']);
+  });
+
+  test('skin matrix rows cover every SKIN_ID with apex hosts', () => {
+    const rows = buildSkinMatrixRows();
+    expect(rows.map(r => r.skinId).sort()).toEqual(SKINS.map(s => s.id).sort());
+    const ace = rows.find(r => r.skinId === 'ace');
+    expect(ace?.hasFingerprints).toBe(true);
+    expect(ace?.apexHosts).toContain('parlay21.com');
+    expect(ace?.catalogLiveProducts).toEqual(['EZLive', 'UltraLive', 'MagLive']);
+  });
+
+  test('ULTRA_DESK_API_PATHS are desk-relative (no host lock)', () => {
+    expect(ULTRA_DESK_API_PATHS.ultraLive.startsWith('/')).toBe(true);
+    expect(ULTRA_DESK_API_PATHS.ultraLive).not.toContain('://');
+    expect(ULTRA_DESK_API_PATHS.sportsLeagues).toContain('Get_SportsLeagues');
   });
 });

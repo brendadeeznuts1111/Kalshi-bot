@@ -9,6 +9,7 @@
 import {
   PLIVE_STREAM_ENDPOINTS,
   STATSCORE_BOOKED_EVENTS,
+  ULTRA_DESK_API_PATHS,
   requireDefaultUrlForUltraMapper,
 } from '../../domain/index.ts';
 
@@ -77,13 +78,13 @@ export type FantasyStreamListWire = {
 export const FANTASY_ULTRA_DEFAULTS = {
   /** Resolved from SKINS Ultra-mapper hosts at module load. */
   domain: requireDefaultUrlForUltraMapper(),
-  ultraLivePath: '/cloud/api/Provider/getUltraLiveURL',
+  ultraLivePath: ULTRA_DESK_API_PATHS.ultraLive,
   /** POST application/x-www-form-urlencoded */
-  sportsLeaguesPath: '/cloud/api/League/Get_SportsLeagues',
+  sportsLeaguesPath: ULTRA_DESK_API_PATHS.sportsLeagues,
   /** POST empty form body; response { code: jwt } */
-  renewTokenPath: '/cloud/api/System/renewToken',
+  renewTokenPath: ULTRA_DESK_API_PATHS.renewToken,
   /** Optional stream token for pandora/ganchrow (path observed in network captures). */
-  streamTokenPath: '/betFactoryV2/api/streamToken.php',
+  streamTokenPath: ULTRA_DESK_API_PATHS.streamToken,
   streamListUrl: PLIVE_STREAM_ENDPOINTS.streamListUrl,
   streamOrigin: PLIVE_STREAM_ENDPOINTS.streamOrigin,
   streamReferer: PLIVE_STREAM_ENDPOINTS.streamReferer,

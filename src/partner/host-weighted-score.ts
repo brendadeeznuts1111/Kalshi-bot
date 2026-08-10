@@ -161,6 +161,24 @@ function haystackLower(obs: HostObservations): string {
     .toLowerCase();
 }
 
+/**
+ * Endpoints shared across unrelated desks — alone they must not clear the
+ * suggest threshold (0.4). Pair with distinctive assets (e.g. sportsbookvip).
+ */
+export const COLLISION_ENDPOINT_WEIGHTS: Readonly<Record<string, number>> = {
+  '/login.aspx': 0.35,
+  'login.aspx': 0.35,
+};
+
+function endpointMatchWeights(endpoint: string): { exact: number; partial: number } {
+  const key = endpoint.toLowerCase();
+  const collision = COLLISION_ENDPOINT_WEIGHTS[key] ?? COLLISION_ENDPOINT_WEIGHTS[key.replace(/^\//, '')];
+  if (collision != null) {
+    return { exact: collision, partial: Math.min(collision, 0.25) };
+  }
+  return { exact: 0.8, partial: 0.6 };
+}
+
 function matchEndpoint(
   paths: readonly string[],
   haystack: string,
@@ -168,18 +186,19 @@ function matchEndpoint(
 ): { weight: number; detail: string } | null {
   const ep = endpoint.toLowerCase();
   if (!ep) return null;
+  const weights = endpointMatchWeights(endpoint);
   for (const path of paths) {
     const p = path.toLowerCase();
     if (p === ep || p.endsWith(ep) || (ep.endsWith('/') && p.startsWith(ep))) {
-      return { weight: 0.8, detail: `endpoint exact ${endpoint} ← ${path}` };
+      return { weight: weights.exact, detail: `endpoint exact ${endpoint} ← ${path}` };
     }
     if (p.includes(ep) || (ep.length >= 6 && p.includes(ep.replace(/^\//, '')))) {
-      return { weight: 0.6, detail: `endpoint partial ${endpoint} ← ${path}` };
+      return { weight: weights.partial, detail: `endpoint partial ${endpoint} ← ${path}` };
     }
   }
   // Also allow path token in HTML/JS without being collected as path
   if (ep.length >= 6 && haystack.includes(ep)) {
-    return { weight: 0.6, detail: `endpoint in body/assets ${endpoint}` };
+    return { weight: weights.partial, detail: `endpoint in body/assets ${endpoint}` };
   }
   return null;
 }

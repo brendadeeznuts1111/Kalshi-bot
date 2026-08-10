@@ -1,29 +1,38 @@
 #!/usr/bin/env bun
 /**
- * Print Partner domain architecture status (five layers).
+ * Print Partner domain architecture status (five layers) + skin matrix.
  *
  *   bun run partner:domain
  *   bun run partner:domain -- --json
+ *   bun run partner:domain -- --skins
+ *   bun run partner:domain -- --skins --json
  *   bun run partner:map
  *   bun run partner:map -- --output=artifacts/partner-expansion.mmd
  *
  * @see docs/PARTNER-DOMAIN.md
  * @see src/partner/domain.ts
+ * @see src/domain/skin-matrix.ts
  */
+import {
+  buildSkinMatrixRows,
+  formatSkinMatrixText,
+} from '../src/domain/index.ts';
 import {
   buildDomainStatusReport,
   formatDomainStatusText,
   formatPartnerExpansionMermaid,
-} from "../src/partner/domain.ts";
-import { mkdir } from "node:fs/promises";
-import { dirname } from "node:path";
+} from '../src/partner/domain.ts';
+import { mkdir } from 'node:fs/promises';
+import { dirname } from 'node:path';
 
-const json = process.argv.includes("--json");
-const map = process.argv.includes("--map") || process.argv.includes("--mermaid");
-const outputArg = process.argv.find((arg) => arg.startsWith("--output="));
-const outputPath = outputArg?.slice("--output=".length).trim();
-if (json && map) throw new TypeError("Choose one of --json or --map/--mermaid");
-if (outputArg && !outputPath) throw new TypeError("--output requires a path");
+const json = process.argv.includes('--json');
+const skins = process.argv.includes('--skins') || process.argv.includes('--skin-matrix');
+const map = process.argv.includes('--map') || process.argv.includes('--mermaid');
+const outputArg = process.argv.find(arg => arg.startsWith('--output='));
+const outputPath = outputArg?.slice('--output='.length).trim();
+if (json && map) throw new TypeError('Choose one of --json or --map/--mermaid');
+if (skins && map) throw new TypeError('Choose one of --skins or --map/--mermaid');
+if (outputArg && !outputPath) throw new TypeError('--output requires a path');
 
 if (map) {
   const content = `${formatPartnerExpansionMermaid()}\n`;
@@ -37,11 +46,23 @@ if (map) {
   process.exit(0);
 }
 
+if (skins) {
+  const rows = buildSkinMatrixRows();
+  if (json) {
+    console.log(JSON.stringify({ skins: rows, count: rows.length }, null, 2));
+  } else {
+    console.log(formatSkinMatrixText(rows));
+    console.log('\n  · SSOT: src/domain/skins.ts · docs: src/domain/README.md');
+  }
+  process.exit(0);
+}
+
 const report = buildDomainStatusReport();
 
 if (json) {
   console.log(JSON.stringify(report, null, 2));
 } else {
   console.log(formatDomainStatusText(report));
-  console.log("\n  · docs: docs/PARTNER-DOMAIN.md");
+  console.log('\n  · docs: docs/PARTNER-DOMAIN.md');
+  console.log('  · skin matrix: bun run partner:domain -- --skins');
 }

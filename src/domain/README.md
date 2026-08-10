@@ -19,7 +19,7 @@ Desk hosts live only in `SKINS[].hosts`. Stream/widget infra URLs live only in
 | Skin         | Active | Live products              | Hosts                       | Mapper         |
 | ------------ | ------ | -------------------------- | --------------------------- | -------------- |
 | **buckeye**  | yes    | PLive, EZLive              | betwest, fantasy402, hulkwager | **fantasy402** |
-| **ace**      | yes    | EZLive, UltraLive, MagLive | parlay21.com, lonestarwagering.com | unmapped |
+| **ace**      | yes    | EZLive, UltraLive, MagLive | parlay21.com, lonestarwagering.com | unmapped (fp: Login.aspx + sportsbookvip) |
 | **metallic** | yes    | TBD                        | paradise, orange777, sunwager, gator747 | unmapped |
 | **sts**      | yes    | TBD                        | wagerattack.ag, gomobilewager.com | unmapped     |
 | **1bv**      | yes    | TBD                        | anybet365.com, betvegas23.com | unmapped     |

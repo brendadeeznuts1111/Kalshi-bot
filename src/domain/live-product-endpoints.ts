@@ -34,6 +34,18 @@ export const STATSCORE_BOOKED_EVENTS = {
   product: 'livescorepro',
 } as const;
 
+/**
+ * Desk-relative API paths for the Fantasy402 Ultra mapper (joined to PARTNER_DOMAIN / SKINS host).
+ * Not absolute URLs — host comes from skins / env.
+ */
+export const ULTRA_DESK_API_PATHS = {
+  ultraLive: '/cloud/api/Provider/getUltraLiveURL',
+  sportsLeagues: '/cloud/api/League/Get_SportsLeagues',
+  renewToken: '/cloud/api/System/renewToken',
+  /** Optional pandora/ganchrow stream token path observed in captures. */
+  streamToken: '/betFactoryV2/api/streamToken.php',
+} as const;
+
 /** Live products that reuse the Plive SportsWidgets stream shell. */
 const PLIVE_SHELL_PRODUCTS = new Set<LiveProductId>(['plive', 'ezlive']);
 
