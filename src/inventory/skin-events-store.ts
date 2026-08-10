@@ -299,14 +299,25 @@ export function formatSkinEventLine(row: SkinEventRow): string {
 export async function fetchPublicPliveStreamEvents(
   options: { sport?: string; fetchImpl?: typeof fetch } = {}
 ): Promise<InventoryEvent[]> {
+  const { fetchWithRetry } = await import('../institutions/resilient-fetch.ts');
   const fetchImpl = options.fetchImpl ?? fetch;
-  const res = await fetchImpl(FANTASY_ULTRA_DEFAULTS.streamListUrl, {
-    headers: {
-      accept: 'application/json, text/plain, */*',
-      origin: FANTASY_ULTRA_DEFAULTS.streamOrigin,
-      referer: FANTASY_ULTRA_DEFAULTS.streamReferer,
+  const res = await fetchWithRetry(
+    FANTASY_ULTRA_DEFAULTS.streamListUrl,
+    {
+      headers: {
+        accept: 'application/json, text/plain, */*',
+        origin: FANTASY_ULTRA_DEFAULTS.streamOrigin,
+        referer: FANTASY_ULTRA_DEFAULTS.streamReferer,
+      },
     },
-  });
+    {
+      retries: 3,
+      backoffMs: 800,
+      isRetryable: status => status === 403 || status === 429 || status >= 500,
+      fetchImpl,
+      timeoutMs: 25_000,
+    }
+  );
   if (!res.ok) {
     const text = await res.text().catch(() => '');
     throw new Error(

@@ -18,6 +18,10 @@ import type { Database } from 'bun:sqlite';
 import type { CoefficientStore } from '../partner/fantasy-ultra/coefficient-store.ts';
 import type { FantasySessionAdapter, InventoryEvent } from '../partner/types.ts';
 import {
+  formatEnrichValidation,
+  type EnrichValidation,
+} from './enrich-validate.ts';
+import {
   formatLeagueLine,
   upsertInventoryLeagues,
   type InventoryLeagueUpsertResult,
@@ -93,6 +97,8 @@ export type InventorySyncReport = {
   pricedLineCount: number;
   /** Post-tick odds_event_id fill-rate for the book (null when dry-run skipped query). */
   oddsLink: OddsLinkCoverage | null;
+  /** Post-enrich validation (null when enrich did not run). */
+  enrichValidation: EnrichValidation | null;
   /** True when no DB mutations were applied. */
   dryRun: boolean;
   /** Live-product shells this inventory feed covers (e.g. plive + ezlive). */
@@ -490,13 +496,16 @@ export async function runInventorySync(
 
   let enriched = 0;
   let enrichCandidates = 0;
+  let enrichValidation: EnrichValidation | null = null;
   const wantEnrich = options.enrichBooked === true || enrichOnly;
   const enrichScope: EnrichBookedScope | null = wantEnrich
     ? (options.enrichBookedScope ?? (enrichOnly ? 'unlinked' : 'board'))
     : null;
 
   if (wantEnrich && enrichScope) {
+    const t0 = Date.now();
     try {
+      const { enrichLog } = await import('./enrich-log.ts');
       const sportFilter = sport.toLowerCase().includes('table')
         ? 'table'
         : sport === 'all'
@@ -507,7 +516,6 @@ export async function runInventorySync(
       if (options.bookedCatalog && options.bookedCatalog.length > 0) {
         catalog = options.bookedCatalog;
       } else {
-        // Prefer public multi-page catalog (no Fantasy login; larger than adapter page)
         const { fetchPublicBookedCatalog, bookedCatalogToMatchList } =
           await import('./booked-catalog.ts');
         const pub = await fetchPublicBookedCatalog({
@@ -527,10 +535,12 @@ export async function runInventorySync(
             byId.set(b.oddsEventId, { oddsEventId: b.oddsEventId, name: b.name });
           }
         } catch {
-          /* public catalog is enough */
+          /* public/cache catalog is enough */
         }
         catalog = [...byId.values()];
-        catalogSource = `public+adapter pages=${pub.pages} totalHint=${pub.totalItemsHint ?? '?'}`;
+        catalogSource = `${pub.source} pages=${pub.pages} totalHint=${pub.totalItemsHint ?? '?'}${
+          pub.errors.length ? ` errs=${pub.errors.length}` : ''
+        }`;
       }
       const candidates = collectBoardEnrichCandidates(
         upsert,
@@ -548,13 +558,57 @@ export async function runInventorySync(
         nowMs: options.nowMs,
         touch,
       });
+      const { validateEnrichmentResult, formatEnrichValidation } = await import(
+        './enrich-validate.ts'
+      );
+      // Fail only when we had candidates but catalog was empty (blocked/fail),
+      // or matched nothing *and* catalog empty. Name-miss on fat unlinked set is expected.
+      enrichValidation = validateEnrichmentResult(dryRun ? null : db, identity.bookId, {
+        candidates: enrichCandidates,
+        matched: enriched,
+        requireAnyMatchWhenCandidates: catalog.length === 0,
+      });
+      if (catalog.length === 0 && enrichCandidates > 0) {
+        enrichValidation.errors.push('catalog empty — live fetch failed and no usable cache');
+        enrichValidation.passed = false;
+      }
       notes.push(
         dryRun
           ? `booked enrich (dry-run, scope=${enrichScope}): would match ${enriched}/${enrichCandidates} by name (catalog=${catalog.length} via ${catalogSource})`
           : `booked enrich (scope=${enrichScope}): matched ${enriched}/${enrichCandidates} by name (catalog=${catalog.length} via ${catalogSource}; metadata only — no prices)`
       );
+      notes.push(formatEnrichValidation(enrichValidation));
+      enrichLog(enrichValidation.passed ? 'info' : 'warn', 'enrich_tick', {
+        scope: enrichScope,
+        dryRun,
+        matched: enriched,
+        candidates: enrichCandidates,
+        catalogSize: catalog.length,
+        catalogSource,
+        latencyMs: Date.now() - t0,
+        validationPassed: enrichValidation.passed,
+        unlinkedRemaining: enrichValidation.unlinkedRemaining,
+      });
     } catch (err) {
-      notes.push(`booked enrich skipped: ${err instanceof Error ? err.message : String(err)}`);
+      const msg = err instanceof Error ? err.message : String(err);
+      notes.push(`booked enrich skipped: ${msg}`);
+      const { enrichLog } = await import('./enrich-log.ts');
+      enrichLog('error', 'enrich_tick_failed', {
+        scope: enrichScope,
+        error: msg,
+        latencyMs: Date.now() - t0,
+      });
+      const { validateEnrichmentResult, formatEnrichValidation } = await import(
+        './enrich-validate.ts'
+      );
+      enrichValidation = validateEnrichmentResult(dryRun ? null : db, identity.bookId, {
+        candidates: enrichCandidates,
+        matched: 0,
+        requireAnyMatchWhenCandidates: true,
+      });
+      enrichValidation.errors.unshift(`catalog/enrich failed: ${msg}`);
+      enrichValidation.passed = false;
+      notes.push(formatEnrichValidation(enrichValidation));
     }
   }
 
@@ -628,6 +682,7 @@ export async function runInventorySync(
     pricedEventCount,
     pricedLineCount,
     oddsLink,
+    enrichValidation,
     dryRun,
     coversLiveProducts,
     sportHistogram,
@@ -672,6 +727,9 @@ export function formatSyncReport(report: InventorySyncReport): string {
   }
   if (report.oddsLink) {
     lines.push(`  ${formatOddsLinkCoverage(report.oddsLink)}`);
+  }
+  if (report.enrichValidation) {
+    lines.push(`  ${formatEnrichValidation(report.enrichValidation)}`);
   }
   lines.push(
     `  leagues: seen=${report.leagues.seen} new=${report.leagues.inserted} updated=${report.leagues.updated}`
