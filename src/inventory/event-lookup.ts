@@ -23,6 +23,7 @@ import type { PandoraHostId } from '../partner/fantasy-ultra/pandora-hosts.ts';
 import { FANTASY_ULTRA_DEFAULTS } from '../partner/fantasy-ultra/types.ts';
 import { defaultBookedCatalogCachePath } from './booked-catalog-cache.ts';
 import { probePandoraEvent } from './pandora-listen.ts';
+import { streamListHeaders } from './stream-list-fetch.ts';
 
 /** Internal plane hit shapes (nested under EventLookupResult). */
 type StreamListEventHit = {
@@ -375,11 +376,7 @@ async function lookupStreamListEvent(
   const fetchImpl = options.fetchImpl ?? fetch;
   const url = options.url ?? PLIVE_STREAM_ENDPOINTS.streamListUrl;
   const res = await fetchImpl(url, {
-    headers: {
-      accept: 'application/json, text/plain, */*',
-      origin: FANTASY_ULTRA_DEFAULTS.streamOrigin,
-      referer: FANTASY_ULTRA_DEFAULTS.streamReferer,
-    },
+    headers: streamListHeaders(),
   });
   if (!res.ok) throw new Error(`stream-list HTTP ${res.status}`);
   const wire = (await res.json()) as {

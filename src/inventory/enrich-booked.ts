@@ -8,7 +8,6 @@
 // @see https://bun.com/docs/runtime/sqlite
 import { openEventStore } from '../institutions/event-store/open-db.ts';
 import { DEFAULT_EVENT_STORE_DB } from '../institutions/event-store/paths.ts';
-import { requireDefaultUrlForUltraMapper } from '../domain/index.ts';
 import {
   getFantasySessionAdapter,
   loadFantasy402ProfileFromEnv,
@@ -17,6 +16,7 @@ import {
 import type { PartnerAccountProfile } from '../partner/account-profile.ts';
 import type { FantasySessionAdapter } from '../partner/types.ts';
 import { maybeNotifyInventoryTelegram } from './notify.ts';
+import { publicFantasyProfile } from './public-profile.ts';
 import {
   runInventorySync,
   type EnrichBookedScope,
@@ -43,23 +43,6 @@ export type EnrichBookedEventsOptions = {
   profile?: PartnerAccountProfile;
 };
 
-function publicProfile(): PartnerAccountProfile {
-  return {
-    id: 'fantasy402-public',
-    partner: 'fantasy402',
-    url: requireDefaultUrlForUltraMapper(),
-    status: 'active',
-    defaultLiveProduct: 2,
-    meta: {
-      customerID: 'public',
-      agentID: 'public',
-      password: 'public',
-      token: 'public',
-      currency: 'USD',
-    },
-  };
-}
-
 function resolveProfile(publicOk: boolean): PartnerAccountProfile {
   const fromEnv = loadFantasy402ProfileFromEnv();
   if (fromEnv) return fromEnv;
@@ -68,7 +51,7 @@ function resolveProfile(publicOk: boolean): PartnerAccountProfile {
     Bun.env.INVENTORY_SYNC_PUBLIC === '1' ||
     Bun.env.PARTNER_SYNC_PUBLIC === '1'
   ) {
-    return publicProfile();
+    return publicFantasyProfile();
   }
   return requireFantasy402ProfileFromEnv();
 }

@@ -12,6 +12,7 @@
  *
  * Logs: research/cache/live-tracker/event-{id}.jsonl
  */
+import { argValue, argValues, hasFlag } from './src/cli/argv.ts';
 import {
   LIVE_TRACKER_EVENT_TYPES,
   appendTrackerLog,
@@ -77,44 +78,8 @@ function parseSortBy(raw: string | undefined | null): SortKey[] {
   return out.length ? out : ['time'];
 }
 
-function hasFlag(name: string): boolean {
-  return process.argv.includes(`--${name}`);
-}
 
-function argValue(name: string): string | undefined {
-  const hit = process.argv.find(a => a.startsWith(`--${name}=`));
-  if (hit) return hit.slice(name.length + 3);
-  const idx = process.argv.indexOf(`--${name}`);
-  if (idx >= 0) {
-    const next = process.argv[idx + 1];
-    if (next && !next.startsWith('--')) return next;
-  }
-  return undefined;
-}
 
-/** All values for a multi flag: --event-type A --event-type B or --event-type A,B */
-function argValues(name: string): string[] {
-  const out: string[] = [];
-  for (let i = 0; i < process.argv.length; i++) {
-    const a = process.argv[i]!;
-    if (a === `--${name}`) {
-      const next = process.argv[i + 1];
-      if (next && !next.startsWith('--')) {
-        out.push(...next.split(',').map(s => s.trim()).filter(Boolean));
-        i++;
-      }
-    } else if (a.startsWith(`--${name}=`)) {
-      out.push(
-        ...a
-          .slice(name.length + 3)
-          .split(',')
-          .map(s => s.trim())
-          .filter(Boolean)
-      );
-    }
-  }
-  return out;
-}
 
 function positionalAfterCmd(cmd: string): string[] {
   const idx = process.argv.indexOf(cmd);

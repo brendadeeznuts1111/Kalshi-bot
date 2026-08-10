@@ -25,6 +25,7 @@
  * validate — market first, then optional seat session (FANTASY402_*)
  * cls = limit class (not suspend).
  */
+import { argValue, hasFlag } from '../src/cli/argv.ts';
 import {
   formatEventBoardScan,
   formatEventLookup,
@@ -49,14 +50,7 @@ import {
 } from '../src/inventory/event-validate.ts';
 import { resolvePandoraHostId } from '../src/partner/fantasy-ultra/pandora-hosts.ts';
 
-function hasFlag(name: string): boolean {
-  return process.argv.includes(`--${name}`);
-}
 
-function argValue(name: string): string | undefined {
-  const hit = process.argv.find(a => a.startsWith(`--${name}=`));
-  return hit ? hit.slice(name.length + 3) : undefined;
-}
 
 const json = hasFlag('json');
 const sampleSports = hasFlag('sample-sports');

@@ -18,6 +18,7 @@
  * --apply:   write candidates into src/domain/competitions.ts + stamp registry rows.
  * --backfill: re-resolve competition_id on inventory_leagues from current seeds.
  */
+import { argValue, hasFlag } from '../src/cli/argv.ts';
 // @see https://bun.com/docs/runtime/sqlite
 import { join } from 'node:path';
 import { openEventStore } from '../src/institutions/event-store/open-db.ts';
@@ -47,14 +48,7 @@ import {
   requireFantasy402ProfileFromEnv,
 } from '../src/partner/index.ts';
 
-function hasFlag(name: string): boolean {
-  return process.argv.includes(`--${name}`);
-}
 
-function argValue(name: string): string | undefined {
-  const hit = process.argv.find(a => a.startsWith(`--${name}=`));
-  return hit ? hit.slice(name.length + 3) : undefined;
-}
 
 /** Public stream-list works without real Fantasy login (same as inventory:sync / cron). */
 function resolveProfile(_dryRun: boolean): PartnerAccountProfile {

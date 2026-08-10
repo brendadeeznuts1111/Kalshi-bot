@@ -35,10 +35,10 @@ import {
   filterLiveEventsBySport,
   formatSkinEventLine,
   listSkinInventoryIds,
+  liveEventToRow,
   liveProductsCoveredByInventory,
   normalizeInventorySport,
   normalizeSkinEventsSports,
-  resolveInventoryCompetitionId,
   upsertSkinLiveEvents,
   type InventoryIdentity,
   type SkinEventRow,
@@ -50,41 +50,6 @@ type SkinEventUpsertResult = {
   updated: SkinEventRow[];
   seen: number;
 };
-
-/** Plan-only row map (same stamps as skin-events-store liveEventToRow). */
-function liveEventToRow(
-  event: InventoryEvent,
-  nowMs: number,
-  identity: InventoryIdentity,
-  existing?: { firstSeen: number; status?: string }
-): SkinEventRow {
-  const inventoryId = String(event.inventoryId ?? '').trim();
-  const sport = normalizeInventorySport(event.sport);
-  const league = event.league ?? '';
-  return {
-    partner: identity.bookId,
-    inventoryId,
-    lsId: null,
-    oddsEventId: null,
-    sport,
-    league,
-    home: event.home,
-    away: event.away,
-    feedId: event.feedId != null ? String(event.feedId) : null,
-    startTime: null,
-    status: existing?.status ?? 'unknown',
-    firstSeen: existing?.firstSeen ?? nowMs,
-    lastUpdated: nowMs,
-    skinId: identity.skinId,
-    bookId: identity.bookId,
-    inventoryLiveProduct: identity.inventoryLiveProduct,
-    competitionId: resolveInventoryCompetitionId({
-      liveProduct: identity.inventoryLiveProduct,
-      sport,
-      league,
-    }),
-  };
-}
 
 /** Which skin_events rows to soft-match against Statscore booked list. */
 export type EnrichBookedScope = 'new' | 'board' | 'unlinked';
