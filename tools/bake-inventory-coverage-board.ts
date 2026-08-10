@@ -8,84 +8,46 @@
  *
  *   bun run inventory:coverage-board
  *   bun tools/bake-inventory-coverage-board.ts -- --out=docs/artifacts/inventory-coverage-board.html
+ *   bun run inventory:coverage-board -- --json-out=docs/artifacts/inventory-coverage-ops.json
+ *   bun run inventory:coverage-board -- --min-linked-pct=20 --notify --fail-on-quality
  */
-import { argValue } from '../src/cli/argv.ts';
+import { argValue, hasFlag } from '../src/cli/argv.ts';
 import { openEventStore } from '../src/institutions/event-store/open-db.ts';
 import { DEFAULT_EVENT_STORE_DB } from '../src/institutions/event-store/paths.ts';
 import {
   defaultWidgetDomainCachePath,
   type WidgetDomainSnapshot,
 } from '../src/domain/widget-domain-extract.ts';
-import { listCompetitions } from '../src/domain/competitions.ts';
 import {
-  buildMarketMatrix,
-  buildSportColumns,
-  buildWagerFamilyRows,
-  pandoraLeaguesBySport,
-} from '../src/inventory/coverage-board.ts';
+  buildCoverageOpsReport,
+  coverageOpsAlertLines,
+  formatCoverageOpsSummary,
+  loadCoverageOpsInputs,
+} from '../src/inventory/coverage-ops.ts';
+import { maybeNotifyInventoryTelegram } from '../src/inventory/notify.ts';
 
 
 async function main(): Promise<void> {
   const out =
     argValue('out') ?? 'docs/artifacts/inventory-coverage-board.html';
+  const jsonOut =
+    argValue('json-out') ??
+    out.replace(/\.html?$/i, '') + '-ops.json';
   const bookId = argValue('book') ?? 'fantasy402';
   const snapPath = argValue('snapshot') ?? defaultWidgetDomainCachePath();
+  const minLinkedPctRaw = argValue('min-linked-pct');
+  const maxUnmappedRaw = argValue('max-unmapped-leagues');
+  const minLinkedPct =
+    minLinkedPctRaw != null && minLinkedPctRaw !== ''
+      ? Number(minLinkedPctRaw)
+      : null;
+  const maxUnmappedLeagues =
+    maxUnmappedRaw != null && maxUnmappedRaw !== ''
+      ? Number(maxUnmappedRaw)
+      : null;
 
   const db = openEventStore({ dbPath: DEFAULT_EVENT_STORE_DB });
-
-  const eventRows = db
-    .query(
-      `SELECT sport AS sport,
-              COUNT(*) AS n,
-              SUM(CASE WHEN odds_event_id IS NOT NULL AND TRIM(odds_event_id) != '' THEN 1 ELSE 0 END) AS linked
-       FROM skin_events WHERE book_id = $book
-       GROUP BY sport ORDER BY n DESC`
-    )
-    .all({ $book: bookId }) as Array<{ sport: string; n: number; linked: number }>;
-
-  const leagueRows = db
-    .query(
-      `SELECT inventory_bucket AS sport,
-              COUNT(*) AS n,
-              SUM(CASE WHEN competition_id IS NOT NULL THEN 1 ELSE 0 END) AS mapped
-       FROM inventory_leagues WHERE book_id = $book
-       GROUP BY inventory_bucket ORDER BY n DESC`
-    )
-    .all({ $book: bookId }) as Array<{ sport: string; n: number; mapped: number }>;
-
-  const topUnmapped = db
-    .query(
-      `SELECT inventory_bucket AS sport, league_key AS league,
-              peak_event_count AS peak, event_count_live AS live
-       FROM inventory_leagues
-       WHERE book_id = $book AND competition_id IS NULL
-       ORDER BY peak_event_count DESC, event_count_live DESC
-       LIMIT 20`
-    )
-    .all({ $book: bookId }) as Array<{
-    sport: string;
-    league: string;
-    peak: number;
-    live: number;
-  }>;
-
-  const sampleLinked = db
-    .query(
-      `SELECT sport, league, home, away, odds_event_id AS odds, inventory_id AS inv
-       FROM skin_events
-       WHERE book_id = $book
-         AND odds_event_id IS NOT NULL AND TRIM(odds_event_id) != ''
-       ORDER BY last_updated DESC
-       LIMIT 12`
-    )
-    .all({ $book: bookId }) as Array<{
-    sport: string;
-    league: string | null;
-    home: string | null;
-    away: string | null;
-    odds: string;
-    inv: string;
-  }>;
+  const inputs = loadCoverageOpsInputs(db, bookId);
 
   let snap: WidgetDomainSnapshot | null = null;
   const snapFile = Bun.file(snapPath);
@@ -93,76 +55,19 @@ async function main(): Promise<void> {
     snap = (await snapFile.json()) as WidgetDomainSnapshot;
   }
 
-  const pandoraBySport = snap ? pandoraLeaguesBySport(snap) : {};
-  const sports = buildSportColumns({
-    eventRows,
-    leagueRows,
-    pandoraLeagueBySport: pandoraBySport,
+  const data = buildCoverageOpsReport({
+    bookId,
+    snap,
+    eventRows: inputs.eventRows,
+    leagueRows: inputs.leagueRows,
+    topUnmapped: inputs.topUnmapped,
+    sampleLinked: inputs.sampleLinked,
+    leaguesLiveNow: inputs.leaguesLiveNow,
+    gates: {
+      minLinkedPct,
+      maxUnmappedLeagues,
+    },
   });
-
-  const marketMatrix = snap
-    ? buildMarketMatrix({
-        liveSports: snap.liveSports ?? [],
-        sportOrder: sports.map(s => s.sport),
-        wagerTypes: snap.wagerTypes ?? [],
-      })
-    : {
-        marketIds: [],
-        sports: [],
-        cells: {},
-        labels: {},
-        wagerTypeCounts: {},
-      };
-
-  const wagerFamilies = snap
-    ? buildWagerFamilyRows(snap.wagerTypes ?? [], 18)
-    : [];
-
-  const totalEvents = sports.reduce((s, r) => s + r.events, 0);
-  const totalLinked = sports.reduce((s, r) => s + r.linked, 0);
-  const totalLeagues = sports.reduce((s, r) => s + r.leagues, 0);
-  const totalMapped = sports.reduce((s, r) => s + r.mapped, 0);
-  const linkedPct = totalEvents
-    ? Math.round((totalLinked / totalEvents) * 100)
-    : 0;
-
-  const data = {
-    generatedAt: new Date().toISOString(),
-    identity: {
-      skinId: 'buckeye',
-      bookId,
-      inventoryLiveProduct: 'plive',
-    },
-    coversLiveProducts: ['plive', 'ezlive'],
-    odds: {
-      bookId,
-      total: totalEvents,
-      linked: totalLinked,
-      unlinked: totalEvents - totalLinked,
-      linkedPct,
-    },
-    leagues: {
-      total: totalLeagues,
-      unmapped: totalLeagues - totalMapped,
-      liveNow: 0,
-      pandoraTotal: snap?.liveLeagues?.length ?? 0,
-    },
-    competitions: listCompetitions().length,
-    wagerTypeTotal: snap?.wagerTypes?.length ?? 0,
-    sports: sports.map(s => s.sport),
-    bySportCols: Object.fromEntries(sports.map(s => [s.sport, s])),
-    marketMatrix,
-    wagerFamilies,
-    topUnmapped,
-    sampleLinked: sampleLinked.map(r => ({
-      sport: r.sport,
-      league: r.league ?? '—',
-      home: r.home ?? '?',
-      away: r.away ?? '?',
-      odds: r.odds,
-      inv: r.inv,
-    })),
-  };
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -328,12 +233,12 @@ async function main(): Promise<void> {
     <section class="card">
       <h2>Operator commands</h2>
       <pre>bun run inventory:coverage-board
+bun run inventory:coverage-board -- --json-out=docs/artifacts/inventory-coverage-ops.json
+bun run inventory:coverage-board -- --min-linked-pct=20 --notify
 bun run domain:sports -- --feed
-bun run domain:sports -- --periods
-bun run domain:widget-extract -- --write   # refresh market flags + leagues
 bun run inventory:sync -- --sport=all --dry-run
-bun run inventory:enrich</pre>
-      <footer>Board: <code>${out}</code> · builders: <code>src/inventory/coverage-board.ts</code></footer>
+bun run inventory:enrich:quality</pre>
+      <footer>Board: <code>${out}</code> · ops JSON · <code>src/inventory/coverage-ops.ts</code></footer>
     </section>
   </main>
 
@@ -450,10 +355,26 @@ bun run inventory:enrich</pre>
 `;
 
   await Bun.write(out, html);
+  await Bun.write(jsonOut, JSON.stringify(data, null, 2) + '\n');
+  console.error(formatCoverageOpsSummary(data));
   console.error(
-    `wrote ${out} · sports=${sports.length} events=${totalEvents} linked=${totalLinked} ` +
-      `markets=${marketMatrix.marketIds.length} wagerFamilies=${wagerFamilies.length}`
+    `wrote ${out} · ${jsonOut} · sports=${data.sports.length} ` +
+      `events=${data.odds.total} linked=${data.odds.linked} ` +
+      `markets=${data.marketMatrix.marketIds.length} wagerFamilies=${data.wagerFamilies.length}`
   );
+
+  if (hasFlag('notify')) {
+    const lines = coverageOpsAlertLines(data);
+    const tg = await maybeNotifyInventoryTelegram({
+      title: `📊 Coverage board · linked ${data.odds.linkedPct}% · unmapped ${data.leagues.unmapped}`,
+      lines,
+    });
+    console.error(`notify: ${tg}`);
+  }
+
+  if (hasFlag('fail-on-quality') && !data.quality.passed) {
+    process.exitCode = 1;
+  }
 }
 
 await main();
