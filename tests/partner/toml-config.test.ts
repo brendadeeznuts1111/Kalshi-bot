@@ -1,6 +1,10 @@
 // @see https://bun.com/docs/test/index#run-tests
 import { describe, expect, test } from 'bun:test';
-import { RETIRED_BARE_BOOK_DOMAIN_ENVS } from '../../src/domain/index.ts';
+import {
+  defaultUrlForSkin,
+  RETIRED_BARE_BOOK_DOMAIN_ENVS,
+  urlForHost,
+} from '../../src/domain/index.ts';
 import { openEventStore } from '../../src/institutions/event-store/open-db.ts';
 import { computeProviderCapacity, listActiveBettingAccounts } from '../../src/partner/registry.ts';
 import {
@@ -180,19 +184,21 @@ skins = [{ name = "ezlive", per_bet_max = "not-a-number" }]
     const bare = resolvePartnerEnv('FANTASY402_', ignored);
     expect(bare.values.DOMAIN).toBeUndefined();
 
+    const aceDesk = defaultUrlForSkin('ace')!;
+    const lonestarDesk = urlForHost('lonestarwagering.com');
     const withPartnerDomain = resolvePartnerEnv('FANTASY402_', {
       ...ignored,
-      [PARTNER_DOMAIN_ENV]: 'https://parlay21.com',
+      [PARTNER_DOMAIN_ENV]: aceDesk,
     });
-    expect(withPartnerDomain.values.DOMAIN).toBe('https://parlay21.com');
+    expect(withPartnerDomain.values.DOMAIN).toBe(aceDesk);
     expect(withPartnerDomain.source.DOMAIN).toBe('book_fallback');
 
     const perOut = resolvePartnerEnv('FANTASY402_SPEN_1_', {
       ...ignored,
-      FANTASY402_SPEN_1_DOMAIN: 'https://lonestarwagering.com',
-      [PARTNER_DOMAIN_ENV]: 'https://parlay21.com',
+      FANTASY402_SPEN_1_DOMAIN: lonestarDesk,
+      [PARTNER_DOMAIN_ENV]: aceDesk,
     });
-    expect(perOut.values.DOMAIN).toBe('https://lonestarwagering.com');
+    expect(perOut.values.DOMAIN).toBe(lonestarDesk);
     expect(perOut.source.DOMAIN).toBe('out');
   });
 

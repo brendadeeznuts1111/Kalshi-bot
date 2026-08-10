@@ -3,9 +3,14 @@
  * Observed 2026-08-04 against getUltraLiveURL + stream-list-v2.
  *
  * Desk `domain` default comes from SKINS (Ultra mapper hosts) — not a hard-coded book URL.
+ * Stream / Statscore URLs come from domain live-product endpoints SSOT.
  */
 
-import { requireDefaultUrlForUltraMapper } from '../../domain/index.ts';
+import {
+  PLIVE_STREAM_ENDPOINTS,
+  STATSCORE_BOOKED_EVENTS,
+  requireDefaultUrlForUltraMapper,
+} from '../../domain/index.ts';
 
 export type FantasyUltraCredentials = {
   customerID: string;
@@ -61,7 +66,7 @@ export type FantasyStreamSportBucket = {
   count?: number;
 };
 
-/** GET https://api-gs.player-us.xyz/stream-list-v2/?tv=usa */
+/** GET stream-list-v2 wire (URL from PLIVE_STREAM_ENDPOINTS.streamListUrl). */
 export type FantasyStreamListWire = {
   sports?: Record<string, FantasyStreamSportBucket>;
   error?: boolean;
@@ -79,16 +84,16 @@ export const FANTASY_ULTRA_DEFAULTS = {
   renewTokenPath: '/cloud/api/System/renewToken',
   /** Optional stream token for pandora/ganchrow (path observed in network captures). */
   streamTokenPath: '/betFactoryV2/api/streamToken.php',
-  streamListUrl: 'https://api-gs.player-us.xyz/stream-list-v2/?tv=usa',
-  streamOrigin: 'https://plive.sportswidgets.pro',
-  streamReferer: 'https://plive.sportswidgets.pro/',
+  streamListUrl: PLIVE_STREAM_ENDPOINTS.streamListUrl,
+  streamOrigin: PLIVE_STREAM_ENDPOINTS.streamOrigin,
+  streamReferer: PLIVE_STREAM_ENDPOINTS.streamReferer,
   /**
    * Statscore public livescore booking API (widget referer).
    * product=livescorepro only — product=odds is rejected for this client_id.
    */
-  statscoreBookedEventsUrl: 'https://api.statscore.com/v2/booked-events',
-  statscoreClientId: '311',
-  statscoreProduct: 'livescorepro',
+  statscoreBookedEventsUrl: STATSCORE_BOOKED_EVENTS.url,
+  statscoreClientId: STATSCORE_BOOKED_EVENTS.clientId,
+  statscoreProduct: STATSCORE_BOOKED_EVENTS.product,
   skin: 2,
   currency: 'USD',
   lang: 'English',

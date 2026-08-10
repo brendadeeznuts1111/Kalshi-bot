@@ -7,9 +7,12 @@ Standalone registry for live PPH coverage. **Not** owned by Fantasy402.
 | Layer             | Owns                                         | Examples                                                              |
 | ----------------- | -------------------------------------------- | --------------------------------------------------------------------- |
 | **Sports**        | Canonical `SportId`                          | `soccer`, `table_tennis`                                              |
-| **Live products** | Coverage bindings                            | `plive`, `ezlive`, `ultralive`, `maglive` (catalog: PLive, EZLive, …) |
+| **Live products** | Coverage bindings + stream endpoints         | `plive`, `ezlive`, `ultralive`, `maglive` · `live-product-endpoints.ts` |
 | **Skins**         | White-labels + hosts + offered live products | `buckeye`, `ace`, `metallic`, `sts`, `1bv`, `lvaction`, `magnum`      |
 | **Outs**          | Capacity / credentials                       | `out-SPEN-1` + live-product wire                                      |
+
+Desk hosts live only in `SKINS[].hosts`. Stream/widget infra URLs live only in
+`live-product-endpoints.ts` (`PLIVE_STREAM_ENDPOINTS`, `STATSCORE_BOOKED_EVENTS`).
 
 ## Skin table
 

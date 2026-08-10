@@ -31,9 +31,8 @@ describe("place-bet HAR → map → placeOrder", () => {
     });
     expect(candidates.length).toBe(1);
     expect(map).not.toBeNull();
-    expect(map!.url).toBe(
-      "https://fantasy402.com/cloud/api/Bet/PlaceBet",
-    );
+    // Fixture HAR was captured against the Ultra default desk host.
+    expect(map!.url).toBe(`${DOMAIN}/cloud/api/Bet/PlaceBet`);
     expect(map!.method).toBe("POST");
     expect(map!.encoding).toBe("json");
     expect(map!.requestKeys).toContain("eventId");
@@ -89,14 +88,14 @@ describe("place-bet HAR → map → placeOrder", () => {
 
   test("resolvePlaceBetUrl never invents path", () => {
     expect(resolvePlaceBetUrl({ envMap: {} })).toBeNull();
+    const placeBetUrl = `${DOMAIN}/cloud/api/Bet/PlaceBet`;
     expect(
       resolvePlaceBetUrl({
         envMap: {
-          FANTASY402_PLACE_BET_URL:
-            "https://fantasy402.com/cloud/api/Bet/PlaceBet",
+          FANTASY402_PLACE_BET_URL: placeBetUrl,
         },
       }),
-    ).toBe("https://fantasy402.com/cloud/api/Bet/PlaceBet");
+    ).toBe(placeBetUrl);
   });
 
   test("placeOrder dry-run reports mapped URL; live POST with mock fetch", async () => {
