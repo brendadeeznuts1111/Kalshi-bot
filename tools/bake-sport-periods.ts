@@ -11,16 +11,10 @@
  *   src/domain/pandora-sport-periods.ts
  *   src/domain/pandora-countries.ts (when countries captured or --countries-from)
  */
+import { argValue, hasFlag } from '../src/cli/argv.ts';
 import { capturePandoraDomainRooms } from '../src/partner/fantasy-ultra/widget-domain-capture.ts';
 
-function argValue(name: string): string | undefined {
-  const hit = process.argv.find(a => a.startsWith(`--${name}=`));
-  return hit ? hit.slice(name.length + 3) : undefined;
-}
 
-function hasFlag(name: string): boolean {
-  return process.argv.includes(`--${name}`);
-}
 
 async function loadSportPeriod(): Promise<unknown> {
   const from = argValue('from');

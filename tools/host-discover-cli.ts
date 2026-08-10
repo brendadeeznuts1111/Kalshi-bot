@@ -14,6 +14,7 @@
  * Stores URL inventory under docs/artifacts/host-discover/<host>-urls.json
  * Never writes HOST_TO_SKIN — human confirms before mapping.
  */
+import { argValue, hasFlag } from '../src/cli/argv.ts';
 import {
   discoverHost,
   formatHostDiscoverText,
@@ -21,27 +22,16 @@ import {
   type HostDiscoverReport,
 } from '../src/domain/host-discover.ts';
 
-function argValue(name: string): string | undefined {
-  const pref = `${name}=`;
-  const hit = process.argv.find(a => a.startsWith(pref));
-  if (hit) return hit.slice(pref.length).trim();
-  const idx = process.argv.indexOf(name);
-  if (idx >= 0 && process.argv[idx + 1] && !process.argv[idx + 1]!.startsWith('-')) {
-    return process.argv[idx + 1]!.trim();
-  }
-  return undefined;
-}
-
-const json = process.argv.includes('--json');
-const compare = process.argv.includes('--compare');
-const all = process.argv.includes('--all');
-const weigh = process.argv.includes('--weigh');
-const skipExtras = process.argv.includes('--skip-extras');
-const noPersist = process.argv.includes('--no-persist');
-const harPath = argValue('--har');
+const json = hasFlag('json');
+const compare = hasFlag('compare');
+const all = hasFlag('all');
+const weigh = hasFlag('weigh');
+const skipExtras = hasFlag('skip-extras');
+const noPersist = hasFlag('no-persist');
+const harPath = argValue('har');
 const url =
-  argValue('--url') ||
-  argValue('--host') ||
+  argValue('url') ||
+  argValue('host') ||
   process.argv.find(
     a =>
       !a.startsWith('-') &&

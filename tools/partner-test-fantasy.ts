@@ -13,6 +13,7 @@
  *   bun run partner:test-fantasy -- --sport=tennis --limit=8
  *   bun run protonpass:run -- bun run partner:test-fantasy -- --out=out-SPEN-1
  */
+import { argValue, hasFlag } from '../src/cli/argv.ts';
 // @see https://bun.com/docs/runtime/utils#bun-env
 import {
   getFantasySessionAdapter,
@@ -27,14 +28,7 @@ import {
 } from "../src/partner/registry.ts";
 import type { PartnerAccountProfile } from "../src/partner/account-profile.ts";
 
-function argValue(name: string): string | undefined {
-  const hit = process.argv.find((a) => a.startsWith(`--${name}=`));
-  return hit ? hit.slice(name.length + 3) : undefined;
-}
 
-function hasFlag(name: string): boolean {
-  return process.argv.includes(`--${name}`);
-}
 
 function redactUrl(u: string): string {
   try {

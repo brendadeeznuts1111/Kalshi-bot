@@ -9,6 +9,7 @@
  *
  * Does not print secret values.
  */
+import { argValue, hasFlag } from '../src/cli/argv.ts';
 // @see https://bun.com/docs/runtime/sqlite
 import { openEventStore } from "../src/institutions/event-store/open-db.ts";
 import { DEFAULT_EVENT_STORE_DB } from "../src/institutions/event-store/paths.ts";
@@ -37,14 +38,7 @@ import {
 import { getPartnerVisual } from "../src/partner/visuals.ts";
 import { parseOutMeta } from "../src/partner/out-capacity.ts";
 
-function hasFlag(name: string): boolean {
-  return process.argv.includes(`--${name}`);
-}
 
-function argValue(name: string): string | undefined {
-  const hit = process.argv.find((a) => a.startsWith(`--${name}=`));
-  return hit ? hit.slice(name.length + 3) : undefined;
-}
 
 async function main(): Promise<void> {
   const db = openEventStore({ dbPath: DEFAULT_EVENT_STORE_DB });

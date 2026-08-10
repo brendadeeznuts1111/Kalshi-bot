@@ -9,6 +9,7 @@
  *   bun run inventory:coverage-board
  *   bun tools/bake-inventory-coverage-board.ts -- --out=docs/artifacts/inventory-coverage-board.html
  */
+import { argValue } from '../src/cli/argv.ts';
 import { openEventStore } from '../src/institutions/event-store/open-db.ts';
 import { DEFAULT_EVENT_STORE_DB } from '../src/institutions/event-store/paths.ts';
 import {
@@ -23,10 +24,6 @@ import {
   pandoraLeaguesBySport,
 } from '../src/inventory/coverage-board.ts';
 
-function argValue(name: string): string | undefined {
-  const hit = process.argv.find(a => a.startsWith(`--${name}=`));
-  return hit ? hit.slice(name.length + 3) : undefined;
-}
 
 async function main(): Promise<void> {
   const out =

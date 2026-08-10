@@ -21,6 +21,7 @@
  * @see src/partner/ledger.ts writeTicketFromBetGroup
  * @see docs/SEAT-OPS.md
  */
+import { argValue, hasFlag } from '../src/cli/argv.ts';
 // @see https://bun.com/docs/runtime/file-io
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
@@ -44,14 +45,7 @@ import {
 import { parseOutMeta } from "../src/partner/out-capacity.ts";
 import type { PartnerBetGroup } from "../src/partner/types.ts";
 
-function argValue(name: string): string | undefined {
-  const hit = process.argv.find((a) => a.startsWith(`--${name}=`));
-  return hit ? hit.slice(name.length + 3) : undefined;
-}
 
-function hasFlag(name: string): boolean {
-  return process.argv.includes(`--${name}`);
-}
 
 function partnerFromOutId(outId: string): string {
   const m = /^out-([A-Za-z0-9]+)-/i.exec(outId);

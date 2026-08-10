@@ -7,6 +7,7 @@
  *   bun run partner:profile -- --code=SPEN --json
  *   bun run partner:profile -- --codes=SPEN,ASH,NOV,BIL
  */
+import { argValue, hasFlag } from '../src/cli/argv.ts';
 // @see https://bun.com/docs/runtime/color
 // @see https://bun.com/docs/runtime/webview
 import { mkdirSync } from "node:fs";
@@ -19,14 +20,7 @@ import {
   writePartnerAvatarPng,
 } from "../src/partner/visuals.ts";
 
-function argValue(name: string): string | undefined {
-  const hit = process.argv.find((a) => a.startsWith(`--${name}=`));
-  return hit ? hit.slice(name.length + 3) : undefined;
-}
 
-function hasFlag(name: string): boolean {
-  return process.argv.includes(`--${name}`);
-}
 
 const codesRaw =
   argValue("codes") ??

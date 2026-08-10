@@ -17,6 +17,7 @@
  * @see docs/FANTASY-ULTRA.md
  * @see src/partner/fantasy-ultra/place-bet-har.ts
  */
+import { argValue, hasFlag } from '../src/cli/argv.ts';
 // @see https://bun.com/docs/api/file-io
 import { mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -38,14 +39,7 @@ import {
 } from "../src/partner/registry.ts";
 import { parseOutMeta } from "../src/partner/out-capacity.ts";
 
-function argValue(name: string): string | undefined {
-  const hit = process.argv.find((a) => a.startsWith(`--${name}=`));
-  return hit ? hit.slice(name.length + 3) : undefined;
-}
 
-function hasFlag(name: string): boolean {
-  return process.argv.includes(`--${name}`);
-}
 
 function partnerFromOutId(outId: string): string {
   const m = /^out-([A-Za-z0-9]+)-/i.exec(outId);

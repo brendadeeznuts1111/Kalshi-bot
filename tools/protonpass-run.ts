@@ -24,6 +24,7 @@
  * @see https://protonpass.github.io/pass-cli/commands/personal-access-token/
  * @see https://protonpass.github.io/pass-cli/commands/contents/run/
  */
+import { argValue, hasFlag } from '../src/cli/argv.ts';
 import { join } from "node:path";
 import { homedir } from "node:os";
 import {
@@ -60,16 +61,8 @@ async function findPassCli(): Promise<string | null> {
   return null;
 }
 
-function arg(name: string): string | undefined {
-  return Bun.argv.find((a) => a.startsWith(`--${name}=`))?.slice(name.length + 3);
-}
-
-function hasFlag(name: string): boolean {
-  return Bun.argv.includes(`--${name}`);
-}
-
 function argNumber(name: string, fallback: number): number {
-  const raw = arg(name);
+  const raw = argValue(name);
   if (!raw) return fallback;
   const n = Number(raw);
   return Number.isFinite(n) && n > 0 ? n : fallback;
@@ -284,7 +277,7 @@ async function resolveEnvFile(
 
 async function main(): Promise<void> {
   const passCli = await findPassCli();
-  const envFile = arg("env-file") ?? DEFAULT_ENV_FILE;
+  const envFile = argValue("env-file") ?? DEFAULT_ENV_FILE;
   // --cache-ttl is documented in seconds; SecretCacheManager takes ms.
   const cacheTtlSeconds = argNumber("cache-ttl", DEFAULT_CACHE_TTL_MS / 1000);
   const cache = new SecretCacheManager({ defaultTtlMs: cacheTtlSeconds * 1000 });

@@ -11,20 +11,14 @@
  * Does **not** auto-rewrite production code by default. It ranks deletions /
  * inlines / test gaps. Apply simplifications in a normal PR after the report.
  */
+import { argValue, hasFlag } from '../src/cli/argv.ts';
 import {
   formatSimplifyReport,
   runSimplifyLoopOnce,
   writeSimplifyReport,
 } from '../src/research/simplify-loop.ts';
 
-function hasFlag(name: string): boolean {
-  return process.argv.includes(`--${name}`);
-}
 
-function argValue(name: string): string | undefined {
-  const hit = process.argv.find(a => a.startsWith(`--${name}=`));
-  return hit ? hit.slice(name.length + 3) : undefined;
-}
 
 function usage(): never {
   console.error(`research:simplify — complexity scan + focused tests

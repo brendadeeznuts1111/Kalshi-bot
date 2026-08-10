@@ -30,6 +30,7 @@
  * @see docs/PROTONPASS.md
  * @see docs/SEAT-OPS.md
  */
+import { argValue, hasFlag } from '../src/cli/argv.ts';
 // @see https://bun.com/docs/api/spawn
 // @see https://bun.com/docs/runtime/utils#bun-which
 import { requireDefaultUrlForUltraMapper } from "../src/domain/index.ts";
@@ -50,14 +51,7 @@ const DEFAULT_VAULT = "Kalshi Bot";
 const DEFAULT_TITLE = "Fantasy402";
 const DEFAULT_DOMAIN = requireDefaultUrlForUltraMapper();
 
-function argValue(name: string): string | undefined {
-  const hit = process.argv.find((a) => a.startsWith(`--${name}=`));
-  return hit ? hit.slice(name.length + 3) : undefined;
-}
 
-function hasFlag(name: string): boolean {
-  return process.argv.includes(`--${name}`);
-}
 
 function redact(s: string): string {
   if (!s) return "(empty)";

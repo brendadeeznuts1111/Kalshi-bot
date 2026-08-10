@@ -10,6 +10,7 @@
  *   bun run partner:capacity              # alias
  *   bun run partner:capacity -- --json
  */
+import { argValue, hasFlag } from '../src/cli/argv.ts';
 // @see https://bun.com/docs/runtime/sqlite
 import { openEventStore } from '../src/institutions/event-store/open-db.ts';
 import { DEFAULT_EVENT_STORE_DB } from '../src/institutions/event-store/paths.ts';
@@ -24,14 +25,7 @@ import {
 import { parseOutMeta } from '../src/partner/out-capacity.ts';
 import { colorizePartnerText, getPartnerVisual } from '../src/partner/visuals.ts';
 
-function hasFlag(name: string): boolean {
-  return process.argv.includes(`--${name}`);
-}
 
-function argValue(name: string): string | undefined {
-  const hit = process.argv.find(a => a.startsWith(`--${name}=`));
-  return hit ? hit.slice(name.length + 3) : undefined;
-}
 
 function main(): void {
   const db = openEventStore({ dbPath: DEFAULT_EVENT_STORE_DB });

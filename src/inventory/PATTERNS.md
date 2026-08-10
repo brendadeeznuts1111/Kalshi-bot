@@ -2,7 +2,7 @@
 
 | Pattern | Location |
 | ------- | -------- |
-| CLI argv (`hasFlag` / `argValue` / `argValues`) | `src/cli/argv.ts` |
+| CLI argv (`hasFlag` / `argValue` / `argValues`) | `src/cli/argv.ts` (tools/* + scripts + live-tracker) |
 | Pandora timed listen | `openPandoraWindow` in `pandora-listen.ts` |
 | Stream-list HTTP headers | `streamListHeaders()` in `stream-list-fetch.ts` |
 | InventoryEvent → skin row | `liveEventToRow` in `skin-events-store.ts` |

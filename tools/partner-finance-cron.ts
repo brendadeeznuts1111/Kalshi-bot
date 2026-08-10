@@ -10,6 +10,7 @@
  *
  * Cron master: PARTNER_FINANCE_CRON=1 bun run cron:start
  */
+import { argValue, hasFlag } from '../src/cli/argv.ts';
 // @see https://bun.com/docs/runtime/sqlite
 import { openEventStore } from "../src/institutions/event-store/open-db.ts";
 import { DEFAULT_EVENT_STORE_DB } from "../src/institutions/event-store/paths.ts";
@@ -18,14 +19,7 @@ import {
   runFinanceCron,
 } from "../src/partner/finance-cron.ts";
 
-function hasFlag(name: string): boolean {
-  return process.argv.includes(`--${name}`);
-}
 
-function argValue(name: string): string | undefined {
-  const hit = process.argv.find((a) => a.startsWith(`--${name}=`));
-  return hit ? hit.slice(name.length + 3) : undefined;
-}
 
 async function main(): Promise<void> {
   const db = openEventStore({ dbPath: DEFAULT_EVENT_STORE_DB });

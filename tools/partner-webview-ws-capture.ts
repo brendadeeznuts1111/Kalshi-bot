@@ -16,6 +16,7 @@
  *
  * Writes JSONL + summary JSON under research/cache/partner-ws-capture/ (gitignored).
  */
+import { argValue } from '../src/cli/argv.ts';
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { readArtifactIntegrity } from '../src/institutions/event-store/visual-snapshot-meta.ts';
@@ -29,10 +30,6 @@ import {
   type CdpWebSocketFrame,
 } from '../src/partner/webview-cdp-events.ts';
 
-function argValue(name: string): string | undefined {
-  const hit = process.argv.find(a => a.startsWith(`--${name}=`));
-  return hit ? hit.slice(name.length + 3) : undefined;
-}
 
 const seconds = Math.min(Math.max(Number(argValue('seconds') ?? '25') || 25, 5), 120);
 const sport = argValue('sport') ?? '220';
