@@ -1,13 +1,14 @@
 #!/usr/bin/env bun
 /**
- * Fantasy402 sports + leagues inventory (stream-list coverage).
+ * Domain live-product sports + stream-list coverage inventory (plive/ezlive shell).
+ * Not seat-partner — sport tiers live in src/domain/.
  *
- *   bun run partner:sports
- *   bun run partner:sports -- --json
- *   bun run partner:sports -- --leagues=table_tennis
- *   bun run partner:sports -- --leagues=all --json
- *   bun run partner:sports -- --seed     # refresh provider_sport_mappings in event-store
- *   bun run partner:sports -- --map      # static map only (offline)
+ *   bun run domain:sports
+ *   bun run domain:sports -- --json
+ *   bun run domain:sports -- --leagues=table_tennis
+ *   bun run domain:sports -- --leagues=all --json
+ *   bun run domain:sports -- --seed     # refresh provider_sport_mappings in event-store
+ *   bun run domain:sports -- --map      # static map only (offline)
  */
 // @see https://bun.com/docs/api/fetch
 import { openEventStore } from "../src/institutions/event-store/open-db.ts";
@@ -126,7 +127,7 @@ async function main(): Promise<void> {
       "Coverage inventory only — not a priced book",
       "primary sports have confirmed API/widget ids; others mapped by stream bucket only",
       "Get_SportsLeagues (auth) still needed for full book league catalog + API sport ids",
-      "Sync: bun run partner:sync -- --sport=all  (or table_tennis / tennis / …)",
+      "Sync: bun run inventory:sync -- --sport=all  (or table_tennis / tennis / …)",
     ],
   };
 

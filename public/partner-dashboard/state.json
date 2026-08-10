@@ -330,11 +330,11 @@
       "purpose": "Raw CDP JSONL only"
     },
     {
-      "cmd": "bun run partner:sports",
+      "cmd": "bun run domain:sports",
       "purpose": "Live stream-list sports/leagues"
     },
     {
-      "cmd": "bun run partner:sync -- --sport=all",
+      "cmd": "bun run inventory:sync -- --sport=all",
       "purpose": "Inventory → skin_events"
     },
     {

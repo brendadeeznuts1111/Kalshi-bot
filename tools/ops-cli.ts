@@ -7,7 +7,8 @@
  *   bun run ops:map
  *   bun run ops:map -- --output=artifacts/partner-expansion.mmd
  *
- * Desk matrix: domain:skins · domain:books · domain:host-discover
+ * Desk matrix: domain:skins · domain:books · domain:host-discover · domain:sports
+ * Inventory: inventory:sync · inventory:watch
  *
  * @see docs/SEAT-OPS.md
  * @see src/partner/architecture.ts
@@ -48,4 +49,6 @@ if (json) {
   console.log('  · skin matrix: bun run domain:skins');
   console.log('  · book matrix: bun run domain:books');
   console.log('  · host discover: bun run domain:host-discover -- --url=https://…');
+  console.log('  · sports map / stream coverage: bun run domain:sports');
+  console.log('  · inventory sync: bun run inventory:sync -- --sport=all');
 }

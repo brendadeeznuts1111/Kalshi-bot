@@ -110,7 +110,10 @@ bun run domain:skins
 bun run domain:skins -- --json
 bun run domain:books
 bun run domain:books -- --json
-# seat-ops (not desk): bun run ops:status
+bun run domain:sports            # live-product sport tiers + stream-list coverage
+bun run domain:sports -- --map   # offline static map
+# inventory events (not seat partner): bun run inventory:sync · inventory:watch
+# seat-ops: bun run ops:status
 ```
 
 ## Unknown host

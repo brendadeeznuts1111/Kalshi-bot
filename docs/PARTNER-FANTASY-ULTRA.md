@@ -278,8 +278,8 @@ export FANTASY402_CURRENCY=USD
 ```bash
 bun run partner:test-fantasy
 bun run partner:test-fantasy -- --sport=tennis --limit=5 --renew
-bun run partner:watch-events -- --once --sport=table_tennis --json
-bun run partner:watch-events -- --loop --sport=table_tennis --interval-ms=30000
+bun run inventory:watch -- --once --sport=table_tennis --json
+bun run inventory:watch -- --loop --sport=table_tennis --interval-ms=30000
 bun test tests/partner/fantasy-ultra.test.ts tests/partner/skin-events-store.test.ts
 ```
 
@@ -314,12 +314,12 @@ until a separate EZ feed is proven. At parse, wire JSON `stream_id` →
 ```bash
 # one-shot (inventory is public — dummy env is fine)
 # Inventory is public (no Fantasy402 env required). Optional login env warms session.
-bun run partner:watch-events -- --once --sport=table_tennis --json
-bun run partner:watch-events -- --once --sport=all --json
+bun run inventory:watch -- --once --sport=table_tennis --json
+bun run inventory:watch -- --once --sport=all --json
 # defaults: --skin=buckeye --book=fantasy402 (other skins rejected)
 
 # long poll every 30s (default)
-bun run partner:watch-events -- --loop --sport=table_tennis --interval-ms=30000
+bun run inventory:watch -- --loop --sport=table_tennis --interval-ms=30000
 ```
 
 New rows print as `+ table_tennis · … · skin=buckeye book=fantasy402`. Optional
@@ -503,13 +503,13 @@ Capacity JSON: `FANTASY402_LIVE_PRODUCTS_JSON` (array of `{name,perBetMax,maxWin
 ### Sports + leagues inventory
 
 ```bash
-bun run partner:sports                 # live stream-list sports (non-zero events)
-bun run partner:sports -- --all        # include empty buckets
-bun run partner:sports -- --leagues=table_tennis
-bun run partner:sports -- --leagues=all --json
-bun run partner:sports -- --map        # offline static map
-bun run partner:sports -- --seed       # refresh provider_sport_mappings
-bun run partner:sync -- --sport=all    # upsert all buckets into skin_events
+bun run domain:sports                 # live stream-list sports (non-zero events)
+bun run domain:sports -- --all        # include empty buckets
+bun run domain:sports -- --leagues=table_tennis
+bun run domain:sports -- --leagues=all --json
+bun run domain:sports -- --map        # offline static map
+bun run domain:sports -- --seed       # refresh provider_sport_mappings
+bun run inventory:sync -- --sport=all    # upsert all buckets into skin_events
 ```
 
 - **Primary** (★): soccer, tennis, basketball, table_tennis — confirmed
@@ -579,9 +579,9 @@ Code: `src/partner/out-capacity.ts` · `computeProviderCapacity` ·
 ## Unified sync module (ground truth)
 
 ```bash
-bun run partner:sync -- --sport=table_tennis --once --json
-bun run partner:sync -- --sport=table_tennis --loop --interval-ms=30000
-bun run partner:sync -- --enrich-booked --once   # soft name→odds_event_id (metadata only)
+bun run inventory:sync -- --sport=table_tennis --once --json
+bun run inventory:sync -- --sport=table_tennis --loop --interval-ms=30000
+bun run inventory:sync -- --enrich-booked --once   # soft name→odds_event_id (metadata only)
 
 # In-process cron (with other desk jobs)
 PARTNER_SYNC=1 PARTNER_SYNC_PUBLIC=1 PARTNER_SYNC_SPORT=table_tennis bun run cron:start
@@ -606,7 +606,7 @@ PARTNER_SYNC=1 PARTNER_SYNC_PUBLIC=1 bun run cron:once
 | placeOrder POST                         | ❌ response parser only          |
 | Merge into Kalshi `liquidity:ground`    | ❌ deferred until priced markets |
 
-Code: `src/partner/sync.ts` · CLI `partner:sync`.  
+Code: `src/partner/sync.ts` · CLI `inventory:sync`.  
 Do **not** invent a full sports/leagues/markets/odds schema until a price wire
 is captured.
 

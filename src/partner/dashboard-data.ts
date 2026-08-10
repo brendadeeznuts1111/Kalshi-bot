@@ -170,11 +170,11 @@ export const PARTNER_OPERATOR_COMMANDS: Array<{
     purpose: "Raw CDP JSONL only",
   },
   {
-    cmd: "bun run partner:sports",
-    purpose: "Live stream-list sports/leagues",
+    cmd: "bun run domain:sports",
+    purpose: "Domain sport map + live stream-list coverage",
   },
   {
-    cmd: "bun run partner:sync -- --sport=all",
+    cmd: "bun run inventory:sync -- --sport=all",
     purpose: "Inventory → skin_events",
   },
   {

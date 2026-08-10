@@ -374,13 +374,13 @@ export function resolveWatchInventoryIdentity(input: {
   const bookRaw = (input.book ?? defaults.bookId).trim().toLowerCase();
   if (!isSkinId(skinRaw) || skinRaw !== 'buckeye') {
     throw new Error(
-      `partner:watch-events supports --skin=buckeye only (got ${skinRaw || '(empty)'})`
+      `inventory:watch supports --skin=buckeye only (got ${skinRaw || '(empty)'})`
     );
   }
   const bookId = resolveBookId(bookRaw);
   if (!bookId || bookId !== 'fantasy402') {
     throw new Error(
-      `partner:watch-events supports --book=fantasy402 only (got ${bookRaw || '(empty)'})`
+      `inventory:watch supports --book=fantasy402 only (got ${bookRaw || '(empty)'})`
     );
   }
   if (!isBookId(bookId)) {

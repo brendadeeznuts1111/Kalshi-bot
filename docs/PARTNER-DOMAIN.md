@@ -10,4 +10,6 @@ bun run ops:status
 bun run domain:skins
 bun run domain:books
 bun run domain:host-discover -- --url=https://example.com
+bun run domain:sports
+bun run inventory:sync -- --sport=all
 ```

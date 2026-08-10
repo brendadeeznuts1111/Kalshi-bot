@@ -8,10 +8,10 @@
  * FANTASY402_AGENT_ID, FANTASY402_PASSWORD
  *
  * Usage:
- *   bun run partner:watch-events
- *   bun run partner:watch-events -- --sport=table_tennis
- *   bun run partner:watch-events -- --sport=all --json
- *   bun run partner:watch-events -- --once --skin=buckeye --book=fantasy402
+ *   bun run inventory:watch
+ *   bun run inventory:watch -- --sport=table_tennis
+ *   bun run inventory:watch -- --sport=all --json
+ *   bun run inventory:watch -- --once --skin=buckeye --book=fantasy402
  *
  * Optional: TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID to notify on new rows.
  */
@@ -143,7 +143,7 @@ async function pollOnce(options: {
     );
   } else {
     console.log(
-      `partner:watch-events skin=${options.identity.skinId} book=${options.identity.bookId} ` +
+      `inventory:watch skin=${options.identity.skinId} book=${options.identity.bookId} ` +
         `source=${loaded.source} covers=${covers.join('+')} sport=${options.sport} ` +
         `seen=${result.seen} new=${result.inserted.length} updated=${result.updated.length}`
     );
@@ -176,7 +176,7 @@ async function main(): Promise<void> {
   }
 
   console.log(
-    `partner:watch-events loop skin=${identity.skinId} book=${identity.bookId} ` +
+    `inventory:watch loop skin=${identity.skinId} book=${identity.bookId} ` +
       `sport=${sport} intervalMs=${intervalMs}`
   );
   for (;;) {

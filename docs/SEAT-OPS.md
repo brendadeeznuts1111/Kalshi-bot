@@ -12,9 +12,10 @@ seat-capital service is the only writer.
 
 Seat-ops status: `bun run ops:status` · `bun run ops:status -- --json`  
 Skin matrix: `bun run domain:skins` · Book matrix: `bun run domain:books`  
-Host discover: `bun run domain:host-discover`  
-Event inventory (Buckeye / Fantasy402 → plive+ezlive):
-`bun run partner:watch-events`  
+Host discover: `bun run domain:host-discover` · Sports map: `bun run domain:sports`  
+Event inventory (plive/ezlive shell → skin_events):
+`bun run inventory:watch` · `bun run inventory:sync`  
+
 Competitions (Plive league → canonical id):
 [`src/domain/competitions.ts`](../src/domain/competitions.ts) ·
 `resolveCompetition`  
@@ -267,6 +268,8 @@ bun run serve
 | `ops:map`                                              | Telegram → authorization → provider expansion map (Mermaid)           |
 | `domain:skins` / `domain:books`                       | Desk matrix (hosts → skin / book)                                     |
 | `domain:host-discover`                                | Suggest SkinId from host (never auto-maps)                            |
+| `domain:sports`                                       | Desk live-product sport map + stream-list coverage (not seat partner) |
+| `inventory:sync` / `inventory:watch`                  | Coverage inventory events → skin_events (plive/ezlive shell)          |
 | `partner:toml`                                        | Partner + Accounts (Bun.TOML config seed/export)                      |
 | `partner:health`                                      | Registry + env + risk + ledger freshness                              |
 | `partner:desk-smoke`                                  | Per-out secret readiness + optional signed `login()`                  |
@@ -287,8 +290,6 @@ bun run serve
 | `partner:placebet-har`                                | Chrome HAR → PlaceBet URL map (+ optional ticket ingest)              |
 | `partner:capacity` / `partner:registry`               | Accounts                                                              |
 | `partner:profile` / `partner:avatars`                 | Partner visuals (Bun.color)                                           |
-| `partner:sports`                                      | Accounts (inventory)                                                  |
-| `partner:sync`                                        | Accounts (events)                                                     |
 | `partner:pandora-probe`                               | Pandora Socket.IO probe                                               |
 | `bun src/telegram/bot.ts`                             | Communication                                                         |
 | `bunx drizzle-kit …`                                  | DB tooling only (not a global install)                                |

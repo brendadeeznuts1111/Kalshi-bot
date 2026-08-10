@@ -9,6 +9,8 @@
  *
  * Seat-ops status / expansion map: bun run ops:status · bun run ops:map
  * Host discover: bun run domain:host-discover
+ * Sports / stream coverage: bun run domain:sports
+ * Inventory events: bun run inventory:sync · inventory:watch
  *
  * @see src/domain/README.md
  * @see src/domain/skin-matrix.ts
