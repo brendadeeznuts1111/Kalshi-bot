@@ -2,6 +2,12 @@
 
 Standalone registry for live PPH coverage. **Not** owned by Fantasy402.
 
+**ID glossary (SSOT):**
+[`docs/PARTNER-DOMAIN.md` § ID glossary](../../docs/PARTNER-DOMAIN.md#id-glossary-ssot)
+— interior `inventoryId` / `oddsEventId` / `inventoryBucket`; wire-only
+`feed_id` / `ls_id` / `donbest_id`; deprecated `skin_events.partner` mirror of
+`book_id`. Wire JSON may still say `stream_id` / `client_event_id` at parse only.
+
 ## Layers
 
 | Layer             | Owns                                         | Examples                                                                            |
@@ -63,8 +69,8 @@ ticketLegFromOddsLine(EXAMPLE_DARIN_PLACHY_ODDS_LINE);
 
 | Plane     | Type                             | Do not mix with                        |
 | --------- | -------------------------------- | -------------------------------------- |
-| Inventory | `InventoryEventRef.inventoryId`  | odds / ticket eventId; wire `stream_id` stays at parse only |
-| Odds      | `OddsLine` (Pandora field names) | ticket without `ticketLegFromOddsLine` |
+| Inventory | `InventoryEventRef.inventoryId` (+ `inventoryBucket` for sport buckets) | odds / ticket eventId; wire JSON `stream_id` at parse only |
+| Odds      | `OddsLine` + `oddsEventId`       | ticket without `ticketLegFromOddsLine`; wire JSON `client_event_id` at parse only |
 | Ticket    | `TicketLeg` (componentBet names) | odds without `oddsLineFromTicketLeg`   |
 
 Desk hosts live only in `SKINS[].hosts`. Stream/widget infra URLs live only in
