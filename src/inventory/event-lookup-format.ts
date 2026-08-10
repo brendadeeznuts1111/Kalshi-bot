@@ -215,7 +215,7 @@ export function formatEventLookup(r: EventLookupResult): string {
       lines.push(
         ...mdTable(
           ['Sport', 'Period', 'Mkt type', 'Name', 'Line (r)', 'Vig', 'cls', 'Prices'],
-          offered.map(m => {
+          offered.slice(0, 24).map(m => {
             const vig = vigByKey.get(`${m.period}/${m.marketType}`);
             return [
               sportCol,

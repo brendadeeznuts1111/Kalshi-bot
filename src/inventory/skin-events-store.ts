@@ -134,7 +134,8 @@ export function listSkinInventoryIds(db: Database, bookId: string): Set<string> 
   return new Set(rows.map(r => String(r.inventoryId)));
 }
 
-function liveEventToRow(
+/** SSOT InventoryEvent → skin row (upsert + dry-run plan). */
+export function liveEventToRow(
   event: InventoryEvent,
   nowMs: number,
   identity: InventoryIdentity,

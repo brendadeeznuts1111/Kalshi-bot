@@ -51,7 +51,8 @@ export function defaultStreamListCachePath(): string {
   return join(CACHE_DIR, 'stream-list-cache.json');
 }
 
-function streamHeaders(): Record<string, string> {
+/** Public stream-list / plive shell headers (SSOT for inventory + samples). */
+export function streamListHeaders(): Record<string, string> {
   return {
     accept: 'application/json, text/plain, */*',
     origin: FANTASY_ULTRA_DEFAULTS.streamOrigin,
@@ -132,7 +133,7 @@ export async function fetchPublicStreamListWire(
   try {
     const res = await fetchWithRetry(
       url,
-      { headers: streamHeaders() },
+      { headers: streamListHeaders() },
       {
         retries: options.retries ?? 3,
         backoffMs: options.retryBackoffMs ?? 800,

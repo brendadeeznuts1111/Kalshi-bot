@@ -15,6 +15,7 @@ import type { FetchFn } from '../institutions/resilient-fetch.ts';
 import type { CoefficientLine } from '../partner/fantasy-ultra/coefficients.ts';
 import { PLIVE_STREAM_ENDPOINTS } from '../domain/live-product-endpoints.ts';
 import { probePandoraEvent } from './pandora-listen.ts';
+import { streamListHeaders } from './stream-list-fetch.ts';
 
 export type StreamSportLeagueRow = {
   streamBucket: string;
@@ -268,11 +269,7 @@ export async function sampleStreamListBySport(
   const fetchImpl = options.fetchImpl ?? fetch;
   const url = options.streamListUrl ?? PLIVE_STREAM_ENDPOINTS.streamListUrl;
   const res = await fetchImpl(url, {
-    headers: {
-      accept: 'application/json, text/plain, */*',
-      origin: FANTASY_ULTRA_DEFAULTS.streamOrigin,
-      referer: FANTASY_ULTRA_DEFAULTS.streamReferer,
-    },
+    headers: streamListHeaders(),
   });
   if (!res.ok) throw new Error(`stream-list HTTP ${res.status}`);
   const wire = (await res.json()) as {

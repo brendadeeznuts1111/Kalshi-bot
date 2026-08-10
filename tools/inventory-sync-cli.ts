@@ -25,6 +25,7 @@
  * --enrich-only: skip stream poll; public Statscore catalog → odds_event_id
  * --odds-status: odds_event_id fill-rate only (no poll)
  */
+import { argValue, hasFlag } from '../src/cli/argv.ts';
 // @see https://bun.com/docs/runtime/sqlite
 import { openEventStore } from "../src/institutions/event-store/open-db.ts";
 import { DEFAULT_EVENT_STORE_DB } from "../src/institutions/event-store/paths.ts";
@@ -41,17 +42,8 @@ import {
   runInventorySync,
 } from "../src/inventory/sync.ts";
 import { buckeyeInventoryIdentity } from "../src/inventory/skin-events-store.ts";
-import { requireDefaultUrlForUltraMapper } from "../src/domain/index.ts";
 import type { PartnerAccountProfile } from "../src/partner/account-profile.ts";
-
-function argValue(name: string): string | undefined {
-  const hit = process.argv.find((a) => a.startsWith(`--${name}=`));
-  return hit ? hit.slice(name.length + 3) : undefined;
-}
-
-function hasFlag(name: string): boolean {
-  return process.argv.includes(`--${name}`);
-}
+import { publicFantasyProfile } from "../src/inventory/public-profile.ts";
 
 function resolveProfile(allowPublic: boolean): PartnerAccountProfile {
   const fromEnv = loadFantasy402ProfileFromEnv();
@@ -61,20 +53,7 @@ function resolveProfile(allowPublic: boolean): PartnerAccountProfile {
     Bun.env.INVENTORY_SYNC_PUBLIC === "1" ||
     Bun.env.PARTNER_SYNC_PUBLIC === "1"
   ) {
-    return {
-      id: "fantasy402-public",
-      partner: "fantasy402",
-      url: requireDefaultUrlForUltraMapper(),
-      status: "active",
-      defaultLiveProduct: 2,
-      meta: {
-        customerID: "public",
-        agentID: "public",
-        password: "public",
-        token: "public",
-        currency: "USD",
-      },
-    };
+    return publicFantasyProfile();
   }
   return requireFantasy402ProfileFromEnv();
 }

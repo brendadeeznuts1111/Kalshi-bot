@@ -36,6 +36,106 @@ import { PandoraSocket } from '../partner/fantasy-ultra/pandora-socket.ts';
 import type { PandoraHostId } from '../partner/fantasy-ultra/pandora-hosts.ts';
 import { resolvePandoraHostId } from '../partner/fantasy-ultra/pandora-hosts.ts';
 
+type PandoraSocketOpts = NonNullable<ConstructorParameters<typeof PandoraSocket>[0]>;
+type PandoraHandlers = NonNullable<PandoraSocketOpts['handlers']>;
+type CoeffInfo = Parameters<NonNullable<PandoraHandlers['onCoefficients']>>[0];
+
+/** Timed Pandora session: connect → handlers → close (SSOT for probe/board/watch). */
+async function openPandoraWindow(
+  seconds: number,
+  options: {
+    WebSocketImpl?: typeof WebSocket;
+    pandoraHost?: PandoraHostId | string;
+  },
+  makeHandlers: (api: {
+    subscribeLive: PandoraSocket['subscribeLive'];
+  }) => PandoraHandlers
+): Promise<void> {
+  const host = resolvePandoraHostId(options.pandoraHost);
+  await new Promise<void>(resolve => {
+    let sock!: PandoraSocket;
+    sock = new PandoraSocket({
+      reconnect: false,
+      host,
+      WebSocketImpl: options.WebSocketImpl,
+      handlers: makeHandlers({
+        subscribeLive: ((...args: Parameters<PandoraSocket['subscribeLive']>) =>
+          sock.subscribeLive(...args)) as PandoraSocket['subscribeLive'],
+      }),
+    });
+    sock.connect();
+    setTimeout(() => {
+      try {
+        sock.close();
+      } catch {
+        /* ignore */
+      }
+      resolve();
+    }, seconds * 1000);
+  });
+}
+
+/** Shared live.sports/leagues/countries/groupProfile + eventData board ingest. */
+function takeMetaRoom(
+  info: CoeffInfo,
+  bags: {
+    sports?: { set: (p: unknown) => void };
+    leagues?: { set: (p: unknown) => void };
+    countries?: { set: (p: unknown) => void };
+    blocked?: { set: (p: unknown) => void };
+    eventData?: {
+      get: () => unknown | null;
+      set: (p: unknown) => void;
+    };
+    /** When true, ignore eventCoefficients rooms on eventData path. */
+    boardOnly?: boolean;
+  }
+): boolean {
+  if (info.room === 'live.sports' && !info.envelope.isDiff) {
+    bags.sports?.set(info.envelope.payload);
+    return true;
+  }
+  if (info.room === 'live.leagues' && !info.envelope.isDiff) {
+    bags.leagues?.set(info.envelope.payload);
+    return true;
+  }
+  if (info.room === 'live.countries' && !info.envelope.isDiff) {
+    bags.countries?.set(info.envelope.payload);
+    return true;
+  }
+  if (
+    info.room.includes('groupProfile') &&
+    !info.envelope.isDiff &&
+    info.envelope.payload &&
+    typeof info.envelope.payload === 'object'
+  ) {
+    const gp = info.envelope.payload as { blocked?: unknown };
+    if (gp.blocked != null) bags.blocked?.set(gp.blocked);
+    return true;
+  }
+  if (!info.room.includes('eventData')) return false;
+  if (bags.boardOnly && info.room.includes('eventCoefficients')) return true;
+  if (!bags.eventData) return false;
+  const p = info.envelope.payload;
+  if (!info.envelope.isDiff && isEventDataBoardPayload(p)) {
+    bags.eventData.set(p);
+    return true;
+  }
+  const cur = bags.eventData.get();
+  if (
+    info.envelope.isDiff &&
+    cur &&
+    typeof cur === 'object' &&
+    Array.isArray(p)
+  ) {
+    bags.eventData.set(
+      applyCoefficientDiff(cur as Record<string, unknown>, p)
+    );
+    return true;
+  }
+  return true;
+}
+
 export async function probePandoraEvent(
   eventId: number,
   options: {
@@ -61,88 +161,48 @@ export async function probePandoraEvent(
   let countriesPayload: unknown | null = null;
   let blockedRaw: unknown | null = null;
 
-  const host = resolvePandoraHostId(options.pandoraHost);
-
-  await new Promise<void>(resolve => {
-    const sock = new PandoraSocket({
-      reconnect: false,
-      host,
-      WebSocketImpl: options.WebSocketImpl,
-      handlers: {
-        onNamespaceConnect: () => {
-          // subscribeLive already includes bulk `${main}.eventData` + live.sports
-          sock.subscribeLive({ eventIds: [eventId] });
-        },
-        onEvent: (name, args) => {
-          if (name.includes(`eventCoefficients.${eventId}`)) subscribed = true;
-          if (Array.isArray(args?.[0]) && String(args[0][0] ?? '').includes(String(eventId))) {
-            subscribed = true;
-          }
-        },
-        onCoefficients: info => {
-          if (info.room === 'live.sports' && !info.envelope.isDiff) {
-            sportsPayload = info.envelope.payload;
-            return;
-          }
-          if (info.room === 'live.leagues' && !info.envelope.isDiff) {
-            leaguesPayload = info.envelope.payload;
-            return;
-          }
-          if (info.room === 'live.countries' && !info.envelope.isDiff) {
-            countriesPayload = info.envelope.payload;
-            return;
-          }
-          if (
-            info.room.includes('groupProfile') &&
-            !info.envelope.isDiff &&
-            info.envelope.payload &&
-            typeof info.envelope.payload === 'object'
-          ) {
-            const gp = info.envelope.payload as { blocked?: unknown };
-            if (gp.blocked != null) blockedRaw = gp.blocked;
-            return;
-          }
-          if (info.room.includes('eventData')) {
-            const p = info.envelope.payload;
-            if (!info.envelope.isDiff && isEventDataBoardPayload(p)) {
-              eventDataBoardPayload = p;
-            } else if (
-              info.envelope.isDiff &&
-              eventDataBoardPayload &&
-              typeof eventDataBoardPayload === 'object' &&
-              Array.isArray(p)
-            ) {
-              eventDataBoardPayload = applyCoefficientDiff(
-                eventDataBoardPayload as Record<string, unknown>,
-                p
-              );
-            }
-            return;
-          }
-          if (info.eventId === eventId || info.room.includes(String(eventId))) {
-            if (info.room.includes('eventCoefficients')) subscribed = true;
-            store.ingest(info);
-            if (
-              info.room.includes('eventCoefficients') &&
-              !info.envelope.isDiff &&
-              info.envelope.payload
-            ) {
-              lastPayload = info.envelope.payload;
-            }
-          }
-        },
-      },
-    });
-    sock.connect();
-    setTimeout(() => {
-      try {
-        sock.close();
-      } catch {
-        /* ignore */
+  await openPandoraWindow(seconds, options, ({ subscribeLive }) => ({
+    onNamespaceConnect: () => {
+      // subscribeLive already includes bulk `${main}.eventData` + live.sports
+      subscribeLive({ eventIds: [eventId] });
+    },
+    onEvent: (name, args) => {
+      if (name.includes(`eventCoefficients.${eventId}`)) subscribed = true;
+      if (
+        Array.isArray(args?.[0]) &&
+        String(args[0][0] ?? '').includes(String(eventId))
+      ) {
+        subscribed = true;
       }
-      resolve();
-    }, seconds * 1000);
-  });
+    },
+    onCoefficients: info => {
+      if (
+        takeMetaRoom(info, {
+          sports: { set: p => (sportsPayload = p) },
+          leagues: { set: p => (leaguesPayload = p) },
+          countries: { set: p => (countriesPayload = p) },
+          blocked: { set: p => (blockedRaw = p) },
+          eventData: {
+            get: () => eventDataBoardPayload,
+            set: p => (eventDataBoardPayload = p),
+          },
+        })
+      ) {
+        return;
+      }
+      if (info.eventId === eventId || info.room.includes(String(eventId))) {
+        if (info.room.includes('eventCoefficients')) subscribed = true;
+        store.ingest(info);
+        if (
+          info.room.includes('eventCoefficients') &&
+          !info.envelope.isDiff &&
+          info.envelope.payload
+        ) {
+          lastPayload = info.envelope.payload;
+        }
+      }
+    },
+  }));
 
   const lines = store.getLines(eventId);
   const book = lastPayload
@@ -210,67 +270,24 @@ export async function scanPandoraEventBoard(
   let countriesPayload: unknown | null = null;
   let blockedRaw: unknown | null = null;
 
-  await new Promise<void>(resolve => {
-    const sock = new PandoraSocket({
-      reconnect: false,
-      host,
-      WebSocketImpl: options.WebSocketImpl,
-      handlers: {
-        onNamespaceConnect: () => {
-          sock.subscribeLive({});
+  await openPandoraWindow(seconds, options, ({ subscribeLive }) => ({
+    onNamespaceConnect: () => {
+      subscribeLive({});
+    },
+    onCoefficients: info => {
+      takeMetaRoom(info, {
+        sports: { set: p => (sportsPayload = p) },
+        leagues: { set: p => (leaguesPayload = p) },
+        countries: { set: p => (countriesPayload = p) },
+        blocked: { set: p => (blockedRaw = p) },
+        eventData: {
+          get: () => boardPayload,
+          set: p => (boardPayload = p),
         },
-        onCoefficients: info => {
-          if (info.room === 'live.sports' && !info.envelope.isDiff) {
-            sportsPayload = info.envelope.payload;
-            return;
-          }
-          if (info.room === 'live.leagues' && !info.envelope.isDiff) {
-            leaguesPayload = info.envelope.payload;
-            return;
-          }
-          if (info.room === 'live.countries' && !info.envelope.isDiff) {
-            countriesPayload = info.envelope.payload;
-            return;
-          }
-          if (
-            info.room.includes('groupProfile') &&
-            !info.envelope.isDiff &&
-            info.envelope.payload &&
-            typeof info.envelope.payload === 'object'
-          ) {
-            const gp = info.envelope.payload as { blocked?: unknown };
-            if (gp.blocked != null) blockedRaw = gp.blocked;
-            return;
-          }
-          if (!info.room.includes('eventData')) return;
-          if (info.room.includes('eventCoefficients')) return;
-          const p = info.envelope.payload;
-          if (!info.envelope.isDiff && isEventDataBoardPayload(p)) {
-            boardPayload = p;
-          } else if (
-            info.envelope.isDiff &&
-            boardPayload &&
-            typeof boardPayload === 'object' &&
-            Array.isArray(p)
-          ) {
-            boardPayload = applyCoefficientDiff(
-              boardPayload as Record<string, unknown>,
-              p
-            );
-          }
-        },
-      },
-    });
-    sock.connect();
-    setTimeout(() => {
-      try {
-        sock.close();
-      } catch {
-        /* ignore */
-      }
-      resolve();
-    }, seconds * 1000);
-  });
+        boardOnly: true,
+      });
+    },
+  }));
 
   const sportsNames = parseLiveSportsNames(sportsPayload);
   const leagueNames = parseLiveLeagueNames(leaguesPayload);
@@ -479,7 +496,6 @@ export async function watchEventOdds(
   } = {}
 ): Promise<OddsWatchUpdate[] & { lastLines: CoefficientLine[] }> {
   const seconds = Math.min(Math.max(options.seconds ?? 30, 5), 300);
-  const host = resolvePandoraHostId(options.pandoraHost);
   const store = new CoefficientStore();
   const history: OddsWatchUpdate[] = [];
   let prevLines: CoefficientLine[] = [];
@@ -538,84 +554,68 @@ export async function watchEventOdds(
     prevEventState = eventState;
   };
 
-  await new Promise<void>(resolve => {
-    const sock = new PandoraSocket({
-      reconnect: false,
-      host,
-      WebSocketImpl: options.WebSocketImpl,
-      handlers: {
-        onNamespaceConnect: () => {
-          sock.subscribeLive({ eventIds: [eventId] });
-        },
-        onCoefficients: info => {
-          if (info.room.includes('eventData')) {
-            const p = info.envelope.payload;
-            if (!info.envelope.isDiff && isEventDataBoardPayload(p)) {
-              boardPayload = p as Record<string, unknown>;
-              emitUpdate([], [], prevLines.length === 0);
-            } else if (
-              info.envelope.isDiff &&
-              boardPayload &&
-              Array.isArray(p)
-            ) {
-              const relevant = (p as Array<{ path?: string; op?: string; value?: unknown }>).filter(
-                op => {
-                  if (!op?.path) return false;
-                  const parsed = parseEventDataDiffPath(op.path);
-                  return parsed.eventId === eventId;
-                }
-              );
-              boardPayload = applyCoefficientDiff(boardPayload, p);
-              if (relevant.length > 0 || prevLines.length === 0) {
-                const eventTransitions: EventDataStateTransition[] = [];
-                for (const op of relevant) {
-                  const parsed = parseEventDataDiffPath(op.path!);
-                  if (parsed.field === 'l' && typeof op.value === 'boolean') {
-                    eventTransitions.push({
-                      kind: 'lines_flag',
-                      eventId,
-                      hasLines: op.value,
-                    });
-                  } else if (parsed.field === 's' || parsed.field === 'ip' || parsed.field === 'il') {
-                    eventTransitions.push({
-                      kind: 'state_change',
-                      eventId,
-                      field: parsed.field,
-                      to: op.value,
-                    });
-                  } else if (op.op === 'remove' && parsed.field === '_node') {
-                    eventTransitions.push({ kind: 'event_removed', eventId });
-                  }
-                }
-                emitUpdate([], eventTransitions);
+  await openPandoraWindow(seconds, options, ({ subscribeLive }) => ({
+    onNamespaceConnect: () => {
+      subscribeLive({ eventIds: [eventId] });
+    },
+    onCoefficients: info => {
+      if (info.room.includes('eventData')) {
+        const p = info.envelope.payload;
+        if (!info.envelope.isDiff && isEventDataBoardPayload(p)) {
+          boardPayload = p as Record<string, unknown>;
+          emitUpdate([], [], prevLines.length === 0);
+        } else if (info.envelope.isDiff && boardPayload && Array.isArray(p)) {
+          const relevant = (
+            p as Array<{ path?: string; op?: string; value?: unknown }>
+          ).filter(op => {
+            if (!op?.path) return false;
+            const parsed = parseEventDataDiffPath(op.path);
+            return parsed.eventId === eventId;
+          });
+          boardPayload = applyCoefficientDiff(boardPayload, p);
+          if (relevant.length > 0 || prevLines.length === 0) {
+            const eventTransitions: EventDataStateTransition[] = [];
+            for (const op of relevant) {
+              const parsed = parseEventDataDiffPath(op.path!);
+              if (parsed.field === 'l' && typeof op.value === 'boolean') {
+                eventTransitions.push({
+                  kind: 'lines_flag',
+                  eventId,
+                  hasLines: op.value,
+                });
+              } else if (
+                parsed.field === 's' ||
+                parsed.field === 'ip' ||
+                parsed.field === 'il'
+              ) {
+                eventTransitions.push({
+                  kind: 'state_change',
+                  eventId,
+                  field: parsed.field,
+                  to: op.value,
+                });
+              } else if (op.op === 'remove' && parsed.field === '_node') {
+                eventTransitions.push({ kind: 'event_removed', eventId });
               }
             }
-            return;
+            emitUpdate([], eventTransitions);
           }
-          if (info.eventId !== eventId && !info.room.includes(String(eventId))) {
-            return;
-          }
-          if (!info.room.includes('eventCoefficients')) return;
-          store.ingest(info);
-          if (!info.envelope.isDiff && info.envelope.payload) {
-            lastPayload = info.envelope.payload;
-          }
-          const lines = store.getLines(eventId);
-          const transitions = diffOfferFingerprints(prevLines, lines);
-          emitUpdate(transitions, [], prevLines.length === 0);
-        },
-      },
-    });
-    sock.connect();
-    setTimeout(() => {
-      try {
-        sock.close();
-      } catch {
-        /* ignore */
+        }
+        return;
       }
-      resolve();
-    }, seconds * 1000);
-  });
+      if (info.eventId !== eventId && !info.room.includes(String(eventId))) {
+        return;
+      }
+      if (!info.room.includes('eventCoefficients')) return;
+      store.ingest(info);
+      if (!info.envelope.isDiff && info.envelope.payload) {
+        lastPayload = info.envelope.payload;
+      }
+      const lines = store.getLines(eventId);
+      const transitions = diffOfferFingerprints(prevLines, lines);
+      emitUpdate(transitions, [], prevLines.length === 0);
+    },
+  }));
 
   const out = history as OddsWatchUpdate[] & { lastLines: CoefficientLine[] };
   out.lastLines = store.getLines(eventId);

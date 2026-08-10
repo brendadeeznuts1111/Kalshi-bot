@@ -20,6 +20,7 @@
  * --enrich-booked: soft Statscore name → odds_event_id (needs Fantasy adapter; scope=board).
  * Optional: TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID to notify on new rows (live only).
  */
+import { argValue, hasFlag } from '../src/cli/argv.ts';
 // @see https://bun.com/docs/runtime/sqlite
 // @see https://bun.com/docs/api/spawn
 import { openEventStore } from '../src/institutions/event-store/open-db.ts';
@@ -47,14 +48,7 @@ import {
 } from '../src/inventory/skin-events-store.ts';
 import type { FantasySessionAdapter, InventoryEvent } from '../src/partner/types.ts';
 
-function argValue(name: string): string | undefined {
-  const hit = process.argv.find(a => a.startsWith(`--${name}=`));
-  return hit ? hit.slice(name.length + 3) : undefined;
-}
 
-function hasFlag(name: string): boolean {
-  return process.argv.includes(`--${name}`);
-}
 
 function resolveFetchSport(sportArg: string): string {
   if (sportArg === 'all') return 'all';
