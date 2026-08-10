@@ -378,14 +378,19 @@ export function resolvePartnerEnv(
   keys: readonly PartnerEnvKey[] = PARTNER_ENV_KEYS,
   options?: { provider?: string }
 ): PartnerEnvBundle {
+  const provider = options?.provider ?? 'fantasy402';
   const normalized = envPrefix?.trim() ? normalizeEnvPrefix(envPrefix) : 'FANTASY402_';
-  const chain = envPrefixFallbackChain(normalized, options?.provider ?? 'fantasy402');
+  const chain = envPrefixFallbackChain(normalized, provider);
   const values: PartnerEnvBundle['values'] = {};
   const source: PartnerEnvBundle['source'] = {};
   for (const key of keys) {
     for (const step of chain) {
-      if (key === 'DOMAIN' && step.source === 'book_fallback') {
-        // Brand-neutral desk URL only — skip FANTASY402_DOMAIN / book-token DOMAIN.
+      // Bare book prefix is often labeled source "out" when callers pass FANTASY402_
+      // itself — still never read FANTASY402_DOMAIN; only PARTNER_DOMAIN.
+      const bookLevelDomain =
+        key === 'DOMAIN' &&
+        (step.source === 'book_fallback' || isBareBookEnvPrefix(step.prefix, provider));
+      if (bookLevelDomain) {
         const preferred = envMap[PARTNER_DOMAIN_ENV]?.trim();
         if (preferred) {
           values.DOMAIN = preferred;
