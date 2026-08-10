@@ -51,7 +51,7 @@ type LiveTrackerLogRecord = {
   events: LiveTrackerEvent[];
 };
 
-export const LIVE_TRACKER_LOG_DIR = joinPath(CACHE_DIR, 'live-tracker');
+const LIVE_TRACKER_LOG_DIR = joinPath(CACHE_DIR, 'live-tracker');
 
 export function defaultLiveTrackerLogPath(eventId: number | string): string {
   return joinPath(LIVE_TRACKER_LOG_DIR, `event-${eventId}.jsonl`);
@@ -424,7 +424,7 @@ const COL_MAP: Record<string, (e: LiveTrackerEvent) => string> = {
   to: e => (e.to != null ? String(e.to) : '—'),
 };
 
-export function resolveColumns(raw?: string[] | null): string[] {
+function resolveColumns(raw?: string[] | null): string[] {
   if (!raw?.length) {
     return ['Time', 'Event', 'EventId', 'Period', 'Market', 'Detail'];
   }
@@ -471,7 +471,7 @@ export function eventsToObjects(
 }
 
 /** Parse a single JSON object into events when possible. */
-export function parseTrackerJsonValue(
+function parseTrackerJsonValue(
   row: unknown,
   file?: string
 ): LiveTrackerEvent[] {

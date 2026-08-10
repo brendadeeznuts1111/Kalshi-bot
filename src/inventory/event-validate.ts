@@ -276,7 +276,7 @@ function classifyProfile(lookup: EventLookupResult): PlaneResult {
 }
 
 /** Default seat probe using Fantasy402 env (no secrets in return value). */
-export async function probeFantasySessionPlane(options: {
+async function probeFantasySessionPlane(options: {
   requireSession: boolean;
   renew: boolean;
   envPrefix?: string;

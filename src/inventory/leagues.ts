@@ -136,7 +136,7 @@ function aggregateLeaguesFromRows(
   return [...by.values()];
 }
 
-export function leaguesFromSkinEventRows(
+function leaguesFromSkinEventRows(
   rows: SkinEventRow[],
   identity?: InventoryIdentity
 ): LeagueAgg[] {
@@ -153,7 +153,7 @@ export function leaguesFromSkinEventRows(
   );
 }
 
-export function leaguesFromInventoryEvents(
+function leaguesFromInventoryEvents(
   events: InventoryEvent[],
   identity?: InventoryIdentity
 ): LeagueAgg[] {

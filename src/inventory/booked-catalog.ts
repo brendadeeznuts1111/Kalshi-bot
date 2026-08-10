@@ -284,7 +284,7 @@ export function bookedCatalogToMatchList(
 }
 
 /** Adapter-shaped rows → catalog entries. */
-export function partnerBookedToCatalog(
+function partnerBookedToCatalog(
   rows: PartnerBookedEvent[]
 ): BookedCatalogEntry[] {
   return rows.map(r => ({
