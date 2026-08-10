@@ -10,6 +10,7 @@
  *   bun live-tracker.ts analyze --stats
  *   bun live-tracker.ts diff --columns File,Event,Detail --desc --output out.csv --format csv
  *   bun live-tracker.ts diff --tail 10 --watch --interval 2
+ *   bun live-tracker.ts chart --event 197510101 --market 3 --event 197510101 --market 4 --overlay --out compare.svg
  *
  * Logs: research/cache/live-tracker/event-{id}.jsonl
  */
@@ -30,6 +31,11 @@ import {
   parseEventType,
   type LiveTrackerEvent,
 } from './src/inventory/live-tracker.ts';
+import {
+  buildPriceSeriesMany,
+  parseEventMarketPairs,
+  renderPriceChartSvg,
+} from './src/inventory/live-tracker-chart.ts';
 import { watchEventOdds } from './src/inventory/pandora-listen.ts';
 import { CACHE_DIR, joinPath } from './src/research/paths.ts';
 
@@ -83,11 +89,14 @@ const BOOLEAN_FLAGS = new Set([
   'desc',
   'detail',
   'json',
+  'overlay',
   'spandora',
   'stats',
   'summary',
   'ticks',
   'watch',
+  'notify',
+  'force-notify',
 ]);
 
 function positionalAfterCmd(cmd: string): string[] {
@@ -123,6 +132,9 @@ Usage:
                               [--summary] [--stats] [--output path]
                               [--watch] [--interval sec]
   bun live-tracker.ts analyze [files…] [--summary] [--stats] [--format …] [--output path]
+  bun live-tracker.ts chart   --event ID --market TYPE [--event ID --market TYPE …]
+                              [--period m] [--overlay] [--out=compare.svg]
+                              [--from=path|glob]   # default: research/cache/live-tracker/event-*.jsonl
 
 Event types: ${LIVE_TRACKER_EVENT_TYPES.join(' | ')}
   aliases: market_on→MARKET_ADDED, market_off→MARKET_REMOVED, …
@@ -131,8 +143,7 @@ Examples:
   bun live-tracker.ts diff old.json new.json --event-type MARKET_ADDED --sort-by time --limit 5
   bun live-tracker.ts watch --market-id #197510101 --format json --watch
   bun live-tracker.ts analyze --summary
-  bun live-tracker.ts diff --columns File,Event,Detail --desc
-  bun live-tracker.ts diff --tail 20 --stats --output /tmp/out.json --format json
+  bun live-tracker.ts chart --event 197510101 --market 3 --event 197510101 --market 4 --overlay --out compare.svg
 `);
   process.exit(code);
 }
@@ -502,6 +513,63 @@ if (cmd === 'analyze') {
   }
   const body = renderOutput(events, events, parseDiffQuery());
   await writeOrPrint(body);
+  process.exit(0);
+}
+
+// ── chart (price overlay SVG) ──────────────────────────────────────────────
+if (cmd === 'chart') {
+  const pairs = parseEventMarketPairs(process.argv);
+  if (!pairs.length) {
+    console.error(
+      'chart requires --event ID --market TYPE (repeatable pairs)\n' +
+        '  e.g. --event 197510101 --market 3 --event 197510101 --market 4'
+    );
+    process.exit(2);
+  }
+  const period = argValue('period');
+  if (period) {
+    for (const p of pairs) p.period = period;
+  }
+  // Load logs for unique event ids (default cache path) + optional --from
+  const eventIds = [...new Set(pairs.map(p => String(p.eventId)))];
+  const fromGlob = argValue('from');
+  const paths: string[] = [];
+  if (fromGlob) {
+    const globber = new Bun.Glob(fromGlob);
+    for await (const p of globber.scan('.')) paths.push(p);
+  } else {
+    for (const id of eventIds) {
+      paths.push(defaultLiveTrackerLogPath(id));
+    }
+  }
+  const existing = [];
+  for (const p of paths) {
+    if (await Bun.file(p).exists()) existing.push(p);
+  }
+  if (!existing.length) {
+    console.error(
+      `no tracker logs for events ${eventIds.join(', ')}\n` +
+        `  run: bun live-tracker.ts watch --market-id ${eventIds[0]} --seconds=30`
+    );
+    process.exit(1);
+  }
+  const events = await loadTrackerEventsFromPaths(existing);
+  const series = buildPriceSeriesMany(events, pairs);
+  const overlay = hasFlag('overlay') || !hasFlag('no-overlay');
+  const svg = renderPriceChartSvg(series, {
+    overlay,
+    title:
+      argValue('title') ??
+      `live-tracker chart · ${series.map(s => s.label).join(' vs ')}`,
+  });
+  const out =
+    argValue('out') ?? argValue('output') ?? 'compare.svg';
+  await Bun.write(out, svg);
+  const pts = series.reduce((n, s) => n + s.points.length, 0);
+  console.error(
+    `wrote ${out} · series=${series.length} points=${pts} logs=${existing.length}` +
+      series.map(s => `\n  ${s.label}: ${s.points.length} pts`).join('')
+  );
   process.exit(0);
 }
 
