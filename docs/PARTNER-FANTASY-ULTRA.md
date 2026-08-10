@@ -128,23 +128,26 @@ Adapter methods:
 
 ### ID map (do not conflate)
 
-| ID                | Source                              | Example use                                       |
-| ----------------- | ----------------------------------- | ------------------------------------------------- |
-| `stream_id` (wire) | stream-list-v2                     | Provider JSON only → interior `inventoryId`       |
-| `inventoryId`     | parsed from `stream_id`             | Inventory plane (`InventoryEventRef` / `skin_events.inventory_id`) |
-| `feed_id`         | stream-list-v2                      | Often 0 or large int — not always odds event id |
-| `client_event_id` (wire) | Statscore / widget `#!/event/…` / ticket | Wire JSON only → interior `oddsEventId` (`OddsEventRef`) |
-| `oddsEventId`     | parsed from `client_event_id`       | Odds + place-bet interior; `skin_events.odds_event_id` |
-| `statscore id`    | booked_events[].id                  | Internal Statscore event id                       |
-| `ls_id`           | get_pushes (when path known)        | Live score pushes                                 |
+**Full glossary (SSOT):** [`PARTNER-DOMAIN.md` § ID glossary](PARTNER-DOMAIN.md#id-glossary-ssot).
+
+Wire → interior at parse (JSON / query only — never interior field names):
+
+| Wire (JSON / URL) | Interior | Notes |
+| ----------------- | -------- | ----- |
+| `stream_id` | `inventoryId` | stream-list-v2 → `InventoryEvent` / `skin_events.inventory_id` |
+| `client_event_id` | `oddsEventId` | Statscore / widget / ticket → `OddsEventRef` / `skin_events.odds_event_id` |
+| `feed_id` | *(wire-only)* | Often 0 or large int — **not** odds event id; stored as opaque `feedId` |
+| `donbest_id` | *(wire-only)* | Opaque upstream string; not an interior brand |
+| `ls_id` | *(wire-only)* | get_pushes path when known; nullable column, not a brand |
+| booked_events[].id | `statscoreId` | Statscore internal event id |
 
 **Three planes** (code: [`src/domain/odds-selection.ts`](../src/domain/odds-selection.ts)):
 
 ```text
-Wire       stream_id          (stream-list-v2 JSON only)
-Inventory  inventoryId        (skin_events.inventory_id)
-Odds       eventId + period + marketType + selection   (Pandora OddsLine)
-Ticket     eventId + periodId + marketId + key         (componentBet TicketLeg)
+Wire       stream_id / client_event_id   (provider JSON / query only)
+Inventory  inventoryId                   (skin_events.inventory_id)
+Odds       oddsEventId + OddsLine coords (Pandora)
+Ticket     TicketLeg.eventId + …         (componentBet)
 ```
 
 Odds and ticket often share the same numeric `eventId`, but **types and field
@@ -292,19 +295,21 @@ tennis).
 | `table_tennis` | ~33         | Table Tennis  |
 
 `skin_events` table (created with event-store schema) stores
-**Buckeye-scoped** Fantasy402 stream inventory. One row per `inventory_id` covers
+**Buckeye-scoped** Fantasy402 inventory. One row per `inventory_id` covers
 **both** PLive and EZLive capacity surfaces (shared Plive SportsWidgets shell)
-until a separate EZ feed is proven. Wire `stream_id` maps to `inventory_id` at parse.
+until a separate EZ feed is proven. At parse, wire JSON `stream_id` →
+`inventory_id` (interior never keeps `stream_id` as a field name).
 
 | Column                       | Source                                                                              |
 | ---------------------------- | ----------------------------------------------------------------------------------- |
 | `book_id` + `inventory_id`   | UNIQUE key (detection key; book=`fantasy402`; inventory from wire `stream_id`)      |
-| `partner`                    | **deprecated** mirror of `book_id` (not a seat partner CODE)                        |
+| `partner`                    | **deprecated** mirror of `book_id` (not a seat partner CODE; stop reading in new paths) |
 | `skin_id` / `book_id`        | stamped `buckeye` / `fantasy402`                                                    |
 | `inventory_live_product`     | feed owner shell = `plive` (ezlive reuses)                                          |
 | `competition_id`             | seeded CompetitionId from sport + league (null when unmapped)                       |
 | sport / league / home / away | stream-list (`competitiors` typo upstream); sport normalized to SportId when mapped |
-| `odds_event_id` / `ls_id`    | nullable until mapping exists (wire `client_event_id` → interior `oddsEventId`)     |
+| `odds_event_id`              | nullable until mapping exists (wire `client_event_id` → interior `oddsEventId`)     |
+| `feed_id` / `ls_id` / `donbest_id` | **wire-only** opaque columns — not odds/inventory brands                      |
 
 ```bash
 # one-shot (inventory is public — dummy env is fine)
@@ -328,6 +333,9 @@ stream-list-v2  ──every 30s──▶  new inventory_id?  ──▶  skin_eve
 ```
 
 ### get_pushes (stats — not for discovery)
+
+Wire URL path still uses the provider’s `{stream_id}` segment (not an interior
+field). Prefer the parsed `inventoryId` in app code when composing calls.
 
 ```
 https://events-d.pc.statscore.com/get_pushes/{stream_id}?messageId=…&auth=…&poll=true
@@ -432,7 +440,8 @@ Partner → Communication → Accounts/Outs → Assets → Finance.
 | **Account (out)**         | `betting_accounts`                                      | Place to bet: provider + limits + `env_prefix` for secrets                       |
 | **Skin** (white-label)    | `src/domain/skins.ts`                                   | `buckeye`, `ace`, `metallic`, `sts`, `1bv`, `lvaction`, `magnum`                 |
 | **Live product**          | `src/domain/live-products.ts` + capacity `meta.skins[]` | `plive` / `ezlive` / `ultralive` / `maglive` (`dark` capacity-only)              |
-| **Provider** (legacy env) | adapter id (`fantasy402`, `kalshi`)                     | Still used on outs / env; `fantasy402` is BookId + mapper token → skin `buckeye` |
+| **Adapter surface**       | `AdapterId` (`fantasy402`, `kalshi`)                    | DTO token on inventory/book rows — **not** seat `partnerId`; distinct from mapper `AdapterId` (`fantasy-ultra` …) |
+| **Provider** (legacy env) | env / outs column mirror                                | Still on outs / env; `fantasy402` is BookId + mapper token → skin `buckeye` |
 | **Sports map**            | `src/domain/` + `provider_sport_mappings` seed          | Live-product keys primary; optional legacy `fantasy402` dual-write               |
 | **Stream inventory**      | `skin_events`                                        | Detected events (not priced book)                                                |
 | **Desk liquidity**        | `match_liquidity`                                       | Kalshi-priced gates (`tradable` / `liq_ok`)                                      |

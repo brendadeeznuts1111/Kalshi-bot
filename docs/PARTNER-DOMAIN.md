@@ -79,6 +79,8 @@ Identity flow: host → `bookId` (fantasy402) → `skinId` (buckeye) →
 
 ## Naming
 
+Operator entity rules (ids for registry / vault / capacity):
+
 | Entity             | Rule                                | Example                          |
 | ------------------ | ----------------------------------- | -------------------------------- |
 | Partner code       | Uppercase short                     | `SPEN`                           |
@@ -86,12 +88,50 @@ Identity flow: host → `bookId` (fantasy402) → `skinId` (buckeye) →
 | Book (desk brand)  | `BookId` from host (`HOST_TO_BOOK`) | `fantasy402` / `parlay21`        |
 | Skin (white-label) | `SkinId` from host (`HOST_TO_SKIN`) | `buckeye`                        |
 | Live product       | capacity / Ultra wire               | `ezlive`                         |
-| Adapter            | `adapterId`                         | `fantasy-ultra`                  |
+| Mapper adapter     | out-identity `adapterId`            | `fantasy-ultra`                  |
 | Vault              | `vault-{outId}`                     | `vault-out-SPEN-1`               |
 | Liquidity key      | `{outId}@{liveProduct}`             | `out-SPEN-1@ezlive`              |
 | Avatar             | `{code}.svg/png`                    | `SPEN.png`                       |
 | Env prefix         | **Per-out** `{BOOK}_{CODE}_{N}_`    | `FANTASY402_SPEN_1_`             |
 | Env secrets        | `{prefix}{KEY}`                     | `FANTASY402_SPEN_1_BEARER_TOKEN` |
+
+### ID glossary (SSOT)
+
+Interior names after parse. Wire JSON may still say `stream_id` /
+`client_event_id` — that is correct **at the boundary only**. Do not use
+`stream_id`, `clientEventId`, `eventClientId`, or `streamBucket` as interior
+field names.
+
+| Name | Plane | Meaning |
+| ---- | ----- | ------- |
+| `partnerCode` / `partners.id` | Seat | FactoryWager partner CODE (untouched) |
+| `OutIdentity.partnerId` / `betting_accounts.partner_id` | Seat | Seat partner on an out (untouched) |
+| `BookId` | Desk | Desk brand under a skin (`fantasy402`, `parlay21`, …) |
+| `SkinId` | Desk | White-label (`buckeye`, `ace`, …) |
+| `LiveProductId` | Desk | Coverage shell (`plive`, `ezlive`, `ultralive`, `maglive`) |
+| `inventoryId` | Inventory | Coverage-catalog key (`skin_events.inventory_id`); from wire `stream_id` at parse |
+| `inventoryBucket` | Inventory | Sport bucket string on stream-list / resolve APIs (was `streamBucket`) |
+| `InventoryEvent` | Inventory | Parsed coverage row (`fetchInventory`); not a priced odds event |
+| `oddsEventId` | Odds | Widget / Statscore match id (`skin_events.odds_event_id`); from wire `client_event_id` at parse |
+| `OddsLine` | Odds | Pandora coefficient coords (period / marketType / selection) |
+| `TicketLeg` | Ticket | Place-bet `componentBet` coords (periodId / marketId / key); `eventId` field stays |
+| `AdapterId` (`src/partner/types.ts`) | Adapter DTO | Surface token on inventory/book DTOs: `fantasy402` \| `kalshi` — **not** a seat partner |
+| `AdapterId` (`out-identity.ts`) | Mapper binding | Session mapper: `fantasy-ultra` \| `kalshi` \| `unmapped` (distinct type, same name) |
+| `feed_id` / `feedId` | **Wire-only** | Opaque stream-list field — not odds event id; no interior rename this wave |
+| `ls_id` | **Wire-only** | Live-score push id when path known — stored nullable; not an interior brand |
+| `donbest_id` / `donbestId` | **Wire-only** | Opaque upstream id — parse may keep string; not an interior brand |
+| `skin_events.partner` | **Deprecated** | Mirror of `book_id` for one release (not a seat partner CODE); UNIQUE key is `(book_id, inventory_id)` |
+
+```text
+wire stream_id        ──parse──▶  inventoryId
+wire client_event_id  ──parse──▶  oddsEventId
+book_id + inventory_id            skin_events UNIQUE
+partner column                    deprecated = book_id
+```
+
+Fantasy Ultra wire examples + inventory columns:
+[`PARTNER-FANTASY-ULTRA.md`](PARTNER-FANTASY-ULTRA.md) · domain planes:
+[`src/domain/README.md`](../src/domain/README.md).
 
 ---
 
