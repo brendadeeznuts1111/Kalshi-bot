@@ -30,7 +30,7 @@ import {
   upsertSkinLiveEvents,
   type InventoryIdentity,
 } from '../src/partner/skin-events-store.ts';
-import type { PartnerLiveEvent } from '../src/partner/types.ts';
+import type { InventoryEvent } from '../src/partner/types.ts';
 
 function argValue(name: string): string | undefined {
   const hit = process.argv.find(a => a.startsWith(`--${name}=`));
@@ -72,7 +72,7 @@ function resolveFetchSport(sportArg: string): string {
 }
 
 async function loadInventoryEvents(sport: string): Promise<{
-  events: PartnerLiveEvent[];
+  events: InventoryEvent[];
   source: 'adapter' | 'public-stream-list';
 }> {
   const fetchSport = resolveFetchSport(sport);
@@ -84,7 +84,7 @@ async function loadInventoryEvents(sport: string): Promise<{
     } catch {
       // stream-list is public; login warm is best-effort
     }
-    const events = await adapter.fetchEvents({
+    const events = await adapter.fetchInventory({
       sport: fetchSport === 'all' ? 'all' : fetchSport,
     });
     return { events, source: 'adapter' };

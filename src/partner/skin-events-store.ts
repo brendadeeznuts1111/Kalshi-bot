@@ -23,7 +23,7 @@ import {
 import { getSkin } from '../domain/skins.ts';
 import { parseStreamList } from './fantasy-ultra/parse.ts';
 import { FANTASY_ULTRA_DEFAULTS } from './fantasy-ultra/types.ts';
-import type { PartnerLiveEvent } from './types.ts';
+import type { InventoryEvent } from './types.ts';
 
 /** Default inventory identity for Fantasy402 stream-list under Buckeye. */
 export type InventoryIdentity = {
@@ -131,7 +131,7 @@ export function listSkinInventoryIds(db: Database, bookId: string): Set<string> 
 }
 
 export function liveEventToRow(
-  event: PartnerLiveEvent,
+  event: InventoryEvent,
   nowMs: number,
   identity: InventoryIdentity,
   existing?: { firstSeen: number; status?: string }
@@ -175,7 +175,7 @@ export type UpsertSkinLiveEventsOptions = {
  */
 export function upsertSkinLiveEvents(
   db: Database,
-  events: PartnerLiveEvent[],
+  events: InventoryEvent[],
   options: UpsertSkinLiveEventsOptions = {}
 ): SkinEventUpsertResult {
   const nowMs = options.nowMs ?? Date.now();
@@ -255,11 +255,11 @@ export function upsertSkinLiveEvents(
   return { inserted, updated, seen: events.length };
 }
 
-/** Filter PartnerLiveEvent by sport (table tennis, tennis, …). */
+/** Filter coverage-catalog InventoryEvent rows by sport (table tennis, tennis, …). */
 export function filterLiveEventsBySport(
-  events: PartnerLiveEvent[],
+  events: InventoryEvent[],
   sport: string
-): PartnerLiveEvent[] {
+): InventoryEvent[] {
   const want = sport.trim().toLowerCase().replace(/_/g, ' ');
   if (!want || want === 'all') return events;
   return events.filter(e => {
@@ -289,12 +289,12 @@ export function formatSkinEventLine(row: SkinEventRow): string {
 }
 
 /**
- * Public Plive shell stream-list → PartnerLiveEvent[] (no Fantasy402 login).
+ * Public Plive shell stream-list → InventoryEvent[] (no Fantasy402 login).
  * Covers Buckeye plive + ezlive inventory.
  */
 export async function fetchPublicPliveStreamEvents(
   options: { sport?: string; fetchImpl?: typeof fetch } = {}
-): Promise<PartnerLiveEvent[]> {
+): Promise<InventoryEvent[]> {
   const fetchImpl = options.fetchImpl ?? fetch;
   const res = await fetchImpl(FANTASY_ULTRA_DEFAULTS.streamListUrl, {
     headers: {

@@ -8,7 +8,7 @@ import {
   migrateSkinEventsStreamIdToInventoryId,
   openEventStore,
 } from '../../src/institutions/event-store/open-db.ts';
-import type { PartnerLiveEvent } from '../../src/partner/types.ts';
+import type { InventoryEvent } from '../../src/partner/types.ts';
 import {
   buckeyeInventoryIdentity,
   fetchPublicPliveStreamEvents,
@@ -24,8 +24,8 @@ import {
 } from '../../src/partner/skin-events-store.ts';
 
 function ev(
-  partial: Partial<PartnerLiveEvent> & { inventoryId: string; sport: string }
-): PartnerLiveEvent {
+  partial: Partial<InventoryEvent> & { inventoryId: string; sport: string }
+): InventoryEvent {
   return {
     partner: 'fantasy402',
     sport: partial.sport,

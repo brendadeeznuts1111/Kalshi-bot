@@ -302,7 +302,7 @@ describe("FantasyUltraAdapter session blueprint", () => {
     const sports = await adapter.fetchSports();
     expect(sports.some((s) => s.sportType === "TENNIS")).toBe(true);
 
-    const events = await adapter.fetchEvents({ sport: "tennis" });
+    const events = await adapter.fetchInventory({ sport: "tennis" });
     expect(events.length).toBe(2);
 
     const next = await adapter.renewToken();

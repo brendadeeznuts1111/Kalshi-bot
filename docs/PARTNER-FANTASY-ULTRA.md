@@ -49,7 +49,7 @@ URL; we use it as-is.
 | `login()`                | ✅ Ultra Live URLs + optional warm                                              |
 | `warmSession()`          | ✅ GET DESKTOP widget                                                           |
 | `fetchSports()`          | ✅ Get_SportsLeagues                                                            |
-| `fetchEvents({ sport })` | ✅ stream-list-v2 (coverage rows)                                               |
+| `fetchInventory({ sport })` | ✅ stream-list-v2 (coverage catalog)                                            |
 | `renewToken()`           | ✅ updates in-memory Bearer from `code`                                         |
 | `fetchLimits`            | ⏳ stub                                                                         |
 | `placeOrder`             | ✅ dry-run always; live POST only when `FANTASY402_PLACE_BET_URL` / HAR map set |
@@ -96,7 +96,7 @@ name `american_football`).
 
 So:
 
-- `fetchEvents()` → coverage catalog only
+- `fetchInventory()` → coverage catalog only
 - `fetchMarkets()` → Pandora coefficient store (ML); **throws** when store empty
   (stream-list never prices)
 - `inspectStreamCapabilities()` / CLI prints the capability probe

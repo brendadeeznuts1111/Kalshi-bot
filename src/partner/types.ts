@@ -103,8 +103,8 @@ export type PartnerBetGroup = {
   legs: PartnerComponentBet[];
 };
 
-/** Normalized live-coverage row (stream catalog — not price odds). */
-export type PartnerLiveEvent = {
+/** Normalized coverage-catalog row (stream inventory — not price odds). */
+export type InventoryEvent = {
   partner: PartnerId;
   sport: string;
   league: string;
@@ -171,8 +171,8 @@ export interface PartnerOrderAdapter {
   readonly partnerId: PartnerId;
   /** Authenticate / refresh live session material. */
   login(): Promise<PartnerLiveUrlSet | void>;
-  /** Live event catalog (coverage), not necessarily a betting book. */
-  fetchEvents(options?: { sport?: string }): Promise<PartnerLiveEvent[]>;
+  /** Coverage catalog (inventory rows), not a priced odds book. */
+  fetchInventory(options?: { sport?: string }): Promise<InventoryEvent[]>;
   fetchLimits(eventId: string): Promise<PartnerLimits>;
   placeOrder(order: PartnerOrder): Promise<PartnerExecutionResult>;
 }
