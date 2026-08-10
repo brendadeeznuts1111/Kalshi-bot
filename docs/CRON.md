@@ -75,7 +75,7 @@ In-process job on `cron:start` (opt-in). Polls `stream-list-v2` → `skin_events
 PARTNER_SYNC=1 PARTNER_SYNC_PUBLIC=1 bun run cron:once   # includes partner job
 PARTNER_SYNC=1 PARTNER_SYNC_PUBLIC=1 bun run cron:start
 # or standalone:
-bun run partner:sync -- --loop --sport=table_tennis
+bun run inventory:sync -- --loop --sport=table_tennis
 ```
 
 See [`docs/PARTNER-FANTASY-ULTRA.md`](PARTNER-FANTASY-ULTRA.md).

@@ -1,14 +1,14 @@
 #!/usr/bin/env bun
 /**
- * Unified partner inventory sync (Fantasy402 blueprint — ground truth).
+ * Inventory sync — stream events → skin_events (coverage catalog, not seat-partner).
  *
- * Discovers new stream events → skin_events.
- * Optional --enrich-booked: soft-match Statscore names → odds_event_id (not odds).
+ * Discovers new stream inventory_ids; optional --enrich-booked soft-matches
+ * Statscore names → odds_event_id (metadata only, not odds).
  *
  * Usage:
- *   bun run partner:sync -- --sport=table_tennis --once
- *   bun run partner:sync -- --sport=table_tennis --loop --interval-ms=30000
- *   bun run partner:sync -- --enrich-booked --json
+ *   bun run inventory:sync -- --sport=table_tennis --once
+ *   bun run inventory:sync -- --sport=table_tennis --loop --interval-ms=30000
+ *   bun run inventory:sync -- --enrich-booked --json
  */
 // @see https://bun.com/docs/runtime/sqlite
 import { openEventStore } from "../src/institutions/event-store/open-db.ts";
@@ -70,7 +70,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  console.log(`partner:sync loop intervalMs=${intervalMs}`);
+  console.log(`inventory:sync loop intervalMs=${intervalMs}`);
   for (;;) {
     try {
       await runOnce();
