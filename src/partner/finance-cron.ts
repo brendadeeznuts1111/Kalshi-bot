@@ -35,7 +35,7 @@ import {
   type BettingAccountRow,
 } from './registry.ts';
 import { outCapacityFromAccount, parseOutMeta } from './out-capacity.ts';
-import { fetchStreamSportsInventory } from './sports-inventory.ts';
+import { fetchStreamSportsInventory } from '../inventory/sports-inventory.ts';
 import { DEFAULT_REQUIRED_ENV_KEYS, resolvePartnerEnv, type PartnerEnvKey } from './toml-config.ts';
 import {
   lastRiskHealthFingerprint,

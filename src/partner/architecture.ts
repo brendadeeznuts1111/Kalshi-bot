@@ -180,7 +180,9 @@ export const OPS_LAYERS: readonly OpsLayer[] = [
         id: 'sports-inventory',
         name: 'Sports + leagues inventory',
         maturity: 'built',
-        where: 'domain:sports · 30 stream buckets · 4 primary API ids',
+        where:
+          'src/inventory/ · domain:sports · inventory:sync · 30 stream buckets · 4 primary API ids',
+        notes: 'Coverage inventory plane — not seat partner capital',
       },
       {
         id: 'concentration-router',

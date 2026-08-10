@@ -9,8 +9,8 @@ import type {
 import { CoefficientStore } from "../../src/partner/fantasy-ultra/coefficient-store.ts";
 import {
   matchBookedOddsEventId,
-  runPartnerInventorySync,
-} from "../../src/partner/sync.ts";
+  runInventorySync,
+} from "../../src/inventory/sync.ts";
 
 function live(
   inventoryId: number,
@@ -50,7 +50,7 @@ function mockAdapter(
   };
 }
 
-describe("partner sync", () => {
+describe("inventory sync", () => {
   test("matchBookedOddsEventId soft-matches names", () => {
     const cid = matchBookedOddsEventId("Andrey Martinyuk", "Aleksandr Timofeev", [
       {
@@ -66,7 +66,7 @@ describe("partner sync", () => {
     expect(cid).toBe("111");
   });
 
-  test("runPartnerInventorySync inserts new and reports capabilities", async () => {
+  test("runInventorySync inserts new and reports capabilities", async () => {
     const db = openEventStore({ dbPath: ":memory:" });
     const events = [
       live(1, "Table Tennis", "A", "B"),
@@ -89,7 +89,7 @@ describe("partner sync", () => {
       },
     ];
     const adapter = mockAdapter(events, booked);
-    const report = await runPartnerInventorySync(db, adapter, {
+    const report = await runInventorySync(db, adapter, {
       sport: "table_tennis",
       enrichBooked: true,
       nowMs: 5000,
@@ -123,7 +123,7 @@ describe("partner sync", () => {
       },
       lines: [],
     });
-    const report = await runPartnerInventorySync(db, mockAdapter(events), {
+    const report = await runInventorySync(db, mockAdapter(events), {
       sport: "table_tennis",
       coefficientStore: store,
       nowMs: 1,

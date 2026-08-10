@@ -19,8 +19,8 @@ import {
 } from "../src/partner/index.ts";
 import {
   formatSyncReport,
-  runPartnerInventorySync,
-} from "../src/partner/sync.ts";
+  runInventorySync,
+} from "../src/inventory/sync.ts";
 
 function argValue(name: string): string | undefined {
   const hit = process.argv.find((a) => a.startsWith(`--${name}=`));
@@ -46,7 +46,7 @@ async function runOnce(): Promise<void> {
   }
 
   const db = openEventStore({ dbPath: DEFAULT_EVENT_STORE_DB });
-  const report = await runPartnerInventorySync(db, adapter, {
+  const report = await runInventorySync(db, adapter, {
     sport,
     enrichBooked,
   });

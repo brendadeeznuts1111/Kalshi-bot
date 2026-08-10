@@ -134,6 +134,6 @@ strip query/hash credentials from persisted URLs.
 - [Authorized execution delivery record](AUTHORIZED_EXECUTION_REMAINING_WORK.md)
 - [Demo proof schema](EXECUTION_DEMO_PROOF_SCHEMA.md)
 - [Regulatory agents and Polymarket intelligence](regulatory-agents.md)
-- [Partner/Fantasy Ultra boundary](PARTNER-FANTASY-ULTRA.md)
+- [Fantasy Ultra + inventory boundary](FANTASY-ULTRA.md)
 - [Official URL catalog](OFFICIAL_URLS.md)
 - [Environment naming and arm flags](ENV_NAMING.md)

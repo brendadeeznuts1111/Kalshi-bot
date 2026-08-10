@@ -15,8 +15,8 @@
  *   - Contrast gate:     daily at 04:00 UTC
  *   - Glossary URLs:     daily at 02:00 UTC
  *   - Match liquidity:   every 30 minutes (recompute + ground; volume via env)
- *   - Partner inventory: every 1 minute when PARTNER_SYNC=1 (stream-list → skin_events)
- *   - Partner desk/finance: when PARTNER_FINANCE_CRON=1 (registry → capacity → optional Telegram)
+ *   - Inventory: every 1 minute when PARTNER_SYNC=1 (stream-list → skin_events)
+ *   - Seat finance: when PARTNER_FINANCE_CRON=1 (registry → capacity → optional Telegram)
  */
 import { ensureEventStoreDir, openEventStore } from "../src/institutions/event-store/open-db.ts";
 import { DEFAULT_EVENT_STORE_DB } from "../src/institutions/event-store/paths.ts";
@@ -38,12 +38,16 @@ const INTERVAL_CONTRAST = "0 4 * * *";
 const INTERVAL_LIQUIDITY =
   Bun.env.LIQUIDITY_PIPELINE_CRON_SCHEDULE?.trim() || "*/30 * * * *";
 /**
- * Partner stream inventory (Fantasy402 table tennis by default).
- * Enable with PARTNER_SYNC=1. Public inventory works with dummy FANTASY402_* env.
+ * Coverage inventory poll (plive/ezlive stream-list → skin_events).
+ * Enable with PARTNER_SYNC=1 (legacy name) or INVENTORY_SYNC=1.
+ * Public inventory works with dummy FANTASY402_* when PARTNER_SYNC_PUBLIC=1.
  */
-const INTERVAL_PARTNER_SYNC =
-  Bun.env.PARTNER_SYNC_CRON_SCHEDULE?.trim() || "*/1 * * * *";
-const PARTNER_SYNC_ENABLED = Bun.env.PARTNER_SYNC === "1";
+const INTERVAL_INVENTORY_SYNC =
+  Bun.env.INVENTORY_SYNC_CRON_SCHEDULE?.trim() ||
+  Bun.env.PARTNER_SYNC_CRON_SCHEDULE?.trim() ||
+  "*/1 * * * *";
+const INVENTORY_SYNC_ENABLED =
+  Bun.env.INVENTORY_SYNC === "1" || Bun.env.PARTNER_SYNC === "1";
 /** Registry desk report (capacity + env + inventory). Default daily 09:00 UTC. */
 const INTERVAL_PARTNER_FINANCE =
   Bun.env.PARTNER_FINANCE_CRON_SCHEDULE?.trim() || "0 9 * * *";
@@ -178,21 +182,24 @@ async function jobLiquidityPipeline(): Promise<void> {
 }
 
 /**
- * Partner inventory sync — stream-list → skin_events (new inventory_id detection).
- * Opt-in: PARTNER_SYNC=1. Sport: PARTNER_SYNC_SPORT (default table_tennis).
- * Enrich: PARTNER_SYNC_ENRICH_BOOKED=1 (soft Statscore name match, no prices).
+ * Inventory sync — stream-list → skin_events (new inventory_id detection).
+ * Opt-in: INVENTORY_SYNC=1 or PARTNER_SYNC=1. Sport: PARTNER_SYNC_SPORT / INVENTORY_SYNC_SPORT.
+ * Enrich: PARTNER_SYNC_ENRICH_BOOKED=1 or INVENTORY_SYNC_ENRICH_BOOKED=1.
  */
-async function jobPartnerSync(): Promise<void> {
-  if (!PARTNER_SYNC_ENABLED) return;
+async function jobInventorySync(): Promise<void> {
+  if (!INVENTORY_SYNC_ENABLED) return;
   const start = Date.now();
   try {
     const { loadFantasy402ProfileFromEnv } = await import("../src/partner/account-profile.ts");
     const { getFantasySessionAdapter } = await import("../src/partner/index.ts");
-    const { runPartnerInventorySync, formatSyncReport } = await import("../src/partner/sync.ts");
+    const { runInventorySync, formatSyncReport } = await import("../src/inventory/sync.ts");
 
     // Inventory is public; allow dummy credentials when PARTNER_SYNC_PUBLIC=1
     let profile = loadFantasy402ProfileFromEnv();
-    if (!profile && Bun.env.PARTNER_SYNC_PUBLIC === "1") {
+    if (
+      !profile &&
+      (Bun.env.INVENTORY_SYNC_PUBLIC === "1" || Bun.env.PARTNER_SYNC_PUBLIC === "1")
+    ) {
       const { requireDefaultUrlForUltraMapper } = await import(
         "../src/domain/index.ts"
       );
@@ -213,35 +220,40 @@ async function jobPartnerSync(): Promise<void> {
     }
     if (!profile) {
       console.error(
-        "[cron:partner] skip — set FANTASY402_* env or PARTNER_SYNC_PUBLIC=1",
+        "[cron:inventory] skip — set FANTASY402_* env or INVENTORY_SYNC_PUBLIC=1",
       );
       return;
     }
 
-    const sport = Bun.env.PARTNER_SYNC_SPORT?.trim() || "table_tennis";
-    const enrichBooked = Bun.env.PARTNER_SYNC_ENRICH_BOOKED === "1";
+    const sport =
+      Bun.env.INVENTORY_SYNC_SPORT?.trim() ||
+      Bun.env.PARTNER_SYNC_SPORT?.trim() ||
+      "table_tennis";
+    const enrichBooked =
+      Bun.env.INVENTORY_SYNC_ENRICH_BOOKED === "1" ||
+      Bun.env.PARTNER_SYNC_ENRICH_BOOKED === "1";
     const adapter = getFantasySessionAdapter(profile, { warmSession: false });
     try {
       await adapter.login();
     } catch {
       /* stream-list does not require login */
     }
-    const report = await runPartnerInventorySync(getDb(), adapter, {
+    const report = await runInventorySync(getDb(), adapter, {
       sport,
       enrichBooked,
     });
     console.error(
-      `[cron:partner] ${formatSyncReport(report).split("\n")[0]} · ${Date.now() - start}ms`,
+      `[cron:inventory] ${formatSyncReport(report).split("\n")[0]} · ${Date.now() - start}ms`,
     );
     if (report.inserted > 0) {
       for (const line of report.newEvents.slice(0, 8)) {
         console.error(
-          `[cron:partner] + ${line.sport} · ${line.league} · ${line.home} vs ${line.away} · ${line.inventoryId}`,
+          `[cron:inventory] + ${line.sport} · ${line.league} · ${line.home} vs ${line.away} · ${line.inventoryId}`,
         );
       }
     }
   } catch (err) {
-    console.error(`[cron:partner] Error: ${err}`);
+    console.error(`[cron:inventory] Error: ${err}`);
   }
 }
 
@@ -357,7 +369,7 @@ async function main(): Promise<void> {
     await jobColorArtifacts();
     await jobContrast();
     await jobLiquidityPipeline();
-    await jobPartnerSync();
+    await jobInventorySync();
     await jobPartnerFinance();
     console.error(`[cron] All jobs complete · sports metadata ${metadataOk ? "ok" : "failed"}.`);
     process.exitCode = metadataOk ? 0 : 1;
@@ -372,7 +384,7 @@ async function main(): Promise<void> {
   colors:   ${INTERVAL_COLOR_ARTIFACTS}
   contrast: ${INTERVAL_CONTRAST}
   liquidity:${INTERVAL_LIQUIDITY}
-  partner:  ${PARTNER_SYNC_ENABLED ? INTERVAL_PARTNER_SYNC : "off (PARTNER_SYNC=1)"}
+  inventory: ${INVENTORY_SYNC_ENABLED ? INTERVAL_INVENTORY_SYNC : "off (INVENTORY_SYNC=1)"}
   finance:  ${PARTNER_FINANCE_ENABLED ? INTERVAL_PARTNER_FINANCE : "off (PARTNER_FINANCE_CRON=1)"}`);
   console.error("[cron] Process running — use SIGTERM to stop.");
 
@@ -383,8 +395,8 @@ async function main(): Promise<void> {
   Bun.cron(INTERVAL_COLOR_ARTIFACTS, jobColorArtifacts);
   Bun.cron(INTERVAL_CONTRAST, jobContrast);
   Bun.cron(INTERVAL_LIQUIDITY, jobLiquidityPipeline);
-  if (PARTNER_SYNC_ENABLED) {
-    Bun.cron(INTERVAL_PARTNER_SYNC, jobPartnerSync);
+  if (INVENTORY_SYNC_ENABLED) {
+    Bun.cron(INTERVAL_INVENTORY_SYNC, jobInventorySync);
   }
   if (PARTNER_FINANCE_ENABLED) {
     Bun.cron(INTERVAL_PARTNER_FINANCE, jobPartnerFinance);

@@ -21,7 +21,7 @@ import {
   resolveWatchInventoryIdentity,
   stampSkinEventsCompetitionIds,
   upsertSkinLiveEvents,
-} from '../../src/partner/skin-events-store.ts';
+} from '../../src/inventory/skin-events-store.ts';
 
 function ev(
   partial: Partial<InventoryEvent> & { inventoryId: string; sport: string }

@@ -1,6 +1,6 @@
 // @see https://bun.com/docs/runtime/sqlite
 /**
- * Partner inventory sync — ground-truth pipeline.
+ * Inventory sync — coverage ground-truth pipeline (not seat partner).
  *
  * REAL today:
  *  - stream-list-v2 → skin_events (detect new inventory_ids)
@@ -15,8 +15,8 @@
  * has moneyline lines, report `pricedOdds: true` — still no liquidity merge.
  */
 import type { Database } from 'bun:sqlite';
-import type { CoefficientStore } from './fantasy-ultra/coefficient-store.ts';
-import type { FantasySessionAdapter, InventoryEvent } from './types.ts';
+import type { CoefficientStore } from '../partner/fantasy-ultra/coefficient-store.ts';
+import type { FantasySessionAdapter, InventoryEvent } from '../partner/types.ts';
 import {
   buckeyeInventoryIdentity,
   filterLiveEventsBySport,
@@ -28,7 +28,7 @@ import {
   type SkinEventUpsertResult,
 } from './skin-events-store.ts';
 
-export type PartnerSyncOptions = {
+export type InventorySyncOptions = {
   sport?: string;
   /** Soft-match Statscore booked names for NEW rows only (metadata, not odds). */
   enrichBooked?: boolean;
@@ -39,7 +39,7 @@ export type PartnerSyncOptions = {
   identity?: InventoryIdentity;
 };
 
-export type PartnerSyncReport = {
+export type InventorySyncReport = {
   sport: string;
   seen: number;
   inserted: number;
@@ -59,7 +59,7 @@ export type PartnerSyncReport = {
 
 function resolveCoefficientStore(
   adapter: FantasySessionAdapter,
-  options: PartnerSyncOptions
+  options: InventorySyncOptions
 ): CoefficientStore | null {
   if (options.coefficientStore) return options.coefficientStore;
   const maybe = adapter as FantasySessionAdapter & {
@@ -98,11 +98,11 @@ export function matchBookedOddsEventId(
   return null;
 }
 
-export async function runPartnerInventorySync(
+export async function runInventorySync(
   db: Database,
   adapter: FantasySessionAdapter,
-  options: PartnerSyncOptions = {}
-): Promise<PartnerSyncReport> {
+  options: InventorySyncOptions = {}
+): Promise<InventorySyncReport> {
   const sport = options.sport ?? 'table_tennis';
   const notes: string[] = [];
   const fetchSport =
@@ -213,9 +213,9 @@ export async function runPartnerInventorySync(
   };
 }
 
-export function formatSyncReport(report: PartnerSyncReport): string {
+export function formatSyncReport(report: InventorySyncReport): string {
   const lines = [
-    `partner sync sport=${report.sport} seen=${report.seen} new=${report.inserted} updated=${report.updated} enriched=${report.enriched}`,
+    `inventory:sync sport=${report.sport} seen=${report.seen} new=${report.inserted} updated=${report.updated} enriched=${report.enriched}`,
     ...report.newEvents.map(e => `  + ${formatSkinEventLine(e)}`),
     ...report.notes.map(n => `  · ${n}`),
   ];

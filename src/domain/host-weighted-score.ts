@@ -5,7 +5,7 @@
  * Definitive (HOST_TO_SKIN / explicit skinId) locks score to 1.0.
  * Ultra stack markers are intentionally excluded — adapter path owns those.
  *
- * @see docs/PARTNER-FANTASY-ULTRA.md (Unknown host discovery)
+ * @see docs/FANTASY-ULTRA.md (Unknown host discovery)
  */
 
 import { SKINS, getSkinByHost, type SkinFingerprints, type SkinId } from './skins.ts';

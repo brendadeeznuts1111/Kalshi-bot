@@ -60,25 +60,26 @@ Set `RESEARCH_EXPORT_AUDIT=1` on scheduled runs to also write audit JSONL + roto
 
 The metadata job is single-flight, drains on graceful shutdown, and recovers abandoned cross-process runs after a five-minute no-progress lease. Adapter instances persist for the cron process lifetime so retry/circuit state survives individual ticks. Full registry mechanics: [`SPORTS_SOURCE_REGISTRY.md`](SPORTS_SOURCE_REGISTRY.md).
 
-## Partner inventory (Fantasy402 stream-list)
+## Coverage inventory (plive/ezlive stream-list)
 
-In-process job on `cron:start` (opt-in). Polls `stream-list-v2` → `skin_events` (new table tennis by default).
+In-process job on `cron:start` (opt-in). Polls `stream-list-v2` → `skin_events`
+(default sport `table_tennis`). Not seat-partner capital.
 
 | Env | Role |
 |-----|------|
-| `PARTNER_SYNC=1` | Enable job |
-| `PARTNER_SYNC_PUBLIC=1` | No real Fantasy login (inventory only) |
-| `PARTNER_SYNC_SPORT` | Default `table_tennis` |
-| `PARTNER_SYNC_CRON_SCHEDULE` | Default every minute |
+| `INVENTORY_SYNC=1` | Enable job (legacy alias: `PARTNER_SYNC=1`) |
+| `INVENTORY_SYNC_PUBLIC=1` | No real Fantasy login (inventory only; alias `PARTNER_SYNC_PUBLIC`) |
+| `INVENTORY_SYNC_SPORT` | Default `table_tennis` (alias `PARTNER_SYNC_SPORT`) |
+| `INVENTORY_SYNC_CRON_SCHEDULE` | Default every minute (alias `PARTNER_SYNC_CRON_SCHEDULE`) |
 
 ```bash
-PARTNER_SYNC=1 PARTNER_SYNC_PUBLIC=1 bun run cron:once   # includes partner job
-PARTNER_SYNC=1 PARTNER_SYNC_PUBLIC=1 bun run cron:start
+INVENTORY_SYNC=1 INVENTORY_SYNC_PUBLIC=1 bun run cron:once
+INVENTORY_SYNC=1 INVENTORY_SYNC_PUBLIC=1 bun run cron:start
 # or standalone:
 bun run inventory:sync -- --loop --sport=table_tennis
 ```
 
-See [`docs/PARTNER-FANTASY-ULTRA.md`](PARTNER-FANTASY-ULTRA.md).
+See [`docs/FANTASY-ULTRA.md`](FANTASY-ULTRA.md).
 
 
 ## Tennis live canary

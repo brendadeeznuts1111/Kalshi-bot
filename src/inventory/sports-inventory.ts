@@ -1,14 +1,15 @@
 /**
- * Live Fantasy402 stream-list sports + leagues inventory.
- * Coverage-only — no odds. Compare against {@link FANTASY_SPORT_MAPPINGS}.
+ * Live-product stream-list sports + leagues inventory (plive/ezlive shell).
+ * Coverage-only — no odds. Domain plane / inventory plane — not seat partner.
+ * Compare against {@link FANTASY_SPORT_MAPPINGS}.
  */
 // @see https://bun.com/docs/api/fetch
-import { FANTASY_ULTRA_DEFAULTS } from "./fantasy-ultra/types.ts";
+import { FANTASY_ULTRA_DEFAULTS } from '../partner/fantasy-ultra/types.ts';
 import {
   FANTASY_SPORT_MAPPINGS,
   fantasySportByStreamBucket,
   type FantasySportMapping,
-} from "./fantasy-ultra/widget-config.ts";
+} from '../partner/fantasy-ultra/widget-config.ts';
 
 export type StreamSportLeagueRow = {
   streamBucket: string;
