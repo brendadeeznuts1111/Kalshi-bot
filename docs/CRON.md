@@ -62,8 +62,12 @@ The metadata job is single-flight, drains on graceful shutdown, and recovers aba
 
 ## Coverage inventory (plive/ezlive stream-list)
 
-In-process job on `cron:start` (opt-in). Polls `stream-list-v2` → `skin_events`.
-**Default sport = `all` (full board)** for continuous coverage. Not seat-partner.
+In-process job on `cron:start` (opt-in). Polls `stream-list-v2` →
+`skin_events` **and** `inventory_leagues` (same tick). Buckeye shell stamp is
+`plive`; report `coversLiveProducts` includes **ezlive** when endpoints exist —
+no dual event rows. **Default sport = `all` (full board)** for continuous
+coverage. Not seat-partner. Does **not** auto-promote COMPETITIONS (operator:
+`inventory:leagues -- --promote`).
 
 | Env | Role |
 |-----|------|
@@ -80,9 +84,13 @@ bun run inventory:sync -- --loop --sport=all --interval-ms=30000
 bun run inventory:watch -- --loop --sport=all
 # dry-run first:
 bun run inventory:sync -- --sport=all --dry-run
+# leagues / promote (operator, not cron apply):
+bun run inventory:leagues
+bun run inventory:leagues -- --promote
 ```
 
-Logs per tick: `seen` / `new` / `updated`, `sports:` histogram, `newBySport:`, up to 12 `+` lines.
+Logs per tick: `seen` / `new` / `updated`, `sports:` histogram, `newBySport:`,
+`leagues:` summary, up to 12 `+` event lines (+ `+L` for new leagues on watch/sync).
 
 Playbook: [`docs/INVENTORY.md`](INVENTORY.md) · adapter: [`FANTASY-ULTRA.md`](FANTASY-ULTRA.md).
 

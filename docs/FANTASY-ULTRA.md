@@ -6,19 +6,22 @@ Book adapter and coverage inventory for a **PPH / Fantasy402** desk (skin
 > **Planes:**
 > - **Domain** — sports / live products / skins / competitions in
 >   [`src/domain/`](../src/domain/README.md)
-> - **Inventory** — stream-list → `skin_events` in
+> - **Inventory** — stream-list → `skin_events` + `inventory_leagues` in
 >   [`src/inventory/`](../src/inventory/) · CLIs `domain:sports` ·
->   `inventory:sync` · `inventory:watch` · playbook
->   [`INVENTORY.md`](INVENTORY.md) (full board + **ezlive** shell recipe)
+>   `inventory:sync` · `inventory:watch` · `inventory:leagues` · playbook
+>   [`INVENTORY.md`](INVENTORY.md) (**ezlive** = shared plive shell; no dual
+>   event rows; seat capacity is separate)
 > - **Seat** — outs / capacity / execution still under `src/partner/`
 >
 > **Skins** (white-labels): `buckeye`, `ace`, `metallic`, `sts`, `1bv`,
 > `lvaction`, `magnum`. **Fantasy402 is a legacy alias for skin `buckeye`**
 > (`resolveSkinId("fantasy402")`). Buckeye offers live products
-> `{ plive, ezlive }`; ACE offers `{ ultralive, ezlive, maglive }`. Sport
-> coverage bindings attach to **live products**; `widget-config.ts` shims
-> `listLiveProductSportBindings("plive")`. Visual map:
+> `{ plive, ezlive }` **and shares one SportsWidgets stream-list** for
+> inventory; ACE offers `{ ultralive, ezlive, maglive }` (no Buckeye-style
+> stream harvest here). Sport coverage bindings attach to **live products**;
+> `widget-config.ts` shims `listLiveProductSportBindings("plive")`. Visual map:
 > [`docs/artifacts/plive-event-meta.html`](artifacts/plive-event-meta.html).
+> Operator checklist: [`INVENTORY.md`](INVENTORY.md) § Operator checklist.
 
 | Concern                                | Location                                  |
 | -------------------------------------- | ----------------------------------------- |
@@ -287,17 +290,21 @@ export FANTASY402_CURRENCY=USD
 ```bash
 bun run partner:test-fantasy
 bun run partner:test-fantasy -- --sport=tennis --limit=5 --renew
+bun run inventory:watch -- --once --sport=all --dry-run --json   # plan only; covers plive+ezlive
 bun run inventory:watch -- --once --sport=table_tennis --json
-bun run inventory:watch -- --once --dry-run --json   # plan only, no SQLite / Telegram
-bun run inventory:watch -- --loop --sport=table_tennis --interval-ms=30000
-bun test tests/partner/fantasy-ultra.test.ts tests/inventory/skin-events-store.test.ts
+bun run inventory:watch -- --loop --sport=all --interval-ms=30000
+bun run inventory:leagues -- --unmapped
+bun test tests/partner/fantasy-ultra.test.ts tests/inventory/
 ```
+
+Full-board + leagues + promote + ezlive capacity:
+[`INVENTORY.md`](INVENTORY.md).
 
 ## Detect new table tennis events
 
 **Primary feed:** `GET https://api-gs.player-us.xyz/stream-list-v2/?tv=usa`  
 **Bucket:** `sports.table_tennis.events` — **not** `sports.tennis` (court
-tennis).
+tennis). Prefer `--sport=all` for coverage; TT is one primary bucket.
 
 | Bucket         | Live sample | `event.sport` |
 | -------------- | ----------- | ------------- |
@@ -305,9 +312,10 @@ tennis).
 | `table_tennis` | ~33         | Table Tennis  |
 
 `skin_events` table (created with event-store schema) stores
-**Buckeye-scoped** Fantasy402 inventory. One row per `inventory_id` covers
-**both** PLive and EZLive capacity surfaces (shared Plive SportsWidgets shell)
-until a separate EZ feed is proven. At parse, wire JSON `stream_id` →
+**Buckeye-scoped** Fantasy402 inventory. One row per `(book_id, inventory_id)`
+covers **both** PLive and EZLive capacity surfaces (shared Plive SportsWidgets
+shell — **do not dual-write** ezlive rows). Durable league dimension:
+`inventory_leagues` (see playbook). At parse, wire JSON `stream_id` →
 `inventory_id` (interior never keeps `stream_id` as a field name).
 
 | Column                       | Source                                                                              |
@@ -324,23 +332,30 @@ until a separate EZ feed is proven. At parse, wire JSON `stream_id` →
 ```bash
 # one-shot (inventory is public — dummy env is fine)
 # Inventory is public (no Fantasy402 env required). Optional login env warms session.
-bun run inventory:watch -- --once --sport=table_tennis --json
+bun run inventory:watch -- --once --sport=all --dry-run --json
 bun run inventory:watch -- --once --sport=all --json
-bun run inventory:watch -- --once --sport=all --dry-run
+bun run inventory:watch -- --once --sport=table_tennis --json
 # defaults: --skin=buckeye --book=fantasy402 (other skins rejected)
 
-# long poll every 30s (default)
-bun run inventory:watch -- --loop --sport=table_tennis --interval-ms=30000
+# long poll every 30s — full board for coverage
+bun run inventory:watch -- --loop --sport=all --interval-ms=30000
+
+# durable leagues + promote (operator)
+bun run inventory:leagues
+bun run inventory:leagues -- --promote
 ```
 
-New rows print as `+ table_tennis · … · skin=buckeye book=fantasy402`. Optional
-Telegram: `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID`.
+New rows print as `+ table_tennis · … · skin=buckeye book=fantasy402` (and
+`+L` for new leagues). Optional Telegram: `TELEGRAM_BOT_TOKEN` +
+`TELEGRAM_CHAT_ID`.
 
 ```text
 stream-list-v2  ──every 30s──▶  new inventory_id?  ──▶  skin_events (buckeye) + notify
+                                      │                 + inventory_leagues
                                       │                 covers: plive + ezlive
                                       ▼ (optional, needs real auth)
                               get_pushes / booked-events / PlaceBet
+                              (ezlive = capacity/session wire, same catalog)
 ```
 
 ### get_pushes (stats — not for discovery)
@@ -520,7 +535,8 @@ bun run domain:sports -- --leagues=table_tennis
 bun run domain:sports -- --leagues=all --json
 bun run domain:sports -- --map        # offline static map
 bun run domain:sports -- --seed       # refresh provider_sport_mappings
-bun run inventory:sync -- --sport=all    # upsert all buckets into skin_events
+bun run inventory:sync -- --sport=all    # events + leagues (plive shell → ezlive cover)
+bun run inventory:leagues -- --unmapped  # promote feed for COMPETITIONS
 ```
 
 - **Primary** (★): soccer, tennis, basketball, table_tennis — confirmed
@@ -530,11 +546,19 @@ bun run inventory:sync -- --sport=all    # upsert all buckets into skin_events
 - **Not yet**: full Get_SportsLeagues catalog / Pandora `live.leagues` decode
   (needs auth / binary parse).
 
+Playbook (full board · leagues · promote · ezlive capacity):
+[`INVENTORY.md`](INVENTORY.md).
+
 ### Out × live-product capacity (PPH)
 
 Out = account (vault credentials + shared `workingBalance`).  
 Live product = capacity / Ultra wire row — same credentials, different limits /
 often different lines. **Not** white-label `SkinId` (that is desk identity).
+
+**ezlive on Buckeye:** inventory is already harvested on the plive shell
+(`coversLiveProducts` includes ezlive). Adding an `ezlive` capacity row only
+gates stake/session — it does **not** create a second event catalog. Recipe:
+[`INVENTORY.md`](INVENTORY.md) § ezlive capacity.
 
 | Layer              | Naming                                           | Example                                   |
 | ------------------ | ------------------------------------------------ | ----------------------------------------- |
