@@ -3,12 +3,15 @@ import { describe, expect, test } from 'bun:test';
 import {
   filterLinesByPeriod,
   formatEventLookup,
+  formatSportBoardSamples,
   inferSportHintFromLines,
   labelPeriodId,
   lookupEvent,
   parseEventRef,
   pliveEventUrl,
   summarizePeriods,
+  type EventLookupResult,
+  type SportBoardSample,
 } from '../../src/inventory/event-lookup.ts';
 import type { FetchFn } from '../../src/institutions/resilient-fetch.ts';
 import type { CoefficientLine } from '../../src/partner/fantasy-ultra/coefficients.ts';
@@ -172,5 +175,100 @@ describe('event-lookup', () => {
     });
     expect(r.plane).toBe('unknown');
     expect(r.streamList.hit).toBe(false);
+  });
+
+  test('summarizePeriods uses feedSportId bake for TT games', () => {
+    const lines: CoefficientLine[] = [
+      {
+        eventId: 1,
+        period: 's1',
+        marketType: '3',
+        selection: '1',
+        decimal: 1.9,
+        american: -111,
+      },
+    ];
+    const periods = summarizePeriods('1', lines, 'tennis', 93);
+    expect(periods[0]!.label).toBe('1st Game');
+  });
+
+  test('formatSportBoardSamples lists buckets', () => {
+    const samples: SportBoardSample[] = [
+      {
+        bucket: 'table_tennis',
+        inventoryId: '1',
+        league: 'Setka',
+        home: 'A',
+        away: 'B',
+        sport: 'Table Tennis',
+        pliveUrl: 'https://example/#!/event/1',
+        pandoraLineCount: 0,
+        periods: ['m'],
+      },
+    ];
+    const text = formatSportBoardSamples(samples);
+    expect(text).toContain('table_tennis');
+    expect(text).toContain('Setka');
+    expect(text).toContain('periods=[m]');
+  });
+
+  test('formatEventLookup includes period table labels', () => {
+    const r = {
+      eventId: '99',
+      periodId: 'm',
+      pliveUrl: 'https://x/#!/event/99/m',
+      pliveUrlBare: 'https://x/#!/event/99',
+      plane: 'priced_only',
+      sportHint: 'table_tennis',
+      streamList: { hit: false, event: null },
+      skinEvents: null,
+      bookedCatalog: null,
+      pandora: {
+        probed: true,
+        seconds: 1,
+        subscribed: true,
+        lineCount: 1,
+        periods: [
+          {
+            periodId: 's1',
+            label: '1st Game',
+            lineCount: 1,
+            marketTypes: ['3'],
+            pliveUrl: 'https://x/#!/event/99/s1',
+          },
+        ],
+        lines: [],
+        markets: [],
+        eventDataKeys: [],
+        periodMissing: false,
+        book: null,
+        eventState: {
+          eventId: 99,
+          state: 0,
+          stateLabel: 'active',
+          hasLines: true,
+          isStarted: true,
+          offTheBoard: false,
+          sportId: '93',
+          sportName: 'Table Tennis',
+          canonicalSportId: 'table_tennis',
+          leagueId: null,
+          leagueName: null,
+          countryId: null,
+          countryName: null,
+          home: 'P1',
+          away: 'P2',
+          path: ['93', '0', '1', '99'],
+          startTimeSec: null,
+          blockedReason: null,
+        },
+        eventDataBoard: null,
+      },
+      notes: [],
+    } as unknown as EventLookupResult;
+    const text = formatEventLookup(r);
+    expect(text).toContain('1st Game');
+    expect(text).toContain('table_tennis');
+    expect(text).toContain('P1 vs P2');
   });
 });

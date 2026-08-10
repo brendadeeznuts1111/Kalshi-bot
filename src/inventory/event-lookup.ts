@@ -75,7 +75,8 @@ import { FANTASY_ULTRA_DEFAULTS } from '../partner/fantasy-ultra/types.ts';
 import type { PartnerMarket } from '../partner/types.ts';
 import { defaultBookedCatalogCachePath } from './booked-catalog-cache.ts';
 
-export type StreamListEventHit = {
+/** Internal plane hit shapes (nested under EventLookupResult). */
+type StreamListEventHit = {
   bucket: string;
   inventoryId: string;
   sport: string | null;
@@ -86,7 +87,7 @@ export type StreamListEventHit = {
   feedId: number | null;
 };
 
-export type SkinEventHit = {
+type SkinEventHit = {
   inventoryId: string;
   sport: string | null;
   league: string | null;
@@ -97,16 +98,16 @@ export type SkinEventHit = {
   inventoryLiveProduct: string | null;
 };
 
-export type BookedCatalogHit = {
+type BookedCatalogHit = {
   oddsEventId: string;
   name: string;
   sportName: string;
 };
 
-export type EventLookupPlane = 'inventory' | 'priced_only' | 'catalog_only' | 'unknown';
+type EventLookupPlane = 'inventory' | 'priced_only' | 'catalog_only' | 'unknown';
 
 /** Period slice of the coefficient book (m = match, s1/h1/q1/…). */
-export type EventPeriodSummary = {
+type EventPeriodSummary = {
   periodId: string;
   /** Human label (sport-aware when hint known). */
   label: string;
@@ -171,7 +172,7 @@ export type EventLookupResult = {
   notes: string[];
 };
 
-export type EventLookupOptions = {
+type EventLookupOptions = {
   eventId: string | number;
   /**
    * Period deep-link focus (`m`, `s1`, `h1`, …).
@@ -428,7 +429,8 @@ export function filterLinesByPeriod(
   return lines.filter(l => l.period === periodId);
 }
 
-export async function lookupStreamListEvent(
+/** Internal: stream-list plane probe (used by lookupEvent). */
+async function lookupStreamListEvent(
   eventId: string,
   options: {
     url?: string;
@@ -478,7 +480,8 @@ export async function lookupStreamListEvent(
   return null;
 }
 
-export function lookupSkinEvent(
+/** Internal: skin_events plane probe. */
+function lookupSkinEvent(
   db: Database,
   eventId: string
 ): SkinEventHit | null {
@@ -495,7 +498,8 @@ export function lookupSkinEvent(
   return row ?? null;
 }
 
-export async function lookupBookedCatalog(
+/** Internal: Statscore catalog cache probe. */
+async function lookupBookedCatalog(
   eventId: string,
   cachePath = defaultBookedCatalogCachePath()
 ): Promise<BookedCatalogHit | null> {
@@ -517,7 +521,8 @@ export async function lookupBookedCatalog(
   }
 }
 
-export async function probePandoraEvent(
+/** Internal: short coefficient probe for one event id. */
+async function probePandoraEvent(
   eventId: number,
   options: {
     seconds?: number;
@@ -934,6 +939,7 @@ function rebuildCFromLines(
   return c;
 }
 
+/** Public watch tick — live-tracker + odds-watch tests import this shape. */
 export type OddsWatchUpdate = {
   at: string;
   eventId: number;
@@ -946,7 +952,7 @@ export type OddsWatchUpdate = {
 };
 
 /** One market suspend interval (off → on). */
-export type SuspensionInterval = {
+type SuspensionInterval = {
   period: string;
   marketType: string;
   offAt: string;
@@ -954,7 +960,7 @@ export type SuspensionInterval = {
   durationMs: number | null;
 };
 
-export type OddsWatchSummary = {
+type OddsWatchSummary = {
   eventId: number;
   updates: number;
   transitionCounts: Record<string, number>;
