@@ -5,7 +5,9 @@ leagues · PR3 promote · PR4 docs).
 
 Coverage catalog for **live board events** and **durable leagues** on the
 shared SportsWidgets stream shell. **Not** seat-partner capital. **Not**
-priced markets.
+priced markets. Settlement / void / action rules (for weighting lines &
+movement): [`PLIVE-EZLIVE-SPORTS-RULES.md`](PLIVE-EZLIVE-SPORTS-RULES.md)
+(plive = ezlive; same shell Rules panel).
 
 | Plane | Owns | Typical CLIs |
 | ----- | ---- | ------------ |
