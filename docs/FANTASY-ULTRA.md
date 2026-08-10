@@ -468,9 +468,19 @@ uses legacy widget ids for some sports).
 ```bash
 bun run domain:event -- --id=197501721 --spandora
 bun run domain:event -- --board --spandora --sport=93 --bettable
+# 90s watch: suspension intervals + vig snapshot (spandora TT)
+bun run domain:event -- --id=197501721 --spandora --watch --seconds=90
 ```
 
-Decode helpers: `market-decode.ts` · hosts: `pandora-hosts.ts`.
+**Vig:** `overroundFromDecimals` / `vigFromCoefficientLines` — multi-way m/16
+drops ~1.0 companion legs; two-way core markets ~8–9% on live TT.
+
+**Suspensions:** `summarizeOddsWatch` pairs `market_off`→`market_on` with
+duration (median/mean). Live TT sample: short m/5 suspends ~1–5s; batch
+suspend of s3/* often ~17–19s around game points.
+
+Decode helpers: `market-decode.ts` · hosts: `pandora-hosts.ts` · watch summary
+in `event-lookup.ts`.
 
 | Handshake (live-probed)   | Meaning               |
 | ------------------------- | --------------------- |

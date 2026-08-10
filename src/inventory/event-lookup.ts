@@ -49,6 +49,9 @@ import {
   pandoraMarketLabel,
   describeCoefficientSelection,
   formatSetCorrectScoreLineId,
+  formatMarketVigRows,
+  vigFromCoefficientLines,
+  type MarketVigRow,
 } from '../partner/fantasy-ultra/market-decode.ts';
 import {
   PANDORA_DEFAULT_SESSION,
@@ -852,6 +855,196 @@ export type OddsWatchUpdate = {
   eventTransitions: EventDataStateTransition[];
 };
 
+/** One market suspend interval (off → on). */
+export type SuspensionInterval = {
+  period: string;
+  marketType: string;
+  offAt: string;
+  onAt: string | null;
+  durationMs: number | null;
+};
+
+export type OddsWatchSummary = {
+  eventId: number;
+  updates: number;
+  transitionCounts: Record<string, number>;
+  suspensions: SuspensionInterval[];
+  openSuspensions: number;
+  suspensionCount: number;
+  /** Closed suspension durations only. */
+  medianSuspensionMs: number | null;
+  meanSuspensionMs: number | null;
+  byMarketTransitions: Array<{
+    period: string;
+    marketType: string;
+    off: number;
+    on: number;
+    priceChanges: number;
+  }>;
+  /** Vig snapshot from last book with lines. */
+  vig: MarketVigRow[];
+  lastLineCount: number;
+  lastOfferedMarkets: number;
+};
+
+function median(nums: number[]): number | null {
+  if (!nums.length) return null;
+  const s = [...nums].sort((a, b) => a - b);
+  const mid = Math.floor(s.length / 2);
+  return s.length % 2 === 0
+    ? (s[mid - 1]! + s[mid]!) / 2
+    : s[mid]!;
+}
+
+/**
+ * Aggregate watch history: suspension intervals (market_off → market_on)
+ * and per-market transition counts.
+ */
+export function summarizeOddsWatch(
+  history: OddsWatchUpdate[],
+  options: { lastLines?: CoefficientLine[] } = {}
+): OddsWatchSummary {
+  const eventId = history[0]?.eventId ?? 0;
+  const transitionCounts: Record<string, number> = {};
+  const byMk = new Map<
+    string,
+    { period: string; marketType: string; off: number; on: number; priceChanges: number }
+  >();
+  const open = new Map<string, string>(); // key → offAt ISO
+  const suspensions: SuspensionInterval[] = [];
+
+  const bumpMk = (
+    period: string,
+    marketType: string,
+    field: 'off' | 'on' | 'priceChanges'
+  ) => {
+    const k = `${period}\0${marketType}`;
+    const mutable = byMk.get(k) ?? {
+      period,
+      marketType,
+      off: 0,
+      on: 0,
+      priceChanges: 0,
+    };
+    mutable[field]++;
+    byMk.set(k, mutable);
+  };
+
+  for (const u of history) {
+    for (const t of u.transitions) {
+      transitionCounts[t.kind] = (transitionCounts[t.kind] ?? 0) + 1;
+      if (t.kind === 'market_off') {
+        bumpMk(t.period, t.marketType, 'off');
+        const k = `${t.period}\0${t.marketType}`;
+        if (!open.has(k)) open.set(k, u.at);
+      } else if (t.kind === 'market_on') {
+        bumpMk(t.period, t.marketType, 'on');
+        const k = `${t.period}\0${t.marketType}`;
+        const offAt = open.get(k);
+        if (offAt) {
+          const durationMs = Math.max(
+            0,
+            Date.parse(u.at) - Date.parse(offAt)
+          );
+          suspensions.push({
+            period: t.period,
+            marketType: t.marketType,
+            offAt,
+            onAt: u.at,
+            durationMs: Number.isFinite(durationMs) ? durationMs : null,
+          });
+          open.delete(k);
+        }
+      } else if (t.kind === 'price_change') {
+        bumpMk(t.period, t.marketType, 'priceChanges');
+      } else if (t.kind === 'selection_off') {
+        bumpMk(t.period, t.marketType, 'off');
+      } else if (t.kind === 'selection_on') {
+        bumpMk(t.period, t.marketType, 'on');
+      }
+    }
+  }
+
+  // still open at end of watch
+  for (const [k, offAt] of open) {
+    const [period, marketType] = k.split('\0') as [string, string];
+    suspensions.push({
+      period,
+      marketType,
+      offAt,
+      onAt: null,
+      durationMs: null,
+    });
+  }
+
+  const closedMs = suspensions
+    .map(s => s.durationMs)
+    .filter((n): n is number => n != null && Number.isFinite(n));
+  const last = history[history.length - 1];
+  const vigLines = options.lastLines ?? [];
+
+  return {
+    eventId,
+    updates: history.length,
+    transitionCounts,
+    suspensions,
+    openSuspensions: [...open.keys()].length,
+    suspensionCount: suspensions.filter(s => s.onAt != null).length,
+    medianSuspensionMs: median(closedMs),
+    meanSuspensionMs: closedMs.length
+      ? closedMs.reduce((a, b) => a + b, 0) / closedMs.length
+      : null,
+    byMarketTransitions: [...byMk.values()].sort(
+      (a, b) => b.off + b.on + b.priceChanges - (a.off + a.on + a.priceChanges)
+    ),
+    vig: vigLines.length ? vigFromCoefficientLines(vigLines) : [],
+    lastLineCount: last?.lineCount ?? 0,
+    lastOfferedMarkets: last?.offeredMarketCount ?? 0,
+  };
+}
+
+export function formatOddsWatchSummary(s: OddsWatchSummary): string {
+  const lines: string[] = [];
+  lines.push(
+    `watch summary event=${s.eventId} updates=${s.updates} ` +
+      `lines=${s.lastLineCount} offeredMkts=${s.lastOfferedMarkets}`
+  );
+  const tc = Object.entries(s.transitionCounts)
+    .map(([k, v]) => `${k}=${v}`)
+    .join('  ');
+  lines.push(`  transitions: ${tc || '(none)'}`);
+  lines.push(
+    `  suspensions closed=${s.suspensionCount} open=${s.openSuspensions}` +
+      (s.medianSuspensionMs != null
+        ? ` median=${(s.medianSuspensionMs / 1000).toFixed(1)}s mean=${((s.meanSuspensionMs ?? 0) / 1000).toFixed(1)}s`
+        : '')
+  );
+  if (s.suspensions.length) {
+    lines.push('  intervals:');
+    for (const x of s.suspensions.slice(0, 16)) {
+      const dur =
+        x.durationMs != null ? `${(x.durationMs / 1000).toFixed(1)}s` : 'open';
+      lines.push(
+        `    ${x.period}/${x.marketType}  off=${x.offAt}  on=${x.onAt ?? '—'}  ${dur}`
+      );
+    }
+  }
+  if (s.byMarketTransitions.length) {
+    lines.push('  by market (top activity):');
+    for (const m of s.byMarketTransitions.slice(0, 12)) {
+      lines.push(
+        `    ${m.period}/${m.marketType}(${pandoraMarketLabel(m.marketType)})  ` +
+          `off=${m.off} on=${m.on} chg=${m.priceChanges}`
+      );
+    }
+  }
+  if (s.vig.length) {
+    lines.push('  vig (last snapshot):');
+    lines.push(...formatMarketVigRows(s.vig, { limit: 12 }));
+  }
+  return lines.join('\n');
+}
+
 /**
  * Watch coefficient book + eventData board for offer transitions.
  * Primary market signals: selection_off / market_off.
@@ -865,7 +1058,7 @@ export async function watchEventOdds(
     pandoraHost?: PandoraHostId | string;
     onUpdate?: (u: OddsWatchUpdate) => void;
   } = {}
-): Promise<OddsWatchUpdate[]> {
+): Promise<OddsWatchUpdate[] & { lastLines: CoefficientLine[] }> {
   const seconds = Math.min(Math.max(options.seconds ?? 30, 5), 300);
   const host = resolvePandoraHostId(options.pandoraHost);
   const store = new CoefficientStore();
@@ -1005,7 +1198,9 @@ export async function watchEventOdds(
     }, seconds * 1000);
   });
 
-  return history;
+  const out = history as OddsWatchUpdate[] & { lastLines: CoefficientLine[] };
+  out.lastLines = store.getLines(eventId);
+  return out;
 }
 
 function classifyPlane(r: {
@@ -1540,6 +1735,11 @@ export function formatEventLookup(r: EventLookupResult): string {
             )
             .join('  ')}`
         );
+      }
+      const vigRows = vigFromCoefficientLines(r.pandora.lines);
+      if (vigRows.length) {
+        lines.push('  vig (overround):');
+        lines.push(...formatMarketVigRows(vigRows, { limit: 10 }));
       }
     }
   } else {

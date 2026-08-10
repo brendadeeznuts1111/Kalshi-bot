@@ -28,11 +28,13 @@
 import {
   formatEventBoardScan,
   formatEventLookup,
+  formatOddsWatchSummary,
   formatSportBoardSamples,
   lookupEvent,
   parseEventRef,
   sampleStreamListBySport,
   scanPandoraEventBoard,
+  summarizeOddsWatch,
   watchEventOdds,
 } from '../src/inventory/event-lookup.ts';
 import {
@@ -219,7 +221,7 @@ if (validate) {
 
 if (watch) {
   console.error(
-    `watching event=${eventId} for ${seconds}s (coeff + eventData state/hasLines)`
+    `watching event=${eventId} host=${pandoraHost} for ${seconds}s (coeff + suspensions + vig)`
   );
   const history = await watchEventOdds(Number(eventId), {
     seconds,
@@ -270,12 +272,25 @@ if (watch) {
       }
     },
   });
+  const summary = summarizeOddsWatch(history, {
+    lastLines: history.lastLines,
+  });
   if (json) {
-    console.log(JSON.stringify({ watch: true, eventId, updates: history.length }, null, 2));
-  } else {
     console.log(
-      `watch done updates=${history.length} (market_off / hasLines=false / s=2|3 = odds taken off)`
+      JSON.stringify(
+        {
+          watch: true,
+          eventId,
+          host: pandoraHost,
+          updates: history.length,
+          summary,
+        },
+        null,
+        2
+      )
     );
+  } else {
+    console.log(formatOddsWatchSummary(summary));
   }
   process.exit(0);
 }

@@ -84,12 +84,16 @@ export {
 export {
   PANDORA_MARKET_LABELS,
   TABLE_TENNIS_FIRST_TO_SETS,
+  decimalToImplied,
   decodeSetCorrectScoreLineId,
   describeCoefficientSelection,
   encodeSetCorrectScoreLineId,
   enumerateSetCorrectScoreLines,
+  formatMarketVigRows,
   formatSetCorrectScoreLineId,
+  overroundFromDecimals,
   pandoraMarketLabel,
+  vigFromCoefficientLines,
 } from './fantasy-ultra/market-decode.ts';
 
 export {
