@@ -164,10 +164,10 @@ export const OPS_LAYERS: readonly OpsLayer[] = [
         where: 'event-store · out id, provider, max_stake, meta_json',
       },
       {
-        id: 'out-skin-matrix',
-        name: 'Out × skin capacity',
+        id: 'out-capacity-matrix',
+        name: 'Out × live-product capacity',
         maturity: 'built',
-        where: 'src/partner/out-capacity.ts (legacy skins.ts shim) · partner:capacity',
+        where: 'src/partner/out-capacity.ts · partner:capacity',
       },
       {
         id: 'fantasy-adapter',
