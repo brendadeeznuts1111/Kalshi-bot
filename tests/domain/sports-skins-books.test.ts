@@ -4,6 +4,7 @@ import {
   BOOK_IDS,
   FINGERPRINT_PENDING_SKINS,
   ULTRA_DESK_API_PATHS,
+  asBookId,
   assertFingerprintCoverage,
   bookOffersLiveProduct,
   buildBookMatrixRows,
@@ -12,6 +13,7 @@ import {
   formatSkinMatrixMarkdownTable,
   getBookByHost,
   listBookIdsForSkin,
+  DESK_DOMAIN_ENV,
   PARTNER_DOMAIN_ENV,
   RETIRED_BARE_BOOK_DOMAIN_ENVS,
   assertActiveSkinsHaveHosts,
@@ -80,12 +82,14 @@ describe('domain sports / skins / live products', () => {
   });
 
   test('BookId is desk brand under skin (not SkinId)', () => {
-    expect(resolveBookId('fantasy402')).toBe('fantasy402');
+    expect(resolveBookId('fantasy402')).toBe(asBookId('fantasy402'));
     expect(resolveSkinId('fantasy402')).toBe('buckeye');
     expect(skinIdForBook('fantasy402')).toBe('buckeye');
-    expect(getBookByHost('https://www.fantasy402.com/login')).toBe('fantasy402');
-    expect(getBookByHost('classic.lvaction.com')).toBe('classic.lvaction.com');
-    expect(listBookIdsForSkin('buckeye').sort()).toEqual(['betwest', 'fantasy402', 'hulkwager']);
+    expect(getBookByHost('https://www.fantasy402.com/login')).toBe(asBookId('fantasy402'));
+    expect(getBookByHost('classic.lvaction.com')).toBe(asBookId('classic.lvaction.com'));
+    expect(listBookIdsForSkin('buckeye').sort()).toEqual(
+      [asBookId('betwest'), asBookId('fantasy402'), asBookId('hulkwager')].sort()
+    );
     expect(bookOffersLiveProduct('fantasy402', 'ezlive')).toBe(true);
     expect(bookOffersLiveProduct('parlay21', 'maglive')).toBe(true);
     expect(bookOffersLiveProduct('buckeye', 'ezlive')).toBe(false); // SkinId ≠ BookId
@@ -129,7 +133,7 @@ describe('domain sports / skins / live products', () => {
     expect(requireDefaultUrlForUltraMapper()).toBe(expected);
   });
 
-  test('resolveDeskDomainFromEnv uses PARTNER_DOMAIN then SKINS default', () => {
+  test('resolveDeskDomainFromEnv uses DESK_DOMAIN (legacy PARTNER_DOMAIN) then SKINS default', () => {
     const fallback = requireDefaultUrlForUltraMapper();
     const retired = Object.fromEntries(
       RETIRED_BARE_BOOK_DOMAIN_ENVS.map(k => [k, 'https://ignored.example'])
@@ -139,7 +143,14 @@ describe('domain sports / skins / live products', () => {
     expect(
       resolveDeskDomainFromEnv({
         ...retired,
-        [PARTNER_DOMAIN_ENV]: 'https://preferred.example',
+        [PARTNER_DOMAIN_ENV]: 'https://legacy.example',
+      })
+    ).toBe('https://legacy.example');
+    expect(
+      resolveDeskDomainFromEnv({
+        ...retired,
+        [PARTNER_DOMAIN_ENV]: 'https://legacy.example',
+        [DESK_DOMAIN_ENV]: 'https://preferred.example',
       })
     ).toBe('https://preferred.example');
   });

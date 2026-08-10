@@ -34,7 +34,7 @@ export type SkinRecord = {
   displayName: string;
   description: string;
   /**
-   * Active desks must declare ≥1 host (HOST_TO_SKIN / PARTNER_DOMAIN / discover).
+   * Active desks must declare ≥1 host (HOST_TO_SKIN / DESK_DOMAIN / discover).
    * Inactive = placeholder until hosts + offerings are proven.
    */
   active: boolean;
@@ -373,12 +373,20 @@ export function requireDefaultUrlForUltraMapper(): string {
   return url;
 }
 
-/** Brand-neutral desk URL env — resolved against SKINS hosts / SkinId mapping. */
+/**
+ * Brand-neutral desk **host** URL env — resolved against SKINS hosts / SkinId.
+ * Prefer this over seat-partner naming; desk identity is host → book → skin.
+ */
+export const DESK_DOMAIN_ENV = 'DESK_DOMAIN';
+
+/**
+ * @deprecated Use {@link DESK_DOMAIN_ENV} (`DESK_DOMAIN`). Still dual-read for one release.
+ */
 export const PARTNER_DOMAIN_ENV = 'PARTNER_DOMAIN';
 
 /**
  * Retired bare-book desk URL env keys — never read.
- * Use PARTNER_DOMAIN or per-out/partner `{PREFIX}DOMAIN` instead.
+ * Use DESK_DOMAIN (or legacy PARTNER_DOMAIN) or per-out `{PREFIX}DOMAIN` instead.
  */
 export const RETIRED_BARE_BOOK_DOMAIN_ENVS = ['FANTASY402_DOMAIN'] as const;
 
@@ -387,14 +395,28 @@ export function isRetiredBareBookDomainEnv(key: string): boolean {
 }
 
 /**
+ * Preferred desk URL from env map only (no Ultra default).
+ * `DESK_DOMAIN` wins over legacy `PARTNER_DOMAIN`.
+ */
+export function deskDomainFromEnvMap(
+  envMap: Record<string, string | undefined> = typeof process !== 'undefined' ? process.env : {}
+): string | undefined {
+  const preferred = envMap[DESK_DOMAIN_ENV]?.trim();
+  if (preferred) return preferred;
+  const legacy = envMap[PARTNER_DOMAIN_ENV]?.trim();
+  if (legacy) return legacy;
+  return undefined;
+}
+
+/**
  * Desk URL from env (brand-neutral).
- *   PARTNER_DOMAIN → SKINS Ultra-mapper default (hosts → SkinId)
+ *   DESK_DOMAIN → legacy PARTNER_DOMAIN → SKINS Ultra-mapper default (hosts → SkinId)
  * Bare-book DOMAIN env keys in RETIRED_BARE_BOOK_DOMAIN_ENVS are ignored.
  */
 export function resolveDeskDomainFromEnv(
   envMap: Record<string, string | undefined> = typeof process !== 'undefined' ? process.env : {}
 ): string {
-  return envMap[PARTNER_DOMAIN_ENV]?.trim() || requireDefaultUrlForUltraMapper();
+  return deskDomainFromEnvMap(envMap) || requireDefaultUrlForUltraMapper();
 }
 
 export function skinOffersLiveProduct(skin: string, product: string): boolean {

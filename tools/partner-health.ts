@@ -12,7 +12,7 @@
 // @see https://bun.com/docs/runtime/sqlite
 import { openEventStore } from "../src/institutions/event-store/open-db.ts";
 import { DEFAULT_EVENT_STORE_DB } from "../src/institutions/event-store/paths.ts";
-import { buildDomainStatusReport } from "../src/partner/domain.ts";
+import { buildDomainStatusReport } from "../src/partner/architecture.ts";
 import {
   computeProviderCapacity,
   ensurePartnerRegistrySchema,

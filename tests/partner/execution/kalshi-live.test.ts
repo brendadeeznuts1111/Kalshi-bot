@@ -248,20 +248,23 @@ function setup(variant?: "inactive" | "partner" | "provider"): Database {
     commissionRate: null,
     notes: null,
   }, NOW_MS);
+  // fantasy402 requires host→skin; kalshi may omit url (requireHost only when url or fantasy402)
+  const isFantasy = variant === "provider";
   upsertBettingAccount(db, {
     id: "out-SPORTS-1",
     partnerId: "partner-sports",
-    provider: variant === "provider" ? "fantasy402" : "kalshi",
-    url: "",
+    provider: isFantasy ? "fantasy402" : "kalshi",
+    url: isFantasy ? "https://www.fantasy402.com" : "",
     status: variant === "inactive" ? "inactive" : "active",
-    envPrefix: "KALSHI_SPORTS_1_",
+    envPrefix: isFantasy ? "FANTASY402_SPORTS_1_" : "KALSHI_SPORTS_1_",
     maxStake: 5,
     maxWin: 20,
     currency: "USD",
     skin: null,
     metaJson: JSON.stringify({
       partnerCode: "SPORTS",
-      skins: [{ name: "main", perBetMax: 5, maxWin: 20, active: true }],
+      skins: [{ name: isFantasy ? "ezlive" : "main", perBetMax: 5, maxWin: 20, active: true }],
+      ...(isFantasy ? { skinId: "buckeye", bookId: "fantasy402" } : {}),
     }),
   }, NOW_MS);
   const policy: AuthorizationPolicy = {

@@ -27,7 +27,8 @@ export type BookRecord = {
   label: string;
 };
 
-function asBookId(raw: string): BookId {
+/** Brand a known desk book token (tests / interior stamps). Prefer resolveBookId for wire. */
+export function asBookId(raw: string): BookId {
   const t = raw.trim().toLowerCase();
   if (!t) throw new Error('BookId: empty');
   return t as BookId;
@@ -191,7 +192,7 @@ export type BookMatrixRow = {
   hosts: readonly string[];
 };
 
-/** Machine-readable book matrix for `bun run partner:books`. */
+/** Machine-readable book matrix for `bun run domain:books`. */
 export function buildBookMatrixRows(): BookMatrixRow[] {
   return BOOKS.map(b => ({
     bookId: b.id,

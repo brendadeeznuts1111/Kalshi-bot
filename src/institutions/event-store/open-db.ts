@@ -166,7 +166,7 @@ export function applyEventStoreSchema(db: Database): void {
   );
   db.run(`CREATE INDEX IF NOT EXISTS idx_skin_events_book ON skin_events (book_id)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_skin_events_last_updated ON skin_events (last_updated)`);
-  db.run(`CREATE INDEX IF NOT EXISTS idx_skin_events_competition ON skin_events (competition_id)`);
+  // idx_skin_events_competition requires competition_id — create after migrateEventStoreColumns
   // Partner financial registry (outs) — secrets stay in env, not here
   db.run(`CREATE TABLE IF NOT EXISTS partners (
     id TEXT PRIMARY KEY,
@@ -213,6 +213,11 @@ export function applyEventStoreSchema(db: Database): void {
   migrateSkinEventsInventoryIdentity(db);
   migrateSkinEventsBookInventoryUnique(db);
   migrateSkinEventsCompetitionIds(db);
+  if (tableHasColumn(db, 'skin_events', 'competition_id')) {
+    db.run(
+      `CREATE INDEX IF NOT EXISTS idx_skin_events_competition ON skin_events (competition_id)`
+    );
+  }
   migrateSourceEventSelectors(db);
   abandonLegacyKalshiInventoryRuns(db);
   abandonUnpinnedSourceInventoryRuns(db);

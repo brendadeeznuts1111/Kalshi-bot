@@ -1,6 +1,6 @@
 // @see https://bun.com/docs/test/index#run-tests
 import { describe, expect, test } from 'bun:test';
-import { defaultUrlForSkin } from '../../src/domain/index.ts';
+import { asBookId, defaultUrlForSkin } from '../../src/domain/index.ts';
 import {
   adapterBindingForSkin,
   parseOutIdentity,
@@ -29,7 +29,7 @@ describe('out-identity boundary', () => {
       }),
     });
     expect(identity?.skinId).toBe('buckeye');
-    expect(identity?.bookId).toBe('fantasy402');
+    expect(identity?.bookId).toBe(asBookId('fantasy402'));
     expect(identity?.adapter.adapterId).toBe('fantasy-ultra');
     expect(identity?.adapter.mapperKind).toBe('fantasy402');
     expect(identity?.adapter.bookEnvToken).toBe('FANTASY402');
@@ -86,7 +86,7 @@ describe('out-identity boundary', () => {
       }),
     });
     expect(identity?.skinId).toBe('ace');
-    expect(identity?.bookId).toBe('parlay21');
+    expect(identity?.bookId).toBe(asBookId('parlay21'));
     expect(identity?.adapter.adapterId).toBe('unmapped');
     expect(identity?.adapter.mapperKind).toBe('unmapped');
   });

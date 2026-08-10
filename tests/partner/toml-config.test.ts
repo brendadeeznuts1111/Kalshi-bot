@@ -1,6 +1,7 @@
 // @see https://bun.com/docs/test/index#run-tests
 import { describe, expect, test } from 'bun:test';
 import {
+  asBookId,
   defaultUrlForSkin,
   RETIRED_BARE_BOOK_DOMAIN_ENVS,
   urlForHost,
@@ -8,6 +9,7 @@ import {
 import { openEventStore } from '../../src/institutions/event-store/open-db.ts';
 import { computeProviderCapacity, listActiveBettingAccounts } from '../../src/partner/registry.ts';
 import {
+  DESK_DOMAIN_ENV,
   PARTNER_DOMAIN_ENV,
   canonicalOutEnvPrefix,
   canonicalPartnerEnvPrefix,
@@ -62,7 +64,7 @@ describe('partners TOML (Bun.TOML)', () => {
     expect(accounts[0]?.metaJson).not.toContain('password');
     // Ultra default url → fantasy402 book + buckeye skin stamped at materialize
     expect(accounts[0]?.skinId).toBe('buckeye');
-    expect(accounts[0]?.bookId).toBe('fantasy402');
+    expect(accounts[0]?.bookId).toBe(asBookId('fantasy402'));
     expect(accounts[0]?.metaJson).toContain('"skinId":"buckeye"');
     expect(accounts[0]?.metaJson).toContain('"bookId":"fantasy402"');
   });
@@ -82,7 +84,7 @@ book_id = "fantasy402"
 skins = [{ name = "ezlive", per_bet_max = 500, max_win = 2500, active = true }]
 `);
     const ok = materializePartnersToml(withUrl);
-    expect(ok.accounts[0]?.bookId).toBe('fantasy402');
+    expect(ok.accounts[0]?.bookId).toBe(asBookId('fantasy402'));
     expect(ok.accounts[0]?.skinId).toBe('buckeye');
 
     const conflict = parsePartnersToml(`
@@ -209,7 +211,7 @@ skins = [{ name = "ezlive", per_bet_max = "not-a-number" }]
     expect(base.source.CUSTOMER_ID).toBe('out');
   });
 
-  test('resolvePartnerEnv: retired bare-book DOMAIN ignored; PARTNER_DOMAIN / per-out DOMAIN win', () => {
+  test('resolvePartnerEnv: retired bare-book DOMAIN ignored; DESK_DOMAIN / per-out DOMAIN win', () => {
     const retired = Object.fromEntries(
       RETIRED_BARE_BOOK_DOMAIN_ENVS.map(k => [k, 'https://evil.example'])
     );
@@ -225,17 +227,25 @@ skins = [{ name = "ezlive", per_bet_max = "not-a-number" }]
 
     const aceDesk = defaultUrlForSkin('ace')!;
     const lonestarDesk = urlForHost('lonestarwagering.com');
-    const withPartnerDomain = resolvePartnerEnv('FANTASY402_', {
+    const withLegacyDomain = resolvePartnerEnv('FANTASY402_', {
       ...ignored,
       [PARTNER_DOMAIN_ENV]: aceDesk,
     });
-    expect(withPartnerDomain.values.DOMAIN).toBe(aceDesk);
-    expect(withPartnerDomain.source.DOMAIN).toBe('book_fallback');
+    expect(withLegacyDomain.values.DOMAIN).toBe(aceDesk);
+    expect(withLegacyDomain.source.DOMAIN).toBe('book_fallback');
+
+    const withDeskDomain = resolvePartnerEnv('FANTASY402_', {
+      ...ignored,
+      [PARTNER_DOMAIN_ENV]: 'https://legacy-should-lose.example',
+      [DESK_DOMAIN_ENV]: aceDesk,
+    });
+    expect(withDeskDomain.values.DOMAIN).toBe(aceDesk);
+    expect(withDeskDomain.source.DOMAIN).toBe('book_fallback');
 
     const perOut = resolvePartnerEnv('FANTASY402_SPEN_1_', {
       ...ignored,
       FANTASY402_SPEN_1_DOMAIN: lonestarDesk,
-      [PARTNER_DOMAIN_ENV]: aceDesk,
+      [DESK_DOMAIN_ENV]: aceDesk,
     });
     expect(perOut.values.DOMAIN).toBe(lonestarDesk);
     expect(perOut.source.DOMAIN).toBe('out');

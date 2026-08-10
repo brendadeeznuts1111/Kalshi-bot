@@ -1,18 +1,21 @@
 #!/usr/bin/env bun
 /**
- * Print Partner domain architecture status (five layers) + skin/book matrices.
+ * Desk domain matrices + seat-ops architecture status.
  *
- *   bun run partner:domain
- *   bun run partner:domain -- --json
- *   bun run partner:domain -- --skins
- *   bun run partner:domain -- --skins --json
- *   bun run partner:domain -- --books
- *   bun run partner:domain -- --books --json
- *   bun run partner:map
- *   bun run partner:map -- --output=artifacts/partner-expansion.mmd
+ * Desk matrix (skins / books / hosts):
+ *   bun run domain:status
+ *   bun run domain:status -- --json
+ *   bun run domain:skins
+ *   bun run domain:skins -- --json
+ *   bun run domain:books
+ *   bun run domain:books -- --json
+ *   bun run domain:map
+ *   bun run domain:map -- --output=artifacts/partner-expansion.mmd
+ *
+ * Legacy aliases: partner:domain · partner:skins · partner:books · partner:map
  *
  * @see docs/PARTNER-DOMAIN.md
- * @see src/partner/domain.ts
+ * @see src/partner/architecture.ts
  * @see src/domain/skin-matrix.ts
  * @see src/domain/books.ts
  */
@@ -26,7 +29,7 @@ import {
   buildDomainStatusReport,
   formatDomainStatusText,
   formatPartnerExpansionMermaid,
-} from '../src/partner/domain.ts';
+} from '../src/partner/architecture.ts';
 import { mkdir } from 'node:fs/promises';
 import { dirname } from 'node:path';
 
@@ -109,7 +112,8 @@ if (json) {
   console.log(JSON.stringify(report, null, 2));
 } else {
   console.log(formatDomainStatusText(report));
-  console.log('\n  · docs: docs/PARTNER-DOMAIN.md');
-  console.log('  · skin matrix: bun run partner:domain -- --skins');
-  console.log('  · book matrix: bun run partner:domain -- --books');
+  console.log('\n  · docs: docs/PARTNER-DOMAIN.md · desk matrix: src/domain/README.md');
+  console.log('  · skin matrix: bun run domain:skins');
+  console.log('  · book matrix: bun run domain:books');
+  console.log('  · host discover: bun run domain:host-discover -- --url=https://…');
 }

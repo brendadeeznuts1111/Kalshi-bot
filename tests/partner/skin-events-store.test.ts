@@ -1,6 +1,7 @@
 // @see https://bun.com/docs/test/index#run-tests
 import { describe, expect, test } from 'bun:test';
 import { Database } from 'bun:sqlite';
+import { asBookId } from '../../src/domain/index.ts';
 import {
   migratePartnerEventsToSkinEvents,
   migrateSkinEventsCompetitionIds,
@@ -62,7 +63,7 @@ describe('skin_events store', () => {
     expect(liveProductsCoveredByInventory('buckeye').sort()).toEqual(['ezlive', 'plive']);
     const id = buckeyeInventoryIdentity();
     expect(id.skinId).toBe('buckeye');
-    expect(id.bookId).toBe('fantasy402');
+    expect(id.bookId).toBe(asBookId('fantasy402'));
     expect(id.inventoryLiveProduct).toBe('plive');
   });
 
@@ -89,7 +90,7 @@ describe('skin_events store', () => {
     expect(r1.updated.length).toBe(0);
     expect(listSkinInventoryIds(db, 'fantasy402').size).toBe(2);
     expect(r1.inserted[0]?.skinId).toBe('buckeye');
-    expect(r1.inserted[0]?.bookId).toBe('fantasy402');
+    expect(r1.inserted[0]?.bookId).toBe(asBookId('fantasy402'));
     expect(r1.inserted[0]?.inventoryLiveProduct).toBe('plive');
     expect(r1.inserted[0]?.sport).toBe('table_tennis');
     expect(r1.inserted[0]?.competitionId).toBe('table_tennis.setka_cup');
@@ -260,7 +261,7 @@ describe('skin_events store', () => {
         new Response(JSON.stringify(wire), {
           status: 200,
           headers: { 'content-type': 'application/json' },
-        })) as typeof fetch,
+        })) as unknown as typeof fetch,
     });
     expect(events.length).toBe(1);
     expect(events[0]?.inventoryId).toBe('55');

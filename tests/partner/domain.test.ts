@@ -1,16 +1,18 @@
 // @see https://bun.com/docs/test/index#run-tests
 import { describe, expect, test } from 'bun:test';
 import {
+  OPS_LAYERS,
   PARTNER_DOMAIN_LAYERS,
   PARTNER_NAMING,
   buildDomainStatusReport,
   formatDomainStatusText,
   formatPartnerExpansionMermaid,
-} from '../../src/partner/domain.ts';
+} from '../../src/partner/architecture.ts';
 
-describe('partner domain architecture', () => {
+describe('seat-ops architecture (not desk domain matrix)', () => {
   test('five layers with honest maturity counts', () => {
-    expect(PARTNER_DOMAIN_LAYERS.map(l => l.id)).toEqual([
+    expect(OPS_LAYERS).toBe(PARTNER_DOMAIN_LAYERS);
+    expect(OPS_LAYERS.map(l => l.id)).toEqual([
       'partner',
       'communication',
       'accounts',
@@ -23,10 +25,11 @@ describe('partner domain architecture', () => {
     expect(report.totals.partial).toBeGreaterThan(0);
     expect(report.totals.planned).toBe(0);
     expect(report.orchestration.missingForBotLoop.length).toBeGreaterThan(0);
+    expect(report.orchestration.clis).toContain('domain:status');
     expect(PARTNER_NAMING.outIdExample).toBe('out-SPEN-1');
     expect(PARTNER_NAMING.bookIdExample).toBe('fantasy402');
     expect(PARTNER_NAMING.skinIdExample).toBe('buckeye');
-    expect(formatDomainStatusText(report)).toContain('partner domain');
+    expect(formatDomainStatusText(report)).toContain('seat ops');
   });
 
   test('expansion map distinguishes built execution from intelligence and unwired providers', () => {
