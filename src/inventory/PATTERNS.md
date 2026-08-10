@@ -9,5 +9,7 @@
 | Public/dummy Fantasy profile | `publicFantasyProfile` in `public-profile.ts` |
 | Human markdown tables | `event-lookup-format.ts` (cap detail; prefer `--json`) |
 | Test fixtures | `tests/inventory/fixtures.ts` |
+| Enrich quality (match-rate / miss reasons) | `enrich-quality.ts` + `diagnoseBookedMatch` |
+| Enrich gates CLI | `--min-match-rate` · `--min-linked-pct` · `--fail-on-enrich-quality` |
 
 Prefer import SSOT over local copies. Prefer delete/unexport over new layers.

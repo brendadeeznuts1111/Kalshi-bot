@@ -303,16 +303,52 @@ function scoreBookedMatch(
   return null;
 }
 
+/** Why a candidate did or did not match (enrich quality loop). */
+export type BookedMatchReason =
+  | 'matched'
+  | 'missing_names'
+  | 'empty_catalog'
+  | 'sport_empty'
+  | 'no_score'
+  | 'below_threshold'
+  | 'ambiguous';
+
+export type BookedMatchDiagnosis = {
+  oddsEventId: string | null;
+  score: number | null;
+  secondScore: number | null;
+  reason: BookedMatchReason;
+  /** Size of sport-scoped catalog pool used. */
+  poolSize: number;
+};
+
 /**
- * Soft match inventory home/away to Statscore booked name (sport-scoped).
+ * Diagnose soft match (score + miss reason) for enrich quality reporting.
  */
-export function matchBookedOddsEventId(
+export function diagnoseBookedMatch(
   home: string | null,
   away: string | null,
   booked: BookedMatchEntry[],
   options: { sport?: string | null; league?: string | null } = {}
-): string | null {
-  if (!home || !away || booked.length === 0) return null;
+): BookedMatchDiagnosis {
+  if (!home || !away) {
+    return {
+      oddsEventId: null,
+      score: null,
+      secondScore: null,
+      reason: 'missing_names',
+      poolSize: 0,
+    };
+  }
+  if (booked.length === 0) {
+    return {
+      oddsEventId: null,
+      score: null,
+      secondScore: null,
+      reason: 'empty_catalog',
+      poolSize: 0,
+    };
+  }
   const query: BookedMatchQuery = {
     home,
     away,
@@ -330,6 +366,16 @@ export function matchBookedOddsEventId(
     : booked;
   const pool = scoped.length > 0 ? scoped : options.sport ? [] : booked;
 
+  if (options.sport && pool.length === 0) {
+    return {
+      oddsEventId: null,
+      score: null,
+      secondScore: null,
+      reason: 'sport_empty',
+      poolSize: 0,
+    };
+  }
+
   for (const b of pool) {
     const sc = scoreBookedMatch(query, b);
     if (sc == null) continue;
@@ -342,10 +388,54 @@ export function matchBookedOddsEventId(
     }
   }
 
+  if (bestScore < 0 || bestId == null) {
+    return {
+      oddsEventId: null,
+      score: null,
+      secondScore: second >= 0 ? second : null,
+      reason: 'no_score',
+      poolSize: pool.length,
+    };
+  }
+
   // Ambiguous: two strong scores within 5 points → skip
-  if (bestId && second >= 65 && bestScore - second < 5) return null;
-  if (bestScore < 65) return null;
-  return bestId;
+  if (second >= 65 && bestScore - second < 5) {
+    return {
+      oddsEventId: null,
+      score: bestScore,
+      secondScore: second,
+      reason: 'ambiguous',
+      poolSize: pool.length,
+    };
+  }
+  if (bestScore < 65) {
+    return {
+      oddsEventId: null,
+      score: bestScore,
+      secondScore: second >= 0 ? second : null,
+      reason: 'below_threshold',
+      poolSize: pool.length,
+    };
+  }
+  return {
+    oddsEventId: bestId,
+    score: bestScore,
+    secondScore: second >= 0 ? second : null,
+    reason: 'matched',
+    poolSize: pool.length,
+  };
+}
+
+/**
+ * Soft match inventory home/away to Statscore booked name (sport-scoped).
+ */
+export function matchBookedOddsEventId(
+  home: string | null,
+  away: string | null,
+  booked: BookedMatchEntry[],
+  options: { sport?: string | null; league?: string | null } = {}
+): string | null {
+  return diagnoseBookedMatch(home, away, booked, options).oddsEventId;
 }
 
 /** Catalog fetch sport filter string for includes-match against sport_name. */

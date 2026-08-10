@@ -17,6 +17,8 @@
  *   bun run inventory:sync -- --odds-status
  *   bun run inventory:sync -- --enrich-only --enrich-scope=unlinked
  *   bun run inventory:sync -- --enrich-only --dry-run
+ *   bun run inventory:enrich:quality   # dry-run JSON + match-rate report
+ *   bun run inventory:sync -- --enrich-only --min-match-rate=0.1 --fail-on-enrich-quality
  *
  * Default sport filter when omitted: table_tennis (CLI). Cron defaults to all.
  * --dry-run: fetch + plan insert/update only (no SQLite writes; enrich is planned only).
@@ -65,6 +67,9 @@ async function runOnce(options: {
   enrichOnly: boolean;
   enrichBookedScope: ReturnType<typeof parseEnrichBookedScope>;
   enrichCatalogMax?: number;
+  minMatchRate?: number | null;
+  minLinkedPct?: number | null;
+  failOnEnrichQuality?: boolean;
   json: boolean;
 }): Promise<void> {
   // enrich-only / dry-run can use public dummy profile
@@ -85,12 +90,22 @@ async function runOnce(options: {
     enrichBookedScope: options.enrichBookedScope,
     enrichCatalogMax: options.enrichCatalogMax,
     dryRun: options.dryRun,
+    minMatchRate: options.minMatchRate,
+    minLinkedPct: options.minLinkedPct,
   });
 
   if (options.json) {
     console.log(JSON.stringify(report, null, 2));
   } else {
     console.log(formatSyncReport(report));
+  }
+
+  if (
+    options.failOnEnrichQuality &&
+    report.enrichQuality &&
+    !report.enrichQuality.passed
+  ) {
+    process.exitCode = 1;
   }
 }
 
@@ -121,6 +136,8 @@ async function main(): Promise<void> {
 
   const enrichOnly = hasFlag("enrich-only");
   const catalogMaxRaw = argValue("enrich-catalog-max");
+  const minMatchRateRaw = argValue("min-match-rate");
+  const minLinkedPctRaw = argValue("min-linked-pct");
   const onceOpts = {
     dryRun,
     sport: argValue("sport") ?? (enrichOnly ? "all" : "table_tennis"),
@@ -132,6 +149,15 @@ async function main(): Promise<void> {
     enrichCatalogMax: catalogMaxRaw
       ? Number(catalogMaxRaw) || undefined
       : undefined,
+    minMatchRate:
+      minMatchRateRaw != null && minMatchRateRaw !== ""
+        ? Number(minMatchRateRaw)
+        : null,
+    minLinkedPct:
+      minLinkedPctRaw != null && minLinkedPctRaw !== ""
+        ? Number(minLinkedPctRaw)
+        : null,
+    failOnEnrichQuality: hasFlag("fail-on-enrich-quality"),
     json,
   };
 
