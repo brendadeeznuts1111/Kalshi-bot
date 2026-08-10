@@ -71,7 +71,7 @@ describe('partners TOML (Bun.TOML)', () => {
   });
 
 
-  test('legacy skins = still dual-read on parse', () => {
+  test('legacy TOML skins key is ignored (live_products only)', () => {
     const doc = parsePartnersToml(`
 [[partners]]
 code = "SPEN"
@@ -85,8 +85,11 @@ url = "https://fantasy402.com"
 skins = [{ name = "ezlive", per_bet_max = 500, max_win = 2500, active = true }]
 `);
     const m = materializePartnersToml(doc);
-    expect(m.accounts[0]?.maxStake).toBe(500);
+    // Hard-cut: skins table ignored → fallback wire "2" at $0
+    expect(m.accounts[0]?.maxStake).toBe(0);
     expect(m.accounts[0]?.skin).toBeNull();
+    expect(m.accounts[0]?.metaJson).toContain('"liveProducts"');
+    expect(m.accounts[0]?.metaJson).toContain('"2"');
   });
 
   test('materialize stamps bookId from url; matching book_id ok; conflict throws', () => {

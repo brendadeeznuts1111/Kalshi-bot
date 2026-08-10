@@ -59,7 +59,7 @@ function database(): Database {
       skin: null,
       metaJson: JSON.stringify({
         partnerCode: 'SPORTS',
-        skins: [{ name: 'main', active: true, perBetMax: 5, maxWin: 20 }],
+        liveProducts: [{ name: 'main', active: true, perBetMax: 5, maxWin: 20 }],
       }),
     },
     NOW

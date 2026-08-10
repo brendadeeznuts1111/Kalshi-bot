@@ -439,7 +439,7 @@ Partner → Communication → Accounts/Outs → Assets → Finance.
 | **Partner**               | `partners`                                              | Financial owner (profit split, commission)                                       |
 | **Account (out)**         | `betting_accounts`                                      | Place to bet: provider + limits + `env_prefix` for secrets                       |
 | **Skin** (white-label)    | `src/domain/skins.ts`                                   | `buckeye`, `ace`, `metallic`, `sts`, `1bv`, `lvaction`, `magnum`                 |
-| **Live product**          | `src/domain/live-products.ts` + capacity `meta.skins[]` | `plive` / `ezlive` / `ultralive` / `maglive` (`dark` capacity-only)              |
+| **Live product**          | `src/domain/live-products.ts` + capacity `meta.liveProducts[]` | `plive` / `ezlive` / `ultralive` / `maglive` (`dark` capacity-only)       |
 | **Adapter surface**       | `AdapterId` (`fantasy402`, `kalshi`)                    | DTO token on inventory/book rows — **not** seat `partnerId`; distinct from mapper `AdapterId` (`fantasy-ultra` …) |
 | **Provider** (legacy env) | env / outs column mirror                                | Still on outs / env; `fantasy402` is BookId + mapper token → skin `buckeye` |
 | **Sports map**            | `src/domain/` + `provider_sport_mappings` seed          | Live-product keys primary; optional legacy `fantasy402` dual-write               |
@@ -488,14 +488,13 @@ On `seedFantasy402FromEnv` / `upsertBettingAccount` (`partner/out-identity.ts`):
 
 1. Resolve host via `getSkinByHost(url)` → white-label `skinId` (unknown host →
    reject; add to `SKINS[].hosts`)
-2. Parse capacity from `meta.liveProducts` (dual-**read** legacy `meta.skins`
-   only when `liveProducts` is absent)
+2. Parse capacity from `meta.liveProducts` only (legacy `meta.skins` ignored)
 3. Assert capacity ⊆ skin `offeredLiveProducts` (plus legacy `dark` / numeric
    Ultra wire)
 4. Derive `AdapterBinding`: `adapterId` (`fantasy-ultra` | `kalshi` |
    `unmapped`) + `mapperKind` + `bookEnvToken`
 5. Stamp `skinId`, `mapper`, `liveProducts`, `defaultLiveProduct` only —
-   writers **drop** legacy `meta.skins` / `defaultSkin` (no dual-write)
+   writers **drop** any legacy `meta.skins` / `defaultSkin`
 6. `getPartnerAdapter` selects Fantasy Ultra when
    `adapterId === "fantasy-ultra"`
 

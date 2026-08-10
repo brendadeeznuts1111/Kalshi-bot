@@ -131,7 +131,8 @@ export function writeDeskSnapshot(
     totalPerBetMax: number;
     workingBalance: number | null;
     envOk: boolean;
-    skinCount: number;
+    /** Active live-product capacity row count. */
+    productCount: number;
     currency?: string;
     extra?: Record<string, unknown>;
     nowMs?: number;
@@ -161,7 +162,7 @@ export function writeDeskSnapshot(
       totalPerBetMax: input.totalPerBetMax,
       workingBalance: input.workingBalance,
       envOk: input.envOk,
-      skinCount: input.skinCount,
+      productCount: input.productCount,
       ...(input.extra ?? {}),
     }),
     createdAt: nowMs,

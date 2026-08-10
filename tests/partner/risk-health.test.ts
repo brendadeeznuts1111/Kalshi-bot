@@ -28,7 +28,7 @@ partner_code = "SPEN"
 provider = "fantasy402"
 env_prefix = "FANTASY402_"
 working_balance = 5000
-skins = [
+live_products = [
   { name = "ezlive", per_bet_max = 500, max_win = 2500, active = true },
   { name = "dark", per_bet_max = 1000, max_win = 5000, active = true },
 ]
@@ -47,7 +47,7 @@ describe("risk health", () => {
       totalPerBetMax: 1500,
       workingBalance: 5000,
       envOk: false,
-      skinCount: 2,
+      productCount: 2,
     });
     const report = evaluateRiskHealth(db, accounts, {
       envMap: {},

@@ -14,7 +14,6 @@
 # Desk URL env (book-level): DESK_DOMAIN — must resolve via active SKINS[].hosts
 #   (bare book-level DOMAIN env is retired). Prefer TOML url= on each out when known.
 # Capacity rows: live_products = [ { name, per_bet_max, max_win, active } ]
-#   (legacy key `skins` still dual-read on parse)
 # @see https://bun.com/docs/runtime/toml
 # @see docs/SEAT-OPS.md
 

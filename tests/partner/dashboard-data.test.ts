@@ -25,7 +25,7 @@ partner_code = "SPEN"
 provider = "fantasy402"
 env_prefix = "FANTASY402_"
 working_balance = 5000
-skins = [
+live_products = [
   { name = "ezlive", per_bet_max = 500, max_win = 2500, active = true },
 ]
 `;

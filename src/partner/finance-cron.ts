@@ -113,7 +113,7 @@ export type FinanceCronOutRow = {
   partnerCode: string;
   provider: string;
   totalPerBetMax: number;
-  skinCount: number;
+  productCount: number;
   liveProducts: Array<{ name: string; perBetMax: number }>;
   workingBalance: number | null;
   envPrefix: string;
@@ -298,11 +298,11 @@ export function formatFinanceCronReportText(report: FinanceCronReport): string {
     const v = getPartnerVisual(g.partnerCode);
     lines.push(`  ${g.partnerCode}  ${v.hex}  capacity=$${g.totalCapacity}  outs=${g.outs.length}`);
     for (const o of g.outs) {
-      const skinBits = o.liveProducts.map(s => `$${s.perBetMax} ${s.name}`).join(' + ');
+      const productBits = o.liveProducts.map(s => `$${s.perBetMax} ${s.name}`).join(' + ');
       const envMark = o.envOk ? 'env✓' : `env✗ ${o.missingKeys.join(',')}`;
       const login = o.loginOk === true ? ' login✓' : o.loginOk === false ? ` login✗` : '';
       lines.push(
-        `    └── ${o.outId}  $${o.totalPerBetMax}${skinBits ? ` (${skinBits})` : ''}  ${envMark}${login}`
+        `    └── ${o.outId}  $${o.totalPerBetMax}${productBits ? ` (${productBits})` : ''}  ${envMark}${login}`
       );
     }
   }
@@ -371,7 +371,7 @@ export async function runFinanceCron(
       partnerCode,
       provider: a.provider,
       totalPerBetMax: cap.totalPerBetMax,
-      skinCount: cap.liveProducts.length,
+      productCount: cap.liveProducts.length,
       liveProducts: cap.liveProducts.map(s => ({
         name: s.name,
         perBetMax: s.perBetMax,
@@ -444,7 +444,7 @@ export async function runFinanceCron(
         totalPerBetMax: r.totalPerBetMax,
         workingBalance: r.workingBalance,
         envOk: r.envOk,
-        skinCount: r.skinCount,
+        productCount: r.productCount,
         extra: {
           missingKeys: r.missingKeys,
           loginOk: r.loginOk,

@@ -28,9 +28,6 @@ export type LiveProductSportBinding = {
   status: BindingStatus;
 };
 
-/** @deprecated alias — use LiveProductSportBinding */
-export type SkinSportBinding = LiveProductSportBinding;
-
 type BindingSeed = {
   sportId: SportId;
   inventoryBucket: string;
@@ -161,9 +158,6 @@ export const LIVE_PRODUCT_SPORT_BINDINGS: readonly LiveProductSportBinding[] = [
   ...EZLIVE,
 ];
 
-/** @deprecated use LIVE_PRODUCT_SPORT_BINDINGS */
-export const SKIN_SPORT_BINDINGS = LIVE_PRODUCT_SPORT_BINDINGS;
-
 const byProduct = new Map<LiveProductId, LiveProductSportBinding[]>([
   ['plive', PLIVE],
   ['ezlive', EZLIVE],
@@ -178,13 +172,6 @@ export function listLiveProductSportBindings(
   return LIVE_PRODUCT_SPORT_BINDINGS;
 }
 
-/** @deprecated use listLiveProductSportBindings */
-export function listSkinSportBindings(
-  liveProduct?: LiveProductId
-): readonly LiveProductSportBinding[] {
-  return listLiveProductSportBindings(liveProduct);
-}
-
 export function liveProductHasSportCoverage(liveProduct: LiveProductId, sportId: SportId): boolean {
   const rows = byProduct.get(liveProduct) ?? [];
   return rows.some(
@@ -192,18 +179,8 @@ export function liveProductHasSportCoverage(liveProduct: LiveProductId, sportId:
   );
 }
 
-/** @deprecated use liveProductHasSportCoverage */
-export function skinHasSportCoverage(liveProduct: LiveProductId, sportId: SportId): boolean {
-  return liveProductHasSportCoverage(liveProduct, sportId);
-}
-
 export function liveProductsWithBindings(): LiveProductId[] {
   return (['plive', 'ezlive', 'ultralive', 'maglive'] as const).filter(
     p => (byProduct.get(p)?.length ?? 0) > 0
   );
-}
-
-/** @deprecated use liveProductsWithBindings */
-export function skinsWithBindings(): LiveProductId[] {
-  return liveProductsWithBindings();
 }

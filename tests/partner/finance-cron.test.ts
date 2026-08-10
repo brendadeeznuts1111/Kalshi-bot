@@ -23,7 +23,7 @@ id = "out-SPEN-1"
 partner_code = "SPEN"
 provider = "fantasy402"
 env_prefix = "FANTASY402_"
-skins = [
+live_products = [
   { name = "ezlive", per_bet_max = 500, max_win = 2500, active = true },
   { name = "dark", per_bet_max = 1000, max_win = 5000, active = true },
 ]

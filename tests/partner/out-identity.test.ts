@@ -38,7 +38,7 @@ describe('out-identity boundary', () => {
     expect(stamped).toContain('"bookId":"fantasy402"');
   });
 
-  test('dual-read legacy skins only (no liveProducts key); stamp writes liveProducts only', () => {
+  test('legacy meta.skins alone is ignored; empty capacity falls back to maxStake wire "2"', () => {
     const identity = parseOutIdentity({
       id: 'out-X-1',
       partnerId: 'partner-x',
@@ -50,12 +50,32 @@ describe('out-identity boundary', () => {
         skins: [{ name: 'plive', perBetMax: 100, maxWin: 500, active: true }],
       }),
     });
-    expect(identity?.capacity[0]?.liveProduct).toBe('plive');
+    // Hard-cut: only liveProducts is capacity SSOT
+    expect(identity?.capacity.map(c => c.liveProduct)).toEqual(['2']);
+    expect(identity?.capacity[0]?.perBetMax).toBe(100);
     const stamped = stampOutMeta(identity!);
     expect(stamped).toContain('"liveProducts"');
     expect(stamped).not.toContain('"skins"');
     expect(stamped).toContain('"defaultLiveProduct"');
     expect(stamped).not.toContain('"defaultSkin"');
+  });
+
+  test('stamp writes liveProducts only from liveProducts meta', () => {
+    const identity = parseOutIdentity({
+      id: 'out-X-1',
+      partnerId: 'partner-x',
+      url: BUCKEYE_URL,
+      maxStake: 100,
+      maxWin: 500,
+      skin: null,
+      metaJson: JSON.stringify({
+        liveProducts: [{ name: 'plive', perBetMax: 100, maxWin: 500, active: true }],
+      }),
+    });
+    expect(identity?.capacity[0]?.liveProduct).toBe('plive');
+    const stamped = stampOutMeta(identity!);
+    expect(stamped).toContain('"liveProducts"');
+    expect(stamped).not.toContain('"skins"');
   });
 
   test('maglive on buckeye rejected', () => {

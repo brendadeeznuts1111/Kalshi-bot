@@ -419,7 +419,7 @@ url = "https://fantasy402.com"
 # book_id = "fantasy402"
 working_balance = 20000
 vault_id = "vault-out-SPEN-3"
-skins = [
+live_products = [
   { name = "ezlive", per_bet_max = 500, max_win = 2500, active = true },
 ]
 ```

@@ -182,9 +182,6 @@ export function bookOffersLiveProduct(bookId: BookId | string, product: string):
   return skinOffersLiveProduct(skinId, product);
 }
 
-/** @deprecated use bookOffersLiveProduct */
-export const bookOffersSkin = bookOffersLiveProduct;
-
 export type BookMatrixRow = {
   bookId: BookId;
   skinId: SkinId;

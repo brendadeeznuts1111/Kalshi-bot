@@ -49,17 +49,10 @@ export type OutMeta = {
   partnerCode?: string;
   /** Shared account balance across live products (out-level). */
   workingBalance?: number;
-  /** @deprecated use defaultLiveProduct */
-  defaultSkin?: CapacityWireName;
   /** Default live-product / Ultra wire for this out. */
   defaultLiveProduct?: CapacityWireName;
   /** Canonical capacity rows (live products). */
   liveProducts?: MetaCapacityRow[];
-  /**
-   * Legacy capacity rows (name = live product wire).
-   * Read-only dual path — writers stamp `liveProducts` only.
-   */
-  skins?: MetaCapacityRow[];
   /**
    * White-label SkinId (buckeye / ace / …) — host gateway identity.
    * Distinct from capacity live-product names.
@@ -168,8 +161,9 @@ export function parseOutMeta(metaJson: string | null | undefined): OutMeta {
 
 /**
  * Resolve active live-product capacity for an account.
- * Prefer meta.liveProducts[]; dual-read legacy meta.skins[]; else column fallback.
+ * Reads meta.liveProducts[] only; falls back to maxStake/maxWin + defaultLiveProduct (or "2").
  * (Kept here to avoid import cycle with out-identity — same rules as parseCapacityFromMeta.)
+ * `skin` column on betting_accounts is ignored (always null on write).
  */
 export function resolveOutCapacity(input: {
   id: string;
@@ -182,8 +176,7 @@ export function resolveOutCapacity(input: {
   if (input.status && input.status !== 'active') return [];
 
   const meta = parseOutMeta(input.metaJson);
-  const source =
-    meta.liveProducts && meta.liveProducts.length > 0 ? meta.liveProducts : (meta.skins ?? []);
+  const source = meta.liveProducts ?? [];
 
   const fromMeta = source
     .map((row): OutCapacityRow | null => {
@@ -201,10 +194,7 @@ export function resolveOutCapacity(input: {
     return fromMeta.filter(s => s.active);
   }
 
-  const defaultName =
-    meta.defaultLiveProduct?.trim() ||
-    meta.defaultSkin?.trim() ||
-    (input.skin != null && Number.isFinite(input.skin) ? String(input.skin) : '2');
+  const defaultName = meta.defaultLiveProduct?.trim() || '2';
   return [
     {
       name: defaultName,
@@ -325,7 +315,7 @@ export function concentrationByOut(
     .sort((a, b) => b.share - a.share || a.outId.localeCompare(b.outId));
 }
 
-/** Build meta_json capacity (writes liveProducts only; readers dual-read legacy skins). */
+/** Build meta_json capacity (writes liveProducts only; strips legacy skins keys). */
 export function buildOutCapacityMeta(input: {
   liveProducts: OutCapacityRow[];
   workingBalance?: number;
@@ -356,8 +346,8 @@ export function buildOutCapacityMeta(input: {
     liveProducts: rows,
   };
   // Never re-emit legacy capacity keys when building fresh meta
-  delete meta.skins;
-  delete meta.defaultSkin;
+  delete (meta as Record<string, unknown>).skins;
+  delete (meta as Record<string, unknown>).defaultSkin;
   if (input.workingBalance != null) meta.workingBalance = input.workingBalance;
   if (input.vaultId) meta.vaultId = input.vaultId;
   if (input.partnerCode) meta.partnerCode = input.partnerCode;
