@@ -26,7 +26,7 @@
 // @see https://bun.com/docs/runtime/toml
 import type { Database } from 'bun:sqlite';
 import { z } from 'zod';
-import { PARTNER_DOMAIN_ENV } from '../domain/index.ts';
+import { PARTNER_DOMAIN_ENV, requireDefaultUrlForUltraMapper } from '../domain/index.ts';
 import {
   ensurePartnerRegistrySchema,
   upsertBettingAccount,

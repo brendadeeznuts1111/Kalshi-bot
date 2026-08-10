@@ -46,8 +46,8 @@ export type SkinRecord = {
   aliases: readonly string[];
   /** Probe / adapter used to map offerings. */
   mapper: SkinMapper;
-  /** Optional host-discover fingerprint profile (weighted evidence model). */
-  fingerprints?: SkinFingerprints;
+  /** Host-discover fingerprint profile (weighted evidence model; may be empty). */
+  fingerprints: SkinFingerprints;
 };
 
 export const SKINS = [
@@ -152,6 +152,7 @@ export const SKINS = [
       kind: 'unmapped',
       note: 'Hosts declared; live-product coverage not proven yet',
     },
+    fingerprints: { endpoints: [] as const, assets: [] as const },
   },
   {
     id: '1bv',
@@ -165,6 +166,7 @@ export const SKINS = [
       kind: 'unmapped',
       note: 'Hosts declared; live-product coverage not proven yet',
     },
+    fingerprints: { endpoints: [] as const, assets: [] as const },
   },
   {
     id: 'lvaction',
@@ -178,6 +180,7 @@ export const SKINS = [
       kind: 'unmapped',
       note: 'Hosts declared; live-product coverage not proven yet',
     },
+    fingerprints: { endpoints: [] as const, assets: [] as const },
   },
   {
     id: 'magnum',
@@ -191,6 +194,7 @@ export const SKINS = [
       kind: 'unmapped',
       note: 'Hosts declared; live-product coverage not proven yet',
     },
+    fingerprints: { endpoints: [] as const, assets: [] as const },
   },
 ] as const satisfies readonly SkinRecord[];
 
@@ -204,7 +208,10 @@ export function listActiveSkins(): readonly (typeof SKINS)[number][] {
  * Throws with skin ids that violate — call from tests / doctor gates.
  */
 export function assertActiveSkinsHaveHosts(): void {
-  const bad = SKINS.filter(s => s.active && s.hosts.length === 0).map(s => s.id);
+  // Widen off the `as const` tuple so empty-hosts placeholders stay type-checkable.
+  const bad = (SKINS as readonly SkinRecord[])
+    .filter(s => s.active && s.hosts.length === 0)
+    .map(s => s.id);
   if (bad.length > 0) {
     throw new Error(
       `Active skins missing hosts[]: [${bad.join(', ')}] — populate hosts or set active:false`
@@ -215,7 +222,7 @@ export function assertActiveSkinsHaveHosts(): void {
 // Fail fast at module load so bad SKINS never ship silently.
 assertActiveSkinsHaveHosts();
 
-const byId = new Map<SkinId, (typeof SKINS)[number]>(SKINS.map(s => [s.id, s]));
+const byId = new Map<SkinId, SkinRecord>(SKINS.map(s => [s.id, s]));
 
 const aliasToSkin = new Map<string, SkinId>();
 for (const s of SKINS) {
@@ -240,7 +247,7 @@ export function isSkinId(value: string): value is SkinId {
   return byId.has(value.trim().toLowerCase() as SkinId);
 }
 
-export function getSkin(id: string): (typeof SKINS)[number] | undefined {
+export function getSkin(id: string): SkinRecord | undefined {
   const resolved = resolveSkinId(id);
   return resolved ? byId.get(resolved) : undefined;
 }

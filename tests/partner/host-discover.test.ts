@@ -27,7 +27,6 @@ describe('host-discover', () => {
   test('brand rules are derived from SKINS aliases/hosts', () => {
     const rules = listSkinBrandFingerprintRules();
     for (const skin of SKINS) {
-      if (skin.hosts.length === 0 && skin.aliases.length === 0) continue;
       expect(rules.some(r => r.suggestSkin === skin.id)).toBe(true);
     }
   });

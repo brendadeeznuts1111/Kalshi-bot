@@ -81,7 +81,9 @@ describe('domain sports / skins / live products', () => {
   test('requireDefaultUrlForUltraMapper equals defaultUrlForSkin of Ultra-mapped skin', () => {
     const ultra = SKINS.find(s => s.mapper.kind === 'fantasy402' && s.hosts.length > 0);
     expect(ultra).toBeDefined();
-    expect(requireDefaultUrlForUltraMapper()).toBe(defaultUrlForSkin(ultra!.id));
+    const expected = defaultUrlForSkin(ultra!.id);
+    if (!expected) throw new Error('expected Ultra-mapped skin URL');
+    expect(requireDefaultUrlForUltraMapper()).toBe(expected);
   });
 
   test('resolveDeskDomainFromEnv uses PARTNER_DOMAIN then SKINS default', () => {
