@@ -7,18 +7,40 @@ import {
   filterAndSortEvents,
   formatEventsCsv,
   formatEventsTable,
-  formatSummaryLine,
-  offerTransitionToEvent,
+  loadTrackerEventsFromPaths,
   parseEventType,
-  parseSortBy,
-  parseTrackerJsonl,
-  summarizeEventTypes,
+  type LiveTrackerEvent,
 } from '../../src/inventory/live-tracker.ts';
 import type { OddsWatchUpdate } from '../../src/inventory/pandora-listen.ts';
+import type { OfferTransition } from '../../src/partner/fantasy-ultra/coefficients.ts';
+
+function mkEvents(
+  transitions: OfferTransition[],
+  ctx: { at: string; eventId: number; file?: string }
+): LiveTrackerEvent[] {
+  const u: OddsWatchUpdate = {
+    at: ctx.at,
+    eventId: ctx.eventId,
+    lineCount: 0,
+    offeredMarketCount: 0,
+    transitions,
+    book: null,
+    eventState: null,
+    eventTransitions: [],
+  };
+  return eventsFromWatchUpdate(u, { file: ctx.file });
+}
+
+function mkEvent(
+  t: OfferTransition,
+  ctx: { at: string; eventId: number; file?: string }
+): LiveTrackerEvent {
+  return mkEvents([t], ctx)[0]!;
+}
 
 describe('live-tracker', () => {
   test('maps offer transitions to public event types', () => {
-    const e = offerTransitionToEvent(
+    const e = mkEvent(
       { kind: 'market_on', period: 'm', marketType: '3' },
       { at: '2026-08-10T00:00:00.000Z', eventId: 197510101 }
     );
@@ -30,15 +52,22 @@ describe('live-tracker', () => {
 
   test('filter sort limit columns', () => {
     const events = [
-      offerTransitionToEvent(
+      mkEvent(
         { kind: 'market_on', period: 'm', marketType: '3' },
         { at: '2026-08-10T00:00:02.000Z', eventId: 1, file: 'b.jsonl' }
       ),
-      offerTransitionToEvent(
-        { kind: 'price_change', period: 'm', marketType: '5', selection: '2.5', from: 1.9, to: 1.95 },
+      mkEvent(
+        {
+          kind: 'price_change',
+          period: 'm',
+          marketType: '5',
+          selection: '2.5',
+          from: 1.9,
+          to: 1.95,
+        },
         { at: '2026-08-10T00:00:01.000Z', eventId: 1, file: 'a.jsonl' }
       ),
-      offerTransitionToEvent(
+      mkEvent(
         { kind: 'market_on', period: 's1', marketType: '3' },
         { at: '2026-08-10T00:00:03.000Z', eventId: 1, file: 'a.jsonl' }
       ),
@@ -75,7 +104,7 @@ describe('live-tracker', () => {
     expect(multi.length).toBeLessThanOrEqual(2);
   });
 
-  test('eventsFromWatchUpdate + summarize', () => {
+  test('eventsFromWatchUpdate + summarize via stats', () => {
     const u: OddsWatchUpdate = {
       at: '2026-08-10T12:00:00.000Z',
       eventId: 99,
@@ -83,7 +112,14 @@ describe('live-tracker', () => {
       offeredMarketCount: 2,
       transitions: [
         { kind: 'market_off', period: 'm', marketType: '6' },
-        { kind: 'price_change', period: 'm', marketType: '3', selection: '1', from: 2, to: 2.1 },
+        {
+          kind: 'price_change',
+          period: 'm',
+          marketType: '3',
+          selection: '1',
+          from: 2,
+          to: 2.1,
+        },
       ],
       book: null,
       eventState: null,
@@ -94,11 +130,12 @@ describe('live-tracker', () => {
       'MARKET_REMOVED',
       'PRICE_CHANGE',
     ]);
-    const sum = summarizeEventTypes(ev);
+    const sum = computeEventStats(ev).byType;
     expect(sum.find(s => s.eventType === 'PRICE_CHANGE')?.count).toBe(1);
   });
 
-  test('parseTrackerJsonl accepts log records', () => {
+  test('loadTrackerEventsFromPaths accepts log records', async () => {
+    const path = `/tmp/live-tracker-test-${Date.now()}.jsonl`;
     const text = [
       JSON.stringify({
         at: 't1',
@@ -121,34 +158,37 @@ describe('live-tracker', () => {
         detail: 'y',
       }),
     ].join('\n');
-    const ev = parseTrackerJsonl(text, 'log.jsonl');
+    await Bun.write(path, text);
+    const ev = await loadTrackerEventsFromPaths([path]);
     expect(ev).toHaveLength(2);
-    expect(ev[0]!.file).toBe('log.jsonl');
+    expect(ev[0]!.file).toBe(path);
+    await Bun.$`rm -f ${path}`.quiet();
   });
 
   test('diffEventLists / stats / csv / multi sort keys', () => {
     const a = [
-      offerTransitionToEvent(
+      mkEvent(
         { kind: 'market_on', period: 'm', marketType: '3' },
         { at: '2026-08-10T00:00:01.000Z', eventId: 1 }
       ),
     ];
     const b = [
       ...a,
-      offerTransitionToEvent(
+      mkEvent(
         { kind: 'market_on', period: 's1', marketType: '3' },
         { at: '2026-08-10T00:00:02.000Z', eventId: 1 }
       ),
     ];
     const d = diffEventLists(a, b, { oldFile: 'old.json', newFile: 'new.json' });
-    expect(d.some(e => e.eventType === 'MARKET_ADDED' && e.detail.includes('s1'))).toBe(
-      true
-    );
-    expect(parseSortBy('time,event')).toEqual(['time', 'event']);
+    expect(
+      d.some(e => e.eventType === 'MARKET_ADDED' && e.detail.includes('s1'))
+    ).toBe(true);
+    const multiSort = filterAndSortEvents(b, { sortBy: ['time', 'event'] });
+    expect(multiSort).toHaveLength(2);
     const stats = computeEventStats(b);
     expect(stats.total).toBe(2);
     expect(stats.spanMs).toBe(1000);
-    expect(formatSummaryLine(summarizeEventTypes(b))).toContain('MARKET_ADDED');
+    expect(stats.byType.some(s => s.eventType === 'MARKET_ADDED')).toBe(true);
     const csv = formatEventsCsv(b, ['Event', 'Detail']);
     expect(csv.split('\n')[0]).toBe('Event,Detail');
     expect(csv).toContain('MARKET_ADDED');

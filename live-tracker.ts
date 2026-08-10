@@ -23,18 +23,59 @@ import {
   filterAndSortEvents,
   formatEventsCsv,
   formatEventsTable,
-  formatSummaryLine,
   loadTrackerEventsFromPaths,
   normalizeWireId,
   parseEventType,
-  parseSortBy,
-  summarizeEventTypes,
-  type DiffQuery,
   type LiveTrackerEvent,
-  type LiveTrackerEventType,
 } from './src/inventory/live-tracker.ts';
 import { watchEventOdds } from './src/inventory/pandora-listen.ts';
 import { CACHE_DIR, joinPath } from './src/research/paths.ts';
+
+type LiveTrackerEventType = (typeof LIVE_TRACKER_EVENT_TYPES)[number];
+type SortKey = 'time' | 'event' | 'type' | 'detail' | 'file' | 'eventid';
+
+type DiffQuery = {
+  eventTypes?: LiveTrackerEventType[];
+  eventType?: LiveTrackerEventType | null;
+  eventId?: string | number | null;
+  marketType?: string | null;
+  period?: string | null;
+  sortBy?: SortKey | SortKey[];
+  desc?: boolean;
+  limit?: number;
+  offset?: number;
+  tail?: number;
+  columns?: string[];
+};
+
+function formatSummaryLine(
+  summary: Array<{ eventType: string; count: number }>
+): string {
+  if (!summary.length) return '(no events)';
+  return summary.map(s => `${s.eventType}: ${s.count}`).join(', ');
+}
+
+function byTypeSummary(events: LiveTrackerEvent[]) {
+  return computeEventStats(events).byType;
+}
+
+function parseSortBy(raw: string | undefined | null): SortKey[] {
+  if (!raw?.trim()) return ['time'];
+  const keys = raw
+    .split(',')
+    .map(s => s.trim().toLowerCase().replace(/[^a-z]/g, '') as SortKey)
+    .filter(Boolean);
+  const allowed = new Set<SortKey>([
+    'time',
+    'event',
+    'type',
+    'detail',
+    'file',
+    'eventid',
+  ]);
+  const out = keys.filter(k => allowed.has(k));
+  return out.length ? out : ['time'];
+}
 
 function hasFlag(name: string): boolean {
   return process.argv.includes(`--${name}`);
@@ -200,8 +241,8 @@ function renderOutput(
   q: DiffQuery
 ): string {
   const rows = filterAndSortEvents(events, q);
-  const summary = summarizeEventTypes(all);
-  const filteredSummary = summarizeEventTypes(rows);
+  const summary = byTypeSummary(all);
+  const filteredSummary = byTypeSummary(rows);
 
   if (hasFlag('summary') && !hasFlag('stats')) {
     if (json || format === 'json') {
@@ -390,7 +431,7 @@ if (cmd === 'watch') {
           updates: history.length,
           eventCount: all.length,
           log: logPath,
-          summary: summarizeEventTypes(all),
+          summary: byTypeSummary(all),
         },
         null,
         2
