@@ -261,7 +261,7 @@ export function upsertSkinLiveEvents(
       });
     }
     if (isNew) {
-      if (!dryRun) set.add(inventoryId);
+      set.add(inventoryId);
       inserted.push(row);
     } else {
       updated.push(row);

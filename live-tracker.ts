@@ -78,8 +78,16 @@ function parseSortBy(raw: string | undefined | null): SortKey[] {
   return out.length ? out : ['time'];
 }
 
-
-
+const BOOLEAN_FLAGS = new Set([
+  'desc',
+  'detail',
+  'json',
+  'spandora',
+  'stats',
+  'summary',
+  'ticks',
+  'watch',
+]);
 
 function positionalAfterCmd(cmd: string): string[] {
   const idx = process.argv.indexOf(cmd);
@@ -88,9 +96,9 @@ function positionalAfterCmd(cmd: string): string[] {
   for (let i = idx + 1; i < process.argv.length; i++) {
     const a = process.argv[i]!;
     if (a.startsWith('--')) {
-      // skip flag values
       const eq = a.includes('=');
-      if (!eq) {
+      const name = a.slice(2);
+      if (!eq && !BOOLEAN_FLAGS.has(name)) {
         const next = process.argv[i + 1];
         if (next && !next.startsWith('--')) i++;
       }
