@@ -2,8 +2,18 @@
 
 Kalshi-bot partner surface for a **PPH / Fantasy402** dummy desk.
 
+> **Domain ownership (Phase 1):** Sports / live products / skins live in
+> [`src/domain/`](../src/domain/README.md) — **not** under this adapter.
+> **Skins** (white-labels): `buckeye`, `ace`, `metallic`, `sts`, `1bv`, `lvaction`, `magnum`.
+> **Fantasy402 is a legacy alias for skin `buckeye`** (`resolveSkinId("fantasy402")`).
+> Buckeye offers live products `{ plive, ezlive }`; ACE offers
+> `{ ultralive, ezlive, maglive }`. Sport coverage bindings attach to **live
+> products**; `widget-config.ts` shims `listLiveProductSportBindings("plive")`.
+> Visual map: [`docs/artifacts/plive-event-meta.html`](artifacts/plive-event-meta.html).
+
 | Concern | Location |
 |---------|----------|
+| Domain matrix (sports / skins / books) | `src/domain/` |
 | Adapter | `src/partner/fantasy-ultra/adapter.ts` |
 | Cookie jar | `src/partner/fantasy-ultra/cookie-jar.ts` |
 | Parse (boundary) | `src/partner/fantasy-ultra/parse.ts` |
@@ -206,8 +216,9 @@ export FANTASY402_BEARER_TOKEN='…'
 export FANTASY402_CUSTOMER_ID='…'
 export FANTASY402_AGENT_ID='…'
 export FANTASY402_PASSWORD='…'
-# optional
-export FANTASY402_DOMAIN='https://fantasy402.com'
+# optional — example host; omit to use SKINS-derived Ultra-mapper default
+# (requireDefaultUrlForUltraMapper / defaultUrlForSkin)
+export PARTNER_DOMAIN='https://BOOK.example'   # must be a SKINS[].hosts URL → SkinId
 export FANTASY402_SKIN=2
 export FANTASY402_CURRENCY=USD
 ```
@@ -346,11 +357,53 @@ Partner → Communication → Accounts/Outs → Assets → Finance.
 |--------|--------------|------|
 | **Partner** | `partners` | Financial owner (profit split, commission) |
 | **Account (out)** | `betting_accounts` | Place to bet: provider + limits + `env_prefix` for secrets |
-| **Skin** | `meta_json.skins[]` | Live interface (`ezlive` / `dark` / `2`) with own perBetMax |
-| **Provider** | adapter id (`fantasy402`, `kalshi`) | Book / feed implementation |
-| **Sports map** | `provider_sport_mappings` + `FANTASY_SPORT_MAPPINGS` | ~30 stream buckets; **4 primary** with API/widget ids |
+| **Skin** (white-label) | `src/domain/skins.ts` | `buckeye`, `ace`, `metallic`, `sts`, `1bv`, `lvaction`, `magnum` |
+| **Live product** | `src/domain/live-products.ts` + capacity `meta.skins[]` | `plive` / `ezlive` / `ultralive` / `maglive` (`dark` capacity-only) |
+| **Provider** (legacy env) | adapter id (`fantasy402`, `kalshi`) | Still used on outs / env; fantasy402 → skin buckeye |
+| **Sports map** | `src/domain/` + `provider_sport_mappings` seed | Live-product keys primary; optional legacy `fantasy402` dual-write |
 | **Stream inventory** | `partner_events` | Detected events (not priced book) |
 | **Desk liquidity** | `match_liquidity` | Kalshi-priced gates (`tradable` / `liq_ok`) |
+
+### Unknown host discovery
+
+Works for **any** host. Mapped desks come from `SKINS[].hosts` (not a hard-coded book list).
+
+```bash
+bun run partner:host-discover -- --url=https://BOOK.example
+# → skin unknown|suggested, stores public HTML/asset URLs under docs/artifacts/host-discover/<host>-urls.json
+
+bun run partner:host-discover -- --url=https://BOOK.example --har=./session.har
+# → merges session URLs into inventory only (no Ultra→skin scoring)
+
+bun run partner:host-discover -- --all
+# → every apex host in SKINS[].hosts
+
+bun run partner:host-discover -- --url=https://BOOK.example --compare --json
+# → optional target + all mapped apex hosts
+```
+
+- Suggests `SkinId` (+ `adapterId` from that skin’s mapper) — **does not** edit `SKINS[].hosts`
+- **Weighted evidence** (`capped-category-v1`): definitive · endpoint · asset · infrastructure · meta  
+  — profiles live on `SKINS[].fingerprints` (buckeye / metallic first). Use `--weigh` for category breakdown.
+- Decision thresholds: ≥0.90 map (after confirm) · 0.70–0.89 HAR/review · 0.40–0.69 gather more · &lt;0.40 weak
+- Not Ultra stack markers (`getUltraLiveURL`, player-us) — those stay on the fantasy-ultra adapter path
+- Session HAR: URL inventory only (feeds path/asset extraction, not Ultra→skin scoring)
+- Mapped host → definitive score 1.0 (`already_mapped`)
+- URL inventory: `docs/artifacts/host-discover/<host>-urls.json`
+- Code: `src/partner/host-discover.ts` · `src/partner/host-weighted-score.ts` · `tools/partner-host-discover.ts`
+
+### Out identity boundary (host → skin → live products → adapter)
+
+On `seedFantasy402FromEnv` / `upsertBettingAccount` (`partner/out-identity.ts`):
+
+1. Resolve host via `getSkinByHost(url)` → white-label `skinId` (unknown host → reject; add to `SKINS[].hosts`)
+2. Parse capacity from `meta.liveProducts` (dual-read legacy `meta.skins`)
+3. Assert capacity ⊆ skin `offeredLiveProducts` (plus legacy `dark` / numeric Ultra wire)
+4. Derive `AdapterBinding`: `adapterId` (`fantasy-ultra` | `kalshi` | `unmapped`) + `mapperKind` + `bookEnvToken`
+5. Stamp `skinId`, `mapper`, `liveProducts` + legacy `skins` mirror, `defaultLiveProduct`
+6. `getPartnerAdapter` selects Fantasy Ultra when `adapterId === "fantasy-ultra"`
+
+Env alias: `FANTASY402_LIVE_PRODUCTS_JSON` (same shape as `FANTASY402_SKINS_JSON`).
 
 ### Sports + leagues inventory
 
@@ -376,9 +429,9 @@ Skin = live provider surface — same credentials, different limits / often diff
 | Layer | Naming | Example |
 |-------|--------|---------|
 | Out | `out-{PARTNER}-{n}` | `out-SPEN-1` |
-| Book / vertical | `{bookId}` | `fantasy402` |
-| Skin | provider name | `ezlive`, `dark` |
-| Liquidity key | `{outId}@{skin}` | `out-SPEN-1@ezlive` |
+| Skin (white-label) | `buckeye` / `ace` / … (env may say `fantasy402`) | `buckeye` |
+| Live product | coverage + login wire | `plive`, `ezlive`, `ultralive`, `maglive` |
+| Liquidity key | `{outId}@{liveProduct}` | `out-SPEN-1@ezlive` |
 | Vault | credentials **per out** | `vault-out-SPEN-1` |
 
 ```json

@@ -136,7 +136,7 @@ username/password/url — no `--field`. Multi-field desk secrets use
 | `agentID` | Text | `FANTASY402_AGENT_ID` |
 | `password` | Hidden | `FANTASY402_PASSWORD` |
 | `bearerToken` | Hidden | `FANTASY402_BEARER_TOKEN` (browser JWT; short-lived) |
-| `domain` | Text | `FANTASY402_DOMAIN` (optional; default `https://fantasy402.com`) |
+| `domain` | Text | `PARTNER_DOMAIN` (optional; default from `SKINS[].hosts` via `resolveDeskDomainFromEnv` → SkinId) |
 | `skin` | Text | `FANTASY402_SKIN` (optional; default `2`) |
 | `currency` | Text | `FANTASY402_CURRENCY` (optional; default `USD`) |
 
