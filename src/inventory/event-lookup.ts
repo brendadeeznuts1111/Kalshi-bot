@@ -535,7 +535,6 @@ async function probePandoraEvent(
   markets: PartnerMarket[];
   eventDataKeys: string[];
   book: CoefficientBookState | null;
-  lastPayload: unknown | null;
   eventState: EventOfferability | null;
   eventDataBoard: EventDataBoardSummary | null;
   sportsNames: Map<string, string>;
@@ -673,7 +672,6 @@ async function probePandoraEvent(
     markets: store.toPartnerMarkets().filter(m => m.oddsEventId === String(eventId)),
     eventDataKeys,
     book,
-    lastPayload,
     eventState,
     eventDataBoard,
     sportsNames,
