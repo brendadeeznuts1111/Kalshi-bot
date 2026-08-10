@@ -9,8 +9,10 @@
  *   bun run domain:event -- --sample-sports
  *   bun run domain:event -- --id=197548901 --json
  *
- * Odds off: market_off / selection_off in --watch; empty `o` in book analysis.
- * cls = limit class (not suspend). Event state: 0 bettable, 1 blocked, 2 notBettable, 3 finished.
+ * Odds off:
+ *   market — empty `o` / selection_off / market_off (--watch)
+ *   event  — eventData board s=0..3 + l(hasLines); OTB = finished|notBettable|blocked|!hasOdds
+ * cls = limit class (not suspend).
  */
 import {
   formatEventLookup,
@@ -85,7 +87,7 @@ const noPandora = hasFlag('no-pandora');
 
 if (watch) {
   console.error(
-    `watching event=${eventId} for ${seconds}s (transitions: market_off|selection_off|price_change|…)`
+    `watching event=${eventId} for ${seconds}s (coeff + eventData state/hasLines)`
   );
   const history = await watchEventOdds(Number(eventId), {
     seconds,
@@ -101,10 +103,25 @@ if (watch) {
         t => t.kind === 'market_on' || t.kind === 'selection_on'
       );
       const ch = u.transitions.filter(t => t.kind === 'price_change');
+      const es = u.eventState;
+      const esPart = es
+        ? ` s=${es.state}(${es.stateLabel}) l=${es.hasLines} OTB=${es.offTheBoard}`
+        : '';
       console.log(
         `${u.at} lines=${u.lineCount} offeredMkts=${u.offeredMarketCount} ` +
-          `off=${off.length} on=${on.length} chg=${ch.length}`
+          `off=${off.length} on=${on.length} chg=${ch.length} evt=${u.eventTransitions.length}${esPart}`
       );
+      for (const t of u.eventTransitions.slice(0, 12)) {
+        if (t.kind === 'lines_flag') {
+          console.log(`  event hasLines=${t.hasLines}`);
+        } else if (t.kind === 'event_removed') {
+          console.log(`  event removed from board`);
+        } else {
+          console.log(
+            `  event ${t.field}: ${t.from ?? '—'}→${JSON.stringify(t.to)}`
+          );
+        }
+      }
       for (const t of u.transitions.slice(0, 20)) {
         if (t.kind === 'price_change') {
           console.log(
@@ -124,7 +141,7 @@ if (watch) {
     console.log(JSON.stringify({ watch: true, eventId, updates: history.length }, null, 2));
   } else {
     console.log(
-      `watch done updates=${history.length} (empty o / market_off / selection_off = odds taken off)`
+      `watch done updates=${history.length} (market_off / hasLines=false / s=2|3 = odds taken off)`
     );
   }
   process.exit(0);

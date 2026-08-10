@@ -4,13 +4,19 @@ import { CoefficientStore } from '../../src/partner/fantasy-ultra/coefficient-st
 import {
   analyzeCoefficientBook,
   applyCoefficientDiff,
+  decodeEventOfferability,
   decodePandoraAttachment,
   describePandoraEventState,
+  diffEventDataOfferability,
   diffOfferFingerprints,
   eventIdFromCoefficientRoom,
   extractCoefficientLines,
+  findEventInEventDataBoard,
+  isEventDataBoardPayload,
   isEventOffTheBoard,
   parseBinaryEventHeader,
+  parseEventDataDiffPath,
+  summarizeEventDataBoard,
   PANDORA_EVENT_STATES,
 } from '../../src/partner/fantasy-ultra/coefficients.ts';
 
@@ -110,6 +116,143 @@ describe('pandora coefficient decode', () => {
     expect(isEventOffTheBoard({ state: 2, oddsCount: 4 })).toBe(true);
     expect(isEventOffTheBoard({ state: 0, oddsCount: 0 })).toBe(true);
     expect(isEventOffTheBoard({ state: 3, oddsCount: 2 })).toBe(true);
+    // board hasLines proxy when oddsCount absent
+    expect(isEventOffTheBoard({ state: 0, hasLines: true })).toBe(false);
+    expect(isEventOffTheBoard({ state: 0, hasLines: false })).toBe(true);
+  });
+
+  test('eventData board find + decode offerability (mainapp s-tree)', () => {
+    const board = {
+      db: { '101': 197488581 },
+      kb: { '9': 197488581 },
+      x: [false, false],
+      s: {
+        '8': {
+          '341': {
+            '30868': {
+              '197488581': [
+                ['Lewis Mary', '', '', 1, '', '', ''],
+                ['Mia Wainwright', '', '', 2, '', '', ''],
+                1786354200,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                { ip: true, l: true, n: 3, s: 0 },
+              ],
+              '197502861': [
+                ['A', '', '', 1],
+                ['B', '', '', 2],
+                1786352760,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                { ip: true, l: false, n: 1, s: 0 },
+              ],
+            },
+          },
+        },
+        '2': {
+          '4': {
+            '30651': {
+              '197548901': [
+                ['Shooters'],
+                ['Vikings Club'],
+                1786354501,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                { l: false, n: 5, s: 3 },
+              ],
+            },
+          },
+        },
+      },
+    };
+
+    expect(isEventDataBoardPayload(board)).toBe(true);
+    const summary = summarizeEventDataBoard(board)!;
+    expect(summary.sportCount).toBe(2);
+    expect(summary.eventCount).toBe(3);
+    expect(summary.dbCount).toBe(1);
+
+    const live = findEventInEventDataBoard(board, 197488581)!;
+    expect(live.home).toBe('Lewis Mary');
+    expect(live.away).toBe('Mia Wainwright');
+    expect(live.sportId).toBe('8');
+    expect(live.dynamic?.s).toBe(0);
+    expect(live.dynamic?.l).toBe(true);
+    const liveOff = decodeEventOfferability(live);
+    expect(liveOff.offTheBoard).toBe(false);
+    expect(liveOff.stateLabel).toBe('bettable');
+
+    const finished = decodeEventOfferability(
+      findEventInEventDataBoard(board, 197548901)!
+    );
+    expect(finished.state).toBe(3);
+    expect(finished.offTheBoard).toBe(true);
+    expect(finished.hasLines).toBe(false);
+
+    const noLines = decodeEventOfferability(
+      findEventInEventDataBoard(board, 197502861)!
+    );
+    expect(noLines.state).toBe(0);
+    expect(noLines.hasLines).toBe(false);
+    expect(noLines.offTheBoard).toBe(true);
+
+    expect(findEventInEventDataBoard(board, 999)).toBeNull();
+  });
+
+  test('parseEventDataDiffPath + offerability transitions', () => {
+    const p = parseEventDataDiffPath('/s/8/340/14358/197502861/12/l');
+    expect(p.eventId).toBe(197502861);
+    expect(p.field).toBe('l');
+
+    const p2 = parseEventDataDiffPath('/s/2/4/30651/197548901/12/s');
+    expect(p2.eventId).toBe(197548901);
+    expect(p2.field).toBe('s');
+
+    const a = {
+      eventId: 1,
+      state: 0,
+      stateLabel: 'bettable',
+      isStarted: true,
+      isLive: null,
+      isHalftime: null,
+      hasLines: true,
+      shard: 1,
+      oddsCount: null,
+      offTheBoard: false,
+      sportId: '8',
+      countryId: '1',
+      leagueId: '1',
+      home: 'A',
+      away: 'B',
+      startTimeSec: null,
+      path: ['8', '1', '1', '1'],
+    };
+    const b = { ...a, hasLines: false, offTheBoard: true };
+    const t = diffEventDataOfferability(a, b);
+    expect(t.some(x => x.kind === 'lines_flag' && x.hasLines === false)).toBe(
+      true
+    );
   });
 
   test('applyCoefficientDiff replace paths', () => {

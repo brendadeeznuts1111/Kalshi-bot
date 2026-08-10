@@ -472,6 +472,50 @@ body).
 Decode: `decodePandoraAttachment` → `extractCoefficientLines` (decimal +
 American via `normalizeOdds`). Diffs use JSON-patch ops (`isDiff: true`).
 
+### eventData board (event-level state)
+
+Room `live.main.{token}.eventData` is the live **board index** (mainapp
+`receiveEvents`), not a single-event DTO. Snapshot keys:
+
+| Key | Meaning |
+| --- | --- |
+| `s` | Tree `s[sportId][countryId][leagueId][eventId]` |
+| `db` | DonBest rotation id → eventId |
+| `kb` | Opaque reverse index (large; not used by mainapp offer gates) |
+| `x` | Per-shard betOffline flags (`handleBetOfflineUpdate`) |
+| `c` / `m` / `f` / `ec` | Optional coeffs / misc / flush / updateState ids |
+
+Each event node is a 13-slot array. Last element (index 12; mainapp `p.pop()`)
+is the **dynamic** object:
+
+| Wire | Maps to |
+| ---- | ------- |
+| `s` | `EVENT_STATES`: 0 bettable · 1 blocked · 2 notBettable · 3 finished |
+| `ip` | isStarted |
+| `il` | isLive |
+| `l` | hasLines (board hasOdds proxy) |
+| `n` | shard |
+| `oc` | oddsCount (when present) |
+| `ht` | isHalftime |
+
+UI **off the board** (`isOTB`): finished ‖ notBettable ‖ blocked ‖ !hasOdds.  
+Diff path example: `/s/8/340/14358/197502861/12/l` → `hasLines` flip.
+
+**Odds taken off (two planes):**
+
+1. **Market** — `eventCoefficients`: empty `o` / `selection_off` / `market_off`
+2. **Event** — `eventData`: `s`→2|3 or `l`→false
+
+`cls` on coefficient markets is **limit/price-class**, not suspend.
+
+```bash
+bun run domain:event -- --id=197488581          # eventState + book
+bun run domain:event -- --id=197548901 --watch  # state + coeff transitions
+```
+
+Decode: `findEventInEventDataBoard` · `decodeEventOfferability` ·
+`isEventOffTheBoard` in `coefficients.ts`.
+
 **Book path (wired):** `onCoefficients` → `CoefficientStore` → `fetchMarkets()`
 / `fetchOdds(oddsEventId)` (match ML `marketType=3`).  
 Inventory sync sets `pricedOdds: true` when the store has lines. Still **no**
@@ -482,7 +526,8 @@ bun run partner:pandora-probe -- --plive --event-ids=174125551 --seconds=20
 ```
 
 Code: `PandoraSocket` · `coefficients.ts` · `coefficient-store.ts` ·
-`buildPliveSubscribeSequence` · `bun run partner:webview-ws-capture`.
+`event-lookup.ts` · `buildPliveSubscribeSequence` ·
+`bun run partner:webview-ws-capture`.
 
 ## Domain architecture (five layers)
 

@@ -16,6 +16,14 @@
  *   bettable=0, blocked=1, notBettable=2, finished=3
  *   hasOdds ⇔ oddsCount > 0; OTB ≈ finished | notBettable | blocked | !hasOdds
  *
+ * Board room `live.main.{token}.eventData` (mainapp `receiveEvents`):
+ *   { s, db, kb, x, c?, m?, f?, ec? }
+ *   s[sportId][countryId][leagueId][eventId] = [team1, team2, start, …, dynamic]
+ *   dynamic (last element, mainapp `p.pop()`):
+ *     s=EVENT_STATES, ip=isStarted, il=isLive, l=hasLines, n=shard, oc=oddsCount, ht, c
+ *   db: donbestRotation → eventId; kb: opaque reverse index; x: per-shard betOffline flags
+ * Diff path example: `/s/8/340/14358/197502861/12/l` (index 12 = dynamic object)
+ *
  * @see https://bun.com/docs/runtime/utils#bun-gunzipsync
  */
 import { gunzipSync } from 'bun';
@@ -50,13 +58,25 @@ export function describePandoraEventState(state: number): string {
 /**
  * UI “off the board” heuristic from mainapp isOTB / showPeriods gates:
  * finished || notBettable || blocked || !hasOdds.
+ *
+ * When `hasLines` is provided (eventData dynamic `l`), treat it as the
+ * board-level hasOdds proxy if oddsCount is absent.
  */
 export function isEventOffTheBoard(input: {
   state?: number | null;
   oddsCount?: number | null;
+  /** eventData dynamic `l` — board says lines present. */
+  hasLines?: boolean | null;
 }): boolean {
   const state = input.state;
-  const odds = input.oddsCount ?? 0;
+  const odds =
+    input.oddsCount != null
+      ? input.oddsCount
+      : input.hasLines === true
+        ? 1
+        : input.hasLines === false
+          ? 0
+          : 0;
   if (odds <= 0) return true;
   if (state == null) return odds <= 0;
   return (
@@ -64,6 +84,366 @@ export function isEventOffTheBoard(input: {
     state === PANDORA_EVENT_STATES.notBettable ||
     state === PANDORA_EVENT_STATES.blocked
   );
+}
+
+// ── eventData board (live.main.*.eventData) ──────────────────────────────
+
+/** Wire dynamic object at end of event array (mainapp pops this). */
+export type EventDataWireDynamic = {
+  /** EVENT_STATES 0–3 */
+  s?: number;
+  /** isStarted */
+  ip?: boolean;
+  /** isLive */
+  il?: boolean;
+  /** has lines on board */
+  l?: boolean;
+  /** shard / namespace id */
+  n?: number;
+  /** oddsCount when present */
+  oc?: number;
+  /** isHalftime */
+  ht?: boolean;
+  /** embedded coefficients (rare on board; usually separate room) */
+  c?: unknown;
+  /** live hazard / velocity (mainapp lht gate) */
+  v?: { value?: number } | unknown;
+};
+
+export type EventDataBoardHit = {
+  eventId: number;
+  /** Path under s: [sportId, countryId, leagueId, eventId] */
+  path: string[];
+  sportId: string | null;
+  countryId: string | null;
+  leagueId: string | null;
+  home: string | null;
+  away: string | null;
+  startTimeSec: number | null;
+  /** Raw dynamic wire object (index 12 / popped last element). */
+  dynamic: EventDataWireDynamic | null;
+  /** Full 13-slot array when present. */
+  raw: unknown[] | null;
+};
+
+/** Decoded event offerability from board dynamic + optional coeff lineCount. */
+export type EventOfferability = {
+  eventId: number;
+  state: number | null;
+  stateLabel: string;
+  isStarted: boolean | null;
+  isLive: boolean | null;
+  isHalftime: boolean | null;
+  hasLines: boolean | null;
+  shard: number | null;
+  /** From wire `oc`, else null (use coeff book lineCount as fallback). */
+  oddsCount: number | null;
+  offTheBoard: boolean;
+  sportId: string | null;
+  countryId: string | null;
+  leagueId: string | null;
+  home: string | null;
+  away: string | null;
+  startTimeSec: number | null;
+  path: string[];
+};
+
+export type EventDataBoardSummary = {
+  sportCount: number;
+  eventCount: number;
+  dbCount: number;
+  kbCount: number;
+  /** betOffline flags length (mainapp handleBetOfflineUpdate). */
+  offlineFlags: boolean[] | null;
+  sports: string[];
+};
+
+/** True when payload looks like the bulk eventData board (`s` + `db`/`kb`/`x`). */
+export function isEventDataBoardPayload(payload: unknown): boolean {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    return false;
+  }
+  const o = payload as Record<string, unknown>;
+  return o.s != null && typeof o.s === 'object' && !Array.isArray(o.s);
+}
+
+export function summarizeEventDataBoard(
+  payload: unknown
+): EventDataBoardSummary | null {
+  if (!isEventDataBoardPayload(payload)) return null;
+  const o = payload as Record<string, unknown>;
+  const s = o.s as Record<string, unknown>;
+  const sports = Object.keys(s);
+  let eventCount = 0;
+  for (const sport of Object.values(s)) {
+    if (!sport || typeof sport !== 'object') continue;
+    for (const country of Object.values(sport as object)) {
+      if (!country || typeof country !== 'object') continue;
+      for (const league of Object.values(country as object)) {
+        if (!league || typeof league !== 'object') continue;
+        eventCount += Object.keys(league as object).length;
+      }
+    }
+  }
+  const offlineFlags = Array.isArray(o.x)
+    ? (o.x as unknown[]).map(v => Boolean(v))
+    : null;
+  return {
+    sportCount: sports.length,
+    eventCount,
+    dbCount:
+      o.db && typeof o.db === 'object' ? Object.keys(o.db as object).length : 0,
+    kbCount:
+      o.kb && typeof o.kb === 'object' ? Object.keys(o.kb as object).length : 0,
+    offlineFlags,
+    sports: sports.sort((a, b) => Number(a) - Number(b)),
+  };
+}
+
+function teamNameFromSlot(slot: unknown): string | null {
+  if (typeof slot === 'string' && slot.trim()) return slot.trim();
+  if (Array.isArray(slot) && slot[0] != null && String(slot[0]).trim()) {
+    return String(slot[0]).trim();
+  }
+  return null;
+}
+
+function asWireDynamic(raw: unknown): EventDataWireDynamic | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  return raw as EventDataWireDynamic;
+}
+
+/**
+ * Locate an event under board `s[sport][country][league][eventId]`.
+ * Returns teams + dynamic state when found.
+ */
+export function findEventInEventDataBoard(
+  payload: unknown,
+  eventId: number | string
+): EventDataBoardHit | null {
+  if (!isEventDataBoardPayload(payload)) return null;
+  const id = String(eventId);
+  const s = (payload as { s: Record<string, unknown> }).s;
+
+  for (const [sportId, countries] of Object.entries(s)) {
+    if (!countries || typeof countries !== 'object') continue;
+    for (const [countryId, leagues] of Object.entries(
+      countries as Record<string, unknown>
+    )) {
+      if (!leagues || typeof leagues !== 'object') continue;
+      for (const [leagueId, events] of Object.entries(
+        leagues as Record<string, unknown>
+      )) {
+        if (!events || typeof events !== 'object') continue;
+        const node = (events as Record<string, unknown>)[id];
+        if (node === undefined) continue;
+
+        let dynamic: EventDataWireDynamic | null = null;
+        let raw: unknown[] | null = null;
+        let home: string | null = null;
+        let away: string | null = null;
+        let startTimeSec: number | null = null;
+
+        if (Array.isArray(node)) {
+          raw = node;
+          home = teamNameFromSlot(node[0]);
+          away = teamNameFromSlot(node[1]);
+          const st = Number(node[2]);
+          startTimeSec = Number.isFinite(st) ? st : null;
+          // mainapp: g = p.pop() when no separate c map — last element is dynamic
+          dynamic = asWireDynamic(node[node.length - 1]);
+          // index 12 is the stable slot when array is full length 13
+          if (!dynamic && node.length > 12) {
+            dynamic = asWireDynamic(node[12]);
+          }
+        } else if (node && typeof node === 'object') {
+          dynamic = asWireDynamic(node);
+        }
+
+        return {
+          eventId: Number(id),
+          path: [sportId, countryId, leagueId, id],
+          sportId,
+          countryId,
+          leagueId,
+          home,
+          away,
+          startTimeSec,
+          dynamic,
+          raw,
+        };
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Decode board hit (+ optional coefficient lineCount) into offerability.
+ * Mirrors mainapp isOTB / isFinished / hasOdds / isBlocked gates.
+ */
+export function decodeEventOfferability(
+  hit: EventDataBoardHit,
+  options: { coeffLineCount?: number | null } = {}
+): EventOfferability {
+  const d = hit.dynamic;
+  const state =
+    d && typeof d.s === 'number' && Number.isFinite(d.s) ? d.s : null;
+  const hasLines = d && typeof d.l === 'boolean' ? d.l : null;
+  const oddsCount =
+    d && typeof d.oc === 'number' && Number.isFinite(d.oc)
+      ? d.oc
+      : options.coeffLineCount != null
+        ? options.coeffLineCount
+        : null;
+
+  // hasOdds proxy: explicit oc → coeff lines → board `l`
+  const hasOddsCount =
+    oddsCount != null
+      ? oddsCount
+      : hasLines === true
+        ? 1
+        : hasLines === false
+          ? 0
+          : options.coeffLineCount ?? 0;
+
+  return {
+    eventId: hit.eventId,
+    state,
+    stateLabel:
+      state != null ? describePandoraEventState(state) : 'unknown',
+    isStarted: d && typeof d.ip === 'boolean' ? d.ip : null,
+    isLive: d && typeof d.il === 'boolean' ? d.il : null,
+    isHalftime: d && typeof d.ht === 'boolean' ? d.ht : null,
+    hasLines,
+    shard: d && typeof d.n === 'number' ? d.n : null,
+    oddsCount: d && typeof d.oc === 'number' ? d.oc : null,
+    offTheBoard: isEventOffTheBoard({
+      state,
+      oddsCount: hasOddsCount,
+      hasLines,
+    }),
+    sportId: hit.sportId,
+    countryId: hit.countryId,
+    leagueId: hit.leagueId,
+    home: hit.home,
+    away: hit.away,
+    startTimeSec: hit.startTimeSec,
+    path: hit.path,
+  };
+}
+
+/**
+ * Parse JSON-patch path from eventData diffs:
+ *   /s/{sport}/{country}/{league}/{eventId}/12/{field}
+ *   /s/{sport}/{country}/{league}/{eventId}  (whole node)
+ */
+export function parseEventDataDiffPath(path: string): {
+  eventId: number | null;
+  field: string | null;
+  pathParts: string[];
+} {
+  const parts = path.split('/').filter(Boolean);
+  // s sport country league eventId [12 field]
+  if (parts[0] !== 's' || parts.length < 5) {
+    return { eventId: null, field: null, pathParts: parts };
+  }
+  const eventIdRaw = parts[4]!;
+  const eventId = Number(eventIdRaw);
+  if (!Number.isFinite(eventId)) {
+    return { eventId: null, field: null, pathParts: parts };
+  }
+  // /s/.../eventId/12/l
+  if (parts.length >= 7 && parts[5] === '12') {
+    return { eventId, field: parts[6] ?? null, pathParts: parts };
+  }
+  // /s/.../eventId/12 (replace whole dynamic)
+  if (parts.length === 6 && parts[5] === '12') {
+    return { eventId, field: '_dynamic', pathParts: parts };
+  }
+  // whole event node
+  if (parts.length === 5) {
+    return { eventId, field: '_node', pathParts: parts };
+  }
+  return { eventId, field: parts[parts.length - 1] ?? null, pathParts: parts };
+}
+
+export type EventDataStateTransition =
+  | {
+      kind: 'state_change';
+      eventId: number;
+      field: string;
+      from?: unknown;
+      to: unknown;
+    }
+  | {
+      kind: 'lines_flag';
+      eventId: number;
+      hasLines: boolean;
+    }
+  | {
+      kind: 'event_removed';
+      eventId: number;
+    };
+
+/** Diff board dynamic fields relevant to odds-off (s, l, ip, il, oc). */
+export function diffEventDataOfferability(
+  prev: EventOfferability | null,
+  next: EventOfferability | null
+): EventDataStateTransition[] {
+  const out: EventDataStateTransition[] = [];
+  if (!prev && next) {
+    if (next.state != null) {
+      out.push({
+        kind: 'state_change',
+        eventId: next.eventId,
+        field: 's',
+        to: next.state,
+      });
+    }
+    if (next.hasLines != null) {
+      out.push({
+        kind: 'lines_flag',
+        eventId: next.eventId,
+        hasLines: next.hasLines,
+      });
+    }
+    return out;
+  }
+  if (prev && !next) {
+    out.push({ kind: 'event_removed', eventId: prev.eventId });
+    return out;
+  }
+  if (!prev || !next) return out;
+
+  if (prev.state !== next.state && next.state != null) {
+    out.push({
+      kind: 'state_change',
+      eventId: next.eventId,
+      field: 's',
+      from: prev.state,
+      to: next.state,
+    });
+  }
+  if (prev.hasLines !== next.hasLines && next.hasLines != null) {
+    out.push({
+      kind: 'lines_flag',
+      eventId: next.eventId,
+      hasLines: next.hasLines,
+    });
+  }
+  for (const field of ['isStarted', 'isLive', 'isHalftime'] as const) {
+    if (prev[field] !== next[field] && next[field] != null) {
+      out.push({
+        kind: 'state_change',
+        eventId: next.eventId,
+        field,
+        from: prev[field],
+        to: next[field],
+      });
+    }
+  }
+  return out;
 }
 
 export type PandoraTi = {

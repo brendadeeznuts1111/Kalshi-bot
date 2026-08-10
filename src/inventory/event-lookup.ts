@@ -24,10 +24,20 @@ import { DEFAULT_EVENT_STORE_DB } from '../institutions/event-store/paths.ts';
 import { CoefficientStore } from '../partner/fantasy-ultra/coefficient-store.ts';
 import {
   analyzeCoefficientBook,
+  applyCoefficientDiff,
+  decodeEventOfferability,
+  diffEventDataOfferability,
   diffOfferFingerprints,
   extractCoefficientLines,
+  findEventInEventDataBoard,
+  isEventDataBoardPayload,
+  parseEventDataDiffPath,
+  summarizeEventDataBoard,
   type CoefficientBookState,
   type CoefficientLine,
+  type EventDataBoardSummary,
+  type EventDataStateTransition,
+  type EventOfferability,
   type OfferTransition,
 } from '../partner/fantasy-ultra/coefficients.ts';
 import {
@@ -123,6 +133,13 @@ export type EventLookupResult = {
      * Offered ⇔ `o` has valid decimals. `cls` is limit class, not suspend.
      */
     book: CoefficientBookState | null;
+    /**
+     * Event-level offerability from eventData board
+     * (`s[sport][country][league][id][12]` → EVENT_STATES / hasLines).
+     */
+    eventState: EventOfferability | null;
+    /** Board-level summary (sport/event counts, db/kb sizes). */
+    eventDataBoard: EventDataBoardSummary | null;
   };
   notes: string[];
 };
@@ -462,13 +479,15 @@ export async function probePandoraEvent(
   eventDataKeys: string[];
   book: CoefficientBookState | null;
   lastPayload: unknown | null;
+  eventState: EventOfferability | null;
+  eventDataBoard: EventDataBoardSummary | null;
 }> {
   const seconds = Math.min(Math.max(options.seconds ?? 8, 2), 30);
   const store = new CoefficientStore();
   let subscribed = false;
   let eventDataKeys: string[] = [];
   let lastPayload: unknown | null = null;
-  const main = `live.main.${PANDORA_DEFAULT_SESSION.mainToken}`;
+  let eventDataBoardPayload: unknown | null = null;
 
   await new Promise<void>(resolve => {
     const sock = new PandoraSocket({
@@ -476,12 +495,8 @@ export async function probePandoraEvent(
       WebSocketImpl: options.WebSocketImpl,
       handlers: {
         onNamespaceConnect: () => {
+          // subscribeLive already includes bulk `${main}.eventData`
           sock.subscribeLive({ eventIds: [eventId] });
-          try {
-            sock.emit('subscribe', [`${main}.eventData.${eventId}`]);
-          } catch {
-            /* optional */
-          }
         },
         onEvent: (name, args) => {
           if (name.includes(`eventCoefficients.${eventId}`)) subscribed = true;
@@ -490,6 +505,24 @@ export async function probePandoraEvent(
           }
         },
         onCoefficients: info => {
+          if (info.room.includes('eventData')) {
+            const p = info.envelope.payload;
+            if (!info.envelope.isDiff && isEventDataBoardPayload(p)) {
+              eventDataBoardPayload = p;
+              eventDataKeys = Object.keys(p as object).slice(0, 24);
+            } else if (
+              info.envelope.isDiff &&
+              eventDataBoardPayload &&
+              typeof eventDataBoardPayload === 'object' &&
+              Array.isArray(p)
+            ) {
+              eventDataBoardPayload = applyCoefficientDiff(
+                eventDataBoardPayload as Record<string, unknown>,
+                p
+              );
+            }
+            return;
+          }
           if (info.eventId === eventId || info.room.includes(String(eventId))) {
             if (info.room.includes('eventCoefficients')) subscribed = true;
             store.ingest(info);
@@ -499,12 +532,6 @@ export async function probePandoraEvent(
               info.envelope.payload
             ) {
               lastPayload = info.envelope.payload;
-            }
-            if (info.room.includes('eventData') && !info.envelope.isDiff) {
-              const p = info.envelope.payload;
-              if (p && typeof p === 'object' && !Array.isArray(p)) {
-                eventDataKeys = Object.keys(p as object).slice(0, 24);
-              }
             }
           }
         },
@@ -531,6 +558,16 @@ export async function probePandoraEvent(
         })
       : null;
 
+  const boardHit = eventDataBoardPayload
+    ? findEventInEventDataBoard(eventDataBoardPayload, eventId)
+    : null;
+  const eventState = boardHit
+    ? decodeEventOfferability(boardHit, { coeffLineCount: lines.length })
+    : null;
+  const eventDataBoard = eventDataBoardPayload
+    ? summarizeEventDataBoard(eventDataBoardPayload)
+    : null;
+
   return {
     subscribed,
     lines,
@@ -538,6 +575,8 @@ export async function probePandoraEvent(
     eventDataKeys,
     book,
     lastPayload,
+    eventState,
+    eventDataBoard,
   };
 }
 
@@ -570,11 +609,14 @@ export type OddsWatchUpdate = {
   offeredMarketCount: number;
   transitions: OfferTransition[];
   book: CoefficientBookState | null;
+  eventState: EventOfferability | null;
+  eventTransitions: EventDataStateTransition[];
 };
 
 /**
- * Watch coefficient book and emit offer transitions (on/off/price).
- * Primary signal for “odds taken off”: selection_off / market_off.
+ * Watch coefficient book + eventData board for offer transitions.
+ * Primary market signals: selection_off / market_off.
+ * Primary event signals: state s→2|3, hasLines l→false (OTB).
  */
 export async function watchEventOdds(
   eventId: number,
@@ -589,6 +631,59 @@ export async function watchEventOdds(
   const history: OddsWatchUpdate[] = [];
   let prevLines: CoefficientLine[] = [];
   let lastPayload: unknown | null = null;
+  let boardPayload: Record<string, unknown> | null = null;
+  let prevEventState: EventOfferability | null = null;
+
+  const emitUpdate = (
+    transitions: OfferTransition[],
+    eventTransitions: EventDataStateTransition[],
+    force = false
+  ) => {
+    const lines = store.getLines(eventId);
+    const book = lastPayload
+      ? analyzeCoefficientBook(eventId, lastPayload)
+      : lines.length
+        ? analyzeCoefficientBook(eventId, {
+            id: eventId,
+            c: rebuildCFromLines(lines),
+          })
+        : null;
+    const hit = boardPayload
+      ? findEventInEventDataBoard(boardPayload, eventId)
+      : null;
+    const eventState = hit
+      ? decodeEventOfferability(hit, { coeffLineCount: lines.length })
+      : null;
+    const et =
+      eventTransitions.length > 0
+        ? eventTransitions
+        : diffEventDataOfferability(prevEventState, eventState);
+
+    if (
+      !force &&
+      transitions.length === 0 &&
+      et.length === 0 &&
+      prevLines.length > 0
+    ) {
+      prevEventState = eventState;
+      return;
+    }
+
+    const u: OddsWatchUpdate = {
+      at: new Date().toISOString(),
+      eventId,
+      lineCount: lines.length,
+      offeredMarketCount: book?.offeredMarketCount ?? 0,
+      transitions,
+      book,
+      eventState,
+      eventTransitions: et,
+    };
+    history.push(u);
+    options.onUpdate?.(u);
+    prevLines = lines;
+    prevEventState = eventState;
+  };
 
   await new Promise<void>(resolve => {
     const sock = new PandoraSocket({
@@ -599,6 +694,50 @@ export async function watchEventOdds(
           sock.subscribeLive({ eventIds: [eventId] });
         },
         onCoefficients: info => {
+          if (info.room.includes('eventData')) {
+            const p = info.envelope.payload;
+            if (!info.envelope.isDiff && isEventDataBoardPayload(p)) {
+              boardPayload = p as Record<string, unknown>;
+              emitUpdate([], [], prevLines.length === 0);
+            } else if (
+              info.envelope.isDiff &&
+              boardPayload &&
+              Array.isArray(p)
+            ) {
+              const relevant = (p as Array<{ path?: string; op?: string; value?: unknown }>).filter(
+                op => {
+                  if (!op?.path) return false;
+                  const parsed = parseEventDataDiffPath(op.path);
+                  return parsed.eventId === eventId;
+                }
+              );
+              boardPayload = applyCoefficientDiff(boardPayload, p);
+              if (relevant.length > 0 || prevLines.length === 0) {
+                const eventTransitions: EventDataStateTransition[] = [];
+                for (const op of relevant) {
+                  const parsed = parseEventDataDiffPath(op.path!);
+                  if (parsed.field === 'l' && typeof op.value === 'boolean') {
+                    eventTransitions.push({
+                      kind: 'lines_flag',
+                      eventId,
+                      hasLines: op.value,
+                    });
+                  } else if (parsed.field === 's' || parsed.field === 'ip' || parsed.field === 'il') {
+                    eventTransitions.push({
+                      kind: 'state_change',
+                      eventId,
+                      field: parsed.field,
+                      to: op.value,
+                    });
+                  } else if (op.op === 'remove' && parsed.field === '_node') {
+                    eventTransitions.push({ kind: 'event_removed', eventId });
+                  }
+                }
+                emitUpdate([], eventTransitions);
+              }
+            }
+            return;
+          }
           if (info.eventId !== eventId && !info.room.includes(String(eventId))) {
             return;
           }
@@ -609,25 +748,7 @@ export async function watchEventOdds(
           }
           const lines = store.getLines(eventId);
           const transitions = diffOfferFingerprints(prevLines, lines);
-          const book = lastPayload
-            ? analyzeCoefficientBook(eventId, lastPayload)
-            : analyzeCoefficientBook(eventId, {
-                id: eventId,
-                c: rebuildCFromLines(lines),
-              });
-          if (transitions.length > 0 || prevLines.length === 0) {
-            const u: OddsWatchUpdate = {
-              at: new Date().toISOString(),
-              eventId,
-              lineCount: lines.length,
-              offeredMarketCount: book.offeredMarketCount,
-              transitions,
-              book,
-            };
-            history.push(u);
-            options.onUpdate?.(u);
-          }
-          prevLines = lines;
+          emitUpdate(transitions, [], prevLines.length === 0);
         },
       },
     });
@@ -717,6 +838,8 @@ export async function lookupEvent(
     eventDataKeys: [] as string[],
     periodMissing: false,
     book: null as CoefficientBookState | null,
+    eventState: null as EventOfferability | null,
+    eventDataBoard: null as EventDataBoardSummary | null,
   };
 
   if (pandoraSeconds > 0) {
@@ -748,6 +871,8 @@ export async function lookupEvent(
         eventDataKeys: p.eventDataKeys,
         periodMissing,
         book: p.book,
+        eventState: p.eventState,
+        eventDataBoard: p.eventDataBoard,
       };
       if (p.lines.length === 0) {
         notes.push(
@@ -756,6 +881,24 @@ export async function lookupEvent(
       } else if (p.book && p.book.offeredMarketCount === 0) {
         notes.push(
           'book has markets but none offered (empty o / no valid decimals) — treated as taken off'
+        );
+      }
+      if (p.eventState) {
+        const es = p.eventState;
+        notes.push(
+          `eventData state=${es.state}(${es.stateLabel}) hasLines=${es.hasLines} isStarted=${es.isStarted} OTB=${es.offTheBoard}` +
+            (es.home || es.away
+              ? ` · ${es.home ?? '?'} vs ${es.away ?? '?'}`
+              : '')
+        );
+        if (es.offTheBoard) {
+          notes.push(
+            'event off the board (mainapp isOTB): finished|notBettable|blocked|!hasOdds'
+          );
+        }
+      } else if (p.eventDataBoard) {
+        notes.push(
+          `eventData board loaded (${p.eventDataBoard.eventCount} events) but id not under s[sport][country][league]`
         );
       }
       if (periodMissing) {
@@ -769,7 +912,7 @@ export async function lookupEvent(
         );
       }
       notes.push(
-        'odds-off signals: empty o / selection_off / market_off diffs; cls is limit-class not suspend; event state 0=bettable 1=blocked 2=notBettable 3=finished (EVENT_STATES)'
+        'odds-off: coeff empty o / selection_off / market_off; eventData s=0..3 + l hasLines; cls=limit-class not suspend'
       );
     } catch (e) {
       notes.push(`pandora error: ${e instanceof Error ? e.message : String(e)}`);
@@ -804,6 +947,10 @@ export async function lookupEvent(
     sportHint = catalog.sportName.toLowerCase().replace(/\s+/g, '_');
   } else {
     sportHint = inferSportHintFromLines(allLines, streamHit?.bucket ?? null);
+  }
+  // Pandora feed sport id (eventData path) as last-resort numeric hint
+  if (!sportHint && pandora.eventState?.sportId) {
+    sportHint = `feed_sport_${pandora.eventState.sportId}`;
   }
 
   // Re-label periods with sport hint for display
@@ -1032,6 +1179,30 @@ export function formatEventLookup(r: EventLookupResult): string {
     }
     if (r.pandora.eventDataKeys.length) {
       lines.push(`    eventData keys: ${r.pandora.eventDataKeys.join(', ')}`);
+    }
+    if (r.pandora.eventDataBoard) {
+      const b = r.pandora.eventDataBoard;
+      lines.push(
+        `  board sports=${b.sportCount} events=${b.eventCount} db=${b.dbCount} kb=${b.kbCount}` +
+          (b.offlineFlags ? ` offlineFlags=${b.offlineFlags.filter(Boolean).length}/${b.offlineFlags.length}` : '')
+      );
+    }
+    if (r.pandora.eventState) {
+      const es = r.pandora.eventState;
+      lines.push(
+        `  eventState s=${es.state}(${es.stateLabel}) hasLines=${es.hasLines} ` +
+          `isStarted=${es.isStarted} isLive=${es.isLive} OTB=${es.offTheBoard}`
+      );
+      if (es.home || es.away) {
+        lines.push(
+          `    ${es.home ?? '?'} vs ${es.away ?? '?'}  path=s/${es.path.join('/')}` +
+            (es.startTimeSec != null
+              ? ` start=${new Date(es.startTimeSec * 1000).toISOString()}`
+              : '')
+        );
+      } else if (es.path.length) {
+        lines.push(`    path=s/${es.path.join('/')}`);
+      }
     }
     if (r.pandora.book) {
       const b = r.pandora.book;
