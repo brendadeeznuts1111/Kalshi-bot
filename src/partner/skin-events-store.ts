@@ -99,7 +99,7 @@ export type SkinEventRow = {
   partner: string;
   inventoryId: string;
   lsId: string | null;
-  clientEventId: string | null;
+  oddsEventId: string | null;
   sport: string;
   league: string;
   home: string | null;
@@ -143,7 +143,7 @@ export function liveEventToRow(
     partner: identity.bookId,
     inventoryId,
     lsId: null,
-    clientEventId: null,
+    oddsEventId: null,
     sport,
     league,
     home: event.home,
@@ -182,11 +182,11 @@ export function upsertSkinLiveEvents(
   const identity = options.identity ?? buckeyeInventoryIdentity();
   const insert = db.query(`
     INSERT INTO skin_events (
-      partner, inventory_id, ls_id, client_event_id, sport, league, home, away,
+      partner, inventory_id, ls_id, odds_event_id, sport, league, home, away,
       feed_id, start_time, status, first_seen, last_updated,
       skin_id, book_id, inventory_live_product, competition_id
     ) VALUES (
-      $partner, $inventory_id, $ls_id, $client_event_id, $sport, $league, $home, $away,
+      $partner, $inventory_id, $ls_id, $odds_event_id, $sport, $league, $home, $away,
       $feed_id, $start_time, $status, $first_seen, $last_updated,
       $skin_id, $book_id, $inventory_live_product, $competition_id
     )
@@ -229,7 +229,7 @@ export function upsertSkinLiveEvents(
       $partner: row.bookId,
       $inventory_id: row.inventoryId,
       $ls_id: row.lsId,
-      $client_event_id: row.clientEventId,
+      $odds_event_id: row.oddsEventId,
       $sport: row.sport,
       $league: row.league,
       $home: row.home,

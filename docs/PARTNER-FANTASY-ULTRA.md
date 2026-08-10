@@ -122,9 +122,9 @@ Adapter methods:
 
 | Method                               | Behavior                                 |
 | ------------------------------------ | ---------------------------------------- |
-| `fetchBookedEvent(clientEventId)`    | Metadata row (or null)                   |
+| `fetchBookedEvent(oddsEventId)`      | Metadata row (or null)                   |
 | `listBookedEvents({ sport, limit })` | First page of booked events              |
-| `fetchOdds(clientEventId)`           | **Throws** until payload has real prices |
+| `fetchOdds(oddsEventId)`             | **Throws** until payload has real prices |
 
 ### ID map (do not conflate)
 
@@ -132,8 +132,9 @@ Adapter methods:
 | ----------------- | ----------------------------------- | ------------------------------------------------- |
 | `stream_id` (wire) | stream-list-v2                     | Provider JSON only → interior `inventoryId`       |
 | `inventoryId`     | parsed from `stream_id`             | Inventory plane (`InventoryEventRef` / `skin_events.inventory_id`) |
-| `feed_id`         | stream-list-v2                      | Often 0 or large int — not always client_event_id |
-| `client_event_id` / `eventId` | Statscore / widget `#!/event/…` / ticket | Odds + place-bet (`OddsEventRef`)        |
+| `feed_id`         | stream-list-v2                      | Often 0 or large int — not always odds event id |
+| `client_event_id` (wire) | Statscore / widget `#!/event/…` / ticket | Wire JSON only → interior `oddsEventId` (`OddsEventRef`) |
+| `oddsEventId`     | parsed from `client_event_id`       | Odds + place-bet interior; `skin_events.odds_event_id` |
 | `statscore id`    | booked_events[].id                  | Internal Statscore event id                       |
 | `ls_id`           | get_pushes (when path known)        | Live score pushes                                 |
 
@@ -303,7 +304,7 @@ until a separate EZ feed is proven. Wire `stream_id` maps to `inventory_id` at p
 | `inventory_live_product`     | feed owner shell = `plive` (ezlive reuses)                                          |
 | `competition_id`             | seeded CompetitionId from sport + league (null when unmapped)                       |
 | sport / league / home / away | stream-list (`competitiors` typo upstream); sport normalized to SportId when mapped |
-| `client_event_id` / `ls_id`  | nullable until mapping exists                                                       |
+| `odds_event_id` / `ls_id`    | nullable until mapping exists (wire `client_event_id` → interior `oddsEventId`)     |
 
 ```bash
 # one-shot (inventory is public — dummy env is fine)
@@ -335,8 +336,8 @@ https://events-d.pc.statscore.com/get_pushes/{stream_id}?messageId=…&auth=…&
 Live probe: **403 Forbidden** without a valid session `auth`. Use stream-list
 for detection only.
 
-**Not auto-filled:** `client_event_id` / odds — stream-list has no prices;
-enrich later.
+**Not auto-filled:** `odds_event_id` / odds — stream-list has no prices;
+enrich later (wire `client_event_id` soft-matched via `--enrich-booked`).
 
 ## Widget runtime config (HTML source)
 
@@ -405,7 +406,7 @@ Decode: `decodePandoraAttachment` → `extractCoefficientLines` (decimal +
 American via `normalizeOdds`). Diffs use JSON-patch ops (`isDiff: true`).
 
 **Book path (wired):** `onCoefficients` → `CoefficientStore` → `fetchMarkets()`
-/ `fetchOdds(clientEventId)` (match ML `marketType=3`).  
+/ `fetchOdds(oddsEventId)` (match ML `marketType=3`).  
 Inventory sync sets `pricedOdds: true` when the store has lines. Still **no**
 `match_liquidity` merge.
 
@@ -572,7 +573,7 @@ Code: `src/partner/skins.ts` · `computeProviderCapacity` ·
 ```bash
 bun run partner:sync -- --sport=table_tennis --once --json
 bun run partner:sync -- --sport=table_tennis --loop --interval-ms=30000
-bun run partner:sync -- --enrich-booked --once   # soft name→client_event_id (metadata only)
+bun run partner:sync -- --enrich-booked --once   # soft name→odds_event_id (metadata only)
 
 # In-process cron (with other desk jobs)
 PARTNER_SYNC=1 PARTNER_SYNC_PUBLIC=1 PARTNER_SYNC_SPORT=table_tennis bun run cron:start
@@ -592,7 +593,7 @@ PARTNER_SYNC=1 PARTNER_SYNC_PUBLIC=1 bun run cron:once
 | --------------------------------------- | -------------------------------- |
 | Inventory (`stream-list-v2`)            | ✅                               |
 | New event detection → `skin_events`  | ✅                               |
-| Soft Statscore name → `client_event_id` | ✅ optional `--enrich-booked`    |
+| Soft Statscore name → `odds_event_id`   | ✅ optional `--enrich-booked`    |
 | Markets / lines / American odds tables  | ❌ not in live feeds yet         |
 | placeOrder POST                         | ❌ response parser only          |
 | Merge into Kalshi `liquidity:ground`    | ❌ deferred until priced markets |
