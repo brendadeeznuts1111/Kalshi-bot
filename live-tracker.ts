@@ -12,7 +12,6 @@
  *
  * Logs: research/cache/live-tracker/event-{id}.jsonl
  */
-import { watchEventOdds } from './src/inventory/event-lookup.ts';
 import {
   LIVE_TRACKER_EVENT_TYPES,
   appendTrackerLog,
@@ -34,6 +33,7 @@ import {
   type LiveTrackerEvent,
   type LiveTrackerEventType,
 } from './src/inventory/live-tracker.ts';
+import { watchEventOdds } from './src/inventory/pandora-listen.ts';
 import { CACHE_DIR, joinPath } from './src/research/paths.ts';
 
 function hasFlag(name: string): boolean {

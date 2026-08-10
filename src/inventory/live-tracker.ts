@@ -8,8 +8,8 @@ import type {
   EventDataStateTransition,
   OfferTransition,
 } from '../partner/fantasy-ultra/coefficients.ts';
-import type { OddsWatchUpdate } from './event-lookup.ts';
 import { CACHE_DIR, joinPath } from '../research/paths.ts';
+import type { OddsWatchUpdate } from './pandora-listen.ts';
 
 /** Stable public event kinds for CLI filters. */
 export const LIVE_TRACKER_EVENT_TYPES = [
