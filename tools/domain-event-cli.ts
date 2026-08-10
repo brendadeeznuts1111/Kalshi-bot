@@ -4,11 +4,13 @@
  *
  *   bun run domain:event -- --id=197548901
  *   bun run domain:event -- --id=197488581 --period=m
- *   bun run domain:event -- --id=197488581/m
  *   bun run domain:event -- --url='https://plive…/live/?#!/event/197488581/m'
+ *   bun run domain:event -- --id=197502731 --watch --seconds=30
  *   bun run domain:event -- --sample-sports
- *   bun run domain:event -- --sample-sports --probe-pandora --seconds=3
  *   bun run domain:event -- --id=197548901 --json
+ *
+ * Odds off: market_off / selection_off in --watch; empty `o` in book analysis.
+ * cls = limit class (not suspend). Event state: 0 bettable, 1 blocked, 2 notBettable, 3 finished.
  */
 import {
   formatEventLookup,
@@ -16,6 +18,7 @@ import {
   lookupEvent,
   parseEventRef,
   sampleStreamListBySport,
+  watchEventOdds,
 } from '../src/inventory/event-lookup.ts';
 
 function hasFlag(name: string): boolean {
@@ -30,7 +33,12 @@ function argValue(name: string): string | undefined {
 const json = hasFlag('json');
 const sampleSports = hasFlag('sample-sports');
 const probePandora = hasFlag('probe-pandora');
-const seconds = Number(argValue('seconds') ?? (probePandora ? '3' : '8')) || 8;
+const watch = hasFlag('watch');
+const seconds =
+  Number(
+    argValue('seconds') ??
+      (watch ? '30' : probePandora ? '3' : '8')
+  ) || 8;
 
 if (sampleSports) {
   const samples = await sampleStreamListBySport({
@@ -62,7 +70,7 @@ try {
     periodFromRef = parsed.periodId;
   } else {
     console.error(
-      'usage: bun run domain:event -- --id=<eventId>[/period] | --url=<plive url> | --sample-sports'
+      'usage: bun run domain:event -- --id=<eventId>[/period] | --url=<plive url> | --sample-sports | --watch'
     );
     process.exit(2);
   }
@@ -74,6 +82,53 @@ try {
 const periodExplicit = argValue('period')?.trim() || null;
 const periodId = periodExplicit ?? periodFromRef;
 const noPandora = hasFlag('no-pandora');
+
+if (watch) {
+  console.error(
+    `watching event=${eventId} for ${seconds}s (transitions: market_off|selection_off|price_change|…)`
+  );
+  const history = await watchEventOdds(Number(eventId), {
+    seconds,
+    onUpdate: u => {
+      if (json) {
+        console.log(JSON.stringify(u));
+        return;
+      }
+      const off = u.transitions.filter(
+        t => t.kind === 'market_off' || t.kind === 'selection_off'
+      );
+      const on = u.transitions.filter(
+        t => t.kind === 'market_on' || t.kind === 'selection_on'
+      );
+      const ch = u.transitions.filter(t => t.kind === 'price_change');
+      console.log(
+        `${u.at} lines=${u.lineCount} offeredMkts=${u.offeredMarketCount} ` +
+          `off=${off.length} on=${on.length} chg=${ch.length}`
+      );
+      for (const t of u.transitions.slice(0, 20)) {
+        if (t.kind === 'price_change') {
+          console.log(
+            `  price_change ${t.period}/${t.marketType} sel=${t.selection} ${t.from}→${t.to}`
+          );
+        } else if (t.kind === 'selection_off' || t.kind === 'selection_on') {
+          console.log(
+            `  ${t.kind} ${t.period}/${t.marketType} sel=${t.selection}`
+          );
+        } else {
+          console.log(`  ${t.kind} ${t.period}/${t.marketType}`);
+        }
+      }
+    },
+  });
+  if (json) {
+    console.log(JSON.stringify({ watch: true, eventId, updates: history.length }, null, 2));
+  } else {
+    console.log(
+      `watch done updates=${history.length} (empty o / market_off / selection_off = odds taken off)`
+    );
+  }
+  process.exit(0);
+}
 
 const result = await lookupEvent({
   eventId,

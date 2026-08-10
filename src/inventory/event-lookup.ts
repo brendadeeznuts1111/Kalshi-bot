@@ -22,7 +22,14 @@ import type { FetchFn } from '../institutions/resilient-fetch.ts';
 import { openEventStore } from '../institutions/event-store/open-db.ts';
 import { DEFAULT_EVENT_STORE_DB } from '../institutions/event-store/paths.ts';
 import { CoefficientStore } from '../partner/fantasy-ultra/coefficient-store.ts';
-import type { CoefficientLine } from '../partner/fantasy-ultra/coefficients.ts';
+import {
+  analyzeCoefficientBook,
+  diffOfferFingerprints,
+  extractCoefficientLines,
+  type CoefficientBookState,
+  type CoefficientLine,
+  type OfferTransition,
+} from '../partner/fantasy-ultra/coefficients.ts';
 import {
   PANDORA_DEFAULT_SESSION,
   PandoraSocket,
@@ -111,6 +118,11 @@ export type EventLookupResult = {
     eventDataKeys: string[];
     /** True when periodId was requested but not present on the book. */
     periodMissing: boolean;
+    /**
+     * Per-market offer map from coefficient payload.
+     * Offered ⇔ `o` has valid decimals. `cls` is limit class, not suspend.
+     */
+    book: CoefficientBookState | null;
   };
   notes: string[];
 };
@@ -448,11 +460,14 @@ export async function probePandoraEvent(
   lines: CoefficientLine[];
   markets: PartnerMarket[];
   eventDataKeys: string[];
+  book: CoefficientBookState | null;
+  lastPayload: unknown | null;
 }> {
   const seconds = Math.min(Math.max(options.seconds ?? 8, 2), 30);
   const store = new CoefficientStore();
   let subscribed = false;
   let eventDataKeys: string[] = [];
+  let lastPayload: unknown | null = null;
   const main = `live.main.${PANDORA_DEFAULT_SESSION.mainToken}`;
 
   await new Promise<void>(resolve => {
@@ -478,6 +493,13 @@ export async function probePandoraEvent(
           if (info.eventId === eventId || info.room.includes(String(eventId))) {
             if (info.room.includes('eventCoefficients')) subscribed = true;
             store.ingest(info);
+            if (
+              info.room.includes('eventCoefficients') &&
+              !info.envelope.isDiff &&
+              info.envelope.payload
+            ) {
+              lastPayload = info.envelope.payload;
+            }
             if (info.room.includes('eventData') && !info.envelope.isDiff) {
               const p = info.envelope.payload;
               if (p && typeof p === 'object' && !Array.isArray(p)) {
@@ -499,12 +521,128 @@ export async function probePandoraEvent(
     }, seconds * 1000);
   });
 
+  const lines = store.getLines(eventId);
+  const book = lastPayload
+    ? analyzeCoefficientBook(eventId, lastPayload)
+    : lines.length
+      ? analyzeCoefficientBook(eventId, {
+          id: eventId,
+          c: rebuildCFromLines(lines),
+        })
+      : null;
+
   return {
     subscribed,
-    lines: store.getLines(eventId),
+    lines,
     markets: store.toPartnerMarkets().filter(m => m.oddsEventId === String(eventId)),
     eventDataKeys,
+    book,
+    lastPayload,
   };
+}
+
+/** Best-effort c{} tree from extracted lines (for book analysis without raw payload). */
+function rebuildCFromLines(
+  lines: CoefficientLine[]
+): Record<string, Record<string, { o: Record<string, number | number[]> }>> {
+  const c: Record<
+    string,
+    Record<string, { o: Record<string, number | number[]> }>
+  > = {};
+  for (const l of lines) {
+    const period = c[l.period] ?? (c[l.period] = {});
+    const mkt = period[l.marketType] ?? (period[l.marketType] = { o: {} });
+    if (l.sideIndex != null) {
+      const arr = (mkt.o[l.selection] as number[] | undefined) ?? [];
+      arr[l.sideIndex] = l.decimal;
+      mkt.o[l.selection] = arr;
+    } else {
+      mkt.o[l.selection] = l.decimal;
+    }
+  }
+  return c;
+}
+
+export type OddsWatchUpdate = {
+  at: string;
+  eventId: number;
+  lineCount: number;
+  offeredMarketCount: number;
+  transitions: OfferTransition[];
+  book: CoefficientBookState | null;
+};
+
+/**
+ * Watch coefficient book and emit offer transitions (on/off/price).
+ * Primary signal for “odds taken off”: selection_off / market_off.
+ */
+export async function watchEventOdds(
+  eventId: number,
+  options: {
+    seconds?: number;
+    WebSocketImpl?: typeof WebSocket;
+    onUpdate?: (u: OddsWatchUpdate) => void;
+  } = {}
+): Promise<OddsWatchUpdate[]> {
+  const seconds = Math.min(Math.max(options.seconds ?? 30, 5), 300);
+  const store = new CoefficientStore();
+  const history: OddsWatchUpdate[] = [];
+  let prevLines: CoefficientLine[] = [];
+  let lastPayload: unknown | null = null;
+
+  await new Promise<void>(resolve => {
+    const sock = new PandoraSocket({
+      reconnect: false,
+      WebSocketImpl: options.WebSocketImpl,
+      handlers: {
+        onNamespaceConnect: () => {
+          sock.subscribeLive({ eventIds: [eventId] });
+        },
+        onCoefficients: info => {
+          if (info.eventId !== eventId && !info.room.includes(String(eventId))) {
+            return;
+          }
+          if (!info.room.includes('eventCoefficients')) return;
+          store.ingest(info);
+          if (!info.envelope.isDiff && info.envelope.payload) {
+            lastPayload = info.envelope.payload;
+          }
+          const lines = store.getLines(eventId);
+          const transitions = diffOfferFingerprints(prevLines, lines);
+          const book = lastPayload
+            ? analyzeCoefficientBook(eventId, lastPayload)
+            : analyzeCoefficientBook(eventId, {
+                id: eventId,
+                c: rebuildCFromLines(lines),
+              });
+          if (transitions.length > 0 || prevLines.length === 0) {
+            const u: OddsWatchUpdate = {
+              at: new Date().toISOString(),
+              eventId,
+              lineCount: lines.length,
+              offeredMarketCount: book.offeredMarketCount,
+              transitions,
+              book,
+            };
+            history.push(u);
+            options.onUpdate?.(u);
+          }
+          prevLines = lines;
+        },
+      },
+    });
+    sock.connect();
+    setTimeout(() => {
+      try {
+        sock.close();
+      } catch {
+        /* ignore */
+      }
+      resolve();
+    }, seconds * 1000);
+  });
+
+  return history;
 }
 
 function classifyPlane(r: {
@@ -578,6 +716,7 @@ export async function lookupEvent(
     markets: [] as EventLookupResult['pandora']['markets'],
     eventDataKeys: [] as string[],
     periodMissing: false,
+    book: null as CoefficientBookState | null,
   };
 
   if (pandoraSeconds > 0) {
@@ -608,10 +747,15 @@ export async function lookupEvent(
         })),
         eventDataKeys: p.eventDataKeys,
         periodMissing,
+        book: p.book,
       };
       if (p.lines.length === 0) {
         notes.push(
           'Pandora subscribed or timed out with 0 lines — event may be settled/off-book or id is inventory-only'
+        );
+      } else if (p.book && p.book.offeredMarketCount === 0) {
+        notes.push(
+          'book has markets but none offered (empty o / no valid decimals) — treated as taken off'
         );
       }
       if (periodMissing) {
@@ -624,6 +768,9 @@ export async function lookupEvent(
           `period focus "${periodId}" (widget route /event/:id/:periodId?) — showing filtered lines`
         );
       }
+      notes.push(
+        'odds-off signals: empty o / selection_off / market_off diffs; cls is limit-class not suspend; event state 0=bettable 1=blocked 2=notBettable 3=finished (EVENT_STATES)'
+      );
     } catch (e) {
       notes.push(`pandora error: ${e instanceof Error ? e.message : String(e)}`);
       pandora.probed = true;
@@ -885,6 +1032,28 @@ export function formatEventLookup(r: EventLookupResult): string {
     }
     if (r.pandora.eventDataKeys.length) {
       lines.push(`    eventData keys: ${r.pandora.eventDataKeys.join(', ')}`);
+    }
+    if (r.pandora.book) {
+      const b = r.pandora.book;
+      lines.push(
+        `  book offeredMarkets=${b.offeredMarketCount} offMarkets=${b.offMarketCount} lines=${b.lineCount}`
+      );
+      const off = b.markets.filter(m => !m.offered);
+      if (off.length) {
+        lines.push(
+          `    off: ${off
+            .slice(0, 12)
+            .map(m => `${m.period}/${m.marketType}`)
+            .join(', ')}${off.length > 12 ? '…' : ''}`
+        );
+      }
+      const sampleCls = b.markets
+        .filter(m => m.clsDefault != null)
+        .slice(0, 6)
+        .map(m => `${m.period}/${m.marketType} cls._d=${m.clsDefault}`);
+      if (sampleCls.length) {
+        lines.push(`    cls (limit class, not suspend): ${sampleCls.join('; ')}`);
+      }
     }
   } else {
     lines.push('  pandora skipped');

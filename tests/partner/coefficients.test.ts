@@ -2,11 +2,16 @@
 import { describe, expect, test } from 'bun:test';
 import { CoefficientStore } from '../../src/partner/fantasy-ultra/coefficient-store.ts';
 import {
+  analyzeCoefficientBook,
   applyCoefficientDiff,
   decodePandoraAttachment,
+  describePandoraEventState,
+  diffOfferFingerprints,
   eventIdFromCoefficientRoom,
   extractCoefficientLines,
+  isEventOffTheBoard,
   parseBinaryEventHeader,
+  PANDORA_EVENT_STATES,
 } from '../../src/partner/fantasy-ultra/coefficients.ts';
 
 describe('pandora coefficient decode', () => {
@@ -62,6 +67,49 @@ describe('pandora coefficient decode', () => {
       (l) => l.marketType === '5' && l.selection === '17.5' && l.sideIndex === 0,
     );
     expect(tot?.line).toBe(17.5);
+  });
+
+  test('analyzeCoefficientBook offered vs empty o + cls limit class', () => {
+    const book = analyzeCoefficientBook(1, {
+      id: 1,
+      c: {
+        m: {
+          '3': { cls: { '0': 2 }, o: { '1': 1.5, '2': 2.5 } },
+          '5': { cls: { _d: 6 }, o: {}, r: 10.5 },
+        },
+      },
+    });
+    expect(book.offeredMarketCount).toBe(1);
+    expect(book.offMarketCount).toBe(1);
+    expect(book.markets.find(m => m.marketType === '5')?.offered).toBe(false);
+    expect(book.markets.find(m => m.marketType === '3')?.clsDefault).toBeNull();
+    expect(book.markets.find(m => m.marketType === '5')?.clsDefault).toBe(6);
+  });
+
+  test('diffOfferFingerprints detects selection_off and price_change', () => {
+    const prev = extractCoefficientLines(1, {
+      c: { m: { '3': { o: { '1': 1.5, '2': 2.5 } } } },
+    });
+    const next = extractCoefficientLines(1, {
+      c: { m: { '3': { o: { '1': 1.6 } } } },
+    });
+    const t = diffOfferFingerprints(prev, next);
+    expect(t.some(x => x.kind === 'selection_off' && x.selection === '2')).toBe(
+      true
+    );
+    expect(t.some(x => x.kind === 'price_change' && x.selection === '1')).toBe(
+      true
+    );
+  });
+
+  test('EVENT_STATES and isEventOffTheBoard', () => {
+    expect(describePandoraEventState(PANDORA_EVENT_STATES.bettable)).toBe(
+      'bettable'
+    );
+    expect(isEventOffTheBoard({ state: 0, oddsCount: 4 })).toBe(false);
+    expect(isEventOffTheBoard({ state: 2, oddsCount: 4 })).toBe(true);
+    expect(isEventOffTheBoard({ state: 0, oddsCount: 0 })).toBe(true);
+    expect(isEventOffTheBoard({ state: 3, oddsCount: 2 })).toBe(true);
   });
 
   test('applyCoefficientDiff replace paths', () => {
