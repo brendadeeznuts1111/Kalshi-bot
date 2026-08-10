@@ -67,7 +67,7 @@ export function planPromoteNotify(
   };
 }
 
-export async function loadPromoteNotifyState(
+async function loadPromoteNotifyState(
   path: string
 ): Promise<PromoteNotifyState | null> {
   try {
@@ -84,7 +84,7 @@ export async function loadPromoteNotifyState(
   }
 }
 
-export async function savePromoteNotifyState(
+async function savePromoteNotifyState(
   path: string,
   state: PromoteNotifyState
 ): Promise<void> {

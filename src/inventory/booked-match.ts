@@ -63,7 +63,7 @@ function normalizeKey(s: string): string {
     .trim();
 }
 
-export function normalizeName(s: string): string {
+function normalizeName(s: string): string {
   return s
     .toLowerCase()
     .normalize('NFKD')
@@ -74,7 +74,7 @@ export function normalizeName(s: string): string {
 }
 
 /** Strip team/player noise common on stream-list wire. */
-export function stripCompetitorNoise(raw: string): string {
+function stripCompetitorNoise(raw: string): string {
   let s = String(raw ?? '').trim();
   // trailing dash / emdash
   s = s.replace(/[-–—]+$/g, '').trim();
@@ -217,7 +217,7 @@ function leagueTokenBoost(
  * 100 full substring, 90 reordered names, 80 first+last both sides,
  * 70 last-name tokens + league boost, 65 last-name + strong league.
  */
-export function scoreBookedMatch(
+function scoreBookedMatch(
   query: BookedMatchQuery,
   entry: BookedMatchEntry
 ): number | null {
