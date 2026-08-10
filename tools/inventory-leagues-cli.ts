@@ -9,11 +9,12 @@
  *   bun run inventory:leagues -- --order=peak
  *   bun run inventory:leagues -- --harvest --sport=all [--dry-run]
  *   bun run inventory:leagues -- --promote [--apply] [--min-peak=1] [--json]
- *   bun run inventory:leagues -- --report [--min-peak=1] [--json]
+ *   bun run inventory:leagues -- --report [--min-peak=1] [--json] [--notify]
  *   bun run inventory:leagues -- --backfill
  *
  * --promote: plan COMPETITIONS seeds from unmapped inventory_leagues (junk filtered).
  * --report:  same plan as promote dry-run (cron-shared buildPromoteReport).
+ * --notify:  with --report, force Telegram once (TELEGRAM_* required; dedup state updated).
  * --apply:   write candidates into src/domain/competitions.ts + stamp registry rows.
  * --backfill: re-resolve competition_id on inventory_leagues from current seeds.
  */
@@ -35,6 +36,7 @@ import {
   stampInventoryLeaguesFromRecords,
   type InventoryLeagueRow,
 } from '../src/inventory/leagues.ts';
+import { maybeNotifyPromoteReport } from '../src/inventory/promote-notify.ts';
 import { buildPromoteReport } from '../src/inventory/promote-report.ts';
 import { stampSkinEventsCompetitionIds } from '../src/inventory/skin-events-store.ts';
 import { runInventorySync } from '../src/inventory/sync.ts';
@@ -101,6 +103,7 @@ async function main(): Promise<void> {
   const harvest = hasFlag('harvest');
   const promote = hasFlag('promote');
   const reportOnly = hasFlag('report');
+  const notify = hasFlag('notify');
   const apply = hasFlag('apply');
   const backfill = hasFlag('backfill');
   const dryRun = hasFlag('dry-run') || hasFlag('dryRun');
@@ -116,6 +119,14 @@ async function main(): Promise<void> {
       minPeak,
       sportId: sportFilter && sportFilter !== 'all' ? sportFilter : undefined,
     });
+    let notifyResult: Awaited<ReturnType<typeof maybeNotifyPromoteReport>> | null =
+      null;
+    if (notify) {
+      notifyResult = await maybeNotifyPromoteReport(promo, {
+        force: true,
+        enabled: true,
+      });
+    }
     if (json) {
       console.log(
         JSON.stringify(
@@ -134,6 +145,13 @@ async function main(): Promise<void> {
               reason: r.reason,
             })),
             summaryLine: promo.summaryLine,
+            notify: notifyResult
+              ? {
+                  telegram: notifyResult.telegram,
+                  reason: notifyResult.plan.reason,
+                  newIds: notifyResult.plan.newIds,
+                }
+              : null,
           },
           null,
           2
@@ -144,6 +162,11 @@ async function main(): Promise<void> {
     console.log(`inventory:leagues --report ${promo.summaryLine}`);
     for (const line of promo.detailLines) {
       console.log(line);
+    }
+    if (notifyResult) {
+      console.log(
+        `  notify: ${notifyResult.telegram} (${notifyResult.plan.reason})`
+      );
     }
     return;
   }

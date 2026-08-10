@@ -102,6 +102,20 @@ export {
 } from '../inventory/promote-report.ts';
 
 export {
+  maybeNotifyInventoryTelegram,
+  inventoryTelegramConfigured,
+  type InventoryNotifyResult,
+} from '../inventory/notify.ts';
+
+export {
+  maybeNotifyPromoteReport,
+  planPromoteNotify,
+  defaultPromoteNotifyStatePath,
+  type PromoteNotifyState,
+  type MaybeNotifyPromoteResult,
+} from '../inventory/promote-notify.ts';
+
+export {
   fetchPublicPliveStreamEvents,
   filterLiveEventsBySport,
   formatSkinEventLine,
