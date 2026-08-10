@@ -456,7 +456,8 @@ export async function runInventorySync(
       );
       let catalog: BookedMatchEntry[] = [];
       let catalogSource = 'injected';
-      if (options.bookedCatalog && options.bookedCatalog.length > 0) {
+      // Defined array (even empty) skips public Statscore fetch — tests / offline.
+      if (options.bookedCatalog != null) {
         catalog = options.bookedCatalog;
       } else {
         const { fetchPublicBookedCatalog, bookedCatalogToMatchList } =

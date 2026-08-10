@@ -18,17 +18,19 @@ import type { PartnerAccountProfile } from '../partner/account-profile.ts';
 import type { FantasySessionAdapter } from '../partner/types.ts';
 import { maybeNotifyInventoryTelegram } from './notify.ts';
 import {
-  formatSyncReport,
   runInventorySync,
   type EnrichBookedScope,
   type InventorySyncOptions,
   type InventorySyncReport,
 } from './sync.ts';
+import type { BookedMatchEntry } from './booked-match.ts';
 
 export type EnrichBookedEventsOptions = {
   enrichOnly?: boolean;
   enrichBookedScope?: EnrichBookedScope;
   enrichCatalogMax?: number;
+  /** Inject catalog (tests / offline) — skips public Statscore fetch. */
+  bookedCatalog?: BookedMatchEntry[];
   sport?: string;
   dryRun?: boolean;
   nowMs?: number;
@@ -98,6 +100,7 @@ export async function enrichBookedEvents(
     enrichBooked: true,
     enrichBookedScope: options.enrichBookedScope ?? (enrichOnly ? 'unlinked' : 'board'),
     enrichCatalogMax: options.enrichCatalogMax ?? 2000,
+    bookedCatalog: options.bookedCatalog,
     dryRun: options.dryRun === true,
     nowMs: options.nowMs,
   };
@@ -117,5 +120,3 @@ export async function enrichBookedEvents(
 
   return report;
 }
-
-export { formatSyncReport };
