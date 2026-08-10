@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Inventory coverage board · sports as columns</title>
+  <style>
+    :root {
+      --bg: #0c0f14; --panel: #141a22; --panel2: #1a222d; --border: #2a3544;
+      --text: #e8eef6; --muted: #8b9bb0; --accent: #5b9fd4; --ok: #3dba7a;
+      --warn: #e0a44c; --bad: #e05a5a; --plive: #6c9ef8; --ezlive: #c084fc;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      --sans: "IBM Plex Sans", system-ui, -apple-system, Segoe UI, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: var(--sans); color: var(--text); line-height: 1.45; min-height: 100vh;
+      background: radial-gradient(1200px 600px at 10% -10%, #1a2740 0%, transparent 50%),
+                  radial-gradient(900px 500px at 100% 0%, #2a1a40 0%, transparent 45%), var(--bg);
+    }
+    header {
+      padding: 1.75rem 1.5rem 1rem; border-bottom: 1px solid var(--border);
+      background: rgba(12,15,20,0.75); backdrop-filter: blur(8px); position: sticky; top: 0; z-index: 10;
+    }
+    header h1 { margin: 0 0 0.35rem; font-size: 1.35rem; font-weight: 650; letter-spacing: -0.02em; }
+    header p { margin: 0; color: var(--muted); font-size: 0.92rem; max-width: 78rem; }
+    .meta { margin-top: 0.65rem; display: flex; flex-wrap: wrap; gap: 0.5rem 1rem;
+      font-family: var(--mono); font-size: 0.78rem; color: var(--muted); }
+    main { padding: 1.25rem 1.5rem 3rem; max-width: 1500px; margin: 0 auto; display: grid; gap: 1rem; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem; }
+    .card {
+      background: linear-gradient(180deg, var(--panel2), var(--panel));
+      border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.05rem; overflow-x: auto;
+    }
+    .card h2 {
+      margin: 0 0 0.75rem; font-size: 0.78rem; text-transform: uppercase;
+      letter-spacing: 0.06em; color: var(--muted); font-weight: 600;
+    }
+    .stat { font-size: 1.65rem; font-weight: 650; letter-spacing: -0.03em; }
+    .stat small { display: block; font-size: 0.72rem; color: var(--muted); font-weight: 500; margin-top: 0.2rem; }
+    .stat.ok { color: var(--ok); } .stat.warn { color: var(--warn); }
+    .stat.bad { color: var(--bad); } .stat.accent { color: var(--accent); }
+    .badge {
+      display: inline-block; padding: 0.12rem 0.45rem; border-radius: 999px;
+      font-family: var(--mono); font-size: 0.72rem; border: 1px solid var(--border);
+    }
+    .badge.plive { color: var(--plive); border-color: #3a5a90; }
+    .badge.ezlive { color: var(--ezlive); border-color: #6b4a90; }
+    table.matrix { width: 100%; border-collapse: collapse; font-size: 0.8rem; min-width: 720px; }
+    table.matrix th, table.matrix td {
+      border: 1px solid var(--border); padding: 0.4rem 0.45rem; text-align: center; white-space: nowrap;
+    }
+    table.matrix th { background: rgba(0,0,0,0.25); font-weight: 600; font-size: 0.7rem; }
+    table.matrix th.row-h, table.matrix td.row-h {
+      text-align: left; font-weight: 600; color: var(--muted);
+      position: sticky; left: 0; background: var(--panel); z-index: 1; min-width: 8.5rem;
+    }
+    table.matrix th.sport {
+      color: var(--accent); font-family: var(--mono); font-size: 0.68rem; max-width: 6.5rem;
+      overflow: hidden; text-overflow: ellipsis;
+    }
+    table.matrix td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+    table.matrix tr.section td { background: rgba(91,159,212,0.08); color: var(--accent);
+      text-align: left; font-size: 0.72rem; letter-spacing: 0.04em; text-transform: uppercase; }
+    .cell-primary { color: var(--ok); font-weight: 650; }
+    .cell-secondary { color: var(--warn); }
+    .cell-yes { color: var(--text); }
+    .cell-empty { color: #3a4555; }
+    .callout {
+      border-radius: 10px; padding: 0.85rem 1rem; border: 1px solid var(--border);
+      background: rgba(224,164,76,0.08); font-size: 0.9rem; color: var(--muted);
+    }
+    .callout strong { color: var(--warn); }
+    .bar { height: 6px; background: #243040; border-radius: 3px; overflow: hidden; }
+    .bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--ok)); }
+    .legend { display: flex; flex-wrap: wrap; gap: 0.75rem; font-size: 0.78rem; color: var(--muted); margin-bottom: 0.65rem; }
+    pre {
+      margin: 0; padding: 0.85rem 1rem; background: #0a0d12; border-radius: 8px;
+      font-family: var(--mono); font-size: 0.78rem; overflow-x: auto; color: var(--muted);
+    }
+    footer { margin-top: 0.75rem; font-size: 0.78rem; color: var(--muted); }
+    .chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+    .chip {
+      border: 1px solid var(--border); border-radius: 8px; padding: 0.35rem 0.55rem;
+      font-size: 0.75rem; background: rgba(0,0,0,0.2);
+    }
+    .chip b { color: var(--accent); font-family: var(--mono); }
+    .chip .n { color: var(--muted); font-family: var(--mono); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Inventory coverage board</h1>
+    <p>
+      <strong>Each sport is a column.</strong>
+      Inventory metrics · feed/widget/api planes · period units · market-type flags
+      (Pandora <code>live.sports.m</code>) · wager-type catalog depth.
+    </p>
+    <div class="meta">
+      <span id="gen">generated —</span>
+      <span>skin=<strong style="color:var(--text)">buckeye</strong></span>
+      <span>book=<strong style="color:var(--text)">fantasy402</strong></span>
+      <span class="badge plive">plive</span>
+      <span class="badge ezlive">ezlive shared</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="grid" id="kpis"></section>
+
+    <div class="callout">
+      <strong>Odds link is the main gap.</strong>
+      Only <span id="linkPct">—</span>% of board events have <code>odds_event_id</code>.
+      Stream-list has no prices; enrich stamps Statscore client id by name match only.
+    </div>
+
+    <section class="card">
+      <h2>Coverage · sport columns</h2>
+      <div class="legend">
+        <span>Rows = metrics / planes · columns = sports (event count order)</span>
+      </div>
+      <table class="matrix" id="sportMatrix"></table>
+    </section>
+
+    <section class="card">
+      <h2>Market type × sport</h2>
+      <div class="legend">
+        <span class="cell-primary">● primary</span>
+        <span class="cell-secondary">● secondary</span>
+        <span class="cell-yes">● offered</span>
+        <span class="cell-empty">— not flagged</span>
+        <span>catalog n = live.wagerTypes with that typeId</span>
+      </div>
+      <p style="margin:0 0 0.65rem;color:var(--muted);font-size:0.82rem">
+        Known Pandora/ticket market ids always listed. Flags merge all feed shells for a sport
+        (e.g. Soccer + Top Soccer + WC). <code>n=…</code> is wagerTypes catalog size for that family.
+      </p>
+      <table class="matrix" id="marketMatrix"></table>
+    </section>
+
+    <section class="card">
+      <h2>Wager type families (catalog depth)</h2>
+      <div class="chips" id="wagerChips"></div>
+    </section>
+
+    <section class="card">
+      <h2>Unmapped leagues</h2>
+      <table class="matrix" style="min-width:0">
+        <thead><tr><th class="row-h">Sport</th><th class="row-h">League</th><th>Peak</th><th>Live</th></tr></thead>
+        <tbody id="unmapped"></tbody>
+      </table>
+    </section>
+
+    <section class="card">
+      <h2>Sample linked events</h2>
+      <table class="matrix" style="min-width:0">
+        <thead><tr><th class="row-h">Sport</th><th class="row-h">Matchup</th><th>odds_event_id</th><th>inv</th></tr></thead>
+        <tbody id="linked"></tbody>
+      </table>
+    </section>
+
+    <section class="card">
+      <h2>Operator commands</h2>
+      <pre>bun run inventory:coverage-board
+bun run domain:sports -- --feed
+bun run domain:sports -- --periods
+bun run domain:widget-extract -- --write   # refresh market flags + leagues
+bun run inventory:sync -- --sport=all --dry-run
+bun run inventory:enrich</pre>
+      <footer>Board: <code>docs/artifacts/inventory-coverage-board.html</code> · builders: <code>src/inventory/coverage-board.ts</code></footer>
+    </section>
+  </main>
+
+  <script>
+    const DATA = {"generatedAt":"2026-08-10T12:42:03.096Z","identity":{"skinId":"buckeye","bookId":"fantasy402","inventoryLiveProduct":"plive"},"coversLiveProducts":["plive","ezlive"],"odds":{"bookId":"fantasy402","total":392,"linked":19,"unlinked":373,"linkedPct":5},"leagues":{"total":111,"unmapped":59,"liveNow":0,"pandoraTotal":3898},"competitions":3052,"wagerTypeTotal":2606,"sports":["table_tennis","basketball","tennis","cricket","soccer","ice_hockey","sports_channels","horse_racing","volleyball","baseball","snooker","darts","football"],"bySportCols":{"table_tennis":{"sport":"table_tennis","events":144,"linked":5,"fillPct":3,"leagues":12,"mapped":10,"mapPct":83,"pandoraLeagues":7,"feedSportId":93,"widgetSportId":220,"apiSportId":93,"periodUnit":"Game","periodS1":"1st Game","bindingStatus":"primary"},"basketball":{"sport":"basketball","events":46,"linked":0,"fillPct":0,"leagues":17,"mapped":12,"mapPct":71,"pandoraLeagues":88,"feedSportId":2,"widgetSportId":4,"apiSportId":null,"periodUnit":"Quarter","periodS1":"1st Quarter","bindingStatus":"primary"},"tennis":{"sport":"tennis","events":44,"linked":8,"fillPct":18,"leagues":15,"mapped":4,"mapPct":27,"pandoraLeagues":3171,"feedSportId":8,"widgetSportId":2,"apiSportId":8,"periodUnit":"Set","periodS1":"1st Set","bindingStatus":"primary"},"cricket":{"sport":"cricket","events":42,"linked":1,"fillPct":2,"leagues":20,"mapped":10,"mapPct":50,"pandoraLeagues":42,"feedSportId":87,"widgetSportId":null,"apiSportId":null,"periodUnit":"Inns","periodS1":"1st Inns","bindingStatus":"inventory"},"soccer":{"sport":"soccer","events":38,"linked":1,"fillPct":3,"leagues":0,"mapped":0,"mapPct":0,"pandoraLeagues":304,"feedSportId":5,"widgetSportId":1,"apiSportId":5,"periodUnit":"Half","periodS1":"1st Half","bindingStatus":"primary"},"ice_hockey":{"sport":"ice_hockey","events":31,"linked":0,"fillPct":0,"leagues":8,"mapped":6,"mapPct":75,"pandoraLeagues":21,"feedSportId":4,"widgetSportId":null,"apiSportId":null,"periodUnit":"Period","periodS1":"1st Period","bindingStatus":"inventory"},"sports_channels":{"sport":"sports_channels","events":18,"linked":0,"fillPct":0,"leagues":0,"mapped":0,"mapPct":0,"pandoraLeagues":93,"feedSportId":114,"widgetSportId":null,"apiSportId":null,"periodUnit":"Map","periodS1":"1st Map","bindingStatus":"inventory"},"horse_racing":{"sport":"horse_racing","events":13,"linked":0,"fillPct":0,"leagues":4,"mapped":3,"mapPct":75,"pandoraLeagues":0,"feedSportId":10,"widgetSportId":null,"apiSportId":null,"periodUnit":null,"periodS1":"1st Period","bindingStatus":"inventory"},"volleyball":{"sport":"volleyball","events":9,"linked":1,"fillPct":11,"leagues":4,"mapped":3,"mapPct":75,"pandoraLeagues":28,"feedSportId":88,"widgetSportId":null,"apiSportId":null,"periodUnit":"Set","periodS1":"1st Set","bindingStatus":"inventory"},"baseball":{"sport":"baseball","events":4,"linked":3,"fillPct":75,"leagues":0,"mapped":0,"mapPct":0,"pandoraLeagues":14,"feedSportId":1,"widgetSportId":null,"apiSportId":null,"periodUnit":"Inning","periodS1":"1st Inning","bindingStatus":"inventory"},"snooker":{"sport":"snooker","events":2,"linked":0,"fillPct":0,"leagues":1,"mapped":1,"mapPct":100,"pandoraLeagues":0,"feedSportId":98,"widgetSportId":null,"apiSportId":null,"periodUnit":"Frame","periodS1":"1st Frame","bindingStatus":"inventory"},"darts":{"sport":"darts","events":1,"linked":0,"fillPct":0,"leagues":1,"mapped":0,"mapPct":0,"pandoraLeagues":0,"feedSportId":118,"widgetSportId":null,"apiSportId":null,"periodUnit":null,"periodS1":"1st Period","bindingStatus":"inventory"},"football":{"sport":"football","events":0,"linked":0,"fillPct":0,"leagues":29,"mapped":3,"mapPct":10,"pandoraLeagues":0,"feedSportId":5,"widgetSportId":1,"apiSportId":5,"periodUnit":"Half","periodS1":"1st Half","bindingStatus":"primary"}},"marketMatrix":{"marketIds":["1","3","4","5","6","7","8","9","16","18","20","21","30"],"sports":["table_tennis","basketball","tennis","cricket","soccer","ice_hockey","sports_channels","horse_racing","volleyball","baseball","snooker","darts","american_football","australian_rules","badminton","bandy","boxing","cycling","floorball","formula_1","futsal","golf","handball","martial_arts","motorsport","rugby","ufc"],"cells":{"1":{"table_tennis":"—","basketball":"—","tennis":"—","cricket":"—","soccer":"primary","ice_hockey":"—","sports_channels":"—","horse_racing":"—","volleyball":"—","baseball":"—","snooker":"—","darts":"—","american_football":"—","australian_rules":"—","badminton":"—","bandy":"primary","boxing":"—","cycling":"—","floorball":"—","formula_1":"—","futsal":"primary","golf":"—","handball":"primary","martial_arts":"—","motorsport":"—","rugby":"primary","ufc":"—"},"3":{"table_tennis":"primary","basketball":"yes","tennis":"primary","cricket":"primary","soccer":"—","ice_hockey":"—","sports_channels":"primary","horse_racing":"—","volleyball":"primary","baseball":"primary","snooker":"—","darts":"primary","american_football":"primary","australian_rules":"primary","badminton":"primary","bandy":"—","boxing":"—","cycling":"—","floorball":"—","formula_1":"—","futsal":"—","golf":"—","handball":"—","martial_arts":"primary","motorsport":"—","rugby":"—","ufc":"primary"},"4":{"table_tennis":"—","basketball":"—","tennis":"—","cricket":"—","soccer":"—","ice_hockey":"—","sports_channels":"—","horse_racing":"—","volleyball":"—","baseball":"—","snooker":"—","darts":"—","american_football":"—","australian_rules":"—","badminton":"—","bandy":"—","boxing":"—","cycling":"—","floorball":"—","formula_1":"—","futsal":"—","golf":"—","handball":"—","martial_arts":"—","motorsport":"—","rugby":"—","ufc":"—"},"5":{"table_tennis":"secondary","basketball":"secondary","tennis":"secondary","cricket":"—","soccer":"secondary","ice_hockey":"—","sports_channels":"—","horse_racing":"—","volleyball":"secondary","baseball":"secondary","snooker":"—","darts":"—","american_football":"secondary","australian_rules":"yes","badminton":"secondary","bandy":"yes","boxing":"—","cycling":"—","floorball":"—","formula_1":"—","futsal":"yes","golf":"—","handball":"secondary","martial_arts":"—","motorsport":"—","rugby":"secondary","ufc":"—"},"6":{"table_tennis":"—","basketball":"primary","tennis":"yes","cricket":"—","soccer":"yes","ice_hockey":"—","sports_channels":"—","horse_racing":"—","volleyball":"secondary","baseball":"yes","snooker":"—","darts":"—","american_football":"primary","australian_rules":"secondary","badminton":"—","bandy":"secondary","boxing":"—","cycling":"—","floorball":"—","formula_1":"—","futsal":"secondary","golf":"—","handball":"yes","martial_arts":"—","motorsport":"—","rugby":"yes","ufc":"—"},"7":{"table_tennis":"—","basketball":"—","tennis":"—","cricket":"—","soccer":"—","ice_hockey":"—","sports_channels":"—","horse_racing":"—","volleyball":"—","baseball":"—","snooker":"—","darts":"—","american_football":"—","australian_rules":"—","badminton":"—","bandy":"—","boxing":"—","cycling":"—","floorball":"—","formula_1":"—","futsal":"—","golf":"—","handball":"—","martial_arts":"—","motorsport":"—","rugby":"—","ufc":"—"},"8":{"table_tennis":"—","basketball":"—","tennis":"—","cricket":"—","soccer":"—","ice_hockey":"—","sports_channels":"—","horse_racing":"—","volleyball":"—","baseball":"—","snooker":"—","darts":"—","american_football":"—","australian_rules":"—","badminton":"—","bandy":"—","boxing":"—","cycling":"—","floorball":"—","formula_1":"—","futsal":"—","golf":"—","handball":"—","martial_arts":"—","motorsport":"—","rugby":"—","ufc":"—"},"9":{"table_tennis":"—","basketball":"—","tennis":"—","cricket":"—","soccer":"—","ice_hockey":"—","sports_channels":"—","horse_racing":"—","volleyball":"—","baseball":"—","snooker":"—","darts":"—","american_football":"—","australian_rules":"—","badminton":"—","bandy":"—","boxing":"—","cycling":"—","floorball":"—","formula_1":"—","futsal":"—","golf":"—","handball":"—","martial_arts":"—","motorsport":"—","rugby":"—","ufc":"—"},"16":{"table_tennis":"—","basketball":"—","tennis":"—","cricket":"—","soccer":"—","ice_hockey":"—","sports_channels":"—","horse_racing":"—","volleyball":"—","baseball":"—","snooker":"—","darts":"—","american_football":"—","australian_rules":"—","badminton":"—","bandy":"—","boxing":"—","cycling":"—","floorball":"—","formula_1":"—","futsal":"—","golf":"—","handball":"—","martial_arts":"—","motorsport":"—","rugby":"—","ufc":"—"},"18":{"table_tennis":"—","basketball":"—","tennis":"—","cricket":"—","soccer":"—","ice_hockey":"—","sports_channels":"—","horse_racing":"—","volleyball":"—","baseball":"—","snooker":"—","darts":"—","american_football":"—","australian_rules":"—","badminton":"—","bandy":"—","boxing":"—","cycling":"—","floorball":"—","formula_1":"—","futsal":"—","golf":"—","handball":"—","martial_arts":"—","motorsport":"—","rugby":"—","ufc":"—"},"20":{"table_tennis":"—","basketball":"—","tennis":"—","cricket":"—","soccer":"—","ice_hockey":"—","sports_channels":"—","horse_racing":"—","volleyball":"—","baseball":"—","snooker":"—","darts":"—","american_football":"—","australian_rules":"—","badminton":"—","bandy":"—","boxing":"—","cycling":"—","floorball":"—","formula_1":"—","futsal":"—","golf":"—","handball":"—","martial_arts":"—","motorsport":"—","rugby":"—","ufc":"—"},"21":{"table_tennis":"—","basketball":"—","tennis":"—","cricket":"—","soccer":"—","ice_hockey":"—","sports_channels":"—","horse_racing":"—","volleyball":"—","baseball":"—","snooker":"—","darts":"—","american_football":"—","australian_rules":"—","badminton":"—","bandy":"—","boxing":"—","cycling":"—","floorball":"—","formula_1":"—","futsal":"—","golf":"—","handball":"—","martial_arts":"—","motorsport":"—","rugby":"—","ufc":"—"},"30":{"table_tennis":"—","basketball":"primary","tennis":"primary","cricket":"—","soccer":"primary","ice_hockey":"—","sports_channels":"—","horse_racing":"primary","volleyball":"—","baseball":"primary","snooker":"—","darts":"—","american_football":"—","australian_rules":"—","badminton":"—","bandy":"—","boxing":"—","cycling":"primary","floorball":"—","formula_1":"primary","futsal":"—","golf":"primary","handball":"—","martial_arts":"—","motorsport":"primary","rugby":"—","ufc":"—"}},"labels":{"1":"moneyline_3way","3":"moneyline","4":"draw_no_bet","5":"total","6":"spread","7":"total_points","8":"team_total","9":"correct_score_sets","16":"set_correct_score","18":"game_winner","20":"set_total_games","21":"set_game_handicap","30":"outright_futures"},"wagerTypeCounts":{"1":38,"2":11,"3":53,"4":2,"5":202,"6":19,"7":41,"8":41,"9":11,"16":1,"17":1,"18":1,"30":1064,"37":5,"61":44,"63":16,"64":15,"73":4,"74":117,"87":6,"88":1,"89":1,"90":1,"95":4,"99":53,"100":3,"109":2,"110":2,"121":1,"125":121,"144":8,"145":8,"146":148,"147":9,"148":8,"153":12,"162":1,"163":8,"164":9,"194":249,"196":11,"275":1,"276":160,"277":11,"321":61,"329":16,"477":4,"-1":1}},"wagerFamilies":[{"typeId":30,"count":1064,"sampleName":"#1 Seed","knownLabel":"outright_futures"},{"typeId":194,"count":249,"sampleName":"#10 Overall Pick","knownLabel":null},{"typeId":5,"count":202,"sampleName":"10 Minute Total","knownLabel":"total"},{"typeId":276,"count":160,"sampleName":"72 Hole Winning Score Range","knownLabel":null},{"typeId":146,"count":148,"sampleName":"#1 Seed To Win Tournament","knownLabel":null},{"typeId":125,"count":121,"sampleName":"1st Field Goal Attempt Result","knownLabel":null},{"typeId":74,"count":117,"sampleName":"3 Point Contest","knownLabel":null},{"typeId":321,"count":61,"sampleName":"1x2 And Both Teams To Score","knownLabel":null},{"typeId":3,"count":53,"sampleName":"1st 20 Yds Or More Gain From Scrimmage","knownLabel":"moneyline"},{"typeId":99,"count":53,"sampleName":"All Periods Score Over","knownLabel":null},{"typeId":61,"count":44,"sampleName":"1st Player To Record 100+ Receiving Yards","knownLabel":null},{"typeId":7,"count":41,"sampleName":"T1 Total Field Goals","knownLabel":"total_points"},{"typeId":8,"count":41,"sampleName":"T2 Total Field Goals","knownLabel":"team_total"},{"typeId":1,"count":38,"sampleName":"10 Minute Result","knownLabel":"moneyline_3way"},{"typeId":6,"count":19,"sampleName":"Cards Spread","knownLabel":"spread"},{"typeId":329,"count":16,"sampleName":"1x2 And Double Chance","knownLabel":null},{"typeId":63,"count":16,"sampleName":"Method Of First Goal","knownLabel":null},{"typeId":64,"count":15,"sampleName":"Record A Knockdown Team 2","knownLabel":null}],"topUnmapped":[{"sport":"tennis","league":"Niderlandi","peak":4,"live":0},{"sport":"tennis","league":"W35 Aldershot - 9 August 26","peak":4,"live":0},{"sport":"tennis","league":"ATP Challenger Todi, Italy Men Singles","peak":3,"live":0},{"sport":"tennis","league":"W50 Hamburg - 9 August 26","peak":3,"live":0},{"sport":"tennis","league":"M25 Koksijde - 9 August 26","peak":3,"live":0},{"sport":"tennis","league":"M25 Idanha-a-Nova - 9 August 26","peak":3,"live":0},{"sport":"tennis","league":"M25 Muttenz - 9 August 26","peak":3,"live":0},{"sport":"tennis","league":"Kvalifikatsiya","peak":2,"live":0},{"sport":"tennis","league":"W75 Kursumlijska Banja - 9 August 26","peak":2,"live":0},{"sport":"cricket","league":"World Cup U19. 2028. Division 2. Qualification","peak":2,"live":0},{"sport":"football","league":"Universitet Thonburi - Universitet Thammasat","peak":1,"live":0},{"sport":"football","league":"Pitchayabundit kolledzh - Universitet Kasem Bundit","peak":1,"live":0},{"sport":"football","league":"Ege Taunship - Yogay Taun","peak":1,"live":0},{"sport":"basketball","league":"FrostBall","peak":1,"live":0},{"sport":"ice_hockey","league":"Subhockey","peak":1,"live":0},{"sport":"table_tennis","league":"Rossiya","peak":1,"live":0},{"sport":"football","league":"Sankt-Peterburg (univ) - Luganskaya Narodnaya Respublika (univ)","peak":1,"live":0},{"sport":"football","league":"Respublika Mordoviya (univ) - Smolenskaya oblasty (univ)","peak":1,"live":0},{"sport":"football","league":"Parizh - Darul Aulyya","peak":1,"live":0},{"sport":"basketball","league":"Filippini","peak":1,"live":0}],"sampleLinked":[{"sport":"cricket","league":"Caribbean Premier League 2026","home":"Falcons","away":"Kings","odds":"19645769","inv":"39891813"},{"sport":"table_tennis","league":"Setka Cup","home":"Maksim Homenko","away":"Yuriy Kolos","odds":"19750078","inv":"39900057"},{"sport":"soccer","league":"Natsionalynaya liga","home":"Yadanarbon (zh)","away":"Titsar Arman (zh)","odds":"19751366","inv":"39899511"},{"sport":"tennis","league":"ATP Challenger Todi, Italy Men Singles","home":"FERRARI, GIANMARCO","away":"MASHTAKOV, NIKITA -","odds":"19747915","inv":"39898457"},{"sport":"tennis","league":"ATP Challenger Astana, Kazakhstan Men Singles","home":"SINCLAIR, COLIN","away":"ZHALGASBAY, DAMIR -","odds":"19748210","inv":"39898719"},{"sport":"tennis","league":"ATP Challenger Astana, Kazakhstan Men Singles","home":"PANKIN, SEMEN","away":"PALAN, DOMINIK -","odds":"19741034","inv":"39899421"},{"sport":"tennis","league":"ATP Challenger Astana, Kazakhstan Men Singles","home":"MATSUDA, KOKI","away":"MATSUOKA, HAYATO -","odds":"19741016","inv":"39899473"},{"sport":"tennis","league":"ATP Challenger Todi, Italy Men Singles","home":"CANIATO, CARLO ALBERTO","away":"CRIVELLARO, GABRIELE -","odds":"19749582","inv":"39899951"},{"sport":"tennis","league":"ATP Challenger Todi, Italy Men Singles","home":"MARTIN MANZANO, JUAN CRUZ","away":"WEIS, ALEXANDER -","odds":"19749935","inv":"39900039"},{"sport":"table_tennis","league":"Setka Cup","home":"Petr Provaznik","away":"Zdenek Kuksa","odds":"19750251","inv":"39899977"},{"sport":"table_tennis","league":"Setka Cup","home":"Aleksey Rodin","away":"Vladimir Stepanovich Ivasiv","odds":"19751022","inv":"39900533"},{"sport":"baseball","league":"Mexico LMB","home":"Leon","away":"Tabasco","odds":"19737913","inv":"39892741"}]};
+
+    const o = DATA.odds;
+    const L = DATA.leagues;
+    const mapPct = L.total ? Math.round(((L.total - L.unmapped) / L.total) * 100) : 0;
+    document.getElementById("gen").textContent = "generated " + DATA.generatedAt;
+    document.getElementById("linkPct").textContent = String(o.linkedPct);
+
+    document.getElementById("kpis").innerHTML = `
+      <div class="card"><h2>Board events</h2><div class="stat accent">${o.total}<small>skin_events</small></div></div>
+      <div class="card"><h2>Odds linked</h2><div class="stat ${o.linkedPct < 10 ? "bad" : o.linkedPct < 50 ? "warn" : "ok"}">${o.linked}<small>${o.linkedPct}% · ${o.unlinked} unlinked</small></div>
+        <div class="bar" style="margin-top:0.55rem"><i style="width:${o.linkedPct}%"></i></div></div>
+      <div class="card"><h2>Durable leagues</h2><div class="stat">${L.total}<small>${L.unmapped} unmapped</small></div></div>
+      <div class="card"><h2>Pandora leagues</h2><div class="stat accent">${L.pandoraTotal || 0}<small>live.leagues snapshot</small></div></div>
+      <div class="card"><h2>COMPETITIONS</h2><div class="stat">${DATA.competitions}<small>${mapPct}% league map</small></div></div>
+      <div class="card"><h2>Wager types</h2><div class="stat">${DATA.wagerTypeTotal}<small>catalog products</small></div></div>
+    `;
+
+    const sports = DATA.sports || [];
+    const cols = DATA.bySportCols || {};
+
+    function cell(v) {
+      if (v == null || v === "") return "—";
+      return String(v);
+    }
+
+    const rowDefs = [
+      { section: "Inventory" },
+      { key: "events", label: "Events", num: true },
+      { key: "linked", label: "Odds linked", num: true },
+      { key: "fillPct", label: "Link fill %", num: true },
+      { key: "leagues", label: "Inv. leagues", num: true },
+      { key: "mapped", label: "Mapped", num: true },
+      { key: "mapPct", label: "Map %", num: true },
+      { key: "pandoraLeagues", label: "Pandora leagues", num: true },
+      { section: "Id planes" },
+      { key: "feedSportId", label: "feedSportId", num: true },
+      { key: "widgetSportId", label: "widgetSportId", num: true },
+      { key: "apiSportId", label: "apiSportId", num: true },
+      { section: "Periods (baked)" },
+      { key: "periodUnit", label: "Unit (s1…)" },
+      { key: "periodS1", label: "s1 label" },
+      { key: "bindingStatus", label: "Binding status" },
+    ];
+
+    let sportHtml = "<thead><tr><th class=\"row-h\">Metric</th>" +
+      sports.map(s => `<th class="sport" title="${s}">${s}</th>`).join("") +
+      "</tr></thead><tbody>";
+    for (const row of rowDefs) {
+      if (row.section) {
+        sportHtml += `<tr class="section"><td class="row-h" colspan="${sports.length + 1}">${row.section}</td></tr>`;
+        continue;
+      }
+      sportHtml += `<tr><td class="row-h">${row.label}</td>`;
+      for (const s of sports) {
+        const v = cols[s] ? cols[s][row.key] : null;
+        sportHtml += `<td class="${row.num ? "num" : ""}">${cell(v)}</td>`;
+      }
+      sportHtml += "</tr>";
+    }
+    sportHtml += "</tbody>";
+    document.getElementById("sportMatrix").innerHTML = sportHtml;
+
+    const mm = DATA.marketMatrix || { marketIds: [], sports: [], cells: {}, labels: {}, wagerTypeCounts: {} };
+    let mktHtml = "<thead><tr><th class=\"row-h\">Market type</th>" +
+      (mm.sports || []).map(s => `<th class="sport" title="${s}">${s}</th>`).join("") +
+      "</tr></thead><tbody>";
+    for (const mid of mm.marketIds || []) {
+      const lab = (mm.labels && mm.labels[mid]) || ("market:" + mid);
+      const n = (mm.wagerTypeCounts && mm.wagerTypeCounts[mid]) || 0;
+      const nLab = n ? ` <span style="color:var(--muted);font-family:var(--mono);font-weight:500">n=${n}</span>` : "";
+      mktHtml += `<tr><td class="row-h"><span style="color:var(--accent);font-family:var(--mono)">${mid}</span> · ${lab}${nLab}</td>`;
+      for (const s of mm.sports || []) {
+        const c = (mm.cells[mid] && mm.cells[mid][s]) || "—";
+        let cls = "cell-empty", text = c;
+        if (c === "primary") { cls = "cell-primary"; text = "primary"; }
+        else if (c === "secondary") { cls = "cell-secondary"; text = "secondary"; }
+        else if (c === "yes") { cls = "cell-yes"; text = "yes"; }
+        mktHtml += `<td class="${cls}">${text}</td>`;
+      }
+      mktHtml += "</tr>";
+    }
+    if (!(mm.marketIds || []).length) {
+      mktHtml += '<tr><td class="row-h" colspan="99">No snapshot — run domain:widget-extract -- --write</td></tr>';
+    }
+    mktHtml += "</tbody>";
+    document.getElementById("marketMatrix").innerHTML = mktHtml;
+
+    document.getElementById("wagerChips").innerHTML = (DATA.wagerFamilies || []).map(f => {
+      const id = f.typeId == null ? "?" : String(f.typeId);
+      const known = f.knownLabel ? ` · ${f.knownLabel}` : "";
+      return `<div class="chip"><b>tp=${id}</b>${known}<div class="n">${f.count} · ${f.sampleName}</div></div>`;
+    }).join("") || "<span style='color:var(--muted)'>no wagerTypes in snapshot</span>";
+
+    document.getElementById("unmapped").innerHTML = (DATA.topUnmapped || []).map(r =>
+      `<tr><td class="row-h">${r.sport}</td><td class="row-h">${r.league}</td><td class="num">${r.peak}</td><td class="num">${r.live}</td></tr>`
+    ).join("");
+
+    document.getElementById("linked").innerHTML = (DATA.sampleLinked || []).map(r =>
+      `<tr>
+        <td class="row-h">${r.sport}</td>
+        <td class="row-h">${r.home} vs ${r.away}<div style="color:var(--muted);font-size:0.78rem">${r.league}</div></td>
+        <td class="num">${r.odds}</td>
+        <td class="num">${r.inv}</td>
+      </tr>`
+    ).join("");
+  </script>
+</body>
+</html>

@@ -1925,15 +1925,20 @@ export function formatEventLookup(r: EventLookupResult): string {
     const offered = b.markets.filter(m => m.offered);
     if (offered.length) {
       lines.push('');
+      const sportCol =
+        r.pandora.eventState?.canonicalSportId ??
+        r.sportHint ??
+        (feedId != null ? String(feedId) : '—');
       lines.push('## Markets (offered)');
       lines.push(
         ...mdTable(
-          ['Mkt', 'Period', 'Name', 'Line (r)', 'Vig', 'cls', 'Prices'],
+          ['Sport', 'Period', 'Mkt type', 'Name', 'Line (r)', 'Vig', 'cls', 'Prices'],
           offered.map(m => {
             const vig = vigByKey.get(`${m.period}/${m.marketType}`);
             return [
-              `${m.period}/${m.marketType}`,
+              sportCol,
               periodCell(m.period),
+              String(m.marketType),
               pandoraMarketLabel(m.marketType),
               m.line != null ? String(m.line) : '—',
               vig ? fmtPct(vig.vigPercent) : '—',
@@ -1946,14 +1951,19 @@ export function formatEventLookup(r: EventLookupResult): string {
     }
     const off = b.markets.filter(m => !m.offered);
     if (off.length) {
+      const sportCol =
+        r.pandora.eventState?.canonicalSportId ??
+        r.sportHint ??
+        (feedId != null ? String(feedId) : '—');
       lines.push('');
       lines.push('## Markets (off / empty o)');
       lines.push(
         ...mdTable(
-          ['Mkt', 'Period', 'Name', 'Line'],
+          ['Sport', 'Period', 'Mkt type', 'Name', 'Line'],
           off.slice(0, 16).map(m => [
-            `${m.period}/${m.marketType}`,
+            sportCol,
             periodCell(m.period),
+            String(m.marketType),
             pandoraMarketLabel(m.marketType),
             m.line != null ? String(m.line) : '—',
           ])
@@ -2076,13 +2086,16 @@ export function formatEventLookup(r: EventLookupResult): string {
     const vigRows = vigFromCoefficientLines(r.pandora.lines);
     if (vigRows.length) {
       lines.push('');
+      const sportCol =
+        r.pandora.eventState?.canonicalSportId ?? r.sportHint ?? '—';
       lines.push('## Vig (overround)');
       lines.push(
         ...mdTable(
-          ['Mkt', 'Period', 'Name', 'Kind', 'Vig', 'Σ implied', 'Legs'],
+          ['Sport', 'Period', 'Mkt type', 'Name', 'Kind', 'Vig', 'Σ implied', 'Legs'],
           vigRows.map(v => [
-            `${v.period}/${v.marketType}`,
+            sportCol,
             periodLab(v.period),
+            String(v.marketType),
             v.label,
             v.kind,
             fmtPct(v.vigPercent),
