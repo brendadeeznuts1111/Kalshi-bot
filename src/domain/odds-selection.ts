@@ -1,10 +1,11 @@
 /**
  * Three planes — keep separate:
  *
- * 1. Inventory — stream-list → skin_events.stream_id
+ * 1. Inventory — stream-list → skin_events.inventory_id
  * 2. Odds     — Pandora eventCoefficients (period / marketType / selection)
  * 3. Ticket   — place-bet componentBets (periodId / marketId / key)
  *
+ * Wire field `stream_id` (Plive JSON) maps to interior `inventoryId` at parse.
  * Odds eventId and ticket eventId are usually the same wire number, but the
  * field names and types stay distinct so callers do not mix planes by accident.
  * DOM `set-to-max-{event}-m-{n}` is incomplete — not a TicketLeg or OddsLine.
@@ -17,7 +18,7 @@ import type { SportId } from './sports.ts';
 
 /** Inventory plane (stream-list → skin_events). */
 export type InventoryEventRef = {
-  streamId: string;
+  inventoryId: string; // brand-ok — opaque provider inventory primary key
   sportId?: SportId;
   competitionId?: CompetitionId;
 };

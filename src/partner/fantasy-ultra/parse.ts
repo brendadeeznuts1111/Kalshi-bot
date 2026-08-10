@@ -52,14 +52,16 @@ function eventFromWire(
   raw: FantasyStreamEventWire,
 ): PartnerLiveEvent {
   const sides = raw.competitiors ?? raw.competitors ?? {};
+  const wireStreamId = asNum(raw.stream_id);
+  const inventoryId =
+    wireStreamId != null ? String(wireStreamId) : String(id ?? "").trim();
   return {
     partner: FANTASY_ULTRA_DEFAULTS.partnerId,
     sport: String(raw.sport ?? "").trim() || "unknown",
     league: String(raw.league ?? "").trim() || "",
-    eventId: String(id),
+    inventoryId,
     home: sides.home?.trim() || null,
     away: sides.away?.trim() || null,
-    streamId: asNum(raw.stream_id),
     feedId: asNum(raw.feed_id),
     donbestId:
       raw.donbest_id != null && String(raw.donbest_id) !== "0"

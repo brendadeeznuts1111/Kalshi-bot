@@ -5,6 +5,7 @@ import {
   migratePartnerEventsToSkinEvents,
   migrateSkinEventsCompetitionIds,
   migrateSkinEventsInventoryIdentity,
+  migrateSkinEventsStreamIdToInventoryId,
   openEventStore,
 } from '../../src/institutions/event-store/open-db.ts';
 import type { PartnerLiveEvent } from '../../src/partner/types.ts';
@@ -12,7 +13,7 @@ import {
   buckeyeInventoryIdentity,
   fetchPublicPliveStreamEvents,
   filterLiveEventsBySport,
-  listSkinStreamIds,
+  listSkinInventoryIds,
   liveProductsCoveredByInventory,
   normalizeInventorySport,
   normalizeSkinEventsSports,
@@ -23,16 +24,15 @@ import {
 } from '../../src/partner/skin-events-store.ts';
 
 function ev(
-  partial: Partial<PartnerLiveEvent> & { streamId: number; sport: string }
+  partial: Partial<PartnerLiveEvent> & { inventoryId: string; sport: string }
 ): PartnerLiveEvent {
   return {
     partner: 'fantasy402',
     sport: partial.sport,
     league: partial.league ?? 'League',
-    eventId: String(partial.streamId),
+    inventoryId: partial.inventoryId,
     home: partial.home ?? 'A',
     away: partial.away ?? 'B',
-    streamId: partial.streamId,
     feedId: partial.feedId ?? 0,
     donbestId: null,
   };
@@ -41,12 +41,15 @@ function ev(
 describe('skin_events store', () => {
   test('filterLiveEventsBySport separates tennis vs table tennis', () => {
     const rows = [
-      ev({ streamId: 1, sport: 'Tennis' }),
-      ev({ streamId: 2, sport: 'Table tennis' }),
-      ev({ streamId: 3, sport: 'Table Tennis' }),
+      ev({ inventoryId: '1', sport: 'Tennis' }),
+      ev({ inventoryId: '2', sport: 'Table tennis' }),
+      ev({ inventoryId: '3', sport: 'Table Tennis' }),
     ];
-    expect(filterLiveEventsBySport(rows, 'table_tennis').map(e => e.streamId)).toEqual([2, 3]);
-    expect(filterLiveEventsBySport(rows, 'tennis').map(e => e.streamId)).toEqual([1]);
+    expect(filterLiveEventsBySport(rows, 'table_tennis').map(e => e.inventoryId)).toEqual([
+      '2',
+      '3',
+    ]);
+    expect(filterLiveEventsBySport(rows, 'tennis').map(e => e.inventoryId)).toEqual(['1']);
   });
 
   test('normalizeInventorySport maps Table Tennis → table_tennis', () => {
@@ -69,22 +72,22 @@ describe('skin_events store', () => {
     expect(() => resolveWatchInventoryIdentity({ book: 'parlay21' })).toThrow(/fantasy402 only/);
   });
 
-  test('upsertSkinLiveEvents stamps skin/book/inventory product once per stream', () => {
+  test('upsertSkinLiveEvents stamps skin/book/inventory product once per inventory id', () => {
     const db = openEventStore({ dbPath: ':memory:' });
     const first = [
       ev({
-        streamId: 100,
+        inventoryId: '100',
         sport: 'Table tennis',
         league: 'Setka Cup',
         home: 'P1',
         away: 'P2',
       }),
-      ev({ streamId: 101, sport: 'Table tennis', league: 'Junk League XYZ' }),
+      ev({ inventoryId: '101', sport: 'Table tennis', league: 'Junk League XYZ' }),
     ];
     const r1 = upsertSkinLiveEvents(db, first, { nowMs: 1_000 });
     expect(r1.inserted.length).toBe(2);
     expect(r1.updated.length).toBe(0);
-    expect(listSkinStreamIds(db, 'fantasy402').size).toBe(2);
+    expect(listSkinInventoryIds(db, 'fantasy402').size).toBe(2);
     expect(r1.inserted[0]?.skinId).toBe('buckeye');
     expect(r1.inserted[0]?.bookId).toBe('fantasy402');
     expect(r1.inserted[0]?.inventoryLiveProduct).toBe('plive');
@@ -94,27 +97,27 @@ describe('skin_events store', () => {
 
     const second = [
       ev({
-        streamId: 100,
+        inventoryId: '100',
         sport: 'Table tennis',
         league: 'Setka Cup',
         home: 'P1',
         away: 'P2x',
       }),
-      ev({ streamId: 102, sport: 'Table tennis', league: 'Setka Cup' }),
+      ev({ inventoryId: '102', sport: 'Table tennis', league: 'Setka Cup' }),
     ];
     const r2 = upsertSkinLiveEvents(db, second, { nowMs: 2_000 });
     expect(r2.inserted.length).toBe(1);
-    expect(r2.inserted[0]!.streamId).toBe('102');
+    expect(r2.inserted[0]!.inventoryId).toBe('102');
     expect(r2.inserted[0]!.competitionId).toBe('table_tennis.setka_cup');
     expect(r2.updated.length).toBe(1);
-    expect(listSkinStreamIds(db, 'fantasy402').size).toBe(3);
+    expect(listSkinInventoryIds(db, 'fantasy402').size).toBe(3);
 
     const row = db
       .query(
         `SELECT home, away, last_updated AS lastUpdated, sport, skin_id AS skinId,
                 book_id AS bookId, inventory_live_product AS inv,
                 competition_id AS competitionId
-         FROM skin_events WHERE stream_id = '100'`
+         FROM skin_events WHERE inventory_id = '100'`
       )
       .get() as {
       home: string;
@@ -136,7 +139,7 @@ describe('skin_events store', () => {
 
     // One row covers both products — no second insert for ezlive
     const count = (
-      db.query(`SELECT COUNT(*) AS c FROM skin_events WHERE stream_id = '100'`).get() as {
+      db.query(`SELECT COUNT(*) AS c FROM skin_events WHERE inventory_id = '100'`).get() as {
         c: number;
       }
     ).c;
@@ -171,7 +174,7 @@ describe('skin_events store', () => {
     const db = openEventStore({ dbPath: ':memory:' });
     db.run(`
       INSERT INTO skin_events (
-        partner, stream_id, sport, league, status, first_seen, last_updated,
+        partner, inventory_id, sport, league, status, first_seen, last_updated,
         skin_id, book_id, inventory_live_product
       ) VALUES (
         'fantasy402', '88', 'table_tennis', 'Setka Cup', 'unknown', 1, 1,
@@ -180,7 +183,7 @@ describe('skin_events store', () => {
     `);
     migrateSkinEventsCompetitionIds(db);
     const cid = (
-      db.query(`SELECT competition_id AS c FROM skin_events WHERE stream_id = '88'`).get() as {
+      db.query(`SELECT competition_id AS c FROM skin_events WHERE inventory_id = '88'`).get() as {
         c: string | null;
       }
     ).c;
@@ -192,14 +195,14 @@ describe('skin_events store', () => {
     const db = openEventStore({ dbPath: ':memory:' });
     db.run(`
       INSERT INTO skin_events (
-        partner, stream_id, sport, league, home, away, status, first_seen, last_updated
+        partner, inventory_id, sport, league, home, away, status, first_seen, last_updated
       ) VALUES
         ('fantasy402', '1', 'table_tennis', 'Test League', 'A', 'B', 'unknown', 1, 1),
         ('fantasy402', '999', 'Table Tennis', 'Setka', 'X', 'Y', 'unknown', 2, 2)
     `);
     migrateSkinEventsInventoryIdentity(db);
     const leftover = (
-      db.query(`SELECT COUNT(*) AS c FROM skin_events WHERE stream_id = '1'`).get() as {
+      db.query(`SELECT COUNT(*) AS c FROM skin_events WHERE inventory_id = '1'`).get() as {
         c: number;
       }
     ).c;
@@ -207,7 +210,7 @@ describe('skin_events store', () => {
     const row = db
       .query(
         `SELECT skin_id AS skinId, book_id AS bookId, inventory_live_product AS inv
-         FROM skin_events WHERE stream_id = '999'`
+         FROM skin_events WHERE inventory_id = '999'`
       )
       .get() as { skinId: string; bookId: string; inv: string };
     expect(row.skinId).toBe('buckeye');
@@ -219,17 +222,19 @@ describe('skin_events store', () => {
     const db = openEventStore({ dbPath: ':memory:' });
     db.run(`
       INSERT INTO skin_events (
-        partner, stream_id, sport, league, status, first_seen, last_updated
+        partner, inventory_id, sport, league, status, first_seen, last_updated
       ) VALUES ('fantasy402', '7', 'Table Tennis', 'Setka', 'unknown', 1, 1)
     `);
     expect(normalizeSkinEventsSports(db)).toBe(1);
     const sport = (
-      db.query(`SELECT sport FROM skin_events WHERE stream_id = '7'`).get() as { sport: string }
+      db.query(`SELECT sport FROM skin_events WHERE inventory_id = '7'`).get() as {
+        sport: string;
+      }
     ).sport;
     expect(sport).toBe('table_tennis');
   });
 
-  test('fetchPublicPliveStreamEvents parses mocked stream-list', async () => {
+  test('fetchPublicPliveStreamEvents maps wire stream_id → inventoryId', async () => {
     const wire = {
       sports: {
         table_tennis: {
@@ -257,10 +262,10 @@ describe('skin_events store', () => {
         })) as typeof fetch,
     });
     expect(events.length).toBe(1);
-    expect(String(events[0]?.streamId)).toBe('55');
+    expect(events[0]?.inventoryId).toBe('55');
   });
 
-  test('migratePartnerEventsToSkinEvents renames legacy table', () => {
+  test('migratePartnerEventsToSkinEvents then renames stream_id → inventory_id', () => {
     const db = new Database(':memory:');
     db.run(`
       CREATE TABLE partner_events (
@@ -282,12 +287,13 @@ describe('skin_events store', () => {
       VALUES ('fantasy402', '42', 'tennis', 'ATP', 'unknown', 1, 1)
     `);
     migratePartnerEventsToSkinEvents(db);
+    migrateSkinEventsStreamIdToInventoryId(db);
     const legacy = db
       .query(`SELECT 1 AS ok FROM sqlite_master WHERE type='table' AND name='partner_events'`)
       .get();
     expect(legacy).toBeNull();
     const count = (
-      db.query(`SELECT COUNT(*) AS c FROM skin_events WHERE stream_id = '42'`).get() as {
+      db.query(`SELECT COUNT(*) AS c FROM skin_events WHERE inventory_id = '42'`).get() as {
         c: number;
       }
     ).c;

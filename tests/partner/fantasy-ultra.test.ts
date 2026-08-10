@@ -317,7 +317,8 @@ describe("FantasyUltraAdapter session blueprint", () => {
     expect(calls.some((c) => c.includes("renewToken"))).toBe(true);
 
     const dry = await adapter.placeOrder({
-      eventId: events[0]!.eventId,
+      // place-bet uses odds/ticket eventId — not inventoryId
+      eventId: "196878741",
       side: "home",
       stake: 5,
       dryRun: true,

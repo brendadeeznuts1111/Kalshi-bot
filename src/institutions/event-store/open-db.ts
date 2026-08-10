@@ -136,12 +136,12 @@ export function applyEventStoreSchema(db: Database): void {
   db.run(
     `CREATE INDEX IF NOT EXISTS idx_player_opponent_profiles_opponent ON player_opponent_profiles (opponent_name)`
   );
-  // Skin stream inventory (Fantasy402 stream-list-v2 under Buckeye, etc.)
+  // Skin inventory (Fantasy402 stream-list-v2 under Buckeye, etc.)
   migratePartnerEventsToSkinEvents(db);
   db.run(`CREATE TABLE IF NOT EXISTS skin_events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     partner TEXT NOT NULL,
-    stream_id TEXT NOT NULL,
+    inventory_id TEXT NOT NULL,
     ls_id TEXT,
     client_event_id TEXT,
     sport TEXT NOT NULL DEFAULT '',
@@ -157,8 +157,9 @@ export function applyEventStoreSchema(db: Database): void {
     book_id TEXT,
     inventory_live_product TEXT,
     competition_id TEXT,
-    UNIQUE(partner, stream_id)
+    UNIQUE(partner, inventory_id)
   )`);
+  migrateSkinEventsStreamIdToInventoryId(db);
   db.run(
     `CREATE INDEX IF NOT EXISTS idx_skin_events_partner_sport ON skin_events (partner, sport)`
   );
@@ -350,8 +351,18 @@ export function migratePartnerEventsToSkinEvents(db: Database): void {
 }
 
 /**
+ * Rename legacy skin_events.stream_id → inventory_id (wire name stays at parse only).
+ */
+export function migrateSkinEventsStreamIdToInventoryId(db: Database): void {
+  if (!tableExists(db, 'skin_events')) return;
+  if (tableHasColumn(db, 'skin_events', 'inventory_id')) return;
+  if (!tableHasColumn(db, 'skin_events', 'stream_id')) return;
+  db.run(`ALTER TABLE skin_events RENAME COLUMN stream_id TO inventory_id`);
+}
+
+/**
  * Stamp Fantasy402 inventory rows as Buckeye / plive-shell; drop fixture junk.
- * plive + ezlive share this inventory — one row per stream_id.
+ * plive + ezlive share this inventory — one row per inventory_id.
  */
 export function migrateSkinEventsInventoryIdentity(db: Database): void {
   if (!tableExists(db, 'skin_events')) return;
@@ -366,7 +377,7 @@ export function migrateSkinEventsInventoryIdentity(db: Database): void {
   `);
   db.run(`
     DELETE FROM skin_events
-    WHERE stream_id = '1' OR league = 'Test League'
+    WHERE inventory_id = '1' OR league = 'Test League'
   `);
 }
 

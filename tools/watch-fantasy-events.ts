@@ -126,7 +126,7 @@ async function pollOnce(options: {
           inserted: result.inserted.length,
           updated: result.updated.length,
           newEvents: result.inserted.map(r => ({
-            streamId: r.streamId,
+            inventoryId: r.inventoryId,
             sport: r.sport,
             league: r.league,
             home: r.home,

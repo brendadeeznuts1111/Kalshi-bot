@@ -63,7 +63,7 @@ ticketLegFromOddsLine(EXAMPLE_DARIN_PLACHY_ODDS_LINE);
 
 | Plane     | Type                             | Do not mix with                        |
 | --------- | -------------------------------- | -------------------------------------- |
-| Inventory | `InventoryEventRef.streamId`     | odds / ticket eventId                  |
+| Inventory | `InventoryEventRef.inventoryId`  | odds / ticket eventId; wire `stream_id` stays at parse only |
 | Odds      | `OddsLine` (Pandora field names) | ticket without `ticketLegFromOddsLine` |
 | Ticket    | `TicketLeg` (componentBet names) | odds without `oddsLineFromTicketLeg`   |
 

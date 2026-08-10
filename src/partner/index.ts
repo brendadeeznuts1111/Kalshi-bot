@@ -83,7 +83,7 @@ export {
   fetchPublicPliveStreamEvents,
   filterLiveEventsBySport,
   formatSkinEventLine,
-  listSkinStreamIds,
+  listSkinInventoryIds,
   normalizeSkinEventsSports,
   resolveInventoryCompetitionId,
   stampSkinEventsCompetitionIds,
