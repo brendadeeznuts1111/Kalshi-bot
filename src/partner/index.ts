@@ -81,12 +81,12 @@ export {
 
 export {
   filterLiveEventsBySport,
-  formatPartnerEventLine,
-  listPartnerStreamIds,
-  upsertPartnerLiveEvents,
-  type PartnerEventRow,
-  type PartnerEventUpsertResult,
-} from './partner-events-store.ts';
+  formatSkinEventLine,
+  listSkinStreamIds,
+  upsertSkinLiveEvents,
+  type SkinEventRow,
+  type SkinEventUpsertResult,
+} from './skin-events-store.ts';
 
 export {
   adapterBindingForSkin,

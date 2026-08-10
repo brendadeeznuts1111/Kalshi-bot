@@ -15,7 +15,7 @@
  *   - Contrast gate:     daily at 04:00 UTC
  *   - Glossary URLs:     daily at 02:00 UTC
  *   - Match liquidity:   every 30 minutes (recompute + ground; volume via env)
- *   - Partner inventory: every 1 minute when PARTNER_SYNC=1 (stream-list → partner_events)
+ *   - Partner inventory: every 1 minute when PARTNER_SYNC=1 (stream-list → skin_events)
  *   - Partner desk/finance: when PARTNER_FINANCE_CRON=1 (registry → capacity → optional Telegram)
  */
 import { ensureEventStoreDir, openEventStore } from "../src/institutions/event-store/open-db.ts";
@@ -178,7 +178,7 @@ async function jobLiquidityPipeline(): Promise<void> {
 }
 
 /**
- * Partner inventory sync — stream-list → partner_events (new stream_id detection).
+ * Partner inventory sync — stream-list → skin_events (new stream_id detection).
  * Opt-in: PARTNER_SYNC=1. Sport: PARTNER_SYNC_SPORT (default table_tennis).
  * Enrich: PARTNER_SYNC_ENRICH_BOOKED=1 (soft Statscore name match, no prices).
  */

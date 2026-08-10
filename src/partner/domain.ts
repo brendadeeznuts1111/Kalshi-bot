@@ -347,7 +347,7 @@ export function buildDomainStatusReport(nowMs = Date.now()): DomainStatusReport 
     layers,
     totals,
     orchestration: {
-      ssot: 'event-store SQLite (partners, betting_accounts, partner_events, account_authorizations, exposure_reservations) + Proton Pass + env',
+      ssot: 'event-store SQLite (partners, betting_accounts, skin_events, account_authorizations, exposure_reservations) + Proton Pass + env',
       clis: [
         'partner:domain',
         'partner:capacity',

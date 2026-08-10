@@ -3,7 +3,7 @@
  * Partner inventory sync — ground-truth pipeline.
  *
  * REAL today:
- *  - stream-list-v2 → partner_events (detect new stream_ids)
+ *  - stream-list-v2 → skin_events (detect new stream_ids)
  *  - optional soft enrich: Statscore booked-events list by name match → client_event_id
  *
  * NOT real yet (do not invent):
@@ -20,12 +20,12 @@ import type { FantasySessionAdapter, PartnerLiveEvent } from './types.ts';
 import {
   buckeyeInventoryIdentity,
   filterLiveEventsBySport,
-  formatPartnerEventLine,
-  upsertPartnerLiveEvents,
+  formatSkinEventLine,
+  upsertSkinLiveEvents,
   type InventoryIdentity,
-  type PartnerEventRow,
-  type PartnerEventUpsertResult,
-} from './partner-events-store.ts';
+  type SkinEventRow,
+  type SkinEventUpsertResult,
+} from './skin-events-store.ts';
 
 export type PartnerSyncOptions = {
   sport?: string;
@@ -43,7 +43,7 @@ export type PartnerSyncReport = {
   seen: number;
   inserted: number;
   updated: number;
-  newEvents: PartnerEventRow[];
+  newEvents: SkinEventRow[];
   enriched: number;
   capabilities: {
     inventory: true;
@@ -123,7 +123,7 @@ export async function runPartnerInventorySync(
   }
 
   const identity = options.identity ?? buckeyeInventoryIdentity();
-  const upsert: PartnerEventUpsertResult = upsertPartnerLiveEvents(db, events, {
+  const upsert: SkinEventUpsertResult = upsertSkinLiveEvents(db, events, {
     nowMs: options.nowMs,
     identity,
   });
@@ -145,7 +145,7 @@ export async function runPartnerInventorySync(
         name: b.name,
       }));
       const update = db.query(`
-        UPDATE partner_events
+        UPDATE skin_events
         SET client_event_id = $cid, last_updated = $ts
         WHERE partner = $partner AND stream_id = $sid AND (client_event_id IS NULL OR client_event_id = '')
       `);
@@ -214,7 +214,7 @@ export async function runPartnerInventorySync(
 export function formatSyncReport(report: PartnerSyncReport): string {
   const lines = [
     `partner sync sport=${report.sport} seen=${report.seen} new=${report.inserted} updated=${report.updated} enriched=${report.enriched}`,
-    ...report.newEvents.map(e => `  + ${formatPartnerEventLine(e)}`),
+    ...report.newEvents.map(e => `  + ${formatSkinEventLine(e)}`),
     ...report.notes.map(n => `  · ${n}`),
   ];
   return lines.join('\n');
