@@ -10,7 +10,7 @@
  * Secrets stay in env / vault — never persist password or bearer JWT.
  */
 import type { Database } from 'bun:sqlite';
-import type { SkinId } from '../domain/index.ts';
+import type { BookId, SkinId } from '../domain/index.ts';
 import {
   listLiveProductSportBindings,
   liveProductsWithBindings,
@@ -23,6 +23,7 @@ import {
   type OutIdentity,
 } from './out-identity.ts';
 import {
+  bookIdFromAccount,
   buildSkinsMeta,
   mapperFromAccount,
   outCapacityFromAccount,
@@ -64,13 +65,18 @@ export type BettingAccountRow = {
    * Named skins live in meta.skins[].name (ezlive, dark, …).
    */
   skin: number | null;
-  /** Non-secret meta only (liveProducts/skins, workingBalance, vaultId, skinId) */
+  /** Non-secret meta only (liveProducts/skins, workingBalance, vaultId, skinId, bookId) */
   metaJson: string;
   /**
    * White-label SkinId from meta_json (stamped on write).
    * Not a DB column — derived for callers.
    */
   skinId?: SkinId;
+  /**
+   * Desk BookId from meta_json / host (stamped on write).
+   * Not a DB column — derived for callers.
+   */
+  bookId?: BookId;
   /** Mapper kind from meta_json (fantasy402 | unmapped). */
   mapper?: OutSkinMapperKind;
   /** Adapter id from OutIdentity (fantasy-ultra | kalshi | unmapped). */
@@ -312,6 +318,7 @@ function mapAccountRow(r: Record<string, unknown>): BettingAccountRow {
     skin: r.skin == null ? null : Number(r.skin),
     metaJson,
     skinId: skinIdFromAccount({ metaJson }),
+    bookId: bookIdFromAccount({ metaJson }),
     mapper: mapperFromAccount({ metaJson }),
   };
   // Soft parse for derived adapter fields (kalshi empty-url may be null).
@@ -332,12 +339,13 @@ function mapAccountRow(r: Record<string, unknown>): BettingAccountRow {
       return {
         ...base,
         skinId: identity.skinId,
+        bookId: identity.bookId ?? base.bookId,
         mapper: identity.adapter.mapperKind,
         adapterId: identity.adapter.adapterId,
       };
     }
   } catch {
-    /* leave meta-derived skinId/mapper */
+    /* leave meta-derived skinId/bookId/mapper */
   }
   return base;
 }
@@ -543,7 +551,7 @@ export {
   type LiveProductCapacity,
   type OutIdentity,
 } from './out-identity.ts';
-export { mapperFromAccount, skinIdFromAccount } from './skins.ts';
+export { bookIdFromAccount, mapperFromAccount, skinIdFromAccount } from './skins.ts';
 
 /** Re-export skin helpers for registry consumers. */
 export {

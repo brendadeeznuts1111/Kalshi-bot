@@ -350,12 +350,18 @@ provider = "fantasy402"
 env_prefix = "FANTASY402_SPEN_3_"
 # url must be a host in SKINS[].hosts (example below); omit to use Ultra-mapper default
 url = "https://fantasy402.com"
+# optional book_id — must agree with url host; seed stamps meta.bookId either way
+# book_id = "fantasy402"
 working_balance = 20000
 vault_id = "vault-out-SPEN-3"
 skins = [
   { name = "ezlive", per_bet_max = 500, max_win = 2500, active = true },
 ]
 ```
+
+Seed stamps `meta.skinId` + `meta.bookId` from the out url (`HOST_TO_SKIN` /
+`HOST_TO_BOOK`). Optional TOML `book_id` must match the host’s BookId when both
+are set.
 
 4. Set secrets (Proton Pass item or `.env` — never commit):
 

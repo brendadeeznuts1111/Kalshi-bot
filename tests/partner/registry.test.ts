@@ -1,14 +1,12 @@
 // @see https://bun.com/docs/test/index#run-tests
 import { describe, expect, test } from 'bun:test';
-import {
-  defaultUrlForSkin,
-  requireDefaultUrlForUltraMapper,
-} from '../../src/domain/index.ts';
+import { defaultUrlForSkin, requireDefaultUrlForUltraMapper } from '../../src/domain/index.ts';
 import { openEventStore } from '../../src/institutions/event-store/open-db.ts';
 import {
   computeProviderCapacity,
   concentrationByOut,
   ensurePartnerRegistrySchema,
+  getBettingAccountById,
   listActiveBettingAccounts,
   listEligibleOutSkinPairs,
   pickBestSkinForOut,
@@ -211,7 +209,7 @@ describe('partner registry', () => {
     expect(parseSkinWire(undefined)).toBe(2);
   });
 
-  test('seed stamps skinId=buckeye from fantasy402 host', () => {
+  test('seed stamps skinId=buckeye and bookId=fantasy402 from host', () => {
     const db = openEventStore({ dbPath: ':memory:' });
     ensurePartnerRegistrySchema(db);
     const seeded = seedFantasy402FromEnv(db, {
@@ -224,11 +222,16 @@ describe('partner registry', () => {
       ]),
     });
     expect(seeded?.skinId).toBe('buckeye');
+    expect(seeded?.bookId).toBe('fantasy402');
     expect(seeded?.mapper).toBe('fantasy402');
     expect(seeded?.adapterId).toBe('fantasy-ultra');
     expect(seeded?.metaJson).toContain('"skinId":"buckeye"');
+    expect(seeded?.metaJson).toContain('"bookId":"fantasy402"');
     expect(seeded?.metaJson).toContain('"liveProducts"');
     expect(seeded?.metaJson).toContain('"defaultLiveProduct"');
+    const byId = getBettingAccountById(db, seeded!.id);
+    expect(byId?.bookId).toBe('fantasy402');
+    expect(byId?.skinId).toBe('buckeye');
   });
 
   test('unknown host on upsert throws', () => {
