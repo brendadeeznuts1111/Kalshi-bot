@@ -1005,42 +1005,92 @@ export function summarizeOddsWatch(
 
 export function formatOddsWatchSummary(s: OddsWatchSummary): string {
   const lines: string[] = [];
+  lines.push(`# Watch summary · event ${s.eventId}`);
+  lines.push('');
   lines.push(
-    `watch summary event=${s.eventId} updates=${s.updates} ` +
-      `lines=${s.lastLineCount} offeredMkts=${s.lastOfferedMarkets}`
+    ...mdTable(
+      ['Metric', 'Value'],
+      [
+        ['Updates', String(s.updates)],
+        ['Lines (last)', String(s.lastLineCount)],
+        ['Offered mkts', String(s.lastOfferedMarkets)],
+        ['Suspensions closed', String(s.suspensionCount)],
+        ['Suspensions open', String(s.openSuspensions)],
+        [
+          'Median suspend',
+          s.medianSuspensionMs != null
+            ? `${(s.medianSuspensionMs / 1000).toFixed(1)}s`
+            : '—',
+        ],
+        [
+          'Mean suspend',
+          s.meanSuspensionMs != null
+            ? `${(s.meanSuspensionMs / 1000).toFixed(1)}s`
+            : '—',
+        ],
+      ]
+    )
   );
-  const tc = Object.entries(s.transitionCounts)
-    .map(([k, v]) => `${k}=${v}`)
-    .join('  ');
-  lines.push(`  transitions: ${tc || '(none)'}`);
-  lines.push(
-    `  suspensions closed=${s.suspensionCount} open=${s.openSuspensions}` +
-      (s.medianSuspensionMs != null
-        ? ` median=${(s.medianSuspensionMs / 1000).toFixed(1)}s mean=${((s.meanSuspensionMs ?? 0) / 1000).toFixed(1)}s`
-        : '')
-  );
+  const tcRows = Object.entries(s.transitionCounts).map(([k, v]) => [
+    k,
+    String(v),
+  ]);
+  if (tcRows.length) {
+    lines.push('');
+    lines.push('## Transitions');
+    lines.push(...mdTable(['Kind', 'Count'], tcRows));
+  }
   if (s.suspensions.length) {
-    lines.push('  intervals:');
-    for (const x of s.suspensions.slice(0, 16)) {
-      const dur =
-        x.durationMs != null ? `${(x.durationMs / 1000).toFixed(1)}s` : 'open';
-      lines.push(
-        `    ${x.period}/${x.marketType}  off=${x.offAt}  on=${x.onAt ?? '—'}  ${dur}`
-      );
-    }
+    lines.push('');
+    lines.push('## Suspension intervals');
+    lines.push(
+      ...mdTable(
+        ['Mkt', 'Off', 'On', 'Duration'],
+        s.suspensions.slice(0, 20).map(x => [
+          `${x.period}/${x.marketType}`,
+          x.offAt.replace('T', ' ').replace(/\.\d+Z$/, 'Z'),
+          x.onAt
+            ? x.onAt.replace('T', ' ').replace(/\.\d+Z$/, 'Z')
+            : '—',
+          x.durationMs != null
+            ? `${(x.durationMs / 1000).toFixed(1)}s`
+            : 'open',
+        ])
+      )
+    );
   }
   if (s.byMarketTransitions.length) {
-    lines.push('  by market (top activity):');
-    for (const m of s.byMarketTransitions.slice(0, 12)) {
-      lines.push(
-        `    ${m.period}/${m.marketType}(${pandoraMarketLabel(m.marketType)})  ` +
-          `off=${m.off} on=${m.on} chg=${m.priceChanges}`
-      );
-    }
+    lines.push('');
+    lines.push('## Activity by market');
+    lines.push(
+      ...mdTable(
+        ['Mkt', 'Name', 'Off', 'On', 'Price chg'],
+        s.byMarketTransitions.slice(0, 14).map(m => [
+          `${m.period}/${m.marketType}`,
+          pandoraMarketLabel(m.marketType),
+          String(m.off),
+          String(m.on),
+          String(m.priceChanges),
+        ])
+      )
+    );
   }
   if (s.vig.length) {
-    lines.push('  vig (last snapshot):');
-    lines.push(...formatMarketVigRows(s.vig, { limit: 12 }));
+    lines.push('');
+    lines.push('## Vig (last snapshot)');
+    lines.push(
+      ...mdTable(
+        ['Mkt', 'Name', 'Kind', 'Vig', 'Σ imp', 'Legs'],
+        s.vig.slice(0, 12).map(v => [
+          `${v.period}/${v.marketType}`,
+          v.label,
+          v.kind,
+          `${v.vigPercent.toFixed(2)}%`,
+          v.impliedSum.toFixed(3),
+          String(v.prices.length),
+        ])
+      )
+    );
   }
   return lines.join('\n');
 }
@@ -1546,204 +1596,379 @@ export function formatSportBoardSamples(samples: SportBoardSample[]): string {
   return lines.join('\n');
 }
 
+/** Markdown table from header + row cells (equal column counts). */
+function mdTable(headers: string[], rows: string[][]): string[] {
+  if (!rows.length) return [];
+  const cols = headers.length;
+  const widths = headers.map((h, i) =>
+    Math.max(h.length, ...rows.map(r => (r[i] ?? '').length))
+  );
+  const pad = (cells: string[]) =>
+    '| ' +
+    cells
+      .map((c, i) => (c ?? '').padEnd(widths[i] ?? 0))
+      .join(' | ') +
+    ' |';
+  const sep =
+    '| ' + widths.map(w => '-'.repeat(Math.max(w, 3))).join(' | ') + ' |';
+  return [pad(headers), sep, ...rows.map(r => pad(r.slice(0, cols)))];
+}
+
+function fmtAm(n: number | null | undefined): string {
+  if (n == null || !Number.isFinite(n)) return '—';
+  return n > 0 ? `+${Math.round(n)}` : `${Math.round(n)}`;
+}
+
+function fmtDec(n: number | null | undefined): string {
+  if (n == null || !Number.isFinite(n)) return '—';
+  return n.toFixed(2);
+}
+
+function fmtPct(n: number | null | undefined): string {
+  if (n == null || !Number.isFinite(n)) return '—';
+  return `${n.toFixed(2)}%`;
+}
+
+/** Build market price summary cell from lines for period/marketType. */
+function marketPriceCell(
+  all: CoefficientLine[],
+  period: string,
+  marketType: string
+): string {
+  const group = all.filter(
+    l => l.period === period && l.marketType === marketType
+  );
+  if (!group.length) return '—';
+  if (marketType === '3' || marketType === '9') {
+    const h = group.find(l => l.selection === '1');
+    const a = group.find(l => l.selection === '2');
+    if (h && a) {
+      return `1 ${fmtAm(h.american)} (${fmtDec(h.decimal)}) · 2 ${fmtAm(a.american)} (${fmtDec(a.decimal)})`;
+    }
+  }
+  if (
+    marketType === '5' ||
+    marketType === '6' ||
+    marketType === '7' ||
+    marketType === '8'
+  ) {
+    // pick first selection with both sides
+    const bySel = new Map<string, { 0?: CoefficientLine; 1?: CoefficientLine }>();
+    for (const l of group) {
+      const slot = bySel.get(l.selection) ?? {};
+      if (l.sideIndex === 0 || l.sideIndex === 1) slot[l.sideIndex] = l;
+      bySel.set(l.selection, slot);
+    }
+    for (const [sel, sides] of bySel) {
+      if (sides[0] && sides[1]) {
+        return `${sel}: ${fmtDec(sides[0].decimal)} / ${fmtDec(sides[1].decimal)}`;
+      }
+    }
+    const withLine = group.find(l => l.line != null);
+    if (withLine?.line != null) return `line ${withLine.line}`;
+  }
+  if (marketType === '16') {
+    const prim = new Map<string, number>();
+    for (const l of group) {
+      if (l.decimal < 1.05) continue;
+      const prev = prim.get(l.selection);
+      if (prev == null || l.decimal > prev) prim.set(l.selection, l.decimal);
+    }
+    return [...prim.entries()]
+      .slice(0, 4)
+      .map(
+        ([sel, d]) =>
+          `${formatSetCorrectScoreLineId(sel) ?? sel}@${fmtDec(d)}`
+      )
+      .join(' ');
+  }
+  if (marketType === '18') {
+    const byGame = new Map<string, { 0?: number; 1?: number }>();
+    for (const l of group) {
+      const slot = byGame.get(l.selection) ?? {};
+      if (l.sideIndex === 0 || l.sideIndex === 1) slot[l.sideIndex] = l.decimal;
+      byGame.set(l.selection, slot);
+    }
+    return [...byGame.entries()]
+      .slice(0, 4)
+      .map(([g, s]) => `g${g} ${fmtDec(s[0])}/${fmtDec(s[1])}`)
+      .join(' · ');
+  }
+  return `${group.length} legs`;
+}
+
 export function formatEventLookup(r: EventLookupResult): string {
   const lines: string[] = [];
+  const es = r.pandora.eventState;
+  const matchup =
+    es?.home || es?.away
+      ? `${es.home ?? '?'} vs ${es.away ?? '?'}`
+      : r.streamList.event
+        ? `${r.streamList.event.home ?? '?'} vs ${r.streamList.event.away ?? '?'}`
+        : '—';
+
   lines.push(
-    `event-lookup id=${r.eventId}` +
-      (r.periodId ? ` period=${r.periodId}` : '') +
-      ` plane=${r.plane}` +
-      (r.sportHint ? ` sport≈${r.sportHint}` : '')
+    `# Event ${r.eventId}` +
+      (r.periodId ? ` / ${r.periodId}` : '') +
+      (r.sportHint ? ` · ${r.sportHint}` : '')
   );
-  lines.push(`  url  ${r.pliveUrl}`);
-  if (r.periodId) lines.push(`  bare ${r.pliveUrlBare}`);
   lines.push('');
-  lines.push('## Inventory plane');
-  if (r.streamList.hit && r.streamList.event) {
-    const e = r.streamList.event;
+  lines.push(...mdTable(
+    ['Field', 'Value'],
+    [
+      ['Match', matchup],
+      ['Sport', es?.sportName ?? r.sportHint ?? '—'],
+      [
+        'State',
+        es
+          ? `s=${es.state}(${es.stateLabel})` +
+            (es.wireState != null && es.wireState !== es.state
+              ? ` wire=${es.wireState}`
+              : '')
+          : '—',
+      ],
+      [
+        'Offer',
+        es
+          ? `hasLines=${es.hasLines} started=${es.isStarted} OTB=${es.offTheBoard}` +
+            (es.blockedReason ? ` ${es.blockedReason}` : '')
+          : '—',
+      ],
+      ['Plane', r.plane],
+      ['Path', es?.path?.length ? `s/${es.path.join('/')}` : '—'],
+      [
+        'Start',
+        es?.startTimeSec != null
+          ? new Date(es.startTimeSec * 1000).toISOString()
+          : '—',
+      ],
+      ['URL', r.pliveUrl],
+      [
+        'Book',
+        r.pandora.book
+          ? `${r.pandora.book.offeredMarketCount} offered / ${r.pandora.book.offMarketCount} off · ${r.pandora.lineCount} lines (${r.pandora.seconds}s)`
+          : r.pandora.probed
+            ? `${r.pandora.lineCount} lines`
+            : 'skipped',
+      ],
+      [
+        'Board',
+        r.pandora.eventDataBoard
+          ? `sports=${r.pandora.eventDataBoard.sportCount} events=${r.pandora.eventDataBoard.eventCount}`
+          : '—',
+      ],
+      [
+        'Inventory',
+        r.streamList.hit
+          ? `stream-list ✓ ${r.streamList.event?.bucket ?? ''}`
+          : 'stream-list ✗',
+      ],
+      [
+        'Catalog',
+        r.bookedCatalog
+          ? `${r.bookedCatalog.sportName}: ${r.bookedCatalog.name}`
+          : '✗',
+      ],
+    ]
+  ));
+
+  if (r.pandora.probed && r.pandora.periods.length) {
+    lines.push('');
+    lines.push('## Periods');
     lines.push(
-      `  stream-list ✓ bucket=${e.bucket} inventoryId=${e.inventoryId}`
+      ...mdTable(
+        ['Period', 'Label', 'Lines', 'Markets', 'ML (am)', 'Total', 'Spread', 'Focus'],
+        r.pandora.periods.map(p => [
+          p.periodId,
+          p.label,
+          String(p.lineCount),
+          p.marketTypes
+            .map(m => `${m}:${pandoraMarketLabel(m).slice(0, 8)}`)
+            .join(', '),
+          p.moneyline
+            ? `${fmtAm(p.moneyline.homeAmerican)} / ${fmtAm(p.moneyline.awayAmerican)}`
+            : '—',
+          p.totalLine != null ? String(p.totalLine) : '—',
+          p.spreadLine != null ? String(p.spreadLine) : '—',
+          r.periodId === p.periodId ? '←' : '',
+        ])
+      )
     );
-    lines.push(
-      `    ${e.league ?? '—'} · ${e.home ?? '?'} vs ${e.away ?? '?'} (sport=${e.sport ?? '—'})`
-    );
-  } else {
-    lines.push('  stream-list ✗ not on public board');
   }
-  if (r.skinEvents) {
-    const s = r.skinEvents;
-    lines.push(
-      `  skin_events ✓ sport=${s.sport} league=${s.league} comp=${s.competitionId ?? '—'} odds=${s.oddsEventId ?? '—'}`
+
+  if (r.pandora.probed && r.pandora.book) {
+    const b = r.pandora.book;
+    const vigByKey = new Map(
+      vigFromCoefficientLines(r.pandora.lines).map(
+        v => [`${v.period}/${v.marketType}`, v] as const
+      )
     );
-    lines.push(`    ${s.home ?? '?'} vs ${s.away ?? '?'}`);
-  } else {
-    lines.push('  skin_events ✗ not in local event-store');
+    const offered = b.markets.filter(m => m.offered);
+    if (offered.length) {
+      lines.push('');
+      lines.push('## Markets (offered)');
+      lines.push(
+        ...mdTable(
+          ['Mkt', 'Name', 'Line (r)', 'Vig', 'cls', 'Prices'],
+          offered.map(m => {
+            const vig = vigByKey.get(`${m.period}/${m.marketType}`);
+            return [
+              `${m.period}/${m.marketType}`,
+              pandoraMarketLabel(m.marketType),
+              m.line != null ? String(m.line) : '—',
+              vig ? fmtPct(vig.vigPercent) : '—',
+              m.clsDefault != null ? String(m.clsDefault) : '—',
+              marketPriceCell(r.pandora.lines, m.period, m.marketType),
+            ];
+          })
+        )
+      );
+    }
+    const off = b.markets.filter(m => !m.offered);
+    if (off.length) {
+      lines.push('');
+      lines.push('## Markets (off / empty o)');
+      lines.push(
+        ...mdTable(
+          ['Mkt', 'Name', 'Line'],
+          off.slice(0, 16).map(m => [
+            `${m.period}/${m.marketType}`,
+            pandoraMarketLabel(m.marketType),
+            m.line != null ? String(m.line) : '—',
+          ])
+        )
+      );
+    }
   }
-  lines.push('');
-  lines.push('## Catalog / priced');
-  if (r.bookedCatalog) {
-    lines.push(
-      `  booked-catalog ✓ ${r.bookedCatalog.sportName}: ${r.bookedCatalog.name}`
-    );
-  } else {
-    lines.push('  booked-catalog ✗ (cache miss / not linked)');
-  }
-  if (r.pandora.probed) {
-    lines.push(
-      `  pandora ${r.pandora.subscribed ? '✓' : '?'} lines=${r.pandora.lineCount} (${r.pandora.seconds}s)` +
-        (r.pandora.periodMissing ? ` period=${r.periodId} MISSING` : '')
-    );
-    if (r.pandora.periods.length) {
-      lines.push('  periods (widget /event/:id/:periodId? — all sports):');
-      for (const p of r.pandora.periods) {
-        const focus = r.periodId === p.periodId ? ' ← focus' : '';
-        const ml = p.moneyline
-          ? ` ML ${p.moneyline.homeAmerican}/${p.moneyline.awayAmerican}`
-          : '';
-        const tot = p.totalLine != null ? ` tot=${p.totalLine}` : '';
-        const sp = p.spreadLine != null ? ` spr=${p.spreadLine}` : '';
-        lines.push(
-          `    ${p.periodId.padEnd(4)} ${p.label.padEnd(18)} lines=${String(p.lineCount).padStart(3)} mkt=[${p.marketTypes.join(',')}]${ml}${tot}${sp}${focus}`
-        );
-        lines.push(`         ${p.pliveUrl}`);
+
+  // Set correct score table
+  const scsLines = r.pandora.lines.filter(
+    l => l.marketType === '16' && l.decimal >= 1.05
+  );
+  if (scsLines.length) {
+    const byPeriod = new Map<string, CoefficientLine[]>();
+    for (const l of scsLines) {
+      const arr = byPeriod.get(l.period) ?? [];
+      arr.push(l);
+      byPeriod.set(l.period, arr);
+    }
+    for (const [period, pls] of byPeriod) {
+      const best = new Map<string, CoefficientLine>();
+      for (const l of pls) {
+        const prev = best.get(l.selection);
+        if (!prev || l.decimal > prev.decimal) best.set(l.selection, l);
       }
-    }
-    // Headline prices for focus period (or m)
-    const focusPeriod = r.periodId ?? 'm';
-    const scope = r.pandora.lines.filter(
-      l => !r.periodId || l.period === r.periodId
-    );
-    const ml = scope.filter(l => l.period === focusPeriod && l.marketType === '3');
-    const mlAny = ml.length
-      ? ml
-      : r.pandora.lines.filter(l => l.period === 'm' && l.marketType === '3');
-    if (mlAny.length) {
-      const h = mlAny.find(l => l.selection === '1');
-      const a = mlAny.find(l => l.selection === '2');
+      lines.push('');
+      lines.push(`## Set correct score (${period}/16)`);
       lines.push(
-        `    ML ${h?.period ?? focusPeriod}/3  home am=${h?.american ?? '—'} dec=${h?.decimal ?? '—'}  away am=${a?.american ?? '—'} dec=${a?.decimal ?? '—'}`
-      );
-    }
-    const totals = scope.filter(l => l.marketType === '5' && l.line != null);
-    if (totals[0]?.line != null) {
-      lines.push(`    Total ${totals[0].period}/5  line=${totals[0].line}`);
-    }
-    const spreads = scope.filter(l => l.marketType === '6' && l.line != null);
-    if (spreads[0]?.line != null) {
-      lines.push(`    Spread ${spreads[0].period}/6 line=${spreads[0].line}`);
-    }
-    for (const m of r.pandora.markets.slice(0, 5)) {
-      lines.push(
-        `    market ${m.ticker} ${m.label} home=${m.homePrice ?? '—'} away=${m.awayPrice ?? '—'}`
-      );
-    }
-    if (r.pandora.eventDataKeys.length) {
-      lines.push(`    eventData keys: ${r.pandora.eventDataKeys.join(', ')}`);
-    }
-    if (r.pandora.eventDataBoard) {
-      const b = r.pandora.eventDataBoard;
-      lines.push(
-        `  board sports=${b.sportCount} events=${b.eventCount} db=${b.dbCount} kb=${b.kbCount}` +
-          (b.offlineFlags ? ` offlineFlags=${b.offlineFlags.filter(Boolean).length}/${b.offlineFlags.length}` : '')
-      );
-    }
-    if (r.pandora.eventState) {
-      const es = r.pandora.eventState;
-      const wire =
-        es.wireState != null && es.wireState !== es.state
-          ? ` wire_s=${es.wireState}`
-          : '';
-      lines.push(
-        `  eventState s=${es.state}(${es.stateLabel})${wire} hasLines=${es.hasLines} ` +
-          `isStarted=${es.isStarted} isLive=${es.isLive} OTB=${es.offTheBoard}` +
-          (es.sportName ? ` sport=${es.sportName}` : '') +
-          (es.blockedReason ? ` ${es.blockedReason}` : '')
-      );
-      if (es.home || es.away) {
-        lines.push(
-          `    ${es.home ?? '?'} vs ${es.away ?? '?'}  path=s/${es.path.join('/')}` +
-            (es.startTimeSec != null
-              ? ` start=${new Date(es.startTimeSec * 1000).toISOString()}`
-              : '') +
-            (es.donbestId ? ` db=${es.donbestId}` : '')
-        );
-      } else if (es.path.length) {
-        lines.push(
-          `    path=s/${es.path.join('/')}` +
-            (es.donbestId ? ` db=${es.donbestId}` : '')
-        );
-      }
-    }
-    if (r.pandora.book) {
-      const b = r.pandora.book;
-      lines.push(
-        `  book offeredMarkets=${b.offeredMarketCount} offMarkets=${b.offMarketCount} lines=${b.lineCount}`
-      );
-      const offered = b.markets.filter(m => m.offered).slice(0, 16);
-      if (offered.length) {
-        lines.push(
-          `    markets: ${offered
-            .map(
-              m =>
-                `${m.period}/${m.marketType}(${pandoraMarketLabel(m.marketType)})` +
-                (m.line != null ? ` r=${m.line}` : '')
-            )
-            .join(', ')}`
-        );
-      }
-      const off = b.markets.filter(m => !m.offered);
-      if (off.length) {
-        lines.push(
-          `    off: ${off
-            .slice(0, 12)
-            .map(m => `${m.period}/${m.marketType}`)
-            .join(', ')}${off.length > 12 ? '…' : ''}`
-        );
-      }
-      const sampleCls = b.markets
-        .filter(m => m.clsDefault != null)
-        .slice(0, 6)
-        .map(m => `${m.period}/${m.marketType} cls._d=${m.clsDefault}`);
-      if (sampleCls.length) {
-        lines.push(`    cls (limit class, not suspend): ${sampleCls.join('; ')}`);
-      }
-      // market 16 set correct score decode samples
-      const scs = r.pandora.lines
-        .filter(l => l.marketType === '16')
-        .slice(0, 8);
-      if (scs.length) {
-        lines.push(
-          `    set_correct_score (m/16 lineId=p1<<16|p2): ${scs
+        ...mdTable(
+          ['Score', 'LineId', 'Decimal', 'American', 'Implied'],
+          [...best.values()]
+            .sort((a, b) => Number(a.selection) - Number(b.selection))
             .map(l => {
-              const lab =
-                formatSetCorrectScoreLineId(l.selection) ?? l.selection;
-              return `${lab}@${l.decimal.toFixed(2)}`;
+              const imp = 1 / l.decimal;
+              return [
+                formatSetCorrectScoreLineId(l.selection) ?? l.selection,
+                l.selection,
+                fmtDec(l.decimal),
+                fmtAm(l.american),
+                Number.isFinite(imp) ? `${(imp * 100).toFixed(1)}%` : '—',
+              ];
             })
-            .join('  ')}`
-        );
-      }
-      // game winner samples (TT s*/18)
-      const gw = r.pandora.lines
-        .filter(l => l.marketType === '18')
-        .slice(0, 6);
-      if (gw.length) {
-        lines.push(
-          `    game_winner (18): ${gw
-            .map(l =>
-              describeCoefficientSelection(l.marketType, l.selection, {
-                sideIndex: l.sideIndex,
-              }) + `=${l.decimal.toFixed(2)}`
-            )
-            .join('  ')}`
-        );
-      }
-      const vigRows = vigFromCoefficientLines(r.pandora.lines);
-      if (vigRows.length) {
-        lines.push('  vig (overround):');
-        lines.push(...formatMarketVigRows(vigRows, { limit: 10 }));
-      }
+        )
+      );
     }
-  } else {
-    lines.push('  pandora skipped');
+  }
+
+  // Game winner table
+  const gwLines = r.pandora.lines.filter(l => l.marketType === '18');
+  if (gwLines.length) {
+    const byKey = new Map<
+      string,
+      { period: string; game: string; p1?: number; p2?: number; p1am?: number; p2am?: number }
+    >();
+    for (const l of gwLines) {
+      const k = `${l.period}\0${l.selection}`;
+      const row =
+        byKey.get(k) ??
+        ({ period: l.period, game: l.selection } as {
+          period: string;
+          game: string;
+          p1?: number;
+          p2?: number;
+          p1am?: number;
+          p2am?: number;
+        });
+      if (l.sideIndex === 0) {
+        row.p1 = l.decimal;
+        row.p1am = l.american;
+      } else if (l.sideIndex === 1) {
+        row.p2 = l.decimal;
+        row.p2am = l.american;
+      } else if (row.p1 == null) {
+        row.p1 = l.decimal;
+        row.p1am = l.american;
+      } else {
+        row.p2 = l.decimal;
+        row.p2am = l.american;
+      }
+      byKey.set(k, row);
+    }
+    lines.push('');
+    lines.push('## Game winner (18)');
+    lines.push(
+      ...mdTable(
+        ['Period', 'Game', 'P1 dec', 'P1 am', 'P2 dec', 'P2 am', 'Vig'],
+        [...byKey.values()]
+          .sort(
+            (a, b) =>
+              a.period.localeCompare(b.period) ||
+              Number(a.game) - Number(b.game)
+          )
+          .map(row => {
+            let vig = '—';
+            if (row.p1 != null && row.p2 != null && row.p1 > 1 && row.p2 > 1) {
+              const sum = 1 / row.p1 + 1 / row.p2;
+              vig = fmtPct((sum - 1) * 100);
+            }
+            return [
+              row.period,
+              row.game,
+              fmtDec(row.p1),
+              fmtAm(row.p1am),
+              fmtDec(row.p2),
+              fmtAm(row.p2am),
+              vig,
+            ];
+          })
+      )
+    );
+  }
+
+  if (r.pandora.probed) {
+    const vigRows = vigFromCoefficientLines(r.pandora.lines);
+    if (vigRows.length) {
+      lines.push('');
+      lines.push('## Vig (overround)');
+      lines.push(
+        ...mdTable(
+          ['Mkt', 'Name', 'Kind', 'Vig', 'Σ implied', 'Legs'],
+          vigRows.map(v => [
+            `${v.period}/${v.marketType}`,
+            v.label,
+            v.kind,
+            fmtPct(v.vigPercent),
+            v.impliedSum.toFixed(3),
+            String(v.prices.length),
+          ])
+        )
+      );
+    }
+  }
+
+  if (!r.pandora.probed) {
+    lines.push('');
+    lines.push('_pandora skipped_');
   }
   if (r.notes.length) {
     lines.push('');

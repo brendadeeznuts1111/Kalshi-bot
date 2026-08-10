@@ -58,7 +58,9 @@ describe('summarizeOddsWatch suspensions', () => {
     expect(s.medianSuspensionMs).toBe(3100);
     expect(s.transitionCounts.market_off).toBe(2);
     expect(s.vig.length).toBeGreaterThanOrEqual(1);
-    expect(formatOddsWatchSummary(s)).toContain('suspensions');
-    expect(formatOddsWatchSummary(s)).toContain('vig');
+    const text = formatOddsWatchSummary(s);
+    expect(text).toContain('Suspension');
+    expect(text).toContain('Vig');
+    expect(text).toContain('| m/5 |');
   });
 });
