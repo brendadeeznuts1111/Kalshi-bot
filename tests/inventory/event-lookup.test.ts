@@ -1,8 +1,8 @@
 // @see https://bun.com/docs/test/index#run-tests
 import { describe, expect, test } from 'bun:test';
+import { formatEventLookup } from '../../src/inventory/event-lookup-format.ts';
 import {
   filterLinesByPeriod,
-  formatEventLookup,
   formatSportBoardSamples,
   inferSportHintFromLines,
   labelPeriodId,

@@ -1,10 +1,10 @@
 // @see https://bun.com/docs/test/index#run-tests
 import { describe, expect, test } from 'bun:test';
+import { formatOddsWatchSummary } from '../../src/inventory/event-lookup-format.ts';
 import {
-  formatOddsWatchSummary,
   summarizeOddsWatch,
   type OddsWatchUpdate,
-} from '../../src/inventory/event-lookup.ts';
+} from '../../src/inventory/pandora-listen.ts';
 
 describe('summarizeOddsWatch suspensions', () => {
   test('pairs market_off → market_on with duration', () => {

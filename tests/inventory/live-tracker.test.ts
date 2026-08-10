@@ -14,7 +14,7 @@ import {
   parseTrackerJsonl,
   summarizeEventTypes,
 } from '../../src/inventory/live-tracker.ts';
-import type { OddsWatchUpdate } from '../../src/inventory/event-lookup.ts';
+import type { OddsWatchUpdate } from '../../src/inventory/pandora-listen.ts';
 
 describe('live-tracker', () => {
   test('maps offer transitions to public event types', () => {

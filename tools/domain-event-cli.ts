@@ -29,14 +29,18 @@ import {
   formatEventBoardScan,
   formatEventLookup,
   formatOddsWatchSummary,
+} from '../src/inventory/event-lookup-format.ts';
+import {
   formatSportBoardSamples,
   lookupEvent,
   parseEventRef,
   sampleStreamListBySport,
+} from '../src/inventory/event-lookup.ts';
+import {
   scanPandoraEventBoard,
   summarizeOddsWatch,
   watchEventOdds,
-} from '../src/inventory/event-lookup.ts';
+} from '../src/inventory/pandora-listen.ts';
 import {
   formatEventValidate,
   validateEvent,
