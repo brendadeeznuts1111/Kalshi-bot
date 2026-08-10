@@ -43,7 +43,7 @@ export type LiveTrackerEvent = {
   rawKind?: string;
 };
 
-export type LiveTrackerLogRecord = {
+type LiveTrackerLogRecord = {
   at: string;
   eventId: number;
   lineCount: number;
@@ -108,7 +108,7 @@ export function offerTransitionToEvent(
   }
 }
 
-export function eventDataTransitionToEvent(
+function eventDataTransitionToEvent(
   t: EventDataStateTransition,
   ctx: { at: string; eventId: number; file?: string }
 ): LiveTrackerEvent {
@@ -188,7 +188,7 @@ export function parseEventType(raw: string): LiveTrackerEventType | null {
   return aliases[u] ?? null;
 }
 
-export type SortKey = 'time' | 'event' | 'type' | 'detail' | 'file' | 'eventid';
+type SortKey = 'time' | 'event' | 'type' | 'detail' | 'file' | 'eventid';
 
 export type DiffQuery = {
   /** One or more event types (OR filter). */
@@ -312,7 +312,7 @@ export function summarizeEventTypes(
     .sort((a, b) => b.count - a.count || a.eventType.localeCompare(b.eventType));
 }
 
-export type EventTimeStats = {
+type EventTimeStats = {
   total: number;
   byType: Array<{ eventType: string; count: number }>;
   /** Epoch ms of earliest/latest event time (parseable ISO). */
