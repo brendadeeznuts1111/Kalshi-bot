@@ -270,10 +270,29 @@ async function jobInventorySync(): Promise<void> {
         t.startsWith("newBySport:") ||
         t.startsWith("leagues:") ||
         t.startsWith("enrich:") ||
+        t.startsWith("enrich-validate") ||
         t.startsWith("priced:") ||
         t.startsWith("odds-link")
       ) {
         console.error(`[cron:inventory] ${t}`);
+      }
+    }
+    // Optional ops alert when enrich validation fails (TELEGRAM_* required)
+    if (
+      Bun.env.INVENTORY_ENRICH_TELEGRAM === "1" &&
+      report.enrichValidation &&
+      !report.enrichValidation.passed
+    ) {
+      try {
+        const { maybeNotifyInventoryTelegram } = await import(
+          "../src/inventory/notify.ts"
+        );
+        await maybeNotifyInventoryTelegram({
+          title: `⚠️ Inventory enrich FAIL unlinked=${report.enrichValidation.unlinkedRemaining}`,
+          lines: report.enrichValidation.errors.slice(0, 12),
+        });
+      } catch (tgErr) {
+        console.error(`[cron:inventory] enrich-telegram: ${tgErr}`);
       }
     }
     if (report.leagues.inserted > 0) {

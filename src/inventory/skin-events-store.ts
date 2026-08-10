@@ -297,35 +297,19 @@ export function formatSkinEventLine(row: SkinEventRow): string {
  * Covers Buckeye plive + ezlive inventory.
  */
 export async function fetchPublicPliveStreamEvents(
-  options: { sport?: string; fetchImpl?: typeof fetch } = {}
+  options: {
+    sport?: string;
+    fetchImpl?: typeof fetch;
+    /** When true, use only disk cache (tests / offline). */
+    cacheOnly?: boolean;
+  } = {}
 ): Promise<InventoryEvent[]> {
-  const { fetchWithRetry } = await import('../institutions/resilient-fetch.ts');
-  const fetchImpl = options.fetchImpl ?? fetch;
-  const res = await fetchWithRetry(
-    FANTASY_ULTRA_DEFAULTS.streamListUrl,
-    {
-      headers: {
-        accept: 'application/json, text/plain, */*',
-        origin: FANTASY_ULTRA_DEFAULTS.streamOrigin,
-        referer: FANTASY_ULTRA_DEFAULTS.streamReferer,
-      },
-    },
-    {
-      retries: 3,
-      backoffMs: 800,
-      isRetryable: status => status === 403 || status === 429 || status >= 500,
-      fetchImpl,
-      timeoutMs: 25_000,
-    }
-  );
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(
-      `skin_events: stream-list HTTP ${res.status}${text ? ` — ${text.slice(0, 200)}` : ''}`
-    );
-  }
-  const json: unknown = await res.json();
-  return parseStreamList(json, { sport: options.sport ?? 'all' });
+  const { fetchPublicStreamListWire } = await import('./stream-list-fetch.ts');
+  const { wire } = await fetchPublicStreamListWire({
+    fetchImpl: options.fetchImpl,
+    cacheOnly: options.cacheOnly,
+  });
+  return parseStreamList(wire, { sport: options.sport ?? 'all' });
 }
 
 /** Rewrite skin_events.sport toward canonical ids when resolvable. */

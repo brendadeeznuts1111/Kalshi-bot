@@ -165,26 +165,17 @@ export function inventoryFromStreamList(
   };
 }
 
-/** GET stream-list-v2 and build inventory. */
+/** GET stream-list-v2 and build inventory (retry + disk cache fallback). */
 export async function fetchStreamSportsInventory(
-  options: { url?: string; fetchImpl?: typeof fetch } = {},
+  options: { url?: string; fetchImpl?: typeof fetch; cacheOnly?: boolean } = {},
 ): Promise<StreamSportsInventory> {
-  const url = options.url ?? FANTASY_ULTRA_DEFAULTS.streamListUrl;
-  const fetchImpl = options.fetchImpl ?? fetch;
-  const res = await fetchImpl(url, {
-    headers: {
-      accept: "application/json",
-      origin: FANTASY_ULTRA_DEFAULTS.streamOrigin,
-      referer: FANTASY_ULTRA_DEFAULTS.streamReferer,
-    },
+  const { fetchPublicStreamListWire } = await import("./stream-list-fetch.ts");
+  const { wire, url } = await fetchPublicStreamListWire({
+    url: options.url,
+    fetchImpl: options.fetchImpl,
+    cacheOnly: options.cacheOnly,
   });
-  if (!res.ok) {
-    throw new Error(
-      `stream-list inventory HTTP ${res.status} ${res.statusText}`,
-    );
-  }
-  const json: unknown = await res.json();
-  return inventoryFromStreamList(json, { url });
+  return inventoryFromStreamList(wire, { url });
 }
 
 /** Static map size for agents. */
