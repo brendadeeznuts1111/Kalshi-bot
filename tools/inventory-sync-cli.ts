@@ -15,11 +15,14 @@
  *   bun run inventory:sync -- --enrich-booked --enrich-scope=board
  *   bun run inventory:sync -- --enrich-booked --enrich-scope=unlinked
  *   bun run inventory:sync -- --odds-status
+ *   bun run inventory:sync -- --enrich-only --enrich-scope=unlinked
+ *   bun run inventory:sync -- --enrich-only --dry-run
  *
  * Default sport filter when omitted: table_tennis (CLI). Cron defaults to all.
  * --dry-run: fetch + plan insert/update only (no SQLite writes; enrich is planned only).
  *            Incompatible with --loop.
  * --enrich-scope: new | board (default) | unlinked
+ * --enrich-only: skip stream poll; public Statscore catalog → odds_event_id
  * --odds-status: odds_event_id fill-rate only (no poll)
  */
 // @see https://bun.com/docs/runtime/sqlite
@@ -50,14 +53,14 @@ function hasFlag(name: string): boolean {
   return process.argv.includes(`--${name}`);
 }
 
-function resolveProfile(dryRun: boolean): PartnerAccountProfile {
-  if (!dryRun) {
-    return requireFantasy402ProfileFromEnv();
-  }
-  // Dry-run: prefer real env, else public dummy when inventory is public-only
+function resolveProfile(allowPublic: boolean): PartnerAccountProfile {
   const fromEnv = loadFantasy402ProfileFromEnv();
   if (fromEnv) return fromEnv;
-  if (Bun.env.INVENTORY_SYNC_PUBLIC === "1" || Bun.env.PARTNER_SYNC_PUBLIC === "1") {
+  if (
+    allowPublic ||
+    Bun.env.INVENTORY_SYNC_PUBLIC === "1" ||
+    Bun.env.PARTNER_SYNC_PUBLIC === "1"
+  ) {
     return {
       id: "fantasy402-public",
       partner: "fantasy402",
@@ -80,10 +83,12 @@ async function runOnce(options: {
   dryRun: boolean;
   sport: string;
   enrichBooked: boolean;
+  enrichOnly: boolean;
   enrichBookedScope: ReturnType<typeof parseEnrichBookedScope>;
   json: boolean;
 }): Promise<void> {
-  const profile = resolveProfile(options.dryRun);
+  // enrich-only / dry-run can use public dummy profile
+  const profile = resolveProfile(options.dryRun || options.enrichOnly);
   const adapter = getFantasySessionAdapter(profile, { warmSession: false });
   // Optional login — inventory works without it
   try {
@@ -95,7 +100,8 @@ async function runOnce(options: {
   const db = openEventStore({ dbPath: DEFAULT_EVENT_STORE_DB });
   const report = await runInventorySync(db, adapter, {
     sport: options.sport,
-    enrichBooked: options.enrichBooked,
+    enrichBooked: options.enrichBooked || options.enrichOnly,
+    enrichOnly: options.enrichOnly,
     enrichBookedScope: options.enrichBookedScope,
     dryRun: options.dryRun,
   });
@@ -132,11 +138,15 @@ async function main(): Promise<void> {
     throw new Error("inventory:sync --dry-run cannot be combined with --loop");
   }
 
+  const enrichOnly = hasFlag("enrich-only");
   const onceOpts = {
     dryRun,
-    sport: argValue("sport") ?? "table_tennis",
+    sport: argValue("sport") ?? (enrichOnly ? "all" : "table_tennis"),
     enrichBooked: hasFlag("enrich-booked"),
-    enrichBookedScope: parseEnrichBookedScope(argValue("enrich-scope")),
+    enrichOnly,
+    enrichBookedScope: parseEnrichBookedScope(
+      argValue("enrich-scope") ?? (enrichOnly ? "unlinked" : undefined),
+    ),
     json,
   };
 

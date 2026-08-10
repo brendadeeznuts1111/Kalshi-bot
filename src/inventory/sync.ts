@@ -53,6 +53,17 @@ export type InventorySyncOptions = {
    * - `unlinked` — all null odds_event_id for the book (capped)
    */
   enrichBookedScope?: EnrichBookedScope;
+  /**
+   * Skip stream poll — only run booked enrich (default scope unlinked).
+   * Uses public Statscore catalog when adapter list fails / public mode.
+   */
+  enrichOnly?: boolean;
+  /** Max Statscore catalog rows for public enrich (default 1200). */
+  enrichCatalogMax?: number;
+  /**
+   * Inject catalog (tests / offline). Skips public+adapter fetch when non-empty.
+   */
+  bookedCatalog?: Array<{ oddsEventId: string; name: string }>;
   nowMs?: number;
   /** Explicit Pandora book; else adapter.getCoefficientStore() when present. */
   coefficientStore?: CoefficientStore;
@@ -140,13 +151,50 @@ function normalizeName(s: string): string {
   return s
     .toLowerCase()
     .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '') // strip combining marks
     .replace(/[^\w\s]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 }
 
+/** "LAST, FIRST" / trailing dash noise → ordered tokens (len ≥ 3). */
+export function competitorNameTokens(raw: string): string[] {
+  let s = String(raw ?? '').trim().replace(/[-–—]+$/g, '').trim();
+  if (!s) return [];
+  if (s.includes(',')) {
+    const [last, ...rest] = s.split(',').map(p => p.trim());
+    s = `${rest.join(' ')} ${last ?? ''}`.trim();
+  }
+  return normalizeName(s)
+    .split(' ')
+    .filter(t => t.length >= 3);
+}
+
+/** Light translit folds for UA/RU latin variants used on both feeds. */
+export function foldCompetitorToken(t: string): string {
+  let x = t.toLowerCase();
+  x = x
+    .replace(/yurii/g, 'yuri')
+    .replace(/yuriy/g, 'yuri')
+    .replace(/oleksandr/g, 'aleksandr')
+    .replace(/oleksander/g, 'aleksandr')
+    .replace(/vladyslav/g, 'vladislav')
+    .replace(/dmitriy/g, 'dmitry')
+    .replace(/dmytro/g, 'dmitry')
+    .replace(/sergey/g, 'sergei')
+    .replace(/serhii/g, 'sergei')
+    .replace(/volodymyr/g, 'vladimir')
+    .replace(/andrii/g, 'andrey')
+    .replace(/andriy/g, 'andrey');
+  // collapse -iy/-yi endings lightly
+  if (x.endsWith('iy') && x.length > 4) x = x.slice(0, -2) + 'y';
+  return x;
+}
+
 /**
- * Soft match "Home vs Away" inventory to Statscore "Home - Away" booked name.
+ * Soft match inventory home/away to Statscore "Home - Away" booked name.
+ * Strategies: full substring, then last-name tokens (len≥4, whole-token) with
+ * light transliteration folds. Avoids short tokens like "univ".
  */
 export function matchBookedOddsEventId(
   home: string | null,
@@ -156,9 +204,38 @@ export function matchBookedOddsEventId(
   if (!home || !away || booked.length === 0) return null;
   const h = normalizeName(home);
   const a = normalizeName(away);
+  if (!h || !a) return null;
+
+  // 1) Full side strings (exact prior behavior)
   for (const b of booked) {
     const n = normalizeName(b.name);
     if (n.includes(h) && n.includes(a)) return b.oddsEventId;
+  }
+
+  // 2) Reordered LAST, FIRST full strings
+  const hTokens = competitorNameTokens(home);
+  const aTokens = competitorNameTokens(away);
+  const hRe = hTokens.join(' ');
+  const aRe = aTokens.join(' ');
+  if (hRe && aRe && (hRe !== h || aRe !== a)) {
+    for (const b of booked) {
+      const n = normalizeName(b.name);
+      if (n.includes(hRe) && n.includes(aRe)) return b.oddsEventId;
+    }
+  }
+
+  // 3) Last-name tokens (require len≥4 to skip univ/fc noise)
+  const hLast = hTokens[hTokens.length - 1];
+  const aLast = aTokens[aTokens.length - 1];
+  if (!hLast || !aLast || hLast.length < 4 || aLast.length < 4) return null;
+  const hFold = foldCompetitorToken(hLast);
+  const aFold = foldCompetitorToken(aLast);
+  if (hFold === aFold) return null;
+
+  for (const b of booked) {
+    const nTokens = competitorNameTokens(b.name).map(foldCompetitorToken);
+    const set = new Set(nTokens);
+    if (set.has(hFold) && set.has(aFold)) return b.oddsEventId;
   }
   return null;
 }
@@ -367,9 +444,13 @@ export async function runInventorySync(
 ): Promise<InventorySyncReport> {
   const sport = options.sport ?? 'table_tennis';
   const dryRun = options.dryRun === true;
+  const enrichOnly = options.enrichOnly === true;
   const notes: string[] = [];
   if (dryRun) {
     notes.push('dry-run: no SQLite writes (plan only)');
+  }
+  if (enrichOnly) {
+    notes.push('enrich-only: skip stream poll');
   }
   const fetchSport =
     sport === 'all'
@@ -381,47 +462,76 @@ export async function runInventorySync(
           ? 'tennis'
           : sport.replace(/\s+/g, '_').toLowerCase();
 
-  // Inventory does not require login
-  let events: InventoryEvent[] = await adapter.fetchInventory({
-    sport: fetchSport === 'all' ? 'all' : fetchSport,
-  });
-  if (sport !== 'all') {
-    events = filterLiveEventsBySport(events, sport);
-  }
-
   const identity = options.identity ?? buckeyeInventoryIdentity();
-  if (!dryRun) {
-    normalizeSkinEventsSports(db);
-  }
 
-  const upsert: SkinEventUpsertResult = dryRun
-    ? planInventoryUpsert(db, events, { nowMs: options.nowMs, identity })
-    : upsertSkinLiveEvents(db, events, {
-        nowMs: options.nowMs,
-        identity,
-      });
+  let events: InventoryEvent[] = [];
+  let upsert: SkinEventUpsertResult = { inserted: [], updated: [], seen: 0 };
+
+  if (!enrichOnly) {
+    // Inventory does not require login
+    events = await adapter.fetchInventory({
+      sport: fetchSport === 'all' ? 'all' : fetchSport,
+    });
+    if (sport !== 'all') {
+      events = filterLiveEventsBySport(events, sport);
+    }
+
+    if (!dryRun) {
+      normalizeSkinEventsSports(db);
+    }
+
+    upsert = dryRun
+      ? planInventoryUpsert(db, events, { nowMs: options.nowMs, identity })
+      : upsertSkinLiveEvents(db, events, {
+          nowMs: options.nowMs,
+          identity,
+        });
+  }
 
   let enriched = 0;
   let enrichCandidates = 0;
-  const enrichScope: EnrichBookedScope | null = options.enrichBooked
-    ? (options.enrichBookedScope ?? 'board')
+  const wantEnrich = options.enrichBooked === true || enrichOnly;
+  const enrichScope: EnrichBookedScope | null = wantEnrich
+    ? (options.enrichBookedScope ?? (enrichOnly ? 'unlinked' : 'board'))
     : null;
 
-  if (options.enrichBooked && enrichScope) {
+  if (wantEnrich && enrichScope) {
     try {
       const sportFilter = sport.toLowerCase().includes('table')
         ? 'table'
         : sport === 'all'
           ? undefined
           : sport;
-      const booked = await adapter.listBookedEvents({
-        sport: sportFilter,
-        limit: 200,
-      });
-      const catalog = booked.map(b => ({
-        oddsEventId: b.oddsEventId,
-        name: b.name,
-      }));
+      let catalog: Array<{ oddsEventId: string; name: string }> = [];
+      let catalogSource = 'injected';
+      if (options.bookedCatalog && options.bookedCatalog.length > 0) {
+        catalog = options.bookedCatalog;
+      } else {
+        // Prefer public multi-page catalog (no Fantasy login; larger than adapter page)
+        const { fetchPublicBookedCatalog, bookedCatalogToMatchList } =
+          await import('./booked-catalog.ts');
+        const pub = await fetchPublicBookedCatalog({
+          maxEvents: options.enrichCatalogMax ?? 1200,
+          maxPages: 25,
+          sport: sportFilter,
+        });
+        const byId = new Map(
+          bookedCatalogToMatchList(pub.entries).map(e => [e.oddsEventId, e] as const)
+        );
+        try {
+          const booked = await adapter.listBookedEvents({
+            sport: sportFilter,
+            limit: 200,
+          });
+          for (const b of booked) {
+            byId.set(b.oddsEventId, { oddsEventId: b.oddsEventId, name: b.name });
+          }
+        } catch {
+          /* public catalog is enough */
+        }
+        catalog = [...byId.values()];
+        catalogSource = `public+adapter pages=${pub.pages} totalHint=${pub.totalItemsHint ?? '?'}`;
+      }
       const candidates = collectBoardEnrichCandidates(
         upsert,
         db,
@@ -440,8 +550,8 @@ export async function runInventorySync(
       });
       notes.push(
         dryRun
-          ? `booked enrich (dry-run, scope=${enrichScope}): would match ${enriched}/${enrichCandidates} by name (catalog=${catalog.length})`
-          : `booked enrich (scope=${enrichScope}): matched ${enriched}/${enrichCandidates} by name (catalog=${catalog.length}; metadata only — no prices)`
+          ? `booked enrich (dry-run, scope=${enrichScope}): would match ${enriched}/${enrichCandidates} by name (catalog=${catalog.length} via ${catalogSource})`
+          : `booked enrich (scope=${enrichScope}): matched ${enriched}/${enrichCandidates} by name (catalog=${catalog.length} via ${catalogSource}; metadata only — no prices)`
       );
     } catch (err) {
       notes.push(`booked enrich skipped: ${err instanceof Error ? err.message : String(err)}`);
