@@ -209,6 +209,101 @@ describe('host-discover', () => {
     expect(getSkinByHost('www.action92.com')).toBeUndefined();
   });
 
+  test('Magnum playersVip + S3 logos → magnum for review', () => {
+    const report = scoreHostDiscovery({
+      url: 'https://mirror-mag.example/',
+      host: 'mirror-mag.example',
+      finalUrl: 'https://mirror-mag.example/',
+      status: 200,
+      headers: {},
+      body: `<html><title>ProbooknycCom</title>
+        <script src="/playersVip/js/jquery.min.js"></script>
+        <link href="/playersVip/css/custom.css?v=1" rel="stylesheet"/>
+        <img src="https://playersvip.s3.amazonaws.com/logos/logo_mirror.png"/>
+        <script src="/js/jquery-1.11.2.min.js"></script>
+        </html>`,
+      storedUrls: [
+        'https://mirror-mag.example/playersVip/css/custom.css',
+        'https://playersvip.s3.amazonaws.com/logos/logo_mirror.png',
+      ],
+      dns: {
+        cname: [],
+        ns: ['ns10.dnsmadeeasy.com', 'ns11.dnsmadeeasy.com'],
+        txt: [],
+        mx: [],
+      },
+    });
+    expect(report.suggestedSkinId).toBe('magnum');
+    expect(report.confidence).toBeGreaterThanOrEqual(0.4);
+  });
+
+  test('LV Action templates/53 + sportsbook.php → lvaction for review', () => {
+    const report = scoreHostDiscovery({
+      url: 'https://mirror-lva.example/',
+      host: 'mirror-lva.example',
+      finalUrl: 'https://mirror-lva.example/',
+      status: 200,
+      headers: {},
+      body: `<html><title>lvaction.com</title>
+        <link href="/templates/53/assets/css/bootstrap.min.css" rel="stylesheet"/>
+        <a href="/sportsbook.php">sports</a>
+        <script>multisitesLogin()</script>
+        <script src="/templates/53/assets/js/jquery.matchHeight.js"></script>
+        </html>`,
+      storedUrls: [
+        'https://mirror-lva.example/templates/53/assets/css/bootstrap.min.css',
+        'https://mirror-lva.example/sportsbook.php',
+      ],
+    });
+    expect(report.suggestedSkinId).toBe('lvaction');
+    expect(report.confidence).toBeGreaterThanOrEqual(0.4);
+  });
+
+  test('1BV skin.betting + cdntools → 1bv for review (not ace)', () => {
+    const report = scoreHostDiscovery({
+      url: 'https://mirror-1bv.example/',
+      host: 'mirror-1bv.example',
+      finalUrl: 'https://mirror-1bv.example/',
+      status: 200,
+      headers: {},
+      body: `<html><title>All Sports Wagering</title>
+        <a href="/frontend/__rules/skin.betting/_sportsbook-rules.html">rules</a>
+        <script src="//cdntools.info/animacion3.aspx"></script>
+        </html>`,
+      storedUrls: [
+        'https://mirror-1bv.example/frontend/__rules/skin.betting/_sportsbook-rules.html',
+        'https://cdntools.info/animacion3.aspx',
+      ],
+    });
+    expect(report.suggestedSkinId).toBe('1bv');
+    expect(report.confidence).toBeGreaterThanOrEqual(0.4);
+    expect(report.weigh.skinScores.find(s => s.skinId === 'ace')?.score ?? 0).toBeLessThan(
+      report.confidence
+    );
+  });
+
+  test('STS NewLogin + frontend login shell → sts for review', () => {
+    const report = scoreHostDiscovery({
+      url: 'https://mirror-sts.example/',
+      host: 'mirror-sts.example',
+      finalUrl: 'https://mirror-sts.example/',
+      status: 200,
+      headers: {},
+      body: `<html><title>GoMobile Login</title>
+        <link href="frontend/vendors/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
+        <link href="frontend/css/login.css" rel="stylesheet"/>
+        <a href="https://mobile.mirror-sts.example/NewLogin.aspx">login</a>
+        </html>`,
+      storedUrls: [
+        'https://mirror-sts.example/frontend/css/login.css',
+        'https://mobile.mirror-sts.example/NewLogin.aspx',
+      ],
+    });
+    expect(report.suggestedSkinId).toBe('sts');
+    expect(report.confidence).toBeGreaterThanOrEqual(0.4);
+    expect(getSkinByHost('mirror-sts.example')).toBeUndefined();
+  });
+
   test('ACE sportsbookvip + Login.aspx → ace for review (not HOST_TO_SKIN)', () => {
     const report = scoreHostDiscovery({
       url: 'https://mirror-ace.example/',

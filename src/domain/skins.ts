@@ -96,7 +96,7 @@ export const SKINS = [
     aliases: ['ace'] as const,
     mapper: {
       kind: 'unmapped',
-      note: 'Live-product coverage not proven yet; offerings declared only',
+      note: 'Products declared; Ultra adapter unproven — getUltraLiveURL/renewToken 404 on parlay21 apex+backend as of 2026-08-09; action92.com stays unmapped (Login.aspx alone)',
     },
     // Live probe 2026-08-09: ASP.NET Login.aspx + sportsbookvip.com shell (parlay21 / lonestar).
     // Login.aspx is collision-weighted — alone stays < 0.4; sportsbookvip clears review.
@@ -108,7 +108,7 @@ export const SKINS = [
   {
     id: 'metallic',
     displayName: 'Metallic',
-    description: 'Metallic skin — hosts declared; live products TBD.',
+    description: 'Metallic skin — hosts + fingerprints declared; live products unknown.',
     active: true,
     offeredLiveProducts: [] as const satisfies readonly LiveProductId[],
     hosts: [
@@ -126,7 +126,7 @@ export const SKINS = [
     aliases: ['metallic'] as const,
     mapper: {
       kind: 'unmapped',
-      note: 'Hosts declared; live-product coverage not proven yet',
+      note: 'products_unknown_as_of=2026-08-09 — public paradise/sun login shows CustomerLoginRedir/main.html only; no plive/ezlive/ultralive/maglive tokens',
     },
     fingerprints: {
       endpoints: ['/main.html', '/player-api/identity/CustomerLoginRedir', '/v2/'] as const,
@@ -152,9 +152,13 @@ export const SKINS = [
     aliases: ['sts'] as const,
     mapper: {
       kind: 'unmapped',
-      note: 'Hosts declared; live-product coverage not proven yet',
+      note: 'Hosts + fingerprints 2026-08-09 (gomobile NewLogin shell); products_unknown_as_of=2026-08-09',
     },
-    fingerprints: { endpoints: [] as const, assets: [] as const },
+    // Live probe: gomobilewager NewLogin.aspx + frontend/css/login.css (wagerattack public page is sparse).
+    fingerprints: {
+      endpoints: ['/NewLogin.aspx', '/frontend/css/login.css'] as const,
+      assets: ['frontend/vendors/bootstrap', 'frontend/css/login.css'] as const,
+    },
   },
   {
     id: '1bv',
@@ -166,9 +170,13 @@ export const SKINS = [
     aliases: ['1bv'] as const,
     mapper: {
       kind: 'unmapped',
-      note: 'Hosts declared; live-product coverage not proven yet',
+      note: 'Hosts + fingerprints 2026-08-09 (anybet365 skin.betting / cdntools); products_unknown_as_of=2026-08-09; betvegas23 also sportsbookvip but HOST_TO_SKIN owns it',
     },
-    fingerprints: { endpoints: [] as const, assets: [] as const },
+    // Prefer anybet365-distinctive tokens — do not claim sportsbookvip (ACE collision).
+    fingerprints: {
+      endpoints: ['/frontend/__rules/skin.betting/', 'skin.betting'] as const,
+      assets: ['cdntools.info', 'animacion3.aspx'] as const,
+    },
   },
   {
     id: 'lvaction',
@@ -180,9 +188,13 @@ export const SKINS = [
     aliases: ['lvaction', 'lv-action'] as const,
     mapper: {
       kind: 'unmapped',
-      note: 'Hosts declared; live-product coverage not proven yet',
+      note: 'Hosts + fingerprints 2026-08-09 (templates/53 + classic App_Themes); products_unknown_as_of=2026-08-09',
     },
-    fingerprints: { endpoints: [] as const, assets: [] as const },
+    // Live probe: modern shell /templates/53/ + classic ASP.NET App_Themes/Responsive.
+    fingerprints: {
+      endpoints: ['/templates/53/', '/sportsbook.php', 'multisitesLogin', '/App_Themes/Responsive/'] as const,
+      assets: ['jquery.matchHeight', 'jquery.bxslider', 'jquery.slicknav'] as const,
+    },
   },
   {
     id: 'magnum',
@@ -194,9 +206,16 @@ export const SKINS = [
     aliases: ['magnum'] as const,
     mapper: {
       kind: 'unmapped',
-      note: 'Hosts declared; live-product coverage not proven yet',
+      note: 'Hosts + fingerprints 2026-08-09 (playersVip / playersvip S3); products_unknown_as_of=2026-08-09',
     },
-    fingerprints: { endpoints: [] as const, assets: [] as const },
+    // Live probe: shared playersVip shell + playersvip.s3.amazonaws.com logos (DNSMadeEasy NS).
+    fingerprints: {
+      endpoints: ['/playersVip/'] as const,
+      assets: ['playersvip.s3.amazonaws.com', 'playersVip/css/custom.css', 'jquery-1.11.2'] as const,
+      infra: {
+        nsTokens: ['dnsmadeeasy.com'] as const,
+      },
+    },
   },
 ] as const satisfies readonly SkinRecord[];
 

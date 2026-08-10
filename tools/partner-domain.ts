@@ -49,7 +49,18 @@ if (map) {
 if (skins) {
   const rows = buildSkinMatrixRows();
   if (json) {
-    console.log(JSON.stringify({ skins: rows, count: rows.length }, null, 2));
+    console.log(
+      JSON.stringify(
+        {
+          skins: rows,
+          count: rows.length,
+          withGaps: rows.filter(r => r.gaps.length > 0).length,
+          fingerprintPending: rows.filter(r => r.fingerprintPending).map(r => r.skinId),
+        },
+        null,
+        2
+      )
+    );
   } else {
     console.log(formatSkinMatrixText(rows));
     console.log('\n  · SSOT: src/domain/skins.ts · docs: src/domain/README.md');

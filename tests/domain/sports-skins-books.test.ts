@@ -1,8 +1,11 @@
 // @see https://bun.com/docs/test/index#run-tests
 import { describe, expect, test } from 'bun:test';
 import {
+  FINGERPRINT_PENDING_SKINS,
   ULTRA_DESK_API_PATHS,
+  assertFingerprintCoverage,
   buildSkinMatrixRows,
+  formatSkinMatrixMarkdownTable,
   PARTNER_DOMAIN_ENV,
   RETIRED_BARE_BOOK_DOMAIN_ENVS,
   assertActiveSkinsHaveHosts,
@@ -170,11 +173,55 @@ describe('domain sports / skins / live products', () => {
     expect(ace?.hasFingerprints).toBe(true);
     expect(ace?.apexHosts).toContain('parlay21.com');
     expect(ace?.catalogLiveProducts).toEqual(['EZLive', 'UltraLive', 'MagLive']);
+    expect(ace?.gaps).toContain('mapper_unmapped');
+    expect(ace?.gaps).not.toContain('missing_fingerprints');
+  });
+
+  test('fingerprint coverage gate: pending allowlist or fingerprints', () => {
+    expect(() => assertFingerprintCoverage()).not.toThrow();
+    expect([...FINGERPRINT_PENDING_SKINS]).toEqual([]);
+    const rows = buildSkinMatrixRows();
+    for (const row of rows.filter(r => r.active)) {
+      expect(row.hasFingerprints).toBe(true);
+      expect(row.fingerprintPending).toBe(false);
+      expect(row.gaps).not.toContain('missing_fingerprints');
+    }
+  });
+
+  test('README skin table matches formatSkinMatrixMarkdownTable', async () => {
+    const readme = await Bun.file('src/domain/README.md').text();
+    const table = formatSkinMatrixMarkdownTable();
+    // Header + every skin row must appear (hosts/products may wrap differently in prose).
+    expect(readme).toContain('| Skin         | Active | Live products');
+    for (const row of buildSkinMatrixRows()) {
+      expect(readme).toContain(`| **${row.skinId}**`);
+    }
+    expect(table).toContain('| **buckeye**');
+    expect(table).toContain('| **sts**');
   });
 
   test('ULTRA_DESK_API_PATHS are desk-relative (no host lock)', () => {
     expect(ULTRA_DESK_API_PATHS.ultraLive.startsWith('/')).toBe(true);
     expect(ULTRA_DESK_API_PATHS.ultraLive).not.toContain('://');
     expect(ULTRA_DESK_API_PATHS.sportsLeagues).toContain('Get_SportsLeagues');
+  });
+
+  test('metallic products stay empty with dated unknown note', () => {
+    const metallic = SKINS.find(s => s.id === 'metallic')!;
+    expect(metallic.offeredLiveProducts).toEqual([]);
+    expect(metallic.mapper.note).toContain('products_unknown_as_of=2026-08-09');
+    const row = buildSkinMatrixRows().find(r => r.skinId === 'metallic')!;
+    expect(row.gaps).toContain('missing_live_products');
+    expect(row.hasFingerprints).toBe(true);
+  });
+
+  test('ace mapper stays unmapped; action92 not in HOST_TO_SKIN', () => {
+    const ace = SKINS.find(s => s.id === 'ace')!;
+    expect(ace.mapper.kind).toBe('unmapped');
+    expect(ace.mapper.note).toContain('Ultra adapter unproven');
+    expect(ace.mapper.note).toContain('action92');
+    expect(getSkinByHost('action92.com')).toBeUndefined();
+    expect(getSkinByHost('www.action92.com')).toBeUndefined();
+    expect(HOST_TO_SKIN['action92.com']).toBeUndefined();
   });
 });

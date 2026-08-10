@@ -16,20 +16,30 @@ Desk hosts live only in `SKINS[].hosts`. Stream/widget infra URLs live only in
 
 ## Skin table
 
-| Skin         | Active | Live products              | Hosts                       | Mapper         |
-| ------------ | ------ | -------------------------- | --------------------------- | -------------- |
-| **buckeye**  | yes    | PLive, EZLive              | betwest, fantasy402, hulkwager | **fantasy402** |
-| **ace**      | yes    | EZLive, UltraLive, MagLive | parlay21.com, lonestarwagering.com | unmapped (fp: Login.aspx + sportsbookvip) |
-| **metallic** | yes    | TBD                        | paradise, orange777, sunwager, gator747 | unmapped |
-| **sts**      | yes    | TBD                        | wagerattack.ag, gomobilewager.com | unmapped     |
-| **1bv**      | yes    | TBD                        | anybet365.com, betvegas23.com | unmapped     |
-| **lvaction** | yes    | TBD                        | lvaction.com, classic/archive.lvaction.com | unmapped |
-| **magnum**   | yes    | TBD                        | probooknyc.com, 50centjuice.com | unmapped |
+Generated from `buildSkinMatrixRows()` / `bun run partner:skins` — do not hand-edit
+product or gap columns; change [`skins.ts`](skins.ts) instead.
+
+| Skin         | Active | Live products              | Hosts                       | Mapper / gaps |
+| ------------ | ------ | -------------------------- | --------------------------- | ------------- |
+| **buckeye** | yes | PLive, EZLive | betwest.com, fantasy402.com, hulkwager.com | **fantasy402** |
+| **ace** | yes | EZLive, UltraLive, MagLive | parlay21.com, lonestarwagering.com | unmapped (mapper_unmapped) |
+| **metallic** | yes | (none) | paradisewager.com, orange777.com, sunwager.com, gator747.com | unmapped (missing_live_products, mapper_unmapped) |
+| **sts** | yes | (none) | wagerattack.ag, gomobilewager.com | unmapped (missing_live_products, mapper_unmapped) |
+| **1bv** | yes | (none) | anybet365.com, betvegas23.com | unmapped (missing_live_products, mapper_unmapped) |
+| **lvaction** | yes | (none) | lvaction.com, classic.lvaction.com, archive.lvaction.com | unmapped (missing_live_products, mapper_unmapped) |
+| **magnum** | yes | (none) | probooknyc.com, 50centjuice.com | unmapped (missing_live_products, mapper_unmapped) |
 
 **Invariant:** `active: true` ⇒ `hosts.length ≥ 1` (`assertActiveSkinsHaveHosts`).
+**Fingerprint gate:** active skins need fingerprints or membership in
+`FINGERPRINT_PENDING_SKINS` (`assertFingerprintCoverage`).
 Desk URL env: `PARTNER_DOMAIN` (or per-out `*DOMAIN`) must be a host in an active skin.
 Bare book-level DOMAIN env keys are retired (`RETIRED_BARE_BOOK_DOMAIN_ENVS`).
 `fantasy402` alias → skin `buckeye` (mapper token, not SkinId).
+
+```bash
+bun run partner:skins
+bun run partner:skins -- --json
+```
 
 ## Unknown host
 
