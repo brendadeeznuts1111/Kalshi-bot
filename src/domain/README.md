@@ -86,6 +86,19 @@ static in HTML — re-run with Pandora when the board is live to grow the set.
 Compare gaps to `SPORTS` / `KNOWN_MARKET_LABELS`; promote leagues still via
 `inventory:leagues --promote`.
 
+**Integrate snapshot → COMPETITIONS** (junk-filtered, limited — not all 3.8k):
+
+```bash
+bun run domain:widget-extract -- --write
+bun run domain:pandora -- --report
+bun run domain:pandora -- --promote --limit=50          # dry-run
+bun run domain:pandora -- --promote --apply --limit=20  # write competitions.ts
+bun run domain:pandora -- --markets
+```
+
+Adds optional `providerMappings.pandora: { leagueId, feedSportId }` alongside
+plive keys. Code: [`pandora-domain-integrate.ts`](pandora-domain-integrate.ts).
+
 ### Three planes (inventory · odds · ticket)
 
 ```ts

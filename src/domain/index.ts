@@ -174,6 +174,20 @@ export {
 } from './competition-promote.ts';
 
 export {
+  applyPandoraPromoteToCompetitionsFile,
+  buildPandoraCoverageReport,
+  buildPandoraSportMap,
+  formatPandoraCoverageReport,
+  formatPandoraPromotePlan,
+  liveLeaguesToPromoteInputs,
+  loadWidgetDomainSnapshot,
+  planPandoraCompetitionPromote,
+  type PandoraCoverageReport,
+  type PandoraPromoteResult,
+  type PandoraSportMapEntry,
+} from './pandora-domain-integrate.ts';
+
+export {
   buildDomainGaps,
   defaultWidgetDomainCachePath,
   extractLanguageTexts,

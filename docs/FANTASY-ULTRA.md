@@ -55,6 +55,18 @@ bun run domain:widget-extract -- --json
 Code: `src/domain/widget-domain-extract.ts`. No gsid. Gaps print vs domain
 `SPORTS`; league promote remains `inventory:leagues --promote`.
 
+**Integrate snapshot into COMPETITIONS** (limited + junk filter — do not dump 3898):
+
+```bash
+bun run domain:pandora -- --report
+bun run domain:pandora -- --promote --limit=50
+bun run domain:pandora -- --promote --apply --limit=20 --sport=soccer
+bun run domain:pandora -- --markets
+```
+
+`providerMappings.pandora.leagueId` links feed league ids when applied.
+Code: `src/domain/pandora-domain-integrate.ts`.
+
 ## Network-capture flow (implemented)
 
 ```text

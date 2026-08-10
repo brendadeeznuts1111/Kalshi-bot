@@ -223,13 +223,20 @@ export function planCompetitionPromote(
 /** Format one CompetitionRecord as TypeScript object literal (competitions.ts style). */
 export function formatCompetitionRecordSource(rec: CompetitionRecord): string {
   const plive = rec.providerMappings.plive;
+  const pandora = rec.providerMappings.pandora;
   const bucket = plive?.inventoryBucket ?? rec.sportId;
   const leagueKey = plive?.leagueKey ?? rec.displayName;
   const aliases = rec.aliases.map(a => JSON.stringify(a)).join(', ');
   const compact =
     rec.aliases.length === 1 &&
     rec.aliases[0] === leagueKey &&
-    rec.gender === 'unknown';
+    rec.gender === 'unknown' &&
+    !pandora;
+
+  const pliveLit = `{ inventoryBucket: ${JSON.stringify(bucket)}, leagueKey: ${JSON.stringify(leagueKey)} }`;
+  const pandoraLit = pandora
+    ? `pandora: { leagueId: ${JSON.stringify(pandora.leagueId)}, feedSportId: ${JSON.stringify(pandora.feedSportId)} }`
+    : null;
 
   if (compact) {
     return `  {
@@ -238,9 +245,12 @@ export function formatCompetitionRecordSource(rec: CompetitionRecord): string {
     displayName: ${JSON.stringify(rec.displayName)},
     aliases: [${aliases}],
     gender: ${JSON.stringify(rec.gender)},
-    providerMappings: { plive: { inventoryBucket: ${JSON.stringify(bucket)}, leagueKey: ${JSON.stringify(leagueKey)} } },
+    providerMappings: { plive: ${pliveLit} },
   }`;
   }
+
+  const mappingLines = [`      plive: ${pliveLit},`];
+  if (pandoraLit) mappingLines.push(`      ${pandoraLit},`);
 
   return `  {
     id: ${JSON.stringify(rec.id)},
@@ -249,7 +259,7 @@ export function formatCompetitionRecordSource(rec: CompetitionRecord): string {
     aliases: [${aliases}],
     gender: ${JSON.stringify(rec.gender)},
     providerMappings: {
-      plive: { inventoryBucket: ${JSON.stringify(bucket)}, leagueKey: ${JSON.stringify(leagueKey)} },
+${mappingLines.join('\n')}
     },
   }`;
 }

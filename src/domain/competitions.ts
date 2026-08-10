@@ -17,6 +17,14 @@ export type PliveCompetitionMapping = {
   leagueKey: string;
 };
 
+/** Pandora / SportsWidgets feed league id (from live.leagues room). */
+export type PandoraCompetitionMapping = {
+  /** Feed league id (stringified). */
+  leagueId: string;
+  /** Feed sport id on live.leagues.sportId. */
+  feedSportId: string;
+};
+
 export type CompetitionRecord = {
   id: string;
   sportId: SportId;
@@ -25,6 +33,8 @@ export type CompetitionRecord = {
   gender: CompetitionGender;
   providerMappings: {
     plive?: PliveCompetitionMapping;
+    /** Optional Pandora external id for priced-plane / widget domain harvest. */
+    pandora?: PandoraCompetitionMapping;
   };
 };
 
