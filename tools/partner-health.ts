@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * Partner domain health — registry + capacity + env presence + optional TOML drift.
+ * Partner desk health — registry + capacity + env presence + optional TOML drift.
  *
  *   bun run partner:health
  *   bun run partner:health -- --json
@@ -54,7 +54,7 @@ async function main(): Promise<void> {
   const accounts = listActiveBettingAccounts(db);
   const capacity = computeProviderCapacity(accounts);
   const env = checkPartnersEnvPresence(accounts);
-  const domain = buildOpsStatusReport();
+  const opsStatus = buildOpsStatusReport();
   const ledgerFreshness = listLedgerFreshness(db);
   const riskThreshold = parseRiskThreshold(
     argValue("risk-threshold") ?? process.env.PARTNER_FINANCE_RISK_THRESHOLD,
@@ -135,10 +135,10 @@ async function main(): Promise<void> {
             : null,
         }
       : null,
-    domain: {
-      built: domain.totals.built,
-      partial: domain.totals.partial,
-      planned: domain.totals.planned,
+    ops: {
+      built: opsStatus.totals.built,
+      partial: opsStatus.totals.partial,
+      planned: opsStatus.totals.planned,
     },
     visuals: [...partnerCodes].sort().map((code) => {
       const v = getPartnerVisual(code);
@@ -194,7 +194,7 @@ async function main(): Promise<void> {
       console.error(`toml error: ${tomlError}`);
     }
     console.log(
-      `  domain maturity: built=${domain.totals.built} partial=${domain.totals.partial} planned=${domain.totals.planned}`,
+      `  ops maturity: built=${opsStatus.totals.built} partial=${opsStatus.totals.partial} planned=${opsStatus.totals.planned}`,
     );
     for (const v of health.visuals) {
       const vis = getPartnerVisual(v.code);

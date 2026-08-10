@@ -91,7 +91,8 @@ export type PartnerDashboardSnapshot = {
     capacity: number;
     hex: string;
   }>;
-  domain: { built: number; partial: number; planned: number };
+  /** Seat-ops maturity (ops:status), not desk matrix. */
+  ops: { built: number; partial: number; planned: number };
   toml?: {
     path: string;
     drift: { added: number; changed: number; removed: number } | null;
@@ -105,8 +106,8 @@ export const PARTNER_OPERATOR_COMMANDS: Array<{
   purpose: string;
 }> = [
   {
-    cmd: "bun run partner:domain",
-    purpose: "Five-layer maturity map",
+    cmd: "bun run ops:status",
+    purpose: "Seat-ops five-layer maturity map",
   },
   {
     cmd: "bun run partner:toml -- --diff",
@@ -206,7 +207,7 @@ export async function buildPartnerDashboardSnapshot(
   const accounts = listActiveBettingAccounts(db);
   const capacity = computeProviderCapacity(accounts);
   const env = checkPartnersEnvPresence(accounts);
-  const domain = buildOpsStatusReport();
+  const opsStatus = buildOpsStatusReport();
   const ledgerFreshness = listLedgerFreshness(db);
   const risk = evaluateRiskHealth(db, accounts);
   const riskOk = riskOkUnderThreshold(risk, threshold);
@@ -340,10 +341,10 @@ export async function buildPartnerDashboardSnapshot(
       };
     }),
     outs,
-    domain: {
-      built: domain.totals.built,
-      partial: domain.totals.partial,
-      planned: domain.totals.planned,
+    ops: {
+      built: opsStatus.totals.built,
+      partial: opsStatus.totals.partial,
+      planned: opsStatus.totals.planned,
     },
     toml,
     commands: PARTNER_OPERATOR_COMMANDS,
@@ -453,7 +454,7 @@ export function renderPartnerDashboardHtml(
       <div class="kpi"><div class="k">Active outs</div><div class="v">${data.registry.activeOuts}</div></div>
       <div class="kpi"><div class="k">Risk errors</div><div class="v" style="color:${data.risk.errorCount ? "var(--err)" : "var(--ok)"}">${data.risk.errorCount}</div><div class="s">warns ${data.risk.warnCount} · thr ${esc(data.risk.threshold)}</div></div>
       <div class="kpi"><div class="k">Env gaps</div><div class="v" style="color:${data.env.missingCount ? "var(--warn)" : "var(--ok)"}">${data.env.missingCount}</div></div>
-      <div class="kpi"><div class="k">Domain</div><div class="v">${data.domain.built}</div><div class="s">built · ${data.domain.partial} partial · ${data.domain.planned} planned</div></div>
+      <div class="kpi"><div class="k">Seat ops</div><div class="v">${data.ops.built}</div><div class="s">built · ${data.ops.partial} partial · ${data.ops.planned} planned</div></div>
       ${data.tickets ? `<div class="kpi"><div class="k">Tickets ${esc(data.tickets.dayUtc)}</div><div class="v">${data.tickets.ticketCount}</div><div class="s">risk $${data.tickets.totalRisk} · toWin $${data.tickets.totalToWin}</div></div>` : ""}
       ${capBits}
     </div>
