@@ -32,13 +32,18 @@ import {
   findEventInEventDataBoard,
   isEventDataBoardPayload,
   parseEventDataDiffPath,
+  parseLiveSportsNames,
+  parsePandoraBlocked,
+  scanEventDataBoard,
   summarizeEventDataBoard,
   type CoefficientBookState,
   type CoefficientLine,
+  type EventDataBoardScan,
   type EventDataBoardSummary,
   type EventDataStateTransition,
   type EventOfferability,
   type OfferTransition,
+  type PandoraBlockedSets,
 } from '../partner/fantasy-ultra/coefficients.ts';
 import {
   PANDORA_DEFAULT_SESSION,
@@ -481,6 +486,8 @@ export async function probePandoraEvent(
   lastPayload: unknown | null;
   eventState: EventOfferability | null;
   eventDataBoard: EventDataBoardSummary | null;
+  sportsNames: Map<string, string>;
+  blocked: PandoraBlockedSets | null;
 }> {
   const seconds = Math.min(Math.max(options.seconds ?? 8, 2), 30);
   const store = new CoefficientStore();
@@ -488,6 +495,8 @@ export async function probePandoraEvent(
   let eventDataKeys: string[] = [];
   let lastPayload: unknown | null = null;
   let eventDataBoardPayload: unknown | null = null;
+  let sportsPayload: unknown | null = null;
+  let blockedRaw: unknown | null = null;
 
   await new Promise<void>(resolve => {
     const sock = new PandoraSocket({
@@ -495,7 +504,7 @@ export async function probePandoraEvent(
       WebSocketImpl: options.WebSocketImpl,
       handlers: {
         onNamespaceConnect: () => {
-          // subscribeLive already includes bulk `${main}.eventData`
+          // subscribeLive already includes bulk `${main}.eventData` + live.sports
           sock.subscribeLive({ eventIds: [eventId] });
         },
         onEvent: (name, args) => {
@@ -505,6 +514,20 @@ export async function probePandoraEvent(
           }
         },
         onCoefficients: info => {
+          if (info.room === 'live.sports' && !info.envelope.isDiff) {
+            sportsPayload = info.envelope.payload;
+            return;
+          }
+          if (
+            info.room.includes('groupProfile') &&
+            !info.envelope.isDiff &&
+            info.envelope.payload &&
+            typeof info.envelope.payload === 'object'
+          ) {
+            const gp = info.envelope.payload as { blocked?: unknown };
+            if (gp.blocked != null) blockedRaw = gp.blocked;
+            return;
+          }
           if (info.room.includes('eventData')) {
             const p = info.envelope.payload;
             if (!info.envelope.isDiff && isEventDataBoardPayload(p)) {
@@ -558,11 +581,18 @@ export async function probePandoraEvent(
         })
       : null;
 
+  const sportsNames = parseLiveSportsNames(sportsPayload);
+  const blocked = blockedRaw ? parsePandoraBlocked(blockedRaw) : null;
   const boardHit = eventDataBoardPayload
     ? findEventInEventDataBoard(eventDataBoardPayload, eventId)
     : null;
   const eventState = boardHit
-    ? decodeEventOfferability(boardHit, { coeffLineCount: lines.length })
+    ? decodeEventOfferability(boardHit, {
+        coeffLineCount: lines.length,
+        sportsNames,
+        blocked,
+        board: eventDataBoardPayload,
+      })
     : null;
   const eventDataBoard = eventDataBoardPayload
     ? summarizeEventDataBoard(eventDataBoardPayload)
@@ -577,7 +607,194 @@ export async function probePandoraEvent(
     lastPayload,
     eventState,
     eventDataBoard,
+    sportsNames,
+    blocked,
   };
+}
+
+/**
+ * Capture full eventData board + live.sports names + groupProfile.blocked.
+ * Used by `domain:event --board`.
+ */
+export async function scanPandoraEventBoard(
+  options: {
+    seconds?: number;
+    WebSocketImpl?: typeof WebSocket;
+  } = {}
+): Promise<{
+  scan: EventDataBoardScan | null;
+  sportsNames: Map<string, string>;
+  blocked: PandoraBlockedSets | null;
+  seconds: number;
+}> {
+  const seconds = Math.min(Math.max(options.seconds ?? 10, 3), 45);
+  let boardPayload: unknown | null = null;
+  let sportsPayload: unknown | null = null;
+  let blockedRaw: unknown | null = null;
+
+  await new Promise<void>(resolve => {
+    const sock = new PandoraSocket({
+      reconnect: false,
+      WebSocketImpl: options.WebSocketImpl,
+      handlers: {
+        onNamespaceConnect: () => {
+          sock.subscribeLive({});
+        },
+        onCoefficients: info => {
+          if (info.room === 'live.sports' && !info.envelope.isDiff) {
+            sportsPayload = info.envelope.payload;
+            return;
+          }
+          if (
+            info.room.includes('groupProfile') &&
+            !info.envelope.isDiff &&
+            info.envelope.payload &&
+            typeof info.envelope.payload === 'object'
+          ) {
+            const gp = info.envelope.payload as { blocked?: unknown };
+            if (gp.blocked != null) blockedRaw = gp.blocked;
+            return;
+          }
+          if (!info.room.includes('eventData')) return;
+          if (info.room.includes('eventCoefficients')) return;
+          const p = info.envelope.payload;
+          if (!info.envelope.isDiff && isEventDataBoardPayload(p)) {
+            boardPayload = p;
+          } else if (
+            info.envelope.isDiff &&
+            boardPayload &&
+            typeof boardPayload === 'object' &&
+            Array.isArray(p)
+          ) {
+            boardPayload = applyCoefficientDiff(
+              boardPayload as Record<string, unknown>,
+              p
+            );
+          }
+        },
+      },
+    });
+    sock.connect();
+    setTimeout(() => {
+      try {
+        sock.close();
+      } catch {
+        /* ignore */
+      }
+      resolve();
+    }, seconds * 1000);
+  });
+
+  const sportsNames = parseLiveSportsNames(sportsPayload);
+  const blocked = blockedRaw ? parsePandoraBlocked(blockedRaw) : null;
+  const scan = boardPayload
+    ? scanEventDataBoard(boardPayload, { sportsNames, blocked })
+    : null;
+
+  return { scan, sportsNames, blocked, seconds };
+}
+
+export function formatEventBoardScan(
+  scan: EventDataBoardScan,
+  options: {
+    sportFilter?: string | null;
+    bettableOnly?: boolean;
+    otbOnly?: boolean;
+    limit?: number;
+    blocked?: PandoraBlockedSets | null;
+  } = {}
+): string {
+  const limit = Math.min(Math.max(options.limit ?? 40, 5), 200);
+  const lines: string[] = [];
+  const s = scan.summary;
+  lines.push(
+    `eventData board  sports=${s.sportCount} events=${s.eventCount}  ` +
+      `db=${s.dbCount} kb=${s.kbCount}`
+  );
+  lines.push(
+    `  effective: bettableWithLines=${scan.bettableWithLines}  OTB=${scan.offTheBoard}  ` +
+      `blockedOverlay=${scan.blockedOverlayCount}`
+  );
+  lines.push(
+    `  byState: ${Object.entries(scan.byState)
+      .map(([k, v]) => `${k}=${v}`)
+      .join('  ')}`
+  );
+  if (options.blocked) {
+    lines.push(
+      `  groupProfile.blocked: sports=[${[...options.blocked.sports].join(',')}]  ` +
+        `leagues=${options.blocked.leagues.size}  events=${options.blocked.events.size}`
+    );
+  }
+  lines.push('');
+  lines.push('## By feed sport (live.sports id — not ticket apiSportId)');
+  lines.push(
+    '  id   name              n  bettable  lines  OTB  fin  notBett  blocked'
+  );
+  for (const r of scan.bySport) {
+    const name = (r.sportName ?? '?').padEnd(16).slice(0, 16);
+    lines.push(
+      `  ${r.sportId.padStart(3)}  ${name}  ${String(r.total).padStart(3)}  ` +
+        `${String(r.bettable).padStart(8)}  ${String(r.hasLines).padStart(5)}  ` +
+        `${String(r.offTheBoard).padStart(3)}  ${String(r.finished).padStart(3)}  ` +
+        `${String(r.notBettable).padStart(7)}  ${String(r.blocked).padStart(7)}`
+    );
+  }
+
+  let list = scan.events;
+  if (options.sportFilter) {
+    const f = options.sportFilter;
+    list = list.filter(
+      e =>
+        e.sportId === f ||
+        (e.sportName && e.sportName.toLowerCase() === f.toLowerCase())
+    );
+  }
+  if (options.bettableOnly) {
+    list = list.filter(e => e.state === 0 && e.hasLines && !e.offTheBoard);
+  }
+  if (options.otbOnly) {
+    list = list.filter(e => e.offTheBoard);
+  }
+  // prefer interesting first: bettable with lines, then others
+  list = [...list].sort((a, b) => {
+    const score = (e: EventOfferability) =>
+      (e.state === 0 && e.hasLines ? 0 : 10) +
+      (e.offTheBoard ? 1 : 0) +
+      (e.blockedReason ? 0.5 : 0);
+    return score(a) - score(b) || a.eventId - b.eventId;
+  });
+
+  lines.push('');
+  lines.push(
+    `## Events (showing ${Math.min(limit, list.length)}/${list.length}` +
+      (options.sportFilter ? ` sport=${options.sportFilter}` : '') +
+      (options.bettableOnly ? ' bettable+lines' : '') +
+      (options.otbOnly ? ' OTB only' : '') +
+      ')'
+  );
+  for (const e of list.slice(0, limit)) {
+    const teams =
+      e.home || e.away
+        ? `${e.home ?? '?'} vs ${e.away ?? '?'}`
+        : '(no teams)';
+    const blk = e.blockedReason ? ` [${e.blockedReason}]` : '';
+    const wire =
+      e.wireState != null && e.wireState !== e.state
+        ? ` wire_s=${e.wireState}`
+        : '';
+    lines.push(
+      `  ${e.eventId}  s=${e.state}(${e.stateLabel})${wire}  l=${e.hasLines}  ` +
+        `OTB=${e.offTheBoard}  ${e.sportName ?? e.sportId ?? '?'}${blk}`
+    );
+    lines.push(`    ${teams}  #!/event/${e.eventId}/m`);
+  }
+  lines.push('');
+  lines.push(
+    'note: feed sport ids from live.sports (1=Baseball 2=Basketball 5=Soccer 8=Tennis 93=TT …); ' +
+      'ticket apiSportId map differs (legacy tennis=2). blocked sports force notBettable (calculateState).'
+  );
+  return lines.join('\n');
 }
 
 /** Best-effort c{} tree from extracted lines (for book analysis without raw payload). */
@@ -886,19 +1103,31 @@ export async function lookupEvent(
       if (p.eventState) {
         const es = p.eventState;
         notes.push(
-          `eventData state=${es.state}(${es.stateLabel}) hasLines=${es.hasLines} isStarted=${es.isStarted} OTB=${es.offTheBoard}` +
+          `eventData state=${es.state}(${es.stateLabel})` +
+            (es.wireState != null && es.wireState !== es.state
+              ? ` wire_s=${es.wireState}`
+              : '') +
+            ` hasLines=${es.hasLines} isStarted=${es.isStarted} OTB=${es.offTheBoard}` +
+            (es.sportName ? ` sport=${es.sportName}` : '') +
+            (es.blockedReason ? ` ${es.blockedReason}` : '') +
             (es.home || es.away
               ? ` · ${es.home ?? '?'} vs ${es.away ?? '?'}`
               : '')
         );
         if (es.offTheBoard) {
           notes.push(
-            'event off the board (mainapp isOTB): finished|notBettable|blocked|!hasOdds'
+            'event off the board (mainapp isOTB): finished|notBettable|blocked|!hasOdds' +
+              (es.blockedReason ? ` (groupProfile ${es.blockedReason})` : '')
           );
         }
       } else if (p.eventDataBoard) {
         notes.push(
           `eventData board loaded (${p.eventDataBoard.eventCount} events) but id not under s[sport][country][league]`
+        );
+      }
+      if (p.blocked && p.blocked.sports.size) {
+        notes.push(
+          `groupProfile blocked sports=[${[...p.blocked.sports].join(',')}] leagues=${p.blocked.leagues.size}`
         );
       }
       if (periodMissing) {
@@ -948,8 +1177,10 @@ export async function lookupEvent(
   } else {
     sportHint = inferSportHintFromLines(allLines, streamHit?.bucket ?? null);
   }
-  // Pandora feed sport id (eventData path) as last-resort numeric hint
-  if (!sportHint && pandora.eventState?.sportId) {
+  // Pandora feed sport (live.sports name or id on eventData path)
+  if (!sportHint && pandora.eventState?.sportName) {
+    sportHint = pandora.eventState.sportName.toLowerCase().replace(/\s+/g, '_');
+  } else if (!sportHint && pandora.eventState?.sportId) {
     sportHint = `feed_sport_${pandora.eventState.sportId}`;
   }
 
@@ -1189,19 +1420,29 @@ export function formatEventLookup(r: EventLookupResult): string {
     }
     if (r.pandora.eventState) {
       const es = r.pandora.eventState;
+      const wire =
+        es.wireState != null && es.wireState !== es.state
+          ? ` wire_s=${es.wireState}`
+          : '';
       lines.push(
-        `  eventState s=${es.state}(${es.stateLabel}) hasLines=${es.hasLines} ` +
-          `isStarted=${es.isStarted} isLive=${es.isLive} OTB=${es.offTheBoard}`
+        `  eventState s=${es.state}(${es.stateLabel})${wire} hasLines=${es.hasLines} ` +
+          `isStarted=${es.isStarted} isLive=${es.isLive} OTB=${es.offTheBoard}` +
+          (es.sportName ? ` sport=${es.sportName}` : '') +
+          (es.blockedReason ? ` ${es.blockedReason}` : '')
       );
       if (es.home || es.away) {
         lines.push(
           `    ${es.home ?? '?'} vs ${es.away ?? '?'}  path=s/${es.path.join('/')}` +
             (es.startTimeSec != null
               ? ` start=${new Date(es.startTimeSec * 1000).toISOString()}`
-              : '')
+              : '') +
+            (es.donbestId ? ` db=${es.donbestId}` : '')
         );
       } else if (es.path.length) {
-        lines.push(`    path=s/${es.path.join('/')}`);
+        lines.push(
+          `    path=s/${es.path.join('/')}` +
+            (es.donbestId ? ` db=${es.donbestId}` : '')
+        );
       }
     }
     if (r.pandora.book) {

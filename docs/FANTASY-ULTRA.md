@@ -511,10 +511,28 @@ Diff path example: `/s/8/340/14358/197502861/12/l` → `hasLines` flip.
 ```bash
 bun run domain:event -- --id=197488581          # eventState + book
 bun run domain:event -- --id=197548901 --watch  # state + coeff transitions
+bun run domain:event -- --board                 # full board OTB / by-sport
+bun run domain:event -- --board --bettable --sport=8
 ```
 
-Decode: `findEventInEventDataBoard` · `decodeEventOfferability` ·
-`isEventOffTheBoard` in `coefficients.ts`.
+**Feed sport ids** (`live.sports[id].n`) ≠ ticket `apiSportId` map:
+
+| Feed id | Name | Notes |
+| ------- | ---- | ----- |
+| 1 | Baseball | |
+| 2 | Basketball | ticket map wrongly used 2=tennis historically |
+| 5 | Soccer | ticket map soccer=1 |
+| 6 | Fighting | |
+| 7 | Golf | often wire `s=2` mass OTB |
+| 8 | Tennis | |
+| 87 | Cricket | |
+| 93 | Table Tennis | often **groupProfile.blocked.sports** |
+| 114 | E-Sports | |
+
+**Effective state** (mainapp `calculateState`): groupProfile
+`blocked.{sports,leagues,events}` forces **notBettable** even when wire `s=0`.
+Decode: `scanEventDataBoard` · `parsePandoraBlocked` ·
+`findEventInEventDataBoard` · `decodeEventOfferability`.
 
 **Book path (wired):** `onCoefficients` → `CoefficientStore` → `fetchMarkets()`
 / `fetchOdds(oddsEventId)` (match ML `marketType=3`).  

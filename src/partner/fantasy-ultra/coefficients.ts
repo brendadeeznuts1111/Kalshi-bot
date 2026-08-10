@@ -126,11 +126,28 @@ export type EventDataBoardHit = {
   raw: unknown[] | null;
 };
 
+/**
+ * Group-profile block lists (from `live.groupProfile.*.blocked`).
+ * mainapp `isBlocked` forces effective state → notBettable.
+ */
+export type PandoraBlockedSets = {
+  events: Set<string>;
+  leagues: Set<string>;
+  sports: Set<string>;
+  markets: Set<string>;
+};
+
 /** Decoded event offerability from board dynamic + optional coeff lineCount. */
 export type EventOfferability = {
   eventId: number;
+  /**
+   * Effective EVENT_STATES after blocked overlay (mainapp calculateState).
+   * Use for OTB; see `wireState` for raw board `s`.
+   */
   state: number | null;
   stateLabel: string;
+  /** Raw dynamic `s` before blocked / client gates. */
+  wireState: number | null;
   isStarted: boolean | null;
   isLive: boolean | null;
   isHalftime: boolean | null;
@@ -140,12 +157,40 @@ export type EventOfferability = {
   oddsCount: number | null;
   offTheBoard: boolean;
   sportId: string | null;
+  /** From live.sports[id].n when provided. */
+  sportName: string | null;
   countryId: string | null;
   leagueId: string | null;
   home: string | null;
   away: string | null;
   startTimeSec: number | null;
   path: string[];
+  /** Why effective state ≠ wire (e.g. blocked_sport:93). */
+  blockedReason: string | null;
+  /** DonBest rotation id when present on board `db`. */
+  donbestId: string | null;
+};
+
+export type EventDataBoardScan = {
+  summary: EventDataBoardSummary;
+  events: EventOfferability[];
+  /** Counts by effective state label. */
+  byState: Record<string, number>;
+  /** Per feed sportId aggregates. */
+  bySport: Array<{
+    sportId: string;
+    sportName: string | null;
+    total: number;
+    bettable: number;
+    hasLines: number;
+    offTheBoard: number;
+    finished: number;
+    notBettable: number;
+    blocked: number;
+  }>;
+  bettableWithLines: number;
+  offTheBoard: number;
+  blockedOverlayCount: number;
 };
 
 export type EventDataBoardSummary = {
@@ -237,45 +282,215 @@ export function findEventInEventDataBoard(
         if (!events || typeof events !== 'object') continue;
         const node = (events as Record<string, unknown>)[id];
         if (node === undefined) continue;
-
-        let dynamic: EventDataWireDynamic | null = null;
-        let raw: unknown[] | null = null;
-        let home: string | null = null;
-        let away: string | null = null;
-        let startTimeSec: number | null = null;
-
-        if (Array.isArray(node)) {
-          raw = node;
-          home = teamNameFromSlot(node[0]);
-          away = teamNameFromSlot(node[1]);
-          const st = Number(node[2]);
-          startTimeSec = Number.isFinite(st) ? st : null;
-          // mainapp: g = p.pop() when no separate c map — last element is dynamic
-          dynamic = asWireDynamic(node[node.length - 1]);
-          // index 12 is the stable slot when array is full length 13
-          if (!dynamic && node.length > 12) {
-            dynamic = asWireDynamic(node[12]);
-          }
-        } else if (node && typeof node === 'object') {
-          dynamic = asWireDynamic(node);
-        }
-
-        return {
-          eventId: Number(id),
-          path: [sportId, countryId, leagueId, id],
-          sportId,
-          countryId,
-          leagueId,
-          home,
-          away,
-          startTimeSec,
-          dynamic,
-          raw,
-        };
+        return hitFromNode(sportId, countryId, leagueId, id, node);
       }
     }
   }
   return null;
+}
+
+/** Parse live.sports payload → feedSportId → name (`n` field). */
+export function parseLiveSportsNames(
+  sportsPayload: unknown
+): Map<string, string> {
+  const out = new Map<string, string>();
+  if (!sportsPayload || typeof sportsPayload !== 'object') return out;
+  for (const [id, row] of Object.entries(
+    sportsPayload as Record<string, unknown>
+  )) {
+    if (!row || typeof row !== 'object') continue;
+    const n = (row as { n?: unknown }).n;
+    if (typeof n === 'string' && n.trim()) out.set(String(id), n.trim());
+  }
+  return out;
+}
+
+/**
+ * Parse groupProfile.blocked into sets.
+ * Wire: { events: {id:true}, leagues: {id:true}, sports: {id:true}, markets: {} }
+ */
+export function parsePandoraBlocked(raw: unknown): PandoraBlockedSets {
+  const empty = (): Set<string> => new Set();
+  const asSet = (v: unknown): Set<string> => {
+    if (!v || typeof v !== 'object') return empty();
+    return new Set(
+      Object.entries(v as Record<string, unknown>)
+        .filter(([, on]) => Boolean(on))
+        .map(([k]) => String(k))
+    );
+  };
+  if (!raw || typeof raw !== 'object') {
+    return {
+      events: empty(),
+      leagues: empty(),
+      sports: empty(),
+      markets: empty(),
+    };
+  }
+  const o = raw as Record<string, unknown>;
+  // sometimes blocked is nested under profile.blocked
+  const b =
+    o.events || o.leagues || o.sports
+      ? o
+      : o.blocked && typeof o.blocked === 'object'
+        ? (o.blocked as Record<string, unknown>)
+        : o;
+  return {
+    events: asSet(b.events),
+    leagues: asSet(b.leagues),
+    sports: asSet(b.sports),
+    markets: asSet(b.markets),
+  };
+}
+
+/**
+ * mainapp eventsService.isBlocked (subset: events / leagues / sports only).
+ * Returns reason string or null.
+ */
+export function pandoraBlockedReason(
+  hit: Pick<EventDataBoardHit, 'eventId' | 'sportId' | 'leagueId'>,
+  blocked: PandoraBlockedSets | null | undefined
+): string | null {
+  if (!blocked) return null;
+  const eid = String(hit.eventId);
+  if (blocked.events.has(eid)) return `blocked_event:${eid}`;
+  if (hit.leagueId && blocked.leagues.has(hit.leagueId)) {
+    return `blocked_league:${hit.leagueId}`;
+  }
+  if (hit.sportId && blocked.sports.has(hit.sportId)) {
+    return `blocked_sport:${hit.sportId}`;
+  }
+  return null;
+}
+
+/**
+ * mainapp calculateState (live flavor, no hideLines / eventInRange).
+ * Blocked → notBettable; golf(7) without lines and s&lt;1 → notBettable.
+ */
+export function calculateEffectiveEventState(
+  wireState: number | null,
+  hit: Pick<EventDataBoardHit, 'eventId' | 'sportId' | 'leagueId'> & {
+    dynamic: EventDataWireDynamic | null;
+  },
+  options: { blocked?: PandoraBlockedSets | null } = {}
+): { state: number | null; blockedReason: string | null } {
+  const reason = pandoraBlockedReason(hit, options.blocked);
+  if (reason) {
+    return { state: PANDORA_EVENT_STATES.notBettable, blockedReason: reason };
+  }
+  let state = wireState;
+  const hasLines = hit.dynamic?.l;
+  // live golf without lines and still "bettable-ish" → notBettable
+  if (
+    hit.sportId === '7' &&
+    hasLines === false &&
+    (state == null || state < PANDORA_EVENT_STATES.blocked)
+  ) {
+    state = PANDORA_EVENT_STATES.notBettable;
+  }
+  return { state, blockedReason: null };
+}
+
+/** Reverse index: donbest rotation id → eventId from board.db */
+export function eventIdFromDonbestRotation(
+  board: unknown,
+  rotationId: string | number
+): number | null {
+  if (!isEventDataBoardPayload(board)) return null;
+  const db = (board as { db?: Record<string, unknown> }).db;
+  if (!db || typeof db !== 'object') return null;
+  const v = db[String(rotationId)];
+  const n = typeof v === 'number' ? v : Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Reverse index: eventId → donbest rotation id */
+export function donbestRotationFromEventId(
+  board: unknown,
+  eventId: string | number
+): string | null {
+  if (!isEventDataBoardPayload(board)) return null;
+  const db = (board as { db?: Record<string, unknown> }).db;
+  if (!db || typeof db !== 'object') return null;
+  const want = Number(eventId);
+  for (const [rot, eid] of Object.entries(db)) {
+    if (Number(eid) === want) return rot;
+  }
+  return null;
+}
+
+function hitFromNode(
+  sportId: string,
+  countryId: string,
+  leagueId: string,
+  eventId: string,
+  node: unknown
+): EventDataBoardHit | null {
+  if (node === undefined || node === null) return null;
+  let dynamic: EventDataWireDynamic | null = null;
+  let raw: unknown[] | null = null;
+  let home: string | null = null;
+  let away: string | null = null;
+  let startTimeSec: number | null = null;
+
+  if (Array.isArray(node)) {
+    raw = node;
+    home = teamNameFromSlot(node[0]);
+    away = teamNameFromSlot(node[1]);
+    const st = Number(node[2]);
+    startTimeSec = Number.isFinite(st) ? st : null;
+    dynamic = asWireDynamic(node[node.length - 1]);
+    if (!dynamic && node.length > 12) dynamic = asWireDynamic(node[12]);
+  } else if (typeof node === 'object') {
+    dynamic = asWireDynamic(node);
+  } else {
+    return null;
+  }
+
+  const idNum = Number(eventId);
+  if (!Number.isFinite(idNum)) return null;
+
+  return {
+    eventId: idNum,
+    path: [sportId, countryId, leagueId, eventId],
+    sportId,
+    countryId,
+    leagueId,
+    home,
+    away,
+    startTimeSec,
+    dynamic,
+    raw,
+  };
+}
+
+/** Enumerate every event node under board.s (single tree walk). */
+export function listEventDataBoardHits(
+  payload: unknown
+): EventDataBoardHit[] {
+  if (!isEventDataBoardPayload(payload)) return [];
+  const s = (payload as { s: Record<string, unknown> }).s;
+  const out: EventDataBoardHit[] = [];
+  for (const [sportId, countries] of Object.entries(s)) {
+    if (!countries || typeof countries !== 'object') continue;
+    for (const [countryId, leagues] of Object.entries(
+      countries as Record<string, unknown>
+    )) {
+      if (!leagues || typeof leagues !== 'object') continue;
+      for (const [leagueId, events] of Object.entries(
+        leagues as Record<string, unknown>
+      )) {
+        if (!events || typeof events !== 'object') continue;
+        for (const [eventId, node] of Object.entries(
+          events as Record<string, unknown>
+        )) {
+          const hit = hitFromNode(sportId, countryId, leagueId, eventId, node);
+          if (hit) out.push(hit);
+        }
+      }
+    }
+  }
+  return out;
 }
 
 /**
@@ -284,12 +499,22 @@ export function findEventInEventDataBoard(
  */
 export function decodeEventOfferability(
   hit: EventDataBoardHit,
-  options: { coeffLineCount?: number | null } = {}
+  options: {
+    coeffLineCount?: number | null;
+    sportsNames?: Map<string, string> | null;
+    blocked?: PandoraBlockedSets | null;
+    board?: unknown;
+  } = {}
 ): EventOfferability {
   const d = hit.dynamic;
-  const state =
+  const wireState =
     d && typeof d.s === 'number' && Number.isFinite(d.s) ? d.s : null;
   const hasLines = d && typeof d.l === 'boolean' ? d.l : null;
+  const { state, blockedReason } = calculateEffectiveEventState(
+    wireState,
+    hit,
+    { blocked: options.blocked }
+  );
   const oddsCount =
     d && typeof d.oc === 'number' && Number.isFinite(d.oc)
       ? d.oc
@@ -307,11 +532,17 @@ export function decodeEventOfferability(
           ? 0
           : options.coeffLineCount ?? 0;
 
+  const sportName =
+    hit.sportId && options.sportsNames?.get(hit.sportId)
+      ? options.sportsNames.get(hit.sportId)!
+      : null;
+
   return {
     eventId: hit.eventId,
     state,
     stateLabel:
       state != null ? describePandoraEventState(state) : 'unknown',
+    wireState,
     isStarted: d && typeof d.ip === 'boolean' ? d.ip : null,
     isLive: d && typeof d.il === 'boolean' ? d.il : null,
     isHalftime: d && typeof d.ht === 'boolean' ? d.ht : null,
@@ -324,12 +555,110 @@ export function decodeEventOfferability(
       hasLines,
     }),
     sportId: hit.sportId,
+    sportName,
     countryId: hit.countryId,
     leagueId: hit.leagueId,
     home: hit.home,
     away: hit.away,
     startTimeSec: hit.startTimeSec,
     path: hit.path,
+    blockedReason,
+    donbestId: options.board
+      ? donbestRotationFromEventId(options.board, hit.eventId)
+      : null,
+  };
+}
+
+/**
+ * Full board scan with state histogram + per-sport rollup.
+ * Optionally apply live.sports names + groupProfile.blocked.
+ */
+export function scanEventDataBoard(
+  payload: unknown,
+  options: {
+    sportsNames?: Map<string, string> | null;
+    blocked?: PandoraBlockedSets | null;
+  } = {}
+): EventDataBoardScan | null {
+  const summary = summarizeEventDataBoard(payload);
+  if (!summary) return null;
+
+  const hits = listEventDataBoardHits(payload);
+  const events = hits.map(h =>
+    decodeEventOfferability(h, {
+      sportsNames: options.sportsNames,
+      blocked: options.blocked,
+      board: payload,
+    })
+  );
+
+  const byState: Record<string, number> = {};
+  const sportMap = new Map<
+    string,
+    {
+      sportId: string;
+      sportName: string | null;
+      total: number;
+      bettable: number;
+      hasLines: number;
+      offTheBoard: number;
+      finished: number;
+      notBettable: number;
+      blocked: number;
+    }
+  >();
+
+  let bettableWithLines = 0;
+  let offTheBoard = 0;
+  let blockedOverlayCount = 0;
+
+  for (const e of events) {
+    const label = e.stateLabel;
+    byState[label] = (byState[label] ?? 0) + 1;
+    if (e.offTheBoard) offTheBoard++;
+    if (e.state === PANDORA_EVENT_STATES.bettable && e.hasLines) {
+      bettableWithLines++;
+    }
+    if (e.blockedReason) blockedOverlayCount++;
+
+    const sid = e.sportId ?? '?';
+    let row = sportMap.get(sid);
+    if (!row) {
+      row = {
+        sportId: sid,
+        sportName: e.sportName,
+        total: 0,
+        bettable: 0,
+        hasLines: 0,
+        offTheBoard: 0,
+        finished: 0,
+        notBettable: 0,
+        blocked: 0,
+      };
+      sportMap.set(sid, row);
+    }
+    row.total++;
+    if (e.hasLines) row.hasLines++;
+    if (e.offTheBoard) row.offTheBoard++;
+    if (e.state === PANDORA_EVENT_STATES.bettable) row.bettable++;
+    if (e.state === PANDORA_EVENT_STATES.finished) row.finished++;
+    if (e.state === PANDORA_EVENT_STATES.notBettable) row.notBettable++;
+    if (e.state === PANDORA_EVENT_STATES.blocked) row.blocked++;
+    if (!row.sportName && e.sportName) row.sportName = e.sportName;
+  }
+
+  const bySport = [...sportMap.values()].sort(
+    (a, b) => Number(a.sportId) - Number(b.sportId)
+  );
+
+  return {
+    summary,
+    events,
+    byState,
+    bySport,
+    bettableWithLines,
+    offTheBoard,
+    blockedOverlayCount,
   };
 }
 

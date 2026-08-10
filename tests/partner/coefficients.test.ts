@@ -4,6 +4,7 @@ import { CoefficientStore } from '../../src/partner/fantasy-ultra/coefficient-st
 import {
   analyzeCoefficientBook,
   applyCoefficientDiff,
+  calculateEffectiveEventState,
   decodeEventOfferability,
   decodePandoraAttachment,
   describePandoraEventState,
@@ -16,6 +17,9 @@ import {
   isEventOffTheBoard,
   parseBinaryEventHeader,
   parseEventDataDiffPath,
+  parseLiveSportsNames,
+  parsePandoraBlocked,
+  scanEventDataBoard,
   summarizeEventDataBoard,
   PANDORA_EVENT_STATES,
 } from '../../src/partner/fantasy-ultra/coefficients.ts';
@@ -233,6 +237,7 @@ describe('pandora coefficient decode', () => {
       eventId: 1,
       state: 0,
       stateLabel: 'bettable',
+      wireState: 0,
       isStarted: true,
       isLive: null,
       isHalftime: null,
@@ -241,18 +246,108 @@ describe('pandora coefficient decode', () => {
       oddsCount: null,
       offTheBoard: false,
       sportId: '8',
+      sportName: 'Tennis',
       countryId: '1',
       leagueId: '1',
       home: 'A',
       away: 'B',
       startTimeSec: null,
       path: ['8', '1', '1', '1'],
+      blockedReason: null,
+      donbestId: null,
     };
     const b = { ...a, hasLines: false, offTheBoard: true };
     const t = diffEventDataOfferability(a, b);
     expect(t.some(x => x.kind === 'lines_flag' && x.hasLines === false)).toBe(
       true
     );
+  });
+
+  test('scanEventDataBoard + blocked sport overlay (TT 93)', () => {
+    const board = {
+      db: { '55': 197418461 },
+      kb: {},
+      x: [false],
+      s: {
+        '8': {
+          '1': {
+            '10': {
+              '100': [
+                ['A'],
+                ['B'],
+                1,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                { s: 0, l: true, ip: true, n: 1 },
+              ],
+            },
+          },
+        },
+        '93': {
+          '4': {
+            '20': {
+              '197418461': [
+                ['Karelov'],
+                ['Sydorenko'],
+                1,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                { s: 0, l: true, ip: true, n: 1 },
+              ],
+            },
+          },
+        },
+      },
+    };
+    const sportsNames = parseLiveSportsNames({
+      '8': { n: 'Tennis' },
+      '93': { n: 'Table Tennis' },
+    });
+    const blocked = parsePandoraBlocked({
+      sports: { '93': true },
+      leagues: {},
+      events: {},
+      markets: {},
+    });
+    expect(blocked.sports.has('93')).toBe(true);
+
+    const scan = scanEventDataBoard(board, { sportsNames, blocked })!;
+    expect(scan.summary.eventCount).toBe(2);
+    const tennis = scan.events.find(e => e.eventId === 100)!;
+    expect(tennis.offTheBoard).toBe(false);
+    expect(tennis.sportName).toBe('Tennis');
+    expect(tennis.state).toBe(0);
+
+    const tt = scan.events.find(e => e.eventId === 197418461)!;
+    expect(tt.wireState).toBe(0);
+    expect(tt.state).toBe(PANDORA_EVENT_STATES.notBettable);
+    expect(tt.blockedReason).toBe('blocked_sport:93');
+    expect(tt.offTheBoard).toBe(true);
+    expect(tt.donbestId).toBe('55');
+    expect(scan.blockedOverlayCount).toBe(1);
+
+    const eff = calculateEffectiveEventState(0, {
+      eventId: 197418461,
+      sportId: '93',
+      leagueId: '20',
+      dynamic: { s: 0, l: true },
+    }, { blocked });
+    expect(eff.state).toBe(2);
+    expect(eff.blockedReason).toBe('blocked_sport:93');
   });
 
   test('applyCoefficientDiff replace paths', () => {

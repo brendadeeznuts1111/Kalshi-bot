@@ -6,20 +6,25 @@
  *   bun run domain:event -- --id=197488581 --period=m
  *   bun run domain:event -- --url='https://plive…/live/?#!/event/197488581/m'
  *   bun run domain:event -- --id=197502731 --watch --seconds=30
+ *   bun run domain:event -- --board
+ *   bun run domain:event -- --board --bettable --sport=8
  *   bun run domain:event -- --sample-sports
  *   bun run domain:event -- --id=197548901 --json
  *
  * Odds off:
  *   market — empty `o` / selection_off / market_off (--watch)
- *   event  — eventData board s=0..3 + l(hasLines); OTB = finished|notBettable|blocked|!hasOdds
+ *   event  — eventData board s=0..3 + l(hasLines); groupProfile blocked → notBettable
+ *   board  — full scan: by-state / by-sport / OTB list
  * cls = limit class (not suspend).
  */
 import {
+  formatEventBoardScan,
   formatEventLookup,
   formatSportBoardSamples,
   lookupEvent,
   parseEventRef,
   sampleStreamListBySport,
+  scanPandoraEventBoard,
   watchEventOdds,
 } from '../src/inventory/event-lookup.ts';
 
@@ -34,12 +39,13 @@ function argValue(name: string): string | undefined {
 
 const json = hasFlag('json');
 const sampleSports = hasFlag('sample-sports');
+const board = hasFlag('board');
 const probePandora = hasFlag('probe-pandora');
 const watch = hasFlag('watch');
 const seconds =
   Number(
     argValue('seconds') ??
-      (watch ? '30' : probePandora ? '3' : '8')
+      (watch ? '30' : board ? '10' : probePandora ? '3' : '8')
   ) || 8;
 
 if (sampleSports) {
@@ -49,6 +55,54 @@ if (sampleSports) {
   });
   if (json) console.log(JSON.stringify(samples, null, 2));
   else console.log(formatSportBoardSamples(samples));
+  process.exit(0);
+}
+
+if (board) {
+  console.error(`scanning eventData board for ${seconds}s…`);
+  const { scan, blocked, sportsNames, seconds: took } =
+    await scanPandoraEventBoard({ seconds });
+  if (!scan) {
+    console.error('no eventData board snapshot received');
+    process.exit(1);
+  }
+  if (json) {
+    console.log(
+      JSON.stringify(
+        {
+          seconds: took,
+          sportsNames: Object.fromEntries(sportsNames),
+          blocked: blocked
+            ? {
+                sports: [...blocked.sports],
+                leagues: [...blocked.leagues],
+                events: [...blocked.events],
+                markets: [...blocked.markets],
+              }
+            : null,
+          summary: scan.summary,
+          byState: scan.byState,
+          bySport: scan.bySport,
+          bettableWithLines: scan.bettableWithLines,
+          offTheBoard: scan.offTheBoard,
+          blockedOverlayCount: scan.blockedOverlayCount,
+          events: scan.events,
+        },
+        null,
+        2
+      )
+    );
+  } else {
+    console.log(
+      formatEventBoardScan(scan, {
+        sportFilter: argValue('sport') ?? null,
+        bettableOnly: hasFlag('bettable'),
+        otbOnly: hasFlag('otb'),
+        limit: Number(argValue('limit') ?? '40') || 40,
+        blocked,
+      })
+    );
+  }
   process.exit(0);
 }
 
@@ -72,7 +126,7 @@ try {
     periodFromRef = parsed.periodId;
   } else {
     console.error(
-      'usage: bun run domain:event -- --id=<eventId>[/period] | --url=<plive url> | --sample-sports | --watch'
+      'usage: bun run domain:event -- --id=<eventId>[/period] | --url=<plive url> | --board | --sample-sports | --watch'
     );
     process.exit(2);
   }
