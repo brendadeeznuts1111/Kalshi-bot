@@ -83,6 +83,17 @@ export {
 } from '../inventory/sync.ts';
 
 export {
+  countInventoryLeagues,
+  ensureInventoryLeaguesSchema,
+  formatLeagueLine,
+  listInventoryLeagues,
+  planInventoryLeagues,
+  upsertInventoryLeagues,
+  type InventoryLeagueRow,
+  type InventoryLeagueUpsertResult,
+} from '../inventory/leagues.ts';
+
+export {
   fetchPublicPliveStreamEvents,
   filterLiveEventsBySport,
   formatSkinEventLine,

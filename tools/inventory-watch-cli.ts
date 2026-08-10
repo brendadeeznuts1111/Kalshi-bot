@@ -23,6 +23,7 @@
 import { openEventStore } from '../src/institutions/event-store/open-db.ts';
 import { DEFAULT_EVENT_STORE_DB } from '../src/institutions/event-store/paths.ts';
 import { getFantasySessionAdapter, loadFantasy402ProfileFromEnv } from '../src/partner/index.ts';
+import { formatLeagueLine, upsertInventoryLeagues } from '../src/inventory/leagues.ts';
 import { planInventoryUpsert } from '../src/inventory/sync.ts';
 import {
   fetchPublicPliveStreamEvents,
@@ -118,6 +119,14 @@ async function pollOnce(options: {
   const result = options.dryRun
     ? planInventoryUpsert(db, events, { identity: options.identity })
     : upsertSkinLiveEvents(db, events, { identity: options.identity });
+  const leagueSource =
+    result.inserted.length + result.updated.length > 0
+      ? [...result.inserted, ...result.updated]
+      : events;
+  const leagues = upsertInventoryLeagues(db, leagueSource, {
+    identity: options.identity,
+    dryRun: options.dryRun,
+  });
   const covers = liveProductsCoveredByInventory(options.identity.skinId);
 
   const newLines = result.inserted.map(formatSkinEventLine);
@@ -136,6 +145,12 @@ async function pollOnce(options: {
           seen: result.seen,
           inserted: result.inserted.length,
           updated: result.updated.length,
+          leagues: {
+            seen: leagues.seen,
+            inserted: leagues.inserted,
+            updated: leagues.updated,
+            newLeagues: leagues.newLeagues.slice(0, 50),
+          },
           newEvents: result.inserted.map(r => ({
             inventoryId: r.inventoryId,
             sport: r.sport,
@@ -168,10 +183,14 @@ async function pollOnce(options: {
       `${mode} skin=${options.identity.skinId} book=${options.identity.bookId} ` +
         `source=${loaded.source} covers=${covers.join('+')} sport=${options.sport} ` +
         `seen=${result.seen} new=${result.inserted.length} updated=${result.updated.length}` +
+        ` leagues=${leagues.seen}/${leagues.inserted}new` +
         (options.dryRun ? ' (no write)' : '')
     );
     for (const line of newLines) {
       console.log(`  + ${line}`);
+    }
+    for (const L of leagues.newLeagues.slice(0, 8)) {
+      console.log(`  +L ${formatLeagueLine(L)}`);
     }
     if (options.dryRun && result.updated.length > 0) {
       for (const row of result.updated.slice(0, 20)) {

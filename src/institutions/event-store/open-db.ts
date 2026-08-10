@@ -3,6 +3,7 @@
 import { mkdirSync, readFileSync } from 'node:fs';
 import { Database } from 'bun:sqlite';
 import { isLiveProductId, isSportId, resolveCompetition } from '../../domain/index.ts';
+import { ensureInventoryLeaguesSchema } from '../../inventory/leagues.ts';
 import { ensureCacheDir } from '../../research/cache.ts';
 import { DEFAULT_EVENT_STORE_DB, SCHEMA_SQL_PATH } from './paths.ts';
 
@@ -218,6 +219,8 @@ export function applyEventStoreSchema(db: Database): void {
       `CREATE INDEX IF NOT EXISTS idx_skin_events_competition ON skin_events (competition_id)`
     );
   }
+  // Durable league dimension (survives inventory_id board churn)
+  ensureInventoryLeaguesSchema(db);
   migrateSourceEventSelectors(db);
   abandonLegacyKalshiInventoryRuns(db);
   abandonUnpinnedSourceInventoryRuns(db);
