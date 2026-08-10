@@ -88,6 +88,8 @@ export {
   formatLeagueLine,
   listInventoryLeagues,
   planInventoryLeagues,
+  stampInventoryLeaguesCompetitionIds,
+  stampInventoryLeaguesFromRecords,
   upsertInventoryLeagues,
   type InventoryLeagueRow,
   type InventoryLeagueUpsertResult,
