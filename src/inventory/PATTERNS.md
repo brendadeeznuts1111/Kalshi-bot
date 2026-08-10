@@ -11,5 +11,7 @@
 | Test fixtures | `tests/inventory/fixtures.ts` |
 | Enrich quality (match-rate / miss reasons) | `enrich-quality.ts` + `diagnoseBookedMatch` |
 | Enrich gates CLI | `--min-match-rate` · `--min-linked-pct` · `--fail-on-enrich-quality` |
+| Coverage ops (board JSON + gates) | `coverage-ops.ts` · `inventory:coverage-board` / `coverage-ops` / `coverage-gate` |
+| Live-tracker alerts | `live-tracker-alerts.ts` · `live-tracker watch --notify` |
 
 Prefer import SSOT over local copies. Prefer delete/unexport over new layers.

@@ -5,6 +5,7 @@
  *   bun live-tracker.ts diff old.json new.json --event-type MARKET_ADDED --sort-by time --limit 5
  *   bun live-tracker.ts diff --event-type MARKET_ADDED --sort-by time --limit 5
  *   bun live-tracker.ts watch --market-id #197510101 --format json --watch
+ *   bun live-tracker.ts watch --market-id #197510101 --notify   # Telegram on MARKET_REMOVED / OTB
  *   bun live-tracker.ts analyze --summary
  *   bun live-tracker.ts analyze --stats
  *   bun live-tracker.ts diff --columns File,Event,Detail --desc --output out.csv --format csv
@@ -113,7 +114,7 @@ function usage(code = 1): never {
   console.error(`live-tracker — Pandora market transition log
 
 Usage:
-  bun live-tracker.ts watch   --market-id|#id [--seconds=30] [--format json|table|csv|markdown]
+  bun live-tracker.ts watch   --market-id|#id [--seconds=30] [--notify] [--format json|table|csv|markdown]
                               [--watch] [--log=path] [--output path]
   bun live-tracker.ts diff    [old.json] [new.json] [--from=path|glob]
                               [--event-type TYPE[,TYPE…]] [--sort-by time[,event]]
@@ -390,12 +391,35 @@ if (cmd === 'watch') {
         offeredMarketCount: u.offeredMarketCount,
         events,
       });
+      if (hasFlag('notify') && events.length) {
+        void import('./src/inventory/live-tracker-alerts.ts').then(m =>
+          m.maybeNotifyLiveTrackerAlerts({
+            eventId,
+            events,
+            force: hasFlag('force-notify'),
+          })
+        );
+      }
     },
   });
 
   const all = history.flatMap(u =>
     eventsFromWatchUpdate(u, { includeTicks, file: logPath })
   );
+  if (hasFlag('notify') && all.length) {
+    const { plan, telegram } = await import(
+      './src/inventory/live-tracker-alerts.ts'
+    ).then(m =>
+      m.maybeNotifyLiveTrackerAlerts({
+        eventId,
+        events: all,
+        force: hasFlag('force-notify'),
+      })
+    );
+    console.error(
+      `live-alerts: ${plan.reason} alerts=${plan.alerts.length} newKeys=${plan.newKeys.length} telegram=${telegram}`
+    );
+  }
   const body = json
     ? JSON.stringify(
         {
