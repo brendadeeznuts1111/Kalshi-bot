@@ -96,7 +96,7 @@ export const SKINS = [
     aliases: ['ace'] as const,
     mapper: {
       kind: 'unmapped',
-      note: 'Live-product coverage not proven yet; offerings declared only',
+      note: 'Products declared; Ultra adapter unproven — getUltraLiveURL/renewToken 404 on parlay21 apex+backend as of 2026-08-09; action92.com stays unmapped (Login.aspx alone)',
     },
     // Live probe 2026-08-09: ASP.NET Login.aspx + sportsbookvip.com shell (parlay21 / lonestar).
     // Login.aspx is collision-weighted — alone stays < 0.4; sportsbookvip clears review.

@@ -214,4 +214,14 @@ describe('domain sports / skins / live products', () => {
     expect(row.gaps).toContain('missing_live_products');
     expect(row.hasFingerprints).toBe(true);
   });
+
+  test('ace mapper stays unmapped; action92 not in HOST_TO_SKIN', () => {
+    const ace = SKINS.find(s => s.id === 'ace')!;
+    expect(ace.mapper.kind).toBe('unmapped');
+    expect(ace.mapper.note).toContain('Ultra adapter unproven');
+    expect(ace.mapper.note).toContain('action92');
+    expect(getSkinByHost('action92.com')).toBeUndefined();
+    expect(getSkinByHost('www.action92.com')).toBeUndefined();
+    expect(HOST_TO_SKIN['action92.com']).toBeUndefined();
+  });
 });
