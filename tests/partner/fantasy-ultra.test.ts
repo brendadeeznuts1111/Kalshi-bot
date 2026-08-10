@@ -1,6 +1,9 @@
 // @see https://bun.com/docs/test/index#run-tests
 import { describe, expect, test } from "bun:test";
-import { requireDefaultUrlForUltraMapper } from "../../src/domain/index.ts";
+import {
+  PLIVE_STREAM_ENDPOINTS,
+  requireDefaultUrlForUltraMapper,
+} from "../../src/domain/index.ts";
 import {
   CookieJar,
   executionResultFromBetGroups,
@@ -22,6 +25,8 @@ import {
 } from "../../src/partner/index.ts";
 
 const DOMAIN = requireDefaultUrlForUltraMapper();
+const STREAM_ORIGIN = PLIVE_STREAM_ENDPOINTS.streamOrigin;
+const STREAM_HOST = new URL(STREAM_ORIGIN).hostname;
 
 /** Captured place/open ticket response (redacted dummy desk). */
 const betTicketWire = {
@@ -67,10 +72,8 @@ const betTicketWire = {
 
 const ultraWire = {
   URL: {
-    DESKTOP:
-      "https://plive.sportswidgets.pro/live/?customerId=BB55113&tstamp=2026-08-04T12:00:00.000Z&lang=en&skin=ezlive&hash=abc",
-    MOBILE:
-      "https://plive.sportswidgets.pro/live/?customerId=BB55113&tstamp=2026-08-04T12:00:00.000Z&lang=en&skin=ezlive&hash=abc&m=1",
+    DESKTOP: `${STREAM_ORIGIN}/live/?customerId=BB55113&tstamp=2026-08-04T12:00:00.000Z&lang=en&skin=ezlive&hash=abc`,
+    MOBILE: `${STREAM_ORIGIN}/live/?customerId=BB55113&tstamp=2026-08-04T12:00:00.000Z&lang=en&skin=ezlive&hash=abc&m=1`,
   },
 };
 
@@ -159,8 +162,8 @@ const profile: PartnerAccountProfile = {
 describe("fantasy ultra parse", () => {
   test("parseUltraLiveUrlResponse reads URL.DESKTOP/MOBILE", () => {
     const urls = parseUltraLiveUrlResponse(ultraWire);
-    expect(urls.desktop).toContain("plive.sportswidgets.pro");
-    expect(urls.mobile).toContain("plive.sportswidgets.pro");
+    expect(urls.desktop).toContain(STREAM_HOST);
+    expect(urls.mobile).toContain(STREAM_HOST);
   });
 
   test("parseStreamList filters tennis and fixes competitiors typo", () => {
@@ -186,9 +189,7 @@ describe("fantasy ultra parse", () => {
   });
 
   test("originFromLiveUrl", () => {
-    expect(originFromLiveUrl(ultraWire.URL.DESKTOP)).toBe(
-      "https://plive.sportswidgets.pro",
-    );
+    expect(originFromLiveUrl(ultraWire.URL.DESKTOP)).toBe(STREAM_ORIGIN);
   });
 
   test("CookieJar absorbs Set-Cookie", () => {
@@ -255,7 +256,7 @@ describe("FantasyUltraAdapter session blueprint", () => {
           headers: { "set-cookie": "sess=abc; Path=/" },
         });
       }
-      if (url.includes("plive.sportswidgets.pro")) {
+      if (url.includes(STREAM_HOST)) {
         return new Response("<html>widget</html>", {
           status: 200,
           headers: { "set-cookie": "widget=1; Path=/" },
@@ -294,7 +295,7 @@ describe("FantasyUltraAdapter session blueprint", () => {
     });
 
     const urls = await adapter.login();
-    expect(urls.desktop).toContain("plive.sportswidgets.pro");
+    expect(urls.desktop).toContain(STREAM_HOST);
     expect(adapter.isWarmed()).toBe(true);
     expect(adapter.cookieCount()).toBeGreaterThanOrEqual(1);
 

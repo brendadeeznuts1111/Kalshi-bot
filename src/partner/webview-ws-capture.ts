@@ -8,6 +8,7 @@
 // @see https://bun.com/docs/runtime/webview
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
+import { defaultLiveWidgetUrl } from "../domain/index.ts";
 import {
   readArtifactIntegrity,
   type SnapshotArtifactIntegrity,
@@ -69,9 +70,7 @@ export async function capturePandoraViaWebView(
     120,
   );
   const sport = options.sport ?? "220";
-  const startUrl =
-    options.url ??
-    `https://plive.sportswidgets.pro/live/?#!/sport/${sport}`;
+  const startUrl = options.url ?? defaultLiveWidgetUrl(sport);
   const outDir =
     options.outDir ??
     join(process.cwd(), "research/cache/partner-ws-capture");

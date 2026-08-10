@@ -1,6 +1,9 @@
 // @see https://bun.com/docs/test/index#run-tests
 import { describe, expect, test } from 'bun:test';
-import { requireDefaultUrlForUltraMapper } from '../../src/domain/index.ts';
+import {
+  defaultUrlForSkin,
+  requireDefaultUrlForUltraMapper,
+} from '../../src/domain/index.ts';
 import { openEventStore } from '../../src/institutions/event-store/open-db.ts';
 import {
   computeProviderCapacity,
@@ -274,7 +277,7 @@ describe('partner registry', () => {
         id: 'out-X-1',
         partnerId: 'partner-x',
         provider: 'fantasy402',
-        url: 'https://betwest.com',
+        url: defaultUrlForSkin('buckeye')!,
         status: 'active',
         envPrefix: 'FANTASY402_',
         maxStake: 100,
@@ -299,12 +302,13 @@ describe('partner registry', () => {
       commissionRate: null,
       notes: null,
     });
+    const aceUrl = defaultUrlForSkin('ace')!;
     expect(() =>
       upsertBettingAccount(db, {
         id: 'out-ACE-1',
         partnerId: 'partner-ace',
         provider: 'fantasy402',
-        url: 'https://parlay21.com',
+        url: aceUrl,
         status: 'active',
         envPrefix: 'FANTASY402_',
         maxStake: 100,
@@ -321,7 +325,7 @@ describe('partner registry', () => {
       id: 'out-ACE-1',
       partnerId: 'partner-ace',
       provider: 'fantasy402',
-      url: 'https://www.parlay21.com/login',
+      url: `${aceUrl.replace(/\/$/, '')}/login`,
       status: 'active',
       envPrefix: 'FANTASY402_',
       maxStake: 100,
