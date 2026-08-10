@@ -40,7 +40,7 @@ env_prefix = "FANTASY402_"
 currency = "USD"
 working_balance = 5000
 vault_id = "vault-out-SPEN-1"
-skins = [
+live_products = [
   { name = "ezlive", per_bet_max = 500, max_win = 2500, active = true },
   { name = "dark", per_bet_max = 1000, max_win = 5000, active = true },
 ]
@@ -55,8 +55,9 @@ describe('partners TOML (Bun.TOML)', () => {
     expect(partners).toHaveLength(1);
     expect(accounts).toHaveLength(1);
     expect(accounts[0]?.id).toBe('out-SPEN-1');
-    expect(accounts[0]?.maxStake).toBe(1000); // max of skins
+    expect(accounts[0]?.maxStake).toBe(1000); // max of live products
     expect(accounts[0]?.envPrefix).toBe('FANTASY402_SPEN_1_'); // bare → per-out
+    expect(accounts[0]?.skin).toBeNull();
     expect(accounts[0]?.metaJson).toContain('ezlive');
     expect(accounts[0]?.metaJson).toContain('vault-out-SPEN-1');
     expect(accounts[0]?.metaJson).not.toContain('password');
@@ -65,6 +66,27 @@ describe('partners TOML (Bun.TOML)', () => {
     expect(String(accounts[0]?.bookId)).toBe('fantasy402');
     expect(accounts[0]?.metaJson).toContain('"skinId":"buckeye"');
     expect(accounts[0]?.metaJson).toContain('"bookId":"fantasy402"');
+    expect(accounts[0]?.metaJson).toContain('"liveProducts"');
+    expect(accounts[0]?.metaJson).not.toContain('"skins"');
+  });
+
+
+  test('legacy skins = still dual-read on parse', () => {
+    const doc = parsePartnersToml(`
+[[partners]]
+code = "SPEN"
+id = "partner-spen"
+name = "Partner SPEN"
+[[outs]]
+id = "out-SPEN-1"
+partner_code = "SPEN"
+provider = "fantasy402"
+url = "https://fantasy402.com"
+skins = [{ name = "ezlive", per_bet_max = 500, max_win = 2500, active = true }]
+`);
+    const m = materializePartnersToml(doc);
+    expect(m.accounts[0]?.maxStake).toBe(500);
+    expect(m.accounts[0]?.skin).toBeNull();
   });
 
   test('materialize stamps bookId from url; matching book_id ok; conflict throws', () => {
@@ -79,7 +101,7 @@ partner_code = "SPEN"
 provider = "fantasy402"
 url = "https://fantasy402.com"
 book_id = "fantasy402"
-skins = [{ name = "ezlive", per_bet_max = 500, max_win = 2500, active = true }]
+live_products = [{ name = "ezlive", per_bet_max = 500, max_win = 2500, active = true }]
 `);
     const ok = materializePartnersToml(withUrl);
     expect(String(ok.accounts[0]?.bookId)).toBe('fantasy402');
@@ -96,7 +118,7 @@ partner_code = "SPEN"
 provider = "fantasy402"
 url = "https://fantasy402.com"
 book_id = "parlay21"
-skins = [{ name = "ezlive", per_bet_max = 500, max_win = 2500, active = true }]
+live_products = [{ name = "ezlive", per_bet_max = 500, max_win = 2500, active = true }]
 `);
     expect(() => materializePartnersToml(conflict)).toThrow(/conflicts with url host book/);
   });
@@ -119,7 +141,7 @@ partner_code = "SPEN"
 provider = "fantasy402"
 env_prefix = "OTHER_"
 vault_id = "vault-nope"
-skins = [{ name = "2", per_bet_max = 1, max_win = 1 }]
+live_products = [{ name = "2", per_bet_max = 1, max_win = 1 }]
 `);
     const issues = validatePartnerAssetPrefixes(bad);
     expect(issues.some(i => i.field === 'env_prefix')).toBe(true);
@@ -180,7 +202,7 @@ skins = [{ name = "2", per_bet_max = 1, max_win = 1 }]
     const bad = `
 [[outs]]
 id = "x"
-skins = [{ name = "ezlive", per_bet_max = "not-a-number" }]
+live_products = [{ name = "ezlive", per_bet_max = "not-a-number" }]
 `;
     // coerce.number may still fail on pure garbage
     expect(() => parsePartnersToml(bad)).toThrow();

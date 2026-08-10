@@ -10,11 +10,13 @@
 #   vault_id   = "vault-{outId}"       e.g. vault-out-SPEN-1
 #   out id     = "out-{CODE}-{n}"
 # Bare FANTASY402_ / partner-only FANTASY402_SPEN_ auto-upgrade to per-out on seed.
-# Secrets: {prefix}BEARER_TOKEN · CUSTOMER_ID · AGENT_ID · PASSWORD · DOMAIN · …
-# Desk URL env (book-level): DESK_DOMAIN (legacy PARTNER_DOMAIN) — must resolve via active SKINS[].hosts
+# Secrets: {prefix}BEARER_TOKEN · CUSTOMER_ID · AGENT_ID · PASSWORD · DOMAIN · LIVE_PRODUCT · CURRENCY
+# Desk URL env (book-level): DESK_DOMAIN — must resolve via active SKINS[].hosts
 #   (bare book-level DOMAIN env is retired). Prefer TOML url= on each out when known.
+# Capacity rows: live_products = [ { name, per_bet_max, max_win, active } ]
+#   (legacy key `skins` still dual-read on parse)
 # @see https://bun.com/docs/runtime/toml
-# @see docs/PARTNER-DOMAIN.md
+# @see docs/SEAT-OPS.md
 
 version = 1
 title = "Kalshi-bot partner registry"
@@ -47,7 +49,7 @@ url = "https://fantasy402.com"
 working_balance = 5000
 vault_id = "vault-out-SPEN-1"
 status = "active"
-skins = [
+live_products = [
   { name = "ezlive", per_bet_max = 500, max_win = 2500, active = true },
   { name = "dark", per_bet_max = 1000, max_win = 5000, active = true },
 ]
@@ -64,6 +66,6 @@ url = "https://fantasy402.com"
 working_balance = 2000
 vault_id = "vault-out-ASH-1"
 status = "active"
-skins = [
+live_products = [
   { name = "ezlive", per_bet_max = 300, max_win = 1500, active = true },
 ]

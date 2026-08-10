@@ -61,8 +61,8 @@ export type BettingAccountRow = {
   maxWin: number;
   currency: string;
   /**
-   * Legacy numeric default live-product wire id (nullable).
-   * Named products live in meta.liveProducts[] (ezlive, dark, …).
+   * Legacy SQLite column (nullable). Writers always stamp `null`;
+   * capacity lives in meta.liveProducts[]. Still dual-read for old rows.
    */
   skin: number | null;
   /** Non-secret meta only (liveProducts, workingBalance, vaultId, skinId, bookId) */
@@ -406,7 +406,7 @@ export function computeProviderCapacity(accounts: BettingAccountRow[]): Provider
 }
 
 /**
- * Parse FANTASY402_LIVE_PRODUCTS_JSON (or legacy FANTASY402_SKINS_JSON) → OutCapacityRow[].
+ * Parse FANTASY402_LIVE_PRODUCTS_JSON → OutCapacityRow[].
  * Accepts `{ name | liveProduct | skin, perBetMax, maxWin }`.
  */
 export function parseLiveProductsJsonEnv(raw: string | undefined): OutCapacityRow[] {
@@ -437,10 +437,12 @@ export function parseLiveProductsJsonEnv(raw: string | undefined): OutCapacityRo
  * Seed registry from Fantasy402 env (non-secret fields + env_prefix pointer).
  * Does not store password/token.
  *
- * Multi-skin (preferred):
- *   FANTASY402_SKINS_JSON='[{"name":"ezlive","perBetMax":500,"maxWin":2500},{"name":"dark","perBetMax":1000,"maxWin":5000}]'
- * Single-skin fallback: FANTASY402_SKIN + MAX_STAKE + MAX_WIN
+ * Multi-product (preferred):
+ *   FANTASY402_LIVE_PRODUCTS_JSON='[{"name":"ezlive","perBetMax":500,"maxWin":2500},{"name":"dark","perBetMax":1000,"maxWin":5000}]'
+ * Single-product fallback: FANTASY402_LIVE_PRODUCT + MAX_STAKE + MAX_WIN
  * Optional: FANTASY402_WORKING_BALANCE, FANTASY402_VAULT_ID, FANTASY402_ACCOUNT_ID=out-SPEN-1
+ *
+ * `betting_accounts.skin` column is always null on write — capacity is meta only.
  */
 export function seedFantasy402FromEnv(
   db: Database,
@@ -471,26 +473,24 @@ export function seedFantasy402FromEnv(
     nowMs
   );
 
-  const skinsFromJson = parseLiveProductsJsonEnv(
-    envMap.FANTASY402_LIVE_PRODUCTS_JSON ?? envMap.FANTASY402_SKINS_JSON
-  );
+  const productsFromJson = parseLiveProductsJsonEnv(envMap.FANTASY402_LIVE_PRODUCTS_JSON);
   const maxStakeEnv = Number(envMap.FANTASY402_MAX_STAKE ?? '1000') || 0;
   const maxWinEnv = Number(envMap.FANTASY402_MAX_WIN ?? '5000') || 0;
-  const skinWire = parseLiveProductWire(envMap.FANTASY402_LIVE_PRODUCT ?? envMap.FANTASY402_SKIN, 2);
-  const skins: OutCapacityRow[] =
-    skinsFromJson.length > 0
-      ? skinsFromJson
+  const productWire = parseLiveProductWire(envMap.FANTASY402_LIVE_PRODUCT, 2);
+  const liveProducts: OutCapacityRow[] =
+    productsFromJson.length > 0
+      ? productsFromJson
       : [
           {
-            name: String(skinWire),
+            name: String(productWire),
             perBetMax: maxStakeEnv,
             maxWin: maxWinEnv,
             active: true,
           },
         ];
 
-  const maxStake = Math.max(...skins.map(s => s.perBetMax), 0);
-  const maxWin = Math.max(...skins.map(s => s.maxWin), 0);
+  const maxStake = Math.max(...liveProducts.map(s => s.perBetMax), 0);
+  const maxWin = Math.max(...liveProducts.map(s => s.maxWin), 0);
   const currency = envMap.FANTASY402_CURRENCY?.trim() || 'USD';
   const url = resolveDeskDomainFromEnv(envMap);
   const accountId =
@@ -502,10 +502,8 @@ export function seedFantasy402FromEnv(
     envMap.FANTASY402_VAULT_ID?.trim() ||
     (accountId.startsWith('out-') ? `vault-${accountId}` : undefined);
 
-  /** Numeric wire id only; named live products live in meta.liveProducts / skins. */
-  const legacySkinCol = typeof skinWire === 'number' ? skinWire : null;
-
   // Host → SkinId + ⊆ check + stamp via OutIdentity inside upsertBettingAccount.
+  // Column `skin` is legacy schema — always null on write (capacity in meta only).
   const account: BettingAccountRow = {
     id: accountId,
     partnerId,
@@ -516,16 +514,16 @@ export function seedFantasy402FromEnv(
     maxStake,
     maxWin,
     currency,
-    skin: legacySkinCol,
+    skin: null,
     metaJson: buildOutCapacityMeta({
-      liveProducts: skins,
+      liveProducts,
       workingBalance:
         workingBalance != null && Number.isFinite(workingBalance) ? workingBalance : undefined,
       vaultId,
       partnerCode: partnerCode ?? undefined,
       customerID,
       agentID: envMap.FANTASY402_AGENT_ID?.trim() || undefined,
-      defaultLiveProduct: String(skins[0]?.name ?? skinWire),
+      defaultLiveProduct: String(liveProducts[0]?.name ?? productWire),
     }),
   };
   upsertBettingAccount(db, account, nowMs);

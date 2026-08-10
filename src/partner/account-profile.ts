@@ -73,7 +73,10 @@ export function profileFromEnvBundle(
   const url = bundle.values.DOMAIN?.trim() || resolveDeskDomainFromEnv();
   /** SkinId from host map only — never forge via fantasy402 alias. */
   const skinId = getSkinByHost(url);
-  const defaultLiveProduct = parseLiveProductWire(bundle.values.SKIN, FANTASY_ULTRA_DEFAULTS.skin);
+  const defaultLiveProduct = parseLiveProductWire(
+    bundle.values.LIVE_PRODUCT,
+    FANTASY_ULTRA_DEFAULTS.skin
+  );
   const binding = skinId ? adapterBindingForSkin(skinId) : undefined;
   const adapterId = binding?.adapterId ?? 'unmapped';
 
@@ -147,7 +150,7 @@ export function fantasyDeskEnvPresence(
  *
  * Required (any level of the fallback chain):
  *   *BEARER_TOKEN *CUSTOMER_ID *AGENT_ID *PASSWORD
- * Optional: DESK_DOMAIN (legacy PARTNER_DOMAIN) or per-out/partner *DOMAIN → host → SkinId; *SKIN *CURRENCY
+ * Optional: DESK_DOMAIN or per-out/partner *DOMAIN → host → SkinId; *LIVE_PRODUCT *CURRENCY
  * Account id: FANTASY402_ACCOUNT_ID (default partner-dummy)
  */
 export function loadFantasy402ProfileFromEnv(
