@@ -20,6 +20,9 @@ bun run inventory:watch -- --loop --sport=all     # continuous full board
 bun run inventory:leagues                         # list durable leagues
 bun run inventory:leagues -- --unmapped           # competition_id null
 bun run inventory:leagues -- --harvest --sport=all
+bun run inventory:leagues -- --promote            # plan COMPETITIONS seeds
+bun run inventory:leagues -- --promote --apply    # write competitions.ts
+bun run inventory:leagues -- --backfill           # re-stamp competition_id
 # cron: INVENTORY_SYNC=1 → sport=all by default
 ```
 

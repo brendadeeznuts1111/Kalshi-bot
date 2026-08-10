@@ -50,6 +50,18 @@ resolveCompetition({
 Unknown / junk league labels return `undefined`. Inventory upsert stamps
 `skin_events.competition_id` when the league resolves (null otherwise).
 
+**Promote from durable registry** (`inventory_leagues` unmapped →
+`COMPETITIONS` source):
+
+```bash
+bun run inventory:leagues -- --promote           # dry-run plan
+bun run inventory:leagues -- --promote --apply   # rewrite competitions.ts
+bun run inventory:leagues -- --backfill          # stamp ids (fresh process)
+```
+
+Logic: [`competition-promote.ts`](competition-promote.ts) — junk filter +
+`planCompetitionPromote` + `applyCompetitionRecordsToSource`.
+
 ### Three planes (inventory · odds · ticket)
 
 ```ts

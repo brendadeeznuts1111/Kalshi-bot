@@ -157,6 +157,22 @@ export {
 } from './resolve-competition.ts';
 
 export {
+  applyCompetitionRecordsToSource,
+  competitionRecordFromLeague,
+  formatCompetitionRecordSource,
+  hasLeagueStructureMarker,
+  isPromotableLeagueLabel,
+  junkLeagueReason,
+  mintCompetitionId,
+  planCompetitionPromote,
+  type CompetitionPromoteCandidate,
+  type CompetitionPromotePlan,
+  type CompetitionPromoteRejection,
+  type JunkLeagueReason,
+  type PromoteLeagueInput,
+} from './competition-promote.ts';
+
+export {
   EXAMPLE_DARIN_PLACHY_ODDS_LINE,
   EXAMPLE_DARIN_PLACHY_TICKET_LEG,
   KNOWN_MARKET_LABELS,

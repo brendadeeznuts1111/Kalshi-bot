@@ -114,8 +114,25 @@ bun run inventory:leagues -- --harvest --sport=all
 
 Hand-seeded `COMPETITIONS` + `resolveCompetition` (ezlive uses plive mappings).
 Unmapped leagues leave `competition_id` null on both `skin_events` and
-`inventory_leagues`. Next program phase: promote unmapped leagues into
-`COMPETITIONS` from the durable registry.
+`inventory_leagues`.
+
+### Promote unmapped → COMPETITIONS
+
+Junk filters drop matchup blobs (`A - B`), person initials (`Vitaliy S`), and
+short structure-less labels. Survivors mint
+`{sportId}.{slug}` + plive `{inventoryBucket, leagueKey}`.
+
+```bash
+# Plan (default dry-run)
+bun run inventory:leagues -- --promote
+bun run inventory:leagues -- --promote --min-peak=2 --json
+
+# Write src/domain/competitions.ts + stamp inventory_leagues
+bun run inventory:leagues -- --promote --apply
+
+# After apply, fresh process stamps skin_events too
+bun run inventory:leagues -- --backfill
+```
 
 ## ezlive capacity recipe (seat)
 
@@ -147,6 +164,8 @@ not a second inventory store.
 | `inventory:sync -- --sport=all [--dry-run]` | Adapter poll → events + leagues |
 | `inventory:watch -- --sport=all [--once] [--dry-run]` | Public/adapter poll → events + leagues |
 | `inventory:leagues [--unmapped] [--harvest]` | List / harvest durable league registry |
+| `inventory:leagues -- --promote [--apply]` | Plan/apply COMPETITIONS seeds from unmapped |
+| `inventory:leagues -- --backfill` | Re-stamp competition_id on leagues + skin_events |
 | Cron `INVENTORY_SYNC=1` | Full board default (`sport=all`) |
 
 ## See also

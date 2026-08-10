@@ -5,6 +5,8 @@
  */
 import type { Database } from 'bun:sqlite';
 import { normalizeLeagueKey } from '../domain/competitions.ts';
+import { resolveCompetition } from '../domain/resolve-competition.ts';
+import { isSportId } from '../domain/sports.ts';
 import { listLiveProductSportBindings } from '../domain/live-product-sport-bindings.ts';
 import { resolveInventoryCompetitionId, normalizeInventorySport } from './skin-events-store.ts';
 import type { InventoryIdentity, SkinEventRow } from './skin-events-store.ts';
@@ -404,4 +406,87 @@ export function countInventoryLeagues(
 export function formatLeagueLine(row: InventoryLeagueRow): string {
   const comp = row.competitionId ?? 'unmapped';
   return `${row.sportId} · ${row.leagueKey} · live=${row.eventCountLive} peak=${row.peakEventCount} · ${comp}`;
+}
+
+/**
+ * Re-resolve competition_id on inventory_leagues from seeded COMPETITIONS.
+ * Call after promote --apply in a fresh process (or pass explicit records via
+ * stampInventoryLeaguesFromRecords for same-process apply).
+ */
+export function stampInventoryLeaguesCompetitionIds(
+  db: Database,
+  bookId?: string
+): number {
+  ensureInventoryLeaguesSchema(db);
+  const book = bookId ?? buckeyeInventoryIdentity().bookId;
+  const rows = db
+    .query(
+      `SELECT inventory_bucket AS inventoryBucket, league_key AS leagueKey,
+              sport_id AS sportId, competition_id AS competitionId
+       FROM inventory_leagues WHERE book_id = $book`
+    )
+    .all({ $book: book }) as Array<{
+    inventoryBucket: string;
+    leagueKey: string;
+    sportId: string;
+    competitionId: string | null;
+  }>;
+  const upd = db.query(
+    `UPDATE inventory_leagues SET competition_id = $c
+     WHERE book_id = $book AND inventory_bucket = $bucket AND league_key_norm = $norm`
+  );
+  let n = 0;
+  for (const row of rows) {
+    const sport = row.sportId.trim();
+    const hit = resolveCompetition({
+      liveProduct: 'plive',
+      league: row.leagueKey,
+      sportId: isSportId(sport) ? sport : undefined,
+      inventoryBucket: row.inventoryBucket || undefined,
+    });
+    const next = hit?.competitionId ?? null;
+    const prev = row.competitionId?.trim() || null;
+    if (next === prev) continue;
+    upd.run({
+      $c: next,
+      $book: book,
+      $bucket: row.inventoryBucket,
+      $norm: normalizeLeagueKey(row.leagueKey),
+    });
+    n += 1;
+  }
+  return n;
+}
+
+/** Stamp competition_id using explicit records (same-process promote apply). */
+export function stampInventoryLeaguesFromRecords(
+  db: Database,
+  records: Array<{
+    id: string;
+    sportId: string;
+    providerMappings: { plive?: { inventoryBucket: string; leagueKey: string } };
+  }>,
+  bookId?: string
+): number {
+  ensureInventoryLeaguesSchema(db);
+  const book = bookId ?? buckeyeInventoryIdentity().bookId;
+  const upd = db.query(
+    `UPDATE inventory_leagues SET competition_id = $c
+     WHERE book_id = $book
+       AND inventory_bucket = $bucket
+       AND league_key_norm = $norm`
+  );
+  let n = 0;
+  for (const rec of records) {
+    const map = rec.providerMappings.plive;
+    if (!map) continue;
+    const r = upd.run({
+      $c: rec.id,
+      $book: book,
+      $bucket: map.inventoryBucket,
+      $norm: normalizeLeagueKey(map.leagueKey),
+    });
+    n += Number(r.changes) || 0;
+  }
+  return n;
 }
