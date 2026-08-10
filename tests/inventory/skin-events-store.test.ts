@@ -168,6 +168,21 @@ describe('skin_events store', () => {
         league: 'Not A Real League',
       })
     ).toBeNull();
+    // sport alone (no bucket) must still resolve soccer → football mapping
+    expect(
+      resolveInventoryCompetitionId({
+        liveProduct: 'plive',
+        sport: 'soccer',
+        league: 'USA MPL',
+      })
+    ).toBe('soccer.usa_mpl');
+    expect(
+      resolveInventoryCompetitionId({
+        liveProduct: 'plive',
+        sport: 'tennis',
+        league: 'ATT. Togliatti',
+      })
+    ).toBe('tennis.att_togliatti');
   });
 
   test('migrateSkinEventsCompetitionIds backfills null competition_id', () => {

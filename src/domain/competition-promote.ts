@@ -9,7 +9,7 @@ import {
   competitionSlugFromLeague,
   inferGenderFromLeagueLabel,
   listCompetitions,
-  normalizeLeagueKey,
+  matchLeagueKey,
   type CompetitionRecord,
 } from './competitions.ts';
 import { isSportId, type SportId } from './sports.ts';
@@ -121,11 +121,11 @@ function existingMappedKeys(): Set<string> {
   for (const c of listCompetitions()) {
     const map = c.providerMappings.plive;
     if (map) {
-      keys.add(`${map.inventoryBucket}\0${normalizeLeagueKey(map.leagueKey)}`);
+      keys.add(`${map.inventoryBucket}\0${matchLeagueKey(map.leagueKey)}`);
     }
     for (const a of c.aliases) {
-      keys.add(`${c.sportId}\0${normalizeLeagueKey(a)}`);
-      if (map) keys.add(`${map.inventoryBucket}\0${normalizeLeagueKey(a)}`);
+      keys.add(`${c.sportId}\0${matchLeagueKey(a)}`);
+      if (map) keys.add(`${map.inventoryBucket}\0${matchLeagueKey(a)}`);
     }
   }
   return keys;
@@ -178,8 +178,8 @@ export function planCompetitionPromote(
     }
 
     const bucket = source.inventoryBucket || sportId;
-    const mapKey = `${bucket}\0${normalizeLeagueKey(leagueKey)}`;
-    const dedupeKey = `${sportId}\0${normalizeLeagueKey(leagueKey)}`;
+    const mapKey = `${bucket}\0${matchLeagueKey(leagueKey)}`;
+    const dedupeKey = `${sportId}\0${matchLeagueKey(leagueKey)}`;
     if (seenNorm.has(dedupeKey)) continue;
     seenNorm.add(dedupeKey);
 
@@ -194,9 +194,11 @@ export function planCompetitionPromote(
       continue;
     }
 
+    // Same slug as an existing seed (e.g. ATT. Togliatti → tennis.att_togliatti)
+    // — treat as already mapped once matchLeagueKey aligns aliases.
     const idExists = ids.has(record.id);
     if (idExists) {
-      rejected.push({ source, reason: 'id_collision' });
+      rejected.push({ source, reason: 'already_mapped' });
       continue;
     }
 

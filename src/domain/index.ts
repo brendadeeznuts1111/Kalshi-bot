@@ -143,6 +143,7 @@ export {
   isCompetitionId,
   listCompetitions,
   listCompetitionsBySport,
+  matchLeagueKey,
   normalizeLeagueKey,
   type CompetitionGender,
   type CompetitionId,

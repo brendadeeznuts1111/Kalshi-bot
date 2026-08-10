@@ -83,13 +83,17 @@ export function resolveInventoryCompetitionId(input: {
   liveProduct: LiveProductId;
   sport: string;
   league: string;
+  /** Wire stream bucket when known (e.g. football). Do not pass SportId here. */
+  inventoryBucket?: string;
 }): CompetitionId | null {
   const sport = input.sport.trim();
+  const bucket = input.inventoryBucket?.trim().toLowerCase() || undefined;
+  // Never pass sportId as inventoryBucket — soccer ≠ football stream bucket.
   const hit = resolveCompetition({
     liveProduct: input.liveProduct,
     league: input.league,
     sportId: isSportId(sport) ? sport : undefined,
-    inventoryBucket: sport || undefined,
+    inventoryBucket: bucket && bucket !== sport ? bucket : undefined,
   });
   return hit?.competitionId ?? null;
 }
