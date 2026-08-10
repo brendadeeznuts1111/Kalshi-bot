@@ -49,7 +49,10 @@ export const COMPETITIONS: readonly CompetitionRecord[] = [
     displayName: 'Mexico LMB',
     aliases: ['Mexico LMB'],
     gender: 'unknown',
-    providerMappings: { plive: { inventoryBucket: 'baseball', leagueKey: 'Mexico LMB' } },
+    providerMappings: {
+      plive: { inventoryBucket: 'baseball', leagueKey: 'Mexico LMB' },
+      pandora: { leagueId: '378', feedSportId: '1' },
+    },
   },
   {
     id: 'baseball.triple_a_minor_league',
@@ -472,7 +475,10 @@ export const COMPETITIONS: readonly CompetitionRecord[] = [
     displayName: "China. CDBL",
     aliases: ["China. CDBL"],
     gender: "unknown",
-    providerMappings: { plive: { inventoryBucket: "basketball", leagueKey: "China. CDBL" } },
+    providerMappings: {
+      plive: { inventoryBucket: 'basketball', leagueKey: 'China. CDBL' },
+      pandora: { leagueId: '30650', feedSportId: '2' },
+    },
   },
   {
     id: "basketball.u23_nations_league",

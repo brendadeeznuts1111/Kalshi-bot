@@ -147,7 +147,102 @@ export function isPandoraLeagueNoise(name: string): boolean {
   if (/presidential\s+election|next\s+president/i.test(n)) return true;
   // Prop/futures shells often pollute league lists
   if (/\bprops?\b/i.test(n) && n.length < 40) return true;
+  // Bare sport name as "league"
+  if (/^(table tennis|tennis|soccer|football|baseball|basketball|hockey)$/i.test(n)) {
+    return true;
+  }
+  // Outrights / futures that are event shells not leagues
+  if (/\boutright\b/i.test(n) && n.length > 24) return true;
   return false;
+}
+
+/**
+ * Promote order: core board sports first so limit=N does not fill with
+ * niche Aussie rules / one-off GP outrights when tennis/TT/soccer still open.
+ */
+export const PROMOTE_SPORT_PRIORITY: readonly string[] = [
+  'table_tennis',
+  'tennis',
+  'soccer',
+  'baseball',
+  'basketball',
+  'american_football',
+  'ice_hockey',
+  'volleyball',
+  'cricket',
+  'golf',
+  'mma',
+  'boxing',
+  'martial_arts',
+  'rugby',
+  'handball',
+  'motorsport',
+  'formula_1',
+] as const;
+
+function promoteSportRank(sportId: string): number {
+  const i = PROMOTE_SPORT_PRIORITY.indexOf(sportId);
+  return i >= 0 ? i : 100 + sportId.charCodeAt(0);
+}
+
+/** Sort promote candidates: priority sport → structured name → alpha. */
+export function rankPromoteInputs<
+  T extends { sportId: string; leagueKey: string },
+>(inputs: T[]): T[] {
+  return [...inputs].sort((a, b) => {
+    const sr = promoteSportRank(a.sportId) - promoteSportRank(b.sportId);
+    if (sr !== 0) return sr;
+    // Prefer names with league structure markers (Cup, League, Tour, …)
+    const aStruct = /\b(cup|league|tour|open|championship|series|liga|premier|pro)\b/i.test(
+      a.leagueKey
+    )
+      ? 0
+      : 1;
+    const bStruct = /\b(cup|league|tour|open|championship|series|liga|premier|pro)\b/i.test(
+      b.leagueKey
+    )
+      ? 0
+      : 1;
+    if (aStruct !== bStruct) return aStruct - bStruct;
+    return a.leagueKey.localeCompare(b.leagueKey);
+  });
+}
+
+/**
+ * Competitions that match a Pandora league by name but lack providerMappings.pandora.
+ */
+export function planAttachPandoraMappings(
+  snapshot: WidgetDomainSnapshot
+): Array<{
+  competitionId: string;
+  displayName: string;
+  pandoraLeagueId: string;
+  feedSportId: string;
+}> {
+  const sportMap = buildPandoraSportMap(snapshot.liveSports);
+  const inputs = liveLeaguesToPromoteInputs(snapshot.liveLeagues, sportMap);
+  const nameIndex = existingCompetitionNameIndex();
+  const out: Array<{
+    competitionId: string;
+    displayName: string;
+    pandoraLeagueId: string;
+    feedSportId: string;
+  }> = [];
+  const seen = new Set<string>();
+  for (const i of inputs) {
+    const id = nameIndex.get(matchLeagueKey(i.leagueKey));
+    if (!id || seen.has(id)) continue;
+    const rec = listCompetitions().find(c => c.id === id);
+    if (!rec || rec.providerMappings.pandora?.leagueId) continue;
+    seen.add(id);
+    out.push({
+      competitionId: id,
+      displayName: rec.displayName,
+      pandoraLeagueId: i.pandoraLeagueId,
+      feedSportId: i.feedSportId,
+    });
+  }
+  return out;
 }
 
 export function liveLeaguesToPromoteInputs(
@@ -211,11 +306,13 @@ export function planPandoraCompetitionPromote(
   // Drop leagues already linked by pandora id or exact name
   const pandoraIds = existingPandoraLeagueIds();
   const nameIndex = existingCompetitionNameIndex();
-  const filtered = inputs.filter(i => {
-    if (pandoraIds.has(i.pandoraLeagueId)) return false;
-    if (nameIndex.has(matchLeagueKey(i.leagueKey))) return false;
-    return true;
-  });
+  const filtered = rankPromoteInputs(
+    inputs.filter(i => {
+      if (pandoraIds.has(i.pandoraLeagueId)) return false;
+      if (nameIndex.has(matchLeagueKey(i.leagueKey))) return false;
+      return true;
+    })
+  );
 
   const plan = planCompetitionPromote(
     filtered.map(i => ({
@@ -465,6 +562,63 @@ export async function applyPandoraPromoteToCompetitionsFile(
     await Bun.write(competitionsPath, next);
   }
   return { added, skipped };
+}
+
+/**
+ * Patch competitions.ts to add providerMappings.pandora on existing rows.
+ * Only rewrites compact plive-only mapping lines.
+ */
+export async function applyAttachPandoraMappings(
+  attaches: Array<{
+    competitionId: string;
+    pandoraLeagueId: string;
+    feedSportId: string;
+  }>,
+  competitionsPath: string
+): Promise<{ patched: string[]; missed: string[] }> {
+  let src = await Bun.file(competitionsPath).text();
+  const patched: string[] = [];
+  const missed: string[] = [];
+
+  for (const a of attaches) {
+    // Match: id: 'baseball.mexico_lmb', ... providerMappings: { plive: { … } },
+    // without an existing pandora key nearby.
+    const idLit = a.competitionId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp(
+      `(id:\\s*['"]${idLit}['"][\\s\\S]*?providerMappings:\\s*\\{\\s*plive:\\s*\\{[^}]+\\}\\s*)(\\})`,
+      'm'
+    );
+    if (!re.test(src)) {
+      missed.push(a.competitionId);
+      continue;
+    }
+    // Skip if pandora already present in this record block
+    const blockMatch = src.match(
+      new RegExp(
+        `id:\\s*['"]${idLit}['"][\\s\\S]*?providerMappings:\\s*\\{[\\s\\S]*?\\},?\\s*\\},`,
+        'm'
+      )
+    );
+    if (blockMatch?.[0]?.includes('pandora:')) {
+      missed.push(a.competitionId);
+      continue;
+    }
+    const next = src.replace(
+      re,
+      `$1,\n      pandora: { leagueId: '${a.pandoraLeagueId}', feedSportId: '${a.feedSportId}' },\n    $2`
+    );
+    if (next === src) {
+      missed.push(a.competitionId);
+      continue;
+    }
+    src = next;
+    patched.push(a.competitionId);
+  }
+
+  if (patched.length > 0) {
+    await Bun.write(competitionsPath, src);
+  }
+  return { patched, missed };
 }
 
 export function isValidSportFilter(raw: string | undefined): raw is SportId | undefined {

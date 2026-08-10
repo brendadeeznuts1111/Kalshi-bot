@@ -7,6 +7,8 @@
  *   bun run domain:pandora -- --promote --limit=50
  *   bun run domain:pandora -- --promote --apply --limit=20
  *   bun run domain:pandora -- --promote --sport=soccer --limit=30
+ *   bun run domain:pandora -- --attach-pandora          # dry-run missing pandora ids
+ *   bun run domain:pandora -- --attach-pandora --apply
  *   bun run domain:pandora -- --markets
  *   bun run domain:pandora -- --json --report
  *
@@ -14,11 +16,13 @@
  */
 import { join } from 'node:path';
 import {
+  applyAttachPandoraMappings,
   applyPandoraPromoteToCompetitionsFile,
   buildPandoraCoverageReport,
   formatPandoraCoverageReport,
   formatPandoraPromotePlan,
   loadWidgetDomainSnapshot,
+  planAttachPandoraMappings,
   planPandoraCompetitionPromote,
 } from '../src/domain/pandora-domain-integrate.ts';
 import { defaultWidgetDomainCachePath } from '../src/domain/widget-domain-extract.ts';
@@ -33,9 +37,11 @@ function argValue(name: string): string | undefined {
 }
 
 const json = hasFlag('json');
-const report = hasFlag('report') || (!hasFlag('promote') && !hasFlag('markets'));
+const attachPandora = hasFlag('attach-pandora');
 const promote = hasFlag('promote');
 const markets = hasFlag('markets');
+const report =
+  hasFlag('report') || (!promote && !markets && !attachPandora);
 const apply = hasFlag('apply');
 const limit = Math.min(Math.max(Number(argValue('limit') ?? '50') || 50, 1), 500);
 const sport = argValue('sport');
@@ -46,7 +52,38 @@ const competitionsPath =
 
 const snapshot = await loadWidgetDomainSnapshot(snapshotPath);
 
-if (report || (!promote && !markets)) {
+if (attachPandora) {
+  const rows = planAttachPandoraMappings(snapshot);
+  if (apply && rows.length > 0) {
+    const { patched, missed } = await applyAttachPandoraMappings(
+      rows,
+      competitionsPath
+    );
+    if (json) {
+      console.log(JSON.stringify({ attach: true, apply: true, patched, missed, planned: rows }, null, 2));
+    } else {
+      console.log(
+        `attach-pandora --apply patched=${patched.length} missed=${missed.length}`
+      );
+      for (const id of patched) console.log(`  ~ ${id}`);
+      for (const id of missed) console.log(`  ? ${id}`);
+    }
+  } else if (json) {
+    console.log(JSON.stringify({ attach: true, apply: false, count: rows.length, rows }, null, 2));
+  } else {
+    console.log(`attach-pandora dry-run: ${rows.length} competitions missing pandora id`);
+    for (const r of rows) {
+      console.log(
+        `  ${r.competitionId}  pandora=${r.pandoraLeagueId} feed=${r.feedSportId}  ${r.displayName}`
+      );
+    }
+    if (rows.length) {
+      console.log('  re-run with --apply to patch competitions.ts');
+    }
+  }
+}
+
+if (report || (!promote && !markets && !attachPandora)) {
   const r = buildPandoraCoverageReport(snapshot);
   if (json) console.log(JSON.stringify(r, null, 2));
   else console.log(formatPandoraCoverageReport(r));

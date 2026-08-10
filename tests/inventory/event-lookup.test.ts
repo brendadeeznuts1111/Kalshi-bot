@@ -44,10 +44,17 @@ describe('event-lookup', () => {
   test('labelPeriodId is sport-aware', () => {
     expect(labelPeriodId('m')).toContain('match');
     expect(labelPeriodId('s1', 'tennis')).toBe('set 1');
-    expect(labelPeriodId('s1', 'table_tennis')).toBe('set 1');
+    // TT is games, not sets (hint path)
+    expect(labelPeriodId('s1', 'table_tennis')).toBe('game 1');
     expect(labelPeriodId('h1', 'soccer')).toBe('half 1');
     expect(labelPeriodId('q2', 'basketball')).toBe('quarter 2');
     expect(labelPeriodId('p1', 'ice_hockey')).toBe('period 1');
+    // Baked feedSportId wins: baseball innings, TT games, basketball quarters
+    expect(labelPeriodId('s1', null, 1)).toBe('1st Inning');
+    expect(labelPeriodId('s1', 'tennis', 93)).toBe('1st Game'); // feed overrides wrong hint
+    expect(labelPeriodId('s1', null, 2)).toBe('1st Quarter');
+    expect(labelPeriodId('s1', null, 8)).toBe('1st Set');
+    expect(labelPeriodId('s1', 'american_football')).toBe('quarter 1');
   });
 
   test('inferSportHintFromLines uses totals and periods', () => {

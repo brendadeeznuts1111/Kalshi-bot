@@ -22,6 +22,10 @@ import {
   feedSportSlug,
   sportIdFromFeedSportId,
 } from '../domain/pandora-feed-sports.ts';
+import {
+  periodLabel,
+  periodLabelForFeedSport,
+} from '../domain/odds-selection.ts';
 import type { FetchFn } from '../institutions/resilient-fetch.ts';
 import { openEventStore } from '../institutions/event-store/open-db.ts';
 import { DEFAULT_EVENT_STORE_DB } from '../institutions/event-store/paths.ts';
@@ -264,54 +268,72 @@ export function pliveEventUrl(
 
 /**
  * Sport-aware period labels for Pandora period codes.
- * Codes are shared across sports; hint disambiguates s1 = set vs segment.
+ *
+ * Prefer `feedSportId` → baked live.sportPeriod (`periodLabelForFeedSport`)
+ * so baseball s1 = "1st Inning", TT s1 = "1st Game", not "set 1".
+ * Fall back to sportHint heuristics, then generic periodLabel.
  */
 export function labelPeriodId(
   periodId: string,
-  sportHint?: string | null
+  sportHint?: string | null,
+  feedSportId?: number | string | null
 ): string {
-  const p = periodId.trim().toLowerCase();
+  const raw = periodId.trim();
+  if (!raw) return '?';
+
+  if (feedSportId != null && String(feedSportId).trim() !== '') {
+    const baked = periodLabelForFeedSport(feedSportId, raw);
+    if (baked && baked !== raw) {
+      if (raw.toLowerCase() === 'm') {
+        const low = baked.toLowerCase();
+        if (low === 'match' || low === 'game') return 'match (full game)';
+      }
+      return baked;
+    }
+  }
+
+  const p = raw.toLowerCase();
   const sport = (sportHint ?? '').toLowerCase().replace(/\s+/g, '_');
   if (p === 'm') return 'match (full game)';
 
+  // TT / badminton use "Game" units — check before bare tennis "set"
+  const gameSports = /table_tennis|badminton|padel/.test(sport);
   const setSports =
-    /tennis|table_tennis|volleyball|badminton|beach|squash|pickle/.test(sport);
-  const halfSports = /soccer|football|futsal|handball|rugby|aussie|bandy/.test(
-    sport
-  );
-  const quarterSports = /basketball|american_football|football_nfl|aussie/.test(
-    sport
-  );
-  const periodSports = /ice_hockey|hockey|floorbandy|bandy/.test(sport);
+    (/tennis|volleyball|beach|squash|pickle/.test(sport) && !gameSports) ||
+    sport === 'tennis';
+  // Do not treat american_football as soccer halves
+  const halfSports =
+    /soccer|futsal|handball|rugby/.test(sport) ||
+    (sport === 'football' && !/american/.test(sport));
+  const quarterSports =
+    /basketball|american_football|football_nfl|australian_rules/.test(sport);
+  const periodSports = /ice_hockey|hockey|floorball|bandy/.test(sport);
   const inningSports = /baseball|softball|cricket/.test(sport);
 
   const sn = p.match(/^s(\d+)$/);
   if (sn) {
     const n = sn[1]!;
+    if (gameSports) return `game ${n}`;
     if (setSports) return `set ${n}`;
+    if (quarterSports) return `quarter ${n}`;
     if (periodSports) return `period ${n}`;
-    if (inningSports) return `segment ${n}`;
-    return `segment/set ${n}`;
+    if (inningSports) return `inning ${n}`;
+    if (halfSports) return `half ${n}`;
+    return `segment ${n}`;
   }
   const hn = p.match(/^h(\d+)$/);
-  if (hn) {
-    const n = hn[1]!;
-    if (halfSports || !sport) return `half ${n}`;
-    return `half ${n}`;
-  }
+  if (hn) return `half ${hn[1]}`;
   const qn = p.match(/^q(\d+)$/);
   if (qn) return `quarter ${qn[1]}`;
   const pn = p.match(/^p(\d+)$/);
-  if (pn) {
-    if (periodSports || !sport) return `period ${pn[1]}`;
-    return `period ${pn[1]}`;
-  }
+  if (pn) return `period ${pn[1]}`;
   const inn = p.match(/^(?:i|inn)(\d+)$/);
   if (inn) return `inning ${inn[1]}`;
   if (p === 'ot' || p === 'overtime') return 'overtime';
   if (p === 'so' || p === 'shootout') return 'shootout';
-  if (p === 'fg' || p === 'f5') return p === 'f5' ? 'first 5 innings' : periodId;
-  return periodId;
+  if (p === 'fg' || p === 'f5') return p === 'f5' ? 'first 5 innings' : raw;
+  const generic = periodLabel(raw);
+  return generic !== raw ? generic : raw;
 }
 
 /**
@@ -356,7 +378,8 @@ export function inferSportHintFromLines(
 export function summarizePeriods(
   eventId: string,
   lines: CoefficientLine[],
-  sportHint?: string | null
+  sportHint?: string | null,
+  feedSportId?: number | string | null
 ): EventPeriodSummary[] {
   const byPeriod = new Map<string, CoefficientLine[]>();
   for (const l of lines) {
@@ -377,7 +400,7 @@ export function summarizePeriods(
     const spread = pls.find(l => l.marketType === '6' && l.line != null);
     const row: EventPeriodSummary = {
       periodId,
-      label: labelPeriodId(periodId, sportHint),
+      label: labelPeriodId(periodId, sportHint, feedSportId),
       lineCount: pls.length,
       marketTypes,
       pliveUrl: pliveEventUrl(eventId, periodId),
@@ -1526,20 +1549,25 @@ export async function lookupEvent(
     sportHint = inferSportHintFromLines(allLines, streamHit?.bucket ?? null);
   }
 
-  // Re-label periods with sport hint for display
-  if (pandora.periods.length && sportHint) {
+  // Re-label periods with feedSportId bake + sport hint for display
+  const feedSportId = pandora.eventState?.sportId ?? null;
+  if (pandora.periods.length && (feedSportId != null || sportHint)) {
     pandora.periods = summarizePeriods(
       eventId,
       // rebuild from full line set if we still have them on filtered-only display
-      allLines.length
-        ? allLines
-        : pandora.lines,
-      sportHint
+      allLines.length ? allLines : pandora.lines,
+      sportHint,
+      feedSportId
     );
   }
 
-  if (sportHint) {
-    notes.push(`sport_hint=${sportHint} (stream/catalog/inference — for period labels)`);
+  if (sportHint || feedSportId != null) {
+    notes.push(
+      `period_labels=` +
+        (feedSportId != null ? `feed=${feedSportId}` : 'hint') +
+        (sportHint ? ` sport=${sportHint}` : '') +
+        ' (bake > hint > generic)'
+    );
   }
 
   return {
@@ -1879,6 +1907,16 @@ export function formatEventLookup(r: EventLookupResult): string {
 
   if (r.pandora.probed && r.pandora.book) {
     const b = r.pandora.book;
+    const feedId = r.pandora.eventState?.sportId ?? null;
+    const periodLabelById = new Map(
+      r.pandora.periods.map(p => [p.periodId, p.label] as const)
+    );
+    const periodCell = (period: string) => {
+      const lab =
+        periodLabelById.get(period) ??
+        labelPeriodId(period, r.sportHint, feedId);
+      return lab && lab !== period ? `${period} · ${lab}` : period;
+    };
     const vigByKey = new Map(
       vigFromCoefficientLines(r.pandora.lines).map(
         v => [`${v.period}/${v.marketType}`, v] as const
@@ -1890,11 +1928,12 @@ export function formatEventLookup(r: EventLookupResult): string {
       lines.push('## Markets (offered)');
       lines.push(
         ...mdTable(
-          ['Mkt', 'Name', 'Line (r)', 'Vig', 'cls', 'Prices'],
+          ['Mkt', 'Period', 'Name', 'Line (r)', 'Vig', 'cls', 'Prices'],
           offered.map(m => {
             const vig = vigByKey.get(`${m.period}/${m.marketType}`);
             return [
               `${m.period}/${m.marketType}`,
+              periodCell(m.period),
               pandoraMarketLabel(m.marketType),
               m.line != null ? String(m.line) : '—',
               vig ? fmtPct(vig.vigPercent) : '—',
@@ -1911,9 +1950,10 @@ export function formatEventLookup(r: EventLookupResult): string {
       lines.push('## Markets (off / empty o)');
       lines.push(
         ...mdTable(
-          ['Mkt', 'Name', 'Line'],
+          ['Mkt', 'Period', 'Name', 'Line'],
           off.slice(0, 16).map(m => [
             `${m.period}/${m.marketType}`,
+            periodCell(m.period),
             pandoraMarketLabel(m.marketType),
             m.line != null ? String(m.line) : '—',
           ])
@@ -1921,6 +1961,10 @@ export function formatEventLookup(r: EventLookupResult): string {
       );
     }
   }
+
+  const feedForLabels = r.pandora.eventState?.sportId ?? null;
+  const periodLab = (period: string) =>
+    labelPeriodId(period, r.sportHint, feedForLabels);
 
   // Set correct score table
   const scsLines = r.pandora.lines.filter(
@@ -1940,7 +1984,9 @@ export function formatEventLookup(r: EventLookupResult): string {
         if (!prev || l.decimal > prev.decimal) best.set(l.selection, l);
       }
       lines.push('');
-      lines.push(`## Set correct score (${period}/16)`);
+      lines.push(
+        `## Set correct score (${period}/16 · ${periodLab(period)})`
+      );
       lines.push(
         ...mdTable(
           ['Score', 'LineId', 'Decimal', 'American', 'Implied'],
@@ -2013,7 +2059,7 @@ export function formatEventLookup(r: EventLookupResult): string {
               vig = fmtPct((sum - 1) * 100);
             }
             return [
-              row.period,
+              periodLab(row.period),
               row.game,
               fmtDec(row.p1),
               fmtAm(row.p1am),
@@ -2033,9 +2079,10 @@ export function formatEventLookup(r: EventLookupResult): string {
       lines.push('## Vig (overround)');
       lines.push(
         ...mdTable(
-          ['Mkt', 'Name', 'Kind', 'Vig', 'Σ implied', 'Legs'],
+          ['Mkt', 'Period', 'Name', 'Kind', 'Vig', 'Σ implied', 'Legs'],
           vigRows.map(v => [
             `${v.period}/${v.marketType}`,
+            periodLab(v.period),
             v.label,
             v.kind,
             fmtPct(v.vigPercent),

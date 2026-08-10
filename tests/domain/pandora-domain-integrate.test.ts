@@ -3,8 +3,10 @@ import { describe, expect, test } from 'bun:test';
 import {
   buildPandoraCoverageReport,
   buildPandoraSportMap,
+  isPandoraLeagueNoise,
   liveLeaguesToPromoteInputs,
   planPandoraCompetitionPromote,
+  rankPromoteInputs,
 } from '../../src/domain/pandora-domain-integrate.ts';
 import type { WidgetDomainSnapshot } from '../../src/domain/widget-domain-extract.ts';
 
@@ -87,5 +89,26 @@ describe('pandora-domain-integrate', () => {
     expect(r.markets.htmlMarketLabels).toBe(2);
     expect(r.partner.partnerId).toBe('118');
     expect(r.sports.live).toBe(3);
+  });
+
+  test('rankPromoteInputs prefers core sports + structured names', () => {
+    const ranked = rankPromoteInputs([
+      { sportId: 'australian_rules', leagueKey: 'Australia AFL' },
+      { sportId: 'table_tennis', leagueKey: 'Setka Cup Men' },
+      { sportId: 'soccer', leagueKey: 'Random Blob' },
+      { sportId: 'soccer', leagueKey: 'Premier League' },
+    ]);
+    expect(ranked[0]!.sportId).toBe('table_tennis');
+    expect(ranked[1]!.leagueKey).toBe('Premier League');
+    expect(ranked[2]!.leagueKey).toBe('Random Blob');
+    expect(ranked[3]!.sportId).toBe('australian_rules');
+  });
+
+  test('isPandoraLeagueNoise rejects bare sport + outrights', () => {
+    expect(isPandoraLeagueNoise('table tennis')).toBe(true);
+    expect(isPandoraLeagueNoise('International Setka Cup Men')).toBe(false);
+    expect(
+      isPandoraLeagueNoise('Formula 1 Brazil Grand Prix Outright')
+    ).toBe(true);
   });
 });

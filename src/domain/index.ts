@@ -202,14 +202,19 @@ export {
 } from './competition-promote.ts';
 
 export {
+  PROMOTE_SPORT_PRIORITY,
+  applyAttachPandoraMappings,
   applyPandoraPromoteToCompetitionsFile,
   buildPandoraCoverageReport,
   buildPandoraSportMap,
   formatPandoraCoverageReport,
   formatPandoraPromotePlan,
+  isPandoraLeagueNoise,
   liveLeaguesToPromoteInputs,
   loadWidgetDomainSnapshot,
+  planAttachPandoraMappings,
   planPandoraCompetitionPromote,
+  rankPromoteInputs,
   type PandoraCoverageReport,
   type PandoraPromoteResult,
   type PandoraSportMapEntry,
