@@ -29,8 +29,6 @@ function baseLookup(
     lineCount: 4,
     periods: [],
     lines: [],
-    markets: [],
-    eventDataKeys: ['db', 'kb', 's', 'x'],
     periodMissing: false,
     book: {
       eventId: 1,

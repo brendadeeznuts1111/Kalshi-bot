@@ -238,8 +238,6 @@ describe('event-lookup', () => {
           },
         ],
         lines: [],
-        markets: [],
-        eventDataKeys: [],
         periodMissing: false,
         book: null,
         eventState: {

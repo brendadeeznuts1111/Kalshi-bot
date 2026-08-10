@@ -36,7 +36,6 @@ import {
   decodeEventOfferability,
   diffEventDataOfferability,
   diffOfferFingerprints,
-  extractCoefficientLines,
   findEventInEventDataBoard,
   isEventDataBoardPayload,
   parseEventDataDiffPath,
@@ -57,22 +56,16 @@ import {
 } from '../partner/fantasy-ultra/coefficients.ts';
 import {
   pandoraMarketLabel,
-  describeCoefficientSelection,
   formatSetCorrectScoreLineId,
-  formatMarketVigRows,
   vigFromCoefficientLines,
   type MarketVigRow,
 } from '../partner/fantasy-ultra/market-decode.ts';
-import {
-  PANDORA_DEFAULT_SESSION,
-  PandoraSocket,
-} from '../partner/fantasy-ultra/pandora-socket.ts';
+import { PandoraSocket } from '../partner/fantasy-ultra/pandora-socket.ts';
 import type { PandoraHostId } from '../partner/fantasy-ultra/pandora-hosts.ts';
 import {
   resolvePandoraHostId,
 } from '../partner/fantasy-ultra/pandora-hosts.ts';
 import { FANTASY_ULTRA_DEFAULTS } from '../partner/fantasy-ultra/types.ts';
-import type { PartnerMarket } from '../partner/types.ts';
 import { defaultBookedCatalogCachePath } from './booked-catalog-cache.ts';
 
 /** Internal plane hit shapes (nested under EventLookupResult). */
@@ -146,14 +139,6 @@ export type EventLookupResult = {
     periods: EventPeriodSummary[];
     /** Lines (optionally filtered to periodId). */
     lines: CoefficientLine[];
-    markets: Array<{
-      ticker: string;
-      label: string;
-      homePrice: number | null;
-      awayPrice: number | null;
-      oddsEventId: string;
-    }>;
-    eventDataKeys: string[];
     /** True when periodId was requested but not present on the book. */
     periodMissing: boolean;
     /**
@@ -532,18 +517,14 @@ async function probePandoraEvent(
 ): Promise<{
   subscribed: boolean;
   lines: CoefficientLine[];
-  markets: PartnerMarket[];
-  eventDataKeys: string[];
   book: CoefficientBookState | null;
   eventState: EventOfferability | null;
   eventDataBoard: EventDataBoardSummary | null;
-  sportsNames: Map<string, string>;
   blocked: PandoraBlockedSets | null;
 }> {
   const seconds = Math.min(Math.max(options.seconds ?? 8, 2), 30);
   const store = new CoefficientStore();
   let subscribed = false;
-  let eventDataKeys: string[] = [];
   let lastPayload: unknown | null = null;
   let eventDataBoardPayload: unknown | null = null;
   let sportsPayload: unknown | null = null;
@@ -596,7 +577,6 @@ async function probePandoraEvent(
             const p = info.envelope.payload;
             if (!info.envelope.isDiff && isEventDataBoardPayload(p)) {
               eventDataBoardPayload = p;
-              eventDataKeys = Object.keys(p as object).slice(0, 24);
             } else if (
               info.envelope.isDiff &&
               eventDataBoardPayload &&
@@ -669,12 +649,9 @@ async function probePandoraEvent(
   return {
     subscribed,
     lines,
-    markets: store.toPartnerMarkets().filter(m => m.oddsEventId === String(eventId)),
-    eventDataKeys,
     book,
     eventState,
     eventDataBoard,
-    sportsNames,
     blocked,
   };
 }
@@ -1415,8 +1392,6 @@ export async function lookupEvent(
     lineCount: 0,
     periods: [] as EventPeriodSummary[],
     lines: [] as CoefficientLine[],
-    markets: [] as EventLookupResult['pandora']['markets'],
-    eventDataKeys: [] as string[],
     periodMissing: false,
     book: null as CoefficientBookState | null,
     eventState: null as EventOfferability | null,
@@ -1443,14 +1418,6 @@ export async function lookupEvent(
         lineCount: allLines.length,
         periods,
         lines: filtered.slice(0, 60),
-        markets: p.markets.map(m => ({
-          ticker: m.ticker,
-          label: m.label ?? 'market',
-          homePrice: m.homePrice ?? null,
-          awayPrice: m.awayPrice ?? null,
-          oddsEventId: m.oddsEventId,
-        })),
-        eventDataKeys: p.eventDataKeys,
         periodMissing,
         book: p.book,
         eventState: p.eventState,
