@@ -99,10 +99,9 @@ hand-edit product or gap columns; change [`skins.ts`](skins.ts) instead.
 **Invariant:** `active: true` ⇒ `hosts.length ≥ 1`
 (`assertActiveSkinsHaveHosts`). **Fingerprint gate:** active skins need
 fingerprints or membership in `FINGERPRINT_PENDING_SKINS`
-(`assertFingerprintCoverage`). Desk URL env: **`DESK_DOMAIN`** (legacy
-`PARTNER_DOMAIN` dual-read; or per-out `*DOMAIN`) must be a host in an active
-skin. Bare book-level DOMAIN env keys are retired
-(`RETIRED_BARE_BOOK_DOMAIN_ENVS`). `fantasy402` alias → skin `buckeye`
+(`assertFingerprintCoverage`). Desk URL env: **`DESK_DOMAIN`** (or per-out
+`*DOMAIN`) must be a host in an active skin. Bare book-level DOMAIN env keys are
+retired (`RETIRED_BARE_BOOK_DOMAIN_ENVS`). `fantasy402` alias → skin `buckeye`
 (mapper token / BookId, not SkinId). Host → `BookId` → `SkinId` (`getBookByHost`
 / `resolveBookId` in [`books.ts`](books.ts)).
 

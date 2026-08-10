@@ -43,7 +43,7 @@ function main(): void {
     const acc = seedFantasy402FromEnv(db);
     if (!acc) {
       console.error(
-        'account seed skipped: set FANTASY402_CUSTOMER_ID (and optional MAX_STAKE/MAX_WIN or SKINS_JSON)'
+        'account seed skipped: set FANTASY402_CUSTOMER_ID (and optional MAX_STAKE/MAX_WIN or LIVE_PRODUCTS_JSON)'
       );
     } else {
       console.error(

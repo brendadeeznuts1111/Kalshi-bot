@@ -162,8 +162,7 @@ Fantasy Ultra wire examples + inventory columns:
   `partner:capacity`)
 - Fantasy Ultra adapter (`adapterId: fantasy-ultra`): login, stream-list, sports
   inventory (30 buckets), Pandora coefficients
-- Seed: `FANTASY402_PARTNER_CODE`, `FANTASY402_LIVE_PRODUCTS_JSON` /
-  `FANTASY402_SKINS_JSON`, `FANTASY402_VAULT_ID`
+- Seed: `FANTASY402_PARTNER_CODE`, `FANTASY402_LIVE_PRODUCTS_JSON`, `FANTASY402_LIVE_PRODUCT`, `FANTASY402_VAULT_ID`
 
 ### Assets
 

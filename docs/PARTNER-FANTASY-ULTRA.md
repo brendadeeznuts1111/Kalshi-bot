@@ -270,8 +270,8 @@ export FANTASY402_AGENT_ID='…'
 export FANTASY402_PASSWORD='…'
 # optional — example host; omit to use SKINS-derived Ultra-mapper default
 # (requireDefaultUrlForUltraMapper / defaultUrlForSkin)
-export DESK_DOMAIN='https://BOOK.example'   # must be a SKINS[].hosts URL → SkinId (legacy: PARTNER_DOMAIN)
-export FANTASY402_SKIN=2
+export DESK_DOMAIN='https://BOOK.example'   # must be a SKINS[].hosts URL → SkinId
+export FANTASY402_LIVE_PRODUCT=2
 export FANTASY402_CURRENCY=USD
 ```
 
@@ -498,8 +498,7 @@ On `seedFantasy402FromEnv` / `upsertBettingAccount` (`partner/out-identity.ts`):
 6. `getPartnerAdapter` selects Fantasy Ultra when
    `adapterId === "fantasy-ultra"`
 
-Env alias: `FANTASY402_LIVE_PRODUCTS_JSON` (same shape as
-`FANTASY402_SKINS_JSON`).
+Capacity JSON: `FANTASY402_LIVE_PRODUCTS_JSON` (array of `{name,perBetMax,maxWin}`).
 
 ### Sports + leagues inventory
 
@@ -561,7 +560,7 @@ bun run partner:registry -- --seed --json
 # Multi-skin out
 export FANTASY402_PARTNER_CODE=SPEN FANTASY402_ACCOUNT_ID=out-SPEN-1
 export FANTASY402_WORKING_BALANCE=5000
-export FANTASY402_SKINS_JSON='[{"name":"ezlive","perBetMax":500,"maxWin":2500},{"name":"dark","perBetMax":1000,"maxWin":5000}]'
+export FANTASY402_LIVE_PRODUCTS_JSON='[{"name":"ezlive","perBetMax":500,"maxWin":2500},{"name":"dark","perBetMax":1000,"maxWin":5000}]'
 bun run partner:registry -- --seed
 bun run partner:capacity
 bun run partner:capacity -- --stake=800 --json

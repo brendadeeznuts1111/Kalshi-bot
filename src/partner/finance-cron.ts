@@ -196,7 +196,7 @@ function credentialsFromEnv(
     password: p,
     bearerToken: t,
     domain: bundle.values.DOMAIN || resolveDeskDomainFromEnv(),
-    skin: parseLiveProductWire(bundle.values.SKIN, 2),
+    skin: parseLiveProductWire(bundle.values.LIVE_PRODUCT, 2),
     currency: bundle.values.CURRENCY || 'USD',
   };
 }

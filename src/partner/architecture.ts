@@ -71,7 +71,7 @@ export const OPS_LAYERS: readonly OpsLayer[] = [
         name: 'partners.toml (Bun.TOML)',
         maturity: 'built',
         where: 'config/partners.example.toml · partner:toml · src/partner/toml-config.ts',
-        notes: 'Non-secret SSOT on disk; seed registry without FANTASY402_SKINS_JSON',
+        notes: 'Non-secret SSOT on disk; seed via live_products TOML or LIVE_PRODUCTS_JSON env',
       },
       {
         id: 'partner-entity',

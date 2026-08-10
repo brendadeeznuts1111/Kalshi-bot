@@ -93,7 +93,7 @@ describe('partner registry', () => {
       FANTASY402_PARTNER_CODE: 'SPEN',
       FANTASY402_ACCOUNT_ID: 'out-SPEN-1',
       FANTASY402_WORKING_BALANCE: '5000',
-      FANTASY402_SKINS_JSON: JSON.stringify([
+      FANTASY402_LIVE_PRODUCTS_JSON: JSON.stringify([
         { name: 'ezlive', perBetMax: 500, maxWin: 2500 },
         { name: 'dark', perBetMax: 1000, maxWin: 5000 },
       ]),
@@ -215,12 +215,13 @@ describe('partner registry', () => {
     const seeded = seedFantasy402FromEnv(db, {
       FANTASY402_CUSTOMER_ID: 'BB55113',
       FANTASY402_AGENT_ID: 'BILLY667',
-      PARTNER_DOMAIN: DOMAIN,
-      FANTASY402_SKINS_JSON: JSON.stringify([
+      DESK_DOMAIN: DOMAIN,
+      FANTASY402_LIVE_PRODUCTS_JSON: JSON.stringify([
         { name: 'ezlive', perBetMax: 500, maxWin: 2500 },
         { name: 'dark', perBetMax: 1000, maxWin: 5000 },
       ]),
     });
+    expect(seeded?.skin).toBeNull();
     expect(seeded?.skinId).toBe('buckeye');
     expect(String(seeded?.bookId)).toBe('fantasy402');
     expect(seeded?.mapper).toBe('fantasy402');
