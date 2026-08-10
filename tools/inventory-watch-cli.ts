@@ -11,15 +11,19 @@
  *   bun run inventory:watch
  *   bun run inventory:watch -- --sport=table_tennis
  *   bun run inventory:watch -- --sport=all --json
+ *   bun run inventory:watch -- --once --dry-run
+ *   bun run inventory:watch -- --once --dry-run --json
  *   bun run inventory:watch -- --once --skin=buckeye --book=fantasy402
  *
- * Optional: TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID to notify on new rows.
+ * --dry-run: plan insert/update only (no SQLite writes, no Telegram). Incompatible with --loop.
+ * Optional: TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID to notify on new rows (live only).
  */
 // @see https://bun.com/docs/runtime/sqlite
 // @see https://bun.com/docs/api/spawn
 import { openEventStore } from '../src/institutions/event-store/open-db.ts';
 import { DEFAULT_EVENT_STORE_DB } from '../src/institutions/event-store/paths.ts';
 import { getFantasySessionAdapter, loadFantasy402ProfileFromEnv } from '../src/partner/index.ts';
+import { planInventoryUpsert } from '../src/inventory/sync.ts';
 import {
   fetchPublicPliveStreamEvents,
   filterLiveEventsBySport,
@@ -99,6 +103,7 @@ async function pollOnce(options: {
   sport: string;
   json: boolean;
   identity: InventoryIdentity;
+  dryRun: boolean;
 }): Promise<{ newCount: number; seen: number }> {
   const loaded = await loadInventoryEvents(options.sport);
   let events = loaded.events;
@@ -107,15 +112,21 @@ async function pollOnce(options: {
   }
 
   const db = openEventStore({ dbPath: DEFAULT_EVENT_STORE_DB });
-  normalizeSkinEventsSports(db);
-  const result = upsertSkinLiveEvents(db, events, { identity: options.identity });
+  if (!options.dryRun) {
+    normalizeSkinEventsSports(db);
+  }
+  const result = options.dryRun
+    ? planInventoryUpsert(db, events, { identity: options.identity })
+    : upsertSkinLiveEvents(db, events, { identity: options.identity });
   const covers = liveProductsCoveredByInventory(options.identity.skinId);
 
   const newLines = result.inserted.map(formatSkinEventLine);
+  const mode = options.dryRun ? 'inventory:watch --dry-run' : 'inventory:watch';
   if (options.json) {
     console.log(
       JSON.stringify(
         {
+          dryRun: options.dryRun,
           sport: options.sport,
           skinId: options.identity.skinId,
           bookId: options.identity.bookId,
@@ -136,6 +147,17 @@ async function pollOnce(options: {
             bookId: r.bookId,
             inventoryLiveProduct: r.inventoryLiveProduct,
           })),
+          ...(options.dryRun
+            ? {
+                updatedEvents: result.updated.slice(0, 50).map(r => ({
+                  inventoryId: r.inventoryId,
+                  sport: r.sport,
+                  league: r.league,
+                  home: r.home,
+                  away: r.away,
+                })),
+              }
+            : {}),
         },
         null,
         2
@@ -143,16 +165,25 @@ async function pollOnce(options: {
     );
   } else {
     console.log(
-      `inventory:watch skin=${options.identity.skinId} book=${options.identity.bookId} ` +
+      `${mode} skin=${options.identity.skinId} book=${options.identity.bookId} ` +
         `source=${loaded.source} covers=${covers.join('+')} sport=${options.sport} ` +
-        `seen=${result.seen} new=${result.inserted.length} updated=${result.updated.length}`
+        `seen=${result.seen} new=${result.inserted.length} updated=${result.updated.length}` +
+        (options.dryRun ? ' (no write)' : '')
     );
     for (const line of newLines) {
       console.log(`  + ${line}`);
     }
+    if (options.dryRun && result.updated.length > 0) {
+      for (const row of result.updated.slice(0, 20)) {
+        console.log(`  ~ ${formatSkinEventLine(row)}`);
+      }
+      if (result.updated.length > 20) {
+        console.log(`  ~ … ${result.updated.length - 20} more would update`);
+      }
+    }
   }
 
-  if (result.inserted.length) {
+  if (!options.dryRun && result.inserted.length) {
     await maybeNotifyTelegram(result.inserted.map(r => `• ${formatSkinEventLine(r)}`));
   }
 
@@ -162,7 +193,12 @@ async function pollOnce(options: {
 async function main(): Promise<void> {
   const sport = argValue('sport') ?? 'table_tennis';
   const json = hasFlag('json');
-  const once = hasFlag('once') || !hasFlag('loop');
+  const dryRun = hasFlag('dry-run') || hasFlag('dryRun');
+  const loop = hasFlag('loop');
+  const once = hasFlag('once') || !loop;
+  if (loop && dryRun) {
+    throw new Error('inventory:watch --dry-run cannot be combined with --loop');
+  }
   const identity = resolveWatchInventoryIdentity({
     skin: argValue('skin'),
     book: argValue('book'),
@@ -171,7 +207,7 @@ async function main(): Promise<void> {
   const intervalMs = Math.max(Number(argValue('interval-ms') ?? '30000') || 30_000, 5_000);
 
   if (once) {
-    await pollOnce({ sport, json, identity });
+    await pollOnce({ sport, json, identity, dryRun });
     return;
   }
 
@@ -181,7 +217,7 @@ async function main(): Promise<void> {
   );
   for (;;) {
     try {
-      await pollOnce({ sport, json: false, identity });
+      await pollOnce({ sport, json: false, identity, dryRun: false });
     } catch (err) {
       console.error(err instanceof Error ? err.message : err);
     }
