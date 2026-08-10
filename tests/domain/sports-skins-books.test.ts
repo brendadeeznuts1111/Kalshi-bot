@@ -1,8 +1,11 @@
 // @see https://bun.com/docs/test/index#run-tests
 import { describe, expect, test } from 'bun:test';
 import {
+  FINGERPRINT_PENDING_SKINS,
   ULTRA_DESK_API_PATHS,
+  assertFingerprintCoverage,
   buildSkinMatrixRows,
+  formatSkinMatrixMarkdownTable,
   PARTNER_DOMAIN_ENV,
   RETIRED_BARE_BOOK_DOMAIN_ENVS,
   assertActiveSkinsHaveHosts,
@@ -170,6 +173,37 @@ describe('domain sports / skins / live products', () => {
     expect(ace?.hasFingerprints).toBe(true);
     expect(ace?.apexHosts).toContain('parlay21.com');
     expect(ace?.catalogLiveProducts).toEqual(['EZLive', 'UltraLive', 'MagLive']);
+    expect(ace?.gaps).toContain('mapper_unmapped');
+    expect(ace?.gaps).not.toContain('missing_fingerprints');
+  });
+
+  test('fingerprint coverage gate: pending allowlist or fingerprints', () => {
+    expect(() => assertFingerprintCoverage()).not.toThrow();
+    expect([...FINGERPRINT_PENDING_SKINS].sort()).toEqual([
+      '1bv',
+      'lvaction',
+      'magnum',
+      'sts',
+    ]);
+    const rows = buildSkinMatrixRows();
+    for (const id of FINGERPRINT_PENDING_SKINS) {
+      const row = rows.find(r => r.skinId === id);
+      expect(row?.hasFingerprints).toBe(false);
+      expect(row?.fingerprintPending).toBe(true);
+      expect(row?.gaps).toContain('missing_fingerprints');
+    }
+  });
+
+  test('README skin table matches formatSkinMatrixMarkdownTable', async () => {
+    const readme = await Bun.file('src/domain/README.md').text();
+    const table = formatSkinMatrixMarkdownTable();
+    // Header + every skin row must appear (hosts/products may wrap differently in prose).
+    expect(readme).toContain('| Skin         | Active | Live products');
+    for (const row of buildSkinMatrixRows()) {
+      expect(readme).toContain(`| **${row.skinId}**`);
+    }
+    expect(table).toContain('| **buckeye**');
+    expect(table).toContain('| **sts**');
   });
 
   test('ULTRA_DESK_API_PATHS are desk-relative (no host lock)', () => {

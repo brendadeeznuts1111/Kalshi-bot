@@ -37,8 +37,13 @@ export {
 } from './live-product-endpoints.ts';
 
 export {
+  FINGERPRINT_PENDING_SKINS,
+  assertFingerprintCoverage,
   buildSkinMatrixRows,
+  formatSkinMatrixMarkdownTable,
   formatSkinMatrixText,
+  gapsForSkin,
+  type SkinMatrixGap,
   type SkinMatrixRow,
 } from './skin-matrix.ts';
 
