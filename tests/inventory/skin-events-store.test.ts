@@ -142,6 +142,28 @@ describe('skin_events store', () => {
     expect(count).toBe(1);
   });
 
+  test('dry-run classifies duplicate inventory ids like a live upsert', () => {
+    const events = [
+      ev({ inventoryId: '100', sport: 'Tennis' }),
+      ev({ inventoryId: '100', sport: 'Tennis', home: 'Updated' }),
+    ];
+
+    const dry = upsertSkinLiveEvents(memoryDb(), events, {
+      dryRun: true,
+      nowMs: 1_000,
+    });
+    const live = upsertSkinLiveEvents(memoryDb(), events, { nowMs: 1_000 });
+
+    expect(dry.inserted.map(row => row.inventoryId)).toEqual(
+      live.inserted.map(row => row.inventoryId)
+    );
+    expect(dry.updated.map(row => row.inventoryId)).toEqual(
+      live.updated.map(row => row.inventoryId)
+    );
+    expect(dry.inserted).toHaveLength(1);
+    expect(dry.updated).toHaveLength(1);
+  });
+
   test('resolveInventoryCompetitionId maps Setka Cup; unknown stays null', () => {
     expect(
       resolveInventoryCompetitionId({

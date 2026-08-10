@@ -1,5 +1,8 @@
 // @see https://bun.com/docs/test/index#run-tests
 import { describe, expect, test } from 'bun:test';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import {
   computeEventStats,
   diffEventLists,
@@ -192,5 +195,45 @@ describe('live-tracker', () => {
     const csv = formatEventsCsv(b, ['Event', 'Detail']);
     expect(csv.split('\n')[0]).toBe('Event,Detail');
     expect(csv).toContain('MARKET_ADDED');
+  });
+
+  test('diff CLI keeps file operands after a boolean flag', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'live-tracker-cli-'));
+    const oldPath = join(dir, 'old.jsonl');
+    const newPath = join(dir, 'new.jsonl');
+    await Bun.write(oldPath, '');
+    await Bun.write(
+      newPath,
+      JSON.stringify({
+        time: '2026-08-10T00:00:00.000Z',
+        eventType: 'MARKET_ADDED',
+        eventId: 1,
+        detail: 'new market',
+      })
+    );
+
+    try {
+      const proc = Bun.spawn({
+        cmd: ['bun', 'live-tracker.ts', 'diff', '--desc', oldPath, newPath, '--format=json'],
+        cwd: process.cwd(),
+        stdout: 'pipe',
+        stderr: 'pipe',
+      });
+      const [exitCode, stdout, stderr] = await Promise.all([
+        proc.exited,
+        new Response(proc.stdout).text(),
+        new Response(proc.stderr).text(),
+      ]);
+
+      expect(exitCode, stderr).toBe(0);
+      const output = JSON.parse(stdout) as {
+        count: number;
+        events: Array<Record<string, string>>;
+      };
+      expect(output.count).toBe(1);
+      expect(output.events[0]?.Detail).toContain('[+] new market');
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
   });
 });
