@@ -53,3 +53,4 @@ research/reports/simplify-loop/
 #   research/audit-evidence/*.jsonl
 #   research/weights.json, keywords.json, schemas/
 research/cache/partner-ws-capture/
+compare.svg
