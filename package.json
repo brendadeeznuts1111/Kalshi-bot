@@ -86,6 +86,7 @@
     "inventory:coverage-board": "bun tools/bake-inventory-coverage-board.ts",
     "inventory:coverage-ops": "bun tools/bake-inventory-coverage-board.ts -- --json-out=docs/artifacts/inventory-coverage-ops.json",
     "inventory:coverage-gate": "bun tools/bake-inventory-coverage-board.ts -- --min-linked-pct=15 --fail-on-quality",
+    "inventory:session-probe": "bun tools/inventory-session-probe-cli.ts",
     "ops:status": "bun tools/ops-cli.ts",
     "ops:map": "bun tools/ops-cli.ts --map",
     "partner:profile": "bun tools/partner-profile.ts",

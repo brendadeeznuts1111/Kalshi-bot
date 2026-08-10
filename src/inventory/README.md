@@ -13,6 +13,7 @@ path: [`docs/INVENTORY.md`](../../docs/INVENTORY.md).
 | `skin-events-store.ts` | Upsert events into `skin_events` (+ competition_id) |
 | `leagues.ts` | Durable `inventory_leagues` registry (survives id churn) |
 | `sync.ts` | Poll adapter inventory → events + leagues |
+| `session-plane-probe.ts` | Public vs gsid-gated plane probe (redacts secrets) |
 
 CLIs:
 
@@ -37,6 +38,8 @@ bun run inventory:leagues -- --report --notify    # force Telegram (TELEGRAM_*)
 bun run inventory:leagues -- --promote            # plan COMPETITIONS seeds
 bun run inventory:leagues -- --promote --apply    # write competitions.ts
 bun run inventory:leagues -- --backfill           # re-stamp competition_id
+bun run inventory:session-probe                   # public list vs gsid streamToken
+# PLIVE_GSID=… bun run inventory:session-probe    # optional bound session (never commit)
 # cron: INVENTORY_SYNC=1 → events + leagues + promote-report (no auto-apply)
 ```
 
