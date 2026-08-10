@@ -3,7 +3,7 @@
  * Partner inventory sync — ground-truth pipeline.
  *
  * REAL today:
- *  - stream-list-v2 → skin_events (detect new stream_ids)
+ *  - stream-list-v2 → skin_events (detect new inventory_ids)
  *  - optional soft enrich: Statscore booked-events list by name match → client_event_id
  *
  * NOT real yet (do not invent):
@@ -149,7 +149,7 @@ export async function runPartnerInventorySync(
       const update = db.query(`
         UPDATE skin_events
         SET client_event_id = $cid, last_updated = $ts
-        WHERE partner = $partner AND stream_id = $sid AND (client_event_id IS NULL OR client_event_id = '')
+        WHERE partner = $partner AND inventory_id = $iid AND (client_event_id IS NULL OR client_event_id = '')
       `);
       const ts = options.nowMs ?? Date.now();
       for (const row of upsert.inserted) {
@@ -159,7 +159,7 @@ export async function runPartnerInventorySync(
           $cid: cid,
           $ts: ts,
           $partner: row.partner,
-          $sid: row.streamId,
+          $iid: row.inventoryId,
         });
         row.clientEventId = cid;
         enriched++;

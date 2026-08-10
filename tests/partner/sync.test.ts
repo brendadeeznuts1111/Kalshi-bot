@@ -13,7 +13,7 @@ import {
 } from "../../src/partner/sync.ts";
 
 function live(
-  streamId: number,
+  inventoryId: number,
   sport: string,
   home: string,
   away: string,
@@ -22,10 +22,9 @@ function live(
     partner: "fantasy402",
     sport,
     league: "Test League",
-    eventId: String(streamId),
+    inventoryId: String(inventoryId),
     home,
     away,
-    streamId,
     feedId: 0,
     donbestId: null,
   };
@@ -105,7 +104,7 @@ describe("partner sync", () => {
 
     const row = db
       .query(
-        `SELECT client_event_id AS cid FROM skin_events WHERE stream_id = '1'`,
+        `SELECT client_event_id AS cid FROM skin_events WHERE inventory_id = '1'`,
       )
       .get() as { cid: string | null };
     expect(row.cid).toBe("999");

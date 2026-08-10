@@ -178,7 +178,7 @@ async function jobLiquidityPipeline(): Promise<void> {
 }
 
 /**
- * Partner inventory sync — stream-list → skin_events (new stream_id detection).
+ * Partner inventory sync — stream-list → skin_events (new inventory_id detection).
  * Opt-in: PARTNER_SYNC=1. Sport: PARTNER_SYNC_SPORT (default table_tennis).
  * Enrich: PARTNER_SYNC_ENRICH_BOOKED=1 (soft Statscore name match, no prices).
  */
@@ -236,7 +236,7 @@ async function jobPartnerSync(): Promise<void> {
     if (report.inserted > 0) {
       for (const line of report.newEvents.slice(0, 8)) {
         console.error(
-          `[cron:partner] + ${line.sport} · ${line.league} · ${line.home} vs ${line.away} · ${line.streamId}`,
+          `[cron:partner] + ${line.sport} · ${line.league} · ${line.home} vs ${line.away} · ${line.inventoryId}`,
         );
       }
     }

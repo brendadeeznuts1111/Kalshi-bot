@@ -2,7 +2,8 @@
 /**
  * Persist Buckeye / Fantasy402 stream inventory (stream-list-v2) into skin_events.
  *
- * One row per stream_id covers both plive and ezlive (shared Plive shell).
+ * One row per inventory_id covers both plive and ezlive (shared Plive shell).
+ * Wire field `stream_id` is mapped to interior `inventoryId` at parse.
  */
 import type { Database } from 'bun:sqlite';
 import {
@@ -91,7 +92,7 @@ export function resolveInventoryCompetitionId(input: {
 
 export type SkinEventRow = {
   partner: string;
-  streamId: string;
+  inventoryId: string;
   lsId: string | null;
   clientEventId: string | null;
   sport: string;
@@ -116,11 +117,11 @@ export type SkinEventUpsertResult = {
   seen: number;
 };
 
-export function listSkinStreamIds(db: Database, partner: string): Set<string> {
+export function listSkinInventoryIds(db: Database, partner: string): Set<string> {
   const rows = db
-    .query(`SELECT stream_id AS streamId FROM skin_events WHERE partner = $p`)
-    .all({ $p: partner }) as Array<{ streamId: string }>;
-  return new Set(rows.map(r => String(r.streamId)));
+    .query(`SELECT inventory_id AS inventoryId FROM skin_events WHERE partner = $p`)
+    .all({ $p: partner }) as Array<{ inventoryId: string }>;
+  return new Set(rows.map(r => String(r.inventoryId)));
 }
 
 export function liveEventToRow(
@@ -129,12 +130,12 @@ export function liveEventToRow(
   identity: InventoryIdentity,
   existing?: { firstSeen: number; status?: string }
 ): SkinEventRow {
-  const streamId = event.streamId != null ? String(event.streamId) : String(event.eventId || '');
+  const inventoryId = String(event.inventoryId ?? '').trim();
   const sport = normalizeInventorySport(event.sport);
   const league = event.league ?? '';
   return {
     partner: identity.partner,
-    streamId,
+    inventoryId,
     lsId: null,
     clientEventId: null,
     sport,
@@ -163,7 +164,7 @@ export type UpsertSkinLiveEventsOptions = {
 };
 
 /**
- * Upsert live inventory rows. Returns which stream_ids were newly inserted.
+ * Upsert live inventory rows. Returns which inventory_ids were newly inserted.
  * Stamps Buckeye / Fantasy402 / plive-shell by default.
  */
 export function upsertSkinLiveEvents(
@@ -175,15 +176,15 @@ export function upsertSkinLiveEvents(
   const identity = options.identity ?? buckeyeInventoryIdentity();
   const insert = db.query(`
     INSERT INTO skin_events (
-      partner, stream_id, ls_id, client_event_id, sport, league, home, away,
+      partner, inventory_id, ls_id, client_event_id, sport, league, home, away,
       feed_id, start_time, status, first_seen, last_updated,
       skin_id, book_id, inventory_live_product, competition_id
     ) VALUES (
-      $partner, $stream_id, $ls_id, $client_event_id, $sport, $league, $home, $away,
+      $partner, $inventory_id, $ls_id, $client_event_id, $sport, $league, $home, $away,
       $feed_id, $start_time, $status, $first_seen, $last_updated,
       $skin_id, $book_id, $inventory_live_product, $competition_id
     )
-    ON CONFLICT(partner, stream_id) DO UPDATE SET
+    ON CONFLICT(partner, inventory_id) DO UPDATE SET
       sport = excluded.sport,
       league = excluded.league,
       home = excluded.home,
@@ -203,7 +204,7 @@ export function upsertSkinLiveEvents(
   const getSet = (partner: string) => {
     let s = partnerSets.get(partner);
     if (!s) {
-      s = listSkinStreamIds(db, partner);
+      s = listSkinInventoryIds(db, partner);
       partnerSets.set(partner, s);
     }
     return s;
@@ -211,16 +212,16 @@ export function upsertSkinLiveEvents(
 
   for (const event of events) {
     const set = getSet(identity.partner);
-    const streamId = event.streamId != null ? String(event.streamId) : String(event.eventId || '');
-    if (!streamId) continue;
-    const isNew = !set.has(streamId);
+    const inventoryId = String(event.inventoryId ?? '').trim();
+    if (!inventoryId) continue;
+    const isNew = !set.has(inventoryId);
     const row = liveEventToRow(event, nowMs, identity, {
       firstSeen: nowMs,
       status: 'unknown',
     });
     insert.run({
       $partner: row.partner,
-      $stream_id: row.streamId,
+      $inventory_id: row.inventoryId,
       $ls_id: row.lsId,
       $client_event_id: row.clientEventId,
       $sport: row.sport,
@@ -238,7 +239,7 @@ export function upsertSkinLiveEvents(
       $competition_id: row.competitionId,
     });
     if (isNew) {
-      set.add(streamId);
+      set.add(inventoryId);
       inserted.push(row);
     } else {
       updated.push(row);
@@ -278,7 +279,7 @@ export function formatSkinEventLine(row: SkinEventRow): string {
     .filter(Boolean)
     .join(' ');
   const suffix = idBits ? ` · ${idBits}` : '';
-  return `${row.sport} · ${row.league || '—'} · ${matchup} · stream=${row.streamId}${suffix}`;
+  return `${row.sport} · ${row.league || '—'} · ${matchup} · inv=${row.inventoryId}${suffix}`;
 }
 
 /**

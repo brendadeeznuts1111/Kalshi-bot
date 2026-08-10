@@ -130,7 +130,8 @@ Adapter methods:
 
 | ID                | Source                              | Example use                                       |
 | ----------------- | ----------------------------------- | ------------------------------------------------- |
-| `stream_id`       | stream-list-v2                      | Video / stream inventory (`InventoryEventRef`)    |
+| `stream_id` (wire) | stream-list-v2                     | Provider JSON only → interior `inventoryId`       |
+| `inventoryId`     | parsed from `stream_id`             | Inventory plane (`InventoryEventRef` / `skin_events.inventory_id`) |
 | `feed_id`         | stream-list-v2                      | Often 0 or large int — not always client_event_id |
 | `client_event_id` / `eventId` | Statscore / widget `#!/event/…` / ticket | Odds + place-bet (`OddsEventRef`)        |
 | `statscore id`    | booked_events[].id                  | Internal Statscore event id                       |
@@ -139,7 +140,8 @@ Adapter methods:
 **Three planes** (code: [`src/domain/odds-selection.ts`](../src/domain/odds-selection.ts)):
 
 ```text
-Inventory  stream_id          (skin_events)
+Wire       stream_id          (stream-list-v2 JSON only)
+Inventory  inventoryId        (skin_events.inventory_id)
 Odds       eventId + period + marketType + selection   (Pandora OddsLine)
 Ticket     eventId + periodId + marketId + key         (componentBet TicketLeg)
 ```
@@ -289,13 +291,13 @@ tennis).
 | `table_tennis` | ~33         | Table Tennis  |
 
 `skin_events` table (created with event-store schema) stores
-**Buckeye-scoped** Fantasy402 stream inventory. One row per `stream_id` covers
+**Buckeye-scoped** Fantasy402 stream inventory. One row per `inventory_id` covers
 **both** PLive and EZLive capacity surfaces (shared Plive SportsWidgets shell)
-until a separate EZ feed is proven.
+until a separate EZ feed is proven. Wire `stream_id` maps to `inventory_id` at parse.
 
 | Column                       | Source                                                                              |
 | ---------------------------- | ----------------------------------------------------------------------------------- |
-| `partner` + `stream_id`      | UNIQUE key (detection key; partner=`fantasy402`)                                    |
+| `partner` + `inventory_id`   | UNIQUE key (detection key; partner=`fantasy402`; from wire `stream_id`)             |
 | `skin_id` / `book_id`        | stamped `buckeye` / `fantasy402`                                                    |
 | `inventory_live_product`     | feed owner shell = `plive` (ezlive reuses)                                          |
 | `competition_id`             | seeded CompetitionId from sport + league (null when unmapped)                       |
@@ -317,7 +319,7 @@ New rows print as `+ table_tennis · … · skin=buckeye book=fantasy402`. Optio
 Telegram: `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID`.
 
 ```text
-stream-list-v2  ──every 30s──▶  new stream_id?  ──▶  skin_events (buckeye) + notify
+stream-list-v2  ──every 30s──▶  new inventory_id?  ──▶  skin_events (buckeye) + notify
                                       │                 covers: plive + ezlive
                                       ▼ (optional, needs real auth)
                               get_pushes / booked-events / PlaceBet

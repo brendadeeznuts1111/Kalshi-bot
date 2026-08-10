@@ -108,10 +108,10 @@ export type PartnerLiveEvent = {
   partner: PartnerId;
   sport: string;
   league: string;
-  eventId: string;
+  /** Interior inventory key (from wire `stream_id`). Not odds/ticket eventId. */
+  inventoryId: string;
   home: string | null;
   away: string | null;
-  streamId: number | null;
   feedId: number | null;
   donbestId: string | null;
 };
