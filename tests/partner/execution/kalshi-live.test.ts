@@ -263,7 +263,9 @@ function setup(variant?: "inactive" | "partner" | "provider"): Database {
     skin: null,
     metaJson: JSON.stringify({
       partnerCode: "SPORTS",
-      skins: [{ name: isFantasy ? "ezlive" : "main", perBetMax: 5, maxWin: 20, active: true }],
+      liveProducts: [
+        { name: isFantasy ? "ezlive" : "main", perBetMax: 5, maxWin: 20, active: true },
+      ],
       ...(isFantasy ? { skinId: "buckeye", bookId: "fantasy402" } : {}),
     }),
   }, NOW_MS);

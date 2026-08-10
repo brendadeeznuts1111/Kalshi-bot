@@ -255,7 +255,7 @@ function authorizedDatabase(nowMs: number): Database {
     skin: null,
     metaJson: JSON.stringify({
       partnerCode: "SPORTS",
-      skins: [{ name: "main", perBetMax: 5, maxWin: 20, active: true }],
+      liveProducts: [{ name: "main", perBetMax: 5, maxWin: 20, active: true }],
     }),
   }, nowMs);
   const policy: AuthorizationPolicy = {
@@ -337,7 +337,7 @@ function fantasyDatabase(): Database {
       partnerCode: "SPORTS",
       skinId: "buckeye",
       bookId: "fantasy402",
-      skins: [{ name: "ezlive", perBetMax: 5, maxWin: 20, active: true }],
+      liveProducts: [{ name: "ezlive", perBetMax: 5, maxWin: 20, active: true }],
     }),
   });
   return db;

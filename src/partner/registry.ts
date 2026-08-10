@@ -63,7 +63,7 @@ export type BettingAccountRow = {
   currency: string;
   /**
    * Legacy SQLite column (nullable). Writers always stamp `null`;
-   * capacity lives in meta.liveProducts[]. Still dual-read for old rows.
+   * capacity lives in meta.liveProducts[] only (column ignored on read).
    */
   skin: number | null;
   /** Non-secret meta only (liveProducts, workingBalance, vaultId, skinId, bookId) */

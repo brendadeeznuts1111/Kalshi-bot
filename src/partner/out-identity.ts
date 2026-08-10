@@ -172,8 +172,9 @@ function rowToCapacity(row: RawCapacityRow): LiveProductCapacity | null {
 }
 
 /**
- * Parse capacity rows from meta: prefer `liveProducts`, dual-read legacy `skins`.
- * Falls back to column skin + maxStake/maxWin when both arrays empty.
+ * Parse capacity rows from meta.liveProducts only.
+ * Falls back to maxStake/maxWin + defaultLiveProduct (or "2") when empty.
+ * Legacy meta.skins / defaultSkin / betting_accounts.skin are ignored.
  */
 export function parseCapacityFromMeta(input: {
   maxStake: number;
@@ -186,19 +187,14 @@ export function parseCapacityFromMeta(input: {
 
   const meta = input.meta;
   const fromLive = Array.isArray(meta.liveProducts) ? (meta.liveProducts as RawCapacityRow[]) : [];
-  const fromSkins = Array.isArray(meta.skins) ? (meta.skins as RawCapacityRow[]) : [];
-  const source = fromLive.length > 0 ? fromLive : fromSkins;
-
-  const parsed = source.map(rowToCapacity).filter((c): c is LiveProductCapacity => c != null);
+  const parsed = fromLive.map(rowToCapacity).filter((c): c is LiveProductCapacity => c != null);
 
   if (parsed.length > 0) {
     return parsed.filter(c => c.active);
   }
 
   const defaultName =
-    (typeof meta.defaultLiveProduct === 'string' && meta.defaultLiveProduct.trim()) ||
-    (typeof meta.defaultSkin === 'string' && meta.defaultSkin.trim()) ||
-    (input.skin != null && Number.isFinite(input.skin) ? String(input.skin) : '2');
+    (typeof meta.defaultLiveProduct === 'string' && meta.defaultLiveProduct.trim()) || '2';
 
   return [
     {
@@ -227,7 +223,7 @@ export function liveProductNames(identity: OutIdentity): string[] {
 /**
  * Stamp OutIdentity into meta_json.
  * Writes canonical `liveProducts` + `defaultLiveProduct` only.
- * Readers still dual-read legacy `meta.skins` / `defaultSkin`.
+ * Strips any legacy capacity keys on restamp.
  */
 export function stampOutMeta(identity: OutIdentity, baseMeta?: OutMeta): string {
   const meta: OutMeta = {
@@ -244,8 +240,8 @@ export function stampOutMeta(identity: OutIdentity, baseMeta?: OutMeta): string 
     })),
   };
   // Drop legacy capacity mirrors if re-stamping over old meta
-  delete meta.skins;
-  delete meta.defaultSkin;
+  delete (meta as Record<string, unknown>).skins;
+  delete (meta as Record<string, unknown>).defaultSkin;
   if (identity.bookId) meta.bookId = identity.bookId;
   if (identity.workingBalance != null) meta.workingBalance = identity.workingBalance;
   if (identity.vaultId) meta.vaultId = identity.vaultId;
@@ -289,7 +285,6 @@ export function parseOutIdentity(input: ParseOutIdentityInput): OutIdentity | nu
   const adapter = adapterBindingForSkin(skinId, input.provider);
   const defaultLiveProduct =
     (typeof meta.defaultLiveProduct === 'string' && meta.defaultLiveProduct.trim()) ||
-    (typeof meta.defaultSkin === 'string' && meta.defaultSkin.trim()) ||
     capacity[0]?.liveProduct ||
     '2';
 

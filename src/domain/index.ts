@@ -119,21 +119,15 @@ export {
 export {
   BINDING_STATUSES,
   LIVE_PRODUCT_SPORT_BINDINGS,
-  SKIN_SPORT_BINDINGS,
   listLiveProductSportBindings,
-  listSkinSportBindings,
   liveProductHasSportCoverage,
   liveProductsWithBindings,
-  skinHasSportCoverage,
-  skinsWithBindings,
   type BindingStatus,
   type LiveProductSportBinding,
-  type SkinSportBinding,
 } from './live-product-sport-bindings.ts';
 
 export {
   DEFAULT_COVERAGE_LIVE_PRODUCT,
-  DEFAULT_COVERAGE_SKIN,
   WIDGET_FAVORITES_SPORT_ID,
   resolveSport,
   type ResolveSportQuery,
@@ -188,7 +182,6 @@ export {
   BOOK_IDS,
   HOST_TO_BOOK,
   bookOffersLiveProduct,
-  bookOffersSkin,
   buildBookMatrixRows,
   formatBooksMatrixText,
   getBook,

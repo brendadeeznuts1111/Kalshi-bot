@@ -15,8 +15,6 @@ export const WIDGET_FAVORITES_SPORT_ID = 214;
 export type ResolveSportQuery = {
   /** Live product that owns the binding (plive / ezlive / …). */
   liveProduct: string;
-  /** @deprecated use liveProduct */
-  skin?: string;
   inventoryBucket?: string;
   apiSportId?: number;
   widgetSportId?: number;
@@ -35,7 +33,7 @@ function asLiveProduct(raw: string): LiveProductId | undefined {
 }
 
 export function resolveSport(query: ResolveSportQuery): ResolvedSport | undefined {
-  const liveProduct = asLiveProduct(query.liveProduct ?? query.skin ?? '');
+  const liveProduct = asLiveProduct(query.liveProduct);
   if (!liveProduct) return undefined;
 
   const rows = listLiveProductSportBindings(liveProduct);
@@ -71,6 +69,3 @@ export function resolveSport(query: ResolveSportQuery): ResolvedSport | undefine
 
 /** Default live product for Fantasy402/Buckeye compatibility lookups. */
 export const DEFAULT_COVERAGE_LIVE_PRODUCT: LiveProductId = 'plive';
-
-/** @deprecated use DEFAULT_COVERAGE_LIVE_PRODUCT */
-export const DEFAULT_COVERAGE_SKIN = DEFAULT_COVERAGE_LIVE_PRODUCT;

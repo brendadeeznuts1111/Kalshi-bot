@@ -64,7 +64,7 @@ id = "out-SPEN-1"
 partner_code = "SPEN"
 provider = "fantasy402"
 env_prefix = "FANTASY402_SPEN_1_"
-skins = [{ name = "ezlive", per_bet_max = 500, max_win = 2500, active = true }]
+live_products = [{ name = "ezlive", per_bet_max = 500, max_win = 2500, active = true }]
 `;
 
 describe("partner ticket ingest + finance totals", () => {

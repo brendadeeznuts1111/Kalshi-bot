@@ -87,8 +87,6 @@ const partnersTomlOutSchema = z
     vault_id: z.string().optional(),
     vaultId: z.string().optional(),
     status: z.enum(['active', 'inactive', 'pending']).or(z.string()).optional(),
-    /** @deprecated capacity rows — prefer live_products */
-    skins: z.array(partnersTomlSkinSchema).optional(),
     live_products: z.array(partnersTomlSkinSchema).optional(),
     liveProducts: z.array(partnersTomlSkinSchema).optional(),
   })
@@ -572,7 +570,7 @@ export function materializePartnersToml(doc: PartnersTomlDoc): {
       }
     }
 
-    const capacityRows = (o.live_products ?? o.liveProducts ?? o.skins ?? []) as PartnersTomlSkin[];
+    const capacityRows = (o.live_products ?? o.liveProducts ?? []) as PartnersTomlSkin[];
     const parsedCapacity = capacityRows
       .map(parseSkin)
       .filter((s): s is OutCapacityRow => s != null);
@@ -795,7 +793,7 @@ function outSig(a: BettingAccountRow): Record<string, unknown> {
     maxStake: a.maxStake,
     maxWin: a.maxWin,
     currency: a.currency,
-    liveProducts: meta.liveProducts ?? meta.skins ?? null,
+    liveProducts: meta.liveProducts ?? null,
     workingBalance: meta.workingBalance ?? null,
     vaultId: meta.vaultId ?? null,
     partnerCode: meta.partnerCode ?? null,
@@ -1010,11 +1008,7 @@ export function buildPartnersTomlFromRows(
     const partnerCode =
       String(rowMeta.partnerCode ?? codeByPartnerId.get(a.partnerId) ?? '').toUpperCase() ||
       undefined;
-    const capacityRaw = Array.isArray(rowMeta.liveProducts)
-      ? rowMeta.liveProducts
-      : Array.isArray(rowMeta.skins)
-        ? rowMeta.skins
-        : [];
+    const capacityRaw = Array.isArray(rowMeta.liveProducts) ? rowMeta.liveProducts : [];
     const liveProducts: PartnersTomlSkin[] = capacityRaw.flatMap(s => {
       if (!s || typeof s !== 'object') return [];
       const r = s as Record<string, unknown>;
@@ -1041,7 +1035,7 @@ export function buildPartnersTomlFromRows(
         typeof rowMeta.workingBalance === 'number' ? rowMeta.workingBalance : undefined,
       vault_id: typeof rowMeta.vaultId === 'string' ? rowMeta.vaultId : undefined,
       status: a.status,
-      // Prefer live_products in exported TOML; dual-read still accepts skins on parse
+      // Prefer live_products in exported TOML
       live_products:
         liveProducts.length > 0
           ? liveProducts

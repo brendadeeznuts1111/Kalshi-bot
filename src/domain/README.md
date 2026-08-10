@@ -133,13 +133,12 @@ Host is the gateway on account seed/upsert via **OutIdentity**
 
 1. `getSkinByHost(url)` → `SkinId` (unknown host → reject)
 2. `getBookByHost(url)` → desk `BookId` (optional stamp)
-3. Parse capacity from `meta.liveProducts` (dual-**read** legacy `meta.skins`
-   only when `liveProducts` is absent)
+3. Parse capacity from `meta.liveProducts` only (legacy `meta.skins` ignored)
 4. Assert capacity ⊆ `offeredLiveProducts` (+ `dark` / numeric Ultra wire)
 5. Derive `AdapterBinding` (`adapterId`: `fantasy-ultra` | `kalshi` |
    `unmapped`)
 6. Stamp `skinId`, `bookId`, `mapper`, `liveProducts`, `defaultLiveProduct`
-   only — writers **drop** legacy `meta.skins` / `defaultSkin` (no dual-write)
+   only — writers **drop** any legacy `meta.skins` / `defaultSkin`
 7. `getPartnerAdapter` switches on `adapterId === "fantasy-ultra"` (not partner
    string)
 
