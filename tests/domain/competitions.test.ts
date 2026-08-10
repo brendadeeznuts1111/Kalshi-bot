@@ -6,6 +6,7 @@ import {
   isCompetitionId,
   listCompetitions,
   listCompetitionsBySport,
+  matchLeagueKey,
   normalizeLeagueKey,
 } from '../../src/domain/competitions.ts';
 import { resolveCompetition } from '../../src/domain/resolve-competition.ts';
@@ -21,10 +22,32 @@ describe('competitions registry', () => {
     expect(listCompetitionsBySport('table_tennis').length).toBeGreaterThanOrEqual(9);
   });
 
-  test('normalizeLeagueKey + inferGenderFromLeagueLabel', () => {
+  test('normalizeLeagueKey + matchLeagueKey + inferGenderFromLeagueLabel', () => {
     expect(normalizeLeagueKey('  Setka   Cup ')).toBe('setka cup');
+    expect(matchLeagueKey('ATT. Togliatti')).toBe('att togliatti');
+    expect(matchLeagueKey('ATT Togliatti')).toBe('att togliatti');
     expect(inferGenderFromLeagueLabel('Masters. Poland. Women')).toBe('women');
     expect(inferGenderFromLeagueLabel('Setka Cup')).toBe('unknown');
+  });
+
+  test('resolveCompetition matches dotted vs spaced league labels', () => {
+    const hit = resolveCompetition({
+      liveProduct: 'plive',
+      sportId: 'tennis',
+      league: 'ATT. Togliatti',
+    });
+    expect(hit?.competitionId).toBe('tennis.att_togliatti');
+  });
+
+  test('resolveCompetition maps soccer sportId without false football bucket block', () => {
+    // Legacy callers passed sport as inventoryBucket ("soccer"); resolver must map to football.
+    const hit = resolveCompetition({
+      liveProduct: 'plive',
+      sportId: 'soccer',
+      inventoryBucket: 'soccer',
+      league: 'USA MPL',
+    });
+    expect(hit?.competitionId).toBe('soccer.usa_mpl');
   });
 
   test('resolveCompetition maps plive bucket+league', () => {

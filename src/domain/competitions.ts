@@ -604,9 +604,25 @@ export type CompetitionId = (typeof COMPETITIONS)[number]['id'];
 
 const byId = new Map<string, (typeof COMPETITIONS)[number]>(COMPETITIONS.map(c => [c.id, c]));
 
-/** Normalize league wire for matching (trim, collapse space, lower). */
+/**
+ * Normalize league wire for matching / storage keys (trim, collapse space, lower).
+ * Keeps punctuation so display-adjacent norms stay stable in inventory_leagues PK.
+ */
 export function normalizeLeagueKey(raw: string): string {
   return raw.trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+/**
+ * Loose match form for resolve / promote: dots & underscores → spaces.
+ * `"ATT. Togliatti"` and `"ATT Togliatti"` both → `"att togliatti"`.
+ */
+export function matchLeagueKey(raw: string): string {
+  return raw
+    .trim()
+    .toLowerCase()
+    .replace(/[._]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 /** Infer gender from feed league label (. Women / Women suffix). */

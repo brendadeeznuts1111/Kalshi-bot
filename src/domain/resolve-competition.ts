@@ -7,7 +7,7 @@
 
 import {
   COMPETITIONS,
-  normalizeLeagueKey,
+  matchLeagueKey,
   type CompetitionId,
   type CompetitionRecord,
 } from './competitions.ts';
@@ -48,8 +48,8 @@ function bucketForSport(liveProduct: LiveProductId, sportId: SportId): string | 
 
 function leagueMatches(comp: CompetitionRecord, leagueNorm: string): boolean {
   const plive = comp.providerMappings.plive;
-  if (plive && normalizeLeagueKey(plive.leagueKey) === leagueNorm) return true;
-  return comp.aliases.some(a => normalizeLeagueKey(a) === leagueNorm);
+  if (plive && matchLeagueKey(plive.leagueKey) === leagueNorm) return true;
+  return comp.aliases.some(a => matchLeagueKey(a) === leagueNorm);
 }
 
 /**
@@ -65,14 +65,28 @@ export function resolveCompetition(
   const mappingLiveProduct = mappingShellFor(liveProduct);
   if (!mappingLiveProduct) return undefined;
 
-  const leagueNorm = normalizeLeagueKey(query.league ?? '');
+  const leagueNorm = matchLeagueKey(query.league ?? '');
   if (!leagueNorm) return undefined;
 
   let inventoryBucket = query.inventoryBucket?.trim().toLowerCase() || undefined;
   let sportId: SportId | undefined =
     query.sportId && isSportId(query.sportId) ? query.sportId : undefined;
 
+  // sportId is not a stream bucket (soccer ≠ football). Map via bindings when needed.
+  if (inventoryBucket && isSportId(inventoryBucket) && !sportId) {
+    sportId = inventoryBucket;
+    inventoryBucket = bucketForSport(mappingLiveProduct, sportId) ?? inventoryBucket;
+  }
   if (!inventoryBucket && sportId) {
+    inventoryBucket = bucketForSport(mappingLiveProduct, sportId);
+  }
+  // Caller passed sport id as bucket (legacy bug) — replace with real stream bucket.
+  if (
+    inventoryBucket &&
+    sportId &&
+    inventoryBucket === sportId &&
+    bucketForSport(mappingLiveProduct, sportId)
+  ) {
     inventoryBucket = bucketForSport(mappingLiveProduct, sportId);
   }
 

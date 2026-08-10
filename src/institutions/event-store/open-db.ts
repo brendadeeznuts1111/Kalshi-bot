@@ -526,11 +526,11 @@ export function migrateSkinEventsCompetitionIds(db: Database): void {
     const liveRaw = (row.inv ?? '').trim() || 'plive';
     const liveProduct = isLiveProductId(liveRaw) ? liveRaw : 'plive';
     const sport = (row.sport ?? '').trim();
+    // sportId alone → resolveCompetition maps soccer → football bucket
     const hit = resolveCompetition({
       liveProduct,
       league: row.league ?? '',
       sportId: isSportId(sport) ? sport : undefined,
-      inventoryBucket: sport || undefined,
     });
     const next = hit?.competitionId ?? null;
     const prev = row.competitionId?.trim() || null;

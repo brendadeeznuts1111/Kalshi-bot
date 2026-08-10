@@ -186,6 +186,11 @@ Hand-seeded `COMPETITIONS` + `resolveCompetition` (ezlive uses **plive**
 mappings — shared shell). Unmapped leagues leave `competition_id` null on both
 `skin_events` and `inventory_leagues`.
 
+Resolve hygiene: `matchLeagueKey` treats dots/underscores like spaces
+(`ATT. Togliatti` ≡ `ATT Togliatti`). `sportId` is never used as the stream
+bucket (`soccer` → `football` via bindings). Re-stamp after seed changes:
+`bun run inventory:leagues -- --backfill`.
+
 ### Promote unmapped → COMPETITIONS
 
 Junk filters drop matchup blobs (`A - B`), person initials (`Vitaliy S`), and
