@@ -199,7 +199,8 @@ short structure-less labels. Survivors mint
 `{sportId}.{slug}` + plive `{inventoryBucket, leagueKey}`.
 
 ```bash
-# Plan (default dry-run)
+# Plan / report (default dry-run — shared with cron promote-report)
+bun run inventory:leagues -- --report
 bun run inventory:leagues -- --promote
 bun run inventory:leagues -- --promote --min-peak=2 --json
 
@@ -210,8 +211,10 @@ bun run inventory:leagues -- --promote --apply
 bun run inventory:leagues -- --backfill
 ```
 
-Promote is **operator-driven** (reviews seeds into source). Cron harvests
-events/leagues only; it does **not** auto-apply COMPETITIONS.
+Promote **apply** is **operator-driven** (reviews seeds into source). Cron
+harvests events/leagues and logs a **promote-report** summary when candidates
+exist; it does **not** auto-apply COMPETITIONS
+(`INVENTORY_PROMOTE_REPORT=0` to silence).
 
 ## ezlive capacity recipe (seat)
 
@@ -269,6 +272,7 @@ not a second inventory store. Details:
 | `inventory:sync -- --sport=all [--dry-run]` | Adapter poll → events + leagues |
 | `inventory:watch -- --sport=all [--once] [--dry-run]` | Public/adapter poll → events + leagues |
 | `inventory:leagues [--unmapped] [--harvest]` | List / harvest durable league registry |
+| `inventory:leagues -- --report` | Promote dry-report (cron-shared) |
 | `inventory:leagues -- --promote [--apply]` | Plan/apply COMPETITIONS seeds from unmapped |
 | `inventory:leagues -- --backfill` | Re-stamp competition_id on leagues + skin_events |
 | Cron `INVENTORY_SYNC=1` | Full board default (`sport=all`); events + leagues |

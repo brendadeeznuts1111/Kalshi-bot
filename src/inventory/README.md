@@ -25,10 +25,11 @@ bun run inventory:watch -- --loop --sport=all     # continuous full board
 bun run inventory:leagues                         # list durable leagues
 bun run inventory:leagues -- --unmapped           # competition_id null
 bun run inventory:leagues -- --harvest --sport=all
+bun run inventory:leagues -- --report             # promote dry-report (cron-shared)
 bun run inventory:leagues -- --promote            # plan COMPETITIONS seeds
 bun run inventory:leagues -- --promote --apply    # write competitions.ts
 bun run inventory:leagues -- --backfill           # re-stamp competition_id
-# cron: INVENTORY_SYNC=1 → sport=all by default (events + leagues; no auto-promote)
+# cron: INVENTORY_SYNC=1 → events + leagues + promote-report (no auto-apply)
 ```
 
 Report metrics: `seen` / `new` / `updated`, `sportHistogram`, `newBySport`,
