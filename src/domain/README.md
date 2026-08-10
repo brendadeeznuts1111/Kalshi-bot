@@ -124,8 +124,10 @@ bun run domain:books
 bun run domain:books -- --json
 bun run domain:sports            # live-product sport tiers + stream-list coverage
 bun run domain:sports -- --map   # offline static map
-# inventory events (not seat partner): bun run inventory:sync · inventory:watch
-# seat-ops: bun run ops:status
+# inventory (plive shell covers ezlive — not seat partner):
+#   inventory:sync · inventory:watch · inventory:leagues
+# ezlive playbook: docs/INVENTORY.md
+# seat-ops: bun run ops:status · partner:capacity
 ```
 
 ## Unknown host

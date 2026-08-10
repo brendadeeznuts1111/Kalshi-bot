@@ -13,14 +13,16 @@ seat-capital service is the only writer.
 Seat-ops status: `bun run ops:status` · `bun run ops:status -- --json`  
 Skin matrix: `bun run domain:skins` · Book matrix: `bun run domain:books`  
 Host discover: `bun run domain:host-discover` · Sports map: `bun run domain:sports`  
-Event inventory (plive/ezlive shell → skin_events):
-`bun run inventory:watch` · `bun run inventory:sync` · playbook
-[`INVENTORY.md`](INVENTORY.md)  
+Event inventory (plive/ezlive **shared** shell → `skin_events` +
+`inventory_leagues` — **not** dual event rows):
+`bun run inventory:watch` · `bun run inventory:sync` ·
+`bun run inventory:leagues` · playbook [`INVENTORY.md`](INVENTORY.md)
+(operator checklist + ezlive capacity recipe)
 
-
-Competitions (Plive league → canonical id):
+Competitions (Plive league → canonical id; ezlive reuses plive mappings):
 [`src/domain/competitions.ts`](../src/domain/competitions.ts) ·
-`resolveCompetition`  
+`resolveCompetition` · promote:
+`bun run inventory:leagues -- --promote`  
 Expansion map: `bun run ops:map` ·
 [`PARTNER-EXECUTION-EXPANSION.md`](PARTNER-EXECUTION-EXPANSION.md) Code map:
 [`src/partner/architecture.ts`](../src/partner/architecture.ts) (seat-ops layers) ·
@@ -271,8 +273,9 @@ bun run serve
 | `domain:skins` / `domain:books`                       | Desk matrix (hosts → skin / book)                                     |
 | `domain:host-discover`                                | Suggest SkinId from host (never auto-maps)                            |
 | `domain:sports`                                       | Desk live-product sport map + stream-list coverage (not seat partner) |
-| `inventory:sync` / `inventory:watch`                  | Coverage inventory events → skin_events (plive/ezlive shell)          |
-| `partner:toml`                                        | Partner + Accounts (Bun.TOML config seed/export)                      |
+| `inventory:sync` / `inventory:watch`                  | Coverage events + leagues → skin_events (plive shell; covers ezlive)  |
+| `inventory:leagues`                                   | Durable leagues list / harvest / promote / backfill ([`INVENTORY.md`](INVENTORY.md)) |
+| `partner:toml`                                        | Partner + Accounts (Bun.TOML config seed/export); ezlive capacity rows |
 | `partner:health`                                      | Registry + env + risk + ledger freshness                              |
 | `partner:desk-smoke`                                  | Per-out secret readiness + optional signed `login()`                  |
 | `partner:dashboard`                                   | Static HTML board + `state.json` (no Vite)                            |

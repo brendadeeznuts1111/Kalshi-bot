@@ -2,6 +2,11 @@
 
 Coverage catalog for live-product stream inventory (**not** seat partner).
 
+**ezlive:** same SportsWidgets stream shell as plive — one `skin_events` row
+per `(book_id, inventory_id)`; `coversLiveProducts` lists both when endpoints
+exist. Seat capacity for ezlive is separate (`partner:toml`). Full operator
+path: [`docs/INVENTORY.md`](../../docs/INVENTORY.md).
+
 | Module | Role |
 | ------ | ---- |
 | `sports-inventory.ts` | Parse / fetch stream-list-v2 sports + league counts |
@@ -23,7 +28,7 @@ bun run inventory:leagues -- --harvest --sport=all
 bun run inventory:leagues -- --promote            # plan COMPETITIONS seeds
 bun run inventory:leagues -- --promote --apply    # write competitions.ts
 bun run inventory:leagues -- --backfill           # re-stamp competition_id
-# cron: INVENTORY_SYNC=1 → sport=all by default
+# cron: INVENTORY_SYNC=1 → sport=all by default (events + leagues; no auto-promote)
 ```
 
 Report metrics: `seen` / `new` / `updated`, `sportHistogram`, `newBySport`,
