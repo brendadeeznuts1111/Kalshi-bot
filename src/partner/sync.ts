@@ -21,6 +21,7 @@ import {
   buckeyeInventoryIdentity,
   filterLiveEventsBySport,
   formatSkinEventLine,
+  normalizeSkinEventsSports,
   upsertSkinLiveEvents,
   type InventoryIdentity,
   type SkinEventRow,
@@ -123,6 +124,7 @@ export async function runPartnerInventorySync(
   }
 
   const identity = options.identity ?? buckeyeInventoryIdentity();
+  normalizeSkinEventsSports(db);
   const upsert: SkinEventUpsertResult = upsertSkinLiveEvents(db, events, {
     nowMs: options.nowMs,
     identity,

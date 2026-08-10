@@ -1,9 +1,11 @@
 #!/usr/bin/env bun
 /**
- * Poll Fantasy402 stream-list inventory into skin_events (Buckeye-scoped).
+ * Poll Plive shell stream-list into skin_events (Buckeye-scoped).
  * One inventory feed covers plive + ezlive (shared Plive shell).
  *
- * Env: FANTASY402_BEARER_TOKEN, FANTASY402_CUSTOMER_ID, FANTASY402_AGENT_ID, FANTASY402_PASSWORD
+ * Inventory is **public** (widget origin/referer) — Fantasy402 login env is optional.
+ * Optional env for session warm: FANTASY402_BEARER_TOKEN, FANTASY402_CUSTOMER_ID,
+ * FANTASY402_AGENT_ID, FANTASY402_PASSWORD
  *
  * Usage:
  *   bun run partner:watch-events
@@ -17,15 +19,18 @@
 // @see https://bun.com/docs/api/spawn
 import { openEventStore } from '../src/institutions/event-store/open-db.ts';
 import { DEFAULT_EVENT_STORE_DB } from '../src/institutions/event-store/paths.ts';
-import { getFantasySessionAdapter, requireFantasy402ProfileFromEnv } from '../src/partner/index.ts';
+import { getFantasySessionAdapter, loadFantasy402ProfileFromEnv } from '../src/partner/index.ts';
 import {
+  fetchPublicPliveStreamEvents,
   filterLiveEventsBySport,
   formatSkinEventLine,
   liveProductsCoveredByInventory,
+  normalizeSkinEventsSports,
   resolveWatchInventoryIdentity,
   upsertSkinLiveEvents,
   type InventoryIdentity,
 } from '../src/partner/skin-events-store.ts';
+import type { PartnerLiveEvent } from '../src/partner/types.ts';
 
 function argValue(name: string): string | undefined {
   const hit = process.argv.find(a => a.startsWith(`--${name}=`));
@@ -56,41 +61,53 @@ async function maybeNotifyTelegram(lines: string[]): Promise<void> {
   }
 }
 
+function resolveFetchSport(sportArg: string): string {
+  if (sportArg === 'all') return 'all';
+  const norm = sportArg.replace(/\s+/g, '_').toLowerCase();
+  if (norm === 'table_tennis' || sportArg.toLowerCase() === 'table tennis') {
+    return 'table_tennis';
+  }
+  if (norm === 'tennis') return 'tennis';
+  return sportArg;
+}
+
+async function loadInventoryEvents(sport: string): Promise<{
+  events: PartnerLiveEvent[];
+  source: 'adapter' | 'public-stream-list';
+}> {
+  const fetchSport = resolveFetchSport(sport);
+  const profile = loadFantasy402ProfileFromEnv();
+  if (profile) {
+    const adapter = getFantasySessionAdapter(profile, { warmSession: false });
+    try {
+      await adapter.login();
+    } catch {
+      // stream-list is public; login warm is best-effort
+    }
+    const events = await adapter.fetchEvents({
+      sport: fetchSport === 'all' ? 'all' : fetchSport,
+    });
+    return { events, source: 'adapter' };
+  }
+  const events = await fetchPublicPliveStreamEvents({
+    sport: fetchSport === 'all' ? 'all' : fetchSport,
+  });
+  return { events, source: 'public-stream-list' };
+}
+
 async function pollOnce(options: {
   sport: string;
   json: boolean;
   identity: InventoryIdentity;
 }): Promise<{ newCount: number; seen: number }> {
-  const profile = requireFantasy402ProfileFromEnv();
-  const adapter = getFantasySessionAdapter(profile, { warmSession: false });
-  // Login optional for stream-list but keeps session consistent
-  try {
-    await adapter.login();
-  } catch {
-    // stream-list often works without login; continue
-  }
-
-  // Fetch by bucket when sport is table_tennis / tennis; else all then filter
-  const sportArg = options.sport;
-  const fetchSport =
-    sportArg === 'all'
-      ? 'all'
-      : sportArg.replace(/\s+/g, '_').toLowerCase() === 'table_tennis' ||
-          sportArg.toLowerCase() === 'table tennis'
-        ? 'table_tennis'
-        : sportArg.replace(/\s+/g, '_').toLowerCase() === 'tennis'
-          ? 'tennis'
-          : sportArg;
-
-  let events = await adapter.fetchEvents({
-    sport: fetchSport === 'all' ? 'all' : fetchSport,
-  });
-  // When API filter is all, still allow client filter
+  const loaded = await loadInventoryEvents(options.sport);
+  let events = loaded.events;
   if (options.sport !== 'all') {
     events = filterLiveEventsBySport(events, options.sport);
   }
 
   const db = openEventStore({ dbPath: DEFAULT_EVENT_STORE_DB });
+  normalizeSkinEventsSports(db);
   const result = upsertSkinLiveEvents(db, events, { identity: options.identity });
   const covers = liveProductsCoveredByInventory(options.identity.skinId);
 
@@ -104,6 +121,7 @@ async function pollOnce(options: {
           bookId: options.identity.bookId,
           inventoryLiveProduct: options.identity.inventoryLiveProduct,
           coversLiveProducts: covers,
+          source: loaded.source,
           seen: result.seen,
           inserted: result.inserted.length,
           updated: result.updated.length,
@@ -126,8 +144,8 @@ async function pollOnce(options: {
   } else {
     console.log(
       `partner:watch-events skin=${options.identity.skinId} book=${options.identity.bookId} ` +
-        `covers=${covers.join('+')} sport=${options.sport} seen=${result.seen} ` +
-        `new=${result.inserted.length} updated=${result.updated.length}`
+        `source=${loaded.source} covers=${covers.join('+')} sport=${options.sport} ` +
+        `seen=${result.seen} new=${result.inserted.length} updated=${result.updated.length}`
     );
     for (const line of newLines) {
       console.log(`  + ${line}`);

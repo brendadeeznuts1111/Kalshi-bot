@@ -16,6 +16,8 @@ import {
   type SkinId,
 } from '../domain/index.ts';
 import { getSkin } from '../domain/skins.ts';
+import { parseStreamList } from './fantasy-ultra/parse.ts';
+import { FANTASY_ULTRA_DEFAULTS } from './fantasy-ultra/types.ts';
 import type { PartnerLiveEvent } from './types.ts';
 
 /** Default inventory identity for Fantasy402 stream-list under Buckeye. */
@@ -242,6 +244,48 @@ export function formatSkinEventLine(row: SkinEventRow): string {
     .join(' ');
   const suffix = idBits ? ` · ${idBits}` : '';
   return `${row.sport} · ${row.league || '—'} · ${matchup} · stream=${row.streamId}${suffix}`;
+}
+
+/**
+ * Public Plive shell stream-list → PartnerLiveEvent[] (no Fantasy402 login).
+ * Covers Buckeye plive + ezlive inventory.
+ */
+export async function fetchPublicPliveStreamEvents(
+  options: { sport?: string; fetchImpl?: typeof fetch } = {}
+): Promise<PartnerLiveEvent[]> {
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const res = await fetchImpl(FANTASY_ULTRA_DEFAULTS.streamListUrl, {
+    headers: {
+      accept: 'application/json, text/plain, */*',
+      origin: FANTASY_ULTRA_DEFAULTS.streamOrigin,
+      referer: FANTASY_ULTRA_DEFAULTS.streamReferer,
+    },
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(
+      `skin_events: stream-list HTTP ${res.status}${text ? ` — ${text.slice(0, 200)}` : ''}`
+    );
+  }
+  const json: unknown = await res.json();
+  return parseStreamList(json, { sport: options.sport ?? 'all' });
+}
+
+/** Rewrite skin_events.sport toward canonical ids when resolvable. */
+export function normalizeSkinEventsSports(db: Database): number {
+  const rows = db.query(`SELECT rowid AS rid, sport FROM skin_events`).all() as Array<{
+    rid: number;
+    sport: string;
+  }>;
+  const upd = db.query(`UPDATE skin_events SET sport = $s WHERE rowid = $r`);
+  let n = 0;
+  for (const row of rows) {
+    const next = normalizeInventorySport(row.sport ?? '');
+    if (!next || next === row.sport) continue;
+    upd.run({ $s: next, $r: row.rid });
+    n += 1;
+  }
+  return n;
 }
 
 /** Resolve watch-CLI skin/book flags (Buckeye / Fantasy402 only for this tool). */
