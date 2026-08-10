@@ -1,7 +1,8 @@
 # Partner domain architecture (moved)
 
 **Canonical seat-ops doc:** [`SEAT-OPS.md`](SEAT-OPS.md)  
-**Fantasy Ultra + inventory:** [`FANTASY-ULTRA.md`](FANTASY-ULTRA.md)
+**Fantasy Ultra + inventory:** [`FANTASY-ULTRA.md`](FANTASY-ULTRA.md) ·
+[`INVENTORY.md`](INVENTORY.md)
 
 Seat-ops (financial partner → outs → finance) and desk/inventory pointers live
 there. This stub remains so old links keep resolving.

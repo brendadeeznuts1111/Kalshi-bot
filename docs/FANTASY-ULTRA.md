@@ -8,7 +8,8 @@ Book adapter and coverage inventory for a **PPH / Fantasy402** desk (skin
 >   [`src/domain/`](../src/domain/README.md)
 > - **Inventory** — stream-list → `skin_events` in
 >   [`src/inventory/`](../src/inventory/) · CLIs `domain:sports` ·
->   `inventory:sync` · `inventory:watch`
+>   `inventory:sync` · `inventory:watch` · playbook
+>   [`INVENTORY.md`](INVENTORY.md) (full board + **ezlive** shell recipe)
 > - **Seat** — outs / capacity / execution still under `src/partner/`
 >
 > **Skins** (white-labels): `buckeye`, `ace`, `metallic`, `sts`, `1bv`,

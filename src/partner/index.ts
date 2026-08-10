@@ -72,10 +72,12 @@ export {
 export { FANTASY_ULTRA_DEFAULTS, type FantasyUltraCredentials } from './fantasy-ultra/types.ts';
 
 export {
+  formatSportHistogram,
   formatSyncReport,
   matchBookedOddsEventId,
   planInventoryUpsert,
   runInventorySync,
+  sportHistogramFromEvents,
   type InventorySyncOptions,
   type InventorySyncReport,
 } from '../inventory/sync.ts';

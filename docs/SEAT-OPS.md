@@ -14,7 +14,9 @@ Seat-ops status: `bun run ops:status` · `bun run ops:status -- --json`
 Skin matrix: `bun run domain:skins` · Book matrix: `bun run domain:books`  
 Host discover: `bun run domain:host-discover` · Sports map: `bun run domain:sports`  
 Event inventory (plive/ezlive shell → skin_events):
-`bun run inventory:watch` · `bun run inventory:sync`  
+`bun run inventory:watch` · `bun run inventory:sync` · playbook
+[`INVENTORY.md`](INVENTORY.md)  
+
 
 Competitions (Plive league → canonical id):
 [`src/domain/competitions.ts`](../src/domain/competitions.ts) ·
