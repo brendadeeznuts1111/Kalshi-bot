@@ -206,9 +206,16 @@ export const SKINS = [
     aliases: ['magnum'] as const,
     mapper: {
       kind: 'unmapped',
-      note: 'Hosts declared; live-product coverage not proven yet',
+      note: 'Hosts + fingerprints 2026-08-09 (playersVip / playersvip S3); products_unknown_as_of=2026-08-09',
     },
-    fingerprints: { endpoints: [] as const, assets: [] as const },
+    // Live probe: shared playersVip shell + playersvip.s3.amazonaws.com logos (DNSMadeEasy NS).
+    fingerprints: {
+      endpoints: ['/playersVip/'] as const,
+      assets: ['playersvip.s3.amazonaws.com', 'playersVip/css/custom.css', 'jquery-1.11.2'] as const,
+      infra: {
+        nsTokens: ['dnsmadeeasy.com'] as const,
+      },
+    },
   },
 ] as const satisfies readonly SkinRecord[];
 

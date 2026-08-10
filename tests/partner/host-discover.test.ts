@@ -209,6 +209,34 @@ describe('host-discover', () => {
     expect(getSkinByHost('www.action92.com')).toBeUndefined();
   });
 
+  test('Magnum playersVip + S3 logos → magnum for review', () => {
+    const report = scoreHostDiscovery({
+      url: 'https://mirror-mag.example/',
+      host: 'mirror-mag.example',
+      finalUrl: 'https://mirror-mag.example/',
+      status: 200,
+      headers: {},
+      body: `<html><title>ProbooknycCom</title>
+        <script src="/playersVip/js/jquery.min.js"></script>
+        <link href="/playersVip/css/custom.css?v=1" rel="stylesheet"/>
+        <img src="https://playersvip.s3.amazonaws.com/logos/logo_mirror.png"/>
+        <script src="/js/jquery-1.11.2.min.js"></script>
+        </html>`,
+      storedUrls: [
+        'https://mirror-mag.example/playersVip/css/custom.css',
+        'https://playersvip.s3.amazonaws.com/logos/logo_mirror.png',
+      ],
+      dns: {
+        cname: [],
+        ns: ['ns10.dnsmadeeasy.com', 'ns11.dnsmadeeasy.com'],
+        txt: [],
+        mx: [],
+      },
+    });
+    expect(report.suggestedSkinId).toBe('magnum');
+    expect(report.confidence).toBeGreaterThanOrEqual(0.4);
+  });
+
   test('LV Action templates/53 + sportsbook.php → lvaction for review', () => {
     const report = scoreHostDiscovery({
       url: 'https://mirror-lva.example/',
