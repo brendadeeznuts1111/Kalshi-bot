@@ -31,15 +31,6 @@ export type OpsLayer = {
   components: OpsComponent[];
 };
 
-/** @deprecated Use OpsLayerId */
-export type DomainLayerId = OpsLayerId;
-/** @deprecated Use OpsMaturity */
-export type DomainMaturity = OpsMaturity;
-/** @deprecated Use OpsComponent */
-export type DomainComponent = OpsComponent;
-/** @deprecated Use OpsLayer */
-export type DomainLayer = OpsLayer;
-
 /** Naming conventions (do not invent alternate forms). */
 export const PARTNER_NAMING = {
   partnerCode: 'UPPER short code',
@@ -320,9 +311,6 @@ export type OpsStatusReport = {
   };
 };
 
-/** @deprecated Use OpsStatusReport */
-export type DomainStatusReport = OpsStatusReport;
-
 export function buildOpsStatusReport(nowMs = Date.now()): OpsStatusReport {
   const layers = OPS_LAYERS.map(layer => {
     let built = 0;
@@ -396,11 +384,6 @@ export function buildOpsStatusReport(nowMs = Date.now()): OpsStatusReport {
   };
 }
 
-/** @deprecated Use {@link buildOpsStatusReport} */
-export function buildDomainStatusReport(nowMs = Date.now()): OpsStatusReport {
-  return buildOpsStatusReport(nowMs);
-}
-
 export function formatOpsStatusText(report: OpsStatusReport): string {
   const lines: string[] = [];
   lines.push(
@@ -425,11 +408,6 @@ export function formatOpsStatusText(report: OpsStatusReport): string {
   lines.push(`  vault: ${PARTNER_NAMING.vaultIdExample}`);
   lines.push(`  liquidity: ${PARTNER_NAMING.liquidityKeyExample}`);
   return lines.join('\n');
-}
-
-/** @deprecated Use {@link formatOpsStatusText} */
-export function formatDomainStatusText(report: OpsStatusReport): string {
-  return formatOpsStatusText(report);
 }
 
 /**
