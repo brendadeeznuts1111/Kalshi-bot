@@ -1,11 +1,11 @@
 export type {
+  AdapterId,
   FantasySessionAdapter,
   PartnerAccountStatus,
   PartnerBetGroup,
   PartnerBookedEvent,
   PartnerComponentBet,
   PartnerExecutionResult,
-  PartnerId,
   PartnerLimits,
   InventoryEvent,
   PartnerLiveUrlSet,
@@ -123,7 +123,6 @@ export {
   upsertBettingAccount,
   upsertPartner,
   type AdapterBinding,
-  type AdapterId,
   type BettingAccountRow,
   type LiveProductCapacity,
   type OutCapacity,
@@ -484,7 +483,7 @@ import type { PartnerAccountProfile } from './account-profile.ts';
 import { credentialsFromFantasyProfile } from './account-profile.ts';
 import { FantasyUltraAdapter } from './fantasy-ultra/adapter.ts';
 import { getSkinByHost, isSkinId, type SkinId } from '../domain/index.ts';
-import { adapterBindingForSkin, type AdapterId } from './out-identity.ts';
+import { adapterBindingForSkin, type AdapterId as MapperAdapterId } from './out-identity.ts';
 import type { FantasySessionAdapter, PartnerOrderAdapter } from './types.ts';
 
 /**
@@ -503,8 +502,8 @@ export function resolveProfileSkinId(account: PartnerAccountProfile): SkinId | u
   return undefined;
 }
 
-/** Resolve adapterId from profile skin mapper (HOST_TO_SKIN / SkinId), not fantasy402 brand. */
-export function resolveProfileAdapterId(account: PartnerAccountProfile): AdapterId {
+/** Resolve mapper adapterId from profile skin (HOST_TO_SKIN / SkinId), not fantasy402 brand. */
+export function resolveProfileAdapterId(account: PartnerAccountProfile): MapperAdapterId {
   if (account.adapterId) return account.adapterId;
   const skinId = resolveProfileSkinId(account);
   if (skinId) return adapterBindingForSkin(skinId).adapterId;

@@ -10,9 +10,9 @@
  *   out (FANTASY402_SPEN_1_*) → partner (FANTASY402_SPEN_*) → book (FANTASY402_*)
  */
 import { getSkinByHost, resolveDeskDomainFromEnv, type SkinId } from '../domain/index.ts';
-import type { AdapterId } from './out-identity.ts';
+import type { AdapterId as MapperAdapterId } from './out-identity.ts';
 import { adapterBindingForSkin, providerMirrorFromAdapter } from './out-identity.ts';
-import type { PartnerAccountStatus, PartnerId } from './types.ts';
+import type { AdapterId, PartnerAccountStatus } from './types.ts';
 import type { FantasyUltraCredentials } from './fantasy-ultra/types.ts';
 import { FANTASY_ULTRA_DEFAULTS } from './fantasy-ultra/types.ts';
 import { parseSkinWire } from './skins.ts';
@@ -27,16 +27,16 @@ import {
 export type PartnerAccountProfile = {
   id: string;
   /**
-   * @deprecated Legacy book env brand (`fantasy402`). Prefer `adapterId` + `skinId`.
+   * @deprecated Legacy adapter-surface token (`fantasy402`). Prefer `adapterId` + `skinId`.
    * Kept as bookEnvToken mirror for env resolution.
    */
-  partner: PartnerId;
+  partner: AdapterId;
   url: string;
   status: PartnerAccountStatus;
   /** White-label SkinId when resolved (host or alias). */
   skinId?: SkinId;
-  /** Adapter selection key (fantasy-ultra | kalshi | unmapped). */
-  adapterId?: AdapterId;
+  /** Mapper selection key (fantasy-ultra | kalshi | unmapped) — out-identity AdapterId. */
+  adapterId?: MapperAdapterId;
   /** Default live-product wire (same as meta.skin / defaultLiveProduct). */
   defaultLiveProduct?: string | number;
   meta: {

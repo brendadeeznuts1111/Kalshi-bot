@@ -2,7 +2,7 @@
  * In-memory Pandora eventCoefficients book.
  * Full snapshots replace; diffs patch the last snapshot then re-extract lines.
  */
-import type { PartnerLimits, PartnerMarket, PartnerId } from '../types.ts';
+import type { AdapterId, PartnerLimits, PartnerMarket } from '../types.ts';
 import {
   applyCoefficientDiff,
   eventIdFromCoefficientRoom,
@@ -101,7 +101,7 @@ export class CoefficientStore {
    * Match moneyline (`marketType` 3, period `m`) → PartnerMarket rows.
    */
   toPartnerMarkets(
-    partner: PartnerId = 'fantasy402',
+    partner: AdapterId = 'fantasy402',
     limits: PartnerLimits = DEFAULT_LIMITS,
   ): PartnerMarket[] {
     const out: PartnerMarket[] = [];
@@ -131,7 +131,7 @@ export class CoefficientStore {
 
   marketsForEvent(
     eventId: number | string,
-    partner: PartnerId = 'fantasy402',
+    partner: AdapterId = 'fantasy402',
     limits: PartnerLimits = DEFAULT_LIMITS,
   ): PartnerMarket[] {
     const id = typeof eventId === 'string' ? Number(eventId) : eventId;
