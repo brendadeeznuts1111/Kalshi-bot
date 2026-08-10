@@ -73,12 +73,24 @@ export function normalizeName(s: string): string {
     .trim();
 }
 
+/** Strip team/player noise common on stream-list wire. */
+export function stripCompetitorNoise(raw: string): string {
+  let s = String(raw ?? '').trim();
+  // trailing dash / emdash
+  s = s.replace(/[-–—]+$/g, '').trim();
+  // parenthetical country/role: (IND), (Women), (univ)
+  s = s.replace(/\([^)]*\)/g, ' ');
+  // common club/noise tokens
+  s = s.replace(
+    /\b(fc|cf|sc|ac|fk|sk|bk|afc|cfc|u19|u20|u21|u23|women|men|w|univ|pro|xi|cc)\b/gi,
+    ' '
+  );
+  return s.replace(/\s+/g, ' ').trim();
+}
+
 /** "LAST, FIRST" / trailing dash → tokens (len ≥ 3). */
 export function competitorNameTokens(raw: string): string[] {
-  let s = String(raw ?? '')
-    .trim()
-    .replace(/[-–—]+$/g, '')
-    .trim();
+  let s = stripCompetitorNoise(raw);
   if (!s) return [];
   if (s.includes(',')) {
     const [last, ...rest] = s.split(',').map(p => p.trim());
@@ -202,7 +214,8 @@ function leagueTokenBoost(
 
 /**
  * Score a catalog row against home/away (higher better). null = no match.
- * 100 full substring, 90 reordered names, 70 last-name tokens + league boost.
+ * 100 full substring, 90 reordered names, 80 first+last both sides,
+ * 70 last-name tokens + league boost, 65 last-name + strong league.
  */
 export function scoreBookedMatch(
   query: BookedMatchQuery,
@@ -213,8 +226,8 @@ export function scoreBookedMatch(
   if (!home || !away) return null;
   if (!bookedEntryMatchesSport(entry, query.sport)) return null;
 
-  const h = normalizeName(home);
-  const a = normalizeName(away);
+  const h = normalizeName(stripCompetitorNoise(home));
+  const a = normalizeName(stripCompetitorNoise(away));
   if (!h || !a) return null;
   const n = normalizeName(entry.name);
   const boost = leagueTokenBoost(query.league, entry);
@@ -229,15 +242,64 @@ export function scoreBookedMatch(
     if (n.includes(hRe) && n.includes(aRe)) return 90 + boost;
   }
 
+  // First + last on both sides (len≥3) present as tokens in catalog name
+  const nFoldTokens = new Set(
+    competitorNameTokens(entry.name).map(foldCompetitorToken)
+  );
+  if (hTokens.length >= 2 && aTokens.length >= 2) {
+    const hFirst = foldCompetitorToken(hTokens[0]!);
+    const hLast = foldCompetitorToken(hTokens[hTokens.length - 1]!);
+    const aFirst = foldCompetitorToken(aTokens[0]!);
+    const aLast = foldCompetitorToken(aTokens[aTokens.length - 1]!);
+    if (
+      hFirst.length >= 3 &&
+      aFirst.length >= 3 &&
+      hLast.length >= 3 &&
+      aLast.length >= 3 &&
+      nFoldTokens.has(hFirst) &&
+      nFoldTokens.has(hLast) &&
+      nFoldTokens.has(aFirst) &&
+      nFoldTokens.has(aLast)
+    ) {
+      return 80 + boost;
+    }
+  }
+
   const hLast = hTokens[hTokens.length - 1];
   const aLast = aTokens[aTokens.length - 1];
-  if (!hLast || !aLast || hLast.length < 4 || aLast.length < 4) return null;
-  const hFold = foldCompetitorToken(hLast);
-  const aFold = foldCompetitorToken(aLast);
+  // Single-token team names (Leon, Tabasco) — use full token as last
+  const hKey =
+    hLast && hLast.length >= 3
+      ? hLast
+      : hTokens[0] && hTokens[0].length >= 3
+        ? hTokens[0]
+        : h.length >= 3
+          ? h
+          : null;
+  const aKey =
+    aLast && aLast.length >= 3
+      ? aLast
+      : aTokens[0] && aTokens[0].length >= 3
+        ? aTokens[0]
+        : a.length >= 3
+          ? a
+          : null;
+  if (!hKey || !aKey) return null;
+  const hFold = foldCompetitorToken(hKey);
+  const aFold = foldCompetitorToken(aKey);
   if (hFold === aFold) return null;
-  const nTokens = competitorNameTokens(entry.name).map(foldCompetitorToken);
-  const set = new Set(nTokens);
-  if (set.has(hFold) && set.has(aFold)) return 70 + boost;
+  const set = nFoldTokens.size
+    ? nFoldTokens
+    : new Set(competitorNameTokens(entry.name).map(foldCompetitorToken));
+  // Also allow raw includes for short team names not split into tokens
+  const nHas = (tok: string) =>
+    set.has(tok) || (tok.length >= 4 && n.includes(tok));
+
+  if (nHas(hFold) && nHas(aFold)) {
+    // Strong league agreement can accept slightly shorter tokens
+    if (hFold.length >= 4 && aFold.length >= 4) return 70 + boost;
+    if (boost >= 10 && hFold.length >= 3 && aFold.length >= 3) return 65 + boost;
+  }
   return null;
 }
 
@@ -281,8 +343,8 @@ export function matchBookedOddsEventId(
   }
 
   // Ambiguous: two strong scores within 5 points → skip
-  if (bestId && second >= 70 && bestScore - second < 5) return null;
-  if (bestScore < 70) return null;
+  if (bestId && second >= 65 && bestScore - second < 5) return null;
+  if (bestScore < 65) return null;
   return bestId;
 }
 

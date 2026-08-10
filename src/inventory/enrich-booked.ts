@@ -97,7 +97,7 @@ export async function enrichBookedEvents(
     enrichOnly,
     enrichBooked: true,
     enrichBookedScope: options.enrichBookedScope ?? (enrichOnly ? 'unlinked' : 'board'),
-    enrichCatalogMax: options.enrichCatalogMax ?? 1200,
+    enrichCatalogMax: options.enrichCatalogMax ?? 2000,
     dryRun: options.dryRun === true,
     nowMs: options.nowMs,
   };

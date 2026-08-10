@@ -462,8 +462,8 @@ export async function runInventorySync(
         const { fetchPublicBookedCatalog, bookedCatalogToMatchList } =
           await import('./booked-catalog.ts');
         const pub = await fetchPublicBookedCatalog({
-          maxEvents: options.enrichCatalogMax ?? 1200,
-          maxPages: 25,
+          maxEvents: options.enrichCatalogMax ?? 2000,
+          maxPages: 40,
           sport: sportFilter,
         });
         const byId = new Map(

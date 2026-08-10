@@ -85,6 +85,7 @@ async function runOnce(options: {
   enrichBooked: boolean;
   enrichOnly: boolean;
   enrichBookedScope: ReturnType<typeof parseEnrichBookedScope>;
+  enrichCatalogMax?: number;
   json: boolean;
 }): Promise<void> {
   // enrich-only / dry-run can use public dummy profile
@@ -103,6 +104,7 @@ async function runOnce(options: {
     enrichBooked: options.enrichBooked || options.enrichOnly,
     enrichOnly: options.enrichOnly,
     enrichBookedScope: options.enrichBookedScope,
+    enrichCatalogMax: options.enrichCatalogMax,
     dryRun: options.dryRun,
   });
 
@@ -139,6 +141,7 @@ async function main(): Promise<void> {
   }
 
   const enrichOnly = hasFlag("enrich-only");
+  const catalogMaxRaw = argValue("enrich-catalog-max");
   const onceOpts = {
     dryRun,
     sport: argValue("sport") ?? (enrichOnly ? "all" : "table_tennis"),
@@ -147,6 +150,9 @@ async function main(): Promise<void> {
     enrichBookedScope: parseEnrichBookedScope(
       argValue("enrich-scope") ?? (enrichOnly ? "unlinked" : undefined),
     ),
+    enrichCatalogMax: catalogMaxRaw
+      ? Number(catalogMaxRaw) || undefined
+      : undefined,
     json,
   };
 
