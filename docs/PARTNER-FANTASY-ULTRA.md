@@ -130,11 +130,44 @@ Adapter methods:
 
 | ID                | Source                              | Example use                                       |
 | ----------------- | ----------------------------------- | ------------------------------------------------- |
-| `stream_id`       | stream-list-v2                      | Video / stream inventory                          |
+| `stream_id`       | stream-list-v2                      | Video / stream inventory (`InventoryEventRef`)    |
 | `feed_id`         | stream-list-v2                      | Often 0 or large int — not always client_event_id |
-| `client_event_id` | Statscore / widget hash `#!event/…` | booked-events lookup                              |
+| `client_event_id` / `eventId` | Statscore / widget `#!/event/…` / ticket | Odds + place-bet (`OddsEventRef`)        |
 | `statscore id`    | booked_events[].id                  | Internal Statscore event id                       |
 | `ls_id`           | get_pushes (when path known)        | Live score pushes                                 |
+
+**Two planes** (code: [`src/domain/odds-selection.ts`](../src/domain/odds-selection.ts)):
+
+```text
+Inventory  stream_id  ·············  (join later)  ········  Odds eventId
+                                                              │
+                                                    periodId + marketId + key
+                                                    (OddsSelection)
+```
+
+| Proven `marketId` | Label |
+| ----------------- | ----- |
+| `3` | moneyline |
+| `5` | total (approx) |
+| `6` | spread (approx) |
+
+Concrete ticket leg (Darin vs Plachy → Plachy ML):
+
+| Field | Value | Meaning |
+| ----- | ----- | ------- |
+| `eventId` | `196878741` | That match (`#!/event/196878741`) |
+| `periodId` | `m` | Full match |
+| `marketId` | `3` | Moneyline |
+| `key` | `2` | Away / team2 (Plachy) |
+
+```ts
+import { describeSelection, EXAMPLE_DARIN_PLACHY_SELECTION } from '../src/domain/index.ts';
+describeSelection(EXAMPLE_DARIN_PLACHY_SELECTION);
+// event=196878741 period=match market=moneyline side=2
+```
+
+DOM `set-to-max-{eventId}-m-{n}` is **not** a full selection (trailing `n` is
+ambiguous). Ticket / coefficient coords are SSOT.
 
 ### Bet ticket wire (captured place/open response)
 
