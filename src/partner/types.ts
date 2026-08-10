@@ -5,7 +5,12 @@
  * Place/limits stay stubbed until the bookmaker bet wire is mapped.
  */
 
-export type PartnerId = "fantasy402" | "kalshi" | (string & {});
+/**
+ * Adapter-surface token on inventory/book DTOs and order adapters.
+ * Not a seat partner (`betting_accounts.partner_id` / `OutIdentity.partnerId`).
+ * Distinct from out-identity mapper `AdapterId` (`fantasy-ultra` | `kalshi` | `unmapped`).
+ */
+export type AdapterId = "fantasy402" | "kalshi" | (string & {});
 
 export type PartnerAccountStatus = "active" | "inactive" | "pending";
 
@@ -105,7 +110,7 @@ export type PartnerBetGroup = {
 
 /** Normalized coverage-catalog row (stream inventory — not price odds). */
 export type InventoryEvent = {
-  partner: PartnerId;
+  partner: AdapterId;
   sport: string;
   league: string;
   /** Interior inventory key (from wire `stream_id`). Not odds/ticket eventId. */
@@ -121,7 +126,7 @@ export type InventoryEvent = {
  * Metadata + bet_status only — **no American prices** on this product.
  */
 export type PartnerBookedEvent = {
-  partner: PartnerId;
+  partner: AdapterId;
   /** Statscore internal id */
   statscoreId: number;
   /** Widget / odds event id (wire query client_event_id → interior oddsEventId) */
@@ -140,7 +145,7 @@ export type PartnerBookedEvent = {
 
 /** Priced market row — only when a real odds wire is mapped (not Statscore livescorepro). */
 export type PartnerMarket = {
-  partner: PartnerId;
+  partner: AdapterId;
   ticker: string;
   name: string;
   oddsEventId: string;
@@ -168,7 +173,7 @@ export type PartnerSportLeague = {
 };
 
 export interface PartnerOrderAdapter {
-  readonly partnerId: PartnerId;
+  readonly partnerId: AdapterId;
   /** Authenticate / refresh live session material. */
   login(): Promise<PartnerLiveUrlSet | void>;
   /** Coverage catalog (inventory rows), not a priced odds book. */

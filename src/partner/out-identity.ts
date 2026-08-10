@@ -27,7 +27,7 @@ export type AdapterId = 'fantasy-ultra' | 'kalshi' | 'unmapped';
 export type AdapterBinding = {
   adapterId: AdapterId;
   mapperKind: OutSkinMapperKind;
-  /** Env brand token only (FANTASY402) — not SkinId, not PartnerId. */
+  /** Env brand token only (FANTASY402) — not SkinId, not seat partnerId. */
   bookEnvToken: string;
 };
 
