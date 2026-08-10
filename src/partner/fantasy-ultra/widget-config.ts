@@ -25,10 +25,15 @@ export const FANTASY_WIDGET_CONFIG = {
   roundUSOddsDown: true,
   oddsDecimalPlaces: 3,
   useCustomWebSocket: true,
+  /** Default plive desk host. Public sportswidgets uses spandora (see pandora-hosts). */
   customWebSocketUrl: 'wss://pandora.ganchrow.com',
+  /** Alternate public shell host (same LINE_SET / protocol). */
+  spandoraWebSocketUrl: 'wss://spandora.ganchrow.com',
   playerUSEnabled: true,
   /** Soft limit: stream after wager within this window (seconds). */
   liveStreamLastWagerToleranceSec: 86_400,
+  /** mainapp isTableTennis — feed sport id on eventData board. */
+  feedSportTableTennis: 93,
 } as const;
 
 /**

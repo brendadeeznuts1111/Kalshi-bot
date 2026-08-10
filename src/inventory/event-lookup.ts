@@ -46,9 +46,18 @@ import {
   type PandoraBlockedSets,
 } from '../partner/fantasy-ultra/coefficients.ts';
 import {
+  pandoraMarketLabel,
+  describeCoefficientSelection,
+  formatSetCorrectScoreLineId,
+} from '../partner/fantasy-ultra/market-decode.ts';
+import {
   PANDORA_DEFAULT_SESSION,
   PandoraSocket,
 } from '../partner/fantasy-ultra/pandora-socket.ts';
+import type { PandoraHostId } from '../partner/fantasy-ultra/pandora-hosts.ts';
+import {
+  resolvePandoraHostId,
+} from '../partner/fantasy-ultra/pandora-hosts.ts';
 import { FANTASY_ULTRA_DEFAULTS } from '../partner/fantasy-ultra/types.ts';
 import type { PartnerMarket } from '../partner/types.ts';
 import { defaultBookedCatalogCachePath } from './booked-catalog-cache.ts';
@@ -168,6 +177,11 @@ export type EventLookupOptions = {
   skipDb?: boolean;
   skipCatalog?: boolean;
   skipPandora?: boolean;
+  /**
+   * Pandora edge: `pandora` (plive default) or `spandora` (public sportswidgets).
+   * Same LINE_SET / protocol.
+   */
+  pandoraHost?: PandoraHostId | string;
 };
 
 function competitors(ev: Record<string, unknown>): {
@@ -476,6 +490,7 @@ export async function probePandoraEvent(
   options: {
     seconds?: number;
     WebSocketImpl?: typeof WebSocket;
+    pandoraHost?: PandoraHostId | string;
   } = {}
 ): Promise<{
   subscribed: boolean;
@@ -498,9 +513,12 @@ export async function probePandoraEvent(
   let sportsPayload: unknown | null = null;
   let blockedRaw: unknown | null = null;
 
+  const host = resolvePandoraHostId(options.pandoraHost);
+
   await new Promise<void>(resolve => {
     const sock = new PandoraSocket({
       reconnect: false,
+      host,
       WebSocketImpl: options.WebSocketImpl,
       handlers: {
         onNamespaceConnect: () => {
@@ -620,14 +638,17 @@ export async function scanPandoraEventBoard(
   options: {
     seconds?: number;
     WebSocketImpl?: typeof WebSocket;
+    pandoraHost?: PandoraHostId | string;
   } = {}
 ): Promise<{
   scan: EventDataBoardScan | null;
   sportsNames: Map<string, string>;
   blocked: PandoraBlockedSets | null;
   seconds: number;
+  host: PandoraHostId;
 }> {
   const seconds = Math.min(Math.max(options.seconds ?? 10, 3), 45);
+  const host = resolvePandoraHostId(options.pandoraHost);
   let boardPayload: unknown | null = null;
   let sportsPayload: unknown | null = null;
   let blockedRaw: unknown | null = null;
@@ -635,6 +656,7 @@ export async function scanPandoraEventBoard(
   await new Promise<void>(resolve => {
     const sock = new PandoraSocket({
       reconnect: false,
+      host,
       WebSocketImpl: options.WebSocketImpl,
       handlers: {
         onNamespaceConnect: () => {
@@ -691,7 +713,7 @@ export async function scanPandoraEventBoard(
     ? scanEventDataBoard(boardPayload, { sportsNames, blocked })
     : null;
 
-  return { scan, sportsNames, blocked, seconds };
+  return { scan, sportsNames, blocked, seconds, host };
 }
 
 export function formatEventBoardScan(
@@ -840,10 +862,12 @@ export async function watchEventOdds(
   options: {
     seconds?: number;
     WebSocketImpl?: typeof WebSocket;
+    pandoraHost?: PandoraHostId | string;
     onUpdate?: (u: OddsWatchUpdate) => void;
   } = {}
 ): Promise<OddsWatchUpdate[]> {
   const seconds = Math.min(Math.max(options.seconds ?? 30, 5), 300);
+  const host = resolvePandoraHostId(options.pandoraHost);
   const store = new CoefficientStore();
   const history: OddsWatchUpdate[] = [];
   let prevLines: CoefficientLine[] = [];
@@ -905,6 +929,7 @@ export async function watchEventOdds(
   await new Promise<void>(resolve => {
     const sock = new PandoraSocket({
       reconnect: false,
+      host,
       WebSocketImpl: options.WebSocketImpl,
       handlers: {
         onNamespaceConnect: () => {
@@ -1064,6 +1089,7 @@ export async function lookupEvent(
       const p = await probePandoraEvent(Number(eventId), {
         seconds: pandoraSeconds,
         WebSocketImpl: options.WebSocketImpl,
+        pandoraHost: options.pandoraHost,
       });
       allLines = p.lines;
       // sport hint filled after stream/catalog known — see below after blocks
@@ -1168,7 +1194,17 @@ export async function lookupEvent(
   });
 
   let sportHint: string | null = null;
-  if (streamHit?.sport?.trim()) {
+  // Prefer eventData feed sport (isTableTennis ⇒ 93) over period inference —
+  // TT also uses s1/s2 and was mis-labeled tennis from lines alone.
+  if (pandora.eventState?.sportName?.trim()) {
+    sportHint = pandora.eventState.sportName
+      .toLowerCase()
+      .replace(/\s+/g, '_');
+  } else if (pandora.eventState?.sportId === '93') {
+    sportHint = 'table_tennis';
+  } else if (pandora.eventState?.sportId === '8') {
+    sportHint = 'tennis';
+  } else if (streamHit?.sport?.trim()) {
     sportHint = streamHit.sport.toLowerCase().replace(/\s+/g, '_');
   } else if (skin?.sport?.trim()) {
     sportHint = skin.sport.trim();
@@ -1177,10 +1213,7 @@ export async function lookupEvent(
   } else {
     sportHint = inferSportHintFromLines(allLines, streamHit?.bucket ?? null);
   }
-  // Pandora feed sport (live.sports name or id on eventData path)
-  if (!sportHint && pandora.eventState?.sportName) {
-    sportHint = pandora.eventState.sportName.toLowerCase().replace(/\s+/g, '_');
-  } else if (!sportHint && pandora.eventState?.sportId) {
+  if (!sportHint && pandora.eventState?.sportId) {
     sportHint = `feed_sport_${pandora.eventState.sportId}`;
   }
 
@@ -1450,6 +1483,18 @@ export function formatEventLookup(r: EventLookupResult): string {
       lines.push(
         `  book offeredMarkets=${b.offeredMarketCount} offMarkets=${b.offMarketCount} lines=${b.lineCount}`
       );
+      const offered = b.markets.filter(m => m.offered).slice(0, 16);
+      if (offered.length) {
+        lines.push(
+          `    markets: ${offered
+            .map(
+              m =>
+                `${m.period}/${m.marketType}(${pandoraMarketLabel(m.marketType)})` +
+                (m.line != null ? ` r=${m.line}` : '')
+            )
+            .join(', ')}`
+        );
+      }
       const off = b.markets.filter(m => !m.offered);
       if (off.length) {
         lines.push(
@@ -1465,6 +1510,36 @@ export function formatEventLookup(r: EventLookupResult): string {
         .map(m => `${m.period}/${m.marketType} cls._d=${m.clsDefault}`);
       if (sampleCls.length) {
         lines.push(`    cls (limit class, not suspend): ${sampleCls.join('; ')}`);
+      }
+      // market 16 set correct score decode samples
+      const scs = r.pandora.lines
+        .filter(l => l.marketType === '16')
+        .slice(0, 8);
+      if (scs.length) {
+        lines.push(
+          `    set_correct_score (m/16 lineId=p1<<16|p2): ${scs
+            .map(l => {
+              const lab =
+                formatSetCorrectScoreLineId(l.selection) ?? l.selection;
+              return `${lab}@${l.decimal.toFixed(2)}`;
+            })
+            .join('  ')}`
+        );
+      }
+      // game winner samples (TT s*/18)
+      const gw = r.pandora.lines
+        .filter(l => l.marketType === '18')
+        .slice(0, 6);
+      if (gw.length) {
+        lines.push(
+          `    game_winner (18): ${gw
+            .map(l =>
+              describeCoefficientSelection(l.marketType, l.selection, {
+                sideIndex: l.sideIndex,
+              }) + `=${l.decimal.toFixed(2)}`
+            )
+            .join('  ')}`
+        );
       }
     }
   } else {

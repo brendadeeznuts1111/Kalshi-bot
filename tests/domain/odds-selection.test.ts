@@ -20,7 +20,9 @@ describe('event planes: inventory / odds / ticket', () => {
     expect(marketLabel('6')).toBe('spread');
     expect(marketLabel('99')).toBe('market:99');
     expect(periodLabel('m')).toBe('match');
-    expect(periodLabel('h1')).toBe('h1');
+    expect(periodLabel('h1')).toBe('half 1');
+    expect(periodLabel('s1')).toBe('set 1');
+    expect(marketLabel('16')).toBe('set_correct_score');
   });
 
   test('odds line is separate from ticket leg (Darin/Plachy)', () => {

@@ -24,6 +24,12 @@ import {
   type CoefficientEnvelope,
   type CoefficientLine,
 } from './coefficients.ts';
+import {
+  pandoraSocketUrl,
+  resolvePandoraHostId,
+  type PandoraHostId,
+  PANDORA_LINE_SET_TOKEN,
+} from './pandora-hosts.ts';
 import { FANTASY_WIDGET_CONFIG } from './widget-config.ts';
 
 /** Engine.IO packet types (EIO=4). */
@@ -82,6 +88,11 @@ export type PandoraSocketHandlers = {
 export type PandoraSocketOptions = {
   /** Default: widget customWebSocketUrl + /socket.io/?EIO=4&transport=websocket */
   url?: string;
+  /**
+   * Host id when `url` unset: `pandora` (plive) or `spandora` (public sportswidgets).
+   * Same protocol / LINE_SET; different edge.
+   */
+  host?: PandoraHostId | string;
   handlers?: PandoraSocketHandlers;
   /** Auto-reconnect (default true). */
   reconnect?: boolean;
@@ -90,7 +101,14 @@ export type PandoraSocketOptions = {
   WebSocketImpl?: typeof WebSocket;
 };
 
-export function defaultPandoraSocketUrl(): string {
+export function defaultPandoraSocketUrl(
+  host: PandoraHostId | string = 'pandora'
+): string {
+  const id = resolvePandoraHostId(host);
+  if (id === 'spandora') {
+    return pandoraSocketUrl('spandora');
+  }
+  // keep widget-config as SSOT for default pandora base
   const base = FANTASY_WIDGET_CONFIG.customWebSocketUrl.replace(/\/$/, '');
   return `${base}/socket.io/?EIO=4&transport=websocket`;
 }
@@ -117,7 +135,7 @@ export const PANDORA_DEFAULT_SESSION: Required<
 > = {
   partnerId: '118',
   groupId: 97360,
-  mainToken: 'U0VWU1NWUkJSMFU9',
+  mainToken: PANDORA_LINE_SET_TOKEN,
 };
 
 /** Build the emit sequence observed after Socket.IO connect on plive. */
@@ -231,7 +249,9 @@ export class PandoraSocket {
   } | null = null;
 
   constructor(options: PandoraSocketOptions = {}) {
-    this.url = options.url ?? defaultPandoraSocketUrl();
+    this.url =
+      options.url ??
+      defaultPandoraSocketUrl(options.host ?? 'pandora');
     this.handlers = options.handlers ?? {};
     this.reconnect = options.reconnect !== false;
     this.maxReconnectAttempts = options.maxReconnectAttempts ?? 10;

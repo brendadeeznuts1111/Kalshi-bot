@@ -436,8 +436,41 @@ normalizeOdds(1.8928, 'decimal'); // dual american + truncated decimal
 ### Pandora Socket.IO (live odds transport)
 
 ```text
-wss://pandora.ganchrow.com/socket.io/?EIO=4&transport=websocket
+wss://pandora.ganchrow.com/socket.io/?EIO=4&transport=websocket   # plive desk (default)
+wss://spandora.ganchrow.com/socket.io/?EIO=4&transport=websocket  # public sportswidgets.pro
 ```
+
+Same Engine.IO / Socket.IO protocol, same `LINE_SET` token
+(`U0VWU1NWUkJSMFU9`), same JSON-patch diffs. Host only differs by edge.
+
+| Host | Shell | Flag |
+| ---- | ----- | ---- |
+| `pandora` | plive.sportswidgets.pro | default |
+| `spandora` | sportswidgets.pro | `--spandora` / `--host=spandora` |
+
+**Feed sport 93 = table tennis** (`isTableTennis(e){return Number(e)===93}`).
+Tennis on the live board is feed id **8** (ticket `apiSportId` map still
+uses legacy widget ids for some sports).
+
+**Market type labels** (Pandora + ticket share ids):
+
+| Id | Label | Notes |
+| -- | ----- | ----- |
+| 3 | moneyline | sides 1/2 |
+| 5 | total | games or points by sport |
+| 6 | spread / handicap | |
+| 7 | total_points | TT |
+| 8 | team_total | |
+| 9 | correct_score_sets | |
+| 16 | set_correct_score | `lineId = (p1<<16)\|p2` (BO5: 3-0…0-3) |
+| 18 | game_winner | odd game # keys; o=[p1,p2] |
+
+```bash
+bun run domain:event -- --id=197501721 --spandora
+bun run domain:event -- --board --spandora --sport=93 --bettable
+```
+
+Decode helpers: `market-decode.ts` · hosts: `pandora-hosts.ts`.
 
 | Handshake (live-probed)   | Meaning               |
 | ------------------------- | --------------------- |

@@ -88,6 +88,8 @@ export type EventValidateOptions = {
   accountId?: string;
   fetchImpl?: typeof fetch;
   WebSocketImpl?: typeof WebSocket;
+  /** Pandora edge: pandora | spandora. */
+  pandoraHost?: string;
   /** Injected for tests. */
   lookupFn?: typeof lookupEvent;
   sessionProbeFn?: (opts: {
@@ -438,6 +440,7 @@ export async function validateEvent(
     pandoraSeconds: options.pandoraSeconds ?? 10,
     fetchImpl: options.fetchImpl,
     WebSocketImpl: options.WebSocketImpl,
+    pandoraHost: options.pandoraHost,
   });
 
   const inventory = classifyInventory(lookup);

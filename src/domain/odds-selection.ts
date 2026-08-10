@@ -122,11 +122,24 @@ export const EXAMPLE_DARIN_PLACHY_TICKET_LEG: TicketLeg = {
 
 // ── Shared labels + explicit bridges ────────────────────────────────────────
 
-/** Proven market type / marketId labels (Pandora + ticket share these ids). */
+/**
+ * Proven market type / marketId labels (Pandora + ticket share these ids).
+ * TT + tennis extended: 7 total_points, 9 set CS, 16 set CS (encoded), 18 game winner.
+ * @see partner/fantasy-ultra/market-decode.ts
+ */
 export const KNOWN_MARKET_LABELS = {
+  '1': 'moneyline_3way',
   '3': 'moneyline',
   '5': 'total',
+  /** Alias: spread (sportsbook) / handicap (Pandora m/6). */
   '6': 'spread',
+  '7': 'total_points',
+  '8': 'team_total',
+  '9': 'correct_score_sets',
+  '16': 'set_correct_score',
+  '18': 'game_winner',
+  '20': 'set_total_games',
+  '21': 'set_game_handicap',
 } as const;
 
 export type KnownMarketId = keyof typeof KNOWN_MARKET_LABELS;
@@ -140,6 +153,9 @@ export function marketLabel(marketId: string): string {
 export function periodLabel(periodId: string): string {
   const p = periodId.trim();
   if (p === 'm') return 'match';
+  if (/^s\d+$/i.test(p)) return `set ${p.slice(1)}`;
+  if (/^h\d+$/i.test(p)) return `half ${p.slice(1)}`;
+  if (/^q\d+$/i.test(p)) return `quarter ${p.slice(1)}`;
   return p || '?';
 }
 

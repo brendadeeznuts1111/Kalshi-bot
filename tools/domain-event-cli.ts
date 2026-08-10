@@ -8,10 +8,15 @@
  *   bun run domain:event -- --id=197502731 --watch --seconds=30
  *   bun run domain:event -- --board
  *   bun run domain:event -- --board --bettable --sport=8
+ *   bun run domain:event -- --board --spandora --sport=93
+ *   bun run domain:event -- --id=197501721 --spandora
  *   bun run domain:event -- --id=197488581 --validate
  *   bun run domain:event -- --id=197488581 --validate-session --renew
  *   bun run domain:event -- --sample-sports
  *   bun run domain:event -- --id=197548901 --json
+ *
+ * Hosts: --spandora | --host=spandora (public sportswidgets) vs default pandora (plive).
+ * Feed sport 93 = table tennis (mainapp isTableTennis).
  *
  * Odds off:
  *   market — empty `o` / selection_off / market_off (--watch)
@@ -34,6 +39,7 @@ import {
   formatEventValidate,
   validateEvent,
 } from '../src/inventory/event-validate.ts';
+import { resolvePandoraHostId } from '../src/partner/fantasy-ultra/pandora-hosts.ts';
 
 function hasFlag(name: string): boolean {
   return process.argv.includes(`--${name}`);
@@ -49,6 +55,9 @@ const sampleSports = hasFlag('sample-sports');
 const board = hasFlag('board');
 const probePandora = hasFlag('probe-pandora');
 const watch = hasFlag('watch');
+const pandoraHost = resolvePandoraHostId(
+  hasFlag('spandora') ? 'spandora' : argValue('host')
+);
 const seconds =
   Number(
     argValue('seconds') ??
@@ -66,9 +75,11 @@ if (sampleSports) {
 }
 
 if (board) {
-  console.error(`scanning eventData board for ${seconds}s…`);
-  const { scan, blocked, sportsNames, seconds: took } =
-    await scanPandoraEventBoard({ seconds });
+  console.error(
+    `scanning eventData board host=${pandoraHost} for ${seconds}s…`
+  );
+  const { scan, blocked, sportsNames, seconds: took, host } =
+    await scanPandoraEventBoard({ seconds, pandoraHost });
   if (!scan) {
     console.error('no eventData board snapshot received');
     process.exit(1);
@@ -77,6 +88,7 @@ if (board) {
     console.log(
       JSON.stringify(
         {
+          host,
           seconds: took,
           sportsNames: Object.fromEntries(sportsNames),
           blocked: blocked
@@ -100,6 +112,7 @@ if (board) {
       )
     );
   } else {
+    console.log(`host=${host}`);
     console.log(
       formatEventBoardScan(scan, {
         sportFilter: argValue('sport') ?? null,
@@ -165,6 +178,7 @@ if (validate) {
     renew: hasFlag('renew'),
     envPrefix: argValue('prefix'),
     accountId: argValue('out') ?? argValue('account'),
+    pandoraHost,
   });
   if (json) {
     // Drop full lookup body by default noise; include compact market snapshot
@@ -209,6 +223,7 @@ if (watch) {
   );
   const history = await watchEventOdds(Number(eventId), {
     seconds,
+    pandoraHost,
     onUpdate: u => {
       if (json) {
         console.log(JSON.stringify(u));
@@ -270,6 +285,7 @@ const result = await lookupEvent({
   periodId,
   pandoraSeconds: noPandora ? 0 : seconds,
   skipPandora: noPandora,
+  pandoraHost,
 });
 
 if (json) {
