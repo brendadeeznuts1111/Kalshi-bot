@@ -5,20 +5,22 @@ the local SSOT for registry + Fantasy Ultra until a separate seat-capital
 service is the only writer.
 
 Machine status: `bun run partner:domain` · `bun run partner:domain -- --json`  
-Expansion map: `bun run partner:map` · [`PARTNER-EXECUTION-EXPANSION.md`](PARTNER-EXECUTION-EXPANSION.md)
-Code map: [`src/partner/domain.ts`](../src/partner/domain.ts)
+Skin matrix: `bun run partner:skins` · Book matrix: `bun run partner:books`  
+Expansion map: `bun run partner:map` ·
+[`PARTNER-EXECUTION-EXPANSION.md`](PARTNER-EXECUTION-EXPANSION.md) Code map:
+[`src/partner/domain.ts`](../src/partner/domain.ts)
 
 ---
 
 ## Layers
 
-| Layer               | Purpose                  | Kalshi-bot home                                                            |
-| ------------------- | ------------------------ | -------------------------------------------------------------------------- |
-| **Partner**         | Financial owner          | `partners` table · profit_split / commission_rate                          |
-| **Communication**   | Chat / bot / alerts      | `src/telegram/` · finance-cron notify · `TELEGRAM_TOPIC_ID_{CODE}`         |
+| Layer               | Purpose                                  | Kalshi-bot home                                                               |
+| ------------------- | ---------------------------------------- | ----------------------------------------------------------------------------- |
+| **Partner**         | Financial owner                          | `partners` table · profit_split / commission_rate                             |
+| **Communication**   | Chat / bot / alerts                      | `src/telegram/` · finance-cron notify · `TELEGRAM_TOPIC_ID_{CODE}`            |
 | **Accounts / Outs** | Betting accounts + live-product capacity | `betting_accounts` · `OutIdentity` · `meta.liveProducts` · `partner:capacity` |
-| **Assets**          | Credentials & identity   | Proton Pass · per-out `env_prefix` · `meta.vaultId` (no secrets in DB)     |
-| **Finance**         | Ledger & reports         | Legacy `partner_ledger` plus the separate authorized-execution journal     |
+| **Assets**          | Credentials & identity                   | Proton Pass · per-out `env_prefix` · `meta.vaultId` (no secrets in DB)        |
+| **Finance**         | Ledger & reports                         | Legacy `partner_ledger` plus the separate authorized-execution journal        |
 
 ### Maturity legend
 
@@ -47,7 +49,7 @@ graph TD
     P[Partner SPEN]:::partner
     TG[Telegram chat]:::comms
     BOT[Telegram bot]:::bot
-    O[out-SPEN-1 buckeye]:::account
+    O[out-SPEN-1 fantasy402@buckeye]:::account
     S1[ezlive perBetMax]:::account
     S2[dark perBetMax]:::account
     V[vault-out-SPEN-1]:::asset
@@ -63,25 +65,27 @@ graph TD
     L -->|daily report| TG
 ```
 
-Identity flow: host → `skinId` (buckeye) → `liveProducts` capacity → `adapterId`
-(`fantasy-ultra`). See `partner/out-identity.ts`.
+Identity flow: host → `bookId` (fantasy402) → `skinId` (buckeye) →
+`liveProducts` capacity → `adapterId` (`fantasy-ultra`). See
+`partner/out-identity.ts` · `src/domain/books.ts`.
 
 ---
 
 ## Naming
 
-| Entity        | Rule                             | Example                          |
-| ------------- | -------------------------------- | -------------------------------- |
-| Partner code  | Uppercase short                  | `SPEN`                           |
-| Out ID        | `out-{code}-{n}`                 | `out-SPEN-1`                     |
-| Skin (white-label) | `SkinId` from host          | `buckeye`                        |
-| Live product  | capacity / Ultra wire            | `ezlive`                         |
-| Adapter       | `adapterId`                      | `fantasy-ultra`                  |
-| Vault         | `vault-{outId}`                  | `vault-out-SPEN-1`               |
-| Liquidity key | `{outId}@{liveProduct}`          | `out-SPEN-1@ezlive`              |
-| Avatar        | `{code}.svg/png`                 | `SPEN.png`                       |
-| Env prefix    | **Per-out** `{BOOK}_{CODE}_{N}_` | `FANTASY402_SPEN_1_`             |
-| Env secrets   | `{prefix}{KEY}`                  | `FANTASY402_SPEN_1_BEARER_TOKEN` |
+| Entity             | Rule                                | Example                          |
+| ------------------ | ----------------------------------- | -------------------------------- |
+| Partner code       | Uppercase short                     | `SPEN`                           |
+| Out ID             | `out-{code}-{n}`                    | `out-SPEN-1`                     |
+| Book (desk brand)  | `BookId` from host (`HOST_TO_BOOK`) | `fantasy402` / `parlay21`        |
+| Skin (white-label) | `SkinId` from host (`HOST_TO_SKIN`) | `buckeye`                        |
+| Live product       | capacity / Ultra wire               | `ezlive`                         |
+| Adapter            | `adapterId`                         | `fantasy-ultra`                  |
+| Vault              | `vault-{outId}`                     | `vault-out-SPEN-1`               |
+| Liquidity key      | `{outId}@{liveProduct}`             | `out-SPEN-1@ezlive`              |
+| Avatar             | `{code}.svg/png`                    | `SPEN.png`                       |
+| Env prefix         | **Per-out** `{BOOK}_{CODE}_{N}_`    | `FANTASY402_SPEN_1_`             |
+| Env secrets        | `{prefix}{KEY}`                     | `FANTASY402_SPEN_1_BEARER_TOKEN` |
 
 ---
 
@@ -90,11 +94,12 @@ Identity flow: host → `skinId` (buckeye) → `liveProducts` capacity → `adap
 ### Partner + Accounts
 
 - `partners` / `betting_accounts` in event-store
-- Out × live-product capacity (`out-identity.ts`, `skins.ts`, `partner:capacity`)
-- Fantasy Ultra adapter (`adapterId: fantasy-ultra`): login, stream-list, sports inventory (30 buckets), Pandora
-  coefficients
-- Seed: `FANTASY402_PARTNER_CODE`, `FANTASY402_LIVE_PRODUCTS_JSON` / `FANTASY402_SKINS_JSON`,
-  `FANTASY402_VAULT_ID`
+- Out × live-product capacity (`out-identity.ts`, `skins.ts`,
+  `partner:capacity`)
+- Fantasy Ultra adapter (`adapterId: fantasy-ultra`): login, stream-list, sports
+  inventory (30 buckets), Pandora coefficients
+- Seed: `FANTASY402_PARTNER_CODE`, `FANTASY402_LIVE_PRODUCTS_JSON` /
+  `FANTASY402_SKINS_JSON`, `FANTASY402_VAULT_ID`
 
 ### Assets
 
@@ -156,8 +161,7 @@ Identity flow: host → `skinId` (buckeye) → `liveProducts` capacity → `adap
 ## Operator catalog (Bun-only)
 
 **Global tool required:** Bun. Everything else is `bun run` / `bunx` (e.g.
-`bunx drizzle-kit`).
-No Vite/React partner UI — static board baked from SQLite.
+`bunx drizzle-kit`). No Vite/React partner UI — static board baked from SQLite.
 
 ### Daily loop
 
@@ -313,16 +317,18 @@ Idempotent: re-run seed updates in place (SQLite `ON CONFLICT DO UPDATE`).
 1. out prefix      FANTASY402_SPEN_1_BEARER_TOKEN
 2. partner prefix  FANTASY402_SPEN_BEARER_TOKEN
 3. book fallback   FANTASY402_BEARER_TOKEN
-4. desk URL        PARTNER_DOMAIN → SKINS default (host → SkinId via HOST_TO_SKIN)
+4. desk URL        PARTNER_DOMAIN → SKINS default
+                   (host → BookId via HOST_TO_BOOK + SkinId via HOST_TO_SKIN)
 ```
 
 Canonical `env_prefix` is **per-out**: `{BOOK}_{CODE}_{N}_`. Bare `FANTASY402_`
-or partner-only `FANTASY402_SPEN_` auto-upgrade on materialize/seed.
-Keys (not USER/PASS): `BEARER_TOKEN` · `CUSTOMER_ID` · `AGENT_ID` · `PASSWORD` ·
-`DOMAIN` · `SKIN` · `CURRENCY`.
-Desk URL: **`PARTNER_DOMAIN`** (or per-out `*DOMAIN`) must resolve via `SKINS[].hosts`
-→ SkinId. Bare book-level DOMAIN env keys are retired (`RETIRED_BARE_BOOK_DOMAIN_ENVS`).
-API base URL also lives in TOML `url=`.
+or partner-only `FANTASY402_SPEN_` auto-upgrade on materialize/seed. Keys (not
+USER/PASS): `BEARER_TOKEN` · `CUSTOMER_ID` · `AGENT_ID` · `PASSWORD` · `DOMAIN`
+· `SKIN` · `CURRENCY`. Desk URL: **`PARTNER_DOMAIN`** (or per-out `*DOMAIN`)
+must resolve via `SKINS[].hosts` → `BookId` + `SkinId`. Bare book-level DOMAIN
+env keys are retired (`RETIRED_BARE_BOOK_DOMAIN_ENVS`). Env prefix `{BOOK}_` is
+the adapter env brand (`FANTASY402`), not the desk `BookId` catalog. API base
+URL also lives in TOML `url=`.
 
 Code: `canonicalOutEnvPrefix` · `resolvePartnerEnv` ·
 `validatePartnerAssetPrefixes`.
