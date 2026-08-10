@@ -73,6 +73,27 @@ describe("inventory sync", () => {
     expect(cid).toBe("111");
   });
 
+  test("matchBookedOddsEventId handles LAST, FIRST and translit last names", () => {
+    expect(
+      matchBookedOddsEventId("RAWAT, SIDHARTH", "MITSUI, SHUNSUKE -", [
+        { oddsEventId: "19748002", name: "Sidharth Rawat - Shunsuke Mitsui" },
+      ]),
+    ).toBe("19748002");
+    expect(
+      matchBookedOddsEventId("Yuriy Kolos", "Vladimir Stepanovich Ivasiv", [
+        { oddsEventId: "19750986", name: "Yurii Kolos - Volodymyr Ivasiv" },
+      ]),
+    ).toBe("19750986");
+    // short tokens like univ must not false-positive
+    expect(
+      matchBookedOddsEventId(
+        "Sankt-Peterburg (univ)",
+        "Luganskaya Narodnaya Respublika (univ)",
+        [{ oddsEventId: "19681374", name: "Tecnico Univ. - Mushuc Runa" }],
+      ),
+    ).toBeNull();
+  });
+
   test("runInventorySync inserts new and reports capabilities", async () => {
     const db = openEventStore({ dbPath: ":memory:" });
     const events = [
@@ -99,6 +120,7 @@ describe("inventory sync", () => {
     const report = await runInventorySync(db, adapter, {
       sport: "table_tennis",
       enrichBooked: true,
+      bookedCatalog: [{ oddsEventId: "999", name: "A - B" }],
       nowMs: 5000,
     });
     expect(report.seen).toBe(2);
@@ -157,6 +179,7 @@ describe("inventory sync", () => {
         sport: "table_tennis",
         enrichBooked: true,
         enrichBookedScope: "board",
+        bookedCatalog: [{ oddsEventId: "555", name: "Home X - Away Y" }],
         nowMs: 2000,
       },
     );
@@ -216,7 +239,12 @@ describe("inventory sync", () => {
         [live(1, "table_tennis", "A", "B"), live(2, "table_tennis", "C", "D")],
         booked,
       ),
-      { sport: "table_tennis", enrichBooked: true, nowMs: 9 },
+      {
+        sport: "table_tennis",
+        enrichBooked: true,
+        bookedCatalog: [{ oddsEventId: "777", name: "A - B" }],
+        nowMs: 9,
+      },
     );
     expect(report.oddsLink).not.toBeNull();
     expect(report.oddsLink!.total).toBe(2);

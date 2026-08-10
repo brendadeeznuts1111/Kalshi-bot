@@ -81,6 +81,8 @@ export {
   collectBoardEnrichCandidates,
   oddsLinkCoverage,
   formatOddsLinkCoverage,
+  competitorNameTokens,
+  foldCompetitorToken,
   planInventoryUpsert,
   runInventorySync,
   sportHistogramFromEvents,
@@ -89,6 +91,13 @@ export {
   type InventorySyncReport,
   type OddsLinkCoverage,
 } from '../inventory/sync.ts';
+
+export {
+  fetchPublicBookedCatalog,
+  bookedCatalogToMatchList,
+  type BookedCatalogEntry,
+  type FetchBookedCatalogOptions,
+} from '../inventory/booked-catalog.ts';
 
 export {
   countInventoryLeagues,
