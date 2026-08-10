@@ -251,30 +251,35 @@ tennis).
 | `tennis`       | ~45         | Tennis        |
 | `table_tennis` | ~33         | Table Tennis  |
 
-`partner_events` table (created with event-store schema) stores stream
-inventory:
+`partner_events` table (created with event-store schema) stores
+**Buckeye-scoped** Fantasy402 stream inventory. One row per `stream_id` covers
+**both** PLive and EZLive capacity surfaces (shared Plive SportsWidgets shell)
+until a separate EZ feed is proven.
 
-| Column                       | Source                                     |
-| ---------------------------- | ------------------------------------------ |
-| `partner` + `stream_id`      | UNIQUE key (detection key)                 |
-| sport / league / home / away | stream-list (`competitiors` typo upstream) |
-| `client_event_id` / `ls_id`  | nullable until mapping exists              |
+| Column                       | Source                                                                              |
+| ---------------------------- | ----------------------------------------------------------------------------------- |
+| `partner` + `stream_id`      | UNIQUE key (detection key; partner=`fantasy402`)                                    |
+| `skin_id` / `book_id`        | stamped `buckeye` / `fantasy402`                                                    |
+| `inventory_live_product`     | feed owner shell = `plive` (ezlive reuses)                                          |
+| sport / league / home / away | stream-list (`competitiors` typo upstream); sport normalized to SportId when mapped |
+| `client_event_id` / `ls_id`  | nullable until mapping exists                                                       |
 
 ```bash
 # one-shot (inventory is public — dummy env is fine)
 export FANTASY402_BEARER_TOKEN=x FANTASY402_CUSTOMER_ID=x FANTASY402_AGENT_ID=x FANTASY402_PASSWORD=x
 bun run partner:watch-events -- --once --sport=table_tennis --json
+# defaults: --skin=buckeye --book=fantasy402 (other skins rejected)
 
 # long poll every 30s (default)
 bun run partner:watch-events -- --loop --sport=table_tennis --interval-ms=30000
 ```
 
-New rows print as `+ Table Tennis · …`. Optional Telegram:
-`TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID`.
+New rows print as `+ table_tennis · … · skin=buckeye book=fantasy402`. Optional
+Telegram: `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID`.
 
 ```text
-stream-list-v2  ──every 30s──▶  new stream_id?  ──▶  partner_events + notify
-                                      │
+stream-list-v2  ──every 30s──▶  new stream_id?  ──▶  partner_events (buckeye) + notify
+                                      │                 covers: plive + ezlive
                                       ▼ (optional, needs real auth)
                               get_pushes / booked-events / PlaceBet
 ```
