@@ -287,10 +287,23 @@ export function applyCompetitionRecordsToSource(
     return { next: source, added, skipped };
   }
 
-  const marker = '] as const satisfies readonly CompetitionRecord[]';
-  const idx = source.lastIndexOf(marker);
+  const markers = [
+    '] as const satisfies readonly CompetitionRecord[]',
+    '] satisfies readonly CompetitionRecord[]',
+  ];
+  let marker = '';
+  let idx = -1;
+  for (const m of markers) {
+    const i = source.lastIndexOf(m);
+    if (i > idx) {
+      idx = i;
+      marker = m;
+    }
+  }
   if (idx < 0) {
-    throw new Error('competitions.ts: closing `] as const satisfies` marker not found');
+    throw new Error(
+      'competitions.ts: closing `] satisfies readonly CompetitionRecord[]` marker not found'
+    );
   }
 
   // Ensure previous entry ends with comma
