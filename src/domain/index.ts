@@ -103,15 +103,20 @@ export {
   type ResolvedSport,
 } from './resolve-sport.ts';
 
-/** @deprecated Skin white-labels replaced books — use resolveSkinId / skinOffersLiveProduct */
 export {
-  resolveSkinId as resolveBookId,
-  skinOffersLiveProduct as bookOffersSkin,
-  listSkins as listBooks,
-  getSkin as getBook,
-  isSkinId as isBookId,
-  SKINS as BOOKS,
-  SKIN_IDS as BOOK_IDS,
-  type SkinId as BookId,
-  type SkinRecord as BookRecord,
-} from './skins.ts';
+  BOOKS,
+  BOOK_IDS,
+  HOST_TO_BOOK,
+  bookOffersLiveProduct,
+  bookOffersSkin,
+  getBook,
+  getBookByHost,
+  isBookId,
+  listBookIdsForSkin,
+  listBooks,
+  listBooksForSkin,
+  resolveBookId,
+  skinIdForBook,
+  type BookId,
+  type BookRecord,
+} from './books.ts';

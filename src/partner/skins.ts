@@ -76,6 +76,11 @@ export type OutMeta = {
    * Distinct from capacity live-product names.
    */
   skinId?: SkinId;
+  /**
+   * Desk brand BookId (fantasy402 / parlay21 / …) under the skin.
+   * Distinct from SkinId and from bookEnvToken (FANTASY402).
+   */
+  bookId?: string;
   /** How offerings are mapped/probed for this skin (fantasy402 | unmapped). */
   mapper?: OutSkinMapperKind;
   /** Opaque non-secret labels only — never password / token. */

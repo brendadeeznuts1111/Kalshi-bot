@@ -3,13 +3,11 @@
  * Used by `bun run partner:domain -- --skins` and domain tests.
  */
 
+import { listBookIdsForSkin, type BookId } from './books.ts';
 import { getLiveProduct } from './live-products.ts';
 import { SKINS, listSkinApexHosts, type SkinId, type SkinMapper } from './skins.ts';
 
-export type SkinMatrixGap =
-  | 'missing_fingerprints'
-  | 'missing_live_products'
-  | 'mapper_unmapped';
+export type SkinMatrixGap = 'missing_fingerprints' | 'missing_live_products' | 'mapper_unmapped';
 
 /**
  * Active skins allowed to ship without fingerprints while Batches 2–5 fill them.
@@ -26,6 +24,8 @@ export type SkinMatrixRow = {
   active: boolean;
   offeredLiveProducts: readonly string[];
   catalogLiveProducts: readonly string[];
+  /** Desk brands under this skin (host-derived BookIds). */
+  bookIds: readonly BookId[];
   apexHosts: readonly string[];
   mapperKind: SkinMapper['kind'];
   mapperNote: string;
@@ -64,6 +64,7 @@ export function buildSkinMatrixRows(): SkinMatrixRow[] {
       active: skin.active,
       offeredLiveProducts: offered,
       catalogLiveProducts,
+      bookIds: listBookIdsForSkin(skin.id),
       apexHosts: listSkinApexHosts(skin.id),
       mapperKind: skin.mapper.kind,
       mapperNote: skin.mapper.note,
@@ -81,7 +82,9 @@ export function buildSkinMatrixRows(): SkinMatrixRow[] {
 }
 
 /** Compact TTY table for operators / agents. */
-export function formatSkinMatrixText(rows: readonly SkinMatrixRow[] = buildSkinMatrixRows()): string {
+export function formatSkinMatrixText(
+  rows: readonly SkinMatrixRow[] = buildSkinMatrixRows()
+): string {
   const lines: string[] = ['Skin matrix (SKINS SSOT)', '─'.repeat(72)];
   for (const r of rows) {
     const products =
@@ -96,6 +99,7 @@ export function formatSkinMatrixText(rows: readonly SkinMatrixRow[] = buildSkinM
       `${r.active ? '●' : '○'} ${r.skinId.padEnd(10)} mapper=${r.mapperKind.padEnd(11)} ${fp}${gapLabel}`
     );
     lines.push(`    products: ${products}`);
+    lines.push(`    books:    ${r.bookIds.join(', ') || '(none)'}`);
     lines.push(`    hosts:    ${r.apexHosts.join(', ') || '(none)'}`);
   }
   lines.push('─'.repeat(72));
@@ -111,20 +115,19 @@ export function formatSkinMatrixMarkdownTable(
   rows: readonly SkinMatrixRow[] = buildSkinMatrixRows()
 ): string {
   const header =
-    '| Skin         | Active | Live products              | Hosts                       | Mapper / gaps |\n' +
-    '| ------------ | ------ | -------------------------- | --------------------------- | ------------- |';
+    '| Skin         | Active | Live products              | Books                       | Hosts                       | Mapper / gaps |\n' +
+    '| ------------ | ------ | -------------------------- | --------------------------- | --------------------------- | ------------- |';
   const body = rows
     .map(r => {
       const products =
         r.catalogLiveProducts.length > 0 ? r.catalogLiveProducts.join(', ') : '(none)';
+      const books = r.bookIds.join(', ') || '(none)';
+      const booksShort = books.length > 40 ? `${books.slice(0, 37)}…` : books;
       const hosts = r.apexHosts.map(h => h.replace(/^www\./, '')).join(', ') || '(none)';
-      const hostShort =
-        hosts.length > 40 ? `${hosts.slice(0, 37)}…` : hosts;
+      const hostShort = hosts.length > 40 ? `${hosts.slice(0, 37)}…` : hosts;
       const mapper =
-        r.gaps.length === 0
-          ? `**${r.mapperKind}**`
-          : `${r.mapperKind} (${r.gaps.join(', ')})`;
-      return `| **${r.skinId}** | ${r.active ? 'yes' : 'no'} | ${products} | ${hostShort} | ${mapper} |`;
+        r.gaps.length === 0 ? `**${r.mapperKind}**` : `${r.mapperKind} (${r.gaps.join(', ')})`;
+      return `| **${r.skinId}** | ${r.active ? 'yes' : 'no'} | ${products} | ${booksShort} | ${hostShort} | ${mapper} |`;
     })
     .join('\n');
   return `${header}\n${body}`;
@@ -134,7 +137,9 @@ export function formatSkinMatrixMarkdownTable(
  * Active skins must have fingerprints, or be explicitly fingerprint-pending.
  * Throws with offending skin ids.
  */
-export function assertFingerprintCoverage(rows: readonly SkinMatrixRow[] = buildSkinMatrixRows()): void {
+export function assertFingerprintCoverage(
+  rows: readonly SkinMatrixRow[] = buildSkinMatrixRows()
+): void {
   const bad = rows
     .filter(r => r.active && !r.hasFingerprints && !r.fingerprintPending)
     .map(r => r.skinId);
@@ -143,9 +148,7 @@ export function assertFingerprintCoverage(rows: readonly SkinMatrixRow[] = build
       `Active skins missing fingerprints (not in FINGERPRINT_PENDING_SKINS): [${bad.join(', ')}]`
     );
   }
-  const stale = rows
-    .filter(r => r.fingerprintPending && r.hasFingerprints)
-    .map(r => r.skinId);
+  const stale = rows.filter(r => r.fingerprintPending && r.hasFingerprints).map(r => r.skinId);
   if (stale.length > 0) {
     throw new Error(
       `Skins still listed in FINGERPRINT_PENDING_SKINS but have fingerprints — remove: [${stale.join(', ')}]`

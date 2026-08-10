@@ -1,19 +1,22 @@
 /**
  * Out identity boundary — parse-once view of an out.
  *
- * Host → SkinId (white-label) → offered live products → capacity ⊆ offered
- * → AdapterBinding (adapterId / mapperKind / bookEnvToken).
+ * Host → BookId (desk brand) → SkinId (white-label) → offered live products
+ * → capacity ⊆ offered → AdapterBinding (adapterId / mapperKind / bookEnvToken).
  *
  * Capacity meta may use `liveProducts` (new) or legacy `skins` (mirror).
  */
 
 import {
+  getBookByHost,
   getSkin,
   getSkinByHost,
   isLegacyCapacityLiveProduct,
   isLiveProductId,
   isSkinId,
   normalizeLiveProductName,
+  resolveBookId,
+  type BookId,
   type SkinId,
 } from '../domain/index.ts';
 import type { OutMeta, OutSkinLimit, OutSkinMapperKind } from './skins.ts';
@@ -40,6 +43,8 @@ export type OutIdentity = {
   partnerId: string;
   url: string;
   skinId: SkinId;
+  /** Desk brand under the skin (host-derived); absent when no URL / unmapped book. */
+  bookId?: BookId;
   adapter: AdapterBinding;
   capacity: LiveProductCapacity[];
   defaultLiveProduct: string;
@@ -244,6 +249,7 @@ export function stampOutMeta(identity: OutIdentity, baseMeta?: OutMeta): string 
       active: c.active,
     })),
   };
+  if (identity.bookId) meta.bookId = identity.bookId;
   if (identity.workingBalance != null) meta.workingBalance = identity.workingBalance;
   if (identity.vaultId) meta.vaultId = identity.vaultId;
   if (identity.partnerCode) meta.partnerCode = identity.partnerCode;
@@ -290,11 +296,16 @@ export function parseOutIdentity(input: ParseOutIdentityInput): OutIdentity | nu
     capacity[0]?.liveProduct ||
     '2';
 
+  const bookId =
+    (input.url.trim() ? getBookByHost(input.url) : undefined) ??
+    (typeof meta.bookId === 'string' ? resolveBookId(meta.bookId) : undefined);
+
   return {
     outId: input.id,
     partnerId: input.partnerId,
     url: input.url,
     skinId,
+    bookId,
     adapter,
     capacity,
     defaultLiveProduct: normalizeLiveProductName(defaultLiveProduct),
