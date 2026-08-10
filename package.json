@@ -73,6 +73,7 @@
     "domain:pandora-report": "bun tools/domain-pandora-cli.ts --report",
     "domain:pandora-promote": "bun tools/domain-pandora-cli.ts --promote",
     "domain:resolve-smoke": "bun tools/resolve-smoke.ts",
+    "domain:event": "bun tools/domain-event-cli.ts",
     "inventory:sync": "bun tools/inventory-sync-cli.ts",
     "inventory:watch": "bun tools/inventory-watch-cli.ts",
     "inventory:leagues": "bun tools/inventory-leagues-cli.ts",
