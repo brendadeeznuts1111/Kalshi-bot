@@ -188,9 +188,13 @@ export const SKINS = [
     aliases: ['lvaction', 'lv-action'] as const,
     mapper: {
       kind: 'unmapped',
-      note: 'Hosts declared; live-product coverage not proven yet',
+      note: 'Hosts + fingerprints 2026-08-09 (templates/53 + classic App_Themes); products_unknown_as_of=2026-08-09',
     },
-    fingerprints: { endpoints: [] as const, assets: [] as const },
+    // Live probe: modern shell /templates/53/ + classic ASP.NET App_Themes/Responsive.
+    fingerprints: {
+      endpoints: ['/templates/53/', '/sportsbook.php', 'multisitesLogin', '/App_Themes/Responsive/'] as const,
+      assets: ['jquery.matchHeight', 'jquery.bxslider', 'jquery.slicknav'] as const,
+    },
   },
   {
     id: 'magnum',

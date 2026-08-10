@@ -209,6 +209,28 @@ describe('host-discover', () => {
     expect(getSkinByHost('www.action92.com')).toBeUndefined();
   });
 
+  test('LV Action templates/53 + sportsbook.php → lvaction for review', () => {
+    const report = scoreHostDiscovery({
+      url: 'https://mirror-lva.example/',
+      host: 'mirror-lva.example',
+      finalUrl: 'https://mirror-lva.example/',
+      status: 200,
+      headers: {},
+      body: `<html><title>lvaction.com</title>
+        <link href="/templates/53/assets/css/bootstrap.min.css" rel="stylesheet"/>
+        <a href="/sportsbook.php">sports</a>
+        <script>multisitesLogin()</script>
+        <script src="/templates/53/assets/js/jquery.matchHeight.js"></script>
+        </html>`,
+      storedUrls: [
+        'https://mirror-lva.example/templates/53/assets/css/bootstrap.min.css',
+        'https://mirror-lva.example/sportsbook.php',
+      ],
+    });
+    expect(report.suggestedSkinId).toBe('lvaction');
+    expect(report.confidence).toBeGreaterThanOrEqual(0.4);
+  });
+
   test('1BV skin.betting + cdntools → 1bv for review (not ace)', () => {
     const report = scoreHostDiscovery({
       url: 'https://mirror-1bv.example/',
