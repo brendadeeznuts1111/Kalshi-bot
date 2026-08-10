@@ -60,15 +60,15 @@ export function normalizeInventorySport(wire: string): string {
   const raw = wire.trim();
   if (!raw) return '';
   const bucket = raw.toLowerCase().replace(/\s+/g, '_');
-  const byBucket = resolveSport({ liveProduct: 'plive', streamBucket: bucket });
+  const byBucket = resolveSport({ liveProduct: 'plive', inventoryBucket: bucket });
   if (byBucket) return byBucket.sportId;
   const spaced = raw.toLowerCase().replace(/_/g, ' ');
   if (spaced.includes('table tennis')) {
-    const tt = resolveSport({ liveProduct: 'plive', streamBucket: 'table_tennis' });
+    const tt = resolveSport({ liveProduct: 'plive', inventoryBucket: 'table_tennis' });
     if (tt) return tt.sportId;
   }
   if (spaced === 'tennis' || (spaced.includes('tennis') && !spaced.includes('table'))) {
-    const t = resolveSport({ liveProduct: 'plive', streamBucket: 'tennis' });
+    const t = resolveSport({ liveProduct: 'plive', inventoryBucket: 'tennis' });
     if (t) return t.sportId;
   }
   return bucket;
@@ -85,7 +85,7 @@ export function resolveInventoryCompetitionId(input: {
     liveProduct: input.liveProduct,
     league: input.league,
     sportId: isSportId(sport) ? sport : undefined,
-    streamBucket: sport || undefined,
+    inventoryBucket: sport || undefined,
   });
   return hit?.competitionId ?? null;
 }

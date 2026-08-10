@@ -1,7 +1,7 @@
 /**
  * Resolve Plive/EZLive stream-list league wire → canonical Competition.
  *
- * Inventory key: (liveProduct shell) + streamBucket + league string.
+ * Inventory key: (liveProduct shell) + inventoryBucket + league string.
  * ezlive reuses plive mappings (shared SportsWidgets shell).
  */
 
@@ -18,7 +18,7 @@ import { isSportId, type SportId } from './sports.ts';
 export type ResolveCompetitionQuery = {
   liveProduct: string;
   league: string;
-  streamBucket?: string;
+  inventoryBucket?: string;
   sportId?: string;
 };
 
@@ -43,7 +43,7 @@ function mappingShellFor(liveProduct: LiveProductId): 'plive' | undefined {
 
 function bucketForSport(liveProduct: LiveProductId, sportId: SportId): string | undefined {
   const rows = listLiveProductSportBindings(liveProduct);
-  return rows.find(r => r.sportId === sportId)?.streamBucket;
+  return rows.find(r => r.sportId === sportId)?.inventoryBucket;
 }
 
 function leagueMatches(comp: CompetitionRecord, leagueNorm: string): boolean {
@@ -68,27 +68,27 @@ export function resolveCompetition(
   const leagueNorm = normalizeLeagueKey(query.league ?? '');
   if (!leagueNorm) return undefined;
 
-  let streamBucket = query.streamBucket?.trim().toLowerCase() || undefined;
+  let inventoryBucket = query.inventoryBucket?.trim().toLowerCase() || undefined;
   let sportId: SportId | undefined =
     query.sportId && isSportId(query.sportId) ? query.sportId : undefined;
 
-  if (!streamBucket && sportId) {
-    streamBucket = bucketForSport(mappingLiveProduct, sportId);
+  if (!inventoryBucket && sportId) {
+    inventoryBucket = bucketForSport(mappingLiveProduct, sportId);
   }
 
   const candidates = COMPETITIONS.filter(c => {
     if (sportId && c.sportId !== sportId) return false;
     const map = c.providerMappings.plive;
     if (!map) return false;
-    if (streamBucket && map.streamBucket !== streamBucket) return false;
+    if (inventoryBucket && map.inventoryBucket !== inventoryBucket) return false;
     return leagueMatches(c, leagueNorm);
   });
 
   if (candidates.length === 0) return undefined;
-  // Prefer exact streamBucket match when multiple alias hits (should be rare).
+  // Prefer exact inventoryBucket match when multiple alias hits (should be rare).
   const hit =
-    (streamBucket
-      ? candidates.find(c => c.providerMappings.plive?.streamBucket === streamBucket)
+    (inventoryBucket
+      ? candidates.find(c => c.providerMappings.plive?.inventoryBucket === inventoryBucket)
       : undefined) ?? candidates[0]!;
 
   return {

@@ -12,7 +12,7 @@ export type CompetitionGender = (typeof COMPETITION_GENDERS)[number];
 
 export type PliveCompetitionMapping = {
   /** Wire sport bucket key (e.g. table_tennis, football). */
-  streamBucket: string;
+  inventoryBucket: string;
   /** Exact feed league string. */
   leagueKey: string;
 };
@@ -39,7 +39,7 @@ export const COMPETITIONS = [
     displayName: 'Mexico LMB',
     aliases: ['Mexico LMB'],
     gender: 'unknown',
-    providerMappings: { plive: { streamBucket: 'baseball', leagueKey: 'Mexico LMB' } },
+    providerMappings: { plive: { inventoryBucket: 'baseball', leagueKey: 'Mexico LMB' } },
   },
   {
     id: 'baseball.triple_a_minor_league',
@@ -48,7 +48,7 @@ export const COMPETITIONS = [
     aliases: ['Triple A Minor League'],
     gender: 'unknown',
     providerMappings: {
-      plive: { streamBucket: 'baseball', leagueKey: 'Triple A Minor League' },
+      plive: { inventoryBucket: 'baseball', leagueKey: 'Triple A Minor League' },
     },
   },
   {
@@ -58,7 +58,7 @@ export const COMPETITIONS = [
     aliases: ['IPBL. Pro Division'],
     gender: 'unknown',
     providerMappings: {
-      plive: { streamBucket: 'basketball', leagueKey: 'IPBL. Pro Division' },
+      plive: { inventoryBucket: 'basketball', leagueKey: 'IPBL. Pro Division' },
     },
   },
   {
@@ -68,7 +68,7 @@ export const COMPETITIONS = [
     aliases: ['IPBL. Pro Division. Women'],
     gender: 'women',
     providerMappings: {
-      plive: { streamBucket: 'basketball', leagueKey: 'IPBL. Pro Division. Women' },
+      plive: { inventoryBucket: 'basketball', leagueKey: 'IPBL. Pro Division. Women' },
     },
   },
   {
@@ -78,7 +78,7 @@ export const COMPETITIONS = [
     aliases: ['India. Indoor Series'],
     gender: 'unknown',
     providerMappings: {
-      plive: { streamBucket: 'cricket', leagueKey: 'India. Indoor Series' },
+      plive: { inventoryBucket: 'cricket', leagueKey: 'India. Indoor Series' },
     },
   },
   {
@@ -88,7 +88,7 @@ export const COMPETITIONS = [
     aliases: ['Chennai daily cricket'],
     gender: 'unknown',
     providerMappings: {
-      plive: { streamBucket: 'cricket', leagueKey: 'Chennai daily cricket' },
+      plive: { inventoryBucket: 'cricket', leagueKey: 'Chennai daily cricket' },
     },
   },
   {
@@ -99,7 +99,7 @@ export const COMPETITIONS = [
     gender: 'unknown',
     providerMappings: {
       plive: {
-        streamBucket: 'cricket',
+        inventoryBucket: 'cricket',
         leagueKey: 'USA. Keenstack Champions Premier League',
       },
     },
@@ -111,7 +111,7 @@ export const COMPETITIONS = [
     aliases: ['USA. Dallas Premier League Summer'],
     gender: 'unknown',
     providerMappings: {
-      plive: { streamBucket: 'cricket', leagueKey: 'USA. Dallas Premier League Summer' },
+      plive: { inventoryBucket: 'cricket', leagueKey: 'USA. Dallas Premier League Summer' },
     },
   },
   {
@@ -121,7 +121,7 @@ export const COMPETITIONS = [
     aliases: ['Gujrat District Cup'],
     gender: 'unknown',
     providerMappings: {
-      plive: { streamBucket: 'cricket', leagueKey: 'Gujrat District Cup' },
+      plive: { inventoryBucket: 'cricket', leagueKey: 'Gujrat District Cup' },
     },
   },
   {
@@ -131,7 +131,7 @@ export const COMPETITIONS = [
     aliases: ['Chandigarh League'],
     gender: 'unknown',
     providerMappings: {
-      plive: { streamBucket: 'cricket', leagueKey: 'Chandigarh League' },
+      plive: { inventoryBucket: 'cricket', leagueKey: 'Chandigarh League' },
     },
   },
   {
@@ -141,7 +141,7 @@ export const COMPETITIONS = [
     aliases: ['Caribbean Premier League 2026'],
     gender: 'unknown',
     providerMappings: {
-      plive: { streamBucket: 'cricket', leagueKey: 'Caribbean Premier League 2026' },
+      plive: { inventoryBucket: 'cricket', leagueKey: 'Caribbean Premier League 2026' },
     },
   },
   {
@@ -150,7 +150,7 @@ export const COMPETITIONS = [
     displayName: '1st T20 Match',
     aliases: ['1st T20 Match'],
     gender: 'unknown',
-    providerMappings: { plive: { streamBucket: 'cricket', leagueKey: '1st T20 Match' } },
+    providerMappings: { plive: { inventoryBucket: 'cricket', leagueKey: '1st T20 Match' } },
   },
   {
     id: 'horse_racing.usa',
@@ -158,7 +158,7 @@ export const COMPETITIONS = [
     displayName: 'USA',
     aliases: ['USA'],
     gender: 'unknown',
-    providerMappings: { plive: { streamBucket: 'horse_racing', leagueKey: 'USA' } },
+    providerMappings: { plive: { inventoryBucket: 'horse_racing', leagueKey: 'USA' } },
   },
   {
     id: 'horse_racing.japan_morioka',
@@ -167,7 +167,7 @@ export const COMPETITIONS = [
     aliases: ['Japan. Morioka'],
     gender: 'unknown',
     providerMappings: {
-      plive: { streamBucket: 'horse_racing', leagueKey: 'Japan. Morioka' },
+      plive: { inventoryBucket: 'horse_racing', leagueKey: 'Japan. Morioka' },
     },
   },
   {
@@ -177,7 +177,7 @@ export const COMPETITIONS = [
     aliases: ['Australia. Pakenham'],
     gender: 'unknown',
     providerMappings: {
-      plive: { streamBucket: 'horse_racing', leagueKey: 'Australia. Pakenham' },
+      plive: { inventoryBucket: 'horse_racing', leagueKey: 'Australia. Pakenham' },
     },
   },
   {
@@ -187,7 +187,7 @@ export const COMPETITIONS = [
     aliases: ['Australia. Nowra'],
     gender: 'unknown',
     providerMappings: {
-      plive: { streamBucket: 'horse_racing', leagueKey: 'Australia. Nowra' },
+      plive: { inventoryBucket: 'horse_racing', leagueKey: 'Australia. Nowra' },
     },
   },
   {
@@ -197,7 +197,7 @@ export const COMPETITIONS = [
     aliases: ['Australia. Kilcoy'],
     gender: 'unknown',
     providerMappings: {
-      plive: { streamBucket: 'horse_racing', leagueKey: 'Australia. Kilcoy' },
+      plive: { inventoryBucket: 'horse_racing', leagueKey: 'Australia. Kilcoy' },
     },
   },
   {
@@ -207,7 +207,7 @@ export const COMPETITIONS = [
     aliases: ['Australia. Dubbo'],
     gender: 'unknown',
     providerMappings: {
-      plive: { streamBucket: 'horse_racing', leagueKey: 'Australia. Dubbo' },
+      plive: { inventoryBucket: 'horse_racing', leagueKey: 'Australia. Dubbo' },
     },
   },
   {
@@ -216,7 +216,7 @@ export const COMPETITIONS = [
     displayName: 'RHL',
     aliases: ['RHL'],
     gender: 'unknown',
-    providerMappings: { plive: { streamBucket: 'ice_hockey', leagueKey: 'RHL' } },
+    providerMappings: { plive: { inventoryBucket: 'ice_hockey', leagueKey: 'RHL' } },
   },
   {
     id: 'ice_hockey.3hl_league',
@@ -224,7 +224,7 @@ export const COMPETITIONS = [
     displayName: '3HL League',
     aliases: ['3HL League'],
     gender: 'unknown',
-    providerMappings: { plive: { streamBucket: 'ice_hockey', leagueKey: '3HL League' } },
+    providerMappings: { plive: { inventoryBucket: 'ice_hockey', leagueKey: '3HL League' } },
   },
   {
     id: 'ice_hockey.russia_mnhl',
@@ -232,7 +232,7 @@ export const COMPETITIONS = [
     displayName: 'Russia. MNHL',
     aliases: ['Russia. MNHL'],
     gender: 'unknown',
-    providerMappings: { plive: { streamBucket: 'ice_hockey', leagueKey: 'Russia. MNHL' } },
+    providerMappings: { plive: { inventoryBucket: 'ice_hockey', leagueKey: 'Russia. MNHL' } },
   },
   {
     id: 'soccer.usa_mpl',
@@ -240,7 +240,7 @@ export const COMPETITIONS = [
     displayName: 'USA MPL',
     aliases: ['USA MPL'],
     gender: 'unknown',
-    providerMappings: { plive: { streamBucket: 'football', leagueKey: 'USA MPL' } },
+    providerMappings: { plive: { inventoryBucket: 'football', leagueKey: 'USA MPL' } },
   },
   {
     id: 'soccer.leagues_cup',
@@ -248,7 +248,7 @@ export const COMPETITIONS = [
     displayName: 'Leagues Cup',
     aliases: ['Leagues Cup'],
     gender: 'unknown',
-    providerMappings: { plive: { streamBucket: 'football', leagueKey: 'Leagues Cup' } },
+    providerMappings: { plive: { inventoryBucket: 'football', leagueKey: 'Leagues Cup' } },
   },
   {
     id: 'sports_channels.usa',
@@ -256,7 +256,7 @@ export const COMPETITIONS = [
     displayName: 'USA',
     aliases: ['USA'],
     gender: 'unknown',
-    providerMappings: { plive: { streamBucket: 'sports_channels', leagueKey: 'USA' } },
+    providerMappings: { plive: { inventoryBucket: 'sports_channels', leagueKey: 'USA' } },
   },
   {
     id: 'table_tennis.setka_cup',
@@ -264,7 +264,7 @@ export const COMPETITIONS = [
     displayName: 'Setka Cup',
     aliases: ['Setka Cup'],
     gender: 'unknown',
-    providerMappings: { plive: { streamBucket: 'table_tennis', leagueKey: 'Setka Cup' } },
+    providerMappings: { plive: { inventoryBucket: 'table_tennis', leagueKey: 'Setka Cup' } },
   },
   {
     id: 'table_tennis.masters_russia',
@@ -273,7 +273,7 @@ export const COMPETITIONS = [
     aliases: ['Masters. Russia'],
     gender: 'unknown',
     providerMappings: {
-      plive: { streamBucket: 'table_tennis', leagueKey: 'Masters. Russia' },
+      plive: { inventoryBucket: 'table_tennis', leagueKey: 'Masters. Russia' },
     },
   },
   {
@@ -283,7 +283,7 @@ export const COMPETITIONS = [
     aliases: ['Masters. Belarus'],
     gender: 'unknown',
     providerMappings: {
-      plive: { streamBucket: 'table_tennis', leagueKey: 'Masters. Belarus' },
+      plive: { inventoryBucket: 'table_tennis', leagueKey: 'Masters. Belarus' },
     },
   },
   {
@@ -293,7 +293,7 @@ export const COMPETITIONS = [
     aliases: ['Masters. Poland'],
     gender: 'unknown',
     providerMappings: {
-      plive: { streamBucket: 'table_tennis', leagueKey: 'Masters. Poland' },
+      plive: { inventoryBucket: 'table_tennis', leagueKey: 'Masters. Poland' },
     },
   },
   {
@@ -303,7 +303,7 @@ export const COMPETITIONS = [
     aliases: ['Masters. Spain'],
     gender: 'unknown',
     providerMappings: {
-      plive: { streamBucket: 'table_tennis', leagueKey: 'Masters. Spain' },
+      plive: { inventoryBucket: 'table_tennis', leagueKey: 'Masters. Spain' },
     },
   },
   {
@@ -313,7 +313,7 @@ export const COMPETITIONS = [
     aliases: ['Masters. Poland. Women'],
     gender: 'women',
     providerMappings: {
-      plive: { streamBucket: 'table_tennis', leagueKey: 'Masters. Poland. Women' },
+      plive: { inventoryBucket: 'table_tennis', leagueKey: 'Masters. Poland. Women' },
     },
   },
   {
@@ -323,7 +323,7 @@ export const COMPETITIONS = [
     aliases: ['Masters. China'],
     gender: 'unknown',
     providerMappings: {
-      plive: { streamBucket: 'table_tennis', leagueKey: 'Masters. China' },
+      plive: { inventoryBucket: 'table_tennis', leagueKey: 'Masters. China' },
     },
   },
   {
@@ -333,7 +333,7 @@ export const COMPETITIONS = [
     aliases: ['Masters. Super League'],
     gender: 'unknown',
     providerMappings: {
-      plive: { streamBucket: 'table_tennis', leagueKey: 'Masters. Super League' },
+      plive: { inventoryBucket: 'table_tennis', leagueKey: 'Masters. Super League' },
     },
   },
   {
@@ -343,7 +343,7 @@ export const COMPETITIONS = [
     aliases: ['Masters. Argentina'],
     gender: 'unknown',
     providerMappings: {
-      plive: { streamBucket: 'table_tennis', leagueKey: 'Masters. Argentina' },
+      plive: { inventoryBucket: 'table_tennis', leagueKey: 'Masters. Argentina' },
     },
   },
   {
@@ -353,7 +353,7 @@ export const COMPETITIONS = [
     aliases: ['Masters. Russia. Women'],
     gender: 'women',
     providerMappings: {
-      plive: { streamBucket: 'table_tennis', leagueKey: 'Masters. Russia. Women' },
+      plive: { inventoryBucket: 'table_tennis', leagueKey: 'Masters. Russia. Women' },
     },
   },
   {
@@ -362,7 +362,7 @@ export const COMPETITIONS = [
     displayName: 'Yaponiya',
     aliases: ['Yaponiya'],
     gender: 'unknown',
-    providerMappings: { plive: { streamBucket: 'tennis', leagueKey: 'Yaponiya' } },
+    providerMappings: { plive: { inventoryBucket: 'tennis', leagueKey: 'Yaponiya' } },
   },
   {
     id: 'tennis.att_togliatti',
@@ -370,7 +370,7 @@ export const COMPETITIONS = [
     displayName: 'ATT Togliatti',
     aliases: ['ATT Togliatti'],
     gender: 'unknown',
-    providerMappings: { plive: { streamBucket: 'tennis', leagueKey: 'ATT Togliatti' } },
+    providerMappings: { plive: { inventoryBucket: 'tennis', leagueKey: 'ATT Togliatti' } },
   },
   {
     id: 'volleyball.upvl_nations_league_women',
@@ -379,7 +379,7 @@ export const COMPETITIONS = [
     aliases: ['UPVL. Nations League. Women'],
     gender: 'women',
     providerMappings: {
-      plive: { streamBucket: 'volleyball', leagueKey: 'UPVL. Nations League. Women' },
+      plive: { inventoryBucket: 'volleyball', leagueKey: 'UPVL. Nations League. Women' },
     },
   },
 ] as const satisfies readonly CompetitionRecord[];

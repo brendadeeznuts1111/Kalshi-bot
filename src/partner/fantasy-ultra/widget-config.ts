@@ -47,7 +47,7 @@ export type FantasySportMapping = {
 function bindingToMapping(b: LiveProductSportBinding): FantasySportMapping {
   return {
     canonical: b.sportId,
-    streamBucket: b.streamBucket,
+    streamBucket: b.inventoryBucket,
     apiSportId: b.apiSportId,
     widgetSportId: b.widgetSportId,
     label: b.label,
@@ -99,7 +99,7 @@ export function fantasySportByStreamBucket(
 ): FantasySportMapping | undefined {
   const hit = resolveSport({
     liveProduct: DEFAULT_COVERAGE_LIVE_PRODUCT,
-    streamBucket: bucket,
+    inventoryBucket: bucket,
   });
   return hit ? bindingToMapping(hit.binding) : undefined;
 }

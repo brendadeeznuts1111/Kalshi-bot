@@ -163,7 +163,7 @@ describe('domain sports / skins / live products', () => {
 
     const byBucket = resolveSport({
       liveProduct: 'ezlive',
-      streamBucket: 'football',
+      inventoryBucket: 'football',
     });
     expect(byBucket?.sportId).toBe('soccer');
   });

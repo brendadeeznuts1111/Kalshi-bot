@@ -411,7 +411,7 @@ export function migrateSkinEventsCompetitionIds(db: Database): void {
       liveProduct,
       league: row.league ?? '',
       sportId: isSportId(sport) ? sport : undefined,
-      streamBucket: sport || undefined,
+      inventoryBucket: sport || undefined,
     });
     const next = hit?.competitionId ?? null;
     const prev = row.competitionId?.trim() || null;

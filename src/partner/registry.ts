@@ -176,7 +176,7 @@ export function seedFantasySportMappings(
       upsert.run({
         $provider: provider,
         $canonical: m.sportId,
-        $stream: m.streamBucket,
+        $stream: m.inventoryBucket,
         $api: m.apiSportId,
         $widget: m.widgetSportId,
         $label: m.label,

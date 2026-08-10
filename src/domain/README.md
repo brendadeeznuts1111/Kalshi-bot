@@ -32,7 +32,7 @@ resolveCompetition({
 // ezlive shares the plive shell mapping
 resolveCompetition({
   liveProduct: 'ezlive',
-  streamBucket: 'table_tennis',
+  inventoryBucket: 'table_tennis',
   league: 'Masters. Poland. Women',
 }); // → table_tennis.masters_poland_women (gender: women)
 ```
