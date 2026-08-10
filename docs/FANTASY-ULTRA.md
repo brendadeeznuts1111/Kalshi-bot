@@ -33,6 +33,39 @@ Book adapter and coverage inventory for a **PPH / Fantasy402** desk (skin
 | Adapter DTO types                      | `src/partner/types.ts`                    |
 | Out env profile                        | `src/partner/account-profile.ts`          |
 | Smoke CLI                              | `bun run partner:test-fantasy`            |
+| Widget domain harvest                  | `bun run domain:widget-extract`           |
+
+## Widget domain harvest (sports · markets · leagues)
+
+| Data | Source | Notes |
+| ---- | ------ | ----- |
+| `MARKET_*` labels | Shell HTML `LANGUAGES.texts` | Static, ~400+ keys |
+| Rules sport icons | Shell HTML rules `icon` | Maps → `SportId` |
+| Live sports + market flags | Pandora `live.sports` | Dynamic catalog |
+| Leagues | Pandora `live.leagues` | **Not** static in HTML |
+| Wager / market types | Pandora `live.wagerTypes` | Name + short codes |
+
+```bash
+bun run domain:widget-extract                 # shell + Pandora (~12s)
+bun run domain:widget-extract -- --html-only
+bun run domain:widget-extract -- --write      # research/cache/widget-domain-snapshot.json
+bun run domain:widget-extract -- --json
+```
+
+Code: `src/domain/widget-domain-extract.ts`. No gsid. Gaps print vs domain
+`SPORTS`; league promote remains `inventory:leagues --promote`.
+
+**Integrate snapshot into COMPETITIONS** (limited + junk filter — do not dump 3898):
+
+```bash
+bun run domain:pandora -- --report
+bun run domain:pandora -- --promote --limit=50
+bun run domain:pandora -- --promote --apply --limit=20 --sport=soccer
+bun run domain:pandora -- --markets
+```
+
+`providerMappings.pandora.leagueId` links feed league ids when applied.
+Code: `src/domain/pandora-domain-integrate.ts`.
 
 ## Network-capture flow (implemented)
 
@@ -379,7 +412,10 @@ enrich later (wire `client_event_id` soft-matched via `--enrich-booked`).
 | ----------------------------------- | ---------------------------- | ----------------------------------------------- |
 | `sportOrder`                        | `[214, 1, 2, 4, 220]`        | UI only; 214 = favorites                        |
 | Table tennis widget id              | **220**                      | Sidebar                                         |
-| Table tennis API / ticket `sportId` | **93**                       | betGroups, Get_SportsLeagues                    |
+| Table tennis API / ticket `sportId` | **93**                       | betGroups `componentBets[].sportId`, mainapp `isTableTennis` |
+| Tennis ticket / feed                | **8**                        | mainapp `isTennis`                              |
+| Soccer ticket / feed                | **5**                        | mainapp `isSoccer` (also shells 214/220/221)    |
+| Golf / racing                       | **7** / **9**                | mainapp `isGolf` / `isRacing`                   |
 | stream-list bucket                  | `table_tennis`               | Detection                                       |
 | `customWebSocketUrl`                | `wss://pandora.ganchrow.com` | Live odds (message format **not** captured yet) |
 | `oddsFormat`                        | `american`                   | Display/wire preference                         |
@@ -403,8 +439,51 @@ normalizeOdds(1.8928, 'decimal'); // dual american + truncated decimal
 ### Pandora Socket.IO (live odds transport)
 
 ```text
-wss://pandora.ganchrow.com/socket.io/?EIO=4&transport=websocket
+wss://pandora.ganchrow.com/socket.io/?EIO=4&transport=websocket   # plive desk (default)
+wss://spandora.ganchrow.com/socket.io/?EIO=4&transport=websocket  # public sportswidgets.pro
 ```
+
+Same Engine.IO / Socket.IO protocol, same `LINE_SET` token
+(`U0VWU1NWUkJSMFU9`), same JSON-patch diffs. Host only differs by edge.
+
+| Host | Shell | Flag |
+| ---- | ----- | ---- |
+| `pandora` | plive.sportswidgets.pro | default |
+| `spandora` | sportswidgets.pro | `--spandora` / `--host=spandora` |
+
+**Feed sport 93 = table tennis** (`isTableTennis(e){return Number(e)===93}`).
+Tennis on the live board is feed id **8** (ticket `apiSportId` map still
+uses legacy widget ids for some sports).
+
+**Market type labels** (Pandora + ticket share ids):
+
+| Id | Label | Notes |
+| -- | ----- | ----- |
+| 3 | moneyline | sides 1/2 |
+| 5 | total | games or points by sport |
+| 6 | spread / handicap | |
+| 7 | total_points | TT |
+| 8 | team_total | |
+| 9 | correct_score_sets | |
+| 16 | set_correct_score | `lineId = (p1<<16)\|p2` (BO5: 3-0…0-3) |
+| 18 | game_winner | odd game # keys; o=[p1,p2] |
+
+```bash
+bun run domain:event -- --id=197501721 --spandora
+bun run domain:event -- --board --spandora --sport=93 --bettable
+# 90s watch: suspension intervals + vig snapshot (spandora TT)
+bun run domain:event -- --id=197501721 --spandora --watch --seconds=90
+```
+
+**Vig:** `overroundFromDecimals` / `vigFromCoefficientLines` — multi-way m/16
+drops ~1.0 companion legs; two-way core markets ~8–9% on live TT.
+
+**Suspensions:** `summarizeOddsWatch` pairs `market_off`→`market_on` with
+duration (median/mean). Live TT sample: short m/5 suspends ~1–5s; batch
+suspend of s3/* often ~17–19s around game points.
+
+Decode helpers: `market-decode.ts` · hosts: `pandora-hosts.ts` · watch summary
+in `event-lookup.ts`.
 
 | Handshake (live-probed)   | Meaning               |
 | ------------------------- | --------------------- |
@@ -439,6 +518,98 @@ body).
 Decode: `decodePandoraAttachment` → `extractCoefficientLines` (decimal +
 American via `normalizeOdds`). Diffs use JSON-patch ops (`isDiff: true`).
 
+### eventData board (event-level state)
+
+Room `live.main.{token}.eventData` is the live **board index** (mainapp
+`receiveEvents`), not a single-event DTO. Snapshot keys:
+
+| Key | Meaning |
+| --- | --- |
+| `s` | Tree `s[sportId][countryId][leagueId][eventId]` |
+| `db` | DonBest rotation id → eventId |
+| `kb` | Opaque reverse index (large; not used by mainapp offer gates) |
+| `x` | Per-shard betOffline flags (`handleBetOfflineUpdate`) |
+| `c` / `m` / `f` / `ec` | Optional coeffs / misc / flush / updateState ids |
+
+Each event node is a 13-slot array. Last element (index 12; mainapp `p.pop()`)
+is the **dynamic** object:
+
+| Wire | Maps to |
+| ---- | ------- |
+| `s` | `EVENT_STATES`: 0 bettable · 1 blocked · 2 notBettable · 3 finished |
+| `ip` | isStarted |
+| `il` | isLive |
+| `l` | hasLines (board hasOdds proxy) |
+| `n` | shard |
+| `oc` | oddsCount (when present) |
+| `ht` | isHalftime |
+
+UI **off the board** (`isOTB`): finished ‖ notBettable ‖ blocked ‖ !hasOdds.  
+Diff path example: `/s/8/340/14358/197502861/12/l` → `hasLines` flip.
+
+**Odds taken off (two planes):**
+
+1. **Market** — `eventCoefficients`: empty `o` / `selection_off` / `market_off`
+2. **Event** — `eventData`: `s`→2|3 or `l`→false
+
+`cls` on coefficient markets is **limit/price-class**, not suspend.
+
+```bash
+bun run domain:event -- --id=197488581          # eventState + book
+bun run domain:event -- --id=197548901 --watch  # state + coeff transitions
+bun run domain:event -- --board                 # full board OTB / by-sport
+bun run domain:event -- --board --bettable --sport=8
+# Market first, then optional seat (FANTASY402_*). Exit 1 only on market/profile fail
+# (or session fail when --validate-session).
+bun run domain:event -- --id=197488581 --validate
+bun run domain:event -- --id=197488581 --validate-session --renew
+```
+
+**Validate planes:** inventory → market (Pandora OTB/lines) → profile
+(blocked) → session (login/warm/cookies).  
+`market_ok_session_fail` = poorly held seat, market still live.  
+`market_off` = fix market/id, not password.
+
+**Three sport-id planes** (SSOT: `src/domain/pandora-feed-sports.ts` +
+`live-product-sport-bindings.ts`):
+
+| Plane | Source | Tennis | Basketball | TT | Soccer |
+| ----- | ------ | ------ | ---------- | -- | ------ |
+| **feedSportId** | eventData / live.sports | **8** | **2** | **93** | **5** |
+| **widgetSportId** | shell sportOrder | 2 | 4 | 220 | 1 |
+| **apiSportId** | ticket / componentBet (proven) | **8** | — | **93** | **5** |
+| **inventoryBucket** | stream-list-v2 | tennis | basketball | table_tennis | football |
+
+`apiSportId` = feed number for sports proven by mainapp `isX` and/or betGroups
+(TT). Basketball etc. stay feed-only until a ticket capture proves them.
+**Collision:** feed shell **220** = Top Soccer; widget **220** = TT sidebar.
+
+```ts
+import { resolveSport, sportIdFromFeedSportId, FEED_SPORT } from './src/domain/index.ts';
+sportIdFromFeedSportId(8);                          // 'tennis'
+resolveSport({ liveProduct: 'plive', feedSportId: 2 }); // basketball (not tennis!)
+resolveSport({ liveProduct: 'plive', widgetSportId: 2 }); // tennis shell
+```
+
+| Feed id | Name | SportId |
+| ------- | ---- | ------- |
+| 1 | Baseball | baseball |
+| 2 | Basketball | basketball |
+| 3 | Football | american_football |
+| 4 | Hockey | ice_hockey |
+| 5 | Soccer | soccer |
+| 6 | Fighting | martial_arts |
+| 7 | Golf | golf |
+| 8 | Tennis | tennis |
+| 87 | Cricket | cricket |
+| 93 | Table Tennis | table_tennis |
+| 114 | E-Sports | sports_channels |
+
+**Effective state** (mainapp `calculateState`): groupProfile
+`blocked.{sports,leagues,events}` forces **notBettable** even when wire `s=0`.
+Decode: `scanEventDataBoard` · `parsePandoraBlocked` ·
+`findEventInEventDataBoard` · `decodeEventOfferability`.
+
 **Book path (wired):** `onCoefficients` → `CoefficientStore` → `fetchMarkets()`
 / `fetchOdds(oddsEventId)` (match ML `marketType=3`).  
 Inventory sync sets `pricedOdds: true` when the store has lines. Still **no**
@@ -449,7 +620,8 @@ bun run partner:pandora-probe -- --plive --event-ids=174125551 --seconds=20
 ```
 
 Code: `PandoraSocket` · `coefficients.ts` · `coefficient-store.ts` ·
-`buildPliveSubscribeSequence` · `bun run partner:webview-ws-capture`.
+`event-lookup.ts` · `buildPliveSubscribeSequence` ·
+`bun run partner:webview-ws-capture`.
 
 ## Domain architecture (five layers)
 
@@ -535,6 +707,7 @@ bun run domain:sports -- --leagues=table_tennis
 bun run domain:sports -- --leagues=all --json
 bun run domain:sports -- --map        # offline static map
 bun run domain:sports -- --seed       # refresh provider_sport_mappings
+bun run domain:widget-extract         # HTML MARKET_* + Pandora sports/leagues/wagers
 bun run inventory:sync -- --sport=all    # events + leagues (plive shell → ezlive cover)
 bun run inventory:leagues -- --unmapped  # promote feed for COMPETITIONS
 ```

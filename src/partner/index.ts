@@ -70,6 +70,31 @@ export {
   resolvePlaceBetUrl,
 } from './fantasy-ultra/place-bet-body.ts';
 export { FANTASY_ULTRA_DEFAULTS, type FantasyUltraCredentials } from './fantasy-ultra/types.ts';
+export {
+  FEED_SPORT_TABLE_TENNIS,
+  FEED_SPORT_TENNIS,
+  PANDORA_HOSTS,
+  PANDORA_LINE_SET_TOKEN,
+  isPandoraHostId,
+  pandoraBaseUrl,
+  pandoraSocketUrl,
+  resolvePandoraHostId,
+  type PandoraHostId,
+} from './fantasy-ultra/pandora-hosts.ts';
+export {
+  PANDORA_MARKET_LABELS,
+  TABLE_TENNIS_FIRST_TO_SETS,
+  decimalToImplied,
+  decodeSetCorrectScoreLineId,
+  describeCoefficientSelection,
+  encodeSetCorrectScoreLineId,
+  enumerateSetCorrectScoreLines,
+  formatMarketVigRows,
+  formatSetCorrectScoreLineId,
+  overroundFromDecimals,
+  pandoraMarketLabel,
+  vigFromCoefficientLines,
+} from './fantasy-ultra/market-decode.ts';
 
 export {
   formatSportHistogram,

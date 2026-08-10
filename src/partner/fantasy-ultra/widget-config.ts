@@ -25,10 +25,15 @@ export const FANTASY_WIDGET_CONFIG = {
   roundUSOddsDown: true,
   oddsDecimalPlaces: 3,
   useCustomWebSocket: true,
+  /** Default plive desk host. Public sportswidgets uses spandora (see pandora-hosts). */
   customWebSocketUrl: 'wss://pandora.ganchrow.com',
+  /** Alternate public shell host (same LINE_SET / protocol). */
+  spandoraWebSocketUrl: 'wss://spandora.ganchrow.com',
   playerUSEnabled: true,
   /** Soft limit: stream after wager within this window (seconds). */
   liveStreamLastWagerToleranceSec: 86_400,
+  /** mainapp isTableTennis — feed sport id on eventData board. */
+  feedSportTableTennis: 93,
 } as const;
 
 /**
@@ -38,6 +43,8 @@ export const FANTASY_WIDGET_CONFIG = {
 export type FantasySportMapping = {
   canonical: string;
   streamBucket: string;
+  /** Pandora feed id (eventData / live.sports). */
+  feedSportId: number | null;
   apiSportId: number | null;
   widgetSportId: number | null;
   label: string;
@@ -48,6 +55,7 @@ function bindingToMapping(b: LiveProductSportBinding): FantasySportMapping {
   return {
     canonical: b.sportId,
     streamBucket: b.inventoryBucket,
+    feedSportId: b.feedSportId,
     apiSportId: b.apiSportId,
     widgetSportId: b.widgetSportId,
     label: b.label,
@@ -70,6 +78,17 @@ export function fantasySportByApiId(
   const hit = resolveSport({
     liveProduct: DEFAULT_COVERAGE_LIVE_PRODUCT,
     apiSportId,
+  });
+  return hit ? bindingToMapping(hit.binding) : undefined;
+}
+
+/** Pandora feed sport id (preferred for board / eventData). */
+export function fantasySportByFeedId(
+  feedSportId: number,
+): FantasySportMapping | undefined {
+  const hit = resolveSport({
+    liveProduct: DEFAULT_COVERAGE_LIVE_PRODUCT,
+    feedSportId,
   });
   return hit ? bindingToMapping(hit.binding) : undefined;
 }

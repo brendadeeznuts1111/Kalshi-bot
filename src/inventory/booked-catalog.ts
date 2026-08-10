@@ -23,6 +23,7 @@ export type BookedCatalogEntry = {
   oddsEventId: string;
   name: string;
   sportName: string;
+  competition?: string | null;
 };
 
 export type FetchBookedCatalogOptions = {
@@ -145,6 +146,7 @@ async function fetchLiveCatalog(
         oddsEventId: r.oddsEventId,
         name: r.name,
         sportName: r.sportName,
+        competition: r.competition,
       });
       if (byId.size >= maxEvents) break;
     }
@@ -267,8 +269,18 @@ export async function fetchPublicBookedCatalog(
 
 export function bookedCatalogToMatchList(
   entries: BookedCatalogEntry[]
-): Array<{ oddsEventId: string; name: string }> {
-  return entries.map(e => ({ oddsEventId: e.oddsEventId, name: e.name }));
+): Array<{
+  oddsEventId: string;
+  name: string;
+  sportName: string;
+  competition?: string | null;
+}> {
+  return entries.map(e => ({
+    oddsEventId: e.oddsEventId,
+    name: e.name,
+    sportName: e.sportName,
+    competition: e.competition ?? null,
+  }));
 }
 
 /** Adapter-shaped rows → catalog entries. */
@@ -279,5 +291,6 @@ export function partnerBookedToCatalog(
     oddsEventId: r.oddsEventId,
     name: r.name,
     sportName: r.sportName,
+    competition: r.competition,
   }));
 }

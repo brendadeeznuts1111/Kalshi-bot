@@ -12,7 +12,9 @@ describe("sports inventory", () => {
     const s = staticSportMapSummary();
     expect(s.total).toBeGreaterThanOrEqual(30);
     expect(s.primary).toBe(4);
-    expect(s.withApiId).toBe(4);
+    // ticket plane: mainapp isX + TT betGroups (soccer/tennis/golf/racing/fighting/TT…)
+    expect(s.withApiId).toBeGreaterThanOrEqual(8);
+    expect(s.withFeedId).toBeGreaterThanOrEqual(20);
     expect(primaryFantasySports().map((m) => m.canonical).sort()).toEqual([
       "basketball",
       "soccer",

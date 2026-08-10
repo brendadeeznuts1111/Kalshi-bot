@@ -127,6 +127,34 @@ export {
 } from './live-product-sport-bindings.ts';
 
 export {
+  FEED_SPORT,
+  PANDORA_FEED_SPORTS,
+  feedSportIdsForSport,
+  feedSportName,
+  feedSportSlug,
+  getPandoraFeedSport,
+  listMappedFeedSports,
+  listPandoraFeedSports,
+  sportIdFromFeedSportId,
+  type PandoraFeedSport,
+  type PandoraFeedSportKind,
+} from './pandora-feed-sports.ts';
+
+export {
+  PANDORA_SPORT_PERIODS,
+  bakedPeriodLabel,
+  listBakedPeriodFeedSportIds,
+  periodUnitForFeedSport,
+  type PandoraSportPeriodBake,
+} from './pandora-sport-periods.ts';
+
+export {
+  PANDORA_COUNTRY_NAMES,
+  countryName,
+  listPandoraCountries,
+} from './pandora-countries.ts';
+
+export {
   DEFAULT_COVERAGE_LIVE_PRODUCT,
   WIDGET_FAVORITES_SPORT_ID,
   resolveSport,
@@ -174,15 +202,71 @@ export {
 } from './competition-promote.ts';
 
 export {
+  PROMOTE_SPORT_PRIORITY,
+  applyAttachPandoraMappings,
+  applyPandoraPromoteToCompetitionsFile,
+  buildPandoraCoverageReport,
+  buildPandoraSportMap,
+  formatPandoraCoverageReport,
+  formatPandoraPromotePlan,
+  isPandoraLeagueNoise,
+  liveLeaguesToPromoteInputs,
+  loadWidgetDomainSnapshot,
+  planAttachPandoraMappings,
+  planPandoraCompetitionPromote,
+  rankPromoteInputs,
+  type PandoraCoverageReport,
+  type PandoraPromoteResult,
+  type PandoraSportMapEntry,
+} from './pandora-domain-integrate.ts';
+
+export {
+  buildDomainGaps,
+  defaultWidgetDomainCachePath,
+  extractLanguageTexts,
+  extractMarketLabelsFromTexts,
+  extractShellSportsFromScript,
+  extractWidgetDomain,
+  formatWidgetDomainSnapshot,
+  mapLiveSportNameToSportId,
+  resolveLeagueFeedSportId,
+  resolveLiveSportId,
+  parseLiveCountriesRoom,
+  parseLiveLeaguesRoom,
+  parseLiveSportsRoom,
+  parseSportPeriodRoom,
+  parseWagerTypesRoom,
+  sportPeriodLabel,
+  summarizeLeaguesByFeedSport,
+  wagerTypeFamilyCounts,
+  writeWidgetDomainSnapshot,
+  type DomainGapReport,
+  type SportPeriodLanguageBlock,
+  type WidgetCountry,
+  type WidgetDomainSnapshot,
+  type WidgetLiveLeague,
+  type WidgetLiveSport,
+  type WidgetMarketLabel,
+  type WidgetShellSport,
+  type WidgetSportPeriods,
+  type WidgetWagerType,
+} from './widget-domain-extract.ts';
+
+export {
   EXAMPLE_DARIN_PLACHY_ODDS_LINE,
   EXAMPLE_DARIN_PLACHY_TICKET_LEG,
   KNOWN_MARKET_LABELS,
+  PANDORA_PERIOD_CODES,
+  PSEUDO_PERIOD_TO_MATCH,
+  canonicalizePeriodId,
   describeOddsLine,
   describeTicketLeg,
+  isPandoraPeriodCode,
   marketLabel,
   oddsLineFromCoefficient,
   oddsLineFromTicketLeg,
   periodLabel,
+  periodLabelForFeedSport,
   ticketLegFromOddsLine,
   ticketLegFromWire,
   type CoefficientLineCoords,
@@ -190,6 +274,7 @@ export {
   type KnownMarketId,
   type OddsEventRef,
   type OddsLine,
+  type PandoraPeriodCode,
   type TicketLeg,
   type TicketLegCoords,
 } from './odds-selection.ts';

@@ -13,6 +13,7 @@
 
 import type { CompetitionId } from './competitions.ts';
 import type { SportId } from './sports.ts';
+import { bakedPeriodLabel } from './pandora-sport-periods.ts';
 
 // ── 1. Inventory ───────────────────────────────────────────────────────────
 
@@ -122,11 +123,26 @@ export const EXAMPLE_DARIN_PLACHY_TICKET_LEG: TicketLeg = {
 
 // ── Shared labels + explicit bridges ────────────────────────────────────────
 
-/** Proven market type / marketId labels (Pandora + ticket share these ids). */
+/**
+ * Proven market type / marketId labels (Pandora + ticket share these ids).
+ * TT + tennis extended: 7 total_points, 9 set CS, 16 set CS (encoded), 18 game winner.
+ * @see partner/fantasy-ultra/market-decode.ts
+ */
 export const KNOWN_MARKET_LABELS = {
+  '1': 'moneyline_3way',
   '3': 'moneyline',
+  '4': 'draw_no_bet',
   '5': 'total',
+  /** Alias: spread (sportsbook) / handicap (Pandora m/6). */
   '6': 'spread',
+  '7': 'total_points',
+  '8': 'team_total',
+  '9': 'correct_score_sets',
+  '16': 'set_correct_score',
+  '18': 'game_winner',
+  '20': 'set_total_games',
+  '21': 'set_game_handicap',
+  '30': 'outright_futures',
 } as const;
 
 export type KnownMarketId = keyof typeof KNOWN_MARKET_LABELS;
@@ -137,10 +153,112 @@ export function marketLabel(marketId: string): string {
   return known ?? `market:${id || '?'}`;
 }
 
+/**
+ * Default period tab order from plive `sportPeriodsService.periodCodes`
+ * (mainapp). Per-sport order can override via live.sportPeriod.
+ */
+export const PANDORA_PERIOD_CODES = [
+  'm',
+  'h1',
+  'h2',
+  's1',
+  's2',
+  's3',
+  's4',
+  's5',
+  's6',
+  's7',
+  's8',
+  's9',
+  's10',
+  's11',
+  's12',
+  's13',
+  's14',
+] as const;
+
+export type PandoraPeriodCode = (typeof PANDORA_PERIOD_CODES)[number];
+
+/**
+ * Pseudo period tabs on the event page that share match-level markets
+ * (`event.controller` realPeriodIds Proxy → `"m"`).
+ */
+export const PSEUDO_PERIOD_TO_MATCH: Readonly<Record<string, 'm'>> = {
+  p: 'm', // player props tab
+  pp: 'm',
+  wc: 'm', // parlay / world cup specials shell
+  cn: 'm',
+  cd: 'm',
+  td: 'm',
+  fg: 'm',
+  sgp: 'm', // same game parlay
+  bb: 'm', // bet builder
+  fb: 'm', // featured / free bet shell
+};
+
+/**
+ * Collapse pseudo period tabs to the coefficient period they price against.
+ * Real codes (`m`, `h1`, `s3`, `q2`) pass through unchanged.
+ */
+export function canonicalizePeriodId(periodId: string): string {
+  const p = periodId.trim().toLowerCase();
+  if (!p) return p;
+  return PSEUDO_PERIOD_TO_MATCH[p] ?? p;
+}
+
+/**
+ * Human label for a Pandora / ticket period id.
+ * Wire codes: m, hN, sN (set/segment), qN (quarter), iN (inning), ot/OT.
+ * Pseudo tabs (p, sgp, bb, …) label as product shells, not match.
+ */
 export function periodLabel(periodId: string): string {
-  const p = periodId.trim();
+  const raw = periodId.trim();
+  if (!raw) return '?';
+  const p = raw.toLowerCase();
+
   if (p === 'm') return 'match';
-  return p || '?';
+  if (p === 'p' || p === 'pp') return 'player props';
+  if (p === 'sgp') return 'same game parlay';
+  if (p === 'bb') return 'bet builder';
+  if (p === 'fb') return 'featured bets';
+  if (p === 'wc') return 'parlay specials';
+  if (p === 'ot' || p === 'eot') return 'overtime';
+  if (p === 'et') return 'extra time';
+  if (p === 'pen' || p === 'pens' || p === 'pso') return 'penalties';
+
+  if (/^s\d+$/.test(p)) return `set ${p.slice(1)}`;
+  if (/^h\d+$/.test(p)) return `half ${p.slice(1)}`;
+  if (/^q\d+$/.test(p)) return `quarter ${p.slice(1)}`;
+  if (/^i\d+$/.test(p)) return `inning ${p.slice(1)}`;
+  if (/^p\d+$/.test(p)) return `period ${p.slice(1)}`; // hockey P1/P2 style as p1
+  if (/^g\d+$/.test(p)) return `game ${p.slice(1)}`;
+
+  // League-scoped keys sometimes appear as L_<code>
+  if (/^l_/i.test(raw)) return periodLabel(raw.slice(2));
+
+  return raw;
+}
+
+/** True when period is a default periodCodes entry (not a pseudo tab). */
+export function isPandoraPeriodCode(periodId: string): boolean {
+  const p = periodId.trim().toLowerCase();
+  return (PANDORA_PERIOD_CODES as readonly string[]).includes(p);
+}
+
+/**
+ * Sport-aware period label: baked live.sportPeriod first, else generic
+ * {@link periodLabel}. Use this whenever feedSportId is known — baseball
+ * `s1` is "1st Inning", TT `s1` is "1st Game", not "set 1".
+ */
+export function periodLabelForFeedSport(
+  feedSportId: number | string | null | undefined,
+  periodId: string
+): string {
+  if (feedSportId != null && String(feedSportId).trim() !== '') {
+    const baked = bakedPeriodLabel(feedSportId, periodId);
+    if (baked) return baked;
+  }
+  return periodLabel(periodId);
 }
 
 /** Explicit bridge: odds line → ticket leg (same wire numbers, new type). */

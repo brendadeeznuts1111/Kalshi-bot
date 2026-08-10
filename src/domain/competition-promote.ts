@@ -223,13 +223,20 @@ export function planCompetitionPromote(
 /** Format one CompetitionRecord as TypeScript object literal (competitions.ts style). */
 export function formatCompetitionRecordSource(rec: CompetitionRecord): string {
   const plive = rec.providerMappings.plive;
+  const pandora = rec.providerMappings.pandora;
   const bucket = plive?.inventoryBucket ?? rec.sportId;
   const leagueKey = plive?.leagueKey ?? rec.displayName;
   const aliases = rec.aliases.map(a => JSON.stringify(a)).join(', ');
   const compact =
     rec.aliases.length === 1 &&
     rec.aliases[0] === leagueKey &&
-    rec.gender === 'unknown';
+    rec.gender === 'unknown' &&
+    !pandora;
+
+  const pliveLit = `{ inventoryBucket: ${JSON.stringify(bucket)}, leagueKey: ${JSON.stringify(leagueKey)} }`;
+  const pandoraLit = pandora
+    ? `pandora: { leagueId: ${JSON.stringify(pandora.leagueId)}, feedSportId: ${JSON.stringify(pandora.feedSportId)} }`
+    : null;
 
   if (compact) {
     return `  {
@@ -238,9 +245,12 @@ export function formatCompetitionRecordSource(rec: CompetitionRecord): string {
     displayName: ${JSON.stringify(rec.displayName)},
     aliases: [${aliases}],
     gender: ${JSON.stringify(rec.gender)},
-    providerMappings: { plive: { inventoryBucket: ${JSON.stringify(bucket)}, leagueKey: ${JSON.stringify(leagueKey)} } },
+    providerMappings: { plive: ${pliveLit} },
   }`;
   }
+
+  const mappingLines = [`      plive: ${pliveLit},`];
+  if (pandoraLit) mappingLines.push(`      ${pandoraLit},`);
 
   return `  {
     id: ${JSON.stringify(rec.id)},
@@ -249,7 +259,7 @@ export function formatCompetitionRecordSource(rec: CompetitionRecord): string {
     aliases: [${aliases}],
     gender: ${JSON.stringify(rec.gender)},
     providerMappings: {
-      plive: { inventoryBucket: ${JSON.stringify(bucket)}, leagueKey: ${JSON.stringify(leagueKey)} },
+${mappingLines.join('\n')}
     },
   }`;
 }
@@ -277,10 +287,23 @@ export function applyCompetitionRecordsToSource(
     return { next: source, added, skipped };
   }
 
-  const marker = '] as const satisfies readonly CompetitionRecord[]';
-  const idx = source.lastIndexOf(marker);
+  const markers = [
+    '] as const satisfies readonly CompetitionRecord[]',
+    '] satisfies readonly CompetitionRecord[]',
+  ];
+  let marker = '';
+  let idx = -1;
+  for (const m of markers) {
+    const i = source.lastIndexOf(m);
+    if (i > idx) {
+      idx = i;
+      marker = m;
+    }
+  }
   if (idx < 0) {
-    throw new Error('competitions.ts: closing `] as const satisfies` marker not found');
+    throw new Error(
+      'competitions.ts: closing `] satisfies readonly CompetitionRecord[]` marker not found'
+    );
   }
 
   // Ensure previous entry ends with comma

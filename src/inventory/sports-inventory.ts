@@ -182,13 +182,18 @@ export async function fetchStreamSportsInventory(
 export function staticSportMapSummary(): {
   total: number;
   primary: number;
+  /** Ticket apiSportId set (mainapp isX + TT betGroups; not all sports). */
   withApiId: number;
+  /** Pandora feedSportId set. */
+  withFeedId: number;
   buckets: string[];
 } {
   return {
     total: FANTASY_SPORT_MAPPINGS.length,
     primary: FANTASY_SPORT_MAPPINGS.filter((m) => m.primary).length,
     withApiId: FANTASY_SPORT_MAPPINGS.filter((m) => m.apiSportId != null).length,
+    withFeedId: FANTASY_SPORT_MAPPINGS.filter((m) => m.feedSportId != null)
+      .length,
     buckets: FANTASY_SPORT_MAPPINGS.map((m) => m.streamBucket),
   };
 }

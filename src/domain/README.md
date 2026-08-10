@@ -62,6 +62,61 @@ bun run inventory:leagues -- --backfill          # stamp ids (fresh process)
 Logic: [`competition-promote.ts`](competition-promote.ts) — junk filter +
 `planCompetitionPromote` + `applyCompetitionRecordsToSource`.
 
+### Widget domain harvest (sports · markets · leagues)
+
+Provider labels from **plive shell HTML** + **Pandora rooms** (not seat gsid):
+
+| Data | Source |
+| ---- | ------ |
+| `MARKET_*` display strings | HTML `LANGUAGES` → `texts` (English) |
+| Rules sport icons | HTML rules `icon` slugs |
+| Live sports + market flags | Pandora `live.sports` |
+| Feed sport id SSOT | [`pandora-feed-sports.ts`](pandora-feed-sports.ts) (85 ids) |
+| Leagues (dynamic) | Pandora `live.leagues` (`s` + `platformSport`) |
+| Period labels | Baked [`pandora-sport-periods.ts`](pandora-sport-periods.ts) + `periodLabelForFeedSport` |
+| Countries | Baked [`pandora-countries.ts`](pandora-countries.ts) + `live.countries` |
+| Wager / market-type catalog | Pandora `live.wagerTypes` (`tp` = family, not unique product) |
+
+```bash
+bun run domain:sports -- --feed               # static feed catalog (85)
+bun run domain:sports -- --periods            # baked s1/h1 labels per feed sport
+bun run domain:sports -- --countries
+bun run domain:sports -- --snapshot-leagues   # from widget-domain-snapshot.json
+bun tools/bake-sport-periods.ts               # re-capture → bake SSOT modules
+bun run domain:widget-extract                 # shell + Pandora (~12s)
+bun run domain:widget-extract -- --html-only
+bun run domain:widget-extract -- --write      # research/cache/widget-domain-snapshot.json
+bun run domain:widget-extract -- --json
+```
+
+**Period unit trap:** wire codes stay `s1`…`s10` for all sports; the *name*
+is sport-specific (baseball Inning, basketball Quarter, tennis Set, TT Game).
+Never rely on generic `periodLabel('s1')` → `"set 1"` when feedSportId is known.
+
+**Planes:** feedSportId (eventData / live.sports) ≠ widgetSportId (shell
+sportOrder) ≠ apiSportId (ticket). Example: feed `3` = Football =
+`american_football`; feed `5` = Soccer. Resolve with
+`resolveLiveSportId` / `sportIdFromFeedSportId` — never name-only for
+`"Football"`.
+
+Code: [`widget-domain-extract.ts`](widget-domain-extract.ts). Leagues are **not**
+static in HTML — re-run with Pandora when the board is live to grow the set.
+Compare gaps to `SPORTS` / `KNOWN_MARKET_LABELS`; promote leagues still via
+`inventory:leagues --promote`.
+
+**Integrate snapshot → COMPETITIONS** (junk-filtered, limited — not all 3.8k):
+
+```bash
+bun run domain:widget-extract -- --write
+bun run domain:pandora -- --report
+bun run domain:pandora -- --promote --limit=50          # dry-run
+bun run domain:pandora -- --promote --apply --limit=20  # write competitions.ts
+bun run domain:pandora -- --markets
+```
+
+Adds optional `providerMappings.pandora: { leagueId, feedSportId }` alongside
+plive keys. Code: [`pandora-domain-integrate.ts`](pandora-domain-integrate.ts).
+
 ### Three planes (inventory · odds · ticket)
 
 ```ts
