@@ -189,7 +189,6 @@ export {
   stampSkinEventsCompetitionIds,
   upsertSkinLiveEvents,
   type SkinEventRow,
-  type SkinEventUpsertResult,
 } from '../inventory/skin-events-store.ts';
 
 export {

@@ -120,7 +120,7 @@ export type SkinEventRow = {
   competitionId: CompetitionId | null;
 };
 
-export type SkinEventUpsertResult = {
+type SkinEventUpsertResult = {
   inserted: SkinEventRow[];
   updated: SkinEventRow[];
   seen: number;
@@ -134,7 +134,7 @@ export function listSkinInventoryIds(db: Database, bookId: string): Set<string> 
   return new Set(rows.map(r => String(r.inventoryId)));
 }
 
-export function liveEventToRow(
+function liveEventToRow(
   event: InventoryEvent,
   nowMs: number,
   identity: InventoryIdentity,
