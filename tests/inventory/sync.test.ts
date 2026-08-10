@@ -101,6 +101,11 @@ describe("inventory sync", () => {
     expect(report.capabilities.pricedOdds).toBe(false);
     expect(report.capabilities.placeBetRequest).toBe(false);
     expect(report.capabilities.liquidityMerge).toBe(false);
+    expect(report.coversLiveProducts).toContain("plive");
+    expect(report.coversLiveProducts).toContain("ezlive");
+    expect(report.sportHistogram.table_tennis).toBe(2);
+    expect(report.newBySport.table_tennis).toBe(2);
+    expect(report.dryRun).toBe(false);
 
     const row = db
       .query(

@@ -191,6 +191,7 @@ async function pollOnce(options: {
 }
 
 async function main(): Promise<void> {
+  // Default table_tennis for interactive; full board: --sport=all (cron uses all)
   const sport = argValue('sport') ?? 'table_tennis';
   const json = hasFlag('json');
   const dryRun = hasFlag('dry-run') || hasFlag('dryRun');

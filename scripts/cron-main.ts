@@ -225,10 +225,11 @@ async function jobInventorySync(): Promise<void> {
       return;
     }
 
+    // Full-board default: sport=all (override with INVENTORY_SYNC_SPORT)
     const sport =
       Bun.env.INVENTORY_SYNC_SPORT?.trim() ||
       Bun.env.PARTNER_SYNC_SPORT?.trim() ||
-      "table_tennis";
+      "all";
     const enrichBooked =
       Bun.env.INVENTORY_SYNC_ENRICH_BOOKED === "1" ||
       Bun.env.PARTNER_SYNC_ENRICH_BOOKED === "1";
@@ -242,14 +243,22 @@ async function jobInventorySync(): Promise<void> {
       sport,
       enrichBooked,
     });
-    console.error(
-      `[cron:inventory] ${formatSyncReport(report).split("\n")[0]} · ${Date.now() - start}ms`,
-    );
+    const head = formatSyncReport(report).split("\n");
+    console.error(`[cron:inventory] ${head[0]} · ${Date.now() - start}ms`);
+    if (head[1]?.startsWith("  sports:")) {
+      console.error(`[cron:inventory] ${head[1].trim()}`);
+    }
+    if (report.inserted > 0 && head[2]?.startsWith("  newBySport:")) {
+      console.error(`[cron:inventory] ${head[2].trim()}`);
+    }
     if (report.inserted > 0) {
-      for (const line of report.newEvents.slice(0, 8)) {
+      for (const line of report.newEvents.slice(0, 12)) {
         console.error(
           `[cron:inventory] + ${line.sport} · ${line.league} · ${line.home} vs ${line.away} · ${line.inventoryId}`,
         );
+      }
+      if (report.inserted > 12) {
+        console.error(`[cron:inventory] + … ${report.inserted - 12} more new`);
       }
     }
   } catch (err) {

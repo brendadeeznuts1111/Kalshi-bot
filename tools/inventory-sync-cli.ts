@@ -6,12 +6,14 @@
  * Statscore names → odds_event_id (metadata only, not odds).
  *
  * Usage:
+ *   bun run inventory:sync -- --sport=all --once
+ *   bun run inventory:sync -- --sport=all --dry-run
+ *   bun run inventory:sync -- --sport=all --dry-run --json
+ *   bun run inventory:sync -- --sport=all --loop --interval-ms=30000
  *   bun run inventory:sync -- --sport=table_tennis --once
- *   bun run inventory:sync -- --sport=table_tennis --dry-run
- *   bun run inventory:sync -- --sport=table_tennis --dry-run --json
- *   bun run inventory:sync -- --sport=table_tennis --loop --interval-ms=30000
  *   bun run inventory:sync -- --enrich-booked --json
  *
+ * Default sport filter when omitted: table_tennis (CLI). Cron defaults to all.
  * --dry-run: fetch + plan insert/update only (no SQLite writes, no enrich UPDATE).
  *            Incompatible with --loop.
  */

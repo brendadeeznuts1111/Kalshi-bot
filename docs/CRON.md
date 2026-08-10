@@ -62,24 +62,29 @@ The metadata job is single-flight, drains on graceful shutdown, and recovers aba
 
 ## Coverage inventory (plive/ezlive stream-list)
 
-In-process job on `cron:start` (opt-in). Polls `stream-list-v2` → `skin_events`
-(default sport `table_tennis`). Not seat-partner capital.
+In-process job on `cron:start` (opt-in). Polls `stream-list-v2` → `skin_events`.
+**Default sport = `all` (full board)** for continuous coverage. Not seat-partner.
 
 | Env | Role |
 |-----|------|
 | `INVENTORY_SYNC=1` | Enable job (legacy alias: `PARTNER_SYNC=1`) |
 | `INVENTORY_SYNC_PUBLIC=1` | No real Fantasy login (inventory only; alias `PARTNER_SYNC_PUBLIC`) |
-| `INVENTORY_SYNC_SPORT` | Default `table_tennis` (alias `PARTNER_SYNC_SPORT`) |
+| `INVENTORY_SYNC_SPORT` | Default **`all`** (alias `PARTNER_SYNC_SPORT`; set `table_tennis` to narrow) |
 | `INVENTORY_SYNC_CRON_SCHEDULE` | Default every minute (alias `PARTNER_SYNC_CRON_SCHEDULE`) |
 
 ```bash
 INVENTORY_SYNC=1 INVENTORY_SYNC_PUBLIC=1 bun run cron:once
 INVENTORY_SYNC=1 INVENTORY_SYNC_PUBLIC=1 bun run cron:start
-# or standalone:
-bun run inventory:sync -- --loop --sport=table_tennis
+# or standalone full board:
+bun run inventory:sync -- --loop --sport=all --interval-ms=30000
+bun run inventory:watch -- --loop --sport=all
+# dry-run first:
+bun run inventory:sync -- --sport=all --dry-run
 ```
 
-See [`docs/FANTASY-ULTRA.md`](FANTASY-ULTRA.md).
+Logs per tick: `seen` / `new` / `updated`, `sports:` histogram, `newBySport:`, up to 12 `+` lines.
+
+Playbook: [`docs/INVENTORY.md`](INVENTORY.md) · adapter: [`FANTASY-ULTRA.md`](FANTASY-ULTRA.md).
 
 
 ## Tennis live canary

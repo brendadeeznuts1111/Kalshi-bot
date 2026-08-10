@@ -13,11 +13,16 @@ CLIs:
 ```bash
 bun run domain:sports
 bun run inventory:sync -- --sport=all --dry-run   # plan inserts/updates, no write
-bun run inventory:sync -- --sport=all
-bun run inventory:watch -- --once --dry-run       # same plan path for watch CLI
-bun run inventory:watch
+bun run inventory:sync -- --sport=all             # full board write
+bun run inventory:watch -- --once --sport=all --dry-run
+bun run inventory:watch -- --loop --sport=all     # continuous full board
+# cron: INVENTORY_SYNC=1 → sport=all by default
 ```
+
+Report metrics: `seen` / `new` / `updated`, `sportHistogram`, `newBySport`,
+`coversLiveProducts` (plive+ezlive on buckeye).
 
 Domain SSOT for sport tiers / competitions: `src/domain/`.  
 Book adapter (login / fetchInventory): `src/partner/fantasy-ultra/`.  
-Doc: [`docs/FANTASY-ULTRA.md`](../../docs/FANTASY-ULTRA.md).
+Playbook: [`docs/INVENTORY.md`](../../docs/INVENTORY.md) ·
+[`docs/FANTASY-ULTRA.md`](../../docs/FANTASY-ULTRA.md).

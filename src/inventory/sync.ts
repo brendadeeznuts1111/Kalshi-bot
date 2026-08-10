@@ -23,6 +23,8 @@ import {
   formatSkinEventLine,
   listSkinInventoryIds,
   liveEventToRow,
+  liveProductsCoveredByInventory,
+  normalizeInventorySport,
   normalizeSkinEventsSports,
   upsertSkinLiveEvents,
   type InventoryIdentity,
@@ -57,6 +59,12 @@ export type InventorySyncReport = {
   enriched: number;
   /** True when no DB mutations were applied. */
   dryRun: boolean;
+  /** Live-product shells this inventory feed covers (e.g. plive + ezlive). */
+  coversLiveProducts: string[];
+  /** Count of events on this poll by normalized sport id. */
+  sportHistogram: Record<string, number>;
+  /** Count of *new* inserts by sport (empty when none). */
+  newBySport: Record<string, number>;
   capabilities: {
     inventory: true;
     eventDetection: true;
@@ -67,6 +75,25 @@ export type InventorySyncReport = {
   };
   notes: string[];
 };
+
+/** Histogram of normalized sport keys from inventory rows or wire events. */
+export function sportHistogramFromEvents(
+  events: Array<{ sport?: string | null }>
+): Record<string, number> {
+  const by: Record<string, number> = {};
+  for (const e of events) {
+    const key = normalizeInventorySport(String(e.sport ?? '').trim()) || '(unknown)';
+    by[key] = (by[key] ?? 0) + 1;
+  }
+  return by;
+}
+
+export function formatSportHistogram(hist: Record<string, number>): string {
+  const parts = Object.entries(hist)
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([s, n]) => `${s}=${n}`);
+  return parts.length ? parts.join(' ') : '(none)';
+}
 
 function resolveCoefficientStore(
   adapter: FantasySessionAdapter,
@@ -258,6 +285,14 @@ export async function runInventorySync(
       : 'liquidity:ground merge: deferred until priced markets exist'
   );
 
+  const sportHistogram = sportHistogramFromEvents(
+    upsert.inserted.length + upsert.updated.length > 0
+      ? [...upsert.inserted, ...upsert.updated]
+      : events
+  );
+  const newBySport = sportHistogramFromEvents(upsert.inserted);
+  const coversLiveProducts = liveProductsCoveredByInventory(identity.skinId).map(String);
+
   return {
     sport,
     seen: upsert.seen,
@@ -267,6 +302,9 @@ export async function runInventorySync(
     updatedEvents: upsert.updated,
     enriched,
     dryRun,
+    coversLiveProducts,
+    sportHistogram,
+    newBySport,
     capabilities: {
       inventory: true,
       eventDetection: true,
@@ -281,8 +319,18 @@ export async function runInventorySync(
 
 export function formatSyncReport(report: InventorySyncReport): string {
   const mode = report.dryRun ? 'inventory:sync --dry-run' : 'inventory:sync';
+  const covers =
+    report.coversLiveProducts.length > 0
+      ? ` covers=${report.coversLiveProducts.join('+')}`
+      : '';
   const lines = [
-    `${mode} sport=${report.sport} seen=${report.seen} new=${report.inserted} updated=${report.updated} enriched=${report.enriched}`,
+    `${mode} sport=${report.sport} seen=${report.seen} new=${report.inserted} updated=${report.updated} enriched=${report.enriched}${covers}`,
+    `  sports: ${formatSportHistogram(report.sportHistogram)}`,
+  ];
+  if (report.inserted > 0) {
+    lines.push(`  newBySport: ${formatSportHistogram(report.newBySport)}`);
+  }
+  lines.push(
     ...report.newEvents.map(e => `  + ${formatSkinEventLine(e)}`),
     ...(report.dryRun && report.updatedEvents && report.updatedEvents.length > 0
       ? report.updatedEvents
@@ -294,7 +342,7 @@ export function formatSyncReport(report: InventorySyncReport): string {
               : []
           )
       : []),
-    ...report.notes.map(n => `  · ${n}`),
-  ];
+    ...report.notes.map(n => `  · ${n}`)
+  );
   return lines.join('\n');
 }
