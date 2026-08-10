@@ -11,7 +11,7 @@ Standalone Bun project for discovering and ranking public [Kalshi](https://kalsh
 - `bun install --frozen-lockfile`
 - Optional secrets via [Proton Pass CLI](https://protonpass.github.io/pass-cli/) — see [`docs/PROTONPASS.md`](docs/PROTONPASS.md)
 - Authorized execution operators: [`docs/AUTHORIZED_EXECUTION.md`](docs/AUTHORIZED_EXECUTION.md)
-- Partner/Telegram/provider expansion map: [`docs/PARTNER-EXECUTION-EXPANSION.md`](docs/PARTNER-EXECUTION-EXPANSION.md) (`bun run partner:map`)
+- Partner/Telegram/provider expansion map: [`docs/PARTNER-EXECUTION-EXPANSION.md`](docs/PARTNER-EXECUTION-EXPANSION.md) (`bun run ops:map`)
 - Documentation hub: [GitHub Wiki](https://github.com/brendadeeznuts1111/Kalshi-bot/wiki) (index only; repository docs remain canonical)
 
 ## Quick start

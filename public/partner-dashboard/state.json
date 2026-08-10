@@ -290,8 +290,8 @@
   },
   "commands": [
     {
-      "cmd": "bun run partner:domain",
-      "purpose": "Five-layer maturity map"
+      "cmd": "bun run ops:status",
+      "purpose": "Seat-ops five-layer maturity map"
     },
     {
       "cmd": "bun run partner:toml -- --diff",

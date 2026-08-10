@@ -3,7 +3,7 @@
 Standalone registry for live PPH coverage. **Not** owned by Fantasy402.
 
 **ID glossary (SSOT):**
-[`docs/PARTNER-DOMAIN.md` § ID glossary](../../docs/PARTNER-DOMAIN.md#id-glossary-ssot)
+[`docs/SEAT-OPS.md` § ID glossary](../../docs/SEAT-OPS.md#id-glossary-ssot)
 — interior `inventoryId` / `oddsEventId` / `inventoryBucket`; wire-only
 `feed_id` / `ls_id` / `donbest_id`; deprecated `skin_events.partner` mirror of
 `book_id`. Wire JSON may still say `stream_id` / `client_event_id` at parse only.
@@ -79,7 +79,7 @@ Desk hosts live only in `SKINS[].hosts`. Stream/widget infra URLs live only in
 
 ## Skin table
 
-Generated from `buildSkinMatrixRows()` / `bun run partner:skins` — do not
+Generated from `buildSkinMatrixRows()` / `bun run domain:skins` — do not
 hand-edit product or gap columns; change [`skins.ts`](skins.ts) instead.
 
 | Skin         | Active | Live products              | Books                                                | Hosts                                                        | Mapper / gaps                                     |
@@ -117,6 +117,9 @@ bun run domain:books -- --json
 bun run domain:host-discover -- --url=https://example.com
 # legacy: partner:host-discover
 ```
+
+SSOT: [`host-discover.ts`](host-discover.ts) · [`host-weighted-score.ts`](host-weighted-score.ts)
+(desk plane; not seat-partner).
 
 Suggests skin from weighted fingerprints (`SKINS[].fingerprints` +
 DNS/TLS/HTML). Confirm, then add hostname to `SKINS[].hosts` — discovery never

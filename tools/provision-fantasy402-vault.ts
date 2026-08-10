@@ -28,7 +28,7 @@
  * @see https://protonpass.github.io/pass-cli/commands/contents/secret-references/
  * @see https://protonpass.github.io/pass-cli/commands/contents/run/
  * @see docs/PROTONPASS.md
- * @see docs/PARTNER-DOMAIN.md
+ * @see docs/SEAT-OPS.md
  */
 // @see https://bun.com/docs/api/spawn
 // @see https://bun.com/docs/runtime/utils#bun-which

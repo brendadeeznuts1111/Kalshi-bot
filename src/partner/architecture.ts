@@ -7,7 +7,7 @@
  * This module is the machine-readable map of **what exists in Kalshi-bot** vs
  * aspirational seat-capital / Telegram onboarding. Keep status honest.
  *
- * @see docs/PARTNER-DOMAIN.md
+ * @see docs/SEAT-OPS.md
  * @see src/domain/README.md
  */
 

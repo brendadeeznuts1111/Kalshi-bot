@@ -168,7 +168,8 @@ export {
   type HostDiscoverTarget,
   type HostDiscoverWeigh,
   type SuggestedSkinId,
-} from './host-discover.ts';
+  type DeskAdapterId,
+} from '../domain/host-discover.ts';
 
 export {
   CATEGORY_CAPS,
@@ -182,7 +183,7 @@ export {
   type HostObservations,
   type SkinWeightedScore,
   type WeightedEvidenceItem,
-} from './host-weighted-score.ts';
+} from '../domain/host-weighted-score.ts';
 
 export {
   BINDING_STATUSES,

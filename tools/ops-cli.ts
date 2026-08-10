@@ -10,7 +10,7 @@
  * Legacy: partner:domain · partner:map
  * Desk matrix: domain:skins · domain:books · domain:host-discover
  *
- * @see docs/PARTNER-DOMAIN.md
+ * @see docs/SEAT-OPS.md
  * @see src/partner/architecture.ts
  */
 import {
@@ -45,7 +45,7 @@ if (json) {
   console.log(JSON.stringify(report, null, 2));
 } else {
   console.log(formatOpsStatusText(report));
-  console.log('\n  · docs: docs/PARTNER-DOMAIN.md · desk matrix: src/domain/README.md');
+  console.log('\n  · docs: docs/SEAT-OPS.md · desk matrix: src/domain/README.md');
   console.log('  · skin matrix: bun run domain:skins');
   console.log('  · book matrix: bun run domain:books');
   console.log('  · host discover: bun run domain:host-discover -- --url=https://…');

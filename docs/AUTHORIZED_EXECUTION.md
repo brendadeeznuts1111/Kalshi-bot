@@ -1,7 +1,7 @@
 # Authorized Partner Execution
 
 Architecture map: [`PARTNER-EXECUTION-EXPANSION.md`](PARTNER-EXECUTION-EXPANSION.md) ·
-CLI: `bun run partner:map`
+CLI: `bun run ops:map`
 
 Status: implemented, default off. This is the operator contract and runbook for the
 authorization, Telegram approval, exposure reservation, Kalshi mapping, and live
@@ -290,6 +290,6 @@ live in
 ## See also
 
 - [Partner execution expansion map](PARTNER-EXECUTION-EXPANSION.md)
-- [Partner domain architecture](PARTNER-DOMAIN.md)
+- [Seat-ops architecture](SEAT-OPS.md)
 - [Demo proof schema](EXECUTION_DEMO_PROOF_SCHEMA.md)
 - [Regulatory agents and Polymarket intelligence](regulatory-agents.md)

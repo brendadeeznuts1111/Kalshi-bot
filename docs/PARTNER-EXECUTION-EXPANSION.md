@@ -7,12 +7,12 @@ runtime authority, not a promise that every pictured provider can place orders.
 ## Generate the map
 
 ```bash
-bun run partner:map
-bun run partner:map -- --output=artifacts/partner-expansion.mmd
-bun run partner:domain -- --json
+bun run ops:map
+bun run ops:map -- --output=artifacts/partner-expansion.mmd
+bun run ops:status -- --json
 ```
 
-`partner:map` emits Mermaid from the code-owned map in
+`ops:map` emits Mermaid from the code-owned map in
 [`src/partner/domain.ts`](../src/partner/domain.ts). Dashed edges are future or
 intelligence-only contracts. They must not be interpreted as live execution.
 
@@ -128,7 +128,7 @@ strip query/hash credentials from persisted URLs.
 ## See also
 
 - [GitHub Wiki documentation hub](https://github.com/brendadeeznuts1111/Kalshi-bot/wiki)
-- [Partner domain architecture](PARTNER-DOMAIN.md)
+- [Seat-ops architecture](SEAT-OPS.md)
 - [Canonical glossary and partner concept graph](GLOSSARY.md)
 - [Authorized partner execution](AUTHORIZED_EXECUTION.md)
 - [Authorized execution delivery record](AUTHORIZED_EXECUTION_REMAINING_WORK.md)

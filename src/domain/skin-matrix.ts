@@ -1,6 +1,6 @@
 /**
  * Machine-readable skin matrix derived from SKINS (hosts · products · fingerprints · mapper).
- * Used by `bun run partner:domain -- --skins` and domain tests.
+ * Used by `bun run domain:skins` and domain tests.
  */
 
 import { listBookIdsForSkin, type BookId } from './books.ts';
