@@ -8,6 +8,8 @@
  *   bun run domain:event -- --id=197502731 --watch --seconds=30
  *   bun run domain:event -- --board
  *   bun run domain:event -- --board --bettable --sport=8
+ *   bun run domain:event -- --id=197488581 --validate
+ *   bun run domain:event -- --id=197488581 --validate-session --renew
  *   bun run domain:event -- --sample-sports
  *   bun run domain:event -- --id=197548901 --json
  *
@@ -15,6 +17,7 @@
  *   market — empty `o` / selection_off / market_off (--watch)
  *   event  — eventData board s=0..3 + l(hasLines); groupProfile blocked → notBettable
  *   board  — full scan: by-state / by-sport / OTB list
+ * validate — market first, then optional seat session (FANTASY402_*)
  * cls = limit class (not suspend).
  */
 import {
@@ -27,6 +30,10 @@ import {
   scanPandoraEventBoard,
   watchEventOdds,
 } from '../src/inventory/event-lookup.ts';
+import {
+  formatEventValidate,
+  validateEvent,
+} from '../src/inventory/event-validate.ts';
 
 function hasFlag(name: string): boolean {
   return process.argv.includes(`--${name}`);
@@ -126,7 +133,7 @@ try {
     periodFromRef = parsed.periodId;
   } else {
     console.error(
-      'usage: bun run domain:event -- --id=<eventId>[/period] | --url=<plive url> | --board | --sample-sports | --watch'
+      'usage: bun run domain:event -- --id=<eventId>[/period] | --url=… | --board | --validate | --validate-session | --sample-sports | --watch'
     );
     process.exit(2);
   }
@@ -138,6 +145,63 @@ try {
 const periodExplicit = argValue('period')?.trim() || null;
 const periodId = periodExplicit ?? periodFromRef;
 const noPandora = hasFlag('no-pandora');
+const validate =
+  hasFlag('validate') ||
+  hasFlag('validate-session') ||
+  hasFlag('validate-market');
+const requireSession = hasFlag('validate-session');
+
+if (validate) {
+  console.error(
+    `validating event=${eventId}` +
+      (requireSession ? ' (session required)' : ' (session if FANTASY402_* present)') +
+      ` pandora=${seconds}s`
+  );
+  const report = await validateEvent({
+    eventId,
+    periodId,
+    pandoraSeconds: noPandora ? 0 : Math.max(seconds, 8),
+    requireSession,
+    renew: hasFlag('renew'),
+    envPrefix: argValue('prefix'),
+    accountId: argValue('out') ?? argValue('account'),
+  });
+  if (json) {
+    // Drop full lookup body by default noise; include compact market snapshot
+    const { lookup, ...rest } = report;
+    console.log(
+      JSON.stringify(
+        {
+          ...rest,
+          marketSnapshot: {
+            plane: lookup.plane,
+            sportHint: lookup.sportHint,
+            lineCount: lookup.pandora.lineCount,
+            eventState: lookup.pandora.eventState,
+            book: lookup.pandora.book
+              ? {
+                  offeredMarketCount: lookup.pandora.book.offeredMarketCount,
+                  offMarketCount: lookup.pandora.book.offMarketCount,
+                  lineCount: lookup.pandora.book.lineCount,
+                }
+              : null,
+          },
+        },
+        null,
+        2
+      )
+    );
+  } else {
+    console.log(formatEventValidate(report));
+  }
+  const exit =
+    report.failedPlanes.includes('market') ||
+    report.failedPlanes.includes('profile') ||
+    (requireSession && report.failedPlanes.includes('session'))
+      ? 1
+      : 0;
+  process.exit(exit);
+}
 
 if (watch) {
   console.error(

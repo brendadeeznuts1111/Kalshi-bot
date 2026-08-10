@@ -513,7 +513,16 @@ bun run domain:event -- --id=197488581          # eventState + book
 bun run domain:event -- --id=197548901 --watch  # state + coeff transitions
 bun run domain:event -- --board                 # full board OTB / by-sport
 bun run domain:event -- --board --bettable --sport=8
+# Market first, then optional seat (FANTASY402_*). Exit 1 only on market/profile fail
+# (or session fail when --validate-session).
+bun run domain:event -- --id=197488581 --validate
+bun run domain:event -- --id=197488581 --validate-session --renew
 ```
+
+**Validate planes:** inventory → market (Pandora OTB/lines) → profile
+(blocked) → session (login/warm/cookies).  
+`market_ok_session_fail` = poorly held seat, market still live.  
+`market_off` = fix market/id, not password.
 
 **Feed sport ids** (`live.sports[id].n`) ≠ ticket `apiSportId` map:
 
