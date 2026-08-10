@@ -29,7 +29,7 @@ import {
   resolveWatchInventoryIdentity,
   upsertSkinLiveEvents,
   type InventoryIdentity,
-} from '../src/partner/skin-events-store.ts';
+} from '../src/inventory/skin-events-store.ts';
 import type { InventoryEvent } from '../src/partner/types.ts';
 
 function argValue(name: string): string | undefined {

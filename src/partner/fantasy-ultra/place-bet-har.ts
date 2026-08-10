@@ -5,7 +5,7 @@
  * the known betGroups wire, then records request URL / method / content-type /
  * body keys from that capture.
  *
- * @see docs/PARTNER-FANTASY-ULTRA.md — Bet ticket wire
+ * @see docs/FANTASY-ULTRA.md — Bet ticket wire
  */
 // @see https://bun.com/docs/api/file-io
 

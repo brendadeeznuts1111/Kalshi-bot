@@ -14,7 +14,7 @@
  *   export FANTASY402_PLACE_BET_URL='<map.url>'
  *   # or keep map file and load in adapter tests
  *
- * @see docs/PARTNER-FANTASY-ULTRA.md
+ * @see docs/FANTASY-ULTRA.md
  * @see src/partner/fantasy-ultra/place-bet-har.ts
  */
 // @see https://bun.com/docs/api/file-io

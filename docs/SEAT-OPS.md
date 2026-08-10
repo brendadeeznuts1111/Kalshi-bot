@@ -23,7 +23,7 @@ Expansion map: `bun run ops:map` ·
 [`PARTNER-EXECUTION-EXPANSION.md`](PARTNER-EXECUTION-EXPANSION.md) Code map:
 [`src/partner/architecture.ts`](../src/partner/architecture.ts) (seat-ops layers) ·
 desk matrix + host-discover [`src/domain/`](../src/domain/) · inventory:
-[`PARTNER-FANTASY-ULTRA.md`](PARTNER-FANTASY-ULTRA.md)
+[`FANTASY-ULTRA.md`](FANTASY-ULTRA.md)
 
 ### Naming split (desk vs seat)
 
@@ -150,7 +150,7 @@ partner column                    deprecated = book_id
 ```
 
 Fantasy Ultra wire examples + inventory columns:
-[`PARTNER-FANTASY-ULTRA.md`](PARTNER-FANTASY-ULTRA.md) · domain planes:
+[`FANTASY-ULTRA.md`](FANTASY-ULTRA.md) · domain planes:
 [`src/domain/README.md`](../src/domain/README.md).
 
 ---
@@ -308,7 +308,7 @@ bun run serve
 - [Partner execution expansion map](PARTNER-EXECUTION-EXPANSION.md)
 - [Authorized partner execution](AUTHORIZED_EXECUTION.md)
 - [Regulatory agents and Polymarket intelligence](regulatory-agents.md)
-- [Partner/Fantasy Ultra provider boundary](PARTNER-FANTASY-ULTRA.md)
+- [Fantasy Ultra + inventory boundary](FANTASY-ULTRA.md)
 
 ### Partners TOML (`Bun.TOML`)
 
@@ -542,7 +542,7 @@ exposure when secrets are missing.
 
 ## Related docs
 
-- [PARTNER-FANTASY-ULTRA.md](PARTNER-FANTASY-ULTRA.md) — Fantasy402 network +
+- [FANTASY-ULTRA.md](FANTASY-ULTRA.md) — Fantasy402 network +
   sports
 - [PROTONPASS.md](PROTONPASS.md) — vault / pass:// injection
 - Glossary partner-ops ids — `bun run partners:validate`

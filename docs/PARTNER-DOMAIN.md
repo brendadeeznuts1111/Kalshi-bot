@@ -1,9 +1,10 @@
 # Partner domain architecture (moved)
 
-**Canonical doc:** [`SEAT-OPS.md`](SEAT-OPS.md)
+**Canonical seat-ops doc:** [`SEAT-OPS.md`](SEAT-OPS.md)  
+**Fantasy Ultra + inventory:** [`FANTASY-ULTRA.md`](FANTASY-ULTRA.md)
 
-Seat-ops (financial partner → outs → finance) and desk matrix pointers live there.
-This stub remains so old links keep resolving.
+Seat-ops (financial partner → outs → finance) and desk/inventory pointers live
+there. This stub remains so old links keep resolving.
 
 ```bash
 bun run ops:status

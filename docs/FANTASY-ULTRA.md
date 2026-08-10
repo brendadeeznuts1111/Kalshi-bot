@@ -1,9 +1,16 @@
-# Fantasy402 Ultra Live partner adapter
+# Fantasy402 Ultra Live + plive/ezlive inventory
 
-Kalshi-bot partner surface for a **PPH / Fantasy402** dummy desk.
+Book adapter and coverage inventory for a **PPH / Fantasy402** desk (skin
+`buckeye`). This is **not** seat-partner capital.
 
-> **Domain ownership (Phase 1):** Sports / live products / skins live in
-> [`src/domain/`](../src/domain/README.md) — **not** under this adapter.
+> **Planes:**
+> - **Domain** — sports / live products / skins / competitions in
+>   [`src/domain/`](../src/domain/README.md)
+> - **Inventory** — stream-list → `skin_events` in
+>   [`src/inventory/`](../src/inventory/) · CLIs `domain:sports` ·
+>   `inventory:sync` · `inventory:watch`
+> - **Seat** — outs / capacity / execution still under `src/partner/`
+>
 > **Skins** (white-labels): `buckeye`, `ace`, `metallic`, `sts`, `1bv`,
 > `lvaction`, `magnum`. **Fantasy402 is a legacy alias for skin `buckeye`**
 > (`resolveSkinId("fantasy402")`). Buckeye offers live products
@@ -15,11 +22,12 @@ Kalshi-bot partner surface for a **PPH / Fantasy402** dummy desk.
 | Concern                                | Location                                  |
 | -------------------------------------- | ----------------------------------------- |
 | Domain matrix (sports / skins / books) | `src/domain/`                             |
-| Adapter                                | `src/partner/fantasy-ultra/adapter.ts`    |
+| Inventory sync / stream sports         | `src/inventory/`                          |
+| Book adapter                           | `src/partner/fantasy-ultra/adapter.ts`    |
 | Cookie jar                             | `src/partner/fantasy-ultra/cookie-jar.ts` |
 | Parse (boundary)                       | `src/partner/fantasy-ultra/parse.ts`      |
-| Types / interfaces                     | `src/partner/types.ts`                    |
-| Env profile                            | `src/partner/account-profile.ts`          |
+| Adapter DTO types                      | `src/partner/types.ts`                    |
+| Out env profile                        | `src/partner/account-profile.ts`          |
 | Smoke CLI                              | `bun run partner:test-fantasy`            |
 
 ## Network-capture flow (implemented)
@@ -280,7 +288,7 @@ bun run partner:test-fantasy
 bun run partner:test-fantasy -- --sport=tennis --limit=5 --renew
 bun run inventory:watch -- --once --sport=table_tennis --json
 bun run inventory:watch -- --loop --sport=table_tennis --interval-ms=30000
-bun test tests/partner/fantasy-ultra.test.ts tests/partner/skin-events-store.test.ts
+bun test tests/partner/fantasy-ultra.test.ts tests/inventory/skin-events-store.test.ts
 ```
 
 ## Detect new table tennis events
@@ -606,7 +614,7 @@ PARTNER_SYNC=1 PARTNER_SYNC_PUBLIC=1 bun run cron:once
 | placeOrder POST                         | ❌ response parser only          |
 | Merge into Kalshi `liquidity:ground`    | ❌ deferred until priced markets |
 
-Code: `src/partner/sync.ts` · CLI `inventory:sync`.  
+Code: `src/inventory/sync.ts` · CLI `inventory:sync`.  
 Do **not** invent a full sports/leagues/markets/odds schema until a price wire
 is captured.
 

@@ -74,10 +74,10 @@ export { FANTASY_ULTRA_DEFAULTS, type FantasyUltraCredentials } from './fantasy-
 export {
   formatSyncReport,
   matchBookedOddsEventId,
-  runPartnerInventorySync,
-  type PartnerSyncOptions,
-  type PartnerSyncReport,
-} from './sync.ts';
+  runInventorySync,
+  type InventorySyncOptions,
+  type InventorySyncReport,
+} from '../inventory/sync.ts';
 
 export {
   fetchPublicPliveStreamEvents,
@@ -90,7 +90,7 @@ export {
   upsertSkinLiveEvents,
   type SkinEventRow,
   type SkinEventUpsertResult,
-} from './skin-events-store.ts';
+} from '../inventory/skin-events-store.ts';
 
 export {
   adapterBindingForSkin,
@@ -276,7 +276,7 @@ export {
   type StreamSportInventoryRow,
   type StreamSportLeagueRow,
   type StreamSportsInventory,
-} from './sports-inventory.ts';
+} from '../inventory/sports-inventory.ts';
 
 export {
   OPS_LAYERS,

@@ -20,7 +20,7 @@ import {
 import {
   fetchStreamSportsInventory,
   staticSportMapSummary,
-} from "../src/partner/sports-inventory.ts";
+} from "../src/inventory/sports-inventory.ts";
 import {
   FANTASY_SPORT_MAPPINGS,
   primaryFantasySports,

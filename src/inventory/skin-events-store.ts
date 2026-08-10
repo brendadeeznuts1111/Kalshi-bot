@@ -21,9 +21,9 @@ import {
   type SkinId,
 } from '../domain/index.ts';
 import { getSkin } from '../domain/skins.ts';
-import { parseStreamList } from './fantasy-ultra/parse.ts';
-import { FANTASY_ULTRA_DEFAULTS } from './fantasy-ultra/types.ts';
-import type { InventoryEvent } from './types.ts';
+import { parseStreamList } from '../partner/fantasy-ultra/parse.ts';
+import { FANTASY_ULTRA_DEFAULTS } from '../partner/fantasy-ultra/types.ts';
+import type { InventoryEvent } from '../partner/types.ts';
 
 /** Default inventory identity for Fantasy402 stream-list under Buckeye. */
 export type InventoryIdentity = {
