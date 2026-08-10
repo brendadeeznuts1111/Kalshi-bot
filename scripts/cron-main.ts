@@ -193,10 +193,13 @@ async function jobPartnerSync(): Promise<void> {
     // Inventory is public; allow dummy credentials when PARTNER_SYNC_PUBLIC=1
     let profile = loadFantasy402ProfileFromEnv();
     if (!profile && Bun.env.PARTNER_SYNC_PUBLIC === "1") {
+      const { requireDefaultUrlForUltraMapper } = await import(
+        "../src/domain/index.ts"
+      );
       profile = {
         id: "fantasy402-public",
         partner: "fantasy402",
-        url: "https://fantasy402.com",
+        url: requireDefaultUrlForUltraMapper(),
         status: "active",
         meta: {
           customerID: "public",

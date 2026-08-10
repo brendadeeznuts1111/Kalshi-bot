@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Domain · live products · skins</title>
+  <style>
+    :root {
+      --ink: #1a221c;
+      --ink-soft: #3d4a41;
+      --muted: #5e6b63;
+      --line: rgba(26, 34, 28, 0.14);
+      --fill: #1f6f5b;
+      --fill-soft: #d5efe6;
+      --sand: #e8e1d4;
+      --warn: #8c3b2e;
+      --warn-soft: #f3ddd7;
+      --panel: rgba(255, 255, 255, 0.78);
+      --shadow: 0 16px 40px rgba(26, 34, 28, 0.08);
+      --max: 880px;
+      --display: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+      --sans: "Avenir Next", "Segoe UI", Candara, sans-serif;
+      --mono: "SF Mono", Menlo, Consolas, monospace;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: var(--sans);
+      line-height: 1.5;
+      background:
+        radial-gradient(900px 500px at 8% -5%, #dce9e3 0%, transparent 55%),
+        radial-gradient(700px 420px at 100% 0%, var(--sand) 0%, transparent 50%),
+        linear-gradient(180deg, #eef3ef 0%, #f6f3ec 45%, #e9eef0 100%);
+      min-height: 100vh;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.4;
+      background-image: repeating-linear-gradient(
+        -14deg, transparent, transparent 26px,
+        rgba(26, 34, 28, 0.03) 26px, rgba(26, 34, 28, 0.03) 27px
+      );
+    }
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(14px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes drawDown {
+      from { transform: scaleY(0); }
+      to { transform: scaleY(1); }
+    }
+    .wrap {
+      width: min(var(--max), calc(100% - 2rem));
+      margin: 0 auto;
+      padding: 3rem 0 4.5rem;
+      position: relative;
+      z-index: 1;
+    }
+    .hero { animation: rise 0.7s ease both; margin-bottom: 2.5rem; }
+    .kicker {
+      margin: 0 0 0.75rem;
+      font-size: 0.75rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      font-weight: 600;
+      color: var(--fill);
+    }
+    h1 {
+      font-family: var(--display);
+      font-size: clamp(2.35rem, 5vw, 3.4rem);
+      line-height: 1.05;
+      letter-spacing: -0.02em;
+      margin: 0 0 0.85rem;
+      max-width: 18ch;
+    }
+    .lede {
+      margin: 0;
+      font-size: 1.08rem;
+      color: var(--ink-soft);
+      max-width: 46ch;
+    }
+    section { margin: 0 0 2.75rem; animation: rise 0.7s ease both; }
+    h2 {
+      font-family: var(--display);
+      font-size: 1.55rem;
+      margin: 0 0 0.4rem;
+    }
+    .section-lede {
+      margin: 0 0 1.2rem;
+      color: var(--muted);
+      max-width: 54ch;
+    }
+    .stack { display: grid; gap: 0; }
+    .stack-layer {
+      position: relative;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 1.15rem 1.3rem 1.25rem;
+      box-shadow: var(--shadow);
+    }
+    .stack-layer + .stack-layer { margin-top: 1.35rem; }
+    .stack-layer + .stack-layer::before {
+      content: "";
+      position: absolute;
+      left: 2rem;
+      top: -1.35rem;
+      width: 2px;
+      height: 1.35rem;
+      background: var(--fill);
+      transform-origin: top;
+      animation: drawDown 0.6s ease both;
+      opacity: 0.55;
+    }
+    .stack-layer + .stack-layer::after {
+      content: "↓";
+      position: absolute;
+      left: 1.55rem;
+      top: -0.95rem;
+      width: 1.1rem;
+      text-align: center;
+      color: var(--fill);
+      font-weight: 700;
+    }
+    .layer-label {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 0.2rem 0.45rem;
+      border-radius: 6px;
+      margin-bottom: 0.55rem;
+      background: var(--fill-soft);
+      color: var(--fill);
+      border: 1px solid rgba(31, 111, 91, 0.2);
+    }
+    .stack-layer h3 { margin: 0 0 0.35rem; font-size: 1.12rem; }
+    .stack-layer p { margin: 0; color: var(--ink-soft); font-size: 0.95rem; }
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-top: 0.75rem;
+    }
+    .pill {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      padding: 0.32rem 0.55rem;
+      border-radius: 999px;
+      background: #fff;
+      border: 1px solid var(--line);
+    }
+    .pill.ok {
+      background: var(--fill-soft);
+      border-color: rgba(31, 111, 91, 0.25);
+      color: var(--fill);
+    }
+    .pill.dim { opacity: 0.45; }
+    .matrix {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      font-size: 0.9rem;
+    }
+    .matrix th, .matrix td {
+      padding: 0.8rem 0.75rem;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+    }
+    .matrix tr:last-child th, .matrix tr:last-child td { border-bottom: 0; }
+    .matrix thead th {
+      background: rgba(26, 34, 28, 0.04);
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .matrix tbody th { font-weight: 600; }
+    .matrix .alias {
+      display: block;
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      color: var(--muted);
+      font-weight: 400;
+      margin-top: 0.12rem;
+    }
+    .cell-yes {
+      color: var(--fill);
+      font-weight: 600;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+    }
+    .cell-no {
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      opacity: 0.5;
+    }
+    .cell-tbd {
+      color: var(--warn);
+      font-family: var(--mono);
+      font-size: 0.78rem;
+    }
+    .cov {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+    @media (max-width: 700px) {
+      .cov { grid-template-columns: 1fr; }
+    }
+    .cov-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 1rem 1.1rem;
+      box-shadow: var(--shadow);
+    }
+    .cov-card h3 { margin: 0 0 0.35rem; font-size: 1rem; }
+    .cov-card p { margin: 0; font-size: 0.88rem; color: var(--muted); }
+    footer {
+      margin-top: 2rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid var(--line);
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+    code { font-family: var(--mono); font-size: 0.88em; }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header class="hero">
+      <p class="kicker">Phase 1 · corrected naming</p>
+      <h1>Skins are white-labels. Live products cover sports.</h1>
+      <p class="lede">
+        <strong>buckeye</strong>, <strong>ace</strong>, <strong>metallic</strong>,
+        <strong>1bv</strong>, <strong>lvaction</strong> are skins.
+        plive / ezlive / ultra / mag are live products those skins offer.
+      </p>
+    </header>
+
+    <section aria-labelledby="shape">
+      <h2 id="shape">The shape</h2>
+      <p class="section-lede">
+        Domain never imports a skin. Skins never own sport ids.
+        Coverage hangs off live products.
+      </p>
+      <div class="stack">
+        <article class="stack-layer">
+          <span class="layer-label">1 · Domain matrix</span>
+          <h3>Sports SSOT (alone)</h3>
+          <p><code>src/domain/sports.ts</code> — canonical SportIds.</p>
+          <div class="pill-row">
+            <span class="pill ok">soccer</span>
+            <span class="pill ok">tennis</span>
+            <span class="pill ok">basketball</span>
+            <span class="pill ok">table_tennis</span>
+          </div>
+        </article>
+        <article class="stack-layer">
+          <span class="layer-label">2 · Live products</span>
+          <h3>Own sport coverage bindings</h3>
+          <p>stream bucket / api sportId / widget id bind here.</p>
+          <div class="pill-row">
+            <span class="pill ok">plive</span>
+            <span class="pill ok">ezlive</span>
+            <span class="pill">ultralive</span>
+            <span class="pill">maglive</span>
+            <span class="pill dim">dark (capacity wire only)</span>
+          </div>
+        </article>
+        <article class="stack-layer">
+          <span class="layer-label">3 · Skins</span>
+          <h3>White-label desks enable live products</h3>
+          <p>
+            <code>fantasy402</code> env → skin <code>buckeye</code>.
+            Capacity login still sends a <em>live product</em> name (ezlive, …).
+          </p>
+          <div class="pill-row">
+            <span class="pill ok">buckeye</span>
+            <span class="pill ok">ace</span>
+            <span class="pill ok">metallic</span>
+            <span class="pill ok">1bv</span>
+            <span class="pill ok">lvaction</span>
+          </div>
+        </article>
+        <article class="stack-layer">
+          <span class="layer-label">4 · Outs</span>
+          <h3>Seat on a skin · route via live product</h3>
+          <p>Liquidity key today: <code>out@{liveProduct}</code> (e.g. <code>out-SPEN-1@ezlive</code>).</p>
+        </article>
+      </div>
+    </section>
+
+    <section aria-labelledby="matrix">
+      <h2 id="matrix">Skin registry</h2>
+      <p class="section-lede">
+        Write path: host → <code>skinId</code> → <code>liveProducts</code> ⊆ offered →
+        <code>adapterId</code> (<code>out-identity</code>). Fantasy402 maps <strong>buckeye</strong> →
+        <code>fantasy-ultra</code>.
+      </p>
+      <table class="matrix">
+        <thead>
+          <tr>
+            <th>Skin</th>
+            <th>Hosts</th>
+            <th>PLive</th>
+            <th>EZLive</th>
+            <th>UltraLive</th>
+            <th>MagLive</th>
+            <th>Mapper</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th>
+              buckeye
+              <span class="alias">alias: fantasy402</span>
+            </th>
+            <td><code>betwest.com</code><br /><code>fantasy402.com</code></td>
+            <td class="cell-yes">offer</td>
+            <td class="cell-yes">offer</td>
+            <td class="cell-no">—</td>
+            <td class="cell-no">—</td>
+            <td class="cell-yes">fantasy402</td>
+          </tr>
+          <tr>
+            <th>ace</th>
+            <td><code>parlay21.com</code></td>
+            <td class="cell-no">—</td>
+            <td class="cell-yes">offer</td>
+            <td class="cell-yes">offer</td>
+            <td class="cell-yes">offer</td>
+            <td class="cell-tbd">unmapped</td>
+          </tr>
+          <tr>
+            <th>metallic</th>
+            <td class="cell-tbd">—</td>
+            <td class="cell-tbd">TBD</td>
+            <td class="cell-tbd">TBD</td>
+            <td class="cell-tbd">TBD</td>
+            <td class="cell-tbd">TBD</td>
+            <td class="cell-tbd">unmapped</td>
+          </tr>
+          <tr>
+            <th>1bv</th>
+            <td class="cell-tbd">—</td>
+            <td class="cell-tbd">TBD</td>
+            <td class="cell-tbd">TBD</td>
+            <td class="cell-tbd">TBD</td>
+            <td class="cell-tbd">TBD</td>
+            <td class="cell-tbd">unmapped</td>
+          </tr>
+          <tr>
+            <th>lvaction</th>
+            <td class="cell-tbd">—</td>
+            <td class="cell-tbd">TBD</td>
+            <td class="cell-tbd">TBD</td>
+            <td class="cell-tbd">TBD</td>
+            <td class="cell-tbd">TBD</td>
+            <td class="cell-tbd">unmapped</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section aria-labelledby="coverage">
+      <h2 id="coverage">Live-product coverage (today)</h2>
+      <p class="section-lede">Bindings in <code>live-product-sport-bindings.ts</code>. Empty ≠ skin doesn’t offer it.</p>
+      <div class="cov">
+        <article class="cov-card">
+          <h3>plive · ezlive</h3>
+          <p>Seeded stream-list map (~30 sports; 4 primary). Used by buckeye today.</p>
+          <div class="pill-row">
+            <span class="pill ok">bindings</span>
+            <span class="pill ok">table_tennis 93/220</span>
+          </div>
+        </article>
+        <article class="cov-card">
+          <h3>ultralive · maglive</h3>
+          <p>ACE can offer these. Binding tables empty until captures prove sports.</p>
+          <div class="pill-row">
+            <span class="pill">coverage unknown</span>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <footer>
+      SSOT: <code>Kalshi-bot/src/domain/</code> · skins:
+      buckeye · ace · metallic · 1bv · lvaction · Offline artifact.
+    </footer>
+  </main>
+</body>
+</html>

@@ -29,6 +29,10 @@ research/evidence-captures/
 # Test artifacts (never commit)
 tests/.tmp-*
 
+# Host-discover probe dumps (regenerated; keep .gitkeep + deep/ notes)
+host-report.json
+docs/artifacts/host-discover/*-urls.json
+
 # Alpha tenant runtime (programs committed; logs are not)
 alpha/*/shadow-log.jsonl
 calibration/artifacts/

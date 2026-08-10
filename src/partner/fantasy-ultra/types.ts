@@ -1,7 +1,11 @@
 /**
  * Fantasy402 Ultra Live wire types (boundary).
  * Observed 2026-08-04 against getUltraLiveURL + stream-list-v2.
+ *
+ * Desk `domain` default comes from SKINS (Ultra mapper hosts) — not a hard-coded book URL.
  */
+
+import { requireDefaultUrlForUltraMapper } from '../../domain/index.ts';
 
 export type FantasyUltraCredentials = {
   customerID: string;
@@ -66,29 +70,30 @@ export type FantasyStreamListWire = {
 };
 
 export const FANTASY_ULTRA_DEFAULTS = {
-  domain: "https://fantasy402.com",
-  ultraLivePath: "/cloud/api/Provider/getUltraLiveURL",
+  /** Resolved from SKINS Ultra-mapper hosts at module load. */
+  domain: requireDefaultUrlForUltraMapper(),
+  ultraLivePath: '/cloud/api/Provider/getUltraLiveURL',
   /** POST application/x-www-form-urlencoded */
-  sportsLeaguesPath: "/cloud/api/League/Get_SportsLeagues",
+  sportsLeaguesPath: '/cloud/api/League/Get_SportsLeagues',
   /** POST empty form body; response { code: jwt } */
-  renewTokenPath: "/cloud/api/System/renewToken",
+  renewTokenPath: '/cloud/api/System/renewToken',
   /** Optional stream token for pandora/ganchrow (path observed in network captures). */
-  streamTokenPath: "/betFactoryV2/api/streamToken.php",
-  streamListUrl: "https://api-gs.player-us.xyz/stream-list-v2/?tv=usa",
-  streamOrigin: "https://plive.sportswidgets.pro",
-  streamReferer: "https://plive.sportswidgets.pro/",
+  streamTokenPath: '/betFactoryV2/api/streamToken.php',
+  streamListUrl: 'https://api-gs.player-us.xyz/stream-list-v2/?tv=usa',
+  streamOrigin: 'https://plive.sportswidgets.pro',
+  streamReferer: 'https://plive.sportswidgets.pro/',
   /**
    * Statscore public livescore booking API (widget referer).
    * product=livescorepro only — product=odds is rejected for this client_id.
    */
-  statscoreBookedEventsUrl: "https://api.statscore.com/v2/booked-events",
-  statscoreClientId: "311",
-  statscoreProduct: "livescorepro",
+  statscoreBookedEventsUrl: 'https://api.statscore.com/v2/booked-events',
+  statscoreClientId: '311',
+  statscoreProduct: 'livescorepro',
   skin: 2,
-  currency: "USD",
-  lang: "English",
-  module: "sports.html",
-  partnerId: "fantasy402" as const,
+  currency: 'USD',
+  lang: 'English',
+  module: 'sports.html',
+  partnerId: 'fantasy402' as const,
 } as const;
 
 /** api.statscore.com/v2/booked-events wire (subset). */

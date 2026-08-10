@@ -13,9 +13,9 @@ export type {
   PartnerOrder,
   PartnerOrderAdapter,
   PartnerSportLeague,
-} from "./types.ts";
+} from './types.ts';
 
-export * from "./execution/index.ts";
+export * from './execution/index.ts';
 
 export {
   credentialsFromFantasyProfile,
@@ -29,14 +29,14 @@ export {
   requireFantasy402ProfileFromEnv,
   requireFantasy402ProfileFromPrefix,
   type PartnerAccountProfile,
-} from "./account-profile.ts";
+} from './account-profile.ts';
 
 export {
   FantasyUltraAdapter,
   type ConnectWebSocketOptions,
   type FantasyUltraAdapterOptions,
-} from "./fantasy-ultra/adapter.ts";
-export { CookieJar } from "./fantasy-ultra/cookie-jar.ts";
+} from './fantasy-ultra/adapter.ts';
+export { CookieJar } from './fantasy-ultra/cookie-jar.ts';
 export {
   executionResultFromBetGroups,
   inspectStreamListCapabilities,
@@ -51,7 +51,7 @@ export {
   parseUltraLiveUrlResponse,
   statscorePayloadHasPrices,
   type StreamListCapabilities,
-} from "./fantasy-ultra/parse.ts";
+} from './fantasy-ultra/parse.ts';
 export {
   extractBetGroupsWiresFromHar,
   extractPlaceBetMapFromHar,
@@ -62,17 +62,14 @@ export {
   type PlaceBetBodyEncoding,
   type PlaceBetEndpointMap,
   type PlaceBetHarCandidate,
-} from "./fantasy-ultra/place-bet-har.ts";
+} from './fantasy-ultra/place-bet-har.ts';
 export {
   buildPlaceBetBody,
   defaultPlaceBetFields,
   encodePlaceBetBody,
   resolvePlaceBetUrl,
-} from "./fantasy-ultra/place-bet-body.ts";
-export {
-  FANTASY_ULTRA_DEFAULTS,
-  type FantasyUltraCredentials,
-} from "./fantasy-ultra/types.ts";
+} from './fantasy-ultra/place-bet-body.ts';
+export { FANTASY_ULTRA_DEFAULTS, type FantasyUltraCredentials } from './fantasy-ultra/types.ts';
 
 export {
   formatSyncReport,
@@ -80,7 +77,7 @@ export {
   runPartnerInventorySync,
   type PartnerSyncOptions,
   type PartnerSyncReport,
-} from "./sync.ts";
+} from './sync.ts';
 
 export {
   filterLiveEventsBySport,
@@ -89,45 +86,166 @@ export {
   upsertPartnerLiveEvents,
   type PartnerEventRow,
   type PartnerEventUpsertResult,
-} from "./partner-events-store.ts";
+} from './partner-events-store.ts';
 
 export {
+  adapterBindingForSkin,
+  assertLiveProductsAllowed,
+  buildSkinMetaFields,
+  capacityToOutSkinLimits,
   computeProviderCapacity,
   concentrationByOut,
   ensurePartnerRegistrySchema,
   getBettingAccountById,
+  guardAndStampAccountMeta,
   listActiveBettingAccounts,
   listBettingAccountsByProvider,
   listEligibleOutSkinPairs,
   liquidityKey,
+  mapperFromAccount,
   outCapacityFromAccount,
+  outIdentityFromAccount,
+  parseLiveProductsJsonEnv,
+  parseOutIdentity,
   parseSkinsJsonEnv,
   pickBestSkinForOut,
   resolveOutSkins,
+  resolveSkinForAccountUrl,
   seedFantasy402FromEnv,
   seedFantasySportMappings,
+  skinIdFromAccount,
+  stampOutMeta,
   upsertBettingAccount,
   upsertPartner,
+  type AdapterBinding,
+  type AdapterId,
   type BettingAccountRow,
+  type LiveProductCapacity,
   type OutCapacity,
   type OutExposureShare,
+  type OutIdentity,
   type OutSkinLimit,
   type OutSkinPair,
   type PartnerEntity,
   type ProviderCapacity,
   type ProviderId,
-} from "./registry.ts";
+} from './registry.ts';
 
 export {
   buildSkinsMeta,
   formatOutId,
   formatVaultName,
+  normalizeSkinName,
   parseLiquidityKey,
   parseOutMeta,
   parseSkinWire,
   type OutMeta,
+  type OutSkinMapperKind,
   type SkinName,
-} from "./skins.ts";
+} from './skins.ts';
+
+export {
+  DEFAULT_HOST_DISCOVER_ARTIFACT_DIR,
+  HOST_DISCOVER_BASELINES,
+  HOST_FINGERPRINT_RULES,
+  adapterIdForMappedSkin,
+  collectHtmlUrls,
+  discoverHost,
+  extractAbsoluteUrls,
+  extractUrlsFromHar,
+  formatHostDiscoverText,
+  listMappedDiscoverHosts,
+  listPublicFingerprintRules,
+  listSkinBrandFingerprintRules,
+  persistHostDiscoverUrls,
+  scoreHostDiscovery,
+  type HostDiscoverEvidence,
+  type HostDiscoverReport,
+  type HostDiscoverTarget,
+  type HostDiscoverWeigh,
+  type SuggestedSkinId,
+} from './host-discover.ts';
+
+export {
+  CATEGORY_CAPS,
+  buildHostObservations,
+  decisionForScore,
+  scoreFromEvidence,
+  scoreHostAgainstSkins,
+  scoreSkinObservations,
+  type EvidenceCategory,
+  type HostDiscoverDecision,
+  type HostObservations,
+  type SkinWeightedScore,
+  type WeightedEvidenceItem,
+} from './host-weighted-score.ts';
+
+export {
+  BINDING_STATUSES,
+  BOOKS,
+  BOOK_IDS,
+  DEFAULT_COVERAGE_LIVE_PRODUCT,
+  DEFAULT_COVERAGE_SKIN,
+  HOST_TO_SKIN,
+  LEGACY_CAPACITY_LIVE_PRODUCTS,
+  LIVE_PRODUCT_IDS,
+  LIVE_PRODUCTS,
+  LIVE_PRODUCT_SPORT_BINDINGS,
+  PARTNER_DOMAIN_ENV,
+  RETIRED_BARE_BOOK_DOMAIN_ENVS,
+  SKIN_IDS,
+  SKIN_SPORT_BINDINGS,
+  SKINS,
+  SPORTS,
+  SPORT_CATEGORIES,
+  bookOffersSkin,
+  getBook,
+  getLiveProduct,
+  getSkin,
+  getSkinByHost,
+  getSport,
+  getSportsByCategory,
+  isBookId,
+  isLegacyCapacityLiveProduct,
+  isLiveProductId,
+  isRetiredBareBookDomainEnv,
+  isSkinId,
+  isSportId,
+  listBooks,
+  listLiveProductSportBindings,
+  listLiveProducts,
+  listSkinSportBindings,
+  listSkins,
+  listSports,
+  liveProductHasSportCoverage,
+  liveProductOwnsCoverage,
+  liveProductsWithBindings,
+  normalizeHost,
+  normalizeLiveProductName,
+  resolveBookId,
+  resolveSkinId,
+  resolveSport,
+  skinHasSportCoverage,
+  skinOfferedCatalogNames,
+  skinOffersLiveProduct,
+  skinsWithBindings,
+  type BindingStatus,
+  type BookId,
+  type BookRecord,
+  type LegacyCapacityLiveProduct,
+  type LiveProductId,
+  type LiveProductRecord,
+  type LiveProductSportBinding,
+  type ResolveSportQuery,
+  type ResolvedSport,
+  type SkinId,
+  type SkinMapper,
+  type SkinRecord,
+  type SkinSportBinding,
+  type SportCategory,
+  type SportId,
+  type SportRecord,
+} from '../domain/index.ts';
 
 export {
   FANTASY_SPORT_MAPPINGS,
@@ -141,7 +259,7 @@ export {
   mappedStreamBuckets,
   primaryFantasySports,
   type FantasySportMapping,
-} from "./fantasy-ultra/widget-config.ts";
+} from './fantasy-ultra/widget-config.ts';
 
 export {
   fetchStreamSportsInventory,
@@ -150,7 +268,7 @@ export {
   type StreamSportInventoryRow,
   type StreamSportLeagueRow,
   type StreamSportsInventory,
-} from "./sports-inventory.ts";
+} from './sports-inventory.ts';
 
 export {
   PARTNER_DOMAIN_LAYERS,
@@ -162,7 +280,7 @@ export {
   type DomainLayerId,
   type DomainMaturity,
   type DomainStatusReport,
-} from "./domain.ts";
+} from './domain.ts';
 
 export {
   classifyTicketStatus,
@@ -182,7 +300,7 @@ export {
   type TicketOutDayTotals,
   type TicketWriteAction,
   type TicketWriteResult,
-} from "./ledger.ts";
+} from './ledger.ts';
 
 export {
   applyRiskThreshold,
@@ -200,13 +318,13 @@ export {
   type RiskHealthReport,
   type RiskSeverity,
   type RiskThreshold,
-} from "./risk-health.ts";
+} from './risk-health.ts';
 
 export {
   capturePandoraViaWebView,
   type WebViewCaptureOptions,
   type WebViewCaptureResult,
-} from "./webview-ws-capture.ts";
+} from './webview-ws-capture.ts';
 
 export {
   findLatestWebViewCapture,
@@ -214,13 +332,13 @@ export {
   ingestWebViewWsJsonl,
   type WebViewIngestReport,
   type WebViewWsFrame,
-} from "./webview-ws-ingest.ts";
+} from './webview-ws-ingest.ts';
 
 export {
   runWebViewWsPipeline,
   type WebViewPipelineOptions,
   type WebViewPipelineResult,
-} from "./webview-ws-pipeline.ts";
+} from './webview-ws-pipeline.ts';
 
 export {
   formatFinanceCronReportText,
@@ -230,14 +348,14 @@ export {
   type FinanceCronOutRow,
   type FinanceCronPartnerGroup,
   type FinanceCronReport,
-} from "./finance-cron.ts";
+} from './finance-cron.ts';
 
 export {
   PARTNER_OPERATOR_COMMANDS,
   buildPartnerDashboardSnapshot,
   renderPartnerDashboardHtml,
   type PartnerDashboardSnapshot,
-} from "./dashboard-data.ts";
+} from './dashboard-data.ts';
 
 export {
   DEFAULT_PARTNERS_TOML,
@@ -265,6 +383,7 @@ export {
   parsePartnersToml,
   partnerEnvPresence,
   partnersTomlDocSchema,
+  resolveDeskDomainFromEnv,
   resolvePartnerEnv,
   seedRegistryFromPartnersToml,
   stringifyPartnersToml,
@@ -282,7 +401,7 @@ export {
   type PartnersTomlPartner,
   type PartnersTomlSkin,
   type RegistrySnapshot,
-} from "./toml-config.ts";
+} from './toml-config.ts';
 
 export {
   colorizePartnerText,
@@ -302,7 +421,7 @@ export {
   type RgbaObject,
   type RgbArray,
   type RgbObject,
-} from "./visuals.ts";
+} from './visuals.ts';
 
 export {
   americanToDecimal,
@@ -312,7 +431,7 @@ export {
   truncateDecimal,
   type DualOdds,
   type OddsFormat,
-} from "./odds-format.ts";
+} from './odds-format.ts';
 
 export {
   PandoraSocket,
@@ -328,7 +447,7 @@ export {
   type PandoraOpenInfo,
   type PandoraSocketHandlers,
   type PandoraSocketOptions,
-} from "./fantasy-ultra/pandora-socket.ts";
+} from './fantasy-ultra/pandora-socket.ts';
 
 export {
   applyCoefficientDiff,
@@ -339,39 +458,76 @@ export {
   type CoefficientEnvelope,
   type CoefficientLine,
   type PandoraTi,
-} from "./fantasy-ultra/coefficients.ts";
+} from './fantasy-ultra/coefficients.ts';
 
 export {
   CoefficientStore,
   sharedCoefficientStore,
   type CoefficientIngest,
-} from "./fantasy-ultra/coefficient-store.ts";
+} from './fantasy-ultra/coefficient-store.ts';
 
-import type { PartnerAccountProfile } from "./account-profile.ts";
-import { credentialsFromFantasyProfile } from "./account-profile.ts";
-import { FantasyUltraAdapter } from "./fantasy-ultra/adapter.ts";
-import type { FantasySessionAdapter, PartnerOrderAdapter } from "./types.ts";
+import type { PartnerAccountProfile } from './account-profile.ts';
+import { credentialsFromFantasyProfile } from './account-profile.ts';
+import { FantasyUltraAdapter } from './fantasy-ultra/adapter.ts';
+import { getSkinByHost, isSkinId, type SkinId } from '../domain/index.ts';
+import { adapterBindingForSkin, type AdapterId } from './out-identity.ts';
+import type { FantasySessionAdapter, PartnerOrderAdapter } from './types.ts';
 
-/** Instantiate adapter for a registry profile (optional execution skin). */
+/**
+ * Resolve white-label skin: explicit skinId → host (HOST_TO_SKIN) → canonical SkinId.
+ * Never forges SkinId from mapper/provider labels (`fantasy402` is an alias, not identity).
+ */
+export function resolveProfileSkinId(account: PartnerAccountProfile): SkinId | undefined {
+  if (account.skinId) return account.skinId;
+  const fromHost = account.url ? getSkinByHost(account.url) : undefined;
+  if (fromHost) return fromHost;
+  // partner field may carry a canonical SkinId only — not mapper aliases
+  const partner = String(account.partner ?? '')
+    .trim()
+    .toLowerCase();
+  if (isSkinId(partner)) return partner;
+  return undefined;
+}
+
+/** Resolve adapterId from profile skin mapper (HOST_TO_SKIN / SkinId), not fantasy402 brand. */
+export function resolveProfileAdapterId(account: PartnerAccountProfile): AdapterId {
+  if (account.adapterId) return account.adapterId;
+  const skinId = resolveProfileSkinId(account);
+  if (skinId) return adapterBindingForSkin(skinId).adapterId;
+  if (account.partner === 'kalshi') return 'kalshi';
+  return 'unmapped';
+}
+
+/** @deprecated use resolveProfileAdapterId === 'fantasy-ultra' */
+export function profileUsesFantasy402Mapper(account: PartnerAccountProfile): boolean {
+  return resolveProfileAdapterId(account) === 'fantasy-ultra';
+}
+
+/** Instantiate adapter for a registry profile (optional execution live product). */
 export function getPartnerAdapter(
   account: PartnerAccountProfile,
   options: {
     fetchImpl?: typeof fetch;
     warmSession?: boolean;
-    /** Override out default skin for this session (ezlive / dark / 2). */
+    /** Override out default live-product wire for this session (ezlive / dark / 2). */
     skin?: string | number;
-  } = {},
+    liveProduct?: string | number;
+  } = {}
 ): PartnerOrderAdapter {
-  if (account.partner === "fantasy402") {
+  const adapterId = resolveProfileAdapterId(account);
+  if (adapterId === 'fantasy-ultra') {
     return new FantasyUltraAdapter({
       credentials: credentialsFromFantasyProfile(account, {
         skin: options.skin,
+        liveProduct: options.liveProduct,
       }),
       fetchImpl: options.fetchImpl,
       warmSession: options.warmSession,
     });
   }
-  throw new Error(`No adapter for partner=${account.partner}`);
+  throw new Error(
+    `No adapter for adapterId=${adapterId} partner=${account.partner} skinId=${account.skinId ?? resolveProfileSkinId(account) ?? '?'}`
+  );
 }
 
 /** Typed Fantasy session adapter (renew / sports / warm). */
@@ -381,14 +537,18 @@ export function getFantasySessionAdapter(
     fetchImpl?: typeof fetch;
     warmSession?: boolean;
     skin?: string | number;
-  } = {},
+    liveProduct?: string | number;
+  } = {}
 ): FantasySessionAdapter {
-  if (account.partner !== "fantasy402") {
-    throw new Error(`Not a fantasy402 account: ${account.partner}`);
+  if (resolveProfileAdapterId(account) !== 'fantasy-ultra') {
+    throw new Error(
+      `Not a fantasy-ultra account: adapterId=${resolveProfileAdapterId(account)} skinId=${account.skinId ?? '?'}`
+    );
   }
   return new FantasyUltraAdapter({
     credentials: credentialsFromFantasyProfile(account, {
       skin: options.skin,
+      liveProduct: options.liveProduct,
     }),
     fetchImpl: options.fetchImpl,
     warmSession: options.warmSession,

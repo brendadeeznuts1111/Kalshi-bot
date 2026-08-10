@@ -1,20 +1,39 @@
 /**
- * PPH out × skin liquidity matrix.
+ * PPH out × live-product liquidity matrix (legacy field name: "skin").
  *
  * Out = account (credentials + working balance).
- * Skin = live interface / provider surface (ezlive, dark, "2", plive, …)
- *   with its own perBetMax / maxWin — same vault credentials, different login skin.
+ * Capacity "skin" on the wire = **live product** (ezlive, plive, ultralive, …)
+ *   — not white-label SkinId (`buckeye` / `ace` / …). See `src/domain/`.
  *
- * Internal liquidity key: `{outId}@{skin}` (e.g. out-SPEN-1@ezlive).
- * Concentration groups by outId across skins — never per-skin in isolation.
+ * White-label skins: buckeye, ace, metallic, sts, 1bv, lvaction, magnum.
+ * Live products: plive, ezlive, ultralive, maglive (`dark` capacity-only legacy).
  *
- * Vault stores credentials once per out; skin lives in seat-capital / meta only.
+ * Internal liquidity key: `{outId}@{liveProduct}` (e.g. out-SPEN-1@ezlive).
+ *
+ * Vault stores credentials once per out; live product lives in seat-capital / meta.
  */
 
-/** Provider skin name as sent on getUltraLiveURL / widget (string or numeric wire). */
+import { isSkinId, type SkinId, type SkinMapper } from '../domain/skins.ts';
+import { normalizeLiveProductName } from '../domain/live-products.ts';
+
+/** Live-product / wire name as sent on getUltraLiveURL (string or numeric). */
 export type SkinName = string;
 
-/** One active interface under an out. */
+/** White-label mapper kind persisted on out meta (from SkinRecord.mapper.kind). */
+export type OutSkinMapperKind = SkinMapper['kind'];
+
+/**
+ * Normalize capacity / live-product wire names (`ultra` → `ultralive`).
+ * Numeric wire ids (`2`) stay digit strings for getUltraLiveURL.
+ */
+export function normalizeSkinName(raw: string | number): string {
+  return normalizeLiveProductName(raw);
+}
+
+/**
+ * One active live-product capacity row under an out.
+ * @deprecated Prefer LiveProductCapacity from out-identity.ts (`name` = liveProduct).
+ */
 export type OutSkinLimit = {
   name: SkinName;
   perBetMax: number;
@@ -22,23 +41,43 @@ export type OutSkinLimit = {
   active: boolean;
 };
 
+type MetaCapacityRow = {
+  name?: string;
+  skin?: string;
+  liveProduct?: string;
+  perBetMax?: number;
+  maxStake?: number;
+  maxWin?: number;
+  active?: boolean;
+};
+
 /** Non-secret meta on betting_accounts.meta_json (seat-capital shape). */
 export type OutMeta = {
   vaultId?: string;
   partnerCode?: string;
-  /** Shared account balance across skins (out-level). */
+  /** Shared account balance across live products (out-level). */
   workingBalance?: number;
-  /** Default skin when no skins[] or adapter override. */
+  /** @deprecated use defaultLiveProduct */
   defaultSkin?: SkinName;
-  /** Per-skin limits — capacity matrix rows. */
-  skins?: Array<{
-    name?: string;
-    skin?: string;
-    perBetMax?: number;
-    maxStake?: number;
-    maxWin?: number;
-    active?: boolean;
-  }>;
+  /** Default live-product / Ultra wire for this out. */
+  defaultLiveProduct?: SkinName;
+  /**
+   * Canonical capacity rows (live products).
+   * Prefer this over legacy `skins`.
+   */
+  liveProducts?: MetaCapacityRow[];
+  /**
+   * @deprecated Legacy mirror of liveProducts (name = liveProduct wire).
+   * Dual-written by stampOutMeta for one release.
+   */
+  skins?: MetaCapacityRow[];
+  /**
+   * White-label SkinId (buckeye / ace / …) — host gateway identity.
+   * Distinct from capacity live-product names.
+   */
+  skinId?: SkinId;
+  /** How offerings are mapped/probed for this skin (fantasy402 | unmapped). */
+  mapper?: OutSkinMapperKind;
   /** Opaque non-secret labels only — never password / token. */
   customerID?: string;
   agentID?: string;
@@ -82,17 +121,15 @@ export function liquidityKey(outId: string, skin: SkinName): string {
   return `${outId}@${skin}`;
 }
 
-export function parseLiquidityKey(
-  key: string,
-): { outId: string; skin: SkinName } | null {
-  const at = key.lastIndexOf("@");
+export function parseLiquidityKey(key: string): { outId: string; skin: SkinName } | null {
+  const at = key.lastIndexOf('@');
   if (at <= 0 || at === key.length - 1) return null;
   return { outId: key.slice(0, at), skin: key.slice(at + 1) };
 }
 
 /** Naming: out-{PARTNER}-{n} */
 export function formatOutId(partnerCode: string, number: number | string): string {
-  const code = partnerCode.trim().toUpperCase().replace(/^OUT-/, "");
+  const code = partnerCode.trim().toUpperCase().replace(/^OUT-/, '');
   return `out-${code}-${number}`;
 }
 
@@ -105,23 +142,27 @@ export function formatVaultName(outId: string): string {
  * Numeric strings ("2") stay numbers (legacy Fantasy skin id);
  * named skins ("ezlive", "dark") stay strings.
  */
-export function parseSkinWire(raw: string | number | null | undefined, fallback: string | number = 2): string | number {
-  if (raw == null || raw === "") return fallback;
-  if (typeof raw === "number" && Number.isFinite(raw)) return raw;
+export function parseSkinWire(
+  raw: string | number | null | undefined,
+  fallback: string | number = 2
+): string | number {
+  if (raw == null || raw === '') return fallback;
+  if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
   const s = String(raw).trim();
   if (!s) return fallback;
   if (/^-?\d+(\.\d+)?$/.test(s)) {
     const n = Number(s);
     if (Number.isFinite(n)) return n;
   }
-  return s;
+  // Named skins → canonical SkinId when known; numeric wire unchanged above.
+  return normalizeSkinName(s);
 }
 
 export function parseOutMeta(metaJson: string | null | undefined): OutMeta {
   if (!metaJson?.trim()) return {};
   try {
     const v = JSON.parse(metaJson) as unknown;
-    if (v && typeof v === "object" && !Array.isArray(v)) return v as OutMeta;
+    if (v && typeof v === 'object' && !Array.isArray(v)) return v as OutMeta;
   } catch {
     /* ignore */
   }
@@ -129,8 +170,9 @@ export function parseOutMeta(metaJson: string | null | undefined): OutMeta {
 }
 
 /**
- * Resolve active skins for an account.
- * Prefer meta.skins[]; else synthesize one skin from column skin + maxStake/maxWin.
+ * Resolve active live-product capacity for an account.
+ * Prefer meta.liveProducts[]; dual-read legacy meta.skins[]; else column fallback.
+ * (Kept here to avoid import cycle with out-identity — same rules as parseCapacityFromMeta.)
  */
 export function resolveOutSkins(input: {
   id: string;
@@ -140,13 +182,17 @@ export function resolveOutSkins(input: {
   metaJson: string;
   status?: string;
 }): OutSkinLimit[] {
-  if (input.status && input.status !== "active") return [];
+  if (input.status && input.status !== 'active') return [];
 
   const meta = parseOutMeta(input.metaJson);
-  const fromMeta = (meta.skins ?? [])
+  const source =
+    meta.liveProducts && meta.liveProducts.length > 0 ? meta.liveProducts : (meta.skins ?? []);
+
+  const fromMeta = source
     .map((row): OutSkinLimit | null => {
-      const name = String(row.name ?? row.skin ?? "").trim();
-      if (!name) return null;
+      const raw = String(row.liveProduct ?? row.name ?? row.skin ?? '').trim();
+      if (!raw) return null;
+      const name = normalizeSkinName(raw);
       const perBetMax = Number(row.perBetMax ?? row.maxStake ?? 0) || 0;
       const maxWin = Number(row.maxWin ?? 0) || 0;
       const active = row.active !== false;
@@ -155,14 +201,13 @@ export function resolveOutSkins(input: {
     .filter((s): s is OutSkinLimit => s != null);
 
   if (fromMeta.length > 0) {
-    return fromMeta.filter((s) => s.active);
+    return fromMeta.filter(s => s.active);
   }
 
   const defaultName =
+    meta.defaultLiveProduct?.trim() ||
     meta.defaultSkin?.trim() ||
-    (input.skin != null && Number.isFinite(input.skin)
-      ? String(input.skin)
-      : "2");
+    (input.skin != null && Number.isFinite(input.skin) ? String(input.skin) : '2');
   return [
     {
       name: defaultName,
@@ -186,7 +231,7 @@ export function outCapacityFromAccount(input: {
   const skins = resolveOutSkins(input);
   const meta = parseOutMeta(input.metaJson);
   const workingBalance =
-    typeof meta.workingBalance === "number" && Number.isFinite(meta.workingBalance)
+    typeof meta.workingBalance === 'number' && Number.isFinite(meta.workingBalance)
       ? meta.workingBalance
       : null;
   return {
@@ -216,17 +261,14 @@ export function listEligibleOutSkinPairs(
     status?: string;
   }>,
   stake: number,
-  options?: { provider?: string },
+  options?: { provider?: string }
 ): OutSkinPair[] {
   const pairs: OutSkinPair[] = [];
   for (const a of accounts) {
-    if (a.status && a.status !== "active") continue;
+    if (a.status && a.status !== 'active') continue;
     if (options?.provider && a.provider !== options.provider) continue;
     const out = outCapacityFromAccount(a);
-    if (
-      out.workingBalance != null &&
-      out.workingBalance < stake
-    ) {
+    if (out.workingBalance != null && out.workingBalance < stake) {
       continue;
     }
     for (const sk of out.skins) {
@@ -253,12 +295,14 @@ export function listEligibleOutSkinPairs(
 export function pickBestSkinForOut(
   skins: OutSkinLimit[],
   stake: number,
-  prefer: "maxCapacity" | "first" = "maxCapacity",
+  prefer: 'maxCapacity' | 'first' = 'maxCapacity'
 ): OutSkinLimit | null {
-  const ok = skins.filter((s) => s.active && s.perBetMax >= stake);
+  const ok = skins.filter(s => s.active && s.perBetMax >= stake);
   if (ok.length === 0) return null;
-  if (prefer === "first") return ok[0] ?? null;
-  return [...ok].sort((a, b) => b.perBetMax - a.perBetMax || a.name.localeCompare(b.name))[0] ?? null;
+  if (prefer === 'first') return ok[0] ?? null;
+  return (
+    [...ok].sort((a, b) => b.perBetMax - a.perBetMax || a.name.localeCompare(b.name))[0] ?? null
+  );
 }
 
 /**
@@ -267,7 +311,7 @@ export function pickBestSkinForOut(
  */
 export function concentrationByOut(
   legs: Array<{ outId: string; amount: number }>,
-  totalBook?: number,
+  totalBook?: number
 ): OutExposureShare[] {
   const by = new Map<string, number>();
   for (const leg of legs) {
@@ -284,7 +328,7 @@ export function concentrationByOut(
     .sort((a, b) => b.share - a.share || a.outId.localeCompare(b.outId));
 }
 
-/** Build meta_json skins array (no secrets). */
+/** Build meta_json capacity array (dual-writes liveProducts + legacy skins). */
 export function buildSkinsMeta(input: {
   skins: OutSkinLimit[];
   workingBalance?: number;
@@ -293,15 +337,29 @@ export function buildSkinsMeta(input: {
   customerID?: string;
   agentID?: string;
   defaultSkin?: SkinName;
+  defaultLiveProduct?: SkinName;
+  /** White-label desk id (host gateway). */
+  skinId?: SkinId;
+  /** Mapper kind for this skin. */
+  mapper?: OutSkinMapperKind;
   extra?: Record<string, unknown>;
 }): string {
+  const defaultLive = input.defaultLiveProduct ?? input.defaultSkin ?? input.skins[0]?.name;
+  const rows = input.skins.map(s => ({
+    liveProduct: s.name,
+    name: s.name,
+    perBetMax: s.perBetMax,
+    maxWin: s.maxWin,
+    active: s.active,
+  }));
   const meta: OutMeta = {
     ...(input.extra ?? {}),
-    skins: input.skins.map((s) => ({
-      name: s.name,
-      perBetMax: s.perBetMax,
-      maxWin: s.maxWin,
-      active: s.active,
+    liveProducts: rows,
+    skins: rows.map(({ name, perBetMax, maxWin, active }) => ({
+      name,
+      perBetMax,
+      maxWin,
+      active,
     })),
   };
   if (input.workingBalance != null) meta.workingBalance = input.workingBalance;
@@ -309,6 +367,26 @@ export function buildSkinsMeta(input: {
   if (input.partnerCode) meta.partnerCode = input.partnerCode;
   if (input.customerID) meta.customerID = input.customerID;
   if (input.agentID) meta.agentID = input.agentID;
-  if (input.defaultSkin) meta.defaultSkin = input.defaultSkin;
+  if (defaultLive) {
+    meta.defaultLiveProduct = defaultLive;
+    meta.defaultSkin = defaultLive;
+  }
+  if (input.skinId) meta.skinId = input.skinId;
+  if (input.mapper) meta.mapper = input.mapper;
   return JSON.stringify(meta);
+}
+
+/** Read white-label skinId from an account's meta_json (if stamped). */
+export function skinIdFromAccount(input: { metaJson: string }): SkinId | undefined {
+  const meta = parseOutMeta(input.metaJson);
+  const raw = typeof meta.skinId === 'string' ? meta.skinId.trim() : '';
+  return raw && isSkinId(raw) ? raw : undefined;
+}
+
+/** Read mapper kind from meta_json. */
+export function mapperFromAccount(input: { metaJson: string }): OutSkinMapperKind | undefined {
+  const meta = parseOutMeta(input.metaJson);
+  const m = meta.mapper;
+  if (m === 'fantasy402' || m === 'unmapped') return m;
+  return undefined;
 }
