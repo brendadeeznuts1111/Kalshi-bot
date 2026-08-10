@@ -135,7 +135,7 @@ export function listSkinInventoryIds(db: Database, bookId: string): Set<string> 
 }
 
 /** SSOT InventoryEvent → skin row (upsert + dry-run plan). */
-export function liveEventToRow(
+function liveEventToRow(
   event: InventoryEvent,
   nowMs: number,
   identity: InventoryIdentity,
@@ -172,11 +172,14 @@ export function liveEventToRow(
 type UpsertSkinLiveEventsOptions = {
   nowMs?: number;
   identity?: InventoryIdentity;
+  /** Plan only — no SQLite writes (same stamps as live upsert). */
+  dryRun?: boolean;
 };
 
 /**
  * Upsert live inventory rows. Returns which inventory_ids were newly inserted.
  * Stamps Buckeye / Fantasy402 / plive-shell by default.
+ * `dryRun: true` → plan insert/update without writing (replaces forked mappers).
  */
 export function upsertSkinLiveEvents(
   db: Database,
@@ -185,7 +188,24 @@ export function upsertSkinLiveEvents(
 ): SkinEventUpsertResult {
   const nowMs = options.nowMs ?? Date.now();
   const identity = options.identity ?? buckeyeInventoryIdentity();
-  const insert = db.query(`
+  const dryRun = options.dryRun === true;
+
+  const inserted: SkinEventRow[] = [];
+  const updated: SkinEventRow[] = [];
+
+  const bookSets = new Map<string, Set<string>>();
+  const getSet = (bookId: string) => {
+    let s = bookSets.get(bookId);
+    if (!s) {
+      s = listSkinInventoryIds(db, bookId);
+      bookSets.set(bookId, s);
+    }
+    return s;
+  };
+
+  const insert = dryRun
+    ? null
+    : db.query(`
     INSERT INTO skin_events (
       partner, inventory_id, ls_id, odds_event_id, sport, league, home, away,
       feed_id, start_time, status, first_seen, last_updated,
@@ -208,56 +228,47 @@ export function upsertSkinLiveEvents(
       competition_id = excluded.competition_id
   `);
 
-  const inserted: SkinEventRow[] = [];
-  const updated: SkinEventRow[] = [];
-
-  const bookSets = new Map<string, Set<string>>();
-  const getSet = (bookId: string) => {
-    let s = bookSets.get(bookId);
-    if (!s) {
-      s = listSkinInventoryIds(db, bookId);
-      bookSets.set(bookId, s);
-    }
-    return s;
-  };
-
+  let seen = 0;
   for (const event of events) {
     const set = getSet(identity.bookId);
     const inventoryId = String(event.inventoryId ?? '').trim();
     if (!inventoryId) continue;
+    seen++;
     const isNew = !set.has(inventoryId);
     const row = liveEventToRow(event, nowMs, identity, {
       firstSeen: nowMs,
       status: 'unknown',
     });
-    insert.run({
-      $partner: row.bookId,
-      $inventory_id: row.inventoryId,
-      $ls_id: row.lsId,
-      $odds_event_id: row.oddsEventId,
-      $sport: row.sport,
-      $league: row.league,
-      $home: row.home,
-      $away: row.away,
-      $feed_id: row.feedId,
-      $start_time: row.startTime,
-      $status: row.status,
-      $first_seen: row.firstSeen,
-      $last_updated: row.lastUpdated,
-      $skin_id: row.skinId,
-      $book_id: row.bookId,
-      $inventory_live_product: row.inventoryLiveProduct,
-      $competition_id: row.competitionId,
-    });
+    if (!dryRun && insert) {
+      insert.run({
+        $partner: row.bookId,
+        $inventory_id: row.inventoryId,
+        $ls_id: row.lsId,
+        $odds_event_id: row.oddsEventId,
+        $sport: row.sport,
+        $league: row.league,
+        $home: row.home,
+        $away: row.away,
+        $feed_id: row.feedId,
+        $start_time: row.startTime,
+        $status: row.status,
+        $first_seen: row.firstSeen,
+        $last_updated: row.lastUpdated,
+        $skin_id: row.skinId,
+        $book_id: row.bookId,
+        $inventory_live_product: row.inventoryLiveProduct,
+        $competition_id: row.competitionId,
+      });
+    }
     if (isNew) {
-      set.add(inventoryId);
+      if (!dryRun) set.add(inventoryId);
       inserted.push(row);
     } else {
       updated.push(row);
     }
   }
 
-  return { inserted, updated, seen: events.length };
+  return { inserted, updated, seen };
 }
 
 /** Filter coverage-catalog InventoryEvent rows by sport (table tennis, tennis, …). */

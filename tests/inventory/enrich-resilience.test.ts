@@ -15,7 +15,7 @@ import {
   formatEnrichValidation,
   validateEnrichmentResult,
 } from '../../src/inventory/enrich-validate.ts';
-import { openEventStore } from '../../src/institutions/event-store/open-db.ts';
+import { memoryDb } from './fixtures.ts';
 import { upsertSkinLiveEvents } from '../../src/inventory/skin-events-store.ts';
 import type { InventoryEvent } from '../../src/partner/types.ts';
 import type { FetchFn } from '../../src/institutions/resilient-fetch.ts';
@@ -105,7 +105,7 @@ describe('booked catalog cache + resilience', () => {
 
 describe('enrich validation', () => {
   test('fails when candidates>0 and matched=0', () => {
-    const db = openEventStore({ dbPath: ':memory:' });
+    const db = memoryDb();
     upsertSkinLiveEvents(db, [live('1', 'A', 'B')], { nowMs: 1 });
     const v = validateEnrichmentResult(db, 'fantasy402', {
       candidates: 10,
@@ -117,7 +117,7 @@ describe('enrich validation', () => {
   });
 
   test('passes when matched and no gates trip', () => {
-    const db = openEventStore({ dbPath: ':memory:' });
+    const db = memoryDb();
     const v = validateEnrichmentResult(db, 'fantasy402', {
       candidates: 5,
       matched: 2,

@@ -6,9 +6,7 @@ import {
   migrateSkinEventsCompetitionIds,
   migrateSkinEventsInventoryIdentity,
   migrateSkinEventsStreamIdToInventoryId,
-  openEventStore,
 } from '../../src/institutions/event-store/open-db.ts';
-import type { InventoryEvent } from '../../src/partner/types.ts';
 import {
   buckeyeInventoryIdentity,
   fetchPublicPliveStreamEvents,
@@ -22,20 +20,18 @@ import {
   stampSkinEventsCompetitionIds,
   upsertSkinLiveEvents,
 } from '../../src/inventory/skin-events-store.ts';
+import { liveEvent, memoryDb } from './fixtures.ts';
 
 function ev(
-  partial: Partial<InventoryEvent> & { inventoryId: string; sport: string }
-): InventoryEvent {
-  return {
-    partner: 'fantasy402',
-    sport: partial.sport,
-    league: partial.league ?? 'League',
-    inventoryId: partial.inventoryId,
-    home: partial.home ?? 'A',
-    away: partial.away ?? 'B',
-    feedId: partial.feedId ?? 0,
-    donbestId: null,
-  };
+  partial: { inventoryId: string; sport: string; league?: string; home?: string; away?: string; feedId?: number }
+) {
+  return liveEvent(
+    partial.inventoryId,
+    partial.sport,
+    partial.home ?? 'A',
+    partial.away ?? 'B',
+    partial.league ?? 'League'
+  );
 }
 
 describe('skin_events store', () => {
@@ -73,7 +69,7 @@ describe('skin_events store', () => {
   });
 
   test('upsertSkinLiveEvents stamps skin/book/inventory product once per inventory id', () => {
-    const db = openEventStore({ dbPath: ':memory:' });
+    const db = memoryDb();
     const first = [
       ev({
         inventoryId: '100',
@@ -186,7 +182,7 @@ describe('skin_events store', () => {
   });
 
   test('migrateSkinEventsCompetitionIds backfills null competition_id', () => {
-    const db = openEventStore({ dbPath: ':memory:' });
+    const db = memoryDb();
     db.run(`
       INSERT INTO skin_events (
         partner, inventory_id, sport, league, status, first_seen, last_updated,
@@ -207,7 +203,7 @@ describe('skin_events store', () => {
   });
 
   test('migrate deletes Test League fixture and backfills fantasy402 rows', () => {
-    const db = openEventStore({ dbPath: ':memory:' });
+    const db = memoryDb();
     db.run(`
       INSERT INTO skin_events (
         partner, inventory_id, sport, league, home, away, status, first_seen, last_updated,
@@ -235,7 +231,7 @@ describe('skin_events store', () => {
   });
 
   test('normalizeSkinEventsSports rewrites display labels', () => {
-    const db = openEventStore({ dbPath: ':memory:' });
+    const db = memoryDb();
     db.run(`
       INSERT INTO skin_events (
         partner, inventory_id, sport, league, status, first_seen, last_updated, book_id

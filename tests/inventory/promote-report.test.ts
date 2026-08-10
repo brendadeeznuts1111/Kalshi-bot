@@ -1,6 +1,6 @@
 // @see https://bun.com/docs/test/index#run-tests
 import { describe, expect, test } from 'bun:test';
-import { openEventStore } from '../../src/institutions/event-store/open-db.ts';
+import { memoryDb } from './fixtures.ts';
 import { upsertInventoryLeagues } from '../../src/inventory/leagues.ts';
 import { buildPromoteReport } from '../../src/inventory/promote-report.ts';
 import type { InventoryEvent } from '../../src/partner/types.ts';
@@ -24,7 +24,7 @@ function live(
 
 describe('promote-report', () => {
   test('buildPromoteReport surfaces candidates and summaryLine', () => {
-    const db = openEventStore({ dbPath: ':memory:' });
+    const db = memoryDb();
     upsertInventoryLeagues(
       db,
       [
@@ -47,7 +47,7 @@ describe('promote-report', () => {
   });
 
   test('minPeak filters candidates', () => {
-    const db = openEventStore({ dbPath: ':memory:' });
+    const db = memoryDb();
     upsertInventoryLeagues(db, [live('1', 'tennis', 'ATT. Lonely Peak')], {
       nowMs: 1,
     });
