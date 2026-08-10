@@ -149,7 +149,7 @@ export async function runPartnerInventorySync(
       const update = db.query(`
         UPDATE skin_events
         SET client_event_id = $cid, last_updated = $ts
-        WHERE partner = $partner AND inventory_id = $iid AND (client_event_id IS NULL OR client_event_id = '')
+        WHERE book_id = $book AND inventory_id = $iid AND (client_event_id IS NULL OR client_event_id = '')
       `);
       const ts = options.nowMs ?? Date.now();
       for (const row of upsert.inserted) {
@@ -158,7 +158,7 @@ export async function runPartnerInventorySync(
         update.run({
           $cid: cid,
           $ts: ts,
-          $partner: row.partner,
+          $book: row.bookId,
           $iid: row.inventoryId,
         });
         row.clientEventId = cid;

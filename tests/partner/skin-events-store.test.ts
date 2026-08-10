@@ -195,10 +195,11 @@ describe('skin_events store', () => {
     const db = openEventStore({ dbPath: ':memory:' });
     db.run(`
       INSERT INTO skin_events (
-        partner, inventory_id, sport, league, home, away, status, first_seen, last_updated
+        partner, inventory_id, sport, league, home, away, status, first_seen, last_updated,
+        book_id
       ) VALUES
-        ('fantasy402', '1', 'table_tennis', 'Test League', 'A', 'B', 'unknown', 1, 1),
-        ('fantasy402', '999', 'Table Tennis', 'Setka', 'X', 'Y', 'unknown', 2, 2)
+        ('fantasy402', '1', 'table_tennis', 'Test League', 'A', 'B', 'unknown', 1, 1, 'fantasy402'),
+        ('fantasy402', '999', 'Table Tennis', 'Setka', 'X', 'Y', 'unknown', 2, 2, 'fantasy402')
     `);
     migrateSkinEventsInventoryIdentity(db);
     const leftover = (
@@ -222,8 +223,8 @@ describe('skin_events store', () => {
     const db = openEventStore({ dbPath: ':memory:' });
     db.run(`
       INSERT INTO skin_events (
-        partner, inventory_id, sport, league, status, first_seen, last_updated
-      ) VALUES ('fantasy402', '7', 'Table Tennis', 'Setka', 'unknown', 1, 1)
+        partner, inventory_id, sport, league, status, first_seen, last_updated, book_id
+      ) VALUES ('fantasy402', '7', 'Table Tennis', 'Setka', 'unknown', 1, 1, 'fantasy402')
     `);
     expect(normalizeSkinEventsSports(db)).toBe(1);
     const sport = (

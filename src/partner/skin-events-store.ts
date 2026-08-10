@@ -27,6 +27,10 @@ import type { PartnerLiveEvent } from './types.ts';
 
 /** Default inventory identity for Fantasy402 stream-list under Buckeye. */
 export type InventoryIdentity = {
+  /**
+   * @deprecated Deprecated mirror of `bookId` written to skin_events.partner.
+   * Not a FactoryWager seat partner CODE — do not use as identity.
+   */
   partner: string;
   skinId: SkinId;
   bookId: BookId;
@@ -37,7 +41,7 @@ export function buckeyeInventoryIdentity(): InventoryIdentity {
   const bookId = resolveBookId('fantasy402');
   if (!bookId) throw new Error('BookId fantasy402 missing from BOOKS catalog');
   return {
-    partner: 'fantasy402',
+    partner: bookId,
     skinId: 'buckeye',
     bookId,
     inventoryLiveProduct: 'plive',
@@ -91,6 +95,7 @@ export function resolveInventoryCompetitionId(input: {
 }
 
 export type SkinEventRow = {
+  /** @deprecated Mirror of bookId — identity is (bookId, inventoryId). */
   partner: string;
   inventoryId: string;
   lsId: string | null;
@@ -117,10 +122,11 @@ export type SkinEventUpsertResult = {
   seen: number;
 };
 
-export function listSkinInventoryIds(db: Database, partner: string): Set<string> {
+/** List inventory ids for a book (identity key — not seat partner). */
+export function listSkinInventoryIds(db: Database, bookId: string): Set<string> {
   const rows = db
-    .query(`SELECT inventory_id AS inventoryId FROM skin_events WHERE partner = $p`)
-    .all({ $p: partner }) as Array<{ inventoryId: string }>;
+    .query(`SELECT inventory_id AS inventoryId FROM skin_events WHERE book_id = $b`)
+    .all({ $b: bookId }) as Array<{ inventoryId: string }>;
   return new Set(rows.map(r => String(r.inventoryId)));
 }
 
@@ -134,7 +140,7 @@ export function liveEventToRow(
   const sport = normalizeInventorySport(event.sport);
   const league = event.league ?? '';
   return {
-    partner: identity.partner,
+    partner: identity.bookId,
     inventoryId,
     lsId: null,
     clientEventId: null,
@@ -184,7 +190,8 @@ export function upsertSkinLiveEvents(
       $feed_id, $start_time, $status, $first_seen, $last_updated,
       $skin_id, $book_id, $inventory_live_product, $competition_id
     )
-    ON CONFLICT(partner, inventory_id) DO UPDATE SET
+    ON CONFLICT(book_id, inventory_id) DO UPDATE SET
+      partner = excluded.partner,
       sport = excluded.sport,
       league = excluded.league,
       home = excluded.home,
@@ -192,7 +199,6 @@ export function upsertSkinLiveEvents(
       feed_id = excluded.feed_id,
       last_updated = excluded.last_updated,
       skin_id = excluded.skin_id,
-      book_id = excluded.book_id,
       inventory_live_product = excluded.inventory_live_product,
       competition_id = excluded.competition_id
   `);
@@ -200,18 +206,18 @@ export function upsertSkinLiveEvents(
   const inserted: SkinEventRow[] = [];
   const updated: SkinEventRow[] = [];
 
-  const partnerSets = new Map<string, Set<string>>();
-  const getSet = (partner: string) => {
-    let s = partnerSets.get(partner);
+  const bookSets = new Map<string, Set<string>>();
+  const getSet = (bookId: string) => {
+    let s = bookSets.get(bookId);
     if (!s) {
-      s = listSkinInventoryIds(db, partner);
-      partnerSets.set(partner, s);
+      s = listSkinInventoryIds(db, bookId);
+      bookSets.set(bookId, s);
     }
     return s;
   };
 
   for (const event of events) {
-    const set = getSet(identity.partner);
+    const set = getSet(identity.bookId);
     const inventoryId = String(event.inventoryId ?? '').trim();
     if (!inventoryId) continue;
     const isNew = !set.has(inventoryId);
@@ -220,7 +226,7 @@ export function upsertSkinLiveEvents(
       status: 'unknown',
     });
     insert.run({
-      $partner: row.partner,
+      $partner: row.bookId,
       $inventory_id: row.inventoryId,
       $ls_id: row.lsId,
       $client_event_id: row.clientEventId,

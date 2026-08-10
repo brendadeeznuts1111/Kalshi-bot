@@ -154,15 +154,16 @@ export function applyEventStoreSchema(db: Database): void {
     first_seen INTEGER NOT NULL,
     last_updated INTEGER NOT NULL,
     skin_id TEXT,
-    book_id TEXT,
+    book_id TEXT NOT NULL,
     inventory_live_product TEXT,
     competition_id TEXT,
-    UNIQUE(partner, inventory_id)
+    UNIQUE(book_id, inventory_id)
   )`);
   migrateSkinEventsStreamIdToInventoryId(db);
   db.run(
     `CREATE INDEX IF NOT EXISTS idx_skin_events_partner_sport ON skin_events (partner, sport)`
   );
+  db.run(`CREATE INDEX IF NOT EXISTS idx_skin_events_book ON skin_events (book_id)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_skin_events_last_updated ON skin_events (last_updated)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_skin_events_competition ON skin_events (competition_id)`);
   // Partner financial registry (outs) — secrets stay in env, not here
@@ -209,6 +210,7 @@ export function applyEventStoreSchema(db: Database): void {
   );
   migrateEventStoreColumns(db);
   migrateSkinEventsInventoryIdentity(db);
+  migrateSkinEventsBookInventoryUnique(db);
   migrateSkinEventsCompetitionIds(db);
   migrateSourceEventSelectors(db);
   abandonLegacyKalshiInventoryRuns(db);
@@ -363,22 +365,119 @@ export function migrateSkinEventsStreamIdToInventoryId(db: Database): void {
 /**
  * Stamp Fantasy402 inventory rows as Buckeye / plive-shell; drop fixture junk.
  * plive + ezlive share this inventory — one row per inventory_id.
+ * `partner` is a deprecated mirror of `book_id` (not a seat partner CODE).
  */
 export function migrateSkinEventsInventoryIdentity(db: Database): void {
   if (!tableExists(db, 'skin_events')) return;
   if (!tableHasColumn(db, 'skin_events', 'skin_id')) return;
+  if (!tableHasColumn(db, 'skin_events', 'book_id')) return;
+  // Backfill book_id from legacy partner token when missing.
+  db.run(`
+    UPDATE skin_events
+    SET book_id = COALESCE(NULLIF(TRIM(book_id), ''), NULLIF(TRIM(partner), ''), 'fantasy402')
+    WHERE book_id IS NULL OR TRIM(book_id) = ''
+  `);
   db.run(`
     UPDATE skin_events
     SET
       skin_id = COALESCE(NULLIF(TRIM(skin_id), ''), 'buckeye'),
-      book_id = COALESCE(NULLIF(TRIM(book_id), ''), 'fantasy402'),
-      inventory_live_product = COALESCE(NULLIF(TRIM(inventory_live_product), ''), 'plive')
-    WHERE partner = 'fantasy402'
+      inventory_live_product = COALESCE(NULLIF(TRIM(inventory_live_product), ''), 'plive'),
+      partner = book_id
+    WHERE book_id = 'fantasy402' OR partner = 'fantasy402'
   `);
   db.run(`
     DELETE FROM skin_events
     WHERE inventory_id = '1' OR league = 'Test League'
   `);
+}
+
+function skinEventsHasBookInventoryUnique(db: Database): boolean {
+  const tableSql = (
+    db
+      .query(`SELECT sql AS s FROM sqlite_master WHERE type = 'table' AND name = 'skin_events'`)
+      .get() as { s: string | null } | null
+  )?.s;
+  if (tableSql && /UNIQUE\s*\(\s*book_id\s*,\s*inventory_id\s*\)/i.test(tableSql)) {
+    return true;
+  }
+  const indexes = db.query(`PRAGMA index_list(skin_events)`).all() as Array<{
+    name: string;
+    unique: number;
+  }>;
+  for (const idx of indexes) {
+    if (!idx.unique) continue;
+    const cols = db.query(`PRAGMA index_info('${idx.name.replace(/'/g, "''")}')`).all() as Array<{
+      name: string;
+    }>;
+    const names = cols.map(c => c.name);
+    if (names.length === 2 && names.includes('book_id') && names.includes('inventory_id')) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Rebuild UNIQUE(partner, inventory_id) → UNIQUE(book_id, inventory_id).
+ * `partner` remains as a deprecated write-through mirror of book_id.
+ */
+export function migrateSkinEventsBookInventoryUnique(db: Database): void {
+  if (!tableExists(db, 'skin_events')) return;
+  if (!tableHasColumn(db, 'skin_events', 'book_id')) return;
+  if (!tableHasColumn(db, 'skin_events', 'inventory_id')) return;
+  if (skinEventsHasBookInventoryUnique(db)) return;
+
+  db.run(`
+    UPDATE skin_events
+    SET book_id = COALESCE(NULLIF(TRIM(book_id), ''), NULLIF(TRIM(partner), ''), 'fantasy402')
+    WHERE book_id IS NULL OR TRIM(book_id) = ''
+  `);
+  db.run(`UPDATE skin_events SET partner = book_id WHERE book_id IS NOT NULL`);
+
+  db.run('DROP TABLE IF EXISTS skin_events_next');
+  db.run(`CREATE TABLE skin_events_next (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    partner TEXT NOT NULL,
+    inventory_id TEXT NOT NULL,
+    ls_id TEXT,
+    client_event_id TEXT,
+    sport TEXT NOT NULL DEFAULT '',
+    league TEXT NOT NULL DEFAULT '',
+    home TEXT,
+    away TEXT,
+    feed_id TEXT,
+    start_time INTEGER,
+    status TEXT NOT NULL DEFAULT 'unknown',
+    first_seen INTEGER NOT NULL,
+    last_updated INTEGER NOT NULL,
+    skin_id TEXT,
+    book_id TEXT NOT NULL,
+    inventory_live_product TEXT,
+    competition_id TEXT,
+    UNIQUE(book_id, inventory_id)
+  )`);
+  db.run(`
+    INSERT INTO skin_events_next (
+      id, partner, inventory_id, ls_id, client_event_id, sport, league, home, away,
+      feed_id, start_time, status, first_seen, last_updated,
+      skin_id, book_id, inventory_live_product, competition_id
+    )
+    SELECT
+      id,
+      COALESCE(NULLIF(TRIM(partner), ''), book_id),
+      inventory_id, ls_id, client_event_id, sport, league, home, away,
+      feed_id, start_time, status, first_seen, last_updated,
+      skin_id, book_id, inventory_live_product, competition_id
+    FROM skin_events
+  `);
+  db.run('DROP TABLE skin_events');
+  db.run('ALTER TABLE skin_events_next RENAME TO skin_events');
+  db.run(
+    `CREATE INDEX IF NOT EXISTS idx_skin_events_partner_sport ON skin_events (partner, sport)`
+  );
+  db.run(`CREATE INDEX IF NOT EXISTS idx_skin_events_book ON skin_events (book_id)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_skin_events_last_updated ON skin_events (last_updated)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_skin_events_competition ON skin_events (competition_id)`);
 }
 
 /**
