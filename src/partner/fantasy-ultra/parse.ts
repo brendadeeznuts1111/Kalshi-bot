@@ -3,7 +3,7 @@ import type {
   PartnerBookedEvent,
   PartnerComponentBet,
   PartnerExecutionResult,
-  PartnerLiveEvent,
+  InventoryEvent,
   PartnerLiveUrlSet,
   PartnerSportLeague,
 } from "../types.ts";
@@ -50,7 +50,7 @@ function asNum(v: unknown): number | null {
 function eventFromWire(
   id: string,
   raw: FantasyStreamEventWire,
-): PartnerLiveEvent {
+): InventoryEvent {
   const sides = raw.competitiors ?? raw.competitors ?? {};
   const wireStreamId = asNum(raw.stream_id);
   const inventoryId =
@@ -154,15 +154,15 @@ export function inspectStreamListCapabilities(wire: unknown): StreamListCapabili
 }
 
 /**
- * Flatten stream-list sports → PartnerLiveEvent[].
+ * Flatten stream-list sports → InventoryEvent[] (coverage catalog).
  * Optional sport filter matches bucket key (tennis) or event.sport (Tennis) case-insensitively.
  *
- * This is **live coverage**, not a priced market book.
+ * This is **coverage inventory**, not a priced market book.
  */
 export function parseStreamList(
   wire: unknown,
   options: { sport?: string } = {},
-): PartnerLiveEvent[] {
+): InventoryEvent[] {
   if (!wire || typeof wire !== "object") {
     throw new Error("fantasy402: stream-list returned non-object");
   }
@@ -173,10 +173,10 @@ export function parseStreamList(
     );
   }
   const want = options.sport?.trim().toLowerCase();
-  const out: PartnerLiveEvent[] = [];
+  const out: InventoryEvent[] = [];
   const sports = w.sports ?? {};
 
-  const matchesSport = (bucket: string, event: PartnerLiveEvent): boolean => {
+  const matchesSport = (bucket: string, event: InventoryEvent): boolean => {
     if (!want || want === "all") return true;
     const b = bucket.toLowerCase().replace(/_/g, " ");
     const s = event.sport.toLowerCase();

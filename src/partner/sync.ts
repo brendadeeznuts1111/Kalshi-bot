@@ -16,7 +16,7 @@
  */
 import type { Database } from 'bun:sqlite';
 import type { CoefficientStore } from './fantasy-ultra/coefficient-store.ts';
-import type { FantasySessionAdapter, PartnerLiveEvent } from './types.ts';
+import type { FantasySessionAdapter, InventoryEvent } from './types.ts';
 import {
   buckeyeInventoryIdentity,
   filterLiveEventsBySport,
@@ -116,7 +116,7 @@ export async function runPartnerInventorySync(
           : sport.replace(/\s+/g, '_').toLowerCase();
 
   // Inventory does not require login
-  let events: PartnerLiveEvent[] = await adapter.fetchEvents({
+  let events: InventoryEvent[] = await adapter.fetchInventory({
     sport: fetchSport === 'all' ? 'all' : fetchSport,
   });
   if (sport !== 'all') {

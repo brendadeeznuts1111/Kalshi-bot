@@ -4,7 +4,7 @@ import { openEventStore } from "../../src/institutions/event-store/open-db.ts";
 import type {
   FantasySessionAdapter,
   PartnerBookedEvent,
-  PartnerLiveEvent,
+  InventoryEvent,
 } from "../../src/partner/types.ts";
 import { CoefficientStore } from "../../src/partner/fantasy-ultra/coefficient-store.ts";
 import {
@@ -17,7 +17,7 @@ function live(
   sport: string,
   home: string,
   away: string,
-): PartnerLiveEvent {
+): InventoryEvent {
   return {
     partner: "fantasy402",
     sport,
@@ -31,13 +31,13 @@ function live(
 }
 
 function mockAdapter(
-  events: PartnerLiveEvent[],
+  events: InventoryEvent[],
   booked: PartnerBookedEvent[] = [],
 ): FantasySessionAdapter {
   return {
     partnerId: "fantasy402",
     login: async () => ({ desktop: "https://x/", mobile: "https://x/" }),
-    fetchEvents: async () => events,
+    fetchInventory: async () => events,
     fetchLimits: async () => ({ maxStake: 0, maxWin: 0 }),
     placeOrder: async () => ({ success: false, error: "stub" }),
     renewToken: async () => "tok",

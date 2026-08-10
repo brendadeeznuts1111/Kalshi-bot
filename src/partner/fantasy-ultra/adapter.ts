@@ -16,7 +16,7 @@ import type {
   PartnerBookedEvent,
   PartnerExecutionResult,
   PartnerLimits,
-  PartnerLiveEvent,
+  InventoryEvent,
   PartnerLiveUrlSet,
   PartnerMarket,
   PartnerOrder,
@@ -332,9 +332,9 @@ export class FantasyUltraAdapter implements FantasySessionAdapter {
     return res.json();
   }
 
-  async fetchEvents(
+  async fetchInventory(
     options: { sport?: string } = {},
-  ): Promise<PartnerLiveEvent[]> {
+  ): Promise<InventoryEvent[]> {
     const json = await this.fetchStreamListRaw();
     return parseStreamList(json, { sport: options.sport ?? "tennis" });
   }

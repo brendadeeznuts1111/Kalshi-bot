@@ -7,7 +7,7 @@ export type {
   PartnerExecutionResult,
   PartnerId,
   PartnerLimits,
-  PartnerLiveEvent,
+  InventoryEvent,
   PartnerLiveUrlSet,
   PartnerMarket,
   PartnerOrder,
