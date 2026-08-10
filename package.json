@@ -13,6 +13,8 @@
     "tennis:warehouse": "bun scripts/warehouse-summary.ts",
     "research": "bun src/research/cli.ts",
     "research:dry": "bun src/research/cli.ts --dry-run --offline",
+    "research:simplify": "bun tools/research-simplify-loop.ts",
+    "research:simplify:loop": "bun tools/research-simplify-loop.ts --loop --interval=120",
     "export-audit": "bun src/research/export-audit-cli.ts",
     "audit:export": "bun src/research/export-audit-cli.ts",
     "serve": "bun --hot src/research/serve.ts",
