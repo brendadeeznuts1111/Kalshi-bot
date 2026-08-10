@@ -209,6 +209,29 @@ describe('host-discover', () => {
     expect(getSkinByHost('www.action92.com')).toBeUndefined();
   });
 
+  test('1BV skin.betting + cdntools → 1bv for review (not ace)', () => {
+    const report = scoreHostDiscovery({
+      url: 'https://mirror-1bv.example/',
+      host: 'mirror-1bv.example',
+      finalUrl: 'https://mirror-1bv.example/',
+      status: 200,
+      headers: {},
+      body: `<html><title>All Sports Wagering</title>
+        <a href="/frontend/__rules/skin.betting/_sportsbook-rules.html">rules</a>
+        <script src="//cdntools.info/animacion3.aspx"></script>
+        </html>`,
+      storedUrls: [
+        'https://mirror-1bv.example/frontend/__rules/skin.betting/_sportsbook-rules.html',
+        'https://cdntools.info/animacion3.aspx',
+      ],
+    });
+    expect(report.suggestedSkinId).toBe('1bv');
+    expect(report.confidence).toBeGreaterThanOrEqual(0.4);
+    expect(report.weigh.skinScores.find(s => s.skinId === 'ace')?.score ?? 0).toBeLessThan(
+      report.confidence
+    );
+  });
+
   test('STS NewLogin + frontend login shell → sts for review', () => {
     const report = scoreHostDiscovery({
       url: 'https://mirror-sts.example/',

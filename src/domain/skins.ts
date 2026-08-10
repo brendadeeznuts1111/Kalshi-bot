@@ -170,9 +170,13 @@ export const SKINS = [
     aliases: ['1bv'] as const,
     mapper: {
       kind: 'unmapped',
-      note: 'Hosts declared; live-product coverage not proven yet',
+      note: 'Hosts + fingerprints 2026-08-09 (anybet365 skin.betting / cdntools); products_unknown_as_of=2026-08-09; betvegas23 also sportsbookvip but HOST_TO_SKIN owns it',
     },
-    fingerprints: { endpoints: [] as const, assets: [] as const },
+    // Prefer anybet365-distinctive tokens — do not claim sportsbookvip (ACE collision).
+    fingerprints: {
+      endpoints: ['/frontend/__rules/skin.betting/', 'skin.betting'] as const,
+      assets: ['cdntools.info', 'animacion3.aspx'] as const,
+    },
   },
   {
     id: 'lvaction',
