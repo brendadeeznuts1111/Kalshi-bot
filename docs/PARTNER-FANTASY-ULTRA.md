@@ -297,7 +297,8 @@ until a separate EZ feed is proven. Wire `stream_id` maps to `inventory_id` at p
 
 | Column                       | Source                                                                              |
 | ---------------------------- | ----------------------------------------------------------------------------------- |
-| `partner` + `inventory_id`   | UNIQUE key (detection key; partner=`fantasy402`; from wire `stream_id`)             |
+| `book_id` + `inventory_id`   | UNIQUE key (detection key; book=`fantasy402`; inventory from wire `stream_id`)      |
+| `partner`                    | **deprecated** mirror of `book_id` (not a seat partner CODE)                        |
 | `skin_id` / `book_id`        | stamped `buckeye` / `fantasy402`                                                    |
 | `inventory_live_product`     | feed owner shell = `plive` (ezlive reuses)                                          |
 | `competition_id`             | seeded CompetitionId from sport + league (null when unmapped)                       |
