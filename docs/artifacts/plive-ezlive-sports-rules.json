@@ -1,0 +1,1751 @@
+{
+  "source": "https://plive.sportswidgets.pro/live/",
+  "captured": "2026-08-10",
+  "products": [
+    "plive",
+    "ezlive"
+  ],
+  "tabs": [
+    {
+      "title": "General Betting",
+      "subtabs": [
+        {
+          "rules": [
+            {
+              "text": "All bets will be accepted in accordance with the current LINE - a list of events with the fixed odds and winning coefficients established by {{companyName}}. The odds can be changed by {{companyName}} after the bets are placed, but conditions of bets remain intact. Clients should check for all possible changes in the odds prior to placing the bet."
+            },
+            {
+              "text": "A client cannot change or cancel a bet after registration on the server and after receiving the acceptance message and ticket number assignment. However, {{companyName}} reserves the right to cancel a bet at any time for technical reasons or human error, without previous notice. Any failure in communication is not a valid reason for the extent of the funds in his account. When the bet has been placed and registered, the bet risk amount will be deducted from the client's deposit account. After the bet calculation, all winnings are added to the client's balance."
+            },
+            {
+              "title": "<b>Scoreboard:</b>",
+              "text": "Although we make every effort to ensure all live in-play information displayed is correct, information (such as score and time of game and other) is intended to be used as a guide and we assume no liability in the event that any information is incorrect."
+            },
+            {
+              "title": "Secondary Confirmation",
+              "indentArticles": true,
+              "numberArticles": true,
+              "articles": [
+                " When an in-play wager leg added to the bet slip is marked as \"subject to secondary confirmation\" that means that after the price and line are validated, a secondary confirmation period will be counted down on the bet slip. If during the secondary confirmation period there are no scores registered by either team, then the wager will be marked as accepted. Otherwise, the wager leg will be marked as canceled and in the case of a straight bet will be marked as no action.",
+                " If one or more in-play legs of a parlay are deemed canceled due to secondary confirmation failure, the remainder of the parlay will have action at payout odds determined by excluding the canceled leg or legs from the odds calculation. If all parlay legs are so rejected then the entire parlay will be marked no action.",
+                " We reserve the right to void any wager if it was placed during or immediately prior to a significant event that could affect the outcome."
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Settling Bets",
+      "subtabs": [
+        {
+          "rules": [
+            {
+              "text": "All event dates and times published by {{companyName}} are tentative. Bets on events listed with incorrect dates or times or with other inaccuracies in their descriptions (e.g. the status or stage of a tournament, the score of an earlier related match, etc.) will be deemed valid for all in-play wagers without exception and for pre-match provided they were placed prior to the actual start of the event."
+            },
+            {
+              "text": "The away team is indicated in the first place in a line. With the exception of pre-match soccer where the home team will be indicated in the first place in a line. If the game took place on the visitor team field (except matches between teams from the same city), all bets for the event will be considered void. The change of location to a neutral field is not a basis for cancelling bets. Bets will be considered valid if the host participant's location is listed in the tournament title, but the host participant is not listed first in the betting line. If there is a display discrepancy affecting the ordering of the home/away teams this will not be a valid reason for wager cancelation and all bets will stand."
+            },
+            {
+              "text": "Interrupted events",
+              "numberArticles": true,
+              "articles": [
+                "Interrupted events not resumed within the same calendar day (at midnight in the local time zone where the event is played) will be cancelled. In the case of such a cancellation, all bets are considered no action, except bets where the outcome has already been unambiguously determined (for example, if the score has already surpassed the total, then all bets on that over and under will be settled as winners and losers, respectively).",
+                "Please see the correspondent chapters of these rules for additional rules relating to different sports."
+              ]
+            },
+            {
+              "text": "Only statistics and scores recorded on the official league website on the day of the event will be counted for settlement purposes. If after the day of the final of the event the primary result is changed for any major reason, this change does not affect the bet settlement. In addition, bets are considered to be settled according to the primary result of an official protocol or other source immediately after the event is finished. In the case that there is no information on official sources, {{companyName}} has the right to use other sources of information, including information from its own representative at the match. The source stated in the betting line will prevail. If the event was interrupted and recommenced the next day from the start, for calculation purposes the first match is considered as an interrupted event and is calculated according 2.3."
+            },
+            {
+              "text": "In case of human errors by {{companyName}} staff or computer malfunctions during the acceptance of bets (such as: obvious mistakes in odds, non-corresponding odds in depending positions, etc.), and in the case where the game is suspected of being rigged, or in other cases of violation of the Rules, {{companyName}} has a right to cancel such a bet. Should international anti match fixing organizations EWS-FIFA, Federbet and Tennis Integrity Unit, suspect of any match fixing or other such manipulation of the sporting event, {{companyName}} has the right to block the account of the client who placed bets on the event until a final conclusion is drawn by the anti match fixing organizations. If the final conclusion results in a match being fixed, then all bets placed will be cancelled. Administration is not required to submit proof of the suspected rigging or manipulation with the result of the event."
+            },
+            {
+              "text": "All in-play statistics displayed on {{companyName}}\u2019s site are for informational purposes only. While {{companyName}} always tries to display the correct current score, an error in the score display will not be considered an acceptable reason for changing bet results. Please use alternative sources of information while placing live bets (for example, television, etc.)."
+            },
+            {
+              "text": "Any change in the score or any change in the details of the match decided on by the official referee, (for example cancelling a goal because of an offside, after examining the video or the cancelling or review of a point play in tennis, volleyball, etc.), or the mutual agreement of the participants (for example playing in equal teams after the player has been sent off, etc.) is not a valid reason to cancel bets."
+            },
+            {
+              "text": "When an event is postponed and rescheduled for a later calendar day (after midnight in the local time zone where the event is played) all bets on that event will be void."
+            },
+            {
+              "text": "If the results for an offering cannot be determined within 24 hours, then all wagers on that offering will be cancelled."
+            },
+            {
+              "text": "For outright winner and top participant markets, dead heat rules may be applied. A dead heat is when multiple participants tie for a position in a contest such that the number of those finishing-in-the money is greater than would normally be expected. When this happens, wagers on any participant that is not fully in-the-money is proportionately divided into a winning portion and a losing portion in proportion to the number of available in-the-money spots.<br><br>For example, if when wagering on a \u201cTop 20\u201d market your chosen participant finishes in a 5-way tie for 19th place, your wager would be a two-fifths winner (sharing the 19th and 20th places with 4 other participants) and a three-fifths loser (sharing 21st, 22nd, and 23rd place with 4 other participants)."
+            },
+            {
+              "text": "In any fixture involving a forfeit, walkover, or any other event where the fixture is considered complete without having been played, all bets will be void, regardless of how the governing body of its league scores it.<br /><br />For multiway or futures type markets, where the wager is not associated with any single event fixture, forfeits and the like will be treated as losses for the forfeiting team."
+            },
+            {
+              "text": "In the event of a situation not specifically addressed in these rules, {{companyName}} reserves the right to determine a final decision and will attempt to do so in a manner consistent with industry standards."
+            },
+            {
+              "text": "Bet Builder wagers are based exclusively on Prematch markets. Bet Builder betting closes when the corresponding Prematch markets are taken off the board."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Bet Types",
+      "subtabs": [
+        {
+          "rules": [
+            {
+              "text": "2-Way Money Lines (Draw No Bet)<p>Predict which side will win outright. If the final result is a draw, then the wager will be refunded.</p>"
+            },
+            {
+              "text": "3-Way Money Lines<p>3-way money line betting are home, away, and draw. The outcome of the wager will be determined by the winner at the end of the specified period. In the case of a drawn outcome, wagers on both home and away are graded as losers.</p>"
+            },
+            {
+              "text": "Handicaps (Spreads)<p>A handicap is a type of wager where the specified number of points are added or subtracted from the side wagered on. A handicap of 0 is displayed on the screen as a line of \u2018PK\u2019. The outcome is determined by adding the handicap line to the chosen side\u2019s score.</p>",
+              "numberArticles": true,
+              "articles": [
+                "Asian Spreads<p>These are Spreads displayed by an X number followed by either \u201c.25\u201d or a \u201c.75\u201d. For scoring purposes, they work the same as regular spreads, but your risk amount will be allocated to 2 different spread values. For example, If you choose a spread of +1.25, half of your wager will go to +1 and the other half to +1.5.</p>",
+                "Examples"
+              ],
+              "examples": [
+                [
+                  "Asian Handicap",
+                  "Explanation"
+                ],
+                [
+                  "-1",
+                  "You win if your team wins the match with a goal difference of two or more. If it wins with a goal difference of one, your stake is refunded."
+                ],
+                [
+                  "-0.75",
+                  "You win if your team wins the match with a goal difference of two or more. If it wins with one goal your bet is split in half: one half is considered a win, the other half is considered a draw and its stakes are refunded."
+                ],
+                [
+                  "-0.5",
+                  "You win if your team wins the match."
+                ],
+                [
+                  "-0.25",
+                  "You win if your team wins the match. If it draws you lose half of the stake."
+                ],
+                [
+                  "0",
+                  "You win if your team wins the match. If there's a draw (0 goals difference), your stake is refunded."
+                ],
+                [
+                  "0.25",
+                  "You win if your team wins the match. If there's a draw, your bet is split in half: one half is considered a win, the other half is considered a draw and its stakes are refunded."
+                ],
+                [
+                  "0.5",
+                  "You win if your team draws or wins the match."
+                ],
+                [
+                  "0.75",
+                  "You win if your team wins or draws the match. If it loses with a one goal difference, you lose half of the stake."
+                ],
+                [
+                  "1",
+                  "You win if your team wins or draws the match. If it loses with a goal difference of one, your stake is refunded."
+                ]
+              ]
+            },
+            {
+              "text": "Totals<p>You have 2 options: Over or Under. Predict the total goals (points on other sports) scored in the full game or in the specified period. For live wagers, goals are considered regardless of whether they are scored before or after the bets are placed. If a game is abandoned, bets will be void unless settlement has already been unconditionally determined.</p>",
+              "numberArticles": true,
+              "articles": [
+                "Asian Totals<p>These are Totals displayed by an X number followed by either \u201c.25\u201d or a \u201c.75\u201d. For scoring purposes, they work the same as regular totals, but your risk amount will be divided into 2 different totals. For example you bet a total to go under 3.75, in which half of your wager will go to under 3.5 and the other half to under 4. This can be selected for the full match or for a specific half/quarter/period.</p><p>Depending on the strength of each team, a handicap is issued for the game. This enables the odds for each side to be more similar, allowing more competitive betting opportunities. All bets on the Asian Handicap in live betting (including 1st/2nd half bets) are settled according to the score line. If a game is abandoned, bets will be void.</p>",
+                "Examples"
+              ],
+              "examples": [
+                [
+                  "Asian Totals",
+                  "Explanation"
+                ],
+                [
+                  "Under 2",
+                  "Bets win if there is either 0 or 1 goal scored in the match. If there are two goals exactly, the stake is returned. Bets lose if there are three or more goals scored in the match."
+                ],
+                [
+                  "Under 2.25",
+                  "Bets win if there is either 0 or 1 goal scored in the match. If there are two goals exactly, half the stake will win and half will be returned. Bets lose if there are three or more goals scored in the match."
+                ],
+                [
+                  "Under 2.5",
+                  "Bets win if there are 0, 1 or 2 goals scored in the match. Bets lose if there are three or more goals scored in the match."
+                ],
+                [
+                  "Under 2.75",
+                  "Bets win if there are 0, 1 or 2 goals scored in the match. If there are three goals exactly, half the stake will be returned and half will be lost. Bets lose if there are four or more goals scored in the match."
+                ],
+                [
+                  "Over 2",
+                  "Bets win if there are three or more goals scored in the match. If there are two goals exactly, the stake is returned. Bets lose if there is 0 or 1 goal scored in the match."
+                ],
+                [
+                  "Over 2.25",
+                  "Bets win if there are three or more goals scored in the match. If there are two goals exactly, half the stake will be returned and half will be lost. Bets lose if there is 0 or 1 goal scored in the match."
+                ],
+                [
+                  "Over 2.5",
+                  "Bets win if there are three or more goals scored in the match. Bets lose if there are 0, 1 or 2 goals scored in the match."
+                ],
+                [
+                  "Over 2.75",
+                  "Bets win if there are four or more goals scored in the match. If there are three goals exactly, half the stake will win and half will be returned. Bets lose if there are 0, 1 or 2 goals scored in the match."
+                ]
+              ]
+            },
+            {
+              "text": "Team Totals<p>This is the same as a total wager but it is based on the score of just one team and not both.</p>"
+            },
+            {
+              "text": "Double Chance<p>This offering displays 3 possible outcomes to wager on:</p>",
+              "indentArticles": true,
+              "articles": [
+                "<b>Home team and draw:</b> If the home team wins or draws the match, your wager will graded a winner.",
+                "<b>Away team and draw:</b> If the away team wins or draws the match, your wager will be graded a winner.",
+                "<b>No draw:</b> If the match is not drawn, your wager will be graded a winner."
+              ]
+            },
+            {
+              "text": "Odd or Even<p>This option allows you to wager on whether a score will be an odd or even number.  All such wagers are based on total point scores (as opposed to a set, map, or frame score), unless specifically indicated otherwise.</p><p>Full match odd/even tennis wagers refer to the total number of games won, unless specifically indicated otherwise.</p>"
+            },
+            {
+              "text": "Exact Total<p>This option allows you to predict what the exact total will be by adding both teams\u2019 final score together. Your betting options will be:</p>",
+              "indentArticles": true,
+              "articles": [
+                "<b>Exactly \u2019N\u2019:</b> Predicting that final scores added together will be \u2019N\u2019.",
+                "<b>Anything but \u2019N\u2019:</b> Predicting that the final scores added together will not be \u2019N\u2019."
+              ]
+            },
+            {
+              "text": "Exact Team Total<p>This option allows you to predict what the exact total will be at the end of the game/period for a specific team. Your betting options will be:</p>",
+              "indentArticles": true,
+              "articles": [
+                "<b>Exactly \u2019N\u2019:</b> Predicting that the score of your team will be exactly \u2019N\u2019.",
+                "<b>Anything but \u2019N\u2019:</b> Predicting that the score of your team will not be \u2019N\u2019."
+              ]
+            },
+            {
+              "text": "To Qualify / To Win Series / Lift the cup<p>These are wagers on a certain team to advance to the next round of a specific competition, or, to win the competition and lift the cup. Wagers are graded after the referee\u2019s final whistle, including extra time and Penalty Shootouts if applicable. The outcome of the wager will be a win if the team you chose to wager on qualifies to the next stage of the competition being played or if they win the competition completely. If the team you chose wins the match, but does not advance to the next stage of the competition, or win the cup, the wager will be a loss.</p>"
+            },
+            {
+              "text": "Exact Margin<p>Wager on a side to win by the exact amount of points specified in the wager.</p>"
+            },
+            {
+              "text": "Half Time/Full Time<p>This is a combination wager, where you choose both the outcome of the 1st half and the outcome after the end of the game. Please check the market description carefully to determine whether or not the wager includes overtime.</p>"
+            },
+            {
+              "text": "Correct Score<p>This is a wager on the exact final score for both teams.</p>"
+            },
+            {
+              "text": "Race To<p>This is a wager on which team will first reach or exceed a specified number of whatever unit is specified in the wager (e.g., goals, points, soccer corner kicks, etc.) Please check the market description carefully to determine whether or not the wager includes overtime.</p>"
+            },
+            {
+              "text": "First to Score<p>This is a 2-way wager on which first team to score in the match. If neither team scores, the wager will be refunded.</p>"
+            },
+            {
+              "text": "Will there be a Draw ?<p>This is a 2-way wager on whether the final result of the match or the specified period will be a draw.</p>"
+            },
+            {
+              "text": "Team X Win No Bet<p>This is a 2-way wager on whether the match will draw or the team specified in the wager selection will win. If Team X (the team specified in the bet header) wins then the wager is no action.</p>"
+            },
+            {
+              "text": "Will there be an own goal ?<p>This is a wager on whether either team will score an own goal. Regulation time only, unless otherwise specified.</p>"
+            },
+            {
+              "text": "Win to Nil<p>This is a wager on whether the selected team will win the event without any score by the opposing team. In the case of a draw, \u201cNo\u201d is the winner.</p>"
+            },
+            {
+              "text": "Highest Scoring Half Or Period<p>This is a wager based on the highest amount scored in each of the halves or periods. If there is a \u201ctie\u201d or a \u201cmultiple periods the same\u201d wagering option provided, then unless you have chosen that option, your bet will be a loser under such circumstances.  Please check the market and sport descriptions carefully to determine whether or not the wager includes overtime.</p>"
+            },
+            {
+              "text": "First Score Method<p>This is a wager on the method of the first score of the game. In the event of no score, wager will be voided.</p>"
+            },
+            {
+              "text": "Will there be Overtime / Extra Innings ?<p>This is a wager on whether or not a particular game will go to overtime or extra innings.</p>"
+            },
+            {
+              "text": "Total Touchdowns (Football)<p>This is a wager based on the total number of touchdowns scored during the specified period.</p>"
+            },
+            {
+              "text": "Will There Be a Safety? (Football)<p>This is a wager on whether or not a safety will be scored.</p>"
+            },
+            {
+              "text": "Either Team to Score 3 Unanswered Times<p>This is a wager on whether or not either team will score three or more consecutive times (on football, this excludes points after touchdown and two-point conversions).</p>"
+            },
+            {
+              "text": "Longest / Shortest Touchdown / Field Goal (Football)<p>These are over/under wagers on the distance of the longest / shortest touchdown / field goal scored. If no such score is made, all wagers will be voided.</p>"
+            },
+            {
+              "text": "Special Teams or Defensive Touchdown (Football)<p>This is a wager on whether or not a touchdown will be scored by a team\u2019s special teams or defensive touchdown.</p>"
+            },
+            {
+              "text": "Total Field Goals (Football)<p>This is a wager based on the total amount of field goals scored during the specified period.</p>"
+            },
+            {
+              "text": "2-Ball / 3-Ball 18 Hole Match-Ups (Golf)<p>This wager type is a match-up between two or three players over 18 holes. The players will not necessarily tee off together and there is no such requirement for the wager to have action. However should any of the players in the group not tee off at all, all wagers will be cancelled.</p>"
+            },
+            {
+              "text": "Leader After Round (Golf)<p>The winner will be the player with the best overall aggregate score at the end of the round.</p>"
+            },
+            {
+              "text": "Corners Result (Soccer)<p>This is a 3-way wager on the team predicted to take the most corner kicks in a soccer match.</p>"
+            },
+            {
+              "text": "Total Corners (Soccer)<p>This is an over/under wager on the total number of corners taken by both teams in a soccer match.</p>"
+            },
+            {
+              "text": "Corners Handicap (Soccer)<p>This is a handicap wager on the number of corners taken by each team.</p>"
+            },
+            {
+              "text": "First Corner of the Match (Soccer)<p>This is a 2-way wager on which team will take the first corner of the match.</p>"
+            },
+            {
+              "text": "To Keep a Clean Sheet (Soccer)<p>This is a 2-way wager on whether the specified team will allow a goal.</p>"
+            },
+            {
+              "text": "Total Cards (Soccer)<p>For settlement purposes, bets referring to the total number of cards shown by the referee will be counted as follows:</p>\n          Second yellows are ignored for settlement purposes (e.g. maximum card count per player is 3).</br>Cards shown to non-players (e.g manager, substitutes, or substituted players who play no subsequent part in the game) do not count towards total.",
+              "indentArticles": true,
+              "articles": [
+                " Yellow card = 1",
+                " Red card = 2",
+                " 2 or more cards = 3"
+              ]
+            },
+            {
+              "text": "Outright Winner / Top Players / Top Nationality Players<p>This is a wager on the winner or top winners of a particular competition or tournament (or on the winner within a particular subset, such as nationality, of the competition or tournament). Results are determined by the official results on the day the competition completes. Later disqualifications or amendments will not be considered. Dead heat rules apply.</p>"
+            },
+            {
+              "text": "Player Props<p>This is a wager based on statistics for a specific player. The player must play (although not necessarily start) for wagers to have action. For Baseball and Prematch Soccer the player must start for wagers to have action. For Live Soccer the player must play for action. Player props offered include:</p>",
+              "indentArticles": true,
+              "numberArticles": true,
+              "articles": [
+                "First / Last / Anytime Player to Score<p>This is a wager on whether or not a particular player will score first, last or anytime during the game. Quarterbacks or any player that score an official passing TD do not count for grading purposes.</p>",
+                "Player Total Rush + Rec Yards (Football)<p>This wager is on whether a particular player\u2019s rushing yards plus receiving yards will go over or under the given total.</p>",
+                "Player Double Double / Triple Double (Basketball)<p>This is a wager on whether or not a particular player will score a \u201cdouble double\u201d or a \u201ctriple double\u201d.<br><br>A double double (or triple double) is defined as reaching double digits (i.e., ten or more) in two (three for a triple double) of the following five statistical categories: points, rebounds, assists, steals, and blocked shots.</p>",
+                "Player to Score First Basket (Basketball)<p>The market is settled on the player who scores the first Basket. Free Throws do count for settlement purposes.</p>",
+                "Player to be Booked (Soccer)<p>Both yellow and red cards counts towards the settlement of this market.</p>"
+              ]
+            },
+            {
+              "text": "10 Minute",
+              "articles": [
+                "Score must happen between 0:00 and 09:59"
+              ]
+            },
+            {
+              "text": "X Minute<p>This rule applies to any given X minute market. To find the exact second a market opens and closes, use this standard formula:</p><p>Start Time: Minute X : 00<br>End Time: (Minute Y minus 1) : 59.</p><p>For example in a 60 Minute market, the score must happen between 0:00 and 59:59.</p>"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Wagering Options",
+      "subtabs": [
+        {
+          "rules": [
+            {
+              "text": "Straight<p>This is a single wager on one of the wager types listed above.</p>"
+            },
+            {
+              "text": "Parlays<p>This wager option combines multiple straight bets into a single wager such that for the parlay to win the stated amount, all components bets must also win.<br><br>If any component bets push (or are canceled) then those bets are excluded when calculating the final payout.<br><br>A parlay could also be a net winner of a lesser amount if the only losing parlay legs were partial losers and did not result in a complete loss of stake (e.g., half losers on quarter or three-quarter point handicaps or totals, or after some dead heat adjustments).<br><br>The percentage returns on each component bet of the parlay are multiplied together to determine the final payout.<br><br>Any push in a parlay with 3 teams or more will go to the next lowest number of teams. A push in a 2 team parlay will result in a straight wager.</p>",
+              "disclaimerKey": "same_game_parlay_disclaimer"
+            },
+            {
+              "text": "Teasers and Pleasers<p>A teaser is a special kind of parlay bet where the player can adjust the point spread or the total points (over/under) in their favor for multiple all parlay legs. By shifting the point spread or totals, the player increases their chances of winning the teaser. However, this advantage comes with the trade-off of receiving lower potential payouts.<br><br>On the other hand, a pleaser is the opposite of a teaser. In a pleaser, the player moves the point spread or totals against their favor, making it harder to win. But if they do win, they get a higher payout due to the increased odds.<br><br>In simple terms:<br><br>* Teasers adjust lines to make it easier to win, but at the cost of lower payouts.<br>* Pleasers adjust lines to make it harder to win, but with the benefit of higher payouts.</p>"
+            },
+            {
+              "text": "Round Robins<p>This option combines multiple combinations of the component legs of a parlay or teaser into a single wager.<br><br>The player chooses between 2 and 15 selections and the desired parlay sizes that are created from the selection.<br><br>For example, a player could make 8 selections and then combine them into parlays of sizes 2, 4, 7, and 8.<br><br>In addition to parlays, round robins may also include straight bets.</p>"
+            },
+            {
+              "text": "Cash Outs<p>Alternative to get funds back from a bet at any point during the event wagered on, based on the current odds.\n          This option is restricted on all contests and multi-way exotic betting.</p>"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "By Sport",
+      "subtabs": [
+        {
+          "icon": "australian-rules",
+          "title": "australian rules",
+          "rules": [
+            {
+              "text": "Bets on matches are accepted on:",
+              "indentArticles": true,
+              "articles": [
+                "Regular time including overtime (OT)."
+              ]
+            },
+            {
+              "text": "We aren't liable for any match duration discrepancies. Date and time of the beginning of an event given in the \u201cSports\u201d and \u201cLive\u201d sections are approximate. All match regulations are to be specified using official sources."
+            },
+            {
+              "text": "If a match is abandoned before 80 minutes are played, all bets on that match are void, except for those bets of which the outcome have been determined at the moment of a match interruption."
+            },
+            {
+              "text": "If a match venue is changed then bets already placed will stand provided that the home team is still designated as such."
+            },
+            {
+              "text": "A goal (6 points) is scored when a football is propelled through the goal posts by a way of kick from the attacking team without touching any other player. The attacking team is awarded 6 points."
+            },
+            {
+              "text": "A behind (1 point) is scored when the football is propelled between a goal post and a behind post or if the ball hits a goal post and passes through."
+            }
+          ]
+        },
+        {
+          "icon": "badminton",
+          "title": "badminton",
+          "rules": [
+            {
+              "text": "All bets will be void if a match has not been completed due to a player's retirement or disqualification."
+            }
+          ]
+        },
+        {
+          "icon": "bandy",
+          "title": "bandy",
+          "rules": [
+            {
+              "text": "All markets are based on the result at the end of regulation time, unless specifically detailed otherwise."
+            }
+          ]
+        },
+        {
+          "icon": "baseball",
+          "title": "baseball",
+          "rules": [
+            {
+              "text": "Full game and second half wagers include extra innings, unless otherwise specified."
+            },
+            {
+              "text": "Prematch moneyline wagers will have action after five innings of play (four and a half if the home team is winning). If a game is canceled or called early, the winner is determined by the score after the last full inning of play. If the home team scores to tie or takes the lead in the bottom half of the inning, the winner is then determined by the score at the time the game is canceled. <b class=\"rules-emphasis\">Please note that this applies only to prematch and NOT to live betting.</b>"
+            },
+            {
+              "text": "For all other full game wagers, the scheduled number of innings must be played for action. If these conditions are not met, all full game wagers will be void, unless the outcome of the market has already been unambiguously determined (see section 2.1.3 for more information)."
+            },
+            {
+              "text": "If the event is interrupted before the 5th inning is completed, and/or four and a half if the home team is winning, all wagers will be void (Please note that this applies only to prematch and NOT to live betting.)"
+            },
+            {
+              "text": "For all single inning and 1st 5 inning wagers, the specified inning(s) must be played to completion for the wager to have action."
+            },
+            {
+              "text": "When wagering on MLB full game moneylines wagers may optionally be placed specifying that either or both listed pitchers must start for the wager to have action.",
+              "indentArticles": true,
+              "articles": [
+                "List One Pitcher: If the listed pitcher specified on the wager does not start the game, the wager will be settled as No Action.",
+                "List Both Pitchers: If either of the listed pitchers specified on the wager does not start the game, the wager will be settled as No Action.",
+                "Action: Regardless of whether or not either of the listed pitchers specified on the wager start the game, the wager will have action."
+              ]
+            },
+            {
+              "text": "Prematch wagers on MLB moneylines, run lines, totals, and team totals for the full game, first half, and first inning are always on listed pitchers (with the exception of full game moneylines as described in 5.1.5 above). If the listed pitcher does not start, the wager will be settled as No Action."
+            },
+            {
+              "text": "MLB postseason games (Wild Card, Divisional Series, Championship Series, World Series) are not considered official until a winner is declared. If a postseason game begins and then is delayed to a later date, all wagers will have action with the final score being graded as the official result."
+            },
+            {
+              "text": "MLB Regular Season Series: Wagers on baseball series are based on the first three games played of each series. At least two of the first three series games must be played for wagers to have action. A called game will count toward a series wager provided it is officially declared a regulation game."
+            },
+            {
+              "text": "Games ending early as a result of a mercy rule will still have action."
+            }
+          ]
+        },
+        {
+          "icon": "basketball",
+          "title": "basketball",
+          "rules": [
+            {
+              "text": "If the match venue is changed, wagers will stand provided that the original home team remains designated as such. If the home team and the away team are flipped, then wagers on the original listing will be graded as NO ACTION."
+            },
+            {
+              "text": "Only statistics and scores recorded on the official league website on the day of the game will be counted for settlement purposes. Subsequent amendments do not count."
+            },
+            {
+              "text": "Game lines and 2nd half wagers include overtime unless stated otherwise. 4th quarter wagers exclude overtime unless stated otherwise."
+            },
+            {
+              "text": "For prematch wagering purposes the game must go at least 43 minutes of play for NBA and 35 minutes of play for College and International Basketball. Please note that this applies only to prematch and NOT to live betting."
+            }
+          ]
+        },
+        {
+          "icon": "beach-volleyball",
+          "title": "beach volleyball",
+          "rules": [
+            {
+              "text": "In the event of a match starting but not being completed, all bets are void, except for those markets which have been settled."
+            }
+          ]
+        },
+        {
+          "icon": "chess",
+          "title": "chess",
+          "rules": [
+            {
+              "text": "Match results will be settled based on the result of all games comprising that match."
+            },
+            {
+              "text": "In the event of a match starting but not being completed, bets will be void unless the outcome has already been determined."
+            }
+          ]
+        },
+        {
+          "icon": "cricket",
+          "title": "cricket",
+          "rules": [
+            {
+              "text": "Match Winner:",
+              "indentArticles": true,
+              "articles": [
+                "If an event is terminated early due to weather, then the match winner, if any, will be determined by official contest rules.",
+                "Should an event be officially declared a draw, 2-way wagers will be graded No Action.",
+                "In competitions where a bowl out or super over determines a winner then bets will be settled on the official result."
+              ]
+            },
+            {
+              "text": "Total Runs in Match:<p>The following number of Overs must be completed for wagers on totals that have not already gone over to have action:</p>",
+              "indentArticles": true,
+              "articles": [
+                "Twenty20 Matches: the full 20 overs for each team.",
+                "One Day Matches: at least 40 overs for each team.",
+                "Test Cricket: at least 50 overs for each team."
+              ]
+            },
+            {
+              "text": "Total Runs in Over:<p>If the Over is terminated early due to inclement weather, all wagers that have not already gone over will be deemed no action.</p>"
+            },
+            {
+              "text": "Odd or Even Runs in Over:<p>If the Over is terminated early due to inclement weather, all wagers will be deemed no action.</p>"
+            },
+            {
+              "text": "<p>If an event is postponed by fewer than 24 hours or interrupted and resumed within 24 hours wagers will have action.</p>"
+            }
+          ]
+        },
+        {
+          "icon": "curling",
+          "title": "curling",
+          "rules": [
+            {
+              "text": "All matches will be settled on the final score. For betting purposes extra ends will count."
+            }
+          ]
+        },
+        {
+          "icon": "cycling",
+          "title": "cycling",
+          "rules": [
+            {
+              "text": "If a tournament is affected by weather, bets will be settled as long as a tournament winner has been declared."
+            },
+            {
+              "text": "In 2 way lines (head to head) both cyclists must start for action."
+            }
+          ]
+        },
+        {
+          "icon": "darts",
+          "title": "darts",
+          "rules": [
+            {
+              "text": "Both competitors must start and must complete the match for bets to stand. If either competitor fails to complete the match, bets are void."
+            }
+          ]
+        },
+        {
+          "icon": "boxing",
+          "title": "Fighting",
+          "rules": [
+            {
+              "text": "A fight is defined as having started once the bell is sounded for the beginning of the first round."
+            },
+            {
+              "text": "In the event of a no contest being declared, or a fight being abandoned for any reason before the completion of the contest, all bets will be void. If the result of the market has already been determined, bets will be settled according to the result."
+            },
+            {
+              "text": "If the number of rounds has been changed, the bets on the outcome of the fight will stand and the bets on the number of rounds will be void."
+            },
+            {
+              "text": "The <em>Duration of the fight</em> bet is designated in the Sports line as <em>Total rounds</em>. To win this bet it is necessary to predict the number of rounds in a fight. The round in which the outcome of a bout is determined (i.e. when a bout is finished) is also taken into account when calculating the number of rounds."
+            },
+            {
+              "text": "In case a boxer does not come out after a gong has rung a new round, it is considered that the match is finished in the previous round."
+            },
+            {
+              "text": "The <em>Victory of the first (second) sportsman</em> bet. It is designated in the Sports line as 1 (2) and includes the following items:",
+              "indentArticles": true,
+              "articles": [
+                "Victory on the points",
+                "Victory by a knock-out",
+                "Victory by a technical knockout",
+                "Disqualification of the opponent or his refusal during the fight"
+              ]
+            },
+            {
+              "text": "The <em>Draw</em> bet. It is designated in the Sports line as X, it is determined by a decision of judges if the number of points scored by boxers is equal when all rounds of the bout are over."
+            },
+            {
+              "text": "The <em>Victory on the points</em> bet. The winner is determined by the judge's decision when all rounds are over."
+            },
+            {
+              "text": "The <em>Win inside distance</em> bet. It includes knockout, technical knockout, and disqualification of an opponent or his refusal during a bout."
+            },
+            {
+              "text": "The <em>Win 2 in 3rd Round</em> bet. The bet will be calculated as a win if the second wins by KO in the 3rd round."
+            },
+            {
+              "text": "The <em>Bout Ends In 10-12 Rounds</em> bet. This bet will be calculated as a win if the boxer wins by KO from 10 to 12 Round."
+            },
+            {
+              "text": "Total Rounds. For settlement purposes a half round on a total refers to an official round time up to but not including 1 minute and 30 seconds (2 minutes and 30 seconds for MMA) for the under and 1 minute 30 seconds  (2 minutes and 31 seconds for MMA) or later for the over."
+            }
+          ]
+        },
+        {
+          "icon": "e-sports",
+          "title": "E-Sports",
+          "rules": [
+            {
+              "text": "Unless otherwise stated, all bets are settled on the official result of the match, including any additional rounds, with the exception of e-soccer where the results are based on Regulation + Injury time."
+            },
+            {
+              "text": "If a match is interrupted due to one or more competitors failing to continue or being disqualified, bets on all markets will be void unless the market has already been determined."
+            },
+            {
+              "text": "Unless otherwise indicated each team must start the match with a full contingent of players."
+            },
+            {
+              "text": "<strong>Simulated NFL (Played with Madden 2020)</strong><br/>Games will be played on All-Pro difficulty with 8 minute quarters. 20 second accelerated clock. Weather conditions are clear unless otherwise noted.<br/>Wagers still have action even if there are problems with the Twitch (or any other) stream."
+            },
+            {
+              "text": "<strong>Simulated NBA (played with NBA 2K)</strong><br/>Games will be played CPU vs. CPU with 12 minute quarters and realistic settings.<br/>Wagers still have action even if there are problems with the Twitch (or any other) stream."
+            }
+          ]
+        },
+        {
+          "icon": "floorball",
+          "title": "floorball",
+          "rules": [
+            {
+              "text": "All markets are based on the result at the end of regulation time, unless specifically detailed otherwise."
+            }
+          ]
+        },
+        {
+          "icon": "football",
+          "title": "football",
+          "rules": [
+            {
+              "text": "All game and second half lines include overtime unless stated otherwise. Fourth quarter lines exclude overtime.  For prematch wagering purposes if play is suspended before the completion of 55 minutes and not resumed the same day all bets on unsettled markets will be graded as NO ACTION."
+            },
+            {
+              "text": "Prematch: Bets will no longer have action when an event is postponed and rescheduled for a later calendar day (after midnight in the local time zone where the event is played).\n          Live Betting: If the event is not resumed within the next 24 hours, wagers will be void, except bets where the outcome has already been unambiguously determined (for example, if the score has already surpassed the total, then all bets on that over and under will be settled as winners and losers, respectively)."
+            },
+            {
+              "text": "When the Mercy Rule and Shortened game is applied in live betting, wagers will be settled with the official final score determined at the venue."
+            },
+            {
+              "text": "If the match venue is changed, wagers will have no action."
+            },
+            {
+              "text": "Only statistics and scores recorded on the official league website on the day of the game will be counted for settlement purposes. Subsequent amendments do not count."
+            },
+            {
+              "text": "NFL Draft<br/>Draft details listed on <a href=\"www.nfl.com\">www.nfl.com</a> will be used for settlement purposes, including official draft orders and player positions published. For the purpose of over/under markets, undrafted players will be assigned a number, one above that of the last draft pick."
+            },
+            {
+              "text": "Player Props / Performances<br/>Bets are action if the player competes in one Down (with the exception of Quarterbacks who must start and for any receiving prop that player must be at least in one offensive snap for action). Player match-ups are action if both players compete in one Down. Push rules apply. Markets will be settled according to game stats from the respective official competition site published on the day of the game. Subsequent amendments do not affect settlement."
+            },
+            {
+              "text": "Multiple selection player props<br/>Wagers will have action if player participates in at least one play, if the prop is for an offensive stat must play in an offensive play, the same for Defensive and Special teams. The exception to this is Player Kicking Points/Longest Punt that are action if player is active/dressed."
+            },
+            {
+              "text": "Regular Season Futures<br/>Unless stated otherwise, for NFL regular season Team markets (including Regular Season Wins) to have action, teams must complete all 17 regular season games, and for CFL all 18 regular season games, unless the remaining games during the course of the season do not affect the result.<br/>NFL / CFL Divisional winners are determined by games won during the regular season (NFL tie-breaker rules apply)<br/>AFC/NFC Conference winners are determined by the team progressing to the Superbowl. NCAAF regular season wins are based on all teams listed, playing their full schedule; unless the remaining games during the course of the season do not affect the result."
+            },
+            {
+              "text": "Season Player Awards<br/>The winner is deemed the player who receives the Associated Press award for the respective category. Bets are placed on an all-in basis. Dead heat rules apply."
+            },
+            {
+              "text": "Passing Yards Markets (Most, total, longest)<br/>For settlement purposes, the complete amount of yards thrown (gross) are included."
+            },
+            {
+              "text": "Rushing Yards Markets (Most, total, longest)<br/>Settlement is based on the total rushing yards gained (includes negative yardage)."
+            },
+            {
+              "text": "Team to Punt First<br/>If there is no punt in the game, bets will be voided."
+            },
+            {
+              "text": "First Offensive Player Pass/Run<br/>This market is determined by the first offensive play from scrimmage (excluding Penalties). In the event of the kick-off being returned for a touchdown then bets will stand for the following kick-off. Incomplete or intercepted passes and QB Sack or Fumble will stand as a Pass Play. A fumble on exchange to the RB will stand as a Run Play."
+            },
+            {
+              "text": "Team to call 1st timeout<br/>Forecast which team will call the 1st timeout. Timeouts lost by any other means, e.g Coaches Challenges, Injuries etc, do not count."
+            },
+            {
+              "text": "Team to Commit First Accepted Penalty / Total Penalties Accepted<br/>Markets are based on the Penalty being accepted. Declined Penalties do not count."
+            },
+            {
+              "text": "Total Turnovers / Player Total Turnovers<br/>For settling purposes, the Turnover on Downs (failed 4th Down attempts) are included."
+            },
+            {
+              "text": "To Reach (or not) Playoffs<br/>NCAAF to Make Playoffs - Winners are the 4 teams who qualify for the Championship Semi-Final games."
+            }
+          ]
+        },
+        {
+          "icon": "futsal",
+          "title": "futsal",
+          "rules": [
+            {
+              "text": "All markets are based on the result at the end of regulation time, unless specifically detailed otherwise."
+            }
+          ]
+        },
+        {
+          "icon": "golf",
+          "title": "golf",
+          "rules": [
+            {
+              "text": "Final leaderboard positions are determined by first considering the highest number of holes completed and then considering the lowest stroke total over those holes. This means that a player who has completed more holes than another will always be ranked higher on the leaderboard than a player who has completed fewer."
+            },
+            {
+              "text": "The outright tournament winner and any other applicable market such as tournament matchups are determined by the player awarded the trophy, which takes into account the result of any playoff holes."
+            },
+            {
+              "text": "If an outright winner, or player to finish in the top X market, or leader after round ends in a tie that is not resolved by a playoff, dead heat rules will apply."
+            },
+            {
+              "text": "Once a player has teed off, all bets on that player will be deemed to have action."
+            },
+            {
+              "text": "If a tournament is played over a shorter format than previously scheduled, bets on the tournament outright winner or outright player markets will be settled on the officially declared result. However, the following bets will be declared void:",
+              "articles": [
+                "Correct scores",
+                "Handicaps",
+                "Individual player points",
+                "Winning margins"
+              ]
+            },
+            {
+              "text": "Irrespective of any changes to the order of play or format and so long as a result can be determined all bets on correct scores, winning margins, top players, and other markets, based on the conclusion of the tournament."
+            },
+            {
+              "text": "Group Betting",
+              "articles": [
+                "The winner will be the player achieving the highest placing at the end of the tournament. Any player missing the cut will be considered a loser. If all players miss the cut then the lowest score (or highest points score, for tournaments using the Stableford scoring system) after the cut has been made will determine settlement. Dead-heat rules apply except where the winner is determined by a playoff."
+              ]
+            },
+            {
+              "text": "Round handicap",
+              "articles": [
+                "The handicap is applied to the specified players\u2019 Round Scores, with the lowest score being the winner. e.g. Player A +1.5 scores 74, Player B -1.5 scores 75, Player B is settled as the winner once the handicap has been applied.<br/>Bets will be void if either named player in a specified Round Handicap match-up does not complete the Round. Official tour site scores recorded on the day will count for settlement (subsequent disqualification after this time does not count)."
+              ]
+            },
+            {
+              "text": "Fourballs",
+              "articles": [
+                "Bets stand once both pairings have teed-off the first hole. Official tour site scores recorded on the day will count for settlement (subsequent disqualification after this time does not count)."
+              ]
+            },
+            {
+              "text": "Hole Score",
+              "articles": [
+                "A player is deemed to have played once they have teed off. In the event of a player withdrawing after having teed off on a specified hole, bets will be settled as \u2018Over Par\u2019. If a player withdraws before teeing off on a given hole, bets on that hole will be void. Official tour site scores recorded on the day will count for settlement (subsequent disqualification after this time does not count)."
+              ]
+            },
+            {
+              "text": "Round Score",
+              "articles": [
+                "Bets will be void if specified groups of holes are not completed, unless settlement is already determined. Official tour site scores recorded on the day will count for settlement (subsequent disqualification after this time does not count)."
+              ]
+            },
+            {
+              "text": "To Win Hole",
+              "articles": [
+                "Bets stand once all nominated players tee-off the designated hole. If a player subsequently withdraws during the hole then bets on that player will be settled as a loser. Official tour site scores recorded on the day will count for settlement (subsequent disqualification after this time does not count)."
+              ]
+            },
+            {
+              "text": "Highest / Lowest Scoring Team",
+              "articles": [
+                "Dead-heat rules apply. Official tour site scores recorded on the day will count for settlement (subsequent disqualification after this time does not count)."
+              ]
+            },
+            {
+              "text": "Foursomes",
+              "articles": [
+                "Bets stand once both pairings have teed-off the first hole."
+              ]
+            },
+            {
+              "text": "Correct Score",
+              "articles": [
+                "All scheduled matches must be completed in full for bets to stand regardless if matches are carried over."
+              ]
+            },
+            {
+              "text": "Top Points / Team / Nationality",
+              "articles": [
+                "Markets will be settled on the whole tournament. Dead-heat rules apply. Bets will stand once the player has teed-off."
+              ]
+            },
+            {
+              "text": "To Hit Fairway with Teeshot",
+              "articles": [
+                "This market is settled on the finishing position of the golf ball after the tee shot. Official sources will be used for settlement. If no official result can be determined via these sources or TV pictures, bets will be void."
+              ]
+            },
+            {
+              "text": "Will There Be A Hole In One",
+              "articles": [
+                "Relates to a hole in one being recorded in the designated Rounds of a specified tournament. In the event of adverse weather affecting the tournament then bets will stand as long as a minimum of 36 holes of a tournament are played. In the event of a hole in one being recorded, but 36 holes not being played then the Yes option - To Make a Hole in One - will be deemed the winner."
+              ]
+            },
+            {
+              "text": "To Make Cut",
+              "articles": [
+                "A tournament cut must be applied for bets to stand. In the case of a Tournament where a multiple cut system is in place, settlement will be defined by a player playing or not playing in the next Round following the 1st official cut."
+              ]
+            }
+          ]
+        },
+        {
+          "icon": "handball",
+          "title": "handball",
+          "rules": [
+            {
+              "text": "All markets are based on the result at the end of regulation time, unless specifically detailed otherwise."
+            }
+          ]
+        },
+        {
+          "icon": "hockey",
+          "title": "hockey",
+          "rules": [
+            {
+              "text": "Full match and period markets INCLUDE overtime and shootouts."
+            },
+            {
+              "text": "Regulation time only markets EXCLUDE overtime and shootouts."
+            },
+            {
+              "text": "The winner of a shootout will be awarded 1 goal regardless of the final shootout score. Goals scored during overtime are included for wagers on the game, but are not included on wagers for the 3rd period."
+            },
+            {
+              "text": "For NHL and NCAA the game becomes official (action) after 55 minutes of play.  Please note that this applies only to prematch and NOT to live betting."
+            },
+            {
+              "text": "Player prop markets Include Overtime but exclude Shootouts unless stated otherwise."
+            }
+          ]
+        },
+        {
+          "icon": "horse-racing",
+          "title": "horse racing",
+          "rules": [
+            {
+              "text": "If a race is canceled, all bets on this race will be deemed void. If a race is postponed to a later time on the same day, all bets will stand."
+            },
+            {
+              "text": "All outright bets are settled according to the official site results at the end of each race. Disqualifications after this time do not count."
+            }
+          ]
+        },
+        {
+          "icon": "lacrosse",
+          "title": "lacrosse",
+          "rules": [
+            {
+              "text": "Games must go full 60 minutes for bets to have action. Overtime is included unless stated otherwise."
+            }
+          ]
+        },
+        {
+          "icon": "motor-racing",
+          "title": "motor racing",
+          "rules": [
+            {
+              "text": "In the instance of a race or qualifier postponement for any reason, all wagers will be upheld for a period of 48 hours. Following this timeframe, all bets will be canceled, and the funds will be returned."
+            },
+            {
+              "text": "For 2 way lines (head to head) both drivers must start for action."
+            },
+            {
+              "text": "<b>Formula 1:</b> Bets on the top driver for the season are settled based on the official Drivers' Championship standings as specified by the FIA. A minimum of 16 races must take place during the season for bets to stand."
+            }
+          ]
+        },
+        {
+          "icon": "rugby",
+          "title": "rugby",
+          "rules": [
+            {
+              "text": "All markets are based on the result at the end of regulation time, unless specifically detailed otherwise."
+            },
+            {
+              "text": "Full game and 2nd half wagers on events that do not reach the end of regulation time will be deemed no action."
+            },
+            {
+              "text": "1st half wagers on events that do not reach break time will be deemed no action."
+            }
+          ]
+        },
+        {
+          "icon": "snooker",
+          "title": "snooker",
+          "rules": [
+            {
+              "text": "Both competitors must start and must complete the match for bets to stand. If either competitor fails to complete the match, bets are void."
+            }
+          ]
+        },
+        {
+          "icon": "soccer",
+          "title": "soccer",
+          "rules": [
+            {
+              "text": "Full match and 2nd half wagers are based on the results of regulation time only, unless specifically detailed otherwise."
+            },
+            {
+              "text": "1st half wagers on events that do not reach break time will be deemed no action."
+            },
+            {
+              "text": "If a match is finished early, abandoned, or is interrupted or postponed, all unsettled markets will be void unless the match has reached the 85th minute in which case all markets will have action as normal.  In the case of games that are previously scheduled to last less than 90 minutes of regulation time, all wagers will have action when the game is completed."
+            },
+            {
+              "text": "For Goalscorer markets: goals scored in 90 minutes + injury time count. Goals in extra-time, own goals, and penalty shootout goals do not count."
+            },
+            {
+              "text": "Player markets: Fouls Committed and Fouls Won for the match include Extra Time (if played) for settlement purposes."
+            },
+            {
+              "text": "All bets on World Cup, Euro Cup and Copa America Fixtures have action as long as the Fixture is completed within 72 hours of when it was originally scheduled to play."
+            }
+          ]
+        },
+        {
+          "icon": "table-tennis",
+          "title": "table tennis",
+          "rules": [
+            {
+              "text": "If a match is interrupted or postponed and not resumed within 24 hours, all unsettled markets will be void."
+            },
+            {
+              "text": "Spreads and totals are specified in terms of points, unless stated otherwise."
+            }
+          ]
+        },
+        {
+          "icon": "tennis",
+          "title": "tennis",
+          "rules": [
+            {
+              "text": "Survival of Wagers<p>Wagers will still have action under the following circumstances:</p>",
+              "indentArticles": true,
+              "articles": [
+                " A change of venue.",
+                " A change of surface, either before or during the match.",
+                " A change from indoor court to outdoor court (or vice-versa).",
+                " A change of the scheduled time or day of the match.",
+                " All set wagers on fully completed sets on retirements."
+              ]
+            },
+            {
+              "text": "Cancellation of Wagers<p>Wagers on unsettled markets will be void under the following circumstances:</p>",
+              "indentArticles": true,
+              "articles": [
+                "For Prematch in the case of a player retires or is disqualified bets on the Match moneyline will have action as long as the first set is completed, otherwise bets will be void.  Bets on other markets will have action only if the specific period was completed before retirement or disqualification.  For Live Betting match must be completed for ML to have action."
+              ]
+            },
+            {
+              "text": "If an event is postponed by fewer than 24 hours or interrupted and resumed within 24 hours wagers will have action."
+            },
+            {
+              "text": "Tie Break<p>The winner of a tie break set will be awarded a single game for the purposes of grading game handicap and game total markets.</p>"
+            }
+          ]
+        },
+        {
+          "icon": "volleyball",
+          "title": "volleyball",
+          "rules": [
+            {
+              "text": "In the event of a match starting but not being completed, all bets are void, except for those markets which have been settled."
+            },
+            {
+              "text": "Spreads, totals are specified in points, unless stated otherwise."
+            }
+          ]
+        },
+        {
+          "icon": "water-polo",
+          "title": "waterpolo",
+          "rules": [
+            {
+              "text": "All markets are based on the result at the end of regulation time, unless specifically detailed otherwise."
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "sports": [
+    {
+      "icon": "australian-rules",
+      "title": "australian rules",
+      "rules": [
+        {
+          "text": "Bets on matches are accepted on:",
+          "indentArticles": true,
+          "articles": [
+            "Regular time including overtime (OT)."
+          ]
+        },
+        {
+          "text": "We aren't liable for any match duration discrepancies. Date and time of the beginning of an event given in the \u201cSports\u201d and \u201cLive\u201d sections are approximate. All match regulations are to be specified using official sources."
+        },
+        {
+          "text": "If a match is abandoned before 80 minutes are played, all bets on that match are void, except for those bets of which the outcome have been determined at the moment of a match interruption."
+        },
+        {
+          "text": "If a match venue is changed then bets already placed will stand provided that the home team is still designated as such."
+        },
+        {
+          "text": "A goal (6 points) is scored when a football is propelled through the goal posts by a way of kick from the attacking team without touching any other player. The attacking team is awarded 6 points."
+        },
+        {
+          "text": "A behind (1 point) is scored when the football is propelled between a goal post and a behind post or if the ball hits a goal post and passes through."
+        }
+      ]
+    },
+    {
+      "icon": "badminton",
+      "title": "badminton",
+      "rules": [
+        {
+          "text": "All bets will be void if a match has not been completed due to a player's retirement or disqualification."
+        }
+      ]
+    },
+    {
+      "icon": "bandy",
+      "title": "bandy",
+      "rules": [
+        {
+          "text": "All markets are based on the result at the end of regulation time, unless specifically detailed otherwise."
+        }
+      ]
+    },
+    {
+      "icon": "baseball",
+      "title": "baseball",
+      "rules": [
+        {
+          "text": "Full game and second half wagers include extra innings, unless otherwise specified."
+        },
+        {
+          "text": "Prematch moneyline wagers will have action after five innings of play (four and a half if the home team is winning). If a game is canceled or called early, the winner is determined by the score after the last full inning of play. If the home team scores to tie or takes the lead in the bottom half of the inning, the winner is then determined by the score at the time the game is canceled. <b class=\"rules-emphasis\">Please note that this applies only to prematch and NOT to live betting.</b>"
+        },
+        {
+          "text": "For all other full game wagers, the scheduled number of innings must be played for action. If these conditions are not met, all full game wagers will be void, unless the outcome of the market has already been unambiguously determined (see section 2.1.3 for more information)."
+        },
+        {
+          "text": "If the event is interrupted before the 5th inning is completed, and/or four and a half if the home team is winning, all wagers will be void (Please note that this applies only to prematch and NOT to live betting.)"
+        },
+        {
+          "text": "For all single inning and 1st 5 inning wagers, the specified inning(s) must be played to completion for the wager to have action."
+        },
+        {
+          "text": "When wagering on MLB full game moneylines wagers may optionally be placed specifying that either or both listed pitchers must start for the wager to have action.",
+          "indentArticles": true,
+          "articles": [
+            "List One Pitcher: If the listed pitcher specified on the wager does not start the game, the wager will be settled as No Action.",
+            "List Both Pitchers: If either of the listed pitchers specified on the wager does not start the game, the wager will be settled as No Action.",
+            "Action: Regardless of whether or not either of the listed pitchers specified on the wager start the game, the wager will have action."
+          ]
+        },
+        {
+          "text": "Prematch wagers on MLB moneylines, run lines, totals, and team totals for the full game, first half, and first inning are always on listed pitchers (with the exception of full game moneylines as described in 5.1.5 above). If the listed pitcher does not start, the wager will be settled as No Action."
+        },
+        {
+          "text": "MLB postseason games (Wild Card, Divisional Series, Championship Series, World Series) are not considered official until a winner is declared. If a postseason game begins and then is delayed to a later date, all wagers will have action with the final score being graded as the official result."
+        },
+        {
+          "text": "MLB Regular Season Series: Wagers on baseball series are based on the first three games played of each series. At least two of the first three series games must be played for wagers to have action. A called game will count toward a series wager provided it is officially declared a regulation game."
+        },
+        {
+          "text": "Games ending early as a result of a mercy rule will still have action."
+        }
+      ]
+    },
+    {
+      "icon": "basketball",
+      "title": "basketball",
+      "rules": [
+        {
+          "text": "If the match venue is changed, wagers will stand provided that the original home team remains designated as such. If the home team and the away team are flipped, then wagers on the original listing will be graded as NO ACTION."
+        },
+        {
+          "text": "Only statistics and scores recorded on the official league website on the day of the game will be counted for settlement purposes. Subsequent amendments do not count."
+        },
+        {
+          "text": "Game lines and 2nd half wagers include overtime unless stated otherwise. 4th quarter wagers exclude overtime unless stated otherwise."
+        },
+        {
+          "text": "For prematch wagering purposes the game must go at least 43 minutes of play for NBA and 35 minutes of play for College and International Basketball. Please note that this applies only to prematch and NOT to live betting."
+        }
+      ]
+    },
+    {
+      "icon": "beach-volleyball",
+      "title": "beach volleyball",
+      "rules": [
+        {
+          "text": "In the event of a match starting but not being completed, all bets are void, except for those markets which have been settled."
+        }
+      ]
+    },
+    {
+      "icon": "chess",
+      "title": "chess",
+      "rules": [
+        {
+          "text": "Match results will be settled based on the result of all games comprising that match."
+        },
+        {
+          "text": "In the event of a match starting but not being completed, bets will be void unless the outcome has already been determined."
+        }
+      ]
+    },
+    {
+      "icon": "cricket",
+      "title": "cricket",
+      "rules": [
+        {
+          "text": "Match Winner:",
+          "indentArticles": true,
+          "articles": [
+            "If an event is terminated early due to weather, then the match winner, if any, will be determined by official contest rules.",
+            "Should an event be officially declared a draw, 2-way wagers will be graded No Action.",
+            "In competitions where a bowl out or super over determines a winner then bets will be settled on the official result."
+          ]
+        },
+        {
+          "text": "Total Runs in Match:<p>The following number of Overs must be completed for wagers on totals that have not already gone over to have action:</p>",
+          "indentArticles": true,
+          "articles": [
+            "Twenty20 Matches: the full 20 overs for each team.",
+            "One Day Matches: at least 40 overs for each team.",
+            "Test Cricket: at least 50 overs for each team."
+          ]
+        },
+        {
+          "text": "Total Runs in Over:<p>If the Over is terminated early due to inclement weather, all wagers that have not already gone over will be deemed no action.</p>"
+        },
+        {
+          "text": "Odd or Even Runs in Over:<p>If the Over is terminated early due to inclement weather, all wagers will be deemed no action.</p>"
+        },
+        {
+          "text": "<p>If an event is postponed by fewer than 24 hours or interrupted and resumed within 24 hours wagers will have action.</p>"
+        }
+      ]
+    },
+    {
+      "icon": "curling",
+      "title": "curling",
+      "rules": [
+        {
+          "text": "All matches will be settled on the final score. For betting purposes extra ends will count."
+        }
+      ]
+    },
+    {
+      "icon": "cycling",
+      "title": "cycling",
+      "rules": [
+        {
+          "text": "If a tournament is affected by weather, bets will be settled as long as a tournament winner has been declared."
+        },
+        {
+          "text": "In 2 way lines (head to head) both cyclists must start for action."
+        }
+      ]
+    },
+    {
+      "icon": "darts",
+      "title": "darts",
+      "rules": [
+        {
+          "text": "Both competitors must start and must complete the match for bets to stand. If either competitor fails to complete the match, bets are void."
+        }
+      ]
+    },
+    {
+      "icon": "boxing",
+      "title": "Fighting",
+      "rules": [
+        {
+          "text": "A fight is defined as having started once the bell is sounded for the beginning of the first round."
+        },
+        {
+          "text": "In the event of a no contest being declared, or a fight being abandoned for any reason before the completion of the contest, all bets will be void. If the result of the market has already been determined, bets will be settled according to the result."
+        },
+        {
+          "text": "If the number of rounds has been changed, the bets on the outcome of the fight will stand and the bets on the number of rounds will be void."
+        },
+        {
+          "text": "The <em>Duration of the fight</em> bet is designated in the Sports line as <em>Total rounds</em>. To win this bet it is necessary to predict the number of rounds in a fight. The round in which the outcome of a bout is determined (i.e. when a bout is finished) is also taken into account when calculating the number of rounds."
+        },
+        {
+          "text": "In case a boxer does not come out after a gong has rung a new round, it is considered that the match is finished in the previous round."
+        },
+        {
+          "text": "The <em>Victory of the first (second) sportsman</em> bet. It is designated in the Sports line as 1 (2) and includes the following items:",
+          "indentArticles": true,
+          "articles": [
+            "Victory on the points",
+            "Victory by a knock-out",
+            "Victory by a technical knockout",
+            "Disqualification of the opponent or his refusal during the fight"
+          ]
+        },
+        {
+          "text": "The <em>Draw</em> bet. It is designated in the Sports line as X, it is determined by a decision of judges if the number of points scored by boxers is equal when all rounds of the bout are over."
+        },
+        {
+          "text": "The <em>Victory on the points</em> bet. The winner is determined by the judge's decision when all rounds are over."
+        },
+        {
+          "text": "The <em>Win inside distance</em> bet. It includes knockout, technical knockout, and disqualification of an opponent or his refusal during a bout."
+        },
+        {
+          "text": "The <em>Win 2 in 3rd Round</em> bet. The bet will be calculated as a win if the second wins by KO in the 3rd round."
+        },
+        {
+          "text": "The <em>Bout Ends In 10-12 Rounds</em> bet. This bet will be calculated as a win if the boxer wins by KO from 10 to 12 Round."
+        },
+        {
+          "text": "Total Rounds. For settlement purposes a half round on a total refers to an official round time up to but not including 1 minute and 30 seconds (2 minutes and 30 seconds for MMA) for the under and 1 minute 30 seconds  (2 minutes and 31 seconds for MMA) or later for the over."
+        }
+      ]
+    },
+    {
+      "icon": "e-sports",
+      "title": "E-Sports",
+      "rules": [
+        {
+          "text": "Unless otherwise stated, all bets are settled on the official result of the match, including any additional rounds, with the exception of e-soccer where the results are based on Regulation + Injury time."
+        },
+        {
+          "text": "If a match is interrupted due to one or more competitors failing to continue or being disqualified, bets on all markets will be void unless the market has already been determined."
+        },
+        {
+          "text": "Unless otherwise indicated each team must start the match with a full contingent of players."
+        },
+        {
+          "text": "<strong>Simulated NFL (Played with Madden 2020)</strong><br/>Games will be played on All-Pro difficulty with 8 minute quarters. 20 second accelerated clock. Weather conditions are clear unless otherwise noted.<br/>Wagers still have action even if there are problems with the Twitch (or any other) stream."
+        },
+        {
+          "text": "<strong>Simulated NBA (played with NBA 2K)</strong><br/>Games will be played CPU vs. CPU with 12 minute quarters and realistic settings.<br/>Wagers still have action even if there are problems with the Twitch (or any other) stream."
+        }
+      ]
+    },
+    {
+      "icon": "floorball",
+      "title": "floorball",
+      "rules": [
+        {
+          "text": "All markets are based on the result at the end of regulation time, unless specifically detailed otherwise."
+        }
+      ]
+    },
+    {
+      "icon": "football",
+      "title": "football",
+      "rules": [
+        {
+          "text": "All game and second half lines include overtime unless stated otherwise. Fourth quarter lines exclude overtime.  For prematch wagering purposes if play is suspended before the completion of 55 minutes and not resumed the same day all bets on unsettled markets will be graded as NO ACTION."
+        },
+        {
+          "text": "Prematch: Bets will no longer have action when an event is postponed and rescheduled for a later calendar day (after midnight in the local time zone where the event is played).\n          Live Betting: If the event is not resumed within the next 24 hours, wagers will be void, except bets where the outcome has already been unambiguously determined (for example, if the score has already surpassed the total, then all bets on that over and under will be settled as winners and losers, respectively)."
+        },
+        {
+          "text": "When the Mercy Rule and Shortened game is applied in live betting, wagers will be settled with the official final score determined at the venue."
+        },
+        {
+          "text": "If the match venue is changed, wagers will have no action."
+        },
+        {
+          "text": "Only statistics and scores recorded on the official league website on the day of the game will be counted for settlement purposes. Subsequent amendments do not count."
+        },
+        {
+          "text": "NFL Draft<br/>Draft details listed on <a href=\"www.nfl.com\">www.nfl.com</a> will be used for settlement purposes, including official draft orders and player positions published. For the purpose of over/under markets, undrafted players will be assigned a number, one above that of the last draft pick."
+        },
+        {
+          "text": "Player Props / Performances<br/>Bets are action if the player competes in one Down (with the exception of Quarterbacks who must start and for any receiving prop that player must be at least in one offensive snap for action). Player match-ups are action if both players compete in one Down. Push rules apply. Markets will be settled according to game stats from the respective official competition site published on the day of the game. Subsequent amendments do not affect settlement."
+        },
+        {
+          "text": "Multiple selection player props<br/>Wagers will have action if player participates in at least one play, if the prop is for an offensive stat must play in an offensive play, the same for Defensive and Special teams. The exception to this is Player Kicking Points/Longest Punt that are action if player is active/dressed."
+        },
+        {
+          "text": "Regular Season Futures<br/>Unless stated otherwise, for NFL regular season Team markets (including Regular Season Wins) to have action, teams must complete all 17 regular season games, and for CFL all 18 regular season games, unless the remaining games during the course of the season do not affect the result.<br/>NFL / CFL Divisional winners are determined by games won during the regular season (NFL tie-breaker rules apply)<br/>AFC/NFC Conference winners are determined by the team progressing to the Superbowl. NCAAF regular season wins are based on all teams listed, playing their full schedule; unless the remaining games during the course of the season do not affect the result."
+        },
+        {
+          "text": "Season Player Awards<br/>The winner is deemed the player who receives the Associated Press award for the respective category. Bets are placed on an all-in basis. Dead heat rules apply."
+        },
+        {
+          "text": "Passing Yards Markets (Most, total, longest)<br/>For settlement purposes, the complete amount of yards thrown (gross) are included."
+        },
+        {
+          "text": "Rushing Yards Markets (Most, total, longest)<br/>Settlement is based on the total rushing yards gained (includes negative yardage)."
+        },
+        {
+          "text": "Team to Punt First<br/>If there is no punt in the game, bets will be voided."
+        },
+        {
+          "text": "First Offensive Player Pass/Run<br/>This market is determined by the first offensive play from scrimmage (excluding Penalties). In the event of the kick-off being returned for a touchdown then bets will stand for the following kick-off. Incomplete or intercepted passes and QB Sack or Fumble will stand as a Pass Play. A fumble on exchange to the RB will stand as a Run Play."
+        },
+        {
+          "text": "Team to call 1st timeout<br/>Forecast which team will call the 1st timeout. Timeouts lost by any other means, e.g Coaches Challenges, Injuries etc, do not count."
+        },
+        {
+          "text": "Team to Commit First Accepted Penalty / Total Penalties Accepted<br/>Markets are based on the Penalty being accepted. Declined Penalties do not count."
+        },
+        {
+          "text": "Total Turnovers / Player Total Turnovers<br/>For settling purposes, the Turnover on Downs (failed 4th Down attempts) are included."
+        },
+        {
+          "text": "To Reach (or not) Playoffs<br/>NCAAF to Make Playoffs - Winners are the 4 teams who qualify for the Championship Semi-Final games."
+        }
+      ]
+    },
+    {
+      "icon": "futsal",
+      "title": "futsal",
+      "rules": [
+        {
+          "text": "All markets are based on the result at the end of regulation time, unless specifically detailed otherwise."
+        }
+      ]
+    },
+    {
+      "icon": "golf",
+      "title": "golf",
+      "rules": [
+        {
+          "text": "Final leaderboard positions are determined by first considering the highest number of holes completed and then considering the lowest stroke total over those holes. This means that a player who has completed more holes than another will always be ranked higher on the leaderboard than a player who has completed fewer."
+        },
+        {
+          "text": "The outright tournament winner and any other applicable market such as tournament matchups are determined by the player awarded the trophy, which takes into account the result of any playoff holes."
+        },
+        {
+          "text": "If an outright winner, or player to finish in the top X market, or leader after round ends in a tie that is not resolved by a playoff, dead heat rules will apply."
+        },
+        {
+          "text": "Once a player has teed off, all bets on that player will be deemed to have action."
+        },
+        {
+          "text": "If a tournament is played over a shorter format than previously scheduled, bets on the tournament outright winner or outright player markets will be settled on the officially declared result. However, the following bets will be declared void:",
+          "articles": [
+            "Correct scores",
+            "Handicaps",
+            "Individual player points",
+            "Winning margins"
+          ]
+        },
+        {
+          "text": "Irrespective of any changes to the order of play or format and so long as a result can be determined all bets on correct scores, winning margins, top players, and other markets, based on the conclusion of the tournament."
+        },
+        {
+          "text": "Group Betting",
+          "articles": [
+            "The winner will be the player achieving the highest placing at the end of the tournament. Any player missing the cut will be considered a loser. If all players miss the cut then the lowest score (or highest points score, for tournaments using the Stableford scoring system) after the cut has been made will determine settlement. Dead-heat rules apply except where the winner is determined by a playoff."
+          ]
+        },
+        {
+          "text": "Round handicap",
+          "articles": [
+            "The handicap is applied to the specified players\u2019 Round Scores, with the lowest score being the winner. e.g. Player A +1.5 scores 74, Player B -1.5 scores 75, Player B is settled as the winner once the handicap has been applied.<br/>Bets will be void if either named player in a specified Round Handicap match-up does not complete the Round. Official tour site scores recorded on the day will count for settlement (subsequent disqualification after this time does not count)."
+          ]
+        },
+        {
+          "text": "Fourballs",
+          "articles": [
+            "Bets stand once both pairings have teed-off the first hole. Official tour site scores recorded on the day will count for settlement (subsequent disqualification after this time does not count)."
+          ]
+        },
+        {
+          "text": "Hole Score",
+          "articles": [
+            "A player is deemed to have played once they have teed off. In the event of a player withdrawing after having teed off on a specified hole, bets will be settled as \u2018Over Par\u2019. If a player withdraws before teeing off on a given hole, bets on that hole will be void. Official tour site scores recorded on the day will count for settlement (subsequent disqualification after this time does not count)."
+          ]
+        },
+        {
+          "text": "Round Score",
+          "articles": [
+            "Bets will be void if specified groups of holes are not completed, unless settlement is already determined. Official tour site scores recorded on the day will count for settlement (subsequent disqualification after this time does not count)."
+          ]
+        },
+        {
+          "text": "To Win Hole",
+          "articles": [
+            "Bets stand once all nominated players tee-off the designated hole. If a player subsequently withdraws during the hole then bets on that player will be settled as a loser. Official tour site scores recorded on the day will count for settlement (subsequent disqualification after this time does not count)."
+          ]
+        },
+        {
+          "text": "Highest / Lowest Scoring Team",
+          "articles": [
+            "Dead-heat rules apply. Official tour site scores recorded on the day will count for settlement (subsequent disqualification after this time does not count)."
+          ]
+        },
+        {
+          "text": "Foursomes",
+          "articles": [
+            "Bets stand once both pairings have teed-off the first hole."
+          ]
+        },
+        {
+          "text": "Correct Score",
+          "articles": [
+            "All scheduled matches must be completed in full for bets to stand regardless if matches are carried over."
+          ]
+        },
+        {
+          "text": "Top Points / Team / Nationality",
+          "articles": [
+            "Markets will be settled on the whole tournament. Dead-heat rules apply. Bets will stand once the player has teed-off."
+          ]
+        },
+        {
+          "text": "To Hit Fairway with Teeshot",
+          "articles": [
+            "This market is settled on the finishing position of the golf ball after the tee shot. Official sources will be used for settlement. If no official result can be determined via these sources or TV pictures, bets will be void."
+          ]
+        },
+        {
+          "text": "Will There Be A Hole In One",
+          "articles": [
+            "Relates to a hole in one being recorded in the designated Rounds of a specified tournament. In the event of adverse weather affecting the tournament then bets will stand as long as a minimum of 36 holes of a tournament are played. In the event of a hole in one being recorded, but 36 holes not being played then the Yes option - To Make a Hole in One - will be deemed the winner."
+          ]
+        },
+        {
+          "text": "To Make Cut",
+          "articles": [
+            "A tournament cut must be applied for bets to stand. In the case of a Tournament where a multiple cut system is in place, settlement will be defined by a player playing or not playing in the next Round following the 1st official cut."
+          ]
+        }
+      ]
+    },
+    {
+      "icon": "handball",
+      "title": "handball",
+      "rules": [
+        {
+          "text": "All markets are based on the result at the end of regulation time, unless specifically detailed otherwise."
+        }
+      ]
+    },
+    {
+      "icon": "hockey",
+      "title": "hockey",
+      "rules": [
+        {
+          "text": "Full match and period markets INCLUDE overtime and shootouts."
+        },
+        {
+          "text": "Regulation time only markets EXCLUDE overtime and shootouts."
+        },
+        {
+          "text": "The winner of a shootout will be awarded 1 goal regardless of the final shootout score. Goals scored during overtime are included for wagers on the game, but are not included on wagers for the 3rd period."
+        },
+        {
+          "text": "For NHL and NCAA the game becomes official (action) after 55 minutes of play.  Please note that this applies only to prematch and NOT to live betting."
+        },
+        {
+          "text": "Player prop markets Include Overtime but exclude Shootouts unless stated otherwise."
+        }
+      ]
+    },
+    {
+      "icon": "horse-racing",
+      "title": "horse racing",
+      "rules": [
+        {
+          "text": "If a race is canceled, all bets on this race will be deemed void. If a race is postponed to a later time on the same day, all bets will stand."
+        },
+        {
+          "text": "All outright bets are settled according to the official site results at the end of each race. Disqualifications after this time do not count."
+        }
+      ]
+    },
+    {
+      "icon": "lacrosse",
+      "title": "lacrosse",
+      "rules": [
+        {
+          "text": "Games must go full 60 minutes for bets to have action. Overtime is included unless stated otherwise."
+        }
+      ]
+    },
+    {
+      "icon": "motor-racing",
+      "title": "motor racing",
+      "rules": [
+        {
+          "text": "In the instance of a race or qualifier postponement for any reason, all wagers will be upheld for a period of 48 hours. Following this timeframe, all bets will be canceled, and the funds will be returned."
+        },
+        {
+          "text": "For 2 way lines (head to head) both drivers must start for action."
+        },
+        {
+          "text": "<b>Formula 1:</b> Bets on the top driver for the season are settled based on the official Drivers' Championship standings as specified by the FIA. A minimum of 16 races must take place during the season for bets to stand."
+        }
+      ]
+    },
+    {
+      "icon": "rugby",
+      "title": "rugby",
+      "rules": [
+        {
+          "text": "All markets are based on the result at the end of regulation time, unless specifically detailed otherwise."
+        },
+        {
+          "text": "Full game and 2nd half wagers on events that do not reach the end of regulation time will be deemed no action."
+        },
+        {
+          "text": "1st half wagers on events that do not reach break time will be deemed no action."
+        }
+      ]
+    },
+    {
+      "icon": "snooker",
+      "title": "snooker",
+      "rules": [
+        {
+          "text": "Both competitors must start and must complete the match for bets to stand. If either competitor fails to complete the match, bets are void."
+        }
+      ]
+    },
+    {
+      "icon": "soccer",
+      "title": "soccer",
+      "rules": [
+        {
+          "text": "Full match and 2nd half wagers are based on the results of regulation time only, unless specifically detailed otherwise."
+        },
+        {
+          "text": "1st half wagers on events that do not reach break time will be deemed no action."
+        },
+        {
+          "text": "If a match is finished early, abandoned, or is interrupted or postponed, all unsettled markets will be void unless the match has reached the 85th minute in which case all markets will have action as normal.  In the case of games that are previously scheduled to last less than 90 minutes of regulation time, all wagers will have action when the game is completed."
+        },
+        {
+          "text": "For Goalscorer markets: goals scored in 90 minutes + injury time count. Goals in extra-time, own goals, and penalty shootout goals do not count."
+        },
+        {
+          "text": "Player markets: Fouls Committed and Fouls Won for the match include Extra Time (if played) for settlement purposes."
+        },
+        {
+          "text": "All bets on World Cup, Euro Cup and Copa America Fixtures have action as long as the Fixture is completed within 72 hours of when it was originally scheduled to play."
+        }
+      ]
+    },
+    {
+      "icon": "table-tennis",
+      "title": "table tennis",
+      "rules": [
+        {
+          "text": "If a match is interrupted or postponed and not resumed within 24 hours, all unsettled markets will be void."
+        },
+        {
+          "text": "Spreads and totals are specified in terms of points, unless stated otherwise."
+        }
+      ]
+    },
+    {
+      "icon": "tennis",
+      "title": "tennis",
+      "rules": [
+        {
+          "text": "Survival of Wagers<p>Wagers will still have action under the following circumstances:</p>",
+          "indentArticles": true,
+          "articles": [
+            " A change of venue.",
+            " A change of surface, either before or during the match.",
+            " A change from indoor court to outdoor court (or vice-versa).",
+            " A change of the scheduled time or day of the match.",
+            " All set wagers on fully completed sets on retirements."
+          ]
+        },
+        {
+          "text": "Cancellation of Wagers<p>Wagers on unsettled markets will be void under the following circumstances:</p>",
+          "indentArticles": true,
+          "articles": [
+            "For Prematch in the case of a player retires or is disqualified bets on the Match moneyline will have action as long as the first set is completed, otherwise bets will be void.  Bets on other markets will have action only if the specific period was completed before retirement or disqualification.  For Live Betting match must be completed for ML to have action."
+          ]
+        },
+        {
+          "text": "If an event is postponed by fewer than 24 hours or interrupted and resumed within 24 hours wagers will have action."
+        },
+        {
+          "text": "Tie Break<p>The winner of a tie break set will be awarded a single game for the purposes of grading game handicap and game total markets.</p>"
+        }
+      ]
+    },
+    {
+      "icon": "volleyball",
+      "title": "volleyball",
+      "rules": [
+        {
+          "text": "In the event of a match starting but not being completed, all bets are void, except for those markets which have been settled."
+        },
+        {
+          "text": "Spreads, totals are specified in points, unless stated otherwise."
+        }
+      ]
+    },
+    {
+      "icon": "water-polo",
+      "title": "waterpolo",
+      "rules": [
+        {
+          "text": "All markets are based on the result at the end of regulation time, unless specifically detailed otherwise."
+        }
+      ]
+    }
+  ],
+  "enhanced": "2026-08-10",
+  "weighting": {
+    "version": 2,
+    "captured": "2026-08-10",
+    "products": [
+      "plive",
+      "ezlive"
+    ],
+    "settlement_identical": true,
+    "general": {
+      "scoreboard_is_guide_only": true,
+      "ticket_price_locked_on_accept": true,
+      "secondary_confirmation_inplay": true,
+      "interrupted_same_calendar_day_default": true,
+      "postponed_next_day_void_default": true,
+      "forfeit_walkover_fixture_void": true,
+      "dead_heat_outrights": true,
+      "official_site_day_of_event_ssot": true
+    },
+    "sports": {
+      "tennis": {
+        "inventoryBucket": "tennis",
+        "prematch_ml_action": "first_set_completed",
+        "live_ml_action": "match_completed",
+        "other_markets": "period_completed_before_stop",
+        "completed_set_bets_survive_retirement": true,
+        "postpone_resume_window_hours": 24,
+        "tiebreak_counts_as_games": 1,
+        "void_risk_live_ml_on_retirement": "high",
+        "void_risk_prematch_ml_after_set1": "low",
+        "movement_notes": [
+          "Injury news on live ML: model void branch, not pure lose",
+          "Prematch ML after set 1: progressor settlement \u2014 price moves still matter for residual",
+          "Set/game props: incomplete unit \u2192 void"
+        ]
+      },
+      "table_tennis": {
+        "inventoryBucket": "table_tennis",
+        "interrupt_void_hours": 24,
+        "spreads_totals_unit": "points",
+        "void_risk_unfinished": "high",
+        "movement_notes": [
+          "Short matches \u2014 secondary confirmation + interrupt risk denser than court tennis"
+        ]
+      },
+      "soccer": {
+        "inventoryBucket": "football",
+        "full_match_period": "regulation_only_default",
+        "action_minute_abandon": 85,
+        "first_half_needs_break": true,
+        "goalscorer_includes_et": false,
+        "goalscorer_includes_pens": false,
+        "major_tournament_complete_window_hours": 72,
+        "void_risk_before_85": "high",
+        "movement_notes": [
+          "Red card / injury: full-match markets still reg-time unless labeled",
+          "Abandon before 85' \u2192 unsettled void; after 85' action"
+        ]
+      },
+      "basketball": {
+        "inventoryBucket": "basketball",
+        "game_and_2h_include_ot": true,
+        "q4_includes_ot": false,
+        "prematch_min_minutes_nba": 43,
+        "prematch_min_minutes_ncaa_intl": 35,
+        "prematch_min_applies_to_live": false,
+        "void_risk_early_stop_prematch": "medium",
+        "movement_notes": [
+          "OT inclusion differs Q4 vs full game \u2014 do not share totals model blindly",
+          "Prematch action minutes do NOT apply to live"
+        ]
+      },
+      "baseball": {
+        "inventoryBucket": "baseball",
+        "extras_in_full_game": true,
+        "prematch_ml_official_innings": "5 (4.5 if home ahead)",
+        "other_full_game_need_scheduled_innings": true,
+        "listed_pitchers_default_mlb_prematch": true,
+        "void_risk_rain_delay": "high",
+        "movement_notes": [
+          "Listed pitcher changes void/no-action ML \u2014 track starter news hard",
+          "Totals/run lines need full scheduled innings unless already determined"
+        ]
+      },
+      "hockey": {
+        "inventoryBucket": "hockey",
+        "full_and_period_include_ot_so": true,
+        "regulation_only_excludes_ot_so": true,
+        "shootout_goal_count": 1,
+        "prematch_official_minutes_nhl_ncaa": 55,
+        "prematch_min_applies_to_live": false,
+        "player_props_include_ot": true,
+        "player_props_include_so": false,
+        "movement_notes": [
+          "3-way vs 2-way OT definition is the whole edge on tight games",
+          "Shootout = 1 goal for game markets that include SO"
+        ]
+      },
+      "football": {
+        "inventoryBucket": "american_football",
+        "game_and_2h_include_ot": true,
+        "q4_includes_ot": false,
+        "venue_change_void": true,
+        "player_props_must_play": "one_down (QB must start; receiving props special)",
+        "movement_notes": [
+          "Inactive list moves props harder than ML when must-play applies",
+          "Venue change voids \u2014 unlike basketball home-designation rule"
+        ]
+      },
+      "golf": {
+        "inventoryBucket": "golf",
+        "action_after_tee_off": true,
+        "outright_dead_heat": true,
+        "shortened_tournament_outright_stands": true,
+        "shortened_voids": [
+          "correct_scores",
+          "handicaps",
+          "player_points",
+          "winning_margins"
+        ],
+        "movement_notes": [
+          "Withdrawal after tee-off = action (usually loss) \u2014 not auto void",
+          "Weather shortened formats: check market class before holding totals/margins"
+        ]
+      }
+    }
+  },
+  "doc": "docs/PLIVE-EZLIVE-SPORTS-RULES.md"
+}

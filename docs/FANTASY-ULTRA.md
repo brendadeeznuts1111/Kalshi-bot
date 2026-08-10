@@ -22,11 +22,16 @@ Book adapter and coverage inventory for a **PPH / Fantasy402** desk (skin
 > `widget-config.ts` shims `listLiveProductSportBindings("plive")`. Visual map:
 > [`docs/artifacts/plive-event-meta.html`](artifacts/plive-event-meta.html).
 > Operator checklist: [`INVENTORY.md`](INVENTORY.md) § Operator checklist.
+> **Shell sports rules** (settlement / void / action — weight lines & movement):
+> [`PLIVE-EZLIVE-SPORTS-RULES.md`](PLIVE-EZLIVE-SPORTS-RULES.md) (quick thresholds ·
+> sports cards · EV void branch) · JSON + `weighting` index
+> [`artifacts/plive-ezlive-sports-rules.json`](artifacts/plive-ezlive-sports-rules.json).
 
 | Concern                                | Location                                  |
 | -------------------------------------- | ----------------------------------------- |
 | Domain matrix (sports / skins / books) | `src/domain/`                             |
 | Inventory sync / stream sports         | `src/inventory/`                          |
+| Shell sports rules (plive/ezlive)      | `docs/PLIVE-EZLIVE-SPORTS-RULES.md`       |
 | Book adapter                           | `src/partner/fantasy-ultra/adapter.ts`    |
 | Cookie jar                             | `src/partner/fantasy-ultra/cookie-jar.ts` |
 | Parse (boundary)                       | `src/partner/fantasy-ultra/parse.ts`      |
