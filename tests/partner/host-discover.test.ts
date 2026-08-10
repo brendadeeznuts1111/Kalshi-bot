@@ -272,4 +272,45 @@ describe('host-discover', () => {
     expect(report.decision).toBe('weak');
     expect(report.storedUrls.length).toBeGreaterThanOrEqual(1);
   });
+
+  test('HAR third-party bodies/urls do not score skin fingerprints', async () => {
+    const har = {
+      log: {
+        entries: [
+          {
+            request: { url: 'https://cdn.thirdparty.example/sites/require.js' },
+            response: {
+              content: {
+                text: `
+                  <script src="/sites/all/modules/custom/require.js"></script>
+                  buckeye fantasy402 /cloud/api/Manager/getBetTicker
+                `,
+              },
+            },
+          },
+          {
+            request: { url: 'https://unknown-book.example/login' },
+            response: { content: { text: 'ok' } },
+          },
+        ],
+      },
+    };
+    const report = await discoverHost('https://unknown-book.example', {
+      skipNetworkExtras: true,
+      persistUrls: false,
+      harJson: har,
+      fixture: {
+        status: 200,
+        finalUrl: 'https://unknown-book.example/',
+        headers: {},
+        body: '<html><title>Neutral Desk</title><body>plain login</body></html>',
+      },
+    });
+    expect(report.suggestedSkinId).toBe('unknown');
+    expect(report.confidence).toBeLessThan(0.4);
+    expect(report.storedUrls.some(u => u.includes('cdn.thirdparty.example'))).toBe(true);
+    expect(report.evidence.some(e => e.kind === 'har' && e.detail.includes('inventory only'))).toBe(
+      true
+    );
+  });
 });

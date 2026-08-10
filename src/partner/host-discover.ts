@@ -187,7 +187,7 @@ export type DiscoverHostOptions = {
   fetchImpl?: typeof fetch;
   /** Skip live TLS/DNS probes (tests / offline). */
   skipNetworkExtras?: boolean;
-  /** Path to Chrome HAR (session capture) — merges URLs + HAR fingerprint rules. */
+  /** Path to Chrome HAR (session capture) — URL inventory; same-apex URLs may score. */
   harPath?: string;
   /** Inline HAR JSON (tests). */
   harJson?: unknown;
@@ -383,24 +383,60 @@ function buildWeighFromScores(input: {
   };
 }
 
+function extractDnsSansFromText(text: string): string[] {
+  const sans: string[] = [];
+  const dnsRe = /DNS:([^,\s]+)/g;
+  let m: RegExpExecArray | null;
+  while ((m = dnsRe.exec(text))) {
+    sans.push(m[1]!.toLowerCase());
+  }
+  return sans;
+}
+
+/** Decode leaf cert SANs via `openssl s_client` → `openssl x509` (PEM alone has no DNS: lines). */
 async function probeTlsSans(host: string): Promise<string[]> {
   try {
-    const proc = Bun.spawn(
-      ['openssl', 's_client', '-connect', `${host}:443`, '-servername', host],
+    const sClient = Bun.spawn(
+      ['openssl', 's_client', '-connect', `${host}:443`, '-servername', host, '-showcerts'],
       { stdin: 'pipe', stdout: 'pipe', stderr: 'pipe' }
     );
-    proc.stdin.end();
-    const out = await new Response(proc.stdout).text();
-    await proc.exited;
-    const sans: string[] = [];
-    const dnsRe = /DNS:([^,\s]+)/g;
-    let m: RegExpExecArray | null;
-    while ((m = dnsRe.exec(out))) {
-      sans.push(m[1]!.toLowerCase());
-    }
-    return [...new Set(sans)].sort();
+    sClient.stdin.end();
+    const pemBundle = await new Response(sClient.stdout).text();
+    await sClient.exited;
+    const pem = /-----BEGIN CERTIFICATE-----[\s\S]+?-----END CERTIFICATE-----/.exec(pemBundle)?.[0];
+    if (!pem) return [];
+
+    const decode = async (args: string[]): Promise<string[]> => {
+      const x509 = Bun.spawn(['openssl', 'x509', ...args], {
+        stdin: 'pipe',
+        stdout: 'pipe',
+        stderr: 'pipe',
+      });
+      x509.stdin.write(pem);
+      x509.stdin.end();
+      const text = await new Response(x509.stdout).text();
+      await x509.exited;
+      return extractDnsSansFromText(text);
+    };
+
+    const fromExt = await decode(['-noout', '-ext', 'subjectAltName']);
+    if (fromExt.length > 0) return [...new Set(fromExt)].sort();
+    const fromText = await decode(['-noout', '-text']);
+    return [...new Set(fromText)].sort();
   } catch {
     return [];
+  }
+}
+
+/** True when url hostname is the apex or a subdomain of it. */
+export function urlMatchesApex(url: string, apex: string): boolean {
+  const a = apex.replace(/^www\./, '').toLowerCase();
+  if (!a) return false;
+  try {
+    const h = new URL(url).hostname.toLowerCase().replace(/^www\./, '');
+    return h === a || h.endsWith(`.${a}`);
+  } catch {
+    return false;
   }
 }
 
@@ -490,11 +526,17 @@ export function scoreHostDiscovery(input: {
   body: string;
   certSANs?: string[];
   dns?: HostDiscoverReport['dns'];
-  /** Extra text merged into observations body (HAR haystack for path/asset mining). */
+  /**
+   * @deprecated Do not pass HAR bodies here — third-party HAR text pollutes scoring.
+   * Kept for tests that intentionally inject extra page text.
+   */
   extraHaystack?: string;
   /** HAR present — URL inventory note only (not Ultra→skin scoring). */
   harMode?: boolean;
+  /** Full URL inventory (page + HAR); written to report / artifacts. */
   storedUrls?: string[];
+  /** URLs used for fingerprint matching (defaults to storedUrls; exclude foreign HAR). */
+  scoreUrls?: string[];
   harPath?: string | null;
   urlStorePath?: string | null;
 }): HostDiscoverReport {
@@ -512,10 +554,11 @@ export function scoreHostDiscovery(input: {
 
   const obs = buildHostObservations({
     host: input.host,
+    // Page HTML only (+ optional test haystack). Never merge raw HAR bodies.
     body: [input.body, input.extraHaystack ?? ''].filter(Boolean).join('\n'),
     title,
     headers: input.headers,
-    storedUrls: input.storedUrls ?? [],
+    storedUrls: input.scoreUrls ?? input.storedUrls ?? [],
     dnsNs: dns.ns,
     certSANs,
     mappedSkinId: mapped,
@@ -662,16 +705,17 @@ export async function discoverHost(
     }
   }
 
-  let harHaystack = '';
+  const pageStoredUrls = [...stored];
   let harPath: string | null = options.harPath ?? null;
+  let harUrls: string[] = [];
   if (options.harJson != null || options.harPath) {
     let harDoc: unknown = options.harJson;
     if (harDoc == null && options.harPath) {
       harDoc = await Bun.file(options.harPath).json();
     }
     const extracted = extractUrlsFromHar(harDoc);
-    harHaystack = extracted.haystack;
-    for (const u of extracted.urls) stored.add(u);
+    harUrls = extracted.urls;
+    for (const u of harUrls) stored.add(u);
   }
 
   let certSANs: string[] = [];
@@ -689,6 +733,12 @@ export async function discoverHost(
   }
 
   const storedUrls = [...stored].sort();
+  const apex = apexHost(host) || host.replace(/^www\./, '');
+  // Score page URLs + same-apex HAR URLs only — never foreign HAR bodies/hosts.
+  const scoreUrls = [
+    ...pageStoredUrls,
+    ...harUrls.filter(u => urlMatchesApex(u, apex)),
+  ].sort();
   const report = scoreHostDiscovery({
     url,
     host,
@@ -698,9 +748,9 @@ export async function discoverHost(
     body,
     certSANs,
     dns,
-    extraHaystack: harHaystack,
     harMode: Boolean(harPath || options.harJson),
     storedUrls,
+    scoreUrls,
     harPath,
   });
 
