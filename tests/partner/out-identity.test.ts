@@ -29,10 +29,13 @@ describe('out-identity boundary', () => {
       }),
     });
     expect(identity?.skinId).toBe('buckeye');
+    expect(identity?.bookId).toBe('fantasy402');
     expect(identity?.adapter.adapterId).toBe('fantasy-ultra');
     expect(identity?.adapter.mapperKind).toBe('fantasy402');
     expect(identity?.adapter.bookEnvToken).toBe('FANTASY402');
     expect(identity?.capacity.map(c => c.liveProduct).sort()).toEqual(['dark', 'ezlive']);
+    const stamped = stampOutMeta(identity!);
+    expect(stamped).toContain('"bookId":"fantasy402"');
   });
 
   test('dual-read legacy skins only (no liveProducts key)', () => {
@@ -83,6 +86,7 @@ describe('out-identity boundary', () => {
       }),
     });
     expect(identity?.skinId).toBe('ace');
+    expect(identity?.bookId).toBe('parlay21');
     expect(identity?.adapter.adapterId).toBe('unmapped');
     expect(identity?.adapter.mapperKind).toBe('unmapped');
   });

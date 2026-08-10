@@ -4,15 +4,20 @@ import {
   FINGERPRINT_PENDING_SKINS,
   ULTRA_DESK_API_PATHS,
   assertFingerprintCoverage,
+  bookOffersLiveProduct,
   buildSkinMatrixRows,
   formatSkinMatrixMarkdownTable,
+  getBookByHost,
+  listBookIdsForSkin,
   PARTNER_DOMAIN_ENV,
   RETIRED_BARE_BOOK_DOMAIN_ENVS,
   assertActiveSkinsHaveHosts,
   defaultUrlForSkin,
   listActiveSkins,
   requireDefaultUrlForUltraMapper,
+  resolveBookId,
   resolveDeskDomainFromEnv,
+  skinIdForBook,
 } from '../../src/domain/index.ts';
 import {
   HOST_TO_SKIN,
@@ -69,6 +74,20 @@ describe('domain sports / skins / live products', () => {
     expect(skinOffersLiveProduct('metallic', 'ezlive')).toBe(false);
     expect(skinOfferedCatalogNames('buckeye')).toEqual(['PLive', 'EZLive']);
     expect(skinOfferedCatalogNames('ace')).toEqual(['EZLive', 'UltraLive', 'MagLive']);
+  });
+
+  test('BookId is desk brand under skin (not SkinId)', () => {
+    expect(resolveBookId('fantasy402')).toBe('fantasy402');
+    expect(resolveSkinId('fantasy402')).toBe('buckeye');
+    expect(skinIdForBook('fantasy402')).toBe('buckeye');
+    expect(getBookByHost('https://www.fantasy402.com/login')).toBe('fantasy402');
+    expect(getBookByHost('classic.lvaction.com')).toBe('classic.lvaction.com');
+    expect(listBookIdsForSkin('buckeye').sort()).toEqual(['betwest', 'fantasy402', 'hulkwager']);
+    expect(bookOffersLiveProduct('fantasy402', 'ezlive')).toBe(true);
+    expect(bookOffersLiveProduct('parlay21', 'maglive')).toBe(true);
+    expect(bookOffersLiveProduct('buckeye', 'ezlive')).toBe(false); // SkinId ≠ BookId
+    const buckeye = buildSkinMatrixRows().find(r => r.skinId === 'buckeye')!;
+    expect(buckeye.bookIds).toEqual(listBookIdsForSkin('buckeye'));
   });
 
   test('HOST_TO_SKIN + getSkinByHost mirrors SKINS[].hosts', () => {
@@ -193,11 +212,13 @@ describe('domain sports / skins / live products', () => {
     const table = formatSkinMatrixMarkdownTable();
     // Header + every skin row must appear (hosts/products may wrap differently in prose).
     expect(readme).toContain('| Skin         | Active | Live products');
+    expect(readme).toContain('| Books');
     for (const row of buildSkinMatrixRows()) {
       expect(readme).toContain(`| **${row.skinId}**`);
     }
     expect(table).toContain('| **buckeye**');
     expect(table).toContain('| **sts**');
+    expect(table).toContain('fantasy402');
   });
 
   test('ULTRA_DESK_API_PATHS are desk-relative (no host lock)', () => {
