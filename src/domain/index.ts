@@ -104,6 +104,28 @@ export {
 } from './resolve-sport.ts';
 
 export {
+  COMPETITIONS,
+  COMPETITION_GENDERS,
+  competitionSlugFromLeague,
+  getCompetition,
+  inferGenderFromLeagueLabel,
+  isCompetitionId,
+  listCompetitions,
+  listCompetitionsBySport,
+  normalizeLeagueKey,
+  type CompetitionGender,
+  type CompetitionId,
+  type CompetitionRecord,
+  type PliveCompetitionMapping,
+} from './competitions.ts';
+
+export {
+  resolveCompetition,
+  type ResolveCompetitionQuery,
+  type ResolvedCompetition,
+} from './resolve-competition.ts';
+
+export {
   BOOKS,
   BOOK_IDS,
   HOST_TO_BOOK,
