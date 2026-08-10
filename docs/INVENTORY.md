@@ -130,7 +130,8 @@ INVENTORY_SYNC=1 INVENTORY_SYNC_PUBLIC=1 bun run cron:start
 - Logging: CLI `+` lines; cron `[cron:inventory] + sport · league · … · id` (up to 12);
   optional Telegram on `inventory:watch` inserts when bot env set
 - **New league** (`+L`): first time `(book, bucket, league_key_norm)` is seen in
-  `inventory_leagues` (labels recur after event ids rotate)
+  `inventory_leagues` (labels recur after event ids rotate). Cron also logs
+  `leagues:` summary + up to 8 `+L` lines per tick.
 
 ## Metrics per tick
 

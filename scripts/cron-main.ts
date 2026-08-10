@@ -245,11 +245,22 @@ async function jobInventorySync(): Promise<void> {
     });
     const head = formatSyncReport(report).split("\n");
     console.error(`[cron:inventory] ${head[0]} · ${Date.now() - start}ms`);
-    if (head[1]?.startsWith("  sports:")) {
-      console.error(`[cron:inventory] ${head[1].trim()}`);
+    for (const line of head) {
+      const t = line.trim();
+      if (t.startsWith("sports:") || t.startsWith("newBySport:") || t.startsWith("leagues:")) {
+        console.error(`[cron:inventory] ${t}`);
+      }
     }
-    if (report.inserted > 0 && head[2]?.startsWith("  newBySport:")) {
-      console.error(`[cron:inventory] ${head[2].trim()}`);
+    if (report.leagues.inserted > 0) {
+      const { formatLeagueLine } = await import("../src/inventory/leagues.ts");
+      for (const L of report.leagues.newLeagues.slice(0, 8)) {
+        console.error(`[cron:inventory] +L ${formatLeagueLine(L)}`);
+      }
+      if (report.leagues.inserted > 8) {
+        console.error(
+          `[cron:inventory] +L … ${report.leagues.inserted - 8} more new leagues`,
+        );
+      }
     }
     if (report.inserted > 0) {
       for (const line of report.newEvents.slice(0, 12)) {
