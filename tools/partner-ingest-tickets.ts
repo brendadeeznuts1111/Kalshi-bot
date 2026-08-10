@@ -41,7 +41,7 @@ import {
   ensurePartnerRegistrySchema,
   getBettingAccountById,
 } from "../src/partner/registry.ts";
-import { parseOutMeta } from "../src/partner/skins.ts";
+import { parseOutMeta } from "../src/partner/out-capacity.ts";
 import type { PartnerBetGroup } from "../src/partner/types.ts";
 
 function argValue(name: string): string | undefined {

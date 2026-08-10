@@ -42,7 +42,7 @@ import {
   type BettingAccountRow,
   type PartnerEntity,
 } from './registry.ts';
-import { buildSkinsMeta, type OutSkinLimit } from './skins.ts';
+import { buildSkinsMeta, type OutSkinLimit } from './out-capacity.ts';
 import { getPartnerVisual } from './visuals.ts';
 import { tomlStringify } from './toml-stringify.ts';
 

@@ -36,7 +36,7 @@ import {
   ensurePartnerRegistrySchema,
   getBettingAccountById,
 } from "../src/partner/registry.ts";
-import { parseOutMeta } from "../src/partner/skins.ts";
+import { parseOutMeta } from "../src/partner/out-capacity.ts";
 
 function argValue(name: string): string | undefined {
   const hit = process.argv.find((a) => a.startsWith(`--${name}=`));

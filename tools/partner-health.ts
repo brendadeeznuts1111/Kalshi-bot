@@ -35,7 +35,7 @@ import {
   toRiskHealthJsonSnapshot,
 } from "../src/partner/risk-health.ts";
 import { getPartnerVisual } from "../src/partner/visuals.ts";
-import { parseOutMeta } from "../src/partner/skins.ts";
+import { parseOutMeta } from "../src/partner/out-capacity.ts";
 
 function hasFlag(name: string): boolean {
   return process.argv.includes(`--${name}`);

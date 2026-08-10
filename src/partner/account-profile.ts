@@ -15,7 +15,7 @@ import { adapterBindingForSkin, providerMirrorFromAdapter } from './out-identity
 import type { AdapterId, PartnerAccountStatus } from './types.ts';
 import type { FantasyUltraCredentials } from './fantasy-ultra/types.ts';
 import { FANTASY_ULTRA_DEFAULTS } from './fantasy-ultra/types.ts';
-import { parseSkinWire } from './skins.ts';
+import { parseSkinWire } from './out-capacity.ts';
 import {
   DEFAULT_REQUIRED_ENV_KEYS,
   parseOutId,

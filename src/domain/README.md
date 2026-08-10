@@ -18,6 +18,10 @@ Standalone registry for live PPH coverage. **Not** owned by Fantasy402.
 | **Ticket leg**    | Place-bet componentBet only                  | `TicketLeg` · periodId/marketId/key · same file                                     |
 | **Live products** | Coverage bindings + stream endpoints         | `plive`, `ezlive`, `ultralive`, `maglive` · `live-product-endpoints.ts`             |
 | **Skins**         | White-labels + hosts + offered live products | `buckeye`, `ace`, `metallic`, `sts`, `1bv`, `lvaction`, `magnum`                    |
+
+> **Not** out capacity: seat-plane live-product rows live in
+> [`src/partner/out-capacity.ts`](../partner/out-capacity.ts) (`OutCapacityRow` /
+> `ezlive`), not here.
 | **Books**         | Desk brands under a skin (host-derived)      | `fantasy402`, `parlay21`, `classic.lvaction.com` · [`books.ts`](books.ts)           |
 | **Outs**          | Capacity / credentials                       | `out-SPEN-1` + live-product wire                                                    |
 

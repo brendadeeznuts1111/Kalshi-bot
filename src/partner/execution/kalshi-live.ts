@@ -9,7 +9,7 @@ import {
 } from "../authorization/domain.ts";
 import { getActiveLiveTradeAuthorization } from "../authorization/sql.ts";
 import { getBettingAccountById, type BettingAccountRow } from "../registry.ts";
-import { parseOutMeta, resolveOutSkins } from "../skins.ts";
+import { parseOutMeta, resolveOutSkins } from "../out-capacity.ts";
 import { envPrefixFallbackChain } from "../toml-config.ts";
 import {
   asExecutionIdempotencyKey,

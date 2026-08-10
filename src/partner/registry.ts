@@ -32,7 +32,7 @@ import {
   type OutCapacity,
   type OutSkinLimit,
   type OutSkinMapperKind,
-} from './skins.ts';
+} from './out-capacity.ts';
 
 export type ProviderId = 'fantasy402' | 'kalshi' | (string & {});
 
@@ -551,15 +551,25 @@ export {
   type LiveProductCapacity,
   type OutIdentity,
 } from './out-identity.ts';
-export { bookIdFromAccount, mapperFromAccount, skinIdFromAccount } from './skins.ts';
+export { bookIdFromAccount, mapperFromAccount, skinIdFromAccount } from './out-capacity.ts';
 
-/** Re-export skin helpers for registry consumers. */
+/** Re-export out capacity helpers for registry consumers. */
 export {
   concentrationByOut,
+  listEligibleOutCapacityPairs,
   listEligibleOutSkinPairs,
   liquidityKey,
   outCapacityFromAccount,
+  pickBestCapacityForOut,
   pickBestSkinForOut,
+  resolveOutCapacity,
   resolveOutSkins,
-} from './skins.ts';
-export type { OutCapacity, OutExposureShare, OutSkinLimit, OutSkinPair } from './skins.ts';
+} from './out-capacity.ts';
+export type {
+  OutCapacity,
+  OutCapacityPair,
+  OutCapacityRow,
+  OutExposureShare,
+  OutSkinLimit,
+  OutSkinPair,
+} from './out-capacity.ts';
