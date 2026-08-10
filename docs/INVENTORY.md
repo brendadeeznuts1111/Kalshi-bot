@@ -1,6 +1,6 @@
 # Inventory coverage playbook (plive shell + ezlive)
 
-Coverage catalog for **live board events** and (later) durable leagues.
+Coverage catalog for **live board events** and **durable leagues**.
 **Not** seat-partner capital. **Not** priced markets.
 
 | Plane | Owns |
@@ -72,6 +72,7 @@ Report fields (sync; watch text/json similar):
 | `sportHistogram` | Counts by normalized sport |
 | `newBySport` | Inserts by sport |
 | `coversLiveProducts` | e.g. `plive+ezlive` |
+| `leagues` | Durable league registry upsert (`seen` / `inserted` / `updated` / `newLeagues`) |
 
 ## Sport tiers (domain)
 
@@ -84,11 +85,37 @@ Same map for plive and ezlive (`live-product-sport-bindings`):
 bun run domain:sports -- --map
 ```
 
+## Durable leagues (`inventory_leagues`)
+
+Event `inventory_id`s rotate; **league labels recur**. On every
+`inventory:sync` / `inventory:watch` poll we also upsert:
+
+`UNIQUE(book_id, inventory_bucket, league_key_norm)`
+
+| Column | Role |
+| ------ | ---- |
+| `event_count_live` | Events on this poll for that league (0 when off board) |
+| `peak_event_count` | Max live count ever observed |
+| `competition_id` | From `resolveCompetition` when known; else null |
+| `first_seen` / `last_seen` | Registry lifetime |
+
+```bash
+# List registry (after at least one live sync/watch)
+bun run inventory:leagues
+bun run inventory:leagues -- --unmapped
+bun run inventory:leagues -- --sport=table_tennis --order=peak --json
+
+# Harvest via full-board sync path (also writes skin_events unless --dry-run)
+bun run inventory:leagues -- --harvest --sport=all --dry-run
+bun run inventory:leagues -- --harvest --sport=all
+```
+
 ## Competitions
 
 Hand-seeded `COMPETITIONS` + `resolveCompetition` (ezlive uses plive mappings).
-Unmapped leagues leave `competition_id` null. Next program phase: durable
-`inventory_leagues` harvest + promote loop.
+Unmapped leagues leave `competition_id` null on both `skin_events` and
+`inventory_leagues`. Next program phase: promote unmapped leagues into
+`COMPETITIONS` from the durable registry.
 
 ## ezlive capacity recipe (seat)
 
@@ -117,8 +144,9 @@ not a second inventory store.
 | Command | Role |
 | ------- | ---- |
 | `domain:sports` | Stream snapshot + static map + sport map seed |
-| `inventory:sync -- --sport=all [--dry-run]` | Adapter poll → plan or upsert |
-| `inventory:watch -- --sport=all [--once] [--dry-run]` | Public/adapter poll → plan or upsert |
+| `inventory:sync -- --sport=all [--dry-run]` | Adapter poll → events + leagues |
+| `inventory:watch -- --sport=all [--once] [--dry-run]` | Public/adapter poll → events + leagues |
+| `inventory:leagues [--unmapped] [--harvest]` | List / harvest durable league registry |
 | Cron `INVENTORY_SYNC=1` | Full board default (`sport=all`) |
 
 ## See also

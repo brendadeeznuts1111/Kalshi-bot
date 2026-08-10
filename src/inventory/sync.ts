@@ -18,6 +18,11 @@ import type { Database } from 'bun:sqlite';
 import type { CoefficientStore } from '../partner/fantasy-ultra/coefficient-store.ts';
 import type { FantasySessionAdapter, InventoryEvent } from '../partner/types.ts';
 import {
+  formatLeagueLine,
+  upsertInventoryLeagues,
+  type InventoryLeagueUpsertResult,
+} from './leagues.ts';
+import {
   buckeyeInventoryIdentity,
   filterLiveEventsBySport,
   formatSkinEventLine,
@@ -65,6 +70,8 @@ export type InventorySyncReport = {
   sportHistogram: Record<string, number>;
   /** Count of *new* inserts by sport (empty when none). */
   newBySport: Record<string, number>;
+  /** League dimension upsert (durable registry). */
+  leagues: InventoryLeagueUpsertResult;
   capabilities: {
     inventory: true;
     eventDetection: true;
@@ -293,6 +300,30 @@ export async function runInventorySync(
   const newBySport = sportHistogramFromEvents(upsert.inserted);
   const coversLiveProducts = liveProductsCoveredByInventory(identity.skinId).map(String);
 
+  // Durable league registry (event ids churn; league labels recur)
+  const leagueSource =
+    upsert.inserted.length + upsert.updated.length > 0
+      ? [...upsert.inserted, ...upsert.updated]
+      : events;
+  const leagues = upsertInventoryLeagues(db, leagueSource, {
+    nowMs: options.nowMs,
+    identity,
+    dryRun,
+  });
+  if (leagues.inserted > 0) {
+    notes.push(
+      dryRun
+        ? `leagues dry-run: would add ${leagues.inserted} new league(s) (${leagues.seen} on board)`
+        : `leagues: +${leagues.inserted} new, ${leagues.updated} refreshed (${leagues.seen} on board)`
+    );
+  } else {
+    notes.push(
+      dryRun
+        ? `leagues dry-run: ${leagues.seen} on board, 0 new`
+        : `leagues: ${leagues.seen} on board, 0 new (${leagues.updated} refreshed)`
+    );
+  }
+
   return {
     sport,
     seen: upsert.seen,
@@ -305,6 +336,7 @@ export async function runInventorySync(
     coversLiveProducts,
     sportHistogram,
     newBySport,
+    leagues,
     capabilities: {
       inventory: true,
       eventDetection: true,
@@ -329,6 +361,19 @@ export function formatSyncReport(report: InventorySyncReport): string {
   ];
   if (report.inserted > 0) {
     lines.push(`  newBySport: ${formatSportHistogram(report.newBySport)}`);
+  }
+  lines.push(
+    `  leagues: seen=${report.leagues.seen} new=${report.leagues.inserted} updated=${report.leagues.updated}`
+  );
+  if (report.leagues.newLeagues.length > 0) {
+    lines.push(
+      ...report.leagues.newLeagues
+        .slice(0, 12)
+        .map(l => `  +L ${formatLeagueLine(l)}`)
+    );
+    if (report.leagues.newLeagues.length > 12) {
+      lines.push(`  +L … ${report.leagues.newLeagues.length - 12} more leagues`);
+    }
   }
   lines.push(
     ...report.newEvents.map(e => `  + ${formatSkinEventLine(e)}`),
