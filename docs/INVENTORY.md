@@ -144,6 +144,34 @@ INVENTORY_SYNC=1 INVENTORY_SYNC_PUBLIC=1 bun run cron:start
 | `newBySport` | Inserts by sport |
 | `coversLiveProducts` | e.g. `plive+ezlive` on Buckeye |
 | `leagues` | Durable registry upsert (`seen` / `inserted` / `updated` / `newLeagues`) |
+| `enriched` / `enrichCandidates` | Soft Statscore name → `odds_event_id` matches (metadata only) |
+| `pricedEventCount` / `pricedLineCount` | Pandora `CoefficientStore` sizes when adapter has lines |
+
+## Odds handoff (metadata ≠ prices)
+
+Stream-list has **no** American/decimal prices. Optional enrich only stamps
+`odds_event_id` via Statscore booked-events **name** soft-match:
+
+```bash
+# Default scope=board: new inserts + on-board rows still missing odds_event_id
+bun run inventory:sync -- --sport=all --enrich-booked
+bun run inventory:sync -- --sport=all --enrich-booked --enrich-scope=new
+bun run inventory:sync -- --sport=all --enrich-booked --enrich-scope=unlinked
+bun run inventory:sync -- --sport=all --enrich-booked --dry-run --json
+
+# Cron
+INVENTORY_SYNC=1 INVENTORY_SYNC_PUBLIC=1 INVENTORY_SYNC_ENRICH_BOOKED=1 bun run cron:start
+```
+
+| Scope | Candidates |
+| ----- | ---------- |
+| `new` | This poll’s inserts only |
+| `board` (default) | Inserts + this-poll updates still unlinked |
+| `unlinked` | All null `odds_event_id` for the book (capped) |
+
+**Priced odds** still require Pandora coefficients (`partner:pandora-probe` /
+webview capture) → `CoefficientStore` → report `pricedOdds: true`. No
+`match_liquidity` merge yet.
 
 ## Sport tiers (domain)
 
@@ -278,7 +306,7 @@ not a second inventory store. Details:
 | Command | Role |
 | ------- | ---- |
 | `domain:sports` | Stream snapshot + static map + sport map seed |
-| `inventory:sync -- --sport=all [--dry-run]` | Adapter poll → events + leagues |
+| `inventory:sync -- --sport=all [--dry-run] [--enrich-booked]` | Adapter poll → events + leagues (+ odds_event_id) |
 | `inventory:watch -- --sport=all [--once] [--dry-run]` | Public/adapter poll → events + leagues |
 | `inventory:leagues [--unmapped] [--harvest]` | List / harvest durable league registry |
 | `inventory:leagues -- --report [--notify]` | Promote dry-report; optional force Telegram |

@@ -8,9 +8,14 @@ import type {
 } from "../../src/partner/types.ts";
 import { CoefficientStore } from "../../src/partner/fantasy-ultra/coefficient-store.ts";
 import {
+  applyBookedOddsEnrich,
+  collectBoardEnrichCandidates,
+  listUnlinkedSkinEvents,
   matchBookedOddsEventId,
+  parseEnrichBookedScope,
   runInventorySync,
 } from "../../src/inventory/sync.ts";
+import { upsertSkinLiveEvents } from "../../src/inventory/skin-events-store.ts";
 
 function live(
   inventoryId: number,
@@ -97,6 +102,9 @@ describe("inventory sync", () => {
     expect(report.seen).toBe(2);
     expect(report.inserted).toBe(2);
     expect(report.enriched).toBe(1);
+    expect(report.enrichCandidates).toBe(2);
+    expect(report.enrichBookedScope).toBe("board");
+    expect(report.pricedEventCount).toBe(0);
     expect(report.capabilities.inventory).toBe(true);
     expect(report.capabilities.pricedOdds).toBe(false);
     expect(report.capabilities.placeBetRequest).toBe(false);
@@ -113,6 +121,73 @@ describe("inventory sync", () => {
       )
       .get() as { cid: string | null };
     expect(row.cid).toBe("999");
+  });
+
+  test("enrich scope board re-links unlinked updates; unlinked scans book", async () => {
+    const db = openEventStore({ dbPath: ":memory:" });
+    // Seed row without odds_event_id
+    upsertSkinLiveEvents(db, [live(10, "table_tennis", "Home X", "Away Y")], {
+      nowMs: 1000,
+    });
+    expect(listUnlinkedSkinEvents(db, "fantasy402").length).toBe(1);
+
+    const booked: PartnerBookedEvent[] = [
+      {
+        partner: "fantasy402",
+        statscoreId: 1,
+        oddsEventId: "555",
+        name: "Home X - Away Y",
+        sportName: "Table tennis",
+        sportId: 46,
+        competition: null,
+        startDate: null,
+        statusName: null,
+        statusType: null,
+        betStatus: "active",
+        relationStatus: null,
+      },
+    ];
+    // Same inventory_id → update path
+    const report = await runInventorySync(
+      db,
+      mockAdapter([live(10, "table_tennis", "Home X", "Away Y")], booked),
+      {
+        sport: "table_tennis",
+        enrichBooked: true,
+        enrichBookedScope: "board",
+        nowMs: 2000,
+      },
+    );
+    expect(report.inserted).toBe(0);
+    expect(report.updated).toBe(1);
+    expect(report.enriched).toBe(1);
+    expect(report.enrichCandidates).toBe(1);
+
+    const cid = (
+      db
+        .query(`SELECT odds_event_id AS c FROM skin_events WHERE inventory_id = '10'`)
+        .get() as { c: string | null }
+    ).c;
+    expect(cid).toBe("555");
+    expect(listUnlinkedSkinEvents(db, "fantasy402").length).toBe(0);
+  });
+
+  test("parseEnrichBookedScope + applyBookedOddsEnrich dry-run", () => {
+    expect(parseEnrichBookedScope("new")).toBe("new");
+    expect(parseEnrichBookedScope("unlinked")).toBe("unlinked");
+    expect(parseEnrichBookedScope(undefined)).toBe("board");
+    const db = openEventStore({ dbPath: ":memory:" });
+    upsertSkinLiveEvents(db, [live(1, "table_tennis", "A", "B")], { nowMs: 1 });
+    const n = applyBookedOddsEnrich(
+      db,
+      "fantasy402",
+      [{ inventoryId: "1", home: "A", away: "B" }],
+      [{ oddsEventId: "42", name: "A - B" }],
+      { dryRun: true },
+    );
+    expect(n).toBe(1);
+    const still = listUnlinkedSkinEvents(db, "fantasy402");
+    expect(still.length).toBe(1);
   });
 
   test("pricedOdds true when coefficientStore has ML lines", async () => {

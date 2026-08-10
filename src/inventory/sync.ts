@@ -37,10 +37,22 @@ import {
   type SkinEventUpsertResult,
 } from './skin-events-store.ts';
 
+/** Which skin_events rows to soft-match against Statscore booked list. */
+export type EnrichBookedScope = 'new' | 'board' | 'unlinked';
+
 export type InventorySyncOptions = {
   sport?: string;
-  /** Soft-match Statscore booked names for NEW rows only (metadata, not odds). */
+  /**
+   * Soft-match Statscore booked names → odds_event_id (metadata only, not prices).
+   * Scope defaults to `board` (new + on-board unlinked).
+   */
   enrichBooked?: boolean;
+  /**
+   * - `new` — inserts only (legacy)
+   * - `board` — inserts + this-poll updates still missing odds_event_id (default)
+   * - `unlinked` — all null odds_event_id for the book (capped)
+   */
+  enrichBookedScope?: EnrichBookedScope;
   nowMs?: number;
   /** Explicit Pandora book; else adapter.getCoefficientStore() when present. */
   coefficientStore?: CoefficientStore;
@@ -62,6 +74,12 @@ export type InventorySyncReport = {
   /** Existing inventory_ids that would be refreshed (dry-run or real). */
   updatedEvents?: SkinEventRow[];
   enriched: number;
+  /** Rows considered for booked name match this tick. */
+  enrichCandidates: number;
+  enrichBookedScope: EnrichBookedScope | null;
+  /** Pandora store sizes when available (0 if empty / absent). */
+  pricedEventCount: number;
+  pricedLineCount: number;
   /** True when no DB mutations were applied. */
   dryRun: boolean;
   /** Live-product shells this inventory feed covers (e.g. plive + ezlive). */
@@ -143,6 +161,141 @@ export function matchBookedOddsEventId(
   return null;
 }
 
+export function parseEnrichBookedScope(raw: string | undefined): EnrichBookedScope {
+  const v = (raw ?? 'board').trim().toLowerCase();
+  if (v === 'new' || v === 'inserts') return 'new';
+  if (v === 'unlinked' || v === 'all-null' || v === 'nulls') return 'unlinked';
+  return 'board';
+}
+
+/** Rows on this poll still missing odds_event_id (board/new scopes). */
+export function collectBoardEnrichCandidates(
+  upsert: SkinEventRow[] | SkinEventUpsertResult,
+  db: Database,
+  bookId: string,
+  scope: EnrichBookedScope
+): Array<{ inventoryId: string; home: string | null; away: string | null }> {
+  if (scope === 'unlinked') {
+    return listUnlinkedSkinEvents(db, bookId, 500);
+  }
+  const inserted = Array.isArray(upsert) ? upsert : upsert.inserted;
+  const updated = Array.isArray(upsert) ? [] : upsert.updated;
+  const candidates: Array<{ inventoryId: string; home: string | null; away: string | null }> =
+    [];
+  for (const row of inserted) {
+    candidates.push({
+      inventoryId: row.inventoryId,
+      home: row.home,
+      away: row.away,
+    });
+  }
+  if (scope === 'board' && updated.length > 0) {
+    const unlinked = new Set(
+      listUnlinkedSkinEvents(
+        db,
+        bookId,
+        500,
+        updated.map(r => r.inventoryId)
+      ).map(r => r.inventoryId)
+    );
+    for (const row of updated) {
+      if (!unlinked.has(row.inventoryId)) continue;
+      candidates.push({
+        inventoryId: row.inventoryId,
+        home: row.home,
+        away: row.away,
+      });
+    }
+  }
+  return candidates;
+}
+
+export function listUnlinkedSkinEvents(
+  db: Database,
+  bookId: string,
+  limit = 500,
+  inventoryIds?: string[]
+): Array<{ inventoryId: string; home: string | null; away: string | null }> {
+  const lim = Math.min(Math.max(limit, 1), 2000);
+  if (inventoryIds && inventoryIds.length > 0) {
+    const out: Array<{ inventoryId: string; home: string | null; away: string | null }> =
+      [];
+    const q = db.query(
+      `SELECT inventory_id AS inventoryId, home, away
+       FROM skin_events
+       WHERE book_id = $book
+         AND inventory_id = $iid
+         AND (odds_event_id IS NULL OR odds_event_id = '')`
+    );
+    for (const id of inventoryIds) {
+      const row = q.get({ $book: bookId, $iid: id }) as
+        | { inventoryId: string; home: string | null; away: string | null }
+        | null;
+      if (row) out.push(row);
+    }
+    return out;
+  }
+  return db
+    .query(
+      `SELECT inventory_id AS inventoryId, home, away
+       FROM skin_events
+       WHERE book_id = $book
+         AND (odds_event_id IS NULL OR odds_event_id = '')
+       ORDER BY last_updated DESC
+       LIMIT $lim`
+    )
+    .all({ $book: bookId, $lim: lim }) as Array<{
+    inventoryId: string;
+    home: string | null;
+    away: string | null;
+  }>;
+}
+
+/**
+ * Apply soft name matches → odds_event_id. Returns match count.
+ * dryRun: only mutates in-memory `touch` map when provided.
+ */
+export function applyBookedOddsEnrich(
+  db: Database,
+  bookId: string,
+  candidates: Array<{ inventoryId: string; home: string | null; away: string | null }>,
+  catalog: Array<{ oddsEventId: string; name: string }>,
+  options: {
+    dryRun?: boolean;
+    nowMs?: number;
+    /** Optional map inventoryId → SkinEventRow to stamp oddsEventId in memory */
+    touch?: Map<string, SkinEventRow>;
+  } = {}
+): number {
+  const dryRun = options.dryRun === true;
+  const ts = options.nowMs ?? Date.now();
+  const update = dryRun
+    ? null
+    : db.query(`
+    UPDATE skin_events
+    SET odds_event_id = $cid, last_updated = $ts
+    WHERE book_id = $book AND inventory_id = $iid
+      AND (odds_event_id IS NULL OR odds_event_id = '')
+  `);
+  let enriched = 0;
+  for (const row of candidates) {
+    const cid = matchBookedOddsEventId(row.home, row.away, catalog);
+    if (!cid) continue;
+    if (update) {
+      update.run({
+        $cid: cid,
+        $ts: ts,
+        $book: bookId,
+        $iid: row.inventoryId,
+      });
+    }
+    const touchRow = options.touch?.get(row.inventoryId);
+    if (touchRow) touchRow.oddsEventId = cid;
+    enriched++;
+  }
+  return enriched;
+}
+
 /** Plan insert vs update without writing (reads existing inventory_ids only). */
 export function planInventoryUpsert(
   db: Database,
@@ -217,7 +370,12 @@ export async function runInventorySync(
       });
 
   let enriched = 0;
-  if (options.enrichBooked && upsert.inserted.length > 0) {
+  let enrichCandidates = 0;
+  const enrichScope: EnrichBookedScope | null = options.enrichBooked
+    ? (options.enrichBookedScope ?? 'board')
+    : null;
+
+  if (options.enrichBooked && enrichScope) {
     try {
       const sportFilter = sport.toLowerCase().includes('table')
         ? 'table'
@@ -226,59 +384,45 @@ export async function runInventorySync(
           : sport;
       const booked = await adapter.listBookedEvents({
         sport: sportFilter,
-        limit: 100,
+        limit: 200,
       });
       const catalog = booked.map(b => ({
         oddsEventId: b.oddsEventId,
         name: b.name,
       }));
-      if (dryRun) {
-        for (const row of upsert.inserted) {
-          const cid = matchBookedOddsEventId(row.home, row.away, catalog);
-          if (!cid) continue;
-          row.oddsEventId = cid;
-          enriched++;
-        }
-        notes.push(
-          `booked enrich (dry-run): would match ${enriched}/${upsert.inserted.length} new rows by name`
-        );
-      } else {
-        const update = db.query(`
-        UPDATE skin_events
-        SET odds_event_id = $cid, last_updated = $ts
-        WHERE book_id = $book AND inventory_id = $iid AND (odds_event_id IS NULL OR odds_event_id = '')
-      `);
-        const ts = options.nowMs ?? Date.now();
-        for (const row of upsert.inserted) {
-          const cid = matchBookedOddsEventId(row.home, row.away, catalog);
-          if (!cid) continue;
-          update.run({
-            $cid: cid,
-            $ts: ts,
-            $book: row.bookId,
-            $iid: row.inventoryId,
-          });
-          row.oddsEventId = cid;
-          enriched++;
-        }
-        notes.push(
-          `booked enrich: matched ${enriched}/${upsert.inserted.length} new rows by name (metadata only — no prices)`
-        );
+      const candidates = collectBoardEnrichCandidates(
+        upsert,
+        db,
+        identity.bookId,
+        enrichScope
+      );
+      enrichCandidates = candidates.length;
+      const touch = new Map<string, SkinEventRow>();
+      for (const r of [...upsert.inserted, ...upsert.updated]) {
+        touch.set(r.inventoryId, r);
       }
+      enriched = applyBookedOddsEnrich(db, identity.bookId, candidates, catalog, {
+        dryRun,
+        nowMs: options.nowMs,
+        touch,
+      });
+      notes.push(
+        dryRun
+          ? `booked enrich (dry-run, scope=${enrichScope}): would match ${enriched}/${enrichCandidates} by name (catalog=${catalog.length})`
+          : `booked enrich (scope=${enrichScope}): matched ${enriched}/${enrichCandidates} by name (catalog=${catalog.length}; metadata only — no prices)`
+      );
     } catch (err) {
       notes.push(`booked enrich skipped: ${err instanceof Error ? err.message : String(err)}`);
     }
-  } else if (options.enrichBooked) {
-    notes.push('booked enrich: no new rows to match');
   }
 
   const store = resolveCoefficientStore(adapter, options);
-  const pricedEvents = store?.pricedEventCount() ?? 0;
-  const pricedLines = store?.lineCount() ?? 0;
-  const pricedOdds = pricedEvents > 0;
+  const pricedEventCount = store?.pricedEventCount() ?? 0;
+  const pricedLineCount = store?.lineCount() ?? 0;
+  const pricedOdds = pricedEventCount > 0;
   if (pricedOdds) {
     notes.push(
-      `priced odds: Pandora store has ${pricedEvents} event(s), ${pricedLines} line(s) (ML via fetchMarkets; no liquidity merge)`
+      `priced odds: Pandora store has ${pricedEventCount} event(s), ${pricedLineCount} line(s) (ML via fetchMarkets; no liquidity merge)`
     );
   } else {
     notes.push(
@@ -332,6 +476,10 @@ export async function runInventorySync(
     newEvents: upsert.inserted,
     updatedEvents: upsert.updated,
     enriched,
+    enrichCandidates,
+    enrichBookedScope: enrichScope,
+    pricedEventCount,
+    pricedLineCount,
     dryRun,
     coversLiveProducts,
     sportHistogram,
@@ -361,6 +509,18 @@ export function formatSyncReport(report: InventorySyncReport): string {
   ];
   if (report.inserted > 0) {
     lines.push(`  newBySport: ${formatSportHistogram(report.newBySport)}`);
+  }
+  if (report.enrichBookedScope) {
+    lines.push(
+      `  enrich: scope=${report.enrichBookedScope} matched=${report.enriched}/${report.enrichCandidates}` +
+        (report.capabilities.pricedOdds
+          ? ` · pandora events=${report.pricedEventCount} lines=${report.pricedLineCount}`
+          : ' · pandora empty')
+    );
+  } else if (report.pricedEventCount > 0) {
+    lines.push(
+      `  priced: pandora events=${report.pricedEventCount} lines=${report.pricedLineCount}`
+    );
   }
   lines.push(
     `  leagues: seen=${report.leagues.seen} new=${report.leagues.inserted} updated=${report.leagues.updated}`
