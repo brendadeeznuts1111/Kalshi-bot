@@ -226,7 +226,8 @@ export function liveProductNames(identity: OutIdentity): string[] {
 
 /**
  * Stamp OutIdentity into meta_json.
- * Writes both `liveProducts` (canonical) and `skins` (legacy mirror).
+ * Writes canonical `liveProducts` + `defaultLiveProduct` only.
+ * Readers still dual-read legacy `meta.skins` / `defaultSkin`.
  */
 export function stampOutMeta(identity: OutIdentity, baseMeta?: OutMeta): string {
   const meta: OutMeta = {
@@ -234,7 +235,6 @@ export function stampOutMeta(identity: OutIdentity, baseMeta?: OutMeta): string 
     skinId: identity.skinId,
     mapper: identity.adapter.mapperKind,
     defaultLiveProduct: identity.defaultLiveProduct,
-    defaultSkin: identity.defaultLiveProduct,
     liveProducts: identity.capacity.map(c => ({
       liveProduct: c.liveProduct,
       name: c.liveProduct,
@@ -242,13 +242,10 @@ export function stampOutMeta(identity: OutIdentity, baseMeta?: OutMeta): string 
       maxWin: c.maxWin,
       active: c.active,
     })),
-    skins: identity.capacity.map(c => ({
-      name: c.liveProduct,
-      perBetMax: c.perBetMax,
-      maxWin: c.maxWin,
-      active: c.active,
-    })),
   };
+  // Drop legacy capacity mirrors if re-stamping over old meta
+  delete meta.skins;
+  delete meta.defaultSkin;
   if (identity.bookId) meta.bookId = identity.bookId;
   if (identity.workingBalance != null) meta.workingBalance = identity.workingBalance;
   if (identity.vaultId) meta.vaultId = identity.vaultId;

@@ -47,7 +47,7 @@ function main(): void {
       );
     } else {
       console.error(
-        `seeded out ${acc.id} provider=${acc.provider} maxStake=${acc.maxStake} (see meta.skins for matrix)`
+        `seeded out ${acc.id} provider=${acc.provider} maxStake=${acc.maxStake} (see meta.liveProducts for matrix)`
       );
     }
   }
@@ -79,7 +79,7 @@ function main(): void {
     capacityByProvider: capacity.map(c => ({
       provider: c.provider,
       outCount: c.accountCount,
-      skinPairCount: c.skinPairCount,
+      capacityPairCount: c.capacityPairCount,
       totalMaxStake: c.totalMaxStake,
       totalMaxWin: c.totalMaxWin,
       accountIds: c.accountIds,
@@ -111,9 +111,9 @@ function main(): void {
         }
       : {}),
     notes: [
-      'capacity = sum(perBetMax) across active skins of active outs — NOT market tradable',
-      'liquidity key = {outId}@{skin}; concentration groups by outId across skins',
-      'vault credentials are per-out; skin is login payload + limits only',
+      'capacity = sum(perBetMax) across active live products of active outs — NOT market tradable',
+      'liquidity key = {outId}@{liveProduct}; concentration groups by outId across live products',
+      'vault credentials are per-out; live product is login payload + limits only',
       'Kalshi match_liquidity remains the priced-book desk gate',
     ],
   };
@@ -124,7 +124,7 @@ function main(): void {
     console.log(`partner registry: ${accounts.length} active out(s)`);
     for (const c of capacity) {
       console.log(
-        `${c.provider}: $${c.totalMaxStake} total capacity  (outs=${c.accountCount} skinPairs=${c.skinPairCount})`
+        `${c.provider}: $${c.totalMaxStake} total capacity  (outs=${c.accountCount} capacityPairs=${c.capacityPairCount})`
       );
       for (const o of c.outs) {
         const acc = accounts.find(a => a.id === o.outId);

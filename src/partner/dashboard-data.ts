@@ -39,7 +39,7 @@ export type PartnerDashboardSnapshot = {
     provider: string;
     totalMaxStake: number;
     outCount: number;
-    skinPairCount: number;
+    capacityPairCount: number;
   }>;
   env: {
     ok: boolean;
@@ -283,7 +283,7 @@ export async function buildPartnerDashboardSnapshot(
       provider: c.provider,
       totalMaxStake: c.totalMaxStake,
       outCount: c.accountCount,
-      skinPairCount: c.skinPairCount,
+      capacityPairCount: c.capacityPairCount,
     })),
     env: {
       ok: env.ok,
@@ -400,7 +400,7 @@ export function renderPartnerDashboardHtml(
   const capBits = data.capacity
     .map(
       (c) =>
-        `<div class="kpi"><div class="k">${esc(c.provider)}</div><div class="v">$${c.totalMaxStake}</div><div class="s">${c.outCount} outs · ${c.skinPairCount} skins</div></div>`,
+        `<div class="kpi"><div class="k">${esc(c.provider)}</div><div class="v">$${c.totalMaxStake}</div><div class="s">${c.outCount} outs · ${c.capacityPairCount} skins</div></div>`,
     )
     .join("\n");
 

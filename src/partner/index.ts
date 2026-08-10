@@ -112,7 +112,6 @@ export {
   outIdentityFromAccount,
   parseLiveProductsJsonEnv,
   parseOutIdentity,
-  parseSkinsJsonEnv,
   pickBestCapacityForOut,
   resolveOutCapacity,
   resolveSkinForAccountUrl,

@@ -79,7 +79,7 @@ describe('partner registry', () => {
     const kalshi = cap.find(c => c.provider === 'kalshi');
     expect(f402?.totalMaxStake).toBe(3000);
     expect(f402?.accountCount).toBe(2);
-    expect(f402?.skinPairCount).toBe(2);
+    expect(f402?.capacityPairCount).toBe(2);
     expect(kalshi?.totalMaxStake).toBe(500);
   });
 
@@ -134,7 +134,7 @@ describe('partner registry', () => {
     const f402 = cap.find(c => c.provider === 'fantasy402');
     // SPEN 500+1000 + ASH 300 = 1800
     expect(f402?.totalMaxStake).toBe(1800);
-    expect(f402?.skinPairCount).toBe(3);
+    expect(f402?.capacityPairCount).toBe(3);
     expect(f402?.accountCount).toBe(2);
 
     const spen = f402?.outs.find(o => o.outId === 'out-SPEN-1');

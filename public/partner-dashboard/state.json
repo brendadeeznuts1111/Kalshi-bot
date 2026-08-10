@@ -11,7 +11,7 @@
       "provider": "fantasy402",
       "totalMaxStake": 2800,
       "outCount": 3,
-      "skinPairCount": 4
+      "capacityPairCount": 4
     }
   ],
   "env": {

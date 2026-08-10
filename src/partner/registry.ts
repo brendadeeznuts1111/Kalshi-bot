@@ -54,18 +54,18 @@ export type BettingAccountRow = {
   /** Env var prefix for secrets, e.g. FANTASY402_ */
   envPrefix: string | null;
   /**
-   * Legacy single-skin ceiling (max over skins when meta.skins present;
-   * used when meta.skins is empty as the sole perBetMax).
+   * Legacy single-row ceiling (max over liveProducts when present;
+   * used when capacity meta is empty as the sole perBetMax).
    */
   maxStake: number;
   maxWin: number;
   currency: string;
   /**
-   * Legacy numeric default skin wire id (nullable).
-   * Named skins live in meta.skins[].name (ezlive, dark, …).
+   * Legacy numeric default live-product wire id (nullable).
+   * Named products live in meta.liveProducts[] (ezlive, dark, …).
    */
   skin: number | null;
-  /** Non-secret meta only (liveProducts/skins, workingBalance, vaultId, skinId, bookId) */
+  /** Non-secret meta only (liveProducts, workingBalance, vaultId, skinId, bookId) */
   metaJson: string;
   /**
    * White-label SkinId from meta_json (stamped on write).
@@ -87,13 +87,13 @@ export type ProviderCapacity = {
   provider: ProviderId;
   /** Distinct outs (betting_accounts rows) */
   accountCount: number;
-  /** Active (out, skin) pairs contributing capacity */
-  skinPairCount: number;
-  /** Sum of perBetMax across all active skins of all outs */
+  /** Active (out, live-product) pairs contributing capacity */
+  capacityPairCount: number;
+  /** Sum of perBetMax across all active live products of all outs */
   totalMaxStake: number;
   totalMaxWin: number;
   accountIds: string[];
-  /** Per-out breakdown (skins summed) */
+  /** Per-out breakdown (live products summed) */
   outs: OutCapacity[];
 };
 
@@ -370,8 +370,8 @@ export function outIdentityFromAccount(
 }
 
 /**
- * Capacity by provider = sum of **active skins' perBetMax** across outs.
- * When meta.skins is absent, falls back to account maxStake as a single skin.
+ * Capacity by provider = sum of **active live-product perBetMax** across outs.
+ * When capacity meta is absent, falls back to account maxStake as a single row.
  * This is stake capacity, not market depth.
  */
 export function computeProviderCapacity(accounts: BettingAccountRow[]): ProviderCapacity[] {
@@ -384,7 +384,7 @@ export function computeProviderCapacity(accounts: BettingAccountRow[]): Provider
       row = {
         provider: a.provider,
         accountCount: 0,
-        skinPairCount: 0,
+        capacityPairCount: 0,
         totalMaxStake: 0,
         totalMaxWin: 0,
         accountIds: [],
@@ -393,7 +393,7 @@ export function computeProviderCapacity(accounts: BettingAccountRow[]): Provider
       by.set(a.provider, row);
     }
     row.accountCount++;
-    row.skinPairCount += out.liveProducts.length;
+    row.capacityPairCount += out.liveProducts.length;
     row.totalMaxStake += out.totalPerBetMax;
     row.totalMaxWin += out.totalMaxWin;
     row.accountIds.push(a.id);
@@ -406,10 +406,10 @@ export function computeProviderCapacity(accounts: BettingAccountRow[]): Provider
 }
 
 /**
- * Parse FANTASY402_SKINS_JSON or FANTASY402_LIVE_PRODUCTS_JSON → OutCapacityRow[].
+ * Parse FANTASY402_LIVE_PRODUCTS_JSON (or legacy FANTASY402_SKINS_JSON) → OutCapacityRow[].
  * Accepts `{ name | liveProduct | skin, perBetMax, maxWin }`.
  */
-export function parseSkinsJsonEnv(raw: string | undefined): OutCapacityRow[] {
+export function parseLiveProductsJsonEnv(raw: string | undefined): OutCapacityRow[] {
   if (!raw?.trim()) return [];
   try {
     const v = JSON.parse(raw) as unknown;
@@ -432,9 +432,6 @@ export function parseSkinsJsonEnv(raw: string | undefined): OutCapacityRow[] {
     return [];
   }
 }
-
-/** Alias of parseSkinsJsonEnv — preferred env name. */
-export const parseLiveProductsJsonEnv = parseSkinsJsonEnv;
 
 /**
  * Seed registry from Fantasy402 env (non-secret fields + env_prefix pointer).
@@ -474,7 +471,7 @@ export function seedFantasy402FromEnv(
     nowMs
   );
 
-  const skinsFromJson = parseSkinsJsonEnv(
+  const skinsFromJson = parseLiveProductsJsonEnv(
     envMap.FANTASY402_LIVE_PRODUCTS_JSON ?? envMap.FANTASY402_SKINS_JSON
   );
   const maxStakeEnv = Number(envMap.FANTASY402_MAX_STAKE ?? '1000') || 0;

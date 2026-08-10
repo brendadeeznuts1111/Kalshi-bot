@@ -114,7 +114,7 @@ export type FinanceCronOutRow = {
   provider: string;
   totalPerBetMax: number;
   skinCount: number;
-  skins: Array<{ name: string; perBetMax: number }>;
+  liveProducts: Array<{ name: string; perBetMax: number }>;
   workingBalance: number | null;
   envPrefix: string;
   envOk: boolean;
@@ -298,7 +298,7 @@ export function formatFinanceCronReportText(report: FinanceCronReport): string {
     const v = getPartnerVisual(g.partnerCode);
     lines.push(`  ${g.partnerCode}  ${v.hex}  capacity=$${g.totalCapacity}  outs=${g.outs.length}`);
     for (const o of g.outs) {
-      const skinBits = o.skins.map(s => `$${s.perBetMax} ${s.name}`).join(' + ');
+      const skinBits = o.liveProducts.map(s => `$${s.perBetMax} ${s.name}`).join(' + ');
       const envMark = o.envOk ? 'env✓' : `env✗ ${o.missingKeys.join(',')}`;
       const login = o.loginOk === true ? ' login✓' : o.loginOk === false ? ` login✗` : '';
       lines.push(
@@ -372,7 +372,7 @@ export async function runFinanceCron(
       provider: a.provider,
       totalPerBetMax: cap.totalPerBetMax,
       skinCount: cap.liveProducts.length,
-      skins: cap.liveProducts.map(s => ({
+      liveProducts: cap.liveProducts.map(s => ({
         name: s.name,
         perBetMax: s.perBetMax,
       })),

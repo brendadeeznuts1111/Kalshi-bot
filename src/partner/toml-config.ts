@@ -86,7 +86,10 @@ const partnersTomlOutSchema = z
     vault_id: z.string().optional(),
     vaultId: z.string().optional(),
     status: z.enum(['active', 'inactive', 'pending']).or(z.string()).optional(),
+    /** @deprecated capacity rows — prefer live_products */
     skins: z.array(partnersTomlSkinSchema).optional(),
+    live_products: z.array(partnersTomlSkinSchema).optional(),
+    liveProducts: z.array(partnersTomlSkinSchema).optional(),
   })
   .passthrough();
 
@@ -567,7 +570,8 @@ export function materializePartnersToml(doc: PartnersTomlDoc): {
       }
     }
 
-    const skins = (o.skins ?? []).map(parseSkin).filter((s): s is OutCapacityRow => s != null);
+    const capacityRows = (o.live_products ?? o.liveProducts ?? o.skins ?? []) as PartnersTomlSkin[];
+    const skins = capacityRows.map(parseSkin).filter((s): s is OutCapacityRow => s != null);
     const fallbackSkins: OutCapacityRow[] =
       skins.length > 0 ? skins : [{ name: '2', perBetMax: 0, maxWin: 0, active: true }];
     const maxStake = Math.max(...fallbackSkins.map(s => s.perBetMax), 0);
@@ -627,14 +631,14 @@ export function materializePartnersToml(doc: PartnersTomlDoc): {
       bookId,
       mapper,
       metaJson: buildOutCapacityMeta({
-      liveProducts: fallbackSkins,
+        liveProducts: fallbackSkins,
         workingBalance:
           o.working_balance != null || o.workingBalance != null
             ? asFiniteNumber(o.working_balance ?? o.workingBalance)
             : undefined,
         vaultId,
         partnerCode: partnerCode || undefined,
-        defaultSkin: fallbackSkins[0]?.name,
+        defaultLiveProduct: fallbackSkins[0]?.name,
         skinId,
         bookId,
         mapper,
@@ -785,7 +789,7 @@ function outSig(a: BettingAccountRow): Record<string, unknown> {
     maxStake: a.maxStake,
     maxWin: a.maxWin,
     currency: a.currency,
-    skins: meta.skins ?? null,
+    liveProducts: meta.liveProducts ?? meta.skins ?? null,
     workingBalance: meta.workingBalance ?? null,
     vaultId: meta.vaultId ?? null,
     partnerCode: meta.partnerCode ?? null,
@@ -1000,11 +1004,15 @@ export function buildPartnersTomlFromRows(
     const partnerCode =
       String(rowMeta.partnerCode ?? codeByPartnerId.get(a.partnerId) ?? '').toUpperCase() ||
       undefined;
-    const skinsRaw = Array.isArray(rowMeta.skins) ? rowMeta.skins : [];
-    const skins: PartnersTomlSkin[] = skinsRaw.flatMap(s => {
+    const capacityRaw = Array.isArray(rowMeta.liveProducts)
+      ? rowMeta.liveProducts
+      : Array.isArray(rowMeta.skins)
+        ? rowMeta.skins
+        : [];
+    const liveProducts: PartnersTomlSkin[] = capacityRaw.flatMap(s => {
       if (!s || typeof s !== 'object') return [];
       const r = s as Record<string, unknown>;
-      const name = String(r.name ?? r.skin ?? '').trim();
+      const name = String(r.liveProduct ?? r.name ?? r.skin ?? '').trim();
       if (!name) return [];
       return [
         {
@@ -1027,9 +1035,10 @@ export function buildPartnersTomlFromRows(
         typeof rowMeta.workingBalance === 'number' ? rowMeta.workingBalance : undefined,
       vault_id: typeof rowMeta.vaultId === 'string' ? rowMeta.vaultId : undefined,
       status: a.status,
-      skins:
-        skins.length > 0
-          ? skins
+      // Prefer live_products in exported TOML; dual-read still accepts skins on parse
+      live_products:
+        liveProducts.length > 0
+          ? liveProducts
           : [
               {
                 name: a.skin != null ? String(a.skin) : '2',
