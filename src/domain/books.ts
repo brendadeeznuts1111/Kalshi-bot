@@ -27,8 +27,8 @@ export type BookRecord = {
   label: string;
 };
 
-/** Brand a known desk book token (tests / interior stamps). Prefer resolveBookId for wire. */
-export function asBookId(raw: string): BookId {
+/** Interior brand only — not a wire parser. Prefer resolveBookId / isBookId at boundaries. */
+function asBookId(raw: string): BookId {
   const t = raw.trim().toLowerCase();
   if (!t) throw new Error('BookId: empty');
   return t as BookId;

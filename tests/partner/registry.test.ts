@@ -1,10 +1,6 @@
 // @see https://bun.com/docs/test/index#run-tests
 import { describe, expect, test } from 'bun:test';
-import {
-  asBookId,
-  defaultUrlForSkin,
-  requireDefaultUrlForUltraMapper,
-} from '../../src/domain/index.ts';
+import { defaultUrlForSkin, requireDefaultUrlForUltraMapper } from '../../src/domain/index.ts';
 import { openEventStore } from '../../src/institutions/event-store/open-db.ts';
 import {
   computeProviderCapacity,
@@ -226,7 +222,7 @@ describe('partner registry', () => {
       ]),
     });
     expect(seeded?.skinId).toBe('buckeye');
-    expect(seeded?.bookId).toBe(asBookId('fantasy402'));
+    expect(String(seeded?.bookId)).toBe('fantasy402');
     expect(seeded?.mapper).toBe('fantasy402');
     expect(seeded?.adapterId).toBe('fantasy-ultra');
     expect(seeded?.metaJson).toContain('"skinId":"buckeye"');
@@ -234,7 +230,7 @@ describe('partner registry', () => {
     expect(seeded?.metaJson).toContain('"liveProducts"');
     expect(seeded?.metaJson).toContain('"defaultLiveProduct"');
     const byId = getBettingAccountById(db, seeded!.id);
-    expect(byId?.bookId).toBe(asBookId('fantasy402'));
+    expect(String(byId?.bookId)).toBe('fantasy402');
     expect(byId?.skinId).toBe('buckeye');
   });
 

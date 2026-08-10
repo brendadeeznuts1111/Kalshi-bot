@@ -107,6 +107,7 @@ bun run domain:skins
 bun run domain:skins -- --json
 bun run domain:books
 bun run domain:books -- --json
+# seat-ops (not desk): bun run ops:status
 # legacy aliases: partner:skins · partner:books
 ```
 

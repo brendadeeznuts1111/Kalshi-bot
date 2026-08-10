@@ -152,7 +152,6 @@ export {
   BOOKS,
   BOOK_IDS,
   HOST_TO_BOOK,
-  asBookId,
   bookOffersLiveProduct,
   bookOffersSkin,
   buildBookMatrixRows,

@@ -4,7 +4,6 @@ import {
   BOOK_IDS,
   FINGERPRINT_PENDING_SKINS,
   ULTRA_DESK_API_PATHS,
-  asBookId,
   assertFingerprintCoverage,
   bookOffersLiveProduct,
   buildBookMatrixRows,
@@ -82,13 +81,14 @@ describe('domain sports / skins / live products', () => {
   });
 
   test('BookId is desk brand under skin (not SkinId)', () => {
-    expect(resolveBookId('fantasy402')).toBe(asBookId('fantasy402'));
+    expect(resolveBookId('fantasy402')).toBe(resolveBookId('fantasy402'));
+    expect(String(resolveBookId('fantasy402'))).toBe('fantasy402');
     expect(resolveSkinId('fantasy402')).toBe('buckeye');
     expect(skinIdForBook('fantasy402')).toBe('buckeye');
-    expect(getBookByHost('https://www.fantasy402.com/login')).toBe(asBookId('fantasy402'));
-    expect(getBookByHost('classic.lvaction.com')).toBe(asBookId('classic.lvaction.com'));
-    expect(listBookIdsForSkin('buckeye').sort()).toEqual(
-      [asBookId('betwest'), asBookId('fantasy402'), asBookId('hulkwager')].sort()
+    expect(String(getBookByHost('https://www.fantasy402.com/login'))).toBe('fantasy402');
+    expect(String(getBookByHost('classic.lvaction.com'))).toBe('classic.lvaction.com');
+    expect(listBookIdsForSkin('buckeye').map(String).sort()).toEqual(
+      ['betwest', 'fantasy402', 'hulkwager'].sort()
     );
     expect(bookOffersLiveProduct('fantasy402', 'ezlive')).toBe(true);
     expect(bookOffersLiveProduct('parlay21', 'maglive')).toBe(true);

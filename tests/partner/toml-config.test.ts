@@ -1,7 +1,6 @@
 // @see https://bun.com/docs/test/index#run-tests
 import { describe, expect, test } from 'bun:test';
 import {
-  asBookId,
   defaultUrlForSkin,
   RETIRED_BARE_BOOK_DOMAIN_ENVS,
   urlForHost,
@@ -64,7 +63,7 @@ describe('partners TOML (Bun.TOML)', () => {
     expect(accounts[0]?.metaJson).not.toContain('password');
     // Ultra default url → fantasy402 book + buckeye skin stamped at materialize
     expect(accounts[0]?.skinId).toBe('buckeye');
-    expect(accounts[0]?.bookId).toBe(asBookId('fantasy402'));
+    expect(String(accounts[0]?.bookId)).toBe('fantasy402');
     expect(accounts[0]?.metaJson).toContain('"skinId":"buckeye"');
     expect(accounts[0]?.metaJson).toContain('"bookId":"fantasy402"');
   });
@@ -84,7 +83,7 @@ book_id = "fantasy402"
 skins = [{ name = "ezlive", per_bet_max = 500, max_win = 2500, active = true }]
 `);
     const ok = materializePartnersToml(withUrl);
-    expect(ok.accounts[0]?.bookId).toBe(asBookId('fantasy402'));
+    expect(String(ok.accounts[0]?.bookId)).toBe('fantasy402');
     expect(ok.accounts[0]?.skinId).toBe('buckeye');
 
     const conflict = parsePartnersToml(`

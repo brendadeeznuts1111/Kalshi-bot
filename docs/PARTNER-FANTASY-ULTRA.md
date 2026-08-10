@@ -430,7 +430,7 @@ Code: `PandoraSocket` · `coefficients.ts` · `coefficient-store.ts` ·
 Partner → Communication → Accounts/Outs → Assets → Finance.
 
 **Full map + maturity:** [`PARTNER-DOMAIN.md`](PARTNER-DOMAIN.md) ·
-`bun run domain:status`
+`bun run ops:status`
 
 ## Liquidity sources map (partners / outs / providers)
 

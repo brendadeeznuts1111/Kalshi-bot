@@ -11,25 +11,34 @@
  * @see src/domain/README.md
  */
 
-export type DomainLayerId = 'partner' | 'communication' | 'accounts' | 'assets' | 'finance';
+export type OpsLayerId = 'partner' | 'communication' | 'accounts' | 'assets' | 'finance';
 
-export type DomainMaturity = 'built' | 'partial' | 'planned';
+export type OpsMaturity = 'built' | 'partial' | 'planned';
 
-export type DomainComponent = {
+export type OpsComponent = {
   id: string;
   name: string;
-  maturity: DomainMaturity;
+  maturity: OpsMaturity;
   /** Code / table / CLI path */
   where: string;
   notes?: string;
 };
 
-export type DomainLayer = {
-  id: DomainLayerId;
+export type OpsLayer = {
+  id: OpsLayerId;
   name: string;
   purpose: string;
-  components: DomainComponent[];
+  components: OpsComponent[];
 };
+
+/** @deprecated Use OpsLayerId */
+export type DomainLayerId = OpsLayerId;
+/** @deprecated Use OpsMaturity */
+export type DomainMaturity = OpsMaturity;
+/** @deprecated Use OpsComponent */
+export type DomainComponent = OpsComponent;
+/** @deprecated Use OpsLayer */
+export type DomainLayer = OpsLayer;
 
 /** Naming conventions (do not invent alternate forms). */
 export const PARTNER_NAMING = {
@@ -51,10 +60,10 @@ export const PARTNER_NAMING = {
 } as const;
 
 /**
- * Canonical five-layer map for agents and `domain:status` / `partner:domain`.
+ * Canonical five-layer map for agents and `ops:status` / `partner:domain`.
  * Update maturity when shipping — never mark planned as built.
  */
-export const OPS_LAYERS: readonly DomainLayer[] = [
+export const OPS_LAYERS: readonly OpsLayer[] = [
   {
     id: 'partner',
     name: 'Partner',
@@ -291,20 +300,17 @@ export const OPS_LAYERS: readonly DomainLayer[] = [
   },
 ] as const;
 
-/** @deprecated Use {@link OPS_LAYERS} — same five-layer seat-ops map. */
-export const PARTNER_DOMAIN_LAYERS = OPS_LAYERS;
-
-export type DomainStatusReport = {
+export type OpsStatusReport = {
   generatedAt: string;
   naming: typeof PARTNER_NAMING;
   layers: Array<{
-    id: DomainLayerId;
+    id: OpsLayerId;
     name: string;
     purpose: string;
     built: number;
     partial: number;
     planned: number;
-    components: DomainComponent[];
+    components: OpsComponent[];
   }>;
   totals: { built: number; partial: number; planned: number; components: number };
   orchestration: {
@@ -314,7 +320,10 @@ export type DomainStatusReport = {
   };
 };
 
-export function buildDomainStatusReport(nowMs = Date.now()): DomainStatusReport {
+/** @deprecated Use OpsStatusReport */
+export type DomainStatusReport = OpsStatusReport;
+
+export function buildOpsStatusReport(nowMs = Date.now()): OpsStatusReport {
   const layers = OPS_LAYERS.map(layer => {
     let built = 0;
     let partial = 0;
@@ -354,11 +363,11 @@ export function buildDomainStatusReport(nowMs = Date.now()): DomainStatusReport 
     orchestration: {
       ssot: 'event-store SQLite (partners, betting_accounts, skin_events, account_authorizations, exposure_reservations) + Proton Pass + env',
       clis: [
-        'domain:status',
+        'ops:status',
+        'ops:map',
         'domain:skins',
         'domain:books',
         'domain:host-discover',
-        'domain:map',
         'partner:capacity',
         'partner:profile',
         'partner:toml',
@@ -387,7 +396,12 @@ export function buildDomainStatusReport(nowMs = Date.now()): DomainStatusReport 
   };
 }
 
-export function formatDomainStatusText(report: DomainStatusReport): string {
+/** @deprecated Use {@link buildOpsStatusReport} */
+export function buildDomainStatusReport(nowMs = Date.now()): OpsStatusReport {
+  return buildOpsStatusReport(nowMs);
+}
+
+export function formatOpsStatusText(report: OpsStatusReport): string {
   const lines: string[] = [];
   lines.push(
     `seat ops  built=${report.totals.built} partial=${report.totals.partial} planned=${report.totals.planned}  (${report.totals.components} components)`
@@ -411,6 +425,11 @@ export function formatDomainStatusText(report: DomainStatusReport): string {
   lines.push(`  vault: ${PARTNER_NAMING.vaultIdExample}`);
   lines.push(`  liquidity: ${PARTNER_NAMING.liquidityKeyExample}`);
   return lines.join('\n');
+}
+
+/** @deprecated Use {@link formatOpsStatusText} */
+export function formatDomainStatusText(report: OpsStatusReport): string {
+  return formatOpsStatusText(report);
 }
 
 /**

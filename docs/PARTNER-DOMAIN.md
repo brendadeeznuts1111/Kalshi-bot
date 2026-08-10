@@ -7,7 +7,7 @@ Desk identity (host → book → skin → live product) lives in
 **Kalshi-bot** is the local SSOT for registry + Fantasy Ultra until a separate
 seat-capital service is the only writer.
 
-Machine status: `bun run domain:status` · `bun run domain:status -- --json`  
+Seat-ops status: `bun run ops:status` · `bun run ops:status -- --json`  
 (legacy: `partner:domain`)  
 Skin matrix: `bun run domain:skins` · Book matrix: `bun run domain:books`  
 Host discover: `bun run domain:host-discover`  
@@ -16,7 +16,7 @@ Event inventory (Buckeye / Fantasy402 → plive+ezlive):
 Competitions (Plive league → canonical id):
 [`src/domain/competitions.ts`](../src/domain/competitions.ts) ·
 `resolveCompetition`  
-Expansion map: `bun run domain:map` ·
+Expansion map: `bun run ops:map` ·
 [`PARTNER-EXECUTION-EXPANSION.md`](PARTNER-EXECUTION-EXPANSION.md) Code map:
 [`src/partner/architecture.ts`](../src/partner/architecture.ts) (seat-ops layers) ·
 desk matrix [`src/domain/`](../src/domain/) · inventory:
@@ -52,7 +52,7 @@ desk matrix [`src/domain/`](../src/domain/) · inventory:
 | **partial** | Scaffold / one path works; not full loop |
 | **planned** | Named in architecture; not implemented   |
 
-Run `bun run domain:status` for the live component checklist.
+Run `bun run ops:status` for the live component checklist.
 
 ---
 
@@ -261,10 +261,10 @@ bun run serve
 
 | Command                                               | Layer                                                                 |
 | ----------------------------------------------------- | --------------------------------------------------------------------- |
-| `domain:status` (legacy `partner:domain`)             | All (seat-ops status)                                                 |
+| `ops:status` (legacy `partner:domain`)                | Seat-ops architecture checklist                                       |
+| `ops:map` (legacy `partner:map`)                      | Telegram → authorization → provider expansion map (Mermaid)           |
 | `domain:skins` / `domain:books`                       | Desk matrix (hosts → skin / book)                                     |
 | `domain:host-discover`                                | Suggest SkinId from host (never auto-maps)                            |
-| `domain:map` (legacy `partner:map`)                   | Telegram → authorization → provider expansion map (Mermaid)           |
 | `partner:toml`                                        | Partner + Accounts (Bun.TOML config seed/export)                      |
 | `partner:health`                                      | Registry + env + risk + ledger freshness                              |
 | `partner:desk-smoke`                                  | Per-out secret readiness + optional signed `login()`                  |

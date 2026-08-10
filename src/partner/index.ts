@@ -287,15 +287,14 @@ export {
 
 export {
   OPS_LAYERS,
-  PARTNER_DOMAIN_LAYERS,
   PARTNER_NAMING,
-  buildDomainStatusReport,
-  formatDomainStatusText,
-  type DomainComponent,
-  type DomainLayer,
-  type DomainLayerId,
-  type DomainMaturity,
-  type DomainStatusReport,
+  buildOpsStatusReport,
+  formatOpsStatusText,
+  type OpsComponent,
+  type OpsLayer,
+  type OpsLayerId,
+  type OpsMaturity,
+  type OpsStatusReport,
 } from './architecture.ts';
 
 export {
