@@ -96,8 +96,20 @@ export {
   fetchPublicBookedCatalog,
   bookedCatalogToMatchList,
   type BookedCatalogEntry,
+  type BookedCatalogResult,
   type FetchBookedCatalogOptions,
 } from '../inventory/booked-catalog.ts';
+
+export {
+  enrichBookedEvents,
+  type EnrichBookedEventsOptions,
+} from '../inventory/enrich-booked.ts';
+
+export {
+  validateEnrichmentResult,
+  formatEnrichValidation,
+  type EnrichValidation,
+} from '../inventory/enrich-validate.ts';
 
 export {
   countInventoryLeagues,

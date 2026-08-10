@@ -163,6 +163,10 @@ bun run inventory:sync -- --odds-status              # fill-rate only
 # Public Statscore catalog (no Fantasy secrets) → re-link unlinked rows:
 bun run inventory:sync -- --enrich-only --enrich-scope=unlinked
 bun run inventory:sync -- --enrich-only --dry-run --json
+# Programmatic (same as CLI):
+#   import { enrichBookedEvents } from './src/inventory/enrich-booked.ts'
+# Retry + disk cache: live 403/429/5xx → research/cache/booked-catalog-cache.json
+# Post-tick: enrich-validate + JSON logs (plane=inventory component=enrich)
 bun run inventory:watch -- --once --sport=all --enrich-booked
 
 # Cron (scope via INVENTORY_SYNC_ENRICH_SCOPE=board|new|unlinked)
