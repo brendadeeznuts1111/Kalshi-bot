@@ -9,6 +9,7 @@ import {
   getBettingAccountById,
   listActiveBettingAccounts,
   listEligibleOutCapacityPairs,
+  parseLiveProductsJsonEnv,
   pickBestCapacityForOut,
   seedFantasy402FromEnv,
   upsertBettingAccount,
@@ -207,6 +208,19 @@ describe('partner registry', () => {
     expect(parseLiveProductWire('2')).toBe(2);
     expect(parseLiveProductWire(2)).toBe(2);
     expect(parseLiveProductWire(undefined)).toBe(2);
+  });
+
+  test('parseLiveProductsJsonEnv normalizes wire aliases (ultra→ultralive)', () => {
+    const rows = parseLiveProductsJsonEnv(
+      JSON.stringify([
+        { name: 'ultra', perBetMax: 100, maxWin: 500 },
+        { liveProduct: 'EZLive', perBetMax: 200, maxWin: 1000 },
+        { skin: '2', perBetMax: 50, maxWin: 250 },
+      ])
+    );
+    expect(rows.map(r => r.name)).toEqual(['ultralive', 'ezlive', '2']);
+    expect(rows[0]?.perBetMax).toBe(100);
+    expect(rows[1]?.perBetMax).toBe(200);
   });
 
   test('seed stamps skinId=buckeye and bookId=fantasy402 from host', () => {

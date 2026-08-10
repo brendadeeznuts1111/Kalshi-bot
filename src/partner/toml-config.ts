@@ -573,11 +573,15 @@ export function materializePartnersToml(doc: PartnersTomlDoc): {
     }
 
     const capacityRows = (o.live_products ?? o.liveProducts ?? o.skins ?? []) as PartnersTomlSkin[];
-    const skins = capacityRows.map(parseSkin).filter((s): s is OutCapacityRow => s != null);
-    const fallbackSkins: OutCapacityRow[] =
-      skins.length > 0 ? skins : [{ name: '2', perBetMax: 0, maxWin: 0, active: true }];
-    const maxStake = Math.max(...fallbackSkins.map(s => s.perBetMax), 0);
-    const maxWin = Math.max(...fallbackSkins.map(s => s.maxWin), 0);
+    const parsedCapacity = capacityRows
+      .map(parseSkin)
+      .filter((s): s is OutCapacityRow => s != null);
+    const fallbackCapacity: OutCapacityRow[] =
+      parsedCapacity.length > 0
+        ? parsedCapacity
+        : [{ name: '2', perBetMax: 0, maxWin: 0, active: true }];
+    const maxStake = Math.max(...fallbackCapacity.map(s => s.perBetMax), 0);
+    const maxWin = Math.max(...fallbackCapacity.map(s => s.maxWin), 0);
     const statusRaw = String(o.status ?? 'active').toLowerCase();
     const status =
       statusRaw === 'inactive' || statusRaw === 'pending'
@@ -606,7 +610,7 @@ export function materializePartnersToml(doc: PartnersTomlDoc): {
       const resolvedTomlBook = resolveBookId(tomlBookRaw);
       if (!resolvedTomlBook) {
         throw new Error(
-          `Out ${id}: unknown book_id=${tomlBookRaw} — use a BookId from bun run partner:books`
+          `Out ${id}: unknown book_id=${tomlBookRaw} — use a BookId from bun run domain:books`
         );
       }
       if (bookFromHost && bookFromHost !== resolvedTomlBook) {
@@ -633,14 +637,14 @@ export function materializePartnersToml(doc: PartnersTomlDoc): {
       bookId,
       mapper,
       metaJson: buildOutCapacityMeta({
-        liveProducts: fallbackSkins,
+        liveProducts: fallbackCapacity,
         workingBalance:
           o.working_balance != null || o.workingBalance != null
             ? asFiniteNumber(o.working_balance ?? o.workingBalance)
             : undefined,
         vaultId,
         partnerCode: partnerCode || undefined,
-        defaultLiveProduct: fallbackSkins[0]?.name,
+        defaultLiveProduct: fallbackCapacity[0]?.name,
         skinId,
         bookId,
         mapper,

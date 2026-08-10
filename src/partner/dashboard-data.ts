@@ -123,7 +123,7 @@ export const PARTNER_OPERATOR_COMMANDS: Array<{
   },
   {
     cmd: "bun run partner:capacity",
-    purpose: "Out × skin capacity tree",
+    purpose: "Out × live-product capacity tree",
   },
   {
     cmd: "bun run partner:health",
@@ -400,7 +400,7 @@ export function renderPartnerDashboardHtml(
   const capBits = data.capacity
     .map(
       (c) =>
-        `<div class="kpi"><div class="k">${esc(c.provider)}</div><div class="v">$${c.totalMaxStake}</div><div class="s">${c.outCount} outs · ${c.capacityPairCount} skins</div></div>`,
+        `<div class="kpi"><div class="k">${esc(c.provider)}</div><div class="v">$${c.totalMaxStake}</div><div class="s">${c.outCount} outs · ${c.capacityPairCount} products</div></div>`,
     )
     .join("\n");
 

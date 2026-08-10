@@ -488,13 +488,14 @@ On `seedFantasy402FromEnv` / `upsertBettingAccount` (`partner/out-identity.ts`):
 
 1. Resolve host via `getSkinByHost(url)` → white-label `skinId` (unknown host →
    reject; add to `SKINS[].hosts`)
-2. Parse capacity from `meta.liveProducts` (dual-read legacy `meta.skins`)
+2. Parse capacity from `meta.liveProducts` (dual-**read** legacy `meta.skins`
+   only when `liveProducts` is absent)
 3. Assert capacity ⊆ skin `offeredLiveProducts` (plus legacy `dark` / numeric
    Ultra wire)
 4. Derive `AdapterBinding`: `adapterId` (`fantasy-ultra` | `kalshi` |
    `unmapped`) + `mapperKind` + `bookEnvToken`
-5. Stamp `skinId`, `mapper`, `liveProducts` + legacy `skins` mirror,
-   `defaultLiveProduct`
+5. Stamp `skinId`, `mapper`, `liveProducts`, `defaultLiveProduct` only —
+   writers **drop** legacy `meta.skins` / `defaultSkin` (no dual-write)
 6. `getPartnerAdapter` selects Fantasy Ultra when
    `adapterId === "fantasy-ultra"`
 
@@ -519,17 +520,17 @@ bun run partner:sync -- --sport=all    # upsert all buckets into skin_events
 - **Not yet**: full Get_SportsLeagues catalog / Pandora `live.leagues` decode
   (needs auth / binary parse).
 
-### Out × skin matrix (PPH)
+### Out × live-product capacity (PPH)
 
 Out = account (vault credentials + shared `workingBalance`).  
-Skin = live provider surface — same credentials, different limits / often
-different lines.
+Live product = capacity / Ultra wire row — same credentials, different limits /
+often different lines. **Not** white-label `SkinId` (that is desk identity).
 
 | Layer              | Naming                                           | Example                                   |
 | ------------------ | ------------------------------------------------ | ----------------------------------------- |
 | Out                | `out-{PARTNER}-{n}`                              | `out-SPEN-1`                              |
-| Skin (white-label) | `buckeye` / `ace` / … (env may say `fantasy402`) | `buckeye`                                 |
-| Live product       | coverage + login wire                            | `plive`, `ezlive`, `ultralive`, `maglive` |
+| Skin (white-label) | `buckeye` / `ace` / … (desk host map)            | `buckeye`                                 |
+| Live product       | capacity + login wire                            | `plive`, `ezlive`, `ultralive`, `maglive` |
 | Liquidity key      | `{outId}@{liveProduct}`                          | `out-SPEN-1@ezlive`                       |
 | Vault              | credentials **per out**                          | `vault-out-SPEN-1`                        |
 
@@ -538,17 +539,17 @@ different lines.
   "vaultId": "vault-out-SPEN-1",
   "partnerCode": "SPEN",
   "workingBalance": 5000,
-  "skins": [
+  "liveProducts": [
     { "name": "ezlive", "perBetMax": 500, "maxWin": 2500, "active": true },
     { "name": "dark", "perBetMax": 1000, "maxWin": 5000, "active": true }
   ]
 }
 ```
 
-**Capacity** = Σ active skins' `perBetMax` across active outs (fallback:
-single-skin `max_stake`).  
-Concentration groups exposure by **out** (across skins). Execution: pick out →
-best skin ≥ stake → adapter `{ skin }`.  
+**Capacity** = Σ active live products' `perBetMax` across active outs (fallback:
+single-product `max_stake`).  
+Concentration groups exposure by **out** (across live products). Execution:
+pick out → best live product ≥ stake → adapter.  
 That is **not** market `tradable` — only stake capacity until a priced line
 exists.
 

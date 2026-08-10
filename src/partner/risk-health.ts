@@ -171,7 +171,7 @@ function latestOddsMeta(
 }
 
 /**
- * Cross-check active outs: capacity (skins / desk) vs odds_book freshness.
+ * Cross-check active outs: live-product capacity vs odds_book freshness.
  */
 export function evaluateRiskHealth(
   db: Database,
@@ -254,7 +254,7 @@ export function evaluateRiskHealth(
         code: "odds_without_capacity",
         outId,
         partnerCode,
-        message: `${oddsLines} priced lines but capacity $0 — check skins / TOML`,
+        message: `${oddsLines} priced lines but capacity $0 — check live_products / TOML`,
         data: { oddsLines, pricedEvents },
       });
     }

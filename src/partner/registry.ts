@@ -2,10 +2,10 @@
 /**
  * Partners (financial entities) → Betting accounts (outs) → Providers (adapters).
  *
- * Capacity is an (out × skin) matrix:
+ * Capacity is an (out × live-product) matrix (seat plane — not desk SkinId):
  *   - out = account (shared workingBalance + vault credentials)
- *   - skin = live interface (ezlive / dark / "2") with its own perBetMax
- * Vertical capacity = sum of active skins' perBetMax across active outs.
+ *   - live product = wire name (ezlive / dark / "2") with its own perBetMax
+ * Vertical capacity = sum of active products' perBetMax across active outs.
  * That is NOT market tradable until the provider offers a priced line.
  * Secrets stay in env / vault — never persist password or bearer JWT.
  */
@@ -26,6 +26,7 @@ import {
   bookIdFromAccount,
   buildOutCapacityMeta,
   mapperFromAccount,
+  normalizeCapacityWireName,
   outCapacityFromAccount,
   parseLiveProductWire,
   skinIdFromAccount,
@@ -418,10 +419,10 @@ export function parseLiveProductsJsonEnv(raw: string | undefined): OutCapacityRo
       .map((row): OutCapacityRow | null => {
         if (!row || typeof row !== 'object') return null;
         const r = row as Record<string, unknown>;
-        const name = String(r.liveProduct ?? r.name ?? r.skin ?? '').trim();
-        if (!name) return null;
+        const rawName = String(r.liveProduct ?? r.name ?? r.skin ?? '').trim();
+        if (!rawName) return null;
         return {
-          name,
+          name: normalizeCapacityWireName(rawName),
           perBetMax: Number(r.perBetMax ?? r.maxStake ?? 0) || 0,
           maxWin: Number(r.maxWin ?? 0) || 0,
           active: r.active !== false,

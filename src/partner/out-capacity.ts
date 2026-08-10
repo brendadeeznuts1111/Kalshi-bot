@@ -243,7 +243,7 @@ export function outCapacityFromAccount(input: {
 }
 
 /**
- * Eligible (out, skin) pairs that can accept `stake`.
+ * Eligible (out, live-product) pairs that can accept `stake`.
  * workingBalance (if set) must also cover stake at out level.
  */
 export function listEligibleOutCapacityPairs(
@@ -286,7 +286,7 @@ export function listEligibleOutCapacityPairs(
 }
 
 /**
- * After concentration picks an out, choose skin within that out.
+ * After concentration picks an out, choose live product within that out.
  * Default: highest perBetMax that covers stake.
  */
 export function pickBestCapacityForOut(
@@ -303,7 +303,7 @@ export function pickBestCapacityForOut(
 }
 
 /**
- * Concentration by out (sum exposure across skins of the same out).
+ * Concentration by out (sum exposure across live products of the same out).
  * Share = exposure / total (or sum of exposures if total omitted).
  */
 export function concentrationByOut(
