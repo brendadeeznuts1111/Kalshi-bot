@@ -36,6 +36,8 @@ import {
   findEventInEventDataBoard,
   isEventDataBoardPayload,
   parseEventDataDiffPath,
+  parseLiveCountryNames,
+  parseLiveLeagueNames,
   parseLiveSportsNames,
   parsePandoraBlocked,
   scanEventDataBoard,
@@ -518,6 +520,8 @@ export async function probePandoraEvent(
   let lastPayload: unknown | null = null;
   let eventDataBoardPayload: unknown | null = null;
   let sportsPayload: unknown | null = null;
+  let leaguesPayload: unknown | null = null;
+  let countriesPayload: unknown | null = null;
   let blockedRaw: unknown | null = null;
 
   const host = resolvePandoraHostId(options.pandoraHost);
@@ -541,6 +545,14 @@ export async function probePandoraEvent(
         onCoefficients: info => {
           if (info.room === 'live.sports' && !info.envelope.isDiff) {
             sportsPayload = info.envelope.payload;
+            return;
+          }
+          if (info.room === 'live.leagues' && !info.envelope.isDiff) {
+            leaguesPayload = info.envelope.payload;
+            return;
+          }
+          if (info.room === 'live.countries' && !info.envelope.isDiff) {
+            countriesPayload = info.envelope.payload;
             return;
           }
           if (
@@ -607,6 +619,8 @@ export async function probePandoraEvent(
       : null;
 
   const sportsNames = parseLiveSportsNames(sportsPayload);
+  const leagueNames = parseLiveLeagueNames(leaguesPayload);
+  const countryNames = parseLiveCountryNames(countriesPayload);
   const blocked = blockedRaw ? parsePandoraBlocked(blockedRaw) : null;
   const boardHit = eventDataBoardPayload
     ? findEventInEventDataBoard(eventDataBoardPayload, eventId)
@@ -615,6 +629,8 @@ export async function probePandoraEvent(
     ? decodeEventOfferability(boardHit, {
         coeffLineCount: lines.length,
         sportsNames,
+        leagueNames,
+        countryNames,
         blocked,
         board: eventDataBoardPayload,
       })
@@ -658,6 +674,8 @@ export async function scanPandoraEventBoard(
   const host = resolvePandoraHostId(options.pandoraHost);
   let boardPayload: unknown | null = null;
   let sportsPayload: unknown | null = null;
+  let leaguesPayload: unknown | null = null;
+  let countriesPayload: unknown | null = null;
   let blockedRaw: unknown | null = null;
 
   await new Promise<void>(resolve => {
@@ -672,6 +690,14 @@ export async function scanPandoraEventBoard(
         onCoefficients: info => {
           if (info.room === 'live.sports' && !info.envelope.isDiff) {
             sportsPayload = info.envelope.payload;
+            return;
+          }
+          if (info.room === 'live.leagues' && !info.envelope.isDiff) {
+            leaguesPayload = info.envelope.payload;
+            return;
+          }
+          if (info.room === 'live.countries' && !info.envelope.isDiff) {
+            countriesPayload = info.envelope.payload;
             return;
           }
           if (
@@ -715,9 +741,16 @@ export async function scanPandoraEventBoard(
   });
 
   const sportsNames = parseLiveSportsNames(sportsPayload);
+  const leagueNames = parseLiveLeagueNames(leaguesPayload);
+  const countryNames = parseLiveCountryNames(countriesPayload);
   const blocked = blockedRaw ? parsePandoraBlocked(blockedRaw) : null;
   const scan = boardPayload
-    ? scanEventDataBoard(boardPayload, { sportsNames, blocked })
+    ? scanEventDataBoard(boardPayload, {
+        sportsNames,
+        leagueNames,
+        countryNames,
+        blocked,
+      })
     : null;
 
   return { scan, sportsNames, blocked, seconds, host };
@@ -756,28 +789,44 @@ export function formatEventBoardScan(
     );
   }
   lines.push('');
-  lines.push('## By feed sport (live.sports id — not ticket apiSportId)');
+  lines.push('## By feed sport (feed id ≠ widget id)');
   lines.push(
-    '  id   name              n  bettable  lines  OTB  fin  notBett  blocked'
+    ...mdTable(
+      [
+        'Feed',
+        'Name',
+        'SportId',
+        'n',
+        'Bettable',
+        'Lines',
+        'OTB',
+        'Fin',
+        'NotBett',
+      ],
+      scan.bySport.map(r => [
+        r.sportId,
+        r.sportName ?? '—',
+        r.canonicalSportId ?? '—',
+        String(r.total),
+        String(r.bettable),
+        String(r.hasLines),
+        String(r.offTheBoard),
+        String(r.finished),
+        String(r.notBettable),
+      ])
+    )
   );
-  for (const r of scan.bySport) {
-    const name = (r.sportName ?? '?').padEnd(16).slice(0, 16);
-    lines.push(
-      `  ${r.sportId.padStart(3)}  ${name}  ${String(r.total).padStart(3)}  ` +
-        `${String(r.bettable).padStart(8)}  ${String(r.hasLines).padStart(5)}  ` +
-        `${String(r.offTheBoard).padStart(3)}  ${String(r.finished).padStart(3)}  ` +
-        `${String(r.notBettable).padStart(7)}  ${String(r.blocked).padStart(7)}`
-    );
-  }
 
   let list = scan.events;
   if (options.sportFilter) {
-    const f = options.sportFilter;
-    list = list.filter(
-      e =>
-        e.sportId === f ||
-        (e.sportName && e.sportName.toLowerCase() === f.toLowerCase())
-    );
+    const f = options.sportFilter.trim().toLowerCase();
+    list = list.filter(e => {
+      if (e.sportId === f || e.sportId === options.sportFilter) return true;
+      if (e.canonicalSportId?.toLowerCase() === f) return true;
+      if (e.sportName?.toLowerCase() === f) return true;
+      if (e.sportName?.toLowerCase().replace(/\s+/g, '_') === f) return true;
+      return false;
+    });
   }
   if (options.bettableOnly) {
     list = list.filter(e => e.state === 0 && e.hasLines && !e.offTheBoard);
@@ -802,26 +851,40 @@ export function formatEventBoardScan(
       (options.otbOnly ? ' OTB only' : '') +
       ')'
   );
-  for (const e of list.slice(0, limit)) {
-    const teams =
-      e.home || e.away
-        ? `${e.home ?? '?'} vs ${e.away ?? '?'}`
-        : '(no teams)';
-    const blk = e.blockedReason ? ` [${e.blockedReason}]` : '';
-    const wire =
-      e.wireState != null && e.wireState !== e.state
-        ? ` wire_s=${e.wireState}`
-        : '';
-    lines.push(
-      `  ${e.eventId}  s=${e.state}(${e.stateLabel})${wire}  l=${e.hasLines}  ` +
-        `OTB=${e.offTheBoard}  ${e.sportName ?? e.sportId ?? '?'}${blk}`
-    );
-    lines.push(`    ${teams}  #!/event/${e.eventId}/m`);
-  }
+  lines.push(
+    ...mdTable(
+      [
+        'Event',
+        'State',
+        'L',
+        'OTB',
+        'Feed',
+        'SportId',
+        'League',
+        'Match',
+      ],
+      list.slice(0, limit).map(e => [
+        String(e.eventId),
+        e.stateLabel,
+        e.hasLines == null ? '—' : e.hasLines ? 'Y' : 'N',
+        e.offTheBoard ? 'Y' : 'N',
+        e.sportId
+          ? `${e.sportId}${e.sportName ? ` ${e.sportName}` : ''}`
+          : '—',
+        e.canonicalSportId ?? '—',
+        e.leagueName
+          ? e.leagueName.slice(0, 24)
+          : (e.leagueId ?? '—'),
+        e.home || e.away
+          ? `${e.home ?? '?'} vs ${e.away ?? '?'}`
+          : '—',
+      ])
+    )
+  );
   lines.push('');
   lines.push(
-    'note: feed sport ids from live.sports (1=Baseball 2=Basketball 5=Soccer 8=Tennis 93=TT …); ' +
-      'ticket apiSportId map differs (legacy tennis=2). blocked sports force notBettable (calculateState).'
+    'note: feed id (eventData) ≠ widget sportOrder ≠ ticket api. ' +
+      'SSOT: domain/pandora-feed-sports.ts · blocked → notBettable.'
   );
   return lines.join('\n');
 }
@@ -1718,7 +1781,24 @@ export function formatEventLookup(r: EventLookupResult): string {
     ['Field', 'Value'],
     [
       ['Match', matchup],
-      ['Sport', es?.sportName ?? r.sportHint ?? '—'],
+      [
+        'Sport',
+        es?.canonicalSportId
+          ? `${es.canonicalSportId} · feed=${es.sportId} (${es.sportName ?? '?'})`
+          : (es?.sportName ?? r.sportHint ?? '—'),
+      ],
+      [
+        'League',
+        es?.leagueName
+          ? `${es.leagueName} (${es.leagueId ?? '?'})`
+          : (es?.leagueId ?? '—'),
+      ],
+      [
+        'Country',
+        es?.countryName
+          ? `${es.countryName} (${es.countryId ?? '?'})`
+          : (es?.countryId ?? '—'),
+      ],
       [
         'State',
         es

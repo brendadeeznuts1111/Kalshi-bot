@@ -247,8 +247,11 @@ describe('pandora coefficient decode', () => {
       offTheBoard: false,
       sportId: '8',
       sportName: 'Tennis',
+      canonicalSportId: 'tennis',
       countryId: '1',
+      countryName: null,
       leagueId: '1',
+      leagueName: null,
       home: 'A',
       away: 'B',
       startTimeSec: null,
@@ -337,8 +340,10 @@ describe('pandora coefficient decode', () => {
     expect(tt.state).toBe(PANDORA_EVENT_STATES.notBettable);
     expect(tt.blockedReason).toBe('blocked_sport:93');
     expect(tt.offTheBoard).toBe(true);
+    expect(tt.canonicalSportId).toBe('table_tennis');
     expect(tt.donbestId).toBe('55');
     expect(scan.blockedOverlayCount).toBe(1);
+    expect(tennis.canonicalSportId).toBe('tennis');
 
     const eff = calculateEffectiveEventState(0, {
       eventId: 197418461,

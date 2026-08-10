@@ -27,6 +27,10 @@
  * @see https://bun.com/docs/runtime/utils#bun-gunzipsync
  */
 import { gunzipSync } from 'bun';
+import {
+  feedSportName,
+  sportIdFromFeedSportId,
+} from '../../domain/pandora-feed-sports.ts';
 import { normalizeOdds } from '../odds-format.ts';
 
 /** Widget `EVENT_STATES` (gsLive constant) — event.dynamicData.state. */
@@ -156,11 +160,21 @@ export type EventOfferability = {
   /** From wire `oc`, else null (use coeff book lineCount as fallback). */
   oddsCount: number | null;
   offTheBoard: boolean;
+  /**
+   * Feed sport id from eventData path (`s/{id}/…`).
+   * Not widget sportOrder; resolve via domain `sportIdFromFeedSportId`.
+   */
   sportId: string | null;
   /** From live.sports[id].n when provided. */
   sportName: string | null;
+  /** Canonical SportId when feed maps (table_tennis, tennis, …). */
+  canonicalSportId: string | null;
   countryId: string | null;
+  /** From live.countries when provided. */
+  countryName: string | null;
   leagueId: string | null;
+  /** From live.leagues when provided. */
+  leagueName: string | null;
   home: string | null;
   away: string | null;
   startTimeSec: number | null;
@@ -180,6 +194,7 @@ export type EventDataBoardScan = {
   bySport: Array<{
     sportId: string;
     sportName: string | null;
+    canonicalSportId: string | null;
     total: number;
     bettable: number;
     hasLines: number;
@@ -289,14 +304,32 @@ export function findEventInEventDataBoard(
   return null;
 }
 
-/** Parse live.sports payload → feedSportId → name (`n` field). */
+/** Parse live.sports / live.countries payload → id → name (`n` field). */
 export function parseLiveSportsNames(
   sportsPayload: unknown
 ): Map<string, string> {
+  return parseNamedIdMap(sportsPayload);
+}
+
+/** Parse live.leagues payload → leagueId → name (`n` field). */
+export function parseLiveLeagueNames(
+  leaguesPayload: unknown
+): Map<string, string> {
+  return parseNamedIdMap(leaguesPayload);
+}
+
+/** Parse live.countries payload → countryId → name (`n` field). */
+export function parseLiveCountryNames(
+  countriesPayload: unknown
+): Map<string, string> {
+  return parseNamedIdMap(countriesPayload);
+}
+
+function parseNamedIdMap(payload: unknown): Map<string, string> {
   const out = new Map<string, string>();
-  if (!sportsPayload || typeof sportsPayload !== 'object') return out;
+  if (!payload || typeof payload !== 'object') return out;
   for (const [id, row] of Object.entries(
-    sportsPayload as Record<string, unknown>
+    payload as Record<string, unknown>
   )) {
     if (!row || typeof row !== 'object') continue;
     const n = (row as { n?: unknown }).n;
@@ -502,6 +535,8 @@ export function decodeEventOfferability(
   options: {
     coeffLineCount?: number | null;
     sportsNames?: Map<string, string> | null;
+    leagueNames?: Map<string, string> | null;
+    countryNames?: Map<string, string> | null;
     blocked?: PandoraBlockedSets | null;
     board?: unknown;
   } = {}
@@ -532,10 +567,19 @@ export function decodeEventOfferability(
           ? 0
           : options.coeffLineCount ?? 0;
 
-  const sportName =
+  const liveSportName =
     hit.sportId && options.sportsNames?.get(hit.sportId)
       ? options.sportsNames.get(hit.sportId)!
       : null;
+  const catalogName = hit.sportId ? feedSportName(hit.sportId) : null;
+  const sportName = liveSportName ?? catalogName;
+  const canonicalSportId = hit.sportId
+    ? sportIdFromFeedSportId(hit.sportId)
+    : null;
+  const leagueName =
+    (hit.leagueId && options.leagueNames?.get(hit.leagueId)) || null;
+  const countryName =
+    (hit.countryId && options.countryNames?.get(hit.countryId)) || null;
 
   return {
     eventId: hit.eventId,
@@ -556,8 +600,11 @@ export function decodeEventOfferability(
     }),
     sportId: hit.sportId,
     sportName,
+    canonicalSportId,
     countryId: hit.countryId,
+    countryName,
     leagueId: hit.leagueId,
+    leagueName,
     home: hit.home,
     away: hit.away,
     startTimeSec: hit.startTimeSec,
@@ -577,6 +624,8 @@ export function scanEventDataBoard(
   payload: unknown,
   options: {
     sportsNames?: Map<string, string> | null;
+    leagueNames?: Map<string, string> | null;
+    countryNames?: Map<string, string> | null;
     blocked?: PandoraBlockedSets | null;
   } = {}
 ): EventDataBoardScan | null {
@@ -587,6 +636,8 @@ export function scanEventDataBoard(
   const events = hits.map(h =>
     decodeEventOfferability(h, {
       sportsNames: options.sportsNames,
+      leagueNames: options.leagueNames,
+      countryNames: options.countryNames,
       blocked: options.blocked,
       board: payload,
     })
@@ -598,6 +649,7 @@ export function scanEventDataBoard(
     {
       sportId: string;
       sportName: string | null;
+      canonicalSportId: string | null;
       total: number;
       bettable: number;
       hasLines: number;
@@ -627,6 +679,7 @@ export function scanEventDataBoard(
       row = {
         sportId: sid,
         sportName: e.sportName,
+        canonicalSportId: e.canonicalSportId,
         total: 0,
         bettable: 0,
         hasLines: 0,
@@ -645,6 +698,9 @@ export function scanEventDataBoard(
     if (e.state === PANDORA_EVENT_STATES.notBettable) row.notBettable++;
     if (e.state === PANDORA_EVENT_STATES.blocked) row.blocked++;
     if (!row.sportName && e.sportName) row.sportName = e.sportName;
+    if (!row.canonicalSportId && e.canonicalSportId) {
+      row.canonicalSportId = e.canonicalSportId;
+    }
   }
 
   const bySport = [...sportMap.values()].sort(
