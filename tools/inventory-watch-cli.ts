@@ -24,6 +24,7 @@ import { openEventStore } from '../src/institutions/event-store/open-db.ts';
 import { DEFAULT_EVENT_STORE_DB } from '../src/institutions/event-store/paths.ts';
 import { getFantasySessionAdapter, loadFantasy402ProfileFromEnv } from '../src/partner/index.ts';
 import { formatLeagueLine, upsertInventoryLeagues } from '../src/inventory/leagues.ts';
+import { maybeNotifyInventoryTelegram } from '../src/inventory/notify.ts';
 import { planInventoryUpsert } from '../src/inventory/sync.ts';
 import {
   fetchPublicPliveStreamEvents,
@@ -44,26 +45,6 @@ function argValue(name: string): string | undefined {
 
 function hasFlag(name: string): boolean {
   return process.argv.includes(`--${name}`);
-}
-
-async function maybeNotifyTelegram(lines: string[]): Promise<void> {
-  const token = process.env.TELEGRAM_BOT_TOKEN?.trim();
-  const chatId = process.env.TELEGRAM_CHAT_ID?.trim() || process.env.TELEGRAM_GROUP_ID?.trim();
-  if (!token || !chatId || lines.length === 0) return;
-  const text = ['New Fantasy402 / Buckeye events:', ...lines.slice(0, 12)].join('\n');
-  try {
-    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: text.slice(0, 3500),
-        disable_web_page_preview: true,
-      }),
-    });
-  } catch {
-    // non-fatal
-  }
 }
 
 function resolveFetchSport(sportArg: string): string {
@@ -203,7 +184,10 @@ async function pollOnce(options: {
   }
 
   if (!options.dryRun && result.inserted.length) {
-    await maybeNotifyTelegram(result.inserted.map(r => `• ${formatSkinEventLine(r)}`));
+    await maybeNotifyInventoryTelegram({
+      title: 'New Fantasy402 / Buckeye events:',
+      lines: result.inserted.map(r => `• ${formatSkinEventLine(r)}`),
+    });
   }
 
   return { newCount: result.inserted.length, seen: result.seen };

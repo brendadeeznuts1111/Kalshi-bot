@@ -26,6 +26,7 @@ bun run inventory:leagues                         # list durable leagues
 bun run inventory:leagues -- --unmapped           # competition_id null
 bun run inventory:leagues -- --harvest --sport=all
 bun run inventory:leagues -- --report             # promote dry-report (cron-shared)
+bun run inventory:leagues -- --report --notify    # force Telegram (TELEGRAM_*)
 bun run inventory:leagues -- --promote            # plan COMPETITIONS seeds
 bun run inventory:leagues -- --promote --apply    # write competitions.ts
 bun run inventory:leagues -- --backfill           # re-stamp competition_id
