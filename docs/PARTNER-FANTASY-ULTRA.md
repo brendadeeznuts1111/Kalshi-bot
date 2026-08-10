@@ -136,38 +136,42 @@ Adapter methods:
 | `statscore id`    | booked_events[].id                  | Internal Statscore event id                       |
 | `ls_id`           | get_pushes (when path known)        | Live score pushes                                 |
 
-**Two planes** (code: [`src/domain/odds-selection.ts`](../src/domain/odds-selection.ts)):
+**Three planes** (code: [`src/domain/odds-selection.ts`](../src/domain/odds-selection.ts)):
 
 ```text
-Inventory  stream_id  ·············  (join later)  ········  Odds eventId
-                                                              │
-                                                    periodId + marketId + key
-                                                    (OddsSelection)
+Inventory  stream_id          (skin_events)
+Odds       eventId + period + marketType + selection   (Pandora OddsLine)
+Ticket     eventId + periodId + marketId + key         (componentBet TicketLeg)
 ```
 
-| Proven `marketId` | Label |
-| ----------------- | ----- |
+Odds and ticket often share the same numeric `eventId`, but **types and field
+names stay separate** — bridge only via `ticketLegFromOddsLine` /
+`oddsLineFromTicketLeg`.
+
+| Proven market id | Label |
+| ---------------- | ----- |
 | `3` | moneyline |
 | `5` | total (approx) |
 | `6` | spread (approx) |
 
-Concrete ticket leg (Darin vs Plachy → Plachy ML):
-
-| Field | Value | Meaning |
-| ----- | ----- | ------- |
-| `eventId` | `196878741` | That match (`#!/event/196878741`) |
-| `periodId` | `m` | Full match |
-| `marketId` | `3` | Moneyline |
-| `key` | `2` | Away / team2 (Plachy) |
+Concrete example (Darin vs Plachy → Plachy ML):
 
 ```ts
-import { describeSelection, EXAMPLE_DARIN_PLACHY_SELECTION } from '../src/domain/index.ts';
-describeSelection(EXAMPLE_DARIN_PLACHY_SELECTION);
-// event=196878741 period=match market=moneyline side=2
+import {
+  describeOddsLine,
+  describeTicketLeg,
+  EXAMPLE_DARIN_PLACHY_ODDS_LINE,
+  EXAMPLE_DARIN_PLACHY_TICKET_LEG,
+} from '../src/domain/index.ts';
+
+describeOddsLine(EXAMPLE_DARIN_PLACHY_ODDS_LINE);
+// odds event=196878741 period=match market=moneyline selection=2
+
+describeTicketLeg(EXAMPLE_DARIN_PLACHY_TICKET_LEG);
+// ticket event=196878741 period=match market=moneyline key=2
 ```
 
-DOM `set-to-max-{eventId}-m-{n}` is **not** a full selection (trailing `n` is
-ambiguous). Ticket / coefficient coords are SSOT.
+DOM `set-to-max-{eventId}-m-{n}` is **not** a `TicketLeg` or `OddsLine`.
 
 ### Bet ticket wire (captured place/open response)
 

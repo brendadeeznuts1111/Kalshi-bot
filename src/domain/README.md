@@ -4,15 +4,16 @@ Standalone registry for live PPH coverage. **Not** owned by Fantasy402.
 
 ## Layers
 
-| Layer              | Owns                                         | Examples                                                                         |
-| ------------------ | -------------------------------------------- | -------------------------------------------------------------------------------- |
-| **Sports**         | Canonical `SportId`                          | `soccer`, `table_tennis`                                                         |
-| **Competitions**   | Canonical leagues under a sport + Plive map  | `table_tennis.setka_cup` · [`competitions.ts`](competitions.ts)                  |
-| **Odds selection** | Ticket/Pandora coords (not inventory)        | `eventId`+`periodId`+`marketId`+`key` · [`odds-selection.ts`](odds-selection.ts) |
-| **Live products**  | Coverage bindings + stream endpoints         | `plive`, `ezlive`, `ultralive`, `maglive` · `live-product-endpoints.ts`          |
-| **Skins**          | White-labels + hosts + offered live products | `buckeye`, `ace`, `metallic`, `sts`, `1bv`, `lvaction`, `magnum`                 |
-| **Books**          | Desk brands under a skin (host-derived)      | `fantasy402`, `parlay21`, `classic.lvaction.com` · [`books.ts`](books.ts)        |
-| **Outs**           | Capacity / credentials                       | `out-SPEN-1` + live-product wire                                                 |
+| Layer             | Owns                                         | Examples                                                                            |
+| ----------------- | -------------------------------------------- | ----------------------------------------------------------------------------------- |
+| **Sports**        | Canonical `SportId`                          | `soccer`, `table_tennis`                                                            |
+| **Competitions**  | Canonical leagues under a sport + Plive map  | `table_tennis.setka_cup` · [`competitions.ts`](competitions.ts)                     |
+| **Odds line**     | Pandora coefficients only                    | `OddsLine` · period/marketType/selection · [`odds-selection.ts`](odds-selection.ts) |
+| **Ticket leg**    | Place-bet componentBet only                  | `TicketLeg` · periodId/marketId/key · same file                                     |
+| **Live products** | Coverage bindings + stream endpoints         | `plive`, `ezlive`, `ultralive`, `maglive` · `live-product-endpoints.ts`             |
+| **Skins**         | White-labels + hosts + offered live products | `buckeye`, `ace`, `metallic`, `sts`, `1bv`, `lvaction`, `magnum`                    |
+| **Books**         | Desk brands under a skin (host-derived)      | `fantasy402`, `parlay21`, `classic.lvaction.com` · [`books.ts`](books.ts)           |
+| **Outs**          | Capacity / credentials                       | `out-SPEN-1` + live-product wire                                                    |
 
 ### Competitions (Plive-aware)
 
@@ -39,28 +40,32 @@ resolveCompetition({
 Unknown / junk league labels return `undefined`. `skin_events` does not yet
 stamp `competition_id` (follow-up).
 
-### Odds selection (not inventory)
+### Three planes (inventory · odds · ticket)
 
 ```ts
 import {
-  describeSelection,
-  EXAMPLE_DARIN_PLACHY_SELECTION,
-  selectionFromTicketLeg,
+  describeOddsLine,
+  describeTicketLeg,
+  EXAMPLE_DARIN_PLACHY_ODDS_LINE,
+  EXAMPLE_DARIN_PLACHY_TICKET_LEG,
+  ticketLegFromOddsLine,
 } from '../domain/index.ts';
 
-describeSelection(EXAMPLE_DARIN_PLACHY_SELECTION);
-// → event=196878741 period=match market=moneyline side=2
+describeOddsLine(EXAMPLE_DARIN_PLACHY_ODDS_LINE);
+// → odds event=196878741 period=match market=moneyline selection=2
 
-selectionFromTicketLeg({
-  eventId: 196878741,
-  periodId: 'm',
-  marketId: '3',
-  key: '2',
-});
+describeTicketLeg(EXAMPLE_DARIN_PLACHY_TICKET_LEG);
+// → ticket event=196878741 period=match market=moneyline key=2
+
+// Explicit bridge only — types stay distinct
+ticketLegFromOddsLine(EXAMPLE_DARIN_PLACHY_ODDS_LINE);
 ```
 
-`stream_id` (inventory) ≠ `eventId` (odds/ticket). Join is a later slice. DOM
-`set-to-max-{event}-m-{n}` is incomplete — use ticket coords.
+| Plane     | Type                             | Do not mix with                        |
+| --------- | -------------------------------- | -------------------------------------- |
+| Inventory | `InventoryEventRef.streamId`     | odds / ticket eventId                  |
+| Odds      | `OddsLine` (Pandora field names) | ticket without `ticketLegFromOddsLine` |
+| Ticket    | `TicketLeg` (componentBet names) | odds without `oddsLineFromTicketLeg`   |
 
 Desk hosts live only in `SKINS[].hosts`. Stream/widget infra URLs live only in
 `live-product-endpoints.ts` (`PLIVE_STREAM_ENDPOINTS`,

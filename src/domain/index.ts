@@ -126,18 +126,23 @@ export {
 } from './resolve-competition.ts';
 
 export {
-  EXAMPLE_DARIN_PLACHY_SELECTION,
+  EXAMPLE_DARIN_PLACHY_ODDS_LINE,
+  EXAMPLE_DARIN_PLACHY_TICKET_LEG,
   KNOWN_MARKET_LABELS,
-  describeSelection,
+  describeOddsLine,
+  describeTicketLeg,
   marketLabel,
+  oddsLineFromCoefficient,
+  oddsLineFromTicketLeg,
   periodLabel,
-  selectionFromCoefficientLine,
-  selectionFromTicketLeg,
+  ticketLegFromOddsLine,
+  ticketLegFromWire,
   type CoefficientLineCoords,
   type InventoryEventRef,
   type KnownMarketId,
   type OddsEventRef,
-  type OddsSelection,
+  type OddsLine,
+  type TicketLeg,
   type TicketLegCoords,
 } from './odds-selection.ts';
 
