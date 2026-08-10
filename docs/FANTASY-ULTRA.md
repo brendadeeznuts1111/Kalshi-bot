@@ -33,6 +33,27 @@ Book adapter and coverage inventory for a **PPH / Fantasy402** desk (skin
 | Adapter DTO types                      | `src/partner/types.ts`                    |
 | Out env profile                        | `src/partner/account-profile.ts`          |
 | Smoke CLI                              | `bun run partner:test-fantasy`            |
+| Widget domain harvest                  | `bun run domain:widget-extract`           |
+
+## Widget domain harvest (sports · markets · leagues)
+
+| Data | Source | Notes |
+| ---- | ------ | ----- |
+| `MARKET_*` labels | Shell HTML `LANGUAGES.texts` | Static, ~400+ keys |
+| Rules sport icons | Shell HTML rules `icon` | Maps → `SportId` |
+| Live sports + market flags | Pandora `live.sports` | Dynamic catalog |
+| Leagues | Pandora `live.leagues` | **Not** static in HTML |
+| Wager / market types | Pandora `live.wagerTypes` | Name + short codes |
+
+```bash
+bun run domain:widget-extract                 # shell + Pandora (~12s)
+bun run domain:widget-extract -- --html-only
+bun run domain:widget-extract -- --write      # research/cache/widget-domain-snapshot.json
+bun run domain:widget-extract -- --json
+```
+
+Code: `src/domain/widget-domain-extract.ts`. No gsid. Gaps print vs domain
+`SPORTS`; league promote remains `inventory:leagues --promote`.
 
 ## Network-capture flow (implemented)
 
@@ -535,6 +556,7 @@ bun run domain:sports -- --leagues=table_tennis
 bun run domain:sports -- --leagues=all --json
 bun run domain:sports -- --map        # offline static map
 bun run domain:sports -- --seed       # refresh provider_sport_mappings
+bun run domain:widget-extract         # HTML MARKET_* + Pandora sports/leagues/wagers
 bun run inventory:sync -- --sport=all    # events + leagues (plive shell → ezlive cover)
 bun run inventory:leagues -- --unmapped  # promote feed for COMPETITIONS
 ```

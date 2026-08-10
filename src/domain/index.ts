@@ -174,6 +174,28 @@ export {
 } from './competition-promote.ts';
 
 export {
+  buildDomainGaps,
+  defaultWidgetDomainCachePath,
+  extractLanguageTexts,
+  extractMarketLabelsFromTexts,
+  extractShellSportsFromScript,
+  extractWidgetDomain,
+  formatWidgetDomainSnapshot,
+  mapLiveSportNameToSportId,
+  parseLiveLeaguesRoom,
+  parseLiveSportsRoom,
+  parseWagerTypesRoom,
+  writeWidgetDomainSnapshot,
+  type DomainGapReport,
+  type WidgetDomainSnapshot,
+  type WidgetLiveLeague,
+  type WidgetLiveSport,
+  type WidgetMarketLabel,
+  type WidgetShellSport,
+  type WidgetWagerType,
+} from './widget-domain-extract.ts';
+
+export {
   EXAMPLE_DARIN_PLACHY_ODDS_LINE,
   EXAMPLE_DARIN_PLACHY_TICKET_LEG,
   KNOWN_MARKET_LABELS,

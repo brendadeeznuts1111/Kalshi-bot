@@ -62,6 +62,30 @@ bun run inventory:leagues -- --backfill          # stamp ids (fresh process)
 Logic: [`competition-promote.ts`](competition-promote.ts) — junk filter +
 `planCompetitionPromote` + `applyCompetitionRecordsToSource`.
 
+### Widget domain harvest (sports · markets · leagues)
+
+Provider labels from **plive shell HTML** + **Pandora rooms** (not seat gsid):
+
+| Data | Source |
+| ---- | ------ |
+| `MARKET_*` display strings | HTML `LANGUAGES` → `texts` (English) |
+| Rules sport icons | HTML rules `icon` slugs |
+| Live sports + market flags | Pandora `live.sports` |
+| Leagues (dynamic) | Pandora `live.leagues` |
+| Wager / market-type catalog | Pandora `live.wagerTypes` |
+
+```bash
+bun run domain:widget-extract                 # shell + Pandora (~12s)
+bun run domain:widget-extract -- --html-only
+bun run domain:widget-extract -- --write      # research/cache/widget-domain-snapshot.json
+bun run domain:widget-extract -- --json
+```
+
+Code: [`widget-domain-extract.ts`](widget-domain-extract.ts). Leagues are **not**
+static in HTML — re-run with Pandora when the board is live to grow the set.
+Compare gaps to `SPORTS` / `KNOWN_MARKET_LABELS`; promote leagues still via
+`inventory:leagues --promote`.
+
 ### Three planes (inventory · odds · ticket)
 
 ```ts

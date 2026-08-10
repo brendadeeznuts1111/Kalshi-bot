@@ -68,6 +68,7 @@
     "domain:books": "bun tools/domain-cli.ts --books",
     "domain:host-discover": "bun tools/host-discover-cli.ts",
     "domain:sports": "bun tools/domain-sports-cli.ts",
+    "domain:widget-extract": "bun tools/domain-widget-extract-cli.ts",
     "inventory:sync": "bun tools/inventory-sync-cli.ts",
     "inventory:watch": "bun tools/inventory-watch-cli.ts",
     "inventory:leagues": "bun tools/inventory-leagues-cli.ts",
