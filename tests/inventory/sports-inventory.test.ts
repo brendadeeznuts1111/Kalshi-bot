@@ -1,8 +1,10 @@
 // @see https://bun.com/docs/test/index#run-tests
 import { describe, expect, test } from 'bun:test';
 import {
+  formatSportBoardSamples,
   inventoryFromStreamList,
   staticSportMapSummary,
+  type SportBoardSample,
 } from '../../src/inventory/sports-inventory.ts';
 
 describe('sports-inventory', () => {
@@ -63,5 +65,25 @@ describe('sports-inventory', () => {
     expect(s.buckets).toContain('table_tennis');
     expect(s.primary).toBeGreaterThan(0);
     expect(s.withFeedId).toBeGreaterThan(0);
+  });
+
+  test('formatSportBoardSamples lists buckets', () => {
+    const samples: SportBoardSample[] = [
+      {
+        bucket: 'table_tennis',
+        inventoryId: '1',
+        league: 'Setka',
+        home: 'A',
+        away: 'B',
+        sport: 'Table Tennis',
+        pliveUrl: 'https://example/#!/event/1',
+        pandoraLineCount: 0,
+        periods: ['m'],
+      },
+    ];
+    const text = formatSportBoardSamples(samples);
+    expect(text).toContain('table_tennis');
+    expect(text).toContain('Setka');
+    expect(text).toContain('periods=[m]');
   });
 });

@@ -45,14 +45,6 @@ import {
   type SkinEventUpsertResult,
 } from './skin-events-store.ts';
 
-export {
-  matchBookedOddsEventId,
-  competitorNameTokens,
-  foldCompetitorToken,
-  catalogSportAliases,
-  type BookedMatchEntry,
-} from './booked-match.ts';
-
 /** Which skin_events rows to soft-match against Statscore booked list. */
 export type EnrichBookedScope = 'new' | 'board' | 'unlinked';
 
@@ -133,7 +125,7 @@ export type InventorySyncReport = {
 };
 
 /** Histogram of normalized sport keys from inventory rows or wire events. */
-export function sportHistogramFromEvents(
+function sportHistogramFromEvents(
   events: Array<{ sport?: string | null }>
 ): Record<string, number> {
   const by: Record<string, number> = {};
@@ -144,7 +136,7 @@ export function sportHistogramFromEvents(
   return by;
 }
 
-export function formatSportHistogram(hist: Record<string, number>): string {
+function formatSportHistogram(hist: Record<string, number>): string {
   const parts = Object.entries(hist)
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
     .map(([s, n]) => `${s}=${n}`);
@@ -259,7 +251,7 @@ export function formatOddsLinkCoverage(c: OddsLinkCoverage): string {
   return `odds-link book=${c.bookId} linked=${c.linked}/${c.total} (${c.linkedPct}%) unlinked=${c.unlinked}`;
 }
 
-export type EnrichCandidate = {
+type EnrichCandidate = {
   inventoryId: string;
   home: string | null;
   away: string | null;

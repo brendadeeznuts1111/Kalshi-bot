@@ -97,25 +97,28 @@ export {
 } from './fantasy-ultra/market-decode.ts';
 
 export {
-  formatSportHistogram,
   formatSyncReport,
-  matchBookedOddsEventId,
   parseEnrichBookedScope,
   applyBookedOddsEnrich,
   listUnlinkedSkinEvents,
   collectBoardEnrichCandidates,
   oddsLinkCoverage,
   formatOddsLinkCoverage,
-  competitorNameTokens,
-  foldCompetitorToken,
   planInventoryUpsert,
   runInventorySync,
-  sportHistogramFromEvents,
   type EnrichBookedScope,
   type InventorySyncOptions,
   type InventorySyncReport,
   type OddsLinkCoverage,
 } from '../inventory/sync.ts';
+
+export {
+  matchBookedOddsEventId,
+  competitorNameTokens,
+  foldCompetitorToken,
+  catalogSportAliases,
+  type BookedMatchEntry,
+} from '../inventory/booked-match.ts';
 
 export {
   fetchPublicBookedCatalog,

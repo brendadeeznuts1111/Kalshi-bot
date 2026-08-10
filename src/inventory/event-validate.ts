@@ -22,7 +22,7 @@ import {
   type EventLookupResult,
 } from './event-lookup.ts';
 
-export type PlaneStatus = 'ok' | 'fail' | 'warn' | 'skip';
+type PlaneStatus = 'ok' | 'fail' | 'warn' | 'skip';
 
 export type PlaneResult = {
   status: PlaneStatus;
@@ -72,7 +72,7 @@ export type EventValidateReport = {
   } | null;
 };
 
-export type EventValidateOptions = {
+type EventValidateOptions = {
   eventId: string | number;
   periodId?: string | null;
   pandoraSeconds?: number;

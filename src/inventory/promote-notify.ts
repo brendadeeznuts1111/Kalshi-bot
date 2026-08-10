@@ -13,7 +13,7 @@ export type PromoteNotifyState = {
   sentAtMs: number;
 };
 
-export type PlanPromoteNotifyResult = {
+type PlanPromoteNotifyResult = {
   shouldSend: boolean;
   reason: 'force' | 'first' | 'new_ids' | 'no_candidates' | 'unchanged';
   newIds: string[];
@@ -91,7 +91,7 @@ async function savePromoteNotifyState(
   await Bun.write(path, JSON.stringify(state, null, 2) + '\n');
 }
 
-export type MaybeNotifyPromoteOptions = {
+type MaybeNotifyPromoteOptions = {
   /** Force send even if candidate set unchanged (CLI --notify). */
   force?: boolean;
   statePath?: string;

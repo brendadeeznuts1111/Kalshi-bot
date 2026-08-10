@@ -10,7 +10,7 @@ export type BookedMatchEntry = {
   competition?: string | null;
 };
 
-export type BookedMatchQuery = {
+type BookedMatchQuery = {
   home: string | null;
   away: string | null;
   /** Inventory sport id / bucket / display (e.g. table_tennis, tennis). */

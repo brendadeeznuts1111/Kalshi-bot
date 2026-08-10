@@ -1,7 +1,7 @@
 /**
  * Structured JSON-line logs for inventory enrich (ops / agents).
  */
-export type EnrichLogLevel = 'info' | 'warn' | 'error';
+type EnrichLogLevel = 'info' | 'warn' | 'error';
 
 export function enrichLog(
   level: EnrichLogLevel,

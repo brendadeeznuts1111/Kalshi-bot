@@ -168,7 +168,7 @@ export function liveEventToRow(
   };
 }
 
-export type UpsertSkinLiveEventsOptions = {
+type UpsertSkinLiveEventsOptions = {
   nowMs?: number;
   identity?: InventoryIdentity;
 };

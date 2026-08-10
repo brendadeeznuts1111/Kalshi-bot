@@ -31,11 +31,13 @@ import {
   formatOddsWatchSummary,
 } from '../src/inventory/event-lookup-format.ts';
 import {
-  formatSportBoardSamples,
   lookupEvent,
   parseEventRef,
-  sampleStreamListBySport,
 } from '../src/inventory/event-lookup.ts';
+import {
+  formatSportBoardSamples,
+  sampleStreamListBySport,
+} from '../src/inventory/sports-inventory.ts';
 import {
   scanPandoraEventBoard,
   summarizeOddsWatch,
