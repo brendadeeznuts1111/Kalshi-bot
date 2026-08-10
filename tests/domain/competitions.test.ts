@@ -40,14 +40,14 @@ describe('competitions registry', () => {
   test('resolveCompetition maps Masters. Poland. Women with gender', () => {
     const hit = resolveCompetition({
       liveProduct: 'plive',
-      streamBucket: 'table_tennis',
+      inventoryBucket: 'table_tennis',
       league: 'Masters. Poland. Women',
     });
     expect(hit?.competitionId).toBe('table_tennis.masters_poland_women');
     expect(hit?.competition.gender).toBe('women');
     const men = resolveCompetition({
       liveProduct: 'plive',
-      streamBucket: 'table_tennis',
+      inventoryBucket: 'table_tennis',
       league: 'Masters. Poland',
     });
     expect(men?.competitionId).toBe('table_tennis.masters_poland');
@@ -62,7 +62,7 @@ describe('competitions registry', () => {
     expect(hit?.competitionId).toBe('soccer.usa_mpl');
     expect(hit?.liveProduct).toBe('ezlive');
     expect(hit?.mappingLiveProduct).toBe('plive');
-    expect(hit?.competition.providerMappings.plive?.streamBucket).toBe('football');
+    expect(hit?.competition.providerMappings.plive?.inventoryBucket).toBe('football');
   });
 
   test('unknown and junk leagues do not resolve', () => {

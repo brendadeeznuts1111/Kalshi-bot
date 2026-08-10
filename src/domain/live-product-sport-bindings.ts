@@ -21,7 +21,7 @@ export type BindingStatus = (typeof BINDING_STATUSES)[number];
 export type LiveProductSportBinding = {
   liveProduct: LiveProductId;
   sportId: SportId;
-  streamBucket: string;
+  inventoryBucket: string;
   apiSportId: number | null;
   widgetSportId: number | null;
   label: string;
@@ -33,7 +33,7 @@ export type SkinSportBinding = LiveProductSportBinding;
 
 type BindingSeed = {
   sportId: SportId;
-  streamBucket: string;
+  inventoryBucket: string;
   apiSportId?: number | null;
   widgetSportId?: number | null;
   label: string;
@@ -43,7 +43,7 @@ type BindingSeed = {
 const BUCKEYE_LIVE_BINDINGS: readonly BindingSeed[] = [
   {
     sportId: 'soccer',
-    streamBucket: 'football',
+    inventoryBucket: 'football',
     apiSportId: 1,
     widgetSportId: 1,
     label: 'Soccer',
@@ -51,7 +51,7 @@ const BUCKEYE_LIVE_BINDINGS: readonly BindingSeed[] = [
   },
   {
     sportId: 'tennis',
-    streamBucket: 'tennis',
+    inventoryBucket: 'tennis',
     apiSportId: 2,
     widgetSportId: 2,
     label: 'Tennis',
@@ -59,7 +59,7 @@ const BUCKEYE_LIVE_BINDINGS: readonly BindingSeed[] = [
   },
   {
     sportId: 'basketball',
-    streamBucket: 'basketball',
+    inventoryBucket: 'basketball',
     apiSportId: 4,
     widgetSportId: 4,
     label: 'Basketball',
@@ -67,65 +67,65 @@ const BUCKEYE_LIVE_BINDINGS: readonly BindingSeed[] = [
   },
   {
     sportId: 'table_tennis',
-    streamBucket: 'table_tennis',
+    inventoryBucket: 'table_tennis',
     apiSportId: 93,
     widgetSportId: 220,
     label: 'Table Tennis',
     status: 'primary',
   },
-  { sportId: 'ice_hockey', streamBucket: 'ice_hockey', label: 'Ice Hockey', status: 'inventory' },
-  { sportId: 'volleyball', streamBucket: 'volleyball', label: 'Volleyball', status: 'inventory' },
-  { sportId: 'handball', streamBucket: 'handball', label: 'Handball', status: 'inventory' },
-  { sportId: 'baseball', streamBucket: 'baseball', label: 'Baseball', status: 'inventory' },
-  { sportId: 'bandy', streamBucket: 'bandy', label: 'Bandy', status: 'inventory' },
-  { sportId: 'snooker', streamBucket: 'snooker', label: 'Snooker', status: 'inventory' },
-  { sportId: 'billiards', streamBucket: 'billiards', label: 'Billiards', status: 'inventory' },
-  { sportId: 'badminton', streamBucket: 'badminton', label: 'Badminton', status: 'inventory' },
-  { sportId: 'cricket', streamBucket: 'cricket', label: 'Cricket', status: 'inventory' },
-  { sportId: 'golf', streamBucket: 'golf', label: 'Golf', status: 'inventory' },
-  { sportId: 'cycling', streamBucket: 'bicycle', label: 'Cycling', status: 'inventory' },
-  { sportId: 'boxing', streamBucket: 'boxing', label: 'Boxing', status: 'inventory' },
-  { sportId: 'formula_1', streamBucket: 'formula_1', label: 'Formula 1', status: 'inventory' },
-  { sportId: 'rugby', streamBucket: 'rugby', label: 'Rugby', status: 'inventory' },
-  { sportId: 'hurling', streamBucket: 'hurling', label: 'Hurling', status: 'inventory' },
+  { sportId: 'ice_hockey', inventoryBucket: 'ice_hockey', label: 'Ice Hockey', status: 'inventory' },
+  { sportId: 'volleyball', inventoryBucket: 'volleyball', label: 'Volleyball', status: 'inventory' },
+  { sportId: 'handball', inventoryBucket: 'handball', label: 'Handball', status: 'inventory' },
+  { sportId: 'baseball', inventoryBucket: 'baseball', label: 'Baseball', status: 'inventory' },
+  { sportId: 'bandy', inventoryBucket: 'bandy', label: 'Bandy', status: 'inventory' },
+  { sportId: 'snooker', inventoryBucket: 'snooker', label: 'Snooker', status: 'inventory' },
+  { sportId: 'billiards', inventoryBucket: 'billiards', label: 'Billiards', status: 'inventory' },
+  { sportId: 'badminton', inventoryBucket: 'badminton', label: 'Badminton', status: 'inventory' },
+  { sportId: 'cricket', inventoryBucket: 'cricket', label: 'Cricket', status: 'inventory' },
+  { sportId: 'golf', inventoryBucket: 'golf', label: 'Golf', status: 'inventory' },
+  { sportId: 'cycling', inventoryBucket: 'bicycle', label: 'Cycling', status: 'inventory' },
+  { sportId: 'boxing', inventoryBucket: 'boxing', label: 'Boxing', status: 'inventory' },
+  { sportId: 'formula_1', inventoryBucket: 'formula_1', label: 'Formula 1', status: 'inventory' },
+  { sportId: 'rugby', inventoryBucket: 'rugby', label: 'Rugby', status: 'inventory' },
+  { sportId: 'hurling', inventoryBucket: 'hurling', label: 'Hurling', status: 'inventory' },
   {
     sportId: 'gaelic_football',
-    streamBucket: 'gaelic_football',
+    inventoryBucket: 'gaelic_football',
     label: 'Gaelic Football',
     status: 'inventory',
   },
-  { sportId: 'floorball', streamBucket: 'floorball', label: 'Floorball', status: 'inventory' },
-  { sportId: 'motorsport', streamBucket: 'motorsport', label: 'Motorsport', status: 'inventory' },
+  { sportId: 'floorball', inventoryBucket: 'floorball', label: 'Floorball', status: 'inventory' },
+  { sportId: 'motorsport', inventoryBucket: 'motorsport', label: 'Motorsport', status: 'inventory' },
   {
     sportId: 'american_football',
-    streamBucket: 'american_football',
+    inventoryBucket: 'american_football',
     label: 'American Football',
     status: 'inventory',
   },
   {
     sportId: 'australian_rules',
-    streamBucket: 'australian_rules',
+    inventoryBucket: 'australian_rules',
     label: 'Australian Rules',
     status: 'inventory',
   },
-  { sportId: 'darts', streamBucket: 'darts', label: 'Darts', status: 'inventory' },
-  { sportId: 'futsal', streamBucket: 'futsal', label: 'Futsal', status: 'inventory' },
-  { sportId: 'ufc', streamBucket: 'ufc', label: 'UFC', status: 'inventory' },
+  { sportId: 'darts', inventoryBucket: 'darts', label: 'Darts', status: 'inventory' },
+  { sportId: 'futsal', inventoryBucket: 'futsal', label: 'Futsal', status: 'inventory' },
+  { sportId: 'ufc', inventoryBucket: 'ufc', label: 'UFC', status: 'inventory' },
   {
     sportId: 'martial_arts',
-    streamBucket: 'martial_arts',
+    inventoryBucket: 'martial_arts',
     label: 'Martial Arts',
     status: 'inventory',
   },
   {
     sportId: 'horse_racing',
-    streamBucket: 'horse_racing',
+    inventoryBucket: 'horse_racing',
     label: 'Horse Racing',
     status: 'inventory',
   },
   {
     sportId: 'sports_channels',
-    streamBucket: 'sports_channels',
+    inventoryBucket: 'sports_channels',
     label: 'Sports Channels',
     status: 'inventory',
   },
@@ -143,7 +143,7 @@ function expand(
     out.push({
       liveProduct,
       sportId: s.sportId,
-      streamBucket: s.streamBucket,
+      inventoryBucket: s.inventoryBucket,
       apiSportId: s.apiSportId ?? null,
       widgetSportId: s.widgetSportId ?? null,
       label: s.label,

@@ -17,7 +17,7 @@ export type ResolveSportQuery = {
   liveProduct: string;
   /** @deprecated use liveProduct */
   skin?: string;
-  streamBucket?: string;
+  inventoryBucket?: string;
   apiSportId?: number;
   widgetSportId?: number;
   canonical?: string;
@@ -53,9 +53,9 @@ export function resolveSport(query: ResolveSportQuery): ResolvedSport | undefine
     if (hit) return { sportId: hit.sportId, binding: hit, liveProduct };
   }
 
-  if (query.streamBucket != null) {
-    const bucket = query.streamBucket.trim().toLowerCase();
-    const hit = rows.find(r => r.streamBucket === bucket);
+  if (query.inventoryBucket != null) {
+    const bucket = query.inventoryBucket.trim().toLowerCase();
+    const hit = rows.find(r => r.inventoryBucket === bucket);
     if (hit) return { sportId: hit.sportId, binding: hit, liveProduct };
   }
 
