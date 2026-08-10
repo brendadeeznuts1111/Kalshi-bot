@@ -22,6 +22,7 @@ import { listLiveProductSportBindings } from './live-product-sport-bindings.ts';
 import {
   defaultWidgetDomainCachePath,
   mapLiveSportNameToSportId,
+  resolveLiveSportId,
   type WidgetDomainSnapshot,
   type WidgetLiveLeague,
   type WidgetLiveSport,
@@ -105,7 +106,9 @@ export function buildPandoraSportMap(
   return liveSports.map(s => ({
     feedSportId: s.id,
     name: s.name,
-    sportId: mapLiveSportNameToSportId(s.name),
+    sportId:
+      s.sportIdCanonical ??
+      resolveLiveSportId({ feedSportId: s.id, name: s.name }),
   }));
 }
 
@@ -159,9 +162,20 @@ export function liveLeaguesToPromoteInputs(
   > = [];
 
   for (const league of leagues) {
-    const feedSportId = league.sportId ?? '';
+    // Prefer display feed id `s`, then platformSport (parent shell)
+    const feedSportId =
+      league.sportId ?? league.platformSport ?? '';
     const sm = byFeed.get(feedSportId);
-    const sportId = sm?.sportId ?? null;
+    const sportId =
+      league.sportIdCanonical ??
+      sm?.sportId ??
+      resolveLiveSportId({
+        feedSportId: feedSportId || null,
+        name: null,
+      }) ??
+      (league.platformSport
+        ? resolveLiveSportId({ feedSportId: league.platformSport, name: null })
+        : null);
     if (!sportId) continue;
     if (want && sportId !== want) continue;
     const leagueKey = league.name.trim();

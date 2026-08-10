@@ -43,7 +43,26 @@ async function main(): Promise<void> {
     console.error(`seeded ${n} fantasy402 sport mappings → provider_sport_mappings`);
   }
 
-  if (hasFlag("map")) {
+  if (hasFlag("feed") || hasFlag("map")) {
+    if (hasFlag("feed") && !hasFlag("map")) {
+      const { listPandoraFeedSports } = await import(
+        "../src/domain/pandora-feed-sports.ts"
+      );
+      const rows = listPandoraFeedSports();
+      if (hasFlag("json")) {
+        console.log(JSON.stringify({ count: rows.length, sports: rows }, null, 2));
+        return;
+      }
+      console.log(
+        `pandora feed sports: ${rows.length} · core=${rows.filter((r) => r.kind === "core").length} · mapped=${rows.filter((r) => r.sportId).length}`,
+      );
+      for (const r of rows) {
+        console.log(
+          `  ${String(r.feedSportId).padStart(3)}  ${(r.name).padEnd(28)} ${(r.sportId ?? "—").padEnd(18)} ${r.kind}`,
+        );
+      }
+      return;
+    }
     const summary = staticSportMapSummary();
     const payload = {
       summary,
@@ -68,7 +87,7 @@ async function main(): Promise<void> {
     if (hasFlag("json")) console.log(JSON.stringify(payload, null, 2));
     else {
       console.log(
-        `static map: ${summary.total} buckets · ${summary.primary} primary · ${summary.withApiId} with API id`,
+        `static map: ${summary.total} buckets · ${summary.primary} primary · feed=${summary.withFeedId} · api=${summary.withApiId}`,
       );
       console.log(
         "  planes: feed=Pandora eventData · widget=shell sportOrder · api=ticket (when set)",

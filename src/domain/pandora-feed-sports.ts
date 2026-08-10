@@ -93,9 +93,16 @@ export const PANDORA_FEED_SPORTS: readonly PandoraFeedSport[] = [
   { feedSportId: 125, name: 'Formula 1', sportId: 'formula_1', kind: 'core' },
   { feedSportId: 135, name: 'Floorball', sportId: 'floorball', kind: 'core' },
   { feedSportId: 172, name: 'Curling', sportId: null, kind: 'unmapped' },
+  { feedSportId: 91, name: 'Curling', sportId: null, kind: 'unmapped' },
   { feedSportId: 218, name: 'Padel', sportId: null, kind: 'unmapped' },
+  { feedSportId: 113, name: 'Water Polo', sportId: null, kind: 'unmapped' },
+  { feedSportId: 120, name: 'Field Hockey', sportId: null, kind: 'unmapped' },
+  { feedSportId: 122, name: 'Lacrosse', sportId: null, kind: 'unmapped' },
+  { feedSportId: 190, name: 'Softball', sportId: 'baseball', kind: 'variant', parentFeedSportId: 1 },
+  { feedSportId: 126, name: 'Universal', sportId: null, kind: 'unmapped' },
+  { feedSportId: 127, name: 'Combat Sport', sportId: 'martial_arts', kind: 'variant', parentFeedSportId: 6 },
 
-  // ── Variants (props / futures / college) ───────────────────────────────
+  // ── Variants (props / futures / college / esports) ─────────────────────
   {
     feedSportId: 24,
     name: 'Basketball Props',
@@ -139,6 +146,20 @@ export const PANDORA_FEED_SPORTS: readonly PandoraFeedSport[] = [
     parentFeedSportId: 1,
   },
   {
+    feedSportId: 52,
+    name: 'Racing Futures',
+    sportId: 'motorsport',
+    kind: 'variant',
+    parentFeedSportId: 9,
+  },
+  {
+    feedSportId: 53,
+    name: 'Golf Props',
+    sportId: 'golf',
+    kind: 'variant',
+    parentFeedSportId: 7,
+  },
+  {
     feedSportId: 55,
     name: 'Soccer Futures',
     sportId: 'soccer',
@@ -158,6 +179,13 @@ export const PANDORA_FEED_SPORTS: readonly PandoraFeedSport[] = [
     sportId: 'tennis',
     kind: 'variant',
     parentFeedSportId: 8,
+  },
+  {
+    feedSportId: 64,
+    name: 'PROPS - NHL 40C',
+    sportId: 'ice_hockey',
+    kind: 'variant',
+    parentFeedSportId: 4,
   },
   {
     feedSportId: 102,
@@ -181,6 +209,13 @@ export const PANDORA_FEED_SPORTS: readonly PandoraFeedSport[] = [
     parentFeedSportId: 3,
   },
   {
+    feedSportId: 121,
+    name: 'LFA',
+    sportId: 'american_football',
+    kind: 'variant',
+    parentFeedSportId: 3,
+  },
+  {
     feedSportId: 130,
     name: 'Nascar',
     sportId: 'motorsport',
@@ -194,6 +229,32 @@ export const PANDORA_FEED_SPORTS: readonly PandoraFeedSport[] = [
     kind: 'variant',
     parentFeedSportId: 2,
   },
+  {
+    feedSportId: 132,
+    name: 'esport-cs:go',
+    sportId: 'sports_channels',
+    kind: 'variant',
+    parentFeedSportId: 114,
+  },
+  {
+    feedSportId: 133,
+    name: 'esport-fifa',
+    sportId: 'sports_channels',
+    kind: 'variant',
+    parentFeedSportId: 114,
+  },
+  {
+    feedSportId: 134,
+    name: 'esport-dota',
+    sportId: 'sports_channels',
+    kind: 'variant',
+    parentFeedSportId: 114,
+  },
+  // Dummy shells (keep listed so feed coverage = 100%)
+  { feedSportId: 103, name: 'Rugby Union Dummy', sportId: 'rugby', kind: 'variant', parentFeedSportId: 92 },
+  { feedSportId: 104, name: 'Rugby League Dummy', sportId: 'rugby', kind: 'variant', parentFeedSportId: 92 },
+  { feedSportId: 128, name: 'Rugby League Dummy', sportId: 'rugby', kind: 'variant', parentFeedSportId: 92 },
+  { feedSportId: 129, name: 'Rugby Union Dummy', sportId: 'rugby', kind: 'variant', parentFeedSportId: 92 },
 
   // ── Event shells (map to parent when clear) ────────────────────────────
   {
@@ -211,11 +272,46 @@ export const PANDORA_FEED_SPORTS: readonly PandoraFeedSport[] = [
     parentFeedSportId: 5,
   },
   {
+    feedSportId: 119,
+    name: 'Liga MX',
+    sportId: 'soccer',
+    kind: 'event',
+    parentFeedSportId: 5,
+  },
+  {
+    feedSportId: 123,
+    name: "FIFA Women's World Cup",
+    sportId: 'soccer',
+    kind: 'event',
+    parentFeedSportId: 5,
+  },
+  {
+    feedSportId: 264,
+    name: "FIFA Women's World Cup",
+    sportId: 'soccer',
+    kind: 'event',
+    parentFeedSportId: 5,
+  },
+  {
+    feedSportId: 214,
+    name: 'FIFA World Cup 2026',
+    sportId: 'soccer',
+    kind: 'event',
+    parentFeedSportId: 5,
+  },
+  {
     feedSportId: 220,
     name: 'Top Soccer',
     sportId: 'soccer',
     kind: 'variant',
     parentFeedSportId: 5,
+  },
+  {
+    feedSportId: 99,
+    name: 'Super Bowl LVI',
+    sportId: 'american_football',
+    kind: 'event',
+    parentFeedSportId: 3,
   },
   {
     feedSportId: 203,
@@ -238,6 +334,27 @@ export const PANDORA_FEED_SPORTS: readonly PandoraFeedSport[] = [
     kind: 'event',
     parentFeedSportId: 3,
   },
+  {
+    feedSportId: 112,
+    name: 'IIHF World Championship',
+    sportId: 'ice_hockey',
+    kind: 'event',
+    parentFeedSportId: 4,
+  },
+  {
+    feedSportId: 216,
+    name: 'IIHF World Championship',
+    sportId: 'ice_hockey',
+    kind: 'event',
+    parentFeedSportId: 4,
+  },
+  {
+    feedSportId: 202,
+    name: 'Hockey World Juniors',
+    sportId: 'ice_hockey',
+    kind: 'event',
+    parentFeedSportId: 4,
+  },
 
   // ── Explicitly unmapped / specialty (do not invent SportId) ────────────
   { feedSportId: 11, name: 'Olympics', sportId: null, kind: 'unmapped' },
@@ -250,9 +367,7 @@ export const PANDORA_FEED_SPORTS: readonly PandoraFeedSport[] = [
   { feedSportId: 115, name: 'Politics', sportId: null, kind: 'unmapped' },
 ] as const;
 
-// Deduplicate feed 114 if listed twice - I accidentally listed 114 twice.
-// Fix: remove duplicate in array - I'll use a Map when indexing.
-
+/** Index by feedSportId (first row wins if a id is listed twice). */
 const byFeedId = new Map<number, PandoraFeedSport>();
 for (const row of PANDORA_FEED_SPORTS) {
   if (!byFeedId.has(row.feedSportId)) {

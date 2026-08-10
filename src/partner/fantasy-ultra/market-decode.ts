@@ -13,6 +13,7 @@
 export const PANDORA_MARKET_LABELS = {
   '1': 'moneyline_3way',
   '3': 'moneyline',
+  '4': 'draw_no_bet',
   '5': 'total',
   '6': 'handicap',
   '7': 'total_points',
@@ -22,6 +23,7 @@ export const PANDORA_MARKET_LABELS = {
   '18': 'game_winner',
   '20': 'set_total_games',
   '21': 'set_game_handicap',
+  '30': 'outright_futures',
 } as const;
 
 export type PandoraMarketTypeId = keyof typeof PANDORA_MARKET_LABELS;

@@ -10,7 +10,11 @@ import {
   mapLiveSportNameToSportId,
   parseLiveLeaguesRoom,
   parseLiveSportsRoom,
+  parseSportPeriodRoom,
   parseWagerTypesRoom,
+  resolveLiveSportId,
+  sportPeriodLabel,
+  wagerTypeFamilyCounts,
 } from '../../src/domain/widget-domain-extract.ts';
 
 const FIXTURE_HTML = `<!doctype html><html><body>
@@ -60,23 +64,60 @@ describe('widget-domain-extract Pandora rooms', () => {
     const sports = parseLiveSportsRoom({
       '1': { n: 'Baseball', o: -1, m: { '3': 'primary', '5': true } },
       '2': { n: 'Basketball', o: 0 },
+      '3': { n: 'Football', o: 1 },
     });
-    expect(sports).toHaveLength(2);
+    expect(sports).toHaveLength(3);
     expect(sports[0]!.name).toBe('Baseball');
+    expect(sports.find(s => s.id === '3')?.sportIdCanonical).toBe(
+      'american_football'
+    );
     expect(mapLiveSportNameToSportId('Table Tennis')).toBe('table_tennis');
     expect(mapLiveSportNameToSportId('Am. Football')).toBe('american_football');
+    // Feed name "Football" is American football, not soccer
+    expect(mapLiveSportNameToSportId('Football')).toBe('american_football');
+    expect(mapLiveSportNameToSportId('Soccer')).toBe('soccer');
+    expect(resolveLiveSportId({ feedSportId: 3, name: 'Football' })).toBe(
+      'american_football'
+    );
 
     const leagues = parseLiveLeaguesRoom({
       '4': { n: 'NFL', s: 3, sn: 'NFL', o: -3 },
+      '7': { n: 'College Basketball', s: 102, platformSport: '2' },
       '99': { n: 'Setka Cup', s: 46, platformSport: '220' },
     });
     expect(leagues.find(l => l.name === 'NFL')?.sportId).toBe('3');
+    expect(leagues.find(l => l.name === 'NFL')?.sportIdCanonical).toBe(
+      'american_football'
+    );
+    expect(leagues.find(l => l.name === 'College Basketball')?.sportIdCanonical).toBe(
+      'basketball'
+    );
     expect(leagues.find(l => l.name === 'Setka Cup')?.platformSport).toBe('220');
 
     const wagers = parseWagerTypesRoom({
       '4': { n: 'Draw No Bet', sn: 'DNB', mcId: 1, tp: 4 },
+      '5': { n: 'Total', sn: 'TOTAL', mcId: 2, tp: 5 },
+      '6': { n: 'Also Total', sn: 'T2', mcId: 2, tp: 5 },
     });
-    expect(wagers[0]!.shortName).toBe('DNB');
+    expect(wagers.find(w => w.id === '4')?.shortName).toBe('DNB');
+    const fam = wagerTypeFamilyCounts(wagers);
+    expect(fam.find(f => f.typeId === 5)?.count).toBe(2);
+  });
+
+  test('parses sportPeriod room labels by feed sport', () => {
+    const periods = parseSportPeriodRoom({
+      en: {
+        periods: {
+          '5': { m: 'Match', h1: '1st Half', h2: '2nd Half' },
+          '93': { m: 'Match', s1: 'Set 1', s2: 'Set 2', s3: 'Set 3' },
+        },
+        abbreviations: { Half: 'H' },
+      },
+    });
+    expect(periods?.primary?.language).toBe('en');
+    expect(sportPeriodLabel(periods, 5, 'h1')).toBe('1st Half');
+    expect(sportPeriodLabel(periods, 93, 's2')).toBe('Set 2');
+    expect(sportPeriodLabel(periods, 8, 'm')).toBeNull();
   });
 
   test('extractWidgetDomain merges html + injected rooms', async () => {

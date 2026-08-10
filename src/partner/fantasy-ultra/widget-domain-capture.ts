@@ -15,6 +15,7 @@ export type PandoraDomainRooms = {
   sports: unknown | null;
   leagues: unknown | null;
   wagerTypes: unknown | null;
+  sportPeriod: unknown | null;
   seconds: number;
 };
 
@@ -31,6 +32,7 @@ export async function capturePandoraDomainRooms(
   const sportsBox: { v: unknown | null } = { v: null };
   const leaguesBox: { v: unknown | null } = { v: null };
   const wagerBox: { v: unknown | null } = { v: null };
+  const periodBox: { v: unknown | null } = { v: null };
 
   await new Promise<void>((resolve, reject) => {
     const sock = new PandoraSocket({
@@ -52,6 +54,7 @@ export async function capturePandoraDomainRooms(
           if (info.room === 'live.sports' && p != null) sportsBox.v = p;
           if (info.room === 'live.leagues' && p != null) leaguesBox.v = p;
           if (info.room === 'live.wagerTypes' && p != null) wagerBox.v = p;
+          if (info.room === 'live.sportPeriod' && p != null) periodBox.v = p;
         },
         onError: () => {
           /* keep waiting */
@@ -73,6 +76,7 @@ export async function capturePandoraDomainRooms(
     sports: sportsBox.v,
     leagues: leaguesBox.v,
     wagerTypes: wagerBox.v,
+    sportPeriod: periodBox.v,
     seconds,
   };
 }
@@ -96,6 +100,7 @@ export async function extractWidgetDomainWithPandora(
         sports: rooms.sports ?? undefined,
         leagues: rooms.leagues ?? undefined,
         wagerTypes: rooms.wagerTypes ?? undefined,
+        sportPeriod: rooms.sportPeriod ?? undefined,
       };
     } catch {
       pandoraRooms = undefined;

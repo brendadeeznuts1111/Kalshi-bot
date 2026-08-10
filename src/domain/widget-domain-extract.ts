@@ -10,6 +10,10 @@
 // @see https://bun.com/docs/api/fetch
 import { listSports, type SportId } from './sports.ts';
 import { PLIVE_STREAM_ENDPOINTS } from './live-product-endpoints.ts';
+import {
+  feedSportName,
+  sportIdFromFeedSportId,
+} from './pandora-feed-sports.ts';
 import { CACHE_DIR, joinPath } from '../research/paths.ts';
 
 export type WidgetMarketLabel = {
@@ -34,15 +38,26 @@ export type WidgetLiveSport = {
   order?: number;
   /** Market-type flags from feed (`m` map). */
   marketFlags?: Record<string, unknown>;
+  /** Canonical SportId from feed id SSOT when known. */
+  sportIdCanonical?: SportId | null;
 };
 
 export type WidgetLiveLeague = {
   id: string;
   name: string;
   shortName?: string | null;
-  /** Feed sport id (links to live.sports). */
+  /**
+   * Display/variant feed sport id from wire `s`
+   * (often more specific than platformSport — e.g. 102 college BB).
+   */
   sportId: string | null;
+  /**
+   * Parent/platform feed sport from wire `platformSport`
+   * (e.g. Top Soccer 220, or base basketball 2).
+   */
   platformSport?: string | null;
+  /** Best-effort SportId from feed SSOT (`s` then platformSport). */
+  sportIdCanonical?: SportId | null;
   order?: number;
 };
 
@@ -52,7 +67,29 @@ export type WidgetWagerType = {
   shortName?: string | null;
   /** Market class / type ids when present. */
   marketClassId?: number | null;
+  /**
+   * Wire `tp` — market *family* id (often aligns with coefficient marketType
+   * for core markets 3/4/5/6/30, but props reuse numbers for many named products).
+   */
   typeId?: number | null;
+};
+
+/**
+ * Parsed `live.sportPeriod` (or HTTP sportPeriods) language block.
+ * Shape from mainapp sportPeriodsService.init:
+ * `{ en: { periods: { [feedSportId]: { m: "Match", h1: "1st Half", … } }, abbreviations?: … } }`
+ */
+export type SportPeriodLanguageBlock = {
+  language: string;
+  /** feedSportId → periodCode → display label */
+  bySport: Record<string, Record<string, string>>;
+  abbreviations?: Record<string, string>;
+};
+
+export type WidgetSportPeriods = {
+  languages: SportPeriodLanguageBlock[];
+  /** Prefer `en` when present. */
+  primary: SportPeriodLanguageBlock | null;
 };
 
 export type DomainGapReport = {
@@ -83,6 +120,8 @@ export type WidgetDomainSnapshot = {
   liveSports: WidgetLiveSport[];
   liveLeagues: WidgetLiveLeague[];
   wagerTypes: WidgetWagerType[];
+  /** Optional live.sportPeriod decode when captured. */
+  sportPeriods?: WidgetSportPeriods | null;
   gaps: DomainGapReport;
 };
 
@@ -101,6 +140,8 @@ export type ExtractWidgetDomainOptions = {
     sports?: unknown;
     leagues?: unknown;
     wagerTypes?: unknown;
+    /** live.sportPeriod payload */
+    sportPeriod?: unknown;
   };
   fetchImpl?: typeof fetch;
 };
@@ -143,7 +184,22 @@ const ICON_TO_SPORT_ID: Record<string, SportId> = {
 };
 
 /** Known Pandora marketType ids we already label in domain. */
-const KNOWN_MARKET_TYPE_IDS = new Set(['3', '5', '6']);
+/** Proven coefficient marketType ids (see KNOWN_MARKET_LABELS). */
+const KNOWN_MARKET_TYPE_IDS = new Set([
+  '1',
+  '3',
+  '4',
+  '5',
+  '6',
+  '7',
+  '8',
+  '9',
+  '16',
+  '18',
+  '20',
+  '21',
+  '30',
+]);
 
 export function defaultWidgetDomainCachePath(): string {
   return joinPath(CACHE_DIR, 'widget-domain-snapshot.json');
@@ -324,10 +380,22 @@ export function parseLiveSportsRoom(payload: unknown): WidgetLiveSport[] {
         r.m && typeof r.m === 'object' && !Array.isArray(r.m)
           ? (r.m as Record<string, unknown>)
           : undefined,
+      sportIdCanonical: sportIdFromFeedSportId(id) ?? mapLiveSportNameToSportId(name),
     });
   }
   out.sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.id.localeCompare(b.id));
   return out;
+}
+
+/**
+ * Prefer display feed id `s`, then `platformSport`, for SportId resolution.
+ * Example: MLS has s=5 (Soccer) + platformSport=220 (Top Soccer).
+ */
+export function resolveLeagueFeedSportId(league: {
+  sportId?: string | null;
+  platformSport?: string | null;
+}): string | null {
+  return league.sportId ?? league.platformSport ?? null;
 }
 
 export function parseLiveLeaguesRoom(payload: unknown): WidgetLiveLeague[] {
@@ -338,17 +406,20 @@ export function parseLiveLeaguesRoom(payload: unknown): WidgetLiveLeague[] {
     const r = raw as Record<string, unknown>;
     const name = typeof r.n === 'string' ? r.n.trim() : '';
     if (!name) continue;
+    const displayFeed = r.s != null ? String(r.s) : null;
+    const platform =
+      r.platformSport != null ? String(r.platformSport) : null;
+    const feedForMap = displayFeed ?? platform;
     out.push({
       id,
       name,
       shortName: typeof r.sn === 'string' ? r.sn : null,
-      sportId:
-        r.s != null
-          ? String(r.s)
-          : r.platformSport != null
-            ? String(r.platformSport)
-            : null,
-      platformSport: r.platformSport != null ? String(r.platformSport) : null,
+      sportId: displayFeed ?? platform,
+      platformSport: platform,
+      sportIdCanonical: feedForMap
+        ? sportIdFromFeedSportId(feedForMap) ??
+          (platform ? sportIdFromFeedSportId(platform) : null)
+        : null,
       order: typeof r.o === 'number' ? r.o : undefined,
     });
   }
@@ -376,6 +447,112 @@ export function parseWagerTypesRoom(payload: unknown): WidgetWagerType[] {
   return out;
 }
 
+/**
+ * Parse live.sportPeriod / sportPeriods HTTP payload.
+ * Accepts either full multi-lang map or a single `{ periods: … }` block.
+ */
+export function parseSportPeriodRoom(payload: unknown): WidgetSportPeriods | null {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    return null;
+  }
+  const root = payload as Record<string, unknown>;
+
+  // Single-language shape: { periods: { sportId: { m: "Match", … } } }
+  if (root.periods && typeof root.periods === 'object' && !Array.isArray(root.periods)) {
+    const block = parseSportPeriodLanguage('en', root);
+    return block
+      ? { languages: [block], primary: block }
+      : null;
+  }
+
+  const languages: SportPeriodLanguageBlock[] = [];
+  for (const [lang, raw] of Object.entries(root)) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) continue;
+    const block = parseSportPeriodLanguage(lang, raw as Record<string, unknown>);
+    if (block) languages.push(block);
+  }
+  if (languages.length === 0) return null;
+  const primary =
+    languages.find(l => l.language === 'en') ?? languages[0] ?? null;
+  return { languages, primary };
+}
+
+function parseSportPeriodLanguage(
+  language: string,
+  raw: Record<string, unknown>
+): SportPeriodLanguageBlock | null {
+  const periodsRaw = raw.periods;
+  if (!periodsRaw || typeof periodsRaw !== 'object' || Array.isArray(periodsRaw)) {
+    return null;
+  }
+  const bySport: Record<string, Record<string, string>> = {};
+  for (const [sportId, periodMap] of Object.entries(
+    periodsRaw as Record<string, unknown>
+  )) {
+    if (!periodMap || typeof periodMap !== 'object' || Array.isArray(periodMap)) {
+      continue;
+    }
+    const labels: Record<string, string> = {};
+    for (const [code, label] of Object.entries(
+      periodMap as Record<string, unknown>
+    )) {
+      if (typeof label === 'string' && label.trim()) {
+        labels[code] = label.trim();
+      }
+    }
+    if (Object.keys(labels).length > 0) bySport[sportId] = labels;
+  }
+  if (Object.keys(bySport).length === 0) return null;
+  const abbreviations =
+    raw.abbreviations &&
+    typeof raw.abbreviations === 'object' &&
+    !Array.isArray(raw.abbreviations)
+      ? Object.fromEntries(
+          Object.entries(raw.abbreviations as Record<string, unknown>).filter(
+            (e): e is [string, string] => typeof e[1] === 'string'
+          )
+        )
+      : undefined;
+  return { language, bySport, abbreviations };
+}
+
+/** Period display label from sportPeriod room, else {@link periodLabel} fallback. */
+export function sportPeriodLabel(
+  periods: WidgetSportPeriods | null | undefined,
+  feedSportId: string | number,
+  periodCode: string
+): string | null {
+  const code = periodCode.trim();
+  if (!code) return null;
+  const sportKey = String(feedSportId);
+  const block = periods?.primary;
+  const fromFeed = block?.bySport[sportKey]?.[code];
+  if (fromFeed) return fromFeed;
+  // try L_ prefix (league-scoped keys in mainapp)
+  const fromL = block?.bySport[sportKey]?.[`L_${code}`];
+  if (fromL) return fromL;
+  return null;
+}
+
+/**
+ * Count wagerTypes grouped by wire `tp` (market family).
+ * Useful for gap reports — typeId is not a 1:1 market product.
+ */
+export function wagerTypeFamilyCounts(
+  wagerTypes: WidgetWagerType[]
+): Array<{ typeId: number | null; count: number; sampleName: string }> {
+  const map = new Map<number | null, { count: number; sampleName: string }>();
+  for (const w of wagerTypes) {
+    const k = w.typeId ?? null;
+    const cur = map.get(k);
+    if (cur) cur.count += 1;
+    else map.set(k, { count: 1, sampleName: w.name });
+  }
+  return [...map.entries()]
+    .map(([typeId, v]) => ({ typeId, count: v.count, sampleName: v.sampleName }))
+    .sort((a, b) => b.count - a.count || String(a.typeId).localeCompare(String(b.typeId)));
+}
+
 function normalizeSportLabel(s: string): string {
   return s
     .toLowerCase()
@@ -384,24 +561,52 @@ function normalizeSportLabel(s: string): string {
     .trim();
 }
 
-/** Best-effort map live sport name → domain SportId. */
+/**
+ * Best-effort map live sport **name** → domain SportId.
+ * Prefer {@link sportIdFromFeedSportId} when you have a numeric feed id.
+ *
+ * Pandora feed uses "Football" = American football and "Soccer" = soccer.
+ */
 export function mapLiveSportNameToSportId(name: string): SportId | null {
   const n = normalizeSportLabel(name);
+
+  // Exact feed catalog name hit (authoritative when id unknown)
+  // Prefer more specific first: "american football" before generic football
+  if (
+    /american|am\.?\s*football|nfl|college football|college fb|cfl|super bowl|grey cup|\blfa\b/.test(
+      n
+    )
+  ) {
+    return 'american_football';
+  }
+  // Feed name "Football" is American football (id 3), not soccer
+  if (n === 'football') return 'american_football';
+  if (n === 'soccer' || /fifa|liga mx|top soccer|world cup/.test(n)) {
+    return 'soccer';
+  }
+  if (/beach\s*volleyball/.test(n)) return 'volleyball';
+  if (/college\s*basketball|nba|wnba|basketball 3x3/.test(n)) {
+    return 'basketball';
+  }
+  if (/hockey world|iihf|world juniors/.test(n)) return 'ice_hockey';
+  if (/^hockey$|^ice hockey$/.test(n)) return 'ice_hockey';
+  if (/e-?sports|esport/.test(n)) return 'sports_channels';
+  if (/fighting|combat sport|martial arts/.test(n)) return 'martial_arts';
+  if (/^mma$|^ufc$/.test(n)) return 'ufc';
+  if (/softball/.test(n)) return 'baseball';
+
   const aliases: Array<[RegExp, SportId]> = [
-    [/^soccer$|^football$/, 'soccer'],
-    [/^am\.?\s*football$|^american football$|^football nfl$/, 'american_football'],
     [/^baseball$/, 'baseball'],
     [/^basketball$/, 'basketball'],
     [/^tennis$/, 'tennis'],
     [/^table tennis$/, 'table_tennis'],
-    [/^ice hockey$|^hockey$/, 'ice_hockey'],
     [/^volleyball$/, 'volleyball'],
     [/^handball$/, 'handball'],
     [/^cricket$/, 'cricket'],
     [/^snooker$/, 'snooker'],
     [/^golf$/, 'golf'],
     [/^cycling$|^bicycle$/, 'cycling'],
-    [/^boxing$|^fighting$/, 'boxing'],
+    [/^boxing$/, 'boxing'],
     [/^rugby/, 'rugby'],
     [/^futsal$/, 'futsal'],
     [/^darts$/, 'darts'],
@@ -410,28 +615,40 @@ export function mapLiveSportNameToSportId(name: string): SportId | null {
     [/^horse racing$/, 'horse_racing'],
     [/^australian rules$|^aussie rules$/, 'australian_rules'],
     [/^badminton$/, 'badminton'],
-    [/^motor/, 'motorsport'],
-    [/^ufc$|^mma$|^martial/, 'ufc'],
+    [/^motor|^nascar/, 'motorsport'],
+    [/^formula 1$|^f1$/, 'formula_1'],
   ];
-  // Prefer more specific first: "american football" before generic football
-  if (/american|am\.?\s*football|nfl|college football|college fb|cfl|super bowl|grey cup/.test(n)) {
-    return 'american_football';
-  }
-  if (/beach\s*volleyball/.test(n)) return 'volleyball';
-  if (/college\s*basketball|nba|wnba/.test(n)) return 'basketball';
-  if (/hockey world|iihf|world juniors/.test(n)) return 'ice_hockey';
-  if (/curling|water\s*polo|e-?sports|lacrosse|chess|olympics|politics|simulations|field hockey/.test(n)) {
-    return 'sports_channels';
-  }
-  if (n === 'football' || n === 'soccer' || /fifa|liga mx|top soccer|world cup/.test(n)) {
-    return 'soccer';
-  }
   for (const [re, id] of aliases) {
     if (re.test(n)) return id;
+  }
+  // Soft "other" bucket for specialty shells
+  if (/politics|entertainment|simulations|olympics/.test(n)) {
+    return 'sports_channels';
+  }
+  // Leave truly unmapped (no SportId yet)
+  if (
+    /curling|water\s*polo|lacrosse|chess|field hockey|kabaddi|padel|universal/.test(
+      n
+    )
+  ) {
+    return null;
   }
   for (const s of listSports()) {
     if (normalizeSportLabel(s.displayName) === n) return s.id;
   }
+  return null;
+}
+
+/** Resolve SportId from feed id first, then name. */
+export function resolveLiveSportId(input: {
+  feedSportId?: string | number | null;
+  name?: string | null;
+}): SportId | null {
+  if (input.feedSportId != null && String(input.feedSportId).trim() !== '') {
+    const byId = sportIdFromFeedSportId(input.feedSportId);
+    if (byId) return byId;
+  }
+  if (input.name?.trim()) return mapLiveSportNameToSportId(input.name);
   return null;
 }
 
@@ -450,13 +667,21 @@ export function buildDomainGaps(input: {
     .sort();
 
   const liveSportsUnmapped = input.liveSports
-    .filter(s => mapLiveSportNameToSportId(s.name) == null)
+    .filter(
+      s =>
+        (s.sportIdCanonical ??
+          resolveLiveSportId({ feedSportId: s.id, name: s.name })) == null
+    )
     .map(s => `${s.id}:${s.name}`)
     .sort();
 
   const liveMapped = new Set(
     input.liveSports
-      .map(s => mapLiveSportNameToSportId(s.name))
+      .map(
+        s =>
+          s.sportIdCanonical ??
+          resolveLiveSportId({ feedSportId: s.id, name: s.name })
+      )
       .filter((x): x is SportId => x != null)
   );
   const domainMissingFromLive = domainIds.filter(id => !liveMapped.has(id as SportId));
@@ -551,14 +776,19 @@ export async function extractWidgetDomain(
   let liveSports: WidgetLiveSport[] = [];
   let liveLeagues: WidgetLiveLeague[] = [];
   let wagerTypes: WidgetWagerType[] = [];
+  let sportPeriods: WidgetSportPeriods | null = null;
   let pandoraOk = false;
 
   if (options.pandoraRooms) {
     liveSports = parseLiveSportsRoom(options.pandoraRooms.sports);
     liveLeagues = parseLiveLeaguesRoom(options.pandoraRooms.leagues);
     wagerTypes = parseWagerTypesRoom(options.pandoraRooms.wagerTypes);
+    sportPeriods = parseSportPeriodRoom(options.pandoraRooms.sportPeriod);
     pandoraOk =
-      liveSports.length > 0 || liveLeagues.length > 0 || wagerTypes.length > 0;
+      liveSports.length > 0 ||
+      liveLeagues.length > 0 ||
+      wagerTypes.length > 0 ||
+      sportPeriods != null;
   }
 
   const gaps = buildDomainGaps({
@@ -582,6 +812,7 @@ export async function extractWidgetDomain(
     liveSports,
     liveLeagues,
     wagerTypes,
+    sportPeriods,
     gaps,
   };
 }
@@ -614,17 +845,25 @@ export function formatWidgetDomainSnapshot(
   lines.push('');
   lines.push('## Live sports (Pandora)');
   for (const s of snap.liveSports) {
-    const map = mapLiveSportNameToSportId(s.name);
+    const map =
+      s.sportIdCanonical ??
+      resolveLiveSportId({ feedSportId: s.id, name: s.name });
     const mkeys = s.marketFlags ? Object.keys(s.marketFlags).join(',') : '';
+    const feedName = feedSportName(s.id);
     lines.push(
-      `  ${map ? '✓' : '?'} id=${s.id.padEnd(4)} ${s.name.padEnd(22)} domain=${map ?? '—'} markets=[${mkeys}]`
+      `  ${map ? '✓' : '?'} id=${s.id.padEnd(4)} ${s.name.padEnd(22)} domain=${map ?? '—'} feed=${feedName ?? '—'} markets=[${mkeys}]`
     );
   }
   lines.push('');
   lines.push(`## Live leagues (first ${maxLeagues}/${snap.liveLeagues.length})`);
   for (const l of snap.liveLeagues.slice(0, maxLeagues)) {
+    const plat =
+      l.platformSport && l.platformSport !== l.sportId
+        ? ` plat=${l.platformSport}`
+        : '';
+    const dom = l.sportIdCanonical ? ` →${l.sportIdCanonical}` : '';
     lines.push(
-      `  ${l.id.padEnd(6)} sport=${String(l.sportId ?? '—').padEnd(4)} ${l.name}${l.shortName ? ` [${l.shortName}]` : ''}`
+      `  ${l.id.padEnd(6)} s=${String(l.sportId ?? '—').padEnd(4)}${plat}${dom} ${l.name}${l.shortName ? ` [${l.shortName}]` : ''}`
     );
   }
   if (snap.liveLeagues.length > maxLeagues) {
@@ -654,7 +893,7 @@ export function formatWidgetDomainSnapshot(
   );
   lines.push('');
   lines.push(
-    `known Pandora marketType ids in domain: ${[...KNOWN_MARKET_TYPE_IDS].join(', ')} (moneyline/total/spread)`
+    `known Pandora marketType ids: ${[...KNOWN_MARKET_TYPE_IDS].join(', ')}`
   );
   return lines.join('\n');
 }

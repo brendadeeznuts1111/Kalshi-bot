@@ -6,6 +6,7 @@ import {
   feedSportName,
   getPandoraFeedSport,
   listMappedFeedSports,
+  listPandoraFeedSports,
   sportIdFromFeedSportId,
 } from '../../src/domain/pandora-feed-sports.ts';
 import {
@@ -17,12 +18,16 @@ describe('pandora feed sport SSOT', () => {
   test('core board ids map to canonical SportId', () => {
     expect(sportIdFromFeedSportId(1)).toBe('baseball');
     expect(sportIdFromFeedSportId(2)).toBe('basketball');
+    expect(sportIdFromFeedSportId(3)).toBe('american_football');
     expect(sportIdFromFeedSportId(5)).toBe('soccer');
     expect(sportIdFromFeedSportId(8)).toBe('tennis');
     expect(sportIdFromFeedSportId(93)).toBe('table_tennis');
     expect(sportIdFromFeedSportId(FEED_SPORT.tennis)).toBe('tennis');
     expect(sportIdFromFeedSportId(FEED_SPORT.table_tennis)).toBe(
       'table_tennis'
+    );
+    expect(sportIdFromFeedSportId(FEED_SPORT.american_football)).toBe(
+      'american_football'
     );
   });
 
@@ -85,5 +90,15 @@ describe('pandora feed sport SSOT', () => {
     expect(bb).toContain(2);
     expect(bb).toContain(102); // college
     expect(listMappedFeedSports().length).toBeGreaterThan(20);
+  });
+
+  test('catalog covers full live.sports capture set (85)', () => {
+    // Live capture 2026-08-10 had 85 ids; catalog should list all of them
+    expect(listPandoraFeedSports().length).toBeGreaterThanOrEqual(85);
+    // esports variants + event shells
+    expect(sportIdFromFeedSportId(132)).toBe('sports_channels');
+    expect(sportIdFromFeedSportId(214)).toBe('soccer'); // WC2026 shell
+    expect(sportIdFromFeedSportId(102)).toBe('basketball'); // college
+    expect(feedSportName(3)).toBe('Football'); // American football on feed
   });
 });

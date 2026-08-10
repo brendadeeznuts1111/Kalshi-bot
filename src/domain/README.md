@@ -71,15 +71,24 @@ Provider labels from **plive shell HTML** + **Pandora rooms** (not seat gsid):
 | `MARKET_*` display strings | HTML `LANGUAGES` → `texts` (English) |
 | Rules sport icons | HTML rules `icon` slugs |
 | Live sports + market flags | Pandora `live.sports` |
-| Leagues (dynamic) | Pandora `live.leagues` |
-| Wager / market-type catalog | Pandora `live.wagerTypes` |
+| Feed sport id SSOT | [`pandora-feed-sports.ts`](pandora-feed-sports.ts) (85 ids) |
+| Leagues (dynamic) | Pandora `live.leagues` (`s` + `platformSport`) |
+| Period labels | `live.sportPeriod` + `PANDORA_PERIOD_CODES` / `periodLabel` |
+| Wager / market-type catalog | Pandora `live.wagerTypes` (`tp` = family, not unique product) |
 
 ```bash
+bun run domain:sports -- --feed               # static feed catalog (85)
 bun run domain:widget-extract                 # shell + Pandora (~12s)
 bun run domain:widget-extract -- --html-only
 bun run domain:widget-extract -- --write      # research/cache/widget-domain-snapshot.json
 bun run domain:widget-extract -- --json
 ```
+
+**Planes:** feedSportId (eventData / live.sports) ≠ widgetSportId (shell
+sportOrder) ≠ apiSportId (ticket). Example: feed `3` = Football =
+`american_football`; feed `5` = Soccer. Resolve with
+`resolveLiveSportId` / `sportIdFromFeedSportId` — never name-only for
+`"Football"`.
 
 Code: [`widget-domain-extract.ts`](widget-domain-extract.ts). Leagues are **not**
 static in HTML — re-run with Pandora when the board is live to grow the set.
