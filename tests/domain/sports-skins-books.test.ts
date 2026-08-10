@@ -13,7 +13,6 @@ import {
   getBookByHost,
   listBookIdsForSkin,
   DESK_DOMAIN_ENV,
-  PARTNER_DOMAIN_ENV,
   RETIRED_BARE_BOOK_DOMAIN_ENVS,
   assertActiveSkinsHaveHosts,
   defaultUrlForSkin,
@@ -31,7 +30,6 @@ import {
   listLiveProductSportBindings,
   liveProductsWithBindings,
   normalizeLiveProductName,
-  normalizeSkinName,
   resolveSkinId,
   resolveSport,
   skinOfferedCatalogNames,
@@ -133,7 +131,7 @@ describe('domain sports / skins / live products', () => {
     expect(requireDefaultUrlForUltraMapper()).toBe(expected);
   });
 
-  test('resolveDeskDomainFromEnv uses DESK_DOMAIN (legacy PARTNER_DOMAIN) then SKINS default', () => {
+  test('resolveDeskDomainFromEnv uses DESK_DOMAIN then SKINS default', () => {
     const fallback = requireDefaultUrlForUltraMapper();
     const retired = Object.fromEntries(
       RETIRED_BARE_BOOK_DOMAIN_ENVS.map(k => [k, 'https://ignored.example'])
@@ -143,13 +141,6 @@ describe('domain sports / skins / live products', () => {
     expect(
       resolveDeskDomainFromEnv({
         ...retired,
-        [PARTNER_DOMAIN_ENV]: 'https://legacy.example',
-      })
-    ).toBe('https://legacy.example');
-    expect(
-      resolveDeskDomainFromEnv({
-        ...retired,
-        [PARTNER_DOMAIN_ENV]: 'https://legacy.example',
         [DESK_DOMAIN_ENV]: 'https://preferred.example',
       })
     ).toBe('https://preferred.example');
@@ -160,7 +151,7 @@ describe('domain sports / skins / live products', () => {
     expect(normalizeLiveProductName('UltraLive')).toBe('ultralive');
     expect(normalizeLiveProductName('mag')).toBe('maglive');
     expect(normalizeLiveProductName('2')).toBe('2');
-    expect(normalizeSkinName(2)).toBe('2');
+    expect(normalizeLiveProductName(2)).toBe('2');
     expect(normalizeLiveProductName('dark')).toBe('dark');
   });
 

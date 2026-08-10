@@ -9,7 +9,6 @@
  *
  * Seat-ops status / expansion map: bun run ops:status · bun run ops:map
  * Host discover: bun run domain:host-discover
- * Legacy: partner:skins · partner:books
  *
  * @see src/domain/README.md
  * @see src/domain/skin-matrix.ts

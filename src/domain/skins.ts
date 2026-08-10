@@ -375,18 +375,13 @@ export function requireDefaultUrlForUltraMapper(): string {
 
 /**
  * Brand-neutral desk **host** URL env — resolved against SKINS hosts / SkinId.
- * Prefer this over seat-partner naming; desk identity is host → book → skin.
+ * Desk identity is host → book → skin (not seat partner).
  */
 export const DESK_DOMAIN_ENV = 'DESK_DOMAIN';
 
 /**
- * @deprecated Use {@link DESK_DOMAIN_ENV} (`DESK_DOMAIN`). Still dual-read for one release.
- */
-export const PARTNER_DOMAIN_ENV = 'PARTNER_DOMAIN';
-
-/**
  * Retired bare-book desk URL env keys — never read.
- * Use DESK_DOMAIN (or legacy PARTNER_DOMAIN) or per-out `{PREFIX}DOMAIN` instead.
+ * Use DESK_DOMAIN or per-out `{PREFIX}DOMAIN` instead.
  */
 export const RETIRED_BARE_BOOK_DOMAIN_ENVS = ['FANTASY402_DOMAIN'] as const;
 
@@ -396,21 +391,17 @@ export function isRetiredBareBookDomainEnv(key: string): boolean {
 
 /**
  * Preferred desk URL from env map only (no Ultra default).
- * `DESK_DOMAIN` wins over legacy `PARTNER_DOMAIN`.
+ * Reads `DESK_DOMAIN` only.
  */
 export function deskDomainFromEnvMap(
   envMap: Record<string, string | undefined> = typeof process !== 'undefined' ? process.env : {}
 ): string | undefined {
-  const preferred = envMap[DESK_DOMAIN_ENV]?.trim();
-  if (preferred) return preferred;
-  const legacy = envMap[PARTNER_DOMAIN_ENV]?.trim();
-  if (legacy) return legacy;
-  return undefined;
+  return envMap[DESK_DOMAIN_ENV]?.trim() || undefined;
 }
 
 /**
  * Desk URL from env (brand-neutral).
- *   DESK_DOMAIN → legacy PARTNER_DOMAIN → SKINS Ultra-mapper default (hosts → SkinId)
+ *   DESK_DOMAIN → SKINS Ultra-mapper default (hosts → SkinId)
  * Bare-book DOMAIN env keys in RETIRED_BARE_BOOK_DOMAIN_ENVS are ignored.
  */
 export function resolveDeskDomainFromEnv(
@@ -444,7 +435,3 @@ export function skinOfferedCatalogNames(skin: string): string[] {
   return s.offeredLiveProducts.map(id => catalog[id]);
 }
 
-/** @deprecated use normalizeLiveProductName — capacity wire names are live products */
-export function normalizeSkinName(raw: string | number): string {
-  return normalizeLiveProductName(raw);
-}

@@ -9,7 +9,7 @@ import {
 } from "../authorization/domain.ts";
 import { getActiveLiveTradeAuthorization } from "../authorization/sql.ts";
 import { getBettingAccountById, type BettingAccountRow } from "../registry.ts";
-import { parseOutMeta, resolveOutSkins } from "../out-capacity.ts";
+import { parseOutMeta, resolveOutCapacity } from "../out-capacity.ts";
 import { envPrefixFallbackChain } from "../toml-config.ts";
 import {
   asExecutionIdempotencyKey,
@@ -197,7 +197,7 @@ export async function executeKalshiLiveOrder(
       reason: "Kalshi execution currently requires a USD out",
     };
   }
-  const skin = resolveOutSkins(account).find((candidate) => candidate.name === command.skin);
+  const skin = resolveOutCapacity(account).find((candidate) => candidate.name === command.skin);
   if (!skin) {
     return { ok: false, code: "SKIN_INACTIVE", reason: "Requested skin is missing or inactive" };
   }

@@ -42,13 +42,12 @@ import {
   type BettingAccountRow,
   type PartnerEntity,
 } from './registry.ts';
-import { buildSkinsMeta, type OutSkinLimit } from './out-capacity.ts';
+import { buildOutCapacityMeta, type OutCapacityRow } from './out-capacity.ts';
 import { getPartnerVisual } from './visuals.ts';
 import { tomlStringify } from './toml-stringify.ts';
 
 export {
   DESK_DOMAIN_ENV,
-  PARTNER_DOMAIN_ENV,
   deskDomainFromEnvMap,
   resolveDeskDomainFromEnv,
 } from '../domain/index.ts';
@@ -454,7 +453,7 @@ function asFiniteNumber(v: unknown, fallback = 0): number {
   return Number.isFinite(n) ? n : fallback;
 }
 
-function parseSkin(row: PartnersTomlSkin): OutSkinLimit | null {
+function parseSkin(row: PartnersTomlSkin): OutCapacityRow | null {
   const name = String(row.name ?? '').trim();
   if (!name) return null;
   return {
@@ -568,8 +567,8 @@ export function materializePartnersToml(doc: PartnersTomlDoc): {
       }
     }
 
-    const skins = (o.skins ?? []).map(parseSkin).filter((s): s is OutSkinLimit => s != null);
-    const fallbackSkins: OutSkinLimit[] =
+    const skins = (o.skins ?? []).map(parseSkin).filter((s): s is OutCapacityRow => s != null);
+    const fallbackSkins: OutCapacityRow[] =
       skins.length > 0 ? skins : [{ name: '2', perBetMax: 0, maxWin: 0, active: true }];
     const maxStake = Math.max(...fallbackSkins.map(s => s.perBetMax), 0);
     const maxWin = Math.max(...fallbackSkins.map(s => s.maxWin), 0);
@@ -627,8 +626,8 @@ export function materializePartnersToml(doc: PartnersTomlDoc): {
       skinId,
       bookId,
       mapper,
-      metaJson: buildSkinsMeta({
-        skins: fallbackSkins,
+      metaJson: buildOutCapacityMeta({
+      liveProducts: fallbackSkins,
         workingBalance:
           o.working_balance != null || o.workingBalance != null
             ? asFiniteNumber(o.working_balance ?? o.workingBalance)

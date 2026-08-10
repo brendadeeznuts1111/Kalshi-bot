@@ -32,14 +32,6 @@ describe('seat-ops architecture (not desk domain matrix)', () => {
     expect(formatOpsStatusText(report)).toContain('seat ops');
   });
 
-  test('deprecated partner/domain.ts shim only re-exports (kill 2026-09-01)', async () => {
-    const shim = await import('../../src/partner/domain.ts');
-    expect(shim.OPS_LAYERS).toBe(OPS_LAYERS);
-    expect(shim.PARTNER_DOMAIN_LAYERS).toBe(OPS_LAYERS);
-    expect(shim.buildDomainStatusReport().totals.components).toBe(
-      buildOpsStatusReport().totals.components
-    );
-  });
 
   test('expansion map distinguishes built execution from intelligence and unwired providers', () => {
     const map = formatPartnerExpansionMermaid();

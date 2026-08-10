@@ -8,42 +8,23 @@
  * - Desk identity = host → BookId → SkinId (domain)
  *
  * Liquidity key: `{outId}@{liveProduct}` (e.g. `out-SPEN-1@ezlive`).
- *
- * Legacy module path: `./skins.ts` (re-export shim — kill 2026-09-01).
  */
 
 import { isBookId, resolveBookId, type BookId } from '../domain/books.ts';
 import { isSkinId, type SkinId, type SkinMapper } from '../domain/skins.ts';
 import { normalizeLiveProductName } from '../domain/live-products.ts';
 
-/** Live-product / wire name as sent on getUltraLiveURL (string or numeric). */
-/** Live-product / wire name (getUltraLiveURL). */
+/** Live-product / wire name (getUltraLiveURL string or numeric wire). */
 export type CapacityWireName = string;
-/** @deprecated Use CapacityWireName */
-export type SkinName = CapacityWireName;
 
-/** White-label mapper kind persisted on out meta (from SkinRecord.mapper.kind). */
 /** White-label mapper kind on out meta (from SkinRecord.mapper.kind). */
 export type OutMapperKind = SkinMapper['kind'];
-/** @deprecated Use OutMapperKind */
-export type OutSkinMapperKind = OutMapperKind;
 
-/**
- * Normalize capacity / live-product wire names (`ultra` → `ultralive`).
- * Numeric wire ids (`2`) stay digit strings for getUltraLiveURL.
- */
+/** Normalize capacity / live-product wire names (`ultra` → `ultralive`). */
 export function normalizeCapacityWireName(raw: string | number): string {
   return normalizeLiveProductName(raw);
 }
-/** @deprecated Use normalizeLiveProductName / normalizeCapacityWireName */
-export function normalizeSkinName(raw: string | number): string {
-  return normalizeCapacityWireName(raw);
-}
 
-/**
- * One active live-product capacity row under an out.
- * @deprecated Prefer LiveProductCapacity from out-identity.ts (`name` = liveProduct).
- */
 /** One active live-product capacity row under an out. */
 export type OutCapacityRow = {
   name: CapacityWireName;
@@ -51,8 +32,6 @@ export type OutCapacityRow = {
   maxWin: number;
   active: boolean;
 };
-/** @deprecated Prefer OutCapacityRow or LiveProductCapacity from out-identity.ts */
-export type OutSkinLimit = OutCapacityRow;
 
 type MetaCapacityRow = {
   name?: string;
@@ -111,14 +90,11 @@ export type OutCapacity = {
   workingBalance: number | null;
   /** Active live-product capacity rows (not SkinId). */
   liveProducts: OutCapacityRow[];
-  /** @deprecated use liveProducts */
-  skins: OutCapacityRow[];
   /** Sum of active rows' perBetMax (true out stake ceiling if split). */
   totalPerBetMax: number;
   totalMaxWin: number;
 };
 
-/** Eligible execution route: out + skin that can take `stake`. */
 /** Eligible execution route: out + live product that can take `stake`. */
 export type OutCapacityPair = {
   outId: string;
@@ -126,16 +102,12 @@ export type OutCapacityPair = {
   provider: string;
   /** Live-product wire name (not SkinId). */
   liveProduct: CapacityWireName;
-  /** @deprecated use liveProduct */
-  skin: CapacityWireName;
   perBetMax: number;
   maxWin: number;
   workingBalance: number | null;
   /** Internal tracking key */
   key: string;
 };
-/** @deprecated Use OutCapacityPair */
-export type OutSkinPair = OutCapacityPair;
 
 export type OutExposureShare = {
   outId: string;
@@ -150,11 +122,10 @@ export function liquidityKey(outId: string, liveProduct: CapacityWireName): stri
 
 export function parseLiquidityKey(
   key: string
-): { outId: string; liveProduct: CapacityWireName; /** @deprecated */ skin: CapacityWireName } | null {
+): { outId: string; liveProduct: CapacityWireName } | null {
   const at = key.lastIndexOf('@');
   if (at <= 0 || at === key.length - 1) return null;
-  const liveProduct = key.slice(at + 1);
-  return { outId: key.slice(0, at), liveProduct, skin: liveProduct };
+  return { outId: key.slice(0, at), liveProduct: key.slice(at + 1) };
 }
 
 /** Naming: out-{PARTNER}-{n} */
@@ -168,9 +139,9 @@ export function formatVaultName(outId: string): string {
 }
 
 /**
- * Parse skin for Ultra login body.
- * Numeric strings ("2") stay numbers (legacy Fantasy skin id);
- * named skins ("ezlive", "dark") stay strings.
+ * Parse live-product wire for Ultra login body.
+ * Numeric strings ("2") stay numbers (legacy Fantasy wire id);
+ * named products ("ezlive", "dark") stay strings.
  */
 export function parseLiveProductWire(
   raw: string | number | null | undefined,
@@ -184,15 +155,7 @@ export function parseLiveProductWire(
     const n = Number(s);
     if (Number.isFinite(n)) return n;
   }
-  // Named skins → canonical SkinId when known; numeric wire unchanged above.
   return normalizeCapacityWireName(s);
-}
-/** @deprecated Use parseLiveProductWire */
-export function parseSkinWire(
-  raw: string | number | null | undefined,
-  fallback: string | number = 2
-): string | number {
-  return parseLiveProductWire(raw, fallback);
 }
 
 export function parseOutMeta(metaJson: string | null | undefined): OutMeta {
@@ -277,7 +240,6 @@ export function outCapacityFromAccount(input: {
     provider: input.provider,
     workingBalance,
     liveProducts,
-    skins: liveProducts,
     totalPerBetMax: liveProducts.reduce((s, x) => s + x.perBetMax, 0),
     totalMaxWin: liveProducts.reduce((s, x) => s + x.maxWin, 0),
   };
@@ -316,7 +278,6 @@ export function listEligibleOutCapacityPairs(
         partnerId: out.partnerId,
         provider: out.provider,
         liveProduct: row.name,
-        skin: row.name,
         perBetMax: row.perBetMax,
         maxWin: row.maxWin,
         workingBalance: out.workingBalance,
@@ -326,8 +287,6 @@ export function listEligibleOutCapacityPairs(
   }
   return pairs.sort((a, b) => b.perBetMax - a.perBetMax || a.key.localeCompare(b.key));
 }
-/** @deprecated Use listEligibleOutCapacityPairs */
-export const listEligibleOutSkinPairs = listEligibleOutCapacityPairs;
 
 /**
  * After concentration picks an out, choose skin within that out.
@@ -345,8 +304,6 @@ export function pickBestCapacityForOut(
     [...ok].sort((a, b) => b.perBetMax - a.perBetMax || a.name.localeCompare(b.name))[0] ?? null
   );
 }
-/** @deprecated Use pickBestCapacityForOut */
-export const pickBestSkinForOut = pickBestCapacityForOut;
 
 /**
  * Concentration by out (sum exposure across skins of the same out).
@@ -373,16 +330,15 @@ export function concentrationByOut(
 
 /** Build meta_json capacity array (dual-writes liveProducts + legacy skins). */
 export function buildOutCapacityMeta(input: {
-  liveProducts?: OutCapacityRow[];
-  /** @deprecated use liveProducts */
-  skins?: OutCapacityRow[];
+  liveProducts: OutCapacityRow[];
   workingBalance?: number;
   vaultId?: string;
   partnerCode?: string;
   customerID?: string;
   agentID?: string;
-  defaultSkin?: CapacityWireName;
   defaultLiveProduct?: CapacityWireName;
+  /** @deprecated use defaultLiveProduct */
+  defaultSkin?: CapacityWireName;
   /** White-label desk id (host gateway). */
   skinId?: SkinId;
   /** Desk brand under the skin (host-derived BookId). */
@@ -391,7 +347,7 @@ export function buildOutCapacityMeta(input: {
   mapper?: OutMapperKind;
   extra?: Record<string, unknown>;
 }): string {
-  const capacity = input.liveProducts ?? input.skins ?? [];
+  const capacity = input.liveProducts;
   const defaultLive = input.defaultLiveProduct ?? input.defaultSkin ?? capacity[0]?.name;
   const rows = capacity.map(s => ({
     liveProduct: s.name,
@@ -428,15 +384,6 @@ export function buildOutCapacityMeta(input: {
   return JSON.stringify(meta);
 }
 
-/** @deprecated Use buildOutCapacityMeta */
-export function buildSkinsMeta(
-  input: Parameters<typeof buildOutCapacityMeta>[0] & { skins?: OutCapacityRow[] }
-): string {
-  return buildOutCapacityMeta({
-    ...input,
-    liveProducts: input.liveProducts ?? input.skins,
-  });
-}
 
 /** Read white-label skinId from an account's meta_json (if stamped). */
 export function skinIdFromAccount(input: { metaJson: string }): SkinId | undefined {
@@ -462,5 +409,3 @@ export function mapperFromAccount(input: { metaJson: string }): OutMapperKind | 
   return undefined;
 }
 
-/** @deprecated Use resolveOutCapacity */
-export const resolveOutSkins = resolveOutCapacity;

@@ -51,7 +51,7 @@ export const PARTNER_NAMING = {
 } as const;
 
 /**
- * Canonical five-layer map for agents and `ops:status` / `partner:domain`.
+ * Canonical five-layer map for agents and `ops:status`.
  * Update maturity when shipping — never mark planned as built.
  */
 export const OPS_LAYERS: readonly OpsLayer[] = [
@@ -186,7 +186,7 @@ export const OPS_LAYERS: readonly OpsLayer[] = [
         id: 'concentration-router',
         name: 'selectAccountForProposal',
         maturity: 'partial',
-        where: 'listEligibleOutSkinPairs · concentrationByOut',
+        where: 'listEligibleOutCapacityPairs · concentrationByOut',
         notes: 'Helpers only — no full proposal router CLI yet',
       },
       {

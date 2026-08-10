@@ -15,7 +15,7 @@ import { adapterBindingForSkin, providerMirrorFromAdapter } from './out-identity
 import type { AdapterId, PartnerAccountStatus } from './types.ts';
 import type { FantasyUltraCredentials } from './fantasy-ultra/types.ts';
 import { FANTASY_ULTRA_DEFAULTS } from './fantasy-ultra/types.ts';
-import { parseSkinWire } from './out-capacity.ts';
+import { parseLiveProductWire } from './out-capacity.ts';
 import {
   DEFAULT_REQUIRED_ENV_KEYS,
   parseOutId,
@@ -73,7 +73,7 @@ export function profileFromEnvBundle(
   const url = bundle.values.DOMAIN?.trim() || resolveDeskDomainFromEnv();
   /** SkinId from host map only — never forge via fantasy402 alias. */
   const skinId = getSkinByHost(url);
-  const defaultLiveProduct = parseSkinWire(bundle.values.SKIN, FANTASY_ULTRA_DEFAULTS.skin);
+  const defaultLiveProduct = parseLiveProductWire(bundle.values.SKIN, FANTASY_ULTRA_DEFAULTS.skin);
   const binding = skinId ? adapterBindingForSkin(skinId) : undefined;
   const adapterId = binding?.adapterId ?? 'unmapped';
 
@@ -181,7 +181,7 @@ export function profileWithSkin(
   profile: PartnerAccountProfile,
   skin: string | number
 ): PartnerAccountProfile {
-  const wire = parseSkinWire(skin, profile.meta.skin);
+  const wire = parseLiveProductWire(skin, profile.meta.skin);
   return {
     ...profile,
     defaultLiveProduct: wire,

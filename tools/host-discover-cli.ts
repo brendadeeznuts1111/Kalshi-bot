@@ -8,7 +8,6 @@
  *   bun run domain:host-discover -- --all
  *   bun run domain:host-discover -- --url=https://BOOK.example --compare
  *
- * Legacy alias: partner:host-discover
  *
  * `--all` / `--compare` walk every apex host in SKINS[].hosts (plus optional --url target).
  * `--weigh` prints capped-category evidence breakdown (report.weigh / report.decision).
