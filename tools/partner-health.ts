@@ -109,7 +109,7 @@ async function main(): Promise<void> {
       provider: c.provider,
       totalMaxStake: c.totalMaxStake,
       outCount: c.accountCount,
-      skinPairCount: c.skinPairCount,
+      capacityPairCount: c.capacityPairCount,
     })),
     env: {
       ok: env.ok,
@@ -182,7 +182,7 @@ async function main(): Promise<void> {
     );
     for (const c of health.capacity) {
       console.log(
-        `  capacity ${c.provider}: $${c.totalMaxStake}  outs=${c.outCount} skins=${c.skinPairCount}`,
+        `  capacity ${c.provider}: $${c.totalMaxStake}  outs=${c.outCount} products=${c.capacityPairCount}`,
       );
     }
     console.error(formatEnvPresenceText(env));

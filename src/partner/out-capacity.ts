@@ -53,14 +53,11 @@ export type OutMeta = {
   defaultSkin?: CapacityWireName;
   /** Default live-product / Ultra wire for this out. */
   defaultLiveProduct?: CapacityWireName;
-  /**
-   * Canonical capacity rows (live products).
-   * Prefer this over legacy `skins`.
-   */
+  /** Canonical capacity rows (live products). */
   liveProducts?: MetaCapacityRow[];
   /**
-   * @deprecated Legacy mirror of liveProducts (name = liveProduct wire).
-   * Dual-written by stampOutMeta for one release.
+   * Legacy capacity rows (name = live product wire).
+   * Read-only dual path — writers stamp `liveProducts` only.
    */
   skins?: MetaCapacityRow[];
   /**
@@ -328,7 +325,7 @@ export function concentrationByOut(
     .sort((a, b) => b.share - a.share || a.outId.localeCompare(b.outId));
 }
 
-/** Build meta_json capacity array (dual-writes liveProducts + legacy skins). */
+/** Build meta_json capacity (writes liveProducts only; readers dual-read legacy skins). */
 export function buildOutCapacityMeta(input: {
   liveProducts: OutCapacityRow[];
   workingBalance?: number;
@@ -337,8 +334,6 @@ export function buildOutCapacityMeta(input: {
   customerID?: string;
   agentID?: string;
   defaultLiveProduct?: CapacityWireName;
-  /** @deprecated use defaultLiveProduct */
-  defaultSkin?: CapacityWireName;
   /** White-label desk id (host gateway). */
   skinId?: SkinId;
   /** Desk brand under the skin (host-derived BookId). */
@@ -348,7 +343,7 @@ export function buildOutCapacityMeta(input: {
   extra?: Record<string, unknown>;
 }): string {
   const capacity = input.liveProducts;
-  const defaultLive = input.defaultLiveProduct ?? input.defaultSkin ?? capacity[0]?.name;
+  const defaultLive = input.defaultLiveProduct ?? capacity[0]?.name;
   const rows = capacity.map(s => ({
     liveProduct: s.name,
     name: s.name,
@@ -359,22 +354,16 @@ export function buildOutCapacityMeta(input: {
   const meta: OutMeta = {
     ...(input.extra ?? {}),
     liveProducts: rows,
-    skins: rows.map(({ name, perBetMax, maxWin, active }) => ({
-      name,
-      perBetMax,
-      maxWin,
-      active,
-    })),
   };
+  // Never re-emit legacy capacity keys when building fresh meta
+  delete meta.skins;
+  delete meta.defaultSkin;
   if (input.workingBalance != null) meta.workingBalance = input.workingBalance;
   if (input.vaultId) meta.vaultId = input.vaultId;
   if (input.partnerCode) meta.partnerCode = input.partnerCode;
   if (input.customerID) meta.customerID = input.customerID;
   if (input.agentID) meta.agentID = input.agentID;
-  if (defaultLive) {
-    meta.defaultLiveProduct = defaultLive;
-    meta.defaultSkin = defaultLive;
-  }
+  if (defaultLive) meta.defaultLiveProduct = defaultLive;
   if (input.skinId) meta.skinId = input.skinId;
   if (input.bookId) {
     const book = resolveBookId(String(input.bookId));

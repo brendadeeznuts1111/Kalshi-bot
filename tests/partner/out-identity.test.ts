@@ -38,7 +38,7 @@ describe('out-identity boundary', () => {
     expect(stamped).toContain('"bookId":"fantasy402"');
   });
 
-  test('dual-read legacy skins only (no liveProducts key)', () => {
+  test('dual-read legacy skins only (no liveProducts key); stamp writes liveProducts only', () => {
     const identity = parseOutIdentity({
       id: 'out-X-1',
       partnerId: 'partner-x',
@@ -53,8 +53,9 @@ describe('out-identity boundary', () => {
     expect(identity?.capacity[0]?.liveProduct).toBe('plive');
     const stamped = stampOutMeta(identity!);
     expect(stamped).toContain('"liveProducts"');
-    expect(stamped).toContain('"skins"');
+    expect(stamped).not.toContain('"skins"');
     expect(stamped).toContain('"defaultLiveProduct"');
+    expect(stamped).not.toContain('"defaultSkin"');
   });
 
   test('maglive on buckeye rejected', () => {

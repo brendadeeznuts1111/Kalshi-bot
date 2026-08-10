@@ -149,7 +149,7 @@ skins = [{ name = "2", per_bet_max = 1, max_win = 1 }]
     const cap = computeProviderCapacity(accounts);
     const f = cap.find(c => c.provider === 'fantasy402');
     expect(f?.totalMaxStake).toBe(1500); // 500+1000
-    expect(f?.skinPairCount).toBe(2);
+    expect(f?.capacityPairCount).toBe(2);
   });
 
   test('example file on disk parses', async () => {

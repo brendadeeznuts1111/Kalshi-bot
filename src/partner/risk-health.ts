@@ -208,7 +208,7 @@ export function evaluateRiskHealth(
       : {
           totalPerBetMax: 0,
           workingBalance: null as number | null,
-          skins: [] as Array<{ name: string; perBetMax: number }>,
+          liveProducts: [] as Array<{ name: string; perBetMax: number }>,
         };
     const capacity = cap.totalPerBetMax;
     const envRow = envByOut.get(outId);
