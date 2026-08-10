@@ -287,6 +287,7 @@ export FANTASY402_CURRENCY=USD
 bun run partner:test-fantasy
 bun run partner:test-fantasy -- --sport=tennis --limit=5 --renew
 bun run inventory:watch -- --once --sport=table_tennis --json
+bun run inventory:watch -- --once --dry-run --json   # plan only, no SQLite / Telegram
 bun run inventory:watch -- --loop --sport=table_tennis --interval-ms=30000
 bun test tests/partner/fantasy-ultra.test.ts tests/inventory/skin-events-store.test.ts
 ```
@@ -324,6 +325,7 @@ until a separate EZ feed is proven. At parse, wire JSON `stream_id` →
 # Inventory is public (no Fantasy402 env required). Optional login env warms session.
 bun run inventory:watch -- --once --sport=table_tennis --json
 bun run inventory:watch -- --once --sport=all --json
+bun run inventory:watch -- --once --sport=all --dry-run
 # defaults: --skin=buckeye --book=fantasy402 (other skins rejected)
 
 # long poll every 30s (default)
