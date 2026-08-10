@@ -167,7 +167,7 @@ export const OPS_LAYERS: readonly OpsLayer[] = [
         id: 'out-skin-matrix',
         name: 'Out × skin capacity',
         maturity: 'built',
-        where: 'src/partner/skins.ts · partner:capacity',
+        where: 'src/partner/out-capacity.ts (legacy skins.ts shim) · partner:capacity',
       },
       {
         id: 'fantasy-adapter',

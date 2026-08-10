@@ -14,7 +14,7 @@ import {
   sumTicketTotalsForDay,
   type LedgerFreshness,
 } from "./ledger.ts";
-import { outCapacityFromAccount, parseOutMeta } from "./skins.ts";
+import { outCapacityFromAccount, parseOutMeta } from "./out-capacity.ts";
 import {
   checkPartnersEnvPresence,
   type PartnerEnvKey,

@@ -14,7 +14,7 @@ import {
   upsertBettingAccount,
   upsertPartner,
 } from '../../src/partner/registry.ts';
-import { buildSkinsMeta, liquidityKey, parseSkinWire } from '../../src/partner/skins.ts';
+import { buildSkinsMeta, liquidityKey, parseSkinWire } from '../../src/partner/out-capacity.ts';
 
 const DOMAIN = requireDefaultUrlForUltraMapper();
 

@@ -19,8 +19,8 @@ import {
   type BookId,
   type SkinId,
 } from '../domain/index.ts';
-import type { OutMeta, OutSkinLimit, OutSkinMapperKind } from './skins.ts';
-import { parseOutMeta } from './skins.ts';
+import type { OutMeta, OutSkinLimit, OutSkinMapperKind } from './out-capacity.ts';
+import { parseOutMeta } from './out-capacity.ts';
 
 export type AdapterId = 'fantasy-ultra' | 'kalshi' | 'unmapped';
 

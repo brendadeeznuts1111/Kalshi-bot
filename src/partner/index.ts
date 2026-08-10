@@ -104,6 +104,7 @@ export {
   guardAndStampAccountMeta,
   listActiveBettingAccounts,
   listBettingAccountsByProvider,
+  listEligibleOutCapacityPairs,
   listEligibleOutSkinPairs,
   liquidityKey,
   bookIdFromAccount,
@@ -113,7 +114,9 @@ export {
   parseLiveProductsJsonEnv,
   parseOutIdentity,
   parseSkinsJsonEnv,
+  pickBestCapacityForOut,
   pickBestSkinForOut,
+  resolveOutCapacity,
   resolveOutSkins,
   resolveSkinForAccountUrl,
   seedFantasy402FromEnv,
@@ -126,6 +129,8 @@ export {
   type BettingAccountRow,
   type LiveProductCapacity,
   type OutCapacity,
+  type OutCapacityPair,
+  type OutCapacityRow,
   type OutExposureShare,
   type OutIdentity,
   type OutSkinLimit,
@@ -136,17 +141,22 @@ export {
 } from './registry.ts';
 
 export {
+  buildOutCapacityMeta,
   buildSkinsMeta,
   formatOutId,
   formatVaultName,
+  normalizeCapacityWireName,
   normalizeSkinName,
   parseLiquidityKey,
+  parseLiveProductWire,
   parseOutMeta,
   parseSkinWire,
+  type CapacityWireName,
+  type OutMapperKind,
   type OutMeta,
   type OutSkinMapperKind,
   type SkinName,
-} from './skins.ts';
+} from './out-capacity.ts';
 
 export {
   DEFAULT_HOST_DISCOVER_ARTIFACT_DIR,

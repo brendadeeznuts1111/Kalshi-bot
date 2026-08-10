@@ -6,7 +6,7 @@ import {
   parseOutIdentity,
   stampOutMeta,
 } from '../../src/partner/out-identity.ts';
-import { buildSkinsMeta } from '../../src/partner/skins.ts';
+import { buildSkinsMeta } from '../../src/partner/out-capacity.ts';
 
 const BUCKEYE_URL = defaultUrlForSkin('buckeye')!;
 const ACE_URL = defaultUrlForSkin('ace')!;

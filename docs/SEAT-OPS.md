@@ -159,7 +159,7 @@ Fantasy Ultra wire examples + inventory columns:
 ### Partner + Accounts
 
 - `partners` / `betting_accounts` in event-store
-- Out × live-product capacity (`out-identity.ts`, `skins.ts`,
+- Out × live-product capacity (`out-identity.ts`, `out-capacity.ts`,
   `partner:capacity`)
 - Fantasy Ultra adapter (`adapterId: fantasy-ultra`): login, stream-list, sports
   inventory (30 buckets), Pandora coefficients

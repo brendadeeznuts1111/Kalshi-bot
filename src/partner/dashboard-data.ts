@@ -24,7 +24,7 @@ import {
   type RiskThreshold,
 } from "./risk-health.ts";
 import { getPartnerVisual } from "./visuals.ts";
-import { parseOutMeta } from "./skins.ts";
+import { parseOutMeta } from "./out-capacity.ts";
 import { sumTicketTotalsForDay } from "./ledger.ts";
 
 export type PartnerDashboardSnapshot = {

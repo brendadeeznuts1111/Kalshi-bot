@@ -567,7 +567,7 @@ bun run partner:capacity
 bun run partner:capacity -- --stake=800 --json
 ```
 
-Code: `src/partner/skins.ts` · `computeProviderCapacity` ·
+Code: `src/partner/out-capacity.ts` · `computeProviderCapacity` ·
 `listEligibleOutSkinPairs` · `concentrationByOut` ·
 `getFantasySessionAdapter(profile, { skin })`.
 
