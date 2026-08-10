@@ -7,10 +7,36 @@ Standalone registry for live PPH coverage. **Not** owned by Fantasy402.
 | Layer             | Owns                                         | Examples                                                                  |
 | ----------------- | -------------------------------------------- | ------------------------------------------------------------------------- |
 | **Sports**        | Canonical `SportId`                          | `soccer`, `table_tennis`                                                  |
+| **Competitions**  | Canonical leagues under a sport + Plive map  | `table_tennis.setka_cup` · [`competitions.ts`](competitions.ts)           |
 | **Live products** | Coverage bindings + stream endpoints         | `plive`, `ezlive`, `ultralive`, `maglive` · `live-product-endpoints.ts`   |
 | **Skins**         | White-labels + hosts + offered live products | `buckeye`, `ace`, `metallic`, `sts`, `1bv`, `lvaction`, `magnum`          |
 | **Books**         | Desk brands under a skin (host-derived)      | `fantasy402`, `parlay21`, `classic.lvaction.com` · [`books.ts`](books.ts) |
 | **Outs**          | Capacity / credentials                       | `out-SPEN-1` + live-product wire                                          |
+
+### Competitions (Plive-aware)
+
+Stream-list inventory sends **bucket + `league` string** (no markets, no numeric
+sport id on the event). Seed + resolve:
+
+```ts
+import { resolveCompetition } from '../domain/index.ts';
+
+resolveCompetition({
+  liveProduct: 'plive',
+  sportId: 'table_tennis',
+  league: 'Setka Cup',
+}); // → table_tennis.setka_cup
+
+// ezlive shares the plive shell mapping
+resolveCompetition({
+  liveProduct: 'ezlive',
+  streamBucket: 'table_tennis',
+  league: 'Masters. Poland. Women',
+}); // → table_tennis.masters_poland_women (gender: women)
+```
+
+Unknown / junk league labels return `undefined`. `skin_events` does not yet
+stamp `competition_id` (follow-up).
 
 Desk hosts live only in `SKINS[].hosts`. Stream/widget infra URLs live only in
 `live-product-endpoints.ts` (`PLIVE_STREAM_ENDPOINTS`,

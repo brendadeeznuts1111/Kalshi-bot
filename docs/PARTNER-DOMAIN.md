@@ -8,6 +8,9 @@ Machine status: `bun run partner:domain` · `bun run partner:domain -- --json`
 Skin matrix: `bun run partner:skins` · Book matrix: `bun run partner:books`  
 Event inventory (Buckeye / Fantasy402 → plive+ezlive):
 `bun run partner:watch-events`  
+Competitions (Plive league → canonical id):
+[`src/domain/competitions.ts`](../src/domain/competitions.ts) ·
+`resolveCompetition`  
 Expansion map: `bun run partner:map` ·
 [`PARTNER-EXECUTION-EXPANSION.md`](PARTNER-EXECUTION-EXPANSION.md) Code map:
 [`src/partner/domain.ts`](../src/partner/domain.ts) · inventory:
