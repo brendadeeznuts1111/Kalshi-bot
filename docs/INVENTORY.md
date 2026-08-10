@@ -146,6 +146,7 @@ INVENTORY_SYNC=1 INVENTORY_SYNC_PUBLIC=1 bun run cron:start
 | `leagues` | Durable registry upsert (`seen` / `inserted` / `updated` / `newLeagues`) |
 | `enriched` / `enrichCandidates` | Soft Statscore name → `odds_event_id` matches (metadata only) |
 | `pricedEventCount` / `pricedLineCount` | Pandora `CoefficientStore` sizes when adapter has lines |
+| `oddsLink` | Book fill-rate: linked/total (`odds_event_id` non-empty) |
 
 ## Odds handoff (metadata ≠ prices)
 
@@ -158,8 +159,10 @@ bun run inventory:sync -- --sport=all --enrich-booked
 bun run inventory:sync -- --sport=all --enrich-booked --enrich-scope=new
 bun run inventory:sync -- --sport=all --enrich-booked --enrich-scope=unlinked
 bun run inventory:sync -- --sport=all --enrich-booked --dry-run --json
+bun run inventory:sync -- --odds-status              # fill-rate only
+bun run inventory:watch -- --once --sport=all --enrich-booked
 
-# Cron
+# Cron (scope via INVENTORY_SYNC_ENRICH_SCOPE=board|new|unlinked)
 INVENTORY_SYNC=1 INVENTORY_SYNC_PUBLIC=1 INVENTORY_SYNC_ENRICH_BOOKED=1 bun run cron:start
 ```
 
@@ -307,7 +310,8 @@ not a second inventory store. Details:
 | ------- | ---- |
 | `domain:sports` | Stream snapshot + static map + sport map seed |
 | `inventory:sync -- --sport=all [--dry-run] [--enrich-booked]` | Adapter poll → events + leagues (+ odds_event_id) |
-| `inventory:watch -- --sport=all [--once] [--dry-run]` | Public/adapter poll → events + leagues |
+| `inventory:sync -- --odds-status` | `odds_event_id` fill-rate for book |
+| `inventory:watch -- --sport=all [--once] [--dry-run] [--enrich-booked]` | Public/adapter poll → events + leagues |
 | `inventory:leagues [--unmapped] [--harvest]` | List / harvest durable league registry |
 | `inventory:leagues -- --report [--notify]` | Promote dry-report; optional force Telegram |
 | `inventory:leagues -- --promote [--apply]` | Plan/apply COMPETITIONS seeds from unmapped |

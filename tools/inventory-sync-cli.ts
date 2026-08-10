@@ -14,11 +14,13 @@
  *   bun run inventory:sync -- --enrich-booked --json
  *   bun run inventory:sync -- --enrich-booked --enrich-scope=board
  *   bun run inventory:sync -- --enrich-booked --enrich-scope=unlinked
+ *   bun run inventory:sync -- --odds-status
  *
  * Default sport filter when omitted: table_tennis (CLI). Cron defaults to all.
  * --dry-run: fetch + plan insert/update only (no SQLite writes; enrich is planned only).
  *            Incompatible with --loop.
  * --enrich-scope: new | board (default) | unlinked
+ * --odds-status: odds_event_id fill-rate only (no poll)
  */
 // @see https://bun.com/docs/runtime/sqlite
 import { openEventStore } from "../src/institutions/event-store/open-db.ts";
@@ -29,10 +31,13 @@ import {
   requireFantasy402ProfileFromEnv,
 } from "../src/partner/index.ts";
 import {
+  formatOddsLinkCoverage,
   formatSyncReport,
+  oddsLinkCoverage,
   parseEnrichBookedScope,
   runInventorySync,
 } from "../src/inventory/sync.ts";
+import { buckeyeInventoryIdentity } from "../src/inventory/skin-events-store.ts";
 import { requireDefaultUrlForUltraMapper } from "../src/domain/index.ts";
 import type { PartnerAccountProfile } from "../src/partner/account-profile.ts";
 
@@ -105,10 +110,23 @@ async function runOnce(options: {
 async function main(): Promise<void> {
   const loop = hasFlag("loop");
   const dryRun = hasFlag("dry-run") || hasFlag("dryRun");
+  const json = hasFlag("json");
   const intervalMs = Math.max(
     Number(argValue("interval-ms") ?? "30000") || 30_000,
     5_000,
   );
+
+  if (hasFlag("odds-status")) {
+    const db = openEventStore({ dbPath: DEFAULT_EVENT_STORE_DB });
+    const bookId = argValue("book") ?? buckeyeInventoryIdentity().bookId;
+    const cov = oddsLinkCoverage(db, bookId);
+    if (json) {
+      console.log(JSON.stringify({ oddsStatus: true, ...cov }, null, 2));
+    } else {
+      console.log(`inventory:sync --odds-status ${formatOddsLinkCoverage(cov)}`);
+    }
+    return;
+  }
 
   if (loop && dryRun) {
     throw new Error("inventory:sync --dry-run cannot be combined with --loop");
@@ -119,7 +137,7 @@ async function main(): Promise<void> {
     sport: argValue("sport") ?? "table_tennis",
     enrichBooked: hasFlag("enrich-booked"),
     enrichBookedScope: parseEnrichBookedScope(argValue("enrich-scope")),
-    json: hasFlag("json"),
+    json,
   };
 
   if (!loop) {
