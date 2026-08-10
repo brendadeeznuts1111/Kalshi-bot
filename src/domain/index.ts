@@ -126,6 +126,22 @@ export {
 } from './resolve-competition.ts';
 
 export {
+  EXAMPLE_DARIN_PLACHY_SELECTION,
+  KNOWN_MARKET_LABELS,
+  describeSelection,
+  marketLabel,
+  periodLabel,
+  selectionFromCoefficientLine,
+  selectionFromTicketLeg,
+  type CoefficientLineCoords,
+  type InventoryEventRef,
+  type KnownMarketId,
+  type OddsEventRef,
+  type OddsSelection,
+  type TicketLegCoords,
+} from './odds-selection.ts';
+
+export {
   BOOKS,
   BOOK_IDS,
   HOST_TO_BOOK,
