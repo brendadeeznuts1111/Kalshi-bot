@@ -81,6 +81,8 @@
     "inventory:watch": "bun tools/inventory-watch-cli.ts",
     "inventory:leagues": "bun tools/inventory-leagues-cli.ts",
     "inventory:enrich": "bun tools/inventory-sync-cli.ts --enrich-only --sport=all --enrich-scope=unlinked",
+    "inventory:enrich:quality": "bun tools/inventory-sync-cli.ts --enrich-only --sport=all --enrich-scope=unlinked --dry-run --json",
+    "inventory:enrich:gate": "bun tools/inventory-sync-cli.ts --enrich-only --sport=all --enrich-scope=unlinked --min-match-rate=0.05 --fail-on-enrich-quality",
     "inventory:coverage-board": "bun tools/bake-inventory-coverage-board.ts",
     "ops:status": "bun tools/ops-cli.ts",
     "ops:map": "bun tools/ops-cli.ts --map",

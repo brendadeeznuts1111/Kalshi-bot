@@ -39,6 +39,9 @@ export type EnrichBookedEventsOptions = {
   publicOk?: boolean;
   /** Telegram ops alert when validation fails (needs TELEGRAM_*). */
   notifyOnValidateFail?: boolean;
+  /** Enrich quality gates (match-rate 0–1, linkedPct 0–100). */
+  minMatchRate?: number | null;
+  minLinkedPct?: number | null;
   adapter?: FantasySessionAdapter;
   profile?: PartnerAccountProfile;
 };
@@ -86,6 +89,8 @@ export async function enrichBookedEvents(
     bookedCatalog: options.bookedCatalog,
     dryRun: options.dryRun === true,
     nowMs: options.nowMs,
+    minMatchRate: options.minMatchRate,
+    minLinkedPct: options.minLinkedPct,
   };
 
   const report = await runInventorySync(db, adapter, syncOpts);

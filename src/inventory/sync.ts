@@ -22,6 +22,10 @@ import {
   type EnrichValidation,
 } from './enrich-validate.ts';
 import {
+  formatEnrichQuality,
+  type EnrichQualityReport,
+} from './enrich-quality.ts';
+import {
   formatLeagueLine,
   upsertInventoryLeagues,
   type InventoryLeagueUpsertResult,
@@ -87,6 +91,12 @@ export type InventorySyncOptions = {
    * no sport-label normalize. Report counts are would-be.
    */
   dryRun?: boolean;
+  /**
+   * Enrich quality gates (match-rate / linked%). Applied when enrich runs.
+   * CLI: --min-match-rate=0.1 --min-linked-pct=20
+   */
+  minMatchRate?: number | null;
+  minLinkedPct?: number | null;
 };
 
 export type InventorySyncReport = {
@@ -108,6 +118,8 @@ export type InventorySyncReport = {
   oddsLink: OddsLinkCoverage | null;
   /** Post-enrich validation (null when enrich did not run). */
   enrichValidation: EnrichValidation | null;
+  /** Match-rate + miss reasons (null when enrich did not run). */
+  enrichQuality: EnrichQualityReport | null;
   /** True when no DB mutations were applied. */
   dryRun: boolean;
   /** Live-product shells this inventory feed covers (e.g. plive + ezlive). */
@@ -422,6 +434,7 @@ export async function runInventorySync(
   let enriched = 0;
   let enrichCandidates = 0;
   let enrichValidation: EnrichValidation | null = null;
+  let enrichQuality: EnrichQualityReport | null = null;
   const wantEnrich = options.enrichBooked === true || enrichOnly;
   const enrichScope: EnrichBookedScope | null = wantEnrich
     ? (options.enrichBookedScope ?? (enrichOnly ? 'unlinked' : 'board'))
@@ -491,16 +504,41 @@ export async function runInventorySync(
       const { validateEnrichmentResult, formatEnrichValidation } = await import(
         './enrich-validate.ts'
       );
-      // Fail only when we had candidates but catalog was empty (blocked/fail),
-      // or matched nothing *and* catalog empty. Name-miss on fat unlinked set is expected.
-      enrichValidation = validateEnrichmentResult(dryRun ? null : db, identity.bookId, {
+      const {
+        buildEnrichQualityReport,
+        formatEnrichQuality,
+      } = await import('./enrich-quality.ts');
+      // Book fill-rate always measured (even dry-run) — quality of current book state.
+      enrichValidation = validateEnrichmentResult(db, identity.bookId, {
         candidates: enrichCandidates,
         matched: enriched,
+        // Fail hard only when catalog empty (match path dead), not on name-miss alone.
         requireAnyMatchWhenCandidates: catalog.length === 0,
+        maxUnlinkedRatio:
+          options.minLinkedPct != null
+            ? 1 - options.minLinkedPct / 100
+            : undefined,
       });
       if (catalog.length === 0 && enrichCandidates > 0) {
-        enrichValidation.errors.push('catalog empty — live fetch failed and no usable cache');
+        enrichValidation.errors.push(
+          'catalog empty — live fetch failed and no usable cache'
+        );
         enrichValidation.passed = false;
+      }
+      enrichQuality = buildEnrichQualityReport(candidates, catalog, {
+        linkedPct: enrichValidation.oddsLink?.linkedPct ?? null,
+        gates: {
+          minMatchRate: options.minMatchRate,
+          minLinkedPct: options.minLinkedPct,
+          // Name-miss alone is expected; only gate when minMatchRate set or catalog empty.
+          requireAnyMatchWhenCandidates: false,
+        },
+      });
+      // Prefer quality report match count when it diverges (should not).
+      if (enrichQuality.matched !== enriched && !dryRun) {
+        notes.push(
+          `enrich quality matched=${enrichQuality.matched} vs apply=${enriched} (diagnose vs write path)`
+        );
       }
       notes.push(
         dryRun
@@ -508,16 +546,20 @@ export async function runInventorySync(
           : `booked enrich (scope=${enrichScope}): matched ${enriched}/${enrichCandidates} by name (catalog=${catalog.length} via ${catalogSource}; metadata only — no prices)`
       );
       notes.push(formatEnrichValidation(enrichValidation));
-      enrichLog(enrichValidation.passed ? 'info' : 'warn', 'enrich_tick', {
+      notes.push(formatEnrichQuality(enrichQuality));
+      enrichLog(enrichQuality.passed ? 'info' : 'warn', 'enrich_tick', {
         scope: enrichScope,
         dryRun,
         matched: enriched,
         candidates: enrichCandidates,
+        matchRate: enrichQuality.matchRate,
         catalogSize: catalog.length,
         catalogSource,
         latencyMs: Date.now() - t0,
         validationPassed: enrichValidation.passed,
+        qualityPassed: enrichQuality.passed,
         unlinkedRemaining: enrichValidation.unlinkedRemaining,
+        byReason: enrichQuality.byReason,
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -531,13 +573,17 @@ export async function runInventorySync(
       const { validateEnrichmentResult, formatEnrichValidation } = await import(
         './enrich-validate.ts'
       );
-      enrichValidation = validateEnrichmentResult(dryRun ? null : db, identity.bookId, {
+      const { emptyEnrichQuality } = await import('./enrich-quality.ts');
+      enrichValidation = validateEnrichmentResult(db, identity.bookId, {
         candidates: enrichCandidates,
         matched: 0,
         requireAnyMatchWhenCandidates: true,
       });
       enrichValidation.errors.unshift(`catalog/enrich failed: ${msg}`);
       enrichValidation.passed = false;
+      enrichQuality = emptyEnrichQuality(0);
+      enrichQuality.passed = false;
+      enrichQuality.errors = [`catalog/enrich failed: ${msg}`];
       notes.push(formatEnrichValidation(enrichValidation));
     }
   }
@@ -594,7 +640,8 @@ export async function runInventorySync(
     );
   }
 
-  const oddsLink = dryRun ? null : oddsLinkCoverage(db, identity.bookId);
+  // Always surface book fill-rate (dry-run included) for enrich quality loop.
+  const oddsLink = oddsLinkCoverage(db, identity.bookId);
   if (oddsLink) {
     notes.push(formatOddsLinkCoverage(oddsLink));
   }
@@ -613,6 +660,7 @@ export async function runInventorySync(
     pricedLineCount,
     oddsLink,
     enrichValidation,
+    enrichQuality,
     dryRun,
     coversLiveProducts,
     sportHistogram,
@@ -660,6 +708,11 @@ export function formatSyncReport(report: InventorySyncReport): string {
   }
   if (report.enrichValidation) {
     lines.push(`  ${formatEnrichValidation(report.enrichValidation)}`);
+  }
+  if (report.enrichQuality) {
+    for (const line of formatEnrichQuality(report.enrichQuality).split('\n')) {
+      lines.push(`  ${line}`);
+    }
   }
   lines.push(
     `  leagues: seen=${report.leagues.seen} new=${report.leagues.inserted} updated=${report.leagues.updated}`
