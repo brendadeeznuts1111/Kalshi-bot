@@ -440,7 +440,7 @@ Partner → Communication → Accounts/Outs → Assets → Finance.
 | **Account (out)**         | `betting_accounts`                                      | Place to bet: provider + limits + `env_prefix` for secrets                       |
 | **Skin** (white-label)    | `src/domain/skins.ts`                                   | `buckeye`, `ace`, `metallic`, `sts`, `1bv`, `lvaction`, `magnum`                 |
 | **Live product**          | `src/domain/live-products.ts` + capacity `meta.liveProducts[]` | `plive` / `ezlive` / `ultralive` / `maglive` (`dark` capacity-only)       |
-| **Adapter surface**       | `AdapterId` (`fantasy402`, `kalshi`)                    | DTO token on inventory/book rows — **not** seat `partnerId`; distinct from mapper `AdapterId` (`fantasy-ultra` …) |
+| **Adapter surface**       | `SurfaceAdapterId` (`fantasy402`, `kalshi`)             | DTO token on inventory/book rows — **not** seat `partnerId`; mapper is `MapperAdapterId` (`fantasy-ultra` …) |
 | **Provider** (legacy env) | env / outs column mirror                                | Still on outs / env; `fantasy402` is BookId + mapper token → skin `buckeye` |
 | **Sports map**            | `src/domain/` + `provider_sport_mappings` seed          | Live-product keys primary; optional legacy `fantasy402` dual-write               |
 | **Stream inventory**      | `skin_events`                                        | Detected events (not priced book)                                                |

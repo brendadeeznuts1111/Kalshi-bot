@@ -2,17 +2,17 @@
  * Partner account profile — env-backed for the Fantasy dummy desk.
  * Do not commit secrets; load via process env / Proton inject later.
  *
- * meta.skin = live interface wire (ezlive / dark / 2) — not white-label.
+ * defaultLiveProduct = live interface wire (ezlive / dark / 2) — not white-label.
  * skinId = white-label desk (buckeye / ace / …) when known.
- * partner: "fantasy402" is a legacy mapper/adapter label (maps buckeye), not the SkinId.
+ * partner: "fantasy402" is a surface adapter token (maps buckeye), not the SkinId.
  *
  * Resolution uses per-out env_prefix with fallback chain:
  *   out (FANTASY402_SPEN_1_*) → partner (FANTASY402_SPEN_*) → book (FANTASY402_*)
  */
 import { getSkinByHost, resolveDeskDomainFromEnv, type SkinId } from '../domain/index.ts';
-import type { AdapterId as MapperAdapterId } from './out-identity.ts';
+import type { MapperAdapterId } from './out-identity.ts';
 import { adapterBindingForSkin, providerMirrorFromAdapter } from './out-identity.ts';
-import type { AdapterId, PartnerAccountStatus } from './types.ts';
+import type { PartnerAccountStatus, SurfaceAdapterId } from './types.ts';
 import type { FantasyUltraCredentials } from './fantasy-ultra/types.ts';
 import { FANTASY_ULTRA_DEFAULTS } from './fantasy-ultra/types.ts';
 import { parseLiveProductWire } from './out-capacity.ts';
@@ -27,27 +27,24 @@ import {
 export type PartnerAccountProfile = {
   id: string;
   /**
-   * @deprecated Legacy adapter-surface token (`fantasy402`). Prefer `adapterId` + `skinId`.
-   * Kept as bookEnvToken mirror for env resolution.
+   * Surface adapter token (`fantasy402` / `kalshi`) for env resolution mirror.
+   * Prefer `adapterId` (mapper) + `skinId` (desk) for routing.
    */
-  partner: AdapterId;
+  partner: SurfaceAdapterId;
   url: string;
   status: PartnerAccountStatus;
   /** White-label SkinId when resolved (host or alias). */
   skinId?: SkinId;
-  /** Mapper selection key (fantasy-ultra | kalshi | unmapped) — out-identity AdapterId. */
+  /** Mapper selection key (fantasy-ultra | kalshi | unmapped). */
   adapterId?: MapperAdapterId;
-  /** Default live-product wire (same as meta.skin / defaultLiveProduct). */
+  /** Default live-product / Ultra wire for this out. */
   defaultLiveProduct?: string | number;
+  /** Secrets + currency only — never put live-product wire here. */
   meta: {
     customerID: string;
     agentID: string;
     password: string;
     token: string;
-    /**
-     * @deprecated use defaultLiveProduct — Ultra wire / live product for session.
-     */
-    skin: string | number;
     currency: string;
   };
 };
@@ -75,7 +72,7 @@ export function profileFromEnvBundle(
   const skinId = getSkinByHost(url);
   const defaultLiveProduct = parseLiveProductWire(
     bundle.values.LIVE_PRODUCT,
-    FANTASY_ULTRA_DEFAULTS.skin
+    FANTASY_ULTRA_DEFAULTS.liveProduct
   );
   const binding = skinId ? adapterBindingForSkin(skinId) : undefined;
   const adapterId = binding?.adapterId ?? 'unmapped';
@@ -93,7 +90,6 @@ export function profileFromEnvBundle(
       agentID,
       password,
       token: token.replace(/^Bearer\s+/i, ''),
-      skin: defaultLiveProduct,
       currency: bundle.values.CURRENCY?.trim() || FANTASY_ULTRA_DEFAULTS.currency,
     },
   };
@@ -164,31 +160,37 @@ export function loadFantasy402ProfileFromEnv(
 
 export function credentialsFromFantasyProfile(
   profile: PartnerAccountProfile,
-  options?: { skin?: string | number; liveProduct?: string | number }
+  options?: { liveProduct?: string | number; skin?: string | number }
 ): FantasyUltraCredentials {
   const wire =
-    options?.liveProduct ?? options?.skin ?? profile.defaultLiveProduct ?? profile.meta.skin;
+    options?.liveProduct ??
+    options?.skin ??
+    profile.defaultLiveProduct ??
+    FANTASY_ULTRA_DEFAULTS.liveProduct;
   return {
     customerID: profile.meta.customerID,
     agentID: profile.meta.agentID,
     password: profile.meta.password,
     bearerToken: profile.meta.token,
     domain: profile.url,
+    /** Ultra form field name remains `skin` on the wire. */
     skin: wire,
     currency: profile.meta.currency,
   };
 }
 
 /** Clone profile with a chosen execution live product (same vault credentials). */
-export function profileWithSkin(
+export function profileWithLiveProduct(
   profile: PartnerAccountProfile,
-  skin: string | number
+  liveProduct: string | number
 ): PartnerAccountProfile {
-  const wire = parseLiveProductWire(skin, profile.meta.skin);
+  const wire = parseLiveProductWire(
+    liveProduct,
+    profile.defaultLiveProduct ?? FANTASY_ULTRA_DEFAULTS.liveProduct
+  );
   return {
     ...profile,
     defaultLiveProduct: wire,
-    meta: { ...profile.meta, skin: wire },
   };
 }
 

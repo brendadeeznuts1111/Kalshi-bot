@@ -106,7 +106,7 @@ async function main(): Promise<void> {
         domain: profile.url,
         customerID: profile.meta.customerID,
         agentID: profile.meta.agentID,
-        skin: profile.meta.skin,
+        liveProduct: profile.defaultLiveProduct,
         currency: profile.meta.currency,
         tokenPresent: profile.meta.token.length > 0,
         tokenLen: profile.meta.token.length,

@@ -31,7 +31,7 @@ import {
 
 /**
  * Desk mapper adapter token for discovery reports.
- * Same string union as partner `AdapterId` (fantasy-ultra | kalshi | unmapped).
+ * Same string union as partner `MapperAdapterId` (fantasy-ultra | kalshi | unmapped).
  */
 export type DeskAdapterId = 'fantasy-ultra' | 'kalshi' | 'unmapped';
 

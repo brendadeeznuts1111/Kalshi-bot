@@ -149,12 +149,12 @@ const profile: PartnerAccountProfile = {
   partner: "fantasy402",
   url: DOMAIN,
   status: "active",
+  defaultLiveProduct: 2,
   meta: {
     customerID: "C",
     agentID: "AGENT1",
     password: "p",
     token: "old-token",
-    skin: 2,
     currency: "USD",
   },
 };

@@ -201,12 +201,12 @@ async function jobPartnerSync(): Promise<void> {
         partner: "fantasy402",
         url: requireDefaultUrlForUltraMapper(),
         status: "active",
+        defaultLiveProduct: 2,
         meta: {
           customerID: "public",
           agentID: "public",
           password: "public",
           token: "public",
-          skin: 2,
           currency: "USD",
         },
       };

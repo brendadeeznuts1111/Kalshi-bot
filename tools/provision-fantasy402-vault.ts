@@ -145,7 +145,7 @@ function loadCredsFromEnv(envPrefix: string): DeskCreds | null {
     password: profile.meta.password,
     bearerToken: profile.meta.token,
     domain: profile.url || DEFAULT_DOMAIN,
-    skin: String(profile.meta.skin),
+    skin: String(profile.defaultLiveProduct ?? 2),
     currency: profile.meta.currency,
   };
 }

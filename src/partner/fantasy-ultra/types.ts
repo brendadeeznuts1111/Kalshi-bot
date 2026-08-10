@@ -21,8 +21,9 @@ export type FantasyUltraCredentials = {
   bearerToken: string;
   domain: string;
   /**
-   * Live interface for getUltraLiveURL — numeric wire id (`2`) or named skin
-   * (`ezlive`, `dark`). Credentials are per-out; skin only changes limits/payload.
+   * Live-product wire for getUltraLiveURL — numeric id (`2`) or name
+   * (`ezlive`, `dark`). Field name is Ultra form `skin` (not desk SkinId).
+   * Credentials are per-out; this only changes limits/payload product.
    */
   skin: string | number;
   currency: string;
@@ -95,7 +96,8 @@ export const FANTASY_ULTRA_DEFAULTS = {
   statscoreBookedEventsUrl: STATSCORE_BOOKED_EVENTS.url,
   statscoreClientId: STATSCORE_BOOKED_EVENTS.clientId,
   statscoreProduct: STATSCORE_BOOKED_EVENTS.product,
-  skin: 2,
+  /** Default Ultra live-product wire (not desk SkinId). */
+  liveProduct: 2,
   currency: 'USD',
   lang: 'English',
   module: 'sports.html',
