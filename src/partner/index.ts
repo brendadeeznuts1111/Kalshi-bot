@@ -102,6 +102,7 @@ export {
   listBettingAccountsByProvider,
   listEligibleOutSkinPairs,
   liquidityKey,
+  bookIdFromAccount,
   mapperFromAccount,
   outCapacityFromAccount,
   outIdentityFromAccount,

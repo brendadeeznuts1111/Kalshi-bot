@@ -13,6 +13,7 @@
  * Vault stores credentials once per out; live product lives in seat-capital / meta.
  */
 
+import { isBookId, resolveBookId, type BookId } from '../domain/books.ts';
 import { isSkinId, type SkinId, type SkinMapper } from '../domain/skins.ts';
 import { normalizeLiveProductName } from '../domain/live-products.ts';
 
@@ -345,6 +346,8 @@ export function buildSkinsMeta(input: {
   defaultLiveProduct?: SkinName;
   /** White-label desk id (host gateway). */
   skinId?: SkinId;
+  /** Desk brand under the skin (host-derived BookId). */
+  bookId?: BookId | string;
   /** Mapper kind for this skin. */
   mapper?: OutSkinMapperKind;
   extra?: Record<string, unknown>;
@@ -377,6 +380,10 @@ export function buildSkinsMeta(input: {
     meta.defaultSkin = defaultLive;
   }
   if (input.skinId) meta.skinId = input.skinId;
+  if (input.bookId) {
+    const book = resolveBookId(String(input.bookId));
+    if (book) meta.bookId = book;
+  }
   if (input.mapper) meta.mapper = input.mapper;
   return JSON.stringify(meta);
 }
@@ -386,6 +393,15 @@ export function skinIdFromAccount(input: { metaJson: string }): SkinId | undefin
   const meta = parseOutMeta(input.metaJson);
   const raw = typeof meta.skinId === 'string' ? meta.skinId.trim() : '';
   return raw && isSkinId(raw) ? raw : undefined;
+}
+
+/** Read desk BookId from an account's meta_json (if stamped). */
+export function bookIdFromAccount(input: { metaJson: string }): BookId | undefined {
+  const meta = parseOutMeta(input.metaJson);
+  const raw = typeof meta.bookId === 'string' ? meta.bookId.trim() : '';
+  if (!raw) return undefined;
+  if (isBookId(raw)) return raw;
+  return resolveBookId(raw);
 }
 
 /** Read mapper kind from meta_json. */

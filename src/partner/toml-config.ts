@@ -28,8 +28,12 @@ import type { Database } from 'bun:sqlite';
 import { z } from 'zod';
 import {
   PARTNER_DOMAIN_ENV,
+  getBookByHost,
+  getSkin,
+  getSkinByHost,
   isRetiredBareBookDomainEnv,
   requireDefaultUrlForUltraMapper,
+  resolveBookId,
 } from '../domain/index.ts';
 import {
   ensurePartnerRegistrySchema,
@@ -71,6 +75,8 @@ const partnersTomlOutSchema = z
     envPrefix: z.string().optional(),
     currency: z.string().optional(),
     url: z.string().optional(),
+    book_id: z.string().optional(),
+    bookId: z.string().optional(),
     working_balance: zNum.optional(),
     workingBalance: zNum.optional(),
     vault_id: z.string().optional(),
@@ -581,17 +587,41 @@ export function materializePartnersToml(doc: PartnersTomlDoc): {
         : normalizeEnvPrefix(rawPrefix);
     const vaultId = String(o.vault_id ?? o.vaultId ?? '').trim() || canonicalVaultId(id);
 
+    const url = String(o.url ?? requireDefaultUrlForUltraMapper());
+    const skinId = getSkinByHost(url);
+    const bookFromHost = getBookByHost(url);
+    const tomlBookRaw = String(o.book_id ?? o.bookId ?? '').trim();
+    let bookId = bookFromHost;
+    if (tomlBookRaw) {
+      const resolvedTomlBook = resolveBookId(tomlBookRaw);
+      if (!resolvedTomlBook) {
+        throw new Error(
+          `Out ${id}: unknown book_id=${tomlBookRaw} — use a BookId from bun run partner:books`
+        );
+      }
+      if (bookFromHost && bookFromHost !== resolvedTomlBook) {
+        throw new Error(
+          `Out ${id}: book_id=${resolvedTomlBook} conflicts with url host book=${bookFromHost}`
+        );
+      }
+      bookId = resolvedTomlBook;
+    }
+    const mapper = skinId ? getSkin(skinId)?.mapper.kind : undefined;
+
     accounts.push({
       id,
       partnerId: partner.id,
       provider,
-      url: String(o.url ?? requireDefaultUrlForUltraMapper()),
+      url,
       status,
       envPrefix,
       maxStake,
       maxWin,
       currency: String(o.currency ?? 'USD'),
       skin: null,
+      skinId,
+      bookId,
+      mapper,
       metaJson: buildSkinsMeta({
         skins: fallbackSkins,
         workingBalance:
@@ -601,6 +631,9 @@ export function materializePartnersToml(doc: PartnersTomlDoc): {
         vaultId,
         partnerCode: partnerCode || undefined,
         defaultSkin: fallbackSkins[0]?.name,
+        skinId,
+        bookId,
+        mapper,
       }),
     });
   }

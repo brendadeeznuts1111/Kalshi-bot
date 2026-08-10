@@ -60,6 +60,45 @@ describe('partners TOML (Bun.TOML)', () => {
     expect(accounts[0]?.metaJson).toContain('ezlive');
     expect(accounts[0]?.metaJson).toContain('vault-out-SPEN-1');
     expect(accounts[0]?.metaJson).not.toContain('password');
+    // Ultra default url → fantasy402 book + buckeye skin stamped at materialize
+    expect(accounts[0]?.skinId).toBe('buckeye');
+    expect(accounts[0]?.bookId).toBe('fantasy402');
+    expect(accounts[0]?.metaJson).toContain('"skinId":"buckeye"');
+    expect(accounts[0]?.metaJson).toContain('"bookId":"fantasy402"');
+  });
+
+  test('materialize stamps bookId from url; matching book_id ok; conflict throws', () => {
+    const withUrl = parsePartnersToml(`
+[[partners]]
+code = "SPEN"
+id = "partner-spen"
+name = "Partner SPEN"
+[[outs]]
+id = "out-SPEN-1"
+partner_code = "SPEN"
+provider = "fantasy402"
+url = "https://fantasy402.com"
+book_id = "fantasy402"
+skins = [{ name = "ezlive", per_bet_max = 500, max_win = 2500, active = true }]
+`);
+    const ok = materializePartnersToml(withUrl);
+    expect(ok.accounts[0]?.bookId).toBe('fantasy402');
+    expect(ok.accounts[0]?.skinId).toBe('buckeye');
+
+    const conflict = parsePartnersToml(`
+[[partners]]
+code = "SPEN"
+id = "partner-spen"
+name = "Partner SPEN"
+[[outs]]
+id = "out-SPEN-1"
+partner_code = "SPEN"
+provider = "fantasy402"
+url = "https://fantasy402.com"
+book_id = "parlay21"
+skins = [{ name = "ezlive", per_bet_max = 500, max_win = 2500, active = true }]
+`);
+    expect(() => materializePartnersToml(conflict)).toThrow(/conflicts with url host book/);
   });
 
   test('canonicalOutEnvPrefix + validatePartnerAssetPrefixes', () => {
