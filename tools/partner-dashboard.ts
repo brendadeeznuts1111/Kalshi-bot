@@ -8,7 +8,7 @@
  *
  * Then: bun run serve  →  /partner-dashboard/
  *
- * @see docs/PARTNER-DOMAIN.md
+ * @see docs/SEAT-OPS.md
  */
 // @see https://bun.com/docs/runtime/sqlite
 // @see https://bun.com/docs/api/file-io

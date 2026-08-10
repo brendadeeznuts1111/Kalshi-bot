@@ -20,7 +20,7 @@ import {
   formatHostDiscoverText,
   listMappedDiscoverHosts,
   type HostDiscoverReport,
-} from '../src/partner/host-discover.ts';
+} from '../src/domain/host-discover.ts';
 
 function argValue(name: string): string | undefined {
   const pref = `${name}=`;
@@ -56,14 +56,14 @@ const multi = all || compare;
 
 if (!url && !multi) {
   console.error(`Usage:
-  bun run partner:host-discover -- --url=https://BOOK.example
-  bun run partner:host-discover -- --url=https://BOOK.example --json
-  bun run partner:host-discover -- --url=https://BOOK.example --weigh --json
-  bun run partner:host-discover -- --url=https://BOOK.example --har=./session.har
-  bun run partner:host-discover -- --all
-  bun run partner:host-discover -- --all --json
-  bun run partner:host-discover -- --url=https://BOOK.example --compare
-  bun run partner:host-discover -- --url=https://BOOK.example --skip-extras --no-persist
+  bun run domain:host-discover -- --url=https://BOOK.example
+  bun run domain:host-discover -- --url=https://BOOK.example --json
+  bun run domain:host-discover -- --url=https://BOOK.example --weigh --json
+  bun run domain:host-discover -- --url=https://BOOK.example --har=./session.har
+  bun run domain:host-discover -- --all
+  bun run domain:host-discover -- --all --json
+  bun run domain:host-discover -- --url=https://BOOK.example --compare
+  bun run domain:host-discover -- --url=https://BOOK.example --skip-extras --no-persist
 `);
   process.exit(2);
 }

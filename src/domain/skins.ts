@@ -14,7 +14,7 @@ export type SkinMapper = { kind: 'fantasy402'; note: string } | { kind: 'unmappe
 
 /**
  * Passive fingerprints for host-discover weighted scoring (not Ultra stack markers).
- * Matched against extracted paths / assets / DNS — see partner/host-weighted-score.ts.
+ * Matched against extracted paths / assets / DNS — see domain/host-weighted-score.ts.
  */
 export type SkinFingerprints = {
   /** Path prefixes or distinctive segments (e.g. `/sites/`, CustomerLoginRedir). */

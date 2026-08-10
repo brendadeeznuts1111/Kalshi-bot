@@ -19,7 +19,7 @@
  * No PlaceBet POST is mapped yet — offline ingest of captured responses.
  *
  * @see src/partner/ledger.ts writeTicketFromBetGroup
- * @see docs/PARTNER-DOMAIN.md
+ * @see docs/SEAT-OPS.md
  */
 // @see https://bun.com/docs/runtime/file-io
 import { readdir } from "node:fs/promises";

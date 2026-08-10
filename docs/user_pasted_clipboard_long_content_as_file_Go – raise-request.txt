@@ -1,0 +1,96 @@
+**Go – raise-request flow (mock 05) is the right next design contract to tackle.**
+
+With the hardening session complete – production static-serving, hot‑reload dev, channel types, and a real Chromium probe adapter – we have a solid foundation. The raise‑request flow is the first design contract that delivers **direct user value** (the clicker crew's ability to request and track limit increases) and it has all the dependencies it needs: live limits from the probe adapter, `limit_change_log` already exercised, and channel routing formalized.
+
+---
+
+## Mock 05 – Raise Request Flow
+
+### What we're building
+
+The raise‑request flow allows a clicker (agent) to request a limit increase for a specific skin/feed. The flow is:
+
+1. **Request** – A user (clicker/agent) initiates a raise request via a Telegram command (`/raise <skin> <amount>`).
+2. **Approval** – The request is routed to an ops/approver channel (via the new channel types) for review.
+3. **Decision** – The approver can approve or deny the request (via a button or inline command).
+4. **Execution** – If approved, the `account_limits` table is updated, and a `limit_change_log` row is written (already used by the probe worker's recon pass, so the pattern is established).
+5. **Notification** – The clicker is notified of the outcome, and the change is reflected in the next daily report.
+
+### Data model
+
+We'll need a new table: `raise_requests`
+
+```sql
+CREATE TABLE raise_requests (
+  id INTEGER PRIMARY KEY,
+  agent_id INTEGER NOT NULL,           -- who requested
+  skin_slug TEXT NOT NULL,             -- which skin/feed
+  requested_limit INTEGER NOT NULL,    -- new limit requested
+  status TEXT NOT NULL,                -- pending / approved / denied / executed
+  approver_id INTEGER,                 -- who approved/denied
+  approved_limit INTEGER,              -- actual limit set (may differ from requested)
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  reviewed_at DATETIME,                -- when it was approved/denied
+  executed_at DATETIME,                -- when limit change was applied
+  FOREIGN KEY (agent_id) REFERENCES agents(id),
+  FOREIGN KEY (approver_id) REFERENCES agents(id)  -- ops agents
+);
+```
+
+### API/Routes
+
+- `POST /raise/request` – create a new raise request (from the clicker).
+- `GET /raise/pending` – list pending requests (for ops channel).
+- `POST /raise/approve/:id` – approve a pending request.
+- `POST /raise/deny/:id` – deny a pending request.
+- `GET /raise/history` – list historical requests for a given agent.
+
+### Telegram integration
+
+- **Channel types**: We'll add `raise_requests` as a new channel type (or reuse `crew` for requests and `ops` for approvals).
+- **Inline buttons**: Approve/Deny buttons on the request message (via Telegram's inline keyboard).
+- **Notifications**: The request is posted to the ops channel; approval/denial sends a DM to the requester.
+
+### Implementation plan
+
+1. **Migration** – add `raise_requests` table to the schema.
+2. **Core logic** – `pph-api/src/raise.ts`: request creation, approval flow, execution, history queries.
+3. **Routes** – register the above endpoints in `server.ts`.
+4. **Telegram handler** – `pph-bot/src/raise-commands.ts`: `/raise` command, inline button callbacks.
+5. **Tests** – full flow: request → pending → approve → limit updated → log written.
+6. **Contract update** – mock 05's three sections (`PENDING`, `AUTO-LOCK`, and the raise flow itself) move from `design` to `live`.
+
+### Effort estimate
+
+| Component | Effort |
+| :-------- | :----- |
+| Migration + table | 15 min |
+| Core logic (`raise.ts`) | 1 hour |
+| Routes | 30 min |
+| Telegram command + inline handlers | 1.5 hours |
+| Tests | 1 hour |
+| Contract updates | 15 min |
+| **Total** | ~4.5 hours |
+
+---
+
+### Why this contract first
+
+| Factor | Explanation |
+| :----- | :---------- |
+| **User‑facing** | Directly unblocks the clicker crew's workflow – they can request limit increases without ops intervention. |
+| **Established patterns** | `limit_change_log` already exists and is exercised by the probe worker. The approval flow mirrors the alert/resolve pattern. |
+| **Low risk** | It's a new feature, not a rewrite of existing core logic. The data model is straightforward. |
+| **Channel types ready** | We just formalized channel routing – we can immediately route raise requests to the correct ops channel. |
+
+---
+
+### After raise‑request flow
+
+- **Mock 09** – Clicker Daily Briefing (headroom, changes, freeze list) – depends on raise history and real limits.
+- **Mock 10** – Executive Weekly Report (data‑hungry sections) – will be powered by the raise history and settlement data.
+
+---
+
+**I'll draft the migration, core logic, routes, and Telegram integration now.**

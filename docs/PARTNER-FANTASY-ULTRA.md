@@ -128,7 +128,7 @@ Adapter methods:
 
 ### ID map (do not conflate)
 
-**Full glossary (SSOT):** [`PARTNER-DOMAIN.md` § ID glossary](PARTNER-DOMAIN.md#id-glossary-ssot).
+**Full glossary (SSOT):** [`SEAT-OPS.md` § ID glossary](SEAT-OPS.md#id-glossary-ssot).
 
 Wire → interior at parse (JSON / query only — never interior field names):
 
@@ -429,7 +429,7 @@ Code: `PandoraSocket` · `coefficients.ts` · `coefficient-store.ts` ·
 
 Partner → Communication → Accounts/Outs → Assets → Finance.
 
-**Full map + maturity:** [`PARTNER-DOMAIN.md`](PARTNER-DOMAIN.md) ·
+**Full map + maturity:** [`SEAT-OPS.md`](SEAT-OPS.md) ·
 `bun run ops:status`
 
 ## Liquidity sources map (partners / outs / providers)
@@ -479,7 +479,7 @@ bun run domain:host-discover -- --url=https://BOOK.example --compare --json
   scoring)
 - Mapped host → definitive score 1.0 (`already_mapped`)
 - URL inventory: `docs/artifacts/host-discover/<host>-urls.json`
-- Code: `src/partner/host-discover.ts` · `src/partner/host-weighted-score.ts` ·
+- Code: `src/domain/host-discover.ts` · `src/domain/host-weighted-score.ts` ·
   `tools/host-discover-cli.ts`
 
 ### Out identity boundary (host → skin → live products → adapter)

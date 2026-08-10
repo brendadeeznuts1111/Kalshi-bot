@@ -8,7 +8,7 @@ import {
   listMappedDiscoverHosts,
   listSkinBrandFingerprintRules,
   scoreHostDiscovery,
-} from '../../src/partner/host-discover.ts';
+} from '../../src/domain/host-discover.ts';
 
 describe('host-discover', () => {
   test('listMappedDiscoverHosts covers every SKINS apex host', () => {

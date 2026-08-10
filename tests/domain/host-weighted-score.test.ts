@@ -7,7 +7,7 @@ import {
   scoreFromEvidence,
   scoreHostAgainstSkins,
   type WeightedEvidenceItem,
-} from '../../src/partner/host-weighted-score.ts';
+} from '../../src/domain/host-weighted-score.ts';
 
 describe('host-weighted-score', () => {
   test('category caps then sum then final 1.0', () => {

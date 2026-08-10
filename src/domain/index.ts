@@ -48,6 +48,43 @@ export {
 } from './skin-matrix.ts';
 
 export {
+  CATEGORY_CAPS,
+  buildHostObservations,
+  decisionForScore,
+  scoreFromEvidence,
+  scoreHostAgainstSkins,
+  scoreSkinObservations,
+  type EvidenceCategory,
+  type HostDiscoverDecision,
+  type HostObservations,
+  type SkinWeightedScore,
+  type WeightedEvidenceItem,
+} from './host-weighted-score.ts';
+
+export {
+  DEFAULT_HOST_DISCOVER_ARTIFACT_DIR,
+  HOST_DISCOVER_BASELINES,
+  HOST_FINGERPRINT_RULES,
+  adapterIdForMappedSkin,
+  collectHtmlUrls,
+  discoverHost,
+  extractAbsoluteUrls,
+  extractUrlsFromHar,
+  formatHostDiscoverText,
+  listMappedDiscoverHosts,
+  listPublicFingerprintRules,
+  listSkinBrandFingerprintRules,
+  persistHostDiscoverUrls,
+  scoreHostDiscovery,
+  type DeskAdapterId,
+  type HostDiscoverEvidence,
+  type HostDiscoverReport,
+  type HostDiscoverTarget,
+  type HostDiscoverWeigh,
+  type SuggestedSkinId,
+} from './host-discover.ts';
+
+export {
   HOST_TO_SKIN,
   SKIN_IDS,
   SKINS,

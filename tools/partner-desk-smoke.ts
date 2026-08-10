@@ -15,7 +15,7 @@
  * After vault inject:
  *   bun run protonpass:run -- bun run partner:desk-smoke -- --login
  *
- * @see docs/PARTNER-DOMAIN.md
+ * @see docs/SEAT-OPS.md
  */
 // @see https://bun.com/docs/runtime/sqlite
 // @see https://bun.com/docs/api/file-io
