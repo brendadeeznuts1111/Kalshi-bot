@@ -12,10 +12,13 @@
  *   bun run inventory:sync -- --sport=all --loop --interval-ms=30000
  *   bun run inventory:sync -- --sport=table_tennis --once
  *   bun run inventory:sync -- --enrich-booked --json
+ *   bun run inventory:sync -- --enrich-booked --enrich-scope=board
+ *   bun run inventory:sync -- --enrich-booked --enrich-scope=unlinked
  *
  * Default sport filter when omitted: table_tennis (CLI). Cron defaults to all.
- * --dry-run: fetch + plan insert/update only (no SQLite writes, no enrich UPDATE).
+ * --dry-run: fetch + plan insert/update only (no SQLite writes; enrich is planned only).
  *            Incompatible with --loop.
+ * --enrich-scope: new | board (default) | unlinked
  */
 // @see https://bun.com/docs/runtime/sqlite
 import { openEventStore } from "../src/institutions/event-store/open-db.ts";
@@ -27,6 +30,7 @@ import {
 } from "../src/partner/index.ts";
 import {
   formatSyncReport,
+  parseEnrichBookedScope,
   runInventorySync,
 } from "../src/inventory/sync.ts";
 import { requireDefaultUrlForUltraMapper } from "../src/domain/index.ts";
@@ -71,6 +75,7 @@ async function runOnce(options: {
   dryRun: boolean;
   sport: string;
   enrichBooked: boolean;
+  enrichBookedScope: ReturnType<typeof parseEnrichBookedScope>;
   json: boolean;
 }): Promise<void> {
   const profile = resolveProfile(options.dryRun);
@@ -86,6 +91,7 @@ async function runOnce(options: {
   const report = await runInventorySync(db, adapter, {
     sport: options.sport,
     enrichBooked: options.enrichBooked,
+    enrichBookedScope: options.enrichBookedScope,
     dryRun: options.dryRun,
   });
 
@@ -112,6 +118,7 @@ async function main(): Promise<void> {
     dryRun,
     sport: argValue("sport") ?? "table_tennis",
     enrichBooked: hasFlag("enrich-booked"),
+    enrichBookedScope: parseEnrichBookedScope(argValue("enrich-scope")),
     json: hasFlag("json"),
   };
 

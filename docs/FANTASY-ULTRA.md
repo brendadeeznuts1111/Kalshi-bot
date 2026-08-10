@@ -618,27 +618,29 @@ bun run inventory:sync -- --sport=table_tennis --once --json
 bun run inventory:sync -- --sport=table_tennis --dry-run --json   # plan only, no SQLite writes
 bun run inventory:sync -- --sport=table_tennis --loop --interval-ms=30000
 bun run inventory:sync -- --enrich-booked --once   # soft name→odds_event_id (metadata only)
+bun run inventory:sync -- --enrich-booked --enrich-scope=board
+bun run inventory:sync -- --enrich-booked --enrich-scope=unlinked
 
 # In-process cron (with other desk jobs)
-PARTNER_SYNC=1 PARTNER_SYNC_PUBLIC=1 PARTNER_SYNC_SPORT=table_tennis bun run cron:start
-# or one-shot all cron jobs including partner when PARTNER_SYNC=1:
-PARTNER_SYNC=1 PARTNER_SYNC_PUBLIC=1 bun run cron:once
+INVENTORY_SYNC=1 INVENTORY_SYNC_PUBLIC=1 INVENTORY_SYNC_SPORT=all bun run cron:start
+# enrich on each tick:
+INVENTORY_SYNC=1 INVENTORY_SYNC_PUBLIC=1 INVENTORY_SYNC_ENRICH_BOOKED=1 bun run cron:start
 ```
 
 | Env                          | Default        | Meaning                                     |
 | ---------------------------- | -------------- | ------------------------------------------- |
-| `PARTNER_SYNC`               | off            | Set `1` to register partner inventory job   |
-| `PARTNER_SYNC_SPORT`         | `table_tennis` | Stream-list sport filter                    |
-| `PARTNER_SYNC_CRON_SCHEDULE` | `*/1 * * * *`  | Bun.cron expression (min 1m)                |
-| `PARTNER_SYNC_PUBLIC`        | off            | Dummy credentials for public inventory only |
-| `PARTNER_SYNC_ENRICH_BOOKED` | off            | Soft Statscore name match                   |
+| `INVENTORY_SYNC` / `PARTNER_SYNC` | off       | Register inventory cron job                 |
+| `INVENTORY_SYNC_SPORT`       | `all`          | Stream-list sport filter                    |
+| `INVENTORY_SYNC_CRON_SCHEDULE` | `*/1 * * * *` | Bun.cron expression (min 1m)              |
+| `INVENTORY_SYNC_PUBLIC`      | off            | Dummy credentials for public inventory only |
+| `INVENTORY_SYNC_ENRICH_BOOKED` | off          | Soft Statscore name match (scope=board)     |
 
 | Capability                              | Status                           |
 | --------------------------------------- | -------------------------------- |
 | Inventory (`stream-list-v2`)            | ✅                               |
 | New event detection → `skin_events`  | ✅                               |
-| Soft Statscore name → `odds_event_id`   | ✅ optional `--enrich-booked`    |
-| Markets / lines / American odds tables  | ❌ not in live feeds yet         |
+| Soft Statscore name → `odds_event_id`   | ✅ `--enrich-booked` (board/new/unlinked) |
+| Markets / lines / American odds tables  | ❌ stream-list; Pandora store optional |
 | placeOrder POST                         | ❌ response parser only          |
 | Merge into Kalshi `liquidity:ground`    | ❌ deferred until priced markets |
 

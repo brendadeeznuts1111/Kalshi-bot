@@ -75,6 +75,7 @@ coverage. Not seat-partner. Does **not** auto-promote COMPETITIONS (operator:
 | `INVENTORY_SYNC_PUBLIC=1` | No real Fantasy login (inventory only; alias `PARTNER_SYNC_PUBLIC`) |
 | `INVENTORY_SYNC_SPORT` | Default **`all`** (alias `PARTNER_SYNC_SPORT`; set `table_tennis` to narrow) |
 | `INVENTORY_SYNC_CRON_SCHEDULE` | Default every minute (alias `PARTNER_SYNC_CRON_SCHEDULE`) |
+| `INVENTORY_SYNC_ENRICH_BOOKED=1` | Soft Statscore name → `odds_event_id` each tick (scope=board) |
 | `INVENTORY_PROMOTE_REPORT` | Default **on** (summary when unmapped). `=0` silence; `=1` + `+C` detail lines |
 | `INVENTORY_PROMOTE_MIN_PEAK` | Promote-report min peak (default `1`) |
 | `INVENTORY_PROMOTE_TELEGRAM=1` | Telegram when **new** promote candidate ids appear (needs `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID`) |
