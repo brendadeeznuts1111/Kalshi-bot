@@ -12,7 +12,7 @@
 // @see https://bun.com/docs/runtime/sqlite
 import { openEventStore } from "../src/institutions/event-store/open-db.ts";
 import { DEFAULT_EVENT_STORE_DB } from "../src/institutions/event-store/paths.ts";
-import { buildDomainStatusReport } from "../src/partner/domain.ts";
+import { buildOpsStatusReport } from "../src/partner/architecture.ts";
 import {
   computeProviderCapacity,
   ensurePartnerRegistrySchema,
@@ -54,7 +54,7 @@ async function main(): Promise<void> {
   const accounts = listActiveBettingAccounts(db);
   const capacity = computeProviderCapacity(accounts);
   const env = checkPartnersEnvPresence(accounts);
-  const domain = buildDomainStatusReport();
+  const domain = buildOpsStatusReport();
   const ledgerFreshness = listLedgerFreshness(db);
   const riskThreshold = parseRiskThreshold(
     argValue("risk-threshold") ?? process.env.PARTNER_FINANCE_RISK_THRESHOLD,

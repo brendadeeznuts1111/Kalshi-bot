@@ -95,23 +95,27 @@ hand-edit product or gap columns; change [`skins.ts`](skins.ts) instead.
 **Invariant:** `active: true` ⇒ `hosts.length ≥ 1`
 (`assertActiveSkinsHaveHosts`). **Fingerprint gate:** active skins need
 fingerprints or membership in `FINGERPRINT_PENDING_SKINS`
-(`assertFingerprintCoverage`). Desk URL env: `PARTNER_DOMAIN` (or per-out
-`*DOMAIN`) must be a host in an active skin. Bare book-level DOMAIN env keys are
-retired (`RETIRED_BARE_BOOK_DOMAIN_ENVS`). `fantasy402` alias → skin `buckeye`
+(`assertFingerprintCoverage`). Desk URL env: **`DESK_DOMAIN`** (legacy
+`PARTNER_DOMAIN` dual-read; or per-out `*DOMAIN`) must be a host in an active
+skin. Bare book-level DOMAIN env keys are retired
+(`RETIRED_BARE_BOOK_DOMAIN_ENVS`). `fantasy402` alias → skin `buckeye`
 (mapper token / BookId, not SkinId). Host → `BookId` → `SkinId` (`getBookByHost`
 / `resolveBookId` in [`books.ts`](books.ts)).
 
 ```bash
-bun run partner:skins
-bun run partner:skins -- --json
-bun run partner:books
-bun run partner:books -- --json
+bun run domain:skins
+bun run domain:skins -- --json
+bun run domain:books
+bun run domain:books -- --json
+# seat-ops (not desk): bun run ops:status
+# legacy aliases: partner:skins · partner:books
 ```
 
 ## Unknown host
 
 ```bash
-bun run partner:host-discover -- --url=https://example.com
+bun run domain:host-discover -- --url=https://example.com
+# legacy: partner:host-discover
 ```
 
 Suggests skin from weighted fingerprints (`SKINS[].fingerprints` +

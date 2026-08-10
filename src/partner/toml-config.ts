@@ -16,7 +16,7 @@
  *   1. out prefix     e.g. FANTASY402_SPEN_1_BEARER_TOKEN
  *   2. partner prefix e.g. FANTASY402_SPEN_BEARER_TOKEN
  *   3. book fallback  e.g. FANTASY402_BEARER_TOKEN
- *   4. desk URL       PARTNER_DOMAIN → SKINS Ultra-mapper default (host → SkinId)
+ *   4. desk URL       DESK_DOMAIN (legacy PARTNER_DOMAIN) → SKINS Ultra default (host → SkinId)
  *
  * Canonical env_prefix: `{BOOK}_{CODE}_{N}_` from out id `out-SPEN-1`.
  *
@@ -27,7 +27,7 @@
 import type { Database } from 'bun:sqlite';
 import { z } from 'zod';
 import {
-  PARTNER_DOMAIN_ENV,
+  deskDomainFromEnvMap,
   getBookByHost,
   getSkin,
   getSkinByHost,
@@ -46,7 +46,12 @@ import { buildSkinsMeta, type OutSkinLimit } from './skins.ts';
 import { getPartnerVisual } from './visuals.ts';
 import { tomlStringify } from './toml-stringify.ts';
 
-export { PARTNER_DOMAIN_ENV, resolveDeskDomainFromEnv } from '../domain/index.ts';
+export {
+  DESK_DOMAIN_ENV,
+  PARTNER_DOMAIN_ENV,
+  deskDomainFromEnvMap,
+  resolveDeskDomainFromEnv,
+} from '../domain/index.ts';
 
 export const DEFAULT_PARTNERS_TOML = 'config/partners.toml';
 export const EXAMPLE_PARTNERS_TOML = 'config/partners.example.toml';
@@ -380,7 +385,7 @@ export function formatPartnerAssetIssues(issues: PartnerAssetIssue[]): string {
  *   out prefix → partner prefix → book fallback
  *
  * DOMAIN is host→SkinId territory: per-out/partner `*DOMAIN` still wins;
- * book-level uses PARTNER_DOMAIN only (retired bare-book DOMAIN envs ignored).
+ * book-level uses DESK_DOMAIN (legacy PARTNER_DOMAIN) only (retired bare-book DOMAIN envs ignored).
  */
 export function resolvePartnerEnv(
   envPrefix: string | null | undefined,
@@ -397,14 +402,14 @@ export function resolvePartnerEnv(
     for (const step of chain) {
       const envKey = `${step.prefix}${key}`;
       // Bare book prefix is often labeled source "out" when callers pass FANTASY402_
-      // itself — still never read retired bare-book DOMAIN; only PARTNER_DOMAIN.
+      // itself — still never read retired bare-book DOMAIN; only DESK_DOMAIN / legacy PARTNER_DOMAIN.
       const bookLevelDomain =
         key === 'DOMAIN' &&
         (step.source === 'book_fallback' ||
           isBareBookEnvPrefix(step.prefix, provider) ||
           isRetiredBareBookDomainEnv(envKey));
       if (bookLevelDomain) {
-        const preferred = envMap[PARTNER_DOMAIN_ENV]?.trim();
+        const preferred = deskDomainFromEnvMap(envMap);
         if (preferred) {
           values.DOMAIN = preferred;
           source.DOMAIN = 'book_fallback';
@@ -420,7 +425,7 @@ export function resolvePartnerEnv(
       }
     }
     if (key === 'DOMAIN' && !values.DOMAIN) {
-      const preferred = envMap[PARTNER_DOMAIN_ENV]?.trim();
+      const preferred = deskDomainFromEnvMap(envMap);
       if (preferred) {
         values.DOMAIN = preferred;
         source.DOMAIN = 'book_fallback';

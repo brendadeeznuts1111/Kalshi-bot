@@ -326,7 +326,7 @@ function fantasyDatabase(): Database {
     id: "out-SPORTS-1",
     partnerId: "partner-sports",
     provider: "fantasy402",
-    url: "",
+    url: "https://www.fantasy402.com",
     status: "active",
     envPrefix: "FANTASY402_SPORTS_1_",
     maxStake: 5,
@@ -335,7 +335,9 @@ function fantasyDatabase(): Database {
     skin: null,
     metaJson: JSON.stringify({
       partnerCode: "SPORTS",
-      skins: [{ name: "main", perBetMax: 5, maxWin: 20, active: true }],
+      skinId: "buckeye",
+      bookId: "fantasy402",
+      skins: [{ name: "ezlive", perBetMax: 5, maxWin: 20, active: true }],
     }),
   });
   return db;

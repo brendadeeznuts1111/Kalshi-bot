@@ -35,7 +35,7 @@ export const STATSCORE_BOOKED_EVENTS = {
 } as const;
 
 /**
- * Desk-relative API paths for the Fantasy402 Ultra mapper (joined to PARTNER_DOMAIN / SKINS host).
+ * Desk-relative API paths for the Fantasy402 Ultra mapper (joined to DESK_DOMAIN / SKINS host).
  * Not absolute URLs — host comes from skins / env.
  */
 export const ULTRA_DESK_API_PATHS = {

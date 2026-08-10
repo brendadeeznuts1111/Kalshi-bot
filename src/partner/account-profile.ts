@@ -147,7 +147,7 @@ export function fantasyDeskEnvPresence(
  *
  * Required (any level of the fallback chain):
  *   *BEARER_TOKEN *CUSTOMER_ID *AGENT_ID *PASSWORD
- * Optional: PARTNER_DOMAIN (or per-out/partner *DOMAIN) → host → SkinId; *SKIN *CURRENCY
+ * Optional: DESK_DOMAIN (legacy PARTNER_DOMAIN) or per-out/partner *DOMAIN → host → SkinId; *SKIN *CURRENCY
  * Account id: FANTASY402_ACCOUNT_ID (default partner-dummy)
  */
 export function loadFantasy402ProfileFromEnv(

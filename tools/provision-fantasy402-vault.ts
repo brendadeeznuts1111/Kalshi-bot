@@ -284,7 +284,7 @@ async function main(): Promise<void> {
         `  ${envPrefix}CUSTOMER_ID  ${envPrefix}AGENT_ID`,
         `  ${envPrefix}PASSWORD     ${envPrefix}BEARER_TOKEN`,
         "Fallback chain also accepts partner- or book-level keys.",
-        "Optional: PARTNER_DOMAIN (or per-out *DOMAIN → SKINS host/SkinId) SKIN CURRENCY",
+        "Optional: DESK_DOMAIN (legacy PARTNER_DOMAIN; or per-out *DOMAIN → SKINS host/SkinId) SKIN CURRENCY",
         "",
         "Export them in this shell (or paste from browser DevTools JWT), then re-run with --apply.",
         "Do not commit secrets. Prefer short-lived JWT + renewToken.",

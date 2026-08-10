@@ -35,7 +35,8 @@ describe("fantasy widget sport map", () => {
   test("seed provider_sport_mappings", () => {
     const db = openEventStore({ dbPath: ":memory:" });
     const n = seedFantasySportMappings(db);
-    expect(n).toBe(FANTASY_SPORT_MAPPINGS.length);
+    // plive + ezlive + legacy fantasy402 dual-write (see sports-skins-books dual-write test)
+    expect(n).toBeGreaterThanOrEqual(FANTASY_SPORT_MAPPINGS.length * 3);
     const row = db
       .query(
         `SELECT api_sport_id AS api, widget_sport_id AS widget FROM provider_sport_mappings

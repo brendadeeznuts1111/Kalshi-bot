@@ -3,7 +3,7 @@
  */
 // @see https://bun.com/docs/runtime/sqlite
 import type { Database } from "bun:sqlite";
-import { buildDomainStatusReport } from "./domain.ts";
+import { buildOpsStatusReport } from "./architecture.ts";
 import {
   computeProviderCapacity,
   ensurePartnerRegistrySchema,
@@ -206,7 +206,7 @@ export async function buildPartnerDashboardSnapshot(
   const accounts = listActiveBettingAccounts(db);
   const capacity = computeProviderCapacity(accounts);
   const env = checkPartnersEnvPresence(accounts);
-  const domain = buildDomainStatusReport();
+  const domain = buildOpsStatusReport();
   const ledgerFreshness = listLedgerFreshness(db);
   const risk = evaluateRiskHealth(db, accounts);
   const riskOk = riskOkUnderThreshold(risk, threshold);

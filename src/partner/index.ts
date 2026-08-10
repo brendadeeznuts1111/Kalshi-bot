@@ -196,8 +196,10 @@ export {
   LIVE_PRODUCT_IDS,
   LIVE_PRODUCTS,
   LIVE_PRODUCT_SPORT_BINDINGS,
+  DESK_DOMAIN_ENV,
   PARTNER_DOMAIN_ENV,
   RETIRED_BARE_BOOK_DOMAIN_ENVS,
+  deskDomainFromEnvMap,
   SKIN_IDS,
   SKIN_SPORT_BINDINGS,
   SKINS,
@@ -284,16 +286,16 @@ export {
 } from './sports-inventory.ts';
 
 export {
-  PARTNER_DOMAIN_LAYERS,
+  OPS_LAYERS,
   PARTNER_NAMING,
-  buildDomainStatusReport,
-  formatDomainStatusText,
-  type DomainComponent,
-  type DomainLayer,
-  type DomainLayerId,
-  type DomainMaturity,
-  type DomainStatusReport,
-} from './domain.ts';
+  buildOpsStatusReport,
+  formatOpsStatusText,
+  type OpsComponent,
+  type OpsLayer,
+  type OpsLayerId,
+  type OpsMaturity,
+  type OpsStatusReport,
+} from './architecture.ts';
 
 export {
   classifyTicketStatus,

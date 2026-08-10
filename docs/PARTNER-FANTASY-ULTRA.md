@@ -270,7 +270,7 @@ export FANTASY402_AGENT_ID='…'
 export FANTASY402_PASSWORD='…'
 # optional — example host; omit to use SKINS-derived Ultra-mapper default
 # (requireDefaultUrlForUltraMapper / defaultUrlForSkin)
-export PARTNER_DOMAIN='https://BOOK.example'   # must be a SKINS[].hosts URL → SkinId
+export DESK_DOMAIN='https://BOOK.example'   # must be a SKINS[].hosts URL → SkinId (legacy: PARTNER_DOMAIN)
 export FANTASY402_SKIN=2
 export FANTASY402_CURRENCY=USD
 ```
@@ -430,7 +430,7 @@ Code: `PandoraSocket` · `coefficients.ts` · `coefficient-store.ts` ·
 Partner → Communication → Accounts/Outs → Assets → Finance.
 
 **Full map + maturity:** [`PARTNER-DOMAIN.md`](PARTNER-DOMAIN.md) ·
-`bun run partner:domain`
+`bun run ops:status`
 
 ## Liquidity sources map (partners / outs / providers)
 
@@ -452,16 +452,16 @@ Works for **any** host. Mapped desks come from `SKINS[].hosts` (not a hard-coded
 book list).
 
 ```bash
-bun run partner:host-discover -- --url=https://BOOK.example
+bun run domain:host-discover -- --url=https://BOOK.example
 # → skin unknown|suggested, stores public HTML/asset URLs under docs/artifacts/host-discover/<host>-urls.json
 
-bun run partner:host-discover -- --url=https://BOOK.example --har=./session.har
+bun run domain:host-discover -- --url=https://BOOK.example --har=./session.har
 # → merges session URLs into inventory only (no Ultra→skin scoring)
 
-bun run partner:host-discover -- --all
+bun run domain:host-discover -- --all
 # → every apex host in SKINS[].hosts
 
-bun run partner:host-discover -- --url=https://BOOK.example --compare --json
+bun run domain:host-discover -- --url=https://BOOK.example --compare --json
 # → optional target + all mapped apex hosts
 ```
 
@@ -480,7 +480,7 @@ bun run partner:host-discover -- --url=https://BOOK.example --compare --json
 - Mapped host → definitive score 1.0 (`already_mapped`)
 - URL inventory: `docs/artifacts/host-discover/<host>-urls.json`
 - Code: `src/partner/host-discover.ts` · `src/partner/host-weighted-score.ts` ·
-  `tools/partner-host-discover.ts`
+  `tools/host-discover-cli.ts`
 
 ### Out identity boundary (host → skin → live products → adapter)
 

@@ -2,11 +2,13 @@
 /**
  * Discover likely SkinId / adapter for any host (suggest only).
  *
- *   bun run partner:host-discover -- --url=https://BOOK.example
- *   bun run partner:host-discover -- --url=https://BOOK.example --weigh --json
- *   bun run partner:host-discover -- --url=https://BOOK.example --har=./session.har
- *   bun run partner:host-discover -- --all
- *   bun run partner:host-discover -- --url=https://BOOK.example --compare
+ *   bun run domain:host-discover -- --url=https://BOOK.example
+ *   bun run domain:host-discover -- --url=https://BOOK.example --weigh --json
+ *   bun run domain:host-discover -- --url=https://BOOK.example --har=./session.har
+ *   bun run domain:host-discover -- --all
+ *   bun run domain:host-discover -- --url=https://BOOK.example --compare
+ *
+ * Legacy alias: partner:host-discover
  *
  * `--all` / `--compare` walk every apex host in SKINS[].hosts (plus optional --url target).
  * `--weigh` prints capped-category evidence breakdown (report.weigh / report.decision).
