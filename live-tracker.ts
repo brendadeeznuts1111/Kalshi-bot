@@ -23,10 +23,8 @@ import {
   eventsToObjects,
   filterAndSortEvents,
   formatEventsCsv,
-  formatEventsMarkdown,
   formatEventsTable,
   formatSummaryLine,
-  loadEventsFlexible,
   loadTrackerEventsFromPaths,
   normalizeWireId,
   parseEventType,
@@ -263,7 +261,7 @@ function renderOutput(
     return formatEventsCsv(rows, q.columns);
   }
   if (format === 'markdown' || format === 'md') {
-    return formatEventsMarkdown(rows, q.columns);
+    return formatEventsTable(rows, q.columns);
   }
   // table
   const table = formatEventsTable(rows, q.columns);
@@ -289,19 +287,22 @@ async function loadDiffEvents(): Promise<{
   // two-file: diff old.json new.json
   if (pos.length >= 2) {
     const [oldP, newP] = pos;
-    const prev = await loadEventsFlexible(oldP!);
-    const next = await loadEventsFlexible(newP!);
-    // If both are event logs, structural set-diff; if only new has events, show new
+    const [prev, next] = await Promise.all([
+      loadTrackerEventsFromPaths([oldP!]),
+      loadTrackerEventsFromPaths([newP!]),
+    ]);
+    if (!(await Bun.file(oldP!).exists()) || !(await Bun.file(newP!).exists())) {
+      throw new Error(`missing file(s): ${oldP} / ${newP}`);
+    }
     const all =
       prev.length || next.length
         ? diffEventLists(prev, next, { oldFile: oldP, newFile: newP })
         : [];
-    // Also include raw next-only stream if diff empty but next has data
     const events = all.length ? all : next.map(e => ({ ...e, file: newP }));
     return { all: events, paths: [oldP!, newP!], mode: 'two-file' };
   }
   if (pos.length === 1) {
-    const events = await loadEventsFlexible(pos[0]!);
+    const events = await loadTrackerEventsFromPaths([pos[0]!]);
     return { all: events, paths: [pos[0]!], mode: 'logs' };
   }
   const paths = await resolveFromPaths();

@@ -404,14 +404,6 @@ export function formatEventsCsv(
   return lines.join('\n');
 }
 
-export function formatEventsMarkdown(
-  events: LiveTrackerEvent[],
-  columns?: string[] | null
-): string {
-  // same as table (GFM)
-  return formatEventsTable(events, columns);
-}
-
 const COL_MAP: Record<string, (e: LiveTrackerEvent) => string> = {
   time: e => e.time,
   event: e => e.eventType,
@@ -612,16 +604,7 @@ export function diffEventLists(
   return out.sort((a, b) => a.time.localeCompare(b.time));
 }
 
-/** Load events from path; if JSONL empty but file is list of logs, still ok. */
-export async function loadEventsFlexible(
-  path: string
-): Promise<LiveTrackerEvent[]> {
-  const f = Bun.file(path);
-  if (!(await f.exists())) {
-    throw new Error(`file not found: ${path}`);
-  }
-  return parseTrackerJsonl(await f.text(), path);
-}
+
 
 export async function appendTrackerLog(
   path: string,

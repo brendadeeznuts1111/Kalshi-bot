@@ -17,8 +17,6 @@ import type {
   WidgetLiveSport,
   WidgetWagerType,
 } from '../domain/widget-domain-extract.ts';
-import type { SportId } from '../domain/sports.ts';
-
 export type MarketCell = 'primary' | 'secondary' | 'yes' | '—';
 
 export type SportColumnMetrics = {
@@ -267,10 +265,4 @@ export function pandoraLeaguesBySport(
   return out;
 }
 
-/** Resolve SportId columns that are inventory buckets but map via bindings. */
-export function normalizeInventorySportKey(sport: string): SportId | string {
-  const bindings = listLiveProductSportBindings('plive');
-  const byBucket = bindings.find(b => b.inventoryBucket === sport);
-  if (byBucket) return byBucket.sportId;
-  return sport;
-}
+
