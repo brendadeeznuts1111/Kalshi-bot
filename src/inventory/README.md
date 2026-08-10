@@ -12,6 +12,7 @@ CLIs:
 
 ```bash
 bun run domain:sports
+bun run inventory:sync -- --sport=all --dry-run   # plan inserts/updates, no write
 bun run inventory:sync -- --sport=all
 bun run inventory:watch
 ```
