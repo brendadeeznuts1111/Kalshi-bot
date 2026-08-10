@@ -75,6 +75,8 @@ coverage. Not seat-partner. Does **not** auto-promote COMPETITIONS (operator:
 | `INVENTORY_SYNC_PUBLIC=1` | No real Fantasy login (inventory only; alias `PARTNER_SYNC_PUBLIC`) |
 | `INVENTORY_SYNC_SPORT` | Default **`all`** (alias `PARTNER_SYNC_SPORT`; set `table_tennis` to narrow) |
 | `INVENTORY_SYNC_CRON_SCHEDULE` | Default every minute (alias `PARTNER_SYNC_CRON_SCHEDULE`) |
+| `INVENTORY_PROMOTE_REPORT` | Default **on** (summary when unmapped). `=0` silence; `=1` + `+C` detail lines |
+| `INVENTORY_PROMOTE_MIN_PEAK` | Promote-report min peak (default `1`) |
 
 ```bash
 INVENTORY_SYNC=1 INVENTORY_SYNC_PUBLIC=1 bun run cron:once
@@ -84,13 +86,16 @@ bun run inventory:sync -- --loop --sport=all --interval-ms=30000
 bun run inventory:watch -- --loop --sport=all
 # dry-run first:
 bun run inventory:sync -- --sport=all --dry-run
-# leagues / promote (operator, not cron apply):
+# leagues / promote (operator apply — cron only dry-reports):
 bun run inventory:leagues
-bun run inventory:leagues -- --promote
+bun run inventory:leagues -- --report
+bun run inventory:leagues -- --promote --apply
 ```
 
 Logs per tick: `seen` / `new` / `updated`, `sports:` histogram, `newBySport:`,
-`leagues:` summary, up to 8 `+L` new-league lines, up to 12 `+` event lines.
+`leagues:` summary, up to 8 `+L` new-league lines, up to 12 `+` event lines,
+plus `promote-report` summary when unmapped candidates exist (**never** auto-applies
+`COMPETITIONS`).
 
 Playbook: [`docs/INVENTORY.md`](INVENTORY.md) · adapter: [`FANTASY-ULTRA.md`](FANTASY-ULTRA.md).
 

@@ -96,6 +96,12 @@ export {
 } from '../inventory/leagues.ts';
 
 export {
+  buildPromoteReport,
+  type PromoteReport,
+  type PromoteReportOptions,
+} from '../inventory/promote-report.ts';
+
+export {
   fetchPublicPliveStreamEvents,
   filterLiveEventsBySport,
   formatSkinEventLine,

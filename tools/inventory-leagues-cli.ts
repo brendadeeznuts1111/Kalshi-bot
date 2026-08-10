@@ -9,9 +9,11 @@
  *   bun run inventory:leagues -- --order=peak
  *   bun run inventory:leagues -- --harvest --sport=all [--dry-run]
  *   bun run inventory:leagues -- --promote [--apply] [--min-peak=1] [--json]
+ *   bun run inventory:leagues -- --report [--min-peak=1] [--json]
  *   bun run inventory:leagues -- --backfill
  *
  * --promote: plan COMPETITIONS seeds from unmapped inventory_leagues (junk filtered).
+ * --report:  same plan as promote dry-run (cron-shared buildPromoteReport).
  * --apply:   write candidates into src/domain/competitions.ts + stamp registry rows.
  * --backfill: re-resolve competition_id on inventory_leagues from current seeds.
  */
@@ -33,14 +35,15 @@ import {
   stampInventoryLeaguesFromRecords,
   type InventoryLeagueRow,
 } from '../src/inventory/leagues.ts';
+import { buildPromoteReport } from '../src/inventory/promote-report.ts';
 import { stampSkinEventsCompetitionIds } from '../src/inventory/skin-events-store.ts';
 import { runInventorySync } from '../src/inventory/sync.ts';
+import type { PartnerAccountProfile } from '../src/partner/account-profile.ts';
 import {
   getFantasySessionAdapter,
   loadFantasy402ProfileFromEnv,
   requireFantasy402ProfileFromEnv,
 } from '../src/partner/index.ts';
-import type { PartnerAccountProfile } from '../src/partner/account-profile.ts';
 
 function hasFlag(name: string): boolean {
   return process.argv.includes(`--${name}`);
@@ -97,6 +100,7 @@ async function main(): Promise<void> {
   const unmapped = hasFlag('unmapped');
   const harvest = hasFlag('harvest');
   const promote = hasFlag('promote');
+  const reportOnly = hasFlag('report');
   const apply = hasFlag('apply');
   const backfill = hasFlag('backfill');
   const dryRun = hasFlag('dry-run') || hasFlag('dryRun');
@@ -106,6 +110,43 @@ async function main(): Promise<void> {
   const minPeak = Number(argValue('min-peak') ?? '1') || 1;
 
   const db = openEventStore({ dbPath: DEFAULT_EVENT_STORE_DB });
+
+  if (reportOnly) {
+    const promo = buildPromoteReport(db, {
+      minPeak,
+      sportId: sportFilter && sportFilter !== 'all' ? sportFilter : undefined,
+    });
+    if (json) {
+      console.log(
+        JSON.stringify(
+          {
+            report: true,
+            minPeak: promo.minPeak,
+            unmappedInput: promo.unmappedInput,
+            candidates: promo.plan.candidates.map(c => ({
+              id: c.record.id,
+              leagueKey: c.source.leagueKey,
+              peak: c.source.peakEventCount,
+              bucket: c.record.providerMappings.plive?.inventoryBucket,
+            })),
+            rejected: promo.plan.rejected.map(r => ({
+              leagueKey: r.source.leagueKey,
+              reason: r.reason,
+            })),
+            summaryLine: promo.summaryLine,
+          },
+          null,
+          2
+        )
+      );
+      return;
+    }
+    console.log(`inventory:leagues --report ${promo.summaryLine}`);
+    for (const line of promo.detailLines) {
+      console.log(line);
+    }
+    return;
+  }
 
   if (backfill) {
     const leaguesN = stampInventoryLeaguesCompetitionIds(db);

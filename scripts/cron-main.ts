@@ -48,6 +48,16 @@ const INTERVAL_INVENTORY_SYNC =
   "*/1 * * * *";
 const INVENTORY_SYNC_ENABLED =
   Bun.env.INVENTORY_SYNC === "1" || Bun.env.PARTNER_SYNC === "1";
+/**
+ * After inventory tick: dry-run promote report (never applies COMPETITIONS).
+ * Default on when candidates > 0 (summary line). Detail +C lines when =1.
+ * Set INVENTORY_PROMOTE_REPORT=0 to silence.
+ */
+const INVENTORY_PROMOTE_REPORT =
+  Bun.env.INVENTORY_PROMOTE_REPORT?.trim() !== "0";
+const INVENTORY_PROMOTE_REPORT_DETAIL =
+  Bun.env.INVENTORY_PROMOTE_REPORT === "1" ||
+  Bun.env.INVENTORY_PROMOTE_REPORT_DETAIL === "1";
 /** Registry desk report (capacity + env + inventory). Default daily 09:00 UTC. */
 const INTERVAL_PARTNER_FINANCE =
   Bun.env.PARTNER_FINANCE_CRON_SCHEDULE?.trim() || "0 9 * * *";
@@ -270,6 +280,27 @@ async function jobInventorySync(): Promise<void> {
       }
       if (report.inserted > 12) {
         console.error(`[cron:inventory] + … ${report.inserted - 12} more new`);
+      }
+    }
+
+    // Promote dry-report only — never writes competitions.ts from cron
+    if (INVENTORY_PROMOTE_REPORT) {
+      try {
+        const { buildPromoteReport } = await import(
+          "../src/inventory/promote-report.ts"
+        );
+        const minPeak = Number(Bun.env.INVENTORY_PROMOTE_MIN_PEAK ?? "1") || 1;
+        const promo = buildPromoteReport(getDb(), { minPeak });
+        if (promo.plan.candidates.length > 0 || promo.unmappedInput > 0) {
+          console.error(`[cron:inventory] ${promo.summaryLine}`);
+          if (INVENTORY_PROMOTE_REPORT_DETAIL && promo.detailLines.length > 0) {
+            for (const line of promo.detailLines) {
+              console.error(`[cron:inventory]${line}`);
+            }
+          }
+        }
+      } catch (promoErr) {
+        console.error(`[cron:inventory] promote-report: ${promoErr}`);
       }
     }
   } catch (err) {
