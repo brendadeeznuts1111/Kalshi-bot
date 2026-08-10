@@ -24,7 +24,7 @@ export const LIVE_TRACKER_EVENT_TYPES = [
   'WATCH_TICK',
 ] as const;
 
-export type LiveTrackerEventType = (typeof LIVE_TRACKER_EVENT_TYPES)[number];
+type LiveTrackerEventType = (typeof LIVE_TRACKER_EVENT_TYPES)[number];
 
 export type LiveTrackerEvent = {
   time: string;
@@ -57,7 +57,7 @@ export function defaultLiveTrackerLogPath(eventId: number | string): string {
   return joinPath(LIVE_TRACKER_LOG_DIR, `event-${eventId}.jsonl`);
 }
 
-export function offerTransitionToEvent(
+function offerTransitionToEvent(
   t: OfferTransition,
   ctx: { at: string; eventId: number; file?: string }
 ): LiveTrackerEvent {
@@ -190,7 +190,7 @@ export function parseEventType(raw: string): LiveTrackerEventType | null {
 
 type SortKey = 'time' | 'event' | 'type' | 'detail' | 'file' | 'eventid';
 
-export type DiffQuery = {
+type DiffQuery = {
   /** One or more event types (OR filter). */
   eventTypes?: LiveTrackerEventType[];
   /** @deprecated use eventTypes */
@@ -224,24 +224,6 @@ function sortKeyValue(e: LiveTrackerEvent, key: SortKey): string {
     default:
       return e.time;
   }
-}
-
-export function parseSortBy(raw: string | undefined | null): SortKey[] {
-  if (!raw?.trim()) return ['time'];
-  const keys = raw
-    .split(',')
-    .map(s => s.trim().toLowerCase().replace(/[^a-z]/g, '') as SortKey)
-    .filter(Boolean);
-  const allowed = new Set<SortKey>([
-    'time',
-    'event',
-    'type',
-    'detail',
-    'file',
-    'eventid',
-  ]);
-  const out = keys.filter(k => allowed.has(k));
-  return out.length ? out : ['time'];
 }
 
 export function filterAndSortEvents(
@@ -300,7 +282,7 @@ export function filterAndSortEvents(
   return rows;
 }
 
-export function summarizeEventTypes(
+function summarizeEventTypes(
   events: LiveTrackerEvent[]
 ): Array<{ eventType: string; count: number }> {
   const m = new Map<string, number>();
@@ -374,13 +356,6 @@ export function computeEventStats(events: LiveTrackerEvent[]): EventTimeStats {
     minGapMs: gaps.length ? Math.min(...gaps) : null,
     maxGapMs: gaps.length ? Math.max(...gaps) : null,
   };
-}
-
-export function formatSummaryLine(
-  summary: Array<{ eventType: string; count: number }>
-): string {
-  if (!summary.length) return '(no events)';
-  return summary.map(s => `${s.eventType}: ${s.count}`).join(', ');
 }
 
 export function formatEventsCsv(
@@ -510,7 +485,7 @@ function parseTrackerJsonValue(
 }
 
 /** Parse JSONL tracker log (one LiveTrackerLogRecord or LiveTrackerEvent per line). */
-export function parseTrackerJsonl(
+function parseTrackerJsonl(
   text: string,
   file?: string
 ): LiveTrackerEvent[] {
