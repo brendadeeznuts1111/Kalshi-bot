@@ -7,11 +7,15 @@
 import type { Database } from 'bun:sqlite';
 import {
   isBookId,
+  isLiveProductId,
   isSkinId,
+  isSportId,
   resolveBookId,
+  resolveCompetition,
   resolveSport,
   streamEndpointsForLiveProduct,
   type BookId,
+  type CompetitionId,
   type LiveProductId,
   type SkinId,
 } from '../domain/index.ts';
@@ -69,6 +73,22 @@ export function normalizeInventorySport(wire: string): string {
   return bucket;
 }
 
+/** Resolve stream-list league → CompetitionId (null when unseeded / junk). */
+export function resolveInventoryCompetitionId(input: {
+  liveProduct: LiveProductId;
+  sport: string;
+  league: string;
+}): CompetitionId | null {
+  const sport = input.sport.trim();
+  const hit = resolveCompetition({
+    liveProduct: input.liveProduct,
+    league: input.league,
+    sportId: isSportId(sport) ? sport : undefined,
+    streamBucket: sport || undefined,
+  });
+  return hit?.competitionId ?? null;
+}
+
 export type SkinEventRow = {
   partner: string;
   streamId: string;
@@ -86,6 +106,8 @@ export type SkinEventRow = {
   skinId: SkinId;
   bookId: BookId;
   inventoryLiveProduct: LiveProductId;
+  /** Seeded CompetitionId when league maps; null for unknown wire labels. */
+  competitionId: CompetitionId | null;
 };
 
 export type SkinEventUpsertResult = {
@@ -108,13 +130,15 @@ export function liveEventToRow(
   existing?: { firstSeen: number; status?: string }
 ): SkinEventRow {
   const streamId = event.streamId != null ? String(event.streamId) : String(event.eventId || '');
+  const sport = normalizeInventorySport(event.sport);
+  const league = event.league ?? '';
   return {
     partner: identity.partner,
     streamId,
     lsId: null,
     clientEventId: null,
-    sport: normalizeInventorySport(event.sport),
-    league: event.league,
+    sport,
+    league,
     home: event.home,
     away: event.away,
     feedId: event.feedId != null ? String(event.feedId) : null,
@@ -125,6 +149,11 @@ export function liveEventToRow(
     skinId: identity.skinId,
     bookId: identity.bookId,
     inventoryLiveProduct: identity.inventoryLiveProduct,
+    competitionId: resolveInventoryCompetitionId({
+      liveProduct: identity.inventoryLiveProduct,
+      sport,
+      league,
+    }),
   };
 }
 
@@ -148,11 +177,11 @@ export function upsertSkinLiveEvents(
     INSERT INTO skin_events (
       partner, stream_id, ls_id, client_event_id, sport, league, home, away,
       feed_id, start_time, status, first_seen, last_updated,
-      skin_id, book_id, inventory_live_product
+      skin_id, book_id, inventory_live_product, competition_id
     ) VALUES (
       $partner, $stream_id, $ls_id, $client_event_id, $sport, $league, $home, $away,
       $feed_id, $start_time, $status, $first_seen, $last_updated,
-      $skin_id, $book_id, $inventory_live_product
+      $skin_id, $book_id, $inventory_live_product, $competition_id
     )
     ON CONFLICT(partner, stream_id) DO UPDATE SET
       sport = excluded.sport,
@@ -163,7 +192,8 @@ export function upsertSkinLiveEvents(
       last_updated = excluded.last_updated,
       skin_id = excluded.skin_id,
       book_id = excluded.book_id,
-      inventory_live_product = excluded.inventory_live_product
+      inventory_live_product = excluded.inventory_live_product,
+      competition_id = excluded.competition_id
   `);
 
   const inserted: SkinEventRow[] = [];
@@ -205,6 +235,7 @@ export function upsertSkinLiveEvents(
       $skin_id: row.skinId,
       $book_id: row.bookId,
       $inventory_live_product: row.inventoryLiveProduct,
+      $competition_id: row.competitionId,
     });
     if (isNew) {
       set.add(streamId);
@@ -239,7 +270,11 @@ export function filterLiveEventsBySport(
 
 export function formatSkinEventLine(row: SkinEventRow): string {
   const matchup = [row.home, row.away].filter(Boolean).join(' vs ') || 'TBD';
-  const idBits = [row.skinId ? `skin=${row.skinId}` : '', row.bookId ? `book=${row.bookId}` : '']
+  const idBits = [
+    row.skinId ? `skin=${row.skinId}` : '',
+    row.bookId ? `book=${row.bookId}` : '',
+    row.competitionId ? `comp=${row.competitionId}` : '',
+  ]
     .filter(Boolean)
     .join(' ');
   const suffix = idBits ? ` · ${idBits}` : '';
@@ -283,6 +318,40 @@ export function normalizeSkinEventsSports(db: Database): number {
     const next = normalizeInventorySport(row.sport ?? '');
     if (!next || next === row.sport) continue;
     upd.run({ $s: next, $r: row.rid });
+    n += 1;
+  }
+  return n;
+}
+
+/** Stamp / refresh competition_id from sport + league (seeded mappings only). */
+export function stampSkinEventsCompetitionIds(db: Database): number {
+  const rows = db
+    .query(
+      `SELECT rowid AS rid, sport, league,
+              inventory_live_product AS inv,
+              competition_id AS competitionId
+       FROM skin_events`
+    )
+    .all() as Array<{
+    rid: number;
+    sport: string;
+    league: string;
+    inv: string | null;
+    competitionId: string | null;
+  }>;
+  const upd = db.query(`UPDATE skin_events SET competition_id = $c WHERE rowid = $r`);
+  let n = 0;
+  for (const row of rows) {
+    const liveRaw = (row.inv ?? '').trim() || 'plive';
+    const liveProduct: LiveProductId = isLiveProductId(liveRaw) ? liveRaw : 'plive';
+    const next = resolveInventoryCompetitionId({
+      liveProduct,
+      sport: row.sport ?? '',
+      league: row.league ?? '',
+    });
+    const prev = row.competitionId?.trim() || null;
+    if (next === prev) continue;
+    upd.run({ $c: next, $r: row.rid });
     n += 1;
   }
   return n;
