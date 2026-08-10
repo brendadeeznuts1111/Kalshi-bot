@@ -9,17 +9,31 @@
  * That is NOT market tradable until the provider offers a priced line.
  * Secrets stay in env / vault — never persist password or bearer JWT.
  */
-import type { Database } from "bun:sqlite";
-import { FANTASY_SPORT_MAPPINGS } from "./fantasy-ultra/widget-config.ts";
+import type { Database } from 'bun:sqlite';
+import type { SkinId } from '../domain/index.ts';
+import {
+  listLiveProductSportBindings,
+  liveProductsWithBindings,
+  resolveDeskDomainFromEnv,
+} from '../domain/index.ts';
+import {
+  guardAndStampAccountMeta,
+  parseOutIdentity,
+  type AdapterId,
+  type OutIdentity,
+} from './out-identity.ts';
 import {
   buildSkinsMeta,
+  mapperFromAccount,
   outCapacityFromAccount,
   parseSkinWire,
+  skinIdFromAccount,
   type OutCapacity,
   type OutSkinLimit,
-} from "./skins.ts";
+  type OutSkinMapperKind,
+} from './skins.ts';
 
-export type ProviderId = "fantasy402" | "kalshi" | (string & {});
+export type ProviderId = 'fantasy402' | 'kalshi' | (string & {});
 
 export type PartnerEntity = {
   id: string;
@@ -35,7 +49,7 @@ export type BettingAccountRow = {
   partnerId: string;
   provider: ProviderId;
   url: string;
-  status: "active" | "inactive" | "pending";
+  status: 'active' | 'inactive' | 'pending';
   /** Env var prefix for secrets, e.g. FANTASY402_ */
   envPrefix: string | null;
   /**
@@ -50,8 +64,17 @@ export type BettingAccountRow = {
    * Named skins live in meta.skins[].name (ezlive, dark, …).
    */
   skin: number | null;
-  /** Non-secret meta only (skins[], workingBalance, vaultId, office) */
+  /** Non-secret meta only (liveProducts/skins, workingBalance, vaultId, skinId) */
   metaJson: string;
+  /**
+   * White-label SkinId from meta_json (stamped on write).
+   * Not a DB column — derived for callers.
+   */
+  skinId?: SkinId;
+  /** Mapper kind from meta_json (fantasy402 | unmapped). */
+  mapper?: OutSkinMapperKind;
+  /** Adapter id from OutIdentity (fantasy-ultra | kalshi | unmapped). */
+  adapterId?: AdapterId;
 };
 
 export type ProviderCapacity = {
@@ -96,14 +119,10 @@ export function ensurePartnerRegistrySchema(db: Database): void {
     updated_at INTEGER NOT NULL
   )`);
   db.run(
-    `CREATE INDEX IF NOT EXISTS idx_betting_accounts_partner ON betting_accounts (partner_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_betting_accounts_partner ON betting_accounts (partner_id)`
   );
-  db.run(
-    `CREATE INDEX IF NOT EXISTS idx_betting_accounts_provider ON betting_accounts (provider)`,
-  );
-  db.run(
-    `CREATE INDEX IF NOT EXISTS idx_betting_accounts_status ON betting_accounts (status)`,
-  );
+  db.run(`CREATE INDEX IF NOT EXISTS idx_betting_accounts_provider ON betting_accounts (provider)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_betting_accounts_status ON betting_accounts (status)`);
   db.run(`CREATE TABLE IF NOT EXISTS provider_sport_mappings (
     provider TEXT NOT NULL,
     canonical TEXT NOT NULL,
@@ -114,12 +133,19 @@ export function ensurePartnerRegistrySchema(db: Database): void {
     PRIMARY KEY (provider, canonical)
   )`);
   db.run(
-    `CREATE INDEX IF NOT EXISTS idx_provider_sport_api ON provider_sport_mappings (provider, api_sport_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_provider_sport_api ON provider_sport_mappings (provider, api_sport_id)`
   );
 }
 
-/** Seed Fantasy402 sport id maps (widget HTML + Get_SportsLeagues / tickets). */
-export function seedFantasySportMappings(db: Database): number {
+/**
+ * Seed sport id maps from domain live-product bindings.
+ * Primary keys = live products with bindings (plive, ezlive, …).
+ * Optional legacy dual-write under `fantasy402` (not the sport owner).
+ */
+export function seedFantasySportMappings(
+  db: Database,
+  options?: { includeLegacyFantasy402?: boolean }
+): number {
   ensurePartnerRegistrySchema(db);
   const upsert = db.query(`
     INSERT INTO provider_sport_mappings (
@@ -132,24 +158,33 @@ export function seedFantasySportMappings(db: Database): number {
       label = excluded.label
   `);
   let n = 0;
-  for (const m of FANTASY_SPORT_MAPPINGS) {
-    upsert.run({
-      $provider: "fantasy402",
-      $canonical: m.canonical,
-      $stream: m.streamBucket,
-      $api: m.apiSportId,
-      $widget: m.widgetSportId,
-      $label: m.label,
-    });
-    n++;
+  // Live-product keys are primary; fantasy402 dual-write is legacy-only.
+  const includeLegacy = options?.includeLegacyFantasy402 !== false;
+  const providerKeys = [
+    ...liveProductsWithBindings(),
+    ...(includeLegacy ? (['fantasy402'] as const) : []),
+  ];
+  const bindings = listLiveProductSportBindings('plive');
+  for (const provider of providerKeys) {
+    for (const m of bindings) {
+      upsert.run({
+        $provider: provider,
+        $canonical: m.sportId,
+        $stream: m.streamBucket,
+        $api: m.apiSportId,
+        $widget: m.widgetSportId,
+        $label: m.label,
+      });
+      n++;
+    }
   }
   return n;
 }
 
 export function upsertPartner(
   db: Database,
-  partner: Omit<PartnerEntity, "active"> & { active?: boolean },
-  nowMs = Date.now(),
+  partner: Omit<PartnerEntity, 'active'> & { active?: boolean },
+  nowMs = Date.now()
 ): void {
   db.query(
     `INSERT INTO partners (id, name, active, profit_split, commission_rate, notes, created_at, updated_at)
@@ -160,7 +195,7 @@ export function upsertPartner(
        profit_split = excluded.profit_split,
        commission_rate = excluded.commission_rate,
        notes = excluded.notes,
-       updated_at = excluded.updated_at`,
+       updated_at = excluded.updated_at`
   ).run({
     $id: partner.id,
     $name: partner.name,
@@ -175,8 +210,23 @@ export function upsertPartner(
 export function upsertBettingAccount(
   db: Database,
   account: BettingAccountRow,
-  nowMs = Date.now(),
+  nowMs = Date.now()
 ): void {
+  const requireHost = Boolean(account.url.trim()) || account.provider === 'fantasy402';
+  const guarded = guardAndStampAccountMeta({
+    id: account.id,
+    partnerId: account.partnerId,
+    url: account.url,
+    provider: account.provider,
+    maxStake: account.maxStake,
+    maxWin: account.maxWin,
+    skin: account.skin,
+    metaJson: account.metaJson,
+    status: account.status,
+    requireHost,
+  });
+  const metaJson = guarded.metaJson;
+
   db.query(
     `INSERT INTO betting_accounts (
        id, partner_id, provider, url, status, env_prefix,
@@ -196,7 +246,7 @@ export function upsertBettingAccount(
        currency = excluded.currency,
        skin = excluded.skin,
        meta_json = excluded.meta_json,
-       updated_at = excluded.updated_at`,
+       updated_at = excluded.updated_at`
   ).run({
     $id: account.id,
     $partner_id: account.partnerId,
@@ -208,7 +258,7 @@ export function upsertBettingAccount(
     $max_win: account.maxWin,
     $currency: account.currency,
     $skin: account.skin,
-    $meta_json: account.metaJson,
+    $meta_json: metaJson,
     $now: nowMs,
   });
 }
@@ -218,55 +268,97 @@ export function listActiveBettingAccounts(db: Database): BettingAccountRow[] {
     .query(
       `SELECT id, partner_id AS partnerId, provider, url, status, env_prefix AS envPrefix,
               max_stake AS maxStake, max_win AS maxWin, currency, skin, meta_json AS metaJson
-       FROM betting_accounts WHERE status = 'active'`,
+       FROM betting_accounts WHERE status = 'active'`
     )
     .all() as Array<Record<string, unknown>>;
   return rows.map(mapAccountRow);
 }
 
 /** Lookup one out by id (active or not). */
-export function getBettingAccountById(
-  db: Database,
-  id: string,
-): BettingAccountRow | null {
+export function getBettingAccountById(db: Database, id: string): BettingAccountRow | null {
   const row = db
     .query(
       `SELECT id, partner_id AS partnerId, provider, url, status, env_prefix AS envPrefix,
               max_stake AS maxStake, max_win AS maxWin, currency, skin, meta_json AS metaJson
-       FROM betting_accounts WHERE id = $id`,
+       FROM betting_accounts WHERE id = $id`
     )
     .get({ $id: id }) as Record<string, unknown> | null;
   return row ? mapAccountRow(row) : null;
 }
 
-export function listBettingAccountsByProvider(
-  db: Database,
-  provider: string,
-): BettingAccountRow[] {
+export function listBettingAccountsByProvider(db: Database, provider: string): BettingAccountRow[] {
   const rows = db
     .query(
       `SELECT id, partner_id AS partnerId, provider, url, status, env_prefix AS envPrefix,
               max_stake AS maxStake, max_win AS maxWin, currency, skin, meta_json AS metaJson
-       FROM betting_accounts WHERE provider = $p AND status = 'active'`,
+       FROM betting_accounts WHERE provider = $p AND status = 'active'`
     )
     .all({ $p: provider }) as Array<Record<string, unknown>>;
   return rows.map(mapAccountRow);
 }
 
 function mapAccountRow(r: Record<string, unknown>): BettingAccountRow {
-  return {
+  const metaJson = String(r.metaJson ?? '{}');
+  const base = {
     id: String(r.id),
     partnerId: String(r.partnerId),
     provider: String(r.provider) as ProviderId,
-    url: String(r.url ?? ""),
-    status: (String(r.status ?? "active") as BettingAccountRow["status"]),
+    url: String(r.url ?? ''),
+    status: String(r.status ?? 'active') as BettingAccountRow['status'],
     envPrefix: r.envPrefix != null ? String(r.envPrefix) : null,
     maxStake: Number(r.maxStake) || 0,
     maxWin: Number(r.maxWin) || 0,
-    currency: String(r.currency ?? "USD"),
+    currency: String(r.currency ?? 'USD'),
     skin: r.skin == null ? null : Number(r.skin),
-    metaJson: String(r.metaJson ?? "{}"),
+    metaJson,
+    skinId: skinIdFromAccount({ metaJson }),
+    mapper: mapperFromAccount({ metaJson }),
   };
+  // Soft parse for derived adapter fields (kalshi empty-url may be null).
+  try {
+    const identity = parseOutIdentity({
+      id: base.id,
+      partnerId: base.partnerId,
+      url: base.url,
+      provider: base.provider,
+      maxStake: base.maxStake,
+      maxWin: base.maxWin,
+      skin: base.skin,
+      metaJson,
+      status: base.status,
+      requireHost: false,
+    });
+    if (identity) {
+      return {
+        ...base,
+        skinId: identity.skinId,
+        mapper: identity.adapter.mapperKind,
+        adapterId: identity.adapter.adapterId,
+      };
+    }
+  } catch {
+    /* leave meta-derived skinId/mapper */
+  }
+  return base;
+}
+
+/** Parse-once OutIdentity for a stored row (throws on invalid host/capacity when requireHost). */
+export function outIdentityFromAccount(
+  account: BettingAccountRow,
+  options?: { requireHost?: boolean }
+): OutIdentity | null {
+  return parseOutIdentity({
+    id: account.id,
+    partnerId: account.partnerId,
+    url: account.url,
+    provider: account.provider,
+    maxStake: account.maxStake,
+    maxWin: account.maxWin,
+    skin: account.skin,
+    metaJson: account.metaJson,
+    status: account.status,
+    requireHost: options?.requireHost,
+  });
 }
 
 /**
@@ -274,12 +366,10 @@ function mapAccountRow(r: Record<string, unknown>): BettingAccountRow {
  * When meta.skins is absent, falls back to account maxStake as a single skin.
  * This is stake capacity, not market depth.
  */
-export function computeProviderCapacity(
-  accounts: BettingAccountRow[],
-): ProviderCapacity[] {
+export function computeProviderCapacity(accounts: BettingAccountRow[]): ProviderCapacity[] {
   const by = new Map<string, ProviderCapacity>();
   for (const a of accounts) {
-    if (a.status !== "active") continue;
+    if (a.status !== 'active') continue;
     const out = outCapacityFromAccount(a);
     let row = by.get(a.provider);
     if (!row) {
@@ -304,24 +394,23 @@ export function computeProviderCapacity(
   for (const row of by.values()) {
     row.outs.sort((x, y) => y.totalPerBetMax - x.totalPerBetMax || x.outId.localeCompare(y.outId));
   }
-  return [...by.values()].sort((a, b) =>
-    a.provider.localeCompare(b.provider),
-  );
+  return [...by.values()].sort((a, b) => a.provider.localeCompare(b.provider));
 }
 
-/** Parse FANTASY402_SKINS_JSON → OutSkinLimit[] (empty if unset/invalid). */
-export function parseSkinsJsonEnv(
-  raw: string | undefined,
-): OutSkinLimit[] {
+/**
+ * Parse FANTASY402_SKINS_JSON or FANTASY402_LIVE_PRODUCTS_JSON → OutSkinLimit[].
+ * Accepts `{ name | liveProduct | skin, perBetMax, maxWin }`.
+ */
+export function parseSkinsJsonEnv(raw: string | undefined): OutSkinLimit[] {
   if (!raw?.trim()) return [];
   try {
     const v = JSON.parse(raw) as unknown;
     if (!Array.isArray(v)) return [];
     return v
       .map((row): OutSkinLimit | null => {
-        if (!row || typeof row !== "object") return null;
+        if (!row || typeof row !== 'object') return null;
         const r = row as Record<string, unknown>;
-        const name = String(r.name ?? r.skin ?? "").trim();
+        const name = String(r.liveProduct ?? r.name ?? r.skin ?? '').trim();
         if (!name) return null;
         return {
           name,
@@ -336,6 +425,9 @@ export function parseSkinsJsonEnv(
   }
 }
 
+/** Alias of parseSkinsJsonEnv — preferred env name. */
+export const parseLiveProductsJsonEnv = parseSkinsJsonEnv;
+
 /**
  * Seed registry from Fantasy402 env (non-secret fields + env_prefix pointer).
  * Does not store password/token.
@@ -348,20 +440,19 @@ export function parseSkinsJsonEnv(
 export function seedFantasy402FromEnv(
   db: Database,
   envMap: Record<string, string | undefined> = process.env,
-  nowMs = Date.now(),
+  nowMs = Date.now()
 ): BettingAccountRow | null {
   ensurePartnerRegistrySchema(db);
   const customerID = envMap.FANTASY402_CUSTOMER_ID?.trim();
   if (!customerID) return null;
 
-  const partnerCode =
-    envMap.FANTASY402_PARTNER_CODE?.trim()?.toUpperCase() || null;
+  const partnerCode = envMap.FANTASY402_PARTNER_CODE?.trim()?.toUpperCase() || null;
   const partnerId =
     envMap.FANTASY402_PARTNER_ID?.trim() ||
-    (partnerCode ? `partner-${partnerCode.toLowerCase()}` : "partner-default");
+    (partnerCode ? `partner-${partnerCode.toLowerCase()}` : 'partner-default');
   const partnerName =
     envMap.FANTASY402_PARTNER_NAME?.trim() ||
-    (partnerCode ? `Partner ${partnerCode}` : "Default Partner");
+    (partnerCode ? `Partner ${partnerCode}` : 'Default Partner');
   upsertPartner(
     db,
     {
@@ -370,15 +461,17 @@ export function seedFantasy402FromEnv(
       active: true,
       profitSplit: null,
       commissionRate: null,
-      notes: "Seeded from FANTASY402_* env (blueprint)",
+      notes: 'Seeded from FANTASY402_* env (blueprint)',
     },
-    nowMs,
+    nowMs
   );
 
-  const skinsFromJson = parseSkinsJsonEnv(envMap.FANTASY402_SKINS_JSON);
-  const maxStakeEnv = Number(envMap.FANTASY402_MAX_STAKE ?? "1000") || 0;
-  const maxWinEnv = Number(envMap.FANTASY402_MAX_WIN ?? "5000") || 0;
-  const skinWire = parseSkinWire(envMap.FANTASY402_SKIN, 2);
+  const skinsFromJson = parseSkinsJsonEnv(
+    envMap.FANTASY402_LIVE_PRODUCTS_JSON ?? envMap.FANTASY402_SKINS_JSON
+  );
+  const maxStakeEnv = Number(envMap.FANTASY402_MAX_STAKE ?? '1000') || 0;
+  const maxWinEnv = Number(envMap.FANTASY402_MAX_WIN ?? '5000') || 0;
+  const skinWire = parseSkinWire(envMap.FANTASY402_LIVE_PRODUCT ?? envMap.FANTASY402_SKIN, 2);
   const skins: OutSkinLimit[] =
     skinsFromJson.length > 0
       ? skinsFromJson
@@ -391,33 +484,30 @@ export function seedFantasy402FromEnv(
           },
         ];
 
-  const maxStake = Math.max(...skins.map((s) => s.perBetMax), 0);
-  const maxWin = Math.max(...skins.map((s) => s.maxWin), 0);
-  const currency = envMap.FANTASY402_CURRENCY?.trim() || "USD";
-  const url =
-    envMap.FANTASY402_DOMAIN?.trim() || "https://fantasy402.com";
+  const maxStake = Math.max(...skins.map(s => s.perBetMax), 0);
+  const maxWin = Math.max(...skins.map(s => s.maxWin), 0);
+  const currency = envMap.FANTASY402_CURRENCY?.trim() || 'USD';
+  const url = resolveDeskDomainFromEnv(envMap);
   const accountId =
-    envMap.FANTASY402_ACCOUNT_ID?.trim() ||
-    (partnerCode ? `out-${partnerCode}-1` : customerID);
+    envMap.FANTASY402_ACCOUNT_ID?.trim() || (partnerCode ? `out-${partnerCode}-1` : customerID);
 
   const workingBalanceRaw = envMap.FANTASY402_WORKING_BALANCE?.trim();
-  const workingBalance = workingBalanceRaw
-    ? Number(workingBalanceRaw)
-    : undefined;
+  const workingBalance = workingBalanceRaw ? Number(workingBalanceRaw) : undefined;
   const vaultId =
     envMap.FANTASY402_VAULT_ID?.trim() ||
-    (accountId.startsWith("out-") ? `vault-${accountId}` : undefined);
+    (accountId.startsWith('out-') ? `vault-${accountId}` : undefined);
 
-  /** Numeric wire id only; named skins (ezlive) live solely in meta.skins. */
-  const legacySkinCol = typeof skinWire === "number" ? skinWire : null;
+  /** Numeric wire id only; named live products live in meta.liveProducts / skins. */
+  const legacySkinCol = typeof skinWire === 'number' ? skinWire : null;
 
+  // Host → SkinId + ⊆ check + stamp via OutIdentity inside upsertBettingAccount.
   const account: BettingAccountRow = {
     id: accountId,
     partnerId,
-    provider: "fantasy402",
+    provider: 'fantasy402',
     url,
-    status: "active",
-    envPrefix: "FANTASY402_",
+    status: 'active',
+    envPrefix: 'FANTASY402_',
     maxStake,
     maxWin,
     currency,
@@ -425,19 +515,35 @@ export function seedFantasy402FromEnv(
     metaJson: buildSkinsMeta({
       skins,
       workingBalance:
-        workingBalance != null && Number.isFinite(workingBalance)
-          ? workingBalance
-          : undefined,
+        workingBalance != null && Number.isFinite(workingBalance) ? workingBalance : undefined,
       vaultId,
       partnerCode: partnerCode ?? undefined,
       customerID,
       agentID: envMap.FANTASY402_AGENT_ID?.trim() || undefined,
-      defaultSkin: String(skins[0]?.name ?? skinWire),
+      defaultLiveProduct: String(skins[0]?.name ?? skinWire),
     }),
   };
   upsertBettingAccount(db, account, nowMs);
-  return account;
+  const stored = getBettingAccountById(db, accountId);
+  return stored ?? account;
 }
+
+export {
+  adapterBindingForSkin,
+  assertLiveProductsAllowed,
+  buildSkinMetaFields,
+  capacityToOutSkinLimits,
+  guardAndStampAccountMeta,
+  parseOutIdentity,
+  providerMirrorFromAdapter,
+  resolveSkinForAccountUrl,
+  stampOutMeta,
+  type AdapterBinding,
+  type AdapterId,
+  type LiveProductCapacity,
+  type OutIdentity,
+} from './out-identity.ts';
+export { mapperFromAccount, skinIdFromAccount } from './skins.ts';
 
 /** Re-export skin helpers for registry consumers. */
 export {
@@ -447,10 +553,5 @@ export {
   outCapacityFromAccount,
   pickBestSkinForOut,
   resolveOutSkins,
-} from "./skins.ts";
-export type {
-  OutCapacity,
-  OutExposureShare,
-  OutSkinLimit,
-  OutSkinPair,
-} from "./skins.ts";
+} from './skins.ts';
+export type { OutCapacity, OutExposureShare, OutSkinLimit, OutSkinPair } from './skins.ts';

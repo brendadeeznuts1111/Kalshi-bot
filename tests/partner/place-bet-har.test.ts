@@ -1,6 +1,7 @@
 // @see https://bun.com/docs/test/index#run-tests
 import { describe, expect, test } from "bun:test";
 import { join } from "node:path";
+import { requireDefaultUrlForUltraMapper } from "../../src/domain/index.ts";
 import {
   extractBetGroupsWiresFromHar,
   extractPlaceBetMapFromHar,
@@ -13,6 +14,9 @@ import {
 } from "../../src/partner/fantasy-ultra/place-bet-body.ts";
 import { FantasyUltraAdapter } from "../../src/partner/fantasy-ultra/adapter.ts";
 import { executionResultFromBetGroups } from "../../src/partner/fantasy-ultra/parse.ts";
+
+/** Adapter/config domain — SKINS-derived, not a source lock. */
+const DOMAIN = requireDefaultUrlForUltraMapper();
 
 const FIXTURE = join(
   import.meta.dir,
@@ -70,7 +74,7 @@ describe("place-bet HAR → map → placeOrder", () => {
         agentID: "A",
         password: "p",
         bearerToken: "t".repeat(20),
-        domain: "https://fantasy402.com",
+        domain: DOMAIN,
         skin: 2,
         currency: "USD",
       },
@@ -106,7 +110,7 @@ describe("place-bet HAR → map → placeOrder", () => {
         agentID: "A",
         password: "p",
         bearerToken: "t".repeat(24),
-        domain: "https://fantasy402.com",
+        domain: DOMAIN,
         skin: 2,
         currency: "USD",
       },
@@ -141,13 +145,13 @@ describe("place-bet HAR → map → placeOrder", () => {
         agentID: "A",
         password: "p",
         bearerToken: "t".repeat(24),
-        domain: "https://fantasy402.com",
+        domain: DOMAIN,
         skin: 2,
         currency: "USD",
       },
       placeBetMap: map,
       warmSession: false,
-      ultraLiveUrl: "https://fantasy402.com/cloud/api/Provider/getUltraLiveURL",
+      ultraLiveUrl: `${DOMAIN}/cloud/api/Provider/getUltraLiveURL`,
       fetchImpl: (async (input: RequestInfo | URL, init?: RequestInit) => {
         const u = String(input);
         if (u.includes("getUltraLiveURL")) {
@@ -210,7 +214,7 @@ describe("place-bet HAR → map → placeOrder", () => {
         agentID: "A",
         password: "p",
         bearerToken: "t".repeat(24),
-        domain: "https://fantasy402.com",
+        domain: DOMAIN,
         skin: 2,
         currency: "USD",
       },

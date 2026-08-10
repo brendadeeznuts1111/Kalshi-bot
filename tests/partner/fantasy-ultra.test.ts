@@ -1,5 +1,6 @@
 // @see https://bun.com/docs/test/index#run-tests
 import { describe, expect, test } from "bun:test";
+import { requireDefaultUrlForUltraMapper } from "../../src/domain/index.ts";
 import {
   CookieJar,
   executionResultFromBetGroups,
@@ -19,6 +20,8 @@ import {
   statscorePayloadHasPrices,
   type PartnerAccountProfile,
 } from "../../src/partner/index.ts";
+
+const DOMAIN = requireDefaultUrlForUltraMapper();
 
 /** Captured place/open ticket response (redacted dummy desk). */
 const betTicketWire = {
@@ -141,7 +144,7 @@ const leaguesWire = {
 const profile: PartnerAccountProfile = {
   id: "dummy",
   partner: "fantasy402",
-  url: "https://fantasy402.com",
+  url: DOMAIN,
   status: "active",
   meta: {
     customerID: "C",
@@ -282,7 +285,7 @@ describe("FantasyUltraAdapter session blueprint", () => {
         agentID: "AGENT1",
         password: "x",
         bearerToken: "old-token",
-        domain: "https://fantasy402.com",
+        domain: DOMAIN,
         skin: 2,
         currency: "USD",
       },
@@ -331,7 +334,7 @@ describe("FantasyUltraAdapter session blueprint", () => {
         agentID: "A",
         password: "p",
         bearerToken: "t",
-        domain: "https://fantasy402.com",
+        domain: DOMAIN,
         skin: 2,
         currency: "USD",
       },
@@ -395,7 +398,7 @@ describe("FantasyUltraAdapter session blueprint", () => {
         agentID: "A",
         password: "p",
         bearerToken: "t",
-        domain: "https://fantasy402.com",
+        domain: DOMAIN,
         skin: 2,
         currency: "USD",
       },
@@ -443,7 +446,7 @@ describe("FantasyUltraAdapter session blueprint", () => {
         agentID: "A",
         password: "p",
         bearerToken: "t",
-        domain: "https://fantasy402.com",
+        domain: DOMAIN,
         skin: 2,
         currency: "USD",
       },

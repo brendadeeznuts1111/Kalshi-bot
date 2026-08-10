@@ -11,6 +11,8 @@
 #   out id     = "out-{CODE}-{n}"
 # Bare FANTASY402_ / partner-only FANTASY402_SPEN_ auto-upgrade to per-out on seed.
 # Secrets: {prefix}BEARER_TOKEN · CUSTOMER_ID · AGENT_ID · PASSWORD · DOMAIN · …
+# Desk URL env (book-level): PARTNER_DOMAIN — must resolve via active SKINS[].hosts
+#   (FANTASY402_DOMAIN is not read). Prefer TOML url= on each out when known.
 # @see https://bun.com/docs/runtime/toml
 # @see docs/PARTNER-DOMAIN.md
 
@@ -38,6 +40,7 @@ partner_code = "SPEN"
 provider = "fantasy402"
 env_prefix = "FANTASY402_SPEN_1_"
 currency = "USD"
+# url must be a host on an *active* skin; omit → PARTNER_DOMAIN / Ultra default
 url = "https://fantasy402.com"
 working_balance = 5000
 vault_id = "vault-out-SPEN-1"
@@ -53,6 +56,7 @@ partner_code = "ASH"
 provider = "fantasy402"
 env_prefix = "FANTASY402_ASH_1_"
 currency = "USD"
+# url must be a host on an *active* skin; omit → PARTNER_DOMAIN / Ultra default
 url = "https://fantasy402.com"
 working_balance = 2000
 vault_id = "vault-out-ASH-1"

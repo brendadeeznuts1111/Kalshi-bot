@@ -32,6 +32,7 @@
  */
 // @see https://bun.com/docs/api/spawn
 // @see https://bun.com/docs/runtime/utils#bun-which
+import { requireDefaultUrlForUltraMapper } from "../src/domain/index.ts";
 import {
   fantasyVaultItemTitle,
   loadFantasy402ProfileFromPrefix,
@@ -47,7 +48,7 @@ import {
 
 const DEFAULT_VAULT = "Kalshi Bot";
 const DEFAULT_TITLE = "Fantasy402";
-const DEFAULT_DOMAIN = "https://fantasy402.com";
+const DEFAULT_DOMAIN = requireDefaultUrlForUltraMapper();
 
 function argValue(name: string): string | undefined {
   const hit = process.argv.find((a) => a.startsWith(`--${name}=`));
@@ -283,7 +284,7 @@ async function main(): Promise<void> {
         `  ${envPrefix}CUSTOMER_ID  ${envPrefix}AGENT_ID`,
         `  ${envPrefix}PASSWORD     ${envPrefix}BEARER_TOKEN`,
         "Fallback chain also accepts partner- or book-level keys.",
-        "Optional: DOMAIN SKIN CURRENCY",
+        "Optional: PARTNER_DOMAIN (or per-out *DOMAIN → SKINS host/SkinId) SKIN CURRENCY",
         "",
         "Export them in this shell (or paste from browser DevTools JWT), then re-run with --apply.",
         "Do not commit secrets. Prefer short-lived JWT + renewToken.",

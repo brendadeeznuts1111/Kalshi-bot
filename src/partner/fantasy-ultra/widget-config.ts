@@ -1,19 +1,31 @@
 /**
  * Fantasy402 Ultra / plive widget runtime config (from HTML source + stream-list-v2).
  *
+ * Coverage SSOT is `src/domain/` (sports matrix + live-product bindings).
+ * This module is a compatibility shim for existing Fantasy402 callers.
+ *
  * Sport order is UI-only; API sport ids differ (table tennis widget 220 vs API 93).
- * Stream-list exposes ~30 buckets; only a subset have confirmed API/widget ids.
  */
+
+import {
+  DEFAULT_COVERAGE_LIVE_PRODUCT,
+  WIDGET_FAVORITES_SPORT_ID,
+  listLiveProductSportBindings,
+  resolveSport,
+  type LiveProductSportBinding,
+} from '../../domain/index.ts';
+
+export { WIDGET_FAVORITES_SPORT_ID };
 
 /** Left-sidebar sport order (widget-internal ids). */
 export const WIDGET_SPORT_ORDER = [214, 1, 2, 4, 220] as const;
 
 export const FANTASY_WIDGET_CONFIG = {
-  oddsFormat: "american" as const,
+  oddsFormat: 'american' as const,
   roundUSOddsDown: true,
   oddsDecimalPlaces: 3,
   useCustomWebSocket: true,
-  customWebSocketUrl: "wss://pandora.ganchrow.com",
+  customWebSocketUrl: 'wss://pandora.ganchrow.com',
   playerUSEnabled: true,
   /** Soft limit: stream after wager within this window (seconds). */
   liveStreamLastWagerToleranceSec: 86_400,
@@ -21,153 +33,81 @@ export const FANTASY_WIDGET_CONFIG = {
 
 /**
  * Canonical sport key ↔ stream-list bucket ↔ API sportId (ticket) ↔ widget id.
- * `apiSportId` / `widgetSportId` null until confirmed on wire (Get_SportsLeagues / ticket / HTML).
+ * Compatibility shape — sourced from domain live-product bindings (default: plive).
  */
 export type FantasySportMapping = {
   canonical: string;
-  /** stream-list-v2 sports bucket key */
   streamBucket: string;
-  /** API / ticket sportId (e.g. componentBets.sportId); null if unknown */
   apiSportId: number | null;
-  /** Widget sportOrder id; null if not in sidebar map */
   widgetSportId: number | null;
   label: string;
-  /**
-   * true = primary desk sports (mapped with full ids, default sync targets).
-   * false = coverage inventory only until API id confirmed.
-   */
   primary: boolean;
 };
 
-function row(
-  streamBucket: string,
-  label: string,
-  opts: {
-    canonical?: string;
-    apiSportId?: number | null;
-    widgetSportId?: number | null;
-    primary?: boolean;
-  } = {},
-): FantasySportMapping {
+function bindingToMapping(b: LiveProductSportBinding): FantasySportMapping {
   return {
-    canonical: opts.canonical ?? streamBucket,
-    streamBucket,
-    apiSportId: opts.apiSportId ?? null,
-    widgetSportId: opts.widgetSportId ?? null,
-    label,
-    primary: opts.primary ?? false,
+    canonical: b.sportId,
+    streamBucket: b.streamBucket,
+    apiSportId: b.apiSportId,
+    widgetSportId: b.widgetSportId,
+    label: b.label,
+    primary: b.status === 'primary',
   };
 }
 
 /**
- * Full stream-list-v2 bucket map (observed 2026-08).
- * Confirmed ticket/widget ids only for soccer/tennis/basketball/table_tennis.
+ * Full stream-list-v2 bucket map via domain plive bindings.
+ * Prefer `resolveSport` / `listLiveProductSportBindings` for new code.
  */
-export const FANTASY_SPORT_MAPPINGS: readonly FantasySportMapping[] = [
-  // Primary desk sports (confirmed ids)
-  row("football", "Soccer", {
-    canonical: "soccer",
-    apiSportId: 1,
-    widgetSportId: 1,
-    primary: true,
-  }),
-  row("tennis", "Tennis", {
-    apiSportId: 2,
-    widgetSportId: 2,
-    primary: true,
-  }),
-  row("basketball", "Basketball", {
-    apiSportId: 4,
-    widgetSportId: 4,
-    primary: true,
-  }),
-  row("table_tennis", "Table Tennis", {
-    apiSportId: 93,
-    widgetSportId: 220,
-    primary: true,
-  }),
-  // Full stream-list inventory (api/widget ids TBD)
-  row("ice_hockey", "Ice Hockey"),
-  row("volleyball", "Volleyball"),
-  row("handball", "Handball"),
-  row("baseball", "Baseball"),
-  row("bandy", "Bandy"),
-  row("snooker", "Snooker"),
-  row("billiards", "Billiards"),
-  row("badminton", "Badminton"),
-  row("cricket", "Cricket"),
-  row("golf", "Golf"),
-  row("bicycle", "Cycling", { canonical: "cycling" }),
-  row("boxing", "Boxing"),
-  row("formula_1", "Formula 1"),
-  row("rugby", "Rugby"),
-  row("hurling", "Hurling"),
-  row("gaelic_football", "Gaelic Football"),
-  row("floorball", "Floorball"),
-  row("motorsport", "Motorsport"),
-  row("american_football", "American Football"),
-  row("australian_rules", "Australian Rules"),
-  row("darts", "Darts"),
-  row("futsal", "Futsal"),
-  row("ufc", "UFC"),
-  row("martial_arts", "Martial Arts"),
-  row("horse_racing", "Horse Racing"),
-  row("sports_channels", "Sports Channels"),
-] as const;
-
-/** Favorites is UI-only virtual sport in sportOrder. */
-export const WIDGET_FAVORITES_SPORT_ID = 214;
-
-const byApi = new Map(
-  FANTASY_SPORT_MAPPINGS.filter((m) => m.apiSportId != null).map((m) => [
-    m.apiSportId!,
-    m,
-  ]),
-);
-const byWidget = new Map(
-  FANTASY_SPORT_MAPPINGS.filter((m) => m.widgetSportId != null).map((m) => [
-    m.widgetSportId!,
-    m,
-  ]),
-);
-const byCanonical = new Map(
-  FANTASY_SPORT_MAPPINGS.map((m) => [m.canonical, m]),
-);
-const byStream = new Map(
-  FANTASY_SPORT_MAPPINGS.map((m) => [m.streamBucket, m]),
-);
+export const FANTASY_SPORT_MAPPINGS: readonly FantasySportMapping[] =
+  listLiveProductSportBindings(DEFAULT_COVERAGE_LIVE_PRODUCT).map(
+    bindingToMapping,
+  );
 
 export function fantasySportByApiId(
   apiSportId: number,
 ): FantasySportMapping | undefined {
-  return byApi.get(apiSportId);
+  const hit = resolveSport({
+    liveProduct: DEFAULT_COVERAGE_LIVE_PRODUCT,
+    apiSportId,
+  });
+  return hit ? bindingToMapping(hit.binding) : undefined;
 }
 
 export function fantasySportByWidgetId(
   widgetSportId: number,
 ): FantasySportMapping | undefined {
-  if (widgetSportId === WIDGET_FAVORITES_SPORT_ID) return undefined;
-  return byWidget.get(widgetSportId);
+  const hit = resolveSport({
+    liveProduct: DEFAULT_COVERAGE_LIVE_PRODUCT,
+    widgetSportId,
+  });
+  return hit ? bindingToMapping(hit.binding) : undefined;
 }
 
 export function fantasySportByCanonical(
   canonical: string,
 ): FantasySportMapping | undefined {
-  return byCanonical.get(canonical.trim().toLowerCase());
+  const hit = resolveSport({
+    liveProduct: DEFAULT_COVERAGE_LIVE_PRODUCT,
+    canonical,
+  });
+  return hit ? bindingToMapping(hit.binding) : undefined;
 }
 
 export function fantasySportByStreamBucket(
   bucket: string,
 ): FantasySportMapping | undefined {
-  return byStream.get(bucket.trim().toLowerCase());
+  const hit = resolveSport({
+    liveProduct: DEFAULT_COVERAGE_LIVE_PRODUCT,
+    streamBucket: bucket,
+  });
+  return hit ? bindingToMapping(hit.binding) : undefined;
 }
 
-/** Primary desk sports (confirmed API + widget ids). */
 export function primaryFantasySports(): FantasySportMapping[] {
   return FANTASY_SPORT_MAPPINGS.filter((m) => m.primary);
 }
 
-/** All stream buckets we know about from the static map. */
 export function mappedStreamBuckets(): string[] {
   return FANTASY_SPORT_MAPPINGS.map((m) => m.streamBucket);
 }

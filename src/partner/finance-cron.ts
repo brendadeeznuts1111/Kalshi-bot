@@ -25,28 +25,25 @@
  */
 // @see https://bun.com/docs/runtime/cron
 // @see https://bun.com/docs/api/fetch
-import type { Database } from "bun:sqlite";
-import { FantasyUltraAdapter } from "./fantasy-ultra/adapter.ts";
-import type { FantasyUltraCredentials } from "./fantasy-ultra/types.ts";
+import type { Database } from 'bun:sqlite';
+import { resolveDeskDomainFromEnv } from '../domain/index.ts';
+import { FantasyUltraAdapter } from './fantasy-ultra/adapter.ts';
+import type { FantasyUltraCredentials } from './fantasy-ultra/types.ts';
 import {
   ensurePartnerRegistrySchema,
   listActiveBettingAccounts,
   type BettingAccountRow,
-} from "./registry.ts";
-import { outCapacityFromAccount, parseOutMeta } from "./skins.ts";
-import { fetchStreamSportsInventory } from "./sports-inventory.ts";
-import {
-  DEFAULT_REQUIRED_ENV_KEYS,
-  resolvePartnerEnv,
-  type PartnerEnvKey,
-} from "./toml-config.ts";
+} from './registry.ts';
+import { outCapacityFromAccount, parseOutMeta } from './skins.ts';
+import { fetchStreamSportsInventory } from './sports-inventory.ts';
+import { DEFAULT_REQUIRED_ENV_KEYS, resolvePartnerEnv, type PartnerEnvKey } from './toml-config.ts';
 import {
   lastRiskHealthFingerprint,
   sumTicketTotalsForDay,
   writeDeskSnapshot,
   writeRiskHealthSnapshot,
   type TicketDayTotals,
-} from "./ledger.ts";
+} from './ledger.ts';
 import {
   evaluateRiskHealth,
   formatRiskHealthTelegram,
@@ -56,10 +53,10 @@ import {
   riskOkUnderThreshold,
   type RiskHealthReport,
   type RiskThreshold,
-} from "./risk-health.ts";
-import { getPartnerVisual } from "./visuals.ts";
-import { parseSkinWire } from "./skins.ts";
-import { runWebViewWsPipeline } from "./webview-ws-pipeline.ts";
+} from './risk-health.ts';
+import { getPartnerVisual } from './visuals.ts';
+import { parseSkinWire } from './skins.ts';
+import { runWebViewWsPipeline } from './webview-ws-pipeline.ts';
 
 export type FinanceCronOptions = {
   /** Fail hard when any out is missing required secrets */
@@ -177,16 +174,16 @@ export type FinanceCronReport = {
 
 function partnerCodeForOut(a: BettingAccountRow): string {
   const meta = parseOutMeta(a.metaJson);
-  if (typeof meta.partnerCode === "string" && meta.partnerCode.trim()) {
+  if (typeof meta.partnerCode === 'string' && meta.partnerCode.trim()) {
     return meta.partnerCode.trim().toUpperCase();
   }
   const m = /^out-([A-Z0-9]+)-/i.exec(a.id);
   if (m) return m[1]!.toUpperCase();
-  return a.partnerId.replace(/^partner-/i, "").toUpperCase() || "UNKNOWN";
+  return a.partnerId.replace(/^partner-/i, '').toUpperCase() || 'UNKNOWN';
 }
 
 function credentialsFromEnv(
-  bundle: ReturnType<typeof resolvePartnerEnv>,
+  bundle: ReturnType<typeof resolvePartnerEnv>
 ): FantasyUltraCredentials | null {
   const c = bundle.values.CUSTOMER_ID;
   const a = bundle.values.AGENT_ID;
@@ -198,14 +195,14 @@ function credentialsFromEnv(
     agentID: a,
     password: p,
     bearerToken: t,
-    domain: bundle.values.DOMAIN || "https://fantasy402.com",
+    domain: bundle.values.DOMAIN || resolveDeskDomainFromEnv(),
     skin: parseSkinWire(bundle.values.SKIN, 2),
-    currency: bundle.values.CURRENCY || "USD",
+    currency: bundle.values.CURRENCY || 'USD',
   };
 }
 
 async function probeLogin(
-  creds: FantasyUltraCredentials,
+  creds: FantasyUltraCredentials
 ): Promise<{ ok: boolean; error?: string }> {
   try {
     const adapter = new FantasyUltraAdapter({
@@ -225,12 +222,10 @@ async function probeLogin(
 /** Soft Telegram send — never throws; no import of telegram/api (hard token require). */
 export async function notifyTelegramFinance(
   text: string,
-  options?: { partnerCode?: string },
+  options?: { partnerCode?: string }
 ): Promise<boolean> {
   const token = process.env.TELEGRAM_BOT_TOKEN?.trim();
-  const chatId =
-    process.env.TELEGRAM_CHAT_ID?.trim() ||
-    process.env.TELEGRAM_GROUP_ID?.trim();
+  const chatId = process.env.TELEGRAM_CHAT_ID?.trim() || process.env.TELEGRAM_GROUP_ID?.trim();
   if (!token || !chatId || !text.trim()) return false;
 
   const body: Record<string, unknown> = {
@@ -248,14 +243,11 @@ export async function notifyTelegramFinance(
   }
 
   try {
-    const res = await fetch(
-      `https://api.telegram.org/bot${token}/sendMessage`,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(body),
-      },
-    );
+    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    });
     const data = (await res.json()) as { ok?: boolean };
     return Boolean(data.ok);
   } catch {
@@ -266,29 +258,23 @@ export async function notifyTelegramFinance(
 export function formatFinanceCronReportText(report: FinanceCronReport): string {
   const lines: string[] = [];
   lines.push(
-    `partner desk  partners=${report.partnerCount} outs=${report.outCount} capacity=$${report.totalCapacity}`,
+    `partner desk  partners=${report.partnerCount} outs=${report.outCount} capacity=$${report.totalCapacity}`
   );
   if (report.inventory) {
     lines.push(
-      `  inventory: ${report.inventory.totalEvents} live events · ${report.inventory.sportBuckets} sports · primary live ${report.inventory.primaryLive}`,
+      `  inventory: ${report.inventory.totalEvents} live events · ${report.inventory.sportBuckets} sports · primary live ${report.inventory.primaryLive}`
     );
   }
   if (report.webview) {
     lines.push(
       `  webview odds: events=${report.webview.pricedEvents} lines=${report.webview.pricedLines}` +
-        (report.webview.capturePath
-          ? `  capture=${report.webview.capturePath}`
-          : ""),
+        (report.webview.capturePath ? `  capture=${report.webview.capturePath}` : '')
     );
   }
   if (report.risk) {
     lines.push(
       `  risk: errors=${report.risk.errorCount} warns=${report.risk.warnCount}` +
-        (report.riskNotified
-          ? "  telegram✓"
-          : report.riskAlertDeduped
-            ? "  deduped"
-            : ""),
+        (report.riskNotified ? '  telegram✓' : report.riskAlertDeduped ? '  deduped' : '')
     );
   }
   if (report.tickets && report.tickets.ticketCount > 0) {
@@ -296,42 +282,31 @@ export function formatFinanceCronReportText(report: FinanceCronReport): string {
     lines.push(
       `  tickets today (${t.dayUtc}): n=${t.ticketCount}  risk=$${t.totalRisk}  toWin=$${t.totalToWin}` +
         `  open=${t.openCount} ($${t.openRisk})  settled=${t.settledCount}` +
-        `  (net P&L needs settlement list URL)`,
+        `  (net P&L needs settlement list URL)`
     );
     for (const row of t.byOut) {
       lines.push(
         `    └── ${row.outId}  n=${row.ticketCount}  risk=$${row.totalRisk}  toWin=$${row.totalToWin}` +
-          `  open=${row.openCount}/$${row.openRisk}`,
+          `  open=${row.openCount}/$${row.openRisk}`
       );
     }
   }
   if (report.skippedMissingSecrets > 0) {
-    lines.push(
-      `  ⚠ ${report.skippedMissingSecrets} out(s) missing secrets (env)`,
-    );
+    lines.push(`  ⚠ ${report.skippedMissingSecrets} out(s) missing secrets (env)`);
   }
   for (const g of report.partners) {
     const v = getPartnerVisual(g.partnerCode);
-    lines.push(
-      `  ${g.partnerCode}  ${v.hex}  capacity=$${g.totalCapacity}  outs=${g.outs.length}`,
-    );
+    lines.push(`  ${g.partnerCode}  ${v.hex}  capacity=$${g.totalCapacity}  outs=${g.outs.length}`);
     for (const o of g.outs) {
-      const skinBits = o.skins
-        .map((s) => `$${s.perBetMax} ${s.name}`)
-        .join(" + ");
-      const envMark = o.envOk ? "env✓" : `env✗ ${o.missingKeys.join(",")}`;
-      const login =
-        o.loginOk === true
-          ? " login✓"
-          : o.loginOk === false
-            ? ` login✗`
-            : "";
+      const skinBits = o.skins.map(s => `$${s.perBetMax} ${s.name}`).join(' + ');
+      const envMark = o.envOk ? 'env✓' : `env✗ ${o.missingKeys.join(',')}`;
+      const login = o.loginOk === true ? ' login✓' : o.loginOk === false ? ` login✗` : '';
       lines.push(
-        `    └── ${o.outId}  $${o.totalPerBetMax}${skinBits ? ` (${skinBits})` : ""}  ${envMark}${login}`,
+        `    └── ${o.outId}  $${o.totalPerBetMax}${skinBits ? ` (${skinBits})` : ''}  ${envMark}${login}`
       );
     }
   }
-  return lines.join("\n");
+  return lines.join('\n');
 }
 
 /**
@@ -339,48 +314,40 @@ export function formatFinanceCronReportText(report: FinanceCronReport): string {
  */
 export async function runFinanceCron(
   db: Database,
-  options: FinanceCronOptions = {},
+  options: FinanceCronOptions = {}
 ): Promise<FinanceCronReport> {
   ensurePartnerRegistrySchema(db);
   const envMap = options.envMap ?? process.env;
   const required = options.requiredKeys ?? DEFAULT_REQUIRED_ENV_KEYS;
   const filter = options.partnerFilter?.trim().toUpperCase();
-  const probeLoginEnabled =
-    options.probeLogin ?? envMap.PARTNER_FINANCE_PROBE_LOGIN === "1";
-  const probeInventory =
-    options.probeInventory ?? envMap.PARTNER_FINANCE_PROBE_INVENTORY !== "0";
+  const probeLoginEnabled = options.probeLogin ?? envMap.PARTNER_FINANCE_PROBE_LOGIN === '1';
+  const probeInventory = options.probeInventory ?? envMap.PARTNER_FINANCE_PROBE_INVENTORY !== '0';
   const notify =
     options.notify ??
-    (envMap.PARTNER_FINANCE_NOTIFY === "1" ||
-      envMap.PARTNER_TELEGRAM_NOTIFY === "true");
+    (envMap.PARTNER_FINANCE_NOTIFY === '1' || envMap.PARTNER_TELEGRAM_NOTIFY === 'true');
   const riskAlert =
     options.riskAlert ??
-    (envMap.PARTNER_FINANCE_RISK_ALERT === "0"
+    (envMap.PARTNER_FINANCE_RISK_ALERT === '0'
       ? false
-      : envMap.PARTNER_FINANCE_RISK_ALERT === "1" || notify);
-  const riskDigest =
-    options.riskDigest ?? envMap.PARTNER_FINANCE_RISK_DIGEST === "1";
-  const riskForce =
-    options.riskForce ?? envMap.PARTNER_FINANCE_RISK_FORCE === "1";
+      : envMap.PARTNER_FINANCE_RISK_ALERT === '1' || notify);
+  const riskDigest = options.riskDigest ?? envMap.PARTNER_FINANCE_RISK_DIGEST === '1';
+  const riskForce = options.riskForce ?? envMap.PARTNER_FINANCE_RISK_FORCE === '1';
   const riskThreshold = parseRiskThreshold(
     options.riskThreshold ?? envMap.PARTNER_FINANCE_RISK_THRESHOLD,
-    "warn",
+    'warn'
   );
   const riskIncludeHealthJson =
-    options.riskIncludeHealthJson ??
-    envMap.PARTNER_FINANCE_RISK_HEALTH_JSON !== "0";
-  const autoWsIngest =
-    options.autoWsIngest ?? envMap.PARTNER_FINANCE_AUTO_WS_INGEST === "1";
+    options.riskIncludeHealthJson ?? envMap.PARTNER_FINANCE_RISK_HEALTH_JSON !== '0';
+  const autoWsIngest = options.autoWsIngest ?? envMap.PARTNER_FINANCE_AUTO_WS_INGEST === '1';
   const autoWsIngestAfterHours =
     options.autoWsIngestAfterHours ??
-    (Number(envMap.PARTNER_FINANCE_AUTO_WS_INGEST_HOURS ?? "24") || 24);
+    (Number(envMap.PARTNER_FINANCE_AUTO_WS_INGEST_HOURS ?? '24') || 24);
   const writeLedger = options.writeLedger !== false;
-  let webviewOdds =
-    options.webviewOdds ?? envMap.PARTNER_FINANCE_WEBVIEW === "1";
+  let webviewOdds = options.webviewOdds ?? envMap.PARTNER_FINANCE_WEBVIEW === '1';
 
   let accounts = listActiveBettingAccounts(db);
   if (filter) {
-    accounts = accounts.filter((a) => partnerCodeForOut(a) === filter);
+    accounts = accounts.filter(a => partnerCodeForOut(a) === filter);
   }
 
   const outRows: FinanceCronOutRow[] = [];
@@ -391,7 +358,7 @@ export async function runFinanceCron(
     const partnerCode = partnerCodeForOut(a);
     const cap = outCapacityFromAccount(a);
     const bundle = resolvePartnerEnv(a.envPrefix, envMap);
-    const missing = required.filter((k) => !bundle.values[k]);
+    const missing = required.filter(k => !bundle.values[k]);
     const envOk = missing.length === 0;
     if (!envOk) {
       skippedMissingSecrets++;
@@ -405,7 +372,7 @@ export async function runFinanceCron(
       provider: a.provider,
       totalPerBetMax: cap.totalPerBetMax,
       skinCount: cap.skins.length,
-      skins: cap.skins.map((s) => ({
+      skins: cap.skins.map(s => ({
         name: s.name,
         perBetMax: s.perBetMax,
       })),
@@ -415,7 +382,7 @@ export async function runFinanceCron(
       missingKeys: missing,
     };
 
-    if (envOk && probeLoginEnabled && a.provider === "fantasy402") {
+    if (envOk && probeLoginEnabled && a.provider === 'fantasy402') {
       const creds = credentialsFromEnv(bundle);
       if (creds) {
         const login = await probeLogin(creds);
@@ -446,9 +413,11 @@ export async function runFinanceCron(
         hex: getPartnerVisual(partnerCode).hex,
       };
     })
-    .sort((a, b) => b.totalCapacity - a.totalCapacity || a.partnerCode.localeCompare(b.partnerCode));
+    .sort(
+      (a, b) => b.totalCapacity - a.totalCapacity || a.partnerCode.localeCompare(b.partnerCode)
+    );
 
-  let inventory: FinanceCronReport["inventory"];
+  let inventory: FinanceCronReport['inventory'];
   if (probeInventory) {
     try {
       const inv = await fetchStreamSportsInventory({
@@ -487,20 +456,19 @@ export async function runFinanceCron(
   }
 
   const totalCapacity = partners.reduce((s, p) => s + p.totalCapacity, 0);
-  let webview: FinanceCronReport["webview"];
+  let webview: FinanceCronReport['webview'];
   if (webviewOdds) {
     try {
       // Attach book to first fantasy402 out when present
-      const primary =
-        outRows.find((o) => o.provider === "fantasy402") ?? outRows[0];
+      const primary = outRows.find(o => o.provider === 'fantasy402') ?? outRows[0];
       const pipe = await runWebViewWsPipeline({
         capture: options.webviewCapture === true,
         seconds: options.webviewSeconds ?? 20,
         writeLedger: writeLedger && Boolean(primary),
         db: writeLedger ? db : undefined,
-        outId: primary?.outId ?? "webview-plive",
-        partnerId: primary?.partnerId ?? "partner-default",
-        partnerCode: primary?.partnerCode ?? "PLIVE",
+        outId: primary?.outId ?? 'webview-plive',
+        partnerId: primary?.partnerId ?? 'partner-default',
+        partnerCode: primary?.partnerCode ?? 'PLIVE',
       });
       webview = {
         capturePath: pipe.capturePath,
@@ -515,9 +483,7 @@ export async function runFinanceCron(
         pricedLines: 0,
         ledgerId: null,
       };
-      console.error(
-        `[finance-cron] webview odds: ${e instanceof Error ? e.message : e}`,
-      );
+      console.error(`[finance-cron] webview odds: ${e instanceof Error ? e.message : e}`);
     }
   }
 
@@ -533,13 +499,13 @@ export async function runFinanceCron(
 
   // Opt-in auto-heal: capacity without odds for ≥ N hours → one WebView capture+ingest
   let autoWsIngestRan = false;
-  let autoWsIngestResult: FinanceCronReport["autoWsIngestResult"];
+  let autoWsIngestResult: FinanceCronReport['autoWsIngestResult'];
   if (autoWsIngest) {
-    const needIngest = risk.findings.some((f) => {
-      if (f.code !== "capacity_without_odds" && f.code !== "odds_never") {
+    const needIngest = risk.findings.some(f => {
+      if (f.code !== 'capacity_without_odds' && f.code !== 'odds_never') {
         return false;
       }
-      const row = risk.outs.find((o) => o.outId === f.outId);
+      const row = risk.outs.find(o => o.outId === f.outId);
       if (!row || row.capacity <= 0) return false;
       // Persist: never had odds, or odds age ≥ threshold, with capacity present
       if (row.oddsAgeMs == null) {
@@ -550,27 +516,26 @@ export async function runFinanceCron(
     });
     // Only auto-run if no lines at all on any capacity out (avoid thrash)
     const anyFreshOdds = risk.outs.some(
-      (o) =>
+      o =>
         o.capacity > 0 &&
         o.oddsLinesToday > 0 &&
-        (o.oddsAgeMs == null || o.oddsAgeMs < autoWsIngestAfterHours * 3600_000),
+        (o.oddsAgeMs == null || o.oddsAgeMs < autoWsIngestAfterHours * 3600_000)
     );
     if (needIngest && !anyFreshOdds) {
       try {
         const primary =
-          outRows.find((o) => o.provider === "fantasy402" && o.totalPerBetMax > 0) ??
-          outRows[0];
+          outRows.find(o => o.provider === 'fantasy402' && o.totalPerBetMax > 0) ?? outRows[0];
         console.error(
-          `[finance-cron] auto-ws-ingest: capacity_without_odds ≥${autoWsIngestAfterHours}h — capturing`,
+          `[finance-cron] auto-ws-ingest: capacity_without_odds ≥${autoWsIngestAfterHours}h — capturing`
         );
         const pipe = await runWebViewWsPipeline({
           capture: true,
           seconds: options.webviewSeconds ?? 25,
           writeLedger: writeLedger && Boolean(primary),
           db: writeLedger ? db : undefined,
-          outId: primary?.outId ?? "webview-plive",
-          partnerId: primary?.partnerId ?? "partner-default",
-          partnerCode: primary?.partnerCode ?? "PLIVE",
+          outId: primary?.outId ?? 'webview-plive',
+          partnerId: primary?.partnerId ?? 'partner-default',
+          partnerCode: primary?.partnerCode ?? 'PLIVE',
         });
         autoWsIngestRan = true;
         autoWsIngestResult = {
@@ -591,7 +556,7 @@ export async function runFinanceCron(
         });
       } catch (e) {
         console.error(
-          `[finance-cron] auto-ws-ingest failed: ${e instanceof Error ? e.message : e}`,
+          `[finance-cron] auto-ws-ingest failed: ${e instanceof Error ? e.message : e}`
         );
       }
     }
@@ -608,7 +573,7 @@ export async function runFinanceCron(
       fingerprint,
       errorCount: risk.errorCount,
       warnCount: risk.warnCount,
-      findings: risk.findings.map((f) => ({
+      findings: risk.findings.map(f => ({
         severity: f.severity,
         code: f.code,
         outId: f.outId,
@@ -642,9 +607,7 @@ export async function runFinanceCron(
   if (notify && !strictEnvFailed) {
     const text = formatFinanceCronReportText(report);
     let any = false;
-    const hasTopics = partners.some(
-      (p) => process.env[`TELEGRAM_TOPIC_ID_${p.partnerCode}`]?.trim(),
-    );
+    const hasTopics = partners.some(p => process.env[`TELEGRAM_TOPIC_ID_${p.partnerCode}`]?.trim());
     if (hasTopics) {
       for (const p of partners) {
         const chunk = formatFinanceCronReportText({
@@ -666,13 +629,12 @@ export async function runFinanceCron(
   }
 
   // Risk Telegram: issues at/above threshold (or digest), fingerprint dedupe
-  if (riskAlert && !strictEnvFailed && riskThreshold !== "off") {
-    const shouldSend =
-      (hasIssues || riskDigest) && (fingerprintChanged || riskForce);
+  if (riskAlert && !strictEnvFailed && riskThreshold !== 'off') {
+    const shouldSend = (hasIssues || riskDigest) && (fingerprintChanged || riskForce);
     if (!shouldSend && hasIssues && !fingerprintChanged) {
       report.riskAlertDeduped = true;
       console.error(
-        `[finance-cron] risk alert deduped (fp=${fingerprint} threshold=${riskThreshold})`,
+        `[finance-cron] risk alert deduped (fp=${fingerprint} threshold=${riskThreshold})`
       );
     } else if (shouldSend) {
       const msg = formatRiskHealthTelegram(risk, {
@@ -682,14 +644,14 @@ export async function runFinanceCron(
       const ok = await notifyTelegramFinance(msg);
       report.riskNotified = ok;
       console.error(
-        `[finance-cron] risk alert ${ok ? "sent" : "not sent (no telegram env)"}  threshold=${riskThreshold}  ${formatRiskHealthText(risk).split("\n")[0]}`,
+        `[finance-cron] risk alert ${ok ? 'sent' : 'not sent (no telegram env)'}  threshold=${riskThreshold}  ${formatRiskHealthText(risk).split('\n')[0]}`
       );
     }
   }
 
   if (strictEnvFailed) {
     throw new Error(
-      `finance-cron strict-env: ${skippedMissingSecrets} out(s) missing required secrets`,
+      `finance-cron strict-env: ${skippedMissingSecrets} out(s) missing required secrets`
     );
   }
 

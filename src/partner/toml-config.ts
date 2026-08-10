@@ -16,6 +16,7 @@
  *   1. out prefix     e.g. FANTASY402_SPEN_1_BEARER_TOKEN
  *   2. partner prefix e.g. FANTASY402_SPEN_BEARER_TOKEN
  *   3. book fallback  e.g. FANTASY402_BEARER_TOKEN
+ *   4. desk URL       PARTNER_DOMAIN → SKINS Ultra-mapper default (host → SkinId)
  *
  * Canonical env_prefix: `{BOOK}_{CODE}_{N}_` from out id `out-SPEN-1`.
  *
@@ -23,21 +24,24 @@
  * @see https://bun.com/docs/api/utils#bun-toml
  */
 // @see https://bun.com/docs/runtime/toml
-import type { Database } from "bun:sqlite";
-import { z } from "zod";
+import type { Database } from 'bun:sqlite';
+import { z } from 'zod';
+import { PARTNER_DOMAIN_ENV } from '../domain/index.ts';
 import {
   ensurePartnerRegistrySchema,
   upsertBettingAccount,
   upsertPartner,
   type BettingAccountRow,
   type PartnerEntity,
-} from "./registry.ts";
-import { buildSkinsMeta, type OutSkinLimit } from "./skins.ts";
-import { getPartnerVisual } from "./visuals.ts";
-import { tomlStringify } from "./toml-stringify.ts";
+} from './registry.ts';
+import { buildSkinsMeta, type OutSkinLimit } from './skins.ts';
+import { getPartnerVisual } from './visuals.ts';
+import { tomlStringify } from './toml-stringify.ts';
 
-export const DEFAULT_PARTNERS_TOML = "config/partners.toml";
-export const EXAMPLE_PARTNERS_TOML = "config/partners.example.toml";
+export { PARTNER_DOMAIN_ENV, resolveDeskDomainFromEnv } from '../domain/index.ts';
+
+export const DEFAULT_PARTNERS_TOML = 'config/partners.toml';
+export const EXAMPLE_PARTNERS_TOML = 'config/partners.example.toml';
 
 /** Coerce TOML numbers that sometimes arrive as strings after edits. */
 const zNum = z.coerce.number().finite();
@@ -67,7 +71,7 @@ const partnersTomlOutSchema = z
     workingBalance: zNum.optional(),
     vault_id: z.string().optional(),
     vaultId: z.string().optional(),
-    status: z.enum(["active", "inactive", "pending"]).or(z.string()).optional(),
+    status: z.enum(['active', 'inactive', 'pending']).or(z.string()).optional(),
     skins: z.array(partnersTomlSkinSchema).optional(),
   })
   .passthrough();
@@ -111,18 +115,18 @@ export type PartnersTomlLoadResult = {
 
 /** Credential field suffixes used with env_prefix (no secret values). */
 export const PARTNER_ENV_KEYS = [
-  "BEARER_TOKEN",
-  "CUSTOMER_ID",
-  "AGENT_ID",
-  "PASSWORD",
-  "DOMAIN",
-  "SKIN",
-  "CURRENCY",
+  'BEARER_TOKEN',
+  'CUSTOMER_ID',
+  'AGENT_ID',
+  'PASSWORD',
+  'DOMAIN',
+  'SKIN',
+  'CURRENCY',
 ] as const;
 
 export type PartnerEnvKey = (typeof PARTNER_ENV_KEYS)[number];
 
-export type PartnerEnvSource = "out" | "partner" | "book_fallback";
+export type PartnerEnvSource = 'out' | 'partner' | 'book_fallback';
 
 export type PartnerEnvBundle = {
   envPrefix: string;
@@ -134,16 +138,14 @@ export type PartnerEnvBundle = {
 
 /** Keys required for Fantasy Ultra session (soft default for --check-env). */
 export const DEFAULT_REQUIRED_ENV_KEYS: readonly PartnerEnvKey[] = [
-  "BEARER_TOKEN",
-  "CUSTOMER_ID",
-  "AGENT_ID",
-  "PASSWORD",
+  'BEARER_TOKEN',
+  'CUSTOMER_ID',
+  'AGENT_ID',
+  'PASSWORD',
 ];
 
 /** Parse `out-SPEN-1` → { code: "SPEN", index: "1" }. */
-export function parseOutId(
-  outId: string,
-): { code: string; index: string } | null {
+export function parseOutId(outId: string): { code: string; index: string } | null {
   const m = /^out-([A-Za-z0-9]+)-(\d+)$/.exec(outId.trim());
   if (!m) return null;
   return { code: m[1]!.toUpperCase(), index: m[2]! };
@@ -151,27 +153,29 @@ export function parseOutId(
 
 /** Normalize env prefix to trailing underscore form. */
 export function normalizeEnvPrefix(prefix: string): string {
-  const t = prefix.trim().toUpperCase().replace(/_+$/, "");
-  return t ? `${t}_` : "FANTASY402_";
+  const t = prefix.trim().toUpperCase().replace(/_+$/, '');
+  return t ? `${t}_` : 'FANTASY402_';
 }
 
 function bookToken(provider: string): string {
-  return (provider.trim() || "fantasy402")
-    .toUpperCase()
-    .replace(/[^A-Z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "") || "FANTASY402";
+  return (
+    (provider.trim() || 'fantasy402')
+      .toUpperCase()
+      .replace(/[^A-Z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '') || 'FANTASY402'
+  );
 }
 
 /**
  * Partner-level prefix (shared across outs of the same partner).
  *   fantasy402 + SPEN → FANTASY402_SPEN_
  */
-export function canonicalPartnerEnvPrefix(
-  provider: string,
-  partnerCode: string,
-): string {
+export function canonicalPartnerEnvPrefix(provider: string, partnerCode: string): string {
   const book = bookToken(provider);
-  const code = partnerCode.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const code = partnerCode
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '');
   if (!code) return `${book}_`;
   return `${book}_${code}_`;
 }
@@ -183,13 +187,16 @@ export function canonicalPartnerEnvPrefix(
 export function canonicalOutEnvPrefix(
   provider: string,
   outId: string,
-  partnerCode?: string,
+  partnerCode?: string
 ): string {
   const parsed = parseOutId(outId);
   const code =
-    (partnerCode?.trim().toUpperCase().replace(/[^A-Z0-9]/g, "") ||
-      parsed?.code ||
-      "");
+    partnerCode
+      ?.trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '') ||
+    parsed?.code ||
+    '';
   const index = parsed?.index;
   const book = bookToken(provider);
   if (code && index) return `${book}_${code}_${index}_`;
@@ -200,26 +207,23 @@ export function canonicalOutEnvPrefix(
 /** `vault-{outId}` — outId already carries partner code (`out-SPEN-1`). */
 export function canonicalVaultId(outId: string): string {
   const id = outId.trim();
-  if (!id) return "vault-unknown";
-  return id.startsWith("vault-") ? id : `vault-${id}`;
+  if (!id) return 'vault-unknown';
+  return id.startsWith('vault-') ? id : `vault-${id}`;
 }
 
 /** True when prefix is only the book family (no partner code segment). */
-export function isBareBookEnvPrefix(
-  prefix: string,
-  provider = "fantasy402",
-): boolean {
+export function isBareBookEnvPrefix(prefix: string, provider = 'fantasy402'): boolean {
   const n = normalizeEnvPrefix(prefix);
-  const bare = canonicalPartnerEnvPrefix(provider, "");
+  const bare = canonicalPartnerEnvPrefix(provider, '');
   return n === bare;
 }
 
 /** True when prefix embeds `_{PARTNER}_` (partner- or out-scoped). */
-export function isPartnerScopedEnvPrefix(
-  prefix: string,
-  partnerCode: string,
-): boolean {
-  const code = partnerCode.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+export function isPartnerScopedEnvPrefix(prefix: string, partnerCode: string): boolean {
+  const code = partnerCode
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '');
   if (!code) return false;
   const n = normalizeEnvPrefix(prefix);
   return n.includes(`_${code}_`);
@@ -229,7 +233,7 @@ export function isPartnerScopedEnvPrefix(
 export function isOutScopedEnvPrefix(
   prefix: string,
   outId: string,
-  provider = "fantasy402",
+  provider = 'fantasy402'
 ): boolean {
   const want = canonicalOutEnvPrefix(provider, outId);
   return normalizeEnvPrefix(prefix) === want;
@@ -241,24 +245,24 @@ export function isOutScopedEnvPrefix(
  */
 export function envPrefixFallbackChain(
   envPrefix: string,
-  provider = "fantasy402",
+  provider = 'fantasy402'
 ): Array<{ prefix: string; source: PartnerEnvSource }> {
   const out = normalizeEnvPrefix(envPrefix);
   const chain: Array<{ prefix: string; source: PartnerEnvSource }> = [
-    { prefix: out, source: "out" },
+    { prefix: out, source: 'out' },
   ];
   // Strip trailing out index: FANTASY402_SPEN_1_ → FANTASY402_SPEN_
-  const partner = out.replace(/_(\d+)_$/, "_");
+  const partner = out.replace(/_(\d+)_$/, '_');
   if (partner !== out) {
-    chain.push({ prefix: partner, source: "partner" });
+    chain.push({ prefix: partner, source: 'partner' });
   }
-  const book = canonicalPartnerEnvPrefix(provider, "");
-  if (!chain.some((c) => c.prefix === book)) {
-    chain.push({ prefix: book, source: "book_fallback" });
+  const book = canonicalPartnerEnvPrefix(provider, '');
+  if (!chain.some(c => c.prefix === book)) {
+    chain.push({ prefix: book, source: 'book_fallback' });
   }
   // Fantasy book alias when provider slug differs but still fantasy402 family
-  if (book !== "FANTASY402_" && !chain.some((c) => c.prefix === "FANTASY402_")) {
-    chain.push({ prefix: "FANTASY402_", source: "book_fallback" });
+  if (book !== 'FANTASY402_' && !chain.some(c => c.prefix === 'FANTASY402_')) {
+    chain.push({ prefix: 'FANTASY402_', source: 'book_fallback' });
   }
   return chain;
 }
@@ -266,7 +270,7 @@ export function envPrefixFallbackChain(
 export type PartnerAssetIssue = {
   outId: string;
   partnerCode: string;
-  field: "env_prefix" | "vault_id" | "out_id";
+  field: 'env_prefix' | 'vault_id' | 'out_id';
   message: string;
   expected?: string;
   actual?: string;
@@ -276,73 +280,70 @@ export type PartnerAssetIssue = {
  * Ensure every out's assets are partner-prefixed (env + vault + out id).
  * Returns issues (empty = ok). Does not write.
  */
-export function validatePartnerAssetPrefixes(
-  doc: PartnersTomlDoc,
-): PartnerAssetIssue[] {
+export function validatePartnerAssetPrefixes(doc: PartnersTomlDoc): PartnerAssetIssue[] {
   const { accounts } = materializePartnersToml(doc);
   const issues: PartnerAssetIssue[] = [];
   for (const a of accounts) {
     let meta: Record<string, unknown> = {};
     try {
-      meta = JSON.parse(a.metaJson || "{}") as Record<string, unknown>;
+      meta = JSON.parse(a.metaJson || '{}') as Record<string, unknown>;
     } catch {
       /* ignore */
     }
-    const partnerCode = String(meta.partnerCode ?? "")
+    const partnerCode = String(meta.partnerCode ?? '')
       .trim()
       .toUpperCase();
     const codeFromOut = /^out-([A-Z0-9]+)-/i.exec(a.id)?.[1]?.toUpperCase();
-    const code = partnerCode || codeFromOut || "";
+    const code = partnerCode || codeFromOut || '';
 
-    if (code && !new RegExp(`^out-${code}-`, "i").test(a.id)) {
+    if (code && !new RegExp(`^out-${code}-`, 'i').test(a.id)) {
       issues.push({
         outId: a.id,
         partnerCode: code,
-        field: "out_id",
+        field: 'out_id',
         message: `out id should start with out-${code}-`,
         expected: `out-${code}-N`,
         actual: a.id,
       });
     }
 
-    const prefix = a.envPrefix ?? "";
+    const prefix = a.envPrefix ?? '';
     const wantOut = canonicalOutEnvPrefix(a.provider, a.id, code);
     if (!code) {
       issues.push({
         outId: a.id,
-        partnerCode: "",
-        field: "env_prefix",
-        message: "missing partner_code — cannot scope env_prefix",
+        partnerCode: '',
+        field: 'env_prefix',
+        message: 'missing partner_code — cannot scope env_prefix',
         actual: prefix,
       });
     } else if (!isOutScopedEnvPrefix(prefix, a.id, a.provider)) {
       issues.push({
         outId: a.id,
         partnerCode: code,
-        field: "env_prefix",
-        message: "env_prefix should be per-out {BOOK}_{CODE}_{N}_",
+        field: 'env_prefix',
+        message: 'env_prefix should be per-out {BOOK}_{CODE}_{N}_',
         expected: wantOut,
         actual: prefix,
       });
     }
 
-    const vaultId =
-      typeof meta.vaultId === "string" ? meta.vaultId.trim() : "";
+    const vaultId = typeof meta.vaultId === 'string' ? meta.vaultId.trim() : '';
     const wantVault = canonicalVaultId(a.id);
     if (!vaultId) {
       issues.push({
         outId: a.id,
         partnerCode: code,
-        field: "vault_id",
-        message: "vault_id missing",
+        field: 'vault_id',
+        message: 'vault_id missing',
         expected: wantVault,
       });
     } else if (code && !vaultId.toUpperCase().includes(code)) {
       issues.push({
         outId: a.id,
         partnerCode: code,
-        field: "vault_id",
-        message: "vault_id should include partner code",
+        field: 'vault_id',
+        message: 'vault_id should include partner code',
         expected: wantVault,
         actual: vaultId,
       });
@@ -352,44 +353,58 @@ export function validatePartnerAssetPrefixes(
 }
 
 export function formatPartnerAssetIssues(issues: PartnerAssetIssue[]): string {
-  if (issues.length === 0) return "assets: ok (partner-scoped prefixes)";
+  if (issues.length === 0) return 'assets: ok (partner-scoped prefixes)';
   const lines = [`assets: ${issues.length} issue(s)`];
   for (const i of issues) {
     lines.push(
       `  ✗ ${i.outId}  ${i.field}: ${i.message}` +
-        (i.expected ? `  expected=${i.expected}` : "") +
-        (i.actual ? `  actual=${i.actual}` : ""),
+        (i.expected ? `  expected=${i.expected}` : '') +
+        (i.actual ? `  actual=${i.actual}` : '')
     );
   }
-  return lines.join("\n");
+  return lines.join('\n');
 }
 
 /**
  * Resolve secrets for an out:
  *   out prefix → partner prefix → book fallback
+ *
+ * DOMAIN is host→SkinId territory: per-out/partner `*DOMAIN` still wins;
+ * book-level uses PARTNER_DOMAIN only (never FANTASY402_DOMAIN).
  */
 export function resolvePartnerEnv(
   envPrefix: string | null | undefined,
   envMap: Record<string, string | undefined> = process.env,
   keys: readonly PartnerEnvKey[] = PARTNER_ENV_KEYS,
-  options?: { provider?: string },
+  options?: { provider?: string }
 ): PartnerEnvBundle {
-  const normalized = envPrefix?.trim()
-    ? normalizeEnvPrefix(envPrefix)
-    : "FANTASY402_";
-  const chain = envPrefixFallbackChain(
-    normalized,
-    options?.provider ?? "fantasy402",
-  );
-  const values: PartnerEnvBundle["values"] = {};
-  const source: PartnerEnvBundle["source"] = {};
+  const normalized = envPrefix?.trim() ? normalizeEnvPrefix(envPrefix) : 'FANTASY402_';
+  const chain = envPrefixFallbackChain(normalized, options?.provider ?? 'fantasy402');
+  const values: PartnerEnvBundle['values'] = {};
+  const source: PartnerEnvBundle['source'] = {};
   for (const key of keys) {
     for (const step of chain) {
+      if (key === 'DOMAIN' && step.source === 'book_fallback') {
+        // Brand-neutral desk URL only — skip FANTASY402_DOMAIN / book-token DOMAIN.
+        const preferred = envMap[PARTNER_DOMAIN_ENV]?.trim();
+        if (preferred) {
+          values.DOMAIN = preferred;
+          source.DOMAIN = 'book_fallback';
+        }
+        break;
+      }
       const v = envMap[`${step.prefix}${key}`]?.trim();
       if (v) {
         values[key] = v;
         source[key] = step.source;
         break;
+      }
+    }
+    if (key === 'DOMAIN' && !values.DOMAIN) {
+      const preferred = envMap[PARTNER_DOMAIN_ENV]?.trim();
+      if (preferred) {
+        values.DOMAIN = preferred;
+        source.DOMAIN = 'book_fallback';
       }
     }
   }
@@ -398,12 +413,9 @@ export function resolvePartnerEnv(
 
 /** Presence-only check for ops (no secret echo). */
 export function partnerEnvPresence(
-  bundle: PartnerEnvBundle,
+  bundle: PartnerEnvBundle
 ): Record<PartnerEnvKey, { present: boolean; source?: string }> {
-  const out = {} as Record<
-    PartnerEnvKey,
-    { present: boolean; source?: string }
-  >;
+  const out = {} as Record<PartnerEnvKey, { present: boolean; source?: string }>;
   for (const key of PARTNER_ENV_KEYS) {
     out[key] = {
       present: Boolean(bundle.values[key]),
@@ -414,12 +426,12 @@ export function partnerEnvPresence(
 }
 
 function asFiniteNumber(v: unknown, fallback = 0): number {
-  const n = typeof v === "number" ? v : Number(v);
+  const n = typeof v === 'number' ? v : Number(v);
   return Number.isFinite(n) ? n : fallback;
 }
 
 function parseSkin(row: PartnersTomlSkin): OutSkinLimit | null {
-  const name = String(row.name ?? "").trim();
+  const name = String(row.name ?? '').trim();
   if (!name) return null;
   return {
     name,
@@ -441,15 +453,15 @@ export function parsePartnersToml(text: string): PartnersTomlDoc {
     const msg = e instanceof Error ? e.message : String(e);
     throw new SyntaxError(`partners TOML parse failed: ${msg}`);
   }
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-    throw new SyntaxError("partners TOML: document must be a table");
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    throw new SyntaxError('partners TOML: document must be a table');
   }
   const result = partnersTomlDocSchema.safeParse(raw);
   if (!result.success) {
     const detail = result.error.issues
       .slice(0, 8)
-      .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
-      .join("; ");
+      .map(i => `${i.path.join('.') || '(root)'}: ${i.message}`)
+      .join('; ');
     throw new Error(`partners TOML schema: ${detail}`);
   }
   return result.data;
@@ -470,12 +482,11 @@ export function materializePartnersToml(doc: PartnersTomlDoc): {
   const byCode = new Map<string, PartnerEntity>();
 
   for (const p of doc.partners ?? []) {
-    const code = String(p.code ?? "")
+    const code = String(p.code ?? '')
       .trim()
       .toUpperCase();
     if (!code) continue;
-    const id =
-      String(p.id ?? "").trim() || `partner-${code.toLowerCase()}`;
+    const id = String(p.id ?? '').trim() || `partner-${code.toLowerCase()}`;
     const noteParts: string[] = [];
     if (p.notes?.trim()) noteParts.push(p.notes.trim());
     const tg = p.telegram_chat_id ?? p.telegramChatId;
@@ -492,7 +503,7 @@ export function materializePartnersToml(doc: PartnersTomlDoc): {
         p.commission_rate != null || p.commissionRate != null
           ? asFiniteNumber(p.commission_rate ?? p.commissionRate, 0)
           : null,
-      notes: noteParts.length ? noteParts.join("; ") : null,
+      notes: noteParts.length ? noteParts.join('; ') : null,
     };
     partners.push(entity);
     byCode.set(code, entity);
@@ -500,9 +511,9 @@ export function materializePartnersToml(doc: PartnersTomlDoc): {
 
   const accounts: BettingAccountRow[] = [];
   for (const o of doc.outs ?? []) {
-    const id = String(o.id ?? "").trim();
+    const id = String(o.id ?? '').trim();
     if (!id) continue;
-    const partnerCode = String(o.partner_code ?? o.partnerCode ?? "")
+    const partnerCode = String(o.partner_code ?? o.partnerCode ?? '')
       .trim()
       .toUpperCase();
     let partner = partnerCode ? byCode.get(partnerCode) : undefined;
@@ -513,69 +524,60 @@ export function materializePartnersToml(doc: PartnersTomlDoc): {
         active: true,
         profitSplit: null,
         commissionRate: null,
-        notes: "auto from out.partner_code",
+        notes: 'auto from out.partner_code',
       };
       partners.push(partner);
       byCode.set(partnerCode, partner);
     }
     if (!partner) {
       partner = {
-        id: "partner-default",
-        name: "Default Partner",
+        id: 'partner-default',
+        name: 'Default Partner',
         active: true,
         profitSplit: null,
         commissionRate: null,
         notes: null,
       };
-      if (!byCode.has("")) {
+      if (!byCode.has('')) {
         partners.push(partner);
-        byCode.set("", partner);
+        byCode.set('', partner);
       }
     }
 
-    const skins = (o.skins ?? [])
-      .map(parseSkin)
-      .filter((s): s is OutSkinLimit => s != null);
+    const skins = (o.skins ?? []).map(parseSkin).filter((s): s is OutSkinLimit => s != null);
     const fallbackSkins: OutSkinLimit[] =
-      skins.length > 0
-        ? skins
-        : [{ name: "2", perBetMax: 0, maxWin: 0, active: true }];
-    const maxStake = Math.max(...fallbackSkins.map((s) => s.perBetMax), 0);
-    const maxWin = Math.max(...fallbackSkins.map((s) => s.maxWin), 0);
-    const statusRaw = String(o.status ?? "active").toLowerCase();
+      skins.length > 0 ? skins : [{ name: '2', perBetMax: 0, maxWin: 0, active: true }];
+    const maxStake = Math.max(...fallbackSkins.map(s => s.perBetMax), 0);
+    const maxWin = Math.max(...fallbackSkins.map(s => s.maxWin), 0);
+    const statusRaw = String(o.status ?? 'active').toLowerCase();
     const status =
-      statusRaw === "inactive" || statusRaw === "pending"
-        ? (statusRaw as BettingAccountRow["status"])
-        : "active";
+      statusRaw === 'inactive' || statusRaw === 'pending'
+        ? (statusRaw as BettingAccountRow['status'])
+        : 'active';
 
-    const provider = String(o.provider ?? "fantasy402");
+    const provider = String(o.provider ?? 'fantasy402');
     // Per-out assets: FANTASY402_SPEN_1_ (upgrade bare book / partner-only prefixes)
-    const rawPrefix = String(o.env_prefix ?? o.envPrefix ?? "").trim();
+    const rawPrefix = String(o.env_prefix ?? o.envPrefix ?? '').trim();
     const wantOut = canonicalOutEnvPrefix(provider, id, partnerCode);
     const partnerOnly =
       partnerCode &&
-      normalizeEnvPrefix(rawPrefix) ===
-        canonicalPartnerEnvPrefix(provider, partnerCode);
+      normalizeEnvPrefix(rawPrefix) === canonicalPartnerEnvPrefix(provider, partnerCode);
     const envPrefix =
-      !rawPrefix ||
-      (partnerCode && isBareBookEnvPrefix(rawPrefix, provider)) ||
-      partnerOnly
+      !rawPrefix || (partnerCode && isBareBookEnvPrefix(rawPrefix, provider)) || partnerOnly
         ? wantOut
         : normalizeEnvPrefix(rawPrefix);
-    const vaultId =
-      String(o.vault_id ?? o.vaultId ?? "").trim() ||
-      canonicalVaultId(id);
+    const vaultId = String(o.vault_id ?? o.vaultId ?? '').trim() || canonicalVaultId(id);
 
     accounts.push({
       id,
       partnerId: partner.id,
       provider,
-      url: String(o.url ?? "https://fantasy402.com"),
+      url: String(o.url ?? requireDefaultUrlForUltraMapper()),
       status,
       envPrefix,
       maxStake,
       maxWin,
-      currency: String(o.currency ?? "USD"),
+      currency: String(o.currency ?? 'USD'),
       skin: null,
       metaJson: buildSkinsMeta({
         skins: fallbackSkins,
@@ -593,9 +595,7 @@ export function materializePartnersToml(doc: PartnersTomlDoc): {
   return { partners, accounts };
 }
 
-export async function loadPartnersTomlFile(
-  path: string,
-): Promise<PartnersTomlLoadResult> {
+export async function loadPartnersTomlFile(path: string): Promise<PartnersTomlLoadResult> {
   const file = Bun.file(path);
   if (!(await file.exists())) {
     throw new Error(`partners TOML not found: ${path}`);
@@ -610,7 +610,7 @@ export async function loadPartnersTomlFile(
 export function seedRegistryFromPartnersToml(
   db: Database,
   doc: PartnersTomlDoc,
-  nowMs = Date.now(),
+  nowMs = Date.now()
 ): { partners: number; accounts: number } {
   ensurePartnerRegistrySchema(db);
   const { partners, accounts } = materializePartnersToml(doc);
@@ -629,11 +629,11 @@ export type RegistrySnapshot = {
 export type FieldChange = { field: string; from: unknown; to: unknown };
 
 export type DiffEntry =
-  | { kind: "add"; entity: "partner" | "out"; id: string; summary: string }
-  | { kind: "remove"; entity: "partner" | "out"; id: string; summary: string }
+  | { kind: 'add'; entity: 'partner' | 'out'; id: string; summary: string }
+  | { kind: 'remove'; entity: 'partner' | 'out'; id: string; summary: string }
   | {
-      kind: "change";
-      entity: "partner" | "out";
+      kind: 'change';
+      entity: 'partner' | 'out';
       id: string;
       changes: FieldChange[];
     };
@@ -653,7 +653,7 @@ export type EnvPresenceReport = {
     envPrefix: string;
     missing: PartnerEnvKey[];
     present: PartnerEnvKey[];
-    sources: PartnerEnvBundle["source"];
+    sources: PartnerEnvBundle['source'];
   }>;
   missingCount: number;
   ok: boolean;
@@ -665,7 +665,7 @@ export function loadRegistrySnapshot(db: Database): RegistrySnapshot {
     .query(
       `SELECT id, name, active, profit_split AS profitSplit,
               commission_rate AS commissionRate, notes
-       FROM partners`,
+       FROM partners`
     )
     .all() as Array<{
     id: string;
@@ -680,12 +680,12 @@ export function loadRegistrySnapshot(db: Database): RegistrySnapshot {
       `SELECT id, partner_id AS partnerId, provider, url, status,
               env_prefix AS envPrefix, max_stake AS maxStake, max_win AS maxWin,
               currency, skin, meta_json AS metaJson
-       FROM betting_accounts`,
+       FROM betting_accounts`
     )
     .all() as Array<Record<string, unknown>>;
 
   return {
-    partners: partners.map((p) => ({
+    partners: partners.map(p => ({
       id: p.id,
       name: p.name,
       active: Boolean(p.active),
@@ -693,18 +693,18 @@ export function loadRegistrySnapshot(db: Database): RegistrySnapshot {
       commissionRate: p.commissionRate,
       notes: p.notes,
     })),
-    accounts: accounts.map((r) => ({
+    accounts: accounts.map(r => ({
       id: String(r.id),
       partnerId: String(r.partnerId),
       provider: String(r.provider),
-      url: String(r.url ?? ""),
-      status: String(r.status ?? "active") as BettingAccountRow["status"],
+      url: String(r.url ?? ''),
+      status: String(r.status ?? 'active') as BettingAccountRow['status'],
       envPrefix: r.envPrefix != null ? String(r.envPrefix) : null,
       maxStake: Number(r.maxStake) || 0,
       maxWin: Number(r.maxWin) || 0,
-      currency: String(r.currency ?? "USD"),
+      currency: String(r.currency ?? 'USD'),
       skin: r.skin == null ? null : Number(r.skin),
-      metaJson: String(r.metaJson ?? "{}"),
+      metaJson: String(r.metaJson ?? '{}'),
     })),
   };
 }
@@ -722,7 +722,7 @@ function partnerSig(p: PartnerEntity): Record<string, unknown> {
 function outSig(a: BettingAccountRow): Record<string, unknown> {
   let meta: Record<string, unknown> = {};
   try {
-    meta = JSON.parse(a.metaJson || "{}") as Record<string, unknown>;
+    meta = JSON.parse(a.metaJson || '{}') as Record<string, unknown>;
   } catch {
     /* ignore */
   }
@@ -742,10 +742,7 @@ function outSig(a: BettingAccountRow): Record<string, unknown> {
   };
 }
 
-function diffObjects(
-  from: Record<string, unknown>,
-  to: Record<string, unknown>,
-): FieldChange[] {
+function diffObjects(from: Record<string, unknown>, to: Record<string, unknown>): FieldChange[] {
   const keys = new Set([...Object.keys(from), ...Object.keys(to)]);
   const changes: FieldChange[] = [];
   for (const k of [...keys].sort()) {
@@ -762,18 +759,15 @@ function diffObjects(
  * Compare TOML-materialized registry vs current DB rows.
  * Does not write. Used by --diff and --dry-run.
  */
-export function diffPartnersTomlVsDb(
-  doc: PartnersTomlDoc,
-  db: Database,
-): PartnersTomlDiff {
+export function diffPartnersTomlVsDb(doc: PartnersTomlDoc, db: Database): PartnersTomlDiff {
   ensurePartnerRegistrySchema(db);
   const desired = materializePartnersToml(doc);
   const current = loadRegistrySnapshot(db);
 
-  const curPartners = new Map(current.partners.map((p) => [p.id, p]));
-  const curAccounts = new Map(current.accounts.map((a) => [a.id, a]));
-  const wantPartners = new Map(desired.partners.map((p) => [p.id, p]));
-  const wantAccounts = new Map(desired.accounts.map((a) => [a.id, a]));
+  const curPartners = new Map(current.partners.map(p => [p.id, p]));
+  const curAccounts = new Map(current.accounts.map(a => [a.id, a]));
+  const wantPartners = new Map(desired.partners.map(p => [p.id, p]));
+  const wantAccounts = new Map(desired.accounts.map(a => [a.id, a]));
 
   const entries: DiffEntry[] = [];
   let unchangedPartners = 0;
@@ -783,8 +777,8 @@ export function diffPartnersTomlVsDb(
     const cur = curPartners.get(id);
     if (!cur) {
       entries.push({
-        kind: "add",
-        entity: "partner",
+        kind: 'add',
+        entity: 'partner',
         id,
         summary: p.name,
       });
@@ -792,7 +786,7 @@ export function diffPartnersTomlVsDb(
     }
     const changes = diffObjects(partnerSig(cur), partnerSig(p));
     if (changes.length) {
-      entries.push({ kind: "change", entity: "partner", id, changes });
+      entries.push({ kind: 'change', entity: 'partner', id, changes });
     } else {
       unchangedPartners++;
     }
@@ -800,8 +794,8 @@ export function diffPartnersTomlVsDb(
   for (const [id, p] of curPartners) {
     if (!wantPartners.has(id)) {
       entries.push({
-        kind: "remove",
-        entity: "partner",
+        kind: 'remove',
+        entity: 'partner',
         id,
         summary: `${p.name} (in DB only — seed does not delete)`,
       });
@@ -812,8 +806,8 @@ export function diffPartnersTomlVsDb(
     const cur = curAccounts.get(id);
     if (!cur) {
       entries.push({
-        kind: "add",
-        entity: "out",
+        kind: 'add',
+        entity: 'out',
         id,
         summary: `${a.provider} maxStake=${a.maxStake}`,
       });
@@ -821,7 +815,7 @@ export function diffPartnersTomlVsDb(
     }
     const changes = diffObjects(outSig(cur), outSig(a));
     if (changes.length) {
-      entries.push({ kind: "change", entity: "out", id, changes });
+      entries.push({ kind: 'change', entity: 'out', id, changes });
     } else {
       unchangedOuts++;
     }
@@ -829,8 +823,8 @@ export function diffPartnersTomlVsDb(
   for (const [id, a] of curAccounts) {
     if (!wantAccounts.has(id)) {
       entries.push({
-        kind: "remove",
-        entity: "out",
+        kind: 'remove',
+        entity: 'out',
         id,
         summary: `${a.provider} maxStake=${a.maxStake} (in DB only — seed does not delete)`,
       });
@@ -840,17 +834,15 @@ export function diffPartnersTomlVsDb(
   entries.sort((a, b) => {
     const order = { add: 0, change: 1, remove: 2 };
     return (
-      order[a.kind] - order[b.kind] ||
-      a.entity.localeCompare(b.entity) ||
-      a.id.localeCompare(b.id)
+      order[a.kind] - order[b.kind] || a.entity.localeCompare(b.entity) || a.id.localeCompare(b.id)
     );
   });
 
   return {
     entries,
-    added: entries.filter((e) => e.kind === "add").length,
-    changed: entries.filter((e) => e.kind === "change").length,
-    removed: entries.filter((e) => e.kind === "remove").length,
+    added: entries.filter(e => e.kind === 'add').length,
+    changed: entries.filter(e => e.kind === 'change').length,
+    removed: entries.filter(e => e.kind === 'remove').length,
     unchangedPartners,
     unchangedOuts,
   };
@@ -862,14 +854,14 @@ export function checkPartnersEnvPresence(
   options?: {
     envMap?: Record<string, string | undefined>;
     requiredKeys?: readonly PartnerEnvKey[];
-  },
+  }
 ): EnvPresenceReport {
   const required = options?.requiredKeys ?? DEFAULT_REQUIRED_ENV_KEYS;
   const envMap = options?.envMap ?? process.env;
-  const outs = accounts.map((a) => {
+  const outs = accounts.map(a => {
     const bundle = resolvePartnerEnv(a.envPrefix, envMap);
-    const missing = required.filter((k) => !bundle.values[k]);
-    const present = required.filter((k) => Boolean(bundle.values[k]));
+    const missing = required.filter(k => !bundle.values[k]);
+    const present = required.filter(k => Boolean(bundle.values[k]));
     return {
       outId: a.id,
       envPrefix: bundle.envPrefix,
@@ -885,25 +877,19 @@ export function checkPartnersEnvPresence(
 export function formatPartnersDiffText(diff: PartnersTomlDiff): string {
   const lines: string[] = [];
   lines.push(
-    `diff: +${diff.added} ~${diff.changed} -${diff.removed}  (unchanged partners=${diff.unchangedPartners} outs=${diff.unchangedOuts})`,
+    `diff: +${diff.added} ~${diff.changed} -${diff.removed}  (unchanged partners=${diff.unchangedPartners} outs=${diff.unchangedOuts})`
   );
   for (const e of diff.entries) {
-    if (e.kind === "add") {
+    if (e.kind === 'add') {
       lines.push(`  + ${e.entity} ${e.id}  ${e.summary}`);
-    } else if (e.kind === "remove") {
+    } else if (e.kind === 'remove') {
       lines.push(`  - ${e.entity} ${e.id}  ${e.summary}`);
     } else {
       lines.push(`  ~ ${e.entity} ${e.id}`);
       for (const c of e.changes.slice(0, 12)) {
-        const from =
-          typeof c.from === "object"
-            ? JSON.stringify(c.from)
-            : String(c.from);
-        const to =
-          typeof c.to === "object" ? JSON.stringify(c.to) : String(c.to);
-        lines.push(
-          `      ${c.field}: ${from.slice(0, 80)} → ${to.slice(0, 80)}`,
-        );
+        const from = typeof c.from === 'object' ? JSON.stringify(c.from) : String(c.from);
+        const to = typeof c.to === 'object' ? JSON.stringify(c.to) : String(c.to);
+        lines.push(`      ${c.field}: ${from.slice(0, 80)} → ${to.slice(0, 80)}`);
       }
       if (e.changes.length > 12) {
         lines.push(`      … +${e.changes.length - 12} more fields`);
@@ -911,25 +897,23 @@ export function formatPartnersDiffText(diff: PartnersTomlDiff): string {
     }
   }
   if (diff.entries.length === 0) {
-    lines.push("  (no changes)");
+    lines.push('  (no changes)');
   }
-  return lines.join("\n");
+  return lines.join('\n');
 }
 
 export function formatEnvPresenceText(report: EnvPresenceReport): string {
   const lines: string[] = [
-    `env check: ${report.ok ? "ok" : "MISSING keys"}  (gaps=${report.missingCount})`,
+    `env check: ${report.ok ? 'ok' : 'MISSING keys'}  (gaps=${report.missingCount})`,
   ];
   for (const o of report.outs) {
     if (o.missing.length === 0) {
       lines.push(`  ✓ ${o.outId}  prefix=${o.envPrefix}  all required present`);
     } else {
-      lines.push(
-        `  ✗ ${o.outId}  prefix=${o.envPrefix}  missing: ${o.missing.join(", ")}`,
-      );
+      lines.push(`  ✗ ${o.outId}  prefix=${o.envPrefix}  missing: ${o.missing.join(', ')}`);
     }
   }
-  return lines.join("\n");
+  return lines.join('\n');
 }
 
 /**
@@ -939,12 +923,11 @@ export function formatEnvPresenceText(report: EnvPresenceReport): string {
 export function buildPartnersTomlFromRows(
   partners: PartnerEntity[],
   accounts: BettingAccountRow[],
-  meta?: { title?: string },
+  meta?: { title?: string }
 ): PartnersTomlDoc {
   const codeByPartnerId = new Map<string, string>();
-  const tomlPartners: PartnersTomlPartner[] = partners.map((p) => {
-    const codeGuess =
-      p.id.replace(/^partner-/i, "").toUpperCase() || p.id.toUpperCase();
+  const tomlPartners: PartnersTomlPartner[] = partners.map(p => {
+    const codeGuess = p.id.replace(/^partner-/i, '').toUpperCase() || p.id.toUpperCase();
     codeByPartnerId.set(p.id, codeGuess);
     return {
       code: codeGuess,
@@ -952,29 +935,26 @@ export function buildPartnersTomlFromRows(
       name: p.name,
       active: p.active,
       ...(p.profitSplit != null ? { profit_split: p.profitSplit } : {}),
-      ...(p.commissionRate != null
-        ? { commission_rate: p.commissionRate }
-        : {}),
+      ...(p.commissionRate != null ? { commission_rate: p.commissionRate } : {}),
       ...(p.notes ? { notes: p.notes } : {}),
     };
   });
 
-  const outs: PartnersTomlOut[] = accounts.map((a) => {
+  const outs: PartnersTomlOut[] = accounts.map(a => {
     let rowMeta: Record<string, unknown> = {};
     try {
-      rowMeta = JSON.parse(a.metaJson || "{}") as Record<string, unknown>;
+      rowMeta = JSON.parse(a.metaJson || '{}') as Record<string, unknown>;
     } catch {
       /* ignore */
     }
     const partnerCode =
-      String(
-        rowMeta.partnerCode ?? codeByPartnerId.get(a.partnerId) ?? "",
-      ).toUpperCase() || undefined;
+      String(rowMeta.partnerCode ?? codeByPartnerId.get(a.partnerId) ?? '').toUpperCase() ||
+      undefined;
     const skinsRaw = Array.isArray(rowMeta.skins) ? rowMeta.skins : [];
-    const skins: PartnersTomlSkin[] = skinsRaw.flatMap((s) => {
-      if (!s || typeof s !== "object") return [];
+    const skins: PartnersTomlSkin[] = skinsRaw.flatMap(s => {
+      if (!s || typeof s !== 'object') return [];
       const r = s as Record<string, unknown>;
-      const name = String(r.name ?? r.skin ?? "").trim();
+      const name = String(r.name ?? r.skin ?? '').trim();
       if (!name) return [];
       return [
         {
@@ -994,18 +974,15 @@ export function buildPartnersTomlFromRows(
       currency: a.currency,
       url: a.url || undefined,
       working_balance:
-        typeof rowMeta.workingBalance === "number"
-          ? rowMeta.workingBalance
-          : undefined,
-      vault_id:
-        typeof rowMeta.vaultId === "string" ? rowMeta.vaultId : undefined,
+        typeof rowMeta.workingBalance === 'number' ? rowMeta.workingBalance : undefined,
+      vault_id: typeof rowMeta.vaultId === 'string' ? rowMeta.vaultId : undefined,
       status: a.status,
       skins:
         skins.length > 0
           ? skins
           : [
               {
-                name: a.skin != null ? String(a.skin) : "2",
+                name: a.skin != null ? String(a.skin) : '2',
                 per_bet_max: a.maxStake,
                 max_win: a.maxWin,
                 active: true,
@@ -1016,7 +993,7 @@ export function buildPartnersTomlFromRows(
 
   return {
     version: 1,
-    title: meta?.title ?? "Kalshi-bot partner registry",
+    title: meta?.title ?? 'Kalshi-bot partner registry',
     partners: tomlPartners,
     outs,
   };
@@ -1024,11 +1001,11 @@ export function buildPartnersTomlFromRows(
 
 /** Attach computed visuals for docs / export (not re-imported as source of truth). */
 export function visualsAppendixForCodes(codes: string[]): string {
-  const rows = codes.map((code) => {
+  const rows = codes.map(code => {
     const v = getPartnerVisual(code);
     return { code: v.partnerCode, hue: v.hue, hex: v.hex, hsl: v.hsl };
   });
   return tomlStringify({
-    visuals: Object.fromEntries(rows.map((r) => [r.code, r])),
+    visuals: Object.fromEntries(rows.map(r => [r.code, r])),
   });
 }
