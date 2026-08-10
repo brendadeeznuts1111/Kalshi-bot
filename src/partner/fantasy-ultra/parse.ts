@@ -275,14 +275,15 @@ function asInt(v: unknown): number | null {
 export function parseStatscoreBookedEvent(
   row: StatscoreBookedEventWire,
 ): PartnerBookedEvent | null {
-  const clientEventId = String(row.client_event_id ?? "").trim();
+  // Wire keeps client_event_id; interior brand is oddsEventId.
+  const oddsEventId = String(row.client_event_id ?? "").trim();
   const statscoreId = asInt(row.id);
-  if (!clientEventId || statscoreId == null) return null;
+  if (!oddsEventId || statscoreId == null) return null;
   return {
     partner: FANTASY_ULTRA_DEFAULTS.partnerId,
     statscoreId,
-    clientEventId,
-    name: String(row.name ?? "").trim() || clientEventId,
+    oddsEventId,
+    name: String(row.name ?? "").trim() || oddsEventId,
     sportName: String(row.sport_name ?? "").trim() || "unknown",
     sportId: asInt(row.sport_id),
     competition:

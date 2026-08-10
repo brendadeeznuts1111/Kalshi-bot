@@ -4,7 +4,7 @@
  *
  * REAL today:
  *  - stream-list-v2 → skin_events (detect new inventory_ids)
- *  - optional soft enrich: Statscore booked-events list by name match → client_event_id
+ *  - optional soft enrich: Statscore booked-events list by name match → odds_event_id
  *
  * NOT real yet (do not invent):
  *  - markets / lines from stream-list or livescorepro booked-events
@@ -83,17 +83,17 @@ function normalizeName(s: string): string {
 /**
  * Soft match "Home vs Away" inventory to Statscore "Home - Away" booked name.
  */
-export function matchBookedClientEventId(
+export function matchBookedOddsEventId(
   home: string | null,
   away: string | null,
-  booked: Array<{ clientEventId: string; name: string }>
+  booked: Array<{ oddsEventId: string; name: string }>
 ): string | null {
   if (!home || !away || booked.length === 0) return null;
   const h = normalizeName(home);
   const a = normalizeName(away);
   for (const b of booked) {
     const n = normalizeName(b.name);
-    if (n.includes(h) && n.includes(a)) return b.clientEventId;
+    if (n.includes(h) && n.includes(a)) return b.oddsEventId;
   }
   return null;
 }
@@ -143,17 +143,17 @@ export async function runPartnerInventorySync(
         limit: 100,
       });
       const catalog = booked.map(b => ({
-        clientEventId: b.clientEventId,
+        oddsEventId: b.oddsEventId,
         name: b.name,
       }));
       const update = db.query(`
         UPDATE skin_events
-        SET client_event_id = $cid, last_updated = $ts
-        WHERE book_id = $book AND inventory_id = $iid AND (client_event_id IS NULL OR client_event_id = '')
+        SET odds_event_id = $cid, last_updated = $ts
+        WHERE book_id = $book AND inventory_id = $iid AND (odds_event_id IS NULL OR odds_event_id = '')
       `);
       const ts = options.nowMs ?? Date.now();
       for (const row of upsert.inserted) {
-        const cid = matchBookedClientEventId(row.home, row.away, catalog);
+        const cid = matchBookedOddsEventId(row.home, row.away, catalog);
         if (!cid) continue;
         update.run({
           $cid: cid,
@@ -161,7 +161,7 @@ export async function runPartnerInventorySync(
           $book: row.bookId,
           $iid: row.inventoryId,
         });
-        row.clientEventId = cid;
+        row.oddsEventId = cid;
         enriched++;
       }
       notes.push(

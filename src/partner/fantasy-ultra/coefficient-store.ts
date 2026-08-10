@@ -117,7 +117,7 @@ export class CoefficientStore {
         partner,
         ticker: `f402:${eventId}:m:3`,
         name: `Fantasy402 event ${eventId} ML`,
-        eventClientId: String(eventId),
+        oddsEventId: String(eventId),
         marketId: `${eventId}:m:3`,
         homePrice: home?.american ?? null,
         awayPrice: away?.american ?? null,
@@ -137,7 +137,7 @@ export class CoefficientStore {
     const id = typeof eventId === 'string' ? Number(eventId) : eventId;
     if (!Number.isFinite(id)) return [];
     return this.toPartnerMarkets(partner, limits).filter(
-      (m) => m.eventClientId === String(id),
+      (m) => m.oddsEventId === String(id),
     );
   }
 }

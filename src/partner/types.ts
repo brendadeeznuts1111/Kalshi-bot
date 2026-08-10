@@ -124,8 +124,8 @@ export type PartnerBookedEvent = {
   partner: PartnerId;
   /** Statscore internal id */
   statscoreId: number;
-  /** Widget / client event id (query client_event_id) */
-  clientEventId: string;
+  /** Widget / odds event id (wire query client_event_id → interior oddsEventId) */
+  oddsEventId: string;
   name: string;
   sportName: string;
   sportId: number | null;
@@ -143,7 +143,7 @@ export type PartnerMarket = {
   partner: PartnerId;
   ticker: string;
   name: string;
-  eventClientId: string;
+  oddsEventId: string;
   marketId: string;
   homePrice: number | null;
   awayPrice: number | null;
@@ -187,8 +187,8 @@ export interface FantasySessionAdapter extends PartnerOrderAdapter {
   fetchSports(): Promise<PartnerSportLeague[]>;
   getBearerToken(): string;
   getLiveUrls(): PartnerLiveUrlSet | null;
-  /** Statscore livescore booking metadata by client_event_id */
-  fetchBookedEvent(clientEventId: string): Promise<PartnerBookedEvent | null>;
+  /** Statscore livescore booking metadata by wire client_event_id / interior oddsEventId */
+  fetchBookedEvent(oddsEventId: string): Promise<PartnerBookedEvent | null>;
   /** List booked events (optional sport filter on sport_name) */
   listBookedEvents(options?: {
     sport?: string;

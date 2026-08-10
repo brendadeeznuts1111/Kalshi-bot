@@ -404,13 +404,14 @@ export class FantasyUltraAdapter implements FantasySessionAdapter {
   }
 
   /**
-   * Statscore livescore booking row for a widget client_event_id.
+   * Statscore livescore booking row for a widget odds event id
+   * (wire query param remains client_event_id).
    * Tries raw id then normalized candidates (strip trailing digit).
    */
   async fetchBookedEvent(
-    clientEventId: string,
+    oddsEventId: string,
   ): Promise<PartnerBookedEvent | null> {
-    for (const id of normalizeClientEventIdCandidates(clientEventId)) {
+    for (const id of normalizeClientEventIdCandidates(oddsEventId)) {
       const raw = await this.fetchStatscoreBookedRaw({
         client_event_id: id,
       });
@@ -444,9 +445,9 @@ export class FantasyUltraAdapter implements FantasySessionAdapter {
    * Prefer Pandora coefficient store (moneyline). Falls back to Statscore
    * booked-events only if that payload ever carries prices (livescorepro does not).
    */
-  async fetchOdds(clientEventId: string): Promise<PartnerMarket[]> {
+  async fetchOdds(oddsEventId: string): Promise<PartnerMarket[]> {
     const fromStore = this.coefficientStore.marketsForEvent(
-      clientEventId,
+      oddsEventId,
       this.partnerId,
       {
         maxStake: 0,
@@ -458,7 +459,7 @@ export class FantasyUltraAdapter implements FantasySessionAdapter {
     if (fromStore.length > 0) return fromStore;
 
     const raw = await this.fetchStatscoreBookedRaw({
-      client_event_id: normalizeClientEventIdCandidates(clientEventId)[0]!,
+      client_event_id: normalizeClientEventIdCandidates(oddsEventId)[0]!,
     });
     const booked = parseStatscoreBookedEvents(raw);
     const hasPrices = statscorePayloadHasPrices(raw);
@@ -466,12 +467,12 @@ export class FantasyUltraAdapter implements FantasySessionAdapter {
       const sample = booked[0];
       throw new Error(
         `statscore: booked-events (livescorepro) has no prices ` +
-          `(client_event_id=${clientEventId}` +
+          `(client_event_id=${oddsEventId}` +
           (sample
             ? `, name=${sample.name}, bet_status=${sample.betStatus}, status=${sample.statusName}`
             : ", no booked row") +
           `); Pandora store also empty for this id. ` +
-          `Subscribe eventCoefficients via connectWebSocket({ eventIds: [${clientEventId}] }).`,
+          `Subscribe eventCoefficients via connectWebSocket({ eventIds: [${oddsEventId}] }).`,
       );
     }
     return [];

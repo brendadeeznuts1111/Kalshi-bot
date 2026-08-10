@@ -143,7 +143,7 @@ export function applyEventStoreSchema(db: Database): void {
     partner TEXT NOT NULL,
     inventory_id TEXT NOT NULL,
     ls_id TEXT,
-    client_event_id TEXT,
+    odds_event_id TEXT,
     sport TEXT NOT NULL DEFAULT '',
     league TEXT NOT NULL DEFAULT '',
     home TEXT,
@@ -160,6 +160,7 @@ export function applyEventStoreSchema(db: Database): void {
     UNIQUE(book_id, inventory_id)
   )`);
   migrateSkinEventsStreamIdToInventoryId(db);
+  migrateSkinEventsClientEventIdToOddsEventId(db);
   db.run(
     `CREATE INDEX IF NOT EXISTS idx_skin_events_partner_sport ON skin_events (partner, sport)`
   );
@@ -363,6 +364,17 @@ export function migrateSkinEventsStreamIdToInventoryId(db: Database): void {
 }
 
 /**
+ * Rename legacy skin_events.client_event_id → odds_event_id.
+ * Wire JSON keeps client_event_id; parse maps to interior oddsEventId.
+ */
+export function migrateSkinEventsClientEventIdToOddsEventId(db: Database): void {
+  if (!tableExists(db, 'skin_events')) return;
+  if (tableHasColumn(db, 'skin_events', 'odds_event_id')) return;
+  if (!tableHasColumn(db, 'skin_events', 'client_event_id')) return;
+  db.run(`ALTER TABLE skin_events RENAME COLUMN client_event_id TO odds_event_id`);
+}
+
+/**
  * Stamp Fantasy402 inventory rows as Buckeye / plive-shell; drop fixture junk.
  * plive + ezlive share this inventory — one row per inventory_id.
  * `partner` is a deprecated mirror of `book_id` (not a seat partner CODE).
@@ -440,7 +452,7 @@ export function migrateSkinEventsBookInventoryUnique(db: Database): void {
     partner TEXT NOT NULL,
     inventory_id TEXT NOT NULL,
     ls_id TEXT,
-    client_event_id TEXT,
+    odds_event_id TEXT,
     sport TEXT NOT NULL DEFAULT '',
     league TEXT NOT NULL DEFAULT '',
     home TEXT,
@@ -458,14 +470,14 @@ export function migrateSkinEventsBookInventoryUnique(db: Database): void {
   )`);
   db.run(`
     INSERT INTO skin_events_next (
-      id, partner, inventory_id, ls_id, client_event_id, sport, league, home, away,
+      id, partner, inventory_id, ls_id, odds_event_id, sport, league, home, away,
       feed_id, start_time, status, first_seen, last_updated,
       skin_id, book_id, inventory_live_product, competition_id
     )
     SELECT
       id,
       COALESCE(NULLIF(TRIM(partner), ''), book_id),
-      inventory_id, ls_id, client_event_id, sport, league, home, away,
+      inventory_id, ls_id, odds_event_id, sport, league, home, away,
       feed_id, start_time, status, first_seen, last_updated,
       skin_id, book_id, inventory_live_product, competition_id
     FROM skin_events

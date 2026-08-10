@@ -8,7 +8,7 @@ import type {
 } from "../../src/partner/types.ts";
 import { CoefficientStore } from "../../src/partner/fantasy-ultra/coefficient-store.ts";
 import {
-  matchBookedClientEventId,
+  matchBookedOddsEventId,
   runPartnerInventorySync,
 } from "../../src/partner/sync.ts";
 
@@ -51,14 +51,14 @@ function mockAdapter(
 }
 
 describe("partner sync", () => {
-  test("matchBookedClientEventId soft-matches names", () => {
-    const cid = matchBookedClientEventId("Andrey Martinyuk", "Aleksandr Timofeev", [
+  test("matchBookedOddsEventId soft-matches names", () => {
+    const cid = matchBookedOddsEventId("Andrey Martinyuk", "Aleksandr Timofeev", [
       {
-        clientEventId: "19690946",
+        oddsEventId: "19690946",
         name: "Andrii Martyniuk - Oleksandr Tymofieiev",
       },
       {
-        clientEventId: "111",
+        oddsEventId: "111",
         name: "Andrey Martinyuk - Aleksandr Timofeev",
       },
     ]);
@@ -76,7 +76,7 @@ describe("partner sync", () => {
       {
         partner: "fantasy402",
         statscoreId: 9,
-        clientEventId: "999",
+        oddsEventId: "999",
         name: "A - B",
         sportName: "Table tennis",
         sportId: 46,
@@ -104,7 +104,7 @@ describe("partner sync", () => {
 
     const row = db
       .query(
-        `SELECT client_event_id AS cid FROM skin_events WHERE inventory_id = '1'`,
+        `SELECT odds_event_id AS cid FROM skin_events WHERE inventory_id = '1'`,
       )
       .get() as { cid: string | null };
     expect(row.cid).toBe("999");

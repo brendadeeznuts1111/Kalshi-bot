@@ -232,7 +232,7 @@ describe("fantasy ultra parse", () => {
     };
     const rows = parseStatscoreBookedEvents(wire);
     expect(rows.length).toBe(1);
-    expect(rows[0]!.clientEventId).toBe("19690946");
+    expect(rows[0]!.oddsEventId).toBe("19690946");
     expect(rows[0]!.statscoreId).toBe(6679023);
     expect(rows[0]!.betStatus).toBe("suspended");
     expect(statscorePayloadHasPrices(wire)).toBe(false);
@@ -355,7 +355,7 @@ describe("FantasyUltraAdapter session blueprint", () => {
     });
     const markets = await adapter.fetchMarkets();
     expect(markets).toHaveLength(1);
-    expect(markets[0]!.eventClientId).toBe("42");
+    expect(markets[0]!.oddsEventId).toBe("42");
     expect(adapter.pricedEventCount()).toBe(1);
     const odds = await adapter.fetchOdds("42");
     expect(odds[0]!.homePrice).toBeTypeOf("number");

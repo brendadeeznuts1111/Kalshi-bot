@@ -3,7 +3,7 @@
  * Unified partner inventory sync (Fantasy402 blueprint — ground truth).
  *
  * Discovers new stream events → skin_events.
- * Optional --enrich-booked: soft-match Statscore names → client_event_id (not odds).
+ * Optional --enrich-booked: soft-match Statscore names → odds_event_id (not odds).
  *
  * Usage:
  *   bun run partner:sync -- --sport=table_tennis --once

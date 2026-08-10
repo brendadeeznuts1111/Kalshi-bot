@@ -73,7 +73,7 @@ export { FANTASY_ULTRA_DEFAULTS, type FantasyUltraCredentials } from './fantasy-
 
 export {
   formatSyncReport,
-  matchBookedClientEventId,
+  matchBookedOddsEventId,
   runPartnerInventorySync,
   type PartnerSyncOptions,
   type PartnerSyncReport,
