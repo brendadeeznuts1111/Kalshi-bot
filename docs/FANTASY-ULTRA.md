@@ -567,19 +567,36 @@ bun run domain:event -- --id=197488581 --validate-session --renew
 `market_ok_session_fail` = poorly held seat, market still live.  
 `market_off` = fix market/id, not password.
 
-**Feed sport ids** (`live.sports[id].n`) ≠ ticket `apiSportId` map:
+**Three sport-id planes** (SSOT: `src/domain/pandora-feed-sports.ts` +
+`live-product-sport-bindings.ts`):
 
-| Feed id | Name | Notes |
-| ------- | ---- | ----- |
-| 1 | Baseball | |
-| 2 | Basketball | ticket map wrongly used 2=tennis historically |
-| 5 | Soccer | ticket map soccer=1 |
-| 6 | Fighting | |
-| 7 | Golf | often wire `s=2` mass OTB |
-| 8 | Tennis | |
-| 87 | Cricket | |
-| 93 | Table Tennis | often **groupProfile.blocked.sports** |
-| 114 | E-Sports | |
+| Plane | Source | Tennis | Basketball | TT |
+| ----- | ------ | ------ | ---------- | -- |
+| **feedSportId** | eventData / live.sports | **8** | **2** | **93** |
+| **widgetSportId** | shell sportOrder | 2 | 4 | 220 |
+| **apiSportId** | Ultra ticket (when proven) | — | — | 93 |
+| **inventoryBucket** | stream-list-v2 | tennis | basketball | table_tennis |
+
+```ts
+import { resolveSport, sportIdFromFeedSportId, FEED_SPORT } from './src/domain/index.ts';
+sportIdFromFeedSportId(8);                          // 'tennis'
+resolveSport({ liveProduct: 'plive', feedSportId: 2 }); // basketball (not tennis!)
+resolveSport({ liveProduct: 'plive', widgetSportId: 2 }); // tennis shell
+```
+
+| Feed id | Name | SportId |
+| ------- | ---- | ------- |
+| 1 | Baseball | baseball |
+| 2 | Basketball | basketball |
+| 3 | Football | american_football |
+| 4 | Hockey | ice_hockey |
+| 5 | Soccer | soccer |
+| 6 | Fighting | martial_arts |
+| 7 | Golf | golf |
+| 8 | Tennis | tennis |
+| 87 | Cricket | cricket |
+| 93 | Table Tennis | table_tennis |
+| 114 | E-Sports | sports_channels |
 
 **Effective state** (mainapp `calculateState`): groupProfile
 `blocked.{sports,leagues,events}` forces **notBettable** even when wire `s=0`.

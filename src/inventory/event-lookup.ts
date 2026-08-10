@@ -18,6 +18,10 @@
 // @see https://bun.com/docs/api/websockets
 import type { Database } from 'bun:sqlite';
 import { PLIVE_STREAM_ENDPOINTS } from '../domain/live-product-endpoints.ts';
+import {
+  feedSportSlug,
+  sportIdFromFeedSportId,
+} from '../domain/pandora-feed-sports.ts';
 import type { FetchFn } from '../institutions/resilient-fetch.ts';
 import { openEventStore } from '../institutions/event-store/open-db.ts';
 import { DEFAULT_EVENT_STORE_DB } from '../institutions/event-store/paths.ts';
@@ -1439,27 +1443,24 @@ export async function lookupEvent(
   });
 
   let sportHint: string | null = null;
-  // Prefer eventData feed sport (isTableTennis ⇒ 93) over period inference —
-  // TT also uses s1/s2 and was mis-labeled tennis from lines alone.
-  if (pandora.eventState?.sportName?.trim()) {
-    sportHint = pandora.eventState.sportName
-      .toLowerCase()
-      .replace(/\s+/g, '_');
-  } else if (pandora.eventState?.sportId === '93') {
-    sportHint = 'table_tennis';
-  } else if (pandora.eventState?.sportId === '8') {
-    sportHint = 'tennis';
-  } else if (streamHit?.sport?.trim()) {
-    sportHint = streamHit.sport.toLowerCase().replace(/\s+/g, '_');
-  } else if (skin?.sport?.trim()) {
-    sportHint = skin.sport.trim();
-  } else if (catalog?.sportName?.trim()) {
-    sportHint = catalog.sportName.toLowerCase().replace(/\s+/g, '_');
-  } else {
-    sportHint = inferSportHintFromLines(allLines, streamHit?.bucket ?? null);
+  // Prefer Pandora feedSportId → SportId SSOT over period inference
+  // (TT uses s1/s2 and was mis-labeled tennis from lines alone).
+  if (pandora.eventState?.sportId) {
+    const sid = sportIdFromFeedSportId(pandora.eventState.sportId);
+    sportHint =
+      sid ??
+      feedSportSlug(pandora.eventState.sportId) ??
+      pandora.eventState.sportName?.toLowerCase().replace(/\s+/g, '_') ??
+      null;
   }
-  if (!sportHint && pandora.eventState?.sportId) {
-    sportHint = `feed_sport_${pandora.eventState.sportId}`;
+  if (!sportHint && streamHit?.sport?.trim()) {
+    sportHint = streamHit.sport.toLowerCase().replace(/\s+/g, '_');
+  } else if (!sportHint && skin?.sport?.trim()) {
+    sportHint = skin.sport.trim();
+  } else if (!sportHint && catalog?.sportName?.trim()) {
+    sportHint = catalog.sportName.toLowerCase().replace(/\s+/g, '_');
+  } else if (!sportHint) {
+    sportHint = inferSportHintFromLines(allLines, streamHit?.bucket ?? null);
   }
 
   // Re-label periods with sport hint for display

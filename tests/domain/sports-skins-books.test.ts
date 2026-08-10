@@ -155,7 +155,11 @@ describe('domain sports / skins / live products', () => {
     expect(normalizeLiveProductName('dark')).toBe('dark');
   });
 
-  test('resolveSport by api / widget / stream bucket on live product plive', () => {
+  test('resolveSport by feed / api / widget / stream bucket on live product plive', () => {
+    const byFeed = resolveSport({ liveProduct: 'plive', feedSportId: 93 });
+    expect(byFeed?.sportId).toBe('table_tennis');
+    expect(byFeed?.via).toBe('feedSportId');
+
     const byApi = resolveSport({ liveProduct: 'plive', apiSportId: 93 });
     expect(byApi?.sportId).toBe('table_tennis');
     expect(byApi?.binding.widgetSportId).toBe(220);
@@ -168,6 +172,7 @@ describe('domain sports / skins / live products', () => {
       inventoryBucket: 'football',
     });
     expect(byBucket?.sportId).toBe('soccer');
+    expect(byBucket?.binding.feedSportId).toBe(5);
   });
 
   test('maglive/ultralive have no coverage bindings; plive does', () => {

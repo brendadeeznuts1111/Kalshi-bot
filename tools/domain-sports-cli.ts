@@ -50,6 +50,7 @@ async function main(): Promise<void> {
       primary: primaryFantasySports().map((m) => ({
         canonical: m.canonical,
         streamBucket: m.streamBucket,
+        feedSportId: m.feedSportId,
         apiSportId: m.apiSportId,
         widgetSportId: m.widgetSportId,
         label: m.label,
@@ -57,6 +58,7 @@ async function main(): Promise<void> {
       all: FANTASY_SPORT_MAPPINGS.map((m) => ({
         canonical: m.canonical,
         streamBucket: m.streamBucket,
+        feedSportId: m.feedSportId,
         apiSportId: m.apiSportId,
         widgetSportId: m.widgetSportId,
         label: m.label,
@@ -68,11 +70,15 @@ async function main(): Promise<void> {
       console.log(
         `static map: ${summary.total} buckets · ${summary.primary} primary · ${summary.withApiId} with API id`,
       );
+      console.log(
+        "  planes: feed=Pandora eventData · widget=shell sportOrder · api=ticket (when set)",
+      );
       for (const m of FANTASY_SPORT_MAPPINGS) {
-        const ids =
-          m.apiSportId != null
-            ? `api=${m.apiSportId} widget=${m.widgetSportId ?? "—"}`
-            : "api=? widget=?";
+        const ids = [
+          m.feedSportId != null ? `feed=${m.feedSportId}` : "feed=?",
+          m.widgetSportId != null ? `widget=${m.widgetSportId}` : "widget=?",
+          m.apiSportId != null ? `api=${m.apiSportId}` : "api=?",
+        ].join(" ");
         console.log(
           `  ${m.primary ? "★" : "·"} ${m.streamBucket.padEnd(20)} ${m.label.padEnd(22)} ${ids}`,
         );

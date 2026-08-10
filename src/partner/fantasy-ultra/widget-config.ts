@@ -43,6 +43,8 @@ export const FANTASY_WIDGET_CONFIG = {
 export type FantasySportMapping = {
   canonical: string;
   streamBucket: string;
+  /** Pandora feed id (eventData / live.sports). */
+  feedSportId: number | null;
   apiSportId: number | null;
   widgetSportId: number | null;
   label: string;
@@ -53,6 +55,7 @@ function bindingToMapping(b: LiveProductSportBinding): FantasySportMapping {
   return {
     canonical: b.sportId,
     streamBucket: b.inventoryBucket,
+    feedSportId: b.feedSportId,
     apiSportId: b.apiSportId,
     widgetSportId: b.widgetSportId,
     label: b.label,
@@ -75,6 +78,17 @@ export function fantasySportByApiId(
   const hit = resolveSport({
     liveProduct: DEFAULT_COVERAGE_LIVE_PRODUCT,
     apiSportId,
+  });
+  return hit ? bindingToMapping(hit.binding) : undefined;
+}
+
+/** Pandora feed sport id (preferred for board / eventData). */
+export function fantasySportByFeedId(
+  feedSportId: number,
+): FantasySportMapping | undefined {
+  const hit = resolveSport({
+    liveProduct: DEFAULT_COVERAGE_LIVE_PRODUCT,
+    feedSportId,
   });
   return hit ? bindingToMapping(hit.binding) : undefined;
 }

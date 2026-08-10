@@ -127,6 +127,20 @@ export {
 } from './live-product-sport-bindings.ts';
 
 export {
+  FEED_SPORT,
+  PANDORA_FEED_SPORTS,
+  feedSportIdsForSport,
+  feedSportName,
+  feedSportSlug,
+  getPandoraFeedSport,
+  listMappedFeedSports,
+  listPandoraFeedSports,
+  sportIdFromFeedSportId,
+  type PandoraFeedSport,
+  type PandoraFeedSportKind,
+} from './pandora-feed-sports.ts';
+
+export {
   DEFAULT_COVERAGE_LIVE_PRODUCT,
   WIDGET_FAVORITES_SPORT_ID,
   resolveSport,

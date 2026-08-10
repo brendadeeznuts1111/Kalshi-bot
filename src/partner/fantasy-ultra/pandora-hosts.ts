@@ -20,9 +20,9 @@ export type PandoraHostId = keyof typeof PANDORA_HOSTS;
 /** Base64 channel segment after live.main. — LINE_SET → "SEVSSVRBR0U=" brand token. */
 export const PANDORA_LINE_SET_TOKEN = 'U0VWU1NWUkJSMFU9' as const;
 
-/** Feed sport id on eventData board / live.sports (mainapp isTableTennis). */
+/** @deprecated use FEED_SPORT.table_tennis from domain/pandora-feed-sports */
 export const FEED_SPORT_TABLE_TENNIS = 93 as const;
-/** Feed sport id for tennis on live board (not ticket apiSportId=2). */
+/** @deprecated use FEED_SPORT.tennis from domain/pandora-feed-sports */
 export const FEED_SPORT_TENNIS = 8 as const;
 
 export function isPandoraHostId(raw: string): raw is PandoraHostId {
