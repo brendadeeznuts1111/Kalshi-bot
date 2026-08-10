@@ -15,7 +15,7 @@ export type SkinMatrixGap =
  * Active skins allowed to ship without fingerprints while Batches 2–5 fill them.
  * Remove an id from this list when that skin's fingerprints land.
  */
-export const FINGERPRINT_PENDING_SKINS = ['sts', '1bv', 'lvaction', 'magnum'] as const satisfies readonly SkinId[];
+export const FINGERPRINT_PENDING_SKINS = ['1bv', 'lvaction', 'magnum'] as const satisfies readonly SkinId[];
 
 const FINGERPRINT_PENDING = new Set<string>(FINGERPRINT_PENDING_SKINS);
 

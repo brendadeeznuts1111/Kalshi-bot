@@ -209,6 +209,28 @@ describe('host-discover', () => {
     expect(getSkinByHost('www.action92.com')).toBeUndefined();
   });
 
+  test('STS NewLogin + frontend login shell → sts for review', () => {
+    const report = scoreHostDiscovery({
+      url: 'https://mirror-sts.example/',
+      host: 'mirror-sts.example',
+      finalUrl: 'https://mirror-sts.example/',
+      status: 200,
+      headers: {},
+      body: `<html><title>GoMobile Login</title>
+        <link href="frontend/vendors/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
+        <link href="frontend/css/login.css" rel="stylesheet"/>
+        <a href="https://mobile.mirror-sts.example/NewLogin.aspx">login</a>
+        </html>`,
+      storedUrls: [
+        'https://mirror-sts.example/frontend/css/login.css',
+        'https://mobile.mirror-sts.example/NewLogin.aspx',
+      ],
+    });
+    expect(report.suggestedSkinId).toBe('sts');
+    expect(report.confidence).toBeGreaterThanOrEqual(0.4);
+    expect(getSkinByHost('mirror-sts.example')).toBeUndefined();
+  });
+
   test('ACE sportsbookvip + Login.aspx → ace for review (not HOST_TO_SKIN)', () => {
     const report = scoreHostDiscovery({
       url: 'https://mirror-ace.example/',

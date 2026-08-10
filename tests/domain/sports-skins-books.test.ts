@@ -179,12 +179,7 @@ describe('domain sports / skins / live products', () => {
 
   test('fingerprint coverage gate: pending allowlist or fingerprints', () => {
     expect(() => assertFingerprintCoverage()).not.toThrow();
-    expect([...FINGERPRINT_PENDING_SKINS].sort()).toEqual([
-      '1bv',
-      'lvaction',
-      'magnum',
-      'sts',
-    ]);
+    expect([...FINGERPRINT_PENDING_SKINS].sort()).toEqual(['1bv', 'lvaction', 'magnum']);
     const rows = buildSkinMatrixRows();
     for (const id of FINGERPRINT_PENDING_SKINS) {
       const row = rows.find(r => r.skinId === id);

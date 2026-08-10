@@ -24,7 +24,7 @@ product or gap columns; change [`skins.ts`](skins.ts) instead.
 | **buckeye** | yes | PLive, EZLive | betwest.com, fantasy402.com, hulkwager.com | **fantasy402** |
 | **ace** | yes | EZLive, UltraLive, MagLive | parlay21.com, lonestarwagering.com | unmapped (mapper_unmapped) |
 | **metallic** | yes | (none) | paradisewager.com, orange777.com, sunwager.com, gator747.com | unmapped (missing_live_products, mapper_unmapped) |
-| **sts** | yes | (none) | wagerattack.ag, gomobilewager.com | unmapped (missing_fingerprints, missing_live_products, mapper_unmapped) |
+| **sts** | yes | (none) | wagerattack.ag, gomobilewager.com | unmapped (missing_live_products, mapper_unmapped) |
 | **1bv** | yes | (none) | anybet365.com, betvegas23.com | unmapped (missing_fingerprints, missing_live_products, mapper_unmapped) |
 | **lvaction** | yes | (none) | lvaction.com, classic.lvaction.com, archive.lvaction.com | unmapped (missing_fingerprints, missing_live_products, mapper_unmapped) |
 | **magnum** | yes | (none) | probooknyc.com, 50centjuice.com | unmapped (missing_fingerprints, missing_live_products, mapper_unmapped) |

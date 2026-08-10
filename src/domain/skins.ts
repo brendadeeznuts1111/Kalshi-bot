@@ -152,9 +152,13 @@ export const SKINS = [
     aliases: ['sts'] as const,
     mapper: {
       kind: 'unmapped',
-      note: 'Hosts declared; live-product coverage not proven yet',
+      note: 'Hosts + fingerprints 2026-08-09 (gomobile NewLogin shell); products_unknown_as_of=2026-08-09',
     },
-    fingerprints: { endpoints: [] as const, assets: [] as const },
+    // Live probe: gomobilewager NewLogin.aspx + frontend/css/login.css (wagerattack public page is sparse).
+    fingerprints: {
+      endpoints: ['/NewLogin.aspx', '/frontend/css/login.css'] as const,
+      assets: ['frontend/vendors/bootstrap', 'frontend/css/login.css'] as const,
+    },
   },
   {
     id: '1bv',
