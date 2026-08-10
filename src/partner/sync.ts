@@ -14,16 +14,18 @@
  * Pandora priced book (optional): when `coefficientStore` (or adapter store)
  * has moneyline lines, report `pricedOdds: true` — still no liquidity merge.
  */
-import type { Database } from "bun:sqlite";
-import type { CoefficientStore } from "./fantasy-ultra/coefficient-store.ts";
-import type { FantasySessionAdapter, PartnerLiveEvent } from "./types.ts";
+import type { Database } from 'bun:sqlite';
+import type { CoefficientStore } from './fantasy-ultra/coefficient-store.ts';
+import type { FantasySessionAdapter, PartnerLiveEvent } from './types.ts';
 import {
+  buckeyeInventoryIdentity,
   filterLiveEventsBySport,
   formatPartnerEventLine,
   upsertPartnerLiveEvents,
+  type InventoryIdentity,
   type PartnerEventRow,
   type PartnerEventUpsertResult,
-} from "./partner-events-store.ts";
+} from './partner-events-store.ts';
 
 export type PartnerSyncOptions = {
   sport?: string;
@@ -32,6 +34,8 @@ export type PartnerSyncOptions = {
   nowMs?: number;
   /** Explicit Pandora book; else adapter.getCoefficientStore() when present. */
   coefficientStore?: CoefficientStore;
+  /** Defaults to Buckeye / Fantasy402 / plive shell. */
+  identity?: InventoryIdentity;
 };
 
 export type PartnerSyncReport = {
@@ -54,13 +58,13 @@ export type PartnerSyncReport = {
 
 function resolveCoefficientStore(
   adapter: FantasySessionAdapter,
-  options: PartnerSyncOptions,
+  options: PartnerSyncOptions
 ): CoefficientStore | null {
   if (options.coefficientStore) return options.coefficientStore;
   const maybe = adapter as FantasySessionAdapter & {
     getCoefficientStore?: () => CoefficientStore;
   };
-  if (typeof maybe.getCoefficientStore === "function") {
+  if (typeof maybe.getCoefficientStore === 'function') {
     return maybe.getCoefficientStore();
   }
   return null;
@@ -69,9 +73,9 @@ function resolveCoefficientStore(
 function normalizeName(s: string): string {
   return s
     .toLowerCase()
-    .normalize("NFKD")
-    .replace(/[^\w\s]/g, " ")
-    .replace(/\s+/g, " ")
+    .normalize('NFKD')
+    .replace(/[^\w\s]/g, ' ')
+    .replace(/\s+/g, ' ')
     .trim();
 }
 
@@ -81,7 +85,7 @@ function normalizeName(s: string): string {
 export function matchBookedClientEventId(
   home: string | null,
   away: string | null,
-  booked: Array<{ clientEventId: string; name: string }>,
+  booked: Array<{ clientEventId: string; name: string }>
 ): string | null {
   if (!home || !away || booked.length === 0) return null;
   const h = normalizeName(home);
@@ -96,46 +100,47 @@ export function matchBookedClientEventId(
 export async function runPartnerInventorySync(
   db: Database,
   adapter: FantasySessionAdapter,
-  options: PartnerSyncOptions = {},
+  options: PartnerSyncOptions = {}
 ): Promise<PartnerSyncReport> {
-  const sport = options.sport ?? "table_tennis";
+  const sport = options.sport ?? 'table_tennis';
   const notes: string[] = [];
   const fetchSport =
-    sport === "all"
-      ? "all"
-      : sport.replace(/\s+/g, "_").toLowerCase() === "table_tennis" ||
-          sport.toLowerCase() === "table tennis"
-        ? "table_tennis"
-        : sport.replace(/\s+/g, "_").toLowerCase() === "tennis"
-          ? "tennis"
-          : sport.replace(/\s+/g, "_").toLowerCase();
+    sport === 'all'
+      ? 'all'
+      : sport.replace(/\s+/g, '_').toLowerCase() === 'table_tennis' ||
+          sport.toLowerCase() === 'table tennis'
+        ? 'table_tennis'
+        : sport.replace(/\s+/g, '_').toLowerCase() === 'tennis'
+          ? 'tennis'
+          : sport.replace(/\s+/g, '_').toLowerCase();
 
   // Inventory does not require login
   let events: PartnerLiveEvent[] = await adapter.fetchEvents({
-    sport: fetchSport === "all" ? "all" : fetchSport,
+    sport: fetchSport === 'all' ? 'all' : fetchSport,
   });
-  if (sport !== "all") {
+  if (sport !== 'all') {
     events = filterLiveEventsBySport(events, sport);
   }
 
+  const identity = options.identity ?? buckeyeInventoryIdentity();
   const upsert: PartnerEventUpsertResult = upsertPartnerLiveEvents(db, events, {
     nowMs: options.nowMs,
+    identity,
   });
 
   let enriched = 0;
   if (options.enrichBooked && upsert.inserted.length > 0) {
     try {
-      const sportFilter =
-        sport.toLowerCase().includes("table")
-          ? "table"
-          : sport === "all"
-            ? undefined
-            : sport;
+      const sportFilter = sport.toLowerCase().includes('table')
+        ? 'table'
+        : sport === 'all'
+          ? undefined
+          : sport;
       const booked = await adapter.listBookedEvents({
         sport: sportFilter,
         limit: 100,
       });
-      const catalog = booked.map((b) => ({
+      const catalog = booked.map(b => ({
         clientEventId: b.clientEventId,
         name: b.name,
       }));
@@ -158,15 +163,13 @@ export async function runPartnerInventorySync(
         enriched++;
       }
       notes.push(
-        `booked enrich: matched ${enriched}/${upsert.inserted.length} new rows by name (metadata only — no prices)`,
+        `booked enrich: matched ${enriched}/${upsert.inserted.length} new rows by name (metadata only — no prices)`
       );
     } catch (err) {
-      notes.push(
-        `booked enrich skipped: ${err instanceof Error ? err.message : String(err)}`,
-      );
+      notes.push(`booked enrich skipped: ${err instanceof Error ? err.message : String(err)}`);
     }
   } else if (options.enrichBooked) {
-    notes.push("booked enrich: no new rows to match");
+    notes.push('booked enrich: no new rows to match');
   }
 
   const store = resolveCoefficientStore(adapter, options);
@@ -175,18 +178,18 @@ export async function runPartnerInventorySync(
   const pricedOdds = pricedEvents > 0;
   if (pricedOdds) {
     notes.push(
-      `priced odds: Pandora store has ${pricedEvents} event(s), ${pricedLines} line(s) (ML via fetchMarkets; no liquidity merge)`,
+      `priced odds: Pandora store has ${pricedEvents} event(s), ${pricedLines} line(s) (ML via fetchMarkets; no liquidity merge)`
     );
   } else {
     notes.push(
-      "priced odds: not available from stream-list or Statscore livescorepro; Pandora store empty",
+      'priced odds: not available from stream-list or Statscore livescorepro; Pandora store empty'
     );
   }
-  notes.push("placeBet POST: still unmapped (ticket response parser ready)");
+  notes.push('placeBet POST: still unmapped (ticket response parser ready)');
   notes.push(
     pricedOdds
-      ? "liquidity:ground merge: deferred (priced book in store only)"
-      : "liquidity:ground merge: deferred until priced markets exist",
+      ? 'liquidity:ground merge: deferred (priced book in store only)'
+      : 'liquidity:ground merge: deferred until priced markets exist'
   );
 
   return {
@@ -211,8 +214,8 @@ export async function runPartnerInventorySync(
 export function formatSyncReport(report: PartnerSyncReport): string {
   const lines = [
     `partner sync sport=${report.sport} seen=${report.seen} new=${report.inserted} updated=${report.updated} enriched=${report.enriched}`,
-    ...report.newEvents.map((e) => `  + ${formatPartnerEventLine(e)}`),
-    ...report.notes.map((n) => `  · ${n}`),
+    ...report.newEvents.map(e => `  + ${formatPartnerEventLine(e)}`),
+    ...report.notes.map(n => `  · ${n}`),
   ];
-  return lines.join("\n");
+  return lines.join('\n');
 }
