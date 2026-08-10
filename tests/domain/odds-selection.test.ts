@@ -12,6 +12,7 @@ import {
   oddsLineFromCoefficient,
   oddsLineFromTicketLeg,
   periodLabel,
+  periodLabelForFeedSport,
   ticketLegFromOddsLine,
   ticketLegFromWire,
 } from '../../src/domain/odds-selection.ts';
@@ -43,6 +44,24 @@ describe('event planes: inventory / odds / ticket', () => {
     expect(canonicalizePeriodId('bb')).toBe('m');
     expect(canonicalizePeriodId('h1')).toBe('h1');
     expect(canonicalizePeriodId('s3')).toBe('s3');
+  });
+
+  test('periodLabelForFeedSport uses sport-specific unit (not always set)', () => {
+    // Generic periodLabel always says "set N" for sN
+    expect(periodLabel('s1')).toBe('set 1');
+    // Baseball feed 1: innings
+    expect(periodLabelForFeedSport(1, 's1')).toBe('1st Inning');
+    expect(periodLabelForFeedSport(1, 'm')).toBe('Game');
+    // Basketball feed 2: quarters
+    expect(periodLabelForFeedSport(2, 's1')).toBe('1st Quarter');
+    // Tennis feed 8: sets
+    expect(periodLabelForFeedSport(8, 's1')).toBe('1st Set');
+    // Table tennis feed 93: games
+    expect(periodLabelForFeedSport(93, 's1')).toBe('1st Game');
+    // Soccer feed 5: halves
+    expect(periodLabelForFeedSport(5, 'h1')).toBe('1st Half');
+    // Unknown feed falls back to generic
+    expect(periodLabelForFeedSport(99999, 's1')).toBe('set 1');
   });
 
   test('odds line is separate from ticket leg (Darin/Plachy)', () => {

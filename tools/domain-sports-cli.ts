@@ -9,6 +9,10 @@
  *   bun run domain:sports -- --leagues=all --json
  *   bun run domain:sports -- --seed     # refresh provider_sport_mappings in event-store
  *   bun run domain:sports -- --map      # static map only (offline)
+ *   bun run domain:sports -- --feed     # Pandora feedSportId catalog (85)
+ *   bun run domain:sports -- --periods  # baked live.sportPeriod labels
+ *   bun run domain:sports -- --countries
+ *   bun run domain:sports -- --snapshot-leagues  # from widget-domain-snapshot.json
  */
 // @see https://bun.com/docs/api/fetch
 import { openEventStore } from "../src/institutions/event-store/open-db.ts";
@@ -41,6 +45,107 @@ async function main(): Promise<void> {
     ensurePartnerRegistrySchema(db);
     const n = seedFantasySportMappings(db);
     console.error(`seeded ${n} fantasy402 sport mappings → provider_sport_mappings`);
+  }
+
+  if (hasFlag("periods")) {
+    const {
+      PANDORA_SPORT_PERIODS,
+      listBakedPeriodFeedSportIds,
+      periodUnitForFeedSport,
+      bakedPeriodLabel,
+    } = await import("../src/domain/pandora-sport-periods.ts");
+    const { feedSportName } = await import("../src/domain/pandora-feed-sports.ts");
+    const ids = listBakedPeriodFeedSportIds();
+    if (hasFlag("json")) {
+      console.log(
+        JSON.stringify(
+          {
+            capturedAt: PANDORA_SPORT_PERIODS.capturedAt,
+            language: PANDORA_SPORT_PERIODS.language,
+            feedSportCount: ids.length,
+            periodUnit: PANDORA_SPORT_PERIODS.periodUnit,
+            periods: PANDORA_SPORT_PERIODS.periods,
+          },
+          null,
+          2,
+        ),
+      );
+      return;
+    }
+    console.log(
+      `baked sportPeriod: ${ids.length} feed sports · lang=${PANDORA_SPORT_PERIODS.language} · @ ${PANDORA_SPORT_PERIODS.capturedAt}`,
+    );
+    for (const id of ids) {
+      const unit = periodUnitForFeedSport(id) ?? "—";
+      const name = feedSportName(id) ?? "?";
+      const codes = Object.keys(PANDORA_SPORT_PERIODS.periods[String(id)] ?? {});
+      const s1 = bakedPeriodLabel(id, "s1") ?? "—";
+      console.log(
+        `  ${String(id).padStart(3)}  ${name.padEnd(28)} unit=${unit.padEnd(8)} s1=${s1.padEnd(14)} codes=${codes.join(",")}`,
+      );
+    }
+    return;
+  }
+
+  if (hasFlag("countries")) {
+    const { listPandoraCountries } = await import(
+      "../src/domain/pandora-countries.ts"
+    );
+    const rows = listPandoraCountries();
+    if (hasFlag("json")) {
+      console.log(JSON.stringify({ count: rows.length, countries: rows }, null, 2));
+      return;
+    }
+    console.log(`baked countries: ${rows.length}`);
+    for (const c of rows.slice(0, hasFlag("all") ? rows.length : 40)) {
+      console.log(`  ${c.id.padStart(4)}  ${c.name}`);
+    }
+    if (!hasFlag("all") && rows.length > 40) {
+      console.log(`  … +${rows.length - 40} more (pass --all)`);
+    }
+    return;
+  }
+
+  if (hasFlag("snapshot-leagues")) {
+    const { defaultWidgetDomainCachePath, summarizeLeaguesByFeedSport } =
+      await import("../src/domain/widget-domain-extract.ts");
+    const { feedSportName } = await import("../src/domain/pandora-feed-sports.ts");
+    const path = argValue("from") ?? defaultWidgetDomainCachePath();
+    const file = Bun.file(path);
+    if (!(await file.exists())) {
+      console.error(`no snapshot at ${path} — run: bun run domain:widget-extract -- --write`);
+      process.exit(1);
+    }
+    const snap = (await file.json()) as {
+      liveLeagues?: Array<{
+        id: string;
+        name: string;
+        sportId?: string | null;
+        platformSport?: string | null;
+        sportIdCanonical?: string | null;
+      }>;
+    };
+    const leagues = snap.liveLeagues ?? [];
+    const summary = summarizeLeaguesByFeedSport(
+      leagues as import("../src/domain/widget-domain-extract.ts").WidgetLiveLeague[],
+    );
+    if (hasFlag("json")) {
+      console.log(
+        JSON.stringify({ path, leagueCount: leagues.length, byFeed: summary }, null, 2),
+      );
+      return;
+    }
+    console.log(`snapshot leagues: ${leagues.length} @ ${path}`);
+    for (const row of summary.slice(0, hasFlag("all") ? summary.length : 30)) {
+      const fname = feedSportName(row.feedSportId) ?? "—";
+      console.log(
+        `  feed=${row.feedSportId.padEnd(4)} ${fname.padEnd(22)} n=${String(row.count).padStart(4)} domain=${row.sportIdCanonical ?? "—"}  e.g. ${row.sample.slice(0, 3).join("; ")}`,
+      );
+    }
+    if (!hasFlag("all") && summary.length > 30) {
+      console.log(`  … +${summary.length - 30} feed sports (pass --all)`);
+    }
+    return;
   }
 
   if (hasFlag("feed") || hasFlag("map")) {

@@ -73,16 +73,25 @@ Provider labels from **plive shell HTML** + **Pandora rooms** (not seat gsid):
 | Live sports + market flags | Pandora `live.sports` |
 | Feed sport id SSOT | [`pandora-feed-sports.ts`](pandora-feed-sports.ts) (85 ids) |
 | Leagues (dynamic) | Pandora `live.leagues` (`s` + `platformSport`) |
-| Period labels | `live.sportPeriod` + `PANDORA_PERIOD_CODES` / `periodLabel` |
+| Period labels | Baked [`pandora-sport-periods.ts`](pandora-sport-periods.ts) + `periodLabelForFeedSport` |
+| Countries | Baked [`pandora-countries.ts`](pandora-countries.ts) + `live.countries` |
 | Wager / market-type catalog | Pandora `live.wagerTypes` (`tp` = family, not unique product) |
 
 ```bash
 bun run domain:sports -- --feed               # static feed catalog (85)
+bun run domain:sports -- --periods            # baked s1/h1 labels per feed sport
+bun run domain:sports -- --countries
+bun run domain:sports -- --snapshot-leagues   # from widget-domain-snapshot.json
+bun tools/bake-sport-periods.ts               # re-capture → bake SSOT modules
 bun run domain:widget-extract                 # shell + Pandora (~12s)
 bun run domain:widget-extract -- --html-only
 bun run domain:widget-extract -- --write      # research/cache/widget-domain-snapshot.json
 bun run domain:widget-extract -- --json
 ```
+
+**Period unit trap:** wire codes stay `s1`…`s10` for all sports; the *name*
+is sport-specific (baseball Inning, basketball Quarter, tennis Set, TT Game).
+Never rely on generic `periodLabel('s1')` → `"set 1"` when feedSportId is known.
 
 **Planes:** feedSportId (eventData / live.sports) ≠ widgetSportId (shell
 sportOrder) ≠ apiSportId (ticket). Example: feed `3` = Football =

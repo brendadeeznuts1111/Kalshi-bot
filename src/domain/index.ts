@@ -141,6 +141,20 @@ export {
 } from './pandora-feed-sports.ts';
 
 export {
+  PANDORA_SPORT_PERIODS,
+  bakedPeriodLabel,
+  listBakedPeriodFeedSportIds,
+  periodUnitForFeedSport,
+  type PandoraSportPeriodBake,
+} from './pandora-sport-periods.ts';
+
+export {
+  PANDORA_COUNTRY_NAMES,
+  countryName,
+  listPandoraCountries,
+} from './pandora-countries.ts';
+
+export {
   DEFAULT_COVERAGE_LIVE_PRODUCT,
   WIDGET_FAVORITES_SPORT_ID,
   resolveSport,
@@ -212,15 +226,18 @@ export {
   mapLiveSportNameToSportId,
   resolveLeagueFeedSportId,
   resolveLiveSportId,
+  parseLiveCountriesRoom,
   parseLiveLeaguesRoom,
   parseLiveSportsRoom,
   parseSportPeriodRoom,
   parseWagerTypesRoom,
   sportPeriodLabel,
+  summarizeLeaguesByFeedSport,
   wagerTypeFamilyCounts,
   writeWidgetDomainSnapshot,
   type DomainGapReport,
   type SportPeriodLanguageBlock,
+  type WidgetCountry,
   type WidgetDomainSnapshot,
   type WidgetLiveLeague,
   type WidgetLiveSport,
@@ -244,6 +261,7 @@ export {
   oddsLineFromCoefficient,
   oddsLineFromTicketLeg,
   periodLabel,
+  periodLabelForFeedSport,
   ticketLegFromOddsLine,
   ticketLegFromWire,
   type CoefficientLineCoords,

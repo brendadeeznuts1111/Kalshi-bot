@@ -76,13 +76,21 @@ export type WidgetWagerType = {
 
 /**
  * Parsed `live.sportPeriod` (or HTTP sportPeriods) language block.
- * Shape from mainapp sportPeriodsService.init:
- * `{ en: { periods: { [feedSportId]: { m: "Match", h1: "1st Half", … } }, abbreviations?: … } }`
+ * Shape from mainapp sportPeriodsService.init / live.sportPeriod room:
+ * ```
+ * { en: {
+ *     periods: { [feedSportId]: { m: "Match", s1: "1st Inning", … } },
+ *     periodNames: { [feedSportId]: "Inning" | "Set" | "Game" | … },
+ *     abbreviations?: { Inning: "Inn", … }
+ * } }
+ * ```
  */
 export type SportPeriodLanguageBlock = {
   language: string;
   /** feedSportId → periodCode → display label */
   bySport: Record<string, Record<string, string>>;
+  /** feedSportId → unit noun (Inning, Quarter, Set, Game, Half, Map, Frame) */
+  periodUnit?: Record<string, string>;
   abbreviations?: Record<string, string>;
 };
 
@@ -90,6 +98,11 @@ export type WidgetSportPeriods = {
   languages: SportPeriodLanguageBlock[];
   /** Prefer `en` when present. */
   primary: SportPeriodLanguageBlock | null;
+};
+
+export type WidgetCountry = {
+  id: string;
+  name: string;
 };
 
 export type DomainGapReport = {
@@ -122,6 +135,8 @@ export type WidgetDomainSnapshot = {
   wagerTypes: WidgetWagerType[];
   /** Optional live.sportPeriod decode when captured. */
   sportPeriods?: WidgetSportPeriods | null;
+  /** Optional live.countries decode when captured. */
+  countries?: WidgetCountry[];
   gaps: DomainGapReport;
 };
 
@@ -142,6 +157,8 @@ export type ExtractWidgetDomainOptions = {
     wagerTypes?: unknown;
     /** live.sportPeriod payload */
     sportPeriod?: unknown;
+    /** live.countries payload */
+    countries?: unknown;
   };
   fetchImpl?: typeof fetch;
 };
@@ -513,10 +530,26 @@ function parseSportPeriodLanguage(
           )
         )
       : undefined;
-  return { language, bySport, abbreviations };
+  let periodUnit: Record<string, string> | undefined;
+  if (
+    raw.periodNames &&
+    typeof raw.periodNames === 'object' &&
+    !Array.isArray(raw.periodNames)
+  ) {
+    periodUnit = {};
+    for (const [id, name] of Object.entries(
+      raw.periodNames as Record<string, unknown>
+    )) {
+      if (typeof name === 'string' && name.trim()) {
+        periodUnit[id] = name.trim();
+      }
+    }
+    if (Object.keys(periodUnit).length === 0) periodUnit = undefined;
+  }
+  return { language, bySport, periodUnit, abbreviations };
 }
 
-/** Period display label from sportPeriod room, else {@link periodLabel} fallback. */
+/** Period display label from sportPeriod room only (no bake / generic). */
 export function sportPeriodLabel(
   periods: WidgetSportPeriods | null | undefined,
   feedSportId: string | number,
@@ -532,6 +565,63 @@ export function sportPeriodLabel(
   const fromL = block?.bySport[sportKey]?.[`L_${code}`];
   if (fromL) return fromL;
   return null;
+}
+
+export function parseLiveCountriesRoom(payload: unknown): WidgetCountry[] {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    return [];
+  }
+  const out: WidgetCountry[] = [];
+  for (const [id, raw] of Object.entries(payload as Record<string, unknown>)) {
+    if (!raw || typeof raw !== 'object') continue;
+    const name = typeof (raw as { n?: unknown }).n === 'string'
+      ? String((raw as { n: string }).n).trim()
+      : '';
+    if (!name) continue;
+    out.push({ id, name });
+  }
+  out.sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
+  return out;
+}
+
+/** League counts / samples grouped by display feed sport id. */
+export function summarizeLeaguesByFeedSport(
+  leagues: WidgetLiveLeague[]
+): Array<{
+  feedSportId: string;
+  sportIdCanonical: SportId | null;
+  count: number;
+  sample: string[];
+}> {
+  const map = new Map<
+    string,
+    { sportIdCanonical: SportId | null; count: number; sample: string[] }
+  >();
+  for (const l of leagues) {
+    const feed = l.sportId ?? l.platformSport ?? '?';
+    let cur = map.get(feed);
+    if (!cur) {
+      const resolved =
+        l.sportIdCanonical ??
+        resolveLiveSportId({ feedSportId: feed === '?' ? null : feed, name: null });
+      cur = {
+        sportIdCanonical: resolved,
+        count: 0,
+        sample: [],
+      };
+      map.set(feed, cur);
+    }
+    cur.count += 1;
+    if (cur.sportIdCanonical == null) {
+      cur.sportIdCanonical =
+        l.sportIdCanonical ??
+        resolveLiveSportId({ feedSportId: feed === '?' ? null : feed, name: null });
+    }
+    if (cur.sample.length < 5) cur.sample.push(l.name);
+  }
+  return [...map.entries()]
+    .map(([feedSportId, v]) => ({ feedSportId, ...v }))
+    .sort((a, b) => b.count - a.count || a.feedSportId.localeCompare(b.feedSportId));
 }
 
 /**
@@ -777,6 +867,7 @@ export async function extractWidgetDomain(
   let liveLeagues: WidgetLiveLeague[] = [];
   let wagerTypes: WidgetWagerType[] = [];
   let sportPeriods: WidgetSportPeriods | null = null;
+  let countries: WidgetCountry[] = [];
   let pandoraOk = false;
 
   if (options.pandoraRooms) {
@@ -784,11 +875,13 @@ export async function extractWidgetDomain(
     liveLeagues = parseLiveLeaguesRoom(options.pandoraRooms.leagues);
     wagerTypes = parseWagerTypesRoom(options.pandoraRooms.wagerTypes);
     sportPeriods = parseSportPeriodRoom(options.pandoraRooms.sportPeriod);
+    countries = parseLiveCountriesRoom(options.pandoraRooms.countries);
     pandoraOk =
       liveSports.length > 0 ||
       liveLeagues.length > 0 ||
       wagerTypes.length > 0 ||
-      sportPeriods != null;
+      sportPeriods != null ||
+      countries.length > 0;
   }
 
   const gaps = buildDomainGaps({
@@ -813,6 +906,7 @@ export async function extractWidgetDomain(
     liveLeagues,
     wagerTypes,
     sportPeriods,
+    countries,
     gaps,
   };
 }
@@ -833,7 +927,9 @@ export function formatWidgetDomainSnapshot(
   );
   lines.push(
     `counts: markets=${snap.markets.length} shellSports=${snap.shellSports.length} ` +
-      `liveSports=${snap.liveSports.length} leagues=${snap.liveLeagues.length} wagerTypes=${snap.wagerTypes.length}`
+      `liveSports=${snap.liveSports.length} leagues=${snap.liveLeagues.length} wagerTypes=${snap.wagerTypes.length}` +
+      ` countries=${snap.countries?.length ?? 0}` +
+      ` sportPeriods=${snap.sportPeriods?.primary ? Object.keys(snap.sportPeriods.primary.bySport).length : 0}`
   );
   lines.push('');
   lines.push('## Shell sports (rules icons)');

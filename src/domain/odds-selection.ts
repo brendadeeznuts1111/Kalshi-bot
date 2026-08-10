@@ -13,6 +13,7 @@
 
 import type { CompetitionId } from './competitions.ts';
 import type { SportId } from './sports.ts';
+import { bakedPeriodLabel } from './pandora-sport-periods.ts';
 
 // ── 1. Inventory ───────────────────────────────────────────────────────────
 
@@ -242,6 +243,22 @@ export function periodLabel(periodId: string): string {
 export function isPandoraPeriodCode(periodId: string): boolean {
   const p = periodId.trim().toLowerCase();
   return (PANDORA_PERIOD_CODES as readonly string[]).includes(p);
+}
+
+/**
+ * Sport-aware period label: baked live.sportPeriod first, else generic
+ * {@link periodLabel}. Use this whenever feedSportId is known — baseball
+ * `s1` is "1st Inning", TT `s1` is "1st Game", not "set 1".
+ */
+export function periodLabelForFeedSport(
+  feedSportId: number | string | null | undefined,
+  periodId: string
+): string {
+  if (feedSportId != null && String(feedSportId).trim() !== '') {
+    const baked = bakedPeriodLabel(feedSportId, periodId);
+    if (baked) return baked;
+  }
+  return periodLabel(periodId);
 }
 
 /** Explicit bridge: odds line → ticket leg (same wire numbers, new type). */
