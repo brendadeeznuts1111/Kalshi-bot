@@ -161,11 +161,14 @@ bun run inventory:sync -- --sport=all --enrich-booked --enrich-scope=unlinked
 bun run inventory:sync -- --sport=all --enrich-booked --dry-run --json
 bun run inventory:sync -- --odds-status              # fill-rate only
 # Public Statscore catalog (no Fantasy secrets) → re-link unlinked rows:
+bun run inventory:enrich
 bun run inventory:sync -- --enrich-only --enrich-scope=unlinked
 bun run inventory:sync -- --enrich-only --dry-run --json
-# Programmatic (same as CLI):
+# Programmatic:
 #   import { enrichBookedEvents } from './src/inventory/enrich-booked.ts'
-# Retry + disk cache: live 403/429/5xx → research/cache/booked-catalog-cache.json
+# Resilience caches (TTL + stale fallback on 403):
+#   research/cache/booked-catalog-cache.json
+#   research/cache/stream-list-cache.json
 # Post-tick: enrich-validate + JSON logs (plane=inventory component=enrich)
 bun run inventory:watch -- --once --sport=all --enrich-booked
 
@@ -318,7 +321,7 @@ not a second inventory store. Details:
 | `domain:sports` | Stream snapshot + static map + sport map seed |
 | `inventory:sync -- --sport=all [--dry-run] [--enrich-booked]` | Adapter poll → events + leagues (+ odds_event_id) |
 | `inventory:sync -- --odds-status` | `odds_event_id` fill-rate for book |
-| `inventory:sync -- --enrich-only` | Public booked catalog → link unlinked rows (no stream poll) |
+| `inventory:sync -- --enrich-only` / `inventory:enrich` | Public booked catalog → link unlinked rows (no stream poll) |
 | `inventory:watch -- --sport=all [--once] [--dry-run] [--enrich-booked]` | Public/adapter poll → events + leagues |
 | `inventory:leagues [--unmapped] [--harvest]` | List / harvest durable league registry |
 | `inventory:leagues -- --report [--notify]` | Promote dry-report; optional force Telegram |

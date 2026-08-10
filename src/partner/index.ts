@@ -112,6 +112,13 @@ export {
 } from '../inventory/enrich-validate.ts';
 
 export {
+  fetchPublicStreamListWire,
+  defaultStreamListCachePath,
+  type StreamListFetchResult,
+  type StreamListFetchOptions,
+} from '../inventory/stream-list-fetch.ts';
+
+export {
   countInventoryLeagues,
   ensureInventoryLeaguesSchema,
   formatLeagueLine,

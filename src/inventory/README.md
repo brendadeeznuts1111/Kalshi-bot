@@ -23,8 +23,9 @@ bun run inventory:sync -- --sport=all             # full board write
 bun run inventory:sync -- --sport=all --enrich-booked --enrich-scope=board
 bun run inventory:sync -- --odds-status           # odds_event_id fill-rate
 bun run inventory:sync -- --enrich-only           # public Statscore name-link
-# Resilience: fetchWithRetry(403/429/5xx), cache TTL + stale fallback,
-# enrich-validate, enrichBookedEvents() one-shot API
+bun run inventory:enrich                          # alias: enrich-only unlinked all
+# Resilience: fetchWithRetry(403/429/5xx), cache TTL + stale fallback for
+# stream-list + booked catalog; enrich-validate; enrichBookedEvents()
 bun run inventory:watch -- --once --sport=all --dry-run
 bun run inventory:watch -- --once --sport=all --enrich-booked
 bun run inventory:watch -- --loop --sport=all     # continuous full board
