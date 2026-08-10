@@ -35,7 +35,6 @@ import {
   filterLiveEventsBySport,
   formatSkinEventLine,
   listSkinInventoryIds,
-  liveEventToRow,
   liveProductsCoveredByInventory,
   normalizeInventorySport,
   normalizeSkinEventsSports,
@@ -353,7 +352,7 @@ export function applyBookedOddsEnrich(
   return enriched;
 }
 
-/** Plan insert vs update without writing (reads existing inventory_ids only). */
+/** Plan insert vs update without writing (same stamps as upsertSkinLiveEvents). */
 export function planInventoryUpsert(
   db: Database,
   events: InventoryEvent[],
@@ -362,27 +361,11 @@ export function planInventoryUpsert(
     identity?: InventoryIdentity;
   } = {}
 ): SkinEventUpsertResult {
-  const nowMs = options.nowMs ?? Date.now();
-  const identity = options.identity ?? buckeyeInventoryIdentity();
-  const existing = listSkinInventoryIds(db, identity.bookId);
-  const inserted: SkinEventRow[] = [];
-  const updated: SkinEventRow[] = [];
-  let seen = 0;
-  for (const event of events) {
-    const inventoryId = String(event.inventoryId ?? '').trim();
-    if (!inventoryId) continue;
-    seen++;
-    const row = liveEventToRow(event, nowMs, identity, {
-      firstSeen: nowMs,
-      status: 'unknown',
-    });
-    if (existing.has(inventoryId)) {
-      updated.push(row);
-    } else {
-      inserted.push(row);
-    }
-  }
-  return { inserted, updated, seen };
+  return upsertSkinLiveEvents(db, events, {
+    nowMs: options.nowMs,
+    identity: options.identity,
+    dryRun: true,
+  });
 }
 
 export async function runInventorySync(
