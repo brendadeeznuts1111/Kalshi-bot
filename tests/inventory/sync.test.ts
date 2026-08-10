@@ -7,12 +7,12 @@ import type {
   InventoryEvent,
 } from "../../src/partner/types.ts";
 import { CoefficientStore } from "../../src/partner/fantasy-ultra/coefficient-store.ts";
+import { matchBookedOddsEventId } from "../../src/inventory/booked-match.ts";
 import {
   applyBookedOddsEnrich,
   collectBoardEnrichCandidates,
   listUnlinkedSkinEvents,
   formatOddsLinkCoverage,
-  matchBookedOddsEventId,
   oddsLinkCoverage,
   parseEnrichBookedScope,
   runInventorySync,

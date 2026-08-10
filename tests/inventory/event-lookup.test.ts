@@ -3,7 +3,6 @@ import { describe, expect, test } from 'bun:test';
 import { formatEventLookup } from '../../src/inventory/event-lookup-format.ts';
 import {
   filterLinesByPeriod,
-  formatSportBoardSamples,
   inferSportHintFromLines,
   labelPeriodId,
   lookupEvent,
@@ -11,8 +10,11 @@ import {
   pliveEventUrl,
   summarizePeriods,
   type EventLookupResult,
-  type SportBoardSample,
 } from '../../src/inventory/event-lookup.ts';
+import {
+  formatSportBoardSamples,
+  type SportBoardSample,
+} from '../../src/inventory/sports-inventory.ts';
 import type { FetchFn } from '../../src/institutions/resilient-fetch.ts';
 import type { CoefficientLine } from '../../src/partner/fantasy-ultra/coefficients.ts';
 
@@ -192,25 +194,6 @@ describe('event-lookup', () => {
     expect(periods[0]!.label).toBe('1st Game');
   });
 
-  test('formatSportBoardSamples lists buckets', () => {
-    const samples: SportBoardSample[] = [
-      {
-        bucket: 'table_tennis',
-        inventoryId: '1',
-        league: 'Setka',
-        home: 'A',
-        away: 'B',
-        sport: 'Table Tennis',
-        pliveUrl: 'https://example/#!/event/1',
-        pandoraLineCount: 0,
-        periods: ['m'],
-      },
-    ];
-    const text = formatSportBoardSamples(samples);
-    expect(text).toContain('table_tennis');
-    expect(text).toContain('Setka');
-    expect(text).toContain('periods=[m]');
-  });
 
   test('formatEventLookup includes period table labels', () => {
     const r = {

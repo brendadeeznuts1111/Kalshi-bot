@@ -341,7 +341,7 @@ export function formatEventBoardScan(
         'Fin',
         'NotBett',
       ],
-      scan.bySport.map(r => [
+      scan.bySport.slice(0, 24).map(r => [
         r.sportId,
         r.sportName ?? '—',
         r.canonicalSportId ?? '—',

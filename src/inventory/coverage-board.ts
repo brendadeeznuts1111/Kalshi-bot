@@ -17,9 +17,9 @@ import type {
   WidgetLiveSport,
   WidgetWagerType,
 } from '../domain/widget-domain-extract.ts';
-export type MarketCell = 'primary' | 'secondary' | 'yes' | '—';
+type MarketCell = 'primary' | 'secondary' | 'yes' | '—';
 
-export type SportColumnMetrics = {
+type SportColumnMetrics = {
   sport: string;
   events: number;
   linked: number;
@@ -39,7 +39,7 @@ export type SportColumnMetrics = {
   bindingStatus: string | null;
 };
 
-export type MarketMatrix = {
+type MarketMatrix = {
   marketIds: string[];
   sports: string[];
   cells: Record<string, Record<string, MarketCell>>;
@@ -48,7 +48,7 @@ export type MarketMatrix = {
   wagerTypeCounts: Record<string, number>;
 };
 
-export type WagerFamilyRow = {
+type WagerFamilyRow = {
   typeId: number | null;
   count: number;
   sampleName: string;

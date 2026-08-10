@@ -11,6 +11,11 @@ import {
   type FantasySportMapping,
 } from '../partner/fantasy-ultra/widget-config.ts';
 
+import type { FetchFn } from '../institutions/resilient-fetch.ts';
+import type { CoefficientLine } from '../partner/fantasy-ultra/coefficients.ts';
+import { PLIVE_STREAM_ENDPOINTS } from '../domain/live-product-endpoints.ts';
+import { probePandoraEvent } from './pandora-listen.ts';
+
 export type StreamSportLeagueRow = {
   streamBucket: string;
   league: string;
@@ -196,4 +201,138 @@ export function staticSportMapSummary(): {
       .length,
     buckets: FANTASY_SPORT_MAPPINGS.map((m) => m.streamBucket),
   };
+}
+
+
+function competitors(ev: Record<string, unknown>): {
+  home: string | null;
+  away: string | null;
+} {
+  const c = (ev.competitiors ?? ev.competitors) as
+    | { home?: unknown; away?: unknown }
+    | undefined;
+  const home =
+    ev.home != null
+      ? String(ev.home)
+      : c?.home != null
+        ? String(c.home)
+        : ev.team1 != null
+          ? String(ev.team1)
+          : null;
+  const away =
+    ev.away != null
+      ? String(ev.away)
+      : c?.away != null
+        ? String(c.away)
+        : ev.team2 != null
+          ? String(ev.team2)
+          : null;
+  return { home, away };
+}
+
+function samplePliveUrl(eventId: string | number, periodId?: string | null): string {
+  const origin = FANTASY_ULTRA_DEFAULTS.streamOrigin;
+  const base = `${origin}/live/?#!/event/${eventId}`;
+  return periodId ? `${base}/${periodId}` : base;
+}
+
+/** One stream-list sample per sport bucket (inventory plane). */
+export type SportBoardSample = {
+  bucket: string;
+  inventoryId: string;
+  league: string | null;
+  home: string | null;
+  away: string | null;
+  sport: string | null;
+  pliveUrl: string;
+  /** Pandora coefficients for this id (usually 0 — different id space). */
+  pandoraLineCount: number;
+  periods: string[];
+};
+
+/**
+ * Sample live stream-list board across sports (optional short Pandora probe per id).
+ * Inventory ids usually have 0 Pandora lines — documents id-space split multi-sport.
+ */
+export async function sampleStreamListBySport(
+  options: {
+    maxSports?: number;
+    pandoraSeconds?: number;
+    fetchImpl?: FetchFn;
+    WebSocketImpl?: typeof WebSocket;
+    streamListUrl?: string;
+  } = {}
+): Promise<SportBoardSample[]> {
+  const maxSports = Math.min(Math.max(options.maxSports ?? 20, 1), 40);
+  const pandoraSeconds = options.pandoraSeconds ?? 0;
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const url = options.streamListUrl ?? PLIVE_STREAM_ENDPOINTS.streamListUrl;
+  const res = await fetchImpl(url, {
+    headers: {
+      accept: 'application/json, text/plain, */*',
+      origin: FANTASY_ULTRA_DEFAULTS.streamOrigin,
+      referer: FANTASY_ULTRA_DEFAULTS.streamReferer,
+    },
+  });
+  if (!res.ok) throw new Error(`stream-list HTTP ${res.status}`);
+  const wire = (await res.json()) as {
+    sports?: Record<
+      string,
+      { events?: Record<string, Record<string, unknown>> }
+    >;
+  };
+
+  const samples: SportBoardSample[] = [];
+  for (const [bucket, block] of Object.entries(wire.sports ?? {})) {
+    const events = Object.entries(block.events ?? {});
+    if (!events.length) continue;
+    const [id, ev] = events[0]!;
+    const { home, away } = competitors(ev);
+    const sample: SportBoardSample = {
+      bucket,
+      inventoryId: id,
+      league: ev.league != null ? String(ev.league) : null,
+      home,
+      away,
+      sport: ev.sport != null ? String(ev.sport) : null,
+      pliveUrl: samplePliveUrl(id, 'm'),
+      pandoraLineCount: 0,
+      periods: [],
+    };
+    if (pandoraSeconds > 0) {
+      try {
+        const p = await probePandoraEvent(Number(id), {
+          seconds: pandoraSeconds,
+          WebSocketImpl: options.WebSocketImpl,
+        });
+        sample.pandoraLineCount = p.lines.length;
+        sample.periods = [
+          ...new Set(p.lines.map((l: CoefficientLine) => l.period || 'm')),
+        ].sort();
+      } catch {
+        /* ignore */
+      }
+    }
+    samples.push(sample);
+    if (samples.length >= maxSports) break;
+  }
+  return samples;
+}
+
+export function formatSportBoardSamples(samples: SportBoardSample[]): string {
+  const lines: string[] = [];
+  lines.push(`stream-list multi-sport sample (${samples.length} buckets)`);
+  lines.push('note: inventory stream_id usually has 0 Pandora coefficient lines');
+  lines.push('');
+  for (const s of samples) {
+    lines.push(
+      `${s.bucket.padEnd(16)} id=${s.inventoryId} pandora_lines=${s.pandoraLineCount}` +
+        (s.periods.length ? ` periods=[${s.periods.join(',')}]` : '')
+    );
+    lines.push(
+      `  ${s.league ?? '—'} · ${s.home ?? '?'} vs ${s.away ?? '?'}`
+    );
+    lines.push(`  ${s.pliveUrl}`);
+  }
+  return lines.join('\n');
 }

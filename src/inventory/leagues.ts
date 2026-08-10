@@ -331,7 +331,7 @@ export function upsertInventoryLeagues(
   return plan;
 }
 
-export type ListInventoryLeaguesOptions = {
+type ListInventoryLeaguesOptions = {
   bookId?: string;
   unmappedOnly?: boolean;
   sportId?: string;

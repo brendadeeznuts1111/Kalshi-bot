@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { CACHE_DIR } from '../research/paths.ts';
 import type { BookedCatalogEntry } from './booked-catalog.ts';
 
-export type BookedCatalogCachePayload = {
+type BookedCatalogCachePayload = {
   savedAtMs: number;
   expiresAtMs: number;
   source: string;

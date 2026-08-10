@@ -4,7 +4,7 @@
  */
 import type { Database } from 'bun:sqlite';
 
-export type EnrichValidationOddsLink = {
+type EnrichValidationOddsLink = {
   bookId: string;
   total: number;
   linked: number;
@@ -47,7 +47,7 @@ function coverage(db: Database, bookId: string): EnrichValidationOddsLink {
   return { bookId, total, linked, unlinked, linkedPct };
 }
 
-export type ValidateEnrichmentInput = {
+type ValidateEnrichmentInput = {
   candidates: number;
   matched: number;
   /** Fail validation when matched=0 but candidates>0 (catalog/match dead). */
