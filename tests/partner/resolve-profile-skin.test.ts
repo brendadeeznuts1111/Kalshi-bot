@@ -10,12 +10,12 @@ function stub(partial: Partial<PartnerAccountProfile>): PartnerAccountProfile {
     partner: 'fantasy402',
     url: defaultUrlForSkin('buckeye')!,
     status: 'active',
+    defaultLiveProduct: 2,
     meta: {
       customerID: 'c',
       agentID: 'a',
       password: 'p',
       token: 't',
-      skin: 2,
       currency: 'USD',
     },
     ...partial,

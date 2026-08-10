@@ -1,18 +1,18 @@
 export type {
-  AdapterId,
   FantasySessionAdapter,
+  InventoryEvent,
   PartnerAccountStatus,
   PartnerBetGroup,
   PartnerBookedEvent,
   PartnerComponentBet,
   PartnerExecutionResult,
   PartnerLimits,
-  InventoryEvent,
   PartnerLiveUrlSet,
   PartnerMarket,
   PartnerOrder,
   PartnerOrderAdapter,
   PartnerSportLeague,
+  SurfaceAdapterId,
 } from './types.ts';
 
 export * from './execution/index.ts';
@@ -25,7 +25,7 @@ export {
   loadFantasy402ProfileFromEnv,
   loadFantasy402ProfileFromPrefix,
   profileFromEnvBundle,
-  profileWithSkin,
+  profileWithLiveProduct,
   requireFantasy402ProfileFromEnv,
   requireFantasy402ProfileFromPrefix,
   type PartnerAccountProfile,
@@ -124,6 +124,7 @@ export {
   type AdapterBinding,
   type BettingAccountRow,
   type LiveProductCapacity,
+  type MapperAdapterId,
   type OutCapacity,
   type OutCapacityPair,
   type OutCapacityRow,
@@ -477,7 +478,7 @@ import type { PartnerAccountProfile } from './account-profile.ts';
 import { credentialsFromFantasyProfile } from './account-profile.ts';
 import { FantasyUltraAdapter } from './fantasy-ultra/adapter.ts';
 import { getSkinByHost, isSkinId, type SkinId } from '../domain/index.ts';
-import { adapterBindingForSkin, type AdapterId as MapperAdapterId } from './out-identity.ts';
+import { adapterBindingForSkin, type MapperAdapterId } from './out-identity.ts';
 import type { FantasySessionAdapter, PartnerOrderAdapter } from './types.ts';
 
 /**
@@ -505,11 +506,6 @@ export function resolveProfileAdapterId(account: PartnerAccountProfile): MapperA
   return 'unmapped';
 }
 
-/** @deprecated use resolveProfileAdapterId === 'fantasy-ultra' */
-export function profileUsesFantasy402Mapper(account: PartnerAccountProfile): boolean {
-  return resolveProfileAdapterId(account) === 'fantasy-ultra';
-}
-
 /** Instantiate adapter for a registry profile (optional execution live product). */
 export function getPartnerAdapter(
   account: PartnerAccountProfile,
@@ -517,16 +513,16 @@ export function getPartnerAdapter(
     fetchImpl?: typeof fetch;
     warmSession?: boolean;
     /** Override out default live-product wire for this session (ezlive / dark / 2). */
-    skin?: string | number;
     liveProduct?: string | number;
+    /** @deprecated use liveProduct */
+    skin?: string | number;
   } = {}
 ): PartnerOrderAdapter {
   const adapterId = resolveProfileAdapterId(account);
   if (adapterId === 'fantasy-ultra') {
     return new FantasyUltraAdapter({
       credentials: credentialsFromFantasyProfile(account, {
-        skin: options.skin,
-        liveProduct: options.liveProduct,
+        liveProduct: options.liveProduct ?? options.skin,
       }),
       fetchImpl: options.fetchImpl,
       warmSession: options.warmSession,
@@ -543,8 +539,9 @@ export function getFantasySessionAdapter(
   options: {
     fetchImpl?: typeof fetch;
     warmSession?: boolean;
-    skin?: string | number;
     liveProduct?: string | number;
+    /** @deprecated use liveProduct */
+    skin?: string | number;
   } = {}
 ): FantasySessionAdapter {
   if (resolveProfileAdapterId(account) !== 'fantasy-ultra') {
@@ -554,8 +551,7 @@ export function getFantasySessionAdapter(
   }
   return new FantasyUltraAdapter({
     credentials: credentialsFromFantasyProfile(account, {
-      skin: options.skin,
-      liveProduct: options.liveProduct,
+      liveProduct: options.liveProduct ?? options.skin,
     }),
     fetchImpl: options.fetchImpl,
     warmSession: options.warmSession,

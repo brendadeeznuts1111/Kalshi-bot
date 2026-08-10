@@ -133,8 +133,9 @@ field names.
 | `oddsEventId` | Odds | Widget / Statscore match id (`skin_events.odds_event_id`); from wire `client_event_id` at parse |
 | `OddsLine` | Odds | Pandora coefficient coords (period / marketType / selection) |
 | `TicketLeg` | Ticket | Place-bet `componentBet` coords (periodId / marketId / key); `eventId` field stays |
-| `AdapterId` (`src/partner/types.ts`) | Adapter DTO | Surface token on inventory/book DTOs: `fantasy402` \| `kalshi` — **not** a seat partner |
-| `AdapterId` (`out-identity.ts`) | Mapper binding | Session mapper: `fantasy-ultra` \| `kalshi` \| `unmapped` (distinct type, same name) |
+| `SurfaceAdapterId` (`src/partner/types.ts`) | Adapter DTO | Surface token on inventory/book DTOs: `fantasy402` \| `kalshi` — **not** a seat partner |
+| `MapperAdapterId` (`out-identity.ts`) | Mapper binding | Session mapper: `fantasy-ultra` \| `kalshi` \| `unmapped` |
+| `DeskAdapterId` (`host-discover.ts`) | Desk discovery | Same union as `MapperAdapterId` for host-discover reports |
 | `feed_id` / `feedId` | **Wire-only** | Opaque stream-list field — not odds event id; no interior rename this wave |
 | `ls_id` | **Wire-only** | Live-score push id when path known — stored nullable; not an interior brand |
 | `donbest_id` / `donbestId` | **Wire-only** | Opaque upstream id — parse may keep string; not an interior brand |

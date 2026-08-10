@@ -22,10 +22,11 @@ import {
 import type { OutMeta, OutCapacityRow, OutMapperKind } from './out-capacity.ts';
 import { parseOutMeta } from './out-capacity.ts';
 
-export type AdapterId = 'fantasy-ultra' | 'kalshi' | 'unmapped';
+/** Session / mapper binding (not DTO surface token — see SurfaceAdapterId). */
+export type MapperAdapterId = 'fantasy-ultra' | 'kalshi' | 'unmapped';
 
 export type AdapterBinding = {
-  adapterId: AdapterId;
+  adapterId: MapperAdapterId;
   mapperKind: OutMapperKind;
   /** Env brand token only (FANTASY402) — not SkinId, not seat partnerId. */
   bookEnvToken: string;
@@ -330,7 +331,7 @@ export function guardAndStampAccountMeta(input: {
 }): {
   skinId?: SkinId;
   mapper?: OutMapperKind;
-  adapterId?: AdapterId;
+  adapterId?: MapperAdapterId;
   metaJson: string;
   identity?: OutIdentity;
 } {

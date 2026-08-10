@@ -19,7 +19,7 @@ import {
 import {
   guardAndStampAccountMeta,
   parseOutIdentity,
-  type AdapterId,
+  type MapperAdapterId,
   type OutIdentity,
 } from './out-identity.ts';
 import {
@@ -81,7 +81,7 @@ export type BettingAccountRow = {
   /** Mapper kind from meta_json (fantasy402 | unmapped). */
   mapper?: OutMapperKind;
   /** Adapter id from OutIdentity (fantasy-ultra | kalshi | unmapped). */
-  adapterId?: AdapterId;
+  adapterId?: MapperAdapterId;
 };
 
 export type ProviderCapacity = {
@@ -543,8 +543,8 @@ export {
   resolveSkinForAccountUrl,
   stampOutMeta,
   type AdapterBinding,
-  type AdapterId,
   type LiveProductCapacity,
+  type MapperAdapterId,
   type OutIdentity,
 } from './out-identity.ts';
 export { bookIdFromAccount, mapperFromAccount, skinIdFromAccount } from './out-capacity.ts';
