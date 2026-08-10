@@ -356,9 +356,19 @@ export function requireDefaultUrlForUltraMapper(): string {
 export const PARTNER_DOMAIN_ENV = 'PARTNER_DOMAIN';
 
 /**
+ * Retired bare-book desk URL env keys — never read.
+ * Use PARTNER_DOMAIN or per-out/partner `{PREFIX}DOMAIN` instead.
+ */
+export const RETIRED_BARE_BOOK_DOMAIN_ENVS = ['FANTASY402_DOMAIN'] as const;
+
+export function isRetiredBareBookDomainEnv(key: string): boolean {
+  return (RETIRED_BARE_BOOK_DOMAIN_ENVS as readonly string[]).includes(key);
+}
+
+/**
  * Desk URL from env (brand-neutral).
  *   PARTNER_DOMAIN → SKINS Ultra-mapper default (hosts → SkinId)
- * No Fantasy402-branded domain env.
+ * Bare-book DOMAIN env keys in RETIRED_BARE_BOOK_DOMAIN_ENVS are ignored.
  */
 export function resolveDeskDomainFromEnv(
   envMap: Record<string, string | undefined> = typeof process !== 'undefined' ? process.env : {}

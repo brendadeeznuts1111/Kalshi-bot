@@ -191,6 +191,8 @@ export {
   LIVE_PRODUCT_IDS,
   LIVE_PRODUCTS,
   LIVE_PRODUCT_SPORT_BINDINGS,
+  PARTNER_DOMAIN_ENV,
+  RETIRED_BARE_BOOK_DOMAIN_ENVS,
   SKIN_IDS,
   SKIN_SPORT_BINDINGS,
   SKINS,
@@ -206,6 +208,7 @@ export {
   isBookId,
   isLegacyCapacityLiveProduct,
   isLiveProductId,
+  isRetiredBareBookDomainEnv,
   isSkinId,
   isSportId,
   listBooks,
@@ -358,7 +361,6 @@ export {
   DEFAULT_PARTNERS_TOML,
   DEFAULT_REQUIRED_ENV_KEYS,
   EXAMPLE_PARTNERS_TOML,
-  PARTNER_DOMAIN_ENV,
   PARTNER_ENV_KEYS,
   buildPartnersTomlFromRows,
   canonicalOutEnvPrefix,
@@ -467,21 +469,23 @@ export {
 import type { PartnerAccountProfile } from './account-profile.ts';
 import { credentialsFromFantasyProfile } from './account-profile.ts';
 import { FantasyUltraAdapter } from './fantasy-ultra/adapter.ts';
-import { getSkinByHost, resolveSkinId, type SkinId } from '../domain/index.ts';
+import { getSkinByHost, isSkinId, type SkinId } from '../domain/index.ts';
 import { adapterBindingForSkin, type AdapterId } from './out-identity.ts';
 import type { FantasySessionAdapter, PartnerOrderAdapter } from './types.ts';
 
 /**
- * Resolve white-label skin: explicit skinId → host (HOST_TO_SKIN) → SkinId alias.
- * Does not treat partner=fantasy402 as a SkinId forge.
+ * Resolve white-label skin: explicit skinId → host (HOST_TO_SKIN) → canonical SkinId.
+ * Never forges SkinId from mapper/provider labels (`fantasy402` is an alias, not identity).
  */
 export function resolveProfileSkinId(account: PartnerAccountProfile): SkinId | undefined {
   if (account.skinId) return account.skinId;
   const fromHost = account.url ? getSkinByHost(account.url) : undefined;
   if (fromHost) return fromHost;
-  // partner may be a SkinId or alias (buckeye / ace / …) — not fantasy402 identity
-  const asSkin = resolveSkinId(String(account.partner));
-  if (asSkin) return asSkin;
+  // partner field may carry a canonical SkinId only — not mapper aliases
+  const partner = String(account.partner ?? '')
+    .trim()
+    .toLowerCase();
+  if (isSkinId(partner)) return partner;
   return undefined;
 }
 

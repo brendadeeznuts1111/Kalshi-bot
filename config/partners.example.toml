@@ -12,7 +12,7 @@
 # Bare FANTASY402_ / partner-only FANTASY402_SPEN_ auto-upgrade to per-out on seed.
 # Secrets: {prefix}BEARER_TOKEN · CUSTOMER_ID · AGENT_ID · PASSWORD · DOMAIN · …
 # Desk URL env (book-level): PARTNER_DOMAIN — must resolve via active SKINS[].hosts
-#   (FANTASY402_DOMAIN is not read). Prefer TOML url= on each out when known.
+#   (bare book-level DOMAIN env is retired). Prefer TOML url= on each out when known.
 # @see https://bun.com/docs/runtime/toml
 # @see docs/PARTNER-DOMAIN.md
 

@@ -41,6 +41,8 @@ export {
   normalizeHost,
   normalizeSkinName,
   PARTNER_DOMAIN_ENV,
+  RETIRED_BARE_BOOK_DOMAIN_ENVS,
+  isRetiredBareBookDomainEnv,
   assertActiveSkinsHaveHosts,
   listActiveSkins,
   requireDefaultUrlForUltraMapper,

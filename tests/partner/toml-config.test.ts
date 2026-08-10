@@ -1,5 +1,6 @@
 // @see https://bun.com/docs/test/index#run-tests
 import { describe, expect, test } from 'bun:test';
+import { RETIRED_BARE_BOOK_DOMAIN_ENVS } from '../../src/domain/index.ts';
 import { openEventStore } from '../../src/institutions/event-store/open-db.ts';
 import { computeProviderCapacity, listActiveBettingAccounts } from '../../src/partner/registry.ts';
 import {
@@ -165,13 +166,16 @@ skins = [{ name = "ezlive", per_bet_max = "not-a-number" }]
     expect(base.source.CUSTOMER_ID).toBe('out');
   });
 
-  test('resolvePartnerEnv: FANTASY402_DOMAIN ignored; PARTNER_DOMAIN / per-out DOMAIN win', () => {
+  test('resolvePartnerEnv: retired bare-book DOMAIN ignored; PARTNER_DOMAIN / per-out DOMAIN win', () => {
+    const retired = Object.fromEntries(
+      RETIRED_BARE_BOOK_DOMAIN_ENVS.map(k => [k, 'https://evil.example'])
+    );
     const ignored = {
       FANTASY402_BEARER_TOKEN: 't',
       FANTASY402_CUSTOMER_ID: 'c',
       FANTASY402_AGENT_ID: 'a',
       FANTASY402_PASSWORD: 'p',
-      FANTASY402_DOMAIN: 'https://evil.example',
+      ...retired,
     };
     const bare = resolvePartnerEnv('FANTASY402_', ignored);
     expect(bare.values.DOMAIN).toBeUndefined();

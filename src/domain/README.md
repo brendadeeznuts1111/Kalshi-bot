@@ -24,7 +24,8 @@ Standalone registry for live PPH coverage. **Not** owned by Fantasy402.
 | **magnum**   | yes    | TBD                        | probooknyc.com, 50centjuice.com | unmapped |
 
 **Invariant:** `active: true` ⇒ `hosts.length ≥ 1` (`assertActiveSkinsHaveHosts`).
-Desk URL env: `PARTNER_DOMAIN` (not `FANTASY402_DOMAIN`) must be a host in an active skin.
+Desk URL env: `PARTNER_DOMAIN` (or per-out `*DOMAIN`) must be a host in an active skin.
+Bare book-level DOMAIN env keys are retired (`RETIRED_BARE_BOOK_DOMAIN_ENVS`).
 `fantasy402` alias → skin `buckeye` (mapper token, not SkinId).
 
 ## Unknown host

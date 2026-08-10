@@ -321,7 +321,8 @@ or partner-only `FANTASY402_SPEN_` auto-upgrade on materialize/seed.
 Keys (not USER/PASS): `BEARER_TOKEN` · `CUSTOMER_ID` · `AGENT_ID` · `PASSWORD` ·
 `DOMAIN` · `SKIN` · `CURRENCY`.
 Desk URL: **`PARTNER_DOMAIN`** (or per-out `*DOMAIN`) must resolve via `SKINS[].hosts`
-→ SkinId. `FANTASY402_DOMAIN` is not read. API base URL also lives in TOML `url=`.
+→ SkinId. Bare book-level DOMAIN env keys are retired (`RETIRED_BARE_BOOK_DOMAIN_ENVS`).
+API base URL also lives in TOML `url=`.
 
 Code: `canonicalOutEnvPrefix` · `resolvePartnerEnv` ·
 `validatePartnerAssetPrefixes`.

@@ -2,6 +2,7 @@
 import { describe, expect, test } from 'bun:test';
 import {
   PARTNER_DOMAIN_ENV,
+  RETIRED_BARE_BOOK_DOMAIN_ENVS,
   assertActiveSkinsHaveHosts,
   defaultUrlForSkin,
   listActiveSkins,
@@ -88,14 +89,15 @@ describe('domain sports / skins / live products', () => {
 
   test('resolveDeskDomainFromEnv uses PARTNER_DOMAIN then SKINS default', () => {
     const fallback = requireDefaultUrlForUltraMapper();
-    expect(resolveDeskDomainFromEnv({})).toBe(fallback);
-    expect(resolveDeskDomainFromEnv({ FANTASY402_DOMAIN: 'https://ignored.example' })).toBe(
-      fallback
+    const retired = Object.fromEntries(
+      RETIRED_BARE_BOOK_DOMAIN_ENVS.map(k => [k, 'https://ignored.example'])
     );
+    expect(resolveDeskDomainFromEnv({})).toBe(fallback);
+    expect(resolveDeskDomainFromEnv(retired)).toBe(fallback);
     expect(
       resolveDeskDomainFromEnv({
+        ...retired,
         [PARTNER_DOMAIN_ENV]: 'https://preferred.example',
-        FANTASY402_DOMAIN: 'https://ignored.example',
       })
     ).toBe('https://preferred.example');
   });

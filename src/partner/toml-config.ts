@@ -26,7 +26,11 @@
 // @see https://bun.com/docs/runtime/toml
 import type { Database } from 'bun:sqlite';
 import { z } from 'zod';
-import { PARTNER_DOMAIN_ENV, requireDefaultUrlForUltraMapper } from '../domain/index.ts';
+import {
+  PARTNER_DOMAIN_ENV,
+  isRetiredBareBookDomainEnv,
+  requireDefaultUrlForUltraMapper,
+} from '../domain/index.ts';
 import {
   ensurePartnerRegistrySchema,
   upsertBettingAccount,
@@ -370,7 +374,7 @@ export function formatPartnerAssetIssues(issues: PartnerAssetIssue[]): string {
  *   out prefix → partner prefix → book fallback
  *
  * DOMAIN is host→SkinId territory: per-out/partner `*DOMAIN` still wins;
- * book-level uses PARTNER_DOMAIN only (never FANTASY402_DOMAIN).
+ * book-level uses PARTNER_DOMAIN only (retired bare-book DOMAIN envs ignored).
  */
 export function resolvePartnerEnv(
   envPrefix: string | null | undefined,
@@ -385,11 +389,14 @@ export function resolvePartnerEnv(
   const source: PartnerEnvBundle['source'] = {};
   for (const key of keys) {
     for (const step of chain) {
+      const envKey = `${step.prefix}${key}`;
       // Bare book prefix is often labeled source "out" when callers pass FANTASY402_
-      // itself — still never read FANTASY402_DOMAIN; only PARTNER_DOMAIN.
+      // itself — still never read retired bare-book DOMAIN; only PARTNER_DOMAIN.
       const bookLevelDomain =
         key === 'DOMAIN' &&
-        (step.source === 'book_fallback' || isBareBookEnvPrefix(step.prefix, provider));
+        (step.source === 'book_fallback' ||
+          isBareBookEnvPrefix(step.prefix, provider) ||
+          isRetiredBareBookDomainEnv(envKey));
       if (bookLevelDomain) {
         const preferred = envMap[PARTNER_DOMAIN_ENV]?.trim();
         if (preferred) {
@@ -398,7 +405,8 @@ export function resolvePartnerEnv(
         }
         break;
       }
-      const v = envMap[`${step.prefix}${key}`]?.trim();
+      if (isRetiredBareBookDomainEnv(envKey)) continue;
+      const v = envMap[envKey]?.trim();
       if (v) {
         values[key] = v;
         source[key] = step.source;
