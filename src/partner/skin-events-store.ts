@@ -1,6 +1,6 @@
 // @see https://bun.com/docs/runtime/sqlite
 /**
- * Persist Buckeye / Fantasy402 stream inventory (stream-list-v2) and detect new rows.
+ * Persist Buckeye / Fantasy402 stream inventory (stream-list-v2) into skin_events.
  *
  * One row per stream_id covers both plive and ezlive (shared Plive shell).
  */
@@ -67,7 +67,7 @@ export function normalizeInventorySport(wire: string): string {
   return bucket;
 }
 
-export type PartnerEventRow = {
+export type SkinEventRow = {
   partner: string;
   streamId: string;
   lsId: string | null;
@@ -86,15 +86,15 @@ export type PartnerEventRow = {
   inventoryLiveProduct: LiveProductId;
 };
 
-export type PartnerEventUpsertResult = {
-  inserted: PartnerEventRow[];
-  updated: PartnerEventRow[];
+export type SkinEventUpsertResult = {
+  inserted: SkinEventRow[];
+  updated: SkinEventRow[];
   seen: number;
 };
 
-export function listPartnerStreamIds(db: Database, partner: string): Set<string> {
+export function listSkinStreamIds(db: Database, partner: string): Set<string> {
   const rows = db
-    .query(`SELECT stream_id AS streamId FROM partner_events WHERE partner = $p`)
+    .query(`SELECT stream_id AS streamId FROM skin_events WHERE partner = $p`)
     .all({ $p: partner }) as Array<{ streamId: string }>;
   return new Set(rows.map(r => String(r.streamId)));
 }
@@ -104,7 +104,7 @@ export function liveEventToRow(
   nowMs: number,
   identity: InventoryIdentity,
   existing?: { firstSeen: number; status?: string }
-): PartnerEventRow {
+): SkinEventRow {
   const streamId = event.streamId != null ? String(event.streamId) : String(event.eventId || '');
   return {
     partner: identity.partner,
@@ -126,7 +126,7 @@ export function liveEventToRow(
   };
 }
 
-export type UpsertPartnerLiveEventsOptions = {
+export type UpsertSkinLiveEventsOptions = {
   nowMs?: number;
   identity?: InventoryIdentity;
 };
@@ -135,15 +135,15 @@ export type UpsertPartnerLiveEventsOptions = {
  * Upsert live inventory rows. Returns which stream_ids were newly inserted.
  * Stamps Buckeye / Fantasy402 / plive-shell by default.
  */
-export function upsertPartnerLiveEvents(
+export function upsertSkinLiveEvents(
   db: Database,
   events: PartnerLiveEvent[],
-  options: UpsertPartnerLiveEventsOptions = {}
-): PartnerEventUpsertResult {
+  options: UpsertSkinLiveEventsOptions = {}
+): SkinEventUpsertResult {
   const nowMs = options.nowMs ?? Date.now();
   const identity = options.identity ?? buckeyeInventoryIdentity();
   const insert = db.query(`
-    INSERT INTO partner_events (
+    INSERT INTO skin_events (
       partner, stream_id, ls_id, client_event_id, sport, league, home, away,
       feed_id, start_time, status, first_seen, last_updated,
       skin_id, book_id, inventory_live_product
@@ -164,14 +164,14 @@ export function upsertPartnerLiveEvents(
       inventory_live_product = excluded.inventory_live_product
   `);
 
-  const inserted: PartnerEventRow[] = [];
-  const updated: PartnerEventRow[] = [];
+  const inserted: SkinEventRow[] = [];
+  const updated: SkinEventRow[] = [];
 
   const partnerSets = new Map<string, Set<string>>();
   const getSet = (partner: string) => {
     let s = partnerSets.get(partner);
     if (!s) {
-      s = listPartnerStreamIds(db, partner);
+      s = listSkinStreamIds(db, partner);
       partnerSets.set(partner, s);
     }
     return s;
@@ -235,7 +235,7 @@ export function filterLiveEventsBySport(
   });
 }
 
-export function formatPartnerEventLine(row: PartnerEventRow): string {
+export function formatSkinEventLine(row: SkinEventRow): string {
   const matchup = [row.home, row.away].filter(Boolean).join(' vs ') || 'TBD';
   const idBits = [row.skinId ? `skin=${row.skinId}` : '', row.bookId ? `book=${row.bookId}` : '']
     .filter(Boolean)

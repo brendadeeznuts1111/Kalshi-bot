@@ -237,7 +237,7 @@ bun run partner:test-fantasy
 bun run partner:test-fantasy -- --sport=tennis --limit=5 --renew
 bun run partner:watch-events -- --once --sport=table_tennis --json
 bun run partner:watch-events -- --loop --sport=table_tennis --interval-ms=30000
-bun test tests/partner/fantasy-ultra.test.ts tests/partner/partner-events-store.test.ts
+bun test tests/partner/fantasy-ultra.test.ts tests/partner/skin-events-store.test.ts
 ```
 
 ## Detect new table tennis events
@@ -251,7 +251,7 @@ tennis).
 | `tennis`       | ~45         | Tennis        |
 | `table_tennis` | ~33         | Table Tennis  |
 
-`partner_events` table (created with event-store schema) stores
+`skin_events` table (created with event-store schema) stores
 **Buckeye-scoped** Fantasy402 stream inventory. One row per `stream_id` covers
 **both** PLive and EZLive capacity surfaces (shared Plive SportsWidgets shell)
 until a separate EZ feed is proven.
@@ -278,7 +278,7 @@ New rows print as `+ table_tennis · … · skin=buckeye book=fantasy402`. Optio
 Telegram: `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID`.
 
 ```text
-stream-list-v2  ──every 30s──▶  new stream_id?  ──▶  partner_events (buckeye) + notify
+stream-list-v2  ──every 30s──▶  new stream_id?  ──▶  skin_events (buckeye) + notify
                                       │                 covers: plive + ezlive
                                       ▼ (optional, needs real auth)
                               get_pushes / booked-events / PlaceBet
@@ -391,7 +391,7 @@ Partner → Communication → Accounts/Outs → Assets → Finance.
 | **Live product**          | `src/domain/live-products.ts` + capacity `meta.skins[]` | `plive` / `ezlive` / `ultralive` / `maglive` (`dark` capacity-only)              |
 | **Provider** (legacy env) | adapter id (`fantasy402`, `kalshi`)                     | Still used on outs / env; `fantasy402` is BookId + mapper token → skin `buckeye` |
 | **Sports map**            | `src/domain/` + `provider_sport_mappings` seed          | Live-product keys primary; optional legacy `fantasy402` dual-write               |
-| **Stream inventory**      | `partner_events`                                        | Detected events (not priced book)                                                |
+| **Stream inventory**      | `skin_events`                                        | Detected events (not priced book)                                                |
 | **Desk liquidity**        | `match_liquidity`                                       | Kalshi-priced gates (`tradable` / `liq_ok`)                                      |
 
 ### Unknown host discovery
@@ -458,7 +458,7 @@ bun run partner:sports -- --leagues=table_tennis
 bun run partner:sports -- --leagues=all --json
 bun run partner:sports -- --map        # offline static map
 bun run partner:sports -- --seed       # refresh provider_sport_mappings
-bun run partner:sync -- --sport=all    # upsert all buckets into partner_events
+bun run partner:sync -- --sport=all    # upsert all buckets into skin_events
 ```
 
 - **Primary** (★): soccer, tennis, basketball, table_tennis — confirmed
@@ -549,7 +549,7 @@ PARTNER_SYNC=1 PARTNER_SYNC_PUBLIC=1 bun run cron:once
 | Capability                              | Status                           |
 | --------------------------------------- | -------------------------------- |
 | Inventory (`stream-list-v2`)            | ✅                               |
-| New event detection → `partner_events`  | ✅                               |
+| New event detection → `skin_events`  | ✅                               |
 | Soft Statscore name → `client_event_id` | ✅ optional `--enrich-booked`    |
 | Markets / lines / American odds tables  | ❌ not in live feeds yet         |
 | placeOrder POST                         | ❌ response parser only          |

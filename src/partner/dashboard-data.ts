@@ -174,7 +174,7 @@ export const PARTNER_OPERATOR_COMMANDS: Array<{
   },
   {
     cmd: "bun run partner:sync -- --sport=all",
-    purpose: "Inventory → partner_events",
+    purpose: "Inventory → skin_events",
   },
   {
     cmd: "bun run partner:profile -- --codes=SPEN,ASH --png",

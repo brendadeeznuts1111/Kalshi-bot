@@ -105,7 +105,7 @@ describe("partner sync", () => {
 
     const row = db
       .query(
-        `SELECT client_event_id AS cid FROM partner_events WHERE stream_id = '1'`,
+        `SELECT client_event_id AS cid FROM skin_events WHERE stream_id = '1'`,
       )
       .get() as { cid: string | null };
     expect(row.cid).toBe("999");

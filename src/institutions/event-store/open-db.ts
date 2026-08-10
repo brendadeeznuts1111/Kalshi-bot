@@ -15,9 +15,9 @@ export type OpenEventStoreOptions = {
 /** Columns added after initial CREATE — applied via ALTER so existing DBs stay compatible. */
 const SCHEMA_COLUMN_MIGRATIONS: Array<{ table: string; column: string; decl: string }> = [
   // Buckeye / Fantasy402 stream inventory identity (plive shell covers ezlive too)
-  { table: 'partner_events', column: 'skin_id', decl: 'TEXT' },
-  { table: 'partner_events', column: 'book_id', decl: 'TEXT' },
-  { table: 'partner_events', column: 'inventory_live_product', decl: 'TEXT' },
+  { table: 'skin_events', column: 'skin_id', decl: 'TEXT' },
+  { table: 'skin_events', column: 'book_id', decl: 'TEXT' },
+  { table: 'skin_events', column: 'inventory_live_product', decl: 'TEXT' },
   { table: 'events', column: 'source_url', decl: "TEXT NOT NULL DEFAULT ''" },
   { table: 'events', column: 'fetched_ts', decl: 'INTEGER' },
   { table: 'events', column: 'corpus', decl: "TEXT NOT NULL DEFAULT 'trading'" },
@@ -134,8 +134,9 @@ export function applyEventStoreSchema(db: Database): void {
   db.run(
     `CREATE INDEX IF NOT EXISTS idx_player_opponent_profiles_opponent ON player_opponent_profiles (opponent_name)`
   );
-  // Partner stream inventory (Fantasy402 stream-list-v2, etc.)
-  db.run(`CREATE TABLE IF NOT EXISTS partner_events (
+  // Skin stream inventory (Fantasy402 stream-list-v2 under Buckeye, etc.)
+  migratePartnerEventsToSkinEvents(db);
+  db.run(`CREATE TABLE IF NOT EXISTS skin_events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     partner TEXT NOT NULL,
     stream_id TEXT NOT NULL,
@@ -150,14 +151,15 @@ export function applyEventStoreSchema(db: Database): void {
     status TEXT NOT NULL DEFAULT 'unknown',
     first_seen INTEGER NOT NULL,
     last_updated INTEGER NOT NULL,
+    skin_id TEXT,
+    book_id TEXT,
+    inventory_live_product TEXT,
     UNIQUE(partner, stream_id)
   )`);
   db.run(
-    `CREATE INDEX IF NOT EXISTS idx_partner_events_partner_sport ON partner_events (partner, sport)`
+    `CREATE INDEX IF NOT EXISTS idx_skin_events_partner_sport ON skin_events (partner, sport)`
   );
-  db.run(
-    `CREATE INDEX IF NOT EXISTS idx_partner_events_last_updated ON partner_events (last_updated)`
-  );
+  db.run(`CREATE INDEX IF NOT EXISTS idx_skin_events_last_updated ON skin_events (last_updated)`);
   // Partner financial registry (outs) — secrets stay in env, not here
   db.run(`CREATE TABLE IF NOT EXISTS partners (
     id TEXT PRIMARY KEY,
@@ -201,7 +203,7 @@ export function applyEventStoreSchema(db: Database): void {
     `CREATE INDEX IF NOT EXISTS idx_provider_sport_api ON provider_sport_mappings (provider, api_sport_id)`
   );
   migrateEventStoreColumns(db);
-  migratePartnerEventsInventoryIdentity(db);
+  migrateSkinEventsInventoryIdentity(db);
   migrateSourceEventSelectors(db);
   abandonLegacyKalshiInventoryRuns(db);
   abandonUnpinnedSourceInventoryRuns(db);
@@ -329,14 +331,28 @@ export function migrateEventStoreColumns(db: Database): void {
   }
 }
 
+/** Rename legacy partner_events → skin_events (preserves rows + unique key). */
+export function migratePartnerEventsToSkinEvents(db: Database): void {
+  if (!tableExists(db, 'partner_events')) return;
+  if (tableExists(db, 'skin_events')) {
+    // Prefer the new name; drop the legacy shell if both somehow exist.
+    db.run('DROP TABLE partner_events');
+    return;
+  }
+  db.run('ALTER TABLE partner_events RENAME TO skin_events');
+  db.run('DROP INDEX IF EXISTS idx_partner_events_partner_sport');
+  db.run('DROP INDEX IF EXISTS idx_partner_events_last_updated');
+}
+
 /**
  * Stamp Fantasy402 inventory rows as Buckeye / plive-shell; drop fixture junk.
  * plive + ezlive share this inventory — one row per stream_id.
  */
-export function migratePartnerEventsInventoryIdentity(db: Database): void {
-  if (!tableHasColumn(db, 'partner_events', 'skin_id')) return;
+export function migrateSkinEventsInventoryIdentity(db: Database): void {
+  if (!tableExists(db, 'skin_events')) return;
+  if (!tableHasColumn(db, 'skin_events', 'skin_id')) return;
   db.run(`
-    UPDATE partner_events
+    UPDATE skin_events
     SET
       skin_id = COALESCE(NULLIF(TRIM(skin_id), ''), 'buckeye'),
       book_id = COALESCE(NULLIF(TRIM(book_id), ''), 'fantasy402'),
@@ -344,9 +360,16 @@ export function migratePartnerEventsInventoryIdentity(db: Database): void {
     WHERE partner = 'fantasy402'
   `);
   db.run(`
-    DELETE FROM partner_events
+    DELETE FROM skin_events
     WHERE stream_id = '1' OR league = 'Test League'
   `);
+}
+
+function tableExists(db: Database, table: string): boolean {
+  const row = db
+    .query(`SELECT 1 AS ok FROM sqlite_master WHERE type = 'table' AND name = $n`)
+    .get({ $n: table }) as { ok: number } | null;
+  return row != null;
 }
 
 function tableHasColumn(db: Database, table: string, column: string): boolean {

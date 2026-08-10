@@ -62,7 +62,7 @@ The metadata job is single-flight, drains on graceful shutdown, and recovers aba
 
 ## Partner inventory (Fantasy402 stream-list)
 
-In-process job on `cron:start` (opt-in). Polls `stream-list-v2` → `partner_events` (new table tennis by default).
+In-process job on `cron:start` (opt-in). Polls `stream-list-v2` → `skin_events` (new table tennis by default).
 
 | Env | Role |
 |-----|------|

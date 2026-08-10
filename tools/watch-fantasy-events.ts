@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * Poll Fantasy402 stream-list inventory into partner_events (Buckeye-scoped).
+ * Poll Fantasy402 stream-list inventory into skin_events (Buckeye-scoped).
  * One inventory feed covers plive + ezlive (shared Plive shell).
  *
  * Env: FANTASY402_BEARER_TOKEN, FANTASY402_CUSTOMER_ID, FANTASY402_AGENT_ID, FANTASY402_PASSWORD
@@ -20,12 +20,12 @@ import { DEFAULT_EVENT_STORE_DB } from '../src/institutions/event-store/paths.ts
 import { getFantasySessionAdapter, requireFantasy402ProfileFromEnv } from '../src/partner/index.ts';
 import {
   filterLiveEventsBySport,
-  formatPartnerEventLine,
+  formatSkinEventLine,
   liveProductsCoveredByInventory,
   resolveWatchInventoryIdentity,
-  upsertPartnerLiveEvents,
+  upsertSkinLiveEvents,
   type InventoryIdentity,
-} from '../src/partner/partner-events-store.ts';
+} from '../src/partner/skin-events-store.ts';
 
 function argValue(name: string): string | undefined {
   const hit = process.argv.find(a => a.startsWith(`--${name}=`));
@@ -91,10 +91,10 @@ async function pollOnce(options: {
   }
 
   const db = openEventStore({ dbPath: DEFAULT_EVENT_STORE_DB });
-  const result = upsertPartnerLiveEvents(db, events, { identity: options.identity });
+  const result = upsertSkinLiveEvents(db, events, { identity: options.identity });
   const covers = liveProductsCoveredByInventory(options.identity.skinId);
 
-  const newLines = result.inserted.map(formatPartnerEventLine);
+  const newLines = result.inserted.map(formatSkinEventLine);
   if (options.json) {
     console.log(
       JSON.stringify(
@@ -135,7 +135,7 @@ async function pollOnce(options: {
   }
 
   if (result.inserted.length) {
-    await maybeNotifyTelegram(result.inserted.map(r => `• ${formatPartnerEventLine(r)}`));
+    await maybeNotifyTelegram(result.inserted.map(r => `• ${formatSkinEventLine(r)}`));
   }
 
   return { newCount: result.inserted.length, seen: result.seen };
