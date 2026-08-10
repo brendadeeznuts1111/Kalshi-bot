@@ -9,10 +9,12 @@ import {
 import type { PartnerLiveEvent } from '../../src/partner/types.ts';
 import {
   buckeyeInventoryIdentity,
+  fetchPublicPliveStreamEvents,
   filterLiveEventsBySport,
   listSkinStreamIds,
   liveProductsCoveredByInventory,
   normalizeInventorySport,
+  normalizeSkinEventsSports,
   resolveWatchInventoryIdentity,
   upsertSkinLiveEvents,
 } from '../../src/partner/skin-events-store.ts';
@@ -145,6 +147,51 @@ describe('skin_events store', () => {
     expect(row.skinId).toBe('buckeye');
     expect(row.bookId).toBe('fantasy402');
     expect(row.inv).toBe('plive');
+  });
+
+  test('normalizeSkinEventsSports rewrites display labels', () => {
+    const db = openEventStore({ dbPath: ':memory:' });
+    db.run(`
+      INSERT INTO skin_events (
+        partner, stream_id, sport, league, status, first_seen, last_updated
+      ) VALUES ('fantasy402', '7', 'Table Tennis', 'Setka', 'unknown', 1, 1)
+    `);
+    expect(normalizeSkinEventsSports(db)).toBe(1);
+    const sport = (
+      db.query(`SELECT sport FROM skin_events WHERE stream_id = '7'`).get() as { sport: string }
+    ).sport;
+    expect(sport).toBe('table_tennis');
+  });
+
+  test('fetchPublicPliveStreamEvents parses mocked stream-list', async () => {
+    const wire = {
+      sports: {
+        table_tennis: {
+          count: 1,
+          events: [
+            {
+              stream_id: 55,
+              league: 'Setka',
+              sport: 'Table Tennis',
+              home: 'A',
+              away: 'B',
+              feed_id: 1,
+              competitiors: [],
+            },
+          ],
+        },
+      },
+    };
+    const events = await fetchPublicPliveStreamEvents({
+      sport: 'table_tennis',
+      fetchImpl: (async () =>
+        new Response(JSON.stringify(wire), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        })) as typeof fetch,
+    });
+    expect(events.length).toBe(1);
+    expect(String(events[0]?.streamId)).toBe('55');
   });
 
   test('migratePartnerEventsToSkinEvents renames legacy table', () => {

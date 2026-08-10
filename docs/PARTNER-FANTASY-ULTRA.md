@@ -266,8 +266,9 @@ until a separate EZ feed is proven.
 
 ```bash
 # one-shot (inventory is public — dummy env is fine)
-export FANTASY402_BEARER_TOKEN=x FANTASY402_CUSTOMER_ID=x FANTASY402_AGENT_ID=x FANTASY402_PASSWORD=x
+# Inventory is public (no Fantasy402 env required). Optional login env warms session.
 bun run partner:watch-events -- --once --sport=table_tennis --json
+bun run partner:watch-events -- --once --sport=all --json
 # defaults: --skin=buckeye --book=fantasy402 (other skins rejected)
 
 # long poll every 30s (default)

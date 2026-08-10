@@ -80,9 +80,11 @@ export {
 } from './sync.ts';
 
 export {
+  fetchPublicPliveStreamEvents,
   filterLiveEventsBySport,
   formatSkinEventLine,
   listSkinStreamIds,
+  normalizeSkinEventsSports,
   upsertSkinLiveEvents,
   type SkinEventRow,
   type SkinEventUpsertResult,
