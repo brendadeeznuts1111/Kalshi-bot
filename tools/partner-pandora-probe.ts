@@ -10,14 +10,11 @@
  *   --emit=eventName --arg='{"sport":220}'
  *   --raw='42["subscribe",{"sport":220}]'
  */
+import { argValue } from '../src/cli/argv.ts';
 // @see https://bun.com/docs/api/websockets
 import { CoefficientStore } from "../src/partner/fantasy-ultra/coefficient-store.ts";
 import { PandoraSocket } from "../src/partner/fantasy-ultra/pandora-socket.ts";
 
-function argValue(name: string): string | undefined {
-  const hit = process.argv.find((a) => a.startsWith(`--${name}=`));
-  return hit ? hit.slice(name.length + 3) : undefined;
-}
 
 const seconds = Math.min(
   Math.max(Number(argValue("seconds") ?? "12") || 12, 3),

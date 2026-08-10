@@ -1,6 +1,6 @@
 // @see https://bun.com/docs/test/index#run-tests
 import { describe, expect, test } from "bun:test";
-import { openEventStore } from "../../src/institutions/event-store/open-db.ts";
+import { liveEvent, memoryDb, mockFantasyAdapter } from "./fixtures.ts";
 import type {
   FantasySessionAdapter,
   PartnerBookedEvent,
@@ -19,43 +19,6 @@ import {
 } from "../../src/inventory/sync.ts";
 import { upsertSkinLiveEvents } from "../../src/inventory/skin-events-store.ts";
 
-function live(
-  inventoryId: number,
-  sport: string,
-  home: string,
-  away: string,
-): InventoryEvent {
-  return {
-    partner: "fantasy402",
-    sport,
-    league: "Test League",
-    inventoryId: String(inventoryId),
-    home,
-    away,
-    feedId: 0,
-    donbestId: null,
-  };
-}
-
-function mockAdapter(
-  events: InventoryEvent[],
-  booked: PartnerBookedEvent[] = [],
-): FantasySessionAdapter {
-  return {
-    partnerId: "fantasy402",
-    login: async () => ({ desktop: "https://x/", mobile: "https://x/" }),
-    fetchInventory: async () => events,
-    fetchLimits: async () => ({ maxStake: 0, maxWin: 0 }),
-    placeOrder: async () => ({ success: false, error: "stub" }),
-    renewToken: async () => "tok",
-    warmSession: async () => {},
-    fetchSports: async () => [],
-    getBearerToken: () => "tok",
-    getLiveUrls: () => null,
-    fetchBookedEvent: async () => null,
-    listBookedEvents: async () => booked,
-  };
-}
 
 describe("inventory sync", () => {
   test("matchBookedOddsEventId soft-matches names", () => {
@@ -95,10 +58,10 @@ describe("inventory sync", () => {
   });
 
   test("runInventorySync inserts new and reports capabilities", async () => {
-    const db = openEventStore({ dbPath: ":memory:" });
+    const db = memoryDb();
     const events = [
-      live(1, "Table Tennis", "A", "B"),
-      live(2, "Table Tennis", "C", "D"),
+      liveEvent(1, "Table Tennis", "A", "B"),
+      liveEvent(2, "Table Tennis", "C", "D"),
     ];
     const booked: PartnerBookedEvent[] = [
       {
@@ -116,7 +79,7 @@ describe("inventory sync", () => {
         relationStatus: null,
       },
     ];
-    const adapter = mockAdapter(events, booked);
+    const adapter = mockFantasyAdapter(events, booked);
     const report = await runInventorySync(db, adapter, {
       sport: "table_tennis",
       enrichBooked: true,
@@ -148,9 +111,9 @@ describe("inventory sync", () => {
   });
 
   test("enrich scope board re-links unlinked updates; unlinked scans book", async () => {
-    const db = openEventStore({ dbPath: ":memory:" });
+    const db = memoryDb();
     // Seed row without odds_event_id
-    upsertSkinLiveEvents(db, [live(10, "table_tennis", "Home X", "Away Y")], {
+    upsertSkinLiveEvents(db, [liveEvent(10, "table_tennis", "Home X", "Away Y")], {
       nowMs: 1000,
     });
     expect(listUnlinkedSkinEvents(db, "fantasy402").length).toBe(1);
@@ -174,7 +137,7 @@ describe("inventory sync", () => {
     // Same inventory_id → update path
     const report = await runInventorySync(
       db,
-      mockAdapter([live(10, "table_tennis", "Home X", "Away Y")], booked),
+      mockFantasyAdapter([liveEvent(10, "table_tennis", "Home X", "Away Y")], booked),
       {
         sport: "table_tennis",
         enrichBooked: true,
@@ -201,8 +164,8 @@ describe("inventory sync", () => {
     expect(parseEnrichBookedScope("new")).toBe("new");
     expect(parseEnrichBookedScope("unlinked")).toBe("unlinked");
     expect(parseEnrichBookedScope(undefined)).toBe("board");
-    const db = openEventStore({ dbPath: ":memory:" });
-    upsertSkinLiveEvents(db, [live(1, "table_tennis", "A", "B")], { nowMs: 1 });
+    const db = memoryDb();
+    upsertSkinLiveEvents(db, [liveEvent(1, "table_tennis", "A", "B")], { nowMs: 1 });
     const n = applyBookedOddsEnrich(
       db,
       "fantasy402",
@@ -216,7 +179,7 @@ describe("inventory sync", () => {
   });
 
   test("oddsLinkCoverage tracks linked vs unlinked", async () => {
-    const db = openEventStore({ dbPath: ":memory:" });
+    const db = memoryDb();
     const booked: PartnerBookedEvent[] = [
       {
         partner: "fantasy402",
@@ -235,8 +198,8 @@ describe("inventory sync", () => {
     ];
     const report = await runInventorySync(
       db,
-      mockAdapter(
-        [live(1, "table_tennis", "A", "B"), live(2, "table_tennis", "C", "D")],
+      mockFantasyAdapter(
+        [liveEvent(1, "table_tennis", "A", "B"), liveEvent(2, "table_tennis", "C", "D")],
         booked,
       ),
       {
@@ -256,8 +219,8 @@ describe("inventory sync", () => {
   });
 
   test("pricedOdds true when coefficientStore has ML lines", async () => {
-    const db = openEventStore({ dbPath: ":memory:" });
-    const events = [live(1, "table_tennis", "A", "B")];
+    const db = memoryDb();
+    const events = [liveEvent(1, "table_tennis", "A", "B")];
     const store = new CoefficientStore();
     store.ingest({
       room: "live.main.TOK.eventCoefficients.99",
@@ -268,7 +231,7 @@ describe("inventory sync", () => {
       },
       lines: [],
     });
-    const report = await runInventorySync(db, mockAdapter(events), {
+    const report = await runInventorySync(db, mockFantasyAdapter(events), {
       sport: "table_tennis",
       coefficientStore: store,
       nowMs: 1,
@@ -278,12 +241,12 @@ describe("inventory sync", () => {
   });
 
   test("dry-run plans inserts without writing skin_events", async () => {
-    const db = openEventStore({ dbPath: ":memory:" });
+    const db = memoryDb();
     const events = [
-      live(10, "table_tennis", "A", "B"),
-      live(11, "table_tennis", "C", "D"),
+      liveEvent(10, "table_tennis", "A", "B"),
+      liveEvent(11, "table_tennis", "C", "D"),
     ];
-    const report = await runInventorySync(db, mockAdapter(events), {
+    const report = await runInventorySync(db, mockFantasyAdapter(events), {
       sport: "table_tennis",
       dryRun: true,
       nowMs: 9000,
@@ -302,17 +265,17 @@ describe("inventory sync", () => {
   });
 
   test("dry-run splits new vs existing inventory_ids", async () => {
-    const db = openEventStore({ dbPath: ":memory:" });
-    const seed = [live(1, "table_tennis", "A", "B")];
-    await runInventorySync(db, mockAdapter(seed), {
+    const db = memoryDb();
+    const seed = [liveEvent(1, "table_tennis", "A", "B")];
+    await runInventorySync(db, mockFantasyAdapter(seed), {
       sport: "table_tennis",
       nowMs: 1000,
     });
     const again = [
-      live(1, "table_tennis", "A", "B"),
-      live(2, "table_tennis", "X", "Y"),
+      liveEvent(1, "table_tennis", "A", "B"),
+      liveEvent(2, "table_tennis", "X", "Y"),
     ];
-    const report = await runInventorySync(db, mockAdapter(again), {
+    const report = await runInventorySync(db, mockFantasyAdapter(again), {
       sport: "table_tennis",
       dryRun: true,
       nowMs: 2000,

@@ -17,6 +17,7 @@
  *
  * @see docs/SEAT-OPS.md
  */
+import { argValue, hasFlag } from '../src/cli/argv.ts';
 // @see https://bun.com/docs/runtime/sqlite
 // @see https://bun.com/docs/api/file-io
 import { openEventStore } from "../src/institutions/event-store/open-db.ts";
@@ -37,14 +38,7 @@ import {
   seedRegistryFromPartnersToml,
 } from "../src/partner/toml-config.ts";
 
-function hasFlag(name: string): boolean {
-  return process.argv.includes(`--${name}`);
-}
 
-function argValue(name: string): string | undefined {
-  const hit = process.argv.find((a) => a.startsWith(`--${name}=`));
-  return hit ? hit.slice(name.length + 3) : undefined;
-}
 
 function redactUrl(u: string): string {
   try {

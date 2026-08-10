@@ -14,6 +14,7 @@
  *
  * Does **not** mass-insert 3898 leagues — junk filter + limit. Prefer dry-run.
  */
+import { argValue, hasFlag } from '../src/cli/argv.ts';
 import { join } from 'node:path';
 import {
   applyAttachPandoraMappings,
@@ -27,14 +28,7 @@ import {
 } from '../src/domain/pandora-domain-integrate.ts';
 import { defaultWidgetDomainCachePath } from '../src/domain/widget-domain-extract.ts';
 
-function hasFlag(name: string): boolean {
-  return process.argv.includes(`--${name}`);
-}
 
-function argValue(name: string): string | undefined {
-  const hit = process.argv.find(a => a.startsWith(`--${name}=`));
-  return hit ? hit.slice(name.length + 3) : undefined;
-}
 
 const json = hasFlag('json');
 const attachPandora = hasFlag('attach-pandora');

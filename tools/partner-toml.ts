@@ -13,6 +13,7 @@
  *
  * @see https://bun.com/docs/runtime/toml
  */
+import { argValue, hasFlag } from '../src/cli/argv.ts';
 // @see https://bun.com/docs/runtime/toml
 // @see https://bun.com/docs/runtime/sqlite
 import { openEventStore } from '../src/institutions/event-store/open-db.ts';
@@ -35,14 +36,7 @@ import {
 } from '../src/partner/toml-config.ts';
 import { getPartnerVisual } from '../src/partner/visuals.ts';
 
-function hasFlag(name: string): boolean {
-  return process.argv.includes(`--${name}`);
-}
 
-function argValue(name: string): string | undefined {
-  const hit = process.argv.find(a => a.startsWith(`--${name}=`));
-  return hit ? hit.slice(name.length + 3) : undefined;
-}
 
 async function resolvePath(): Promise<string> {
   const p = argValue('path');

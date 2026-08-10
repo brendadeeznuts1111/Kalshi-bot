@@ -12,6 +12,7 @@
  *
  * @see https://bun.com/docs/runtime/child-process#spawn-a-process-bun-spawn
  */
+import { argValue, hasFlag } from '../src/cli/argv.ts';
 import { createHash } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { gzipSync, gunzipSync } from "node:zlib";
@@ -191,18 +192,6 @@ export function decompressBuffer(buf: Buffer): Buffer {
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
-
-function arg(name: string): string | undefined {
-  const eq = Bun.argv.find((a) => a.startsWith(`--${name}=`))?.slice(name.length + 3);
-  if (eq != null) return eq;
-  const idx = Bun.argv.indexOf(`--${name}`);
-  if (idx >= 0 && idx + 1 < Bun.argv.length) return Bun.argv[idx + 1];
-  return undefined;
-}
-
-function hasFlag(name: string): boolean {
-  return Bun.argv.includes(`--${name}`);
-}
 
 async function getFileSizeBytes(path: string): Promise<number> {
   try {
@@ -786,11 +775,11 @@ export async function validateRegistry(registryDir: string = defaultRegistryDir(
 /* ------------------------------------------------------------------ */
 
 if (import.meta.main) {
-  const scopeArg = arg("scope");
+  const scopeArg = argValue("scope");
   const resolvedScope: SnapshotScope = scopeArg && (scopeArg in SCOPE_CONFIGS) ? (scopeArg as SnapshotScope) : "data-plane";
 
   if (hasFlag("list")) {
-    const dir = arg("registry") ?? registryPathForScope(resolvedScope);
+    const dir = argValue("registry") ?? registryPathForScope(resolvedScope);
     const snaps = await listSnapshots(dir);
     console.log(`Scope: ${resolvedScope} — ${snaps.length} snapshot(s)`);
     for (const s of snaps.slice(0, 20)) {
@@ -800,8 +789,8 @@ if (import.meta.main) {
   }
 
   if (hasFlag("grep")) {
-    const pattern = arg("grep") ?? "";
-    const dir = arg("registry") ?? registryPathForScope(resolvedScope);
+    const pattern = argValue("grep") ?? "";
+    const dir = argValue("registry") ?? registryPathForScope(resolvedScope);
     const entries = await readRegistry(dir);
     const matched = entries.filter((e) => JSON.stringify(e).includes(pattern));
     console.log(`Grep "${pattern}" in ${resolvedScope}: ${matched.length} match(es)`);

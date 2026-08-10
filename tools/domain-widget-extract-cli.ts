@@ -12,6 +12,7 @@
  *
  * Does not commit secrets. Pandora anonymous subscribe is enough for domain rooms.
  */
+import { argValue, hasFlag } from '../src/cli/argv.ts';
 import {
   defaultWidgetDomainCachePath,
   formatWidgetDomainSnapshot,
@@ -19,14 +20,7 @@ import {
 } from '../src/domain/widget-domain-extract.ts';
 import { extractWidgetDomainWithPandora } from '../src/partner/fantasy-ultra/widget-domain-capture.ts';
 
-function hasFlag(name: string): boolean {
-  return process.argv.includes(`--${name}`);
-}
 
-function argValue(name: string): string | undefined {
-  const hit = process.argv.find(a => a.startsWith(`--${name}=`));
-  return hit ? hit.slice(name.length + 3) : undefined;
-}
 
 const json = hasFlag('json');
 const htmlOnly = hasFlag('html-only');
