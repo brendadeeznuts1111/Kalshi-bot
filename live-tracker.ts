@@ -2,10 +2,13 @@
 /**
  * Live market event tracker (Pandora coefficient transitions).
  *
+ *   bun live-tracker.ts diff old.json new.json --event-type MARKET_ADDED --sort-by time --limit 5
  *   bun live-tracker.ts diff --event-type MARKET_ADDED --sort-by time --limit 5
  *   bun live-tracker.ts watch --market-id #197510101 --format json --watch
  *   bun live-tracker.ts analyze --summary
- *   bun live-tracker.ts diff --columns File,Event,Detail --desc
+ *   bun live-tracker.ts analyze --stats
+ *   bun live-tracker.ts diff --columns File,Event,Detail --desc --output out.csv --format csv
+ *   bun live-tracker.ts diff --tail 10 --watch --interval 2
  *
  * Logs: research/cache/live-tracker/event-{id}.jsonl
  */
@@ -13,14 +16,21 @@ import { watchEventOdds } from './src/inventory/event-lookup.ts';
 import {
   LIVE_TRACKER_EVENT_TYPES,
   appendTrackerLog,
+  computeEventStats,
   defaultLiveTrackerLogPath,
+  diffEventLists,
   eventsFromWatchUpdate,
   eventsToObjects,
   filterAndSortEvents,
+  formatEventsCsv,
+  formatEventsMarkdown,
   formatEventsTable,
+  formatSummaryLine,
+  loadEventsFlexible,
   loadTrackerEventsFromPaths,
   normalizeWireId,
   parseEventType,
+  parseSortBy,
   summarizeEventTypes,
   type DiffQuery,
   type LiveTrackerEvent,
@@ -43,23 +53,73 @@ function argValue(name: string): string | undefined {
   return undefined;
 }
 
+/** All values for a multi flag: --event-type A --event-type B or --event-type A,B */
+function argValues(name: string): string[] {
+  const out: string[] = [];
+  for (let i = 0; i < process.argv.length; i++) {
+    const a = process.argv[i]!;
+    if (a === `--${name}`) {
+      const next = process.argv[i + 1];
+      if (next && !next.startsWith('--')) {
+        out.push(...next.split(',').map(s => s.trim()).filter(Boolean));
+        i++;
+      }
+    } else if (a.startsWith(`--${name}=`)) {
+      out.push(
+        ...a
+          .slice(name.length + 3)
+          .split(',')
+          .map(s => s.trim())
+          .filter(Boolean)
+      );
+    }
+  }
+  return out;
+}
+
+function positionalAfterCmd(cmd: string): string[] {
+  const idx = process.argv.indexOf(cmd);
+  if (idx < 0) return [];
+  const out: string[] = [];
+  for (let i = idx + 1; i < process.argv.length; i++) {
+    const a = process.argv[i]!;
+    if (a.startsWith('--')) {
+      // skip flag values
+      const eq = a.includes('=');
+      if (!eq) {
+        const next = process.argv[i + 1];
+        if (next && !next.startsWith('--')) i++;
+      }
+      continue;
+    }
+    out.push(a);
+  }
+  return out;
+}
+
 function usage(code = 1): never {
   console.error(`live-tracker — Pandora market transition log
 
 Usage:
-  bun live-tracker.ts watch  --market-id|#eventId [--seconds=30] [--format json|table] [--watch] [--log=path]
-  bun live-tracker.ts diff   [--from=path|glob] [--event-type TYPE] [--sort-by time|event|detail|file]
-                             [--limit N] [--columns A,B,C] [--desc] [--format json|table]
-  bun live-tracker.ts analyze [--from=path|glob] [--summary] [--format json|table]
+  bun live-tracker.ts watch   --market-id|#id [--seconds=30] [--format json|table|csv|markdown]
+                              [--watch] [--log=path] [--output path]
+  bun live-tracker.ts diff    [old.json] [new.json] [--from=path|glob]
+                              [--event-type TYPE[,TYPE…]] [--sort-by time[,event]]
+                              [--limit N] [--offset N] [--tail N] [--desc]
+                              [--columns A,B,C] [--format table|json|csv|markdown]
+                              [--summary] [--stats] [--output path]
+                              [--watch] [--interval sec]
+  bun live-tracker.ts analyze [files…] [--summary] [--stats] [--format …] [--output path]
 
 Event types: ${LIVE_TRACKER_EVENT_TYPES.join(' | ')}
-  (aliases: market_on→MARKET_ADDED, market_off→MARKET_REMOVED, …)
+  aliases: market_on→MARKET_ADDED, market_off→MARKET_REMOVED, …
 
 Examples:
-  bun live-tracker.ts diff --event-type MARKET_ADDED --sort-by time --limit 5
+  bun live-tracker.ts diff old.json new.json --event-type MARKET_ADDED --sort-by time --limit 5
   bun live-tracker.ts watch --market-id #197510101 --format json --watch
   bun live-tracker.ts analyze --summary
   bun live-tracker.ts diff --columns File,Event,Detail --desc
+  bun live-tracker.ts diff --tail 20 --stats --output /tmp/out.json --format json
 `);
   process.exit(code);
 }
@@ -76,51 +136,56 @@ function parseColumns(): string[] | undefined {
   return c.split(',').map(s => s.trim()).filter(Boolean);
 }
 
-function parseDiffQuery(): DiffQuery {
-  const etRaw = argValue('event-type') ?? argValue('type');
-  let eventType: LiveTrackerEventType | null = null;
-  if (etRaw) {
-    eventType = parseEventType(etRaw);
-    if (!eventType) {
-      console.error(`unknown --event-type ${etRaw}`);
+function parseEventTypes(): LiveTrackerEventType[] {
+  const raws = argValues('event-type');
+  const typeAlias = argValues('type');
+  const all = [...raws, ...typeAlias];
+  if (!all.length) return [];
+  const out: LiveTrackerEventType[] = [];
+  for (const r of all) {
+    const p = parseEventType(r);
+    if (!p) {
+      console.error(`unknown --event-type ${r}`);
       process.exit(2);
     }
+    out.push(p);
   }
-  const sortRaw = (argValue('sort-by') ?? 'time').toLowerCase();
-  const sortBy = (
-    ['time', 'event', 'detail', 'file'].includes(sortRaw)
-      ? sortRaw
-      : 'time'
-  ) as DiffQuery['sortBy'];
+  return out;
+}
+
+function parseDiffQuery(): DiffQuery {
   const limitRaw = argValue('limit');
+  const offsetRaw = argValue('offset');
+  const tailRaw = argValue('tail');
   return {
-    eventType,
+    eventTypes: parseEventTypes(),
     eventId: argValue('market-id') ?? argValue('event-id') ?? argValue('id'),
     marketType: argValue('market-type'),
     period: argValue('period'),
-    sortBy,
+    sortBy: parseSortBy(argValue('sort-by') ?? 'time'),
     desc: hasFlag('desc'),
     limit: limitRaw ? Math.max(1, Number(limitRaw) || 1) : undefined,
+    offset: offsetRaw ? Math.max(0, Number(offsetRaw) || 0) : undefined,
+    tail: tailRaw ? Math.max(1, Number(tailRaw) || 1) : undefined,
     columns: parseColumns(),
   };
 }
 
-async function resolveFromPaths(): Promise<string[]> {
+async function resolveFromPaths(extra: string[] = []): Promise<string[]> {
   const from = argValue('from');
+  const hits: string[] = [...extra];
   if (from) {
-    // support simple globs via Bun.Glob
     if (from.includes('*')) {
       const g = new Bun.Glob(from);
-      const hits: string[] = [];
       for await (const p of g.scan('.')) hits.push(p);
-      return hits.sort();
+    } else {
+      hits.push(from);
     }
-    return [from];
   }
-  // default: all tracker logs
+  if (hits.length) return [...new Set(hits)].sort();
+
   const dir = joinPath(CACHE_DIR, 'live-tracker');
   const g = new Bun.Glob('*.jsonl');
-  const hits: string[] = [];
   try {
     for await (const p of g.scan(dir)) {
       hits.push(joinPath(dir, p));
@@ -131,29 +196,120 @@ async function resolveFromPaths(): Promise<string[]> {
   return hits.sort();
 }
 
-function emitEvents(events: LiveTrackerEvent[], q: DiffQuery): void {
+function renderOutput(
+  events: LiveTrackerEvent[],
+  all: LiveTrackerEvent[],
+  q: DiffQuery
+): string {
   const rows = filterAndSortEvents(events, q);
-  if (json) {
-    console.log(
-      JSON.stringify(
+  const summary = summarizeEventTypes(all);
+  const filteredSummary = summarizeEventTypes(rows);
+
+  if (hasFlag('summary') && !hasFlag('stats')) {
+    if (json || format === 'json') {
+      return JSON.stringify(
         {
-          count: rows.length,
-          total: events.length,
-          query: q,
-          events: eventsToObjects(rows, q.columns),
-          raw: rows,
+          total: all.length,
+          matched: rows.length,
+          summary: formatSummaryLine(filteredSummary),
+          byType: filteredSummary,
         },
         null,
         2
-      )
+      );
+    }
+    return (
+      `matched ${rows.length}/${all.length}\n` +
+      formatSummaryLine(filteredSummary)
     );
+  }
+
+  if (hasFlag('stats')) {
+    const stats = computeEventStats(rows);
+    if (json || format === 'json') {
+      return JSON.stringify({ matched: rows.length, total: all.length, stats }, null, 2);
+    }
+    const lines = [
+      `stats · matched ${rows.length}/${all.length}`,
+      `  by type: ${formatSummaryLine(stats.byType)}`,
+      `  time: ${stats.minTime ?? '—'} → ${stats.maxTime ?? '—'}`,
+      `  span: ${stats.spanMs != null ? `${(stats.spanMs / 1000).toFixed(2)}s` : '—'}`,
+      `  gap mean/min/max: ${
+        stats.meanGapMs != null
+          ? `${(stats.meanGapMs / 1000).toFixed(2)}s / ${(stats.minGapMs! / 1000).toFixed(2)}s / ${(stats.maxGapMs! / 1000).toFixed(2)}s`
+          : '—'
+      }`,
+    ];
+    if (!hasFlag('summary') && rows.length && format === 'table') {
+      lines.push('', formatEventsTable(rows, q.columns));
+    }
+    return lines.join('\n');
+  }
+
+  if (format === 'json' || json) {
+    return JSON.stringify(
+      {
+        count: rows.length,
+        total: all.length,
+        query: q,
+        summary: filteredSummary,
+        events: eventsToObjects(rows, q.columns),
+      },
+      null,
+      2
+    );
+  }
+  if (format === 'csv') {
+    return formatEventsCsv(rows, q.columns);
+  }
+  if (format === 'markdown' || format === 'md') {
+    return formatEventsMarkdown(rows, q.columns);
+  }
+  // table
+  const table = formatEventsTable(rows, q.columns);
+  return `${table}\n# ${rows.length}/${all.length} events`;
+}
+
+async function writeOrPrint(body: string): Promise<void> {
+  const out = argValue('output') ?? argValue('out');
+  if (out) {
+    await Bun.write(out, body.endsWith('\n') ? body : body + '\n');
+    console.error(`wrote ${out} (${body.length} bytes)`);
   } else {
-    console.log(formatEventsTable(rows, q.columns));
-    console.error(`# ${rows.length}/${events.length} events`);
+    console.log(body);
   }
 }
 
-// ── watch ──────────────────────────────────────────────────────────────────
+async function loadDiffEvents(): Promise<{
+  all: LiveTrackerEvent[];
+  paths: string[];
+  mode: 'two-file' | 'logs';
+}> {
+  const pos = positionalAfterCmd('diff');
+  // two-file: diff old.json new.json
+  if (pos.length >= 2) {
+    const [oldP, newP] = pos;
+    const prev = await loadEventsFlexible(oldP!);
+    const next = await loadEventsFlexible(newP!);
+    // If both are event logs, structural set-diff; if only new has events, show new
+    const all =
+      prev.length || next.length
+        ? diffEventLists(prev, next, { oldFile: oldP, newFile: newP })
+        : [];
+    // Also include raw next-only stream if diff empty but next has data
+    const events = all.length ? all : next.map(e => ({ ...e, file: newP }));
+    return { all: events, paths: [oldP!, newP!], mode: 'two-file' };
+  }
+  if (pos.length === 1) {
+    const events = await loadEventsFlexible(pos[0]!);
+    return { all: events, paths: [pos[0]!], mode: 'logs' };
+  }
+  const paths = await resolveFromPaths();
+  const all = await loadTrackerEventsFromPaths(paths);
+  return { all, paths, mode: 'logs' };
+}
+
+// ── watch (live Pandora) ───────────────────────────────────────────────────
 if (cmd === 'watch') {
   const idRaw =
     argValue('market-id') ??
@@ -171,10 +327,14 @@ if (cmd === 'watch') {
   }
 
   const seconds = Math.min(
-    Math.max(Number(argValue('seconds') ?? (hasFlag('watch') ? '60' : '30')) || 30, 5),
+    Math.max(
+      Number(argValue('seconds') ?? (hasFlag('watch') ? '60' : '30')) || 30,
+      5
+    ),
     600
   );
-  const host = argValue('host') ?? (hasFlag('spandora') ? 'spandora' : 'pandora');
+  const host =
+    argValue('host') ?? (hasFlag('spandora') ? 'spandora' : 'pandora');
   const logPath = argValue('log') ?? defaultLiveTrackerLogPath(eventId);
   const includeTicks = hasFlag('ticks');
 
@@ -187,7 +347,7 @@ if (cmd === 'watch') {
     pandoraHost: host,
     onUpdate: u => {
       const events = eventsFromWatchUpdate(u, { includeTicks });
-      if (json) {
+      if (json || format === 'json') {
         console.log(
           JSON.stringify(
             {
@@ -221,15 +381,8 @@ if (cmd === 'watch') {
   const all = history.flatMap(u =>
     eventsFromWatchUpdate(u, { includeTicks, file: logPath })
   );
-  if (!json) {
-    console.error(
-      `# watch done updates=${history.length} events=${all.length} log=${logPath}`
-    );
-    if (all.length) console.log(formatEventsTable(filterAndSortEvents(all, { sortBy: 'time' })));
-  } else if (!hasFlag('watch')) {
-    // final envelope when not streaming-only
-    console.log(
-      JSON.stringify(
+  const body = json
+    ? JSON.stringify(
         {
           watch: true,
           eventId,
@@ -241,6 +394,18 @@ if (cmd === 'watch') {
         null,
         2
       )
+    : `# watch done updates=${history.length} events=${all.length} log=${logPath}` +
+      (all.length
+        ? '\n' +
+          formatEventsTable(
+            filterAndSortEvents(all, { sortBy: ['time'] })
+          )
+        : '');
+  if (!hasFlag('watch') || argValue('output')) {
+    await writeOrPrint(json ? body : body);
+  } else if (!json) {
+    console.error(
+      `# watch done updates=${history.length} events=${all.length} log=${logPath}`
     );
   }
   process.exit(0);
@@ -248,55 +413,56 @@ if (cmd === 'watch') {
 
 // ── diff ───────────────────────────────────────────────────────────────────
 if (cmd === 'diff') {
-  const paths = await resolveFromPaths();
-  if (!paths.length) {
-    console.error(
-      'no tracker logs — run: bun live-tracker.ts watch --market-id <id>'
-    );
-    process.exit(1);
+  const q = parseDiffQuery();
+  const intervalSec = Math.max(
+    0.5,
+    Number(argValue('interval') ?? '2') || 2
+  );
+
+  const runOnce = async (clear: boolean) => {
+    const { all, paths, mode } = await loadDiffEvents();
+    if (!paths.length && !all.length) {
+      console.error(
+        'no tracker logs — run: bun live-tracker.ts watch --market-id <id>\n' +
+          '  or: bun live-tracker.ts diff old.json new.json'
+      );
+      process.exit(1);
+    }
+    const body = renderOutput(all, all, q);
+    if (clear && hasFlag('watch') && !argValue('output')) {
+      console.clear();
+      console.error(
+        `live-tracker diff [${mode}] ${paths.map(p => p.split('/').pop()).join(' → ')} · ${new Date().toISOString()}`
+      );
+    }
+    await writeOrPrint(body);
+  };
+
+  await runOnce(false);
+
+  if (hasFlag('watch')) {
+    console.error(`# watching every ${intervalSec}s (Ctrl-C to stop)`);
+    for (;;) {
+      await Bun.sleep(intervalSec * 1000);
+      await runOnce(true);
+    }
   }
-  const events = await loadTrackerEventsFromPaths(paths);
-  emitEvents(events, parseDiffQuery());
   process.exit(0);
 }
 
 // ── analyze ────────────────────────────────────────────────────────────────
 if (cmd === 'analyze') {
-  const paths = await resolveFromPaths();
-  const events = await loadTrackerEventsFromPaths(paths);
-  const summary = summarizeEventTypes(events);
-  if (hasFlag('summary') || !hasFlag('detail')) {
-    if (json) {
-      console.log(
-        JSON.stringify(
-          {
-            files: paths.length,
-            totalEvents: events.length,
-            byType: summary,
-          },
-          null,
-          2
-        )
-      );
-    } else {
-      console.log(
-        `live-tracker analyze · files=${paths.length} events=${events.length}`
-      );
-      const wType = Math.max(
-        12,
-        ...summary.map(s => s.eventType.length),
-        'Event type'.length
-      );
-      console.log('Event type'.padEnd(wType) + '  Count');
-      console.log('-'.repeat(wType) + '  -----');
-      for (const s of summary) {
-        console.log(s.eventType.padEnd(wType) + '  ' + String(s.count));
-      }
-      if (!summary.length) console.log('(no events in logs)');
-    }
-  } else {
-    emitEvents(events, parseDiffQuery());
+  const pos = positionalAfterCmd('analyze');
+  const paths = pos.length ? pos : await resolveFromPaths();
+  const events = paths.length
+    ? await loadTrackerEventsFromPaths(paths)
+    : [];
+  // default analyze = summary
+  if (!hasFlag('detail') && !hasFlag('stats')) {
+    process.argv.push('--summary');
   }
+  const body = renderOutput(events, events, parseDiffQuery());
+  await writeOrPrint(body);
   process.exit(0);
 }
 

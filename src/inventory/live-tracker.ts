@@ -188,24 +188,76 @@ export function parseEventType(raw: string): LiveTrackerEventType | null {
   return aliases[u] ?? null;
 }
 
+export type SortKey = 'time' | 'event' | 'type' | 'detail' | 'file' | 'eventid';
+
 export type DiffQuery = {
+  /** One or more event types (OR filter). */
+  eventTypes?: LiveTrackerEventType[];
+  /** @deprecated use eventTypes */
   eventType?: LiveTrackerEventType | null;
   eventId?: string | number | null;
   marketType?: string | null;
   period?: string | null;
-  sortBy?: 'time' | 'event' | 'detail' | 'file';
+  /** Single key or multi-key (time,event). */
+  sortBy?: SortKey | SortKey[];
   desc?: boolean;
   limit?: number;
+  offset?: number;
+  /** Keep only last N after sort (like tail). Applied after offset/limit chain: sort → offset → limit, unless tail set then sort desc time → limit. */
+  tail?: number;
   columns?: string[];
 };
+
+function sortKeyValue(e: LiveTrackerEvent, key: SortKey): string {
+  switch (key) {
+    case 'time':
+      return e.time;
+    case 'event':
+    case 'type':
+      return e.eventType;
+    case 'detail':
+      return e.detail;
+    case 'file':
+      return e.file ?? '';
+    case 'eventid':
+      return String(e.eventId);
+    default:
+      return e.time;
+  }
+}
+
+export function parseSortBy(raw: string | undefined | null): SortKey[] {
+  if (!raw?.trim()) return ['time'];
+  const keys = raw
+    .split(',')
+    .map(s => s.trim().toLowerCase().replace(/[^a-z]/g, '') as SortKey)
+    .filter(Boolean);
+  const allowed = new Set<SortKey>([
+    'time',
+    'event',
+    'type',
+    'detail',
+    'file',
+    'eventid',
+  ]);
+  const out = keys.filter(k => allowed.has(k));
+  return out.length ? out : ['time'];
+}
 
 export function filterAndSortEvents(
   events: LiveTrackerEvent[],
   q: DiffQuery
 ): LiveTrackerEvent[] {
   let rows = events;
-  if (q.eventType) {
-    rows = rows.filter(e => e.eventType === q.eventType);
+  const types =
+    q.eventTypes?.length
+      ? q.eventTypes
+      : q.eventType
+        ? [q.eventType]
+        : null;
+  if (types?.length) {
+    const set = new Set(types);
+    rows = rows.filter(e => set.has(e.eventType));
   }
   if (q.eventId != null && String(q.eventId).trim() !== '') {
     const id = String(q.eventId).replace(/^#/, '');
@@ -218,18 +270,30 @@ export function filterAndSortEvents(
     rows = rows.filter(e => e.period === q.period);
   }
 
-  const sortBy = q.sortBy ?? 'time';
+  // --tail: most recent N by time (ignore other sort for selection)
+  if (q.tail != null && q.tail > 0) {
+    rows = [...rows].sort((a, b) => b.time.localeCompare(a.time)).slice(0, q.tail);
+    // present oldest→newest unless --desc
+    if (!q.desc) rows = rows.reverse();
+    return rows;
+  }
+
+  const sortKeys: SortKey[] = Array.isArray(q.sortBy)
+    ? q.sortBy
+    : q.sortBy
+      ? [q.sortBy]
+      : ['time'];
   const dir = q.desc ? -1 : 1;
   rows = [...rows].sort((a, b) => {
-    let cmp = 0;
-    if (sortBy === 'time') cmp = a.time.localeCompare(b.time);
-    else if (sortBy === 'event') cmp = a.eventType.localeCompare(b.eventType);
-    else if (sortBy === 'detail') cmp = a.detail.localeCompare(b.detail);
-    else if (sortBy === 'file')
-      cmp = (a.file ?? '').localeCompare(b.file ?? '');
-    return cmp * dir;
+    for (const key of sortKeys) {
+      const cmp = sortKeyValue(a, key).localeCompare(sortKeyValue(b, key));
+      if (cmp !== 0) return cmp * dir;
+    }
+    return 0;
   });
 
+  const offset = q.offset != null && q.offset > 0 ? q.offset : 0;
+  if (offset) rows = rows.slice(offset);
   if (q.limit != null && q.limit > 0) {
     rows = rows.slice(0, q.limit);
   }
@@ -246,6 +310,106 @@ export function summarizeEventTypes(
   return [...m.entries()]
     .map(([eventType, count]) => ({ eventType, count }))
     .sort((a, b) => b.count - a.count || a.eventType.localeCompare(b.eventType));
+}
+
+export type EventTimeStats = {
+  total: number;
+  byType: Array<{ eventType: string; count: number }>;
+  /** Epoch ms of earliest/latest event time (parseable ISO). */
+  minTime: string | null;
+  maxTime: string | null;
+  spanMs: number | null;
+  /** Mean gap between consecutive events (ms), when ≥2 events. */
+  meanGapMs: number | null;
+  minGapMs: number | null;
+  maxGapMs: number | null;
+};
+
+export function computeEventStats(events: LiveTrackerEvent[]): EventTimeStats {
+  const byType = summarizeEventTypes(events);
+  if (!events.length) {
+    return {
+      total: 0,
+      byType,
+      minTime: null,
+      maxTime: null,
+      spanMs: null,
+      meanGapMs: null,
+      minGapMs: null,
+      maxGapMs: null,
+    };
+  }
+  const times = events
+    .map(e => ({ t: e.time, ms: Date.parse(e.time) }))
+    .filter(x => Number.isFinite(x.ms))
+    .sort((a, b) => a.ms - b.ms);
+  if (!times.length) {
+    return {
+      total: events.length,
+      byType,
+      minTime: null,
+      maxTime: null,
+      spanMs: null,
+      meanGapMs: null,
+      minGapMs: null,
+      maxGapMs: null,
+    };
+  }
+  const gaps: number[] = [];
+  for (let i = 1; i < times.length; i++) {
+    gaps.push(times[i]!.ms - times[i - 1]!.ms);
+  }
+  const minTime = times[0]!.t;
+  const maxTime = times[times.length - 1]!.t;
+  const spanMs = times[times.length - 1]!.ms - times[0]!.ms;
+  return {
+    total: events.length,
+    byType,
+    minTime,
+    maxTime,
+    spanMs,
+    meanGapMs: gaps.length
+      ? gaps.reduce((a, b) => a + b, 0) / gaps.length
+      : null,
+    minGapMs: gaps.length ? Math.min(...gaps) : null,
+    maxGapMs: gaps.length ? Math.max(...gaps) : null,
+  };
+}
+
+export function formatSummaryLine(
+  summary: Array<{ eventType: string; count: number }>
+): string {
+  if (!summary.length) return '(no events)';
+  return summary.map(s => `${s.eventType}: ${s.count}`).join(', ');
+}
+
+export function formatEventsCsv(
+  events: LiveTrackerEvent[],
+  columns?: string[] | null
+): string {
+  const cols = resolveColumns(columns);
+  const keys = cols.map(c => c.toLowerCase().replace(/[^a-z0-9]/g, ''));
+  const esc = (s: string) => {
+    if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+    return s;
+  };
+  const lines = [cols.map(esc).join(',')];
+  for (const e of events) {
+    lines.push(
+      keys
+        .map(k => esc((COL_MAP[k] ?? (() => '—'))(e)))
+        .join(',')
+    );
+  }
+  return lines.join('\n');
+}
+
+export function formatEventsMarkdown(
+  events: LiveTrackerEvent[],
+  columns?: string[] | null
+): string {
+  // same as table (GFM)
+  return formatEventsTable(events, columns);
 }
 
 const COL_MAP: Record<string, (e: LiveTrackerEvent) => string> = {
@@ -314,28 +478,72 @@ export function eventsToObjects(
   });
 }
 
+/** Parse a single JSON object into events when possible. */
+export function parseTrackerJsonValue(
+  row: unknown,
+  file?: string
+): LiveTrackerEvent[] {
+  if (row == null) return [];
+  if (Array.isArray(row)) {
+    // array of events
+    if (row.length && typeof row[0] === 'object' && row[0] && 'eventType' in (row[0] as object)) {
+      return (row as LiveTrackerEvent[]).map(e => ({
+        ...e,
+        file: e.file ?? file,
+      }));
+    }
+    return [];
+  }
+  if (typeof row !== 'object') return [];
+  const o = row as Record<string, unknown>;
+  if (Array.isArray(o.events)) {
+    return (o.events as LiveTrackerEvent[]).map(e => ({
+      ...e,
+      file: e.file ?? file,
+    }));
+  }
+  if (typeof o.eventType === 'string' && typeof o.time === 'string') {
+    return [
+      {
+        ...(o as unknown as LiveTrackerEvent),
+        file: file ?? (o.file as string | undefined),
+      },
+    ];
+  }
+  if (typeof o.at === 'string' && (typeof o.eventId === 'number' || typeof o.eventId === 'string')) {
+    const u = o as unknown as OddsWatchUpdate;
+    return eventsFromWatchUpdate(u, { file });
+  }
+  return [];
+}
+
 /** Parse JSONL tracker log (one LiveTrackerLogRecord or LiveTrackerEvent per line). */
 export function parseTrackerJsonl(
   text: string,
   file?: string
 ): LiveTrackerEvent[] {
+  const trimmed = text.trim();
+  if (!trimmed) return [];
+
+  // Whole-file JSON (array or object)
+  if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(trimmed) as unknown;
+      const fromDoc = parseTrackerJsonValue(parsed, file);
+      if (fromDoc.length) return fromDoc;
+      // JSONL disguised as multi-line: fall through to line mode if object has no events
+    } catch {
+      /* line mode */
+    }
+  }
+
   const out: LiveTrackerEvent[] = [];
   for (const line of text.split('\n')) {
     const t = line.trim();
     if (!t) continue;
     try {
-      const row = JSON.parse(t) as Record<string, unknown>;
-      if (Array.isArray(row.events)) {
-        for (const e of row.events as LiveTrackerEvent[]) {
-          out.push({ ...e, file: e.file ?? file });
-        }
-      } else if (typeof row.eventType === 'string' && row.time) {
-        out.push({ ...(row as unknown as LiveTrackerEvent), file: file ?? (row.file as string | undefined) });
-      } else if (typeof row.at === 'string' && typeof row.eventId === 'number') {
-        // OddsWatchUpdate shape
-        const u = row as unknown as OddsWatchUpdate;
-        out.push(...eventsFromWatchUpdate(u, { file }));
-      }
+      const row = JSON.parse(t) as unknown;
+      out.push(...parseTrackerJsonValue(row, file));
     } catch {
       /* skip bad lines */
     }
@@ -354,6 +562,65 @@ export async function loadTrackerEventsFromPaths(
     all.push(...parseTrackerJsonl(text, p));
   }
   return all;
+}
+
+/**
+ * Diff two event lists: events only in `next` (MARKET_ADDED-style presence),
+ * plus PRICE_CHANGE when same key has different detail/from/to.
+ * Labels file as basename of paths.
+ */
+export function diffEventLists(
+  prev: LiveTrackerEvent[],
+  next: LiveTrackerEvent[],
+  options: { oldFile?: string; newFile?: string; at?: string } = {}
+): LiveTrackerEvent[] {
+  const at = options.at ?? new Date().toISOString();
+  const oldBase = options.oldFile?.split('/').pop() ?? 'old';
+  const newBase = options.newFile?.split('/').pop() ?? 'new';
+  const keyOf = (e: LiveTrackerEvent) =>
+    `${e.eventType}\0${e.eventId}\0${e.period ?? ''}\0${e.marketType ?? ''}\0${e.selection ?? ''}\0${e.detail}`;
+  const prevKeys = new Set(prev.map(keyOf));
+  const nextKeys = new Set(next.map(keyOf));
+  const out: LiveTrackerEvent[] = [];
+
+  for (const e of next) {
+    if (!prevKeys.has(keyOf(e))) {
+      out.push({
+        ...e,
+        time: e.time || at,
+        file: newBase,
+        detail: e.detail.startsWith('[+]') ? e.detail : `[+] ${e.detail}`,
+      });
+    }
+  }
+  for (const e of prev) {
+    if (!nextKeys.has(keyOf(e))) {
+      out.push({
+        ...e,
+        time: e.time || at,
+        file: oldBase,
+        eventType:
+          e.eventType === 'MARKET_ADDED'
+            ? 'MARKET_REMOVED'
+            : e.eventType === 'SELECTION_ADDED'
+              ? 'SELECTION_REMOVED'
+              : e.eventType,
+        detail: e.detail.startsWith('[-]') ? e.detail : `[-] ${e.detail}`,
+      });
+    }
+  }
+  return out.sort((a, b) => a.time.localeCompare(b.time));
+}
+
+/** Load events from path; if JSONL empty but file is list of logs, still ok. */
+export async function loadEventsFlexible(
+  path: string
+): Promise<LiveTrackerEvent[]> {
+  const f = Bun.file(path);
+  if (!(await f.exists())) {
+    throw new Error(`file not found: ${path}`);
+  }
+  return parseTrackerJsonl(await f.text(), path);
 }
 
 export async function appendTrackerLog(

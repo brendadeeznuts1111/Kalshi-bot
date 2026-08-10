@@ -1,11 +1,16 @@
 // @see https://bun.com/docs/test/index#run-tests
 import { describe, expect, test } from 'bun:test';
 import {
+  computeEventStats,
+  diffEventLists,
   eventsFromWatchUpdate,
   filterAndSortEvents,
+  formatEventsCsv,
   formatEventsTable,
+  formatSummaryLine,
   offerTransitionToEvent,
   parseEventType,
+  parseSortBy,
   parseTrackerJsonl,
   summarizeEventTypes,
 } from '../../src/inventory/live-tracker.ts';
@@ -39,20 +44,35 @@ describe('live-tracker', () => {
       ),
     ];
     const added = filterAndSortEvents(events, {
-      eventType: 'MARKET_ADDED',
-      sortBy: 'time',
+      eventTypes: ['MARKET_ADDED'],
+      sortBy: ['time'],
       limit: 5,
     });
     expect(added).toHaveLength(2);
     expect(added[0]!.time).toBe('2026-08-10T00:00:02.000Z');
 
-    const desc = filterAndSortEvents(events, { sortBy: 'time', desc: true });
+    const desc = filterAndSortEvents(events, {
+      sortBy: ['time'],
+      desc: true,
+    });
     expect(desc[0]!.time).toBe('2026-08-10T00:00:03.000Z');
 
     const table = formatEventsTable(added, ['File', 'Event', 'Detail']);
     expect(table).toContain('File');
     expect(table).toContain('MARKET_ADDED');
     expect(table).toContain('b.jsonl');
+
+    const tail = filterAndSortEvents(events, { tail: 2 });
+    expect(tail).toHaveLength(2);
+    expect(tail[0]!.time <= tail[1]!.time).toBe(true);
+
+    const multi = filterAndSortEvents(events, {
+      eventTypes: ['MARKET_ADDED', 'PRICE_CHANGE'],
+      offset: 1,
+      limit: 2,
+      sortBy: ['time'],
+    });
+    expect(multi.length).toBeLessThanOrEqual(2);
   });
 
   test('eventsFromWatchUpdate + summarize', () => {
@@ -104,5 +124,33 @@ describe('live-tracker', () => {
     const ev = parseTrackerJsonl(text, 'log.jsonl');
     expect(ev).toHaveLength(2);
     expect(ev[0]!.file).toBe('log.jsonl');
+  });
+
+  test('diffEventLists / stats / csv / multi sort keys', () => {
+    const a = [
+      offerTransitionToEvent(
+        { kind: 'market_on', period: 'm', marketType: '3' },
+        { at: '2026-08-10T00:00:01.000Z', eventId: 1 }
+      ),
+    ];
+    const b = [
+      ...a,
+      offerTransitionToEvent(
+        { kind: 'market_on', period: 's1', marketType: '3' },
+        { at: '2026-08-10T00:00:02.000Z', eventId: 1 }
+      ),
+    ];
+    const d = diffEventLists(a, b, { oldFile: 'old.json', newFile: 'new.json' });
+    expect(d.some(e => e.eventType === 'MARKET_ADDED' && e.detail.includes('s1'))).toBe(
+      true
+    );
+    expect(parseSortBy('time,event')).toEqual(['time', 'event']);
+    const stats = computeEventStats(b);
+    expect(stats.total).toBe(2);
+    expect(stats.spanMs).toBe(1000);
+    expect(formatSummaryLine(summarizeEventTypes(b))).toContain('MARKET_ADDED');
+    const csv = formatEventsCsv(b, ['Event', 'Detail']);
+    expect(csv.split('\n')[0]).toBe('Event,Detail');
+    expect(csv).toContain('MARKET_ADDED');
   });
 });
