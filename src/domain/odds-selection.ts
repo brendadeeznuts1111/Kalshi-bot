@@ -1,16 +1,19 @@
 /**
- * Clean separation of inventory identity vs odds/ticket selection coordinates.
+ * Three planes — keep separate:
  *
- * - Inventory: stream-list → skin_events.stream_id (coverage)
- * - Odds: widget #!/event/N · Pandora eventCoefficients · ticket componentBets
+ * 1. Inventory — stream-list → skin_events.stream_id
+ * 2. Odds     — Pandora eventCoefficients (period / marketType / selection)
+ * 3. Ticket   — place-bet componentBets (periodId / marketId / key)
  *
- * Do not treat stream_id and eventId as interchangeable. DOM ids like
- * `set-to-max-{event}-m-{n}` are incomplete (trailing n is ambiguous); ticket
- * coords (eventId + periodId + marketId + key) are SSOT for a priced leg.
+ * Odds eventId and ticket eventId are usually the same wire number, but the
+ * field names and types stay distinct so callers do not mix planes by accident.
+ * DOM `set-to-max-{event}-m-{n}` is incomplete — not a TicketLeg or OddsLine.
  */
 
 import type { CompetitionId } from './competitions.ts';
 import type { SportId } from './sports.ts';
+
+// ── 1. Inventory ───────────────────────────────────────────────────────────
 
 /** Inventory plane (stream-list → skin_events). */
 export type InventoryEventRef = {
@@ -19,37 +22,22 @@ export type InventoryEventRef = {
   competitionId?: CompetitionId;
 };
 
-/** Odds / widget / ticket plane (Pandora + place-bet). */
+// ── 2. Odds (Pandora) ──────────────────────────────────────────────────────
+
+/** Widget / Pandora match id (`#!/event/N`, coefficient room). */
 export type OddsEventRef = {
-  /** Opaque wire id — same space as #!/event/N and ticket eventId. */
   eventId: string; // brand-ok — opaque provider event primary key
 };
 
 /**
- * Full priced selection (ticket componentBet + coefficient store).
- * periodId `m` = match; marketId `3` = moneyline (proven).
+ * One priced Pandora coefficient line.
+ * Field names match the coefficient store (`period`, `marketType`, `selection`).
  */
-export type OddsSelection = {
+export type OddsLine = {
   eventId: string; // brand-ok — opaque provider event primary key
-  periodId: string;
-  marketId: string;
-  key: string;
-};
-
-/** Proven Pandora / ticket marketId labels only. */
-export const KNOWN_MARKET_LABELS = {
-  '3': 'moneyline',
-  '5': 'total',
-  '6': 'spread',
-} as const;
-
-export type KnownMarketId = keyof typeof KNOWN_MARKET_LABELS;
-
-export type TicketLegCoords = {
-  eventId: string | number;
-  periodId?: string | null;
-  marketId?: string | number | null;
-  key?: string | null;
+  period: string;
+  marketType: string;
+  selection: string;
 };
 
 export type CoefficientLineCoords = {
@@ -58,6 +46,89 @@ export type CoefficientLineCoords = {
   marketType: string;
   selection: string;
 };
+
+export function oddsLineFromCoefficient(line: CoefficientLineCoords): OddsLine | undefined {
+  const eventId = String(line.eventId ?? '').trim();
+  const period = String(line.period ?? '').trim();
+  const marketType = String(line.marketType ?? '').trim();
+  const selection = String(line.selection ?? '').trim();
+  if (!eventId || !period || !marketType || !selection) return undefined;
+  return { eventId, period, marketType, selection };
+}
+
+export function describeOddsLine(line: OddsLine): string {
+  return (
+    `odds event=${line.eventId}` +
+    ` period=${periodLabel(line.period)}` +
+    ` market=${marketLabel(line.marketType)}` +
+    ` selection=${line.selection}`
+  );
+}
+
+/** Concrete Pandora-shaped capture: Darin vs Plachy, Plachy ML. */
+export const EXAMPLE_DARIN_PLACHY_ODDS_LINE: OddsLine = {
+  eventId: '196878741',
+  period: 'm',
+  marketType: '3',
+  selection: '2',
+};
+
+// ── 3. Ticket (place-bet) ──────────────────────────────────────────────────
+
+/**
+ * One ticket componentBet selection.
+ * Field names match ticket wire (`periodId`, `marketId`, `key`).
+ */
+export type TicketLeg = {
+  eventId: string; // brand-ok — opaque provider event primary key
+  periodId: string;
+  marketId: string;
+  key: string;
+};
+
+export type TicketLegCoords = {
+  eventId: string | number;
+  periodId?: string | null;
+  marketId?: string | number | null;
+  key?: string | null;
+};
+
+export function ticketLegFromWire(leg: TicketLegCoords): TicketLeg | undefined {
+  const eventId = String(leg.eventId ?? '').trim();
+  const periodId = String(leg.periodId ?? '').trim();
+  const marketId = leg.marketId != null ? String(leg.marketId).trim() : '';
+  const key = leg.key != null ? String(leg.key).trim() : '';
+  if (!eventId || !periodId || !marketId || !key) return undefined;
+  return { eventId, periodId, marketId, key };
+}
+
+export function describeTicketLeg(leg: TicketLeg): string {
+  return (
+    `ticket event=${leg.eventId}` +
+    ` period=${periodLabel(leg.periodId)}` +
+    ` market=${marketLabel(leg.marketId)}` +
+    ` key=${leg.key}`
+  );
+}
+
+/** Concrete ticket capture: Darin vs Plachy, Plachy ML. */
+export const EXAMPLE_DARIN_PLACHY_TICKET_LEG: TicketLeg = {
+  eventId: '196878741',
+  periodId: 'm',
+  marketId: '3',
+  key: '2',
+};
+
+// ── Shared labels + explicit bridges ────────────────────────────────────────
+
+/** Proven market type / marketId labels (Pandora + ticket share these ids). */
+export const KNOWN_MARKET_LABELS = {
+  '3': 'moneyline',
+  '5': 'total',
+  '6': 'spread',
+} as const;
+
+export type KnownMarketId = keyof typeof KNOWN_MARKET_LABELS;
 
 export function marketLabel(marketId: string): string {
   const id = marketId.trim();
@@ -71,40 +142,22 @@ export function periodLabel(periodId: string): string {
   return p || '?';
 }
 
-export function selectionFromTicketLeg(leg: TicketLegCoords): OddsSelection | undefined {
-  const eventId = String(leg.eventId ?? '').trim();
-  const periodId = String(leg.periodId ?? '').trim();
-  const marketId = leg.marketId != null ? String(leg.marketId).trim() : '';
-  const key = leg.key != null ? String(leg.key).trim() : '';
-  if (!eventId || !periodId || !marketId || !key) return undefined;
-  return { eventId, periodId, marketId, key };
+/** Explicit bridge: odds line → ticket leg (same wire numbers, new type). */
+export function ticketLegFromOddsLine(line: OddsLine): TicketLeg {
+  return {
+    eventId: line.eventId,
+    periodId: line.period,
+    marketId: line.marketType,
+    key: line.selection,
+  };
 }
 
-export function selectionFromCoefficientLine(
-  line: CoefficientLineCoords
-): OddsSelection | undefined {
-  const eventId = String(line.eventId ?? '').trim();
-  const periodId = String(line.period ?? '').trim();
-  const marketId = String(line.marketType ?? '').trim();
-  const key = String(line.selection ?? '').trim();
-  if (!eventId || !periodId || !marketId || !key) return undefined;
-  return { eventId, periodId, marketId, key };
+/** Explicit bridge: ticket leg → odds line. */
+export function oddsLineFromTicketLeg(leg: TicketLeg): OddsLine {
+  return {
+    eventId: leg.eventId,
+    period: leg.periodId,
+    marketType: leg.marketId,
+    selection: leg.key,
+  };
 }
-
-/** Human-readable selection line for logs / docs. */
-export function describeSelection(sel: OddsSelection): string {
-  return (
-    `event=${sel.eventId}` +
-    ` period=${periodLabel(sel.periodId)}` +
-    ` market=${marketLabel(sel.marketId)}` +
-    ` side=${sel.key}`
-  );
-}
-
-/** Concrete capture: Darin vs Plachy, Plachy ML. */
-export const EXAMPLE_DARIN_PLACHY_SELECTION: OddsSelection = {
-  eventId: '196878741',
-  periodId: 'm',
-  marketId: '3',
-  key: '2',
-};
