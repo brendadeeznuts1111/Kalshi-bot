@@ -90,7 +90,7 @@ bun run inventory:leagues -- --promote
 ```
 
 Logs per tick: `seen` / `new` / `updated`, `sports:` histogram, `newBySport:`,
-`leagues:` summary, up to 12 `+` event lines (+ `+L` for new leagues on watch/sync).
+`leagues:` summary, up to 8 `+L` new-league lines, up to 12 `+` event lines.
 
 Playbook: [`docs/INVENTORY.md`](INVENTORY.md) · adapter: [`FANTASY-ULTRA.md`](FANTASY-ULTRA.md).
 

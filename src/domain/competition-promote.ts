@@ -16,7 +16,7 @@ import { isSportId, type SportId } from './sports.ts';
 
 /** Structural markers that signal a real competition, not a matchup/person. */
 const LEAGUE_MARKERS =
-  /\b(league|liga|cup|open|division|championship|series|masters|premier|tour|challenger|atp|wta|itf|ipbl|mpl|nba|nhl|mlb|ncaa|nation|world|super|pro|t20|ipl|qualify|playoff|tournament|grand|slam|setka|regional|friendl|women|men|u\d{2}|youth|indoor|summer|winter|classic|trophy|bowl|prix|formula|f1|ufc|wbc|wba|ibf|cage|cdbl|rhl|upvl)\b/i;
+  /\b(league|liga|cup|open|division|championship|series|seriya|masters|premier|tour|challenger|atp|wta|itf|ipbl|mpl|nba|nhl|mlb|ncaa|nation|world|super|pro|t20|ipl|qualify|playoff|tournament|grand|slam|setka|regional|friendl|women|men|u\d{2}|youth|indoor|summer|winter|classic|trophy|bowl|prix|formula|f1|ufc|wbc|wba|ibf|cage|cdbl|rhl|mnhl|3hl|bskt|upvl|att)\b/i;
 
 export type JunkLeagueReason =
   | 'empty'
@@ -80,9 +80,12 @@ export function junkLeagueReason(league: string): JunkLeagueReason | null {
 
   // Single short token with no structure (table-tennis person nicknames etc.)
   const tokens = raw.split(/[\s.]+/).filter(Boolean);
-  if (tokens.length === 1 && raw.length < 10 && !hasLeagueStructureMarker(raw)) {
+  if (tokens.length === 1 && raw.length < 12 && !hasLeagueStructureMarker(raw)) {
     return 'no_structure';
   }
+
+  // Two tokens but first is a known circuit prefix (ATT. Saransk, IPBL CAGE)
+  // already passes when markers fire; no extra gate.
 
   return null;
 }

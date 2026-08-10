@@ -51,13 +51,11 @@ function argValue(name: string): string | undefined {
   return hit ? hit.slice(name.length + 3) : undefined;
 }
 
-function resolveProfile(dryRun: boolean): PartnerAccountProfile {
+/** Public stream-list works without real Fantasy login (same as inventory:sync / cron). */
+function resolveProfile(_dryRun: boolean): PartnerAccountProfile {
   const fromEnv = loadFantasy402ProfileFromEnv();
   if (fromEnv) return fromEnv;
-  if (
-    dryRun &&
-    (Bun.env.INVENTORY_SYNC_PUBLIC === '1' || Bun.env.PARTNER_SYNC_PUBLIC === '1')
-  ) {
+  if (Bun.env.INVENTORY_SYNC_PUBLIC === '1' || Bun.env.PARTNER_SYNC_PUBLIC === '1') {
     return {
       id: 'fantasy402-public',
       partner: 'fantasy402',

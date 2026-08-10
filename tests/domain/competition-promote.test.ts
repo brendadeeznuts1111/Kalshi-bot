@@ -28,10 +28,16 @@ describe('competition promote', () => {
       'matchup_blob'
     );
     expect(junkLeagueReason('Polysha')).toBe('no_structure');
+    expect(junkLeagueReason('Filippini')).toBe('no_structure');
     expect(isPromotableLeagueLabel('Setka Cup')).toBe(true);
     expect(isPromotableLeagueLabel('Angola. Liga Bantu')).toBe(true);
     expect(isPromotableLeagueLabel('China Open 2026 - 2026/2027')).toBe(true);
     expect(isPromotableLeagueLabel('IPBL. Prime Division')).toBe(true);
+    // Circuit / translit markers
+    expect(isPromotableLeagueLabel('ATT. Saransk')).toBe(true);
+    expect(isPromotableLeagueLabel('CAGE')).toBe(true);
+    expect(isPromotableLeagueLabel('Evropeyskaya seriya')).toBe(true);
+    expect(isPromotableLeagueLabel('Indoor Series')).toBe(true);
   });
 
   test('mintCompetitionId + plan skips already-seeded; inserts novel', () => {

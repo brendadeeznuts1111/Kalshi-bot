@@ -598,6 +598,30 @@ export const COMPETITIONS = [
     gender: "unknown",
     providerMappings: { plive: { inventoryBucket: "horse_racing", leagueKey: "Japan. Urawa" } },
   },
+  {
+    id: "tennis.att_saransk",
+    sportId: "tennis",
+    displayName: "ATT. Saransk",
+    aliases: ["ATT. Saransk"],
+    gender: "unknown",
+    providerMappings: { plive: { inventoryBucket: "tennis", leagueKey: "ATT. Saransk" } },
+  },
+  {
+    id: "cricket.evropeyskaya_seriya",
+    sportId: "cricket",
+    displayName: "Evropeyskaya seriya",
+    aliases: ["Evropeyskaya seriya"],
+    gender: "unknown",
+    providerMappings: { plive: { inventoryBucket: "cricket", leagueKey: "Evropeyskaya seriya" } },
+  },
+  {
+    id: "cricket.pakistan_escribir_academy_grassroots_tournament",
+    sportId: "cricket",
+    displayName: "Pakistan. Escribir Academy Grassroots Tournament",
+    aliases: ["Pakistan. Escribir Academy Grassroots Tournament"],
+    gender: "unknown",
+    providerMappings: { plive: { inventoryBucket: "cricket", leagueKey: "Pakistan. Escribir Academy Grassroots Tournament" } },
+  },
 ] as const satisfies readonly CompetitionRecord[];
 
 export type CompetitionId = (typeof COMPETITIONS)[number]['id'];
