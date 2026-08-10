@@ -183,3 +183,36 @@ export function bookOffersLiveProduct(bookId: BookId | string, product: string):
 
 /** @deprecated use bookOffersLiveProduct */
 export const bookOffersSkin = bookOffersLiveProduct;
+
+export type BookMatrixRow = {
+  bookId: BookId;
+  skinId: SkinId;
+  label: string;
+  hosts: readonly string[];
+};
+
+/** Machine-readable book matrix for `bun run partner:books`. */
+export function buildBookMatrixRows(): BookMatrixRow[] {
+  return BOOKS.map(b => ({
+    bookId: b.id,
+    skinId: b.skinId,
+    label: b.label,
+    hosts: b.hosts,
+  }));
+}
+
+/** Compact TTY table for operators / agents. */
+export function formatBooksMatrixText(
+  rows: readonly BookMatrixRow[] = buildBookMatrixRows()
+): string {
+  const lines: string[] = ['Book matrix (BOOKS SSOT)', '─'.repeat(72)];
+  for (const r of rows) {
+    lines.push(
+      `${r.bookId.padEnd(24)} skin=${r.skinId.padEnd(10)} hosts=${r.hosts.join(', ') || '(none)'}`
+    );
+  }
+  lines.push('─'.repeat(72));
+  const skinsCovered = new Set(rows.map(r => r.skinId)).size;
+  lines.push(`books=${rows.length}  skinsCovered=${skinsCovered}`);
+  return lines.join('\n');
+}

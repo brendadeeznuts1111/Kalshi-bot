@@ -1,11 +1,14 @@
 // @see https://bun.com/docs/test/index#run-tests
 import { describe, expect, test } from 'bun:test';
 import {
+  BOOK_IDS,
   FINGERPRINT_PENDING_SKINS,
   ULTRA_DESK_API_PATHS,
   assertFingerprintCoverage,
   bookOffersLiveProduct,
+  buildBookMatrixRows,
   buildSkinMatrixRows,
+  formatBooksMatrixText,
   formatSkinMatrixMarkdownTable,
   getBookByHost,
   listBookIdsForSkin,
@@ -88,6 +91,21 @@ describe('domain sports / skins / live products', () => {
     expect(bookOffersLiveProduct('buckeye', 'ezlive')).toBe(false); // SkinId ≠ BookId
     const buckeye = buildSkinMatrixRows().find(r => r.skinId === 'buckeye')!;
     expect(buckeye.bookIds).toEqual(listBookIdsForSkin('buckeye'));
+  });
+
+  test('book matrix rows cover every BOOK_ID with skin linkage', () => {
+    const rows = buildBookMatrixRows();
+    expect(rows.map(r => r.bookId).sort()).toEqual([...BOOK_IDS].sort());
+    expect(rows.some(r => r.bookId === 'fantasy402' && r.skinId === 'buckeye')).toBe(true);
+    for (const row of rows) {
+      expect(skinIdForBook(row.bookId)).toBe(row.skinId);
+    }
+    const text = formatBooksMatrixText(rows);
+    expect(text).toContain('Book matrix (BOOKS SSOT)');
+    expect(text).toContain('fantasy402');
+    expect(text).toContain('buckeye');
+    expect(text).toMatch(/books=\d+/);
+    expect(text).toMatch(/skinsCovered=\d+/);
   });
 
   test('HOST_TO_SKIN + getSkinByHost mirrors SKINS[].hosts', () => {

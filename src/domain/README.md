@@ -43,6 +43,8 @@ retired (`RETIRED_BARE_BOOK_DOMAIN_ENVS`). `fantasy402` alias → skin `buckeye`
 ```bash
 bun run partner:skins
 bun run partner:skins -- --json
+bun run partner:books
+bun run partner:books -- --json
 ```
 
 ## Unknown host

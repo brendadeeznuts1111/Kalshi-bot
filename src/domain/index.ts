@@ -109,6 +109,8 @@ export {
   HOST_TO_BOOK,
   bookOffersLiveProduct,
   bookOffersSkin,
+  buildBookMatrixRows,
+  formatBooksMatrixText,
   getBook,
   getBookByHost,
   isBookId,
@@ -118,5 +120,6 @@ export {
   resolveBookId,
   skinIdForBook,
   type BookId,
+  type BookMatrixRow,
   type BookRecord,
 } from './books.ts';
