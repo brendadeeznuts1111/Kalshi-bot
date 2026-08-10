@@ -205,4 +205,13 @@ describe('domain sports / skins / live products', () => {
     expect(ULTRA_DESK_API_PATHS.ultraLive).not.toContain('://');
     expect(ULTRA_DESK_API_PATHS.sportsLeagues).toContain('Get_SportsLeagues');
   });
+
+  test('metallic products stay empty with dated unknown note', () => {
+    const metallic = SKINS.find(s => s.id === 'metallic')!;
+    expect(metallic.offeredLiveProducts).toEqual([]);
+    expect(metallic.mapper.note).toContain('products_unknown_as_of=2026-08-09');
+    const row = buildSkinMatrixRows().find(r => r.skinId === 'metallic')!;
+    expect(row.gaps).toContain('missing_live_products');
+    expect(row.hasFingerprints).toBe(true);
+  });
 });

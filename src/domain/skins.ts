@@ -108,7 +108,7 @@ export const SKINS = [
   {
     id: 'metallic',
     displayName: 'Metallic',
-    description: 'Metallic skin — hosts declared; live products TBD.',
+    description: 'Metallic skin — hosts + fingerprints declared; live products unknown.',
     active: true,
     offeredLiveProducts: [] as const satisfies readonly LiveProductId[],
     hosts: [
@@ -126,7 +126,7 @@ export const SKINS = [
     aliases: ['metallic'] as const,
     mapper: {
       kind: 'unmapped',
-      note: 'Hosts declared; live-product coverage not proven yet',
+      note: 'products_unknown_as_of=2026-08-09 — public paradise/sun login shows CustomerLoginRedir/main.html only; no plive/ezlive/ultralive/maglive tokens',
     },
     fingerprints: {
       endpoints: ['/main.html', '/player-api/identity/CustomerLoginRedir', '/v2/'] as const,
