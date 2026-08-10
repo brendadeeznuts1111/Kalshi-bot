@@ -3,6 +3,7 @@ import { describe, expect, test } from 'bun:test';
 import { Database } from 'bun:sqlite';
 import {
   migratePartnerEventsToSkinEvents,
+  migrateSkinEventsCompetitionIds,
   migrateSkinEventsInventoryIdentity,
   openEventStore,
 } from '../../src/institutions/event-store/open-db.ts';
@@ -15,7 +16,9 @@ import {
   liveProductsCoveredByInventory,
   normalizeInventorySport,
   normalizeSkinEventsSports,
+  resolveInventoryCompetitionId,
   resolveWatchInventoryIdentity,
+  stampSkinEventsCompetitionIds,
   upsertSkinLiveEvents,
 } from '../../src/partner/skin-events-store.ts';
 
@@ -69,8 +72,14 @@ describe('skin_events store', () => {
   test('upsertSkinLiveEvents stamps skin/book/inventory product once per stream', () => {
     const db = openEventStore({ dbPath: ':memory:' });
     const first = [
-      ev({ streamId: 100, sport: 'Table tennis', home: 'P1', away: 'P2' }),
-      ev({ streamId: 101, sport: 'Table tennis' }),
+      ev({
+        streamId: 100,
+        sport: 'Table tennis',
+        league: 'Setka Cup',
+        home: 'P1',
+        away: 'P2',
+      }),
+      ev({ streamId: 101, sport: 'Table tennis', league: 'Junk League XYZ' }),
     ];
     const r1 = upsertSkinLiveEvents(db, first, { nowMs: 1_000 });
     expect(r1.inserted.length).toBe(2);
@@ -80,21 +89,31 @@ describe('skin_events store', () => {
     expect(r1.inserted[0]?.bookId).toBe('fantasy402');
     expect(r1.inserted[0]?.inventoryLiveProduct).toBe('plive');
     expect(r1.inserted[0]?.sport).toBe('table_tennis');
+    expect(r1.inserted[0]?.competitionId).toBe('table_tennis.setka_cup');
+    expect(r1.inserted[1]?.competitionId).toBeNull();
 
     const second = [
-      ev({ streamId: 100, sport: 'Table tennis', home: 'P1', away: 'P2x' }),
-      ev({ streamId: 102, sport: 'Table tennis' }),
+      ev({
+        streamId: 100,
+        sport: 'Table tennis',
+        league: 'Setka Cup',
+        home: 'P1',
+        away: 'P2x',
+      }),
+      ev({ streamId: 102, sport: 'Table tennis', league: 'Setka Cup' }),
     ];
     const r2 = upsertSkinLiveEvents(db, second, { nowMs: 2_000 });
     expect(r2.inserted.length).toBe(1);
     expect(r2.inserted[0]!.streamId).toBe('102');
+    expect(r2.inserted[0]!.competitionId).toBe('table_tennis.setka_cup');
     expect(r2.updated.length).toBe(1);
     expect(listSkinStreamIds(db, 'fantasy402').size).toBe(3);
 
     const row = db
       .query(
         `SELECT home, away, last_updated AS lastUpdated, sport, skin_id AS skinId,
-                book_id AS bookId, inventory_live_product AS inv
+                book_id AS bookId, inventory_live_product AS inv,
+                competition_id AS competitionId
          FROM skin_events WHERE stream_id = '100'`
       )
       .get() as {
@@ -105,6 +124,7 @@ describe('skin_events store', () => {
       skinId: string;
       bookId: string;
       inv: string;
+      competitionId: string | null;
     };
     expect(row.away).toBe('P2x');
     expect(row.lastUpdated).toBe(2_000);
@@ -112,6 +132,7 @@ describe('skin_events store', () => {
     expect(row.skinId).toBe('buckeye');
     expect(row.bookId).toBe('fantasy402');
     expect(row.inv).toBe('plive');
+    expect(row.competitionId).toBe('table_tennis.setka_cup');
 
     // One row covers both products — no second insert for ezlive
     const count = (
@@ -120,6 +141,51 @@ describe('skin_events store', () => {
       }
     ).c;
     expect(count).toBe(1);
+  });
+
+  test('resolveInventoryCompetitionId maps Setka Cup; unknown stays null', () => {
+    expect(
+      resolveInventoryCompetitionId({
+        liveProduct: 'plive',
+        sport: 'table_tennis',
+        league: 'Setka Cup',
+      })
+    ).toBe('table_tennis.setka_cup');
+    expect(
+      resolveInventoryCompetitionId({
+        liveProduct: 'ezlive',
+        sport: 'table_tennis',
+        league: 'Setka Cup',
+      })
+    ).toBe('table_tennis.setka_cup');
+    expect(
+      resolveInventoryCompetitionId({
+        liveProduct: 'plive',
+        sport: 'table_tennis',
+        league: 'Not A Real League',
+      })
+    ).toBeNull();
+  });
+
+  test('migrateSkinEventsCompetitionIds backfills null competition_id', () => {
+    const db = openEventStore({ dbPath: ':memory:' });
+    db.run(`
+      INSERT INTO skin_events (
+        partner, stream_id, sport, league, status, first_seen, last_updated,
+        skin_id, book_id, inventory_live_product
+      ) VALUES (
+        'fantasy402', '88', 'table_tennis', 'Setka Cup', 'unknown', 1, 1,
+        'buckeye', 'fantasy402', 'plive'
+      )
+    `);
+    migrateSkinEventsCompetitionIds(db);
+    const cid = (
+      db.query(`SELECT competition_id AS c FROM skin_events WHERE stream_id = '88'`).get() as {
+        c: string | null;
+      }
+    ).c;
+    expect(cid).toBe('table_tennis.setka_cup');
+    expect(stampSkinEventsCompetitionIds(db)).toBe(0);
   });
 
   test('migrate deletes Test League fixture and backfills fantasy402 rows', () => {

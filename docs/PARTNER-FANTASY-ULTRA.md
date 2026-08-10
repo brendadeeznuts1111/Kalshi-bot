@@ -298,6 +298,7 @@ until a separate EZ feed is proven.
 | `partner` + `stream_id`      | UNIQUE key (detection key; partner=`fantasy402`)                                    |
 | `skin_id` / `book_id`        | stamped `buckeye` / `fantasy402`                                                    |
 | `inventory_live_product`     | feed owner shell = `plive` (ezlive reuses)                                          |
+| `competition_id`             | seeded CompetitionId from sport + league (null when unmapped)                       |
 | sport / league / home / away | stream-list (`competitiors` typo upstream); sport normalized to SportId when mapped |
 | `client_event_id` / `ls_id`  | nullable until mapping exists                                                       |
 

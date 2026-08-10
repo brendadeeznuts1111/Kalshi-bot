@@ -85,6 +85,8 @@ export {
   formatSkinEventLine,
   listSkinStreamIds,
   normalizeSkinEventsSports,
+  resolveInventoryCompetitionId,
+  stampSkinEventsCompetitionIds,
   upsertSkinLiveEvents,
   type SkinEventRow,
   type SkinEventUpsertResult,

@@ -2,6 +2,7 @@
 // @see https://bun.com/docs/runtime/file-io#reading-files-bun-file
 import { mkdirSync, readFileSync } from 'node:fs';
 import { Database } from 'bun:sqlite';
+import { isLiveProductId, isSportId, resolveCompetition } from '../../domain/index.ts';
 import { ensureCacheDir } from '../../research/cache.ts';
 import { DEFAULT_EVENT_STORE_DB, SCHEMA_SQL_PATH } from './paths.ts';
 
@@ -18,6 +19,7 @@ const SCHEMA_COLUMN_MIGRATIONS: Array<{ table: string; column: string; decl: str
   { table: 'skin_events', column: 'skin_id', decl: 'TEXT' },
   { table: 'skin_events', column: 'book_id', decl: 'TEXT' },
   { table: 'skin_events', column: 'inventory_live_product', decl: 'TEXT' },
+  { table: 'skin_events', column: 'competition_id', decl: 'TEXT' },
   { table: 'events', column: 'source_url', decl: "TEXT NOT NULL DEFAULT ''" },
   { table: 'events', column: 'fetched_ts', decl: 'INTEGER' },
   { table: 'events', column: 'corpus', decl: "TEXT NOT NULL DEFAULT 'trading'" },
@@ -154,12 +156,14 @@ export function applyEventStoreSchema(db: Database): void {
     skin_id TEXT,
     book_id TEXT,
     inventory_live_product TEXT,
+    competition_id TEXT,
     UNIQUE(partner, stream_id)
   )`);
   db.run(
     `CREATE INDEX IF NOT EXISTS idx_skin_events_partner_sport ON skin_events (partner, sport)`
   );
   db.run(`CREATE INDEX IF NOT EXISTS idx_skin_events_last_updated ON skin_events (last_updated)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_skin_events_competition ON skin_events (competition_id)`);
   // Partner financial registry (outs) — secrets stay in env, not here
   db.run(`CREATE TABLE IF NOT EXISTS partners (
     id TEXT PRIMARY KEY,
@@ -204,6 +208,7 @@ export function applyEventStoreSchema(db: Database): void {
   );
   migrateEventStoreColumns(db);
   migrateSkinEventsInventoryIdentity(db);
+  migrateSkinEventsCompetitionIds(db);
   migrateSourceEventSelectors(db);
   abandonLegacyKalshiInventoryRuns(db);
   abandonUnpinnedSourceInventoryRuns(db);
@@ -363,6 +368,45 @@ export function migrateSkinEventsInventoryIdentity(db: Database): void {
     DELETE FROM skin_events
     WHERE stream_id = '1' OR league = 'Test League'
   `);
+}
+
+/**
+ * Backfill skin_events.competition_id from seeded Plive league mappings.
+ * Unknown / junk leagues stay NULL.
+ */
+export function migrateSkinEventsCompetitionIds(db: Database): void {
+  if (!tableExists(db, 'skin_events')) return;
+  if (!tableHasColumn(db, 'skin_events', 'competition_id')) return;
+  const rows = db
+    .query(
+      `SELECT rowid AS rid, sport, league,
+              inventory_live_product AS inv,
+              competition_id AS competitionId
+       FROM skin_events`
+    )
+    .all() as Array<{
+    rid: number;
+    sport: string;
+    league: string;
+    inv: string | null;
+    competitionId: string | null;
+  }>;
+  const upd = db.query(`UPDATE skin_events SET competition_id = $c WHERE rowid = $r`);
+  for (const row of rows) {
+    const liveRaw = (row.inv ?? '').trim() || 'plive';
+    const liveProduct = isLiveProductId(liveRaw) ? liveRaw : 'plive';
+    const sport = (row.sport ?? '').trim();
+    const hit = resolveCompetition({
+      liveProduct,
+      league: row.league ?? '',
+      sportId: isSportId(sport) ? sport : undefined,
+      streamBucket: sport || undefined,
+    });
+    const next = hit?.competitionId ?? null;
+    const prev = row.competitionId?.trim() || null;
+    if (next === prev) continue;
+    upd.run({ $c: next, $r: row.rid });
+  }
 }
 
 function tableExists(db: Database, table: string): boolean {

@@ -37,8 +37,8 @@ resolveCompetition({
 }); // → table_tennis.masters_poland_women (gender: women)
 ```
 
-Unknown / junk league labels return `undefined`. `skin_events` does not yet
-stamp `competition_id` (follow-up).
+Unknown / junk league labels return `undefined`. Inventory upsert stamps
+`skin_events.competition_id` when the league resolves (null otherwise).
 
 ### Three planes (inventory · odds · ticket)
 
