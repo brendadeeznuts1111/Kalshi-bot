@@ -7,7 +7,6 @@
  *   bun run ops:map
  *   bun run ops:map -- --output=artifacts/partner-expansion.mmd
  *
- * Legacy: partner:domain · partner:map
  * Desk matrix: domain:skins · domain:books · domain:host-discover
  *
  * @see docs/SEAT-OPS.md

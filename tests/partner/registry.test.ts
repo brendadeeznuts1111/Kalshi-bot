@@ -8,13 +8,13 @@ import {
   ensurePartnerRegistrySchema,
   getBettingAccountById,
   listActiveBettingAccounts,
-  listEligibleOutSkinPairs,
-  pickBestSkinForOut,
+  listEligibleOutCapacityPairs,
+  pickBestCapacityForOut,
   seedFantasy402FromEnv,
   upsertBettingAccount,
   upsertPartner,
 } from '../../src/partner/registry.ts';
-import { buildSkinsMeta, liquidityKey, parseSkinWire } from '../../src/partner/out-capacity.ts';
+import { buildOutCapacityMeta, liquidityKey, parseLiveProductWire } from '../../src/partner/out-capacity.ts';
 
 const DOMAIN = requireDefaultUrlForUltraMapper();
 
@@ -122,8 +122,8 @@ describe('partner registry', () => {
       maxWin: 1500,
       currency: 'USD',
       skin: null,
-      metaJson: buildSkinsMeta({
-        skins: [{ name: 'ezlive', perBetMax: 300, maxWin: 1500, active: true }],
+      metaJson: buildOutCapacityMeta({
+      liveProducts: [{ name: 'ezlive', perBetMax: 300, maxWin: 1500, active: true }],
         workingBalance: 2000,
         partnerCode: 'ASH',
       }),
@@ -140,7 +140,7 @@ describe('partner registry', () => {
     const spen = f402?.outs.find(o => o.outId === 'out-SPEN-1');
     expect(spen?.totalPerBetMax).toBe(1500);
     expect(spen?.workingBalance).toBe(5000);
-    expect(spen?.skins.map(s => s.name).sort()).toEqual(['dark', 'ezlive']);
+    expect(spen?.liveProducts.map(s => s.name).sort()).toEqual(['dark', 'ezlive']);
   });
 
   test('eligible pairs + pickBestSkin + concentration by out', () => {
@@ -153,8 +153,8 @@ describe('partner registry', () => {
         maxWin: 5000,
         skin: null as number | null,
         status: 'active' as const,
-        metaJson: buildSkinsMeta({
-          skins: [
+        metaJson: buildOutCapacityMeta({
+      liveProducts: [
             { name: 'ezlive', perBetMax: 500, maxWin: 2500, active: true },
             { name: 'dark', perBetMax: 1000, maxWin: 5000, active: true },
           ],
@@ -169,21 +169,21 @@ describe('partner registry', () => {
         maxWin: 1500,
         skin: null as number | null,
         status: 'active' as const,
-        metaJson: buildSkinsMeta({
-          skins: [{ name: 'ezlive', perBetMax: 300, maxWin: 1500, active: true }],
+        metaJson: buildOutCapacityMeta({
+      liveProducts: [{ name: 'ezlive', perBetMax: 300, maxWin: 1500, active: true }],
           workingBalance: 2000,
         }),
       },
     ];
 
-    const for800 = listEligibleOutSkinPairs(accounts, 800);
+    const for800 = listEligibleOutCapacityPairs(accounts, 800);
     expect(for800.map(p => p.key)).toEqual(['out-SPEN-1@dark']);
     expect(liquidityKey('out-SPEN-1', 'dark')).toBe('out-SPEN-1@dark');
 
-    const for200 = listEligibleOutSkinPairs(accounts, 200);
+    const for200 = listEligibleOutCapacityPairs(accounts, 200);
     expect(for200.length).toBe(3);
 
-    const best = pickBestSkinForOut(
+    const best = pickBestCapacityForOut(
       [
         { name: 'ezlive', perBetMax: 500, maxWin: 2500, active: true },
         { name: 'dark', perBetMax: 1000, maxWin: 5000, active: true },
@@ -202,11 +202,11 @@ describe('partner registry', () => {
     expect(conc[0]?.share).toBeCloseTo(500 / 600, 5);
   });
 
-  test('parseSkinWire keeps named skins as strings', () => {
-    expect(parseSkinWire('ezlive')).toBe('ezlive');
-    expect(parseSkinWire('2')).toBe(2);
-    expect(parseSkinWire(2)).toBe(2);
-    expect(parseSkinWire(undefined)).toBe(2);
+  test('parseLiveProductWire keeps named skins as strings', () => {
+    expect(parseLiveProductWire('ezlive')).toBe('ezlive');
+    expect(parseLiveProductWire('2')).toBe(2);
+    expect(parseLiveProductWire(2)).toBe(2);
+    expect(parseLiveProductWire(undefined)).toBe(2);
   });
 
   test('seed stamps skinId=buckeye and bookId=fantasy402 from host', () => {
@@ -257,8 +257,8 @@ describe('partner registry', () => {
         maxWin: 500,
         currency: 'USD',
         skin: null,
-        metaJson: buildSkinsMeta({
-          skins: [{ name: 'ezlive', perBetMax: 100, maxWin: 500, active: true }],
+        metaJson: buildOutCapacityMeta({
+      liveProducts: [{ name: 'ezlive', perBetMax: 100, maxWin: 500, active: true }],
         }),
       })
     ).toThrow(/Unknown account host/);
@@ -287,8 +287,8 @@ describe('partner registry', () => {
         maxWin: 500,
         currency: 'USD',
         skin: null,
-        metaJson: buildSkinsMeta({
-          skins: [{ name: 'maglive', perBetMax: 100, maxWin: 500, active: true }],
+        metaJson: buildOutCapacityMeta({
+      liveProducts: [{ name: 'maglive', perBetMax: 100, maxWin: 500, active: true }],
         }),
       })
     ).toThrow(/not offered by skin=buckeye/);
@@ -318,8 +318,8 @@ describe('partner registry', () => {
         maxWin: 500,
         currency: 'USD',
         skin: null,
-        metaJson: buildSkinsMeta({
-          skins: [{ name: 'plive', perBetMax: 100, maxWin: 500, active: true }],
+        metaJson: buildOutCapacityMeta({
+      liveProducts: [{ name: 'plive', perBetMax: 100, maxWin: 500, active: true }],
         }),
       })
     ).toThrow(/not offered by skin=ace/);
@@ -335,8 +335,8 @@ describe('partner registry', () => {
       maxWin: 500,
       currency: 'USD',
       skin: null,
-      metaJson: buildSkinsMeta({
-        skins: [{ name: 'ultralive', perBetMax: 100, maxWin: 500, active: true }],
+      metaJson: buildOutCapacityMeta({
+      liveProducts: [{ name: 'ultralive', perBetMax: 100, maxWin: 500, active: true }],
       }),
     });
     const row = listActiveBettingAccounts(db).find(a => a.id === 'out-ACE-1');

@@ -24,14 +24,14 @@ import {
 } from './out-identity.ts';
 import {
   bookIdFromAccount,
-  buildSkinsMeta,
+  buildOutCapacityMeta,
   mapperFromAccount,
   outCapacityFromAccount,
-  parseSkinWire,
+  parseLiveProductWire,
   skinIdFromAccount,
   type OutCapacity,
-  type OutSkinLimit,
-  type OutSkinMapperKind,
+  type OutCapacityRow,
+  type OutMapperKind,
 } from './out-capacity.ts';
 
 export type ProviderId = 'fantasy402' | 'kalshi' | (string & {});
@@ -78,7 +78,7 @@ export type BettingAccountRow = {
    */
   bookId?: BookId;
   /** Mapper kind from meta_json (fantasy402 | unmapped). */
-  mapper?: OutSkinMapperKind;
+  mapper?: OutMapperKind;
   /** Adapter id from OutIdentity (fantasy-ultra | kalshi | unmapped). */
   adapterId?: AdapterId;
 };
@@ -393,7 +393,7 @@ export function computeProviderCapacity(accounts: BettingAccountRow[]): Provider
       by.set(a.provider, row);
     }
     row.accountCount++;
-    row.skinPairCount += out.skins.length;
+    row.skinPairCount += out.liveProducts.length;
     row.totalMaxStake += out.totalPerBetMax;
     row.totalMaxWin += out.totalMaxWin;
     row.accountIds.push(a.id);
@@ -406,16 +406,16 @@ export function computeProviderCapacity(accounts: BettingAccountRow[]): Provider
 }
 
 /**
- * Parse FANTASY402_SKINS_JSON or FANTASY402_LIVE_PRODUCTS_JSON → OutSkinLimit[].
+ * Parse FANTASY402_SKINS_JSON or FANTASY402_LIVE_PRODUCTS_JSON → OutCapacityRow[].
  * Accepts `{ name | liveProduct | skin, perBetMax, maxWin }`.
  */
-export function parseSkinsJsonEnv(raw: string | undefined): OutSkinLimit[] {
+export function parseSkinsJsonEnv(raw: string | undefined): OutCapacityRow[] {
   if (!raw?.trim()) return [];
   try {
     const v = JSON.parse(raw) as unknown;
     if (!Array.isArray(v)) return [];
     return v
-      .map((row): OutSkinLimit | null => {
+      .map((row): OutCapacityRow | null => {
         if (!row || typeof row !== 'object') return null;
         const r = row as Record<string, unknown>;
         const name = String(r.liveProduct ?? r.name ?? r.skin ?? '').trim();
@@ -427,7 +427,7 @@ export function parseSkinsJsonEnv(raw: string | undefined): OutSkinLimit[] {
           active: r.active !== false,
         };
       })
-      .filter((s): s is OutSkinLimit => s != null);
+      .filter((s): s is OutCapacityRow => s != null);
   } catch {
     return [];
   }
@@ -479,8 +479,8 @@ export function seedFantasy402FromEnv(
   );
   const maxStakeEnv = Number(envMap.FANTASY402_MAX_STAKE ?? '1000') || 0;
   const maxWinEnv = Number(envMap.FANTASY402_MAX_WIN ?? '5000') || 0;
-  const skinWire = parseSkinWire(envMap.FANTASY402_LIVE_PRODUCT ?? envMap.FANTASY402_SKIN, 2);
-  const skins: OutSkinLimit[] =
+  const skinWire = parseLiveProductWire(envMap.FANTASY402_LIVE_PRODUCT ?? envMap.FANTASY402_SKIN, 2);
+  const skins: OutCapacityRow[] =
     skinsFromJson.length > 0
       ? skinsFromJson
       : [
@@ -520,8 +520,8 @@ export function seedFantasy402FromEnv(
     maxWin,
     currency,
     skin: legacySkinCol,
-    metaJson: buildSkinsMeta({
-      skins,
+    metaJson: buildOutCapacityMeta({
+      liveProducts: skins,
       workingBalance:
         workingBalance != null && Number.isFinite(workingBalance) ? workingBalance : undefined,
       vaultId,
@@ -540,7 +540,7 @@ export {
   adapterBindingForSkin,
   assertLiveProductsAllowed,
   buildSkinMetaFields,
-  capacityToOutSkinLimits,
+  capacityToOutCapacityRows,
   guardAndStampAccountMeta,
   parseOutIdentity,
   providerMirrorFromAdapter,
@@ -557,19 +557,14 @@ export { bookIdFromAccount, mapperFromAccount, skinIdFromAccount } from './out-c
 export {
   concentrationByOut,
   listEligibleOutCapacityPairs,
-  listEligibleOutSkinPairs,
   liquidityKey,
   outCapacityFromAccount,
   pickBestCapacityForOut,
-  pickBestSkinForOut,
   resolveOutCapacity,
-  resolveOutSkins,
 } from './out-capacity.ts';
 export type {
   OutCapacity,
   OutCapacityPair,
   OutCapacityRow,
   OutExposureShare,
-  OutSkinLimit,
-  OutSkinPair,
 } from './out-capacity.ts';

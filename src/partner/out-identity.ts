@@ -19,14 +19,14 @@ import {
   type BookId,
   type SkinId,
 } from '../domain/index.ts';
-import type { OutMeta, OutSkinLimit, OutSkinMapperKind } from './out-capacity.ts';
+import type { OutMeta, OutCapacityRow, OutMapperKind } from './out-capacity.ts';
 import { parseOutMeta } from './out-capacity.ts';
 
 export type AdapterId = 'fantasy-ultra' | 'kalshi' | 'unmapped';
 
 export type AdapterBinding = {
   adapterId: AdapterId;
-  mapperKind: OutSkinMapperKind;
+  mapperKind: OutMapperKind;
   /** Env brand token only (FANTASY402) — not SkinId, not seat partnerId. */
   bookEnvToken: string;
 };
@@ -210,8 +210,8 @@ export function parseCapacityFromMeta(input: {
   ];
 }
 
-/** Convert capacity → legacy OutSkinLimit shape (name = liveProduct). */
-export function capacityToOutSkinLimits(capacity: readonly LiveProductCapacity[]): OutSkinLimit[] {
+/** Convert capacity → legacy OutCapacityRow shape (name = liveProduct). */
+export function capacityToOutCapacityRows(capacity: readonly LiveProductCapacity[]): OutCapacityRow[] {
   return capacity.map(c => ({
     name: c.liveProduct,
     perBetMax: c.perBetMax,
@@ -337,7 +337,7 @@ export function guardAndStampAccountMeta(input: {
   requireHost?: boolean;
 }): {
   skinId?: SkinId;
-  mapper?: OutSkinMapperKind;
+  mapper?: OutMapperKind;
   adapterId?: AdapterId;
   metaJson: string;
   identity?: OutIdentity;
@@ -371,7 +371,7 @@ export function guardAndStampAccountMeta(input: {
 
 export function buildSkinMetaFields(skinId: SkinId): {
   skinId: SkinId;
-  mapper: OutSkinMapperKind;
+  mapper: OutMapperKind;
 } {
   const skin = getSkin(skinId);
   if (!skin) throw new Error(`Unknown SkinId: ${skinId}`);

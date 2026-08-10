@@ -6,7 +6,7 @@ import {
   parseOutIdentity,
   stampOutMeta,
 } from '../../src/partner/out-identity.ts';
-import { buildSkinsMeta } from '../../src/partner/out-capacity.ts';
+import { buildOutCapacityMeta } from '../../src/partner/out-capacity.ts';
 
 const BUCKEYE_URL = defaultUrlForSkin('buckeye')!;
 const ACE_URL = defaultUrlForSkin('ace')!;
@@ -21,8 +21,8 @@ describe('out-identity boundary', () => {
       maxStake: 500,
       maxWin: 2500,
       skin: null,
-      metaJson: buildSkinsMeta({
-        skins: [
+      metaJson: buildOutCapacityMeta({
+      liveProducts: [
           { name: 'ezlive', perBetMax: 500, maxWin: 2500, active: true },
           { name: 'dark', perBetMax: 1000, maxWin: 5000, active: true },
         ],
@@ -66,8 +66,8 @@ describe('out-identity boundary', () => {
         maxStake: 100,
         maxWin: 500,
         skin: null,
-        metaJson: buildSkinsMeta({
-          skins: [{ name: 'maglive', perBetMax: 100, maxWin: 500, active: true }],
+        metaJson: buildOutCapacityMeta({
+      liveProducts: [{ name: 'maglive', perBetMax: 100, maxWin: 500, active: true }],
         }),
       })
     ).toThrow(/not offered by skin=buckeye/);
@@ -81,8 +81,8 @@ describe('out-identity boundary', () => {
       maxStake: 100,
       maxWin: 500,
       skin: null,
-      metaJson: buildSkinsMeta({
-        skins: [{ name: 'ultralive', perBetMax: 100, maxWin: 500, active: true }],
+      metaJson: buildOutCapacityMeta({
+      liveProducts: [{ name: 'ultralive', perBetMax: 100, maxWin: 500, active: true }],
       }),
     });
     expect(identity?.skinId).toBe('ace');

@@ -112,14 +112,12 @@ bun run domain:skins -- --json
 bun run domain:books
 bun run domain:books -- --json
 # seat-ops (not desk): bun run ops:status
-# legacy aliases: partner:skins · partner:books
 ```
 
 ## Unknown host
 
 ```bash
 bun run domain:host-discover -- --url=https://example.com
-# legacy: partner:host-discover
 ```
 
 SSOT: [`host-discover.ts`](host-discover.ts) · [`host-weighted-score.ts`](host-weighted-score.ts)

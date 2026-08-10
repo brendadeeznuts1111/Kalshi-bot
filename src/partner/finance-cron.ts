@@ -55,7 +55,7 @@ import {
   type RiskThreshold,
 } from './risk-health.ts';
 import { getPartnerVisual } from './visuals.ts';
-import { parseSkinWire } from './out-capacity.ts';
+import { parseLiveProductWire } from './out-capacity.ts';
 import { runWebViewWsPipeline } from './webview-ws-pipeline.ts';
 
 export type FinanceCronOptions = {
@@ -196,7 +196,7 @@ function credentialsFromEnv(
     password: p,
     bearerToken: t,
     domain: bundle.values.DOMAIN || resolveDeskDomainFromEnv(),
-    skin: parseSkinWire(bundle.values.SKIN, 2),
+    skin: parseLiveProductWire(bundle.values.SKIN, 2),
     currency: bundle.values.CURRENCY || 'USD',
   };
 }
@@ -371,8 +371,8 @@ export async function runFinanceCron(
       partnerCode,
       provider: a.provider,
       totalPerBetMax: cap.totalPerBetMax,
-      skinCount: cap.skins.length,
-      skins: cap.skins.map(s => ({
+      skinCount: cap.liveProducts.length,
+      skins: cap.liveProducts.map(s => ({
         name: s.name,
         perBetMax: s.perBetMax,
       })),

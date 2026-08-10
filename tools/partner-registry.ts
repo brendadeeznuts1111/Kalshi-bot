@@ -17,7 +17,7 @@ import {
   computeProviderCapacity,
   ensurePartnerRegistrySchema,
   listActiveBettingAccounts,
-  listEligibleOutSkinPairs,
+  listEligibleOutCapacityPairs,
   seedFantasy402FromEnv,
   seedFantasySportMappings,
 } from '../src/partner/registry.ts';
@@ -55,7 +55,7 @@ function main(): void {
   const accounts = listActiveBettingAccounts(db);
   const capacity = computeProviderCapacity(accounts);
   const stakeProbe = Number(argValue('stake') ?? '0') || 0;
-  const eligible = stakeProbe > 0 ? listEligibleOutSkinPairs(accounts, stakeProbe) : [];
+  const eligible = stakeProbe > 0 ? listEligibleOutCapacityPairs(accounts, stakeProbe) : [];
 
   const payload = {
     accounts: accounts.map(a => {
@@ -70,7 +70,7 @@ function main(): void {
         maxWin: a.maxWin,
         currency: a.currency,
         envPrefix: a.envPrefix,
-        skins: cap?.skins ?? [],
+        liveProducts: cap?.liveProducts ?? [],
         totalPerBetMax: cap?.totalPerBetMax ?? a.maxStake,
         workingBalance: cap?.workingBalance ?? null,
         // no secrets
@@ -88,7 +88,7 @@ function main(): void {
         totalPerBetMax: o.totalPerBetMax,
         totalMaxWin: o.totalMaxWin,
         workingBalance: o.workingBalance,
-        skins: o.skins.map(s => ({
+        liveProducts: o.liveProducts.map(s => ({
           name: s.name,
           perBetMax: s.perBetMax,
           maxWin: s.maxWin,
@@ -103,7 +103,7 @@ function main(): void {
             pairs: eligible.map(p => ({
               key: p.key,
               outId: p.outId,
-              skin: p.skin,
+              liveProduct: p.liveProduct,
               perBetMax: p.perBetMax,
               workingBalance: p.workingBalance,
             })),
@@ -135,7 +135,7 @@ function main(): void {
           o.outId;
         const vis = getPartnerVisual(String(code));
         const label = colorizePartnerText(String(code), o.outId);
-        const skinBits = o.skins.map(s => `$${s.perBetMax} ${s.name}`).join(' + ');
+        const skinBits = o.liveProducts.map(s => `$${s.perBetMax} ${s.name}`).join(' + ');
         const bookBit = acc?.bookId ? ` book=${acc.bookId}` : '';
         console.log(
           `  └── ${label} ${vis.hex}: $${o.totalPerBetMax}${skinBits ? ` (${skinBits})` : ''}${bookBit}`

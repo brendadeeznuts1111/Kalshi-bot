@@ -9,7 +9,6 @@ import { openEventStore } from '../../src/institutions/event-store/open-db.ts';
 import { computeProviderCapacity, listActiveBettingAccounts } from '../../src/partner/registry.ts';
 import {
   DESK_DOMAIN_ENV,
-  PARTNER_DOMAIN_ENV,
   canonicalOutEnvPrefix,
   canonicalPartnerEnvPrefix,
   checkPartnersEnvPresence,
@@ -228,14 +227,13 @@ skins = [{ name = "ezlive", per_bet_max = "not-a-number" }]
     const lonestarDesk = urlForHost('lonestarwagering.com');
     const withLegacyDomain = resolvePartnerEnv('FANTASY402_', {
       ...ignored,
-      [PARTNER_DOMAIN_ENV]: aceDesk,
+      [DESK_DOMAIN_ENV]: aceDesk,
     });
     expect(withLegacyDomain.values.DOMAIN).toBe(aceDesk);
     expect(withLegacyDomain.source.DOMAIN).toBe('book_fallback');
 
     const withDeskDomain = resolvePartnerEnv('FANTASY402_', {
       ...ignored,
-      [PARTNER_DOMAIN_ENV]: 'https://legacy-should-lose.example',
       [DESK_DOMAIN_ENV]: aceDesk,
     });
     expect(withDeskDomain.values.DOMAIN).toBe(aceDesk);

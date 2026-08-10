@@ -11,7 +11,6 @@ redirects here).
 seat-capital service is the only writer.
 
 Seat-ops status: `bun run ops:status` · `bun run ops:status -- --json`  
-(legacy: `partner:domain`)  
 Skin matrix: `bun run domain:skins` · Book matrix: `bun run domain:books`  
 Host discover: `bun run domain:host-discover`  
 Event inventory (Buckeye / Fantasy402 → plive+ezlive):
@@ -29,7 +28,7 @@ desk matrix + host-discover [`src/domain/`](../src/domain/) · inventory:
 
 | Concept | Name | Example |
 | ------- | ---- | ------- |
-| Desk host URL env | **`DESK_DOMAIN`** (legacy `PARTNER_DOMAIN`) | `https://parlay21.com` |
+| Desk host URL env | **`DESK_DOMAIN`** | `https://parlay21.com` |
 | White-label family | `SkinId` | `ace`, `buckeye` |
 | Desk brand under skin | `BookId` | `parlay21`, `fantasy402` |
 | Seat financial owner | **Partner** (unchanged) | `SPEN` |
@@ -264,8 +263,8 @@ bun run serve
 
 | Command                                               | Layer                                                                 |
 | ----------------------------------------------------- | --------------------------------------------------------------------- |
-| `ops:status` (legacy `partner:domain`)                | Seat-ops architecture checklist                                       |
-| `ops:map` (legacy `partner:map`)                      | Telegram → authorization → provider expansion map (Mermaid)           |
+| `ops:status`                                           | Seat-ops architecture checklist                                       |
+| `ops:map`                                              | Telegram → authorization → provider expansion map (Mermaid)           |
 | `domain:skins` / `domain:books`                       | Desk matrix (hosts → skin / book)                                     |
 | `domain:host-discover`                                | Suggest SkinId from host (never auto-maps)                            |
 | `partner:toml`                                        | Partner + Accounts (Bun.TOML config seed/export)                      |
@@ -384,14 +383,14 @@ Idempotent: re-run seed updates in place (SQLite `ON CONFLICT DO UPDATE`).
 1. out prefix      FANTASY402_SPEN_1_BEARER_TOKEN
 2. partner prefix  FANTASY402_SPEN_BEARER_TOKEN
 3. book fallback   FANTASY402_BEARER_TOKEN
-4. desk URL        DESK_DOMAIN (legacy PARTNER_DOMAIN) → SKINS default
+4. desk URL        DESK_DOMAIN → SKINS default
                    (host → BookId via HOST_TO_BOOK + SkinId via HOST_TO_SKIN)
 ```
 
 Canonical `env_prefix` is **per-out**: `{BOOK}_{CODE}_{N}_`. Bare `FANTASY402_`
 or partner-only `FANTASY402_SPEN_` auto-upgrade on materialize/seed. Keys (not
 USER/PASS): `BEARER_TOKEN` · `CUSTOMER_ID` · `AGENT_ID` · `PASSWORD` · `DOMAIN`
-· `SKIN` · `CURRENCY`. Desk URL: **`DESK_DOMAIN`** (legacy `PARTNER_DOMAIN`; or per-out `*DOMAIN`)
+· `SKIN` · `CURRENCY`. Desk URL: **`DESK_DOMAIN`** (or per-out `*DOMAIN`)
 must resolve via `SKINS[].hosts` → `BookId` + `SkinId`. Bare book-level DOMAIN
 env keys are retired (`RETIRED_BARE_BOOK_DOMAIN_ENVS`). Env prefix `{BOOK}_` is
 the adapter env brand (`FANTASY402`), not the desk `BookId` catalog. API base
