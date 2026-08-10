@@ -588,6 +588,7 @@ Code: `src/partner/out-capacity.ts` · `computeProviderCapacity` ·
 
 ```bash
 bun run inventory:sync -- --sport=table_tennis --once --json
+bun run inventory:sync -- --sport=table_tennis --dry-run --json   # plan only, no SQLite writes
 bun run inventory:sync -- --sport=table_tennis --loop --interval-ms=30000
 bun run inventory:sync -- --enrich-booked --once   # soft name→odds_event_id (metadata only)
 

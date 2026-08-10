@@ -131,4 +131,56 @@ describe("inventory sync", () => {
     expect(report.capabilities.pricedOdds).toBe(true);
     expect(report.notes.some((n) => /Pandora store has/i.test(n))).toBe(true);
   });
+
+  test("dry-run plans inserts without writing skin_events", async () => {
+    const db = openEventStore({ dbPath: ":memory:" });
+    const events = [
+      live(10, "table_tennis", "A", "B"),
+      live(11, "table_tennis", "C", "D"),
+    ];
+    const report = await runInventorySync(db, mockAdapter(events), {
+      sport: "table_tennis",
+      dryRun: true,
+      nowMs: 9000,
+    });
+    expect(report.dryRun).toBe(true);
+    expect(report.seen).toBe(2);
+    expect(report.inserted).toBe(2);
+    expect(report.updated).toBe(0);
+    expect(report.newEvents.map((e) => e.inventoryId).sort()).toEqual(["10", "11"]);
+    expect(report.notes.some((n) => /dry-run/i.test(n))).toBe(true);
+
+    const count = db
+      .query(`SELECT COUNT(*) AS n FROM skin_events`)
+      .get() as { n: number };
+    expect(count.n).toBe(0);
+  });
+
+  test("dry-run splits new vs existing inventory_ids", async () => {
+    const db = openEventStore({ dbPath: ":memory:" });
+    const seed = [live(1, "table_tennis", "A", "B")];
+    await runInventorySync(db, mockAdapter(seed), {
+      sport: "table_tennis",
+      nowMs: 1000,
+    });
+    const again = [
+      live(1, "table_tennis", "A", "B"),
+      live(2, "table_tennis", "X", "Y"),
+    ];
+    const report = await runInventorySync(db, mockAdapter(again), {
+      sport: "table_tennis",
+      dryRun: true,
+      nowMs: 2000,
+    });
+    expect(report.dryRun).toBe(true);
+    expect(report.inserted).toBe(1);
+    expect(report.updated).toBe(1);
+    expect(report.newEvents[0]?.inventoryId).toBe("2");
+    expect(report.updatedEvents?.[0]?.inventoryId).toBe("1");
+
+    const count = db
+      .query(`SELECT COUNT(*) AS n FROM skin_events`)
+      .get() as { n: number };
+    expect(count.n).toBe(1);
+  });
 });

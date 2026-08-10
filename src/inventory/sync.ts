@@ -21,6 +21,8 @@ import {
   buckeyeInventoryIdentity,
   filterLiveEventsBySport,
   formatSkinEventLine,
+  listSkinInventoryIds,
+  liveEventToRow,
   normalizeSkinEventsSports,
   upsertSkinLiveEvents,
   type InventoryIdentity,
@@ -37,6 +39,11 @@ export type InventorySyncOptions = {
   coefficientStore?: CoefficientStore;
   /** Defaults to Buckeye / Fantasy402 / plive shell. */
   identity?: InventoryIdentity;
+  /**
+   * Fetch + plan insert/update only — no SQLite writes, no booked enrich UPDATE,
+   * no sport-label normalize. Report counts are would-be.
+   */
+  dryRun?: boolean;
 };
 
 export type InventorySyncReport = {
@@ -45,7 +52,11 @@ export type InventorySyncReport = {
   inserted: number;
   updated: number;
   newEvents: SkinEventRow[];
+  /** Existing inventory_ids that would be refreshed (dry-run or real). */
+  updatedEvents?: SkinEventRow[];
   enriched: number;
+  /** True when no DB mutations were applied. */
+  dryRun: boolean;
   capabilities: {
     inventory: true;
     eventDetection: true;
@@ -98,13 +109,49 @@ export function matchBookedOddsEventId(
   return null;
 }
 
+/** Plan insert vs update without writing (reads existing inventory_ids only). */
+export function planInventoryUpsert(
+  db: Database,
+  events: InventoryEvent[],
+  options: {
+    nowMs?: number;
+    identity?: InventoryIdentity;
+  } = {}
+): SkinEventUpsertResult {
+  const nowMs = options.nowMs ?? Date.now();
+  const identity = options.identity ?? buckeyeInventoryIdentity();
+  const existing = listSkinInventoryIds(db, identity.bookId);
+  const inserted: SkinEventRow[] = [];
+  const updated: SkinEventRow[] = [];
+  let seen = 0;
+  for (const event of events) {
+    const inventoryId = String(event.inventoryId ?? '').trim();
+    if (!inventoryId) continue;
+    seen++;
+    const row = liveEventToRow(event, nowMs, identity, {
+      firstSeen: nowMs,
+      status: 'unknown',
+    });
+    if (existing.has(inventoryId)) {
+      updated.push(row);
+    } else {
+      inserted.push(row);
+    }
+  }
+  return { inserted, updated, seen };
+}
+
 export async function runInventorySync(
   db: Database,
   adapter: FantasySessionAdapter,
   options: InventorySyncOptions = {}
 ): Promise<InventorySyncReport> {
   const sport = options.sport ?? 'table_tennis';
+  const dryRun = options.dryRun === true;
   const notes: string[] = [];
+  if (dryRun) {
+    notes.push('dry-run: no SQLite writes (plan only)');
+  }
   const fetchSport =
     sport === 'all'
       ? 'all'
@@ -124,11 +171,16 @@ export async function runInventorySync(
   }
 
   const identity = options.identity ?? buckeyeInventoryIdentity();
-  normalizeSkinEventsSports(db);
-  const upsert: SkinEventUpsertResult = upsertSkinLiveEvents(db, events, {
-    nowMs: options.nowMs,
-    identity,
-  });
+  if (!dryRun) {
+    normalizeSkinEventsSports(db);
+  }
+
+  const upsert: SkinEventUpsertResult = dryRun
+    ? planInventoryUpsert(db, events, { nowMs: options.nowMs, identity })
+    : upsertSkinLiveEvents(db, events, {
+        nowMs: options.nowMs,
+        identity,
+      });
 
   let enriched = 0;
   if (options.enrichBooked && upsert.inserted.length > 0) {
@@ -146,27 +198,39 @@ export async function runInventorySync(
         oddsEventId: b.oddsEventId,
         name: b.name,
       }));
-      const update = db.query(`
+      if (dryRun) {
+        for (const row of upsert.inserted) {
+          const cid = matchBookedOddsEventId(row.home, row.away, catalog);
+          if (!cid) continue;
+          row.oddsEventId = cid;
+          enriched++;
+        }
+        notes.push(
+          `booked enrich (dry-run): would match ${enriched}/${upsert.inserted.length} new rows by name`
+        );
+      } else {
+        const update = db.query(`
         UPDATE skin_events
         SET odds_event_id = $cid, last_updated = $ts
         WHERE book_id = $book AND inventory_id = $iid AND (odds_event_id IS NULL OR odds_event_id = '')
       `);
-      const ts = options.nowMs ?? Date.now();
-      for (const row of upsert.inserted) {
-        const cid = matchBookedOddsEventId(row.home, row.away, catalog);
-        if (!cid) continue;
-        update.run({
-          $cid: cid,
-          $ts: ts,
-          $book: row.bookId,
-          $iid: row.inventoryId,
-        });
-        row.oddsEventId = cid;
-        enriched++;
+        const ts = options.nowMs ?? Date.now();
+        for (const row of upsert.inserted) {
+          const cid = matchBookedOddsEventId(row.home, row.away, catalog);
+          if (!cid) continue;
+          update.run({
+            $cid: cid,
+            $ts: ts,
+            $book: row.bookId,
+            $iid: row.inventoryId,
+          });
+          row.oddsEventId = cid;
+          enriched++;
+        }
+        notes.push(
+          `booked enrich: matched ${enriched}/${upsert.inserted.length} new rows by name (metadata only — no prices)`
+        );
       }
-      notes.push(
-        `booked enrich: matched ${enriched}/${upsert.inserted.length} new rows by name (metadata only — no prices)`
-      );
     } catch (err) {
       notes.push(`booked enrich skipped: ${err instanceof Error ? err.message : String(err)}`);
     }
@@ -200,7 +264,9 @@ export async function runInventorySync(
     inserted: upsert.inserted.length,
     updated: upsert.updated.length,
     newEvents: upsert.inserted,
+    updatedEvents: upsert.updated,
     enriched,
+    dryRun,
     capabilities: {
       inventory: true,
       eventDetection: true,
@@ -214,9 +280,20 @@ export async function runInventorySync(
 }
 
 export function formatSyncReport(report: InventorySyncReport): string {
+  const mode = report.dryRun ? 'inventory:sync --dry-run' : 'inventory:sync';
   const lines = [
-    `inventory:sync sport=${report.sport} seen=${report.seen} new=${report.inserted} updated=${report.updated} enriched=${report.enriched}`,
+    `${mode} sport=${report.sport} seen=${report.seen} new=${report.inserted} updated=${report.updated} enriched=${report.enriched}`,
     ...report.newEvents.map(e => `  + ${formatSkinEventLine(e)}`),
+    ...(report.dryRun && report.updatedEvents && report.updatedEvents.length > 0
+      ? report.updatedEvents
+          .slice(0, 20)
+          .map(e => `  ~ ${formatSkinEventLine(e)}`)
+          .concat(
+            report.updatedEvents.length > 20
+              ? [`  ~ … ${report.updatedEvents.length - 20} more would update`]
+              : []
+          )
+      : []),
     ...report.notes.map(n => `  · ${n}`),
   ];
   return lines.join('\n');
