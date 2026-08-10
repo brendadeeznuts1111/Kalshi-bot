@@ -52,12 +52,20 @@ type BindingSeed = {
  * Buckeye plive/ezlive bindings.
  * feedSportId = Pandora board (live.sports). widgetSportId = shell sportOrder.
  * Do not put widget ids in feedSportId (legacy bug: tennis widget 2 ≠ feed 8).
+ *
+ * apiSportId = ticket / betGroups `componentBets[].sportId` when proven.
+ * mainapp sportsService treats event.sportId as the **same number space** as
+ * feed (isTennis→8, isSoccer→5|214|220|221, isTableTennis→93, isGolf→7,
+ * isRacing→9, isFighting→6|13|27). TT betGroups capture has sportId=93.
+ * Shell Top Soccer is feed 220 — **not** widget 220 (TT sidebar).
  */
 const BUCKEYE_LIVE_BINDINGS: readonly BindingSeed[] = [
   {
     sportId: 'soccer',
     inventoryBucket: 'football',
     feedSportId: 5,
+    /** mainapp isSoccer includes 5 (+ shells 214/220/221). */
+    apiSportId: 5,
     widgetSportId: 1,
     label: 'Soccer',
     status: 'primary',
@@ -66,6 +74,8 @@ const BUCKEYE_LIVE_BINDINGS: readonly BindingSeed[] = [
     sportId: 'tennis',
     inventoryBucket: 'tennis',
     feedSportId: 8,
+    /** mainapp isTennis(e) ⇒ Number(e)===8 */
+    apiSportId: 8,
     widgetSportId: 2,
     label: 'Tennis',
     status: 'primary',
@@ -82,7 +92,7 @@ const BUCKEYE_LIVE_BINDINGS: readonly BindingSeed[] = [
     sportId: 'table_tennis',
     inventoryBucket: 'table_tennis',
     feedSportId: 93,
-    /** Ticket + feed share 93 (proven). */
+    /** Ticket betGroups + mainapp isTableTennis. */
     apiSportId: 93,
     /** Shell sportOrder entry for TT (not live.sports[220] Top Soccer). */
     widgetSportId: 220,
@@ -114,6 +124,8 @@ const BUCKEYE_LIVE_BINDINGS: readonly BindingSeed[] = [
     sportId: 'golf',
     inventoryBucket: 'golf',
     feedSportId: 7,
+    /** mainapp isGolf(e) ⇒ Number(e)===7 */
+    apiSportId: 7,
     label: 'Golf',
     status: 'inventory',
   },
@@ -171,6 +183,8 @@ const BUCKEYE_LIVE_BINDINGS: readonly BindingSeed[] = [
     sportId: 'boxing',
     inventoryBucket: 'boxing',
     feedSportId: 13,
+    /** mainapp isFighting includes 13 */
+    apiSportId: 13,
     label: 'Boxing',
     status: 'inventory',
   },
@@ -206,6 +220,8 @@ const BUCKEYE_LIVE_BINDINGS: readonly BindingSeed[] = [
     sportId: 'motorsport',
     inventoryBucket: 'motorsport',
     feedSportId: 9,
+    /** mainapp isRacing(e) ⇒ Number(e)===9 */
+    apiSportId: 9,
     label: 'Motorsport',
     status: 'inventory',
   },
@@ -234,6 +250,8 @@ const BUCKEYE_LIVE_BINDINGS: readonly BindingSeed[] = [
     sportId: 'ufc',
     inventoryBucket: 'ufc',
     feedSportId: 27,
+    /** mainapp isFighting includes 27 */
+    apiSportId: 27,
     label: 'UFC',
     status: 'inventory',
   },
@@ -241,6 +259,8 @@ const BUCKEYE_LIVE_BINDINGS: readonly BindingSeed[] = [
     sportId: 'martial_arts',
     inventoryBucket: 'martial_arts',
     feedSportId: 6,
+    /** mainapp isFighting includes 6 */
+    apiSportId: 6,
     label: 'Martial Arts',
     status: 'inventory',
   },

@@ -68,10 +68,16 @@ describe('pandora feed sport SSOT', () => {
     expect(tt?.via).toBe('apiSportId');
   });
 
-  test('legacy apiSportId=8 falls through to feed catalog as tennis', () => {
-    // Callers that passed feed id as apiSportId still work
-    const hit = resolveSport({ liveProduct: 'plive', apiSportId: 8 });
-    expect(hit?.sportId).toBe('tennis');
+  test('apiSportId matches feed for mainapp-proven sports', () => {
+    // Ticket/componentBet sportId shares feed number space (mainapp isX + betGroups)
+    const tennis = resolveSport({ liveProduct: 'plive', apiSportId: 8 });
+    expect(tennis?.sportId).toBe('tennis');
+    expect(tennis?.via).toBe('apiSportId');
+    const soccer = resolveSport({ liveProduct: 'plive', apiSportId: 5 });
+    expect(soccer?.sportId).toBe('soccer');
+    expect(soccer?.via).toBe('apiSportId');
+    const golf = resolveSport({ liveProduct: 'plive', apiSportId: 7 });
+    expect(golf?.sportId).toBe('golf');
   });
 
   test('bindings carry feedSportId for primary sports', () => {
@@ -80,9 +86,12 @@ describe('pandora feed sport SSOT', () => {
     expect(rows.find(r => r.sportId === 'soccer')?.feedSportId).toBe(5);
     expect(rows.find(r => r.sportId === 'basketball')?.feedSportId).toBe(2);
     expect(rows.find(r => r.sportId === 'table_tennis')?.feedSportId).toBe(93);
-    // Wrong legacy values gone
-    expect(rows.find(r => r.sportId === 'soccer')?.apiSportId).toBeNull();
-    expect(rows.find(r => r.sportId === 'tennis')?.apiSportId).toBeNull();
+    // Proven ticket plane (mainapp isX / betGroups)
+    expect(rows.find(r => r.sportId === 'soccer')?.apiSportId).toBe(5);
+    expect(rows.find(r => r.sportId === 'tennis')?.apiSportId).toBe(8);
+    expect(rows.find(r => r.sportId === 'table_tennis')?.apiSportId).toBe(93);
+    // Basketball still feed-only (no mainapp isBasketball / ticket capture yet)
+    expect(rows.find(r => r.sportId === 'basketball')?.apiSportId).toBeNull();
   });
 
   test('feedSportIdsForSport includes core + variants', () => {

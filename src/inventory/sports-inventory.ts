@@ -182,7 +182,7 @@ export async function fetchStreamSportsInventory(
 export function staticSportMapSummary(): {
   total: number;
   primary: number;
-  /** Ticket apiSportId set (only TT proven). */
+  /** Ticket apiSportId set (mainapp isX + TT betGroups; not all sports). */
   withApiId: number;
   /** Pandora feedSportId set. */
   withFeedId: number;

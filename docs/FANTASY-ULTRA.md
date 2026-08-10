@@ -412,7 +412,10 @@ enrich later (wire `client_event_id` soft-matched via `--enrich-booked`).
 | ----------------------------------- | ---------------------------- | ----------------------------------------------- |
 | `sportOrder`                        | `[214, 1, 2, 4, 220]`        | UI only; 214 = favorites                        |
 | Table tennis widget id              | **220**                      | Sidebar                                         |
-| Table tennis API / ticket `sportId` | **93**                       | betGroups, Get_SportsLeagues                    |
+| Table tennis API / ticket `sportId` | **93**                       | betGroups `componentBets[].sportId`, mainapp `isTableTennis` |
+| Tennis ticket / feed                | **8**                        | mainapp `isTennis`                              |
+| Soccer ticket / feed                | **5**                        | mainapp `isSoccer` (also shells 214/220/221)    |
+| Golf / racing                       | **7** / **9**                | mainapp `isGolf` / `isRacing`                   |
 | stream-list bucket                  | `table_tennis`               | Detection                                       |
 | `customWebSocketUrl`                | `wss://pandora.ganchrow.com` | Live odds (message format **not** captured yet) |
 | `oddsFormat`                        | `american`                   | Display/wire preference                         |
@@ -570,12 +573,16 @@ bun run domain:event -- --id=197488581 --validate-session --renew
 **Three sport-id planes** (SSOT: `src/domain/pandora-feed-sports.ts` +
 `live-product-sport-bindings.ts`):
 
-| Plane | Source | Tennis | Basketball | TT |
-| ----- | ------ | ------ | ---------- | -- |
-| **feedSportId** | eventData / live.sports | **8** | **2** | **93** |
-| **widgetSportId** | shell sportOrder | 2 | 4 | 220 |
-| **apiSportId** | Ultra ticket (when proven) | — | — | 93 |
-| **inventoryBucket** | stream-list-v2 | tennis | basketball | table_tennis |
+| Plane | Source | Tennis | Basketball | TT | Soccer |
+| ----- | ------ | ------ | ---------- | -- | ------ |
+| **feedSportId** | eventData / live.sports | **8** | **2** | **93** | **5** |
+| **widgetSportId** | shell sportOrder | 2 | 4 | 220 | 1 |
+| **apiSportId** | ticket / componentBet (proven) | **8** | — | **93** | **5** |
+| **inventoryBucket** | stream-list-v2 | tennis | basketball | table_tennis | football |
+
+`apiSportId` = feed number for sports proven by mainapp `isX` and/or betGroups
+(TT). Basketball etc. stay feed-only until a ticket capture proves them.
+**Collision:** feed shell **220** = Top Soccer; widget **220** = TT sidebar.
 
 ```ts
 import { resolveSport, sportIdFromFeedSportId, FEED_SPORT } from './src/domain/index.ts';
