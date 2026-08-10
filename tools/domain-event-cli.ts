@@ -5,15 +5,17 @@
  *   bun run domain:event -- --id=197548901
  *   bun run domain:event -- --id=197488581 --period=m
  *   bun run domain:event -- --id=197488581/m
- *   bun run domain:event -- --url='https://plive.sportswidgets.pro/live/?#!/event/197488581/m'
+ *   bun run domain:event -- --url='https://plive…/live/?#!/event/197488581/m'
+ *   bun run domain:event -- --sample-sports
+ *   bun run domain:event -- --sample-sports --probe-pandora --seconds=3
  *   bun run domain:event -- --id=197548901 --json
- *   bun run domain:event -- --id=197548901 --seconds=12
- *   bun run domain:event -- --id=197548901 --no-pandora
  */
 import {
   formatEventLookup,
+  formatSportBoardSamples,
   lookupEvent,
   parseEventRef,
+  sampleStreamListBySport,
 } from '../src/inventory/event-lookup.ts';
 
 function hasFlag(name: string): boolean {
@@ -23,6 +25,21 @@ function hasFlag(name: string): boolean {
 function argValue(name: string): string | undefined {
   const hit = process.argv.find(a => a.startsWith(`--${name}=`));
   return hit ? hit.slice(name.length + 3) : undefined;
+}
+
+const json = hasFlag('json');
+const sampleSports = hasFlag('sample-sports');
+const probePandora = hasFlag('probe-pandora');
+const seconds = Number(argValue('seconds') ?? (probePandora ? '3' : '8')) || 8;
+
+if (sampleSports) {
+  const samples = await sampleStreamListBySport({
+    maxSports: Number(argValue('max') ?? '24') || 24,
+    pandoraSeconds: probePandora ? Math.min(seconds, 5) : 0,
+  });
+  if (json) console.log(JSON.stringify(samples, null, 2));
+  else console.log(formatSportBoardSamples(samples));
+  process.exit(0);
 }
 
 const urlArg = argValue('url');
@@ -45,7 +62,7 @@ try {
     periodFromRef = parsed.periodId;
   } else {
     console.error(
-      'usage: bun run domain:event -- --id=<eventId>[/period] | --url=<plive event url>'
+      'usage: bun run domain:event -- --id=<eventId>[/period] | --url=<plive url> | --sample-sports'
     );
     process.exit(2);
   }
@@ -56,10 +73,7 @@ try {
 
 const periodExplicit = argValue('period')?.trim() || null;
 const periodId = periodExplicit ?? periodFromRef;
-
-const json = hasFlag('json');
 const noPandora = hasFlag('no-pandora');
-const seconds = Number(argValue('seconds') ?? '8') || 8;
 
 const result = await lookupEvent({
   eventId,

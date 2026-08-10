@@ -33456,6 +33456,28 @@ export const COMPETITIONS: readonly CompetitionRecord[] = [
       pandora: { leagueId: "23649", feedSportId: "8" },
     },
   },
+  {
+    id: "futsal.brazil_liga_futsal",
+    sportId: "futsal",
+    displayName: "Brazil Liga Futsal",
+    aliases: ["Brazil Liga Futsal"],
+    gender: "unknown",
+    providerMappings: {
+      plive: { inventoryBucket: "futsal", leagueKey: "Brazil Liga Futsal" },
+      pandora: { leagueId: "11434", feedSportId: "89" },
+    },
+  },
+  {
+    id: "futsal.guatemala_liga_nacional_w",
+    sportId: "futsal",
+    displayName: "Guatemala Liga Nacional W",
+    aliases: ["Guatemala Liga Nacional W"],
+    gender: "unknown",
+    providerMappings: {
+      plive: { inventoryBucket: "futsal", leagueKey: "Guatemala Liga Nacional W" },
+      pandora: { leagueId: "24736", feedSportId: "89" },
+    },
+  },
 ] satisfies readonly CompetitionRecord[];
 
 /**

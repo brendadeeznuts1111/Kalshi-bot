@@ -3,6 +3,8 @@ import { describe, expect, test } from 'bun:test';
 import {
   filterLinesByPeriod,
   formatEventLookup,
+  inferSportHintFromLines,
+  labelPeriodId,
   lookupEvent,
   parseEventRef,
   pliveEventUrl,
@@ -39,6 +41,49 @@ describe('event-lookup', () => {
     ).toEqual({ eventId: '197548901', periodId: null });
   });
 
+  test('labelPeriodId is sport-aware', () => {
+    expect(labelPeriodId('m')).toContain('match');
+    expect(labelPeriodId('s1', 'tennis')).toBe('set 1');
+    expect(labelPeriodId('s1', 'table_tennis')).toBe('set 1');
+    expect(labelPeriodId('h1', 'soccer')).toBe('half 1');
+    expect(labelPeriodId('q2', 'basketball')).toBe('quarter 2');
+    expect(labelPeriodId('p1', 'ice_hockey')).toBe('period 1');
+  });
+
+  test('inferSportHintFromLines uses totals and periods', () => {
+    const bb: CoefficientLine[] = [
+      {
+        eventId: 1,
+        period: 'm',
+        marketType: '5',
+        selection: '159.5',
+        line: 159.5,
+        decimal: 1.9,
+        american: -111,
+      },
+    ];
+    expect(inferSportHintFromLines(bb)).toBe('basketball');
+    const ten: CoefficientLine[] = [
+      {
+        eventId: 1,
+        period: 's1',
+        marketType: '3',
+        selection: '1',
+        decimal: 1.9,
+        american: -111,
+      },
+      {
+        eventId: 1,
+        period: 's2',
+        marketType: '3',
+        selection: '1',
+        decimal: 1.9,
+        american: -111,
+      },
+    ];
+    expect(inferSportHintFromLines(ten)).toBe('tennis');
+  });
+
   test('summarizePeriods and filterLinesByPeriod', () => {
     const lines: CoefficientLine[] = [
       {
@@ -66,8 +111,9 @@ describe('event-lookup', () => {
         american: 100,
       },
     ];
-    const periods = summarizePeriods('1', lines);
+    const periods = summarizePeriods('1', lines, 'tennis');
     expect(periods.map(p => p.periodId).sort()).toEqual(['m', 's1']);
+    expect(periods.find(p => p.periodId === 's1')?.label).toBe('set 1');
     expect(periods.find(p => p.periodId === 'm')?.pliveUrl).toContain('/m');
     expect(filterLinesByPeriod(lines, 's1')).toHaveLength(1);
     expect(filterLinesByPeriod(lines, null)).toHaveLength(3);

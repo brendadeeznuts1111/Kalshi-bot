@@ -61,9 +61,11 @@ export type BookedCatalogHit = {
 
 export type EventLookupPlane = 'inventory' | 'priced_only' | 'catalog_only' | 'unknown';
 
-/** Period slice of the coefficient book (m = match, s1/h1/…). */
+/** Period slice of the coefficient book (m = match, s1/h1/q1/…). */
 export type EventPeriodSummary = {
   periodId: string;
+  /** Human label (sport-aware when hint known). */
+  label: string;
   lineCount: number;
   marketTypes: string[];
   /** Deep link focusing this period. */
@@ -82,6 +84,11 @@ export type EventLookupResult = {
   /** Same event without period segment. */
   pliveUrlBare: string;
   plane: EventLookupPlane;
+  /**
+   * Best-effort sport context: stream-list sport, catalog, or inferred from
+   * periods/markets (basketball totals, tennis sets, soccer halves, …).
+   */
+  sportHint: string | null;
   streamList: { hit: boolean; event: StreamListEventHit | null };
   skinEvents: SkinEventHit | null;
   bookedCatalog: BookedCatalogHit | null;
@@ -180,7 +187,7 @@ export function parseEventRef(raw: string): {
 
 /**
  * Build plive deep link.
- * Widget: `/event/:eventId/:periodId?` — period `m` = match.
+ * Widget: `/event/:eventId/:periodId?` — period `m` = match (all sports).
  */
 export function pliveEventUrl(
   eventId: string | number,
@@ -191,8 +198,6 @@ export function pliveEventUrl(
   const p = periodId?.trim();
   const path = p ? `#!/event/${id}/${p}` : `#!/event/${id}`;
   const qs = options.hideSidebar === false ? '' : '?hideSidebar=true';
-  // Widget uses `?#!/…` then optional query after period in some captures;
-  // canonical: origin/live/?#!/event/id[/period] with hideSidebar as trailing query-ish.
   // Observed working: .../live/?#!/event/197488581/m and ...?#!/event/id?hideSidebar=true
   if (p) {
     return `${PLIVE_STREAM_ENDPOINTS.streamOrigin}${PLIVE_STREAM_ENDPOINTS.livePathPrefix}?${path}`;
@@ -200,10 +205,101 @@ export function pliveEventUrl(
   return `${PLIVE_STREAM_ENDPOINTS.streamOrigin}${PLIVE_STREAM_ENDPOINTS.livePathPrefix}?${path}${qs}`;
 }
 
+/**
+ * Sport-aware period labels for Pandora period codes.
+ * Codes are shared across sports; hint disambiguates s1 = set vs segment.
+ */
+export function labelPeriodId(
+  periodId: string,
+  sportHint?: string | null
+): string {
+  const p = periodId.trim().toLowerCase();
+  const sport = (sportHint ?? '').toLowerCase().replace(/\s+/g, '_');
+  if (p === 'm') return 'match (full game)';
+
+  const setSports =
+    /tennis|table_tennis|volleyball|badminton|beach|squash|pickle/.test(sport);
+  const halfSports = /soccer|football|futsal|handball|rugby|aussie|bandy/.test(
+    sport
+  );
+  const quarterSports = /basketball|american_football|football_nfl|aussie/.test(
+    sport
+  );
+  const periodSports = /ice_hockey|hockey|floorbandy|bandy/.test(sport);
+  const inningSports = /baseball|softball|cricket/.test(sport);
+
+  const sn = p.match(/^s(\d+)$/);
+  if (sn) {
+    const n = sn[1]!;
+    if (setSports) return `set ${n}`;
+    if (periodSports) return `period ${n}`;
+    if (inningSports) return `segment ${n}`;
+    return `segment/set ${n}`;
+  }
+  const hn = p.match(/^h(\d+)$/);
+  if (hn) {
+    const n = hn[1]!;
+    if (halfSports || !sport) return `half ${n}`;
+    return `half ${n}`;
+  }
+  const qn = p.match(/^q(\d+)$/);
+  if (qn) return `quarter ${qn[1]}`;
+  const pn = p.match(/^p(\d+)$/);
+  if (pn) {
+    if (periodSports || !sport) return `period ${pn[1]}`;
+    return `period ${pn[1]}`;
+  }
+  const inn = p.match(/^(?:i|inn)(\d+)$/);
+  if (inn) return `inning ${inn[1]}`;
+  if (p === 'ot' || p === 'overtime') return 'overtime';
+  if (p === 'so' || p === 'shootout') return 'shootout';
+  if (p === 'fg' || p === 'f5') return p === 'f5' ? 'first 5 innings' : periodId;
+  return periodId;
+}
+
+/**
+ * Infer sport family from coefficient shape when inventory/catalog lack names.
+ * Heuristic only — used for period labels and notes.
+ */
+export function inferSportHintFromLines(
+  lines: CoefficientLine[],
+  fallback?: string | null
+): string | null {
+  if (fallback && fallback.trim()) {
+    const f = fallback.trim().toLowerCase().replace(/\s+/g, '_');
+    // map stream-list buckets
+    if (f === 'football') return 'soccer';
+    return f;
+  }
+  if (!lines.length) return null;
+  const periods = new Set(lines.map(l => (l.period || 'm').toLowerCase()));
+  const totals = lines
+    .filter(l => l.marketType === '5' && l.line != null)
+    .map(l => Number(l.line));
+  const maxTot = totals.length ? Math.max(...totals) : 0;
+  const hasQ = [...periods].some(p => /^q\d+$/.test(p));
+  const hasH = [...periods].some(p => /^h\d+$/.test(p));
+  const hasS = [...periods].some(p => /^s\d+$/.test(p));
+  const hasP = [...periods].some(p => /^p\d+$/.test(p));
+  // basketball game totals typically 140–240
+  if (maxTot >= 120 && maxTot <= 280) return 'basketball';
+  // soccer totals usually < 10
+  if (hasH && maxTot > 0 && maxTot <= 12) return 'soccer';
+  if (hasQ) return 'basketball';
+  if (hasP && maxTot > 0 && maxTot < 20) return 'ice_hockey';
+  // tennis sets: s1/s2/s3, totals often games < 40 or absent
+  if (hasS && (maxTot === 0 || maxTot < 50)) return 'tennis';
+  if (hasH) return 'soccer';
+  if (hasS) return 'tennis';
+  if (maxTot > 0 && maxTot < 15) return 'soccer';
+  return null;
+}
+
 /** Summarize coefficient lines by period for deep-link inventory. */
 export function summarizePeriods(
   eventId: string,
-  lines: CoefficientLine[]
+  lines: CoefficientLine[],
+  sportHint?: string | null
 ): EventPeriodSummary[] {
   const byPeriod = new Map<string, CoefficientLine[]>();
   for (const l of lines) {
@@ -224,6 +320,7 @@ export function summarizePeriods(
     const spread = pls.find(l => l.marketType === '6' && l.line != null);
     const row: EventPeriodSummary = {
       periodId,
+      label: labelPeriodId(periodId, sportHint),
       lineCount: pls.length,
       marketTypes,
       pliveUrl: pliveEventUrl(eventId, periodId),
@@ -490,7 +587,8 @@ export async function lookupEvent(
         WebSocketImpl: options.WebSocketImpl,
       });
       allLines = p.lines;
-      const periods = summarizePeriods(eventId, allLines);
+      // sport hint filled after stream/catalog known — see below after blocks
+      const periods = summarizePeriods(eventId, allLines, null);
       const periodMissing =
         !!periodId && periods.length > 0 && !periods.some(x => x.periodId === periodId);
       const filtered = filterLinesByPeriod(allLines, periodId);
@@ -550,12 +648,40 @@ export async function lookupEvent(
     pandoraLines: pandora.lineCount,
   });
 
+  let sportHint: string | null = null;
+  if (streamHit?.sport?.trim()) {
+    sportHint = streamHit.sport.toLowerCase().replace(/\s+/g, '_');
+  } else if (skin?.sport?.trim()) {
+    sportHint = skin.sport.trim();
+  } else if (catalog?.sportName?.trim()) {
+    sportHint = catalog.sportName.toLowerCase().replace(/\s+/g, '_');
+  } else {
+    sportHint = inferSportHintFromLines(allLines, streamHit?.bucket ?? null);
+  }
+
+  // Re-label periods with sport hint for display
+  if (pandora.periods.length && sportHint) {
+    pandora.periods = summarizePeriods(
+      eventId,
+      // rebuild from full line set if we still have them on filtered-only display
+      allLines.length
+        ? allLines
+        : pandora.lines,
+      sportHint
+    );
+  }
+
+  if (sportHint) {
+    notes.push(`sport_hint=${sportHint} (stream/catalog/inference — for period labels)`);
+  }
+
   return {
     eventId,
     periodId,
     pliveUrl: pliveEventUrl(eventId, periodId),
     pliveUrlBare: pliveEventUrl(eventId),
     plane,
+    sportHint,
     streamList: { hit: !!streamHit, event: streamHit },
     skinEvents: skin,
     bookedCatalog: catalog,
@@ -564,12 +690,116 @@ export async function lookupEvent(
   };
 }
 
+/** One stream-list sample per sport bucket (inventory plane). */
+export type SportBoardSample = {
+  bucket: string;
+  inventoryId: string;
+  league: string | null;
+  home: string | null;
+  away: string | null;
+  sport: string | null;
+  pliveUrl: string;
+  /** Pandora coefficients for this id (usually 0 — different id space). */
+  pandoraLineCount: number;
+  periods: string[];
+};
+
+/**
+ * Sample live stream-list board across sports (optional short Pandora probe per id).
+ * Inventory ids usually have 0 Pandora lines — documents id-space split multi-sport.
+ */
+export async function sampleStreamListBySport(
+  options: {
+    maxSports?: number;
+    pandoraSeconds?: number;
+    fetchImpl?: FetchFn;
+    WebSocketImpl?: typeof WebSocket;
+    streamListUrl?: string;
+  } = {}
+): Promise<SportBoardSample[]> {
+  const maxSports = Math.min(Math.max(options.maxSports ?? 20, 1), 40);
+  const pandoraSeconds = options.pandoraSeconds ?? 0;
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const url = options.streamListUrl ?? PLIVE_STREAM_ENDPOINTS.streamListUrl;
+  const res = await fetchImpl(url, {
+    headers: {
+      accept: 'application/json, text/plain, */*',
+      origin: FANTASY_ULTRA_DEFAULTS.streamOrigin,
+      referer: FANTASY_ULTRA_DEFAULTS.streamReferer,
+    },
+  });
+  if (!res.ok) throw new Error(`stream-list HTTP ${res.status}`);
+  const wire = (await res.json()) as {
+    sports?: Record<
+      string,
+      { events?: Record<string, Record<string, unknown>> }
+    >;
+  };
+
+  const samples: SportBoardSample[] = [];
+  for (const [bucket, block] of Object.entries(wire.sports ?? {})) {
+    const events = Object.entries(block.events ?? {});
+    if (!events.length) continue;
+    const [id, ev] = events[0]!;
+    const { home, away } = competitors(ev);
+    const sample: SportBoardSample = {
+      bucket,
+      inventoryId: id,
+      league: ev.league != null ? String(ev.league) : null,
+      home,
+      away,
+      sport: ev.sport != null ? String(ev.sport) : null,
+      pliveUrl: pliveEventUrl(id, 'm'),
+      pandoraLineCount: 0,
+      periods: [],
+    };
+    if (pandoraSeconds > 0) {
+      try {
+        const p = await probePandoraEvent(Number(id), {
+          seconds: pandoraSeconds,
+          WebSocketImpl: options.WebSocketImpl,
+        });
+        sample.pandoraLineCount = p.lines.length;
+        sample.periods = [
+          ...new Set(p.lines.map(l => l.period || 'm')),
+        ].sort();
+      } catch {
+        /* ignore */
+      }
+    }
+    samples.push(sample);
+    if (samples.length >= maxSports) break;
+  }
+  return samples;
+}
+
+export function formatSportBoardSamples(samples: SportBoardSample[]): string {
+  const lines: string[] = [];
+  lines.push(`stream-list multi-sport sample (${samples.length} buckets)`);
+  lines.push(
+    'note: #!/event/{id}/m uses Pandora event ids — inventory stream_id usually has 0 coefficient lines'
+  );
+  lines.push('');
+  for (const s of samples) {
+    lines.push(
+      `${s.bucket.padEnd(16)} id=${s.inventoryId} pandora_lines=${s.pandoraLineCount}` +
+        (s.periods.length ? ` periods=[${s.periods.join(',')}]` : '')
+    );
+    lines.push(
+      `  ${s.league ?? '—'} · ${s.home ?? '?'} vs ${s.away ?? '?'}`
+    );
+    lines.push(`  ${s.pliveUrl}`);
+  }
+  return lines.join('\n');
+}
+
 export function formatEventLookup(r: EventLookupResult): string {
   const lines: string[] = [];
   lines.push(
     `event-lookup id=${r.eventId}` +
       (r.periodId ? ` period=${r.periodId}` : '') +
-      ` plane=${r.plane}`
+      ` plane=${r.plane}` +
+      (r.sportHint ? ` sport≈${r.sportHint}` : '')
   );
   lines.push(`  url  ${r.pliveUrl}`);
   if (r.periodId) lines.push(`  bare ${r.pliveUrlBare}`);
@@ -610,7 +840,7 @@ export function formatEventLookup(r: EventLookupResult): string {
         (r.pandora.periodMissing ? ` period=${r.periodId} MISSING` : '')
     );
     if (r.pandora.periods.length) {
-      lines.push('  periods (widget /event/:id/:periodId?):');
+      lines.push('  periods (widget /event/:id/:periodId? — all sports):');
       for (const p of r.pandora.periods) {
         const focus = r.periodId === p.periodId ? ' ← focus' : '';
         const ml = p.moneyline
@@ -619,7 +849,7 @@ export function formatEventLookup(r: EventLookupResult): string {
         const tot = p.totalLine != null ? ` tot=${p.totalLine}` : '';
         const sp = p.spreadLine != null ? ` spr=${p.spreadLine}` : '';
         lines.push(
-          `    ${p.periodId.padEnd(4)} lines=${String(p.lineCount).padStart(3)} mkt=[${p.marketTypes.join(',')}]${ml}${tot}${sp}${focus}`
+          `    ${p.periodId.padEnd(4)} ${p.label.padEnd(18)} lines=${String(p.lineCount).padStart(3)} mkt=[${p.marketTypes.join(',')}]${ml}${tot}${sp}${focus}`
         );
         lines.push(`         ${p.pliveUrl}`);
       }
