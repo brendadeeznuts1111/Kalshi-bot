@@ -11,7 +11,9 @@ import {
   applyBookedOddsEnrich,
   collectBoardEnrichCandidates,
   listUnlinkedSkinEvents,
+  formatOddsLinkCoverage,
   matchBookedOddsEventId,
+  oddsLinkCoverage,
   parseEnrichBookedScope,
   runInventorySync,
 } from "../../src/inventory/sync.ts";
@@ -188,6 +190,41 @@ describe("inventory sync", () => {
     expect(n).toBe(1);
     const still = listUnlinkedSkinEvents(db, "fantasy402");
     expect(still.length).toBe(1);
+  });
+
+  test("oddsLinkCoverage tracks linked vs unlinked", async () => {
+    const db = openEventStore({ dbPath: ":memory:" });
+    const booked: PartnerBookedEvent[] = [
+      {
+        partner: "fantasy402",
+        statscoreId: 1,
+        oddsEventId: "777",
+        name: "A - B",
+        sportName: "Table tennis",
+        sportId: 46,
+        competition: null,
+        startDate: null,
+        statusName: null,
+        statusType: null,
+        betStatus: "active",
+        relationStatus: null,
+      },
+    ];
+    const report = await runInventorySync(
+      db,
+      mockAdapter(
+        [live(1, "table_tennis", "A", "B"), live(2, "table_tennis", "C", "D")],
+        booked,
+      ),
+      { sport: "table_tennis", enrichBooked: true, nowMs: 9 },
+    );
+    expect(report.oddsLink).not.toBeNull();
+    expect(report.oddsLink!.total).toBe(2);
+    expect(report.oddsLink!.linked).toBe(1);
+    expect(report.oddsLink!.unlinked).toBe(1);
+    expect(report.oddsLink!.linkedPct).toBe(50);
+    const cov = oddsLinkCoverage(db, "fantasy402");
+    expect(formatOddsLinkCoverage(cov)).toContain("linked=1/2");
   });
 
   test("pricedOdds true when coefficientStore has ML lines", async () => {

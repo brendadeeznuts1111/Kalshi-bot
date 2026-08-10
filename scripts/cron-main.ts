@@ -245,6 +245,11 @@ async function jobInventorySync(): Promise<void> {
     const enrichBooked =
       Bun.env.INVENTORY_SYNC_ENRICH_BOOKED === "1" ||
       Bun.env.PARTNER_SYNC_ENRICH_BOOKED === "1";
+    const { parseEnrichBookedScope } = await import("../src/inventory/sync.ts");
+    const enrichBookedScope = parseEnrichBookedScope(
+      Bun.env.INVENTORY_SYNC_ENRICH_SCOPE?.trim() ||
+        Bun.env.PARTNER_SYNC_ENRICH_SCOPE?.trim(),
+    );
     const adapter = getFantasySessionAdapter(profile, { warmSession: false });
     try {
       await adapter.login();
@@ -254,12 +259,20 @@ async function jobInventorySync(): Promise<void> {
     const report = await runInventorySync(getDb(), adapter, {
       sport,
       enrichBooked,
+      enrichBookedScope: enrichBooked ? enrichBookedScope : undefined,
     });
     const head = formatSyncReport(report).split("\n");
     console.error(`[cron:inventory] ${head[0]} · ${Date.now() - start}ms`);
     for (const line of head) {
       const t = line.trim();
-      if (t.startsWith("sports:") || t.startsWith("newBySport:") || t.startsWith("leagues:")) {
+      if (
+        t.startsWith("sports:") ||
+        t.startsWith("newBySport:") ||
+        t.startsWith("leagues:") ||
+        t.startsWith("enrich:") ||
+        t.startsWith("priced:") ||
+        t.startsWith("odds-link")
+      ) {
         console.error(`[cron:inventory] ${t}`);
       }
     }

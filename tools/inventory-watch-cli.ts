@@ -14,8 +14,10 @@
  *   bun run inventory:watch -- --once --dry-run
  *   bun run inventory:watch -- --once --dry-run --json
  *   bun run inventory:watch -- --once --skin=buckeye --book=fantasy402
+ *   bun run inventory:watch -- --once --sport=all --enrich-booked
  *
  * --dry-run: plan insert/update only (no SQLite writes, no Telegram). Incompatible with --loop.
+ * --enrich-booked: soft Statscore name → odds_event_id (needs Fantasy adapter; scope=board).
  * Optional: TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID to notify on new rows (live only).
  */
 // @see https://bun.com/docs/runtime/sqlite
@@ -25,7 +27,14 @@ import { DEFAULT_EVENT_STORE_DB } from '../src/institutions/event-store/paths.ts
 import { getFantasySessionAdapter, loadFantasy402ProfileFromEnv } from '../src/partner/index.ts';
 import { formatLeagueLine, upsertInventoryLeagues } from '../src/inventory/leagues.ts';
 import { maybeNotifyInventoryTelegram } from '../src/inventory/notify.ts';
-import { planInventoryUpsert } from '../src/inventory/sync.ts';
+import {
+  applyBookedOddsEnrich,
+  collectBoardEnrichCandidates,
+  formatOddsLinkCoverage,
+  oddsLinkCoverage,
+  parseEnrichBookedScope,
+  planInventoryUpsert,
+} from '../src/inventory/sync.ts';
 import {
   fetchPublicPliveStreamEvents,
   filterLiveEventsBySport,
@@ -36,7 +45,7 @@ import {
   upsertSkinLiveEvents,
   type InventoryIdentity,
 } from '../src/inventory/skin-events-store.ts';
-import type { InventoryEvent } from '../src/partner/types.ts';
+import type { FantasySessionAdapter, InventoryEvent } from '../src/partner/types.ts';
 
 function argValue(name: string): string | undefined {
   const hit = process.argv.find(a => a.startsWith(`--${name}=`));
@@ -60,6 +69,7 @@ function resolveFetchSport(sportArg: string): string {
 async function loadInventoryEvents(sport: string): Promise<{
   events: InventoryEvent[];
   source: 'adapter' | 'public-stream-list';
+  adapter: FantasySessionAdapter | null;
 }> {
   const fetchSport = resolveFetchSport(sport);
   const profile = loadFantasy402ProfileFromEnv();
@@ -73,12 +83,12 @@ async function loadInventoryEvents(sport: string): Promise<{
     const events = await adapter.fetchInventory({
       sport: fetchSport === 'all' ? 'all' : fetchSport,
     });
-    return { events, source: 'adapter' };
+    return { events, source: 'adapter', adapter };
   }
   const events = await fetchPublicPliveStreamEvents({
     sport: fetchSport === 'all' ? 'all' : fetchSport,
   });
-  return { events, source: 'public-stream-list' };
+  return { events, source: 'public-stream-list', adapter: null };
 }
 
 async function pollOnce(options: {
@@ -86,6 +96,8 @@ async function pollOnce(options: {
   json: boolean;
   identity: InventoryIdentity;
   dryRun: boolean;
+  enrichBooked: boolean;
+  enrichBookedScope: ReturnType<typeof parseEnrichBookedScope>;
 }): Promise<{ newCount: number; seen: number }> {
   const loaded = await loadInventoryEvents(options.sport);
   let events = loaded.events;
@@ -110,6 +122,52 @@ async function pollOnce(options: {
   });
   const covers = liveProductsCoveredByInventory(options.identity.skinId);
 
+  let enriched = 0;
+  let enrichCandidates = 0;
+  let enrichNote: string | null = null;
+  if (options.enrichBooked) {
+    if (!loaded.adapter) {
+      enrichNote = 'enrich skipped: needs Fantasy adapter (set FANTASY402_* env)';
+    } else {
+      try {
+        const sportFilter = options.sport.toLowerCase().includes('table')
+          ? 'table'
+          : options.sport === 'all'
+            ? undefined
+            : options.sport;
+        const booked = await loaded.adapter.listBookedEvents({
+          sport: sportFilter,
+          limit: 200,
+        });
+        const catalog = booked.map(b => ({
+          oddsEventId: b.oddsEventId,
+          name: b.name,
+        }));
+        const candidates = collectBoardEnrichCandidates(
+          result,
+          db,
+          options.identity.bookId,
+          options.enrichBookedScope
+        );
+        enrichCandidates = candidates.length;
+        const touch = new Map(result.inserted.concat(result.updated).map(r => [r.inventoryId, r]));
+        enriched = applyBookedOddsEnrich(db, options.identity.bookId, candidates, catalog, {
+          dryRun: options.dryRun,
+          touch,
+        });
+        enrichNote = options.dryRun
+          ? `enrich dry-run scope=${options.enrichBookedScope} would match ${enriched}/${enrichCandidates}`
+          : `enrich scope=${options.enrichBookedScope} matched ${enriched}/${enrichCandidates}`;
+      } catch (err) {
+        enrichNote = `enrich skipped: ${err instanceof Error ? err.message : String(err)}`;
+      }
+    }
+  }
+
+  const oddsLink = options.dryRun
+    ? null
+    : oddsLinkCoverage(db, options.identity.bookId);
+
   const newLines = result.inserted.map(formatSkinEventLine);
   const mode = options.dryRun ? 'inventory:watch --dry-run' : 'inventory:watch';
   if (options.json) {
@@ -126,6 +184,11 @@ async function pollOnce(options: {
           seen: result.seen,
           inserted: result.inserted.length,
           updated: result.updated.length,
+          enriched,
+          enrichCandidates,
+          enrichBookedScope: options.enrichBooked ? options.enrichBookedScope : null,
+          enrichNote,
+          oddsLink,
           leagues: {
             seen: leagues.seen,
             inserted: leagues.inserted,
@@ -142,6 +205,7 @@ async function pollOnce(options: {
             skinId: r.skinId,
             bookId: r.bookId,
             inventoryLiveProduct: r.inventoryLiveProduct,
+            oddsEventId: r.oddsEventId,
           })),
           ...(options.dryRun
             ? {
@@ -165,8 +229,11 @@ async function pollOnce(options: {
         `source=${loaded.source} covers=${covers.join('+')} sport=${options.sport} ` +
         `seen=${result.seen} new=${result.inserted.length} updated=${result.updated.length}` +
         ` leagues=${leagues.seen}/${leagues.inserted}new` +
+        (options.enrichBooked ? ` enriched=${enriched}/${enrichCandidates}` : '') +
         (options.dryRun ? ' (no write)' : '')
     );
+    if (enrichNote) console.log(`  ${enrichNote}`);
+    if (oddsLink) console.log(`  ${formatOddsLinkCoverage(oddsLink)}`);
     for (const line of newLines) {
       console.log(`  + ${line}`);
     }
@@ -200,6 +267,8 @@ async function main(): Promise<void> {
   const dryRun = hasFlag('dry-run') || hasFlag('dryRun');
   const loop = hasFlag('loop');
   const once = hasFlag('once') || !loop;
+  const enrichBooked = hasFlag('enrich-booked');
+  const enrichBookedScope = parseEnrichBookedScope(argValue('enrich-scope'));
   if (loop && dryRun) {
     throw new Error('inventory:watch --dry-run cannot be combined with --loop');
   }
@@ -211,7 +280,7 @@ async function main(): Promise<void> {
   const intervalMs = Math.max(Number(argValue('interval-ms') ?? '30000') || 30_000, 5_000);
 
   if (once) {
-    await pollOnce({ sport, json, identity, dryRun });
+    await pollOnce({ sport, json, identity, dryRun, enrichBooked, enrichBookedScope });
     return;
   }
 
@@ -221,7 +290,14 @@ async function main(): Promise<void> {
   );
   for (;;) {
     try {
-      await pollOnce({ sport, json: false, identity, dryRun: false });
+      await pollOnce({
+        sport,
+        json: false,
+        identity,
+        dryRun: false,
+        enrichBooked,
+        enrichBookedScope,
+      });
     } catch (err) {
       console.error(err instanceof Error ? err.message : err);
     }

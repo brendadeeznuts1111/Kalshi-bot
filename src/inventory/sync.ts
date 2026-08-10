@@ -80,6 +80,8 @@ export type InventorySyncReport = {
   /** Pandora store sizes when available (0 if empty / absent). */
   pricedEventCount: number;
   pricedLineCount: number;
+  /** Post-tick odds_event_id fill-rate for the book (null when dry-run skipped query). */
+  oddsLink: OddsLinkCoverage | null;
   /** True when no DB mutations were applied. */
   dryRun: boolean;
   /** Live-product shells this inventory feed covers (e.g. plive + ezlive). */
@@ -208,6 +210,36 @@ export function collectBoardEnrichCandidates(
     }
   }
   return candidates;
+}
+
+export type OddsLinkCoverage = {
+  bookId: string;
+  total: number;
+  linked: number;
+  unlinked: number;
+  /** 0–100, integer percent of rows with non-empty odds_event_id. */
+  linkedPct: number;
+};
+
+/** Fill-rate of skin_events.odds_event_id for a book (metadata link, not prices). */
+export function oddsLinkCoverage(db: Database, bookId: string): OddsLinkCoverage {
+  const row = db
+    .query(
+      `SELECT
+         COUNT(*) AS total,
+         SUM(CASE WHEN odds_event_id IS NOT NULL AND TRIM(odds_event_id) != '' THEN 1 ELSE 0 END) AS linked
+       FROM skin_events WHERE book_id = $book`
+    )
+    .get({ $book: bookId }) as { total: number; linked: number | null };
+  const total = Number(row?.total) || 0;
+  const linked = Number(row?.linked) || 0;
+  const unlinked = Math.max(0, total - linked);
+  const linkedPct = total === 0 ? 0 : Math.round((linked / total) * 100);
+  return { bookId, total, linked, unlinked, linkedPct };
+}
+
+export function formatOddsLinkCoverage(c: OddsLinkCoverage): string {
+  return `odds-link book=${c.bookId} linked=${c.linked}/${c.total} (${c.linkedPct}%) unlinked=${c.unlinked}`;
 }
 
 export function listUnlinkedSkinEvents(
@@ -468,6 +500,11 @@ export async function runInventorySync(
     );
   }
 
+  const oddsLink = dryRun ? null : oddsLinkCoverage(db, identity.bookId);
+  if (oddsLink) {
+    notes.push(formatOddsLinkCoverage(oddsLink));
+  }
+
   return {
     sport,
     seen: upsert.seen,
@@ -480,6 +517,7 @@ export async function runInventorySync(
     enrichBookedScope: enrichScope,
     pricedEventCount,
     pricedLineCount,
+    oddsLink,
     dryRun,
     coversLiveProducts,
     sportHistogram,
@@ -521,6 +559,9 @@ export function formatSyncReport(report: InventorySyncReport): string {
     lines.push(
       `  priced: pandora events=${report.pricedEventCount} lines=${report.pricedLineCount}`
     );
+  }
+  if (report.oddsLink) {
+    lines.push(`  ${formatOddsLinkCoverage(report.oddsLink)}`);
   }
   lines.push(
     `  leagues: seen=${report.leagues.seen} new=${report.leagues.inserted} updated=${report.leagues.updated}`

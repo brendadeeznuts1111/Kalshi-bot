@@ -79,12 +79,15 @@ export {
   applyBookedOddsEnrich,
   listUnlinkedSkinEvents,
   collectBoardEnrichCandidates,
+  oddsLinkCoverage,
+  formatOddsLinkCoverage,
   planInventoryUpsert,
   runInventorySync,
   sportHistogramFromEvents,
   type EnrichBookedScope,
   type InventorySyncOptions,
   type InventorySyncReport,
+  type OddsLinkCoverage,
 } from '../inventory/sync.ts';
 
 export {
