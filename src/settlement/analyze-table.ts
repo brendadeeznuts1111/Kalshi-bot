@@ -7,11 +7,17 @@
  * @see docs/artifacts/live-tracker-analyze-sample.json
  */
 
+import { dualTime } from '../lib/time-ssot.ts';
 import type { LiveTrackerWeightResult } from './live-weight.ts';
 
 /** Event + settlement + pattern fields for desk tables. */
 export const ANALYZE_WEIGHTED_FIELD_SCHEMA = [
-  { key: 'time', type: 'string', description: 'Event ISO time' },
+  { key: 'time', type: 'string', description: 'Event ISO-8601 UTC (wall clock)' },
+  {
+    key: 'timeMs',
+    type: 'number|null',
+    description: 'Same instant as Unix epoch milliseconds (join key for shadow/event-store)',
+  },
   { key: 'eventType', type: 'string', description: 'MARKET_ADDED | PRICE_CHANGE | …' },
   { key: 'eventId', type: 'string', description: 'Pandora event id' },
   { key: 'period', type: 'string', description: 'm | s1 | h1 | …' },
@@ -46,6 +52,7 @@ export type AnalyzeWeightedFieldKey = (typeof ANALYZE_WEIGHTED_FIELD_SCHEMA)[num
 /** Default table column order (subset of schema for TTY width). */
 export const ANALYZE_WEIGHTED_DEFAULT_COLUMNS: readonly AnalyzeWeightedFieldKey[] = [
   'time',
+  'timeMs',
   'eventType',
   'period',
   'marketType',
@@ -99,8 +106,10 @@ export function flattenWeightedEventRow(e: WeightedTrackerEvent): AnalyzeWeighte
     s?.patternScan?.maxSeverity ??
     (hits[0]?.severity ?? '—');
 
+  const dual = dualTime(e.time);
   return {
-    time: e.time,
+    time: dual?.time ?? e.time,
+    timeMs: dual?.timeMs ?? null,
     eventType: e.eventType,
     eventId: String(e.eventId),
     period: e.period ?? '—',

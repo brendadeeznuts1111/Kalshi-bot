@@ -5,7 +5,12 @@
     {
       "key": "time",
       "type": "string",
-      "description": "Event ISO time"
+      "description": "Event ISO-8601 UTC (wall clock)"
+    },
+    {
+      "key": "timeMs",
+      "type": "number|null",
+      "description": "Same instant as Unix epoch milliseconds (join key for shadow/event-store)"
     },
     {
       "key": "eventType",
@@ -140,6 +145,7 @@
   ],
   "defaultColumns": [
     "time",
+    "timeMs",
     "eventType",
     "period",
     "marketType",
@@ -153,6 +159,7 @@
   ],
   "allColumns": [
     "time",
+    "timeMs",
     "eventType",
     "eventId",
     "period",

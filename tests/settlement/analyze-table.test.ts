@@ -50,6 +50,8 @@ describe('analyze weighted table schema', () => {
     expect(String(row.patternIds)).toContain('void.live-ml-unfinished');
     expect(row.pVoidPrior).toBe(0.15);
     expect(row.voidEv).not.toBeNull();
+    expect(row.timeMs).toBe(Date.parse('2026-08-10T10:00:02.000Z'));
+    expect(row.time).toBe('2026-08-10T10:00:02.000Z');
     for (const k of ANALYZE_WEIGHTED_ALL_COLUMNS) {
       expect(row).toHaveProperty(k);
     }
