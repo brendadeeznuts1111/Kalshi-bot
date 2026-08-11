@@ -4,8 +4,9 @@
  */
 import type { BookSnapshot, SignalContext } from "../institutions/alpha-signal-types.ts";
 import {
-  attachSettlementToComponents,
+  attachEdgePatternComponents,
   resolveSettlementWeighting,
+  scanEdgePatterns,
   type SettlementPhase,
 } from "../settlement/index.ts";
 import type { OddsEvent } from "./odds-types.ts";
@@ -27,8 +28,8 @@ export type BuildPinnacleSignalInput = {
   kalshiPriceCents?: number;
   mapperOptions?: TickerMapperOptions;
   /**
-   * Optional shell settlement tags (plive/ezlive rules).
-   * When set, components get settlement_void_risk / p_void_prior / phase.
+   * Optional shell settlement + sport-wide edge patterns.
+   * When set, components get settlement_* and pat_* tags from scanEdgePatterns.
    */
   settlement?: {
     sportId: string;
@@ -39,7 +40,12 @@ export type BuildPinnacleSignalInput = {
       firstSetCompleted?: boolean;
       matchCompleted?: boolean;
       periodCompleted?: boolean;
+      minute?: number;
+      injuryRisk?: boolean;
+      eligibilityBroken?: boolean;
     };
+    /** Default true — scan convergent edge patterns. */
+    scanPatterns?: boolean;
   };
 };
 
@@ -109,14 +115,31 @@ export async function buildPinnacleSignalContext(
   };
 
   if (input.settlement) {
-    const w = resolveSettlementWeighting({
-      sportId: input.settlement.sportId,
-      phase: input.settlement.phase,
-      marketType: input.settlement.marketType,
-      period: input.settlement.period,
-      matchState: input.settlement.matchState,
-    });
-    components = attachSettlementToComponents(components, w);
+    if (input.settlement.scanPatterns === false) {
+      const w = resolveSettlementWeighting({
+        sportId: input.settlement.sportId,
+        phase: input.settlement.phase,
+        marketType: input.settlement.marketType,
+        period: input.settlement.period,
+        matchState: input.settlement.matchState,
+      });
+      components = {
+        ...components,
+        settlement_void_risk:
+          w.voidRisk === "high" ? 3 : w.voidRisk === "medium" ? 2 : w.voidRisk === "low" ? 1 : 0,
+        settlement_phase_live: w.phase === "live" ? 1 : 0,
+        settlement_prefer_unit_markets: w.preferCompletedUnitMarkets ? 1 : 0,
+      };
+    } else {
+      const scan = scanEdgePatterns({
+        sportId: input.settlement.sportId,
+        phase: input.settlement.phase,
+        marketType: input.settlement.marketType,
+        period: input.settlement.period,
+        matchState: input.settlement.matchState,
+      });
+      components = attachEdgePatternComponents(components, scan);
+    }
   }
 
   return {

@@ -23,9 +23,10 @@ Book adapter and coverage inventory for a **PPH / Fantasy402** desk (skin
 > [`docs/artifacts/plive-event-meta.html`](artifacts/plive-event-meta.html).
 > Operator checklist: [`INVENTORY.md`](INVENTORY.md) § Operator checklist.
 > **Shell sports rules** (settlement / void / action — weight lines & movement):
-> [`PLIVE-EZLIVE-SPORTS-RULES.md`](PLIVE-EZLIVE-SPORTS-RULES.md) (quick thresholds ·
-> sports cards · EV void branch) · JSON + `weighting` index
-> [`artifacts/plive-ezlive-sports-rules.json`](artifacts/plive-ezlive-sports-rules.json).
+> [`PLIVE-EZLIVE-SPORTS-RULES.md`](PLIVE-EZLIVE-SPORTS-RULES.md) · sport-wide
+> **edge patterns** (market/line/sport families):
+> [`EDGE-PATTERNS.md`](EDGE-PATTERNS.md) · `src/settlement/` ·
+> `bun live-tracker.ts patterns`.
 
 | Concern                                | Location                                  |
 | -------------------------------------- | ----------------------------------------- |
