@@ -27,7 +27,8 @@
 | Human doc | this file |
 | Machine snapshot | [`artifacts/plive-ezlive-sports-rules.json`](artifacts/plive-ezlive-sports-rules.json) |
 | Weighting index | JSON key `weighting` (v2) |
-| Code SSOT | [`src/settlement/`](../src/settlement/) — `resolveSettlementWeighting` · `expectedValueWithVoid` · `weightLiveTrackerMove` |
+| Code SSOT | [`src/settlement/`](../src/settlement/) — weighting · void EV · **edge patterns** |
+| Edge patterns (sport/market/line) | [`EDGE-PATTERNS.md`](EDGE-PATTERNS.md) · `scanEdgePatterns` · `bun live-tracker.ts patterns` |
 | Live-tracker | `bun live-tracker.ts analyze --sport=tennis --phase=live` |
 | Shadow outcomes | `0 \| 1 \| "void"` — voids **excluded** from Brier (`src/institutions/shadow-line.ts`) |
 | **plive** | Live product + inventory shell owner |

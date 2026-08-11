@@ -8,7 +8,8 @@
  *   bun live-tracker.ts watch --market-id #197510101 --notify   # Telegram on MARKET_REMOVED / OTB
  *   bun live-tracker.ts analyze --summary
  *   bun live-tracker.ts analyze --stats
- *   bun live-tracker.ts analyze --sport=tennis --phase=live   # shell void/action weighting
+ *   bun live-tracker.ts analyze --sport=tennis --phase=live   # settlement + edge patterns
+ *   bun live-tracker.ts patterns                              # catalog of sport-wide edge families
  *   bun live-tracker.ts diff --columns File,Event,Detail --desc --output out.csv --format csv
  *   bun live-tracker.ts diff --tail 10 --watch --interval 2
  *   bun live-tracker.ts chart --event 197510101 --market 3 --event 197510101 --market 4 --overlay --out compare.svg
@@ -502,6 +503,27 @@ if (cmd === 'diff') {
   process.exit(0);
 }
 
+// ── patterns (sport-wide edge catalog) ─────────────────────────────────────
+if (cmd === 'patterns') {
+  const { formatEdgePatternCatalog, listEdgePatterns, edgePatternsByFamily } =
+    await import('./src/settlement/index.ts');
+  if (hasFlag('json') || argValue('format') === 'json') {
+    const catalog = listEdgePatterns().map(p => ({
+      id: p.id,
+      family: p.family,
+      title: p.title,
+      description: p.description,
+      scope: p.scope,
+    }));
+    await writeOrPrint(
+      JSON.stringify({ families: edgePatternsByFamily(), patterns: catalog }, null, 2) + '\n',
+    );
+    process.exit(0);
+  }
+  await writeOrPrint(formatEdgePatternCatalog());
+  process.exit(0);
+}
+
 // ── analyze ────────────────────────────────────────────────────────────────
 if (cmd === 'analyze') {
   const pos = positionalAfterCmd('analyze');
@@ -509,7 +531,7 @@ if (cmd === 'analyze') {
   let events = paths.length
     ? await loadTrackerEventsFromPaths(paths)
     : [];
-  // Optional shell settlement weighting (plive/ezlive rules)
+  // Optional shell settlement + edge patterns (plive/ezlive rules)
   const sportId = argValue('sport');
   if (sportId) {
     const phase =
@@ -523,9 +545,8 @@ if (cmd === 'analyze') {
       await writeOrPrint(JSON.stringify(weighted, null, 2) + '\n');
       process.exit(0);
     }
-    // Text summary: print settlement lines for PRICE_CHANGE
     const lines: string[] = [
-      `settlement weighting · sport=${sportId} phase=${phase}`,
+      `settlement + edge patterns · sport=${sportId} phase=${phase}`,
       '',
     ];
     for (const e of weighted) {
@@ -541,6 +562,10 @@ if (cmd === 'analyze') {
           `  → EV_void=${s.voidEv.ev.toFixed(2)} EV_2way=${s.voidEv.twoWayEv.toFixed(2)} ` +
             `Δ=${s.voidEv.voidDelta.toFixed(2)} p_void=${s.pVoidPrior}`
         );
+      }
+      for (const h of s.patterns ?? []) {
+        if (h.severity === 'info' && !hasFlag('verbose')) continue;
+        lines.push(`  → [${h.severity}] ${h.patternId} (${h.family}): ${h.note}`);
       }
     }
     if (lines.length <= 2) {
