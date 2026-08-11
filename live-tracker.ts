@@ -139,6 +139,8 @@ Usage:
   bun live-tracker.ts analyze [files…] [--summary] [--stats] [--format …] [--output path]
                               [--sport=tennis] [--phase=live|prematch]
                               [--sort-by severity|family|id] [--desc] [--verbose]
+                              [--inspect|--json|--table] [--columns all|a,b,…]
+                              [--bake]   # write docs/artifacts live-tracker-analyze-*
   bun live-tracker.ts patterns [--sort-by family|severity|id] [--desc] [--json|--inspect]
   bun live-tracker.ts chart   --event ID --market TYPE [--event ID --market TYPE …]
                               [--period m] [--overlay] [--out=compare.svg]
@@ -571,7 +573,14 @@ if (cmd === 'analyze') {
   // Optional shell settlement + edge patterns (plive/ezlive rules)
   const sportId = argValue('sport');
   if (sportId) {
-    const { parseEdgePatternSortBy } = await import('./src/settlement/index.ts');
+    const {
+      parseEdgePatternSortBy,
+      buildAnalyzeSnapshotArtifact,
+      formatAnalyzeInspectTable,
+      formatAnalyzeMarkdownTable,
+      ANALYZE_WEIGHTED_ALL_COLUMNS,
+      ANALYZE_WEIGHTED_DEFAULT_COLUMNS,
+    } = await import('./src/settlement/index.ts');
     const phase =
       argValue('phase') === 'prematch' ? 'prematch' : 'live';
     const sortBy = parseEdgePatternSortBy(argValue('sort-by'), ['severity', 'id']);
@@ -582,7 +591,63 @@ if (cmd === 'analyze') {
       period: argValue('period') ?? undefined,
       patternSort: { sortBy, desc },
     });
-    const analyzeSnapshot = { sortBy, desc, sportId, phase, events: weighted };
+    // Flat schema rows (all settlement/pattern fields) — not nested [Object …]
+    const artifact = buildAnalyzeSnapshotArtifact({
+      sportId,
+      phase,
+      sortBy,
+      desc,
+      events: weighted,
+    });
+    const colArg = argValue('columns');
+    const columns =
+      colArg === 'all' || hasFlag('all-columns')
+        ? [...ANALYZE_WEIGHTED_ALL_COLUMNS]
+        : colArg
+          ? colArg.split(',').map(s => s.trim()).filter(Boolean)
+          : [...ANALYZE_WEIGHTED_DEFAULT_COLUMNS];
+
+    // Optional bake to docs/artifacts for sample table SSOT
+    if (hasFlag('bake') || hasFlag('write-sample')) {
+      const { joinPath } = await import('./src/research/paths.ts');
+      const schemaPath = joinPath(
+        process.cwd(),
+        'docs/artifacts/live-tracker-analyze-schema.json',
+      );
+      const samplePath = joinPath(
+        process.cwd(),
+        'docs/artifacts/live-tracker-analyze-sample.json',
+      );
+      const tablePath = joinPath(
+        process.cwd(),
+        'docs/artifacts/live-tracker-analyze-sample.md',
+      );
+      await Bun.write(
+        schemaPath,
+        JSON.stringify(
+          {
+            schemaVersion: artifact.schemaVersion,
+            description:
+              'Flat row schema for live-tracker analyze --sport (settlement + edge patterns)',
+            fields: artifact.fields,
+            defaultColumns: artifact.defaultColumns,
+            allColumns: artifact.allColumns,
+          },
+          null,
+          2,
+        ) + '\n',
+      );
+      await Bun.write(samplePath, JSON.stringify(artifact, null, 2) + '\n');
+      await Bun.write(
+        tablePath,
+        `# Live-tracker analyze sample (tennis / live)\n\n` +
+          `Generated \`${artifact.generatedAt}\` · sport=\`${sportId}\` phase=\`${phase}\`\n\n` +
+          formatAnalyzeMarkdownTable(artifact.rows, ANALYZE_WEIGHTED_ALL_COLUMNS) +
+          '\n',
+      );
+      console.error(`baked ${schemaPath}\n      ${samplePath}\n      ${tablePath}`);
+    }
+
     if (hasFlag('inspect') || argValue('format') === 'inspect') {
       const { inspectSnapshot } = await import('./src/research/bun-native.ts');
       const colors =
@@ -590,39 +655,62 @@ if (cmd === 'analyze') {
         Boolean(process.stdout.isTTY) &&
         process.env.NO_COLOR == null;
       const depthRaw = argValue('depth');
-      const depth = depthRaw != null && Number.isFinite(Number(depthRaw)) ? Number(depthRaw) : 4;
-      const text = inspectSnapshot(analyzeSnapshot, { colors, depth, sorted: true });
-      await writeOrPrint(text.endsWith('\n') ? text : text + '\n');
+      const depth = depthRaw != null && Number.isFinite(Number(depthRaw)) ? Number(depthRaw) : 6;
+      // Prefer flat rows + inspect.table so every schema field is visible
+      const table = formatAnalyzeInspectTable(artifact.rows, columns, { colors });
+      const meta = inspectSnapshot(
+        {
+          sportId: artifact.sportId,
+          phase: artifact.phase,
+          sortBy: artifact.sortBy,
+          desc: artifact.desc,
+          schemaVersion: artifact.schemaVersion,
+          rowCount: artifact.rows.length,
+          columns,
+          fields: artifact.fields.map(f => f.key),
+        },
+        { colors, depth, sorted: true },
+      );
+      await writeOrPrint(meta + '\n\n' + table + '\n');
       process.exit(0);
     }
     if (hasFlag('json') || argValue('format') === 'json') {
-      await writeOrPrint(JSON.stringify(analyzeSnapshot, null, 2) + '\n');
+      await writeOrPrint(JSON.stringify(artifact, null, 2) + '\n');
       process.exit(0);
     }
+    if (hasFlag('table') || argValue('format') === 'table') {
+      const colors =
+        !hasFlag('no-color') &&
+        Boolean(process.stdout.isTTY) &&
+        process.env.NO_COLOR == null;
+      await writeOrPrint(
+        formatAnalyzeInspectTable(artifact.rows, columns, { colors }) + '\n',
+      );
+      process.exit(0);
+    }
+    // Markdown narrative + full-field table
     const lines: string[] = [
       `settlement + edge patterns · sport=${sportId} phase=${phase} · sort-by ${sortBy.join(',')}${desc ? ' desc' : ''}`,
       '',
+      formatAnalyzeMarkdownTable(artifact.rows, columns),
+      '',
     ];
-    for (const e of weighted) {
-      if (!('settlement' in e) || !e.settlement) continue;
-      const s = e.settlement;
-      lines.push(
-        `${e.time} ${e.eventType} mkt=${e.marketType ?? '?'} per=${e.period ?? 'm'} ` +
-          `${s.summary}`
-      );
-      lines.push(`  → ${s.sizingNote}`);
-      if (s.voidEv) {
+    if (hasFlag('verbose')) {
+      for (const e of weighted) {
+        if (!('settlement' in e) || !e.settlement) continue;
+        const s = e.settlement;
         lines.push(
-          `  → EV_void=${s.voidEv.ev.toFixed(2)} EV_2way=${s.voidEv.twoWayEv.toFixed(2)} ` +
-            `Δ=${s.voidEv.voidDelta.toFixed(2)} p_void=${s.pVoidPrior}`
+          `${e.time} ${e.eventType} mkt=${e.marketType ?? '?'} per=${e.period ?? 'm'} ` +
+            `${s.summary}`,
         );
-      }
-      for (const h of s.patterns ?? []) {
-        if (h.severity === 'info' && !hasFlag('verbose')) continue;
-        lines.push(`  → [${h.severity}] ${h.patternId} (${h.family}): ${h.note}`);
+        lines.push(`  → ${s.sizingNote}`);
+        for (const h of s.patterns ?? []) {
+          if (h.severity === 'info') continue;
+          lines.push(`  → [${h.severity}] ${h.patternId} (${h.family}): ${h.note}`);
+        }
       }
     }
-    if (lines.length <= 2) {
+    if (!artifact.rows.length) {
       lines.push('(no PRICE_CHANGE/MARKET_ADDED rows to weight)');
     }
     await writeOrPrint(lines.join('\n') + '\n');

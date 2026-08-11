@@ -59,6 +59,26 @@ Also: `analyze --sport=… --inspect` uses the same helper.
 
 `--sort-by` still orders **pattern rows** before either dump; `sorted: true` only orders **object keys** inside the inspect tree.
 
+## Analyze sample table + schema
+
+Flat row schema (all settlement / pattern fields, no nested `[Object …]`):
+
+| Artifact | Path |
+| -------- | ---- |
+| Schema | [`docs/artifacts/live-tracker-analyze-schema.json`](artifacts/live-tracker-analyze-schema.json) |
+| Sample JSON | [`docs/artifacts/live-tracker-analyze-sample.json`](artifacts/live-tracker-analyze-sample.json) |
+| Sample MD table | [`docs/artifacts/live-tracker-analyze-sample.md`](artifacts/live-tracker-analyze-sample.md) |
+
+```bash
+# Rebake artifacts + full-column inspect.table
+bun live-tracker.ts analyze --sport=tennis --phase=live --bake --columns=all --inspect --no-color
+
+# Default TTY columns (narrower)
+bun live-tracker.ts analyze --sport=tennis --phase=live --table
+```
+
+Code: `src/settlement/analyze-table.ts` · `ANALYZE_WEIGHTED_FIELD_SCHEMA` · `buildAnalyzeSnapshotArtifact`.
+
 ### `--sort-by` (patterns / analyze --sport)
 
 | Field | Catalog (`patterns`) | Hits (`analyze --sport`) |
