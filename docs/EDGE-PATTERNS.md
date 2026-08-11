@@ -79,6 +79,8 @@ bun live-tracker.ts analyze --sport=tennis --phase=live --table
 
 Code: `src/settlement/analyze-table.ts` · `ANALYZE_WEIGHTED_FIELD_SCHEMA` · `buildAnalyzeSnapshotArtifact`.
 
+Time: `time` = ISO UTC · `timeMs` = epoch ms join key — see [`TIME.md`](TIME.md).
+
 ### `--sort-by` (patterns / analyze --sport)
 
 | Field | Catalog (`patterns`) | Hits (`analyze --sport`) |

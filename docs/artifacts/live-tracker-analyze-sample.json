@@ -11,7 +11,12 @@
     {
       "key": "time",
       "type": "string",
-      "description": "Event ISO time"
+      "description": "Event ISO-8601 UTC (wall clock)"
+    },
+    {
+      "key": "timeMs",
+      "type": "number|null",
+      "description": "Same instant as Unix epoch milliseconds (join key for shadow/event-store)"
     },
     {
       "key": "eventType",
@@ -146,6 +151,7 @@
   ],
   "defaultColumns": [
     "time",
+    "timeMs",
     "eventType",
     "period",
     "marketType",
@@ -159,6 +165,7 @@
   ],
   "allColumns": [
     "time",
+    "timeMs",
     "eventType",
     "eventId",
     "period",
@@ -189,6 +196,7 @@
   "rows": [
     {
       "time": "2026-08-10T10:00:01.000Z",
+      "timeMs": 1786356001000,
       "eventType": "MARKET_ADDED",
       "eventId": "197510101",
       "period": "m",
@@ -218,6 +226,7 @@
     },
     {
       "time": "2026-08-10T10:00:02.000Z",
+      "timeMs": 1786356002000,
       "eventType": "PRICE_CHANGE",
       "eventId": "197510101",
       "period": "m",
@@ -247,6 +256,7 @@
     },
     {
       "time": "2026-08-10T10:00:03.000Z",
+      "timeMs": 1786356003000,
       "eventType": "MARKET_ADDED",
       "eventId": "197510101",
       "period": "s1",
@@ -276,6 +286,7 @@
     },
     {
       "time": "2026-08-10T10:00:04.000Z",
+      "timeMs": 1786356004000,
       "eventType": "PRICE_CHANGE",
       "eventId": "197510101",
       "period": "m",
@@ -305,6 +316,7 @@
     },
     {
       "time": "2026-08-10T10:00:05.000Z",
+      "timeMs": 1786356005000,
       "eventType": "PRICE_CHANGE",
       "eventId": "197510101",
       "period": "m",
@@ -334,6 +346,7 @@
     },
     {
       "time": "2026-08-10T10:00:05.000Z",
+      "timeMs": 1786356005000,
       "eventType": "PRICE_CHANGE",
       "eventId": "197510101",
       "period": "m",
@@ -362,5 +375,5 @@
       "pliveEqEzlive": true
     }
   ],
-  "generatedAt": "2026-08-11T09:36:07.308Z"
+  "generatedAt": "2026-08-11T16:55:23.872Z"
 }
