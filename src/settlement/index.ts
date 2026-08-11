@@ -40,13 +40,17 @@ export {
 
 export {
   EDGE_PATTERN_FAMILIES,
+  EDGE_PATTERN_SORT_KEYS,
   edgePatternsByFamily,
   formatEdgePatternCatalog,
   getEdgePattern,
   lineKindFromMarketClass,
   listEdgePatternFamilies,
   listEdgePatterns,
+  parseEdgePatternSortBy,
   scanEdgePatterns,
+  sortEdgePatternHits,
+  sortEdgePatterns,
   voidRiskScore,
   type EdgeLineKind,
   type EdgePattern,
@@ -56,4 +60,6 @@ export {
   type EdgePatternScanResult,
   type EdgePatternScope,
   type EdgePatternSeverity,
+  type EdgePatternSortKey,
+  type EdgePatternSortOptions,
 } from './edge-patterns.ts';
