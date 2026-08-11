@@ -9,7 +9,7 @@
  *   bun live-tracker.ts analyze --summary
  *   bun live-tracker.ts analyze --stats
  *   bun live-tracker.ts analyze --sport=tennis --phase=live [--sort-by severity|family|id]
- *   bun live-tracker.ts patterns [--sort-by family|id] [--desc]  # sport-wide edge catalog
+ *   bun live-tracker.ts patterns [--sort-by family|id] [--desc] [--json|--inspect]
  *   bun live-tracker.ts diff --columns File,Event,Detail --desc --output out.csv --format csv
  *   bun live-tracker.ts diff --tail 10 --watch --interval 2
  *   bun live-tracker.ts chart --event 197510101 --market 3 --event 197510101 --market 4 --overlay --out compare.svg
@@ -92,11 +92,13 @@ const BOOLEAN_FLAGS = new Set([
   'desc',
   'detail',
   'json',
+  'inspect',
   'overlay',
   'spandora',
   'stats',
   'summary',
   'ticks',
+  'verbose',
   'watch',
   'notify',
   'force-notify',
@@ -137,7 +139,7 @@ Usage:
   bun live-tracker.ts analyze [files…] [--summary] [--stats] [--format …] [--output path]
                               [--sport=tennis] [--phase=live|prematch]
                               [--sort-by severity|family|id] [--desc] [--verbose]
-  bun live-tracker.ts patterns [--sort-by family|severity|id] [--desc] [--json]
+  bun live-tracker.ts patterns [--sort-by family|severity|id] [--desc] [--json|--inspect]
   bun live-tracker.ts chart   --event ID --market TYPE [--event ID --market TYPE …]
                               [--period m] [--overlay] [--out=compare.svg]
                               [--from=path|glob]   # default: research/cache/live-tracker/event-*.jsonl
@@ -155,6 +157,7 @@ Examples:
   bun live-tracker.ts analyze --sport=tennis --phase=live --sort-by severity,id
   bun live-tracker.ts patterns --sort-by family,id
   bun live-tracker.ts patterns --sort-by id --desc
+  bun live-tracker.ts patterns --inspect          # TTY Bun.inspect (sorted keys, depth 4)
   bun live-tracker.ts chart --event 197510101 --market 3 --event 197510101 --market 4 --overlay --out compare.svg
 `);
   process.exit(code);
@@ -523,21 +526,40 @@ if (cmd === 'patterns') {
   } = await import('./src/settlement/index.ts');
   const sortBy = parseEdgePatternSortBy(argValue('sort-by'), ['family', 'id']);
   const desc = hasFlag('desc');
+  const catalog = sortEdgePatterns(listEdgePatterns(), { sortBy, desc }).map(p => ({
+    id: p.id,
+    family: p.family,
+    title: p.title,
+    description: p.description,
+    scope: p.scope,
+  }));
+  const payload = {
+    sortBy,
+    desc,
+    families: edgePatternsByFamily(),
+    patterns: catalog,
+  };
+
+  // --json: machine JSON. --inspect: TTY Bun.inspect (sorted keys). Markdown default.
+  // @see https://bun.com/docs/runtime/utils#bun-inspect
+  if (hasFlag('inspect') || argValue('format') === 'inspect') {
+    const colors =
+      !hasFlag('no-color') &&
+      Boolean(process.stdout.isTTY) &&
+      process.env.NO_COLOR == null;
+    const depthRaw = argValue('depth');
+    const depth = depthRaw != null && Number.isFinite(Number(depthRaw)) ? Number(depthRaw) : 4;
+    const text = Bun.inspect(payload, {
+      colors,
+      compact: false,
+      depth,
+      sorted: true,
+    });
+    await writeOrPrint(text.endsWith('\n') ? text : text + '\n');
+    process.exit(0);
+  }
   if (hasFlag('json') || argValue('format') === 'json') {
-    const catalog = sortEdgePatterns(listEdgePatterns(), { sortBy, desc }).map(p => ({
-      id: p.id,
-      family: p.family,
-      title: p.title,
-      description: p.description,
-      scope: p.scope,
-    }));
-    await writeOrPrint(
-      JSON.stringify(
-        { sortBy, desc, families: edgePatternsByFamily(), patterns: catalog },
-        null,
-        2,
-      ) + '\n',
-    );
+    await writeOrPrint(JSON.stringify(payload, null, 2) + '\n');
     process.exit(0);
   }
   await writeOrPrint(formatEdgePatternCatalog({ sortBy, desc }));
