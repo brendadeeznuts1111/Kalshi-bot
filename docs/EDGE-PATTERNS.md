@@ -37,9 +37,19 @@ Catalog (runtime):
 ```bash
 bun live-tracker.ts patterns
 bun live-tracker.ts patterns --json
+bun live-tracker.ts patterns --inspect          # Bun.inspect: colors, depth 4, sorted keys
+bun live-tracker.ts patterns --inspect --depth=6
 bun live-tracker.ts patterns --sort-by family,id
 bun live-tracker.ts patterns --sort-by id --desc
 ```
+
+| Format flag | Output |
+| ----------- | ------ |
+| (default) | Markdown catalog |
+| `--json` | Machine JSON (`sortBy`, `families`, `patterns`) |
+| `--inspect` | `Bun.inspect(payload, { colors, compact: false, depth: 4, sorted: true })` — TTY colors unless `--no-color` / `NO_COLOR` |
+
+`--sort-by` still orders **pattern rows** before either dump; `sorted: true` only orders **object keys** inside the inspect tree.
 
 ### `--sort-by` (patterns / analyze --sport)
 
