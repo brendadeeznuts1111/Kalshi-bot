@@ -1,6 +1,7 @@
 // @see https://bun.com/docs/runtime/utils#bun-inspect
 // @see https://bun.com/docs/test
 import { describe, expect, test } from 'bun:test';
+import { inspectSnapshot } from '../../src/research/bun-native.ts';
 import {
   edgePatternsByFamily,
   listEdgePatterns,
@@ -9,8 +10,7 @@ import {
 } from '../../src/settlement/index.ts';
 
 /**
- * Mirrors live-tracker `patterns --inspect` payload + Bun.inspect options.
- * Keeps CLI dump contract pinned without spawning the full CLI.
+ * Mirrors live-tracker `patterns --inspect` via inspectSnapshot(snapshot, { colors, depth, sorted }).
  */
 function inspectPatternsPayload(sortByRaw?: string, desc = false): string {
   const sortBy = parseEdgePatternSortBy(sortByRaw, ['family', 'id']);
@@ -21,18 +21,13 @@ function inspectPatternsPayload(sortByRaw?: string, desc = false): string {
     description: p.description,
     scope: p.scope,
   }));
-  const payload = {
+  const snapshot = {
     sortBy,
     desc,
     families: edgePatternsByFamily(),
     patterns: catalog,
   };
-  return Bun.inspect(payload, {
-    colors: false,
-    compact: false,
-    depth: 4,
-    sorted: true,
-  });
+  return inspectSnapshot(snapshot, { colors: false, depth: 4, sorted: true });
 }
 
 describe('patterns --inspect (Bun.inspect contract)', () => {
