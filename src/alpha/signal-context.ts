@@ -3,6 +3,11 @@
  * Tenants call this from buildSignalContext; harness never imports here.
  */
 import type { BookSnapshot, SignalContext } from "../institutions/alpha-signal-types.ts";
+import {
+  attachSettlementToComponents,
+  resolveSettlementWeighting,
+  type SettlementPhase,
+} from "../settlement/index.ts";
 import type { OddsEvent } from "./odds-types.ts";
 import { pinnacleSnapshot } from "./odds-feed.ts";
 import {
@@ -21,6 +26,21 @@ export type BuildPinnacleSignalInput = {
   side?: "yes" | "no";
   kalshiPriceCents?: number;
   mapperOptions?: TickerMapperOptions;
+  /**
+   * Optional shell settlement tags (plive/ezlive rules).
+   * When set, components get settlement_void_risk / p_void_prior / phase.
+   */
+  settlement?: {
+    sportId: string;
+    phase: SettlementPhase;
+    marketType?: string | null;
+    period?: string | null;
+    matchState?: {
+      firstSetCompleted?: boolean;
+      matchCompleted?: boolean;
+      periodCompleted?: boolean;
+    };
+  };
 };
 
 export function eventsToFeedRefs(events: OddsEvent[]): FeedEventRef[] {
@@ -82,15 +102,28 @@ export async function buildPinnacleSignalContext(
       ? Math.round((input.book.bids[0].priceCents + input.book.asks[0].priceCents) / 2)
       : null;
 
+  let components: Record<string, number> = {
+    pinnacle_novig_home: snap.probabilities.home,
+    pinnacle_novig_away: snap.probabilities.away,
+    ...(mid != null ? { kalshi_mid_cents: mid } : {}),
+  };
+
+  if (input.settlement) {
+    const w = resolveSettlementWeighting({
+      sportId: input.settlement.sportId,
+      phase: input.settlement.phase,
+      marketType: input.settlement.marketType,
+      period: input.settlement.period,
+      matchState: input.settlement.matchState,
+    });
+    components = attachSettlementToComponents(components, w);
+  }
+
   return {
     ticker: input.kalshiTicker,
     eventId: mapped.eventId,
     book: input.book,
     pModel,
-    components: {
-      pinnacle_novig_home: snap.probabilities.home,
-      pinnacle_novig_away: snap.probabilities.away,
-      ...(mid != null ? { kalshi_mid_cents: mid } : {}),
-    },
+    components,
   };
 }
