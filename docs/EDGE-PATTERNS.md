@@ -47,7 +47,15 @@ bun live-tracker.ts patterns --sort-by id --desc
 | ----------- | ------ |
 | (default) | Markdown catalog |
 | `--json` | Machine JSON (`sortBy`, `families`, `patterns`) |
-| `--inspect` | `Bun.inspect(payload, { colors, compact: false, depth: 4, sorted: true })` — TTY colors unless `--no-color` / `NO_COLOR` |
+| `--inspect` | `inspectSnapshot(snapshot, { colors, depth, sorted })` → `Bun.inspect` (`src/research/bun-native.ts`) |
+
+```ts
+// @see https://bun.com/docs/runtime/utils#bun-inspect
+inspectSnapshot(snapshot, { colors, depth, sorted: true });
+// defaults: colors false · depth 4 · sorted true
+```
+
+Also: `analyze --sport=… --inspect` uses the same helper.
 
 `--sort-by` still orders **pattern rows** before either dump; `sorted: true` only orders **object keys** inside the inspect tree.
 

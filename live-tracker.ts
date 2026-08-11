@@ -540,21 +540,16 @@ if (cmd === 'patterns') {
     patterns: catalog,
   };
 
-  // --json: machine JSON. --inspect: TTY Bun.inspect (sorted keys). Markdown default.
-  // @see https://bun.com/docs/runtime/utils#bun-inspect
+  // --json: machine JSON. --inspect: Bun.inspect(snapshot, { colors, depth, sorted }).
   if (hasFlag('inspect') || argValue('format') === 'inspect') {
+    const { inspectSnapshot } = await import('./src/research/bun-native.ts');
     const colors =
       !hasFlag('no-color') &&
       Boolean(process.stdout.isTTY) &&
       process.env.NO_COLOR == null;
     const depthRaw = argValue('depth');
     const depth = depthRaw != null && Number.isFinite(Number(depthRaw)) ? Number(depthRaw) : 4;
-    const text = Bun.inspect(payload, {
-      colors,
-      compact: false,
-      depth,
-      sorted: true,
-    });
+    const text = inspectSnapshot(payload, { colors, depth, sorted: true });
     await writeOrPrint(text.endsWith('\n') ? text : text + '\n');
     process.exit(0);
   }
@@ -587,10 +582,21 @@ if (cmd === 'analyze') {
       period: argValue('period') ?? undefined,
       patternSort: { sortBy, desc },
     });
+    const analyzeSnapshot = { sortBy, desc, sportId, phase, events: weighted };
+    if (hasFlag('inspect') || argValue('format') === 'inspect') {
+      const { inspectSnapshot } = await import('./src/research/bun-native.ts');
+      const colors =
+        !hasFlag('no-color') &&
+        Boolean(process.stdout.isTTY) &&
+        process.env.NO_COLOR == null;
+      const depthRaw = argValue('depth');
+      const depth = depthRaw != null && Number.isFinite(Number(depthRaw)) ? Number(depthRaw) : 4;
+      const text = inspectSnapshot(analyzeSnapshot, { colors, depth, sorted: true });
+      await writeOrPrint(text.endsWith('\n') ? text : text + '\n');
+      process.exit(0);
+    }
     if (hasFlag('json') || argValue('format') === 'json') {
-      await writeOrPrint(
-        JSON.stringify({ sortBy, desc, events: weighted }, null, 2) + '\n',
-      );
+      await writeOrPrint(JSON.stringify(analyzeSnapshot, null, 2) + '\n');
       process.exit(0);
     }
     const lines: string[] = [
