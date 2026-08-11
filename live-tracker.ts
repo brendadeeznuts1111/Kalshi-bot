@@ -8,8 +8,8 @@
  *   bun live-tracker.ts watch --market-id #197510101 --notify   # Telegram on MARKET_REMOVED / OTB
  *   bun live-tracker.ts analyze --summary
  *   bun live-tracker.ts analyze --stats
- *   bun live-tracker.ts analyze --sport=tennis --phase=live   # settlement + edge patterns
- *   bun live-tracker.ts patterns                              # catalog of sport-wide edge families
+ *   bun live-tracker.ts analyze --sport=tennis --phase=live [--sort-by severity|family|id]
+ *   bun live-tracker.ts patterns [--sort-by family|id] [--desc]  # sport-wide edge catalog
  *   bun live-tracker.ts diff --columns File,Event,Detail --desc --output out.csv --format csv
  *   bun live-tracker.ts diff --tail 10 --watch --interval 2
  *   bun live-tracker.ts chart --event 197510101 --market 3 --event 197510101 --market 4 --overlay --out compare.svg
@@ -135,6 +135,9 @@ Usage:
                               [--summary] [--stats] [--output path]
                               [--watch] [--interval sec]
   bun live-tracker.ts analyze [files…] [--summary] [--stats] [--format …] [--output path]
+                              [--sport=tennis] [--phase=live|prematch]
+                              [--sort-by severity|family|id] [--desc] [--verbose]
+  bun live-tracker.ts patterns [--sort-by family|severity|id] [--desc] [--json]
   bun live-tracker.ts chart   --event ID --market TYPE [--event ID --market TYPE …]
                               [--period m] [--overlay] [--out=compare.svg]
                               [--from=path|glob]   # default: research/cache/live-tracker/event-*.jsonl
@@ -142,10 +145,16 @@ Usage:
 Event types: ${LIVE_TRACKER_EVENT_TYPES.join(' | ')}
   aliases: market_on→MARKET_ADDED, market_off→MARKET_REMOVED, …
 
+diff --sort-by fields: time | event | type | detail | file | eventid
+patterns/analyze --sort-by fields: family | severity | id  (comma-separated; --desc)
+
 Examples:
   bun live-tracker.ts diff old.json new.json --event-type MARKET_ADDED --sort-by time --limit 5
   bun live-tracker.ts watch --market-id #197510101 --format json --watch
   bun live-tracker.ts analyze --summary
+  bun live-tracker.ts analyze --sport=tennis --phase=live --sort-by severity,id
+  bun live-tracker.ts patterns --sort-by family,id
+  bun live-tracker.ts patterns --sort-by id --desc
   bun live-tracker.ts chart --event 197510101 --market 3 --event 197510101 --market 4 --overlay --out compare.svg
 `);
   process.exit(code);
@@ -505,10 +514,17 @@ if (cmd === 'diff') {
 
 // ── patterns (sport-wide edge catalog) ─────────────────────────────────────
 if (cmd === 'patterns') {
-  const { formatEdgePatternCatalog, listEdgePatterns, edgePatternsByFamily } =
-    await import('./src/settlement/index.ts');
+  const {
+    formatEdgePatternCatalog,
+    listEdgePatterns,
+    edgePatternsByFamily,
+    parseEdgePatternSortBy,
+    sortEdgePatterns,
+  } = await import('./src/settlement/index.ts');
+  const sortBy = parseEdgePatternSortBy(argValue('sort-by'), ['family', 'id']);
+  const desc = hasFlag('desc');
   if (hasFlag('json') || argValue('format') === 'json') {
-    const catalog = listEdgePatterns().map(p => ({
+    const catalog = sortEdgePatterns(listEdgePatterns(), { sortBy, desc }).map(p => ({
       id: p.id,
       family: p.family,
       title: p.title,
@@ -516,11 +532,15 @@ if (cmd === 'patterns') {
       scope: p.scope,
     }));
     await writeOrPrint(
-      JSON.stringify({ families: edgePatternsByFamily(), patterns: catalog }, null, 2) + '\n',
+      JSON.stringify(
+        { sortBy, desc, families: edgePatternsByFamily(), patterns: catalog },
+        null,
+        2,
+      ) + '\n',
     );
     process.exit(0);
   }
-  await writeOrPrint(formatEdgePatternCatalog());
+  await writeOrPrint(formatEdgePatternCatalog({ sortBy, desc }));
   process.exit(0);
 }
 
@@ -534,19 +554,25 @@ if (cmd === 'analyze') {
   // Optional shell settlement + edge patterns (plive/ezlive rules)
   const sportId = argValue('sport');
   if (sportId) {
+    const { parseEdgePatternSortBy } = await import('./src/settlement/index.ts');
     const phase =
       argValue('phase') === 'prematch' ? 'prematch' : 'live';
+    const sortBy = parseEdgePatternSortBy(argValue('sort-by'), ['severity', 'id']);
+    const desc = hasFlag('desc');
     const weighted = weightTrackerEvents(events, {
       sportId,
       phase,
       period: argValue('period') ?? undefined,
+      patternSort: { sortBy, desc },
     });
     if (hasFlag('json') || argValue('format') === 'json') {
-      await writeOrPrint(JSON.stringify(weighted, null, 2) + '\n');
+      await writeOrPrint(
+        JSON.stringify({ sortBy, desc, events: weighted }, null, 2) + '\n',
+      );
       process.exit(0);
     }
     const lines: string[] = [
-      `settlement + edge patterns · sport=${sportId} phase=${phase}`,
+      `settlement + edge patterns · sport=${sportId} phase=${phase} · sort-by ${sortBy.join(',')}${desc ? ' desc' : ''}`,
       '',
     ];
     for (const e of weighted) {

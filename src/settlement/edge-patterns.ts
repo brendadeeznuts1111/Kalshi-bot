@@ -180,6 +180,84 @@ function severityRank(s: EdgePatternSeverity): number {
   }
 }
 
+/** Sort keys for catalog rows and pattern hits (`--sort-by family|severity|id`). */
+export const EDGE_PATTERN_SORT_KEYS = ['family', 'severity', 'id'] as const;
+export type EdgePatternSortKey = (typeof EDGE_PATTERN_SORT_KEYS)[number];
+
+export type EdgePatternSortOptions = {
+  /** Ordered keys; default `['family', 'id']` for catalog, `['severity', 'id']` for hits. */
+  sortBy?: readonly EdgePatternSortKey[];
+  /** Reverse overall order after multi-key compare. */
+  desc?: boolean;
+};
+
+/** Parse CLI `--sort-by family,severity,id` (unknown tokens dropped). */
+export function parseEdgePatternSortBy(
+  raw: string | null | undefined,
+  fallback: readonly EdgePatternSortKey[] = ['family', 'id'],
+): EdgePatternSortKey[] {
+  if (!raw?.trim()) return [...fallback];
+  const allowed = new Set<string>(EDGE_PATTERN_SORT_KEYS);
+  const keys = raw
+    .split(',')
+    .map(s => s.trim().toLowerCase())
+    .filter((k): k is EdgePatternSortKey => allowed.has(k));
+  return keys.length ? keys : [...fallback];
+}
+
+function cmpStr(a: string, b: string): number {
+  return a.localeCompare(b);
+}
+
+/**
+ * Sort catalog definitions. `severity` is a no-op key on definitions (no fixed
+ * severity) — falls through to id so `--sort-by severity` aliases aren't needed.
+ */
+export function sortEdgePatterns(
+  patterns: readonly EdgePattern[],
+  options: EdgePatternSortOptions = {},
+): EdgePattern[] {
+  const keys = options.sortBy?.length ? options.sortBy : (['family', 'id'] as const);
+  const dir = options.desc ? -1 : 1;
+  return [...patterns].sort((a, b) => {
+    for (const key of keys) {
+      let c = 0;
+      if (key === 'family') c = cmpStr(a.family, b.family);
+      else if (key === 'id') c = cmpStr(a.id, b.id);
+      else if (key === 'severity') c = cmpStr(a.id, b.id); // catalog has no severity
+      if (c !== 0) return c * dir;
+    }
+    return 0;
+  });
+}
+
+/** Sort scan hits. Default severity desc, then id asc (ignores outer desc for severity-first). */
+export function sortEdgePatternHits(
+  hits: readonly EdgePatternHit[],
+  options: EdgePatternSortOptions = {},
+): EdgePatternHit[] {
+  const keys = options.sortBy?.length ? options.sortBy : (['severity', 'id'] as const);
+  const desc = Boolean(options.desc);
+  return [...hits].sort((a, b) => {
+    for (const key of keys) {
+      let c = 0;
+      if (key === 'severity') {
+        // Higher severity first unless --desc (then lowest first)
+        c = severityRank(b.severity) - severityRank(a.severity);
+        if (desc) c = -c;
+      } else if (key === 'family') {
+        c = cmpStr(a.family, b.family);
+        if (desc) c = -c;
+      } else if (key === 'id') {
+        c = cmpStr(a.patternId, b.patternId);
+        if (desc) c = -c;
+      }
+      if (c !== 0) return c;
+    }
+    return 0;
+  });
+}
+
 function hit(
   pattern: EdgePattern,
   ctx: EdgePatternContext,
@@ -733,9 +811,13 @@ export type EdgePatternScanResult = {
 };
 
 /**
- * Scan all in-scope patterns for this context. Ranked by severity then id.
+ * Scan all in-scope patterns for this context.
+ * Default sort: severity (critical→info) then id. Override with `sort`.
  */
-export function scanEdgePatterns(ctx: EdgePatternContext): EdgePatternScanResult {
+export function scanEdgePatterns(
+  ctx: EdgePatternContext,
+  sort: EdgePatternSortOptions = {},
+): EdgePatternScanResult {
   const settlement =
     ctx.settlement ??
     resolveSettlementWeighting({
@@ -749,7 +831,7 @@ export function scanEdgePatterns(ctx: EdgePatternContext): EdgePatternScanResult
   const sportKey = settlement.sportKey ?? weightingSportKey(ctx.sportId);
   const marketClass = settlement.marketClass;
   const lineKind = lineKindFromMarketClass(marketClass);
-  const hits: EdgePatternHit[] = [];
+  let hits: EdgePatternHit[] = [];
 
   for (const pattern of PATTERNS) {
     if (!scopeMatches(pattern.scope, sportKey, marketClass, ctx.phase, lineKind)) continue;
@@ -757,10 +839,9 @@ export function scanEdgePatterns(ctx: EdgePatternContext): EdgePatternScanResult
     if (h) hits.push(h);
   }
 
-  hits.sort((a, b) => {
-    const d = severityRank(b.severity) - severityRank(a.severity);
-    if (d !== 0) return d;
-    return a.patternId.localeCompare(b.patternId);
+  hits = sortEdgePatternHits(hits, {
+    sortBy: sort.sortBy?.length ? sort.sortBy : ['severity', 'id'],
+    desc: sort.desc,
   });
 
   const maxSeverity: EdgePatternSeverity = hits.reduce(
@@ -801,19 +882,47 @@ export function edgePatternsByFamily(): Record<EdgePatternFamily, string[]> {
   return out;
 }
 
-export function formatEdgePatternCatalog(): string {
-  const by = edgePatternsByFamily();
-  const lines: string[] = ['# Edge pattern catalog', ''];
-  for (const f of EDGE_PATTERN_FAMILIES) {
-    lines.push(`## ${f}`);
-    lines.push('');
-    for (const id of by[f]) {
-      const p = getEdgePattern(id)!;
-      lines.push(`- **\`${p.id}\`** — ${p.title}`);
+/**
+ * Human catalog. Default groups by family (sort family,id).
+ * `--sort-by id` flattens to a single list ordered by id.
+ */
+export function formatEdgePatternCatalog(options: EdgePatternSortOptions = {}): string {
+  const keys = options.sortBy?.length ? options.sortBy : (['family', 'id'] as const);
+  const sorted = sortEdgePatterns(listEdgePatterns(), {
+    sortBy: keys,
+    desc: options.desc,
+  });
+
+  // Flat list when primary key is id (or only severity which maps to id for catalog)
+  if (keys[0] === 'id') {
+    const lines: string[] = [
+      `# Edge pattern catalog (sort-by ${keys.join(',')}${options.desc ? ' desc' : ''})`,
+      '',
+    ];
+    for (const p of sorted) {
+      lines.push(`- **\`${p.id}\`** · \`${p.family}\` — ${p.title}`);
       lines.push(`  ${p.description}`);
     }
     lines.push('');
+    return lines.join('\n');
   }
+
+  // Group by family in sorted order of first appearance
+  const lines: string[] = [
+    `# Edge pattern catalog (sort-by ${keys.join(',')}${options.desc ? ' desc' : ''})`,
+    '',
+  ];
+  let currentFamily: string | null = null;
+  for (const p of sorted) {
+    if (p.family !== currentFamily) {
+      currentFamily = p.family;
+      lines.push(`## ${currentFamily}`);
+      lines.push('');
+    }
+    lines.push(`- **\`${p.id}\`** — ${p.title}`);
+    lines.push(`  ${p.description}`);
+  }
+  lines.push('');
   return lines.join('\n');
 }
 

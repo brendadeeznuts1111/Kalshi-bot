@@ -10,6 +10,7 @@ import type {
 } from '../partner/fantasy-ultra/coefficients.ts';
 import {
   weightLiveTrackerMove,
+  type EdgePatternSortOptions,
   type LiveTrackerWeightResult,
   type SettlementPhase,
 } from '../settlement/index.ts';
@@ -310,6 +311,8 @@ export function weightTrackerEvents(
     phase?: SettlementPhase;
     /** Default period when event omits it. */
     period?: string;
+    /** Pattern hit sort: family | severity | id */
+    patternSort?: EdgePatternSortOptions;
   }
 ): Array<LiveTrackerEvent & { settlement?: LiveTrackerWeightResult }> {
   const phase = options.phase ?? 'live';
@@ -324,6 +327,7 @@ export function weightTrackerEvents(
       marketType: e.marketType,
       period: e.period ?? options.period ?? 'm',
       decimalOdds: Number.isFinite(toNum) && toNum > 1 ? toNum : null,
+      patternSort: options.patternSort,
     });
     return { ...e, settlement };
   });

@@ -5,6 +5,7 @@ import {
   scanEdgePatterns,
   type EdgePatternHit,
   type EdgePatternScanResult,
+  type EdgePatternSortOptions,
 } from './edge-patterns.ts';
 import {
   defaultVoidPrior,
@@ -74,6 +75,8 @@ export type LiveTrackerWeightInput = {
   };
   /** Run full edge-pattern scan (default true). */
   scanPatterns?: boolean;
+  /** Hit order: family | severity | id (comma-separated via parseEdgePatternSortBy). */
+  patternSort?: EdgePatternSortOptions;
 };
 
 export type LiveTrackerWeightResult = {
@@ -105,15 +108,18 @@ export function weightLiveTrackerMove(input: LiveTrackerWeightInput): LiveTracke
 
   const scanPatterns = input.scanPatterns !== false;
   const patternScan = scanPatterns
-    ? scanEdgePatterns({
-        sportId: input.sportId,
-        phase: input.phase,
-        marketType: input.marketType,
-        period: input.period,
-        decimalOdds: input.decimalOdds,
-        matchState: input.matchState,
-        settlement: weighting,
-      })
+    ? scanEdgePatterns(
+        {
+          sportId: input.sportId,
+          phase: input.phase,
+          marketType: input.marketType,
+          period: input.period,
+          decimalOdds: input.decimalOdds,
+          matchState: input.matchState,
+          settlement: weighting,
+        },
+        input.patternSort ?? {},
+      )
     : null;
 
   const patternVoid = patternScan

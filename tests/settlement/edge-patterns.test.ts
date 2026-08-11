@@ -6,7 +6,10 @@ import {
   getEdgePattern,
   lineKindFromMarketClass,
   listEdgePatterns,
+  parseEdgePatternSortBy,
   scanEdgePatterns,
+  sortEdgePatternHits,
+  sortEdgePatterns,
   weightLiveTrackerMove,
 } from '../../src/settlement/index.ts';
 
@@ -121,5 +124,77 @@ describe('scanEdgePatterns sport-wide', () => {
     expect(r.patterns.length).toBeGreaterThan(0);
     expect(r.eyeOpeners.length).toBeGreaterThan(0);
     expect(r.pVoidPrior).toBeGreaterThanOrEqual(0.15);
+  });
+});
+
+describe('edge pattern --sort-by family|severity|id', () => {
+  test('parseEdgePatternSortBy', () => {
+    expect(parseEdgePatternSortBy(undefined)).toEqual(['family', 'id']);
+    expect(parseEdgePatternSortBy('severity,id')).toEqual(['severity', 'id']);
+    expect(parseEdgePatternSortBy('id')).toEqual(['id']);
+    expect(parseEdgePatternSortBy('nope,family,time')).toEqual(['family']);
+    expect(parseEdgePatternSortBy('bogus', ['severity', 'id'])).toEqual(['severity', 'id']);
+  });
+
+  test('sortEdgePatterns by id', () => {
+    const sorted = sortEdgePatterns(listEdgePatterns(), { sortBy: ['id'] });
+    const ids = sorted.map(p => p.id);
+    expect(ids).toEqual([...ids].sort((a, b) => a.localeCompare(b)));
+  });
+
+  test('sortEdgePatterns by family then id', () => {
+    const sorted = sortEdgePatterns(listEdgePatterns(), { sortBy: ['family', 'id'] });
+    for (let i = 1; i < sorted.length; i++) {
+      const prev = sorted[i - 1]!;
+      const cur = sorted[i]!;
+      if (prev.family === cur.family) {
+        expect(prev.id.localeCompare(cur.id)).toBeLessThanOrEqual(0);
+      }
+    }
+  });
+
+  test('sortEdgePatternHits severity first', () => {
+    const scan = scanEdgePatterns({
+      sportId: 'tennis',
+      phase: 'live',
+      marketType: '3',
+      period: 'm',
+      matchState: { injuryRisk: true, matchCompleted: false },
+    });
+    const bySev = sortEdgePatternHits(scan.hits, { sortBy: ['severity', 'id'] });
+    const rank = (s: string) =>
+      s === 'critical' ? 4 : s === 'high' ? 3 : s === 'watch' ? 2 : 1;
+    for (let i = 1; i < bySev.length; i++) {
+      expect(rank(bySev[i - 1]!.severity)).toBeGreaterThanOrEqual(rank(bySev[i]!.severity));
+    }
+  });
+
+  test('sortEdgePatternHits by family', () => {
+    const scan = scanEdgePatterns(
+      {
+        sportId: 'tennis',
+        phase: 'live',
+        marketType: '3',
+        period: 'm',
+        matchState: { matchCompleted: false },
+      },
+      { sortBy: ['family', 'id'] },
+    );
+    const families = scan.hits.map(h => h.family);
+    expect(families).toEqual([...families].sort((a, b) => a.localeCompare(b)));
+  });
+
+  test('scanEdgePatterns respects sort option', () => {
+    const byId = scanEdgePatterns(
+      {
+        sportId: 'basketball',
+        phase: 'live',
+        marketType: '5',
+        period: 'q4',
+      },
+      { sortBy: ['id'] },
+    );
+    const ids = byId.hits.map(h => h.patternId);
+    expect(ids).toEqual([...ids].sort((a, b) => a.localeCompare(b)));
   });
 });

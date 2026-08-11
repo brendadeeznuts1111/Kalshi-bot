@@ -37,8 +37,19 @@ Catalog (runtime):
 ```bash
 bun live-tracker.ts patterns
 bun live-tracker.ts patterns --json
+bun live-tracker.ts patterns --sort-by family,id
+bun live-tracker.ts patterns --sort-by id --desc
 ```
 
+### `--sort-by` (patterns / analyze --sport)
+
+| Field | Catalog (`patterns`) | Hits (`analyze --sport`) |
+| ----- | -------------------- | ------------------------ |
+| `family` | Group / order by family | Order hits by family name |
+| `severity` | No-op on definitions (falls to id) | Critical → info (default first key) |
+| `id` | Flat list by pattern id | Order by `patternId` |
+
+Comma-separated; left → right. `--desc` reverses. Defaults: catalog `family,id` · hits `severity,id`.
 ## Scan API
 
 ```ts
