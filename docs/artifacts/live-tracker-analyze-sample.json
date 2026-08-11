@@ -1,0 +1,366 @@
+{
+  "schemaVersion": 1,
+  "sportId": "tennis",
+  "phase": "live",
+  "sortBy": [
+    "severity",
+    "id"
+  ],
+  "desc": false,
+  "fields": [
+    {
+      "key": "time",
+      "type": "string",
+      "description": "Event ISO time"
+    },
+    {
+      "key": "eventType",
+      "type": "string",
+      "description": "MARKET_ADDED | PRICE_CHANGE | …"
+    },
+    {
+      "key": "eventId",
+      "type": "string",
+      "description": "Pandora event id"
+    },
+    {
+      "key": "period",
+      "type": "string",
+      "description": "m | s1 | h1 | …"
+    },
+    {
+      "key": "marketType",
+      "type": "string",
+      "description": "Pandora market id (3=ML, 5=total, …)"
+    },
+    {
+      "key": "selection",
+      "type": "string",
+      "description": "Selection key when present"
+    },
+    {
+      "key": "from",
+      "type": "string",
+      "description": "Prior decimal odds"
+    },
+    {
+      "key": "to",
+      "type": "string",
+      "description": "New decimal odds"
+    },
+    {
+      "key": "detail",
+      "type": "string",
+      "description": "Human detail line"
+    },
+    {
+      "key": "file",
+      "type": "string",
+      "description": "Source log basename"
+    },
+    {
+      "key": "sportKey",
+      "type": "string",
+      "description": "Weighting sport key"
+    },
+    {
+      "key": "phase",
+      "type": "string",
+      "description": "prematch | live"
+    },
+    {
+      "key": "marketClass",
+      "type": "string",
+      "description": "match_ml | set_market | …"
+    },
+    {
+      "key": "actionThreshold",
+      "type": "string",
+      "description": "Shell action rule label"
+    },
+    {
+      "key": "voidRisk",
+      "type": "string",
+      "description": "low | medium | high | unknown"
+    },
+    {
+      "key": "preferUnitMkts",
+      "type": "boolean",
+      "description": "Prefer completed set/game markets"
+    },
+    {
+      "key": "pVoidPrior",
+      "type": "number",
+      "description": "Default void mass for three-way EV"
+    },
+    {
+      "key": "maxSeverity",
+      "type": "string",
+      "description": "Max pattern severity on this row"
+    },
+    {
+      "key": "patternIds",
+      "type": "string",
+      "description": "Comma-separated pattern ids (non-info first)"
+    },
+    {
+      "key": "patternCount",
+      "type": "number",
+      "description": "Number of pattern hits"
+    },
+    {
+      "key": "eyeOpeners",
+      "type": "string",
+      "description": "Joined watch+ severity notes"
+    },
+    {
+      "key": "sizingNote",
+      "type": "string",
+      "description": "Desk sizing one-liner"
+    },
+    {
+      "key": "summary",
+      "type": "string",
+      "description": "Compact weighting summary"
+    },
+    {
+      "key": "voidEv",
+      "type": "number|null",
+      "description": "Three-way EV at stake 100 if odds known"
+    },
+    {
+      "key": "twoWayEv",
+      "type": "number|null",
+      "description": "Two-way EV (void as lose)"
+    },
+    {
+      "key": "voidDelta",
+      "type": "number|null",
+      "description": "twoWayEv - voidEv"
+    },
+    {
+      "key": "pliveEqEzlive",
+      "type": "boolean",
+      "description": "Settlement identical across products"
+    }
+  ],
+  "defaultColumns": [
+    "time",
+    "eventType",
+    "period",
+    "marketType",
+    "from",
+    "to",
+    "voidRisk",
+    "maxSeverity",
+    "patternIds",
+    "pVoidPrior",
+    "sizingNote"
+  ],
+  "allColumns": [
+    "time",
+    "eventType",
+    "eventId",
+    "period",
+    "marketType",
+    "selection",
+    "from",
+    "to",
+    "detail",
+    "file",
+    "sportKey",
+    "phase",
+    "marketClass",
+    "actionThreshold",
+    "voidRisk",
+    "preferUnitMkts",
+    "pVoidPrior",
+    "maxSeverity",
+    "patternIds",
+    "patternCount",
+    "eyeOpeners",
+    "sizingNote",
+    "summary",
+    "voidEv",
+    "twoWayEv",
+    "voidDelta",
+    "pliveEqEzlive"
+  ],
+  "rows": [
+    {
+      "time": "2026-08-10T10:00:01.000Z",
+      "eventType": "MARKET_ADDED",
+      "eventId": "197510101",
+      "period": "m",
+      "marketType": "3",
+      "selection": "—",
+      "from": "—",
+      "to": "—",
+      "detail": "market m/3 offered",
+      "file": "event-197510101.jsonl",
+      "sportKey": "tennis",
+      "phase": "live",
+      "marketClass": "match_ml",
+      "actionThreshold": "match_completed",
+      "voidRisk": "high",
+      "preferUnitMkts": true,
+      "pVoidPrior": 0.15,
+      "maxSeverity": "high",
+      "patternIds": "void.live-ml-unfinished, fill.secondary-confirmation, phase.prematch-vs-live-product",
+      "patternCount": 6,
+      "eyeOpeners": "[high] void.live-ml-unfinished: Live ML void risk=high (action: match_completed). Prefer completed period units if available. · [watch] fill.secondary-confirmation: In-play secondary confirmation + dense scoring — raise fill-fail prior on live edges. · [watch] phase.prematch-vs-live-product: Phase=live: match_completed. Do not pool prematch+live calibration without a phase tag.",
+      "sizingNote": "live match ML: high void on unfinished match — prefer completed set/game markets · patterns: void.live-ml-unfinished",
+      "summary": "tennis · live · match_ml · action=match_completed · voidRisk=high · prefer_unit_mkts",
+      "voidEv": null,
+      "twoWayEv": null,
+      "voidDelta": null,
+      "pliveEqEzlive": true
+    },
+    {
+      "time": "2026-08-10T10:00:02.000Z",
+      "eventType": "PRICE_CHANGE",
+      "eventId": "197510101",
+      "period": "m",
+      "marketType": "3",
+      "selection": "1",
+      "from": "1.9",
+      "to": "1.95",
+      "detail": "price m/3/1 1.9→1.95",
+      "file": "event-197510101.jsonl",
+      "sportKey": "tennis",
+      "phase": "live",
+      "marketClass": "match_ml",
+      "actionThreshold": "match_completed",
+      "voidRisk": "high",
+      "preferUnitMkts": true,
+      "pVoidPrior": 0.15,
+      "maxSeverity": "high",
+      "patternIds": "void.live-ml-unfinished, fill.secondary-confirmation, phase.prematch-vs-live-product",
+      "patternCount": 6,
+      "eyeOpeners": "[high] void.live-ml-unfinished: Live ML void risk=high (action: match_completed). Prefer completed period units if available. · [watch] fill.secondary-confirmation: In-play secondary confirmation + dense scoring — raise fill-fail prior on live edges. · [watch] phase.prematch-vs-live-product: Phase=live: match_completed. Do not pool prematch+live calibration without a phase tag.",
+      "sizingNote": "live match ML: high void on unfinished match — prefer completed set/game markets · two-way understates holder EV by ~15.00 (voids refund) · patterns: void.live-ml-unfinished",
+      "summary": "tennis · live · match_ml · action=match_completed · voidRisk=high · prefer_unit_mkts",
+      "voidEv": 12.5,
+      "twoWayEv": -2.5,
+      "voidDelta": -15,
+      "pliveEqEzlive": true
+    },
+    {
+      "time": "2026-08-10T10:00:03.000Z",
+      "eventType": "MARKET_ADDED",
+      "eventId": "197510101",
+      "period": "s1",
+      "marketType": "3",
+      "selection": "—",
+      "from": "—",
+      "to": "—",
+      "detail": "market s1/3 offered",
+      "file": "event-197510101.jsonl",
+      "sportKey": "tennis",
+      "phase": "live",
+      "marketClass": "period_ml",
+      "actionThreshold": "period_completed_before_stop",
+      "voidRisk": "medium",
+      "preferUnitMkts": false,
+      "pVoidPrior": 0.05,
+      "maxSeverity": "watch",
+      "patternIds": "fill.secondary-confirmation, phase.prematch-vs-live-product",
+      "patternCount": 4,
+      "eyeOpeners": "[watch] fill.secondary-confirmation: In-play secondary confirmation + dense scoring — raise fill-fail prior on live edges. · [watch] phase.prematch-vs-live-product: Phase=live: period_completed_before_stop. Do not pool prematch+live calibration without a phase tag.",
+      "sizingNote": "size residual action path only · patterns: fill.secondary-confirmation",
+      "summary": "tennis · live · period_ml · action=period_completed_before_stop · voidRisk=medium",
+      "voidEv": null,
+      "twoWayEv": null,
+      "voidDelta": null,
+      "pliveEqEzlive": true
+    },
+    {
+      "time": "2026-08-10T10:00:04.000Z",
+      "eventType": "PRICE_CHANGE",
+      "eventId": "197510101",
+      "period": "m",
+      "marketType": "4",
+      "selection": "1",
+      "from": "1.5",
+      "to": "1.55",
+      "detail": "price m/4/1 1.5→1.55",
+      "file": "event-197510101.jsonl",
+      "sportKey": "tennis",
+      "phase": "live",
+      "marketClass": "match_ml",
+      "actionThreshold": "match_completed",
+      "voidRisk": "high",
+      "preferUnitMkts": true,
+      "pVoidPrior": 0.15,
+      "maxSeverity": "high",
+      "patternIds": "void.live-ml-unfinished, fill.secondary-confirmation, phase.prematch-vs-live-product",
+      "patternCount": 6,
+      "eyeOpeners": "[high] void.live-ml-unfinished: Live ML void risk=high (action: match_completed). Prefer completed period units if available. · [watch] fill.secondary-confirmation: In-play secondary confirmation + dense scoring — raise fill-fail prior on live edges. · [watch] phase.prematch-vs-live-product: Phase=live: match_completed. Do not pool prematch+live calibration without a phase tag.",
+      "sizingNote": "live match ML: high void on unfinished match — prefer completed set/game markets · two-way understates holder EV by ~15.00 (voids refund) · patterns: void.live-ml-unfinished",
+      "summary": "tennis · live · match_ml · action=match_completed · voidRisk=high · prefer_unit_mkts",
+      "voidEv": -7.5,
+      "twoWayEv": -22.5,
+      "voidDelta": -15,
+      "pliveEqEzlive": true
+    },
+    {
+      "time": "2026-08-10T10:00:05.000Z",
+      "eventType": "PRICE_CHANGE",
+      "eventId": "197510101",
+      "period": "m",
+      "marketType": "3",
+      "selection": "1",
+      "from": "1.95",
+      "to": "1.88",
+      "detail": "price m/3/1 1.95→1.88",
+      "file": "event-197510101.jsonl",
+      "sportKey": "tennis",
+      "phase": "live",
+      "marketClass": "match_ml",
+      "actionThreshold": "match_completed",
+      "voidRisk": "high",
+      "preferUnitMkts": true,
+      "pVoidPrior": 0.15,
+      "maxSeverity": "high",
+      "patternIds": "void.live-ml-unfinished, fill.secondary-confirmation, phase.prematch-vs-live-product",
+      "patternCount": 6,
+      "eyeOpeners": "[high] void.live-ml-unfinished: Live ML void risk=high (action: match_completed). Prefer completed period units if available. · [watch] fill.secondary-confirmation: In-play secondary confirmation + dense scoring — raise fill-fail prior on live edges. · [watch] phase.prematch-vs-live-product: Phase=live: match_completed. Do not pool prematch+live calibration without a phase tag.",
+      "sizingNote": "live match ML: high void on unfinished match — prefer completed set/game markets · two-way understates holder EV by ~15.00 (voids refund) · patterns: void.live-ml-unfinished",
+      "summary": "tennis · live · match_ml · action=match_completed · voidRisk=high · prefer_unit_mkts",
+      "voidEv": 9,
+      "twoWayEv": -6,
+      "voidDelta": -15,
+      "pliveEqEzlive": true
+    },
+    {
+      "time": "2026-08-10T10:00:05.000Z",
+      "eventType": "PRICE_CHANGE",
+      "eventId": "197510101",
+      "period": "m",
+      "marketType": "4",
+      "selection": "1",
+      "from": "1.55",
+      "to": "1.62",
+      "detail": "price m/4/1 1.55→1.62",
+      "file": "event-197510101.jsonl",
+      "sportKey": "tennis",
+      "phase": "live",
+      "marketClass": "match_ml",
+      "actionThreshold": "match_completed",
+      "voidRisk": "high",
+      "preferUnitMkts": true,
+      "pVoidPrior": 0.15,
+      "maxSeverity": "high",
+      "patternIds": "void.live-ml-unfinished, fill.secondary-confirmation, phase.prematch-vs-live-product",
+      "patternCount": 6,
+      "eyeOpeners": "[high] void.live-ml-unfinished: Live ML void risk=high (action: match_completed). Prefer completed period units if available. · [watch] fill.secondary-confirmation: In-play secondary confirmation + dense scoring — raise fill-fail prior on live edges. · [watch] phase.prematch-vs-live-product: Phase=live: match_completed. Do not pool prematch+live calibration without a phase tag.",
+      "sizingNote": "live match ML: high void on unfinished match — prefer completed set/game markets · two-way understates holder EV by ~15.00 (voids refund) · patterns: void.live-ml-unfinished",
+      "summary": "tennis · live · match_ml · action=match_completed · voidRisk=high · prefer_unit_mkts",
+      "voidEv": -4,
+      "twoWayEv": -19,
+      "voidDelta": -15,
+      "pliveEqEzlive": true
+    }
+  ],
+  "generatedAt": "2026-08-11T09:36:07.308Z"
+}

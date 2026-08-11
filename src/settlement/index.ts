@@ -63,3 +63,19 @@ export {
   type EdgePatternSortKey,
   type EdgePatternSortOptions,
 } from './edge-patterns.ts';
+
+export {
+  ANALYZE_WEIGHTED_ALL_COLUMNS,
+  ANALYZE_WEIGHTED_DEFAULT_COLUMNS,
+  ANALYZE_WEIGHTED_FIELD_SCHEMA,
+  buildAnalyzeSnapshotArtifact,
+  flattenWeightedEventRow,
+  flattenWeightedEvents,
+  formatAnalyzeInspectTable,
+  formatAnalyzeMarkdownTable,
+  projectAnalyzeRows,
+  type AnalyzeSnapshotArtifact,
+  type AnalyzeWeightedFieldKey,
+  type AnalyzeWeightedRow,
+  type WeightedTrackerEvent,
+} from './analyze-table.ts';
