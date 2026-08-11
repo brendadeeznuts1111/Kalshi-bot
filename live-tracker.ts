@@ -8,6 +8,7 @@
  *   bun live-tracker.ts watch --market-id #197510101 --notify   # Telegram on MARKET_REMOVED / OTB
  *   bun live-tracker.ts analyze --summary
  *   bun live-tracker.ts analyze --stats
+ *   bun live-tracker.ts analyze --sport=tennis --phase=live   # shell void/action weighting
  *   bun live-tracker.ts diff --columns File,Event,Detail --desc --output out.csv --format csv
  *   bun live-tracker.ts diff --tail 10 --watch --interval 2
  *   bun live-tracker.ts chart --event 197510101 --market 3 --event 197510101 --market 4 --overlay --out compare.svg
@@ -29,6 +30,7 @@ import {
   loadTrackerEventsFromPaths,
   normalizeWireId,
   parseEventType,
+  weightTrackerEvents,
   type LiveTrackerEvent,
 } from './src/inventory/live-tracker.ts';
 import {
@@ -504,9 +506,49 @@ if (cmd === 'diff') {
 if (cmd === 'analyze') {
   const pos = positionalAfterCmd('analyze');
   const paths = pos.length ? pos : await resolveFromPaths();
-  const events = paths.length
+  let events = paths.length
     ? await loadTrackerEventsFromPaths(paths)
     : [];
+  // Optional shell settlement weighting (plive/ezlive rules)
+  const sportId = argValue('sport');
+  if (sportId) {
+    const phase =
+      argValue('phase') === 'prematch' ? 'prematch' : 'live';
+    const weighted = weightTrackerEvents(events, {
+      sportId,
+      phase,
+      period: argValue('period') ?? undefined,
+    });
+    if (hasFlag('json') || argValue('format') === 'json') {
+      await writeOrPrint(JSON.stringify(weighted, null, 2) + '\n');
+      process.exit(0);
+    }
+    // Text summary: print settlement lines for PRICE_CHANGE
+    const lines: string[] = [
+      `settlement weighting · sport=${sportId} phase=${phase}`,
+      '',
+    ];
+    for (const e of weighted) {
+      if (!('settlement' in e) || !e.settlement) continue;
+      const s = e.settlement;
+      lines.push(
+        `${e.time} ${e.eventType} mkt=${e.marketType ?? '?'} per=${e.period ?? 'm'} ` +
+          `${s.summary}`
+      );
+      lines.push(`  → ${s.sizingNote}`);
+      if (s.voidEv) {
+        lines.push(
+          `  → EV_void=${s.voidEv.ev.toFixed(2)} EV_2way=${s.voidEv.twoWayEv.toFixed(2)} ` +
+            `Δ=${s.voidEv.voidDelta.toFixed(2)} p_void=${s.pVoidPrior}`
+        );
+      }
+    }
+    if (lines.length <= 2) {
+      lines.push('(no PRICE_CHANGE/MARKET_ADDED rows to weight)');
+    }
+    await writeOrPrint(lines.join('\n') + '\n');
+    process.exit(0);
+  }
   // default analyze = summary
   if (!hasFlag('detail') && !hasFlag('stats')) {
     process.argv.push('--summary');

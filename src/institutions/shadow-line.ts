@@ -10,6 +10,27 @@ export type ToxicityMark = {
   movedAgainst: boolean | null;
 };
 
+/** Binary market grade or shell void/refund. */
+export type ShadowOutcome = 0 | 1 | "void";
+
+export function isBinaryOutcome(o: unknown): o is 0 | 1 {
+  return o === 0 || o === 1;
+}
+
+export function isVoidOutcome(o: unknown): o is "void" {
+  return o === "void";
+}
+
+/** True when line has a terminal grade (win/lose/void). */
+export function hasResolvedOutcome(line: { outcome?: ShadowOutcome | null }): boolean {
+  return line.outcome === 0 || line.outcome === 1 || line.outcome === "void";
+}
+
+/** True when line is win/lose for Brier / calibration. */
+export function hasBinaryResolvedOutcome(line: { outcome?: ShadowOutcome | null }): boolean {
+  return isBinaryOutcome(line.outcome);
+}
+
 /** Immutable prediction line — toxicity/outcome fields stay null; marks arrive as append-only entries. */
 export interface ShadowPredictionLine {
   kind?: "prediction";
@@ -28,7 +49,11 @@ export interface ShadowPredictionLine {
   filledContracts: number;
   midAtFillCents: number | null;
   toxicity: ToxicityMark;
-  outcome?: number | null;
+  /**
+   * Materialized grade: 0 | 1 win/lose, or `'void'` refund / no-action.
+   * Voids are **excluded** from Brier (not scored as 0 or 1).
+   */
+  outcome?: ShadowOutcome | null;
   lineHash: string;
 }
 
@@ -53,7 +78,8 @@ export type OutcomeResolutionEntry = {
   ts: number;
   program: string;
   eventId: string;
-  outcome: 0 | 1;
+  /** 0 | 1 win/lose, or void/refund (shell no-action). */
+  outcome: ShadowOutcome;
 };
 
 export type ShadowLogEntry = ShadowPredictionLine | ToxicityMarkEntry | OutcomeResolutionEntry;
@@ -105,7 +131,7 @@ export async function readShadowLogEntries(absPath: string): Promise<ShadowLogEn
 export function materializeShadowLines(entries: ShadowLogEntry[]): ShadowPredictionLine[] {
   const predictions: ShadowPredictionLine[] = [];
   const toxicityByRef = new Map<string, ToxicityMarkEntry>();
-  const outcomeByEvent = new Map<string, 0 | 1>();
+  const outcomeByEvent = new Map<string, ShadowOutcome>();
 
   for (const entry of entries) {
     if (isPredictionEntry(entry)) {
@@ -113,7 +139,8 @@ export function materializeShadowLines(entries: ShadowLogEntry[]): ShadowPredict
     } else if (isToxicityMarkEntry(entry)) {
       toxicityByRef.set(entry.refLineHash, entry);
     } else if (isOutcomeResolutionEntry(entry)) {
-      outcomeByEvent.set(entry.eventId, entry.outcome);
+      const o = normalizeShadowOutcome(entry.outcome);
+      if (o !== undefined) outcomeByEvent.set(entry.eventId, o);
     }
   }
 
@@ -121,8 +148,7 @@ export function materializeShadowLines(entries: ShadowLogEntry[]): ShadowPredict
     const tox = toxicityByRef.get(line.lineHash);
     const resolvedOutcome = outcomeByEvent.get(line.eventId);
     const legacyInlineTox = line.toxicity.markedTs != null ? line.toxicity : null;
-    const legacyInlineOutcome =
-      line.outcome === 0 || line.outcome === 1 ? line.outcome : undefined;
+    const legacyInlineOutcome = normalizeShadowOutcome(line.outcome ?? undefined);
 
     return {
       ...line,
@@ -137,6 +163,16 @@ export function materializeShadowLines(entries: ShadowLogEntry[]): ShadowPredict
       outcome: resolvedOutcome ?? legacyInlineOutcome ?? line.outcome ?? null,
     };
   });
+}
+
+/** Accept 0 | 1 | 'void' | legacy strings. Invalid → still returns as-is only if already valid. */
+export function normalizeShadowOutcome(raw: unknown): ShadowOutcome | undefined {
+  if (raw === 0 || raw === 1 || raw === "void") return raw;
+  if (raw === "0") return 0;
+  if (raw === "1") return 1;
+  if (typeof raw === "string" && raw.toLowerCase() === "void") return "void";
+  if (typeof raw === "string" && raw.toLowerCase() === "push") return "void";
+  return undefined;
 }
 
 /** Materialized predictions for metrics — chain integrity checked on raw entries separately. */
@@ -161,13 +197,21 @@ export function verifyHashChain(lines: ShadowPredictionLine[]): boolean {
   return verifyHashChainEntries(lines);
 }
 
+/**
+ * Brier on win/lose only — **voids excluded** (refunds are not 0/1 labels).
+ */
 export function brierScore(lines: ShadowPredictionLine[]): number | null {
-  const resolved = lines.filter(
-    (l) => l.outcome === 0 || l.outcome === 1,
-  ) as Array<ShadowPredictionLine & { outcome: 0 | 1 }>;
+  const resolved = lines.filter(hasBinaryResolvedOutcome) as Array<
+    ShadowPredictionLine & { outcome: 0 | 1 }
+  >;
   if (!resolved.length) return null;
   const sum = resolved.reduce((acc, l) => acc + (l.pModel - l.outcome) ** 2, 0);
   return sum / resolved.length;
+}
+
+/** Count of void / no-action resolutions among materialized lines. */
+export function voidOutcomeCount(lines: ShadowPredictionLine[]): number {
+  return lines.filter((l) => isVoidOutcome(l.outcome)).length;
 }
 
 export function baselineProbability(line: ShadowPredictionLine): number | null {
@@ -180,7 +224,7 @@ export function baselineProbability(line: ShadowPredictionLine): number | null {
 
 export function baselineBrierScore(lines: ShadowPredictionLine[]): number | null {
   const resolved = lines.filter(
-    (l) => (l.outcome === 0 || l.outcome === 1) && baselineProbability(l) != null,
+    (l) => hasBinaryResolvedOutcome(l) && baselineProbability(l) != null,
   ) as Array<ShadowPredictionLine & { outcome: 0 | 1 }>;
   if (!resolved.length) return null;
   const sum = resolved.reduce((acc, l) => {
@@ -366,15 +410,16 @@ export async function appendToxicityMarks(
 export async function appendOutcomeResolutions(
   absPath: string,
   program: string,
-  outcomesByEventId: Record<string, 0 | 1>,
+  outcomesByEventId: Record<string, ShadowOutcome | 0 | 1 | "void">,
   existingEntries?: ShadowLogEntry[],
 ): Promise<number> {
   const entries = existingEntries ?? (await readShadowLogEntries(absPath));
   const resolvedEvents = existingOutcomeEventIds(entries);
   let appended = 0;
 
-  for (const [eventId, outcome] of Object.entries(outcomesByEventId)) {
-    if (outcome !== 0 && outcome !== 1) continue;
+  for (const [eventId, raw] of Object.entries(outcomesByEventId)) {
+    const outcome = normalizeShadowOutcome(raw);
+    if (outcome === undefined) continue;
     if (resolvedEvents.has(eventId)) continue;
     await appendShadowLogEntry(absPath, {
       kind: "outcome-resolution",

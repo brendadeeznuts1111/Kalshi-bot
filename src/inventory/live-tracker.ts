@@ -8,6 +8,11 @@ import type {
   EventDataStateTransition,
   OfferTransition,
 } from '../partner/fantasy-ultra/coefficients.ts';
+import {
+  weightLiveTrackerMove,
+  type LiveTrackerWeightResult,
+  type SettlementPhase,
+} from '../settlement/index.ts';
 import { CACHE_DIR, joinPath } from '../research/paths.ts';
 import type { OddsWatchUpdate } from './pandora-listen.ts';
 
@@ -292,6 +297,36 @@ function summarizeEventTypes(
   return [...m.entries()]
     .map(([eventType, count]) => ({ eventType, count }))
     .sort((a, b) => b.count - a.count || a.eventType.localeCompare(b.eventType));
+}
+
+/**
+ * Annotate PRICE_CHANGE (and other priced) tracker events with shell settlement
+ * weighting (void risk, action threshold, three-way EV sketch).
+ */
+export function weightTrackerEvents(
+  events: LiveTrackerEvent[],
+  options: {
+    sportId: string;
+    phase?: SettlementPhase;
+    /** Default period when event omits it. */
+    period?: string;
+  }
+): Array<LiveTrackerEvent & { settlement?: LiveTrackerWeightResult }> {
+  const phase = options.phase ?? 'live';
+  return events.map(e => {
+    if (e.eventType !== 'PRICE_CHANGE' && e.eventType !== 'MARKET_ADDED') {
+      return e;
+    }
+    const toNum = e.to != null && e.to !== '' ? Number(e.to) : NaN;
+    const settlement = weightLiveTrackerMove({
+      sportId: options.sportId,
+      phase,
+      marketType: e.marketType,
+      period: e.period ?? options.period ?? 'm',
+      decimalOdds: Number.isFinite(toNum) && toNum > 1 ? toNum : null,
+    });
+    return { ...e, settlement };
+  });
 }
 
 type EventTimeStats = {

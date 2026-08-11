@@ -12,10 +12,12 @@ import {
   appendOutcomeResolutions,
   appendToxicityMarks,
   materializeShadowLines,
+  normalizeShadowOutcome,
   readShadowLogEntries,
   selectDueToxicityMarks,
   verifyHashChainEntries,
   type ShadowLogEntry,
+  type ShadowOutcome,
   type ShadowPredictionLine,
 } from "../institutions/shadow-line.ts";
 
@@ -95,7 +97,7 @@ export async function runToxicityMark(
 
 export async function runOutcomeResolution(
   programName: string,
-  outcomesByEventId: Record<string, 0 | 1>,
+  outcomesByEventId: Record<string, ShadowOutcome>,
   options?: { alphaRoot?: string },
 ): Promise<{ updated: number; chainValid: boolean }> {
   const { manifest, logPath } = await resolveProgramShadow(programName, options?.alphaRoot);
@@ -105,11 +107,16 @@ export async function runOutcomeResolution(
   return { updated, chainValid };
 }
 
-export async function loadOutcomesFile(path: string): Promise<Record<string, 0 | 1>> {
-  const raw = (await Bun.file(path).json()) as Record<string, number>;
-  const out: Record<string, 0 | 1> = {};
+/**
+ * Outcomes JSON: `{ "eventId": 0 | 1 | "void" }`.
+ * Also accepts `"push"` → void (refund / no-action).
+ */
+export async function loadOutcomesFile(path: string): Promise<Record<string, ShadowOutcome>> {
+  const raw = (await Bun.file(path).json()) as Record<string, unknown>;
+  const out: Record<string, ShadowOutcome> = {};
   for (const [k, v] of Object.entries(raw)) {
-    if (v === 0 || v === 1) out[k] = v;
+    const n = normalizeShadowOutcome(v);
+    if (n !== undefined) out[k] = n;
   }
   return out;
 }
