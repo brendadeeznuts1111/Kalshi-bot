@@ -38,6 +38,7 @@ import {
   appendReservationJournalEntry,
 } from "./execution-journal.ts";
 import { ensureExecutionSchema } from "./sql.ts";
+import { mintSortableId } from "../../lib/ids.ts";
 
 const DEFAULT_RESERVATION_TTL_MS = 30_000;
 
@@ -104,7 +105,7 @@ export async function executeAuthorizedBet(
     };
   }
 
-  const placementOwner = asPlacementOwner(crypto.randomUUID());
+  const placementOwner = asPlacementOwner(mintSortableId());
   const ttlMs = dependencies.reservationTtlMs ?? DEFAULT_RESERVATION_TTL_MS;
   if (!Number.isSafeInteger(ttlMs) || ttlMs <= 0) {
     return {

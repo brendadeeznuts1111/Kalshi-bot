@@ -9,6 +9,7 @@ import { asReconciliationOwner } from "../src/partner/execution/domain.ts";
 import { Database } from "bun:sqlite";
 import { syncRegulatoryExecutionPlays } from "../src/regulatory/lib/execution-play-sync.ts";
 import { runExecutionMaintenance } from "../src/partner/execution/maintenance.ts";
+import { mintSortableId } from "../src/lib/ids.ts";
 
 export async function runKalshiReconciliationJob(options: {
   limit?: number;
@@ -28,7 +29,7 @@ export async function runKalshiReconciliationJob(options: {
     const resolveAccountClient = createKalshiAccountClientResolver();
     const result = await reconcileKalshiUnknownReservations(db, {
     limit,
-    owner: asReconciliationOwner(`kalshi-reconciler-${process.pid}-${crypto.randomUUID()}`),
+    owner: asReconciliationOwner(`kalshi-reconciler-${process.pid}-${mintSortableId()}`),
     resolveClient: (reservation) => {
       const account = getBettingAccountById(db, reservation.outId);
       if (account === null) throw new Error(`Execution out ${reservation.outId} no longer exists`);

@@ -156,7 +156,8 @@ const buf = randomUUIDv7("buffer");        // 16-byte Buffer
 const short = randomUUIDv7("base64url");
 ```
 
-**Here today:** many call sites still use `crypto.randomUUID()` (journal, experiments). New sortable / store keys should prefer v7; v4 remains fine for pure entropy secrets (temp SSH names, nonces).
+**Here:** store / order / journal / experiment / lease keys go through
+[`mintSortableId()`](../src/lib/ids.ts) → `randomUUIDv7()`. Keep `crypto.randomUUID()` (v4) for pure entropy (temp SSH names, browser HQ form fallback, test temp paths).
 
 ### `Bun.peek` — settled-promise fast path
 

@@ -5,6 +5,7 @@ import { migrateExecutionSchema } from "../src/partner/execution/sql.ts";
 import { asAuthorizationReceiptLeaseOwner } from "../src/partner/authorization/outbox.ts";
 import { deliverAuthorizationReceiptBatch } from "../src/telegram/authorization-outbox-worker.ts";
 import { sendMessage } from "../src/telegram/api.ts";
+import { mintSortableId } from "../src/lib/ids.ts";
 
 export async function runReceiptDeliveryJob(options: { limit?: number; nowMs?: number } = {}) {
   const limit = options.limit ?? 100;
@@ -16,7 +17,7 @@ export async function runReceiptDeliveryJob(options: { limit?: number; nowMs?: n
     migrateExecutionSchema(db);
     return await deliverAuthorizationReceiptBatch(db, {
     nowMs: options.nowMs ?? Date.now(),
-    leaseOwner: asAuthorizationReceiptLeaseOwner(`receipt-worker-${process.pid}-${crypto.randomUUID()}`),
+    leaseOwner: asAuthorizationReceiptLeaseOwner(`receipt-worker-${process.pid}-${mintSortableId()}`),
     limit,
     send: sendMessage,
     });

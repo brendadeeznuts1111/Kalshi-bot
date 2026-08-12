@@ -1,4 +1,5 @@
 /** Branded registry identities. Parse once at source/config boundaries. */
+import { mintSortableId } from '../../lib/ids.ts';
 
 type Brand<T, Name extends string> = T & { readonly __brand: Name };
 
@@ -85,13 +86,13 @@ export const mintSourceInventoryRunId = (
   source: SourceKey,
   sport: SportKey,
   scope: SourceScopeId,
-  entropy = crypto.randomUUID()
+  entropy = mintSortableId()
 ): SourceInventoryRunId =>
   asSourceInventoryRunId(`${unbrand(source)}:${unbrand(sport)}:${unbrand(scope)}:${entropy}`);
 export const mintSourceMetadataRunId = (
   source: SourceKey,
   scope: SourceScopeId,
-  entropy: string = crypto.randomUUID()
+  entropy: string = mintSortableId()
 ): SourceMetadataRunId => {
   const token = required(entropy, 'SourceMetadataRunId entropy');
   return asSourceMetadataRunId(`${unbrand(source)}:metadata:${unbrand(scope)}:${token}`);
