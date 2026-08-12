@@ -531,7 +531,10 @@ export function buildAnalyzeInspectMeta(input: {
 }
 
 /**
- * Full markdown report: banner + summary counts + every column preset table.
+ * Full or focused markdown report: banner + summary + selected preset table(s).
+ *
+ * @param presets Which column presets to include. Default = all named presets.
+ *   Pass `['desk']` for a focused desk page (CLI `--html --columns=desk`).
  */
 export function formatAnalyzeMarkdownReport(input: {
   sportId: string;
@@ -541,18 +544,33 @@ export function formatAnalyzeMarkdownReport(input: {
   rows: AnalyzeWeightedRow[];
   schemaVersion?: number;
   generatedAt?: string;
+  /** Preset names to render; omit for full multi-preset bake. */
+  presets?: readonly AnalyzeColumnPresetName[];
+  /** Optional column list for a free-form table (when not a single named preset). */
+  columns?: readonly string[];
 }): string {
   const summary = summarizeAnalyzeRows(input.rows);
+  const presetList: AnalyzeColumnPresetName[] = input.presets
+    ? [...input.presets]
+    : [...ANALYZE_COLUMN_PRESET_NAMES];
+  const focused =
+    presetList.length === 1 && presetList[0] !== 'all' ? presetList[0]! : null;
   const banner = formatAnalyzeBanner({
     sportId: input.sportId,
     phase: input.phase,
     sortBy: input.sortBy,
     desc: input.desc,
+    columns: focused
+      ? resolveAnalyzeColumns([focused])
+      : input.columns
+        ? resolveAnalyzeColumns(input.columns)
+        : undefined,
     summary,
     schemaVersion: input.schemaVersion,
   });
+  const titleSuffix = focused ? ` · ${focused}` : '';
   const lines: string[] = [
-    `# Live-tracker analyze (${input.sportId} / ${input.phase})`,
+    `# Live-tracker analyze (${input.sportId} / ${input.phase}${titleSuffix})`,
     '',
     input.generatedAt ? `Generated \`${input.generatedAt}\`` : '',
     '',
@@ -595,32 +613,41 @@ export function formatAnalyzeMarkdownReport(input: {
     ),
     '',
   ];
-  for (const name of ANALYZE_COLUMN_PRESET_NAMES) {
-    if (name === 'all') continue; // place last
-    lines.push(`## Preset \`${name}\``, '', formatAnalyzeMarkdownTable(input.rows, [name]), '');
+
+  // Free-form column list (not a single named preset) → one table section
+  if (input.columns?.length && !focused && !(input.presets?.length)) {
+    lines.push('## Columns', '', formatAnalyzeMarkdownTable(input.rows, input.columns), '');
+  } else {
+    const ordered = [
+      ...presetList.filter(p => p !== 'all'),
+      ...(presetList.includes('all') ? (['all'] as const) : []),
+    ];
+    for (const name of ordered) {
+      lines.push(
+        `## Preset \`${name}\``,
+        '',
+        formatAnalyzeMarkdownTable(input.rows, [name]),
+        '',
+      );
+    }
   }
-  lines.push('## Preset `all`', '', formatAnalyzeMarkdownTable(input.rows, ['all']), '');
   return lines.filter((l, i, a) => !(l === '' && a[i - 1] === '')).join('\n');
 }
 
-/** HTML report via Bun.markdown.html (docs preset: GFM + heading ids + tagFilter). */
-export function formatAnalyzeHtmlReport(input: {
+/** Wrap markdown body in a minimal standalone HTML document. */
+export function wrapAnalyzeHtmlDocument(input: {
   sportId: string;
   phase: string;
-  sortBy: string[];
-  desc?: boolean;
-  rows: AnalyzeWeightedRow[];
-  schemaVersion?: number;
-  generatedAt?: string;
+  titleExtra?: string;
+  bodyHtml: string;
 }): string {
-  const md = formatAnalyzeMarkdownReport(input);
-  const body = markdownToHtml(md, 'docs');
+  const titleExtra = input.titleExtra ? ` · ${input.titleExtra}` : '';
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Live-tracker analyze · ${input.sportId} / ${input.phase}</title>
+<title>Live-tracker analyze · ${input.sportId} / ${input.phase}${titleExtra}</title>
 <style>
   :root { color-scheme: dark light; font-family: ui-sans-serif, system-ui, sans-serif; }
   body { max-width: 1100px; margin: 1.5rem auto; padding: 0 1rem; line-height: 1.45; }
@@ -632,10 +659,50 @@ export function formatAnalyzeHtmlReport(input: {
 </style>
 </head>
 <body>
-${body}
+${input.bodyHtml}
 </body>
 </html>
 `;
+}
+
+/**
+ * HTML report via Bun.markdown.html (docs preset: GFM + heading ids + tagFilter).
+ * Pass `presets: ['desk']` for a focused single-preset page.
+ */
+export function formatAnalyzeHtmlReport(input: {
+  sportId: string;
+  phase: string;
+  sortBy: string[];
+  desc?: boolean;
+  rows: AnalyzeWeightedRow[];
+  schemaVersion?: number;
+  generatedAt?: string;
+  presets?: readonly AnalyzeColumnPresetName[];
+  columns?: readonly string[];
+}): string {
+  const md = formatAnalyzeMarkdownReport(input);
+  const body = markdownToHtml(md, 'docs');
+  const focused =
+    input.presets?.length === 1 && input.presets[0] !== 'all' ? input.presets[0] : undefined;
+  return wrapAnalyzeHtmlDocument({
+    sportId: input.sportId,
+    phase: input.phase,
+    titleExtra: focused,
+    bodyHtml: body,
+  });
+}
+
+/** Detect a single named column preset from --columns args. */
+export function detectAnalyzeFocusPreset(
+  columns?: readonly string[],
+): AnalyzeColumnPresetName | null {
+  if (!columns?.length) return null;
+  if (columns.length !== 1) return null;
+  const only = columns[0]!;
+  if ((ANALYZE_COLUMN_PRESET_NAMES as readonly string[]).includes(only)) {
+    return only as AnalyzeColumnPresetName;
+  }
+  return null;
 }
 
 export type AnalyzeSnapshotArtifact = {
@@ -716,12 +783,22 @@ export function buildAnalyzeSnapshotArtifact(input: {
 export type SportAnalyzeRender = {
   artifact: AnalyzeSnapshotArtifact;
   columns: AnalyzeWeightedFieldKey[];
+  /** Single named preset when --columns=desk|odds|…; null for free-form / all. */
+  focusPreset: AnalyzeColumnPresetName | null;
   banner: string;
   inspectMeta: Record<string, unknown>;
   tableInspect: string;
   tableMarkdown: string;
+  /** Full multi-preset report (bake sample.md). */
   markdownReport: string;
+  /** Full multi-preset HTML (bake sample.html). */
   htmlReport: string;
+  /**
+   * HTML for CLI `--html`: honors --columns.
+   * - one named preset (e.g. desk) → focused page (summary + that preset only)
+   * - all / free-form → full multi-preset or columns table
+   */
+  htmlView: string;
 };
 
 export function renderSportAnalyze(input: {
@@ -743,6 +820,7 @@ export function renderSportAnalyze(input: {
     events: input.events,
   });
   const columns = resolveAnalyzeColumns(input.columns);
+  const focusPreset = detectAnalyzeFocusPreset(input.columns);
   const banner = formatAnalyzeBanner({
     sportId: artifact.sportId,
     phase: artifact.phase,
@@ -761,9 +839,44 @@ export function renderSportAnalyze(input: {
     rows: artifact.rows,
     schemaVersion: artifact.schemaVersion,
   });
+  const htmlReport = formatAnalyzeHtmlReport({
+    sportId: artifact.sportId,
+    phase: artifact.phase,
+    sortBy: artifact.sortBy,
+    desc: artifact.desc,
+    rows: artifact.rows,
+    schemaVersion: artifact.schemaVersion,
+    generatedAt: artifact.generatedAt,
+  });
+  // Focused HTML when a single named preset is requested (not "all")
+  const htmlView =
+    focusPreset && focusPreset !== 'all'
+      ? formatAnalyzeHtmlReport({
+          sportId: artifact.sportId,
+          phase: artifact.phase,
+          sortBy: artifact.sortBy,
+          desc: artifact.desc,
+          rows: artifact.rows,
+          schemaVersion: artifact.schemaVersion,
+          generatedAt: artifact.generatedAt,
+          presets: [focusPreset],
+        })
+      : focusPreset === 'all' || !input.columns?.length
+        ? htmlReport
+        : formatAnalyzeHtmlReport({
+            sportId: artifact.sportId,
+            phase: artifact.phase,
+            sortBy: artifact.sortBy,
+            desc: artifact.desc,
+            rows: artifact.rows,
+            schemaVersion: artifact.schemaVersion,
+            generatedAt: artifact.generatedAt,
+            columns: input.columns,
+          });
   return {
     artifact,
     columns,
+    focusPreset,
     banner,
     inspectMeta,
     tableInspect: formatAnalyzeInspectTable(artifact.rows, columns, {
@@ -771,14 +884,7 @@ export function renderSportAnalyze(input: {
     }),
     tableMarkdown: formatAnalyzeMarkdownTable(artifact.rows, columns),
     markdownReport: artifact.markdownReport,
-    htmlReport: formatAnalyzeHtmlReport({
-      sportId: artifact.sportId,
-      phase: artifact.phase,
-      sortBy: artifact.sortBy,
-      desc: artifact.desc,
-      rows: artifact.rows,
-      schemaVersion: artifact.schemaVersion,
-      generatedAt: artifact.generatedAt,
-    }),
+    htmlReport,
+    htmlView,
   };
 }

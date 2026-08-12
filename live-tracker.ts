@@ -613,9 +613,9 @@ if (cmd === 'analyze') {
           : undefined,
       colors,
     });
-    const { artifact, columns, banner, inspectMeta, tableInspect, tableMarkdown } = render;
+    const { artifact, banner, inspectMeta, tableInspect, tableMarkdown } = render;
 
-    // Optional bake to docs/artifacts for sample table SSOT
+    // Optional bake to docs/artifacts for sample table SSOT (always full multi-preset)
     if (hasFlag('bake') || hasFlag('write-sample')) {
       const { joinPath } = await import('./src/research/paths.ts');
       const schemaPath = joinPath(
@@ -658,8 +658,8 @@ if (cmd === 'analyze') {
       process.exit(0);
     }
     if (hasFlag('html') || argValue('format') === 'html') {
-      // Full multi-preset HTML report (same body as bake sample.html)
-      await writeOrPrint(render.htmlReport);
+      // Honors --columns: desk → focused HTML; all → full multi-preset
+      await writeOrPrint(render.htmlView);
       process.exit(0);
     }
     if (hasFlag('table') || argValue('format') === 'table') {
