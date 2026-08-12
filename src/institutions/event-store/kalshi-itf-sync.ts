@@ -40,6 +40,7 @@ import type { CanonicalEventId, KalshiEventTicker, KalshiMarketTicker, SeriesTic
 import { asKalshiEventTicker, asSeriesTicker, sqlBrand, tryKalshiEventTicker, unbrand } from "./brands.ts";
 import type { BookSnapshot } from "../alpha-signal-types.ts";
 import { fetchKalshiBookSnapshot } from "../../bot/kalshi-market-data.ts";
+import { bookTickClocks } from "../../lib/time-ssot.ts";
 import { recomputeMatchLiquidityForEvents } from "./match-liquidity.ts";
 import {
   extractMatchupDateBlob,
@@ -655,19 +656,21 @@ export async function recordKalshiBookTicks(
     const kind = marketKindFromTicker(ticker);
     try {
       const book: BookSnapshot = await fetchBook(ticker);
-      const recvTs = Date.now();
+      // REST has no exchange ts_ms — dual-clock collapses to recv (source_clock=recv).
+      const clocks = bookTickClocks({ recvTsMs: Date.now() });
       db.query(
         `INSERT INTO book_ticks (
            event_id, ticker, market_kind, ts, recv_ts, source_clock, seq, levels_json, source, source_url
          ) VALUES (
-           $event_id, $ticker, $market_kind, $ts, $recv_ts, 'recv', NULL, $levels_json, $source, $source_url
+           $event_id, $ticker, $market_kind, $ts, $recv_ts, $source_clock, NULL, $levels_json, $source, $source_url
          )`,
       ).run({
         $event_id: unbrand(eventId),
         $ticker: tickerPlain,
         $market_kind: kind,
-        $ts: recvTs,
-        $recv_ts: recvTs,
+        $ts: clocks.ts,
+        $recv_ts: clocks.recvTs,
+        $source_clock: clocks.sourceClock,
         $levels_json: JSON.stringify(book),
         $source: KALSHI_BOOK_SOURCE_REST,
         $source_url: KALSHI_ORDERBOOK_URL(ticker),

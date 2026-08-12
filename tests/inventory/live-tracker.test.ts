@@ -15,6 +15,7 @@ import {
   stampTrackerLogRecord,
   type LiveTrackerEvent,
 } from '../../src/inventory/live-tracker.ts';
+import { compareTime } from '../../src/lib/time-ssot.ts';
 import type { OddsWatchUpdate } from '../../src/inventory/pandora-listen.ts';
 import type { OfferTransition } from '../../src/partner/fantasy-ultra/coefficients.ts';
 
@@ -97,7 +98,11 @@ describe('live-tracker', () => {
 
     const tail = filterAndSortEvents(events, { tail: 2 });
     expect(tail).toHaveLength(2);
-    expect(tail[0]!.time <= tail[1]!.time).toBe(true);
+    // Tail is last-N by time ascending — interior sort key via time-ssot.
+    expect(compareTime(tail[0]!.time, tail[1]!.time)).toBeLessThanOrEqual(0);
+    if (tail[0]!.timeMs != null && tail[1]!.timeMs != null) {
+      expect(tail[0]!.timeMs).toBeLessThanOrEqual(tail[1]!.timeMs);
+    }
 
     const multi = filterAndSortEvents(events, {
       eventTypes: ['MARKET_ADDED', 'PRICE_CHANGE'],

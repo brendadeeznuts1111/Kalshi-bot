@@ -38,6 +38,12 @@ import {
   unbrand,
 } from "./brands.ts";
 import {
+  hoursToMs,
+  nowEpochMs,
+  toIsoUtc,
+  watchWindowMs,
+} from "../../lib/time-ssot.ts";
+import {
   KALSHI_EVENT_SOURCE,
   KALSHI_LIVE_SCORE_SOURCE,
   resolveTennisLeadMinutes,
@@ -547,8 +553,8 @@ export function analyzeScoreSnapshotCadence(
   } = {},
 ): SnapshotCadenceReport {
   const intervalMs = options.intervalMs ?? Number(Bun.env.TENNIS_LIVE_INTERVAL_MS ?? 10_000);
-  const windowMs = options.windowMs ?? 6 * 3600_000;
-  const floorTs = Date.now() - windowMs;
+  const windowMs = options.windowMs ?? hoursToMs(6);
+  const floorTs = nowEpochMs() - windowMs;
   const limitEvents = options.limitEvents ?? TENNIS_WATCH_LIMIT;
 
   const tickerFilter = options.eventTicker
@@ -736,7 +742,7 @@ export function clearStaleLiveFlags(
   options: { staleMs?: number; nowMs?: number } = {},
 ): number {
   const staleMs = options.staleMs ?? TENNIS_LIVE_STALE_MS;
-  const nowMs = options.nowMs ?? Date.now();
+  const nowMs = options.nowMs ?? nowEpochMs();
   const cutoff = nowMs - staleMs;
   const result = db
     .query(
@@ -770,13 +776,14 @@ export function listWatchEvents(
   const leadMinutes = resolveTennisLeadMinutes(options.leadMinutes);
   const limit = resolveTennisWatchLimit(options.limit);
   const pastGraceHours = options.pastGraceHours ?? TENNIS_WATCH_PAST_GRACE_HOURS;
-  const nowMs = options.nowMs ?? Date.now();
+  const nowMs = options.nowMs ?? nowEpochMs();
   if (options.clearStale !== false) {
     clearStaleLiveFlags(db, { staleMs: options.staleMs, nowMs });
   }
-  const leadMs = leadMinutes * 60_000;
-  const cutoffIso = new Date(nowMs + leadMs).toISOString();
-  const floorIso = new Date(nowMs - pastGraceHours * 3600_000).toISOString();
+  // Window SSOT: [now − pastGrace, now + lead] → ISO bounds for events.start_ts text compare.
+  const window = watchWindowMs({ nowMs, leadMinutes, pastGraceHours });
+  const cutoffIso = toIsoUtc(window.windowEndMs)!;
+  const floorIso = toIsoUtc(window.windowStartMs)!;
   const staleFloor = nowMs - (options.staleMs ?? TENNIS_LIVE_STALE_MS);
 
   const rows = db

@@ -101,12 +101,43 @@ describe('time-ssot', () => {
     const w = watchWindowMs({ nowMs: now, leadMinutes: 5, pastGraceHours: 6 });
     expect(w).toMatchObject({
       nowMs: now,
-      windowEndMs: now + 5 * 60_000,
-      windowStartMs: now - 6 * 3_600_000,
+      windowEndMs: now + minutesToMs(5),
+      windowStartMs: now - hoursToMs(6),
     });
     const inside = '2026-08-10T12:03:00.000Z';
+    const justPastLead = '2026-08-10T12:06:00.000Z';
+    const justBeforeFloor = new Date(w.windowStartMs - 1).toISOString();
     expect(
       startTsInWatchWindow(inside, {
+        nowMs: now,
+        leadMinutes: 5,
+        pastGraceHours: 6,
+      }),
+    ).toBe(true);
+    expect(
+      startTsInWatchWindow(justPastLead, {
+        nowMs: now,
+        leadMinutes: 5,
+        pastGraceHours: 6,
+      }),
+    ).toBe(false);
+    expect(
+      startTsInWatchWindow(justBeforeFloor, {
+        nowMs: now,
+        leadMinutes: 5,
+        pastGraceHours: 6,
+      }),
+    ).toBe(false);
+    // Inclusive bounds at exact window edges.
+    expect(
+      startTsInWatchWindow(new Date(w.windowEndMs).toISOString(), {
+        nowMs: now,
+        leadMinutes: 5,
+        pastGraceHours: 6,
+      }),
+    ).toBe(true);
+    expect(
+      startTsInWatchWindow(new Date(w.windowStartMs).toISOString(), {
         nowMs: now,
         leadMinutes: 5,
         pastGraceHours: 6,
