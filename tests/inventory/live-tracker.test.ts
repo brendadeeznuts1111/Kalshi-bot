@@ -12,6 +12,7 @@ import {
   formatEventsTable,
   loadTrackerEventsFromPaths,
   parseEventType,
+  stampTrackerLogRecord,
   type LiveTrackerEvent,
 } from '../../src/inventory/live-tracker.ts';
 import type { OddsWatchUpdate } from '../../src/inventory/pandora-listen.ts';
@@ -105,6 +106,25 @@ describe('live-tracker', () => {
       sortBy: ['time'],
     });
     expect(multi.length).toBeLessThanOrEqual(2);
+  });
+
+  test('stampTrackerLogRecord dual-stamps envelope + events', () => {
+    const stamped = stampTrackerLogRecord({
+      at: '2026-08-10T10:00:02.000Z',
+      eventId: 1,
+      lineCount: 1,
+      offeredMarketCount: 1,
+      events: [
+        {
+          time: '2026-08-10T10:00:02.000Z',
+          eventType: 'PRICE_CHANGE',
+          eventId: 1,
+          detail: 'price',
+        },
+      ],
+    });
+    expect(stamped.atMs).toBe(Date.parse('2026-08-10T10:00:02.000Z'));
+    expect(stamped.events[0]!.timeMs).toBe(stamped.atMs);
   });
 
   test('eventsFromWatchUpdate dual-stamps timeMs', () => {

@@ -4,8 +4,12 @@
  * Watch-set, recorders, ground capture, and alpha book-context must import from here
  * instead of re-declaring lead minutes, limits, book_ticks.source strings, or WebView dims.
  *
+ * Durations in ms use {@link minutesToMs} / {@link hoursToMs} from time-ssot.
+ *
  * @see docs/TENNIS_PROGRAM_ARCHETYPES.md
+ * @see docs/TIME.md
  */
+import { hoursToMs, minutesToMs, secondsToMs } from "../../lib/time-ssot.ts";
 
 /** Minutes before start_ts — tennis:live --lead and tennis:record --watch. */
 export const TENNIS_DEFAULT_LEAD_MINUTES = 5;
@@ -46,7 +50,7 @@ export const TENNIS_WS_GROUND_THUMB_HEIGHT = 270;
 export const TENNIS_WS_GROUND_WEBP_QUALITY = 82;
 
 /** Refresh watch-set membership during WS capture (kalshi-ws-recorder). */
-export const TENNIS_WS_WATCH_REFRESH_MS = 30_000;
+export const TENNIS_WS_WATCH_REFRESH_MS = secondsToMs(30);
 
 /** REST book poll loop default lives in env TENNIS_RECORD_INTERVAL_MS (record-cli) — not this constant. */
 
@@ -54,16 +58,16 @@ export const TENNIS_WS_WATCH_REFRESH_MS = 30_000;
 export const TENNIS_WATCH_PAST_GRACE_HOURS = 6;
 
 /** Clear is_live when live_scores.updated_ts is older than this (stuck in_progress). */
-export const TENNIS_LIVE_STALE_MS = 45 * 60_000;
+export const TENNIS_LIVE_STALE_MS = minutesToMs(45);
 
 /** Default live_data poll interval (override with TENNIS_LIVE_INTERVAL_MS env). */
-export const TENNIS_LIVE_INTERVAL_MS_DEFAULT = 10_000;
+export const TENNIS_LIVE_INTERVAL_MS_DEFAULT = secondsToMs(10);
 
 /** agent tennis: re-run canary when artifact older than this. */
-export const TENNIS_CANARY_ARTIFACT_STALE_MS = 30 * 60_000;
+export const TENNIS_CANARY_ARTIFACT_STALE_MS = minutesToMs(30);
 
 /** agent tennis: refresh WS ground when artifact older than this. */
-export const TENNIS_WS_GROUND_ARTIFACT_STALE_MS = 60 * 60_000;
+export const TENNIS_WS_GROUND_ARTIFACT_STALE_MS = minutesToMs(60);
 
 /** OS Bun.cron — WS recorder (tools/tennis/ws-recorder-schedule-cli.ts). */
 export const TENNIS_WS_RECORDER_CRON_SCHEDULE = "*/30 * * * *";
@@ -73,7 +77,7 @@ export const TENNIS_WS_RECORDER_DEFAULT_WS_SECONDS = 300;
 export const TENNIS_LIVE_CANARY_CRON_SCHEDULE = "*/15 * * * *";
 
 /** agent tennis: re-run experiment check when artifact older than this. */
-export const TENNIS_EXPERIMENT_ARTIFACT_STALE_MS = 24 * 60 * 60_000;
+export const TENNIS_EXPERIMENT_ARTIFACT_STALE_MS = hoursToMs(24);
 
 /** OS Bun.cron — factorial experiment dailyCheck (tools/tennis/experiment-schedule-cli.ts). */
 export const TENNIS_EXPERIMENT_CRON_SCHEDULE = "0 9 * * *";

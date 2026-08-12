@@ -240,3 +240,66 @@ export const TOXICITY_MARK_WINDOW_MS = 15_000;
 export function cliSecondsToMs(seconds: number): EpochMs {
   return secondsToMs(seconds);
 }
+
+// ── Book ticks / Kalshi dual-clock ──────────────────────────────────────────
+
+/**
+ * Dual-clock for book_ticks: prefer exchange ts when present, always keep recv.
+ * @see docs/TIME.md § book_ticks
+ */
+export function bookTickClocks(input: {
+  /** Exchange/provider ms when known (e.g. WS ts_ms). */
+  exchangeTsMs?: number | null;
+  /** Local receipt ms (required). */
+  recvTsMs: number;
+}): {
+  ts: EpochMs;
+  recvTs: EpochMs;
+  sourceClock: 'exchange' | 'recv';
+} {
+  const recvTs = Math.trunc(input.recvTsMs);
+  const ex =
+    input.exchangeTsMs != null && Number.isFinite(input.exchangeTsMs)
+      ? Math.trunc(input.exchangeTsMs)
+      : null;
+  if (ex != null) {
+    return { ts: ex, recvTs, sourceClock: 'exchange' };
+  }
+  return { ts: recvTs, recvTs, sourceClock: 'recv' };
+}
+
+/**
+ * Normalize Kalshi/event-store start_ts wire (ISO string or unix s/ms) → dual instant.
+ * Event-store `events.start_ts` is text ISO; some wires send unix seconds.
+ */
+export function normalizeStartTs(value: unknown): DualInstant | null {
+  return dualTime(value);
+}
+
+/**
+ * Watch membership window around now: [now − pastGrace, now + lead].
+ * All outputs epoch ms. Lead/grace are **wall-clock** durations.
+ */
+export function watchWindowMs(input: {
+  nowMs?: EpochMs;
+  leadMinutes: number;
+  pastGraceHours: number;
+}): { nowMs: EpochMs; windowStartMs: EpochMs; windowEndMs: EpochMs } {
+  const nowMs = input.nowMs ?? nowEpochMs();
+  return {
+    nowMs,
+    windowStartMs: nowMs - hoursToMs(input.pastGraceHours),
+    windowEndMs: nowMs + minutesToMs(input.leadMinutes),
+  };
+}
+
+/** True if start instant falls in the watch window (or start unknown → false). */
+export function startTsInWatchWindow(
+  startTs: unknown,
+  opts: { nowMs?: EpochMs; leadMinutes: number; pastGraceHours: number },
+): boolean {
+  const start = toEpochMs(startTs);
+  if (start == null) return false;
+  const w = watchWindowMs(opts);
+  return start >= w.windowStartMs && start <= w.windowEndMs;
+}

@@ -686,13 +686,37 @@ export function diffEventLists(
 
 
 
+/**
+ * Dual-stamp log envelope + every nested event before disk write.
+ * Ensures new JSONL lines always carry `at`/`atMs` and `time`/`timeMs`.
+ */
+export function stampTrackerLogRecord(record: LiveTrackerLogRecord): LiveTrackerLogRecord {
+  const envelope = dualTime(record.at);
+  const at = envelope?.time ?? record.at;
+  const atMs = envelope?.timeMs ?? record.atMs ?? null;
+  const events = (record.events ?? []).map(e =>
+    withDualTime({
+      ...e,
+      // Prefer event time; fall back to envelope if missing
+      time: e.time || at,
+    }),
+  );
+  return {
+    ...record,
+    at,
+    atMs,
+    events,
+  };
+}
+
 export async function appendTrackerLog(
   path: string,
   record: LiveTrackerLogRecord
 ): Promise<void> {
+  const stamped = stampTrackerLogRecord(record);
   const dir = path.replace(/\/[^/]+$/, '');
   await Bun.$`mkdir -p ${dir}`.quiet();
-  const line = JSON.stringify(record) + '\n';
+  const line = JSON.stringify(stamped) + '\n';
   const existing = Bun.file(path);
   if (await existing.exists()) {
     const prev = await existing.arrayBuffer();

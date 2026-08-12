@@ -36,6 +36,7 @@ import {
   resetOrderbookStreamSeq,
   type OrderbookStreamState,
 } from "./orderbook-stream.ts";
+import { bookTickClocks } from "../../lib/time-ssot.ts";
 import { listRecordTickers } from "./watch-set.ts";
 import { persistTennisWsRecorderSession } from "./tennis-ws-recorder-store.ts";
 import {
@@ -156,6 +157,7 @@ function insertBookTick(
     levelsJson: string;
   },
 ): void {
+  // Clocks already normalized via bookTickClocks at call sites (epoch ms).
   db.query(
     `INSERT INTO book_ticks (
        event_id, ticker, market_kind, ts, seq, levels_json, source, source_url, recv_ts, source_clock
@@ -245,7 +247,8 @@ export function handleOrderbookWire(
       },
       seq,
     );
-    const snap = liveOrderbookToSnapshot(book, recvTs);
+    const clocks = bookTickClocks({ recvTsMs: recvTs });
+    const snap = liveOrderbookToSnapshot(book, clocks.ts);
     if (snap && db && !options.dryRun) {
       const eventId = eventIdForTicker(db, ticker);
       if (!eventId) return { kind: "error", ticker };
@@ -253,13 +256,13 @@ export function handleOrderbookWire(
         eventId,
         ticker,
         seq,
-        ts: recvTs,
-        recvTs,
-        sourceClock: "recv",
+        ts: clocks.ts,
+        recvTs: clocks.recvTs,
+        sourceClock: clocks.sourceClock,
         levelsJson: JSON.stringify(snap),
       });
     }
-    options.onTick?.({ ticker, seq, sourceClock: "recv" });
+    options.onTick?.({ ticker, seq, sourceClock: clocks.sourceClock });
     return { kind: "snapshot", ticker };
   }
 
@@ -275,10 +278,13 @@ export function handleOrderbookWire(
       seq,
     );
     if (!ok) return { kind: "error", ticker };
-    const exchangeTs = typeof msg.ts_ms === "number" && Number.isFinite(msg.ts_ms) ? msg.ts_ms : null;
-    const ts = exchangeTs ?? recvTs;
-    const sourceClock = exchangeTs != null ? "exchange" : "recv";
-    const snap = liveOrderbookToSnapshot(book, ts);
+    const exchangeTs =
+      typeof msg.ts_ms === "number" && Number.isFinite(msg.ts_ms) ? msg.ts_ms : null;
+    const clocks = bookTickClocks({
+      exchangeTsMs: exchangeTs,
+      recvTsMs: recvTs,
+    });
+    const snap = liveOrderbookToSnapshot(book, clocks.ts);
     if (snap && db && !options.dryRun) {
       const eventId = eventIdForTicker(db, ticker);
       if (!eventId) return { kind: "error", ticker };
@@ -286,13 +292,13 @@ export function handleOrderbookWire(
         eventId,
         ticker,
         seq,
-        ts,
-        recvTs,
-        sourceClock,
+        ts: clocks.ts,
+        recvTs: clocks.recvTs,
+        sourceClock: clocks.sourceClock,
         levelsJson: JSON.stringify(snap),
       });
     }
-    options.onTick?.({ ticker, seq, sourceClock });
+    options.onTick?.({ ticker, seq, sourceClock: clocks.sourceClock });
     return { kind: "delta", ticker };
   }
 
