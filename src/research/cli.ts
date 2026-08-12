@@ -159,7 +159,7 @@ export function printResearchRunSummary(run: ResearchRun): void {
     console.log(`Shortlist (${run.shortlist.length}):`);
     printInspectTable(
       shortlistTableRows(run.shortlist, { hyperlinks: true }),
-      ["#", "repo", "score", "auth", "orders", "license"],
+      ["#", "repo", "score", "auth", "orders", "tests", "risk", "license"],
     );
   } else {
     console.log(`Shortlist (${run.shortlist.length}):`);

@@ -576,11 +576,11 @@ if (cmd === 'analyze') {
   if (sportId) {
     const {
       parseEdgePatternSortBy,
+      buildAnalyzeSchemaDocument,
       buildAnalyzeSnapshotArtifact,
       formatAnalyzeInspectTable,
       formatAnalyzeMarkdownTable,
-      ANALYZE_WEIGHTED_ALL_COLUMNS,
-      ANALYZE_WEIGHTED_DEFAULT_COLUMNS,
+      resolveAnalyzeColumns,
     } = await import('./src/settlement/index.ts');
     const phase =
       argValue('phase') === 'prematch' ? 'prematch' : 'live';
@@ -600,13 +600,15 @@ if (cmd === 'analyze') {
       desc,
       events: weighted,
     });
+    // --columns desk|odds|settlement|patterns|ev|all|key1,key2
     const colArg = argValue('columns');
-    const columns =
-      colArg === 'all' || hasFlag('all-columns')
-        ? [...ANALYZE_WEIGHTED_ALL_COLUMNS]
+    const columns = resolveAnalyzeColumns(
+      hasFlag('all-columns')
+        ? ['all']
         : colArg
           ? colArg.split(',').map(s => s.trim()).filter(Boolean)
-          : [...ANALYZE_WEIGHTED_DEFAULT_COLUMNS];
+          : undefined,
+    );
 
     // Optional bake to docs/artifacts for sample table SSOT
     if (hasFlag('bake') || hasFlag('write-sample')) {
@@ -625,25 +627,19 @@ if (cmd === 'analyze') {
       );
       await Bun.write(
         schemaPath,
-        JSON.stringify(
-          {
-            schemaVersion: artifact.schemaVersion,
-            description:
-              'Flat row schema for live-tracker analyze --sport (settlement + edge patterns)',
-            fields: artifact.fields,
-            defaultColumns: artifact.defaultColumns,
-            allColumns: artifact.allColumns,
-          },
-          null,
-          2,
-        ) + '\n',
+        JSON.stringify(buildAnalyzeSchemaDocument(), null, 2) + '\n',
       );
       await Bun.write(samplePath, JSON.stringify(artifact, null, 2) + '\n');
       await Bun.write(
         tablePath,
-        `# Live-tracker analyze sample (tennis / live)\n\n` +
-          `Generated \`${artifact.generatedAt}\` · sport=\`${sportId}\` phase=\`${phase}\`\n\n` +
-          formatAnalyzeMarkdownTable(artifact.rows, ANALYZE_WEIGHTED_ALL_COLUMNS) +
+        `# Live-tracker analyze sample (${sportId} / ${phase})\n\n` +
+          `Generated \`${artifact.generatedAt}\` · schema v${artifact.schemaVersion}\n\n` +
+          `## Desk\n\n` +
+          formatAnalyzeMarkdownTable(artifact.rows, ['desk']) +
+          `\n\n## EV\n\n` +
+          formatAnalyzeMarkdownTable(artifact.rows, ['ev']) +
+          `\n\n## All columns\n\n` +
+          formatAnalyzeMarkdownTable(artifact.rows, ['all']) +
           '\n',
       );
       console.error(`baked ${schemaPath}\n      ${samplePath}\n      ${tablePath}`);

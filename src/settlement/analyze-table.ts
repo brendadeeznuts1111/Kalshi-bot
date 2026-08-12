@@ -3,67 +3,272 @@
  * Used for Bun.inspect.table / markdown artifacts so nested settlement/patterns
  * are not collapsed to `[Object …]`.
  *
+ * Column presets: desk | odds | settlement | patterns | ev | all
+ *
  * @see docs/artifacts/live-tracker-analyze-schema.json
  * @see docs/artifacts/live-tracker-analyze-sample.json
+ * @see src/lib/table-schema.ts
  */
 
 import { dualTime } from '../lib/time-ssot.ts';
+import {
+  buildTableSchemaDocument,
+  formatInspectTableFromRows,
+  formatMarkdownTable,
+  projectTableRows,
+  resolveTableColumns,
+  type TableFieldSpec,
+} from '../lib/table-schema.ts';
 import type { LiveTrackerWeightResult } from './live-weight.ts';
 
 /** Event + settlement + pattern fields for desk tables. */
 export const ANALYZE_WEIGHTED_FIELD_SCHEMA = [
-  { key: 'time', type: 'string', description: 'Event ISO-8601 UTC (wall clock)' },
+  // event
+  {
+    key: 'time',
+    type: 'string',
+    description: 'Event ISO-8601 UTC (wall clock)',
+    group: 'event',
+  },
   {
     key: 'timeMs',
     type: 'number|null',
     description: 'Same instant as Unix epoch milliseconds (join key for shadow/event-store)',
+    group: 'event',
+    align: 'right',
   },
-  { key: 'eventType', type: 'string', description: 'MARKET_ADDED | PRICE_CHANGE | …' },
-  { key: 'eventId', type: 'string', description: 'Pandora event id' },
-  { key: 'period', type: 'string', description: 'm | s1 | h1 | …' },
-  { key: 'marketType', type: 'string', description: 'Pandora market id (3=ML, 5=total, …)' },
-  { key: 'selection', type: 'string', description: 'Selection key when present' },
-  { key: 'from', type: 'string', description: 'Prior decimal odds' },
-  { key: 'to', type: 'string', description: 'New decimal odds' },
-  { key: 'detail', type: 'string', description: 'Human detail line' },
-  { key: 'file', type: 'string', description: 'Source log basename' },
+  {
+    key: 'eventType',
+    type: 'string',
+    description: 'MARKET_ADDED | PRICE_CHANGE | …',
+    group: 'event',
+  },
+  {
+    key: 'eventId',
+    type: 'string',
+    description: 'Pandora event id',
+    group: 'event',
+  },
+  {
+    key: 'period',
+    type: 'string',
+    description: 'm | s1 | h1 | …',
+    group: 'event',
+  },
+  {
+    key: 'marketType',
+    type: 'string',
+    description: 'Pandora market id (3=ML, 5=total, …)',
+    group: 'event',
+  },
+  {
+    key: 'selection',
+    type: 'string',
+    description: 'Selection key when present',
+    group: 'event',
+  },
+  {
+    key: 'detail',
+    type: 'string',
+    description: 'Human detail line',
+    group: 'event',
+    maxWidth: 80,
+  },
+  {
+    key: 'file',
+    type: 'string',
+    description: 'Source log basename',
+    group: 'event',
+  },
+  // odds
+  {
+    key: 'from',
+    type: 'string',
+    description: 'Prior decimal odds',
+    group: 'odds',
+    align: 'right',
+  },
+  {
+    key: 'to',
+    type: 'string',
+    description: 'New decimal odds',
+    group: 'odds',
+    align: 'right',
+  },
   // settlement
-  { key: 'sportKey', type: 'string', description: 'Weighting sport key' },
-  { key: 'phase', type: 'string', description: 'prematch | live' },
-  { key: 'marketClass', type: 'string', description: 'match_ml | set_market | …' },
-  { key: 'actionThreshold', type: 'string', description: 'Shell action rule label' },
-  { key: 'voidRisk', type: 'string', description: 'low | medium | high | unknown' },
-  { key: 'preferUnitMkts', type: 'boolean', description: 'Prefer completed set/game markets' },
-  { key: 'pVoidPrior', type: 'number', description: 'Default void mass for three-way EV' },
-  { key: 'maxSeverity', type: 'string', description: 'Max pattern severity on this row' },
-  { key: 'patternIds', type: 'string', description: 'Comma-separated pattern ids (non-info first)' },
-  { key: 'patternCount', type: 'number', description: 'Number of pattern hits' },
-  { key: 'eyeOpeners', type: 'string', description: 'Joined watch+ severity notes' },
-  { key: 'sizingNote', type: 'string', description: 'Desk sizing one-liner' },
-  { key: 'summary', type: 'string', description: 'Compact weighting summary' },
-  { key: 'voidEv', type: 'number|null', description: 'Three-way EV at stake 100 if odds known' },
-  { key: 'twoWayEv', type: 'number|null', description: 'Two-way EV (void as lose)' },
-  { key: 'voidDelta', type: 'number|null', description: 'twoWayEv - voidEv' },
-  { key: 'pliveEqEzlive', type: 'boolean', description: 'Settlement identical across products' },
-] as const;
+  {
+    key: 'sportKey',
+    type: 'string',
+    description: 'Weighting sport key',
+    group: 'settlement',
+  },
+  {
+    key: 'phase',
+    type: 'string',
+    description: 'prematch | live',
+    group: 'settlement',
+  },
+  {
+    key: 'marketClass',
+    type: 'string',
+    description: 'match_ml | set_market | …',
+    group: 'settlement',
+  },
+  {
+    key: 'actionThreshold',
+    type: 'string',
+    description: 'Shell action rule label',
+    group: 'settlement',
+  },
+  {
+    key: 'voidRisk',
+    type: 'string',
+    description: 'low | medium | high | unknown',
+    group: 'settlement',
+  },
+  {
+    key: 'preferUnitMkts',
+    type: 'boolean',
+    description: 'Prefer completed set/game markets',
+    group: 'settlement',
+  },
+  {
+    key: 'pVoidPrior',
+    type: 'number',
+    description: 'Default void mass for three-way EV',
+    group: 'settlement',
+    align: 'right',
+  },
+  {
+    key: 'pliveEqEzlive',
+    type: 'boolean',
+    description: 'Settlement identical across products',
+    group: 'settlement',
+  },
+  {
+    key: 'sizingNote',
+    type: 'string',
+    description: 'Desk sizing one-liner',
+    group: 'settlement',
+    maxWidth: 72,
+  },
+  {
+    key: 'summary',
+    type: 'string',
+    description: 'Compact weighting summary',
+    group: 'settlement',
+    maxWidth: 72,
+  },
+  // patterns
+  {
+    key: 'maxSeverity',
+    type: 'string',
+    description: 'Max pattern severity on this row',
+    group: 'patterns',
+  },
+  {
+    key: 'patternIds',
+    type: 'string',
+    description: 'Comma-separated pattern ids (non-info first)',
+    group: 'patterns',
+    maxWidth: 64,
+  },
+  {
+    key: 'patternCount',
+    type: 'number',
+    description: 'Number of pattern hits',
+    group: 'patterns',
+    align: 'right',
+  },
+  {
+    key: 'eyeOpeners',
+    type: 'string',
+    description: 'Joined watch+ severity notes',
+    group: 'patterns',
+    maxWidth: 72,
+  },
+  // ev
+  {
+    key: 'voidEv',
+    type: 'number|null',
+    description: 'Three-way EV at stake 100 if odds known',
+    group: 'ev',
+    align: 'right',
+  },
+  {
+    key: 'twoWayEv',
+    type: 'number|null',
+    description: 'Two-way EV (void as lose)',
+    group: 'ev',
+    align: 'right',
+  },
+  {
+    key: 'voidDelta',
+    type: 'number|null',
+    description: 'twoWayEv - voidEv',
+    group: 'ev',
+    align: 'right',
+  },
+] as const satisfies readonly TableFieldSpec[];
 
 export type AnalyzeWeightedFieldKey = (typeof ANALYZE_WEIGHTED_FIELD_SCHEMA)[number]['key'];
 
-/** Default table column order (subset of schema for TTY width). */
-export const ANALYZE_WEIGHTED_DEFAULT_COLUMNS: readonly AnalyzeWeightedFieldKey[] = [
-  'time',
-  'timeMs',
-  'eventType',
-  'period',
-  'marketType',
-  'from',
-  'to',
-  'voidRisk',
-  'maxSeverity',
-  'patternIds',
-  'pVoidPrior',
-  'sizingNote',
-] as const;
+/** Named column presets for TTY / --columns. */
+export const ANALYZE_COLUMN_PRESETS = {
+  desk: [
+    'time',
+    'timeMs',
+    'eventType',
+    'period',
+    'marketType',
+    'from',
+    'to',
+    'voidRisk',
+    'maxSeverity',
+    'patternIds',
+    'pVoidPrior',
+    'sizingNote',
+  ],
+  odds: ['time', 'eventType', 'period', 'marketType', 'selection', 'from', 'to', 'detail'],
+  settlement: [
+    'time',
+    'eventType',
+    'sportKey',
+    'phase',
+    'marketClass',
+    'actionThreshold',
+    'voidRisk',
+    'preferUnitMkts',
+    'pVoidPrior',
+    'pliveEqEzlive',
+    'sizingNote',
+    'summary',
+  ],
+  patterns: [
+    'time',
+    'eventType',
+    'voidRisk',
+    'maxSeverity',
+    'patternIds',
+    'patternCount',
+    'eyeOpeners',
+  ],
+  ev: [
+    'time',
+    'eventType',
+    'from',
+    'to',
+    'voidRisk',
+    'pVoidPrior',
+    'voidEv',
+    'twoWayEv',
+    'voidDelta',
+  ],
+} as const satisfies Record<string, readonly AnalyzeWeightedFieldKey[]>;
+
+/** Default table column order (desk preset). */
+export const ANALYZE_WEIGHTED_DEFAULT_COLUMNS: readonly AnalyzeWeightedFieldKey[] =
+  ANALYZE_COLUMN_PRESETS.desk;
 
 /** Full column set for artifacts / --columns all. */
 export const ANALYZE_WEIGHTED_ALL_COLUMNS: readonly AnalyzeWeightedFieldKey[] =
@@ -145,6 +350,18 @@ export function flattenWeightedEvents(events: WeightedTrackerEvent[]): AnalyzeWe
     .map(flattenWeightedEventRow);
 }
 
+/** Resolve desk/odds/settlement/patterns/ev/all or explicit keys. */
+export function resolveAnalyzeColumns(
+  requested?: readonly string[],
+): AnalyzeWeightedFieldKey[] {
+  return resolveTableColumns(
+    requested,
+    ANALYZE_COLUMN_PRESETS,
+    ANALYZE_WEIGHTED_ALL_COLUMNS,
+    ANALYZE_WEIGHTED_DEFAULT_COLUMNS,
+  );
+}
+
 /**
  * Project rows to selected columns for Bun.inspect.table / markdown.
  */
@@ -152,38 +369,21 @@ export function projectAnalyzeRows(
   rows: AnalyzeWeightedRow[],
   columns: readonly string[] = ANALYZE_WEIGHTED_DEFAULT_COLUMNS,
 ): Array<Record<string, string | number | boolean | null>> {
-  const cols =
-    columns.length === 1 && columns[0] === 'all'
-      ? [...ANALYZE_WEIGHTED_ALL_COLUMNS]
-      : columns.length
-        ? columns
-        : [...ANALYZE_WEIGHTED_DEFAULT_COLUMNS];
-  return rows.map(row => {
-    const o: Record<string, string | number | boolean | null> = {};
-    for (const c of cols) {
-      const k = c as AnalyzeWeightedFieldKey;
-      o[c] = row[k] ?? '—';
-    }
-    return o;
-  });
+  const cols = resolveAnalyzeColumns(columns);
+  return projectTableRows(rows, cols);
 }
 
-/** Markdown table from projected rows. */
+/** Markdown table from projected rows (aligned number columns). */
 export function formatAnalyzeMarkdownTable(
   rows: AnalyzeWeightedRow[],
   columns: readonly string[] = ANALYZE_WEIGHTED_DEFAULT_COLUMNS,
 ): string {
-  const projected = projectAnalyzeRows(rows, columns);
+  const cols = resolveAnalyzeColumns(columns);
+  const projected = projectTableRows(rows, cols);
   if (!projected.length) return '(no weighted rows)';
-  const cols = Object.keys(projected[0]!);
-  const cell = (v: unknown) => {
-    const s = v == null ? '—' : String(v);
-    return s.replace(/\|/g, '\\|').slice(0, 120);
-  };
-  const header = '| ' + cols.join(' | ') + ' |';
-  const sep = '| ' + cols.map(() => '---').join(' | ') + ' |';
-  const body = projected.map(r => '| ' + cols.map(c => cell(r[c])).join(' | ') + ' |');
-  return [header, sep, ...body].join('\n');
+  return formatMarkdownTable(projected, cols, {
+    fields: ANALYZE_WEIGHTED_FIELD_SCHEMA as unknown as readonly TableFieldSpec[],
+  });
 }
 
 /**
@@ -195,27 +395,40 @@ export function formatAnalyzeInspectTable(
   columns: readonly string[] = ANALYZE_WEIGHTED_DEFAULT_COLUMNS,
   options: { colors?: boolean } = {},
 ): string {
-  const projected = projectAnalyzeRows(rows, columns);
+  const cols = resolveAnalyzeColumns(columns);
+  const projected = projectTableRows(rows, cols);
   if (!projected.length) return '(no weighted rows)';
-  const cols = Object.keys(projected[0]!);
-  // @see https://bun.com/docs/runtime/utils#bun-inspect-table
-  return Bun.inspect.table(projected, cols, {
-    colors: options.colors ?? false,
-  });
+  return formatInspectTableFromRows(projected, cols, options).trimEnd();
 }
 
 export type AnalyzeSnapshotArtifact = {
-  schemaVersion: 1;
+  schemaVersion: 2;
+  description: string;
   sportId: string;
   phase: string;
   sortBy: string[];
   desc: boolean;
   fields: typeof ANALYZE_WEIGHTED_FIELD_SCHEMA;
+  groups: Record<string, readonly string[]>;
+  presets: typeof ANALYZE_COLUMN_PRESETS;
   defaultColumns: readonly string[];
   allColumns: readonly string[];
   rows: AnalyzeWeightedRow[];
+  /** Desk-preset markdown for human skim. */
+  markdownDesk: string;
   generatedAt: string;
 };
+
+export function buildAnalyzeSchemaDocument() {
+  return buildTableSchemaDocument({
+    schemaVersion: 2,
+    description:
+      'Flat row schema for live-tracker analyze --sport (settlement + edge patterns). Column presets: desk | odds | settlement | patterns | ev | all.',
+    fields: ANALYZE_WEIGHTED_FIELD_SCHEMA as unknown as readonly TableFieldSpec<AnalyzeWeightedFieldKey>[],
+    presets: ANALYZE_COLUMN_PRESETS,
+    defaultColumns: ANALYZE_WEIGHTED_DEFAULT_COLUMNS,
+  });
+}
 
 export function buildAnalyzeSnapshotArtifact(input: {
   sportId: string;
@@ -224,16 +437,22 @@ export function buildAnalyzeSnapshotArtifact(input: {
   desc: boolean;
   events: WeightedTrackerEvent[];
 }): AnalyzeSnapshotArtifact {
+  const schema = buildAnalyzeSchemaDocument();
+  const rows = flattenWeightedEvents(input.events);
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
+    description: schema.description,
     sportId: input.sportId,
     phase: input.phase,
     sortBy: input.sortBy,
     desc: input.desc,
     fields: ANALYZE_WEIGHTED_FIELD_SCHEMA,
+    groups: schema.groups as Record<string, readonly string[]>,
+    presets: ANALYZE_COLUMN_PRESETS,
     defaultColumns: ANALYZE_WEIGHTED_DEFAULT_COLUMNS,
     allColumns: ANALYZE_WEIGHTED_ALL_COLUMNS,
-    rows: flattenWeightedEvents(input.events),
+    rows,
+    markdownDesk: formatAnalyzeMarkdownTable(rows, ANALYZE_WEIGHTED_DEFAULT_COLUMNS),
     generatedAt: new Date().toISOString(),
   };
 }

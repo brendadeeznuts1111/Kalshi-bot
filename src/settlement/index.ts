@@ -65,15 +65,18 @@ export {
 } from './edge-patterns.ts';
 
 export {
+  ANALYZE_COLUMN_PRESETS,
   ANALYZE_WEIGHTED_ALL_COLUMNS,
   ANALYZE_WEIGHTED_DEFAULT_COLUMNS,
   ANALYZE_WEIGHTED_FIELD_SCHEMA,
+  buildAnalyzeSchemaDocument,
   buildAnalyzeSnapshotArtifact,
   flattenWeightedEventRow,
   flattenWeightedEvents,
   formatAnalyzeInspectTable,
   formatAnalyzeMarkdownTable,
   projectAnalyzeRows,
+  resolveAnalyzeColumns,
   type AnalyzeSnapshotArtifact,
   type AnalyzeWeightedFieldKey,
   type AnalyzeWeightedRow,

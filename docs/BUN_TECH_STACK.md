@@ -98,7 +98,7 @@ const server: Server = Bun.serve({
 | `Bun.nanoseconds` | High-precision **duration** | **yes** | phase-timing, live poll — **not** event wall-clock ([`TIME.md`](TIME.md)) |
 | `Bun.peek` / `peek.status` | Settled-promise inspect | **yes** | [`bun-settle.ts`](../src/research/bun-settle.ts) |
 | `Bun.deepEquals` | Deep equality | **yes** | inspect-utils |
-| `Bun.inspect` / `.table` | Debug + TTY tables | **yes** | patterns `--inspect`, protonpass health, terminal-out |
+| `Bun.inspect` / `.table` | Debug + TTY tables | **yes** | [`table-schema.ts`](../src/lib/table-schema.ts) + analyze/shortlist schemas · patterns `--inspect`, protonpass health |
 | `Bun.escapeHTML` | HTML entities | **yes** | views / boards |
 | `Bun.stringWidth` / `stripANSI` / `wrapAnsi` | TTY width | **yes** | terminal-out, report-term |
 | `Bun.fileURLToPath` / `pathToFileURL` | URL ↔ path | **partial** | as needed |
