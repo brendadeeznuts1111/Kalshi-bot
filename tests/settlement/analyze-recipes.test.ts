@@ -40,10 +40,18 @@ describe('analyze recipes (fixture jsonl)', () => {
     expect(r.banner).toContain('rows=6');
     expect(r.banner).toContain('voidRisk[high=5 medium=1]');
     expect(r.banner).toContain('schema v3');
+    expect(r.focusPreset).toBe('desk');
     expect(r.columns).toEqual([...ANALYZE_COLUMN_PRESETS.desk]);
     expect(r.tableInspect).toContain('voidRisk');
     expect(r.tableInspect).toContain('sizingNote');
     expect(r.tableInspect).not.toContain('voidEv'); // desk omits EV cols
+    // --html --columns=desk → focused page (not all presets)
+    expect(r.htmlView).toContain('Preset <code>desk</code>');
+    expect(r.htmlView).toContain('tennis / live · desk');
+    expect(r.htmlView).not.toContain('Preset <code>ev</code>');
+    expect(r.htmlView).not.toContain('Preset <code>all</code>');
+    // bake body stays full multi-preset
+    expect(r.htmlReport).toContain('Preset <code>ev</code>');
   });
 
   test('ev inspect recipe: meta summary + EV columns', async () => {
