@@ -190,6 +190,8 @@ export {
   competitionRecordFromLeague,
   formatCompetitionRecordSource,
   hasLeagueStructureMarker,
+  isFeedCountryBucket,
+  isItfWeeklyLabel,
   isPromotableLeagueLabel,
   junkLeagueReason,
   mintCompetitionId,

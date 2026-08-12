@@ -27,8 +27,16 @@ describe('competition promote', () => {
     expect(junkLeagueReason('Universitet Thonburi - Universitet Thammasat')).toBe(
       'matchup_blob'
     );
-    expect(junkLeagueReason('Polysha')).toBe('no_structure');
-    expect(junkLeagueReason('Filippini')).toBe('no_structure');
+    // Opaque single-token product / nicknames stay junk
+    expect(junkLeagueReason('FrostBall')).toBe('no_structure');
+    expect(junkLeagueReason('Subhockey')).toBe('no_structure');
+    // Feed country buckets (RU translit) are promotable
+    expect(junkLeagueReason('Filippini')).toBeNull();
+    expect(junkLeagueReason('Niderlandi')).toBeNull();
+    expect(junkLeagueReason('Rossiya')).toBeNull();
+    // ITF weekly labels look like matchups but are tournaments
+    expect(junkLeagueReason('W35 Aldershot - 9 August 26')).toBeNull();
+    expect(junkLeagueReason('M25 Muttenz - 9 August 26')).toBeNull();
     expect(isPromotableLeagueLabel('Setka Cup')).toBe(true);
     expect(isPromotableLeagueLabel('Angola. Liga Bantu')).toBe(true);
     expect(isPromotableLeagueLabel('China Open 2026 - 2026/2027')).toBe(true);
@@ -38,6 +46,7 @@ describe('competition promote', () => {
     expect(isPromotableLeagueLabel('CAGE')).toBe(true);
     expect(isPromotableLeagueLabel('Evropeyskaya seriya')).toBe(true);
     expect(isPromotableLeagueLabel('Indoor Series')).toBe(true);
+    expect(isPromotableLeagueLabel('Kvalifikatsiya')).toBe(true);
   });
 
   test('mintCompetitionId + plan skips already-seeded; inserts novel', () => {

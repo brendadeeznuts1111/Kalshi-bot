@@ -62,6 +62,18 @@ bun run inventory:leagues -- --backfill          # stamp ids (fresh process)
 Logic: [`competition-promote.ts`](competition-promote.ts) — junk filter +
 `planCompetitionPromote` + `applyCompetitionRecordsToSource`.
 
+**Junk filter allows (promotable):** league markers, ITF weekly labels
+(`W35 Aldershot - 9 August 26`), feed country buckets (`Indiya`, `Rossiya`,
+`Niderlandi`, …). **Still rejected:** true matchup blobs
+(`Team A - Team B` / `X vs Y` without markers) and opaque nicknames
+(`FrostBall` unless manually seeded).
+
+```bash
+bun run inventory:leagues -- --promote           # dry-run all unmapped
+bun run inventory:leagues -- --promote --apply   # insert COMPETITIONS + stamp
+bun run inventory:leagues -- --backfill          # new process: stamp skin_events
+```
+
 ### Volleyball tiers + NCAA
 
 Desk sizing tiers **A–D** and NCAA college seeds:
