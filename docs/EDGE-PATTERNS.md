@@ -76,7 +76,9 @@ bun live-tracker.ts analyze --sport=tennis --phase=live --columns=ev --inspect -
 bun live-tracker.ts analyze --sport=tennis --phase=live --columns=ev --sort-rows=voidDelta --csv
 bun live-tracker.ts analyze --sport=tennis --phase=live --void-risk=high --limit=5 --columns=desk --table
 bun live-tracker.ts analyze --sport=tennis --phase=live --pattern=void.live --has-eye --columns=patterns --table
+bun live-tracker.ts analyze --sport=tennis --phase=live --market-type=3 --periods=m --columns=desk --table
 bun live-tracker.ts analyze --sport=tennis --phase=live --columns=desk --html --watch --interval=5 --open
+bun live-tracker.ts analyze --sport=tennis --phase=live --columns=desk --bundle --output /tmp/desk
 bun live-tracker.ts analyze --sport=tennis --phase=live --columns=all --bake
 bun live-tracker.ts analyze --sport=tennis --phase=live --columns=desk --html --output /tmp/desk.html
 bun live-tracker.ts analyze --sport=tennis --phase=live --columns=desk,ev --html --open
@@ -84,17 +86,19 @@ bun live-tracker.ts analyze --sport=tennis --phase=live --columns=desk,ev --html
 # --html without --output → research/cache/live-tracker/analyze-{sport}-{phase}-{cols}.html
 # --open opens the written file (macOS)
 # pipeline: filter (--void-risk|--max-severity|--market-class|--event-type|
+#   --market-type|--periods|--event-id|--since|--until|
 #   --pattern|--pattern-family|--has-eye)
 #   → sort (--sort-rows / --rows-desc) → limit (--limit N)
 #   defaults: desk/patterns risk-first; ev → voidDelta,voidEv,time (nulls last)
-# --watch [--interval sec]: reload logs; TTY table clears; HTML rewrites + meta refresh
+# --watch [--interval sec]: reload logs; TTY clears; HTML meta refresh; banner/HTML Δ vs last tick
+# --bundle: write stem.html + stem.csv + stem.md (stem from --output or cache path)
 # --csv / --format=csv → projected columns (respects pipeline)
-# HTML: sticky preset nav · summary chips · risk row tint · recipe footer with flags
+# HTML: sticky preset nav · summary chips · Δ chips · risk row tint · recipe footer
 # bake → docs/artifacts/live-tracker-analyze-{schema.json,sample.json,sample.md,sample.html}
 # fixture: tests/fixtures/live-tracker-event-197510101.jsonl
 ```
 
-Code: `renderSportAnalyze` · `pipelineAnalyzeRows` · pattern filters · watch/meta-refresh · CSV · sticky nav + chips · **schema v3** · recipes in `tests/settlement/analyze-recipes.test.ts`.
+Code: `renderSportAnalyze` · `pipelineAnalyzeRows` · `diffAnalyzeDisplay` · pattern/structural filters · watch Δ · `--bundle` · CSV · sticky nav + chips · **schema v3** · recipes in `tests/settlement/analyze-recipes.test.ts`.
 
 Time: `time` = ISO UTC · `timeMs` = epoch ms join key — see [`TIME.md`](TIME.md).
 
