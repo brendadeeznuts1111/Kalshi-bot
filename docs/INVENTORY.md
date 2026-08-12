@@ -329,6 +329,7 @@ not a second inventory store. Details:
 | `inventory:leagues -- --report [--notify]` | Promote dry-report; optional force Telegram |
 | `inventory:leagues -- --promote [--apply]` | Plan/apply COMPETITIONS seeds from unmapped |
 | `inventory:leagues -- --backfill` | Re-stamp competition_id on leagues + skin_events |
+| `inventory:session-probe` | Public stream-list vs gsid-gated streamToken (redacts secrets) |
 | Cron `INVENTORY_SYNC=1` | Full board default (`sport=all`); events + leagues |
 | `partner:toml` / `partner:capacity` | Seat outs — ezlive limits (not inventory) |
 

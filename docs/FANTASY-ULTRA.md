@@ -40,6 +40,7 @@ Book adapter and coverage inventory for a **PPH / Fantasy402** desk (skin
 | Out env profile                        | `src/partner/account-profile.ts`          |
 | Smoke CLI                              | `bun run partner:test-fantasy`            |
 | Widget domain harvest                  | `bun run domain:widget-extract`           |
+| Session plane probe                    | `bun run inventory:session-probe`         |
 
 ## Widget domain harvest (sports · markets · leagues)
 
@@ -72,6 +73,24 @@ bun run domain:pandora -- --markets
 
 `providerMappings.pandora.leagueId` links feed league ids when applied.
 Code: `src/domain/pandora-domain-integrate.ts`.
+
+## Session planes (HAR 2026-08-10 + live probe)
+
+| Plane | Endpoint | Auth |
+| ----- | -------- | ---- |
+| **Inventory (public)** | `GET api-gs.player-us.xyz/stream-list-v2/?tv=usa` | none |
+| **Shell handoff** | `getUltraLiveURL` → signed `/live/?customerId&hash` → `gsid` | seat body-auth then session |
+| **Session-gated** | `GET plive…/betFactoryV2/api/streamToken.php` + `x-gsid` | bound gsid (403 without) |
+| **Prices** | `wss://pandora.ganchrow.com/socket.io/` | streamToken JWT after gsid |
+
+Operator check (never logs full gsid/JWT; do not commit `PLIVE_GSID`):
+
+```bash
+bun run inventory:session-probe
+bun run inventory:session-probe -- --json
+# optional bound session from plive /live/?gsid=… :
+# PLIVE_GSID=… bun run inventory:session-probe
+```
 
 ## Network-capture flow (implemented)
 
