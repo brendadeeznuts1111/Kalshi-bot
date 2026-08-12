@@ -70,14 +70,14 @@ Flat row schema (all settlement / pattern fields, no nested `[Object …]`):
 | Sample MD table | [`docs/artifacts/live-tracker-analyze-sample.md`](artifacts/live-tracker-analyze-sample.md) |
 
 ```bash
-# Rebake artifacts + full-column inspect.table
-bun live-tracker.ts analyze --sport=tennis --phase=live --bake --columns=all --inspect --no-color
-
-# Default TTY columns (narrower)
-bun live-tracker.ts analyze --sport=tennis --phase=live --table
+# Column presets (desk | odds | settlement | patterns | ev | all)
+bun live-tracker.ts analyze --sport=tennis --phase=live --columns=desk --table
+bun live-tracker.ts analyze --sport=tennis --phase=live --columns=ev --inspect --no-color
+bun live-tracker.ts analyze --sport=tennis --phase=live --columns=all --bake
+# bake → docs/artifacts/live-tracker-analyze-{schema.json,sample.json,sample.md,sample.html}
 ```
 
-Code: `src/settlement/analyze-table.ts` · `ANALYZE_WEIGHTED_FIELD_SCHEMA` · column presets `desk|odds|settlement|patterns|ev|all` · `buildAnalyzeSnapshotArtifact` (schema **v2** + groups) · shared render [`src/lib/table-schema.ts`](../src/lib/table-schema.ts).
+Code: `src/settlement/analyze-table.ts` · presets + **schema v3** (row summary, multi-preset markdown/HTML) · [`src/lib/table-schema.ts`](../src/lib/table-schema.ts).
 
 Time: `time` = ISO UTC · `timeMs` = epoch ms join key — see [`TIME.md`](TIME.md).
 

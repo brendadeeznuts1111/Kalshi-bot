@@ -2,15 +2,21 @@
 // @see https://bun.com/docs/test
 import { describe, expect, test } from 'bun:test';
 import {
+  ANALYZE_COLUMN_PRESET_NAMES,
   ANALYZE_COLUMN_PRESETS,
   ANALYZE_WEIGHTED_ALL_COLUMNS,
   ANALYZE_WEIGHTED_FIELD_SCHEMA,
+  buildAnalyzeInspectMeta,
   buildAnalyzeSchemaDocument,
   buildAnalyzeSnapshotArtifact,
   flattenWeightedEventRow,
+  formatAnalyzeBanner,
+  formatAnalyzeHtmlReport,
   formatAnalyzeInspectTable,
+  formatAnalyzeMarkdownReport,
   formatAnalyzeMarkdownTable,
   resolveAnalyzeColumns,
+  summarizeAnalyzeRows,
   weightLiveTrackerMove,
 } from '../../src/settlement/index.ts';
 
@@ -29,8 +35,11 @@ describe('analyze weighted table schema', () => {
     );
     expect(resolveAnalyzeColumns(['ev'])).toEqual([...ANALYZE_COLUMN_PRESETS.ev]);
     expect(resolveAnalyzeColumns(['all'])).toHaveLength(ANALYZE_WEIGHTED_ALL_COLUMNS.length);
+    expect([...ANALYZE_COLUMN_PRESET_NAMES]).toEqual(
+      expect.arrayContaining(['desk', 'ev', 'all']),
+    );
     const doc = buildAnalyzeSchemaDocument();
-    expect(doc.schemaVersion).toBe(2);
+    expect(doc.schemaVersion).toBe(3);
     expect(doc.presets?.desk).toBeDefined();
   });
 
@@ -105,9 +114,13 @@ describe('analyze weighted table schema', () => {
     expect(artifact).toMatchObject({
       sportId: 'tennis',
       phase: 'live',
-      schemaVersion: 2,
+      schemaVersion: 3,
     });
+    expect(artifact.summary.rowCount).toBe(1);
+    expect(artifact.summary.byVoidRisk.high).toBe(1);
+    expect(artifact.summary.dualStamp.withTimeMs).toBe(1);
     expect(artifact.markdownDesk).toContain('voidRisk');
+    expect(artifact.markdownReport).toContain('## Preset `ev`');
     expect(artifact.presets.ev).toContain('voidEv');
     const md = formatAnalyzeMarkdownTable(artifact.rows, ['time', 'voidRisk', 'patternIds']);
     expect(md).toMatch(/voidRisk/);
@@ -115,6 +128,44 @@ describe('analyze weighted table schema', () => {
     // Number columns use right-align separator in GFM
     const evMd = formatAnalyzeMarkdownTable(artifact.rows, ['ev']);
     expect(evMd).toMatch(/---:/);
+    const banner = formatAnalyzeBanner({
+      sportId: 'tennis',
+      phase: 'live',
+      sortBy: ['severity'],
+      summary: artifact.summary,
+      schemaVersion: 3,
+    });
+    expect(banner).toContain('rows=1');
+    expect(banner).toContain('voidRisk[high=1]');
+    const meta = buildAnalyzeInspectMeta({
+      sportId: 'tennis',
+      phase: 'live',
+      sortBy: ['severity'],
+      desc: false,
+      columns: resolveAnalyzeColumns(['ev']),
+      rows: artifact.rows,
+      schemaVersion: 3,
+    });
+    expect(meta).toMatchObject({
+      columnCount: ANALYZE_COLUMN_PRESETS.ev.length,
+      summary: expect.objectContaining({ withVoidEv: expect.any(Number) }),
+    });
+    const html = formatAnalyzeHtmlReport({
+      sportId: 'tennis',
+      phase: 'live',
+      sortBy: ['severity'],
+      rows: artifact.rows,
+      schemaVersion: 3,
+    });
+    expect(html).toContain('<table>');
+    expect(html).toContain('voidRisk');
+    expect(summarizeAnalyzeRows([])).toMatchObject({ rowCount: 0, meanVoidDelta: null });
+    expect(formatAnalyzeMarkdownReport({
+      sportId: 'tennis',
+      phase: 'live',
+      sortBy: ['id'],
+      rows: artifact.rows,
+    })).toContain('## Summary');
     const table = formatAnalyzeInspectTable(artifact.rows, ['time', 'voidRisk', 'maxSeverity']);
     expect(table.length).toBeGreaterThan(10);
   });

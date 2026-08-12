@@ -1,6 +1,6 @@
 {
-  "schemaVersion": 2,
-  "description": "Flat row schema for live-tracker analyze --sport (settlement + edge patterns). Column presets: desk | odds | settlement | patterns | ev | all.",
+  "schemaVersion": 3,
+  "description": "Flat row schema for live-tracker analyze --sport (settlement + edge patterns). Column presets: desk | odds | settlement | patterns | ev | all. Includes row summary aggregates and multi-preset markdown/HTML bake.",
   "fields": [
     {
       "key": "time",
