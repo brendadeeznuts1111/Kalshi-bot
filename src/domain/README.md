@@ -74,6 +74,37 @@ bun run inventory:leagues -- --promote --apply   # insert COMPETITIONS + stamp
 bun run inventory:leagues -- --backfill          # new process: stamp skin_events
 ```
 
+### Country + kind meta
+
+Optional on `CompetitionRecord` (legacy rows omit):
+
+| Field | Values |
+| ----- | ------ |
+| `countryCode` | ISO2 (`IN`, `US`, …) or `INT` (multi-nation) or `null` |
+| `kind` | `league` · `cup` · `tournament` · `country_bucket` · `itf_week` · `friendly` · `circuit` · `product` · `unknown` |
+
+SSOT inference: [`competition-meta.ts`](competition-meta.ts)
+
+```ts
+import {
+  resolveCompetitionMeta,
+  getCompetitionMetaById,
+  competitionRecordFromLeague,
+} from '../domain/index.ts';
+
+// Legacy seed — fields inferred from league label
+resolveCompetitionMeta(getCompetition('volleyball.russia_league_pro_women')!);
+// → { countryCode: 'RU', kind: 'league', inferred: true }
+
+// New promote writes countryCode + kind into COMPETITIONS source
+competitionRecordFromLeague({
+  sportId: 'volleyball',
+  leagueKey: 'Indiya',
+  inventoryBucket: 'volleyball',
+});
+// → { …, countryCode: 'IN', kind: 'country_bucket' }
+```
+
 ### Volleyball tiers + NCAA
 
 Desk sizing tiers **A–D** and NCAA college seeds:

@@ -12,45 +12,20 @@ import {
   matchLeagueKey,
   type CompetitionRecord,
 } from './competitions.ts';
+import {
+  enrichCompetitionRecordMeta,
+  isFeedCountryBucket,
+  isItfWeeklyLabel,
+  ITF_WEEKLY_LABEL,
+} from './competition-meta.ts';
 import { isSportId, type SportId } from './sports.ts';
 
 /** Structural markers that signal a real competition, not a matchup/person. */
 const LEAGUE_MARKERS =
   /\b(league|liga|cup|open|division|championship|series|seriya|masters|premier|tour|challenger|atp|wta|itf|ipbl|mpl|nba|nhl|mlb|ncaa|nation|world|super|pro|t20|ipl|qualify|kvalifik|playoff|tournament|grand|slam|setka|regional|friendl|women|men|u\d{2}|youth|indoor|summer|winter|classic|trophy|bowl|prix|formula|f1|ufc|wbc|wba|ibf|cage|cdbl|rhl|mnhl|3hl|bskt|upvl|att|konferentsiya|conference)\b/i;
 
-/**
- * ITF / satellite weekly wire labels: "W35 Aldershot - 9 August 26", "M25 Muttenz - 9 August 26".
- * Contain " - " but are tournaments, not team matchups.
- */
-const ITF_WEEKLY_LABEL =
-  /^(?:W|M)\d{2,3}\b.+\s+-\s+\d{1,2}\s+[A-Za-z]+\s+\d{2,4}\s*$/i;
-
-/**
- * Single-token feed country buckets (often RU translit). Promotable as desk D noise.
- * Keep tight — do not add person nicknames.
- */
-const FEED_COUNTRY_BUCKETS = new Set(
-  [
-    'indiya',
-    'india',
-    'rossiya',
-    'belarusy',
-    'niderlandi',
-    'filippini',
-    'polsha',
-    'polysha',
-    'ukraina',
-    'kazakhstan',
-    'germaniya',
-    'frantsiya',
-    'turtsiya',
-    'ispaniya',
-    'italiya',
-    'kitay',
-    'yaponiya',
-    'braziliya',
-  ].map(s => s.toLowerCase()),
-);
+// Re-export label classifiers (SSOT lives in competition-meta.ts)
+export { isFeedCountryBucket, isItfWeeklyLabel } from './competition-meta.ts';
 
 export type JunkLeagueReason =
   | 'empty'
@@ -92,14 +67,6 @@ export type CompetitionPromotePlan = {
 
 export function hasLeagueStructureMarker(league: string): boolean {
   return LEAGUE_MARKERS.test(league) || ITF_WEEKLY_LABEL.test(league.trim());
-}
-
-export function isFeedCountryBucket(league: string): boolean {
-  return FEED_COUNTRY_BUCKETS.has(league.trim().toLowerCase());
-}
-
-export function isItfWeeklyLabel(league: string): boolean {
-  return ITF_WEEKLY_LABEL.test(league.trim());
 }
 
 /**
@@ -154,7 +121,7 @@ export function competitionRecordFromLeague(input: PromoteLeagueInput): Competit
   const bucket =
     (input.inventoryBucket?.trim().toLowerCase() || sportId) as string;
   const id = mintCompetitionId(sportId, leagueKey);
-  return {
+  return enrichCompetitionRecordMeta({
     id,
     sportId,
     displayName: leagueKey,
@@ -163,7 +130,7 @@ export function competitionRecordFromLeague(input: PromoteLeagueInput): Competit
     providerMappings: {
       plive: { inventoryBucket: bucket, leagueKey },
     },
-  };
+  });
 }
 
 function existingMappedKeys(): Set<string> {
@@ -274,16 +241,30 @@ export function formatCompetitionRecordSource(rec: CompetitionRecord): string {
   const bucket = plive?.inventoryBucket ?? rec.sportId;
   const leagueKey = plive?.leagueKey ?? rec.displayName;
   const aliases = rec.aliases.map(a => JSON.stringify(a)).join(', ');
+  const hasMeta =
+    rec.countryCode !== undefined || (rec.kind != null && rec.kind !== 'unknown');
   const compact =
     rec.aliases.length === 1 &&
     rec.aliases[0] === leagueKey &&
     rec.gender === 'unknown' &&
-    !pandora;
+    !pandora &&
+    !hasMeta;
 
   const pliveLit = `{ inventoryBucket: ${JSON.stringify(bucket)}, leagueKey: ${JSON.stringify(leagueKey)} }`;
   const pandoraLit = pandora
     ? `pandora: { leagueId: ${JSON.stringify(pandora.leagueId)}, feedSportId: ${JSON.stringify(pandora.feedSportId)} }`
     : null;
+
+  const metaLines: string[] = [];
+  if (rec.countryCode !== undefined) {
+    metaLines.push(
+      `    countryCode: ${rec.countryCode === null ? 'null' : JSON.stringify(rec.countryCode)},`,
+    );
+  }
+  if (rec.kind != null && rec.kind !== 'unknown') {
+    metaLines.push(`    kind: ${JSON.stringify(rec.kind)},`);
+  }
+  const metaBlock = metaLines.length ? `\n${metaLines.join('\n')}` : '';
 
   if (compact) {
     return `  {
@@ -307,7 +288,7 @@ export function formatCompetitionRecordSource(rec: CompetitionRecord): string {
     gender: ${JSON.stringify(rec.gender)},
     providerMappings: {
 ${mappingLines.join('\n')}
-    },
+    },${metaBlock}
   }`;
 }
 
