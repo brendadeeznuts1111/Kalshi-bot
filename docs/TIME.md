@@ -2,6 +2,11 @@
 
 **Code:** [`src/lib/time-ssot.ts`](../src/lib/time-ssot.ts)
 
+**Type contracts:** [`tests/lib/time-ssot.types.test.ts`](../tests/lib/time-ssot.types.test.ts)
+(`expectTypeOf` from [`bun:test`](https://bun.com/reference/bun/test/expectTypeOf) — runtime no-ops;
+proved by `bun run typecheck` / `tsc --noEmit`, same pattern as
+[`tests/tools/snapshot-data-plane.types.test.ts`](../tests/tools/snapshot-data-plane.types.test.ts)).
+
 ## Dual convention (non-negotiable)
 
 | Form | Type alias | Unit / shape | Use |
