@@ -102,6 +102,13 @@ const BOOLEAN_FLAGS = new Set([
   'watch',
   'notify',
   'force-notify',
+  'open',
+  'html',
+  'table',
+  'bake',
+  'write-sample',
+  'all-columns',
+  'no-color',
 ]);
 
 function positionalAfterCmd(cmd: string): string[] {
@@ -161,6 +168,8 @@ Examples:
   bun live-tracker.ts analyze --sport=tennis --phase=live --columns=ev --inspect --no-color
   bun live-tracker.ts analyze --sport=tennis --phase=live --columns=all --bake
   bun live-tracker.ts analyze --sport=tennis --phase=live --columns=desk --html --output /tmp/desk.html
+  bun live-tracker.ts analyze --sport=tennis --phase=live --columns=desk,ev --html --open
+  bun live-tracker.ts analyze --sport=tennis --phase=live --columns=ev --html   # writes cache path if no --output
   bun live-tracker.ts patterns --sort-by family,id
   bun live-tracker.ts patterns --sort-by id --desc
   bun live-tracker.ts patterns --inspect          # TTY Bun.inspect (sorted keys, depth 4)
@@ -315,11 +324,33 @@ function renderOutput(
   return `${table}\n# ${rows.length}/${all.length} events`;
 }
 
-async function writeOrPrint(body: string): Promise<void> {
-  const out = argValue('output') ?? argValue('out');
+async function writeOrPrint(
+  body: string,
+  options?: { defaultPath?: string; open?: boolean },
+): Promise<void> {
+  const out = argValue('output') ?? argValue('out') ?? options?.defaultPath;
   if (out) {
+    const { dirname } = await import('node:path');
+    const dir = dirname(out);
+    if (dir && dir !== '.' && dir !== '/') {
+      try {
+        await Bun.$`mkdir -p ${dir}`.quiet();
+      } catch {
+        /* best-effort */
+      }
+    }
     await Bun.write(out, body.endsWith('\n') ? body : body + '\n');
     console.error(`wrote ${out} (${body.length} bytes)`);
+    if (options?.open || hasFlag('open')) {
+      try {
+        await Bun.$`open ${out}`.quiet();
+        console.error(`opened ${out}`);
+      } catch (err) {
+        console.error(
+          `open failed: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+    }
   } else {
     console.log(body);
   }
@@ -658,8 +689,19 @@ if (cmd === 'analyze') {
       process.exit(0);
     }
     if (hasFlag('html') || argValue('format') === 'html') {
-      // Honors --columns: desk → focused HTML; all → full multi-preset
-      await writeOrPrint(render.htmlView);
+      // Honors --columns: desk → focused; desk,ev → multi-select; all → full
+      const colLabel =
+        colArg?.replace(/,/g, '-') ??
+        (hasFlag('all-columns') ? 'all' : 'desk');
+      const defaultHtml = joinPath(
+        CACHE_DIR,
+        'live-tracker',
+        `analyze-${sportId}-${phase}-${colLabel}.html`,
+      );
+      await writeOrPrint(render.htmlView, {
+        defaultPath: argValue('output') || argValue('out') ? undefined : defaultHtml,
+        open: hasFlag('open'),
+      });
       process.exit(0);
     }
     if (hasFlag('table') || argValue('format') === 'table') {
