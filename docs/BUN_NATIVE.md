@@ -83,7 +83,7 @@ Full topic map (guides from the official table; **Ref** = types API; **Here** = 
 | Stream Processing | [`Bun.readableStreamTo*()`](https://bun.com/docs/runtime/utils#bun-readablestreamto) | — | as needed |
 | Memory & Buffer | `ArrayBufferSink`, `allocUnsafe`, `concatArrayBuffers` | — | rare |
 | Module Resolution | [`Bun.resolveSync()`](https://bun.com/docs/runtime/utils#bun-resolvesync) | [/resolveSync](https://bun.com/reference/bun/resolveSync) | — |
-| Parsing & Formatting | [`semver`](https://bun.com/docs/runtime/semver), [`TOML.parse`](https://bun.com/docs/runtime/toml), [`XML`](https://bun.com/docs/runtime/xml), [`markdown`](https://bun.com/docs/runtime/markdown), [`color`](https://bun.com/docs/runtime/color), [`Image`](https://bun.com/docs/runtime/image) | [/markdown](https://bun.com/reference/bun/markdown) · [/color](https://bun.com/reference/bun/color) · [/Image](https://bun.com/reference/bun/Image) | yes — TOML config, color, Image ground, markdown.ansi |
+| Parsing & Formatting | [`semver`](https://bun.com/docs/runtime/semver), [`TOML.parse`](https://bun.com/docs/runtime/toml), [`XML`](https://bun.com/docs/runtime/xml), [`markdown`](https://bun.com/docs/runtime/markdown), [`color`](https://bun.com/docs/runtime/color), [`Image`](https://bun.com/docs/runtime/image) | [/markdown](https://bun.com/reference/bun/markdown) · [/color](https://bun.com/reference/bun/color) · [/Image](https://bun.com/reference/bun/Image) | yes — TOML, color, Image, `markdown.ansi` + [`markdownToHtml`](../src/lib/markdown.ts) |
 | Low-level / Internals | `mmap`, `gc`, `generateHeapSnapshot`, [`bun:jsc`](https://bun.com/reference/bun/jsc) | [/jsc](https://bun.com/reference/bun/jsc) | — |
 
 Repo-specific wiring (paths, not the full catalog) continues in [Bun API map](#bun-api-map).
@@ -220,6 +220,33 @@ Bun.stringWidth("\u001b[31mhello\u001b[0m", { countAnsiEscapeCodes: true }); // 
 ### Compression (utils plane)
 
 `gzipSync` / `gunzipSync` / deflate / inflate / **zstd** sync+async — see overview Compression row. Repo uses **zstd** for audit evidence and **gunzip** on fantasy coefficients wire.
+
+### `Bun.markdown` — GFM HTML + ANSI
+
+```ts
+// @see https://bun.com/docs/runtime/markdown#options
+// @see https://bun.com/reference/bun/markdown/html
+import { markdownToHtml, MARKDOWN_HTML_GFM } from '../src/lib/markdown.ts';
+
+// Explicit opts — tables/strikethrough/tasklists default true; tagFilter + autolinks do not.
+const html = Bun.markdown.html('some markdown', {
+  tables: true,
+  strikethrough: true,
+  tasklists: true,
+  tagFilter: true, // filter disallowed raw HTML tags (default: false)
+  autolinks: true, // www./URL/email (default: false)
+});
+
+// Prefer the SSOT helper for docs/artifacts (GFM + heading ids):
+markdownToHtml(md); // MARKDOWN_HTML_DOCS
+```
+
+| Surface | API | Repo |
+| ------- | --- | ---- |
+| Terminal reports | `Bun.markdown.ansi` | [`report-term.ts`](../src/agent/report-term.ts) |
+| Doc HTML artifacts | `markdownToHtml` → `Bun.markdown.html` | [`src/lib/markdown.ts`](../src/lib/markdown.ts), `colors:artifacts` → `docs/COLORS.html` |
+
+**Do not** add `marked` / `markdown-it` / `remark` for simple MD→HTML.
 
 ### `bun:jsc` (low-level)
 
@@ -442,6 +469,7 @@ Deep dive: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns)
 | `URLPattern` | [blog v1.3.4](https://bun.com/blog/bun-v1.3.4#urlpattern-api) | — |
 | `Bun.serve` | [http/server](https://bun.com/docs/runtime/http/server#basic-setup) | [/serve](https://bun.com/reference/bun/serve) |
 | `Bun.markdown.ansi` | [markdown#ansi](https://bun.com/docs/runtime/markdown#ansi-terminal-output) | [/markdown/ansi](https://bun.com/reference/bun/markdown/ansi) |
+| `Bun.markdown.html` | [markdown#html](https://bun.com/docs/runtime/markdown#bun-markdown-html) · [options](https://bun.com/docs/runtime/markdown#options) | [/markdown/html](https://bun.com/reference/bun/markdown/html) |
 | `Bun.stringWidth` | [utils#stringWidth](https://bun.com/docs/runtime/utils#bun-stringwidth) | [/stringWidth](https://bun.com/reference/bun/stringWidth) |
 | `Bun.wrapAnsi` | [utils#wrapAnsi](https://bun.com/docs/runtime/utils#bun-wrapansi) | [/wrapAnsi](https://bun.com/reference/bun/wrapAnsi) |
 | `Bun.stripANSI` | [utils#stripANSI](https://bun.com/docs/runtime/utils#bun-stripansi) | [/stripANSI](https://bun.com/reference/bun/stripANSI) |

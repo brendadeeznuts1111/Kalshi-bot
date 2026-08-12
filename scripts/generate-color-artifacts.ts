@@ -16,10 +16,13 @@
  * @see https://bun.com/docs/runtime/color#flexible-input
  * @see https://bun.com/docs/runtime/file-io#writing-files-bun-write
  * @see https://bun.com/docs/runtime/markdown#bun-markdown-html
+ * @see https://bun.com/docs/runtime/markdown#options
  * @see src/lib/color/kernel.ts
+ * @see src/lib/markdown.ts
  */
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
+import { markdownToHtml } from "../src/lib/markdown.ts";
 import {
   COLORS,
   ansi16mColor,
@@ -250,7 +253,7 @@ async function writeArtifacts(): Promise<void> {
 
   const md = buildMarkdown();
   await Bun.write(join(root, "docs/COLORS.md"), md);
-  await Bun.write(join(root, "docs/COLORS.html"), Bun.markdown.html(md));
+  await Bun.write(join(root, "docs/COLORS.html"), markdownToHtml(md));
   await Bun.write(join(root, "artifacts/color-preview.txt"), buildPreview());
 
   console.log(
