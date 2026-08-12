@@ -26,6 +26,68 @@ Top-level reference modules this repo uses most:
 
 Deep dive: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns)
 
+## Bun APIs overview (official)
+
+**Source:** [Bun APIs](https://bun.com/docs/runtime/bun-apis) · index [llms.txt](https://bun.com/docs/llms.txt) · types [reference](https://bun.com/reference)
+
+Bun implements native APIs on the `Bun` global and built-in modules. Prefer **standard Web APIs** (`Blob`, `URL`, `Request`, `Response`, client `WebSocket`) when they exist; Bun adds surfaces for server-side work where no standard applies (file I/O, HTTP server, SQLite, …).
+
+```ts
+// @see https://bun.com/docs/runtime/http/server
+// @see https://bun.com/reference/bun/serve
+Bun.serve({
+  fetch(req: Request) {
+    return new Response("Success!");
+  },
+});
+```
+
+Full topic map (guides from the official table; **Ref** = types API; **Here** = used in this repo today):
+
+| Topic | Guide APIs | Ref (when present) | Here |
+| ----- | ---------- | ------------------ | ---- |
+| HTTP Server | [`Bun.serve`](https://bun.com/docs/runtime/http/server) | [/serve](https://bun.com/reference/bun/serve) | yes — report browser |
+| Shell | [`$`](https://bun.com/docs/runtime/shell) | [/$](https://bun.com/reference/bun/$) | yes — `gh`, scripts · [`BUN_SHELL.md`](BUN_SHELL.md) |
+| Bundler | [`Bun.build`](https://bun.com/docs/bundler) | [/build](https://bun.com/reference/bun/build) | rare |
+| File I/O | [`Bun.file`](https://bun.com/docs/runtime/file-io#reading-files-bun-file), [`Bun.write`](https://bun.com/docs/runtime/file-io#writing-files-bun-write), `Bun.stdin`/`stdout`/`stderr` | [/file](https://bun.com/reference/bun/file) · [/write](https://bun.com/reference/bun/write) | yes |
+| Child Processes | [`Bun.spawn`](https://bun.com/docs/runtime/child-process#spawn-a-process-bun-spawn), [`Bun.spawnSync`](https://bun.com/docs/runtime/child-process#blocking-api-bun-spawnsync) | [/spawn](https://bun.com/reference/bun/spawn) · [/spawnSync](https://bun.com/reference/bun/spawnSync) | yes — IPC, rate budget |
+| TCP Sockets | [`Bun.listen`](https://bun.com/docs/runtime/networking/tcp#start-a-server-bun-listen), [`Bun.connect`](https://bun.com/docs/runtime/networking/tcp#start-a-server-bun-listen) | [/listen](https://bun.com/reference/bun/listen) · [/connect](https://bun.com/reference/bun/connect) | — |
+| UDP Sockets | [`Bun.udpSocket`](https://bun.com/docs/runtime/networking/udp) | [/udpSocket](https://bun.com/reference/bun/udpSocket) | — |
+| WebSockets | `new WebSocket()` (client), [`Bun.serve`](https://bun.com/docs/runtime/http/websockets) (server) | — | yes — Kalshi orderbook client |
+| Transpiler | [`Bun.Transpiler`](https://bun.com/docs/runtime/transpiler) | [/Transpiler](https://bun.com/reference/bun/Transpiler) | — |
+| Routing | [`Bun.FileSystemRouter`](https://bun.com/docs/runtime/file-system-router) | [/FileSystemRouter](https://bun.com/reference/bun/FileSystemRouter) | — |
+| Streaming HTML | [`HTMLRewriter`](https://bun.com/docs/runtime/html-rewriter) | — | yes — social/OG meta |
+| Headless Browser | [`Bun.WebView`](https://bun.com/docs/runtime/webview) | [/WebView](https://bun.com/reference/bun/WebView) | yes — tennis/liquidity ground |
+| Hashing | [`Bun.password`](https://bun.com/docs/runtime/hashing#bun-password), [`Bun.hash`](https://bun.com/docs/runtime/hashing#bun-hash), [`Bun.CryptoHasher`](https://bun.com/docs/runtime/hashing#bun-cryptohasher), `Bun.sha` | [/hash](https://bun.com/reference/bun/hash) · [/CryptoHasher](https://bun.com/reference/bun/CryptoHasher) | yes — cache digests, canary |
+| CSRF Protection | [`Bun.CSRF.generate`](https://bun.com/docs/runtime/csrf) / [`.verify`](https://bun.com/docs/runtime/csrf) | [/CSRF](https://bun.com/reference/bun/CSRF) | — (prefer when adding browser forms) |
+| SQLite | [`bun:sqlite`](https://bun.com/docs/runtime/sqlite) | [/sqlite](https://bun.com/reference/bun/sqlite) | yes — event-store, research cache (+ drizzle) |
+| SQL Client | [`Bun.SQL`](https://bun.com/docs/runtime/sql), `Bun.sql` | [/SQL](https://bun.com/reference/bun/SQL) | — (sqlite + drizzle own this plane) |
+| Redis (Valkey) | [`Bun.RedisClient`](https://bun.com/docs/runtime/redis), `Bun.redis` | [/RedisClient](https://bun.com/reference/bun/RedisClient) | — |
+| FFI | [`bun:ffi`](https://bun.com/docs/runtime/ffi) | [/ffi](https://bun.com/reference/bun/ffi) | — |
+| DNS | [`Bun.dns.lookup`](https://bun.com/docs/runtime/networking/dns), `Bun.dns.prefetch`, `getCacheStats` | [/dns](https://bun.com/reference/bun/dns) · [/prefetch](https://bun.com/reference/bun/dns/prefetch) | yes — Kalshi live poll preconnect |
+| Testing | [`bun:test`](https://bun.com/docs/test) | [/test](https://bun.com/reference/bun/test) · [expectTypeOf](https://bun.com/reference/bun/test/expectTypeOf) | yes — `tests/**` + `*.types.test.ts` |
+| Workers | [`new Worker()`](https://bun.com/docs/runtime/workers) | — | — |
+| Module Loaders | [`Bun.plugin`](https://bun.com/docs/bundler/plugins) | [/plugin](https://bun.com/reference/bun/plugin) | — |
+| Glob | [`Bun.Glob`](https://bun.com/docs/runtime/glob) | [/Glob](https://bun.com/reference/bun/Glob) | yes — watcher, blueprint |
+| Cookies | [`Bun.Cookie`](https://bun.com/docs/runtime/cookies), [`Bun.CookieMap`](https://bun.com/docs/runtime/cookies) | [/Cookie](https://bun.com/reference/bun/Cookie) | — |
+| Node-API | [Node-API](https://bun.com/docs/runtime/node-api) | — | — |
+| `import.meta` | [`import.meta`](https://bun.com/docs/runtime/module-resolution#import-meta) | — | yes — `dir` / `main` |
+| Utilities | [`Bun.version`](https://bun.com/docs/runtime/utils#bun-version), [`revision`](https://bun.com/docs/runtime/utils#bun-revision), [`env`](https://bun.com/docs/runtime/utils#bun-env), [`main`](https://bun.com/docs/runtime/utils#bun-main) | [/env](https://bun.com/reference/bun/env) | yes — `Bun.env` |
+| Sleep & Timing | [`sleep`](https://bun.com/docs/runtime/utils#bun-sleep), [`sleepSync`](https://bun.com/docs/runtime/utils#bun-sleepsync), [`nanoseconds`](https://bun.com/docs/runtime/utils#bun-nanoseconds) | [/sleep](https://bun.com/reference/bun/sleep) · [/nanoseconds](https://bun.com/reference/bun/nanoseconds) | yes — backoff, phase timing, live poll |
+| Random & UUID | [`Bun.randomUUIDv7()`](https://bun.com/docs/runtime/utils#bun-randomuuidv7) | [/randomUUIDv7](https://bun.com/reference/bun/randomUUIDv7) | prefer for new IDs when order matters |
+| System | [`Bun.which()`](https://bun.com/docs/runtime/utils#bun-which) | [/which](https://bun.com/reference/bun/which) | yes — preflight `gh` |
+| Comparison & Inspection | [`peek`](https://bun.com/docs/runtime/utils#bun-peek), [`deepEquals`](https://bun.com/docs/runtime/utils#bun-deepequals), `deepMatch`, [`inspect`](https://bun.com/docs/runtime/utils#bun-inspect) | [/inspect](https://bun.com/reference/bun/inspect) · [table](https://bun.com/reference/bun/inspect/table) | yes — tables, inspect utils |
+| String & Text | [`escapeHTML`](https://bun.com/docs/runtime/utils#bun-escapehtml), [`stringWidth`](https://bun.com/docs/runtime/utils#bun-stringwidth), `indexOfLine` | [/escapeHTML](https://bun.com/reference/bun/escapeHTML) · [/stringWidth](https://bun.com/reference/bun/stringWidth) | yes — TTY + views |
+| URL & Path | [`fileURLToPath`](https://bun.com/docs/runtime/utils#bun-fileurltopath), [`pathToFileURL`](https://bun.com/docs/runtime/utils#bun-pathtofileurl) | [/fileURLToPath](https://bun.com/reference/bun/fileURLToPath) | yes |
+| Compression | [`gzipSync` / `gunzipSync` / deflate / inflate / **zstd**](https://bun.com/docs/runtime/utils#bun-gzipsync) | [/zstdCompressSync](https://bun.com/reference/bun/zstdCompressSync) | yes — evidence + fantasy gunzip |
+| Stream Processing | [`Bun.readableStreamTo*()`](https://bun.com/docs/runtime/utils#bun-readablestreamto) | — | as needed |
+| Memory & Buffer | `ArrayBufferSink`, `allocUnsafe`, `concatArrayBuffers` | — | rare |
+| Module Resolution | [`Bun.resolveSync()`](https://bun.com/docs/runtime/utils#bun-resolvesync) | [/resolveSync](https://bun.com/reference/bun/resolveSync) | — |
+| Parsing & Formatting | [`semver`](https://bun.com/docs/runtime/semver), [`TOML.parse`](https://bun.com/docs/runtime/toml), [`XML`](https://bun.com/docs/runtime/xml), [`markdown`](https://bun.com/docs/runtime/markdown), [`color`](https://bun.com/docs/runtime/color), [`Image`](https://bun.com/docs/runtime/image) | [/markdown](https://bun.com/reference/bun/markdown) · [/color](https://bun.com/reference/bun/color) · [/Image](https://bun.com/reference/bun/Image) | yes — TOML config, color, Image ground, markdown.ansi |
+| Low-level / Internals | `mmap`, `gc`, `generateHeapSnapshot`, [`bun:jsc`](https://bun.com/reference/bun/jsc) | [/jsc](https://bun.com/reference/bun/jsc) | — |
+
+Repo-specific wiring (paths, not the full catalog) continues in [Bun API map](#bun-api-map).
+
 ## Environment variables
 
 [@see Bun docs](https://bun.com/docs/runtime/environment-variables) · [Configuring Bun](https://bun.com/docs/runtime/environment-variables#configuring-bun) · index: [llms.txt](https://bun.com/docs/llms.txt)
