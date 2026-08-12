@@ -81,6 +81,7 @@ export {
   formatAnalyzeMarkdownReport,
   formatAnalyzeMarkdownTable,
   projectAnalyzeRows,
+  renderSportAnalyze,
   resolveAnalyzeColumns,
   summarizeAnalyzeRows,
   type AnalyzeColumnPresetName,
@@ -88,5 +89,6 @@ export {
   type AnalyzeSnapshotArtifact,
   type AnalyzeWeightedFieldKey,
   type AnalyzeWeightedRow,
+  type SportAnalyzeRender,
   type WeightedTrackerEvent,
 } from './analyze-table.ts';

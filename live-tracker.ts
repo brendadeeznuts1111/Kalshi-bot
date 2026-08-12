@@ -139,7 +139,7 @@ Usage:
   bun live-tracker.ts analyze [files…] [--summary] [--stats] [--format …] [--output path]
                               [--sport=tennis] [--phase=live|prematch]
                               [--sort-by severity|family|id] [--desc] [--verbose]
-                              [--inspect|--json|--table] [--columns desk|odds|settlement|patterns|ev|all|a,b,…]
+                              [--inspect|--json|--table|--html] [--columns desk|odds|settlement|patterns|ev|all|a,b,…]
                               [--bake]   # write docs/artifacts live-tracker-analyze-* (+ .html)
   bun live-tracker.ts patterns [--sort-by family|severity|id] [--desc] [--json|--inspect]
   bun live-tracker.ts chart   --event ID --market TYPE [--event ID --market TYPE …]
@@ -160,6 +160,7 @@ Examples:
   bun live-tracker.ts analyze --sport=tennis --phase=live --columns=desk --table
   bun live-tracker.ts analyze --sport=tennis --phase=live --columns=ev --inspect --no-color
   bun live-tracker.ts analyze --sport=tennis --phase=live --columns=all --bake
+  bun live-tracker.ts analyze --sport=tennis --phase=live --columns=desk --html --output /tmp/desk.html
   bun live-tracker.ts patterns --sort-by family,id
   bun live-tracker.ts patterns --sort-by id --desc
   bun live-tracker.ts patterns --inspect          # TTY Bun.inspect (sorted keys, depth 4)
@@ -579,15 +580,10 @@ if (cmd === 'analyze') {
   if (sportId) {
     const {
       parseEdgePatternSortBy,
-      buildAnalyzeInspectMeta,
       buildAnalyzeSchemaDocument,
-      buildAnalyzeSnapshotArtifact,
-      formatAnalyzeBanner,
-      formatAnalyzeHtmlReport,
-      formatAnalyzeInspectTable,
-      formatAnalyzeMarkdownTable,
-      resolveAnalyzeColumns,
+      renderSportAnalyze,
     } = await import('./src/settlement/index.ts');
+    const { inspectSnapshot } = await import('./src/research/bun-native.ts');
     const phase =
       argValue('phase') === 'prematch' ? 'prematch' : 'live';
     const sortBy = parseEdgePatternSortBy(argValue('sort-by'), ['severity', 'id']);
@@ -598,23 +594,26 @@ if (cmd === 'analyze') {
       period: argValue('period') ?? undefined,
       patternSort: { sortBy, desc },
     });
-    // Flat schema rows (all settlement/pattern fields) — not nested [Object …]
-    const artifact = buildAnalyzeSnapshotArtifact({
+    // --columns desk|odds|settlement|patterns|ev|all|key1,key2
+    const colArg = argValue('columns');
+    const colors =
+      !hasFlag('no-color') &&
+      Boolean(process.stdout.isTTY) &&
+      process.env.NO_COLOR == null;
+    const render = renderSportAnalyze({
       sportId,
       phase,
       sortBy,
       desc,
       events: weighted,
-    });
-    // --columns desk|odds|settlement|patterns|ev|all|key1,key2
-    const colArg = argValue('columns');
-    const columns = resolveAnalyzeColumns(
-      hasFlag('all-columns')
+      columns: hasFlag('all-columns')
         ? ['all']
         : colArg
           ? colArg.split(',').map(s => s.trim()).filter(Boolean)
           : undefined,
-    );
+      colors,
+    });
+    const { artifact, columns, banner, inspectMeta, tableInspect, tableMarkdown } = render;
 
     // Optional bake to docs/artifacts for sample table SSOT
     if (hasFlag('bake') || hasFlag('write-sample')) {
@@ -640,88 +639,38 @@ if (cmd === 'analyze') {
         JSON.stringify(buildAnalyzeSchemaDocument(), null, 2) + '\n',
       );
       await Bun.write(samplePath, JSON.stringify(artifact, null, 2) + '\n');
-      await Bun.write(tablePath, artifact.markdownReport + '\n');
-      await Bun.write(
-        htmlPath,
-        formatAnalyzeHtmlReport({
-          sportId: artifact.sportId,
-          phase: artifact.phase,
-          sortBy: artifact.sortBy,
-          desc: artifact.desc,
-          rows: artifact.rows,
-          schemaVersion: artifact.schemaVersion,
-          generatedAt: artifact.generatedAt,
-        }),
-      );
+      await Bun.write(tablePath, render.markdownReport + '\n');
+      await Bun.write(htmlPath, render.htmlReport);
       console.error(
         `baked ${schemaPath}\n      ${samplePath}\n      ${tablePath}\n      ${htmlPath}`,
       );
     }
 
     if (hasFlag('inspect') || argValue('format') === 'inspect') {
-      const { inspectSnapshot } = await import('./src/research/bun-native.ts');
-      const colors =
-        !hasFlag('no-color') &&
-        Boolean(process.stdout.isTTY) &&
-        process.env.NO_COLOR == null;
       const depthRaw = argValue('depth');
       const depth = depthRaw != null && Number.isFinite(Number(depthRaw)) ? Number(depthRaw) : 6;
-      // Prefer flat rows + inspect.table so every schema field is visible
-      const table = formatAnalyzeInspectTable(artifact.rows, columns, { colors });
-      const meta = inspectSnapshot(
-        buildAnalyzeInspectMeta({
-          sportId: artifact.sportId,
-          phase: artifact.phase,
-          sortBy: artifact.sortBy,
-          desc: artifact.desc,
-          columns,
-          rows: artifact.rows,
-          schemaVersion: artifact.schemaVersion,
-        }),
-        { colors, depth, sorted: true },
-      );
-      await writeOrPrint(meta + '\n\n' + table + '\n');
+      const meta = inspectSnapshot(inspectMeta, { colors, depth, sorted: true });
+      await writeOrPrint(meta + '\n\n' + tableInspect + '\n');
       process.exit(0);
     }
     if (hasFlag('json') || argValue('format') === 'json') {
       await writeOrPrint(JSON.stringify(artifact, null, 2) + '\n');
       process.exit(0);
     }
+    if (hasFlag('html') || argValue('format') === 'html') {
+      // Full multi-preset HTML report (same body as bake sample.html)
+      await writeOrPrint(render.htmlReport);
+      process.exit(0);
+    }
     if (hasFlag('table') || argValue('format') === 'table') {
-      const colors =
-        !hasFlag('no-color') &&
-        Boolean(process.stdout.isTTY) &&
-        process.env.NO_COLOR == null;
-      const banner = formatAnalyzeBanner({
-        sportId: artifact.sportId,
-        phase: artifact.phase,
-        sortBy: artifact.sortBy,
-        desc: artifact.desc,
-        columns,
-        summary: artifact.summary,
-        schemaVersion: artifact.schemaVersion,
-      });
-      await writeOrPrint(
-        banner +
-          '\n\n' +
-          formatAnalyzeInspectTable(artifact.rows, columns, { colors }) +
-          '\n',
-      );
+      await writeOrPrint(banner + '\n\n' + tableInspect + '\n');
       process.exit(0);
     }
     // Markdown narrative + selected-column table (+ banner summary)
     const lines: string[] = [
-      formatAnalyzeBanner({
-        sportId,
-        phase,
-        sortBy,
-        desc,
-        columns,
-        summary: artifact.summary,
-        schemaVersion: artifact.schemaVersion,
-      }),
+      banner,
       '',
-      formatAnalyzeMarkdownTable(artifact.rows, columns),
+      tableMarkdown,
       '',
     ];
     if (hasFlag('verbose')) {

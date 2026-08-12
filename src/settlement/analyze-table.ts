@@ -708,3 +708,77 @@ export function buildAnalyzeSnapshotArtifact(input: {
     generatedAt,
   };
 }
+
+/**
+ * Pure end-to-end sport analyze render bundle for CLI + recipe tests.
+ * Call after {@link weightTrackerEvents} (or with pre-weighted events).
+ */
+export type SportAnalyzeRender = {
+  artifact: AnalyzeSnapshotArtifact;
+  columns: AnalyzeWeightedFieldKey[];
+  banner: string;
+  inspectMeta: Record<string, unknown>;
+  tableInspect: string;
+  tableMarkdown: string;
+  markdownReport: string;
+  htmlReport: string;
+};
+
+export function renderSportAnalyze(input: {
+  sportId: string;
+  phase: string;
+  sortBy: string[];
+  desc?: boolean;
+  events: WeightedTrackerEvent[];
+  /** Preset name(s) and/or field keys — same as CLI --columns. */
+  columns?: readonly string[];
+  colors?: boolean;
+}): SportAnalyzeRender {
+  const desc = input.desc ?? false;
+  const artifact = buildAnalyzeSnapshotArtifact({
+    sportId: input.sportId,
+    phase: input.phase,
+    sortBy: input.sortBy,
+    desc,
+    events: input.events,
+  });
+  const columns = resolveAnalyzeColumns(input.columns);
+  const banner = formatAnalyzeBanner({
+    sportId: artifact.sportId,
+    phase: artifact.phase,
+    sortBy: artifact.sortBy,
+    desc: artifact.desc,
+    columns,
+    summary: artifact.summary,
+    schemaVersion: artifact.schemaVersion,
+  });
+  const inspectMeta = buildAnalyzeInspectMeta({
+    sportId: artifact.sportId,
+    phase: artifact.phase,
+    sortBy: artifact.sortBy,
+    desc: artifact.desc,
+    columns,
+    rows: artifact.rows,
+    schemaVersion: artifact.schemaVersion,
+  });
+  return {
+    artifact,
+    columns,
+    banner,
+    inspectMeta,
+    tableInspect: formatAnalyzeInspectTable(artifact.rows, columns, {
+      colors: input.colors ?? false,
+    }),
+    tableMarkdown: formatAnalyzeMarkdownTable(artifact.rows, columns),
+    markdownReport: artifact.markdownReport,
+    htmlReport: formatAnalyzeHtmlReport({
+      sportId: artifact.sportId,
+      phase: artifact.phase,
+      sortBy: artifact.sortBy,
+      desc: artifact.desc,
+      rows: artifact.rows,
+      schemaVersion: artifact.schemaVersion,
+      generatedAt: artifact.generatedAt,
+    }),
+  };
+}

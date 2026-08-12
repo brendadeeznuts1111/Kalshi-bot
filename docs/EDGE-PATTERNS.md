@@ -74,10 +74,12 @@ Flat row schema (all settlement / pattern fields, no nested `[Object …]`):
 bun live-tracker.ts analyze --sport=tennis --phase=live --columns=desk --table
 bun live-tracker.ts analyze --sport=tennis --phase=live --columns=ev --inspect --no-color
 bun live-tracker.ts analyze --sport=tennis --phase=live --columns=all --bake
+bun live-tracker.ts analyze --sport=tennis --phase=live --columns=desk --html --output /tmp/desk.html
 # bake → docs/artifacts/live-tracker-analyze-{schema.json,sample.json,sample.md,sample.html}
+# fixture for tests: tests/fixtures/live-tracker-event-197510101.jsonl
 ```
 
-Code: `src/settlement/analyze-table.ts` · presets + **schema v3** (row summary, multi-preset markdown/HTML) · [`src/lib/table-schema.ts`](../src/lib/table-schema.ts).
+Code: `renderSportAnalyze` · **schema v3** · recipes tested in `tests/settlement/analyze-recipes.test.ts` · shared render [`src/lib/table-schema.ts`](../src/lib/table-schema.ts).
 
 Time: `time` = ISO UTC · `timeMs` = epoch ms join key — see [`TIME.md`](TIME.md).
 
