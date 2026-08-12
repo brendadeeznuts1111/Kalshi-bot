@@ -50,8 +50,11 @@ Seeded before first live sighting so inventory promote maps cleanly:
 | `volleyball.ncaa_beach_volleyball` | NCAA Beach Volleyball | B |
 | `volleyball.ncaa_dii_women` | NCAA DII Women's Volleyball | C |
 | `volleyball.ncaa_diii_women` | NCAA DIII Women's Volleyball | C |
+| `volleyball.indiya` | Indiya (feed country bucket = India) | D |
 
 Aliases cover common variants (`College Volleyball`, `NCAA Volleyball`, conference short names, DI wording).
+
+**Inventory:** `Indiya` was unmapped on plive (`no_structure` under promote junk filter — single token). Seeded manually as tier **D** with aliases `Indiya` / `India` / `India Volleyball`.
 
 ## Inventory
 

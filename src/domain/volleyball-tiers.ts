@@ -67,6 +67,8 @@ export const VOLLEYBALL_TIER_BY_COMPETITION_ID: Readonly<
   'volleyball.friendly_international': 'D',
   'volleyball.international_friendly_women': 'D',
   'volleyball.gambia_national_championship_w': 'D',
+  /** Feed country bucket (RU “Indiya” = India); branch/cup noise. */
+  'volleyball.indiya': 'D',
 };
 
 /**
@@ -118,6 +120,8 @@ export function inferVolleyballTierFromLeagueLabel(
 
   // Friendlies / thin
   if (/friend|friendl/.test(low)) return 'D';
+  // Country-only feed buckets (translit)
+  if (/^(indiya|india|rossiya|belarusy|niderlandi)$/.test(low)) return 'D';
 
   // Default unmapped volleyball league → mid desk caution
   return 'C';

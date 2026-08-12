@@ -33584,6 +33584,24 @@ export const COMPETITIONS: readonly CompetitionRecord[] = [
       plive: { inventoryBucket: "volleyball", leagueKey: "NCAA DIII Women's Volleyball" },
     },
   },
+  {
+    id: "volleyball.indiya",
+    sportId: "volleyball",
+    displayName: "Indiya",
+    aliases: ["Indiya", "India", "India Volleyball"],
+    gender: "unknown",
+    providerMappings: {
+      plive: { inventoryBucket: "volleyball", leagueKey: "Indiya" },
+    },
+  },
+  {
+    id: "cricket.indiya",
+    sportId: "cricket",
+    displayName: "Indiya",
+    aliases: ["Indiya"],
+    gender: "unknown",
+    providerMappings: { plive: { inventoryBucket: "cricket", leagueKey: "Indiya" } },
+  },
 ] satisfies readonly CompetitionRecord[];
 
 /**
