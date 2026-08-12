@@ -139,8 +139,8 @@ Usage:
   bun live-tracker.ts analyze [files…] [--summary] [--stats] [--format …] [--output path]
                               [--sport=tennis] [--phase=live|prematch]
                               [--sort-by severity|family|id] [--desc] [--verbose]
-                              [--inspect|--json|--table] [--columns all|a,b,…]
-                              [--bake]   # write docs/artifacts live-tracker-analyze-*
+                              [--inspect|--json|--table] [--columns desk|odds|settlement|patterns|ev|all|a,b,…]
+                              [--bake]   # write docs/artifacts live-tracker-analyze-* (+ .html)
   bun live-tracker.ts patterns [--sort-by family|severity|id] [--desc] [--json|--inspect]
   bun live-tracker.ts chart   --event ID --market TYPE [--event ID --market TYPE …]
                               [--period m] [--overlay] [--out=compare.svg]
@@ -151,12 +151,15 @@ Event types: ${LIVE_TRACKER_EVENT_TYPES.join(' | ')}
 
 diff --sort-by fields: time | event | type | detail | file | eventid
 patterns/analyze --sort-by fields: family | severity | id  (comma-separated; --desc)
+analyze --columns presets: desk | odds | settlement | patterns | ev | all  (or comma keys)
 
 Examples:
   bun live-tracker.ts diff old.json new.json --event-type MARKET_ADDED --sort-by time --limit 5
   bun live-tracker.ts watch --market-id #197510101 --format json --watch
   bun live-tracker.ts analyze --summary
-  bun live-tracker.ts analyze --sport=tennis --phase=live --sort-by severity,id
+  bun live-tracker.ts analyze --sport=tennis --phase=live --columns=desk --table
+  bun live-tracker.ts analyze --sport=tennis --phase=live --columns=ev --inspect --no-color
+  bun live-tracker.ts analyze --sport=tennis --phase=live --columns=all --bake
   bun live-tracker.ts patterns --sort-by family,id
   bun live-tracker.ts patterns --sort-by id --desc
   bun live-tracker.ts patterns --inspect          # TTY Bun.inspect (sorted keys, depth 4)
@@ -576,8 +579,11 @@ if (cmd === 'analyze') {
   if (sportId) {
     const {
       parseEdgePatternSortBy,
+      buildAnalyzeInspectMeta,
       buildAnalyzeSchemaDocument,
       buildAnalyzeSnapshotArtifact,
+      formatAnalyzeBanner,
+      formatAnalyzeHtmlReport,
       formatAnalyzeInspectTable,
       formatAnalyzeMarkdownTable,
       resolveAnalyzeColumns,
@@ -625,24 +631,31 @@ if (cmd === 'analyze') {
         process.cwd(),
         'docs/artifacts/live-tracker-analyze-sample.md',
       );
+      const htmlPath = joinPath(
+        process.cwd(),
+        'docs/artifacts/live-tracker-analyze-sample.html',
+      );
       await Bun.write(
         schemaPath,
         JSON.stringify(buildAnalyzeSchemaDocument(), null, 2) + '\n',
       );
       await Bun.write(samplePath, JSON.stringify(artifact, null, 2) + '\n');
+      await Bun.write(tablePath, artifact.markdownReport + '\n');
       await Bun.write(
-        tablePath,
-        `# Live-tracker analyze sample (${sportId} / ${phase})\n\n` +
-          `Generated \`${artifact.generatedAt}\` · schema v${artifact.schemaVersion}\n\n` +
-          `## Desk\n\n` +
-          formatAnalyzeMarkdownTable(artifact.rows, ['desk']) +
-          `\n\n## EV\n\n` +
-          formatAnalyzeMarkdownTable(artifact.rows, ['ev']) +
-          `\n\n## All columns\n\n` +
-          formatAnalyzeMarkdownTable(artifact.rows, ['all']) +
-          '\n',
+        htmlPath,
+        formatAnalyzeHtmlReport({
+          sportId: artifact.sportId,
+          phase: artifact.phase,
+          sortBy: artifact.sortBy,
+          desc: artifact.desc,
+          rows: artifact.rows,
+          schemaVersion: artifact.schemaVersion,
+          generatedAt: artifact.generatedAt,
+        }),
       );
-      console.error(`baked ${schemaPath}\n      ${samplePath}\n      ${tablePath}`);
+      console.error(
+        `baked ${schemaPath}\n      ${samplePath}\n      ${tablePath}\n      ${htmlPath}`,
+      );
     }
 
     if (hasFlag('inspect') || argValue('format') === 'inspect') {
@@ -656,16 +669,15 @@ if (cmd === 'analyze') {
       // Prefer flat rows + inspect.table so every schema field is visible
       const table = formatAnalyzeInspectTable(artifact.rows, columns, { colors });
       const meta = inspectSnapshot(
-        {
+        buildAnalyzeInspectMeta({
           sportId: artifact.sportId,
           phase: artifact.phase,
           sortBy: artifact.sortBy,
           desc: artifact.desc,
-          schemaVersion: artifact.schemaVersion,
-          rowCount: artifact.rows.length,
           columns,
-          fields: artifact.fields.map(f => f.key),
-        },
+          rows: artifact.rows,
+          schemaVersion: artifact.schemaVersion,
+        }),
         { colors, depth, sorted: true },
       );
       await writeOrPrint(meta + '\n\n' + table + '\n');
@@ -680,14 +692,34 @@ if (cmd === 'analyze') {
         !hasFlag('no-color') &&
         Boolean(process.stdout.isTTY) &&
         process.env.NO_COLOR == null;
+      const banner = formatAnalyzeBanner({
+        sportId: artifact.sportId,
+        phase: artifact.phase,
+        sortBy: artifact.sortBy,
+        desc: artifact.desc,
+        columns,
+        summary: artifact.summary,
+        schemaVersion: artifact.schemaVersion,
+      });
       await writeOrPrint(
-        formatAnalyzeInspectTable(artifact.rows, columns, { colors }) + '\n',
+        banner +
+          '\n\n' +
+          formatAnalyzeInspectTable(artifact.rows, columns, { colors }) +
+          '\n',
       );
       process.exit(0);
     }
-    // Markdown narrative + full-field table
+    // Markdown narrative + selected-column table (+ banner summary)
     const lines: string[] = [
-      `settlement + edge patterns · sport=${sportId} phase=${phase} · sort-by ${sortBy.join(',')}${desc ? ' desc' : ''}`,
+      formatAnalyzeBanner({
+        sportId,
+        phase,
+        sortBy,
+        desc,
+        columns,
+        summary: artifact.summary,
+        schemaVersion: artifact.schemaVersion,
+      }),
       '',
       formatAnalyzeMarkdownTable(artifact.rows, columns),
       '',

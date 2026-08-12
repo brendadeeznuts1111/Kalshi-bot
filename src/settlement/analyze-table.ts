@@ -10,6 +10,7 @@
  * @see src/lib/table-schema.ts
  */
 
+import { markdownToHtml } from '../lib/markdown.ts';
 import { dualTime } from '../lib/time-ssot.ts';
 import {
   buildTableSchemaDocument,
@@ -401,8 +402,244 @@ export function formatAnalyzeInspectTable(
   return formatInspectTableFromRows(projected, cols, options).trimEnd();
 }
 
+/** Stable preset names for CLI help / inspect meta. */
+export const ANALYZE_COLUMN_PRESET_NAMES = [
+  'desk',
+  'odds',
+  'settlement',
+  'patterns',
+  'ev',
+  'all',
+] as const;
+
+export type AnalyzeColumnPresetName = (typeof ANALYZE_COLUMN_PRESET_NAMES)[number];
+
+function bumpCount(map: Record<string, number>, key: string): void {
+  const k = key || '—';
+  map[k] = (map[k] ?? 0) + 1;
+}
+
+/** Aggregate counters for desk banners / inspect meta / bake front-matter. */
+export type AnalyzeRowSummary = {
+  rowCount: number;
+  byVoidRisk: Record<string, number>;
+  byMaxSeverity: Record<string, number>;
+  byMarketClass: Record<string, number>;
+  byEventType: Record<string, number>;
+  withVoidEv: number;
+  meanVoidDelta: number | null;
+  dualStamp: { withTimeMs: number; missingTimeMs: number };
+};
+
+export function summarizeAnalyzeRows(rows: readonly AnalyzeWeightedRow[]): AnalyzeRowSummary {
+  const byVoidRisk: Record<string, number> = {};
+  const byMaxSeverity: Record<string, number> = {};
+  const byMarketClass: Record<string, number> = {};
+  const byEventType: Record<string, number> = {};
+  let withVoidEv = 0;
+  let voidDeltaSum = 0;
+  let voidDeltaN = 0;
+  let withTimeMs = 0;
+  let missingTimeMs = 0;
+  for (const r of rows) {
+    bumpCount(byVoidRisk, String(r.voidRisk));
+    bumpCount(byMaxSeverity, String(r.maxSeverity));
+    bumpCount(byMarketClass, String(r.marketClass));
+    bumpCount(byEventType, String(r.eventType));
+    if (typeof r.voidEv === 'number' && Number.isFinite(r.voidEv)) withVoidEv++;
+    if (typeof r.voidDelta === 'number' && Number.isFinite(r.voidDelta)) {
+      voidDeltaSum += r.voidDelta;
+      voidDeltaN++;
+    }
+    if (typeof r.timeMs === 'number' && Number.isFinite(r.timeMs)) withTimeMs++;
+    else missingTimeMs++;
+  }
+  return {
+    rowCount: rows.length,
+    byVoidRisk,
+    byMaxSeverity,
+    byMarketClass,
+    byEventType,
+    withVoidEv,
+    meanVoidDelta: voidDeltaN ? voidDeltaSum / voidDeltaN : null,
+    dualStamp: { withTimeMs, missingTimeMs },
+  };
+}
+
+/** Compact one-liner banner for TTY / markdown headers. */
+export function formatAnalyzeBanner(input: {
+  sportId: string;
+  phase: string;
+  sortBy: string[];
+  desc?: boolean;
+  columns?: readonly string[];
+  summary: AnalyzeRowSummary;
+  schemaVersion?: number;
+}): string {
+  const s = input.summary;
+  const voidBits = Object.entries(s.byVoidRisk)
+    .sort((a, b) => b[1] - a[1])
+    .map(([k, n]) => `${k}=${n}`)
+    .join(' ');
+  const colHint = input.columns?.length
+    ? ` · cols=${input.columns.length}`
+    : '';
+  const mean =
+    s.meanVoidDelta != null ? ` · mean voidΔ=${s.meanVoidDelta.toFixed(1)}` : '';
+  return (
+    `settlement + edge patterns · sport=${input.sportId} phase=${input.phase}` +
+    ` · sort-by ${input.sortBy.join(',')}${input.desc ? ' desc' : ''}` +
+    ` · rows=${s.rowCount}${colHint}` +
+    ` · voidRisk[${voidBits || '—'}]` +
+    ` · dualStamp=${s.dualStamp.withTimeMs}/${s.rowCount}` +
+    mean +
+    (input.schemaVersion != null ? ` · schema v${input.schemaVersion}` : '')
+  );
+}
+
+/** Meta object for --inspect (paired with Bun.inspect + table). */
+export function buildAnalyzeInspectMeta(input: {
+  sportId: string;
+  phase: string;
+  sortBy: string[];
+  desc: boolean;
+  columns: readonly string[];
+  rows: AnalyzeWeightedRow[];
+  schemaVersion?: number;
+}): Record<string, unknown> {
+  const summary = summarizeAnalyzeRows(input.rows);
+  return {
+    schemaVersion: input.schemaVersion ?? 3,
+    sportId: input.sportId,
+    phase: input.phase,
+    sortBy: input.sortBy,
+    desc: input.desc,
+    rowCount: summary.rowCount,
+    columns: [...input.columns],
+    columnCount: input.columns.length,
+    presets: [...ANALYZE_COLUMN_PRESET_NAMES],
+    summary: {
+      byVoidRisk: summary.byVoidRisk,
+      byMaxSeverity: summary.byMaxSeverity,
+      byMarketClass: summary.byMarketClass,
+      byEventType: summary.byEventType,
+      withVoidEv: summary.withVoidEv,
+      meanVoidDelta: summary.meanVoidDelta,
+      dualStamp: summary.dualStamp,
+    },
+  };
+}
+
+/**
+ * Full markdown report: banner + summary counts + every column preset table.
+ */
+export function formatAnalyzeMarkdownReport(input: {
+  sportId: string;
+  phase: string;
+  sortBy: string[];
+  desc?: boolean;
+  rows: AnalyzeWeightedRow[];
+  schemaVersion?: number;
+  generatedAt?: string;
+}): string {
+  const summary = summarizeAnalyzeRows(input.rows);
+  const banner = formatAnalyzeBanner({
+    sportId: input.sportId,
+    phase: input.phase,
+    sortBy: input.sortBy,
+    desc: input.desc,
+    summary,
+    schemaVersion: input.schemaVersion,
+  });
+  const lines: string[] = [
+    `# Live-tracker analyze (${input.sportId} / ${input.phase})`,
+    '',
+    input.generatedAt ? `Generated \`${input.generatedAt}\`` : '',
+    '',
+    banner,
+    '',
+    '## Summary',
+    '',
+    formatMarkdownTable(
+      [
+        { metric: 'rows', value: summary.rowCount },
+        { metric: 'with voidEv', value: summary.withVoidEv },
+        {
+          metric: 'mean voidΔ',
+          value: summary.meanVoidDelta != null ? Number(summary.meanVoidDelta.toFixed(3)) : '—',
+        },
+        {
+          metric: 'dual timeMs',
+          value: `${summary.dualStamp.withTimeMs}/${summary.rowCount}`,
+        },
+        {
+          metric: 'voidRisk',
+          value: Object.entries(summary.byVoidRisk)
+            .map(([k, n]) => `${k}:${n}`)
+            .join(' · ') || '—',
+        },
+        {
+          metric: 'severity',
+          value: Object.entries(summary.byMaxSeverity)
+            .map(([k, n]) => `${k}:${n}`)
+            .join(' · ') || '—',
+        },
+        {
+          metric: 'marketClass',
+          value: Object.entries(summary.byMarketClass)
+            .map(([k, n]) => `${k}:${n}`)
+            .join(' · ') || '—',
+        },
+      ],
+      ['metric', 'value'],
+    ),
+    '',
+  ];
+  for (const name of ANALYZE_COLUMN_PRESET_NAMES) {
+    if (name === 'all') continue; // place last
+    lines.push(`## Preset \`${name}\``, '', formatAnalyzeMarkdownTable(input.rows, [name]), '');
+  }
+  lines.push('## Preset `all`', '', formatAnalyzeMarkdownTable(input.rows, ['all']), '');
+  return lines.filter((l, i, a) => !(l === '' && a[i - 1] === '')).join('\n');
+}
+
+/** HTML report via Bun.markdown.html (docs preset: GFM + heading ids + tagFilter). */
+export function formatAnalyzeHtmlReport(input: {
+  sportId: string;
+  phase: string;
+  sortBy: string[];
+  desc?: boolean;
+  rows: AnalyzeWeightedRow[];
+  schemaVersion?: number;
+  generatedAt?: string;
+}): string {
+  const md = formatAnalyzeMarkdownReport(input);
+  const body = markdownToHtml(md, 'docs');
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Live-tracker analyze · ${input.sportId} / ${input.phase}</title>
+<style>
+  :root { color-scheme: dark light; font-family: ui-sans-serif, system-ui, sans-serif; }
+  body { max-width: 1100px; margin: 1.5rem auto; padding: 0 1rem; line-height: 1.45; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.85rem; margin: 0.75rem 0 1.5rem; overflow-x: auto; display: block; }
+  th, td { border: 1px solid color-mix(in srgb, currentColor 25%, transparent); padding: 0.35rem 0.5rem; text-align: left; vertical-align: top; }
+  th { background: color-mix(in srgb, currentColor 8%, transparent); }
+  code { font-size: 0.9em; }
+  h1, h2 { letter-spacing: 0.02em; }
+</style>
+</head>
+<body>
+${body}
+</body>
+</html>
+`;
+}
+
 export type AnalyzeSnapshotArtifact = {
-  schemaVersion: 2;
+  schemaVersion: 3;
   description: string;
   sportId: string;
   phase: string;
@@ -413,17 +650,20 @@ export type AnalyzeSnapshotArtifact = {
   presets: typeof ANALYZE_COLUMN_PRESETS;
   defaultColumns: readonly string[];
   allColumns: readonly string[];
+  summary: AnalyzeRowSummary;
   rows: AnalyzeWeightedRow[];
   /** Desk-preset markdown for human skim. */
   markdownDesk: string;
+  /** Full multi-preset markdown report body. */
+  markdownReport: string;
   generatedAt: string;
 };
 
 export function buildAnalyzeSchemaDocument() {
   return buildTableSchemaDocument({
-    schemaVersion: 2,
+    schemaVersion: 3,
     description:
-      'Flat row schema for live-tracker analyze --sport (settlement + edge patterns). Column presets: desk | odds | settlement | patterns | ev | all.',
+      'Flat row schema for live-tracker analyze --sport (settlement + edge patterns). Column presets: desk | odds | settlement | patterns | ev | all. Includes row summary aggregates and multi-preset markdown/HTML bake.',
     fields: ANALYZE_WEIGHTED_FIELD_SCHEMA as unknown as readonly TableFieldSpec<AnalyzeWeightedFieldKey>[],
     presets: ANALYZE_COLUMN_PRESETS,
     defaultColumns: ANALYZE_WEIGHTED_DEFAULT_COLUMNS,
@@ -439,8 +679,10 @@ export function buildAnalyzeSnapshotArtifact(input: {
 }): AnalyzeSnapshotArtifact {
   const schema = buildAnalyzeSchemaDocument();
   const rows = flattenWeightedEvents(input.events);
+  const generatedAt = new Date().toISOString();
+  const summary = summarizeAnalyzeRows(rows);
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     description: schema.description,
     sportId: input.sportId,
     phase: input.phase,
@@ -451,8 +693,18 @@ export function buildAnalyzeSnapshotArtifact(input: {
     presets: ANALYZE_COLUMN_PRESETS,
     defaultColumns: ANALYZE_WEIGHTED_DEFAULT_COLUMNS,
     allColumns: ANALYZE_WEIGHTED_ALL_COLUMNS,
+    summary,
     rows,
     markdownDesk: formatAnalyzeMarkdownTable(rows, ANALYZE_WEIGHTED_DEFAULT_COLUMNS),
-    generatedAt: new Date().toISOString(),
+    markdownReport: formatAnalyzeMarkdownReport({
+      sportId: input.sportId,
+      phase: input.phase,
+      sortBy: input.sortBy,
+      desc: input.desc,
+      rows,
+      schemaVersion: 3,
+      generatedAt,
+    }),
+    generatedAt,
   };
 }

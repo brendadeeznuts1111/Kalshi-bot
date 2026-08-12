@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Live-tracker analyze · tennis / live</title>
+<style>
+  :root { color-scheme: dark light; font-family: ui-sans-serif, system-ui, sans-serif; }
+  body { max-width: 1100px; margin: 1.5rem auto; padding: 0 1rem; line-height: 1.45; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.85rem; margin: 0.75rem 0 1.5rem; overflow-x: auto; display: block; }
+  th, td { border: 1px solid color-mix(in srgb, currentColor 25%, transparent); padding: 0.35rem 0.5rem; text-align: left; vertical-align: top; }
+  th { background: color-mix(in srgb, currentColor 8%, transparent); }
+  code { font-size: 0.9em; }
+  h1, h2 { letter-spacing: 0.02em; }
+</style>
+</head>
+<body>
+<h1 id="live-tracker-analyze-tennis-live"><a href="#live-tracker-analyze-tennis-live">Live-tracker analyze (tennis / live)</a></h1>
+<p>Generated <code>2026-08-12T01:24:21.065Z</code></p>
+<p>settlement + edge patterns · sport=tennis phase=live · sort-by severity,id · rows=6 · voidRisk[high=5 medium=1] · dualStamp=6/6 · mean voidΔ=-15.0 · schema v3</p>
+<h2 id="summary"><a href="#summary">Summary</a></h2>
+<table>
+<thead>
+<tr><th>metric</th><th align="right">value</th></tr>
+</thead>
+<tbody>
+<tr><td>rows</td><td align="right">6</td></tr>
+<tr><td>with voidEv</td><td align="right">4</td></tr>
+<tr><td>mean voidΔ</td><td align="right">-15</td></tr>
+<tr><td>dual timeMs</td><td align="right">6/6</td></tr>
+<tr><td>voidRisk</td><td align="right">high:5 · medium:1</td></tr>
+<tr><td>severity</td><td align="right">high:5 · watch:1</td></tr>
+<tr><td>marketClass</td><td align="right">match_ml:5 · period_ml:1</td></tr>
+</tbody>
+</table>
+<h2 id="preset-desk"><a href="#preset-desk">Preset <code>desk</code></a></h2>
+<table>
+<thead>
+<tr><th>time</th><th align="right">timeMs</th><th>eventType</th><th>period</th><th>marketType</th><th>from</th><th>to</th><th>voidRisk</th><th>maxSeverity</th><th align="right">patternIds</th><th align="right">pVoidPrior</th><th>sizingNote</th></tr>
+</thead>
+<tbody>
+<tr><td>2026-08-10T10:00:01.000Z</td><td align="right">1786356001000</td><td>MARKET_ADDED</td><td>m</td><td>3</td><td>—</td><td>—</td><td>high</td><td>high</td><td align="right">void.live-ml-unfinished, fill.secondary-confirmation, phase.pre…</td><td align="right">0.15</td><td>live match ML: high void on unfinished match — prefer completed set/gam…</td></tr>
+<tr><td>2026-08-10T10:00:02.000Z</td><td align="right">1786356002000</td><td>PRICE_CHANGE</td><td>m</td><td>3</td><td>1.9</td><td>1.95</td><td>high</td><td>high</td><td align="right">void.live-ml-unfinished, fill.secondary-confirmation, phase.pre…</td><td align="right">0.15</td><td>live match ML: high void on unfinished match — prefer completed set/gam…</td></tr>
+<tr><td>2026-08-10T10:00:03.000Z</td><td align="right">1786356003000</td><td>MARKET_ADDED</td><td>s1</td><td>3</td><td>—</td><td>—</td><td>medium</td><td>watch</td><td align="right">fill.secondary-confirmation, phase.prematch-vs-live-product</td><td align="right">0.05</td><td>size residual action path only · patterns: fill.secondary-confirmation</td></tr>
+<tr><td>2026-08-10T10:00:04.000Z</td><td align="right">1786356004000</td><td>PRICE_CHANGE</td><td>m</td><td>4</td><td>1.5</td><td>1.55</td><td>high</td><td>high</td><td align="right">void.live-ml-unfinished, fill.secondary-confirmation, phase.pre…</td><td align="right">0.15</td><td>live match ML: high void on unfinished match — prefer completed set/gam…</td></tr>
+<tr><td>2026-08-10T10:00:05.000Z</td><td align="right">1786356005000</td><td>PRICE_CHANGE</td><td>m</td><td>3</td><td>1.95</td><td>1.88</td><td>high</td><td>high</td><td align="right">void.live-ml-unfinished, fill.secondary-confirmation, phase.pre…</td><td align="right">0.15</td><td>live match ML: high void on unfinished match — prefer completed set/gam…</td></tr>
+<tr><td>2026-08-10T10:00:05.000Z</td><td align="right">1786356005000</td><td>PRICE_CHANGE</td><td>m</td><td>4</td><td>1.55</td><td>1.62</td><td>high</td><td>high</td><td align="right">void.live-ml-unfinished, fill.secondary-confirmation, phase.pre…</td><td align="right">0.15</td><td>live match ML: high void on unfinished match — prefer completed set/gam…</td></tr>
+</tbody>
+</table>
+<h2 id="preset-odds"><a href="#preset-odds">Preset <code>odds</code></a></h2>
+<table>
+<thead>
+<tr><th>time</th><th align="right">eventType</th><th>period</th><th>marketType</th><th>selection</th><th>from</th><th>to</th><th>detail</th></tr>
+</thead>
+<tbody>
+<tr><td>2026-08-10T10:00:01.000Z</td><td align="right">MARKET_ADDED</td><td>m</td><td>3</td><td>—</td><td>—</td><td>—</td><td>market m/3 offered</td></tr>
+<tr><td>2026-08-10T10:00:02.000Z</td><td align="right">PRICE_CHANGE</td><td>m</td><td>3</td><td>1</td><td>1.9</td><td>1.95</td><td>price m/3/1 1.9→1.95</td></tr>
+<tr><td>2026-08-10T10:00:03.000Z</td><td align="right">MARKET_ADDED</td><td>s1</td><td>3</td><td>—</td><td>—</td><td>—</td><td>market s1/3 offered</td></tr>
+<tr><td>2026-08-10T10:00:04.000Z</td><td align="right">PRICE_CHANGE</td><td>m</td><td>4</td><td>1</td><td>1.5</td><td>1.55</td><td>price m/4/1 1.5→1.55</td></tr>
+<tr><td>2026-08-10T10:00:05.000Z</td><td align="right">PRICE_CHANGE</td><td>m</td><td>3</td><td>1</td><td>1.95</td><td>1.88</td><td>price m/3/1 1.95→1.88</td></tr>
+<tr><td>2026-08-10T10:00:05.000Z</td><td align="right">PRICE_CHANGE</td><td>m</td><td>4</td><td>1</td><td>1.55</td><td>1.62</td><td>price m/4/1 1.55→1.62</td></tr>
+</tbody>
+</table>
+<h2 id="preset-settlement"><a href="#preset-settlement">Preset <code>settlement</code></a></h2>
+<table>
+<thead>
+<tr><th>time</th><th align="right">eventType</th><th>sportKey</th><th>phase</th><th>marketClass</th><th>actionThreshold</th><th>voidRisk</th><th>preferUnitMkts</th><th>pVoidPrior</th><th align="right">pliveEqEzlive</th><th align="right">sizingNote</th><th>summary</th></tr>
+</thead>
+<tbody>
+<tr><td>2026-08-10T10:00:01.000Z</td><td align="right">MARKET_ADDED</td><td>tennis</td><td>live</td><td>match_ml</td><td>match_completed</td><td>high</td><td>true</td><td>0.15</td><td align="right">true</td><td align="right">live match ML: high void on unfinished match — prefer completed set/gam…</td><td>tennis · live · match_ml · action=match_completed · voidRisk=high · pre…</td></tr>
+<tr><td>2026-08-10T10:00:02.000Z</td><td align="right">PRICE_CHANGE</td><td>tennis</td><td>live</td><td>match_ml</td><td>match_completed</td><td>high</td><td>true</td><td>0.15</td><td align="right">true</td><td align="right">live match ML: high void on unfinished match — prefer completed set/gam…</td><td>tennis · live · match_ml · action=match_completed · voidRisk=high · pre…</td></tr>
+<tr><td>2026-08-10T10:00:03.000Z</td><td align="right">MARKET_ADDED</td><td>tennis</td><td>live</td><td>period_ml</td><td>period_completed_before_stop</td><td>medium</td><td>false</td><td>0.05</td><td align="right">true</td><td align="right">size residual action path only · patterns: fill.secondary-confirmation</td><td>tennis · live · period_ml · action=period_completed_before_stop · voidR…</td></tr>
+<tr><td>2026-08-10T10:00:04.000Z</td><td align="right">PRICE_CHANGE</td><td>tennis</td><td>live</td><td>match_ml</td><td>match_completed</td><td>high</td><td>true</td><td>0.15</td><td align="right">true</td><td align="right">live match ML: high void on unfinished match — prefer completed set/gam…</td><td>tennis · live · match_ml · action=match_completed · voidRisk=high · pre…</td></tr>
+<tr><td>2026-08-10T10:00:05.000Z</td><td align="right">PRICE_CHANGE</td><td>tennis</td><td>live</td><td>match_ml</td><td>match_completed</td><td>high</td><td>true</td><td>0.15</td><td align="right">true</td><td align="right">live match ML: high void on unfinished match — prefer completed set/gam…</td><td>tennis · live · match_ml · action=match_completed · voidRisk=high · pre…</td></tr>
+<tr><td>2026-08-10T10:00:05.000Z</td><td align="right">PRICE_CHANGE</td><td>tennis</td><td>live</td><td>match_ml</td><td>match_completed</td><td>high</td><td>true</td><td>0.15</td><td align="right">true</td><td align="right">live match ML: high void on unfinished match — prefer completed set/gam…</td><td>tennis · live · match_ml · action=match_completed · voidRisk=high · pre…</td></tr>
+</tbody>
+</table>
+<h2 id="preset-patterns"><a href="#preset-patterns">Preset <code>patterns</code></a></h2>
+<table>
+<thead>
+<tr><th>time</th><th align="right">eventType</th><th>voidRisk</th><th>maxSeverity</th><th>patternIds</th><th>patternCount</th><th>eyeOpeners</th></tr>
+</thead>
+<tbody>
+<tr><td>2026-08-10T10:00:01.000Z</td><td align="right">MARKET_ADDED</td><td>high</td><td>high</td><td>void.live-ml-unfinished, fill.secondary-confirmation, phase.pre…</td><td>6</td><td>[high] void.live-ml-unfinished: Live ML void risk=high (action: match_c…</td></tr>
+<tr><td>2026-08-10T10:00:02.000Z</td><td align="right">PRICE_CHANGE</td><td>high</td><td>high</td><td>void.live-ml-unfinished, fill.secondary-confirmation, phase.pre…</td><td>6</td><td>[high] void.live-ml-unfinished: Live ML void risk=high (action: match_c…</td></tr>
+<tr><td>2026-08-10T10:00:03.000Z</td><td align="right">MARKET_ADDED</td><td>medium</td><td>watch</td><td>fill.secondary-confirmation, phase.prematch-vs-live-product</td><td>4</td><td>[watch] fill.secondary-confirmation: In-play secondary confirmation + d…</td></tr>
+<tr><td>2026-08-10T10:00:04.000Z</td><td align="right">PRICE_CHANGE</td><td>high</td><td>high</td><td>void.live-ml-unfinished, fill.secondary-confirmation, phase.pre…</td><td>6</td><td>[high] void.live-ml-unfinished: Live ML void risk=high (action: match_c…</td></tr>
+<tr><td>2026-08-10T10:00:05.000Z</td><td align="right">PRICE_CHANGE</td><td>high</td><td>high</td><td>void.live-ml-unfinished, fill.secondary-confirmation, phase.pre…</td><td>6</td><td>[high] void.live-ml-unfinished: Live ML void risk=high (action: match_c…</td></tr>
+<tr><td>2026-08-10T10:00:05.000Z</td><td align="right">PRICE_CHANGE</td><td>high</td><td>high</td><td>void.live-ml-unfinished, fill.secondary-confirmation, phase.pre…</td><td>6</td><td>[high] void.live-ml-unfinished: Live ML void risk=high (action: match_c…</td></tr>
+</tbody>
+</table>
+<h2 id="preset-ev"><a href="#preset-ev">Preset <code>ev</code></a></h2>
+<table>
+<thead>
+<tr><th>time</th><th align="right">eventType</th><th>from</th><th>to</th><th>voidRisk</th><th>pVoidPrior</th><th>voidEv</th><th>twoWayEv</th><th>voidDelta</th></tr>
+</thead>
+<tbody>
+<tr><td>2026-08-10T10:00:01.000Z</td><td align="right">MARKET_ADDED</td><td>—</td><td>—</td><td>high</td><td>0.15</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td>2026-08-10T10:00:02.000Z</td><td align="right">PRICE_CHANGE</td><td>1.9</td><td>1.95</td><td>high</td><td>0.15</td><td>12.5</td><td>-2.5</td><td>-15</td></tr>
+<tr><td>2026-08-10T10:00:03.000Z</td><td align="right">MARKET_ADDED</td><td>—</td><td>—</td><td>medium</td><td>0.05</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td>2026-08-10T10:00:04.000Z</td><td align="right">PRICE_CHANGE</td><td>1.5</td><td>1.55</td><td>high</td><td>0.15</td><td>-7.5</td><td>-22.5</td><td>-15</td></tr>
+<tr><td>2026-08-10T10:00:05.000Z</td><td align="right">PRICE_CHANGE</td><td>1.95</td><td>1.88</td><td>high</td><td>0.15</td><td>9</td><td>-6</td><td>-15</td></tr>
+<tr><td>2026-08-10T10:00:05.000Z</td><td align="right">PRICE_CHANGE</td><td>1.55</td><td>1.62</td><td>high</td><td>0.15</td><td>-4</td><td>-19</td><td>-15</td></tr>
+</tbody>
+</table>
+<h2 id="preset-all"><a href="#preset-all">Preset <code>all</code></a></h2>
+<table>
+<thead>
+<tr><th>time</th><th align="right">timeMs</th><th>eventType</th><th>eventId</th><th>period</th><th>marketType</th><th>selection</th><th>detail</th><th>file</th><th align="right">from</th><th align="right">to</th><th>sportKey</th><th>phase</th><th>marketClass</th><th>actionThreshold</th><th>voidRisk</th><th>preferUnitMkts</th><th align="right">pVoidPrior</th><th>pliveEqEzlive</th><th>sizingNote</th><th>summary</th><th>maxSeverity</th><th>patternIds</th><th align="right">patternCount</th><th>eyeOpeners</th><th align="right">voidEv</th><th align="right">twoWayEv</th><th align="right">voidDelta</th></tr>
+</thead>
+<tbody>
+<tr><td>2026-08-10T10:00:01.000Z</td><td align="right">1786356001000</td><td>MARKET_ADDED</td><td>197510101</td><td>m</td><td>3</td><td>—</td><td>market m/3 offered</td><td>event-197510101.jsonl</td><td align="right">—</td><td align="right">—</td><td>tennis</td><td>live</td><td>match_ml</td><td>match_completed</td><td>high</td><td>true</td><td align="right">0.15</td><td>true</td><td>live match ML: high void on unfinished match — prefer completed set/gam…</td><td>tennis · live · match_ml · action=match_completed · voidRisk=high · pre…</td><td>high</td><td>void.live-ml-unfinished, fill.secondary-confirmation, phase.pre…</td><td align="right">6</td><td>[high] void.live-ml-unfinished: Live ML void risk=high (action: match_c…</td><td align="right">—</td><td align="right">—</td><td align="right">—</td></tr>
+<tr><td>2026-08-10T10:00:02.000Z</td><td align="right">1786356002000</td><td>PRICE_CHANGE</td><td>197510101</td><td>m</td><td>3</td><td>1</td><td>price m/3/1 1.9→1.95</td><td>event-197510101.jsonl</td><td align="right">1.9</td><td align="right">1.95</td><td>tennis</td><td>live</td><td>match_ml</td><td>match_completed</td><td>high</td><td>true</td><td align="right">0.15</td><td>true</td><td>live match ML: high void on unfinished match — prefer completed set/gam…</td><td>tennis · live · match_ml · action=match_completed · voidRisk=high · pre…</td><td>high</td><td>void.live-ml-unfinished, fill.secondary-confirmation, phase.pre…</td><td align="right">6</td><td>[high] void.live-ml-unfinished: Live ML void risk=high (action: match_c…</td><td align="right">12.5</td><td align="right">-2.5</td><td align="right">-15</td></tr>
+<tr><td>2026-08-10T10:00:03.000Z</td><td align="right">1786356003000</td><td>MARKET_ADDED</td><td>197510101</td><td>s1</td><td>3</td><td>—</td><td>market s1/3 offered</td><td>event-197510101.jsonl</td><td align="right">—</td><td align="right">—</td><td>tennis</td><td>live</td><td>period_ml</td><td>period_completed_before_stop</td><td>medium</td><td>false</td><td align="right">0.05</td><td>true</td><td>size residual action path only · patterns: fill.secondary-confirmation</td><td>tennis · live · period_ml · action=period_completed_before_stop · voidR…</td><td>watch</td><td>fill.secondary-confirmation, phase.prematch-vs-live-product</td><td align="right">4</td><td>[watch] fill.secondary-confirmation: In-play secondary confirmation + d…</td><td align="right">—</td><td align="right">—</td><td align="right">—</td></tr>
+<tr><td>2026-08-10T10:00:04.000Z</td><td align="right">1786356004000</td><td>PRICE_CHANGE</td><td>197510101</td><td>m</td><td>4</td><td>1</td><td>price m/4/1 1.5→1.55</td><td>event-197510101.jsonl</td><td align="right">1.5</td><td align="right">1.55</td><td>tennis</td><td>live</td><td>match_ml</td><td>match_completed</td><td>high</td><td>true</td><td align="right">0.15</td><td>true</td><td>live match ML: high void on unfinished match — prefer completed set/gam…</td><td>tennis · live · match_ml · action=match_completed · voidRisk=high · pre…</td><td>high</td><td>void.live-ml-unfinished, fill.secondary-confirmation, phase.pre…</td><td align="right">6</td><td>[high] void.live-ml-unfinished: Live ML void risk=high (action: match_c…</td><td align="right">-7.5</td><td align="right">-22.5</td><td align="right">-15</td></tr>
+<tr><td>2026-08-10T10:00:05.000Z</td><td align="right">1786356005000</td><td>PRICE_CHANGE</td><td>197510101</td><td>m</td><td>3</td><td>1</td><td>price m/3/1 1.95→1.88</td><td>event-197510101.jsonl</td><td align="right">1.95</td><td align="right">1.88</td><td>tennis</td><td>live</td><td>match_ml</td><td>match_completed</td><td>high</td><td>true</td><td align="right">0.15</td><td>true</td><td>live match ML: high void on unfinished match — prefer completed set/gam…</td><td>tennis · live · match_ml · action=match_completed · voidRisk=high · pre…</td><td>high</td><td>void.live-ml-unfinished, fill.secondary-confirmation, phase.pre…</td><td align="right">6</td><td>[high] void.live-ml-unfinished: Live ML void risk=high (action: match_c…</td><td align="right">9</td><td align="right">-6</td><td align="right">-15</td></tr>
+<tr><td>2026-08-10T10:00:05.000Z</td><td align="right">1786356005000</td><td>PRICE_CHANGE</td><td>197510101</td><td>m</td><td>4</td><td>1</td><td>price m/4/1 1.55→1.62</td><td>event-197510101.jsonl</td><td align="right">1.55</td><td align="right">1.62</td><td>tennis</td><td>live</td><td>match_ml</td><td>match_completed</td><td>high</td><td>true</td><td align="right">0.15</td><td>true</td><td>live match ML: high void on unfinished match — prefer completed set/gam…</td><td>tennis · live · match_ml · action=match_completed · voidRisk=high · pre…</td><td>high</td><td>void.live-ml-unfinished, fill.secondary-confirmation, phase.pre…</td><td align="right">6</td><td>[high] void.live-ml-unfinished: Live ML void risk=high (action: match_c…</td><td align="right">-4</td><td align="right">-19</td><td align="right">-15</td></tr>
+</tbody>
+</table>
+
+</body>
+</html>
