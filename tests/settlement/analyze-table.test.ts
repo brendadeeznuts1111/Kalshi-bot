@@ -6,12 +6,14 @@ import {
   ANALYZE_COLUMN_PRESETS,
   ANALYZE_WEIGHTED_ALL_COLUMNS,
   ANALYZE_WEIGHTED_FIELD_SCHEMA,
+  analyzeRowIdentity,
   buildAnalyzeInspectMeta,
   buildAnalyzePresetNav,
   buildAnalyzeSchemaDocument,
   buildAnalyzeSnapshotArtifact,
   buildAnalyzeSummaryChipsHtml,
   defaultRowSortForPreset,
+  diffAnalyzeDisplay,
   filterAnalyzeRows,
   flattenWeightedEventRow,
   formatAnalyzeBanner,
@@ -22,8 +24,10 @@ import {
   formatAnalyzeMarkdownTable,
   parseAnalyzeCsvList,
   parseAnalyzeRowSortBy,
+  parseAnalyzeTimeBound,
   patternFamilyMatches,
   pipelineAnalyzeRows,
+  resolveAnalyzeBundlePaths,
   resolveAnalyzeColumns,
   sortAnalyzeRows,
   summarizeAnalyzeRows,
@@ -342,5 +346,95 @@ describe('analyze weighted table schema', () => {
     expect(html).toContain('2026-08-12T00:00:00.000Z');
     expect(html).toContain('--pattern-family=void');
     expect(html).toContain('--has-eye');
+  });
+
+  test('structural filters + time bounds + watch delta + bundle paths', () => {
+    const t0 = Date.parse('2026-08-10T10:00:00.000Z');
+    const rows = [
+      stubRow({
+        eventId: '197510101',
+        marketType: '3',
+        period: 'm',
+        timeMs: t0,
+        time: '2026-08-10T10:00:00.000Z',
+        voidRisk: 'medium',
+        maxSeverity: 'watch',
+        from: '1.9',
+        to: '1.95',
+      }),
+      stubRow({
+        eventId: '197510101',
+        marketType: '4',
+        period: 'm',
+        timeMs: t0 + 2000,
+        time: '2026-08-10T10:00:02.000Z',
+        voidRisk: 'high',
+        maxSeverity: 'high',
+        from: '1.5',
+        to: '1.55',
+      }),
+      stubRow({
+        eventId: '197510102',
+        marketType: '3',
+        period: 's1',
+        timeMs: t0 + 5000,
+        time: '2026-08-10T10:00:05.000Z',
+        voidRisk: 'low',
+        maxSeverity: 'info',
+        from: '—',
+        to: '—',
+      }),
+    ];
+    expect(parseAnalyzeTimeBound('2026-08-10T10:00:01.000Z')).toBe(t0 + 1000);
+    expect(parseAnalyzeTimeBound(String(t0))).toBe(t0);
+    expect(filterAnalyzeRows(rows, { marketType: ['3'] })).toHaveLength(2);
+    expect(filterAnalyzeRows(rows, { period: ['m'] })).toHaveLength(2);
+    expect(filterAnalyzeRows(rows, { eventId: ['197510102'] })).toHaveLength(1);
+    expect(
+      filterAnalyzeRows(rows, { sinceMs: t0 + 1000, untilMs: t0 + 3000 }),
+    ).toHaveLength(1);
+    const next = [
+      ...rows,
+      stubRow({
+        eventId: '197510101',
+        marketType: '3',
+        period: 'm',
+        timeMs: t0 + 9000,
+        from: '1.95',
+        to: '1.88',
+        voidRisk: 'high',
+      }),
+    ];
+    // Escalate risk on first row identity by replacing with worse risk
+    const escalated = rows.map((r, i) =>
+      i === 0 ? { ...r, voidRisk: 'high', maxSeverity: 'high' } : r,
+    );
+    const delta = diffAnalyzeDisplay(rows, escalated);
+    expect(delta).not.toBeNull();
+    expect(delta!.stable).toBe(3);
+    expect(delta!.riskWorse).toBe(1);
+    expect(delta!.hint).toContain('risk↑');
+    const added = diffAnalyzeDisplay(rows, next);
+    expect(added!.added).toBe(1);
+    expect(added!.hint).toMatch(/\+1/);
+    expect(diffAnalyzeDisplay(null, rows)).toBeNull();
+    expect(analyzeRowIdentity(rows[0]!)).toContain('197510101');
+    const paths = resolveAnalyzeBundlePaths('/tmp/desk.html');
+    expect(paths).toEqual({
+      stem: '/tmp/desk',
+      html: '/tmp/desk.html',
+      csv: '/tmp/desk.csv',
+      md: '/tmp/desk.md',
+    });
+    const html = formatAnalyzeHtmlReport({
+      sportId: 'tennis',
+      phase: 'live',
+      sortBy: ['severity'],
+      rows: escalated,
+      delta: delta!,
+      presets: ['desk'],
+    });
+    expect(html).toContain('Watch delta');
+    expect(html).toContain('risk worse');
   });
 });

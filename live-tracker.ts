@@ -12,7 +12,9 @@
  *   bun live-tracker.ts analyze --sport=tennis --phase=live --columns=ev --sort-rows=voidDelta --csv
  *   bun live-tracker.ts analyze --sport=tennis --phase=live --void-risk=high --limit=10 --table
  *   bun live-tracker.ts analyze --sport=tennis --phase=live --pattern=void.live --has-eye --table
+ *   bun live-tracker.ts analyze --sport=tennis --phase=live --market-type=3 --periods=m --since=2026-08-10T10:00:00Z --table
  *   bun live-tracker.ts analyze --sport=tennis --phase=live --columns=desk --html --watch --interval=5
+ *   bun live-tracker.ts analyze --sport=tennis --phase=live --columns=desk --bundle --output /tmp/desk
  *   bun live-tracker.ts patterns [--sort-by family|id] [--desc] [--json|--inspect]
  *   bun live-tracker.ts diff --columns File,Event,Detail --desc --output out.csv --format csv
  *   bun live-tracker.ts diff --tail 10 --watch --interval 2
@@ -116,6 +118,7 @@ const BOOLEAN_FLAGS = new Set([
   'no-color',
   'rows-desc',
   'has-eye',
+  'bundle',
 ]);
 
 function positionalAfterCmd(cmd: string): string[] {
@@ -158,7 +161,9 @@ Usage:
                               [--void-risk high|medium|low] [--max-severity critical|high|watch|info]
                               [--market-class match_ml|…] [--event-type PRICE_CHANGE|…] [--limit N]
                               [--pattern id-substring…] [--pattern-family void|fill|…] [--has-eye]
-                              [--watch] [--interval sec]  # reload logs; HTML gets meta refresh
+                              [--market-type 3,4] [--periods m,s1] [--event-id ID] [--since ISO|epoch] [--until …]
+                              [--watch] [--interval sec]  # reload logs; HTML meta refresh + Δ chips
+                              [--bundle]  # write .html + .csv + .md next to --output stem
                               [--bake]   # write docs/artifacts live-tracker-analyze-* (+ .html)
   bun live-tracker.ts patterns [--sort-by family|severity|id] [--desc] [--json|--inspect]
   bun live-tracker.ts chart   --event ID --market TYPE [--event ID --market TYPE …]
@@ -175,10 +180,12 @@ analyze --sort-rows: voidRisk | voidDelta | voidEv | maxSeverity | time | eventT
   (comma-separated; orthogonal to pattern --sort-by). Default: voidRisk,maxSeverity,time
   (ev preset → voidDelta,voidEv,time). --rows-desc reverses display order.
 analyze triage: --void-risk / --max-severity / --market-class / --event-type (allowlists)
+  --market-type / --periods / --event-id / --since / --until
   --pattern (substring in patternIds) / --pattern-family / --has-eye
   then sort, then --limit N (top-N after sort). Banner/HTML chips reflect filtered rows.
 analyze --watch: reload source logs every --interval sec (default 5). TTY table clears;
-  --html rewrites file + injects meta refresh (open once with --open).
+  --html rewrites file + injects meta refresh (open once with --open); banner shows Δ vs last tick.
+analyze --bundle: write stem.html + stem.csv + stem.md (stem from --output or cache path).
 
 Examples:
   bun live-tracker.ts diff old.json new.json --event-type MARKET_ADDED --sort-by time --limit 5
@@ -189,7 +196,9 @@ Examples:
   bun live-tracker.ts analyze --sport=tennis --phase=live --columns=ev --sort-rows=voidDelta --csv
   bun live-tracker.ts analyze --sport=tennis --phase=live --void-risk=high --limit=5 --columns=desk --table
   bun live-tracker.ts analyze --sport=tennis --phase=live --pattern=void.live --has-eye --columns=patterns --table
+  bun live-tracker.ts analyze --sport=tennis --phase=live --market-type=3 --periods=m --columns=desk --table
   bun live-tracker.ts analyze --sport=tennis --phase=live --columns=desk --html --watch --interval=5 --open
+  bun live-tracker.ts analyze --sport=tennis --phase=live --columns=desk --bundle --output /tmp/desk
   bun live-tracker.ts analyze --sport=tennis --phase=live --columns=all --bake
   bun live-tracker.ts analyze --sport=tennis --phase=live --columns=desk --html --output /tmp/desk.html
   bun live-tracker.ts analyze --sport=tennis --phase=live --columns=desk,ev --html --open
@@ -633,10 +642,14 @@ if (cmd === 'analyze') {
       parseEdgePatternSortBy,
       parseAnalyzeRowSortBy,
       parseAnalyzeCsvList,
+      parseAnalyzeTimeBound,
       buildAnalyzeSchemaDocument,
       formatAnalyzeCsv,
       renderSportAnalyze,
+      resolveAnalyzeBundlePaths,
     } = await import('./src/settlement/index.ts');
+    type AnalyzeWeightedRow = import('./src/settlement/index.ts').AnalyzeWeightedRow;
+    type AnalyzeRowSummary = import('./src/settlement/index.ts').AnalyzeRowSummary;
     const { inspectSnapshot } = await import('./src/research/bun-native.ts');
     const phase =
       argValue('phase') === 'prematch' ? 'prematch' : 'live';
@@ -648,15 +661,20 @@ if (cmd === 'analyze') {
     const sortRowsArg = argValue('sort-rows');
     const rowSortBy = sortRowsArg ? parseAnalyzeRowSortBy(sortRowsArg) : undefined;
     const rowSortDesc = hasFlag('rows-desc');
-    // Triage allowlists + pattern-hit filters (filter → sort → limit)
+    // Triage allowlists + pattern-hit + structural filters (filter → sort → limit)
     const rowFilter = {
       voidRisk: parseAnalyzeCsvList(argValue('void-risk')),
       maxSeverity: parseAnalyzeCsvList(argValue('max-severity')),
       marketClass: parseAnalyzeCsvList(argValue('market-class')),
       eventType: parseAnalyzeCsvList(argValue('event-type')),
+      marketType: parseAnalyzeCsvList(argValue('market-type')),
+      period: parseAnalyzeCsvList(argValue('periods')),
+      eventId: parseAnalyzeCsvList(argValue('event-id')),
       pattern: parseAnalyzeCsvList(argValue('pattern')),
       patternFamily: parseAnalyzeCsvList(argValue('pattern-family')),
       hasEye: hasFlag('has-eye') ? true : undefined,
+      sinceMs: parseAnalyzeTimeBound(argValue('since')),
+      untilMs: parseAnalyzeTimeBound(argValue('until')),
     };
     const limitRaw = argValue('limit');
     const rowLimit =
@@ -681,6 +699,8 @@ if (cmd === 'analyze') {
 
     let baked = false;
     let htmlOpened = false;
+    let prevRows: AnalyzeWeightedRow[] | null = null;
+    let prevSummary: AnalyzeRowSummary | null = null;
 
     const runOnce = async (opts: { clearTty: boolean; openHtml: boolean }) => {
       const paths = pos.length ? pos : await resolveFromPaths();
@@ -704,8 +724,12 @@ if (cmd === 'analyze') {
         rowFilter,
         rowLimit,
         autoRefreshSec,
+        prevRows,
+        prevSummary,
       });
-      const { artifact, banner, inspectMeta, tableInspect, tableMarkdown } = render;
+      const { artifact, banner, inspectMeta, tableInspect, tableMarkdown, delta } = render;
+      prevRows = [...artifact.rows];
+      prevSummary = artifact.summary;
 
       // Bake once (sample SSOT) — not every watch tick
       if (!baked && (hasFlag('bake') || hasFlag('write-sample'))) {
@@ -727,6 +751,60 @@ if (cmd === 'analyze') {
         baked = true;
       }
 
+      const watchNote = () => {
+        const d = delta ? ` · ${delta.hint}` : '';
+        return `# analyze watch · ${sportId}/${phase} · rows=${artifact.rows.length}${d} · ${new Date().toISOString()}`;
+      };
+
+      // Multi-format bundle: stem.html + stem.csv + stem.md
+      if (hasFlag('bundle')) {
+        const colLabel =
+          colArg?.replace(/,/g, '-') ?? (hasFlag('all-columns') ? 'all' : 'desk');
+        const defaultStem = joinPath(
+          CACHE_DIR,
+          'live-tracker',
+          `analyze-${sportId}-${phase}-${colLabel}`,
+        );
+        const outStem = argValue('output') ?? argValue('out') ?? defaultStem;
+        const pathsBundle = resolveAnalyzeBundlePaths(outStem);
+        const { dirname } = await import('node:path');
+        for (const p of [pathsBundle.html, pathsBundle.csv, pathsBundle.md]) {
+          const dir = dirname(p);
+          if (dir && dir !== '.' && dir !== '/') {
+            try {
+              await Bun.$`mkdir -p ${dir}`.quiet();
+            } catch {
+              /* best-effort */
+            }
+          }
+        }
+        await Bun.write(pathsBundle.html, render.htmlView.endsWith('\n') ? render.htmlView : render.htmlView + '\n');
+        await Bun.write(
+          pathsBundle.csv,
+          formatAnalyzeCsv(artifact.rows, render.columns),
+        );
+        await Bun.write(
+          pathsBundle.md,
+          `${banner}\n\n${tableMarkdown}\n`,
+        );
+        console.error(
+          `bundle ${pathsBundle.html}\n       ${pathsBundle.csv}\n       ${pathsBundle.md}`,
+        );
+        if (opts.openHtml && hasFlag('open') && !htmlOpened) {
+          try {
+            await Bun.$`open ${pathsBundle.html}`.quiet();
+            console.error(`opened ${pathsBundle.html}`);
+            htmlOpened = true;
+          } catch (err) {
+            console.error(
+              `open failed: ${err instanceof Error ? err.message : String(err)}`,
+            );
+          }
+        }
+        if (watching) console.error(watchNote());
+        return;
+      }
+
       if (hasFlag('inspect') || argValue('format') === 'inspect') {
         const depthRaw = argValue('depth');
         const depth =
@@ -734,7 +812,7 @@ if (cmd === 'analyze') {
         const meta = inspectSnapshot(inspectMeta, { colors, depth, sorted: true });
         if (opts.clearTty && process.stdout.isTTY && !argValue('output') && !argValue('out')) {
           console.clear();
-          console.error(`# analyze watch · ${sportId}/${phase} · ${new Date().toISOString()}`);
+          console.error(watchNote());
         }
         await writeOrPrint(meta + '\n\n' + tableInspect + '\n');
         return;
@@ -759,7 +837,7 @@ if (cmd === 'analyze') {
         if (shouldOpen) htmlOpened = true;
         if (watching) {
           console.error(
-            `# analyze html watch · rows=${artifact.rows.length} · refresh=${autoRefreshSec}s · ${new Date().toISOString()}`,
+            `${watchNote()} · refresh=${autoRefreshSec}s`,
           );
         }
         return;
@@ -771,7 +849,7 @@ if (cmd === 'analyze') {
       if (hasFlag('table') || argValue('format') === 'table') {
         if (opts.clearTty && process.stdout.isTTY && !argValue('output') && !argValue('out')) {
           console.clear();
-          console.error(`# analyze watch · ${sportId}/${phase} · ${new Date().toISOString()}`);
+          console.error(watchNote());
         }
         await writeOrPrint(banner + '\n\n' + tableInspect + '\n');
         return;
@@ -798,7 +876,7 @@ if (cmd === 'analyze') {
       }
       if (opts.clearTty && process.stdout.isTTY && !argValue('output') && !argValue('out')) {
         console.clear();
-        console.error(`# analyze watch · ${sportId}/${phase} · ${new Date().toISOString()}`);
+        console.error(watchNote());
       }
       await writeOrPrint(lines.join('\n') + '\n');
     };

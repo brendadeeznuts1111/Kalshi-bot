@@ -536,6 +536,12 @@ export type AnalyzeRowFilter = {
   maxSeverity?: readonly string[];
   marketClass?: readonly string[];
   eventType?: readonly string[];
+  /** Pandora market type ids (`3`, `4`, …). */
+  marketType?: readonly string[];
+  /** Period tokens (`m`, `s1`, …) — orthogonal to weighting `--period`. */
+  period?: readonly string[];
+  /** Event id allowlist. */
+  eventId?: readonly string[];
   /**
    * Substring match against `patternIds` (any needle hits).
    * e.g. `void.live-ml-unfinished` or bare `void`.
@@ -548,6 +554,10 @@ export type AnalyzeRowFilter = {
   patternFamily?: readonly string[];
   /** When true, only rows with non-empty eyeOpeners. */
   hasEye?: boolean;
+  /** Inclusive lower bound on `timeMs` (epoch ms). */
+  sinceMs?: number;
+  /** Inclusive upper bound on `timeMs` (epoch ms). */
+  untilMs?: number;
 };
 
 /** Parse comma list (`high,medium`) → trimmed tokens; empty → undefined. */
@@ -558,6 +568,21 @@ export function parseAnalyzeCsvList(raw: string | undefined | null): string[] | 
     .map(s => s.trim())
     .filter(Boolean);
   return parts.length ? parts : undefined;
+}
+
+/**
+ * Parse `--since` / `--until`: ISO-8601 or epoch (ms if ≥1e12, else seconds).
+ */
+export function parseAnalyzeTimeBound(raw: string | undefined | null): number | undefined {
+  if (!raw?.trim()) return undefined;
+  const s = raw.trim();
+  if (/^-?\d+(\.\d+)?$/.test(s)) {
+    const n = Number(s);
+    if (!Number.isFinite(n)) return undefined;
+    return Math.abs(n) < 1e12 ? Math.round(n * 1000) : Math.round(n);
+  }
+  const t = Date.parse(s);
+  return Number.isFinite(t) ? t : undefined;
 }
 
 function allowlistHit(value: unknown, allow: readonly string[] | undefined): boolean {
@@ -598,15 +623,33 @@ function hasEyeOpeners(value: unknown): boolean {
   return s.length > 0 && s !== '—';
 }
 
+function inTimeWindow(
+  timeMs: unknown,
+  sinceMs: number | undefined,
+  untilMs: number | undefined,
+): boolean {
+  if (sinceMs == null && untilMs == null) return true;
+  const t = numOrNull(timeMs);
+  if (t == null) return false;
+  if (sinceMs != null && t < sinceMs) return false;
+  if (untilMs != null && t > untilMs) return false;
+  return true;
+}
+
 function filterIsEmpty(filter: AnalyzeRowFilter): boolean {
   return (
     !filter.voidRisk?.length &&
     !filter.maxSeverity?.length &&
     !filter.marketClass?.length &&
     !filter.eventType?.length &&
+    !filter.marketType?.length &&
+    !filter.period?.length &&
+    !filter.eventId?.length &&
     !filter.pattern?.length &&
     !filter.patternFamily?.length &&
-    !filter.hasEye
+    !filter.hasEye &&
+    filter.sinceMs == null &&
+    filter.untilMs == null
   );
 }
 
@@ -616,17 +659,33 @@ export function filterAnalyzeRows(
   filter: AnalyzeRowFilter = {},
 ): AnalyzeWeightedRow[] {
   if (filterIsEmpty(filter)) return [...rows];
-  const { voidRisk, maxSeverity, marketClass, eventType, pattern, patternFamily, hasEye } =
-    filter;
+  const {
+    voidRisk,
+    maxSeverity,
+    marketClass,
+    eventType,
+    marketType,
+    period,
+    eventId,
+    pattern,
+    patternFamily,
+    hasEye,
+    sinceMs,
+    untilMs,
+  } = filter;
   return rows.filter(
     r =>
       allowlistHit(r.voidRisk, voidRisk) &&
       allowlistHit(r.maxSeverity, maxSeverity) &&
       allowlistHit(r.marketClass, marketClass) &&
       allowlistHit(r.eventType, eventType) &&
+      allowlistHit(r.marketType, marketType) &&
+      allowlistHit(r.period, period) &&
+      allowlistHit(r.eventId, eventId) &&
       fieldContainsAny(r.patternIds, pattern) &&
       patternFamilyMatches(r.patternIds, patternFamily) &&
-      (hasEye ? hasEyeOpeners(r.eyeOpeners) : true),
+      (hasEye ? hasEyeOpeners(r.eyeOpeners) : true) &&
+      inTimeWindow(r.timeMs, sinceMs, untilMs),
   );
 }
 
@@ -658,9 +717,14 @@ export function pipelineAnalyzeRows(
   if (f.maxSeverity?.length) bits.push(`sev=${f.maxSeverity.join('|')}`);
   if (f.marketClass?.length) bits.push(`class=${f.marketClass.join('|')}`);
   if (f.eventType?.length) bits.push(`type=${f.eventType.join('|')}`);
+  if (f.marketType?.length) bits.push(`mkt=${f.marketType.join('|')}`);
+  if (f.period?.length) bits.push(`period=${f.period.join('|')}`);
+  if (f.eventId?.length) bits.push(`event=${f.eventId.join('|')}`);
   if (f.pattern?.length) bits.push(`pattern=${f.pattern.join('|')}`);
   if (f.patternFamily?.length) bits.push(`family=${f.patternFamily.join('|')}`);
   if (f.hasEye) bits.push('hasEye');
+  if (f.sinceMs != null) bits.push(`since=${f.sinceMs}`);
+  if (f.untilMs != null) bits.push(`until=${f.untilMs}`);
   const sortKeys = options.sortBy
     ? Array.isArray(options.sortBy)
       ? options.sortBy
@@ -669,6 +733,140 @@ export function pipelineAnalyzeRows(
   bits.push(`sort=${sortKeys.join(',')}${options.desc ? ' desc' : ''}`);
   if (lim != null) bits.push(`limit=${lim}`);
   return { rows: out, hint: bits.join(' · ') };
+}
+
+/**
+ * Stable identity for watch-tick deltas (event + market line + stamp + price jump).
+ */
+export function analyzeRowIdentity(r: AnalyzeWeightedRow): string {
+  return [
+    r.eventId,
+    r.period,
+    r.marketType,
+    r.selection,
+    r.eventType,
+    r.timeMs ?? r.time,
+    r.from,
+    r.to,
+  ].join('|');
+}
+
+/** Watch-tick delta between previous and current display rows. */
+export type AnalyzeDisplayDelta = {
+  added: number;
+  removed: number;
+  stable: number;
+  /** Stable rows whose voidRisk rank worsened (high < medium < low). */
+  riskWorse: number;
+  riskBetter: number;
+  severityWorse: number;
+  severityBetter: number;
+  rowCountDelta: number;
+  meanVoidDeltaDelta: number | null;
+  /** Compact banner / chip hint. */
+  hint: string;
+};
+
+/**
+ * Compare two display snapshots (typically consecutive `--watch` ticks).
+ * Returns null when `prev` is absent (first tick).
+ */
+export function diffAnalyzeDisplay(
+  prev: readonly AnalyzeWeightedRow[] | null | undefined,
+  next: readonly AnalyzeWeightedRow[],
+  options: {
+    prevSummary?: AnalyzeRowSummary | null;
+    nextSummary?: AnalyzeRowSummary | null;
+  } = {},
+): AnalyzeDisplayDelta | null {
+  if (!prev) return null;
+  const prevMap = new Map(prev.map(r => [analyzeRowIdentity(r), r]));
+  const nextMap = new Map(next.map(r => [analyzeRowIdentity(r), r]));
+  let added = 0;
+  let removed = 0;
+  let stable = 0;
+  let riskWorse = 0;
+  let riskBetter = 0;
+  let severityWorse = 0;
+  let severityBetter = 0;
+  for (const [k, nr] of nextMap) {
+    const pr = prevMap.get(k);
+    if (!pr) {
+      added++;
+      continue;
+    }
+    stable++;
+    const prRisk = rankOrTail(VOID_RISK_RANK, String(pr.voidRisk));
+    const nrRisk = rankOrTail(VOID_RISK_RANK, String(nr.voidRisk));
+    if (nrRisk < prRisk) riskWorse++;
+    else if (nrRisk > prRisk) riskBetter++;
+    const prSev = rankOrTail(SEVERITY_RANK, String(pr.maxSeverity));
+    const nrSev = rankOrTail(SEVERITY_RANK, String(nr.maxSeverity));
+    if (nrSev < prSev) severityWorse++;
+    else if (nrSev > prSev) severityBetter++;
+  }
+  for (const k of prevMap.keys()) {
+    if (!nextMap.has(k)) removed++;
+  }
+  const prevSum = options.prevSummary ?? summarizeAnalyzeRows(prev);
+  const nextSum = options.nextSummary ?? summarizeAnalyzeRows(next);
+  const rowCountDelta = nextSum.rowCount - prevSum.rowCount;
+  const meanVoidDeltaDelta =
+    prevSum.meanVoidDelta != null && nextSum.meanVoidDelta != null
+      ? nextSum.meanVoidDelta - prevSum.meanVoidDelta
+      : null;
+  const bits: string[] = [];
+  if (added) bits.push(`+${added}`);
+  if (removed) bits.push(`-${removed}`);
+  if (riskWorse) bits.push(`risk↑${riskWorse}`);
+  if (riskBetter) bits.push(`risk↓${riskBetter}`);
+  if (severityWorse) bits.push(`sev↑${severityWorse}`);
+  if (severityBetter) bits.push(`sev↓${severityBetter}`);
+  if (rowCountDelta) bits.push(`rows${rowCountDelta > 0 ? '+' : ''}${rowCountDelta}`);
+  if (meanVoidDeltaDelta != null && Math.abs(meanVoidDeltaDelta) >= 0.05) {
+    bits.push(`voidΔ${meanVoidDeltaDelta > 0 ? '+' : ''}${meanVoidDeltaDelta.toFixed(1)}`);
+  }
+  if (!bits.length) bits.push('Δ0');
+  return {
+    added,
+    removed,
+    stable,
+    riskWorse,
+    riskBetter,
+    severityWorse,
+    severityBetter,
+    rowCountDelta,
+    meanVoidDeltaDelta,
+    hint: bits.join(' '),
+  };
+}
+
+/** HTML chip strip for watch-tick delta. */
+export function buildAnalyzeDeltaChipsHtml(delta: AnalyzeDisplayDelta): string {
+  const chips: string[] = [
+    `<span class="chip chip-meta">Δ <span class="n">${delta.hint}</span></span>`,
+  ];
+  if (delta.added) {
+    chips.push(
+      `<span class="chip chip-risk-medium">added <span class="n">${delta.added}</span></span>`,
+    );
+  }
+  if (delta.removed) {
+    chips.push(
+      `<span class="chip chip-meta">removed <span class="n">${delta.removed}</span></span>`,
+    );
+  }
+  if (delta.riskWorse) {
+    chips.push(
+      `<span class="chip chip-risk-high">risk worse <span class="n">${delta.riskWorse}</span></span>`,
+    );
+  }
+  if (delta.severityWorse) {
+    chips.push(
+      `<span class="chip chip-sev-high">sev worse <span class="n">${delta.severityWorse}</span></span>`,
+    );
+  }
+  return `<div class="summary-chips" aria-label="Watch delta">${chips.join('')}</div>\n`;
 }
 
 /** GFM/CSV-safe cell. */
@@ -1093,6 +1291,8 @@ export function wrapAnalyzeHtmlDocument(input: {
   sortHint?: string;
   /** Pre-built summary chip strip. */
   chipsHtml?: string;
+  /** Watch-tick delta chips (optional). */
+  deltaChipsHtml?: string;
   /**
    * Browser auto-reload interval (seconds). Used with analyze `--watch --html`
    * so the written file refreshes without re-open.
@@ -1132,6 +1332,7 @@ export function wrapAnalyzeHtmlDocument(input: {
   const liveBar = liveBits.length
     ? `<div class="summary-chips" aria-label="Live status">${liveBits.join('')}</div>\n`
     : '';
+  const delta = input.deltaChipsHtml ?? '';
   const chips = input.chipsHtml ?? '';
   const nav = input.navHtml ?? '';
   const recipe = input.footer?.recipe
@@ -1148,7 +1349,7 @@ ${ANALYZE_HTML_STYLES}
 </style>
 </head>
 <body>
-${badge}${sortHint}${liveBar}${chips}${nav}${enhanced}
+${badge}${sortHint}${liveBar}${delta}${chips}${nav}${enhanced}
 ${recipe}</body>
 </html>
 `;
@@ -1176,6 +1377,8 @@ export function formatAnalyzeHtmlReport(input: {
   recipeExtra?: string[];
   /** Inject `<meta http-equiv="refresh">` for watch-mode HTML. */
   autoRefreshSec?: number;
+  /** Optional watch-tick delta for chips. */
+  delta?: AnalyzeDisplayDelta | null;
 }): string {
   const md = formatAnalyzeMarkdownReport(input);
   const body = markdownToHtml(md, 'docs');
@@ -1217,6 +1420,7 @@ export function formatAnalyzeHtmlReport(input: {
     navHtml: buildAnalyzePresetNav(navPresets),
     sortHint: input.rowSortHint,
     chipsHtml: buildAnalyzeSummaryChipsHtml(summary),
+    deltaChipsHtml: input.delta ? buildAnalyzeDeltaChipsHtml(input.delta) : undefined,
     autoRefreshSec: input.autoRefreshSec,
     generatedAt: input.generatedAt,
   });
@@ -1366,6 +1570,8 @@ export type SportAnalyzeRender = {
    * - all / free-form → full multi-preset or columns table
    */
   htmlView: string;
+  /** Watch-tick delta vs `prevRows` (null on first tick / when omitted). */
+  delta: AnalyzeDisplayDelta | null;
 };
 
 export function renderSportAnalyze(input: {
@@ -1389,6 +1595,9 @@ export function renderSportAnalyze(input: {
   rowLimit?: number;
   /** HTML meta refresh (seconds) for watch-mode desks. */
   autoRefreshSec?: number;
+  /** Previous display rows for watch-tick delta. */
+  prevRows?: readonly AnalyzeWeightedRow[] | null;
+  prevSummary?: AnalyzeRowSummary | null;
 }): SportAnalyzeRender {
   const desc = input.desc ?? false;
   const artifact = buildAnalyzeSnapshotArtifact({
@@ -1418,6 +1627,10 @@ export function renderSportAnalyze(input: {
   const displayRows = pipeline.rows;
   const displaySummary = summarizeAnalyzeRows(displayRows);
   const rowSortHint = pipeline.hint;
+  const delta = diffAnalyzeDisplay(input.prevRows, displayRows, {
+    prevSummary: input.prevSummary,
+    nextSummary: displaySummary,
+  });
   const recipeExtra = buildAnalyzeRecipeExtras({
     rowSortBy,
     rowSortDesc,
@@ -1435,6 +1648,7 @@ export function renderSportAnalyze(input: {
     summary: displaySummary,
     schemaVersion: artifact.schemaVersion,
   });
+  const deltaSuffix = delta ? ` · ${delta.hint}` : '';
   const inspectMeta = {
     ...buildAnalyzeInspectMeta({
       sportId: artifact.sportId,
@@ -1451,6 +1665,7 @@ export function renderSportAnalyze(input: {
     pipeline: rowSortHint,
     sourceRowCount: artifact.summary.rowCount,
     autoRefreshSec: input.autoRefreshSec ?? null,
+    delta,
   };
   const htmlBase = {
     sportId: artifact.sportId,
@@ -1463,6 +1678,7 @@ export function renderSportAnalyze(input: {
     rowSortHint,
     recipeExtra,
     autoRefreshSec: input.autoRefreshSec,
+    delta,
   };
   const htmlReport = formatAnalyzeHtmlReport(htmlBase);
   // HTML view honors --columns: one/more named presets, free-form fields, or full
@@ -1486,7 +1702,7 @@ export function renderSportAnalyze(input: {
     },
     columns,
     focusPreset,
-    banner: `${banner} · ${rowSortHint}`,
+    banner: `${banner} · ${rowSortHint}${deltaSuffix}`,
     inspectMeta,
     tableInspect: formatAnalyzeInspectTable(displayRows, columns, {
       colors: input.colors ?? false,
@@ -1503,6 +1719,7 @@ export function renderSportAnalyze(input: {
     }),
     htmlReport,
     htmlView,
+    delta,
   };
 }
 
@@ -1521,9 +1738,14 @@ export function buildAnalyzeRecipeExtras(input: {
   if (f?.maxSeverity?.length) extra.push(`--max-severity=${f.maxSeverity.join(',')}`);
   if (f?.marketClass?.length) extra.push(`--market-class=${f.marketClass.join(',')}`);
   if (f?.eventType?.length) extra.push(`--event-type=${f.eventType.join(',')}`);
+  if (f?.marketType?.length) extra.push(`--market-type=${f.marketType.join(',')}`);
+  if (f?.period?.length) extra.push(`--periods=${f.period.join(',')}`);
+  if (f?.eventId?.length) extra.push(`--event-id=${f.eventId.join(',')}`);
   if (f?.pattern?.length) extra.push(`--pattern=${f.pattern.join(',')}`);
   if (f?.patternFamily?.length) extra.push(`--pattern-family=${f.patternFamily.join(',')}`);
   if (f?.hasEye) extra.push('--has-eye');
+  if (f?.sinceMs != null) extra.push(`--since=${new Date(f.sinceMs).toISOString()}`);
+  if (f?.untilMs != null) extra.push(`--until=${new Date(f.untilMs).toISOString()}`);
   if (!input.usedDefaultSort) {
     const keys = Array.isArray(input.rowSortBy) ? input.rowSortBy : [input.rowSortBy];
     extra.push(`--sort-rows=${keys.join(',')}`);
@@ -1540,4 +1762,24 @@ export function buildAnalyzeRecipeExtras(input: {
     extra.push('--watch');
   }
   return extra;
+}
+
+/**
+ * Resolve multi-format bundle paths from an output stem.
+ * `desk.html` → desk.html / desk.csv / desk.md; `desk` → desk.html / …
+ */
+export function resolveAnalyzeBundlePaths(stemOrPath: string): {
+  html: string;
+  csv: string;
+  md: string;
+  stem: string;
+} {
+  const raw = stemOrPath.replace(/\/+$/, '');
+  const stem = raw.replace(/\.(html?|csv|md)$/i, '');
+  return {
+    stem,
+    html: `${stem}.html`,
+    csv: `${stem}.csv`,
+    md: `${stem}.md`,
+  };
 }

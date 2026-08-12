@@ -209,5 +209,44 @@ describe('analyze recipes (fixture jsonl)', () => {
     expect(r.htmlView).toContain('--has-eye');
     expect(r.htmlView).toContain('--watch');
     expect(r.inspectMeta.autoRefreshSec).toBe(5);
+    expect(r.delta).toBeNull();
+  });
+
+  test('market-type + periods filter and watch delta on second render', async () => {
+    const weighted = await loadWeighted();
+    const first = renderSportAnalyze({
+      sportId: 'tennis',
+      phase: 'live',
+      sortBy: ['severity', 'id'],
+      events: weighted,
+      columns: ['desk'],
+      rowFilter: { marketType: ['3'], period: ['m'] },
+    });
+    expect(first.artifact.rows.length).toBeGreaterThan(0);
+    expect(first.artifact.rows.every(r => r.marketType === '3' && r.period === 'm')).toBe(
+      true,
+    );
+    expect(first.banner).toContain('mkt=3');
+    expect(first.banner).toContain('period=m');
+    expect(first.htmlView).toContain('--market-type=3');
+    expect(first.htmlView).toContain('--periods=m');
+
+    // Second pass with prevRows: same set → Δ0
+    const second = renderSportAnalyze({
+      sportId: 'tennis',
+      phase: 'live',
+      sortBy: ['severity', 'id'],
+      events: weighted,
+      columns: ['desk'],
+      rowFilter: { marketType: ['3'], period: ['m'] },
+      prevRows: first.artifact.rows,
+      prevSummary: first.artifact.summary,
+    });
+    expect(second.delta).not.toBeNull();
+    expect(second.delta!.added).toBe(0);
+    expect(second.delta!.removed).toBe(0);
+    expect(second.delta!.hint).toBe('Δ0');
+    expect(second.banner).toContain('Δ0');
+    expect(second.htmlView).toContain('Watch delta');
   });
 });
