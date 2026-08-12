@@ -33484,6 +33484,106 @@ export const COMPETITIONS: readonly CompetitionRecord[] = [
       pandora: { leagueId: "24736", feedSportId: "89" },
     },
   },
+  {
+    id: "volleyball.ncaa_women_s_volleyball",
+    sportId: "volleyball",
+    displayName: "NCAA Women's Volleyball",
+    aliases: ["NCAA Women's Volleyball", "NCAA Volleyball Women", "NCAA Volleyball", "College Volleyball", "College Volleyball Women", "NCAA DI Women's Volleyball", "NCAA Division I Women's Volleyball", "NCAAW Volleyball"],
+    gender: "women",
+    providerMappings: {
+      plive: { inventoryBucket: "volleyball", leagueKey: "NCAA Women's Volleyball" },
+    },
+  },
+  {
+    id: "volleyball.ncaa_women_s_volleyball_tournament",
+    sportId: "volleyball",
+    displayName: "NCAA Women's Volleyball Tournament",
+    aliases: ["NCAA Women's Volleyball Tournament", "NCAA Volleyball Tournament Women", "NCAA Tournament Women's Volleyball", "NCAA Volleyball Championship Women"],
+    gender: "women",
+    providerMappings: {
+      plive: { inventoryBucket: "volleyball", leagueKey: "NCAA Women's Volleyball Tournament" },
+    },
+  },
+  {
+    id: "volleyball.ncaa_big_ten_women",
+    sportId: "volleyball",
+    displayName: "NCAA Big Ten Women's Volleyball",
+    aliases: ["NCAA Big Ten Women's Volleyball", "NCAA Big Ten Women Volleyball", "Big Ten Volleyball Women", "Big Ten Women's Volleyball", "Big Ten Women Volleyball", "NCAA Big 10 Volleyball Women", "NCAA Big Ten Volleyball Women"],
+    gender: "women",
+    providerMappings: {
+      plive: { inventoryBucket: "volleyball", leagueKey: "NCAA Big Ten Women's Volleyball" },
+    },
+  },
+  {
+    id: "volleyball.ncaa_sec_women",
+    sportId: "volleyball",
+    displayName: "NCAA SEC Women's Volleyball",
+    aliases: ["NCAA SEC Women's Volleyball", "NCAA SEC Women Volleyball", "SEC Volleyball Women", "SEC Women's Volleyball", "SEC Women Volleyball", "NCAA SEC Volleyball Women"],
+    gender: "women",
+    providerMappings: {
+      plive: { inventoryBucket: "volleyball", leagueKey: "NCAA SEC Women's Volleyball" },
+    },
+  },
+  {
+    id: "volleyball.ncaa_acc_women",
+    sportId: "volleyball",
+    displayName: "NCAA ACC Women's Volleyball",
+    aliases: ["NCAA ACC Women's Volleyball", "NCAA ACC Women Volleyball", "ACC Volleyball Women", "ACC Women's Volleyball", "ACC Women Volleyball", "NCAA ACC Volleyball Women"],
+    gender: "women",
+    providerMappings: {
+      plive: { inventoryBucket: "volleyball", leagueKey: "NCAA ACC Women's Volleyball" },
+    },
+  },
+  {
+    id: "volleyball.ncaa_big_12_women",
+    sportId: "volleyball",
+    displayName: "NCAA Big 12 Women's Volleyball",
+    aliases: ["NCAA Big 12 Women's Volleyball", "NCAA Big 12 Women Volleyball", "Big 12 Volleyball Women", "Big 12 Women's Volleyball", "Big 12 Women Volleyball", "NCAA Big Twelve Volleyball Women", "NCAA Big 12 Volleyball Women"],
+    gender: "women",
+    providerMappings: {
+      plive: { inventoryBucket: "volleyball", leagueKey: "NCAA Big 12 Women's Volleyball" },
+    },
+  },
+  {
+    id: "volleyball.ncaa_men_s_volleyball",
+    sportId: "volleyball",
+    displayName: "NCAA Men's Volleyball",
+    aliases: ["NCAA Men's Volleyball", "NCAA Volleyball Men", "College Volleyball Men", "NCAA DI Men's Volleyball"],
+    gender: "men",
+    providerMappings: {
+      plive: { inventoryBucket: "volleyball", leagueKey: "NCAA Men's Volleyball" },
+    },
+  },
+  {
+    id: "volleyball.ncaa_beach_volleyball",
+    sportId: "volleyball",
+    displayName: "NCAA Beach Volleyball",
+    aliases: ["NCAA Beach Volleyball", "NCAA Women's Beach Volleyball", "College Beach Volleyball"],
+    gender: "women",
+    providerMappings: {
+      plive: { inventoryBucket: "volleyball", leagueKey: "NCAA Beach Volleyball" },
+    },
+  },
+  {
+    id: "volleyball.ncaa_dii_women",
+    sportId: "volleyball",
+    displayName: "NCAA DII Women's Volleyball",
+    aliases: ["NCAA DII Women's Volleyball", "NCAA Division II Women's Volleyball", "NCAA D2 Volleyball Women"],
+    gender: "women",
+    providerMappings: {
+      plive: { inventoryBucket: "volleyball", leagueKey: "NCAA DII Women's Volleyball" },
+    },
+  },
+  {
+    id: "volleyball.ncaa_diii_women",
+    sportId: "volleyball",
+    displayName: "NCAA DIII Women's Volleyball",
+    aliases: ["NCAA DIII Women's Volleyball", "NCAA Division III Women's Volleyball", "NCAA D3 Volleyball Women"],
+    gender: "women",
+    providerMappings: {
+      plive: { inventoryBucket: "volleyball", leagueKey: "NCAA DIII Women's Volleyball" },
+    },
+  },
 ] satisfies readonly CompetitionRecord[];
 
 /**

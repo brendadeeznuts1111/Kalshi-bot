@@ -62,6 +62,16 @@ bun run inventory:leagues -- --backfill          # stamp ids (fresh process)
 Logic: [`competition-promote.ts`](competition-promote.ts) — junk filter +
 `planCompetitionPromote` + `applyCompetitionRecordsToSource`.
 
+### Volleyball tiers + NCAA
+
+Desk sizing tiers **A–D** and NCAA college seeds:
+
+- SSOT: [`volleyball-tiers.ts`](volleyball-tiers.ts) · doc
+  [`docs/VOLLEYBALL-TIERS.md`](../docs/VOLLEYBALL-TIERS.md)
+- Resolve: `resolveVolleyballCompetitionTier({ competitionId, leagueKey })`
+- NCAA DI women / Power 4 / tournament / men / beach / DII–DIII seeded in
+  `COMPETITIONS` (aliases ready before first plive sighting)
+
 ### Widget domain harvest (sports · markets · leagues)
 
 Provider labels from **plive shell HTML** + **Pandora rooms** (not seat gsid):
