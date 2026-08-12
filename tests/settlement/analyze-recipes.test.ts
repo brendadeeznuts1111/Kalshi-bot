@@ -83,8 +83,10 @@ describe('analyze recipes (fixture jsonl)', () => {
     const deltas = r.artifact.rows.map(row => row.voidDelta);
     expect(deltas.slice(0, 4).every(d => typeof d === 'number')).toBe(true);
     expect(deltas.slice(4).every(d => d == null)).toBe(true);
-    expect(r.banner).toContain('rowSort=voidDelta,voidEv,time');
-    expect(r.htmlView).toContain('Row sort: voidDelta,voidEv,time');
+    expect(r.banner).toContain('sort=voidDelta,voidEv,time');
+    expect(r.htmlView).toContain('Pipeline: sort=voidDelta,voidEv,time');
+    expect(r.htmlView).toContain('summary-chips');
+    expect(r.htmlView).toContain('void high');
   });
 
   test('all bake recipe: multi-preset md + html', async () => {
@@ -107,7 +109,9 @@ describe('analyze recipes (fixture jsonl)', () => {
     expect(r.htmlReport).toContain('class="risk-high"');
     expect(r.htmlReport).toContain('row-risk-high');
     expect(r.htmlReport).toContain('preset-nav');
-    expect(r.htmlReport).toContain('Row sort:');
+    expect(r.htmlReport).toContain('position: sticky');
+    expect(r.htmlReport).toContain('Pipeline:');
+    expect(r.htmlReport).toContain('summary-chips');
     expect(r.artifact.summary.meanVoidDelta).toBe(-15);
     // Default desk-like risk sort: high before medium
     expect(r.artifact.rows[0]!.voidRisk).toBe('high');
@@ -152,6 +156,33 @@ describe('analyze recipes (fixture jsonl)', () => {
     });
     const times = r.artifact.rows.map(row => row.timeMs as number);
     expect(times).toEqual([...times].sort((a, b) => a - b));
-    expect(r.banner).toContain('rowSort=time');
+    expect(r.banner).toContain('sort=time');
+  });
+
+  test('void-risk filter + limit triage recipe', async () => {
+    const weighted = await loadWeighted();
+    const r = renderSportAnalyze({
+      sportId: 'tennis',
+      phase: 'live',
+      sortBy: ['severity', 'id'],
+      events: weighted,
+      columns: ['desk'],
+      rowFilter: { voidRisk: ['high'] },
+      rowLimit: 3,
+    });
+    expect(r.artifact.rows).toHaveLength(3);
+    expect(r.artifact.rows.every(row => row.voidRisk === 'high')).toBe(true);
+    expect(r.artifact.summary.rowCount).toBe(3);
+    expect(r.artifact.summary.byVoidRisk.high).toBe(3);
+    expect(r.banner).toContain('voidRisk=high');
+    expect(r.banner).toContain('limit=3');
+    expect(r.banner).toContain('rows=3');
+    expect(r.inspectMeta).toMatchObject({
+      sourceRowCount: 6,
+      rowLimit: 3,
+      rowFilter: { voidRisk: ['high'] },
+    });
+    expect(r.htmlView).toContain('--void-risk=high');
+    expect(r.htmlView).toContain('--limit=3');
   });
 });

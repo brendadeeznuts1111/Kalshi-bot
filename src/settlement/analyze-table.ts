@@ -530,6 +530,86 @@ export function defaultRowSortForPreset(
   return { sortBy: ['voidRisk', 'maxSeverity', 'time'], desc: false };
 }
 
+/** Allowlist filters for display rows (CLI triage). Empty / omitted = no filter. */
+export type AnalyzeRowFilter = {
+  voidRisk?: readonly string[];
+  maxSeverity?: readonly string[];
+  marketClass?: readonly string[];
+  eventType?: readonly string[];
+};
+
+/** Parse comma list (`high,medium`) → trimmed tokens; empty → undefined. */
+export function parseAnalyzeCsvList(raw: string | undefined | null): string[] | undefined {
+  if (!raw?.trim()) return undefined;
+  const parts = raw
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean);
+  return parts.length ? parts : undefined;
+}
+
+function allowlistHit(value: unknown, allow: readonly string[] | undefined): boolean {
+  if (!allow?.length) return true;
+  const v = String(value ?? '').toLowerCase();
+  return allow.some(a => a.toLowerCase() === v);
+}
+
+/** Filter flat analyze rows by allowlisted field values (case-insensitive). */
+export function filterAnalyzeRows(
+  rows: readonly AnalyzeWeightedRow[],
+  filter: AnalyzeRowFilter = {},
+): AnalyzeWeightedRow[] {
+  const { voidRisk, maxSeverity, marketClass, eventType } = filter;
+  if (!voidRisk?.length && !maxSeverity?.length && !marketClass?.length && !eventType?.length) {
+    return [...rows];
+  }
+  return rows.filter(
+    r =>
+      allowlistHit(r.voidRisk, voidRisk) &&
+      allowlistHit(r.maxSeverity, maxSeverity) &&
+      allowlistHit(r.marketClass, marketClass) &&
+      allowlistHit(r.eventType, eventType),
+  );
+}
+
+/**
+ * Display pipeline: filter → sort → limit.
+ * Returns rows ready for table/HTML/CSV and a short pipeline hint for banners.
+ */
+export function pipelineAnalyzeRows(
+  rows: readonly AnalyzeWeightedRow[],
+  options: {
+    filter?: AnalyzeRowFilter;
+    sortBy?: AnalyzeRowSortKey | AnalyzeRowSortKey[];
+    desc?: boolean;
+    /** Keep first N after sort (top-N desk). */
+    limit?: number;
+  } = {},
+): { rows: AnalyzeWeightedRow[]; hint: string } {
+  let out = filterAnalyzeRows(rows, options.filter ?? {});
+  out = sortAnalyzeRows(out, { sortBy: options.sortBy, desc: options.desc });
+  const lim =
+    typeof options.limit === 'number' && Number.isFinite(options.limit) && options.limit >= 0
+      ? Math.floor(options.limit)
+      : undefined;
+  if (lim != null) out = out.slice(0, lim);
+
+  const bits: string[] = [];
+  const f = options.filter ?? {};
+  if (f.voidRisk?.length) bits.push(`voidRisk=${f.voidRisk.join('|')}`);
+  if (f.maxSeverity?.length) bits.push(`sev=${f.maxSeverity.join('|')}`);
+  if (f.marketClass?.length) bits.push(`class=${f.marketClass.join('|')}`);
+  if (f.eventType?.length) bits.push(`type=${f.eventType.join('|')}`);
+  const sortKeys = options.sortBy
+    ? Array.isArray(options.sortBy)
+      ? options.sortBy
+      : [options.sortBy]
+    : ['voidRisk', 'maxSeverity', 'time'];
+  bits.push(`sort=${sortKeys.join(',')}${options.desc ? ' desc' : ''}`);
+  if (lim != null) bits.push(`limit=${lim}`);
+  return { rows: out, hint: bits.join(' · ') };
+}
+
 /** GFM/CSV-safe cell. */
 function csvCell(v: unknown): string {
   const s = v == null ? '' : String(v);
@@ -787,10 +867,12 @@ export const ANALYZE_HTML_STYLES = `
     --border: color-mix(in srgb, currentColor 22%, transparent);
     --th-bg: color-mix(in srgb, currentColor 9%, transparent);
     --chip-bg: color-mix(in srgb, currentColor 6%, transparent);
+    --surface: color-mix(in srgb, Canvas 92%, transparent);
   }
   body { max-width: 1180px; margin: 1rem auto 2.5rem; padding: 0 0.85rem 2rem; line-height: 1.4; font-size: 14px; }
   h1 { font-size: 1.25rem; margin: 0.5rem 0 0.35rem; letter-spacing: 0.02em; }
-  h2 { font-size: 1rem; margin: 1.25rem 0 0.4rem; letter-spacing: 0.02em; }
+  h2 { font-size: 1rem; margin: 1.25rem 0 0.4rem; letter-spacing: 0.02em; scroll-margin-top: 3.25rem; }
+  h2:target { outline: 2px solid color-mix(in srgb, currentColor 35%, transparent); outline-offset: 4px; border-radius: 4px; }
   p { margin: 0.35rem 0; }
   .table-wrap { overflow-x: auto; margin: 0.5rem 0 1.25rem; border: 1px solid var(--border); border-radius: 6px; }
   table { border-collapse: collapse; width: max-content; min-width: 100%; font-size: 0.78rem; margin: 0; }
@@ -810,10 +892,32 @@ export const ANALYZE_HTML_STYLES = `
   tr.row-risk-high td { background: color-mix(in srgb, var(--risk-high) 9%, transparent); }
   tr.row-risk-medium td { background: color-mix(in srgb, var(--risk-medium) 8%, transparent); }
   tr.row-risk-low td { background: color-mix(in srgb, var(--risk-low) 7%, transparent); }
-  .preset-nav { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.6rem 0 0.85rem; }
+  .preset-nav {
+    display: flex; flex-wrap: wrap; gap: 0.4rem;
+    position: sticky; top: 0; z-index: 3;
+    margin: 0.6rem 0 0.85rem; padding: 0.45rem 0.35rem;
+    background: var(--surface);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+  }
   .preset-nav a { text-decoration: none; padding: 0.2rem 0.55rem; border-radius: 999px; border: 1px solid var(--border); font-size: 0.75rem; font-weight: 600; color: inherit; background: var(--chip-bg); }
   .preset-nav a:hover { border-color: color-mix(in srgb, currentColor 45%, transparent); }
   .sort-hint { font-size: 0.75rem; opacity: 0.8; margin: 0.2rem 0 0.5rem; }
+  .summary-chips { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0.35rem 0 0.75rem; }
+  .summary-chips .chip {
+    display: inline-flex; align-items: center; gap: 0.25rem;
+    padding: 0.15rem 0.5rem; border-radius: 999px;
+    border: 1px solid var(--border); font-size: 0.72rem; font-weight: 600;
+    background: var(--chip-bg);
+  }
+  .summary-chips .chip .n { opacity: 0.75; font-variant-numeric: tabular-nums; }
+  .chip-risk-high { color: var(--risk-high); border-color: color-mix(in srgb, var(--risk-high) 45%, transparent); }
+  .chip-risk-medium { color: var(--risk-medium); border-color: color-mix(in srgb, var(--risk-medium) 45%, transparent); }
+  .chip-risk-low { color: var(--risk-low); border-color: color-mix(in srgb, var(--risk-low) 45%, transparent); }
+  .chip-sev-critical, .chip-sev-high { color: var(--risk-high); }
+  .chip-sev-watch { color: var(--sev-watch); }
+  .chip-sev-info { color: var(--sev-info); }
+  .chip-meta { opacity: 0.9; }
 `.trim();
 
 /**
@@ -869,6 +973,51 @@ export function buildAnalyzePresetNav(
   return `<nav class="preset-nav" aria-label="Column presets">${links.join('')}</nav>\n`;
 }
 
+function chipClassForToken(kind: 'risk' | 'sev' | 'meta', token: string): string {
+  const t = token.toLowerCase();
+  if (kind === 'risk') {
+    if (t === 'high') return 'chip chip-risk-high';
+    if (t === 'medium') return 'chip chip-risk-medium';
+    if (t === 'low') return 'chip chip-risk-low';
+  }
+  if (kind === 'sev') {
+    if (t === 'critical') return 'chip chip-sev-critical';
+    if (t === 'high') return 'chip chip-sev-high';
+    if (t === 'watch') return 'chip chip-sev-watch';
+    if (t === 'info') return 'chip chip-sev-info';
+  }
+  return 'chip chip-meta';
+}
+
+/**
+ * Compact HTML chip strip for voidRisk / severity / dual-stamp (above tables).
+ */
+export function buildAnalyzeSummaryChipsHtml(summary: AnalyzeRowSummary): string {
+  const chips: string[] = [];
+  chips.push(
+    `<span class="chip chip-meta">rows <span class="n">${summary.rowCount}</span></span>`,
+  );
+  for (const [k, n] of Object.entries(summary.byVoidRisk).sort((a, b) => b[1] - a[1])) {
+    chips.push(
+      `<span class="${chipClassForToken('risk', k)}">void ${k} <span class="n">${n}</span></span>`,
+    );
+  }
+  for (const [k, n] of Object.entries(summary.byMaxSeverity).sort((a, b) => b[1] - a[1])) {
+    chips.push(
+      `<span class="${chipClassForToken('sev', k)}">sev ${k} <span class="n">${n}</span></span>`,
+    );
+  }
+  if (summary.meanVoidDelta != null) {
+    chips.push(
+      `<span class="chip chip-meta">mean voidΔ <span class="n">${summary.meanVoidDelta.toFixed(1)}</span></span>`,
+    );
+  }
+  chips.push(
+    `<span class="chip chip-meta">dual <span class="n">${summary.dualStamp.withTimeMs}/${summary.rowCount}</span></span>`,
+  );
+  return `<div class="summary-chips" aria-label="Row summary">${chips.join('')}</div>\n`;
+}
+
 /** Wrap markdown body in a minimal standalone HTML document. */
 export function wrapAnalyzeHtmlDocument(input: {
   sportId: string;
@@ -879,8 +1028,10 @@ export function wrapAnalyzeHtmlDocument(input: {
   footer?: { recipe?: string; focusLabel?: string };
   /** Multi-preset jump links (already HTML). */
   navHtml?: string;
-  /** Sort hint under title. */
+  /** Pipeline hint under title (sort / filter / limit). */
   sortHint?: string;
+  /** Pre-built summary chip strip. */
+  chipsHtml?: string;
 }): string {
   const titleExtra = input.titleExtra ? ` · ${input.titleExtra}` : '';
   const enhanced = enhanceAnalyzeHtmlBody(input.bodyHtml);
@@ -888,8 +1039,9 @@ export function wrapAnalyzeHtmlDocument(input: {
     ? `<p><span class="badge">${input.footer.focusLabel}</span></p>\n`
     : '';
   const sortHint = input.sortHint
-    ? `<p class="sort-hint">Row sort: ${input.sortHint}</p>\n`
+    ? `<p class="sort-hint">Pipeline: ${input.sortHint}</p>\n`
     : '';
+  const chips = input.chipsHtml ?? '';
   const nav = input.navHtml ?? '';
   const recipe = input.footer?.recipe
     ? `<div class="meta-footer">Recipe: <code>${input.footer.recipe}</code></div>\n`
@@ -905,7 +1057,7 @@ ${ANALYZE_HTML_STYLES}
 </style>
 </head>
 <body>
-${badge}${sortHint}${nav}${enhanced}
+${badge}${sortHint}${chips}${nav}${enhanced}
 ${recipe}</body>
 </html>
 `;
@@ -927,8 +1079,10 @@ export function formatAnalyzeHtmlReport(input: {
   columns?: readonly string[];
   /** When true, append CLI recipe footer. */
   includeRecipe?: boolean;
-  /** Displayed under title (row sort applied to `rows` by caller). */
+  /** Displayed under title (pipeline applied to `rows` by caller). */
   rowSortHint?: string;
+  /** Extra recipe fragments (`--void-risk=high` …). */
+  recipeExtra?: string[];
 }): string {
   const md = formatAnalyzeMarkdownReport(input);
   const body = markdownToHtml(md, 'docs');
@@ -945,6 +1099,7 @@ export function formatAnalyzeHtmlReport(input: {
       : !input.presets || input.presets.includes('all')
         ? [...ANALYZE_COLUMN_PRESET_NAMES]
         : [];
+  const summary = summarizeAnalyzeRows(input.rows);
   const recipe =
     input.includeRecipe !== false
       ? buildAnalyzeHtmlRecipe({
@@ -957,6 +1112,7 @@ export function formatAnalyzeHtmlReport(input: {
               : input.presets?.includes('all')
                 ? ['all']
                 : input.columns,
+          extra: input.recipeExtra,
         })
       : undefined;
   return wrapAnalyzeHtmlDocument({
@@ -967,6 +1123,7 @@ export function formatAnalyzeHtmlReport(input: {
     footer: { recipe, focusLabel },
     navHtml: buildAnalyzePresetNav(navPresets),
     sortHint: input.rowSortHint,
+    chipsHtml: buildAnalyzeSummaryChipsHtml(summary),
   });
 }
 
@@ -975,9 +1132,12 @@ export function buildAnalyzeHtmlRecipe(input: {
   sportId: string;
   phase: string;
   columns?: readonly string[];
+  /** Additional flags already formatted (`--void-risk=high`). */
+  extra?: readonly string[];
 }): string {
   const cols = input.columns?.length ? input.columns.join(',') : 'desk';
-  return `bun live-tracker.ts analyze --sport=${input.sportId} --phase=${input.phase} --columns=${cols} --html`;
+  const extras = input.extra?.length ? ` ${input.extra.join(' ')}` : '';
+  return `bun live-tracker.ts analyze --sport=${input.sportId} --phase=${input.phase} --columns=${cols}${extras} --html`;
 }
 
 /** Detect a single named column preset from --columns args. */
@@ -1128,6 +1288,10 @@ export function renderSportAnalyze(input: {
    */
   rowSortBy?: AnalyzeRowSortKey | AnalyzeRowSortKey[];
   rowSortDesc?: boolean;
+  /** Allowlist filters before sort/limit. */
+  rowFilter?: AnalyzeRowFilter;
+  /** Top-N after sort (omit = all). */
+  rowLimit?: number;
 }): SportAnalyzeRender {
   const desc = input.desc ?? false;
   const artifact = buildAnalyzeSnapshotArtifact({
@@ -1148,18 +1312,29 @@ export function renderSportAnalyze(input: {
         : defaultRowSortForPreset(null);
   const rowSortBy = input.rowSortBy ?? defaultSort.sortBy;
   const rowSortDesc = input.rowSortDesc ?? defaultSort.desc;
-  const displayRows = sortAnalyzeRows(artifact.rows, {
+  const pipeline = pipelineAnalyzeRows(artifact.rows, {
+    filter: input.rowFilter,
     sortBy: rowSortBy,
     desc: rowSortDesc,
+    limit: input.rowLimit,
   });
-  const rowSortHint = `${Array.isArray(rowSortBy) ? rowSortBy.join(',') : rowSortBy}${rowSortDesc ? ' desc' : ''}`;
+  const displayRows = pipeline.rows;
+  const displaySummary = summarizeAnalyzeRows(displayRows);
+  const rowSortHint = pipeline.hint;
+  const recipeExtra = buildAnalyzeRecipeExtras({
+    rowSortBy,
+    rowSortDesc,
+    rowFilter: input.rowFilter,
+    rowLimit: input.rowLimit,
+    usedDefaultSort: input.rowSortBy == null,
+  });
   const banner = formatAnalyzeBanner({
     sportId: artifact.sportId,
     phase: artifact.phase,
     sortBy: artifact.sortBy,
     desc: artifact.desc,
     columns,
-    summary: artifact.summary,
+    summary: displaySummary,
     schemaVersion: artifact.schemaVersion,
   });
   const inspectMeta = {
@@ -1173,8 +1348,12 @@ export function renderSportAnalyze(input: {
       schemaVersion: artifact.schemaVersion,
     }),
     rowSort: { sortBy: rowSortBy, desc: rowSortDesc },
+    rowFilter: input.rowFilter ?? {},
+    rowLimit: input.rowLimit ?? null,
+    pipeline: rowSortHint,
+    sourceRowCount: artifact.summary.rowCount,
   };
-  const htmlReport = formatAnalyzeHtmlReport({
+  const htmlBase = {
     sportId: artifact.sportId,
     phase: artifact.phase,
     sortBy: artifact.sortBy,
@@ -1183,39 +1362,31 @@ export function renderSportAnalyze(input: {
     schemaVersion: artifact.schemaVersion,
     generatedAt: artifact.generatedAt,
     rowSortHint,
-  });
+    recipeExtra,
+  };
+  const htmlReport = formatAnalyzeHtmlReport(htmlBase);
   // HTML view honors --columns: one/more named presets, free-form fields, or full
   const htmlView =
     htmlSel.kind === 'full'
       ? htmlReport
       : htmlSel.kind === 'presets'
         ? formatAnalyzeHtmlReport({
-            sportId: artifact.sportId,
-            phase: artifact.phase,
-            sortBy: artifact.sortBy,
-            desc: artifact.desc,
-            rows: displayRows,
-            schemaVersion: artifact.schemaVersion,
-            generatedAt: artifact.generatedAt,
+            ...htmlBase,
             presets: htmlSel.presets,
-            rowSortHint,
           })
         : formatAnalyzeHtmlReport({
-            sportId: artifact.sportId,
-            phase: artifact.phase,
-            sortBy: artifact.sortBy,
-            desc: artifact.desc,
-            rows: displayRows,
-            schemaVersion: artifact.schemaVersion,
-            generatedAt: artifact.generatedAt,
+            ...htmlBase,
             columns: htmlSel.fields,
-            rowSortHint,
           });
   return {
-    artifact: { ...artifact, rows: displayRows },
+    artifact: {
+      ...artifact,
+      rows: displayRows,
+      summary: displaySummary,
+    },
     columns,
     focusPreset,
-    banner: `${banner} · rowSort=${rowSortHint}`,
+    banner: `${banner} · ${rowSortHint}`,
     inspectMeta,
     tableInspect: formatAnalyzeInspectTable(displayRows, columns, {
       colors: input.colors ?? false,
@@ -1233,4 +1404,29 @@ export function renderSportAnalyze(input: {
     htmlReport,
     htmlView,
   };
+}
+
+/** Build CLI flag fragments for recipe footer (skip pure defaults). */
+export function buildAnalyzeRecipeExtras(input: {
+  rowSortBy: AnalyzeRowSortKey | AnalyzeRowSortKey[];
+  rowSortDesc: boolean;
+  rowFilter?: AnalyzeRowFilter;
+  rowLimit?: number;
+  usedDefaultSort: boolean;
+}): string[] {
+  const extra: string[] = [];
+  const f = input.rowFilter;
+  if (f?.voidRisk?.length) extra.push(`--void-risk=${f.voidRisk.join(',')}`);
+  if (f?.maxSeverity?.length) extra.push(`--max-severity=${f.maxSeverity.join(',')}`);
+  if (f?.marketClass?.length) extra.push(`--market-class=${f.marketClass.join(',')}`);
+  if (f?.eventType?.length) extra.push(`--event-type=${f.eventType.join(',')}`);
+  if (!input.usedDefaultSort) {
+    const keys = Array.isArray(input.rowSortBy) ? input.rowSortBy : [input.rowSortBy];
+    extra.push(`--sort-rows=${keys.join(',')}`);
+  }
+  if (input.rowSortDesc) extra.push('--rows-desc');
+  if (typeof input.rowLimit === 'number' && Number.isFinite(input.rowLimit)) {
+    extra.push(`--limit=${Math.floor(input.rowLimit)}`);
+  }
+  return extra;
 }

@@ -10,6 +10,7 @@
  *   bun live-tracker.ts analyze --stats
  *   bun live-tracker.ts analyze --sport=tennis --phase=live [--sort-by severity|family|id]
  *   bun live-tracker.ts analyze --sport=tennis --phase=live --columns=ev --sort-rows=voidDelta --csv
+ *   bun live-tracker.ts analyze --sport=tennis --phase=live --void-risk=high --limit=10 --table
  *   bun live-tracker.ts patterns [--sort-by family|id] [--desc] [--json|--inspect]
  *   bun live-tracker.ts diff --columns File,Event,Detail --desc --output out.csv --format csv
  *   bun live-tracker.ts diff --tail 10 --watch --interval 2
@@ -151,6 +152,8 @@ Usage:
                               [--sort-by severity|family|id] [--desc] [--verbose]
                               [--inspect|--json|--table|--html|--csv] [--columns desk|odds|settlement|patterns|ev|all|a,b,…]
                               [--sort-rows voidRisk|voidDelta|voidEv|maxSeverity|time|…] [--rows-desc]
+                              [--void-risk high|medium|low] [--max-severity critical|high|watch|info]
+                              [--market-class match_ml|…] [--event-type PRICE_CHANGE|…] [--limit N]
                               [--bake]   # write docs/artifacts live-tracker-analyze-* (+ .html)
   bun live-tracker.ts patterns [--sort-by family|severity|id] [--desc] [--json|--inspect]
   bun live-tracker.ts chart   --event ID --market TYPE [--event ID --market TYPE …]
@@ -166,6 +169,8 @@ analyze --columns presets: desk | odds | settlement | patterns | ev | all  (or c
 analyze --sort-rows: voidRisk | voidDelta | voidEv | maxSeverity | time | eventType | marketClass
   (comma-separated; orthogonal to pattern --sort-by). Default: voidRisk,maxSeverity,time
   (ev preset → voidDelta,voidEv,time). --rows-desc reverses display order.
+analyze triage: --void-risk / --max-severity / --market-class / --event-type (allowlists)
+  then sort, then --limit N (top-N after sort). Banner/HTML chips reflect filtered rows.
 
 Examples:
   bun live-tracker.ts diff old.json new.json --event-type MARKET_ADDED --sort-by time --limit 5
@@ -174,6 +179,7 @@ Examples:
   bun live-tracker.ts analyze --sport=tennis --phase=live --columns=desk --table
   bun live-tracker.ts analyze --sport=tennis --phase=live --columns=ev --inspect --no-color
   bun live-tracker.ts analyze --sport=tennis --phase=live --columns=ev --sort-rows=voidDelta --csv
+  bun live-tracker.ts analyze --sport=tennis --phase=live --void-risk=high --limit=5 --columns=desk --table
   bun live-tracker.ts analyze --sport=tennis --phase=live --columns=all --bake
   bun live-tracker.ts analyze --sport=tennis --phase=live --columns=desk --html --output /tmp/desk.html
   bun live-tracker.ts analyze --sport=tennis --phase=live --columns=desk,ev --html --open
@@ -620,6 +626,7 @@ if (cmd === 'analyze') {
     const {
       parseEdgePatternSortBy,
       parseAnalyzeRowSortBy,
+      parseAnalyzeCsvList,
       buildAnalyzeSchemaDocument,
       formatAnalyzeCsv,
       renderSportAnalyze,
@@ -641,6 +648,18 @@ if (cmd === 'analyze') {
     const sortRowsArg = argValue('sort-rows');
     const rowSortBy = sortRowsArg ? parseAnalyzeRowSortBy(sortRowsArg) : undefined;
     const rowSortDesc = hasFlag('rows-desc');
+    // Triage allowlists (filter → sort → limit)
+    const rowFilter = {
+      voidRisk: parseAnalyzeCsvList(argValue('void-risk')),
+      maxSeverity: parseAnalyzeCsvList(argValue('max-severity')),
+      marketClass: parseAnalyzeCsvList(argValue('market-class')),
+      eventType: parseAnalyzeCsvList(argValue('event-type')),
+    };
+    const limitRaw = argValue('limit');
+    const rowLimit =
+      limitRaw != null && Number.isFinite(Number(limitRaw))
+        ? Math.max(0, Math.floor(Number(limitRaw)))
+        : undefined;
     const colors =
       !hasFlag('no-color') &&
       Boolean(process.stdout.isTTY) &&
@@ -659,6 +678,8 @@ if (cmd === 'analyze') {
       colors,
       rowSortBy,
       rowSortDesc,
+      rowFilter,
+      rowLimit,
     });
     const { artifact, banner, inspectMeta, tableInspect, tableMarkdown } = render;
 
