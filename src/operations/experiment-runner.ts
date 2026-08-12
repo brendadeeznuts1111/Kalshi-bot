@@ -10,6 +10,7 @@ import {
   type FactorialDesign,
   type FactorialResult,
 } from "./factorial.ts";
+import { mintSortableId } from "../lib/ids.ts";
 import { openExperimentsDb } from "./experiment-schema.ts";
 import { persistExperimentSession } from "./experiment-store.ts";
 
@@ -41,7 +42,7 @@ export class ExperimentRunner {
 
   launch(config: LaunchExperimentConfig): string {
     const design = generateDesign(config.factors, config.fraction ?? 1);
-    const id = crypto.randomUUID();
+    const id = mintSortableId();
     const startDate = new Date().toISOString();
     const weight = design.variants.length > 0 ? 1 / design.variants.length : 1;
 
@@ -67,7 +68,7 @@ export class ExperimentRunner {
         `INSERT INTO experiment_variants (id, experiment_id, variant_id, config_json, weight)
          VALUES ($id, $exp, $vid, $cfg, $w)`,
       ).run({
-        $id: crypto.randomUUID(),
+        $id: mintSortableId(),
         $exp: id,
         $vid: vid,
         $cfg: JSON.stringify(v),
@@ -113,7 +114,7 @@ export class ExperimentRunner {
     if (!assignment) {
       throw new Error(`partner ${partnerId} not assigned to experiment ${experimentId}`);
     }
-    const id = metricId ?? crypto.randomUUID();
+    const id = metricId ?? mintSortableId();
     const existing = this.db
       .query("SELECT id FROM experiment_metrics WHERE id = $id")
       .get({ $id: id }) as { id: string } | null;

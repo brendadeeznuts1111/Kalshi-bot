@@ -17,6 +17,7 @@ import {
 } from "./kalshi-auth.ts";
 import type { KalshiFetchImpl } from "./kalshi-events-api.ts";
 import { OFFICIAL_URLS } from "../institutions/official-urls.ts";
+import { mintSortableId } from "../lib/ids.ts";
 
 export type KalshiOrderSide = "yes" | "no";
 
@@ -29,7 +30,7 @@ export type KalshiOrderRequest = {
   dryRun: boolean;
   /** Resting-maker entry — default true (maker-first doctrine). */
   postOnly?: boolean;
-  /** Stable UUID used by authorized execution to make provider retries idempotent. */
+  /** Stable UUID v7 used by authorized execution to make provider retries idempotent. */
   clientOrderId?: string;
 };
 
@@ -287,7 +288,7 @@ export function createKalshiClient(options: KalshiClientOptions = {}): KalshiCli
     if (request.dryRun) {
       return {
         orderId: `dry-${request.ticker}-${Date.now()}`,
-        clientOrderId: request.clientOrderId ?? crypto.randomUUID(),
+        clientOrderId: request.clientOrderId ?? mintSortableId(),
         fillCount: 0,
         remainingCount: request.count,
         averageFillPriceCents: null,
@@ -302,7 +303,7 @@ export function createKalshiClient(options: KalshiClientOptions = {}): KalshiCli
       );
     }
     await governCreate();
-    const clientOrderId = request.clientOrderId ?? crypto.randomUUID();
+    const clientOrderId = request.clientOrderId ?? mintSortableId();
     const yesPriceCents = request.side === "yes" ? request.priceCents : 100 - request.priceCents;
     const body: Record<string, unknown> = {
       ticker: request.ticker,
@@ -633,7 +634,7 @@ export async function placeOrder(request: KalshiOrderRequest): Promise<KalshiOrd
   if (request.dryRun) {
     return {
       orderId: `dry-${request.ticker}-${Date.now()}`,
-      clientOrderId: request.clientOrderId ?? crypto.randomUUID(),
+      clientOrderId: request.clientOrderId ?? mintSortableId(),
       fillCount: 0,
       remainingCount: request.count,
       averageFillPriceCents: null,

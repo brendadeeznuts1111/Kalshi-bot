@@ -15,13 +15,14 @@
  */
 import { exists, mkdir, readdir, rename, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { mintSortableId } from "./ids.ts";
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
 export type JournalEntry = {
-  /** UUIDv4 identifying this transaction. */
+  /** UUID v7 identifying this transaction (sortable by mint time). */
   txnId: string;
   /** Machine-readable action name (e.g. "rotate-key"). */
   action: string;
@@ -85,7 +86,7 @@ export async function writePending(
   params: unknown,
 ): Promise<{ txnId: string; pendingPath: string }> {
   await ensureDir(dir);
-  const txnId = crypto.randomUUID();
+  const txnId = mintSortableId();
   const entry: JournalEntry = {
     txnId,
     action,
