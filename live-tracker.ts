@@ -9,6 +9,7 @@
  *   bun live-tracker.ts analyze --summary
  *   bun live-tracker.ts analyze --stats
  *   bun live-tracker.ts analyze --sport=tennis --phase=live [--sort-by severity|family|id]
+ *   bun live-tracker.ts analyze --sport=tennis --phase=live --columns=ev --sort-rows=voidDelta --csv
  *   bun live-tracker.ts patterns [--sort-by family|id] [--desc] [--json|--inspect]
  *   bun live-tracker.ts diff --columns File,Event,Detail --desc --output out.csv --format csv
  *   bun live-tracker.ts diff --tail 10 --watch --interval 2
@@ -105,10 +106,12 @@ const BOOLEAN_FLAGS = new Set([
   'open',
   'html',
   'table',
+  'csv',
   'bake',
   'write-sample',
   'all-columns',
   'no-color',
+  'rows-desc',
 ]);
 
 function positionalAfterCmd(cmd: string): string[] {
@@ -146,7 +149,8 @@ Usage:
   bun live-tracker.ts analyze [files…] [--summary] [--stats] [--format …] [--output path]
                               [--sport=tennis] [--phase=live|prematch]
                               [--sort-by severity|family|id] [--desc] [--verbose]
-                              [--inspect|--json|--table|--html] [--columns desk|odds|settlement|patterns|ev|all|a,b,…]
+                              [--inspect|--json|--table|--html|--csv] [--columns desk|odds|settlement|patterns|ev|all|a,b,…]
+                              [--sort-rows voidRisk|voidDelta|voidEv|maxSeverity|time|…] [--rows-desc]
                               [--bake]   # write docs/artifacts live-tracker-analyze-* (+ .html)
   bun live-tracker.ts patterns [--sort-by family|severity|id] [--desc] [--json|--inspect]
   bun live-tracker.ts chart   --event ID --market TYPE [--event ID --market TYPE …]
@@ -159,6 +163,9 @@ Event types: ${LIVE_TRACKER_EVENT_TYPES.join(' | ')}
 diff --sort-by fields: time | event | type | detail | file | eventid
 patterns/analyze --sort-by fields: family | severity | id  (comma-separated; --desc)
 analyze --columns presets: desk | odds | settlement | patterns | ev | all  (or comma keys)
+analyze --sort-rows: voidRisk | voidDelta | voidEv | maxSeverity | time | eventType | marketClass
+  (comma-separated; orthogonal to pattern --sort-by). Default: voidRisk,maxSeverity,time
+  (ev preset → voidDelta,voidEv,time). --rows-desc reverses display order.
 
 Examples:
   bun live-tracker.ts diff old.json new.json --event-type MARKET_ADDED --sort-by time --limit 5
@@ -166,6 +173,7 @@ Examples:
   bun live-tracker.ts analyze --summary
   bun live-tracker.ts analyze --sport=tennis --phase=live --columns=desk --table
   bun live-tracker.ts analyze --sport=tennis --phase=live --columns=ev --inspect --no-color
+  bun live-tracker.ts analyze --sport=tennis --phase=live --columns=ev --sort-rows=voidDelta --csv
   bun live-tracker.ts analyze --sport=tennis --phase=live --columns=all --bake
   bun live-tracker.ts analyze --sport=tennis --phase=live --columns=desk --html --output /tmp/desk.html
   bun live-tracker.ts analyze --sport=tennis --phase=live --columns=desk,ev --html --open
@@ -611,7 +619,9 @@ if (cmd === 'analyze') {
   if (sportId) {
     const {
       parseEdgePatternSortBy,
+      parseAnalyzeRowSortBy,
       buildAnalyzeSchemaDocument,
+      formatAnalyzeCsv,
       renderSportAnalyze,
     } = await import('./src/settlement/index.ts');
     const { inspectSnapshot } = await import('./src/research/bun-native.ts');
@@ -627,6 +637,10 @@ if (cmd === 'analyze') {
     });
     // --columns desk|odds|settlement|patterns|ev|all|key1,key2
     const colArg = argValue('columns');
+    // --sort-rows voidRisk,voidDelta (display order; orthogonal to pattern --sort-by)
+    const sortRowsArg = argValue('sort-rows');
+    const rowSortBy = sortRowsArg ? parseAnalyzeRowSortBy(sortRowsArg) : undefined;
+    const rowSortDesc = hasFlag('rows-desc');
     const colors =
       !hasFlag('no-color') &&
       Boolean(process.stdout.isTTY) &&
@@ -643,6 +657,8 @@ if (cmd === 'analyze') {
           ? colArg.split(',').map(s => s.trim()).filter(Boolean)
           : undefined,
       colors,
+      rowSortBy,
+      rowSortDesc,
     });
     const { artifact, banner, inspectMeta, tableInspect, tableMarkdown } = render;
 
@@ -702,6 +718,10 @@ if (cmd === 'analyze') {
         defaultPath: argValue('output') || argValue('out') ? undefined : defaultHtml,
         open: hasFlag('open'),
       });
+      process.exit(0);
+    }
+    if (hasFlag('csv') || argValue('format') === 'csv') {
+      await writeOrPrint(formatAnalyzeCsv(artifact.rows, render.columns));
       process.exit(0);
     }
     if (hasFlag('table') || argValue('format') === 'table') {

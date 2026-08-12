@@ -68,6 +68,7 @@ describe('analyze recipes (fixture jsonl)', () => {
       schemaVersion: 3,
       rowCount: 6,
       columnCount: ANALYZE_COLUMN_PRESETS.ev.length,
+      rowSort: { sortBy: ['voidDelta', 'voidEv', 'time'], desc: false },
     });
     const summary = r.inspectMeta.summary as {
       meanVoidDelta: number | null;
@@ -78,6 +79,12 @@ describe('analyze recipes (fixture jsonl)', () => {
     expect(r.tableInspect).toContain('voidEv');
     expect(r.tableInspect).toContain('voidDelta');
     expect(r.tableInspect).toContain('12.5');
+    // Default EV row sort: finite voidDelta first, nulls last
+    const deltas = r.artifact.rows.map(row => row.voidDelta);
+    expect(deltas.slice(0, 4).every(d => typeof d === 'number')).toBe(true);
+    expect(deltas.slice(4).every(d => d == null)).toBe(true);
+    expect(r.banner).toContain('rowSort=voidDelta,voidEv,time');
+    expect(r.htmlView).toContain('Row sort: voidDelta,voidEv,time');
   });
 
   test('all bake recipe: multi-preset md + html', async () => {
@@ -98,7 +105,13 @@ describe('analyze recipes (fixture jsonl)', () => {
     expect(r.htmlReport).toContain('table-wrap');
     expect(r.htmlReport).toContain('voidRisk');
     expect(r.htmlReport).toContain('class="risk-high"');
+    expect(r.htmlReport).toContain('row-risk-high');
+    expect(r.htmlReport).toContain('preset-nav');
+    expect(r.htmlReport).toContain('Row sort:');
     expect(r.artifact.summary.meanVoidDelta).toBe(-15);
+    // Default desk-like risk sort: high before medium
+    expect(r.artifact.rows[0]!.voidRisk).toBe('high');
+    expect(r.artifact.rows.at(-1)!.voidRisk).toBe('medium');
   });
 
   test('multi-select desk,ev HTML has only those presets', async () => {
@@ -121,5 +134,24 @@ describe('analyze recipes (fixture jsonl)', () => {
     expect(r.htmlView).toContain('Recipe:');
     expect(r.htmlView).toContain('--columns=desk,ev');
     expect(r.htmlView).toContain('class="table-wrap"');
+    expect(r.htmlView).toContain('preset-nav');
+    expect(r.htmlView).toContain('href="#preset-desk"');
+    expect(r.htmlView).toContain('href="#preset-ev"');
+  });
+
+  test('explicit --sort-rows=time overrides preset default', async () => {
+    const weighted = await loadWeighted();
+    const r = renderSportAnalyze({
+      sportId: 'tennis',
+      phase: 'live',
+      sortBy: ['severity', 'id'],
+      events: weighted,
+      columns: ['desk'],
+      rowSortBy: ['time'],
+      rowSortDesc: false,
+    });
+    const times = r.artifact.rows.map(row => row.timeMs as number);
+    expect(times).toEqual([...times].sort((a, b) => a - b));
+    expect(r.banner).toContain('rowSort=time');
   });
 });

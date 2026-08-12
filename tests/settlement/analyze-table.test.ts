@@ -7,18 +7,56 @@ import {
   ANALYZE_WEIGHTED_ALL_COLUMNS,
   ANALYZE_WEIGHTED_FIELD_SCHEMA,
   buildAnalyzeInspectMeta,
+  buildAnalyzePresetNav,
   buildAnalyzeSchemaDocument,
   buildAnalyzeSnapshotArtifact,
+  defaultRowSortForPreset,
   flattenWeightedEventRow,
   formatAnalyzeBanner,
+  formatAnalyzeCsv,
   formatAnalyzeHtmlReport,
   formatAnalyzeInspectTable,
   formatAnalyzeMarkdownReport,
   formatAnalyzeMarkdownTable,
+  parseAnalyzeRowSortBy,
   resolveAnalyzeColumns,
+  sortAnalyzeRows,
   summarizeAnalyzeRows,
   weightLiveTrackerMove,
+  type AnalyzeWeightedRow,
 } from '../../src/settlement/index.ts';
+
+function stubRow(partial: Partial<AnalyzeWeightedRow>): AnalyzeWeightedRow {
+  return {
+    time: '2026-08-10T10:00:00.000Z',
+    timeMs: Date.parse('2026-08-10T10:00:00.000Z'),
+    eventType: 'PRICE_CHANGE',
+    eventId: 1,
+    period: 'm',
+    marketType: '3',
+    selection: '1',
+    from: 1.9,
+    to: 1.95,
+    detail: 'x',
+    file: 'f',
+    marketClass: 'match_ml',
+    voidRisk: 'high',
+    pVoidPrior: 0.15,
+    preferUnitMkts: true,
+    sizeMult: 1,
+    confidence: 0.5,
+    sizingNote: 'n',
+    patternIds: '',
+    maxSeverity: 'high',
+    families: '',
+    eyeOpeners: '',
+    voidEv: null,
+    twoWayEv: null,
+    voidDelta: null,
+    pWin: null,
+    ...partial,
+  } as AnalyzeWeightedRow;
+}
 
 describe('analyze weighted table schema', () => {
   test('schema lists all flat fields with groups', () => {
@@ -168,5 +206,61 @@ describe('analyze weighted table schema', () => {
     })).toContain('## Summary');
     const table = formatAnalyzeInspectTable(artifact.rows, ['time', 'voidRisk', 'maxSeverity']);
     expect(table.length).toBeGreaterThan(10);
+  });
+
+  test('sortAnalyzeRows: voidRisk then severity; null voidDelta last', () => {
+    const rows = [
+      stubRow({ voidRisk: 'low', maxSeverity: 'info', voidDelta: -1, timeMs: 3, time: 't3' }),
+      stubRow({ voidRisk: 'high', maxSeverity: 'watch', voidDelta: null, timeMs: 1, time: 't1' }),
+      stubRow({ voidRisk: 'high', maxSeverity: 'critical', voidDelta: -20, timeMs: 2, time: 't2' }),
+      stubRow({ voidRisk: 'medium', maxSeverity: 'high', voidDelta: -5, timeMs: 4, time: 't4' }),
+    ];
+    const byRisk = sortAnalyzeRows(rows);
+    expect(byRisk.map(r => r.voidRisk)).toEqual(['high', 'high', 'medium', 'low']);
+    expect(byRisk[0]!.maxSeverity).toBe('critical');
+    const byDelta = sortAnalyzeRows(rows, { sortBy: ['voidDelta', 'time'] });
+    expect(byDelta.map(r => r.voidDelta)).toEqual([-20, -5, -1, null]);
+    const descTime = sortAnalyzeRows(rows, { sortBy: 'time', desc: true });
+    expect(descTime.map(r => r.timeMs)).toEqual([4, 3, 2, 1]);
+  });
+
+  test('parseAnalyzeRowSortBy + defaultRowSortForPreset', () => {
+    expect(parseAnalyzeRowSortBy('voidDelta,voidEv')).toEqual(['voidDelta', 'voidEv']);
+    expect(parseAnalyzeRowSortBy('nope')).toEqual(['voidRisk', 'maxSeverity', 'time']);
+    expect(parseAnalyzeRowSortBy(undefined)).toEqual(['voidRisk', 'maxSeverity', 'time']);
+    expect(defaultRowSortForPreset('ev')).toEqual({
+      sortBy: ['voidDelta', 'voidEv', 'time'],
+      desc: false,
+    });
+    expect(defaultRowSortForPreset('patterns').sortBy[0]).toBe('maxSeverity');
+    expect(defaultRowSortForPreset('desk').sortBy[0]).toBe('voidRisk');
+  });
+
+  test('formatAnalyzeCsv projects columns + escapes', () => {
+    const rows = [
+      stubRow({ voidRisk: 'high', detail: 'a,b "c"', voidDelta: -15 }),
+    ];
+    const csv = formatAnalyzeCsv(rows, ['voidRisk', 'detail', 'voidDelta']);
+    expect(csv.startsWith('voidRisk,detail,voidDelta\n')).toBe(true);
+    expect(csv).toContain('"a,b ""c"""');
+    expect(csv).toContain('high');
+    expect(csv).toContain('-15');
+  });
+
+  test('HTML nav + row tint helpers', () => {
+    expect(buildAnalyzePresetNav(['desk', 'ev'])).toContain('href="#preset-desk"');
+    expect(buildAnalyzePresetNav(['desk'])).toBe('');
+    const html = formatAnalyzeHtmlReport({
+      sportId: 'tennis',
+      phase: 'live',
+      sortBy: ['severity'],
+      rows: [stubRow({ voidRisk: 'high' })],
+      presets: ['desk', 'ev'],
+      rowSortHint: 'voidRisk,maxSeverity,time',
+    });
+    expect(html).toContain('preset-nav');
+    expect(html).toContain('Row sort: voidRisk,maxSeverity,time');
+    expect(html).toContain('row-risk-high');
+    expect(html).toContain('class="risk-high"');
   });
 });
