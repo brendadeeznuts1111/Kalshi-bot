@@ -1,4 +1,5 @@
 // @see https://bun.com/docs/runtime/utils#bun-inspect
+// @see https://bun.com/docs/test/writing-tests#matchers
 // @see https://bun.com/docs/test
 import { describe, expect, test } from 'bun:test';
 import { inspectSnapshot } from '../../src/research/bun-native.ts';
@@ -33,9 +34,9 @@ function inspectPatternsPayload(sortByRaw?: string, desc = false): string {
 describe('patterns --inspect (Bun.inspect contract)', () => {
   test('sorted keys + depth include patterns and families', () => {
     const text = inspectPatternsPayload('id');
-    expect(text).toContain('patterns:');
-    expect(text).toContain('families:');
-    expect(text).toContain('sortBy:');
+    expect(text).toMatch(/patterns:/);
+    expect(text).toMatch(/families:/);
+    expect(text).toMatch(/sortBy:/);
     // sorted: true → keys appear alphabetically at top level (desc, families, patterns, sortBy)
     const descAt = text.indexOf('desc:');
     const familiesAt = text.indexOf('families:');
@@ -48,7 +49,6 @@ describe('patterns --inspect (Bun.inspect contract)', () => {
   });
 
   test('includes a known pattern id from catalog', () => {
-    const text = inspectPatternsPayload();
-    expect(text).toContain('void.live-ml-unfinished');
+    expect(inspectPatternsPayload()).toMatch(/void\.live-ml-unfinished/);
   });
 });

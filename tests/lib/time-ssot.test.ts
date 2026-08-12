@@ -1,3 +1,4 @@
+// @see https://bun.com/docs/test/writing-tests#matchers
 // @see https://bun.com/docs/test
 import { describe, expect, test } from 'bun:test';
 import {
@@ -42,13 +43,16 @@ describe('time-ssot', () => {
   });
 
   test('dualTime + stampInstant', () => {
-    const d = dualTime('2026-08-10T10:00:02.000Z');
-    expect(d).not.toBeNull();
-    expect(d!.time).toBe('2026-08-10T10:00:02.000Z');
-    expect(d!.timeMs).toBe(Date.parse(d!.time));
-    const s = stampInstant(d!.timeMs, 'recv');
-    expect(s?.sourceClock).toBe('recv');
-    expect(s?.timeMs).toBe(d!.timeMs);
+    const iso = '2026-08-10T10:00:02.000Z';
+    expect(dualTime(iso)).toMatchObject({
+      time: iso,
+      timeMs: Date.parse(iso),
+    });
+    expect(stampInstant(Date.parse(iso), 'recv')).toMatchObject({
+      time: iso,
+      timeMs: Date.parse(iso),
+      sourceClock: 'recv',
+    });
   });
 
   test('duration helpers', () => {
@@ -95,8 +99,11 @@ describe('time-ssot', () => {
   test('watch window + startTs', () => {
     const now = Date.parse('2026-08-10T12:00:00.000Z');
     const w = watchWindowMs({ nowMs: now, leadMinutes: 5, pastGraceHours: 6 });
-    expect(w.windowEndMs - now).toBe(5 * 60_000);
-    expect(now - w.windowStartMs).toBe(6 * 3_600_000);
+    expect(w).toMatchObject({
+      nowMs: now,
+      windowEndMs: now + 5 * 60_000,
+      windowStartMs: now - 6 * 3_600_000,
+    });
     const inside = '2026-08-10T12:03:00.000Z';
     expect(
       startTsInWatchWindow(inside, {
@@ -105,6 +112,9 @@ describe('time-ssot', () => {
         pastGraceHours: 6,
       }),
     ).toBe(true);
-    expect(normalizeStartTs(inside)?.timeMs).toBe(Date.parse(inside));
+    expect(normalizeStartTs(inside)).toMatchObject({
+      time: inside,
+      timeMs: Date.parse(inside),
+    });
   });
 });

@@ -1,3 +1,4 @@
+// @see https://bun.com/docs/test/writing-tests#matchers
 // @see https://bun.com/docs/test
 import { describe, expect, test } from 'bun:test';
 import {
@@ -17,16 +18,20 @@ describe('edge pattern catalog', () => {
   test('every family has ≥1 pattern', () => {
     const by = edgePatternsByFamily();
     for (const f of EDGE_PATTERN_FAMILIES) {
-      expect(by[f].length).toBeGreaterThan(0);
+      expect(by[f]).toBeDefined();
+      expect(by[f]!.length).toBeGreaterThan(0);
     }
   });
 
   test('pattern ids unique and family.slug shaped', () => {
-    const ids = listEdgePatterns().map(p => p.id);
-    expect(new Set(ids).size).toBe(ids.length);
-    for (const p of listEdgePatterns()) {
-      expect(p.id.startsWith(p.family.split('_')[0]! ) || p.id.includes('.')).toBe(true);
-      expect(getEdgePattern(p.id)?.title).toBeTruthy();
+    const patterns = listEdgePatterns();
+    const ids = patterns.map(p => p.id);
+    expect(ids).toHaveLength(new Set(ids).size);
+    for (const p of patterns) {
+      expect(p.id).toMatch(/^[a-z0-9]+[a-z0-9._-]*$/i);
+      expect(p.id).toContain('.');
+      expect(getEdgePattern(p.id)?.title).toEqual(expect.any(String));
+      expect(getEdgePattern(p.id)!.title.length).toBeGreaterThan(0);
     }
   });
 
@@ -48,9 +53,9 @@ describe('scanEdgePatterns sport-wide', () => {
     });
     const ids = scan.hits.map(h => h.patternId);
     expect(ids).toContain('void.live-ml-unfinished');
-    expect(scan.maxSeverity === 'high' || scan.maxSeverity === 'critical').toBe(true);
+    expect(['high', 'critical']).toContain(scan.maxSeverity);
     expect(scan.components.pat_hit_count).toBeGreaterThan(0);
-    expect(scan.eyeOpeners.some(e => e.includes('void.live-ml-unfinished'))).toBe(true);
+    expect(scan.eyeOpeners.join('\n')).toMatch(/void\.live-ml-unfinished/);
   });
 
   test('injury + live tennis ML → critical injury-steam pattern', () => {
@@ -61,7 +66,7 @@ describe('scanEdgePatterns sport-wide', () => {
       period: 'm',
       matchState: { matchCompleted: false, injuryRisk: true },
     });
-    expect(scan.hits.some(h => h.patternId === 'void.injury-steam-vs-void')).toBe(true);
+    expect(scan.hits.map(h => h.patternId)).toContain('void.injury-steam-vs-void');
     expect(scan.maxSeverity).toBe('critical');
   });
 
@@ -72,10 +77,9 @@ describe('scanEdgePatterns sport-wide', () => {
       marketType: '5',
       period: 'q4',
     });
-    expect(scan.hits.some(h => h.patternId === 'period.ot-inclusion-mismatch')).toBe(true);
-    expect(
-      scan.hits.find(h => h.patternId === 'period.ot-inclusion-mismatch')?.severity,
-    ).toBe('high');
+    const ot = scan.hits.find(h => h.patternId === 'period.ot-inclusion-mismatch');
+    expect(ot).toBeDefined();
+    expect(ot).toMatchObject({ patternId: 'period.ot-inclusion-mismatch', severity: 'high' });
   });
 
   test('baseball eligibility broken → critical', () => {
@@ -86,7 +90,7 @@ describe('scanEdgePatterns sport-wide', () => {
       period: 'm',
       matchState: { eligibilityBroken: true },
     });
-    expect(scan.hits.some(h => h.patternId === 'elig.listed-pitcher-or-must-play')).toBe(true);
+    expect(scan.hits.map(h => h.patternId)).toContain('elig.listed-pitcher-or-must-play');
     expect(scan.maxSeverity).toBe('critical');
   });
 
@@ -98,7 +102,7 @@ describe('scanEdgePatterns sport-wide', () => {
       period: 's1',
       matchState: { periodCompleted: true },
     });
-    expect(scan.hits.some(h => h.patternId === 'void.completed-unit-survives')).toBe(true);
+    expect(scan.hits.map(h => h.patternId)).toContain('void.completed-unit-survives');
   });
 
   test('soccer total → interrupt / line unit families present', () => {
@@ -108,8 +112,16 @@ describe('scanEdgePatterns sport-wide', () => {
       marketType: '5',
       period: 'm',
     });
-    const families = new Set(scan.hits.map(h => h.family));
-    expect(families.has('interrupt_window') || families.has('line_unit')).toBe(true);
+    const families = scan.hits.map(h => h.family);
+    expect(families).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/interrupt_window|line_unit/),
+      ]),
+    );
+    // at least one of the two families
+    expect(
+      families.some(f => f === 'interrupt_window' || f === 'line_unit'),
+    ).toBe(true);
   });
 
   test('weightLiveTrackerMove includes patterns', () => {

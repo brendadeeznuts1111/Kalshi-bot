@@ -1,3 +1,4 @@
+// @see https://bun.com/docs/test/writing-tests#matchers
 // @see https://bun.com/docs/test
 import { describe, expect, test } from 'bun:test';
 import {
@@ -13,10 +14,9 @@ import {
 describe('analyze weighted table schema', () => {
   test('schema lists all flat fields', () => {
     expect(ANALYZE_WEIGHTED_FIELD_SCHEMA.length).toBeGreaterThan(20);
-    expect([...ANALYZE_WEIGHTED_ALL_COLUMNS]).toContain('voidRisk');
-    expect([...ANALYZE_WEIGHTED_ALL_COLUMNS]).toContain('patternIds');
-    expect([...ANALYZE_WEIGHTED_ALL_COLUMNS]).toContain('pVoidPrior');
-    expect([...ANALYZE_WEIGHTED_ALL_COLUMNS]).toContain('eyeOpeners');
+    expect([...ANALYZE_WEIGHTED_ALL_COLUMNS]).toEqual(
+      expect.arrayContaining(['voidRisk', 'patternIds', 'pVoidPrior', 'eyeOpeners', 'timeMs']),
+    );
     expect(ANALYZE_WEIGHTED_FIELD_SCHEMA.map(f => f.key)).toEqual([
       ...ANALYZE_WEIGHTED_ALL_COLUMNS,
     ]);
@@ -44,14 +44,18 @@ describe('analyze weighted table schema', () => {
       file: 'event-197510101.jsonl',
       settlement,
     });
-    expect(row.voidRisk).toBe('high');
-    expect(row.marketClass).toBe('match_ml');
-    expect(row.preferUnitMkts).toBe(true);
-    expect(String(row.patternIds)).toContain('void.live-ml-unfinished');
-    expect(row.pVoidPrior).toBe(0.15);
-    expect(row.voidEv).not.toBeNull();
-    expect(row.timeMs).toBe(Date.parse('2026-08-10T10:00:02.000Z'));
-    expect(row.time).toBe('2026-08-10T10:00:02.000Z');
+    expect(row).toMatchObject({
+      voidRisk: 'high',
+      marketClass: 'match_ml',
+      preferUnitMkts: true,
+      pVoidPrior: 0.15,
+      time: '2026-08-10T10:00:02.000Z',
+      timeMs: Date.parse('2026-08-10T10:00:02.000Z'),
+      eventType: 'PRICE_CHANGE',
+      marketType: '3',
+    });
+    expect(String(row.patternIds)).toMatch(/void\.live-ml-unfinished/);
+    expect(row.voidEv).toEqual(expect.any(Number));
     for (const k of ANALYZE_WEIGHTED_ALL_COLUMNS) {
       expect(row).toHaveProperty(k);
     }
@@ -86,9 +90,14 @@ describe('analyze weighted table schema', () => {
       ],
     });
     expect(artifact.rows).toHaveLength(1);
+    expect(artifact).toMatchObject({
+      sportId: 'tennis',
+      phase: 'live',
+      schemaVersion: 1,
+    });
     const md = formatAnalyzeMarkdownTable(artifact.rows, ['time', 'voidRisk', 'patternIds']);
-    expect(md).toContain('voidRisk');
-    expect(md).toContain('high');
+    expect(md).toMatch(/voidRisk/);
+    expect(md).toMatch(/high/);
     const table = formatAnalyzeInspectTable(artifact.rows, ['time', 'voidRisk', 'maxSeverity']);
     expect(table.length).toBeGreaterThan(10);
   });

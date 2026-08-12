@@ -1,3 +1,4 @@
+// @see https://bun.com/docs/test/writing-tests#matchers
 // @see https://bun.com/docs/test
 import { describe, expect, test } from 'bun:test';
 import {
@@ -37,11 +38,16 @@ describe('settlement weighting', () => {
       period: 'm',
       matchState: { matchCompleted: false },
     });
-    expect(w.actionThreshold).toBe('match_completed');
-    expect(w.voidRisk).toBe('high');
-    expect(w.preferCompletedUnitMarkets).toBe(true);
-    expect(w.tennisRetirement?.wouldHaveAction).toBe(false);
-    expect(w.settlementIdenticalPliveEzlive).toBe(true);
+    expect(w).toMatchObject({
+      actionThreshold: 'match_completed',
+      voidRisk: 'high',
+      preferCompletedUnitMarkets: true,
+      settlementIdenticalPliveEzlive: true,
+      marketClass: 'match_ml',
+      phase: 'live',
+      sportKey: 'tennis',
+    });
+    expect(w.tennisRetirement).toMatchObject({ wouldHaveAction: false });
   });
 
   test('tennis prematch ML action after first set', () => {
@@ -52,8 +58,10 @@ describe('settlement weighting', () => {
       period: 'm',
       matchState: { firstSetCompleted: false },
     });
-    expect(before.tennisRetirement?.wouldHaveAction).toBe(false);
-    expect(before.voidRisk).toBe('high');
+    expect(before).toMatchObject({
+      voidRisk: 'high',
+      tennisRetirement: { wouldHaveAction: false },
+    });
 
     const after = resolveSettlementWeighting({
       sportId: 'tennis',
@@ -62,8 +70,10 @@ describe('settlement weighting', () => {
       period: 'm',
       matchState: { firstSetCompleted: true },
     });
-    expect(after.tennisRetirement?.wouldHaveAction).toBe(true);
-    expect(after.voidRisk).toBe('low');
+    expect(after).toMatchObject({
+      voidRisk: 'low',
+      tennisRetirement: { wouldHaveAction: true },
+    });
   });
 
   test('tennis completed set market low void on survival', () => {
@@ -74,8 +84,7 @@ describe('settlement weighting', () => {
       period: 's1',
       matchState: { periodCompleted: true },
     });
-    expect(w.marketClass).toBe('set_market');
-    expect(w.voidRisk).toBe('low');
+    expect(w).toMatchObject({ marketClass: 'set_market', voidRisk: 'low' });
   });
 
   test('tennisMatchMlWouldHaveAction matrix', () => {
@@ -93,7 +102,7 @@ describe('settlement weighting', () => {
       marketType: '5',
       period: 'm',
     });
-    expect(game.otFlags.gameIncludesOt).toBe(true);
+    expect(game.otFlags).toMatchObject({ gameIncludesOt: true });
 
     const q4 = resolveSettlementWeighting({
       sportId: 'basketball',
@@ -101,7 +110,7 @@ describe('settlement weighting', () => {
       marketType: '5',
       period: 'q4',
     });
-    expect(q4.otFlags.periodExcludesOt).toBe(true);
+    expect(q4.otFlags).toMatchObject({ periodExcludesOt: true });
   });
 });
 
@@ -113,11 +122,8 @@ describe('void EV', () => {
       stake: 100,
       decimalOdds: 1.9,
     });
-    // two-way treats non-win as lose
     expect(r.twoWayEv).toBeCloseTo(0.55 * 190 - 100, 5);
-    // three-way refunds void mass → better for ticket holder than two-way
     expect(r.ev).toBeGreaterThan(r.twoWayEv);
-    // voidDelta = twoWayEv - threeWayEv (negative when voids help holder)
     expect(r.voidDelta).toBeLessThan(0);
     expect(r.pLose).toBeCloseTo(0.3, 5);
   });
@@ -144,8 +150,14 @@ describe('void EV', () => {
       pWin: 0.6,
     });
     expect(r.weighting.preferCompletedUnitMarkets).toBe(true);
-    expect(r.sizingNote).toContain('void');
-    expect(r.voidEv).not.toBeNull();
+    expect(r.sizingNote).toMatch(/void/i);
+    expect(r.voidEv).toEqual(
+      expect.objectContaining({
+        pWin: 0.6,
+        pVoid: 0.15,
+        stake: 100,
+      }),
+    );
     expect(r.pVoidPrior).toBe(0.15);
   });
 });
