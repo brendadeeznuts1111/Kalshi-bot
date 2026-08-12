@@ -202,6 +202,18 @@ export {
 } from './competition-promote.ts';
 
 export {
+  NCAA_VOLLEYBALL_COMPETITION_SEEDS,
+  VOLLEYBALL_COMPETITION_TIERS,
+  VOLLEYBALL_TIER_BY_COMPETITION_ID,
+  inferVolleyballTierFromLeagueLabel,
+  isVolleyballCompetitionTier,
+  listVolleyballCompetitionIdsByTier,
+  listVolleyballTieredCompetitionIds,
+  resolveVolleyballCompetitionTier,
+  type VolleyballCompetitionTier,
+} from './volleyball-tiers.ts';
+
+export {
   PROMOTE_SPORT_PRIORITY,
   applyAttachPandoraMappings,
   applyPandoraPromoteToCompetitionsFile,
