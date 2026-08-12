@@ -10,7 +10,9 @@ import {
   buildAnalyzePresetNav,
   buildAnalyzeSchemaDocument,
   buildAnalyzeSnapshotArtifact,
+  buildAnalyzeSummaryChipsHtml,
   defaultRowSortForPreset,
+  filterAnalyzeRows,
   flattenWeightedEventRow,
   formatAnalyzeBanner,
   formatAnalyzeCsv,
@@ -18,7 +20,9 @@ import {
   formatAnalyzeInspectTable,
   formatAnalyzeMarkdownReport,
   formatAnalyzeMarkdownTable,
+  parseAnalyzeCsvList,
   parseAnalyzeRowSortBy,
+  pipelineAnalyzeRows,
   resolveAnalyzeColumns,
   sortAnalyzeRows,
   summarizeAnalyzeRows,
@@ -256,11 +260,38 @@ describe('analyze weighted table schema', () => {
       sortBy: ['severity'],
       rows: [stubRow({ voidRisk: 'high' })],
       presets: ['desk', 'ev'],
-      rowSortHint: 'voidRisk,maxSeverity,time',
+      rowSortHint: 'sort=voidRisk,maxSeverity,time',
     });
     expect(html).toContain('preset-nav');
-    expect(html).toContain('Row sort: voidRisk,maxSeverity,time');
+    expect(html).toContain('position: sticky');
+    expect(html).toContain('Pipeline: sort=voidRisk,maxSeverity,time');
+    expect(html).toContain('summary-chips');
     expect(html).toContain('row-risk-high');
     expect(html).toContain('class="risk-high"');
+  });
+
+  test('filterAnalyzeRows + pipeline limit', () => {
+    const rows = [
+      stubRow({ voidRisk: 'high', maxSeverity: 'critical', eventType: 'PRICE_CHANGE' }),
+      stubRow({ voidRisk: 'medium', maxSeverity: 'watch', eventType: 'MARKET_ADDED' }),
+      stubRow({ voidRisk: 'high', maxSeverity: 'high', eventType: 'PRICE_CHANGE', voidDelta: -5 }),
+      stubRow({ voidRisk: 'low', maxSeverity: 'info', eventType: 'PRICE_CHANGE' }),
+    ];
+    expect(filterAnalyzeRows(rows, { voidRisk: ['high'] })).toHaveLength(2);
+    expect(filterAnalyzeRows(rows, { eventType: ['market_added'] })).toHaveLength(1);
+    expect(parseAnalyzeCsvList('high, medium')).toEqual(['high', 'medium']);
+    expect(parseAnalyzeCsvList('  ')).toBeUndefined();
+    const piped = pipelineAnalyzeRows(rows, {
+      filter: { voidRisk: ['high'] },
+      sortBy: ['voidDelta'],
+      limit: 1,
+    });
+    expect(piped.rows).toHaveLength(1);
+    expect(piped.rows[0]!.voidDelta).toBe(-5);
+    expect(piped.hint).toContain('voidRisk=high');
+    expect(piped.hint).toContain('limit=1');
+    const chips = buildAnalyzeSummaryChipsHtml(summarizeAnalyzeRows(rows));
+    expect(chips).toContain('summary-chips');
+    expect(chips).toContain('void high');
   });
 });
