@@ -1,148 +1,289 @@
 {
-  "schemaVersion": 1,
-  "description": "Flat row schema for live-tracker analyze --sport (settlement + edge patterns)",
+  "schemaVersion": 2,
+  "description": "Flat row schema for live-tracker analyze --sport (settlement + edge patterns). Column presets: desk | odds | settlement | patterns | ev | all.",
   "fields": [
     {
       "key": "time",
       "type": "string",
-      "description": "Event ISO-8601 UTC (wall clock)"
+      "description": "Event ISO-8601 UTC (wall clock)",
+      "group": "event"
     },
     {
       "key": "timeMs",
       "type": "number|null",
-      "description": "Same instant as Unix epoch milliseconds (join key for shadow/event-store)"
+      "description": "Same instant as Unix epoch milliseconds (join key for shadow/event-store)",
+      "group": "event",
+      "align": "right"
     },
     {
       "key": "eventType",
       "type": "string",
-      "description": "MARKET_ADDED | PRICE_CHANGE | …"
+      "description": "MARKET_ADDED | PRICE_CHANGE | …",
+      "group": "event"
     },
     {
       "key": "eventId",
       "type": "string",
-      "description": "Pandora event id"
+      "description": "Pandora event id",
+      "group": "event"
     },
     {
       "key": "period",
       "type": "string",
-      "description": "m | s1 | h1 | …"
+      "description": "m | s1 | h1 | …",
+      "group": "event"
     },
     {
       "key": "marketType",
       "type": "string",
-      "description": "Pandora market id (3=ML, 5=total, …)"
+      "description": "Pandora market id (3=ML, 5=total, …)",
+      "group": "event"
     },
     {
       "key": "selection",
       "type": "string",
-      "description": "Selection key when present"
-    },
-    {
-      "key": "from",
-      "type": "string",
-      "description": "Prior decimal odds"
-    },
-    {
-      "key": "to",
-      "type": "string",
-      "description": "New decimal odds"
+      "description": "Selection key when present",
+      "group": "event"
     },
     {
       "key": "detail",
       "type": "string",
-      "description": "Human detail line"
+      "description": "Human detail line",
+      "group": "event",
+      "maxWidth": 80
     },
     {
       "key": "file",
       "type": "string",
-      "description": "Source log basename"
+      "description": "Source log basename",
+      "group": "event"
+    },
+    {
+      "key": "from",
+      "type": "string",
+      "description": "Prior decimal odds",
+      "group": "odds",
+      "align": "right"
+    },
+    {
+      "key": "to",
+      "type": "string",
+      "description": "New decimal odds",
+      "group": "odds",
+      "align": "right"
     },
     {
       "key": "sportKey",
       "type": "string",
-      "description": "Weighting sport key"
+      "description": "Weighting sport key",
+      "group": "settlement"
     },
     {
       "key": "phase",
       "type": "string",
-      "description": "prematch | live"
+      "description": "prematch | live",
+      "group": "settlement"
     },
     {
       "key": "marketClass",
       "type": "string",
-      "description": "match_ml | set_market | …"
+      "description": "match_ml | set_market | …",
+      "group": "settlement"
     },
     {
       "key": "actionThreshold",
       "type": "string",
-      "description": "Shell action rule label"
+      "description": "Shell action rule label",
+      "group": "settlement"
     },
     {
       "key": "voidRisk",
       "type": "string",
-      "description": "low | medium | high | unknown"
+      "description": "low | medium | high | unknown",
+      "group": "settlement"
     },
     {
       "key": "preferUnitMkts",
       "type": "boolean",
-      "description": "Prefer completed set/game markets"
+      "description": "Prefer completed set/game markets",
+      "group": "settlement"
     },
     {
       "key": "pVoidPrior",
       "type": "number",
-      "description": "Default void mass for three-way EV"
-    },
-    {
-      "key": "maxSeverity",
-      "type": "string",
-      "description": "Max pattern severity on this row"
-    },
-    {
-      "key": "patternIds",
-      "type": "string",
-      "description": "Comma-separated pattern ids (non-info first)"
-    },
-    {
-      "key": "patternCount",
-      "type": "number",
-      "description": "Number of pattern hits"
-    },
-    {
-      "key": "eyeOpeners",
-      "type": "string",
-      "description": "Joined watch+ severity notes"
-    },
-    {
-      "key": "sizingNote",
-      "type": "string",
-      "description": "Desk sizing one-liner"
-    },
-    {
-      "key": "summary",
-      "type": "string",
-      "description": "Compact weighting summary"
-    },
-    {
-      "key": "voidEv",
-      "type": "number|null",
-      "description": "Three-way EV at stake 100 if odds known"
-    },
-    {
-      "key": "twoWayEv",
-      "type": "number|null",
-      "description": "Two-way EV (void as lose)"
-    },
-    {
-      "key": "voidDelta",
-      "type": "number|null",
-      "description": "twoWayEv - voidEv"
+      "description": "Default void mass for three-way EV",
+      "group": "settlement",
+      "align": "right"
     },
     {
       "key": "pliveEqEzlive",
       "type": "boolean",
-      "description": "Settlement identical across products"
+      "description": "Settlement identical across products",
+      "group": "settlement"
+    },
+    {
+      "key": "sizingNote",
+      "type": "string",
+      "description": "Desk sizing one-liner",
+      "group": "settlement",
+      "maxWidth": 72
+    },
+    {
+      "key": "summary",
+      "type": "string",
+      "description": "Compact weighting summary",
+      "group": "settlement",
+      "maxWidth": 72
+    },
+    {
+      "key": "maxSeverity",
+      "type": "string",
+      "description": "Max pattern severity on this row",
+      "group": "patterns"
+    },
+    {
+      "key": "patternIds",
+      "type": "string",
+      "description": "Comma-separated pattern ids (non-info first)",
+      "group": "patterns",
+      "maxWidth": 64
+    },
+    {
+      "key": "patternCount",
+      "type": "number",
+      "description": "Number of pattern hits",
+      "group": "patterns",
+      "align": "right"
+    },
+    {
+      "key": "eyeOpeners",
+      "type": "string",
+      "description": "Joined watch+ severity notes",
+      "group": "patterns",
+      "maxWidth": 72
+    },
+    {
+      "key": "voidEv",
+      "type": "number|null",
+      "description": "Three-way EV at stake 100 if odds known",
+      "group": "ev",
+      "align": "right"
+    },
+    {
+      "key": "twoWayEv",
+      "type": "number|null",
+      "description": "Two-way EV (void as lose)",
+      "group": "ev",
+      "align": "right"
+    },
+    {
+      "key": "voidDelta",
+      "type": "number|null",
+      "description": "twoWayEv - voidEv",
+      "group": "ev",
+      "align": "right"
     }
   ],
+  "groups": {
+    "event": [
+      "time",
+      "timeMs",
+      "eventType",
+      "eventId",
+      "period",
+      "marketType",
+      "selection",
+      "detail",
+      "file"
+    ],
+    "odds": [
+      "from",
+      "to"
+    ],
+    "settlement": [
+      "sportKey",
+      "phase",
+      "marketClass",
+      "actionThreshold",
+      "voidRisk",
+      "preferUnitMkts",
+      "pVoidPrior",
+      "pliveEqEzlive",
+      "sizingNote",
+      "summary"
+    ],
+    "patterns": [
+      "maxSeverity",
+      "patternIds",
+      "patternCount",
+      "eyeOpeners"
+    ],
+    "ev": [
+      "voidEv",
+      "twoWayEv",
+      "voidDelta"
+    ]
+  },
+  "presets": {
+    "desk": [
+      "time",
+      "timeMs",
+      "eventType",
+      "period",
+      "marketType",
+      "from",
+      "to",
+      "voidRisk",
+      "maxSeverity",
+      "patternIds",
+      "pVoidPrior",
+      "sizingNote"
+    ],
+    "odds": [
+      "time",
+      "eventType",
+      "period",
+      "marketType",
+      "selection",
+      "from",
+      "to",
+      "detail"
+    ],
+    "settlement": [
+      "time",
+      "eventType",
+      "sportKey",
+      "phase",
+      "marketClass",
+      "actionThreshold",
+      "voidRisk",
+      "preferUnitMkts",
+      "pVoidPrior",
+      "pliveEqEzlive",
+      "sizingNote",
+      "summary"
+    ],
+    "patterns": [
+      "time",
+      "eventType",
+      "voidRisk",
+      "maxSeverity",
+      "patternIds",
+      "patternCount",
+      "eyeOpeners"
+    ],
+    "ev": [
+      "time",
+      "eventType",
+      "from",
+      "to",
+      "voidRisk",
+      "pVoidPrior",
+      "voidEv",
+      "twoWayEv",
+      "voidDelta"
+    ]
+  },
   "defaultColumns": [
     "time",
     "timeMs",
@@ -165,10 +306,10 @@
     "period",
     "marketType",
     "selection",
-    "from",
-    "to",
     "detail",
     "file",
+    "from",
+    "to",
     "sportKey",
     "phase",
     "marketClass",
@@ -176,15 +317,15 @@
     "voidRisk",
     "preferUnitMkts",
     "pVoidPrior",
+    "pliveEqEzlive",
+    "sizingNote",
+    "summary",
     "maxSeverity",
     "patternIds",
     "patternCount",
     "eyeOpeners",
-    "sizingNote",
-    "summary",
     "voidEv",
     "twoWayEv",
-    "voidDelta",
-    "pliveEqEzlive"
+    "voidDelta"
   ]
 }

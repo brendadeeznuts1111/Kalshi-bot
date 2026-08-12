@@ -77,7 +77,7 @@ bun live-tracker.ts analyze --sport=tennis --phase=live --bake --columns=all --i
 bun live-tracker.ts analyze --sport=tennis --phase=live --table
 ```
 
-Code: `src/settlement/analyze-table.ts` · `ANALYZE_WEIGHTED_FIELD_SCHEMA` · `buildAnalyzeSnapshotArtifact`.
+Code: `src/settlement/analyze-table.ts` · `ANALYZE_WEIGHTED_FIELD_SCHEMA` · column presets `desk|odds|settlement|patterns|ev|all` · `buildAnalyzeSnapshotArtifact` (schema **v2** + groups) · shared render [`src/lib/table-schema.ts`](../src/lib/table-schema.ts).
 
 Time: `time` = ISO UTC · `timeMs` = epoch ms join key — see [`TIME.md`](TIME.md).
 

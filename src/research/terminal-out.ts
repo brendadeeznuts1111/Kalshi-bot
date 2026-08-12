@@ -2,6 +2,10 @@
 // @see https://bun.com/docs/runtime/utils#bun-wrapansi
 // @see https://bun.com/docs/runtime/utils#bun-stripansi
 // @see https://bun.com/docs/runtime/utils#bun-inspect-table-tabulardata-properties-options
+import {
+  formatInspectTableFromRows,
+  type TableFieldSpec,
+} from "../lib/table-schema.ts";
 import { githubRepoWebUrl } from "./patterns.ts";
 
 /** Native Bun terminal output — TTY-gated tables and OSC 8 links. */
@@ -82,27 +86,61 @@ export function repoTerminalLink(fullName: string, hyperlinks = isTtyStdout()): 
   }
 }
 
+/** Research shortlist column schema (desk TTY). */
+export const SHORTLIST_FIELD_SCHEMA = [
+  { key: "#", type: "number", description: "Rank (1-based)", group: "meta", align: "right" },
+  { key: "repo", type: "string", description: "owner/name (OSC 8 link in TTY)", group: "repo" },
+  { key: "score", type: "number", description: "Total score", group: "score", align: "right" },
+  { key: "auth", type: "number", description: "Auth/API component", group: "score", align: "right" },
+  { key: "orders", type: "number", description: "Order realism component", group: "score", align: "right" },
+  { key: "tests", type: "number", description: "Tests/CI component", group: "score", align: "right" },
+  { key: "risk", type: "number", description: "Risk controls component", group: "score", align: "right" },
+  { key: "license", type: "string", description: "ok | UNLICENSED", group: "meta" },
+] as const satisfies readonly TableFieldSpec[];
+
+export const SHORTLIST_DEFAULT_COLUMNS = [
+  "#",
+  "repo",
+  "score",
+  "auth",
+  "orders",
+  "tests",
+  "risk",
+  "license",
+] as const;
+
+export const SHORTLIST_COMPACT_COLUMNS = ["#", "repo", "score", "badge", "license"] as const;
+
 export function formatInspectTable(
   rows: Record<string, unknown>[],
   columns: string[],
+  options?: { colors?: boolean },
 ): string {
   if (!rows.length) return "";
-  const table = Bun.inspect.table(rows, columns, { colors: isTtyStdout() });
-  return table.endsWith("\n") ? table : `${table}\n`;
+  return formatInspectTableFromRows(rows, columns, {
+    colors: options?.colors ?? isTtyStdout(),
+  });
 }
 
 export function printInspectTable(
   rows: Record<string, unknown>[],
   columns: string[],
   stream: { write: (chunk: string) => boolean | void } = process.stdout,
+  options?: { colors?: boolean },
 ): void {
-  const table = formatInspectTable(rows, columns);
+  const table = formatInspectTable(rows, columns, options);
   if (table) stream.write(table);
 }
 
 export type ShortlistRowInput = {
   repo: { fullName: string; license: { unlicensed: boolean } };
-  score: { total: number; authApi: number; orderRealism: number };
+  score: {
+    total: number;
+    authApi: number;
+    orderRealism: number;
+    testsCi?: number;
+    riskControls?: number;
+  };
 };
 
 export function shortlistTableRows(
@@ -116,6 +154,8 @@ export function shortlistTableRows(
     score: s.score.total,
     auth: s.score.authApi,
     orders: s.score.orderRealism,
+    tests: s.score.testsCi ?? 0,
+    risk: s.score.riskControls ?? 0,
     license: s.repo.license.unlicensed ? "UNLICENSED" : "ok",
   }));
 }
