@@ -2,6 +2,7 @@
 import { describe, expect, test } from 'bun:test';
 import {
   ageMs,
+  bookTickClocks,
   compareTime,
   dualTime,
   epochFromUnit,
@@ -9,12 +10,15 @@ import {
   hoursToMs,
   isStale,
   minutesToMs,
+  normalizeStartTs,
   secondsToMs,
   sortKeyEpochMs,
   stampInstant,
+  startTsInWatchWindow,
   toEpochMs,
   toIsoUtc,
   TOXICITY_DUE_OFFSET_MS,
+  watchWindowMs,
 } from '../../src/lib/time-ssot.ts';
 
 describe('time-ssot', () => {
@@ -71,5 +75,36 @@ describe('time-ssot', () => {
     expect(toEpochMs('not-a-date')).toBeNull();
     expect(toEpochMs(undefined)).toBeNull();
     expect(dualTime('')).toBeNull();
+  });
+
+  test('bookTickClocks prefer exchange when present', () => {
+    const recv = 1_700_000_000_000;
+    const ex = recv + 50;
+    expect(bookTickClocks({ recvTsMs: recv })).toEqual({
+      ts: recv,
+      recvTs: recv,
+      sourceClock: 'recv',
+    });
+    expect(bookTickClocks({ exchangeTsMs: ex, recvTsMs: recv })).toEqual({
+      ts: ex,
+      recvTs: recv,
+      sourceClock: 'exchange',
+    });
+  });
+
+  test('watch window + startTs', () => {
+    const now = Date.parse('2026-08-10T12:00:00.000Z');
+    const w = watchWindowMs({ nowMs: now, leadMinutes: 5, pastGraceHours: 6 });
+    expect(w.windowEndMs - now).toBe(5 * 60_000);
+    expect(now - w.windowStartMs).toBe(6 * 3_600_000);
+    const inside = '2026-08-10T12:03:00.000Z';
+    expect(
+      startTsInWatchWindow(inside, {
+        nowMs: now,
+        leadMinutes: 5,
+        pastGraceHours: 6,
+      }),
+    ).toBe(true);
+    expect(normalizeStartTs(inside)?.timeMs).toBe(Date.parse(inside));
   });
 });

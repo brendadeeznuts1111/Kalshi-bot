@@ -412,6 +412,7 @@ if (cmd === 'watch') {
           `${u.at} tick lines=${u.lineCount} offered=${u.offeredMarketCount}`
         );
       }
+      // stampTrackerLogRecord dual-writes at/atMs + time/timeMs on disk
       void appendTrackerLog(logPath, {
         at: u.at,
         eventId: u.eventId,

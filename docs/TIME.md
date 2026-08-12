@@ -71,9 +71,52 @@ bun live-tracker.ts analyze --sport=tennis --phase=live --table --no-color
 # columns include time, timeMs, …
 ```
 
+## Book ticks dual-clock
+
+```ts
+import { bookTickClocks } from '../src/lib/time-ssot.ts';
+
+bookTickClocks({ exchangeTsMs: msg.ts_ms, recvTsMs: recvTs });
+// → { ts, recvTs, sourceClock: 'exchange' | 'recv' }
+```
+
+Wired in `kalshi-ws-recorder` insert path. REST pollers should pass `recv` only.
+
+## Watch window
+
+```ts
+import { watchWindowMs, startTsInWatchWindow, normalizeStartTs } from '../src/lib/time-ssot.ts';
+
+watchWindowMs({ leadMinutes: 5, pastGraceHours: 6 });
+// → { nowMs, windowStartMs, windowEndMs }
+
+normalizeStartTs(event.start_ts); // ISO or unix → dual
+startTsInWatchWindow(event.start_ts, { leadMinutes: 5, pastGraceHours: 6 });
+```
+
+Tennis lead/stale durations in `tennis-lane-constants.ts` use `minutesToMs` / `hoursToMs` from this module.
+
+## Live-tracker JSONL (on-disk)
+
+Every append via `appendTrackerLog` runs `stampTrackerLogRecord`:
+
+```json
+{
+  "at": "2026-08-10T10:00:02.000Z",
+  "atMs": 1786356002000,
+  "eventId": 197510101,
+  "events": [
+    { "time": "2026-08-10T10:00:02.000Z", "timeMs": 1786356002000, "eventType": "PRICE_CHANGE", "…" : "…" }
+  ]
+}
+```
+
+Legacy lines without `timeMs` are backfilled on load.
+
 ## Anti-patterns
 
 - Storing only ISO and re-parsing on every join without caching `timeMs`
 - Mixing shadow `ts` (ms) with live-tracker `time` (ISO) without `toEpochMs`
 - Treating settlement “85 minutes” as wall-clock ms
-- Assuming Kalshi `start_ts` is always ms — use `epochFromUnit` when docs say seconds
+- Assuming Kalshi `start_ts` is always ms — use `epochFromUnit` / `normalizeStartTs`
+- Hand-rolling exchange vs recv book clocks — use `bookTickClocks`
