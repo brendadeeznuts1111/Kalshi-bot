@@ -221,32 +221,57 @@ Bun.stringWidth("\u001b[31mhello\u001b[0m", { countAnsiEscapeCodes: true }); // 
 
 `gzipSync` / `gunzipSync` / deflate / inflate / **zstd** sync+async — see overview Compression row. Repo uses **zstd** for audit evidence and **gunzip** on fantasy coefficients wire.
 
-### `Bun.markdown` — GFM HTML + ANSI
+### `Bun.markdown` — native Markdown → HTML / ANSI
+
+Zero-dependency parser. Prefer [`src/lib/markdown.ts`](../src/lib/markdown.ts) over ad-hoc options.
 
 ```ts
-// @see https://bun.com/docs/runtime/markdown#options
+// @see https://bun.com/docs/runtime/markdown
 // @see https://bun.com/reference/bun/markdown/html
-import { markdownToHtml, MARKDOWN_HTML_GFM } from '../src/lib/markdown.ts';
+import { markdownToHtml, markdownToAnsi } from '../src/lib/markdown.ts';
 
-// Explicit opts — tables/strikethrough/tasklists default true; tagFilter + autolinks do not.
-const html = Bun.markdown.html('some markdown', {
-  tables: true,
-  strikethrough: true,
-  tasklists: true,
-  tagFilter: true, // filter disallowed raw HTML tags (default: false)
-  autolinks: true, // www./URL/email (default: false)
-});
-
-// Prefer the SSOT helper for docs/artifacts (GFM + heading ids):
-markdownToHtml(md); // MARKDOWN_HTML_DOCS
+markdownToHtml(md);              // preset: docs (GFM + tagFilter + autolinks + heading ids)
+markdownToHtml(md, 'dashboard'); // production boards: + noHtmlBlocks
+markdownToHtml(md, 'strict');    // + noHtmlSpans
+markdownToHtml(md, 'gfm');       // GFM + safety only
+markdownToAnsi(md);              // TTY reports (same engine as report-term)
 ```
+
+**Full options** ([docs](https://bun.com/docs/runtime/markdown#options)):
+
+| Option | Default | Description |
+| ------ | ------- | ----------- |
+| `tables` | `true` | GFM tables |
+| `strikethrough` | `true` | `~~text~~` |
+| `tasklists` | `true` | `- [x]` |
+| `autolinks` | `false` | URLs / emails / www. (`true` or `{ url, www, email }`) |
+| `headings` | `false` | IDs / autolink (`true` or `{ ids, autolink }`) |
+| `hardSoftBreaks` | `false` | Soft breaks → hard |
+| `wikiLinks` | `false` | `[[wiki]]` |
+| `underline` | `false` | `__text__` → `<u>` |
+| `latexMath` | `false` | `$…$` / `$$…$$` |
+| `collapseWhitespace` | `false` | Collapse text whitespace |
+| `permissiveAtxHeaders` | `false` | `#no-space` headers |
+| `noIndentedCodeBlocks` | `false` | Disable indented fences |
+| `noHtmlBlocks` | `false` | Strip HTML blocks |
+| `noHtmlSpans` | `false` | Strip inline HTML |
+| `tagFilter` | `false` | Escape disallowed tags (`<script>`, …) |
+
+**Presets in repo:**
+
+| Preset | Use |
+| ------ | --- |
+| `gfm` | Safe GFM (tagFilter + autolinks) |
+| `docs` | Artifacts / COLORS.html (heading ids + autolink headings) |
+| `dashboard` | Boards: docs-like + `noHtmlBlocks` |
+| `strict` | Untrusted paste: + `noHtmlSpans` |
 
 | Surface | API | Repo |
 | ------- | --- | ---- |
-| Terminal reports | `Bun.markdown.ansi` | [`report-term.ts`](../src/agent/report-term.ts) |
-| Doc HTML artifacts | `markdownToHtml` → `Bun.markdown.html` | [`src/lib/markdown.ts`](../src/lib/markdown.ts), `colors:artifacts` → `docs/COLORS.html` |
+| Terminal reports | `Bun.markdown.ansi` / `markdownToAnsi` | [`report-term.ts`](../src/agent/report-term.ts) |
+| Doc HTML artifacts | `markdownToHtml` | [`markdown.ts`](../src/lib/markdown.ts), `colors:artifacts` |
 
-**Do not** add `marked` / `markdown-it` / `remark` for simple MD→HTML.
+**vs Node ecosystem:** `marked` / `markdown-it` / `remark` add parse plugins and weight. For GFM tables/tasks + safe HTML, Bun is enough — do not add those packages.
 
 ### `bun:jsc` (low-level)
 
