@@ -414,6 +414,144 @@ export const ANALYZE_COLUMN_PRESET_NAMES = [
 
 export type AnalyzeColumnPresetName = (typeof ANALYZE_COLUMN_PRESET_NAMES)[number];
 
+/** Row sort keys for desk tables / HTML (orthogonal to pattern hit --sort-by). */
+export type AnalyzeRowSortKey =
+  | 'time'
+  | 'voidRisk'
+  | 'voidDelta'
+  | 'voidEv'
+  | 'maxSeverity'
+  | 'eventType'
+  | 'marketClass';
+
+const VOID_RISK_RANK: Record<string, number> = {
+  high: 0,
+  medium: 1,
+  low: 2,
+  unknown: 3,
+  '—': 4,
+};
+
+const SEVERITY_RANK: Record<string, number> = {
+  critical: 0,
+  high: 1,
+  watch: 2,
+  info: 3,
+  '—': 4,
+};
+
+function rankOrTail(map: Record<string, number>, key: string): number {
+  return map[key] ?? 50;
+}
+
+function numOrNull(v: unknown): number | null {
+  return typeof v === 'number' && Number.isFinite(v) ? v : null;
+}
+
+/**
+ * Sort flat analyze rows for display (table / HTML / CSV).
+ * Default multi-key: voidRisk → maxSeverity → time.
+ */
+export function sortAnalyzeRows(
+  rows: readonly AnalyzeWeightedRow[],
+  options: {
+    sortBy?: AnalyzeRowSortKey | AnalyzeRowSortKey[];
+    desc?: boolean;
+  } = {},
+): AnalyzeWeightedRow[] {
+  const keys: AnalyzeRowSortKey[] = options.sortBy
+    ? Array.isArray(options.sortBy)
+      ? options.sortBy
+      : [options.sortBy]
+    : ['voidRisk', 'maxSeverity', 'time'];
+  const desc = options.desc === true;
+  const out = [...rows];
+  out.sort((a, b) => {
+    for (const key of keys) {
+      let cmp = 0;
+      if (key === 'voidRisk') {
+        cmp =
+          rankOrTail(VOID_RISK_RANK, String(a.voidRisk)) -
+          rankOrTail(VOID_RISK_RANK, String(b.voidRisk));
+      } else if (key === 'maxSeverity') {
+        cmp =
+          rankOrTail(SEVERITY_RANK, String(a.maxSeverity)) -
+          rankOrTail(SEVERITY_RANK, String(b.maxSeverity));
+      } else if (key === 'voidDelta' || key === 'voidEv' || key === 'time') {
+        const av =
+          key === 'time'
+            ? numOrNull(a.timeMs) ?? Number.POSITIVE_INFINITY
+            : numOrNull(a[key]) ?? (desc ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY);
+        const bv =
+          key === 'time'
+            ? numOrNull(b.timeMs) ?? Number.POSITIVE_INFINITY
+            : numOrNull(b[key]) ?? (desc ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY);
+        cmp = av === bv ? 0 : av < bv ? -1 : 1;
+      } else {
+        cmp = String(a[key] ?? '').localeCompare(String(b[key] ?? ''));
+      }
+      if (cmp !== 0) return desc ? -cmp : cmp;
+    }
+    return 0;
+  });
+  return out;
+}
+
+/** Parse `--sort-rows=voidRisk,voidDelta` (comma-separated). */
+export function parseAnalyzeRowSortBy(
+  raw: string | undefined | null,
+  fallback: AnalyzeRowSortKey[] = ['voidRisk', 'maxSeverity', 'time'],
+): AnalyzeRowSortKey[] {
+  if (!raw?.trim()) return fallback;
+  const allowed = new Set<AnalyzeRowSortKey>([
+    'time',
+    'voidRisk',
+    'voidDelta',
+    'voidEv',
+    'maxSeverity',
+    'eventType',
+    'marketClass',
+  ]);
+  const keys = raw
+    .split(',')
+    .map(s => s.trim())
+    .filter((k): k is AnalyzeRowSortKey => allowed.has(k as AnalyzeRowSortKey));
+  return keys.length ? keys : fallback;
+}
+
+/**
+ * Default row sort for a focus preset (EV → worst voidΔ first).
+ */
+export function defaultRowSortForPreset(
+  focus: AnalyzeColumnPresetName | null,
+): { sortBy: AnalyzeRowSortKey[]; desc: boolean } {
+  if (focus === 'ev') return { sortBy: ['voidDelta', 'voidEv', 'time'], desc: false };
+  if (focus === 'patterns') return { sortBy: ['maxSeverity', 'voidRisk', 'time'], desc: false };
+  return { sortBy: ['voidRisk', 'maxSeverity', 'time'], desc: false };
+}
+
+/** GFM/CSV-safe cell. */
+function csvCell(v: unknown): string {
+  const s = v == null ? '' : String(v);
+  if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+}
+
+/** CSV export of projected columns (header + rows). */
+export function formatAnalyzeCsv(
+  rows: AnalyzeWeightedRow[],
+  columns: readonly string[] = ANALYZE_WEIGHTED_DEFAULT_COLUMNS,
+): string {
+  const cols = resolveAnalyzeColumns(columns);
+  const projected = projectTableRows(rows, cols, { empty: '' });
+  if (!projected.length) return cols.join(',') + '\n';
+  const lines = [cols.join(',')];
+  for (const r of projected) {
+    lines.push(cols.map(c => csvCell(r[c])).join(','));
+  }
+  return lines.join('\n') + '\n';
+}
+
 function bumpCount(map: Record<string, number>, key: string): void {
   const k = key || '—';
   map[k] = (map[k] ?? 0) + 1;
@@ -669,10 +807,17 @@ export const ANALYZE_HTML_STYLES = `
   .risk-low { color: var(--risk-low); font-weight: 600; }
   .sev-watch { color: var(--sev-watch); font-weight: 600; }
   .sev-info { color: var(--sev-info); }
+  tr.row-risk-high td { background: color-mix(in srgb, var(--risk-high) 9%, transparent); }
+  tr.row-risk-medium td { background: color-mix(in srgb, var(--risk-medium) 8%, transparent); }
+  tr.row-risk-low td { background: color-mix(in srgb, var(--risk-low) 7%, transparent); }
+  .preset-nav { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.6rem 0 0.85rem; }
+  .preset-nav a { text-decoration: none; padding: 0.2rem 0.55rem; border-radius: 999px; border: 1px solid var(--border); font-size: 0.75rem; font-weight: 600; color: inherit; background: var(--chip-bg); }
+  .preset-nav a:hover { border-color: color-mix(in srgb, currentColor 45%, transparent); }
+  .sort-hint { font-size: 0.75rem; opacity: 0.8; margin: 0.2rem 0 0.5rem; }
 `.trim();
 
 /**
- * Highlight voidRisk / severity cell text after Bun.markdown.html.
+ * Highlight voidRisk / severity cells + tint whole rows after Bun.markdown.html.
  * Conservative: only bare cells whose entire text is a known token.
  */
 export function enhanceAnalyzeHtmlBody(bodyHtml: string): string {
@@ -686,18 +831,42 @@ export function enhanceAnalyzeHtmlBody(bodyHtml: string): string {
   ];
   let out = bodyHtml;
   for (const [token, cls] of tokens) {
-    const re = new RegExp(
-      `<td(\\s[^>]*)?>${token}<\\/td>`,
-      'gi',
-    );
+    const re = new RegExp(`<td(\\s[^>]*)?>${token}<\\/td>`, 'gi');
     out = out.replace(re, `<td$1 class="${cls}">${token}</td>`);
   }
+  // Row tint from highest-priority risk token present in the row
+  out = out.replace(/<tr>([\s\S]*?)<\/tr>/gi, (full, inner: string) => {
+    if (/class="risk-high"/i.test(inner) || /class='risk-high'/i.test(inner)) {
+      return `<tr class="row-risk-high">${inner}</tr>`;
+    }
+    if (/class="risk-medium"/i.test(inner) || /class='risk-medium'/i.test(inner)) {
+      return `<tr class="row-risk-medium">${inner}</tr>`;
+    }
+    if (/class="risk-low"/i.test(inner) || /class='risk-low'/i.test(inner)) {
+      return `<tr class="row-risk-low">${inner}</tr>`;
+    }
+    return full;
+  });
   // Wrap each table for sticky + scroll
   out = out.replace(/<table>/gi, '<div class="table-wrap"><table>').replace(
     /<\/table>/gi,
     '</table></div>',
   );
   return out;
+}
+
+/** Jump nav for multi-preset HTML reports. */
+export function buildAnalyzePresetNav(
+  presets: readonly AnalyzeColumnPresetName[],
+): string {
+  const links = presets
+    .filter(p => p !== 'all' || presets.length === 1)
+    .map(p => {
+      const id = p === 'all' ? 'preset-all' : `preset-${p}`;
+      return `<a href="#${id}">${p}</a>`;
+    });
+  if (links.length < 2) return '';
+  return `<nav class="preset-nav" aria-label="Column presets">${links.join('')}</nav>\n`;
 }
 
 /** Wrap markdown body in a minimal standalone HTML document. */
@@ -708,12 +877,20 @@ export function wrapAnalyzeHtmlDocument(input: {
   bodyHtml: string;
   /** Optional footer: recipe command + focus badge. */
   footer?: { recipe?: string; focusLabel?: string };
+  /** Multi-preset jump links (already HTML). */
+  navHtml?: string;
+  /** Sort hint under title. */
+  sortHint?: string;
 }): string {
   const titleExtra = input.titleExtra ? ` · ${input.titleExtra}` : '';
   const enhanced = enhanceAnalyzeHtmlBody(input.bodyHtml);
   const badge = input.footer?.focusLabel
     ? `<p><span class="badge">${input.footer.focusLabel}</span></p>\n`
     : '';
+  const sortHint = input.sortHint
+    ? `<p class="sort-hint">Row sort: ${input.sortHint}</p>\n`
+    : '';
+  const nav = input.navHtml ?? '';
   const recipe = input.footer?.recipe
     ? `<div class="meta-footer">Recipe: <code>${input.footer.recipe}</code></div>\n`
     : '';
@@ -728,7 +905,7 @@ ${ANALYZE_HTML_STYLES}
 </style>
 </head>
 <body>
-${badge}${enhanced}
+${badge}${sortHint}${nav}${enhanced}
 ${recipe}</body>
 </html>
 `;
@@ -750,6 +927,8 @@ export function formatAnalyzeHtmlReport(input: {
   columns?: readonly string[];
   /** When true, append CLI recipe footer. */
   includeRecipe?: boolean;
+  /** Displayed under title (row sort applied to `rows` by caller). */
+  rowSortHint?: string;
 }): string {
   const md = formatAnalyzeMarkdownReport(input);
   const body = markdownToHtml(md, 'docs');
@@ -760,6 +939,12 @@ export function formatAnalyzeHtmlReport(input: {
       ? input.presets.filter(p => p !== 'all').join('+')
       : undefined;
   const focusLabel = focused ?? multi;
+  const navPresets: AnalyzeColumnPresetName[] =
+    input.presets && input.presets.length > 1
+      ? [...input.presets]
+      : !input.presets || input.presets.includes('all')
+        ? [...ANALYZE_COLUMN_PRESET_NAMES]
+        : [];
   const recipe =
     input.includeRecipe !== false
       ? buildAnalyzeHtmlRecipe({
@@ -780,6 +965,8 @@ export function formatAnalyzeHtmlReport(input: {
     titleExtra: focusLabel,
     bodyHtml: body,
     footer: { recipe, focusLabel },
+    navHtml: buildAnalyzePresetNav(navPresets),
+    sortHint: input.rowSortHint,
   });
 }
 
@@ -935,6 +1122,12 @@ export function renderSportAnalyze(input: {
   /** Preset name(s) and/or field keys — same as CLI --columns. */
   columns?: readonly string[];
   colors?: boolean;
+  /**
+   * Display row order (table/HTML/CSV). When omitted, uses
+   * {@link defaultRowSortForPreset} from the focus preset.
+   */
+  rowSortBy?: AnalyzeRowSortKey | AnalyzeRowSortKey[];
+  rowSortDesc?: boolean;
 }): SportAnalyzeRender {
   const desc = input.desc ?? false;
   const artifact = buildAnalyzeSnapshotArtifact({
@@ -946,6 +1139,20 @@ export function renderSportAnalyze(input: {
   });
   const columns = resolveAnalyzeColumns(input.columns);
   const focusPreset = detectAnalyzeFocusPreset(input.columns);
+  const htmlSel = resolveHtmlPresets(input.columns);
+  const defaultSort =
+    focusPreset && focusPreset !== 'all'
+      ? defaultRowSortForPreset(focusPreset)
+      : htmlSel.kind === 'presets' && htmlSel.presets.includes('ev')
+        ? defaultRowSortForPreset('ev')
+        : defaultRowSortForPreset(null);
+  const rowSortBy = input.rowSortBy ?? defaultSort.sortBy;
+  const rowSortDesc = input.rowSortDesc ?? defaultSort.desc;
+  const displayRows = sortAnalyzeRows(artifact.rows, {
+    sortBy: rowSortBy,
+    desc: rowSortDesc,
+  });
+  const rowSortHint = `${Array.isArray(rowSortBy) ? rowSortBy.join(',') : rowSortBy}${rowSortDesc ? ' desc' : ''}`;
   const banner = formatAnalyzeBanner({
     sportId: artifact.sportId,
     phase: artifact.phase,
@@ -955,26 +1162,29 @@ export function renderSportAnalyze(input: {
     summary: artifact.summary,
     schemaVersion: artifact.schemaVersion,
   });
-  const inspectMeta = buildAnalyzeInspectMeta({
-    sportId: artifact.sportId,
-    phase: artifact.phase,
-    sortBy: artifact.sortBy,
-    desc: artifact.desc,
-    columns,
-    rows: artifact.rows,
-    schemaVersion: artifact.schemaVersion,
-  });
+  const inspectMeta = {
+    ...buildAnalyzeInspectMeta({
+      sportId: artifact.sportId,
+      phase: artifact.phase,
+      sortBy: artifact.sortBy,
+      desc: artifact.desc,
+      columns,
+      rows: displayRows,
+      schemaVersion: artifact.schemaVersion,
+    }),
+    rowSort: { sortBy: rowSortBy, desc: rowSortDesc },
+  };
   const htmlReport = formatAnalyzeHtmlReport({
     sportId: artifact.sportId,
     phase: artifact.phase,
     sortBy: artifact.sortBy,
     desc: artifact.desc,
-    rows: artifact.rows,
+    rows: displayRows,
     schemaVersion: artifact.schemaVersion,
     generatedAt: artifact.generatedAt,
+    rowSortHint,
   });
   // HTML view honors --columns: one/more named presets, free-form fields, or full
-  const htmlSel = resolveHtmlPresets(input.columns);
   const htmlView =
     htmlSel.kind === 'full'
       ? htmlReport
@@ -984,32 +1194,42 @@ export function renderSportAnalyze(input: {
             phase: artifact.phase,
             sortBy: artifact.sortBy,
             desc: artifact.desc,
-            rows: artifact.rows,
+            rows: displayRows,
             schemaVersion: artifact.schemaVersion,
             generatedAt: artifact.generatedAt,
             presets: htmlSel.presets,
+            rowSortHint,
           })
         : formatAnalyzeHtmlReport({
             sportId: artifact.sportId,
             phase: artifact.phase,
             sortBy: artifact.sortBy,
             desc: artifact.desc,
-            rows: artifact.rows,
+            rows: displayRows,
             schemaVersion: artifact.schemaVersion,
             generatedAt: artifact.generatedAt,
             columns: htmlSel.fields,
+            rowSortHint,
           });
   return {
-    artifact,
+    artifact: { ...artifact, rows: displayRows },
     columns,
     focusPreset,
-    banner,
+    banner: `${banner} · rowSort=${rowSortHint}`,
     inspectMeta,
-    tableInspect: formatAnalyzeInspectTable(artifact.rows, columns, {
+    tableInspect: formatAnalyzeInspectTable(displayRows, columns, {
       colors: input.colors ?? false,
     }),
-    tableMarkdown: formatAnalyzeMarkdownTable(artifact.rows, columns),
-    markdownReport: artifact.markdownReport,
+    tableMarkdown: formatAnalyzeMarkdownTable(displayRows, columns),
+    markdownReport: formatAnalyzeMarkdownReport({
+      sportId: artifact.sportId,
+      phase: artifact.phase,
+      sortBy: artifact.sortBy,
+      desc: artifact.desc,
+      rows: displayRows,
+      schemaVersion: artifact.schemaVersion,
+      generatedAt: artifact.generatedAt,
+    }),
     htmlReport,
     htmlView,
   };

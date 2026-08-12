@@ -73,17 +73,21 @@ Flat row schema (all settlement / pattern fields, no nested `[Object …]`):
 # Column presets (desk | odds | settlement | patterns | ev | all)
 bun live-tracker.ts analyze --sport=tennis --phase=live --columns=desk --table
 bun live-tracker.ts analyze --sport=tennis --phase=live --columns=ev --inspect --no-color
+bun live-tracker.ts analyze --sport=tennis --phase=live --columns=ev --sort-rows=voidDelta --csv
 bun live-tracker.ts analyze --sport=tennis --phase=live --columns=all --bake
 bun live-tracker.ts analyze --sport=tennis --phase=live --columns=desk --html --output /tmp/desk.html
 bun live-tracker.ts analyze --sport=tennis --phase=live --columns=desk,ev --html --open
 # --html honors --columns: desk → focused; desk,ev → those sections; all → multi-preset
 # --html without --output → research/cache/live-tracker/analyze-{sport}-{phase}-{cols}.html
 # --open opens the written file (macOS)
+# --sort-rows voidRisk|voidDelta|voidEv|maxSeverity|time|…  (display order; --rows-desc)
+#   defaults: desk/patterns risk-first; ev → voidDelta,voidEv,time (nulls last)
+# --csv / --format=csv → projected columns (respects --columns + row sort)
 # bake → docs/artifacts/live-tracker-analyze-{schema.json,sample.json,sample.md,sample.html}
 # fixture: tests/fixtures/live-tracker-event-197510101.jsonl
 ```
 
-Code: `renderSportAnalyze` (`htmlView` vs `htmlReport`) · risk CSS chips · **schema v3** · recipes in `tests/settlement/analyze-recipes.test.ts`.
+Code: `renderSportAnalyze` (`htmlView` vs `htmlReport`) · row sort + CSV · risk CSS chips / row tint · multi-preset nav · **schema v3** · recipes in `tests/settlement/analyze-recipes.test.ts`.
 
 Time: `time` = ISO UTC · `timeMs` = epoch ms join key — see [`TIME.md`](TIME.md).
 
