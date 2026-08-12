@@ -107,6 +107,35 @@ describe('live-tracker', () => {
     expect(multi.length).toBeLessThanOrEqual(2);
   });
 
+  test('eventsFromWatchUpdate dual-stamps timeMs', () => {
+    const u: OddsWatchUpdate = {
+      at: '2026-08-10T12:00:00.000Z',
+      eventId: 99,
+      lineCount: 4,
+      offeredMarketCount: 2,
+      transitions: [
+        { kind: 'market_off', period: 'm', marketType: '6' },
+        {
+          kind: 'price_change',
+          period: 'm',
+          marketType: '3',
+          selection: '1',
+          from: 2,
+          to: 2.1,
+        },
+      ],
+      book: null,
+      eventState: null,
+      eventTransitions: [],
+    };
+    const events = eventsFromWatchUpdate(u);
+    expect(events.length).toBeGreaterThan(0);
+    for (const e of events) {
+      expect(e.timeMs).toBe(Date.parse('2026-08-10T12:00:00.000Z'));
+      expect(e.time).toBe('2026-08-10T12:00:00.000Z');
+    }
+  });
+
   test('eventsFromWatchUpdate + summarize via stats', () => {
     const u: OddsWatchUpdate = {
       at: '2026-08-10T12:00:00.000Z',

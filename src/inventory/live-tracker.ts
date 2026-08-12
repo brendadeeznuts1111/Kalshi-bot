@@ -8,6 +8,7 @@ import type {
   EventDataStateTransition,
   OfferTransition,
 } from '../partner/fantasy-ultra/coefficients.ts';
+import { dualTime, sortKeyEpochMs, type EpochMs, type IsoUtc } from '../lib/time-ssot.ts';
 import {
   weightLiveTrackerMove,
   type EdgePatternSortOptions,
@@ -33,7 +34,13 @@ export const LIVE_TRACKER_EVENT_TYPES = [
 type LiveTrackerEventType = (typeof LIVE_TRACKER_EVENT_TYPES)[number];
 
 export type LiveTrackerEvent = {
-  time: string;
+  /** ISO-8601 UTC wall clock. */
+  time: IsoUtc | string;
+  /**
+   * Same instant as Unix epoch **milliseconds** (join to shadow/event-store).
+   * Filled at mint; backfilled on load when missing.
+   */
+  timeMs?: EpochMs | null;
   eventType: LiveTrackerEventType;
   /** Pandora event id (wire). */
   eventId: number | string;
@@ -50,12 +57,36 @@ export type LiveTrackerEvent = {
 };
 
 type LiveTrackerLogRecord = {
+  /** ISO-8601 UTC. */
   at: string;
+  /** Epoch ms for `at` when known. */
+  atMs?: EpochMs | null;
   eventId: number;
   lineCount: number;
   offeredMarketCount: number;
   events: LiveTrackerEvent[];
 };
+
+/** Stamp dual time onto an event (mint or load backfill). */
+export function withDualTime<T extends { time: string; timeMs?: EpochMs | null }>(
+  e: T,
+): T & { time: string; timeMs: EpochMs | null } {
+  if (e.timeMs != null && Number.isFinite(e.timeMs)) {
+    return e as T & { time: string; timeMs: EpochMs | null };
+  }
+  const d = dualTime(e.time);
+  return { ...e, time: d?.time ?? e.time, timeMs: d?.timeMs ?? null };
+}
+
+function ctxDual(at: string): { at: string; atMs: EpochMs | null; time: string; timeMs: EpochMs | null } {
+  const d = dualTime(at);
+  return {
+    at: d?.time ?? at,
+    atMs: d?.timeMs ?? null,
+    time: d?.time ?? at,
+    timeMs: d?.timeMs ?? null,
+  };
+}
 
 const LIVE_TRACKER_LOG_DIR = joinPath(CACHE_DIR, 'live-tracker');
 
@@ -65,10 +96,12 @@ export function defaultLiveTrackerLogPath(eventId: number | string): string {
 
 function offerTransitionToEvent(
   t: OfferTransition,
-  ctx: { at: string; eventId: number; file?: string }
+  ctx: { at: string; eventId: number; file?: string; timeMs?: EpochMs | null }
 ): LiveTrackerEvent {
+  const dual = ctx.timeMs != null ? { time: ctx.at, timeMs: ctx.timeMs } : dualTime(ctx.at);
   const base = {
-    time: ctx.at,
+    time: dual?.time ?? ctx.at,
+    timeMs: dual?.timeMs ?? null,
     eventId: ctx.eventId,
     period: t.period,
     marketType: t.marketType,
@@ -116,10 +149,12 @@ function offerTransitionToEvent(
 
 function eventDataTransitionToEvent(
   t: EventDataStateTransition,
-  ctx: { at: string; eventId: number; file?: string }
+  ctx: { at: string; eventId: number; file?: string; timeMs?: EpochMs | null }
 ): LiveTrackerEvent {
+  const dual = ctx.timeMs != null ? { time: ctx.at, timeMs: ctx.timeMs } : dualTime(ctx.at);
   const base = {
-    time: ctx.at,
+    time: dual?.time ?? ctx.at,
+    timeMs: dual?.timeMs ?? null,
     eventId: ctx.eventId,
     file: ctx.file,
     rawKind: t.kind,
@@ -153,7 +188,13 @@ export function eventsFromWatchUpdate(
   u: OddsWatchUpdate,
   options: { includeTicks?: boolean; file?: string } = {}
 ): LiveTrackerEvent[] {
-  const ctx = { at: u.at, eventId: u.eventId, file: options.file };
+  const stamped = ctxDual(u.at);
+  const ctx = {
+    at: stamped.at,
+    timeMs: stamped.timeMs,
+    eventId: u.eventId,
+    file: options.file,
+  };
   const out: LiveTrackerEvent[] = [];
   for (const t of u.transitions) {
     out.push(offerTransitionToEvent(t, ctx));
@@ -163,7 +204,8 @@ export function eventsFromWatchUpdate(
   }
   if (options.includeTicks && out.length === 0) {
     out.push({
-      time: u.at,
+      time: stamped.time,
+      timeMs: stamped.timeMs,
       eventType: 'WATCH_TICK',
       eventId: u.eventId,
       detail: `lines=${u.lineCount} offered=${u.offeredMarketCount}`,
@@ -317,8 +359,9 @@ export function weightTrackerEvents(
 ): Array<LiveTrackerEvent & { settlement?: LiveTrackerWeightResult }> {
   const phase = options.phase ?? 'live';
   return events.map(e => {
+    const stamped = withDualTime(e);
     if (e.eventType !== 'PRICE_CHANGE' && e.eventType !== 'MARKET_ADDED') {
-      return e;
+      return stamped;
     }
     const toNum = e.to != null && e.to !== '' ? Number(e.to) : NaN;
     const settlement = weightLiveTrackerMove({
@@ -329,16 +372,20 @@ export function weightTrackerEvents(
       decimalOdds: Number.isFinite(toNum) && toNum > 1 ? toNum : null,
       patternSort: options.patternSort,
     });
-    return { ...e, settlement };
+    return { ...stamped, settlement };
   });
 }
 
 type EventTimeStats = {
   total: number;
   byType: Array<{ eventType: string; count: number }>;
-  /** Epoch ms of earliest/latest event time (parseable ISO). */
+  /** ISO of earliest/latest (from dual stamp). */
   minTime: string | null;
   maxTime: string | null;
+  /** Epoch ms bounds. */
+  minTimeMs: number | null;
+  maxTimeMs: number | null;
+  /** Span in milliseconds. */
   spanMs: number | null;
   /** Mean gap between consecutive events (ms), when ≥2 events. */
   meanGapMs: number | null;
@@ -354,6 +401,8 @@ export function computeEventStats(events: LiveTrackerEvent[]): EventTimeStats {
       byType,
       minTime: null,
       maxTime: null,
+      minTimeMs: null,
+      maxTimeMs: null,
       spanMs: null,
       meanGapMs: null,
       minGapMs: null,
@@ -361,8 +410,11 @@ export function computeEventStats(events: LiveTrackerEvent[]): EventTimeStats {
     };
   }
   const times = events
-    .map(e => ({ t: e.time, ms: Date.parse(e.time) }))
-    .filter(x => Number.isFinite(x.ms))
+    .map(e => {
+      const stamped = withDualTime(e);
+      return { t: stamped.time, ms: sortKeyEpochMs(stamped) };
+    })
+    .filter(x => Number.isFinite(x.ms) && x.ms !== Number.NEGATIVE_INFINITY)
     .sort((a, b) => a.ms - b.ms);
   if (!times.length) {
     return {
@@ -370,6 +422,8 @@ export function computeEventStats(events: LiveTrackerEvent[]): EventTimeStats {
       byType,
       minTime: null,
       maxTime: null,
+      minTimeMs: null,
+      maxTimeMs: null,
       spanMs: null,
       meanGapMs: null,
       minGapMs: null,
@@ -382,12 +436,16 @@ export function computeEventStats(events: LiveTrackerEvent[]): EventTimeStats {
   }
   const minTime = times[0]!.t;
   const maxTime = times[times.length - 1]!.t;
-  const spanMs = times[times.length - 1]!.ms - times[0]!.ms;
+  const minTimeMs = times[0]!.ms;
+  const maxTimeMs = times[times.length - 1]!.ms;
+  const spanMs = maxTimeMs - minTimeMs;
   return {
     total: events.length,
     byType,
     minTime,
     maxTime,
+    minTimeMs,
+    maxTimeMs,
     spanMs,
     meanGapMs: gaps.length
       ? gaps.reduce((a, b) => a + b, 0) / gaps.length
@@ -420,6 +478,10 @@ export function formatEventsCsv(
 
 const COL_MAP: Record<string, (e: LiveTrackerEvent) => string> = {
   time: e => e.time,
+  timems: e => {
+    const ms = withDualTime(e).timeMs;
+    return ms != null ? String(ms) : '—';
+  },
   event: e => e.eventType,
   eventtype: e => e.eventType,
   type: e => e.eventType,
@@ -484,7 +546,7 @@ export function eventsToObjects(
   });
 }
 
-/** Parse a single JSON object into events when possible. */
+/** Parse a single JSON object into events when possible. Always dual-stamps time/timeMs. */
 function parseTrackerJsonValue(
   row: unknown,
   file?: string
@@ -493,27 +555,31 @@ function parseTrackerJsonValue(
   if (Array.isArray(row)) {
     // array of events
     if (row.length && typeof row[0] === 'object' && row[0] && 'eventType' in (row[0] as object)) {
-      return (row as LiveTrackerEvent[]).map(e => ({
-        ...e,
-        file: e.file ?? file,
-      }));
+      return (row as LiveTrackerEvent[]).map(e =>
+        withDualTime({
+          ...e,
+          file: e.file ?? file,
+        }),
+      );
     }
     return [];
   }
   if (typeof row !== 'object') return [];
   const o = row as Record<string, unknown>;
   if (Array.isArray(o.events)) {
-    return (o.events as LiveTrackerEvent[]).map(e => ({
-      ...e,
-      file: e.file ?? file,
-    }));
+    return (o.events as LiveTrackerEvent[]).map(e =>
+      withDualTime({
+        ...e,
+        file: e.file ?? file,
+      }),
+    );
   }
   if (typeof o.eventType === 'string' && typeof o.time === 'string') {
     return [
-      {
+      withDualTime({
         ...(o as unknown as LiveTrackerEvent),
         file: file ?? (o.file as string | undefined),
-      },
+      }),
     ];
   }
   if (typeof o.at === 'string' && (typeof o.eventId === 'number' || typeof o.eventId === 'string')) {
