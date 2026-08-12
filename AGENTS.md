@@ -7,6 +7,8 @@ runtime safety.
 ## Commands
 
 - Bun 1.3.14 stable is the supported local and production baseline.
+- Bun-native stack checklist: [`docs/BUN_TECH_STACK.md`](docs/BUN_TECH_STACK.md)
+  (API depth: [`docs/BUN_NATIVE.md`](docs/BUN_NATIVE.md)).
 - Use `bun run bun:ci` as local merge proof. `bun run check` is the same owned
   gate beneath it.
 - GitHub Actions is a manual diagnostic only while hosted runners are

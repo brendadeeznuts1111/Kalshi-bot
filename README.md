@@ -293,10 +293,11 @@ Details: [`docs/CRON.md`](docs/CRON.md) · Bun map: [`docs/BUN_NATIVE.md`](docs/
 - [`docs/AUDIT_ADAPTER.md`](docs/AUDIT_ADAPTER.md) — audit wire + rotor ingest
 - [`docs/FACTOR_STACK.md`](docs/FACTOR_STACK.md) — scoring SSOT
 - [`docs/PLAN.md`](docs/PLAN.md) — as-built design
-- [`docs/BUN_NATIVE.md`](docs/BUN_NATIVE.md) — API map
+- [`docs/BUN_TECH_STACK.md`](docs/BUN_TECH_STACK.md) — Bun-native stack checklist (grounded)
+- [`docs/BUN_NATIVE.md`](docs/BUN_NATIVE.md) — API map + utils/markdown deep-dive
 - [`docs/BUN_SHELL.md`](docs/BUN_SHELL.md) — `Bun.$` patterns
 - [`docs/PARTNER-EXECUTION-EXPANSION.md`](docs/PARTNER-EXECUTION-EXPANSION.md) — Telegram → partner authorization → Kalshi, with honest Polymarket expansion gates
 
 ## Dependency rule
 
-Before adding a package, check [`docs/BUN_NATIVE.md`](docs/BUN_NATIVE.md).
+Before adding a package, check [`docs/BUN_TECH_STACK.md`](docs/BUN_TECH_STACK.md) and [`docs/BUN_NATIVE.md`](docs/BUN_NATIVE.md).
