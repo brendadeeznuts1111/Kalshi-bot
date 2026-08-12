@@ -105,6 +105,14 @@ competitionRecordFromLeague({
 // → { …, countryCode: 'IN', kind: 'country_bucket' }
 ```
 
+**CLI** (`inventory:leagues`) prints meta by default:
+
+```text
+volleyball · Indiya · live=0 peak=1 · volleyball.indiya · cc=IN kind=country_bucket
+```
+
+`--json` includes `countryCode`, `kind`, `metaInferred`. Pass `--no-meta` for the old line shape.
+
 ### Volleyball tiers + NCAA
 
 Desk sizing tiers **A–D** and NCAA college seeds:

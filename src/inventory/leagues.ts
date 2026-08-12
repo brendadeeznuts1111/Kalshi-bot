@@ -4,7 +4,16 @@
  * Dimension: book + stream bucket + league label (not seat partner).
  */
 import type { Database } from 'bun:sqlite';
-import { normalizeLeagueKey } from '../domain/competitions.ts';
+import {
+  getCompetition,
+  normalizeLeagueKey,
+  type CompetitionKind,
+} from '../domain/competitions.ts';
+import {
+  inferCompetitionCountryCode,
+  inferCompetitionKind,
+  resolveCompetitionMeta,
+} from '../domain/competition-meta.ts';
 import { resolveCompetition } from '../domain/resolve-competition.ts';
 import { isSportId } from '../domain/sports.ts';
 import { listLiveProductSportBindings } from '../domain/live-product-sport-bindings.ts';
@@ -26,6 +35,18 @@ export type InventoryLeagueRow = {
   lastSeen: number;
   sampleHome: string | null;
   sampleAway: string | null;
+};
+
+/** Desk geo/kind attached at display/JSON time (not stored on inventory_leagues). */
+export type InventoryLeagueMetaView = {
+  countryCode: string | null;
+  kind: CompetitionKind;
+  /** True when meta was inferred from label (not explicit competition seed fields). */
+  inferred: boolean;
+};
+
+export type InventoryLeagueRowWithMeta = InventoryLeagueRow & {
+  meta: InventoryLeagueMetaView;
 };
 
 export type InventoryLeagueUpsertResult = {
@@ -403,9 +424,51 @@ export function countInventoryLeagues(
   };
 }
 
-export function formatLeagueLine(row: InventoryLeagueRow): string {
+/**
+ * Resolve country/kind for an inventory league row.
+ * Prefer mapped competition meta; fall back to label inference when unmapped.
+ */
+export function resolveInventoryLeagueMeta(
+  row: Pick<InventoryLeagueRow, 'competitionId' | 'leagueKey' | 'sportId'>,
+): InventoryLeagueMetaView {
+  if (row.competitionId) {
+    const rec = getCompetition(row.competitionId);
+    if (rec) {
+      const m = resolveCompetitionMeta(rec);
+      return {
+        countryCode: m.countryCode,
+        kind: m.kind,
+        inferred: m.inferred,
+      };
+    }
+  }
+  return {
+    countryCode: inferCompetitionCountryCode(row.leagueKey),
+    kind: inferCompetitionKind(row.leagueKey, row.sportId),
+    inferred: true,
+  };
+}
+
+export function withInventoryLeagueMeta(
+  row: InventoryLeagueRow,
+): InventoryLeagueRowWithMeta {
+  return { ...row, meta: resolveInventoryLeagueMeta(row) };
+}
+
+/**
+ * Operator TTY line. Meta: `cc=IN kind=country_bucket` (or `cc=?` when unknown).
+ */
+export function formatLeagueLine(
+  row: InventoryLeagueRow,
+  options: { meta?: boolean } = {},
+): string {
+  const showMeta = options.meta !== false;
   const comp = row.competitionId ?? 'unmapped';
-  return `${row.sportId} · ${row.leagueKey} · live=${row.eventCountLive} peak=${row.peakEventCount} · ${comp}`;
+  const base = `${row.sportId} · ${row.leagueKey} · live=${row.eventCountLive} peak=${row.peakEventCount} · ${comp}`;
+  if (!showMeta) return base;
+  const m = resolveInventoryLeagueMeta(row);
+  const cc = m.countryCode ?? '?';
+  return `${base} · cc=${cc} kind=${m.kind}`;
 }
 
 /**
