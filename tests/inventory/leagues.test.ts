@@ -2,8 +2,10 @@
 import { describe, expect, test } from 'bun:test';
 import {
   countInventoryLeagues,
+  formatLeagueLine,
   listInventoryLeagues,
   planInventoryLeagues,
+  resolveInventoryLeagueMeta,
   upsertInventoryLeagues,
 } from '../../src/inventory/leagues.ts';
 import { runInventorySync } from '../../src/inventory/sync.ts';
@@ -76,5 +78,32 @@ describe('inventory leagues', () => {
     });
     expect(report.seen).toBeGreaterThanOrEqual(1);
     expect(countInventoryLeagues(db).total).toBeGreaterThanOrEqual(1);
+  });
+
+  test('resolveInventoryLeagueMeta + formatLeagueLine include cc/kind', () => {
+    const db = memoryDb();
+    const events = [
+      liveEvent('1', 'volleyball', 'A', 'B', 'Indiya'),
+      liveEvent('2', 'volleyball', 'C', 'D', 'Russia. League Pro. Women'),
+    ];
+    upsertInventoryLeagues(db, events, { nowMs: 1000 });
+    const rows = listInventoryLeagues(db, { sportId: 'volleyball', orderBy: 'peak' });
+    const indiya = rows.find(r => r.leagueKey === 'Indiya');
+    const russia = rows.find(r => r.leagueKey === 'Russia. League Pro. Women');
+    expect(indiya).toBeDefined();
+    expect(russia).toBeDefined();
+
+    const mInd = resolveInventoryLeagueMeta(indiya!);
+    expect(mInd.countryCode).toBe('IN');
+    expect(mInd.kind).toBe('country_bucket');
+
+    const mRu = resolveInventoryLeagueMeta(russia!);
+    expect(mRu.countryCode).toBe('RU');
+    expect(mRu.kind).toBe('league');
+
+    const line = formatLeagueLine(indiya!);
+    expect(line).toContain('cc=IN');
+    expect(line).toContain('kind=country_bucket');
+    expect(formatLeagueLine(indiya!, { meta: false })).not.toContain('cc=');
   });
 });

@@ -7,6 +7,7 @@
  *   bun run inventory:leagues -- --unmapped
  *   bun run inventory:leagues -- --sport=table_tennis --limit=50
  *   bun run inventory:leagues -- --order=peak
+ *   bun run inventory:leagues -- --no-meta          # omit cc=/kind= columns
  *   bun run inventory:leagues -- --harvest --sport=all [--dry-run]
  *   bun run inventory:leagues -- --promote [--apply] [--min-peak=1] [--json]
  *   bun run inventory:leagues -- --report [--min-peak=1] [--json] [--notify]
@@ -17,6 +18,7 @@
  * --notify:  with --report, force Telegram once (TELEGRAM_* required; dedup state updated).
  * --apply:   write candidates into src/domain/competitions.ts + stamp registry rows.
  * --backfill: re-resolve competition_id on inventory_leagues from current seeds.
+ * Lines/JSON include countryCode + kind (from competition meta / label inference).
  */
 import { argValue, hasFlag } from '../src/cli/argv.ts';
 // @see https://bun.com/docs/runtime/sqlite
@@ -28,13 +30,16 @@ import {
   formatCompetitionRecordSource,
   planCompetitionPromote,
   requireDefaultUrlForUltraMapper,
+  resolveCompetitionMeta,
 } from '../src/domain/index.ts';
 import {
   countInventoryLeagues,
   formatLeagueLine,
   listInventoryLeagues,
+  resolveInventoryLeagueMeta,
   stampInventoryLeaguesCompetitionIds,
   stampInventoryLeaguesFromRecords,
+  withInventoryLeagueMeta,
   type InventoryLeagueRow,
 } from '../src/inventory/leagues.ts';
 import { maybeNotifyPromoteReport } from '../src/inventory/promote-notify.ts';
@@ -73,8 +78,8 @@ function resolveProfile(_dryRun: boolean): PartnerAccountProfile {
   return requireFantasy402ProfileFromEnv();
 }
 
-function rowJson(r: InventoryLeagueRow) {
-  return {
+function rowJson(r: InventoryLeagueRow, options: { meta?: boolean } = {}) {
+  const base = {
     bookId: r.bookId,
     inventoryBucket: r.inventoryBucket,
     sportId: r.sportId,
@@ -86,6 +91,14 @@ function rowJson(r: InventoryLeagueRow) {
     lastSeen: new Date(r.lastSeen).toISOString(),
     sampleHome: r.sampleHome,
     sampleAway: r.sampleAway,
+  };
+  if (options.meta === false) return base;
+  const meta = resolveInventoryLeagueMeta(r);
+  return {
+    ...base,
+    countryCode: meta.countryCode,
+    kind: meta.kind,
+    metaInferred: meta.inferred,
   };
 }
 
@@ -101,6 +114,7 @@ async function main(): Promise<void> {
   const apply = hasFlag('apply');
   const backfill = hasFlag('backfill');
   const dryRun = hasFlag('dry-run') || hasFlag('dryRun');
+  const showMeta = !hasFlag('no-meta');
   const sportFilter = argValue('sport');
   const limit = Number(argValue('limit') ?? '100') || 100;
   const orderBy = argValue('order') === 'peak' ? 'peak' : 'last_seen';
@@ -128,12 +142,17 @@ async function main(): Promise<void> {
             report: true,
             minPeak: promo.minPeak,
             unmappedInput: promo.unmappedInput,
-            candidates: promo.plan.candidates.map(c => ({
-              id: c.record.id,
-              leagueKey: c.source.leagueKey,
-              peak: c.source.peakEventCount,
-              bucket: c.record.providerMappings.plive?.inventoryBucket,
-            })),
+            candidates: promo.plan.candidates.map(c => {
+              const m = resolveCompetitionMeta(c.record);
+              return {
+                id: c.record.id,
+                leagueKey: c.source.leagueKey,
+                peak: c.source.peakEventCount,
+                bucket: c.record.providerMappings.plive?.inventoryBucket,
+                countryCode: m.countryCode ?? c.record.countryCode ?? null,
+                kind: m.kind,
+              };
+            }),
             rejected: promo.plan.rejected.map(r => ({
               leagueKey: r.source.leagueKey,
               reason: r.reason,
@@ -274,14 +293,19 @@ async function main(): Promise<void> {
             dryRun: true,
             minPeak,
             toInsert: plan.toInsert,
-            candidates: plan.candidates.map(c => ({
-              id: c.record.id,
-              sportId: c.record.sportId,
-              leagueKey: c.source.leagueKey,
-              bucket: c.record.providerMappings.plive?.inventoryBucket,
-              peak: c.source.peakEventCount,
-              gender: c.record.gender,
-            })),
+            candidates: plan.candidates.map(c => {
+              const m = resolveCompetitionMeta(c.record);
+              return {
+                id: c.record.id,
+                sportId: c.record.sportId,
+                leagueKey: c.source.leagueKey,
+                bucket: c.record.providerMappings.plive?.inventoryBucket,
+                peak: c.source.peakEventCount,
+                gender: c.record.gender,
+                countryCode: m.countryCode ?? c.record.countryCode ?? null,
+                kind: m.kind,
+              };
+            }),
             rejected: plan.rejected.map(r => ({
               sportId: r.source.sportId,
               leagueKey: r.source.leagueKey,
@@ -306,8 +330,11 @@ async function main(): Promise<void> {
     );
     for (const c of plan.candidates.slice(0, 40)) {
       const peak = c.source.peakEventCount ?? '?';
+      const m = resolveCompetitionMeta(c.record);
+      const cc = m.countryCode ?? '?';
       console.log(
-        `  +C ${c.record.id} · peak=${peak} · ${c.record.providerMappings.plive?.inventoryBucket}`
+        `  +C ${c.record.id} · peak=${peak} · ${c.record.providerMappings.plive?.inventoryBucket}` +
+          ` · cc=${cc} kind=${m.kind}`,
       );
     }
     if (plan.candidates.length > 40) {
@@ -390,7 +417,8 @@ async function main(): Promise<void> {
           unmappedOnly: unmapped,
           sportId: sportFilter ?? null,
           orderBy,
-          leagues: rows.map(rowJson),
+          meta: showMeta,
+          leagues: rows.map(r => rowJson(r, { meta: showMeta })),
         },
         null,
         2
@@ -402,11 +430,12 @@ async function main(): Promise<void> {
   console.log(
     `inventory:leagues total=${counts.total} liveNow=${counts.liveNow} unmapped=${counts.unmapped}` +
       (unmapped ? ' (unmapped only)' : '') +
-      (sportFilter ? ` sport=${sportFilter}` : '')
+      (sportFilter ? ` sport=${sportFilter}` : '') +
+      (showMeta ? '' : ' (no-meta)'),
   );
   for (const r of rows) {
     const live = r.eventCountLive > 0 ? '*' : ' ';
-    console.log(`  ${live} ${formatLeagueLine(r)}`);
+    console.log(`  ${live} ${formatLeagueLine(r, { meta: showMeta })}`);
   }
   if (rows.length === 0) {
     console.log('  (empty — run inventory:leagues -- --harvest --sport=all)');
