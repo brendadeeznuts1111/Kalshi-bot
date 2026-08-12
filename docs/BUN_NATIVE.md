@@ -2,6 +2,8 @@
 
 This project is **Bun-native first**. Runtime dependencies are limited to the two domain libraries that earn their weight: `drizzle-orm` for typed SQL and `zod` for boundary schemas. Process, file, TOML, terminal, test, and other platform capabilities map directly to Bun or the Node-compatible standard library.
 
+**Stack checklist (agents):** [`BUN_TECH_STACK.md`](BUN_TECH_STACK.md) — runtime, HTTP, DB, utils, markdown, production readiness mapped to this repo.
+
 **Rule:** before adding any package, check the [Bun API map](#bun-api-map) below — the runtime almost certainly already provides it.
 
 Canonical URLs (two planes — prefer both in `@see` when practical):
