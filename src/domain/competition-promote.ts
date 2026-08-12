@@ -16,7 +16,41 @@ import { isSportId, type SportId } from './sports.ts';
 
 /** Structural markers that signal a real competition, not a matchup/person. */
 const LEAGUE_MARKERS =
-  /\b(league|liga|cup|open|division|championship|series|seriya|masters|premier|tour|challenger|atp|wta|itf|ipbl|mpl|nba|nhl|mlb|ncaa|nation|world|super|pro|t20|ipl|qualify|playoff|tournament|grand|slam|setka|regional|friendl|women|men|u\d{2}|youth|indoor|summer|winter|classic|trophy|bowl|prix|formula|f1|ufc|wbc|wba|ibf|cage|cdbl|rhl|mnhl|3hl|bskt|upvl|att)\b/i;
+  /\b(league|liga|cup|open|division|championship|series|seriya|masters|premier|tour|challenger|atp|wta|itf|ipbl|mpl|nba|nhl|mlb|ncaa|nation|world|super|pro|t20|ipl|qualify|kvalifik|playoff|tournament|grand|slam|setka|regional|friendl|women|men|u\d{2}|youth|indoor|summer|winter|classic|trophy|bowl|prix|formula|f1|ufc|wbc|wba|ibf|cage|cdbl|rhl|mnhl|3hl|bskt|upvl|att|konferentsiya|conference)\b/i;
+
+/**
+ * ITF / satellite weekly wire labels: "W35 Aldershot - 9 August 26", "M25 Muttenz - 9 August 26".
+ * Contain " - " but are tournaments, not team matchups.
+ */
+const ITF_WEEKLY_LABEL =
+  /^(?:W|M)\d{2,3}\b.+\s+-\s+\d{1,2}\s+[A-Za-z]+\s+\d{2,4}\s*$/i;
+
+/**
+ * Single-token feed country buckets (often RU translit). Promotable as desk D noise.
+ * Keep tight — do not add person nicknames.
+ */
+const FEED_COUNTRY_BUCKETS = new Set(
+  [
+    'indiya',
+    'india',
+    'rossiya',
+    'belarusy',
+    'niderlandi',
+    'filippini',
+    'polsha',
+    'polysha',
+    'ukraina',
+    'kazakhstan',
+    'germaniya',
+    'frantsiya',
+    'turtsiya',
+    'ispaniya',
+    'italiya',
+    'kitay',
+    'yaponiya',
+    'braziliya',
+  ].map(s => s.toLowerCase()),
+);
 
 export type JunkLeagueReason =
   | 'empty'
@@ -57,7 +91,15 @@ export type CompetitionPromotePlan = {
 };
 
 export function hasLeagueStructureMarker(league: string): boolean {
-  return LEAGUE_MARKERS.test(league);
+  return LEAGUE_MARKERS.test(league) || ITF_WEEKLY_LABEL.test(league.trim());
+}
+
+export function isFeedCountryBucket(league: string): boolean {
+  return FEED_COUNTRY_BUCKETS.has(league.trim().toLowerCase());
+}
+
+export function isItfWeeklyLabel(league: string): boolean {
+  return ITF_WEEKLY_LABEL.test(league.trim());
 }
 
 /**
@@ -72,6 +114,9 @@ export function junkLeagueReason(league: string): JunkLeagueReason | null {
   // "Vitaliy S" / "John D."
   if (/^[A-Za-z][A-Za-z'-]+ [A-Z]\.?$/.test(raw)) return 'person_initial';
 
+  // ITF weekly tournaments look like matchups ("W35 City - 9 August 26") but are leagues
+  if (isItfWeeklyLabel(raw)) return null;
+
   // Matchup blob: "Team A - Team B" / "X vs Y" without competition markers
   const matchupSep = /\s+-\s+|\s+vs\.?\s+/i;
   if (matchupSep.test(raw) && !hasLeagueStructureMarker(raw)) {
@@ -79,8 +124,10 @@ export function junkLeagueReason(league: string): JunkLeagueReason | null {
   }
 
   // Single short token with no structure (table-tennis person nicknames etc.)
+  // Country-only feed buckets are allowed through (Indiya, Rossiya, …).
   const tokens = raw.split(/[\s.]+/).filter(Boolean);
   if (tokens.length === 1 && raw.length < 12 && !hasLeagueStructureMarker(raw)) {
+    if (isFeedCountryBucket(raw)) return null;
     return 'no_structure';
   }
 
