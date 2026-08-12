@@ -88,6 +88,147 @@ Full topic map (guides from the official table; **Ref** = types API; **Here** = 
 
 Repo-specific wiring (paths, not the full catalog) continues in [Bun API map](#bun-api-map).
 
+## Utils (runtime)
+
+**Source:** [Utils guide](https://bun.com/docs/runtime/utils) · types [reference/bun](https://bun.com/reference/bun) · overview row above under Sleep / Comparison / String / Compression
+
+Native helpers on the `Bun` global. Prefer these over npm packages (`which`, `string-width`, `ms`, `uuid` v4 for sortable IDs, …).
+
+### Identity & entry
+
+| API | Behavior | Repo |
+| --- | -------- | ---- |
+| `Bun.version` | CLI version string (`"1.3.x"`) | doctor / ground banners when needed |
+| `Bun.revision` | Compiled Bun git SHA | diagnostics only |
+| `Bun.env` | Alias of `process.env` (auto `.env` load — see [Environment variables](#environment-variables)) | everywhere |
+| `Bun.main` | Absolute path of the entry script for this process | prefer with `import.meta.path === Bun.main` **or** the shorter `import.meta.main` (this repo uses **`import.meta.main`** on CLIs) |
+
+```ts
+// @see https://bun.com/docs/runtime/utils#bun-main
+// @see https://bun.com/docs/runtime/module-resolution#import-meta
+if (import.meta.main) {
+  // CLI entry — same intent as import.meta.path === Bun.main
+  await main();
+}
+```
+
+### Sleep & timing
+
+| API | Notes | Repo |
+| --- | ----- | ---- |
+| `Bun.sleep(ms \| Date)` | Async delay; **Date** form resolves *at* that wall time | rate-limit backoff ([`gh.ts`](../src/research/gh.ts)), protonpass retry |
+| `Bun.sleepSync(ms)` | **Blocks** the thread — avoid in request paths | rare / scripts only |
+| `Bun.nanoseconds()` | Monotonic high-res clock (not wall epoch) | phase timing, live poll, protonpass telemetry · **not** a substitute for [`time-ssot`](TIME.md) event stamps |
+
+```ts
+// @see https://bun.com/docs/runtime/utils#bun-sleep
+// @see https://bun.com/reference/bun/sleep
+await Bun.sleep(1_000);
+await Bun.sleep(new Date(Date.now() + 1_000)); // wake at absolute time
+```
+
+Domain wall-clock / epoch-ms joins stay in [`src/lib/time-ssot.ts`](../src/lib/time-ssot.ts) (`toEpochMs`, `bookTickClocks`, `watchWindowMs`). Use `nanoseconds` only for **duration** of local work.
+
+### `Bun.which` — executable lookup
+
+Built-in alternative to the `which` npm package. Optional `PATH` / `cwd` override.
+
+```ts
+// @see https://bun.com/docs/runtime/utils#bun-which
+// @see https://bun.com/reference/bun/which
+const gh = Bun.which("gh");
+const ls = Bun.which("ls", { PATH: "/usr/local/bin:/usr/bin:/bin" });
+```
+
+Used by research preflight and protonpass CLI discovery.
+
+### `Bun.randomUUIDv7` — monotonic IDs
+
+UUID **v7** (timestamp-ordered, crypto random tail). Prefer over `crypto.randomUUID()` (v4) when inserts must sort by time without a separate `created_at` column.
+
+```ts
+// @see https://bun.com/docs/runtime/utils#bun-randomuuidv7
+// @see https://bun.com/reference/bun/randomUUIDv7
+import { randomUUIDv7 } from "bun";
+
+const id = randomUUIDv7();                 // hex string
+const buf = randomUUIDv7("buffer");        // 16-byte Buffer
+const short = randomUUIDv7("base64url");
+```
+
+**Here today:** many call sites still use `crypto.randomUUID()` (journal, experiments). New sortable / store keys should prefer v7; v4 remains fine for pure entropy secrets (temp SSH names, nonces).
+
+### `Bun.peek` — settled-promise fast path
+
+Read a promise result **without** `await` when already fulfilled/rejected. Pending → returns the same promise. Rejected → returns the error **without** marking the promise handled.
+
+```ts
+// @see https://bun.com/docs/runtime/utils#bun-peek
+// @see https://bun.com/reference/bun/peek
+import { peek } from "bun";
+
+peek(Promise.resolve(true));     // true
+peek.status(promise);            // "fulfilled" | "pending" | "rejected"
+```
+
+Repo: [`bun-settle.ts`](../src/research/bun-settle.ts), research pool / inspect paths. Advanced — do not use as a general `await` replacement.
+
+### `Bun.openInEditor`
+
+Opens a file in `$VISUAL` / `$EDITOR` (or `bunfig.toml` `[debug] editor`, or `{ editor, line, column }`).
+
+```ts
+// @see https://bun.com/docs/runtime/utils#bun-openineditor
+Bun.openInEditor(import.meta.path, { editor: "vscode", line: 10, column: 5 });
+```
+
+Repo: pattern editor jump (`agent patterns --open`).
+
+### `Bun.deepEquals` — structural equality
+
+Powers `expect().toEqual()` / strict mode powers `toStrictEqual()`.
+
+```ts
+// @see https://bun.com/docs/runtime/utils#bun-deepequals
+Bun.deepEquals(a, b);       // loose (undefined-ish tolerant)
+Bun.deepEquals(a, b, true); // strict — undefined keys, sparse arrays, class instances
+```
+
+Repo: inspect cache equality ([`inspect-utils.ts`](../src/research/inspect-utils.ts)).
+
+### String / TTY utils
+
+| API | Role | Repo |
+| --- | ---- | ---- |
+| `Bun.escapeHTML` | Escape `<>&"'` — high throughput | views / HTML boards |
+| `Bun.stringWidth` | Terminal column width (ANSI/emoji/wide); ~SIMD native | table alignment |
+| `Bun.wrapAnsi` | Soft/hard wrap with ANSI-aware columns | report-term, terminal-out |
+| `Bun.stripANSI` | Strip escape sequences | width-safe plain text |
+| `Bun.inspect` / `.table` | Pretty print + tabular string | analyze desks, protonpass health |
+
+```ts
+// @see https://bun.com/docs/runtime/utils#bun-stringwidth
+// @see https://bun.com/reference/bun/stringWidth
+Bun.stringWidth("hello");                              // 5
+Bun.stringWidth("\u001b[31mhello\u001b[0m");           // 5 (ANSI ignored)
+Bun.stringWidth("\u001b[31mhello\u001b[0m", { countAnsiEscapeCodes: true }); // 12
+```
+
+**Do not** add `string-width` / `wrap-ansi` npm packages.
+
+### Compression (utils plane)
+
+`gzipSync` / `gunzipSync` / deflate / inflate / **zstd** sync+async — see overview Compression row. Repo uses **zstd** for audit evidence and **gunzip** on fantasy coefficients wire.
+
+### `bun:jsc` (low-level)
+
+| API | Use |
+| --- | --- |
+| `serialize` / `deserialize` | Structured clone into SharedArrayBuffer (same algorithm as `postMessage`) |
+| `estimateShallowMemoryUsageOf` | Best-effort shallow bytes; for deep heaps use `Bun.generateHeapSnapshot` |
+
+Not required for desk paths; keep behind diagnostics.
+
 ## Environment variables
 
 [@see Bun docs](https://bun.com/docs/runtime/environment-variables) · [Configuring Bun](https://bun.com/docs/runtime/environment-variables#configuring-bun) · index: [llms.txt](https://bun.com/docs/llms.txt)
@@ -263,7 +404,13 @@ Deep dive: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns)
 | `Bun.which` | [utils#which](https://bun.com/docs/runtime/utils#bun-which) | [/which](https://bun.com/reference/bun/which) |
 | `Bun.file` | [file-io](https://bun.com/docs/runtime/file-io#reading-files-bun-file) | [/file](https://bun.com/reference/bun/file) |
 | `Bun.write` | [file-io#write](https://bun.com/docs/runtime/file-io#writing-files-bun-write) | [/write](https://bun.com/reference/bun/write) |
-| `Bun.env` / `.env` load | [environment-variables](https://bun.com/docs/runtime/environment-variables) | [/env](https://bun.com/reference/bun/env) |
+| Utils hub | [runtime/utils](https://bun.com/docs/runtime/utils) | [/bun](https://bun.com/reference/bun) |
+| `Bun.version` | [utils#version](https://bun.com/docs/runtime/utils#bun-version) | [/version](https://bun.com/reference/bun/version) |
+| `Bun.revision` | [utils#revision](https://bun.com/docs/runtime/utils#bun-revision) | [/revision](https://bun.com/reference/bun/revision) |
+| `Bun.env` / `.env` load | [environment-variables](https://bun.com/docs/runtime/environment-variables) · [utils#env](https://bun.com/docs/runtime/utils#bun-env) | [/env](https://bun.com/reference/bun/env) |
+| `Bun.main` | [utils#main](https://bun.com/docs/runtime/utils#bun-main) | [/main](https://bun.com/reference/bun/main) |
+| `Bun.sleep` / `sleepSync` | [utils#sleep](https://bun.com/docs/runtime/utils#bun-sleep) · [sleepSync](https://bun.com/docs/runtime/utils#bun-sleepsync) | [/sleep](https://bun.com/reference/bun/sleep) · [/sleepSync](https://bun.com/reference/bun/sleepSync) |
+| `Bun.randomUUIDv7` | [utils#randomUUIDv7](https://bun.com/docs/runtime/utils#bun-randomuuidv7) | [/randomUUIDv7](https://bun.com/reference/bun/randomUUIDv7) |
 | Configuring Bun (`BUN_*`, `NO_COLOR`, …) | [configuring-bun](https://bun.com/docs/runtime/environment-variables#configuring-bun) | — |
 | `Bun.color` | [color](https://bun.com/docs/runtime/color) | [/color](https://bun.com/reference/bun/color) |
 | `bun update` interactive visuals | [update § visual](https://bun.com/docs/pm/cli/update#visual-indicators) | — |
@@ -281,9 +428,8 @@ Deep dive: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns)
 | `Bun.fileURLToPath` | [utils#fileURLToPath](https://bun.com/docs/runtime/utils#bun-fileurltopath) | [/fileURLToPath](https://bun.com/reference/bun/fileURLToPath) |
 | `Bun.pathToFileURL` | [utils#pathToFileURL](https://bun.com/docs/runtime/utils#bun-pathtofileurl) | [/pathToFileURL](https://bun.com/reference/bun/pathToFileURL) |
 | `bun:sqlite` | [sqlite](https://bun.com/docs/runtime/sqlite) | [/sqlite](https://bun.com/reference/bun/sqlite) |
-| `Bun.sleep` | [utils#sleep](https://bun.com/docs/runtime/utils#bun-sleep) | [/sleep](https://bun.com/reference/bun/sleep) |
 | `import.meta.dir` | [module-resolution](https://bun.com/docs/runtime/module-resolution#import-meta) | — |
-| `import.meta.main` | [utils#main](https://bun.com/docs/runtime/utils#bun-main) | — |
+| `import.meta.main` | [import.meta](https://bun.com/docs/runtime/module-resolution#import-meta) (CLI entry; ≡ `path === Bun.main`) | — |
 | `bun:test` | [test](https://bun.com/docs/test/index#run-tests) · [type testing](https://bun.com/docs/test/writing-tests#type-testing) | [/test](https://bun.com/reference/bun/test) |
 | `expect` | [matchers](https://bun.com/docs/test/writing-tests#matchers) | [/test/expect](https://bun.com/reference/bun/test/expect) |
 | `expectTypeOf` | [type testing](https://bun.com/docs/test/writing-tests#type-testing) | [/test/expectTypeOf](https://bun.com/reference/bun/test/expectTypeOf) |
