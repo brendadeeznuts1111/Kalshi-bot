@@ -185,4 +185,29 @@ describe('analyze recipes (fixture jsonl)', () => {
     expect(r.htmlView).toContain('--void-risk=high');
     expect(r.htmlView).toContain('--limit=3');
   });
+
+  test('pattern-family + has-eye + auto-refresh html', async () => {
+    const weighted = await loadWeighted();
+    const r = renderSportAnalyze({
+      sportId: 'tennis',
+      phase: 'live',
+      sortBy: ['severity', 'id'],
+      events: weighted,
+      columns: ['patterns'],
+      rowFilter: { patternFamily: ['void'], hasEye: true },
+      autoRefreshSec: 5,
+    });
+    expect(r.artifact.rows.length).toBeGreaterThan(0);
+    expect(
+      r.artifact.rows.every(row => String(row.patternIds).includes('void.')),
+    ).toBe(true);
+    expect(r.banner).toContain('family=void');
+    expect(r.banner).toContain('hasEye');
+    expect(r.htmlView).toContain('http-equiv="refresh"');
+    expect(r.htmlView).toContain('content="5"');
+    expect(r.htmlView).toContain('--pattern-family=void');
+    expect(r.htmlView).toContain('--has-eye');
+    expect(r.htmlView).toContain('--watch');
+    expect(r.inspectMeta.autoRefreshSec).toBe(5);
+  });
 });
