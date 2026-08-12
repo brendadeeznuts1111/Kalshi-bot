@@ -175,9 +175,26 @@ export {
   normalizeLeagueKey,
   type CompetitionGender,
   type CompetitionId,
+  type CompetitionKind,
   type CompetitionRecord,
   type PliveCompetitionMapping,
 } from './competitions.ts';
+
+export {
+  COMPETITION_KINDS,
+  FEED_COUNTRY_BUCKETS,
+  ITF_WEEKLY_LABEL,
+  enrichCompetitionRecordMeta,
+  getCompetitionMetaById,
+  inferCompetitionCountryCode,
+  inferCompetitionKind,
+  isCompetitionCountryCode,
+  isCompetitionKind,
+  isFeedCountryBucket,
+  isItfWeeklyLabel,
+  resolveCompetitionMeta,
+  type CompetitionMeta,
+} from './competition-meta.ts';
 
 export {
   resolveCompetition,
@@ -190,8 +207,6 @@ export {
   competitionRecordFromLeague,
   formatCompetitionRecordSource,
   hasLeagueStructureMarker,
-  isFeedCountryBucket,
-  isItfWeeklyLabel,
   isPromotableLeagueLabel,
   junkLeagueReason,
   mintCompetitionId,

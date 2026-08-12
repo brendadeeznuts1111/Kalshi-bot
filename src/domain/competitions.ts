@@ -25,6 +25,22 @@ export type PandoraCompetitionMapping = {
   feedSportId: string;
 };
 
+/**
+ * Optional desk/geo meta on a competition seed.
+ * Omitted on legacy rows — use {@link resolveCompetitionMeta} for effective values.
+ * @see competition-meta.ts
+ */
+export type CompetitionKind =
+  | 'league'
+  | 'cup'
+  | 'tournament'
+  | 'country_bucket'
+  | 'itf_week'
+  | 'friendly'
+  | 'circuit'
+  | 'product'
+  | 'unknown';
+
 export type CompetitionRecord = {
   id: string;
   sportId: SportId;
@@ -36,6 +52,13 @@ export type CompetitionRecord = {
     /** Optional Pandora external id for priced-plane / widget domain harvest. */
     pandora?: PandoraCompetitionMapping;
   };
+  /**
+   * ISO 3166-1 alpha-2 when single-country; `INT` for multi-nation.
+   * `null` = known-unknown; omit = infer at resolve time.
+   */
+  countryCode?: string | null;
+  /** Shape of the competition label (league vs ITF week vs country bucket …). */
+  kind?: CompetitionKind;
 };
 
 /**
