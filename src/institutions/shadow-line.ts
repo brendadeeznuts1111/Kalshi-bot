@@ -1,7 +1,13 @@
 // @see https://bun.com/docs/runtime/file-io#reading-files-bun-file
 import { appendFile } from "node:fs/promises";
+import {
+  TOXICITY_DUE_OFFSET_MS,
+  TOXICITY_MARK_WINDOW_MS,
+} from "../lib/time-ssot.ts";
 import type { BookSnapshot, Decision } from "./alpha-signal-types.ts";
 import { toxicityMovedAgainst } from "./shadow-sim.ts";
+
+export { TOXICITY_DUE_OFFSET_MS, TOXICITY_MARK_WINDOW_MS };
 
 export type ToxicityMark = {
   dueTs: number;
@@ -87,11 +93,6 @@ export type ShadowLogEntry = ShadowPredictionLine | ToxicityMarkEntry | OutcomeR
 /** @deprecated Alias — use ShadowPredictionLine. Materialized view after join. */
 export type ShadowLine = ShadowPredictionLine;
 
-/** Offset from fill ts to toxicity due time (mid at T+60s). */
-export const TOXICITY_DUE_OFFSET_MS = 60_000;
-
-/** Valid mark window after dueTs — marks outside this window are wrong, not late. */
-export const TOXICITY_MARK_WINDOW_MS = 15_000;
 
 export function isPredictionEntry(entry: ShadowLogEntry): entry is ShadowPredictionLine {
   return entry.kind === "prediction" || entry.kind === undefined;
