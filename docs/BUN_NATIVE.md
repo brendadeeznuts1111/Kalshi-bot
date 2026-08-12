@@ -4,7 +4,25 @@ This project is **Bun-native first**. Runtime dependencies are limited to the tw
 
 **Rule:** before adding any package, check the [Bun API map](#bun-api-map) below — the runtime almost certainly already provides it.
 
-Canonical URLs: [Bun docs index](https://bun.com/docs/llms.txt) — use the [@see links](#canonical-see-links) table below (standalone repo; monorepo `bun tools/bun-doc-refs.ts` is optional).
+Canonical URLs (two planes — prefer both in `@see` when practical):
+
+| Plane | Hub | What it is |
+| ----- | --- | ---------- |
+| **Guides** | [docs index / llms.txt](https://bun.com/docs/llms.txt) | Narrative how-to, examples, CLI flags |
+| **API reference** | [bun.com/reference](https://bun.com/reference) | Generated from `bun-types` — signatures, overloads, types |
+
+Top-level reference modules this repo uses most:
+
+| Module | Reference | Guides (when present) |
+| ------ | --------- | --------------------- |
+| `Bun` (core) | [/reference/bun](https://bun.com/reference/bun) | [runtime](https://bun.com/docs/runtime) |
+| `bun:test` | [/reference/bun/test](https://bun.com/reference/bun/test) | [test](https://bun.com/docs/test) |
+| `bun:sqlite` | [/reference/bun/sqlite](https://bun.com/reference/bun/sqlite) | [sqlite](https://bun.com/docs/runtime/sqlite) |
+| `bun:ffi` | [/reference/bun/ffi](https://bun.com/reference/bun/ffi) | (advanced) |
+| Globals | [/reference/globals](https://bun.com/reference/globals) | — |
+| Node compat | [/reference/node/…](https://bun.com/reference) (`fs`, `util`, `zlib`, …) | Node docs / Bun notes |
+
+`@see` table: [Canonical `@see` links](#canonical-see-links) (guides primary; reference dual-link for symbols). Standalone repo; monorepo `bun tools/bun-doc-refs.ts` is optional.
 
 Deep dive: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns)
 
@@ -139,8 +157,6 @@ Deep dive: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns)
 | HTML escaping | `Bun.escapeHTML` | [`bun-native.ts`](../src/research/bun-native.ts), [`views.ts`](../src/research/views.ts) |
 | Evidence compression | `Bun.zstdCompressSync` / `decompress` | [`evidence-io.ts`](../src/research/evidence-io.ts), [`export-audit.ts`](../src/research/export-audit.ts) |
 | Pattern editor jump | `Bun.openInEditor` | [`pattern-editor.ts`](../src/agent/pattern-editor.ts), [`agent/cli.ts`](../src/agent/cli.ts) |
-
-**Pattern excerpts from local clones:** `bun run agent patterns --open` reads source files under `REPO_CLONE_ROOT/{owner}/{repo}` when set (optional — default remains `gh api` reads with no clone). This is an intentional scope extension beyond the original no-clone plan; set `REPO_CLONE_ROOT` only when you maintain local checkouts for excerpt review.
 | Rate-limit backoff | `Bun.sleep` | [`gh.ts`](../src/research/gh.ts) |
 | Bounded concurrency | [`pool.ts`](../src/research/pool.ts) + `Bun.peek` | [`cli.ts`](../src/research/cli.ts), [`inspect.ts`](../src/research/inspect.ts) |
 | Settled-promise fast path | `Bun.peek` / `peek.status` | [`bun-settle.ts`](../src/research/bun-settle.ts) |
@@ -167,66 +183,75 @@ Deep dive: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns)
 | Repo / alpha file scan | `Bun.Glob` | [`watcher.ts`](../src/calibration/watcher.ts), [`architecture-blueprint.ts`](../src/agent/architecture-blueprint.ts) |
 | CLI flags | `parseArgs` from `node:util` | [`cli.ts`](../src/research/cli.ts) |
 | Reproducible package install | `bun install --frozen-lockfile` | [`package.json`](../package.json), [`bun.lock`](../bun.lock) |
-| Unit tests | `bun:test` + `mock.module()` | [`tests/`](../tests/) |
+| Unit tests | `bun:test` + `mock.module()` + `expect` matchers | [`tests/`](../tests/) |
+| Type contracts | `expectTypeOf` (compile-time; `bun run typecheck`) | [`*.types.test.ts`](../tests/) e.g. [`time-ssot.types.test.ts`](../tests/lib/time-ssot.types.test.ts), [`snapshot-data-plane.types.test.ts`](../tests/tools/snapshot-data-plane.types.test.ts) |
 | Test coverage | `bun run test:coverage` | [`package.json`](../package.json) |
+
+**Pattern excerpts from local clones:** `bun run agent patterns --open` reads source files under `REPO_CLONE_ROOT/{owner}/{repo}` when set (optional — default remains `gh api` reads with no clone). This is an intentional scope extension beyond the original no-clone plan; set `REPO_CLONE_ROOT` only when you maintain local checkouts for excerpt review.
 
 ### Canonical `@see` links
 
-| API | Doc |
-|-----|-----|
-| `Bun.$` | https://bun.com/docs/runtime/shell#getting-started |
-| `Bun.which` | https://bun.com/docs/runtime/utils#bun-which |
-| `Bun.file` | https://bun.com/docs/runtime/file-io#reading-files-bun-file |
-| `Bun.write` | https://bun.com/docs/runtime/file-io#writing-files-bun-write |
-| `Bun.env` / `.env` load | https://bun.com/docs/runtime/environment-variables |
-| Configuring Bun (`BUN_*`, `NO_COLOR`, …) | https://bun.com/docs/runtime/environment-variables#configuring-bun |
-| `Bun.color` | https://bun.com/docs/runtime/color |
-| `bun update` interactive visuals | https://bun.com/docs/pm/cli/update#visual-indicators |
-| HTMLRewriter social / OG meta | https://bun.com/docs/guides/html-rewriter/extract-social-meta |
-| `HTMLRewriter` | https://bun.com/docs/runtime/html-rewriter |
-| `Bun.hash` | https://bun.com/docs/runtime/hashing#bun-hash |
-| `Bun.deepEquals` | https://bun.com/docs/runtime/utils#bun-deepequals |
-| `Bun.inspect` | https://bun.com/docs/runtime/utils#bun-inspect |
-| `Bun.peek` | https://bun.com/docs/runtime/utils#bun-peek |
-| `Bun.openInEditor` | https://bun.com/docs/runtime/utils#bun-openineditor |
-| `Bun.escapeHTML` | https://bun.com/docs/runtime/utils#bun-escapehtml |
-| `Bun.zstdCompressSync` | https://bun.com/docs/runtime/utils#bun-zstdcompress-bun-zstdcompresssync |
-| `Bun.zstdDecompressSync` | https://bun.com/docs/runtime/utils#bun-zstddecompress-bun-zstddecompresssync |
-| `Bun.fileURLToPath` | https://bun.com/docs/runtime/utils#bun-fileurltopath |
-| `Bun.pathToFileURL` | https://bun.com/docs/runtime/utils#bun-pathtofileurl |
-| `bun:sqlite` | https://bun.com/docs/runtime/sqlite |
-| `Bun.sleep` | https://bun.com/docs/runtime/utils#bun-sleep |
-| `import.meta.dir` | https://bun.com/docs/runtime/module-resolution#import-meta |
-| `import.meta.main` | https://bun.com/docs/runtime/utils#bun-main |
-| `bun:test` | https://bun.com/docs/test/index#run-tests |
-| `mock.module` | https://bun.com/docs/test/mocks |
-| `Bun.cron` | https://bun.com/docs/runtime/cron |
-| `Bun.cron.parse` / `.remove` | https://bun.com/docs/runtime/cron |
-| `Bun.Glob` | https://bun.com/docs/runtime/glob |
-| `Bun.CryptoHasher` | https://bun.com/docs/runtime/hashing#bun-cryptohasher |
-| `URLPattern` | https://bun.com/blog/bun-v1.3.4#urlpattern-api |
-| `Bun.serve` | https://bun.com/docs/runtime/http/server#basic-setup |
-| `Bun.markdown.ansi` | https://bun.com/docs/runtime/markdown#ansi-terminal-output |
-| `Bun.inspect.table` | https://bun.com/docs/runtime/utils#bun-inspect-table-tabulardata-properties-options |
-| `Bun.stringWidth` | https://bun.com/docs/runtime/utils#bun-stringwidth |
-| `Bun.wrapAnsi` | https://bun.com/docs/runtime/utils#bun-wrapansi |
-| `Bun.stripANSI` | https://bun.com/docs/runtime/utils#bun-stripansi |
-| `Bun.nanoseconds` | https://bun.com/docs/runtime/utils#bun-nanoseconds |
-| `Bun.fetch` / `fetch.preconnect` | https://bun.com/docs/runtime/networking/fetch#sending-an-http-request · [preconnect](https://bun.com/docs/runtime/networking/fetch#preconnect-to-a-host) |
-| `Bun.spawn` IPC | https://bun.com/docs/runtime/child-process#inter-process-communication-ipc · [reference](https://bun.com/docs/runtime/child-process#reference) |
-| `Bun.spawn` (pipes) | https://bun.com/docs/runtime/child-process#spawning-a-process-bun-spawn |
-| `Bun.Terminal` (PTY) | https://bun.com/docs/runtime/child-process#terminal-pty-support |
-| `Bun.spawnSync` | https://bun.com/docs/runtime/child-process#blocking-api-bun-spawnsync |
-| `Bun.WebView` | https://bun.com/docs/runtime/webview |
-| `Bun.Image` | https://bun.com/docs/runtime/image |
-| Client `WebSocket` (headers, `proxy`) | https://bun.com/docs/runtime/http/websockets · [proxy v1.3.6](https://bun.com/docs/blog/bun-v1.3.6#httphttps-proxy-support-for-websocket) |
-| `bun install` | https://bun.com/docs/pm/cli/install |
-| `bun.lock` / lockfile | https://bun.com/docs/pm/lockfile |
-| `bunfig.toml` `[install]` | https://bun.com/docs/runtime/bunfig |
-| Isolated installs | https://bun.com/docs/pm/isolated-installs |
-| `Buffer.indexOf` / `Buffer.includes` | https://bun.com/docs/blog/bun-v1.3.6#faster-bufferindexof |
-| `bun test --grep` | https://bun.com/docs/blog/bun-v1.3.6#grep-flag-for-bun-test |
-| `Response.json()` perf | https://bun.com/docs/blog/bun-v1.3.6#responsejsonobject-is-now-35x-faster |
+**Guides** = narrative (`bun.com/docs/…`). **Ref** = types API (`bun.com/reference/…`, from [bun-types](https://github.com/oven-sh/bun/tree/main/packages/bun-types)). Prefer `// @see <guide>` for agents; add ref when overloads / exact types matter.
+
+| API | Guide | Ref |
+|-----|-------|-----|
+| Hub | [docs/llms.txt](https://bun.com/docs/llms.txt) | [reference](https://bun.com/reference) |
+| `Bun` module | [runtime](https://bun.com/docs/runtime) | [/bun](https://bun.com/reference/bun) |
+| `Bun.$` | [shell](https://bun.com/docs/runtime/shell#getting-started) | [/$](https://bun.com/reference/bun/$) |
+| `Bun.which` | [utils#which](https://bun.com/docs/runtime/utils#bun-which) | [/which](https://bun.com/reference/bun/which) |
+| `Bun.file` | [file-io](https://bun.com/docs/runtime/file-io#reading-files-bun-file) | [/file](https://bun.com/reference/bun/file) |
+| `Bun.write` | [file-io#write](https://bun.com/docs/runtime/file-io#writing-files-bun-write) | [/write](https://bun.com/reference/bun/write) |
+| `Bun.env` / `.env` load | [environment-variables](https://bun.com/docs/runtime/environment-variables) | [/env](https://bun.com/reference/bun/env) |
+| Configuring Bun (`BUN_*`, `NO_COLOR`, …) | [configuring-bun](https://bun.com/docs/runtime/environment-variables#configuring-bun) | — |
+| `Bun.color` | [color](https://bun.com/docs/runtime/color) | [/color](https://bun.com/reference/bun/color) |
+| `bun update` interactive visuals | [update § visual](https://bun.com/docs/pm/cli/update#visual-indicators) | — |
+| HTMLRewriter social / OG meta | [guide](https://bun.com/docs/guides/html-rewriter/extract-social-meta) | — |
+| `HTMLRewriter` | [html-rewriter](https://bun.com/docs/runtime/html-rewriter) | — |
+| `Bun.hash` | [hashing](https://bun.com/docs/runtime/hashing#bun-hash) | [/hash](https://bun.com/reference/bun/hash) |
+| `Bun.deepEquals` | [utils#deepEquals](https://bun.com/docs/runtime/utils#bun-deepequals) | [/deepEquals](https://bun.com/reference/bun/deepEquals) |
+| `Bun.inspect` | [utils#inspect](https://bun.com/docs/runtime/utils#bun-inspect) | [/inspect](https://bun.com/reference/bun/inspect) · [BunInspectOptions](https://bun.com/reference/bun/BunInspectOptions) |
+| `Bun.inspect.table` | [utils#table](https://bun.com/docs/runtime/utils#bun-inspect-table-tabulardata-properties-options) | [/inspect/table](https://bun.com/reference/bun/inspect/table) |
+| `Bun.peek` | [utils#peek](https://bun.com/docs/runtime/utils#bun-peek) | [/peek](https://bun.com/reference/bun/peek) |
+| `Bun.openInEditor` | [utils#openInEditor](https://bun.com/docs/runtime/utils#bun-openineditor) | [/openInEditor](https://bun.com/reference/bun/openInEditor) |
+| `Bun.escapeHTML` | [utils#escapeHTML](https://bun.com/docs/runtime/utils#bun-escapehtml) | [/escapeHTML](https://bun.com/reference/bun/escapeHTML) |
+| `Bun.zstdCompressSync` | [utils#zstd](https://bun.com/docs/runtime/utils#bun-zstdcompress-bun-zstdcompresssync) | [/zstdCompressSync](https://bun.com/reference/bun/zstdCompressSync) |
+| `Bun.zstdDecompressSync` | [utils#zstd](https://bun.com/docs/runtime/utils#bun-zstddecompress-bun-zstddecompresssync) | [/zstdDecompressSync](https://bun.com/reference/bun/zstdDecompressSync) |
+| `Bun.fileURLToPath` | [utils#fileURLToPath](https://bun.com/docs/runtime/utils#bun-fileurltopath) | [/fileURLToPath](https://bun.com/reference/bun/fileURLToPath) |
+| `Bun.pathToFileURL` | [utils#pathToFileURL](https://bun.com/docs/runtime/utils#bun-pathtofileurl) | [/pathToFileURL](https://bun.com/reference/bun/pathToFileURL) |
+| `bun:sqlite` | [sqlite](https://bun.com/docs/runtime/sqlite) | [/sqlite](https://bun.com/reference/bun/sqlite) |
+| `Bun.sleep` | [utils#sleep](https://bun.com/docs/runtime/utils#bun-sleep) | [/sleep](https://bun.com/reference/bun/sleep) |
+| `import.meta.dir` | [module-resolution](https://bun.com/docs/runtime/module-resolution#import-meta) | — |
+| `import.meta.main` | [utils#main](https://bun.com/docs/runtime/utils#bun-main) | — |
+| `bun:test` | [test](https://bun.com/docs/test/index#run-tests) · [type testing](https://bun.com/docs/test/writing-tests#type-testing) | [/test](https://bun.com/reference/bun/test) |
+| `expect` | [matchers](https://bun.com/docs/test/writing-tests#matchers) | [/test/expect](https://bun.com/reference/bun/test/expect) |
+| `expectTypeOf` | [type testing](https://bun.com/docs/test/writing-tests#type-testing) | [/test/expectTypeOf](https://bun.com/reference/bun/test/expectTypeOf) |
+| `mock` / `mock.module` | [mocks](https://bun.com/docs/test/mocks) | [/test/mock](https://bun.com/reference/bun/test/mock) |
+| `Bun.cron` | [cron](https://bun.com/docs/runtime/cron) | [/cron](https://bun.com/reference/bun/cron) |
+| `Bun.cron.parse` / `.remove` | [cron](https://bun.com/docs/runtime/cron) | [/cron](https://bun.com/reference/bun/cron) |
+| `Bun.Glob` | [glob](https://bun.com/docs/runtime/glob) | [/Glob](https://bun.com/reference/bun/Glob) |
+| `Bun.CryptoHasher` | [hashing#CryptoHasher](https://bun.com/docs/runtime/hashing#bun-cryptohasher) | [/CryptoHasher](https://bun.com/reference/bun/CryptoHasher) |
+| `URLPattern` | [blog v1.3.4](https://bun.com/blog/bun-v1.3.4#urlpattern-api) | — |
+| `Bun.serve` | [http/server](https://bun.com/docs/runtime/http/server#basic-setup) | [/serve](https://bun.com/reference/bun/serve) |
+| `Bun.markdown.ansi` | [markdown#ansi](https://bun.com/docs/runtime/markdown#ansi-terminal-output) | [/markdown/ansi](https://bun.com/reference/bun/markdown/ansi) |
+| `Bun.stringWidth` | [utils#stringWidth](https://bun.com/docs/runtime/utils#bun-stringwidth) | [/stringWidth](https://bun.com/reference/bun/stringWidth) |
+| `Bun.wrapAnsi` | [utils#wrapAnsi](https://bun.com/docs/runtime/utils#bun-wrapansi) | [/wrapAnsi](https://bun.com/reference/bun/wrapAnsi) |
+| `Bun.stripANSI` | [utils#stripANSI](https://bun.com/docs/runtime/utils#bun-stripansi) | [/stripANSI](https://bun.com/reference/bun/stripANSI) |
+| `Bun.nanoseconds` | [utils#nanoseconds](https://bun.com/docs/runtime/utils#bun-nanoseconds) | [/nanoseconds](https://bun.com/reference/bun/nanoseconds) |
+| `Bun.fetch` / `fetch.preconnect` | [fetch](https://bun.com/docs/runtime/networking/fetch#sending-an-http-request) · [preconnect](https://bun.com/docs/runtime/networking/fetch#preconnect-to-a-host) | [/fetch](https://bun.com/reference/bun/fetch) · [dns.prefetch](https://bun.com/reference/bun/dns/prefetch) |
+| `Bun.spawn` IPC | [child-process IPC](https://bun.com/docs/runtime/child-process#inter-process-communication-ipc) | [/spawn](https://bun.com/reference/bun/spawn) |
+| `Bun.spawn` (pipes) | [spawn](https://bun.com/docs/runtime/child-process#spawning-a-process-bun-spawn) | [/spawn](https://bun.com/reference/bun/spawn) |
+| `Bun.Terminal` (PTY) | [terminal PTY](https://bun.com/docs/runtime/child-process#terminal-pty-support) | [/Terminal](https://bun.com/reference/bun/Terminal) |
+| `Bun.spawnSync` | [spawnSync](https://bun.com/docs/runtime/child-process#blocking-api-bun-spawnsync) | [/spawnSync](https://bun.com/reference/bun/spawnSync) |
+| `Bun.WebView` | [webview](https://bun.com/docs/runtime/webview) | [/WebView](https://bun.com/reference/bun/WebView) |
+| `Bun.Image` | [image](https://bun.com/docs/runtime/image) | [/Image](https://bun.com/reference/bun/Image) |
+| Client `WebSocket` (headers, `proxy`) | [websockets](https://bun.com/docs/runtime/http/websockets) · [proxy v1.3.6](https://bun.com/docs/blog/bun-v1.3.6#httphttps-proxy-support-for-websocket) | — |
+| `bun install` | [install](https://bun.com/docs/pm/cli/install) | — |
+| `bun.lock` / lockfile | [lockfile](https://bun.com/docs/pm/lockfile) | — |
+| `bunfig.toml` `[install]` | [bunfig](https://bun.com/docs/runtime/bunfig) | — |
+| Isolated installs | [isolated-installs](https://bun.com/docs/pm/isolated-installs) | — |
+| `Buffer.indexOf` / `Buffer.includes` | [blog v1.3.6](https://bun.com/docs/blog/bun-v1.3.6#faster-bufferindexof) | [node:buffer](https://bun.com/reference/node/buffer) |
+| `bun test --grep` | [blog v1.3.6](https://bun.com/docs/blog/bun-v1.3.6#grep-flag-for-bun-test) | — |
+| `Response.json()` perf | [blog v1.3.6](https://bun.com/docs/blog/bun-v1.3.6#responsejsonobject-is-now-35x-faster) | — |
 
 ## Runtime notes (Bun v1.3.6+)
 
