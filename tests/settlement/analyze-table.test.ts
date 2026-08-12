@@ -22,6 +22,7 @@ import {
   formatAnalyzeMarkdownTable,
   parseAnalyzeCsvList,
   parseAnalyzeRowSortBy,
+  patternFamilyMatches,
   pipelineAnalyzeRows,
   resolveAnalyzeColumns,
   sortAnalyzeRows,
@@ -293,5 +294,53 @@ describe('analyze weighted table schema', () => {
     const chips = buildAnalyzeSummaryChipsHtml(summarizeAnalyzeRows(rows));
     expect(chips).toContain('summary-chips');
     expect(chips).toContain('void high');
+  });
+
+  test('pattern / family / hasEye filters + HTML auto-refresh', () => {
+    const rows = [
+      stubRow({
+        patternIds: 'void.live-ml-unfinished, fill.secondary-confirmation',
+        eyeOpeners: '[high] void.live-ml-unfinished: note',
+        voidRisk: 'high',
+      }),
+      stubRow({
+        patternIds: 'fill.secondary-confirmation',
+        eyeOpeners: '—',
+        voidRisk: 'medium',
+      }),
+      stubRow({
+        patternIds: 'phase.prematch-vs-live-product',
+        eyeOpeners: '',
+        voidRisk: 'low',
+      }),
+    ];
+    expect(patternFamilyMatches(rows[0]!.patternIds, ['void'])).toBe(true);
+    expect(patternFamilyMatches(rows[1]!.patternIds, ['void'])).toBe(false);
+    expect(filterAnalyzeRows(rows, { pattern: ['void.live'] })).toHaveLength(1);
+    expect(filterAnalyzeRows(rows, { patternFamily: ['fill'] })).toHaveLength(2);
+    expect(filterAnalyzeRows(rows, { hasEye: true })).toHaveLength(1);
+    const piped = pipelineAnalyzeRows(rows, {
+      filter: { patternFamily: ['void'], hasEye: true },
+      sortBy: ['voidRisk'],
+    });
+    expect(piped.rows).toHaveLength(1);
+    expect(piped.hint).toContain('family=void');
+    expect(piped.hint).toContain('hasEye');
+    const html = formatAnalyzeHtmlReport({
+      sportId: 'tennis',
+      phase: 'live',
+      sortBy: ['severity'],
+      rows: piped.rows,
+      presets: ['patterns'],
+      autoRefreshSec: 5,
+      generatedAt: '2026-08-12T00:00:00.000Z',
+      recipeExtra: ['--pattern-family=void', '--has-eye', '--watch'],
+    });
+    expect(html).toContain('http-equiv="refresh"');
+    expect(html).toContain('content="5"');
+    expect(html).toContain('auto-refresh 5s');
+    expect(html).toContain('2026-08-12T00:00:00.000Z');
+    expect(html).toContain('--pattern-family=void');
+    expect(html).toContain('--has-eye');
   });
 });

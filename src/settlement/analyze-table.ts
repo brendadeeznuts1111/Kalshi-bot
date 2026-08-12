@@ -536,6 +536,18 @@ export type AnalyzeRowFilter = {
   maxSeverity?: readonly string[];
   marketClass?: readonly string[];
   eventType?: readonly string[];
+  /**
+   * Substring match against `patternIds` (any needle hits).
+   * e.g. `void.live-ml-unfinished` or bare `void`.
+   */
+  pattern?: readonly string[];
+  /**
+   * Pattern family / id-prefix match against comma-separated `patternIds`.
+   * Hits when id equals family, starts with `family.`, or contains family token.
+   */
+  patternFamily?: readonly string[];
+  /** When true, only rows with non-empty eyeOpeners. */
+  hasEye?: boolean;
 };
 
 /** Parse comma list (`high,medium`) → trimmed tokens; empty → undefined. */
@@ -554,21 +566,67 @@ function allowlistHit(value: unknown, allow: readonly string[] | undefined): boo
   return allow.some(a => a.toLowerCase() === v);
 }
 
+function fieldContainsAny(value: unknown, needles: readonly string[] | undefined): boolean {
+  if (!needles?.length) return true;
+  const hay = String(value ?? '').toLowerCase();
+  if (!hay || hay === '—') return false;
+  return needles.some(n => hay.includes(n.toLowerCase()));
+}
+
+/** True if any pattern id matches a family token (prefix / equality / contains). */
+export function patternFamilyMatches(
+  patternIds: unknown,
+  families: readonly string[] | undefined,
+): boolean {
+  if (!families?.length) return true;
+  const ids = String(patternIds ?? '')
+    .split(/[,]+/)
+    .map(s => s.trim())
+    .filter(Boolean);
+  if (!ids.length || (ids.length === 1 && ids[0] === '—')) return false;
+  return families.some(f => {
+    const fl = f.toLowerCase();
+    return ids.some(id => {
+      const il = id.toLowerCase();
+      return il === fl || il.startsWith(`${fl}.`) || il.includes(fl);
+    });
+  });
+}
+
+function hasEyeOpeners(value: unknown): boolean {
+  const s = String(value ?? '').trim();
+  return s.length > 0 && s !== '—';
+}
+
+function filterIsEmpty(filter: AnalyzeRowFilter): boolean {
+  return (
+    !filter.voidRisk?.length &&
+    !filter.maxSeverity?.length &&
+    !filter.marketClass?.length &&
+    !filter.eventType?.length &&
+    !filter.pattern?.length &&
+    !filter.patternFamily?.length &&
+    !filter.hasEye
+  );
+}
+
 /** Filter flat analyze rows by allowlisted field values (case-insensitive). */
 export function filterAnalyzeRows(
   rows: readonly AnalyzeWeightedRow[],
   filter: AnalyzeRowFilter = {},
 ): AnalyzeWeightedRow[] {
-  const { voidRisk, maxSeverity, marketClass, eventType } = filter;
-  if (!voidRisk?.length && !maxSeverity?.length && !marketClass?.length && !eventType?.length) {
-    return [...rows];
-  }
+  if (filterIsEmpty(filter)) return [...rows];
+  const { voidRisk, maxSeverity, marketClass, eventType, pattern, patternFamily, hasEye } =
+    filter;
   return rows.filter(
     r =>
       allowlistHit(r.voidRisk, voidRisk) &&
       allowlistHit(r.maxSeverity, maxSeverity) &&
       allowlistHit(r.marketClass, marketClass) &&
-      allowlistHit(r.eventType, eventType),
+      allowlistHit(r.eventType, eventType) &&
+      fieldContainsAny(r.patternIds, pattern) &&
+      patternFamilyMatches(r.patternIds, patternFamily) &&
+      (hasEye ? hasEyeOpeners(r.eyeOpeners) : true),
   );
 }
 
@@ -600,6 +658,9 @@ export function pipelineAnalyzeRows(
   if (f.maxSeverity?.length) bits.push(`sev=${f.maxSeverity.join('|')}`);
   if (f.marketClass?.length) bits.push(`class=${f.marketClass.join('|')}`);
   if (f.eventType?.length) bits.push(`type=${f.eventType.join('|')}`);
+  if (f.pattern?.length) bits.push(`pattern=${f.pattern.join('|')}`);
+  if (f.patternFamily?.length) bits.push(`family=${f.patternFamily.join('|')}`);
+  if (f.hasEye) bits.push('hasEye');
   const sortKeys = options.sortBy
     ? Array.isArray(options.sortBy)
       ? options.sortBy
@@ -1032,6 +1093,13 @@ export function wrapAnalyzeHtmlDocument(input: {
   sortHint?: string;
   /** Pre-built summary chip strip. */
   chipsHtml?: string;
+  /**
+   * Browser auto-reload interval (seconds). Used with analyze `--watch --html`
+   * so the written file refreshes without re-open.
+   */
+  autoRefreshSec?: number;
+  /** ISO generated-at shown next to refresh chip. */
+  generatedAt?: string;
 }): string {
   const titleExtra = input.titleExtra ? ` · ${input.titleExtra}` : '';
   const enhanced = enhanceAnalyzeHtmlBody(input.bodyHtml);
@@ -1040,6 +1108,29 @@ export function wrapAnalyzeHtmlDocument(input: {
     : '';
   const sortHint = input.sortHint
     ? `<p class="sort-hint">Pipeline: ${input.sortHint}</p>\n`
+    : '';
+  const refreshSec =
+    typeof input.autoRefreshSec === 'number' &&
+    Number.isFinite(input.autoRefreshSec) &&
+    input.autoRefreshSec > 0
+      ? Math.max(1, Math.floor(input.autoRefreshSec))
+      : undefined;
+  const refreshMeta = refreshSec
+    ? `<meta http-equiv="refresh" content="${refreshSec}" />\n`
+    : '';
+  const liveBits: string[] = [];
+  if (input.generatedAt) {
+    liveBits.push(
+      `<span class="chip chip-meta">as of <span class="n">${input.generatedAt}</span></span>`,
+    );
+  }
+  if (refreshSec != null) {
+    liveBits.push(
+      `<span class="chip chip-meta" title="meta refresh">auto-refresh ${refreshSec}s</span>`,
+    );
+  }
+  const liveBar = liveBits.length
+    ? `<div class="summary-chips" aria-label="Live status">${liveBits.join('')}</div>\n`
     : '';
   const chips = input.chipsHtml ?? '';
   const nav = input.navHtml ?? '';
@@ -1051,13 +1142,13 @@ export function wrapAnalyzeHtmlDocument(input: {
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Live-tracker analyze · ${input.sportId} / ${input.phase}${titleExtra}</title>
+${refreshMeta}<title>Live-tracker analyze · ${input.sportId} / ${input.phase}${titleExtra}</title>
 <style>
 ${ANALYZE_HTML_STYLES}
 </style>
 </head>
 <body>
-${badge}${sortHint}${chips}${nav}${enhanced}
+${badge}${sortHint}${liveBar}${chips}${nav}${enhanced}
 ${recipe}</body>
 </html>
 `;
@@ -1083,6 +1174,8 @@ export function formatAnalyzeHtmlReport(input: {
   rowSortHint?: string;
   /** Extra recipe fragments (`--void-risk=high` …). */
   recipeExtra?: string[];
+  /** Inject `<meta http-equiv="refresh">` for watch-mode HTML. */
+  autoRefreshSec?: number;
 }): string {
   const md = formatAnalyzeMarkdownReport(input);
   const body = markdownToHtml(md, 'docs');
@@ -1124,6 +1217,8 @@ export function formatAnalyzeHtmlReport(input: {
     navHtml: buildAnalyzePresetNav(navPresets),
     sortHint: input.rowSortHint,
     chipsHtml: buildAnalyzeSummaryChipsHtml(summary),
+    autoRefreshSec: input.autoRefreshSec,
+    generatedAt: input.generatedAt,
   });
 }
 
@@ -1292,6 +1387,8 @@ export function renderSportAnalyze(input: {
   rowFilter?: AnalyzeRowFilter;
   /** Top-N after sort (omit = all). */
   rowLimit?: number;
+  /** HTML meta refresh (seconds) for watch-mode desks. */
+  autoRefreshSec?: number;
 }): SportAnalyzeRender {
   const desc = input.desc ?? false;
   const artifact = buildAnalyzeSnapshotArtifact({
@@ -1327,6 +1424,7 @@ export function renderSportAnalyze(input: {
     rowFilter: input.rowFilter,
     rowLimit: input.rowLimit,
     usedDefaultSort: input.rowSortBy == null,
+    autoRefreshSec: input.autoRefreshSec,
   });
   const banner = formatAnalyzeBanner({
     sportId: artifact.sportId,
@@ -1352,6 +1450,7 @@ export function renderSportAnalyze(input: {
     rowLimit: input.rowLimit ?? null,
     pipeline: rowSortHint,
     sourceRowCount: artifact.summary.rowCount,
+    autoRefreshSec: input.autoRefreshSec ?? null,
   };
   const htmlBase = {
     sportId: artifact.sportId,
@@ -1363,6 +1462,7 @@ export function renderSportAnalyze(input: {
     generatedAt: artifact.generatedAt,
     rowSortHint,
     recipeExtra,
+    autoRefreshSec: input.autoRefreshSec,
   };
   const htmlReport = formatAnalyzeHtmlReport(htmlBase);
   // HTML view honors --columns: one/more named presets, free-form fields, or full
@@ -1413,6 +1513,7 @@ export function buildAnalyzeRecipeExtras(input: {
   rowFilter?: AnalyzeRowFilter;
   rowLimit?: number;
   usedDefaultSort: boolean;
+  autoRefreshSec?: number;
 }): string[] {
   const extra: string[] = [];
   const f = input.rowFilter;
@@ -1420,6 +1521,9 @@ export function buildAnalyzeRecipeExtras(input: {
   if (f?.maxSeverity?.length) extra.push(`--max-severity=${f.maxSeverity.join(',')}`);
   if (f?.marketClass?.length) extra.push(`--market-class=${f.marketClass.join(',')}`);
   if (f?.eventType?.length) extra.push(`--event-type=${f.eventType.join(',')}`);
+  if (f?.pattern?.length) extra.push(`--pattern=${f.pattern.join(',')}`);
+  if (f?.patternFamily?.length) extra.push(`--pattern-family=${f.patternFamily.join(',')}`);
+  if (f?.hasEye) extra.push('--has-eye');
   if (!input.usedDefaultSort) {
     const keys = Array.isArray(input.rowSortBy) ? input.rowSortBy : [input.rowSortBy];
     extra.push(`--sort-rows=${keys.join(',')}`);
@@ -1427,6 +1531,13 @@ export function buildAnalyzeRecipeExtras(input: {
   if (input.rowSortDesc) extra.push('--rows-desc');
   if (typeof input.rowLimit === 'number' && Number.isFinite(input.rowLimit)) {
     extra.push(`--limit=${Math.floor(input.rowLimit)}`);
+  }
+  if (
+    typeof input.autoRefreshSec === 'number' &&
+    Number.isFinite(input.autoRefreshSec) &&
+    input.autoRefreshSec > 0
+  ) {
+    extra.push('--watch');
   }
   return extra;
 }

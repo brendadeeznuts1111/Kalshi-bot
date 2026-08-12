@@ -91,6 +91,7 @@ export {
   formatAnalyzeMarkdownTable,
   parseAnalyzeCsvList,
   parseAnalyzeRowSortBy,
+  patternFamilyMatches,
   pipelineAnalyzeRows,
   projectAnalyzeRows,
   renderSportAnalyze,

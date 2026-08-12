@@ -11,6 +11,8 @@
  *   bun live-tracker.ts analyze --sport=tennis --phase=live [--sort-by severity|family|id]
  *   bun live-tracker.ts analyze --sport=tennis --phase=live --columns=ev --sort-rows=voidDelta --csv
  *   bun live-tracker.ts analyze --sport=tennis --phase=live --void-risk=high --limit=10 --table
+ *   bun live-tracker.ts analyze --sport=tennis --phase=live --pattern=void.live --has-eye --table
+ *   bun live-tracker.ts analyze --sport=tennis --phase=live --columns=desk --html --watch --interval=5
  *   bun live-tracker.ts patterns [--sort-by family|id] [--desc] [--json|--inspect]
  *   bun live-tracker.ts diff --columns File,Event,Detail --desc --output out.csv --format csv
  *   bun live-tracker.ts diff --tail 10 --watch --interval 2
@@ -113,6 +115,7 @@ const BOOLEAN_FLAGS = new Set([
   'all-columns',
   'no-color',
   'rows-desc',
+  'has-eye',
 ]);
 
 function positionalAfterCmd(cmd: string): string[] {
@@ -154,6 +157,8 @@ Usage:
                               [--sort-rows voidRisk|voidDelta|voidEv|maxSeverity|time|…] [--rows-desc]
                               [--void-risk high|medium|low] [--max-severity critical|high|watch|info]
                               [--market-class match_ml|…] [--event-type PRICE_CHANGE|…] [--limit N]
+                              [--pattern id-substring…] [--pattern-family void|fill|…] [--has-eye]
+                              [--watch] [--interval sec]  # reload logs; HTML gets meta refresh
                               [--bake]   # write docs/artifacts live-tracker-analyze-* (+ .html)
   bun live-tracker.ts patterns [--sort-by family|severity|id] [--desc] [--json|--inspect]
   bun live-tracker.ts chart   --event ID --market TYPE [--event ID --market TYPE …]
@@ -170,7 +175,10 @@ analyze --sort-rows: voidRisk | voidDelta | voidEv | maxSeverity | time | eventT
   (comma-separated; orthogonal to pattern --sort-by). Default: voidRisk,maxSeverity,time
   (ev preset → voidDelta,voidEv,time). --rows-desc reverses display order.
 analyze triage: --void-risk / --max-severity / --market-class / --event-type (allowlists)
+  --pattern (substring in patternIds) / --pattern-family / --has-eye
   then sort, then --limit N (top-N after sort). Banner/HTML chips reflect filtered rows.
+analyze --watch: reload source logs every --interval sec (default 5). TTY table clears;
+  --html rewrites file + injects meta refresh (open once with --open).
 
 Examples:
   bun live-tracker.ts diff old.json new.json --event-type MARKET_ADDED --sort-by time --limit 5
@@ -180,6 +188,8 @@ Examples:
   bun live-tracker.ts analyze --sport=tennis --phase=live --columns=ev --inspect --no-color
   bun live-tracker.ts analyze --sport=tennis --phase=live --columns=ev --sort-rows=voidDelta --csv
   bun live-tracker.ts analyze --sport=tennis --phase=live --void-risk=high --limit=5 --columns=desk --table
+  bun live-tracker.ts analyze --sport=tennis --phase=live --pattern=void.live --has-eye --columns=patterns --table
+  bun live-tracker.ts analyze --sport=tennis --phase=live --columns=desk --html --watch --interval=5 --open
   bun live-tracker.ts analyze --sport=tennis --phase=live --columns=all --bake
   bun live-tracker.ts analyze --sport=tennis --phase=live --columns=desk --html --output /tmp/desk.html
   bun live-tracker.ts analyze --sport=tennis --phase=live --columns=desk,ev --html --open
@@ -616,10 +626,6 @@ if (cmd === 'patterns') {
 // ── analyze ────────────────────────────────────────────────────────────────
 if (cmd === 'analyze') {
   const pos = positionalAfterCmd('analyze');
-  const paths = pos.length ? pos : await resolveFromPaths();
-  let events = paths.length
-    ? await loadTrackerEventsFromPaths(paths)
-    : [];
   // Optional shell settlement + edge patterns (plive/ezlive rules)
   const sportId = argValue('sport');
   if (sportId) {
@@ -636,147 +642,185 @@ if (cmd === 'analyze') {
       argValue('phase') === 'prematch' ? 'prematch' : 'live';
     const sortBy = parseEdgePatternSortBy(argValue('sort-by'), ['severity', 'id']);
     const desc = hasFlag('desc');
-    const weighted = weightTrackerEvents(events, {
-      sportId,
-      phase,
-      period: argValue('period') ?? undefined,
-      patternSort: { sortBy, desc },
-    });
     // --columns desk|odds|settlement|patterns|ev|all|key1,key2
     const colArg = argValue('columns');
     // --sort-rows voidRisk,voidDelta (display order; orthogonal to pattern --sort-by)
     const sortRowsArg = argValue('sort-rows');
     const rowSortBy = sortRowsArg ? parseAnalyzeRowSortBy(sortRowsArg) : undefined;
     const rowSortDesc = hasFlag('rows-desc');
-    // Triage allowlists (filter → sort → limit)
+    // Triage allowlists + pattern-hit filters (filter → sort → limit)
     const rowFilter = {
       voidRisk: parseAnalyzeCsvList(argValue('void-risk')),
       maxSeverity: parseAnalyzeCsvList(argValue('max-severity')),
       marketClass: parseAnalyzeCsvList(argValue('market-class')),
       eventType: parseAnalyzeCsvList(argValue('event-type')),
+      pattern: parseAnalyzeCsvList(argValue('pattern')),
+      patternFamily: parseAnalyzeCsvList(argValue('pattern-family')),
+      hasEye: hasFlag('has-eye') ? true : undefined,
     };
     const limitRaw = argValue('limit');
     const rowLimit =
       limitRaw != null && Number.isFinite(Number(limitRaw))
         ? Math.max(0, Math.floor(Number(limitRaw)))
         : undefined;
+    const intervalSec = Math.max(
+      0.5,
+      Number(argValue('interval') ?? '5') || 5,
+    );
+    const watching = hasFlag('watch');
+    const autoRefreshSec = watching ? Math.max(1, Math.floor(intervalSec)) : undefined;
     const colors =
       !hasFlag('no-color') &&
       Boolean(process.stdout.isTTY) &&
       process.env.NO_COLOR == null;
-    const render = renderSportAnalyze({
-      sportId,
-      phase,
-      sortBy,
-      desc,
-      events: weighted,
-      columns: hasFlag('all-columns')
-        ? ['all']
-        : colArg
-          ? colArg.split(',').map(s => s.trim()).filter(Boolean)
-          : undefined,
-      colors,
-      rowSortBy,
-      rowSortDesc,
-      rowFilter,
-      rowLimit,
-    });
-    const { artifact, banner, inspectMeta, tableInspect, tableMarkdown } = render;
+    const columnsArg = hasFlag('all-columns')
+      ? (['all'] as string[])
+      : colArg
+        ? colArg.split(',').map(s => s.trim()).filter(Boolean)
+        : undefined;
 
-    // Optional bake to docs/artifacts for sample table SSOT (always full multi-preset)
-    if (hasFlag('bake') || hasFlag('write-sample')) {
-      const { joinPath } = await import('./src/research/paths.ts');
-      const schemaPath = joinPath(
-        process.cwd(),
-        'docs/artifacts/live-tracker-analyze-schema.json',
-      );
-      const samplePath = joinPath(
-        process.cwd(),
-        'docs/artifacts/live-tracker-analyze-sample.json',
-      );
-      const tablePath = joinPath(
-        process.cwd(),
-        'docs/artifacts/live-tracker-analyze-sample.md',
-      );
-      const htmlPath = joinPath(
-        process.cwd(),
-        'docs/artifacts/live-tracker-analyze-sample.html',
-      );
-      await Bun.write(
-        schemaPath,
-        JSON.stringify(buildAnalyzeSchemaDocument(), null, 2) + '\n',
-      );
-      await Bun.write(samplePath, JSON.stringify(artifact, null, 2) + '\n');
-      await Bun.write(tablePath, render.markdownReport + '\n');
-      await Bun.write(htmlPath, render.htmlReport);
-      console.error(
-        `baked ${schemaPath}\n      ${samplePath}\n      ${tablePath}\n      ${htmlPath}`,
-      );
-    }
+    let baked = false;
+    let htmlOpened = false;
 
-    if (hasFlag('inspect') || argValue('format') === 'inspect') {
-      const depthRaw = argValue('depth');
-      const depth = depthRaw != null && Number.isFinite(Number(depthRaw)) ? Number(depthRaw) : 6;
-      const meta = inspectSnapshot(inspectMeta, { colors, depth, sorted: true });
-      await writeOrPrint(meta + '\n\n' + tableInspect + '\n');
-      process.exit(0);
-    }
-    if (hasFlag('json') || argValue('format') === 'json') {
-      await writeOrPrint(JSON.stringify(artifact, null, 2) + '\n');
-      process.exit(0);
-    }
-    if (hasFlag('html') || argValue('format') === 'html') {
-      // Honors --columns: desk → focused; desk,ev → multi-select; all → full
-      const colLabel =
-        colArg?.replace(/,/g, '-') ??
-        (hasFlag('all-columns') ? 'all' : 'desk');
-      const defaultHtml = joinPath(
-        CACHE_DIR,
-        'live-tracker',
-        `analyze-${sportId}-${phase}-${colLabel}.html`,
-      );
-      await writeOrPrint(render.htmlView, {
-        defaultPath: argValue('output') || argValue('out') ? undefined : defaultHtml,
-        open: hasFlag('open'),
+    const runOnce = async (opts: { clearTty: boolean; openHtml: boolean }) => {
+      const paths = pos.length ? pos : await resolveFromPaths();
+      const events = paths.length ? await loadTrackerEventsFromPaths(paths) : [];
+      const weighted = weightTrackerEvents(events, {
+        sportId,
+        phase,
+        period: argValue('period') ?? undefined,
+        patternSort: { sortBy, desc },
       });
-      process.exit(0);
-    }
-    if (hasFlag('csv') || argValue('format') === 'csv') {
-      await writeOrPrint(formatAnalyzeCsv(artifact.rows, render.columns));
-      process.exit(0);
-    }
-    if (hasFlag('table') || argValue('format') === 'table') {
-      await writeOrPrint(banner + '\n\n' + tableInspect + '\n');
-      process.exit(0);
-    }
-    // Markdown narrative + selected-column table (+ banner summary)
-    const lines: string[] = [
-      banner,
-      '',
-      tableMarkdown,
-      '',
-    ];
-    if (hasFlag('verbose')) {
-      for (const e of weighted) {
-        if (!('settlement' in e) || !e.settlement) continue;
-        const s = e.settlement;
-        lines.push(
-          `${e.time} ${e.eventType} mkt=${e.marketType ?? '?'} per=${e.period ?? 'm'} ` +
-            `${s.summary}`,
+      const render = renderSportAnalyze({
+        sportId,
+        phase,
+        sortBy,
+        desc,
+        events: weighted,
+        columns: columnsArg,
+        colors,
+        rowSortBy,
+        rowSortDesc,
+        rowFilter,
+        rowLimit,
+        autoRefreshSec,
+      });
+      const { artifact, banner, inspectMeta, tableInspect, tableMarkdown } = render;
+
+      // Bake once (sample SSOT) — not every watch tick
+      if (!baked && (hasFlag('bake') || hasFlag('write-sample'))) {
+        const { joinPath: jp } = await import('./src/research/paths.ts');
+        const schemaPath = jp(process.cwd(), 'docs/artifacts/live-tracker-analyze-schema.json');
+        const samplePath = jp(process.cwd(), 'docs/artifacts/live-tracker-analyze-sample.json');
+        const tablePath = jp(process.cwd(), 'docs/artifacts/live-tracker-analyze-sample.md');
+        const htmlPath = jp(process.cwd(), 'docs/artifacts/live-tracker-analyze-sample.html');
+        await Bun.write(
+          schemaPath,
+          JSON.stringify(buildAnalyzeSchemaDocument(), null, 2) + '\n',
         );
-        lines.push(`  → ${s.sizingNote}`);
-        for (const h of s.patterns ?? []) {
-          if (h.severity === 'info') continue;
-          lines.push(`  → [${h.severity}] ${h.patternId} (${h.family}): ${h.note}`);
+        await Bun.write(samplePath, JSON.stringify(artifact, null, 2) + '\n');
+        await Bun.write(tablePath, render.markdownReport + '\n');
+        await Bun.write(htmlPath, render.htmlReport);
+        console.error(
+          `baked ${schemaPath}\n      ${samplePath}\n      ${tablePath}\n      ${htmlPath}`,
+        );
+        baked = true;
+      }
+
+      if (hasFlag('inspect') || argValue('format') === 'inspect') {
+        const depthRaw = argValue('depth');
+        const depth =
+          depthRaw != null && Number.isFinite(Number(depthRaw)) ? Number(depthRaw) : 6;
+        const meta = inspectSnapshot(inspectMeta, { colors, depth, sorted: true });
+        if (opts.clearTty && process.stdout.isTTY && !argValue('output') && !argValue('out')) {
+          console.clear();
+          console.error(`# analyze watch · ${sportId}/${phase} · ${new Date().toISOString()}`);
+        }
+        await writeOrPrint(meta + '\n\n' + tableInspect + '\n');
+        return;
+      }
+      if (hasFlag('json') || argValue('format') === 'json') {
+        await writeOrPrint(JSON.stringify(artifact, null, 2) + '\n');
+        return;
+      }
+      if (hasFlag('html') || argValue('format') === 'html') {
+        const colLabel =
+          colArg?.replace(/,/g, '-') ?? (hasFlag('all-columns') ? 'all' : 'desk');
+        const defaultHtml = joinPath(
+          CACHE_DIR,
+          'live-tracker',
+          `analyze-${sportId}-${phase}-${colLabel}.html`,
+        );
+        const shouldOpen = Boolean(opts.openHtml && hasFlag('open') && !htmlOpened);
+        await writeOrPrint(render.htmlView, {
+          defaultPath: argValue('output') || argValue('out') ? undefined : defaultHtml,
+          open: shouldOpen,
+        });
+        if (shouldOpen) htmlOpened = true;
+        if (watching) {
+          console.error(
+            `# analyze html watch · rows=${artifact.rows.length} · refresh=${autoRefreshSec}s · ${new Date().toISOString()}`,
+          );
+        }
+        return;
+      }
+      if (hasFlag('csv') || argValue('format') === 'csv') {
+        await writeOrPrint(formatAnalyzeCsv(artifact.rows, render.columns));
+        return;
+      }
+      if (hasFlag('table') || argValue('format') === 'table') {
+        if (opts.clearTty && process.stdout.isTTY && !argValue('output') && !argValue('out')) {
+          console.clear();
+          console.error(`# analyze watch · ${sportId}/${phase} · ${new Date().toISOString()}`);
+        }
+        await writeOrPrint(banner + '\n\n' + tableInspect + '\n');
+        return;
+      }
+      // Markdown narrative + selected-column table (+ banner summary)
+      const lines: string[] = [banner, '', tableMarkdown, ''];
+      if (hasFlag('verbose')) {
+        for (const e of weighted) {
+          if (!('settlement' in e) || !e.settlement) continue;
+          const s = e.settlement;
+          lines.push(
+            `${e.time} ${e.eventType} mkt=${e.marketType ?? '?'} per=${e.period ?? 'm'} ` +
+              `${s.summary}`,
+          );
+          lines.push(`  → ${s.sizingNote}`);
+          for (const h of s.patterns ?? []) {
+            if (h.severity === 'info') continue;
+            lines.push(`  → [${h.severity}] ${h.patternId} (${h.family}): ${h.note}`);
+          }
         }
       }
+      if (!artifact.rows.length) {
+        lines.push('(no PRICE_CHANGE/MARKET_ADDED rows to weight)');
+      }
+      if (opts.clearTty && process.stdout.isTTY && !argValue('output') && !argValue('out')) {
+        console.clear();
+        console.error(`# analyze watch · ${sportId}/${phase} · ${new Date().toISOString()}`);
+      }
+      await writeOrPrint(lines.join('\n') + '\n');
+    };
+
+    await runOnce({ clearTty: false, openHtml: true });
+    if (watching) {
+      console.error(
+        `# analyzing every ${intervalSec}s (Ctrl-C to stop)` +
+          (hasFlag('html') || argValue('format') === 'html'
+            ? ` · html meta refresh ${autoRefreshSec}s`
+            : ''),
+      );
+      for (;;) {
+        await Bun.sleep(intervalSec * 1000);
+        await runOnce({ clearTty: true, openHtml: false });
+      }
     }
-    if (!artifact.rows.length) {
-      lines.push('(no PRICE_CHANGE/MARKET_ADDED rows to weight)');
-    }
-    await writeOrPrint(lines.join('\n') + '\n');
     process.exit(0);
   }
+
+  const paths = pos.length ? pos : await resolveFromPaths();
+  const events = paths.length ? await loadTrackerEventsFromPaths(paths) : [];
   // default analyze = summary
   if (!hasFlag('detail') && !hasFlag('stats')) {
     process.argv.push('--summary');
