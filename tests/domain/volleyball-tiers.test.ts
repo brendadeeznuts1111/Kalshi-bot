@@ -104,4 +104,18 @@ describe('volleyball tiers + NCAA seeds', () => {
       }),
     ).toBe('D');
   });
+
+  test('Indiya country-bucket maps to volleyball.indiya tier D', () => {
+    const hit = resolveCompetition({
+      liveProduct: 'plive',
+      sportId: 'volleyball',
+      inventoryBucket: 'volleyball',
+      league: 'Indiya',
+    });
+    expect(hit?.competitionId).toBe('volleyball.indiya');
+    expect(
+      resolveVolleyballCompetitionTier({ competitionId: hit?.competitionId }),
+    ).toBe('D');
+    expect(inferVolleyballTierFromLeagueLabel('Indiya')).toBe('D');
+  });
 });
