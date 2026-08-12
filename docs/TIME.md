@@ -80,7 +80,10 @@ bookTickClocks({ exchangeTsMs: msg.ts_ms, recvTsMs: recvTs });
 // → { ts, recvTs, sourceClock: 'exchange' | 'recv' }
 ```
 
-Wired in `kalshi-ws-recorder` insert path. REST pollers should pass `recv` only.
+| Path | Source | Clocks |
+| ---- | ------ | ------ |
+| WS (`kalshi-ws-recorder`) | `kalshi-ws` | `bookTickClocks({ exchangeTsMs: msg.ts_ms?, recvTsMs })` |
+| REST (`kalshi-itf-sync` `recordKalshiBookTicks`) | `kalshi-rest` | `bookTickClocks({ recvTsMs })` only → `source_clock=recv` |
 
 ## Watch window
 
@@ -93,6 +96,15 @@ watchWindowMs({ leadMinutes: 5, pastGraceHours: 6 });
 normalizeStartTs(event.start_ts); // ISO or unix → dual
 startTsInWatchWindow(event.start_ts, { leadMinutes: 5, pastGraceHours: 6 });
 ```
+
+**Wired consumers:**
+
+| Consumer | How |
+| -------- | --- |
+| `listWatchEvents` (`live-scores.ts`) | `watchWindowMs` → ISO `$floor` / `$cutoff` for `events.start_ts` text compare |
+| `clearStaleLiveFlags` | `nowEpochMs()` default; stale pin `TENNIS_LIVE_STALE_MS` |
+| `analyzeScoreSnapshotCadence` | default 6h via `hoursToMs(6)` |
+| Unit membership checks | `startTsInWatchWindow` |
 
 Tennis lead/stale durations in `tennis-lane-constants.ts` use `minutesToMs` / `hoursToMs` from this module.
 
