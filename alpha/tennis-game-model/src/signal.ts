@@ -18,6 +18,7 @@ import {
   type KalshiMarketTicker,
 } from "../../../src/institutions/event-store/brands.ts";
 import { buildGameModelP } from "./game-model.ts";
+import { assertPermittedSignalComponents } from "./circuit-contract.ts";
 import type { ScoreContext } from "./score-context.ts";
 
 export function midCents(book: BookSnapshot): number | null {
@@ -52,15 +53,20 @@ export async function buildSignalContext(input: {
     return null;
   }
 
+  const components = {
+    ...model.components,
+    // The current mid is execution context only. The circuit contract keeps it
+    // observable for decisions while preventing it from becoming a pModel input.
+    market_mid_current: mid / 100,
+  };
+  assertPermittedSignalComponents(components);
+
   return {
     ticker: input.ticker,
     eventId: input.eventId,
     book: input.book,
     pModel: model.pModel,
-    components: {
-      ...model.components,
-      market_mid_current: mid / 100,
-    },
+    components,
   };
 }
 

@@ -1,0 +1,137 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`tennis-game-model circuit contract separates causal inputs from decision observations and excluded noise 1`] = `
+{
+  "componentGroups": {
+    "decisionObservation": [
+      "market_opening_prior",
+      "market_mid_current",
+    ],
+    "diagnostics": [
+      "players_known",
+      "model_kind",
+      "match_win_prob",
+    ],
+    "matchState": [
+      "live",
+      "set_delta",
+      "game_delta",
+    ],
+    "modelInput": [
+      "self_prior",
+      "strength_yes",
+      "strength_no",
+      "hold_prob_yes",
+      "hold_prob_no",
+    ],
+  },
+  "dataPolicy": {
+    "evaluationClock": "book receive timestamp",
+    "excludedCorpus": "research-only",
+    "fitCorpus": "trading",
+    "marketPriceRole": "decision observation only; never a pModel input",
+    "noisePolicy": "diagnostic-only fields may not appear in the signal component map",
+    "outcomeCutoff": "event start and resolution timestamps must be at or before asOfMs",
+  },
+  "environment": {
+    "executionArm": [
+      "ALPHA_LIVE",
+    ],
+    "rule": "ALPHA_LIVE only permits an already-approved live route when it exactly matches the program name; it never changes pModel or weights.",
+  },
+  "excludedNoise": [
+    "latency_ms",
+    "network_latency_ms",
+    "transport",
+    "source_clock",
+    "book_sequence",
+    "cache_age_ms",
+    "render_latency_ms",
+    "ui_state",
+    "fetch_attempt",
+  ],
+  "flags": {
+    "backtest": [
+      "--db=<path>",
+    ],
+    "batchShadow": [
+      "--db=<path>",
+      "--dry-run",
+      "--from=<YYYY-MM-DD>",
+      "--to=<YYYY-MM-DD>",
+    ],
+    "runOnce": [
+      "--ticker=<Kalshi ticker>",
+      "--fetch-book",
+      "--event=<event id>",
+      "--db=<path>",
+      "--live",
+    ],
+    "watch": [
+      "--db=<path>",
+      "--lead=<minutes>",
+      "--dry-run",
+    ],
+  },
+  "propertyGroups": [
+    {
+      "id": "package-identity",
+      "properties": [
+        "name",
+        "private",
+        "type",
+      ],
+      "rule": "Private Bun ESM alpha tenant; it is not a publishable package.",
+    },
+    {
+      "id": "tenant-runtime",
+      "properties": [
+        "scripts.test",
+        "scripts.run-once",
+        "scripts.run-watch",
+        "scripts.backtest",
+      ],
+      "rule": "Execution is event-store based; no command creates a live order route.",
+    },
+    {
+      "id": "circuit",
+      "properties": [
+        "pModel",
+        "components",
+        "asOfMs",
+        "trading corpus",
+      ],
+      "rule": "Probability uses only timestamp-causal trading-corpus evidence and model state.",
+    },
+    {
+      "id": "execution-observation",
+      "properties": [
+        "market_opening_prior",
+        "market_mid_current",
+        "book",
+      ],
+      "rule": "Market observations explain an execution decision but never enter pModel.",
+    },
+    {
+      "id": "environment-and-flags",
+      "properties": [
+        "ALPHA_LIVE",
+        "--live",
+        "--dry-run",
+        "--db",
+        "--ticker",
+      ],
+      "rule": "Runtime controls select work or arm an already-approved route; they cannot tune the model.",
+    },
+  ],
+  "weightPolicy": {
+    "owner": "player-strengths.ts",
+    "parameters": [
+      "PRIOR_UNITS",
+      "MATCH_WEIGHT_GAMES",
+      "DEFAULT_UNKNOWN_STRENGTH",
+    ],
+    "rule": "Weights are fixed code parameters. Change only with timestamp-causal trading-corpus evidence and a reviewed backtest; never derive them from latency, UI, cache, or transport telemetry.",
+  },
+}
+`;

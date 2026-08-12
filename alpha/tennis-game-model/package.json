@@ -4,6 +4,8 @@
   "type": "module",
   "scripts": {
     "test": "bun test src/",
+    "check:contract": "bun test src/circuit-contract.test.ts",
+    "check": "bun run check:contract && bun test src/",
     "run-once": "bun src/run-once.ts",
     "run-watch": "bun src/run-watch.ts",
     "backtest": "bun src/backtest.ts"

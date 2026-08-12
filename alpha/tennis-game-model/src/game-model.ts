@@ -23,11 +23,20 @@ import {
 } from "./match-model.ts";
 import { resolveSelfPrior } from "./self-prior.ts";
 import type { ScoreContext } from "./score-context.ts";
+import {
+  assertPermittedSignalComponents,
+  type TennisGameModelComponents,
+} from "./circuit-contract.ts";
 
 export type GameModelResult = {
   pModel: number;
-  components: Record<string, number>;
+  components: TennisGameModelComponents;
 };
+
+function result(pModel: number, components: TennisGameModelComponents): GameModelResult {
+  assertPermittedSignalComponents(components);
+  return { pModel, components };
+}
 
 function loadBestOf(db: Database, eventId: CanonicalEventId): 3 | 5 {
   const row = db
@@ -80,7 +89,7 @@ export function buildGameModelP(input: {
     openingPriorP(input.db, input.ticker, input.eventId) ??
     (input.currentMidCents != null ? input.currentMidCents / 100 : null);
 
-  const components: Record<string, number> = {
+  const components: TennisGameModelComponents = {
     self_prior: prior.pYes,
     players_known: prior.playersKnown,
     strength_yes: prior.strengthYes,
@@ -91,32 +100,23 @@ export function buildGameModelP(input: {
   if (openingP != null) components.market_opening_prior = openingP;
 
   if (!input.score?.isLive) {
-    return {
-      pModel: prior.pYes,
-      components: { ...components, live: 0, model_kind: 0 },
-    };
+    return result(prior.pYes, { ...components, live: 0, model_kind: 0 });
   }
 
   const state = toMatchState({ ...input.score, bestOf }, bestOf);
   if (!state) {
-    return {
-      pModel: prior.pYes,
-      components: { ...components, live: 1, model_kind: 1 },
-    };
+    return result(prior.pYes, { ...components, live: 1, model_kind: 1 });
   }
 
   const pModel = matchWinProbYes(state, prior.holds.pHoldYes, prior.holds.pHoldNo);
-  return {
-    pModel,
-    components: {
-      ...components,
-      match_win_prob: pModel,
-      live: 1,
-      set_delta: input.score.setsYes - input.score.setsNo,
-      game_delta: input.score.gamesYes - input.score.gamesNo,
-      model_kind: 2,
-    },
-  };
+  return result(pModel, {
+    ...components,
+    match_win_prob: pModel,
+    live: 1,
+    set_delta: input.score.setsYes - input.score.setsNo,
+    game_delta: input.score.gamesYes - input.score.gamesNo,
+    model_kind: 2,
+  });
 }
 
 /** Re-exported for callers that only need the market echo as a component. */

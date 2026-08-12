@@ -98,6 +98,31 @@ describe("game-model", () => {
     db.close();
   });
 
+  test("market observation does not alter p_model when the causal circuit is fixed", () => {
+    const db = openEventStore({ dbPath: ":memory:" });
+    const { eventId, ticker } = seedEventWithBook(db);
+    const lowMarket = buildGameModelP({
+      db,
+      ticker,
+      eventId,
+      currentMidCents: 15,
+      score: null,
+    });
+    const highMarket = buildGameModelP({
+      db,
+      ticker,
+      eventId,
+      currentMidCents: 85,
+      score: null,
+    });
+    expect(lowMarket).not.toBeNull();
+    expect(highMarket).not.toBeNull();
+    expect(highMarket!.pModel).toBe(lowMarket!.pModel);
+    // Market price remains a recorded decision observation, not a model input.
+    expect(highMarket!.components.market_opening_prior).toBeDefined();
+    db.close();
+  });
+
   test("pre-match with stronger YES player → p_model > 0.5 from corpus, not the mid", () => {
     const db = openEventStore({ dbPath: ":memory:" });
     const { eventId, ticker } = seedEventWithBook(db);
