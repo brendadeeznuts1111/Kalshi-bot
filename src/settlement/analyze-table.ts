@@ -634,14 +634,89 @@ export function formatAnalyzeMarkdownReport(input: {
   return lines.filter((l, i, a) => !(l === '' && a[i - 1] === '')).join('\n');
 }
 
+/** Operator-grade CSS for analyze HTML (density + sticky header + risk chips). */
+export const ANALYZE_HTML_STYLES = `
+  :root {
+    color-scheme: dark light;
+    font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+    --risk-high: #ef4444;
+    --risk-medium: #f59e0b;
+    --risk-low: #22c55e;
+    --sev-critical: #dc2626;
+    --sev-high: #ea580c;
+    --sev-watch: #2563eb;
+    --sev-info: #64748b;
+    --border: color-mix(in srgb, currentColor 22%, transparent);
+    --th-bg: color-mix(in srgb, currentColor 9%, transparent);
+    --chip-bg: color-mix(in srgb, currentColor 6%, transparent);
+  }
+  body { max-width: 1180px; margin: 1rem auto 2.5rem; padding: 0 0.85rem 2rem; line-height: 1.4; font-size: 14px; }
+  h1 { font-size: 1.25rem; margin: 0.5rem 0 0.35rem; letter-spacing: 0.02em; }
+  h2 { font-size: 1rem; margin: 1.25rem 0 0.4rem; letter-spacing: 0.02em; }
+  p { margin: 0.35rem 0; }
+  .table-wrap { overflow-x: auto; margin: 0.5rem 0 1.25rem; border: 1px solid var(--border); border-radius: 6px; }
+  table { border-collapse: collapse; width: max-content; min-width: 100%; font-size: 0.78rem; margin: 0; }
+  th, td { border-bottom: 1px solid var(--border); padding: 0.28rem 0.45rem; text-align: left; vertical-align: top; white-space: nowrap; max-width: 28rem; overflow: hidden; text-overflow: ellipsis; }
+  td:last-child, th:last-child { white-space: normal; max-width: 36rem; }
+  th { background: var(--th-bg); position: sticky; top: 0; z-index: 1; font-weight: 600; }
+  tr:hover td { background: color-mix(in srgb, currentColor 4%, transparent); }
+  code { font-size: 0.88em; }
+  .badge { display: inline-block; padding: 0.12rem 0.45rem; border-radius: 999px; background: var(--chip-bg); border: 1px solid var(--border); font-size: 0.75rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+  .meta-footer { margin-top: 1.5rem; padding-top: 0.75rem; border-top: 1px solid var(--border); font-size: 0.75rem; opacity: 0.85; }
+  .meta-footer code { user-select: all; }
+  .risk-high, .sev-high, .sev-critical { color: var(--risk-high); font-weight: 600; }
+  .risk-medium { color: var(--risk-medium); font-weight: 600; }
+  .risk-low { color: var(--risk-low); font-weight: 600; }
+  .sev-watch { color: var(--sev-watch); font-weight: 600; }
+  .sev-info { color: var(--sev-info); }
+`.trim();
+
+/**
+ * Highlight voidRisk / severity cell text after Bun.markdown.html.
+ * Conservative: only bare cells whose entire text is a known token.
+ */
+export function enhanceAnalyzeHtmlBody(bodyHtml: string): string {
+  const tokens: Array<[string, string]> = [
+    ['critical', 'sev-critical'],
+    ['high', 'risk-high'],
+    ['medium', 'risk-medium'],
+    ['low', 'risk-low'],
+    ['watch', 'sev-watch'],
+    ['info', 'sev-info'],
+  ];
+  let out = bodyHtml;
+  for (const [token, cls] of tokens) {
+    const re = new RegExp(
+      `<td(\\s[^>]*)?>${token}<\\/td>`,
+      'gi',
+    );
+    out = out.replace(re, `<td$1 class="${cls}">${token}</td>`);
+  }
+  // Wrap each table for sticky + scroll
+  out = out.replace(/<table>/gi, '<div class="table-wrap"><table>').replace(
+    /<\/table>/gi,
+    '</table></div>',
+  );
+  return out;
+}
+
 /** Wrap markdown body in a minimal standalone HTML document. */
 export function wrapAnalyzeHtmlDocument(input: {
   sportId: string;
   phase: string;
   titleExtra?: string;
   bodyHtml: string;
+  /** Optional footer: recipe command + focus badge. */
+  footer?: { recipe?: string; focusLabel?: string };
 }): string {
   const titleExtra = input.titleExtra ? ` · ${input.titleExtra}` : '';
+  const enhanced = enhanceAnalyzeHtmlBody(input.bodyHtml);
+  const badge = input.footer?.focusLabel
+    ? `<p><span class="badge">${input.footer.focusLabel}</span></p>\n`
+    : '';
+  const recipe = input.footer?.recipe
+    ? `<div class="meta-footer">Recipe: <code>${input.footer.recipe}</code></div>\n`
+    : '';
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -649,18 +724,12 @@ export function wrapAnalyzeHtmlDocument(input: {
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Live-tracker analyze · ${input.sportId} / ${input.phase}${titleExtra}</title>
 <style>
-  :root { color-scheme: dark light; font-family: ui-sans-serif, system-ui, sans-serif; }
-  body { max-width: 1100px; margin: 1.5rem auto; padding: 0 1rem; line-height: 1.45; }
-  table { border-collapse: collapse; width: 100%; font-size: 0.85rem; margin: 0.75rem 0 1.5rem; overflow-x: auto; display: block; }
-  th, td { border: 1px solid color-mix(in srgb, currentColor 25%, transparent); padding: 0.35rem 0.5rem; text-align: left; vertical-align: top; }
-  th { background: color-mix(in srgb, currentColor 8%, transparent); }
-  code { font-size: 0.9em; }
-  h1, h2 { letter-spacing: 0.02em; }
+${ANALYZE_HTML_STYLES}
 </style>
 </head>
 <body>
-${input.bodyHtml}
-</body>
+${badge}${enhanced}
+${recipe}</body>
 </html>
 `;
 }
@@ -679,17 +748,49 @@ export function formatAnalyzeHtmlReport(input: {
   generatedAt?: string;
   presets?: readonly AnalyzeColumnPresetName[];
   columns?: readonly string[];
+  /** When true, append CLI recipe footer. */
+  includeRecipe?: boolean;
 }): string {
   const md = formatAnalyzeMarkdownReport(input);
   const body = markdownToHtml(md, 'docs');
   const focused =
     input.presets?.length === 1 && input.presets[0] !== 'all' ? input.presets[0] : undefined;
+  const multi =
+    input.presets && input.presets.length > 1
+      ? input.presets.filter(p => p !== 'all').join('+')
+      : undefined;
+  const focusLabel = focused ?? multi;
+  const recipe =
+    input.includeRecipe !== false
+      ? buildAnalyzeHtmlRecipe({
+          sportId: input.sportId,
+          phase: input.phase,
+          columns: focused
+            ? [focused]
+            : multi
+              ? input.presets!.filter(p => p !== 'all')
+              : input.presets?.includes('all')
+                ? ['all']
+                : input.columns,
+        })
+      : undefined;
   return wrapAnalyzeHtmlDocument({
     sportId: input.sportId,
     phase: input.phase,
-    titleExtra: focused,
+    titleExtra: focusLabel,
     bodyHtml: body,
+    footer: { recipe, focusLabel },
   });
+}
+
+/** CLI recipe string for HTML footers. */
+export function buildAnalyzeHtmlRecipe(input: {
+  sportId: string;
+  phase: string;
+  columns?: readonly string[];
+}): string {
+  const cols = input.columns?.length ? input.columns.join(',') : 'desk';
+  return `bun live-tracker.ts analyze --sport=${input.sportId} --phase=${input.phase} --columns=${cols} --html`;
 }
 
 /** Detect a single named column preset from --columns args. */
@@ -703,6 +804,30 @@ export function detectAnalyzeFocusPreset(
     return only as AnalyzeColumnPresetName;
   }
   return null;
+}
+
+export type HtmlPresetResolution =
+  | { kind: 'full' }
+  | { kind: 'presets'; presets: AnalyzeColumnPresetName[] }
+  | { kind: 'fields'; fields: string[] };
+
+/**
+ * Resolve --columns for HTML:
+ * - empty / all → full multi-preset
+ * - one or more named presets (desk,ev) → those sections only
+ * - free-form field keys → single Columns table
+ */
+export function resolveHtmlPresets(columns?: readonly string[]): HtmlPresetResolution {
+  if (!columns?.length) return { kind: 'full' };
+  if (columns.length === 1 && columns[0] === 'all') return { kind: 'full' };
+  const presetSet = new Set<string>(ANALYZE_COLUMN_PRESET_NAMES);
+  const allPresets = columns.every(c => presetSet.has(c));
+  if (allPresets) {
+    const presets = columns.filter(c => c !== 'all') as AnalyzeColumnPresetName[];
+    if (!presets.length) return { kind: 'full' };
+    return { kind: 'presets', presets };
+  }
+  return { kind: 'fields', fields: [...columns] };
 }
 
 export type AnalyzeSnapshotArtifact = {
@@ -848,21 +973,22 @@ export function renderSportAnalyze(input: {
     schemaVersion: artifact.schemaVersion,
     generatedAt: artifact.generatedAt,
   });
-  // Focused HTML when a single named preset is requested (not "all")
+  // HTML view honors --columns: one/more named presets, free-form fields, or full
+  const htmlSel = resolveHtmlPresets(input.columns);
   const htmlView =
-    focusPreset && focusPreset !== 'all'
-      ? formatAnalyzeHtmlReport({
-          sportId: artifact.sportId,
-          phase: artifact.phase,
-          sortBy: artifact.sortBy,
-          desc: artifact.desc,
-          rows: artifact.rows,
-          schemaVersion: artifact.schemaVersion,
-          generatedAt: artifact.generatedAt,
-          presets: [focusPreset],
-        })
-      : focusPreset === 'all' || !input.columns?.length
-        ? htmlReport
+    htmlSel.kind === 'full'
+      ? htmlReport
+      : htmlSel.kind === 'presets'
+        ? formatAnalyzeHtmlReport({
+            sportId: artifact.sportId,
+            phase: artifact.phase,
+            sortBy: artifact.sortBy,
+            desc: artifact.desc,
+            rows: artifact.rows,
+            schemaVersion: artifact.schemaVersion,
+            generatedAt: artifact.generatedAt,
+            presets: htmlSel.presets,
+          })
         : formatAnalyzeHtmlReport({
             sportId: artifact.sportId,
             phase: artifact.phase,
@@ -871,7 +997,7 @@ export function renderSportAnalyze(input: {
             rows: artifact.rows,
             schemaVersion: artifact.schemaVersion,
             generatedAt: artifact.generatedAt,
-            columns: input.columns,
+            columns: htmlSel.fields,
           });
   return {
     artifact,

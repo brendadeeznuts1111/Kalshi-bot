@@ -95,8 +95,31 @@ describe('analyze recipes (fixture jsonl)', () => {
     expect(r.markdownReport).toContain('## Preset `ev`');
     expect(r.markdownReport).toContain('## Preset `all`');
     expect(r.htmlReport).toContain('<!DOCTYPE html>');
-    expect(r.htmlReport).toContain('<table>');
+    expect(r.htmlReport).toContain('table-wrap');
     expect(r.htmlReport).toContain('voidRisk');
+    expect(r.htmlReport).toContain('class="risk-high"');
     expect(r.artifact.summary.meanVoidDelta).toBe(-15);
+  });
+
+  test('multi-select desk,ev HTML has only those presets', async () => {
+    const weighted = await loadWeighted();
+    const r = renderSportAnalyze({
+      sportId: 'tennis',
+      phase: 'live',
+      sortBy: ['severity', 'id'],
+      events: weighted,
+      columns: ['desk', 'ev'],
+    });
+    // Field union for table paths
+    expect(r.columns).toEqual(
+      expect.arrayContaining([...ANALYZE_COLUMN_PRESETS.desk, ...ANALYZE_COLUMN_PRESETS.ev]),
+    );
+    expect(r.htmlView).toContain('Preset <code>desk</code>');
+    expect(r.htmlView).toContain('Preset <code>ev</code>');
+    expect(r.htmlView).not.toContain('Preset <code>settlement</code>');
+    expect(r.htmlView).not.toContain('Preset <code>all</code>');
+    expect(r.htmlView).toContain('Recipe:');
+    expect(r.htmlView).toContain('--columns=desk,ev');
+    expect(r.htmlView).toContain('class="table-wrap"');
   });
 });

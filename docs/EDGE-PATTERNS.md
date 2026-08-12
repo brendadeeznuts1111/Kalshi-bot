@@ -75,12 +75,15 @@ bun live-tracker.ts analyze --sport=tennis --phase=live --columns=desk --table
 bun live-tracker.ts analyze --sport=tennis --phase=live --columns=ev --inspect --no-color
 bun live-tracker.ts analyze --sport=tennis --phase=live --columns=all --bake
 bun live-tracker.ts analyze --sport=tennis --phase=live --columns=desk --html --output /tmp/desk.html
-# --html honors --columns: desk → focused page; all → multi-preset (same as bake HTML)
+bun live-tracker.ts analyze --sport=tennis --phase=live --columns=desk,ev --html --open
+# --html honors --columns: desk → focused; desk,ev → those sections; all → multi-preset
+# --html without --output → research/cache/live-tracker/analyze-{sport}-{phase}-{cols}.html
+# --open opens the written file (macOS)
 # bake → docs/artifacts/live-tracker-analyze-{schema.json,sample.json,sample.md,sample.html}
-# fixture for tests: tests/fixtures/live-tracker-event-197510101.jsonl
+# fixture: tests/fixtures/live-tracker-event-197510101.jsonl
 ```
 
-Code: `renderSportAnalyze` (`htmlView` vs `htmlReport`) · **schema v3** · recipes in `tests/settlement/analyze-recipes.test.ts` · [`src/lib/table-schema.ts`](../src/lib/table-schema.ts).
+Code: `renderSportAnalyze` (`htmlView` vs `htmlReport`) · risk CSS chips · **schema v3** · recipes in `tests/settlement/analyze-recipes.test.ts`.
 
 Time: `time` = ISO UTC · `timeMs` = epoch ms join key — see [`TIME.md`](TIME.md).
 
