@@ -1,3 +1,4 @@
+// @see https://bun.com/docs/test/writing-tests#matchers
 // @see https://bun.com/docs/test
 import { describe, expect, test } from 'bun:test';
 import {
@@ -21,6 +22,7 @@ describe('shadow ternary outcomes', () => {
   });
 
   test('void excluded from Brier; counted separately', async () => {
+    expect.hasAssertions();
     const dir = joinPath(import.meta.dir, '.tmp-void-brier');
     await Bun.$`rm -rf ${dir}`.quiet();
     await Bun.$`mkdir -p ${dir}`.quiet();
@@ -78,8 +80,15 @@ describe('shadow ternary outcomes', () => {
     });
 
     const lines = materializeShadowLines(await readShadowLogEntries(logPath));
-    expect(lines.find(l => l.eventId === 'e-void')?.outcome).toBe('void');
-    expect(lines.find(l => l.eventId === 'e-win')?.outcome).toBe(1);
+    expect(lines).toHaveLength(2);
+    expect(lines.find(l => l.eventId === 'e-void')).toMatchObject({
+      eventId: 'e-void',
+      outcome: 'void',
+    });
+    expect(lines.find(l => l.eventId === 'e-win')).toMatchObject({
+      eventId: 'e-win',
+      outcome: 1,
+    });
     expect(voidOutcomeCount(lines)).toBe(1);
     // Brier only on win line: (0.8 - 1)^2 = 0.04
     expect(brierScore(lines)).toBeCloseTo(0.04, 5);
