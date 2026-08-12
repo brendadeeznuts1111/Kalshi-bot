@@ -4,6 +4,7 @@
 // @see https://bun.com/docs/runtime/file-io#reading-files-bun-file
 // @see https://bun.com/docs/guides/process/argv
 import { parseArgs } from "node:util";
+import { markdownToAnsi } from "../lib/markdown.ts";
 import { REPORT_DIR, joinPath } from "../research/paths.ts";
 import { isTtyStdout, wrapDisplay } from "../research/terminal-out.ts";
 
@@ -34,7 +35,7 @@ export async function renderReportTerm(opts: ReportTermOptions): Promise<string>
   }
   const text = await file.text();
   if (opts.raw) return text;
-  const ansi = Bun.markdown.ansi(text);
+  const ansi = markdownToAnsi(text);
   return isTtyStdout() ? wrapDisplay(ansi) : ansi;
 }
 
