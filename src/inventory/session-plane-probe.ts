@@ -45,14 +45,33 @@ export type SessionPlaneProbeReport = {
   summary: {
     inventoryPublicOk: boolean;
     streamTokenRequiresGsidOk: boolean;
+    /**
+     * Token probe with a gsid:
+     * - absent: no gsid available (shell mint empty and no operator gsid)
+     * - ok / fail: streamToken result for the gsid that was used
+     *
+     * Note: shell-minted gsid often fails closed (403) — that is expected and
+     * does **not** fail `allRequiredOk` unless source is `operator`.
+     */
     boundGsid: 'absent' | 'ok' | 'fail';
+    /** Where the gsid for stream-token-with-gsid came from. */
+    gsidSource: 'absent' | 'operator' | 'shell_mint';
     allRequiredOk: boolean;
   };
 };
 
 export type SessionPlaneProbeOptions = {
-  /** Bound SportsWidgets session (from live shell). Never written to disk by this probe. */
+  /**
+   * Operator seat-bound SportsWidgets session (from getUltraLiveURL handoff).
+   * When omitted, probe reuses the anonymous shell `x-gsid` / GSID cookie mint.
+   * Never written to disk by this probe.
+   */
   gsid?: string;
+  /**
+   * When true (default), use shell-minted x-gsid for streamToken if no operator gsid.
+   * Set false to only test explicit PLIVE_GSID/--gsid.
+   */
+  useShellGsid?: boolean;
   fetchImpl?: FetchFn;
   endpoints?: LiveStreamEndpoints;
   streamTokenPath?: string;
@@ -115,6 +134,15 @@ function streamTokenUrl(origin: string, path: string): string {
   return new URL(path, origin.endsWith('/') ? origin : `${origin}/`).toString();
 }
 
+/** Extract GSID value from Set-Cookie lines (never log raw). */
+export function gsidFromSetCookie(setCookie: readonly string[]): string | null {
+  for (const line of setCookie) {
+    const m = line.match(/^GSID=([^;]+)/i);
+    if (m?.[1]?.trim()) return m[1].trim();
+  }
+  return null;
+}
+
 async function timedFetch(
   fetchImpl: FetchFn,
   input: string,
@@ -154,11 +182,13 @@ export async function probeSessionPlanes(
   const timeoutMs = options.timeoutMs ?? 15_000;
   const tokenPath = options.streamTokenPath ?? DEFAULT_STREAM_TOKEN_PATH;
   const pandoraWs = options.pandoraWsUrl ?? DEFAULT_PANDORA_WS;
-  const gsid = options.gsid?.trim() || undefined;
+  const operatorGsid = options.gsid?.trim() || undefined;
+  const useShellGsid = options.useShellGsid !== false;
   const tokenUrl = streamTokenUrl(ep.streamOrigin, tokenPath);
   const liveUrl = `${ep.streamOrigin}${ep.livePathPrefix}${ep.livePathPrefix.includes('?') ? '&' : '?'}lang=en`;
 
   const checks: SessionPlaneCheck[] = [];
+  let shellMintedGsid: string | null = null;
 
   // 1) Public inventory catalog
   {
@@ -238,7 +268,9 @@ export async function probeSessionPlanes(
     const status = res?.status ?? null;
     const xGsid = res ? headerGet(res, 'x-gsid') : null;
     const setCookie = res?.headers.getSetCookie?.() ?? [];
-    const hasGsidCookie = setCookie.some((c) => /^GSID=/i.test(c));
+    const cookieGsid = gsidFromSetCookie(setCookie);
+    const hasGsidCookie = !!cookieGsid || setCookie.some((c) => /^GSID=/i.test(c));
+    shellMintedGsid = (xGsid?.trim() || cookieGsid || null) as string | null;
     // Consume body without retaining
     if (res) await res.arrayBuffer().catch(() => null);
     const ok = status === 200 && (!!xGsid || hasGsidCookie);
@@ -254,7 +286,8 @@ export async function probeSessionPlanes(
       detail: {
         xGsidFingerprint: fingerprintSecret(xGsid),
         gsidCookiePresent: hasGsidCookie,
-        note: 'Anonymous mint ≠ seat-bound gsid from getUltraLiveURL hash handoff',
+        note:
+          'Shell mint proves anonymous session mint; seat-bound gsid still preferred via PLIVE_GSID/--gsid after getUltraLiveURL',
       },
       error,
     });
@@ -298,8 +331,16 @@ export async function probeSessionPlanes(
     });
   }
 
-  // 4) Optional bound gsid → streamToken JWT (redacted)
-  if (gsid) {
+  // 4) streamToken with gsid (operator seat-bound preferred; else shell mint)
+  const gsidSource: SessionPlaneProbeReport['summary']['gsidSource'] = operatorGsid
+    ? 'operator'
+    : useShellGsid && shellMintedGsid
+      ? 'shell_mint'
+      : 'absent';
+  const gsidForToken =
+    operatorGsid || (useShellGsid ? shellMintedGsid || undefined : undefined);
+
+  if (gsidForToken) {
     const { res, latencyMs, error } = await timedFetch(
       fetchImpl,
       tokenUrl,
@@ -308,7 +349,7 @@ export async function probeSessionPlanes(
         headers: {
           accept: '*/*',
           referer: `${ep.streamOrigin}${ep.livePathPrefix}`,
-          'x-gsid': gsid,
+          'x-gsid': gsidForToken,
         },
       },
       timeoutMs
@@ -332,13 +373,22 @@ export async function probeSessionPlanes(
       url: redactUrl(tokenUrl),
       status,
       ok,
-      expected: '200 JWT when x-gsid is seat-bound',
+      expected:
+        gsidSource === 'operator'
+          ? '200 JWT when x-gsid is seat-bound (operator)'
+          : '200 JWT if shell mint is accepted (often 403 — diagnostic only)',
       latencyMs,
       detail: {
-        gsidFingerprint: fingerprintSecret(gsid),
+        gsidSource,
+        gsidFingerprint: fingerprintSecret(gsidForToken),
         bodyKind,
         jwtClaims,
         tokenFingerprint: bodyKind === 'jwt' ? 'jwt-present' : null,
+        diagnosticOnly: gsidSource === 'shell_mint',
+        note:
+          gsidSource === 'shell_mint' && !ok
+            ? 'Shell mint rejected by streamToken — use seat-bound PLIVE_GSID/--gsid after getUltraLiveURL'
+            : undefined,
         next: 'Pandora WS uses token — partner:pandora-probe (do not log JWT)',
       },
       error,
@@ -351,11 +401,13 @@ export async function probeSessionPlanes(
       url: redactUrl(tokenUrl),
       status: null,
       ok: true,
-      expected: 'skipped — pass --gsid= or PLIVE_GSID for bound-session check',
+      expected:
+        'skipped — shell did not mint gsid; pass --gsid= or PLIVE_GSID for seat-bound check',
       latencyMs: 0,
       detail: {
         skipped: true,
-        hint: 'gsid from plive /live/?gsid=… after getUltraLiveURL (never commit)',
+        gsidSource: 'absent',
+        hint: 'gsid from shell mint (auto) or plive /live/?gsid=… after getUltraLiveURL (never commit)',
       },
     });
   }
@@ -371,7 +423,7 @@ export async function probeSessionPlanes(
     expected: 'not probed here — use partner:pandora-probe',
     latencyMs: 0,
     detail: {
-      requires: 'streamToken JWT from bound gsid',
+      requires: 'streamToken JWT from gsid (shell mint or seat-bound)',
       inventoryUsesPandora: false,
     },
   });
@@ -379,18 +431,22 @@ export async function probeSessionPlanes(
   const inv = checks.find((c) => c.id === 'stream-list-v2');
   const noGsid = checks.find((c) => c.id === 'stream-token-no-gsid');
   const withGsid = checks.find((c) => c.id === 'stream-token-with-gsid');
-  const boundGsid: SessionPlaneProbeReport['summary']['boundGsid'] = !gsid
-    ? 'absent'
-    : withGsid?.ok
-      ? 'ok'
-      : 'fail';
+  const boundGsid: SessionPlaneProbeReport['summary']['boundGsid'] =
+    gsidSource === 'absent'
+      ? 'absent'
+      : withGsid?.ok
+        ? 'ok'
+        : 'fail';
 
   const inventoryPublicOk = !!inv?.ok;
   const streamTokenRequiresGsidOk = !!noGsid?.ok;
+  // Required path: public inventory + fail-closed without gsid.
+  // Operator seat-bound gsid must mint JWT when provided.
+  // Shell-mint token probe is diagnostic only (often 403 — anonymous ≠ seat).
   const allRequiredOk =
     inventoryPublicOk &&
     streamTokenRequiresGsidOk &&
-    (boundGsid === 'absent' || boundGsid === 'ok');
+    (gsidSource !== 'operator' || boundGsid === 'ok');
 
   return {
     at: new Date().toISOString(),
@@ -406,6 +462,7 @@ export async function probeSessionPlanes(
       inventoryPublicOk,
       streamTokenRequiresGsidOk,
       boundGsid,
+      gsidSource,
       allRequiredOk,
     },
   };
@@ -415,11 +472,15 @@ export async function probeSessionPlanes(
 export function formatSessionPlaneProbeReport(report: SessionPlaneProbeReport): string {
   const lines: string[] = [];
   lines.push(`session-plane-probe @ ${report.at}`);
+  const gsidLabel =
+    report.summary.gsidSource === 'absent'
+      ? 'absent'
+      : `${report.summary.boundGsid}(${report.summary.gsidSource})`;
   lines.push(
     `summary: inventory_public=${report.summary.inventoryPublicOk ? 'PASS' : 'FAIL'} ` +
       `token_requires_gsid=${report.summary.streamTokenRequiresGsidOk ? 'PASS' : 'FAIL'} ` +
-      `bound_gsid=${report.summary.boundGsid} ` +
-      `required=${report.summary.allRequiredOk ? 'OK' : 'FAIL'}`
+      `gsid_token=${gsidLabel} ` +
+      `required=${report.summary.allRequiredOk ? 'OK' : 'FAIL'}`,
   );
   lines.push('');
   for (const c of report.checks) {
@@ -440,7 +501,7 @@ export function formatSessionPlaneProbeReport(report: SessionPlaneProbeReport): 
       );
     } else if (c.id === 'stream-token-with-gsid' && !d.skipped) {
       lines.push(
-        `    gsid=${d.gsidFingerprint ?? '?'} body=${d.bodyKind} jwt=${JSON.stringify(d.jwtClaims ?? null)}`
+        `    source=${d.gsidSource ?? '?'} gsid=${d.gsidFingerprint ?? '?'} body=${d.bodyKind} jwt=${JSON.stringify(d.jwtClaims ?? null)}`,
       );
     } else if (c.id === 'stream-token-no-gsid') {
       lines.push(`    bodyKind=${d.bodyKind ?? '?'}`);

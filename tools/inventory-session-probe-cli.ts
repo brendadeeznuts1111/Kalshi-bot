@@ -5,8 +5,10 @@
  *   bun run inventory:session-probe
  *   bun run inventory:session-probe -- --json
  *   bun run inventory:session-probe -- --gsid=<from-plive-shell>
+ *   bun run inventory:session-probe -- --no-shell-gsid   # only test operator gsid
  *   PLIVE_GSID=… bun run inventory:session-probe
  *
+ * Default: auto-use shell-minted x-gsid for streamToken when no operator gsid.
  * Never prints full gsid/JWT. Never writes secrets to disk.
  * Pandora frames: partner:pandora-probe.
  */
@@ -26,8 +28,9 @@ function hasFlag(name: string): boolean {
 
 const json = hasFlag('json');
 const gsid = argValue('gsid')?.trim() || Bun.env.PLIVE_GSID?.trim() || undefined;
+const useShellGsid = !hasFlag('no-shell-gsid');
 
-const report = await probeSessionPlanes({ gsid });
+const report = await probeSessionPlanes({ gsid, useShellGsid });
 
 if (json) {
   console.log(JSON.stringify(report, null, 2));
