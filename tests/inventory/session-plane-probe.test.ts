@@ -4,6 +4,7 @@ import type { FetchFn } from '../../src/institutions/resilient-fetch.ts';
 import {
   fingerprintSecret,
   formatSessionPlaneProbeReport,
+  gsidFromSetCookie,
   jwtSafeClaims,
   probeSessionPlanes,
   redactUrl,
@@ -142,5 +143,91 @@ describe('probeSessionPlanes', () => {
     const report = await probeSessionPlanes({ fetchImpl });
     expect(report.summary.inventoryPublicOk).toBe(false);
     expect(report.summary.allRequiredOk).toBe(false);
+  });
+
+  test('auto-uses shell-minted x-gsid for streamToken when no operator gsid', async () => {
+    expect(gsidFromSetCookie(['GSID=shellcookievalue123456; path=/'])).toBe(
+      'shellcookievalue123456',
+    );
+
+    const fetchImpl: FetchFn = async (input, init) => {
+      const url = String(input);
+      const headers = new Headers(init?.headers);
+      if (url.includes('stream-list-v2')) {
+        return new Response(
+          JSON.stringify({ sports: { tennis: { count: 1, events: { '1': {} } } } }),
+          { status: 200 },
+        );
+      }
+      if (url.includes('/live/')) {
+        return new Response('<html/>', {
+          status: 200,
+          headers: {
+            'x-gsid': 'shellmintedgsidvalue01',
+            'set-cookie': 'GSID=shellmintedgsidvalue01; path=/',
+          },
+        });
+      }
+      if (url.includes('streamToken')) {
+        if (headers.get('x-gsid') === 'shellmintedgsidvalue01') {
+          const payload = btoa(
+            JSON.stringify({
+              domain: 'plive.sportswidgets.pro',
+              cid: 'shell',
+              exp: Math.floor(Date.now() / 1000) + 100,
+            }),
+          )
+            .replace(/\+/g, '-')
+            .replace(/\//g, '_')
+            .replace(/=+$/, '');
+          return new Response(`eyJhbGciOiJub25lIn0.${payload}.x`, { status: 200 });
+        }
+        return new Response('no', { status: 403 });
+      }
+      return new Response('no', { status: 404 });
+    };
+
+    const report = await probeSessionPlanes({ fetchImpl, timeoutMs: 5_000 });
+    expect(report.summary.gsidSource).toBe('shell_mint');
+    expect(report.summary.boundGsid).toBe('ok');
+    expect(report.summary.allRequiredOk).toBe(true);
+    const withGsid = report.checks.find((c) => c.id === 'stream-token-with-gsid')!;
+    expect(withGsid.ok).toBe(true);
+    expect(withGsid.detail.gsidSource).toBe('shell_mint');
+    expect(formatSessionPlaneProbeReport(report)).toContain('shell_mint');
+    expect(formatSessionPlaneProbeReport(report)).not.toContain('shellmintedgsidvalue01');
+  });
+
+  test('shell_mint token 403 does not fail required (diagnostic only)', async () => {
+    const fetchImpl: FetchFn = async (input, init) => {
+      const url = String(input);
+      const headers = new Headers(init?.headers);
+      if (url.includes('stream-list-v2')) {
+        return new Response(
+          JSON.stringify({ sports: { tennis: { count: 1, events: { '1': {} } } } }),
+          { status: 200 },
+        );
+      }
+      if (url.includes('/live/')) {
+        return new Response('<html/>', {
+          status: 200,
+          headers: { 'x-gsid': 'anononlysessionid000001' },
+        });
+      }
+      if (url.includes('streamToken')) {
+        // Always 403 — including with shell mint (live plane behavior)
+        return new Response(JSON.stringify({ e: 999 }), { status: 403 });
+      }
+      return new Response('no', { status: 404 });
+    };
+    const report = await probeSessionPlanes({ fetchImpl, timeoutMs: 5_000 });
+    expect(report.summary.gsidSource).toBe('shell_mint');
+    expect(report.summary.boundGsid).toBe('fail');
+    expect(report.summary.inventoryPublicOk).toBe(true);
+    expect(report.summary.streamTokenRequiresGsidOk).toBe(true);
+    expect(report.summary.allRequiredOk).toBe(true); // shell fail is soft
+    expect(report.checks.find((c) => c.id === 'stream-token-with-gsid')!.ok).toBe(
+      false,
+    );
   });
 });
