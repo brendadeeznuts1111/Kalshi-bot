@@ -54,6 +54,28 @@ describe('skin_events store', () => {
     expect(filterLiveEventsBySport(rows, 'tennis').map(e => e.inventoryId)).toEqual(['1']);
   });
 
+  test('filterLiveEventsBySport maps soccer ↔ Football wire; excludes American Football', () => {
+    const rows = [
+      ev({ inventoryId: '1', sport: 'Football' }),
+      ev({ inventoryId: '2', sport: 'Soccer' }),
+      ev({ inventoryId: '3', sport: 'American Football' }),
+      ev({ inventoryId: '4', sport: 'Basketball' }),
+    ];
+    // Domain sportId is soccer; stream label is Football
+    expect(filterLiveEventsBySport(rows, 'soccer').map(e => e.inventoryId).sort()).toEqual([
+      '1',
+      '2',
+    ]);
+    // football token normalizes to soccer (plive bucket), not american_football
+    expect(filterLiveEventsBySport(rows, 'football').map(e => e.inventoryId).sort()).toEqual([
+      '1',
+      '2',
+    ]);
+    expect(filterLiveEventsBySport(rows, 'american_football').map(e => e.inventoryId)).toEqual([
+      '3',
+    ]);
+  });
+
   test('parseInventorySportsCsv handles single, CSV multi, spaces, and all', () => {
     expect(parseInventorySportsCsv('all')).toEqual({ kind: 'all' });
     expect(parseInventorySportsCsv('  ALL  ')).toEqual({ kind: 'all' });
