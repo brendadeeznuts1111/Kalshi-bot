@@ -2,6 +2,9 @@
 
 This project uses [Proton Pass CLI](https://protonpass.github.io/pass-cli/) (`pass-cli`) for secret management. Secrets are stored in a dedicated Proton Pass vault and resolved at runtime — never committed to the repository.
 
+**First-principles design, error logging, failure codes, and proof plan:**  
+[`PROTONPASS-INTEGRATION-SPEC.md`](PROTONPASS-INTEGRATION-SPEC.md).
+
 ## Official documentation
 
 Canonical docs: **[protonpass.github.io/pass-cli](https://protonpass.github.io/pass-cli/)**

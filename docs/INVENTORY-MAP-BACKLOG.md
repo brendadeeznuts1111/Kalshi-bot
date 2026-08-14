@@ -141,8 +141,8 @@
 - [x] **W1:** doubles tokenization + same-pair order-swap de-ambig (`booked-match`)
 - [x] Alias: Masters Belarusy → `table_tennis.masters_belarus`
 - [x] Capture watch restarted with junk filter
-- [ ] **W1:** Fantasy adapter — **blocked**: no `FANTASY402_*` in project `.env` (`loadFantasy402ProfileFromEnv` → null). Public catalog has almost **zero** last-name overlap with unlinked TT/UTR board.
-- [ ] Inject Fantasy secrets via Proton Pass / operator env for adapter `listBookedEvents`
+- [ ] **W1:** Fantasy adapter — **blocked** until Proton session + vault item resolve (see [`PROTONPASS-INTEGRATION-SPEC.md`](PROTONPASS-INTEGRATION-SPEC.md) §6.3). Plain `.env` has no `FANTASY402_*`; use `bun run protonpass:run -- …`. Public catalog has almost **zero** last-name overlap with unlinked TT/UTR board.
+- [ ] Operator: `pass-cli login` (or PAT) → `protonpass:check` → `protonpass:run -- inventory:sync --enrich-only …`
 
 ### P2 — later
 

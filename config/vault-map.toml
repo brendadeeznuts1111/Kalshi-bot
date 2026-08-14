@@ -48,8 +48,49 @@ label = "GitHub Token"
 color = "#2DA44E"
 type = "pat"
 
+# === Fantasy402 Ultra Live (desk — Map enrich adapter path) ===
+# Prefer per-out items; book-level Fantasy402 is optional fallback.
+# Values never live here — only chrome for boards / docs.
+
+[env.FANTASY402_SPEN_1_CUSTOMER_ID]
+vault = "Kalshi Bot"
+item = "Fantasy402 SPEN 1"
+field = "customerID"
+label = "Fantasy402 SPEN1 customerID"
+color = "#F59E0B"
+type = "token"
+
+[env.FANTASY402_SPEN_1_AGENT_ID]
+vault = "Kalshi Bot"
+item = "Fantasy402 SPEN 1"
+field = "agentID"
+label = "Fantasy402 SPEN1 agentID"
+color = "#F59E0B"
+type = "token"
+
+[env.FANTASY402_SPEN_1_PASSWORD]
+vault = "Kalshi Bot"
+item = "Fantasy402 SPEN 1"
+field = "password"
+label = "Fantasy402 SPEN1 password"
+color = "#F59E0B"
+type = "password"
+
+[env.FANTASY402_SPEN_1_BEARER_TOKEN]
+vault = "Kalshi Bot"
+item = "Fantasy402 SPEN 1"
+field = "bearerToken"
+label = "Fantasy402 SPEN1 bearer JWT"
+color = "#F59E0B"
+type = "token"
+
 [backlog]
 # DONE 2026-07-28: minted kalshi-bot-agent PAT (viewer on "Kalshi Bot", expires
 # 2027-07-28), stored as PROTON_PASS_KALSHI_BOT_TOKEN in ~/Projects/.env.pass-tokens
+# Spec: docs/PROTONPASS-INTEGRATION-SPEC.md
 agent_pat = []
-human_only = ["KALSHI_API_KEY_ID — keyId field on 'Kalshi API' item is empty; fill from Kalshi dashboard"]
+human_only = [
+  "KALSHI_API_KEY_ID — keyId field on 'Kalshi API' item is empty; fill from Kalshi dashboard",
+  "pass-cli session — login or PAT; required before protonpass:run",
+  "Fantasy402 vault item fields — required for inventory adapter enrich (Map W1)",
+]
