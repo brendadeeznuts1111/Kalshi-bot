@@ -316,7 +316,7 @@ export const COMPETITIONS: readonly CompetitionRecord[] = [
     id: 'table_tennis.masters_belarus',
     sportId: 'table_tennis',
     displayName: 'Masters. Belarus',
-    aliases: ['Masters. Belarus'],
+    aliases: ['Masters. Belarus', 'Masters Belarusy'],
     gender: 'unknown',
     providerMappings: {
       plive: { inventoryBucket: 'table_tennis', leagueKey: 'Masters. Belarus' },

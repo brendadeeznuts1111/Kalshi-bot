@@ -64,4 +64,68 @@ describe('booked-match sport scope', () => {
       })
     ).toBe('b');
   });
+
+  test('doubles slash names match catalog pair format', () => {
+    const catalog = [
+      {
+        oddsEventId: 'd1',
+        name: 'Siniakova/Zhang - Errani/Melichar-Martinez',
+        sportName: 'Tennis',
+      },
+    ];
+    expect(
+      matchBookedOddsEventId(
+        'Siniakova / S. Zhang',
+        'Errani / Melichar-Martinez',
+        catalog,
+        { sport: 'tennis', league: 'WTA Doubles' }
+      )
+    ).toBe('d1');
+  });
+
+  test('same-pair order swap is not ambiguous (home-first wins)', () => {
+    const catalog = [
+      {
+        oddsEventId: 'ab',
+        name: 'Martin Vizek - Daniel Tuma',
+        sportName: 'Table tennis',
+      },
+      {
+        oddsEventId: 'ba',
+        name: 'Daniel Tuma - Martin Vizek',
+        sportName: 'Table tennis',
+      },
+    ];
+    expect(
+      matchBookedOddsEventId('Vizek M', 'Tuma D', catalog, {
+        sport: 'table_tennis',
+        league: 'Masters. Czech',
+      })
+    ).toBe('ab');
+  });
+
+  test('many City/United club hits stay ambiguous', () => {
+    const catalog = [
+      {
+        oddsEventId: '1',
+        name: 'Stoke City U21 - Leeds United U21',
+        sportName: 'Soccer',
+      },
+      {
+        oddsEventId: '2',
+        name: 'Bradford City - Peterborough United',
+        sportName: 'Soccer',
+      },
+      {
+        oddsEventId: '3',
+        name: 'Sheffield United - Birmingham City',
+        sportName: 'Soccer',
+      },
+    ];
+    expect(
+      matchBookedOddsEventId('Deportivo Rose City', 'Miami United', catalog, {
+        sport: 'soccer',
+      })
+    ).toBeNull();
+  });
 });

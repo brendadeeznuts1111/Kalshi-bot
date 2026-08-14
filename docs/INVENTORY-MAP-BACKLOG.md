@@ -134,14 +134,15 @@
 - [x] `inventory:leagues -- --resolve --apply` → **13** exact stamps; unmapped **45→32**; live unmapped **0**
 - [x] Enrich tennis (0/8) + soccer (1/32); odds-link **25→26** (still 5%)
 
-### P1 — this pass
+### P1 — status
 
-- [x] **W4:** junk filter on upsert + `--purge-junk --apply` (30 deleted)
-- [x] **W1:** full catalog on enrich-only; multi-sport enrich → **7%** linked
-- [ ] **W1:** Fantasy adapter path when Proton/FANTASY402_* env loaded (profile currently null)
-- [ ] **W1:** name-match improvements for doubles/UTR/Masters TT (`no_score` dominant)
-- [ ] Restart Capture watch process after deploy (picks up junk upsert filter)
-- [ ] Optional aliases for residual TT: Masters Belarusy, Setka short label
+- [x] **W4:** junk filter + purge (30 deleted)
+- [x] **W1:** full catalog enrich-only → **7%** linked (34–36/491)
+- [x] **W1:** doubles tokenization + same-pair order-swap de-ambig (`booked-match`)
+- [x] Alias: Masters Belarusy → `table_tennis.masters_belarus`
+- [x] Capture watch restarted with junk filter
+- [ ] **W1:** Fantasy adapter — **blocked**: no `FANTASY402_*` in project `.env` (`loadFantasy402ProfileFromEnv` → null). Public catalog has almost **zero** last-name overlap with unlinked TT/UTR board.
+- [ ] Inject Fantasy secrets via Proton Pass / operator env for adapter `listBookedEvents`
 
 ### P2 — later
 
@@ -185,7 +186,7 @@ bun run inventory:watch -- --loop \
 
 ## Next-thread opener (paste)
 
-> Continue Map from `docs/INVENTORY-MAP-BACKLOG.md`. **P0+P1 W4 done** (unmapped ~5, linked **7%**). Weakest: **W1** still `no_score` on doubles/UTR/TT; Fantasy env null. Next: load FANTASY402_* for adapter catalog; improve `booked-match` for doubles names; restart Capture.
+> Continue Map from `docs/INVENTORY-MAP-BACKLOG.md`. Linked **~7%**; matcher improved (doubles + order-swap). **Ceiling** is public catalog coverage — inject **FANTASY402_*** (Proton) for adapter booked list. Optional: bake coverage board metrics.
 
 ---
 

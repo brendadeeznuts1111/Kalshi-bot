@@ -88,10 +88,14 @@ function stripCompetitorNoise(raw: string): string {
   return s.replace(/\s+/g, ' ').trim();
 }
 
-/** "LAST, FIRST" / trailing dash → tokens (len ≥ 3). */
+/** "LAST, FIRST" / doubles slash / trailing dash → tokens (len ≥ 3). */
 export function competitorNameTokens(raw: string): string[] {
   let s = stripCompetitorNoise(raw);
   if (!s) return [];
+  // Doubles: "Siniakova / S. Zhang" or "Chandrasekar/Yuzuki"
+  s = s.replace(/\s*\/\s*/g, ' ');
+  // Drop bare initials after split ("S." / "M")
+  s = s.replace(/\b[A-Za-z]\b\.?/g, ' ');
   if (s.includes(',')) {
     const [last, ...rest] = s.split(',').map(p => p.trim());
     s = `${rest.join(' ')} ${last ?? ''}`.trim();
@@ -99,6 +103,31 @@ export function competitorNameTokens(raw: string): string[] {
   return normalizeName(s)
     .split(' ')
     .filter(t => t.length >= 3);
+}
+
+/** Last-name keys for home/away (for order-swap de-ambiguation). */
+function lastNameKeys(
+  home: string,
+  away: string
+): { hLast: string; aLast: string } | null {
+  const h = competitorNameTokens(home).map(foldCompetitorToken);
+  const a = competitorNameTokens(away).map(foldCompetitorToken);
+  const hLast = h[h.length - 1];
+  const aLast = a[a.length - 1];
+  if (!hLast || !aLast || hLast === aLast) return null;
+  if (hLast.length < 3 || aLast.length < 3) return null;
+  return { hLast, aLast };
+}
+
+function nameHasHomeBeforeAway(
+  entryName: string,
+  hLast: string,
+  aLast: string
+): boolean {
+  const n = normalizeName(entryName);
+  const hi = n.indexOf(hLast);
+  const ai = n.indexOf(aLast);
+  return hi >= 0 && ai >= 0 && hi < ai;
 }
 
 export function foldCompetitorToken(t: string): string {
@@ -357,8 +386,10 @@ export function diagnoseBookedMatch(
   };
 
   let bestId: string | null = null;
+  let bestEntry: BookedMatchEntry | null = null;
   let bestScore = -1;
   let second = -1;
+  const keys = lastNameKeys(home, away);
 
   // Prefer sport-scoped pool; if empty, do not fall back to all sports (false positives)
   const scoped = options.sport
@@ -383,6 +414,19 @@ export function diagnoseBookedMatch(
       second = bestScore;
       bestScore = sc;
       bestId = b.oddsEventId;
+      bestEntry = b;
+    } else if (sc === bestScore) {
+      // Equal top score: track as second for ambiguity; prefer home…away order
+      if (sc > second) second = sc;
+      if (
+        bestEntry &&
+        keys &&
+        nameHasHomeBeforeAway(b.name, keys.hLast, keys.aLast) &&
+        !nameHasHomeBeforeAway(bestEntry.name, keys.hLast, keys.aLast)
+      ) {
+        bestId = b.oddsEventId;
+        bestEntry = b;
+      }
     } else if (sc > second) {
       second = sc;
     }
@@ -398,8 +442,34 @@ export function diagnoseBookedMatch(
     };
   }
 
-  // Ambiguous: two strong scores within 5 points → skip
+  // Ambiguous: two strong scores within 5 points → skip, unless same-pair order swap
   if (second >= 65 && bestScore - second < 5) {
+    if (keys && bestEntry) {
+      const contenders: BookedMatchEntry[] = [];
+      for (const b of pool) {
+        const sc = scoreBookedMatch(query, b);
+        if (sc == null || sc < 65 || bestScore - sc >= 5) continue;
+        const n = normalizeName(b.name);
+        if (n.includes(keys.hLast) && n.includes(keys.aLast)) {
+          contenders.push(b);
+        }
+      }
+      // Same player/team pair listed both ways (≤2) → accept home-first pick
+      if (contenders.length > 0 && contenders.length <= 2) {
+        contenders.sort((x, y) => {
+          const xh = nameHasHomeBeforeAway(x.name, keys.hLast, keys.aLast) ? 1 : 0;
+          const yh = nameHasHomeBeforeAway(y.name, keys.hLast, keys.aLast) ? 1 : 0;
+          return yh - xh;
+        });
+        return {
+          oddsEventId: contenders[0]!.oddsEventId,
+          score: bestScore,
+          secondScore: second,
+          reason: 'matched',
+          poolSize: pool.length,
+        };
+      }
+    }
     return {
       oddsEventId: null,
       score: bestScore,
