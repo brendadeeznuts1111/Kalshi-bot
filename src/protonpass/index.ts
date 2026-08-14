@@ -1,41 +1,49 @@
 /**
- * ProtonPass Bun-native capability suite.
+ * ProtonPass capability suite for Kalshi-bot.
  *
- * | Capability | Module | Bun API |
- * |------------|--------|---------|
- * | Parallel secret fetch | `parallel-fetch.ts` | Promise.allSettled |
- * | Secret caching (TTL) | `cache.ts` | Bun.file + Bun.write |
- * | Retry with backoff | `retry.ts` | Bun.sleep |
- * | Command timeout | `timeout.ts` | Promise.race + proc.kill() |
- * | Structured logging | `logger.ts` | Bun.inspect |
- * | Secret health score | `health.ts` | Bun.inspect.table |
- * | SSH temp file | `ssh-temp.ts` | Bun.write + chmod |
- * | Startup gate | `gate.ts` | — |
- * | Circuit breaker | `circuit.ts` | — |
- * | Telemetry | `telemetry.ts` | — |
+ * Shared implementation: `@factorywager/proton-pass` (file:../packages/proton-pass).
+ * Host-only: Kalshi DEFAULT_GATE_CHECKS + ensureKalshiAgentSession (force-reset).
  */
 
-export { createLogger, defaultLogger } from "./logger.ts";
-export { withRetry, RetryExhaustedError, type RetryOptions } from "./retry.ts";
-export { spawnWithTimeout, withTimeout, TimeoutError, type SpawnResult } from "./timeout.ts";
-export { SecretCacheManager, type CacheOptions, type SecretCache, type CacheEntry } from "./cache.ts";
 export {
+  createLogger,
+  defaultLogger,
+  withRetry,
+  RetryExhaustedError,
+  type RetryOptions,
+  spawnWithTimeout,
+  withTimeout,
+  TimeoutError,
+  type SpawnResult,
+  SecretCacheManager,
+  type CacheOptions,
+  type SecretCache,
+  type CacheEntry,
   fetchSecret,
   fetchSecretsParallel,
   type SecretUri,
   type SecretFetchResult,
   type ParallelFetchOptions,
-} from "./parallel-fetch.ts";
-export { auditSecretHealth, printHealthTable, type SecretHealthScore } from "./health.ts";
-export {
+  auditSecretHealth,
+  printHealthTable,
+  type SecretHealthScore,
   writeSecureTemp,
   writePemTemp,
   withTempFile,
   type TempFile,
-} from "./ssh-temp.ts";
-export { runStartupGate, assertGate, DEFAULT_GATE_CHECKS, type GateCheck, type GateResult } from "./gate.ts";
-export { CircuitBreaker, CircuitOpenError, type CircuitState } from "./circuit.ts";
-export { SecretTelemetry, type SecretTelemetryEvent, type TelemetrySummary } from "./telemetry.ts";
+  runStartupGate,
+  assertGate,
+  type GateCheck,
+  type GateResult,
+  CircuitBreaker,
+  CircuitOpenError,
+  type CircuitState,
+  SecretTelemetry,
+  type SecretTelemetryEvent,
+  type TelemetrySummary,
+} from '@factorywager/proton-pass';
+
+export { DEFAULT_GATE_CHECKS } from './gate.ts';
 export {
   ensureKalshiAgentSession,
   loadKalshiBotToken,
@@ -43,4 +51,4 @@ export {
   KALSHI_TOKEN_ENV,
   PASS_TOKENS_FILE,
   type AgentSessionResult,
-} from "./agent-session.ts";
+} from './agent-session.ts';
