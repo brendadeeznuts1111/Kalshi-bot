@@ -1336,7 +1336,7 @@ export const COMPETITIONS: readonly CompetitionRecord[] = [
     id: "basketball.brazil_fpb_paulista_league",
     sportId: "basketball",
     displayName: "Brazil FPB Paulista League",
-    aliases: ["Brazil FPB Paulista League"],
+    aliases: ["Brazil FPB Paulista League", "Brazil FPB"],
     gender: "unknown",
     providerMappings: {
       plive: { inventoryBucket: "basketball", leagueKey: "Brazil FPB Paulista League" },
@@ -16373,7 +16373,10 @@ export const COMPETITIONS: readonly CompetitionRecord[] = [
     id: "tennis.international_utr_pro_tennis_series_men",
     sportId: "tennis",
     displayName: "International UTR Pro Tennis Series - Men",
-    aliases: ["International UTR Pro Tennis Series - Men"],
+    aliases: [
+      "International UTR Pro Tennis Series - Men",
+      "UTR Pro Tennis Series",
+    ],
     gender: "men",
     providerMappings: {
       plive: { inventoryBucket: "tennis", leagueKey: "International UTR Pro Tennis Series - Men" },
@@ -31916,7 +31919,7 @@ export const COMPETITIONS: readonly CompetitionRecord[] = [
     id: "tennis.wta_doubles_toronto_canada",
     sportId: "tennis",
     displayName: "WTA Doubles Toronto, Canada",
-    aliases: ["WTA Doubles Toronto, Canada"],
+    aliases: ["WTA Doubles Toronto, Canada", "WTA Doubles - Toronto"],
     gender: "unknown",
     providerMappings: {
       plive: { inventoryBucket: "tennis", leagueKey: "WTA Doubles Toronto, Canada" },
@@ -33938,6 +33941,133 @@ export const COMPETITIONS: readonly CompetitionRecord[] = [
     providerMappings: {
       plive: { inventoryBucket: "basketball", leagueKey: "Paraguay Championship" },
     },
+    kind: "tournament",
+  },
+  // --- Map-lane P0 2026-08-14 (live unmapped real leagues; max curated batch) ---
+  {
+    id: "tennis.att_tallahassi",
+    sportId: "tennis",
+    displayName: "ATT Tallahassi",
+    aliases: ["ATT Tallahassi", "ATT Tallahassee"],
+    gender: "unknown",
+    providerMappings: {
+      plive: { inventoryBucket: "tennis", leagueKey: "ATT Tallahassi" },
+    },
+    kind: "circuit",
+  },
+  {
+    id: "tennis.atp_challenger_brownsburg_usa_men_doubles",
+    sportId: "tennis",
+    displayName: "ATP Challenger Brownsburg, USA Men Doubles",
+    aliases: ["ATP Challenger Brownsburg, USA Men Doubles"],
+    gender: "men",
+    providerMappings: {
+      plive: {
+        inventoryBucket: "tennis",
+        leagueKey: "ATP Challenger Brownsburg, USA Men Doubles",
+      },
+    },
+    kind: "circuit",
+  },
+  {
+    id: "basketball.wnba",
+    sportId: "basketball",
+    displayName: "WNBA",
+    aliases: ["WNBA"],
+    gender: "women",
+    providerMappings: {
+      plive: { inventoryBucket: "basketball", leagueKey: "WNBA" },
+    },
+    countryCode: "US",
+    kind: "league",
+  },
+  {
+    id: "basketball.copa_do_brasil_u22",
+    sportId: "basketball",
+    displayName: "Copa do Brasil U22",
+    aliases: ["Copa do Brasil U22"],
+    gender: "unknown",
+    providerMappings: {
+      plive: { inventoryBucket: "basketball", leagueKey: "Copa do Brasil U22" },
+    },
+    countryCode: "BR",
+    kind: "cup",
+  },
+  {
+    id: "basketball.liga_jugabet",
+    sportId: "basketball",
+    displayName: "Liga JugaBet",
+    aliases: ["Liga JugaBet"],
+    gender: "unknown",
+    providerMappings: {
+      plive: { inventoryBucket: "basketball", leagueKey: "Liga JugaBet" },
+    },
+    kind: "league",
+  },
+  {
+    id: "soccer.copa_sudamericana",
+    sportId: "soccer",
+    displayName: "Copa Sudamericana",
+    aliases: ["Copa Sudamericana", "CONMEBOL Sudamericana"],
+    gender: "unknown",
+    providerMappings: {
+      plive: { inventoryBucket: "football", leagueKey: "Copa Sudamericana" },
+    },
+    countryCode: "INT",
+    kind: "cup",
+  },
+  {
+    id: "soccer.concacaf_central_american_cup",
+    sportId: "soccer",
+    displayName: "Concacaf Central American Cup",
+    aliases: ["Concacaf Central American Cup", "CONCACAF Central American Cup"],
+    gender: "unknown",
+    providerMappings: {
+      plive: { inventoryBucket: "football", leagueKey: "Concacaf Central American Cup" },
+    },
+    countryCode: "INT",
+    kind: "cup",
+  },
+  {
+    id: "soccer.usa_nvsl",
+    sportId: "soccer",
+    displayName: "USA NVSL",
+    aliases: ["USA NVSL", "NVSL"],
+    gender: "unknown",
+    providerMappings: {
+      plive: { inventoryBucket: "football", leagueKey: "USA NVSL" },
+    },
+    countryCode: "US",
+    kind: "league",
+  },
+  {
+    id: "soccer.dominica_premier_league",
+    sportId: "soccer",
+    displayName: "Dominica Premier League",
+    aliases: ["Dominica Premier League"],
+    gender: "unknown",
+    providerMappings: {
+      plive: { inventoryBucket: "football", leagueKey: "Dominica Premier League" },
+    },
+    countryCode: "DM",
+    kind: "league",
+  },
+  {
+    id: "soccer.brazil_boa_viagense_championship",
+    sportId: "soccer",
+    displayName: "Brazil Boa-Viagense Championship",
+    aliases: [
+      "Brazil. Boa-Viagense Championship",
+      "Brazil Boa-Viagense Championship",
+    ],
+    gender: "unknown",
+    providerMappings: {
+      plive: {
+        inventoryBucket: "football",
+        leagueKey: "Brazil. Boa-Viagense Championship",
+      },
+    },
+    countryCode: "BR",
     kind: "tournament",
   },
 ] satisfies readonly CompetitionRecord[];

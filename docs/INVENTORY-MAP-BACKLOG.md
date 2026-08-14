@@ -2,7 +2,7 @@
 
 **Status:** living operator backlog (Lane B only — never on the 30s Capture loop).  
 **Playbook:** [`INVENTORY.md`](INVENTORY.md) · modules: `src/inventory/`  
-**Snapshot date:** 2026-08-14 · `main` @ post-promote/resolve/enrich pass
+**Snapshot date:** 2026-08-14 · `main` @ Map P0 pass (aliases + 10 seeds + resolve + enrich)
 
 ---
 
@@ -15,8 +15,9 @@
 | Operator Capture profile + two-lane docs | `INVENTORY.md` |
 | `inventory:leagues --resolve` scored + threshold apply | #133 |
 | Enrich `--limit` + sport-scoped candidates | #133 |
-| Promote min-peak=2 seeds (5) + wire aliases (6 exact resolve) | `competitions.ts` commit |
-| First Map enrich batch live | odds-link **19 → 25** (4% → **5%**) |
+| Promote min-peak=2 seeds (5) + first wire aliases | earlier `competitions.ts` |
+| **Map P0:** aliases + 10 curated seeds + resolve 13 exact | this pass |
+| First Map enrich batches | odds-link **19 → 26** (still ~**5%**) |
 
 ---
 
@@ -25,11 +26,11 @@
 | Metric | Value | Notes |
 | ------ | ----- | ----- |
 | `inventory_leagues` total | ~146 | grows with Capture |
-| Unmapped leagues | **~45** | of which **soccer ~27** (many junk matchups) |
-| Live unmapped | ~13 | peak=1 mostly |
-| Resolve auto @0.9 | **0** | after last apply; review ~7 |
-| `skin_events` odds-link | **25/471 (5%)** | unlinked ~446 |
-| Worst event link rates | BB **0%**, TT **~4%**, soccer **~2%**, tennis **~20%** | Map enrich focus |
+| Unmapped leagues | **~32** (was ~45) | mostly soccer **matchup_blob** junk + TT short labels |
+| Live unmapped | **0** | all live board labels mapped this pass |
+| Resolve auto @0.9 | **0** remaining | review ~3 (TT soft only) |
+| `skin_events` odds-link | **26/473 (5%)** | tennis enrich 0/8; soccer 1/32 this tick |
+| Worst event link rates | BB **0%**, TT low, soccer low | **W1 still dominant** |
 
 ---
 
@@ -127,22 +128,21 @@
 
 ---
 
-## Work queue (next thread)
+## Work queue
 
-Copy this into the next session and tick down.
+### P0 — Map ops — **done 2026-08-14**
 
-### P0 — this week Map ops (no big code)
+- [x] Alias pack: WTA Doubles Toronto, UTR Pro Tennis Series, Brazil FPB
+- [x] Curated seeds (10): ATT Tallahassi, Brownsburg MD doubles, WNBA, Copa do Brasil U22, Liga JugaBet, Copa Sudamericana, Concacaf CAC, USA NVSL, Dominica PL, Boa-Viagense
+- [x] `inventory:leagues -- --resolve --apply` → **13** exact stamps; unmapped **45→32**; live unmapped **0**
+- [x] Enrich tennis (0/8) + soccer (1/32); odds-link **25→26** (still 5%)
 
-- [ ] Alias pack: Sudamericana, Concacaf CAC, WNBA (if seed exists), UTR Pro Tennis Series
-- [ ] `inventory:leagues -- --resolve --apply` after aliases
-- [ ] Enrich live: tennis then soccer (limit 100 each); record linkedPct delta
-- [ ] Promote dry-run peak=1 core sports; apply **≤10** clean real leagues only
+### P1 — next thread (priority order)
 
-### P1 — small code (single PR)
-
-- [ ] Junk filter on **league upsert** (or purge CLI for junk rows)
-- [ ] `suggest-aliases` or resolve JSON export for conf 0.8–0.89 review
-- [ ] Optional `enrich_attempted_at` cooldown if we re-hit same no_score forever
+- [ ] **W1 deep-dive:** enrich with Fantasy adapter catalog (not public-only) when env present; compare match rate
+- [ ] **W1:** TT-focused catalog aliases / softer name fold for Masters. * players (measure only)
+- [ ] **W4:** junk filter on league upsert + purge matchup_blob rows from `inventory_leagues`
+- [ ] Optional `suggest-aliases` for conf 0.8–0.89 review (TT Setka / Argentina / Belarusy)
 
 ### P2 — later
 
@@ -181,7 +181,7 @@ bun run inventory:watch -- --loop \
 
 ## Next-thread opener (paste)
 
-> Continue Map lane from `docs/INVENTORY-MAP-BACKLOG.md`. Weakest: **W1 odds ~5%**, **W2 soccer unmapped junk**, **W3 alias treadmill**. Run P0 alias pack + resolve apply + tennis/soccer enrich batches; only then P1 junk-on-upsert if registry still polluted.
+> Continue Map from `docs/INVENTORY-MAP-BACKLOG.md`. **P0 done** (live unmapped=0, unmapped 32 junk-heavy). Weakest left: **W1 odds ~5%** (tennis 0/8 public catalog). Next: Fantasy-adapter enrich vs public; **W4** purge matchup_blob leagues from registry.
 
 ---
 
