@@ -11,12 +11,15 @@
  *   bun run inventory:leagues -- --harvest --sport=all [--dry-run]
  *   bun run inventory:leagues -- --promote [--apply] [--min-peak=1] [--json]
  *   bun run inventory:leagues -- --report [--min-peak=1] [--json] [--notify]
+ *   bun run inventory:leagues -- --resolve [--apply] [--threshold=0.9] [--sport=tennis] [--json]
  *   bun run inventory:leagues -- --backfill
  *
  * --promote: plan COMPETITIONS seeds from unmapped inventory_leagues (junk filtered).
  * --report:  same plan as promote dry-run (cron-shared buildPromoteReport).
  * --notify:  with --report, force Telegram once (TELEGRAM_* required; dedup state updated).
- * --apply:   write candidates into src/domain/competitions.ts + stamp registry rows.
+ * --resolve: Map lane — stamp unmapped leagues from existing COMPETITIONS (scored).
+ *            default dry-run; --apply writes only conf >= --threshold (default 0.9).
+ * --apply:   with --promote: write seeds; with --resolve: stamp high-confidence ids.
  * --backfill: re-resolve competition_id on inventory_leagues from current seeds.
  * Lines/JSON include countryCode + kind (from competition meta / label inference).
  */
@@ -32,6 +35,11 @@ import {
   requireDefaultUrlForUltraMapper,
   resolveCompetitionMeta,
 } from '../src/domain/index.ts';
+import {
+  applyInventoryLeagueResolve,
+  formatLeagueResolvePlan,
+  planInventoryLeagueResolve,
+} from '../src/inventory/league-resolve.ts';
 import {
   countInventoryLeagues,
   formatLeagueLine,
@@ -109,6 +117,7 @@ async function main(): Promise<void> {
   const unmapped = hasFlag('unmapped');
   const harvest = hasFlag('harvest');
   const promote = hasFlag('promote');
+  const resolve = hasFlag('resolve');
   const reportOnly = hasFlag('report');
   const notify = hasFlag('notify');
   const apply = hasFlag('apply');
@@ -119,8 +128,81 @@ async function main(): Promise<void> {
   const limit = Number(argValue('limit') ?? '100') || 100;
   const orderBy = argValue('order') === 'peak' ? 'peak' : 'last_seen';
   const minPeak = Number(argValue('min-peak') ?? '1') || 1;
+  const thresholdRaw = argValue('threshold');
+  const threshold =
+    thresholdRaw != null && thresholdRaw !== ''
+      ? Number(thresholdRaw)
+      : 0.9;
 
   const db = openEventStore({ dbPath: DEFAULT_EVENT_STORE_DB });
+
+  if (resolve) {
+    if (promote || reportOnly || harvest || backfill) {
+      throw new Error(
+        'inventory:leagues --resolve cannot combine with --promote/--report/--harvest/--backfill'
+      );
+    }
+    const plan = planInventoryLeagueResolve(db, {
+      sport: sportFilter,
+      limit: Math.min(Math.max(Number(argValue('limit') ?? '500') || 500, 1), 5000),
+      threshold: Number.isFinite(threshold) ? threshold : 0.9,
+      orderBy: orderBy === 'peak' ? 'peak' : 'last_seen',
+    });
+    let leaguesUpdated = 0;
+    let skinEventsUpdated = 0;
+    if (apply) {
+      leaguesUpdated = applyInventoryLeagueResolve(db, plan.autoApply);
+      skinEventsUpdated = stampSkinEventsCompetitionIds(db);
+    }
+    if (json) {
+      console.log(
+        JSON.stringify(
+          {
+            resolve: true,
+            dryRun: !apply,
+            threshold: plan.threshold,
+            sport: sportFilter ?? null,
+            unmappedInput: plan.unmappedInput,
+            autoApply: plan.autoApply.length,
+            review: plan.review.length,
+            none: plan.none.length,
+            leaguesUpdated,
+            skinEventsUpdated,
+            suggestions: plan.suggestions.map(s => ({
+              sportId: s.sportId,
+              leagueKey: s.leagueKey,
+              inventoryBucket: s.inventoryBucket,
+              peak: s.peakEventCount,
+              live: s.eventCountLive,
+              suggestedCompetitionId: s.suggestedCompetitionId,
+              suggestedDisplayName: s.suggestedDisplayName,
+              confidence: s.confidence,
+              matchKind: s.matchKind,
+              wouldApply: Boolean(
+                s.suggestedCompetitionId && s.confidence >= plan.threshold
+              ),
+            })),
+          },
+          null,
+          2
+        )
+      );
+      return;
+    }
+    console.log(formatLeagueResolvePlan(plan));
+    if (apply) {
+      console.log(
+        `  applied: leagues=${leaguesUpdated} skin_events=${skinEventsUpdated}`
+      );
+    } else if (plan.autoApply.length > 0) {
+      console.log(
+        '  apply high-confidence: bun run inventory:leagues -- --resolve --apply' +
+          (sportFilter ? ` --sport=${sportFilter}` : '') +
+          ` --threshold=${plan.threshold}`
+      );
+    }
+    return;
+  }
 
   if (reportOnly) {
     const promo = buildPromoteReport(db, {

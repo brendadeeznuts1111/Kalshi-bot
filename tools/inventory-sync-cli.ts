@@ -18,12 +18,14 @@
  *   bun run inventory:sync -- --enrich-booked --enrich-scope=unlinked
  *   bun run inventory:sync -- --odds-status
  *   bun run inventory:sync -- --enrich-only --enrich-scope=unlinked
+ *   bun run inventory:sync -- --enrich-only --sport=tennis --limit=100 --dry-run
  *   bun run inventory:sync -- --enrich-only --dry-run
  *   bun run inventory:enrich:quality   # dry-run JSON + match-rate report
  *   bun run inventory:sync -- --enrich-only --min-match-rate=0.1 --fail-on-enrich-quality
  *
  * --sport: single, CSV multi (spaces trimmed), or all. Multi fetches full board then filters.
  * Default sport filter when omitted: table_tennis (CLI). Cron defaults to all.
+ * --limit: Map-lane enrich batch size (max candidates per tick; default uncapped unlinked 500).
  * --dry-run: fetch + plan insert/update only (no SQLite writes; enrich is planned only).
  *            Incompatible with --loop.
  * --enrich-scope: new | board (default) | unlinked
@@ -70,6 +72,7 @@ async function runOnce(options: {
   enrichOnly: boolean;
   enrichBookedScope: ReturnType<typeof parseEnrichBookedScope>;
   enrichCatalogMax?: number;
+  enrichLimit?: number | null;
   minMatchRate?: number | null;
   minLinkedPct?: number | null;
   failOnEnrichQuality?: boolean;
@@ -92,6 +95,7 @@ async function runOnce(options: {
     enrichOnly: options.enrichOnly,
     enrichBookedScope: options.enrichBookedScope,
     enrichCatalogMax: options.enrichCatalogMax,
+    enrichLimit: options.enrichLimit,
     dryRun: options.dryRun,
     minMatchRate: options.minMatchRate,
     minLinkedPct: options.minLinkedPct,
@@ -139,6 +143,7 @@ async function main(): Promise<void> {
 
   const enrichOnly = hasFlag("enrich-only");
   const catalogMaxRaw = argValue("enrich-catalog-max");
+  const limitRaw = argValue("limit");
   const minMatchRateRaw = argValue("min-match-rate");
   const minLinkedPctRaw = argValue("min-linked-pct");
   const onceOpts = {
@@ -152,6 +157,10 @@ async function main(): Promise<void> {
     enrichCatalogMax: catalogMaxRaw
       ? Number(catalogMaxRaw) || undefined
       : undefined,
+    enrichLimit:
+      limitRaw != null && limitRaw !== ""
+        ? Number(limitRaw) || null
+        : null,
     minMatchRate:
       minMatchRateRaw != null && minMatchRateRaw !== ""
         ? Number(minMatchRateRaw)
