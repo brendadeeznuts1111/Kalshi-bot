@@ -271,23 +271,28 @@ export function upsertSkinLiveEvents(
   return { inserted, updated, seen };
 }
 
-/** Filter coverage-catalog InventoryEvent rows by sport (table tennis, tennis, …). */
+/**
+ * Filter coverage-catalog InventoryEvent rows by sport.
+ *
+ * Matches on **normalized sportId** (via {@link normalizeInventorySport}), not raw
+ * wire labels — so `--sport=soccer` includes stream bucket `Football`, and
+ * `football` does **not** pull in American Football.
+ */
 export function filterLiveEventsBySport(
   events: InventoryEvent[],
   sport: string
 ): InventoryEvent[] {
-  const want = sport.trim().toLowerCase().replace(/_/g, ' ');
-  if (!want || want === 'all') return events;
+  const wantRaw = sport.trim();
+  if (!wantRaw || wantRaw.toLowerCase() === 'all') return events;
+  const wantId =
+    normalizeInventorySport(wantRaw) || normalizeSportToken(wantRaw);
+  if (!wantId) return events;
+
   return events.filter(e => {
-    const s = e.sport.toLowerCase().replace(/_/g, ' ');
-    if (want === 'table tennis' || want === 'tabletennis') {
-      return s.includes('table tennis') || s === 'table tennis';
-    }
-    if (want === 'tennis') {
-      // exact tennis, not table tennis
-      return s === 'tennis' || (s.includes('tennis') && !s.includes('table'));
-    }
-    return s === want || s.includes(want);
+    const eventId =
+      normalizeInventorySport(e.sport) ||
+      e.sport.toLowerCase().replace(/\s+/g, '_');
+    return eventId === wantId;
   });
 }
 
@@ -406,12 +411,23 @@ export async function fetchPublicPliveStreamEvents(
     fetchImpl?: typeof fetch;
     /** When true, use only disk cache (tests / offline). */
     cacheOnly?: boolean;
+    /** Override disk cache path (tests). */
+    cachePath?: string;
+    /** Skip writing disk cache (tests / one-shot). */
+    skipCacheWrite?: boolean;
   } = {}
 ): Promise<InventoryEvent[]> {
   const { fetchPublicStreamListWire } = await import('./stream-list-fetch.ts');
+  // Injected fetchImpl (tests): isolate from operator disk cache so a live watch
+  // cannot poison unit fixtures.
+  const isolate = options.fetchImpl != null;
   const { wire } = await fetchPublicStreamListWire({
     fetchImpl: options.fetchImpl,
     cacheOnly: options.cacheOnly,
+    cachePath:
+      options.cachePath ??
+      (isolate ? `/tmp/inventory-stream-list-test-${process.pid}.json` : undefined),
+    skipCacheWrite: options.skipCacheWrite ?? isolate,
   });
   return parseStreamList(wire, { sport: options.sport ?? 'all' });
 }

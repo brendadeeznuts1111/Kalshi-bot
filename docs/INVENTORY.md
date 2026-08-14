@@ -78,7 +78,9 @@ loop.
 | Runner | single `inventory:watch --loop` | one process; avoid double-poll with cron |
 
 **Core sports** (domain primary tier): `table_tennis`, `tennis`, `soccer`,
-`basketball`.
+`basketball`. Stream wire labels soccer as **Football**; `--sport=soccer` (or
+`football`) matches via normalized sportId — American Football is a separate
+token (`american_football`).
 
 ```bash
 # Capture — recommended continuous profile
