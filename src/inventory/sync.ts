@@ -36,12 +36,16 @@ import {
 } from './booked-match.ts';
 import {
   buckeyeInventoryIdentity,
-  filterLiveEventsBySport,
+  filterLiveEventsBySports,
+  formatInventorySportSelection,
   formatSkinEventLine,
+  inventorySportForCatalogFetch,
   listSkinInventoryIds,
   liveProductsCoveredByInventory,
   normalizeInventorySport,
   normalizeSkinEventsSports,
+  parseInventorySportsCsv,
+  resolveInventoryFetchSport,
   upsertSkinLiveEvents,
   type InventoryIdentity,
   type SkinEventRow,
@@ -58,6 +62,10 @@ type SkinEventUpsertResult = {
 export type EnrichBookedScope = 'new' | 'board' | 'unlinked';
 
 export type InventorySyncOptions = {
+  /**
+   * Sport filter: single token, CSV multi (`table_tennis, tennis`), or `all`.
+   * Spaces around commas are trimmed. Multi-sport fetches full board then filters.
+   */
   sport?: string;
   /**
    * Soft-match Statscore booked names → odds_event_id (metadata only, not prices).
@@ -385,7 +393,9 @@ export async function runInventorySync(
   adapter: FantasySessionAdapter,
   options: InventorySyncOptions = {}
 ): Promise<InventorySyncReport> {
-  const sport = options.sport ?? 'table_tennis';
+  // --sport accepts single, CSV multi (spaces OK), or all
+  const sportSel = parseInventorySportsCsv(options.sport ?? 'table_tennis');
+  const sport = formatInventorySportSelection(sportSel);
   const dryRun = options.dryRun === true;
   const enrichOnly = options.enrichOnly === true;
   const notes: string[] = [];
@@ -395,15 +405,10 @@ export async function runInventorySync(
   if (enrichOnly) {
     notes.push('enrich-only: skip stream poll');
   }
-  const fetchSport =
-    sport === 'all'
-      ? 'all'
-      : sport.replace(/\s+/g, '_').toLowerCase() === 'table_tennis' ||
-          sport.toLowerCase() === 'table tennis'
-        ? 'table_tennis'
-        : sport.replace(/\s+/g, '_').toLowerCase() === 'tennis'
-          ? 'tennis'
-          : sport.replace(/\s+/g, '_').toLowerCase();
+  const fetchSport = resolveInventoryFetchSport(sportSel);
+  if (sportSel.kind === 'sports' && sportSel.sports.length > 1) {
+    notes.push(`multi-sport: fetch=all filter=${sport}`);
+  }
 
   const identity = options.identity ?? buckeyeInventoryIdentity();
 
@@ -413,11 +418,9 @@ export async function runInventorySync(
   if (!enrichOnly) {
     // Inventory does not require login
     events = await adapter.fetchInventory({
-      sport: fetchSport === 'all' ? 'all' : fetchSport,
+      sport: fetchSport,
     });
-    if (sport !== 'all') {
-      events = filterLiveEventsBySport(events, sport);
-    }
+    events = filterLiveEventsBySports(events, sportSel);
 
     if (!dryRun) {
       normalizeSkinEventsSports(db);
@@ -446,7 +449,7 @@ export async function runInventorySync(
       const { enrichLog } = await import('./enrich-log.ts');
       const { catalogFetchSportFilter } = await import('./booked-match.ts');
       const sportFilter = catalogFetchSportFilter(
-        sport === 'all' ? undefined : sport
+        inventorySportForCatalogFetch(sportSel)
       );
       let catalog: BookedMatchEntry[] = [];
       let catalogSource = 'injected';

@@ -73,7 +73,7 @@ coverage. Not seat-partner. Does **not** auto-promote COMPETITIONS (operator:
 |-----|------|
 | `INVENTORY_SYNC=1` | Enable job (legacy alias: `PARTNER_SYNC=1`) |
 | `INVENTORY_SYNC_PUBLIC=1` | No real Fantasy login (inventory only; alias `PARTNER_SYNC_PUBLIC`) |
-| `INVENTORY_SYNC_SPORT` | Default **`all`** (alias `PARTNER_SYNC_SPORT`; set `table_tennis` to narrow) |
+| `INVENTORY_SYNC_SPORT` | Default **`all`** (alias `PARTNER_SYNC_SPORT`; single sport or CSV e.g. `table_tennis,tennis`) |
 | `INVENTORY_SYNC_CRON_SCHEDULE` | Default every minute (alias `PARTNER_SYNC_CRON_SCHEDULE`) |
 | `INVENTORY_SYNC_ENRICH_BOOKED=1` | Soft Statscore name → `odds_event_id` each tick |
 | `INVENTORY_SYNC_ENRICH_SCOPE` | `board` (default) · `new` · `unlinked` |

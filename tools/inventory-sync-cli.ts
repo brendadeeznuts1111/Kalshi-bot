@@ -11,6 +11,8 @@
  *   bun run inventory:sync -- --sport=all --dry-run --json
  *   bun run inventory:sync -- --sport=all --loop --interval-ms=30000
  *   bun run inventory:sync -- --sport=table_tennis --once
+ *   bun run inventory:sync -- --sport=table_tennis,tennis --once
+ *   bun run inventory:sync -- --sport="table_tennis, tennis" --once   # spaces OK
  *   bun run inventory:sync -- --enrich-booked --json
  *   bun run inventory:sync -- --enrich-booked --enrich-scope=board
  *   bun run inventory:sync -- --enrich-booked --enrich-scope=unlinked
@@ -20,6 +22,7 @@
  *   bun run inventory:enrich:quality   # dry-run JSON + match-rate report
  *   bun run inventory:sync -- --enrich-only --min-match-rate=0.1 --fail-on-enrich-quality
  *
+ * --sport: single, CSV multi (spaces trimmed), or all. Multi fetches full board then filters.
  * Default sport filter when omitted: table_tennis (CLI). Cron defaults to all.
  * --dry-run: fetch + plan insert/update only (no SQLite writes; enrich is planned only).
  *            Incompatible with --loop.

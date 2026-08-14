@@ -51,6 +51,80 @@ have stream endpoints in domain (`streamEndpointsForLiveProduct`).
 UltraLive / MagLive: no stream endpoints on Buckeye path yet — seat capacity
 only if an out is wired; **no** inventory harvest here.
 
+## Operator profile (recommended)
+
+**Goal:** continuous, scoped capture without hammering the feed or coupling
+mapping work into the hot path. One long-running watcher is enough.
+
+### Two-lane mental model
+
+| Lane | Owns | Runs when | Does **not** do |
+| ---- | ---- | --------- | --------------- |
+| **Capture** | stream-list → `skin_events` + `inventory_leagues` | always-on loop (or cron) | enrich, promote, seat wire |
+| **Map** | `competition_id`, seeds, `odds_event_id` soft-link | operator / offline batch | continuous poll |
+
+Capture is cheap and idempotent. Map is reviewable and reversible (dry-run
+first). Do **not** put `--enrich-booked` or `--promote --apply` on the Capture
+loop.
+
+### Recommended Capture profile
+
+| Knob | Value | Why |
+| ---- | ----- | --- |
+| Sports | **core** CSV (not full `all` unless needed) | board is ~100–180 events; scope keeps noise down |
+| Interval | `30000` ms (default) | near-real-time without thrashing |
+| Enrich | **off** on the loop | Statscore name-match is Map lane |
+| Promote | **off** on the loop | never auto-apply seeds from capture |
+| Runner | single `inventory:watch --loop` | one process; avoid double-poll with cron |
+
+**Core sports** (domain primary tier): `table_tennis`, `tennis`, `soccer`,
+`basketball`.
+
+```bash
+# Capture — recommended continuous profile
+bun run inventory:watch -- --loop \
+  --sport=table_tennis,tennis,soccer,basketball \
+  --interval-ms=30000
+
+# Spaces around commas are fine:
+bun run inventory:watch -- --loop --sport="table_tennis, tennis"
+
+# Single sport still works (interactive default when --sport omitted: table_tennis)
+bun run inventory:watch -- --once --sport=table_tennis --dry-run --json
+
+# Full board when you need every stream bucket:
+bun run inventory:watch -- --loop --sport=all --interval-ms=30000
+```
+
+`--sport` accepts:
+
+| Form | Behavior |
+| ---- | -------- |
+| `all` | full board |
+| one token (`tennis`) | fetch + filter that sport |
+| CSV (`table_tennis, tennis`) | fetch full board, client filter (union); spaces trimmed |
+
+### Map lane (separate sessions)
+
+```bash
+# Soft-link odds_event_id (metadata only — not prices)
+bun run inventory:sync -- --sport=all --enrich-booked --enrich-scope=board --dry-run --json
+bun run inventory:sync -- --enrich-only --enrich-scope=unlinked
+
+# Promote unmapped leagues → COMPETITIONS (always plan before apply)
+bun run inventory:leagues -- --promote
+bun run inventory:leagues -- --promote --apply
+bun run inventory:leagues -- --backfill
+```
+
+### Cron vs watch
+
+- Prefer **one** Capture runner: either `inventory:watch --loop` **or**
+  `INVENTORY_SYNC=1` cron — not both on the same host.
+- Cron default sport is `all`; pin with `INVENTORY_SYNC_SPORT=table_tennis,tennis`
+  when you want the same core profile under cron.
+- Cron may emit promote-**report** (Telegram); it does **not** auto-apply.
+
 ## Operator checklist (end-to-end)
 
 Use this when standing up or verifying **ezlive-ready coverage** on Buckeye:
@@ -61,9 +135,12 @@ Use this when standing up or verifying **ezlive-ready coverage** on Buckeye:
    bun run inventory:watch -- --once --sport=all --dry-run --json
    # expect: coversLiveProducts includes plive+ezlive, seen > 0
    ```
-2. **Live full-board capture** (continuous; ids churn):
+2. **Live capture** (continuous; ids churn) — prefer **core sports**, not always `all`:
    ```bash
-   bun run inventory:watch -- --loop --sport=all --interval-ms=30000
+   bun run inventory:watch -- --loop \
+     --sport=table_tennis,tennis,soccer,basketball \
+     --interval-ms=30000
+   # full board when needed: --sport=all
    # or cron: INVENTORY_SYNC=1 INVENTORY_SYNC_PUBLIC=1 bun run cron:start
    ```
 3. **Durable leagues** (survive `inventory_id` rotation):
@@ -93,17 +170,20 @@ Use this when standing up or verifying **ezlive-ready coverage** on Buckeye:
 6. **Session wire** for execution: `LIVE_PRODUCT=ezlive` / Ultra form `skin`
    field — capacity/session only, **not** a second inventory store.
 
-## Full-board capture
+## Full-board / scoped capture
 
 The live board **rotates** (`inventory_id` churn). One-shot polls never equal
-full history. Prefer continuous full-board poll (`sport=all`).
+full history. Prefer continuous poll — **scoped core sports** for day-to-day
+ops ([Operator profile](#operator-profile-recommended)); use `sport=all` when
+you need every stream bucket.
 
 ### Dry-run first
 
 ```bash
 bun run domain:sports -- --json
+bun run inventory:watch -- --once --sport=table_tennis,tennis --dry-run --json
+# or full board plan:
 bun run inventory:watch -- --once --sport=all --dry-run --json
-# or
 bun run inventory:sync -- --sport=all --dry-run --json
 ```
 
@@ -116,12 +196,21 @@ Inspect: `seen`, `inserted` (new), `updated`, `sportHistogram`,
 # One-shot full board
 bun run inventory:sync -- --sport=all --once
 
-# Loop (30s)
+# Scoped multi-sport (CSV; spaces OK)
+bun run inventory:sync -- --sport="table_tennis, tennis, soccer, basketball" --once
+
+# Loop (30s) — recommended operator profile
+bun run inventory:watch -- --loop \
+  --sport=table_tennis,tennis,soccer,basketball \
+  --interval-ms=30000
+
+# Full-board loop when needed
 bun run inventory:watch -- --loop --sport=all --interval-ms=30000
 
 # Cron (default sport=all when INVENTORY_SYNC=1)
 INVENTORY_SYNC=1 INVENTORY_SYNC_PUBLIC=1 bun run cron:start
-# optional: INVENTORY_SYNC_SPORT=table_tennis to narrow
+# optional narrow (CSV supported same as CLI):
+# INVENTORY_SYNC_SPORT=table_tennis,tennis
 ```
 
 ### What “new” means
@@ -311,7 +400,8 @@ not a second inventory store. Details:
 | Mistake | Fix |
 | ------- | --- |
 | Dual-writing ezlive event rows | Keep one `inventory_live_product=plive` shell stamp |
-| Expecting inventory without continuous poll | Run watch/cron `sport=all` |
+| Expecting inventory without continuous poll | Run watch/cron (core CSV or `sport=all`) — see [Operator profile](#operator-profile-recommended) |
+| Enrich/promote on the capture loop | Keep Capture lean; Map lane is offline |
 | Treating person/matchup labels as leagues | Use `--promote` junk filter; do not hand-seed junk |
 | Seeding capacity as “inventory product” | Capacity is seat; harvest is domain/inventory |
 | ACE ultralive coverage via this feed | Wrong shell — no stream endpoint here |
@@ -321,10 +411,10 @@ not a second inventory store. Details:
 | Command | Role |
 | ------- | ---- |
 | `domain:sports` | Stream snapshot + static map + sport map seed |
-| `inventory:sync -- --sport=all [--dry-run] [--enrich-booked]` | Adapter poll → events + leagues (+ odds_event_id) |
+| `inventory:sync -- --sport=… [--dry-run] [--enrich-booked]` | Adapter poll → events + leagues (+ odds_event_id); sport = single / CSV / all |
 | `inventory:sync -- --odds-status` | `odds_event_id` fill-rate for book |
 | `inventory:sync -- --enrich-only` / `inventory:enrich` | Public booked catalog → link unlinked rows (no stream poll) |
-| `inventory:watch -- --sport=all [--once] [--dry-run] [--enrich-booked]` | Public/adapter poll → events + leagues |
+| `inventory:watch -- --sport=… [--once] [--dry-run] [--enrich-booked]` | Public/adapter poll → events + leagues; multi-sport CSV supported |
 | `inventory:leagues [--unmapped] [--harvest]` | List / harvest durable league registry |
 | `inventory:leagues -- --report [--notify]` | Promote dry-report; optional force Telegram |
 | `inventory:leagues -- --promote [--apply]` | Plan/apply COMPETITIONS seeds from unmapped |
