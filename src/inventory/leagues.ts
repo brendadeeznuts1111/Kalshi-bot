@@ -14,6 +14,10 @@ import {
   inferCompetitionKind,
   resolveCompetitionMeta,
 } from '../domain/competition-meta.ts';
+import {
+  junkLeagueReason,
+  type JunkLeagueReason,
+} from '../domain/competition-promote.ts';
 import { resolveCompetition } from '../domain/resolve-competition.ts';
 import { isSportId } from '../domain/sports.ts';
 import { listLiveProductSportBindings } from '../domain/live-product-sport-bindings.ts';
@@ -121,6 +125,8 @@ function aggregateLeaguesFromRows(
   for (const r of rows) {
     const leagueKey = String(r.league ?? '').trim();
     if (!leagueKey || leagueKey === '(unknown)') continue;
+    // Map hygiene: never register matchup blobs / person labels as durable leagues
+    if (junkLeagueReason(leagueKey)) continue;
     const sportId = normalizeInventorySport(r.sport) || r.sport.trim().toLowerCase();
     const inventoryBucket = inventoryBucketForSport(sportId) || sportId;
     const leagueKeyNorm = normalizeLeagueKey(leagueKey);
@@ -519,6 +525,98 @@ export function stampInventoryLeaguesCompetitionIds(
     n += 1;
   }
   return n;
+}
+
+export type InventoryLeagueJunkRow = InventoryLeagueRow & {
+  junkReason: JunkLeagueReason;
+};
+
+/**
+ * List durable leagues that fail {@link junkLeagueReason} (matchup blobs, etc.).
+ * Default: unmapped only (safer). Pass `includeMapped: true` for full audit.
+ */
+export function listJunkInventoryLeagues(
+  db: Database,
+  options: {
+    bookId?: string;
+    includeMapped?: boolean;
+    limit?: number;
+  } = {}
+): InventoryLeagueJunkRow[] {
+  ensureInventoryLeaguesSchema(db);
+  const rows = listInventoryLeagues(db, {
+    bookId: options.bookId,
+    unmappedOnly: options.includeMapped !== true,
+    limit: options.limit ?? 5000,
+    orderBy: 'peak',
+  });
+  const out: InventoryLeagueJunkRow[] = [];
+  for (const r of rows) {
+    const junkReason = junkLeagueReason(r.leagueKey);
+    if (!junkReason) continue;
+    out.push({ ...r, junkReason });
+  }
+  return out;
+}
+
+/**
+ * Delete junk leagues from the durable registry (Map-lane hygiene).
+ * Default: only unmapped junk. Returns deleted count.
+ */
+export function purgeJunkInventoryLeagues(
+  db: Database,
+  options: {
+    bookId?: string;
+    includeMapped?: boolean;
+    dryRun?: boolean;
+    /** Limit reasons (default all JunkLeagueReason). */
+    reasons?: JunkLeagueReason[];
+  } = {}
+): {
+  wouldDelete: number;
+  deleted: number;
+  byReason: Record<string, number>;
+  sample: Array<{ sportId: string; leagueKey: string; junkReason: JunkLeagueReason }>;
+} {
+  ensureInventoryLeaguesSchema(db);
+  const book = options.bookId ?? buckeyeInventoryIdentity().bookId;
+  const allow = options.reasons ? new Set(options.reasons) : null;
+  const junk = listJunkInventoryLeagues(db, {
+    bookId: book,
+    includeMapped: options.includeMapped === true,
+    limit: 5000,
+  }).filter(r => (allow ? allow.has(r.junkReason) : true));
+
+  const byReason: Record<string, number> = {};
+  for (const r of junk) {
+    byReason[r.junkReason] = (byReason[r.junkReason] ?? 0) + 1;
+  }
+  const sample = junk.slice(0, 30).map(r => ({
+    sportId: r.sportId,
+    leagueKey: r.leagueKey,
+    junkReason: r.junkReason,
+  }));
+
+  if (options.dryRun || junk.length === 0) {
+    return { wouldDelete: junk.length, deleted: 0, byReason, sample };
+  }
+
+  const del = db.query(
+    `DELETE FROM inventory_leagues
+     WHERE book_id = $book
+       AND inventory_bucket = $bucket
+       AND league_key_norm = $norm`
+  );
+  let deleted = 0;
+  for (const r of junk) {
+    const res = del.run({
+      $book: book,
+      $bucket: r.inventoryBucket,
+      $norm: r.leagueKeyNorm,
+    });
+    deleted += Number(res.changes) || 0;
+  }
+  return { wouldDelete: junk.length, deleted, byReason, sample };
 }
 
 /** Stamp competition_id using explicit records (same-process promote apply). */

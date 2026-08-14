@@ -5,6 +5,7 @@ import {
   formatLeagueLine,
   listInventoryLeagues,
   planInventoryLeagues,
+  purgeJunkInventoryLeagues,
   resolveInventoryLeagueMeta,
   upsertInventoryLeagues,
 } from '../../src/inventory/leagues.ts';
@@ -78,6 +79,49 @@ describe('inventory leagues', () => {
     });
     expect(report.seen).toBeGreaterThanOrEqual(1);
     expect(countInventoryLeagues(db).total).toBeGreaterThanOrEqual(1);
+  });
+
+  test('upsert skips matchup_blob junk leagues', () => {
+    const db = memoryDb();
+    const events = [
+      liveEvent('1', 'soccer', 'A', 'B', 'Hong Da - Duo Yuany Hua'),
+      liveEvent('2', 'table_tennis', 'C', 'D', 'Setka Cup'),
+    ];
+    const res = upsertInventoryLeagues(db, events, { nowMs: 1000 });
+    expect(res.seen).toBe(1); // Setka only
+    expect(countInventoryLeagues(db).total).toBe(1);
+    expect(listInventoryLeagues(db)[0]?.leagueKey).toBe('Setka Cup');
+  });
+
+  test('purgeJunkInventoryLeagues removes unmapped matchup blobs', () => {
+    const db = memoryDb();
+    // Force-insert junk row (bypass upsert filter) then purge
+    upsertInventoryLeagues(
+      db,
+      [liveEvent('1', 'table_tennis', 'A', 'B', 'Setka Cup')],
+      { nowMs: 1 }
+    );
+    db.run(
+      `INSERT INTO inventory_leagues (
+         book_id, inventory_bucket, sport_id, league_key, league_key_norm,
+         competition_id, event_count_live, peak_event_count, first_seen, last_seen
+       ) VALUES (
+         'fantasy402', 'football', 'soccer', 'Team A - Team B', 'team a - team b',
+         NULL, 0, 1, 1, 1
+       )`
+    );
+    expect(countInventoryLeagues(db).total).toBe(2);
+    const dry = purgeJunkInventoryLeagues(db, { dryRun: true });
+    expect(dry.wouldDelete).toBeGreaterThanOrEqual(1);
+    expect(dry.deleted).toBe(0);
+    const live = purgeJunkInventoryLeagues(db, { dryRun: false });
+    expect(live.deleted).toBeGreaterThanOrEqual(1);
+    expect(
+      listInventoryLeagues(db).every(r => r.leagueKey !== 'Team A - Team B')
+    ).toBe(true);
+    expect(listInventoryLeagues(db).some(r => r.leagueKey === 'Setka Cup')).toBe(
+      true
+    );
   });
 
   test('resolveInventoryLeagueMeta + formatLeagueLine include cc/kind', () => {

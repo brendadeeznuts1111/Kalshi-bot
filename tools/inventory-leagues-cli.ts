@@ -12,6 +12,7 @@
  *   bun run inventory:leagues -- --promote [--apply] [--min-peak=1] [--json]
  *   bun run inventory:leagues -- --report [--min-peak=1] [--json] [--notify]
  *   bun run inventory:leagues -- --resolve [--apply] [--threshold=0.9] [--sport=tennis] [--json]
+ *   bun run inventory:leagues -- --purge-junk [--apply] [--json]
  *   bun run inventory:leagues -- --backfill
  *
  * --promote: plan COMPETITIONS seeds from unmapped inventory_leagues (junk filtered).
@@ -19,7 +20,9 @@
  * --notify:  with --report, force Telegram once (TELEGRAM_* required; dedup state updated).
  * --resolve: Map lane — stamp unmapped leagues from existing COMPETITIONS (scored).
  *            default dry-run; --apply writes only conf >= --threshold (default 0.9).
- * --apply:   with --promote: write seeds; with --resolve: stamp high-confidence ids.
+ * --purge-junk: delete unmapped junk leagues (matchup blobs, etc.); dry-run unless --apply.
+ * --apply:   with --promote: write seeds; with --resolve: stamp high-confidence ids;
+ *            with --purge-junk: perform deletes.
  * --backfill: re-resolve competition_id on inventory_leagues from current seeds.
  * Lines/JSON include countryCode + kind (from competition meta / label inference).
  */
@@ -44,6 +47,7 @@ import {
   countInventoryLeagues,
   formatLeagueLine,
   listInventoryLeagues,
+  purgeJunkInventoryLeagues,
   resolveInventoryLeagueMeta,
   stampInventoryLeaguesCompetitionIds,
   stampInventoryLeaguesFromRecords,
@@ -118,6 +122,7 @@ async function main(): Promise<void> {
   const harvest = hasFlag('harvest');
   const promote = hasFlag('promote');
   const resolve = hasFlag('resolve');
+  const purgeJunk = hasFlag('purge-junk') || hasFlag('purgeJunk');
   const reportOnly = hasFlag('report');
   const notify = hasFlag('notify');
   const apply = hasFlag('apply');
@@ -135,6 +140,51 @@ async function main(): Promise<void> {
       : 0.9;
 
   const db = openEventStore({ dbPath: DEFAULT_EVENT_STORE_DB });
+
+  if (purgeJunk) {
+    if (promote || reportOnly || harvest || backfill || resolve) {
+      throw new Error(
+        'inventory:leagues --purge-junk cannot combine with --promote/--resolve/--report/--harvest/--backfill'
+      );
+    }
+    const result = purgeJunkInventoryLeagues(db, {
+      dryRun: !apply,
+      includeMapped: hasFlag('include-mapped'),
+    });
+    if (json) {
+      console.log(
+        JSON.stringify(
+          {
+            purgeJunk: true,
+            dryRun: !apply,
+            wouldDelete: result.wouldDelete,
+            deleted: result.deleted,
+            byReason: result.byReason,
+            sample: result.sample,
+          },
+          null,
+          2
+        )
+      );
+      return;
+    }
+    console.log(
+      `inventory:leagues --purge-junk${apply ? ' --apply' : ' (dry-run)'} ` +
+        `wouldDelete=${result.wouldDelete} deleted=${result.deleted} ` +
+        `reasons=${Object.entries(result.byReason)
+          .map(([k, v]) => `${k}=${v}`)
+          .join(' ') || 'none'}`
+    );
+    for (const s of result.sample.slice(0, 15)) {
+      console.log(`  - ${s.sportId} · ${s.leagueKey} · ${s.junkReason}`);
+    }
+    if (!apply && result.wouldDelete > 0) {
+      console.log(
+        '  apply: bun run inventory:leagues -- --purge-junk --apply'
+      );
+    }
+    return;
+  }
 
   if (resolve) {
     if (promote || reportOnly || harvest || backfill) {

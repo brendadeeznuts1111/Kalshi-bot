@@ -437,6 +437,7 @@ not a second inventory store. Details:
 | `inventory:watch -- --sport=… [--once] [--dry-run] [--enrich-booked]` | Public/adapter poll → events + leagues; multi-sport CSV supported |
 | `inventory:leagues [--unmapped] [--harvest]` | List / harvest durable league registry |
 | `inventory:leagues -- --resolve [--apply] [--threshold=0.9]` | Map lane: stamp unmapped from existing seeds (scored) |
+| `inventory:leagues -- --purge-junk [--apply]` | Delete unmapped junk leagues (matchup blobs / no_structure) |
 | `inventory:leagues -- --report [--notify]` | Promote dry-report; optional force Telegram |
 | `inventory:leagues -- --promote [--apply]` | Plan/apply COMPETITIONS seeds from unmapped |
 | `inventory:leagues -- --backfill` | Re-stamp competition_id on leagues + skin_events |

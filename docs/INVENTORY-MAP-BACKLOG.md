@@ -2,7 +2,7 @@
 
 **Status:** living operator backlog (Lane B only — never on the 30s Capture loop).  
 **Playbook:** [`INVENTORY.md`](INVENTORY.md) · modules: `src/inventory/`  
-**Snapshot date:** 2026-08-14 · `main` @ Map P0 pass (aliases + 10 seeds + resolve + enrich)
+**Snapshot date:** 2026-08-14 · Map P1 (junk purge + full-catalog enrich)
 
 ---
 
@@ -15,9 +15,10 @@
 | Operator Capture profile + two-lane docs | `INVENTORY.md` |
 | `inventory:leagues --resolve` scored + threshold apply | #133 |
 | Enrich `--limit` + sport-scoped candidates | #133 |
-| Promote min-peak=2 seeds (5) + first wire aliases | earlier `competitions.ts` |
-| **Map P0:** aliases + 10 curated seeds + resolve 13 exact | this pass |
-| First Map enrich batches | odds-link **19 → 26** (still ~**5%**) |
+| Map P0 aliases + 10 seeds + resolve | earlier pass |
+| **W4** junk skip on league upsert + `--purge-junk` | this pass |
+| **W1** enrich-only uses **full** public catalog (not sport-narrowed) | this pass |
+| Map enrich multi-sport batch | odds-link **26 → 34** (**5% → 7%**) |
 
 ---
 
@@ -25,12 +26,12 @@
 
 | Metric | Value | Notes |
 | ------ | ----- | ----- |
-| `inventory_leagues` total | ~146 | grows with Capture |
-| Unmapped leagues | **~32** (was ~45) | mostly soccer **matchup_blob** junk + TT short labels |
-| Live unmapped | **0** | all live board labels mapped this pass |
-| Resolve auto @0.9 | **0** remaining | review ~3 (TT soft only) |
-| `skin_events` odds-link | **26/473 (5%)** | tennis enrich 0/8; soccer 1/32 this tick |
-| Worst event link rates | BB **0%**, TT low, soccer low | **W1 still dominant** |
+| `inventory_leagues` total | **~119** | purged 30 junk |
+| Unmapped leagues | **~5** | TT soft (Setka, Masters Belarusy, country buckets) |
+| Live unmapped | ~0 | restart Capture after junk filter ships |
+| Resolve auto @0.9 | 0 | soft TT only |
+| `skin_events` odds-link | **34/482 (7%)** | full catalog + core multi-sport enrich |
+| Fantasy adapter enrich | **blocked** | `loadFantasy402ProfileFromEnv()` → null (no FANTASY402_* in env) |
 
 ---
 
@@ -92,17 +93,13 @@
 
 ---
 
-### W4 — Live garbage “leagues”
+### W4 — Live garbage “leagues” — **mostly done**
 
-**Why weak:** e.g. basketball `j0G05k8CMNI` live unmapped; soccer matchup blobs in registry at peak=1; promote correctly rejects but registry still grows.
+**Shipped:** upsert skips `junkLeagueReason`; `inventory:leagues --purge-junk [--apply]` deleted 30 (25 matchup_blob + 5 no_structure).
 
-**Next work:**
+**Residual:** soft TT labels (Setka, Masters Belarusy); country buckets (Polysha, Ispaniya) kept. Restart Capture so new upsert filter is live.
 
-1. On league upsert: skip/drop `junkLeagueReason` keys (or mark `ignored` column) — **Capture-adjacent** but Map benefits.
-2. One-shot cleanup: delete inventory_leagues where junk + peak≤1 + live=0.
-3. Never promote ebasketball-style product noise without operator intent (already have one seed — freeze further e-* unless needed).
-
-**Done when:** live unmapped list has no opaque tokens / matchup blobs.
+**Done when:** live unmapped has no opaque tokens / matchup blobs — **met after purge**; keep Capture process updated.
 
 ---
 
@@ -137,12 +134,14 @@
 - [x] `inventory:leagues -- --resolve --apply` → **13** exact stamps; unmapped **45→32**; live unmapped **0**
 - [x] Enrich tennis (0/8) + soccer (1/32); odds-link **25→26** (still 5%)
 
-### P1 — next thread (priority order)
+### P1 — this pass
 
-- [ ] **W1 deep-dive:** enrich with Fantasy adapter catalog (not public-only) when env present; compare match rate
-- [ ] **W1:** TT-focused catalog aliases / softer name fold for Masters. * players (measure only)
-- [ ] **W4:** junk filter on league upsert + purge matchup_blob rows from `inventory_leagues`
-- [ ] Optional `suggest-aliases` for conf 0.8–0.89 review (TT Setka / Argentina / Belarusy)
+- [x] **W4:** junk filter on upsert + `--purge-junk --apply` (30 deleted)
+- [x] **W1:** full catalog on enrich-only; multi-sport enrich → **7%** linked
+- [ ] **W1:** Fantasy adapter path when Proton/FANTASY402_* env loaded (profile currently null)
+- [ ] **W1:** name-match improvements for doubles/UTR/Masters TT (`no_score` dominant)
+- [ ] Restart Capture watch process after deploy (picks up junk upsert filter)
+- [ ] Optional aliases for residual TT: Masters Belarusy, Setka short label
 
 ### P2 — later
 
@@ -166,10 +165,15 @@ bun run inventory:leagues -- --promote --apply --min-peak=2
 bun run inventory:leagues -- --resolve --apply --threshold=0.9
 bun run inventory:leagues -- --backfill
 
-# Odds (batched)
+# Odds (batched; enrich-only uses full public catalog)
 bun run inventory:sync -- --enrich-only --sport=tennis --limit=100 --dry-run --json
-bun run inventory:sync -- --enrich-only --sport=tennis --limit=100
+bun run inventory:sync -- --enrich-only \
+  --sport=table_tennis,tennis,soccer,basketball --limit=150
 bun run inventory:enrich:quality
+
+# Registry hygiene
+bun run inventory:leagues -- --purge-junk
+bun run inventory:leagues -- --purge-junk --apply
 
 # Capture (do not mix Map flags)
 bun run inventory:watch -- --loop \
@@ -181,7 +185,7 @@ bun run inventory:watch -- --loop \
 
 ## Next-thread opener (paste)
 
-> Continue Map from `docs/INVENTORY-MAP-BACKLOG.md`. **P0 done** (live unmapped=0, unmapped 32 junk-heavy). Weakest left: **W1 odds ~5%** (tennis 0/8 public catalog). Next: Fantasy-adapter enrich vs public; **W4** purge matchup_blob leagues from registry.
+> Continue Map from `docs/INVENTORY-MAP-BACKLOG.md`. **P0+P1 W4 done** (unmapped ~5, linked **7%**). Weakest: **W1** still `no_score` on doubles/UTR/TT; Fantasy env null. Next: load FANTASY402_* for adapter catalog; improve `booked-match` for doubles names; restart Capture.
 
 ---
 

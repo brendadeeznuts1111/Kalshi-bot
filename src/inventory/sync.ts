@@ -474,9 +474,11 @@ export async function runInventorySync(
     try {
       const { enrichLog } = await import('./enrich-log.ts');
       const { catalogFetchSportFilter } = await import('./booked-match.ts');
-      const sportFilter = catalogFetchSportFilter(
-        inventorySportForCatalogFetch(sportSel)
-      );
+      // Candidate sport scoping is separate (filterEnrichCandidatesBySport).
+      // Prefer a **wide** public catalog — narrowing Statscore by sport starved tennis
+      // match rates (hundreds of rows vs full board). Adapter list still sport-hinted.
+      const candidateSport = inventorySportForCatalogFetch(sportSel);
+      const catalogSportFilter = catalogFetchSportFilter(candidateSport);
       let catalog: BookedMatchEntry[] = [];
       let catalogSource = 'injected';
       // Defined array (even empty) skips public Statscore fetch — tests / offline.
@@ -488,14 +490,17 @@ export async function runInventorySync(
         const pub = await fetchPublicBookedCatalog({
           maxEvents: options.enrichCatalogMax ?? 2000,
           maxPages: 40,
-          sport: sportFilter,
+          // Full catalog when enrich-only or multi-sport; single-sport poll keeps hint
+          sport: enrichOnly || sportSel.kind === 'sports' && sportSel.sports.length > 1
+            ? undefined
+            : catalogSportFilter,
         });
         const byId = new Map(
           bookedCatalogToMatchList(pub.entries).map(e => [e.oddsEventId, e] as const)
         );
         try {
           const booked = await adapter.listBookedEvents({
-            sport: sportFilter,
+            sport: catalogSportFilter,
             limit: 200,
           });
           for (const b of booked) {
@@ -512,6 +517,12 @@ export async function runInventorySync(
         catalog = [...byId.values()];
         catalogSource = `${pub.source} pages=${pub.pages} totalHint=${pub.totalItemsHint ?? '?'}${
           pub.errors.length ? ` errs=${pub.errors.length}` : ''
+        }${
+          enrichOnly || (sportSel.kind === 'sports' && sportSel.sports.length > 1)
+            ? ' catalogSport=all'
+            : catalogSportFilter
+              ? ` catalogSport=${catalogSportFilter}`
+              : ''
         }`;
       }
       let candidates = collectBoardEnrichCandidates(
