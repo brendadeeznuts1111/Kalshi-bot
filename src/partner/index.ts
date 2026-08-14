@@ -182,12 +182,17 @@ export {
 export {
   fetchPublicPliveStreamEvents,
   filterLiveEventsBySport,
+  filterLiveEventsBySports,
+  formatInventorySportSelection,
   formatSkinEventLine,
   listSkinInventoryIds,
   normalizeSkinEventsSports,
+  parseInventorySportsCsv,
   resolveInventoryCompetitionId,
+  resolveInventoryFetchSport,
   stampSkinEventsCompetitionIds,
   upsertSkinLiveEvents,
+  type InventorySportSelection,
   type SkinEventRow,
 } from '../inventory/skin-events-store.ts';
 

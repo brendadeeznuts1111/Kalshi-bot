@@ -11,11 +11,17 @@ import {
   buckeyeInventoryIdentity,
   fetchPublicPliveStreamEvents,
   filterLiveEventsBySport,
+  filterLiveEventsBySports,
+  formatInventorySportSelection,
+  inventorySportForCatalogFetch,
   listSkinInventoryIds,
   liveProductsCoveredByInventory,
   normalizeInventorySport,
   normalizeSkinEventsSports,
+  normalizeSportToken,
+  parseInventorySportsCsv,
   resolveInventoryCompetitionId,
+  resolveInventoryFetchSport,
   resolveWatchInventoryIdentity,
   stampSkinEventsCompetitionIds,
   upsertSkinLiveEvents,
@@ -46,6 +52,75 @@ describe('skin_events store', () => {
       '3',
     ]);
     expect(filterLiveEventsBySport(rows, 'tennis').map(e => e.inventoryId)).toEqual(['1']);
+  });
+
+  test('parseInventorySportsCsv handles single, CSV multi, spaces, and all', () => {
+    expect(parseInventorySportsCsv('all')).toEqual({ kind: 'all' });
+    expect(parseInventorySportsCsv('  ALL  ')).toEqual({ kind: 'all' });
+    expect(parseInventorySportsCsv('table_tennis')).toEqual({
+      kind: 'sports',
+      sports: ['table_tennis'],
+    });
+    expect(parseInventorySportsCsv('table_tennis, tennis')).toEqual({
+      kind: 'sports',
+      sports: ['table_tennis', 'tennis'],
+    });
+    expect(parseInventorySportsCsv('table_tennis,tennis, soccer')).toEqual({
+      kind: 'sports',
+      sports: ['table_tennis', 'tennis', 'soccer'],
+    });
+    // spaces / hyphens collapse; table tennis aliases
+    expect(normalizeSportToken(' Table Tennis ')).toBe('table_tennis');
+    expect(normalizeSportToken('table-tennis')).toBe('table_tennis');
+    expect(parseInventorySportsCsv('table tennis, tennis')).toEqual({
+      kind: 'sports',
+      sports: ['table_tennis', 'tennis'],
+    });
+    // any "all" token wins
+    expect(parseInventorySportsCsv('tennis,all')).toEqual({ kind: 'all' });
+    // dedupe
+    expect(parseInventorySportsCsv('tennis, tennis,tennis')).toEqual({
+      kind: 'sports',
+      sports: ['tennis'],
+    });
+    expect(parseInventorySportsCsv('')).toEqual({ kind: 'all' });
+    expect(parseInventorySportsCsv(null)).toEqual({ kind: 'all' });
+  });
+
+  test('resolveInventoryFetchSport: multi → all, single stays', () => {
+    expect(resolveInventoryFetchSport({ kind: 'all' })).toBe('all');
+    expect(resolveInventoryFetchSport({ kind: 'sports', sports: ['tennis'] })).toBe('tennis');
+    expect(
+      resolveInventoryFetchSport({ kind: 'sports', sports: ['table_tennis', 'tennis'] })
+    ).toBe('all');
+    expect(
+      formatInventorySportSelection({ kind: 'sports', sports: ['table_tennis', 'tennis'] })
+    ).toBe('table_tennis,tennis');
+    expect(inventorySportForCatalogFetch({ kind: 'all' })).toBeUndefined();
+    expect(
+      inventorySportForCatalogFetch({ kind: 'sports', sports: ['table_tennis', 'tennis'] })
+    ).toBeUndefined();
+    expect(inventorySportForCatalogFetch({ kind: 'sports', sports: ['tennis'] })).toBe('tennis');
+  });
+
+  test('filterLiveEventsBySports unions multi without tennis/table_tennis bleed', () => {
+    const rows = [
+      ev({ inventoryId: '1', sport: 'Tennis' }),
+      ev({ inventoryId: '2', sport: 'Table tennis' }),
+      ev({ inventoryId: '3', sport: 'Soccer' }),
+      ev({ inventoryId: '4', sport: 'Basketball' }),
+    ];
+    const multi = filterLiveEventsBySports(rows, {
+      kind: 'sports',
+      sports: ['table_tennis', 'tennis'],
+    });
+    expect(multi.map(e => e.inventoryId).sort()).toEqual(['1', '2']);
+    const core = filterLiveEventsBySports(rows, {
+      kind: 'sports',
+      sports: ['table_tennis', 'tennis', 'soccer', 'basketball'],
+    });
+    expect(core.map(e => e.inventoryId).sort()).toEqual(['1', '2', '3', '4']);
+    expect(filterLiveEventsBySports(rows, { kind: 'all' })).toHaveLength(4);
   });
 
   test('normalizeInventorySport maps Table Tennis → table_tennis', () => {

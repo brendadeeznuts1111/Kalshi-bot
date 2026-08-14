@@ -291,6 +291,98 @@ export function filterLiveEventsBySport(
   });
 }
 
+/**
+ * Parsed `--sport` selection for inventory watch/sync.
+ * - `all` — full board
+ * - `sports` — one or more tokens (CSV); multi-sport fetches full board then filters
+ */
+export type InventorySportSelection =
+  | { kind: 'all' }
+  | { kind: 'sports'; sports: string[] };
+
+/** Canonical sport token: trim, collapse whitespace → `_`, lowercase aliases. */
+export function normalizeSportToken(raw: string): string {
+  const t = raw.trim().toLowerCase().replace(/[-\s]+/g, '_');
+  if (!t) return '';
+  if (t === 'tabletennis' || t === 'table_tennis') return 'table_tennis';
+  return t;
+}
+
+/**
+ * Parse `--sport` CSV (spaces around commas OK).
+ *
+ * | Input | Result |
+ * | ----- | ------ |
+ * | `all` | full board |
+ * | `table_tennis` | single sport |
+ * | `table_tennis, tennis` | multi (spaces trimmed) |
+ * | `table_tennis,tennis,all` | `all` wins if any token is all |
+ * | empty / whitespace | `all` |
+ */
+export function parseInventorySportsCsv(raw: string | undefined | null): InventorySportSelection {
+  if (raw == null) return { kind: 'all' };
+  const parts = raw
+    .split(',')
+    .map(p => normalizeSportToken(p))
+    .filter(Boolean);
+  if (parts.length === 0) return { kind: 'all' };
+  if (parts.some(p => p === 'all')) return { kind: 'all' };
+  const seen = new Set<string>();
+  const sports: string[] = [];
+  for (const p of parts) {
+    if (seen.has(p)) continue;
+    seen.add(p);
+    sports.push(p);
+  }
+  return { kind: 'sports', sports };
+}
+
+/** Stable display / report string (`all` or `table_tennis,tennis`). */
+export function formatInventorySportSelection(sel: InventorySportSelection): string {
+  return sel.kind === 'all' ? 'all' : sel.sports.join(',');
+}
+
+/**
+ * Stream fetch sport arg: single token as-is; multi-sport and `all` → `all`
+ * (client-side filter after full board).
+ */
+export function resolveInventoryFetchSport(sel: InventorySportSelection): string {
+  if (sel.kind === 'all') return 'all';
+  if (sel.sports.length === 1) return sel.sports[0]!;
+  return 'all';
+}
+
+/** Filter events by selection (union for multi-sport; tennis ≠ table tennis). */
+export function filterLiveEventsBySports(
+  events: InventoryEvent[],
+  sel: InventorySportSelection
+): InventoryEvent[] {
+  if (sel.kind === 'all') return events;
+  if (sel.sports.length === 0) return events;
+  if (sel.sports.length === 1) {
+    return filterLiveEventsBySport(events, sel.sports[0]!);
+  }
+  const seen = new Set<string>();
+  const out: InventoryEvent[] = [];
+  for (const sport of sel.sports) {
+    for (const e of filterLiveEventsBySport(events, sport)) {
+      if (seen.has(e.inventoryId)) continue;
+      seen.add(e.inventoryId);
+      out.push(e);
+    }
+  }
+  return out;
+}
+
+/** Sport string for booked-catalog narrow (undefined when all or multi). */
+export function inventorySportForCatalogFetch(
+  sel: InventorySportSelection
+): string | undefined {
+  if (sel.kind === 'all') return undefined;
+  if (sel.sports.length === 1) return sel.sports[0];
+  return undefined;
+}
+
 export function formatSkinEventLine(row: SkinEventRow): string {
   const matchup = [row.home, row.away].filter(Boolean).join(' vs ') || 'TBD';
   const idBits = [

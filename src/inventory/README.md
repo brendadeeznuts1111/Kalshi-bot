@@ -21,6 +21,7 @@ CLIs:
 bun run domain:sports
 bun run inventory:sync -- --sport=all --dry-run   # plan inserts/updates, no write
 bun run inventory:sync -- --sport=all             # full board write
+# Multi-sport CSV (spaces OK): --sport=table_tennis,tennis,soccer,basketball
 bun run inventory:sync -- --sport=all --enrich-booked --enrich-scope=board
 bun run inventory:sync -- --odds-status           # odds_event_id fill-rate
 bun run inventory:sync -- --enrich-only           # public Statscore name-link
@@ -29,6 +30,9 @@ bun run inventory:enrich                          # alias: enrich-only unlinked 
 # stream-list + booked catalog; enrich-validate; enrichBookedEvents()
 bun run inventory:watch -- --once --sport=all --dry-run
 bun run inventory:watch -- --once --sport=all --enrich-booked
+# Recommended capture profile (see docs/INVENTORY.md § Operator profile):
+bun run inventory:watch -- --loop \
+  --sport=table_tennis,tennis,soccer,basketball --interval-ms=30000
 bun run inventory:watch -- --loop --sport=all     # continuous full board
 bun run inventory:leagues                         # list durable leagues
 bun run inventory:leagues -- --unmapped           # competition_id null

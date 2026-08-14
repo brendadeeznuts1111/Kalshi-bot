@@ -10,12 +10,15 @@
  * Usage:
  *   bun run inventory:watch
  *   bun run inventory:watch -- --sport=table_tennis
+ *   bun run inventory:watch -- --sport=table_tennis,tennis
+ *   bun run inventory:watch -- --sport="table_tennis, tennis"   # spaces OK
  *   bun run inventory:watch -- --sport=all --json
  *   bun run inventory:watch -- --once --dry-run
  *   bun run inventory:watch -- --once --dry-run --json
  *   bun run inventory:watch -- --once --skin=buckeye --book=fantasy402
  *   bun run inventory:watch -- --once --sport=all --enrich-booked
  *
+ * --sport: single, CSV multi (spaces trimmed), or all. Multi fetches full board then filters.
  * --dry-run: plan insert/update only (no SQLite writes, no Telegram). Incompatible with --loop.
  * --enrich-booked: soft Statscore name → odds_event_id (needs Fantasy adapter; scope=board).
  * Optional: TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID to notify on new rows (live only).
@@ -38,34 +41,27 @@ import {
 } from '../src/inventory/sync.ts';
 import {
   fetchPublicPliveStreamEvents,
-  filterLiveEventsBySport,
+  filterLiveEventsBySports,
+  formatInventorySportSelection,
   formatSkinEventLine,
+  inventorySportForCatalogFetch,
   liveProductsCoveredByInventory,
   normalizeSkinEventsSports,
+  parseInventorySportsCsv,
+  resolveInventoryFetchSport,
   resolveWatchInventoryIdentity,
   upsertSkinLiveEvents,
   type InventoryIdentity,
+  type InventorySportSelection,
 } from '../src/inventory/skin-events-store.ts';
 import type { FantasySessionAdapter, InventoryEvent } from '../src/partner/types.ts';
 
-
-
-function resolveFetchSport(sportArg: string): string {
-  if (sportArg === 'all') return 'all';
-  const norm = sportArg.replace(/\s+/g, '_').toLowerCase();
-  if (norm === 'table_tennis' || sportArg.toLowerCase() === 'table tennis') {
-    return 'table_tennis';
-  }
-  if (norm === 'tennis') return 'tennis';
-  return sportArg;
-}
-
-async function loadInventoryEvents(sport: string): Promise<{
+async function loadInventoryEvents(sportSel: InventorySportSelection): Promise<{
   events: InventoryEvent[];
   source: 'adapter' | 'public-stream-list';
   adapter: FantasySessionAdapter | null;
 }> {
-  const fetchSport = resolveFetchSport(sport);
+  const fetchSport = resolveInventoryFetchSport(sportSel);
   const profile = loadFantasy402ProfileFromEnv();
   if (profile) {
     const adapter = getFantasySessionAdapter(profile, { warmSession: false });
@@ -74,30 +70,24 @@ async function loadInventoryEvents(sport: string): Promise<{
     } catch {
       // stream-list is public; login warm is best-effort
     }
-    const events = await adapter.fetchInventory({
-      sport: fetchSport === 'all' ? 'all' : fetchSport,
-    });
+    const events = await adapter.fetchInventory({ sport: fetchSport });
     return { events, source: 'adapter', adapter };
   }
-  const events = await fetchPublicPliveStreamEvents({
-    sport: fetchSport === 'all' ? 'all' : fetchSport,
-  });
+  const events = await fetchPublicPliveStreamEvents({ sport: fetchSport });
   return { events, source: 'public-stream-list', adapter: null };
 }
 
 async function pollOnce(options: {
-  sport: string;
+  sportSel: InventorySportSelection;
+  sportLabel: string;
   json: boolean;
   identity: InventoryIdentity;
   dryRun: boolean;
   enrichBooked: boolean;
   enrichBookedScope: ReturnType<typeof parseEnrichBookedScope>;
 }): Promise<{ newCount: number; seen: number }> {
-  const loaded = await loadInventoryEvents(options.sport);
-  let events = loaded.events;
-  if (options.sport !== 'all') {
-    events = filterLiveEventsBySport(events, options.sport);
-  }
+  const loaded = await loadInventoryEvents(options.sportSel);
+  const events = filterLiveEventsBySports(loaded.events, options.sportSel);
 
   const db = openEventStore({ dbPath: DEFAULT_EVENT_STORE_DB });
   if (!options.dryRun) {
@@ -124,11 +114,13 @@ async function pollOnce(options: {
       enrichNote = 'enrich skipped: needs Fantasy adapter (set FANTASY402_* env)';
     } else {
       try {
-        const sportFilter = options.sport.toLowerCase().includes('table')
-          ? 'table'
-          : options.sport === 'all'
+        const catalogSport = inventorySportForCatalogFetch(options.sportSel);
+        const sportFilter =
+          catalogSport == null
             ? undefined
-            : options.sport;
+            : catalogSport.includes('table')
+              ? 'table'
+              : catalogSport;
         const booked = await loaded.adapter.listBookedEvents({
           sport: sportFilter,
           limit: 200,
@@ -169,7 +161,7 @@ async function pollOnce(options: {
       JSON.stringify(
         {
           dryRun: options.dryRun,
-          sport: options.sport,
+          sport: options.sportLabel,
           skinId: options.identity.skinId,
           bookId: options.identity.bookId,
           inventoryLiveProduct: options.identity.inventoryLiveProduct,
@@ -220,7 +212,7 @@ async function pollOnce(options: {
   } else {
     console.log(
       `${mode} skin=${options.identity.skinId} book=${options.identity.bookId} ` +
-        `source=${loaded.source} covers=${covers.join('+')} sport=${options.sport} ` +
+        `source=${loaded.source} covers=${covers.join('+')} sport=${options.sportLabel} ` +
         `seen=${result.seen} new=${result.inserted.length} updated=${result.updated.length}` +
         ` leagues=${leagues.seen}/${leagues.inserted}new` +
         (options.enrichBooked ? ` enriched=${enriched}/${enrichCandidates}` : '') +
@@ -255,8 +247,9 @@ async function pollOnce(options: {
 }
 
 async function main(): Promise<void> {
-  // Default table_tennis for interactive; full board: --sport=all (cron uses all)
-  const sport = argValue('sport') ?? 'table_tennis';
+  // Default table_tennis for interactive; operator core CSV or --sport=all (cron uses all)
+  const sportSel = parseInventorySportsCsv(argValue('sport') ?? 'table_tennis');
+  const sportLabel = formatInventorySportSelection(sportSel);
   const json = hasFlag('json');
   const dryRun = hasFlag('dry-run') || hasFlag('dryRun');
   const loop = hasFlag('loop');
@@ -274,18 +267,27 @@ async function main(): Promise<void> {
   const intervalMs = Math.max(Number(argValue('interval-ms') ?? '30000') || 30_000, 5_000);
 
   if (once) {
-    await pollOnce({ sport, json, identity, dryRun, enrichBooked, enrichBookedScope });
+    await pollOnce({
+      sportSel,
+      sportLabel,
+      json,
+      identity,
+      dryRun,
+      enrichBooked,
+      enrichBookedScope,
+    });
     return;
   }
 
   console.log(
     `inventory:watch loop skin=${identity.skinId} book=${identity.bookId} ` +
-      `sport=${sport} intervalMs=${intervalMs}`
+      `sport=${sportLabel} intervalMs=${intervalMs}`
   );
   for (;;) {
     try {
       await pollOnce({
-        sport,
+        sportSel,
+        sportLabel,
         json: false,
         identity,
         dryRun: false,
