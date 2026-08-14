@@ -4625,7 +4625,7 @@ export const COMPETITIONS: readonly CompetitionRecord[] = [
     id: "tennis.atp_challenger_brownsburg_usa",
     sportId: "tennis",
     displayName: "ATP Challenger Brownsburg, USA",
-    aliases: ["ATP Challenger Brownsburg, USA"],
+    aliases: ["ATP Challenger Brownsburg, USA", "Challenger - Brownsburg"],
     gender: "unknown",
     providerMappings: {
       plive: { inventoryBucket: "tennis", leagueKey: "ATP Challenger Brownsburg, USA" },
@@ -6704,7 +6704,7 @@ export const COMPETITIONS: readonly CompetitionRecord[] = [
     id: "soccer.international_copa_libertadores",
     sportId: "soccer",
     displayName: "International Copa Libertadores",
-    aliases: ["International Copa Libertadores"],
+    aliases: ["International Copa Libertadores", "Copa Libertadores"],
     gender: "unknown",
     providerMappings: {
       plive: { inventoryBucket: "football", leagueKey: "International Copa Libertadores" },
@@ -8387,7 +8387,7 @@ export const COMPETITIONS: readonly CompetitionRecord[] = [
     id: "soccer.mexico_liga_de_expansion_mx",
     sportId: "soccer",
     displayName: "Mexico Liga de Expansion MX",
-    aliases: ["Mexico Liga de Expansion MX"],
+    aliases: ["Mexico Liga de Expansion MX", "Mexico - Liga de Expansion"],
     gender: "unknown",
     providerMappings: {
       plive: { inventoryBucket: "football", leagueKey: "Mexico Liga de Expansion MX" },
@@ -12446,7 +12446,7 @@ export const COMPETITIONS: readonly CompetitionRecord[] = [
     id: "tennis.atp_cincinnati_usa",
     sportId: "tennis",
     displayName: "ATP Cincinnati, USA",
-    aliases: ["ATP Cincinnati, USA"],
+    aliases: ["ATP Cincinnati, USA", "ATP - Cincinnati"],
     gender: "unknown",
     providerMappings: {
       plive: { inventoryBucket: "tennis", leagueKey: "ATP Cincinnati, USA" },
@@ -13557,7 +13557,7 @@ export const COMPETITIONS: readonly CompetitionRecord[] = [
     id: "tennis.atp_montreal_canada",
     sportId: "tennis",
     displayName: "ATP Montreal, Canada",
-    aliases: ["ATP Montreal, Canada"],
+    aliases: ["ATP Montreal, Canada", "ATP - Montreal"],
     gender: "unknown",
     providerMappings: {
       plive: { inventoryBucket: "tennis", leagueKey: "ATP Montreal, Canada" },
@@ -31311,7 +31311,7 @@ export const COMPETITIONS: readonly CompetitionRecord[] = [
     id: "tennis.wta_cincinnati_usa",
     sportId: "tennis",
     displayName: "WTA Cincinnati, USA",
-    aliases: ["WTA Cincinnati, USA"],
+    aliases: ["WTA Cincinnati, USA", "WTA - Cincinnati"],
     gender: "unknown",
     providerMappings: {
       plive: { inventoryBucket: "tennis", leagueKey: "WTA Cincinnati, USA" },
@@ -33890,6 +33890,55 @@ export const COMPETITIONS: readonly CompetitionRecord[] = [
     providerMappings: {
       plive: { inventoryBucket: "ice_hockey", leagueKey: "Subhockey" },
     },
+  },
+  {
+    id: "tennis.utr_pro_kawaguchi",
+    sportId: "tennis",
+    displayName: "UTR Pro Kawaguchi",
+    aliases: ["UTR Pro Kawaguchi"],
+    gender: "unknown",
+    providerMappings: { plive: { inventoryBucket: "tennis", leagueKey: "UTR Pro Kawaguchi" } },
+  },
+  {
+    id: "basketball.chile_lnb",
+    sportId: "basketball",
+    displayName: "Chile LNB",
+    aliases: ["Chile LNB"],
+    gender: "unknown",
+    providerMappings: { plive: { inventoryBucket: "basketball", leagueKey: "Chile LNB" } },
+  },
+  {
+    id: "basketball.ebasketball_h2h_gg_league",
+    sportId: "basketball",
+    displayName: "Ebasketball H2H GG League",
+    aliases: ["Ebasketball H2H GG League"],
+    gender: "unknown",
+    providerMappings: {
+      plive: { inventoryBucket: "basketball", leagueKey: "Ebasketball H2H GG League" },
+    },
+    kind: "league",
+  },
+  {
+    id: "tennis.challenger_brownsburg_md",
+    sportId: "tennis",
+    displayName: "Challenger Brownsburg MD",
+    aliases: ["Challenger Brownsburg MD"],
+    gender: "unknown",
+    providerMappings: {
+      plive: { inventoryBucket: "tennis", leagueKey: "Challenger Brownsburg MD" },
+    },
+    kind: "circuit",
+  },
+  {
+    id: "basketball.paraguay_championship",
+    sportId: "basketball",
+    displayName: "Paraguay Championship",
+    aliases: ["Paraguay Championship"],
+    gender: "unknown",
+    providerMappings: {
+      plive: { inventoryBucket: "basketball", leagueKey: "Paraguay Championship" },
+    },
+    kind: "tournament",
   },
 ] satisfies readonly CompetitionRecord[];
 
