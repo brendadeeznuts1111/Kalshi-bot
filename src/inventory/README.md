@@ -5,7 +5,8 @@ Coverage catalog for live-product stream inventory (**not** seat partner).
 **ezlive:** same SportsWidgets stream shell as plive — one `skin_events` row
 per `(book_id, inventory_id)`; `coversLiveProducts` lists both when endpoints
 exist. Seat capacity for ezlive is separate (`partner:toml`). Full operator
-path: [`docs/INVENTORY.md`](../../docs/INVENTORY.md).
+path: [`docs/INVENTORY.md`](../../docs/INVENTORY.md). Map-lane backlog (odds
+link, unmapped leagues): [`docs/INVENTORY-MAP-BACKLOG.md`](../../docs/INVENTORY-MAP-BACKLOG.md).
 
 | Module | Role |
 | ------ | ---- |

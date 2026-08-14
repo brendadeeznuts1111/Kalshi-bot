@@ -446,6 +446,7 @@ not a second inventory store. Details:
 
 ## See also
 
+- [`INVENTORY-MAP-BACKLOG.md`](INVENTORY-MAP-BACKLOG.md) — Map-lane weakest points + next work queue
 - [`FANTASY-ULTRA.md`](FANTASY-ULTRA.md) — adapter / wire / Pandora
 - [`src/inventory/README.md`](../src/inventory/README.md) — module map
 - [`src/domain/README.md`](../src/domain/README.md) — competitions + promote
