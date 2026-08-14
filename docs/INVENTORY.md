@@ -108,12 +108,30 @@ bun run inventory:watch -- --loop --sport=all --interval-ms=30000
 
 ### Map lane (separate sessions)
 
+Never on the 30s Capture loop. Cadence:
+
+| Task | Frequency | Command |
+| ---- | --------- | ------- |
+| **Resolve** leagues → existing seeds | daily / after harvest | `inventory:leagues -- --resolve [--apply]` |
+| **Promote** new COMPETITIONS seeds | operator review | `--promote` then `--promote --apply` |
+| **Enrich** odds_event_id | every few hours | `inventory:enrich` / `--enrich-only` with `--limit` |
+| Review stragglers | weekly | `--unmapped` + enrich quality JSON |
+
 ```bash
+# 1) Stamp unmapped leagues from existing COMPETITIONS (scored; dry-run first)
+bun run inventory:leagues -- --resolve --json
+bun run inventory:leagues -- --resolve --sport=tennis --threshold=0.9
+bun run inventory:leagues -- --resolve --apply --threshold=0.9
+# conf < threshold stays for review; conf=0 → promote or junk
+
 # Soft-link odds_event_id (metadata only — not prices)
 bun run inventory:sync -- --sport=all --enrich-booked --enrich-scope=board --dry-run --json
 bun run inventory:sync -- --enrich-only --enrich-scope=unlinked
+# Map-lane batch (sport + limit — do not hammer Statscore)
+bun run inventory:sync -- --enrich-only --sport=tennis --limit=100 --dry-run --json
+bun run inventory:enrich   # alias: enrich-only unlinked all
 
-# Promote unmapped leagues → COMPETITIONS (always plan before apply)
+# Promote unmapped leagues → new COMPETITIONS seeds (always plan before apply)
 bun run inventory:leagues -- --promote
 bun run inventory:leagues -- --promote --apply
 bun run inventory:leagues -- --backfill
@@ -418,6 +436,7 @@ not a second inventory store. Details:
 | `inventory:sync -- --enrich-only` / `inventory:enrich` | Public booked catalog → link unlinked rows (no stream poll) |
 | `inventory:watch -- --sport=… [--once] [--dry-run] [--enrich-booked]` | Public/adapter poll → events + leagues; multi-sport CSV supported |
 | `inventory:leagues [--unmapped] [--harvest]` | List / harvest durable league registry |
+| `inventory:leagues -- --resolve [--apply] [--threshold=0.9]` | Map lane: stamp unmapped from existing seeds (scored) |
 | `inventory:leagues -- --report [--notify]` | Promote dry-report; optional force Telegram |
 | `inventory:leagues -- --promote [--apply]` | Plan/apply COMPETITIONS seeds from unmapped |
 | `inventory:leagues -- --backfill` | Re-stamp competition_id on leagues + skin_events |

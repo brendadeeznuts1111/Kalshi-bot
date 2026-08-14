@@ -29,6 +29,8 @@ export type EnrichBookedEventsOptions = {
   enrichOnly?: boolean;
   enrichBookedScope?: EnrichBookedScope;
   enrichCatalogMax?: number;
+  /** Max candidates this tick (Map-lane batch). */
+  enrichLimit?: number | null;
   /** Inject catalog (tests / offline) — skips public Statscore fetch. */
   bookedCatalog?: BookedMatchEntry[];
   sport?: string;
@@ -86,6 +88,7 @@ export async function enrichBookedEvents(
     enrichBooked: true,
     enrichBookedScope: options.enrichBookedScope ?? (enrichOnly ? 'unlinked' : 'board'),
     enrichCatalogMax: options.enrichCatalogMax ?? 2000,
+    enrichLimit: options.enrichLimit,
     bookedCatalog: options.bookedCatalog,
     dryRun: options.dryRun === true,
     nowMs: options.nowMs,

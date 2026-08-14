@@ -37,11 +37,14 @@ bun run inventory:watch -- --loop --sport=all     # continuous full board
 bun run inventory:leagues                         # list durable leagues
 bun run inventory:leagues -- --unmapped           # competition_id null
 bun run inventory:leagues -- --harvest --sport=all
+bun run inventory:leagues -- --resolve            # Map: score unmapped → existing seeds
+bun run inventory:leagues -- --resolve --apply    # stamp conf≥threshold (default 0.9)
 bun run inventory:leagues -- --report             # promote dry-report (cron-shared)
 bun run inventory:leagues -- --report --notify    # force Telegram (TELEGRAM_*)
 bun run inventory:leagues -- --promote            # plan COMPETITIONS seeds
 bun run inventory:leagues -- --promote --apply    # write competitions.ts
 bun run inventory:leagues -- --backfill           # re-stamp competition_id
+# Map enrich batch: bun run inventory:sync -- --enrich-only --sport=tennis --limit=100
 bun run inventory:session-probe                   # public list vs gsid streamToken
 # PLIVE_GSID=… bun run inventory:session-probe    # optional bound session (never commit)
 # cron: INVENTORY_SYNC=1 → events + leagues + promote-report (no auto-apply)

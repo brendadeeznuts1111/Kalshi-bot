@@ -48,6 +48,7 @@ import {
   resolveInventoryFetchSport,
   upsertSkinLiveEvents,
   type InventoryIdentity,
+  type InventorySportSelection,
   type SkinEventRow,
 } from './skin-events-store.ts';
 
@@ -105,6 +106,11 @@ export type InventorySyncOptions = {
    */
   minMatchRate?: number | null;
   minLinkedPct?: number | null;
+  /**
+   * Max skin_events candidates to attempt this enrich tick (Map-lane batch).
+   * CLI: --limit=100. Default: no extra cap beyond listUnlinked max.
+   */
+  enrichLimit?: number | null;
 };
 
 export type InventorySyncReport = {
@@ -194,7 +200,8 @@ export function collectBoardEnrichCandidates(
   upsert: SkinEventRow[] | SkinEventUpsertResult,
   db: Database,
   bookId: string,
-  scope: EnrichBookedScope
+  scope: EnrichBookedScope,
+  options: { limit?: number | null } = {}
 ): Array<{
   inventoryId: string;
   home: string | null;
@@ -202,8 +209,12 @@ export function collectBoardEnrichCandidates(
   sport: string | null;
   league: string | null;
 }> {
+  const cap =
+    options.limit != null && Number.isFinite(options.limit)
+      ? Math.min(Math.max(Math.floor(options.limit), 1), 2000)
+      : undefined;
   if (scope === 'unlinked') {
-    return listUnlinkedSkinEvents(db, bookId, 500);
+    return listUnlinkedSkinEvents(db, bookId, cap ?? 500);
   }
   const inserted = Array.isArray(upsert) ? upsert : upsert.inserted;
   const updated = Array.isArray(upsert) ? [] : upsert.updated;
@@ -228,7 +239,7 @@ export function collectBoardEnrichCandidates(
       listUnlinkedSkinEvents(
         db,
         bookId,
-        500,
+        cap ?? 500,
         updated.map(r => r.inventoryId)
       ).map(r => r.inventoryId)
     );
@@ -243,7 +254,22 @@ export function collectBoardEnrichCandidates(
       });
     }
   }
-  return candidates;
+  return cap != null ? candidates.slice(0, cap) : candidates;
+}
+
+/** Keep enrich candidates whose normalized sport is in the CLI sport selection. */
+export function filterEnrichCandidatesBySport<
+  T extends { sport?: string | null },
+>(candidates: T[], sportSel: InventorySportSelection): T[] {
+  if (sportSel.kind === 'all') return candidates;
+  if (sportSel.sports.length === 0) return candidates;
+  const want = new Set(sportSel.sports);
+  return candidates.filter(c => {
+    const id = normalizeInventorySport(String(c.sport ?? '')) || String(c.sport ?? '')
+      .toLowerCase()
+      .replace(/\s+/g, '_');
+    return want.has(id);
+  });
 }
 
 export type OddsLinkCoverage = {
@@ -488,13 +514,28 @@ export async function runInventorySync(
           pub.errors.length ? ` errs=${pub.errors.length}` : ''
         }`;
       }
-      const candidates = collectBoardEnrichCandidates(
+      let candidates = collectBoardEnrichCandidates(
         upsert,
         db,
         identity.bookId,
-        enrichScope
+        enrichScope,
+        { limit: options.enrichLimit }
       );
+      // Map-lane sport CSV: only attempt rows in selected sports
+      candidates = filterEnrichCandidatesBySport(candidates, sportSel);
+      if (
+        options.enrichLimit != null &&
+        Number.isFinite(options.enrichLimit) &&
+        candidates.length > options.enrichLimit
+      ) {
+        candidates = candidates.slice(0, Math.floor(options.enrichLimit));
+      }
       enrichCandidates = candidates.length;
+      if (options.enrichLimit != null) {
+        notes.push(
+          `enrich batch limit=${options.enrichLimit} candidates=${enrichCandidates}`
+        );
+      }
       const touch = new Map<string, SkinEventRow>();
       for (const r of [...upsert.inserted, ...upsert.updated]) {
         touch.set(r.inventoryId, r);
