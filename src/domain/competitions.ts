@@ -65,7 +65,12 @@ export type CompetitionRecord = {
  * Seeded from observed Buckeye/Plive stream-list + skin_events leagues.
  * Junk matchup blobs / person-like league labels intentionally omitted.
  */
-export const COMPETITIONS: readonly CompetitionRecord[] = [
+
+// Split into annotated chunks — a single literal of ~3.1k records exceeds TS union-complexity
+// limits (TS2590). Chunks keep element type-checking; the export spreads them. The marker
+// contract for competition-promote.ts lives on the LAST chunk.
+
+const COMPETITIONS_CHUNK_0: readonly CompetitionRecord[] = [
   {
     id: 'baseball.mexico_lmb',
     sportId: 'baseball',
@@ -8493,6 +8498,9 @@ export const COMPETITIONS: readonly CompetitionRecord[] = [
       pandora: { leagueId: "3034", feedSportId: "5" },
     },
   },
+];
+
+const COMPETITIONS_CHUNK_1: readonly CompetitionRecord[] = [
   {
     id: "soccer.new_zealand_northern_league",
     sportId: "soccer",
@@ -17054,6 +17062,9 @@ export const COMPETITIONS: readonly CompetitionRecord[] = [
       pandora: { leagueId: "20335", feedSportId: "8" },
     },
   },
+];
+
+const COMPETITIONS_CHUNK_2: readonly CompetitionRecord[] = [
   {
     id: "tennis.itf_men_brcko_bosnia_herz",
     sportId: "tennis",
@@ -25612,6 +25623,9 @@ export const COMPETITIONS: readonly CompetitionRecord[] = [
       pandora: { leagueId: "19394", feedSportId: "8" },
     },
   },
+];
+
+const COMPETITIONS_CHUNK_3: readonly CompetitionRecord[] = [
   {
     id: "tennis.itf_women_prerov_czech_republic",
     sportId: "tennis",
@@ -34071,6 +34085,13 @@ export const COMPETITIONS: readonly CompetitionRecord[] = [
     kind: "tournament",
   },
 ] satisfies readonly CompetitionRecord[];
+
+export const COMPETITIONS: readonly CompetitionRecord[] = [
+  ...COMPETITIONS_CHUNK_0,
+  ...COMPETITIONS_CHUNK_1,
+  ...COMPETITIONS_CHUNK_2,
+  ...COMPETITIONS_CHUNK_3,
+];
 
 /**
  * Competition primary key. Not a closed string union — registry is large and grows via promote.
