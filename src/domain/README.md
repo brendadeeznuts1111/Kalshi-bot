@@ -118,7 +118,7 @@ volleyball · Indiya · live=0 peak=1 · volleyball.indiya · cc=IN kind=country
 Desk sizing tiers **A–D** and NCAA college seeds:
 
 - SSOT: [`volleyball-tiers.ts`](volleyball-tiers.ts) · doc
-  [`docs/VOLLEYBALL-TIERS.md`](../docs/VOLLEYBALL-TIERS.md)
+  [`docs/VOLLEYBALL-TIERS.md`](../../docs/VOLLEYBALL-TIERS.md)
 - Resolve: `resolveVolleyballCompetitionTier({ competitionId, leagueKey })`
 - NCAA DI women / Power 4 / tournament / men / beach / DII–DIII seeded in
   `COMPETITIONS` (aliases ready before first plive sighting)

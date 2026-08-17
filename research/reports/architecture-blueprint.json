@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-22T09:03:02.405Z",
+  "generatedAt": "2026-08-15T21:59:58.294Z",
   "localBunStack": {
     "features": [
       "bun-cron",
@@ -7,13 +7,126 @@
       "bun-hash",
       "bun-http",
       "bun-sqlite",
-      "bun-timer"
+      "bun-timer",
+      "bun-websocket"
     ],
     "sourceFiles": [
       "src/agent/agent-report.ts",
       "src/agent/architecture-blueprint.ts",
       "src/agent/pattern-extract.ts",
       "src/agent/report-term.ts",
+      "src/agent/tennis-ground.ts",
+      "src/alpha/odds-feed.ts",
+      "src/alpha/run-shadow-once.ts",
+      "src/alpha/ticker-mapper.ts",
+      "src/bot/kalshi-rotate.ts",
+      "src/bot/kalshi-ws.ts",
+      "src/calibration/init-program.ts",
+      "src/calibration/shadow-maintenance.ts",
+      "src/calibration/toxicity-loop.ts",
+      "src/calibration/toxicity-schedule-cli.ts",
+      "src/calibration/watcher.ts",
+      "src/domain/host-discover.ts",
+      "src/domain/pandora-domain-integrate.ts",
+      "src/domain/widget-domain-extract.ts",
+      "src/institutions/event-store/cross-market.ts",
+      "src/institutions/event-store/ingest-primary-results.ts",
+      "src/institutions/event-store/ingest-tennis-history.ts",
+      "src/institutions/event-store/itf-stadion.ts",
+      "src/institutions/event-store/kalshi-itf-sync.ts",
+      "src/institutions/event-store/kalshi-ws-recorder.ts",
+      "src/institutions/event-store/live-canary-store.ts",
+      "src/institutions/event-store/live-scores.ts",
+      "src/institutions/event-store/match-liquidity-backfill.ts",
+      "src/institutions/event-store/match-liquidity-dashboard.ts",
+      "src/institutions/event-store/match-liquidity-ground.ts",
+      "src/institutions/event-store/match-liquidity-pipeline.ts",
+      "src/institutions/event-store/match-liquidity.ts",
+      "src/institutions/event-store/open-db.ts",
+      "src/institutions/event-store/source-inventory-run.ts",
+      "src/institutions/event-store/source-inventory-runner.ts",
+      "src/institutions/event-store/source-market-store.ts",
+      "src/institutions/event-store/source-metadata-read.ts",
+      "src/institutions/event-store/source-metadata-run.ts",
+      "src/institutions/event-store/source-metadata-runner.ts",
+      "src/institutions/event-store/source-metadata-store.ts",
+      "src/institutions/event-store/stadion-kalshi-bridge.ts",
+      "src/institutions/event-store/summary.ts",
+      "src/institutions/event-store/tennis-book-coverage.ts",
+      "src/institutions/event-store/tennis-ws-dashboard.ts",
+      "src/institutions/event-store/tennis-ws-ground.ts",
+      "src/institutions/event-store/tennis-ws-recorder-store.ts",
+      "src/institutions/event-store/visual-snapshot-meta.ts",
+      "src/institutions/event-store/watch-set.ts",
+      "src/institutions/program-manifest.ts",
+      "src/institutions/shadow-line.ts",
+      "src/inventory/booked-catalog-cache.ts",
+      "src/inventory/coverage-ops.ts",
+      "src/inventory/enrich-validate.ts",
+      "src/inventory/event-lookup.ts",
+      "src/inventory/league-resolve.ts",
+      "src/inventory/leagues.ts",
+      "src/inventory/live-tracker-alerts.ts",
+      "src/inventory/live-tracker.ts",
+      "src/inventory/promote-notify.ts",
+      "src/inventory/promote-report.ts",
+      "src/inventory/skin-events-store.ts",
+      "src/inventory/stream-list-fetch.ts",
+      "src/inventory/sync.ts",
+      "src/lib/journal.ts",
+      "src/operations/experiment-runner.ts",
+      "src/operations/experiment-schema.ts",
+      "src/operations/experiment-store.ts",
+      "src/operations/factorial.ts",
+      "src/partner/authorization/hash.ts",
+      "src/partner/authorization/outbox.ts",
+      "src/partner/authorization/service.ts",
+      "src/partner/authorization/sql.ts",
+      "src/partner/dashboard-data.ts",
+      "src/partner/execution/cancel-sql.ts",
+      "src/partner/execution/cancel.ts",
+      "src/partner/execution/demo-evidence-checkpoint.ts",
+      "src/partner/execution/demo-evidence-collector.ts",
+      "src/partner/execution/execution-journal.ts",
+      "src/partner/execution/executor.ts",
+      "src/partner/execution/kalshi-lifecycle-sync.ts",
+      "src/partner/execution/kalshi-live.ts",
+      "src/partner/execution/kalshi-snapshot.ts",
+      "src/partner/execution/kalshi.ts",
+      "src/partner/execution/maintenance.ts",
+      "src/partner/execution/provider-lifecycle-journal.ts",
+      "src/partner/execution/provider-lifecycle.ts",
+      "src/partner/execution/reconciliation.ts",
+      "src/partner/execution/reservation.ts",
+      "src/partner/execution/risk-alert.ts",
+      "src/partner/execution/risk-health.ts",
+      "src/partner/execution/sql.ts",
+      "src/partner/fantasy-ultra/place-bet-har.ts",
+      "src/partner/fantasy-ultra/widget-config.ts",
+      "src/partner/finance-cron.ts",
+      "src/partner/ledger.ts",
+      "src/partner/registry.ts",
+      "src/partner/risk-health.ts",
+      "src/partner/toml-config.ts",
+      "src/partner/visuals.ts",
+      "src/partner/webview-ws-capture.ts",
+      "src/partner/webview-ws-ingest.ts",
+      "src/partner/webview-ws-pipeline.ts",
+      "src/regulatory/agents/admin-agent.ts",
+      "src/regulatory/agents/compliance-agent.ts",
+      "src/regulatory/agents/market-data-agent.ts",
+      "src/regulatory/agents/orchestrator.ts",
+      "src/regulatory/examples/regulatory-server.ts",
+      "src/regulatory/lib/alerting.ts",
+      "src/regulatory/lib/audit.ts",
+      "src/regulatory/lib/compliance-repo.ts",
+      "src/regulatory/lib/execution-play-sync.ts",
+      "src/regulatory/lib/repository.ts",
+      "src/regulatory/middleware/state-compliance.ts",
+      "src/regulatory/routes/ops/partners.ts",
+      "src/regulatory/scripts/admin.ts",
+      "src/regulatory/scripts/migrate.ts",
+      "src/regulatory/scripts/sweep-violations.ts",
       "src/research/audit-adapter.ts",
       "src/research/cache.ts",
       "src/research/cli.ts",
@@ -22,24 +135,71 @@
       "src/research/evidence-io.ts",
       "src/research/export-audit.ts",
       "src/research/gh.ts",
+      "src/research/github-api.ts",
       "src/research/github-search.ts",
+      "src/research/hq-data.ts",
+      "src/research/hq-store.ts",
       "src/research/io.ts",
+      "src/research/player-opponent-profiles.ts",
+      "src/research/player-profiles.ts",
       "src/research/report.ts",
       "src/research/schedule-cli.ts",
       "src/research/scheduled.ts",
-      "src/research/serve.ts"
+      "src/research/serve.ts",
+      "src/research/simplify-loop.ts",
+      "src/research/sports-source-catalog.ts",
+      "src/research/tennis-hq-data.ts",
+      "src/research/trading-auth.ts",
+      "src/telegram/api.ts",
+      "src/telegram/authorization-commands.ts",
+      "src/telegram/authorization-outbox-worker.ts",
+      "src/telegram/authorization-requests.ts",
+      "src/telegram/bot.ts",
+      "src/telegram/subscribers.ts",
+      "src/warehouse/tennis-warehouse.ts"
     ],
     "featureFiles": {
-      "bun-hash": [
-        "src/agent/pattern-extract.ts",
-        "src/research/audit-adapter.ts",
-        "src/research/evidence-io.ts"
-      ],
       "bun-file": [
         "src/agent/agent-report.ts",
         "src/agent/architecture-blueprint.ts",
         "src/agent/pattern-extract.ts",
         "src/agent/report-term.ts",
+        "src/alpha/run-shadow-once.ts",
+        "src/alpha/ticker-mapper.ts",
+        "src/bot/kalshi-rotate.ts",
+        "src/bot/kalshi-ws.ts",
+        "src/calibration/init-program.ts",
+        "src/calibration/shadow-maintenance.ts",
+        "src/calibration/watcher.ts",
+        "src/domain/host-discover.ts",
+        "src/domain/pandora-domain-integrate.ts",
+        "src/domain/widget-domain-extract.ts",
+        "src/institutions/event-store/ingest-tennis-history.ts",
+        "src/institutions/event-store/itf-stadion.ts",
+        "src/institutions/event-store/live-canary-store.ts",
+        "src/institutions/event-store/match-liquidity-ground.ts",
+        "src/institutions/event-store/tennis-ws-ground.ts",
+        "src/institutions/event-store/tennis-ws-recorder-store.ts",
+        "src/institutions/event-store/visual-snapshot-meta.ts",
+        "src/institutions/program-manifest.ts",
+        "src/institutions/shadow-line.ts",
+        "src/inventory/booked-catalog-cache.ts",
+        "src/inventory/event-lookup.ts",
+        "src/inventory/live-tracker-alerts.ts",
+        "src/inventory/live-tracker.ts",
+        "src/inventory/promote-notify.ts",
+        "src/inventory/stream-list-fetch.ts",
+        "src/lib/journal.ts",
+        "src/operations/experiment-store.ts",
+        "src/partner/dashboard-data.ts",
+        "src/partner/fantasy-ultra/place-bet-har.ts",
+        "src/partner/toml-config.ts",
+        "src/partner/visuals.ts",
+        "src/partner/webview-ws-capture.ts",
+        "src/partner/webview-ws-ingest.ts",
+        "src/regulatory/scripts/admin.ts",
+        "src/regulatory/scripts/migrate.ts",
+        "src/regulatory/scripts/sweep-violations.ts",
         "src/research/cache.ts",
         "src/research/cli.ts",
         "src/research/dimensions.ts",
@@ -47,21 +207,146 @@
         "src/research/export-audit.ts",
         "src/research/io.ts",
         "src/research/report.ts",
+        "src/research/serve.ts",
+        "src/research/simplify-loop.ts",
+        "src/telegram/api.ts",
+        "src/telegram/bot.ts",
+        "src/telegram/subscribers.ts"
+      ],
+      "bun-sqlite": [
+        "src/agent/tennis-ground.ts",
+        "src/alpha/odds-feed.ts",
+        "src/alpha/ticker-mapper.ts",
+        "src/institutions/event-store/cross-market.ts",
+        "src/institutions/event-store/ingest-primary-results.ts",
+        "src/institutions/event-store/ingest-tennis-history.ts",
+        "src/institutions/event-store/kalshi-itf-sync.ts",
+        "src/institutions/event-store/kalshi-ws-recorder.ts",
+        "src/institutions/event-store/live-scores.ts",
+        "src/institutions/event-store/match-liquidity-backfill.ts",
+        "src/institutions/event-store/match-liquidity-dashboard.ts",
+        "src/institutions/event-store/match-liquidity-ground.ts",
+        "src/institutions/event-store/match-liquidity-pipeline.ts",
+        "src/institutions/event-store/match-liquidity.ts",
+        "src/institutions/event-store/open-db.ts",
+        "src/institutions/event-store/source-inventory-run.ts",
+        "src/institutions/event-store/source-inventory-runner.ts",
+        "src/institutions/event-store/source-market-store.ts",
+        "src/institutions/event-store/source-metadata-read.ts",
+        "src/institutions/event-store/source-metadata-run.ts",
+        "src/institutions/event-store/source-metadata-runner.ts",
+        "src/institutions/event-store/source-metadata-store.ts",
+        "src/institutions/event-store/stadion-kalshi-bridge.ts",
+        "src/institutions/event-store/summary.ts",
+        "src/institutions/event-store/tennis-book-coverage.ts",
+        "src/institutions/event-store/tennis-ws-dashboard.ts",
+        "src/institutions/event-store/tennis-ws-ground.ts",
+        "src/institutions/event-store/watch-set.ts",
+        "src/inventory/coverage-ops.ts",
+        "src/inventory/enrich-validate.ts",
+        "src/inventory/event-lookup.ts",
+        "src/inventory/league-resolve.ts",
+        "src/inventory/leagues.ts",
+        "src/inventory/promote-report.ts",
+        "src/inventory/skin-events-store.ts",
+        "src/inventory/sync.ts",
+        "src/operations/experiment-runner.ts",
+        "src/operations/experiment-schema.ts",
+        "src/operations/factorial.ts",
+        "src/partner/authorization/outbox.ts",
+        "src/partner/authorization/service.ts",
+        "src/partner/authorization/sql.ts",
+        "src/partner/dashboard-data.ts",
+        "src/partner/execution/cancel-sql.ts",
+        "src/partner/execution/cancel.ts",
+        "src/partner/execution/demo-evidence-checkpoint.ts",
+        "src/partner/execution/demo-evidence-collector.ts",
+        "src/partner/execution/execution-journal.ts",
+        "src/partner/execution/executor.ts",
+        "src/partner/execution/kalshi-lifecycle-sync.ts",
+        "src/partner/execution/kalshi-live.ts",
+        "src/partner/execution/kalshi-snapshot.ts",
+        "src/partner/execution/maintenance.ts",
+        "src/partner/execution/provider-lifecycle-journal.ts",
+        "src/partner/execution/provider-lifecycle.ts",
+        "src/partner/execution/reconciliation.ts",
+        "src/partner/execution/reservation.ts",
+        "src/partner/execution/risk-alert.ts",
+        "src/partner/execution/risk-health.ts",
+        "src/partner/execution/sql.ts",
+        "src/partner/finance-cron.ts",
+        "src/partner/ledger.ts",
+        "src/partner/registry.ts",
+        "src/partner/risk-health.ts",
+        "src/partner/toml-config.ts",
+        "src/partner/webview-ws-pipeline.ts",
+        "src/regulatory/agents/admin-agent.ts",
+        "src/regulatory/agents/compliance-agent.ts",
+        "src/regulatory/agents/market-data-agent.ts",
+        "src/regulatory/agents/orchestrator.ts",
+        "src/regulatory/examples/regulatory-server.ts",
+        "src/regulatory/lib/alerting.ts",
+        "src/regulatory/lib/audit.ts",
+        "src/regulatory/lib/compliance-repo.ts",
+        "src/regulatory/lib/execution-play-sync.ts",
+        "src/regulatory/lib/repository.ts",
+        "src/regulatory/middleware/state-compliance.ts",
+        "src/regulatory/routes/ops/partners.ts",
+        "src/regulatory/scripts/admin.ts",
+        "src/regulatory/scripts/migrate.ts",
+        "src/regulatory/scripts/sweep-violations.ts",
+        "src/research/cache.ts",
+        "src/research/hq-store.ts",
+        "src/research/player-opponent-profiles.ts",
+        "src/research/player-profiles.ts",
+        "src/research/serve.ts",
+        "src/research/sports-source-catalog.ts",
+        "src/research/tennis-hq-data.ts",
+        "src/telegram/authorization-commands.ts",
+        "src/telegram/authorization-outbox-worker.ts",
+        "src/telegram/authorization-requests.ts",
+        "src/telegram/bot.ts",
+        "src/warehouse/tennis-warehouse.ts"
+      ],
+      "bun-timer": [
+        "src/calibration/toxicity-loop.ts",
+        "src/institutions/event-store/ingest-primary-results.ts",
+        "src/institutions/event-store/kalshi-itf-sync.ts",
+        "src/institutions/event-store/kalshi-ws-recorder.ts",
+        "src/institutions/event-store/live-scores.ts",
+        "src/institutions/event-store/match-liquidity-backfill.ts",
+        "src/partner/webview-ws-capture.ts",
+        "src/research/gh.ts",
+        "src/research/github-api.ts",
+        "src/research/github-search.ts",
+        "src/research/hq-data.ts",
+        "src/research/serve.ts",
+        "src/telegram/bot.ts"
+      ],
+      "bun-hash": [
+        "src/agent/pattern-extract.ts",
+        "src/institutions/event-store/visual-snapshot-meta.ts",
+        "src/partner/authorization/hash.ts",
+        "src/partner/execution/kalshi-live.ts",
+        "src/partner/execution/kalshi.ts",
+        "src/partner/execution/provider-lifecycle-journal.ts",
+        "src/partner/risk-health.ts",
+        "src/research/audit-adapter.ts",
+        "src/research/evidence-io.ts",
+        "src/research/trading-auth.ts"
+      ],
+      "bun-websocket": [
+        "src/partner/fantasy-ultra/widget-config.ts"
+      ],
+      "bun-http": [
+        "src/regulatory/examples/regulatory-server.ts",
         "src/research/serve.ts"
       ],
       "bun-cron": [
+        "src/calibration/toxicity-schedule-cli.ts",
+        "src/institutions/event-store/match-liquidity-pipeline.ts",
         "src/research/schedule-cli.ts",
         "src/research/scheduled.ts"
-      ],
-      "bun-http": [
-        "src/research/serve.ts"
-      ],
-      "bun-sqlite": [
-        "src/research/cache.ts"
-      ],
-      "bun-timer": [
-        "src/research/gh.ts",
-        "src/research/github-search.ts"
       ]
     }
   },
@@ -91,17 +376,22 @@
       "bunNative": [
         {
           "feature": "bun-websocket",
-          "localFiles": []
+          "localFiles": [
+            "src/partner/fantasy-ultra/widget-config.ts"
+          ]
         },
         {
           "feature": "bun-sqlite",
           "localFiles": [
-            "src/research/cache.ts"
+            "src/agent/tennis-ground.ts",
+            "src/alpha/odds-feed.ts",
+            "src/alpha/ticker-mapper.ts",
+            "src/institutions/event-store/cross-market.ts"
           ]
         }
       ],
       "notes": [
-        "GitHub shortlist is non-Bun — mirror APIs from local stack: Bun.cron, Bun.file / Bun.write, Bun.CryptoHasher, Bun.serve, bun:sqlite, Bun.sleep",
+        "GitHub shortlist is non-Bun — mirror APIs from local stack: Bun.cron, Bun.file / Bun.write, Bun.CryptoHasher, Bun.serve, bun:sqlite, Bun.sleep, Bun WebSocket",
         "No shortlist — run research with --min-stars=1 if niche"
       ],
       "dataFreshness": null,
@@ -118,7 +408,7 @@
       ],
       "referenceRepo": "bullmeme777/kalshi-portfolio-tracker",
       "referenceScore": 47.75,
-      "referenceBadge": "scored",
+      "referenceBadge": "scored 🕒 35485m ago",
       "referenceDimension": "wallet-track",
       "bunFeatures": [],
       "bunFeatureFile": null,
@@ -132,7 +422,7 @@
           "repo": "bullmeme777/kalshi-portfolio-tracker",
           "points": 21.75,
           "maxPoints": 25,
-          "badge": "scored",
+          "badge": "scored 🕒 35485m ago",
           "rationale": "KALSHI access headers in code; trade-api/v2; auth freshness (recent commit + v2/PSS); official SDK markers",
           "pattern": {
             "summary": "env secrets, key file",
@@ -146,7 +436,7 @@
           "repo": "bullmeme777/kalshi-portfolio-tracker",
           "points": 17.5,
           "maxPoints": 25,
-          "badge": "scored",
+          "badge": "scored 🕒 35485m ago",
           "rationale": "live order path markers; cent price bounds (1–99 / price_cents)",
           "pattern": {
             "summary": "order fields (side/count/price)",
@@ -173,6 +463,8 @@
         {
           "feature": "bun-cron",
           "localFiles": [
+            "src/calibration/toxicity-schedule-cli.ts",
+            "src/institutions/event-store/match-liquidity-pipeline.ts",
             "src/research/schedule-cli.ts",
             "src/research/scheduled.ts"
           ]
@@ -180,16 +472,17 @@
         {
           "feature": "bun-http",
           "localFiles": [
+            "src/regulatory/examples/regulatory-server.ts",
             "src/research/serve.ts"
           ]
         }
       ],
       "notes": [
-        "GitHub shortlist is non-Bun — mirror APIs from local stack: Bun.cron, Bun.file / Bun.write, Bun.CryptoHasher, Bun.serve, bun:sqlite, Bun.sleep"
+        "GitHub shortlist is non-Bun — mirror APIs from local stack: Bun.cron, Bun.file / Bun.write, Bun.CryptoHasher, Bun.serve, bun:sqlite, Bun.sleep, Bun WebSocket"
       ],
       "dataFreshness": {
-        "stale": false,
-        "ageMs": 8910772
+        "stale": true,
+        "ageMs": 2129126665
       },
       "gate": null
     },
@@ -204,7 +497,7 @@
       ],
       "referenceRepo": "bullmeme777/kalshi-portfolio-tracker",
       "referenceScore": 47.75,
-      "referenceBadge": "scored",
+      "referenceBadge": "scored 🕒 35485m ago",
       "referenceDimension": "tracking",
       "bunFeatures": [],
       "bunFeatureFile": null,
@@ -218,7 +511,7 @@
           "repo": "bullmeme777/kalshi-portfolio-tracker",
           "points": 21.75,
           "maxPoints": 25,
-          "badge": "scored",
+          "badge": "scored 🕒 35485m ago",
           "rationale": "KALSHI access headers in code; trade-api/v2; auth freshness (recent commit + v2/PSS); official SDK markers",
           "pattern": {
             "summary": "env secrets, key file",
@@ -232,7 +525,7 @@
           "repo": "bullmeme777/kalshi-portfolio-tracker",
           "points": 17.5,
           "maxPoints": 25,
-          "badge": "scored",
+          "badge": "scored 🕒 35485m ago",
           "rationale": "live order path markers; cent price bounds (1–99 / price_cents)",
           "pattern": {
             "summary": "order fields (side/count/price)",
@@ -284,17 +577,18 @@
           "feature": "bun-hash",
           "localFiles": [
             "src/agent/pattern-extract.ts",
-            "src/research/audit-adapter.ts",
-            "src/research/evidence-io.ts"
+            "src/institutions/event-store/visual-snapshot-meta.ts",
+            "src/partner/authorization/hash.ts",
+            "src/partner/execution/kalshi-live.ts"
           ]
         }
       ],
       "notes": [
-        "GitHub shortlist is non-Bun — mirror APIs from local stack: Bun.cron, Bun.file / Bun.write, Bun.CryptoHasher, Bun.serve, bun:sqlite, Bun.sleep"
+        "GitHub shortlist is non-Bun — mirror APIs from local stack: Bun.cron, Bun.file / Bun.write, Bun.CryptoHasher, Bun.serve, bun:sqlite, Bun.sleep, Bun WebSocket"
       ],
       "dataFreshness": {
-        "stale": false,
-        "ageMs": 8889846
+        "stale": true,
+        "ageMs": 2129105737
       },
       "gate": null
     },
@@ -309,7 +603,7 @@
       ],
       "referenceRepo": "rodlaf/KalshiMarketMaker",
       "referenceScore": 67.75,
-      "referenceBadge": "watchlist",
+      "referenceBadge": "watchlist 🕒 35506m ago",
       "referenceDimension": "market-making",
       "bunFeatures": [],
       "bunFeatureFile": null,
@@ -323,7 +617,7 @@
           "repo": "rodlaf/KalshiMarketMaker",
           "points": 21.25,
           "maxPoints": 25,
-          "badge": "watchlist",
+          "badge": "watchlist 🕒 35506m ago",
           "rationale": "KALSHI access headers in code; trade-api/v2; official SDK markers",
           "pattern": {
             "summary": "KALSHI-ACCESS-* headers, RSA-PSS, key file",
@@ -337,7 +631,7 @@
           "repo": "rodlaf/KalshiMarketMaker",
           "points": 25,
           "maxPoints": 25,
-          "badge": "watchlist",
+          "badge": "watchlist 🕒 35506m ago",
           "rationale": "live order path markers; dry-run / paper default",
           "pattern": {
             "summary": "create-order API, order fields (side/count/price), portfolio/orders path",
@@ -364,89 +658,75 @@
         {
           "feature": "bun-http",
           "localFiles": [
+            "src/regulatory/examples/regulatory-server.ts",
             "src/research/serve.ts"
           ]
         },
         {
           "feature": "bun-websocket",
-          "localFiles": []
+          "localFiles": [
+            "src/partner/fantasy-ultra/widget-config.ts"
+          ]
         }
       ],
       "notes": [
-        "GitHub shortlist is non-Bun — mirror APIs from local stack: Bun.cron, Bun.file / Bun.write, Bun.CryptoHasher, Bun.serve, bun:sqlite, Bun.sleep"
+        "GitHub shortlist is non-Bun — mirror APIs from local stack: Bun.cron, Bun.file / Bun.write, Bun.CryptoHasher, Bun.serve, bun:sqlite, Bun.sleep, Bun WebSocket"
       ],
       "dataFreshness": {
-        "stale": false,
-        "ageMs": 10156525
+        "stale": true,
+        "ageMs": 2130372416
       },
       "gate": null
     },
     {
       "dimension": "arbitrage",
       "title": "Cross-venue arbitrage",
-      "runId": "2026-07-22T06-19-51-053Z",
-      "runGeneratedAt": "2026-07-22T06:19:51.053Z",
+      "runId": "2026-07-22T09-33-07-231Z",
+      "runGeneratedAt": "2026-07-22T09:33:07.231Z",
       "recommendedBun": [
         "bun-cron",
         "bun-http"
       ],
       "referenceRepo": "RichardFeynmanEnthusiast/kalshi-polymarket-arbitrage-bot",
       "referenceScore": 69.5,
-      "referenceBadge": "watchlist",
+      "referenceBadge": null,
       "referenceDimension": "arbitrage",
       "bunFeatures": [],
       "bunFeatureFile": null,
       "authPattern": "KALSHI-ACCESS-* headers, RSA-PSS, key file, trade-api/v2",
       "orderPattern": "create-order API, order fields (side/count/price), portfolio/orders path",
-      "liftAuth": "RichardFeynmanEnthusiast/kalshi-polymarket-arbitrage-bot",
-      "liftOrders": "RichardFeynmanEnthusiast/kalshi-polymarket-arbitrage-bot",
+      "liftAuth": "",
+      "liftOrders": "",
       "liftEntries": [
         {
           "component": "authApi",
-          "repo": "RichardFeynmanEnthusiast/kalshi-polymarket-arbitrage-bot",
-          "points": 15,
+          "repo": "",
+          "points": 0,
           "maxPoints": 25,
-          "badge": "watchlist",
-          "rationale": "KALSHI access headers in code; trade-api/v2",
-          "pattern": {
-            "summary": "KALSHI-ACCESS-* headers, RSA-PSS, key file, trade-api/v2",
-            "excerpt": "headers = { \"Content-Type\": \"application/json\", \"KALSHI-ACCESS-KEY\": self.key_id, \"KALSHI-ACCESS-SIGNATURE\": signature, \"KALSHI-ACCESS-TIMESTAMP\": timestamp_str, } return headers def sign_pss_text(self, text: str) -> str: \"\"\"Signs the text using RSA-PSS and returns the base64 encoded signature.\"\"\" message = text.encode('utf-8') try: signature = self.private_key.sign",
-            "file": "app/clients/kalshi/base.py",
-            "source": "research/patterns/patterns-latest-arbitrage.json"
-          }
+          "badge": "—",
+          "rationale": "No shortlist candidates",
+          "pattern": null
         },
         {
           "component": "orderRealism",
-          "repo": "RichardFeynmanEnthusiast/kalshi-polymarket-arbitrage-bot",
-          "points": 25,
+          "repo": "",
+          "points": 0,
           "maxPoints": 25,
-          "badge": "watchlist",
-          "rationale": "live order path markers; dry-run / paper default",
-          "pattern": {
-            "summary": "create-order API, order fields (side/count/price), portfolio/orders path",
-            "excerpt": "vironment) self.host = self.HTTP_BASE_URL self.exchange_url = \"/trade-api/v2/exchange\" self.markets_url = \"/trade-api/v2/markets\" self.portfolio_url = \"/trade-api/v2/portfolio\" self.events_url = \"/trade-api/v2/events\" def rate_limit(self) -> None: \"\"\"Built-in rate limiter to prevent exceeding API rate limits.\"\"\" THRESHOLD_IN_MILLISECONDS = 100 now = datetime.now() threshold_in_microseconds = 1000 * T",
-            "file": "app/clients/kalshi/kalshi_http_client.py",
-            "source": "research/patterns/patterns-latest-arbitrage.json"
-          }
+          "badge": "—",
+          "rationale": "No shortlist candidates",
+          "pattern": null
         }
       ],
-      "shortlistSummary": [
-        {
-          "fullName": "RichardFeynmanEnthusiast/kalshi-polymarket-arbitrage-bot",
-          "total": 69.5,
-          "auditTier": "watchlist",
-          "license": "gpl-3.0",
-          "unlicensed": false
-        }
-      ],
+      "shortlistSummary": [],
       "liftNotes": [
-        "No shortlist repo meets high-value audit export threshold (≥70 total, auth+order ≥15 each).",
-        "Watchlist tier (1): RichardFeynmanEnthusiast/kalshi-polymarket-arbitrage-bot — auditable at ≥65/≥12, status open."
+        "No shortlist repo meets high-value audit export threshold (≥70 total, auth+order ≥15 each)."
       ],
       "bunNative": [
         {
           "feature": "bun-cron",
           "localFiles": [
+            "src/calibration/toxicity-schedule-cli.ts",
+            "src/institutions/event-store/match-liquidity-pipeline.ts",
             "src/research/schedule-cli.ts",
             "src/research/scheduled.ts"
           ]
@@ -454,16 +734,18 @@
         {
           "feature": "bun-http",
           "localFiles": [
+            "src/regulatory/examples/regulatory-server.ts",
             "src/research/serve.ts"
           ]
         }
       ],
       "notes": [
-        "GitHub shortlist is non-Bun — mirror APIs from local stack: Bun.cron, Bun.file / Bun.write, Bun.CryptoHasher, Bun.serve, bun:sqlite, Bun.sleep"
+        "GitHub shortlist is non-Bun — mirror APIs from local stack: Bun.cron, Bun.file / Bun.write, Bun.CryptoHasher, Bun.serve, bun:sqlite, Bun.sleep, Bun WebSocket",
+        "No shortlist — run research with --min-stars=1 if niche"
       ],
       "dataFreshness": {
-        "stale": false,
-        "ageMs": 9791344
+        "stale": true,
+        "ageMs": 2118411055
       },
       "gate": null
     },
@@ -471,7 +753,7 @@
       "dimension": "sports-nba",
       "title": "NBA",
       "runId": "2026-07-22T09-00-00-001Z",
-      "runGeneratedAt": "2026-07-22T09:02:52.413Z",
+      "runGeneratedAt": "2026-07-22T09:35:01.630Z",
       "recommendedBun": [
         "bun-http",
         "bun-cron"
@@ -514,24 +796,27 @@
         {
           "feature": "bun-http",
           "localFiles": [
+            "src/regulatory/examples/regulatory-server.ts",
             "src/research/serve.ts"
           ]
         },
         {
           "feature": "bun-cron",
           "localFiles": [
+            "src/calibration/toxicity-schedule-cli.ts",
+            "src/institutions/event-store/match-liquidity-pipeline.ts",
             "src/research/schedule-cli.ts",
             "src/research/scheduled.ts"
           ]
         }
       ],
       "notes": [
-        "GitHub shortlist is non-Bun — mirror APIs from local stack: Bun.cron, Bun.file / Bun.write, Bun.CryptoHasher, Bun.serve, bun:sqlite, Bun.sleep",
+        "GitHub shortlist is non-Bun — mirror APIs from local stack: Bun.cron, Bun.file / Bun.write, Bun.CryptoHasher, Bun.serve, bun:sqlite, Bun.sleep, Bun WebSocket",
         "No gated candidates yet — probe with `--min-stars=2`"
       ],
       "dataFreshness": {
-        "stale": false,
-        "ageMs": 9986
+        "stale": true,
+        "ageMs": 2118296657
       },
       "gate": null
     },
@@ -561,19 +846,22 @@
         {
           "feature": "bun-http",
           "localFiles": [
+            "src/regulatory/examples/regulatory-server.ts",
             "src/research/serve.ts"
           ]
         },
         {
           "feature": "bun-cron",
           "localFiles": [
+            "src/calibration/toxicity-schedule-cli.ts",
+            "src/institutions/event-store/match-liquidity-pipeline.ts",
             "src/research/schedule-cli.ts",
             "src/research/scheduled.ts"
           ]
         }
       ],
       "notes": [
-        "GitHub shortlist is non-Bun — mirror APIs from local stack: Bun.cron, Bun.file / Bun.write, Bun.CryptoHasher, Bun.serve, bun:sqlite, Bun.sleep",
+        "GitHub shortlist is non-Bun — mirror APIs from local stack: Bun.cron, Bun.file / Bun.write, Bun.CryptoHasher, Bun.serve, bun:sqlite, Bun.sleep, Bun WebSocket",
         "No gated candidates yet — probe with `--min-stars=2`"
       ],
       "dataFreshness": null,
@@ -605,19 +893,22 @@
         {
           "feature": "bun-http",
           "localFiles": [
+            "src/regulatory/examples/regulatory-server.ts",
             "src/research/serve.ts"
           ]
         },
         {
           "feature": "bun-cron",
           "localFiles": [
+            "src/calibration/toxicity-schedule-cli.ts",
+            "src/institutions/event-store/match-liquidity-pipeline.ts",
             "src/research/schedule-cli.ts",
             "src/research/scheduled.ts"
           ]
         }
       ],
       "notes": [
-        "GitHub shortlist is non-Bun — mirror APIs from local stack: Bun.cron, Bun.file / Bun.write, Bun.CryptoHasher, Bun.serve, bun:sqlite, Bun.sleep",
+        "GitHub shortlist is non-Bun — mirror APIs from local stack: Bun.cron, Bun.file / Bun.write, Bun.CryptoHasher, Bun.serve, bun:sqlite, Bun.sleep, Bun WebSocket",
         "No gated candidates yet — probe with `--min-stars=2`"
       ],
       "dataFreshness": null,
@@ -625,7 +916,7 @@
     },
     {
       "dimension": "sports-other",
-      "title": "Other sports (MLB, NHL, tennis, …)",
+      "title": "Other sports (MLB, NHL, …)",
       "runId": null,
       "runGeneratedAt": null,
       "recommendedBun": [
@@ -649,19 +940,22 @@
         {
           "feature": "bun-http",
           "localFiles": [
+            "src/regulatory/examples/regulatory-server.ts",
             "src/research/serve.ts"
           ]
         },
         {
           "feature": "bun-cron",
           "localFiles": [
+            "src/calibration/toxicity-schedule-cli.ts",
+            "src/institutions/event-store/match-liquidity-pipeline.ts",
             "src/research/schedule-cli.ts",
             "src/research/scheduled.ts"
           ]
         }
       ],
       "notes": [
-        "GitHub shortlist is non-Bun — mirror APIs from local stack: Bun.cron, Bun.file / Bun.write, Bun.CryptoHasher, Bun.serve, bun:sqlite, Bun.sleep",
+        "GitHub shortlist is non-Bun — mirror APIs from local stack: Bun.cron, Bun.file / Bun.write, Bun.CryptoHasher, Bun.serve, bun:sqlite, Bun.sleep, Bun WebSocket",
         "No gated candidates yet — probe with `--min-stars=2`"
       ],
       "dataFreshness": null,
@@ -714,24 +1008,27 @@
         {
           "feature": "bun-http",
           "localFiles": [
+            "src/regulatory/examples/regulatory-server.ts",
             "src/research/serve.ts"
           ]
         },
         {
           "feature": "bun-cron",
           "localFiles": [
+            "src/calibration/toxicity-schedule-cli.ts",
+            "src/institutions/event-store/match-liquidity-pipeline.ts",
             "src/research/schedule-cli.ts",
             "src/research/scheduled.ts"
           ]
         }
       ],
       "notes": [
-        "GitHub shortlist is non-Bun — mirror APIs from local stack: Bun.cron, Bun.file / Bun.write, Bun.CryptoHasher, Bun.serve, bun:sqlite, Bun.sleep",
+        "GitHub shortlist is non-Bun — mirror APIs from local stack: Bun.cron, Bun.file / Bun.write, Bun.CryptoHasher, Bun.serve, bun:sqlite, Bun.sleep, Bun WebSocket",
         "No gated candidates yet — probe with `--min-stars=2`"
       ],
       "dataFreshness": {
-        "stale": false,
-        "ageMs": 9826723
+        "stale": true,
+        "ageMs": 2130042609
       },
       "gate": null
     },
@@ -782,26 +1079,153 @@
         {
           "feature": "bun-http",
           "localFiles": [
+            "src/regulatory/examples/regulatory-server.ts",
             "src/research/serve.ts"
           ]
         },
         {
           "feature": "bun-cron",
           "localFiles": [
+            "src/calibration/toxicity-schedule-cli.ts",
+            "src/institutions/event-store/match-liquidity-pipeline.ts",
             "src/research/schedule-cli.ts",
             "src/research/scheduled.ts"
           ]
         }
       ],
       "notes": [
-        "GitHub shortlist is non-Bun — mirror APIs from local stack: Bun.cron, Bun.file / Bun.write, Bun.CryptoHasher, Bun.serve, bun:sqlite, Bun.sleep",
+        "GitHub shortlist is non-Bun — mirror APIs from local stack: Bun.cron, Bun.file / Bun.write, Bun.CryptoHasher, Bun.serve, bun:sqlite, Bun.sleep, Bun WebSocket",
         "No gated candidates yet — probe with `--min-stars=2`"
       ],
       "dataFreshness": {
-        "stale": false,
-        "ageMs": 9821124
+        "stale": true,
+        "ageMs": 2130037011
       },
       "gate": null
+    },
+    {
+      "dimension": "odds-feed",
+      "title": "Odds API integration",
+      "runId": "2026-07-22T10-05-56-356Z",
+      "runGeneratedAt": "2026-07-22T10:05:56.356Z",
+      "recommendedBun": [
+        "bun-http",
+        "bun-sqlite",
+        "bun-cron"
+      ],
+      "referenceRepo": null,
+      "referenceScore": null,
+      "referenceBadge": null,
+      "referenceDimension": null,
+      "bunFeatures": [],
+      "bunFeatureFile": null,
+      "authPattern": null,
+      "orderPattern": null,
+      "liftAuth": "",
+      "liftOrders": "",
+      "liftEntries": [
+        {
+          "component": "authApi",
+          "repo": "",
+          "points": 0,
+          "maxPoints": 25,
+          "badge": "—",
+          "rationale": "No shortlist candidates",
+          "pattern": null
+        },
+        {
+          "component": "orderRealism",
+          "repo": "",
+          "points": 0,
+          "maxPoints": 25,
+          "badge": "—",
+          "rationale": "No shortlist candidates",
+          "pattern": null
+        }
+      ],
+      "shortlistSummary": [],
+      "liftNotes": [
+        "No shortlist repo meets high-value audit export threshold (≥70 total, auth+order ≥15 each)."
+      ],
+      "bunNative": [
+        {
+          "feature": "bun-http",
+          "localFiles": [
+            "src/regulatory/examples/regulatory-server.ts",
+            "src/research/serve.ts"
+          ]
+        },
+        {
+          "feature": "bun-sqlite",
+          "localFiles": [
+            "src/agent/tennis-ground.ts",
+            "src/alpha/odds-feed.ts",
+            "src/alpha/ticker-mapper.ts",
+            "src/institutions/event-store/cross-market.ts"
+          ]
+        },
+        {
+          "feature": "bun-cron",
+          "localFiles": [
+            "src/calibration/toxicity-schedule-cli.ts",
+            "src/institutions/event-store/match-liquidity-pipeline.ts",
+            "src/research/schedule-cli.ts",
+            "src/research/scheduled.ts"
+          ]
+        }
+      ],
+      "notes": [
+        "GitHub shortlist is non-Bun — mirror APIs from local stack: Bun.cron, Bun.file / Bun.write, Bun.CryptoHasher, Bun.serve, bun:sqlite, Bun.sleep, Bun WebSocket"
+      ],
+      "dataFreshness": {
+        "stale": true,
+        "ageMs": 2116441938
+      },
+      "gate": {
+        "minStars": 500,
+        "minForks": 500,
+        "maxAgeMonths": 18
+      },
+      "gateMiss": {
+        "rejected": 46,
+        "nearMisses": [
+          {
+            "fullName": "sportsdataverse/oddsapiR",
+            "stars": 9,
+            "forks": 5,
+            "pushedAt": "2026-06-24T03:16:01Z",
+            "pushedLabel": "2026-06",
+            "reasons": [
+              "low_popularity"
+            ],
+            "summary": "9 stars, 5 forks, pushed 2026-06 — needs 500 stars or 500 forks"
+          },
+          {
+            "fullName": "aqsmith02/paper-betting-tracker",
+            "stars": 6,
+            "forks": 1,
+            "pushedAt": "2026-07-14T04:11:27Z",
+            "pushedLabel": "2026-07",
+            "reasons": [
+              "low_popularity"
+            ],
+            "summary": "6 stars, 1 forks, pushed 2026-07 — needs 500 stars or 500 forks"
+          },
+          {
+            "fullName": "iliyasone/ps3838api",
+            "stars": 6,
+            "forks": 1,
+            "pushedAt": "2026-03-30T00:18:55Z",
+            "pushedLabel": "2026-03",
+            "reasons": [
+              "low_popularity"
+            ],
+            "summary": "6 stars, 1 forks, pushed 2026-03 — needs 500 stars or 500 forks"
+          }
+        ],
+        "retryCommand": "bun run research -- --dimension=odds-feed --min-stars=9",
+        "retryHint": "Gate probe: `bun run research -- --dimension=odds-feed --min-stars=9` (near miss: sportsdataverse/oddsapiR — 9 stars, 5 forks, pushed 2026-06 — needs 500 stars or 500 forks)"
+      }
     }
   ]
 }

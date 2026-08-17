@@ -1,8 +1,12 @@
 // @see https://bun.com/docs/test/index#run-tests
 import { describe, expect, test } from 'bun:test';
 import { memoryDb } from './fixtures.ts';
-import { upsertInventoryLeagues } from '../../src/inventory/leagues.ts';
+import {
+  ensureInventoryLeaguesSchema,
+  upsertInventoryLeagues,
+} from '../../src/inventory/leagues.ts';
 import { buildPromoteReport } from '../../src/inventory/promote-report.ts';
+import { normalizeLeagueKey } from '../../src/domain/competitions.ts';
 import type { InventoryEvent } from '../../src/partner/types.ts';
 
 function live(
@@ -29,10 +33,34 @@ describe('promote-report', () => {
       db,
       [
         live('1', 'tennis', 'ATT. Test City Cup'),
-        live('2', 'soccer', 'Team X - Team Y'),
         live('3', 'table_tennis', 'Setka Cup'), // already seeded
       ],
       { nowMs: 1000 }
+    );
+
+    // Legacy junk row predating the upsert junk filter (855b654) — must still
+    // surface in the report as a matchup_blob rejection, never a candidate.
+    ensureInventoryLeaguesSchema(db);
+    const legacySql = [
+      'INSERT INTO inventory_leagues (',
+      '  book_id, inventory_bucket, sport_id, league_key, league_key_norm,',
+      '  competition_id, event_count_live, peak_event_count,',
+      '  first_seen, last_seen, sample_home, sample_away',
+      ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    ].join('\n');
+    db.query(legacySql).run(
+      'fantasy402',
+      'football', // soccer → football wire bucket
+      'soccer',
+      'Team X - Team Y',
+      normalizeLeagueKey('Team X - Team Y'),
+      null,
+      1,
+      1,
+      1000,
+      1000,
+      'X',
+      'Y'
     );
 
     const report = buildPromoteReport(db, { minPeak: 1 });

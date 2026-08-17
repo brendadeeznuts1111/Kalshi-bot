@@ -1,27 +1,21 @@
 {
-  "generatedAt": "2026-07-22T09:03:06.288Z",
+  "generatedAt": "2026-08-15T22:00:08.332Z",
   "dimensions": [
     {
       "dimension": "arbitrage",
       "label": "Cross-venue arbitrage",
-      "runId": "2026-07-22T06-19-51-053Z",
-      "generatedAt": "2026-07-22T06:19:51.053Z",
+      "runId": "2026-07-22T09-33-07-231Z",
+      "generatedAt": "2026-07-22T09:33:07.231Z",
       "stats": {
-        "discovered": 14,
+        "discovered": 1,
         "gated": 1,
         "inspected": 1,
-        "shortlist": 1
+        "shortlist": 0
       },
-      "shortlist": [
-        {
-          "fullName": "RichardFeynmanEnthusiast/kalshi-polymarket-arbitrage-bot",
-          "total": 69.5,
-          "badge": "watchlist",
-          "auditTier": "watchlist",
-          "topPattern": "KALSHI-ACCESS-* headers, RSA-PSS, key file, trade-api/v2"
-        }
-      ],
-      "notes": []
+      "shortlist": [],
+      "notes": [
+        "Discovered repos but none passed gate/shortlist — try --min-stars=2 or refine queries"
+      ]
     },
     {
       "dimension": "market-making",
@@ -38,7 +32,7 @@
         {
           "fullName": "rodlaf/KalshiMarketMaker",
           "total": 67.75,
-          "badge": "watchlist",
+          "badge": "watchlist 🕒 35506m ago",
           "auditTier": "watchlist",
           "topPattern": "KALSHI-ACCESS-* headers, RSA-PSS, key file, create-order API"
         }
@@ -92,7 +86,7 @@
       "dimension": "sports-nba",
       "label": "NBA",
       "runId": "2026-07-22T09-00-00-001Z",
-      "generatedAt": "2026-07-22T09:02:52.413Z",
+      "generatedAt": "2026-07-22T09:35:01.630Z",
       "stats": {
         "discovered": 1,
         "gated": 1,
@@ -119,21 +113,21 @@
         {
           "fullName": "bullmeme777/kalshi-portfolio-tracker",
           "total": 47.75,
-          "badge": "scored",
+          "badge": "scored 🕒 35485m ago",
           "auditTier": null,
           "topPattern": "env secrets, key file, order fields (side/count/price)"
         },
         {
           "fullName": "kevinhjshim/kalshi-pnl",
           "total": 27.75,
-          "badge": "scored",
+          "badge": "scored 🕒 35485m ago",
           "auditTier": null,
           "topPattern": null
         },
         {
           "fullName": "slee8495/kalshi-pnl-dashboard",
           "total": 29.25,
-          "badge": "scored",
+          "badge": "scored 🕒 35485m ago",
           "auditTier": null,
           "topPattern": null
         }
@@ -155,7 +149,7 @@
         {
           "fullName": "bullmeme777/kalshi-portfolio-tracker",
           "total": 47.75,
-          "badge": "scored",
+          "badge": "scored 🕒 35486m ago",
           "auditTier": null,
           "topPattern": "env secrets, key file, order fields (side/count/price)"
         }
@@ -164,7 +158,6 @@
     }
   ],
   "architectureNotes": [
-    "Cross-venue arbitrage: lift candidate RichardFeynmanEnthusiast/kalshi-polymarket-arbitrage-bot (69.5) — watchlist tier",
     "Market making / liquidity: lift candidate rodlaf/KalshiMarketMaker (67.75) — watchlist tier",
     "Composite bot: mix component lifts across dimensions (see agent blueprint / patterns per dimension)."
   ]

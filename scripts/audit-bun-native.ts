@@ -247,8 +247,11 @@ export async function auditRepository(
     const extension = dot < 0 ? "" : file.slice(dot);
     if (!SOURCE_EXTENSIONS.has(extension)) continue;
 
+    const sourceFile = Bun.file(join(root, file));
+    if (!(await sourceFile.exists())) continue; // deleted-but-unstaged: normal transient state
+
     try {
-      const source = await Bun.file(join(root, file)).text();
+      const source = await sourceFile.text();
       violations.push(...findSourceViolations(source, file));
     } catch (error) {
       violations.push({

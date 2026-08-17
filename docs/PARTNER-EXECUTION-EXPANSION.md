@@ -13,7 +13,7 @@ bun run ops:status -- --json
 ```
 
 `ops:map` emits Mermaid from the code-owned map in
-[`src/partner/domain.ts`](../src/partner/domain.ts). Dashed edges are future or
+[`src/partner/architecture.ts`](../src/partner/architecture.ts) (`formatPartnerExpansionMermaid`). Dashed edges are future or
 intelligence-only contracts. They must not be interpreted as live execution.
 
 ```mermaid

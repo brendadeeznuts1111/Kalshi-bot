@@ -1,0 +1,42 @@
+{"scope":"line","query":"KALSHI-ACCESS-KEY","path":"src/venues/kalshi/auth.rs","component":"authApi"}
+{"scope":"line","query":"KALSHI-ACCESS-SIGNATURE","path":"src/venues/kalshi/auth.rs","component":"authApi"}
+{"scope":"line","query":"trade-api/v2","path":"src/venues/kalshi/mod.rs","component":"authApi"}
+{"scope":"line","query":"trade-api/v2","path":"src/venues/kalshi/auth.rs","component":"authApi"}
+{"scope":"line","query":"RSA-PSS","path":"README.md","component":"authApi"}
+{"scope":"line","query":"RSA-PSS","path":"src/venues/kalshi/auth.rs","component":"authApi"}
+{"scope":"line","query":"RSA-PSS","path":"src/venues/kalshi/mod.rs","component":"authApi"}
+{"scope":"line","query":"RSA-PSS","path":"src/venues/kalshi/ws.rs","component":"authApi"}
+{"scope":"line","query":"RSA-PSS","path":"Cargo.toml","component":"authApi"}
+{"scope":"line","query":"kalshi_api","path":"src/venues/kalshi/auth.rs","component":"authApi"}
+{"scope":"line","query":"kalshi_api","path":"README.md","component":"authApi"}
+{"scope":"line","query":"kalshi_api","path":"src/main.rs","component":"authApi"}
+{"scope":"line","query":"kalshi_api","path":"src/venues/kalshi/mod.rs","component":"authApi"}
+{"scope":"line","query":"kalshi_api","path":".env.example","component":"authApi"}
+{"scope":"line","query":"create_order","path":"src/venues/kalshi/types.rs","component":"orderRealism"}
+{"scope":"line","query":"portfolio/orders","path":"src/venues/kalshi/auth.rs","component":"orderRealism"}
+{"scope":"line","query":"portfolio/orders","path":"src/venues/kalshi/orders.rs","component":"orderRealism"}
+{"scope":"line","query":"/orders","path":"src/venues/intl/orders.rs","component":"orderRealism"}
+{"scope":"line","query":"/orders","path":"src/venues/kalshi/orders.rs","component":"orderRealism"}
+{"scope":"line","query":"/orders","path":"src/venues/kalshi/auth.rs","component":"orderRealism"}
+{"scope":"line","query":"/orders","path":"src/venues/us/types.rs","component":"orderRealism"}
+{"scope":"line","query":"/orders","path":"README.md","component":"orderRealism"}
+{"scope":"line","query":"place_order","path":"src/venues/core.rs","component":"orderRealism"}
+{"scope":"line","query":"place_order","path":"src/venues/us/mod.rs","component":"orderRealism"}
+{"scope":"line","query":"place_order","path":"src/venues/intl/mod.rs","component":"orderRealism"}
+{"scope":"line","query":"place_order","path":"src/venues/kalshi/orders.rs","component":"orderRealism"}
+{"scope":"line","query":"place_order","path":"src/venues/lifecycle.rs","component":"orderRealism"}
+{"scope":"line","query":"PlaceOrder","path":"src/venues/us/types.rs","component":"orderRealism"}
+{"scope":"line","query":"PlaceOrder","path":"src/venues/us/mod.rs","component":"orderRealism"}
+{"scope":"line","query":"dry-run","path":"src/config.conservative.rs.example","component":"orderRealism"}
+{"scope":"line","query":"price_cents","path":"src/venues/intl/orders.rs","component":"orderRealism"}
+{"scope":"line","query":"yes_price","path":"src/venues/kalshi/ws.rs","component":"orderRealism"}
+{"scope":"line","query":"yes_price","path":"src/venues/kalshi/types.rs","component":"orderRealism"}
+{"scope":"line","query":"yes_price","path":"src/squadron/patrol_tasks.rs","component":"orderRealism"}
+{"scope":"line","query":"yes_price","path":"src/vipers/maker_impl.rs","component":"orderRealism"}
+{"scope":"line","query":"yes_price","path":"src/squadron/patrol_impl.rs","component":"orderRealism"}
+{"scope":"line","query":"no_price","path":"src/squadron/patrol_tasks.rs","component":"orderRealism"}
+{"scope":"line","query":"no_price","path":"src/vipers/maker_impl.rs","component":"orderRealism"}
+{"scope":"line","query":"no_price","path":"src/squadron/patrol_impl.rs","component":"orderRealism"}
+{"scope":"line","query":"kelly","path":"(readme/code aggregate)","component":"riskControls"}
+{"scope":"line","query":"stop loss","path":"(readme/code aggregate)","component":"riskControls"}
+{"scope":"line","query":"drawdown","path":"(readme/code aggregate)","component":"riskControls"}

@@ -17,7 +17,7 @@ import { formatReportMarkdown, writeOutputs } from "../src/research/report.ts";
 import { loadLatestRunFromDb, loadResearchRun, saveRun, CACHE_DB } from "../src/research/cache.ts";
 import { diffRuns } from "../src/research/diff.ts";
 import type { ResearchRun } from "../src/research/types.ts";
-import { REPORT_DIR, joinPath } from "../src/research/paths.ts";
+import { OUTPUT_DIR, REPORT_DIR, joinPath } from "../src/research/paths.ts";
 import { freshTestGeneratedAt, mintTestProductionRunId } from "./fixtures.ts";
 
 const SAMPLE_DIMENSIONS = {
@@ -223,12 +223,28 @@ describe("dimension reports", () => {
       excludedSdkOnly: [],
     };
     const diff = diffRuns(null, run);
-    await writeOutputs(run, diff, { dimensionLabel: "Sport-specific bots" });
+    // writeOutputs targets the real REPORT_DIR/OUTPUT_DIR — clean up so the
+    // synthetic dim-test-run files never leak into committed reports/outputs.
+    try {
+      await writeOutputs(run, diff, { dimensionLabel: "Sport-specific bots" });
 
-    const scoped = joinPath(REPORT_DIR, "latest-sports.md");
-    expect(await Bun.file(scoped).exists()).toBe(true);
-    const text = await Bun.file(scoped).text();
-    expect(text).toContain("Dimension: `sports`");
+      const scoped = joinPath(REPORT_DIR, "latest-sports.md");
+      expect(await Bun.file(scoped).exists()).toBe(true);
+      const text = await Bun.file(scoped).text();
+      expect(text).toContain("Dimension: `sports`");
+    } finally {
+      const cleanup = [
+        joinPath(OUTPUT_DIR, `run_${run.runId}.json`),
+        joinPath(REPORT_DIR, `run_${run.runId}.md`),
+        joinPath(OUTPUT_DIR, `${dimensionArtifactBasename("sports")}.json`),
+        joinPath(REPORT_DIR, `${dimensionArtifactBasename("sports")}.md`),
+        joinPath(REPORT_DIR, `${dimensionArtifactBasename("sports")}.diff.md`),
+      ];
+      for (const p of cleanup) {
+        const f = Bun.file(p);
+        if (await f.exists()) await f.unlink();
+      }
+    }
   });
 
   test("loadResearchRun loads latest run for a dimension", async () => {

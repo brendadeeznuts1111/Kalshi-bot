@@ -22,14 +22,14 @@ Success is a **green live run** on `market-making`, audit export, pattern report
 | **Discover vs apply gate** | broad discover, strict apply for gate-miss proofs | **done** | `tests/discover-gate.test.ts` |
 | **Evidence dual-hash** | `digest` + `contentDigest` on zstd NDJSON | **done** | [`AUDIT_ADAPTER.md`](AUDIT_ADAPTER.md) |
 | **Agent CLI (no dashboard)** | status / patterns / blueprint / report over `cache.db` | **done** | [`AGENT.md`](AGENT.md) |
-| **V5 — Live MM happy path** | Full `market-making` run with inspect when quota allows | **blocked** | `code_search` multi-wave (see blockers) |
+| **V5 — Live MM happy path** | Full `market-making` run with inspect when quota allows | **done** | run `2026-08-15T22-06-13-046Z`: 94 → 7 → shortlist 4, audit export, patterns, blueprint |
 | **4 — Bot scaffold** | Composite repo layout from lift + patterns (no live orders) | **planned** | after V5 green run |
 
 ## Current blockers
 
 | Blocker | Impact | Unblock |
 |---------|--------|---------|
-| **`code_search` economics** | One-shot inspect blocked even when bucket is full (10/10): ~21 queries/repo × N uncached ≫ 10/min | `GITHUB_RATE_LIMIT_WAIT=1` (multi-wave), tighter `--min-stars`, or warm real `inspect_cache`; `bun run rate-limit:status` |
+| **`code_search` economics** | One-shot inspect blocked even when bucket is full (10/10): ~21 queries/repo × N uncached ≫ 10/min | Proven on V5: `GITHUB_RATE_LIMIT_WAIT=1` multi-wave warms `inspect_cache` per run; 2–3 runs converge (cached repos skip live GitHub). Tighter `--min-stars` when quota is tight |
 | **Agent vs report SSOT** | Polluted `cache.db` can make `agent ground` disagree with committed `latest-*.md` | Synthetic shortlists (`description:"test"` + 100★) are fixtures; `purgeIneligibleRuns({ purgeTestInspect: true })` after test leaks |
 | **CI** | Remote PRs need the same gate as local pre-commit | `.github/workflows/check.yml` runs `bun run check`; local: `bun run hooks:install` |
 
