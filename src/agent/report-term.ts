@@ -35,8 +35,9 @@ export async function renderReportTerm(opts: ReportTermOptions): Promise<string>
   }
   const text = await file.text();
   if (opts.raw) return text;
-  const ansi = markdownToAnsi(text);
-  return isTtyStdout() ? wrapDisplay(ansi) : ansi;
+  if (isTtyStdout()) return wrapDisplay(markdownToAnsi(text));
+  // Piped / non-TTY: plain text, no ANSI escape codes.
+  return markdownToAnsi(text, { colors: false });
 }
 
 if (import.meta.main) {
