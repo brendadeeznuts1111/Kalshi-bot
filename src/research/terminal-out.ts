@@ -51,17 +51,8 @@ export function padDisplay(str: string, width: number, align: "left" | "right" =
   if (visible === width) return str;
   if (visible > width) {
     if (width <= 1) return plainDisplay(str).slice(0, Math.max(0, width));
-    // Truncate the plain visible text so we never split mid-ANSI sequence.
-    const plain = plainDisplay(str);
-    let out = "";
-    let w = 0;
-    for (const ch of plain) {
-      const cw = Bun.stringWidth(ch);
-      if (w + cw > width - 1) break;
-      out += ch;
-      w += cw;
-    }
-    return `${out}…`;
+    // Native width-aware truncation: preserves ANSI + OSC 8, ellipsis inside styles.
+    return Bun.sliceAnsi(str, 0, width, { ellipsis: "…" });
   }
   const pad = " ".repeat(width - visible);
   return align === "right" ? pad + str : str + pad;

@@ -57,11 +57,12 @@ describe("terminal-out", () => {
     expect(padDisplay("orders", 4).endsWith("…")).toBe(true);
   });
 
-  test("padDisplay truncates ANSI-colored text without leaving escapes", () => {
+  test("padDisplay truncates ANSI-colored text via Bun.sliceAnsi (width-aware, styles kept)", () => {
     const colored = "\u001b[31morders\u001b[0m";
     const truncated = padDisplay(colored, 4);
     expect(plainDisplay(truncated)).toBe("ord…");
-    expect(truncated.includes("\u001b[")).toBe(false);
+    expect(Bun.stringWidth(truncated)).toBe(4);
+    expect(truncated.includes("\u001b[31m")).toBe(true);
   });
 
   test("wrapDisplay preserves ANSI across soft wraps", () => {
