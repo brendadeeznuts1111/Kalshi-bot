@@ -34,6 +34,7 @@
     "reports:restore": "bun tools/restore-committed-artifacts.ts",
     "artifacts:restore": "bun tools/restore-committed-artifacts.ts",
     "guard": "bun scripts/audit-bun-native.ts",
+    "licenses:check": "bun pm licenses --prod --json",
     "check": "bun run guard && bun run typecheck && bun run test",
     "bun:ci": "bun run check",
     "rate-limit:status": "bun tools/github-rate-budget.ts",
