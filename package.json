@@ -39,7 +39,7 @@
     "bun:ci": "bun run check",
     "rate-limit:status": "bun tools/github-rate-budget.ts",
     "miss-taxonomy:status": "bun tools/miss-taxonomy-status.ts",
-    "hooks:install": "cp tools/pre-commit.sh .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit",
+    "hooks:install": "git config core.hooksPath .githooks && chmod +x .githooks/pre-commit tools/pre-commit.ts",
     "cache:purge-ineligible": "bun tools/purge-ineligible-runs.ts",
     "train:elo": "bun scripts/train-elo.ts",
     "train:elo:watch": "bun --watch scripts/train-elo.ts",

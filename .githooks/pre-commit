@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Bun-native pre-commit gate (see tools/pre-commit.ts).
+# Installed via: git config core.hooksPath .githooks
+set -euo pipefail
+root="$(git rev-parse --show-toplevel)"
+cd "$root"
+exec bun tools/pre-commit.ts
