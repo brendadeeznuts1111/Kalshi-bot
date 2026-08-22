@@ -12,6 +12,9 @@
  * with a full-suite fallback when changed-detection fails.
  * Conditional gates fire when their paths are staged. Protected artifact
  * deletions block the commit. SKIP_TEST_CHANGED=1 skips the test layer.
+ *
+ * Color: Bun.color('ansi') text + the inspect.table summary honor FORCE_COLOR
+ * (0=off, 1=16-color, 2=256, 3=truecolor; unset = auto — plain in non-TTY/CI).
  */
 import { spawn } from "bun";
 import { joinPath } from "../src/research/paths.ts";
@@ -164,7 +167,9 @@ async function main(): Promise<void> {
     status: s.ok ? paint("green", "ok") : paint("red", "FAIL"),
     ms: s.ms,
   }));
-  process.stderr.write(Bun.inspect.table(summaryRows) + "\n");
+  const force = Bun.env.FORCE_COLOR && Bun.env.FORCE_COLOR !== "0";
+  const tableOptions = force ? { colors: true } : undefined;
+  process.stderr.write(Bun.inspect.table(summaryRows, tableOptions) + "\n");
   if (failed) {
     process.stderr.write(paint("red", "pre-commit: FAILED (" + ms + "ms)\n"));
     process.exit(1);
