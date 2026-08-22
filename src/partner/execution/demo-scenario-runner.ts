@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import type { DemoProofInput, DemoProofScenario } from "./demo-proof.ts";
 
 export interface DemoScenarioRun {
@@ -94,5 +93,5 @@ async function runBunTestSpec(spec: ScenarioSpec) {
 }
 
 function digest(value: unknown): string {
-  return createHash("sha256").update(JSON.stringify(value), "utf8").digest("hex");
+  return new Bun.CryptoHasher("sha256").update(JSON.stringify(value), "utf8").digest("hex");
 }

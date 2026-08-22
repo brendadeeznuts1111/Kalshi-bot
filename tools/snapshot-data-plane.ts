@@ -13,9 +13,7 @@
  * @see https://bun.com/docs/runtime/child-process#spawn-a-process-bun-spawn
  */
 import { argValue, hasFlag } from '../src/cli/argv.ts';
-import { createHash } from "node:crypto";
 import { mkdirSync } from "node:fs";
-import { gzipSync, gunzipSync } from "node:zlib";
 import { openEventStore } from "../src/institutions/event-store/open-db.ts";
 import { DEFAULT_EVENT_STORE_DB } from "../src/institutions/event-store/paths.ts";
 import { summarizeMatchLiquidity } from "../src/institutions/event-store/match-liquidity.ts";
@@ -177,16 +175,16 @@ export function registryPathForScope(scope: SnapshotScope): string {
 export function computeFingerprint(snap: DataPlaneSnapshot): string {
   const clone = { ...snap };
   delete (clone as any).fingerprint;
-  const hash = createHash("sha256").update(JSON.stringify(clone)).digest("hex");
+  const hash = new Bun.CryptoHasher("sha256").update(JSON.stringify(clone)).digest("hex");
   return hash.slice(0, 8);
 }
 
 export function compressBuffer(buf: Buffer): Buffer {
-  return gzipSync(buf);
+  return Buffer.from(Bun.gzipSync(buf as Uint8Array<ArrayBuffer>));
 }
 
 export function decompressBuffer(buf: Buffer): Buffer {
-  return gunzipSync(buf);
+  return Buffer.from(Bun.gunzipSync(buf as Uint8Array<ArrayBuffer>));
 }
 
 /* ------------------------------------------------------------------ */

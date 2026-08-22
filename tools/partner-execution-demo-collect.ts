@@ -1,5 +1,4 @@
 #!/usr/bin/env bun
-import { createHash } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { openEventStore } from "../src/institutions/event-store/open-db.ts";
@@ -38,7 +37,7 @@ async function main(): Promise<void> {
     const effectiveAtMs = capturedAtMs;
     const proofStartMs = Date.parse(`${day}T00:00:00.000Z`);
     if (effectiveAtMs > proofStartMs) throw new Error("Checkpoint capture must occur no later than the requested proof-day start; seed the next demo day instead of backdating evidence");
-    const sourceSha256 = createHash("sha256").update(JSON.stringify({ environment: client.environment, outId, balanceCents: balance.balanceCents, effectiveAtMs })).digest("hex");
+    const sourceSha256 = new Bun.CryptoHasher("sha256").update(JSON.stringify({ environment: client.environment, outId, balanceCents: balance.balanceCents, effectiveAtMs })).digest("hex");
     const checkpoint = recordDemoBalanceCheckpoint(db, { partnerCode, outId, skin: "*", balanceCents: balance.balanceCents, effectiveAtMs, sourceSha256, createdAtMs: Date.now() });
     console.log(JSON.stringify({ checkpointId: checkpoint.id, effectiveAtMs, sourceSha256 }, null, 2));
     return;

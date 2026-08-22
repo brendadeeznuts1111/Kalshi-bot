@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import {
   DEMO_PROOF_SCHEMA_VERSION,
   DEMO_PROOF_SCENARIOS,
@@ -193,7 +192,7 @@ function positionDrift(
 }
 
 function sha256(value: string): string {
-  return createHash('sha256').update(value, 'utf8').digest('hex');
+  return new Bun.CryptoHasher("sha256").update(value, "utf8").digest("hex");
 }
 
 function validDay(day: string): boolean {
