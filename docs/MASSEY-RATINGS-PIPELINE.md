@@ -76,8 +76,25 @@ full-suite flake (POST /ops/kalshi-rotate-key) passes standalone and is unrelate
 - Odds comparison (moneyline edge) needs live odds persisted per event; the
   probability derivation is ready - capture book odds to enable edge flags.
 
+## Scheduling, config, edge, report (built 2026-08-22)
+
+- Bun.cron job in scripts/cron-main.ts: MASSEY_SYNC=1 gate, schedule from
+  massey.config.json5 (default 0 3 * * *), syncs configured sports with
+  --max-age-hours then crossrefs each sport. Registration pins { tz: "UTC" }
+  - in-process Bun.cron defaults to SYSTEM LOCAL time on 1.4 (verified: local
+  vs UTC differ by the machine offset); the header documents this for the
+  pre-existing jobs too.
+- massey.config.json5: JSON5 config (Bun.JSON5.parse) - sync sports /
+  maxAgeHours / schedule, crossref sports / reportRows; env overrides.
+- edge.ts: lineImpliedFromDecimal / americanToDecimal / masseyEdge /
+  vigFreeEdge (overround removal) + tests. Odds are NOT persisted for book
+  events yet - the edge machinery is ready; capturing live odds per event
+  enables automatic edge flags.
+- massey:crossref --report writes research/outputs/massey-crossref.md + .json
+  (coverage + implied win pcts; tennis demo: 46/139 covered).
+
 ## Next phases
 
-1. Cron - register massey:sync jobs in scripts/cron-main.ts (env-gated, per-sport cadence).
-2. Config + report - JSON5 sport config; markdown/HTML outlier report served like research/serve.ts.
-3. Verify bun run check on Bun 1.4.0 (now the pinned baseline).
+1. Odds capture: persist plive/ezlive moneyline per skin_event so masseyEdge /
+   vigFreeEdge produce automatic outlier flags in the report.
+2. Verify bun run check on Bun 1.4.0 (now the pinned baseline).

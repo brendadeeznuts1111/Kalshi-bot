@@ -15,6 +15,7 @@
  *   --sport   book sport bucket (volleyball | tennis | basketball | ...).
  *   --rows=N  print first N matched rows (default 10; 0 = all).
  *   --json    emit one JSON object { summary, rows }.
+ *   --report  also write research/outputs/massey-crossref.md + .json artifacts.
  */
 import { argValue, hasFlag } from '../src/cli/argv.ts';
 import { openEventStore } from '../src/institutions/event-store/open-db.ts';
@@ -58,6 +59,7 @@ function formatRow(r: MasseyCrossrefRow): string {
 async function main(): Promise<void> {
   const sport = argValue('sport') ?? 'volleyball';
   const json = hasFlag('json');
+  const report = hasFlag('report');
   const rowsLimit = Number(argValue('rows') ?? '10') || 0;
   const masseyDb = openMasseyDb();
   const bookDb = openEventStore({ readonly: true });
@@ -83,6 +85,24 @@ async function main(): Promise<void> {
     } else {
       for (const r of shown) console.log(formatRow(r));
     }
+  }
+  if (report) {
+    const dir = "./research/outputs";
+    const mk = Bun.spawn(["mkdir", "-p", dir]);
+    await mk.exited;
+    const coveredRows = result.rows.filter((row) => row.covered);
+    const md = [
+      "# Massey xref: " + sport,
+      "",
+      "- book events: " + result.total + " | covered: " + result.covered + " | uncovered: " + (result.total - result.covered),
+      "",
+      "## Covered",
+      "",
+      ...coveredRows.map((row) => "| " + row.bookLeague + " | " + row.bookHome + " | " + (row.homeMatch?.team ?? "-") + " | " + (row.homeWinPct != null ? row.homeWinPct.toFixed(3) : "-") + " | " + row.bookAway + " | " + (row.awayMatch?.team ?? "-") + " | " + (row.awayWinPct != null ? row.awayWinPct.toFixed(3) : "-") + " |"),
+    ].join("\n");
+    await Bun.write(dir + "/massey-crossref.md", md + "\n");
+    await Bun.write(dir + "/massey-crossref.json", JSON.stringify({ sport, total: result.total, covered: result.covered, rows: result.rows }, null, 2));
+    console.log("report: " + dir + "/massey-crossref.md (+.json)");
   }
   masseyDb.close();
   bookDb.close();

@@ -17,6 +17,10 @@
  *   - Match liquidity:   every 30 minutes (recompute + ground; volume via env)
  *   - Inventory: every 1 minute when PARTNER_SYNC=1 (stream-list → skin_events)
  *   - Seat finance: when PARTNER_FINANCE_CRON=1 (registry → capacity → optional Telegram)
+ *
+ * TZ NOTE (Bun 1.4): in-process Bun.cron interprets schedules in the SYSTEM
+ * LOCAL time zone (1.3.x used UTC). The UTC labels above describe intent;
+ * only the massey job pins { tz: "UTC" } explicitly.
  */
 import { ensureEventStoreDir, openEventStore } from "../src/institutions/event-store/open-db.ts";
 import { DEFAULT_EVENT_STORE_DB } from "../src/institutions/event-store/paths.ts";
@@ -64,6 +68,13 @@ const INVENTORY_PROMOTE_TELEGRAM = Bun.env.INVENTORY_PROMOTE_TELEGRAM === "1";
 const INTERVAL_PARTNER_FINANCE =
   Bun.env.PARTNER_FINANCE_CRON_SCHEDULE?.trim() || "0 9 * * *";
 const PARTNER_FINANCE_ENABLED = Bun.env.PARTNER_FINANCE_CRON === "1";
+/**
+ * Massey ratings sync + crossref. Enable with MASSEY_SYNC=1.
+ * Sports/schedule/max-age come from massey.config.json5 (env overrides).
+ */
+const INTERVAL_MASSEY_SYNC =
+  Bun.env.MASSEY_SYNC_CRON_SCHEDULE?.trim() || "0 3 * * *";
+const MASSEY_SYNC_ENABLED = Bun.env.MASSEY_SYNC === "1";
 
 // ── Jobs ────────────────────────────────────────────────────────
 
@@ -388,6 +399,47 @@ async function jobPartnerFinance(): Promise<void> {
   }
 }
 
+
+/**
+ * Massey ratings sync + crossref (Bun.cron, opt-in MASSEY_SYNC=1).
+ * Syncs configured sports with a freshness gate, then crossrefs each
+ * configured sport and logs coverage.
+ */
+async function jobMasseySync(): Promise<void> {
+  if (!MASSEY_SYNC_ENABLED) return;
+  const start = Date.now();
+  try {
+    const { loadMasseyConfig } = await import(
+      "../src/institutions/massey/config.ts"
+    );
+    const cfg = loadMasseyConfig();
+    const sportList = cfg.sync.sports.join(",");
+    const proc = Bun.spawn(
+      [
+        "bun", "run", "massey:sync", "--",
+        `--sport=${sportList}`,
+        "--write",
+        `--max-age-hours=${cfg.sync.maxAgeHours}`,
+        "--rows=0",
+      ],
+      { cwd: import.meta.dir + "/..", stdout: "inherit", stderr: "inherit" },
+    );
+    const code = await proc.exited;
+    if (code !== 0) throw new Error(`massey:sync exited ${code}`);
+    for (const sport of cfg.crossref.sports) {
+      const cr = Bun.spawn(
+        ["bun", "run", "massey:crossref", "--", `--sport=${sport}`, "--rows=0"],
+        { cwd: import.meta.dir + "/..", stdout: "inherit", stderr: "inherit" },
+      );
+      const crCode = await cr.exited;
+      if (crCode !== 0) throw new Error(`massey:crossref ${sport} exited ${crCode}`);
+    }
+    console.error(`[cron:massey] sync+crossref ok · ${Date.now() - start}ms`);
+  } catch (err) {
+    console.error(`[cron:massey] Error: ${err}`);
+  }
+}
+
 /** HEAD/GET check for OFFICIAL_URLS + glossary entry urls (hard via probe engine). */
 async function jobGlossaryUrls(): Promise<void> {
   const start = Date.now();
@@ -474,6 +526,7 @@ async function main(): Promise<void> {
     await jobLiquidityPipeline();
     await jobInventorySync();
     await jobPartnerFinance();
+    await jobMasseySync();
     console.error(`[cron] All jobs complete · sports metadata ${metadataOk ? "ok" : "failed"}.`);
     process.exitCode = metadataOk ? 0 : 1;
     return;
@@ -488,7 +541,8 @@ async function main(): Promise<void> {
   contrast: ${INTERVAL_CONTRAST}
   liquidity:${INTERVAL_LIQUIDITY}
   inventory: ${INVENTORY_SYNC_ENABLED ? INTERVAL_INVENTORY_SYNC : "off (INVENTORY_SYNC=1)"}
-  finance:  ${PARTNER_FINANCE_ENABLED ? INTERVAL_PARTNER_FINANCE : "off (PARTNER_FINANCE_CRON=1)"}`);
+  finance:  ${PARTNER_FINANCE_ENABLED ? INTERVAL_PARTNER_FINANCE : "off (PARTNER_FINANCE_CRON=1)"}
+  massey:   ${MASSEY_SYNC_ENABLED ? INTERVAL_MASSEY_SYNC : "off (MASSEY_SYNC=1)"}`);
   console.error("[cron] Process running — use SIGTERM to stop.");
 
   Bun.cron(INTERVAL_LOGGER, jobLogger);
@@ -503,6 +557,10 @@ async function main(): Promise<void> {
   }
   if (PARTNER_FINANCE_ENABLED) {
     Bun.cron(INTERVAL_PARTNER_FINANCE, jobPartnerFinance);
+  }
+  if (MASSEY_SYNC_ENABLED) {
+    // Pin UTC: in-process Bun.cron defaults to system local time (1.4 change).
+    Bun.cron(INTERVAL_MASSEY_SYNC, jobMasseySync, { tz: "UTC" });
   }
   await new Promise(() => {});
 }
