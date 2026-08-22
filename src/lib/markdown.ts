@@ -30,6 +30,15 @@
  * argument with an explicit reactVersion: 18 — React 18 and older do not
  * understand the default transitional element symbol (React 19+ only).
  *
+ * ## Markdown file imports (the .md loader)
+ *
+ * Bun lets you import .md files directly (import html from "./x.md").
+ * VERIFIED: the loader renders with DEFAULT options — no tagFilter, so raw
+ * <script> passes through unescaped; no autolinks; no heading ids. It is NOT
+ * a drop-in for markdownToHtml presets on untrusted/operator input — keep
+ * using the presets there (they enable tagFilter). The loader is only safe
+ * for trusted markdown rendered with native defaults.
+ *
  * @see https://bun.com/docs/runtime/markdown
  */
 
