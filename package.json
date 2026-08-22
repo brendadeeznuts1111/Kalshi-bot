@@ -1,7 +1,7 @@
 {
   "name": "kalshi-bot-research",
   "version": "0.2.0",
-  "packageManager": "bun@1.3.14",
+  "packageManager": "bun@1.4.0",
   "private": true,
   "description": "Discover and rank public Kalshi trading bots on GitHub (Bun + gh CLI)",
   "type": "module",
@@ -76,9 +76,10 @@
     "domain:pandora-promote": "bun tools/domain-pandora-cli.ts --promote",
     "domain:resolve-smoke": "bun tools/resolve-smoke.ts",
     "domain:event": "bun tools/domain-event-cli.ts",
-    "live-tracker": "bun live-tracker.ts",
+    "live-tracker": "bun tools/live-tracker-cli.ts",
     "inventory:sync": "bun tools/inventory-sync-cli.ts",
     "inventory:watch": "bun tools/inventory-watch-cli.ts",
+    "massey:sync": "bun tools/massey-sync-cli.ts",
     "inventory:leagues": "bun tools/inventory-leagues-cli.ts",
     "inventory:enrich": "bun tools/inventory-sync-cli.ts --enrich-only --sport=all --enrich-scope=unlinked",
     "inventory:enrich:quality": "bun tools/inventory-sync-cli.ts --enrich-only --sport=all --enrich-scope=unlinked --dry-run --json",
@@ -191,16 +192,16 @@
     "test:liquidity": "bun test --parallel tests/institutions/match-liquidity.test.ts tests/institutions/match-liquidity-ground.test.ts tests/institutions/match-liquidity-backfill.test.ts tests/institutions/match-liquidity-pipeline.test.ts"
   },
   "engines": {
-    "bun": ">=1.3.14"
+    "bun": ">=1.4.0"
   },
   "dependencies": {
-    "@factorywager/proton-pass": "file:../packages/proton-pass",
+    "@factorywager/proton-pass": "file:vendor/proton-pass",
     "drizzle-orm": "^0.45.2",
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@types/bun": "1.3.14",
-    "bun-types": "1.3.14",
+    "@types/bun": "1.4.0",
+    "bun-types": "1.4.0",
     "typescript": "6.0.3"
   }
 }

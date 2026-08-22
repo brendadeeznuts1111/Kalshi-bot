@@ -1,9 +1,9 @@
 /**
  * TOML serialization through Bun's native API with a stable-runtime fallback.
  *
- * Project R is pinned to Bun 1.3.14, while `Bun.TOML.stringify` arrived on the
- * Bun 1.4 channel. Keep the compatibility decision at this one boundary so
- * callers and tests have the same behavior on stable and newer runtimes.
+ * Bun 1.4.0 (the active runtime) ships native `Bun.TOML.stringify`; the pre-1.4
+ * manual serializer fallback is kept so callers behave identically on older
+ * runtimes (e.g. CI pinned to 1.3.14) without duplicating the decision.
  *
  * This mirrors the governed helper at `~/Projects/lib/toml-stringify.ts`.
  *
@@ -149,9 +149,9 @@ function fallbackTomlStringify<TValue>(value: TValue): string {
   return `${collectTomlBlocks(parsed, [], false).join("\n\n")}\n`;
 }
 
-/** Serialize an object as TOML on both Bun 1.3.14 and Bun 1.4+. */
+/** Serialize an object as TOML: native-first with feature detection. */
 export function tomlStringify<TValue>(value: TValue): string {
-  const nativeStringify = Reflect.get(TOML, "stringify");
-  if (typeof nativeStringify === "function") return nativeStringify.call(TOML, value);
+  const nativeStringify = (TOML as { stringify?: (v: unknown) => string }).stringify;
+  if (typeof nativeStringify === "function") return nativeStringify(value);
   return fallbackTomlStringify(value);
 }

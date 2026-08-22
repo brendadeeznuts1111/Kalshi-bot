@@ -25,6 +25,25 @@ export const BANNED_PACKAGES = new Map<string, string>([
   ["toml", "Bun.TOML.parse() / governed tomlStringify()"],
   ["@iarna/toml", "Bun.TOML.parse() / governed tomlStringify()"],
   ["@ltd/j-toml", "Bun.TOML.parse() / governed tomlStringify()"],
+  // Bun 1.4 replaces-table (bun.com/blog/bun-v1.4): npm package -> native API
+  ["cli-truncate", "Bun.sliceAnsi()"],
+  ["concurrently", "bun run --parallel"],
+  ["express", "Bun.serve"],
+  ["fast-xml-parser", "Bun.XML.parse()"],
+  ["json5", "Bun.JSON5.parse()"],
+  ["jsonc-parser", "Bun.JSONC.parse()"],
+  ["marked", "Bun.markdown.html()"],
+  ["ndjson", "Bun.JSONL.parse()"],
+  ["node-cron", "Bun.cron()"],
+  ["node-pty", "Bun.Terminal"],
+  ["npm-run-all", "bun run --parallel"],
+  ["path-to-regexp", "Bun.serve path matching"],
+  ["puppeteer", "Bun.WebView"],
+  ["serve-static", "Bun.serve"],
+  ["sharp", "Bun.Image"],
+  ["slice-ansi", "Bun.sliceAnsi()"],
+  ["tar", "Bun.Archive"],
+  ["xml2js", "Bun.XML.parse()"],
 ]);
 
 const DEPENDENCY_SECTIONS = [

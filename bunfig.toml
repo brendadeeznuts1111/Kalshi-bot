@@ -6,6 +6,12 @@ frozenLockfile = true
 # @see https://bun.com/docs/runtime/bunfig#run-shell-use-the-system-shell-or-buns-shell
 shell = "bun"
 
+# Exit when the parent process dies, and on exit SIGKILL every descendant.
+# Linux: prctl(PR_SET_PDEATHSIG, SIGKILL) / macOS: kqueue parent watcher.
+# Low overhead; useful for CI runners and supervisors. Bun >= 1.3.14.
+# @see https://bun.com/docs/runtime/bunfig#run-no-orphans
+noOrphans = true
+
 [console]
 # Default depth for Bun.inspect / console.log.
 # Override per-run: bun --console-depth 5 run <script>
@@ -20,8 +26,8 @@ depth = 3
 # Override any key at runtime via env vars:
 #   KALSHI__REGULATORY__DATABASE_PATH=/tmp/test.db bun run script.ts
 #
-# Native API reference. `src/partner/toml-stringify.ts` owns the stable-runtime
-# fallback until the selected stable Bun ships stringify:
+# Native API reference. Bun 1.4.0 ships `Bun.TOML.stringify`; `src/partner/toml-stringify.ts`
+# keeps a feature-detected native call with a pre-1.4 manual fallback:
 #   Bun.TOML.parse(string) -> object
 #   Bun.TOML.stringify(object) -> string
 # @see https://bun.com/docs/api/toml

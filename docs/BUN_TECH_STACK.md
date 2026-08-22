@@ -17,7 +17,7 @@ Agent checklist for Kalshi-bot. Prefer native Bun over npm. Deep API map:
 
 | Rule | Here |
 | ---- | ---- |
-| Bun latest stable, native APIs only | **yes** — pin `bun-types@1.3.x` in `package.json`; run with Bun |
+| Bun latest stable, native APIs only | **yes** — pin `bun-types@1.4.x` in `package.json`; run with Bun |
 | TypeScript `strict: true` | **yes** — [`tsconfig.json`](../tsconfig.json) |
 | `"types": ["bun"]` (or bun-types package) | **yes** — `"types": ["bun"]` loads the `bun-types` package surface |
 | Branded domain IDs | **yes** — event-store brands, market-registry brands, partner execution brands; mint sortables via [`mintSortableId()`](../src/lib/ids.ts) (UUID v7) |
@@ -99,6 +99,7 @@ const server: Server = Bun.serve({
 | `Bun.peek` / `peek.status` | Settled-promise inspect | **yes** | [`bun-settle.ts`](../src/research/bun-settle.ts) |
 | `Bun.deepEquals` | Deep equality | **yes** | inspect-utils |
 | `Bun.inspect` / `.table` | Debug + TTY tables | **yes** | [`table-schema.ts`](../src/lib/table-schema.ts) + analyze/shortlist schemas · patterns `--inspect`, protonpass health |
+| `Bun.JSONL.parse` / `.parseChunk` | JSONL parse + incremental chunk streaming (byte-offset carry) | **yes** | [`src/lib/jsonl.ts`](../src/lib/jsonl.ts) — live-tracker logs, WebView WS captures |
 | `Bun.escapeHTML` | HTML entities | **yes** | views / boards |
 | `Bun.stringWidth` / `stripANSI` / `wrapAnsi` | TTY width | **yes** | terminal-out, report-term |
 | `Bun.fileURLToPath` / `pathToFileURL` | URL ↔ path | **partial** | as needed |
