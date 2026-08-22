@@ -370,7 +370,7 @@ async function submitOrder(ev) {
       return;
     }
   }
-  const idempotencyKey = form.idempotencyKey.value.trim() || crypto.randomUUID();
+  const idempotencyKey = form.idempotencyKey.value.trim() || Bun.randomUUIDv7();
   if (live) form.idempotencyKey.value = idempotencyKey;
   btn.disabled = true;
   out.innerHTML = '<span class="muted">submitting…</span>';

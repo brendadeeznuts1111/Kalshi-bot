@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import type { Database } from "bun:sqlite";
 import type { DemoProofInput, DemoProofScenario } from "./demo-proof.ts";
 import { executionIdempotencyKeyToUuid } from "./kalshi.ts";
@@ -259,7 +258,7 @@ function utcDayWindow(day: string): { startMs: number; endMs: number } {
 }
 
 function digest(value: unknown): string {
-  return createHash("sha256").update(JSON.stringify(value), "utf8").digest("hex");
+  return new Bun.CryptoHasher("sha256").update(JSON.stringify(value), "utf8").digest("hex");
 }
 
 function safeAdd(left: number, right: number): number {

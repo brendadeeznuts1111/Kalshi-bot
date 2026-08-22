@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import {
   asSourceRegistryFingerprint,
   type SourceRegistryFingerprint,
@@ -15,7 +14,7 @@ export function sourceRegistryFingerprint(
 ): SourceRegistryFingerprint {
   const artifact = buildSportsSourceRegistryArtifact("1970-01-01T00:00:00.000Z", registry);
   return asSourceRegistryFingerprint(
-    createHash("sha256").update(canonicalJson(artifact)).digest("hex"),
+    new Bun.CryptoHasher("sha256").update(canonicalJson(artifact)).digest("hex"),
   );
 }
 

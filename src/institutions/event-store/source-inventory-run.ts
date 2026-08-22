@@ -1,5 +1,4 @@
 import type { Database } from "bun:sqlite";
-import { createHash } from "node:crypto";
 import {
   asAdapterId,
   asSourceKey,
@@ -486,7 +485,7 @@ function pageFingerprint(page: SourcePage<NormalizedSourceObservation>): string 
     nextCursor: page.nextCursor ?? null,
     exhausted: page.exhausted,
   });
-  return createHash("sha256").update(canonical).digest("hex");
+  return new Bun.CryptoHasher("sha256").update(canonical).digest("hex");
 }
 
 function canonicalJson(value: unknown): string {

@@ -1,5 +1,4 @@
 import type { Database } from 'bun:sqlite';
-import { createHash } from 'node:crypto';
 import {
   asAdapterId,
   asSelectorKind,
@@ -531,7 +530,7 @@ function assertEntityMatchesRun(entity: NormalizedSourceMetadata, run: RunRow): 
 }
 
 function pageFingerprint(page: MetadataPage<NormalizedSourceMetadata>): string {
-  return createHash('sha256')
+  return new Bun.CryptoHasher('sha256')
     .update(
       canonicalJson({
         request: page.request,
