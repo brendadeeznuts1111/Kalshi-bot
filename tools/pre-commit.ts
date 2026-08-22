@@ -17,6 +17,7 @@ import { spawn } from "bun";
 import { joinPath } from "../src/research/paths.ts";
 
 const root = joinPath(import.meta.dir, "..");
+const BUN = Bun.which("bun") ?? "bun";
 
 // ── Color: Bun.color('ansi') is TTY-aware (empty when unsupported) ─────
 const RESET = "\u001b[0m";
@@ -85,7 +86,7 @@ export function protectedDeletionViolations(deleted: Iterable<string>): string[]
 // ── Runner ──────────────────────────────────────────────────────────────
 async function runBatch(label: string, args: string[]): Promise<boolean> {
   process.stderr.write(paint("yellow", "pre-commit: " + label + "\n"));
-  const proc = spawn(args, { cwd: root, stdout: "inherit", stderr: "inherit" });
+  const proc = spawn([BUN, ...args], { cwd: root, stdout: "inherit", stderr: "inherit" });
   const code = await proc.exited;
   if (code !== 0) {
     process.stderr.write(paint("red", "pre-commit: " + label + " FAILED (" + code + ")\n"));
@@ -94,17 +95,25 @@ async function runBatch(label: string, args: string[]): Promise<boolean> {
 }
 
 async function runScriptBatch(label: string, scripts: readonly string[]): Promise<boolean> {
-  return runBatch(label, ["bun", "run", "--parallel", ...scripts]);
+  return runBatch(label, ["run", "--parallel", ...scripts]);
 }
 
-async function stagedPaths(): Promise<Set<string>> {
-  const out = await Bun.$`git diff --cached --name-only --diff-filter=ACM`.text();
+/** git stdout, or "" on failure (Bun.spawnSync, no shell interpolation). */
+function gitOutput(args: string[]): string {
+  const proc = Bun.spawnSync(["git", ...args], { cwd: root, stdout: "pipe", stderr: "pipe" });
+  return proc.exitCode === 0 ? new TextDecoder().decode(proc.stdout) : "";
+}
+
+function stagedPaths(): Set<string> {
+  const out = gitOutput(["diff", "--cached", "--name-only", "--diff-filter=ACM"]);
   return new Set(out.split("\n").filter(Boolean));
 }
 
-async function deletedPaths(): Promise<string[]> {
-  const out = await Bun.$`git diff --name-only --diff-filter=D -- research/audit-evidence research/reports/latest.md research/reports/latest.diff.md`.text();
-  const cached = await Bun.$`git diff --cached --name-only --diff-filter=D -- research/audit-evidence research/reports/latest.md research/reports/latest.diff.md`.text();
+/** Worktree + staged deletions under PROTECTED_PATHS (single source of truth). */
+function deletedPaths(): string[] {
+  const pathspec = ["--", ...PROTECTED_PATHS];
+  const out = gitOutput(["diff", "--name-only", "--diff-filter=D", ...pathspec]);
+  const cached = gitOutput(["diff", "--cached", "--name-only", "--diff-filter=D", ...pathspec]);
   return [...new Set([...out.split("\n"), ...cached.split("\n")])].filter(Boolean);
 }
 
@@ -127,20 +136,20 @@ async function main(): Promise<void> {
     process.stderr.write(paint("yellow", "pre-commit: SKIP_TEST_CHANGED=1 — tests skipped (reason in commit msg)\n"));
   } else {
     await step("test --changed=HEAD", async () => {
-      const ok = await runBatch("test --changed=HEAD", ["bun", "test", "--changed=HEAD", "--isolate", "--timeout", "15000"]);
+      const ok = await runBatch("test --changed=HEAD", ["test", "--changed=HEAD", "--isolate", "--timeout", "15000"]);
       if (ok) return true;
-      return runBatch("test (full fallback)", ["bun", "test", "--isolate", "--timeout", "15000"]);
+      return runBatch("test (full fallback)", ["test", "--isolate", "--timeout", "15000"]);
     });
   }
 
   await step("glossary + partners", () => runScriptBatch("glossary + partners", STATIC_BATCH_2));
 
-  const staged = await stagedPaths();
+  const staged = stagedPaths();
   for (const script of resolveConditionalGates(staged)) {
-    await step(script, () => runBatch(script, ["bun", "run", script]));
+    await step(script, () => runBatch(script, ["run", script]));
   }
 
-  const violations = protectedDeletionViolations(await deletedPaths());
+  const violations = protectedDeletionViolations(deletedPaths());
   if (violations.length > 0) {
     failed = true;
     process.stderr.write(paint("red", "pre-commit: protected artifact deletions:\n"));
