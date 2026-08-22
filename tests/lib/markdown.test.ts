@@ -92,6 +92,42 @@ describe('markdownToHtml', () => {
   });
 });
 
+
+describe("defaults (Bun native vs presets)", () => {
+  test("native-off options stay off in every preset", () => {
+    for (const p of [MARKDOWN_HTML_GFM, MARKDOWN_HTML_DOCS, MARKDOWN_HTML_DASHBOARD, MARKDOWN_HTML_STRICT]) {
+      const opts = p as Bun.markdown.Options; // presets are as-const literal types
+      expect(opts.wikiLinks).toBeUndefined();
+      expect(opts.underline).toBeUndefined();
+      expect(opts.latexMath).toBeUndefined();
+      expect(opts.hardSoftBreaks).toBeUndefined();
+      expect(opts.collapseWhitespace).toBeUndefined();
+      expect(opts.permissiveAtxHeaders).toBeUndefined();
+      expect(opts.noIndentedCodeBlocks).toBeUndefined();
+    }
+  });
+
+  test("native-on defaults (tables/strikethrough/tasklists) are locked in", () => {
+    for (const p of [MARKDOWN_HTML_GFM, MARKDOWN_HTML_DOCS, MARKDOWN_HTML_DASHBOARD, MARKDOWN_HTML_STRICT]) {
+      expect(p.tables).toBe(true);
+      expect(p.strikethrough).toBe(true);
+      expect(p.tasklists).toBe(true);
+    }
+  });
+
+  test("numbered + nested + task lists render per parser semantics", () => {
+    const html = markdownToHtml("1. first\n   1. sub\n2. second");
+    expect(html).toContain("<ol>");
+    expect(html).toContain("<li>first");
+    expect(html).toContain("<ol>\n<li>sub</li>\n</ol>");
+    const start = markdownToHtml("3. alpha");
+    expect(start).toContain("<ol start=\"3\">");
+    const tasks = markdownToHtml("- [x] done\n- [ ] open");
+    expect(tasks).toContain("disabled checked");
+    expect(tasks).toMatch(/task-list-item/);
+  });
+});
+
 describe('markdownToAnsi', () => {
   test('renders bold without HTML tags', () => {
     const out = markdownToAnsi('# Hello\n\nThis is **bold**.');

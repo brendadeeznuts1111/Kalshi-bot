@@ -6,6 +6,30 @@
  * callers pass a preset name (docs | dashboard | strict | gfm) or a raw
  * Bun.markdown.Options object.
  *
+ * ## Bun native defaults (verified 2026-08-22 against Bun 1.4.0)
+ *
+ * ON by default: tables, strikethrough, tasklists.
+ * OFF by default (opt-in): autolinks, headings, hardSoftBreaks, wikiLinks,
+ * underline, latexMath, collapseWhitespace, permissiveAtxHeaders,
+ * noIndentedCodeBlocks, noHtmlBlocks, noHtmlSpans, tagFilter.
+ *
+ * Our presets turn ON beyond the native defaults:
+ *   gfm       + tagFilter, autolinks
+ *   docs      + gfm + headings { ids, autolink }          (default for markdownToHtml)
+ *   dashboard + gfm + headings { ids }, noHtmlBlocks
+ *   strict    + dashboard + noHtmlSpans
+ * The native-off options (wikiLinks, underline, latexMath, hardSoftBreaks, …)
+ * stay OFF in every preset. List rendering (ordered/nested/task) is parser
+ * behavior, not configurable: explicit start numbers render as ol start=,
+ * nested lists render as nested ol/ul, task items render checked checkboxes.
+ *
+ * ## React
+ *
+ * Bun.markdown.react() is NOT used by this repo (no React dependency or JSX
+ * in the stack). If it is ever adopted, pass the parser options as the third
+ * argument with an explicit reactVersion: 18 — React 18 and older do not
+ * understand the default transitional element symbol (React 19+ only).
+ *
  * @see https://bun.com/docs/runtime/markdown
  */
 
