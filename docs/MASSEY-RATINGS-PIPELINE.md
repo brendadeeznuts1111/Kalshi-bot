@@ -62,11 +62,22 @@ full-suite flake (POST /ops/kalshi-rotate-key) passes standalone and is unrelate
   bun run massey:sync -- --sport=volleyball,basketball --write --max-age-hours=24
   bun run massey:sync -- --sport=cvol/ncaa-d1 --json                    # machine-readable
 
+## Crossref (built 2026-08-22)
+
+- tools/massey-crossref-cli.ts (bun run massey:crossref -- --sport=tennis)
+- Joins latest Massey snapshots (massey.db) vs book events (event-store.db
+  skin_events) per sport bucket; normalizes names (LAST, First reorder,
+  parenthetical stripping), exact-then-strong matching with a 4-char length
+  guard, implied win pct from EW/(EW+EL) or record winPct.
+- Demo results: tennis 46/139 book events covered (real player matches:
+  Ferrari, Monfils, Boulter, Shelton, ...); volleyball 0/8 (book RU leagues
+  Russia League Pro / Belarus Liga Pro / UPVL / Indiya have no Massey
+  coverage - reported honestly, no false positives).
+- Odds comparison (moneyline edge) needs live odds persisted per event; the
+  probability derivation is ready - capture book odds to enable edge flags.
+
 ## Next phases
 
-1. Crossref - join latest Massey ratings vs plive/ezlive skin_events lines (event-store.db):
-   map Massey team/competition to competition_id, derive Massey-implied probability from
-   EW/EL or winPct, compare with moneyline/spread/total, flag outliers.
-2. Cron - register massey:sync jobs in scripts/cron-main.ts (env-gated, per-sport cadence).
-3. Config + report - JSON5 sport config; markdown/HTML outlier report served like research/serve.ts.
-4. Verify bun run check on Bun 1.4.0 (now the pinned baseline).
+1. Cron - register massey:sync jobs in scripts/cron-main.ts (env-gated, per-sport cadence).
+2. Config + report - JSON5 sport config; markdown/HTML outlier report served like research/serve.ts.
+3. Verify bun run check on Bun 1.4.0 (now the pinned baseline).

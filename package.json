@@ -81,6 +81,7 @@
     "inventory:sync": "bun tools/inventory-sync-cli.ts",
     "inventory:watch": "bun tools/inventory-watch-cli.ts",
     "massey:sync": "bun tools/massey-sync-cli.ts",
+    "massey:crossref": "bun tools/massey-crossref-cli.ts",
     "inventory:leagues": "bun tools/inventory-leagues-cli.ts",
     "inventory:enrich": "bun tools/inventory-sync-cli.ts --enrich-only --sport=all --enrich-scope=unlinked",
     "inventory:enrich:quality": "bun tools/inventory-sync-cli.ts --enrich-only --sport=all --enrich-scope=unlinked --dry-run --json",
