@@ -18,15 +18,12 @@ import { joinPath } from "../src/research/paths.ts";
 
 const root = joinPath(import.meta.dir, "..");
 
-// ── ANSI (Bun.color returns color names, not escape codes) ─────────────
-const ANSI = {
-  red: "\u001b[31m",
-  green: "\u001b[32m",
-  yellow: "\u001b[33m",
-  reset: "\u001b[0m",
-} as const;
-const paint = (code: keyof typeof ANSI, text: string): string =>
-  ANSI[code] + text + ANSI.reset;
+// ── Color: Bun.color('ansi') is TTY-aware (empty when unsupported) ─────
+const RESET = "\u001b[0m";
+const paint = (color: string, text: string): string => {
+  const ansi = Bun.color(color, "ansi");
+  return ansi ? ansi + text + RESET : text;
+};
 
 // ── Gate definitions (data-driven) ─────────────────────────────────────
 const STATIC_BATCH_1 = ["guard", "typecheck"] as const;
@@ -112,7 +109,7 @@ async function deletedPaths(): Promise<string[]> {
 }
 
 async function main(): Promise<void> {
-  const started = Date.now();
+  const started = Bun.nanoseconds();
   const steps: Array<{ label: string; ok: boolean; ms: number }> = [];
   let failed = false;
 
@@ -151,11 +148,14 @@ async function main(): Promise<void> {
     process.stderr.write("  fix fixtures or run: bun run artifacts:restore\n");
   }
 
-  const ms = Date.now() - started;
+  const ms = Math.round((Bun.nanoseconds() - started) / 1e6);
   process.stderr.write("pre-commit: summary\n");
-  for (const s of steps) {
-    process.stderr.write("  " + (s.ok ? paint("green", "ok") : paint("red", "FAIL")) + "  " + s.label + " (" + s.ms + "ms)\n");
-  }
+  const summaryRows = steps.map((s) => ({
+    gate: s.label,
+    status: s.ok ? paint("green", "ok") : paint("red", "FAIL"),
+    ms: s.ms,
+  }));
+  process.stderr.write(Bun.inspect.table(summaryRows) + "\n");
   if (failed) {
     process.stderr.write(paint("red", "pre-commit: FAILED (" + ms + "ms)\n"));
     process.exit(1);
