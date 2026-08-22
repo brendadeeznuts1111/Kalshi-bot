@@ -1,98 +1,166 @@
 #!/usr/bin/env bun
 /**
- * Pre-commit gate (Bun-native, replaces tools/pre-commit.sh).
+ * Pre-commit gate (Bun-native).
  *
  * Installed via core.hooksPath -> .githooks/pre-commit (works in the
  * submodule layout where .git/hooks does not exist).
  *
- * Gates:
- *   - guard + typecheck in parallel (bun run --parallel semantics via spawn)
- *   - bun test --changed=HEAD (Bun 1.4 primitive: only tests touched by the
- *     diff; falls back to the full suite if changed-detection fails)
+ * Static gates run in parallel batches (bun run --parallel, prefixed output):
+ *   - guard + typecheck
  *   - glossary:check + partners:validate
- *   - conditional partner-TTL + colors checks when those paths are staged
- *   - block deletion of protected committed artifacts
- *
- * Escape hatch: SKIP_TEST_CHANGED=1 skips the test layer (reason in commit msg).
+ * Tests run only for the diff (bun test --changed=HEAD, Bun 1.4 primitive),
+ * with a full-suite fallback when changed-detection fails.
+ * Conditional gates fire when their paths are staged. Protected artifact
+ * deletions block the commit. SKIP_TEST_CHANGED=1 skips the test layer.
  */
 import { spawn } from "bun";
+import { joinPath } from "../src/research/paths.ts";
 
-const root = Bun.$`git rev-parse --show-toplevel`.textSync().trim();
-const RED = "\u001b[31m";
-const GRN = "\u001b[32m";
-const YLW = "\u001b[33m";
-const RST = "\u001b[0m";
+const root = joinPath(import.meta.dir, "..");
 
-async function run(label: string, args: string[]): Promise<boolean> {
-  process.stderr.write(`pre-commit: ${label}\n`);
+// ── ANSI (Bun.color returns color names, not escape codes) ─────────────
+const ANSI = {
+  red: "\u001b[31m",
+  green: "\u001b[32m",
+  yellow: "\u001b[33m",
+  reset: "\u001b[0m",
+} as const;
+const paint = (code: keyof typeof ANSI, text: string): string =>
+  ANSI[code] + text + ANSI.reset;
+
+// ── Gate definitions (data-driven) ─────────────────────────────────────
+const STATIC_BATCH_1 = ["guard", "typecheck"] as const;
+const STATIC_BATCH_2 = ["glossary:check", "partners:validate"] as const;
+
+export const CONDITIONAL_GATES: ReadonlyArray<{ script: string; paths: readonly string[] }> = [
+  {
+    script: "partner:toml:validate",
+    paths: [
+      "config/partners.toml",
+      "config/partners.example.toml",
+      "src/partner/toml-config.ts",
+      "tools/partner-toml.ts",
+      "tests/partner/toml-config.test.ts",
+    ],
+  },
+  {
+    script: "colors:check",
+    paths: [
+      "src/lib/color",
+      "src/lib/design-colors.ts",
+      "scripts/generate-color-artifacts.ts",
+      "public/colors.css",
+      "public/registry/color-system.json",
+      "docs/COLORS.md",
+      "src/research/hq-app/color-vars.css",
+    ],
+  },
+] as const;
+
+export const PROTECTED_PATHS = [
+  "research/audit-evidence",
+  "research/reports/latest.md",
+  "research/reports/latest.diff.md",
+] as const;
+
+/** A configured path matches a staged file when it is the file or a dir prefix. */
+function pathMatches(configured: string, staged: string): boolean {
+  if (staged === configured) return true;
+  const dir = configured.replace(/\/+$/, "");
+  return staged.startsWith(dir + "/");
+}
+
+/** Which conditional gates fire for the staged file set. */
+export function resolveConditionalGates(staged: Iterable<string>): string[] {
+  const files = new Set(staged);
+  return CONDITIONAL_GATES.filter((gate) =>
+    gate.paths.some((p) => [...files].some((s) => pathMatches(p, s))),
+  ).map((gate) => gate.script);
+}
+
+/** Protected-path deletions that must block the commit. */
+export function protectedDeletionViolations(deleted: Iterable<string>): string[] {
+  return [...deleted].filter((d) =>
+    PROTECTED_PATHS.some((p) => pathMatches(p, d)),
+  );
+}
+
+// ── Runner ──────────────────────────────────────────────────────────────
+async function runBatch(label: string, args: string[]): Promise<boolean> {
+  process.stderr.write(paint("yellow", "pre-commit: " + label + "\n"));
   const proc = spawn(args, { cwd: root, stdout: "inherit", stderr: "inherit" });
   const code = await proc.exited;
-  if (code !== 0) process.stderr.write(`${RED}pre-commit: ${label} FAILED (${code})${RST}\n`);
+  if (code !== 0) {
+    process.stderr.write(paint("red", "pre-commit: " + label + " FAILED (" + code + ")\n"));
+  }
   return code === 0;
 }
 
-async function runBunScript(label: string, script: string, extra: string[] = []): Promise<boolean> {
-  return run(label, ["bun", "run", script, ...extra]);
+async function runScriptBatch(label: string, scripts: readonly string[]): Promise<boolean> {
+  return runBatch(label, ["bun", "run", "--parallel", ...scripts]);
 }
 
 async function stagedPaths(): Promise<Set<string>> {
-  const out = Bun.$`git diff --cached --name-only --diff-filter=ACM`.textSync();
+  const out = await Bun.$`git diff --cached --name-only --diff-filter=ACM`.text();
   return new Set(out.split("\n").filter(Boolean));
+}
+
+async function deletedPaths(): Promise<string[]> {
+  const out = await Bun.$`git diff --name-only --diff-filter=D -- research/audit-evidence research/reports/latest.md research/reports/latest.diff.md`.text();
+  const cached = await Bun.$`git diff --cached --name-only --diff-filter=D -- research/audit-evidence research/reports/latest.md research/reports/latest.diff.md`.text();
+  return [...new Set([...out.split("\n"), ...cached.split("\n")])].filter(Boolean);
 }
 
 async function main(): Promise<void> {
   const started = Date.now();
+  const steps: Array<{ label: string; ok: boolean; ms: number }> = [];
   let failed = false;
 
-  // guard + typecheck in parallel (independent, read-only)
-  const [guardOk, typeOk] = await Promise.all([
-    run("guard", ["bun", "run", "guard"]),
-    run("typecheck", ["bun", "run", "typecheck"]),
-  ]);
-  if (!guardOk || !typeOk) failed = true;
+  const step = async (label: string, fn: () => Promise<boolean>): Promise<boolean> => {
+    const t = Date.now();
+    const ok = await fn();
+    steps.push({ label, ok, ms: Date.now() - t });
+    if (!ok) failed = true;
+    return ok;
+  };
 
-  // changed tests (Bun 1.4): only tests touched by the diff
+  await step("guard + typecheck", () => runScriptBatch("guard + typecheck", STATIC_BATCH_1));
+
   if (Bun.env.SKIP_TEST_CHANGED === "1") {
-    process.stderr.write(`${YLW}pre-commit: SKIP_TEST_CHANGED=1 — tests skipped (reason in commit msg)${RST}\n`);
+    process.stderr.write(paint("yellow", "pre-commit: SKIP_TEST_CHANGED=1 — tests skipped (reason in commit msg)\n"));
   } else {
-    const changed = await run("test --changed=HEAD", ["bun", "test", "--changed=HEAD", "--isolate", "--timeout", "15000"]);
-    if (!changed) {
-      const full = await run("test (full fallback)", ["bun", "test", "--isolate", "--timeout", "15000"]);
-      if (!full) failed = true;
-    }
+    await step("test --changed=HEAD", async () => {
+      const ok = await runBatch("test --changed=HEAD", ["bun", "test", "--changed=HEAD", "--isolate", "--timeout", "15000"]);
+      if (ok) return true;
+      return runBatch("test (full fallback)", ["bun", "test", "--isolate", "--timeout", "15000"]);
+    });
   }
 
-  if (!(await runBunScript("glossary:check", "glossary:check"))) failed = true;
-  if (!(await runBunScript("partners:validate", "partners:validate"))) failed = true;
+  await step("glossary + partners", () => runScriptBatch("glossary + partners", STATIC_BATCH_2));
 
   const staged = await stagedPaths();
-  const partnerPaths = ["config/partners.toml", "config/partners.example.toml", "src/partner/toml-config.ts", "tools/partner-toml.ts", "tests/partner/toml-config.test.ts"];
-  if (partnerPaths.some((p) => staged.has(p))) {
-    if (!(await runBunScript("partner:toml:validate", "partner:toml:validate"))) failed = true;
-  }
-  const colorPaths = ["src/lib/color/", "src/lib/design-colors.ts", "scripts/generate-color-artifacts.ts", "public/colors.css", "public/registry/color-system.json", "docs/COLORS.md", "src/research/hq-app/color-vars.css"];
-  if (colorPaths.some((p) => [...staged].some((s) => s.startsWith(p.replace(/\/$/, "")) || s === p))) {
-    if (!(await runBunScript("colors:check", "colors:check"))) failed = true;
+  for (const script of resolveConditionalGates(staged)) {
+    await step(script, () => runBatch(script, ["bun", "run", script]));
   }
 
-  // protected artifact deletions
-  const protectedPaths = ["research/audit-evidence", "research/reports/latest.md", "research/reports/latest.diff.md"];
-  const delOut = Bun.$`git diff --name-only --diff-filter=D -- research/audit-evidence research/reports/latest.md research/reports/latest.diff.md`.textSync().trim();
-  const delCached = Bun.$`git diff --cached --name-only --diff-filter=D -- research/audit-evidence research/reports/latest.md research/reports/latest.diff.md`.textSync().trim();
-  const deleted = [...new Set([...delOut.split("\n"), ...delCached.split("\n")])].filter(Boolean);
-  if (deleted.length > 0) {
-    process.stderr.write(`${RED}pre-commit: protected artifact deletions:${RST}\n`);
-    for (const d of deleted) process.stderr.write(`  ${d}\n`);
-    process.stderr.write(`  fix fixtures or run: bun run artifacts:restore\n`);
+  const violations = protectedDeletionViolations(await deletedPaths());
+  if (violations.length > 0) {
     failed = true;
+    process.stderr.write(paint("red", "pre-commit: protected artifact deletions:\n"));
+    for (const d of violations) process.stderr.write("  " + d + "\n");
+    process.stderr.write("  fix fixtures or run: bun run artifacts:restore\n");
   }
 
   const ms = Date.now() - started;
+  process.stderr.write("pre-commit: summary\n");
+  for (const s of steps) {
+    process.stderr.write("  " + (s.ok ? paint("green", "ok") : paint("red", "FAIL")) + "  " + s.label + " (" + s.ms + "ms)\n");
+  }
   if (failed) {
-    process.stderr.write(`${RED}pre-commit: FAILED (${ms}ms)${RST}\n`);
+    process.stderr.write(paint("red", "pre-commit: FAILED (" + ms + "ms)\n"));
     process.exit(1);
   }
-  process.stderr.write(`${GRN}pre-commit: ok (${ms}ms)${RST}\n`);
+  process.stderr.write(paint("green", "pre-commit: ok (" + ms + "ms)\n"));
 }
 
-await main();
+if (import.meta.main) await main();
