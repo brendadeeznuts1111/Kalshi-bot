@@ -30,6 +30,13 @@
  * argument with an explicit reactVersion: 18 — React 18 and older do not
  * understand the default transitional element symbol (React 19+ only).
  *
+ * ## ANSI options (verified 2026-08-22)
+ *
+ * Bun.markdown.ansi accepts: colors (false = plain text), hyperlinks (OSC 8),
+ * columns (render-time markdown-aware wrapping — tables stay aligned, code
+ * blocks are NOT wrapped mid-line, unlike post-hoc Bun.wrapAnsi), and
+ * kittyGraphics (inline images; safe 📷 alt-text fallback on non-Kitty terms).
+ *
  * ## Markdown file imports (the .md loader)
  *
  * Bun lets you import .md files directly (import html from "./x.md").

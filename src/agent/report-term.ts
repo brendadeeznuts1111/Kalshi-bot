@@ -6,7 +6,7 @@
 import { parseArgs } from "node:util";
 import { markdownToAnsi } from "../lib/markdown.ts";
 import { REPORT_DIR, joinPath } from "../research/paths.ts";
-import { isTtyStdout, wrapDisplay } from "../research/terminal-out.ts";
+import { isTtyStdout, ttyColumns } from "../research/terminal-out.ts";
 
 export type ReportTermOptions = {
   file: string;
@@ -35,7 +35,11 @@ export async function renderReportTerm(opts: ReportTermOptions): Promise<string>
   }
   const text = await file.text();
   if (opts.raw) return text;
-  if (isTtyStdout()) return wrapDisplay(markdownToAnsi(text, { hyperlinks: true }));
+  if (isTtyStdout()) {
+    // Render-time markdown-aware wrapping: tables stay aligned and code blocks
+    // are never wrapped mid-line (post-hoc Bun.wrapAnsi would break them).
+    return markdownToAnsi(text, { hyperlinks: true, columns: ttyColumns() });
+  }
   // Piped / non-TTY: plain text, no ANSI escape codes.
   return markdownToAnsi(text, { colors: false });
 }
