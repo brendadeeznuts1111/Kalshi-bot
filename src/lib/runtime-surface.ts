@@ -70,6 +70,12 @@ export function runRuntimeSurfaceProbe(): SurfaceCheck[] {
   });
 
   checks.push({
+    name: 'node:tls connect + getPeerCertificate',
+    ok: typeof require('node:tls')?.connect === 'function',
+    detail: 'host-discover probeTlsSans SANs (no openssl subprocess)',
+  });
+
+  checks.push({
     name: 'fetch protocol option (h2 client)',
     ok: typeof (fetch as unknown as { protocol?: unknown }).protocol !== 'undefined' || typeof AbortSignal.timeout === 'function',
     detail: "protocol:'http2' requires https (h2c unsupported); presence via the fetch fn accepting options (probe-verified: protocol:http2 over TLS works)",

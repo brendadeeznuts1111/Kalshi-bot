@@ -225,6 +225,14 @@ backslash in template literals.
   output. bun-types 1.4.0 does NOT declare resolve* (types lag the runtime) -
   use an isolated cast (host-discover DnsResolveSurface) and add a
   runtime-surface guard check.
+- **node:tls works on 1.4.0** (probed): tls.connect({ host, servername,
+  rejectUnauthorized: false }) + socket.getPeerCertificate().subjectaltname
+  returns 'DNS:github.com, DNS:www.github.com' - replaced openssl s_client +
+  x509 in host-discover with zero subprocess. Filter to DNS: entries, lowercase,
+  sort; wrap with an 8s timeout -> [] (the old openssl path had none).
+  rejectUnauthorized:false trips the breaking-audit TLS check - the probe-only
+  case is allowlisted via TLS_OVERRIDE_ALLOWLIST (you cannot chain-verify a
+  host you are identifying for the first time).
 
 
 

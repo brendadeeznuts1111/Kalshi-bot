@@ -46,6 +46,13 @@ export function runBreakingAudit(root: string): BreakingFinding[] {
   // audit glob by default; these ride the exclude option.
   const LABEL_FILES = ['**/pre-commit.ts', '**/runtime-surface.ts'];
 
+  // TLS probe-only exception: host-discover reads leaf SANs from ANY cert
+  // (same semantics as the openssl s_client -showcerts it replaced). You
+  // cannot chain-verify a host you are probing to identify for the first
+  // time; the SANs only inform a host->skin suggestion and carry no secrets.
+  // All other connections must keep chain + hostname verification.
+  const TLS_OVERRIDE_ALLOWLIST = ['**/host-discover.ts'];
+
   // 1. res.writeHeader removed (v1.4): any usage would crash at runtime.
   const wH = rgFiles(root, 'writeHeader', dirs, { exclude: LABEL_FILES });
   findings.push({
@@ -101,7 +108,7 @@ export function runBreakingAudit(root: string): BreakingFinding[] {
   });
 
   // 6. TLS stricter: actual rejectUnauthorized:false overrides.
-  const tls = rgFiles(root, 'rejectUnauthorized\\s*:\\s*false', dirs, { exclude: LABEL_FILES });
+  const tls = rgFiles(root, 'rejectUnauthorized\\s*:\\s*false', dirs, { exclude: [...LABEL_FILES, ...TLS_OVERRIDE_ALLOWLIST] });
   findings.push({
     check: 'TLS stricter (ERR_TLS_CERT_ALTNAME_INVALID)',
     status: tls.length ? 'warn' : 'ok',

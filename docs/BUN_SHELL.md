@@ -80,8 +80,9 @@ in-process side.
 ### Cross-references with the rest of Bun (verified 2026-08-23)
 
 The shell layer is the fallback for things Bun has no native API for (`gh`,
-`git`, `openssl`, `launchctl`, `open`, `bunx`, `pass-cli`, `rg`, `find`).
-Where Bun has a native API the repository migrates off shell.
+`git`, `launchctl`, `open`, `bunx`, `pass-cli`, `rg`, `find`; `openssl` only
+for the h2 test cert-gen in `SPAWN_KEEP_LIST`). Where Bun has a native API
+(or a Node-compat one, e.g. `node:tls`) the repository migrates off shell.
 
 | Bun API | Cross-reference with the shell/subprocess layer | Where |
 |---------|--------------------------------------------------|-------|
@@ -95,6 +96,7 @@ Where Bun has a native API the repository migrates off shell.
 | `Bun.CryptoHasher` | Digests `$`-captured output into evidence hashes | `src/partner/execution/demo-scenario-runner.ts` |
 | `Bun.Glob` | Programmatic file matching vs shell globs in `$` templates | `src/research/serve.ts`, `src/calibration/watcher.ts` |
 | `Bun.dns` | **Native replacement for `dig`** — `resolveCname/NS/TXT/MX` (shapes: `string[]`, `string[][]`, `[{priority,exchange}]`; absent CNAME rejects → `.catch(() => [])`); types lag in 1.4.0 → isolated cast + runtime-surface check | `src/domain/host-discover.ts` `probeDns`, `src/institutions/fonbet/connection.ts` |
+| `node:tls` (Node compat) | `tls.connect().getPeerCertificate()` replaces `openssl s_client` + `x509` — leaf SANs (`subjectaltname`) with zero subprocess (probed 1.4.0) | `src/domain/host-discover.ts` `probeTlsSans` |
 | `Bun.Terminal` (PTY) | The isTTY=true option the interactive keeps need (`$` pipes stdout/stderr) | not used — keep-list reasoning |
 | `Bun.Transpiler.scanImports` + `ts` AST | The enforcement loop — guard runs `git ls-files -z` via `$`, reads via `Bun.file`, walks AST for spawn sites | `scripts/audit-bun-native.ts` |
 | `Bun.fetch` | REST half of research transport (`Bun.fetch`), auth/rate-limit via `$`→`gh` | `src/research/github-api.ts`, `src/research/gh.ts` |

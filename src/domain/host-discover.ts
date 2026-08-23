@@ -7,7 +7,7 @@
  * Suggested adapter follows SKINS[].mapper only (not Ultra stack scoring).
  */
 
-import { $ } from "bun";
+import tls from "node:tls";
 import {
   SKIN_IDS,
   SKINS,
@@ -399,37 +399,45 @@ function buildWeighFromScores(input: {
   };
 }
 
-function extractDnsSansFromText(text: string): string[] {
-  const sans: string[] = [];
-  const dnsRe = /DNS:([^,\s]+)/g;
-  let m: RegExpExecArray | null;
-  while ((m = dnsRe.exec(text))) {
-    sans.push(m[1]!.toLowerCase());
-  }
-  return sans;
-}
-
-/** Decode leaf cert SANs via `openssl s_client` → `openssl x509` (PEM alone has no DNS: lines). */
+/** Decode leaf cert SANs via node:tls getPeerCertificate — no openssl subprocess. */
 async function probeTlsSans(host: string): Promise<string[]> {
-  try {
-    const pemBundle = (
-      await $`openssl s_client -connect ${host}:443 -servername ${host} -showcerts < ${Buffer.alloc(0)}`.nothrow().quiet()
-    ).stdout.toString();
-    const pem = /-----BEGIN CERTIFICATE-----[\s\S]+?-----END CERTIFICATE-----/.exec(pemBundle)?.[0];
-    if (!pem) return [];
-
-    const decode = async (args: string[]): Promise<string[]> => {
-      const { stdout } = await $`openssl x509 ${args} < ${Buffer.from(pem)}`.nothrow().quiet();
-      return extractDnsSansFromText(stdout.toString());
+  return new Promise((resolve) => {
+    let settled = false;
+    const socket = tls.connect({
+      host,
+      port: 443,
+      servername: host,
+      // Probe-only: we want the leaf SANs, not a chain verdict (the old
+      // `openssl s_client -showcerts` did not verify either).
+      rejectUnauthorized: false,
+    });
+    const finish = (sans: string[]): void => {
+      if (settled) return;
+      settled = true;
+      socket.destroy();
+      resolve([...new Set(sans)].sort());
     };
-
-    const fromExt = await decode(['-noout', '-ext', 'subjectAltName']);
-    if (fromExt.length > 0) return [...new Set(fromExt)].sort();
-    const fromText = await decode(['-noout', '-text']);
-    return [...new Set(fromText)].sort();
-  } catch {
-    return [];
-  }
+    const timeout = setTimeout(() => finish([]), 8_000); // hard cap: no cert -> []
+    socket.on("secureConnect", () => {
+      clearTimeout(timeout);
+      const cert = socket.getPeerCertificate() as { subjectaltname?: string };
+      const sans = (cert.subjectaltname ?? "")
+        .split(",")
+        .map((entry) => entry.trim())
+        .filter((entry) => entry.startsWith("DNS:")) // skip IP Address: entries
+        .map((entry) => entry.slice(4).toLowerCase())
+        .filter(Boolean);
+      finish(sans);
+    });
+    socket.on("error", () => {
+      clearTimeout(timeout);
+      finish([]);
+    });
+    socket.on("close", () => {
+      clearTimeout(timeout);
+      finish([]);
+    });
+  });
 }
 
 /** True when url hostname is the apex or a subdomain of it. */
