@@ -75,7 +75,30 @@ in-process side.
 ### Known behavior deltas vs the old spawns
 
 - `serve.ts` launchd probe: the 2 s race no longer kills the child on timeout (Bun Shell has no kill handle on the raced promise); `launchctl list` hanging is pathological, so the race still returns `null`.
-- `host-discover` s_client: stdin closes immediately via `printf "" |` (same as the old `stdin.end()`).
+- `host-discover` s_client: stdin closes immediately via `< ${Buffer.alloc(0)}` (same as the old `stdin.end()`).
+
+### Cross-references with the rest of Bun (verified 2026-08-23)
+
+The shell layer is the fallback for things Bun has no native API for (`gh`,
+`git`, `openssl`, `launchctl`, `open`, `bunx`, `pass-cli`, `rg`, `find`).
+Where Bun has a native API the repository migrates off shell.
+
+| Bun API | Cross-reference with the shell/subprocess layer | Where |
+|---------|--------------------------------------------------|-------|
+| `Bun.file` / `Bun.write` | `$` redirection `> ${Bun.file(path)}` / `< ${Buffer}` (tested in `tests/shell-idioms.test.ts`); artifact reads/writes beside `$`-gathered data | `tools/snapshot-data-plane.ts`, `tools/github-rate-budget.ts` |
+| `Bun.which` | Resolves binaries handed to `$` / `Bun.spawn` (`pass-cli`, editor, `bun`) | `tools/provision-fantasy402-vault.ts`, `src/lib/editor.ts`, `tools/pre-commit.ts` |
+| `Bun.spawnSync` ↔ `$` | Sync/async split of the same subprocess story (blocking gates vs async shell) | `tools/pre-commit.ts`, `src/lib/rg.ts`, `src/lib/breaking-audit.ts` |
+| `Bun.spawn` (keep-list) | IPC (`research-runner`), `unref()` (`editor`), true-TTY interactive (`protonpass`, `db-push-gate`) | `SPAWN_KEEP_LIST` in `scripts/audit-bun-native.ts` |
+| `Bun.env` / `.env()` | Per-call env merge into `$` (undefined values dropped) | `scripts/deps-outdated.ts`, `src/partner/execution/demo-scenario-runner.ts` |
+| `Bun.sleep` | The only `$` timeout mechanism — `Promise.race` races | `src/research/serve.ts` (launchd probe) |
+| `Bun.cron` | In-process scheduler whose 7 jobs spawn via `$` | `scripts/cron-main.ts` |
+| `Bun.CryptoHasher` | Digests `$`-captured output into evidence hashes | `src/partner/execution/demo-scenario-runner.ts` |
+| `Bun.Glob` | Programmatic file matching vs shell globs in `$` templates | `src/research/serve.ts`, `src/calibration/watcher.ts` |
+| `Bun.dns` | **Native replacement for `dig`** — `resolveCname/NS/TXT/MX` (shapes: `string[]`, `string[][]`, `[{priority,exchange}]`; absent CNAME rejects → `.catch(() => [])`); types lag in 1.4.0 → isolated cast + runtime-surface check | `src/domain/host-discover.ts` `probeDns`, `src/institutions/fonbet/connection.ts` |
+| `Bun.Terminal` (PTY) | The isTTY=true option the interactive keeps need (`$` pipes stdout/stderr) | not used — keep-list reasoning |
+| `Bun.Transpiler.scanImports` + `ts` AST | The enforcement loop — guard runs `git ls-files -z` via `$`, reads via `Bun.file`, walks AST for spawn sites | `scripts/audit-bun-native.ts` |
+| `Bun.fetch` | REST half of research transport (`Bun.fetch`), auth/rate-limit via `$`→`gh` | `src/research/github-api.ts`, `src/research/gh.ts` |
+| `bun:sqlite` | Stores what `$`/`gh` gathers | `src/research/cache.ts`, `src/institutions/event-store/*` |
 
 ## Why `Bun.$` over `Bun.spawn`
 

@@ -63,6 +63,13 @@ export function runRuntimeSurfaceProbe(): SurfaceCheck[] {
   });
 
   checks.push({
+    name: 'Bun.dns.resolveCname/NS/TXT/MX',
+    ok: ['resolveCname', 'resolveNs', 'resolveTxt', 'resolveMx']
+      .every((k) => typeof (Bun.dns as Record<string, unknown>)[k] === 'function'),
+    detail: 'host-discover probeDns native DNS (bun-types 1.4.0 lags; runtime probed)',
+  });
+
+  checks.push({
     name: 'fetch protocol option (h2 client)',
     ok: typeof (fetch as unknown as { protocol?: unknown }).protocol !== 'undefined' || typeof AbortSignal.timeout === 'function',
     detail: "protocol:'http2' requires https (h2c unsupported); presence via the fetch fn accepting options (probe-verified: protocol:http2 over TLS works)",

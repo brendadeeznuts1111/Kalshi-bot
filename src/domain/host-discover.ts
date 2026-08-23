@@ -444,6 +444,18 @@ export function urlMatchesApex(url: string, apex: string): boolean {
   }
 }
 
+// bun-types 1.4.0 lags the runtime: resolveCname/NS/TXT/MX exist on the
+// installed binary (probed 2026-08-23; runtime-surface guard check added) but
+// are missing from typeof Bun.dns. Narrow local surface, same pattern as the
+// kalshi-ws ctor cast (docs/BUN_NATIVE.md).
+type DnsResolveSurface = {
+  resolveCname(hostname: string): Promise<string[]>;
+  resolveNs(hostname: string): Promise<string[]>;
+  resolveTxt(hostname: string): Promise<string[][]>;
+  resolveMx(hostname: string): Promise<Array<{ priority: number; exchange: string }>>;
+};
+const dnsResolve = Bun.dns as unknown as DnsResolveSurface;
+
 async function probeDns(host: string): Promise<HostDiscoverReport['dns']> {
   const empty = {
     cname: [] as string[],
@@ -452,19 +464,22 @@ async function probeDns(host: string): Promise<HostDiscoverReport['dns']> {
     mx: [] as string[],
   };
   try {
-    const dig = async (type: string): Promise<string[]> => {
-      const { stdout } = await $`dig +short ${type} ${host}`.nothrow().quiet();
-      return stdout
-        .toString()
-        .split('\n')
-        .map(l => l.trim().replace(/\.$/, ''))
-        .filter(Boolean);
-    };
+    const [cname, ns, txt, mx]: [
+      string[],
+      string[],
+      string[][],
+      Array<{ priority: number; exchange: string }>,
+    ] = await Promise.all([
+      dnsResolve.resolveCname(host).catch(() => [] as string[]),
+      dnsResolve.resolveNs(host).catch(() => [] as string[]),
+      dnsResolve.resolveTxt(host).catch(() => [] as string[][]),
+      dnsResolve.resolveMx(host).catch(() => [] as Array<{ priority: number; exchange: string }>),
+    ]);
     return {
-      cname: await dig('CNAME'),
-      ns: await dig('NS'),
-      txt: await dig('TXT'),
-      mx: await dig('MX'),
+      cname: cname.map((v) => v.trim().replace(/\.$/, '')).filter(Boolean),
+      ns: ns.map((v) => v.trim().replace(/\.$/, '')).filter(Boolean),
+      txt: txt.flatMap((chunk) => chunk.map((v) => v.trim())).filter(Boolean),
+      mx: mx.map((r) => r.exchange.trim().replace(/\.$/, '')).filter(Boolean),
     };
   } catch {
     return empty;

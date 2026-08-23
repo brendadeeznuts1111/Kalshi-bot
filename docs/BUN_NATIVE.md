@@ -71,7 +71,7 @@ Full topic map (guides from the official table; **Ref** = types API; **Here** = 
 | SQL Client | [`Bun.SQL`](https://bun.com/docs/runtime/sql), `Bun.sql` | [/SQL](https://bun.com/reference/bun/SQL) | — (sqlite + drizzle own this plane) |
 | Redis (Valkey) | [`Bun.RedisClient`](https://bun.com/docs/runtime/redis), `Bun.redis` | [/RedisClient](https://bun.com/reference/bun/RedisClient) | — |
 | FFI | [`bun:ffi`](https://bun.com/docs/runtime/ffi) | [/ffi](https://bun.com/reference/bun/ffi) | — |
-| DNS | [`Bun.dns.lookup`](https://bun.com/docs/runtime/networking/dns), `Bun.dns.prefetch`, `getCacheStats` | [/dns](https://bun.com/reference/bun/dns) · [/prefetch](https://bun.com/reference/bun/dns/prefetch) | yes — Kalshi live poll preconnect |
+| DNS | [`Bun.dns.lookup`](https://bun.com/docs/runtime/networking/dns), `Bun.dns.prefetch`, `getCacheStats`, `resolveCname/NS/TXT/MX` (runtime-probed; types lag in 1.4.0 → isolated cast) | [/dns](https://bun.com/reference/bun/dns) · [/prefetch](https://bun.com/reference/bun/dns/prefetch) | yes — Kalshi live poll preconnect + host-discover native dig replacement |
 | Testing | [`bun:test`](https://bun.com/docs/test) | [/test](https://bun.com/reference/bun/test) · [expectTypeOf](https://bun.com/reference/bun/test/expectTypeOf) | yes — `tests/**` + `*.types.test.ts` |
 | Workers | [`new Worker()`](https://bun.com/docs/runtime/workers) | — | — |
 | Module Loaders | [`Bun.plugin`](https://bun.com/docs/bundler/plugins) | [/plugin](https://bun.com/reference/bun/plugin) | — |

@@ -219,6 +219,12 @@ backslash in template literals.
   the child sees isTTY=false. For CLIs that need the parent's true TTY fds
   (pass-cli agent prompts, drizzle-kit push), keep Bun.spawn with stdio
   inherit and list the file in SPAWN_KEEP_LIST.
+- **Bun.dns.resolve* shapes (1.4.0, runtime-probed):** CNAME/NS -> string[],
+  TXT -> string[][] (flatMap the chunks), MX -> [{priority, exchange}]. A host
+  with NO CNAME REJECTS (ENOTFOUND) - .catch(() => []) mirrors dig empty
+  output. bun-types 1.4.0 does NOT declare resolve* (types lag the runtime) -
+  use an isolated cast (host-discover DnsResolveSurface) and add a
+  runtime-surface guard check.
 
 
 
