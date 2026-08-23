@@ -97,6 +97,7 @@
     "bun:deps-audit": "bun tools/bun-deps-audit.ts",
     "bun:backup": "bun tools/bun-backup.ts",
     "bun:perf-audit": "bun tools/bun-perf-audit.ts",
+    "bun:adoption-audit": "bun tools/bun-adoption-audit.ts",
     "test:failed": "bun test --only-failures --isolate --timeout 15000",
     "inventory:leagues": "bun tools/inventory-leagues-cli.ts",
     "inventory:enrich": "bun tools/inventory-sync-cli.ts --enrich-only --sport=all --enrich-scope=unlinked",

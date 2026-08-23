@@ -955,3 +955,32 @@ scanned; no code changes needed:
   'Bun.build' matched the audit's own source text - fixed with
   --glob '!**/*audit*.ts'. Recorded so future audit tools exclude
   themselves structurally, not by growing a list.
+
+### 25. bun:adoption-audit + networking paste verdicts
+
+- tools/bun-adoption-audit.ts + src/lib/adoption-audit.ts = the paste's
+  suggested tool: coverage report of the v1.4 networking stack. Three
+  checks with ok / gap / n/a: (1) Bun.serve dir routes (ok - serve.ts
+  has /registry/* + /partner-dashboard/*), (2) fetch() compress option
+  (gap - 7 files POST but bodies are small JSON; compress only matters
+  >~100KB, so a SOFT gap), (3) fetch() protocol:http2 (gap - 24 files
+  fetch without it; experimental, SOFT gap). Report command only - NOT
+  a check-pipeline gate (the gaps are soft/experimental, unlike the
+  hard perf/breaking gates). Tests: tests/lib/adoption-audit.test.ts
+  (4 tests, temp fixture).
+- PASTE's 'already using' table audited: WRONG on '/api/image/:id uses
+  Bun.file' (no such route; image work is visual-snapshot-meta.ts with
+  Bun.file().image().metadata()); RIGHT on dir routes (serve.ts) and
+  'compression is native' (but via Bun.zstdCompressSync in evidence-io,
+  not the fetch compress option - which genuinely has zero consumers).
+- claims-audit on the paste's suggestions: 5/6 FOUND; 'HTTP/3 is 2.7x
+  faster' misses on the word boundary because the blog writes '2.7x'
+  with the multiplication sign (U+00D7) which the boundary regex
+  splits - a known boundary quirk, the claim is in the blog.
+- rg escaping trap (new, recorded): rg treats '{' as a repetition
+  operator and ERRORS (exit 2 -> empty results, silently); through
+  spawnSync the pattern must carry '\\{' so rg sees '\{'. Shell tests
+  of the same pattern masked this (shell strips one level). Also
+  'fetch(' as a regex needs 'fetch\\(' (unescaped '(' = open group,
+  silent empty). Debug pattern-vs-function mismatches with the exact
+  spawnSync args, not shell.
