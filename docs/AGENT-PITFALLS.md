@@ -931,3 +931,27 @@ scanned; no code changes needed:
 - Perf claims spot-probed on this machine: new URL ~60ns/op (matches the
   claimed ~75ns scale); gzipSync/hex SIMD fast. Timing resolution was
   coarse (JIT elided loops), so absolute numbers are indicative only.
+
+### 24. bun:perf-audit — the toolchain-wins gate (paste's suggested tool)
+
+- src/lib/perf-audit.ts + tools/bun-perf-audit.ts (bun:perf-audit) checks
+  the four toolchain wins from the release-notes summary paste: (1)
+  globalStore + linker=isolated in config (machine ~/.bunfig.toml since
+  the project bunfig defers install policy), (2) test script uses
+  --parallel --timings, (3) Bun.build metafile analysis where builds
+  exist (n/a when no Bun.build usage - does NOT fail the gate), (4) CI
+  runs bun audit + bun dedupe --check. Wired as the final step of bun
+  run check. Tests: tests/lib/perf-audit.test.ts (5 tests, temp
+  fixture: all-ok, missing --parallel, missing globalStore, missing CI,
+  n/a-does-not-fail).
+- All 4 checks currently pass on this repo: global store configured
+  (global bunfig), test script parallel+timings (section 23), no
+  Bun.build usage (n/a), CI workflows run bun audit --audit-level=high
+  + bun dedupe --check (check.yml - the paste asked 'check if you use
+  audit fix/dedupe in CI'; the read-only forms are the frozenLockfile-
+  safe equivalent, mutating bun audit fix / bun dedupe conflict with
+  frozen policy and are run manually).
+- Self-match trap (same class as section 17): the rg search for
+  'Bun.build' matched the audit's own source text - fixed with
+  --glob '!**/*audit*.ts'. Recorded so future audit tools exclude
+  themselves structurally, not by growing a list.
