@@ -707,3 +707,41 @@ probes + cached debugger.mdx). Verdicts:
   changes, compat table, classes.ts, inspector protocol) all checked
   out; every invented number was greppable-as-absent. Same rule as
   section 13: verify, then act.
+
+### 16. Repo impact of the v1.4 breaking changes (audited, all green)
+
+Applied the section-15 breaking-changes table to THIS repo. Every item
+scanned; no code changes needed:
+
+- res.writeHeader removed: ZERO usage of writeHeader/writeHead in src/
+  and tools/ (grep) - we use Response/Bun.serve fetch handlers only.
+- bun.lock v2: verified bun 1.4.0 writes 'lockfileVersion': 2 when a
+  lock is (re)generated (probe: fresh install with frozenLockfile=false
+  -> lockfileVersion 2). THIS repo's committed lock is still v1 and
+  stays v1 while frozenLockfile=true (bunfig + all docs/scripts use
+  --frozen-lockfile). The 'temporary-unfreeze dance' (pitfalls line
+  98) is the ONLY path that would rewrite it to v2; when it happens,
+  old Bun (<1.4) can no longer read it - team-wide upgrade needed.
+  NOTE: --lockfile-only does NOT bypass frozenLockfile (probe: no lock
+  written even with the flag under the global frozen policy); the
+  global ~/.bunfig.toml sets frozenLockfile=true too, so the project
+  policy is layered.
+- .env under node: zero scripts use the node interpreter (package.json
+  has no node invocations; everything is bun). No impact. Note: the
+  earlier probe where 'node t.js' printed the env value was a PATH
+  artifact - /opt/homebrew/bin/node (real node 26.7.0) does NOT load
+  .env; bun does. (Also: this machine's node is v26.7.0, newer than
+  bun's embedded 26.3.0.)
+- Bun.YAML 1.2: ZERO YAML parsing in src/tools (grep). No impact.
+- Temporal API: zero Temporal.* usage. No impact. (Runtime probe:
+  typeof Temporal === 'object' - enabled.)
+- TLS stricter (ERR_TLS_CERT_ALTNAME_INVALID for IP/localhost with a
+  cert issued for another name): all repo connections are hostname-
+  based (kalshi.com, fonbet hosts, bun.com) - no IP-address TLS
+  connections found; no impact.
+- Native addons (NODE_MODULE_VERSION 147): zero .node files, zero
+  node-gyp/napi deps in package.json. No impact.
+- Practice: a breaking-changes table is only actionable AFTER applying
+  it to the actual codebase. The audit pattern (grep each API, verify
+  each lock/probe) took minutes and found zero required changes - the
+  repo was already on the safe side of every v1.4 break.
