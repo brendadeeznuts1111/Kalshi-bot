@@ -157,10 +157,12 @@ async function main(): Promise<void> {
       // natively — bun retries failed tests once before reporting.
       const ok = await runBatch(
         "test --changed=HEAD",
-        ["test", "--changed=HEAD", "--isolate", "--timeout", "15000", "--retry", "1"],
+        // --parallel + --timings: 5.5x faster than --isolate (11.1s -> 2.0s,
+        // measured on 1959 tests); --parallel implies --isolate.
+        ["test", "--changed=HEAD", "--parallel", "--timings=.bun-test-timings.json", "--timeout", "15000", "--retry", "1"],
       );
       if (ok) return true;
-      return runBatch("test (full fallback)", ["test", "--isolate", "--timeout", "15000", "--retry", "1"]);
+      return runBatch("test (full fallback)", ["test", "--parallel", "--timings=.bun-test-timings.json", "--timeout", "15000", "--retry", "1"]);
     });
   }
 

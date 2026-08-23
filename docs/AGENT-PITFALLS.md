@@ -905,3 +905,29 @@ scanned; no code changes needed:
   cgroup }) - Linux-only, dev is macOS; ML-DSA/ML-KEM - no crypto
   primitive need in repo (keychain/WebCrypto AES-GCM covers secrets);
   bun repl / bun ./README.md - dev conveniences, not code paths.
+
+### 23. Test runner adoption: --parallel --timings is 5.5x faster (measured)
+
+- The v1.4 release-notes paste was audited; the actionable win was the
+  test runner. Measured on THIS suite (1959 tests, 0 fail):
+  bun test --isolate = 11.1s vs bun test --parallel=8 --timings = 2.0s
+  (5.5x). Same tests, same results - --parallel implies --isolate and
+  distributes files across workers; --timings balances by wall time.
+- ADOPTED: package.json test = 'bun test --parallel --timings=
+  .bun-test-timings.json --timeout 15000' (was --isolate); new
+  test:record-timings re-records the committed timings file; pre-commit
+  hook test layer (--changed=HEAD AND full fallback) also switched.
+  .bun-test-timings.json is committed so the hook/CI benefits without a
+  warm-up run. Full run now 3.3s (parallel=8 on 8-core + posttest).
+- Package-manager audit (all clean on this repo): bun audit = 'No
+  vulnerabilities found (checked 7 packages)'; bun dedupe --check = no
+  duplicates; bun pm licenses --prod resolves; bun pm diff zod = no
+  differences. None need gate integration yet (6 deps, already clean).
+- Security defaults audited vs our surface: the only rejectUnauthorized
+  override is src/bot/kalshi-ws.ts's EXPLICIT env-gated opt-in
+  (KALSHI_WS_TLS_REJECT_UNAUTHORIZED=0) - legitimate, not an accidental
+  disable. No RedisClient usage (its TLS enforcement is moot here).
+  No checkServerIdentity pinning in repo.
+- Perf claims spot-probed on this machine: new URL ~60ns/op (matches the
+  claimed ~75ns scale); gzipSync/hex SIMD fast. Timing resolution was
+  coarse (JIT elided loops), so absolute numbers are indicative only.
