@@ -341,8 +341,15 @@ Node APIs are intentional:
     cross-worker probe reported 'does not bridge' because the worker
     FILE never loaded (./bc-worker.ts resolved against the repo temp,
     not /tmp) - rule out harness artifacts before accepting a NEGATIVE
-    probe result. No BroadcastChannel consumer in the repo yet (cron
-    master is single-threaded) - pattern documented, not adopted.
+    probe result. CORRECTED SCOPE: BroadcastChannel is SAME-PROCESS only -
+    it bridges worker threads and main, but NOT separate processes (a
+    cross-process demo failed even with the sender alive 1s; a controlled
+    two-process test confirmed). The fan-out consumer is now REAL and
+    in-process: release-watch-worker.ts (Worker) broadcasts, the cron
+    master receives via the bus (src/lib/fanout.ts, two-instance internals
+    so same-process post() also reaches handlers) - live-verified
+    'worker analyzed Bun 1.4 -> main RECEIVED'. Cross-process fan-out
+    needs WS/HTTP, not BroadcastChannel.
   * Full-stack feed playbook verified: named imports from 'bun' (cron,
     XML, markdown, write, file) all real - unlike 'html'. Bun.cron jobs
     ARE disposable (Symbol.dispose + unref on the prototype) so `using

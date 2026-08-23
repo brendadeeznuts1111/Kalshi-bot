@@ -29,6 +29,7 @@ import { runSnapshotCycle } from "./price-logger.ts";
 import { syncSportsSourceMetadata } from "./sync-sports-source-metadata.ts";
 import { createSportsSourceRuntime } from "../src/institutions/market-registry/runtime.ts";
 import { unbrand } from "../src/institutions/market-registry/brands.ts";
+import { createFanout, RELEASE_FANOUT_CHANNEL } from "../src/lib/fanout.ts";
 
 // ── Config ──────────────────────────────────────────────────────
 
@@ -412,15 +413,28 @@ async function jobBunReleaseWatch(): Promise<void> {
   if (Bun.env.BUN_RELEASE_WATCH !== "1") return;
   const start = Date.now();
   try {
-    const proc = Bun.spawn(["bun", "run", "bun:release-watch"], {
-      cwd: import.meta.dir + "/..",
-      stdout: "inherit",
-      stderr: "inherit",
-    });
-    const code = await proc.exited;
-    if (code !== 0 && code !== 1) throw new Error(`bun:release-watch exited ${code}`);
-    // exit 1 = new release with absent APIs (the report says which) — logged, not fatal.
-    console.error(`[cron:bun-release] ok · ${Date.now() - start}ms`);
+    // Run the watch as a WORKER so the result arrives over BroadcastChannel
+    // IN-PROCESS (verified: channels bridge worker threads + main, but NOT
+    // separate processes).
+    const worker = new Worker(new URL("./release-watch-worker.ts", import.meta.url));
+    const bus = createFanout(RELEASE_FANOUT_CHANNEL);
+    // Wait for the fan-out event (the worker's real completion signal) or a
+    // 2-minute timeout - Bun's Worker has no .exited property.
+    const received = await Promise.race([
+      new Promise<string | null>((resolve) => {
+        const off = bus.onMessage((m) => {
+          if (m.type !== "bun-release") return;
+          off();
+          console.error(`[cron:bun-release] fan-out received: ${m.title ?? m.version} (${m.present} present / ${m.absent} absent)`);
+          resolve(String(m.title ?? m.version));
+        });
+      }),
+      Bun.sleep(120_000).then(() => null),
+    ]);
+    bus.close();
+    worker.terminate();
+    if (!received) throw new Error("release worker finished without a fan-out event");
+    console.error(`[cron:bun-release] ok (${received}) · ${Date.now() - start}ms`);
   } catch (err) {
     console.error(`[cron:bun-release] Error: ${err}`);
   }

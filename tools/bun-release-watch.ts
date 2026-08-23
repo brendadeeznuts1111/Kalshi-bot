@@ -93,6 +93,9 @@ async function main(): Promise<void> {
     JSON.stringify({ version: release.version, title: release.title, checkedAt: new Date().toISOString() }, null, 2) + '\n',
   );
   console.log('wrote ' + outPath + ' · ' + present + ' present / ' + absent + ' absent');
+  // NOTE: BroadcastChannel is same-process only (workers yes, separate
+  // processes NO) - the worker-based cron job (release-watch-worker.ts)
+  // handles in-process fan-out. This standalone CLI just writes the report.
   process.exit(absent > 0 ? 1 : 0);
 }
 
