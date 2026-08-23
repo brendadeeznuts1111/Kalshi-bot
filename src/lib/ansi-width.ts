@@ -55,6 +55,12 @@ export type StatusMark = "ok" | "WARN" | "FAIL" | "GAP" | "n/a";
  * @param detail optional detail after ': '
  * @param opts indent (default 2 spaces), markWidth (default 6), sep (default 2 spaces)
  */
+/**
+ * Status row with defaulted, separated columns. Color-agnostic: pass a
+ * PRE-PAINTED mark (e.g. paint('ok', 'ok') from src/lib/color/terminal.ts)
+ * to colorize; padAnsi ignores ANSI when measuring, so the mark column
+ * still aligns (pitfalls 30/31).
+ */
 export function statusLine(
   mark: string,
   label: string,

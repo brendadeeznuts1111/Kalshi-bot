@@ -49,6 +49,7 @@ import { join } from 'node:path';
 import { assertBunAtLeast } from '../src/research/bun-native.ts';
 import { hasFlag, argValue } from '../src/cli/argv.ts';
 import { fetchPool, warmDns } from '../src/lib/fetch-pool.ts';
+import { statusLine } from '../src/lib/ansi-width.ts';
 import type { DnsWarmTarget } from '../src/lib/fetch-pool.ts';
 
 assertBunAtLeast('1.4.0', 'bun:docs-index');
@@ -230,7 +231,12 @@ async function main(): Promise<void> {
     const r = fetched[i]!;
     if (r.ok) writeFileSync(join(CACHE_DIR, page.name + '.mdx'), r.text);
     entries.push({ name: page.name, source, sourceUrl: r.url, fetchedAt: new Date().toISOString(), bytes: r.bytes, ok: r.ok });
-    console.log('  ' + (r.ok ? 'cached ' : 'FAILED ') + page.name + ' (' + source + ', ' + r.bytes + 'b' + (r.error ? ' - ' + r.error : '') + ')');
+    // Color marks via Bun.color('ansi') (TTY-aware, like pre-commit's
+    // local paint); statusLine's padAnsi ignores ANSI so columns align.
+    const open = Bun.color(r.ok ? 'green' : 'red', 'ansi') ?? '';
+    const mark = (open ? open + (r.ok ? 'cached' : 'FAILED') + '\u001b[0m' : r.ok ? 'cached' : 'FAILED');
+    const detail = '(' + source + ', ' + r.bytes + 'b' + (r.error ? ' - ' + r.error : '') + ')';
+    console.log(statusLine(mark, page.name, detail));
   }
   writeFileSync(INDEX_PATH, JSON.stringify({ pages: entries, fetchedAt: new Date().toISOString() }, null, 2) + '\n');
   const okCount = entries.filter((e) => e.ok).length;

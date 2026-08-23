@@ -1175,3 +1175,12 @@ notes - they have structural enforcement:
   audit usage table right-aligns count to 5 + left-pads API name to 28.
   Tests: tests/lib/ansi-width.test.ts statusLine describe (alignment,
   detail append, opts override).
+- Deepened (user: 'deeper'): statusLine is now the shared formatter for
+  5 consumers - the 4 audits + bun:docs-index fetch log (was the same
+  misaligned 'cached '/FAILED ' hand-rolled pattern). Colored marks
+  work by passing a PRE-PAINTED mark (Bun.color('ansi') for CSS names,
+  TTY-aware like pre-commit's local paint); statusLine stays color-
+  agnostic (no import into the color kernel - clean separation).
+  KEY TEST LESSON: ANSI-colored marks align by VISIBLE width, not
+  string index (escape bytes precede the mark, so indexOf differs);
+  assert visibleWidth(prefix), never index. Test-locked.

@@ -72,6 +72,18 @@ describe("ANSI-aware width (Bun.stringWidth / sliceAnsi)", () => {
       const line = statusLine("ok", "x", undefined, { indent: 4, markWidth: 3, sep: 1 });
       expect(line).toBe("    ok  x"); // mark padded to 3 ('ok ') + 1 sep = 'ok  '
     });
+
+    test("ANSI-colored marks still align (padAnsi ignores escapes)", () => {
+      const open = "\u001b[32m"; // green
+      const reset = "\u001b[0m";
+      const plain = statusLine("ok", "a");
+      const colored = statusLine(open + "ok" + reset, "b");
+      // VISIBLE width to the label is equal (escape bytes are invisible);
+      // string index differs because the escape bytes precede the mark.
+      expect(visibleWidth(colored.slice(0, colored.indexOf("b")))).toBe(
+        visibleWidth(plain.slice(0, plain.indexOf("a"))),
+      );
+    });
   });
 
   test("sliceAnsi keeps hyperlinks and ZWJ families whole (pitfalls 28)", () => {
