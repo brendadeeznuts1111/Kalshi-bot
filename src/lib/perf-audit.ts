@@ -10,8 +10,8 @@
  * Status: ok | warn | n/a (n/a = not applicable to this repo).
  */
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
-import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
+import { rgFiles } from './rg.ts';
 
 export type PerfCheck = { name: string; status: 'ok' | 'warn' | 'n/a'; detail: string };
 
@@ -48,8 +48,8 @@ export function runPerfAudit(root: string, globalBunfigPath?: string): PerfCheck
       : 'test script missing --parallel/--timings: ' + (testScript || '(none)'),
   });
 
-  const buildFiles = spawnSync('rg', ['-l', '--glob', '!**/*audit*.ts', 'Bun.build', join(root, 'src'), join(root, 'tools')], { encoding: 'utf8' });
-  const usesBuild = buildFiles.status === 0 && buildFiles.stdout.trim().length > 0;
+  const buildFiles = rgFiles(root, 'Bun.build', [join(root, 'src'), join(root, 'tools')]);
+  const usesBuild = buildFiles.length > 0;
   checks.push({
     name: 'Bun.build metafile analysis (--metafile-md / metafile:true)',
     status: usesBuild ? 'warn' : 'n/a',

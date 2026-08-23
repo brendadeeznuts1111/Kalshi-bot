@@ -20,17 +20,13 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { rgFiles } from './rg.ts';
 
 export type FindingStatus = 'ok' | 'warn' | 'fail';
 export type BreakingFinding = { check: string; status: FindingStatus; detail: string };
 
-/** Ripgrep file list for a pattern under dirs, excluding globs. */
-function grepFiles(root: string, pattern: string, dirs: string[], exclude: string[] = []): string[] {
-  const args = ['-l', ...exclude.flatMap((e) => ['--glob', '!' + e]), pattern, ...dirs];
-  const out = spawnSync('rg', args, { encoding: 'utf8' });
-  if (out.status !== 0) return [];
-  return out.stdout.split('\n').filter(Boolean).map((p) => p.replace(root + '/', ''));
-}
+// grepFiles -> shared rgFiles (src/lib/rg.ts): mandatory audit self-
+// exclusion + escaping handled structurally (pitfalls 17/24/27).
 
 /**
  * Audit a repo root against the Bun 1.4 breaking changes.
@@ -45,13 +41,14 @@ export function runBreakingAudit(root: string): BreakingFinding[] {
   // Audit/label text legitimately mentions removed APIs (check names) -
   // exclude those files from the call-site scan.
   // Audit/probe machinery legitimately mentions removed APIs in check
-  // labels and probe names (not as calls). Exclude by FILE ROLE:
-  // *-audit.ts, *-breaking-audit.ts, pre-commit.ts (gate labels), and
-  // runtime-surface.ts (probe names) - so new checks don't need edits.
-  const SELF_EXCLUDE = ['**/*audit*.ts', '**/pre-commit.ts', '**/runtime-surface.ts'];
+  // Extra files that legitimately mention removed APIs in check labels /
+  // probe names (not as calls): pre-commit.ts gate labels, runtime-
+  // surface.ts probe names. The shared rgFiles already excludes the
+  // audit glob by default; these ride the exclude option.
+  const LABEL_FILES = ['**/pre-commit.ts', '**/runtime-surface.ts'];
 
   // 1. res.writeHeader removed (v1.4): any usage would crash at runtime.
-  const wH = grepFiles(root, 'writeHeader', dirs, SELF_EXCLUDE);
+  const wH = rgFiles(root, 'writeHeader', dirs, { exclude: LABEL_FILES });
   findings.push({
     check: 'res.writeHeader (removed in 1.4)',
     status: wH.length ? 'fail' : 'ok',
@@ -89,7 +86,7 @@ export function runBreakingAudit(root: string): BreakingFinding[] {
   });
 
   // 4. Bun.YAML now YAML 1.2: 1.1-style yes/on/no booleans break.
-  const yaml = grepFiles(root, 'Bun\\.YAML|yaml\.parse|YAML\.parse', dirs, SELF_EXCLUDE);
+  const yaml = rgFiles(root, 'Bun\\.YAML|yaml\.parse|YAML\.parse', dirs, { exclude: LABEL_FILES });
   findings.push({
     check: 'Bun.YAML is YAML 1.2 (yes/on/no no longer booleans)',
     status: yaml.length ? 'warn' : 'ok',
@@ -97,7 +94,7 @@ export function runBreakingAudit(root: string): BreakingFinding[] {
   });
 
   // 5. Temporal API enabled (behavioral change vs Date).
-  const temporal = grepFiles(root, 'Temporal\\.', dirs, SELF_EXCLUDE);
+  const temporal = rgFiles(root, 'Temporal\\.', dirs, { exclude: LABEL_FILES });
   findings.push({
     check: 'Temporal API enabled (behavioral change)',
     status: temporal.length ? 'warn' : 'ok',
@@ -105,7 +102,7 @@ export function runBreakingAudit(root: string): BreakingFinding[] {
   });
 
   // 6. TLS stricter: actual rejectUnauthorized:false overrides.
-  const tls = grepFiles(root, 'rejectUnauthorized\\s*:\\s*false', dirs, SELF_EXCLUDE);
+  const tls = rgFiles(root, 'rejectUnauthorized\\s*:\\s*false', dirs, { exclude: LABEL_FILES });
   findings.push({
     check: 'TLS stricter (ERR_TLS_CERT_ALTNAME_INVALID)',
     status: tls.length ? 'warn' : 'ok',

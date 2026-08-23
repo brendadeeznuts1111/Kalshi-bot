@@ -1108,3 +1108,31 @@ scanned; no code changes needed:
   strings the runtime is correct. Rule reinforced: before accepting a
   NEGATIVE runtime result, check the probe INPUT itself (encoding of
   the test string), not just the code path.
+
+### 29. Recurrence prevention: the failure classes are now structural
+
+The three recurring failure classes are no longer 'remember to check'
+notes - they have structural enforcement:
+
+- SELF-MATCH (hit 4x: breaking, deps, perf, adoption audits each forgot
+  the audit-source exclusion): src/lib/rg.ts is the SINGLE rg helper
+  (rgFiles: excludeSelf defaults true -> --glob '!**/*audit*.ts'
+  structural; escapeForRg for metachars; count mode for summed counts).
+  All four audit libs/tools now call it - no local grepFiles/
+  spawnSync('rg') remains (grep-verified). New audit tools must import
+  rgFiles, not hand-roll rg.
+- PROBE ARTIFACTS (hit 3x: h2c plaintext, AOT claims, ZWJ-emoji
+  double-encoding): grapheme behavior is now PINNED with escaped
+  \u{...} input (tests/lib/ansi-width.test.ts: ZWJ family 2, skin tone
+  2, flag 2, keycap 2, combining 1, hyperlink preserved) and UTF-8
+  bytes pinned (fetch-pool test: 27 bytes / 17 code units). Future
+  probes have correct references and non-ASCII test strings must use
+  \u{...} escapes, not literal emoji.
+- RG ESCAPING (hit 2x: '{' and '(' as rg metachars): escapeForRg in
+  the shared helper; the 'To mount a directory' / 'regex parse error'
+  failures now have one documented home.
+- NEW TRAP found while building the helper: writing '\\n' through the
+  tool layer double-escapes (file gets '\\n' = literal backslash-n,
+  split never fires -> single-element arrays). Verify escape-sensitive
+  strings in the WRITTEN file (bun -e read + JSON.stringify), not the
+  tool argument.

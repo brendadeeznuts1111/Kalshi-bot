@@ -18,7 +18,7 @@
  */
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { spawnSync } from 'node:child_process';
+import { rgFiles } from '../src/lib/rg.ts';
 import { assertBunAtLeast } from '../src/research/bun-native.ts';
 
 assertBunAtLeast('1.4.0', 'bun:deps-audit');
@@ -68,11 +68,10 @@ const NATIVE_APIS = [
 ].map((a) => a.replace('Bun.serve routes { dir }', 'dir: joinPath\|{ dir:'));
 
 function grepCount(pattern: string, dirs: string[]): number {
-  // --glob exclusion: the audit's own source mentions native APIs in its
-  // table text - without it the counts are inflated (recon finding, MEDIUM).
-  const out = spawnSync('rg', ['-c', '--glob', '!**/*audit*.ts', pattern, ...dirs], { encoding: 'utf8' });
-  if (out.status !== 0) return 0;
-  return out.stdout.split('\n').filter(Boolean).reduce((sum, line) => {
+  // Shared rgFiles with count:true (audit self-exclusion structural -
+  // the audit's own source mentions native APIs in its table text).
+  const lines = rgFiles('', pattern, dirs, { count: true });
+  return lines.reduce((sum, line) => {
     const m = line.match(/:(\d+)$/);
     return sum + (m ? Number(m[1]) : 0);
   }, 0);
@@ -94,9 +93,9 @@ function main(): number {
   const violations: Array<{ pkg: string; where: string }> = [];
   for (const [pkgName, replacement] of Object.entries(REPLACEMENTS)) {
     if (pkgName in allDeps) violations.push({ pkg: pkgName, where: 'package.json dependency' });
-    const importHits = spawnSync('rg', ['-l', '(from|require\()["\' ]' + pkgName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), ...src], { encoding: 'utf8' });
-    if (importHits.status === 0 && importHits.stdout.trim().length > 0) {
-      violations.push({ pkg: pkgName, where: 'import in: ' + importHits.stdout.split('\n').filter(Boolean).map((f) => f.replace(ROOT + '/', '')).join(', ') });
+    const importHits = rgFiles(ROOT, '(from|require\()["\' ]' + pkgName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), src);
+    if (importHits.length > 0) {
+      violations.push({ pkg: pkgName, where: 'import in: ' + importHits.join(', ') });
     }
   }
   const depNames = Object.keys(allDeps).sort();

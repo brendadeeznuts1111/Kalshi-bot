@@ -14,15 +14,12 @@
  */
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { spawnSync } from 'node:child_process';
+import { rgFiles } from './rg.ts';
 
 export type AdoptionCheck = { name: string; status: 'ok' | 'gap' | 'n/a'; detail: string };
 
-function grepFiles(root: string, pattern: string, dirs: string[]): string[] {
-  const out = spawnSync('rg', ['-l', '--glob', '!**/*audit*.ts', pattern, ...dirs], { encoding: 'utf8' });
-  if (out.status !== 0) return [];
-  return out.stdout.split('\n').filter(Boolean).map((p) => p.replace(root + '/', ''));
-}
+// grepFiles -> shared rgFiles (src/lib/rg.ts): audit self-exclusion is
+// structural there (pitfalls 17/24/27).
 
 export function runAdoptionAudit(root: string): AdoptionCheck[] {
   const checks: AdoptionCheck[] = [];
@@ -31,7 +28,7 @@ export function runAdoptionAudit(root: string): AdoptionCheck[] {
   const dirs = [src, tools];
 
   // 1. Dir routes for static assets.
-  const dirRoutes = grepFiles(root, '\\{ dir:', dirs);
+  const dirRoutes = rgFiles(root, '\\{ dir:', dirs);
   const hasStaticAssets = existsSync(join(root, 'public')) && readdirSync(join(root, 'public')).length > 0;
   checks.push({
     name: 'Bun.serve dir routes for static assets',
@@ -42,9 +39,9 @@ export function runAdoptionAudit(root: string): AdoptionCheck[] {
   });
 
   // 2. fetch() compress option.
-  const compressUses = grepFiles(root, 'compress: ["\'](gzip|deflate|br|zstd)["\']', dirs);
+  const compressUses = rgFiles(root, 'compress: ["\'](gzip|deflate|br|zstd)["\']', dirs);
   // Heuristic: does the repo POST bodies anywhere (would benefit)?
-  const posts = grepFiles(root, 'method: ["\']POST["\']', dirs);
+  const posts = rgFiles(root, 'method: ["\']POST["\']', dirs);
   checks.push({
     name: 'fetch() compress option (request-body compression)',
     status: compressUses.length ? 'ok' : posts.length ? 'gap' : 'n/a',
@@ -56,15 +53,15 @@ export function runAdoptionAudit(root: string): AdoptionCheck[] {
   // 3. fetch() protocol:'http2' OR the global env flag (paste: 'check
   //    if protocol:http2 appears, OR if BUN_FEATURE_FLAG_EXPERIMENTAL_
   //    HTTP2_CLIENT is set in environment').
-  const h2Uses = grepFiles(root, 'protocol: ("|\x27)http2(\x27|")', dirs);
-  // grepFiles needs EXISTING dirs; .env is gitignored so a fresh clone
-  // lacks it - rg exits 2 on a missing path and grepFiles returns []
+  const h2Uses = rgFiles(root, 'protocol: ("|\x27)http2(\x27|")', dirs);
+  // rgFiles needs EXISTING dirs; .env is gitignored so a fresh clone
+  // lacks it - rg exits 2 on a missing path and rgFiles returns []
   // (recon finding, MEDIUM). Filter to files that actually exist.
   const h2FlagFiles = ['bunfig.toml', '.env', '.env.example']
     .map((f) => join(root, f))
     .filter((f) => existsSync(f));
-  const h2Flag = h2FlagFiles.length ? grepFiles(root, 'BUN_FEATURE_FLAG_EXPERIMENTAL_HTTP2_CLIENT', h2FlagFiles) : [];
-  const fetchCalls = grepFiles(root, 'fetch\\(', dirs);
+  const h2Flag = h2FlagFiles.length ? rgFiles(root, 'BUN_FEATURE_FLAG_EXPERIMENTAL_HTTP2_CLIENT', h2FlagFiles) : [];
+  const fetchCalls = rgFiles(root, 'fetch\\(', dirs);
   const h2Adopted = h2Uses.length > 0 || h2Flag.length > 0;
   checks.push({
     name: 'fetch() protocol:http2 (experimental h2 client)',

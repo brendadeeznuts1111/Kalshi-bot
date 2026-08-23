@@ -89,6 +89,21 @@ describe('fetchText', () => {
     }
   });
 
+  test('bytes reports UTF-8 byte length, not UTF-16 code units (pitfalls 27)', async () => {
+    const echo = Bun.serve({
+      port: 0,
+      async fetch() { return new Response('héllo wörld ☃ 日本語'); },
+    });
+    try {
+      const r = await fetchText('http://127.0.0.1:' + echo.port + '/u', { timeoutMs: 2000 });
+      // 'héllo wörld ☃ 日本語' is 27 UTF-8 bytes but 17 code units.
+      expect(r.bytes).toBe(27);
+      expect(r.text.length).toBe(17);
+    } finally {
+      echo.stop(true);
+    }
+  });
+
   test('compress option sets Content-Encoding and round-trips', async () => {
     // Echo server: reports the Content-Encoding it saw and returns the
     // (still-compressed) body so the client can gunzip-verify.
