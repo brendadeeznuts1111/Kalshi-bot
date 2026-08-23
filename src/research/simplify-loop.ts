@@ -380,6 +380,7 @@ export async function runFocusedTests(
 
   const command = `bun test ${[...testArgs].join(' ')}`;
   const start = performance.now();
+  // Capture idiom (docs/BUN_SHELL.md): .nothrow().quiet() -> { exitCode: number, stdout: Buffer, stderr: Buffer }
   const { stdout: stdoutBuf, stderr: stderrBuf, exitCode } = await $`bun test ${[...testArgs]}`.cwd(ROOT).nothrow().quiet();
   const stdout = stdoutBuf.toString();
   const stderr = stderrBuf.toString();
@@ -481,7 +482,7 @@ export async function writeSimplifyReport(
   options: { dir?: string } = {}
 ): Promise<{ md: string; json: string }> {
   const dir = options.dir ?? joinPath(REPORT_DIR, 'simplify-loop');
-  await Bun.$`mkdir -p ${dir}`.quiet();
+  await Bun.$`mkdir -p ${dir}`.nothrow().quiet();
   const stamp = report.at.replace(/[:.]/g, '-');
   const mdPath = joinPath(dir, `simplify-${stamp}.md`);
   const jsonPath = joinPath(dir, `simplify-${stamp}.json`);

@@ -91,7 +91,7 @@ async function main(): Promise<void> {
   }
   if (report) {
     const dir = "./research/outputs";
-    await $`mkdir -p ${dir}`.nothrow();
+    await $`mkdir -p ${dir}`.nothrow().quiet();
     const coveredRows = result.rows.filter((row) => row.covered);
     const md = [
       "# Massey xref: " + sport,

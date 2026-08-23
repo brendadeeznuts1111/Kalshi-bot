@@ -86,6 +86,26 @@ describe("line streaming", () => {
   });
 });
 
+
+describe("result shapes", () => {
+  test("$ result exposes exactly stdout/stderr/exitCode (Buffers + number)", async () => {
+    const result = await $`printf "x"`.nothrow().quiet();
+    expect(Object.keys(result).sort()).toEqual(["exitCode", "stderr", "stdout"]);
+    expect(typeof result.exitCode).toBe("number");
+    expect(result.stdout).toBeInstanceOf(Buffer);
+    expect(result.stderr).toBeInstanceOf(Buffer);
+  });
+
+  test("$(...) substitution inlines another command output", async () => {
+    const { stdout } = await $`printf "outer $(printf inner)"`.nothrow().quiet();
+    expect(stdout.toString()).toBe("outer inner");
+  });
+
+  test("streaming (no .quiet()) still captures Buffers while printing live", async () => {
+    const { stdout } = await $`printf "stream-captured\n"`.nothrow();
+    expect(stdout.toString()).toBe("stream-captured\n");
+  });
+});
 describe("utilities", () => {
   test("$.escape produces a shell-safe fragment", () => {
     expect($.escape("a$(b)c")).toContain("\\$(b)c");

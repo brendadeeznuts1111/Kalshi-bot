@@ -713,7 +713,7 @@ export async function appendTrackerLog(
 ): Promise<void> {
   const stamped = stampTrackerLogRecord(record);
   const dir = path.replace(/\/[^/]+$/, '');
-  await Bun.$`mkdir -p ${dir}`.quiet();
+  await Bun.$`mkdir -p ${dir}`.nothrow().quiet();
   const line = JSON.stringify(stamped) + '\n';
   const existing = Bun.file(path);
   if (await existing.exists()) {

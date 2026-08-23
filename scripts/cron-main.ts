@@ -166,6 +166,7 @@ async function jobAnalysis(): Promise<void> {
       console.error("[cron:analysis] Skipped · scripts/market-inefficiency.ts is not installed");
       return;
     }
+    // Streaming idiom (docs/BUN_SHELL.md): no .quiet() -> live output + captured Buffers (approx stdout/stderr inherit)
     const { exitCode } = await $`bun ${script}`.cwd(import.meta.dir + "/..").nothrow();
     if (exitCode !== 0) throw new Error(`market-inefficiency exited ${exitCode}`);
     console.error(`[cron:analysis] Complete · ${Date.now() - start}ms`);
