@@ -29,6 +29,10 @@ assertBunAtLeast('1.4.0', 'bun:release-watch');
 const ROOT = join(import.meta.dir, '..');
 const STATE_PATH = join(ROOT, 'research/cache/bun-release-state.json');
 const OUT_DIR = join(ROOT, 'research/outputs');
+// Shared with bun:claims-audit: every release-watch run refreshes the
+// blog cache the claims audit greps, so pasted-claim verification can
+// run offline against the newest release.
+const BLOG_CACHE = join(ROOT, 'research/cache/bun-blog.html');
 
 type ReleaseState = { version: string; title: string; checkedAt: string };
 
@@ -60,6 +64,8 @@ async function main(): Promise<void> {
   }
 
   const html = await (await fetch(release.link)).text();
+  mkdirSync(join(ROOT, 'research/cache'), { recursive: true });
+  writeFileSync(BLOG_CACHE, html); // keeps bun:claims-audit fresh offline
   const blocks = extractCodeBlocks(html);
   const ids = [...identifiersFromCodeBlocks(blocks)].sort();
 

@@ -46,6 +46,19 @@ export const CONDITIONAL_GATES: ReadonlyArray<{ script: string; paths: readonly 
     ],
   },
   {
+    script: "bun:breaking-audit",
+    // Bun/runtime-surface files: any change to these can introduce v1.4
+    // breakage (writeHeader, YAML 1.2, Temporal, node interpreter,
+    // native addons, lock version). Runs the importable audit lib.
+    paths: [
+      "package.json",
+      "bun.lock",
+      "bunfig.toml",
+      "src/lib/breaking-audit.ts",
+      "tools/bun-breaking-audit.ts",
+    ],
+  },
+  {
     script: "colors:check",
     paths: [
       "src/lib/color",
