@@ -1122,6 +1122,18 @@ function handleLiquidityByTournament(keyRaw: string, url: URL): Response {
 
 export function createResearchServer(options: ServeOptions = {}) {
   const port = options.port ?? Number(Bun.env.PORT ?? 3456);
+  // process.on('memoryPressure') — v1.4 low-memory notification. On
+  // 'critical', drop the in-process caches so the OS doesn't kill us.
+  // (Levels typed 'warning' | 'critical' in bun-types; event only shows
+  // in eventNames after a listener is registered — runtime-surface probe.)
+  const onMemoryPressure = (level: string) => {
+    if (level !== 'critical') return;
+    const before = bookCache.size;
+    bookCache.clear();
+    resetSportsSourceCatalogCache();
+    console.warn('memoryPressure critical: cleared ' + before + ' bookCache entries + sports source catalog');
+  };
+  process.on('memoryPressure', onMemoryPressure as never);
   const serveOptions = {
     port,
     // Hardening: Bun's defaults are a 128MB request body cap and a 10s idle

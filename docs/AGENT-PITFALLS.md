@@ -856,3 +856,22 @@ scanned; no code changes needed:
   the blog writes 'Bun.serve() routes...' (the parens intervene even in
   substring mode) - a phrasing mismatch, not fabrication, but the tool
   correctly reports it as absent.
+
+### 21. memoryPressure adopted: the paste's 'already integrated' claim is now true
+
+- Section 20 noted the paste claimed 'you've already integrated
+  memoryPressure' — false then (only the runtime-surface probe
+  mentioned it). NOW TRUE: createResearchServer registers a real
+  process.on('memoryPressure') handler that clears the in-process
+  bookCache (Map, 5s TTL) + sportsSourceCatalogCache on 'critical'
+  (levels typed 'warning' | 'critical'; non-critical is a no-op).
+  Tests: tests/research/serve-memory-pressure.test.ts simulates via
+  process.emit('memoryPressure', 'critical'|'warning') and asserts the
+  handler fires only on critical + the server still serves after.
+- Remaining §10 roadmap: Bun.Archive for backups is still unadopted
+  (only 88MB event-store.db + DBs in research/cache are the natural
+  targets; nothing speculatively built). URLPattern (36 uses, SSOT
+  BunURLPattern wrapper in patterns.ts), Bun.JSONL (streaming NDJSON
+  endpoints in serve.ts + parseChunk pipelines), Bun.TOML (10), dir
+  routes (section 19) are all already adopted - the 'High' roadmap
+  items were done before this round.
