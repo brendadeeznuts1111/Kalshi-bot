@@ -44,7 +44,11 @@ export function runBreakingAudit(root: string): BreakingFinding[] {
   const dirs = [src, tools];
   // Audit/label text legitimately mentions removed APIs (check names) -
   // exclude those files from the call-site scan.
-  const SELF_EXCLUDE = ['**/bun-breaking-audit.ts', '**/breaking-audit.ts', '**/pre-commit.ts'];
+  // Audit/probe machinery legitimately mentions removed APIs in check
+  // labels and probe names (not as calls). Exclude by FILE ROLE:
+  // *-audit.ts, *-breaking-audit.ts, pre-commit.ts (gate labels), and
+  // runtime-surface.ts (probe names) - so new checks don't need edits.
+  const SELF_EXCLUDE = ['**/*audit*.ts', '**/pre-commit.ts', '**/runtime-surface.ts'];
 
   // 1. res.writeHeader removed (v1.4): any usage would crash at runtime.
   const wH = grepFiles(root, 'writeHeader', dirs, SELF_EXCLUDE);

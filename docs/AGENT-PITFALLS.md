@@ -770,3 +770,21 @@ scanned; no code changes needed:
   prefix-vs-longer-word ('rewrite' vs 'rewrites').
 - Use: after any pasted Bun claims, run bun:claims-audit with the
   specific numbers; after any Bun upgrade, run bun:breaking-audit.
+
+### 18. Runtime-surface probe: the guard now checks the BINARY, not just deps
+
+- src/lib/runtime-surface.ts (runRuntimeSurfaceProbe) verifies the
+  INSTALLED bun exposes the APIs the repo relies on: Bun.dns.prefetch +
+  getCacheStats, fetch protocol option (h2), process.on(memoryPressure),
+  Temporal enabled, Bun.YAML 1.2 semantics (yes/on/no strings),
+  res.writeHeader removed on node:http. Wired into bun:guard main so a
+  downgrade / broken install / canary regression fails the merge gate.
+- memoryPressure presence trap (probe): the event appears in
+  process.eventNames() ONLY AFTER a listener is registered (bare check
+  returns false). The probe registers a no-op listener, checks, removes
+  it. Firing still requires real OS pressure - registration is the
+  presence signal.
+- The guard is now two layers: auditRepository (npm->native dependency
+  scan, static) + runRuntimeSurfaceProbe (runtime behavior, dynamic).
+  Both run in bun run guard -> check -> pre-commit. Tests in
+  tests/lib/runtime-surface.test.ts (assert the same binary they guard).

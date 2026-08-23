@@ -289,14 +289,29 @@ async function main(): Promise<void> {
   const root = join(import.meta.dir, "..");
   const violations = await auditRepository(root);
 
-  if (violations.length === 0) {
+  // Runtime-surface probe: verify the installed binary exposes the APIs
+  // this repo relies on (downgrade / broken install / canary regression
+  // fails here, not later). See src/lib/runtime-surface.ts.
+  const { runRuntimeSurfaceProbe, surfaceProbePasses } = await import("../src/lib/runtime-surface.ts");
+  const surface = runRuntimeSurfaceProbe();
+  const surfaceFail = surface.filter((c) => !c.ok);
+
+  if (violations.length === 0 && surfaceFail.length === 0) {
     console.log("bun-native guard: ok");
     return;
   }
 
-  console.error(`bun-native guard: ${violations.length} violation(s)`);
-  for (const violation of violations) {
-    console.error(`- ${violation.file}: ${violation.message}`);
+  if (surfaceFail.length > 0) {
+    console.error(`bun-native guard: ${surfaceFail.length} runtime-surface failure(s)`);
+    for (const c of surfaceFail) {
+      console.error(`- ${c.name}: ${c.detail}`);
+    }
+  }
+  if (violations.length > 0) {
+    console.error(`bun-native guard: ${violations.length} violation(s)`);
+    for (const violation of violations) {
+      console.error(`- ${violation.file}: ${violation.message}`);
+    }
   }
   process.exitCode = 1;
 }
