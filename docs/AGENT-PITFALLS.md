@@ -450,6 +450,10 @@ patterns (harvest-nationalities, fonbet fixture loader converted).
   before slicing (a filter on already-sliced paths yields 0 pages -
   real bug, fixed). Name collisions: dedupe must append -1/-2... (docs/
   has typescript.mdx AND runtime/typescript.mdx AND typescript-6.mdx).
+- bun.sh is NOT a third source: it is a byte-identical alias of bun.com
+  (same content/sitemap/CDN headers, different Cloudflare IPs; verified
+  on workers/sql/fetch/server/webview/api + root). Only two real
+  surfaces: repo (tag/main .mdx) and the rendered site (bun.com/bun.sh).
 - As of bun 1.4.0, tag and repo main are BYTE-IDENTICAL on all 16 curated
   pages (md5 check) - no repo-ahead drift right now. The REAL skew is
   docs-vs-runtime and it EXISTS EVEN AT THE TAG: fetch.preconnect exists but

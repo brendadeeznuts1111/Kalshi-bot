@@ -14,6 +14,9 @@
  *   repo             oven-sh/bun main branch — may be AHEAD of runtime.
  *   site             bun.com/docs — released-docs surface, a rendering
  *        of the repo .mdx (frontmatter stripped + render hints).
+ *        bun.sh is a BYTE-IDENTICAL alias (same deployment, different
+ *        Cloudflare edge IPs; verified on workers/sql/fetch/server/
+ *        webview/api + sitemap) — no separate source needed.
  *
  * Scope:
  *   runtime (default)  docs/runtime/** (API reference surface).
