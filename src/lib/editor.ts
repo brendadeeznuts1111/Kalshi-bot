@@ -119,7 +119,11 @@ export function openTarget(target: OpenTarget, deps: OpenTargetDeps = {}): void 
   const env = deps.env ?? (Bun.env as EditorEnv);
   const which = deps.which ?? ((bin: string) => Bun.which(bin));
   const spawn = deps.spawn ?? ((bin: string, args: string[]) => {
-    Bun.spawn([bin, ...args]);
+    // Detach: the editor is a long-lived GUI process — without unref() the
+    // parent (e.g. the editor:open CLI) would hang until the editor exits
+    // (Bun: 'the parent process does not terminate until all children have
+    // exited').
+    Bun.spawn([bin, ...args]).unref();
   });
   const log = deps.log ?? ((msg: string): void => {
     if (env.PATTERN_EDITOR_DEBUG === "1") process.stderr.write(msg + "\n");

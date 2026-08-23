@@ -233,7 +233,19 @@ agent:encode for tricky code: encode -> write .b64 -> base64 -d -> probe.
     supported.
   * Bun.spawn has NO signal (AbortSignal) and NO timeout option (the AI
     paste claiming them was wrong - not in child-process.mdx). Timeouts
-    are manual: Promise.race or kill after N ms.
+    are manual: Promise.race or kill after N ms (serve.ts probeLaunchdLabels
+    is the reference pattern: Promise.race stdout vs Bun.sleep(2000),
+    proc.kill() on timeout, then await proc.exited).
+  * GUI launches MUST unref(): fixed editor.ts default spawn - without
+    unref() the editor:open CLI hung until the editor GUI closed.
+  * Cleanup-before-exit pattern (protonpass-run): await proc.exited, then
+    delete temp files, then process.exit(code) - never process.exit with
+    pending cleanup.
+  * IPC (guides/process/ipc.mdx): Bun.spawn(['bun','child.ts'],
+    { ipc(msg, childProc) {...} }), childProc.send(msg), serialization:
+    'json' for Node peers, process.execPath for the bun binary. Repo uses
+    Node-style process.send (research-progress.ts) - native ipc is an
+    unused no-fit so far.
   * Signal death with NO listener emits NEITHER event - to run cleanup
     on a signal, listen (process.on('SIGINT'/'SIGTERM')) and call
     process.exit() from the listener (the ctrl-c guide makes the
