@@ -91,6 +91,8 @@
     "agent:probe": "bun tools/agent-probe.ts",
     "bun:release-watch": "bun tools/bun-release-watch.ts",
     "bun:docs-index": "bun tools/bun-docs-index.ts",
+    "bun:breaking-audit": "bun tools/bun-breaking-audit.ts",
+    "bun:claims-audit": "bun tools/bun-claims-audit.ts",
     "test:failed": "bun test --only-failures --isolate --timeout 15000",
     "inventory:leagues": "bun tools/inventory-leagues-cli.ts",
     "inventory:enrich": "bun tools/inventory-sync-cli.ts --enrich-only --sport=all --enrich-scope=unlinked",

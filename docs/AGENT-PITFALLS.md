@@ -745,3 +745,28 @@ scanned; no code changes needed:
   it to the actual codebase. The audit pattern (grep each API, verify
   each lock/probe) took minutes and found zero required changes - the
   repo was already on the safe side of every v1.4 break.
+
+### 17. Folded tooling: the audit patterns are now runnable
+
+- bun:breaking-audit (tools/bun-breaking-audit.ts) encodes section 16:
+  greps src+tools for every v1.4 break (writeHeader, YAML 1.2, Temporal,
+  node interpreter, rejectUnauthorized:false, native addons, bun.lock
+  version vs frozenLockfile) and exits 0/1. Traps learned: exclude the
+  tool's OWN source from rg (self-match), use find -name '*.node'
+  instead of rg '\.node' (matches table.nodeId column names), and
+  don't flag the openssl CLI '-servername' SNI arg as a TLS override.
+  Current run: 7/7 ok.
+- bun:claims-audit (tools/bun-claims-audit.ts + src/lib/claims-audit.ts)
+  encodes sections 13/15: given claim strings, greps the release blog
+  (cached at research/cache/bun-blog.html) and reports FOUND / NOT
+  FOUND, exiting 1 if anything is absent (likely fabricated). Core is
+  a pure lib (auditClaims: word-boundary by default, --all for
+  substring) with 6 tests. Verified against the v1.4 blog: correctly
+  flags '535,496 lines of Zig' / '64 Claude agents' as fabricated and
+  finds 'rewrites Bun from Zig to Rust' / 'res.writeHeader'.
+- Word-boundary subtlety (probe + test): a hyphen is NOT a word
+  boundary in the (^|[^a-z0-9])...([^a-z0-9]|$) scheme - 'strangler'
+  matches inside 'strangler-fig'. The reliable discriminator is
+  prefix-vs-longer-word ('rewrite' vs 'rewrites').
+- Use: after any pasted Bun claims, run bun:claims-audit with the
+  specific numbers; after any Bun upgrade, run bun:breaking-audit.
