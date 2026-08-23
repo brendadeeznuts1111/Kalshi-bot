@@ -49,14 +49,27 @@ type FormatCache = {
   "ansi-16m": Record<ColorKey, string>;
 };
 
+/**
+ * Bun.color overloads reject a union of string-returning and object-returning
+ * formats, so narrow per format — each branch resolves a concrete overload
+ * with no casts (bun-types 1.4.0 types every format incl. {rgb}).
+ */
+function convertDeterministic(
+  value: string,
+  format: DeterministicFormat,
+): string | number | RGB | null {
+  if (format === "{rgb}") return Bun.color(value, "{rgb}");
+  if (format === "number") return Bun.color(value, "number");
+  return Bun.color(value, format); // css | HEX | ansi-16m (string overload)
+}
+
 function buildCache(): FormatCache {
   const keys = Object.keys(COLORS) as ColorKey[];
   const cache = {} as FormatCache;
   for (const format of DETERMINISTIC_FORMATS) {
     const row = {} as Record<ColorKey, unknown>;
     for (const key of keys) {
-      // bun-types may lag on object formats (`{rgb}`); runtime accepts them.
-      const converted = Bun.color(COLORS[key], format as "css");
+      const converted = convertDeterministic(COLORS[key], format);
       if (converted == null) {
         throw new Error(`Bun.color failed for "${key}" format "${format}"`);
       }
@@ -66,7 +79,6 @@ function buildCache(): FormatCache {
   }
   return cache;
 }
-
 const cache = buildCache();
 
 const foregroundCache = {} as Record<ColorKey, ForegroundCss>;
