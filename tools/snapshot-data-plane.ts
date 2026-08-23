@@ -10,10 +10,11 @@
  *   bun tools/snapshot-data-plane.ts --list
  *   bun tools/snapshot-data-plane.ts --grep="mae>0.1"
  *
- * @see https://bun.com/docs/runtime/child-process#spawn-a-process-bun-spawn
+ * @see https://bun.com/docs/runtime/shell#getting-started
  */
 import { argValue, hasFlag } from '../src/cli/argv.ts';
 import { mkdirSync } from "node:fs";
+import { $ } from "bun";
 import { openEventStore } from "../src/institutions/event-store/open-db.ts";
 import { DEFAULT_EVENT_STORE_DB } from "../src/institutions/event-store/paths.ts";
 import { summarizeMatchLiquidity } from "../src/institutions/event-store/match-liquidity.ts";
@@ -202,11 +203,9 @@ async function getFileSizeBytes(path: string): Promise<number> {
 
 async function getGitHead(): Promise<string | null> {
   try {
-    const proc = Bun.spawn(["git", "rev-parse", "--short", "HEAD"], { stdout: "pipe", stderr: "pipe" });
-    const code = await proc.exited;
-    if (code !== 0) return null;
-    const out = await new Response(proc.stdout).text();
-    return out.trim() || null;
+    const { exitCode, stdout } = await $`git rev-parse --short HEAD`.nothrow().quiet();
+    if (exitCode !== 0) return null;
+    return stdout.toString().trim() || null;
   } catch {
     return null;
   }
@@ -246,8 +245,8 @@ function ensureDir(dir: string): void {
 
 async function commandSucceeds(command: string[]): Promise<boolean> {
   try {
-    const proc = Bun.spawn(command, { stdout: "ignore", stderr: "ignore" });
-    return (await proc.exited) === 0;
+    const { exitCode } = await $`${command}`.nothrow().quiet();
+    return exitCode === 0;
   } catch {
     return false;
   }
@@ -611,7 +610,7 @@ export async function pruneSnapshots(
     const gz = compressBuffer(buf);
     await Bun.write(dstPath, gz);
 
-    await srcFile.delete?.() ?? Bun.spawn(["rm", srcPath]).exited;
+    await (srcFile.delete?.() ?? (await $`rm ${srcPath}`.nothrow().quiet()).exitCode);
 
     entry.compressed = true;
     bytesSaved += buf.length - gz.length;
@@ -655,7 +654,7 @@ export async function pruneSnapshots(
     for (const p of [filePath, gzPath]) {
       const f = Bun.file(p);
       if (await f.exists()) {
-        await f.delete?.() ?? Bun.spawn(["rm", p]).exited;
+        await (f.delete?.() ?? (await $`rm ${p}`.nothrow().quiet()).exitCode);
       }
     }
     deleted++;

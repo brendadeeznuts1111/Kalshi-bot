@@ -11,6 +11,7 @@
  * @see docs/SEAT-OPS.md
  */
 import { argValue, hasFlag } from '../src/cli/argv.ts';
+import { $ } from "bun";
 // @see https://bun.com/docs/runtime/sqlite
 // @see https://bun.com/docs/api/file-io
 import { mkdirSync } from "node:fs";
@@ -67,7 +68,7 @@ async function main(): Promise<void> {
 
   if (hasFlag("open")) {
     const fileUrl = Bun.pathToFileURL(htmlPath).href;
-    Bun.spawn(["open", fileUrl], { stdout: "ignore", stderr: "ignore" });
+    await $`open ${fileUrl}`.nothrow().quiet();
   }
 }
 

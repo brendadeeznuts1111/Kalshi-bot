@@ -14,6 +14,56 @@ No `Bun.spawn`, no `execa`, no Octokit. Token resolution still uses `gh auth tok
 
 Canonical `Bun.$` entry: [bun.com/docs/runtime/shell#getting-started](https://bun.com/docs/runtime/shell#getting-started)
 
+
+## Repo-wide default (2026-08-23): `Bun.$` is the default subprocess transport
+
+All subprocess calls under `src/`, `scripts/`, and `tools/` go through `Bun.$`
+unless a hard reason exists (keep-list below). `bunfig.toml` `[run] shell = "bun"`
+already routes every `bun run …` through Bun Shell; this section documents the
+in-process side.
+
+### Converted (2026-08-23 sweep — Phase A argv + Phase B pipelines)
+
+| Area | Before | After |
+|------|--------|-------|
+| GitHub rate budget | `Bun.spawn(["gh","api","rate_limit"], pipes)` | `$`gh api rate_limit`.nothrow().quiet()` · `tools/github-rate-budget.ts` |
+| Data-plane snapshot | git rev-parse / rm / commandSucceeds spawns | `$`git rev-parse --short HEAD` · `$`rm ${p}`.nothrow().quiet()` · `tools/snapshot-data-plane.ts` |
+| Massey report dir | `Bun.spawn(["mkdir","-p",dir])` | `$`mkdir -p ${dir}`.nothrow()` · `tools/massey-crossref-cli.ts` |
+| Serve launchd probe | `Bun.spawn(["launchctl","list"])` + kill-on-timeout | `$`launchctl list`.nothrow().quiet()` · `src/research/serve.ts` |
+| Host discover TLS/DNS | s_client / x509 / dig spawns (stdin pipes) | `$`printf "" | openssl s_client …` · `$`printf "%s" ${pem} | openssl x509 ${args}` · `$`dig +short ${type} ${host}` · `src/domain/host-discover.ts` |
+| Partner dashboard open | `Bun.spawn(["open",url])` | `$`open ${fileUrl}`.nothrow().quiet()` · `tools/partner-dashboard.ts` |
+| Simplify-loop test run | `Bun.spawn(["bun","test",…])` pipes | `$`bun test ${[...testArgs]}`.cwd(ROOT).nothrow().quiet()` · `src/research/simplify-loop.ts` |
+| Shadow tick | `Bun.spawn(["bun",runOnce,…])` inherit | `$`bun ${runOnce} ${passthrough}`.cwd(programDir).nothrow()` · `src/alpha/run-shadow-once.ts` |
+| Cron jobs (7 sites) | `Bun.spawn(["bun","run",script], inherit)` | `$`bun run ${script}`.cwd(…).nothrow()` · `scripts/cron-main.ts` |
+| deps outdated | `Bun.spawn(["bun","outdated"], env)` | `$`bun outdated`.env({…, NO_COLOR:"1"}).nothrow().quiet()` · `scripts/deps-outdated.ts` |
+| Vault provisioning | pass-cli spawn + stdin write | `$`printf "%s" ${input} | ${bin} ${args}`.nothrow().quiet()` · `tools/provision-fantasy402-vault.ts` |
+| Guard git scan | `Bun.spawn(["git","ls-files","-z"])` | `$`git ls-files -z`.cwd(root).nothrow().quiet()` + NUL split · `scripts/audit-bun-native.ts` |
+
+### Keep-list — `Bun.spawn` / `Bun.spawnSync` stay (deliberate)
+
+| Site | Reason |
+|------|--------|
+| `src/agent/research-runner.ts` | IPC — `process.send` / `serialization: "advanced"`; Bun Shell has no IPC channel |
+| `src/lib/editor.ts` | `unref()` detach for the GUI editor; `$` has no unref |
+| `tools/pre-commit.ts` · `tools/agent-probe.ts` | `Bun.spawnSync` in blocking sync contexts; `$` is async-only |
+| `tools/protonpass-run.ts` · `tools/db-push-gate.ts` | Interactive TTY passthrough (pass prompts / drizzle-kit) — `$` regressions hide here |
+| `src/partner/execution/demo-scenario-runner.ts` | Deferred — env `undefined` semantics + compliance-adjacent evidence hashing |
+| `tests/*` spawns | Out of the 2026-08-23 sweep scope (consistency pass later) |
+
+### Idioms (verified on Bun 1.4.0)
+
+- **Capture + exit code:** `.nothrow().quiet()` → `{ exitCode, stdout, stderr }` (Buffers).
+- **Live output (≈ `stdout: "inherit"`):** `$` without `.quiet()` streams to the parent **and** still returns captured Buffers — used by the cron jobs.
+- **stdin input:** no `.stdin()` method, and the callable-options form `$`cmd`({…})` does **not** exist in 1.4.0. Feed stdin via `$`printf "%s" ${value} | cmd ${args}`` (empty value closes stdin immediately) or `</dev/null`.
+- **NUL-delimited output:** `stdout.toString().split("\0").filter(Boolean)`.
+- **`.text()` / `.json()` throw on non-zero exit** — prefer `.nothrow()` unless the caller wants the exception.
+- **`.cwd(path)` / `.env({…})` methods exist;** array interpolation escapes each element as its own argv token.
+
+### Known behavior deltas vs the old spawns
+
+- `serve.ts` launchd probe: the 2 s race no longer kills the child on timeout (Bun Shell has no kill handle on the raced promise); `launchctl list` hanging is pathological, so the race still returns `null`.
+- `host-discover` s_client: stdin closes immediately via `printf "" |` (same as the old `stdin.end()`).
+
 ## Why `Bun.$` over `Bun.spawn`
 
 | Concern | `Bun.spawn` | `Bun.$` |

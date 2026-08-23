@@ -18,6 +18,7 @@
  *   --report  also write research/outputs/massey-crossref.md + .json artifacts.
  */
 import { argValue, hasFlag } from '../src/cli/argv.ts';
+import { $ } from "bun";
 import { assertBunAtLeast } from '../src/research/bun-native.ts';
 import { openEventStore } from '../src/institutions/event-store/open-db.ts';
 import { openMasseyDb } from '../src/institutions/massey/store.ts';
@@ -90,8 +91,7 @@ async function main(): Promise<void> {
   }
   if (report) {
     const dir = "./research/outputs";
-    const mk = Bun.spawn(["mkdir", "-p", dir]);
-    await mk.exited;
+    await $`mkdir -p ${dir}`.nothrow();
     const coveredRows = result.rows.filter((row) => row.covered);
     const md = [
       "# Massey xref: " + sport,

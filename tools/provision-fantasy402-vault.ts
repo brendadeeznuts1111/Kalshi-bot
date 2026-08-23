@@ -31,6 +31,7 @@
  * @see docs/SEAT-OPS.md
  */
 import { argValue, hasFlag } from '../src/cli/argv.ts';
+import { $ } from "bun";
 // @see https://bun.com/docs/api/spawn
 // @see https://bun.com/docs/runtime/utils#bun-which
 import { requireDefaultUrlForUltraMapper } from "../src/domain/index.ts";
@@ -64,25 +65,15 @@ async function passCli(
   opts?: { stdin?: string; allowFail?: boolean },
 ): Promise<{ code: number; stdout: string; stderr: string }> {
   const bin = Bun.which("pass-cli") ?? "pass-cli";
-  const proc = Bun.spawn([bin, ...args], {
-    stdin: opts?.stdin != null ? "pipe" : "ignore",
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  if (opts?.stdin != null && proc.stdin) {
-    proc.stdin.write(opts.stdin);
-    proc.stdin.end();
+  const input = opts?.stdin ?? "";
+  const { stdout, stderr, exitCode } = await $`printf "%s" ${input} | ${bin} ${args}`.nothrow().quiet();
+  const outText = stdout.toString();
+  const errText = stderr.toString();
+  if (exitCode !== 0 && !opts?.allowFail) {
+    const err = (errText || outText).trim().slice(0, 400);
+    throw new Error(`pass-cli ${args.join(" ")} failed (exit ${exitCode}): ${err}`);
   }
-  const [stdout, stderr] = await Promise.all([
-    new Response(proc.stdout).text(),
-    new Response(proc.stderr).text(),
-  ]);
-  const code = await proc.exited;
-  if (code !== 0 && !opts?.allowFail) {
-    const err = (stderr || stdout).trim().slice(0, 400);
-    throw new Error(`pass-cli ${args.join(" ")} failed (exit ${code}): ${err}`);
-  }
-  return { code, stdout, stderr };
+  return { code: exitCode, stdout: outText, stderr: errText };
 }
 
 type DeskCreds = {

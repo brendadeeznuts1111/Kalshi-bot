@@ -4,6 +4,7 @@
  *
  * Philosophy: fewer files, fewer re-exports, more direct tests — not new layers.
  */
+import { $ } from "bun";
 import { readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { REPORT_DIR, joinPath } from './paths.ts';
@@ -379,14 +380,10 @@ export async function runFocusedTests(
 
   const command = `bun test ${[...testArgs].join(' ')}`;
   const start = performance.now();
-  const proc = Bun.spawn(['bun', 'test', ...testArgs], {
-    cwd: ROOT,
-    stdout: 'pipe',
-    stderr: 'pipe',
-  });
-  const stdout = await new Response(proc.stdout).text();
-  const stderr = await new Response(proc.stderr).text();
-  const code = await proc.exited;
+  const { stdout: stdoutBuf, stderr: stderrBuf, exitCode } = await $`bun test ${[...testArgs]}`.cwd(ROOT).nothrow().quiet();
+  const stdout = stdoutBuf.toString();
+  const stderr = stderrBuf.toString();
+  const code = exitCode;
   const seconds = (performance.now() - start) / 1000;
   const combined = stdout + stderr;
   const passLine = combined.match(/(\d+) pass/)?.[0] ?? '';

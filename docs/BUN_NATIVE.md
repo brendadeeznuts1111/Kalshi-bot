@@ -49,11 +49,11 @@ Full topic map (guides from the official table; **Ref** = types API; **Here** = 
 | Topic | Guide APIs | Ref (when present) | Here |
 | ----- | ---------- | ------------------ | ---- |
 | HTTP Server | [`Bun.serve`](https://bun.com/docs/runtime/http/server) | [/serve](https://bun.com/reference/bun/serve) | yes — report browser |
-| Shell | [`$`](https://bun.com/docs/runtime/shell) | [/$](https://bun.com/reference/bun/$) | yes — `gh`, scripts · [`BUN_SHELL.md`](BUN_SHELL.md) |
+| Shell | [`$`](https://bun.com/docs/runtime/shell) | [/$](https://bun.com/reference/bun/$) | yes — **default subprocess transport** · [`BUN_SHELL.md`](BUN_SHELL.md) |
 | Bundler | [`Bun.build`](https://bun.com/docs/bundler) | [/build](https://bun.com/reference/bun/build) | rare |
 | File I/O | [`Bun.file`](https://bun.com/docs/runtime/file-io#reading-files-bun-file), [`Bun.write`](https://bun.com/docs/runtime/file-io#writing-files-bun-write), `Bun.stdin`/`stdout`/`stderr` | [/file](https://bun.com/reference/bun/file) · [/write](https://bun.com/reference/bun/write) | yes |
 | JSONL | [`Bun.JSONL.parse` / `.parseChunk`](https://bun.com/docs/api/jsonl) | [/JSONL](https://bun.com/reference/bun/JSONL/parse) | yes — [`src/lib/jsonl.ts`](../src/lib/jsonl.ts): streaming logs, WS captures, `/api/*.jsonl` endpoints. **Verified gotchas:** (1) `parse()` truncates at the first bad line — does not skip; (2) `parseChunk()` `read` is UTF-8 **bytes** for strings too — never `string.slice(read)` on multibyte; (3) naive `buffer.slice(read)` loops forever on a bad line; (4) `subarray()` retains the parent buffer. Use the lib's skip-and-continue streaming helpers |
-| Child Processes | [`Bun.spawn`](https://bun.com/docs/runtime/child-process#spawn-a-process-bun-spawn), [`Bun.spawnSync`](https://bun.com/docs/runtime/child-process#blocking-api-bun-spawnsync) | [/spawn](https://bun.com/reference/bun/spawn) · [/spawnSync](https://bun.com/reference/bun/spawnSync) | yes — IPC, rate budget |
+| Child Processes | [`Bun.spawn`](https://bun.com/docs/runtime/child-process#spawn-a-process-bun-spawn), [`Bun.spawnSync`](https://bun.com/docs/runtime/child-process#blocking-api-bun-spawnsync) | [/spawn](https://bun.com/reference/bun/spawn) · [/spawnSync](https://bun.com/reference/bun/spawnSync) | yes — keep-list only: IPC, unref, sync, interactive ([`BUN_SHELL.md`](BUN_SHELL.md)) |
 | TCP Sockets | [`Bun.listen`](https://bun.com/docs/runtime/networking/tcp#start-a-server-bun-listen), [`Bun.connect`](https://bun.com/docs/runtime/networking/tcp#start-a-server-bun-listen) | [/listen](https://bun.com/reference/bun/listen) · [/connect](https://bun.com/reference/bun/connect) | — |
 | UDP Sockets | [`Bun.udpSocket`](https://bun.com/docs/runtime/networking/udp) | [/udpSocket](https://bun.com/reference/bun/udpSocket) | — |
 | WebSockets | `new WebSocket()` (client), [`Bun.serve`](https://bun.com/docs/runtime/http/websockets) (server) | — | yes — Kalshi orderbook client |
@@ -557,7 +557,7 @@ Deep dive: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns)
 | TTY tables + OSC 8 links | `Bun.inspect.table` + `Bun.stringWidth` / `wrapAnsi` / `stripANSI` | [`terminal-out.ts`](../src/research/terminal-out.ts) |
 | Phase timings | `Bun.nanoseconds` | [`phase-timing.ts`](../src/research/phase-timing.ts) |
 | Agent IPC research progress | `Bun.spawn` + `process.send` | [`research-runner.ts`](../src/agent/research-runner.ts), [`research-progress.ts`](../src/research/research-progress.ts) |
-| GitHub rate budget probe | `Bun.spawn` (stdout/stderr pipes) | [`github-rate-budget.ts`](../tools/github-rate-budget.ts) |
+| GitHub rate budget probe | `Bun.$` — `gh api rate_limit` quiet capture | [`github-rate-budget.ts`](../tools/github-rate-budget.ts) |
 | Repo / alpha file scan | `Bun.Glob` | [`watcher.ts`](../src/calibration/watcher.ts), [`architecture-blueprint.ts`](../src/agent/architecture-blueprint.ts) |
 | CLI flags | `parseArgs` from `node:util` | [`cli.ts`](../src/research/cli.ts) |
 | Reproducible package install | `bun install --frozen-lockfile` | [`package.json`](../package.json), [`bun.lock`](../bun.lock) |

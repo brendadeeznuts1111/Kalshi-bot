@@ -22,6 +22,7 @@
  * LOCAL time zone (1.3.x used UTC). The UTC labels above describe intent;
  * only the massey job pins { tz: "UTC" } explicitly.
  */
+import { $ } from "bun";
 import { ensureEventStoreDir, openEventStore } from "../src/institutions/event-store/open-db.ts";
 import { DEFAULT_EVENT_STORE_DB } from "../src/institutions/event-store/paths.ts";
 import { existsSync } from "node:fs";
@@ -165,13 +166,8 @@ async function jobAnalysis(): Promise<void> {
       console.error("[cron:analysis] Skipped · scripts/market-inefficiency.ts is not installed");
       return;
     }
-    const proc = Bun.spawn(["bun", script], {
-      cwd: import.meta.dir + "/..",
-      stdout: "inherit",
-      stderr: "inherit",
-    });
-    const code = await proc.exited;
-    if (code !== 0) throw new Error(`market-inefficiency exited ${code}`);
+    const { exitCode } = await $`bun ${script}`.cwd(import.meta.dir + "/..").nothrow();
+    if (exitCode !== 0) throw new Error(`market-inefficiency exited ${exitCode}`);
     console.error(`[cron:analysis] Complete · ${Date.now() - start}ms`);
   } catch (err) {
     console.error(`[cron:analysis] Error: ${err}`);
@@ -451,34 +447,16 @@ async function jobMasseySync(): Promise<void> {
     );
     const cfg = loadMasseyConfig();
     const sportList = cfg.sync.sports.join(",");
-    const proc = Bun.spawn(
-      [
-        "bun", "run", "massey:sync", "--",
-        `--sport=${sportList}`,
-        "--write",
-        `--max-age-hours=${cfg.sync.maxAgeHours}`,
-        "--rows=0",
-      ],
-      { cwd: import.meta.dir + "/..", stdout: "inherit", stderr: "inherit" },
-    );
-    const code = await proc.exited;
-    if (code !== 0) throw new Error(`massey:sync exited ${code}`);
+    const { exitCode } = await $`bun run massey:sync -- --sport=${sportList} --write --max-age-hours=${cfg.sync.maxAgeHours} --rows=0`.cwd(import.meta.dir + "/..").nothrow();
+    if (exitCode !== 0) throw new Error(`massey:sync exited ${exitCode}`);
     for (const sport of cfg.crossref.sports) {
-      const cr = Bun.spawn(
-        ["bun", "run", "massey:crossref", "--", `--sport=${sport}`, "--rows=0"],
-        { cwd: import.meta.dir + "/..", stdout: "inherit", stderr: "inherit" },
-      );
-      const crCode = await cr.exited;
-      if (crCode !== 0) throw new Error(`massey:crossref ${sport} exited ${crCode}`);
+      const cr = await $`bun run massey:crossref -- --sport=${sport} --rows=0`.cwd(import.meta.dir + "/..").nothrow();
+      if (cr.exitCode !== 0) throw new Error(`massey:crossref ${sport} exited ${cr.exitCode}`);
     }
     // Automatic edge flags over the latest odds_ticks (live-capture contract).
     for (const sport of cfg.crossref.sports) {
-      const fg = Bun.spawn(
-        ["bun", "run", "massey:edge-flags", "--", `--sport=${sport}`, "--report", "--rows=0"],
-        { cwd: import.meta.dir + "/..", stdout: "inherit", stderr: "inherit" },
-      );
-      const fgCode = await fg.exited;
-      if (fgCode !== 0) throw new Error(`massey:edge-flags ${sport} exited ${fgCode}`);
+      const fg = await $`bun run massey:edge-flags -- --sport=${sport} --report --rows=0`.cwd(import.meta.dir + "/..").nothrow();
+      if (fg.exitCode !== 0) throw new Error(`massey:edge-flags ${sport} exited ${fg.exitCode}`);
     }
     console.error(`[cron:massey] sync+crossref+flags ok · ${Date.now() - start}ms`);
   } catch (err) {
@@ -493,13 +471,8 @@ async function jobGlossaryUrls(): Promise<void> {
     // Prefer hard check; soft only if GLOSSARY_URLS_SOFT=1 (flaky networks)
     const soft = Bun.env.GLOSSARY_URLS_SOFT === "1";
     const script = soft ? "glossary:urls:soft" : "glossary:urls";
-    const proc = Bun.spawn(["bun", "run", script], {
-      cwd: import.meta.dir + "/..",
-      stdout: "inherit",
-      stderr: "inherit",
-    });
-    const code = await proc.exited;
-    if (code !== 0) throw new Error(`${script} exited ${code}`);
+    const { exitCode } = await $`bun run ${script}`.cwd(import.meta.dir + "/..").nothrow();
+    if (exitCode !== 0) throw new Error(`${script} exited ${exitCode}`);
     console.error(`[cron:glossary-urls] ok (${script}) · ${Date.now() - start}ms`);
   } catch (err) {
     console.error(`[cron:glossary-urls] Error: ${err}`);
@@ -510,13 +483,8 @@ async function jobGlossaryUrls(): Promise<void> {
 async function jobColorArtifacts(): Promise<void> {
   const start = Date.now();
   try {
-    const proc = Bun.spawn(["bun", "run", "colors:artifacts"], {
-      cwd: import.meta.dir + "/..",
-      stdout: "inherit",
-      stderr: "inherit",
-    });
-    const code = await proc.exited;
-    if (code !== 0) throw new Error(`colors:artifacts exited ${code}`);
+    const { exitCode } = await $`bun run colors:artifacts`.cwd(import.meta.dir + "/..").nothrow();
+    if (exitCode !== 0) throw new Error(`colors:artifacts exited ${exitCode}`);
     console.error(`[cron:colors] artifacts ok · ${Date.now() - start}ms`);
   } catch (err) {
     console.error(`[cron:colors] Error: ${err}`);
@@ -527,13 +495,8 @@ async function jobColorArtifacts(): Promise<void> {
 async function jobContrast(): Promise<void> {
   const start = Date.now();
   try {
-    const proc = Bun.spawn(["bun", "run", "colors:contrast"], {
-      cwd: import.meta.dir + "/..",
-      stdout: "inherit",
-      stderr: "inherit",
-    });
-    const code = await proc.exited;
-    if (code !== 0) throw new Error(`colors:contrast exited ${code}`);
+    const { exitCode } = await $`bun run colors:contrast`.cwd(import.meta.dir + "/..").nothrow();
+    if (exitCode !== 0) throw new Error(`colors:contrast exited ${exitCode}`);
     console.error(`[cron:contrast] ok · ${Date.now() - start}ms`);
   } catch (err) {
     console.error(`[cron:contrast] Error: ${err}`);

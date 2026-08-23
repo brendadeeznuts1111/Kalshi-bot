@@ -11,6 +11,7 @@
  * @see https://bun.com/docs/runtime/color
  * @see https://bun.com/docs/runtime/environment-variables#configuring-bun
  */
+import { $ } from "bun";
 import { paintSemverChange, type SemverChange } from "../src/lib/color/index.ts";
 
 type OutdatedRow = {
@@ -75,21 +76,14 @@ export function parseOutdatedTable(text: string): OutdatedRow[] {
 }
 
 async function runBunOutdated(): Promise<string> {
-  const proc = Bun.spawn(["bun", "outdated"], {
-    stdout: "pipe",
-    stderr: "pipe",
-    env: { ...Bun.env, NO_COLOR: "1" }, // parse plain table
-  });
-  const [stdout, stderr, code] = await Promise.all([
-    new Response(proc.stdout).text(),
-    new Response(proc.stderr).text(),
-    proc.exited,
-  ]);
+  const { stdout, stderr, exitCode } = await $`bun outdated`.env({ ...Bun.env, NO_COLOR: "1" }).nothrow().quiet();
+  const outText = stdout.toString();
+  const errText = stderr.toString();
   // bun outdated exits 0 with empty table or non-zero when outdated — accept both
-  if (code !== 0 && !stdout.includes("Package")) {
-    throw new Error(stderr.trim() || `bun outdated exited ${code}`);
+  if (exitCode !== 0 && !outText.includes("Package")) {
+    throw new Error(errText.trim() || `bun outdated exited ${exitCode}`);
   }
-  return stdout;
+  return outText;
 }
 
 async function main() {

@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 // @see https://bun.com/docs/runtime/utils#bun-main
-// @see https://bun.com/docs/runtime/child-process#spawning-a-process-bun-spawn
+// @see https://bun.com/docs/runtime/shell#getting-started
 /**
  * Read GitHub rate-limit buckets + inspect cost estimate — no research run.
  *
@@ -8,6 +8,7 @@
  *   bun tools/github-rate-budget.ts --dimension=price-data --gated=49 --uncached=49
  */
 import { parseArgs } from "node:util";
+import { $ } from "bun";
 import { loadConfig } from "../src/research/discover.ts";
 import {
   estimateCodeSearchCallsPerRepo,
@@ -18,12 +19,10 @@ import {
 } from "../src/research/github-rate-limit.ts";
 
 async function fetchRateLimitWire(): Promise<GitHubRateLimitWire | null> {
-  const proc = Bun.spawn(["gh", "api", "rate_limit"], { stdout: "pipe", stderr: "pipe" });
-  const exitCode = await proc.exited;
-  const stdout = proc.stdout ? await new Response(proc.stdout).text() : "";
+  const { exitCode, stdout } = await $`gh api rate_limit`.nothrow().quiet();
   if (exitCode !== 0) return null;
   try {
-    return JSON.parse(stdout) as GitHubRateLimitWire;
+    return JSON.parse(stdout.toString()) as GitHubRateLimitWire;
   } catch {
     return null;
   }

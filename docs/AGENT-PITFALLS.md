@@ -179,6 +179,23 @@ Args-arrays are lexer-safe (values are double-quoted JS strings) AND shell-safe
 (no re-parsing). Note: under `bun -e script arg`, the arg is argv[1] (argv[0] is
 the bun binary; the -e script is not in argv).
 
+## 9. Bun Shell (`Bun.$`) switch — verified API surface (2026-08-23)
+
+Converted all non-keep-list `Bun.spawn` sites to `Bun.$` (see BUN_SHELL.md
+"Repo-wide default" + keep-list). Verified on Bun 1.4.0, in order of surprise:
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| `TypeError: $`cmd` is not a function` | The callable-options form (`$`cmd`({ stdout: "inherit" })`) does not exist in 1.4.0 | Default `$` streams to the parent (≈ inherit) and still returns captured Buffers; `.quiet()` suppresses |
+| `$`cmd`.stdin is not a function` | No `.stdin()` method in 1.4.0 | Pipe stdin: `$`printf "%s" ${value} | cmd ${args}``; empty value closes stdin immediately |
+| `$`cmd`.stdout("inherit") is not a function` | No stdio-setter methods | Default streaming is inherit-like; use `.quiet()` for capture |
+| `.text()` / `.json()` throw on non-zero exit | Documented throw-path | `.nothrow().quiet()` → `{ exitCode, stdout, stderr }` |
+| NUL bytes in output? | They round-trip byte-exact (`printf "a\0b"` probe) | `stdout.toString().split("\0").filter(Boolean)` for `git ls-files -z` |
+
+Rules that still apply: never `$`bash -c "…"` with interpolated input; array
+interpolation escapes each element as a separate argv token.
+
+
 ### 8f. The run_code worker is plain Node - SOLVED with `bun run agent:probe`
 
 Bun globals are NOT available inside a run_code program (Bun.spawnSync threw

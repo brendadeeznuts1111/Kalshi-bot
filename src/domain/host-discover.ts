@@ -7,6 +7,7 @@
  * Suggested adapter follows SKINS[].mapper only (not Ultra stack scoring).
  */
 
+import { $ } from "bun";
 import {
   SKIN_IDS,
   SKINS,
@@ -411,27 +412,15 @@ function extractDnsSansFromText(text: string): string[] {
 /** Decode leaf cert SANs via `openssl s_client` → `openssl x509` (PEM alone has no DNS: lines). */
 async function probeTlsSans(host: string): Promise<string[]> {
   try {
-    const sClient = Bun.spawn(
-      ['openssl', 's_client', '-connect', `${host}:443`, '-servername', host, '-showcerts'],
-      { stdin: 'pipe', stdout: 'pipe', stderr: 'pipe' }
-    );
-    sClient.stdin.end();
-    const pemBundle = await new Response(sClient.stdout).text();
-    await sClient.exited;
+    const pemBundle = (
+      await $`printf "" | openssl s_client -connect ${host}:443 -servername ${host} -showcerts`.nothrow().quiet()
+    ).stdout.toString();
     const pem = /-----BEGIN CERTIFICATE-----[\s\S]+?-----END CERTIFICATE-----/.exec(pemBundle)?.[0];
     if (!pem) return [];
 
     const decode = async (args: string[]): Promise<string[]> => {
-      const x509 = Bun.spawn(['openssl', 'x509', ...args], {
-        stdin: 'pipe',
-        stdout: 'pipe',
-        stderr: 'pipe',
-      });
-      x509.stdin.write(pem);
-      x509.stdin.end();
-      const text = await new Response(x509.stdout).text();
-      await x509.exited;
-      return extractDnsSansFromText(text);
+      const { stdout } = await $`printf "%s" ${pem} | openssl x509 ${args}`.nothrow().quiet();
+      return extractDnsSansFromText(stdout.toString());
     };
 
     const fromExt = await decode(['-noout', '-ext', 'subjectAltName']);
@@ -464,13 +453,9 @@ async function probeDns(host: string): Promise<HostDiscoverReport['dns']> {
   };
   try {
     const dig = async (type: string): Promise<string[]> => {
-      const proc = Bun.spawn(['dig', '+short', type, host], {
-        stdout: 'pipe',
-        stderr: 'pipe',
-      });
-      const text = await new Response(proc.stdout).text();
-      await proc.exited;
-      return text
+      const { stdout } = await $`dig +short ${type} ${host}`.nothrow().quiet();
+      return stdout
+        .toString()
         .split('\n')
         .map(l => l.trim().replace(/\.$/, ''))
         .filter(Boolean);

@@ -1,4 +1,5 @@
 // @see https://bun.com/docs/runtime/file-io#reading-files-bun-file
+import { $ } from "bun";
 import type { ResearchRun, ScoredRepo } from "./types.ts";
 import {
   isFixtureRun,
@@ -745,16 +746,11 @@ const OPS_CRON_FLOWS = [
 /** launchctl list, 2s timeout; null on any failure. */
 async function probeLaunchdLabels(): Promise<Set<string> | null> {
   try {
-    const proc = Bun.spawn(["launchctl", "list"], { stdout: "pipe", stderr: "ignore" });
     const text = (await Promise.race([
-      new Response(proc.stdout).text(),
+      $`launchctl list`.nothrow().quiet().then((r) => r.stdout.toString()),
       Bun.sleep(2_000).then(() => null),
     ])) as string | null;
-    if (text == null) {
-      proc.kill();
-      return null;
-    }
-    await proc.exited;
+    if (text == null) return null;
     return new Set(
       text
         .split("\n")

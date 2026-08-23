@@ -1,5 +1,6 @@
 // @see https://bun.com/docs/runtime/networking/fetch#sending-an-http-request
 /** Run one shadow tick for an alpha program directory. */
+import { $ } from "bun";
 import { joinPath } from "../research/paths.ts";
 
 const ROOT = joinPath(import.meta.dir, "../..");
@@ -25,10 +26,6 @@ if (import.meta.main) {
   }
 
   const passthrough = Bun.argv.slice(2).filter((a) => !a.startsWith("--program="));
-  const proc = Bun.spawn(["bun", runOnce, ...passthrough], {
-    cwd: programDir,
-    stdout: "inherit",
-    stderr: "inherit",
-  });
-  process.exit(await proc.exited);
+  const { exitCode } = await $`bun ${runOnce} ${passthrough}`.cwd(programDir).nothrow();
+  process.exit(exitCode);
 }

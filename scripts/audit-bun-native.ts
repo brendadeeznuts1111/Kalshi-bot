@@ -11,6 +11,7 @@
  * @see https://bun.com/docs/runtime/transpiler#scanimports
  * @see https://bun.com/docs/runtime/utils
  */
+import { $ } from "bun";
 import { join } from "node:path";
 import ts from "typescript";
 
@@ -228,18 +229,11 @@ export function findSourceViolations(
 }
 
 async function trackedRepositoryFiles(root: string): Promise<string[]> {
-  const proc = Bun.spawn(["git", "ls-files", "-z"], {
-    cwd: root,
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  const stdout = new Response(proc.stdout).text();
-  const stderr = new Response(proc.stderr).text();
-  const exitCode = await proc.exited;
+  const { stdout, stderr, exitCode } = await $`git ls-files -z`.cwd(root).nothrow().quiet();
   if (exitCode !== 0) {
-    throw new Error(`git ls-files failed: ${(await stderr).trim() || `exit ${exitCode}`}`);
+    throw new Error(`git ls-files failed: ${stderr.toString().trim() || `exit ${exitCode}`}`);
   }
-  return (await stdout).split("\0").filter(Boolean);
+  return stdout.toString().split("\0").filter(Boolean);
 }
 
 export async function auditRepository(
