@@ -1,5 +1,6 @@
 // @see https://bun.com/docs/test/index#run-tests
 import { describe, expect, test } from 'bun:test';
+import { $ } from "bun";
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -267,20 +268,10 @@ describe('live-tracker', () => {
     );
 
     try {
-      const proc = Bun.spawn({
-        cmd: ['bun', 'live-tracker.ts', 'diff', '--desc', oldPath, newPath, '--format=json'],
-        cwd: process.cwd(),
-        stdout: 'pipe',
-        stderr: 'pipe',
-      });
-      const [exitCode, stdout, stderr] = await Promise.all([
-        proc.exited,
-        new Response(proc.stdout).text(),
-        new Response(proc.stderr).text(),
-      ]);
+      const { exitCode, stdout, stderr } = await $`bun tools/live-tracker-cli.ts diff --desc ${oldPath} ${newPath} --format=json`.nothrow().quiet();
 
-      expect(exitCode, stderr).toBe(0);
-      const output = JSON.parse(stdout) as {
+      expect(exitCode, stderr.toString()).toBe(0);
+      const output = JSON.parse(stdout.toString()) as {
         count: number;
         events: Array<Record<string, string>>;
       };

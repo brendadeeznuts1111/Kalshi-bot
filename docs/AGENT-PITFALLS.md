@@ -214,6 +214,11 @@ backslash in template literals.
 - Node returns status: null on a missing binary; **Bun THROWS on spawn
   failure (ENOENT)** - wrap optional binaries (rg, openssl, find) in
   try/catch and return the same fallback as a non-zero exit.
+- **Bun.$ passes stdin through** to the child by default (verified:
+  `echo hi | bun -e 'await $`cat`'` -> hi), but it PIPES stdout/stderr -
+  the child sees isTTY=false. For CLIs that need the parent's true TTY fds
+  (pass-cli agent prompts, drizzle-kit push), keep Bun.spawn with stdio
+  inherit and list the file in SPAWN_KEEP_LIST.
 
 
 

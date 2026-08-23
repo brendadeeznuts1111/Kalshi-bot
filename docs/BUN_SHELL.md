@@ -48,8 +48,10 @@ in-process side.
 | `src/agent/research-runner.ts` | IPC — `process.send` / `serialization: "advanced"`; Bun Shell has no IPC channel |
 | `src/lib/editor.ts` | `unref()` detach for the GUI editor; `$` has no unref |
 | `tools/pre-commit.ts` · `tools/agent-probe.ts` · `src/lib/rg.ts` · `src/lib/breaking-audit.ts` | `Bun.spawnSync` in blocking sync contexts; `$` is async-only. `node:child_process` is guard-banned (`BANNED_PACKAGES`) |
-| `tools/protonpass-run.ts` · `tools/db-push-gate.ts` | Interactive TTY passthrough (pass prompts / drizzle-kit) — `$` regressions hide here |
-| `tests/inventory/live-tracker.test.ts` | Deferred — file carries unrelated uncommitted work; convert when it lands |
+| `tools/protonpass-run.ts` · `tools/db-push-gate.ts` | True TTY fds via stdio inherit — `$` pipes stdout/stderr (child `isTTY=false`), which can alter prompts/colors on the secrets wrapper and the destructive schema gate. (`$` does pass stdin through — verified — but stdout TTY-ness differs.) |
+
+
+**Enforced:** `scripts/audit-bun-native.ts` `SPAWN_KEEP_LIST` — any `Bun.spawn` / `Bun.spawnSync` call outside these files fails `bun:ci` (AST-based; comments and strings are ignored).
 
 ### Idioms (verified on Bun 1.4.0)
 
