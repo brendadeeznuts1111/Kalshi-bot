@@ -642,4 +642,14 @@ export class FantasyUltraAdapter implements FantasySessionAdapter {
     this.pandora?.close();
     this.pandora = null;
   }
+
+  /**
+   * Compact + redacted: console.log / Bun.inspect never prints the bearer
+   * token or credentials (password/token fields are secret).
+   * @see https://bun.com/docs/runtime/utils#bun-inspect-custom
+   */
+  [Bun.inspect.custom](): string {
+    const domain = this.credentials.domain;
+    return `FantasyUltraAdapter(partner=${this.partnerId}, domain=${domain}, token=${this.bearerToken ? "set" : "unset"}, cookies=${this.jar.size()}, warmed=${this.warmed})`;
+  }
 }

@@ -511,4 +511,19 @@ export class PandoraSocket {
       if (!this.closedByUser) this.connect();
     }, delay);
   }
+
+  /**
+   * Compact + redacted: show host + connection state only — the URL may
+   * carry session params (gsid) and the wire never needs them in logs.
+   * @see https://bun.com/docs/runtime/utils#bun-inspect-custom
+   */
+  [Bun.inspect.custom](): string {
+    let host = "?";
+    try {
+      host = new URL(this.url).host;
+    } catch {
+      /* keep ? */
+    }
+    return `PandoraSocket(${host}, ${this.ws ? "open" : "closed"}, reconnect=${this.reconnectAttempt})`;
+  }
 }
