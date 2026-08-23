@@ -46,4 +46,13 @@ export class CookieJar {
   clear(): void {
     this.map.clear();
   }
+
+  /**
+   * Compact + redacted print: console.log / Bun.inspect never leak cookie
+   * values (session tokens) into logs.
+   * @see https://bun.com/docs/runtime/utils#bun-inspect-custom
+   */
+  [Bun.inspect.custom](): string {
+    return `CookieJar(${this.map.size} cookie${this.map.size === 1 ? "" : "s"})`;
+  }
 }
