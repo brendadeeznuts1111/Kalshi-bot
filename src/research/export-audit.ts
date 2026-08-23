@@ -1,6 +1,7 @@
 // @see https://bun.com/docs/runtime/file-io#writing-files-bun-write
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
+import { readJsonFile } from "../lib/json-file.ts";
 import {
   buildAuditEvidenceWire,
   buildAuditRunExport,
@@ -155,7 +156,7 @@ export async function verifyLocalAuditExport(auditRelDir: string): Promise<Audit
       errors.push(`missing finding file: ${entry.id}.finding.json`);
       continue;
     }
-    const finding = JSON.parse(await Bun.file(findingPath).text()) as AuditFindingWire;
+    const finding = await readJsonFile<AuditFindingWire>(findingPath);
     const evidenceAbs = join(ROOT, finding.evidence.path);
     if (!(await Bun.file(evidenceAbs).exists())) {
       errors.push(`missing evidence: ${finding.evidence.path}`);

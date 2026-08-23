@@ -50,3 +50,18 @@ export function absPathToFileUrl(absPath: string): string {
 export function fileUrlToAbsPath(url: string | URL): string {
   return Bun.fileURLToPath(url instanceof URL ? url : new URL(url));
 }
+
+// @see https://bun.com/docs/runtime/semver#satisfies
+/**
+ * Fail fast with a clear message when the runtime is below a Bun baseline.
+ * Use at CLI entry points that rely on Bun 1.4-only APIs (e.g. Bun.WebView),
+ * where an old runtime would otherwise fail with a confusing ReferenceError.
+ */
+export function assertBunAtLeast(minVersion = "1.4.0", feature = "Bun-native APIs"): void {
+  if (!Bun.semver.satisfies(Bun.version, ">=" + minVersion)) {
+    throw new Error(
+      "This tool requires Bun >= " + minVersion + " (running " + Bun.version + ") for " + feature +
+        " — upgrade with: brew upgrade bun",
+    );
+  }
+}

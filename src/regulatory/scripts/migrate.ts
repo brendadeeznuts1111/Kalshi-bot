@@ -105,7 +105,7 @@ function main(): number {
 
     console.log(c.info(`Applying ${pending.length} migration(s):`));
     for (const filename of pending) {
-      process.stdout.write(`  ${c.dim("→")} ${filename} … `);
+      Bun.stdout.write(`  ${c.dim("→")} ${filename} … `);
       runMigration(db, filename);
       console.log(c.ok("✓"));
     }

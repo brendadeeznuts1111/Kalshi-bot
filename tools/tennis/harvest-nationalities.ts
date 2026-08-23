@@ -12,6 +12,7 @@
  */
 // @see https://bun.com/docs/runtime/file-io
 import { readdirSync } from "node:fs";
+import { readJsonFile } from "../../src/lib/json-file.ts";
 import { join } from "node:path";
 import { CACHE_DIR, joinPath } from "../../src/research/paths.ts";
 import { normalizeKey } from "../../src/research/tennis-meta.ts";
@@ -69,7 +70,7 @@ export async function harvestAll(options: { dryRun?: boolean } = {}): Promise<{
   const out = { players: new Map<string, IsoEntry>(), venues: new Map<string, IsoEntry>() };
   const files = readdirSync(STADION_DIR).filter((f) => f.endsWith(".json")).sort();
   for (const f of files) {
-    const wire: unknown = JSON.parse(await Bun.file(join(STADION_DIR, f)).text());
+    const wire: unknown = await readJsonFile(join(STADION_DIR, f));
     harvestStadionWire(wire, out);
   }
   if (!options.dryRun) {

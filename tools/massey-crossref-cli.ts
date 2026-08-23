@@ -18,6 +18,7 @@
  *   --report  also write research/outputs/massey-crossref.md + .json artifacts.
  */
 import { argValue, hasFlag } from '../src/cli/argv.ts';
+import { assertBunAtLeast } from '../src/research/bun-native.ts';
 import { openEventStore } from '../src/institutions/event-store/open-db.ts';
 import { openMasseyDb } from '../src/institutions/massey/store.ts';
 import { crossrefSport, type BookSkinEvent, type MasseyCrossrefRow } from '../src/institutions/massey/crossref.ts';
@@ -57,6 +58,7 @@ function formatRow(r: MasseyCrossrefRow): string {
 }
 
 async function main(): Promise<void> {
+  assertBunAtLeast('1.4.0', 'Massey cross-reference (Bun.cron + bun:sqlite)');
   const sport = argValue('sport') ?? 'volleyball';
   const json = hasFlag('json');
   const report = hasFlag('report');

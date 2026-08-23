@@ -1113,6 +1113,9 @@ bun pm cache rm                    # clear ~/.bun/install/cache
 | `AbortSignal.timeout` | `src/institutions/url-health.ts` | `probeHttp` now uses the self-aborting signal instead of an AbortController + manual timer + `clearTimeout` in `finally`.
 | `Promise.withResolvers` | `src/institutions/event-store/kalshi-ws-recorder.ts` | Deferred session promise — removes the `new Promise` executor indirection for the `sessionDone` resolver.
 | `Bun.ArrayBufferSink` | `src/partner/visuals.ts` | PNG builder's final part concatenation now uses a single-pass sink instead of the manual total+offset loop; structural PNG test pins the bytes.
+| `Bun.semver.satisfies` | `src/research/bun-native.ts`, `tools/massey-sync-cli.ts`, `tools/massey-crossref-cli.ts` | `assertBunAtLeast` runtime gate — CLI entries that need Bun 1.4-only APIs (WebView, cron) fail fast with a clear upgrade message instead of a ReferenceError.
+| `Bun.file().json()` | `src/lib/json-file.ts`, `src/research/export-audit.ts`, `tools/tennis/harvest-nationalities.ts` | JSON artifact SSOT (`readJsonFile`/`readJsonFileOr`/`writeJsonFile`); two manual `JSON.parse(await Bun.file(p).text())` sites refactored.
+| `Bun.stdout.write` | `src/regulatory/scripts/migrate.ts`, `tools/tennis/live-scores-cli.ts` | Replaced the last `process.stdout.write` spots (readline.ts already native).
 
 ### Flagged (no adoption yet — honest no-fit)
 

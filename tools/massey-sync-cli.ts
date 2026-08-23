@@ -27,6 +27,7 @@
  *   --db=PATH        override massey.db path (tests use :memory:).
  */
 import { argValue, hasFlag } from '../src/cli/argv.ts';
+import { assertBunAtLeast } from '../src/research/bun-native.ts';
 import {
   listMasseyBuckets,
   masseyTargetsForBucket,
@@ -147,6 +148,7 @@ async function fetchOne(
 }
 
 async function main(): Promise<void> {
+  assertBunAtLeast('1.4.0', 'Bun.WebView-based Massey fetch');
   const targets = resolveTargets();
   const dryRun = !hasFlag('write');
   const json = hasFlag('json');

@@ -1,6 +1,6 @@
 // @see https://bun.com/docs/test/index#run-tests
 import { describe, expect, test } from "bun:test";
-import { deepEqual, escapeHtml, inspectBrief, stableHash } from "../src/research/bun-native.ts";
+import { assertBunAtLeast, deepEqual, escapeHtml, inspectBrief, stableHash } from "../src/research/bun-native.ts";
 
 describe("bun-native", () => {
   test("escapeHtml delegates to Bun.escapeHTML", () => {
@@ -20,5 +20,18 @@ describe("bun-native", () => {
 
   test("inspectBrief returns plain string", () => {
     expect(inspectBrief({ ok: true })).toContain("ok");
+  });
+
+  test("assertBunAtLeast passes on the running Bun", () => {
+    expect(() => assertBunAtLeast("1.4.0")).not.toThrow();
+  });
+
+  test("assertBunAtLeast throws for an impossible baseline", () => {
+    expect(() => assertBunAtLeast("99.0.0", "future feature")).toThrow(/Bun >= 99.0.0/);
+  });
+
+  test("Bun.semver.satisfies gates the baseline", () => {
+    expect(Bun.semver.satisfies("1.4.0", ">=1.4.0")).toBe(true);
+    expect(Bun.semver.satisfies("1.3.9", ">=1.4.0")).toBe(false);
   });
 });

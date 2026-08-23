@@ -74,7 +74,7 @@ function emitCadence(report: SnapshotCadenceReport, asJson: boolean) {
     set: e.transitions.set,
   }));
   if (rows.length && isTtyStdout()) {
-    process.stdout.write(
+    Bun.stdout.write(
       formatInspectTable(rows, ["event", "snaps", "med_gap", "p90", "rest", "point", "game", "set"]),
     );
   } else {
