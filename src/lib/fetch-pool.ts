@@ -32,12 +32,25 @@ export type FetchTextResult = {
 };
 
 export type FetchPoolOptions = {
-  /** Max concurrent fetches (each = one TCP connection on HTTP/1.1). Default 8. */
+  /** Max concurrent fetches (each = one TCP connection on HTTP/1.1; one
+   * multiplexed stream per request on h2). Default 8. */
   concurrency?: number;
   /** Per-request timeout via AbortSignal.timeout. Default 15s. */
   timeoutMs?: number;
   /** Warm DNS for the target hosts first (default true). */
   warmDns?: boolean;
+  /**
+   * Force the HTTP version (experimental, 1.4.0): 'http2' multiplexes
+   * concurrent requests on ONE TLS connection (verified: 20 parallel
+   * -> 1 conn / 20 streams) but REQUIRES https - plaintext h2c is not
+   * supported and a server that declines h2 makes the request fail
+   * with HTTP2Unsupported (no fallback). Omit to use the default
+   * (h1.1; offer h2 process-wide via BUN_FEATURE_FLAG_EXPERIMENTAL_
+   * HTTP2_CLIENT=1 / --experimental-http2-fetch).
+   */
+  protocol?: 'http2' | 'http1.1';
+  /** Extra fetch init forwarded to every request (e.g. tls options). */
+  fetchInit?: RequestInit;
 };
 
 const DEFAULT_CONCURRENCY = 8;
@@ -67,11 +80,13 @@ export function warmDns(targets: DnsWarmTarget[]): void {
  */
 export async function fetchText(
   url: string,
-  init?: RequestInit & { timeoutMs?: number },
+  init?: RequestInit & { timeoutMs?: number; protocol?: 'http2' | 'http1.1' },
 ): Promise<{ ok: boolean; status: number; bytes: number; text: string }> {
   const timeoutMs = init?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const signal = init?.signal ?? AbortSignal.timeout(timeoutMs);
-  const res = await fetch(url, { ...init, signal });
+  const { timeoutMs: _t, protocol, ...rest } = init ?? {};
+  void _t;
+  const res = await fetch(url, protocol ? { ...rest, signal, protocol } : { ...rest, signal });
   const text = await res.text(); // body ALWAYS consumed for pooling
   return { ok: res.ok, status: res.status, bytes: text.length, text };
 }
@@ -89,6 +104,7 @@ export async function fetchPool(
   if (!urls.length) return [];
   const concurrency = options?.concurrency ?? DEFAULT_CONCURRENCY;
   const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const protocol = options?.protocol;
   if (options?.warmDns ?? true) {
     const seen = new Set<string>();
     const targets: DnsWarmTarget[] = [];
@@ -110,7 +126,7 @@ export async function fetchPool(
       if (idx >= urls.length) return;
       const url = urls[idx]!;
       try {
-        const r = await fetchText(url, { timeoutMs });
+        const r = await fetchText(url, { timeoutMs, protocol, ...options?.fetchInit });
         results[idx] = { url, ok: r.ok, status: r.status, bytes: r.bytes, text: r.text };
       } catch (err) {
         results[idx] = { url, ok: false, status: 0, bytes: 0, text: '', error: (err as Error).message };

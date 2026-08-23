@@ -507,19 +507,31 @@ patterns (harvest-nationalities, fonbet fixture loader converted).
   effort), fetchText() (body ALWAYS consumed, AbortSignal.timeout per-
   request), fetchPool() (bounded concurrency default 8, per-URL error
   capture, never throws, results aligned with input order).
-- fetchPool replaces unbounded Promise.all fan-outs: on HTTP/1.1 (only
-  protocol available) each concurrent request is one TCP connection, so
-  the concurrency bound IS the peak socket count. bun:docs-index now
-  uses it (16 concurrent, 30s timeout); test coverage in
-  tests/lib/fetch-pool.test.ts (bound honored, failures captured,
+- fetchPool replaces unbounded Promise.all fan-outs: on HTTP/1.1 (the
+  default) each concurrent request is one TCP connection, so the
+  concurrency bound IS the peak socket count. With h2 enabled
+  (--experimental-http2-fetch / BUN_FEATURE_FLAG_EXPERIMENTAL_HTTP2_
+  CLIENT=1, or per-request protocol:'http2' over https) concurrent
+  requests MULTIPLEX on one connection (verified 20 parallel -> 1 conn
+  / 20 streams), so the bound then limits stream fan-out, not sockets.
+  bun:docs-index uses it (16 concurrent, 30s timeout); test coverage
+  in tests/lib/fetch-pool.test.ts (bound honored, failures captured,
   timeout fires, warmDns never throws).
 - Migration rule: new multi-URL fetches call fetchPool; single fetches
   call fetchText (never bare fetch without reading the body).
-- HTTP/2 client: NOT supported on 1.4.0. fetch to a local node:http2
-  server fails with 'Malformed_HTTP_Response'; verbose output shows
-  --http1.1 always. So pooling is the ONLY reuse mechanism - no h2
-  multiplexing, which is why parallel = one conn each. (This also
-  explains the Cloudflare HTTP/1.1 negotiation seen in section 10.)
+- HTTP/2 client: SUPPORTED (experimental) - this section was WRONG and
+  is corrected. fetch() accepts protocol:'http2' (per-request, requires
+  https - plaintext h2c is NOT supported, 'HTTP2Unsupported' otherwise)
+  and the whole process upgrades via --experimental-http2-fetch /
+  BUN_FEATURE_FLAG_EXPERIMENTAL_HTTP2_CLIENT=1 (offers h2 in TLS ALPN,
+  falls back to h1.1 if the server doesn't pick it). VERIFIED: h2 over
+  TLS to a local node:http2 server -> 200; with the flag, fetch to
+  bun.com negotiates HTTP/2 (verbose shows 'HTTP/2 GET', Cloudflare
+  accepts); 20 PARALLEL h2 requests -> 1 connection / 20 streams
+  (multiplexed) vs 20 connections on h1.1. The earlier negative probe
+  was an artifact: it tested plaintext http:// h2c, which is not a
+  supported mode. This also means the section-10 'HTTP/1.1 only'
+  framing is default-only: h2 is opt-in (flag or protocol option).
 - Repo precedent: src/institutions/fonbet/connection.ts already uses
   Bun.dns.prefetch (prefetchDns) + getCacheStats (dnsCacheStats) to warm
   and observe the DNS cache - the pattern to copy for any multi-host
@@ -593,3 +605,44 @@ probes. Verdict per claim:
   fabricated tables/percentages in pasted summaries are common. Verify
   any number you will act on. The repo already acts correctly on the
   two big ones (128MB cap comment, idleTimeout 255).
+
+### 14. Deeper pass: h2 fetch correction + new 1.4 fetch features (all verified)
+
+- CORRECTION to sections 10-12: HTTP/2 client IS supported on 1.4.0
+  (experimental). The section-11 'no h2 client' negative was a probe
+  artifact: it tested PLAINTEXT http:// against a node:http2 server.
+  h2 requires https (TLS ALPN); plaintext h2c is not supported -
+  protocol:'http2' on http:// throws HTTP2Unsupported, and default
+  fetch to an h2-only plaintext server throws Malformed_HTTP_Response.
+  Verified over TLS: protocol:'http2' -> 200; with
+  BUN_FEATURE_FLAG_EXPERIMENTAL_HTTP2_CLIENT=1 / --experimental-http2-
+  fetch, default fetch offers h2 in ALPN and falls back to h1.1.
+  Real-world: with the flag, fetch to bun.com shows 'HTTP/2 GET' in
+  verbose output (curl template still prints --http1.1 - the curl
+  line is a template, the HTTP/2 GET line is the real negotiation).
+- Multiplexing verified: 20 PARALLEL h2 requests -> 1 connection / 20
+  streams (h1.1: 20 connections). So fetchPool's concurrency bound
+  means sockets on h1.1 but streams on h2 - the pool works under both;
+  enabling h2 is per-process (flag) or per-request (protocol option).
+- TLS session resumption (new in 1.4, blog): 32-entry LRU of BoringSSL
+  client sessions per origin; a reconnect after pool eviction resumes
+  at 1 RTT instead of a full handshake + cert walk. Improves the
+  eviction/reconnect case from section 10.
+- fetch() request compression (new in 1.4, blog + probe-verified): the
+  compress option compresses request bodies with auto Content-Encoding;
+  gzip/deflate/br/zstd all work (probe: 1200-byte body -> gzip 43b,
+  deflate 31b, br 17b, zstd 29b; server saw the right Content-Encoding
+  header). Buffered bodies compressed + Content-Length reflects it;
+  streaming bodies pass through unchanged.
+- memoryPressure level values typed in bun-types: 'warning' | 'critical'
+  (overrides.d.ts). Event registered in process.eventNames; firing
+  requires actual OS pressure.
+- smol effect probe: heapUsed 17.8 MB normal vs 5.0 MB with --smol
+  (GC runs more often). Top-level bunfig smol = true and [test] smol
+  both documented (bunfig.mdx:53, 204).
+- bun test --parallel semantics: files already run in parallel by
+  default; --parallel=N controls worker PROCESS count (implies
+  --isolate). --shard=1/3 splits files across CI jobs.
+- bun run --parallel verified real: runs scripts concurrently with
+  Foreman-style 'name | exit |' prefixed output (help text + probe).
+- 3x faster bun:ffi confirmed in blog (image alt text).
