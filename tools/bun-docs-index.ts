@@ -48,6 +48,8 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { assertBunAtLeast } from '../src/research/bun-native.ts';
 import { hasFlag, argValue } from '../src/cli/argv.ts';
+import { fetchPool, warmDns } from '../src/lib/fetch-pool.ts';
+import type { DnsWarmTarget } from '../src/lib/fetch-pool.ts';
 
 assertBunAtLeast('1.4.0', 'bun:docs-index');
 
@@ -109,24 +111,12 @@ function sourceBase(s: Source): string {
   return s === 'tag' ? TAG_BASE : s === 'repo' ? REPO_BASE : SITE_BASE;
 }
 
-/**
- * Best-effort DNS warm-up for the hosts this tool talks to (Bun.dns.prefetch,
- * real on 1.4.0; pattern from src/institutions/fonbet/connection.ts).
- * Never fails startup: prefetch is an optimization. Discovery (api.github.com,
- * bun.com sitemap) and content fetches (raw.githubusercontent.com, bun.com)
- * then share one warmed lookup instead of racing their own.
- */
-function warmDns(source: Source): void {
-  const hosts: Array<{ hostname: string; port?: number }> = [
-    { hostname: 'api.github.com', port: 443 },
-    { hostname: 'raw.githubusercontent.com', port: 443 },
-    { hostname: 'bun.com', port: 443 },
-  ];
-  void source; // same hosts for every source (sitemap lives on bun.com)
-  for (const h of hosts) {
-    try { Bun.dns.prefetch(h.hostname, h.port ?? 443); } catch { /* best effort */ }
-  }
-}
+/** Hosts this tool talks to (warmed before discovery + fan-out). */
+const WARM_HOSTS: DnsWarmTarget[] = [
+  { hostname: 'api.github.com', port: 443 },
+  { hostname: 'raw.githubusercontent.com', port: 443 },
+  { hostname: 'bun.com', port: 443 },
+];
 
 /** Cache file name from a docs-relative path (runtime/networking/fetch.mdx -> networking-fetch). */
 function nameFromPath(repoPath: string): string {
@@ -216,7 +206,7 @@ async function main(): Promise<void> {
   }
   mkdirSync(CACHE_DIR, { recursive: true });
   writeFileSync(DISCOVERY_PATH, JSON.stringify({ at: new Date().toISOString(), source, scope, ref, pages }, null, 2) + '\n');
-  warmDns(source); // shared warmed lookups before discovery + fan-out
+  warmDns(WARM_HOSTS); // shared warmed lookups before discovery + fan-out
   const index = readJson<Index>(INDEX_PATH) ?? { pages: [], fetchedAt: new Date(0).toISOString() };
   const byName = new Map(index.pages.map((p) => [p.name, p]));
   const entries: IndexEntry[] = [];
@@ -230,16 +220,17 @@ async function main(): Promise<void> {
       needFetch.push({ page, url: sourceBase(source) + (source === 'site' ? page.path.replace(/\.mdx$/, '.md') : page.path) });
     }
   }
-  const results = await Promise.all(needFetch.map(async ({ page, url }) => {
-    const res = await fetch(url);
-    const ok = res.ok;
-    const text = ok ? await res.text() : '';
-    return { page, url, ok, text };
-  }));
-  for (const r of results) {
-    if (r.ok) writeFileSync(join(CACHE_DIR, r.page.name + '.mdx'), r.text);
-    entries.push({ name: r.page.name, source, sourceUrl: r.url, fetchedAt: new Date().toISOString(), bytes: r.text.length, ok: r.ok });
-    console.log('  ' + (r.ok ? 'cached ' : 'FAILED ') + r.page.name + ' (' + source + ', ' + r.text.length + 'b)');
+  // Bounded fan-out via the shared fetch-pool default: DNS already warmed,
+  // max 16 concurrent (HTTP/1.1 = one TCP connection each), bodies always
+  // consumed (pooling-friendly), 30s per-request timeout. Order preserved.
+  const urls = needFetch.map((n) => n.url);
+  const fetched = await fetchPool(urls, { concurrency: 16, timeoutMs: 30_000 });
+  for (let i = 0; i < needFetch.length; i++) {
+    const page = needFetch[i]!.page;
+    const r = fetched[i]!;
+    if (r.ok) writeFileSync(join(CACHE_DIR, page.name + '.mdx'), r.text);
+    entries.push({ name: page.name, source, sourceUrl: r.url, fetchedAt: new Date().toISOString(), bytes: r.bytes, ok: r.ok });
+    console.log('  ' + (r.ok ? 'cached ' : 'FAILED ') + page.name + ' (' + source + ', ' + r.bytes + 'b' + (r.error ? ' - ' + r.error : '') + ')');
   }
   writeFileSync(INDEX_PATH, JSON.stringify({ pages: entries, fetchedAt: new Date().toISOString() }, null, 2) + '\n');
   const okCount = entries.filter((e) => e.ok).length;

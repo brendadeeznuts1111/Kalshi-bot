@@ -499,6 +499,22 @@ patterns (harvest-nationalities, fonbet fixture loader converted).
   Always consume response bodies (or .cancel()) when you want pooling.
 - Connection: close header and keepalive:false both force a fresh
   connection per request (verified: 3 requests -> 3 conns).
+
+### 12. Canonical fetch defaults (src/lib/fetch-pool.ts)
+
+- NEW DEFAULT for any fetch fan-out: src/lib/fetch-pool.ts encodes the
+  section 10/11 findings as code: warmDns() (Bun.dns.prefetch, best
+  effort), fetchText() (body ALWAYS consumed, AbortSignal.timeout per-
+  request), fetchPool() (bounded concurrency default 8, per-URL error
+  capture, never throws, results aligned with input order).
+- fetchPool replaces unbounded Promise.all fan-outs: on HTTP/1.1 (only
+  protocol available) each concurrent request is one TCP connection, so
+  the concurrency bound IS the peak socket count. bun:docs-index now
+  uses it (16 concurrent, 30s timeout); test coverage in
+  tests/lib/fetch-pool.test.ts (bound honored, failures captured,
+  timeout fires, warmDns never throws).
+- Migration rule: new multi-URL fetches call fetchPool; single fetches
+  call fetchText (never bare fetch without reading the body).
 - HTTP/2 client: NOT supported on 1.4.0. fetch to a local node:http2
   server fails with 'Malformed_HTTP_Response'; verbose output shows
   --http1.1 always. So pooling is the ONLY reuse mechanism - no h2
