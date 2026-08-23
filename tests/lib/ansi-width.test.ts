@@ -4,7 +4,7 @@
  * stripANSI calls, pitfalls 31).
  */
 import { describe, expect, test } from "bun:test";
-import { brandMark, padDisplay, plainDisplay, statusLine, wrapDisplay } from "../../src/research/terminal-out.ts";
+import { brandCell, brandMark, padDisplay, plainDisplay, statusLine, wrapDisplay } from "../../src/research/terminal-out.ts";
 
 const GREEN = "\u001b[38;2;204;230;77m";
 const RESET = "\u001b[0m";
@@ -46,6 +46,24 @@ describe("terminal-out (Bun ANSI primitives)", () => {
     const rows = [{ name: "a", status: { [sym]() { return "[[OK]]"; } } }];
     const table = Bun.inspect.table(rows, ["name", "status"]);
     expect(table).toContain("[[OK]]");
+  });
+
+  test("brandCell: TTY-aware brand color (plain in non-TTY harness)", () => {
+    const cell = brandCell("pass", "pass");
+    // Bun.color(key,'ansi') returns '' in this non-TTY harness, so the
+    // cell renders PLAIN - the documented auto-detection, not a bug.
+    expect(Bun.inspect(cell, { colors: true } as never)).toBe("pass");
+    // With colors forced off, also plain.
+    expect(Bun.inspect(cell, { colors: false } as never)).toBe("pass");
+    // And the raw/meta surface is intact for table rendering.
+    expect(cell.raw).toBe("pass");
+    expect(cell.semantic).toBe("pass");
+  });
+
+  test("brandCell renders in a Bun.inspect.table cell with meta", () => {
+    const cell = brandCell("ok", "pass", { dur: 5 });
+    const table = Bun.inspect.table([{ name: "a", status: cell }], ["name", "status"], { colors: false } as never);
+    expect(table).toContain("ok");
   });
 });
 

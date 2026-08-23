@@ -100,6 +100,61 @@ export function brandMark(mark: string, colorKey: "ok" | "warn" | "bad"): string
   return open ? open + mark + "\u001b[0m" : mark;
 }
 
+export type BrandSemantic = "pass" | "fail" | "warn" | "info";
+
+/**
+ * A cell that renders as a brand-colored token inside Bun.inspect.table
+ * (and Bun.inspect). Verified API composition (pitfalls 32-33):
+ *  - [Bun.inspect.custom] symbol renders the cell custom in tables
+ *    (probe: [[OK]] in a table cell);
+ *  - opts.stylize(_, 'string') gives STANDARD token coloring respecting
+ *    the colors toggle (colors:true -> green token, false/undefined ->
+ *    plain; verified);
+ *  - brand semantics use Bun.color(key,'ansi') directly (stylize can't
+ *    express custom semantics; Bun.color returns a STRING, not fn).
+ * CORRECTED vs the pasted factory: Bun.term undefined, bgGreen null,
+ * Bun.color is not callable, stripANSI (all-caps), opts only carries
+ * {stylize, depth, colors} in the custom handler.
+ */
+export type BrandCell = {
+  raw: string;
+  semantic: BrandSemantic;
+  meta?: Record<string, unknown>;
+  [Bun.inspect.custom]: (depth: number, opts: Record<string, unknown>, inspect: typeof Bun.inspect) => string;
+};
+
+export function brandCell(
+  raw: string,
+  semantic: BrandSemantic,
+  meta?: Record<string, unknown>,
+): BrandCell {
+  const hex = {
+    pass: COLORS.tennis,
+    fail: COLORS.trading,
+    warn: COLORS.middleware,
+    info: COLORS.research,
+  }[semantic];
+  const styled = (opts: Record<string, unknown>, s: string): string => {
+    const open = Bun.color(hex, "ansi") ?? "";
+    return open ? open + s + "\u001b[0m" : s;
+  };
+  return {
+    raw,
+    semantic,
+    meta,
+    [Bun.inspect.custom](depth, opts, inspect) {
+      if (!opts.colors) return this.raw;
+      const colored = styled(opts, this.raw);
+      if (depth === 0) return "[" + this.semantic + " " + this.raw + "...]";
+      if (this.meta) {
+        const extra = inspect(this.meta, { ...opts, depth: (depth as number) - 1 } as never);
+        return colored + " " + Bun.stripANSI(extra);
+      }
+      return colored;
+    },
+  };
+}
+
 export function repoTerminalLink(fullName: string, hyperlinks = isTtyStdout()): string {
   if (!hyperlinks) return fullName;
   const slash = fullName.indexOf("/");

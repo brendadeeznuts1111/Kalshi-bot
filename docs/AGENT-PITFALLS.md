@@ -1215,3 +1215,23 @@ notes - they have structural enforcement:
   declarations. It's a bundler-internal API, not a user-facing
   runtime class. Section 13 marked the blog claim 'verified' without
   runtime-probing; corrected here - blog-verified != runtime-available.
+- Branded-cell factory (paste #5 'production-grade cells') VERIFIED
+  claim-by-claim, then adopted corrected as brandCell() in
+  src/research/terminal-out.ts:
+  * REAL: opts.stylize (custom inspect receives {stylize, depth,
+    colors}; stylize(raw,'string') -> green token when colors:true,
+    plain when false/undefined - probe-verified); Bun.stdout.write
+    (FileSink, buffered); getters:true shows computed props;
+    Bun.stripANSI (all-caps; camel 'stripAnsi' is undefined).
+  * WRONG in the paste: Bun.term is UNDEFINED (no cursorTo/clearDown);
+    Bun.color('bgGreen','ansi') -> null (no named backgrounds);
+    Bun.color returns a STRING not a function (paste's colorMap[..](raw)
+    would throw); maxStringLength not accepted (BunInspectOptions is
+    only {colors, depth, sorted, compact}); opts to the custom handler
+    carry ONLY {stylize, depth, colors} (compact NOT forwarded).
+  * ADOPTED brandCell(raw, semantic, meta): [Bun.inspect.custom] cell
+    that renders brand-colored (COLORS palette pass/fail/warn/info) via
+    Bun.color(key,'ansi') with TTY auto-detection (plain in non-TTY -
+    verified), meta via inspect() with reduced depth, tables render it
+    (probe: cell shows in Bun.inspect.table). Test-locked: colors
+    toggle, TTY-plain fallback, table cell with meta.
