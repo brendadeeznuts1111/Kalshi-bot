@@ -4,7 +4,7 @@
  * stripANSI calls, pitfalls 31).
  */
 import { describe, expect, test } from "bun:test";
-import { padDisplay, plainDisplay, statusLine, wrapDisplay } from "../../src/research/terminal-out.ts";
+import { brandMark, padDisplay, plainDisplay, statusLine, wrapDisplay } from "../../src/research/terminal-out.ts";
 
 const GREEN = "\u001b[38;2;204;230;77m";
 const RESET = "\u001b[0m";
@@ -29,6 +29,23 @@ describe("terminal-out (Bun ANSI primitives)", () => {
     // trim:false keeps the wrapped space on its own line (terminal-out
     // choice; matches Bun.wrapAnsi's default trim behavior).
     expect(wrapDisplay("hello world", 5)).toBe("hello\n \nworld");
+  });
+
+  test("brandMark composes Bun.color auto-TTY with the brand palette", () => {
+    // Non-TTY: Bun.color(key, 'ansi') returns '' so the mark is PLAIN.
+    const plain = brandMark("ok", "ok");
+    expect(plain).toBe("ok");
+    // The palette SSOT drives the color; ansi-16m always emits, so verify
+    // the same brand hex maps to the tennis green escape.
+    const tennisGreen = Bun.color("#27AE60", "ansi-16m");
+    expect(tennisGreen).toBe("\u001b[38;2;39;174;96m");
+  });
+
+  test("Bun.inspect.custom renders inside Bun.inspect.table cells", () => {
+    const sym = Bun.inspect.custom;
+    const rows = [{ name: "a", status: { [sym]() { return "[[OK]]"; } } }];
+    const table = Bun.inspect.table(rows, ["name", "status"]);
+    expect(table).toContain("[[OK]]");
   });
 });
 

@@ -49,7 +49,7 @@ import { join } from 'node:path';
 import { assertBunAtLeast } from '../src/research/bun-native.ts';
 import { hasFlag, argValue } from '../src/cli/argv.ts';
 import { fetchPool, warmDns } from '../src/lib/fetch-pool.ts';
-import { statusLine } from '../src/research/terminal-out.ts';
+import { statusLine, brandMark } from '../src/research/terminal-out.ts';
 import type { DnsWarmTarget } from '../src/lib/fetch-pool.ts';
 
 assertBunAtLeast('1.4.0', 'bun:docs-index');
@@ -231,10 +231,9 @@ async function main(): Promise<void> {
     const r = fetched[i]!;
     if (r.ok) writeFileSync(join(CACHE_DIR, page.name + '.mdx'), r.text);
     entries.push({ name: page.name, source, sourceUrl: r.url, fetchedAt: new Date().toISOString(), bytes: r.bytes, ok: r.ok });
-    // Color marks via Bun.color('ansi') (TTY-aware, like pre-commit's
-    // local paint); statusLine's padAnsi ignores ANSI so columns align.
-    const open = Bun.color(r.ok ? 'green' : 'red', 'ansi') ?? '';
-    const mark = (open ? open + (r.ok ? 'cached' : 'FAILED') + '\u001b[0m' : r.ok ? 'cached' : 'FAILED');
+    // Brand-colored mark via brandMark (composes Bun.color auto-TTY +
+    // brand palette); statusLine's padDisplay ignores ANSI, columns align.
+    const mark = brandMark(r.ok ? 'cached' : 'FAILED', r.ok ? 'ok' : 'bad');
     const detail = '(' + source + ', ' + r.bytes + 'b' + (r.error ? ' - ' + r.error : '') + ')';
     console.log(statusLine(mark, page.name, detail));
   }

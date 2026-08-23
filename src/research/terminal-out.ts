@@ -7,6 +7,7 @@ import {
   type TableFieldSpec,
 } from "../lib/table-schema.ts";
 import { githubRepoWebUrl } from "./patterns.ts";
+import { COLORS } from "../lib/color/palette.ts";
 
 /** Native Bun terminal output — TTY-gated tables and OSC 8 links. */
 
@@ -83,6 +84,20 @@ export function statusLine(
   const padded = padDisplay(mark, markWidth);
   const pad = " ".repeat(indent) + padded + " ".repeat(sep);
   return detail === undefined || detail.length === 0 ? pad + label : pad + label + ": " + detail;
+}
+
+/**
+ * Brand-colored status mark, composed from Bun's utils (pitfalls 32):
+ * Bun.color(key, 'ansi') auto-detects TTY ('' when disabled/non-TTY, so
+ * the mark falls back to plain text) and Bun.stringWidth ignores the
+ * ANSI so statusLine columns still align. Colors come from the brand
+ * palette (src/lib/color/palette.ts) - NOT ad-hoc green/red.
+ */
+export function brandMark(mark: string, colorKey: "ok" | "warn" | "bad"): string {
+  // Brand palette SSOT: tennis green / middleware yellow / trading red.
+  const hex = { ok: COLORS.tennis, warn: COLORS.middleware, bad: COLORS.trading }[colorKey];
+  const open = Bun.color(hex, "ansi") ?? "";
+  return open ? open + mark + "\u001b[0m" : mark;
 }
 
 export function repoTerminalLink(fullName: string, hyperlinks = isTtyStdout()): string {

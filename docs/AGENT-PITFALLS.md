@@ -1197,3 +1197,21 @@ notes - they have structural enforcement:
   NO padding/row primitives - probe: padAnsi undefined, Terminal is a
   PTY class, no table/row helpers), the color kernel (domain palette +
   validation), table-schema (Bun.inspect.table field specs).
+- COMPOSITION (user pushback: 'combine the bun utils + auto + brand
+  colors; check globals + Bun.inspect.custom'): verified Bun DOES
+  compose - (1) Bun.inspect.custom is a real symbol (bun.d.ts:4798,
+  utils.mdx:661, identical to util.inspect.custom) and objects with it
+  RENDER CUSTOM INSIDE Bun.inspect.table cells (probe: [[OK]] in the
+  status column); (2) brand palette hex flows through Bun.color with
+  'ansi' auto-TTY detection ('' when non-TTY) or ansi-16m (always).
+  ADOPTED: brandMark() in terminal-out.ts composes Bun.color(key,
+  'ansi') + brand palette (tennis/middleware/trading hex from COLORS
+  SSOT, not ad-hoc green/red) for status marks; docs-index uses it.
+  Tests lock both claims (brandMark non-TTY plain + custom cell in
+  Bun.inspect.table).
+- CORRECTION: SourceMap (blog: 'new SourceMap(json) decoding is 3.1x
+  faster') is NOT available in the runtime - global undefined,
+  Bun.SourceMap undefined, bun:jsc undefined, zero bun-types
+  declarations. It's a bundler-internal API, not a user-facing
+  runtime class. Section 13 marked the blog claim 'verified' without
+  runtime-probing; corrected here - blog-verified != runtime-available.
