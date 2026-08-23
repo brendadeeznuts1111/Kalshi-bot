@@ -69,6 +69,12 @@ export function redactSecrets<T>(value: T, options: RedactOptions = {}): Redacte
   const seen = new WeakSet<object>();
 
   const walk = (v: unknown, depth: number): unknown => {
+    if (typeof v === "string") {
+      // String values that ARE URLs may carry secret query params (gsid/token).
+      // Cheap pre-check avoids URL parsing on every string.
+      if (v.includes("://") && v.includes("?")) return redactUrlParams(v);
+      return v;
+    }
     if (v === null || typeof v !== "object") return v;
     if (depth <= 0) return "[DepthLimit]";
     if (seen.has(v)) return "[Circular]";

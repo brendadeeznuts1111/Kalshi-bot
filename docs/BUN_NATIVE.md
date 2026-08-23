@@ -403,6 +403,10 @@ each has a real consumer in the repo where marked.
   shape (secret-keyed props become the marker type; template-literal key
   check with Camel/Pascal variants — approximation of the case-insensitive
   runtime regex); depth option bounds recursion ([DepthLimit] past the cap).
+- redactSecrets also redacts URL string VALUES carrying secret query
+  params (cheap pre-check: string contains :// and ?) — e.g. callbackUrl
+  "https://x/api?token=SECRET" -> token redacted. No type change (string
+  stays string).
 - redactUrlParams(url): stubs sensitive query keys (gsid/token/...) — wired
   into PandoraSocket display (key visible, value redacted).
 - printf-style lines: formatLine / formatLineColor (%s, %d, %o via
