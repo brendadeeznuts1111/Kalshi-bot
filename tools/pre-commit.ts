@@ -162,6 +162,11 @@ async function main(): Promise<void> {
   }
 
   const ms = Math.round((Bun.nanoseconds() - started) / 1e6);
+  if (failed) {
+    const failedGates = steps.filter((s) => !s.ok).map((s) => s.label);
+    const { inspectColor } = await import("../src/institutions/terminal-utils.ts");
+    process.stderr.write("pre-commit: failed gates " + inspectColor(failedGates) + "\n");
+  }
   process.stderr.write("pre-commit: summary\n");
   const summaryRows = steps.map((s) => ({
     gate: s.label,

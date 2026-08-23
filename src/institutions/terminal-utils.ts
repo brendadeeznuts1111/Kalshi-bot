@@ -15,7 +15,7 @@ function c(key: ColorKey): string {
 }
 
 export const ANSI = {
-  reset:   "\x1b[0m",
+  reset: "\x1b[0m",
   bold:    "\x1b[1m",
   dim:     "\x1b[2m",
   green:   c("tennis"),
@@ -30,6 +30,20 @@ export const ANSI = {
   brightCyan:   c("kalshi"),
   brightBlue:   c("polymarket"),
 } as const;
+
+/**
+ * Serialize any value with Bun.inspect (Bun's console.log formatting).
+ * colors: true forces ANSI (crash-reporter style); false forces plain;
+ * undefined lets Bun auto-detect (NO_COLOR / FORCE_COLOR / TTY).
+ */
+export function inspectValue(value: unknown, opts: { colors?: boolean } = {}): string {
+  return Bun.inspect(value, { colors: opts.colors });
+}
+
+/** Colored serialization for terminal diagnostics. */
+export function inspectColor(value: unknown): string {
+  return inspectValue(value, { colors: true });
+}
 
 /** Color a value by edge threshold. */
 export function edgeColor(edgeCents: number): string {
