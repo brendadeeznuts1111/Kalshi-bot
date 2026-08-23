@@ -261,7 +261,7 @@ export function localRepoPath(owner: string, repo: string): string {
   return `/repo/${ref.owner}/${ref.repo}`;
 }
 
-/** URL wins over gh search `fullName` when they disagree. */
+/** URL wins over GitHub search `fullName` when they disagree. */
 export function normalizeFullName(wireFullName: string, htmlUrl: string): string {
   const parsed = parseGitHubRepoRef(htmlUrl);
   if (parsed) return parsed.fullName;

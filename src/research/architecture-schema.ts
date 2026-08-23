@@ -171,7 +171,7 @@ export const DATA_FLOWS = [
     name: "Research Pipeline",
     description: "GitHub search → popularity gate → deep inspect → score → diversify → report",
     steps: [
-      "discover.ts — gh search code/repos for Kalshi-related bots",
+      "discover.ts — GitHub REST search (repos + code) for Kalshi-related bots",
       "gate.ts — min stars/forks, max age filter",
       "inspect.ts — source analysis: auth patterns, SDK, order placement",
       "score.ts — multi-dimensional scoring (authApi, orderRealism, testsCi, etc.)",

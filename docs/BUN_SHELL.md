@@ -8,7 +8,7 @@ GitHub traffic is hybrid:
 |------|-----------|
 | Repo search (discover) | [`github-search.ts`](../src/research/github-search.ts) — `Bun.fetch` + ETag cache |
 | Inspect REST + code search + repo file contents | [`github-api.ts`](../src/research/github-api.ts) — `Bun.fetch` |
-| Rate-limit preflight + legacy `gh` helpers | [`gh.ts`](../src/research/gh.ts) / [`github-rate-limit.ts`](../src/research/github-rate-limit.ts) — `Bun.$` → `gh` |
+| Rate-limit preflight + budget facade | [`gh.ts`](../src/research/gh.ts) (no subprocess) / [`github-rate-limit.ts`](../src/research/github-rate-limit.ts) — `Bun.fetch` + `gh auth token` fallback |
 
 No `Bun.spawn`, no `execa`, no Octokit. Token resolution still uses `gh auth token` when `GH_TOKEN` / `GITHUB_TOKEN` are unset.
 
@@ -124,80 +124,41 @@ await $`gh ${args}`.nothrow().quiet();
 
 `Bun.$` is the same tag on the global — either works.
 
-## Pattern used in `gh.ts`
+## `gh` CLI usage today (post Bun.fetch migration)
 
-### 1. `.nothrow().quiet()` — explicit exit handling
-
-Default `$` throws on non-zero exit ([error handling](https://bun.com/docs/runtime/shell#error-handling)). For retry logic we need `exitCode` and `stderr` without catching:
-
-```typescript
-const { exitCode, stdout, stderr } = await $`gh ${args}`.nothrow().quiet();
-
-if (exitCode === 0) {
-  return parseGhStdout<T>(stdout);
-}
-```
-
-- `.quiet()` — suppress live stdout/stderr during batch research runs
-- `.nothrow()` — never throw; inspect `exitCode` yourself
-
-Alternative (throwing path):
+The research pipeline talks to GitHub REST via `Bun.fetch` (`github-api.ts`,
+`github-search.ts`, `github-rate-limit.ts` -> `readGitHubRateLimitWire`). The
+`gh` CLI survives for exactly one call: the **auth-token fallback** in
+`src/research/github-network.ts`:
 
 ```typescript
-try {
-  return await $`gh ${args}`.json(); // .text()/.json() imply .quiet()
-} catch (err) {
-  // ShellError: err.exitCode, err.stdout, err.stderr (Buffers)
-}
+const { exitCode, stdout } = await $`gh auth token`.nothrow().quiet();
+if (exitCode === 0) return stdout.toString().trim();
 ```
 
-We prefer `.nothrow()` so rate-limit retries don't rely on exception types.
-
-### 2. Array interpolation — dynamic `gh` argv
-
-```typescript
-const args = ["search", "repos", query, "--json", "fullName", "--limit", "30"];
-await $`gh ${args}`.nothrow().quiet();
-```
-
-Bun expands `args` as separate argv tokens — equivalent to `gh search repos "kalshi bot" --json fullName --limit 30`. Each element is escaped individually.
-
-### 3. `.json()` vs manual parse
-
-| `gh` output | Use |
-|-------------|-----|
-| `gh search … --json field1,field2` | `.json()` or `parseGhStdout` after `.quiet()` |
-| `gh api … --jq .login` | `.text()` only (plain string, not JSON) |
-
-This research CLI only uses `--json` fields, so `parseGhStdout` is sufficient after `.nothrow()`.
-
-### 4. Rate-limit backoff
-
-```typescript
-// @see https://bun.com/docs/runtime/utils#bun-sleep
-if (isRateLimited(stderr.toString()) && attempt < retries - 1) {
-  await Bun.sleep(2000 * (attempt + 1));
-  continue;
-}
-```
-
-Code search (`gh search code`) hits secondary limits first — backoff is linear, concurrency capped in [`pool.ts`](../src/research/pool.ts).
+`src/research/gh.ts` is now a **rate-limit facade** (preflight + budget
+helpers over the Bun.fetch rate reader) - it contains no `$` call. The old
+`ghJson`/`ghText` subprocess runners were removed as dead code (everything
+moved to `Bun.fetch`; code search is `githubApiJson("search/code?...")`).
 
 ## Security notes for this CLI
 
 Bun escapes interpolated strings ([docs](https://bun.com/docs/runtime/shell#security-in-the-bun-shell)):
 
 ```typescript
-// SAFE — query treated as one literal argument to gh
-await $`gh ${["search", "repos", maliciousQuery, "--json", "fullName"]}`.nothrow().quiet();
+// SAFE - token treated as one literal argument to gh
+await $`gh auth token`.nothrow().quiet();
 ```
 
-**Argument injection** still applies: a malicious repo name passed as `repo:owner/name` in code search could confuse `gh`. Our queries come from fixed `dimensions.json` + static keyword lists, not user stdin — but if you add interactive mode, validate inputs.
+**Argument injection** still applies to the `Bun.fetch` search URLs built
+from queries (`encodeURIComponent` is not a security boundary). Queries come
+from fixed `dimensions.json` + static keyword lists, not user stdin - but if
+you add interactive mode, validate inputs.
 
 **Never** do:
 
 ```typescript
-await $`bash -c "gh search repos ${userInput}"`; // hands off to system shell
+await $`bash -c "gh auth token ${userInput}"`; // hands off to system shell
 ```
 
 ## ShellError shape (throwing path)
@@ -230,10 +191,9 @@ catch (err) {
 
 Pure helpers tested in [`tests/gh.test.ts`](../tests/gh.test.ts):
 
-- `isRateLimited` — stderr classification
-- `parseGhStdout` — JSON parse + empty stdout
+- `isRateLimited` - stderr classification (moved to `github-errors.ts`)
 
-Live `gh` integration is covered by `bun run research`, not unit tests.
+Live GitHub access is covered by `bun run research`, not unit tests.
 
 ## Related docs
 

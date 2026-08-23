@@ -1,6 +1,6 @@
 // @see https://bun.com/docs/test/index#run-tests
 import { describe, expect, test } from "bun:test";
-import { isRateLimited, parseGhStdout } from "../src/research/gh.ts";
+import { isRateLimited } from "../src/research/github-errors.ts";
 
 describe("isRateLimited", () => {
   test("detects GitHub REST rate limit", () => {
@@ -17,13 +17,3 @@ describe("isRateLimited", () => {
   });
 });
 
-describe("parseGhStdout", () => {
-  test("parses JSON array from gh --json", () => {
-    const data = parseGhStdout<{ fullName: string }[]>('[{"fullName":"o/r"}]');
-    expect(data[0]?.fullName).toBe("o/r");
-  });
-
-  test("returns empty array for empty stdout", () => {
-    expect(parseGhStdout<string[]>("")).toEqual([]);
-  });
-});

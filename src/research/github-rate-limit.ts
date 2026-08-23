@@ -405,7 +405,7 @@ export async function readGitHubRateLimit(
   return wire ? snapshotFromWire(wire, resource) : null;
 }
 
-/** Preflight inspect phase — fail fast before `gh search code` hammers the API. */
+/** Preflight inspect phase — fail fast before GitHub code search hammers the API. */
 export async function ensureInspectRateBudget(input: {
   repoCount: number;
   uncachedRepoCount: number;

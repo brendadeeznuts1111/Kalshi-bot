@@ -17,6 +17,11 @@ export type GitHubResearchErrorContext = {
   minForks?: number;
 };
 
+/** True when stderr indicates a GitHub rate limit (403/429/secondary). */
+export function isRateLimited(stderr: string): boolean {
+  return /rate limit|403|429|secondary rate limit/i.test(stderr);
+}
+
 export type GitHubErrorEnrichment = GitHubResearchErrorContext & {
   staleDataRunId?: string;
   staleDataAgeMs?: number | null;

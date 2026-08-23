@@ -1,7 +1,4 @@
-// @see https://bun.com/docs/runtime/shell#getting-started
 // @see https://bun.com/docs/runtime/utils#bun-sleep
-import { $ } from "bun";
-import { DEFAULT_GH_RETRIES } from "./constants.ts";
 import {
   assertGitHubRateBudget,
   GitHubRateLimitError,
@@ -12,12 +9,11 @@ import {
 import {
   computeWaitMs,
   readGitHubRateLimit,
-  resolveGhRateLimitResource,
   type GitHubRateLimitResource,
   type GitHubRateLimitSnapshot,
 } from "./github-rate-limit.ts";
 
-/** All GitHub access via gh CLI — subprocess SSOT. See docs/BUN_SHELL.md. */
+/** GitHub rate-limit facade — preflight + budget helpers over the Bun.fetch rate reader. No gh subprocess remains (gh CLI is only the auth-token fallback in github-network.ts). */
 
 export {
   GitHubRateLimitError,
@@ -36,10 +32,6 @@ export {
 
 export { buildGitHubErrorEnrichment } from "./github-error-enrichment.ts";
 export { resolveGhRateLimitResource } from "./github-rate-limit.ts";
-
-export function isRateLimited(stderr: string): boolean {
-  return /rate limit|403|429|secondary rate limit/i.test(stderr);
-}
 
 async function pauseUntilRateLimitReset(
   resetSec: number,
@@ -93,12 +85,6 @@ export async function ensureGhRateBudget(minRemaining = 3): Promise<void> {
   await ensureResourceBudget("search", minRemaining);
 }
 
-export function parseGhStdout<T>(stdout: Buffer | Uint8Array | string): T {
-  const text = (typeof stdout === "string" ? stdout : stdout.toString()).trim();
-  if (!text) return [] as T;
-  return JSON.parse(text) as T;
-}
-
 function tripFromSnapshot(
   snap: GitHubRateLimitSnapshot | null,
   source: string,
@@ -111,49 +97,4 @@ function tripFromSnapshot(
   });
 }
 
-export async function ghJson<T>(args: string[], retries = DEFAULT_GH_RETRIES): Promise<T> {
-  assertGitHubRateBudget(`gh ${args.join(" ")}`);
-  const resource = resolveGhRateLimitResource(args);
-  const maxAttempts = shouldWaitForRateLimitReset() ? retries : 1;
 
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    const { exitCode, stdout, stderr } = await $`gh ${args}`.nothrow().quiet();
-
-    if (exitCode === 0) {
-      return parseGhStdout<T>(stdout);
-    }
-
-    const errText = stderr.toString();
-    if (!isRateLimited(errText)) {
-      throw new Error(`gh ${args.join(" ")} failed (${exitCode}): ${errText}`);
-    }
-
-    const snap = await readGitHubRateLimit(resource);
-    tripFromSnapshot(snap, `gh ${args[0] ?? "api"}`, resource);
-
-    if (shouldWaitForRateLimitReset() && attempt < maxAttempts - 1 && snap) {
-      await pauseUntilRateLimitReset(snap.reset, resource);
-      continue;
-    }
-
-    throw rateLimitError(args, snap?.reset ?? null, resource);
-  }
-
-  throw rateLimitError(args, null, resource);
-}
-
-export async function ghText(args: string[]): Promise<string> {
-  assertGitHubRateBudget(`gh ${args.join(" ")}`);
-  const resource = resolveGhRateLimitResource(args);
-  const { exitCode, stdout, stderr } = await $`gh ${args}`.nothrow().quiet();
-  if (exitCode !== 0) {
-    const errText = stderr.toString();
-    if (isRateLimited(errText)) {
-      const snap = await readGitHubRateLimit(resource);
-      tripFromSnapshot(snap, `gh ${args[0] ?? "api"}`, resource);
-      throw rateLimitError(args, snap?.reset ?? null, resource);
-    }
-    throw new Error(`gh ${args.join(" ")} failed (${exitCode}): ${errText}`);
-  }
-  return stdout.toString().trim();
-}
