@@ -73,3 +73,49 @@ Never adopt a claimed API from a summary or paste without probing the runtime:
   - Bun.serve idleTimeout is a u8 - 300 throws 'expects idleTimeout to be 255 or less'.
 - Adopt, test, then document the VERIFIED reality (see docs/CONNECTION-MASTERY.md,
   the gap register in docs/BUN_NATIVE.md, and docs/DATA_MODEL.md).
+## 6. Tooling sharp edges (beyond the lexer)
+
+- CLI files with a top-level await main() or process.exit KILL the test process when
+  imported by a test. Guard the entry point with if (import.meta.main) { ... } so
+  tests can import the pure helpers (do this for every tools/ CLI you add).
+- Every tools call needs ALL its required args: dropping the bash 'description'
+  (easy under Promise.all) throws 'invalid arguments: missing required property'.
+- tools.read can TRUNCATE large files (~40KB+) without warning - a read+write
+  round-trip on such a file silently corrupts it (observed on docs/BUN_NATIVE.md).
+  Use targeted edit() calls or verify the line count after any rewrite.
+- ask_user_question can return an EMPTY selection array - treat it as 'no answer':
+  proceed with the recommended path or re-ask, never assume a choice.
+- Test hygiene: bun:test files share the process env - save/restore any process.env
+  you mutate (the rotate-key suite does this). Verify a gated test actually SKIPS
+  (test.skipIf, not a stale { skip } option - a misused skip ran a real keychain
+  probe once).
+- After a git add && ... && commit chain, confirm git status: a parse failure in the
+  FIRST command means nothing was ever staged ('no changes added to commit').
+- Bun.inspect.table(rows, undefined, { colors }) IGNORES colors - pass options as
+  the second argument. formatWithOptions colors apply to object values only.
+- bun install in this repo needs TMPDIR=$(pwd)/node_modules/.tmp and
+  --cache-dir=$(pwd)/node_modules/.bun-cache (global cache writes are blocked);
+  bunfig frozenLockfile requires the temporary-unfreeze dance for mutating installs.
+
+## 7. Repo-domain facts (hard-won)
+
+- massey:sync --sport=volleyball resolves the bucket to its FIRST target only
+  (cvol/ncaa-d1). To fetch the whole bucket pass an explicit CSV list:
+  --sport=cvol/ncaa-d2,cvol/ncaa-d3,cmvol/ncaa-d1,dlv,dlvw,csand.
+- massey_ratings columns are sport + subdivision, NOT target_key - query
+  GROUP BY sport, subdivision.
+- skin_events carries NO prices. Odds live in odds_ticks (sides 'home'/'away' for the
+  live capture, 'winner'/'loser' for tennis history - canonicalize via
+  event-identity.ts normalizeSideToHomeAway, backfill via odds-canonicalize.ts).
+- FantasyUltraAdapter.connectWebSocket(handlers, options) - the FIRST argument is the
+  handlers object (PandoraSocketHandlers), options come second.
+- FantasyUltraCredentials requires currency (add 'USD'); the coefficient store is
+  in-memory only - nothing persists it unless the adapter's persistence option is set.
+- The repo key in .env is PRODUCTION (KALSHI_ENV=prod). Never use it for sandbox
+  probes; the kalshi:secrets CLI + --service isolation exists exactly for this.
+- Network from this machine: fonbet.com and betting-api.com are geo-blocked/unreachable
+  (403 / 000); api.oddscp.com (ODDSCORP WS) IS reachable. Real-network tests must be
+  gated by an env opt-in (e.g. KALSHI_TEST_KEYCHAIN_SERVICE) or use --dry-run/fixtures.
+- research/cache DBs are the live local state - migrations (open-db) apply on open;
+  backfills (db:canonicalize) are idempotent. Check gitignore before committing
+  anything under research/.
