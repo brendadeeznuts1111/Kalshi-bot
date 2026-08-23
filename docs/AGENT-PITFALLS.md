@@ -3,6 +3,13 @@
 Everything below is a real failure observed in this session, with the fix that
 unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verification.
 
+> **Numbering convention:** "pitfalls N" / "section N" references in this file
+> and across the repo are HISTORICAL lesson counters from the 2026-08 audit
+> rounds (the N-th lesson added) - NOT pointers to the §1-§11 headings above.
+> The headings were renumbered to §1-§11 on 2026-08-23; the counters were kept
+> so historical notes stay traceable.
+
+
 ## 1. run_code program text (the harness lexer)
 
 | Symptom | Cause | Fix |
