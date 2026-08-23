@@ -203,6 +203,23 @@ agent:encode for tricky code: encode -> write .b64 -> base64 -d -> probe.
 - Children: Bun.spawnSync(...).exitCode (sync) and await Bun.spawn(...)
   .exited (async) propagate the child's code (verified 7 and 9);
   bun run <script> propagates the script's code.
+- GROUNDED in the official guides (docs/runtime/child-process.mdx,
+  docs/guides/process/{os-signals,ctrl-c}.mdx):
+  * proc.exited is a Promise resolving on exit; proc.exitCode is
+    null | number; proc.signalCode is null | 'SIGABRT' | ... ;
+    proc.kill(15) sends signals by number; onExit(proc, exitCode,
+    signalCode, error) callback exists.
+  * The parent bun process does NOT terminate until all children exit -
+    call proc.unref() to detach a child.
+  * 'exit' emits when the loop empties OR process.exit() is called;
+    'beforeExit' emits when the loop empties first.
+  * Signal death with NO listener emits NEITHER event - to run cleanup
+    on a signal, listen (process.on('SIGINT'/'SIGTERM')) and call
+    process.exit() from the listener (the ctrl-c guide makes the
+    explicit process.exit() a requirement).
+  * process.exitCode/exit() graceful-vs-immediate is Node process
+    semantics (Bun references Node's process docs); probes confirm Bun
+    matches.
 
 - `bun run agent:encode [file]` + `--decode`: lexer-safe base64 in/out (byte-exact
   round-trip verified).
