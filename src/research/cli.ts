@@ -4,6 +4,7 @@
 // @see https://bun.com/docs/runtime/utils#bun-main
 // @see https://bun.com/docs/runtime/environment-variables#bun-env
 import { parseArgs } from "node:util";
+import { openTarget } from "../lib/editor.ts";
 import { inspectRepo } from "./inspect.ts";
 import { discoverCandidates, loadConfig } from "./discover.ts";
 import { applyGate } from "./gate.ts";
@@ -474,8 +475,7 @@ if (import.meta.main) {
       printResearchRunSummary(run);
       if (opts.openReport) {
         const reportPath = joinPath(REPORT_DIR, `${dimensionArtifactBasename(runDimension(run))}.md`);
-        // @see https://bun.com/docs/runtime/utils#bun-openineditor
-        Bun.openInEditor(reportPath);
+        openTarget({ path: reportPath });
       }
     }
   } catch (err) {

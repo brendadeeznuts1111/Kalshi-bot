@@ -1,6 +1,7 @@
 // @see https://bun.com/docs/runtime/utils#bun-openineditor
 import { existsSync } from "node:fs";
 import { PATTERNS_DIR, joinPath } from "../research/paths.ts";
+import { openTarget } from "../lib/editor.ts";
 import { fileUrlToAbsPath } from "../research/bun-native.ts";
 import { patternReportBasename, type FilePatternSlice, type PatternReport } from "./pattern-extract.ts";
 
@@ -46,10 +47,7 @@ export function resolvePatternEditorTarget(
 }
 
 export function openPatternEditorTarget(target: PatternEditorTarget): void {
-  const opts: { line?: number; column?: number } = {};
-  if (target.line !== undefined) opts.line = target.line;
-  if (target.column !== undefined) opts.column = target.column;
-  Bun.openInEditor(target.path, Object.keys(opts).length ? opts : undefined);
+  openTarget({ path: target.path, line: target.line, column: target.column });
 }
 
 export function openPatternReport(dimension: string, line?: number): void {
