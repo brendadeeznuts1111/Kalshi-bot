@@ -434,7 +434,16 @@ async function jobMasseySync(): Promise<void> {
       const crCode = await cr.exited;
       if (crCode !== 0) throw new Error(`massey:crossref ${sport} exited ${crCode}`);
     }
-    console.error(`[cron:massey] sync+crossref ok · ${Date.now() - start}ms`);
+    // Automatic edge flags over the latest odds_ticks (live-capture contract).
+    for (const sport of cfg.crossref.sports) {
+      const fg = Bun.spawn(
+        ["bun", "run", "massey:edge-flags", "--", `--sport=${sport}`, "--report", "--rows=0"],
+        { cwd: import.meta.dir + "/..", stdout: "inherit", stderr: "inherit" },
+      );
+      const fgCode = await fg.exited;
+      if (fgCode !== 0) throw new Error(`massey:edge-flags ${sport} exited ${fgCode}`);
+    }
+    console.error(`[cron:massey] sync+crossref+flags ok · ${Date.now() - start}ms`);
   } catch (err) {
     console.error(`[cron:massey] Error: ${err}`);
   }
