@@ -1259,3 +1259,11 @@ notes - they have structural enforcement:
   passthrough, zero consumers) -> direct Bun.Glob.match in the test.
   src/lib/glob.ts keeps only the ENRICHED listFiles/listFilesAsync
   (sort + option defaults - additive).
+- Globstar verification (docs paste): Bun's '**' (globstar) matches any
+  depth INCLUDING '/' and - KEY DIFFERENCE FROM GIT - '**/*.ts' matches
+  ROOT-LEVEL files too ('index.ts' true, not just 'src/index.ts').
+  Probe-verified in both match() AND scan() (root index.ts listed).
+  Alternation '{ts,js}' + char classes '[ab]' compose with globstar.
+  All 9 probe cases pass; pinned in tests/lib/glob.test.ts. Repo
+  already relies on it: architecture-blueprint scans
+  'src/**/*.{ts,tsx}', others use '**/*'.

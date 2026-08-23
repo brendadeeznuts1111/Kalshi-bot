@@ -37,4 +37,16 @@ describe("Bun.Glob helpers", () => {
     expect(new Bun.Glob("*.json").match("x.jsonl")).toBe(false);
     expect(new Bun.Glob("**/*.ts").match("src/lib/glob.ts")).toBe(true);
   });
+
+  test("globstar **/* matches ROOT-level files too (Bun-specific, probe-verified)", () => {
+    // Unlike git's globstar (which needs a separate '*.ts' for root
+    // files), Bun's '**/*.ts' matches both 'index.ts' AND 'src/index.ts'.
+    expect(new Bun.Glob("**/*.ts").match("index.ts")).toBe(true);
+    expect(new Bun.Glob("**/*.ts").match("a/b/c/index.ts")).toBe(true);
+    expect(new Bun.Glob("**/*.ts").match("index.js")).toBe(false);
+    // Alternation + character classes compose with globstar.
+    expect(new Bun.Glob("**/*.{ts,js}").match("a/b/x.js")).toBe(true);
+    expect(new Bun.Glob("[ab].ts").match("a.ts")).toBe(true);
+    expect(new Bun.Glob("[ab].ts").match("c.ts")).toBe(false);
+  });
 });
