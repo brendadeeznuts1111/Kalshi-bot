@@ -45,7 +45,7 @@ export const KALSHI_KEY_SECRET = "kalshi-private-key";
  * without touching production credentials.
  */
 export async function loadKalshiCredentials(
-  env: Record<string, string | undefined> = Bun.env as Record<string, string | undefined>,
+  env: Record<string, string | undefined> = Bun.env,
   opts: { keychain?: boolean; service?: string } = {},
 ): Promise<KalshiCredentials> {
   const keyId = (env.KALSHI_API_KEY_ID ?? env.KALSHI_ACCESS_KEY)?.trim();
@@ -133,7 +133,7 @@ export async function probeKalshiAuth(
   creds: KalshiCredentials,
   opts?: { base?: string; timeoutMs?: number },
 ): Promise<KalshiAuthProbe> {
-  const env = Bun.env as Record<string, string | undefined>;
+  const env = Bun.env;
   const base = (
     opts?.base?.trim() ||
     env.KALSHI_API_BASE?.trim() ||

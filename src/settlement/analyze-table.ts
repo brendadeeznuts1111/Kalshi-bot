@@ -1436,7 +1436,7 @@ export function buildAnalyzeHtmlRecipe(input: {
 }): string {
   const cols = input.columns?.length ? input.columns.join(',') : 'desk';
   const extras = input.extra?.length ? ` ${input.extra.join(' ')}` : '';
-  return `bun live-tracker.ts analyze --sport=${input.sportId} --phase=${input.phase} --columns=${cols}${extras} --html`;
+  return `bun tools/live-tracker-cli.ts analyze --sport=${input.sportId} --phase=${input.phase} --columns=${cols}${extras} --html`;
 }
 
 /** Detect a single named column preset from --columns args. */

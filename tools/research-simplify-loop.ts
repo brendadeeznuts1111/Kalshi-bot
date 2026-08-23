@@ -3,7 +3,7 @@
  * Auto research loop: simplify backlog + tests.
  *
  *   bun run research:simplify
- *   bun run research:simplify -- --roots=src/inventory,live-tracker.ts
+ *   bun run research:simplify -- --roots=src/inventory,tools/live-tracker-cli.ts
  *   bun run research:simplify -- --skip-tests
  *   bun run research:simplify -- --loop --interval=120
  *   bun run research:simplify -- --json
@@ -24,7 +24,7 @@ function usage(): never {
   console.error(`research:simplify — complexity scan + focused tests
 
   bun run research:simplify
-  bun run research:simplify -- --roots=src/inventory,live-tracker.ts
+  bun run research:simplify -- --roots=src/inventory,tools/live-tracker-cli.ts
   bun run research:simplify -- --skip-tests --json
   bun run research:simplify -- --loop --interval=120
 
@@ -35,7 +35,7 @@ Writes research/reports/simplify-loop/latest.{md,json}
 
 if (hasFlag('help') || hasFlag('h')) usage();
 
-const roots = (argValue('roots') ?? 'src/inventory,live-tracker.ts')
+const roots = (argValue('roots') ?? 'src/inventory,tools/live-tracker-cli.ts')
   .split(',')
   .map(s => s.trim())
   .filter(Boolean);

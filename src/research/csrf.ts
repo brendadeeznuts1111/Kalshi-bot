@@ -40,7 +40,7 @@ export const CSRF_SESSION_MAX_AGE_SEC = 30 * 24 * 60 * 60;
 const FALLBACK_CSRF_SECRET = crypto.randomUUID();
 
 export function csrfSecret(
-  env: Record<string, string | undefined> = Bun.env as Record<string, string | undefined>,
+  env: Record<string, string | undefined> = Bun.env,
 ): string {
   const s = env.KALSHI_CSRF_SECRET?.trim();
   return s ? s : FALLBACK_CSRF_SECRET;
@@ -62,7 +62,7 @@ export type CsrfSession = {
  */
 export function issueCsrfSession(
   req?: Request,
-  env: Record<string, string | undefined> = Bun.env as Record<string, string | undefined>,
+  env: Record<string, string | undefined> = Bun.env,
 ): CsrfSession {
   const secret = csrfSecret(env);
   const existing = req ? csrfSessionIdFrom(req) : null;
@@ -99,7 +99,7 @@ export function csrfSessionIdFrom(req: Request): string | null {
  */
 export function verifyCsrfRequest(
   req: Request,
-  env: Record<string, string | undefined> = Bun.env as Record<string, string | undefined>,
+  env: Record<string, string | undefined> = Bun.env,
 ): boolean {
   const token = csrfTokenFrom(req);
   if (!token) return false;
@@ -120,7 +120,7 @@ export function verifyCsrfRequest(
 export function csrfGuard(
   req: Request,
   next: () => Promise<Response> | Response,
-  env: Record<string, string | undefined> = Bun.env as Record<string, string | undefined>,
+  env: Record<string, string | undefined> = Bun.env,
 ): Promise<Response> | Response {
   if (!verifyCsrfRequest(req, env)) {
     return new Response(

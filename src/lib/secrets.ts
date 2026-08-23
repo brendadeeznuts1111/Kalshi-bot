@@ -97,7 +97,7 @@ export async function getSecret(
     );
   }
   if (opts.envName) {
-    const source = opts.env ?? (Bun.env as Record<string, string | undefined>);
+    const source = opts.env ?? (Bun.env);
     const fromEnv = source[opts.envName]?.trim();
     if (fromEnv) return fromEnv;
   }

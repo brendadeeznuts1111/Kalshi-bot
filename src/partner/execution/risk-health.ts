@@ -169,7 +169,7 @@ export interface LoadExecutionRiskHealthInput {
 export function loadExecutionRiskHealthInput(
   options: LoadExecutionRiskHealthInput,
 ): ExecutionRiskHealthInput {
-  const env = options.env ?? (Bun.env as Record<string, string | undefined>);
+  const env = options.env ?? (Bun.env);
   const environment = env.KALSHI_ENV === "demo" || env.KALSHI_ENV === "prod"
     ? env.KALSHI_ENV
     : null;
@@ -204,7 +204,7 @@ export function evaluateStoredExecutionRiskHealth(options: {
   placingStaleAfterMs?: number;
 }): ExecutionRiskHealthDecision {
   const nowMs = options.nowMs ?? Date.now();
-  const env = options.env ?? (Bun.env as Record<string, string | undefined>);
+  const env = options.env ?? (Bun.env);
   const prefix = normalizeOutPrefix(options.outEnvPrefix);
   const backlog = options.db.query(
     `SELECT

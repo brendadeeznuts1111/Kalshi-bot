@@ -53,7 +53,7 @@ async function main(): Promise<void> {
     db, provider: source, partnerCode, outId, day, generatedAtMs: Date.now(),
     unknownResolutionSlaMs: Number(value("unknown-sla-ms") ?? 900_000),
     scenarios: scenarioRun.scenarios,
-    environment: Bun.env as Record<string, string | undefined>,
+    environment: Bun.env,
   });
   const artifact = buildDemoProofArtifact(input);
   const outputDir = resolve(value("output-dir") ?? "artifacts/execution-demo-proof");

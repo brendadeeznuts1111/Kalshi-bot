@@ -1281,3 +1281,19 @@ notes - they have structural enforcement:
   Options (bun-types 1.3.x lag), data-shape casts (Record fields).
   bun:wrapper-audit now ALSO flags untyped 'as never' on Bun/process
   APIs (exit 1) - future regressions caught.
+- Node: sweep + more cast removal (user: 'yes we do'):
+  * node:fs (readFileSync 34/existsSync 29/mkdirSync 14) - ALL legit:
+    module-load-time SYNC reads (SQL migrations, config, seeds);
+    Bun.file().text() is async-only so no Bun replacement exists for
+    the sync-required sites. 48 files already use Bun.file where
+    async fits (documented decision since section 22).
+  * node:util - parseArgs (6x, no Bun equivalent), formatWithOptions
+    (printf-style %s/%d, Bun.inspect does NOT replace printf). Legit.
+  * REMOVED 20 'Bun.env as Record<string, string|undefined>' casts:
+    Bun.env is typed (Env & NodeJS.ProcessEnv & ImportMetaEnv) and
+    IS assignable to Record<string, string|undefined> - the casts
+    were unnecessary (type-level probe confirmed assignability).
+    wrapper-audit now flags 'Bun.env as Record' regressions too.
+  * Remaining Bun casts are legit + documented: kalshi-ws WebSocket
+    ctor (lib.dom wins global ctor), serve.ts Bun.Serve.Options
+    (bun-types 1.3.x lag), data-shape casts (optional fields).

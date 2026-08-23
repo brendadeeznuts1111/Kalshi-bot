@@ -57,7 +57,7 @@ export function mergeMasseyConfig(
  */
 export function loadMasseyConfig(
   path: string = DEFAULT_MASSEY_CONFIG_PATH,
-  env: Record<string, string | undefined> = Bun.env as Record<string, string | undefined>,
+  env: Record<string, string | undefined> = Bun.env,
 ): MasseyConfig {
   let cfg = DEFAULT_MASSEY_CONFIG;
   if (existsSync(path)) {

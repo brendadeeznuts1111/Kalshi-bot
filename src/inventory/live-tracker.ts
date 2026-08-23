@@ -9,6 +9,7 @@ import type {
   OfferTransition,
 } from '../partner/fantasy-ultra/coefficients.ts';
 import { dualTime, sortKeyEpochMs, type EpochMs, type IsoUtc } from '../lib/time-ssot.ts';
+import { parseJsonlText } from '../lib/jsonl.ts';
 import {
   weightLiveTrackerMove,
   type EdgePatternSortOptions,
@@ -88,7 +89,7 @@ function ctxDual(at: string): { at: string; atMs: EpochMs | null; time: string; 
   };
 }
 
-const LIVE_TRACKER_LOG_DIR = joinPath(CACHE_DIR, 'live-tracker');
+export const LIVE_TRACKER_LOG_DIR = joinPath(CACHE_DIR, 'live-tracker');
 
 export function defaultLiveTrackerLogPath(eventId: number | string): string {
   return joinPath(LIVE_TRACKER_LOG_DIR, `event-${eventId}.jsonl`);
@@ -547,7 +548,7 @@ export function eventsToObjects(
 }
 
 /** Parse a single JSON object into events when possible. Always dual-stamps time/timeMs. */
-function parseTrackerJsonValue(
+export function parseTrackerJsonValue(
   row: unknown,
   file?: string
 ): LiveTrackerEvent[] {
@@ -609,16 +610,13 @@ function parseTrackerJsonl(
     }
   }
 
+  // Bun.JSONL line mode with skip-and-continue: bad lines are reported by the
+  // shared helper instead of silently truncating the tail (raw Bun.JSONL.parse
+  // stops at the first invalid line — see src/lib/jsonl.ts).
+  const { values } = parseJsonlText(text);
   const out: LiveTrackerEvent[] = [];
-  for (const line of text.split('\n')) {
-    const t = line.trim();
-    if (!t) continue;
-    try {
-      const row = JSON.parse(t) as unknown;
-      out.push(...parseTrackerJsonValue(row, file));
-    } catch {
-      /* skip bad lines */
-    }
+  for (const row of values) {
+    out.push(...parseTrackerJsonValue(row, file));
   }
   return out;
 }

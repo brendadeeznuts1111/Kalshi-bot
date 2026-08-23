@@ -336,7 +336,7 @@ function profitSplitToBasisPoints(value: number | null): number {
 
 /** Resolve out-scoped Kalshi credentials with out → partner → KALSHI_ fallback. */
 export function createKalshiAccountClientResolver(
-  envMap: Record<string, string | undefined> = Bun.env as Record<string, string | undefined>,
+  envMap: Record<string, string | undefined> = Bun.env,
 ): (account: BettingAccountRow) => Promise<KalshiClient> {
   const clients = new Map<string, { fingerprint: string; client: KalshiClient }>();
   return async (account) => {

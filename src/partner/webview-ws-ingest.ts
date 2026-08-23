@@ -18,6 +18,7 @@ import {
   CoefficientStore,
   type CoefficientIngest,
 } from "./fantasy-ultra/coefficient-store.ts";
+import { readJsonlFile } from '../lib/jsonl.ts';
 
 export type WebViewWsFrame = {
   t?: number;
@@ -132,17 +133,10 @@ export async function ingestWebViewWsJsonl(
   path: string,
   store?: CoefficientStore,
 ): Promise<{ store: CoefficientStore; report: WebViewIngestReport; path: string }> {
-  const text = await Bun.file(path).text();
-  const frames: WebViewWsFrame[] = [];
-  for (const line of text.split("\n")) {
-    if (!line.trim()) continue;
-    try {
-      frames.push(JSON.parse(line) as WebViewWsFrame);
-    } catch {
-      /* skip bad lines */
-    }
-  }
-  const result = ingestWebViewWsFrames(frames, store);
+  // Streaming JSONL read (Bun.JSONL.parseChunk) — memory-efficient for large
+  // CDP captures; bad lines are skipped and reported, never truncating the tail.
+  const { values } = await readJsonlFile<WebViewWsFrame>(path);
+  const result = ingestWebViewWsFrames(values, store);
   return { ...result, path };
 }
 

@@ -117,7 +117,7 @@ function logSetCall(service: string, name: string, valueLen: number, unrestricte
 }
 
 async function store(args: CliArgs): Promise<number> {
-  const env = Bun.env as Record<string, string | undefined>;
+  const env = Bun.env;
   const keyId = (args.keyId ?? env.KALSHI_API_KEY_ID ?? env.KALSHI_ACCESS_KEY)?.trim();
   if (!keyId) {
     console.error("Missing key id — pass --key-id or set KALSHI_API_KEY_ID (or KALSHI_ACCESS_KEY)");

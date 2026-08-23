@@ -1,7 +1,7 @@
 /**
  * ProtonPass capability suite for Kalshi-bot.
  *
- * Shared implementation: `@factorywager/proton-pass` (file:../packages/proton-pass).
+ * Shared implementation: `@factorywager/proton-pass` (file:vendor/proton-pass).
  * Host-only: Kalshi DEFAULT_GATE_CHECKS + ensureKalshiAgentSession (force-reset).
  */
 

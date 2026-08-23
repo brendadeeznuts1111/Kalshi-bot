@@ -151,7 +151,7 @@ export type KalshiClient = {
 
 /** Env gate — demo by default; prod must be explicitly armed. */
 export function resolveKalshiEnvironment(
-  env: Record<string, string | undefined> = Bun.env as Record<string, string | undefined>,
+  env: Record<string, string | undefined> = Bun.env,
   explicit?: KalshiEnvironment,
 ): KalshiEnvironment {
   const name = explicit ?? (env.KALSHI_ENV === "prod" ? "prod" : "demo");
@@ -228,7 +228,7 @@ function defaultSleep(ms: number): Promise<void> {
 
 export function createKalshiClient(options: KalshiClientOptions = {}): KalshiClient {
   const environment = resolveKalshiEnvironment(
-    Bun.env as Record<string, string | undefined>,
+    Bun.env,
     options.env,
   );
   const baseUrl = KALSHI_REST_BASE[environment];

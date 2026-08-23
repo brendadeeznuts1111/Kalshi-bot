@@ -434,7 +434,7 @@ export async function runSimplifyLoopOnce(options: {
   roots?: string[];
   skipTests?: boolean;
 }): Promise<SimplifyScanReport> {
-  const roots = options.roots ?? ['src/inventory', 'live-tracker.ts'];
+  const roots = options.roots ?? ['src/inventory', 'tools/live-tracker-cli.ts'];
   const { findings, files, locByFile } = await scanSimplifyTargets(roots);
   const locs = [...locByFile.values()];
   const totalLoc = locs.reduce((a, b) => a + b, 0);

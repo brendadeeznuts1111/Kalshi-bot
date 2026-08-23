@@ -38,7 +38,7 @@ const sport = argValue('sport') ?? 'tennis';
 const seconds = Number(argValue('seconds') ?? '30') || 30;
 const dbPath = argValue('db') ?? DEFAULT_EVENT_STORE_DB;
 
-const env = Bun.env as Record<string, string | undefined>;
+const env = Bun.env;
 
 function subscribeSet(db: ReturnType<typeof openEventStore>, forSport: string): string[] {
   const rows = db

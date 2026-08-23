@@ -125,7 +125,7 @@ export function isHostInNoProxy(host: string, noProxyList: string[]): boolean {
  * NO_PROXY / no_proxy suppresses proxy when target host matches.
  */
 export function resolveKalshiWsProxy(
-  env: Record<string, string | undefined> = Bun.env as Record<string, string | undefined>,
+  env: Record<string, string | undefined> = Bun.env,
   targetHost?: string,
 ): string | undefined {
   const explicit = env.KALSHI_WS_PROXY?.trim();
@@ -162,7 +162,7 @@ export function kalshiWsReconnectBackoffMs(
  * - KALSHI_WS_TLS_PASSPHRASE / _SERVER_NAME / _CIPHERS → passed through
  */
 export function resolveKalshiWsTls(
-  env: Record<string, string | undefined> = Bun.env as Record<string, string | undefined>,
+  env: Record<string, string | undefined> = Bun.env,
 ): KalshiWsTlsOptions | undefined {
   const tls: KalshiWsTlsOptions = {};
   const reject = env.KALSHI_WS_TLS_REJECT_UNAUTHORIZED?.trim().toLowerCase();
@@ -183,7 +183,7 @@ export function resolveKalshiWsTls(
 
 /** Combined granular net control values from env (proxy + TLS). */
 export function resolveKalshiWsNetOptions(
-  env: Record<string, string | undefined> = Bun.env as Record<string, string | undefined>,
+  env: Record<string, string | undefined> = Bun.env,
 ): KalshiWsNetOptions {
   const net: KalshiWsNetOptions = {};
   const proxy = resolveKalshiWsProxy(env);
@@ -207,7 +207,7 @@ function defaultWsFactory(
 }
 
 export function resolveKalshiWsUrl(
-  env: Record<string, string | undefined> = Bun.env as Record<string, string | undefined>,
+  env: Record<string, string | undefined> = Bun.env,
 ): string {
   const override = env.KALSHI_WS_URL?.trim();
   if (override) return override;
