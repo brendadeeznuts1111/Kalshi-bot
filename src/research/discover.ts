@@ -64,7 +64,7 @@ export function parseLicense(
   unlicensed: boolean;
 } {
   const spdxId = (raw?.spdxId ?? raw?.key ?? null) || null;
-  // gh search often returns license.key (e.g. "mit") without spdxId — normalizeLicense handles both.
+  // GitHub search often returns license.key (e.g. "mit") without spdxId — normalizeLicense handles both.
   const name = raw?.name || null;
   const normalized = normalizeLicense(raw);
   const unlicensed = isUnlicensedSpdx(normalized);
