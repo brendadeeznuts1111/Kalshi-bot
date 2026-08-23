@@ -13,8 +13,9 @@
  * Conditional gates fire when their paths are staged. Protected artifact
  * deletions block the commit. SKIP_TEST_CHANGED=1 skips the test layer.
  *
- * Color: Bun.color('ansi') text + the inspect.table summary honor FORCE_COLOR
- * (0=off, 1=16-color, 2=256, 3=truecolor; unset = auto — plain in non-TTY/CI).
+ * Color: Bun.color('ansi') text + the inspect.table summary follow the docs:
+ * NO_COLOR=1 disables, FORCE_COLOR=1|2|3 forces on (wins over NO_COLOR),
+ * unset = auto (plain in non-TTY/CI).
  */
 import { spawn } from "bun";
 import { joinPath } from "../src/research/paths.ts";
