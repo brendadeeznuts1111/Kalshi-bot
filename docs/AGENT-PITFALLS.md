@@ -243,9 +243,10 @@ agent:encode for tricky code: encode -> write .b64 -> base64 -d -> probe.
     pending cleanup.
   * IPC (guides/process/ipc.mdx): Bun.spawn(['bun','child.ts'],
     { ipc(msg, childProc) {...} }), childProc.send(msg), serialization:
-    'json' for Node peers, process.execPath for the bun binary. Repo uses
-    Node-style process.send (research-progress.ts) - native ipc is an
-    unused no-fit so far.
+    'json' for Node peers, process.execPath for the bun binary. ALREADY
+    native here: research-runner spawns with { ipc(...), serialization:
+    'advanced' } and the child's process.send IS Bun's IPC channel
+    (research-progress.ts) - an earlier 'unused no-fit' note was wrong.
   * Signal death with NO listener emits NEITHER event - to run cleanup
     on a signal, listen (process.on('SIGINT'/'SIGTERM')) and call
     process.exit() from the listener (the ctrl-c guide makes the
@@ -253,6 +254,24 @@ agent:encode for tricky code: encode -> write .b64 -> base64 -d -> probe.
   * process.exitCode/exit() graceful-vs-immediate is Node process
     semantics (Bun references Node's process docs); probes confirm Bun
     matches.
+
+### 8l. Why some Node-isms remain (do NOT 'fix' these)
+
+A full sweep confirmed the codebase is Bun-native everywhere it matters -
+10x Bun.nanoseconds, zero hrtime, zero util.inspect, zero createHash
+(Bun.CryptoHasher), zero require(), native IPC, Bun.spawn/sleep/glob/
+file/json/cron/WebView/markdown/semver/CSRF/secrets/color. Remaining
+Node APIs are intentional:
+
+- node:util.parseArgs - Bun has no native equivalent; the right CLI tool.
+- formatWithOptions (terminal-utils) - %s/%d/printf semantics Bun.inspect
+  does not provide.
+- Sync readFileSync in config loaders, DB open, and migration seeding -
+  startup-time sync reads are correct (the async-only Bun.file().json()
+  rule applies to runtime paths).
+- process.memoryUsage/uptime/env - identical semantics in Bun; nothing to
+  adopt.
+- Browser-side code (hq-view timers) - not the Bun runtime.
 
 - `bun run agent:encode [file]` + `--decode`: lexer-safe base64 in/out (byte-exact
   round-trip verified).
