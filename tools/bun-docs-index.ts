@@ -22,6 +22,12 @@
  *   runtime (default)  docs/runtime/** (API reference surface).
  *   all                every page under docs/.
  *
+ * Offline behavior: --check is fully offline (reads local JSON only, zero
+ * network). Discovery + page fetch need network; on discovery failure the
+ * tool falls back to the curated list. Before any fan-out the tool warms
+ * DNS via Bun.dns.prefetch for api.github.com / raw.githubusercontent.com /
+ * bun.com (best effort, in-process, never fails).
+ *
  * Flags:
  *   --refresh       re-fetch pages even when cached recently (also forces
  *                    live discovery).
@@ -101,6 +107,25 @@ function resolveScope(raw: string | undefined): Scope {
 
 function sourceBase(s: Source): string {
   return s === 'tag' ? TAG_BASE : s === 'repo' ? REPO_BASE : SITE_BASE;
+}
+
+/**
+ * Best-effort DNS warm-up for the hosts this tool talks to (Bun.dns.prefetch,
+ * real on 1.4.0; pattern from src/institutions/fonbet/connection.ts).
+ * Never fails startup: prefetch is an optimization. Discovery (api.github.com,
+ * bun.com sitemap) and content fetches (raw.githubusercontent.com, bun.com)
+ * then share one warmed lookup instead of racing their own.
+ */
+function warmDns(source: Source): void {
+  const hosts: Array<{ hostname: string; port?: number }> = [
+    { hostname: 'api.github.com', port: 443 },
+    { hostname: 'raw.githubusercontent.com', port: 443 },
+    { hostname: 'bun.com', port: 443 },
+  ];
+  void source; // same hosts for every source (sitemap lives on bun.com)
+  for (const h of hosts) {
+    try { Bun.dns.prefetch(h.hostname, h.port ?? 443); } catch { /* best effort */ }
+  }
 }
 
 /** Cache file name from a docs-relative path (runtime/networking/fetch.mdx -> networking-fetch). */
@@ -191,6 +216,7 @@ async function main(): Promise<void> {
   }
   mkdirSync(CACHE_DIR, { recursive: true });
   writeFileSync(DISCOVERY_PATH, JSON.stringify({ at: new Date().toISOString(), source, scope, ref, pages }, null, 2) + '\n');
+  warmDns(source); // shared warmed lookups before discovery + fan-out
   const index = readJson<Index>(INDEX_PATH) ?? { pages: [], fetchedAt: new Date(0).toISOString() };
   const byName = new Map(index.pages.map((p) => [p.name, p]));
   const entries: IndexEntry[] = [];

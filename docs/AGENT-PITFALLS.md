@@ -482,6 +482,13 @@ patterns (harvest-nationalities, fonbet fixture loader converted).
   Bun.dns.prefetch (prefetchDns) + getCacheStats (dnsCacheStats) to warm
   and observe the DNS cache - the pattern to copy for any multi-host
   ingestion.
+- bun:docs-index adopted the pattern (warmDns): prefetches the three
+  hosts before discovery/fan-out. The DNS cache is PER-PROCESS - stats
+  observed from a separate bun process are always empty; only in-process
+  observation shows the warm entries (probe: 3 prefetches -> size 3,
+  then discovery fetch -> hits 0->1, misses stay 3). --check is fully
+  offline (zero fetch calls, local JSON only); discovery failure falls
+  back to the curated list.
 - As of bun 1.4.0, tag and repo main are BYTE-IDENTICAL on all 16 curated
   pages (md5 check) - no repo-ahead drift right now. The REAL skew is
   docs-vs-runtime and it EXISTS EVEN AT THE TAG: fetch.preconnect exists but
