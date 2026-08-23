@@ -823,3 +823,36 @@ scanned; no code changes needed:
   renders, no VM).
 - fetch compress option re-verified here (already section 14):
   gzip/deflate/br/zstd with auto Content-Encoding.
+
+### 20. bun:deps-audit + dependency-killer verification (paste #3)
+
+- tools/bun-deps-audit.ts (bun:deps-audit) = the dependency-killer table
+  as a runnable report: scans package.json deps AND source imports for
+  every npm package Bun replaces (REPLACEMENTS map, 28 entries), plus a
+  positive native-usage count (which Bun APIs actually appear in
+  src/tools). --check exits 1 on any replaced package. Import-safe:
+  process.exit guarded by import.meta.main (so tests can import the
+  table). Tests: tests/lib/deps-audit.test.ts (table completeness vs
+  the blog list + replacement sanity).
+- This repo: 6 dependencies total (@factorywager/proton-pass, @types/bun,
+  bun-types, drizzle-orm, typescript, zod), ZERO replaced packages in
+  deps or imports, 26 native Bun APIs in active use (Bun.file 143,
+  Bun.write 121, Bun.cron 46, Bun.WebView 46, URLPattern 36...). The
+  dependency-killer thesis is already achieved here.
+- Guard gaps found and filled: sirv, compression, pako were NOT in the
+  guard's BANNED_PACKAGES (the paste's table has them) - added with
+  correct replacements (Bun.serve { dir } / CompressionStream).
+- PASTE ERROR caught: the paste claims 'you're already using
+  CompressionStream' and 'already integrated memoryPressure' - both
+  FALSE for this repo. Zero CompressionStream usage in src (the only
+  hits were this tool's own text); memoryPressure appears only in the
+  runtime-surface PROBE, not a real handler. Actual compression is
+  native but via Bun.gunzipSync (coefficients.ts), not
+  CompressionStream - fine, but the paste's specific claim was wrong.
+- bun:claims-audit improvement: the CLI now strips HTML (htmlToText)
+  before matching - claims spanning <code> tags ('files stream with
+  sendfile') previously never matched. Paraphrase-vs-literal is still
+  surfaced: 'Bun.serve routes can now serve a directory' misses because
+  the blog writes 'Bun.serve() routes...' (the parens intervene even in
+  substring mode) - a phrasing mismatch, not fabrication, but the tool
+  correctly reports it as absent.

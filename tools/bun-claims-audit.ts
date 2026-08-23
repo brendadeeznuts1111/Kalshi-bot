@@ -20,7 +20,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { assertBunAtLeast } from '../src/research/bun-native.ts';
-import { auditClaims } from '../src/lib/claims-audit.ts';
+import { auditClaims, htmlToText } from '../src/lib/claims-audit.ts';
 
 assertBunAtLeast('1.4.0', 'bun:claims-audit');
 
@@ -61,7 +61,10 @@ async function main(): Promise<number> {
   } else {
     console.log('  using cached blog: ' + BLOG_CACHE);
   }
-  const { verdicts, absent } = auditClaims(claims, html, { all });
+  // Match against the STRIPPED text (visible words), not raw HTML -
+  // otherwise claims spanning <code> tags (e.g. 'files stream with
+  // sendfile') never match even though the sentence is present.
+  const { verdicts, absent } = auditClaims(claims, htmlToText(html), { all });
   for (const v of verdicts) {
     console.log('  ' + (v.found ? 'FOUND   ' : 'NOT FOUND') + ': ' + v.claim);
   }
