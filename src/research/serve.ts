@@ -6,7 +6,16 @@ import {
   loadLatestProductionRunAnyDimension,
   loadRunFromDb,
 } from "./cache.ts";
-import { REPORT_DIR, CACHE_DIR, ROOT, joinPath } from "./paths.ts";
+import {
+  REPORT_DIR,
+  CACHE_DIR,
+  ROOT,
+  joinPath,
+  AUDIT_EVIDENCE_DIR,
+  auditEvidenceAbsPath,
+} from "./paths.ts";
+import { JsonlChunkParser } from "../lib/jsonl.ts";
+import { LIVE_TRACKER_LOG_DIR, parseTrackerJsonValue } from "../inventory/live-tracker.ts";
 import { fullNameFromRouteParams, ROUTES, SERVE_PATTERNS } from "./patterns.ts";
 import { pageLayout, renderIndex, renderOps, renderRepoPage, type KalshiAuthState } from "./views.ts";
 import { renderArchitecture } from "./architecture-view.ts";
@@ -49,6 +58,7 @@ import { buildHqPayload, resetTradingCache } from "./hq-data.ts";
 import { renderHq } from "./hq-view.ts";
 import hqApp from "./hq-app/index.html";
 import { attachDeskLiquidityToBoard, fetchTennisBoard } from "./tennis-events.ts";
+import { csrfGuard, issueCsrfSession } from "./csrf.ts";
 import { buildGlossaryApiPayload } from "../institutions/glossary.ts";
 import { readPlayerProfiles } from "./player-profiles.ts";
 import { buildTennisHqPayload, getPlayerDetail } from "./tennis-hq-data.ts";
@@ -823,7 +833,7 @@ async function readEventStoreCounts() {
   }
 }
 
-async function handleOpsPage(_req: Request): Promise<Response> {
+async function handleOpsPage(_req: Request, csrfToken: string): Promise<Response> {
   const roles = orchestrator.listRoles();
   const marketData = new MarketDataAgent(regDb);
   const launchd = await probeLaunchdLabels();
@@ -833,6 +843,7 @@ async function handleOpsPage(_req: Request): Promise<Response> {
   return html(
     renderOps({
       generatedAt: new Date().toISOString(),
+      csrfToken,
       agents: {
         orchestrator: true,
         market_data: roles.includes("market_data"),
@@ -1290,31 +1301,119 @@ export function createResearchServer(options: ServeOptions = {}) {
         );
       }
 
-      // Ops dashboard (read-only management page)
-      if (url.pathname === "/ops") {
-        return handleOpsPage(req);
+      // ── Streaming NDJSON endpoints (Bun.JSONL pipeline) ───────────────────
+      // Committed audit evidence as NDJSON. ?repo=owner__name → one file;
+      // no param → all evidence files concatenated (still valid NDJSON).
+      if (url.pathname === "/api/audit.jsonl") {
+        const repo = url.searchParams.get("repo");
+        if (repo) {
+          const f = Bun.file(auditEvidenceAbsPath(repo));
+          if (!(await f.exists())) {
+            return json({ error: "no audit evidence for repo", repo }, 404);
+          }
+          return new Response(f.stream(), {
+            headers: { "Content-Type": "application/x-ndjson; charset=utf-8" },
+          });
+        }
+        const files = [] as ReturnType<typeof Bun.file>[];
+        const auditGlob = new Bun.Glob("*.jsonl");
+        for await (const name of auditGlob.scan({ cwd: AUDIT_EVIDENCE_DIR })) {
+          files.push(Bun.file(joinPath(AUDIT_EVIDENCE_DIR, name)));
+        }
+        const auditBody = new ReadableStream<Uint8Array>({
+          async start(controller) {
+            for (const f of files) {
+              for await (const chunk of f.stream()) controller.enqueue(chunk);
+            }
+            controller.close();
+          },
+        });
+        return new Response(auditBody, {
+          headers: { "Content-Type": "application/x-ndjson; charset=utf-8" },
+        });
       }
 
-      // Ops dashboard JSON companion
+      // Live-tracker event logs streamed through JsonlChunkParser
+      // (server-side parseChunk pipeline). ?file=<name>&event-type=TYPE&limit=N
+      if (url.pathname === "/api/events.jsonl") {
+        const file = url.searchParams.get("file") ?? "";
+        const eventType = url.searchParams.get("event-type");
+        const limit = Math.max(0, Number(url.searchParams.get("limit") ?? "0") || 0);
+        const f = Bun.file(joinPath(LIVE_TRACKER_LOG_DIR, file));
+        if (!file || !(await f.exists())) {
+          const available: string[] = [];
+          const evGlob = new Bun.Glob("*.jsonl");
+          for await (const name of evGlob.scan({ cwd: LIVE_TRACKER_LOG_DIR })) {
+            available.push(name);
+          }
+          return json(
+            { error: "no such log file: " + (file || "(none)"), available: available.slice(-10) },
+            404,
+          );
+        }
+        const parser = new JsonlChunkParser();
+        const enc = new TextEncoder();
+        const evBody = new ReadableStream<Uint8Array>({
+          async start(controller) {
+            let emitted = 0;
+            // Normalize each raw log row (watch update / event / doc) to
+            // LiveTrackerEvent via the lib SSOT, then filter + re-emit NDJSON.
+            const emit = (row: unknown): boolean => {
+              for (const ev of parseTrackerJsonValue(row, file)) {
+                if (eventType && ev.eventType !== eventType) continue;
+                controller.enqueue(enc.encode(JSON.stringify(ev) + "\n"));
+                emitted++;
+                if (limit && emitted >= limit) return false;
+              }
+              return !limit || emitted < limit;
+            };
+            for await (const chunk of f.stream()) {
+              for (const v of parser.feed(new Uint8Array(chunk))) {
+                if (!emit(v)) { controller.close(); return; }
+              }
+            }
+            for (const v of parser.finish()) {
+              if (!emit(v)) { controller.close(); return; }
+            }
+            controller.close();
+          },
+        });
+        return new Response(evBody, {
+          headers: { "Content-Type": "application/x-ndjson; charset=utf-8" },
+        });
+      }
+
+      // Ops dashboard (read-only management page) — issues the CSRF session
+      if (url.pathname === "/ops") {
+        const session = issueCsrfSession();
+        const page = await handleOpsPage(req, session.token);
+        page.headers.set("Set-Cookie", session.cookie);
+        return page;
+      }
+
+      // Ops dashboard JSON companion — same CSRF cookie so JSON clients can POST
       if (url.pathname === "/ops.json") {
-        return handleOpsJson(req);
+        const session = issueCsrfSession();
+        const res = await handleOpsJson(req);
+        res.headers.set("Set-Cookie", session.cookie);
+        return res;
       }
 
       // /ops/partners/:nodeId — SERVE_PATTERNS.opsPartner (above)
 
-      // Bet placement — rate limit first, then compliance gate
+      // Bet placement — CSRF first, then rate limit, then compliance gate
       if (url.pathname === "/place-bet" && req.method === "POST") {
-        return rateLimiter(req, () => stateValidator(req, () => complianceGate(req, () => handlePlaceBet(req))));
+        return csrfGuard(req, () => rateLimiter(req, () => stateValidator(req, () => complianceGate(req, () => handlePlaceBet(req)))));
       }
 
-      // HQ order entry — same middleware stack as /place-bet; dry-run unless explicit dryRun:false
+      // HQ order entry — CSRF, then same middleware stack as /place-bet
       if (url.pathname === "/api/trading/order" && req.method === "POST") {
-        return rateLimiter(req, () => requireTradingOrderPrincipal(req, () => stateValidator(req, () => executionComplianceGate(req, () => handleTradingOrder(req, options.trading)))));
+        return csrfGuard(req, () => rateLimiter(req, () => requireTradingOrderPrincipal(req, () => stateValidator(req, () => executionComplianceGate(req, () => handleTradingOrder(req, options.trading))))));
       }
 
       // HQ order cancel
       if (url.pathname === "/api/trading/cancel" && req.method === "POST") {
-        return rateLimiter(req, () => requireTradingCancelPrincipal(req, () => handleTradingCancel(req, options.trading)));
+        return csrfGuard(req, () => rateLimiter(req, () => requireTradingCancelPrincipal(req, () => handleTradingCancel(req, options.trading))));
       }
 
       // HQ orderbook preview (public market data)
@@ -1374,6 +1473,8 @@ export function createResearchServer(options: ServeOptions = {}) {
 
       // ── Polymarket / agent routes ──
 
+      // External webhook — not browser-facing, so no CSRF guard: the
+      // double-submit pattern only protects browser-session POSTs.
       if (url.pathname === "/polymarket/ingest" && req.method === "POST") {
         return rateLimiter(req, () => handlePolymarketIngest(req));
       }
@@ -1391,11 +1492,11 @@ export function createResearchServer(options: ServeOptions = {}) {
       }
 
       if (url.pathname === "/agent/dispatch" && req.method === "POST") {
-        return rateLimiter(req, () => handleAgentDispatch(req));
+        return csrfGuard(req, () => rateLimiter(req, () => handleAgentDispatch(req)));
       }
 
       if (url.pathname === "/ops/kalshi-rotate-key" && req.method === "POST") {
-        return rateLimiter(req, () => handleKalshiRotateKey(req));
+        return csrfGuard(req, () => rateLimiter(req, () => handleKalshiRotateKey(req)));
       }
 
       return new Response("Not Found", { status: 404 });

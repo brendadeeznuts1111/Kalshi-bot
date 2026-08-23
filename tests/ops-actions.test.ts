@@ -1,6 +1,7 @@
 // @see https://bun.com/docs/test/index#run-tests
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { createResearchServer } from "../src/research/serve.ts";
+import { issueCsrfSession } from "../src/research/csrf.ts";
 import { renderOps } from "../src/research/views.ts";
 
 describe("ops actions panel", () => {
@@ -46,6 +47,7 @@ describe("ops actions panel", () => {
 
 describe("ops actions endpoints", () => {
   let server: ReturnType<typeof createResearchServer>;
+  const csrfToken = issueCsrfSession().token;
 
   beforeAll(() => {
     server = createResearchServer({ port: 0 });
@@ -58,7 +60,7 @@ describe("ops actions endpoints", () => {
   test("POST /agent/dispatch with a valid type returns agent result", async () => {
     const res = await fetch(`${server.url}agent/dispatch`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-csrf-token": csrfToken },
       body: JSON.stringify({ task: { type: "SPIKE_DETECT", payload: {} } }),
     });
     expect(res.status).toBe(200);
@@ -72,7 +74,7 @@ describe("ops actions endpoints", () => {
   test("POST /place-bet with x-state-code MA returns synthetic playId", async () => {
     const res = await fetch(`${server.url}place-bet`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-state-code": "MA" },
+      headers: { "Content-Type": "application/json", "x-state-code": "MA", "x-csrf-token": csrfToken },
       body: JSON.stringify({ wagerAmount: 10, userId: "ops-test" }),
     });
     expect(res.status).toBe(200);
@@ -84,7 +86,7 @@ describe("ops actions endpoints", () => {
   test("POST /place-bet with unsupported state is blocked with 400", async () => {
     const res = await fetch(`${server.url}place-bet`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-state-code": "XX" },
+      headers: { "Content-Type": "application/json", "x-state-code": "XX", "x-csrf-token": csrfToken },
       body: JSON.stringify({ wagerAmount: 10, userId: "ops-test" }),
     });
     expect(res.status).toBe(400);

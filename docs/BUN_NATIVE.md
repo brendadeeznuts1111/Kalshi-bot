@@ -1100,3 +1100,19 @@ bun pm cache rm                    # clear ~/.bun/install/cache
 | Parallel map | `pool.ts` |
 | CLI flags | `parseArgs` |
 | Unit tests | `bun:test` + `mock.module` |
+
+## Gap register (Bun 1.4 audit)
+
+### Adopted this round
+
+| API | Where | What |
+|-----|-------|------|
+| `Bun.CSRF` + `Bun.Cookie`/`CookieMap` | `src/research/csrf.ts`, `serve.ts`, `views.ts` | Double-submit CSRF on all browser-facing POSTs (`/place-bet`, `/api/trading/order`, `/api/trading/cancel`, `/agent/dispatch`, `/ops/kalshi-rotate-key`). GET `/ops` issues a token (HttpOnly SameSite=Lax cookie, inlined `OPS_CSRF` in the page), clients echo it in `x-csrf-token`, and `csrfGuard` 403s before any handler runs. `KALSHI_CSRF_SECRET` pins a stable signing secret so tokens survive restarts. The `/polymarket/ingest` webhook is deliberately excluded (no browser session).
+| `Bun.secrets` (OS keychain) | `src/lib/secrets.ts`, `tools/kalshi-secrets-cli.ts`, `tests/lib/secrets.test.ts` | Credential-store wrapper: backend-injectable (tests use an in-memory map), feature-detected, reads degrade to an env-var fallback. `bun run kalshi:secrets store|get|delete` moves the plaintext Kalshi key and `.env` credential values into the OS vault under service `com.kalshi-bot`. Complement to `redactSecrets` — store in the vault, redact on the way out.
+
+### Flagged (no adoption yet — honest no-fit)
+
+- `bun test --timings/--shard/--parallel` — unused; hosted CI runners are billing-blocked (manual diagnostic only), so sharding has no consumer. `--timings` is a candidate for the local gate once output noise is acceptable.
+- `Bun.password` — no current hashing consumer in this repo; candidate only if a local vault passphrase ever appears. Do not force-fit.
+- `ArrayBufferSink` — `src/partner/visuals.ts` builds PNG buffers manually; a clean refactor is flagged, not urgent.
+- Keychain-first auth read (`loadKalshiCredentials`) — deferred: the loader is sync and sits on the live-execution path; convert alongside a broader async-auth change. The `kalshi:secrets` CLI is the opt-in migration step meanwhile.

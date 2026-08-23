@@ -227,6 +227,8 @@ export type OpsCronFlow = {
 
 export type OpsDashboardData = {
   generatedAt: string;
+  /** CSRF double-submit token issued by GET /ops; echoed in every POST. */
+  csrfToken?: string;
   agents: Record<string, boolean>;
   ticks: Array<{
     slug: string;
@@ -495,7 +497,7 @@ const OPS_DISPATCH_TYPES = [
   "LINE_MOVE_EVAL",
 ] as const;
 
-export function renderOpsActions(): string {
+export function renderOpsActions(csrfToken = ""): string {
   const typeOptions = OPS_DISPATCH_TYPES.map((t) => `<option value="${t}">${t}</option>`).join("");
   return `<h2>Actions</h2>
   <p class="dim">Synthetic probes against this server's own endpoints — the compliance bet check runs the regulatory pipeline and returns a synthetic playId; it is NOT a live Kalshi order. Form values persist across auto-refresh; confirmation resets deliberately.</p>
@@ -546,6 +548,8 @@ export function renderOpsActions(): string {
   </form>
   <pre class="diff" id="ops-rotate-result" hidden></pre>
 <script>
+  // CSRF double-submit token — issued by GET /ops, echoed in every POST.
+  var OPS_CSRF = "${csrfToken}";
 (function () {
   // Minimal working payload per task type, derived from the agents' run() payload usage.
   var PAYLOAD_EXAMPLES = {
@@ -626,7 +630,9 @@ export function renderOpsActions(): string {
       out.hidden = false;
       out.classList.remove("ok", "bad");
       out.textContent = "…";
-      fetch(req.url, req.init).then(function (res) {
+      var init = req.init;
+      init.headers = Object.assign({ "x-csrf-token": OPS_CSRF }, init.headers);
+      fetch(req.url, init).then(function (res) {
         return res.text().then(function (text) {
           var body = text;
           try { body = JSON.stringify(JSON.parse(text), null, 2); } catch (e) { /* raw text */ }
@@ -693,7 +699,7 @@ export function renderOpsActions(): string {
     rotateOut.textContent = "…";
     fetch("/ops/kalshi-rotate-key", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-csrf-token": OPS_CSRF },
       body: JSON.stringify(body),
     }).then(function (res) {
       return res.text().then(function (text) {
@@ -834,7 +840,7 @@ export function renderOps(data: OpsDashboardData): string {
   <h2>Bot &amp; agents</h2>
   ${renderOpsAgents(data.agents)}
   <p><a href="/polymarket/status">status.json</a> · <a href="/regulatory/health">regulatory health</a></p>
-  ${renderOpsActions()}
+  ${renderOpsActions(data.csrfToken ?? "")}
   ${data.server ? `<h2>Server</h2>\n  ${renderOpsServer(data, nowMs)}` : ""}
   <h2>Signals</h2>
   ${renderOpsSignals(data)}
