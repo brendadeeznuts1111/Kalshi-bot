@@ -295,6 +295,15 @@ Node APIs are intentional:
   resize, .png().bytes(), .placeholder() ThumbHash, Bun.file().image()
   shorthand, backend 'system') but CANNOT create images from raw pixels
   (statics are clipboard-only - no create/fromPixels on 1.4.0).
+- Bun.Image pattern matrix (verified): chaining metadata -> resize ->
+  format -> bytes() on ONE instance works; Bun.color accepts [r,g,b] and
+  {r,g,b} inputs; Bun.s3 + BunFile.stat() are real; getOptimalQuality +
+  metadataGate adopted as src/lib/image-quality.ts (tested). WRONG in the
+  writeup: .bytes() returns the ENCODED output (PNG signature confirmed),
+  NOT raw RGBA pixels, and there is NO pixel-decode API on 1.4.0
+  (decode/pixels/toPixels undefined) - so 'average color from pixels'
+  patterns are unimplementable with Bun.Image alone; the placeholder/
+  thumbhash part is real.
 - REAL BUG FOUND via Bun.Image: Bun.deflateSync emits RAW deflate (first
   bytes 0x63 0x64, no zlib header) but PNG IDAT requires an RFC 1950 zlib
   stream. Our hand-built solid PNG passed metadata-only checks and sips
