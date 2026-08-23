@@ -405,6 +405,14 @@ each has a real consumer in the repo where marked.
   runtime regex); depth option bounds recursion ([DepthLimit] past the cap).
 - redactUrlParams(url): stubs sensitive query keys (gsid/token/...) — wired
   into PandoraSocket display (key visible, value redacted).
+- printf-style lines: formatLine / formatLineColor (%s, %d, %o via
+  util.formatWithOptions; colors apply to object values).
+- Bun.deepMatch(subset, actual): native subset matcher (OBJECT order is
+  subset-first; arrays match exactly) — used in redaction tests.
+- console is an AsyncIterable: for await (const line of console) reads stdin
+  lines (no readline dependency).
+- inspectValue supports sorted (verified); maxArrayLength/maxStringLength are
+  NOT supported at runtime — do not pass them.
 - [Bun.inspect.custom] hooks typed with the real 3-arg contract
   (depth, options, inspect) across all redacted classes.
 - The 3-arg recurse power move (depth, opts, inspect) — used for custom tree

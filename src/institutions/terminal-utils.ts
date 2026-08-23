@@ -8,6 +8,7 @@
 import type { Decision, SignalContext } from "./alpha-signal-types.ts";
 import { ansiColor, type ColorKey } from "../lib/color/index.ts";
 import { redactSecrets } from "../lib/redact.ts";
+import { formatWithOptions } from "node:util";
 
 // ── ANSI color helpers ──────────────────────────────────────────
 
@@ -41,18 +42,30 @@ export const ANSI = {
  */
 export function inspectValue(
   value: unknown,
-  opts: { colors?: boolean; depth?: number; verbose?: boolean } = {},
+  opts: { colors?: boolean; depth?: number; verbose?: boolean; sorted?: boolean } = {},
 ): string {
   // Context-aware verbosity: verbose=true -> full depth + colors (DEBUG dumps);
   // verbose=false -> compact depth 2 plain; unset -> honor colors/depth as given.
-  if (opts.verbose === true) return Bun.inspect(value, { colors: true, depth: undefined });
-  if (opts.verbose === false) return Bun.inspect(value, { colors: false, depth: 2 });
-  return Bun.inspect(value, { colors: opts.colors, depth: opts.depth });
+  if (opts.verbose === true) return Bun.inspect(value, { colors: true, depth: undefined, sorted: opts.sorted });
+  if (opts.verbose === false) return Bun.inspect(value, { colors: false, depth: 2, sorted: opts.sorted });
+  return Bun.inspect(value, { colors: opts.colors, depth: opts.depth, sorted: opts.sorted });
 }
 
 /** Colored serialization for terminal diagnostics. */
 export function inspectColor(value: unknown): string {
   return inspectValue(value, { colors: true });
+}
+
+/**
+
+/** printf-style line formatting (%s, %d, %o) via util.formatWithOptions. */
+export function formatLine(format: string, ...args: unknown[]): string {
+  return formatWithOptions({ colors: false }, format, ...args);
+}
+
+/** Colored printf-style line formatting. */
+export function formatLineColor(format: string, ...args: unknown[]): string {
+  return formatWithOptions({ colors: true }, format, ...args);
 }
 
 /**
