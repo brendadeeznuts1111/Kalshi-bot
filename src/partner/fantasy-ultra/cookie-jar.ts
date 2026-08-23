@@ -52,7 +52,7 @@ export class CookieJar {
    * values (session tokens) into logs.
    * @see https://bun.com/docs/runtime/utils#bun-inspect-custom
    */
-  [Bun.inspect.custom](): string {
+  [Bun.inspect.custom](_depth: number, _options: unknown, _inspect: typeof Bun.inspect): string {
     return `CookieJar(${this.map.size} cookie${this.map.size === 1 ? "" : "s"})`;
   }
 }

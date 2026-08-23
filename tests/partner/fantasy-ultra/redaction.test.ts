@@ -31,8 +31,8 @@ describe("PandoraSocket inspect.custom", () => {
       reconnect: false,
     });
     const out = Bun.inspect(socket);
-    expect(out).toContain("PandoraSocket(pandora.example.test");
+    expect(out).toContain("pandora.example.test");
+    expect(out).toContain("gsid"); // key visible — only the value is redacted
     expect(out).not.toContain("SECRET_GSID");
-    expect(out).not.toContain("gsid");
   });
 });

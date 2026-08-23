@@ -399,6 +399,14 @@ each has a real consumer in the repo where marked.
 - Context-aware verbosity: inspectValue(value, { verbose: true|false }) — true
   = full depth + colors (DEBUG dumps), false = compact depth 2 plain;
   unset honors colors/depth as given.
+- redactSecrets typing: RedactedClone<T> mapped type mirrors the redacted
+  shape (secret-keyed props become the marker type; template-literal key
+  check with Camel/Pascal variants — approximation of the case-insensitive
+  runtime regex); depth option bounds recursion ([DepthLimit] past the cap).
+- redactUrlParams(url): stubs sensitive query keys (gsid/token/...) — wired
+  into PandoraSocket display (key visible, value redacted).
+- [Bun.inspect.custom] hooks typed with the real 3-arg contract
+  (depth, options, inspect) across all redacted classes.
 - The 3-arg recurse power move (depth, opts, inspect) — used for custom tree
   formatting (e.g. FileNode); the redactor achieves the same via cloning
   instead of recursion-through-inspect.

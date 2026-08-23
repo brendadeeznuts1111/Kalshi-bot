@@ -31,6 +31,7 @@ import {
   PANDORA_LINE_SET_TOKEN,
 } from './pandora-hosts.ts';
 import { FANTASY_WIDGET_CONFIG } from './widget-config.ts';
+import { redactUrlParams } from '../../lib/redact.ts';
 
 /** Engine.IO packet types (EIO=4). */
 export const EIO = {
@@ -517,13 +518,9 @@ export class PandoraSocket {
    * carry session params (gsid) and the wire never needs them in logs.
    * @see https://bun.com/docs/runtime/utils#bun-inspect-custom
    */
-  [Bun.inspect.custom](): string {
-    let host = "?";
-    try {
-      host = new URL(this.url).host;
-    } catch {
-      /* keep ? */
-    }
-    return `PandoraSocket(${host}, ${this.ws ? "open" : "closed"}, reconnect=${this.reconnectAttempt})`;
+  [Bun.inspect.custom](_depth: number, _options: unknown, _inspect: typeof Bun.inspect): string {
+    // Show the URL with session params (gsid) redacted — never the raw query.
+    const safe = redactUrlParams(this.url);
+    return `PandoraSocket(${safe}, ${this.ws ? "open" : "closed"}, reconnect=${this.reconnectAttempt})`;
   }
 }

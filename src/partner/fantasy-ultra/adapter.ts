@@ -648,7 +648,7 @@ export class FantasyUltraAdapter implements FantasySessionAdapter {
    * token or credentials (password/token fields are secret).
    * @see https://bun.com/docs/runtime/utils#bun-inspect-custom
    */
-  [Bun.inspect.custom](): string {
+  [Bun.inspect.custom](_depth: number, _options: unknown, _inspect: typeof Bun.inspect): string {
     const domain = this.credentials.domain;
     return `FantasyUltraAdapter(partner=${this.partnerId}, domain=${domain}, token=${this.bearerToken ? "set" : "unset"}, cookies=${this.jar.size()}, warmed=${this.warmed})`;
   }

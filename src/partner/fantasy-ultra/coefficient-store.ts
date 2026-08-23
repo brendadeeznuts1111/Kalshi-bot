@@ -39,7 +39,7 @@ export class CoefficientStore {
    * event-book dump.
    * @see https://bun.com/docs/runtime/utils#bun-inspect-custom
    */
-  [Bun.inspect.custom](): string {
+  [Bun.inspect.custom](_depth: number, _options: unknown, _inspect: typeof Bun.inspect): string {
     return `CoefficientStore(${this.byEvent.size} event${this.byEvent.size === 1 ? "" : "s"})`;
   }
 
