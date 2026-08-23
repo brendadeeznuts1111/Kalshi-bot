@@ -478,6 +478,32 @@ patterns (harvest-nationalities, fonbet fixture loader converted).
   $BUN_CONFIG_MAX_HTTP_REQUESTS raises it (max 65535). Our --scope all
   run fans out 333 parallel fetches - 77 queue behind the cap, which is
   fine (pooled, same host), but cap is real.
+
+### 11. Bun fetch pooling mechanics (probe-verified on 1.4.0, local servers)
+
+- Pool is per host:port. Sequential fetches reuse ONE connection (20 seq
+  -> 1 conn; 5 seq to a second port -> 1 new conn there = separate pool).
+- CONCURRENT fetches to the same host do NOT share: each parallel request
+  opens its own connection (20 parallel -> 20 conns peak 20; 40 parallel
+  -> 40 peak 40). No per-host cap below the global 256. For fan-outs this
+  means N parallel fetches = N TCP connections, so warm the pool / bound
+  concurrency deliberately (our bun-docs fan-out to raw.githubusercontent
+  opens one conn per page in parallel).
+- Idle pooled connections do NOT time out within 15s (checked at 5/10/15s,
+  zero closes) and are reused after idle. Docs do not specify an idle
+  timeout; effectively the connection stays pooled until the process
+  exits or the server closes it.
+- UNREAD response bodies block reuse: a 1MB Content-Length body that is
+  never read -> next fetch opens a new connection (2 conns). A small
+  chunked body that fully terminated -> reuse still happens (1 conn).
+  Always consume response bodies (or .cancel()) when you want pooling.
+- Connection: close header and keepalive:false both force a fresh
+  connection per request (verified: 3 requests -> 3 conns).
+- HTTP/2 client: NOT supported on 1.4.0. fetch to a local node:http2
+  server fails with 'Malformed_HTTP_Response'; verbose output shows
+  --http1.1 always. So pooling is the ONLY reuse mechanism - no h2
+  multiplexing, which is why parallel = one conn each. (This also
+  explains the Cloudflare HTTP/1.1 negotiation seen in section 10.)
 - Repo precedent: src/institutions/fonbet/connection.ts already uses
   Bun.dns.prefetch (prefetchDns) + getCacheStats (dnsCacheStats) to warm
   and observe the DNS cache - the pattern to copy for any multi-host
