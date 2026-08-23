@@ -154,7 +154,7 @@ describe("Kalshi live execution orchestration", () => {
     }
   });
 
-  test("resolves and caches out-scoped credentials without falling through to another out", () => {
+  test("resolves and caches out-scoped credentials without falling through to another out", async () => {
     const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
     const pem = privateKey.export({ format: "pem", type: "pkcs8" }).toString();
     const resolve = createKalshiAccountClientResolver({
@@ -175,14 +175,14 @@ describe("Kalshi live execution orchestration", () => {
       skin: null,
       metaJson: "{}",
     };
-    const first = resolve(account);
-    expect(resolve(account)).toBe(first);
+    const first = await resolve(account);
+    expect(await resolve(account)).toBe(first);
     expect(first.environment).toBe("demo");
-    expect(() => resolve({ ...account, id: "out-OTHER-1", envPrefix: "KALSHI_OTHER_1_" }))
-      .toThrow(/Missing KALSHI_API_KEY_ID/);
+    await expect(resolve({ ...account, id: "out-OTHER-1", envPrefix: "KALSHI_OTHER_1_" }))
+      .rejects.toThrow(/Missing KALSHI_API_KEY_ID/);
   });
 
-  test("rebuilds an out-scoped client after credential rotation", () => {
+  test("rebuilds an out-scoped client after credential rotation", async () => {
     const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
     const pem = privateKey.export({ format: "pem", type: "pkcs8" }).toString();
     const env = {
@@ -204,9 +204,9 @@ describe("Kalshi live execution orchestration", () => {
       skin: null,
       metaJson: "{}",
     };
-    const first = resolve(account);
+    const first = await resolve(account);
     env.KALSHI_SPORTS_1_API_KEY_ID = "out-key-v2";
-    expect(resolve(account)).not.toBe(first);
+    expect(await resolve(account)).not.toBe(first);
   });
 
   test("returns an explicit session failure when scoped credentials cannot resolve", async () => {

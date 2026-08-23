@@ -669,9 +669,9 @@ export async function probeKalshiAuthCached(
   }
   const checkedAt = new Date(nowMs).toISOString();
   let value: OpsKalshiAuth;
-  let creds: ReturnType<typeof loadKalshiCredentials> | null = null;
+  let creds: Awaited<ReturnType<typeof loadKalshiCredentials>> | null = null;
   try {
-    creds = loadKalshiCredentials();
+    creds = await loadKalshiCredentials();
   } catch {
     value = { state: "no-creds", checkedAt, cacheTtlSec: KALSHI_AUTH_CACHE_TTL_SEC };
   }

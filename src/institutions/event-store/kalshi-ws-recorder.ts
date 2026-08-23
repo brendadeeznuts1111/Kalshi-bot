@@ -339,7 +339,7 @@ export async function runKalshiWsWatchRecorder(
   let creds = options.creds;
   if (!creds && !dryRun) {
     try {
-      creds = loadKalshiCredentials();
+      creds = await loadKalshiCredentials();
     } catch (err) {
       // No credentials at all — classify and bail instead of throwing away the summary.
       summary.errors++;
@@ -495,7 +495,7 @@ export async function runKalshiWsWatchRecorder(
     }
 
     try {
-      client.connect();
+      await client.connect();
     } catch (err) {
       summary.errors++;
       recordProbeErrorCode(summary, classifyProbeError(err));

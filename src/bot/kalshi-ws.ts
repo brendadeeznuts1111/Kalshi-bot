@@ -244,9 +244,9 @@ export class KalshiMarketWs {
     return this.ws != null && this.ws.readyState === WebSocket.OPEN;
   }
 
-  connect(): void {
+  async connect(): Promise<void> {
     if (this.closed) throw new Error("KalshiMarketWs already closed");
-    const creds = this.options.creds ?? loadKalshiCredentials();
+    const creds = this.options.creds ?? await loadKalshiCredentials();
     const url = this.options.url ?? resolveKalshiWsUrl();
     const headers = kalshiWsAccessHeaders(creds) as unknown as Record<string, string>;
     const factory =

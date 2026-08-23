@@ -240,8 +240,8 @@ export function createKalshiClient(options: KalshiClientOptions = {}): KalshiCli
   let creds: KalshiCredentials | null = options.credentials ?? null;
   let lastCreateMs = 0;
 
-  function credentials(): KalshiCredentials {
-    creds ??= loadKalshiCredentials();
+  async function credentials(): Promise<KalshiCredentials> {
+    creds ??= await loadKalshiCredentials();
     return creds;
   }
 
@@ -252,7 +252,7 @@ export function createKalshiClient(options: KalshiClientOptions = {}): KalshiCli
   ): Promise<unknown> {
     const headers: Record<string, string> = {
       Accept: "application/json",
-      ...kalshiAccessHeaders(credentials(), method, path),
+      ...kalshiAccessHeaders(await credentials(), method, path),
     };
     if (body) headers["Content-Type"] = "application/json";
     // Create retries reuse the same client_order_id (idempotency key) and only

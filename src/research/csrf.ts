@@ -75,13 +75,20 @@ export function csrfCookieFrom(req: Request): string | null {
   return new Bun.CookieMap(cookieHeader).get(CSRF_COOKIE_NAME) ?? null;
 }
 
-/** True when the request carries a token that verifies against the secret. */
+/**
+ * True when the request carries a token that verifies against the secret AND
+ * matches the session cookie (double-submit binding). A valid HMAC alone is
+ * not enough — any token minted by this process would pass — so the header
+ * must equal the HttpOnly `kalshi_csrf` cookie the browser sent.
+ */
 export function verifyCsrfRequest(
   req: Request,
   env: Record<string, string | undefined> = Bun.env as Record<string, string | undefined>,
 ): boolean {
   const token = csrfTokenFrom(req);
   if (!token) return false;
+  const cookie = csrfCookieFrom(req);
+  if (!cookie || cookie !== token) return false;
   try {
     return Bun.CSRF.verify(token, { secret: csrfSecret(env) });
   } catch {

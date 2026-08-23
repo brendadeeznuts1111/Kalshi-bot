@@ -12,6 +12,7 @@ import {
   type KeyObject,
 } from "node:crypto";
 import { readFileSync } from "node:fs";
+import { DEFAULT_SECRET_SERVICE, getSecret } from "../lib/secrets.ts";
 import { OFFICIAL_URLS } from "../institutions/official-urls.ts";
 
 const KALSHI_WS_URL = new URL(OFFICIAL_URLS.kalshi.tradeApiWsV2);
@@ -28,25 +29,51 @@ export type KalshiCredentials = {
   privateKey: KeyObject;
 };
 
-/** Load credentials from env. Throws with a clear message when missing. */
-export function loadKalshiCredentials(
+/** OS-keychain credential names under service com.kalshi-bot — see `bun run kalshi:secrets`. */
+export const KALSHI_KEY_ID_SECRET = "kalshi-api-key-id";
+export const KALSHI_KEY_SECRET = "kalshi-private-key";
+
+/**
+ * Load credentials: env/file first (explicit, fresh), then the OS keychain
+ * fallback set via `bun run kalshi:secrets store`. Async because Bun.secrets
+ * is async-only; the keychain read degrades silently when unavailable.
+ *
+ * opts.keychain: false (used by per-account resolvers) forces env-only —
+ * account-scoped clients must never pick up a machine-global key.
+ */
+export async function loadKalshiCredentials(
   env: Record<string, string | undefined> = Bun.env as Record<string, string | undefined>,
-): KalshiCredentials {
+  opts: { keychain?: boolean } = {},
+): Promise<KalshiCredentials> {
   const keyId = (env.KALSHI_API_KEY_ID ?? env.KALSHI_ACCESS_KEY)?.trim();
-  if (!keyId) {
-    throw new Error("Missing KALSHI_API_KEY_ID (or KALSHI_ACCESS_KEY)");
-  }
   const pemInline = env.KALSHI_PRIVATE_KEY?.trim();
   const pemPath = env.KALSHI_PRIVATE_KEY_PATH?.trim();
-  let pem: string;
+  let pem: string | null = null;
   if (pemInline) {
     pem = pemInline.includes("\\n") ? pemInline.replace(/\\n/g, "\n") : pemInline;
   } else if (pemPath) {
     pem = readFileSync(pemPath, "utf8");
-  } else {
-    throw new Error("Missing KALSHI_PRIVATE_KEY_PATH or KALSHI_PRIVATE_KEY");
   }
-  return { keyId, privateKey: createPrivateKey(pem) };
+  if (keyId && pem) {
+    return { keyId, privateKey: createPrivateKey(pem) };
+  }
+  if (opts.keychain !== false) {
+    const vaultKeyId = await getSecret({
+      service: DEFAULT_SECRET_SERVICE,
+      name: KALSHI_KEY_ID_SECRET,
+    });
+    const vaultPem = await getSecret({
+      service: DEFAULT_SECRET_SERVICE,
+      name: KALSHI_KEY_SECRET,
+    });
+    if (vaultKeyId && vaultPem) {
+      return { keyId: vaultKeyId, privateKey: createPrivateKey(vaultPem) };
+    }
+  }
+  if (!keyId) {
+    throw new Error("Missing KALSHI_API_KEY_ID (or KALSHI_ACCESS_KEY)");
+  }
+  throw new Error("Missing KALSHI_PRIVATE_KEY_PATH or KALSHI_PRIVATE_KEY");
 }
 
 /** RSA-PSS SHA-256, salt = digest length — Kalshi API key signing. */

@@ -27,7 +27,8 @@ export interface AuthorizedCancelInput {
 }
 
 export interface AuthorizedCancelDependencies {
-  resolveClient: (account: BettingAccountRow) => Pick<KalshiClient, 'environment' | 'cancelOrder'>;
+  resolveClient: (account: BettingAccountRow) =>
+    Pick<KalshiClient, 'environment' | 'cancelOrder'> | Promise<Pick<KalshiClient, 'environment' | 'cancelOrder'>>;
   isRiskHealthy: (reservation: ExposureReservation) =>
     boolean | ExecutionRiskHealthDecision | Promise<boolean | ExecutionRiskHealthDecision>;
   env?: Record<string, string | undefined>;
@@ -244,7 +245,7 @@ export async function executeAuthorizedCancel(
   }
   let client: Pick<KalshiClient, 'environment' | 'cancelOrder'>;
   try {
-    client = dependencies.resolveClient(account);
+    client = await dependencies.resolveClient(account);
   } catch (error) {
     return {
       ok: false,

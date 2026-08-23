@@ -5,7 +5,7 @@ const env = resolveKalshiEnvironment();
 const base = KALSHI_REST_BASE[env];
 let creds: KalshiCredentials | undefined;
 try {
-  creds = loadKalshiCredentials();
+  creds = await loadKalshiCredentials();
 } catch (e) {
   console.warn('Kalshi credentials not loaded:', e instanceof Error ? e.message : String(e));
 }

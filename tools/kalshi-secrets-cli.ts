@@ -11,14 +11,13 @@
  *            key material is never printed (count only).
  *   delete — remove both entries from the vault.
  *
- * This is the opt-in migration step for moving the plaintext
- * `.env.kalshi-key.pem` / `.env` credential values into the OS vault. The
- * runtime auth path (`loadKalshiCredentials`) still reads env/file — wiring a
- * keychain-first read into it is deferred because that function is sync and
- * sits on the live-execution path (see docs/BUN_NATIVE.md gap register).
+ * This is the migration step for moving the plaintext `.env.kalshi-key.pem` /
+ * `.env` credential values into the OS vault. `loadKalshiCredentials` is now
+ * async and falls back to this vault when env/file is absent (env stays
+ * authoritative when both are present).
  *
  * @see https://bun.com/docs/runtime/bun-secrets (Bun 1.4 secrets manager)
- * @see src/bot/kalshi-auth.ts — runtime credential loading (env/file)
+ * @see src/bot/kalshi-auth.ts — runtime credential loading (env/file first, keychain fallback)
  */
 import { readFileSync } from "node:fs";
 import {
@@ -27,10 +26,11 @@ import {
   getSecret,
   setSecret,
 } from "../src/lib/secrets.ts";
+import { KALSHI_KEY_ID_SECRET, KALSHI_KEY_SECRET } from "../src/bot/kalshi-auth.ts";
 
 const SERVICE = DEFAULT_SECRET_SERVICE;
-const KEY_ID_NAME = "kalshi-api-key-id";
-const KEY_NAME = "kalshi-private-key";
+const KEY_ID_NAME = KALSHI_KEY_ID_SECRET;
+const KEY_NAME = KALSHI_KEY_SECRET;
 
 async function store(): Promise<number> {
   const env = Bun.env as Record<string, string | undefined>;

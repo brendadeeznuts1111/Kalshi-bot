@@ -337,9 +337,9 @@ function profitSplitToBasisPoints(value: number | null): number {
 /** Resolve out-scoped Kalshi credentials with out → partner → KALSHI_ fallback. */
 export function createKalshiAccountClientResolver(
   envMap: Record<string, string | undefined> = Bun.env as Record<string, string | undefined>,
-): (account: BettingAccountRow) => KalshiClient {
+): (account: BettingAccountRow) => Promise<KalshiClient> {
   const clients = new Map<string, { fingerprint: string; client: KalshiClient }>();
-  return (account) => {
+  return async (account) => {
     const prefix = account.envPrefix?.trim() || canonicalKalshiOutPrefix(account.id);
     const chain = envPrefixFallbackChain(prefix, "kalshi");
     const scoped = {
@@ -355,7 +355,8 @@ export function createKalshiAccountClientResolver(
     const cached = clients.get(account.id);
     if (cached?.fingerprint === fingerprint) return cached.client;
     const client = createKalshiClient({
-      credentials: loadKalshiCredentials(scoped),
+      // Account-scoped: env-only — never fall back to the machine keychain.
+      credentials: await loadKalshiCredentials(scoped, { keychain: false }),
       env: environment,
     });
     clients.set(account.id, { fingerprint, client });

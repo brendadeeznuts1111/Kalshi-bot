@@ -28,7 +28,7 @@ async function main(): Promise<void> {
   migrateDemoEvidenceSchema(db);
   const account = getBettingAccountById(db, outId);
   if (!account || account.provider.toLowerCase() !== "kalshi") throw new Error("Requested out is not a registered Kalshi account");
-  const client = createKalshiAccountClientResolver()(account);
+  const client = await createKalshiAccountClientResolver()(account);
   if (client.environment !== "demo") throw new Error("Demo collector resolved a non-demo client");
   if (process.argv.includes("--record-checkpoint")) {
     const capturedAtMs = Date.now();

@@ -46,11 +46,11 @@ describe("CSRF double-submit guard (Bun.CSRF + Bun.Cookie)", () => {
     expect(csrfTokenFrom(req)).toBe("tok");
   });
 
-  test("guard passes a valid request through to next", async () => {
-    const { token } = issueCsrfSession(EMPTY_ENV);
+  test("guard passes a valid request (token + matching cookie) through", async () => {
+    const { token, cookie } = issueCsrfSession(EMPTY_ENV);
     let called = false;
     const res = await csrfGuard(
-      postRequest(token),
+      postRequest(token, cookie),
       () => {
         called = true;
         return new Response("ok");
@@ -59,6 +59,17 @@ describe("CSRF double-submit guard (Bun.CSRF + Bun.Cookie)", () => {
     );
     expect(called).toBe(true);
     expect(res.status).toBe(200);
+  });
+
+  test("header token that does not match the cookie is rejected", () => {
+    const { token } = issueCsrfSession(EMPTY_ENV);
+    const other = issueCsrfSession(EMPTY_ENV).token;
+    expect(verifyCsrfRequest(postRequest(token, "kalshi_csrf=" + other), EMPTY_ENV)).toBe(false);
+  });
+
+  test("token without a session cookie is rejected (double-submit binding)", () => {
+    const { token } = issueCsrfSession(EMPTY_ENV);
+    expect(verifyCsrfRequest(postRequest(token), EMPTY_ENV)).toBe(false);
   });
 
   test("guard 403s an invalid request without calling next", async () => {
