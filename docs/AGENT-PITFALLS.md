@@ -184,6 +184,31 @@ the bun binary; the -e script is not in argv).
 Bun globals are NOT available inside a run_code program (Bun.spawnSync threw
 'Bun is not defined'). Any Bun API you need must run inside a bun script file:
 tools.write the script (lexer-safe), then `bun /path/script.ts` via bash.
+### 8g. bun test has NO name-filter flag (verified flag list)
+
+--filter is not a bun test flag in 1.4.0 - it is silently IGNORED (ran all
+tests). Real flags: --only (tests marked .only), --only-failures, --changed,
+--shard, --parallel, --rerun-each, --retry, --timings, --bail, --randomize,
+--seed, --coverage, --todo, --path-ignore-patterns, --pass-with-no-tests.
+Targeting = path-based (bun test <file>) or --changed. Verified by running
+--filter with a matching and a non-matching pattern - both ran the whole file.
+
+### 8h. Console depth semantics (verified)
+
+- bunfig [console] depth (3 here) applies to console.log ONLY.
+- Bun.inspect default is FULL depth - it does NOT honor the ambient depth.
+- bun --console-depth N overrides the bunfig depth per-run (verified: depth 1
+  truncated a 6-level object at 2 levels).
+- Fix applied: inspectValue() now defaults depth to 3 (matching console.log)
+  instead of silently full; verbose=true stays full. Pass depth explicitly
+  when a bound matters.
+
+### 8i. Bun.Glob is deeper than readdir+filter
+
+src/lib/glob.ts wraps it: listFiles(pattern, { cwd, sort, onlyFiles, dot }),
+listFilesAsync for ** recursion, globMatch(pattern, str) for predicates.
+Brace alternation works (*.{json,jsonl}). Replaces readdirSync+endsWith
+patterns (harvest-nationalities, fonbet fixture loader converted).
 
 - The harness lexer parses the run_code program text BEFORE Bun runs - no Bun API
   can change that; base64 is the workaround, not a Bun feature.

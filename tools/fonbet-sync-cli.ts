@@ -26,7 +26,8 @@
  * @see src/institutions/fonbet/parse.ts — wire parser
  * @see src/institutions/fonbet/sync.ts — unified persistence
  */
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
+import { listFiles } from '../src/lib/glob.ts';
 import { join } from "node:path";
 import { argValue, argValues, hasFlag } from '../src/cli/argv.ts';
 import { assertBunAtLeast } from '../src/research/bun-native.ts';
@@ -66,7 +67,7 @@ function handleMessage(db: ReturnType<typeof openEventStore>, msg: WireMessage, 
 
 function loadMessages(fixturePath: string): WireMessage[] {
   const files = statSync(fixturePath).isDirectory()
-    ? readdirSync(fixturePath).filter((f) => f.endsWith('.jsonl') || f.endsWith('.json')).sort().map((f) => join(fixturePath, f))
+    ? listFiles('*.{json,jsonl}', { cwd: fixturePath }).map((f) => join(fixturePath, f))
     : [fixturePath];
   const out: WireMessage[] = [];
   for (const f of files) {

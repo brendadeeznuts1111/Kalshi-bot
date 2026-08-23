@@ -37,18 +37,20 @@ export const ANSI = {
  * Serialize any value with Bun.inspect (Bun's console.log formatting).
  * colors: true forces ANSI (crash-reporter style); false forces plain;
  * undefined lets Bun auto-detect (NO_COLOR / FORCE_COLOR / TTY).
- * depth limits recursion (truncates with [Object ...]); undefined = full.
- * console.log default depth comes from bunfig [console] depth (3 here).
+ * depth limits recursion (truncates with [Object ...]). Bun.inspect's default
+ * is FULL depth - it does NOT honor bunfig [console] depth (3 here), which only
+ * applies to console.log. So the unset branch defaults depth to the same 3 to
+ * match console.log's truncation; pass depth explicitly or verbose=true for full.
  */
 export function inspectValue(
   value: unknown,
   opts: { colors?: boolean; depth?: number; verbose?: boolean; sorted?: boolean } = {},
 ): string {
   // Context-aware verbosity: verbose=true -> full depth + colors (DEBUG dumps);
-  // verbose=false -> compact depth 2 plain; unset -> honor colors/depth as given.
+  // verbose=false -> compact depth 2 plain; unset -> match console.log depth 3.
   if (opts.verbose === true) return Bun.inspect(value, { colors: true, depth: undefined, sorted: opts.sorted });
   if (opts.verbose === false) return Bun.inspect(value, { colors: false, depth: 2, sorted: opts.sorted });
-  return Bun.inspect(value, { colors: opts.colors, depth: opts.depth, sorted: opts.sorted });
+  return Bun.inspect(value, { colors: opts.colors, depth: opts.depth ?? 3, sorted: opts.sorted });
 }
 
 /** Colored serialization for terminal diagnostics. */

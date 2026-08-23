@@ -11,7 +11,7 @@
  *   bun tools/tennis/harvest-nationalities.ts --dry-run
  */
 // @see https://bun.com/docs/runtime/file-io
-import { readdirSync } from "node:fs";
+import { listFiles } from "../../src/lib/glob.ts";
 import { readJsonFile } from "../../src/lib/json-file.ts";
 import { join } from "node:path";
 import { CACHE_DIR, joinPath } from "../../src/research/paths.ts";
@@ -68,7 +68,7 @@ export async function harvestAll(options: { dryRun?: boolean } = {}): Promise<{
   venues: number;
 }> {
   const out = { players: new Map<string, IsoEntry>(), venues: new Map<string, IsoEntry>() };
-  const files = readdirSync(STADION_DIR).filter((f) => f.endsWith(".json")).sort();
+  const files = listFiles("*.json", { cwd: STADION_DIR });
   for (const f of files) {
     const wire: unknown = await readJsonFile(join(STADION_DIR, f));
     harvestStadionWire(wire, out);
