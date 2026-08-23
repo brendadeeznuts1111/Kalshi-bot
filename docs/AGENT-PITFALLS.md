@@ -212,7 +212,28 @@ agent:encode for tricky code: encode -> write .b64 -> base64 -d -> probe.
   * The parent bun process does NOT terminate until all children exit -
     call proc.unref() to detach a child.
   * 'exit' emits when the loop empties OR process.exit() is called;
-    'beforeExit' emits when the loop empties first.
+    'beforeExit' emits when the loop empties first (verified ordering:
+    beforeExit then exit).
+- MORE (verified + grounded):
+  * process.on('unhandledRejection') and process.on('uncaughtException')
+    handlers PREVENT the default exit 1 - the process keeps running and
+    exits 0 (verified: 'still alive' then exit 0). Use for long-running
+    servers that log-and-continue.
+  * process.abort() exits 134 (128+6 SIGABRT).
+  * proc.kill() defaults to SIGTERM; after await proc.exited, killed=true,
+    signalCode='SIGTERM', exitCode=null (signal deaths have no exit code).
+  * spawn API (child-process.mdx): cwd, env, onExit(proc, exitCode,
+    signalCode, error); stdin default undefined ("pipe" FileSink,
+    "inherit", ReadableStream); stdout default "pipe" (ReadableStream,
+    proc.stdout.text()); stderr default "inherit" (proc.stderr undefined
+    unless "pipe"); proc.pid, proc.killed, proc.resourceUsage() after
+    exit; proc.unref() detaches; cgroup option on Linux.
+  * spawnSync stdin: Buffer works (verified 'via-buffer'); a string
+    THROWS 'stdio must be an array...'; Node's `input` option is NOT
+    supported.
+  * Bun.spawn has NO signal (AbortSignal) and NO timeout option (the AI
+    paste claiming them was wrong - not in child-process.mdx). Timeouts
+    are manual: Promise.race or kill after N ms.
   * Signal death with NO listener emits NEITHER event - to run cleanup
     on a signal, listen (process.on('SIGINT'/'SIGTERM')) and call
     process.exit() from the listener (the ctrl-c guide makes the
