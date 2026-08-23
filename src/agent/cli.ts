@@ -5,6 +5,7 @@
 // @see https://bun.com/docs/runtime/image
 import { parseArgs } from "node:util";
 import { runResearch, printResearchRunSummary } from "../research/cli.ts";
+import { redactSecrets } from "../lib/redact.ts";
 import {
   GitHubRateLimitError,
   buildGitHubErrorEnrichment,
@@ -92,7 +93,7 @@ export async function runAgentTennis(
     if (code !== 0 && json) {
       // Still emit ground so agent mesh can triage without a second process.
       const report = await runTennisGround({ dbPath: options.db });
-      console.log(JSON.stringify({ ok: false, canaryExit: code, ground: report }, null, 2));
+      console.log(JSON.stringify({ ok: false, canaryExit: code, ground: redactSecrets(report) }, null, 2));
       return code;
     }
     if (code !== 0) return code;

@@ -388,6 +388,21 @@ each has a real consumer in the repo where marked.
 - Bun.inspect(value, { depth }) is the ONLY per-call bound; our inspectValue
   helper passes depth through (inspectValue(x, { depth: 2 })).
 
+### Production inspect patterns (2026-08-22)
+
+- Secret Redactor: src/lib/redact.ts redactSecrets(value) — recursive, NON-
+  mutating deep clone with password/token/secret/api-key keys replaced by a
+  marker; circular refs -> [Circular]; Date/typed arrays pass through. Wire:
+  error dumps JSON.stringify({ ok:false, ...redactSecrets(wire) }) keep the
+  JSON shape but never leak credentials (research + agent CLIs).
+- inspectRedacted(value, opts): Bun.inspect over the redacted clone.
+- Context-aware verbosity: inspectValue(value, { verbose: true|false }) — true
+  = full depth + colors (DEBUG dumps), false = compact depth 2 plain;
+  unset honors colors/depth as given.
+- The 3-arg recurse power move (depth, opts, inspect) — used for custom tree
+  formatting (e.g. FileNode); the redactor achieves the same via cloning
+  instead of recursion-through-inspect.
+
 ### Bun.inspect.custom pattern (redaction-first)
 
 - Any class holding secrets or large state implements [Bun.inspect.custom]()

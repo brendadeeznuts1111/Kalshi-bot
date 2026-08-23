@@ -5,6 +5,7 @@
 // @see https://bun.com/docs/runtime/environment-variables#bun-env
 import { parseArgs } from "node:util";
 import { openTarget } from "../lib/editor.ts";
+import { redactSecrets } from "../lib/redact.ts";
 import { inspectRepo } from "./inspect.ts";
 import { discoverCandidates, loadConfig } from "./discover.ts";
 import { applyGate } from "./gate.ts";
@@ -488,7 +489,7 @@ if (import.meta.main) {
         opts.onProgress,
       );
       if (opts.json) {
-        console.error(JSON.stringify({ ok: false, ...wire }, null, 2));
+        console.error(JSON.stringify({ ok: false, ...redactSecrets(wire) }, null, 2));
       } else {
         console.error(wrapDisplay(formatRateLimitRemediation(err, enrichment)));
       }

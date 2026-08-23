@@ -7,6 +7,7 @@
  */
 import type { Decision, SignalContext } from "./alpha-signal-types.ts";
 import { ansiColor, type ColorKey } from "../lib/color/index.ts";
+import { redactSecrets } from "../lib/redact.ts";
 
 // ── ANSI color helpers ──────────────────────────────────────────
 
@@ -40,8 +41,12 @@ export const ANSI = {
  */
 export function inspectValue(
   value: unknown,
-  opts: { colors?: boolean; depth?: number } = {},
+  opts: { colors?: boolean; depth?: number; verbose?: boolean } = {},
 ): string {
+  // Context-aware verbosity: verbose=true -> full depth + colors (DEBUG dumps);
+  // verbose=false -> compact depth 2 plain; unset -> honor colors/depth as given.
+  if (opts.verbose === true) return Bun.inspect(value, { colors: true, depth: undefined });
+  if (opts.verbose === false) return Bun.inspect(value, { colors: false, depth: 2 });
   return Bun.inspect(value, { colors: opts.colors, depth: opts.depth });
 }
 
@@ -49,6 +54,18 @@ export function inspectValue(
 export function inspectColor(value: unknown): string {
   return inspectValue(value, { colors: true });
 }
+
+/**
+ * Serialize with secrets redacted first (never leaks tokens/PII to logs).
+ * Same output shape as inspectValue over the redacted clone.
+ */
+export function inspectRedacted(
+  value: unknown,
+  opts: { colors?: boolean; depth?: number } = {},
+): string {
+  return Bun.inspect(redactSecrets(value), { colors: opts.colors, depth: opts.depth });
+}
+
 
 /** Color a value by edge threshold. */
 export function edgeColor(edgeCents: number): string {
