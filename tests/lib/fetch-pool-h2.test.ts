@@ -7,7 +7,6 @@
 import { describe, test, expect, afterAll } from 'bun:test';
 import http2 from 'node:http2';
 import { readFileSync } from 'node:fs';
-import { execSync } from 'node:child_process';
 import { fetchText, fetchPool } from '../../src/lib/fetch-pool.ts';
 
 let server: any = null;
@@ -17,7 +16,11 @@ let conns = 0;
 
 async function setup() {
   try {
-    execSync('openssl req -x509 -newkey rsa:2048 -keyout /tmp/h2t-key.pem -out /tmp/h2t-cert.pem -days 1 -nodes -subj /CN=localhost 2>/dev/null');
+    const certGen = Bun.spawnSync(
+      ['openssl', 'req', '-x509', '-newkey', 'rsa:2048', '-keyout', '/tmp/h2t-key.pem', '-out', '/tmp/h2t-cert.pem', '-days', '1', '-nodes', '-subj', '/CN=localhost'],
+      { stdout: 'ignore', stderr: 'ignore' },
+    );
+    if (certGen.exitCode !== 0) return false; // openssl failed - skip
     key = readFileSync('/tmp/h2t-key.pem', 'utf8');
     cert = readFileSync('/tmp/h2t-cert.pem', 'utf8');
   } catch {

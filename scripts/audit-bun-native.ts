@@ -26,6 +26,10 @@ export const BANNED_PACKAGES = new Map<string, string>([
   ["toml", "Bun.TOML.parse() / governed tomlStringify()"],
   ["@iarna/toml", "Bun.TOML.parse() / governed tomlStringify()"],
   ["@ltd/j-toml", "Bun.TOML.parse() / governed tomlStringify()"],
+  // Node subprocess APIs -> Bun (blocking contexts: Bun.spawnSync; async: Bun.$)
+  ["child_process", "Bun.spawnSync() / Bun.$ (Bun Shell)"],
+  ["node:child_process", "Bun.spawnSync() / Bun.$ (Bun Shell)"],
+  ["execa", "Bun.spawnSync() / Bun.$ (Bun Shell)"],
   // Bun 1.4 replaces-table (bun.com/blog/bun-v1.4): npm package -> native API
   ["cli-truncate", "Bun.sliceAnsi()"],
   ["concurrently", "bun run --parallel"],

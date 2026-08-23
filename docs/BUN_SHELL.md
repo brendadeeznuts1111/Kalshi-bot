@@ -45,7 +45,7 @@ in-process side.
 |------|--------|
 | `src/agent/research-runner.ts` | IPC — `process.send` / `serialization: "advanced"`; Bun Shell has no IPC channel |
 | `src/lib/editor.ts` | `unref()` detach for the GUI editor; `$` has no unref |
-| `tools/pre-commit.ts` · `tools/agent-probe.ts` | `Bun.spawnSync` in blocking sync contexts; `$` is async-only |
+| `tools/pre-commit.ts` · `tools/agent-probe.ts` · `src/lib/rg.ts` · `src/lib/breaking-audit.ts` | `Bun.spawnSync` in blocking sync contexts; `$` is async-only. `node:child_process` is guard-banned (`BANNED_PACKAGES`) |
 | `tools/protonpass-run.ts` · `tools/db-push-gate.ts` | Interactive TTY passthrough (pass prompts / drizzle-kit) — `$` regressions hide here |
 | `src/partner/execution/demo-scenario-runner.ts` | Deferred — env `undefined` semantics + compliance-adjacent evidence hashing |
 | `tests/*` spawns | Out of the 2026-08-23 sweep scope (consistency pass later) |

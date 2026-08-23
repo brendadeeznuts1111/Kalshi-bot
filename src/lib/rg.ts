@@ -17,8 +17,6 @@
  *     tooling source glob, so audit/probe code that legitimately names
  *     the APIs it checks never self-matches.
  */
-import { spawnSync } from 'node:child_process';
-
 export type RgOptions = {
   /** Add the audit-tooling --glob exclusion (default true). */
   excludeSelf?: boolean;
@@ -53,7 +51,11 @@ export function rgFiles(root: string, pattern: string, dirs: string[], options?:
   if (options?.excludeSelf ?? true) args.push('--glob', '!**/*audit*.ts');
   for (const e of options?.exclude ?? []) args.push('--glob', '!' + e);
   args.push(pattern, ...dirs);
-  const out = spawnSync('rg', args, { encoding: 'utf8' });
-  if (out.status !== 0) return [];
-  return out.stdout.split('\n').filter(Boolean).map((p) => p.replace(root + '/', ''));
+  try {
+    const out = Bun.spawnSync(['rg', ...args], { stdout: 'pipe', stderr: 'pipe' });
+    if (out.exitCode !== 0) return [];
+    return out.stdout.toString().split('\n').filter(Boolean).map((p) => p.replace(root + '/', ''));
+  } catch {
+    return []; // rg unavailable or spawn failure - same fallback as non-zero exit
+  }
 }

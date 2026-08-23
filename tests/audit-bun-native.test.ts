@@ -55,6 +55,36 @@ describe("bun-native guard", () => {
     expect(violations.map((item) => item.message).join("\n")).toContain("Bun.TOML.parse()");
   });
 
+  test("blocks node:child_process imports - subprocesses only via Bun APIs", () => {
+    const violations = findSourceViolations(`
+      import { spawnSync } from "node:child_process";
+      const out = spawnSync("git", ["status"]);
+    `);
+
+    expect(violations).toHaveLength(1);
+    expect(violations[0]?.message).toContain("node:child_process");
+    expect(violations[0]?.message).toContain("Bun.spawnSync()");
+  });
+
+  test("blocks execa in manifests - subprocesses only via Bun APIs", () => {
+    const violations = findManifestViolations({
+      dependencies: { execa: "^9.0.0" },
+    });
+
+    expect(violations.map((item) => item.message)).toEqual([
+      "dependencies.execa duplicates Bun.spawnSync() / Bun.$ (Bun Shell)",
+    ]);
+  });
+
+  test("allows Bun Shell and Bun.spawnSync as the native subprocess surface", () => {
+    const violations = findSourceViolations(`
+      import { $ } from "bun";
+      const out = Bun.spawnSync(["git", "status"], { stdout: "pipe" });
+      await $\`git status\`.nothrow().quiet();
+    `);
+
+    expect(violations).toEqual([]);
+  });
   test("allows Bun APIs, Node compatibility APIs, and non-equivalent styling packages", () => {
     const violations = findSourceViolations(`
       import { join } from "node:path";

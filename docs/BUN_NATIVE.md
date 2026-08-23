@@ -376,8 +376,11 @@ each has a real consumer in the repo where marked.
 ### Terminal gate patterns (tools/pre-commit.ts)
 
 - Bun.which("bun") resolves the runtime; Bun.spawnSync for one-shot git
-  reads; Bun.color("ansi") + Bun.inspect.table(rows, { colors }) honor
-  FORCE_COLOR; Bun.nanoseconds for timing. See commit history 2026-08-22.
+  reads (src/lib/rg.ts + src/lib/breaking-audit.ts use the same sync-site
+  pattern); Bun.color("ansi") + Bun.inspect.table(rows, { colors }) honor
+  FORCE_COLOR; Bun.nanoseconds for timing. node:child_process is
+  guard-banned (BANNED_PACKAGES) — subprocesses go through Bun APIs only.
+  See commit history 2026-08-22.
 
 ### Inspect depth semantics (verified 2026-08-22)
 

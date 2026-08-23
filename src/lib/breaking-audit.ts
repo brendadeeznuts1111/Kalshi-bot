@@ -19,7 +19,6 @@
  */
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { spawnSync } from 'node:child_process';
 import { rgFiles } from './rg.ts';
 
 export type FindingStatus = 'ok' | 'warn' | 'fail';
@@ -112,8 +111,13 @@ export function runBreakingAudit(root: string): BreakingFinding[] {
   // 7. Native addons: real .node binaries or known addon deps.
   const allDeps = { ...(pkg.dependencies ?? {}), ...(pkg.devDependencies ?? {}) };
   const addonDeps = Object.keys(allDeps).filter((d) => /node-gyp|napi|better-sqlite3|sharp|bcrypt|canvas/.test(d));
-  const findOut = spawnSync('find', [src, tools, '-name', '*.node', '-type', 'f'], { encoding: 'utf8' });
-  const addonFiles = (findOut.stdout ?? '').split('\n').filter(Boolean).map((p) => p.replace(root + '/', ''));
+  let addonFiles: string[] = [];
+  try {
+    const findOut = Bun.spawnSync(['find', src, tools, '-name', '*.node', '-type', 'f'], { stdout: 'pipe', stderr: 'pipe' });
+    addonFiles = findOut.stdout.toString().split('\n').filter(Boolean).map((p) => p.replace(root + '/', ''));
+  } catch {
+    addonFiles = []; // find unavailable - treat as no addon files
+  }
   findings.push({
     check: 'Native addons (NODE_MODULE_VERSION 147 rebuild)',
     status: addonDeps.length || addonFiles.length ? 'warn' : 'ok',

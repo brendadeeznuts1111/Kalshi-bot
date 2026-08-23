@@ -194,6 +194,27 @@ Converted all non-keep-list `Bun.spawn` sites to `Bun.$` (see BUN_SHELL.md
 
 Rules that still apply: never `$`bash -c "…"` with interpolated input; array
 interpolation escapes each element as a separate argv token.
+## 10. Grep discipline + Node->Bun spawnSync (2026-08-23)
+
+### 10a. A backslash-b in a JS template literal silently mangles a grep
+
+Writing `grep -E '\bspawn\('` inside a run_code template literal turns the
+`\b` into a BACKSPACE byte (JS string escape), so the pattern literally
+searches for a backspace followed by "spawn(" - matching NOTHING and
+producing a false "zero usage" claim (this bit the child_process audit:
+the repo had 3 node:child_process sites all along). Fix: use the repo's
+rgFiles / escapeForRg (src/lib/rg.ts) for code greps, or double-escape the
+backslash in template literals.
+
+### 10b. Node child_process.spawnSync -> Bun.spawnSync contract
+
+- result.status -> result.exitCode (Node-only status fails typecheck).
+- encoding: 'utf8' is NOT a Bun option - Bun returns Buffers; call
+  .stdout.toString().
+- Node returns status: null on a missing binary; **Bun THROWS on spawn
+  failure (ENOENT)** - wrap optional binaries (rg, openssl, find) in
+  try/catch and return the same fallback as a non-zero exit.
+
 
 
 ### 8f. The run_code worker is plain Node - SOLVED with `bun run agent:probe`
