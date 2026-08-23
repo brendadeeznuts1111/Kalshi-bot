@@ -875,3 +875,33 @@ scanned; no code changes needed:
   endpoints in serve.ts + parseChunk pipelines), Bun.TOML (10), dir
   routes (section 19) are all already adopted - the 'High' roadmap
   items were done before this round.
+
+### 22. Integration map + Bun.Archive adopted (with a real 1.4.0 bug found)
+
+- Integration map (paste #4 'see where we can integrate', per-API usage
+  in src+tools): Bun.cron 46, Bun.WebView 46, URLPattern 36, Bun.
+  stringWidth 14, Bun.JSONL 14, Bun.TOML 10, Bun.sliceAnsi 7, Bun.wrapAnsi
+  6, Bun.XML 5, Bun.JSON5 5, Bun.Terminal 2, Bun.JSONC 2, Bun.gzipSync/
+  gunzipSync 1 (snapshot-data-plane). ZERO real usage: Bun.Archive,
+  CompressionStream/DecompressionStream (only the deps-audit table text),
+  Response.textStream (no large-streaming consumer exists - .text() calls
+  are all bounded API/file reads; nothing to convert).
+- ADOPTED: bun:backup (tools/bun-backup.ts) uses Bun.Archive.write to tar
+  research/cache DBs+json into research/backups/research-<stamp>.tar
+  with keep-N pruning + --list. Round-trip verified (extract -> byte-
+  identical massey.db). Script: bun run bun:backup.
+- REAL BUG FOUND on 1.4.0 (probe + test-locked): Bun.Archive.write with a
+  BunFile VALUE archives a 0-byte entry - the 'data streams directly to
+  disk' docs are aspirational; string/bytes values work (string 14 bytes,
+  bytes 19 bytes archived correctly). WORKAROUND in bun:backup: read
+  Bun.file().bytes() first (loads the 88MB event-store into memory -
+  acceptable for backups). Not found in a GitHub issue search. Locked in
+  tests/lib/archive-roundtrip.test.ts (both the working bytes path and
+  the 0-byte BunFile bug).
+- NOT adopted (documented rationale): CompressionStream/DecompressionStream
+  - real compression is already native via Bun.gzipSync/gunzipSync on
+  bounded Buffers (snapshot-data-plane), no streaming consumer exists;
+  Response.textStream - no large response .text() reads; Bun.spawn({
+  cgroup }) - Linux-only, dev is macOS; ML-DSA/ML-KEM - no crypto
+  primitive need in repo (keychain/WebCrypto AES-GCM covers secrets);
+  bun repl / bun ./README.md - dev conveniences, not code paths.
