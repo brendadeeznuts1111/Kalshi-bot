@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { Database } from "bun:sqlite";
+import { makeEventStoreDb } from "../../lib/fixtures/event-store.ts";
 import {
   FONBET_BOOK_ID,
   FONBET_ODDS_SOURCE,
@@ -9,13 +9,8 @@ import {
 import type { FonbetEventRow } from "../../../src/institutions/fonbet/parse.ts";
 import { loadPricedBookEvents } from "../../../src/institutions/event-store/odds-ticks-store.ts";
 
-function makeDb(): Database {
-  const db = new Database(":memory:");
-  db.run("CREATE TABLE skin_events (id INTEGER PRIMARY KEY, partner TEXT, inventory_id TEXT, odds_event_id TEXT, sport TEXT, league TEXT, home TEXT, away TEXT, feed_id TEXT, start_time INTEGER, status TEXT, first_seen INTEGER, last_updated INTEGER, skin_id TEXT, book_id TEXT, inventory_live_product TEXT, competition_id TEXT, match_key TEXT, UNIQUE(book_id, inventory_id))");
-  db.run("CREATE TABLE odds_ticks (id INTEGER PRIMARY KEY, event_id TEXT, source TEXT, source_url TEXT DEFAULT '', fetched_ts INTEGER, corpus TEXT DEFAULT 'trading', ts INTEGER, side TEXT, decimal_odds REAL, implied_prob REAL, limit_context TEXT, match_key TEXT)");
-  db.run("CREATE TABLE events (event_id TEXT PRIMARY KEY, player_a TEXT, player_b TEXT, winner TEXT, loser TEXT)");
-  db.run("CREATE TABLE event_links (stadion_event_id TEXT, kalshi_event_id TEXT, match_key TEXT)");
-  return db;
+function makeDb(): ReturnType<typeof makeEventStoreDb> {
+  return makeEventStoreDb();
 }
 
 function row(over: Partial<FonbetEventRow> = {}): FonbetEventRow {

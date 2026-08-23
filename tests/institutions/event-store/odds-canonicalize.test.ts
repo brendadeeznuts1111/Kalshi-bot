@@ -1,17 +1,13 @@
 import { describe, expect, test } from "bun:test";
-import { Database } from "bun:sqlite";
+import { makeEventStoreDb } from "../../lib/fixtures/event-store.ts";
 import {
   backfillMatchKeys,
   canonicalizeOddsSides,
 } from "../../../src/institutions/event-store/odds-canonicalize.ts";
 import { latestOddsByMatchKey } from "../../../src/institutions/event-store/odds-ticks-store.ts";
 
-function makeDb(): Database {
-  const db = new Database(":memory:");
-  db.run("CREATE TABLE events (event_id TEXT PRIMARY KEY, player_a TEXT, player_b TEXT, winner TEXT, loser TEXT)");
-  db.run("CREATE TABLE event_links (stadion_event_id TEXT, kalshi_event_id TEXT, match_key TEXT, status TEXT)");
-  db.run("CREATE TABLE odds_ticks (id INTEGER PRIMARY KEY, event_id TEXT, side TEXT, decimal_odds REAL, ts INTEGER, match_key TEXT, source TEXT DEFAULT '', source_url TEXT DEFAULT '', fetched_ts INTEGER, corpus TEXT DEFAULT 'trading', implied_prob REAL, limit_context TEXT)");
-  return db;
+function makeDb(): ReturnType<typeof makeEventStoreDb> {
+  return makeEventStoreDb();
 }
 
 describe("backfillMatchKeys (canonical match_key joins)", () => {

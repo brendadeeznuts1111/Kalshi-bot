@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { Database } from "bun:sqlite";
+import { makeEventStoreDb } from "../../lib/fixtures/event-store.ts";
 import {
   latestOddsByMatchKey,
   latestOddsForEvent,
@@ -8,13 +8,8 @@ import {
   persistOddsTicks,
 } from "../../../src/institutions/event-store/odds-ticks-store.ts";
 
-function makeDb(): Database {
-  const db = new Database(":memory:");
-  db.run("CREATE TABLE skin_events (id INTEGER PRIMARY KEY, sport TEXT, league TEXT, home TEXT, away TEXT, competition_id TEXT, odds_event_id TEXT)");
-  db.run("CREATE TABLE odds_ticks (id INTEGER PRIMARY KEY, event_id TEXT, source TEXT, source_url TEXT DEFAULT '', fetched_ts INTEGER, corpus TEXT DEFAULT 'trading', ts INTEGER, side TEXT, decimal_odds REAL, implied_prob REAL, limit_context TEXT, match_key TEXT)");
-  db.run("CREATE TABLE events (event_id TEXT PRIMARY KEY, player_a TEXT, player_b TEXT, winner TEXT, loser TEXT)");
-  db.run("CREATE TABLE event_links (stadion_event_id TEXT, kalshi_event_id TEXT, match_key TEXT)");
-  return db;
+function makeDb(): ReturnType<typeof makeEventStoreDb> {
+  return makeEventStoreDb();
 }
 
 describe("odds-ticks store (live-odds persistence contract)", () => {

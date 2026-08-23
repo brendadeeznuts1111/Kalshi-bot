@@ -179,11 +179,23 @@ Args-arrays are lexer-safe (values are double-quoted JS strings) AND shell-safe
 (no re-parsing). Note: under `bun -e script arg`, the arg is argv[1] (argv[0] is
 the bun binary; the -e script is not in argv).
 
-### 8f. The run_code worker is plain Node
+### 8f. The run_code worker is plain Node - SOLVED with `bun run agent:probe`
 
 Bun globals are NOT available inside a run_code program (Bun.spawnSync threw
-'Bun is not defined'). Any Bun API you need must run inside a bun script file:
-tools.write the script (lexer-safe), then `bun /path/script.ts` via bash.
+'Bun is not defined'). SOLVED: `bun run agent:probe -- <code-file>` (or stdin)
+writes the code to a repo-local `.probe-tmp.ts` (relative imports resolve), runs
+it under bun, forwards stdout/stderr, and deletes the temp (verified). Pair with
+agent:encode for tricky code: encode -> write .b64 -> base64 -d -> probe.
+
+### 8j. Friction-killers shipped (this repo)
+
+- `bun run agent:encode [file]` + `--decode`: lexer-safe base64 in/out (byte-exact
+  round-trip verified).
+- `bun run agent:probe [file]`: run Bun code repo-locally (worker-is-Node +
+  /tmp-imports solved).
+- tests/lib/fixtures/event-store.ts `makeEventStoreDb()`: ONE canonical in-memory
+  schema (skin_events/odds_ticks/events/event_links) - the three duplicated
+  makeDb() fixtures now import it, killing the fixture-drift failure class.
 ### 8g. bun test has NO name-filter flag (verified flag list)
 
 --filter is not a bun test flag in 1.4.0 - it is silently IGNORED (ran all

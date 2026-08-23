@@ -15,6 +15,12 @@
  */
 import { readFileSync } from "node:fs";
 
-const arg = process.argv[2] && process.argv[2] !== "-" ? process.argv[2] : null;
+const decode = process.argv.includes("--decode");
+const fileArg = process.argv.slice(2).find((a) => a !== "--decode");
+const arg = fileArg && fileArg !== "-" ? fileArg : null;
 const input = arg ? readFileSync(arg, "utf8") : readFileSync(0, "utf8");
-process.stdout.write(Buffer.from(input, "utf8").toString("base64") + "\n");
+if (decode) {
+  process.stdout.write(Buffer.from(input.trim(), "base64").toString("utf8"));
+} else {
+  process.stdout.write(Buffer.from(input, "utf8").toString("base64") + "\n");
+}
