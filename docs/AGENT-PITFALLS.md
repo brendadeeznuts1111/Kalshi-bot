@@ -283,9 +283,14 @@ Node APIs are intentional:
   JSON5/TOML) - documented, not force-fit.
 - Bun.sql: REAL (tagged-template query API); the repo uses bun:sqlite
   directly - different layer, no conversion.
-- Bun.html / Bun.S: NOT present in the 1.4.0 runtime (undefined - some
-  secondary writeups claim them; the build disagrees). Same docs-ahead-
-  of-runtime class as fetch.preconnect https.
+- Bun.html (declarative streaming) is INVENTED - a long AI writeup
+  claims it; four-source verification kills it: runtime (typeof Bun.html
+  undefined, no `html` named export from 'bun'), bun-types (no html
+  tagged template), docs tree (no page - only html-rewriter and bundler
+  HTML pages exist), and the very blog it cites (zero Bun.html code
+  mentions). Every code block in the writeup would throw 'html is not
+  defined'. Same class as WebTransport and Bun.S.
+- Bun.S: also undefined on 1.4.0 (blog code identifier unresolved).
 - bun audit fix / bun dedupe / bun prune: CLI commands exist; the CI
   workflow already runs bun audit --audit-level=high + bun dedupe --check.
 
