@@ -1014,3 +1014,48 @@ scanned; no code changes needed:
   accepts BUN_FEATURE_FLAG_EXPERIMENTAL_HTTP2_CLIENT in bunfig/.env
   as h2 adoption, not just per-request protocol:http2. Still a GAP
   here (neither used - experimental, soft).
+
+### 27. Team-audit round: 4 parallel recon agents + applied fixes
+
+- Ran a 4-agent recon team (tooling, fetch-pool, server, docs; read-only)
+  then applied the findings myself. Fixes landed:
+  * fetch-pool: first-class `compress` option (FetchCompress type,
+    forwarded to fetch; test asserts Content-Encoding:gzip + gunzip
+    round-trip) - closes the adoption-audit compress gap as a real API.
+    Also: `bytes` now reports UTF-8 BYTE length (Buffer.byteLength),
+    not UTF-16 code units (was 17 for a 27-byte multibyte string -
+    recon finding).
+  * state-compliance.ts: `declare module "bun" { interface Request }`
+    -> `declare global` - the module-scoped form SHADOWS the global
+    Request inside bun-types' Bun.serve signature and was the ROOT
+    CAUSE of the intermittent typecheck flake (recon reproduced it:
+    adding only that augmentation + a typed fetch(req) yields exactly
+    the TS2339/TS2322 errors seen in the gate). Exposed two test
+    fixtures with `parsedBody: {}` that were never type-checked;
+    fixed with a valid complianceBody(). trading-auth.ts already used
+    the correct `declare global` form.
+  * claims-audit HIGH: argv slice(1) leaked the script path into the
+    claims (every run reported it NOT FOUND + exit 1) - now
+    slice(2). Verified: true claim -> FOUND, exit 0.
+  * deps-audit MEDIUM: native-usage count self-matched (no --glob
+    exclusion) - inflated 26 -> 21 real APIs. Fixed.
+  * adoption-audit MEDIUM: h2 env-flag check died on missing files
+    (rg exits 2 on a missing path; .env is gitignored) - now filters
+    to existing files.
+  * serve.ts: memoryPressure now clears FOUR caches (book + source
+    catalog + kalshiAuth + tennis board) on critical; listener removed
+    on server.stop() (was leaking per createResearchServer - tests
+    create many); bookCache bounded at 512 entries (was unbounded -
+    MEDIUM recon finding).
+  * runtime-surface h2 check was toothless (typeof fetch) - now
+    verifies the protocol option presence.
+  * docs: BUN_NATIVE.md gap register + serve.ts section updated with
+    the 9 missing facts (h2, TLS resumption, compress, Archive bug,
+    parallel/timings, audit tools, memoryPressure, dir routes,
+    fetch-pool); stale '5 routes' and '--isolate' / 'timings unused'
+    statements corrected; BUN_TECH_STACK quick-start updated.
+- Team-audit method note: the first workflow attempt (8 agents in one
+  foreground call) timed out at 600s; background subagents + applying
+  the findings myself worked better. Recon reports were structured and
+  specific enough to act on directly; the fetch-pool agent even
+  root-caused the flake that had been masked as a 'known transient'.

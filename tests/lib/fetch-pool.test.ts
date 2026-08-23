@@ -88,6 +88,32 @@ describe('fetchText', () => {
       hung.stop(true);
     }
   });
+
+  test('compress option sets Content-Encoding and round-trips', async () => {
+    // Echo server: reports the Content-Encoding it saw and returns the
+    // (still-compressed) body so the client can gunzip-verify.
+    const echo = Bun.serve({
+      port: 0,
+      async fetch(req) {
+        const r = req as unknown as { headers: Headers; arrayBuffer(): Promise<ArrayBuffer> };
+        const enc = r.headers.get('content-encoding') ?? '';
+        const raw = new Uint8Array(await r.arrayBuffer());
+        return new Response(JSON.stringify({ enc, bytes: raw.byteLength, b64: Buffer.from(raw).toString('base64') }));
+      },
+    } as Parameters<typeof Bun.serve>[0]);
+    try {
+      const payload = 'compress-me-'.repeat(1000); // 12KB, compressible
+      const r = await fetchText('http://127.0.0.1:' + echo.port + '/c', { method: 'POST', body: payload, compress: 'gzip', timeoutMs: 3000 });
+      expect(r.ok).toBe(true);
+      const seen = JSON.parse(r.text) as { enc: string; bytes: number; b64: string };
+      expect(seen.enc).toBe('gzip');
+      expect(seen.bytes).toBeLessThan(payload.length); // compressed smaller
+      const gunzipped = new TextDecoder().decode(Bun.gunzipSync(Buffer.from(seen.b64, 'base64')));
+      expect(gunzipped).toBe(payload);
+    } finally {
+      echo.stop(true);
+    }
+  });
 });
 
 describe('warmDns', () => {

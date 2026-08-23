@@ -40,7 +40,10 @@ function argValue(name: string): string | undefined {
 async function main(): Promise<number> {
   const url = argValue('blog') ?? 'https://bun.com/blog/bun-v1.4';
   const all = process.argv.includes('--all');
-  const claims = process.argv.filter((a) => !a.startsWith('--') && a !== '--').slice(1);
+  // process.argv = [bun, script, --, claim...] - slice(2) skips both;
+  // the old slice(1) leaked the script path into the claims list, making
+  // every run report it as NOT FOUND and exit 1 (recon finding, HIGH).
+  const claims = process.argv.slice(2).filter((a) => !a.startsWith('--') && a !== '--');
   if (!claims.length) {
     console.error('usage: bun run bun:claims-audit -- <claim> [claim...]');
     console.error('  --blog=<url>  blog URL (default bun-v1.4 post)');

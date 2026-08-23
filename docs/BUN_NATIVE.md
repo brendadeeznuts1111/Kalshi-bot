@@ -787,7 +787,8 @@ const local = localRepoPath(ref.owner, ref.repo); // → /repo/:owner/:name
 
 ### [`serve.ts`](../src/research/serve.ts) — report browser
 
-`bun run serve` (`bun --hot`) — **5 routes**, no router package:
+`bun run serve` (`bun --hot`) — no router package; `Bun.serve` routes +
+**two v1.4 static dir mounts** for baked artifacts:
 
 | Route | Source |
 |-------|--------|
@@ -796,6 +797,12 @@ const local = localRepoPath(ref.owner, ref.repo); // → /repo/:owner/:name
 | `/api/runs/:id` | full run JSON |
 | `/repo/:owner/:name` | repo detail (`?run=` for historical) |
 | `/reports/latest.md` | `Bun.file(research/reports/latest.md)` |
+| `/registry/*` | `{ dir: public/registry }` — sendfile + ETag + 304 + Range |
+| `/partner-dashboard/*` | `{ dir: public/partner-dashboard }` — index.html auto |
+
+`process.on('memoryPressure')` (v1.4): `createResearchServer` clears the
+book/source-catalog/auth/tennis-board caches on `critical` (see
+`docs/AGENT-PITFALLS.md` §21).
 
 HTML lives in [`views.ts`](../src/research/views.ts) — handlers in [`serve.ts`](../src/research/serve.ts) stay thin.
 
@@ -1124,10 +1131,18 @@ bun pm cache rm                    # clear ~/.bun/install/cache
 | `Bun.file().json()` (expanded) | `src/research/hq-data.ts`, `src/research/export-audit.ts` | 6 more manual sites refactored: hq-data alpha/calibration loaders are now async `readJsonFileOr` (caller `buildHqPayload` already awaited); export-audit manifest/concept reads consolidated. `readJsonFileOr` widened to `T | null` for the optional-file pattern.
 | `Bun.serve` hardening | `src/research/serve.ts` | `maxRequestBodySize: 16MB` (default is 128MB) + `idleTimeout: 255` (u8 max; default 10s) for the long-lived ndjson/SSE streams. Probe note: idleTimeout is a u8 — 300 throws.
 | `Bun.stdout.write` | `src/regulatory/scripts/migrate.ts`, `tools/tennis/live-scores-cli.ts` | Replaced the last `process.stdout.write` spots (readline.ts already native).
+| `Bun.serve routes { dir }` | `src/research/serve.ts` | v1.4 static dir mounts for `/registry/*` + `/partner-dashboard/*` (sendfile, ETag/Last-Modified, 304, Range/206, index.html, openat2 O_RESOLVE_BENEATH on Linux). Replaces ~60 lines of hand-rolled `Bun.file` handlers; verified + test-locked (§19). Requires the path to end in `/*`; a root-level mount would shadow API routes.
+| `process.on('memoryPressure')` | `src/research/serve.ts` | Real handler on `createResearchServer`: clears book/source-catalog/auth/tennis-board caches on `critical` (levels `warning`/`critical`); listener removed on `server.stop()` (§21).
+| `fetch()` h2 client (`protocol:'http2'`) | `src/lib/fetch-pool.ts` | Experimental h2 client: `protocol:'http2'` over TLS multiplexes concurrent requests on ONE connection (verified 20 parallel → 1 conn/20 streams); `BUN_FEATURE_FLAG_EXPERIMENTAL_HTTP2_CLIENT=1` offers h2 globally. Requires https (plaintext h2c → `HTTP2Unsupported`); the earlier 'no h2 on 1.4.0' claim was an h2c probe artifact (§14).
+| `fetch()` compress option | `src/lib/fetch-pool.ts` | First-class `compress` on `fetchText`/`fetchPool` (gzip/deflate/br/zstd, auto Content-Encoding; verified all four codecs). Only worth it for large bodies (>~100KB); zero current consumers.
+| TLS session resumption | (implicit) | 32-entry LRU of BoringSSL sessions per origin; reconnect after pool eviction resumes at 1 RTT (§14). Automatically active.
+| `Bun.Archive` | `tools/bun-backup.ts` | `bun:backup` tars research/cache DBs (incl. 88MB event-store.db) with keep-N pruning; round-trip verified. KNOWN 1.4.0 BUG: `Bun.Archive.write` with a `BunFile` value archives 0-byte entries — must pass `.bytes()` (test-locked, §22).
+| fetch-pool defaults | `src/lib/fetch-pool.ts` | Canonical fetch layer: `fetchPool` (bounded concurrency 8, DNS warm-up, per-URL error capture, never throws) + `fetchText` (body always consumed, `AbortSignal.timeout`, UTF-8 `bytes`) + `warmDns` (§12).
+| Five audit tools | `tools/bun-{breaking,claims,deps,perf,adoption}-audit.ts` | `bun:breaking-audit` (v1.4 break scan, in `check`), `bun:claims-audit` (blog claim verification), `bun:deps-audit` (dependency-killer report), `bun:perf-audit` (toolchain wins, in `check`), `bun:adoption-audit` (networking coverage report) + `runtime-surface` probe in the guard (§17-26).
 
 ### Flagged (no adoption yet — honest no-fit)
 
-- `bun test --timings/--shard/--parallel` — unused; hosted CI runners are billing-blocked (manual diagnostic only), so sharding has no consumer. `--timings` is a candidate for the local gate once output noise is acceptable.
+- `bun test --shard` — unused (no multi-runner CI; hosted runners billing-blocked). `--timings/--parallel` are now ADOPTED (§23): the gate's test script is `--parallel --timings=.bun-test-timings.json`, 5.5x faster than the old `--isolate` (measured 11.1s → 2.0s on 1959 tests); pre-commit hook uses it too.
 - `Bun.password` — no current hashing consumer in this repo; candidate only if a local vault passphrase ever appears. Do not force-fit.
 - `Bun.XML` — ADOPTED: `src/lib/release-blog.ts` parses the bun.com RSS with `Bun.XML.parse` (SIMD; 87KB feed in ~1.9ms verified). Import loader `with { type: 'xml' }` returns the parsed object, not the file path (verified — the 1.4 breaking change holds). Shape notes: repeated elements become arrays, single elements stay objects; RSS 2.0 is `rss.channel.item[]` with plain strings, Atom is `feed.entry` with `@`-prefixed attributes.
 - `Bun.deepMatch` — subset-matching has no consumer; `Bun.deepEquals` (via `bun-native.ts`) covers equality. Revisit if a schema-subset check appears.

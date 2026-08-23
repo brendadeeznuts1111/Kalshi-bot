@@ -5,10 +5,12 @@
  *   1. DNS warm-up via Bun.dns.prefetch before fan-outs, so all requests
  *      share one lookup instead of racing their own (per-process cache,
  *      30s TTL; failed connections evict and re-resolve).
- *   2. BOUNDED concurrency. Bun fetch is HTTP/1.1 only (no h2 client on
- *      1.4.0): every concurrent request opens its OWN TCP connection, so
- *      an unbounded Promise.all fan-out burns N sockets. mapPool-style
- *      workers keep the peak bounded (default 8).
+ *   2. BOUNDED concurrency. On HTTP/1.1 (the default) every concurrent
+ *      request opens its OWN TCP connection, so an unbounded Promise.all
+ *      fan-out burns N sockets. mapPool-style workers keep the peak
+ *      bounded (default 8). With protocol:'http2' over https, requests
+ *      MULTIPLEX on one connection instead (verified: 20 parallel -> 1
+ *      conn / 20 streams) - see the protocol option.
  *   3. Bodies are ALWAYS consumed. An unread response body blocks
  *      connection reuse (verified: 1MB unread -> next fetch opens a new
  *      connection), so fetchText() reads the body unconditionally.
@@ -51,6 +53,14 @@ export type FetchPoolOptions = {
   protocol?: 'http2' | 'http1.1';
   /** Extra fetch init forwarded to every request (e.g. tls options). */
   fetchInit?: RequestInit;
+  /**
+   * Compress request bodies before sending (v1.4 fetch extension, probe-
+   * verified in pitfalls §14): true | 'gzip' | 'deflate' | 'br' | 'zstd'
+   * | { encoding, level }. Sets Content-Encoding automatically; buffered
+   * bodies reflect compressed Content-Length; streaming bodies pass
+   * through unchanged. Only worth it for LARGE bodies (>~100KB).
+   */
+  compress?: true | 'gzip' | 'deflate' | 'br' | 'zstd' | { encoding: 'gzip' | 'deflate' | 'br' | 'zstd'; level?: number };
 };
 
 const DEFAULT_CONCURRENCY = 8;
@@ -78,17 +88,27 @@ export function warmDns(targets: DnsWarmTarget[]): void {
  * Fetch a URL and ALWAYS consume the body (pooling-friendly).
  * Resolves with ok/status/text; throws only on network-level errors.
  */
+export type FetchCompress =
+  | true
+  | 'gzip'
+  | 'deflate'
+  | 'br'
+  | 'zstd'
+  | { encoding: 'gzip' | 'deflate' | 'br' | 'zstd'; level?: number };
+
 export async function fetchText(
   url: string,
-  init?: RequestInit & { timeoutMs?: number; protocol?: 'http2' | 'http1.1' },
+  init?: RequestInit & { timeoutMs?: number; protocol?: 'http2' | 'http1.1'; compress?: FetchCompress },
 ): Promise<{ ok: boolean; status: number; bytes: number; text: string }> {
   const timeoutMs = init?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const signal = init?.signal ?? AbortSignal.timeout(timeoutMs);
-  const { timeoutMs: _t, protocol, ...rest } = init ?? {};
+  const { timeoutMs: _t, protocol, compress, ...rest } = init ?? {};
   void _t;
-  const res = await fetch(url, protocol ? { ...rest, signal, protocol } : { ...rest, signal });
+  const res = await fetch(url, { ...rest, signal, ...(protocol ? { protocol } : {}), ...(compress ? { compress } : {}) });
   const text = await res.text(); // body ALWAYS consumed for pooling
-  return { ok: res.ok, status: res.status, bytes: text.length, text };
+  // bytes = UTF-8 byte length, NOT UTF-16 code units (recon finding:
+  // 'text.length' reported 17 for a 27-byte multibyte string).
+  return { ok: res.ok, status: res.status, bytes: Buffer.byteLength(text, 'utf8'), text };
 }
 
 /**
@@ -105,6 +125,7 @@ export async function fetchPool(
   const concurrency = options?.concurrency ?? DEFAULT_CONCURRENCY;
   const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const protocol = options?.protocol;
+  const compress = options?.compress;
   if (options?.warmDns ?? true) {
     const seen = new Set<string>();
     const targets: DnsWarmTarget[] = [];
@@ -126,7 +147,7 @@ export async function fetchPool(
       if (idx >= urls.length) return;
       const url = urls[idx]!;
       try {
-        const r = await fetchText(url, { timeoutMs, protocol, ...options?.fetchInit });
+        const r = await fetchText(url, { timeoutMs, protocol, compress, ...options?.fetchInit });
         results[idx] = { url, ok: r.ok, status: r.status, bytes: r.bytes, text: r.text };
       } catch (err) {
         results[idx] = { url, ok: false, status: 0, bytes: 0, text: '', error: (err as Error).message };

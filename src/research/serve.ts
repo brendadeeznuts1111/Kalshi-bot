@@ -57,7 +57,7 @@ import {
 import { buildHqPayload, resetTradingCache } from "./hq-data.ts";
 import { renderHq } from "./hq-view.ts";
 import hqApp from "./hq-app/index.html";
-import { attachDeskLiquidityToBoard, fetchTennisBoard } from "./tennis-events.ts";
+import { attachDeskLiquidityToBoard, fetchTennisBoard, resetTennisBoardCache } from "./tennis-events.ts";
 import { csrfGuard, issueCsrfSession } from "./csrf.ts";
 import { buildGlossaryApiPayload } from "../institutions/glossary.ts";
 import { readPlayerProfiles } from "./player-profiles.ts";
@@ -548,6 +548,9 @@ export async function handleTradingCancel(
 // ── HQ orderbook preview (public market data, short per-ticker cache) ──
 
 const BOOK_CACHE_TTL_MS = 5_000;
+// Bounded: a ticker requested once and never again would otherwise stay
+// forever (recon finding, MEDIUM). Cap the map; evict oldest on overflow.
+const BOOK_CACHE_MAX_ENTRIES = 512;
 const bookCache = new Map<string, { value: unknown; expiresAtMs: number }>();
 
 async function handleTradingBook(req: Request): Promise<Response> {
@@ -574,6 +577,11 @@ async function handleTradingBook(req: Request): Promise<Response> {
       checkedAt: new Date(nowMs).toISOString(),
     };
     bookCache.set(key, { value, expiresAtMs: nowMs + BOOK_CACHE_TTL_MS });
+    while (bookCache.size > BOOK_CACHE_MAX_ENTRIES) {
+      const oldest = bookCache.keys().next().value;
+      if (oldest === undefined) break;
+      bookCache.delete(oldest as string); // Map preserves insertion order
+    }
     return json(value);
   } catch (err) {
     return json(
@@ -1131,7 +1139,9 @@ export function createResearchServer(options: ServeOptions = {}) {
     const before = bookCache.size;
     bookCache.clear();
     resetSportsSourceCatalogCache();
-    console.warn('memoryPressure critical: cleared ' + before + ' bookCache entries + sports source catalog');
+    resetKalshiAuthCache();
+    resetTennisBoardCache();
+    console.warn('memoryPressure critical: cleared ' + before + ' bookCache + source catalog + auth + tennis board caches');
   };
   process.on('memoryPressure', onMemoryPressure as never);
   const serveOptions = {
@@ -1483,7 +1493,16 @@ export function createResearchServer(options: ServeOptions = {}) {
   // Bun.serve's route/fetch signatures is the headers-only Bun.Request — it
   // lacks url/method even though the runtime passes a full DOM Request. Cast
   // the config once here instead of sprinkling casts through every handler.
-  return Bun.serve(serveOptions as Bun.Serve.Options<undefined, string>);
+  const server = Bun.serve(serveOptions as Bun.Serve.Options<undefined, string>);
+  // Wrap stop() so the memoryPressure listener (registered above) is
+  // removed when the server stops — tests create many servers, and an
+  // unremoved listener would accumulate across runs (recon finding, LOW).
+  const origStop = server.stop.bind(server);
+  (server as { stop?: () => void }).stop = () => {
+    process.removeListener('memoryPressure', onMemoryPressure as never);
+    return origStop(false);
+  };
+  return server;
 }
 
 if (import.meta.main) {

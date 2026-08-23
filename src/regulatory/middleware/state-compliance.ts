@@ -81,11 +81,18 @@ function stringField(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
-declare module "bun" {
+// declare global (NOT declare module "bun"): the module-scoped form
+// shadows the GLOBAL Request type used inside bun-types' Bun.serve
+// signature, which intermittently broke typecheck on typed fetch(req)
+// handlers (recon root-cause finding). declare global merges into the
+// DOM Request instead.
+declare global {
   interface Request {
     compliance?: ComplianceContext;
   }
 }
+
+export {};
 
 export function requireStateCompliance(db: Database) {
   const compliance = new ComplianceRepository(db);

@@ -146,7 +146,7 @@ GFM defaults: tables / strikethrough / tasklists **on**. Opt-in: `autolinks`, `h
 
 | API | Status | Repo |
 | --- | ------ | ---- |
-| `bun:test` — `describe` / `test` / `expect` / `mock` | **yes** | `tests/**`, alpha packages; package script `--isolate --timeout 15000` |
+| `bun:test` — `describe` / `test` / `expect` / `mock` | **yes** | `tests/**`, alpha packages; package script `--parallel --timings=.bun-test-timings.json` (5.5x faster than `--isolate`, pitfalls §23) |
 | `expectTypeOf` | **yes** | `*.types.test.ts` (compile-time; prove with `bun run typecheck`) |
 | Snapshots | **yes** | e.g. tennis circuit contract |
 
@@ -185,7 +185,7 @@ GFM defaults: tables / strikethrough / tasklists **on**. Opt-in: `autolinks`, `h
    ```bash
    bun install
    bun run typecheck
-   bun test --isolate --timeout 15000
+   bun test --parallel --timings=.bun-test-timings.json --timeout 15000   # 5.5x faster than --isolate (pitfalls §23)
    bun run report:term          # markdown.ansi
    bun run colors:artifacts     # markdown.html → docs/COLORS.html
    ```

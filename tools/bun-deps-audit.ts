@@ -68,7 +68,9 @@ const NATIVE_APIS = [
 ].map((a) => a.replace('Bun.serve routes { dir }', 'dir: joinPath\|{ dir:'));
 
 function grepCount(pattern: string, dirs: string[]): number {
-  const out = spawnSync('rg', ['-c', pattern, ...dirs], { encoding: 'utf8' });
+  // --glob exclusion: the audit's own source mentions native APIs in its
+  // table text - without it the counts are inflated (recon finding, MEDIUM).
+  const out = spawnSync('rg', ['-c', '--glob', '!**/*audit*.ts', pattern, ...dirs], { encoding: 'utf8' });
   if (out.status !== 0) return 0;
   return out.stdout.split('\n').filter(Boolean).reduce((sum, line) => {
     const m = line.match(/:(\d+)$/);

@@ -61,7 +61,7 @@ describe("HQ trading-order authorization boundary", () => {
       stateCode: "MA",
       userId: "operator-1",
       playId: "play-1",
-      parsedBody: {},
+      parsedBody: complianceBody(),
     };
     const response = await handleTradingOrder(req, {
       db,
@@ -205,12 +205,23 @@ function liveBody(): Record<string, unknown> {
   };
 }
 
+/** Valid parsed body for the compliance fixture (matches BetRequestBody). */
+function complianceBody() {
+  return {
+    wagerAmount: 0.8,
+    betType: "WIN",
+    sportId: "TENNIS",
+    marketId: "mkt-1",
+    stateCode: "MA",
+  };
+}
+
 function attachCompliance(req: Request): void {
   (req as Request & { compliance?: unknown }).compliance = {
     stateCode: "MA",
     userId: "operator-1",
     playId: "play-1",
-    parsedBody: {},
+    parsedBody: complianceBody(),
   };
   req.tradingPrincipal = {
     actorId: "operator-1" as never,

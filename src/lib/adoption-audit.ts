@@ -57,7 +57,13 @@ export function runAdoptionAudit(root: string): AdoptionCheck[] {
   //    if protocol:http2 appears, OR if BUN_FEATURE_FLAG_EXPERIMENTAL_
   //    HTTP2_CLIENT is set in environment').
   const h2Uses = grepFiles(root, 'protocol: ("|\x27)http2(\x27|")', dirs);
-  const h2Flag = grepFiles(root, 'BUN_FEATURE_FLAG_EXPERIMENTAL_HTTP2_CLIENT', [join(root, 'bunfig.toml'), join(root, '.env'), join(root, '.env.example')]);
+  // grepFiles needs EXISTING dirs; .env is gitignored so a fresh clone
+  // lacks it - rg exits 2 on a missing path and grepFiles returns []
+  // (recon finding, MEDIUM). Filter to files that actually exist.
+  const h2FlagFiles = ['bunfig.toml', '.env', '.env.example']
+    .map((f) => join(root, f))
+    .filter((f) => existsSync(f));
+  const h2Flag = h2FlagFiles.length ? grepFiles(root, 'BUN_FEATURE_FLAG_EXPERIMENTAL_HTTP2_CLIENT', h2FlagFiles) : [];
   const fetchCalls = grepFiles(root, 'fetch\\(', dirs);
   const h2Adopted = h2Uses.length > 0 || h2Flag.length > 0;
   checks.push({

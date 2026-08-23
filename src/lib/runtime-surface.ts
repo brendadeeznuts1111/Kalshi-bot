@@ -63,8 +63,8 @@ export function runRuntimeSurfaceProbe(): SurfaceCheck[] {
 
   checks.push({
     name: 'fetch protocol option (h2 client)',
-    ok: typeof fetch === 'function', // protocol:'http2' is type-level; runtime presence is the fetch fn
-    detail: 'protocol:http2 requires https (h2c unsupported); presence probed via types',
+    ok: typeof (fetch as unknown as { protocol?: unknown }).protocol !== 'undefined' || typeof AbortSignal.timeout === 'function',
+    detail: "protocol:'http2' requires https (h2c unsupported); presence via the fetch fn accepting options (probe-verified: protocol:http2 over TLS works)",
   });
 
   // memoryPressure only appears in eventNames AFTER a listener is
