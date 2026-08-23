@@ -1235,3 +1235,17 @@ notes - they have structural enforcement:
     verified), meta via inspect() with reduced depth, tables render it
     (probe: cell shows in Bun.inspect.table). Test-locked: colors
     toggle, TTY-plain fallback, table cell with meta.
+- WRAPPER ELIMINATION (user: 'remove unneeded wrappers, use Bun APIs
+  directly, make a script'): new bun:wrapper-audit (tools/bun-
+  wrapper-audit.ts) detects thin Bun passthrough wrappers (function
+  whose body is a SINGLE 'return Bun.X(...)' with args = params
+  unchanged). Excludes enriched wrappers (defaults/transform) and a
+  KEEP list for intentional seams. ELIMINATED: plainDisplay (dead -
+  only consumer was the ansi-width shim) -> Bun.stripANSI; tennis-hq
+  visibleWidth (only ascii-bars) -> Bun.stringWidth; absPathToFileUrl
+  (zero consumers, dead) deleted; the whole src/lib/ansi-width.ts
+  shim file deleted (nothing imported it). KEPT as seams: escapeHtml
+  (DI callback into gate-miss/discovery-miss + re-exported by
+  views.ts - direct calls would break the injection contract),
+  stableHash/inspectBrief/etc (real defaults/transform). Script:
+  bun run bun:wrapper-audit (exit 0 when clean, 1 on hits).

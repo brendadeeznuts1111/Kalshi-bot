@@ -41,7 +41,4 @@ export function pad(
   return align === "right" ? spaces + str : str + spaces;
 }
 
-/** Visible column width of a string (ANSI stripped). */
-export function visibleWidth(str: string): number {
-  return Bun.stringWidth(str);
-}
+

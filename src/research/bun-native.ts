@@ -41,10 +41,6 @@ export function inspectSnapshot(
   return Bun.inspect(snapshot, { colors, depth, sorted });
 }
 
-// @see https://bun.com/docs/runtime/utils#bun-path-to-fileurl
-export function absPathToFileUrl(absPath: string): string {
-  return Bun.pathToFileURL(absPath).href;
-}
 
 // @see https://bun.com/docs/runtime/utils#bun-fileurl-to-path
 export function fileUrlToAbsPath(url: string | URL): string {

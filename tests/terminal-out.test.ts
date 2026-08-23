@@ -3,7 +3,6 @@ import { describe, expect, test } from "bun:test";
 import {
   formatInspectTable,
   padDisplay,
-  plainDisplay,
   repoTerminalLink,
   shortlistTableRows,
   terminalLink,
@@ -60,7 +59,7 @@ describe("terminal-out", () => {
   test("padDisplay truncates ANSI-colored text via Bun.sliceAnsi (width-aware, styles kept)", () => {
     const colored = "\u001b[31morders\u001b[0m";
     const truncated = padDisplay(colored, 4);
-    expect(plainDisplay(truncated)).toBe("ord…");
+    expect(Bun.stripANSI(truncated)).toBe("ord…");
     expect(Bun.stringWidth(truncated)).toBe(4);
     expect(truncated.includes("\u001b[31m")).toBe(true);
   });
@@ -69,11 +68,11 @@ describe("terminal-out", () => {
     const colored = "\u001b[31mThe quick brown fox jumps over the lazy dog\u001b[0m";
     const wrapped = wrapDisplay(colored, 20);
     expect(wrapped.includes("\n")).toBe(true);
-    expect(plainDisplay(wrapped).replace(/\n/g, " ")).toContain("quick brown");
+    expect(Bun.stripANSI(wrapped).replace(/\n/g, " ")).toContain("quick brown");
   });
 
   test("plainDisplay strips ANSI via Bun.stripANSI", () => {
-    expect(plainDisplay("\u001b[1mBold\u001b[0m")).toBe("Bold");
+    expect(Bun.stripANSI("\u001b[1mBold\u001b[0m")).toBe("Bold");
   });
 });
 

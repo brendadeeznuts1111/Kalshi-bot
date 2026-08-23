@@ -7,7 +7,7 @@
  * @see https://bun.com/docs/runtime/utils#bun-stripansi
  */
 
-import { c, pad, visibleWidth } from "../utils/terminal.ts";
+import { c, pad } from "../utils/terminal.ts";
 
 export interface BarDatum {
   label: string;
@@ -132,7 +132,7 @@ export function chartLineVisibleWidths(chart: string): number[] {
   return chart
     .split("\n")
     .filter((l) => l.length > 0 && !l.includes("Mid distribution"))
-    .map((l) => visibleWidth(l));
+    .map((l) => Bun.stringWidth(l));
 }
 
 /** True when all data rows share the same visible width. */

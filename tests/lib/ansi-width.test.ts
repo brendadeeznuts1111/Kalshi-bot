@@ -4,7 +4,7 @@
  * stripANSI calls, pitfalls 31).
  */
 import { describe, expect, test } from "bun:test";
-import { brandCell, brandMark, padDisplay, plainDisplay, statusLine, wrapDisplay } from "../../src/research/terminal-out.ts";
+import { brandCell, brandMark, padDisplay, statusLine, wrapDisplay } from "../../src/research/terminal-out.ts";
 
 const GREEN = "\u001b[38;2;204;230;77m";
 const RESET = "\u001b[0m";
@@ -22,7 +22,7 @@ describe("terminal-out (Bun ANSI primitives)", () => {
   });
 
   test("plainDisplay strips ANSI (Bun.stripANSI)", () => {
-    expect(plainDisplay(spen)).toBe("SPEN");
+    expect(Bun.stripANSI(spen)).toBe("SPEN");
   });
 
   test("wrapDisplay wraps at column width (Bun.wrapAnsi)", () => {
@@ -85,6 +85,6 @@ describe("statusLine (defaulted columns)", () => {
     // Visible prefix widths match; string indexes differ (escape bytes).
     const coloredPrefix = colored.slice(0, colored.indexOf("b"));
     const plainPrefix = plain.slice(0, plain.indexOf("a"));
-    expect(plainDisplay(coloredPrefix).length).toBe(plainDisplay(plainPrefix).length);
+    expect(Bun.stripANSI(coloredPrefix).length).toBe(Bun.stripANSI(plainPrefix).length);
   });
 });

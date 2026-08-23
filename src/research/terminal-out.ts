@@ -23,10 +23,6 @@ export function ttyColumns(fallback = DEFAULT_TTY_COLUMNS): number {
   return typeof cols === "number" && cols > 0 ? cols : fallback;
 }
 
-/** Strip colors / OSC sequences for plain logs and width-safe truncation. */
-export function plainDisplay(str: string): string {
-  return Bun.stripANSI(str);
-}
 
 /**
  * Wrap text to the TTY width. Preserves ANSI + OSC 8 hyperlinks.
@@ -51,7 +47,7 @@ export function padDisplay(str: string, width: number, align: "left" | "right" =
   const visible = Bun.stringWidth(str);
   if (visible === width) return str;
   if (visible > width) {
-    if (width <= 1) return plainDisplay(str).slice(0, Math.max(0, width));
+    if (width <= 1) return Bun.stripANSI(str).slice(0, Math.max(0, width));
     // Native width-aware truncation: preserves ANSI + OSC 8, ellipsis inside styles.
     return Bun.sliceAnsi(str, 0, width, { ellipsis: "…" });
   }
