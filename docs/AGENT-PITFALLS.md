@@ -333,6 +333,16 @@ Node APIs are intentional:
     marketing - adopt only what is independently measured (we confirmed
     XML parse 1.9ms/87KB). SQLite-entry-storage for feeds has no consumer
     here (release-watch uses state JSON + report) - documented no-fit.
+  * 'channel' writeup FULLY VERIFIED: BroadcastChannel crosses Worker
+    threads AND main (worker posts -> main ch2 receives; same-thread via
+    two instances; single-instance self-delivery does NOT fire - that is
+    spec-correct, use two instances). MessageChannel/MessagePort round-
+    trip + node:diagnostics_channel both work. NEAR-MISS: the first
+    cross-worker probe reported 'does not bridge' because the worker
+    FILE never loaded (./bc-worker.ts resolved against the repo temp,
+    not /tmp) - rule out harness artifacts before accepting a NEGATIVE
+    probe result. No BroadcastChannel consumer in the repo yet (cron
+    master is single-threaded) - pattern documented, not adopted.
   * Full-stack feed playbook verified: named imports from 'bun' (cron,
     XML, markdown, write, file) all real - unlike 'html'. Bun.cron jobs
     ARE disposable (Symbol.dispose + unref on the prototype) so `using
