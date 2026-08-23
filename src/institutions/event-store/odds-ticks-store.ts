@@ -12,6 +12,7 @@
  */
 import type { Database } from "bun:sqlite";
 import type { PricedBookEvent } from "../massey/edge-flags.ts";
+import { normalizeSideToHomeAway } from "./event-identity.ts";
 
 export type LatestSideOdds = {
   decimal: number;
@@ -32,7 +33,9 @@ export function latestOddsForEvent(
     .all(eventId) as Array<{ side: string; decimal_odds: number; ts: number }>;
   const out: { home: LatestSideOdds | null; away: LatestSideOdds | null } = { home: null, away: null };
   for (const r of rows) {
-    const side = r.side === "home" ? "home" : r.side === "away" ? "away" : null;
+    // Unified side vocabulary: home/away, 1/2, yes/no map directly;
+    // winner/loser need competitor names (not stored here) → null.
+    const side = normalizeSideToHomeAway(r.side); // winner/loser need names → null here
     if (side && out[side] == null) out[side] = { decimal: r.decimal_odds, ts: r.ts };
   }
   return out;

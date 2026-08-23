@@ -1,0 +1,81 @@
+# Data model — current state and unified target
+
+Surveyed from the live databases (`research/cache/massey.db`, `research/cache/event-store.db`) and the ingest/pipeline code. Goal: one canonical event identity, one side vocabulary, one odds-row contract.
+
+## 1. Current state (the fragmentation)
+
+### Databases
+
+| DB | Tables | Role |
+|----|--------|------|
+| `massey.db` | `massey_snapshots`, `massey_ratings` | Massey ratings snapshots (fetch/cache), keyed by sport target |
+| `event-store.db` | 33 tables | Book catalog, odds, markets, execution, source-* staging, live scores |
+
+### Event identity: four namespaces, no single join key
+
+| Namespace | Where it appears | Example |
+|-----------|------------------|---------|
+| Canonical hash (32-hex) | `events.event_id`, `price_snapshots.event_id`, `book_ticks.event_id`, `event_links.stadion_event_id`/`kalshi_event_id` | `78021648fa8c…` |
+| fantasy402 numeric `odds_event_id` | `skin_events.odds_event_id`, `odds_ticks.event_id` (pandora capture), coefficient store | `19749582` |
+| Kalshi ticker | `price_snapshots.ticker`, `book_ticks.ticker`, `markets.ticker` | `KXITFMATCH-26JUL22SANALV-SAN` |
+| Readable `match_key` | `event_links.match_key`, `price_snapshots.match_key`, `stadion-kalshi-bridge.buildMatchKey` | `2026-07-22|KXITFWMATCH|pace|trevisan` |
+
+`events` (canonical hash + `player_a`/`player_b` + `start_ts`) is the closest thing to an identity registry; `event_links` maps stadion↔kalshi hashes + match_key. `skin_events`/`odds_ticks` are NOT linked to it (fantasy402 numeric ids only). `price_snapshots.match_key` is currently unpopulated in the live DB.
+
+### Side vocabulary: four dialects
+
+| Dialect | Where | Canonical mapping |
+|---------|-------|-------------------|
+| `home` / `away` | pandora capture, massey crossref, odds-ticks contract | — (canonical) |
+| `winner` / `loser` | tennis-history odds (canonical corpus) | resolve via `events.winner`/`loser` names vs `player_a`/`player_b` |
+| selection `1` / `2` | coefficient lines (`marketType` 3, `period m`) | 1 → home, 2 → away |
+| yes / no | Kalshi markets (`yes_side_label`, `side_code`) | resolve via competitor/side labels |
+
+## 2. Unified target model
+
+### Canonical event key: `match_key`
+
+`day|lane|sorted-last-names` (as built by `buildMatchKey`) is the single join key. Every source id maps to it through an identity registry:
+
+- `events` = the registry: `event_id` (canonical hash) + `player_a`/`player_b`/`start_ts` (names needed to resolve sides).
+- `event_links` = source-id → match_key map (stadion/kalshi today; extend to odds_event_id + ticker).
+- New/migrated rows: `skin_events` and `odds_ticks` gain `match_key` (and `competitor_a`/`competitor_b` where available) so any consumer joins on one key.
+
+### Unified side vocabulary: home/away
+
+One `normalizeSideToHomeAway(side, homeName, awayName)` in `src/institutions/event-store/event-identity.ts`:
+
+- `home`/`away` → as-is; `1`/`2` → home/away; `yes`/`no` → home/away.
+- `winner`/`loser` → home/away by comparing the winning/losing competitor name against `homeName`/`awayName`; `null` when names are unavailable or ambiguous.
+
+### Unified odds row contract (odds_ticks)
+
+`event_key(match_key)` · `source` · `side` (home/away) · `decimal_odds` · `implied_prob` · `ts` · `corpus` · `limit_context`.
+
+- pandora capture already writes home/away (✓).
+- tennis-history writes `winner`/`loser` under the canonical hash — migrate to home/away by resolving through `events` names, and add the match_key.
+
+### Table roles (grouped)
+
+| Role | Tables |
+|------|--------|
+| Identity registry | `events`, `event_links` |
+| Book catalog | `skin_events`, `inventory_leagues`, `provider_sport_mappings` |
+| Odds | `odds_ticks` (live contract), `price_snapshots` (multi-venue probs), `book_ticks` (orderbooks) |
+| Market reference | `markets`, `match_liquidity`, `resolutions` |
+| Execution | `betting_accounts`, `partner_ledger`, `partners` |
+| Source staging | `source_*` (inventory/metadata runs, events, markets, outcomes, participants) |
+
+## 3. Migration steps (incremental, gate-safe)
+
+1. `event-identity.ts` SSOT (match_key build/parse + side canonicalization) + tests. **done this round**.
+2. Add `match_key` columns to `skin_events` + `odds_ticks` (open-db migration) and backfill from `event_links`/names.
+3. Rewrite tennis-history odds writes to home/away + match_key (side migration).
+4. Crossref + edge-flags join on `match_key` instead of name-normalization.
+5. Optionally a `unified_odds` view over odds_ticks + price_snapshots for reporting.
+
+## 4. Open notes
+
+- `price_snapshots.match_key` is empty in the live DB (population pending).
+- Volleyball book leagues have no Massey coverage (data availability, not a schema gap).
+- `match_key` as built today is tennis-lane-specific; generalize to `day|sport|competitors` if non-tennis sports need it.

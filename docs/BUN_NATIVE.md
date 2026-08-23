@@ -1101,6 +1101,10 @@ bun pm cache rm                    # clear ~/.bun/install/cache
 | CLI flags | `parseArgs` |
 | Unit tests | `bun:test` + `mock.module` |
 
+## Data-model unification
+
+[`docs/DATA_MODEL.md`](docs/DATA_MODEL.md) surveys the fragmented state (four event-id namespaces, four side dialects across `massey.db` + `event-store.db`) and prescribes the unified model: `match_key` as the canonical event key, home/away as the single side vocabulary, and one odds-row contract. Implemented so far: `src/institutions/event-store/event-identity.ts` (match_key build/parse SSOT + `normalizeSideToHomeAway` covering home/away, 1/2, yes/no, winner/loser-by-name), wired into `odds-ticks-store`. Migration steps 2–5 (add `match_key` columns, migrate tennis-history odds to home/away, join on match_key, unified odds view) are tracked in the doc.
+
 ## Gap register (Bun 1.4 audit)
 
 ### Adopted this round
