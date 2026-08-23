@@ -1080,3 +1080,31 @@ scanned; no code changes needed:
   200); ONLY { dir } mounts do (section 19). /colors.css keeps its
   current shape (cache-control: no-cache + Range/206), which is the
   best available for a single hand-rolled file.
+
+### 28. Color API audit (Bun.color / stringWidth / sliceAnsi) — all verified
+
+- Bun.color surface (probe on 1.4.0, matches cached color.mdx exactly):
+  formats css/ansi/ansi-16/ansi-256/ansi-16m/number/rgb/rgba/hsl/hex/HEX/
+  lab + {rgb}/{rgba}/[rgb]/[rgba] object-array forms; input accepts CSS
+  names, #hex, rgb()/hsl()/lab() strings, numbers, {r,g,b} objects,
+  arrays. INVALID input returns null (does not throw). KEY: 'ansi' is
+  TTY-aware (returns '' when colors are disabled/non-TTY; probe: ''
+  with isTTY undefined), while ansi-16/256/16m ALWAYS emit. The repo's
+  color kernel (src/lib/color/) is a CORRECT deep consumer: kernel.ts
+  validates the palette on load via Bun.color(value,'HEX') (null ->
+  throw), uses ansi-16m for deterministic output (never the TTY-gated
+  'ansi'), and terminal.ts paint() has auto (NO_COLOR/TTY-respecting)
+  vs deterministic modes. pre-commit's paint() (Bun.color('ansi')) is
+  the documented TTY-aware pattern. No repo fixes needed.
+- stringWidth grapheme handling VERIFIED correct: ZWJ family (11 cp) ->
+  2, skin tone -> 2, flag -> 2, keycap -> 2, combining e+accent -> 1,
+  color-escapes ignored. sliceAnsi preserves hyperlinks intact and
+  keeps ZWJ families whole on slice. The 1.4 blog claim ('ANSI and
+  grapheme aware') HOLDS.
+- PROBE-ARTIFACT LESSON (third instance, after h2c and the AOT claims):
+  an early stringWidth probe reported ZWJ family -> 8 (should be 2);
+  the 'negative' was my probe string being double-encoded in the
+  heredoc (literal emoji mangled), not a runtime bug. With proper
+  strings the runtime is correct. Rule reinforced: before accepting a
+  NEGATIVE runtime result, check the probe INPUT itself (encoding of
+  the test string), not just the code path.
