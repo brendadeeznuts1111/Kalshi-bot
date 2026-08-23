@@ -188,6 +188,21 @@ it under bun, forwards stdout/stderr, and deletes the temp (verified). Pair with
 agent:encode for tricky code: encode -> write .b64 -> base64 -d -> probe.
 
 ### 8j. Friction-killers shipped (this repo)
+### 8k. Exit codes & processes (verified on 1.4.0)
+
+- process.exitCode = n is GRACEFUL (pending timers/trailing code run, exit
+  hooks run); process.exit(n) is IMMEDIATE (no stack unwinding, pending
+  timers skipped, but 'exit' handlers still run). Verified with a timer +
+  exit hook: exitCode mode ran both, exit() mode skipped the timer.
+- process.exit() inside a try BYPASSES finally (no unwinding) - the
+  agent-probe temp-strand bug. Prefer: capture the code, cleanup in
+  finally, process.exit after.
+- Uncaught exception and unhandled rejection both exit 1. Usage errors in
+  our CLIs use exit 2. Signals exit 128+signum (SIGINT 130, SIGTERM 143,
+  SIGKILL 137) unless a handler overrides (process.on('SIGTERM')).
+- Children: Bun.spawnSync(...).exitCode (sync) and await Bun.spawn(...)
+  .exited (async) propagate the child's code (verified 7 and 9);
+  bun run <script> propagates the script's code.
 
 - `bun run agent:encode [file]` + `--decode`: lexer-safe base64 in/out (byte-exact
   round-trip verified).
