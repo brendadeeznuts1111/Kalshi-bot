@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdtemp, rm, writeFile, mkdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { globMatch, listFiles, listFilesAsync } from "../../src/lib/glob.ts";
+import { listFiles, listFilesAsync } from "../../src/lib/glob.ts";
 
 describe("Bun.Glob helpers", () => {
   let dir: string;
@@ -32,9 +32,9 @@ describe("Bun.Glob helpers", () => {
     expect(files).toContain(join("sub", "d.json"));
   });
 
-  test("globMatch tests a single string", () => {
-    expect(globMatch("*.json", "x.json")).toBe(true);
-    expect(globMatch("*.json", "x.jsonl")).toBe(false);
-    expect(globMatch("**/*.ts", "src/lib/glob.ts")).toBe(true);
+  test("Bun.Glob.match tests a single string (direct API)", () => {
+    expect(new Bun.Glob("*.json").match("x.json")).toBe(true);
+    expect(new Bun.Glob("*.json").match("x.jsonl")).toBe(false);
+    expect(new Bun.Glob("**/*.ts").match("src/lib/glob.ts")).toBe(true);
   });
 });

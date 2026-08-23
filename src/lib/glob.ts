@@ -28,10 +28,6 @@ export function listFiles(pattern: string, opts: ListFilesOptions = {}): string[
   return (opts.sort ?? true) ? out.sort() : out;
 }
 
-/** True when a string matches a glob pattern (Bun.Glob.match). */
-export function globMatch(pattern: string, value: string): boolean {
-  return new Bun.Glob(pattern).match(value);
-}
 
 /**
  * Async variant (scan iterator) for large trees - use when the listing is

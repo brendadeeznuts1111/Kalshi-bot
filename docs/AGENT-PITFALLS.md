@@ -1249,3 +1249,13 @@ notes - they have structural enforcement:
   views.ts - direct calls would break the injection contract),
   stableHash/inspectBrief/etc (real defaults/transform). Script:
   bun run bun:wrapper-audit (exit 0 when clean, 1 on hits).
+- API-usage survey (user: 'does it use Bun.Glob, Bun.spawn piped,
+  console depth'): all three used DIRECTLY - Bun.Glob class (new
+  Bun.Glob(...).scan/scanSync) in 5 files; Bun.spawn with
+  {stdout:'pipe',stderr:'pipe'} + new Response(proc.stdout).text() in
+  audit-bun-native, {stdout:'inherit'} in cron-main; console depth via
+  bunfig [console] depth=3 + per-run bun --console-depth N (verified
+  section 8m). Eliminated one more dead wrapper: globMatch (pure
+  passthrough, zero consumers) -> direct Bun.Glob.match in the test.
+  src/lib/glob.ts keeps only the ENRICHED listFiles/listFilesAsync
+  (sort + option defaults - additive).
