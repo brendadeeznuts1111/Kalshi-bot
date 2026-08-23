@@ -721,3 +721,323 @@ One `BunURLPattern` for `github.com/:owner/:repo` serves **three consumers**:
 3. **Serve** — `/repo/:owner/:name` route matches the same shape
 
 ```typescript
+const ref = parseGitHubRepoRef(url);
+const web = githubRepoWebUrl(ref.owner, ref.repo);
+const local = localRepoPath(ref.owner, ref.repo); // → /repo/:owner/:name
+```
+
+### [`serve.ts`](../src/research/serve.ts) — report browser
+
+`bun run serve` (`bun --hot`) — **5 routes**, no router package:
+
+| Route | Source |
+|-------|--------|
+| `/` | latest shortlist + diff excerpt + run history |
+| `/api/runs` | run summaries JSON |
+| `/api/runs/:id` | full run JSON |
+| `/repo/:owner/:name` | repo detail (`?run=` for historical) |
+| `/reports/latest.md` | `Bun.file(research/reports/latest.md)` |
+
+HTML lives in [`views.ts`](../src/research/views.ts) — handlers in [`serve.ts`](../src/research/serve.ts) stay thin.
+
+## Terminal: three layers (PTY vs IPC vs parent TTY)
+
+Bun exposes **three separate terminal mechanisms**. This repo uses layer 1 and 2; layer 3 is optional for a future interactive agent shell.
+
+| Layer | API | Who has `isTTY` | Used here for |
+|-------|-----|-----------------|---------------|
+| **1 — Parent stdout** | `Bun.inspect.table`, `Bun.stringWidth` / `wrapAnsi` / `stripANSI`, `Bun.markdown.ansi` | The **bun research/agent** process you run in Terminal/iTerm | Shortlist tables, lift map, `report:term` |
+| **2 — Child pipes + IPC** | `Bun.spawn({ cmd, ipc, stdout: "pipe" })` + `process.send` | Child sees **pipes** (`isTTY=false`); parent relays stdout | Agent → research progress + final table ([`research-runner.ts`](../src/agent/research-runner.ts)) |
+| **3 — Child PTY** | `Bun.spawn({ terminal: { cols, rows, data } })` or `new Bun.Terminal()` | The **child subprocess** (`isTTY=true`) | **Not used** — see below |
+
+### When PTY (`terminal` option) applies
+
+From [Terminal (PTY) support](https://bun.com/docs/runtime/child-process#terminal-pty-support):
+
+- Child needs **interactive** behavior: prompts, cursor movement, pagers, `bash` REPL.
+- Child checks **`process.stdout.isTTY`** and changes output (colors, width) based on that.
+- You write to **`proc.terminal.write()`** — `proc.stdout`/`stderr` are **null** when `terminal` is set.
+- **`data(terminal, data)`** relays PTY output to the parent (often `process.stdout.write(data)`).
+- **`proc.exited`** = process exit; **`terminal.exit` callback** = PTY stream lifecycle (not the same thing).
+- **Reusable terminal:** `await using terminal = new Bun.Terminal({…})` then pass `{ terminal }` to multiple spawns for one session.
+
+### Why this repo does not use PTY for research
+
+| Subprocess | Why pipes/IPC, not PTY |
+|------------|------------------------|
+| **`gh` via `Bun.$`** | JSON `--json` output; `.quiet()` batch mode; no TTY needed ([`BUN_SHELL.md`](BUN_SHELL.md)) |
+| **Research child** | Structured `ResearchProgressMessage` over IPC; markdown/table on stdout pipe — parsing PTY ANSI would be fragile |
+| **Parent CLI** | Already running in a real TTY — use layer 1 natively |
+
+PTY would only help if we spawned **`gh` without `--json`** for human-readable logs, or built an **interactive research TUI** (pick dimension, watch live inspect in a full-screen view).
+
+### Platform notes (if we add PTY later)
+
+- **macOS/Linux:** `openpty()` — termios, line echo, SIGWINCH.
+- **Windows:** ConPTY — output is re-encoded VT (semantically same, not byte-identical); `\r` not mapped to `\n`; kill child before `terminal.close()` on older Windows.
+- **`Bun.spawnSync`:** blocking; good for tiny CLI tools, not long research runs ([reference](https://bun.com/docs/runtime/child-process#reference)).
+
+## Testing
+
+Colocated under [`tests/`](../tests/):
+
+| File | Covers |
+|------|--------|
+| `gate.test.ts` | popularity gate |
+| `score.test.ts` | weighted scoring |
+| `detect.test.ts` | detector pure functions |
+| `gh.test.ts` | rate-limit + JSON parse helpers |
+| `cache.test.ts` | sqlite cache + run storage |
+| `research/patterns.test.ts` | `BunURLPattern` / `SERVE_PATTERNS` (mirrors `src/research/patterns.ts`) |
+| `serve.test.ts` | `Bun.serve` report browser handlers |
+| `inspect.mock.test.ts` | `mock.module("../src/research/gh.ts")` — no network |
+| `preflight.test.ts` | `Bun.which("gh")` |
+| `audit-adapter.test.ts` | sha3 digest + high-value gate |
+| `export-audit.test.ts` | audit export round-trip |
+| `diversify.test.ts` | shortlist caps + tag coverage |
+| `schedule-cli.test.ts` | cron admin parse + preview |
+| `constants.test.ts` | weights.json alignment |
+| `validate.test.ts` | RepoReport wire |
+| `evidence.test.ts` | detectors + fingerprints |
+| `diff.test.ts` | run diffs |
+| `paths.test.ts` | audit evidence paths |
+
+```bash
+bun test
+bun test --coverage
+bun test --grep "live-scores"
+bun test tests/institutions/live-scores.test.ts --grep "poll"
+```
+
+- Use `bun test --grep "pattern"` (v1.3.6+) or `bun test -t "pattern"` to filter by test name.
+- `--grep` is an alias for `--test-name-pattern`.
+
+Filters on **`test()` / `describe()` names**, not file paths; pass a file path separately to narrow scope. Works with `--isolate` (this repo’s default via [`package.json`](../package.json) `"test"` script). See [Bun v1.3.6](https://bun.com/docs/blog/bun-v1.3.6#grep-flag-for-bun-test).
+
+Integration (live `gh`) is `bun run research` only.
+
+## Package manager
+
+This repo keeps a deliberately small dependency surface in [`package.json`](../package.json):
+
+- Runtime: `drizzle-orm` and `zod`.
+- Development: pinned `typescript` and `@types/bun` for a self-contained typecheck.
+
+Run `bun install --frozen-lockfile` before `bun run check`. The committed [`bun.lock`](../bun.lock) makes the same graph available locally and in CI.
+
+### When `bun install` matters
+
+| Situation | Action |
+|-----------|--------|
+| Normal setup / CI | `bun install --frozen-lockfile`, then `bun run check`. |
+| Intentional dependency change | Temporarily permit lockfile updates, run `bun install`, review and commit both `package.json` and `bun.lock`, then restore frozen mode. |
+| Lockfile out of sync | `frozenLockfile = true` in [`bunfig.toml`](../bunfig.toml) makes install fail until `package.json` and `bun.lock` agree. |
+
+**Footgun:** do not delete `bun.lock` or loosen frozen mode as a permanent workaround. A manifest change and its reviewed lockfile update are one change.
+
+### Project `bunfig.toml`
+
+[`bunfig.toml`](../bunfig.toml) holds **project-only** overrides (not machine linker/cache policy — that lives in the monorepo `~/.bunfig.toml` when applicable):
+
+| Key | Value | Purpose |
+|-----|-------|---------|
+| `[install] frozenLockfile` | `true` | Reproducible installs |
+| `[run] shell` | `"bun"` | `bun run …` uses Bun Shell — see [`BUN_SHELL.md`](BUN_SHELL.md) |
+| `[console] depth` | `3` | Consistent inspect depth; override per run when needed |
+
+The canonical `bun run test` command carries the 15-second integration timeout explicitly, so local, hook, and CI runs cannot drift with their working directory. Coverage is explicit through `bun run test:coverage`; the default test path optimizes for rapid feedback.
+
+### Install pipeline
+
+Bun install is not “download into `node_modules`” directly — it is **resolve → cache → link**:
+
+```text
+package.json + bun.lock
+        │
+        ▼
+   Resolve graph (registry / git / tarball)
+        │
+        ├── no lock or deps changed → eager: fetch tarballs while resolving
+        └── lock + unchanged deps     → lazy: fetch only missing packages
+        │
+        ▼
+   Extract to global store
+   ~/.bun/install/cache/${name}@${version}
+   (pre/build semver tags → hashed dir name)
+        │
+        ▼
+   Link into node_modules (--backend / platform default)
+        │
+        ▼
+   Optional: project lifecycle scripts (pre/post install on *root* only)
+```
+
+**Kalshi-bot today:** the lock resolves the two runtime libraries, the pinned compiler toolchain, and their type dependencies into a project-local `node_modules` layout.
+
+### Eager vs lazy resolution
+
+| Condition | Behavior |
+|-----------|----------|
+| No `bun.lock`, or `package.json` deps changed | **Eager** — download and extract tarballs during resolution |
+| `bun.lock` present and deps unchanged | **Lazy** — skip packages already satisfied in `node_modules` (name+version check below) |
+
+[`frozenLockfile = true`](../bunfig.toml) adds a gate: install fails if lockfile would change, regardless of eager/lazy path.
+
+### Global cache vs project `node_modules`
+
+Two layers:
+
+| Layer | Location | Role |
+|-------|----------|------|
+| **Global store** | `~/.bun/install/cache/${name}@${version}` | Canonical extracted package bytes (shared across projects on the machine) |
+| **Project tree** | `./node_modules/` (gitignored here) | Per-project layout — hoisted flat or isolated `.bun/` + symlinks |
+
+Monorepo **machine** policy ([`docs/UNIFIED.md`](../../docs/UNIFIED.md) on the parent `Projects` tree) sets absolute `[install.cache].dir`, `globalStore = true`, and `linker = isolated` in `~/.bunfig.toml`. **This repo’s** [`bunfig.toml`](../bunfig.toml) does not duplicate those machine-owned keys; it only carries project install, run, and console behavior.
+
+Registry metadata (versions, dist-tags) is cached separately as binary `~/.bun/install/cache/*.npm` (hashed package name). Bun ignores `Cache-Control: Age` on registry responses — metadata can lag npm by ~5 minutes.
+
+### Cache directory layout (finding packages on disk)
+
+Canonical layout ([bun install — global cache](https://bun.com/docs/pm/cli/install), [global cache](https://bun.com/docs/pm/global-cache)):
+
+```text
+$(bun pm cache)/                    # default ~/.bun/install/cache
+├── ${name}@${version}@@@1/         # extracted tarball (release semver)
+├── ${name}@${hash}@@@1/            # pre/build semver → hash, not literal version
+├── ${hash(packageName)}.npm        # registry metadata blobs (scoped names hashed)
+└── links/                          # global virtual store (globalStore = true only)
+    └── ${name}@${version}-${entry_hash}/
+        └── node_modules/           # linked dep closure for this project graph
+```
+
+**Release semver** — directory name matches lockfile version, often with an `@@@1` suffix on the extracted cache entry (e.g. `esbuild@0.28.1@@@1`). Scoped packages use the scope in the name: `@types/node@20.0.0@@@1`.
+
+**Pre-release or build metadata** — if the version string has a pre suffix (`1.0.0-beta.0`) or build suffix (`1.0.0+20220101`), Bun **replaces that semver segment with a hash** in the cache path. This avoids OS errors from overlong paths, but you cannot `ls ~/.bun/install/cache/foo@1.0.0-beta.0` and expect a hit.
+
+**Registry metadata** — `*.npm` files use `${hash(packageName)}.npm` so scoped packages do not need extra directory nesting ([install docs](https://bun.com/docs/pm/cli/install)).
+
+**Global virtual store** — when `globalStore = true` (monorepo machine default in [`docs/UNIFIED.md`](../../docs/UNIFIED.md)), isolated installs also materialize under `cache/links/` with a 16-hex `entry_hash` suffix encoding the resolved dependency closure ([global virtual store](https://bun.com/docs/pm/global-store)). Project `node_modules/.bun/<pkg>@<version>` symlinks there; `readlink` on those paths is the reliable way to see the canonical on-disk tree.
+
+**Practical lookup** (once deps exist):
+
+| Goal | Command / path |
+|------|----------------|
+| Cache root | `bun pm cache` |
+| Why a package is installed | `bun pm why <pkg>` |
+| Version in the tree | `node_modules/<pkg>/package.json` → `"version"` |
+| Canonical path (isolated + global store) | `readlink node_modules/.bun/<pkg>@<version>` |
+| Clear everything | `bun pm cache rm` |
+
+**Kalshi-bot today:** the shared cache contains the resolved runtime and compiler packages; `node_modules` remains project-local and gitignored.
+
+### Name + version skip (existing `node_modules`)
+
+When `node_modules/` already exists and `bun.lock` matches `package.json`, Bun **lazy-installs**: for each resolved package it checks whether `node_modules/<pkg>/package.json` has the expected `"name"` and `"version"`. A custom JSON parser reads **only those two fields** and stops — it does not hash file contents.
+
+Implications:
+
+- **Fast path:** repeat `bun install` on a warm tree skips tarball fetch when name+version match.
+- **Stale tree:** edited files under `node_modules/` still “pass” until version string changes — symptoms look like “wrong runtime behavior” not “install failed”. Fix: `rm -rf node_modules && bun install`.
+- **Cross-platform:** same lockfile on macOS (clonefile) vs Linux CI (hardlink) still agrees on name+version; backend affects *how* bytes appear in `node_modules`, not resolution.
+- **Today:** repeat installs take the lazy path when `bun.lock` and the local package versions agree.
+
+### Linker strategies (`--linker`)
+
+Backends (`clonefile` / `hardlink`) control **how files land** from cache. **Linker** controls **layout**:
+
+| Linker | Layout | Default when |
+|--------|--------|--------------|
+| `hoisted` | Flat shared `node_modules` (npm/Yarn classic) | Existing pre-v1.3.2 projects; new single-package projects |
+| `isolated` | Central `node_modules/.bun/` + symlinks; blocks phantom imports | New workspaces; monorepo machine policy |
+
+Lockfile `configVersion` records the chosen strategy. The machine `~/.bunfig.toml` supplies `linker = isolated`, so this project does not repeat that key.
+
+See [isolated installs](https://bun.com/docs/pm/isolated-installs).
+
+### Install backends (platform) — deep dive
+
+After extract, Bun populates `node_modules` from the global cache using the **fastest platform backend**. On failure, `clonefile` and `hardlink` **automatically fall back** to copy ([bun install — platform backends](https://bun.com/docs/pm/cli/install)).
+
+| Backend | OS | Mechanism | When to use |
+|---------|-----|-----------|-------------|
+| `clonefile` | macOS (default) | APFS `clonefile()` — CoW, one syscall per tree | Default local dev on Darwin |
+| `clonefile_each_dir` | macOS | Per-directory clone; slower than `clonefile` | Debugging clonefile edge cases |
+| `hardlink` | Linux (default) | Same inode, multiple directory entries | Default on CI (`ubuntu-latest`) |
+| `copyfile` | all | `fcopyfile()` (macOS) / `copy_file_range()` (Linux) | Slowest; explicit fallback or `--backend copyfile` |
+| `symlink` | special | Used for `file:` deps; not normal npm layout | Requires `--preserve-symlinks` for Node-compatible resolution if forced globally |
+
+**Why backends matter:** they avoid duplicating megabytes per project. Hardlinks and clones share disk blocks with the global cache; copies do not. All backends must still present a normal `node_modules` tree to Bun’s resolver.
+
+**Force a backend:**
+
+```bash
+rm -rf node_modules
+bun install --backend hardlink    # Linux-style on any OS
+bun install --backend clonefile   # macOS-only; errors elsewhere
+bun install --backend copyfile    # portable slow path
+```
+
+**Kalshi-bot mapping:**
+
+| Environment | Install backend |
+|-------------|-----------------------------------|
+| Your Mac | `clonefile` → cache at `~/.bun/install/cache/…` |
+| GitHub Actions `ubuntu-latest` | `hardlink` during the frozen install |
+| Docker / exotic FS (no hardlink) | silent fallback to `copyfile` |
+
+### Lifecycle scripts and security
+
+Bun **does not** run `postinstall` / `preinstall` on **dependency** packages by default (supply-chain risk). Root project scripts in `package.json` still run. To allow a specific dependency’s scripts: add it to `trustedDependencies` in `package.json`, then reinstall.
+
+Popular native addons (`esbuild`, `sharp`) get Bun optimizations. Neither is part of this project’s dependency graph.
+
+### CI
+
+[`.github/workflows/check.yml`](../.github/workflows/check.yml) uses `oven-sh/setup-bun`, runs `bun install --frozen-lockfile`, then invokes the same `bun run check` entry point used by the hook and local development.
+
+### Debugging (when deps exist)
+
+```bash
+bun install --dry-run              # preview resolution
+bun install --verbose              # debug logging
+rm -rf node_modules && bun install # bust stale name+version skip
+bun pm cache rm                    # clear ~/.bun/install/cache
+```
+
+### Canonical references
+
+| Topic | Doc |
+|-------|-----|
+| `bun install` / backends / CI | https://bun.com/docs/pm/cli/install |
+| Global cache / pre-build hashing | https://bun.com/docs/pm/global-cache |
+| Global virtual store (`links/`) | https://bun.com/docs/pm/global-store |
+| Lockfile / `configVersion` | https://bun.com/docs/pm/lockfile |
+| Isolated vs hoisted | https://bun.com/docs/pm/isolated-installs |
+| `bunfig.toml` `[install]` | https://bun.com/docs/runtime/bunfig |
+| Monorepo machine install policy | [`docs/UNIFIED.md`](../../docs/UNIFIED.md) (parent `Projects` repo) |
+
+## TypeScript
+
+[`tsconfig.json`](../tsconfig.json): `"module": "Preserve"`, `"moduleResolution": "bundler"`, `"noEmit": true`, `"types": ["bun"]`.
+
+## Dependency smell test
+
+| If you need… | Use instead |
+|--------------|-------------|
+| GitHub HTTP | `gh.ts` (`Bun.$`) |
+| File cache | `cache.ts` (`bun:sqlite`) |
+| Read/write JSON artifacts | `io.ts` |
+| Parallel map | `pool.ts` |
+| CLI flags | `parseArgs` |
+| Unit tests | `bun:test` + `mock.module` |
+| Type-safe SQLite queries | `src/db/schema.ts` + `src/db/client.ts` (`drizzle-orm`) |
+| SQLite migration tool (dev) | `bunx drizzle-kit` (not in package.json) |
+
+| If you need… | Use instead |
+|--------------|-------------|
+| GitHub HTTP | `gh.ts` (`Bun.$`) |
+| File cache | `cache.ts` (`bun:sqlite`) |
+| Read/write JSON artifacts | `io.ts` |
+| Parallel map | `pool.ts` |
+| CLI flags | `parseArgs` |
+| Unit tests | `bun:test` + `mock.module` |
