@@ -1184,3 +1184,16 @@ notes - they have structural enforcement:
   KEY TEST LESSON: ANSI-colored marks align by VISIBLE width, not
   string index (escape bytes precede the mark, so indexOf differs);
   assert visibleWidth(prefix), never index. Test-locked.
+- CONSOLIDATION (user: 'why not just use Bun's utils by default'): the
+  answer was that terminal-out.ts ALREADY calls the Bun primitives
+  directly (32 sites); the old src/lib/ansi-width.ts wrappers
+  (visibleWidth/padAnsi/sliceAnsiSafe) had ZERO production consumers
+  (only their own test) - removed, ansi-width.ts is now a re-export
+  shim pointing at terminal-out. statusLine moved to terminal-out.ts
+  (4 audit/docs-index consumers repointed). tennis-hq's pad()
+  hand-rolled char-loop truncation replaced with native Bun.sliceAnsi
+  (width-aware, ellipsis) - use Bun's utils by default. Only
+  genuinely-additive wrappers remain: padDisplay/statusLine (Bun has
+  NO padding/row primitives - probe: padAnsi undefined, Terminal is a
+  PTY class, no table/row helpers), the color kernel (domain palette +
+  validation), table-schema (Bun.inspect.table field specs).

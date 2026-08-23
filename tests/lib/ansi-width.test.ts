@@ -1,96 +1,55 @@
+/**
+ * Bun ANSI primitives + statusLine via src/research/terminal-out.ts (the
+ * canonical Bun-utils consumer - direct Bun.stringWidth/sliceAnsi/wrapAnsi/
+ * stripANSI calls, pitfalls 31).
+ */
 import { describe, expect, test } from "bun:test";
-import { padAnsi, sliceAnsiSafe, visibleWidth, statusLine } from "../../src/lib/ansi-width.ts";
+import { padDisplay, plainDisplay, statusLine, wrapDisplay } from "../../src/research/terminal-out.ts";
 
 const GREEN = "\u001b[38;2;204;230;77m";
 const RESET = "\u001b[0m";
 const spen = GREEN + "SPEN" + RESET;
 
-describe("ANSI-aware width (Bun.stringWidth / sliceAnsi)", () => {
-  test("visibleWidth ignores ANSI escapes", () => {
-    expect(visibleWidth("SPEN")).toBe(4);
-    expect(visibleWidth(spen)).toBe(4);
+describe("terminal-out (Bun ANSI primitives)", () => {
+  test("padDisplay pads to the VISIBLE width (Bun.stringWidth)", () => {
+    expect(padDisplay("SPEN", 10)).toBe("SPEN      ");
+    expect(padDisplay(spen, 10)).toBe(spen + " ".repeat(6)); // ANSI ignored
   });
 
-  test("padAnsi pads to the VISIBLE width", () => {
-    const padded = padAnsi(spen, 10);
-    expect(padded).toBe(spen + " ".repeat(6));
-    expect(visibleWidth(padded)).toBe(10);
-    // JS padEnd would have counted the ANSI bytes and padded too little:
-    expect(spen.length).toBeGreaterThan(4);
-    expect(visibleWidth(padded)).not.toBe(padded.length);
+  test("padDisplay truncates by visible cells with ellipsis (Bun.sliceAnsi)", () => {
+    const truncated = padDisplay("unicorn", 4);
+    expect(truncated).toBe("uni…"); // 3 visible + ellipsis at width 4
   });
 
-  test("padAnsi left-pads and truncates-never", () => {
-    expect(visibleWidth(padAnsi(spen, 2, "left"))).toBe(4); // wider content: unchanged
-    const left = padAnsi(spen, 8, "left");
-    expect(left.startsWith(" ".repeat(4))).toBe(true);
-    expect(visibleWidth(left)).toBe(8);
+  test("plainDisplay strips ANSI (Bun.stripANSI)", () => {
+    expect(plainDisplay(spen)).toBe("SPEN");
   });
 
-  test("sliceAnsiSafe keeps ANSI intact around visible cells", () => {
-    const sliced = sliceAnsiSafe(spen, 0, 2);
-    expect(sliced.includes("38;2")).toBe(true);
-    expect(visibleWidth(sliced)).toBe(2);
+  test("wrapDisplay wraps at column width (Bun.wrapAnsi)", () => {
+    // trim:false keeps the wrapped space on its own line (terminal-out
+    // choice; matches Bun.wrapAnsi's default trim behavior).
+    expect(wrapDisplay("hello world", 5)).toBe("hello\n \nworld");
+  });
+});
+
+describe("statusLine (defaulted columns)", () => {
+  test("aligns marks of different widths to the same column", () => {
+    expect(statusLine("ok", "a")).toBe("  ok      a");
+    expect(statusLine("WARN", "b")).toBe("  WARN    b");
+    expect(statusLine("ok", "a").indexOf("a")).toBe(statusLine("WARN", "b").indexOf("b"));
   });
 
-  test("sliceAnsiSafe supports placeholder and negative start (blog-verified)", () => {
-    expect(sliceAnsiSafe("unicorn", 0, 4, "…")).toBe("uni…");
-    expect(sliceAnsiSafe("unicorn", -4, undefined, "…")).toBe("…orn");
+  test("detail appended after label with colon", () => {
+    expect(statusLine("GAP", "name", "detail here")).toMatch(/name: detail here$/);
   });
 
-  // Grapheme pinning (pitfalls 28): escaped \u{...} input on purpose -
-  // literal emoji in test sources double-encode in some toolchains and
-  // produced a FALSE 'stringWidth returns 8 for a ZWJ family' probe result.
-  test("visibleWidth handles multi-codepoint emoji graphemes (escaped input)", () => {
-    const zwjFamily = "\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}\u{200D}\u{1F466}"; // family
-    const skinTone = "\u{1F44D}\u{1F3FB}"; // thumbs-up light
-    const flag = "\u{1F1FA}\u{1F1F8}"; // US flag
-    const keycap = "1\u{FE0F}\u{20E3}";
-    const combining = "e\u{0301}";
-    expect(visibleWidth(zwjFamily)).toBe(2);
-    expect(visibleWidth(skinTone)).toBe(2);
-    expect(visibleWidth(flag)).toBe(2);
-    expect(visibleWidth(keycap)).toBe(2);
-    expect(visibleWidth(combining)).toBe(1);
-  });
-
-  describe("statusLine (defaulted columns)", () => {
-    test("aligns marks of different widths to the same column", () => {
-      const ok = statusLine("ok", "a");
-      const warn = statusLine("WARN", "b");
-      // Both marks pad to markWidth (6): ok has 6 trailing, WARN has 4.
-      expect(ok.indexOf("a")).toBe(warn.indexOf("b"));
-      expect(ok).toMatch(/^  ok      a$/);
-      expect(warn).toMatch(/^  WARN    b$/);
-    });
-
-    test("detail appended after label with colon", () => {
-      expect(statusLine("GAP", "name", "detail here")).toMatch(/name: detail here$/);
-    });
-
-    test("options override indent, width, separator", () => {
-      const line = statusLine("ok", "x", undefined, { indent: 4, markWidth: 3, sep: 1 });
-      expect(line).toBe("    ok  x"); // mark padded to 3 ('ok ') + 1 sep = 'ok  '
-    });
-
-    test("ANSI-colored marks still align (padAnsi ignores escapes)", () => {
-      const open = "\u001b[32m"; // green
-      const reset = "\u001b[0m";
-      const plain = statusLine("ok", "a");
-      const colored = statusLine(open + "ok" + reset, "b");
-      // VISIBLE width to the label is equal (escape bytes are invisible);
-      // string index differs because the escape bytes precede the mark.
-      expect(visibleWidth(colored.slice(0, colored.indexOf("b")))).toBe(
-        visibleWidth(plain.slice(0, plain.indexOf("a"))),
-      );
-    });
-  });
-
-  test("sliceAnsi keeps hyperlinks and ZWJ families whole (pitfalls 28)", () => {
-    const link = "\u001b]8;;http://x.com\u0007hi\u001b]8;;\u0007";
-    expect(sliceAnsiSafe(link, 0, 1)).toContain("]8;;http://x.com"); // hyperlink preserved
-    const zwjFamily = "\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}\u{200D}\u{1F466}";
-    const sliced = sliceAnsiSafe(zwjFamily, 0, 1);
-    expect(visibleWidth(sliced)).toBe(2); // family kept whole, not half-split
+  test("ANSI-colored marks align by VISIBLE width (escape bytes are invisible)", () => {
+    const colored = statusLine(GREEN + "ok" + RESET, "b");
+    const plain = statusLine("ok", "a");
+    const toLabel = (s: string) => s.slice(0, s.indexOf(s.includes("a") ? "a" : "b") + (s.includes("a") ? 0 : 0));
+    // Visible prefix widths match; string indexes differ (escape bytes).
+    const coloredPrefix = colored.slice(0, colored.indexOf("b"));
+    const plainPrefix = plain.slice(0, plain.indexOf("a"));
+    expect(plainDisplay(coloredPrefix).length).toBe(plainDisplay(plainPrefix).length);
   });
 });

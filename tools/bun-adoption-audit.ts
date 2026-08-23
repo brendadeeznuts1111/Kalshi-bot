@@ -10,7 +10,7 @@
 import { join } from 'node:path';
 import { assertBunAtLeast } from '../src/research/bun-native.ts';
 import { runAdoptionAudit } from '../src/lib/adoption-audit.ts';
-import { statusLine } from '../src/lib/ansi-width.ts';
+import { statusLine } from '../src/research/terminal-out.ts';
 
 assertBunAtLeast('1.4.0', 'bun:adoption-audit');
 

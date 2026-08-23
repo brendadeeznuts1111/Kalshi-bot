@@ -12,7 +12,7 @@ import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { assertBunAtLeast } from '../src/research/bun-native.ts';
 import { runPerfAudit, perfAuditPasses } from '../src/lib/perf-audit.ts';
-import { statusLine } from '../src/lib/ansi-width.ts';
+import { statusLine } from '../src/research/terminal-out.ts';
 
 assertBunAtLeast('1.4.0', 'bun:perf-audit');
 

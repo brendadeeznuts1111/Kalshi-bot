@@ -63,6 +63,28 @@ export function terminalLink(text: string, url: string): string {
   return `\u001b]8;;${url}\u0007${text}\u001b]8;;\u0007`;
 }
 
+/**
+ * Status row with defaulted, separated columns (audit/report tooling).
+ * Bun has no row formatter - this is additive, built on the native
+ * primitives above. Color-agnostic: pass a PRE-PAINTED mark (e.g.
+ * Bun.color('green','ansi') + text + reset); Bun.stringWidth ignores
+ * the ANSI when measuring, so colored marks align by VISIBLE width
+ * (pitfalls 31).
+ */
+export function statusLine(
+  mark: string,
+  label: string,
+  detail?: string,
+  opts?: { indent?: number; markWidth?: number; sep?: number },
+): string {
+  const indent = opts?.indent ?? 2;
+  const markWidth = opts?.markWidth ?? 6;
+  const sep = opts?.sep ?? 2;
+  const padded = padDisplay(mark, markWidth);
+  const pad = " ".repeat(indent) + padded + " ".repeat(sep);
+  return detail === undefined || detail.length === 0 ? pad + label : pad + label + ": " + detail;
+}
+
 export function repoTerminalLink(fullName: string, hyperlinks = isTtyStdout()): string {
   if (!hyperlinks) return fullName;
   const slash = fullName.indexOf("/");

@@ -49,7 +49,7 @@ import { join } from 'node:path';
 import { assertBunAtLeast } from '../src/research/bun-native.ts';
 import { hasFlag, argValue } from '../src/cli/argv.ts';
 import { fetchPool, warmDns } from '../src/lib/fetch-pool.ts';
-import { statusLine } from '../src/lib/ansi-width.ts';
+import { statusLine } from '../src/research/terminal-out.ts';
 import type { DnsWarmTarget } from '../src/lib/fetch-pool.ts';
 
 assertBunAtLeast('1.4.0', 'bun:docs-index');
