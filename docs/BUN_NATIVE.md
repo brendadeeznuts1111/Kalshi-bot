@@ -62,7 +62,7 @@ Full topic map (guides from the official table; **Ref** = types API; **Here** = 
 | Streaming HTML | [`HTMLRewriter`](https://bun.com/docs/runtime/html-rewriter) | — | yes — social/OG meta |
 | Headless Browser | [`Bun.WebView`](https://bun.com/docs/runtime/webview) | [/WebView](https://bun.com/reference/bun/WebView) | yes — tennis/liquidity ground, Massey ratings (CF bypass) |
 | Terminal/PTY | [`Bun.Terminal`](https://bun.com/docs/runtime/terminal) | [/Terminal](https://bun.com/reference/bun/Terminal) | — (replaces node-pty) |
-| Archive | [`Bun.Archive`](https://bun.com/docs/runtime/archive) | [/Archive](https://bun.com/reference/bun/Archive) | — (replaces tar) |
+| Archive | [`Bun.Archive`](https://bun.com/docs/runtime/archive) | [/Archive](https://bun.com/reference/bun/Archive) | yes — `bun:backup` tars research DBs (§22; KNOWN bug: `BunFile` values archive 0-byte, use `.bytes()`) |
 | Object Store | [`Bun.S3Client`](https://bun.com/docs/runtime/s3) | [/S3Client](https://bun.com/reference/bun/S3Client) | — |
 | JSON5 / JSONC | [`Bun.JSON5.parse`](https://bun.com/docs/runtime/json5) · [`Bun.JSONC.parse`](https://bun.com/docs/runtime/jsonc) | [/JSON5](https://bun.com/reference/bun/JSON5/parse) | JSON5: config; JSONC: tsconfig-style comments |
 | Hashing | [`Bun.password`](https://bun.com/docs/runtime/hashing#bun-password), [`Bun.hash`](https://bun.com/docs/runtime/hashing#bun-hash), [`Bun.CryptoHasher`](https://bun.com/docs/runtime/hashing#bun-cryptohasher), `Bun.sha` | [/hash](https://bun.com/reference/bun/hash) · [/CryptoHasher](https://bun.com/reference/bun/CryptoHasher) | yes — cache digests, canary |
@@ -878,7 +878,7 @@ bun test tests/institutions/live-scores.test.ts --grep "poll"
 - Use `bun test --grep "pattern"` (v1.3.6+) or `bun test -t "pattern"` to filter by test name.
 - `--grep` is an alias for `--test-name-pattern`.
 
-Filters on **`test()` / `describe()` names**, not file paths; pass a file path separately to narrow scope. Works with `--isolate` (this repo’s default via [`package.json`](../package.json) `"test"` script). See [Bun v1.3.6](https://bun.com/docs/blog/bun-v1.3.6#grep-flag-for-bun-test).
+Filters on **`test()` / `describe()` names**, not file paths; pass a file path separately to narrow scope. Works with `--parallel --timings` (this repo’s default via [`package.json`](../package.json) `"test"` script — 5.5x faster than the old `--isolate`, §23). See [Bun v1.3.6](https://bun.com/docs/blog/bun-v1.3.6#grep-flag-for-bun-test).
 
 Integration (live `gh`) is `bun run research` only.
 
