@@ -40,10 +40,13 @@ export const KALSHI_KEY_SECRET = "kalshi-private-key";
  *
  * opts.keychain: false (used by per-account resolvers) forces env-only —
  * account-scoped clients must never pick up a machine-global key.
+ * opts.service overrides the keychain service namespace (default
+ * com.kalshi-bot) — used to verify round-trips against a test service
+ * without touching production credentials.
  */
 export async function loadKalshiCredentials(
   env: Record<string, string | undefined> = Bun.env as Record<string, string | undefined>,
-  opts: { keychain?: boolean } = {},
+  opts: { keychain?: boolean; service?: string } = {},
 ): Promise<KalshiCredentials> {
   const keyId = (env.KALSHI_API_KEY_ID ?? env.KALSHI_ACCESS_KEY)?.trim();
   const pemInline = env.KALSHI_PRIVATE_KEY?.trim();
@@ -58,12 +61,13 @@ export async function loadKalshiCredentials(
     return { keyId, privateKey: createPrivateKey(pem) };
   }
   if (opts.keychain !== false) {
+    const service = opts.service ?? DEFAULT_SECRET_SERVICE;
     const vaultKeyId = await getSecret({
-      service: DEFAULT_SECRET_SERVICE,
+      service,
       name: KALSHI_KEY_ID_SECRET,
     });
     const vaultPem = await getSecret({
-      service: DEFAULT_SECRET_SERVICE,
+      service,
       name: KALSHI_KEY_SECRET,
     });
     if (vaultKeyId && vaultPem) {
