@@ -442,6 +442,14 @@ patterns (harvest-nationalities, fonbet fixture loader converted).
   * site: bun.com/docs/...md - a rendering of repo .mdx (YAML frontmatter
     stripped, render hints like icon= added); content equivalent, verified
     byte-diff on workers (10635 vs 10662 bytes = frontmatter only).
+- The page list is now DISCOVERED, not curated: tag/repo via GitHub trees
+  API (git/trees/<ref>?recursive=1, filter docs/<scope>/**.mdx) - 64
+  runtime pages at bun-v1.4.0, 333 pages under --scope all; site via
+  bun.com/sitemap.xml - 63 runtime pages (one fewer than the repo tree,
+  the released surface). Scope filter MUST run on the FULL url/path
+  before slicing (a filter on already-sliced paths yields 0 pages -
+  real bug, fixed). Name collisions: dedupe must append -1/-2... (docs/
+  has typescript.mdx AND runtime/typescript.mdx AND typescript-6.mdx).
 - As of bun 1.4.0, tag and repo main are BYTE-IDENTICAL on all 16 curated
   pages (md5 check) - no repo-ahead drift right now. The REAL skew is
   docs-vs-runtime and it EXISTS EVEN AT THE TAG: fetch.preconnect exists but
