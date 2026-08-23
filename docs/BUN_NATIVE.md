@@ -415,8 +415,10 @@ each has a real consumer in the repo where marked.
   subset-first; arrays match exactly) — used in redaction tests.
 - console is an AsyncIterable: src/lib/readline.ts readLine/confirmYes read
   stdin lines with a no-newline prompt (no readline dependency); injectable
-  source for tests. Consumer: tools/kalshi-rotate-key.ts interactive confirm
-  before replacing the live key (--yes skips for scripts).
+  source, default value on empty input, and timeoutMs that aborts safely
+  (auto-false) so scripts never hang. Consumers: tools/kalshi-rotate-key.ts
+  (live key rotation confirm, --yes skips) and tools/db-push-gate.ts
+  (db:push schema apply confirm, --yes / DB_PUSH_YES=1 skips).
 - inspectValue supports sorted (verified); maxArrayLength/maxStringLength are
   NOT supported at runtime — do not pass them.
 - [Bun.inspect.custom] hooks typed with the real 3-arg contract

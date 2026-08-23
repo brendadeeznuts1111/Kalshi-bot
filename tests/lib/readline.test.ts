@@ -17,6 +17,14 @@ describe("readLine", () => {
     expect(written).toBe("prompt>");
   });
 
+  test("returns default on empty input", async () => {
+    expect(await readLine("p", { source: sourceOf(""), default: "fallback" })).toBe("fallback");
+  });
+
+  test("confirmYes times out to false (never hangs)", async () => {
+    const never = { async *[Symbol.asyncIterator]() { await new Promise(() => {}); } } as AsyncIterable<string>;
+    expect(await confirmYes("q", { source: never, timeoutMs: 30 })).toBe(false);
+  });
   test("returns empty on EOF", async () => {
     expect(await readLine("p", { source: sourceOf() })).toBe("");
   });

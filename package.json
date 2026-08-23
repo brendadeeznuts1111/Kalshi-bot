@@ -146,7 +146,7 @@
     "regulatory:migrate": "bun src/regulatory/scripts/migrate.ts",
     "regulatory:sweep": "bun src/regulatory/scripts/sweep-violations.ts",
     "db:generate": "bunx drizzle-kit generate",
-    "db:push": "bunx drizzle-kit push",
+    "db:push": "bun tools/db-push-gate.ts",
     "db:studio": "bunx drizzle-kit studio",
     "db:check": "bunx drizzle-kit check",
     "protonpass:check": "bun tools/protonpass-run.ts --env-check",
