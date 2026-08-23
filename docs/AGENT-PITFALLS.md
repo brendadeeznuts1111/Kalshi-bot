@@ -133,6 +133,15 @@ decodes byte-exact at the destination:
   // variant B (tools.write is lexer-safe for base64 too):
   await tools.write({ file_path: '/tmp/x.b64', content: b64 });
   // then: base64 -d /tmp/x.b64 > target/file.ts
+  // variant B, pure Bun (no shell base64 dependency):
+  //   bun -e "const b = Buffer.from((await Bun.file('/tmp/x.b64').text()).trim(), 'base64'); await Bun.write('target/file.ts', b);"
+  // proven byte-exact (sha256 251998c0ff5314ec) with backticks, ${}, quotes, newlines.
+
+Commands themselves can carry the same hazard: a bash command containing
+dollar-open-brace or backticks breaks the program text. Encode the WHOLE command:
+
+  const cmdB64 = Buffer.from('echo "${PWD##*/}" && echo `pwd`', 'utf8').toString('base64');
+  // bash: echo '<cmdB64>' | base64 -d | bash   (proven: ${} expanded, backtick literal ran)
 
 Proven: a file containing backticks, ${interpolations}, single+double quotes, and
 escaped newlines round-tripped byte-exact and executed. Use this whenever content
@@ -152,7 +161,10 @@ ABSOLUTE imports.
 
 - The harness lexer parses the run_code program text BEFORE Bun runs - no Bun API
   can change that; base64 is the workaround, not a Bun feature.
-- Bun.escapeHTML / JSON.stringify are NOT JS-literal-safe: backticks and
-  dollar-open-brace survive both unescaped.
-- encodeURIComponent is NOT safe (leaves '()* unescaped - apostrophes break
-  single-quoted strings). Base64 is the only reliably safe encoding.
+- Bun.escapeHTML / JSON.stringify are NOT JS-literal-safe: verified that
+  JSON.stringify leaves backticks AND dollar-open-brace unescaped in its
+  output.
+- encodeURIComponent is NOT safe: it escapes backticks and dollar-open-brace
+  but LEAVES apostrophes - a single-quoted string breaks. Base64 (only
+  [A-Za-z0-9+/=]) is the only reliably safe encoding; all three claims were
+  probe-verified.
