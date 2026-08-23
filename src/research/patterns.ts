@@ -196,10 +196,9 @@ export const SERVE_PATTERNS = {
     reportsLatest:   "/reports/latest.md",
     /** Same path as ROUTES.architecture */
     architecture:    "/architecture",
-    /** Static partner ops board (baked via `bun run partner:dashboard`) */
-    partnerDashboard: "/partner-dashboard",
-    partnerDashboardSlash: "/partner-dashboard/",
-    partnerDashboardState: "/partner-dashboard/state.json",
+    // (Static partner ops board moved to the routes dir mount in
+    // serve.ts - /partner-dashboard/* -> public/partner-dashboard;
+    // constants removed with the hand-rolled handlers)
   },
 } as const;
 

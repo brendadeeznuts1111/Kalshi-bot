@@ -39,7 +39,7 @@ export const BANNED_PACKAGES = new Map<string, string>([
   ["npm-run-all", "bun run --parallel"],
   ["path-to-regexp", "Bun.serve path matching"],
   ["puppeteer", "Bun.WebView"],
-  ["serve-static", "Bun.serve"],
+  ["serve-static", "Bun.serve routes { dir } (v1.4 static dir mount)"],
   ["sharp", "Bun.Image"],
   ["slice-ansi", "Bun.sliceAnsi()"],
   ["tar", "Bun.Archive"],

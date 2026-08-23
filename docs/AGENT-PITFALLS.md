@@ -788,3 +788,38 @@ scanned; no code changes needed:
   scan, static) + runRuntimeSurfaceProbe (runtime behavior, dynamic).
   Both run in bun run guard -> check -> pre-commit. Tests in
   tests/lib/runtime-surface.test.ts (assert the same binary they guard).
+
+### 19. Bun.serve dir routes + 'also built in' APIs (probe-verified + adopted)
+
+- Bun.serve routes { dir } verified end-to-end: serves index.html for
+  dirs, correct Content-Type, ETag + Last-Modified, 304 on If-None-
+  Match, 206 Partial Content with Content-Range on Range, 404 for
+  missing, and routes + fallback fetch COEXIST (non-static paths fall
+  through). Traps: a dir mount path MUST end in '/*' (else: 'To mount a
+  directory, make sure the path ends in /*'), and a ROOT-LEVEL dir
+  mount would shadow every API route - keep static files under a
+  prefixed path.
+- ADOPTED in serve.ts: /registry/* and /partner-dashboard/* now use
+  routes { dir } (public/registry, public/partner-dashboard), replacing
+  ~60 lines of hand-rolled Bun.file + exists() + content-type switch
+  handlers (which lacked ETag/Range). /colors.css stayed in fetch (a
+  single root-level file). SERVE_PATTERNS.EXACT.partnerDashboard*
+  constants removed (dead). Tests: tests/research/serve-static-dir.
+  test.ts (200/etag/304/fallthrough, artifact-guarded). Guard message
+  for serve-static updated to point at the dir mount.
+- 'Also built in' surface probe: Bun.JSON5 (unquoted keys + comments
+  OK), Bun.JSONL parse/parseChunk, Bun.JSONC (QUOTED keys only - JSON
+  with comments, NOT JSON5; unquoted keys throw), Bun.TOML parse +
+  stringify, Bun.Archive, URLPattern (:id groups work),
+  CompressionStream/DecompressionStream, Response.textStream() - all
+  present on 1.4.0.
+- Post-quantum crypto: ML-DSA-44/65/87 generateKey works (sign/verify).
+  ML-KEM is 768/1024 ONLY (512 absent - blog-consistent) via FOUR new
+  SubtleCrypto methods (encapsulateBits/encapsulateKey/decapsulateBits/
+  decapsulateKey), NOT generateKey+deriveBits (that usage throws
+  'Unsupported key usage'). The KEM flow works: keypair ->
+  encapsulateKey(publicKey, {name:'AES-GCM',length:256}) ->
+  decapsulateKey. bun repl and bun ./README.md verified (markdown
+  renders, no VM).
+- fetch compress option re-verified here (already section 14):
+  gzip/deflate/br/zstd with auto Content-Encoding.

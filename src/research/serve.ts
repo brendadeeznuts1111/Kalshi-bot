@@ -1138,6 +1138,14 @@ export function createResearchServer(options: ServeOptions = {}) {
       [ROUTES.repo]: handleRepoPage,
       [ROUTES.latestReport]: handleLatestReport,
       [ROUTES.architecture]: handleArchitecture,
+      // Static baked artifacts via Bun.serve dir routes (v1.4, probe-verified:
+      // sendfile + Content-Type + ETag/Last-Modified + 304/412 + Range/206 +
+      // index.html, openat2 O_RESOLVE_BENEATH on Linux). Replaces the
+      // hand-rolled Bun.file handlers in the fallback fetch for
+      // /registry/* and /partner-dashboard/*. /colors.css stays in fetch
+      // (single file; a root-level /* dir route would shadow APIs).
+      "/registry/*": { dir: joinPath(ROOT, "public/registry") },
+      "/partner-dashboard/*": { dir: joinPath(ROOT, "public/partner-dashboard") },
     },
     async fetch(req: Request) {
       const url = new URL(req.url);
@@ -1218,59 +1226,10 @@ export function createResearchServer(options: ServeOptions = {}) {
         });
       }
 
-      if (url.pathname === "/registry/color-system.json") {
-        const file = Bun.file(joinPath(ROOT, "public/registry/color-system.json"));
-        if (!(await file.exists())) {
-          return new Response("color-system.json missing — run bun run colors:artifacts", { status: 404 });
-        }
-        return new Response(file, {
-          headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-cache" },
-        });
-      }
-
-      if (url.pathname === "/registry/sports-sources.json") {
-        const file = Bun.file(joinPath(ROOT, "public/registry/sports-sources.json"));
-        if (!(await file.exists())) {
-          return new Response("sports-sources.json missing — run bun run sports:registry:bake", {
-            status: 404,
-          });
-        }
-        return new Response(file, {
-          headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-cache" },
-        });
-      }
-
-      // Partner ops static board (bake: bun run partner:dashboard)
-      // Paths: /partner-dashboard[/] → index.html · /partner-dashboard/state.json
-      if (
-        url.pathname === SERVE_PATTERNS.EXACT.partnerDashboard ||
-        url.pathname === SERVE_PATTERNS.EXACT.partnerDashboardSlash ||
-        url.pathname === SERVE_PATTERNS.EXACT.partnerDashboardState
-      ) {
-        const name =
-          url.pathname === SERVE_PATTERNS.EXACT.partnerDashboardState
-            ? "state.json"
-            : "index.html";
-        const file = Bun.file(
-          joinPath(ROOT, "public/partner-dashboard", name),
-        );
-        if (!(await file.exists())) {
-          return new Response(
-            "partner-dashboard missing — run: bun run partner:dashboard",
-            { status: 404 },
-          );
-        }
-        const contentType =
-          name === "state.json"
-            ? "application/json; charset=utf-8"
-            : "text/html; charset=utf-8";
-        return new Response(file, {
-          headers: {
-            "content-type": contentType,
-            "cache-control": "no-cache",
-          },
-        });
-      }
+      // NOTE: /registry/* and /partner-dashboard/* static files are now
+      // served by the routes dir mounts above (sendfile + ETag + Range +
+      // 304, probe-verified); the hand-rolled Bun.file handlers were
+      // removed. /colors.css remains here (single root-level file).
 
       if (url.pathname === "/api/hq") {
         return json(await buildHqPayload());
