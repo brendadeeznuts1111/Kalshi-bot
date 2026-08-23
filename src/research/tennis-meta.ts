@@ -88,7 +88,11 @@ function loadSeed<T>(file: string): Record<string, T> {
   }
 }
 
-/** Load a TOML seed file with same key normalization as loadSeed. */
+/**
+ * Load a TOML seed file with same key normalization as loadSeed.
+ * NOTE (Bun 1.4): bare TOML datetimes parse to Temporal objects
+ * (Instant/PlainDate/...), quoted values stay strings — do not assume string.
+ */
 function loadTomlSeed<T>(file: string): Record<string, T> {
   const path = joinPath(SEED_DIR, file);
   if (!existsSync(path)) return {};

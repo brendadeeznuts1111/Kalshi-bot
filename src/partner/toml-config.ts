@@ -470,6 +470,8 @@ function parseSkin(row: PartnersTomlSkin): OutCapacityRow | null {
 /**
  * Parse TOML text → partner domain doc.
  * Throws SyntaxError on invalid TOML; Error on shape failures.
+ * NOTE (Bun 1.4): strict parser (unquoted strings/unsafe ints throw) and
+ * bare datetimes parse to Temporal objects, not strings.
  */
 export function parsePartnersToml(text: string): PartnersTomlDoc {
   let raw: unknown;
