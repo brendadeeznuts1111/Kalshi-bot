@@ -88,6 +88,7 @@
     "db:canonicalize": "bun tools/db-canonicalize.ts",
     "fonbet:sync": "bun tools/fonbet-sync-cli.ts",
     "agent:encode": "bun tools/agent-encode.ts",
+    "test:failed": "bun test --only-failures --isolate --timeout 15000",
     "inventory:leagues": "bun tools/inventory-leagues-cli.ts",
     "inventory:enrich": "bun tools/inventory-sync-cli.ts --enrich-only --sport=all --enrich-scope=unlinked",
     "inventory:enrich:quality": "bun tools/inventory-sync-cli.ts --enrich-only --sport=all --enrich-scope=unlinked --dry-run --json",

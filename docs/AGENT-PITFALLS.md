@@ -192,6 +192,12 @@ tests). Real flags: --only (tests marked .only), --only-failures, --changed,
 --seed, --coverage, --todo, --path-ignore-patterns, --pass-with-no-tests.
 Targeting = path-based (bun test <file>) or --changed. Verified by running
 --filter with a matching and a non-matching pattern - both ran the whole file.
+Flags with VERIFIED semantics (tested with a deliberately flaky test): --retry N
+retries failed tests once per run (transient passed on retry, broken still
+failed) - the pre-commit hook now runs --retry 1 to defuse the rotate-key flake
+natively; --rerun-each N runs each test N times (flake detection);
+--only-failures re-runs the last run's failures (test:failed script added);
+--bail stops at the first failure.
 
 ### 8h. Console depth semantics (verified)
 

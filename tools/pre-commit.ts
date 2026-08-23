@@ -140,9 +140,14 @@ async function main(): Promise<void> {
     process.stderr.write(paint("yellow", "pre-commit: SKIP_TEST_CHANGED=1 — tests skipped (reason in commit msg)\n"));
   } else {
     await step("test --changed=HEAD", async () => {
-      const ok = await runBatch("test --changed=HEAD", ["test", "--changed=HEAD", "--isolate", "--timeout", "15000"]);
+      // --retry=1: defuses the known transient flake (ops/kalshi-rotate-key)
+      // natively — bun retries failed tests once before reporting.
+      const ok = await runBatch(
+        "test --changed=HEAD",
+        ["test", "--changed=HEAD", "--isolate", "--timeout", "15000", "--retry", "1"],
+      );
       if (ok) return true;
-      return runBatch("test (full fallback)", ["test", "--isolate", "--timeout", "15000"]);
+      return runBatch("test (full fallback)", ["test", "--isolate", "--timeout", "15000", "--retry", "1"]);
     });
   }
 

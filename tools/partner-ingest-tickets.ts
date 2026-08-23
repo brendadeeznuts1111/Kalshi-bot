@@ -140,11 +140,9 @@ function ingestWire(
 }
 
 async function listTicketFiles(dir: string): Promise<string[]> {
-  const names = await readdir(dir);
-  return names
-    .filter((n) => n.endsWith(".json") || n.endsWith(".jsonl"))
-    .sort()
-    .map((n) => join(dir, n));
+  const { listFilesAsync } = await import("../src/lib/glob.ts");
+  const names = await listFilesAsync("*.{json,jsonl}", { cwd: dir });
+  return names.map((n) => join(dir, n));
 }
 
 async function main(): Promise<void> {
