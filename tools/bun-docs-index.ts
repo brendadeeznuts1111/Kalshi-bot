@@ -9,20 +9,29 @@
  * Flags:
  *   --refresh   re-fetch pages even when cached recently.
  *   --check     report cache age/drift without fetching.
+ *   --source repo|site  repo = oven-sh/bun main branch raw .mdx (default,
+ *           may be AHEAD of the installed runtime); site = bun.com/docs
+ *           raw .md (released-docs surface, frontmatter stripped + render
+ *           hints). The site is a rendering of the repo .mdx; content is
+ *           equivalent. sourceUrl in INDEX.json records provenance.
  *
  * @see docs/AGENT-PITFALLS.md (verify against the reference, not guesses)
  */
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { assertBunAtLeast } from '../src/research/bun-native.ts';
-import { hasFlag } from '../src/cli/argv.ts';
+import { hasFlag, argValue } from '../src/cli/argv.ts';
 
 assertBunAtLeast('1.4.0', 'bun:docs-index');
 
 const ROOT = join(import.meta.dir, '..');
 const CACHE_DIR = join(ROOT, 'research/cache/bun-docs');
 const INDEX_PATH = join(CACHE_DIR, 'INDEX.json');
-const RAW = 'https://raw.githubusercontent.com/oven-sh/bun/main/docs/';
+// Source choice: repo raw (main branch .mdx, can be AHEAD of the
+// installed runtime - e.g. fetch.preconnect https / Bun.html cases) vs
+// the site's raw .md endpoints (released-docs surface). Default repo.
+const REPO_BASE = 'https://raw.githubusercontent.com/oven-sh/bun/main/docs/';
+const SITE_BASE = 'https://bun.com/docs/';
 
 /** Curated reference pages (repo-relative docs paths, .mdx). */
 const PAGES: Array<{ name: string; path: string }> = [
@@ -56,6 +65,8 @@ function readIndex(): Index | null {
 async function main(): Promise<void> {
   const refresh = hasFlag('refresh');
   const check = hasFlag('check');
+  const source = argValue('source') === 'site' ? 'site' : 'repo';
+  const base = source === 'site' ? SITE_BASE : REPO_BASE;
   const index = readIndex() ?? { pages: [], fetchedAt: new Date(0).toISOString() };
   const byName = new Map(index.pages.map((p) => [p.name, p]));
   if (check) {
@@ -73,7 +84,7 @@ async function main(): Promise<void> {
       entries.push(existing);
       continue;
     }
-    const url = RAW + page.path;
+    const url = base + (source === 'site' ? page.path.replace(/\.mdx$/, '.md') : page.path);
     const res = await fetch(url);
     const ok = res.ok;
     const text = ok ? await res.text() : '';
