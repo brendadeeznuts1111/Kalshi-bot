@@ -157,15 +157,14 @@ Proven on docs/BUN_NATIVE.md (82,517 bytes): full text, all 1,138 lines, last li
 intact - where tools.read truncates silently. Run via bun -e or a /tmp probe with
 ABSOLUTE imports.
 
-### 8c. What Bun does NOT help with (honest limits)
-### 8d. Automate it: bun run agent:encode [file]
+### 8c. Automate it: bun run agent:encode [file]
 
 tools/agent-encode.ts reads stdin (or a file path) and prints the single-line
 base64 - paste into run_code, decode with `echo <out> | base64 -d > target` or the
 pure-Bun variant in 8a. Tested byte-exact (sha256 match) on content with
 backticks, ${}, and mixed quotes.
 
-### 8e. Kill the SHELL-quoting class: Bun.spawn with an args-array, not bash -c
+### 8d. Kill the SHELL-quoting class: Bun.spawn with an args-array, not bash -c
 
 A command string run through bash re-parses quotes, backticks (command
 substitution), and ${} (expansion) - even when the JS string carried them safely
@@ -179,64 +178,7 @@ Args-arrays are lexer-safe (values are double-quoted JS strings) AND shell-safe
 (no re-parsing). Note: under `bun -e script arg`, the arg is argv[1] (argv[0] is
 the bun binary; the -e script is not in argv).
 
-## 9. Bun Shell (`Bun.$`) switch — verified API surface (2026-08-23)
-
-Converted all non-keep-list `Bun.spawn` sites to `Bun.$` (see BUN_SHELL.md
-"Repo-wide default" + keep-list). Verified on Bun 1.4.0, in order of surprise:
-
-| Symptom | Cause | Fix |
-|---------|-------|-----|
-| `TypeError: $`cmd` is not a function` | The callable-options form (`$`cmd`({ stdout: "inherit" })`) does not exist in 1.4.0 | Default `$` streams to the parent (≈ inherit) and still returns captured Buffers; `.quiet()` suppresses |
-| `$`cmd`.stdin is not a function` | No `.stdin()` method in 1.4.0 | JS-object redirection: `$`cmd ${args} < ${Buffer.from(value)}`` (verified; empty buffer closes stdin); `printf|` pipe as fallback |
-| `$`cmd`.stdout("inherit") is not a function` | No stdio-setter methods | Default streaming is inherit-like; use `.quiet()` for capture |
-| `.text()` / `.json()` throw on non-zero exit | Documented throw-path | `.nothrow().quiet()` → `{ exitCode, stdout, stderr }` |
-| NUL bytes in output? | They round-trip byte-exact (`printf "a\0b"` probe) | `stdout.toString().split("\0").filter(Boolean)` for `git ls-files -z` |
-
-Rules that still apply: never `$`bash -c "…"` with interpolated input; array
-interpolation escapes each element as a separate argv token.
-## 10. Grep discipline + Node->Bun spawnSync (2026-08-23)
-
-### 10a. A backslash-b in a JS template literal silently mangles a grep
-
-Writing `grep -E '\bspawn\('` inside a run_code template literal turns the
-`\b` into a BACKSPACE byte (JS string escape), so the pattern literally
-searches for a backspace followed by "spawn(" - matching NOTHING and
-producing a false "zero usage" claim (this bit the child_process audit:
-the repo had 3 node:child_process sites all along). Fix: use the repo's
-rgFiles / escapeForRg (src/lib/rg.ts) for code greps, or double-escape the
-backslash in template literals.
-
-### 10b. Node child_process.spawnSync -> Bun.spawnSync contract
-
-- result.status -> result.exitCode (Node-only status fails typecheck).
-- encoding: 'utf8' is NOT a Bun option - Bun returns Buffers; call
-  .stdout.toString().
-- Node returns status: null on a missing binary; **Bun THROWS on spawn
-  failure (ENOENT)** - wrap optional binaries (rg, openssl, find) in
-  try/catch and return the same fallback as a non-zero exit.
-- **Bun.$ passes stdin through** to the child by default (verified:
-  `echo hi | bun -e 'await $`cat`'` -> hi), but it PIPES stdout/stderr -
-  the child sees isTTY=false. For CLIs that need the parent's true TTY fds
-  (pass-cli agent prompts, drizzle-kit push), keep Bun.spawn with stdio
-  inherit and list the file in SPAWN_KEEP_LIST.
-- **Bun.dns.resolve* shapes (1.4.0, runtime-probed):** CNAME/NS -> string[],
-  TXT -> string[][] (flatMap the chunks), MX -> [{priority, exchange}]. A host
-  with NO CNAME REJECTS (ENOTFOUND) - .catch(() => []) mirrors dig empty
-  output. bun-types 1.4.0 does NOT declare resolve* (types lag the runtime) -
-  use an isolated cast (host-discover DnsResolveSurface) and add a
-  runtime-surface guard check.
-- **node:tls works on 1.4.0** (probed): tls.connect({ host, servername,
-  rejectUnauthorized: false }) + socket.getPeerCertificate().subjectaltname
-  returns 'DNS:github.com, DNS:www.github.com' - replaced openssl s_client +
-  x509 in host-discover with zero subprocess. Filter to DNS: entries, lowercase,
-  sort; wrap with an 8s timeout -> [] (the old openssl path had none).
-  rejectUnauthorized:false trips the breaking-audit TLS check - the probe-only
-  case is allowlisted via TLS_OVERRIDE_ALLOWLIST (you cannot chain-verify a
-  host you are identifying for the first time).
-
-
-
-### 8f. The run_code worker is plain Node - SOLVED with `bun run agent:probe`
+### 8e. The run_code worker is plain Node - SOLVED with `bun run agent:probe`
 
 Bun globals are NOT available inside a run_code program (Bun.spawnSync threw
 'Bun is not defined'). SOLVED: `bun run agent:probe -- <code-file>` (or stdin)
@@ -244,8 +186,7 @@ writes the code to a repo-local `.probe-tmp.ts` (relative imports resolve), runs
 it under bun, forwards stdout/stderr, and deletes the temp (verified). Pair with
 agent:encode for tricky code: encode -> write .b64 -> base64 -d -> probe.
 
-### 8j. Friction-killers shipped (this repo)
-### 8k. Exit codes & processes (verified on 1.4.0)
+### 8f. Exit codes & processes (verified on 1.4.0)
 
 - process.exitCode = n is GRACEFUL (pending timers/trailing code run, exit
   hooks run); process.exit(n) is IMMEDIATE (no stack unwinding, pending
@@ -1354,6 +1295,61 @@ notes - they have structural enforcement:
   * Remaining Bun casts are legit + documented: kalshi-ws WebSocket
     ctor (lib.dom wins global ctor), serve.ts Bun.Serve.Options
     (bun-types 1.3.x lag), data-shape casts (optional fields).
+## 9. Bun Shell (`Bun.$`) switch — verified API surface (2026-08-23)
+
+Converted all non-keep-list `Bun.spawn` sites to `Bun.$` (see BUN_SHELL.md
+"Repo-wide default" + keep-list). Verified on Bun 1.4.0, in order of surprise:
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| `TypeError: $`cmd` is not a function` | The callable-options form (`$`cmd`({ stdout: "inherit" })`) does not exist in 1.4.0 | Default `$` streams to the parent (≈ inherit) and still returns captured Buffers; `.quiet()` suppresses |
+| `$`cmd`.stdin is not a function` | No `.stdin()` method in 1.4.0 | JS-object redirection: `$`cmd ${args} < ${Buffer.from(value)}`` (verified; empty buffer closes stdin); `printf|` pipe as fallback |
+| `$`cmd`.stdout("inherit") is not a function` | No stdio-setter methods | Default streaming is inherit-like; use `.quiet()` for capture |
+| `.text()` / `.json()` throw on non-zero exit | Documented throw-path | `.nothrow().quiet()` → `{ exitCode, stdout, stderr }` |
+| NUL bytes in output? | They round-trip byte-exact (`printf "a\0b"` probe) | `stdout.toString().split("\0").filter(Boolean)` for `git ls-files -z` |
+
+Rules that still apply: never `$`bash -c "…"` with interpolated input; array
+interpolation escapes each element as a separate argv token.
+## 10. Grep discipline + Node->Bun spawnSync (2026-08-23)
+
+### 10a. A backslash-b in a JS template literal silently mangles a grep
+
+Writing `grep -E '\bspawn\('` inside a run_code template literal turns the
+`\b` into a BACKSPACE byte (JS string escape), so the pattern literally
+searches for a backspace followed by "spawn(" - matching NOTHING and
+producing a false "zero usage" claim (this bit the child_process audit:
+the repo had 3 node:child_process sites all along). Fix: use the repo's
+rgFiles / escapeForRg (src/lib/rg.ts) for code greps, or double-escape the
+backslash in template literals.
+
+### 10b. Node child_process.spawnSync -> Bun.spawnSync contract
+
+- result.status -> result.exitCode (Node-only status fails typecheck).
+- encoding: 'utf8' is NOT a Bun option - Bun returns Buffers; call
+  .stdout.toString().
+- Node returns status: null on a missing binary; **Bun THROWS on spawn
+  failure (ENOENT)** - wrap optional binaries (rg, openssl, find) in
+  try/catch and return the same fallback as a non-zero exit.
+- **Bun.$ passes stdin through** to the child by default (verified:
+  `echo hi | bun -e 'await $`cat`'` -> hi), but it PIPES stdout/stderr -
+  the child sees isTTY=false. For CLIs that need the parent's true TTY fds
+  (pass-cli agent prompts, drizzle-kit push), keep Bun.spawn with stdio
+  inherit and list the file in SPAWN_KEEP_LIST.
+- **Bun.dns.resolve* shapes (1.4.0, runtime-probed):** CNAME/NS -> string[],
+  TXT -> string[][] (flatMap the chunks), MX -> [{priority, exchange}]. A host
+  with NO CNAME REJECTS (ENOTFOUND) - .catch(() => []) mirrors dig empty
+  output. bun-types 1.4.0 does NOT declare resolve* (types lag the runtime) -
+  use an isolated cast (host-discover DnsResolveSurface) and add a
+  runtime-surface guard check.
+- **node:tls works on 1.4.0** (probed): tls.connect({ host, servername,
+  rejectUnauthorized: false }) + socket.getPeerCertificate().subjectaltname
+  returns 'DNS:github.com, DNS:www.github.com' - replaced openssl s_client +
+  x509 in host-discover with zero subprocess. Filter to DNS: entries, lowercase,
+  sort; wrap with an 8s timeout -> [] (the old openssl path had none).
+  rejectUnauthorized:false trips the breaking-audit TLS check - the probe-only
+  case is allowlisted via TLS_OVERRIDE_ALLOWLIST (you cannot chain-verify a
+  host you are identifying for the first time).
+
 ## 11. Docs-grounding: a word across Bun docs pages is NOT a concept (2026-08-23)
 
 "Metadata" appears across unrelated Bun docs pages with no unified topic -
@@ -1376,4 +1372,3 @@ into the glossary, cross-referencing pages, or claiming it in BUN_NATIVE.md.
 A shared word is a coincidence; a concept needs its own API/page. This repo's
 glossary (src/institutions/glossary.ts) is Kalshi-domain ONLY - do not add
 Bun-docs words like metadata to it.
-

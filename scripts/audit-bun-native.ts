@@ -245,7 +245,7 @@ export const SPAWN_KEEP_LIST = new Set([
   "tools/pre-commit.ts", // Bun.spawnSync in blocking sync gate
   "tools/agent-probe.ts", // Bun.spawnSync in blocking sync probe
   "src/lib/rg.ts", // Bun.spawnSync - sync audit helper (rg)
-  "src/lib/breaking-audit.ts", // Bun.spawnSync - sync audit helper (find)
+  "src/lib/breaking-audit.ts", // Bun.spawnSync - sync audit helper (rg via src/lib/rg.ts)
   "tools/db-push-gate.ts", // true TTY fds for interactive drizzle-kit prompt
   "tools/protonpass-run.ts", // true TTY fds for pass-cli agent prompts (secrets)
   "tests/lib/fetch-pool-h2.test.ts", // Bun.spawnSync openssl cert-gen in blocking test setup

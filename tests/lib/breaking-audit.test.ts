@@ -51,6 +51,18 @@ describe('runBreakingAudit', () => {
     expect(lock.status).toBe('warn');
   });
 
+  test('flags a real .node addon binary (Bun.Glob scanSync)', () => {
+    write('src/addon.node', '\x7fELF');
+    try {
+      const findings = runBreakingAudit(root);
+      const addon = findings.find((f) => f.check.includes('Native addons'))!;
+      expect(addon.status).toBe('warn');
+      expect(addon.detail).toContain('src/addon.node');
+    } finally {
+      rmSync(join(root, 'src/addon.node'));
+    }
+  });
+
   test('does not match table.nodeId as a native addon (find -name *.node)', () => {
     // 'table.nodeId' column reference must NOT trigger the addon check,
     // and the audit must not break when find returns nothing.

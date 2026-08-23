@@ -120,10 +120,15 @@ export function runBreakingAudit(root: string): BreakingFinding[] {
   const addonDeps = Object.keys(allDeps).filter((d) => /node-gyp|napi|better-sqlite3|sharp|bcrypt|canvas/.test(d));
   let addonFiles: string[] = [];
   try {
-    const findOut = Bun.spawnSync(['find', src, tools, '-name', '*.node', '-type', 'f'], { stdout: 'pipe', stderr: 'pipe' });
-    addonFiles = findOut.stdout.toString().split('\n').filter(Boolean).map((p) => p.replace(root + '/', ''));
+    // Native glob instead of `find` subprocess (deepest Bun pattern): results
+    // are root-relative like the old find output; cwd=root so missing dirs
+    // simply match nothing.
+    addonFiles = [...new Set([
+      ...new Bun.Glob('src/**/*.node').scanSync({ cwd: root, onlyFiles: true }),
+      ...new Bun.Glob('tools/**/*.node').scanSync({ cwd: root, onlyFiles: true }),
+    ])];
   } catch {
-    addonFiles = []; // find unavailable - treat as no addon files
+    addonFiles = []; // glob unavailable - treat as no addon files
   }
   findings.push({
     check: 'Native addons (NODE_MODULE_VERSION 147 rebuild)',
