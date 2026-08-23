@@ -1059,3 +1059,10 @@ scanned; no code changes needed:
   the findings myself worked better. Recon reports were structured and
   specific enough to act on directly; the fetch-pool agent even
   root-caused the flake that had been masked as a 'known transient'.
+- Audit-tooling report closeout (all 6 checks green): the remaining two
+  LOW findings are fixed - perf-audit now imports spawnSync at top
+  level (was inline require; zero-require convention 8l) and
+  claims-audit's dead CACHE const (bun-docs/../) removed. Verified all
+  five CLIs exit 0 on true state: breaking 0/1, claims 0 on real
+  claim, deps/perf/adoption 0. The claims-audit HIGH (argv slice)
+  and deps/adoption MEDIUM fixes were part of 39b633a.

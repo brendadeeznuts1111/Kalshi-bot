@@ -25,7 +25,6 @@ import { auditClaims, htmlToText } from '../src/lib/claims-audit.ts';
 assertBunAtLeast('1.4.0', 'bun:claims-audit');
 
 const ROOT = join(import.meta.dir, '..');
-const CACHE = join(ROOT, 'research/cache/bun-docs/../');
 const BLOG_CACHE = join(ROOT, 'research/cache/bun-blog.html');
 
 function argValue(name: string): string | undefined {

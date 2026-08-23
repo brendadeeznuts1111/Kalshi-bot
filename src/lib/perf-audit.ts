@@ -10,6 +10,7 @@
  * Status: ok | warn | n/a (n/a = not applicable to this repo).
  */
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 
 export type PerfCheck = { name: string; status: 'ok' | 'warn' | 'n/a'; detail: string };
@@ -47,7 +48,6 @@ export function runPerfAudit(root: string, globalBunfigPath?: string): PerfCheck
       : 'test script missing --parallel/--timings: ' + (testScript || '(none)'),
   });
 
-  const { spawnSync } = require('node:child_process');
   const buildFiles = spawnSync('rg', ['-l', '--glob', '!**/*audit*.ts', 'Bun.build', join(root, 'src'), join(root, 'tools')], { encoding: 'utf8' });
   const usesBuild = buildFiles.status === 0 && buildFiles.stdout.trim().length > 0;
   checks.push({
