@@ -36,6 +36,8 @@ const INTERVAL_LOGGER = "*/5 * * * *";
 export const INTERVAL_SPORTS_METADATA = "*/15 * * * *";
 const INTERVAL_ANALYSIS = "0 8 * * *";
 const INTERVAL_GLOSSARY_URLS = "0 2 * * *";
+/** Weekly Bun release-blog watch (opt-in BUN_RELEASE_WATCH=1). */
+export const INTERVAL_BUN_RELEASE = "0 6 * * 1";
 const INTERVAL_COLOR_ARTIFACTS = "0 3 * * *";
 const INTERVAL_CONTRAST = "0 4 * * *";
 /** Match liquidity recompute + HTML ground (volume backfill opt-in via env). */
@@ -405,6 +407,25 @@ async function jobPartnerFinance(): Promise<void> {
  * Syncs configured sports with a freshness gate, then crossrefs each
  * configured sport and logs coverage.
  */
+/** Weekly Bun release-blog integration (Bun.cron, opt-in BUN_RELEASE_WATCH=1). */
+async function jobBunReleaseWatch(): Promise<void> {
+  if (Bun.env.BUN_RELEASE_WATCH !== "1") return;
+  const start = Date.now();
+  try {
+    const proc = Bun.spawn(["bun", "run", "bun:release-watch"], {
+      cwd: import.meta.dir + "/..",
+      stdout: "inherit",
+      stderr: "inherit",
+    });
+    const code = await proc.exited;
+    if (code !== 0 && code !== 1) throw new Error(`bun:release-watch exited ${code}`);
+    // exit 1 = new release with absent APIs (the report says which) — logged, not fatal.
+    console.error(`[cron:bun-release] ok · ${Date.now() - start}ms`);
+  } catch (err) {
+    console.error(`[cron:bun-release] Error: ${err}`);
+  }
+}
+
 async function jobMasseySync(): Promise<void> {
   if (!MASSEY_SYNC_ENABLED) return;
   const start = Date.now();
@@ -547,6 +568,7 @@ async function main(): Promise<void> {
   analysis: ${INTERVAL_ANALYSIS}
   urls:     ${INTERVAL_GLOSSARY_URLS}
   colors:   ${INTERVAL_COLOR_ARTIFACTS}
+  bun-rel:  ${Bun.env.BUN_RELEASE_WATCH === "1" ? INTERVAL_BUN_RELEASE : "off (BUN_RELEASE_WATCH=1)"}
   contrast: ${INTERVAL_CONTRAST}
   liquidity:${INTERVAL_LIQUIDITY}
   inventory: ${INVENTORY_SYNC_ENABLED ? INTERVAL_INVENTORY_SYNC : "off (INVENTORY_SYNC=1)"}
@@ -559,6 +581,7 @@ async function main(): Promise<void> {
   Bun.cron(INTERVAL_ANALYSIS, jobAnalysis);
   Bun.cron(INTERVAL_GLOSSARY_URLS, jobGlossaryUrls);
   Bun.cron(INTERVAL_COLOR_ARTIFACTS, jobColorArtifacts);
+  Bun.cron(INTERVAL_BUN_RELEASE, jobBunReleaseWatch);
   Bun.cron(INTERVAL_CONTRAST, jobContrast);
   Bun.cron(INTERVAL_LIQUIDITY, jobLiquidityPipeline);
   if (INVENTORY_SYNC_ENABLED) {
