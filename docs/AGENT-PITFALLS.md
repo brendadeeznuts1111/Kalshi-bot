@@ -304,6 +304,14 @@ Node APIs are intentional:
   (decode/pixels/toPixels undefined) - so 'average color from pixels'
   patterns are unimplementable with Bun.Image alone; the placeholder/
   thumbhash part is real.
+- Ecosystem diagram claims verified: Bun.markdown is a NAMESPACE (html,
+  ansi, render, react - all functions) - the direct `Bun.markdown(md)`
+  call form is WRONG (not callable). The repo ALREADY delegates natively:
+  markdownToHtml / markdownToAnsi are thin wrappers over Bun.markdown.
+  html / .ansi; render/react unused (no consumer). Bun.Image.
+  fromClipboard, Bun.s3.file, Bun.password.hash, Bun.sql AND Bun.SQL
+  (alias) all exist on 1.4.0. Version numbers in such tables are NOT
+  verifiable from the installed build - treat them as ungrounded.
 - REAL BUG FOUND via Bun.Image: Bun.deflateSync emits RAW deflate (first
   bytes 0x63 0x64, no zlib header) but PNG IDAT requires an RFC 1950 zlib
   stream. Our hand-built solid PNG passed metadata-only checks and sips
