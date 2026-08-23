@@ -1324,6 +1324,12 @@ export function createResearchServer(options: ServeOptions = {}) {
       // (server-side parseChunk pipeline). ?file=<name>&event-type=TYPE&limit=N
       if (url.pathname === "/api/events.jsonl") {
         const file = url.searchParams.get("file") ?? "";
+        // Path traversal guard (server-audit finding): ?file= must be a
+        // bare log NAME inside LIVE_TRACKER_LOG_DIR - reject any path
+        // separator, dot-dot, or empty/absolute input before joinPath.
+        if (!/^[A-Za-z0-9._-]+$/.test(file)) {
+          return json({ error: "invalid log file name: " + file.slice(0, 80) }, 400);
+        }
         const eventType = url.searchParams.get("event-type");
         const limit = Math.max(0, Number(url.searchParams.get("limit") ?? "0") || 0);
         const f = Bun.file(joinPath(LIVE_TRACKER_LOG_DIR, file));

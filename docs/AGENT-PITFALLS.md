@@ -1066,3 +1066,17 @@ scanned; no code changes needed:
   five CLIs exit 0 on true state: breaking 0/1, claims 0 on real
   claim, deps/perf/adoption 0. The claims-audit HIGH (argv slice)
   and deps/adoption MEDIUM fixes were part of 39b633a.
+- Server-audit closeout (serve.ts): the 3 actionable findings (bookCache
+  cap, listener removal, 4-cache clear) landed in 39b633a. Two more
+  fixed here: (1) SECURITY - /api/events.jsonl?file= was a path-
+  traversal primitive (joinPath on raw input, no '..' normalization);
+  now rejects any non-[A-Za-z0-9._-] name with 400 (probe: ..%2F..%2F
+  and %2Fetc%2Fpasswd both 400; bare names reach the normal 404
+  path). Test-locked in tests/research/serve-events-jsonl-guard.test.ts.
+  (2) PROBE CORRECTION of the agent's suggestion: the audit claimed an
+  exact-route Response value (BunFile body) would regain ETag/304 for
+  /colors.css - WRONG, verified: neither Response-wrapped nor route-
+  value BunFiles emit ETag/304 (probe: both NO etag, If-None-Match
+  200); ONLY { dir } mounts do (section 19). /colors.css keeps its
+  current shape (cache-control: no-cache + Range/206), which is the
+  best available for a single hand-rolled file.
