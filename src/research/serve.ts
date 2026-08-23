@@ -75,6 +75,7 @@ import {
 import { codedError, httpStatusFor, type ErrorCode } from "../institutions/error-codes.ts";
 import { designAgent } from "../agent/design-agent.ts";
 import { fetchKalshiBookSnapshot, midFromBookSnapshot } from "../bot/kalshi-market-data.ts";
+import { asKalshiMarketTicker } from "../institutions/event-store/brands.ts";
 import { buildSportsSourceCatalogPayload } from "./sports-source-catalog.ts";
 import {
   requireTradingCancelPrincipal,
@@ -563,7 +564,7 @@ async function handleTradingBook(req: Request): Promise<Response> {
   const hit = bookCache.get(key);
   if (hit && nowMs < hit.expiresAtMs) return json(hit.value);
   try {
-    const book = await fetchKalshiBookSnapshot(ticker as never, { depth });
+    const book = await fetchKalshiBookSnapshot(asKalshiMarketTicker(ticker), { depth });
     const bestBid = book.bids[0]?.priceCents ?? null;
     const bestAsk = book.asks[0]?.priceCents ?? null;
     const value = {
@@ -1134,7 +1135,7 @@ export function createResearchServer(options: ServeOptions = {}) {
   // 'critical', drop the in-process caches so the OS doesn't kill us.
   // (Levels typed 'warning' | 'critical' in bun-types; event only shows
   // in eventNames after a listener is registered — runtime-surface probe.)
-  const onMemoryPressure = (level: string) => {
+  const onMemoryPressure = (level: 'warning' | 'critical') => {
     if (level !== 'critical') return;
     const before = bookCache.size;
     bookCache.clear();
@@ -1143,7 +1144,7 @@ export function createResearchServer(options: ServeOptions = {}) {
     resetTennisBoardCache();
     console.warn('memoryPressure critical: cleared ' + before + ' bookCache + source catalog + auth + tennis board caches');
   };
-  process.on('memoryPressure', onMemoryPressure as never);
+  process.on('memoryPressure', onMemoryPressure);
   const serveOptions = {
     port,
     // Hardening: Bun's defaults are a 128MB request body cap and a 10s idle
@@ -1505,7 +1506,7 @@ export function createResearchServer(options: ServeOptions = {}) {
   // unremoved listener would accumulate across runs (recon finding, LOW).
   const origStop = server.stop.bind(server);
   (server as { stop?: () => void }).stop = () => {
-    process.removeListener('memoryPressure', onMemoryPressure as never);
+    process.removeListener('memoryPressure', onMemoryPressure);
     return origStop(false);
   };
   return server;

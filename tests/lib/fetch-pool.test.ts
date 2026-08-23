@@ -110,12 +110,13 @@ describe('fetchText', () => {
     const echo = Bun.serve({
       port: 0,
       async fetch(req) {
-        const r = req as unknown as { headers: Headers; arrayBuffer(): Promise<ArrayBuffer> };
-        const enc = r.headers.get('content-encoding') ?? '';
-        const raw = new Uint8Array(await r.arrayBuffer());
+        // req is BunRequest which extends DOM Request - headers and
+        // arrayBuffer are fully typed (bun-types 1.4), no cast needed.
+        const enc = req.headers.get('content-encoding') ?? '';
+        const raw = new Uint8Array(await req.arrayBuffer());
         return new Response(JSON.stringify({ enc, bytes: raw.byteLength, b64: Buffer.from(raw).toString('base64') }));
       },
-    } as Parameters<typeof Bun.serve>[0]);
+    });
     try {
       const payload = 'compress-me-'.repeat(1000); // 12KB, compressible
       const r = await fetchText('http://127.0.0.1:' + echo.port + '/c', { method: 'POST', body: payload, compress: 'gzip', timeoutMs: 3000 });

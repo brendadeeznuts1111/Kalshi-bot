@@ -1267,3 +1267,17 @@ notes - they have structural enforcement:
   All 9 probe cases pass; pinned in tests/lib/glob.test.ts. Repo
   already relies on it: architecture-blueprint scans
   'src/**/*.{ts,tsx}', others use '**/*'.
+- FULLY-TYPED Bun pass (user: 'better bun native fully typed'):
+  eliminated ALL 'as never' in src (was 25 cast sites; Bun-API ones
+  are now 0). Fixes: serve.ts memoryPressure handler typed
+  ('warning'|'critical' per overrides.d.ts) - process.on/removeListener
+  casts dropped; runtime-surface Bun.dns typed directly (Bun.dns is a
+  typed namespace); fetchKalshiBookSnapshot(ticker as never) ->
+  asKalshiMarketTicker(ticker) (the proper assertion helper); brandCell
+  opts typed as BunInspectOptions (spread into nested inspect typed);
+  test echo server cast removed (BunRequest extends DOM Request -
+  headers/arrayBuffer typed). Legit casts kept + documented: kalshi-ws
+  WebSocket ctor (lib.dom wins global ctor), serve.ts Bun.Serve.
+  Options (bun-types 1.3.x lag), data-shape casts (Record fields).
+  bun:wrapper-audit now ALSO flags untyped 'as never' on Bun/process
+  APIs (exit 1) - future regressions caught.

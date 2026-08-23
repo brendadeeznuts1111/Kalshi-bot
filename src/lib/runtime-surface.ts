@@ -52,12 +52,13 @@ function writeHeaderRemoved(): boolean {
 
 export function runRuntimeSurfaceProbe(): SurfaceCheck[] {
   const checks: SurfaceCheck[] = [];
-  const bun = Bun as unknown as Record<string, unknown>;
-
+  // Bun.dns is fully typed in bun-types (namespace dns) - no casts needed
+  // for the typed members. The fetch.protocol probe below is the only
+  // genuine runtime-extension check (protocol is not on the fetch type).
   checks.push({
     name: 'Bun.dns.prefetch + getCacheStats',
-    ok: typeof (bun.dns as Record<string, unknown> | undefined)?.prefetch === 'function'
-      && typeof (bun.dns as Record<string, unknown> | undefined)?.getCacheStats === 'function',
+    ok: typeof Bun.dns?.prefetch === 'function'
+      && typeof Bun.dns?.getCacheStats === 'function',
     detail: 'fetch-pool DNS warm-up dependency',
   });
 
@@ -71,7 +72,7 @@ export function runRuntimeSurfaceProbe(): SurfaceCheck[] {
   // registered (probe-verified); fired only under real OS pressure.
   const mpListener = () => {};
   process.on('memoryPressure', mpListener);
-  const mpOk = process.eventNames().includes('memoryPressure' as never);
+  const mpOk = process.eventNames().includes('memoryPressure');
   process.removeListener('memoryPressure', mpListener);
   checks.push({
     name: 'process.on(memoryPressure)',

@@ -66,6 +66,25 @@ async function main(): Promise<number> {
     }
   }
 
+  // Second check: untyped 'as never' casts on Bun/process APIs (the
+  // fully-typed class). bun-types 1.4 types memoryPressure, Bun.dns,
+  // Bun.color etc - an 'as never' there means the handler/opts aren't
+  // typed against the real types. Data-shape casts (Record/string[]) are
+  // NOT flagged (legit).
+  const castRe = /(process\.(on|removeListener)|Bun\.\w+)[^\n]*as never/;
+  let castHits = 0;
+  for (const f of files) {
+    const lines = readFileSync(join(ROOT, f), 'utf8').split('\n');
+    for (let i = 0; i < lines.length; i++) {
+      if (castRe.test(lines[i]!)) {
+        if (castHits === 0) console.log('wrapper-audit: untyped Bun/process casts (type against bun-types 1.4):');
+        castHits++;
+        console.log('  ' + f + ':' + (i + 1) + '  ' + lines[i]!.trim().slice(0, 80));
+      }
+    }
+  }
+  if (castHits > 0) return 1;
+
   if (!hits.length) {
     console.log('wrapper-audit: no thin Bun passthrough wrappers found');
     return 0;

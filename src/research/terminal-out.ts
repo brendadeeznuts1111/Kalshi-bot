@@ -116,7 +116,7 @@ export type BrandCell = {
   raw: string;
   semantic: BrandSemantic;
   meta?: Record<string, unknown>;
-  [Bun.inspect.custom]: (depth: number, opts: Record<string, unknown>, inspect: typeof Bun.inspect) => string;
+  [Bun.inspect.custom]: (depth: number, opts: Bun.BunInspectOptions, inspect: typeof Bun.inspect) => string;
 };
 
 export function brandCell(
@@ -130,7 +130,7 @@ export function brandCell(
     warn: COLORS.middleware,
     info: COLORS.research,
   }[semantic];
-  const styled = (opts: Record<string, unknown>, s: string): string => {
+  const styled = (s: string): string => {
     const open = Bun.color(hex, "ansi") ?? "";
     return open ? open + s + "\u001b[0m" : s;
   };
@@ -140,10 +140,12 @@ export function brandCell(
     meta,
     [Bun.inspect.custom](depth, opts, inspect) {
       if (!opts.colors) return this.raw;
-      const colored = styled(opts, this.raw);
+      const colored = styled(this.raw);
       if (depth === 0) return "[" + this.semantic + " " + this.raw + "...]";
       if (this.meta) {
-        const extra = inspect(this.meta, { ...opts, depth: (depth as number) - 1 } as never);
+        // opts is BunInspectOptions (typed) - spreading it into the nested
+        // inspect call carries colors/depth/sorted through fully typed.
+        const extra = inspect(this.meta, { ...opts, depth: depth - 1 });
         return colored + " " + Bun.stripANSI(extra);
       }
       return colored;
