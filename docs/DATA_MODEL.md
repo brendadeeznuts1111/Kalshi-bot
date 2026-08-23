@@ -77,5 +77,5 @@ One `normalizeSideToHomeAway(side, homeName, awayName)` in `src/institutions/eve
 ## 4. Open notes
 
 - `price_snapshots.match_key` is empty in the live DB (population pending).
-- Volleyball book leagues have no Massey coverage (data availability, not a schema gap).
+- Volleyball (corrected 2026-08): the full bucket IS ingested — cvol/ncaa-d1 (698 rows), cvol d2/d3, cmvol d1, dlv (894), dlvw (800, domestic women: Turkey/Italy/Poland/China clubs), csand (124), all via the WebView Cloudflare path. Real book coverage is 0/8 because the fantasy402 volleyball leagues (Belarus Liga Pro, Indiya, Russia League Pro Women, UPVL Nations League Women) are not in Massey's NCAA or domestic club ratings. The one apparent crossref match (book "Sokol" → Massey "SG SVS SokolAustria") is a FALSE POSITIVE — the 4-char strong-match heuristic matched a shared club nickname across countries; cross-country nickname collisions are a known quality risk of the name-matching guard.
 - `match_key` as built today is tennis-lane-specific; generalize to `day|sport|competitors` if non-tennis sports need it.
