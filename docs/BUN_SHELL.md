@@ -99,7 +99,7 @@ for the h2 test cert-gen in `SPAWN_KEEP_LIST`). Where Bun has a native API
 | `node:tls` (Node compat) | `tls.connect().getPeerCertificate()` replaces `openssl s_client` + `x509` — leaf SANs (`subjectaltname`) with zero subprocess (probed 1.4.0) | `src/domain/host-discover.ts` `probeTlsSans` |
 | `Bun.Terminal` (PTY) | The isTTY=true option the interactive keeps need (`$` pipes stdout/stderr) | not used — keep-list reasoning |
 | `Bun.Transpiler.scanImports` + `ts` AST | The enforcement loop — guard runs `git ls-files -z` via `$`, reads via `Bun.file`, walks AST for spawn sites | `scripts/audit-bun-native.ts` |
-| `Bun.fetch` | REST half of research transport — GitHub REST + `/rate_limit` (`readGitHubRateLimitWire`); `$`→`gh` only for the auth-token fallback | `src/research/github-api.ts`, `src/research/gh.ts`, `src/research/github-rate-limit.ts` |
+| `Bun.fetch` | REST half of research transport — GitHub REST + `/rate_limit` (`readGitHubRateLimitWire`); `$`→`gh` only for auth (token fallback + auth-status probe) | `src/research/github-api.ts`, `src/research/gh.ts`, `src/research/github-rate-limit.ts` |
 | `bun:sqlite` | Stores what `Bun.fetch`/`$` gathers | `src/research/cache.ts`, `src/institutions/event-store/*` |
 
 ## Why `Bun.$` over `Bun.spawn`
@@ -128,8 +128,9 @@ await $`gh auth token`.nothrow().quiet();
 
 The research pipeline talks to GitHub REST via `Bun.fetch` (`github-api.ts`,
 `github-search.ts`, `github-rate-limit.ts` -> `readGitHubRateLimitWire`). The
-`gh` CLI survives for exactly one call: the **auth-token fallback** in
-`src/research/github-network.ts`:
+`gh` CLI survives for two calls: the **auth-token fallback** in
+`src/research/github-network.ts` and the **auth-status health probe** in
+`tools/snapshot-data-plane.ts` (`commandSucceeds(["gh", "auth", "status"])`):
 
 ```typescript
 const { exitCode, stdout } = await $`gh auth token`.nothrow().quiet();

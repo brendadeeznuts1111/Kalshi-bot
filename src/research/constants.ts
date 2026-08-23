@@ -102,10 +102,10 @@ export const DEFAULT_INSPECT_CONCURRENCY = 4;
 /** Parallel code-search queries per repo — keep low (code_search is 10/min). */
 export const DEFAULT_CODE_SEARCH_CONCURRENCY = 1;
 
-/** `gh search repos --limit`. */
+/** GitHub REST repo search limit (github-search.ts). */
 export const DEFAULT_GH_SEARCH_LIMIT = 30;
 
-/** Default retries for `ghJson`. */
+/** Default retries for GitHub API calls (github-api.ts). */
 export const DEFAULT_GH_RETRIES = 3;
 
 /** Fallback strategy tag when none match keywords. */

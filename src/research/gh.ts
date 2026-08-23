@@ -2,7 +2,6 @@
 import {
   assertGitHubRateBudget,
   GitHubRateLimitError,
-  isGitHubRateLimitError,
   shouldWaitForRateLimitReset,
   tripGitHubRateLimit,
 } from "./github-errors.ts";
@@ -10,7 +9,6 @@ import {
   computeWaitMs,
   readGitHubRateLimit,
   type GitHubRateLimitResource,
-  type GitHubRateLimitSnapshot,
 } from "./github-rate-limit.ts";
 
 /** GitHub rate-limit facade — preflight + budget helpers over the Bun.fetch rate reader. No gh subprocess remains (gh CLI is only the auth-token fallback in github-network.ts). */
@@ -39,20 +37,19 @@ async function pauseUntilRateLimitReset(
 ): Promise<void> {
   const capped = computeWaitMs(resetSec, Date.now(), resource);
   console.error(
-    `[gh] ${resource} rate limit — waiting ${Math.ceil(capped / 1000)}s (GITHUB_RATE_LIMIT_WAIT=1)`,
+    `[rate-limit] ${resource} waiting ${Math.ceil(capped / 1000)}s (GITHUB_RATE_LIMIT_WAIT=1)`,
   );
   await Bun.sleep(capped);
 }
 
 function rateLimitError(
-  args: string[],
   resetSec: number | null,
   resource: GitHubRateLimitResource,
 ): GitHubRateLimitError {
   const resetMs = resetSec ? resetSec * 1000 : null;
   return new GitHubRateLimitError(
-    `gh ${args.join(" ")} hit GitHub ${resource} rate limit${resetMs ? ` — reset ${new Date(resetMs).toISOString()}` : ""}`,
-    { resetAtMs: resetMs, source: `gh ${args[0] ?? "api"} (${resource})` },
+    `GitHub ${resource} rate limit hit${resetMs ? ` — reset ${new Date(resetMs).toISOString()}` : ""}`,
+    { resetAtMs: resetMs, source: `${resource} preflight` },
   );
 }
 
@@ -75,7 +72,7 @@ async function ensureResourceBudget(
     limit: snap.limit,
     resource,
   });
-  throw rateLimitError(["api", "rate_limit"], snap.reset, resource);
+  throw rateLimitError(snap.reset, resource);
 }
 
 /** Preflight discover + REST — checks core and search buckets (not code_search; see ensureInspectRateBudget). */
@@ -85,16 +82,5 @@ export async function ensureGhRateBudget(minRemaining = 3): Promise<void> {
   await ensureResourceBudget("search", minRemaining);
 }
 
-function tripFromSnapshot(
-  snap: GitHubRateLimitSnapshot | null,
-  source: string,
-  fallbackResource: GitHubRateLimitResource,
-): void {
-  tripGitHubRateLimit(snap?.reset ?? null, source, {
-    remaining: snap?.remaining ?? null,
-    limit: snap?.limit ?? null,
-    resource: snap?.resource ?? fallbackResource,
-  });
-}
 
 
