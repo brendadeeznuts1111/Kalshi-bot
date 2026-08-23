@@ -541,3 +541,55 @@ patterns (harvest-nationalities, fonbet fixture loader converted).
 - Consequence: docs (any source) are a REFERENCE, never proof. Probe the
   runtime for every claimed API - docs describe the intended surface, the
   binary is the ground truth.
+
+### 13. Bun v1.4 performance-claims audit (paste vs blog vs docs vs probes)
+
+An AI-pasted 'v1.4 performance summary' was audited claim-by-claim against
+the release blog (bun.com/blog/bun-v1.4), cached tag docs, and runtime
+probes. Verdict per claim:
+
+- VERIFIED (blog text found): Rust rewrite; idle CPU 5x (hello-world
+  server); memory up to 35% (HTTP servers 13-48%: fastify 120->233 -48%,
+  Express 92->169 -46%, Elysia 55->91 -40%, Next.js 285->397 -28%);
+  Linux startup 50% faster (5.1 vs 10.9 ms); Windows 2.5x (15.5 vs 39.0
+  ms); binary up to 17% smaller; unified allocator (JSC now uses
+  mimalloc with partial page clearing, scavenger thread, lazy zeroing).
+- VERIFIED (CLI --help): --smol, --no-orphans, --parallel (top-level
+  script runner, NOT a bun:run flag - 'bun run --parallel' IS real per
+  blog), bun test --parallel=<N> (worker processes, default CPU count,
+  implies --isolate), bun test --shard=1/3, --cpu-prof/--heap-prof/
+  -md variants, --cpu-prof-interval default 1000 us, --metafile-md.
+  --metafile-md exists but ONLY on bun build (paste lumped it with
+  general profiling flags - misleading placement, real flag).
+- VERIFIED (docs): Bun.serve idleTimeout default 10s, max 255, 0
+  disables (http-server.mdx; repo serve.ts already sets 255 for SSE and
+  comments the real defaults); process.on('memoryPressure') is REAL
+  (blog section + runtime registers it in process.eventNames, probe:
+  listener accepted, event listed; firing needs actual OS pressure);
+  bun audit fix / bun dedupe / bun prune all real commands (blog +
+  --help); [install] globalStore real (isolated-installs.mdx: 7x faster
+  warm installs, off by default); [run] noOrphans real (bunfig.mdx,
+  platform impls: Linux prctl PDEATHSIG, macOS kqueue, Windows job
+  objects); test.smol bunfig key real.
+- FABRICATED / NOT in the blog: '22% faster median build time' (blog
+  has no such number; closest: 14x code-splitting on 20k modules, 1.3-
+  1.4x 2-core builds, 12% ESM loading); '2-5% overall' (no such claim);
+  the req/s table (509k HTTP/3, 189k HTTPS/1.1, 239k HTTP/1.1) - blog
+  only says HTTP/3 is 2.7x faster than HTTPS/1.1 on static routes and
+  shows 49,239 req/s node-to-node; 'Bun.serve 36->45 MB' row (real
+  table has fastify/Express/Elysia/Next.js, no Bun.serve row); the
+  Elysia systemRouter '45.7x AOT degradation' claim - NOT in the blog
+  (Elysia appears only in the memory table; SystemRouter in the blog is
+  Bun.FileSystemRouter, a different API).
+- WRONG (probe-falsified): 'maxRequestBodySize default 8 MB' - actual
+  default is 128 MB, binary-search probed: 128 MB POST -> 200, 129 MB
+  -> 413. The repo's serve.ts comment ('Bun's defaults are a 128MB
+  request body cap') was right all along; the paste's 8MB is wrong.
+- MISLEADING bunfig: '[test] parallel = true; shard = true' - NO such
+  bunfig keys (test section: root/preload/pathIgnorePatterns/smol/
+  coverage; parallel/shard are CLI-only). '[run] noOrphans = true' and
+  '[install] globalStore = true' are correct bunfig keys.
+- Practice: blog numbers are checkable (this audit took ~10 grep calls);
+  fabricated tables/percentages in pasted summaries are common. Verify
+  any number you will act on. The repo already acts correctly on the
+  two big ones (128MB cap comment, idleTimeout 255).
