@@ -18,7 +18,7 @@
  */
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { rgFiles } from '../src/lib/rg.ts';
+import { rgFiles, escapeForRg } from '../src/lib/rg.ts';
 import { assertBunAtLeast } from '../src/research/bun-native.ts';
 
 assertBunAtLeast('1.4.0', 'bun:deps-audit');
@@ -111,7 +111,7 @@ function main(): number {
   console.log('native API usage in src+tools:');
   const usage: Array<{ api: string; count: number }> = [];
   for (const api of NATIVE_APIS) {
-    const count = grepCount(api.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), src);
+    const count = grepCount(escapeForRg(api), src); // literal match, not regex ('.' would over-count)
     if (count > 0) usage.push({ api: api.replace('dir: joinPath\\|{ dir:', 'Bun.serve dir'), count });
   }
   usage.sort((a, b) => b.count - a.count);

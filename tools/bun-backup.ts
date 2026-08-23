@@ -66,17 +66,19 @@ async function main(): Promise<number> {
   const outPath = join(BACKUP_DIR, 'research-' + stamp + '.tar');
   mkdirSync(BACKUP_DIR, { recursive: true });
 
-  // Bun.Archive.write(path, object): keys are archive paths, values are
-  // BlobParts. BUG on 1.4.0 (probe-verified): passing a BunFile value
-  // archives a 0-BYTE entry ('streams directly to disk' is aspirational);
-  // string/bytes values work. Workaround: read to bytes first. The
-  // event-store.db is ~88MB, so this loads it into memory - acceptable
-  // for a backup tool; revisit when the BunFile path is fixed.
+  // Docs-canonical Archive path (grounded against runtime/archive.mdx):
+  // `new Bun.Archive({...})` then `Bun.write(path, archive)`. Accepted
+  // value types per docs: strings, Blobs, ArrayBufferViews, ArrayBuffers.
+  // BunFile is NOT in that list - passing one archives a 0-byte entry
+  // (probe-verified; the earlier '0-byte bug' is actually documented
+  // behavior for an undocumented input type). .bytes() is the valid way;
+  // the 88MB event-store loads into memory - acceptable for backups.
   const entries: Record<string, BlobPart> = {};
   for (const f of files) {
     entries['cache/' + f.split('/').pop()!] = await Bun.file(f).bytes();
   }
-  await Bun.Archive.write(outPath, entries as unknown as Parameters<typeof Bun.Archive.write>[1]);
+  const archive = new Bun.Archive(entries as unknown as Bun.ArchiveInput);
+  await Bun.write(outPath, archive);
   const size = statSync(outPath).size;
   console.log('backup: ' + outPath);
   console.log('  ' + files.length + ' files, ' + (totalBytes / 1048576).toFixed(1) + ' MB raw -> ' + (size / 1048576).toFixed(1) + ' MB tar');

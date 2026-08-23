@@ -1136,3 +1136,34 @@ notes - they have structural enforcement:
   split never fires -> single-element arrays). Verify escape-sensitive
   strings in the WRITTEN file (bun -e read + JSON.stringify), not the
   tool argument.
+
+### 30. Docs-grounding pass (Archive/cron/WebView/fetch vs reference)
+
+- Docs cache refreshed to tag (bun-v1.4.0) reference, then the major
+  adopted APIs grounded against runtime/*.mdx. Findings:
+  * Bun.Archive: the docs-canonical create path is `new Bun.Archive(
+    {path: content})` + `Bun.write(path, archive)` - NOT Bun.Archive.
+    write() (typed in bun.d.ts:9566 but absent from the .mdx docs).
+    Accepted content types per docs: strings, Blobs, ArrayBufferViews,
+    ArrayBuffers - BunFile is NOT listed, so the earlier '0-byte BunFile
+    bug' is really DOCUMENTED BEHAVIOR for an undocumented input type
+    (the types' ArchiveInput is broader than the docs). bun:backup
+    REFACTORED to the docs pattern: new Bun.Archive(bytes entries) +
+    Bun.write. Verified: 12 files, 99.1MB tar, extract round-trip intact.
+  * Bun.cron: the repo's TZ NOTE (in-process Bun.cron uses SYSTEM local
+    time; 1.3.x used UTC; { tz } override) is DOC-CORRECT - cron.mdx
+    says exactly this, and the massey job pins { tz: 'UTC' }
+    (cron-main.ts:611) as documented.
+  * Bun.WebView: usage grounded - `await using view = new
+    Bun.WebView(...)` (webview.mdx:11/46) matches partner-webview-ws-
+    capture.ts:85; `{ backend: 'chrome' }` matches the shared-Chrome
+    pattern; the typeof feature-detect is a sensible guard for an
+    optional build feature.
+  * fetch-pool: every documented claim confirmed in fetch.mdx -
+    keepalive:false opt-out, 256 simultaneous limit, pooling default,
+    compress option exists.
+  * deps-audit native counts are LINE-MENTIONS (comments/docs included),
+    not API calls - WebView reports 44 lines but only ~3 real
+    constructors. Acceptable for a coverage report; documented so the
+    numbers aren't misread as call counts. The escapeForRg fix made
+    the pattern matching literal (previously '.' matched any char).
