@@ -199,8 +199,9 @@ export function encodeSolidColorPng(
       raw[i + 2] = b & 255;
     }
   }
-  const compressed = Bun.deflateSync(raw);
-
+  // Bun.deflateSync emits RAW deflate (verified: no zlib header); PNG IDAT
+  // requires an RFC 1950 zlib stream, so wrap it (0x78 0x9C + Adler-32).
+  const compressed = wrapZlib(Bun.deflateSync(raw), raw);
   const signature = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
   const ihdr = new Uint8Array(13);
   const dv = new DataView(ihdr.buffer);
@@ -224,6 +225,32 @@ export function encodeSolidColorPng(
   sink.start({ stream: false });
   for (const p of parts) sink.write(p);
   return new Uint8Array(sink.end());
+}
+
+/**
+ * RFC 1950 zlib wrapper for PNG IDAT: 0x78 0x9C header + raw deflate +
+ * Adler-32 of the UNCOMPRESSED data. Bun.deflateSync only emits raw
+ * deflate, which strict decoders (Bun.Image) reject in PNG (verified:
+ * metadata passes, pixel decode fails without this wrapper).
+ */
+function wrapZlib(rawDeflate: Uint8Array, raw: Uint8Array): Uint8Array {
+  const out = new Uint8Array(2 + rawDeflate.byteLength + 4);
+  out[0] = 0x78;
+  out[1] = 0x9c; // (0x789c % 31 === 0)
+  out.set(rawDeflate, 2);
+  new DataView(out.buffer).setUint32(2 + rawDeflate.byteLength, adler32(raw));
+  return out;
+}
+
+/** RFC 1950 Adler-32 checksum (mod 65521). */
+function adler32(buf: Uint8Array): number {
+  let a = 1;
+  let b = 0;
+  for (let i = 0; i < buf.byteLength; i++) {
+    a = (a + buf[i]!) % 65521;
+    b = (b + a) % 65521;
+  }
+  return ((b << 16) | a) >>> 0;
 }
 
 function pngChunk(type: string, data: Uint8Array): Uint8Array {

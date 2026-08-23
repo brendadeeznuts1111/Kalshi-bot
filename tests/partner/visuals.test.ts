@@ -49,6 +49,20 @@ describe("partner visuals (Bun.color)", () => {
     expect(partnerCssVars("SPEN")).toContain("--partner-hex:");
   });
 
+  test("encodeSolidColorPng decodes with Bun.Image (zlib-valid IDAT)", async () => {
+    // Structural checks alone missed the raw-deflate (no zlib wrapper)
+    // bug — Bun.Image reads the header but fails pixel decode. This is
+    // the strict-decoder assertion.
+    const png = encodeSolidColorPng(204, 230, 77, 64);
+    const img = new Bun.Image(new Uint8Array(png));
+    const meta = await img.metadata();
+    expect(meta.width).toBe(64);
+    expect(meta.height).toBe(64);
+    expect(meta.format).toBe("png");
+    const reencoded = await new Bun.Image(new Uint8Array(png)).resize(32, 32, { fit: "inside" }).png().bytes();
+    expect(reencoded.length).toBeGreaterThan(0);
+  });
+
   test("encodeSolidColorPng emits a structurally valid PNG (ArrayBufferSink concat)", () => {
     const png = encodeSolidColorPng(204, 230, 77, 64);
     const dv = new DataView(png.buffer, png.byteOffset, png.byteLength);

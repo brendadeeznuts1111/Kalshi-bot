@@ -291,6 +291,17 @@ Node APIs are intentional:
   mentions). Every code block in the writeup would throw 'html is not
   defined'. Same class as WebTransport and Bun.S.
 - Bun.S: also undefined on 1.4.0 (blog code identifier unresolved).
+- Bun.Image is REAL (docs runtime/image.mdx + runtime verified: metadata,
+  resize, .png().bytes(), .placeholder() ThumbHash, Bun.file().image()
+  shorthand, backend 'system') but CANNOT create images from raw pixels
+  (statics are clipboard-only - no create/fromPixels on 1.4.0).
+- REAL BUG FOUND via Bun.Image: Bun.deflateSync emits RAW deflate (first
+  bytes 0x63 0x64, no zlib header) but PNG IDAT requires an RFC 1950 zlib
+  stream. Our hand-built solid PNG passed metadata-only checks and sips
+  but strict decoders (Bun.Image) failed pixel decode. Fixed: wrapZlib
+  (0x78 0x9C + Adler-32) in visuals.ts + a decode-level test. Lesson:
+  validate binary output with a STRICT decoder, not just structure/
+  metadata checks.
 - bun audit fix / bun dedupe / bun prune: CLI commands exist; the CI
   workflow already runs bun audit --audit-level=high + bun dedupe --check.
 
