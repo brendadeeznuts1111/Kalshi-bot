@@ -1391,17 +1391,17 @@ export function createResearchServer(options: ServeOptions = {}) {
 
       // Ops dashboard (read-only management page) — issues the CSRF session
       if (url.pathname === "/ops") {
-        const session = issueCsrfSession();
+        const session = issueCsrfSession(req);
         const page = await handleOpsPage(req, session.token);
-        page.headers.set("Set-Cookie", session.cookie);
+        page.headers.set("Set-Cookie", session.sessionCookie);
         return page;
       }
 
       // Ops dashboard JSON companion — same CSRF cookie so JSON clients can POST
       if (url.pathname === "/ops.json") {
-        const session = issueCsrfSession();
+        const session = issueCsrfSession(req);
         const res = await handleOpsJson(req);
-        res.headers.set("Set-Cookie", session.cookie);
+        res.headers.set("Set-Cookie", session.sessionCookie);
         return res;
       }
 

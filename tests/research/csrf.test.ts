@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
-  CSRF_COOKIE_NAME,
   CSRF_HEADER_NAME,
+  CSRF_SESSION_COOKIE,
   csrfGuard,
   csrfTokenFrom,
   issueCsrfSession,
@@ -10,17 +10,17 @@ import {
 
 const EMPTY_ENV: Record<string, string | undefined> = {};
 
-function postRequest(token: string | null, cookie?: string): Request {
+function postRequest(token: string | null, sessionId?: string): Request {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (token) headers[CSRF_HEADER_NAME] = token;
-  if (cookie) headers["cookie"] = cookie;
+  if (sessionId) headers["cookie"] = CSRF_SESSION_COOKIE + "=" + sessionId;
   return new Request("http://localhost/place-bet", { method: "POST", headers });
 }
 
-describe("CSRF double-submit guard (Bun.CSRF + Bun.Cookie)", () => {
-  test("an issued token verifies via the header", () => {
-    const { token, cookie } = issueCsrfSession(EMPTY_ENV);
-    expect(verifyCsrfRequest(postRequest(token, cookie), EMPTY_ENV)).toBe(true);
+describe("CSRF session-bound guard (Bun.CSRF + Bun.Cookie, per bun docs)", () => {
+  test("an issued token verifies with its session id", () => {
+    const { token, sessionId } = issueCsrfSession(undefined, EMPTY_ENV);
+    expect(verifyCsrfRequest(postRequest(token, sessionId), EMPTY_ENV)).toBe(true);
   });
 
   test("a request with no header is rejected", () => {
@@ -28,14 +28,36 @@ describe("CSRF double-submit guard (Bun.CSRF + Bun.Cookie)", () => {
   });
 
   test("a garbage token is rejected", () => {
-    expect(verifyCsrfRequest(postRequest("not-a-real-token"), EMPTY_ENV)).toBe(false);
+    expect(verifyCsrfRequest(postRequest("not-a-real-token", "sid"), EMPTY_ENV)).toBe(false);
+  });
+
+  test("a token bound to another session is rejected (docs warning)", () => {
+    const a = issueCsrfSession(undefined, EMPTY_ENV);
+    const b = issueCsrfSession(undefined, EMPTY_ENV);
+    expect(verifyCsrfRequest(postRequest(a.token, b.sessionId), EMPTY_ENV)).toBe(false);
+  });
+
+  test("a token without a session cookie is rejected", () => {
+    const { token } = issueCsrfSession(undefined, EMPTY_ENV);
+    expect(verifyCsrfRequest(postRequest(token), EMPTY_ENV)).toBe(false);
   });
 
   test("a token signed with a different secret is rejected", () => {
-    const { token, cookie } = issueCsrfSession({ KALSHI_CSRF_SECRET: "one" });
-    expect(verifyCsrfRequest(postRequest(token, cookie), { KALSHI_CSRF_SECRET: "two" })).toBe(
-      false,
-    );
+    const a = issueCsrfSession(undefined, { KALSHI_CSRF_SECRET: "one" });
+    expect(
+      verifyCsrfRequest(postRequest(a.token, a.sessionId), { KALSHI_CSRF_SECRET: "two" }),
+    ).toBe(false);
+  });
+
+  test("issueCsrfSession preserves an existing session when given the request", () => {
+    const first = issueCsrfSession(undefined, EMPTY_ENV);
+    const secondReq = new Request("http://localhost/ops", {
+      headers: { cookie: CSRF_SESSION_COOKIE + "=" + first.sessionId },
+    });
+    const second = issueCsrfSession(secondReq, EMPTY_ENV);
+    expect(second.sessionId).toBe(first.sessionId);
+    expect(second.token).not.toBe(first.token);
+    expect(verifyCsrfRequest(postRequest(second.token, second.sessionId), EMPTY_ENV)).toBe(true);
   });
 
   test("csrfTokenFrom trims whitespace", () => {
@@ -46,11 +68,11 @@ describe("CSRF double-submit guard (Bun.CSRF + Bun.Cookie)", () => {
     expect(csrfTokenFrom(req)).toBe("tok");
   });
 
-  test("guard passes a valid request (token + matching cookie) through", async () => {
-    const { token, cookie } = issueCsrfSession(EMPTY_ENV);
+  test("guard passes a valid request (token + session) through", async () => {
+    const { token, sessionId } = issueCsrfSession(undefined, EMPTY_ENV);
     let called = false;
     const res = await csrfGuard(
-      postRequest(token, cookie),
+      postRequest(token, sessionId),
       () => {
         called = true;
         return new Response("ok");
@@ -59,17 +81,6 @@ describe("CSRF double-submit guard (Bun.CSRF + Bun.Cookie)", () => {
     );
     expect(called).toBe(true);
     expect(res.status).toBe(200);
-  });
-
-  test("header token that does not match the cookie is rejected", () => {
-    const { token } = issueCsrfSession(EMPTY_ENV);
-    const other = issueCsrfSession(EMPTY_ENV).token;
-    expect(verifyCsrfRequest(postRequest(token, "kalshi_csrf=" + other), EMPTY_ENV)).toBe(false);
-  });
-
-  test("token without a session cookie is rejected (double-submit binding)", () => {
-    const { token } = issueCsrfSession(EMPTY_ENV);
-    expect(verifyCsrfRequest(postRequest(token), EMPTY_ENV)).toBe(false);
   });
 
   test("guard 403s an invalid request without calling next", async () => {
@@ -85,21 +96,21 @@ describe("CSRF double-submit guard (Bun.CSRF + Bun.Cookie)", () => {
     expect(body.ok).toBe(false);
   });
 
-  test("cookie is HttpOnly SameSite=Lax; Secure only in prod", () => {
-    const dev = issueCsrfSession(EMPTY_ENV).cookie;
-    expect(dev).toContain(CSRF_COOKIE_NAME + "=");
+  test("session cookie is HttpOnly SameSite=Lax; Secure only in prod", () => {
+    const dev = issueCsrfSession(undefined, EMPTY_ENV).sessionCookie;
+    expect(dev).toContain(CSRF_SESSION_COOKIE + "=");
     expect(dev).toContain("HttpOnly");
     expect(dev).toContain("SameSite=Lax");
     expect(dev).not.toContain("Secure");
 
-    const prod = issueCsrfSession({ KALSHI_ENV: "prod" }).cookie;
+    const prod = issueCsrfSession(undefined, { KALSHI_ENV: "prod" }).sessionCookie;
     expect(prod).toContain("Secure");
   });
 
-  test("explicit KALSHI_CSRF_SECRET roundtrips; default env rejects it", () => {
+  test("explicit KALSHI_CSRF_SECRET roundtrips; another secret rejects", () => {
     const env = { KALSHI_CSRF_SECRET: "s3cret" };
-    const { token, cookie } = issueCsrfSession(env);
-    expect(verifyCsrfRequest(postRequest(token, cookie), env)).toBe(true);
-    expect(verifyCsrfRequest(postRequest(token, cookie), EMPTY_ENV)).toBe(false);
+    const { token, sessionId } = issueCsrfSession(undefined, env);
+    expect(verifyCsrfRequest(postRequest(token, sessionId), env)).toBe(true);
+    expect(verifyCsrfRequest(postRequest(token, sessionId), EMPTY_ENV)).toBe(false);
   });
 });

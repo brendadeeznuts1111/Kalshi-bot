@@ -1,7 +1,7 @@
 // @see https://bun.com/docs/test/index#run-tests
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { createResearchServer } from "../src/research/serve.ts";
-import { CSRF_COOKIE_NAME, issueCsrfSession } from "../src/research/csrf.ts";
+import { CSRF_SESSION_COOKIE, issueCsrfSession } from "../src/research/csrf.ts";
 import { renderOps } from "../src/research/views.ts";
 
 describe("ops actions panel", () => {
@@ -47,7 +47,7 @@ describe("ops actions panel", () => {
 
 describe("ops actions endpoints", () => {
   let server: ReturnType<typeof createResearchServer>;
-  const csrfToken = issueCsrfSession().token;
+  const session = issueCsrfSession();
 
   beforeAll(() => {
     server = createResearchServer({ port: 0 });
@@ -60,7 +60,7 @@ describe("ops actions endpoints", () => {
   test("POST /agent/dispatch with a valid type returns agent result", async () => {
     const res = await fetch(`${server.url}agent/dispatch`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-csrf-token": csrfToken, "cookie": CSRF_COOKIE_NAME + "=" + csrfToken },
+      headers: { "Content-Type": "application/json", "x-csrf-token": session.token, "cookie": CSRF_SESSION_COOKIE + "=" + session.sessionId },
       body: JSON.stringify({ task: { type: "SPIKE_DETECT", payload: {} } }),
     });
     expect(res.status).toBe(200);
@@ -74,7 +74,7 @@ describe("ops actions endpoints", () => {
   test("POST /place-bet with x-state-code MA returns synthetic playId", async () => {
     const res = await fetch(`${server.url}place-bet`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-state-code": "MA", "x-csrf-token": csrfToken, "cookie": CSRF_COOKIE_NAME + "=" + csrfToken },
+      headers: { "Content-Type": "application/json", "x-state-code": "MA", "x-csrf-token": session.token, "cookie": CSRF_SESSION_COOKIE + "=" + session.sessionId },
       body: JSON.stringify({ wagerAmount: 10, userId: "ops-test" }),
     });
     expect(res.status).toBe(200);
@@ -86,7 +86,7 @@ describe("ops actions endpoints", () => {
   test("POST /place-bet with unsupported state is blocked with 400", async () => {
     const res = await fetch(`${server.url}place-bet`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-state-code": "XX", "x-csrf-token": csrfToken, "cookie": CSRF_COOKIE_NAME + "=" + csrfToken },
+      headers: { "Content-Type": "application/json", "x-state-code": "XX", "x-csrf-token": session.token, "cookie": CSRF_SESSION_COOKIE + "=" + session.sessionId },
       body: JSON.stringify({ wagerAmount: 10, userId: "ops-test" }),
     });
     expect(res.status).toBe(400);

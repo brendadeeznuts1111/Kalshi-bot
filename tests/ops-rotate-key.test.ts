@@ -11,7 +11,7 @@ import {
   probeKalshiAuthCached,
   resetKalshiAuthCache,
 } from "../src/research/serve.ts";
-import { CSRF_COOKIE_NAME, issueCsrfSession } from "../src/research/csrf.ts";
+import { CSRF_SESSION_COOKIE, issueCsrfSession } from "../src/research/csrf.ts";
 
 let pemA: string;
 let pemB: string;
@@ -136,11 +136,11 @@ describe("POST /ops/kalshi-rotate-key", () => {
     stub.stop();
   });
 
-  const csrfToken = issueCsrfSession().token;
+  const session = issueCsrfSession();
   const post = (body: Record<string, unknown>) =>
     fetch(`${base}/ops/kalshi-rotate-key`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-csrf-token": csrfToken, "cookie": CSRF_COOKIE_NAME + "=" + csrfToken },
+      headers: { "Content-Type": "application/json", "x-csrf-token": session.token, "cookie": CSRF_SESSION_COOKIE + "=" + session.sessionId },
       body: JSON.stringify(body),
     });
 

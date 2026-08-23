@@ -31,7 +31,8 @@ export type SecretRefWithValue = SecretRef & { value: string };
 export interface SecretBackend {
   get(ref: SecretRef): Promise<string | null>;
   set(ref: SecretRefWithValue): Promise<void>;
-  delete(ref: SecretRef): Promise<void>;
+  /** Returns true when a credential was deleted, false if not found (per Bun docs). */
+  delete(ref: SecretRef): Promise<boolean>;
 }
 
 /** Reverse-domain service namespace for this repo's credentials. */
@@ -55,8 +56,8 @@ export const keychainBackend: SecretBackend = {
     await Bun.secrets.set(ref);
   },
   async delete(ref) {
-    if (!hasSecretBackend()) return;
-    await Bun.secrets.delete(ref);
+    if (!hasSecretBackend()) return false;
+    return await Bun.secrets.delete(ref);
   },
 };
 

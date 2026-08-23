@@ -21,7 +21,7 @@ function memoryBackend(
       map.set(service + "/" + name, value);
     },
     async delete({ service, name }) {
-      map.delete(service + "/" + name);
+      return map.delete(service + "/" + name);
     },
   };
 }
@@ -50,7 +50,7 @@ describe("OS keychain credential store wrapper (Bun.secrets)", () => {
         throw new Error("keychain locked");
       },
       async set() {},
-      async delete() {},
+      async delete() { return false; },
     };
     const env = { KALSHI_API_KEY_ID: "env-key" };
     expect(await getSecret(REF, { backend, envName: "KALSHI_API_KEY_ID", env })).toBe(
