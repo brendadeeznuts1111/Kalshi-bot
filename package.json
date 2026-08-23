@@ -77,6 +77,7 @@
     "domain:pandora-promote": "bun tools/domain-pandora-cli.ts --promote",
     "domain:resolve-smoke": "bun tools/resolve-smoke.ts",
     "domain:event": "bun tools/domain-event-cli.ts",
+    "editor:open": "bun tools/editor-open-cli.ts",
     "live-tracker": "bun tools/live-tracker-cli.ts",
     "inventory:sync": "bun tools/inventory-sync-cli.ts",
     "inventory:watch": "bun tools/inventory-watch-cli.ts",

@@ -1,32 +1,70 @@
 // @see https://bun.com/docs/runtime/utils#bun-openineditor
 // @see https://bun.com/docs/runtime/utils#bun-which
+// @see https://bun.com/docs/runtime/child-process#spawn-a-process-bun-spawn
 /**
- * Editor resolution for Bun.openInEditor.
+ * Editor launcher: resolve an editor CLI (PATTERN_EDITOR env or Bun.which
+ * auto-detect across vscode-family + subl), launch it directly via
+ * Bun.spawn with line/column args, and fall back to Bun.openInEditor for the
+ * system default when no known editor CLI is found.
  *
- * Precedence: PATTERN_EDITOR=vscode|subl env -> Bun.which auto-detect
- * (code -> vscode, subl -> subl) -> system default (no editor option).
- *
- * Bun.openInEditor accepts only "vscode" | "subl"; anything else falls back
- * to the OS default editor for the file type.
+ * Targets accept "path", "path:line", "path:line:column", or ripgrep-style
+ * "path:line:column: rest" (parseOpenTarget).
  */
 
-export type EditorName = "vscode" | "subl";
+export type EditorFamily = "vscode" | "subl" | "unknown";
+
+export type ResolvedEditor = {
+  /** CLI name (e.g. code, cursor, subl) or the PATTERN_EDITOR value. */
+  name: string;
+  family: EditorFamily;
+  /** Absolute binary path from Bun.which. */
+  binary: string;
+};
 
 export type EditorEnv = Record<string, string | undefined>;
 
+type WhichFn = (bin: string) => string | null;
+
+/** Known CLIs, in auto-detect order (vscode-family before subl). */
+const EDITOR_CLIS: ReadonlyArray<{ bin: string; family: EditorFamily }> = [
+  { bin: "code", family: "vscode" },
+  { bin: "cursor", family: "vscode" },
+  { bin: "windsurf", family: "vscode" },
+  { bin: "codium", family: "vscode" },
+  { bin: "subl", family: "subl" },
+] as const;
+
 /**
- * Resolve the editor name to pass to Bun.openInEditor.
- * Pure (injectable which/env) for tests.
+ * Resolve the editor to launch. PATTERN_EDITOR names a CLI (known or custom);
+ * otherwise auto-detect. Returns null when nothing is on PATH.
+ * Pure (injectable env/which) for tests.
  */
-export function resolveEditorName(
+export function resolveEditor(
   env: EditorEnv = Bun.env as EditorEnv,
-  which: (bin: string) => string | null = (bin) => Bun.which(bin),
-): EditorName | undefined {
+  which: WhichFn = (bin) => Bun.which(bin),
+): ResolvedEditor | null {
   const e = (env.PATTERN_EDITOR ?? "").trim().toLowerCase();
-  if (e === "vscode" || e === "subl") return e;
-  if (which("code")) return "vscode";
-  if (which("subl")) return "subl";
-  return undefined;
+  if (e) {
+    if (e === "vscode" || e === "subl") {
+      // Friendly name → try that family\'s CLIs in order (vscode → code/cursor/…).
+      for (const c of EDITOR_CLIS) {
+        if (c.family !== e) continue;
+        const binary = which(c.bin);
+        if (binary) return { name: c.bin, family: c.family, binary };
+      }
+      return null;
+    }
+    // Direct CLI name (code, cursor, subl, or any custom binary).
+    const known = EDITOR_CLIS.find((c) => c.bin === e);
+    const binary = which(e);
+    if (binary) return { name: e, family: known?.family ?? "unknown", binary };
+    return null;
+  }
+  for (const c of EDITOR_CLIS) {
+    const binary = which(c.bin);
+    if (binary) return { name: c.bin, family: c.family, binary };
+  }
+  return null;
 }
 
 export type OpenTarget = {
@@ -35,28 +73,69 @@ export type OpenTarget = {
   column?: number;
 };
 
+/**
+ * Parse "path", "path:line", "path:line:column", or ripgrep-style
+ * "path:line:column: rest" into an OpenTarget. Tolerates drive letters.
+ */
+export function parseOpenTarget(spec: string): OpenTarget {
+  const s = spec.trim();
+  const m = /^(.+?):(\d+)(?::(\d+))?(?::.*)?$/.exec(s);
+  if (m) {
+    return {
+      path: m[1]!,
+      line: Number(m[2]),
+      column: m[3] ? Number(m[3]) : undefined,
+    };
+  }
+  return { path: s };
+}
+
+function vscodeArgs(target: OpenTarget): string[] {
+  const where = target.path +
+    (target.line !== undefined ? ":" + target.line + (target.column !== undefined ? ":" + target.column : "") : "");
+  return ["-g", where];
+}
+
+function editorArgs(editor: ResolvedEditor, target: OpenTarget): string[] {
+  if (editor.family === "vscode") return vscodeArgs(target);
+  if (editor.family === "subl") {
+    return [target.path + (target.line !== undefined ? ":" + target.line : "")];
+  }
+  return [target.path];
+}
+
 export type OpenTargetDeps = {
   env?: EditorEnv;
-  which?: (bin: string) => string | null;
+  which?: WhichFn;
+  spawn?: (bin: string, args: string[]) => void;
   log?: (msg: string) => void;
 };
 
 /**
- * Open a target in the resolved editor (or the system default).
- * Logs the choice to stderr when PATTERN_EDITOR_DEBUG=1.
+ * Open a target: spawn the resolved editor CLI with line/column args, or
+ * fall back to Bun.openInEditor (system default). Logs with PATTERN_EDITOR_DEBUG.
  */
 export function openTarget(target: OpenTarget, deps: OpenTargetDeps = {}): void {
   const env = deps.env ?? (Bun.env as EditorEnv);
-  const editor = resolveEditorName(env, deps.which ?? ((bin) => Bun.which(bin)));
-  const options: { editor?: EditorName; line?: number; column?: number } = {};
-  if (editor) options.editor = editor;
-  if (target.line !== undefined) options.line = target.line;
-  if (target.column !== undefined) options.column = target.column;
-  Bun.openInEditor(target.path, options);
-
+  const which = deps.which ?? ((bin: string) => Bun.which(bin));
+  const spawn = deps.spawn ?? ((bin: string, args: string[]) => {
+    Bun.spawn([bin, ...args]);
+  });
   const log = deps.log ?? ((msg: string): void => {
     if (env.PATTERN_EDITOR_DEBUG === "1") process.stderr.write(msg + "\n");
   });
-  const where = target.line !== undefined ? ":" + target.line : "";
-  log("openInEditor: " + target.path + where + (editor ? " via " + editor : " (system editor)"));
+
+  const editor = resolveEditor(env, which);
+  if (editor) {
+    spawn(editor.binary, editorArgs(editor, target));
+    const where = target.line !== undefined ? ":" + target.line : "";
+    log("open: " + target.path + where + " via " + editor.name);
+    return;
+  }
+
+  Bun.openInEditor(target.path, {
+    line: target.line,
+    column: target.column,
+  });
+  log("open: " + target.path + " (system editor)");
 }
