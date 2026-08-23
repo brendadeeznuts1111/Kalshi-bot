@@ -432,3 +432,23 @@ patterns (harvest-nationalities, fonbet fixture loader converted).
   but LEAVES apostrophes - a single-quoted string breaks. Base64 (only
   [A-Za-z0-9+/=]) is the only reliably safe encoding; all three claims were
   probe-verified.
+
+### 9. Docs sources: tag vs repo vs site (bun:docs-index)
+
+- THREE sources exist for Bun reference docs, verified live:
+  * tag: raw.githubusercontent.com/oven-sh/bun/bun-v<Bun.version>/docs/ -
+    matches the INSTALLED runtime exactly (default source now).
+  * repo: .../main/docs/ - can be AHEAD of the installed runtime.
+  * site: bun.com/docs/...md - a rendering of repo .mdx (YAML frontmatter
+    stripped, render hints like icon= added); content equivalent, verified
+    byte-diff on workers (10635 vs 10662 bytes = frontmatter only).
+- As of bun 1.4.0, tag and repo main are BYTE-IDENTICAL on all 16 curated
+  pages (md5 check) - no repo-ahead drift right now. The REAL skew is
+  docs-vs-runtime and it EXISTS EVEN AT THE TAG: fetch.preconnect exists but
+  rejects https URLs ('Invalid port'), while both tag and repo fetch.mdx
+  show fetch.preconnect("https://bun.com") as valid. Bun.html is in NEITHER
+  docs tree (grep 0) and is undefined at runtime - earlier 'repo-ahead'
+  claim was wrong; docs never documented it.
+- Consequence: docs (any source) are a REFERENCE, never proof. Probe the
+  runtime for every claimed API - docs describe the intended surface, the
+  binary is the ground truth.

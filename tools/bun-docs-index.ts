@@ -3,17 +3,27 @@
  *
  * Fetches curated Bun reference pages (raw markdown from the oven-sh/bun
  * repo docs/ tree) into research/cache/bun-docs/<name>.mdx with an
- * INDEX.json manifest (source URL, fetchedAt, bytes). Future verification
- * can cite the LOCAL copy and detect docs drift instead of re-fetching.
+ * INDEX.json manifest (source, source URL, fetchedAt, bytes). Future
+ * verification can cite the LOCAL copy and detect docs drift instead of
+ * re-fetching.
+ *
+ * Sources:
+ *   tag  (default) oven-sh/bun git tag matching the INSTALLED runtime
+ *        (bun-v<Bun.version>) — exactly the docs for the binary in use.
+ *   repo             oven-sh/bun main branch raw .mdx — may be AHEAD of
+ *        the installed runtime (e.g. fetch.preconnect https / Bun.html).
+ *   site             bun.com/docs raw .md — released-docs surface; a
+ *        rendering of the repo .mdx (frontmatter stripped + render
+ *        hints). Content equivalent.
  *
  * Flags:
- *   --refresh   re-fetch pages even when cached recently.
- *   --check     report cache age/drift without fetching.
- *   --source repo|site  repo = oven-sh/bun main branch raw .mdx (default,
- *           may be AHEAD of the installed runtime); site = bun.com/docs
- *           raw .md (released-docs surface, frontmatter stripped + render
- *           hints). The site is a rendering of the repo .mdx; content is
- *           equivalent. sourceUrl in INDEX.json records provenance.
+ *   --refresh       re-fetch pages even when cached recently.
+ *   --check         report cache age/source without fetching.
+ *   --source X      one of tag|repo|site (default tag).
+ *
+ * Provenance: INDEX.json entries carry `source`; a page cached from one
+ * source is re-fetched when another source is requested (source-aware
+ * freshness), and --check flags stale-source pages.
  *
  * @see docs/AGENT-PITFALLS.md (verify against the reference, not guesses)
  */
@@ -27,11 +37,11 @@ assertBunAtLeast('1.4.0', 'bun:docs-index');
 const ROOT = join(import.meta.dir, '..');
 const CACHE_DIR = join(ROOT, 'research/cache/bun-docs');
 const INDEX_PATH = join(CACHE_DIR, 'INDEX.json');
-// Source choice: repo raw (main branch .mdx, can be AHEAD of the
-// installed runtime - e.g. fetch.preconnect https / Bun.html cases) vs
-// the site's raw .md endpoints (released-docs surface). Default repo.
+const TAG_BASE = 'https://raw.githubusercontent.com/oven-sh/bun/bun-v' + Bun.version + '/docs/';
 const REPO_BASE = 'https://raw.githubusercontent.com/oven-sh/bun/main/docs/';
 const SITE_BASE = 'https://bun.com/docs/';
+
+type Source = 'tag' | 'repo' | 'site';
 
 /** Curated reference pages (repo-relative docs paths, .mdx). */
 const PAGES: Array<{ name: string; path: string }> = [
@@ -53,7 +63,7 @@ const PAGES: Array<{ name: string; path: string }> = [
   { name: 'sql', path: 'runtime/sql.mdx' },
 ];
 
-type IndexEntry = { name: string; sourceUrl: string; fetchedAt: string; bytes: number; ok: boolean };
+type IndexEntry = { name: string; source: Source; sourceUrl: string; fetchedAt: string; bytes: number; ok: boolean };
 type Index = { pages: IndexEntry[]; fetchedAt: string };
 
 function readIndex(): Index | null {
@@ -62,17 +72,30 @@ function readIndex(): Index | null {
   catch { return null; }
 }
 
+function resolveSource(raw: string | undefined): Source {
+  return raw === 'repo' || raw === 'site' ? raw : 'tag';
+}
+
+function sourceBase(s: Source): string {
+  return s === 'tag' ? TAG_BASE : s === 'repo' ? REPO_BASE : SITE_BASE;
+}
+
+function sourceUrlFor(s: Source, path: string): string {
+  return sourceBase(s) + (s === 'site' ? path.replace(/\.mdx$/, '.md') : path);
+}
+
 async function main(): Promise<void> {
   const refresh = hasFlag('refresh');
   const check = hasFlag('check');
-  const source = argValue('source') === 'site' ? 'site' : 'repo';
-  const base = source === 'site' ? SITE_BASE : REPO_BASE;
+  const source = resolveSource(argValue('source'));
   const index = readIndex() ?? { pages: [], fetchedAt: new Date(0).toISOString() };
   const byName = new Map(index.pages.map((p) => [p.name, p]));
   if (check) {
     for (const p of PAGES) {
       const c = byName.get(p.name);
-      console.log('  ' + p.name + ': ' + (c ? c.ok ? c.bytes + 'b @ ' + c.fetchedAt.slice(0, 10) : 'FETCH FAILED' : 'not cached'));
+      if (!c) { console.log('  ' + p.name + ': not cached'); continue; }
+      const line = '  ' + p.name + ': ' + (c.ok ? c.source + ' ' + c.bytes + 'b @ ' + c.fetchedAt.slice(0, 10) : 'FETCH FAILED');
+      console.log(c.source === source ? line : line + '  [source mismatch: requested ' + source + ']');
     }
     process.exit(0);
   }
@@ -80,21 +103,22 @@ async function main(): Promise<void> {
   const entries: IndexEntry[] = [];
   for (const page of PAGES) {
     const existing = byName.get(page.name);
-    if (!refresh && existing?.ok && Date.now() - Date.parse(existing.fetchedAt) < 24 * 60 * 60 * 1000) {
+    const fresh = existing?.ok && existing.source === source && Date.now() - Date.parse(existing.fetchedAt) < 24 * 60 * 60 * 1000;
+    if (!refresh && fresh) {
       entries.push(existing);
       continue;
     }
-    const url = base + (source === 'site' ? page.path.replace(/\.mdx$/, '.md') : page.path);
+    const url = sourceUrlFor(source, page.path);
     const res = await fetch(url);
     const ok = res.ok;
     const text = ok ? await res.text() : '';
     if (ok) writeFileSync(join(CACHE_DIR, page.name + '.mdx'), text);
-    entries.push({ name: page.name, sourceUrl: url, fetchedAt: new Date().toISOString(), bytes: text.length, ok });
-    console.log('  ' + (ok ? 'cached ' : 'FAILED ') + page.name + ' (' + text.length + 'b)');
+    entries.push({ name: page.name, source, sourceUrl: url, fetchedAt: new Date().toISOString(), bytes: text.length, ok });
+    console.log('  ' + (ok ? 'cached ' : 'FAILED ') + page.name + ' (' + source + ', ' + text.length + 'b)');
   }
   writeFileSync(INDEX_PATH, JSON.stringify({ pages: entries, fetchedAt: new Date().toISOString() }, null, 2) + '\n');
   const okCount = entries.filter((e) => e.ok).length;
-  console.log('index: ' + okCount + '/' + entries.length + ' pages · ' + CACHE_DIR);
+  console.log('index: ' + okCount + '/' + entries.length + ' pages (' + source + ') · ' + CACHE_DIR);
   process.exit(okCount === entries.length ? 0 : 1);
 }
 
