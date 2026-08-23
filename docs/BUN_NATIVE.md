@@ -388,6 +388,17 @@ each has a real consumer in the repo where marked.
 - Bun.inspect(value, { depth }) is the ONLY per-call bound; our inspectValue
   helper passes depth through (inspectValue(x, { depth: 2 })).
 
+### Bun.inspect.custom pattern (redaction-first)
+
+- Any class holding secrets or large state implements [Bun.inspect.custom]()
+  so console.log / Bun.inspect prints a compact, safe form automatically.
+- Secret-bearing classes redact: CookieJar -> CookieJar(N cookies);
+  FantasyUltraAdapter -> token=set|unset (credentials never printed);
+  PandoraSocket -> host + state (gsid/query params stripped).
+- Noisy value-types compact: CoefficientStore -> CoefficientStore(N events).
+- Test rule: Bun.inspect(instance) contains the compact form AND NOT the
+  secret values (see tests/partner/fantasy-ultra/redaction.test.ts).
+
 ### Markdown .md loader trap
 
 - import html from "./x.md" renders with DEFAULT options — no tagFilter, so

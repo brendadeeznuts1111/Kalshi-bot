@@ -34,6 +34,15 @@ const DEFAULT_LIMITS: PartnerLimits = {
 export class CoefficientStore {
   private readonly byEvent = new Map<number, EventBook>();
 
+  /**
+   * Compact print: console.log / Bun.inspect shows coverage, not the full
+   * event-book dump.
+   * @see https://bun.com/docs/runtime/utils#bun-inspect-custom
+   */
+  [Bun.inspect.custom](): string {
+    return `CoefficientStore(${this.byEvent.size} event${this.byEvent.size === 1 ? "" : "s"})`;
+  }
+
   clear(): void {
     this.byEvent.clear();
   }
