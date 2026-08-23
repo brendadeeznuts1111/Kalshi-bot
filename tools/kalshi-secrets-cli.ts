@@ -22,6 +22,10 @@
  *                     keychain prompt (CI use; reduces security).
  *   --verbose         log the exact Bun.secrets.set call shape (value length
  *                     only — never the secret itself).
+ *   --key-id <id>     store key id non-interactively (else env KALSHI_API_KEY_ID).
+ *   --key-secret <pem>  store the PEM directly — throwaway test keys only: it is
+ *                     visible in the process list; prefer --key-file or env.
+ *   --key-file <path> read the PEM from a file (avoids process-list exposure).
  *
  * Safety: store prompts before overwriting an existing credential and delete
  * prompts before removing, unless --force is passed. Prompts read stdin; when
@@ -54,31 +58,45 @@ export type CliArgs = {
   force: boolean;
   unrestricted: boolean;
   verbose: boolean;
+  keyId: string | null;
+  keySecret: string | null;
+  keyFile: string | null;
 };
 
-/** Parse `--flag` / `--flag=value` / `--flag value`; command = first positional. */
+/**
+ * Parse `--flag` / `--flag=value` / `--flag value`; command = first positional.
+ * `--key-secret` is for throwaway test keys only — it is visible in the
+ * process list; prefer `--key-file` or env for real credentials.
+ */
 export function parseCliArgs(argv: string[]): CliArgs {
   let command: string | null = null;
   let service = DEFAULT_SECRET_SERVICE;
   let force = false;
   let unrestricted = false;
   let verbose = false;
+  let keyId: string | null = null;
+  let keySecret: string | null = null;
+  let keyFile: string | null = null;
+  const take = (i: number): string | null => {
+    const v = argv[i + 1]?.trim();
+    return v ? v : null;
+  };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i] ?? "";
     if (a === "--force") force = true;
     else if (a === "--unrestricted") unrestricted = true;
     else if (a === "--verbose") verbose = true;
-    else if (a === "--service") {
-      const next = argv[i + 1]?.trim();
-      if (next) { service = next; i++; }
-    } else if (a.startsWith("--service=")) {
-      const v = a.slice("--service=".length).trim();
-      if (v) service = v;
-    } else if (!a.startsWith("--") && command === null) {
-      command = a;
-    }
+    else if (a === "--service") { const v = take(i); if (v) { service = v; i++; } }
+    else if (a === "--key-id") { const v = take(i); if (v) { keyId = v; i++; } }
+    else if (a === "--key-secret") { const v = take(i); if (v) { keySecret = v; i++; } }
+    else if (a === "--key-file") { const v = take(i); if (v) { keyFile = v; i++; } }
+    else if (a.startsWith("--service=")) { const v = a.slice("--service=".length).trim(); if (v) service = v; }
+    else if (a.startsWith("--key-id=")) { const v = a.slice("--key-id=".length).trim(); if (v) keyId = v; }
+    else if (a.startsWith("--key-secret=")) { const v = a.slice("--key-secret=".length).trim(); if (v) keySecret = v; }
+    else if (a.startsWith("--key-file=")) { const v = a.slice("--key-file=".length).trim(); if (v) keyFile = v; }
+    else if (!a.startsWith("--") && command === null) { command = a; }
   }
-  return { command, service, force, unrestricted, verbose };
+  return { command, service, force, unrestricted, verbose, keyId, keySecret, keyFile };
 }
 
 /** Masked fingerprint (first 8 hex of sha256) — proves identity without leaking the value. */
@@ -100,20 +118,26 @@ function logSetCall(service: string, name: string, valueLen: number, unrestricte
 
 async function store(args: CliArgs): Promise<number> {
   const env = Bun.env as Record<string, string | undefined>;
-  const keyId = (env.KALSHI_API_KEY_ID ?? env.KALSHI_ACCESS_KEY)?.trim();
+  const keyId = (args.keyId ?? env.KALSHI_API_KEY_ID ?? env.KALSHI_ACCESS_KEY)?.trim();
   if (!keyId) {
-    console.error("Missing KALSHI_API_KEY_ID (or KALSHI_ACCESS_KEY)");
+    console.error("Missing key id — pass --key-id or set KALSHI_API_KEY_ID (or KALSHI_ACCESS_KEY)");
     return 1;
   }
   const pemInline = env.KALSHI_PRIVATE_KEY?.trim();
   const pemPath = env.KALSHI_PRIVATE_KEY_PATH?.trim();
-  let pem: string;
-  if (pemInline) {
+  // Precedence: --key-secret > --key-file > env inline > env path.
+  let pem: string | null = null;
+  if (args.keySecret) {
+    pem = args.keySecret.includes("\\n") ? args.keySecret.replace(/\\n/g, "\n") : args.keySecret;
+  } else if (args.keyFile) {
+    pem = readFileSync(args.keyFile, "utf8");
+  } else if (pemInline) {
     pem = pemInline.includes("\\n") ? pemInline.replace(/\\n/g, "\n") : pemInline;
   } else if (pemPath) {
     pem = readFileSync(pemPath, "utf8");
-  } else {
-    console.error("Missing KALSHI_PRIVATE_KEY_PATH or KALSHI_PRIVATE_KEY");
+  }
+  if (!pem) {
+    console.error("Missing private key — pass --key-secret, --key-file, KALSHI_PRIVATE_KEY, or KALSHI_PRIVATE_KEY_PATH");
     return 1;
   }
   for (const name of [KEY_ID_NAME, KEY_NAME]) {

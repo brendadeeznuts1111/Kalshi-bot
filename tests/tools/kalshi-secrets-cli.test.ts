@@ -27,6 +27,16 @@ describe("kalshi:secrets CLI args", () => {
     expect(a.verbose).toBe(true);
     expect(parseCliArgs(["store"]).force).toBe(false);
   });
+
+  test("--key-id/--key-secret/--key-file parse (value and = forms)", () => {
+    const a = parseCliArgs(["store", "--key-id", "kid-1", "--key-secret", "pem", "--key-file", "/tmp/k.pem"]);
+    expect(a.keyId).toBe("kid-1");
+    expect(a.keySecret).toBe("pem");
+    expect(a.keyFile).toBe("/tmp/k.pem");
+    const b = parseCliArgs(["store", "--key-id=kid-2"]);
+    expect(b.keyId).toBe("kid-2");
+    expect(parseCliArgs(["store"]).keyId).toBeNull();
+  });
 });
 
 describe("fingerprint (masked, never the value)", () => {

@@ -137,6 +137,7 @@
     "tennis:record:ws:preview": "bun tools/tennis/ws-recorder-schedule-cli.ts preview",
     "kalshi:rotate-key": "bun tools/kalshi-rotate-key.ts",
     "kalshi:secrets": "bun tools/kalshi-secrets-cli.ts",
+    "kalshi:live-probe": "bun tools/kalshi-live-probe.ts",
     "tennis:experiment": "bun tools/tennis/experiment-cli.ts",
     "tennis:experiment:register": "bun tools/tennis/experiment-schedule-cli.ts register",
     "tennis:experiment:remove": "bun tools/tennis/experiment-schedule-cli.ts remove",
