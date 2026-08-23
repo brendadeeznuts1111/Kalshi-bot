@@ -116,7 +116,11 @@ function main(): number {
   }
   usage.sort((a, b) => b.count - a.count);
   if (usage.length === 0) console.log('  (no native Bun APIs found in src/tools)');
-  for (const u of usage) console.log('  ' + String(u.count).padStart(4) + '  ' + u.api);
+  for (const u of usage) {
+    // Defaulted columns: count right-aligned to 5, two-space sep, API name
+    // left-padded to 28 so the counts column separates cleanly.
+    console.log('  ' + String(u.count).padStart(5) + '  ' + u.api.padEnd(28));
+  }
 
   if (check && violations.length > 0) {
     console.error('deps-audit: ' + violations.length + ' replaced package(s) in use — fix before merging');

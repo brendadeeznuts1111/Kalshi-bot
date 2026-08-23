@@ -41,3 +41,29 @@ export function sliceAnsiSafe(
 ): string {
   return placeholder === undefined ? Bun.sliceAnsi(value, start, end) : Bun.sliceAnsi(value, start, end, placeholder);
 }
+
+export type StatusMark = "ok" | "WARN" | "FAIL" | "GAP" | "n/a";
+
+/**
+ * Format a status line with SEPARATED, DEFAULTED columns:
+ *   <indent><mark padded to markWidth>  <label>: <detail>
+ * Every audit tool prints status rows; this keeps the mark column the
+ * same width regardless of mark length (ok/n/a are 2-3 chars, WARN/FAIL
+ * are 4), so the label column aligns across ALL tools (pitfalls 30).
+ * @param mark one of ok/WARN/FAIL/GAP/n/a (any string works)
+ * @param label the check name
+ * @param detail optional detail after ': '
+ * @param opts indent (default 2 spaces), markWidth (default 6), sep (default 2 spaces)
+ */
+export function statusLine(
+  mark: string,
+  label: string,
+  detail?: string,
+  opts?: { indent?: number; markWidth?: number; sep?: number },
+): string {
+  const indent = opts?.indent ?? 2;
+  const markWidth = opts?.markWidth ?? 6;
+  const sep = opts?.sep ?? 2;
+  const pad = " ".repeat(indent) + padAnsi(mark, markWidth) + " ".repeat(sep);
+  return detail === undefined || detail.length === 0 ? pad + label : pad + label + ": " + detail;
+}

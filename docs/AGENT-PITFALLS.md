@@ -1167,3 +1167,11 @@ notes - they have structural enforcement:
     constructors. Acceptable for a coverage report; documented so the
     numbers aren't misread as call counts. The escapeForRg fix made
     the pattern matching literal (previously '.' matched any char).
+- Audit CLI output consistency (user request: 'proper separation and
+  columns defaulted'): all four audit CLIs (breaking/perf/adoption/
+  deps) now print through shared src/lib/ansi-width.ts statusLine() -
+  defaulted mark column (6 wide, so ok/WARN/FAIL/GAP/n/a all align),
+  defaulted indent (2) + separator (2), override-able via opts. deps-
+  audit usage table right-aligns count to 5 + left-pads API name to 28.
+  Tests: tests/lib/ansi-width.test.ts statusLine describe (alignment,
+  detail append, opts override).

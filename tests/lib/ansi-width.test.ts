@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { padAnsi, sliceAnsiSafe, visibleWidth } from "../../src/lib/ansi-width.ts";
+import { padAnsi, sliceAnsiSafe, visibleWidth, statusLine } from "../../src/lib/ansi-width.ts";
 
 const GREEN = "\u001b[38;2;204;230;77m";
 const RESET = "\u001b[0m";
@@ -52,6 +52,26 @@ describe("ANSI-aware width (Bun.stringWidth / sliceAnsi)", () => {
     expect(visibleWidth(flag)).toBe(2);
     expect(visibleWidth(keycap)).toBe(2);
     expect(visibleWidth(combining)).toBe(1);
+  });
+
+  describe("statusLine (defaulted columns)", () => {
+    test("aligns marks of different widths to the same column", () => {
+      const ok = statusLine("ok", "a");
+      const warn = statusLine("WARN", "b");
+      // Both marks pad to markWidth (6): ok has 6 trailing, WARN has 4.
+      expect(ok.indexOf("a")).toBe(warn.indexOf("b"));
+      expect(ok).toMatch(/^  ok      a$/);
+      expect(warn).toMatch(/^  WARN    b$/);
+    });
+
+    test("detail appended after label with colon", () => {
+      expect(statusLine("GAP", "name", "detail here")).toMatch(/name: detail here$/);
+    });
+
+    test("options override indent, width, separator", () => {
+      const line = statusLine("ok", "x", undefined, { indent: 4, markWidth: 3, sep: 1 });
+      expect(line).toBe("    ok  x"); // mark padded to 3 ('ok ') + 1 sep = 'ok  '
+    });
   });
 
   test("sliceAnsi keeps hyperlinks and ZWJ families whole (pitfalls 28)", () => {
