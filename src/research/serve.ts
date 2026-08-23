@@ -1124,6 +1124,12 @@ export function createResearchServer(options: ServeOptions = {}) {
   const port = options.port ?? Number(Bun.env.PORT ?? 3456);
   const serveOptions = {
     port,
+    // Hardening: Bun's defaults are a 128MB request body cap and a 10s idle
+    // timeout. Legit POSTs here are KB-scale (largest: the rotor ingest), so
+    // cap bodies at 16MB; extend the idle grace for the long-lived ndjson /
+    // SSE streams.
+    maxRequestBodySize: 16 * 1024 * 1024,
+    idleTimeout: 255, // u8 max
     routes: {
       "/hq": hqApp,
       [ROUTES.home]: handleHome,

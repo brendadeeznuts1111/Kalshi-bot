@@ -13,7 +13,7 @@ export async function readJsonFile<T = unknown>(path: string): Promise<T> {
   return (await Bun.file(path).json()) as T;
 }
 
-export async function readJsonFileOr<T>(path: string, fallback: T): Promise<T> {
+export async function readJsonFileOr<T>(path: string, fallback: T | null): Promise<T | null> {
   if (!(await Bun.file(path).exists())) return fallback;
   try {
     return await readJsonFile<T>(path);

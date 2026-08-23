@@ -1115,6 +1115,8 @@ bun pm cache rm                    # clear ~/.bun/install/cache
 | `Bun.ArrayBufferSink` | `src/partner/visuals.ts` | PNG builder's final part concatenation now uses a single-pass sink instead of the manual total+offset loop; structural PNG test pins the bytes.
 | `Bun.semver.satisfies` | `src/research/bun-native.ts`, `tools/massey-sync-cli.ts`, `tools/massey-crossref-cli.ts` | `assertBunAtLeast` runtime gate — CLI entries that need Bun 1.4-only APIs (WebView, cron) fail fast with a clear upgrade message instead of a ReferenceError.
 | `Bun.file().json()` | `src/lib/json-file.ts`, `src/research/export-audit.ts`, `tools/tennis/harvest-nationalities.ts` | JSON artifact SSOT (`readJsonFile`/`readJsonFileOr`/`writeJsonFile`); two manual `JSON.parse(await Bun.file(p).text())` sites refactored.
+| `Bun.file().json()` (expanded) | `src/research/hq-data.ts`, `src/research/export-audit.ts` | 6 more manual sites refactored: hq-data alpha/calibration loaders are now async `readJsonFileOr` (caller `buildHqPayload` already awaited); export-audit manifest/concept reads consolidated. `readJsonFileOr` widened to `T | null` for the optional-file pattern.
+| `Bun.serve` hardening | `src/research/serve.ts` | `maxRequestBodySize: 16MB` (default is 128MB) + `idleTimeout: 255` (u8 max; default 10s) for the long-lived ndjson/SSE streams. Probe note: idleTimeout is a u8 — 300 throws.
 | `Bun.stdout.write` | `src/regulatory/scripts/migrate.ts`, `tools/tennis/live-scores-cli.ts` | Replaced the last `process.stdout.write` spots (readline.ts already native).
 
 ### Flagged (no adoption yet — honest no-fit)
@@ -1123,5 +1125,7 @@ bun pm cache rm                    # clear ~/.bun/install/cache
 - `Bun.password` — no current hashing consumer in this repo; candidate only if a local vault passphrase ever appears. Do not force-fit.
 - `Bun.XML` — no XML parsing in the repo (Kalshi/partner feeds are JSON); no consumer.
 - `Bun.deepMatch` — subset-matching has no consumer; `Bun.deepEquals` (via `bun-native.ts`) covers equality. Revisit if a schema-subset check appears.
-- `Bun.password` — no current hashing consumer in this repo; candidate only if a local vault passphrase ever appears. Do not force-fit.
+- `Bun.mmap` — no random-access large-file consumer; all file reads are full-buffer or streamed. Revisit if a memory-mapped scan appears.
+- `Bun.Transpiler` / `Bun.unsafe` — no runtime transpilation or unsafe-FFI need; nothing to adopt.
+- Sync seed loaders (`tennis-meta.ts` `loadSeed`, hq-data hypothesis reads) stay `readFileSync` — `Bun.file().json()` is async-only and the `??=` memoized dicts are sync by design.
 - Keychain-first auth read (`loadKalshiCredentials`) — deferred: the loader is sync and sits on the live-execution path; convert alongside a broader async-auth change. The `kalshi:secrets` CLI is the opt-in migration step meanwhile.

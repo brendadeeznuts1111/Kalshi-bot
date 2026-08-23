@@ -1,7 +1,7 @@
 // @see https://bun.com/docs/runtime/file-io#writing-files-bun-write
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
-import { readJsonFile } from "../lib/json-file.ts";
+import { readJsonFile, readJsonFileOr } from "../lib/json-file.ts";
 import {
   buildAuditEvidenceWire,
   buildAuditRunExport,
@@ -136,19 +136,17 @@ export async function verifyLocalAuditExport(auditRelDir: string): Promise<Audit
   const errors: string[] = [];
   const auditDir = join(ROOT, auditRelDir);
   const manifestPath = join(auditDir, "manifest.json");
-  const manifestFile = Bun.file(manifestPath);
-  if (!(await manifestFile.exists())) {
-    return { ok: false, errors: [`missing manifest: ${auditRelDir}/manifest.json`] };
-  }
-
-  const manifest = JSON.parse(await manifestFile.text()) as {
+  const manifest = await readJsonFileOr<{
     findings: Array<{
       id: string;
       evidencePath: string;
       digest: string;
       contentDigest?: string;
     }>;
-  };
+  }>(manifestPath, null);
+  if (manifest == null) {
+    return { ok: false, errors: [`missing manifest: ${auditRelDir}/manifest.json`] };
+  }
 
   for (const entry of manifest.findings) {
     const findingPath = join(auditDir, `${entry.id}.finding.json`);
@@ -187,15 +185,15 @@ export async function buildRotorIngestWire(auditRelDir: string): Promise<RotorIn
   const manifestFile = Bun.file(join(auditDir, "manifest.json"));
   if (!(await manifestFile.exists())) return null;
 
-  const manifest = JSON.parse(await manifestFile.text()) as {
+  const manifest = await readJsonFile<{
     runId: string;
     generatedAt: string;
     findings: Array<{ id: string; evidencePath: string }>;
-  };
+  }>(join(auditDir, "manifest.json"));
 
-  const concept = JSON.parse(
-    await Bun.file(join(auditDir, "shortlist-diversity.concept.json")).text(),
-  ) as AuditConceptWire;
+  const concept = await readJsonFile<AuditConceptWire>(
+    join(auditDir, "shortlist-diversity.concept.json"),
+  );
 
   const findings: AuditFindingWire[] = [];
   const evidenceCopies: RotorIngestWire["evidenceCopies"] = [];

@@ -8,6 +8,7 @@
  * instead of failing the whole payload.
  */
 import { readdirSync, existsSync, statSync, readFileSync } from "node:fs";
+import { readJsonFileOr } from "../lib/json-file.ts";
 import { join } from "node:path";
 import { listRunSummaries, loadLatestProductionRunAnyDimension } from "./cache.ts";
 import { CACHE_DIR, REPORT_DIR, joinPath } from "./paths.ts";
@@ -139,15 +140,26 @@ function readShadowStats(dir: string, shadowLog: string | undefined) {
   return { signals, resolutions, lastAt };
 }
 
-function readAlphaPrograms(): AlphaProgramView[] {
+type AlphaProgramSeed = {
+  name?: string;
+  status?: string;
+  role?: string;
+  dimension?: string;
+  created?: string | null;
+  gates?: Record<string, unknown>;
+  hypothesisFile?: string;
+  shadowLog?: string;
+};
+
+async function readAlphaPrograms(): Promise<AlphaProgramView[]> {
   if (!existsSync(ALPHA_DIR)) return [];
   const out: AlphaProgramView[] = [];
   for (const name of readdirSync(ALPHA_DIR).sort()) {
     const dir = joinPath(ALPHA_DIR, name);
     const programPath = joinPath(dir, "program.json");
-    if (!existsSync(programPath)) continue;
     try {
-      const p = JSON.parse(readFileSync(programPath, "utf-8"));
+      const p = await readJsonFileOr<AlphaProgramSeed>(programPath, null);
+      if (p == null) continue;
       const hypPath = joinPath(dir, p.hypothesisFile ?? "hypothesis.md");
       out.push({
         name: p.name ?? name,
@@ -170,11 +182,13 @@ function readAlphaPrograms(): AlphaProgramView[] {
 
 // ── Calibration section ──
 
-function readCalibrationLatest() {
-  const latestPath = joinPath(CALIBRATION_DIR, "latest-run.json");
-  if (!existsSync(latestPath)) return null;
+async function readCalibrationLatest() {
+  const latest = await readJsonFileOr<{ runId: string; at: string }>(
+    joinPath(CALIBRATION_DIR, "latest-run.json"),
+    null,
+  );
+  if (latest == null) return null;
   try {
-    const latest = JSON.parse(readFileSync(latestPath, "utf-8"));
     let runs = 0;
     try {
       runs = readdirSync(CALIBRATION_DIR).filter((d) =>
@@ -184,14 +198,7 @@ function readCalibrationLatest() {
       runs = 0;
     }
     const manifestPath = joinPath(CALIBRATION_DIR, latest.runId, "manifest.json");
-    let manifest: unknown = null;
-    if (existsSync(manifestPath)) {
-      try {
-        manifest = JSON.parse(readFileSync(manifestPath, "utf-8"));
-      } catch {
-        manifest = null;
-      }
-    }
+    const manifest: unknown = await readJsonFileOr(manifestPath, null);
     return { runId: latest.runId, at: latest.at, totalRuns: runs, manifest };
   } catch {
     return null;
@@ -293,8 +300,8 @@ function buildMonitorSection(trading: unknown) {
 export async function buildHqPayload(nowMs = Date.now()) {
   const [trading] = await Promise.all([fetchTradingSection(nowMs)]);
   const research = readResearchSection();
-  const alpha = readAlphaPrograms();
-  const calibration = readCalibrationLatest();
+  const alpha = await readAlphaPrograms();
+  const calibration = await readCalibrationLatest();
   const alphaLastAt = alpha
     .map((p) => p.shadow?.lastAt)
     .filter((x): x is string => typeof x === "string")
