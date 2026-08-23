@@ -65,6 +65,42 @@ export function prefetchDns(targets: DnsWarmTarget[]): void {
 }
 
 /**
+ * Map a ws:///wss:// feed URL to the http(s) form fetch.preconnect accepts.
+ * Verified on Bun 1.4.0: preconnect works with `http://host:port` +
+ * { dns, tcp }; `https://` URLs throw "Invalid port" in this build (the
+ * documented example shape fails), so we warm the ws endpoint as http.
+ */
+export function feedHttpUrl(url: string): string {
+  if (url.startsWith("ws://")) return "http://" + url.slice(5);
+  if (url.startsWith("wss://")) return "https://" + url.slice(6);
+  return url;
+}
+
+/**
+ * Pre-establish DNS + TCP for a feed endpoint (fetch.preconnect, real in
+ * Bun 1.4.0 — typed in globals.d.ts, untyped in bun.d.ts). Best effort.
+ */
+export function preconnectFeed(url: string): void {
+  try {
+    fetch.preconnect(feedHttpUrl(url), { dns: true, tcp: true });
+  } catch {
+    // best effort — preconnect is an optimization, never fail on it
+  }
+}
+
+/**
+ * DNS cache stats (Bun.dns.getCacheStats, real in 1.4.0): hits/misses,
+ * size, errors. Useful for a debug/diagnostic mode.
+ */
+export function dnsCacheStats(): Record<string, number> {
+  try {
+    return (Bun.dns.getCacheStats() as Record<string, number>) ?? {};
+  } catch {
+    return {};
+  }
+}
+
+/**
  * Reconnect delay: base * 2^attempt, capped. Pure + tested.
  */
 export function nextReconnectDelay(

@@ -37,6 +37,7 @@ import { persistFonbetEvent } from '../src/institutions/fonbet/sync.ts';
 import {
   connectFonbetFeed,
   prefetchDns,
+  preconnectFeed,
   FONBET_ODDSCORP_URL,
 } from '../src/institutions/fonbet/connection.ts';
 
@@ -111,9 +112,10 @@ async function main(): Promise<void> {
   const seconds = Number(argValue('seconds') ?? '30') || 30;
   const leagues = argValues('league');
   const teams = argValues('team');
-  // Warm DNS for the feed host (Bun.dns.prefetch) — fetch.preconnect is
-  // not present in bun-types 1.4.0; DNS warm-up is the real mechanism.
+  // Warm DNS + TCP for the feed endpoint (Bun.dns.prefetch +
+  // fetch.preconnect — both real in 1.4.0).
   prefetchDns([new URL(FONBET_ODDSCORP_URL).hostname]);
+  preconnectFeed(FONBET_ODDSCORP_URL);
   let events = 0;
   let odds = 0;
   const session = connectFonbetFeed({

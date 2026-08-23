@@ -1,8 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import {
+  dnsCacheStats,
+  feedHttpUrl,
   filterFonbetEvent,
   nextReconnectDelay,
   prefetchDns,
+  preconnectFeed,
 } from "../../../src/institutions/fonbet/connection.ts";
 import type { FonbetEventWire } from "../../../src/institutions/fonbet/parse.ts";
 
@@ -49,5 +52,22 @@ describe("fonbet connection manager (Bun-native)", () => {
 
   test("prefetchDns warms known hosts without throwing", () => {
     expect(() => prefetchDns(["api.oddscp.com", { hostname: "example.com", port: 443 }])).not.toThrow();
+  });
+
+  test("feedHttpUrl maps ws:// to the http form preconnect accepts", () => {
+    expect(feedHttpUrl("ws://api.oddscp.com:8001")).toBe("http://api.oddscp.com:8001");
+    expect(feedHttpUrl("wss://feed.example.com")).toBe("https://feed.example.com");
+    expect(feedHttpUrl("https://x.example.com")).toBe("https://x.example.com");
+  });
+
+  test("preconnectFeed is best-effort (never throws on bad input)", () => {
+    expect(() => preconnectFeed("ws://api.oddscp.com:8001")).not.toThrow();
+  });
+
+  test("dnsCacheStats returns the real cache stats shape", () => {
+    const stats = dnsCacheStats();
+    expect(stats).toHaveProperty("cacheHitsCompleted");
+    expect(stats).toHaveProperty("cacheMisses");
+    expect(stats).toHaveProperty("size");
   });
 });
