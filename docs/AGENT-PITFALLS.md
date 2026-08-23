@@ -454,6 +454,34 @@ patterns (harvest-nationalities, fonbet fixture loader converted).
   (same content/sitemap/CDN headers, different Cloudflare IPs; verified
   on workers/sql/fetch/server/webview/api + root). Only two real
   surfaces: repo (tag/main .mdx) and the rendered site (bun.com/bun.sh).
+
+### 10. Bun native fetch: DNS, CDNs, and connection reuse (all probe-verified on 1.4.0)
+
+- Bun.dns is REAL and complete: prefetch(host, port?), lookup(),
+  getCacheStats() -> {cacheHitsCompleted, cacheHitsInflight, cacheMisses,
+  size, errors, totalCount}. prefetch populates the cache (misses+1,
+  size+1). Docs (cached runtime/networking/dns.mdx): 256-entry cache,
+  30s TTL default, $BUN_CONFIG_DNS_TIME_TO_LIVE_SECONDS to change, used
+  automatically by fetch/Bun.connect/node:net/node:tls/node:http/bun install.
+- Connection FAILURE evicts the DNS entry (verified: localhost:1 refused
+  -> size 1->0, errors 0->1) forcing re-resolution - this is how the
+  multi-IP CDN case self-heals: a dead Cloudflare IP gets dropped, the
+  next connect re-resolves (possibly to the other IP). A TIMEOUT (hanging
+  port, e.g. bun.com:99) does NOT evict - it just hangs until your own
+  timeout. No Happy Eyeballs documented in tcp docs.
+- Connection pooling is REAL and default-on: 20 sequential fetches to a
+  keep-alive local server -> 1 TCP connection; keepalive:false per-
+  request -> 1 connection each (5/5 new). fetch() to bun.com negotiated
+  HTTP/1.1 (verbose:'curl' output shows --http1.1), Cloudflare edge
+  served it (x-vercel-cache: HIT, cf-cache-status: DYNAMIC, br encoding).
+- Default simultaneous fetch limit is 256; excess QUEUES (docs).
+  $BUN_CONFIG_MAX_HTTP_REQUESTS raises it (max 65535). Our --scope all
+  run fans out 333 parallel fetches - 77 queue behind the cap, which is
+  fine (pooled, same host), but cap is real.
+- Repo precedent: src/institutions/fonbet/connection.ts already uses
+  Bun.dns.prefetch (prefetchDns) + getCacheStats (dnsCacheStats) to warm
+  and observe the DNS cache - the pattern to copy for any multi-host
+  ingestion.
 - As of bun 1.4.0, tag and repo main are BYTE-IDENTICAL on all 16 curated
   pages (md5 check) - no repo-ahead drift right now. The REAL skew is
   docs-vs-runtime and it EXISTS EVEN AT THE TAG: fetch.preconnect exists but
