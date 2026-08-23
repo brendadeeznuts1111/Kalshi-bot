@@ -379,6 +379,15 @@ each has a real consumer in the repo where marked.
   reads; Bun.color("ansi") + Bun.inspect.table(rows, { colors }) honor
   FORCE_COLOR; Bun.nanoseconds for timing. See commit history 2026-08-22.
 
+### Inspect depth semantics (verified 2026-08-22)
+
+- console.log honors [console] depth in bunfig.toml (this repo: 3) and the
+  bun --console-depth N flag; truncates with [Object ...].
+- Bun.inspect(value) does NOT honor console.depth — it always serializes at
+  full depth (docs claim otherwise; verified on 1.4.0 with and without bunfig).
+- Bun.inspect(value, { depth }) is the ONLY per-call bound; our inspectValue
+  helper passes depth through (inspectValue(x, { depth: 2 })).
+
 ### Markdown .md loader trap
 
 - import html from "./x.md" renders with DEFAULT options — no tagFilter, so
