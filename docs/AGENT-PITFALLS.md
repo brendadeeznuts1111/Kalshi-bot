@@ -1354,3 +1354,26 @@ notes - they have structural enforcement:
   * Remaining Bun casts are legit + documented: kalshi-ws WebSocket
     ctor (lib.dom wins global ctor), serve.ts Bun.Serve.Options
     (bun-types 1.3.x lag), data-shape casts (optional fields).
+## 11. Docs-grounding: a word across Bun docs pages is NOT a concept (2026-08-23)
+
+"Metadata" appears across unrelated Bun docs pages with no unified topic -
+do not treat a shared word as a cross-linkable concept, glossary entry, or
+single claim:
+
+| Page | What "metadata" means there |
+|------|------------------------------|
+| docs/pm/cli/info | package metadata from the npm registry |
+| docs/pm/cli/install (npm-registry-metadata) | how Bun caches registry metadata locally (this repo: research/registry *.npm blobs) |
+| guides/html-rewriter/extract-social-meta | Open Graph / social meta extraction from HTML |
+| docs/runtime/s3 | example file reference named metadata (NOT a metadata API) |
+| docs/bundler/bytecode | ESM bytecode embeds module metadata; per-function metadata overhead |
+| docs/runtime/image (metadata) | Bun.Image.metadata() -> { width, height, format } without decoding pixels |
+| docs/runtime/markdown (callback-signature) | render callbacks receive a meta object (element-specific) |
+| docs/test/reporters | JUnit reporter <properties> (CI/commit/hostname) |
+
+Rule: verify a concept exists on its canonical page before merging the word
+into the glossary, cross-referencing pages, or claiming it in BUN_NATIVE.md.
+A shared word is a coincidence; a concept needs its own API/page. This repo's
+glossary (src/institutions/glossary.ts) is Kalshi-domain ONLY - do not add
+Bun-docs words like metadata to it.
+
