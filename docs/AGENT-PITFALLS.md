@@ -646,3 +646,64 @@ probes. Verdict per claim:
 - bun run --parallel verified real: runs scripts concurrently with
   Foreman-style 'name | exit |' prefixed output (help text + probe).
 - 3x faster bun:ffi confirmed in blog (image alt text).
+
+### 15. Deeper pass: rewrite/event-loop/SIMD/JSC claims audit
+
+Second claims paste audited (blog bun-v1.4 + bun-v1.4.0 tree + runtime
+probes + cached debugger.mdx). Verdicts:
+
+- VERIFIED (blog): 'rewrites Bun from Zig to Rust'; Node.js 26.3.0 meta
+  description AND process.versions.node = 26.3.0 at runtime with
+  process.versions.modules = 147 (NODE_MODULE_VERSION, probe).
+  node:http/fs/cluster/timers/zlib/vm/stream pass 97% of Node's own
+  tests, node:quic 99%, node:events/trace_events/sqlite 100% (blog
+  sentence matches the paste's table exactly). +1,517 Node tests.
+- VERIFIED (blog + runtime): breaking changes table is accurate:
+  res.writeHeader REMOVED (probe: node:http ServerResponse.writeHeader
+  undefined, writeHead is a function - use writeHead); bun.lock v2
+  exists (blog: 'bun.lock is now lockfileVersion') while THIS repo's
+  lock is still v1 (old format - migration note, not a claim error);
+  TLS validation stricter (blog: ERR_TLS_CERT_ALTNAME_INVALID when
+  connecting by IP/localhost with a cert issued for another name -
+  matches Node); .env NOT auto-loaded under real node (probe:
+  /opt/homebrew/bin/node prints undefined, bun prints the value -
+  bun's auto-load is a bun feature, not node's); Bun.YAML is YAML 1.2
+  (probe: 'yes'/'on'/'no' parse as STRINGS, 1.1 booleans are gone);
+  Temporal enabled (probe: typeof Temporal === 'object').
+- VERIFIED (repo tree + docs): .classes.ts binding generator is REAL -
+  the bun-v1.4.0 tree has src/runtime/api/*.classes.ts (Glob, Archive,
+  BunObject, JSBundler...) using define() from codegen/class-
+  definitions describing class layout (construct/finalize/JSType/proto
+  builtins) - the paste's 'binding generator' claim is accurate;
+  WebKit Inspector Protocol confirmed by debugger.mdx ('Bun speaks the
+  WebKit Inspector Protocol') with a CDP layer for debug.bun.sh - the
+  WIP-not-CDP + translation claim is accurate.
+- PARTIALLY TRUE / EMBELLISHED (blog has the optimization but NOT the
+  paste's mechanism): setImmediate - blog says 'no longer writes to the
+  eventfd on every iteration' (44k writes -> 0); the paste's
+  'zero-timeout getTimeout()' mechanism is INVENTED. Event loop Linux
+  edge-triggered epoll for eventfd wakeups is real (blog). SIMD is
+  real and pervasive (SIMD XML parser, SourceMap 3.1x, String#indexOf
+  5.36x, Wasm interpreter SIMD) but the specific paste stories
+  (TextEncoder.encode regression saga, highway_index_of_char /
+  highway_memmem names, ANSI 4-way unroll with NEON-to-GPR, LTO caveat)
+  are NOT in the blog - invented detail on top of a true theme.
+- FABRICATED (not in blog): the rewrite statistics - '535,496 lines of
+  Zig', '64 Claude agents over 11 days', '$165,000 API credits',
+  '6,778 commits', 'strangler-fig pattern', 'Rust passed 100% with
+  zero skips' - NONE appear in the blog (grep for each: zero hits).
+  The blog only says 'rewrites Bun from Zig to Rust'. The specific bug
+  list (node:zlib UAF, http2 hash rehash, UDPSocket valueOf crash,
+  Buffer#copy OOB, scrypt leak, CSS double-free, fs.watch refcount) is
+  also absent from the blog - plausible-sounding but unverified.
+  'uSockets/uWebSockets' event loop layering - zero blog hits; the
+  paste's three-layer architecture with uSockets is invented.
+- Anthropic production numbers VERIFIED: Claude Code p99 CPU 24% ->
+  10%, p50 5.8% -> 2.5% (blog). 'Claude Code has been using Bun's Rust
+  port for months' (blog). But this is Anthropic's app on Bun, NOT
+  evidence for the migration agent/cost claims.
+- Practice: paste #2 mixed ~60% verified facts with invented
+  mechanisms and statistics. The verifiable core (versions, breaking
+  changes, compat table, classes.ts, inspector protocol) all checked
+  out; every invented number was greppable-as-absent. Same rule as
+  section 13: verify, then act.
