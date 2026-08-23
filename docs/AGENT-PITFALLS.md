@@ -350,6 +350,19 @@ Node APIs are intentional:
     so same-process post() also reaches handlers) - live-verified
     'worker analyzed Bun 1.4 -> main RECEIVED'. Cross-process fan-out
     needs WS/HTTP, not BroadcastChannel.
+  * Worker API VERIFIED (runtime + cached workers.mdx): unref()/ref() are
+    REAL - unref detaches the worker from process liveness (Node
+    worker_threads semantics), ref() restores it (default), ref:false in
+    options is equivalent; message listeners ALSO keep a worker alive,
+    which the release-watch cron job relies on (it waits for the fan-out
+    event, so it deliberately stays ref'd). Worker.exited is genuinely
+    ABSENT (runtime + types agree) - wait on messages/events, not exited.
+  * Bun reference docs are now CACHED LOCALLY: bun:docs-index fetches 16
+    curated .mdx pages (workers, child-process, image, markdown, xml,
+    secrets, csrf, cookies, dns, fetch, tcp, udp, websockets, server,
+    glob, sql) into research/cache/bun-docs/ with an INDEX.json manifest,
+    24h freshness + --refresh/--check - verification cites local copies
+    and can detect docs drift.
   * Full-stack feed playbook verified: named imports from 'bun' (cron,
     XML, markdown, write, file) all real - unlike 'html'. Bun.cron jobs
     ARE disposable (Symbol.dispose + unref on the prototype) so `using

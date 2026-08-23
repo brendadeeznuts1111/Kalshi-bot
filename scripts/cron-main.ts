@@ -415,7 +415,9 @@ async function jobBunReleaseWatch(): Promise<void> {
   try {
     // Run the watch as a WORKER so the result arrives over BroadcastChannel
     // IN-PROCESS (verified: channels bridge worker threads + main, but NOT
-    // separate processes).
+    // separate processes). The worker stays REF'D deliberately: we wait for
+    // its fan-out event (workers.mdx: message listeners also keep a worker
+    // alive); worker.unref()/ref:false would detach it for fire-and-forget.
     const worker = new Worker(new URL("./release-watch-worker.ts", import.meta.url));
     const bus = createFanout(RELEASE_FANOUT_CHANNEL);
     // Wait for the fan-out event (the worker's real completion signal) or a
