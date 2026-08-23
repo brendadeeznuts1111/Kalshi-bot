@@ -38,6 +38,45 @@ export function latestOddsForEvent(
   return out;
 }
 
+export type OddsTickInsert = {
+  eventId: string;
+  source: string;
+  side: "home" | "away";
+  decimalOdds: number;
+  ts: number;
+};
+
+/**
+ * Persist live odds ticks (upsert-ignore on event_id+source+side+ts).
+ * corpus 'trading' (open-db default), limit_context 'live'.
+ */
+export function persistOddsTicks(db: Database, ticks: OddsTickInsert[]): number {
+  const stmt = db.prepare(
+    `INSERT INTO odds_ticks (
+       event_id, source, fetched_ts, corpus, ts, side, decimal_odds, implied_prob, limit_context
+     )
+     SELECT $event_id, $source, $fetched_ts, 'trading', $ts, $side, $decimal_odds, $implied_prob, 'live'
+     WHERE NOT EXISTS (
+       SELECT 1 FROM odds_ticks
+       WHERE event_id = $event_id AND source = $source AND side = $side AND ts = $ts
+     )`,
+  );
+  let inserted = 0;
+  for (const t of ticks) {
+    if (!Number.isFinite(t.decimalOdds) || t.decimalOdds <= 1) continue;
+    inserted += stmt.run({
+      $event_id: t.eventId,
+      $source: t.source,
+      $fetched_ts: t.ts,
+      $ts: t.ts,
+      $side: t.side,
+      $decimal_odds: t.decimalOdds,
+      $implied_prob: 1 / t.decimalOdds,
+    }).changes;
+  }
+  return inserted;
+}
+
 /**
  * Book catalog + latest live odds for a sport, deduped by league|home|away.
  * Events without an odds_event_id (or with no odds_ticks rows) come back

@@ -42,6 +42,7 @@ import {
   type FantasyUltraCredentials,
 } from "./types.ts";
 import { CoefficientStore } from "./coefficient-store.ts";
+import { persistCoefficientMarkets } from "./odds-persist.ts";
 import {
   PandoraSocket,
   type PandoraLiveSessionIds,
@@ -49,6 +50,7 @@ import {
   type PandoraSocketOptions,
 } from "./pandora-socket.ts";
 import type { PlaceBetEndpointMap } from "./place-bet-har.ts";
+import type { Database } from "bun:sqlite";
 import {
   buildPlaceBetBody,
   encodePlaceBetBody,
@@ -75,6 +77,11 @@ export type FantasyUltraAdapterOptions = {
   warmSession?: boolean;
   /** Optional shared/in-memory Pandora book (tests / sync). */
   coefficientStore?: CoefficientStore;
+  /**
+   * When set, persist the Pandora book into odds_ticks after every
+   * coefficient ingest (the massey edge-flags live-odds contract).
+   */
+  persistence?: { db: Database } | null;
 };
 
 export type ConnectWebSocketOptions = Omit<PandoraSocketOptions, "handlers"> & {
@@ -105,6 +112,7 @@ export class FantasyUltraAdapter implements FantasySessionAdapter {
   private warmed = false;
   private pandora: PandoraSocket | null = null;
   private readonly coefficientStore: CoefficientStore;
+  private readonly persistenceDb: Database | null = null;
 
   constructor(options: FantasyUltraAdapterOptions) {
     this.credentials = options.credentials;
@@ -131,6 +139,7 @@ export class FantasyUltraAdapter implements FantasySessionAdapter {
     this.placeBetMap = options.placeBetMap ?? null;
     this.autoWarm = options.warmSession !== false;
     this.coefficientStore = options.coefficientStore ?? new CoefficientStore();
+    this.persistenceDb = options.persistence?.db ?? null;
   }
 
   /** Resolved PlaceBet URL (constructor / map / env) or null if unmapped. */
@@ -617,6 +626,12 @@ export class FantasyUltraAdapter implements FantasySessionAdapter {
         ...handlers,
         onCoefficients: (info) => {
           this.coefficientStore.ingest(info);
+          if (this.persistenceDb) {
+            persistCoefficientMarkets(
+              this.persistenceDb,
+              this.coefficientStore.toPartnerMarkets(),
+            );
+          }
           handlers.onCoefficients?.(info);
         },
         onNamespaceConnect: (sid) => {
