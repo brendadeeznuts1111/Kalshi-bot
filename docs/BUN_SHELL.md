@@ -38,6 +38,8 @@ in-process side.
 | deps outdated | `Bun.spawn(["bun","outdated"], env)` | `$`bun outdated`.env({…, NO_COLOR:"1"}).nothrow().quiet()` · `scripts/deps-outdated.ts` |
 | Vault provisioning | pass-cli spawn + stdin write | `$`printf "%s" ${input} | ${bin} ${args}`.nothrow().quiet()` · `tools/provision-fantasy402-vault.ts` |
 | Guard git scan | `Bun.spawn(["git","ls-files","-z"])` | `$`git ls-files -z`.cwd(root).nothrow().quiet()` + NUL split · `scripts/audit-bun-native.ts` |
+| Demo scenario runner | `Bun.spawn([process.execPath,"test",…])` + env | `$`${process.execPath} test ${spec.file} --test-name-pattern ${spec.pattern}`.env({…})` — undefined env dropped (verified) · `src/partner/execution/demo-scenario-runner.ts` |
+| Regulatory CLI tests | `Bun.spawn({ cmd: […] })` pipes | `$`bun src/regulatory/scripts/… --db :memory:`.nothrow().quiet()` · `tests/regulatory/state-compliance.test.ts` |
 
 ### Keep-list — `Bun.spawn` / `Bun.spawnSync` stay (deliberate)
 
@@ -47,8 +49,7 @@ in-process side.
 | `src/lib/editor.ts` | `unref()` detach for the GUI editor; `$` has no unref |
 | `tools/pre-commit.ts` · `tools/agent-probe.ts` · `src/lib/rg.ts` · `src/lib/breaking-audit.ts` | `Bun.spawnSync` in blocking sync contexts; `$` is async-only. `node:child_process` is guard-banned (`BANNED_PACKAGES`) |
 | `tools/protonpass-run.ts` · `tools/db-push-gate.ts` | Interactive TTY passthrough (pass prompts / drizzle-kit) — `$` regressions hide here |
-| `src/partner/execution/demo-scenario-runner.ts` | Deferred — env `undefined` semantics + compliance-adjacent evidence hashing |
-| `tests/*` spawns | Out of the 2026-08-23 sweep scope (consistency pass later) |
+| `tests/inventory/live-tracker.test.ts` | Deferred — file carries unrelated uncommitted work; convert when it lands |
 
 ### Idioms (verified on Bun 1.4.0)
 

@@ -13,6 +13,7 @@
  */
 
 import { describe, expect, test, beforeAll, afterAll } from "bun:test";
+import { $ } from "bun";
 import { Database } from "bun:sqlite";
 import { ComplianceRepository } from "../../src/regulatory/lib/compliance-repo";
 import { BetBlockedError } from "../../src/regulatory/lib/errors";
@@ -521,26 +522,13 @@ describe("ViolationAlerts", () => {
 
 describe("Regulatory CLI scripts", () => {
   test("migrate runner exits 0 and tracks applied migrations", async () => {
-    const proc = Bun.spawn({
-      cmd: ["bun", "src/regulatory/scripts/migrate.ts", "--db", ":memory:"],
-      cwd: process.cwd(),
-      stdout: "pipe",
-      stderr: "pipe",
-    });
-    const exitCode = await proc.exited;
-    const stdout = await new Response(proc.stdout).text();
+    const { exitCode, stdout } = await $`bun src/regulatory/scripts/migrate.ts --db :memory:`.nothrow().quiet();
     expect(exitCode).toBe(0);
-    expect(stdout).toContain("Applied");
+    expect(stdout.toString()).toContain("Applied");
   });
 
   test("sweep-violations exits 0 even on empty table", async () => {
-    const proc = Bun.spawn({
-      cmd: ["bun", "src/regulatory/scripts/sweep-violations.ts", "--db", ":memory:"],
-      cwd: process.cwd(),
-      stdout: "pipe",
-      stderr: "pipe",
-    });
-    const exitCode = await proc.exited;
+    const { exitCode } = await $`bun src/regulatory/scripts/sweep-violations.ts --db :memory:`.nothrow().quiet();
     expect(exitCode).toBe(0);
   });
 });

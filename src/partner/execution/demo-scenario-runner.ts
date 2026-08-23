@@ -1,3 +1,4 @@
+import { $ } from "bun";
 import type { DemoProofInput, DemoProofScenario } from "./demo-proof.ts";
 
 export interface DemoScenarioRun {
@@ -72,24 +73,8 @@ export async function runDeterministicDemoScenarios(
 }
 
 async function runBunTestSpec(spec: ScenarioSpec) {
-  const child = Bun.spawn([
-    process.execPath,
-    "test",
-    spec.file,
-    "--test-name-pattern",
-    spec.pattern,
-  ], {
-    cwd: process.cwd(),
-    env: { ...process.env, KALSHI_ENV: "demo", KALSHI_PROD_ARMED: undefined },
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  const [stdout, stderr, exitCode] = await Promise.all([
-    new Response(child.stdout).text(),
-    new Response(child.stderr).text(),
-    child.exited,
-  ]);
-  return { exitCode, outputSha256: digest({ stdout, stderr }) };
+  const { stdout, stderr, exitCode } = await $`${process.execPath} test ${spec.file} --test-name-pattern ${spec.pattern}`.env({ ...process.env, KALSHI_ENV: "demo", KALSHI_PROD_ARMED: undefined }).nothrow().quiet();
+  return { exitCode, outputSha256: digest({ stdout: stdout.toString(), stderr: stderr.toString() }) };
 }
 
 function digest(value: unknown): string {
