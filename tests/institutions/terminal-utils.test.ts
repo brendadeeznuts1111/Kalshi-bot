@@ -16,4 +16,10 @@ describe("inspectValue / inspectColor", () => {
   test("typed arrays serialize with their type tag", () => {
     expect(inspectValue(new Uint8Array([1, 2, 3]), { colors: false })).toContain("Uint8Array");
   });
+
+  test("depth truncates with [Object ...]", () => {
+    const deep = { a: { b: { c: { d: 1 } } } };
+    expect(inspectValue(deep, { depth: 2 })).toContain("[Object ...]");
+    expect(inspectValue(deep, { depth: 10 })).not.toContain("[Object ...]");
+  });
 });

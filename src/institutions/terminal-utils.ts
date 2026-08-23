@@ -35,9 +35,14 @@ export const ANSI = {
  * Serialize any value with Bun.inspect (Bun's console.log formatting).
  * colors: true forces ANSI (crash-reporter style); false forces plain;
  * undefined lets Bun auto-detect (NO_COLOR / FORCE_COLOR / TTY).
+ * depth limits recursion (truncates with [Object ...]); undefined = full.
+ * console.log default depth comes from bunfig [console] depth (3 here).
  */
-export function inspectValue(value: unknown, opts: { colors?: boolean } = {}): string {
-  return Bun.inspect(value, { colors: opts.colors });
+export function inspectValue(
+  value: unknown,
+  opts: { colors?: boolean; depth?: number } = {},
+): string {
+  return Bun.inspect(value, { colors: opts.colors, depth: opts.depth });
 }
 
 /** Colored serialization for terminal diagnostics. */
