@@ -14,6 +14,8 @@
  *
  * Flags:
  *   --sport     feed sport filter (e.g. volleyball, tennis); omit = all.
+ *   --league    league filter (repeatable, exact case-insensitive).
+ *   --team      team filter (repeatable, substring both directions).
  *   --seconds   live capture duration (default 30).
  *   --db=PATH   event-store db path (default research/cache/event-store.db).
  *   --fixture   file or dir of saved ODDSCORP messages (JSONL: one message array per line).
@@ -26,12 +28,17 @@
  */
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { argValue, hasFlag } from '../src/cli/argv.ts';
+import { argValue, argValues, hasFlag } from '../src/cli/argv.ts';
 import { assertBunAtLeast } from '../src/research/bun-native.ts';
 import { openEventStore } from '../src/institutions/event-store/open-db.ts';
 import { DEFAULT_EVENT_STORE_DB } from '../src/institutions/event-store/paths.ts';
 import { parseFonbetEvent, type FonbetMarketWire } from '../src/institutions/fonbet/parse.ts';
 import { persistFonbetEvent } from '../src/institutions/fonbet/sync.ts';
+import {
+  connectFonbetFeed,
+  prefetchDns,
+  FONBET_ODDSCORP_URL,
+} from '../src/institutions/fonbet/connection.ts';
 
 assertBunAtLeast('1.4.0', 'fonbet:sync');
 
@@ -102,34 +109,28 @@ async function main(): Promise<void> {
     process.exit(2);
   }
   const seconds = Number(argValue('seconds') ?? '30') || 30;
+  const leagues = argValues('league');
+  const teams = argValues('team');
+  // Warm DNS for the feed host (Bun.dns.prefetch) — fetch.preconnect is
+  // not present in bun-types 1.4.0; DNS warm-up is the real mechanism.
+  prefetchDns([new URL(FONBET_ODDSCORP_URL).hostname]);
   let events = 0;
   let odds = 0;
-  const ws = new WebSocket('ws://api.oddscp.com:8001');
-  ws.onopen = () => {
-    ws.send(JSON.stringify({
-      cmd: 'subscribe',
-      auth_key: authKey,
-      needed_bk: ['fonbet:prematch', 'fonbet:live'],
-      needed_sport: sport ? [sport] : undefined,
-      send_events_ids: true,
-      send_actual_first: true,
-      short_format: true,
-    }));
-    console.log('subscribed fonbet:prematch + fonbet:live' + (sport ? ' · sport=' + sport : ''));
-  };
-  ws.onmessage = (event) => {
-    try {
-      const msg = JSON.parse(String(event.data)) as WireMessage;
-      const r = handleMessage(db, msg, marketsByKey, sport);
-      events += r.events;
-      odds += r.odds;
-    } catch {
-      // non-JSON keepalive
-    }
-  };
+  const session = connectFonbetFeed({
+    authKey,
+    filters: { sport, leagues: leagues.length ? leagues : undefined, teams: teams.length ? teams : undefined },
+  }, {
+    onEvent: (ev, markets) => {
+      const row = parseFonbetEvent(ev, markets);
+      if (!row) return;
+      events++;
+      odds += persistFonbetEvent(db, row);
+    },
+    onLog: (line) => console.log(line),
+  });
   console.log('capturing for ' + seconds + 's (Ctrl-C to stop early)…');
   await Bun.sleep(seconds * 1000);
-  ws.close();
+  session.close();
   console.log('captured: ' + events + ' events · ' + odds + ' odds ticks');
   process.exit(0);
 }

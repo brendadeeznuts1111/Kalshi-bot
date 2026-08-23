@@ -25,6 +25,8 @@ export type FonbetEventWire = {
   team2?: string;
   meta?: string;
   direct_link?: string;
+  /** Fonbet internal feed delay (seconds) — freshness hint. */
+  live_delay?: string | number | null;
 };
 
 export type FonbetMarketWire = [string, number, string, string, string];
