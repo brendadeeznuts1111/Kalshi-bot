@@ -43,6 +43,15 @@ async function main(): Promise<void> {
   console.log(`key-id: ${keyId.slice(0, 8)}… (len ${keyId.length})`);
   console.log(`pem:    ${pem} → ${pemDest} (0600)`);
 
+  // Interactive confirm before replacing the LIVE key (--yes skips for scripts).
+  if (!DRY_RUN && !Bun.argv.includes('--yes')) {
+    const { confirmYes } = await import('../src/lib/readline.ts');
+    if (!(await confirmYes('Type YES to rotate the live Kalshi API key:'))) {
+      console.error('aborted - no files written');
+      process.exit(1);
+    }
+  }
+
   const result = await rotateKalshiKey({ keyId, pemText, dryRun: DRY_RUN });
   if (result.error) {
     console.error(result.error);

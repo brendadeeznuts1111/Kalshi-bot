@@ -413,8 +413,10 @@ each has a real consumer in the repo where marked.
   util.formatWithOptions; colors apply to object values).
 - Bun.deepMatch(subset, actual): native subset matcher (OBJECT order is
   subset-first; arrays match exactly) — used in redaction tests.
-- console is an AsyncIterable: for await (const line of console) reads stdin
-  lines (no readline dependency).
+- console is an AsyncIterable: src/lib/readline.ts readLine/confirmYes read
+  stdin lines with a no-newline prompt (no readline dependency); injectable
+  source for tests. Consumer: tools/kalshi-rotate-key.ts interactive confirm
+  before replacing the live key (--yes skips for scripts).
 - inspectValue supports sorted (verified); maxArrayLength/maxStringLength are
   NOT supported at runtime — do not pass them.
 - [Bun.inspect.custom] hooks typed with the real 3-arg contract
