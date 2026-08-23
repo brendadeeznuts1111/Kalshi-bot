@@ -6,6 +6,7 @@ import {
   nextReconnectDelay,
   prefetchDns,
   preconnectFeed,
+  retryableConnect,
 } from "../../../src/institutions/fonbet/connection.ts";
 import type { FonbetEventWire } from "../../../src/institutions/fonbet/parse.ts";
 
@@ -62,6 +63,39 @@ describe("fonbet connection manager (Bun-native)", () => {
 
   test("preconnectFeed is best-effort (never throws on bad input)", () => {
     expect(() => preconnectFeed("ws://api.oddscp.com:8001")).not.toThrow();
+  });
+
+  test("retryableConnect retries then succeeds", async () => {
+    let calls = 0;
+    const out = await retryableConnect(async () => {
+      calls++;
+      if (calls < 3) throw new Error("transient " + calls);
+      return "ok";
+    }, { retries: 3, sleep: async () => {} });
+    expect(out).toBe("ok");
+    expect(calls).toBe(3);
+  });
+
+  test("retryableConnect gives up after retries and rethrows", async () => {
+    let calls = 0;
+    await expect(
+      retryableConnect(async () => {
+        calls++;
+        throw new Error("boom");
+      }, { retries: 2, sleep: async () => {} }),
+    ).rejects.toThrow("boom");
+    expect(calls).toBe(3); // initial + 2 retries
+  });
+
+  test("retryableConnect respects shouldRetry (no retry on fatal)", async () => {
+    let calls = 0;
+    await expect(
+      retryableConnect(async () => {
+        calls++;
+        throw new Error("fatal");
+      }, { retries: 3, sleep: async () => {}, shouldRetry: (e) => !String((e as Error).message).includes("fatal") }),
+    ).rejects.toThrow("fatal");
+    expect(calls).toBe(1);
   });
 
   test("dnsCacheStats returns the real cache stats shape", () => {

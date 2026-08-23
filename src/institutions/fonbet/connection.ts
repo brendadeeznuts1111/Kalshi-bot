@@ -101,6 +101,42 @@ export function dnsCacheStats(): Record<string, number> {
 }
 
 /**
+ * Universal retry wrapper — works across fetch / Bun.connect / any
+ * AbortSignal-based call (Bun's unified error/abort model). Inject
+ * `sleep` in tests; `shouldRetry` can classify non-retryable errors.
+ */
+export type RetryableOptions = {
+  retries?: number;
+  baseMs?: number;
+  maxMs?: number;
+  sleep?: (ms: number) => Promise<void>;
+  shouldRetry?: (err: unknown) => boolean;
+};
+
+export async function retryableConnect<T>(
+  fn: (signal: AbortSignal) => Promise<T>,
+  opts: RetryableOptions = {},
+): Promise<T> {
+  const retries = opts.retries ?? 3;
+  const baseMs = opts.baseMs ?? 100;
+  const maxMs = opts.maxMs ?? 2_000;
+  const sleep = opts.sleep ?? Bun.sleep;
+  let lastErr: unknown;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const ac = new AbortController();
+    try {
+      return await fn(ac.signal);
+    } catch (err) {
+      lastErr = err;
+      if (attempt >= retries) break;
+      if (opts.shouldRetry && !opts.shouldRetry(err)) break;
+      await sleep(Math.min(baseMs * 2 ** attempt, maxMs));
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
+}
+
+/**
  * Reconnect delay: base * 2^attempt, capped. Pure + tested.
  */
 export function nextReconnectDelay(
