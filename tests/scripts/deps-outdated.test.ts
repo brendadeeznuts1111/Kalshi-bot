@@ -13,6 +13,8 @@ describe("deps-outdated", () => {
     expect(classifySemverChange("1.0.0", "1.0.1")).toBe("patch");
     expect(classifySemverChange("1.0.0", "1.0.0")).toBe("same");
     expect(classifySemverChange("6.0.3", "7.0.2")).toBe("major");
+    expect(classifySemverChange("2.1.0-beta.1", "2.1.0")).toBe("patch");
+    expect(classifySemverChange("2.1.0", "2.1.0")).toBe("same");
   });
 
   test("parseOutdatedTable strips (dev) suffix", () => {

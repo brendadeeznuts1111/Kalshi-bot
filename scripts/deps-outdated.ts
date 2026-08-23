@@ -27,7 +27,12 @@ function parseSemver(v: string): [number, number, number] | null {
   return [Number(m[1]), Number(m[2]), Number(m[3])];
 }
 
-/** Classify bump from current → target (prefer latest when asked). */
+/**
+ * Classify bump from current → target.
+ * Segment comparison via parseSemver (numeric core); same-core diffs that are
+ * still version changes (prerelease/build metadata, e.g. 2.1.0-beta.1 → 2.1.0)
+ * fall through to Bun.semver.order for a correct verdict (patch-level).
+ */
 export function classifySemverChange(current: string, target: string): SemverChange {
   const a = parseSemver(current);
   const b = parseSemver(target);
@@ -35,7 +40,8 @@ export function classifySemverChange(current: string, target: string): SemverCha
   if (b[0] !== a[0]) return "major";
   if (b[1] !== a[1]) return "minor";
   if (b[2] !== a[2]) return "patch";
-  return "same";
+  // Same numeric core — prerelease/build metadata may still differ.
+  return Bun.semver.order(current, target) === 0 ? "same" : "patch";
 }
 
 /**
