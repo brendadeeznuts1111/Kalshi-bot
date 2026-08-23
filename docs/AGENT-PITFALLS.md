@@ -333,6 +333,17 @@ Node APIs are intentional:
     marketing - adopt only what is independently measured (we confirmed
     XML parse 1.9ms/87KB). SQLite-entry-storage for feeds has no consumer
     here (release-watch uses state JSON + report) - documented no-fit.
+  * Full-stack feed playbook verified: named imports from 'bun' (cron,
+    XML, markdown, write, file) all real - unlike 'html'. Bun.cron jobs
+    ARE disposable (Symbol.dispose + unref on the prototype) so `using
+    job = Bun.cron(...)` works for SCOPED jobs; the cron master keeps
+    registrations alive instead (no using there). Bun.cron is 5-field
+    (minute hour day month weekday) - SECONDS NOT SUPPORTED (a 6-field
+    expression throws 'too many fields'). Bun.markdown.html tagFilter
+    DOES escape raw HTML (<script> -> &lt;script>), verified - but it
+    does NOT sanitize markdown link URLs (javascript: links pass) -
+    partial sanitization only; our markdown.ts presets already set
+    tagFilter.
 - REAL BUG FOUND via Bun.Image: Bun.deflateSync emits RAW deflate (first
   bytes 0x63 0x64, no zlib header) but PNG IDAT requires an RFC 1950 zlib
   stream. Our hand-built solid PNG passed metadata-only checks and sips
