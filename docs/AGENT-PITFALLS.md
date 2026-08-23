@@ -984,3 +984,33 @@ scanned; no code changes needed:
   'fetch(' as a regex needs 'fetch\\(' (unescaped '(' = open group,
   silent empty). Debug pattern-vs-function mismatches with the exact
   spawnSync args, not shell.
+
+### 26. 'Upgrading to 1.4' claims verified (all three new ones, zero repo impact)
+
+- The release-notes paste's final 'Upgrading to 1.4' section listed five
+  likely-need-a-line changes; three were unverified and are now
+  probe-confirmed:
+  1. Paused-mode readable.read() returns ONE chunk: probe with node:
+     stream Readable - read() #1 -> c1, #2 -> c2 (one per call),
+     readableLength 0 after 3 reads. VERIFIED. Zero repo impact (no
+     stream.read() usage; the .read() grep hits are unrelated health
+     adapters).
+  2. Bun.TOML strictness: unquoted strings, missing newlines between
+     pairs, and integers past Number.MAX_SAFE_INTEGER are all
+     SyntaxErrors (probe: all three throw with clear messages; quoted
+     string / newline / at-limit int control cases parse). VERIFIED.
+     Repo impact ZERO: config.toml, config/partners.example.toml,
+     config/vault-map.toml, bunfig.toml ALL parse cleanly (strings
+     quoted, newlines present, ints in range) - validated each with
+     Bun.TOML.parse. (Bun.TOML is heavily used: config.ts, toml-
+     config.ts, tennis-meta.ts, partners.toml - but all conform.)
+  3. bun.lock configVersion 1 + monorepo isolated-linker default: our
+     lock already records configVersion: 1; machine bunfig sets
+     linker = 'isolated' (global store); fresh 1.4 install writes
+     lockfileVersion 2 + configVersion 1. VERIFIED, no change needed.
+  (The other two - NODE_MODULE_VERSION 147 and res.writeHeader gone -
+  were verified in section 15/16.)
+- bun:adoption-audit h2 check extended (paste suggestion): now also
+  accepts BUN_FEATURE_FLAG_EXPERIMENTAL_HTTP2_CLIENT in bunfig/.env
+  as h2 adoption, not just per-request protocol:http2. Still a GAP
+  here (neither used - experimental, soft).

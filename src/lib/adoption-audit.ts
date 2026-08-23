@@ -53,15 +53,19 @@ export function runAdoptionAudit(root: string): AdoptionCheck[] {
       : posts.length ? 'POST bodies exist (' + posts.length + ' files) but none use compress - only worth it for LARGE bodies (>~100KB); inspect before adopting' : 'no POST bodies found - not applicable',
   });
 
-  // 3. fetch() protocol:'http2'.
+  // 3. fetch() protocol:'http2' OR the global env flag (paste: 'check
+  //    if protocol:http2 appears, OR if BUN_FEATURE_FLAG_EXPERIMENTAL_
+  //    HTTP2_CLIENT is set in environment').
   const h2Uses = grepFiles(root, 'protocol: ("|\x27)http2(\x27|")', dirs);
+  const h2Flag = grepFiles(root, 'BUN_FEATURE_FLAG_EXPERIMENTAL_HTTP2_CLIENT', [join(root, 'bunfig.toml'), join(root, '.env'), join(root, '.env.example')]);
   const fetchCalls = grepFiles(root, 'fetch\\(', dirs);
+  const h2Adopted = h2Uses.length > 0 || h2Flag.length > 0;
   checks.push({
     name: 'fetch() protocol:http2 (experimental h2 client)',
-    status: h2Uses.length ? 'ok' : fetchCalls.length ? 'gap' : 'n/a',
-    detail: h2Uses.length
-      ? 'protocol:http2 in: ' + h2Uses.join(', ')
-      : fetchCalls.length ? fetchCalls.length + ' files call fetch() without protocol:http2 - experimental, optional' : 'no fetch calls - not applicable',
+    status: h2Adopted ? 'ok' : fetchCalls.length ? 'gap' : 'n/a',
+    detail: h2Adopted
+      ? h2Uses.length ? 'protocol:http2 in: ' + h2Uses.join(', ') : 'BUN_FEATURE_FLAG_EXPERIMENTAL_HTTP2_CLIENT in: ' + h2Flag.join(', ')
+      : fetchCalls.length ? fetchCalls.length + ' files call fetch() without protocol:http2 or the env flag - experimental, optional' : 'no fetch calls - not applicable',
   });
 
   return checks;
