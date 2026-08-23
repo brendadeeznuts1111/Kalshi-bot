@@ -158,6 +158,32 @@ intact - where tools.read truncates silently. Run via bun -e or a /tmp probe wit
 ABSOLUTE imports.
 
 ### 8c. What Bun does NOT help with (honest limits)
+### 8d. Automate it: bun run agent:encode [file]
+
+tools/agent-encode.ts reads stdin (or a file path) and prints the single-line
+base64 - paste into run_code, decode with `echo <out> | base64 -d > target` or the
+pure-Bun variant in 8a. Tested byte-exact (sha256 match) on content with
+backticks, ${}, and mixed quotes.
+
+### 8e. Kill the SHELL-quoting class: Bun.spawn with an args-array, not bash -c
+
+A command string run through bash re-parses quotes, backticks (command
+substitution), and ${} (expansion) - even when the JS string carried them safely
+(the printf test above mangled its own payload exactly this way). Instead:
+
+  const trickyArg = "it's ${x} and `y` and \"q\"";   // double-quoted JS string: lexer-safe
+  Bun.spawnSync(["bun", "-e", "console.log(process.argv[1])", trickyArg]);
+  // child received the arg VERBATIM - proven: exact match, no expansion/execution
+
+Args-arrays are lexer-safe (values are double-quoted JS strings) AND shell-safe
+(no re-parsing). Note: under `bun -e script arg`, the arg is argv[1] (argv[0] is
+the bun binary; the -e script is not in argv).
+
+### 8f. The run_code worker is plain Node
+
+Bun globals are NOT available inside a run_code program (Bun.spawnSync threw
+'Bun is not defined'). Any Bun API you need must run inside a bun script file:
+tools.write the script (lexer-safe), then `bun /path/script.ts` via bash.
 
 - The harness lexer parses the run_code program text BEFORE Bun runs - no Bun API
   can change that; base64 is the workaround, not a Bun feature.
