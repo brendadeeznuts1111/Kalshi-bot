@@ -11,13 +11,13 @@ import {
 } from '../domain/live-product-endpoints.ts';
 import type { FetchFn } from '../institutions/resilient-fetch.ts';
 
-export type SessionPlaneId =
+type SessionPlaneId =
   | 'inventory_public'
   | 'shell'
   | 'session_gated'
   | 'priced_note';
 
-export type SessionPlaneCheck = {
+type SessionPlaneCheck = {
   id: string;
   plane: SessionPlaneId;
   method: string;
@@ -32,7 +32,7 @@ export type SessionPlaneCheck = {
   error?: string;
 };
 
-export type SessionPlaneProbeReport = {
+type SessionPlaneProbeReport = {
   at: string;
   endpoints: {
     streamListUrl: string;
@@ -60,7 +60,7 @@ export type SessionPlaneProbeReport = {
   };
 };
 
-export type SessionPlaneProbeOptions = {
+type SessionPlaneProbeOptions = {
   /**
    * Operator seat-bound SportsWidgets session (from getUltraLiveURL handoff).
    * When omitted, probe reuses the anonymous shell `x-gsid` / GSID cookie mint.

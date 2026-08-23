@@ -56,7 +56,7 @@ export type LeagueResolvePlan = {
   none: LeagueResolveSuggestion[];
 };
 
-export type PlanLeagueResolveOptions = {
+type PlanLeagueResolveOptions = {
   bookId?: string;
   /** Single sport, CSV multi, or all (default unmapped all sports). */
   sport?: string;

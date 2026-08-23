@@ -42,14 +42,14 @@ export type InventoryLeagueRow = {
 };
 
 /** Desk geo/kind attached at display/JSON time (not stored on inventory_leagues). */
-export type InventoryLeagueMetaView = {
+type InventoryLeagueMetaView = {
   countryCode: string | null;
   kind: CompetitionKind;
   /** True when meta was inferred from label (not explicit competition seed fields). */
   inferred: boolean;
 };
 
-export type InventoryLeagueRowWithMeta = InventoryLeagueRow & {
+type InventoryLeagueRowWithMeta = InventoryLeagueRow & {
   meta: InventoryLeagueMetaView;
 };
 
@@ -527,7 +527,7 @@ export function stampInventoryLeaguesCompetitionIds(
   return n;
 }
 
-export type InventoryLeagueJunkRow = InventoryLeagueRow & {
+type InventoryLeagueJunkRow = InventoryLeagueRow & {
   junkReason: JunkLeagueReason;
 };
 
