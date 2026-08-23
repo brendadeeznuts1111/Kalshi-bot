@@ -413,13 +413,13 @@ function extractDnsSansFromText(text: string): string[] {
 async function probeTlsSans(host: string): Promise<string[]> {
   try {
     const pemBundle = (
-      await $`printf "" | openssl s_client -connect ${host}:443 -servername ${host} -showcerts`.nothrow().quiet()
+      await $`openssl s_client -connect ${host}:443 -servername ${host} -showcerts < ${Buffer.alloc(0)}`.nothrow().quiet()
     ).stdout.toString();
     const pem = /-----BEGIN CERTIFICATE-----[\s\S]+?-----END CERTIFICATE-----/.exec(pemBundle)?.[0];
     if (!pem) return [];
 
     const decode = async (args: string[]): Promise<string[]> => {
-      const { stdout } = await $`printf "%s" ${pem} | openssl x509 ${args}`.nothrow().quiet();
+      const { stdout } = await $`openssl x509 ${args} < ${Buffer.from(pem)}`.nothrow().quiet();
       return extractDnsSansFromText(stdout.toString());
     };
 

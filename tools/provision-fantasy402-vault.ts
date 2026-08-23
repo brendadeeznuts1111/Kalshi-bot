@@ -66,7 +66,7 @@ async function passCli(
 ): Promise<{ code: number; stdout: string; stderr: string }> {
   const bin = Bun.which("pass-cli") ?? "pass-cli";
   const input = opts?.stdin ?? "";
-  const { stdout, stderr, exitCode } = await $`printf "%s" ${input} | ${bin} ${args}`.nothrow().quiet();
+  const { stdout, stderr, exitCode } = await $`${bin} ${args} < ${Buffer.from(input)}`.nothrow().quiet();
   const outText = stdout.toString();
   const errText = stderr.toString();
   if (exitCode !== 0 && !opts?.allowFail) {

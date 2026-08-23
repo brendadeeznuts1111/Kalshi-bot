@@ -54,10 +54,20 @@ in-process side.
 
 - **Capture + exit code:** `.nothrow().quiet()` → `{ exitCode, stdout, stderr }` (Buffers).
 - **Live output (≈ `stdout: "inherit"`):** `$` without `.quiet()` streams to the parent **and** still returns captured Buffers — used by the cron jobs.
-- **stdin input:** no `.stdin()` method, and the callable-options form `$`cmd`({…})` does **not** exist in 1.4.0. Feed stdin via `$`printf "%s" ${value} | cmd ${args}`` (empty value closes stdin immediately) or `</dev/null`.
+- **stdin input:** no `.stdin()` method, and the callable-options form `$`cmd`({…})` does **not** exist in 1.4.0. Prefer JS-object redirection (verified): `$`cmd ${args} < ${Buffer.from(value)}`` feeds stdin, an empty buffer closes it immediately, and `< ${new Response(body)}` / `> ${Bun.file(path)}` also work. The `printf "%s" ${value} | cmd ${args}` pipe remains as a fallback.
 - **NUL-delimited output:** `stdout.toString().split("\0").filter(Boolean)`.
 - **`.text()` / `.json()` throw on non-zero exit** — prefer `.nothrow()` unless the caller wants the exception.
 - **`.cwd(path)` / `.env({…})` methods exist;** array interpolation escapes each element as its own argv token.
+
+### More verified on Bun 1.4.0 (recipes for future flows)
+
+- **Command substitution `$(...)`:** `$`echo rev=$(git rev-parse --short HEAD)`` inlines another command output into the script (verified; backtick substitution is NOT supported — use `$(...)`).
+- **Line streaming `.lines()`:** `for await (const line of $`cat list.txt | grep ${q}`.lines())` — gotcha: a trailing newline yields a final `""` entry, so `if (line !== "")` or filter(Boolean) when parsing.
+- **stdout to file `> ${Bun.file(path)}`:** verified — write command output straight to disk.
+- **stdout to buffer `> ${Buffer}`:** verified — writes into the existing buffer; remaining bytes are left untouched (NUL-padded in a fresh alloc).
+- **`.run()`:** streams to the parent and returns `{ stdout, stderr, exitCode }` on success, but **throws on non-zero** (like the default `$`) — it is NOT a `.nothrow()` replacement; cron jobs keep `.nothrow()`.
+- **`$.escape(str)` / `$.braces(template)`:** statics verified — build shell-safe fragments or generate brace-expansion variants.
+- **No timeout/signal API in 1.4.0:** hand-rolled `Promise.race` + `Bun.sleep` timeouts (serve.ts launchd probe) remain the pattern.
 
 ### Known behavior deltas vs the old spawns
 

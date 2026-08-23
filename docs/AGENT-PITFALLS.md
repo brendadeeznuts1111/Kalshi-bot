@@ -187,7 +187,7 @@ Converted all non-keep-list `Bun.spawn` sites to `Bun.$` (see BUN_SHELL.md
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | `TypeError: $`cmd` is not a function` | The callable-options form (`$`cmd`({ stdout: "inherit" })`) does not exist in 1.4.0 | Default `$` streams to the parent (≈ inherit) and still returns captured Buffers; `.quiet()` suppresses |
-| `$`cmd`.stdin is not a function` | No `.stdin()` method in 1.4.0 | Pipe stdin: `$`printf "%s" ${value} | cmd ${args}``; empty value closes stdin immediately |
+| `$`cmd`.stdin is not a function` | No `.stdin()` method in 1.4.0 | JS-object redirection: `$`cmd ${args} < ${Buffer.from(value)}`` (verified; empty buffer closes stdin); `printf|` pipe as fallback |
 | `$`cmd`.stdout("inherit") is not a function` | No stdio-setter methods | Default streaming is inherit-like; use `.quiet()` for capture |
 | `.text()` / `.json()` throw on non-zero exit | Documented throw-path | `.nothrow().quiet()` → `{ exitCode, stdout, stderr }` |
 | NUL bytes in output? | They round-trip byte-exact (`printf "a\0b"` probe) | `stdout.toString().split("\0").filter(Boolean)` for `git ls-files -z` |
