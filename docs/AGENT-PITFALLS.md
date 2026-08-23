@@ -322,6 +322,17 @@ Node APIs are intentional:
     sliceAnsiSafe now passes it through (was a real gap); AnsiTheme
     includes hyperlinks + columns; stringWidth handles ZWJ/emoji/hyperlink
     sequences.
+  * XML build-time inlining VERIFIED: bun build of a file importing
+    'feed.rss' with { type: 'xml' } embeds the parsed object as a JS
+    literal in the bundle (226-byte output, zero runtime parsing); the
+    single-item-becomes-object shape carries into the bundle. Migration:
+    `with { type: 'file' }` returns the path STRING (verified); the
+    --loader .rss:file flag was NOT confirmed from bun build --help -
+    the type: 'file' attribute suffices.
+  * Playbook perf tables (req/s, insert ms, '3-10x faster than Rust') are
+    marketing - adopt only what is independently measured (we confirmed
+    XML parse 1.9ms/87KB). SQLite-entry-storage for feeds has no consumer
+    here (release-watch uses state JSON + report) - documented no-fit.
 - REAL BUG FOUND via Bun.Image: Bun.deflateSync emits RAW deflate (first
   bytes 0x63 0x64, no zlib header) but PNG IDAT requires an RFC 1950 zlib
   stream. Our hand-built solid PNG passed metadata-only checks and sips
