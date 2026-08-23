@@ -1,6 +1,6 @@
 // @see https://bun.com/docs/runtime/file-io#writing-files-bun-write
 /**
- * Static pattern extraction from detector evidence paths (gh API file reads — no clone).
+ * Static pattern extraction from detector evidence paths (GitHub REST file reads — no clone).
  */
 import type { EvidenceLine, ResearchRun, ScoredRepo } from "../research/types.ts";
 import type { ScoreComponentKey } from "../research/constants.ts";
@@ -385,7 +385,7 @@ export function formatPatternReportMarkdown(report: PatternReport): string {
     for (const file of repo.files) {
       lines.push(`### \`${file.path}\` (${file.components.join(", ")})`);
       if (!file.fetchOk) {
-        lines.push("- _Could not fetch file via gh API_");
+        lines.push("- _Could not fetch file via GitHub REST API_");
         continue;
       }
       for (const cat of Object.keys(file.hits) as PatternCategory[]) {

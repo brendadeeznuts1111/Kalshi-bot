@@ -568,7 +568,7 @@ Deep dive: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns)
 | Type contracts | `expectTypeOf` (compile-time; `bun run typecheck`) | [`*.types.test.ts`](../tests/) e.g. [`time-ssot.types.test.ts`](../tests/lib/time-ssot.types.test.ts), [`snapshot-data-plane.types.test.ts`](../tests/tools/snapshot-data-plane.types.test.ts) |
 | Test coverage | `bun run test:coverage` | [`package.json`](../package.json) |
 
-**Pattern excerpts from local clones:** `bun run agent patterns --open` reads source files under `REPO_CLONE_ROOT/{owner}/{repo}` when set (optional — default remains `gh api` reads with no clone). This is an intentional scope extension beyond the original no-clone plan; set `REPO_CLONE_ROOT` only when you maintain local checkouts for excerpt review.
+**Pattern excerpts from local clones:** `bun run agent patterns --open` reads source files under `REPO_CLONE_ROOT/{owner}/{repo}` when set (optional — default remains GitHub REST reads via `Bun.fetch` with no clone). This is an intentional scope extension beyond the original no-clone plan; set `REPO_CLONE_ROOT` only when you maintain local checkouts for excerpt review.
 
 ### Canonical `@see` links
 

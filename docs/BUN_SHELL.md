@@ -99,8 +99,8 @@ for the h2 test cert-gen in `SPAWN_KEEP_LIST`). Where Bun has a native API
 | `node:tls` (Node compat) | `tls.connect().getPeerCertificate()` replaces `openssl s_client` + `x509` — leaf SANs (`subjectaltname`) with zero subprocess (probed 1.4.0) | `src/domain/host-discover.ts` `probeTlsSans` |
 | `Bun.Terminal` (PTY) | The isTTY=true option the interactive keeps need (`$` pipes stdout/stderr) | not used — keep-list reasoning |
 | `Bun.Transpiler.scanImports` + `ts` AST | The enforcement loop — guard runs `git ls-files -z` via `$`, reads via `Bun.file`, walks AST for spawn sites | `scripts/audit-bun-native.ts` |
-| `Bun.fetch` | REST half of research transport — GitHub REST + `/rate_limit` (`readGitHubRateLimitWire`); `$`→`gh` only for the auth-token fallback + search | `src/research/github-api.ts`, `src/research/gh.ts`, `src/research/github-rate-limit.ts` |
-| `bun:sqlite` | Stores what `$`/`gh` gathers | `src/research/cache.ts`, `src/institutions/event-store/*` |
+| `Bun.fetch` | REST half of research transport — GitHub REST + `/rate_limit` (`readGitHubRateLimitWire`); `$`→`gh` only for the auth-token fallback | `src/research/github-api.ts`, `src/research/gh.ts`, `src/research/github-rate-limit.ts` |
+| `bun:sqlite` | Stores what `Bun.fetch`/`$` gathers | `src/research/cache.ts`, `src/institutions/event-store/*` |
 
 ## Why `Bun.$` over `Bun.spawn`
 
@@ -119,7 +119,7 @@ Docs use both forms; this repo uses the named import:
 ```typescript
 import { $ } from "bun";
 
-await $`gh ${args}`.nothrow().quiet();
+await $`gh auth token`.nothrow().quiet();
 ```
 
 `Bun.$` is the same tag on the global — either works.
@@ -177,11 +177,11 @@ catch (err) {
 
 | Feature | Doc anchor | When you'd reach for it |
 |---------|------------|-------------------------|
-| `.env({ … })` | [environment variables](https://bun.com/docs/runtime/shell#environment-variables) | `GH_TOKEN` override per call |
-| `.cwd(path)` | [working directory](https://bun.com/docs/runtime/shell#changing-the-working-directory) | run gh from a git worktree |
-| `.lines()` | [line-by-line](https://bun.com/docs/runtime/shell#reading-output-line-by-line) | stream large `gh api` paginated output |
+| `.env({ … })` | [environment variables](https://bun.com/docs/runtime/shell#environment-variables) | per-call env override |
+| `.cwd(path)` | [working directory](https://bun.com/docs/runtime/shell#changing-the-working-directory) | run a subprocess from another directory |
+| `.lines()` | [line-by-line](https://bun.com/docs/runtime/shell#reading-output-line-by-line) | stream large outputs (git log, paginated API) |
 | `$.escape(str)` | [utilities](https://bun.com/docs/runtime/shell#escape-strings) | build raw fragments safely |
-| Redirect to `Bun.file` | [redirection](https://bun.com/docs/runtime/shell#redirection) | cache gh output directly to disk |
+| Redirect to `Bun.file` | [redirection](https://bun.com/docs/runtime/shell#redirection) | capture subprocess output directly to disk |
 
 ## bunfig
 
