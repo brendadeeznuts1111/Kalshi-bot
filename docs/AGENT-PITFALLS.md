@@ -119,3 +119,40 @@ Never adopt a claimed API from a summary or paste without probing the runtime:
 - research/cache DBs are the live local state - migrations (open-db) apply on open;
   backfills (db:canonicalize) are idempotent. Check gitignore before committing
   anything under research/.
+## 8. Bun utilities that defuse the failure classes (all PROVEN in this session)
+
+### 8a. Base64 round-trip defeats every lexer-escaping failure
+
+Base64 output is only [A-Za-z0-9+/=] - no backticks, no dollar-open-brace, no quotes,
+no newlines (single line). It passes through run_code program text untouched and
+decodes byte-exact at the destination:
+
+  const b64 = Buffer.from(content, 'utf8').toString('base64');   // in the program
+  // variant A (bash-echo):
+  echo '<b64>' | base64 -d > target/file.ts
+  // variant B (tools.write is lexer-safe for base64 too):
+  await tools.write({ file_path: '/tmp/x.b64', content: b64 });
+  // then: base64 -d /tmp/x.b64 > target/file.ts
+
+Proven: a file containing backticks, ${interpolations}, single+double quotes, and
+escaped newlines round-tripped byte-exact and executed. Use this whenever content
+needs backticks or dollar-open-brace - it replaces the fragile per-line quote
+discipline entirely.
+
+### 8b. Bun.file().text()/json() for full reads (tools.read truncates ~40KB+)
+
+  const full = await Bun.file(path).text();          // no truncation, byte-exact
+  await Bun.file(path).size;                          // check bytes first (>~40000)
+
+Proven on docs/BUN_NATIVE.md (82,517 bytes): full text, all 1,138 lines, last line
+intact - where tools.read truncates silently. Run via bun -e or a /tmp probe with
+ABSOLUTE imports.
+
+### 8c. What Bun does NOT help with (honest limits)
+
+- The harness lexer parses the run_code program text BEFORE Bun runs - no Bun API
+  can change that; base64 is the workaround, not a Bun feature.
+- Bun.escapeHTML / JSON.stringify are NOT JS-literal-safe: backticks and
+  dollar-open-brace survive both unescaped.
+- encodeURIComponent is NOT safe (leaves '()* unescaped - apostrophes break
+  single-quoted strings). Base64 is the only reliably safe encoding.
