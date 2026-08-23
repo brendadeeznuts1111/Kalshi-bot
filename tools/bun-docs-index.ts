@@ -18,7 +18,9 @@
  *
  * Flags:
  *   --refresh       re-fetch pages even when cached recently.
- *   --check         report cache age/source without fetching.
+ *   --check         report cache age/source without fetching; exits 1
+ *                    unless every page is cached, fresh (<24h), ok, and
+ *                    from the requested source (gate-able).
  *   --source X      one of tag|repo|site (default tag).
  *
  * Provenance: INDEX.json entries carry `source`; a page cached from one
@@ -91,30 +93,50 @@ async function main(): Promise<void> {
   const index = readIndex() ?? { pages: [], fetchedAt: new Date(0).toISOString() };
   const byName = new Map(index.pages.map((p) => [p.name, p]));
   if (check) {
+    let problems = 0;
     for (const p of PAGES) {
       const c = byName.get(p.name);
-      if (!c) { console.log('  ' + p.name + ': not cached'); continue; }
-      const line = '  ' + p.name + ': ' + (c.ok ? c.source + ' ' + c.bytes + 'b @ ' + c.fetchedAt.slice(0, 10) : 'FETCH FAILED');
-      console.log(c.source === source ? line : line + '  [source mismatch: requested ' + source + ']');
+      if (!c) {
+        console.log('  ' + p.name + ': not cached');
+        problems++;
+        continue;
+      }
+      if (!c.ok) { console.log('  ' + p.name + ': FETCH FAILED'); problems++; continue; }
+      const src = (c as { source?: string }).source ?? 'legacy';
+      const ageH = (Date.now() - Date.parse(c.fetchedAt)) / 3.6e6;
+      const stale = ageH > 24;
+      const srcOk = src === source;
+      let line = '  ' + p.name + ': ' + src + ' ' + c.bytes + 'b @ ' + c.fetchedAt.slice(0, 10);
+      if (stale) line += '  [stale ' + ageH.toFixed(0) + 'h > 24h]';
+      if (!srcOk) { line += '  [source mismatch: requested ' + source + ']'; problems++; }
+      console.log(line);
     }
-    process.exit(0);
+    const verdict = problems === 0 ? 'ok' : problems + ' problem(s)';
+    console.log('check (' + source + '): ' + verdict + ' - ' + PAGES.length + ' pages');
+    process.exit(problems === 0 ? 0 : 1);
   }
   mkdirSync(CACHE_DIR, { recursive: true });
   const entries: IndexEntry[] = [];
+  const needFetch: Array<{ page: (typeof PAGES)[number]; url: string }> = [];
   for (const page of PAGES) {
     const existing = byName.get(page.name);
     const fresh = existing?.ok && existing.source === source && Date.now() - Date.parse(existing.fetchedAt) < 24 * 60 * 60 * 1000;
     if (!refresh && fresh) {
       entries.push(existing);
-      continue;
+    } else {
+      needFetch.push({ page, url: sourceUrlFor(source, page.path) });
     }
-    const url = sourceUrlFor(source, page.path);
+  }
+  const results = await Promise.all(needFetch.map(async ({ page, url }) => {
     const res = await fetch(url);
     const ok = res.ok;
     const text = ok ? await res.text() : '';
-    if (ok) writeFileSync(join(CACHE_DIR, page.name + '.mdx'), text);
-    entries.push({ name: page.name, source, sourceUrl: url, fetchedAt: new Date().toISOString(), bytes: text.length, ok });
-    console.log('  ' + (ok ? 'cached ' : 'FAILED ') + page.name + ' (' + source + ', ' + text.length + 'b)');
+    return { page, url, ok, text };
+  }));
+  for (const r of results) {
+    if (r.ok) writeFileSync(join(CACHE_DIR, r.page.name + '.mdx'), r.text);
+    entries.push({ name: r.page.name, source, sourceUrl: r.url, fetchedAt: new Date().toISOString(), bytes: r.text.length, ok: r.ok });
+    console.log('  ' + (r.ok ? 'cached ' : 'FAILED ') + r.page.name + ' (' + source + ', ' + r.text.length + 'b)');
   }
   writeFileSync(INDEX_PATH, JSON.stringify({ pages: entries, fetchedAt: new Date().toISOString() }, null, 2) + '\n');
   const okCount = entries.filter((e) => e.ok).length;
