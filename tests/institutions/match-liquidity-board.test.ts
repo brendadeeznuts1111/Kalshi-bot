@@ -2,6 +2,8 @@
 import { describe, expect, test } from "bun:test";
 import type { BookSnapshot } from "../../src/institutions/alpha-signal-types.ts";
 import { openEventStore } from "../../src/institutions/event-store/open-db.ts";
+import { tmpdir } from "node:os";
+import { randomUUID } from "node:crypto";
 import {
   buildLiquidityBoardPayload,
   deskFlagsFromRow,
@@ -62,7 +64,8 @@ describe("liquidity board + HQ API", () => {
   });
 
   test("GET /api/liquidity and /api/kpi expose tradable chips", async () => {
-    const server = createResearchServer({ port: 0 });
+    const dbPath = `${tmpdir()}/ml-board-${randomUUID()}.db`;
+    const server = createResearchServer({ port: 0, dbPath });
     const base = `http://127.0.0.1:${server.port}`;
     try {
       const board = await fetch(`${base}/api/liquidity`).then((r) => r.json());
@@ -76,6 +79,7 @@ describe("liquidity board + HQ API", () => {
       expect(typeof kpi.quoted_books).toBe("number");
     } finally {
       server.stop(true);
+      await Bun.file(dbPath).delete();
     }
   });
 

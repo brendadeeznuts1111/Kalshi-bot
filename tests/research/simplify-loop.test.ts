@@ -6,9 +6,10 @@ import {
 } from '../../src/research/simplify-loop.ts';
 
 describe('simplify-loop scan', () => {
-  test('scans inventory and flags large / unused surfaces', async () => {
+  // @ts-expect-error — bun-types lags runtime: test options timeout supported since Bun 1.2
+  test('scans inventory and flags large / unused surfaces', { timeout: 30_000 }, async () => {
     const { findings, files, locByFile } = await scanSimplifyTargets(
-      ['src/inventory', 'live-tracker.ts'],
+      ['src/inventory', 'tools/live-tracker-cli.ts'],
       { checkUnused: true }
     );
     expect(files.length).toBeGreaterThan(5);

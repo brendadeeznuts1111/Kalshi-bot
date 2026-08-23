@@ -139,6 +139,8 @@ const resolveKalshiAccountClient = createKalshiAccountClientResolver();
 
 export type ServeOptions = {
   port?: number;
+  /** Event-store DB for the liquidity/KPI/partner routes (tests isolate; default DEFAULT_EVENT_STORE_DB). */
+  dbPath?: string;
   trading?: {
     db?: Database;
     /** Lifecycle seam: when db is absent, handler owns and closes this handle. */
@@ -285,7 +287,7 @@ export async function handleArchitecture(): Promise<Response> {
 }
 
 // ── Regulatory route handlers ──
-function handlePartnerDetail(req: Request, nodeId: string): Response {
+function handlePartnerDetail(req: Request, nodeId: string, dbPath: string = DEFAULT_EVENT_STORE_DB): Response {
   const url = new URL(req.url);
   const filters = {
     state: url.searchParams.get("state") ?? undefined,
@@ -294,7 +296,7 @@ function handlePartnerDetail(req: Request, nodeId: string): Response {
   };
   let deskLiquidity: ReturnType<typeof buildLiquidityBoardPayload> | null = null;
   try {
-    deskLiquidity = buildLiquidityBoardPayload(openEventStore({ dbPath: DEFAULT_EVENT_STORE_DB }), {
+    deskLiquidity = buildLiquidityBoardPayload(openEventStore({ dbPath }), {
       topLimit: 8,
       tournamentLimit: 8,
     });
@@ -965,9 +967,9 @@ async function handleKalshiRotateKey(req: Request): Promise<Response> {
 }
 
 
-async function handleKpi(): Promise<Record<string, number>> {
+async function handleKpi(dbPath: string = DEFAULT_EVENT_STORE_DB): Promise<Record<string, number>> {
   try {
-    const store = openEventStore({ dbPath: DEFAULT_EVENT_STORE_DB });
+    const store = openEventStore({ dbPath });
     /** Soft SQL — missing tables/columns (watch_set, rps_flag, …) return 0. */
     const snapshot = (sql: string): number => {
       try {
@@ -1010,9 +1012,9 @@ async function handleKpi(): Promise<Record<string, number>> {
   }
 }
 
-function handleLiquidityBoard(url: URL): Response {
+function handleLiquidityBoard(url: URL, dbPath: string = DEFAULT_EVENT_STORE_DB): Response {
   try {
-    const store = openEventStore({ dbPath: DEFAULT_EVENT_STORE_DB });
+    const store = openEventStore({ dbPath });
     if (url.searchParams.get("recompute") === "1") {
       recomputeMatchLiquidity(store);
     }
@@ -1037,11 +1039,11 @@ function handleLiquidityBoard(url: URL): Response {
  * GET /api/events — Kalshi open board + deskLiquidity join.
  * Optional server filters: liquidity, minVolume/minVol (HQ still filters client-side too).
  */
-async function handleEventsBoard(url: URL): Promise<unknown> {
+async function handleEventsBoard(url: URL, dbPath: string = DEFAULT_EVENT_STORE_DB): Promise<unknown> {
   const board = await fetchTennisBoard();
   let deskIndex = new Map<string, DeskLiquidityFlags>();
   try {
-    const store = openEventStore({ dbPath: DEFAULT_EVENT_STORE_DB });
+    const store = openEventStore({ dbPath });
     deskIndex = listDeskLiquidityByEventId(store);
   } catch {
     // Event-store optional — board still serves without desk flags.
@@ -1059,18 +1061,18 @@ async function handleEventsBoard(url: URL): Promise<unknown> {
   });
 }
 
-function openLiquidityStore(): Database {
-  return openEventStore({ dbPath: DEFAULT_EVENT_STORE_DB });
+function openLiquidityStore(dbPath: string = DEFAULT_EVENT_STORE_DB): Database {
+  return openEventStore({ dbPath });
 }
 
 /** GET /api/liquidity/:eventId — optional ?recompute=1 to refresh from markets/books. */
-function handleLiquidityByEvent(eventIdRaw: string, url: URL): Response {
+function handleLiquidityByEvent(eventIdRaw: string, url: URL, dbPath: string = DEFAULT_EVENT_STORE_DB): Response {
   const eventId = decodeURIComponent(eventIdRaw).trim();
   if (!eventId) {
     return json({ error: "eventId required" }, 400);
   }
   try {
-    const store = openLiquidityStore();
+    const store = openLiquidityStore(dbPath);
     if (url.searchParams.get("recompute") === "1") {
       recomputeMatchLiquidity(store, eventId);
     }
@@ -1097,13 +1099,13 @@ function handleLiquidityByEvent(eventIdRaw: string, url: URL): Response {
 }
 
 /** GET /api/liquidity/by-tournament/:key — optional ?sport=tennis&limit=50&recompute=1 */
-function handleLiquidityByTournament(keyRaw: string, url: URL): Response {
+function handleLiquidityByTournament(keyRaw: string, url: URL, dbPath: string = DEFAULT_EVENT_STORE_DB): Response {
   const key = decodeURIComponent(keyRaw).trim();
   if (!key) {
     return json({ error: "tournament key required" }, 400);
   }
   try {
-    const store = openLiquidityStore();
+    const store = openLiquidityStore(dbPath);
     if (url.searchParams.get("recompute") === "1") {
       recomputeMatchLiquidity(store);
     }
@@ -1127,6 +1129,7 @@ function handleLiquidityByTournament(keyRaw: string, url: URL): Response {
 
 export function createResearchServer(options: ServeOptions = {}) {
   const port = options.port ?? Number(Bun.env.PORT ?? 3456);
+  const dbPath = options.dbPath ?? DEFAULT_EVENT_STORE_DB;
   // process.on('memoryPressure') — v1.4 low-memory notification. On
   // 'critical', drop the in-process caches so the OS doesn't kill us.
   // (Levels typed 'warning' | 'critical' in bun-types; event only shows
@@ -1174,7 +1177,7 @@ export function createResearchServer(options: ServeOptions = {}) {
       {
         const g = SERVE_PATTERNS.opsPartner.groups(url);
         if (g?.nodeId) {
-          return rateLimiter(req, () => handlePartnerDetail(req, g.nodeId!));
+          return rateLimiter(req, () => handlePartnerDetail(req, g.nodeId!, dbPath));
         }
       }
       {
@@ -1199,19 +1202,19 @@ export function createResearchServer(options: ServeOptions = {}) {
         url.pathname === SERVE_PATTERNS.EXACT.liquidityBoard ||
         url.pathname === SERVE_PATTERNS.EXACT.liquiditySummary
       ) {
-        return handleLiquidityBoard(url);
+        return handleLiquidityBoard(url, dbPath);
       }
       // Derived from markets + book_ticks — no rateLimiter
       {
         const g = SERVE_PATTERNS.liquidityByEvent.groups(url);
         if (g?.eventId && g.eventId !== "summary" && g.eventId !== "by-tournament") {
-          return handleLiquidityByEvent(g.eventId!, url);
+          return handleLiquidityByEvent(g.eventId!, url, dbPath);
         }
       }
       {
         const g = SERVE_PATTERNS.liquidityByTournament.groups(url);
         if (g?.key) {
-          return handleLiquidityByTournament(g.key!, url);
+          return handleLiquidityByTournament(g.key!, url, dbPath);
         }
       }
 
@@ -1232,7 +1235,7 @@ export function createResearchServer(options: ServeOptions = {}) {
       }
 
       if (url.pathname === "/api/kpi") {
-        return json(await handleKpi());
+        return json(await handleKpi(dbPath));
       }
 
       if (url.pathname === "/colors.css") {
@@ -1258,7 +1261,7 @@ export function createResearchServer(options: ServeOptions = {}) {
       // + desk match_liquidity flags for HQ filters/badges.
       // Query: ?liquidity=all|priced|active|quoted|liq_ok|tradable&minVolume=N
       if (url.pathname === "/api/events") {
-        return json(await handleEventsBoard(url));
+        return json(await handleEventsBoard(url, dbPath));
       }
 
       // Player profiles derived from the event store

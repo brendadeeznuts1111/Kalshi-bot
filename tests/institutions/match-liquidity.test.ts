@@ -1,5 +1,7 @@
 // @see https://bun.com/docs/test/index#run-tests
 import { describe, expect, test } from "bun:test";
+import { tmpdir } from "node:os";
+import { randomUUID } from "node:crypto";
 import type { BookSnapshot } from "../../src/institutions/alpha-signal-types.ts";
 import { openEventStore } from "../../src/institutions/event-store/open-db.ts";
 import {
@@ -265,8 +267,9 @@ describe("match-liquidity", () => {
 
 describe("match-liquidity REST (no rate limit)", () => {
   test("100 concurrent GETs all 200", async () => {
+    const dbPath = `${tmpdir()}/ml-rest-${randomUUID()}.db`;
     const { createResearchServer } = await import("../../src/research/serve.ts");
-    const server = createResearchServer({ port: 0 });
+    const server = createResearchServer({ port: 0, dbPath });
     const url = `http://127.0.0.1:${server.port}/api/liquidity/by-tournament/${encodeURIComponent("NoSuch")}?limit=1`;
     try {
       const results = await Promise.all(
@@ -279,6 +282,7 @@ describe("match-liquidity REST (no rate limit)", () => {
       expect(results.every((s) => s !== 429)).toBe(true);
     } finally {
       server.stop(true);
+      await Bun.file(dbPath).delete();
     }
   });
 });
