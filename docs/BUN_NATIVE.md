@@ -1109,10 +1109,16 @@ bun pm cache rm                    # clear ~/.bun/install/cache
 |-----|-------|------|
 | `Bun.CSRF` + `Bun.Cookie`/`CookieMap` | `src/research/csrf.ts`, `serve.ts`, `views.ts` | Double-submit CSRF on all browser-facing POSTs (`/place-bet`, `/api/trading/order`, `/api/trading/cancel`, `/agent/dispatch`, `/ops/kalshi-rotate-key`). GET `/ops` issues a token (HttpOnly SameSite=Lax cookie, inlined `OPS_CSRF` in the page), clients echo it in `x-csrf-token`, and `csrfGuard` 403s before any handler runs. `KALSHI_CSRF_SECRET` pins a stable signing secret so tokens survive restarts. The `/polymarket/ingest` webhook is deliberately excluded (no browser session).
 | `Bun.secrets` (OS keychain) | `src/lib/secrets.ts`, `tools/kalshi-secrets-cli.ts`, `tests/lib/secrets.test.ts` | Credential-store wrapper: backend-injectable (tests use an in-memory map), feature-detected, reads degrade to an env-var fallback. `bun run kalshi:secrets store|get|delete` moves the plaintext Kalshi key and `.env` credential values into the OS vault under service `com.kalshi-bot`. Complement to `redactSecrets` — store in the vault, redact on the way out.
+| `Bun.sleep` | `src/bot/kalshi-client.ts`, `src/institutions/resilient-fetch.ts`, `src/lib/readline.ts` | Replaced the `new Promise(r => setTimeout(r, ms))` sleep/backoff/timeout wrappers with the native timer (injectable `sleep` option in kalshi-client kept for tests).
+| `AbortSignal.timeout` | `src/institutions/url-health.ts` | `probeHttp` now uses the self-aborting signal instead of an AbortController + manual timer + `clearTimeout` in `finally`.
+| `Promise.withResolvers` | `src/institutions/event-store/kalshi-ws-recorder.ts` | Deferred session promise — removes the `new Promise` executor indirection for the `sessionDone` resolver.
+| `Bun.ArrayBufferSink` | `src/partner/visuals.ts` | PNG builder's final part concatenation now uses a single-pass sink instead of the manual total+offset loop; structural PNG test pins the bytes.
 
 ### Flagged (no adoption yet — honest no-fit)
 
 - `bun test --timings/--shard/--parallel` — unused; hosted CI runners are billing-blocked (manual diagnostic only), so sharding has no consumer. `--timings` is a candidate for the local gate once output noise is acceptable.
 - `Bun.password` — no current hashing consumer in this repo; candidate only if a local vault passphrase ever appears. Do not force-fit.
-- `ArrayBufferSink` — `src/partner/visuals.ts` builds PNG buffers manually; a clean refactor is flagged, not urgent.
+- `Bun.XML` — no XML parsing in the repo (Kalshi/partner feeds are JSON); no consumer.
+- `Bun.deepMatch` — subset-matching has no consumer; `Bun.deepEquals` (via `bun-native.ts`) covers equality. Revisit if a schema-subset check appears.
+- `Bun.password` — no current hashing consumer in this repo; candidate only if a local vault passphrase ever appears. Do not force-fit.
 - Keychain-first auth read (`loadKalshiCredentials`) — deferred: the loader is sync and sits on the live-execution path; convert alongside a broader async-auth change. The `kalshi:secrets` CLI is the opt-in migration step meanwhile.

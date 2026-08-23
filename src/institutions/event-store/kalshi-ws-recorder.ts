@@ -378,11 +378,10 @@ export async function runKalshiWsWatchRecorder(
   while (!shouldStop()) {
     attempt++;
     let refreshTimer: ReturnType<typeof setInterval> | null = null;
-    let sessionDone: (() => void) | null = null;
     let onAbort: (() => void) | null = null;
-    const sessionPromise = new Promise<void>((resolve) => {
-      sessionDone = resolve;
-    });
+    // Deferred session promise — no executor indirection.
+    // @see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/withResolvers
+    const { promise: sessionPromise, resolve: sessionDone } = Promise.withResolvers<void>();
 
     const client = new KalshiMarketWs({
       creds,

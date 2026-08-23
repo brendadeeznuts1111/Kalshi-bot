@@ -218,15 +218,12 @@ export function encodeSolidColorPng(
     pngChunk("IDAT", compressed),
     pngChunk("IEND", new Uint8Array(0)),
   ];
-  let total = 0;
-  for (const p of parts) total += p.byteLength;
-  const out = new Uint8Array(total);
-  let o = 0;
-  for (const p of parts) {
-    out.set(p, o);
-    o += p.byteLength;
-  }
-  return out;
+  // Single-pass concatenation — replaces the manual total+offset loop.
+  // @see https://bun.com/docs/api/utils#arraybuffersink
+  const sink = new Bun.ArrayBufferSink();
+  sink.start({ stream: false });
+  for (const p of parts) sink.write(p);
+  return new Uint8Array(sink.end());
 }
 
 function pngChunk(type: string, data: Uint8Array): Uint8Array {

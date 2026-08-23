@@ -37,7 +37,7 @@ export async function readLine(
 function withTimeout(read: Promise<string>, timeoutMs: number, fallback: string): Promise<string> {
   return Promise.race([
     read,
-    new Promise<string>((resolve) => setTimeout(() => resolve(fallback), timeoutMs)),
+    Bun.sleep(timeoutMs).then(() => fallback),
   ]);
 }
 

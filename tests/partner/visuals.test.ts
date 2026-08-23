@@ -4,6 +4,7 @@ import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import {
   colorizePartnerText,
+  encodeSolidColorPng,
   getContrastTextColor,
   getPartnerVisual,
   partnerAvatarSvg,
@@ -46,6 +47,24 @@ describe("partner visuals (Bun.color)", () => {
     expect(svg).toContain(">SP</text>");
     expect(colorizePartnerText("SPEN", "X")).toContain("X");
     expect(partnerCssVars("SPEN")).toContain("--partner-hex:");
+  });
+
+  test("encodeSolidColorPng emits a structurally valid PNG (ArrayBufferSink concat)", () => {
+    const png = encodeSolidColorPng(204, 230, 77, 64);
+    const dv = new DataView(png.buffer, png.byteOffset, png.byteLength);
+    // PNG signature
+    expect(Array.from(png.slice(0, 8))).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
+    // IHDR chunk: 4-byte length (13) + type, then width/height
+    expect(dv.getUint32(8)).toBe(13);
+    expect(new TextDecoder().decode(png.slice(12, 16))).toBe("IHDR");
+    expect(dv.getUint32(16)).toBe(64);
+    expect(dv.getUint32(20)).toBe(64);
+    // IEND terminates the file
+    expect(new TextDecoder().decode(png.slice(png.length - 8, png.length - 4))).toBe("IEND");
+    // total = signature(8) + IHDR chunk(25) + IDAT chunk(12+len) + IEND chunk(12)
+    const idatLen = dv.getUint32(33);
+    expect(idatLen).toBeGreaterThan(0);
+    expect(png.length).toBe(8 + 25 + (12 + idatLen) + 12);
   });
 
   test("writePartnerAvatarPng", async () => {

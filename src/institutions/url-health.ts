@@ -44,13 +44,14 @@ export async function probeHttp(
   timeoutMs: number,
 ): Promise<{ ok: boolean; status: number; latencyMs: number; error?: string }> {
   const t0 = Bun.nanoseconds();
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
+    // Self-aborting timeout signal — no controller/timer/cleanup bookkeeping.
+    // @see https://developer.mozilla.org/en-US/docs/Web/API/AbortSignal/timeout_static
+    const signal = AbortSignal.timeout(timeoutMs);
     let res = await fetch(url, {
       method: "HEAD",
       redirect: "follow",
-      signal: ctrl.signal,
+      signal,
       headers: { "user-agent": "kalshi-bot-url-health/1" },
     });
     if (
@@ -62,7 +63,7 @@ export async function probeHttp(
       res = await fetch(url, {
         method: "GET",
         redirect: "follow",
-        signal: ctrl.signal,
+        signal,
         headers: { "user-agent": "kalshi-bot-url-health/1" },
       });
     }
@@ -79,8 +80,6 @@ export async function probeHttp(
       latencyMs: Math.round((Bun.nanoseconds() - t0) / 1e6),
       error: err instanceof Error ? err.message : String(err),
     };
-  } finally {
-    clearTimeout(timer);
   }
 }
 
