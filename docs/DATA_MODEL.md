@@ -68,9 +68,9 @@ One `normalizeSideToHomeAway(side, homeName, awayName)` in `src/institutions/eve
 
 ## 3. Migration steps (incremental, gate-safe)
 
-1. `event-identity.ts` SSOT (match_key build/parse + side canonicalization) + tests. **done this round**.
-2. Add `match_key` columns to `skin_events` + `odds_ticks` (open-db migration) and backfill from `event_links`/names.
-3. Rewrite tennis-history odds writes to home/away + match_key (side migration).
+1. `event-identity.ts` SSOT (match_key build/parse + side canonicalization) + tests. **done**.
+2. `match_key` columns on `skin_events` + `odds_ticks` (open-db migrations) + `backfillMatchKeys` (copies from `event_links`, stadion or kalshi side) + `canonicalizeOddsSides` (winner/loser → home/away via `events` names) + `db:canonicalize` CLI + `latestOddsByMatchKey` query. **done** — all unit-tested; the live DB currently has no linked/winner-loser rows to migrate (honest 0s).
+3. Tennis-history odds writes stay `winner`/`loser` (no Kalshi lane → no match_key); `canonicalizeOddsSides` handles them at read time. **partial — documented**.
 4. Crossref + edge-flags join on `match_key` instead of name-normalization.
 5. Optionally a `unified_odds` view over odds_ticks + price_snapshots for reporting.
 

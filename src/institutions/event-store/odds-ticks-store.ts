@@ -81,6 +81,32 @@ export function persistOddsTicks(db: Database, ticks: OddsTickInsert[]): number 
 }
 
 /**
+ * Latest per-side odds for a canonical match_key — joins odds_ticks through
+ * event_links (stadion/kalshi ids) or the backfilled match_key column.
+ */
+export function latestOddsByMatchKey(
+  db: Database,
+  matchKey: string,
+): { home: LatestSideOdds | null; away: LatestSideOdds | null } {
+  const rows = db
+    .query(
+      `SELECT ot.side AS side, ot.decimal_odds AS decimal_odds, ot.ts AS ts
+       FROM odds_ticks ot
+       LEFT JOIN event_links el
+         ON el.stadion_event_id = ot.event_id OR el.kalshi_event_id = ot.event_id
+       WHERE ot.match_key = ? OR el.match_key = ?
+       ORDER BY ot.ts DESC`,
+    )
+    .all(matchKey, matchKey) as Array<{ side: string; decimal_odds: number; ts: number }>;
+  const out: { home: LatestSideOdds | null; away: LatestSideOdds | null } = { home: null, away: null };
+  for (const r of rows) {
+    const side = normalizeSideToHomeAway(r.side);
+    if (side && out[side] == null) out[side] = { decimal: r.decimal_odds, ts: r.ts };
+  }
+  return out;
+}
+
+/**
  * Book catalog + latest live odds for a sport, deduped by league|home|away.
  * Events without an odds_event_id (or with no odds_ticks rows) come back
  * with null prices — the flags engine skips them.

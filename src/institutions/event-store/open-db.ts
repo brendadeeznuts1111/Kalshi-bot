@@ -42,6 +42,8 @@ const SCHEMA_COLUMN_MIGRATIONS: Array<{ table: string; column: string; decl: str
   { table: 'odds_ticks', column: 'source_url', decl: "TEXT NOT NULL DEFAULT ''" },
   { table: 'odds_ticks', column: 'fetched_ts', decl: 'INTEGER' },
   { table: 'odds_ticks', column: 'corpus', decl: "TEXT NOT NULL DEFAULT 'trading'" },
+  { table: 'odds_ticks', column: 'match_key', decl: 'TEXT' },
+  { table: 'skin_events', column: 'match_key', decl: 'TEXT' },
   { table: 'resolutions', column: 'source_url', decl: "TEXT NOT NULL DEFAULT ''" },
   { table: 'resolutions', column: 'fetched_ts', decl: 'INTEGER' },
   { table: 'resolutions', column: 'corpus', decl: "TEXT NOT NULL DEFAULT 'trading'" },
