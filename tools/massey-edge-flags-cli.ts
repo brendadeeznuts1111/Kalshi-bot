@@ -53,7 +53,7 @@ async function main(): Promise<void> {
   for (const f of shown) {
     const side = f.side === 'home' ? f.homeSide! : f.awaySide!;
     console.log(
-      [f.league, f.home, f.away, side.edgePct.toFixed(1) + '%', f.side].join('  '),
+      [f.league, f.home, f.away, side.edgePct.toFixed(1) + '%', f.side, f.matchKey ?? ''].join('  '),
     );
   }
   const positive = flags.filter((f) => f.maxEdgePct > 0).length;

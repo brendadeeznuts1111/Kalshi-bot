@@ -1,15 +1,19 @@
 import { describe, expect, test } from "bun:test";
 import { Database } from "bun:sqlite";
 import {
+  latestOddsByMatchKey,
   latestOddsForEvent,
   loadPricedBookEvents,
+  matchKeyForEventId,
   persistOddsTicks,
 } from "../../../src/institutions/event-store/odds-ticks-store.ts";
 
 function makeDb(): Database {
   const db = new Database(":memory:");
   db.run("CREATE TABLE skin_events (id INTEGER PRIMARY KEY, sport TEXT, league TEXT, home TEXT, away TEXT, competition_id TEXT, odds_event_id TEXT)");
-  db.run("CREATE TABLE odds_ticks (id INTEGER PRIMARY KEY, event_id TEXT, source TEXT, source_url TEXT DEFAULT '', fetched_ts INTEGER, corpus TEXT DEFAULT 'trading', ts INTEGER, side TEXT, decimal_odds REAL, implied_prob REAL, limit_context TEXT)");
+  db.run("CREATE TABLE odds_ticks (id INTEGER PRIMARY KEY, event_id TEXT, source TEXT, source_url TEXT DEFAULT '', fetched_ts INTEGER, corpus TEXT DEFAULT 'trading', ts INTEGER, side TEXT, decimal_odds REAL, implied_prob REAL, limit_context TEXT, match_key TEXT)");
+  db.run("CREATE TABLE events (event_id TEXT PRIMARY KEY, player_a TEXT, player_b TEXT, winner TEXT, loser TEXT)");
+  db.run("CREATE TABLE event_links (stadion_event_id TEXT, kalshi_event_id TEXT, match_key TEXT)");
   return db;
 }
 
@@ -56,6 +60,37 @@ describe("odds-ticks store (live-odds persistence contract)", () => {
       { eventId: "e1", source: "src", side: "away", decimalOdds: 2.0, ts: 1 },
     ]);
     expect(n).toBe(1);
+  });
+
+  test("latestOddsForEvent resolves winner/loser via the events registry", () => {
+    const db = makeDb();
+    db.run("INSERT INTO events (event_id, player_a, player_b, winner, loser) VALUES ('e1', 'Ann Pace', 'Bob Trevisan', 'Ann Pace', 'Bob Trevisan')");
+    db.run("INSERT INTO odds_ticks (event_id, side, decimal_odds, ts) VALUES ('e1', 'winner', 1.4, 100)");
+    db.run("INSERT INTO odds_ticks (event_id, side, decimal_odds, ts) VALUES ('e1', 'loser', 3.1, 100)");
+    const odds = latestOddsForEvent(db, "e1");
+    expect(odds.home).toEqual({ decimal: 1.4, ts: 100 });
+    expect(odds.away).toEqual({ decimal: 3.1, ts: 100 });
+  });
+
+  test("matchKeyForEventId reads the backfilled column or event_links", () => {
+    const db = makeDb();
+    db.run("INSERT INTO odds_ticks (event_id, side, decimal_odds, ts, match_key) VALUES ('e1', 'home', 1.5, 1, 'mk-1')");
+    expect(matchKeyForEventId(db, "e1")).toBe("mk-1");
+    db.run("INSERT INTO event_links (stadion_event_id, kalshi_event_id, match_key) VALUES ('e2', 'k2', 'mk-2')");
+    expect(matchKeyForEventId(db, "e2")).toBe("mk-2");
+    expect(matchKeyForEventId(db, "unknown")).toBeNull();
+  });
+
+  test("latestOddsByMatchKey resolves winner/loser through events names", () => {
+    const db = makeDb();
+    db.run("INSERT INTO events (event_id, player_a, player_b, winner, loser) VALUES ('e1', 'Ann Pace', 'Bob Trevisan', 'Bob Trevisan', 'Ann Pace')");
+    db.run("INSERT INTO event_links (stadion_event_id, kalshi_event_id, match_key) VALUES ('e1', 'k1', 'mk-1')");
+    db.run("INSERT INTO odds_ticks (event_id, side, decimal_odds, ts) VALUES ('e1', 'winner', 2.2, 1)");
+    db.run("INSERT INTO odds_ticks (event_id, side, decimal_odds, ts) VALUES ('e1', 'loser', 1.6, 1)");
+    const odds = latestOddsByMatchKey(db, "mk-1");
+    // winner = Bob Trevisan = away → away side; loser = Ann Pace = home.
+    expect(odds.home).toEqual({ decimal: 1.6, ts: 1 });
+    expect(odds.away).toEqual({ decimal: 2.2, ts: 1 });
   });
 
   test("loadPricedBookEvents joins skin_events to latest odds and dedupes", () => {

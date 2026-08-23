@@ -28,6 +28,8 @@ export type PricedBookEvent = BookSkinEvent & {
   awayDecimal: number | null;
   /** Millisecond epoch of the odds capture (null when unavailable). */
   asOf: number | null;
+  /** Canonical event key (day|lane|names) when the odds link resolves one. */
+  matchKey: string | null;
 };
 
 export type EdgeFlagSide = {
@@ -45,6 +47,8 @@ export type EdgeFlag = {
   home: string;
   away: string;
   competitionId: string | null;
+  /** Canonical event key (day|lane|names) when resolved. */
+  matchKey: string | null;
   asOf: number | null;
   homeSide: EdgeFlagSide | null;
   awaySide: EdgeFlagSide | null;
@@ -101,6 +105,7 @@ export function computeEdgeFlags(
       home: row.bookHome,
       away: row.bookAway,
       competitionId: row.competitionId,
+      matchKey: ev.matchKey,
       asOf: ev.asOf,
       homeSide,
       awaySide,

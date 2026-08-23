@@ -25,6 +25,7 @@ function ev(home: string, away: string, homeDecimal: number | null, awayDecimal:
     home,
     away,
     competitionId: "tennis.atp",
+    matchKey: "2026-07-22|KXITFWMATCH|pace|trevisan",
     homeDecimal,
     awayDecimal,
     asOf: 1_700_000_000_000,
@@ -45,6 +46,7 @@ describe("computeEdgeFlags (Massey vs live book odds)", () => {
     expect(flags[0]!.side).toBe("away");
     expect(flags[0]!.maxEdgePct).toBeCloseTo(12.7, 1);
     expect(flags[0]!.awaySide!.lineProb).toBeCloseTo(1 / 3.1, 4);
+    expect(flags[0]!.matchKey).toBe("2026-07-22|KXITFWMATCH|pace|trevisan");
   });
 
   test("positive edge flags the away side", () => {

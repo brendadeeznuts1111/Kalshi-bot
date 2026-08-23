@@ -71,7 +71,7 @@ One `normalizeSideToHomeAway(side, homeName, awayName)` in `src/institutions/eve
 1. `event-identity.ts` SSOT (match_key build/parse + side canonicalization) + tests. **done**.
 2. `match_key` columns on `skin_events` + `odds_ticks` (open-db migrations) + `backfillMatchKeys` (copies from `event_links`, stadion or kalshi side) + `canonicalizeOddsSides` (winner/loser → home/away via `events` names) + `db:canonicalize` CLI + `latestOddsByMatchKey` query. **done** — all unit-tested; the live DB currently has no linked/winner-loser rows to migrate (honest 0s).
 3. Tennis-history odds writes stay `winner`/`loser` (no Kalshi lane → no match_key); `canonicalizeOddsSides` handles them at read time. **partial — documented**.
-4. Crossref + edge-flags join on `match_key` instead of name-normalization.
+4. Canonical key flows through the odds pipeline: `matchKeyForEventId` (backfilled column or `event_links`), `PricedBookEvent.matchKey` → `EdgeFlag.matchKey` (CLI prints it, JSON artifact carries it), and `latestOddsForEvent`/`latestOddsByMatchKey` now resolve `winner`/`loser` sides through the `events` registry (names) — the unified query returns home/away for every corpus. **done**. (The Massey side remains a team-name lookup — Massey ratings are per-team, not per-match, so crossref matching stays name-based by nature.)
 5. Optionally a `unified_odds` view over odds_ticks + price_snapshots for reporting.
 
 ## 4. Open notes

@@ -26,16 +26,31 @@ export function latestOddsForEvent(
 ): { home: LatestSideOdds | null; away: LatestSideOdds | null } {
   const rows = db
     .query(
-      `SELECT side, decimal_odds, ts FROM odds_ticks
-       WHERE event_id = ?
-       ORDER BY ts DESC`,
+      `SELECT ot.side AS side, ot.decimal_odds AS decimal_odds, ot.ts AS ts,
+              e.player_a AS player_a, e.player_b AS player_b, e.winner AS winner, e.loser AS loser
+       FROM odds_ticks ot
+       LEFT JOIN events e ON e.event_id = ot.event_id
+       WHERE ot.event_id = ?
+       ORDER BY ot.ts DESC`,
     )
-    .all(eventId) as Array<{ side: string; decimal_odds: number; ts: number }>;
+    .all(eventId) as Array<{
+    side: string;
+    decimal_odds: number;
+    ts: number;
+    player_a: string | null;
+    player_b: string | null;
+    winner: string | null;
+    loser: string | null;
+  }>;
   const out: { home: LatestSideOdds | null; away: LatestSideOdds | null } = { home: null, away: null };
   for (const r of rows) {
-    // Unified side vocabulary: home/away, 1/2, yes/no map directly;
-    // winner/loser need competitor names (not stored here) → null.
-    const side = normalizeSideToHomeAway(r.side); // winner/loser need names → null here
+    const competitor =
+      r.side === "winner" ? r.winner : r.side === "loser" ? r.loser : undefined;
+    const side = normalizeSideToHomeAway(r.side, {
+      competitor,
+      home: r.player_a,
+      away: r.player_b,
+    });
     if (side && out[side] == null) out[side] = { decimal: r.decimal_odds, ts: r.ts };
   }
   return out;
@@ -81,6 +96,24 @@ export function persistOddsTicks(db: Database, ticks: OddsTickInsert[]): number 
 }
 
 /**
+ * Canonical match_key for an event id: the backfilled odds_ticks column,
+ * else the event_links join (stadion or kalshi side). Null when unknown.
+ */
+export function matchKeyForEventId(db: Database, eventId: string): string | null {
+  const row = db
+    .query(
+      `SELECT COALESCE(
+         (SELECT ot.match_key FROM odds_ticks ot
+          WHERE ot.event_id = ? AND ot.match_key IS NOT NULL AND ot.match_key != '' LIMIT 1),
+         (SELECT el.match_key FROM event_links el
+          WHERE (el.stadion_event_id = ? OR el.kalshi_event_id = ?) AND el.match_key != '' LIMIT 1)
+       ) AS match_key`,
+    )
+    .get(eventId, eventId, eventId) as { match_key: string | null } | null;
+  return row?.match_key ?? null;
+}
+
+/**
  * Latest per-side odds for a canonical match_key — joins odds_ticks through
  * event_links (stadion/kalshi ids) or the backfilled match_key column.
  */
@@ -90,17 +123,33 @@ export function latestOddsByMatchKey(
 ): { home: LatestSideOdds | null; away: LatestSideOdds | null } {
   const rows = db
     .query(
-      `SELECT ot.side AS side, ot.decimal_odds AS decimal_odds, ot.ts AS ts
+      `SELECT ot.side AS side, ot.decimal_odds AS decimal_odds, ot.ts AS ts,
+              e.player_a AS player_a, e.player_b AS player_b, e.winner AS winner, e.loser AS loser
        FROM odds_ticks ot
        LEFT JOIN event_links el
          ON el.stadion_event_id = ot.event_id OR el.kalshi_event_id = ot.event_id
+       LEFT JOIN events e ON e.event_id = ot.event_id
        WHERE ot.match_key = ? OR el.match_key = ?
        ORDER BY ot.ts DESC`,
     )
-    .all(matchKey, matchKey) as Array<{ side: string; decimal_odds: number; ts: number }>;
+    .all(matchKey, matchKey) as Array<{
+    side: string;
+    decimal_odds: number;
+    ts: number;
+    player_a: string | null;
+    player_b: string | null;
+    winner: string | null;
+    loser: string | null;
+  }>;
   const out: { home: LatestSideOdds | null; away: LatestSideOdds | null } = { home: null, away: null };
   for (const r of rows) {
-    const side = normalizeSideToHomeAway(r.side);
+    const competitor =
+      r.side === "winner" ? r.winner : r.side === "loser" ? r.loser : undefined;
+    const side = normalizeSideToHomeAway(r.side, {
+      competitor,
+      home: r.player_a,
+      away: r.player_b,
+    });
     if (side && out[side] == null) out[side] = { decimal: r.decimal_odds, ts: r.ts };
   }
   return out;
@@ -137,6 +186,7 @@ export function loadPricedBookEvents(db: Database, sport: string): PricedBookEve
       home: row.home,
       away: row.away,
       competitionId: row.competition_id,
+      matchKey: eventId ? matchKeyForEventId(db, eventId) : null,
       homeDecimal: odds.home?.decimal ?? null,
       awayDecimal: odds.away?.decimal ?? null,
       asOf: odds.home?.ts ?? odds.away?.ts ?? null,
