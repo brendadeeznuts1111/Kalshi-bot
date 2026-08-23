@@ -6,7 +6,8 @@
  *            private key (KALSHI_PRIVATE_KEY inline, or the file at
  *            KALSHI_PRIVATE_KEY_PATH) from the environment and store both in
  *            the OS credential vault via Bun.secrets under service
- *            "com.kalshi-bot".
+ *            "com.kalshi-bot". Pass --unrestricted to skip the macOS
+ *            keychain prompt (CI use; reduces security).
  *   get    — report whether the credentials are stored. The key id is shown;
  *            key material is never printed (count only).
  *   delete — remove both entries from the vault.
@@ -50,8 +51,9 @@ async function store(): Promise<number> {
     console.error("Missing KALSHI_PRIVATE_KEY_PATH or KALSHI_PRIVATE_KEY");
     return 1;
   }
-  await setSecret({ service: SERVICE, name: KEY_ID_NAME, value: keyId });
-  await setSecret({ service: SERVICE, name: KEY_NAME, value: pem });
+  const unrestricted = process.argv.includes("--unrestricted");
+  await setSecret({ service: SERVICE, name: KEY_ID_NAME, value: keyId, allowUnrestrictedAccess: unrestricted });
+  await setSecret({ service: SERVICE, name: KEY_NAME, value: pem, allowUnrestrictedAccess: unrestricted });
   console.log("stored " + KEY_ID_NAME + " + " + KEY_NAME + " in OS keychain (service " + SERVICE + ")");
   return 0;
 }

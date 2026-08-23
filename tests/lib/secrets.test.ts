@@ -78,6 +78,17 @@ describe("OS keychain credential store wrapper (Bun.secrets)", () => {
     expect(await getSecret(REF, { backend })).toBe("PEM");
   });
 
+  test("setSecret forwards allowUnrestrictedAccess (macOS CI option)", async () => {
+    const received: Array<Record<string, unknown>> = [];
+    const backend: SecretBackend = {
+      async get() { return null; },
+      async set(ref) { received.push({ ...ref }); },
+      async delete() { return false; },
+    };
+    await setSecret({ ...REF, value: "v", allowUnrestrictedAccess: true }, backend);
+    expect(received[0]).toMatchObject({ service: REF.service, name: REF.name, value: "v", allowUnrestrictedAccess: true });
+  });
+
   test("deleteSecret removes the entry", async () => {
     const backend = memoryBackend(new Map([["com.kalshi-bot/kalshi-api-key-id", "v"]]));
     await deleteSecret(REF, backend);

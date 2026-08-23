@@ -25,7 +25,15 @@ export type SecretRef = {
   name: string;
 };
 
-export type SecretRefWithValue = SecretRef & { value: string };
+export type SecretRefWithValue = SecretRef & {
+  value: string;
+  /**
+   * macOS keychain only: allow all apps to read this item without user
+   * interaction (CI use). Default false; ignored on other platforms.
+   * @see https://bun.com/docs/runtime/secrets (set options)
+   */
+  allowUnrestrictedAccess?: boolean;
+};
 
 /** Injectable vault backend; tests substitute an in-memory map. */
 export interface SecretBackend {
@@ -96,7 +104,15 @@ export async function getSecret(
   return null;
 }
 
-/** Store or replace a credential in the vault. */
+/**
+ * Store or replace a credential in the vault.
+ *
+ * Docs semantics: an empty `value` deletes the credential if it exists
+ * (same as `deleteSecret`), and `allowUnrestrictedAccess` skips the macOS
+ * keychain prompt for CI runs. The object form is the typed primary API —
+ * Bun's positional forms (`secrets.set('app','name',value)`) work at
+ * runtime but bun-types 1.4.0 does not declare them.
+ */
 export async function setSecret(
   ref: SecretRefWithValue,
   backend: SecretBackend = keychainBackend,
