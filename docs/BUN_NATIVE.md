@@ -560,7 +560,7 @@ Deep dive: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns)
 | TTY tables + OSC 8 links | `Bun.inspect.table` + `Bun.stringWidth` / `wrapAnsi` / `stripANSI` | [`terminal-out.ts`](../src/research/terminal-out.ts) |
 | Phase timings | `Bun.nanoseconds` | [`phase-timing.ts`](../src/research/phase-timing.ts) |
 | Agent IPC research progress | `Bun.spawn` + `process.send` | [`research-runner.ts`](../src/agent/research-runner.ts), [`research-progress.ts`](../src/research/research-progress.ts) |
-| GitHub rate budget probe | `Bun.$` — `gh api rate_limit` quiet capture | [`github-rate-budget.ts`](../tools/github-rate-budget.ts) |
+| GitHub rate limit probe | `Bun.fetch` — `readGitHubRateLimitWire()` (no gh subprocess) | [`github-rate-limit.ts`](../src/research/github-rate-limit.ts), [`github-rate-budget.ts`](../tools/github-rate-budget.ts) |
 | Repo / alpha file scan | `Bun.Glob` | [`watcher.ts`](../src/calibration/watcher.ts), [`architecture-blueprint.ts`](../src/agent/architecture-blueprint.ts) |
 | CLI flags | `parseArgs` from `node:util` | [`cli.ts`](../src/research/cli.ts) |
 | Reproducible package install | `bun install --frozen-lockfile` | [`package.json`](../package.json), [`bun.lock`](../bun.lock) |

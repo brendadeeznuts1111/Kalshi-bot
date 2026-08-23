@@ -379,9 +379,8 @@ export function skipRatePreflight(): boolean {
   return raw === "1" || raw === "true" || raw === "yes";
 }
 
-export async function readGitHubRateLimit(
-  resource: GitHubRateLimitResource,
-): Promise<GitHubRateLimitSnapshot | null> {
+/** Full /rate_limit wire via Bun.fetch (no gh subprocess) - same JSON shape `gh api rate_limit` returns. */
+export async function readGitHubRateLimitWire(): Promise<GitHubRateLimitWire | null> {
   try {
     const token = await resolveGitHubToken();
     const res = await fetch(`${GITHUB_API_ORIGIN}/rate_limit`, {
@@ -393,10 +392,17 @@ export async function readGitHubRateLimit(
       },
     });
     if (!res.ok) return null;
-    return snapshotFromWire((await res.json()) as GitHubRateLimitWire, resource);
+    return (await res.json()) as GitHubRateLimitWire;
   } catch {
     return null;
   }
+}
+
+export async function readGitHubRateLimit(
+  resource: GitHubRateLimitResource,
+): Promise<GitHubRateLimitSnapshot | null> {
+  const wire = await readGitHubRateLimitWire();
+  return wire ? snapshotFromWire(wire, resource) : null;
 }
 
 /** Preflight inspect phase — fail fast before `gh search code` hammers the API. */

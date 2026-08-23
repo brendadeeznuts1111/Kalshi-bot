@@ -26,7 +26,7 @@ in-process side.
 
 | Area | Before | After |
 |------|--------|-------|
-| GitHub rate budget | `Bun.spawn(["gh","api","rate_limit"], pipes)` | `$`gh api rate_limit`.nothrow().quiet()` · `tools/github-rate-budget.ts` |
+| GitHub rate budget | `Bun.spawn(["gh","api","rate_limit"], pipes)` | `readGitHubRateLimitWire()` — `Bun.fetch` to `/rate_limit` (no gh subprocess) · `tools/github-rate-budget.ts` |
 | Data-plane snapshot | git rev-parse / rm / commandSucceeds spawns | `$`git rev-parse --short HEAD` · `$`rm ${p}`.nothrow().quiet()` · `tools/snapshot-data-plane.ts` |
 | Massey report dir | `Bun.spawn(["mkdir","-p",dir])` | `$`mkdir -p ${dir}`.nothrow().quiet()` · `tools/massey-crossref-cli.ts` |
 | Serve launchd probe | `Bun.spawn(["launchctl","list"])` + kill-on-timeout | `$`launchctl list`.nothrow().quiet()` · `src/research/serve.ts` |
@@ -99,7 +99,7 @@ for the h2 test cert-gen in `SPAWN_KEEP_LIST`). Where Bun has a native API
 | `node:tls` (Node compat) | `tls.connect().getPeerCertificate()` replaces `openssl s_client` + `x509` — leaf SANs (`subjectaltname`) with zero subprocess (probed 1.4.0) | `src/domain/host-discover.ts` `probeTlsSans` |
 | `Bun.Terminal` (PTY) | The isTTY=true option the interactive keeps need (`$` pipes stdout/stderr) | not used — keep-list reasoning |
 | `Bun.Transpiler.scanImports` + `ts` AST | The enforcement loop — guard runs `git ls-files -z` via `$`, reads via `Bun.file`, walks AST for spawn sites | `scripts/audit-bun-native.ts` |
-| `Bun.fetch` | REST half of research transport (`Bun.fetch`), auth/rate-limit via `$`→`gh` | `src/research/github-api.ts`, `src/research/gh.ts` |
+| `Bun.fetch` | REST half of research transport — GitHub REST + `/rate_limit` (`readGitHubRateLimitWire`); `$`→`gh` only for the auth-token fallback + search | `src/research/github-api.ts`, `src/research/gh.ts`, `src/research/github-rate-limit.ts` |
 | `bun:sqlite` | Stores what `$`/`gh` gathers | `src/research/cache.ts`, `src/institutions/event-store/*` |
 
 ## Why `Bun.$` over `Bun.spawn`

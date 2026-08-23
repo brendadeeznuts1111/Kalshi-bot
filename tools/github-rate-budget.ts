@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 // @see https://bun.com/docs/runtime/utils#bun-main
-// @see https://bun.com/docs/runtime/shell#getting-started
+// @see https://bun.com/docs/runtime/networking/fetch#sending-an-http-request
 /**
  * Read GitHub rate-limit buckets + inspect cost estimate — no research run.
  *
@@ -8,25 +8,14 @@
  *   bun tools/github-rate-budget.ts --dimension=price-data --gated=49 --uncached=49
  */
 import { parseArgs } from "node:util";
-import { $ } from "bun";
 import { loadConfig } from "../src/research/discover.ts";
 import {
   estimateCodeSearchCallsPerRepo,
   evaluateInspectRateBudget,
   formatInspectBudgetEstimate,
   parseRateLimitWire,
-  type GitHubRateLimitWire,
+  readGitHubRateLimitWire,
 } from "../src/research/github-rate-limit.ts";
-
-async function fetchRateLimitWire(): Promise<GitHubRateLimitWire | null> {
-  const { exitCode, stdout } = await $`gh api rate_limit`.nothrow().quiet();
-  if (exitCode !== 0) return null;
-  try {
-    return JSON.parse(stdout.toString()) as GitHubRateLimitWire;
-  } catch {
-    return null;
-  }
-}
 
 if (import.meta.main) {
   const { values } = parseArgs({
@@ -44,7 +33,7 @@ if (import.meta.main) {
   const gated = values.gated ? Number(values.gated) : null;
   const uncached = values.uncached ? Number(values.uncached) : gated;
 
-  const wire = await fetchRateLimitWire();
+  const wire = await readGitHubRateLimitWire();
   if (!wire) {
     console.error("failed to read GitHub rate_limit — is GH_TOKEN / gh auth set?");
     process.exit(1);
