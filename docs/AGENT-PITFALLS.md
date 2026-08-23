@@ -273,6 +273,22 @@ Node APIs are intentional:
   adopt.
 - Browser-side code (hq-view timers) - not the Bun runtime.
 
+### 8m. Release-blog APIs (bun.com/blog/bun-v1.4, verified 1.4.0)
+
+- Bun.stringWidth / Bun.sliceAnsi: REAL - ANSI-aware visible width and
+  ANSI-preserving slice. Adopted as src/lib/ansi-width.ts (visibleWidth,
+  padAnsi, sliceAnsiSafe) with tests - no repo consumer had the padEnd-
+  counts-ANSI-bytes bug, but this is the ready primitive.
+- Bun.YAML: REAL (parse/stringify verified); no consumer (config is
+  JSON5/TOML) - documented, not force-fit.
+- Bun.sql: REAL (tagged-template query API); the repo uses bun:sqlite
+  directly - different layer, no conversion.
+- Bun.html / Bun.S: NOT present in the 1.4.0 runtime (undefined - some
+  secondary writeups claim them; the build disagrees). Same docs-ahead-
+  of-runtime class as fetch.preconnect https.
+- bun audit fix / bun dedupe / bun prune: CLI commands exist; the CI
+  workflow already runs bun audit --audit-level=high + bun dedupe --check.
+
 - `bun run agent:encode [file]` + `--decode`: lexer-safe base64 in/out (byte-exact
   round-trip verified).
 - `bun run agent:probe [file]`: run Bun code repo-locally (worker-is-Node +
