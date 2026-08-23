@@ -28,15 +28,15 @@ in-process side.
 |------|--------|-------|
 | GitHub rate budget | `Bun.spawn(["gh","api","rate_limit"], pipes)` | `$`gh api rate_limit`.nothrow().quiet()` · `tools/github-rate-budget.ts` |
 | Data-plane snapshot | git rev-parse / rm / commandSucceeds spawns | `$`git rev-parse --short HEAD` · `$`rm ${p}`.nothrow().quiet()` · `tools/snapshot-data-plane.ts` |
-| Massey report dir | `Bun.spawn(["mkdir","-p",dir])` | `$`mkdir -p ${dir}`.nothrow()` · `tools/massey-crossref-cli.ts` |
+| Massey report dir | `Bun.spawn(["mkdir","-p",dir])` | `$`mkdir -p ${dir}`.nothrow().quiet()` · `tools/massey-crossref-cli.ts` |
 | Serve launchd probe | `Bun.spawn(["launchctl","list"])` + kill-on-timeout | `$`launchctl list`.nothrow().quiet()` · `src/research/serve.ts` |
-| Host discover TLS/DNS | s_client / x509 / dig spawns (stdin pipes) | `$`printf "" | openssl s_client …` · `$`printf "%s" ${pem} | openssl x509 ${args}` · `$`dig +short ${type} ${host}` · `src/domain/host-discover.ts` |
+| Host discover TLS/DNS | s_client / x509 / dig spawns (stdin pipes) | `node:tls` `getPeerCertificate()` (SANs, zero subprocess) · `Bun.dns.resolveCname/NS/TXT/MX` (native DNS) · `src/domain/host-discover.ts` |
 | Partner dashboard open | `Bun.spawn(["open",url])` | `$`open ${fileUrl}`.nothrow().quiet()` · `tools/partner-dashboard.ts` |
 | Simplify-loop test run | `Bun.spawn(["bun","test",…])` pipes | `$`bun test ${[...testArgs]}`.cwd(ROOT).nothrow().quiet()` · `src/research/simplify-loop.ts` |
 | Shadow tick | `Bun.spawn(["bun",runOnce,…])` inherit | `$`bun ${runOnce} ${passthrough}`.cwd(programDir).nothrow()` · `src/alpha/run-shadow-once.ts` |
 | Cron jobs (7 sites) | `Bun.spawn(["bun","run",script], inherit)` | `$`bun run ${script}`.cwd(…).nothrow()` · `scripts/cron-main.ts` |
 | deps outdated | `Bun.spawn(["bun","outdated"], env)` | `$`bun outdated`.env({…, NO_COLOR:"1"}).nothrow().quiet()` · `scripts/deps-outdated.ts` |
-| Vault provisioning | pass-cli spawn + stdin write | `$`printf "%s" ${input} | ${bin} ${args}`.nothrow().quiet()` · `tools/provision-fantasy402-vault.ts` |
+| Vault provisioning | pass-cli spawn + stdin write | `$`${bin} ${args} < ${Buffer.from(input)}`.nothrow().quiet()` · `tools/provision-fantasy402-vault.ts` |
 | Guard git scan | `Bun.spawn(["git","ls-files","-z"])` | `$`git ls-files -z`.cwd(root).nothrow().quiet()` + NUL split · `scripts/audit-bun-native.ts` |
 | Demo scenario runner | `Bun.spawn([process.execPath,"test",…])` + env | `$`${process.execPath} test ${spec.file} --test-name-pattern ${spec.pattern}`.env({…})` — undefined env dropped (verified) · `src/partner/execution/demo-scenario-runner.ts` |
 | Regulatory CLI tests | `Bun.spawn({ cmd: […] })` pipes | `$`bun src/regulatory/scripts/… --db :memory:`.nothrow().quiet()` · `tests/regulatory/state-compliance.test.ts` |

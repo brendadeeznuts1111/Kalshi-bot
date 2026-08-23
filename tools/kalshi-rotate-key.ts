@@ -1,5 +1,4 @@
 #!/usr/bin/env bun
-// @see https://bun.com/docs/runtime/child-process#spawn-a-process-bun-spawn — Bun.spawn
 // @see https://bun.com/docs/runtime/file-io#writing-files-bun-write — Bun.write
 /**
  * Kalshi API key rotation helper — one command instead of a multi-file ritual.

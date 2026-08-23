@@ -2,7 +2,7 @@
  * Live market event tracker — normalize Pandora offer transitions into a
  * stable event log (MARKET_ADDED / MARKET_REMOVED / PRICE_CHANGE / …).
  *
- * Used by root `live-tracker.ts` CLI: diff · watch · analyze.
+ * Used by `tools/live-tracker-cli.ts` CLI (moved from root `live-tracker.ts`): diff · watch · analyze.
  */
 import type {
   EventDataStateTransition,
