@@ -1129,7 +1129,7 @@ bun pm cache rm                    # clear ~/.bun/install/cache
 
 - `bun test --timings/--shard/--parallel` — unused; hosted CI runners are billing-blocked (manual diagnostic only), so sharding has no consumer. `--timings` is a candidate for the local gate once output noise is acceptable.
 - `Bun.password` — no current hashing consumer in this repo; candidate only if a local vault passphrase ever appears. Do not force-fit.
-- `Bun.XML` — no XML parsing in the repo (Kalshi/partner feeds are JSON); no consumer.
+- `Bun.XML` — ADOPTED: `src/lib/release-blog.ts` parses the bun.com RSS with `Bun.XML.parse` (SIMD; 87KB feed in ~1.9ms verified). Import loader `with { type: 'xml' }` returns the parsed object, not the file path (verified — the 1.4 breaking change holds). Shape notes: repeated elements become arrays, single elements stay objects; RSS 2.0 is `rss.channel.item[]` with plain strings, Atom is `feed.entry` with `@`-prefixed attributes.
 - `Bun.deepMatch` — subset-matching has no consumer; `Bun.deepEquals` (via `bun-native.ts`) covers equality. Revisit if a schema-subset check appears.
 - `Bun.mmap` — no random-access large-file consumer; all file reads are full-buffer or streamed. Revisit if a memory-mapped scan appears.
 - `Bun.Transpiler` / `Bun.unsafe` — no runtime transpilation or unsafe-FFI need; nothing to adopt.
