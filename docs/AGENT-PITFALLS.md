@@ -310,8 +310,18 @@ Node APIs are intentional:
   markdownToHtml / markdownToAnsi are thin wrappers over Bun.markdown.
   html / .ansi; render/react unused (no consumer). Bun.Image.
   fromClipboard, Bun.s3.file, Bun.password.hash, Bun.sql AND Bun.SQL
-  (alias) all exist on 1.4.0. Version numbers in such tables are NOT
-  verifiable from the installed build - treat them as ungrounded.
+  (alias) all exist on 1.4.0. Version numbers ARE checkable per-release:
+  the RSS feed lists the release blogs, and bun-v1.3.14 confirms 'Bun.Image
+  - a built-in image processing API' while bun-v1.3.8 confirms Bun.markdown
+  - those two hold; verify others against their release post, not by
+  assuming.
+  * The 1.4 blog's ACTUAL code blocks (extracted, not just identifier
+    counts): Bun.markdown.render with custom callbacks (heading/paragraph/
+    strong) is real (we use .ansi for reports); Bun.sliceAnsi takes a
+    THIRD placeholder arg ('unicorn' -> 'uni…') and negative starts -
+    sliceAnsiSafe now passes it through (was a real gap); AnsiTheme
+    includes hyperlinks + columns; stringWidth handles ZWJ/emoji/hyperlink
+    sequences.
 - REAL BUG FOUND via Bun.Image: Bun.deflateSync emits RAW deflate (first
   bytes 0x63 0x64, no zlib header) but PNG IDAT requires an RFC 1950 zlib
   stream. Our hand-built solid PNG passed metadata-only checks and sips

@@ -32,4 +32,9 @@ describe("ANSI-aware width (Bun.stringWidth / sliceAnsi)", () => {
     expect(sliced.includes("38;2")).toBe(true);
     expect(visibleWidth(sliced)).toBe(2);
   });
+
+  test("sliceAnsiSafe supports placeholder and negative start (blog-verified)", () => {
+    expect(sliceAnsiSafe("unicorn", 0, 4, "…")).toBe("uni…");
+    expect(sliceAnsiSafe("unicorn", -4, undefined, "…")).toBe("…orn");
+  });
 });

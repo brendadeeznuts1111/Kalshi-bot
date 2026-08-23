@@ -28,7 +28,16 @@ export function padAnsi(value: string, width: number, dir: "left" | "right" = "r
   return dir === "right" ? value + spaces : spaces + value;
 }
 
-/** Slice by visible cells, preserving the ANSI escapes around the kept text. */
-export function sliceAnsiSafe(value: string, start: number, end?: number): string {
-  return Bun.sliceAnsi(value, start, end);
+/**
+ * Slice by visible cells, preserving ANSI escapes; optional placeholder
+ * inserted when truncation occurs (Bun.sliceAnsi third arg; verified on
+ * 1.4.0: 'unicorn' -> 'uni…', negative start -> '…orn').
+ */
+export function sliceAnsiSafe(
+  value: string,
+  start: number,
+  end?: number,
+  placeholder?: string,
+): string {
+  return placeholder === undefined ? Bun.sliceAnsi(value, start, end) : Bun.sliceAnsi(value, start, end, placeholder);
 }
