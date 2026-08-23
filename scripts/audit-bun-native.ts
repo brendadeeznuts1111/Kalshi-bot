@@ -68,6 +68,7 @@ const IGNORED_PATH_SEGMENTS = new Set([
   ".reasonix",
   "coverage",
   "node_modules",
+  "vendor", // vendored third-party packages (file: deps) - not our code
 ]);
 
 const IGNORED_PATH_PREFIXES = [
