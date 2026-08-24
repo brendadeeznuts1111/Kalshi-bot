@@ -51,7 +51,7 @@ export function runPerfAudit(root: string, globalBunfigPath?: string): PerfCheck
   const buildDirs = [join(root, 'src'), join(root, 'tools'), join(root, 'scripts')];
   const buildFiles = rgFiles(root, 'Bun.build', buildDirs);
   const usesBuild = buildFiles.length > 0;
-  const metafileFiles = rgFiles(root, 'metafile\s*:\s*true|--metafile-md', buildDirs);
+  const metafileFiles = rgFiles(root, 'metafile\s*:\s*true|--metafile(?:-md)?=', buildDirs);
   checks.push({
     name: 'Bun.build metafile analysis (--metafile-md / metafile:true)',
     status: !usesBuild ? 'n/a' : metafileFiles.length ? 'ok' : 'warn',

@@ -6,14 +6,14 @@
  */
 import { join } from 'node:path';
 const root = join(import.meta.dir, '..');
-// Blog-recommended usage (bun.com/blog/bun-v1.4): minify for the shipped
+// Filename parity: design:watch (CLI --outdir) produces the same (bun.com/blog/bun-v1.4): minify for the shipped
 // dist (client pattern) + metafile:true so the bundle is analyzable
 // (--metafile-md equivalent; perf-audit verifies this flag). target:bun
 // is the server pattern; single entry, so no code splitting needed.
 const out = await Bun.build({
   entrypoints: [join(root, 'src/institutions/design-system.ts')],
   outdir: join(root, 'dist'),
-  naming: 'design-system.mjs',
+  naming: 'design-system.js', // same filename as design:watch (CLI --outdir)
   target: 'bun',
   minify: true,
   metafile: true,
