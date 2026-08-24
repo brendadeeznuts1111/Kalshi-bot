@@ -1513,6 +1513,46 @@ src/research/serve.ts`. RUN IT WITH --hot, not plain `bun serve.ts`:
   stop the first. job_kill on the DSH wrapper does not always kill the
   bun child; pkill -f the exact command line is the reliable kill.
 
+### 33. Observability paste (cpu/heap profilers, inspector, memoryPressure) — audited + probed
+
+The v1.4 'Observability' paste was applied claim-by-claim (probes on 1.4.0).
+Verdicts:
+
+VERIFIED (probe):
+- `--cpu-prof` writes a .cpuprofile (759 B for the probe app); openable in
+  DevTools. `--cpu-prof-md` writes CPU.<ts>.md - markdown profile with top
+  functions by self time (probe: 1.4 KB report generated).
+- `--heap-prof-md` writes Heap.<ts>.md - 407 KB markdown heap report
+  (summary: total heap, top types by retained size, gcroot search).
+- `BUN_CPU_PROFILE=1` enables the CPU profiler for processes you cannot
+  pass flags to (probe: .cpuprofile written).
+- node:inspector Session with Profiler.start/stop works in-process
+  (probe: profile.nodes returned).
+- Async stack traces: a fetch() failure stack points at the `await` line,
+  not native frames (probe: 'at async fetchFail (async-stack.ts:2:9)').
+- process.on('memoryPressure') platform semantics match the repo's serve.ts
+  guard (already adopted): macOS kqueue EVFILT_MEMORYSTATUS (warning|
+  critical), Linux PSI /proc/pressure/memory (critical only), Windows
+  CreateMemoryResourceNotification (critical only). The handler's
+  'if (level !== critical) return' is correct for Linux/Windows.
+
+PASTE DISCREPANCY (probe):
+- `--heap-prof` writes Heap.<ts>.heapprofile (132 KB, V8-compatible) - NOT
+  '.heapsnapshot' as the paste says, and an explicit `--heap-prof=path` is
+  ignored (it writes the timestamped file regardless). Content opens in
+  DevTools; only the extension/claim differs.
+
+ADOPTED:
+- `--metafile-md=dist/design-system.meta.md` added to design:watch - the
+  LLM-friendly bundle report (quick summary: output size + input modules;
+  largest modules; entry analysis; dependency chains) alongside the JSON
+  meta. design:build (API) keeps metafile:true -> meta.json; the perf-audit
+  metafile check matches both forms.
+
+N/A: Datadog dd-trace/@datadog/pprof and @opentelemetry/* - no such deps in
+  the repo (the guard bans npm deps where Bun-native exists; nothing here
+  needs a tracing agent).
+
 ## 9. Bun Shell (`Bun.$`) switch — verified API surface (2026-08-23)
 
 Converted all non-keep-list `Bun.spawn` sites to `Bun.$` (see BUN_SHELL.md

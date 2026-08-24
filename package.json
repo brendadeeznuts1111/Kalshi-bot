@@ -192,7 +192,7 @@
     "glossary:check": "bun scripts/check-glossary-usage.ts -- --hard",
     "design:check": "bun tools/design-check.ts",
     "design:build": "bun scripts/build-design-system.ts",
-    "design:watch": "bun build src/institutions/design-system.ts --outdir=dist --target=bun --minify --metafile=dist/design-system.meta.json --watch",
+    "design:watch": "bun build src/institutions/design-system.ts --outdir=dist --target=bun --minify --metafile=dist/design-system.meta.json --metafile-md=dist/design-system.meta.md --watch",
     "glossary:dump": "bun scripts/dump-glossary.ts",
     "glossary:generate": "bun scripts/generate-glossary-types.ts",
     "partners:validate": "bun scripts/partners-validate.ts",
