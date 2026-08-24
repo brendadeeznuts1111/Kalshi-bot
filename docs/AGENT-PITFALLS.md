@@ -1447,6 +1447,51 @@ mentions are HISTORICAL records and stay: BUN_UPGRADE_CANARY.md phases
 (the documented 1.3.14 -> 1.4.0 upgrade), the bun-v1.3.14 release catalog,
 @updated/@verified annotations in vendor/proton-pass, bun-types 1.3.x lag
 comments, and release-blog test fixtures.
+### 31b. Backpressure-section paste (Bun.color / Bun.Glob / Bun.Cookie / color-mix / getColorDepth) — audited + probed
+
+A second paste from the v1.4 'backpressure' section (color/glob/cookie
+items) applied claim-by-claim: grep across src + runtime probes on 1.4.0.
+Verdicts:
+
+VERIFIED (probe):
+- Bun.color ansi-16 emits decimal digits: #27AE60 -> \x1b[32m, #E05E5E ->
+  \x1b[91m, #4DA3FF -> \x1b[94m (no raw control byte).
+- ansi-256 grey ramp has no underflow: #000000->16, #1b1b1b->234,
+  #808080->244, #eeeeee->255, #ffffff->231.
+- hsl/lab output is parseable and round-trips: hsl(153.39,47.72%,47.25%)
+  -> #3FB27F; lab(...) -> lab(...) (normalized, parseable).
+- 24-bit numbers opaque (0xff0000 -> \x1b[38;2;255;0;0m) - already in
+  section 31.
+- Bun.Cookie.parse records BOTH Expires and Max-Age regardless of order;
+  isExpired() applies the RFC 6265 precedence (Max-Age=0 -> expired).
+- Bun.Glob: explicit dotfile segment matches WITHOUT dot:true
+  ('.hidden/*' -> ['.hidden/f.txt']); literal segments resolve through
+  symlinked dirs WITHOUT followSymlinks ('link/*' -> ['link/g.txt']);
+  deeply nested braces expand ('{a,{b,c}}/*' -> ['a/1.txt','b/2.txt']).
+- color-mix: Bun.color returns null (Bun.color does not parse it); the
+  claim's out-of-range rejection lives in Bun's CSS path, not Bun.color.
+
+REPO IMPACT (all safe, no code changes):
+- Bun.Glob: hq-data.ts alpha/calibration scans use '*/program.json' and
+  '*/manifest.json' (literal segments, no dotfiles/symlinks/braces) - the
+  verified dotfile/symlink/brace behaviors do not affect them; the §31
+  node:fs -> Bun.Glob swap is correct.
+- Bun.color ansi-16/ansi-256: the color kernel deliberately uses ansi-16m
+  only (section 28) - the decimal-digits and grey-ramp fixes are
+  irrelevant to repo output.
+- hsl/lab: repo design docs rule out LAB (COLORS.md); no usage.
+- color-mix: repo uses color-mix() in analyze-table.ts generated CSS (8
+  sites, all in-range 4-92%) - the out-of-range rejection cannot trip the
+  repo; if Bun's CSS path ever validates these, the repo stays in-range.
+- getColorDepth: no repo usage - the TMUX/xterm-kitty/CI depth report and
+  the empty-NO_COLOR change (per no-color.org) are N/A; the repo relies
+  on Bun.color('ansi') TTY auto-detection ('' off-TTY, probe-verified).
+- S3Client Content-Length:0 / Connection:close: no usage.
+- stringWidth SIMD: perf-only; repo already uses Bun.stringWidth.
+- Bun.Cookie parse/isExpired: repo uses the maxAge-only constructor
+  (csrf.ts) - no parse()/isExpired() call sites; Expires serialization
+  already audited in section 31.
+
 
 ## 9. Bun Shell (`Bun.$`) switch — verified API surface (2026-08-23)
 
