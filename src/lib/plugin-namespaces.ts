@@ -53,11 +53,11 @@ export const DEFAULT_PLUGIN_NAMESPACE = asPluginNamespace("file");
  * resolves with ns "file" and onResolve({namespace:"node"}) never fires.
  */
 export const KNOWN_PLUGIN_NAMESPACES = {
-  file: { ns: DEFAULT_PLUGIN_NAMESPACE, probe: "default — relative imports; plugin can redirect file: specifier (verified §61)" },
-  env: { ns: asPluginNamespace("env"), probe: "virtual env-module pattern works in Bun.build (verified §61)" },
-  yaml: { ns: asPluginNamespace("yaml"), probe: "valid alphanumeric ns; the doc yaml: (colon) THROWS (verified §61)" },
-  virt: { ns: asPluginNamespace("virt"), probe: "build.module() runtime virtual module (verified §61)" },
-  stats: { ns: asPluginNamespace("stats"), probe: "defer() example namespace (verified §61)" },
+  file: { ns: DEFAULT_PLUGIN_NAMESPACE, probe: "default — relative imports; plugin can redirect file: specifier (verified §61)", example: 'build.onLoad({ filter: /\.txt$/, namespace: "file" }, ...)' },
+  env: { ns: asPluginNamespace("env"), probe: "virtual env-module pattern works in Bun.build (verified §61)", example: 'build.onLoad({ filter: /.*/, namespace: "env" }, ...) — the doc env plugin' },
+  yaml: { ns: asPluginNamespace("yaml"), probe: "valid alphanumeric ns; the doc yaml: (colon) THROWS (verified §61)", example: 'build.onResolve({ filter: /\.yaml$/, namespace: "file" }, () => ({ path, namespace: "yaml" }))' },
+  virt: { ns: asPluginNamespace("virt"), probe: "build.module() runtime virtual module (verified §61)", example: 'build.module("hello:world", () => ({ exports: { foo: "bar" }, loader: "object" }))' },
+  stats: { ns: asPluginNamespace("stats"), probe: "defer() example namespace (verified §61)", example: 'build.onLoad({ filter: /stats\.json/, namespace: "stats" }, async ({ defer }) => ...)' },
 } as const;
 
 export type KnownPluginNamespace = keyof typeof KNOWN_PLUGIN_NAMESPACES;
@@ -70,10 +70,18 @@ export type KnownPluginNamespace = keyof typeof KNOWN_PLUGIN_NAMESPACES;
 export const INVALID_PLUGIN_NAMESPACES = [
   "yaml:", // doc example — colon invalid (§61)
   "file:", // doc claim — colon invalid; file: is internal-only (§61)
-  "",
   "with spaces",
   "a:b:c",
 ] as const;
+
+/**
+ * Empty-string namespace: NOT invalid — probed §61 follow-up. The runtime
+ * treats namespace:"" as NO CONSTRAINT (the callback fires for
+ * file-namespace modules; identical to omitting the field). asPluginNamespace
+ * still rejects it because a *named* namespace must be charset-valid — use
+ * undefined / omit for the unconstrained case, never the empty string.
+ */
+export const EMPTY_PLUGIN_NAMESPACE_NOTE = "empty string = unconstrained (runtime accepts; matches any namespace) — omit the field instead (probed §61)";
 
 /** Documentation map — rendered by the /bun/plugins page and §61. */
 export const PLUGIN_NAMESPACE_DOCS = {

@@ -3024,3 +3024,29 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
   registry charset must agree with the runtime, 5/5 rejected + 5/5
   accepted), tests/lib/plugins-probe.test.ts (registry unit tests),
   and the /bun/plugins page (registry section rendered from the module).
+- Deepen pass (§61a, 2026-08-24) — closing the loop, probe-grounded:
+  - REGISTRY DRIVES THE PROBE (not just checked): tools/plugins-probe.ts P2
+    is now a bidirectional lock — every KNOWN namespace must BUILD at
+    runtime, every INVALID must THROW (compile-time via branded values +
+    runtime via real Bun.build). P2b registry charset agreement; P2c
+    empty-string special case. 12/12 checks.
+  - NEW CORRECTION the lock caught: namespace:"" is NOT invalid — the
+    runtime treats it as NO CONSTRAINT (fires for file-ns modules; same as
+    omitting the field). The registry's asPluginNamespace still rejects it
+    (a NAMED namespace must be charset-valid) — use undefined/omit, never
+    the empty string. Removed "" from INVALID_PLUGIN_NAMESPACES, added
+    EMPTY_PLUGIN_NAMESPACE_NOTE + P2c probe.
+  - bun-types 1.4.0 declares PluginConstraints.namespace?: string — UNTYPED
+    (no charset in the .d.ts), so a "maps-lock 4th lock" extracting valid
+    namespaces from bun-types is a NON-STARTER: there is nothing to
+    extract. Worse, the bun-types doc comment REPEATS the wrong doc claim
+    ("bun:ffi has the namespace bun") — the runtime error is the only
+    authority, which the registry encodes.
+  - REJECTED plan items (probe discipline): runtime integration into
+    production plugin code (ZERO Bun.plugin/onLoad/onResolve call sites in
+    src/ — nothing to enforce at; the probe IS the only runtime consumer);
+    a regex lint gate over all string literals (false-positive machine on
+    "file"/"env"/"node" everywhere; zero plugin call sites to lint — the
+    compile-time branded values in the probe are the real lint); --fix
+    auto-rewrite (dangerous, no surface). Adopted: example field per known
+    namespace, rendered as a third column on /bun/plugins.

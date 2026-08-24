@@ -132,4 +132,18 @@ describe("plugin namespace registry (src/lib/plugin-namespaces.ts)", () => {
     expect(Object.keys(KNOWN_PLUGIN_NAMESPACES)).not.toContain("node");
     expect(Object.keys(KNOWN_PLUGIN_NAMESPACES)).not.toContain("bun");
   });
+
+  test("empty string is a special case: registry rejects, runtime accepts (no constraint)", async () => {
+    expect(() => asPluginNamespace("")).toThrow(/invalid charset/);
+    const dir = mkdtempSync(join(tmpdir(), "plug-empty-"));
+    writeFileSync(join(dir, "app.ts"), 'import { v } from "./dep";\nconsole.log(v);\n');
+    writeFileSync(join(dir, "dep.ts"), "export const v = 1;\n");
+    let fired = 0;
+    const r = await Bun.build({ entrypoints: [join(dir, "app.ts")], outdir: join(dir, "o"), plugins: [{ name: "e", setup(build) {
+      build.onLoad({ filter: /dep\.ts$/, namespace: "" }, () => { fired++; return undefined; });
+    } }] });
+    expect(r.success).toBe(true);
+    expect(fired).toBeGreaterThan(0);
+    rmSync(dir, { recursive: true, force: true });
+  });
 });

@@ -42,17 +42,48 @@ console.log("plugins:probe — bun " + Bun.version + " (" + Bun.revision + ")");
 import { plugin as namedPlugin } from "bun";
 check("P1 plugin === Bun.plugin", (Bun as any).plugin === namedPlugin, "identity=" + ((Bun as any).plugin === namedPlugin));
 
-// P2: namespace char restriction (doc: yaml:)
+// P2: FULL bidirectional lock — the registry drives the runtime probe.
+// Every KNOWN namespace must build; every INVALID must throw. This is the
+// compile-time (branded values) + runtime (real Bun.build) enforcement: if a
+// namespace drifts in the registry, the probe fails here, not in the docs.
 const dir = mkdtempSync(join(tmpdir(), "plugins-probe-"));
 writeFileSync(join(dir, "x.ts"), "export const x = 1;\n");
-let nsThrow = "";
-try {
-  await Bun.build({ entrypoints: [join(dir, "x.ts")], outdir: join(dir, "o1"), plugins: [{ name: "bad-ns", setup(build) { build.onLoad({ filter: /./, namespace: "yaml:" }, () => undefined); } }] });
-  nsThrow = "no-throw";
-} catch (e) { nsThrow = (e as Error).message || String(e).slice(0, 60); }
-check("P2 namespace yaml: (colon) rejected", nsThrow.includes("namespace can only contain"), nsThrow);
-// P2b: registry charset agrees with the runtime — every INVALID string
-// throws in the registry; every KNOWN namespace is accepted.
+
+let knownFail = 0;
+const knownSummary: string[] = [];
+for (const key of Object.keys(KNOWN_PLUGIN_NAMESPACES)) {
+  const ns = KNOWN_PLUGIN_NAMESPACES[key as keyof typeof KNOWN_PLUGIN_NAMESPACES].ns;
+  const ok = await Bun.build({
+    entrypoints: [join(dir, "x.ts")],
+    outdir: join(dir, "o-known-" + key),
+    plugins: [{ name: "known-" + key, setup(build) {
+      build.onLoad({ filter: /\.ts$/, namespace: ns }, () => undefined);
+    } }],
+  }).then((r) => r.success).catch(() => false);
+  if (!ok) knownFail++;
+  knownSummary.push(key + "=" + (ok ? "ok" : "FAIL"));
+}
+check("P2 every KNOWN namespace builds at runtime", knownFail === 0, knownSummary.join(" "));
+
+let invalidAccepted = 0;
+const invalidSummary: string[] = [];
+for (const bad of INVALID_PLUGIN_NAMESPACES) {
+  let threw = false;
+  try {
+    await Bun.build({
+      entrypoints: [join(dir, "x.ts")],
+      outdir: join(dir, "o-invalid"),
+      plugins: [{ name: "invalid", setup(build) {
+        build.onLoad({ filter: /\.ts$/, namespace: bad }, () => undefined);
+      } }],
+    });
+  } catch { threw = true; }
+  if (!threw) invalidAccepted++;
+  invalidSummary.push(JSON.stringify(bad) + "=" + (threw ? "throws" : "ACCEPTED"));
+}
+check("P2 every INVALID namespace throws at runtime", invalidAccepted === 0, invalidSummary.join(" "));
+
+// Registry-side charset agreement (same rule, no network/build):
 let regBad = 0;
 for (const bad of INVALID_PLUGIN_NAMESPACES) {
   try { asPluginNamespace(bad); } catch { regBad++; } // threw = rejected
@@ -63,6 +94,21 @@ for (const k of Object.keys(KNOWN_PLUGIN_NAMESPACES)) {
 }
 check("P2b registry charset == runtime (INVALID throw, KNOWN accept)", regBad === INVALID_PLUGIN_NAMESPACES.length && regKnown === Object.keys(KNOWN_PLUGIN_NAMESPACES).length, "invalidRejected=" + regBad + "/" + INVALID_PLUGIN_NAMESPACES.length + " knownAccepted=" + regKnown + "/" + Object.keys(KNOWN_PLUGIN_NAMESPACES).length);
 
+
+// P2c: empty-string namespace is a SPECIAL CASE — runtime accepts it as
+// "no constraint" (fires for file-ns modules), but a *named* namespace must
+// be charset-valid. The registry rejects it; the runtime treats it as omit.
+let emptyFired = 0;
+const r2c = await Bun.build({
+  entrypoints: [join(dir, "x.ts")],
+  outdir: join(dir, "o-empty"),
+  plugins: [{ name: "empty-ns", setup(build) {
+    build.onLoad({ filter: /\.ts$/, namespace: "" }, () => { emptyFired++; return undefined; });
+  } }],
+});
+let emptyRegistryRejects = false;
+try { asPluginNamespace(""); } catch { emptyRegistryRejects = true; }
+check("P2c empty string: runtime accepts (no constraint), registry rejects (named ns)", r2c.success && emptyFired >= 1 && emptyRegistryRejects, "runtimeFired=" + emptyFired + " registryRejects=" + emptyRegistryRejects);
 
 // P3: default namespace is file; void = default resolution
 writeFileSync(join(dir, "app.ts"), 'import { v } from "./dep";\nconsole.log(v);\n');
