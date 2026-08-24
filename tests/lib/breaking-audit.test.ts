@@ -29,9 +29,9 @@ beforeAll(() => {
 afterAll(() => { rmSync(root, { recursive: true, force: true }); });
 
 describe('runBreakingAudit', () => {
-  test('clean repo passes all 7 checks', () => {
+  test('clean repo passes all 12 checks', () => {
     const findings = runBreakingAudit(root);
-    expect(findings).toHaveLength(7);
+    expect(findings).toHaveLength(12);
     expect(breakingAuditPasses(findings)).toBe(true);
   });
 
@@ -70,6 +70,46 @@ describe('runBreakingAudit', () => {
     const findings = runBreakingAudit(root);
     const addon = findings.find((f) => f.check.includes('Native addons'))!;
     expect(addon.status).toBe('ok');
+  });
+
+  test('flags Bun.serve port from raw env as warn', () => {
+    write('src/env-port.ts', 'Bun.serve({ port: Bun.env.PORT, fetch: () => new Response("x") });\n');
+    const findings = runBreakingAudit(root);
+    const port = findings.find((f) => f.check.includes('port from raw env'))!;
+    expect(port.status).toBe('warn');
+    expect(port.detail).toContain('env-port.ts');
+  });
+
+  test('flags server websocket routes / server.upgrade() as warn', () => {
+    write('src/ws.ts', 'const ok = server.upgrade(req);\n');
+    const findings = runBreakingAudit(root);
+    const ws = findings.find((f) => f.check.includes('websocket routes'))!;
+    expect(ws.status).toBe('warn');
+    expect(ws.detail).toContain('ws.ts');
+  });
+
+  test('flags fetch redirect:"error" as warn', () => {
+    write('src/redir.ts', 'fetch(url, { redirect: "error" });\n');
+    const findings = runBreakingAudit(root);
+    const r = findings.find((f) => f.check.includes('redirect:"error"'))!;
+    expect(r.status).toBe('warn');
+    expect(r.detail).toContain('redir.ts');
+  });
+
+  test('flags spawn validation traps as warn', () => {
+    write('src/spawn.ts', 'Bun.spawnSync(["true"], { timeout: NaN });\n');
+    const findings = runBreakingAudit(root);
+    const s = findings.find((f) => f.check.includes('spawn validation traps'))!;
+    expect(s.status).toBe('warn');
+    expect(s.detail).toContain('spawn.ts');
+  });
+
+  test('flags Response.error() as warn', () => {
+    write('src/resperr.ts', 'return Response.error();\n');
+    const findings = runBreakingAudit(root);
+    const r = findings.find((f) => f.check.includes('Response.error()'))!;
+    expect(r.status).toBe('warn');
+    expect(r.detail).toContain('resperr.ts');
   });
 });
 

@@ -760,7 +760,8 @@ scanned; no code changes needed:
   tool's OWN source from rg (self-match), use find -name '*.node'
   instead of rg '\.node' (matches table.nodeId column names), and
   don't flag the openssl CLI '-servername' SNI arg as a TLS override.
-  Current run: 7/7 ok.
+  Current run: 12/12 ok (section 31 added the 'Other behavior
+  changes' checks).
 - bun:claims-audit (tools/bun-claims-audit.ts + src/lib/claims-audit.ts)
   encodes sections 13/15: given claim strings, greps the release blog
   (cached at research/cache/bun-blog.html) and reports FOUND / NOT
@@ -1302,6 +1303,151 @@ notes - they have structural enforcement:
   * Remaining Bun casts are legit + documented: kalshi-ws WebSocket
     ctor (lib.dom wins global ctor), serve.ts Bun.Serve.Options
     (bun-types 1.3.x lag), data-shape casts (optional fields).
+
+### 31. Repo impact of the v1.4.0 'Other behavior changes' (audited + probed)
+
+The v1.4.0 'Other behavior changes' release-notes paste was applied to THIS
+repo claim-by-claim (grep across src/tools/scripts/tests + runtime probes on
+the repo's 1.4.0 binary). Unlike section 16 (the breaking-changes table),
+most items here touch APIs the repo DOES use - but every one was verified
+safe on the current code. bun:breaking-audit grew 7 -> 12 checks (section
+17 updated); editor.ts got one small fix.
+
+TWO items needed action:
+- Bun.openInEditor() throws when no editor is found (was: silent return).
+  src/lib/editor.ts openTarget fallback path now try/catches and logs
+  instead of crashing the editor:open CLI on editor-less hosts.
+- Bun.serve({port}) throws RangeError for non-integer/negative/out-of-range
+  (was: silent clamp / random port). serve.ts already passes
+  `Number(Bun.env.PORT ?? 3456)`, so a garbage PORT now fails fast at
+  startup instead of binding a random port - desired, no change. (Probe:
+  NaN/65536/-1 -> RangeError; '3456' still serves.)
+
+Verified-safe usage (repo touches the API; on the safe side):
+- bun:sqlite close() finalizes every db.query() statement (was: 'database
+  is locked'); close(true) also finalizes prepare() statements; columnNames
+  throws after finalize; AS "" columns kept. 16 close() call sites in src,
+  ALL close-at-scope-end, no retained statement used after close
+  (odds-feed/ticker-mapper/admin/migrate/serve/cache/hq-store/...). NO gate
+  check added: every site is uniformly safe, so a greppable check would be
+  all false positives. Probes: use-after-close throws; columnNames after
+  finalize throws; AS "" survives.
+- Bun.color: repo uses 'ansi' (returns '' off-TTY, unchanged) and 'ansi-16m'
+  (opaque; the 24-bit-number alpha change does not apply - repo passes hex
+  strings). The changed formats (ansi-16 real 16-color escapes, ansi-256
+  near-black, hsl/lab, 24-bit numbers) appear only in the regulatory
+  scripts' fallback `Bun.color(color,"ansi") || Bun.color(color,"ansi-256")`
+  (migrate/sweep-violations/admin) with bright green/red/yellow - not
+  near-black - so output is unchanged in practice; cosmetic at worst. No
+  gate check (it would flag legit code).
+- fetch: all 8 redirect: sites use 'follow' - the redirect:'error'
+  narrowing (now only 301/302/303/307/308; 304/other 3xx RESOLVE) is a
+  no-op. fetch-pool.ts (AbortSignal.timeout 15s + always-consume) is
+  STRICTER under the new abort semantics: body reads reject once the signal
+  aborts even if the body fully arrived, and a cut-off compressed body
+  rejects instead of resolving partial - both make the pool's timeout
+  actually bound the body read. Probes: abort-after-body -> text() rejects
+  with the abort reason; redirect:'error' on 304 resolves 304; Latin-1
+  request header bytes byte-for-byte (café -> 63 61 66 e9 on the wire);
+  gzip decode failure -> ZlibError reject.
+- Bun.serve: no websocket routes / server.upgrade() (426 / upgrade()-false
+  / unmasked-frame-1006 / ws.subscribe-closed changes all N/A); static dir
+  routes now honor If-Match/If-Unmodified-Since (412) at runtime - no code;
+  Transfer-Encoding validation probed over a raw socket (gzip,chunked AND
+  chunked,chunked -> 400); status outside 100-999 -> Response ctor
+  RangeError, server answers 500 via error(); HEAD falls back to GET on
+  per-method route objects (probed 200).
+- Bun.Cookie: csrf.ts uses maxAge (no Expires emitted) - the Expires
+  toUTCString fix (correct weekday / padded day / GMT) is a no-op. Probed:
+  Expires=Tue, 02 Jan 2024 03:04:05 GMT.
+- Bun.spawn: zero timeout/killSignal/argv0/signal options in repo (rg,
+  editor, research-runner pass none) - the NaN/0/NUL/already-aborted
+  validation is a no-op. Probes: timeout NaN -> RangeError; killSignal 0 ->
+  TypeError; argv0 NUL -> TypeError; aborted signal -> AbortError (no
+  process created). NOTE: error names differ from the paste's
+  ERR_OUT_OF_RANGE / ERR_UNKNOWN_SIGNAL - Bun throws RangeError/TypeError
+  with equivalent messages.
+- Bun.deepEquals (bun-native wrapper): compares plain JSON snapshots -
+  boxed BigInt/Symbol distinction N/A. Probed: Object(1n) vs Object(2n)
+  now distinct.
+- structuredClone (coefficients.ts): no transferList - transfer-entry
+  validation N/A. Probed: transfer [null] -> TypeError.
+- Bun.randomUUIDv7 (hq-view.ts): no timestamp arg - RangeError only for
+  ts >= 2^48 / NaN / invalid Date. N/A.
+- Bun.JSONC.parse: no real calls (only dep-mapping labels in
+  bun-deps-audit / audit-bun-native) - '' and invalid input now throw
+  SyntaxError. Probed: both throw.
+- Bun.YAML.parse (runtime-surface probe only): NUL now SyntaxError - probe
+  input has no NUL. Probed: throws.
+- fs: appendFile without options (shadow-line) - flag 'w' truncation N/A;
+  no fs.rm / fs.open / fs.write / fs.watch / createWriteStream usage in
+  src/tools. Probes: appendFile flag w truncates; rmSync explicit-undefined
+  options -> TypeError; openSync({}) flags -> TypeError.
+- node:http2: only the fetch-pool-h2 test server (respond + end) -
+  remoteSettings {} / pushStream / END_STREAM changes do not affect it.
+- util.format/inspect: terminal-utils uses Bun.inspect, not
+  util.styleText/util.inspect - ISO-date + ArrayBuffer-bracket changes N/A.
+  Probes: %s date -> ISO; inspect(ArrayBuffer) shows [byteLength]: 4.
+- process.title: zero usage - defaults to argv[0]-as-invoked (probed:
+  'bun' for `bun script.ts`; explicit set works). N/A.
+- import * as (db/client.ts schema namespace): never iterated - sorted
+  enumeration change N/A. Probed: node:path keys sorted.
+- Bun.$: repo usage (live-tracker/simplify-loop) has no redirect targets -
+  ambiguous-redirect change N/A. Probed: `echo hi > *.txt` with 2 matches
+  -> ShellError exit 1.
+- ESM lazy builtin exports: startup only; no import-time side effects in
+  repo. Probed: Bun.redis with invalid REDIS_URL returns {} - the paste's
+  'throws at the binding' is NOT reproduced; no repo impact.
+- fetch Connection/TE token lists, HTTP/1.0 keep-alive, idle-timeout as one
+  header-block deadline: client-side; fetch-pool's 15s AbortSignal.timeout
+  supersedes the 300s idle deadline. No repo code.
+- Warnings format (node:PID) [CODE]: cosmetic; nothing asserts it.
+
+NOT REPRODUCED on 1.4.0 (probe) - flag any future paste that repeats it:
+- 'odd-length hex passed to Bun.CryptoHasher#update() now throws':
+  update('abc') still hashes the TEXT (sha256 = ba7816bf...), no throw;
+  there is no updateHex() method on 1.4.0. Repo hashes text anyway
+  (hash.ts update(serialized)).
+
+No repo usage at all (paste items with zero code contact): bun feedback;
+Bun.password argon2 memoryCost; bun update/init/install/remove CLI
+semantics; bunfig-vs-.npmrc precedence (no .npmrc); catalog:/workspace:
+ranges/trustedDependencies (no catalogs, no workspace:, no
+trustedDependencies, no overrides; lock stays v1 under frozenLockfile);
+lockfileVersion-3 nested overrides; wildcard exports/imports extension
+retry (deps resolve; vendor proton-pass is file:); every bun build item (no
+builds; perf-audit only advises metafile:true); import-binding assignment;
+browser-field remap; --minify $; Bun.udpSocket; Bun.Terminal (labels only;
+PTY probe unavailable in this harness); Bun.RedisClient; FileSystemRouter;
+bun:ffi; S3Client checksumAlgorithm; TextDecoder primitive options (repo
+decodes without options); crypto.subtle; createDiffieHellman;
+fs.write/readv/writev position; child_process encoding (labels only); N-API
+status codes (no addons); Windows libuv errnos; node:test skip (no
+node:test); process.execve/reallyExit/getBuiltinModule;
+assert.deepStrictEqual (no usage; bun:test expect unchanged);
+util.styleText (Node 26 API); Response.redirect; WebSocket proxy scheme
+(kalshi-ws proxy is env-driven http/https); Bun.sql PGSSLMODE / infinity
+dates / connectionTimeout (no usage); PR_SET_THP_DISABLE (Linux startup
+only).
+
+New gate checks (bun:breaking-audit 7 -> 12; all ok on this repo):
+- Bun.serve port from raw env (RangeError on garbage port)
+- server websocket routes / server.upgrade() (426 + upgrade()-false + 1006)
+- fetch redirect:"error" (304/other 3xx now resolve)
+- Bun.spawn timeout:NaN / killSignal:0 / argv0 (validation throws)
+- Response.error() in handlers (answers 500 via error())
+
+Hygiene: .bun-version was stale at 1.3.14 while the runtime,
+packageManager and engines pins were 1.4.0 - aligned to 1.4.0 so bun-v /
+mise pick the same version. All minimum-version statements were then
+aligned to 1.4.0 too: README prerequisites (>= 1.3.14), the bunfig noOrphans
+comment (>= 1.3.14), vendor/proton-pass's bun-types peer range (>=1.3.0),
+and BUN_NATIVE.md's Bun.version format note ("1.3.x"). The remaining 1.3.x
+mentions are HISTORICAL records and stay: BUN_UPGRADE_CANARY.md phases
+(the documented 1.3.14 -> 1.4.0 upgrade), the bun-v1.3.14 release catalog,
+@updated/@verified annotations in vendor/proton-pass, bun-types 1.3.x lag
+comments, and release-blog test fixtures.
+
 ## 9. Bun Shell (`Bun.$`) switch — verified API surface (2026-08-23)
 
 Converted all non-keep-list `Bun.spawn` sites to `Bun.$` (see BUN_SHELL.md

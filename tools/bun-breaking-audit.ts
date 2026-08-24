@@ -7,7 +7,7 @@
  *
  * Exits 0 when nothing needs action, 1 when a finding needs attention.
  *
- * @see docs/AGENT-PITFALLS.md (sections 16-17)
+ * @see docs/AGENT-PITFALLS.md (sections 16-17, 31)
  */
 import { join } from 'node:path';
 import { assertBunAtLeast } from '../src/research/bun-native.ts';

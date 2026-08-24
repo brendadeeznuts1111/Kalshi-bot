@@ -137,9 +137,17 @@ export function openTarget(target: OpenTarget, deps: OpenTargetDeps = {}): void 
     return;
   }
 
-  Bun.openInEditor(target.path, {
-    line: target.line,
-    column: target.column,
-  });
+  try {
+    Bun.openInEditor(target.path, {
+      line: target.line,
+      column: target.column,
+    });
+  } catch (err) {
+    // Bun 1.4 behavior change: openInEditor() THROWS when no editor can be
+    // found (before, it returned silently). Preserve the old contract -
+    // log and return, don't crash the CLI on editor-less hosts.
+    log("openInEditor failed: " + (err as Error).message);
+    return;
+  }
   log("open: " + target.path + " (system editor)");
 }
