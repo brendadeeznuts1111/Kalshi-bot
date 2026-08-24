@@ -1552,6 +1552,17 @@ ADOPTED:
 N/A: Datadog dd-trace/@datadog/pprof and @opentelemetry/* - no such deps in
   the repo (the guard bans npm deps where Bun-native exists; nothing here
   needs a tracing agent).
+PROFILE TARGETS + FLAG FORMS (probed):
+- `--cpu-prof-md` / `--heap-prof-md` do NOT take a value: they write
+  CPU.<ts>.md / Heap.<ts>.md to the CWD (a `=path` form ERRORS: 'does not
+  take a value'). Same for --cpu-prof/--heap-prof (no =path). Find the
+  latest with `ls -t CPU.*.md`.
+- Wired scripts: profile:serve, profile:research (dry-run+offline -> 41ms
+  profile; the FULL online run is the meaningful one), heap:serve
+  (Ctrl-C; cross-check top retainers against what the memoryPressure
+  handler clears: bookCache, sportsSourceCatalog, kalshiAuth, tennisBoard).
+- The research pipeline (cli.ts) is the real CPU hot path; the serve is
+  mostly idle (4-5ms requests) - profile:research first.
 
 ## 9. Bun Shell (`Bun.$`) switch — verified API surface (2026-08-23)
 
