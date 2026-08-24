@@ -12,8 +12,8 @@
 
 export const DESIGN_SYSTEM_VERSION = "1.1.0"; // 1.1.0: +palette (domain COLORS), +status, +scrim, +accTint
 
-import { COLORS } from "../lib/color/palette.ts";
-import { tint } from "../lib/color/kernel.ts";
+import { COLORS, type ColorKey } from "../lib/color/palette.ts";
+import { cssColor, tint } from "../lib/color/kernel.ts";
 
 export const BRAND = {
   name: "Kalshi HQ",
@@ -45,9 +45,14 @@ export const TOKENS = {
     /** Domain palette — mirrors the generated --color-* vars in
      * hq-app/color-vars.css (scripts/generate-color-artifacts.ts reads the
      * same COLORS source). Registering them here makes them legal design
-     * vocabulary (the design agent audits against tokenValues()). */
+     * vocabulary (the design agent audits against tokenValues()).
+     * Values pass through the kernel's cssColor() (Bun.color "css"), so any
+     * input spelling (COLORS are uppercase) is canonicalized to lowercase
+     * css — Bun.color is the formatter, we never hand-normalize case. */
     palette: {
-      ...COLORS,
+      ...Object.fromEntries(
+        (Object.keys(COLORS) as ColorKey[]).map((key) => [key, cssColor(key)]),
+      ),
       /** Ink-on-color (the generated --color-*-on vars are #000000/#ffffff). */
       onLight: "#000000",
       onDark: "#ffffff",
