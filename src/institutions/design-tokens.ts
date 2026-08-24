@@ -10,7 +10,9 @@
  * The design agent (`src/agent/design-agent.ts`) audits compliance.
  */
 
-export const DESIGN_SYSTEM_VERSION = "1.0.0";
+export const DESIGN_SYSTEM_VERSION = "1.1.0"; // 1.1.0: +palette (domain COLORS), +status, +scrim, +accTint
+
+import { COLORS } from "../lib/color/palette.ts";
 
 export const BRAND = {
   name: "Kalshi HQ",
@@ -35,7 +37,26 @@ export const TOKENS = {
     okTint: "rgba(63,178,127,.15)",
     warnTint: "rgba(224,169,62,.15)",
     badTint: "rgba(224,94,94,.15)",
+    accTint: "rgba(77,163,255,.15)",
     onAccent: "#06121f",
+    /** Domain palette — mirrors the generated --color-* vars in
+     * hq-app/color-vars.css (scripts/generate-color-artifacts.ts reads the
+     * same COLORS source). Registering them here makes them legal design
+     * vocabulary (the design agent audits against tokenValues()). */
+    palette: {
+      ...COLORS,
+      /** Ink-on-color (the generated --color-*-on vars are #000000/#ffffff). */
+      onLight: "#000000",
+      onDark: "#ffffff",
+      /** hq-app status badge colors (.g-status-*). */
+      deprecated: "#f0b429",
+      draft: "#7aa2ff",
+    },
+    /** Overlay scrims (box-shadow / modal dim). */
+    scrim: {
+      soft: "rgba(0,0,0,.35)",
+      strong: "rgba(0,0,0,.45)",
+    },
   },
   space: {
     xs: "0.25rem",

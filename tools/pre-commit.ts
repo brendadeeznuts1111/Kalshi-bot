@@ -59,6 +59,18 @@ export const CONDITIONAL_GATES: ReadonlyArray<{ script: string; paths: readonly 
     ],
   },
   {
+    script: "design:check",
+    // hq-app surfaces + design system: hardcoded colors/radii outside TOKENS
+    // fail the commit (live pages must stay token-compliant).
+    paths: [
+      "src/research/hq-app",
+      "src/institutions/design-tokens.ts",
+      "src/institutions/hq-ui.ts",
+      "src/agent/design-agent.ts",
+      "tools/design-check.ts",
+    ],
+  },
+  {
     script: "colors:check",
     paths: [
       "src/lib/color",

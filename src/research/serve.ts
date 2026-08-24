@@ -1421,7 +1421,17 @@ export function createResearchServer(options: ServeOptions = {}) {
 
       // Design agent audit of the live HQ page (self-check)
       if (url.pathname === "/api/design/audit") {
-        return json(designAgent.audit(renderHq()));
+        const hqAppDir = joinPath(ROOT, "src/research/hq-app");
+        const surfaces = [
+          renderHq(),
+          ...(await Promise.all([
+            Bun.file(joinPath(hqAppDir, "index.html")).text().catch(() => ""),
+            Bun.file(joinPath(hqAppDir, "styles.css")).text().catch(() => ""),
+            Bun.file(joinPath(hqAppDir, "app.js")).text().catch(() => ""),
+            Bun.file(joinPath(hqAppDir, "color-vars.css")).text().catch(() => ""),
+          ])),
+        ];
+        return json(designAgent.audit(...surfaces));
       }
 
       // Regulatory health check (+ live Kalshi exchange probe)

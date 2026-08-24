@@ -306,8 +306,11 @@ function buildMonitorSection(trading: unknown) {
 
 // ── Aggregate ──
 
+/** Schema version for the /api/hq JSON contract (bump on breaking shape changes). */
+export const HQ_PAYLOAD_SCHEMA_VERSION = 1;
+
 export async function buildHqPayload(nowMs = Date.now()) {
-  const [trading] = await Promise.all([fetchTradingSection(nowMs)]);
+  const trading = await fetchTradingSection(nowMs);
   const research = readResearchSection();
   const alpha = await readAlphaPrograms();
   const calibration = await readCalibrationLatest();
@@ -317,6 +320,7 @@ export async function buildHqPayload(nowMs = Date.now()) {
     .sort()
     .pop() ?? null;
   return {
+    schemaVersion: HQ_PAYLOAD_SCHEMA_VERSION,
     generatedAt: new Date(nowMs).toISOString(),
     research,
     trading,

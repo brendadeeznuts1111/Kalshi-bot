@@ -294,8 +294,8 @@ button:disabled { opacity: 0.5; cursor: default; }
  * Tabular nums on .bar-chart-value.
  */
 .bar-chart {
-  background: var(--panel, #161b22);
-  border: 1px solid var(--line, #30363d);
+  background: var(--panel, #12161f);
+  border: 1px solid var(--line, #232a3a);
   border-radius: 8px;
   padding: 16px;
 }
@@ -303,12 +303,12 @@ button:disabled { opacity: 0.5; cursor: default; }
 .bar-chart-title {
   font-size: 13px;
   font-weight: 600;
-  color: var(--fg, #f0f6fc);
+  color: var(--fg, #d7dee9);
   letter-spacing: 0.02em;
 }
 .bar-chart-subtitle {
   font-size: 11px;
-  color: var(--dim, #8b949e);
+  color: var(--dim, #7d8798);
   margin-top: 2px;
 }
 .bar-chart-bars {
@@ -324,7 +324,7 @@ button:disabled { opacity: 0.5; cursor: default; }
 }
 .bar-chart-label {
   font-size: 12px;
-  color: var(--fg, #c9d1d9);
+  color: var(--fg, #d7dee9);
   font-weight: 500;
   text-align: left;
   white-space: nowrap;
@@ -333,20 +333,20 @@ button:disabled { opacity: 0.5; cursor: default; }
 }
 .bar-chart-track {
   height: 8px;
-  background: var(--panel2, #21262d);
+  background: var(--panel2, #171c28);
   border-radius: 4px;
   overflow: hidden;
 }
 .bar-chart-bar {
   height: 100%;
   border-radius: 4px;
-  background: var(--acc, #58a6ff);
+  background: var(--acc, #4da3ff);
   transition: width 0.3s ease;
   min-width: 0;
 }
 .bar-chart-value {
   font-size: 12px;
-  color: var(--dim, #8b949e);
+  color: var(--dim, #7d8798);
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
   text-align: right;

@@ -14,10 +14,17 @@ describe("design tokens", () => {
   test("version is semver", () => {
     expect(DESIGN_SYSTEM_VERSION).toMatch(/^\d+\.\d+\.\d+$/);
   });
-  test("colors are valid hex/rgba", () => {
-    for (const v of Object.values(TOKENS.color)) {
-      expect(v).toMatch(/^(#[0-9a-f]{6}|rgba\()/i);
-    }
+  test("colors are valid hex/rgba (nested groups included)", () => {
+    const walk = (obj: Record<string, unknown>) => {
+      for (const v of Object.values(obj)) {
+        if (typeof v === "string") {
+          expect(v).toMatch(/^(#[0-9a-f]{6}|rgba\()/i);
+        } else {
+          walk(v as Record<string, unknown>);
+        }
+      }
+    };
+    walk(TOKENS.color as Record<string, unknown>);
   });
   test("tokenPaths/tokenValues cover the tree", () => {
     expect(tokenPaths()).toContain("color.bg");

@@ -54,30 +54,43 @@ export class DesignAgent {
   }
 
   /**
-   * Flag hardcoded hex colors / px radii in HTML that are NOT token values.
-   * Inline styles in generated markup are the usual offenders.
+   * Flag hardcoded hex colors / rgba() literals / px radii that are NOT
+   * token values. Accepts any number of surfaces (HTML, CSS, JS) so the
+   * LIVE hq-app files are audited alongside generated templates.
+   * 8-digit hex (#rrggbbaa) is normalized to its 6-digit base for legality;
+   * rgba() literals are compared against token rgba values (tints, scrims).
    */
-  audit(html: string): DesignAudit {
+  audit(...surfaces: string[]): DesignAudit {
     const legal = new Set(tokenValues().map((v) => v.toLowerCase()));
     const issues: DesignAuditIssue[] = [];
 
-    for (const m of html.matchAll(/#[0-9a-fA-F]{3,8}\b/g)) {
-      const hex = m[0].toLowerCase();
-      if (!legal.has(hex)) {
-        issues.push({
-          kind: "hardcoded-color",
-          value: m[0],
-          detail: "color not in TOKENS — add a token or use a CSS var",
-        });
+    const add = (kind: DesignAuditIssue["kind"], value: string, detail: string) =>
+      issues.push({ kind, value, detail });
+
+    for (const html of surfaces) {
+      for (const m of html.matchAll(/#[0-9a-fA-F]{3,8}\b/g)) {
+        const raw = m[0].toLowerCase();
+        let base = raw;
+        if (raw.length === 9) {
+          base = raw.slice(0, 7); // #rrggbbaa -> #rrggbb
+        } else if (raw.length === 4) {
+          // #rgb -> #rrggbb
+          base = raw[0] + raw[1] + raw[1] + raw[2] + raw[2] + raw[3] + raw[3];
+        }
+        if (!legal.has(raw) && !legal.has(base)) {
+          add("hardcoded-color", m[0], "color not in TOKENS — add a token or use a CSS var");
+        }
       }
-    }
-    for (const m of html.matchAll(/border-radius:\s*([0-9]+px)/g)) {
-      if (!legal.has(m[1].toLowerCase())) {
-        issues.push({
-          kind: "hardcoded-radius",
-          value: m[1],
-          detail: "radius not in TOKENS.radius — use a token value",
-        });
+      for (const m of html.matchAll(/rgba\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*([.0-9]+)\s*\)/g)) {
+        const rgba = `rgba(${m[1]},${m[2]},${m[3]},${m[4]})`;
+        if (!legal.has(rgba)) {
+          add("hardcoded-color", rgba, "rgba() not in TOKENS (tint/scrim) — add a token");
+        }
+      }
+      for (const m of html.matchAll(/border-radius:\s*([0-9]+px)/g)) {
+        if (!legal.has(m[1]!.toLowerCase())) {
+          add("hardcoded-radius", m[1]!, "radius not in TOKENS.radius — use a token value");
+        }
       }
     }
 
