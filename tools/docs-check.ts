@@ -10,17 +10,36 @@
  */
 import { join } from 'node:path';
 import { auditAllDocs } from '../src/lib/docs-audit.ts';
+import { auditDocsStyle } from '../src/lib/docs-style.ts';
+import { validateDocsCode } from '../src/lib/docs-validate.ts';
 
 const ROOT = join(import.meta.dir, '..');
 const docs = await auditAllDocs(ROOT);
 
+// Smart structure gate (not a dumb bullet count): a section that is an
+// unstructured bullet wall (>= 6 flat bullets, no ### subsections, no
+// tables) fails — the run-on prose pattern §55-57 used to be.
 let bad = 0;
 for (const d of docs) {
+  const style = auditDocsStyle(await Bun.file(join(ROOT, d.path)).text(), d.path);
+  for (const s of style) {
+    console.log('FAIL ' + d.path + ' [' + s.section + '] — ' + s.detail);
+    bad += 1;
+  }
   const problems: string[] = [];
   if (!d.renderOk) problems.push('RENDER FAIL: ' + (d.renderError ?? ''));
   if (d.duplicateSlugs.length) problems.push('DUPLICATE SLUGS: ' + d.duplicateSlugs.slice(0, 3).join(', '));
   console.log((problems.length ? 'FAIL ' : 'ok   ') + d.path.padEnd(28) + d.headings + ' headings · ' + d.bytes + ' B' + (problems.length ? ' — ' + problems.join('; ') : ''));
   if (problems.length) bad += 1;
+}
+
+// Code-block validation — REPORTED (never fails): catches real syntax
+// bugs in JS-family blocks, but intentional pseudo-code (… elision, top-
+// level await snippets) is expected. Review the report, fix genuine bugs.
+const codeBlocks = await validateDocsCode(docs);
+const codeFailures = codeBlocks.filter((v) => !v.ok && ["js", "jsx", "ts", "tsx", "typescript"].includes(v.language.toLowerCase()));
+for (const f of codeFailures) {
+  console.log('docs:check (report) code-block FAIL ' + f.file + ':' + f.line + ' [' + f.language + '] — ' + (f.error ?? ''));
 }
 
 const state = {

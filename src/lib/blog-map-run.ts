@@ -6,6 +6,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { diffBlogMap, mappingReport, type BlogMapRegistry, type BlogMapState } from './blog-map.ts';
+import { probeFetch } from './probe-fetch.ts';
 
 export type BlogMapRunOptions = {
   root?: string;
@@ -28,7 +29,11 @@ export async function runBlogMap(options: BlogMapRunOptions = {}): Promise<{ cov
   if (options.offline && existsSync(CACHE_PATH)) {
     html = readFileSync(CACHE_PATH, 'utf8');
   } else {
-    html = await (await fetch(blogUrl)).text();
+    // probeFetch: bounded timeout + retry + UA (bare fetch hung on a dead
+    // host — §57). Null on failure -> the cache-less path stays honest.
+    const res = await probeFetch(blogUrl);
+    if (!res) return { coverage: 0, newUnmapped: -1 }; // unreachable
+    html = await res.text();
     mkdirSync(join(root, 'research/cache'), { recursive: true });
     writeFileSync(CACHE_PATH, html);
   }

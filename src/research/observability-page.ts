@@ -3,14 +3,15 @@
  * Every profiler here is USED by this repo (profile:serve, profile:design,
  * design:build metafile-md, serve memoryPressure listener).
  */
-import { renderWidgetPage, widgetTable, W_VERIFIED } from '../lib/widget-page.ts';
+import { renderWidgetPage, widgetTable, W_VERIFIED, W_CORRECTED } from '../lib/widget-page.ts';
 
 export function renderObservabilityPage(): string {
   const profilers = widgetTable(['Profiler', 'Status'], [
     { cells: ['<code>--cpu-prof-md</code> — CPU profile as Markdown', W_VERIFIED + ' used by profile:serve / profile:design / profile:research'] },
     { cells: ['<code>--heap-prof-md</code> — heap report as Markdown', W_VERIFIED + ' used by heap:serve'] },
     { cells: ['<code>--metafile-md</code> — bundle report as Markdown', W_VERIFIED + ' this repo design-system.meta.md + hq-app.meta.md'] },
-    { cells: ['<code>BUN_CPU_PROFILE=1</code>', W_VERIFIED + ' for processes you cannot pass flags to'] },
+    { cells: ['<code>BUN_CPU_PROFILE=1</code>', W_CORRECTED + ' NO-OP in 1.4.0 (probe §55) — use --cpu-prof/--cpu-prof-md directly'] },
+    { cells: ['<code>--heap-prof-md</code>', W_VERIFIED + ' markdown heap report (Summary + Top 50 Types by Retained Size)'] },
     { cells: ['<code>process.on(memoryPressure)</code>', W_VERIFIED + ' serve.ts listener (kqueue / PSI / CreateMemoryResourceNotification)'] },
     { cells: ['<code>Bun.markdown.ansi()</code>', W_VERIFIED + ' renders Markdown to ANSI terminal output'] },
   ]);

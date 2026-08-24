@@ -32,18 +32,23 @@ ills, positions, balance, or P&L reconciliation anywhere in `src/`. The named li
 
 ## 2. External research findings (2026-07-22, live API verified)
 
+### Order entry
 * **Order entry:** `POST /trade-api/v2/portfolio/orders` — `ticker/side/action/count/yes_price`, `client_order_id` idempotency, `post_only`, `reduce_only`, `buy_max_cost` (FoK market-with-protection), `cancel_order_on_pause`, `self_trade_prevention_type`. Auth = RSA-PSS/SHA-256 over `{ts}{METHOD}{path-no-query}` (matches our existing signer).
 
+### Rate limits
 * **Rate limits:** Create Order = **100 tokens**; Basic tier = 100 write-tokens/s ≈ **1 order/sec sustained**. 429s have no `Retry-After` → backoff with jitter. Apply for Advanced tier early.
 
+### Fees (decisive)
 * **Fees (decisive):** taker `ceil(0.07·C·P·(1−P))`; **KXATPMATCH/KXWTAMATCH makers pay 25% of taker; KXITFMATCH/KXATPCHALLENGERMATCH resting makers pay 0** (live `fee_type` fields). Resting-limit strategy on soft series is where fee edge + price edge overlap. **Current `kalshi-fees.ts` hardcodes maker 1.75% — must become per-series `fee_type`-driven before any live order.**
 
+### Market shape
 * **Market shape:** two binary markets per match (one per player), 1¢ tick; ITF pre-start walkover resolves **\$0.50 flat** (P\&L edge case); retirement after start → that side No; no evidence of per-point suspensions (unverified — design for continuous trading); top-of-book thin (hundreds–few thousand contracts), ITF thinner.
 
+### Model consensus
 * **Model consensus:** surface-Elo prior + point-level serve/return Markov in-play updater; benchmark vs Pinnacle de-vigged close; Challenger/ITF softest; in-play is a latency game — without a sub-second point feed, **pre-match / near-start entries are the realistic edge**.
 
+### Ops/legal
 * **Ops/legal:** automated trading permitted (no self-match); US-only, state-litigation volatile (MA injunction, MI TRO mid-2026) — bot must halt on market unavailability; archive per-series contract PDFs.
-
 ## 3. Strengths this project already has (build on these)
 
 1. License-clean, provenance-tagged primary corpus (1,153 resolutions) — competitors train on Sackmann; we can audit ours.

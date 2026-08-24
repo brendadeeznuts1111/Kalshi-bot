@@ -1,10 +1,10 @@
 {
-  "lastChecked": "2026-08-24T22:53:03.743Z",
+  "lastChecked": "2026-08-24T23:23:08.623Z",
   "docs": [
     {
       "path": "docs/AGENT-PITFALLS.md",
-      "hash": "55142059bb9ea9ebe887958513363066fab9fda6cd2f268d6eab3fc12439c364",
-      "headings": 95,
+      "hash": "39125c970e66f856517f81d7577bdf00d992073f2c9abc5dbefbd5d1eb07f880",
+      "headings": 116,
       "renderOk": true,
       "duplicateSlugs": []
     },
@@ -101,8 +101,8 @@
     },
     {
       "path": "docs/DATA_MODEL.md",
-      "hash": "d6a1f7e8de89de7d2f93d33f4321b5ec8624a6b7b1506e78bfa1ca24d502d10d",
-      "headings": 12,
+      "hash": "16a05287c04605f51d746a82ea320f83b87ce9de66faa73518c83f5aedb79e29",
+      "headings": 16,
       "renderOk": true,
       "duplicateSlugs": []
     },
@@ -192,8 +192,8 @@
     },
     {
       "path": "docs/KIMI_DISCOVERY_MAP.md",
-      "hash": "a23040f69a0bfc6ce24ae257dc38b379f6f814c1c2404c4e809bfaca30719fb2",
-      "headings": 13,
+      "hash": "36dea24c3f5ea67cb90c56fbe9f61e0ac735904c7383f18067c687fc7e1fcedb",
+      "headings": 19,
       "renderOk": true,
       "duplicateSlugs": []
     },
@@ -304,8 +304,8 @@
     },
     {
       "path": "docs/SPORTS_SOURCE_REGISTRY.md",
-      "hash": "3aa0d29ee75c5788fcf42beef2594f431ffb347a945842ee33884e24d7796cc6",
-      "headings": 8,
+      "hash": "1dbc418d4643f15156f4754a8968740b55848a13e6e5398499c14f812144d8d8",
+      "headings": 12,
       "renderOk": true,
       "duplicateSlugs": []
     },

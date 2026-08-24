@@ -2039,12 +2039,38 @@ mismatch (GitHub is authoritative). Verified live: RSS 'Bun 1.4' <-> atom
 
 ## 26. Archive + prune-channel + dynamic content verified (2026-08-24)
 
-- Bun.Archive VERIFIED: `Bun.Archive.write(path, { "entry": value }, { compress: "gzip" })` writes a real extractable tar.gz; `new Bun.Archive(bytes).extract(dir)` round-trips; `archive.files()` returns a Map of entry -> Bun.File.
-- CRITICAL probe catch: Archive.write with a Bun.file VALUE writes a structurally valid tar with EMPTY payloads (header blocks present, 0-byte entries — verified via files() text + disk readback). Only string / Uint8Array / Blob values round-trip. The prune archive helper reads bytes first (new Blob([bytes])). The doc's example used string literals, which is why it worked there.
-- The `prune` CHANNEL (8th signal channel) reports content-plane state: manifest integrity (missing references = bad — the decision matrix needs real files) + .trash/ footprint (files/bytes/archives). Mirror of the deps channel for CONTENT (AGENT-PITFALLS §25). Dashboard renders it via CHANNEL_LABELS automatically.
-- `content:verify` — hash-drift detection: re-hashes every manifest-referenced file against .data/content-state.json; mismatch = stale ETags/feeds, exit 1; --update re-baselines. Verified: edit -> DRIFT, restore+baseline -> ok. Wired to content:watch (`bun --watch tools/content-verify.ts -- --update`) for dynamic rebuild on change.
-- `content:prune -- --archive` bundles removed files into ONE .trash/<date>/prune-<date>.tar.gz (Bun.Archive, gzip) alongside the per-file sidecars.
-- Bun.FFI (dlopen) is available and would avoid Bun.spawn, but the repo's gates stay spawn-based (runBunGate keep-list) — FFI adds a native surface for no gain here; noted, not adopted.
+### Bun.Archive — verified
+
+`Bun.Archive.write(path, { "entry": value }, { compress: "gzip" })` writes a
+real extractable tar.gz; `new Bun.Archive(bytes).extract(dir)` round-trips;
+`archive.files()` returns a Map of entry -> Bun.File.
+
+**Critical probe catch:** Archive.write with a Bun.file VALUE writes a
+structurally valid tar with EMPTY payloads (header blocks present, 0-byte
+entries). Only string / Uint8Array / Blob values round-trip — the prune
+archive helper reads bytes first (`new Blob([bytes])`). The doc's example
+used string literals, which is why it worked there.
+
+### The prune channel
+
+The `prune` CHANNEL (8th signal channel) reports content-plane state:
+manifest integrity (missing references = bad — the decision matrix needs
+real files) + .trash/ footprint (files/bytes/archives). Mirror of the deps
+channel for CONTENT (§25). Dashboard renders it via CHANNEL_LABELS.
+
+### Dynamic content — verified
+
+| Tool | Behavior |
+| --- | --- |
+| `content:verify` | re-hashes every manifest-referenced file vs .data/content-state.json; mismatch = stale ETags/feeds, exit 1; --update re-baselines (edit -> DRIFT, restore -> ok) |
+| `content:watch` | `bun --watch tools/content-verify.ts -- --update` — dynamic rebuild on change |
+| `content:prune -- --archive` | bundles removed files into ONE .trash/<date>/prune-<date>.tar.gz (Bun.Archive, gzip) + per-file sidecars |
+
+### FFI — noted, not adopted
+
+`Bun.FFI` (dlopen) is available and would avoid Bun.spawn, but the repo's
+gates stay spawn-based (runBunGate keep-list) — FFI adds a native surface
+for no gain here.
 
 ## 27. Deepen pass: markdown render, FFI, restore (2026-08-24)
 
@@ -2312,10 +2338,10 @@ mismatch (GitHub is authoritative). Verified live: RSS 'Bun 1.4' <-> atom
   without { autolinks: true } or { url: true }). An earlier probe showing
   autolink:Y for default was WRONG (it matched an existing [link](...) <a>
   in that fixture). GFM tables/tasklists ARE on by default (re-verified).
-- Bun.markdown LANGUAGE: UNRESOLVED CONTRADICTION — bun.com/docs/runtime/
-  markdown says "written in Rust"; the 1.3.8 release blog says "written in
-  Zig". Both are official Bun sources. Recorded as-is; do not pick one
-  without the source code. (Earlier I stated Zig as settled — overreach.)
+- Bun.markdown LANGUAGE: RESOLVED in §56 — Bun WAS Zig; 1.4 is the first
+  Rust release. bun.com/docs says Rust (current); the 1.3.8 blog said Zig
+  (historically true, pre-rewrite). See §56 for the resolution.
+
 - faster-regexp: the blog's isbot/marked numbers (200x/138x) were NOT
   reproduced — only a hex-regex micro-bench (4.84ms/200k×20) was run.
   Registry row corrected to note.
@@ -2618,10 +2644,11 @@ mismatch (GitHub is authoritative). Verified live: RSS 'Bun 1.4' <-> atom
   exports), macro (accepted), tsconfig: { compilerOptions: { jsx:
   "react-jsx" } } WORKS (emits jsx_w77yafs4) — the earlier probe used the
   wrong shape (top-level jsx, not compilerOptions.jsx).
-- CORRECTION: the docs claim target affects import/require — PROBED NO
-  output difference for target:"node" vs "browser" in the standalone
-  transpiler (imports stay imports, requires stay requires). target matters
-  in the BUNDLER, not the transpiler.
+- CORRECTION (revised §59): target:"bun" DOES change transpiler output —
+  it emits `var {require}=import.meta;` (the Bun CJS-interop preamble) vs
+  node/browser which keep plain import/require. My earlier "no difference"
+  was because I only tested node vs browser, never "bun". target:"bun"
+  is meaningful in the transpiler; node vs browser still show no diff.
 - scan() has NO loader arg (type: scan(code) only) and defaults to jsx —
   it CHOKES on TS type annotations (function f(value: string) -> Parse
   error). transformSync(code, "ts") is the TS-capable parse oracle.
@@ -2726,3 +2753,201 @@ mismatch (GitHub is authoritative). Verified live: RSS 'Bun 1.4' <-> atom
   hand-written JSON.stringify/python (the session's early patch-pkg*.py
   scratch was cleaned; no committed tool writes package.json by hand —
   repo tools read it via deps-diff/deps-report/pre-commit).
+
+## 55. Production / Observability / Streams probed (2026-08-24)
+
+### Markdown profiler outputs — verified
+
+| Tool | Output shape (matches docs) |
+| --- | --- |
+| `--cpu-prof-md` | Summary (Duration/Samples/Interval/Functions) · Top 10 · Hot Functions (self%) · Call Tree (total%) · Function Details (Called-by/Calls) |
+| `--heap-prof-md` | header + Quick Search Commands · Summary (Total Heap/Objects/Edges/Unique Types/GC Roots) · Top 50 Types by Retained Size — full edge data makes it large (233 KB, small run) |
+| `--metafile-md` | our `dist/*.meta.md` (the mtafile) matches the docs byte-for-byte: TOC, Quick Summary, Largest Modules, Entry Points, Dependency Chains, Full Graph |
+
+### Streams + memory — verified
+
+| Claim | Probe |
+| --- | --- |
+| CompressionStream/DecompressionStream/TextDecoderStream/TextEncoderStream native | all present; gzip roundtrip 60000 -> 312 -> equal |
+| Response.clone() chunk-shared | both bodies read (`a`/`b` clones both return full body) |
+| memoryPressure | listener surface verified (on/removeListener + event name); serve.ts handler uses the documented levels |
+
+### Probe catch — BUN_CPU_PROFILE
+
+`BUN_CPU_PROFILE=1` **alone produces NO profile** in 1.4.0 (ran with the
+env, no .cpuprofile). It only works when `--cpu-prof` is ALSO passed —
+defeating the docs' "process you cannot pass flags to" purpose.
+`--cpu-prof-name` requires `--cpu-prof` (errors alone). Use
+`--cpu-prof`/`--cpu-prof-md` directly.
+
+### Vendor benchmarks — marketing (not reproduced)
+
+Claude CPU 2x, memory 13-48%, startup 2x, binary -17%, stream throughput,
+backpressure OOM repro — all need the exact app/hardware (EPYC 9R14,
+`/usr/bin/time -v`, median of 3). Local sanity only: streams work, a
+slow-client read keeps the server alive at small scale (the 1 GiB/s
+OOM-pause claim needs the #32553 repro).
+
+## 56. "We rewrote Bun in Rust" — verified + resolves the §35 contradiction (2026-08-24)
+
+### The claim
+
+Bun 1.4 is the FIRST release written in Rust. The dedicated post
+(`bun.com/blog/bun-in-rust`) meta-description states: *"Why & how we
+rewrote Bun from Zig to Rust"*. Claude Code used the port for months;
+Prisma Compute launched on it (see §57).
+
+### §35 resolved
+
+The earlier "unresolved contradiction" (docs said Rust, 1.3.8 blog said
+Zig) is resolved: **both were true at different times**.
+
+| Claim | Truth |
+| --- | --- |
+| 1.3.8 "markdown written in Zig" | historically accurate — pre-rewrite |
+| docs "written in Rust" | current — post-rewrite |
+
+### Runtime verification
+
+| Evidence | Result |
+| --- | --- |
+| binary size | 63,558,256 bytes = 61.2 MB macOS arm64 — EXACTLY the blog table value |
+| binary format | Mach-O arm64, links libc++ (Rust + JSC C++ ABI) |
+| symbols | no Rust markers via nm (release stripping) — size + post meta are the evidence |
+
+### Not runtime-verifiable
+
+- Stats section (64 Claudes, 58 commits/min, 11 days): process
+  storytelling, marked note.
+- Faster section "8 months of WebKit" + zlib-ng + SIMD: consistent with
+  the rewrite but vendor benchmarks (§29/§55 discipline: absolute
+  measurements only).
+
+## 57. Context + fetch defaults — two corrections (2026-08-24)
+
+### Missed context — the Prisma URL
+
+The v1.4 Rust section links a second URL I skipped:
+`prisma.io/blog/bun-rust-rewrite-prisma-compute`. It is a production
+adoption report, not marketing:
+
+| What | Detail |
+| --- | --- |
+| Bun 1.3 failures | memory leaks; connection pool could not recover after VM pause/resume |
+| Rust rewrite | handled both failure modes perfectly |
+| Proven fixes | bounded memory · dead-connection reconnection · pause/resume · fail-loud requests |
+| Adoption | Prisma Compute beta + Claude Code ran the port for months before 1.4 shipped |
+
+Takeaway: the rewrite's value was **reliability under long-lived load**, not
+just speed.
+
+### Missed context — the built-in list
+
+The section's "built into Bun 1.4 ✓" list adds five entries to what's-new:
+
+| New built-in | Replaces | Probed at |
+| --- | --- | --- |
+| `tar` | npm `tar` | §26 (Bun.Archive) |
+| `string-width` | npm `string-width` | §43 |
+| `slice-ansi` | npm `slice-ansi` | §43 |
+| `cli-truncate` | npm `cli-truncate` | §43 (sliceAnsi) |
+| `wrap-ansi` | npm `wrap-ansi` | §43/§44 |
+
+### Fetch defaults — the correction
+
+**Problem:** the probe scripts used bare `fetch()` — no timeout (hangs on a
+non-routable host), no retry, no User-Agent.
+
+**Reality:** the repo's `fetchWithRetry` (resilient-fetch.ts) already had good
+defaults — `timeoutMs` 30s, `AbortSignal.timeout`, AbortError treated as
+retryable, backoff/jitter/breaker. The probes bypassed it.
+
+**Fix:** `src/lib/probe-fetch.ts` wraps `fetchWithRetry` with probe-safe
+defaults:
+
+| Default | Value |
+| --- | --- |
+| timeout | 8s |
+| retries | 2 |
+| User-Agent | kalshi-bot-research/0.2.0 (probe) |
+| redirect | follow |
+| failure | null (probe reports unreachable, never throws) |
+
+Verified: non-routable host -> null in 1.6s (previously: hang forever);
+bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
+
+## 58. "grep -c bullet count" proposal — probed + rejected for the smart gate (2026-08-24)
+
+- A pasted proposal suggested a bullet-check via Bun.$ + grep -c '^[-*]'
+  with glob.scan + import { glob } from "bun". PROBED, three API errors:
+  1. import { glob } from "bun" does NOT exist (undefined) — it is
+     new Bun.Glob().
+  2. glob.scan() is SYNC-iterable (Symbol.iterator), not async —
+     for await (const f of glob.scan(...)) fails. scanAsync() does not
+     exist in this build.
+  3. .nothrow() DOES exist (verified: exit 1 handled without throw).
+- More importantly, grep -c '^[-*]' counts EVERY bullet line — a doc with
+  100 short list items across 20 sections fails; a 6-bullet prose wall
+  passes. That is the "dumb count" the smart gate replaces.
+- The smart gate (src/lib/docs-style.ts + docs:check) detects PROSE WALLS:
+  >= 6 flat bullets, NO ### subsections, NO tables, AND at least one bullet
+  >= 200 chars (a real prose paragraph). This caught + fixed real walls in
+  AGENT-PITFALLS §26, DATA_MODEL §4, KIMI §2, SPORTS_SOURCE invariants,
+  while PROTONPASS "Security notes" (7 short bullets, max 160, factual
+  checklist) passes as list-appropriate.
+- docs:check now enforces 48/48 docs render cleanly AND no prose walls.
+
+## 59. Docs code-block validation via Bun.Transpiler (2026-08-24)
+
+- A proposal suggested validating doc code blocks with transpiler options.
+  PROBED, three corrections:
+- target:"bun" IS meaningful (revised §48): it emits `var {require}=
+  import.meta;` (Bun CJS-interop preamble) vs node/browser which keep
+  plain import/require. My earlier "no difference" tested node vs
+  browser only — wrong. "bun" is the right validation target.
+- define does NOT "catch typos": a typo'd env key (API_URLL vs defined
+  API_URL) is silently left as-is — exact-match only. define is for
+  making env-dependent examples parse, not typo detection.
+- trimUnusedImports IS a stale-import detector: compare import sets
+  before/after trim — imports removed were unused.
+- Built src/lib/docs-validate.ts: extract fenced JS-family blocks (untagged
+  blocks skipped — they're diagrams/pseudo, not code), validate via
+  transformSync with the language loader + target:"bun" + define, and
+  report unused imports.
+- Result across 48 docs: 46 tagged JS blocks, 7 reported (all intentional
+  pseudo-code: … elision, top-level await snippets, pseudo-classes) — ZERO
+  genuine syntax bugs found. Wired into docs:check as REPORTED (playground-
+  backlog pattern), never fails the gate.
+
+## 60. Language-specific docs code-block validation — bash continuation join (2026-08-24)
+
+- Extended the §59 validator per-language (validateBlockByLanguage +
+  validateDocsCodeLanguage in src/lib/docs-validate.ts):
+  - JS-family: Bun.Transpiler (as §59).
+  - json/json5/toml/yaml/xml: Bun's native parsers — good parses return,
+    bad parses throw (probe-verified: Bun.JSON5/TOML/YAML/XML.parse all
+    throw on malformed input, parse valid input).
+  - bash/sh: `bash -n -c` (exit 0 good / 2 bad, probe).
+- bash -n false-positive hunt: doc blocks are command EXAMPLES, and
+  examples use three things real scripts don't:
+  1. `\` line continuations — my first cut checked line-by-line and
+     flagged the dangling continuation (PROTONPASS-INTEGRATION-SPEC).
+  2. multi-line quoted strings — `bun -e "..."` / `bun -e '...'` spanning
+     lines (BUN_UPGRADE_CANARY, PROTONPASS): the first line has an
+     unbalanced open quote and bash -n rightly rejects it.
+  3. angle-bracket placeholder notation — --experiment=<id>, --diff
+     <run-id>, --sport=<sport_key> (EXPERIMENT_FACTORIAL, PLAN,
+     SPORTS_SOURCE_REGISTRY): bash reads < as a redirection, so these
+     are invalid shell BY DESIGN.
+- Fix: reassemble logical lines before bash -n — join `\` continuations
+  (outside quotes), join while quote depth is open (single/double,
+  backslash-escaped inside quotes), and SKIP lines carrying <placeholder>
+  notation. Result: 18 reported bash false-positives → 0; only the 7
+  intentional JS pseudo-code blocks remain (report-only).
+- Bun.YAML (1.2) in the validator is intentional and now allowlisted in
+  src/lib/breaking-audit.ts (YAML_ALLOWLIST): doc examples are validated
+  with the SAME parser the runtime uses, so a 1.1-style yes/on/no key in
+  a doc block is exactly what should surface.
+- Tests: tests/lib/docs-validate.test.ts covers continuation join,
+  multi-line quotes, placeholder skip, comment-only blocks, and a genuine
+  syntax error (bash -n still catches real bugs).

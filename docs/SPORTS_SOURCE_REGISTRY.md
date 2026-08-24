@@ -77,17 +77,23 @@ No scheduler, read-model, API, or catalog code should need a source-specific bra
 
 ## Required invariants
 
+### Identity & authority
 - Domain IDs are branded after the boundary; provider wire values are parsed once.
 - There is exactly one metadata discovery authority per source.
 - Concurrency ownership is `(source, selector scope)`; adapter identity is stored and validated as part of the run contract, but it does not permit a second owner for the same scope.
+
+### Reconciliation gates
 - Event type and participant format are pre-match gates, never conclusions drawn from a successful name match. Kalshi resolves the lane from an enabled, reconciliation-authorized exact series binding. A Polymarket sport tag remains acquisition scope only: the adapter resolves a match lane only when an attached tag, a registry-owned `seriesSlug` mapping, and one coherent two-participant moneyline agree. Unknown series, selector drift, generic outcomes, missing/ambiguous moneylines, participant conflicts, and format conflicts remain quarantined. A separate redundant rule classifies field tournaments only when a `Winner` title, tournament/winner resolution text, multiple named Yes/No child markets, and absence of sports market types agree; tournament rows remain excluded from match reconciliation, and proposition events remain quarantined.
+
+### Persistence & health
 - Price snapshots persist the exact Kalshi series/event/participant lane plus the Polymarket observation time and cache state. HQ re-resolves the stored lane against the current registry and never counts legacy, expired, or identity-free prices as healthy coverage; stale/degraded/circuit-fallback quotes remain visible but force degraded health.
 - Atomic sources publish one complete terminal page. Cursor sources may terminate on an empty tail only after staging records.
 - Empty, partial, replay-mutated, clock-regressed, or registry-drifted snapshots cannot retire active truth.
 - Latest attempt and serving complete snapshot are separate health concepts.
+
+### Operational boundaries
 - Registered/quarantined detail is public; ignored bulk is counted in SQL and not emitted.
 - Metadata and inventory runs pin the registry fingerprint that interpreted their pages; classification fingerprints remain separate so reclassification is not mislabeled as mixed source data.
-
 ## Verification
 
 ```bash

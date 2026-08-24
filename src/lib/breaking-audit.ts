@@ -57,6 +57,11 @@ export function runBreakingAudit(root: string): BreakingFinding[] {
   // cannot chain-verify a host you are probing to identify for the first
   // time; the SANs only inform a host->skin suggestion and carry no secrets.
   // All other connections must keep chain + hostname verification.
+  // docs-validate.ts deliberately uses Bun.YAML (1.2) to validate doc
+  // code-block examples with the SAME parser the runtime uses - a 1.1-style
+  // yes/on/no key in a doc block is exactly what should be flagged, not
+  // hidden (the validator is report-only).
+  const YAML_ALLOWLIST = ['**/docs-validate.ts'];
   const TLS_OVERRIDE_ALLOWLIST = [
     '**/host-discover.ts',
     // security:probe deliberately connects with rejectUnauthorized:false to
@@ -106,7 +111,7 @@ export function runBreakingAudit(root: string): BreakingFinding[] {
   });
 
   // 4. Bun.YAML now YAML 1.2: 1.1-style yes/on/no booleans break.
-  const yaml = rgFiles(root, 'Bun\\.YAML|yaml\.parse|YAML\.parse', dirs, { exclude: LABEL_FILES });
+  const yaml = rgFiles(root, 'Bun\.YAML|yaml\.parse|YAML\.parse', dirs, { exclude: [...LABEL_FILES, ...YAML_ALLOWLIST] });
   findings.push({
     check: 'Bun.YAML is YAML 1.2 (yes/on/no no longer booleans)',
     status: yaml.length ? 'warn' : 'ok',
