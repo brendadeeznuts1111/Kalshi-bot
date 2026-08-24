@@ -60,6 +60,9 @@ research/cache/partner-ws-capture/
 compare.svg
 dist/
 
+# Content pruning trash (recoverable removals — never commit)
+.trash/
+
 # Stray installer downloads / runtime backups (never commit)
 *.dmg
 research/backups/

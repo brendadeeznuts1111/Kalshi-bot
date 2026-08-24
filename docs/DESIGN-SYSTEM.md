@@ -2,6 +2,7 @@
 
 **SSOT:** `src/institutions/design-tokens.ts` (tokens) · `src/institutions/hq-ui.ts` (components)
 **Agent:** `src/agent/design-agent.ts` · **Live manifest:** `/api/design` · **Self-audit:** `/api/design/audit`
+**Pipeline:** build → metafile → budget/audit gates, per frontend module — see [DESIGN-PIPELINE.md](DESIGN-PIPELINE.md)
 
 ## Brand
 

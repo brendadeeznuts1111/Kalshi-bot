@@ -1,6 +1,12 @@
 [install]
 # Project hardening; machine linker/global-store/cache policy stays in ~/.bunfig.toml.
 frozenLockfile = true
+# Global virtual store (bun 1.4): packages extracted once into Bun's cache and
+# symlinked into each project's node_modules/.bun/ store instead of copied per
+# install — up to 7x faster warm CI installs on large projects. Opt-in via the
+# isolated linker. This repo is tiny (3 deps) so the win is small, but the
+# layout is the recommended one.
+linker = "isolated"
 
 [run]
 # @see https://bun.com/docs/runtime/bunfig#run-shell-use-the-system-shell-or-buns-shell

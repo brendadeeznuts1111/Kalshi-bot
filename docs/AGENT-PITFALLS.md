@@ -1659,3 +1659,1070 @@ into the glossary, cross-referencing pages, or claiming it in BUN_NATIVE.md.
 A shared word is a coincidence; a concept needs its own API/page. This repo's
 glossary (src/institutions/glossary.ts) is Kalshi-domain ONLY - do not add
 Bun-docs words like metadata to it.
+
+## 12. Bun.image 1.4.0 — file-based decode/meta, NO rasterizer (2026-08-24)
+
+VERIFIED (probe):
+- `Bun.file(path).image()` decodes an image; `.metadata()` returns
+  `{ width, height, format }` (probe: 64x64 png). The instance also has
+  transforms (`resize(w,h)`, `rotate(deg)`, `flip()`, `flop()`) and
+  re-encoders (`png()`, `jpeg({quality})`, `webp({quality})`, `avif`, `heic`)
+  plus `.bytes()/.buffer()/.write(path)`. Ground-truth metadata comes from
+  RE-decoding the written file (the in-memory object reports the source's
+  dims even after resize — probe: resize(32,32) object still said 64x64,
+  on-disk decode said 32x32).
+- `Bun.Image.metadata()` does NOT exist; `Bun.Image` statics are clipboard-
+  only (`fromClipboard`, `hasClipboardImage`, `backend`). The SVG/HTML
+  rasterizer (`Bun.image(svg)`) does NOT exist in 1.4.0 — SVG metadata via
+  Bun.Image throws 'unrecognised format'. Brand SVG is served as-is.
+- `Bun.file(bytes)` is NOT an in-memory image source (path-only, rejects
+  null bytes) — decode requires a real file path. `Bun.file(p).size` is a
+  property, not a method.
+- ADOPTED: `images:meta` CLI (metadata table + --to/--resize conversion),
+  `/brand.svg` + `/brand/swatch/<token>.png` routes, brand-card.svg is an
+  enforced design surface, and `src/lib/brand-image.ts` wraps it all.
+
+CORRECTION (2026-08-24, bun-v1.4 blog): the CONSTRUCTOR is the in-memory
+decode + the chain is sharp-style — `new Bun.Image(bytes)` decodes bytes
+directly (no file path needed), `.resize(w,h,{fit:'inside'|'fill'})`,
+`.rotate()`, `.webp({quality})`/`.jpeg({quality})`/`.png()`/`.avif()`
+chain, and a transformed Image IS a Response body (`new Response(img)`).
+The earlier 'no in-memory decode' claim was wrong — I tested Bun.image()
+and Bun.Image.metadata() but never the constructor. SVG rasterization is
+still unavailable in Bun.Image, but Bun.WebView screenshot does it:
+`new Bun.WebView({ url: data:… }).screenshot({ format:'png',
+encoding:'buffer' })` (settle ~300ms first — immediate screenshots throw
+'Completion handler for function call is no longer reachable'; the
+document.fonts.ready evaluate from tennis-ws-ground is NOT sufficient for
+a small static page — a plain delay is the robust fix).
+ADOPTED: brand-image.ts uses the constructor (decodeImage/transformImage/
+Response bodies), /brand/card.png serves the WebView-rasterized card
+(cached per design version), images:meta supports --fit/--rotate.
+
+## 13. Bun.serve video Range/206 + data-URL inlining pitfall (2026-08-24)
+
+VERIFIED (probe): `routes: { "/videos/*": { dir: public/videos } }` serves
+video files with ZERO custom code: full GET -> 200 + `accept-ranges: bytes`
++ content-type from extension (`video/mp4`); `Range: bytes=100-199` -> 206
+Partial Content with exact `content-range: bytes 100-199/500000` and 100
+bytes; open-ended `bytes=200-` -> 206 with the tail. Seeking works out of
+the box (sendfile zero-copy). The `/videos` page (token-built, audited
+surface) lists + plays files via the route path.
+
+PITFALL: referencing `<video src="./demo.mp4">` with a RELATIVE path in an
+HTML-import page (hq-app/index.html etc.) makes the bundler INLINE the
+file as a `data:` URL — fine for tiny assets, catastrophic for video.
+Always use the served route path (`/videos/<name>`). Same rule applies to
+any large binary referenced from an HTML import.
+ADOPTED: /videos/* dir route, /videos page, public/videos/README, video
+page is a design:check surface (15 surfaces).
+
+## 14. Bun.serve routing precedence + param-route traversal guard (2026-08-24)
+
+VERIFIED (probe): routes matching order is EXACT > PARAM > WILDCARD/dir.
+- `/videos/index.json` (exact) beats `/videos/:id` (param) beats
+  `/videos/*` (dir). A param route OWNS all single-segment paths under its
+  prefix — multi-segment paths fall to the dir wildcard.
+- `req.params.id` on route handlers; Bun.file() bodies from a param route
+  still get Range/206 + content-type from extension (probe: bytes=0-99 ->
+  206 content-range bytes 0-99/300000).
+- Traversal (`/videos/..%2F..%2Fpackage.json`) 404s — but a hand-rolled
+  param route must validate its own id (`isSafeVideoId`: no separators,
+  no `..`, video ext only, length cap) since the dir route's openat2
+  O_RESOLVE_BENEATH protection does NOT apply to param handlers.
+ADOPTED: /videos/:id param route + /videos/index.json exact manifest;
+the /videos page links the manifest.
+
+## 15. Bun.Networking claims probed (2026-08-24) — what the marketing copy gets wrong
+
+VERIFIED:
+- `Bun.listen()` TCP server + `server.reload()` hot-swap + `Bun.connect()`
+  (probe: echo on 127.0.0.1, reload/stop are functions).
+- `Bun.udpSocket()` + `addMembership` / `setMulticastTTL` / `send` exist.
+- `http3: true` requires `tls` (probe: throws 'HTTP/3 requires tls to be
+  set' otherwise) — consistent with the docs' example.
+- sendfile zero-copy + Range/206 + ETag/304 + openat2 O_RESOLVE_BENEATH:
+  already verified in-repo (dir routes, videos).
+
+CORRECTED (marketing copy is wrong for 1.4.0):
+- `req.file()` DOES NOT EXIST — the multipart upload example is invalid;
+  use `req.formData()` + form.get('file').
+- `new Response(Bun.file('./app.html'))` does NOT bundle scripts/styles —
+  it serves the raw file (probe: script src unchanged, no bundling). HTML
+  bundling happens ONLY via HTML imports (`import html from './app.html'`
+  -> routes['/app'] = html), which is what /hq uses.
+
+UNVERIFIABLE/NOT CLAIMED: marketing benchmarks (34k req/s static, 72k
+JSON, 12ms cold start), trie O(1) routing, 1,517 Node.js compat tests,
+QUIC interop suite. The /bun/networking page marks these as unverified.
+ADOPTED: /bun/networking token-built page (audited surface, 16 surfaces)
+with per-claim probe badges.
+
+## 16. Streams + terminal primitives probed (2026-08-24) — the observability widgets
+
+VERIFIED in Bun 1.4.0:
+- `Bun.stringWidth` (emoji + CJK grapheme-aware: ⬇️ = 3, 下载 = 4),
+  `Bun.sliceAnsi` (slice preserves ANSI codes), `Bun.wrapAnsi`.
+- Native `CompressionStream`/`DecompressionStream`/`TextEncoderStream`/
+  `TextDecoderStream` — gzip round-trip probed (6000 -> 74 -> 6000 B).
+- `Response.clone()` — both bodies readable.
+- `Bun.markdown` exposes html/ansi/render/react — `Bun.markdown.ansi()`
+  exists (the widget claimed it; confirmed).
+- The profilers (--cpu-prof-md/--heap-prof-md/--metafile-md/
+  BUN_CPU_PROFILE) + process.on('memoryPressure') were already verified in
+  earlier probes and are used by the repo's own scripts.
+
+NOT CLAIMED: all throughput/memory/startup benchmarks in the widget copy
+are release-note marketing figures; the /bun/performance page labels them
+marketing and points at the repo's own profiles instead.
+ADOPTED: /bun/streams, /bun/observability, /bun/performance widget pages
+(token-built, audited — 19 design surfaces), shared widget-page renderer
+(src/lib/widget-page.ts), and `bun run profile:all` (runs every profiler,
+Markdown out).
+
+## 16. Streams + terminal primitives probed (2026-08-24) — the observability widgets
+
+VERIFIED in Bun 1.4.0:
+- `Bun.stringWidth` (emoji + CJK grapheme-aware: ⬇️ = 3, 下载 = 4),
+  `Bun.sliceAnsi` (slice preserves ANSI codes), `Bun.wrapAnsi`.
+- Native `CompressionStream`/`DecompressionStream`/`TextEncoderStream`/
+  `TextDecoderStream` — gzip round-trip probed (6000 -> 74 -> 6000 B).
+- `Response.clone()` — both bodies readable.
+- `Bun.markdown` exposes html/ansi/render/react — `Bun.markdown.ansi()`
+  exists (the widget claimed it; confirmed).
+- The profilers (--cpu-prof-md/--heap-prof-md/--metafile-md/
+  BUN_CPU_PROFILE) + process.on('memoryPressure') were already verified in
+  earlier probes and are used by the repo's own scripts.
+
+NOT CLAIMED: all throughput/memory/startup benchmarks in the widget copy
+are release-note marketing figures; the /bun/performance page labels them
+marketing and points at the repo's own profiles instead.
+ADOPTED: /bun/streams, /bun/observability, /bun/performance widget pages
+(token-built, audited — 19 design surfaces), shared widget-page renderer
+(src/lib/widget-page.ts), and `bun run profile:all` (runs every profiler,
+Markdown out).
+
+## 17. Built-in utilities + fetch client probed (2026-08-24) — updated widgets
+
+VERIFIED in Bun 1.4.0:
+- `Bun.JSON5.parse` / `Bun.JSONC.parse` / `Bun.JSONL.parse` all work
+  (comments, trailing commas, NDJSON arrays).
+- `Response.textStream()` returns an async-iterable stream.
+- Post-quantum crypto: `crypto.subtle.generateKey({ name: 'ML-DSA-65' })`
+  works (keygen probed).
+- fetch request compression: `compress: 'gzip'` sends `content-encoding:
+  gzip` + compressed body (47 B), `{ encoding: 'br', level: 9 }` -> br
+  (27 B) — VERIFIED against a local server.
+- bun:ffi `dlopen` present; Bun.Archive exists but its surface is `write`
+  (the docs' tar/create example is NOT the 1.4.0 API shape).
+
+NOT CLAIMED: FFI speedups (3x/3.8x), HTTP/3 static-route throughput (2.7x),
+1,517 Node.js compat tests, 535k Zig -> 1M+ Rust / 64 agents / 11 days,
+~382 MB eliminated (package-size estimates), TLS session resumption /
+proxy headers (need real TLS/proxy peers to exercise) — all labeled
+marketing/note on the pages.
+ADOPTED: /bun/utilities + /bun/overview pages; networking page gained a
+fetch-client section; performance page gained FFI + HTTP/3 sections.
+design surfaces: 21.
+
+## 18. WebView in the merge gate — final call (2026-08-24)
+
+WebKit screenshots are UNRELIABLE under `bun test --parallel` (worker
+processes contend for the window server; captures can return corrupt
+buffers that fail decode). The repo's own WebView tests never screenshot
+in the merge gate (presence/html-only). DECISION: the brand-card raster
+test asserts the CONTRACT (hasWebView true, brandCardPng returns a buffer
+or null, never throws); the REAL capture + exact 1200x630 verification is
+`bun run brand:card` (CLI, ground-tool pattern) + the serve smoke
+(/brand/card.png serves a verified 1200x630 PNG). This is the same split
+tennis-ws-ground uses (tests assert; the CLI captures).
+
+## 19. GitHub releases.atom feed folded in (2026-08-24)
+
+bun:release-watch now ALSO fetches https://github.com/oven-sh/bun/releases.atom
+(the second verified Bun.XML shape: feed.entry[] with '@'-prefixed link
+attrs — same RssEntry shape as the RSS parser, so latestRelease works on
+both). It cross-checks the GitHub latest against the blog RSS and warns on
+mismatch (GitHub is authoritative). Verified live: RSS 'Bun 1.4' <-> atom
+'Bun v1.4' (bun-v1.4.0) match. parseAtomEntries guards malformed XML
+(Bun.XML.parse throws -> []).
+
+## 20. Install/test tooling folded in (2026-08-24)
+
+- bunfig [install] now sets `linker = "isolated"` (bun 1.4 global virtual
+  store: packages extracted once into Bun's cache, symlinked via
+  node_modules/.bun/ — 7x faster warm CI installs on large projects;
+  verified `bun install --frozen-lockfile` still passes, .bun store
+  created). This repo is 3 deps, so the win is small but the layout is
+  the recommended one.
+- `deps:diff` (bun pm diff for every npm runtime dep; file:/link:/git:
+  specs skipped — no registry diff). Verified: zod/drizzle-orm no
+  differences (718/2666 files).
+- `deps:prune` / `deps:prune:prod` (bun prune / --production) — verified
+  dry-run: nothing to prune.
+- `deps:audit-fix:dry` (bun audit fix --dry-run) — verified: no
+  vulnerabilities. The actual fix conflicts with frozenLockfile (runs
+  manually).
+- `test:shard` (bun test --parallel --timings --shard=$TEST_SHARD) for CI
+  matrices — the repo already used --parallel/--timings/--changed/--retry.
+- `bun dedupe --check` (already in CI) verified green with the isolated
+  linker: no duplicates.
+
+## 21. Bun.cron signal channel + dynamic dashboard (2026-08-24)
+
+- Bun.cron verified in 1.4.0 (probe): function form (event loop, no system
+  cron), `Bun.cron.parse()` -> next run Date, job.unref()/stop().
+- serve.ts registers ONE signal-refresh Bun.cron (*/5 * * * *) per process
+  (guard flag — tests create many servers), unref'd so it never blocks
+  exit. It re-collects signals into the cache; the pipeline's cron channel
+  reports registered/lastOk/runs/last/next.
+- /dashboard is now DYNAMIC: each section carries data-channel; the page
+  polls /api/signals every 15s and re-renders channel tables in place
+  (severity badges + action buttons rebound) — no full reload.
+- REMOVED startup card WARMING: the boot-time WebView capture crashed the
+  process with an escaped 'WebView closed' (async WebKit error bypassing
+  try/catch). /brand/card.png warms on first request instead.
+
+## 22. Bun color stack probed (2026-08-24) — what the marketing copy gets wrong
+
+- `Bun.color(hex, "luminance")` DOES NOT EXIST — TypeError. Luminance and
+  contrast are NOT Bun formats: WCAG 2.1 math lives in the kernel
+  (`relativeLuminance` / `contrastRatio` / `accessibleForeground` in
+  src/lib/color/theme.ts + kernel luminance/contrast for palette keys).
+- Output formats are exactly: `[r,g,b,a]` `[rgb]` `[rgba]` `{r,g,b}` `{rgb}`
+  `{rgba}` `ansi_16`/`ansi-16` `ansi_256`/`ansi-256` `ansi_16m`/`ansi-16m`/
+  `ansi-24bit`/`ansi-truecolor`/`ansi` `ansi256` `css` `hex` `HEX` `hsl`
+  `lab` `number` `rgb` `rgba`. The doc's `"object"`/`"array"` formats do
+  NOT exist — use `{rgba}` / `[rgba]` etc. `number` = 0xRRGGBB.
+- The 2nd argument is an OUTPUT format only. Passing a CSS color-space
+  keyword (`"srgb"`, `"display-p3"`) throws TypeError — you cannot force
+  interpretation, only conversion.
+- Inputs: `color-mix(in srgb, …)` and `hwb(…)` ARE parsed (probe:
+  `color-mix(in srgb, red 50%, blue)` -> `#800080`; `hwb(0 0% 0%)` ->
+  `#ff0000`). `device-cmyk(...)`, `lab(...)`, `lch(...)`, `oklch(...)`
+  inputs return null (silently unparsed) — do NOT rely on them.
+- `hex` output DROPS alpha: `#ff0000aa` -> `#ff0000`; `transparent` ->
+  `#000000`. No 2nd arg = identity passthrough, NOT a conversion. `css`
+  output is 'most compact' (can emit named colors, e.g. `red`).
+- `ansi` (auto) honors NO_COLOR / FORCE_COLOR / TTY: piped or NO_COLOR ->
+  empty string; FORCE_COLOR=1 -> 16-bit, =2 -> 256, =3 -> 24-bit (verified
+  even when piped). Explicit formats (`ansi-256`, `ansi-16m`, `ansi-16`)
+  ALWAYS emit — NO_COLOR does not silence them (probe-verified).
+- `Bun.markdown.ansi(md, { heading/render/header/... })` options are
+  IGNORED in 1.4.0 — output identical for every option shape probed. There
+  is NO per-element renderer callback. `Bun.markdown` surface: `html`,
+  `ansi`, `render`, `react`; `render` returns plain text (probe: "Hibold"),
+  `html` returns real HTML.
+- Image generation from raw pixels: `ImageData` is NOT a global in Bun
+  1.4.0 (neither is `Image`) — the doc's `new ImageData(...)` +
+  `new Image(imageData)` + `.pipeTo(Bun.file().writer())` chain does NOT
+  work. The verified zero-dep path is the hand-rolled PNG encoder
+  (`encodeSolidColorPng` in src/partner/visuals.ts — zlib-wrapped deflate,
+  strict-decoder verified via Bun.Image.metadata). `Bun.file().writer()`
+  IS a valid pipeTo destination for encoded streams (probe-verified).
+- `util.styleText` (node:util) EXISTS in Bun and is the auto-fallback
+  styler: plain text when piped/no TTY, ANSI under FORCE_COLOR (verified:
+  `styleText("green", "hi")` -> `\x1b[32mhi\x1b[39m` with FORCE_COLOR=3).
+- Perf marketing "~100 ns" is understated marketing: measured here ~360-550
+  ns/op (hex 361, ansi-16m 364, color-mix 545) on this machine. Still
+  native and allocation-free in JS — just not 100 ns.
+- Folded in: src/lib/color/theme.ts (one semantic theme -> ANSI/CSS/PNG),
+  /api/color/theme, /bun/color explorer page, `bun run color:theme` CLI
+  (terminal preview + artifacts/theme-swatches/*.png + color-theme.json),
+  tests/lib/color-theme.test.ts, and the design:check /bun/color surface
+  (probe-table example hexes allowlisted as data).
+
+## 23. Integrated architecture probed (2026-08-24) — feed + theme + live channel
+
+- WebSocket in Bun.serve VERIFIED end-to-end: `server.upgrade(req, { data })`
+  in fetch, `websocket: { open, message, close }` in serve options,
+  `ws.readyState === WebSocket.OPEN` (1), `ws.data` passthrough, two-way
+  `ws.send`. Topic broadcast: `ws.subscribe(topic)` + `server.publish(topic,
+  msg)` — a subscribed client received the published message (probe). The
+  research server now upgrades `/api/live` and broadcasts theme-update +
+  feed-update (src/institutions/live-channel.ts).
+- The doc's "SQLite (Bun.SQL)" claim is WRONG: `Bun.sql` is a POSTGRES
+  tagged-template client (probe: PostgresError, Query object with
+  execute/run/raw/values). SQLite in this repo is `bun:sqlite` Database;
+  `INSERT OR IGNORE` on a PRIMARY KEY(link) dedups — verified (changes === 1
+  only for new rows; lastInsertRowid is NOT a reliable signal).
+- `Bun.XML.parse` enclosure shapes VERIFIED: RSS items expose
+  `enclosure["@url"]`, `["media:content"]["@url"]`, `["media:thumbnail"]["@url"]`
+  (the `@`-attribute convention). release-blog.ts now extracts imageUrl.
+- `Bun.Image.modulate({ brightness, saturation })` EXISTS and works;
+  `hue`/`lightness` showed no observable effect on solid swatches, and the
+  call MUTATES the source image (sharp-style purity NOT preserved — encode
+  a copy first). The doc's "tint feed images to match theme" is only
+  partially real: brightness/saturation only, and only on copies.
+- `Bun.cron("0 * * * *")` string form VERIFIED: `Bun.cron.parse` returns
+  the next run Date. Hourly feed cron registered once per process
+  (module-state guard — tests create many servers), unref'd.
+- Live `change-theme` is EPHEMERAL: hexes are validated (isHex) and
+  broadcast to connected clients only. NOT persisted to disk — TOKENS
+  remains the audited one-vocabulary source; persisting arbitrary hexes
+  would break the design gate. (The doc's persist-to-theme.json is a
+  deliberate deviation, documented on the /bun/live page.)
+- `Bun.markdown.ansi(md, { heading/strong/… })` options remain IGNORED
+  (§22) — the doc's themed-markdown renderer callback pattern still does
+  not exist; terminal theming injects ANSI codes manually via theme.ts.
+- Folded in: src/institutions/live-channel.ts (FeedStore dedup by link with
+  epoch-sorted recent(), theme/feed payloads, WS handlers, hourly cron),
+  serve.ts /api/live upgrade + websocket config, /bun/live widget page,
+  tests/institutions/live-channel.test.ts (real WS roundtrip + invalid
+  change-theme rejection), release-blog.ts imageUrl extraction.
+
+## 24. Content hashing probed (2026-08-24) — Bun.sha, CryptoHasher, ETags
+
+- `Bun.sha` is NOT a general-purpose hash: it is SHA-512/256. Probe:
+  `Bun.sha("abc", "hex")` === `sha512-256("abc")` vector
+  (53048e2681941ef99b2e29b76b4c7dabe4c2d0c634fc6d46e0e2f13107e7af23),
+  and the DEFAULT return is a Uint8Array (not a string). Use it only when
+  you want SHA-512/256; for content fingerprints the repo uses
+  CryptoHasher("sha256") (src/lib/content-pipeline.ts).
+- `Bun.sha(data, "hex"|"base64"|"utf8")` accepted; "arraybuffer" throws
+  (unknown encoding).
+- `Bun.CryptoHasher` verified against known vectors: sha1/sha256/sha384/
+  sha512/blake2b256/md5/blake2b512/sha512-256/sha3-256 ALL match.
+  `digest("hex"|"base64")` -> string; `digest()` (no arg) -> Buffer;
+  "arraybuffer" throws. update() accepts string or Uint8Array.
+- The doc's "pass Uint8Array instead of string for best performance"
+  measured NO material difference: 34.7ms vs 33.9ms over 100 x 1MB sha256
+  (this machine). Labeled marketing on the /bun/hashing page.
+- Bun.file verified: exists()/text()/bytes() (Uint8Array)/stat() with size
+  + mtime (Date). ETag/304 pattern already in-repo (notModified helper in
+  serve.ts, used by /brand routes) — reused for the content pipeline.
+- Folded in: src/lib/content-pipeline.ts (hashContent/etagFor/
+  parseFrontmatter zero-dep/ingestContentItem), content/posts/*.md samples,
+  /content/posts routes (index + raw .md + rendered page, all ETag/304 via
+  notModified), /bun/hashing widget page, tests/lib/content-pipeline.test.ts
+  (known vectors + frontmatter + raw-content hashing), design:check surface.
+
+## 25. Content pruning probed (2026-08-24) — archive vs delete, .trash/
+
+- The doc's implied Bun-native rename does NOT exist: `Bun.rename` is
+  undefined in 1.4.0 (probe TypeError). Use node:fs `renameSync`.
+- `ensureDirectory(...)` in the doc is NOT a Bun or node API — the real
+  call is `mkdirSync(path, { recursive: true })` (probe-verified: creates
+  parent dirs for the .trash/<date>/<dir> destination).
+- `renameSync` on a missing file throws ENOENT — check `existsSync` first
+  (applyPrune returns null instead of throwing).
+- Metadata sidecar write/read roundtrip verified: Bun.write(
+  dest + ".meta.json") + Bun.file().text() + JSON.parse. Sidecar carries
+  originalPath/archivedAt/reason/size/hash/action/performedBy.
+- Sidecar hashes reuse hashContent (CryptoHasher sha256, §24) — the prune
+  metadata is content-addressed with the same kernel as the pipeline.
+- Codified decision matrix (src/lib/prune-content.ts planPrune):
+  unreferenced+duplicate/stale -> delete; unreferenced+large/significant
+  -> archive; referenced+large -> review; referenced -> keep. Pure and
+  unit-tested (tests/lib/prune-content.test.ts).
+- Folded in: src/lib/prune-content.ts, tools/prune-content-cli.ts
+  (bun run content:prune --dry-run/--apply), .data/manifest.json
+  (committed — content story), CONTENT_CHANGELOG.md (appended on apply),
+  .trash/ gitignored (recovery outside the repo), /bun/pruning page,
+  design:check surface.
+- INTEGRATION with `bun prune` and the repo gates — two planes, one pattern:
+  - `bun prune` (package plane): removes unused DEPENDENCIES from
+    node_modules (real output: "Checked 14 packages across 2 folders
+    (nothing to prune)"). Wired as deps:check (dedupe --check + prune
+    --dry-run) on package.json/bun.lock/bunfig.toml in pre-commit.
+  - `content:prune` (content plane): archives/deletes unused CONTENT FILES
+    with .trash/ sidecars. Wired as content:check on content/ +
+    .data/manifest.json + the prune source in pre-commit (CONDITIONAL_GATES).
+  - Gate semantics match: deps:check is a dry-run (never mutates); the
+    content gate is manifest INTEGRITY — every manifest reference must
+    exist (a broken manifest silently defeats the decision matrix) — and
+    the delete/archive candidates in the report are informational, not a
+    failure. `content:prune -- --apply` is the explicit maintenance action,
+    exactly like `bun prune` needs no flag but content moves only on apply.
+  - Both gates fire only on their own paths (lockfile vs content tree), so
+    unrelated commits stay fast; both are offline + sub-second.
+
+## 26. Archive + prune-channel + dynamic content verified (2026-08-24)
+
+- Bun.Archive VERIFIED: `Bun.Archive.write(path, { "entry": value }, { compress: "gzip" })` writes a real extractable tar.gz; `new Bun.Archive(bytes).extract(dir)` round-trips; `archive.files()` returns a Map of entry -> Bun.File.
+- CRITICAL probe catch: Archive.write with a Bun.file VALUE writes a structurally valid tar with EMPTY payloads (header blocks present, 0-byte entries — verified via files() text + disk readback). Only string / Uint8Array / Blob values round-trip. The prune archive helper reads bytes first (new Blob([bytes])). The doc's example used string literals, which is why it worked there.
+- The `prune` CHANNEL (8th signal channel) reports content-plane state: manifest integrity (missing references = bad — the decision matrix needs real files) + .trash/ footprint (files/bytes/archives). Mirror of the deps channel for CONTENT (AGENT-PITFALLS §25). Dashboard renders it via CHANNEL_LABELS automatically.
+- `content:verify` — hash-drift detection: re-hashes every manifest-referenced file against .data/content-state.json; mismatch = stale ETags/feeds, exit 1; --update re-baselines. Verified: edit -> DRIFT, restore+baseline -> ok. Wired to content:watch (`bun --watch tools/content-verify.ts -- --update`) for dynamic rebuild on change.
+- `content:prune -- --archive` bundles removed files into ONE .trash/<date>/prune-<date>.tar.gz (Bun.Archive, gzip) alongside the per-file sidecars.
+- Bun.FFI (dlopen) is available and would avoid Bun.spawn, but the repo's gates stay spawn-based (runBunGate keep-list) — FFI adds a native surface for no gain here; noted, not adopted.
+
+## 27. Deepen pass: markdown render, FFI, restore (2026-08-24)
+
+- Bun.markdown surface: html / ansi / render / react. `render` is PLAIN
+  TEXT (probe: strips all markup — "HelloSome bold…"), `html` is the real
+  renderer (probe: <h1>, <ul><li>, <blockquote>, <pre><code
+  class="language-ts">). Post pages (/content/posts/<slug>) now render
+  bodies via Bun.markdown.html — previously escaped <pre>. Raw body is
+  trusted (our own content); escape when rendering untrusted markdown.
+- Bun.FFI: the `Bun.ffi` NAMESPACE does not exist (undefined in 1.4.0) —
+  the module is `bun:ffi` (dlopen, CString, FFIType, ptr, CFunction,
+  JSCallback…). Verified: dlopen("libSystem.B.dylib") getpid/getuid/getgid
+  return real values; dlopen("libz.dylib") zlibVersion -> "1.2.12" via
+  CString. `bun run ffi:probe` exercises it. NOT adopted in gates: FFI adds
+  a native surface (platform .dylib names/ABI) for zero gain over the spawn
+  keep-list — it IS the escape hatch if a spawn-free path is ever required.
+- content:prune -- --restore=<path>: recovers a pruned file from .trash
+  using its sidecar (originalPath match), renames it back, removes the
+  sidecar. Manifest is NOT auto-rewritten — re-add the path if it should be
+  active again. Verified round-trip in tests.
+
+## 28. Bun 1.4 security hardening probed (2026-08-24) — release-blog security section
+
+- fetch() + tls.checkServerIdentity VERIFIED: the callback receives
+  (hostname, cert) and runs before the request is written; returning an
+  Error rejects fetch with that error (`Error: pin mismatch` probe) and
+  nothing is sent. Returning undefined proceeds. PROBE CATCH: passing
+  rejectUnauthorized:false alongside checkServerIdentity means the
+  identity callback NEVER runs (identity check disabled) — use
+  tls:{ ca, checkServerIdentity } instead, where ca pins the trust and the
+  callback still fires.
+- ca alone does NOT bypass hostname verification: fetch to 127.0.0.1 with
+  a CN=localhost cert and only tls:{ca} -> ERR_TLS_CERT_ALTNAME_INVALID.
+- tls.connect({host}) uses host as default servername VERIFIED (matches
+  Node + blog): by hostname, servername=host sent; by IP without
+  servername, connected but authorized=false; with default verification,
+  IP vs CN=localhost -> ERR_TLS_CERT_ALTNAME_INVALID.
+- Bun.connect({tls}) default rejectUnauthorized:true VERIFIED: untrusted
+  handshake opens with socket.authorized=false, no data delivered; pass
+  ca or rejectUnauthorized:false. NODE_TLS_REJECT_UNAUTHORIZED honored
+  (not exercised — repo never disables verification; host-discover has the
+  documented probe-only exception).
+- HTTP framing hardening VERIFIED via raw TCP: Content-Length:abc,
+  CL+TE together (smuggling), CL:-1, duplicate CL, and invalid chunk size
+  all -> 400 Bad Request. PROBE CATCH: the 400 only fires when the
+  handler READS the body (req.text()/json()) — Bun parses framing lazily;
+  a handler that ignores the body gets 200 for an invalid chunk.
+- Redis rediss:// + tarball extraction hardening: documented (v1.3.14 /
+  v1.3.6), NOT probed (no redis server / crafted tarball in-repo) —
+  marked note on /bun/security.
+- Folded in: /bun/security widget page (verified/note badges), bun run
+  security:probe CLI (self-signed cert + local TLS server + framing raw
+  TCP — 10 probes, exit 1 on any failure), design:check surface, tests.
+
+## 29. Faster / build / test / install claims probed (2026-08-24)
+
+- new URL() absolute 1.4 measurements: 52 ns/op (absolute),
+  73 ns/op (relative), 2 ns/op (href) on THIS machine. The blog's 75/168/5
+  ns figures and the 4.6x / 3.1x / 3.2x RATIOS were NOT independently
+  string, relative resolve works, punycode works (münchen.de ->
+  xn--mnchen-3ya.de).
+- reactCompiler: TRUE AND FUNCTIONAL: Bun.build({ reactCompiler: true })
+  compiles and injects react/compiler-runtime imports (the memoization
+  runtime) — the probe failed ONLY because react isn't installed (missing
+  react/compiler-runtime). --react-compiler CLI flag exists. The 19-20x
+  speedup-vs-Babel claim is NOT reproducible in-repo (no React codebase) —
+  labeled marketing.
+- optimizeImports: accepted (typed option + runtime), but on pure-ESM
+  barrels the DEFAULT tree-shaker already drops unused exports — no
+  observable difference. The optimization targets side-effectful packages
+  (no sideEffects:false); not reproducible with pure ESM fixtures (note).
+- jsx option must be an OBJECT ({ runtime, factory }) — a bare string
+  throws TypeError (probe).
+- bun test flags all present: --parallel=<N> (defaults CPU count, implies
+  --isolate, --parallel-delay default 5ms), --shard, --timings +
+  --update-timings (balances + slowest-first), --changed=<branch> — repo
+  already uses most (§20).
+- bun install: vendor benchmarks (T3 app) are marketing; the no-op path
+  IS real and fast (probe: "Checked 1 package (no changes) [1.00ms]").
+- what-s-new builtin list (sharp/puppeteer/marked/node-cron/node-pty/
+  concurrently/npm-run-all/serve-static/json5/fast-xml-parser) maps to the
+  repo's builtin replacements (Bun.Image/WebView/markdown/cron/spawn/dir
+  routes/JSON5/XML) — see /bun/overview.
+- Folded in: /bun/speed widget page (verified/marketing/note badges),
+  design:check surface, widget tests.
+
+## 30. Full sub-header mapping — every anchor's sub-headers to the repo (2026-08-24)
+
+- The five anchors (#faster #bun-build #bun-test #bun-install #what-s-new)
+  contain ~45 sub-headers beyond the top-level claims; the /bun/map page
+  maps EACH to a repo file/script + integration layer (channels / branding
+  / pipeline / data).
+- #faster sub-headers: new URL (probed §29), faster-regexp (design scanner
+  hex regexes — probe: 4.84ms over 200k×20), node-zlib-uses-zlib-ng (PNG
+  encoder Bun.deflateSync — probe: 0.21ms vs node:zlib 0.25ms per 1MB),
+  Buffer.from hex/base64url (no direct consumer — kernel does manual hex),
+  source-map decoding (dev-mode sourcemaps, automatic), promises (runtime
+  wide, automatic).
+- #bun-build sub-headers: react-compiler + barrel (parked, §29),
+  compile-time-feature-flags (bun:bundle is NOT a runtime module — the
+  real surface is --define; probe: FEATURE_FLAG->enabled), in-memory-files
+  (plugin virtual modules VERIFIED), single-file-html (not used),
+  metafile-true + metafile-md (YES — the mtafile pipeline: dist/*.meta.json
+  + *.meta.md feed design budgets/channels), decorators/asset/bytecode
+  (not used), code-splitting-20k (marketing).
+- #bun-test sub-headers: all seven (parallel/isolate/shard/timings/changed/
+  retry/faketimers) map to package.json scripts + pre-commit (retry 1).
+- #bun-install sub-headers: global-virtual-store (bunfig linker=isolated),
+  pm-diff/audit-fix/dedupe/prune/licenses (deps:* scripts + deps channel),
+  update-transitive (frozen, note), add-filter/catalog/overrides/trustedDeps
+  /nativeDeps (not mapped — 3-dep repo), lockfile-integrity (no git/tarball
+  deps — file: only).
+- #what-s-new sub-headers: bun-image/webview/markdown/cron (brand + content
+  + signal channels), bun-terminal (exists, PTY-only — probe: Failed to
+  open PTY under capture; repo uses ANSI paint not PTY), bun-run-parallel
+  (not used), 3x-faster-ffi (ffi:probe §27), dev-tooling/http3/http2/range/
+  sourcemaps/compression/proxy/TLS-resumption/reuse (serve.ts + §15/§17),
+  also-built-in (the sharp/puppeteer/marked list -> file-by-file).
+- Integration layers recap: channels = design/deps/brand/releases/ops/
+  inventory/cron/prune signals; branding = TOKENS + design-system bundle
+  (one-vocabulary audit); pipeline = content (hash/frontmatter/ETag) +
+  build (metafiles/budgets) + prune (.trash/archive/restore); data =
+  massey/event-store/registry + fetch compression/reuse.
+
+## 31. Blog → repo mapping TRACKER (2026-08-24) — automatic, contract-gated
+
+- The mapping is now a TRACKER, not a static page: .data/blog-map.json
+  (registry, 55 entries across all 5 anchors) + bun:blog-map CLI + a
+  "mapping" signal channel + a daily Bun.cron + a pre-commit contract gate.
+- Core (src/lib/blog-map.ts, pure + unit-tested): extractAnchors parses the
+  blog HTML into h2/h3 headers; diffBlogMap compares the sub-headers under
+  the tracked anchors (#faster #bun-build #bun-test #bun-install
+  #what-s-new) against the registry. Output: newUnmapped (blog added a
+  sub-header we haven't mapped — CONTRACT VIOLATION), missing (registry
+  entry gone from the blog — cleanup), coverage.
+- CLI (tools/bun-blog-map.ts -> src/lib/blog-map-run.ts shared with the
+  cron): fetches the blog (or --offline from research/cache/bun-blog.html),
+  writes .data/blog-map-state.json + research/outputs/blog-map.md, exits 1
+  when a sub-header is unmapped. Currently 100% coverage, EXIT 0.
+- mapping channel: reads the STATE file (offline — the dashboard never
+  fetches the blog per request): coverage %, unmapped/missing counts,
+  staleness (> 30 days warn). Added to the channel union + CHANNEL_LABELS
+  + the signal-pipeline coverage test.
+- Daily cron: registerBlogMapCron('0 3 * * *', ...) — once per process,
+  unref'd, re-runs the tracker so the state stays fresh without manual
+  runs (serve.ts wires it to runBlogMap).
+- Contract gate: pre-commit fires bun:blog-map on .data/blog-map.json +
+  tracker source changes. A new blog sub-header without a registry entry
+  fails the commit until someone maps it (add a row to .data/blog-map.json).
+- To map a new sub-header: add { anchor, subId, title, mappedTo, layer,
+  status } to .data/blog-map.json (subId is the blog's id= slug). The map
+  page (/bun/map) is still hand-maintained for display; the registry is
+  the machine-checked contract.
+
+## 32. Native markdown automation — heading ids, GFM, child tracking (2026-08-24)
+
+- Bun.markdown.html VERIFIED: full GFM — tables (<table><thead>), task
+  lists (<li class="task-list-item"><input type="checkbox" checked>),
+  strikethrough (<del>), code fences with language classes.
+- BUT: Bun.markdown emits NO heading ids/anchors, and NO option enables
+  them — headerIds / gfm / headerLinks / slugify are all IGNORED (probe:
+  output identical). The blog's id="faster" anchors come from its own
+  HTML/MDX, not from Bun.markdown.
+- HTMLRewriter is NOT available in this Bun build (undefined — Cloudflare
+  surface). So the heading/anchor layer is ours: render with
+  Bun.markdown.html, then walk the output (src/lib/markdown-headings.ts).
+- markdownHeadings(): renderer-driven heading tree — levels, GitHub-style
+  fragment slugs (lowercase, dashes, strip punctuation; duplicates get
+  -1/-2 suffixes — probe: "Duplicate Heading" -> duplicate-heading-1),
+  and parentIndex (child tracking: h3 under h2 under h1). headingTree()
+  builds the nested TOC structure.
+- Folded in: content pipeline exposes renderMarkdownToc(); post pages
+  (/content/posts/<slug>) now render a Contents section with fragment
+  links. Tests: tests/lib/markdown-headings.test.ts.
+- Tracker boundary (honest): the BLOG's anchors are hand-written HTML ids
+  — extractAnchors regex stays (Bun.markdown can't produce them). For OUR
+  OWN markdown (content/posts), the ids are now renderer-derived and
+  fragment-unique via markdownHeadings — the mapping slug source for our
+  content, vs the blog's ids for the blog.
+
+## 33. Bun.markdown documented API surface — CORRECTION (2026-08-24)
+
+- SUPERSEDES parts of §22 and §32: those probed WRONG option names and the
+  WRONG function for callbacks. The documented surface is REAL and verified:
+- `Bun.markdown.html(md, { headings: { ids: true } })` emits
+  `<h1 id="faster">` — GitHub-style slugs, byte-identical to the hand-rolled
+  slugger ("$x^2$" -> "x2", duplicates get -1/-2). `headings: true` also
+  works. (My §32 probe passed `headerIds`/`headerLinks`/`slugify` — none are
+  real option names; they were silently ignored.)
+- GFM on by default: tables, strikethrough, task lists (verified).
+  Opt-ins VERIFIED: autolinks (bare URLs -> <a>), wikiLinks, underline
+  (__x__ -> <u>), latexMath ($...$), permissiveAtxHeaders (#not-a-heading),
+  noIndentedCodeBlocks (indented -> <p>), collapseWhitespace, hardSoftBreaks.
+- `Bun.markdown.render(md, callbacks, options?)` — EVERY callback verified:
+  heading({level,id}), paragraph, blockquote, code({language}), list,
+  listItem({index,ordered,depth,checked} — the task item reported
+  checked:true), table/thead/tbody/tr/th/td({align}), html, strong, emphasis,
+  link({href,title}), image({src,title}), codespan, strikethrough, text.
+  Returning null drops the element; omitting a callback passes children
+  through (that's why a bare render(md) call looked like stripped text — it
+  is the DEFAULT pass-through, not a bug).
+- `Bun.markdown.react(md, overrides?, { reactVersion: 18 })` returns real
+  React elements ($$typeof verified).
+- Folded in: markdownHeadings now uses NATIVE ids (headings:{ids:true}) —
+  same slugs, less code; markdownPlaintext uses the render-callback pattern
+  (strip formatting, keep structure); tests updated.
+
+## 34. Bun.markdown FULL API matrix (2026-08-24) — systematic, no more gaps
+
+- Every documented html() option, render() callback + meta, and react()
+  behavior was probed in one matrix (15/16 → 9/16 after probe-bug fixes;
+  the final matrix below is the authoritative record). /bun/markdown shows
+  it; this section is the same data.
+- html() VERIFIED: headings:{ids:true} (native <h1 id=…> slugs, dupes
+  -1/-2), headings:true, autolinks:true AND {url,www} (both link),
+  wikiLinks:true (emits <x-wikilink data-target="…"> — NOT <a>),
+  noHtmlSpans (escapes), noHtmlBlocks (blocks -> paragraph text),
+  permissiveAtxHeaders, noIndentedCodeBlocks. GFM tables/tasklists/
+  strikethrough ON by default.
+- html() CORRECTED (docs claim, 1.4.0 runtime NO-OP — accepted silently,
+  output unchanged): underline (__x__ stays <strong>), latexMath ($x$
+  stays literal), collapseWhitespace, hardSoftBreaks (newline stays
+  space), tagFilter (<b> not filtered). Marked corrected on the page.
+- render() callbacks ALL verified with meta: heading{level,id}, code
+  {language}, list{ordered,start,depth} (ordered start=1, nested depth
+  0/1/2), listItem{index,ordered,start,depth,checked} (task item
+  checked:true), th/td{align} (undefined w/o alignment), link{href,
+  title?}, image{src,title?}, strong/emphasis/codespan/strikethrough/
+  text (children only), paragraph/blockquote/hr/table/thead/tbody/tr/
+  html (block). null return drops element; omitted callback = pass-through.
+- react(md, overrides?, {reactVersion:18}) VERIFIED real elements
+  ($$typeof). Tag-override map exists; element shape not rendered without
+  React in-repo.
+- WRAPPER REMOVAL (the goal): markdownHeadings no longer regexes rendered
+  HTML or hand-slugs — it captures the tree through render() heading
+  callbacks + native ids (headings:{ids:true}); headingSlug is kept only
+  for callers slugging arbitrary strings (e.g. the blog registry).
+  markdownPlaintext is render-callback driven (GFM tables/tasks flatten
+  natively). renderMarkdownToc builds from the callback tree. All six
+  wrapper tests still green — same output, native implementation.
+
+## 35. Bun.markdown — release version + React target (verified, not guessed) (2026-08-24)
+
+- WHEN: Bun.markdown shipped in Bun 1.3.8 — verified from Bun's own release
+  blog (bun.com/blog/bun-v1.3.8): "Bun.markdown is a builtin CommonMark-
+  compliant Markdown parser written in Zig." The 1.4.0 what's-new label
+  ("bun-markdown v 1.3.8 v 1.4.0") means introduced 1.3.8, enhanced 1.4.0
+  (options/callbacks added). LANGUAGE: Zig (release blog) — the docs page
+  says Rust; release notes are authoritative here.
+- REACT TARGET: verified from React's own source (facebook/react
+  packages/shared/ReactSymbols.js): REACT_ELEMENT_TYPE = renameElementSymbol
+  ? Symbol.for('react.transitional.element') : REACT_LEGACY_ELEMENT_TYPE.
+  - Bun.markdown.react() DEFAULT emits Symbol.for('react.transitional.element')
+    — the React 19+ element type (renameElementSymbol true; present in
+    v19.0.0+ tags, absent in v18.3.1 — checked the tags).
+  - { reactVersion: 18 } emits Symbol.for('react.element') — the legacy
+    React 18 type. Runtime probe: $$typeof flips exactly between the two.
+  - So: React 19+ by default, React 18 via reactVersion: 18. NOT "19.1"
+    specifically (that was an unsourced guess — the accurate statement is
+    React 19.x; the transitional symbol exists in 19.0+).
+
+## 36. Poor-grounding audit — claims corrected to their real evidence level (2026-08-24)
+
+- autolinks DEFAULT: settled — OFF by default in 1.4.0 (bare URL -> no <a>
+  without { autolinks: true } or { url: true }). An earlier probe showing
+  autolink:Y for default was WRONG (it matched an existing [link](...) <a>
+  in that fixture). GFM tables/tasklists ARE on by default (re-verified).
+- Bun.markdown LANGUAGE: UNRESOLVED CONTRADICTION — bun.com/docs/runtime/
+  markdown says "written in Rust"; the 1.3.8 release blog says "written in
+  Zig". Both are official Bun sources. Recorded as-is; do not pick one
+  without the source code. (Earlier I stated Zig as settled — overreach.)
+- faster-regexp: the blog's isbot/marked numbers (200x/138x) were NOT
+  reproduced — only a hex-regex micro-bench (4.84ms/200k×20) was run.
+  Registry row corrected to note.
+- source-map-decoding / promises: marked "verified/automatic" without any
+  probe — corrected to note (runtime-wide, no in-repo measurement).
+- react() version: earlier "19.1 specifically" was unsourced — corrected to
+  React 19.x (transitional symbol exists in v19.0.0+, absent v18.3.1 —
+  checked the tags). See §35.
+- Lesson: the map/registry must distinguish VERIFIED (probed here) from
+  NOTE (documented claim, not measured here). The /bun/map page + registry
+  now carry that distinction; 3 rows downgraded verified -> note.
+
+## 37. Deeper grounding audit — the full claim surface re-checked (2026-08-24)
+
+- Beyond §36's three, the ENTIRE registry + widget pages were re-audited for
+  claims marked verified that outrun their evidence:
+  - node-zlib-uses-zlib-ng: deflateSync SPEED was measured, but the zlib-ng
+    IMPLEMENTATION claim was not — downgraded to note.
+  - 3x-faster-bun-ffi: dlopen/getpid/zlibVersion calls verified (ffi:probe),
+    the 3x speedup NOT measured — downgraded to note.
+  - html-routes-sourcemaps-disabled-in-production: serve.ts has the flag,
+    the runtime sourcemap behavior was never probed — downgraded to note.
+  - new-url-is-up-to-4-6-faster: the 1.4 ABSOLUTE numbers (52/73/2 ns) are
+    measured on this machine; the 1.3 baseline and the 4.6x/3.1x/3.2x RATIOS
+    were never reproduced (no 1.3/Node26 same-hardware benchmark) — page +
+    §29 reframed from "faster than claimed" to absolute-only.
+  - overview-page builtin row: "present in 1.4.0" now qualified (Terminal /
+    FFI / HTTP3 verified present, not for every claim).
+  - color/hashing pages re-checked: their verified rows ARE probe-backed
+    (parity tests, FORCE_COLOR probes, hash vectors) — no change.
+- Status discipline now enforced: verified = probed IN THIS REPO;
+  note = documented claim not measured here; marketing = vendor claim.
+  Registry + /bun/map + /bun/speed + /bun/overview all carry the corrected
+  levels; the blog-map contract still passes at 100% coverage (coverage
+  counts mapping presence, not verification depth).
+
+## 38. Repo docs managed by Bun.markdown (2026-08-24)
+
+- The repo's OWN docs (docs/*.md, 48 files) are now managed by the same
+  native markdown stack as content/posts — not raw heredoc appends:
+  - docs:check (tools/docs-check.ts + src/lib/docs-audit.ts) verifies every
+    doc renders through Bun.markdown.html AND has unique native heading ids
+    (markdownHeadings). Probe: AGENT-PITFALLS.md (2353 lines) renders with
+    78 headings, all slugs unique. 48/48 pass.
+  - /docs serves the docs through the content pipeline: index table + per-
+    doc page with native TOC + content-addressed ETag (sha256 of the raw
+    file) + If-None-Match 304 (verified live: conditional -> 304).
+  - docs channel (11th): reports render health + staleness from
+    .data/docs-state.json (offline — the dashboard never renders docs).
+  - pre-commit gate: docs:check fires on docs/*.md + the audit tooling — a
+    doc that stops rendering or gains a duplicate heading slug fails the
+    commit (same contract shape as bun:blog-map).
+- Why this matters: the docs ARE markdown; they were the one place NOT
+  running through the verified Bun.markdown path (no render check, no TOC,
+  no hash/ETag). Now the renderer we probed owns the docs too.
+
+## 39. Dev tooling / HTTP3 / static / conditional / compression probed (2026-08-24)
+
+- Flags VERIFIED: --cpu-prof/--cpu-prof-md (+name/dir/interval),
+  --heap-prof/--heap-prof-md, --no-orphans, --no-env-file (all present in
+  --help). bun ./README.md renders markdown to terminal (probe: "Test Doc"
+  rendered, exit 0). BUN_CPU_PROFILE documented for flag-less processes.
+- http3:true VERIFIED: TLS server with http3:true responds 200 AND
+  advertises Alt-Svc: h3=":port"; ma=86400 (probe) — browsers upgrade on
+  their own. Docs: zero-RTT resumption disabled, server.upgrade() false
+  over H3, unix: sockets skip H3. fetch(protocol:http2) VERIFIED: 200 to
+  bun.sh. The 2.7x HTTP/3 benchmark is marketing (not reproduced).
+- Static dir routes: sendfile + Content-Type + WEAK ETag (W/"a-…") +
+  Last-Modified + 304 + Range/206 all auto (probe; repo /videos/* uses it).
+- Conditional requests on dir/Bun.file bodies VERIFIED: If-None-Match ->
+  304; If-Match with a weak etag -> 412 (weak tags never strong-match,
+  RFC 7232); If-Match: "*" -> 200; If-Unmodified-Since past -> 412.
+  PROBE CATCH: a bare Response(Bun.file(...)) does NOT auto-etag — the
+  conditional machinery belongs to the DIR-ROUTE/static mechanism, not a
+  plain Response body. (The blog's example conflates the two.)
+- fetch compress VERIFIED: string form + object form { encoding: "gzip",
+  level: 6 } both work — 5000B -> 55B with Content-Encoding: gzip (§17
+  resilient-fetch uses the string form).
+- Proxy {url,headers} object shape + TLS session resumption (BoringSSL
+  32-entry LRU) + HTTPS-proxy reuse: documented, NOT probed (no proxy /
+  internal) — note on the map.
+- Terminal utils: Bun.stringWidth (ANSI-aware, "hi"=2), sliceAnsi,
+  wrapAnsi all present. ML-DSA-44 keygen verified in crypto.subtle
+  (post-quantum). Response.textStream() returns a real ReadableStream.
+- Registry rows updated: http-3 / http-2-3 / serve-files / range-and-
+  conditional / fetch-compression -> verified with probe details;
+  html-routes-sourcemaps stays note (flag present, runtime not probed).
+- TOOLING DISCIPLINE (§39 addendum): file/dir edits use Bun NATIVE paths only —
+  Bun.file().json()/text() + Bun.write for JSON/text edits, Bun.$ tagged-
+  template shell for commands, node:fs renameSync/mkdirSync for moves. NO
+  python: it crept in as an inline -e quoting workaround and has no place in
+  a Bun-native repo (scratch scripts were ephemeral; nothing shipped depends
+  on it). When inline quoting fights you, write a proper tools/*.ts script
+  (the repo pattern) instead of reaching for a foreign interpreter.
+
+## 40. Automation pass — better Bun usage (2026-08-24)
+
+- PNG crc32 is now NATIVE: hand-rolled JS crc32 replaced with bun:ffi
+
+  libz.crc32 (probe: 1.2ms vs 1295ms per 50x1MB, identical output
+
+  ef0e6054). JS impl kept as guarded fallback. visuals.ts is server/tool-
+
+  only (never in the browser bundle) so dlopen is safe. Strict-decoder
+
+  PNG round-trip re-verified (64x64 png via Bun.Image.metadata).
+
+- security-probe openssl now uses Bun.$ tagged-template shell (was
+
+  node:child_process spawnSync) — all 10 probes still pass.
+
+- verify:contracts (tools/verify-contracts.ts): runs ALL offline contract
+
+  gates in PARALLEL via Bun.spawn (deps:check, docs:check, content:check,
+
+  bun:blog-map --offline, colors:check, design:check) — 6/6 ok. Wired
+
+  into bun run check (was missing docs/content/blog-map/colors from the
+
+  full CI gate; they were pre-commit-conditional only).
+
+- Policy: child_process/execSync stays banned (audit-bun-native keep-
+
+  list); use Bun.$ / Bun.spawn / Bun.spawnSync per context.
+
+
+## 41. Deeper automation — consolidate + native conversions (2026-08-24)
+
+- Shared runBunCommand (src/lib/run-bun.ts): the Bun.which('bun') +
+
+  Bun.spawn shape was duplicated 8+ times; now one source. runBunGate
+
+  (signal-pipeline) delegates to it; verify:contracts uses it. Returns
+
+  {ok, exitCode, stdout, stderr, lastLine}.
+
+- Recursive readdirSync walks -> native: signal-pipeline trash scan and
+
+  prune-content scanDirectory now use listFiles (src/lib/glob.ts, the
+
+  repo's Bun.Glob wrapper) with onlyFiles — no manual isDirectory()
+
+  recursion, no raw Bun.Glob in new code.
+
+- toml-config JSON.parse(JSON.stringify()) deep clone -> structuredClone
+
+  (native).
+
+- Policy (from §17/§40): node:child_process banned; Bun.$ / Bun.spawn /
+
+  Bun.spawnSync per context; raw Bun.Glob -> listFiles wrapper; deep clone
+
+  -> structuredClone. New code follows all three.
+
+
+## 42. Bun.which() probed (2026-08-24) — the which-replacement, with PATH semantics
+
+- Bun.which(bin) VERIFIED: returns the path ("ls" -> /bin/ls), null for
+
+  missing. Options object = { PATH?, cwd? } (typed WhichOptions).
+
+- KEY SEMANTIC (probe): { PATH } REPLACES the env PATH entirely, it is NOT
+
+  additive — PATH: "/custom" finds mybin but makes "ls" -> null; you must
+
+  include system dirs yourself (PATH: dir + ":/bin:/usr/bin"). The docs'
+
+  "overrides the PATH env var" wording undersells the replacement.
+
+- cwd resolves RELATIVE PATH entries (PATH: "./sub" against cwd finds the
+
+  bin) but does NOT add cwd to the search by itself (cwd-only -> null).
+
+- Folded in: runBunCommand (src/lib/run-bun.ts) accepts a path option
+
+  (Bun.which with { PATH, cwd } when provided) so sandboxed gates can run
+
+  with a restricted search path. Tests: tests/lib/bun-which.test.ts
+
+  (system resolve, null, PATH-replacement, cwd-relative, runBun path).
+
+
+## 43. Bun utils probed — deepEquals, escapeHTML, randomUUIDv7, version (2026-08-24)
+
+- Full utils surface probed (docs/runtime/utils): version/revision,
+  deepEquals, escapeHTML, randomUUIDv7, nanoseconds, sleep/sleepSync, peek,
+  stringWidth/stripANSI/wrapAnsi, inspect, main, readableStreamTo*,
+  zstdCompress(Sync)/zstdDecompress(Sync), gzipSync/gunzipSync/inflateSync/
+  deflateSync, fileURLToPath/pathToFileURL, resolveSync, openInEditor — all
+  present and working in 1.4.0 (29-item probe).
+- Bun.deepEquals VERIFIED as lodash-isEqual replacement: typed arrays, Sets,
+  Maps, Dates, NaN all compare correctly; key order irrelevant; array order
+  matters. Already wrapped (bun-native deepEqual) + used in inspect-utils.
+- Bun.escapeHTML VERIFIED: escapes &<>" PLUS ' (-> &#x27;) — strictly safer
+  than the hand-rolled esc() copies (which skipped '). 5 server-side
+  hand-rolled esc() helpers consolidated to Bun.escapeHTML (signal-pipeline,
+  hq-ui, tennis-ws-dashboard, match-liquidity-dashboard, live-tracker-chart).
+  The dashboard's injected client JS escH stays hand-rolled — it runs in the
+  BROWSER where Bun.escapeHTML doesn't exist (documented, intentional).
+- randomUUIDv7 already used (csrf, hq-view idempotency, lib/ids).
+  version/revision already gated (assertBunAtLeast + Bun.semver).
+- gunzipSync/gunzipSync return Uint8Array (not string) — decode with
+  TextDecoder when text is expected (probe nuance).
+
+## 44. Utils page re-probed — the missed items + Options section (2026-08-24)
+
+- First pass (§43) missed nested/sub-utils + the Options section. Full
+  inventory now: version, revision, env, main, sleep/sleepSync, which,
+  randomUUIDv7, peek, openInEditor, deepEquals, escapeHTML, stringWidth,
+  fileURLToPath, pathToFileURL, gzipSync/gunzipSync/deflateSync/inflateSync,
+  zstdCompress(+Sync)/zstdDecompress(+Sync), inspect, inspect.custom,
+  inspect.table, nanoseconds, readableStreamTo*, resolveSync, stripANSI,
+  wrapAnsi, generateHeapSnapshot, plus serialize/deserialize +
+  estimateShallowMemoryUsageOf in bun:jsc.
+- NEW VERIFIED: Bun.wrapAnsi(input, columns, { hard, wordWrap, trim,
+  ambiguousIsNarrow }) — options work (trim:false preserves whitespace,
+  probe). Bun.inspect.table(data, [props], { colors: true }) — box-drawing
+  string, property filtering, ANSI colors as 2nd-arg options (3rd-arg form
+  NOT honored — probe). inspect.custom = Symbol(nodejs.util.inspect.custom)
+  (the NODE symbol). peek.status -> "fulfilled"/"pending". generateHeapSnapshot()
+  returns a V8-shaped OBJECT ({version:3, type:"Inspector", nodes, edges, ...}),
+  not a string/path. fileURLToPath("file:///C:/x") -> "/C:/x" on macOS (no
+  Windows drive-letter handling off-Windows). resolveSync takes 2 args
+  (moduleId, parent) — the 3rd "esm" option is NOT part of the type.
+- Bun.inspect.table is the native alternative to the repo's hand-rolled
+  box-drawing renderTable (regulatory/admin.ts) + itf-calendar/summary/
+  cross-market padEnd tables — VERIFIED available, but those builders are
+  format-specific (colored borders, custom separators, positional rows);
+  swapping changes output, so they stay as-is unless output parity is
+  wanted. Documented as the native option, not force-rewritten.
+
+## 45. Hand-rolled vs native — the honest test (2026-08-24)
+
+- §44 claimed the hand-rolled box tables "stay because swapping changes
+  output" — that was UNTESTED laziness, same class as earlier overreach.
+  Re-probed and flipped:
+- Bun.inspect.table IS ANSI-aware: colored cells (c.dim("$500")) align by
+  VISIBLE width inside the box (probe: stringWidth-aware padding). The
+  alignment concern was false.
+- regulatory/admin.ts renderTable (internal, not test-asserted, headers +
+  string[][] rows) CONVERTED to Bun.inspect.table(objects, { colors: true })
+  — rows mapped to objects from headers. 109 regulatory tests pass; CLI
+  output verified with real DB rows (box-drawing, bold headers, ANSI cells
+  aligned).
+- The padEnd plain-text tables (itf-calendar-format, summary,
+  cross-market) STAY hand-rolled for a REAL reason, now verified: they emit
+  plain aligned text (machine-readable-ish, no box), not box-drawing —
+  a different output format, not a capability gap.
+- Rule: never default to "keep hand-rolled" on an untested assumption.
+  Either convert and verify, or name the concrete format contract that
+  differs (as above). §44's "stays as-is" claim corrected here.
+
+## 46. assets:check gate — content-hashed images via Bun.markdown hooks (2026-08-24)
+
+- Extended the docs:check/content:check model to IMAGES referenced from
+  markdown. Reference extraction probe-verified: the Bun.markdown.render
+  image callback catches image-markdown refs (meta.src/title) but NOT
+  embedded HTML <img src> — a regex over the raw text covers that case
+  (both combined in src/lib/assets-audit.ts extractImageRefs).
+- assets:check (tools/assets-check.ts): for every content/posts + docs
+  markdown, resolve local image refs, verify existence, sha256 each, diff
+  against .data/assets-state.json. Exit 1 on MISSING or DRIFT. --update
+  re-baselines (same model as docs:check/content:verify).
+- Verified live: content/posts/assets/brand-card.png referenced from
+  hello-world.md -> 1 asset hashed ok; modifying the file -> FAIL DRIFT +
+  exit 1; restore + --update -> ok. Remote URLs skipped (not locally
+  hashable).
+- Wired into verify:contracts (7 gates now: deps, docs, content, assets,
+  blog-map, colors, design) + pre-commit (assets:check on content/docs +
+  audit source). Tests: tests/lib/assets-audit.test.ts + pre-commit gate.
+
+## 47. Bun.Transpiler probed (2026-08-24) — transform/scan + Import.kind
+
+- Bun.Transpiler VERIFIED: transformSync(code, loader) for ts/js/tsx (jsx
+  emits jsxDEV dev runtime), async transform(), scan() -> {exports,
+  imports}, scanImports() -> Import[]. Options: define (process.env.NODE_ENV
+  -> "production" probe), loader, target, tsconfig (jsx factory), macro,
+  exports{eliminate,replace}, trimUnusedImports, jsxOptimizationInline,
+  minifyWhitespace, inline.
+- Import.kind values from the docs: import-statement, require-call,
+  require-resolve, dynamic-import, import-rule, url-token, internal,
+  entry-point-build, entry-point-run. PROBED: import-statement /
+  require-call / require-resolve / dynamic-import all emitted by scan()
+  (require-resolve ONLY in scan().imports, NOT scanImports() — a real
+  behavioral difference the docs don't call out). import-rule/url-token are
+  BUNDLER-only (CSS) — scanImports(css, "css") throws "Only JavaScript-like
+  files"; the standalone transpiler never emits them.
+- import type { T } from "x" THROWS only on a BARE transpiler (jsx
+  default); with loader:"tsx" they are IGNORED (see §52 correction).
+- Folded in: design-deadcode scanDeadImports now sources specifiers from
+  Bun.Transpiler.scan().imports (native) and cross-checks the statement
+  regex against that set; bindings still manual (Bun doesn't expose them —
+  the file header documents this). Tests pass.
+
+## 48. Transpiler deeper — options + parse oracle (2026-08-24)
+
+- Deeper option probes (all VERIFIED): trimUnusedImports (drops unused
+  import), minifyWhitespace (const a=1;const b=2;), inline (CONSTANT
+  FOLDING: X * 2 -> 10), exports.eliminate/replace (removes + renames
+  exports), macro (accepted), tsconfig: { compilerOptions: { jsx:
+  "react-jsx" } } WORKS (emits jsx_w77yafs4) — the earlier probe used the
+  wrong shape (top-level jsx, not compilerOptions.jsx).
+- CORRECTION: the docs claim target affects import/require — PROBED NO
+  output difference for target:"node" vs "browser" in the standalone
+  transpiler (imports stay imports, requires stay requires). target matters
+  in the BUNDLER, not the transpiler.
+- scan() has NO loader arg (type: scan(code) only) and defaults to jsx —
+  it CHOKES on TS type annotations (function f(value: string) -> Parse
+  error). transformSync(code, "ts") is the TS-capable parse oracle.
+- Folded in: design-browser-safety checkFileBrowserSafety now runs a parse
+  oracle first (transformSync(code, "ts") try/catch) — an unparseable file
+  is reported as a violation (can't be safely analyzed) before the Bun-ref
+  scan. 6 tests pass incl. the new unparseable-file case.
+
+## 49. Transpiler constructor loader (2026-08-24) — the anchor's option
+
+- new Bun.Transpiler({ loader: "tsx" }) VERIFIED: the constructor loader
+  makes transformSync work WITHOUT the 2nd arg (all 4 loaders js/jsx/ts/tsx
+  verified; explicit arg overrides the ctor).
+- KEY FIX: the ctor loader ALSO fixes scan() for TS — new Bun.Transpiler({
+  loader: "ts" }).scan("function f(x: string)…") parses, while a BARE
+  scan() defaults to jsx and throws Parse error on TS annotations.
+- This replaced the §48 workaround (transformSync(code, "ts") as the parse
+  oracle) with the lighter loader'd scan() — no emit. Both the
+  browser-safety parse oracle and the deadcode specifier scanner now use
+  new Bun.Transpiler({ loader: "ts" }).scan().
+
+## 50. Transpiler full options surface — the last unprobed ones (2026-08-24)
+
+- Full TranspilerOptions from bun-types: define, loader, target, tsconfig,
+  macro, autoImportJSX, allowBunRuntime, exports{eliminate,replace},
+  treeShaking, trimUnusedImports, jsxOptimizationInline, minifyWhitespace,
+  deadCodeElimination, inline, logLevel, replMode.
+- NEW VERIFIED: treeShaking (drops unused import), replMode (wraps object
+  literal in IIFE + {__proto__:null, value:...} — exactly as documented),
+  autoImportJSX (auto-imports react/jsx-dev-runtime). deadCodeElimination:
+  NO observable difference on a dead-const sample (transpiler DCE is
+  conservative; both default and false kept the dead code — noted, not a
+  strong signal).
+- MACRO FULLY VERIFIED: a real macro file replaced graphql("query…") with
+  the macro's return and REMOVED the import. PROBE CATCH: the docs' example
+  uses a TEMPLATE LITERAL (graphql`…`) which THROWS "template literal
+  macro invocations are not supported" in 1.4.0 — the function-call form
+  works.
+- tests/lib/transpiler-probe.test.ts locks the loader/scan + new cases.
+
+## 51. Import.kind — separated + highlighted reference + CSS correction (2026-08-24)
+
+- The docs' Import.kind list (import-statement, require-call,
+  require-resolve, dynamic-import, import-rule, url-token, internal,
+  entry-point-build, entry-point-run) is now a SEPARATED + HIGHLIGHTED
+  table on /bun/transpiler (each kind its own row with example + probe
+  status), not prose.
+- PROBE CORRECTION: import-rule (@import 'foo.css') and url-token
+  (url('./foo.png')) are CSS kinds — Bun.Transpiler CANNOT scan CSS in
+  1.4.0 (every path throws: "only JavaScript-like loaders" for loader:"css"
+  scan/transform, "Expected identifier" for bare scan, "Only JavaScript-
+  like files" for scanImports(css,"css")). They are bundler-only kinds;
+  listed as corrected on the page.
+- require-resolve: only in scan().imports, dropped by scanImports (§47) —
+  highlighted as corrected.
+- The other 6 JS kinds verified via scan()/scanImports() probes (§47).
+
+## 52. Type-only imports/exports CORRECTION (2026-08-24) — the docs were right
+
+- §47 claimed "import type { T } from 'm' THROWS in scan()" — that is only
+  true for a BARE Bun.Transpiler() (jsx default loader, no TS support).
+- With the DOCUMENTED usage — new Bun.Transpiler({ loader: "tsx" }) —
+  .scan() IGNORES type-only imports AND exports exactly as the docs say:
+  probe matched the docs' example byte-for-byte (exports:["name"], imports:
+  [import-statement:react, dynamic-import:./loader]; import type {ReactNode}
+  and export type Foo both absent). §47's throw finding is corrected here.
+- Lesson: probe with the DOCUMENTED loader configuration, not the bare
+  default. The bare-transpiler throw is a loader gap, not the API behavior.
+
+## 53. Transpiler deeper — accuracy, options, imports:graph (2026-08-24)
+
+- docs' TSX example reproduces BYTE-FOR-BYTE (jsxDEV_7x81h0kn 6-arg form).
+- scan() ACCURACY verified (native parser, not regex): fake imports in
+  comments/strings/templates are NOT listed; export * from / export {x}
+  from ARE imports; import.meta is NOT; type-mixed (import {type A, B})
+  lists the module (only PURE type-only ignored); conditional + semicolon-
+  less caught.
+- Options verified: exports.replace ALONE renames (pub -> private, other
+  untouched); tsconfig as STRINGIFIED JSON works (jsx factory); logLevel
+  accepted; jsxOptimizationInline no output change on a simple sample.
+- allowBunRuntime: NO observable difference in the transpiler (matters in
+  the bundler, like target). transform() async NOT faster for small files
+  (3.2ms vs 0.8ms per 200x) — the docs' own "threadpool overhead often
+  costs more; use transformSync" guidance is measurement-verified.
+- Folded in: imports:graph (tools/imports-graph.ts) — scans all src/*.ts
+  via Bun.Transpiler.scan (loader:tsx, type-only ignored): 452 files,
+  1273 imports (1152 internal/121 external), 3526 exports, and found 39
+  REAL duplicate-specifier files (e.g. content-pipeline -> markdown-
+  headings x2). --check exits 1 on duplicates. Tests: tests/lib/imports-
+  graph.test.ts.
+
+## 54. bun pm pkg + bun pm version — native package.json editing (2026-08-24)
+
+- bun pm pkg VERIFIED: get (dot + bracket notation, e.g. scripts.build,
+  contributors[0], scripts[test:watch]), set (multiple at once, --json for
+  complex values), delete (multiple/nested), fix, get-whole.
+- bun pm version VERIFIED: patch/minor/major (+pre*/from-git/specific
+  versions per help) bumps package.json; --no-git-tag-version skips the
+  git commit+tag (probed: 0.2.0 -> 0.2.1 with the flag, no tag; restored
+  via bun pm pkg set version=0.2.0).
+- POLICY: package.json edits use bun pm pkg set / bun pm version — NOT
+  hand-written JSON.stringify/python (the session's early patch-pkg*.py
+  scratch was cleaned; no committed tool writes package.json by hand —
+  repo tools read it via deps-diff/deps-report/pre-commit).
