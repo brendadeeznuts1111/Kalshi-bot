@@ -1161,6 +1161,14 @@ export function createResearchServer(options: ServeOptions = {}) {
     // SSE streams.
     maxRequestBodySize: 16 * 1024 * 1024,
     idleTimeout: 255, // u8 max
+    // Dev mode (docs: bundler-fullstack 'Development Mode' + 'Advanced
+    // Development Configuration'): sourcemaps + in-browser error page +
+    // HMR in dev; forward browser console.log to the terminal. Explicitly
+    // OFF in production (v1.4: prod drops sourcemaps from HTML routes).
+    development:
+      Bun.env.NODE_ENV === 'production'
+        ? false
+        : { hmr: true, console: true },
     routes: {
       "/hq": hqApp,
       [ROUTES.home]: handleHome,
