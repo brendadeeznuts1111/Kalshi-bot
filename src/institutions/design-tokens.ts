@@ -13,6 +13,7 @@
 export const DESIGN_SYSTEM_VERSION = "1.1.0"; // 1.1.0: +palette (domain COLORS), +status, +scrim, +accTint
 
 import { COLORS } from "../lib/color/palette.ts";
+import { tint } from "../lib/color/kernel.ts";
 
 export const BRAND = {
   name: "Kalshi HQ",
@@ -33,11 +34,13 @@ export const TOKENS = {
     ok: "#3fb27f",
     warn: "#e0a93e",
     bad: "#e05e5e",
-    /** Badge backgrounds are 15%-alpha tints of the semantic color. */
-    okTint: "rgba(63,178,127,.15)",
-    warnTint: "rgba(224,169,62,.15)",
-    badTint: "rgba(224,94,94,.15)",
-    accTint: "rgba(77,163,255,.15)",
+    /** Badge backgrounds are 15%-alpha tints of the semantic color —
+     * derived from the base hex via Bun.color (color kernel tint()), not
+     * hand-maintained rgba literals. */
+    okTint: tint("#3fb27f", 0.15),
+    warnTint: tint("#e0a93e", 0.15),
+    badTint: tint("#e05e5e", 0.15),
+    accTint: tint("#4da3ff", 0.15),
     onAccent: "#06121f",
     /** Domain palette — mirrors the generated --color-* vars in
      * hq-app/color-vars.css (scripts/generate-color-artifacts.ts reads the
@@ -52,10 +55,10 @@ export const TOKENS = {
       deprecated: "#f0b429",
       draft: "#7aa2ff",
     },
-    /** Overlay scrims (box-shadow / modal dim). */
+    /** Overlay scrims (box-shadow / modal dim) — derived via tint(). */
     scrim: {
-      soft: "rgba(0,0,0,.35)",
-      strong: "rgba(0,0,0,.45)",
+      soft: tint("#000000", 0.35),
+      strong: tint("#000000", 0.45),
     },
   },
   space: {

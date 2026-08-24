@@ -13,6 +13,8 @@ import {
   paint,
   resolveColor,
   rgbChannels,
+  rgbaChannels,
+  tint,
   type ColorKey,
 } from "../../src/lib/color/index.ts";
 import {
@@ -68,6 +70,33 @@ describe("Color kernel", () => {
     for (const key of Object.keys(COLOR_CSS) as (keyof typeof COLOR_CSS)[]) {
       expect(COLOR_CSS[key]).toBe(cssColor(key));
     }
+  });
+
+  test("rgbaChannels returns r,g,b,a for palette keys (Bun.color {rgba})", () => {
+    expect(rgbaChannels("tennis")).toEqual({ r: 39, g: 174, b: 96, a: 1 });
+    expect(rgbaChannels("kalshi").a).toBe(1);
+  });
+
+  test("tint derives the css rgba() string from any hex", () => {
+    expect(tint("#3fb27f", 0.15)).toBe("rgba(63,178,127,.15)");
+    expect(tint("#e0a93e", 0.15)).toBe("rgba(224,169,62,.15)");
+    expect(tint("#000000", 0.35)).toBe("rgba(0,0,0,.35)");
+  });
+
+  test("tint alpha drops the leading zero (css convention)", () => {
+    expect(tint("#ffffff", 1)).toBe("rgba(255,255,255,1)");
+    expect(tint("#ffffff", 0.5)).toBe("rgba(255,255,255,.5)");
+  });
+
+  test("design TOKENS tints are derived via tint() (SSOT base hexes)", async () => {
+    const { TOKENS } = await import("../../src/institutions/design-tokens.ts");
+    const c = TOKENS.color;
+    expect(c.okTint).toBe(tint("#3fb27f", 0.15));
+    expect(c.warnTint).toBe(tint("#e0a93e", 0.15));
+    expect(c.badTint).toBe(tint("#e05e5e", 0.15));
+    expect(c.accTint).toBe(tint("#4da3ff", 0.15));
+    expect(c.scrim.soft).toBe(tint("#000000", 0.35));
+    expect(c.scrim.strong).toBe(tint("#000000", 0.45));
   });
 });
 

@@ -11,6 +11,7 @@
 import { COLORS, type ColorKey } from "./palette.ts";
 
 export type RGB = { r: number; g: number; b: number };
+export type RGBA = RGB & { a: number };
 
 export type ForegroundCss = "#000000" | "#ffffff";
 
@@ -23,13 +24,14 @@ export type ResolvedColor = {
   rgb: RGB;
 };
 
-type DeterministicFormat = "css" | "HEX" | "number" | "{rgb}" | "ansi-16m";
+type DeterministicFormat = "css" | "HEX" | "number" | "{rgb}" | "{rgba}" | "ansi-16m";
 
 const DETERMINISTIC_FORMATS = [
   "css",
   "HEX",
   "number",
   "{rgb}",
+  "{rgba}",
   "ansi-16m",
 ] as const satisfies readonly DeterministicFormat[];
 
@@ -46,6 +48,7 @@ type FormatCache = {
   HEX: Record<ColorKey, string>;
   number: Record<ColorKey, number>;
   "{rgb}": Record<ColorKey, RGB>;
+  "{rgba}": Record<ColorKey, RGBA>;
   "ansi-16m": Record<ColorKey, string>;
 };
 
@@ -57,8 +60,9 @@ type FormatCache = {
 function convertDeterministic(
   value: string,
   format: DeterministicFormat,
-): string | number | RGB | null {
+): string | number | RGB | RGBA | null {
   if (format === "{rgb}") return Bun.color(value, "{rgb}");
+  if (format === "{rgba}") return Bun.color(value, "{rgba}");
   if (format === "number") return Bun.color(value, "number");
   return Bun.color(value, format); // css | HEX | ansi-16m (string overload)
 }
@@ -121,6 +125,23 @@ export function colorNumber(key: ColorKey): number {
 
 export function rgbChannels(key: ColorKey): RGB {
   return cache["{rgb}"][key];
+}
+
+/** Channels incl. alpha (1 = opaque) — the deterministic alpha source. */
+export function rgbaChannels(key: ColorKey): RGBA {
+  return cache["{rgba}"][key];
+}
+
+/**
+ * Derive an rgba() CSS string from ANY css hex (token or palette value) at
+ * the given alpha — the design system uses this for tint/scrim tokens so the
+ * rgba literals are computed from the base hex, not hand-maintained.
+ * Alpha is formatted without a leading zero ("rgba(63,178,127,.15)").
+ */
+export function tint(hex: string, alpha: number): string {
+  const { r, g, b } = Bun.color(hex, "{rgba}") ?? { r: 0, g: 0, b: 0, a: 1 };
+  const a = String(alpha).replace(/^0\./, ".");
+  return `rgba(${r},${g},${b},${a})`;
 }
 
 export function ansi16mColor(key: ColorKey): string {

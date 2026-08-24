@@ -23,9 +23,12 @@ export {
   luminance,
   resolveColor,
   rgbChannels,
+  rgbaChannels,
+  tint,
   type ForegroundCss,
   type ResolvedColor,
   type RGB,
+  type RGBA,
 } from "./kernel.ts";
 export {
   COLOR_ROLES,
