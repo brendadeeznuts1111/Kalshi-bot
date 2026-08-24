@@ -58,3 +58,7 @@ research/reports/simplify-loop/
 #   research/weights.json, keywords.json, schemas/
 research/cache/partner-ws-capture/
 compare.svg
+
+# Stray installer downloads / runtime backups (never commit)
+*.dmg
+research/backups/
