@@ -252,6 +252,9 @@ export const SPAWN_KEEP_LIST = new Set([
   "tests/lib/fetch-pool-h2.test.ts", // Bun.spawnSync openssl cert-gen in blocking test setup
   "scripts/build-design-system.ts", // async Bun.spawn for the CLI --metafile-md report
   "tools/design-check.ts", // async Bun.spawn to build the bundle for the size gate
+  "src/research/serve.ts", // release-check action: Bun.spawn bun:release-watch --check (pipe capture)
+  "src/institutions/signal-pipeline.ts", // runBunGate def: sub-second offline dep gates (dedupe/prune/audit)
+  "src/lib/run-bun.ts", // runBunCommand: the shared Bun.which+spawn gate runner (pipe capture; §54)
 ]);
 
 /** Flag Bun.spawn / Bun.spawnSync call sites in files outside SPAWN_KEEP_LIST. */
