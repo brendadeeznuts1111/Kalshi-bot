@@ -3,6 +3,12 @@
 Agent checklist for Kalshi-bot. Prefer native Bun over npm. Deep API map:
 [`BUN_NATIVE.md`](BUN_NATIVE.md) · time dual-stamp: [`TIME.md`](TIME.md) · shell: [`BUN_SHELL.md`](BUN_SHELL.md).
 
+**Dependency exception (vendored):** `@factorywager/proton-pass` resolves to
+`file:vendor/proton-pass` **inside this repo** (snapshot of the sibling
+package, zero npm-registry deps, zero transitive deps). Keep the vendor copy
+in sync with upstream `../packages/proton-pass`; do not add npm-registry
+dependencies elsewhere.
+
 **Hubs:** [docs/llms.txt](https://bun.com/docs/llms.txt) · [API reference](https://bun.com/reference) · [Bun APIs overview](https://bun.com/docs/runtime/bun-apis)
 
 | Status | Meaning |
