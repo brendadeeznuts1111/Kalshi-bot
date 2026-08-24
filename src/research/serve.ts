@@ -1,5 +1,6 @@
 // @see https://bun.com/docs/runtime/file-io#reading-files-bun-file
 import { $ } from "bun";
+import { createLiveChannel, registerFeedCron } from "../institutions/live-channel.ts";
 import type { ResearchRun, ScoredRepo } from "./types.ts";
 import {
   isFixtureRun,
@@ -75,6 +76,58 @@ import {
 } from "../partner/execution/kalshi-live.ts";
 import { codedError, httpStatusFor, type ErrorCode } from "../institutions/error-codes.ts";
 import { designAgent } from "../agent/design-agent.ts";
+import { baseCssVars } from "../institutions/design-tokens.ts";
+import { themeManifest } from "../lib/color/theme.ts";
+import { renderWidgetPage, widgetTable as widgetTableLocal } from "../lib/widget-page.ts";
+import { ingestContentItem, parseFrontmatter, renderMarkdownBody, renderMarkdownToc } from "../lib/content-pipeline.ts";
+import { auditDoc } from "../lib/docs-audit.ts";
+import { componentCss } from "../institutions/hq-ui.ts";
+import { renderDesignPage } from "./design-page.ts";
+import { renderTrendPage } from "./trend-page.ts";
+import { isSafeVideoId, isVideoFile, renderVideoPage } from "./video-page.ts";
+import { renderNetworkingPage } from "./networking-page.ts";
+import { renderStreamsPage } from "./streams-page.ts";
+import { renderObservabilityPage } from "./observability-page.ts";
+import { renderPerformancePage } from "./performance-page.ts";
+import { renderUtilitiesPage } from "./utilities-page.ts";
+import { renderOverviewPage } from "./overview-page.ts";
+import { renderToolingPage } from "./tooling-page.ts";
+import { renderColorPage } from "./color-page.ts";
+import { renderLivePage } from "./live-page.ts";
+import { renderHashingPage } from "./hashing-page.ts";
+import { renderPruningPage } from "./pruning-page.ts";
+import { renderSecurityPage } from "./security-page.ts";
+import { renderSpeedPage } from "./speed-page.ts";
+import { renderMapPage } from "./map-page.ts";
+import { renderMarkdownPage } from "./markdown-page.ts";
+import { renderTranspilerPage } from "./transpiler-page.ts";
+import {
+  collectSignals,
+  registerBlogMapCron,
+  registerSignalCron,
+  renderDashboard,
+  runBunGate,
+  type BrandMetricsSnapshot,
+  type Signal,
+} from "../institutions/signal-pipeline.ts";
+import {
+  brandBadgeSvg,
+  brandCardPng,
+  brandCardSvg,
+  brandChartSvg,
+  brandQuoteSvg,
+  brandSwatchPng,
+  clampDim,
+  transformImage,
+  validateFontUrl,
+} from "../lib/brand-image.ts";
+import { DESIGN_SYSTEM_VERSION } from "../institutions/design-tokens.ts";
+import { TOKENS as DESIGN_TOKENS } from "../institutions/design-tokens.ts";
+import {
+  buildBudgetHealth,
+  bundleHistoryPath,
+  readBundleHistory,
+} from "../lib/design-budget.ts";
 import { fetchKalshiBookSnapshot, midFromBookSnapshot } from "../bot/kalshi-market-data.ts";
 import { asKalshiMarketTicker } from "../institutions/event-store/brands.ts";
 import { buildSportsSourceCatalogPayload } from "./sports-source-catalog.ts";
@@ -163,8 +216,89 @@ function html(body: string, status = 200): Response {
   });
 }
 
-function json(data: unknown, status = 200): Response {
-  return Response.json(data, { status });
+function json(data: unknown, status = 200, extraHeaders?: Record<string, string>): Response {
+  return Response.json(data, { status, headers: extraHeaders });
+}
+
+/**
+ * CORS for the design-system endpoints: read-only, no credentials — any
+ * origin may consume the manifest/budgets/audit + the stylesheet, so the
+ * feed aggregator's admin UI (a different origin) can render the same
+ * branding. Tighten with DESIGN_CORS_ORIGIN (e.g. https://admin.example.com).
+ */
+function designCorsHeaders(): Record<string, string> {
+  return { "access-control-allow-origin": Bun.env.DESIGN_CORS_ORIGIN ?? "*" };
+}
+
+/** Brand card PNG cache (content-addressed: version×size×format×font). */
+const brandCardCache = new Map<string, Uint8Array>();
+
+/** Brand image generation metrics (fed by the routes; read at /api/brand/metrics). */
+const brandMetrics = {
+  card: { hits: 0, misses: 0, errors: 0, totalMs: 0 },
+  swatch: { served: 0 },
+  svg: { served: 0 },
+  badge: { served: 0 },
+  quote: { served: 0 },
+  chart: { served: 0 },
+  purges: 0,
+};
+
+/** Tight limiter for the WebView raster (expensive per capture). */
+const brandCardLimiter = createRateLimiter({ windowMs: 60_000, max: 30 });
+
+/** Dep-tooling health cache (the offline gates are sub-second; still cached). */
+let depsHealthCache: { at: number; payload: unknown } | null = null;
+const DEPS_HEALTH_TTL_MS = 60_000;
+
+/** Signal-pipeline cache (30s — the release fetch is network). */
+let signalsCache: { at: number; payload: Signal[] } | null = null;
+const SIGNALS_TTL_MS = 30_000;
+
+async function buildDepsHealth(): Promise<unknown> {
+  const [dedupe, prune, audit] = await Promise.all([
+    runBunGate(["dedupe", "--check"], ROOT),
+    runBunGate(["prune", "--dry-run"], ROOT),
+    runBunGate(["audit"], ROOT),
+  ]);
+  const pkg = (await Bun.file(joinPath(ROOT, "package.json")).json().catch(() => ({}))) as {
+    dependencies?: Record<string, string>;
+  };
+  return {
+    bunVersion: Bun.version,
+    isolatedLinker: true, // bunfig [install] linker = "isolated"
+    dedupe: { ok: dedupe.ok, detail: dedupe.detail },
+    prune: { ok: prune.ok, detail: prune.detail },
+    audit: { ok: audit.ok, detail: audit.detail },
+    deps: Object.entries(pkg.dependencies ?? {}).map(([name, version]) => ({ name, version })),
+    generatedAt: new Date().toISOString(),
+  };
+}
+
+/** If-None-Match match -> 304 (ETag/conditional-request support). */
+function notModified(req: Request, etag: string): Response | null {
+  if (req.headers.get("if-none-match") === etag) {
+    return new Response(null, { status: 304 });
+  }
+  return null;
+}
+
+/** Functional Bun.Image probe: decode a real tiny PNG and check metadata. */
+async function probeBunImage(): Promise<boolean> {
+  try {
+    const img = new Bun.Image(brandSwatchPng(DESIGN_TOKENS.color.acc, 8));
+    const meta = await img.metadata();
+    return meta.format === "png" && meta.width === 8 && meta.height === 8;
+  } catch {
+    return false;
+  }
+}
+
+/** Swatch size clamp (solid swatches: 16-512). */
+function clampSwatchSize(value: string | null, fallback: number): number {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(16, Math.min(512, Math.round(n)));
 }
 
 const SPORTS_SOURCE_CATALOG_CACHE_MS = 5_000;
@@ -1153,6 +1287,11 @@ export function createResearchServer(options: ServeOptions = {}) {
   };
   hot.__kalshiMemPressureHandler = onMemoryPressure;
   process.on('memoryPressure', onMemoryPressure);
+  // Live channel: WebSocket theme + feed broadcast (probe-verified in
+  // AGENT-PITFALLS §23). Created before serveOptions so the websocket
+  // handlers can reference it; attachServer() binds the returned server.
+  const liveChannel = createLiveChannel();
+
   const serveOptions = {
     port,
     // Hardening: Bun's defaults are a 128MB request body cap and a 10s idle
@@ -1161,6 +1300,15 @@ export function createResearchServer(options: ServeOptions = {}) {
     // SSE streams.
     maxRequestBodySize: 16 * 1024 * 1024,
     idleTimeout: 255, // u8 max
+    // WebSocket live channel (verified: server.upgrade + open/message/close
+    // + ws.subscribe/server.publish broadcast). The /api/live fetch route
+    // performs the upgrade; these handlers broadcast theme/feed updates.
+    websocket: {
+      open: (ws: import("bun").ServerWebSocket) => liveChannel.websocket.open(ws),
+      message: (ws: import("bun").ServerWebSocket, msg: string | Buffer) =>
+        liveChannel.websocket.message(ws, msg),
+      close: (ws: import("bun").ServerWebSocket) => liveChannel.websocket.close(ws),
+    },
     // Dev mode (docs: bundler-fullstack 'Development Mode' + 'Advanced
     // Development Configuration'): sourcemaps + in-browser error page +
     // HMR in dev; forward browser console.log to the terminal. Explicitly
@@ -1185,9 +1333,48 @@ export function createResearchServer(options: ServeOptions = {}) {
       // (single file; a root-level /* dir route would shadow APIs).
       "/registry/*": { dir: joinPath(ROOT, "public/registry") },
       "/partner-dashboard/*": { dir: joinPath(ROOT, "public/partner-dashboard") },
+      // Videos: Bun.file dir route serves Range requests with 206 + Content-
+      // Range automatically (bun-v1.4 range-and-conditional-requests), so
+      // <video> seeking works with zero custom code. Files stream via
+      // sendfile (zero-copy). Never reference these via HTML-import relative
+      // src — the bundler inlines small assets as data: URLs.
+      "/videos/*": { dir: joinPath(ROOT, "public/videos") },
+      // Exact route (beats param): machine-readable video manifest.
+      "/videos/index.json": async () => {
+        const vidsDir = joinPath(ROOT, "public/videos");
+        const names = [...new Bun.Glob("*").scanSync({ cwd: vidsDir, onlyFiles: true })].filter(isVideoFile);
+        const videos = (
+          await Promise.all(
+            names.map(async (name) => ({ name, bytes: Bun.file(joinPath(vidsDir, name)).size })),
+          )
+        ).sort((a, b) => a.name.localeCompare(b.name));
+        return json({ count: videos.length, videos }, 200, designCorsHeaders());
+      },
+      // Parameterized route (beats wildcard for single segments): serves one
+      // video by name with traversal-safe validation; Bun.file() bodies still
+      // get Range/206 + content-type automatically.
+      "/videos/:id": async (req: Request) => {
+        const id = (req as unknown as { params: Record<string, string> }).params.id;
+        if (!isSafeVideoId(id)) {
+          return json({ error: "invalid video name" }, 404, designCorsHeaders());
+        }
+        const file = Bun.file(joinPath(ROOT, "public/videos", id));
+        if (!(await file.exists())) {
+          return json({ error: "video not found" }, 404, designCorsHeaders());
+        }
+        return new Response(file, { headers: designCorsHeaders() });
+      },
     },
-    async fetch(req: Request) {
+    async fetch(req: Request, server: import("bun").Server<undefined>) {
       const url = new URL(req.url);
+
+      // Live channel upgrade: /api/live -> WebSocket (theme + feed).
+      // server.upgrade returns true when the handshake succeeds; the
+      // websocket handlers above take over from here.
+      if (url.pathname === "/api/live") {
+        const upgraded = server.upgrade(req);
+        return upgraded ? undefined : new Response("upgrade failed", { status: 400 });
+      }
 
       // ── URLPattern routes (parameterized) — SERVE_PATTERNS in patterns.ts ──
       // @see https://bun.com/blog/bun-v1.3.4#urlpattern-api
@@ -1265,15 +1452,459 @@ export function createResearchServer(options: ServeOptions = {}) {
         });
       }
 
+      // Design-system bundle (dist/design-system.js, built by design:build)
+      // — the reusable TOKENS + color kernel artifact for external consumers.
+      // dist/ is gitignored; a 404 tells the operator to run the build.
+      if (url.pathname === "/design-system.js") {
+        const file = Bun.file(joinPath(ROOT, "dist/design-system.js"));
+        if (!(await file.exists())) {
+          return new Response("design-system.js missing — run bun run design:build", { status: 404 });
+        }
+        return new Response(file, {
+          headers: {
+            "content-type": "text/javascript; charset=utf-8",
+            "cache-control": "no-cache",
+            ...designCorsHeaders(),
+          },
+        });
+      }
+
+      // Design-system CSS: token vars + component base styles as one
+      // cacheable stylesheet (renderHq links it instead of inlining). The
+      // body is deterministic per TOKENS/hq-ui version — computed, not
+      // stored, so it can never drift from the source of truth.
+      if (url.pathname === "/design-system.css") {
+        return new Response(baseCssVars() + componentCss(), {
+          headers: {
+            "content-type": "text/css; charset=utf-8",
+            "cache-control": "no-cache",
+            ...designCorsHeaders(),
+          },
+        });
+      }
+
+      // ── Brand image endpoints (production-readied) ───────────────────────
+      // Rate-limited, param-validated (400), ETag/If-None-Match (304), CORS,
+      // metrics. SVG inputs are server-generated (no user SVG — no script
+      // injection surface). Metrics feed /api/brand/metrics.
+
+      // Brand card SVG (cheap, token-built) — ETag by design version.
+      if (url.pathname === "/brand.svg") {
+        return rateLimiter(req, () => {
+          brandMetrics.svg.served += 1;
+          const etag = '"svg-v' + DESIGN_SYSTEM_VERSION + '"';
+          const nm = notModified(req, etag);
+          if (nm) return nm;
+          return new Response(brandCardSvg(), {
+            headers: { "content-type": "image/svg+xml; charset=utf-8", "cache-control": "no-cache", etag, ...designCorsHeaders() },
+          });
+        });
+      }
+
+      // Rasterized brand card (Bun.WebView) — content-addressed cache,
+      // validated params (w/h clamped 100-4000, format whitelist, font URL),
+      // tighter rate limit (WebView capture is expensive).
+      if (url.pathname === "/brand/card.png") {
+        return brandCardLimiter(req, async () => {
+          const sp = url.searchParams;
+          const width = clampDim(sp.get("w"), 1200);
+          const height = clampDim(sp.get("h"), 630);
+          const formatRaw = sp.get("format") ?? "png";
+          if (!["png", "jpeg", "webp", "avif"].includes(formatRaw)) {
+            return json({ error: "invalid format — png|jpeg|webp|avif" }, 400, designCorsHeaders());
+          }
+          const fontUrl = validateFontUrl(sp.get("font") ?? undefined);
+          if (sp.has("font") && !fontUrl) {
+            return json({ error: "invalid font URL (https, non-localhost)" }, 400, designCorsHeaders());
+          }
+          const cacheKey = DESIGN_SYSTEM_VERSION + "-" + width + "x" + height + "-" + formatRaw + "-" + (fontUrl ?? "sys");
+          let png = brandCardCache.get(cacheKey);
+          const t0 = performance.now();
+          if (!png) {
+            brandMetrics.card.misses += 1;
+            const captured = await brandCardPng({ width, height, font: fontUrl ?? undefined });
+            if (!captured) {
+              brandMetrics.card.errors += 1;
+              return new Response("brand card unavailable (Bun.WebView required)", { status: 503, headers: designCorsHeaders() });
+            }
+            if (formatRaw !== "png") {
+              const converted = await transformImage(captured, { format: formatRaw as "jpeg" | "webp" | "avif", quality: 85 });
+              png = await converted.image.bytes();
+            } else {
+              png = captured;
+            }
+            brandCardCache.set(cacheKey, png);
+          } else {
+            brandMetrics.card.hits += 1;
+          }
+          brandMetrics.card.totalMs += performance.now() - t0;
+          const etag = '"' + cacheKey + '"';
+          const nm = notModified(req, etag);
+          if (nm) return nm;
+          return new Response(new Blob([png as unknown as BlobPart], { type: "image/" + formatRaw }), {
+            headers: { "content-type": "image/" + formatRaw, "cache-control": "public, max-age=300", etag, ...designCorsHeaders() },
+          });
+        });
+      }
+
+      // Solid token-color swatch PNGs (semantic colors as real images).
+      if (url.pathname.startsWith("/brand/swatch/") && url.pathname.endsWith(".png")) {
+        return rateLimiter(req, () => {
+          const token = url.pathname.slice("/brand/swatch/".length, -".png".length);
+          const SWATCH_TOKENS: Record<string, string> = {
+            bg: DESIGN_TOKENS.color.bg, panel: DESIGN_TOKENS.color.panel, panel2: DESIGN_TOKENS.color.panel2,
+            line: DESIGN_TOKENS.color.line, fg: DESIGN_TOKENS.color.fg, dim: DESIGN_TOKENS.color.dim,
+            acc: DESIGN_TOKENS.color.acc, ok: DESIGN_TOKENS.color.ok, warn: DESIGN_TOKENS.color.warn,
+            bad: DESIGN_TOKENS.color.bad,
+            // Unified theme roles (src/lib/color/theme.ts) — same one vocabulary.
+            primary: DESIGN_TOKENS.color.acc, secondary: DESIGN_TOKENS.color.ok,
+            accent: DESIGN_TOKENS.color.warn, success: DESIGN_TOKENS.color.ok,
+            warning: DESIGN_TOKENS.color.warn, error: DESIGN_TOKENS.color.bad,
+            info: DESIGN_TOKENS.color.acc, background: DESIGN_TOKENS.color.bg,
+            foreground: DESIGN_TOKENS.color.fg, muted: DESIGN_TOKENS.color.dim,
+            border: DESIGN_TOKENS.color.line, onAccent: DESIGN_TOKENS.color.onAccent,
+          };
+          const color = SWATCH_TOKENS[token];
+          if (!color) {
+            return json({ error: "unknown token — try acc, ok, warn, bad, bg, panel, fg, dim" }, 404, designCorsHeaders());
+          }
+          const size = clampSwatchSize(url.searchParams.get("size"), 64);
+          brandMetrics.swatch.served += 1;
+          const etag = '"swatch-' + token + '-' + size + '"';
+          const nm = notModified(req, etag);
+          if (nm) return nm;
+          const pngBlob = new Blob([brandSwatchPng(color, size) as unknown as BlobPart], { type: "image/png" });
+          return new Response(pngBlob, {
+            headers: { "content-type": "image/png", "cache-control": "public, max-age=3600", etag, ...designCorsHeaders() },
+          });
+        });
+      }
+
+      // Template cards (badge / quote / chart) — validated params, ETag.
+      if (url.pathname === "/brand/badge.svg") {
+        return rateLimiter(req, () => {
+          const tone = url.searchParams.get("tone") ?? "ok";
+          if (!["ok", "warn", "bad", "dim"].includes(tone)) {
+            return json({ error: "invalid tone — ok|warn|bad|dim" }, 400, designCorsHeaders());
+          }
+          const text = url.searchParams.get("text") ?? "";
+          brandMetrics.badge.served += 1;
+          const etag = '"badge-' + tone + '-' + text + '"';
+          const nm = notModified(req, etag);
+          if (nm) return nm;
+          return new Response(brandBadgeSvg(tone as "ok" | "warn" | "bad" | "dim", text), {
+            headers: { "content-type": "image/svg+xml; charset=utf-8", "cache-control": "public, max-age=60", etag, ...designCorsHeaders() },
+          });
+        });
+      }
+      if (url.pathname === "/brand/quote.svg") {
+        return rateLimiter(req, () => {
+          const quote = url.searchParams.get("quote") ?? "";
+          const by = url.searchParams.get("by") ?? "";
+          brandMetrics.quote.served += 1;
+          const etag = '"quote-' + quote + '-' + by + '"';
+          const nm = notModified(req, etag);
+          if (nm) return nm;
+          return new Response(brandQuoteSvg(quote, by), {
+            headers: { "content-type": "image/svg+xml; charset=utf-8", "cache-control": "public, max-age=60", etag, ...designCorsHeaders() },
+          });
+        });
+      }
+      if (url.pathname === "/brand/chart.svg") {
+        return rateLimiter(req, () => {
+          const raw = url.searchParams.get("values") ?? "";
+          if (!raw.trim()) {
+            return json({ error: "values required: comma-separated numbers (1-12)" }, 400, designCorsHeaders());
+          }
+          const values = raw.split(",").map((v) => Number(v.trim())).filter((v) => Number.isFinite(v));
+          if (!values.length || values.length > 12) {
+            return json({ error: "values required: comma-separated numbers (1-12)" }, 400, designCorsHeaders());
+          }
+          brandMetrics.chart.served += 1;
+          const etag = '"chart-' + values.join(",") + '"';
+          const nm = notModified(req, etag);
+          if (nm) return nm;
+          return new Response(brandChartSvg(values), {
+            headers: { "content-type": "image/svg+xml; charset=utf-8", "cache-control": "public, max-age=60", etag, ...designCorsHeaders() },
+          });
+        });
+      }
+
       // NOTE: /registry/* and /partner-dashboard/* static files are now
       // served by the routes dir mounts above (sendfile + ETag + Range +
       // 304, probe-verified); the hand-rolled Bun.file handlers were
       // removed. /colors.css remains here (single root-level file).
 
-      // Liveness probe: { status, pid, uptime } — used by tunnels/CI to
-      // confirm the server is alive (verified after --hot reloads).
+      // Liveness + capability probe: also verifies Bun.Image (functional
+      // decode of a real PNG) and Bun.WebView (presence) so tunnels/CI know
+      // the brand-image pipeline is genuinely working, not just up.
       if (url.pathname === "/health") {
-        return json({ status: "ok", pid: process.pid, uptime: process.uptime() });
+        const imageOk = await probeBunImage();
+        return json({
+          status: "ok",
+          pid: process.pid,
+          uptime: process.uptime(),
+          features: { image: imageOk, webview: typeof Bun.WebView === "function" },
+        });
+      }
+
+      // Repo docs served through the SAME markdown pipeline: render via
+      // Bun.markdown.html + native TOC + content-addressed ETag/304.
+      if (url.pathname === "/docs") {
+        const names = [...new Bun.Glob("*.md").scanSync({ cwd: joinPath(ROOT, "docs"), onlyFiles: true })].sort();
+        const rows = await Promise.all(
+          names.map(async (f) => {
+            const d = await auditDoc(joinPath(ROOT, "docs", f), "docs/" + f);
+            return { cells: ['<a href="/docs/' + f.replace(/\.md$/, "") + '">' + f + '</a>', String(d.headings) + ' headings', d.bytes + ' B', '<code>' + d.hash.slice(0, 12) + '</code>'] };
+          }),
+        );
+        const page = renderWidgetPage({
+          title: 'Repo Docs',
+          subtitle: 'docs/*.md rendered via Bun.markdown — native heading ids, ETag/304 (docs:check contract, §38)',
+          badges: [names.length + ' docs', 'Bun.markdown', 'ETag/304'],
+          links: ['/bun/markdown', '/content/posts'],
+          sections: [{ heading: 'All docs', html: widgetTableLocal(['Doc', 'Headings', 'Bytes', 'sha256'], rows) }],
+          footer: 'Contract: every doc renders with unique heading ids (bun run docs:check).',
+        });
+        return new Response(page, {
+          headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-cache", ...designCorsHeaders() },
+        });
+      }
+      if (url.pathname.startsWith("/docs/")) {
+        const name = url.pathname.slice("/docs/".length);
+        if (!/^[A-Za-z0-9_.-]+$/.test(name) || name.includes("..")) return json({ error: "invalid doc" }, 404, designCorsHeaders());
+        const rel = "docs/" + name + ".md";
+        const abs = joinPath(ROOT, rel);
+        if (!(await Bun.file(abs).exists())) return json({ error: "doc not found" }, 404, designCorsHeaders());
+        const audit = await auditDoc(abs, rel);
+        const nm = notModified(req, '"' + audit.hash + '"');
+        if (nm) return nm;
+        const text = await Bun.file(abs).text();
+        const body = text.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "");
+        const page = renderWidgetPage({
+          title: name,
+          subtitle: rel + ' · ' + audit.headings + ' headings · ' + audit.hash.slice(0, 12),
+          badges: ['Bun.markdown', '"' + audit.hash.slice(0, 12) + '"'],
+          links: ['/docs'],
+          sections: [
+            ...(renderMarkdownToc(body) ? [{ heading: 'Contents', html: renderMarkdownToc(body) }] : []),
+            { heading: name, html: renderMarkdownBody(body) },
+          ],
+          footer: 'Docs contract: render via Bun.markdown with unique heading ids (docs:check).',
+        });
+        return new Response(page, {
+          headers: { "content-type": "text/html; charset=utf-8", etag: '"' + audit.hash + '"', "cache-control": "public, max-age=60", ...designCorsHeaders() },
+        });
+      }
+
+      // Content pipeline: markdown posts -> frontmatter -> SHA-256 -> ETag.
+      // ETag is the quoted content hash; If-None-Match -> 304 (notModified
+      // helper, probe-verified conditional GET — the same pattern the
+      // /brand routes use).
+      if (url.pathname === "/content/posts") {
+        const files = [...new Bun.Glob("*.md").scanSync({ cwd: joinPath(ROOT, "content/posts"), onlyFiles: true })];
+        const items = await Promise.all(
+          files.sort().map((f) => ingestContentItem(joinPath(ROOT, "content/posts", f))),
+        );
+        const rows = items.map((it) => ({
+          cells: [
+            '<a href="/content/posts/' + encodeURIComponent(it.id) + '">' + it.title + '</a>',
+            '<code>' + it.id + '</code>',
+            it.pubDate.slice(0, 10),
+            '<code>' + it.etag + '</code>',
+          ],
+        }));
+        const page = renderWidgetPage({
+          title: 'Content Pipeline',
+          subtitle: 'Markdown posts -> frontmatter -> SHA-256 -> ETag/304 — zero deps, probe-verified',
+          badges: ['sha256', 'ETag/304', 'conditional GET'],
+          links: ['/bun/hashing', '/content/posts/hello-world.md'],
+          sections: [
+            { heading: 'Posts (content-addressed)', html: widgetTableLocal(['Title', 'slug', 'date', 'ETag'], rows) },
+          ],
+          footer: 'Probes: docs/AGENT-PITFALLS.md §24.',
+        });
+        return new Response(page, {
+          headers: { "content-type": "text/html; charset=utf-8", "cache-control": "public, max-age=60", ...designCorsHeaders() },
+        });
+      }
+      if (url.pathname.startsWith("/content/posts/") && url.pathname.endsWith(".md")) {
+        const name = url.pathname.slice("/content/posts/".length, -".md".length);
+        if (!/^[A-Za-z0-9-]+$/.test(name)) return json({ error: "invalid post name" }, 404, designCorsHeaders());
+        const file = Bun.file(joinPath(ROOT, "content/posts", name + ".md"));
+        if (!(await file.exists())) return json({ error: "post not found" }, 404, designCorsHeaders());
+        const item = await ingestContentItem(joinPath(ROOT, "content/posts", name + ".md"));
+        const nm = notModified(req, item.etag);
+        if (nm) return nm;
+        return new Response(file, {
+          headers: { "content-type": "text/markdown; charset=utf-8", etag: item.etag, "cache-control": "public, max-age=60", ...designCorsHeaders() },
+        });
+      }
+      if (url.pathname.startsWith("/content/posts/")) {
+        const name = url.pathname.slice("/content/posts/".length);
+        if (!/^[A-Za-z0-9-]+$/.test(name)) return json({ error: "invalid post name" }, 404, designCorsHeaders());
+        const item = await ingestContentItem(joinPath(ROOT, "content/posts", name + ".md")).catch(() => null);
+        if (!item) return json({ error: "post not found" }, 404, designCorsHeaders());
+        const nm = notModified(req, item.etag);
+        if (nm) return nm;
+        const page = renderWidgetPage({
+          title: item.title,
+          subtitle: item.id + ' · ' + item.pubDate.slice(0, 10) + ' · ' + item.etag,
+          badges: ['sha256', item.etag],
+          links: ['/content/posts', '/content/posts/' + encodeURIComponent(item.id) + '.md'],
+          // Bun.markdown.html — probe-verified real HTML (§27); raw body is
+          // our own trusted content.
+          sections: [
+            { heading: item.title, html: renderMarkdownBody(item.body) },
+            ...(renderMarkdownToc(item.body) ? [{ heading: 'Contents', html: renderMarkdownToc(item.body) }] : []),
+          ],
+          footer: 'Content-addressed: ETag = quoted SHA-256 of the raw file · rendered via Bun.markdown.html',
+        });
+        return new Response(page, {
+          headers: { "content-type": "text/html; charset=utf-8", etag: item.etag, "cache-control": "public, max-age=60", ...designCorsHeaders() },
+        });
+      }
+
+      // Bun capability widget pages (token-built, probe-verified claims).
+      const BUN_WIDGETS: Record<string, () => string> = {
+        "/bun/networking": renderNetworkingPage,
+        "/bun/streams": renderStreamsPage,
+        "/bun/observability": renderObservabilityPage,
+        "/bun/performance": renderPerformancePage,
+        "/bun/utilities": renderUtilitiesPage,
+        "/bun/overview": renderOverviewPage,
+        "/bun/tooling": renderToolingPage,
+        "/bun/color": renderColorPage,
+        "/bun/live": renderLivePage,
+        "/bun/hashing": renderHashingPage,
+        "/bun/pruning": renderPruningPage,
+        "/bun/security": renderSecurityPage,
+        "/bun/speed": renderSpeedPage,
+        "/bun/map": renderMapPage,
+        "/bun/markdown": renderMarkdownPage,
+        "/bun/transpiler": renderTranspilerPage,
+      };
+      if (url.pathname in BUN_WIDGETS) {
+        return new Response(BUN_WIDGETS[url.pathname]!(), {
+          headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-cache", ...designCorsHeaders() },
+        });
+      }
+
+      // Branded video page — lists public/videos and plays them via the
+      // /videos/* dir route (Range/206 seeking handled by Bun.serve).
+      if (url.pathname === "/videos") {
+        const vidsDir = joinPath(ROOT, "public/videos");
+        const names = [...new Bun.Glob("*").scanSync({ cwd: vidsDir, onlyFiles: true })].filter(isVideoFile);
+        return new Response(renderVideoPage(names), {
+          headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-cache", ...designCorsHeaders() },
+        });
+      }
+
+      // Brand metrics: generation time, cache hit/miss, error rate.
+      if (url.pathname === "/api/brand/metrics") {
+        return rateLimiter(req, () =>
+          json({ ...brandMetrics, cardCacheSize: brandCardCache.size }, 200, designCorsHeaders()),
+        );
+      }
+
+      // Dep-tooling health: the offline gates (dedupe --check, prune
+      // --dry-run, audit) + the isolated-linker state — cached 60s, the same
+      // data the /bun/tooling page documents.
+      if (url.pathname === "/api/deps/health") {
+        return rateLimiter(req, async () => {
+          const now = Date.now();
+          if (!depsHealthCache || now - depsHealthCache.at > DEPS_HEALTH_TTL_MS) {
+            depsHealthCache = { at: now, payload: await buildDepsHealth() };
+          }
+          return json(depsHealthCache.payload, 200, designCorsHeaders());
+        });
+      }
+
+      // ── Signal pipeline: multi-source dashboard hub ────────────────────
+      // Shared collector: design budgets + deps gates + brand metrics +
+      // release feeds (RSS+Atom) + ops. Cached 30s (the feeds are network).
+      const brandSnap: BrandMetricsSnapshot = {
+        card: { hits: brandMetrics.card.hits, misses: brandMetrics.card.misses, errors: brandMetrics.card.errors, totalMs: brandMetrics.card.totalMs },
+        swatch: { served: brandMetrics.swatch.served },
+        svg: { served: brandMetrics.svg.served },
+        badge: { served: brandMetrics.badge.served },
+        quote: { served: brandMetrics.quote.served },
+        chart: { served: brandMetrics.chart.served },
+        purges: brandMetrics.purges,
+      };
+      const signalsNow = async (): Promise<Signal[]> => {
+        const now = Date.now();
+        if (!signalsCache || now - signalsCache.at > SIGNALS_TTL_MS) {
+          signalsCache = { at: now, payload: await collectSignals(ROOT, brandSnap) };
+        }
+        return signalsCache.payload;
+      };
+      // NOTE: the shared refreshSignalsCache (used by signalsNow + the
+      // Bun.cron job) is defined in createResearchServer scope near the end —
+      // closures resolve it by reference.
+
+      // The dashboard page (token-built; issues the CSRF session for buttons).
+      if (url.pathname === "/dashboard") {
+        const session = issueCsrfSession(req);
+        const signals = await signalsNow();
+        const page = new Response(renderDashboard(signals, session.token), {
+          headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-cache", ...designCorsHeaders() },
+        });
+        page.headers.set("Set-Cookie", session.sessionCookie);
+        return page;
+      }
+
+      // The pipeline as JSON (machine-readable; CORS for other UIs).
+      if (url.pathname === "/api/signals") {
+        return rateLimiter(req, async () => json(await signalsNow(), 200, designCorsHeaders()));
+      }
+
+      // Actions: purge brand cache / run deps gates / regenerate card /
+      // refresh release check — POST, CSRF + rate limited.
+      if (url.pathname.startsWith("/api/signals/actions/") && req.method === "POST") {
+        const name = url.pathname.slice("/api/signals/actions/".length);
+        return csrfGuard(req, () =>
+          rateLimiter(req, async () => {
+            if (name === "purge-brand") {
+              brandCardCache.clear();
+              brandMetrics.purges += 1;
+              return json({ ok: true, action: name, cacheSize: brandCardCache.size }, 200, designCorsHeaders());
+            }
+            if (name === "deps-check") {
+              const [dedupe, prune] = await Promise.all([
+                runBunGate(["dedupe", "--check"], ROOT),
+                runBunGate(["prune", "--dry-run"], ROOT),
+              ]);
+              return json({ ok: dedupe.ok && prune.ok, action: name, dedupe, prune }, 200, designCorsHeaders());
+            }
+            if (name === "brand-card") {
+              const png = await brandCardPng({ width: 1200, height: 630 });
+              if (png) {
+                brandCardCache.set(DESIGN_SYSTEM_VERSION + "-1200x630-png-sys", png);
+                return json({ ok: true, action: name, bytes: png.length }, 200, designCorsHeaders());
+              }
+              return new Response("brand card capture failed (WebKit busy?)", { status: 503, headers: designCorsHeaders() });
+            }
+            if (name === "release-check") {
+              const p = Bun.spawn([Bun.which("bun") ?? "bun", "run", "bun:release-watch", "--", "--check"], { cwd: ROOT, stdout: "pipe", stderr: "pipe" });
+              const out = await new Response(p.stdout).text();
+              await p.exited;
+              return json({ ok: (p.exitCode ?? 1) === 0, action: name, out: out.trim().split("\n").slice(0, 3) }, 200, designCorsHeaders());
+            }
+            return json({ error: "unknown action — purge-brand | deps-check | brand-card | release-check" }, 404, designCorsHeaders());
+          }),
+        );
+      }
+
+      // Admin: purge the brand image caches (POST, CSRF + rate limited).
+      if (url.pathname === "/brand/purge" && req.method === "POST") {
+        return csrfGuard(req, () =>
+          rateLimiter(req, () => {
+            brandCardCache.clear();
+            brandMetrics.purges += 1;
+            return json({ purged: true, cacheSize: brandCardCache.size }, 200, designCorsHeaders());
+          }),
+        );
       }
       if (url.pathname === "/api/hq") {
         return json(await buildHqPayload());
@@ -1436,9 +2067,55 @@ export function createResearchServer(options: ServeOptions = {}) {
         return rateLimiter(req, () => handleTradingBook(req));
       }
 
-      // Design system manifest (tokens, components, brand)
+      // Design system manifest (tokens, components, brand) + LIVE health:
+      // bundle budgets and a token-audit summary ride along, so one call
+      // carries the whole design-system state (brand → tokens → components →
+      // bundles → compliance).
       if (url.pathname === "/api/design") {
-        return json(designAgent.manifest());
+        const health = await buildBudgetHealth(ROOT);
+        const surfaces = await Promise.all([
+          renderHq(),
+          ...["index.html", "styles.css", "app.js", "color-vars.css"].map((f) =>
+            Bun.file(joinPath(joinPath(ROOT, "src/research/hq-app"), f)).text().catch(() => ""),
+          ),
+        ]);
+        const audit = designAgent.audit(...surfaces);
+        return json(
+          {
+            ...designAgent.manifest(),
+            budgets: health,
+            audit: { ok: audit.ok, issues: audit.issues.length },
+          },
+          200,
+          designCorsHeaders(),
+        );
+      }
+
+      // Unified color theme as JSON: roles -> hex/css/ansi + WCAG contrast.
+      // One call carries terminal codes, web CSS vars, and the contrast math.
+      if (url.pathname === "/api/color/theme") {
+        return json(themeManifest(), 200, designCorsHeaders());
+      }
+
+      // Bundle health alone: live per-module sizes/budgets/largest-contributor
+      // from the build metafiles + the trend history (same data as design:check).
+      if (url.pathname === "/api/design/budgets") {
+        return json({ generatedAt: new Date().toISOString(), modules: await buildBudgetHealth(ROOT) }, 200, designCorsHeaders());
+      }
+
+      // Token inspector page — the live consumer of /design-system.css.
+      if (url.pathname === "/design") {
+        return new Response(renderDesignPage(), {
+          headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-cache", ...designCorsHeaders() },
+        });
+      }
+
+      // Bundle trend dashboard — renders dist/bundle-history.json visually.
+      if (url.pathname === "/design/trend") {
+        const history = await readBundleHistory(bundleHistoryPath(ROOT));
+        return new Response(renderTrendPage(history, new Date().toISOString()), {
+          headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-cache", ...designCorsHeaders() },
+        });
       }
 
       // Design agent audit of the live HQ page (self-check)
@@ -1453,7 +2130,7 @@ export function createResearchServer(options: ServeOptions = {}) {
             Bun.file(joinPath(hqAppDir, "color-vars.css")).text().catch(() => ""),
           ])),
         ];
-        return json(designAgent.audit(...surfaces));
+        return json(designAgent.audit(...surfaces), 200, designCorsHeaders());
       }
 
       // Regulatory health check (+ live Kalshi exchange probe)
@@ -1532,6 +2209,16 @@ export function createResearchServer(options: ServeOptions = {}) {
   // lacks url/method even though the runtime passes a full DOM Request. Cast
   // the config once here instead of sprinkling casts through every handler.
   const server = Bun.serve(serveOptions as Bun.Serve.Options<undefined, string>);
+  liveChannel.attachServer(server);
+  // Hourly feed-refresh cron (once per process; unref'd). Tests create many
+  // servers — the module-level guard prevents stacked jobs.
+  registerFeedCron(() => ({}));
+  // Daily blog-map tracker refresh (once per process; unref'd) — keeps the
+  // mapping channel's state fresh without manual runs (§31).
+  registerBlogMapCron(async () => {
+    const m = await import("../lib/blog-map-run.ts");
+    await m.runBlogMap({ root: ROOT });
+  });
   // Wrap stop() so the memoryPressure listener (registered above) is
   // removed when the server stops — tests create many servers, and an
   // unremoved listener would accumulate across runs (recon finding, LOW).
@@ -1540,10 +2227,40 @@ export function createResearchServer(options: ServeOptions = {}) {
     process.removeListener('memoryPressure', onMemoryPressure);
     return origStop(false);
   };
+
+  // Signal pipeline self-refresh: a Bun.cron job re-collects signals into
+  // the cache every 5 minutes (function form — event loop, no system cron;
+  // unref'd so it never blocks exit; registered once per process so tests
+  // creating many servers don't stack jobs).
+  const refreshSignalsCache = async (): Promise<void> => {
+    signalsCache = {
+      at: Date.now(),
+      payload: await collectSignals(ROOT, {
+        card: {
+          hits: brandMetrics.card.hits,
+          misses: brandMetrics.card.misses,
+          errors: brandMetrics.card.errors,
+          totalMs: brandMetrics.card.totalMs,
+        },
+        swatch: { served: brandMetrics.swatch.served },
+        svg: { served: brandMetrics.svg.served },
+        badge: { served: brandMetrics.badge.served },
+        quote: { served: brandMetrics.quote.served },
+        chart: { served: brandMetrics.chart.served },
+        purges: brandMetrics.purges,
+      }),
+    };
+  };
+  registerSignalCron(refreshSignalsCache);
+
   return server;
 }
 
 if (import.meta.main) {
   const server = createResearchServer();
   console.log(`Research browser at ${server.url}`);
+  // NOTE: startup card WARMING was removed — the boot-time WebView capture
+  // crashed the process with an escaped "WebView closed" (async WebKit error
+  // that bypasses try/catch). The /brand/card.png route warms the cache on
+  // first request instead (probe: AGENT-PITFALLS §18).
 }

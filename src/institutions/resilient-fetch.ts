@@ -51,6 +51,13 @@ export type RetryOptions = {
   fetchImpl?: FetchFn;
   /** Per-attempt timeout in ms (default 30_000). 0 disables. */
   timeoutMs?: number;
+  /**
+   * Compress the request body (fetch compress option): true | "gzip" |
+   * "deflate" | "br" | "zstd" (Bun 1.4 verified). ONLY for unsigned bodies —
+   * NEVER for signed Kalshi requests (the signature covers the exact body;
+   * compression changes it and breaks authentication).
+   */
+  compress?: boolean | "gzip" | "deflate" | "br" | "zstd";
 };
 
 /** Exported for tests — deterministic jitter. */
@@ -168,7 +175,13 @@ export async function fetchWithRetry(
         timeoutMs > 0
           ? { ...init, signal: AbortSignal.timeout(timeoutMs) }
           : init;
-      const res = await fetchImpl(input, timedInit);
+      // Folding in Bun 1.4's verified fetch compression (probe: content-encoding
+      // gzip/br + compressed body). Signed requests must NOT compress.
+      const compressInit: RequestInit =
+        options.compress != null
+          ? ({ ...timedInit, compress: options.compress } as RequestInit) // bun-types 1.4 lacks compress on RequestInit
+          : timedInit;
+      const res = await fetchImpl(input, compressInit);
       if (res.ok) {
         breaker?.recordSuccess();
         return res;
@@ -198,5 +211,26 @@ export async function fetchWithRetry(
   }
 
   throw lastErr ?? new Error("fetchWithRetry exhausted all attempts");
+}
+
+/**
+ * Stream NDJSON lines from a Response body using the verified
+ * Response.textStream() + async iteration (Bun 1.4 probe). Yields parsed
+ * objects as they arrive — backpressure-aware, no whole-body buffering.
+ * Throws on a malformed line.
+ */
+export async function* streamNdjsonLines<T = unknown>(res: Response): AsyncGenerator<T> {
+  let buffer = "";
+  for await (const chunk of res.textStream()) {
+    buffer += chunk;
+    let idx: number;
+    while ((idx = buffer.indexOf("\n")) !== -1) {
+      const line = buffer.slice(0, idx).trim();
+      buffer = buffer.slice(idx + 1);
+      if (line) yield JSON.parse(line) as T;
+    }
+  }
+  const tail = buffer.trim();
+  if (tail) yield JSON.parse(tail) as T;
 }
 // EOF

@@ -5,26 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Partner desk</title>
   <style>
-    :root { --bg:#0b0f14; --panel:#121820; --text:#e7eef7; --muted:#8b9bb0; --border:#1e2a38; --warn:#f59e0b; --err:#ef4444; --ok:#22c55e; }
+    :root { --bg:#0b0e14; --panel:#12161f; --panel2:#171c28; --text:#d7dee9; --muted:#7d8798; --border:#232a3a; --acc:#4da3ff; --warn:#e0a93e; --err:#e05e5e; --ok:#3fb27f; }
     * { box-sizing: border-box; }
     body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif; background:var(--bg); color:var(--text); line-height:1.45; }
     header { padding:1.25rem 1.5rem; border-bottom:1px solid var(--border); display:flex; flex-wrap:wrap; gap:1rem; align-items:center; justify-content:space-between; }
     h1 { font-size:1.15rem; margin:0; font-weight:650; letter-spacing:.02em; }
-    .badge { display:inline-flex; align-items:center; gap:.4rem; padding:.25rem .65rem; border-radius:999px; font-size:.8rem; font-weight:600; background:#1a2430; border:1px solid var(--border); }
-    .badge .dot { width:.55rem; height:.55rem; border-radius:50%; background:#ef4444; box-shadow:0 0 8px #ef4444; }
+    .badge { display:inline-flex; align-items:center; gap:.4rem; padding:.25rem .65rem; border-radius:999px; font-size:.8rem; font-weight:600; background:var(--panel2); border:1px solid var(--border); }
+    .badge .dot { width:.55rem; height:.55rem; border-radius:50%; background:var(--err); box-shadow:0 0 8px var(--err); }
     main { padding:1.25rem 1.5rem 3rem; max-width:1100px; margin:0 auto; }
     .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:.75rem; margin:1rem 0 1.5rem; }
-    .kpi { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:.9rem 1rem; }
+    .kpi { background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:.9rem 1rem; }
     .kpi .k { color:var(--muted); font-size:.75rem; text-transform:uppercase; letter-spacing:.06em; }
     .kpi .v { font-size:1.35rem; font-weight:700; margin-top:.2rem; }
     .kpi .s { color:var(--muted); font-size:.8rem; margin-top:.15rem; }
     section { margin:1.75rem 0; }
     h2 { font-size:.95rem; margin:0 0 .75rem; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; font-weight:600; }
-    table { width:100%; border-collapse:collapse; background:var(--panel); border:1px solid var(--border); border-radius:12px; overflow:hidden; font-size:.88rem; }
+    table { width:100%; border-collapse:collapse; background:var(--panel); border:1px solid var(--border); border-radius:8px; overflow:hidden; font-size:.88rem; }
     th, td { text-align:left; padding:.55rem .75rem; border-bottom:1px solid var(--border); vertical-align:top; }
-    th { color:var(--muted); font-weight:600; font-size:.75rem; text-transform:uppercase; letter-spacing:.05em; background:#0e141c; }
+    th { color:var(--muted); font-weight:600; font-size:.75rem; text-transform:uppercase; letter-spacing:.05em; background:var(--bg); }
     tr:last-child td { border-bottom:none; }
-    code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size:.8rem; color:#a5d6ff; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size:.8rem; color:var(--acc); }
     .sev-error td:first-child { color:var(--err); font-weight:700; }
     .sev-warn td:first-child { color:var(--warn); font-weight:700; }
     .sev-info td:first-child { color:var(--muted); }
@@ -55,7 +55,7 @@
 
     <section>
       <h2>Partners</h2>
-      <div><span class="chip" style="background:#e64dcc;color:#fff">AS ASH</span> <span class="chip" style="background:#ba4de6;color:#fff">BB BB55113</span> <span class="chip" style="background:#cce64d;color:#111">SP SPEN</span></div>
+      <div><span class="chip" style="background:#e64dcc;color:#fff">AS ASH</span> <span class="chip" style="background:#ba4de6;color:#fff">BB BB55113</span> <span class="chip" style="background:#cce64d;color:#000000">SP SPEN</span></div>
     </section>
 
     <section>

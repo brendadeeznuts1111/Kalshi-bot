@@ -59,16 +59,85 @@ export const CONDITIONAL_GATES: ReadonlyArray<{ script: string; paths: readonly 
     ],
   },
   {
+    script: "deps:check",
+    // Lockfile health on the same manifest files: dedupe --check (no
+    // duplicate versions) + prune --dry-run (no stale packages). Both
+    // offline + sub-second.
+    paths: ["package.json", "bun.lock", "bunfig.toml"],
+  },
+  {
     script: "design:check",
-    // hq-app surfaces + design system: hardcoded colors/radii outside TOKENS
-    // fail the commit (live pages must stay token-compliant).
+    // Every frontend module surface + design system: hardcoded colors/radii
+    // outside TOKENS fail the commit (live pages must stay token-compliant),
+    // and bundle-budget changes from the build pipeline are gated.
     paths: [
       "src/research/hq-app",
+      "src/research/hq-view.ts", // renderHq() SSR template is an audited surface
+      "src/research/design-page.ts", // /design token inspector (enforced surface)
       "src/institutions/design-tokens.ts",
       "src/institutions/hq-ui.ts",
       "src/agent/design-agent.ts",
       "src/lib/color", // kernel/palette changes affect the design-system bundle size
+      "src/lib/design-budget.ts", // per-module budgets feed the gate
+      "scripts/build-design-system.ts",
+      "scripts/watch-design-system.ts",
+      "public/partner-dashboard", // baked desk board (enforced surface, data allowlist)
+      "src/partner/dashboard-data.ts", // the board's generator (template -> TOKENS)
+      "playground", // dev sandbox surfaces are audited (reported only)
       "tools/design-check.ts",
+    ],
+  },
+  {
+    script: "assets:check",
+    // Content-hashed image gate (§46): images referenced from markdown must
+    // exist and match the hashed state — a missing/edited referenced asset
+    // fails the commit (extend the content/docs check model to assets).
+    paths: [
+      "content", // posts + their referenced assets
+      "docs",
+      "src/lib/assets-audit.ts",
+      "tools/assets-check.ts",
+    ],
+  },
+  {
+    script: "docs:check",
+    // The repo's own docs must render through Bun.markdown with unique
+    // native heading ids — a broken doc (render throw / duplicate slugs)
+    // fails the commit (§38). Also re-checks when the audit tooling changes.
+    paths: [
+      "docs", // *.md render contract
+      "src/lib/docs-audit.ts",
+      "src/lib/markdown-headings.ts",
+      "tools/docs-check.ts",
+    ],
+  },
+  {
+    script: "bun:blog-map",
+    // Blog → repo mapping contract: the registry (.data/blog-map.json) must
+    // stay in sync with the release-blog sub-headers. Offline run uses the
+    // cached blog HTML; a new unmapped sub-header fails the commit until a
+    // registry entry is added (§31). Tracker source changes also re-check.
+    paths: [
+      ".data/blog-map.json",
+      "src/lib/blog-map.ts",
+      "src/lib/blog-map-run.ts",
+      "tools/bun-blog-map.ts",
+    ],
+  },
+  {
+    script: "content:check",
+    // Content-plane prune gate (mirror of deps:check): manifest integrity
+    // — every .data/manifest.json reference must exist, so the prune
+    // decision matrix (delete/archive/review/keep) sees real files.
+    // Dry-run report is informational; --apply is the explicit action.
+    // (content:verify — hash drift — stays manual/watch-driven; committing
+    // a drift intentionally is legitimate, e.g. a real content edit.)
+    paths: [
+      "content", // content files (add/remove/edit)
+      ".data/manifest.json",
+      "src/lib/prune-content.ts",
+      "tools/prune-content-cli.ts",
+      "tools/content-verify.ts",
     ],
   },
   {
@@ -81,6 +150,7 @@ export const CONDITIONAL_GATES: ReadonlyArray<{ script: string; paths: readonly 
       "public/registry/color-system.json",
       "docs/COLORS.md",
       "src/research/hq-app/color-vars.css",
+      "src/research/hq-app/token-vars.css",
     ],
   },
 ] as const;

@@ -3,6 +3,7 @@ import {
   computeBackoffMs,
   createCircuitBreaker,
   fetchWithRetry,
+  streamNdjsonLines,
   type CircuitBreaker,
   type FetchFn,
 } from "../../src/institutions/resilient-fetch.ts";
@@ -223,5 +224,79 @@ describe("fetchWithRetry", () => {
     await expect(
       fetchWithRetry("https://example.com", {}, { retries: 1, backoffMs: 1, jitter: 0, timeoutMs: 100, fetchImpl }),
     ).rejects.toThrow(/timed out/);
+  });
+});
+
+describe("compress + streamNdjsonLines (folded-in Bun 1.4 patterns)", () => {
+  test("fetchWithRetry forwards compress to the fetch impl", async () => {
+    const seen: unknown[] = [];
+    const fetchImpl: FetchFn = async (input, init) => {
+      seen.push((init as { compress?: unknown }).compress);
+      return new Response("ok");
+    };
+    const res = await fetchWithRetry("https://x.test/", { method: "POST", body: "{}" }, { retries: 0, compress: "gzip", fetchImpl });
+    expect(await res.text()).toBe("ok");
+    expect(seen[0]).toBe("gzip");
+  });
+
+  test("streamNdjsonLines parses NDJSON as it streams", async () => {
+    const res = new Response(new ReadableStream({
+      start(c) {
+        c.enqueue(new TextEncoder().encode("{\"a\":1}\n{\"b\":2}\n"));
+        c.close();
+      },
+    }));
+    const out: Array<Record<string, number>> = [];
+    for await (const obj of streamNdjsonLines<Record<string, number>>(res)) out.push(obj);
+    expect(out).toEqual([{ a: 1 }, { b: 2 }]);
+  });
+
+  test("streamNdjsonLines handles a final line without trailing newline", async () => {
+    const res = new Response(new ReadableStream({
+      start(c) {
+        c.enqueue(new TextEncoder().encode("{\"x\":9}"));
+        c.close();
+      },
+    }));
+    const out: unknown[] = [];
+    for await (const obj of streamNdjsonLines(res)) out.push(obj);
+    expect(out).toEqual([{ x: 9 }]);
+  });
+});
+
+describe("compress + streamNdjsonLines (folded-in Bun 1.4 patterns)", () => {
+  test("fetchWithRetry forwards compress to the fetch impl", async () => {
+    const seen: unknown[] = [];
+    const fetchImpl: FetchFn = async (input, init) => {
+      seen.push((init as { compress?: unknown }).compress);
+      return new Response("ok");
+    };
+    const res = await fetchWithRetry("https://x.test/", { method: "POST", body: "{}" }, { retries: 0, compress: "gzip", fetchImpl });
+    expect(await res.text()).toBe("ok");
+    expect(seen[0]).toBe("gzip");
+  });
+
+  test("streamNdjsonLines parses NDJSON as it streams", async () => {
+    const res = new Response(new ReadableStream({
+      start(c) {
+        c.enqueue(new TextEncoder().encode("{\"a\":1}\n{\"b\":2}\n"));
+        c.close();
+      },
+    }));
+    const out: Array<Record<string, number>> = [];
+    for await (const obj of streamNdjsonLines<Record<string, number>>(res)) out.push(obj);
+    expect(out).toEqual([{ a: 1 }, { b: 2 }]);
+  });
+
+  test("streamNdjsonLines handles a final line without trailing newline", async () => {
+    const res = new Response(new ReadableStream({
+      start(c) {
+        c.enqueue(new TextEncoder().encode("{\"x\":9}"));
+        c.close();
+      },
+    }));
+    const out: unknown[] = [];
+    for await (const obj of streamNdjsonLines(res)) out.push(obj);
+    expect(out).toEqual([{ x: 9 }]);
   });
 });

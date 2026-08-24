@@ -259,6 +259,8 @@ export const SPAWN_KEEP_LIST = new Set([
   "src/lib/design-budget.ts", // gitSnapshot: sync Bun.spawnSync git metadata for trend history
   "tools/design-audit-deps.ts", // bun audit subprocess (pipe capture)
   "tools/profile-all.ts", // profiler runner: spawns with stdio inherit
+  "tools/deps-diff.ts", // bun pm diff subprocess (pipe capture)
+  "tools/deps-report.ts", // dep gate runner (pipe capture)
 ]);
 
 /** Flag Bun.spawn / Bun.spawnSync call sites in files outside SPAWN_KEEP_LIST. */

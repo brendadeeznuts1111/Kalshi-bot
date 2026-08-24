@@ -26,6 +26,11 @@ import {
 import { getPartnerVisual } from "./visuals.ts";
 import { parseOutMeta } from "./out-capacity.ts";
 import { sumTicketTotalsForDay } from "./ledger.ts";
+// Design tokens: the desk board uses TOKENS values so the baked HTML is
+// token-compliant (design:check audits it as an ENFORCED surface). Only the
+// per-partner identity hexes (getPartnerVisual) remain data-driven — those
+// are allowlisted by the gate via state.json.
+import { TOKENS } from "../institutions/design-tokens.ts";
 
 export type PartnerDashboardSnapshot = {
   generatedAt: string;
@@ -361,7 +366,7 @@ export function renderPartnerDashboardHtml(
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;");
 
-  const statusColor = data.ok ? "#22c55e" : "#ef4444";
+  const statusColor = data.ok ? TOKENS.color.ok : TOKENS.color.bad;
   const findings = data.risk.findings
     .map(
       (f) =>
@@ -393,7 +398,7 @@ export function renderPartnerDashboardHtml(
   const partnerChips = data.partners
     .map(
       (p) =>
-        `<span class="chip" style="background:${esc(p.hex)};color:${p.hex === "#cce64d" || p.hex.startsWith("#cc") || p.hex.startsWith("#ee") ? "#111" : "#fff"}">${esc(p.initials)} ${esc(p.code)}</span>`,
+        `<span class="chip" style="background:${esc(p.hex)};color:${p.hex === "#cce64d" || p.hex.startsWith("#cc") || p.hex.startsWith("#ee") ? TOKENS.color.palette.onLight : TOKENS.color.palette.onDark}">${esc(p.initials)} ${esc(p.code)}</span>`,
     )
     .join(" ");
 
@@ -411,26 +416,26 @@ export function renderPartnerDashboardHtml(
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Partner desk</title>
   <style>
-    :root { --bg:#0b0f14; --panel:#121820; --text:#e7eef7; --muted:#8b9bb0; --border:#1e2a38; --warn:#f59e0b; --err:#ef4444; --ok:#22c55e; }
+    :root { --bg:${TOKENS.color.bg}; --panel:${TOKENS.color.panel}; --panel2:${TOKENS.color.panel2}; --text:${TOKENS.color.fg}; --muted:${TOKENS.color.dim}; --border:${TOKENS.color.line}; --acc:${TOKENS.color.acc}; --warn:${TOKENS.color.warn}; --err:${TOKENS.color.bad}; --ok:${TOKENS.color.ok}; }
     * { box-sizing: border-box; }
     body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif; background:var(--bg); color:var(--text); line-height:1.45; }
     header { padding:1.25rem 1.5rem; border-bottom:1px solid var(--border); display:flex; flex-wrap:wrap; gap:1rem; align-items:center; justify-content:space-between; }
     h1 { font-size:1.15rem; margin:0; font-weight:650; letter-spacing:.02em; }
-    .badge { display:inline-flex; align-items:center; gap:.4rem; padding:.25rem .65rem; border-radius:999px; font-size:.8rem; font-weight:600; background:#1a2430; border:1px solid var(--border); }
+    .badge { display:inline-flex; align-items:center; gap:.4rem; padding:.25rem .65rem; border-radius:999px; font-size:.8rem; font-weight:600; background:var(--panel2); border:1px solid var(--border); }
     .badge .dot { width:.55rem; height:.55rem; border-radius:50%; background:${statusColor}; box-shadow:0 0 8px ${statusColor}; }
     main { padding:1.25rem 1.5rem 3rem; max-width:1100px; margin:0 auto; }
     .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:.75rem; margin:1rem 0 1.5rem; }
-    .kpi { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:.9rem 1rem; }
+    .kpi { background:var(--panel); border:1px solid var(--border); border-radius:${TOKENS.radius.lg}; padding:.9rem 1rem; }
     .kpi .k { color:var(--muted); font-size:.75rem; text-transform:uppercase; letter-spacing:.06em; }
     .kpi .v { font-size:1.35rem; font-weight:700; margin-top:.2rem; }
     .kpi .s { color:var(--muted); font-size:.8rem; margin-top:.15rem; }
     section { margin:1.75rem 0; }
     h2 { font-size:.95rem; margin:0 0 .75rem; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; font-weight:600; }
-    table { width:100%; border-collapse:collapse; background:var(--panel); border:1px solid var(--border); border-radius:12px; overflow:hidden; font-size:.88rem; }
+    table { width:100%; border-collapse:collapse; background:var(--panel); border:1px solid var(--border); border-radius:${TOKENS.radius.lg}; overflow:hidden; font-size:.88rem; }
     th, td { text-align:left; padding:.55rem .75rem; border-bottom:1px solid var(--border); vertical-align:top; }
-    th { color:var(--muted); font-weight:600; font-size:.75rem; text-transform:uppercase; letter-spacing:.05em; background:#0e141c; }
+    th { color:var(--muted); font-weight:600; font-size:.75rem; text-transform:uppercase; letter-spacing:.05em; background:var(--bg); }
     tr:last-child td { border-bottom:none; }
-    code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size:.8rem; color:#a5d6ff; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size:.8rem; color:var(--acc); }
     .sev-error td:first-child { color:var(--err); font-weight:700; }
     .sev-warn td:first-child { color:var(--warn); font-weight:700; }
     .sev-info td:first-child { color:var(--muted); }
