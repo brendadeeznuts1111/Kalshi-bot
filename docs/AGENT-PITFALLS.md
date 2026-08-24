@@ -1552,6 +1552,24 @@ ADOPTED:
 N/A: Datadog dd-trace/@datadog/pprof and @opentelemetry/* - no such deps in
   the repo (the guard bans npm deps where Bun-native exists; nothing here
   needs a tracing agent).
+KALSHI SIGNING-PATH BUG (probed + fixed 2026-08-24):
+- Kalshi signs the FULL request path (host excluded): /trade-api/v2/
+  portfolio/balance - NOT /portfolio/balance. kalshi-client's signedRequest
+  passed the ENDPOINT path to kalshiAccessHeaders -> every signed REST call
+  401'd 'authentication_error' even with VALID creds (probe: same key,
+  same headers; signing /portfolio/balance -> 401, signing
+  /trade-api/v2/portfolio/balance -> 200). probeKalshiAuth already used
+  new URL(endpoint).pathname (correct); kalshiWsAccessHeaders signs
+  KALSHI_WS_PATH = URL.pathname (correct). The REST client was the odd
+  one out. Fixed: signedRequest now signs new URL(baseUrl + path).pathname.
+  The hq trading section also got defense-in-depth: balance FIRST (the
+  authoritative auth probe), enrichment SEQUENTIAL (never a 4-parallel
+  signed burst - Kalshi rate limits are token-bucket, most requests cost
+  10 tokens, docs.kalshi.com/getting_started/rate_limits), TTL 15s -> 60s.
+- Diagnostic note: 'missing KALSHI_API_KEY_ID' from kalshi:live-probe is
+  BY DESIGN (keychain-only probe, empty env). And: don't hammer the live
+  key with rapid probes while diagnosing - Kalshi 401s under burst look
+  like auth failures but are the token bucket.
 PROFILE TARGETS + FLAG FORMS (probed):
 - `--cpu-prof-md` / `--heap-prof-md` do NOT take a value: they write
   CPU.<ts>.md / Heap.<ts>.md to the CWD (a `=path` form ERRORS: 'does not

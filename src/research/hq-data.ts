@@ -22,7 +22,7 @@ const CALIBRATION_DIR = joinPath(ROOT, "calibration", "artifacts");
 // ── Trading section (short-TTL cache so a dashboard refresh burst does not
 //    turn into an API burst against Kalshi) ──
 
-const TRADING_CACHE_TTL_MS = 15_000;
+const TRADING_CACHE_TTL_MS = 60_000;
 let tradingCache: { value: unknown; expiresAtMs: number } | null = null;
 
 /** Test hook — drop the cached trading snapshot. */
@@ -44,33 +44,31 @@ async function fetchTradingSection(nowMs: number) {
   const checkedAt = new Date(nowMs).toISOString();
   let value;
   try {
-    const [balance, positions, orders, fills] = await Promise.allSettled([
-      withTimeout(getBalance(), 3_000),
-      withTimeout(getPositions(), 3_000),
-      withTimeout(getOrders(), 3_000),
-      withTimeout(getFills(), 3_000),
-    ]);
-    const orderList = orders.status === "fulfilled" ? orders.value : [];
-    const positionList = positions.status === "fulfilled" ? positions.value : [];
-    const openOrders = orderList.filter(isWorkingOrder);
-    const fillList = fills.status === "fulfilled" ? fills.value : [];
-    const allFailed = [balance, positions, orders, fills].every((r) => r.status === "rejected");
-    if (allFailed) {
-      const first = balance.status === "rejected" ? balance.reason : null;
+    // Kalshi rate limits are TOKEN-BUCKET: firing 4 signed requests in
+    // parallel (balance/positions/orders/fills) exhausts the bucket and
+    // yields 401 even with VALID creds (probed 2026-08-24; docs.kalshi.com
+    // /getting_started/rate_limits - most requests cost 10 tokens).
+    // Fetch balance FIRST as the authoritative auth probe; enrich
+    // SEQUENTIALLY so we never burst signed requests.
+    const balance = await withTimeout(getBalance(), 3_000).catch((err) => err);
+    if (balance instanceof Error) {
       value = {
         state: "unavailable",
         checkedAt,
-        reason: first instanceof Error ? first.message : String(first ?? "all portfolio reads failed"),
+        reason: balance.message,
       };
       tradingCache = { value, expiresAtMs: nowMs + TRADING_CACHE_TTL_MS };
       return value;
     }
+    const positionList = await withTimeout(getPositions(), 3_000).catch(() => []);
+    const orderList = await withTimeout(getOrders(), 3_000).catch(() => []);
+    const fillList = await withTimeout(getFills(), 3_000).catch(() => []);
+    const openOrders = orderList.filter(isWorkingOrder);
     try {
       recordTradingSnapshot({
         atMs: nowMs,
-        balanceCents: balance.status === "fulfilled" ? balance.value.balanceCents : null,
-        portfolioValueCents:
-          balance.status === "fulfilled" ? balance.value.portfolioValueCents : null,
+        balanceCents: balance.balanceCents,
+        portfolioValueCents: balance.portfolioValueCents,
         positions: positionList,
         openOrderCount: openOrders.length,
         fillCount: fillList.length,
@@ -81,9 +79,8 @@ async function fetchTradingSection(nowMs: number) {
     value = {
       state: "ok",
       checkedAt,
-      balanceCents: balance.status === "fulfilled" ? balance.value.balanceCents : null,
-      portfolioValueCents:
-        balance.status === "fulfilled" ? balance.value.portfolioValueCents : null,
+      balanceCents: balance.balanceCents,
+      portfolioValueCents: balance.portfolioValueCents,
       positions: positionList,
       openOrders,
       orderCount: orderList.length,

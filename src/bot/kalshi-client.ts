@@ -252,7 +252,12 @@ export function createKalshiClient(options: KalshiClientOptions = {}): KalshiCli
   ): Promise<unknown> {
     const headers: Record<string, string> = {
       Accept: "application/json",
-      ...kalshiAccessHeaders(await credentials(), method, path),
+      // Kalshi signs the FULL request path (host excluded) - e.g.
+      // /trade-api/v2/portfolio/balance, NOT /portfolio/balance. Signing the
+      // endpoint path alone yields 401 authentication_error even with valid
+      // creds (probed 2026-08-24). kalshiWsAccessHeaders already signs the
+      // full pathname; this REST path did not.
+      ...kalshiAccessHeaders(await credentials(), method, new URL(baseUrl + path).pathname),
     };
     if (body) headers["Content-Type"] = "application/json";
     // Create retries reuse the same client_order_id (idempotency key) and only
