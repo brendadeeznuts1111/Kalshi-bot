@@ -245,6 +245,7 @@
     "plugins:probe": "bun tools/plugins-probe.ts",
     "bun:blog-map": "bun tools/bun-blog-map.ts",
     "docs:check": "bun tools/docs-check.ts",
+    "docs:api": "bun tools/docs-api-validate.ts",
     "verify:contracts": "bun tools/verify-contracts.ts",
     "assets:check": "bun tools/assets-check.ts",
     "imports:graph": "bun tools/imports-graph.ts"

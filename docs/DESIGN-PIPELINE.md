@@ -210,7 +210,7 @@ Status legend: ✅ done · 🟡 planned · ⛔ out of scope (documented).
 | Deps audit | `bun run design:audit-deps` | zero-npm-dep contract for the frontend bundles (fails) + `bun audit` passthrough |
 | Dead imports | `bun run design:dead-imports` | heuristic scan for imported bindings never used in the module body (warning; `-- --fail` to gate) |
 | Browser safety | `bun run design:browser-safety` | lints the graph for unguarded `Bun.` references (fails in design:check; `typeof Bun` guards + strings/comments exempt) |
-| Image meta | `bun run images:meta <path...> [--to=...] [--resize=WxH]` | Bun.image metadata table (token-colored) + re-encode/resize via `Bun.file().image()` |
+| Image meta | `bun run images:meta <path...> [--to=...] [--resize=WxH]` | Bun.Image metadata table (token-colored) + re-encode/resize via `Bun.file().image()` |
 
 The zero-npm-dep contract and the dead-import warning are ALSO wired into
 design:check itself, so they run at every merge gate without extra commands.

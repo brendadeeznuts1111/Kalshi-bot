@@ -41,7 +41,7 @@ Verified platform facts that motivated this doc:
 | `Bun.serve` | `src/research/serve.ts` (:3456 report browser), regulatory example | 🟢 Benefit / low risk |
 | `Bun.cron` | `cron-main.ts`, tennis-live-canary (→ `research/cache/tennis-canary/latest.json`) | 🟢 Watch registration |
 | `Bun.WebView` / `Bun.Image` | tennis-ground dashboard | 🟢 Watch |
-| `Bun.markdown` / `Bun.color` / `Bun.Glob` / `Bun.zstd` / `Bun.hash` / `Bun.nanoseconds` | settlement `analyze-table.ts` HTML, color artifacts, canary fingerprints | 🟢 Benefit |
+| `Bun.markdown` / `Bun.color` / `Bun.Glob` / `Bun.zstdCompressSync` / `Bun.zstdDecompressSync` / `Bun.hash` / `Bun.nanoseconds` | settlement `analyze-table.ts` HTML, color artifacts, canary fingerprints | 🟢 Benefit |
 | `Bun.password` | **0 matches** | ✅ No impact |
 | `Bun.XML` | **0 matches** (only HTML parsing is `HTMLRewriter` in `extract-social-meta.ts`) | ✅ No impact |
 | `process.permission` / `http3` | **0 matches** | ✅ No impact |

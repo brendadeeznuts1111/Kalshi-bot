@@ -16,6 +16,7 @@ const ROOT = join(import.meta.dir, '..');
 const gates = [
   ['deps:check'],
   ['docs:check'],
+  ['docs:api'],
   ['content:check'],
   ['assets:check'],
   ['bun:blog-map', '--', '--offline'],

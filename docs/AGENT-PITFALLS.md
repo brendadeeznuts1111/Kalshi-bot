@@ -1676,7 +1676,7 @@ A shared word is a coincidence; a concept needs its own API/page. This repo's
 glossary (src/institutions/glossary.ts) is Kalshi-domain ONLY - do not add
 Bun-docs words like metadata to it.
 
-## 12. Bun.image 1.4.0 — file-based decode/meta, NO rasterizer (2026-08-24)
+## 12. Bun.Image 1.4.0 — file-based decode/meta, NO rasterizer (2026-08-24)
 
 VERIFIED (probe):
 - `Bun.file(path).image()` decodes an image; `.metadata()` returns
@@ -1703,7 +1703,7 @@ decode + the chain is sharp-style — `new Bun.Image(bytes)` decodes bytes
 directly (no file path needed), `.resize(w,h,{fit:'inside'|'fill'})`,
 `.rotate()`, `.webp({quality})`/`.jpeg({quality})`/`.png()`/`.avif()`
 chain, and a transformed Image IS a Response body (`new Response(img)`).
-The earlier 'no in-memory decode' claim was wrong — I tested Bun.image()
+The earlier 'no in-memory decode' claim was wrong — I tested Bun.Image()
 and Bun.Image.metadata() but never the constructor. SVG rasterization is
 still unavailable in Bun.Image, but Bun.WebView screenshot does it:
 `new Bun.WebView({ url: data:… }).screenshot({ format:'png',
@@ -3050,3 +3050,34 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
     compile-time branded values in the probe are the real lint); --fix
     auto-rewrite (dangerous, no surface). Adopted: example field per known
     namespace, rendered as a third column on /bun/plugins.
+
+## 62. docs:api — validate every Bun.<token> in docs against the runtime (2026-08-24)
+
+- New gate `bun run docs:api` (tools/docs-api-validate.ts, 9th verify:contracts
+  gate): scans docs/*.md + src/research/*-page.ts for `Bun.<token>` mentions,
+  probes each with `typeof Bun[t]` IN-PROCESS (no spawn loop), caches results
+  in .data/api-cache.json keyed by Bun.version, and FAILS only on UNALLOWED
+  missing tokens. 91 tokens scanned on 1.4.0.
+- IMMEDIATE VALUE — three genuine doc bugs caught and fixed on first run:
+  - pruning-page claimed `Bun.watch` re-verify — NO such API (typeof
+    undefined); content:watch is `bun --watch tools/content-verify.ts`
+    (CLI flag). Page fixed to say exactly that.
+  - BUN_UPGRADE_CANARY listed `Bun.zstd` — undefined; the real APIs are
+    Bun.zstdCompressSync / Bun.zstdDecompressSync. Fixed.
+  - AGENT-PITFALLS §12 heading said `Bun.image` — the API is Bun.Image
+    (capital class); lowercase is undefined. Heading fixed.
+- Classification (probe-classified, in-tool allowlists):
+  - INTENTIONAL — docs document a NON-existent API on purpose (Bun.ffi,
+    Bun.html invented claim, Bun.SourceMap, Bun.term, Bun.rename, Bun.S,
+    Bun.X).
+  - TYPE_ONLY — bun-types type namespaces, not runtime values (Bun.Serve
+    .Options, Bun.WebSocketOptions, Bun.File type).
+  - PROSE — section titles / fragments (Bun.Networking blog name).
+  - WILDCARD — `Bun.readableStreamTo*()` family notation: verified the
+    family has 7 real members instead of failing the prefix.
+- Probe discipline notes: typeof-in-one-process keeps the gate ~50ms (no
+  per-token spawn); the version-keyed cache makes re-runs fully offline;
+  UPPER_CASE tokens like Bun.S / Bun.X are real prose placeholders, NOT
+  namespaces (don't conflate with the plugin-namespace charset §61).
+- Tests: tests/lib/docs-api.test.ts locks the load-bearing runtime facts
+  (Bun.Image vs image, zstd family, no Bun.watch, ffi/html intentional).
