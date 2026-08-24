@@ -8,7 +8,7 @@ shell = "bun"
 
 # Exit when the parent process dies, and on exit SIGKILL every descendant.
 # Linux: prctl(PR_SET_PDEATHSIG, SIGKILL) / macOS: kqueue parent watcher.
-# Low overhead; useful for CI runners and supervisors. Bun >= 1.3.14.
+# Low overhead; useful for CI runners and supervisors. Bun >= 1.4.0 (repo baseline; noOrphans landed in 1.3.14).
 # @see https://bun.com/docs/runtime/bunfig#run-no-orphans
 noOrphans = true
 

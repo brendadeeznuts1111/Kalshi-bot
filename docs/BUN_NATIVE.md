@@ -105,7 +105,7 @@ Native helpers on the `Bun` global. Prefer these over npm packages (`which`, `st
 
 | API | Behavior | Repo |
 | --- | -------- | ---- |
-| `Bun.version` | CLI version string (`"1.3.x"`) | doctor / ground banners when needed |
+| `Bun.version` | CLI version string (`"1.4.x"`) | doctor / ground banners when needed |
 | `Bun.revision` | Compiled Bun git SHA | diagnostics only |
 | `Bun.env` | Alias of `process.env` (auto `.env` load — see [Environment variables](#environment-variables)) | everywhere |
 | `Bun.main` | Absolute path of the entry script for this process | prefer with `import.meta.path === Bun.main` **or** the shorter `import.meta.main` (this repo uses **`import.meta.main`** on CLIs) |

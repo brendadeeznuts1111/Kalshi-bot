@@ -6,7 +6,7 @@ Standalone Bun project for discovering and ranking public [Kalshi](https://kalsh
 
 ## Prerequisites
 
-- [Bun](https://bun.sh) >= 1.3.14 ([`URLPattern`](https://bun.com/blog/bun-v1.3.4#urlpattern-api), [`Bun.cron`](https://bun.com/docs/runtime/cron), [SHA3-256](https://bun.com/blog/bun-v1.3.13#sha3-support-in-webcrypto-and-node-crypto))
+- [Bun](https://bun.sh) >= 1.4.0 ([`URLPattern`](https://bun.com/blog/bun-v1.3.4#urlpattern-api), [`Bun.cron`](https://bun.com/docs/runtime/cron), [SHA3-256](https://bun.com/blog/bun-v1.3.13#sha3-support-in-webcrypto-and-node-crypto))
 - GitHub CLI on PATH (`gh auth login`)
 - `bun install --frozen-lockfile`
 - Optional secrets via [Proton Pass CLI](https://protonpass.github.io/pass-cli/) — see [`docs/PROTONPASS.md`](docs/PROTONPASS.md)
