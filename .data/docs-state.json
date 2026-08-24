@@ -1,0 +1,343 @@
+{
+  "lastChecked": "2026-08-24T22:49:12.311Z",
+  "docs": [
+    {
+      "path": "docs/AGENT-PITFALLS.md",
+      "hash": "55142059bb9ea9ebe887958513363066fab9fda6cd2f268d6eab3fc12439c364",
+      "headings": 95,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/AGENT.md",
+      "hash": "428da932035a0c2ae7add05fff39adee6049a8edd2a27ca8bbd9051ef8edf20d",
+      "headings": 11,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/AUDIT_ADAPTER.md",
+      "hash": "f756946a33ca04a796ef402249a9792dffbeee2a342caa0b46bdf60c84f9aef3",
+      "headings": 8,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/AUTHORIZED_EXECUTION_REMAINING_WORK.md",
+      "hash": "c34a3c35766d3ae24ab386d99e4bb72d9a47d7333d287a384032f25817cc12e1",
+      "headings": 19,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/AUTHORIZED_EXECUTION.md",
+      "hash": "7266e0c089087556548199e104fe9ae367f92d4cc00873934ec039b501d74455",
+      "headings": 14,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/BUN_NATIVE.md",
+      "hash": "300d376f725c552974e9476c16efffc9f7cda89414dfc8a4ef1dfdfd6a583cc4",
+      "headings": 65,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/BUN_SHELL.md",
+      "hash": "f3d6e0eac64e645c5ad656c428631ba77378ded9e1545a61dacbae602622b700",
+      "headings": 17,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/BUN_TECH_STACK.md",
+      "hash": "f1d4da3be13bc60d030be3828fa6da4fa99605ca1fe3290ed60b83aeb55a357e",
+      "headings": 15,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/BUN_UPGRADE_CANARY.md",
+      "hash": "b80a5a8e9f71bf5395a769730a8d0703047bc77a4eec42d28d265321784802a9",
+      "headings": 16,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/bun-v1.3.14-catalog.md",
+      "hash": "043aa2210612d469551c09a89a4ecf19c0319f1175ef4009e19ea23c201ab566",
+      "headings": 3,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/CHEBNET_GRAPH_DOMINANCE.md",
+      "hash": "ff51001b91eb668ce6f30e26c4c2c80dd6b61f6bbed0f2cf8e346b2f890584bd",
+      "headings": 8,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/COLORS.md",
+      "hash": "03c52f04c5575c61fca1f0ca09212fff824f55bef944735b60cdce9971b73f8d",
+      "headings": 5,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/CONNECTION-MASTERY.md",
+      "hash": "00199c6adfb8fc271a55fc5e64d6c135ca23a8b8ce605140c8d6200028cdd150",
+      "headings": 6,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/CRON.md",
+      "hash": "262aea959461f04874b227b4a87589c3c3e1a78d5e766a5a1936145ae3dd8192",
+      "headings": 11,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/DATA_MODEL.md",
+      "hash": "d6a1f7e8de89de7d2f93d33f4321b5ec8624a6b7b1506e78bfa1ca24d502d10d",
+      "headings": 12,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/DESIGN-PIPELINE.md",
+      "hash": "c0aca46923efdf5a9c7cbc84cbe77cc6988aa7db960a77920c1c1ce0525983ac",
+      "headings": 18,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/DESIGN-SYSTEM.md",
+      "hash": "3774fe6b3e8bea2581873a774025050babb09e1144a95e078e2049f0b8330705",
+      "headings": 6,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/EDGE-PATTERNS.md",
+      "hash": "83e6348525e7358e249e09be607e998713e9da0c80476b0cfc4412945d86673b",
+      "headings": 9,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/ENV_NAMING.md",
+      "hash": "732ddd638d65c2a89d3a972414651de5348c25b713a8fbfffb7cb6cdad61545d",
+      "headings": 9,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/EXECUTION_DEMO_PROOF_SCHEMA.md",
+      "hash": "53c1235ca7744c9ac860b2ea04b430fd575bf52f8ed652ec14996231cac12499",
+      "headings": 4,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/EXPERIMENT_FACTORIAL.md",
+      "hash": "d1d1457bddb832a6ad437e468ecf35b470782e121f736fc872cb16276a798faa",
+      "headings": 11,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/FACTOR_STACK.md",
+      "hash": "f0315c5f948258321f398da607873b8e2dbc60640722c34c29f380d58e00db55",
+      "headings": 7,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/FANTASY-ULTRA.md",
+      "hash": "27e9fb9c1091ee9116046e4070ed35d5937eff1e59e4c93b893b00635c991177",
+      "headings": 26,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/GLOSSARY.md",
+      "hash": "2b452aeffcb81e1818364b87e4bca42102079a759bc2e80527d2c5cc94b16417",
+      "headings": 10,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/HQ-FOUNDATION.md",
+      "hash": "5ea352cc736844330a2334c3efe63695a752c5d31a6b70fd0b8cd85c90b60102",
+      "headings": 10,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/INVENTORY-MAP-BACKLOG.md",
+      "hash": "7d91d0f8301adf45157248060f77197cfc3ddb44b06a42cb9f8420db79162c73",
+      "headings": 17,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/INVENTORY.md",
+      "hash": "40666483e8e2eb0fa06063d1ce27eca30d8d85edef2848cbfc97f99790274d33",
+      "headings": 24,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/KIMI_DISCOVERY_MAP.md",
+      "hash": "a23040f69a0bfc6ce24ae257dc38b379f6f814c1c2404c4e809bfaca30719fb2",
+      "headings": 13,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/LIQUIDITY-PIPELINE.md",
+      "hash": "0988359fad7672a9cd7db142a1dfe6471c0975af8361ff67f7250ab457e65acc",
+      "headings": 12,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/MASSEY-RATINGS-PIPELINE.md",
+      "hash": "033d1420d3704610b08bebfdf2cc6edf9b5633e61a7c405d01537c69583e3d29",
+      "headings": 9,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/MISS_TAXONOMY.md",
+      "hash": "ddcbc183d2a75c2d450fae8c1addfd0d77dbd07db691d2f8850101b35a62e091",
+      "headings": 9,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/OFFICIAL_URLS.md",
+      "hash": "0923b6466b379a6d07b45b66d9b50b43a2424403624fc6091aba8360395895d8",
+      "headings": 8,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/PARTNER-DOMAIN.md",
+      "hash": "3203041b18daba39999ebf09d7fb372de2decd8f54ab379b37837ef9b13e45d7",
+      "headings": 1,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/PARTNER-EXECUTION-EXPANSION.md",
+      "hash": "10e73010a49a4a28c0f092acdf1c7eaa3612a9a463d4edfdeffdec95c2045b88",
+      "headings": 8,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/PLAN.md",
+      "hash": "667eacc4baead085288044f1caccc816d1dbd6ec8b3c69ac12054076cc3a0379",
+      "headings": 19,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/PLAYER_PROFILES_META.md",
+      "hash": "b7e62df93110ca2338f91b08c54533b2ef96557b8ca05f0f0797faaf8dc8278f",
+      "headings": 7,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/PLIVE-EZLIVE-SPORTS-RULES.md",
+      "hash": "bfc90feb4f324fe97b0b7c8d0d19bd233c3f59c7f2185dfc49f1fdb124f27489",
+      "headings": 63,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/PROTONPASS-INTEGRATION-SPEC.md",
+      "hash": "1025691fca682d236775bde9f8da2370637ce6dff5518a230313c09e6d8dafaf",
+      "headings": 31,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/PROTONPASS.md",
+      "hash": "f2dc926341d1be1d3763d383fab3642c6ffc602299356c6bdb475c17929d5a1f",
+      "headings": 31,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/regulatory-agents.md",
+      "hash": "a023784b56701dcc9611761a63a682b1da0e07060a204e7375f3b489dcdcde3e",
+      "headings": 21,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/ROADMAP.md",
+      "hash": "4727d118b86eed6313547b6e73703453ef1560922084e30d89d584a63c7f32a5",
+      "headings": 7,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/SEAT-OPS.md",
+      "hash": "09c2e0c04965eea8645c4597a35c96a60fb02d2d59237707f2e30fa341808a38",
+      "headings": 27,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/SEMANTIC_LAYER.md",
+      "hash": "acd3fc2417b1c9e09d3aef5ee7a2347dec876a4d6485d9b51d3445c6cfbc8e22",
+      "headings": 19,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/SPORTS_SOURCE_REGISTRY.md",
+      "hash": "3aa0d29ee75c5788fcf42beef2594f431ffb347a945842ee33884e24d7796cc6",
+      "headings": 8,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/TENNIS_PROGRAM_ARCHETYPES.md",
+      "hash": "c68a443865bf5d0357118a689c57adbe12486891082879461d15be4f57d7f41c",
+      "headings": 11,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/TIME.md",
+      "hash": "339895f32e5448882f4fe1ce789ef7021e6081e822504d3075733aa514cac824",
+      "headings": 11,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/TOKENS.md",
+      "hash": "8224d42156b8bf4aef3434b54df13762d737cfb1c59fcc3c3dfa6ce2311c5a20",
+      "headings": 1,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/VOLLEYBALL-TIERS.md",
+      "hash": "3456ba12cf0c55b241ab25b8a58905d2ef846bc433f84da373f6b156eec513b4",
+      "headings": 5,
+      "renderOk": true,
+      "duplicateSlugs": []
+    }
+  ],
+  "total": 48,
+  "failing": 0
+}

@@ -1,0 +1,446 @@
+{
+  "version": "1.1.0",
+  "blogUrl": "https://bun.sh/blog/bun-v1.4",
+  "entries": [
+    {
+      "anchor": "faster",
+      "subId": "new-url-is-up-to-4-6-faster",
+      "title": "new URL() is up to 4.6× faster v 1.4.0 #",
+      "mappedTo": "absolute 1.4 measurement 52ns/op on this machine — the 1.3 baseline + 4.6x ratio NOT independently reproduced",
+      "layer": "pipeline · channels",
+      "status": "verified"
+    },
+    {
+      "anchor": "faster",
+      "subId": "faster-regexp",
+      "title": "Faster RegExp v 1.4.0 #",
+      "mappedTo": "design scanner hex regex micro-bench (4.84ms/200k x20) - the blog isbot/marked numbers NOT reproduced",
+      "layer": "pipeline",
+      "status": "note"
+    },
+    {
+      "anchor": "faster",
+      "subId": "node-zlib-uses-zlib-ng",
+      "title": "node:zlib uses zlib-ng v 1.3.13 v 1.4.0 #",
+      "mappedTo": "Bun.deflateSync speed measured (0.21ms vs node:zlib 0.25ms per 1MB) — the zlib-ng IMPLEMENTATION claim NOT verified",
+      "layer": "pipeline · brand",
+      "status": "note"
+    },
+    {
+      "anchor": "faster",
+      "subId": "buffer-from-str-hex-is-8-faster-and-base64url-46-faster",
+      "title": "Buffer.from(str, \"hex\") is 8× faster and \"base64url\" 46× faster v 1.4.0 #",
+      "mappedTo": "kernel manual hex — no Buffer consumer",
+      "layer": "branding",
+      "status": "note"
+    },
+    {
+      "anchor": "faster",
+      "subId": "source-map-decoding-is-3-1-faster",
+      "title": "Source map decoding is 3.1× faster v 1.4.0 #",
+      "mappedTo": "NOT probed - runtime-wide sourcemap decode; no measured evidence in-repo",
+      "layer": "ops",
+      "status": "note"
+    },
+    {
+      "anchor": "faster",
+      "subId": "promises-are-1-5-2-4-faster",
+      "title": "Promises are 1.5–2.4× faster v 1.4.0 #",
+      "mappedTo": "NOT probed - runtime-wide; no measured evidence in-repo",
+      "layer": "all",
+      "status": "note"
+    },
+    {
+      "anchor": "bun-build",
+      "subId": "built-in-react-compiler",
+      "title": "Built-in React Compiler v 1.4.0 #",
+      "mappedTo": "NOT mapped — no React/TSX (option verified §29)",
+      "layer": "—",
+      "status": "note"
+    },
+    {
+      "anchor": "bun-build",
+      "subId": "barrel-import-optimization",
+      "title": "Barrel import optimization v 1.3.10 v 1.4.0 #",
+      "mappedTo": "NOT mapped — default tree-shaker wins (§29)",
+      "layer": "—",
+      "status": "note"
+    },
+    {
+      "anchor": "bun-build",
+      "subId": "compile-time-feature-flags-with-bun-bundle",
+      "title": "Compile-time feature flags with bun:bundle v 1.3.5 #",
+      "mappedTo": "--define verified (bun:bundle not runtime)",
+      "layer": "pipeline",
+      "status": "verified"
+    },
+    {
+      "anchor": "bun-build",
+      "subId": "in-memory-files-in-bun-build",
+      "title": "In-memory files in Bun.build() v 1.3.6 #",
+      "mappedTo": "plugin virtual modules verified",
+      "layer": "pipeline",
+      "status": "verified"
+    },
+    {
+      "anchor": "bun-build",
+      "subId": "single-file-html-with-compile-target-browser",
+      "title": "Single-file HTML with --compile --target=browser v 1.3.10 #",
+      "mappedTo": "NOT mapped — serve.ts serves HTML live",
+      "layer": "—",
+      "status": "note"
+    },
+    {
+      "anchor": "bun-build",
+      "subId": "metafile-true",
+      "title": "metafile: true v 1.3.6 v 1.4.0 #",
+      "mappedTo": "dist/*.meta.json -> design budgets",
+      "layer": "pipeline · channels(design)",
+      "status": "verified"
+    },
+    {
+      "anchor": "bun-build",
+      "subId": "metafile-md",
+      "title": "--metafile-md v 1.3.8 v 1.4.0 #",
+      "mappedTo": "dist/*.meta.md is the mtafile",
+      "layer": "pipeline · channels(design)",
+      "status": "verified"
+    },
+    {
+      "anchor": "bun-build",
+      "subId": "standard-tc39-decorators",
+      "title": "Standard TC39 decorators v 1.3.10 v 1.4.0 #",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "note"
+    },
+    {
+      "anchor": "bun-build",
+      "subId": "asset",
+      "title": "--asset v 1.4.0 #",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "note"
+    },
+    {
+      "anchor": "bun-build",
+      "subId": "bytecode-compilation-for-es-modules",
+      "title": "Bytecode compilation for ES modules v 1.3.9 v 1.4.0 #",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "note"
+    },
+    {
+      "anchor": "bun-build",
+      "subId": "code-splitting-on-20-000-module-graphs-is-14-faster",
+      "title": "Code splitting on 20,000-module graphs is 14× faster v 1.4.0 #",
+      "mappedTo": "marketing — no 20k graph",
+      "layer": "—",
+      "status": "marketing"
+    },
+    {
+      "anchor": "bun-test",
+      "subId": "bun-test-parallel",
+      "title": "bun test --parallel v 1.3.13 v 1.4.0 #",
+      "mappedTo": "test:parallel, test:",
+      "layer": "pipeline · channels(deps)",
+      "status": "verified"
+    },
+    {
+      "anchor": "bun-test",
+      "subId": "bun-test-isolate",
+      "title": "bun test --isolate v 1.3.13 v 1.4.0 #",
+      "mappedTo": "test:parallel (implies isolate)",
+      "layer": "pipeline",
+      "status": "verified"
+    },
+    {
+      "anchor": "bun-test",
+      "subId": "bun-test-shard",
+      "title": "bun test --shard v 1.3.13 v 1.4.0 #",
+      "mappedTo": "test:shard (TEST_SHARD)",
+      "layer": "pipeline",
+      "status": "verified"
+    },
+    {
+      "anchor": "bun-test",
+      "subId": "bun-test-timings",
+      "title": "bun test --timings v 1.4.0 #",
+      "mappedTo": "test: + .bun-test-timings.json",
+      "layer": "pipeline",
+      "status": "verified"
+    },
+    {
+      "anchor": "bun-test",
+      "subId": "bun-test-changed",
+      "title": "bun test --changed v 1.3.13 v 1.4.0 #",
+      "mappedTo": "test:changed, pre-commit --changed",
+      "layer": "pipeline",
+      "status": "verified"
+    },
+    {
+      "anchor": "bun-test",
+      "subId": "bun-test-retry",
+      "title": "bun test --retry v 1.3.3 v 1.4.0 #",
+      "mappedTo": "pre-commit --retry 1",
+      "layer": "pipeline",
+      "status": "verified"
+    },
+    {
+      "anchor": "bun-test",
+      "subId": "jest-usefaketimers",
+      "title": "jest.useFakeTimers() v 1.3.4 v 1.4.0 #",
+      "mappedTo": "available, not used (§20)",
+      "layer": "pipeline",
+      "status": "note"
+    },
+    {
+      "anchor": "bun-install",
+      "subId": "global-virtual-store-up-to-7x-faster-installs",
+      "title": "Global virtual store: up to 7x faster installs v 1.3.14 v 1.4.0 #",
+      "mappedTo": "bunfig linker=isolated",
+      "layer": "deps",
+      "status": "verified"
+    },
+    {
+      "anchor": "bun-install",
+      "subId": "bun-pm-diff",
+      "title": "bun pm diff v 1.4.0 #",
+      "mappedTo": "deps:diff (tools/deps-diff.ts)",
+      "layer": "channels(deps)",
+      "status": "verified"
+    },
+    {
+      "anchor": "bun-install",
+      "subId": "bun-audit-fix",
+      "title": "bun audit fix v 1.4.0 #",
+      "mappedTo": "deps:audit-fix:dry",
+      "layer": "channels(deps)",
+      "status": "verified"
+    },
+    {
+      "anchor": "bun-install",
+      "subId": "bun-dedupe",
+      "title": "bun dedupe v 1.4.0 #",
+      "mappedTo": "deps:check (dedupe --check)",
+      "layer": "channels(deps)",
+      "status": "verified"
+    },
+    {
+      "anchor": "bun-install",
+      "subId": "bun-prune",
+      "title": "bun prune v 1.4.0 #",
+      "mappedTo": "deps:prune(:prod) + content:prune",
+      "layer": "channels(deps+prune)",
+      "status": "verified"
+    },
+    {
+      "anchor": "bun-install",
+      "subId": "bun-pm-licenses",
+      "title": "bun pm licenses v 1.4.0 #",
+      "mappedTo": "licenses:check",
+      "layer": "channels(deps)",
+      "status": "verified"
+    },
+    {
+      "anchor": "bun-install",
+      "subId": "bun-update-updates-transitive-dependencies",
+      "title": "bun update updates transitive dependencies v 1.4.0 #",
+      "mappedTo": "not run (frozenLockfile)",
+      "layer": "deps",
+      "status": "note"
+    },
+    {
+      "anchor": "bun-install",
+      "subId": "bun-add-filter",
+      "title": "bun add --filter v 1.4.0 #",
+      "mappedTo": "NOT mapped — 3-dep repo",
+      "layer": "—",
+      "status": "note"
+    },
+    {
+      "anchor": "bun-install",
+      "subId": "bun-add-catalog",
+      "title": "bun add --catalog v 1.4.0 #",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "note"
+    },
+    {
+      "anchor": "bun-install",
+      "subId": "nested-overrides",
+      "title": "Nested overrides v 1.4.0 #",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "note"
+    },
+    {
+      "anchor": "bun-install",
+      "subId": "lockfile-integrity-for-github-and-tarball-dependencies",
+      "title": "Lockfile integrity for GitHub and tarball dependencies v 1.3.10 #",
+      "mappedTo": "NOT mapped — no git/tarball deps",
+      "layer": "—",
+      "status": "note"
+    },
+    {
+      "anchor": "bun-install",
+      "subId": "trusteddependencies-only-auto-trusts-the-npm-registry",
+      "title": "trustedDependencies only auto-trusts the npm registry v 1.3.5 #",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "note"
+    },
+    {
+      "anchor": "bun-install",
+      "subId": "nativedependencies-and-ignorescripts",
+      "title": "nativeDependencies and ignoreScripts v 1.3.2 #",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "note"
+    },
+    {
+      "anchor": "what-s-new",
+      "subId": "bun-image",
+      "title": "Bun.Image v 1.3.14 #",
+      "mappedTo": "brand-image.ts, /brand/* routes, images:meta",
+      "layer": "brand · pipeline",
+      "status": "verified"
+    },
+    {
+      "anchor": "what-s-new",
+      "subId": "bun-webview",
+      "title": "Bun.WebView v 1.3.12 v 1.4.0 #",
+      "mappedTo": "brand:card CLI (ground tool)",
+      "layer": "brand",
+      "status": "verified"
+    },
+    {
+      "anchor": "what-s-new",
+      "subId": "bun-markdown",
+      "title": "Bun.markdown v 1.3.8 v 1.4.0 #",
+      "mappedTo": "content-pipeline renderMarkdownBody + release-blog",
+      "layer": "pipeline · channels(releases)",
+      "status": "verified"
+    },
+    {
+      "anchor": "what-s-new",
+      "subId": "bun-cron",
+      "title": "Bun.cron() v 1.3.11 v 1.4.0 #",
+      "mappedTo": "signal-pipeline cron channel + live-channel",
+      "layer": "channels(cron)",
+      "status": "verified"
+    },
+    {
+      "anchor": "what-s-new",
+      "subId": "bun-terminal",
+      "title": "Bun.Terminal v 1.3.5 v 1.4.0 #",
+      "mappedTo": "exists PTY-only; terminal.ts ANSI paint",
+      "layer": "ops",
+      "status": "note"
+    },
+    {
+      "anchor": "what-s-new",
+      "subId": "bun-run-parallel",
+      "title": "bun run --parallel v 1.3.9 v 1.4.0 #",
+      "mappedTo": "NOT mapped — no parallel scripts",
+      "layer": "—",
+      "status": "note"
+    },
+    {
+      "anchor": "what-s-new",
+      "subId": "3x-faster-bun-ffi",
+      "title": "3x faster bun:ffi v 1.4.0 #",
+      "mappedTo": "dlopen/getpid/zlibVersion calls verified (ffi:probe) — the 3x speedup NOT measured",
+      "layer": "ops",
+      "status": "note"
+    },
+    {
+      "anchor": "what-s-new",
+      "subId": "dev-tooling",
+      "title": "Dev tooling v 1.3.2 v 1.4.0 #",
+      "mappedTo": "--cpu-prof/--cpu-prof-md/--heap-prof/--heap-prof-md/--no-orphans/--no-env-file all present; bun ./README.md renders MD to terminal (probe)",
+      "layer": "ops",
+      "status": "verified"
+    },
+    {
+      "anchor": "what-s-new",
+      "subId": "http-3-in-bun-serve-experimental",
+      "title": "HTTP/3 in Bun.serve() (experimental) v 1.3.14 v 1.4.0 #",
+      "mappedTo": "http3:true listens UDP same port + Alt-Svc h3=:port ma=86400 advertised (probe); upgrade() false over H3 per docs",
+      "layer": "ops",
+      "status": "verified"
+    },
+    {
+      "anchor": "what-s-new",
+      "subId": "http-2-http-3-in-fetch-experimental",
+      "title": "HTTP/2 & HTTP/3 in fetch() (experimental) v 1.3.14 v 1.4.0 #",
+      "mappedTo": "fetch(protocol:http2) -> 200 to bun.sh (probe); http3 flag per docs",
+      "layer": "ops",
+      "status": "verified"
+    },
+    {
+      "anchor": "what-s-new",
+      "subId": "serve-files-folders",
+      "title": "Serve files & folders v 1.4.0 #",
+      "mappedTo": "dir routes: sendfile + content-type + etag (weak W/) + last-modified + 304 + 206 (verified, repo /videos/*)",
+      "layer": "ops · pipeline",
+      "status": "verified"
+    },
+    {
+      "anchor": "what-s-new",
+      "subId": "range-and-conditional-requests",
+      "title": "Range and conditional requests v 1.3.13 v 1.4.0 #",
+      "mappedTo": "dir/Bun.file bodies: Range->206, If-None-Match->304, If-Match weak->412 / *->200, If-Unmodified-Since past->412 (probe); bare Response(Bun.file) does NOT auto-etag (must use dir route)",
+      "layer": "ops · pipeline",
+      "status": "verified"
+    },
+    {
+      "anchor": "what-s-new",
+      "subId": "html-routes-sourcemaps-disabled-in-production",
+      "title": "HTML routes sourcemaps disabled in production v 1.4.0 #",
+      "mappedTo": "verified natively: NODE_ENV=production /design HTML route has NO sourcemap refs + no dev markers (probe, §39)",
+      "layer": "ops",
+      "status": "verified"
+    },
+    {
+      "anchor": "what-s-new",
+      "subId": "fetch-request-compression",
+      "title": "fetch() request compression v 1.4.0 #",
+      "mappedTo": "compress string + object {encoding,level} both work - gzip 5000B->55B with Content-Encoding (probe, §17)",
+      "layer": "data",
+      "status": "verified"
+    },
+    {
+      "anchor": "what-s-new",
+      "subId": "fetch-proxy-headers",
+      "title": "fetch() proxy headers v 1.3.4 #",
+      "mappedTo": "proxy {url,headers} option shape accepted per docs - no real proxy in-repo",
+      "layer": "data",
+      "status": "note"
+    },
+    {
+      "anchor": "what-s-new",
+      "subId": "tls-session-resumption",
+      "title": "TLS session resumption v 1.4.0 #",
+      "mappedTo": "BoringSSL 32-entry LRU 1-RTT - internal, not probed",
+      "layer": "data",
+      "status": "note"
+    },
+    {
+      "anchor": "what-s-new",
+      "subId": "connection-reuse",
+      "title": "Connection reuse v 1.3.10 v 1.4.0 #",
+      "mappedTo": "fetch-pool.ts reuse in-repo; HTTPS-proxy reuse per docs not probed",
+      "layer": "data",
+      "status": "note"
+    },
+    {
+      "anchor": "what-s-new",
+      "subId": "also-built-in",
+      "title": "Also built in v 1.3.3 v 1.4.0 #",
+      "mappedTo": "sharp/puppeteer/marked list -> file-by-file",
+      "layer": "all",
+      "status": "verified"
+    }
+  ]
+}

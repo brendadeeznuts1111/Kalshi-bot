@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "description": "Active content tracked by content:prune (content/posts).",
+  "files": [
+    "content/posts/etag-patterns.md",
+    "content/posts/hello-world.md"
+  ]
+}
