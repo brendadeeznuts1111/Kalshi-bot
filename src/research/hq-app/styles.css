@@ -1,12 +1,6 @@
 
-:root {
-  --bg: #0b0e14; --panel: #12161f; --panel2: #171c28; --line: #232a3a;
-  --fg: #d7dee9; --dim: #7d8798; --acc: #4da3ff; --ok: #3fb27f;
-  --warn: #e0a93e; --bad: #e05e5e;
-  --ok-tint: rgba(63,178,127,.15); --warn-tint: rgba(224,169,62,.15); --bad-tint: rgba(224,94,94,.15);
-  --on-accent: #06121f;
-  --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
-}
+/* Design tokens (:root vars) come from generated token-vars.css — see scripts/generate-color-artifacts.ts */
+
 
 .badge { display: inline-block; padding: 0.1rem 0.55rem; border-radius: 999px;
   font-size: 0.72rem; font-weight: 600; }
