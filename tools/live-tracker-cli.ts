@@ -22,7 +22,7 @@
  *
  * Logs: research/cache/live-tracker/event-{id}.jsonl
  */
-import { argValue, argValues, hasFlag } from './src/cli/argv.ts';
+import { argValue, argValues, hasFlag } from '../src/cli/argv.ts';
 import {
   LIVE_TRACKER_EVENT_TYPES,
   appendTrackerLog,
@@ -39,14 +39,14 @@ import {
   parseEventType,
   weightTrackerEvents,
   type LiveTrackerEvent,
-} from './src/inventory/live-tracker.ts';
+} from '../src/inventory/live-tracker.ts';
 import {
   buildPriceSeriesMany,
   parseEventMarketPairs,
   renderPriceChartSvg,
-} from './src/inventory/live-tracker-chart.ts';
-import { watchEventOdds } from './src/inventory/pandora-listen.ts';
-import { CACHE_DIR, joinPath } from './src/research/paths.ts';
+} from '../src/inventory/live-tracker-chart.ts';
+import { watchEventOdds } from '../src/inventory/pandora-listen.ts';
+import { CACHE_DIR, joinPath } from '../src/research/paths.ts';
 
 type LiveTrackerEventType = (typeof LIVE_TRACKER_EVENT_TYPES)[number];
 type SortKey = 'time' | 'event' | 'type' | 'detail' | 'file' | 'eventid';
@@ -489,7 +489,7 @@ if (cmd === 'watch') {
         events,
       });
       if (hasFlag('notify') && events.length) {
-        void import('./src/inventory/live-tracker-alerts.ts').then(m =>
+        void import('../src/inventory/live-tracker-alerts.ts').then(m =>
           m.maybeNotifyLiveTrackerAlerts({
             eventId,
             events,
@@ -505,7 +505,7 @@ if (cmd === 'watch') {
   );
   if (hasFlag('notify') && all.length) {
     const { plan, telegram } = await import(
-      './src/inventory/live-tracker-alerts.ts'
+      '../src/inventory/live-tracker-alerts.ts'
     ).then(m =>
       m.maybeNotifyLiveTrackerAlerts({
         eventId,
@@ -594,7 +594,7 @@ if (cmd === 'patterns') {
     edgePatternsByFamily,
     parseEdgePatternSortBy,
     sortEdgePatterns,
-  } = await import('./src/settlement/index.ts');
+  } = await import('../src/settlement/index.ts');
   const sortBy = parseEdgePatternSortBy(argValue('sort-by'), ['family', 'id']);
   const desc = hasFlag('desc');
   const catalog = sortEdgePatterns(listEdgePatterns(), { sortBy, desc }).map(p => ({
@@ -613,7 +613,7 @@ if (cmd === 'patterns') {
 
   // --json: machine JSON. --inspect: Bun.inspect(snapshot, { colors, depth, sorted }).
   if (hasFlag('inspect') || argValue('format') === 'inspect') {
-    const { inspectSnapshot } = await import('./src/research/bun-native.ts');
+    const { inspectSnapshot } = await import('../src/research/bun-native.ts');
     const colors =
       !hasFlag('no-color') &&
       Boolean(process.stdout.isTTY) &&
@@ -647,10 +647,10 @@ if (cmd === 'analyze') {
       formatAnalyzeCsv,
       renderSportAnalyze,
       resolveAnalyzeBundlePaths,
-    } = await import('./src/settlement/index.ts');
-    type AnalyzeWeightedRow = import('./src/settlement/index.ts').AnalyzeWeightedRow;
-    type AnalyzeRowSummary = import('./src/settlement/index.ts').AnalyzeRowSummary;
-    const { inspectSnapshot } = await import('./src/research/bun-native.ts');
+    } = await import('../src/settlement/index.ts');
+    type AnalyzeWeightedRow = import('../src/settlement/index.ts').AnalyzeWeightedRow;
+    type AnalyzeRowSummary = import('../src/settlement/index.ts').AnalyzeRowSummary;
+    const { inspectSnapshot } = await import('../src/research/bun-native.ts');
     const phase =
       argValue('phase') === 'prematch' ? 'prematch' : 'live';
     const sortBy = parseEdgePatternSortBy(argValue('sort-by'), ['severity', 'id']);
@@ -733,7 +733,7 @@ if (cmd === 'analyze') {
 
       // Bake once (sample SSOT) — not every watch tick
       if (!baked && (hasFlag('bake') || hasFlag('write-sample'))) {
-        const { joinPath: jp } = await import('./src/research/paths.ts');
+        const { joinPath: jp } = await import('../src/research/paths.ts');
         const schemaPath = jp(process.cwd(), 'docs/artifacts/live-tracker-analyze-schema.json');
         const samplePath = jp(process.cwd(), 'docs/artifacts/live-tracker-analyze-sample.json');
         const tablePath = jp(process.cwd(), 'docs/artifacts/live-tracker-analyze-sample.md');

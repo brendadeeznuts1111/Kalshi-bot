@@ -28,7 +28,7 @@ describe('live-tracker-chart', () => {
   test('parseEventMarketPairs zips sequential event/market flags', () => {
     const pairs = parseEventMarketPairs([
       'bun',
-      'live-tracker.ts',
+      'tools/live-tracker-cli.ts',
       'chart',
       '--event',
       '197510101',

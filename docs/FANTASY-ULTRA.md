@@ -26,7 +26,7 @@ Book adapter and coverage inventory for a **PPH / Fantasy402** desk (skin
 > [`PLIVE-EZLIVE-SPORTS-RULES.md`](PLIVE-EZLIVE-SPORTS-RULES.md) · sport-wide
 > **edge patterns** (market/line/sport families):
 > [`EDGE-PATTERNS.md`](EDGE-PATTERNS.md) · `src/settlement/` ·
-> `bun live-tracker.ts patterns`.
+> `bun tools/live-tracker-cli.ts patterns`.
 
 | Concern                                | Location                                  |
 | -------------------------------------- | ----------------------------------------- |

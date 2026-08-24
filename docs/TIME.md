@@ -72,7 +72,7 @@ Prefer ISO or `epochFromUnit(n, 's'\|'ms')` when the API documents the unit.
 28+ fields: human `time` **and** joinable `timeMs`.
 
 ```bash
-bun live-tracker.ts analyze --sport=tennis --phase=live --table --no-color
+bun tools/live-tracker-cli.ts analyze --sport=tennis --phase=live --table --no-color
 # columns include time, timeMs, …
 ```
 

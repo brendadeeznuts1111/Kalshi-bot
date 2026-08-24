@@ -35,12 +35,12 @@ New edges should prefer **new pattern ids in an existing family** over a bespoke
 Catalog (runtime):
 
 ```bash
-bun live-tracker.ts patterns
-bun live-tracker.ts patterns --json
-bun live-tracker.ts patterns --inspect          # Bun.inspect: colors, depth 4, sorted keys
-bun live-tracker.ts patterns --inspect --depth=6
-bun live-tracker.ts patterns --sort-by family,id
-bun live-tracker.ts patterns --sort-by id --desc
+bun tools/live-tracker-cli.ts patterns
+bun tools/live-tracker-cli.ts patterns --json
+bun tools/live-tracker-cli.ts patterns --inspect          # Bun.inspect: colors, depth 4, sorted keys
+bun tools/live-tracker-cli.ts patterns --inspect --depth=6
+bun tools/live-tracker-cli.ts patterns --sort-by family,id
+bun tools/live-tracker-cli.ts patterns --sort-by id --desc
 ```
 
 | Format flag | Output |
@@ -71,17 +71,17 @@ Flat row schema (all settlement / pattern fields, no nested `[Object …]`):
 
 ```bash
 # Column presets (desk | odds | settlement | patterns | ev | all)
-bun live-tracker.ts analyze --sport=tennis --phase=live --columns=desk --table
-bun live-tracker.ts analyze --sport=tennis --phase=live --columns=ev --inspect --no-color
-bun live-tracker.ts analyze --sport=tennis --phase=live --columns=ev --sort-rows=voidDelta --csv
-bun live-tracker.ts analyze --sport=tennis --phase=live --void-risk=high --limit=5 --columns=desk --table
-bun live-tracker.ts analyze --sport=tennis --phase=live --pattern=void.live --has-eye --columns=patterns --table
-bun live-tracker.ts analyze --sport=tennis --phase=live --market-type=3 --periods=m --columns=desk --table
-bun live-tracker.ts analyze --sport=tennis --phase=live --columns=desk --html --watch --interval=5 --open
-bun live-tracker.ts analyze --sport=tennis --phase=live --columns=desk --bundle --output /tmp/desk
-bun live-tracker.ts analyze --sport=tennis --phase=live --columns=all --bake
-bun live-tracker.ts analyze --sport=tennis --phase=live --columns=desk --html --output /tmp/desk.html
-bun live-tracker.ts analyze --sport=tennis --phase=live --columns=desk,ev --html --open
+bun tools/live-tracker-cli.ts analyze --sport=tennis --phase=live --columns=desk --table
+bun tools/live-tracker-cli.ts analyze --sport=tennis --phase=live --columns=ev --inspect --no-color
+bun tools/live-tracker-cli.ts analyze --sport=tennis --phase=live --columns=ev --sort-rows=voidDelta --csv
+bun tools/live-tracker-cli.ts analyze --sport=tennis --phase=live --void-risk=high --limit=5 --columns=desk --table
+bun tools/live-tracker-cli.ts analyze --sport=tennis --phase=live --pattern=void.live --has-eye --columns=patterns --table
+bun tools/live-tracker-cli.ts analyze --sport=tennis --phase=live --market-type=3 --periods=m --columns=desk --table
+bun tools/live-tracker-cli.ts analyze --sport=tennis --phase=live --columns=desk --html --watch --interval=5 --open
+bun tools/live-tracker-cli.ts analyze --sport=tennis --phase=live --columns=desk --bundle --output /tmp/desk
+bun tools/live-tracker-cli.ts analyze --sport=tennis --phase=live --columns=all --bake
+bun tools/live-tracker-cli.ts analyze --sport=tennis --phase=live --columns=desk --html --output /tmp/desk.html
+bun tools/live-tracker-cli.ts analyze --sport=tennis --phase=live --columns=desk,ev --html --open
 # --html honors --columns: desk → focused; desk,ev → those sections; all → multi-preset
 # --html without --output → research/cache/live-tracker/analyze-{sport}-{phase}-{cols}.html
 # --open opens the written file (macOS)
@@ -139,8 +139,8 @@ const move = weightLiveTrackerMove({
 Live-tracker:
 
 ```bash
-bun live-tracker.ts analyze --sport=tennis --phase=live
-bun live-tracker.ts analyze --sport=tennis --phase=live --verbose  # include info hits
+bun tools/live-tracker-cli.ts analyze --sport=tennis --phase=live
+bun tools/live-tracker-cli.ts analyze --sport=tennis --phase=live --verbose  # include info hits
 ```
 
 Signals:
