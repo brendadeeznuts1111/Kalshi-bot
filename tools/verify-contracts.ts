@@ -21,6 +21,7 @@ const gates = [
   ['bun:blog-map', '--', '--offline'],
   ['colors:check'],
   ['design:check'],
+  ['plugins:probe'],
 ] as const;
 
 const run = async (name: string, args: readonly string[]): Promise<boolean> => {

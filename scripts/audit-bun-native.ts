@@ -261,6 +261,8 @@ export const SPAWN_KEEP_LIST = new Set([
   "tools/profile-all.ts", // profiler runner: spawns with stdio inherit
   "tools/deps-diff.ts", // bun pm diff subprocess (pipe capture)
   "tools/deps-report.ts", // dep gate runner (pipe capture)
+  "tools/plugins-probe.ts", // probes runtime build.module() via --preload (child bun run, pipe capture)
+  "tests/lib/plugins-probe.test.ts", // same probe: runtime build.module() via child bun run (pipe capture)
 ]);
 
 /** Flag Bun.spawn / Bun.spawnSync call sites in files outside SPAWN_KEEP_LIST. */

@@ -362,12 +362,13 @@ Node APIs are intentional:
     which the release-watch cron job relies on (it waits for the fan-out
     event, so it deliberately stays ref'd). Worker.exited is genuinely
     ABSENT (runtime + types agree) - wait on messages/events, not exited.
-  * Bun reference docs are now CACHED LOCALLY: bun:docs-index fetches 16
-    curated .mdx pages (workers, child-process, image, markdown, xml,
-    secrets, csrf, cookies, dns, fetch, tcp, udp, websockets, server,
-    glob, sql) into research/cache/bun-docs/ with an INDEX.json manifest,
-    24h freshness + --refresh/--check - verification cites local copies
-    and can detect docs drift.
+  * Bun reference docs are now CACHED LOCALLY: bun:docs-index DISCOVERS the
+    page list from the source (tag/repo GitHub trees, site sitemap) into
+    research/cache/bun-docs/ with an INDEX.json manifest - 64 runtime pages,
+    13 bundler pages (--scope bundler), 333 under --scope all (bun 1.4.0).
+    24h freshness + --refresh/--check; INDEX merges across scopes and the
+    docs:refresh weekly cron (docs:refresh:register) keeps it current.
+    Verification cites local copies and can detect docs drift.
   * Full-stack feed playbook verified: named imports from 'bun' (cron,
     XML, markdown, write, file) all real - unlike 'html'. Bun.cron jobs
     ARE disposable (Symbol.dispose + unref on the prototype) so `using
@@ -459,6 +460,21 @@ patterns (harvest-nationalities, fonbet fixture loader converted).
   (same content/sitemap/CDN headers, different Cloudflare IPs; verified
   on workers/sql/fetch/server/webview/api + root). Only two real
   surfaces: repo (tag/main .mdx) and the rendered site (bun.com/bun.sh).
+- Scope granularity: --scope runtime (64 pages) | --scope bundler (13 pages,
+  docs/bundler/** - the bundler/plugins.mdx the /bun/map claims cite) |
+  --scope all (333). INDEX.json MERGES additively across scopes: running one
+  scope never drops another's cached entries (names unique; dedupe appends
+  -1/-2). DISCOVERY.json keeps a per-scope page list (scopes map, migrated
+  from the old single-scope shape). docs:refresh (tools/bun-docs-refresh-
+  cli.ts) refreshes --scope all then gates with the offline --check; the
+  weekly OS cron (docs:refresh:register, "0 6 * * 1") automates it, and
+  BUN_DOCS_REFRESH_SKIP_NETWORK=1 turns any run into check-only.
+- Bundler plugin namespace probe (tests/bun-plugin-namespaces.test.ts, cached
+  bundler-plugins.mdx §Namespaces): namespaces are restricted to [a-zA-Z0-9_-]
+  on 1.4.0 - the doc's literal namespace: "yaml:" example THROWS at build time
+  ("namespace can only contain ..."); use "yaml". In-memory bundle output text
+  is read via await output.arrayBuffer() (the documented .text accessor is a
+  native fn returning undefined on 1.4.0).
 
 ### 10. Bun native fetch: DNS, CDNs, and connection reuse (all probe-verified on 1.4.0)
 
@@ -2951,3 +2967,50 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
 - Tests: tests/lib/docs-validate.test.ts covers continuation join,
   multi-line quotes, placeholder skip, comment-only blocks, and a genuine
   syntax error (bash -n still catches real bugs).
+
+## 61. Bundler plugins doc — namespaces + runtime claims probed (2026-08-24)
+
+- Probed bun.com/docs/bundler/plugins (§namespaces anchor) against Bun
+  1.4.0. FIVE corrections, all reproduced in tools/plugins-probe.ts (10/10
+  checks, now a verify:contracts gate) + tests/lib/plugins-probe.test.ts.
+- VERIFIED:
+  - `import { plugin } from "bun"` — the named export EXISTS and IS the
+    same function as Bun.plugin (identity === true).
+  - default namespace is "file": onResolve({filter, namespace:"file"})
+    sees relative imports; a plugin CAN intercept a `file:` specifier
+    and redirect it to a real path.
+  - the env-plugin pattern (onResolve → namespace + onLoad → contents)
+    works in Bun.build — virtual modules build fine.
+  - onStart async callbacks are awaited before onLoad; onEnd async
+    callbacks are awaited before Bun.build resolves, and onEnd receives
+    BuildOutput with success=false + logs when a build fails.
+  - defer() is once-only: the second call THROWS.
+  - Bun.build THROWS AggregateError ("Bundle failed") on unresolvable
+    imports — it does NOT return success:false for a bad entry graph
+    (onEnd still fires with success=false).
+- CORRECTED (doc claims WRONG on 1.4.0):
+  1. Namespace chars are RESTRICTED: `namespace: "yaml:"` THROWS
+     `TypeError: namespace can only contain $a-zA-Z0-9_\-`. The doc's
+     flagship example (loader with namespace "yaml:" transforming
+     ./myfile.yaml into yaml:./myfile.yaml) is invalid — colons are not
+     allowed in namespace strings.
+  2. `import m from "file:./dep"` does NOT resolve — Bun.build throws
+     (doc: "the same as ./dep"). The file: prefix is internal-only; a
+     plugin onResolve is required to make a file: specifier resolve.
+  3. onStart CAN mutate build.config — the doc Note says it cannot, but
+     an outdir mutation in onStart silently redirected the output.
+  4. node:/bun: modules do NOT carry "node"/"bun" namespaces — node:fs
+     resolves with namespace "file" and onResolve({namespace:"node"})
+     never fires. Also, bun:sqlite / bun:test imports THROW under
+     Bun.build's default target; bun:sqlite builds with target:"bun"
+     (reinforces the §48/§59 "bun" target finding).
+  5. Runtime plugins: onResolve/onLoad do NOT fire for runtime imports
+     in 1.4.0 — a catch-all runtime onResolve saw FIRED=0 even for a
+     relative ./dep import. The runtime virtual-module mechanism is
+     `build.module(specifier, cb)` (returns {exports, loader:"object"}),
+     which works inline, via bunfig top-level `preload = ["plugin.ts"]`,
+     or `bun --preload`. The `[runtime] plugins` bunfig key does NOT
+     load in 1.4.0 (correct key is `preload`).
+- Artifacts: src/research/plugins-page.ts (/bun/plugins widget),
+  tools/plugins-probe.ts (bun run plugins:probe),
+  tests/lib/plugins-probe.test.ts, verify:contracts gate.
