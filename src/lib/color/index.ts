@@ -14,6 +14,7 @@ export {
   colorNumber,
   contrast,
   convert,
+  convertColorFallback,
   cssColor,
   darken,
   foregroundCss,

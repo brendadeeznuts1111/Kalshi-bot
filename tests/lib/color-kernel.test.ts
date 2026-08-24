@@ -6,6 +6,7 @@ import {
   COLOR_CSS,
   COLOR_ROLES,
   ansiColor,
+  convertColorFallback,
   cssColor,
   foregroundCss,
   hexColor,
@@ -125,3 +126,83 @@ describe("Glossary ↔ color wire", () => {
     expect(row?.color?.key).toBe("env");
   });
 });
+
+describe("browser fallback parity (no-Bun bundles)", () => {
+  // The design-system bundle ships to browsers where Bun.color does not
+  // exist; convertColorFallback must produce byte-identical output to
+  // Bun.color for every format the kernel caches at module load.
+  const FORMATS = ["css", "HEX", "number", "{rgb}", "{rgba}", "ansi-16m"] as const;
+  for (const format of FORMATS) {
+    test("fallback matches Bun.color for " + format, () => {
+      for (const key of Object.keys(COLORS) as ColorKey[]) {
+        const bun = Bun.color(COLORS[key], format as "hex");
+        const fallback = convertColorFallback(COLORS[key], format);
+        expect(fallback, key + " " + format).toEqual(bun);
+      }
+    });
+  }
+
+  test("fallback normalizes 3-digit and uppercase hex", () => {
+    expect(convertColorFallback("#fff", "css")).toBe("#ffffff");
+    expect(convertColorFallback("#7DD3FC", "HEX")).toBe("#7DD3FC");
+  });
+
+  test("fallback tint parity with Bun", () => {
+    for (const key of Object.keys(COLORS) as ColorKey[]) {
+      expect(tint(COLORS[key], 0.15), key).toBe(tintFallback(COLORS[key], 0.15));
+    }
+  });
+});
+
+describe("browser fallback extended formats (hsl / lab / ansi-256)", () => {
+  // These formats involve float math where Bun.color's internal precision
+  // differs from a standard implementation, so byte-equality is NOT asserted.
+  // Instead, the fallback output must be VALID and round-trip to the same
+  // color — Bun.color itself is the oracle. Byte-exact parity holds for the
+  // six cached formats above (the ones the design system actually consumes).
+  const roundTripFormats = ["hsl", "lab"] as const;
+
+  test("fallback hsl/lab parse back to the source color via Bun.color", () => {
+    for (const format of roundTripFormats) {
+      for (const key of Object.keys(COLORS) as ColorKey[]) {
+        const out = convertColorFallback(COLORS[key], format);
+        expect(typeof out, key + " " + format).toBe("string");
+        // Bun.color can parse its own hsl/lab strings back to rgb.
+        const rgb = Bun.color(out as string, "{rgb}") as { r: number; g: number; b: number } | null;
+        expect(rgb, key + " " + format + " unparseable: " + out).not.toBeNull();
+        const src = convertColorFallback(COLORS[key], "{rgb}") as { r: number; g: number; b: number };
+        expect(Math.abs(rgb!.r - src.r), key + " " + format + " r").toBeLessThanOrEqual(2);
+        expect(Math.abs(rgb!.g - src.g), key + " " + format + " g").toBeLessThanOrEqual(2);
+        expect(Math.abs(rgb!.b - src.b), key + " " + format + " b").toBeLessThanOrEqual(2);
+      }
+    }
+  });
+
+  test("fallback ansi-256 emits a valid 256-color escape", () => {
+    for (const key of Object.keys(COLORS) as ColorKey[]) {
+      const out = convertColorFallback(COLORS[key], "ansi-256");
+      expect(typeof out).toBe("string");
+      const m = /^\x1b\[38;5;(\d+)m$/.exec(out as string);
+      expect(m, key).not.toBeNull();
+      const idx = Number(m![1]!);
+      expect(idx).toBeGreaterThanOrEqual(0);
+      expect(idx).toBeLessThanOrEqual(255);
+    }
+  });
+
+  test("fallback hsl output shape matches Bun's grammar", () => {
+    for (const key of Object.keys(COLORS) as ColorKey[]) {
+      const out = convertColorFallback(COLORS[key], "hsl") as string;
+      expect(out, key).toMatch(/^hsl\([\d.]+,\s*[\d.]+%,\s*[\d.]+%\)$/);
+      const bun = Bun.color(COLORS[key], "hsl" as "hex") as string;
+      expect(bun, key).toMatch(/^hsl\(/);
+    }
+  });
+});
+
+/** tint()'s output recomputed through the fallback (alpha formatting shared). */
+function tintFallback(hex: string, alpha: number): string {
+  const { r, g, b } = (convertColorFallback(hex, "{rgba}") as { r: number; g: number; b: number }) ?? { r: 0, g: 0, b: 0 };
+  const a = String(alpha).replace(/^0\./, ".");
+  return `rgba(${r},${g},${b},${a})`;
+}
