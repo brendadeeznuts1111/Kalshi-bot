@@ -251,6 +251,7 @@ export const SPAWN_KEEP_LIST = new Set([
   "tools/protonpass-run.ts", // true TTY fds for pass-cli agent prompts (secrets)
   "tests/lib/fetch-pool-h2.test.ts", // Bun.spawnSync openssl cert-gen in blocking test setup
   "scripts/build-design-system.ts", // async Bun.spawn for the CLI --metafile-md report
+  "tools/design-check.ts", // async Bun.spawn to build the bundle for the size gate
 ]);
 
 /** Flag Bun.spawn / Bun.spawnSync call sites in files outside SPAWN_KEEP_LIST. */

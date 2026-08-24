@@ -11,8 +11,8 @@ describe("resolveConditionalGates", () => {
     expect(resolveConditionalGates(["src/partner/toml-config.ts"])).toEqual(["partner:toml:validate"]);
   });
 
-  test("fires colors gate on staged color paths (dir prefix + files)", () => {
-    expect(resolveConditionalGates(["src/lib/color/palette.ts"])).toEqual(["colors:check"]);
+  test("fires colors + design gates on staged color paths (kernel affects bundle size)", () => {
+    expect(resolveConditionalGates(["src/lib/color/palette.ts"])).toEqual(["design:check", "colors:check"]);
     expect(resolveConditionalGates(["public/registry/color-system.json"])).toEqual(["colors:check"]);
   });
 

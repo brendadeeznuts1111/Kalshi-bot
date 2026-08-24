@@ -194,6 +194,8 @@
     "design:build": "bun scripts/build-design-system.ts",
     "profile:serve": "bun --cpu-prof-md src/research/serve.ts",
     "profile:research": "bun --cpu-prof-md src/research/cli.ts --dry-run --offline",
+    "profile:research:full": "bun --cpu-prof-md src/research/cli.ts",
+    "profile:design": "bun --cpu-prof-md scripts/build-design-system.ts",
     "heap:serve": "bun --heap-prof-md src/research/serve.ts",
     "design:watch": "bun build src/institutions/design-system.ts --outdir=dist --target=bun --minify --metafile=dist/design-system.meta.json --metafile-md=dist/design-system.meta.md --watch",
     "glossary:dump": "bun scripts/dump-glossary.ts",

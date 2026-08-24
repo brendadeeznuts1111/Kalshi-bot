@@ -67,6 +67,7 @@ export const CONDITIONAL_GATES: ReadonlyArray<{ script: string; paths: readonly 
       "src/institutions/design-tokens.ts",
       "src/institutions/hq-ui.ts",
       "src/agent/design-agent.ts",
+      "src/lib/color", // kernel/palette changes affect the design-system bundle size
       "tools/design-check.ts",
     ],
   },
