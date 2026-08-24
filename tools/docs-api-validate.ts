@@ -22,15 +22,30 @@
  *   - WILDCARD: `Bun.readableStreamTo*()` family notation — prefix is a
  *     documented family, the * expands to real members
  *
- * Exit 1 only for UNALLOWED missing tokens (genuine drift).
+ * STRICT=1 adds CALLABILITY checks: a `Bun.tok(...)` call-site or
+ * `new Bun.tok(...)` site on a MISSING (undefined) token is a FAIL. Object
+ * namespaces (Bun.JSON5 / Bun.TOML / Bun.markdown) used in prose with a
+ * space-paren are NOT flagged (they exist; the paren is prose).
+ *
+ * Param-count validation was REJECTED after probing (§62): 13/41 call
+ * tokens are overloaded (file=7, hash=9, write=5) and docs abbreviate
+ * args (Bun.file(path), Bun.serve({...})) — regex param matching is a
+ * false-positive machine. STRICT stops at callability, which is noise-free.
+ *
+ * Always writes .data/api-report.md: classification table + STRICT
+ * callability findings (dashboard channel input).
+ *
+ * Exit 1 only for UNALLOWED missing tokens (genuine drift), or STRICT
+ * callability fails when STRICT=1.
  *
  * @see docs/AGENT-PITFALLS.md §62
  */
-import { readFileSync, existsSync, mkdirSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 
 const ROOT = join(import.meta.dir, "..");
 const TOKEN_RE = /\bBun\.([A-Za-z_$][A-Za-z0-9_$]*)\b/g;
+const STRICT = process.env.STRICT === "1";
 
 // ─── Allowlists (probe-classified §62) ────────────────────────────────
 /** Docs intentionally documenting a NON-existent API (probe-verified). */
@@ -44,7 +59,7 @@ const INTENTIONAL = new Set([
   "X", // §62: Bun.X placeholder in a probe writeup
   "watch", // §62: NO Bun.watch API — content:watch is the bun --watch CLI flag
   "zstd", // §62: no Bun.zstd — real APIs are zstdCompressSync/zstdDecompressSync
-  "image", // §12: lowercase form documented as non-existent (the API is Bun.Image capital); prose in §12 body
+  "image", // §12: lowercase form documented as non-existent (the API is Bun.Image capital)
 ]);
 /** bun-types TYPE namespaces — not runtime values; typeof check is wrong for these. */
 const TYPE_ONLY = new Set([
@@ -61,23 +76,36 @@ const WILDCARD_FAMILIES = new Set([
   "readableStreamTo", // Bun.readableStreamToArrayBuffer/Array/Blob/JSON/Text
 ]);
 
-/** Scan markdown + widget pages for Bun.<token> mentions. */
-function collectTokens(): Map<string, { count: number; files: string[] }> {
-  const out = new Map<string, { count: number; files: string[] }>();
+type TokenMeta = { count: number; files: string[] };
+type CallMeta = { call: number; news: number; files: string[] };
+
+/** Scan markdown + widget pages for Bun.<token> mentions + call-sites. */
+function collectTokens(): { out: Map<string, TokenMeta>; callSites: Map<string, CallMeta> } {
+  const out = new Map<string, TokenMeta>();
+  const callSites = new Map<string, CallMeta>();
   const add = (tok: string, file: string) => {
     const e = out.get(tok);
     if (e) { e.count++; if (!e.files.includes(file)) e.files.push(file); }
     else out.set(tok, { count: 1, files: [file] });
   };
+  const noteCall = (tok: string, file: string, isNew: boolean) => {
+    const e = callSites.get(tok) || { call: 0, news: 0, files: [] };
+    if (isNew) e.news++; else e.call++;
+    if (!e.files.includes(file)) e.files.push(file);
+    callSites.set(tok, e);
+  };
+  const scan = (text: string, file: string) => {
+    for (const m of text.matchAll(TOKEN_RE)) add(m[1]!, file);
+    for (const m of text.matchAll(/\bBun\.([A-Za-z_$][A-Za-z0-9_$]*)\s*\(/g)) noteCall(m[1]!, file, false);
+    for (const m of text.matchAll(/\bnew\s+Bun\.([A-Za-z_$][A-Za-z0-9_$]*)\s*\(/g)) noteCall(m[1]!, file, true);
+  };
   for (const f of new Bun.Glob("*.md").scanSync({ cwd: join(ROOT, "docs"), onlyFiles: true })) {
-    const text = readFileSync(join(ROOT, "docs", f), "utf8");
-    for (const m of text.matchAll(TOKEN_RE)) add(m[1]!, f);
+    scan(readFileSync(join(ROOT, "docs", f), "utf8"), f);
   }
   for (const f of new Bun.Glob("*page.ts").scanSync({ cwd: join(ROOT, "src/research"), onlyFiles: true })) {
-    const text = readFileSync(join(ROOT, "src/research", f), "utf8");
-    for (const m of text.matchAll(TOKEN_RE)) add(m[1]!, f);
+    scan(readFileSync(join(ROOT, "src/research", f), "utf8"), f);
   }
-  return out;
+  return { out, callSites };
 }
 
 /** Load the per-version probe cache. */
@@ -88,16 +116,20 @@ function loadCache(): Record<string, Record<string, string>> {
   catch { return {}; }
 }
 
+/** True when the token is allowlisted (any bucket). */
+function allowed(tok: string): boolean {
+  return INTENTIONAL.has(tok) || TYPE_ONLY.has(tok) || PROSE.has(tok) || WILDCARD_FAMILIES.has(tok);
+}
+
 async function main() {
-  console.log("docs:api — bun " + Bun.version + " (" + Bun.revision.slice(0, 8) + ")");
-  const tokens = collectTokens();
+  console.log("docs:api — bun " + Bun.version + " (" + Bun.revision.slice(0, 8) + ")" + (STRICT ? " STRICT=1" : ""));
+  const { out: tokens, callSites } = collectTokens();
   const all = [...tokens.keys()];
   const cache = loadCache();
   const version = Bun.version;
   const cached = cache[version] ?? {};
   const toProbe = all.filter((t) => !(t in cached));
   const results: Record<string, string> = {};
-  // probe missing-from-cache tokens in ONE process (typeof, no spawn)
   for (const t of toProbe) {
     try { results[t] = typeof (Bun as any)[t] !== "undefined" ? "exists" : "MISSING"; }
     catch (e) { results[t] = "THREW:" + String(e).slice(0, 40); }
@@ -106,7 +138,7 @@ async function main() {
   await Bun.write(join(ROOT, ".data", "api-cache.json"), JSON.stringify(cache, null, 2) + "\n");
   const probed = cache[version]!;
 
-  // classify
+  // classify existence
   let fails = 0;
   const rows: Array<{ tok: string; status: string; files: string }> = [];
   for (const [tok, meta] of tokens) {
@@ -117,7 +149,6 @@ async function main() {
       continue;
     }
     if (WILDCARD_FAMILIES.has(tok)) {
-      // verify the family actually exists as real members
       const members = Object.keys(Bun).filter((k) => k.startsWith(tok) && typeof (Bun as any)[k] !== "undefined");
       rows.push({ tok: tok + "*", status: members.length ? "ok (family: " + members.length + " members)" : "MISSING (no members)", files: meta.files.join(",") });
       if (!members.length) fails++;
@@ -126,10 +157,49 @@ async function main() {
     rows.push({ tok, status: "MISSING (unallowed)", files: meta.files.join(",") });
     fails++;
   }
+
+  // STRICT: callability on MISSING tokens
+  const strictRows: Array<{ tok: string; detail: string }> = [];
+  if (STRICT) {
+    for (const [tok, c] of callSites) {
+      if (probed[tok] === "exists") continue;
+      if (allowed(tok)) continue; // intentional/type/prose/wildcard — documented, not a bug
+      if (c.call > 0) strictRows.push({ tok, detail: "call-site x" + c.call + " on MISSING token (" + c.files.join(",") + ")" });
+      if (c.news > 0) strictRows.push({ tok, detail: "new-site x" + c.news + " on MISSING token (" + c.files.join(",") + ")" });
+    }
+  }
+
+  // report
   rows.sort((a, b) => a.tok.localeCompare(b.tok));
   for (const r of rows) console.log((r.status.startsWith("MISSING") ? "FAIL " : "ok   ") + r.tok.padEnd(22) + r.status.padEnd(32) + r.files.slice(0, 60));
+  if (STRICT) {
+    for (const s of strictRows) { console.log("FAIL " + s.tok.padEnd(22) + s.detail); fails++; }
+  }
   console.log("---");
-  console.log("docs:api — " + all.length + " tokens · " + rows.length + " non-exists classified · " + fails + " genuine drift" + (fails ? " (fix docs or allowlist)" : ""));
+  console.log("docs:api — " + all.length + " tokens · " + rows.length + " non-exists classified · " + fails + " genuine drift" + (STRICT ? " (STRICT incl. callability)" : "") + (fails ? " (fix docs or allowlist)" : ""));
+
+  // .data/api-report.md
+  const mdLines: string[] = [
+    "# docs:api report — Bun " + Bun.version + " (" + Bun.revision.slice(0, 8) + ")",
+    "",
+    "Generated by `bun run docs:api" + (STRICT ? "` (STRICT=1)" : "`") + " — " + new Date().toISOString(),
+    "",
+    "## Existence classification (" + all.length + " tokens)",
+    "",
+    "| token | status | files |",
+    "|---|---|---|",
+  ];
+  for (const r of [...rows].sort((a, b) => a.tok.localeCompare(b.tok))) {
+    mdLines.push("| `" + r.tok + "` | " + r.status.replace(/\|/g, "\\|") + " | " + r.files + " |");
+  }
+  if (STRICT) {
+    mdLines.push("", "## STRICT callability findings", "");
+    if (!strictRows.length) mdLines.push("_none — every call-site/new-site is on an existing or allowlisted token_");
+    else { mdLines.push("| token | finding |", "|---|---|"); for (const s of strictRows) mdLines.push("| `" + s.tok + "` | " + s.detail.replace(/\|/g, "\\|") + " |"); }
+  }
+  mdLines.push("", "## Note: param-count validation rejected", "");
+  mdLines.push("13/41 call tokens are overloaded in bun-types (file=7, hash=9, write=5) and docs abbreviate args — regex param matching is a false-positive machine (§62). STRICT stops at callability, which is noise-free.");
+  await Bun.write(join(ROOT, ".data", "api-report.md"), mdLines.join("\n") + "\n");
   process.exit(fails === 0 ? 0 : 1);
 }
 

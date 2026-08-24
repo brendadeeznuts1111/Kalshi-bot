@@ -29,4 +29,19 @@ describe("docs:api runtime surface (§62)", () => {
     expect(typeof Bun.readableStreamToArrayBuffer).toBe("function");
     expect(typeof Bun.readableStreamToText).toBe("function");
   });
+
+  test("STRICT callability: docs:api exits 0 (no phantom call-sites on 1.4.0)", async () => {
+    // The gate runs docs:api with STRICT=1; a call-site on a MISSING token
+    // would fail. On the current docs the surface is clean — lock it.
+    const proc = Bun.spawn(["bun", "run", "docs:api"], {
+      cwd: process.cwd(),
+      env: { ...process.env, STRICT: "1" },
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const out = await new Response(proc.stdout).text();
+    const exit = await proc.exited;
+    expect(exit).toBe(0);
+    expect(out).toContain("0 genuine drift");
+  });
 });

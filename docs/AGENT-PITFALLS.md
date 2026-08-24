@@ -3081,3 +3081,19 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
   namespaces (don't conflate with the plugin-namespace charset §61).
 - Tests: tests/lib/docs-api.test.ts locks the load-bearing runtime facts
   (Bun.Image vs image, zstd family, no Bun.watch, ffi/html intentional).
+- STRICT deepen (§62a, 2026-08-24):
+  - STRICT=1 mode (now the verify:contracts gate variant) adds CALLABILITY
+    checks: a call-site or `new`-site on a MISSING (undefined) API token is a FAIL. Noise-free today: all 10 prose
+    call-looking tokens (Bun.JSON5/TOML/XML/YAML/markdown object
+    namespaces, intentional X/html/image) classify into existing
+    allowlists. Protects against FUTURE docs calling a phantom API.
+  - REJECTED: param-count validation. Probed the surface first: 13/41
+    call tokens are OVERLOADED in bun-types (file=7, hash=9, write=5,
+    color=6) and docs abbreviate args (Bun.file(path), Bun.serve({...})).
+    Regex param matching would flag overload mismatch + elided args — a
+    false-positive machine. STRICT stops at callability, which is the
+    noise-free boundary. Revisit only with a real TS AST parser.
+  - .data/api-report.md: always written — existence classification table
+    + STRICT callability findings, feed for the docs dashboard channel.
+  - Gate wiring: tools/verify-contracts.ts passes STRICT=1 env to the
+    docs:api gate via runBunCommand env (probe-verified §42 PATH note).

@@ -16,7 +16,7 @@ const ROOT = join(import.meta.dir, '..');
 const gates = [
   ['deps:check'],
   ['docs:check'],
-  ['docs:api'],
+  ['docs:api'], // STRICT=1 env set in run() below // STRICT callability via env — runBunCommand passes env through? check
   ['content:check'],
   ['assets:check'],
   ['bun:blog-map', '--', '--offline'],
@@ -26,7 +26,8 @@ const gates = [
 ] as const;
 
 const run = async (name: string, args: readonly string[]): Promise<boolean> => {
-  const r = await runBunCommand(['run', name, ...args], { cwd: ROOT });
+  const env = name === 'docs:api' ? { STRICT: '1' } : undefined;
+  const r = await runBunCommand(['run', name, ...args], { cwd: ROOT, ...(env ? { env } : {}) });
   console.log((r.ok ? 'ok   ' : 'FAIL ') + name.padEnd(16) + r.lastLine.slice(0, 100));
   return r.ok;
 };

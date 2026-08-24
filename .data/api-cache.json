@@ -92,6 +92,7 @@
     "FFI": "exists",
     "ffi": "MISSING",
     "watch": "MISSING",
-    "zstd": "MISSING"
+    "zstd": "MISSING",
+    "tok": "MISSING"
   }
 }
