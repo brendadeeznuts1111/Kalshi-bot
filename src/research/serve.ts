@@ -1270,6 +1270,11 @@ export function createResearchServer(options: ServeOptions = {}) {
       // 304, probe-verified); the hand-rolled Bun.file handlers were
       // removed. /colors.css remains here (single root-level file).
 
+      // Liveness probe: { status, pid, uptime } — used by tunnels/CI to
+      // confirm the server is alive (verified after --hot reloads).
+      if (url.pathname === "/health") {
+        return json({ status: "ok", pid: process.pid, uptime: process.uptime() });
+      }
       if (url.pathname === "/api/hq") {
         return json(await buildHqPayload());
       }
