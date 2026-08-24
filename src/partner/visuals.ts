@@ -268,8 +268,21 @@ function pngChunk(type: string, data: Uint8Array): Uint8Array {
   return chunk;
 }
 
-/** PNG CRC32 */
+/**
+ * PNG CRC32 — NATIVE via bun:ffi libz when available (probe-verified:
+ * 1.2ms vs 1295ms per 50x1MB, identical output; AGENT-PITFALLS §40). The
+ * JS implementation is the fallback (server/tool surface only — visuals.ts
+ * is never in the browser bundle, so dlopen is safe here).
+ */
+let ffiCrc32: ((crc: number, buf: Uint8Array, len: number) => number) | null = null;
+try {
+  const { dlopen } = await import("bun:ffi");
+  const lib = dlopen("libz.dylib", { crc32: { args: ["u32", "ptr", "u32"], returns: "u32" } });
+  ffiCrc32 = lib.symbols.crc32;
+} catch { /* no bun:ffi / no libz — JS fallback */ }
+
 function crc32(buf: Uint8Array): number {
+  if (ffiCrc32) return ffiCrc32(0, buf, buf.length) >>> 0;
   let c = 0xffffffff;
   for (let i = 0; i < buf.byteLength; i++) {
     c ^= buf[i]!;

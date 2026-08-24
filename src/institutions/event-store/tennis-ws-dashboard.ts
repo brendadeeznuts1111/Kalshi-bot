@@ -156,11 +156,7 @@ function loadLatestBookTicksForWatch(
 }
 
 function esc(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+  return Bun.escapeHTML(s); // native (§43)
 }
 
 /** Inline HTML for Bun.WebView `data:` navigation. */

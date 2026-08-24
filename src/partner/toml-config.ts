@@ -497,7 +497,7 @@ export function parsePartnersToml(text: string): PartnersTomlDoc {
 
 /** Serialize domain doc → TOML string. */
 export function stringifyPartnersToml(doc: PartnersTomlDoc): string {
-  const clean = JSON.parse(JSON.stringify(doc)) as PartnersTomlDoc;
+  const clean = structuredClone(doc); // native deep clone (Bun)
   return tomlStringify(clean);
 }
 

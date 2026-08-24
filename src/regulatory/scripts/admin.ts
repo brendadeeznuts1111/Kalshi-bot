@@ -34,22 +34,14 @@ const c = {
 
 // ── Table rendering ──
 
+// NATIVE box-drawing table (§44): Bun.inspect.table is ANSI-aware
+// (probe: colored cells align by visible width) and replaces the hand-rolled
+// renderTable. Options as 2nd arg (colors:true) — 3rd-arg form not honored.
 function renderTable(headers: string[], rows: string[][]): void {
-  const colWidths = headers.map((h, i) =>
-    Math.max(h.length, ...rows.map((r) => (r[i] ?? "").length)),
+  const objects = rows.map((r) =>
+    Object.fromEntries(headers.map((h, i) => [h, r[i] ?? ""])),
   );
-  const sep = "─".repeat(colWidths.reduce((a, b) => a + b + 3, 1));
-
-  const fmtRow = (cells: string[]) =>
-    "│ " + cells.map((cell, i) => (cell ?? "").padEnd(colWidths[i])).join(" │ ") + " │";
-
-  console.log(c.dim(sep));
-  console.log(c.bold(fmtRow(headers)));
-  console.log(c.dim(sep));
-  for (const row of rows) {
-    console.log(fmtRow(row));
-  }
-  console.log(c.dim(sep));
+  console.log(Bun.inspect.table(objects, { colors: true }));
 }
 
 // ── CLI ──
