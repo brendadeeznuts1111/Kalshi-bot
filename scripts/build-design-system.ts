@@ -25,4 +25,17 @@ if (!out.success) {
 if (out.metafile) {
   await Bun.write(join(root, 'dist/design-system.meta.json'), JSON.stringify(out.metafile, null, 2));
 }
-console.log('design:build ->', out.outputs.map((o) => o.path).join(', ') + ' + meta.json');
+// Markdown bundle report (--metafile-md, LLM-friendly) via the CLI - the API
+// has no md emitter; the CLI re-build is ~4ms for this 8-module bundle.
+const mdProc = Bun.spawn([
+  Bun.which('bun') ?? 'bun',
+  'build', join(root, 'src/institutions/design-system.ts'),
+  '--outdir=' + join(root, 'dist'), '--target=bun', '--minify',
+  '--metafile-md=' + join(root, 'dist/design-system.meta.md'),
+], { cwd: root, stdout: 'pipe', stderr: 'pipe' });
+await mdProc.exited;
+if (mdProc.exitCode !== 0) {
+  console.error('metafile-md report failed:', await new Response(mdProc.stderr).text());
+  process.exit(1);
+}
+console.log('design:build ->', out.outputs.map((o) => o.path).join(', ') + ' + meta.json + meta.md');
