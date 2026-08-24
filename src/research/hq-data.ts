@@ -7,7 +7,6 @@
  * unreachable upstream degrades that section to a typed "unavailable" state
  * instead of failing the whole payload.
  */
-import { readdirSync, existsSync, statSync, readFileSync } from "node:fs";
 import { readJsonFileOr } from "../lib/json-file.ts";
 import { join } from "node:path";
 import { listRunSummaries, loadLatestProductionRunAnyDimension } from "./cache.ts";
@@ -115,15 +114,15 @@ type AlphaProgramView = {
   hypothesis: string | null;
 };
 
-function readShadowStats(dir: string, shadowLog: string | undefined) {
+async function readShadowStats(dir: string, shadowLog: string | undefined) {
   if (!shadowLog) return null;
   const path = joinPath(dir, shadowLog);
-  if (!existsSync(path)) return null;
+  if (!(await Bun.file(path).exists())) return null;
   let signals = 0;
   let resolutions = 0;
   let lastAt: string | null = null;
   try {
-    const lines = readFileSync(path, "utf-8").split("\n").filter(Boolean);
+    const lines = (await Bun.file(path).text()).split("\n").filter(Boolean);
     for (const line of lines) {
       try {
         const rec = JSON.parse(line);
@@ -152,9 +151,18 @@ type AlphaProgramSeed = {
 };
 
 async function readAlphaPrograms(): Promise<AlphaProgramView[]> {
-  if (!existsSync(ALPHA_DIR)) return [];
+  const names: string[] = [];
+  try {
+    // Glob throws ENOENT when ALPHA_DIR is missing (same guard the old
+    // existsSync provided); "*/program.json" yields one entry per program dir.
+    for await (const rel of new Bun.Glob("*/program.json").scan({ cwd: ALPHA_DIR, onlyFiles: true })) {
+      names.push(rel.substring(0, rel.indexOf("/")));
+    }
+  } catch {
+    return [];
+  }
   const out: AlphaProgramView[] = [];
-  for (const name of readdirSync(ALPHA_DIR).sort()) {
+  for (const name of names.sort()) {
     const dir = joinPath(ALPHA_DIR, name);
     const programPath = joinPath(dir, "program.json");
     try {
@@ -168,10 +176,9 @@ async function readAlphaPrograms(): Promise<AlphaProgramView[]> {
         dimension: p.dimension ?? "unknown",
         created: p.created ?? null,
         gates: p.gates ?? {},
-        shadow: readShadowStats(dir, p.shadowLog),
-        hypothesis: existsSync(hypPath)
-          ? readFileSync(hypPath, "utf-8").split("\n").find((l) => l.trim().length > 0) ?? null
-          : null,
+        shadow: await readShadowStats(dir, p.shadowLog),
+        hypothesis: (await Bun.file(hypPath).text().catch(() => ""))
+          .split("\n").find((l) => l.trim().length > 0) ?? null,
       });
     } catch {
       // skip unreadable program
@@ -191,9 +198,11 @@ async function readCalibrationLatest() {
   try {
     let runs = 0;
     try {
-      runs = readdirSync(CALIBRATION_DIR).filter((d) =>
-        statSync(joinPath(CALIBRATION_DIR, d)).isDirectory(),
-      ).length;
+      // One manifest per run dir; Glob throws ENOENT when CALIBRATION_DIR is
+      // missing (old readdirSync+statSync guard => 0 either way).
+      for await (const _rel of new Bun.Glob("*/manifest.json").scan({ cwd: CALIBRATION_DIR, onlyFiles: true })) {
+        runs += 1;
+      }
     } catch {
       runs = 0;
     }

@@ -7,7 +7,6 @@
  */
 // @see https://bun.com/docs/runtime/sqlite
 import type { Database } from "bun:sqlite";
-import { existsSync } from "node:fs";
 import { midFromBookSnapshot } from "../bot/kalshi-book-parse.ts";
 import type { BookSnapshot } from "../institutions/alpha-signal-types.ts";
 import { openEventStore } from "../institutions/event-store/open-db.ts";
@@ -888,11 +887,10 @@ function liveDataHealth(
 }
 
 function openReadonlyDb(dbPath: string): Database | null {
-  if (!existsSync(dbPath)) return null;
   try {
     return openEventStore({ dbPath, readonly: true });
   } catch {
-    return null;
+    return null; // missing/unreadable DB — try/catch replaces the old existsSync guard
   }
 }
 
