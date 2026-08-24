@@ -1134,6 +1134,14 @@ export function createResearchServer(options: ServeOptions = {}) {
   // 'critical', drop the in-process caches so the OS doesn't kill us.
   // (Levels typed 'warning' | 'critical' in bun-types; event only shows
   // in eventNames after a listener is registered — runtime-surface probe.)
+  // Under `bun --hot` the module re-evaluates WITHOUT restarting the
+  // process, so a plain process.on() would ACCUMULATE one listener per
+  // reload. The previous handler is kept on globalThis (which survives hot
+  // reloads per bun watch-mode docs) and removed before re-adding.
+  const hot = globalThis as { __kalshiMemPressureHandler?: (level: 'warning' | 'critical') => void };
+  if (hot.__kalshiMemPressureHandler) {
+    process.removeListener('memoryPressure', hot.__kalshiMemPressureHandler);
+  }
   const onMemoryPressure = (level: 'warning' | 'critical') => {
     if (level !== 'critical') return;
     const before = bookCache.size;
@@ -1143,6 +1151,7 @@ export function createResearchServer(options: ServeOptions = {}) {
     resetTennisBoardCache();
     console.warn('memoryPressure critical: cleared ' + before + ' bookCache + source catalog + auth + tennis board caches');
   };
+  hot.__kalshiMemPressureHandler = onMemoryPressure;
   process.on('memoryPressure', onMemoryPressure);
   const serveOptions = {
     port,

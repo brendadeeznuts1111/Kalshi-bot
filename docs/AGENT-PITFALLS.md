@@ -1492,6 +1492,26 @@ REPO IMPACT (all safe, no code changes):
   (csrf.ts) - no parse()/isExpired() call sites; Expires serialization
   already audited in section 31.
 
+### 32. Serve ops: use `bun --hot`, and the EADDRINUSE restart recipe
+
+The report browser's dev command is `bun run serve` = `bun --hot
+src/research/serve.ts`. RUN IT WITH --hot, not plain `bun serve.ts`:
+- --hot SOFT-reloads the module graph without restarting the process;
+  Bun.serve re-binds the handler in place (verified: edit serve.ts while
+  running -> reload logged, port stays 200, NO EADDRINUSE). Plain mode
+  + kill/restart is where the port-release race lives.
+- The memoryPressure listener is registered per evaluation; under --hot it
+  would ACCUMULATE one per reload (old process showed 3 after pre-guard
+  reloads). serve.ts now keeps the last handler on globalThis and
+  removeListener()s it before re-adding (docs: globalThis survives hot
+  reloads). Fresh process + 2 reloads -> listenerCount stays 1.
+- Restart recipe when the port IS stuck (EADDRINUSE at serve.ts:1512):
+  `pkill -f 'bun --hot src/research/serve.ts'` -> wait 1.5s -> verify
+  `curl localhost:3456` refuses -> start ONE `bun --hot` instance.
+  lsof is sandbox-blocked in this harness; pkill+curl is the check.
+- Do NOT start a second instance on 3456 - pick a PORT env override or
+  stop the first. job_kill on the DSH wrapper does not always kill the
+  bun child; pkill -f the exact command line is the reliable kill.
 
 ## 9. Bun Shell (`Bun.$`) switch — verified API surface (2026-08-23)
 
