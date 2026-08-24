@@ -48,14 +48,18 @@ export function runPerfAudit(root: string, globalBunfigPath?: string): PerfCheck
       : 'test script missing --parallel/--timings: ' + (testScript || '(none)'),
   });
 
-  const buildFiles = rgFiles(root, 'Bun.build', [join(root, 'src'), join(root, 'tools')]);
+  const buildDirs = [join(root, 'src'), join(root, 'tools'), join(root, 'scripts')];
+  const buildFiles = rgFiles(root, 'Bun.build', buildDirs);
   const usesBuild = buildFiles.length > 0;
+  const metafileFiles = rgFiles(root, 'metafile\s*:\s*true|--metafile-md', buildDirs);
   checks.push({
     name: 'Bun.build metafile analysis (--metafile-md / metafile:true)',
-    status: usesBuild ? 'warn' : 'n/a',
-    detail: usesBuild
-      ? 'Bun.build used - consider metafile:true'
-      : 'no Bun.build usage in src/tools (not applicable)',
+    status: !usesBuild ? 'n/a' : metafileFiles.length ? 'ok' : 'warn',
+    detail: !usesBuild
+      ? 'no Bun.build usage in src/tools/scripts (not applicable)'
+      : metafileFiles.length
+        ? 'Bun.build with metafile in: ' + metafileFiles.join(', ')
+        : 'Bun.build used - add metafile:true / --metafile-md for bundle analysis',
   });
 
   const workflowsDir = join(root, '.github/workflows');
