@@ -21,6 +21,7 @@ import {
   extractCodeBlocks,
   identifiersFromCodeBlocks,
   latestRelease,
+  parseAtomEntries,
   parseRssEntries,
 } from '../src/lib/release-blog.ts';
 
@@ -45,13 +46,31 @@ function readState(): ReleaseState | null {
 async function main(): Promise<void> {
   const check = hasFlag('check');
   const force = hasFlag('force');
-  const rss = await (await fetch('https://bun.com/rss.xml')).text();
+  const rss = await (await fetch('https://bun.sh/rss.xml')).text();
   const release = latestRelease(parseRssEntries(rss));
   if (!release) {
     console.error('no versioned release found in RSS');
     process.exit(1);
   }
   console.log('latest:', release.title, '(' + release.pubDate + ')');
+
+  // Cross-check against the authoritative GitHub releases Atom feed (the
+  // second verified Bun.XML shape — feed.entry with '@'-attrs). A mismatch
+  // here means the blog RSS lags GitHub.
+  let githubCross: string | null = null;
+  try {
+    const atom = await (await fetch('https://github.com/oven-sh/bun/releases.atom')).text();
+    const gh = latestRelease(parseAtomEntries(atom));
+    if (gh) {
+      const match = gh.version === release.version;
+      githubCross = (match ? 'match' : 'MISMATCH') + ': github ' + gh.title + ' (' + gh.link + ')';
+      console.log('github atom cross-check:', githubCross);
+      if (!match) console.error('note: RSS and GitHub releases disagree — GitHub is authoritative');
+    }
+  } catch (e) {
+    githubCross = 'unavailable: ' + String(e).slice(0, 60);
+    console.error('github atom cross-check unavailable:', String(e).slice(0, 80));
+  }
 
   const state = readState();
   if (!force && state?.version === release.version) {

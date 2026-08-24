@@ -6,8 +6,6 @@ import {
   filterLabel,
 } from "../institutions/filter-catalog.ts";
 import { BRAND } from "../institutions/design-tokens.ts";
-import { baseCssVars } from "../institutions/design-tokens.ts";
-import { componentCss } from "../institutions/hq-ui.ts";
 
 export function renderHq(): string {
   return `<!DOCTYPE html>
@@ -16,9 +14,8 @@ export function renderHq(): string {
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>${BRAND.name} — ${BRAND.tagline}</title>
+<link rel="stylesheet" href="/design-system.css" />
 <style>
-${baseCssVars()}
-${componentCss()}
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--fg);
   font: 14px/1.5 -apple-system, "SF Pro Text", Segoe UI, sans-serif; }

@@ -9,6 +9,18 @@ import {
   surfaceEdgePresentation,
 } from "./surface-edge.ts";
 
+// Design tokens are injected server-side via the composed /api/design
+// manifest (no color kernel in the browser bundle). Seeds are the current
+// TOKENS values — legal design vocabulary — until the manifest arrives.
+let DESIGN_TOKENS = { acc: "#4da3ff", ok: "#3fb27f", warn: "#e0a93e" };
+fetch("/api/design")
+  .then((r) => (r.ok ? r.json() : null))
+  .then((d) => {
+    const c = d?.tokens?.color;
+    if (c?.acc && c?.ok && c?.warn) DESIGN_TOKENS = { acc: c.acc, ok: c.ok, warn: c.warn };
+  })
+  .catch(() => {});
+
 const $ = (s) => document.querySelector(s);
 const esc = (v) => String(v ?? "").replace(/[&<>"]/g, (c) =>
   ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -613,9 +625,9 @@ function drawHistoryChart(history) {
   }
   const W = cv.width, H = cv.height, pad = 8;
   const series = [
-    { key: "balanceCents", color: "#4da3ff", label: "balance" },
-    { key: "portfolioValueCents", color: "#3fb27f", label: "portfolio" },
-    { key: "exposureCents", color: "#e0a93e", label: "exposure" },
+    { key: "balanceCents", color: DESIGN_TOKENS.acc, label: "balance" },
+    { key: "portfolioValueCents", color: DESIGN_TOKENS.ok, label: "portfolio" },
+    { key: "exposureCents", color: DESIGN_TOKENS.warn, label: "exposure" },
   ];
   const all = pts.flatMap((p) => series.map((s) => p[s.key]).filter((v) => v != null));
   const min = Math.min(...all), max = Math.max(...all);

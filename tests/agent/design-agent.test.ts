@@ -14,6 +14,14 @@ describe('designAgent.audit', () => {
     expect(a.issues[0]!.value).toBe('#123456');
   });
 
+  test('allowlist admits data-driven colors but not UI chrome', () => {
+    const html = '<span style="color: #e64dcc">ASH</span><span style="color: #123456">x</span>';
+    const withLegal = designAgent.audit(html, { legal: ['#e64dcc'] });
+    expect(withLegal.ok).toBe(false);
+    expect(withLegal.issues.map((i) => i.value)).toEqual(['#123456']);
+    expect(designAgent.audit(html, { legal: ['#e64dcc', '#123456'] }).ok).toBe(true);
+  });
+
   test('domain palette colors are legal (COLORS via TOKENS.palette)', () => {
     expect(designAgent.audit('<div style="color: #27ae60"></div>').ok).toBe(true); // tennis
     expect(designAgent.audit('<div style="color: #7dd3fc"></div>').ok).toBe(true); // kalshi

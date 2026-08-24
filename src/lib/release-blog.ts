@@ -12,6 +12,10 @@ export type RssEntry = {
   title: string;
   link: string;
   pubDate: string;
+  /** Image enclosure URL if present (RSS 2.0 `@url` shapes, probe-verified:
+   * item.enclosure["@url"] / item["media:content"]["@url"] /
+   * item["media:thumbnail"]["@url"]). */
+  imageUrl?: string;
 };
 
 /**
@@ -20,20 +24,64 @@ export type RssEntry = {
  * rss.channel.item[] with plain-string title/link/pubDate. (Atom feeds use
  * feed.entry and '@'-prefixed attributes instead - shape differs by format.)
  */
+type RssItemShape = {
+  title?: string;
+  link?: string;
+  pubDate?: string;
+  enclosure?: { "@url"?: string };
+  "media:content"?: { "@url"?: string };
+  "media:thumbnail"?: { "@url"?: string };
+};
+
+/** First image URL from the probe-verified RSS enclosure shapes. */
+function imageUrlOf(it: RssItemShape): string | undefined {
+  return it.enclosure?.["@url"] ?? it["media:content"]?.["@url"] ?? it["media:thumbnail"]?.["@url"];
+}
+
 export function parseRssEntries(xml: string): RssEntry[] {
   const parsed = Bun.XML.parse(xml) as {
-    rss?: {
-      channel?: {
-        item?:
-          | Array<{ title?: string; link?: string; pubDate?: string }>
-          | { title?: string; link?: string; pubDate?: string };
-      };
-    };
+    rss?: { channel?: { item?: RssItemShape | RssItemShape[] } };
   };
   const raw = parsed.rss?.channel?.item;
   const items = Array.isArray(raw) ? raw : raw ? [raw] : [];
   return items
-    .map((it) => ({ title: it.title ?? "", link: it.link ?? "", pubDate: it.pubDate ?? "" }))
+    .map((it) => ({
+      title: it.title ?? "",
+      link: it.link ?? "",
+      pubDate: it.pubDate ?? "",
+      ...(imageUrlOf(it) ? { imageUrl: imageUrlOf(it) } : {}),
+    }))
+    .filter((e) => e.title.length > 0);
+}
+
+/**
+ * Parse a GitHub releases Atom feed (feed.entry[]) via Bun.XML.parse —
+ * the verified parser, second feed shape. Atom uses '@'-prefixed link
+ * attributes: feed.entry[].link.@href. Returns the same RssEntry shape so
+ * latestRelease() works unchanged.
+ */
+export function parseAtomEntries(xml: string): RssEntry[] {
+  let parsed: { feed?: { entry?: unknown } };
+  try {
+    parsed = Bun.XML.parse(xml) as { feed?: { entry?: unknown } };
+  } catch {
+    return []; // malformed/empty feed -> no entries
+  }
+  const feed = parsed as {
+    feed?: {
+      entry?:
+        | Array<{ title?: string; link?: { "@href"?: string }; updated?: string }>
+        | { title?: string; link?: { "@href"?: string }; updated?: string };
+    };
+  };
+  const raw = parsed.feed?.entry;
+  const items = Array.isArray(raw) ? raw : raw ? [raw] : [];
+  return items
+    .map((it) => ({
+      title: it.title ?? "",
+      link: it.link?.["@href"] ?? "",
+      pubDate: it.updated ?? "",
+    }))
     .filter((e) => e.title.length > 0);
 }
 

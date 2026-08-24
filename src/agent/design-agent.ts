@@ -59,9 +59,21 @@ export class DesignAgent {
    * LIVE hq-app files are audited alongside generated templates.
    * 8-digit hex (#rrggbbaa) is normalized to its 6-digit base for legality;
    * rgba() literals are compared against token rgba values (tints, scrims).
+   *
+   * A trailing `{ legal: string[] }` options object adds extra
+   * legal hex values — for DATA-DRIVEN colors (e.g. per-partner identity
+   * hexes from the partner registry) that are not global design tokens.
+   * UI chrome must still come from TOKENS; the allowlist is for values that
+   * are by definition not part of the one vocabulary.
    */
-  audit(...surfaces: string[]): DesignAudit {
-    const legal = new Set(tokenValues().map((v) => v.toLowerCase()));
+  audit(...surfacesAndOpts: Array<string | { legal?: string[] }>): DesignAudit {
+    const opts =
+      surfacesAndOpts.find((s): s is { legal?: string[] } => typeof s !== "string") ?? {};
+    const surfaces = surfacesAndOpts.filter((s): s is string => typeof s === "string");
+    const legal = new Set([
+      ...tokenValues().map((v) => v.toLowerCase()),
+      ...(opts.legal ?? []).map((v) => v.toLowerCase()),
+    ]);
     const issues: DesignAuditIssue[] = [];
 
     const add = (kind: DesignAuditIssue["kind"], value: string, detail: string) =>

@@ -25,10 +25,7 @@ export const HQ_COMPONENTS = {
 
 export type HqComponent = keyof typeof HQ_COMPONENTS;
 
-const esc = (v: unknown): string =>
-  String(v ?? "").replace(/[&<>"]/g, (c) =>
-    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] as string,
-  );
+const esc = (v: unknown): string => Bun.escapeHTML(String(v ?? "")); // native (§43)
 
 // ── badge@1.0.0 — semantic status pill ──
 

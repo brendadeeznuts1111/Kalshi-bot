@@ -57,7 +57,15 @@ export function runBreakingAudit(root: string): BreakingFinding[] {
   // cannot chain-verify a host you are probing to identify for the first
   // time; the SANs only inform a host->skin suggestion and carry no secrets.
   // All other connections must keep chain + hostname verification.
-  const TLS_OVERRIDE_ALLOWLIST = ['**/host-discover.ts'];
+  const TLS_OVERRIDE_ALLOWLIST = [
+    '**/host-discover.ts',
+    // security:probe deliberately connects with rejectUnauthorized:false to
+    // VERIFY the untrusted-handshake path (authorized=false probe) and the
+    // ca-alone-does-not-bypass-hostname behavior — a local throwaway cert,
+    // no secrets; security-page.ts only DOCUMENTS the pattern (§28).
+    '**/tools/security-probe.ts',
+    '**/src/research/security-page.ts',
+  ];
 
   // 1. res.writeHeader removed (v1.4): any usage would crash at runtime.
   const wH = rgFiles(root, 'writeHeader', dirs, { exclude: LABEL_FILES });
@@ -161,13 +169,24 @@ export function runBreakingAudit(root: string): BreakingFinding[] {
   // return false unless Upgrade: websocket + well-formed Sec-WebSocket-Key
   // (426 for Sec-WebSocket-Version != 13), closes 1006 on unmasked frames,
   // and ws.subscribe/unsubscribe return false on a closed socket.
-  const wsRoutes = rgFiles(root, 'websocket\\s*:\\s*\\{|\\bupgrade\\(', dirs, { exclude: LABEL_FILES });
+  // Deliberate live channel (probe-verified AGENT-PITFALLS §23): /api/live
+  // upgrade in serve.ts handles upgrade() false with 400; live-channel.ts
+  // uses the standard open/message/close + subscribe/publish surface;
+  // live-page.ts only DOCUMENTS the surface. These are the sanctioned
+  // usage - the fixture in breaking-audit.test.ts (src/ws.ts) still warns.
+  const WS_ALLOWLIST = [
+    '**/src/research/serve.ts',
+    '**/src/institutions/live-channel.ts',
+    '**/src/research/live-page.ts',
+    '**/src/research/map-page.ts', // documents server.upgrade() H3 caveat (§39), not a call
+  ];
+  const wsRoutes = rgFiles(root, 'websocket\\s*:\\s*\\{|\\bupgrade\\(', dirs, { exclude: [...LABEL_FILES, ...WS_ALLOWLIST] });
   findings.push({
     check: 'Bun.serve websocket routes / server.upgrade() (1.4 semantics)',
     status: wsRoutes.length ? 'warn' : 'ok',
     detail: wsRoutes.length
       ? 'server websocket in: ' + wsRoutes.join(', ') + ' - handle upgrade() false + 426 + unmasked-frame 1006'
-      : 'no server-side websocket routes or upgrade() calls',
+      : 'no unexpected server-side websocket routes or upgrade() calls (live channel allowlisted)',
   });
 
   // 10. fetch redirect:'error': 1.4 narrows it to 301/302/303/307/308 only;
