@@ -3014,3 +3014,13 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
 - Artifacts: src/research/plugins-page.ts (/bun/plugins widget),
   tools/plugins-probe.ts (bun run plugins:probe),
   tests/lib/plugins-probe.test.ts, verify:contracts gate.
+- Typed registry: src/lib/plugin-namespaces.ts — ONE source of truth for
+  the charset rule (PLUGIN_NAMESPACE_CHARSET = [a-zA-Z0-9_$-], the exact
+  runtime error text), the branded PluginNamespace type (as/try/parse
+  constructors), KNOWN_PLUGIN_NAMESPACES (file/env/yaml/virt/stats — the
+  doc's "node"/"bun" deliberately ABSENT, probe proved ns file),
+  INVALID_PLUGIN_NAMESPACES (yaml:/file:/empty/spaces — UPPER_CASE is
+  VALID, charset includes A-Z). Wired into tools/plugins-probe.ts (P2b:
+  registry charset must agree with the runtime, 5/5 rejected + 5/5
+  accepted), tests/lib/plugins-probe.test.ts (registry unit tests),
+  and the /bun/plugins page (registry section rendered from the module).

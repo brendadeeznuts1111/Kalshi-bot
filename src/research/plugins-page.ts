@@ -16,6 +16,7 @@
  * only build.module() works (bunfig preload, NOT [runtime] plugins).
  */
 import { renderWidgetPage, widgetTable, W_VERIFIED, W_CORRECTED, W_NOTE } from "../lib/widget-page.ts";
+import { KNOWN_PLUGIN_NAMESPACES, PLUGIN_NAMESPACE_DOCS, PLUGIN_NAMESPACE_CHARSET } from "../lib/plugin-namespaces.ts";
 
 export function renderPluginsPage(): string {
   const namespaces = widgetTable(["Claim (doc §namespaces)", "Probe on Bun 1.4.0"], [
@@ -42,6 +43,8 @@ export function renderPluginsPage(): string {
     { cells: ["unresolvable import (e.g. <code>no-such-pkg</code>)", W_CORRECTED + " Bun.build THROWS AggregateError (\"Bundle failed\") rather than returning success:false - and onEnd still fires with success=false + logs (§61)"] },
     { cells: ["<code>bun:sqlite</code> / <code>bun:test</code> under default target", W_CORRECTED + " both throw under Bun.build default target; <code>bun:sqlite</code> builds with target:\"bun\" (consistent with §48/§59 target finding) (§61)"] },
   ]);
+  const registryRows = (Object.keys(KNOWN_PLUGIN_NAMESPACES) as Array<keyof typeof KNOWN_PLUGIN_NAMESPACES>).map((k) => ({ cells: ['<code>"' + k + '"</code>', W_VERIFIED + ' ' + PLUGIN_NAMESPACE_DOCS[k]] }));
+  const registry = widgetTable(["Namespace (typed registry)", "Probe / doc"], registryRows);
   return renderWidgetPage({
     title: "Bundler Plugins Reference",
     subtitle: "bun.com/docs/bundler/plugins (#namespaces anchor) - every claim probed against Bun 1.4.0; 4 doc corrections",
@@ -49,6 +52,7 @@ export function renderPluginsPage(): string {
     links: ["/bun/overview", "/bun/transpiler", "/bun/markdown"],
     sections: [
       { heading: "Namespaces (the #namespaces anchor)", html: namespaces },
+      { heading: "Typed namespace registry (src/lib/plugin-namespaces.ts)", html: registry },
       { heading: "Lifecycle hooks", html: hooks },
       { heading: "Runtime vs bundler plugins", html: runtime },
       { heading: "Failure modes", html: failures },

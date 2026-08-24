@@ -31,6 +31,7 @@
 import { mkdtempSync, writeFileSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { asPluginNamespace, INVALID_PLUGIN_NAMESPACES, KNOWN_PLUGIN_NAMESPACES, tryPluginNamespace } from "../src/lib/plugin-namespaces.ts";
 
 const checks: { name: string; pass: boolean; detail: string }[] = [];
 const check = (name: string, pass: boolean, detail = "") => { checks.push({ name, pass, detail }); console.log((pass ? "PASS" : "FAIL") + "  " + name + (detail ? "  — " + detail : "")); };
@@ -50,6 +51,18 @@ try {
   nsThrow = "no-throw";
 } catch (e) { nsThrow = (e as Error).message || String(e).slice(0, 60); }
 check("P2 namespace yaml: (colon) rejected", nsThrow.includes("namespace can only contain"), nsThrow);
+// P2b: registry charset agrees with the runtime — every INVALID string
+// throws in the registry; every KNOWN namespace is accepted.
+let regBad = 0;
+for (const bad of INVALID_PLUGIN_NAMESPACES) {
+  try { asPluginNamespace(bad); } catch { regBad++; } // threw = rejected
+}
+let regKnown = 0;
+for (const k of Object.keys(KNOWN_PLUGIN_NAMESPACES)) {
+  if (tryPluginNamespace(k)) regKnown++;
+}
+check("P2b registry charset == runtime (INVALID throw, KNOWN accept)", regBad === INVALID_PLUGIN_NAMESPACES.length && regKnown === Object.keys(KNOWN_PLUGIN_NAMESPACES).length, "invalidRejected=" + regBad + "/" + INVALID_PLUGIN_NAMESPACES.length + " knownAccepted=" + regKnown + "/" + Object.keys(KNOWN_PLUGIN_NAMESPACES).length);
+
 
 // P3: default namespace is file; void = default resolution
 writeFileSync(join(dir, "app.ts"), 'import { v } from "./dep";\nconsole.log(v);\n');

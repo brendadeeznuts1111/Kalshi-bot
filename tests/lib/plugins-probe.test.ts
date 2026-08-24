@@ -4,6 +4,7 @@ import { describe, expect, test } from "bun:test";
 import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { DEFAULT_PLUGIN_NAMESPACE, asPluginNamespace, INVALID_PLUGIN_NAMESPACES, KNOWN_PLUGIN_NAMESPACES, tryPluginNamespace } from "../../src/lib/plugin-namespaces.ts";
 
 describe("bundler plugins namespaces (§61)", () => {
   test("namespace chars are restricted — yaml: (colon) throws", async () => {
@@ -105,5 +106,30 @@ describe("bundler plugins runtime (§61)", () => {
     expect(exit).toBe(0);
     expect(out).toContain("FIRED=0");
     rmSync(dir, { recursive: true, force: true });
+  });
+});
+
+
+describe("plugin namespace registry (src/lib/plugin-namespaces.ts)", () => {
+  test("DEFAULT is file; KNOWN map keys all validate as namespaces", () => {
+    expect(String(DEFAULT_PLUGIN_NAMESPACE)).toBe("file");
+    for (const key of Object.keys(KNOWN_PLUGIN_NAMESPACES)) {
+      expect(String(tryPluginNamespace(key))).toBe(key);
+    }
+  });
+
+  test("INVALID strings throw via asPluginNamespace (yaml:/file: are doc examples)", () => {
+    for (const bad of INVALID_PLUGIN_NAMESPACES) {
+      expect(() => asPluginNamespace(bad)).toThrow(/invalid charset/);
+    }
+  });
+
+  test("UPPER_CASE is VALID (charset includes A-Z — probe §61)", () => {
+    expect(String(asPluginNamespace("UPPER_CASE"))).toBe("UPPER_CASE");
+  });
+
+  test("node/bun are NOT registered namespaces (probe §61: ns file)", () => {
+    expect(Object.keys(KNOWN_PLUGIN_NAMESPACES)).not.toContain("node");
+    expect(Object.keys(KNOWN_PLUGIN_NAMESPACES)).not.toContain("bun");
   });
 });
