@@ -13,7 +13,7 @@
 export const DESIGN_SYSTEM_VERSION = "1.1.0"; // 1.1.0: +palette (domain COLORS), +status, +scrim, +accTint
 
 import { COLORS, type ColorKey } from "../lib/color/palette.ts";
-import { cssColor, tint } from "../lib/color/kernel.ts";
+import { convert, tint } from "../lib/color/kernel.ts";
 
 export const BRAND = {
   name: "Kalshi HQ",
@@ -46,12 +46,13 @@ export const TOKENS = {
      * hq-app/color-vars.css (scripts/generate-color-artifacts.ts reads the
      * same COLORS source). Registering them here makes them legal design
      * vocabulary (the design agent audits against tokenValues()).
-     * Values pass through the kernel's cssColor() (Bun.color "css"), so any
-     * input spelling (COLORS are uppercase) is canonicalized to lowercase
-     * css — Bun.color is the formatter, we never hand-normalize case. */
+     * Values pass through the kernel's convert(key, "hex") — Bun.color's
+     * "hex" format GUARANTEES lowercase #rrggbb for any input spelling
+     * ("css" would be 'most compact' and can emit named colors, e.g.
+     * #FF0000 -> "red", which would break the audit's hex comparison). */
     palette: {
       ...Object.fromEntries(
-        (Object.keys(COLORS) as ColorKey[]).map((key) => [key, cssColor(key)]),
+        (Object.keys(COLORS) as ColorKey[]).map((key) => [key, convert(key, "hex") as string]),
       ),
       /** Ink-on-color (the generated --color-*-on vars are #000000/#ffffff). */
       onLight: "#000000",
@@ -89,6 +90,14 @@ export const TOKENS = {
     sizeStat: "1.6rem",
   },
 } as const;
+
+// Load-time guard: every palette entry must be a lowercase hex — the design
+// audit compares surfaces against these exact strings.
+for (const [name, value] of Object.entries(TOKENS.color.palette)) {
+  if (typeof value !== "string" || !/^#[0-9a-f]{6}$/.test(value)) {
+    throw new Error(`Palette token "${name}" is not lowercase hex: ${value}`);
+  }
+}
 
 /** Flat token path list — design agent audits views against these. */
 export function tokenPaths(): string[] {
