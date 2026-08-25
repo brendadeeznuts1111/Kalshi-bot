@@ -1,0 +1,14 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`P18 toMatchSnapshot file snapshot 1`] = `
+{
+  "deep": {
+    "value": 42,
+  },
+  "list": [
+    1,
+    2,
+    3,
+  ],
+}
+`;

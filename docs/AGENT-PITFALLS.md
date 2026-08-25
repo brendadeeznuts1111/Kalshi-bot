@@ -5495,6 +5495,29 @@ another note.
 - Artifacts: tools/test-probe.test.ts (new, gate #39), tools/verify-contracts.ts
   (38 -> 39 gates), package.json (test:probe), docs/BUN_API_COVERAGE.md
   + AGENT-PITFALLS header (38/38 -> 39/39). verify:contracts 39/39.
+## 138. bun:test deeper — fake timers, failing/if/concurrent, file snapshots (2026-08-24)
+
+- Extended gate #39 (tools/test-probe.test.ts) to 23 tests: 22 pass + 1
+  todo + 2 snapshots (inline + file).
+- FAKE TIMERS: vi.useFakeTimers()/useRealTimers()/isFakeTimers() +
+  advanceTimersByTime(ms) fires pending setTimeout; runAllTimers/
+  advanceTimersToNextTimer/getTimerCount/clearAllTimers exist.
+- CLAIM VERIFIED (docs dates-times): bun's useFakeTimers does NOT patch
+  Date/Date.now (Date stays === OriginalDate — unlike Jest); only
+  setSystemTime fakes the clock (Date.now -> frozen). Two different
+  mechanisms; pinned in P13 so a future change flips the gate.
+- test.failing(name, fn) INVERTS: a test that throws PASSES (tracking a
+  known bug); test.if(cond)(name, fn) runs conditionally; test.concurrent
+  runs in parallel (keep such tests isolated — no shared state);
+  describe.skip/only are functions; setDefaultTimeout(ms) accepted.
+- FILE SNAPSHOTS: expect(x).toMatchSnapshot() writes
+  tools/__snapshots__/test-probe.test.ts.snap (Bun Snapshot v1 format);
+  CI runs COMPARE (no writes without --update-snapshots). Inline
+  snapshots (P7) need no file.
+- Note: bun:test options are the THIRD arg (test(name, fn, options))
+  typed number | TestOptions; test.todo requires a fn.
+- Artifacts: tools/test-probe.test.ts (+P12..P18),
+  tools/__snapshots__/test-probe.test.ts.snap (new). verify:contracts 39/39.
 - GitHub recomputes the pie on the default branch after push (a few
   minutes). Verified with git check-attr.
 - Artifacts: .gitattributes (new). verify:contracts 38/38 (unchanged).

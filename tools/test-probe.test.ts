@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, expect, expectTypeOf, jest, mock, onTestFinished, setSystemTime, spyOn, test, vi } from "bun:test";
+import { afterAll, beforeAll, describe, expect, expectTypeOf, jest, mock, onTestFinished, setDefaultTimeout, setSystemTime, spyOn, test, vi } from "bun:test";
 
 // §137: probe the bun:test runner surface on Bun 1.4.0 — mocks, spies,
 // module mocks (repo: github-budget.test.ts pattern), fake timers,
@@ -110,6 +110,62 @@ test("P11 expect matchers set", () => {
   expect(0.1 + 0.2).toBeCloseTo(0.3, 5);
   expect([1, 2]).toContain(2);
   expect("abc").toHaveLength(3);
+});
+
+
+// P12 fake timers: vi.useFakeTimers + advanceTimersByTime + restore
+test("P12 vi fake timers advance + restore", () => {
+  vi.useFakeTimers();
+  expect(vi.isFakeTimers()).toBe(true);
+  let fired = false;
+  setTimeout(() => { fired = true; }, 1000);
+  expect(fired).toBe(false);
+  vi.advanceTimersByTime(1000);
+  expect(fired).toBe(true);
+  vi.useRealTimers();
+  expect(vi.isFakeTimers()).toBe(false);
+});
+
+// P13 docs claim (§138): useFakeTimers does NOT patch Date/Date.now
+// (bun differs from Jest — the Date constructor stays); setSystemTime DOES.
+test("P13 useFakeTimers keeps Date; setSystemTime fakes Date.now", () => {
+  const OriginalDate = Date;
+  vi.useFakeTimers();
+  expect(Date).toBe(OriginalDate);
+  expect(Date.now).toBe(OriginalDate.now);
+  vi.useRealTimers();
+  setSystemTime(new Date("2020-01-01T00:00:00.000Z"));
+  expect(Date.now()).toBe(1577836800000);
+  setSystemTime();
+});
+
+// P14 test.failing inverts: a test that throws PASSES the gate.
+test.failing("P14 failing test inverts (throws -> passes)", () => {
+  throw new Error("expected");
+});
+
+// P15 test.if conditional (truthy condition -> runs).
+test.if(true)("P15 test.if true condition runs", () => {
+  expect(1).toBe(1);
+});
+
+// P16 test.concurrent presence + isolated concurrent test.
+test.concurrent("P16 concurrent test isolated", async () => {
+  await Bun.sleep(10);
+  expect(2 + 2).toBe(4);
+});
+
+// P17 describe variants + setDefaultTimeout.
+test("P17 describe/only/skip + setDefaultTimeout", () => {
+  expect(typeof describe.skip).toBe("function");
+  expect(typeof describe.only).toBe("function");
+  setDefaultTimeout(5000);
+  expect(1).toBe(1);
+});
+
+// P18 file snapshot (__snapshots__/test-probe.test.ts.snap, committed).
+test("P18 toMatchSnapshot file snapshot", () => {
+  expect({ deep: { value: 42 }, list: [1, 2, 3] }).toMatchSnapshot();
 });
 
 afterAll(() => { setSystemTime(); });
