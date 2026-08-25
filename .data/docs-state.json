@@ -1,10 +1,10 @@
 {
-  "lastChecked": "2026-08-25T06:07:00.834Z",
+  "lastChecked": "2026-08-25T06:21:15.154Z",
   "docs": [
     {
       "path": "docs/AGENT-PITFALLS.md",
-      "hash": "40ce33bf8345bc027caf7e1ae562e2c90b06b702e78477e33f9f8724aea85c14",
-      "headings": 180,
+      "hash": "4b0b30bf219d932d98d98447277d67149d26be147ca2244eea2887673412b449",
+      "headings": 181,
       "renderOk": true,
       "duplicateSlugs": []
     },
@@ -227,7 +227,7 @@
     },
     {
       "path": "docs/MISS_TAXONOMY.md",
-      "hash": "ddcbc183d2a75c2d450fae8c1addfd0d77dbd07db691d2f8850101b35a62e091",
+      "hash": "87235ecc97c634784b66d8893d90573b2351f4842c01423178bdd656daded16d",
       "headings": 9,
       "renderOk": true,
       "duplicateSlugs": []
@@ -304,7 +304,7 @@
     },
     {
       "path": "docs/ROADMAP.md",
-      "hash": "4727d118b86eed6313547b6e73703453ef1560922084e30d89d584a63c7f32a5",
+      "hash": "bc0c26cabe1d27e4bae8dbcf30bb6649e30b031e4ef584d61b219b35fcaaa811",
       "headings": 7,
       "renderOk": true,
       "duplicateSlugs": []
