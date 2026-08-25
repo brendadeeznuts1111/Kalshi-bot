@@ -1,7 +1,23 @@
 import { describe, expect, test } from "bun:test";
-import { versionGt } from "../../src/institutions/signal-pipeline.ts";
+import { normalizeSemver, versionGt } from "../../src/institutions/signal-pipeline.ts";
 
-describe("versionGt (numeric semver compare for docs-drift)", () => {
+describe("normalizeSemver (pad ragged feed versions before Bun.semver)", () => {
+  test("pads to major.minor.patch and strips leading v", () => {
+    expect(normalizeSemver("1.4")).toBe("1.4.0");
+    expect(normalizeSemver("v1.4")).toBe("1.4.0");
+    expect(normalizeSemver("2")).toBe("2.0.0");
+    expect(normalizeSemver("1.10.0")).toBe("1.10.0");
+  });
+
+  test("rejects garbage and prereleases", () => {
+    expect(normalizeSemver("unknown")).toBeNull();
+    expect(normalizeSemver("")).toBeNull();
+    expect(normalizeSemver("1.4.0-beta")).toBeNull();
+    expect(normalizeSemver("1.4.0.0")).toBeNull(); // 4 segments
+  });
+});
+
+describe("versionGt (Bun.semver.order after normalization — docs-drift)", () => {
   test("equal versions are not greater — feeds say 1.4, maps pins 1.4.0", () => {
     expect(versionGt("1.4", "1.4.0")).toBe(false);
     expect(versionGt("1.4.0", "1.4.0")).toBe(false);

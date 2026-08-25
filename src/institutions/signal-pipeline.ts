@@ -204,16 +204,36 @@ export async function collectSignals(root: string, brand: BrandMetricsSnapshot):
   return signals;
 }
 
-/** Numeric semver compare: "1.4" > "1.4.0" is FALSE; "1.4.1" > "1.4.0" TRUE. */
-export function versionGt(a: string, b: string): boolean {
-  const an = a.replace(/^v/i, '').split('.').map((n) => Number(n) || 0);
-  const bn = b.replace(/^v/i, '').split('.').map((n) => Number(n) || 0);
-  for (let i = 0; i < Math.max(an.length, bn.length); i++) {
-    const av = an[i] ?? 0;
-    const bv = bn[i] ?? 0;
-    if (av !== bv) return av > bv;
+/**
+ * Pad a ragged feed version to major.minor.patch ("1.4" -> "1.4.0",
+ * "v2" -> "2.0.0"). Null for garbage (non-numeric segments, prerelease).
+ * REQUIRED before Bun.semver: Bun.semver.order is inconsistent on missing
+ * components — order("1.4","1.4.0") returns 1 while satisfies("1.4",
+ * ">1.4.0") returns false (AGENT-PITFALLS §121). Normalized both sides,
+ * Bun.semver owns the comparison (same SSOT as assertBunAtLeast).
+ */
+export function normalizeSemver(v: string): string | null {
+  const segs = v.trim().replace(/^v/i, '').split('.');
+  if (segs.length === 0 || segs.length > 3) return null;
+  const parts: number[] = [];
+  for (const seg of segs) {
+    if (!/^\d+$/.test(seg)) return null;
+    parts.push(Number(seg));
   }
-  return false;
+  while (parts.length < 3) parts.push(0);
+  return parts.join('.');
+}
+
+/** "release version > indexed version" — Bun.semver.order after normalization. */
+export function versionGt(a: string, b: string): boolean {
+  const na = normalizeSemver(a);
+  const nb = normalizeSemver(b);
+  if (na === null || nb === null) return false;
+  try {
+    return Bun.semver.order(na, nb) > 0;
+  } catch {
+    return false;
+  }
 }
 
 const esc = (v: unknown): string =>

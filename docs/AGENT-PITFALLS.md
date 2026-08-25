@@ -4595,5 +4595,17 @@ another note.
   via githubApiAuthHeaders() (Bearer when a token resolves, {} otherwise) —
   the unauthenticated bucket is 60 req/hr and an abort kills discovery.
 
+## 121. Bun.semver is inconsistent on ragged versions (2026-08-25)
+
+- Probe: order("1.4","1.4.0") returns 1 (says 1.4 > 1.4.0) while
+  satisfies("1.4",">1.4.0") returns false; order("1.4.1","1.4") returns -1
+  (1.4.1 < 1.4?!). Missing components are NOT treated as zero in order().
+- Rule: normalize BOTH sides to major.minor.patch first (normalizeSemver in
+  signal-pipeline.ts pads + strips leading v, null for garbage/prerelease),
+  then let Bun.semver.order own the comparison — same SSOT as assertBunAtLeast
+  (satisfies). Garbage ("unknown") throws from order() — catch → false.
+- Do NOT hand-roll numeric version loops; they drift from Bun's semantics.
+
+
 
 
