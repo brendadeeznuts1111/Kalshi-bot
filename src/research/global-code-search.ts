@@ -17,6 +17,8 @@
 import { githubApiJson } from "./github-api.ts";
 import { isGitHubRateLimitError } from "./gh.ts";
 import { countGlobalCodeCache, loadGlobalCodeCache, saveGlobalCodeCache } from "./cache.ts";
+import { readGitHubRateLimit } from "./github-rate-limit.ts";
+import { currentRateLimitResetMs, isGitHubRateLimitError as isRateLimitErr } from "./github-errors.ts";
 
 export type GlobalCodeHit = { path: string; repo: string };
 
@@ -156,22 +158,49 @@ export async function fetchGlobalCodeHits(queries: string[]): Promise<Map<string
     }
     todo.push(q);
   }
-  const results = await Promise.all(
-    todo.map(async (q) => {
-      try {
-        return await fetchOneGlobal(q);
-      } catch (err) {
-        if (isGitHubRateLimitError(err)) throw err;
-        // Degraded: in-process only, NEVER persisted (disk stays clean).
-        return { query: q, totalCount: 0, hits: [] as GlobalCodeHit[] };
-      }
-    }),
-  );
-  for (const row of results) {
-    cache.set(row.query, row);
-    out.set(row.query, row);
+  // Self-healing: wait for a FULL code_search window before the batch
+  // (the pacer only paces OUR calls; a short leftover window would crash).
+  if (todo.length > 0) {
+    const snap = await readGitHubRateLimit("code_search");
+    if (snap && snap.remaining < Math.min(todo.length, MAX_CALLS_PER_WINDOW)) {
+      const waitMs = Math.max(2_000, snap.reset * 1000 - Date.now() + 3_000);
+      console.error(
+        `[global-code-search] waiting ${Math.round(waitMs / 1000)}s for a full window (${snap.remaining}/${snap.limit} left, ${todo.length} to fetch)`,
+      );
+      await Bun.sleep(waitMs);
+    }
+  }
+  // SEQUENTIAL batch (not Promise.all): a parallel burst races the rolling
+  // 10/min window, re-trips the shared circuit, and extends its trip-until
+  // past any single retry wait (§129 lesson). Sequential + pacer = one call
+  // at a time, window-boundary sleeps inside paceCall.
+  for (const q of todo) {
+    const row = await fetchOneGlobalSafe(q);
+    cache.set(q, row);
+    out.set(q, row);
   }
   return out;
+}
+
+/** One query with circuit-aware retry-once; degrades (never crashes) after. */
+async function fetchOneGlobalSafe(query: string): Promise<GlobalCodeSearchRow> {
+  try {
+    return await fetchOneGlobal(query);
+  } catch (err) {
+    if (!isRateLimitErr(err)) {
+      return { query, totalCount: 0, hits: [] as GlobalCodeHit[] };
+    }
+    const tripUntil = currentRateLimitResetMs();
+    const waitMs = Math.max(2_000, (tripUntil ?? Date.now() + 60_000) - Date.now() + 3_000);
+    console.error(`[global-code-search] ${query} rate-limited — waiting ${Math.round(waitMs / 1000)}s for the circuit, retry once`);
+    await Bun.sleep(waitMs);
+    try {
+      return await fetchOneGlobal(query);
+    } catch {
+      // Degraded: in-process only, NEVER persisted (disk stays clean).
+      return { query, totalCount: 0, hits: [] as GlobalCodeHit[] };
+    }
+  }
 }
 
 /** Prime the global code-search cache for a keyword set (paced network). */
