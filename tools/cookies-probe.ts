@@ -78,6 +78,14 @@ const setC = (res.headers as any).getSetCookie?.() ?? [];
 srv.stop(true);
 check("C9 req.cookies is CookieMap + auto-applies set()", body.includes("true") && body.includes("abc123") && setC.some((h: string) => h.startsWith("visited=true")), body + " | " + setC.join(" / "));
 
+// C10: http-cookies doc (§80) — delete() emits empty value + past Expires
+const srv2 = Bun.serve({ port: 3632, routes: { "/logout": (req: any) => { req.cookies.delete("user_id", { path: "/" }); return new Response("out"); } } });
+const res2 = await fetch("http://127.0.0.1:3632/logout");
+const setD = (res2.headers as any).getSetCookie?.() ?? [];
+srv2.stop(true);
+const del = setD[0] ?? "";
+check("C10 delete() -> empty value + past Expires", del.startsWith("user_id=;") && del.includes("Expires=") && del.includes("1970"), del);
+
 console.log("---");
 const fails = results.filter((r) => !r.pass);
 console.log("cookies:probe — " + (results.length - fails.length) + "/" + results.length + " pass" + (fails.length ? " · FAIL: " + fails.map((f) => f.name).join(", ") : ""));

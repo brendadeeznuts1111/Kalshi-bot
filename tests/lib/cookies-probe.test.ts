@@ -102,4 +102,26 @@ describe("server req.cookies (§79)", () => {
       srv.stop(true);
     }
   });
+
+  test("delete() emits empty value + past Expires (http-cookies doc §80)", async () => {
+    const srv = Bun.serve({
+      port: 3633,
+      routes: {
+        "/logout": (req: any) => {
+          req.cookies.delete("user_id", { path: "/" });
+          return new Response("out");
+        },
+      },
+    });
+    try {
+      const res = await fetch("http://127.0.0.1:3633/logout");
+      const setD = (res.headers as any).getSetCookie?.() ?? [];
+      const del = setD[0] ?? "";
+      expect(del.startsWith("user_id=;")).toBe(true);
+      expect(del).toContain("Expires=");
+      expect(del).toContain("1970");
+    } finally {
+      srv.stop(true);
+    }
+  });
 });

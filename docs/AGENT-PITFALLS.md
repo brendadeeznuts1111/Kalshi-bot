@@ -3616,3 +3616,19 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
   the csrf route is tested (§77).
 - Artifacts: tools/cookies-probe.ts (12 checks), tests/lib/cookies-probe.
   test.ts (7 tests), verify:contracts 15/15.
+
+## 80. HTTP-cookies doc — delete behavior verified, extends §79 (2026-08-24)
+
+- The second cookie doc (http-cookies.mdx — cached at
+  research/cache/bun-docs/http-cookies.mdx; fresh URL 404s, doc moved)
+  covers the BunRequest.cookies property. Most claims already covered by
+  §79's server probe; the ONE new claim is the DELETE behavior:
+- VERIFIED (probe, cookies:probe C10):
+  - set() with options auto-applies to the response:
+    'user_id=12345; Path=/; Max-Age=3600; Secure; HttpOnly; SameSite=Lax'
+  - delete(name, {path}) emits a Set-Cookie with EMPTY value + Expires in
+    the PAST: 'user_id=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;
+    SameSite=Lax' — the doc's exact claim, byte-for-byte.
+  - Reading via req.cookies.get('user_id') (already §79 C9).
+- Artifacts: tools/cookies-probe.ts C10 (13/13), tests/lib/cookies-
+  probe.test.ts (8 tests), verify:contracts 15/15.
