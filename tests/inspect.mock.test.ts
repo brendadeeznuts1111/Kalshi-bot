@@ -33,6 +33,7 @@ async function mockGithubApiJson(path: string): Promise<unknown> {
 }
 
 beforeAll(() => {
+  Bun.env.GLOBAL_CODE_SEARCH_NO_PACE = "1"; // mocked API — no real window pacing
   mock.module("../src/research/github-api.ts", () => ({
     githubApiJson: mockGithubApiJson,
     githubApiGet: async (path: string) => ({
@@ -45,6 +46,7 @@ beforeAll(() => {
 });
 
 afterAll(() => {
+  delete Bun.env.GLOBAL_CODE_SEARCH_NO_PACE;
   mock.restore();
 });
 

@@ -35,30 +35,88 @@ const PER_PAGE = 100;
 const MAX_PAGES = 4;
 const DEFAULT_CODE_SEARCH_CONCURRENCY = 8;
 
-const cache = new Map<string, GlobalCodeSearchRow>();
+// ── code_search window pacing ──────────────────────────────────────────
+// Platform limit: 10 calls/min. Fire-and-forget over the whole keyword set
+// trips the circuit on call ~11 and serializes 61s waits per call after
+// that (§127 lesson). A deliberate token bucket keeps us at 9/min so the
+// batch completes in ~4 min instead of grinding per-call.
+const WINDOW_MS = 60_000;
+const MAX_CALLS_PER_WINDOW = 9;
+let windowStart = 0;
+let callsThisWindow = 0;
 
-/** Reset the in-process global query cache (tests). */
+/** Reset the pacer (tests). */
 export function resetGlobalCodeSearchCache(): void {
   cache.clear();
+  windowStart = 0;
+  callsThisWindow = 0;
 }
 
-/** One keyword, unscoped, paginated to MAX_PAGES pages. */
+/** Budget ONE code_search call; sleeps across the window boundary.
+ *  GLOBAL_CODE_SEARCH_NO_PACE=1 disables sleeping (tests with mocked API). */
+async function paceCall(): Promise<void> {
+  if (Bun.env.GLOBAL_CODE_SEARCH_NO_PACE === "1") return;
+  const now = Date.now();
+  if (now - windowStart >= WINDOW_MS) {
+    windowStart = now;
+    callsThisWindow = 0;
+  }
+  if (callsThisWindow >= MAX_CALLS_PER_WINDOW) {
+    const waitMs = Math.max(2_000, WINDOW_MS - (now - windowStart) + 2_000);
+    console.error(`[global-code-search] pacing — waiting ${Math.round(waitMs / 1000)}s for the code_search window (${MAX_CALLS_PER_WINDOW}/min)`);
+    await Bun.sleep(waitMs);
+    windowStart = Date.now();
+    callsThisWindow = 0;
+  }
+  callsThisWindow++;
+}
+
+const cache = new Map<string, GlobalCodeSearchRow>();
+
+/**
+ * One keyword, unscoped, paginated to MAX_PAGES pages.
+ * Each page is ONE code_search call — the PACER in fetchGlobalCodeHits
+ * budgets them: code_search resets every minute at 10/min, and firing all
+ * queries at once trips the circuit and serializes 61s waits per call.
+ */
 async function fetchOneGlobal(query: string): Promise<GlobalCodeSearchRow> {
   const rows: GlobalCodeHit[] = [];
   let totalCount = 0;
-  for (let page = 1; page <= MAX_PAGES; page++) {
-    const body = await githubApiJson<{ total_count?: number; items?: CodeSearchItemWire[] }>(
-      `search/code?q=${encodeURIComponent(query)}&per_page=${PER_PAGE}&page=${page}`
-      , { resource: "code_search" },
-    );
+  const pages = await pagedFetch(query, MAX_PAGES);
+  for (let i = 0; i < pages.length; i++) {
+    const body = pages[i]!;
     totalCount = body.total_count ?? rows.length;
     for (const it of body.items ?? []) {
       const repo = it.repository?.full_name;
       if (repo && it.path) rows.push({ path: it.path, repo });
     }
-    if (!body.items?.length || body.items.length < PER_PAGE || totalCount <= page * PER_PAGE) break;
   }
   return { query, totalCount, hits: rows };
+}
+
+/**
+ * Fetch pages for one query as INDIVIDUAL call promises so the caller can
+ * pace them across 10/min windows. Stops early when a page is partial or
+ * total_count is covered.
+ */
+async function pagedFetch(
+  query: string,
+  maxPages: number,
+): Promise<Array<{ total_count?: number; items?: CodeSearchItemWire[] }>> {
+  const out: Array<{ total_count?: number; items?: CodeSearchItemWire[] }> = [];
+  let totalCount = 0;
+  for (let page = 1; page <= maxPages; page++) {
+    await paceCall();
+    const body = await githubApiJson<{ total_count?: number; items?: CodeSearchItemWire[] }>(
+      `search/code?q=${encodeURIComponent(query)}&per_page=${PER_PAGE}&page=${page}`,
+      { resource: "code_search" },
+    );
+    out.push(body);
+    totalCount = body.total_count ?? 0;
+    const items = body.items ?? [];
+    if (items.length < PER_PAGE || totalCount <= page * PER_PAGE) break;
+  }
+  return out;
 }
 
 /**
