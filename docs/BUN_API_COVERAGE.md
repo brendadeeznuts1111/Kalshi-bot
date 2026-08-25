@@ -137,5 +137,124 @@ Type-only / non-existent (29):
 
 All bun: and node: modules resolve on 1.4.0 (runtime:probe P12). Coverage:
 **102/102 Bun.* tokens classified · 73 runtime values gated · 29
-type-only/non-existent pinned · 0 GAP rows** — verify:contracts 46/46.
+type-only/non-existent pinned · 0 GAP rows** — verify:contracts 47/47.
+
+
+## Full Bun surface (110 runtime members — repo-used vs probed)
+
+The matrix above covers the repo's USAGE. This table covers ALL of
+Bun's runtime namespace on 1.4.0, so unprobed members are visible.
+Gate: surface:probe (#47).
+
+| Member | Status |
+|---|---|| `$` | probed |
+| `Archive` | probed |
+| `ArrayBufferSink` | probed |
+| `CSRF` | probed |
+| `Cookie` | probed |
+| `CookieMap` | probed |
+| `CryptoHasher` | probed |
+| `FFI` | probed |
+| `FileSystemRouter` | probed |
+| `Glob` | probed |
+| `Image` | probed |
+| `JSON5` | probed |
+| `JSONC` | probed |
+| `JSONL` | probed |
+| `MD4` | probed |
+| `MD5` | probed |
+| `RedisClient` | probed |
+| `S3Client` | probed |
+| `SHA1` | probed |
+| `SHA224` | probed |
+| `SHA256` | UNPROBED |
+| `SHA384` | probed |
+| `SHA512` | probed |
+| `SHA512_256` | probed |
+| `SQL` | probed |
+| `TOML` | probed |
+| `Terminal` | probed |
+| `Transpiler` | probed |
+| `WebView` | probed |
+| `XML` | probed |
+| `YAML` | probed |
+| `allocUnsafe` | probed |
+| `argv` | probed |
+| `build` | probed |
+| `color` | probed |
+| `concatArrayBuffers` | probed |
+| `connect` | probed |
+| `cron` | probed |
+| `deepEquals` | probed |
+| `deepMatch` | probed |
+| `deflateSync` | probed |
+| `dns` | probed |
+| `embeddedFiles` | probed |
+| `enableANSIColors` | probed |
+| `env` | probed |
+| `escapeHTML` | probed |
+| `fetch` | probed |
+| `file` | probed |
+| `fileURLToPath` | probed |
+| `gc` | probed |
+| `generateHeapSnapshot` | probed |
+| `gunzipSync` | probed |
+| `gzipSync` | probed |
+| `hash` | probed |
+| `indexOfLine` | probed |
+| `inflateSync` | probed |
+| `inspect` | probed |
+| `isMainThread` | probed |
+| `isStandaloneExecutable` | probed |
+| `listen` | probed |
+| `main` | probed |
+| `markdown` | probed |
+| `mmap` | probed |
+| `nanoseconds` | probed |
+| `openInEditor` | probed |
+| `password` | probed |
+| `pathToFileURL` | probed |
+| `peek` | probed |
+| `plugin` | probed |
+| `postgres` | probed |
+| `randomUUIDv5` | probed |
+| `randomUUIDv7` | probed |
+| `readableStreamToArray` | probed |
+| `readableStreamToArrayBuffer` | probed |
+| `readableStreamToBlob` | probed |
+| `readableStreamToBytes` | probed |
+| `readableStreamToFormData` | probed |
+| `readableStreamToJSON` | probed |
+| `readableStreamToText` | probed |
+| `redis` | probed |
+| `resolve` | probed |
+| `resolveSync` | probed |
+| `revision` | probed |
+| `s3` | probed |
+| `secrets` | probed |
+| `semver` | probed |
+| `serve` | probed |
+| `sha` | probed |
+| `shrink` | probed |
+| `sleep` | probed |
+| `sleepSync` | probed |
+| `sliceAnsi` | probed |
+| `spawn` | probed |
+| `spawnSync` | probed |
+| `sql` | probed |
+| `stderr` | probed |
+| `stdin` | probed |
+| `stdout` | probed |
+| `stringWidth` | probed |
+| `stripANSI` | probed |
+| `udpSocket` | probed |
+| `unsafe` | probed |
+| `version` | probed |
+| `which` | probed |
+| `wrapAnsi` | probed |
+| `write` | probed |
+| `zstdCompress` | probed |
+| `zstdCompressSync` | probed |
+| `zstdDecompress` | probed |
+| `zstdDecompressSync` | probed |
 

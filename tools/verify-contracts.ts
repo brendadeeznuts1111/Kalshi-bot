@@ -60,6 +60,7 @@ const gates = [
   ['h2:probe'],
   ['metafile:probe'],
   ['ecosystem:probe'],
+  ['surface:probe'],
 ] as const;
 
 const GATE_ENV: Record<string, Record<string, string>> = {

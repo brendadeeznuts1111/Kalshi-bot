@@ -9,7 +9,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 > The headings were renumbered to §1-§11 on 2026-08-23; the counters were kept
 > so historical notes stay traceable.
 >
-> **Current contract status: verify:contracts 46/46** (see docs/BUN_API_COVERAGE.md
+> **Current contract status: verify:contracts 47/47** (see docs/BUN_API_COVERAGE.md
 > for the full matrix). `verify:contracts N/N` lines inside older sections are
 > HISTORICAL (each records its era) — docs:check enforces that only this header
 > and non-pitfall docs may reference the current count.
@@ -5750,6 +5750,35 @@ another note.
 - Artifacts: tools/ecosystem-probe.ts (new, gate #46), tools/verify-contracts.ts
   (45 -> 46 gates), package.json (ecosystem:probe), docs/BUN_API_COVERAGE.md
   + AGENT-PITFALLS header (45/45 -> 46/46). verify:contracts 46/46.
+## 158. Full-surface gap closed — the honest completeness picture (2026-08-24)
+
+- ROOT CAUSE of the "missing key aspects": the coverage matrix was
+  repo-scoped (100% of REPO-USED tokens), and probes were claim-driven.
+  Bun's runtime namespace has 110 members; 34 were entirely unprobed
+  (S3Client/s3, FileSystemRouter, password, the SHA class family,
+  readableStreamTo* family, unsafe, memory APIs, randomUUIDv5...).
+- docs/BUN_API_COVERAGE.md now carries a FULL-SURFACE table: all 110
+  runtime members with probed/unprobed status — gaps are visible.
+- tools/surface-probe.ts (gate #47, 8/8) closes the biggest gaps:
+  SHA family classes (MD4/MD5/SHA1/SHA224/SHA384/SHA512/SHA512_256)
+  constructible with known digests; password hash/verify round-trip;
+  FileSystemRouter match/routes; readableStreamToArray/Bytes/Blob/JSON;
+  deepMatch; concatArrayBuffers; memory/runtime members (gc/shrink/
+  generateHeapSnapshot/isMainThread/isStandaloneExecutable/main/
+  unsafe/indexOfLine/resolveSync/allocUnsafe/embeddedFiles/stderr/
+  stdin); postgres/RedisClient/s3/S3Client shapes.
+- CORRECTIONS pinned: randomUUIDv5 is BROKEN on 1.4.0 (every namespace
+  form — string, hex, Buffer, Uint8Array — throws Invalid UUID format);
+  concatArrayBuffers takes ONE array of buffers and returns an
+  ArrayBuffer (byteLength, not length).
+- REMAINING KNOWN-GAP: S3Client/s3/RedisClient/postgres are shape-
+  checked only (need servers/credentials to probe behavior); unsafe
+  internals documented as object. Version-stamp claims and network
+  behaviors stay unverifiable offline (marked in §157).
+- Artifacts: tools/surface-probe.ts (new, gate #47), tools/verify-contracts.ts
+  (46 -> 47 gates), package.json (surface:probe), docs/BUN_API_COVERAGE.md
+  (full-surface table), AGENT-PITFALLS header (46/46 -> 47/47).
+  verify:contracts 47/47.
 - FILENAME BEHAVIOR (pasted --metafile-md claims vs 1.4.0, gate P9-P13):
   a bare --metafile-md writes meta.md to the PROCESS CWD, NOT the
   --outdir (the pasted claim's location is wrong); --metafile-md=<path>
