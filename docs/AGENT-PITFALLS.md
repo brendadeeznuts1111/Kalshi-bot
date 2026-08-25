@@ -4862,6 +4862,32 @@ another note.
   HTMLImageElement shadows it otherwise (tsc + runtime both misresolve).
 - Artifacts: tools/image-probe.ts (P15-P22, 35/35), this section.
   verify:contracts 26/26 (image:probe count grew within its gate).
+## 124. serve-h2 correction triple-confirmed — docs + blog + runtime (2026-08-24)
+
+- Challenged to re-check §123's serve-h2 correction against the docs
+  and release blog. Result: the correction stands, now triple-grounded:
+  1. BLOG (cached bun-blog.html): the 1.4 blog's HTTP/2 claim is about
+     FETCH — 'fetch() now supports HTTP/2 and HTTP/3. Pass protocol:
+     "http2"'. For Bun.serve it only claims 'HTTP/3 in Bun.serve()
+     (experimental) — Set http3: true next to tls, and Bun listens on
+     UDP on the same port' (h1.1 keeps working over TCP). The §115
+     table's 'Bun.serve supports HTTP/2 via the http2 option' was
+     INVENTED — the blog never said it.
+  2. OFFICIAL SERVE DOCS (fetched bun.sh/docs/runtime/http/server):
+     http3: true documented ('HTTP/3 requires TLS'); http2: ABSENT —
+     the string 'http2' does not occur on the page. idleTimeout is
+     documented; maxRequestBodySize and the error() option are NOT on
+     the guide page (they work at runtime — verified §123 P4/P5 — and
+     may live on the reference page; runtime evidence is authoritative
+     either way).
+  3. RUNTIME (probe §123 P2): serve({ http2: true, tls }) is ACCEPTED
+     but serves HTTP/1.1 only — Bun fetch protocol http2 fails with
+     HTTP2Unsupported, node:http2 client fails with 'h2 is not
+     supported'. The accepted-but-vestigial option is undocumented.
+- The probe's negative-behavior pin is the right call: it self-
+  invalidates if a future Bun release actually delivers serve h2.
+- Artifacts: this section. verify:contracts 28/28.
+
 ## 123. serve-tls:probe — TLS works, http2 option is a NO-OP (CORRECTED) (2026-08-24)
 
 - Closed the §116/§120 next-step (real TLS + h2/h3). serve-tls:probe
