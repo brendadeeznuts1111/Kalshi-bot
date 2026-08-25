@@ -22,6 +22,16 @@ describe("event-store", () => {
     expect(parseTennisDataDate("01/07/2019")).toBe("2019-07-01T12:00:00.000Z");
   });
 
+  test("parseTennisDataDate rejects impossible dates via Temporal (§89)", () => {
+    // Regression: the old day<1||day>31 check let these through as
+    // "2024-02-31T12:00:00.000Z" / "2023-02-29T12:00:00.000Z".
+    expect(parseTennisDataDate("31/02/2024")).toBeNull();
+    expect(parseTennisDataDate("30/02/2024")).toBeNull();
+    expect(parseTennisDataDate("29/02/2023")).toBeNull(); // non-leap
+    expect(parseTennisDataDate("31/04/2024")).toBeNull(); // April has 30
+    expect(parseTennisDataDate("29/02/2024")).toBe("2024-02-29T12:00:00.000Z"); // leap
+  });
+
   test("mintCanonicalEventId is stable for player order", () => {
     const [a, b] = sortPlayerPair("Roger Federer", "John Isner");
     const left = mintCanonicalEventId({

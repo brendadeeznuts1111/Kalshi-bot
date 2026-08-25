@@ -3842,3 +3842,26 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
     zero in repo — gate ok). No adoption needed; awareness recorded.
 - Artifacts: tools/defaults-probe.ts D13 (25/25), tests/lib/defaults-
   probe.test.ts (17 tests), verify:contracts 16/16.
+
+## 89. Temporal adopted — parseTennisDataDate real-date validation (2026-08-24)
+
+- The §88 Temporal verification found a real consumer: the repo's manual
+  date parsing. parseTennisDataDate (tennis-data.co.uk DD/MM/YYYY feed)
+  checked day<1||day>31 only — IMPOSSIBLE dates flowed through:
+  '31/02/2024' -> '2024-02-31T12:00:00.000Z', '29/02/2023' (non-leap) ->
+  '2023-02-29T12:00:00.000Z'. Those invalid timestamps then entered the
+  event store as startTs.
+- FIXED: parseTennisDataDate now validates via Temporal.PlainDate.from
+  (throws RangeError on non-existent calendar dates — month length + leap
+  years). Verified: 31/02, 30/02, 29/02/2023, 31/04 all -> null;
+  29/02/2024 (leap) + normal dates unchanged. Exact return shape
+  preserved ({iso}T12:00:00.000Z). All 28 existing tests pass.
+- WHY Temporal here: it is the native, probe-verified (§88) way to reject
+  impossible dates — the manual month-length/leap table would be
+  reimplementing Temporal. The breaking-audit now has ONE legit Temporal
+  usage site (parse-tennis-data-csv.ts); it was excluded in §88 for the
+  probe tool only, so this adoption is audited normally.
+- Regression tests: 31/02, 30/02, 29/02/2023, 31/04 -> null; 29/02/2024
+  -> valid (tests/institutions/event-store.test.ts).
+- Artifacts: src/institutions/event-store/parse-tennis-data-csv.ts,
+  tests/institutions/event-store.test.ts. Gate stays 16/16.

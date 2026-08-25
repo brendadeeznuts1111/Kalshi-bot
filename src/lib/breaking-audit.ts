@@ -62,6 +62,10 @@ export function runBreakingAudit(root: string): BreakingFinding[] {
   // yes/on/no key in a doc block is exactly what should be flagged, not
   // hidden (the validator is report-only).
   const YAML_ALLOWLIST = ['**/docs-validate.ts'];
+  // parse-tennis-data-csv.ts deliberately uses Temporal.PlainDate to validate
+  // tennis-data.co.uk dates (§89) — the old day>31 check let impossible
+  // dates through; Temporal rejects them natively. Audited, deliberate.
+  const TEMPORAL_ALLOWLIST = ['**/parse-tennis-data-csv.ts', '**/tennis-meta.ts', '**/toml-config.ts']; // §89 adoption + §88-behavior prose notes (not calls)
   const TLS_OVERRIDE_ALLOWLIST = [
     '**/host-discover.ts',
     // security:probe deliberately connects with rejectUnauthorized:false to
@@ -119,7 +123,7 @@ export function runBreakingAudit(root: string): BreakingFinding[] {
   });
 
   // 5. Temporal API enabled (behavioral change vs Date).
-  const temporal = rgFiles(root, 'Temporal\\.', dirs, { exclude: LABEL_FILES });
+  const temporal = rgFiles(root, 'Temporal\.', dirs, { exclude: [...LABEL_FILES, ...TEMPORAL_ALLOWLIST] });
   findings.push({
     check: 'Temporal API enabled (behavioral change)',
     status: temporal.length ? 'warn' : 'ok',

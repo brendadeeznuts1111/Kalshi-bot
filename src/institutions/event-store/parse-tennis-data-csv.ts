@@ -113,8 +113,17 @@ export function parseTennisDataDate(raw: string): string | null {
   const month = Number(m[2]);
   let year = Number(m[3]);
   if (year < 100) year += year >= 70 ? 1900 : 2000;
-  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+  // REAL date validation via Temporal (§89): the old day<1||day>31 check
+  // let impossible dates through (31/02/2024 -> 2024-02-31, 29/02/2023 ->
+  // 2023-02-29). Temporal.PlainDate.from throws RangeError on non-existent
+  // calendar dates (month length + leap years), so a match means the date
+  // genuinely exists.
   const iso = `${year.toString().padStart(4, "0")}-${month.toString().padStart(2, "0")}-${day.toString().padStart(2, "0")}`;
+  try {
+    Temporal.PlainDate.from(iso);
+  } catch {
+    return null;
+  }
   return `${iso}T12:00:00.000Z`;
 }
 
