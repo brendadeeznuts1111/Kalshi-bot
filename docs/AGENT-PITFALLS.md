@@ -9,7 +9,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 > The headings were renumbered to §1-§11 on 2026-08-23; the counters were kept
 > so historical notes stay traceable.
 >
-> **Current contract status: verify:contracts 50/50** (see docs/BUN_API_COVERAGE.md
+> **Current contract status: verify:contracts 51/51** (see docs/BUN_API_COVERAGE.md
 > for the full matrix). `verify:contracts N/N` lines inside older sections are
 > HISTORICAL (each records its era) — docs:check enforces that only this header
 > and non-pitfall docs may reference the current count.
@@ -5823,6 +5823,23 @@ another note.
 - Artifacts: tools/client-shape-probe.ts (new, gate #50), tools/verify-contracts.ts
   (49 -> 50 gates), package.json (client-shape:probe), docs/BUN_API_COVERAGE.md
   + AGENT-PITFALLS header (49/49 -> 50/50). verify:contracts 50/50.
+## 161. bun test --coverage semantics — gate #51 (2026-08-24)
+
+- tools/coverage-probe.ts (5/5): the repo's 300+ tests could ride on
+  coverage thresholds for the CI story.
+- VERIFIED (docs code-coverage.mdx correct): --coverage prints the
+  % Funcs / % Lines table with uncovered line ranges (a one-covered-
+  of-two fixture reports 50% funcs / 100% lines); [test] coverage =
+  true auto-enables WITHOUT the flag; coverageSkipTestFiles excludes
+  test files from the report by default; coverageThreshold enforces:
+  below -> bun test exits 1, above -> 0; the object form
+  { lines, functions } works.
+- NOTE: thresholds only apply when coverage RUNS — bun test without
+  --coverage (or [test] coverage) does NOT check thresholds.
+- Artifacts: tools/coverage-probe.ts (new, gate #51), tools/verify-contracts.ts
+  (50 -> 51 gates), package.json (coverage:probe), scripts/audit-bun-native.ts
+  (SPAWN_KEEP_LIST), docs/BUN_API_COVERAGE.md + AGENT-PITFALLS header
+  (50/50 -> 51/51). verify:contracts 51/51.
 - FILENAME BEHAVIOR (pasted --metafile-md claims vs 1.4.0, gate P9-P13):
   a bare --metafile-md writes meta.md to the PROCESS CWD, NOT the
   --outdir (the pasted claim's location is wrong); --metafile-md=<path>

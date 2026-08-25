@@ -137,7 +137,7 @@ Type-only / non-existent (29):
 
 All bun: and node: modules resolve on 1.4.0 (runtime:probe P12). Coverage:
 **102/102 Bun.* tokens classified · 73 runtime values gated · 29
-type-only/non-existent pinned · 0 GAP rows** — verify:contracts 50/50.
+type-only/non-existent pinned · 0 GAP rows** — verify:contracts 51/51.
 
 
 ## Full Bun surface (110 runtime members — repo-used vs probed)
