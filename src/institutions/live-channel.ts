@@ -93,6 +93,15 @@ export type FeedPayload = {
   items: FeedItem[];
 };
 
+export type StatusPayload = {
+  type: "status-update";
+  ok: boolean;
+  status: string;
+  signals: number;
+  channels: { ok: number; warn: number; bad: number; info: number };
+  failing: Array<{ id: string; title: string }>;
+};
+
 export type LiveChannelConfig = {
   /** RSS XML source for the hourly feed cron (default: bun.sh RSS). */
   fetchFeed?: () => Promise<string>;
@@ -128,6 +137,8 @@ export type LiveChannel = {
   };
   /** Recompute + broadcast the theme to all connected clients. */
   broadcastTheme(): void;
+  /** Broadcast an aggregated health snapshot to the status topic. */
+  broadcastStatus(payload: StatusPayload): void;
   /** Parse RSS XML, dedup into the store, broadcast new items. */
   refreshFeed(xml: string): FeedItem[];
   getStore(): FeedStore;
@@ -152,6 +163,7 @@ export function createLiveChannel(config: LiveChannelConfig = {}): LiveChannel {
       open(ws) {
         ws.subscribe("theme");
         ws.subscribe("feed");
+        ws.subscribe("status");
         ws.send(JSON.stringify(buildThemePayload(overrides)));
         const items = store.recent(recentLimit);
         if (items.length > 0) {
@@ -182,10 +194,14 @@ export function createLiveChannel(config: LiveChannelConfig = {}): LiveChannel {
       close(ws) {
         ws.unsubscribe("theme");
         ws.unsubscribe("feed");
+        ws.unsubscribe("status");
       },
     },
     broadcastTheme() {
       if (publisher) publisher.publish("theme", JSON.stringify(buildThemePayload(overrides)));
+    },
+    broadcastStatus(payload: StatusPayload) {
+      if (publisher) publisher.publish("status", JSON.stringify(payload));
     },
     refreshFeed(xml: string): FeedItem[] {
       const entries = parseRssEntries(xml);

@@ -1,6 +1,6 @@
 // @see https://bun.com/docs/runtime/file-io#reading-files-bun-file
 import { $ } from "bun";
-import { createLiveChannel, registerFeedCron } from "../institutions/live-channel.ts";
+import { createLiveChannel, registerFeedCron, type StatusPayload } from "../institutions/live-channel.ts";
 import type { ResearchRun, ScoredRepo } from "./types.ts";
 import {
   isFixtureRun,
@@ -2280,6 +2280,22 @@ export function createResearchServer(options: ServeOptions = {}) {
   // the cache every 5 minutes (function form — event loop, no system cron;
   // unref'd so it never blocks exit; registered once per process so tests
   // creating many servers don't stack jobs).
+  // Aggregate signal health into the /status shape (shared by the
+  // /status endpoint + the cron broadcast over the live channel).
+  const buildStatusPayload = (signals: Signal[]): StatusPayload => {
+    const counts = { ok: 0, warn: 0, bad: 0, info: 0 };
+    for (const s of signals) counts[s.severity] += 1;
+    const ok = counts.bad === 0;
+    return {
+      type: "status-update",
+      ok,
+      status: ok ? "ok" : "degraded",
+      signals: signals.length,
+      channels: counts,
+      failing: signals.filter((s) => s.severity === "bad").map((s) => ({ id: s.id, title: s.title })),
+    };
+  };
+
   const refreshSignalsCache = async (): Promise<void> => {
     signalsCache = {
       at: Date.now(),
@@ -2298,6 +2314,7 @@ export function createResearchServer(options: ServeOptions = {}) {
         purges: brandMetrics.purges,
       }),
     };
+    liveChannel.broadcastStatus(buildStatusPayload(signalsCache.payload));
   };
   registerSignalCron(refreshSignalsCache);
 

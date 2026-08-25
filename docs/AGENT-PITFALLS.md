@@ -3491,3 +3491,20 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
   Rate-limited + CORS like the rest. Tests: tests/lib/status-endpoint.
   test.ts (2 tests). This was the ONE genuinely-missing, consumer-grounded
   piece (external monitors need a boolean 200/5xx).
+- LIVE-CHANNEL STATUS BROADCAST (§75 deep, 2026-08-24):
+  - Added StatusPayload {type:'status-update', ok, status, signals,
+    channels:{ok,warn,bad,info}, failing[]} + LiveChannel.broadcastStatus()
+    in src/institutions/live-channel.ts. WS clients now subscribe to a
+    'status' topic (open/close handlers subscribe/unsubscribe alongside
+    theme/feed).
+  - serve.ts: shared buildStatusPayload(signals) helper (used by BOTH
+    /status endpoint and the cron broadcast — one shape, no drift);
+    refreshSignalsCache now calls liveChannel.broadcastStatus() after
+    each Bun.cron refresh, so health CHANGES push live to connected
+    clients. Initial state comes from GET /status (the cron fires every
+    SIGNAL_CRON_EXPR, so the first broadcast lands on the first refresh).
+  - Same verified mechanism as feed-update/theme-update (server.publish/
+    ws.subscribe, header-verified). Tests: tests/lib/live-status.test.ts
+    (payload shape + degraded failing-list).
+  - This closes the loop: /status (pull) + status-update WS (push) +
+    dashboard (render) all share the same aggregated health.
