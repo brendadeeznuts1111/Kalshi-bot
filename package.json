@@ -271,6 +271,7 @@
     "fsx:probe": "bun tools/fsx-probe.ts",
     "net:probe": "bun tools/net-probe.ts",
     "runtime:probe": "bun tools/runtime-probe.ts",
+    "test:probe": "bun test tools/test-probe.test.ts",
     "routes:check": "bun tools/routes-check.ts",
     "bun:coverage-audit": "bun tools/bun-coverage-audit.ts",
     "research:resume": "bun tools/research-resume.ts",

@@ -9,7 +9,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 > The headings were renumbered to §1-§11 on 2026-08-23; the counters were kept
 > so historical notes stay traceable.
 >
-> **Current contract status: verify:contracts 38/38** (see docs/BUN_API_COVERAGE.md
+> **Current contract status: verify:contracts 39/39** (see docs/BUN_API_COVERAGE.md
 > for the full matrix). `verify:contracts N/N` lines inside older sections are
 > HISTORICAL (each records its era) — docs:check enforces that only this header
 > and non-pitfall docs may reference the current count.
@@ -5473,6 +5473,28 @@ another note.
   generated docs -> linguist-generated; .audit-inbox/** and node_modules/**
   -> linguist-vendored; docs/**/*.md + README.md -> linguist-documentation
   (code-only pie; drop those lines to show Markdown %).
+## 137. bun:test runner surface — the gate IS a test file (2026-08-24)
+
+- tools/test-probe.test.ts (gate #39) runs `bun test` against bun:test
+  itself: 15 pass + 1 todo (P8c, todo is not a failure) + 1 inline
+  snapshot. The runner exercises its own API on 1.4.0.
+- VERIFIED: mock.fn (calls/results/lastCall/mockClear, mockImplementation
+  (Once), mockReturnValue(Once), mockResolvedValue(Once),
+  mockRejectedValue + rejects.toThrow); spyOn tracks WITHOUT replacing
+  (original runs) + mockRestore; mock.module intercepts by path (repo
+  pattern from github-budget.test.ts — registers top-level, dynamic
+  import resolves to the mock); setSystemTime fakes Date.now()/new Date
+  (2020-01-01 -> 1577836800000) + afterAll restore; toMatchInlineSnapshot;
+  test.each; test(name, { retry: 2 }) and { timeout } options accepted;
+  expectTypeOf runtime no-op + jest.fn/vi.fn compat aliases;
+  beforeAll/afterAll/onTestFinished lifecycle; matcher set (toBeTypeOf,
+  toMatchObject, toBeCloseTo, toContain, toHaveLength).
+- Repo note: github-budget.test.ts mock.module pattern is the correct
+  shape (closure flags instead of re-registering); the repo could adopt
+  spyOn + test.each + { retry } in future tests — all verified.
+- Artifacts: tools/test-probe.test.ts (new, gate #39), tools/verify-contracts.ts
+  (38 -> 39 gates), package.json (test:probe), docs/BUN_API_COVERAGE.md
+  + AGENT-PITFALLS header (38/38 -> 39/39). verify:contracts 39/39.
 - GitHub recomputes the pie on the default branch after push (a few
   minutes). Verified with git check-attr.
 - Artifacts: .gitattributes (new). verify:contracts 38/38 (unchanged).

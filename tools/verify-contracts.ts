@@ -52,6 +52,7 @@ const gates = [
   ['fsx:probe'],
   ['net:probe'],
   ['runtime:probe'],
+  ['test:probe'],
 ] as const;
 
 const GATE_ENV: Record<string, Record<string, string>> = {
