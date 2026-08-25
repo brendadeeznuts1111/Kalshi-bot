@@ -61,7 +61,7 @@ export function runBreakingAudit(root: string): BreakingFinding[] {
   // code-block examples with the SAME parser the runtime uses - a 1.1-style
   // yes/on/no key in a doc block is exactly what should be flagged, not
   // hidden (the validator is report-only).
-  const YAML_ALLOWLIST = ['**/docs-validate.ts'];
+  const YAML_ALLOWLIST = ['**/docs-validate.ts', 'tools/format-probe.ts']; // format-probe asserts the 1.2 semantics deliberately
   // parse-tennis-data-csv.ts deliberately uses Temporal.PlainDate to validate
   // tennis-data.co.uk dates (§89) — the old day>31 check let impossible
   // dates through; Temporal rejects them natively. Audited, deliberate.

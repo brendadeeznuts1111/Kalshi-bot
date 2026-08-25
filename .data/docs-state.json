@@ -1,10 +1,10 @@
 {
-  "lastChecked": "2026-08-25T16:22:29.772Z",
+  "lastChecked": "2026-08-25T16:51:54.132Z",
   "docs": [
     {
       "path": "docs/AGENT-PITFALLS.md",
-      "hash": "fa01a19fd1dcb0433a1de270f53c1c888293e60c3c7543669e4280b8c3ffbf50",
-      "headings": 198,
+      "hash": "93cb2c9d5f5d59a045f5efa3099fb826fda335160c5316f8af29af3d68c5144c",
+      "headings": 204,
       "renderOk": true,
       "duplicateSlugs": []
     },
@@ -33,6 +33,13 @@
       "path": "docs/AUTHORIZED_EXECUTION.md",
       "hash": "7266e0c089087556548199e104fe9ae367f92d4cc00873934ec039b501d74455",
       "headings": 14,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/BUN_API_COVERAGE.md",
+      "hash": "13826e05ea65f37e6062aa0849ad42935b5a34aa7c85ac9a7a2a15ad857f4a94",
+      "headings": 1,
       "renderOk": true,
       "duplicateSlugs": []
     },
@@ -359,6 +366,6 @@
       "duplicateSlugs": []
     }
   ],
-  "total": 51,
+  "total": 52,
   "failing": 0
 }

@@ -5359,6 +5359,45 @@ another note.
   (32 -> 34 gates), package.json (ansi:probe, crypto:probe).
   verify:contracts 34/34. Remaining runtime gaps: 35 (format/fsx/net/
   runtime-misc clusters — next rounds).
+## 133. Coverage goal round 2 — format + fsx clusters (2026-08-24)
+
+- format:probe (gate #35, 12/12): TOML/YAML/JSONC/JSONL/XML/markdown.
+  - TOML.parse/stringify round-trip (partner-toml, defaults-probe).
+  - YAML parse: 1.2 semantics — yes/on/no are STRINGS (runtime-surface
+    asserts the same); stringify round-trips.
+  - JSONC = JSON with COMMENTS + trailing commas, but QUOTED KEYS ARE
+    REQUIRED — unquoted keys throw ("Expected string but found a");
+    JSONC is NOT JSON5 (pinned boundary). Repo's jsonc usage is safe.
+  - JSONL.parse -> array of objects. parseChunk(input) -> { values,
+    read, done, error } and is STATELESS: a partial trailing line is
+    dropped, not carried across calls — callers must buffer the
+    remainder (repo's ndjson replacement should do its own buffering).
+  - XML.parse: attributes -> "@attr", text -> "#text", repeated
+    elements -> arrays (bun-docs-index §68 pattern); stringify works.
+  - markdown: object with html/ansi/render/react methods; html() renders
+    headings/strong/em correctly. react() (React elements) is a
+    frontend-relevant surface worth a future look.
+- fsx:probe (gate #36, 13/13): Glob/which/resolve/fileURLToPath/
+  pathToFileURL/openInEditor.
+  - Glob.match (incl. **), Glob.scan({ cwd, absolute }) — repo's 49
+    uses covered.
+  - which: found -> path, missing -> null, { PATH } override honored.
+  - CORRECTION (P3b, pinned): Bun.resolve on 1.4.0 resolves BARE
+    PACKAGE names to entry paths (typescript -> .../typescript.js) and
+    returns node: builtins as the specifier, but RELATIVE paths THROW
+    ("Cannot find module") even for existing files — resolve absolute
+    via node:path or import.meta.resolve for relative targets.
+  - fileURLToPath/pathToFileURL round-trip; openInEditor is a function.
+- Matrix progress: docs/BUN_API_COVERAGE.md runtime gaps 47 -> 22
+  (ansi/crypto/format/fsx + Image mapping). Remaining: net cluster
+  (connect/listen/udpSocket/dns/redis/secrets) + runtime-misc
+  (env/argv/sleep/version/revision/nanoseconds/WebView/Transpiler/
+  Terminal/CSRF/Cookie/CookieMap/peek/readableStreamTo*/ArrayBufferSink).
+- Artifacts: tools/format-probe.ts (new, gate #35), tools/fsx-probe.ts
+  (new, gate #36), tools/verify-contracts.ts (34 -> 36 gates),
+  package.json (format:probe, fsx:probe), docs/BUN_API_COVERAGE.md.
+  verify:contracts 36/36.
+
 
 
 
