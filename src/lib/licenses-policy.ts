@@ -109,6 +109,15 @@ export function evaluatePackage(
     return { ...base, normalizedLicense: expr.normalized, allowed: false, matchedBy: null,
       reason: "SPDX expression has no permissive alternative: " + expr.normalized };
   }
+  const rawTrimmed = pkg.reportedLicense.trim();
+  if (/^UNLICENSED$/i.test(rawTrimmed)) {
+    return { ...base, normalizedLicense: normalized, allowed: false, matchedBy: null,
+      reason: "UNLICENSED — not open source; remove the dep or get an explicit vendor/legal exemption" };
+  }
+  if (/^SEE LICENSE IN\b/i.test(rawTrimmed)) {
+    return { ...base, normalizedLicense: normalized, allowed: false, matchedBy: null,
+      reason: "SEE LICENSE IN <file> — license deferred to a file; resolve manually and add an exemption" };
+  }
   return { ...base, normalizedLicense: normalized, allowed: false, matchedBy: null,
     reason: "no allowlist entry and no matching exemption" };
 }
@@ -210,13 +219,20 @@ function expressionAllows(expr: string, policy: LicensePolicy, allowedSet: Set<s
   if (orParts.length > 1) return orParts.some((p) => expressionAllows(p, policy, allowedSet));
   const andParts = splitTopLevel(e, "AND");
   if (andParts.length > 1) return andParts.every((p) => expressionAllows(p, policy, allowedSet));
+  const withParts = splitTopLevel(e, "WITH");
+  if (withParts.length > 1) {
+    // SPDX exception modifier (e.g. GPL-2.0 WITH Classpath-exception-2.0):
+    // permissiveness is decided by the BASE license — an exception never
+    // makes a non-permissive license permissive for our allowlist purposes.
+    return expressionAllows(withParts[0], policy, allowedSet);
+  }
   const operand = normalizeLicense(e, policy);
   return allowedSet.has(operand.toLowerCase());
 }
 
 export function evaluateLicenseExpression(raw: string, policy: LicensePolicy): ExpressionResult {
   const trimmed = raw.trim();
-  const isExpression = /[()]/.test(trimmed) || /\bOR\b/.test(trimmed) || /\bAND\b/.test(trimmed);
+  const isExpression = /[()]/.test(trimmed) || /\bOR\b/.test(trimmed) || /\bAND\b/.test(trimmed) || /\bWITH\b/.test(trimmed);
   if (!isExpression) return { isExpression: false, allowed: false, normalized: trimmed };
   const allowedSet = new Set(policy.allowedLicenses.map((l) => l.toLowerCase()));
   return { isExpression: true, allowed: expressionAllows(trimmed, policy, allowedSet), normalized: trimmed };

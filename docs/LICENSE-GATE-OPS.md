@@ -96,6 +96,14 @@ licenses:gate — FAIL (1 violation(s))
   Example entry: `"BSD": "BSD-3-Clause"`.
 - An identity alias like `"Unlicense": "Unlicense"` is a no-op —
   Unlicense is already in allowedLicenses.
+- Pseudo-license strings get actionable reasons (they still FAIL):
+  UNLICENSED -> 'not open source; remove the dep or get an explicit
+  vendor/legal exemption'; 'SEE LICENSE IN <file>' -> 'resolve manually
+  and add an exemption'.
+- SPDX 'WITH' exceptions evaluate the BASE license: 'MIT WITH
+  LLVM-exception' passes; a WITH modifier never rescues a non-permissive
+  base.
+
 
 ## Vulnerability overlay (warn-only)
 

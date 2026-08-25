@@ -4215,6 +4215,31 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
   lib/licenses-gate.test.ts (15 tests, +3 e2e), docs/LICENSE-GATE-OPS.md
   (key list), docs/GATE-PATTERN.md (new), this section. verify:contracts
   stays 17/17.
+## 102. SPDX WITH exceptions + pseudo-license diagnostics (2026-08-24)
+
+- WITH EXCEPTION MODIFIERS: 'X WITH exception' (e.g. 'GPL-2.0 WITH
+  Classpath-exception-2.0') now evaluates the BASE license only — an
+  exception never makes a non-permissive base permissive for the
+  allowlist's purposes. 'MIT WITH LLVM-exception' passes; 'GPL-2.0 WITH
+  Classpath-exception-2.0' still fails with 'no permissive alternative'.
+  Detection regex extended with \bWITH\b (case-sensitive, so the
+  lowercase '-or-later' suffix is untouched); splitTopLevel's
+  word-boundary split is reused. Parenthesized OR + WITH composes
+  ('(MIT OR GPL-2.0) WITH LLVM-exception' passes).
+- PSEUDO-LICENSE DIAGNOSTICS: 'UNLICENSED' and 'SEE LICENSE IN <file>'
+  previously failed with the GENERIC 'no allowlist entry' — an operator
+  could not tell the string was meaningful. Now they get actionable
+  reasons: UNLICENSED -> 'not open source; remove the dep or get an
+  explicit vendor/legal exemption'; SEE LICENSE IN -> 'deferred to a
+  file; resolve manually and add an exemption'. Both still FAIL (exit 1)
+  — the diagnostics improve the message, never the verdict.
+- Tests: +5 (WITH allowed base, WITH blocked base, WITH+parens, both
+  pseudo-license diagnostics). tests/lib/licenses-policy.test.ts now
+  29.
+- Artifacts: src/lib/licenses-policy.ts (WITH branch + detection +
+  diagnostics), tests/lib/licenses-policy.test.ts (+5), docs/LICENSE-
+  GATE-OPS.md (diagnostics note). verify:contracts stays 17/17.
+
 
 
 

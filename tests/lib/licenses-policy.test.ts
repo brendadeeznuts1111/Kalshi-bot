@@ -174,5 +174,37 @@ describe("SPDX expressions + expiry warning window (§96)", () => {
     expect(validatePolicyConfig({ policy: { allowedLicenses: ["MIT"], expiryWarningDays: 30 }, exemptions: [] })).toBeNull();
   });
 });
+describe("SPDX WITH exceptions + pseudo-license diagnostics (§102)", () => {
+  test("WITH modifiers evaluate the BASE license (allowed base passes)", () => {
+    const v = evaluatePackage({ name: "x", version: "1.0.0", reportedLicense: "MIT WITH LLVM-exception" }, policy, [], TODAY);
+    expect(v.allowed).toBe(true);
+    expect(v.matchedBy).toBe("expression");
+  });
+
+  test("WITH modifiers do NOT rescue a non-permissive base", () => {
+    const v = evaluatePackage({ name: "x", version: "1.0.0", reportedLicense: "GPL-2.0 WITH Classpath-exception-2.0" }, policy, [], TODAY);
+    expect(v.allowed).toBe(false);
+    expect(v.reason ?? "").toContain("no permissive alternative");
+  });
+
+  test("WITH combines with parenthesized OR", () => {
+    const v = evaluateLicenseExpression("(MIT OR GPL-2.0) WITH LLVM-exception", policy);
+    expect(v.isExpression).toBe(true);
+    expect(v.allowed).toBe(true);
+  });
+
+  test("UNLICENSED fails with an actionable diagnostic", () => {
+    const v = evaluatePackage({ name: "x", version: "1.0.0", reportedLicense: "UNLICENSED" }, policy, [], TODAY);
+    expect(v.allowed).toBe(false);
+    expect(v.reason ?? "").toContain("not open source");
+  });
+
+  test("SEE LICENSE IN fails with a resolve-manually diagnostic", () => {
+    const v = evaluatePackage({ name: "x", version: "1.0.0", reportedLicense: "SEE LICENSE IN LICENSE.txt" }, policy, [], TODAY);
+    expect(v.allowed).toBe(false);
+    expect(v.reason ?? "").toContain("SEE LICENSE IN");
+  });
+});
+
 
 
