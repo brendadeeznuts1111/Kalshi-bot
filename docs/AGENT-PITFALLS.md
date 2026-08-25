@@ -4862,6 +4862,38 @@ another note.
   HTMLImageElement shadows it otherwise (tsc + runtime both misresolve).
 - Artifacts: tools/image-probe.ts (P15-P22, 35/35), this section.
   verify:contracts 26/26 (image:probe count grew within its gate).
+## 122. routes:probe — Bun.serve routes API locked, non-working forms pinned (2026-08-24)
+
+- routes:probe (verify:contracts gate #27) locks the routes surface the
+  repo's serve.ts runs on. VERIFIED 11/11 on 1.4.0:
+  1. exact routes; 2. named params (:id -> req.params.id);
+  3. wildcard /*: params is EMPTY — handlers read req.url (intact);
+  4-7. dir routes: content-type + accept-ranges:bytes + ETag +
+     Last-Modified + Content-Length on files, Range -> 206 +
+     Content-Range, index.html for dirs, built-in EMPTY 404 for missing;
+  8. fetch fallback for unmatched paths (routes + fetch compose).
+- NOT WORKING on 1.4.0 (pinned so the repo never relies on them):
+  9. METHOD-PREFIXED route keys: serve({ routes: { 'GET /m': ... } })
+     THROWS 'Invalid route "GET /m". Path must start with /' — method
+     filtering must happen in the handler via req.method.
+  10. dir-route error/headers options NOT honored (missing file -> the
+      built-in empty 404; custom headers ignored). The DirectoryRoute-
+      Options TS type does not declare them either.
+  11. SPA-fallback nested routes ({ dir, routes: { '/*': handler } }) NOT
+      honored — a deep path under the dir returns EMPTY. SPA fallback
+      must live in the fetch handler.
+- The repo's own patterns (exact + { dir } + fetch fallback, §87/§118)
+  are exactly the supported subset — serve.ts is correct as-is.
+- tsc confirms the runtime: the TS types for DirectoryRouteOptions do
+  not declare error/headers/routes (both casts needed).
+- Probe nuance: the first verify run showed a transient failure (11/11
+  isolated, 11/11 on re-run) — a port-0 fetch race under parallel gate
+  load; documented transient pattern.
+- Artifacts: tools/routes-probe.ts (new), tests/lib/routes-probe.test.ts
+  (new), package.json (routes:probe), tools/verify-contracts.ts (gate
+  #27), scripts/audit-bun-native.ts (keep-list +1), this section.
+  verify:contracts 27/27.
+
 ## 121. node:quic listen() pinned non-functional — deep QUIC probe (2026-08-24)
 
 - §120 verified the node:quic MODULE surface. Deeper probe of the

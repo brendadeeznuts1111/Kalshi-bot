@@ -280,6 +280,7 @@ export const SPAWN_KEEP_LIST = new Set([
   "tests/lib/ws-probe.test.ts", // runs the ws probe CLI (pipe capture)
   "tools/bun-apis-probe.ts", // P8 spawns a child to pin the node:quic listen() abort (pipe capture)
   "tests/lib/bun-apis-probe.test.ts", // runs the bun-apis probe CLI (pipe capture)
+  "tests/lib/routes-probe.test.ts", // runs the routes probe CLI (pipe capture)
   "tests/lib/licenses-gate.test.ts", // same gate subprocess (pipe capture)
 ]);
 

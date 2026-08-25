@@ -62,6 +62,7 @@ const INTENTIONAL = new Set([
   "CSV", // §69: no Bun.CSV in 1.4.0 (probe) — custom parser is the native answer
   "zstd", // §62: no Bun.zstd — real APIs are zstdCompressSync/zstdDecompressSync
   "image", // §12: lowercase form documented as non-existent (the API is Bun.Image capital)
+  "Quic", // §120/§122: Bun.Quic global asserted ABSENT — QUIC is the node:quic module
 ]);
 /** bun-types TYPE namespaces — not runtime values; typeof check is wrong for these. */
 const TYPE_ONLY = new Set([
