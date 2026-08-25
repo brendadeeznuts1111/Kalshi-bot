@@ -9,7 +9,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 > The headings were renumbered to §1-§11 on 2026-08-23; the counters were kept
 > so historical notes stay traceable.
 >
-> **Current contract status: verify:contracts 42/42** (see docs/BUN_API_COVERAGE.md
+> **Current contract status: verify:contracts 43/43** (see docs/BUN_API_COVERAGE.md
 > for the full matrix). `verify:contracts N/N` lines inside older sections are
 > HISTORICAL (each records its era) — docs:check enforces that only this header
 > and non-pitfall docs may reference the current count.
@@ -5635,6 +5635,27 @@ another note.
 - Artifacts: docs/AGENT-PITFALLS.md (renumbered + §152), docs/DESIGN-PIPELINE.md,
   tools/docs-check.ts (uniqueness rule), ~13 reference-updated files.
   verify:contracts 42/42.
+## 153. bun:sqlite deep — strict mode, query.as, serialize, transactions (2026-08-24)
+
+- tools/sqlite-deep-probe.ts (gate #43, 12/12) — beyond the base 9-claim
+  sqlite:probe (§19): the repo imports bun:sqlite 126x.
+- VERIFIED (docs runtime/sqlite.mdx correct): strict:true THROWS on a
+  missing param AND allows prefix-less binding; query.as(Class) maps
+  rows to class instances; multi-query run ("SELECT 1; SELECT 2;") in
+  one call; run() returns { changes, lastInsertRowid }; readonly mode
+  rejects writes; serialize() -> Buffer + Database.deserialize(buf) ->
+  Database round-trips data; BLOB <-> Uint8Array round-trip.
+- SHAPES: db.transaction(fn)() is deferred, exposes db.inTransaction,
+  ROLLS BACK on throw AND RETHROWS the inner error (callers must
+  catch). Statement introspection is columnNames/columnTypes/
+  declaredTypes/paramsCount — NOT columns/params (better-sqlite3 API
+  shape differs).
+- CORRECTION (pinned): bun:sqlite has NO createFunction/
+  createAggregate on 1.4.0 (better-sqlite3 parity gap) — custom SQL
+  functions need a different approach (no native path on 1.4.0).
+- Artifacts: tools/sqlite-deep-probe.ts (new, gate #43), tools/verify-contracts.ts
+  (42 -> 43 gates), package.json (sqlite-deep:probe), docs/BUN_API_COVERAGE.md
+  + AGENT-PITFALLS header (42/42 -> 43/43). verify:contracts 43/43.
 - GitHub recomputes the pie on the default branch after push (a few
   minutes). Verified with git check-attr.
 - Artifacts: .gitattributes (new). verify:contracts 38/38 (unchanged).

@@ -56,6 +56,7 @@ const gates = [
   ['fetch:probe'],
   ['node-compat:probe'],
   ['transpiler:probe'],
+  ['sqlite-deep:probe'],
 ] as const;
 
 const GATE_ENV: Record<string, Record<string, string>> = {
