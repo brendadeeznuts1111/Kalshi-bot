@@ -255,6 +255,7 @@
     "xml:probe": "bun tools/xml-probe.ts",
     "bun:build-probe": "bun tools/build-probe.ts",
     "sqlite:probe": "bun tools/sqlite-probe.ts",
+    "serve-stream:probe": "bun tools/serve-stream-probe.ts",
     "routes:check": "bun tools/routes-check.ts",
     "bun:coverage-audit": "bun tools/bun-coverage-audit.ts",
     "code-search:prime": "bun tools/code-search-prime-cli.ts",

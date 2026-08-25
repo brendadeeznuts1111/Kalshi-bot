@@ -4703,6 +4703,34 @@ another note.
   (new), package.json (sqlite:probe), tools/verify-contracts.ts (gate),
   scripts/audit-bun-native.ts (keep-list +1), this section.
   verify:contracts 22/22.
+## 112. Bun.serve streaming probed — SSE push pattern grounded (2026-08-24)
+
+- The live dashboard currently POLLS via setInterval; SSE push would
+  replace that. serve-stream:probe (tools/serve-stream-probe.ts,
+  verify:contracts gate #23 -> 23/23) grounds the pattern. VERIFIED 4/4
+  on 1.4.0:
+  1. ReadableStream Response bodies stream INCREMENTALLY — the client
+     sees chunks as produced (total time ~= sum of producer sleeps;
+     probe: c1c2c3 in 307ms vs 300ms of sleeps).
+  2. text/event-stream works over the same mechanism — SSE data lines
+     arrive intact (data: one / two / three).
+  3. Request bodies iterate with `for await (const chunk of req.body)`
+     (POST ab-cd-ef echoed verbatim).
+  4. A stream that NEVER closes stays alive across heartbeats — the
+     connection is not dropped server-side; the client reads N beats
+     then cancels (keep-alive pattern for SSE).
+- ADOPTION READY: the live channel could push dashboard updates over
+  SSE with a comment-only keep-alive, removing the setInterval poll.
+  Note §90: WebSocket publish() backpressure returns 0/-1 — for SSE,
+  the equivalent is the writer's backpressure on enqueue (not probed;
+  the consumer-side ReadableStream semantics match).
+- R2 PROTOCOL: second consecutive tool written protocol-clean (zero
+  single quotes, double-quoted heredoc) — 4/4 on the first try.
+- Artifacts: tools/serve-stream-probe.ts (new), tests/lib/serve-stream-
+  probe.test.ts (new), package.json (serve-stream:probe), tools/verify-
+  contracts.ts (gate #23), scripts/audit-bun-native.ts (keep-list +1),
+  this section. verify:contracts 23/23.
+
 
 
 

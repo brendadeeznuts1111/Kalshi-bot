@@ -274,6 +274,7 @@ export const SPAWN_KEEP_LIST = new Set([
   "tools/build-probe.ts", // bun build CLI + compiled binary subprocesses (pipe capture)
   "tests/lib/build-probe.test.ts", // runs the build probe CLI (pipe capture)
   "tests/lib/sqlite-probe.test.ts", // runs the sqlite probe CLI (pipe capture)
+  "tests/lib/serve-stream-probe.test.ts", // runs the serve-stream probe CLI (pipe capture)
   "tests/lib/licenses-gate.test.ts", // same gate subprocess (pipe capture)
 ]);
 
