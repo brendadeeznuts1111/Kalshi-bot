@@ -132,3 +132,46 @@ describe("Bun.Image error codes (§71)", () => {
     expect(code).toBe("ERR_IMAGE_UNKNOWN_FORMAT");
   });
 });
+
+describe("Bun.Image resize signature (§72)", () => {
+  test("resize(width) auto-height preserves aspect (2:1 -> 80x40)", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "img-r1-"));
+    const src = makeSrc(dir);
+    const big = join(dir, "big.png");
+    await Bun.file(src).image().resize(40, 20).png().write(big);
+    const out = join(dir, "r.png");
+    await Bun.file(big).image().resize(80).png().write(out);
+    const m = await Bun.file(out).image().metadata();
+    expect(m).toMatchObject({ width: 80, height: 40 });
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  test("resize(null, h) THROWS — height-only NOT supported (doc correction)", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "img-r2-"));
+    const src = makeSrc(dir);
+    let threw = false;
+    try { await Bun.file(src).image().resize(null as any, 60).png().bytes(); } catch { threw = true; }
+    expect(threw).toBe(true);
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  test("resize(undefined, h) THROWS — width is required", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "img-r3-"));
+    const src = makeSrc(dir);
+    let threw = false;
+    try { await Bun.file(src).image().resize(undefined as any, 60).png().bytes(); } catch { threw = true; }
+    expect(threw).toBe(true);
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  test("resize(w, undefined) treats height as omitted (auto)", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "img-r4-"));
+    const src = makeSrc(dir);
+    const out = join(dir, "r.png");
+    await Bun.file(src).image().resize(80, undefined as any).png().write(out);
+    const m = await Bun.file(out).image().metadata();
+    expect(m.width).toBe(80);
+    expect(m.height).toBe(40); // 2:1 preserved
+    rmSync(dir, { recursive: true, force: true });
+  });
+});

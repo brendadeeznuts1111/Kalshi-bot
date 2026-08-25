@@ -3362,3 +3362,30 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
   all three; tests lock them).
 - Artifacts: tools/image-probe.ts P13 (3 new checks, 23/23), tests/lib/
   image-probe.test.ts (3 new tests, 11/11). Gate stays 12/12.
+
+## 72. On-the-fly resize doc — pattern rejected (no consumer), resize signature CORRECTED (2026-08-24)
+
+- A pasted doc proposed on-the-fly image resizing in Bun.serve:
+  /logos/:sport/:team?w=&h= with a Map-based resize cache + placeholder
+  endpoints. Builds on the §71-rejected team_logos premise.
+- GROUNDED — pattern rejected (no consumer):
+  - No team_logos table/routes (§71); the repo's image serving is
+    PRE-GENERATED brand assets (/brand.svg, /brand/swatch/<token>.png)
+    with ETag/304 + rate limiting — not dynamic resize.
+  - brand-image.ts uses resize(w, h) with explicit dims — no height-only
+    pattern exists to fix.
+  - The on-the-fly endpoint, Map cache, and placeholder routes would be
+    built for phantom logo data.
+- CORRECTED (the doc's Sharp-assumption is WRONG on Bun 1.4.0):
+  - The doc hedged: 'we'll assume resize(null, height) works (Sharp
+    does)'. PROBED: resize(null, 60) THROWS TypeError: resize(width,
+    height?, options?) — width is REQUIRED number, height optional.
+  - resize(undefined, 60) also THROWS. resize(80, undefined) works
+    (height omitted -> auto). resize(80) alone: 40x20 src -> 80x40
+    (aspect preserved).
+  - bun-types signature: 'resize(width: number, height?: number,
+    options?): this — Omit height to keep the source aspect ratio.'
+  - Height-only resize requires computing width from metadata:
+    resize(Math.round(h * (srcWidth / srcHeight))).
+- Artifacts: tools/image-probe.ts P14 (3 checks, 26/26), tests/lib/
+  image-probe.test.ts (4 tests, 15/15). Gate stays 12/12.

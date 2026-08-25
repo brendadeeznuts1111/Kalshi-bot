@@ -121,6 +121,20 @@ check("P13b truncated -> ERR_IMAGE_DECODE_FAILED", truncated === "ERR_IMAGE_DECO
 const svg = await codeOf(Buffer.from("<svg xmlns=\"http://www.w3.org/2000/svg\"><rect/></svg>"));
 check("P13c svg -> ERR_IMAGE_UNKNOWN_FORMAT (no rasterizer §12)", svg === "ERR_IMAGE_UNKNOWN_FORMAT", svg);
 
+// P14: resize signature (§72) — width REQUIRED; null/undefined width THROW.
+// The doc assumed resize(null, height) works (Sharp-style) — WRONG on Bun.
+const r1 = join(dir, "res-w.png");
+await Bun.file(SRC).image().resize(80).png().write(r1);
+const mW = await writeMeta(r1);
+check("P14a resize(width) auto-height", mW.width === 80 && mW.height === 40, JSON.stringify(mW) + " (2:1 src -> 80x40)");
+const th = (fn: () => Promise<unknown>): string => { try { void fn(); return "no-throw"; } catch (e) { return "THREW " + (e as Error).constructor.name; } };
+let nullThrew = "no-throw";
+try { const f = join(dir, "null.png"); await Bun.file(SRC).image().resize(null as any, 60).png().write(f); } catch (e) { nullThrew = "THREW " + (e as Error).constructor.name; }
+check("P14b resize(null, h) THROWS (doc correction)", nullThrew.startsWith("THREW"), nullThrew);
+let undefThrew = "no-throw";
+try { const f = join(dir, "undef.png"); await Bun.file(SRC).image().resize(undefined as any, 60).png().write(f); } catch (e) { undefThrew = "THREW " + (e as Error).constructor.name; }
+check("P14c resize(undefined, h) THROWS (doc correction)", undefThrew.startsWith("THREW"), undefThrew);
+
 console.log("---");
 const fails = results.filter((r) => !r.pass);
 console.log("image:probe — " + (results.length - fails.length) + "/" + results.length + " pass" + (fails.length ? " · FAIL: " + fails.map((f) => f.name).join(", ") : ""));
