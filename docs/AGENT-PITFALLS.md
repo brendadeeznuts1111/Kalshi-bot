@@ -4357,6 +4357,59 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
   (alert block in jobAuditOverlay), tests/lib/compliance-alert.test.ts
   (new), docs/LICENSE-GATE-OPS.md (alerts section). verify:contracts
   stays 17/17.
+## 107. Combined pipeline report — the founding mtafile ask completed (2026-08-24)
+
+- The original request ('review the mtafile.md pipeline, enhance it with
+  the frontend modules, plan per module, work through the builds') had
+  per-module metafiles + budgets + a gate, but NO combined review
+  document. dist/pipeline.meta.md (design:pipeline-report) closes it:
+  one markdown report over ALL frontend modules with size vs budget,
+  largest contributor, growth, gate status, and a per-module
+  enhancement plan.
+- ENHANCEMENT PLANS ARE DATA-DRIVEN (moduleEnhancementNotes): over-
+  budget, monolith (largest >= 90% of bundle -> chunking note),
+  contributor-over-budget, growth over warn threshold — derived from
+  the same buildBudgetHealth the gate + /api/design/budgets use, so the
+  report, the gate, and the live API cannot drift. Current findings:
+  hq-app app.js monolith at 95.8% (chunk hash-routes/surface-edge);
+  design-system color kernel 55.8% (expected core).
+- WORKED THROUGH THE BUILDS: design:build -> design:pipeline-report ->
+  design:check — all green (2 modules, 0 enforced, 20 backlog
+  playground-only, 32 surfaces).
+- Artifacts: src/lib/pipeline-report.ts (pure, 5 tests), tools/
+  pipeline-report.ts (CLI), package.json (design:pipeline-report),
+  docs/DESIGN-PIPELINE.md §13-§14, this section. verify:contracts stays
+  17/17.
+## 108. Transient url-health flake fixed at the source — probeHttp retries network-level failures once (2026-08-24)
+
+- The full-suite flake (1 of 2445 tests, green on re-run) was finally
+  pinned: tests/institutions/url-health.test.ts makes LIVE network calls
+  (12s timeouts; probeOfficialCatalog asserts failed === 0 across the
+  catalog with concurrency 4). Under 10x --parallel load a transient
+  DNS/TLS/connection hiccup made a fetch throw -> ok:false -> test
+  fail. 5 reproduction runs were clean (transient flakes do not
+  reproduce on demand), so the fix targeted the mechanism, not the
+  symptom.
+- FIX (src/institutions/url-health.ts probeHttp): network-LEVEL failures
+  (status 0 = the fetch threw) are retried ONCE — a transient hiccup
+  self-heals; a genuinely dead endpoint fails both attempts with
+  '(after 1 retry)' appended. HTTP statuses (2xx/4xx/5xx) are REAL
+  signals and are never retried (an answered 503 stays a 503). The
+  probe is now testable: attemptOnce() extracted + probeHttp takes an
+  injectable fetch (defaults to the global).
+- Tests: tests/lib/url-health-retry.test.ts (3, offline via injected
+  fetch): transient self-heal (2 HEADs), dead endpoint fails with the
+  retry noted, HTTP 503 NOT retried (1 HEAD). Count HEAD calls, not all
+  fetches — one attempt = HEAD + optional GET fallback.
+- Design note: the pre-commit hook's --retry 1 defuses flakes at the
+  harness level (belt); fixing the probe removes the flake at the
+  source (suspenders) — the check's test step stays retry-free because
+  it no longer needs it.
+- Artifacts: src/institutions/url-health.ts (attemptOnce + retry),
+  tests/lib/url-health-retry.test.ts (new). verify:contracts stays
+  17/17.
+
+
 
 
 

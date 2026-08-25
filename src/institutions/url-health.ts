@@ -38,17 +38,19 @@ function statusOk(status: number, okStatuses: readonly number[]): boolean {
   return status >= 200 && status < 400;
 }
 
-export async function probeHttp(
+/** One probe attempt (HEAD, GET fallback on 404/405/501/other non-ok). */
+async function attemptOnce(
   url: string,
   okStatuses: readonly number[],
   timeoutMs: number,
+  fetchImpl: typeof fetch,
 ): Promise<{ ok: boolean; status: number; latencyMs: number; error?: string }> {
   const t0 = Bun.nanoseconds();
   try {
     // Self-aborting timeout signal — no controller/timer/cleanup bookkeeping.
     // @see https://developer.mozilla.org/en-US/docs/Web/API/AbortSignal/timeout_static
     const signal = AbortSignal.timeout(timeoutMs);
-    let res = await fetch(url, {
+    let res = await fetchImpl(url, {
       method: "HEAD",
       redirect: "follow",
       signal,
@@ -60,7 +62,7 @@ export async function probeHttp(
       res.status === 501 ||
       !statusOk(res.status, okStatuses)
     ) {
-      res = await fetch(url, {
+      res = await fetchImpl(url, {
         method: "GET",
         redirect: "follow",
         signal,
@@ -81,6 +83,24 @@ export async function probeHttp(
       error: err instanceof Error ? err.message : String(err),
     };
   }
+}
+
+export async function probeHttp(
+  url: string,
+  okStatuses: readonly number[],
+  timeoutMs: number,
+  fetchImpl: typeof fetch = fetch,
+): Promise<{ ok: boolean; status: number; latencyMs: number; error?: string }> {
+  // Retry NETWORK-LEVEL failures once (status 0 = the fetch threw): a
+  // transient DNS/connection hiccup under parallel load must not fail a
+  // live liveness probe; a genuinely dead endpoint fails both attempts.
+  // HTTP statuses (2xx/4xx/5xx) are real signals and are NOT retried.
+  const first = await attemptOnce(url, okStatuses, timeoutMs, fetchImpl);
+  if (first.status === 0) {
+    const second = await attemptOnce(url, okStatuses, timeoutMs, fetchImpl);
+    return second.ok ? second : { ...second, error: (second.error ?? "") + " (after 1 retry)" };
+  }
+  return first;
 }
 
 /** Kalshi exchange status for prod / demo / elections. */
