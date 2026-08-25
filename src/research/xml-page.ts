@@ -34,6 +34,13 @@ export function renderXmlPage(): string {
     { cells: ["with { type: \"xml\" }", W_VERIFIED + ' parse a non-.xml extension as XML (§68)'] },
     { cells: ["bundler inlines at build time", W_VERIFIED + ' <code>bun build</code> parses XML and inlines the object — zero runtime overhead (§68)'] },
   ]);
+  const adoption = widgetTable(["Adoption in this repo", "Where"], [
+    { cells: ["sitemap.xml discovery (bun-docs-index)", W_VERIFIED + ' 17,907 <code>&lt;loc&gt;</code> extracted via <code>Bun.XML.parse</code> — byte-identical to the old regex (probe)'] },
+    { cells: ["CycloneDX SBOM twin (licenses-report)", W_VERIFIED + ' <code>Bun.XML.stringify</code> emits research/outputs/licenses-sbom.xml (§104)'] },
+    { cells: ["RSS 2.0 + Atom feeds (release-blog)", W_VERIFIED + ' <code>parseRssEntries</code>/<code>parseAtomEntries</code> feed the releases channel'] },
+    { cells: ["live-channel feed broadcast", W_VERIFIED + ' RSS/Atom enclosure <code>@url</code> attribute convention'] },
+    { cells: ["docs-validate xml schema", W_VERIFIED + ' <code>Bun.XML.parse</code> validates .xml docs in docs:check'] },
+  ]);
   const errors = widgetTable(["Errors + conformance", "Probe"], [
     { cells: ["SyntaxError not-well-formed", W_VERIFIED + ' <code>XML Parse error: Expected closing tag</code> — no lenient mode (§68)'] },
     { cells: ["RangeError deep nesting", W_VERIFIED + ' pathologically deep documents throw (§68)'] },
@@ -53,7 +60,8 @@ export function renderXmlPage(): string {
       { heading: "Bun.XML.stringify", html: stringify },
       { heading: "Module imports + bundler", html: imports },
       { heading: "Errors + conformance", html: errors },
+      { heading: "Adoption in this repo", html: adoption },
     ],
-    footer: "Full probe matrix: docs/AGENT-PITFALLS.md §68 · page: src/research/xml-page.ts",
+    footer: "Full probe matrix: docs/AGENT-PITFALLS.md §68 · sitemap parity probe 2026-08-25 (17,907 locs) · page: src/research/xml-page.ts",
   });
 }

@@ -174,7 +174,15 @@ async function discoverPages(source: Source, scope: Scope): Promise<Array<{ name
   let paths: string[] = [];
   if (source === 'site') {
     const xml = await (await fetch(SITEMAP_URL)).text();
-    const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]!);
+    // Bun.XML.parse (Bun 1.4 native, §68 verified): attributes -> @attr,
+    // text -> string, repeated elements -> arrays. Replaces the regex
+    // <loc> extraction so entities/CDATA/whitespace are handled by the
+    // parser, not a hand-rolled pattern.
+    const parsed = Bun.XML.parse(xml) as { urlset?: { url?: { loc?: string } | Array<{ loc?: string }> } };
+    const urls = parsed.urlset?.url;
+    const locs = (Array.isArray(urls) ? urls : urls ? [urls] : [])
+      .map((u) => u.loc)
+      .filter((l): l is string => typeof l === 'string');
     const sitePrefix = 'https://bun.com/docs/' + (scope === 'all' ? '' : scope + '/');
     paths = locs
       .filter((l) => l.startsWith(sitePrefix) && l !== sitePrefix.slice(0, -1))
