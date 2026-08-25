@@ -5731,6 +5731,20 @@ another note.
   "Largest Modules by Output Contribution" (not "Largest Input Files");
   Quick Summary counts ESM only — NO CJS metric and NO output/input
   ratio; the byte marker is [OUTPUT_BYTES:] not [SIZE:].
+
+- DEFINE-GATED tree shaking (gate P21-P22): an import() behind a
+  define that resolves false is dropped, AND treeShaking:false does
+  NOT keep it — the pasted claim ("set treeShaking:false to keep
+  every import() chunk") is wrong on 1.4.0, consistent with P7.
+- outputs.imports is ALWAYS EMPTY (P23, pinned) — the schema field
+  never populates even when the output JS carries external imports.
+- Node BUILTINS are bundled into the output (P24 — node:path polyfill
+  inlined, 10KB) — esbuild keeps builtins external; a real difference.
+- JSON.stringify(result.metafile) + Bun.write round-trips (P25).
+- "Matches esbuild exactly" is NOT exact: inputs.imports entries are
+  { path, kind, original } without the always-present external flag
+  (external appears only on require-calls). The analyzer likely still
+  tolerates it (extra fields ignored), but exact-match is overstated.
 - GitHub recomputes the pie on the default branch after push (a few
   minutes). Verified with git check-attr.
 - Artifacts: .gitattributes (new). verify:contracts 38/38 (unchanged).

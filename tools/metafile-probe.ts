@@ -113,6 +113,29 @@ check("P19 grep markers MODULE/IMPORT/OUTPUT_BYTES", rpt.includes("[MODULE:") &&
 check("P20 pinned deviations: no [SIZE:], no ratio, named section", !rpt.includes("[SIZE:") && !/ratio/i.test(rpt) && rpt.includes("Largest Modules by Output Contribution"), "");
 
 
+
+// ── §155 addendum 4: define-gated tree shaking, outputs.imports, builtins ──
+
+// define-gated import() is dropped like if(false); treeShaking:false does
+// NOT keep it (contradicts the pasted claim, matches pinned P7).
+// outputs.imports is ALWAYS EMPTY on 1.4.0 (the schema field never
+// populates, even with external imports in the output JS). Node builtins
+// are BUNDLED into the output (esbuild keeps them external).
+await Bun.write(F + "/feature.ts", 'import { SHARED } from "./shared.ts";\nif (FEATURE) { await import("./dead.ts"); }\nexport const main = () => SHARED;\n');
+const rFeat = await Bun.build({ entrypoints: [F + "/feature.ts"], outdir: "scratch/mf-f/dist", metafile: true, define: { FEATURE: "false" } });
+check("P21 define-gated import() chunk dropped", !Object.keys(rFeat.metafile!.outputs).some((p: string) => p.includes("dead")), "");
+const rFeat2 = await Bun.build({ entrypoints: [F + "/feature.ts"], outdir: "scratch/mf-f2/dist", metafile: true, define: { FEATURE: "false" }, treeShaking: false });
+check("P22 define-gated + treeShaking:false STILL dropped", !Object.keys(rFeat2.metafile!.outputs).some((p: string) => p.includes("dead")), "");
+const rExt = await Bun.build({ entrypoints: [F + "/ext.ts"], outdir: "scratch/mf-ext5/dist", metafile: true, external: ["typescript"] });
+const extOut = Object.values(rExt.metafile!.outputs)[0] as any;
+check("P23 outputs.imports always empty (pinned)", Array.isArray(extOut.imports) && extOut.imports.length === 0, "len=" + extOut.imports.length);
+const nodeOut = Object.values(rExt.metafile!.outputs)[0] as any;
+check("P24 node builtins BUNDLED (inputs includes node:path)", Object.keys(nodeOut.inputs).some((p: string) => p === "node:path"), Object.keys(nodeOut.inputs).join(","));
+const jsStr = JSON.stringify(rExt.metafile);
+await Bun.write("scratch/mf-ext5/dist/meta.json", jsStr);
+check("P25 JSON.stringify + Bun.write round-trip", jsStr.startsWith("{\"inputs\":") && await w("scratch/mf-ext5/dist/meta.json"), "len=" + jsStr.length);
+
+
 const failed = results.filter((r) => !r.pass);
 console.log("metafile:probe — " + (results.length - failed.length) + "/" + results.length + " checks" + (failed.length ? " · FAIL: " + failed.map((f) => f.name).join(", ") : ""));
 process.exit(failed.length === 0 ? 0 : 1);
