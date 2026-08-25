@@ -274,6 +274,7 @@
     "test:probe": "bun test tools/test-probe.test.ts",
     "fetch:probe": "bun tools/fetch-probe.ts",
     "node-compat:probe": "bun tools/node-compat-probe.ts",
+    "transpiler:probe": "bun tools/transpiler-probe.ts",
     "routes:check": "bun tools/routes-check.ts",
     "bun:coverage-audit": "bun tools/bun-coverage-audit.ts",
     "research:resume": "bun tools/research-resume.ts",

@@ -9,7 +9,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 > The headings were renumbered to §1-§11 on 2026-08-23; the counters were kept
 > so historical notes stay traceable.
 >
-> **Current contract status: verify:contracts 41/41** (see docs/BUN_API_COVERAGE.md
+> **Current contract status: verify:contracts 42/42** (see docs/BUN_API_COVERAGE.md
 > for the full matrix). `verify:contracts N/N` lines inside older sections are
 > HISTORICAL (each records its era) — docs:check enforces that only this header
 > and non-pitfall docs may reference the current count.
@@ -1614,7 +1614,7 @@ PROFILE TARGETS + FLAG FORMS (probed):
 
 ## 9. Bun Shell (`Bun.$`) switch — verified API surface (2026-08-23)
 
-Converted all non-keep-list `Bun.spawn` sites to `Bun.$` (see BUN_SHELL.md
+Converted all non-keep-list `Bun.spawn` sites to `Bun.$` — see BUN_SHELL.md
 "Repo-wide default" + keep-list). Verified on Bun 1.4.0, in order of surprise:
 
 | Symptom | Cause | Fix |
@@ -5566,10 +5566,10 @@ another note.
 ## 141. Pattern enhancements — Bun.$ in the design pipeline, §128 catch-up visibility (2026-08-24)
 
 - MIGRATED scripts/build-design-system.ts: the CLI metafile-md report
-  subprocess was Bun.spawn + manual exited/stderr plumbing — now Bun.$
-  (interpolation auto-escape, .cwd()/.nothrow()/.stderr verified §127).
-  design:build + design:check still pass; the stale SPAWN_KEEP_LIST
-  entry was removed (no Bun.spawn left in the file).
+  subprocess was Bun.spawn + manual exited/stderr plumbing — now the Bun
+  Shell template: interpolation auto-escape, .cwd()/.nothrow()/.stderr
+  verified §127. design:build + design:check still pass; the stale
+  SPAWN_KEEP_LIST entry was removed (no Bun.spawn left in the file).
 - ENHANCED createSingleFlight (scripts/cron-main.ts): exposes
   droppedTicks() — a fire that lands while the job is active is
   coalesced AND the scheduled tick is LOST (§128 SKIP policy).
@@ -5582,6 +5582,30 @@ another note.
 - Artifacts: scripts/build-design-system.ts, scripts/audit-bun-native.ts
   (keep-list), scripts/cron-main.ts, tests/scripts/audit-overlay-cron.test.ts.
   verify:contracts 41/41 (unchanged).
+## 142. Bun.Transpiler internals — scan APIs the repo enforcement relies on (2026-08-24)
+
+- tools/transpiler-probe.ts (gate #42, 9/9): the guard's scanImports and
+  docs-validate's .scan() both verified against the runtime.
+- scan(src) -> { imports, exports }: static imports (import-statement),
+  side-effect imports, dynamic imports (dynamic-import), require calls
+  (require-call) all detected with paths; exports array lists exported
+  names. scanImports(src) returns the same imports array (the guard's
+  enforcement surface is sound).
+- transformSync: ts loader strips types, tsx handles JSX; define option
+  replaces process.env refs + plain identifiers (unmatched kept);
+  target bun vs node output IDENTICAL for plain ESM; invalid syntax
+  throws; minify { whitespace } vs minify true (renames identifiers).
+- CORRECTION (pinned): transformSync THROWS on a with { type: "macro" }
+  import when the macro file is unresolvable (error variant by loader:
+  AggregateError Parse error vs Macro-not-found) — the transpiler is not
+  a macro runner; builds resolve macros (§130).
+- GOTCHA (docs:api STRICT): the call-site regex \s*\( spans newlines —
+  prose like "Bun.$\n(see..." reads as a call on the MISSING-classified
+  $ token. Doc wording avoids Bun.$ adjacent to an open paren.
+- Artifacts: tools/transpiler-probe.ts (new, gate #42), tools/verify-contracts.ts
+  (41 -> 42 gates), package.json (transpiler:probe), docs/BUN_API_COVERAGE.md
+  + AGENT-PITFALLS header (41/41 -> 42/42), §141 reworded.
+  verify:contracts 42/42.
 - GitHub recomputes the pie on the default branch after push (a few
   minutes). Verified with git check-attr.
 - Artifacts: .gitattributes (new). verify:contracts 38/38 (unchanged).
