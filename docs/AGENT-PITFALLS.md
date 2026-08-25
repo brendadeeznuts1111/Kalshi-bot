@@ -3586,3 +3586,33 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
     header (no attributes).
 - Artifacts: probe verified via inline bun -e (no new gate — the surface
   is 2 call sites + cookie-jar, all now documented at their source).
+
+## 79. Bun cookie docs — full property surface probed, 15th gate (2026-08-24)
+
+- Probed bun.com/docs/runtime/cookies against Bun 1.4.0 (tools/cookies-
+  probe.ts, `bun run cookies:probe`, new verify:contracts gate, 15/15).
+  The user asked WHERE and HOW cookie properties are — the answer, all
+  probe-verified:
+- Bun.Cookie (per-cookie object):
+  - 10 properties: name, value, domain (string|null), path (default '/'),
+    expires (Date|undefined), secure, sameSite (strict|lax|none, default
+    lax), partitioned (CHIPS), maxAge (number|undefined), httpOnly.
+  - constructors: (name,value), (name,value,opts), (cookieString),
+    (options object); statics Cookie.parse + Cookie.from.
+  - isExpired(): past-expires true, maxAge 3600 false, maxAge 0 true,
+    session-cookie false. serialize() === toString(). toJSON() shape.
+- Bun.CookieMap (map-like collection):
+  - get/has/set (name,value | options | Cookie)/delete/size/toJSON/
+    toSetCookieHeaders; iteration for...of + entries/keys/values/forEach.
+  - constructors: empty, cookie-string, object, array-of-pairs.
+  - NOTE (§78): CookieMap parses the Cookie REQUEST header — Set-Cookie
+    attributes (Path= etc.) come through as entries; the cookie-jar's
+    manual parse is correct for Set-Cookie.
+- SERVER (the deepest integration): req.cookies in Bun.serve routes IS a
+  CookieMap — get() reads request cookies, and set() AUTO-APPLIES to the
+  response Set-Cookie headers (verified: visited=true + theme=dark both
+  in the response). The repo's serve.ts uses routes but reads the session
+  cookie via csrf.ts's explicit CookieMap(header).get — both correct,
+  the csrf route is tested (§77).
+- Artifacts: tools/cookies-probe.ts (12 checks), tests/lib/cookies-probe.
+  test.ts (7 tests), verify:contracts 15/15.
