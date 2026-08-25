@@ -28,13 +28,13 @@ describe("licenses:gate (§92)", () => {
     expect(stdout).toContain("allowed");
   });
 });
-function runGateArgs(args: string[]): { exitCode: number; stdout: string } {
+function runGateArgs(args: string[]): { exitCode: number; stdout: string; stderr: string } {
   const proc = Bun.spawnSync(["bun", "run", "licenses:gate", ...args], {
     cwd: ROOT,
     stdout: "pipe",
     stderr: "pipe",
   });
-  return { exitCode: proc.exitCode, stdout: (proc.stdout?.toString() ?? "") };
+  return { exitCode: proc.exitCode, stdout: (proc.stdout?.toString() ?? ""), stderr: (proc.stderr?.toString() ?? "") };
 }
 
 describe("licenses:gate --json (§93)", () => {
@@ -153,5 +153,49 @@ describe("licenses:gate --overlay (§100)", () => {
     }
   });
 });
+describe("licenses:gate operator-visible failure formats (§101 review)", () => {
+  const EXPIRED_PATH = join(ROOT, ".data", "licenses-config-expired.json");
+
+  test("expired exemption fails with expiry date + Action hint in HUMAN output", async () => {
+    const expired = { policy: { allowedLicenses: ["MIT", "Apache-2.0"], licenseAliases: {} }, exemptions: [{ name: "@factorywager/proton-pass", license: "Unknown", expires: "2026-01-01", remediation: "upgrade to v2" }] };
+    await Bun.write(EXPIRED_PATH, JSON.stringify(expired, null, 2) + "\n");
+    try {
+      const { exitCode, stdout } = runGateArgs(["--config", EXPIRED_PATH]);
+      expect(exitCode).toBe(1);
+      expect(stdout).toContain("exemption expired on 2026-01-01");
+      expect(stdout).toContain("Action: upgrade to v2");
+    } finally {
+      await Bun.file(EXPIRED_PATH).delete();
+    }
+  });
+
+  test("advisory matches print the warn line in HUMAN output (exit code unchanged)", async () => {
+    const FIX = join(ROOT, ".data", "licenses-overlay-warn.json");
+    const fixture = { format: "audit-overrides", version: 1, advisories: { "zod@4.4.3": { severity: "high", note: "fixture note" } } };
+    await Bun.write(FIX, JSON.stringify(fixture, null, 2) + "\n");
+    try {
+      const { exitCode, stdout } = runGateArgs(["--overlay", FIX]);
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain("warn advisory zod@4.4.3 (high)");
+      expect(stdout).toContain("fixture note");
+    } finally {
+      await Bun.file(FIX).delete();
+    }
+  });
+
+  test("--sbom with a fixture config demands an explicit snapshot path (no committed-snapshot pollution)", async () => {
+    const FIX = join(ROOT, ".data", "licenses-config-guard.json");
+    const strict = { policy: { allowedLicenses: ["MIT"], licenseAliases: {} }, exemptions: [] };
+    await Bun.write(FIX, JSON.stringify(strict, null, 2) + "\n");
+    try {
+      const { exitCode, stdout, stderr } = runGateArgs(["--config", FIX, "--sbom"]);
+      expect(exitCode).toBe(1);
+      expect((stdout + stderr)).toContain("explicit --sbom path");
+    } finally {
+      await Bun.file(FIX).delete();
+    }
+  });
+});
+
 
 

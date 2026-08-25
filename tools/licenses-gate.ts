@@ -129,19 +129,27 @@ function computeDiff(prev: SbomEntry[] | undefined, cur: SbomEntry[]) {
   return { added, removed, changed };
 }
 
+/** `--flag <value>` (or fallback) — a value starting with "--" is a new flag, not a value. */
+function flagValue(args: string[], name: string, fallback: string): string {
+  const idx = args.indexOf(name);
+  const next = args[idx + 1];
+  return idx >= 0 && next !== undefined && !next.startsWith("--") ? next : fallback;
+}
+
 async function main() {
   const args = process.argv.slice(2);
   const jsonMode = args.includes("--json");
-  const sbomIdx = args.indexOf("--sbom");
-  const sbomMode = sbomIdx >= 0;
-  const next = args[sbomIdx + 1];
-  const sbomPath = sbomMode && next !== undefined && !next.startsWith("--") ? next : DEFAULT_SBOM_PATH;
-  const cfgIdx = args.indexOf("--config");
-  const cfgNext = args[cfgIdx + 1];
-  const configPath = cfgIdx >= 0 && cfgNext !== undefined && !cfgNext.startsWith("--") ? cfgNext : CONFIG_PATH;
-  const ovIdx = args.indexOf("--overlay");
-  const ovNext = args[ovIdx + 1];
-  const overlayPath = ovIdx >= 0 && ovNext !== undefined && !ovNext.startsWith("--") ? ovNext : OVERLAY_PATH;
+  const sbomMode = args.includes("--sbom");
+  const sbomPath = flagValue(args, "--sbom", DEFAULT_SBOM_PATH);
+  const configPath = flagValue(args, "--config", CONFIG_PATH);
+  const overlayPath = flagValue(args, "--overlay", OVERLAY_PATH);
+
+  if (sbomMode && sbomPath === DEFAULT_SBOM_PATH && configPath !== CONFIG_PATH) {
+    const msg = "licenses:gate — use an explicit --sbom path with --config (fixture runs must not overwrite the committed snapshot)";
+    if (jsonMode) console.log(JSON.stringify({ ok: false, error: msg }));
+    else console.error(msg);
+    process.exit(1);
+  }
 
   const proc = Bun.spawnSync(["bun", "pm", "licenses", "--prod", "--json"], { cwd: ROOT, stdout: "pipe", stderr: "pipe" });
   const stdout = proc.stdout?.toString() ?? "";

@@ -124,8 +124,9 @@ licenses:gate — FAIL (1 violation(s))
 
 - `bun run licenses:gate --json | jq '.ok'` — boolean pass/fail. There is
   NO `status` key (`jq '.status'` returns null).
-- Top-level keys: ok, summary (total/allowed/violations/exemptions),
-  packages, violations, advisories, staleExemptions, diff.
+- Top-level keys: ok, generatedAt, bunVersion, summary
+  (total/allowed/violations/exemptions), packages, violations,
+  advisories, expiringSoon, staleExemptions, diff.
 
 ## When an exemption expires
 

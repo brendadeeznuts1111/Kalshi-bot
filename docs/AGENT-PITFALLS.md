@@ -4191,6 +4191,31 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
 - Artifacts: tools/licenses-gate.ts (resolveLicensesData, --overlay,
   import guard), tests/lib/licenses-gate.test.ts (+5), docs/LICENSE-
   GATE-OPS.md (--overlay row). verify:contracts stays 17/17.
+## 101. Review pass — flag helper, snapshot guard, operator-format e2e, gate pattern codified (2026-08-24)
+
+- REVIEWED the assembled gate (6 edit rounds had left drift):
+  1. Flag parsing was a triplicated indexOf block (--sbom/--config/
+     --overlay) — extracted flagValue() helper.
+  2. A fixture config combined with a default --sbom path would have
+     silently overwritten the COMMITTED snapshot — now fails closed
+     ('use an explicit --sbom path with --config').
+  3. The ops manual's --json key list was stale (missing expiringSoon
+     from §96) — probe-compared against live output and fixed.
+  4. The time-bomb's OPERATOR-VISIBLE message (expiry date + Action
+     hint in human output) had no e2e — added. Human advisory warn
+     line also now asserted.
+- PATTERN CODIFIED: docs/GATE-PATTERN.md — the six-part checklist
+  (config-not-code, fail-closed-named, importable+guarded main, full
+  chain wiring, unit+e2e-fixture tests, documents) distilled from
+  §92-§100 so the NEXT gate lands with the same guarantees.
+- Test trap (again): runGateArgs captured stdout only — the guard's
+  human-mode message goes to stderr (consistent with other error
+  paths); the helper now returns stderr too.
+- Artifacts: tools/licenses-gate.ts (flagValue, snapshot guard), tests/
+  lib/licenses-gate.test.ts (15 tests, +3 e2e), docs/LICENSE-GATE-OPS.md
+  (key list), docs/GATE-PATTERN.md (new), this section. verify:contracts
+  stays 17/17.
+
 
 
 
