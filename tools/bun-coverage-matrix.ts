@@ -43,7 +43,7 @@ for (const l of (scan.stdout?.toString() ?? "").split("\n")) {
   const m = l.match(/Bun\.([A-Za-z_$][A-Za-z0-9_$]*)/);
   if (m) counts[m[1]!] = (counts[m[1]!] ?? 0) + 1;
 }
-counts["$"] = 47;
+// no $ hardcode: rg counts Bun.$ correctly (verified 47)
 
 // 2) runtime typeof sweep + 3) d.ts presence + 4) docs presence.
 const dtsFiles = ["index.d.ts", "bun.d.ts", "sqlite.d.ts", "shell.d.ts", "ffi.d.ts", "redis.d.ts", "s3.d.ts", "deprecated.d.ts"];

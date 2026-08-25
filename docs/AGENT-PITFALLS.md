@@ -5871,6 +5871,24 @@ another note.
 - Artifacts: tools/bun-coverage-matrix.ts (new), package.json
   (coverage:matrix script), docs/BUN_API_COVERAGE.md (regenerated).
   verify:contracts 52/52 (unchanged).
+## 165. Hardcoded values made auto — counts sync (2026-08-24)
+
+- The verify:contracts N/N header count was hardcoded + manually bumped
+  on every gate addition (a stale-risk chore). Now AUTO:
+  tools/docs-sync-counts.ts derives the count from the gates array
+  (pure string ops, no regex hell) and updates the AGENT-PITFALLS
+  header. Proven: corrupting the header to 51/51 -> docs:sync-counts
+  restores 52/52 -> docs:check passes. Chained after coverage:matrix
+  (the one command keeps the matrix AND the count current).
+- The matrix generator's counts["$"] = 47 hardcode was REMOVED — the rg
+  scan counts Bun.$ correctly (verified 47); the hardcode would mask
+  drift.
+- docs:check's stale-count scan remains the FAIL-side enforcement; the
+  generator is the auto-FIX side. Both coexist.
+- Artifacts: tools/docs-sync-counts.ts (new), package.json (docs:sync-
+  counts script + coverage:matrix chain), tools/bun-coverage-matrix.ts
+  ($ hardcode removed), docs/AGENT-PITFALLS.md (§165).
+  verify:contracts 52/52.
 ## 164. Realignment executed — hq-app chunking + two real bugs found (2026-08-24)
 
 - Executed the §13 per-module plan: hq-app's hash-routes.ts + surface-edge.ts
