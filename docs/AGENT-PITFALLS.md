@@ -4862,6 +4862,32 @@ another note.
   HTMLImageElement shadows it otherwise (tsc + runtime both misresolve).
 - Artifacts: tools/image-probe.ts (P15-P22, 35/35), this section.
   verify:contracts 26/26 (image:probe count grew within its gate).
+## 118. Bun 1.4 blog replayed via claims-audit + mp4/assets review (2026-08-24)
+
+- REPLAY: ran bun:claims-audit against the cached 1.4 blog with the
+  session's verified claim strings — 6/8 FOUND (Compile-time feature
+  flags, Bun.Image, Bun.XML, WebSocket, zlib-ng, 320 ms) and the two
+  canonical fabricated numbers correctly NOT FOUND (535,496 lines, 64
+  Claude agents; exit 1 is the tool's designed 'likely fabricated'
+  signal). The blog is the ground truth every probe this session was
+  derived from; the audit still rejects invented numbers.
+- MP4/ASSETS REVIEW: public/videos/ contains NO video files (README
+  only) — the ops-videos signal counts zero; the video surface is
+  asset-less. The SERVING CONTRACT is verified for a real file: a
+  served .mp4 gets video/mp4 content-type, Range bytes=0-99 -> 206 +
+  Content-Range bytes 0-99/1032 with exactly 100 bytes, and mid-file
+  seek (bytes=500-599) works — the prerequisites for a <video> element
+  with seeking. Locked in tests/research/video-serving.test.ts (3
+  tests, self-contained scratch fixture, no baked artifacts).
+- GOTCHA (probe): the dir-route syntax is routes: { "/videos/*": { dir } }
+  — the { dir } wrapper is required; routes: { "/videos/*": path }
+  throws. Confirmed against serve.ts + defaults-probe §87 usage.
+- ACTION: the video pipeline is production-ready but empty — dropping
+  real .mp4 assets into public/videos/ will serve them with correct
+  types + seeking out of the box.
+- Artifacts: tests/research/video-serving.test.ts (new), this section.
+  verify:contracts 26/26.
+
 
 
 
