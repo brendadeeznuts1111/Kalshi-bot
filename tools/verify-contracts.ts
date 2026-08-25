@@ -59,6 +59,7 @@ const gates = [
   ['sqlite-deep:probe'],
   ['h2:probe'],
   ['metafile:probe'],
+  ['ecosystem:probe'],
 ] as const;
 
 const GATE_ENV: Record<string, Record<string, string>> = {

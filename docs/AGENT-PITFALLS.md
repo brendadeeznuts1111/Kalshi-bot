@@ -9,7 +9,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 > The headings were renumbered to §1-§11 on 2026-08-23; the counters were kept
 > so historical notes stay traceable.
 >
-> **Current contract status: verify:contracts 45/45** (see docs/BUN_API_COVERAGE.md
+> **Current contract status: verify:contracts 46/46** (see docs/BUN_API_COVERAGE.md
 > for the full matrix). `verify:contracts N/N` lines inside older sections are
 > HISTORICAL (each records its era) — docs:check enforces that only this header
 > and non-pitfall docs may reference the current count.
@@ -5727,6 +5727,29 @@ another note.
 - Artifacts: tools/net-probe.ts (P5 hardened), docs/SEAT-OPS.md,
   docs/BUN_NATIVE.md (pointers), tools/docs-check.ts (pointer rule).
   verify:contracts 45/45.
+## 157. Enhanced-ecosystem-diagram claim audit — gate #46 (2026-08-24)
+
+- tools/ecosystem-probe.ts (7/7) against the pasted Mermaid diagram's
+  API/version claims.
+- VERIFIED CORRECT: Bun.enableANSIColors is a real BOOLEAN (theme gating
+  claim right); Bun.Image.prototype has modulate + resize/rotate/flip/
+  flop (instance methods, not statics); bunfig [console] depth = 3 is
+  documented (with the --console-depth flag); install.globalStore is
+  documented (default false, BUN_INSTALL_GLOBAL_STORE env, isolated-
+  linker links store at <cache>/links/).
+- FABRICATED (pinned): bunfig [dev] port/hostname and [server] static/
+  development sections do NOT exist — the real sections are [serve]
+  (port default 3000) and [serve.static] (env = "PUBLIC_*" inline
+  config lives here, not top-level); node:http2 has NO server push
+  (pushStream undefined on 1.4.0) — the diagram's "Server push
+  (partial)" is wrong.
+- UNVERIFIABLE OFFLINE (noted, not pinned): version stamps like
+  Global Virtual Store v1.3.14+, metafile v1.3.8+ (contradicts the
+  earlier paste's v1.3.6), Bun.cron v1.4.0+, Bun.JSONL/JSON5 v1.3.7+,
+  sqlite v0.6.0+ — need release-note verification.
+- Artifacts: tools/ecosystem-probe.ts (new, gate #46), tools/verify-contracts.ts
+  (45 -> 46 gates), package.json (ecosystem:probe), docs/BUN_API_COVERAGE.md
+  + AGENT-PITFALLS header (45/45 -> 46/46). verify:contracts 46/46.
 - FILENAME BEHAVIOR (pasted --metafile-md claims vs 1.4.0, gate P9-P13):
   a bare --metafile-md writes meta.md to the PROCESS CWD, NOT the
   --outdir (the pasted claim's location is wrong); --metafile-md=<path>
