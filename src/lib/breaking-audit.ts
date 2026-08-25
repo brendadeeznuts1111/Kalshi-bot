@@ -74,6 +74,7 @@ export function runBreakingAudit(root: string): BreakingFinding[] {
     // no secrets; security-page.ts only DOCUMENTS the pattern (§28).
     '**/tools/security-probe.ts',
     '**/src/research/security-page.ts',
+    '**/tools/serve-tls-probe.ts', // TLS probe with a local throwaway self-signed cert (§123)
   ];
 
   // 1. res.writeHeader removed (v1.4): any usage would crash at runtime.

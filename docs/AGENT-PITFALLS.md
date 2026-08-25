@@ -4862,6 +4862,36 @@ another note.
   HTMLImageElement shadows it otherwise (tsc + runtime both misresolve).
 - Artifacts: tools/image-probe.ts (P15-P22, 35/35), this section.
   verify:contracts 26/26 (image:probe count grew within its gate).
+## 123. serve-tls:probe — TLS works, http2 option is a NO-OP (CORRECTED) (2026-08-24)
+
+- Closed the §116/§120 next-step (real TLS + h2/h3). serve-tls:probe
+  (verify:contracts gate #28 -> 28/28), VERIFIED 5/5:
+  1. TLS serve works; the scheme comes from req.url (https:), NOT a
+     req.scheme property (that is undefined).
+  2. CORRECTED: serve({ http2: true }) does NOT negotiate h2 on 1.4.0.
+     The option is ACCEPTED and the server serves HTTP/1.1 over TLS,
+     but Bun's own fetch with protocol:'http2' fails with
+     HTTP2Unsupported, and a node:http2 client fails with 'h2 is not
+     supported'. Pinned as a negative-behavior check (self-invalidates
+     when Bun fixes ALPN). The §115 table's 'HTTP/2 via the http2
+     option' and the blog's h2 framing are overstated for serve; the
+     repo's fetch-pool h2 CLIENT works against node:http2 servers (§14)
+     — the gap is the SERVER side.
+  3. http3:true + TLS: the server STARTS and serves (default fetch
+     gets a response; actual QUIC transport not asserted — no h3
+     client). The serve TS types declare http3 but NOT http2 — the
+     type hint ('did you mean http3?') confirms http2 is untyped.
+  4. maxRequestBodySize enforced: small POST 200, oversized -> 413.
+  5. serve error() handler fires on a handler throw (custom 500).
+- tsc evidence: 'http2 does not exist in type ... did you mean http3'
+  — the runtime accepts it but the types omit it (another types-lag
+  case, but here the runtime ALSO doesn't deliver h2, so the types are
+  honest).
+- Artifacts: tools/serve-tls-probe.ts (new), tests/lib/serve-tls-probe.
+  test.ts (new), package.json (serve-tls:probe), tools/verify-contracts.
+  ts (gate #28), scripts/audit-bun-native.ts (keep-list +2), this
+  section. verify:contracts 28/28.
+
 ## 122. routes:probe — Bun.serve routes API locked, non-working forms pinned (2026-08-24)
 
 - routes:probe (verify:contracts gate #27) locks the routes surface the

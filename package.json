@@ -260,6 +260,7 @@
     "ws:probe": "bun tools/ws-probe.ts",
     "bun:apis-probe": "bun tools/bun-apis-probe.ts",
     "routes:probe": "bun tools/routes-probe.ts",
+    "serve-tls:probe": "bun tools/serve-tls-probe.ts",
     "routes:check": "bun tools/routes-check.ts",
     "bun:coverage-audit": "bun tools/bun-coverage-audit.ts",
     "code-search:prime": "bun tools/code-search-prime-cli.ts",
