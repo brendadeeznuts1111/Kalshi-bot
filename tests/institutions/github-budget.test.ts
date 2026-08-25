@@ -16,6 +16,10 @@ let tokenResolves = true;
 beforeAll(() => {
   Bun.env.GH_TOKEN = "test-token";
   mock.module("../../src/research/github-network.ts", () => ({
+    GITHUB_API_HOST: "api.github.com",
+    GITHUB_API_ORIGIN: "https://api.github.com",
+    warmGitHubApiNetwork: () => {},
+    resetGitHubNetworkWarmup: () => {},
     resolveGitHubToken: async (): Promise<string> => {
       if (!tokenResolves) throw new Error("GitHub token not found");
       return "test-token";

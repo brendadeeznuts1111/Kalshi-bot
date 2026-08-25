@@ -29,6 +29,7 @@ import { latestRelease, parseAtomEntries, parseRssEntries } from '../lib/release
 import { CHANNEL_DEFS, CHANNEL_ORDER, type ChannelId } from './channel-registry.ts';
 import { collectGithubBudget, githubTokenSource } from './github-budget.ts';
 import { parseMapsPins } from '../lib/maps-lock.ts';
+import { versionGt } from '../lib/semver.ts';
 import type { GitHubRateLimitSnapshot } from '../research/github-rate-limit.ts';
 
 export type SignalSeverity = 'ok' | 'warn' | 'bad' | 'info';
@@ -204,37 +205,8 @@ export async function collectSignals(root: string, brand: BrandMetricsSnapshot):
   return signals;
 }
 
-/**
- * Pad a ragged feed version to major.minor.patch ("1.4" -> "1.4.0",
- * "v2" -> "2.0.0"). Null for garbage (non-numeric segments, prerelease).
- * REQUIRED before Bun.semver: Bun.semver.order is inconsistent on missing
- * components — order("1.4","1.4.0") returns 1 while satisfies("1.4",
- * ">1.4.0") returns false (AGENT-PITFALLS §121). Normalized both sides,
- * Bun.semver owns the comparison (same SSOT as assertBunAtLeast).
- */
-export function normalizeSemver(v: string): string | null {
-  const segs = v.trim().replace(/^v/i, '').split('.');
-  if (segs.length === 0 || segs.length > 3) return null;
-  const parts: number[] = [];
-  for (const seg of segs) {
-    if (!/^\d+$/.test(seg)) return null;
-    parts.push(Number(seg));
-  }
-  while (parts.length < 3) parts.push(0);
-  return parts.join('.');
-}
-
-/** "release version > indexed version" — Bun.semver.order after normalization. */
-export function versionGt(a: string, b: string): boolean {
-  const na = normalizeSemver(a);
-  const nb = normalizeSemver(b);
-  if (na === null || nb === null) return false;
-  try {
-    return Bun.semver.order(na, nb) > 0;
-  } catch {
-    return false;
-  }
-}
+// Version comparisons: src/lib/semver.ts (Bun.semver SSOT + normalize-
+// first rule, §121-§123). Never hand-roll version logic here.
 
 const esc = (v: unknown): string =>
   String(v ?? '').replace(/[&<>\"]/g, (c) =>

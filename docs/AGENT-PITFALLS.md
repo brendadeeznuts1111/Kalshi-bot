@@ -4613,15 +4613,43 @@ another note.
   Bun.semver; all ^ / ~ / x / hyphen-range examples true; order returns
   0/1/-1; prerelease sort order alpha < beta < rc < release; satisfies
   returns false for invalid version/range.
-- GAP 1 (dangerous): order() THROWS "Invalid SemVer" on invalid input —
-  the doc's "invalid -> false" sentence applies to satisfies only. Never
-  feed dirty data to order() as a comparator without try/catch.
+- GAP 1 (dangerous): order() THROWS "Invalid SemVer" on invalid input.
+  The bun-types REFERENCE documents it ("Throws an error if either version
+  is invalid") but the guide omits it — a guide-vs-reference discrepancy.
+  Never feed dirty data to order() as a comparator without try/catch.
 - GAP 2: ragged versions are inconsistent across the two functions —
   order("1.4","1.4.0")=1 (1.4 > 1.4.0!) but satisfies("1.4","^1.4.0")
   =false, and even satisfies("1.4","^1.4")=false. Missing components are
   NOT zero-padded. Normalize to major.minor.patch first (normalizeSemver,
   §121) before calling either.
 - "20x faster than node-semver" — marketing figure, not verifiable in-repo.
+
+## 123. Bun.semver deep matrix + shared SSOT (2026-08-25)
+
+- OPERATORS verified: > >= < <= = != || (space-AND) ~ ^ x/* hyphen all work
+  except "!=" — satisfies("1.0.0","!=1.0.0") is TRUE (should be false) and
+  satisfies("1.2.0","!=1.x") is TRUE (should be false): the negation is
+  effectively IGNORED on 1.4.0. Pinned in tests; avoid "!=" in ranges
+  (express as ">=x <y" or "||"); recheck on upgrade.
+- PARTIAL RANGES ok vs RAGGED VERSIONS rejected (asymmetry): ~1.4 / ^1.4 /
+  >=1.4 / 1.* satisfy fine with a full version, but a RAGGED VERSION
+  ("1.4") fails every range including "^1.4". Always pad the VERSION side.
+- order() ragged inflation is systemic: order("1","1.0.0")=1 and
+  order("0","0.0.0")=1 — missing components are treated as LARGER, not zero.
+- order() details verified: build metadata ignored (1.0.0+a vs +b = 0),
+  "v" prefix stripped, leading zeros tolerated ("1.04" vs "1.4" = 0), big
+  numbers numeric (1.0.10 > 1.0.9), whitespace trimmed; empty/negative/
+  garbage THROW. satisfies accepts StringLike (numbers) per bun-types.
+- PRERELEASE matches node-semver: alpha/beta/rc never satisfy non-
+  prerelease ranges; explicit prerelease ranges work; rc.1 < rc.2.
+- SHARED SSOT: src/lib/semver.ts now owns normalizeSemver (pad),
+  semverCore (leading numeric triple), versionGt (Bun.semver.order after
+  normalize). Consumers: signal-pipeline docs-drift + scripts/deps-outdated
+  (its hand-rolled parseSemver regex is gone). Repo-wide audit of remaining
+  Bun.semver sites: assertBunAtLeast (Bun.version — well-formed), massey
+  CLIs (same), bun-security-scanner (npm advisory versions) — all feed
+  well-formed input; none hit the ragged/invalid hazards.
+
 
 
 

@@ -22,21 +22,19 @@ type OutdatedRow = {
   workspace?: string;
 };
 
-function parseSemver(v: string): [number, number, number] | null {
-  const m = /^v?(\d+)\.(\d+)\.(\d+)/.exec(v.trim());
-  if (!m) return null;
-  return [Number(m[1]), Number(m[2]), Number(m[3])];
-}
+// Version core + comparisons come from the shared SSOT
+// (src/lib/semver.ts — Bun.semver, normalize-first rule §121-§123).
+import { semverCore } from "../src/lib/semver.ts";
 
 /**
  * Classify bump from current → target.
- * Segment comparison via parseSemver (numeric core); same-core diffs that are
+ * Segment comparison via semverCore (numeric core); same-core diffs that are
  * still version changes (prerelease/build metadata, e.g. 2.1.0-beta.1 → 2.1.0)
  * fall through to Bun.semver.order for a correct verdict (patch-level).
  */
 export function classifySemverChange(current: string, target: string): SemverChange {
-  const a = parseSemver(current);
-  const b = parseSemver(target);
+  const a = semverCore(current);
+  const b = semverCore(target);
   if (!a || !b) return "unknown";
   if (b[0] !== a[0]) return "major";
   if (b[1] !== a[1]) return "minor";
