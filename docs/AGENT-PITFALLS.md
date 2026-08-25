@@ -4862,6 +4862,39 @@ another note.
   HTMLImageElement shadows it otherwise (tsc + runtime both misresolve).
 - Artifacts: tools/image-probe.ts (P15-P22, 35/35), this section.
   verify:contracts 26/26 (image:probe count grew within its gate).
+## 119. Release-blog mp4s — why NOT to adopt them (probed, §118 follow-up) (2026-08-24)
+
+- The 1.4 blog DOES contain real mp4s (probe: 4 terminal demos, all
+  fetchable 200 video/mp4): bun-audit-fix.mp4 (2.4 MB), bun-dedupe.mp4
+  (2.7 MB), bun-prune.mp4 (2.0 MB), spawn-cgroup.mp4 (7.4 MB) — ~14.5
+  MB total, at /images/blog/bun-1.4/tweets/*.mp4.
+- WHY NOT TO ADOPT INTO public/videos/ (the user's suggestion, probed
+  and assessed):
+  1. OWNERSHIP: they are Bun's vendor demo recordings of the audit/
+     dedupe/prune/cgroup commands — marketing content for bun itself,
+     not content about the Kalshi-bot pipeline. The dir route serves
+     whatever is dropped in; serving vendor marketing videos on this
+     repo's public server is misattributed content with no license
+     grant for redistribution.
+  2. BLOAT: ~14.5 MB committed to a lean, offline-first repo; the
+     assets/content gates assume repo-owned content.
+  3. PURPOSE: the video surface (video-page.ts, isVideoFile, ops-
+     videos signal) exists for REPO-generated captures, not bun
+     command demos.
+- WebView CANNOT generate video (probe): Bun.WebView methods are
+  navigate/evaluate/screenshot/cdp/click/type/press/scroll/scrollTo/
+  resize/goBack/goForward/reload/close + url/title/loading/onNavigated/
+  onNavigationFailed — SCREENSHOT only, no recording. The videos dir
+  stays empty until a real capture need exists; a future demo video
+  must come from external screen capture or an HLS source, not WebView
+  and not vendor clips.
+- The suggestion DID prove something: the serving contract accepts a
+  real multi-MB video/mp4 through the exact Range/206/seek path locked
+  in §118 — the pipeline is genuinely production-ready for repo-owned
+  content whenever one exists.
+- Artifacts: this section (+ DESIGN-PIPELINE video note).
+  verify:contracts 26/26.
+
 ## 118. Bun 1.4 blog replayed via claims-audit + mp4/assets review (2026-08-24)
 
 - REPLAY: ran bun:claims-audit against the cached 1.4 blog with the
