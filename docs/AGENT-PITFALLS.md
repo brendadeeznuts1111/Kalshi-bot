@@ -475,6 +475,15 @@ patterns (harvest-nationalities, fonbet fixture loader converted).
   ("namespace can only contain ..."); use "yaml". In-memory bundle output text
   is read via await output.arrayBuffer() (the documented .text accessor is a
   native fn returning undefined on 1.4.0).
+- maps.toml triple-lock (src/lib/maps-lock.ts): maps.toml + bun-types +
+  @types/bun + Bun.version + docs tag ref must agree. docs:refresh runs the
+  lock: on mismatch it logs the drifted pins, re-indexes (the indexer's
+  discovery freshness also requires the ref match, so a Bun bump forces
+  re-discovery), regenerates maps.toml from the indexed surface, and records
+  INDEX.json "mapsHash" (Bun.hash hex, 16 chars) + mapsMeta. Idempotent: a
+  synced lock is a no-op. Check-only (BUN_DOCS_REFRESH_SKIP_NETWORK=1) never
+  writes; a mismatch exits 1. The indexer preserves unknown INDEX.json
+  top-level keys so lock metadata survives re-indexes.
 
 ### 10. Bun native fetch: DNS, CDNs, and connection reuse (all probe-verified on 1.4.0)
 
@@ -4408,6 +4417,51 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
 - Artifacts: src/institutions/url-health.ts (attemptOnce + retry),
   tests/lib/url-health-retry.test.ts (new). verify:contracts stays
   17/17.
+## 109. Build-system changelog probed — 9/9 verified, 2 doc claims corrected (2026-08-24)
+
+- Pasted Bun build-system changelog probed against 1.4.0 (34cbb9a40) via
+  a new gate: bun:build-probe (tools/build-probe.ts, verify:contracts
+  gate #18 -> 18/18). VERIFIED 9/9:
+  1. feature() from bun:bundle — build-time dead-branch removal via
+     --feature=FLAG AND features:[...] (string present only when set).
+  2. CORRECTED: feature() has a POSITIONAL GUARD the doc omits — calling
+     it outside a direct if/ternary throws 'can only be used directly
+     in an if statement or ternary condition'.
+  3. In if/ternary position it works under bun run/test, returning
+     false when unflagged (the doc's 'works in bun run and bun test' is
+     true ONLY in that position).
+  4. Bun.build({ files }) — in-memory builds; virtual paths take
+     precedence over disk (probe: virtual-won 42).
+  5. metafile:true — esbuild-format inputs/outputs (already adopted by
+     design:build §107).
+  6. TC39 decorators work (experimentalDecorators off).
+  7. --compile --target=browser -> ONE html, everything inline.
+  8. CORRECTED: --asset embeds files/dirs and node:fs resolves them at
+     their ORIGINAL paths (absolute + relative work) — but the
+     changelog's /$bunfs/ namespace is ABSENT on this runtime
+     (existsSync('/$bunfs') === false). Embedding yes; /$bunfs/ no.
+  9. --bytecode --format=esm --compile runs top-level await.
+- ALREADY ADOPTED: metafile:true + --metafile-md (the mtafile pipeline,
+  §107) — the changelog's metafile section describes what the repo's
+  dist/*.meta.json + *.meta.md already produce.
+- LABELED MARKETING (not probeable in-repo, never claimed): the 'Faster'
+  section (new URL 4.6x, RegExp marked/isbot, zlib-ng, Buffer hex/
+  base64url SIMD, SourceMap, Promises) is comparative against Bun 1.3
+  (not installed) + third-party deps (marked/isbot absent from the
+  zero-dep repo); code-splitting 14x is a vendor benchmark on a
+  20,000-module graph; the antd barrel example references an external
+  package. Same labeling discipline as §88.
+- Probe traps (recorded): scratch files must live in ONE /tmp view —
+  tools.write and bash see different sandbox /tmp (probe writes its own
+  mkdtemp + cleanup); the run_code lexer mangles escaped quotes — the
+  probe was transported via a double-quoted-heredoc (no-expansion
+  <<"EOF") inside a single-quoted wrapper, source written with zero
+  single quotes.
+- Artifacts: tools/build-probe.ts (new, 9 checks), tests/lib/build-
+  probe.test.ts (new), package.json (bun:build-probe), tools/verify-
+  contracts.ts (gate #18), scripts/audit-bun-native.ts (keep-list +2),
+  this section. verify:contracts 18/18.
+
 
 
 

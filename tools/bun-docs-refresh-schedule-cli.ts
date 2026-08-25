@@ -1,0 +1,106 @@
+#!/usr/bin/env bun
+// @see https://bun.com/docs/runtime/cron#bun-cron-path-schedule-title-os-level
+// @see https://bun.com/docs/runtime/cron#bun-cron-remove
+// @see https://bun.com/docs/runtime/cron#bun-cron-parse
+/**
+ * Register / remove / preview the bun-docs refresh OS Bun.cron job.
+ *
+ *   bun run docs:refresh:register
+ *   bun run docs:refresh:preview
+ *   bun run docs:refresh:remove
+ */
+import { join } from "node:path";
+import { parseArgs } from "node:util";
+import { previewFireTimes } from "../src/research/schedule-cli.ts";
+
+export const BUN_DOCS_REFRESH_CRON_SCHEDULE = "0 6 * * 1";
+export const BUN_DOCS_REFRESH_CRON_TITLE = "bun-docs refresh";
+export const BUN_DOCS_REFRESH_WORKER_PATH = join(
+  import.meta.dir,
+  "bun-docs-refresh-scheduled.ts",
+);
+
+export type DocsRefreshScheduleCommand = "register" | "remove" | "preview";
+
+export function parseDocsRefreshScheduleCli(argv: string[]): {
+  command: DocsRefreshScheduleCommand;
+  schedule: string;
+  title: string;
+  count: number;
+} | null {
+  const positional = argv.filter((a) => !a.startsWith("-"));
+  const command = positional[0] as DocsRefreshScheduleCommand | undefined;
+  if (!command || !["register", "remove", "preview"].includes(command)) {
+    return null;
+  }
+
+  const { values } = parseArgs({
+    args: argv.slice(1),
+    options: {
+      schedule: { type: "string" },
+      title: { type: "string" },
+      count: { type: "string", default: "3" },
+    },
+    strict: false,
+  });
+
+  const countRaw = values.count ? Number(values.count) : 3;
+  const count = Number.isFinite(countRaw) && countRaw > 0 ? Math.floor(countRaw) : 3;
+
+  return {
+    command,
+    schedule:
+      typeof values.schedule === "string"
+        ? values.schedule
+        : Bun.env.BUN_DOCS_REFRESH_CRON_SCHEDULE?.trim() ||
+          BUN_DOCS_REFRESH_CRON_SCHEDULE,
+    title:
+      typeof values.title === "string"
+        ? values.title
+        : Bun.env.BUN_DOCS_REFRESH_CRON_TITLE?.trim() || BUN_DOCS_REFRESH_CRON_TITLE,
+    count,
+  };
+}
+
+if (import.meta.main) {
+  const opts = parseDocsRefreshScheduleCli(Bun.argv.slice(2));
+  if (!opts) {
+    console.error(
+      "Usage: bun tools/bun-docs-refresh-schedule-cli.ts <register|remove|preview> [--schedule='0 6 * * 1']",
+    );
+    process.exit(1);
+  }
+
+  switch (opts.command) {
+    case "register": {
+      await Bun.cron(BUN_DOCS_REFRESH_WORKER_PATH, opts.schedule, opts.title);
+      console.log(`Registered OS cron job "${opts.title}"`);
+      console.log(`  worker: ${BUN_DOCS_REFRESH_WORKER_PATH}`);
+      console.log(`  schedule: ${opts.schedule} (system local time)`);
+      console.log(`  logs (macOS): /tmp/bun.cron.${opts.title}.stdout.log`);
+      console.log(`  manual: bun run docs:refresh`);
+      console.log(`  skip network: BUN_DOCS_REFRESH_SKIP_NETWORK=1`);
+      break;
+    }
+    case "remove": {
+      await Bun.cron.remove(opts.title);
+      console.log(`Removed OS cron job "${opts.title}" (if present)`);
+      break;
+    }
+    case "preview": {
+      const times = previewFireTimes(opts.schedule, opts.count);
+      if (!times.length) {
+        console.error(`No upcoming fires for: ${opts.schedule}`);
+        process.exit(1);
+      }
+      console.log(`Schedule: ${opts.schedule}`);
+      console.log(`Title: ${opts.title}`);
+      console.log(`Next ${times.length} fire(s) (UTC, Bun.cron.parse):`);
+      for (const [i, d] of times.entries()) {
+        console.log(`  ${i + 1}. ${d.toISOString()}`);
+      }
+      console.log("Note: OS-level register uses system local time — preview is UTC.");
+      break;
+    }
+  }
+}

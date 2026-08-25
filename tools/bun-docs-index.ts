@@ -20,7 +20,14 @@
  *
  * Scope:
  *   runtime (default)  docs/runtime/** (API reference surface).
+ *   bundler            docs/bundler/** (the bundler/plugins.mdx the map
+ *                      page claims reference - 13 pages as of bun 1.4.0).
  *   all                every page under docs/.
+ *
+ * INDEX.json MERGES across scopes: running --scope bundler after --scope all
+ * keeps the existing entries (same sourceUrls), and --scope runtime keeps
+ * bundler pages cached. DISCOVERY.json records each scope's discovered list
+ * in a `scopes` map (additive, per source/ref).
  *
  * Offline behavior: --check is fully offline (reads local JSON only, zero
  * network). Discovery + page fetch need network; on discovery failure the
@@ -35,12 +42,13 @@
  *                    unless every discovered page is cached, fresh (<24h),
  *                    ok, and from the requested source (gate-able).
  *   --source X      one of tag|repo|site (default tag).
- *   --scope X       one of runtime|all (default runtime).
+ *   --scope X       one of runtime|bundler|all (default runtime).
  *
  * Provenance: INDEX.json entries carry `source`; a page cached from one
  * source is re-fetched when another source is requested (source-aware
  * freshness). DISCOVERY.json records the discovered page list per
- * source/scope/ref so --check works offline.
+ * source/scope/ref so --check works offline; the single INDEX.json is the
+ * union across scopes (additive, never drops other scopes' entries).
  *
  * @see docs/AGENT-PITFALLS.md (verify against the reference, not guesses)
  */
@@ -68,7 +76,7 @@ const SITEMAP_URL = 'https://bun.com/sitemap.xml';
 const FRESH_MS = 24 * 60 * 60 * 1000;
 
 type Source = 'tag' | 'repo' | 'site';
-type Scope = 'runtime' | 'all';
+type Scope = 'runtime' | 'bundler' | 'all';
 
 /** Offline fallback when discovery fails (formerly the curated list). */
 const FALLBACK_PAGES: Array<{ name: string; path: string }> = [
@@ -92,7 +100,13 @@ const FALLBACK_PAGES: Array<{ name: string; path: string }> = [
 
 type IndexEntry = { name: string; source: Source; sourceUrl: string; fetchedAt: string; bytes: number; ok: boolean };
 type Index = { pages: IndexEntry[]; fetchedAt: string };
-type Discovery = { at: string; source: Source; scope: Scope; ref: string; pages: Array<{ name: string; path: string }> };
+type Discovery = {
+  at: string;
+  source: Source;
+  ref: string;
+  /** Per-scope discovered page lists (additive across runs). */
+  scopes: Partial<Record<Scope, Array<{ name: string; path: string }>>>;
+};
 
 function readJson<T>(path: string): T | null {
   if (!existsSync(path)) return null;
@@ -100,12 +114,39 @@ function readJson<T>(path: string): T | null {
   catch { return null; }
 }
 
+function refFor(source: Source): string {
+  return source === 'tag' ? TAG_REF : source === 'repo' ? REPO_REF : 'sitemap';
+}
+
+/**
+ * Read DISCOVERY.json, migrating the pre-merge single-scope shape
+ * ({ scope, pages }) into the per-scope `scopes` map.
+ */
+function readDiscovery(): Discovery | null {
+  const raw = readJson<{
+    at: string;
+    source: Source;
+    ref?: string;
+    scope?: Scope;
+    pages?: Array<{ name: string; path: string }>;
+    scopes?: Partial<Record<Scope, Array<{ name: string; path: string }>>>;
+  }>(DISCOVERY_PATH);
+  if (!raw) return null;
+  if (raw.scopes) return { at: raw.at, source: raw.source, ref: raw.ref ?? refFor(raw.source), scopes: raw.scopes };
+  return {
+    at: raw.at,
+    source: raw.source,
+    ref: raw.ref ?? refFor(raw.source),
+    scopes: { [(raw.scope ?? 'runtime') as Scope]: raw.pages ?? [] },
+  };
+}
+
 function resolveSource(raw: string | undefined): Source {
   return raw === 'repo' || raw === 'site' ? raw : 'tag';
 }
 
 function resolveScope(raw: string | undefined): Scope {
-  return raw === 'all' ? 'all' : 'runtime';
+  return raw === 'all' ? 'all' : raw === 'bundler' ? 'bundler' : 'runtime';
 }
 
 function sourceBase(s: Source): string {
@@ -123,7 +164,8 @@ const WARM_HOSTS: DnsWarmTarget[] = [
 function nameFromPath(repoPath: string): string {
   const parts = repoPath.replace(/\.mdx$/, '').split('/');
   // Drop a leading 'runtime' scope root (runtime/workers.mdx -> workers);
-  // under --scope all, keep api/... guides/... and root-level pages whole.
+  // under --scope bundler/all, keep bundler/... api/... guides/... and
+  // root-level pages whole (bundler/plugins.mdx -> bundler-plugins).
   if (parts.length > 1 && parts[0] === 'runtime') parts.shift();
   return parts.join('-') || 'index';
 }
@@ -133,12 +175,12 @@ async function discoverPages(source: Source, scope: Scope): Promise<Array<{ name
   if (source === 'site') {
     const xml = await (await fetch(SITEMAP_URL)).text();
     const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]!);
-    const sitePrefix = 'https://bun.com/docs/' + (scope === 'all' ? '' : 'runtime/');
+    const sitePrefix = 'https://bun.com/docs/' + (scope === 'all' ? '' : scope + '/');
     paths = locs
       .filter((l) => l.startsWith(sitePrefix) && l !== sitePrefix.slice(0, -1))
       .map((l) => l.slice('https://bun.com/docs/'.length) + '.mdx');
   } else {
-    const prefix = scope === 'all' ? 'docs/' : 'docs/runtime/';
+    const prefix = scope === 'all' ? 'docs/' : 'docs/' + scope + '/';
     const ref = source === 'tag' ? TAG_REF : REPO_REF;
     const res = await fetch(TREES_API + ref + '?recursive=1');
     const json = (await res.json()) as { tree?: Array<{ type: string; path: string }> };
@@ -168,15 +210,20 @@ async function main(): Promise<void> {
   const check = hasFlag('check');
   const source = resolveSource(argValue('source'));
   const scope = resolveScope(argValue('scope'));
-  const ref = source === 'tag' ? TAG_REF : source === 'repo' ? REPO_REF : 'sitemap';
-  const cachedDiscovery = readJson<Discovery>(DISCOVERY_PATH);
-  const discoveryFresh = cachedDiscovery !== null && cachedDiscovery.source === source && cachedDiscovery.scope === scope && Date.now() - Date.parse(cachedDiscovery.at) < FRESH_MS;
+  const ref = refFor(source);
+  const cachedDiscovery = readDiscovery();
+  const discoveryFresh =
+    cachedDiscovery !== null &&
+    cachedDiscovery.source === source &&
+    cachedDiscovery.ref === ref &&
+    (cachedDiscovery.scopes[scope]?.length ?? 0) > 0 &&
+    Date.now() - Date.parse(cachedDiscovery.at) < FRESH_MS;
   if (check) {
     if (!discoveryFresh) {
       console.log('discovery: none or stale (' + source + '/' + scope + ') - run without --check first');
       process.exit(1);
     }
-    const pages = cachedDiscovery!.pages;
+    const pages = cachedDiscovery!.scopes[scope]!;
     const index = readJson<Index>(INDEX_PATH) ?? { pages: [], fetchedAt: new Date(0).toISOString() };
     const byName = new Map(index.pages.map((p) => [p.name, p]));
     let problems = 0;
@@ -200,13 +247,18 @@ async function main(): Promise<void> {
   }
   let pages: Array<{ name: string; path: string }>;
   try {
-    pages = discoveryFresh && !refresh ? cachedDiscovery!.pages : await discoverPages(source, scope);
+    pages = discoveryFresh && !refresh ? cachedDiscovery!.scopes[scope]! : await discoverPages(source, scope);
   } catch (err) {
+    if (scope !== 'runtime') {
+      console.error('discovery failed for scope ' + scope + ' (' + (err as Error).message + ') - offline fallback covers runtime only; re-run when network returns');
+      process.exit(1);
+    }
     console.warn('discovery failed (' + (err as Error).message + ') - using fallback ' + FALLBACK_PAGES.length + ' pages');
     pages = FALLBACK_PAGES;
   }
   mkdirSync(CACHE_DIR, { recursive: true });
-  writeFileSync(DISCOVERY_PATH, JSON.stringify({ at: new Date().toISOString(), source, scope, ref, pages }, null, 2) + '\n');
+  // Additive per-scope discovery: preserve the other scopes' lists, upsert this scope's.
+  writeFileSync(DISCOVERY_PATH, JSON.stringify({ at: new Date().toISOString(), source, ref, scopes: { ...cachedDiscovery?.scopes, [scope]: pages } }, null, 2) + '\n');
   warmDns(WARM_HOSTS); // shared warmed lookups before discovery + fan-out
   const index = readJson<Index>(INDEX_PATH) ?? { pages: [], fetchedAt: new Date(0).toISOString() };
   const byName = new Map(index.pages.map((p) => [p.name, p]));
@@ -237,9 +289,19 @@ async function main(): Promise<void> {
     const detail = '(' + source + ', ' + r.bytes + 'b' + (r.error ? ' - ' + r.error : '') + ')';
     console.log(statusLine(mark, page.name, detail));
   }
-  writeFileSync(INDEX_PATH, JSON.stringify({ pages: entries, fetchedAt: new Date().toISOString() }, null, 2) + '\n');
+  // Additive INDEX: entries for pages NOT in this scope's discovery (other
+  // scopes) are preserved; this scope's entries (fresh or re-fetched) follow.
+  const discoveredNames = new Set(pages.map((p) => p.name));
+  const preserved = index.pages.filter((p) => !discoveredNames.has(p.name));
+  // Preserve non-managed top-level keys (mapsHash/mapsMeta and any future
+  // pipeline metadata) written by other steps (docs:refresh triple-lock).
+  const extra: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(index)) {
+    if (k !== 'pages' && k !== 'fetchedAt') extra[k] = v;
+  }
+  writeFileSync(INDEX_PATH, JSON.stringify({ ...extra, pages: [...preserved, ...entries], fetchedAt: new Date().toISOString() }, null, 2) + '\n');
   const okCount = entries.filter((e) => e.ok).length;
-  console.log('index: ' + okCount + '/' + entries.length + ' pages (' + source + '/' + scope + ') · ' + CACHE_DIR);
+  console.log('index: ' + okCount + '/' + entries.length + ' pages (' + source + '/' + scope + ')' + (preserved.length > 0 ? ' · merged ' + preserved.length + ' other-scope entries' : '') + ' · ' + CACHE_DIR);
   process.exit(okCount === entries.length ? 0 : 1);
 }
 

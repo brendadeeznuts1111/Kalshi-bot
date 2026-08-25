@@ -1,10 +1,10 @@
 {
-  "lastChecked": "2026-08-24T23:33:00.474Z",
+  "lastChecked": "2026-08-25T05:01:27.701Z",
   "docs": [
     {
       "path": "docs/AGENT-PITFALLS.md",
-      "hash": "e7cc806c30af3e1fd87802d1b91e3747ec8c10417c1fad4820452e6fec2a9075",
-      "headings": 117,
+      "hash": "92923e9f30b5991b3b6dc5ce114c45ad6f3133531f213afa5d12762231e6146a",
+      "headings": 165,
       "renderOk": true,
       "duplicateSlugs": []
     },
@@ -24,7 +24,7 @@
     },
     {
       "path": "docs/AUTHORIZED_EXECUTION_REMAINING_WORK.md",
-      "hash": "c34a3c35766d3ae24ab386d99e4bb72d9a47d7333d287a384032f25817cc12e1",
+      "hash": "d27211124cca7434c7d39b62489dedb041409efdf0c3de5338c9e2bd2596d505",
       "headings": 19,
       "renderOk": true,
       "duplicateSlugs": []
@@ -38,7 +38,7 @@
     },
     {
       "path": "docs/BUN_NATIVE.md",
-      "hash": "300d376f725c552974e9476c16efffc9f7cda89414dfc8a4ef1dfdfd6a583cc4",
+      "hash": "c43dbf7e2a4f8c5d3ed80b8f1a00ae8bb2cb0f1f2a502a3386dcf817dbd92b9b",
       "headings": 65,
       "renderOk": true,
       "duplicateSlugs": []
@@ -52,14 +52,14 @@
     },
     {
       "path": "docs/BUN_TECH_STACK.md",
-      "hash": "f1d4da3be13bc60d030be3828fa6da4fa99605ca1fe3290ed60b83aeb55a357e",
+      "hash": "0af85b928df58e6995f80e2bb48ea10aa67f5ec771413212e41dcf1a722d98d7",
       "headings": 15,
       "renderOk": true,
       "duplicateSlugs": []
     },
     {
       "path": "docs/BUN_UPGRADE_CANARY.md",
-      "hash": "b80a5a8e9f71bf5395a769730a8d0703047bc77a4eec42d28d265321784802a9",
+      "hash": "d80463c36eedc7168d6a4fe96930d4f9c331df144b4fa9b04e04f7cf51e420d7",
       "headings": 16,
       "renderOk": true,
       "duplicateSlugs": []
@@ -73,7 +73,7 @@
     },
     {
       "path": "docs/CHEBNET_GRAPH_DOMINANCE.md",
-      "hash": "ff51001b91eb668ce6f30e26c4c2c80dd6b61f6bbed0f2cf8e346b2f890584bd",
+      "hash": "f341ad0e111a4e10c1d258a7fdadae0492089b4e567dc87ebfe12bb5df2b8d4d",
       "headings": 8,
       "renderOk": true,
       "duplicateSlugs": []
@@ -101,21 +101,21 @@
     },
     {
       "path": "docs/DATA_MODEL.md",
-      "hash": "16a05287c04605f51d746a82ea320f83b87ce9de66faa73518c83f5aedb79e29",
+      "hash": "52f86f7c7e85538e68d0cd0e000384bc1c033d2d76b2e9267e4a085826e22ef5",
       "headings": 16,
       "renderOk": true,
       "duplicateSlugs": []
     },
     {
       "path": "docs/DESIGN-PIPELINE.md",
-      "hash": "c0aca46923efdf5a9c7cbc84cbe77cc6988aa7db960a77920c1c1ce0525983ac",
-      "headings": 18,
+      "hash": "50ce64e3fdbfe590a837aff70c5bcdfbf412ea85e083f3005fffcdb8d33fa058",
+      "headings": 20,
       "renderOk": true,
       "duplicateSlugs": []
     },
     {
       "path": "docs/DESIGN-SYSTEM.md",
-      "hash": "3774fe6b3e8bea2581873a774025050babb09e1144a95e078e2049f0b8330705",
+      "hash": "2e48596e45fb9de4f81b804f1574513ce813831468aa28dd35bb9a69cd9fd3c2",
       "headings": 6,
       "renderOk": true,
       "duplicateSlugs": []
@@ -163,6 +163,13 @@
       "duplicateSlugs": []
     },
     {
+      "path": "docs/GATE-PATTERN.md",
+      "hash": "ee86e841721e88f962eee3a2d1667d4bd50c0d27bf39c515ed736ade31e94177",
+      "headings": 7,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
       "path": "docs/GLOSSARY.md",
       "hash": "2b452aeffcb81e1818364b87e4bca42102079a759bc2e80527d2c5cc94b16417",
       "headings": 10,
@@ -194,6 +201,13 @@
       "path": "docs/KIMI_DISCOVERY_MAP.md",
       "hash": "36dea24c3f5ea67cb90c56fbe9f61e0ac735904c7383f18067c687fc7e1fcedb",
       "headings": 19,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/LICENSE-GATE-OPS.md",
+      "hash": "616a44720a5039fdd1f707fc97734428789beaca37e0b12be54dfa3164cf79da",
+      "headings": 20,
       "renderOk": true,
       "duplicateSlugs": []
     },
@@ -255,7 +269,7 @@
     },
     {
       "path": "docs/PLIVE-EZLIVE-SPORTS-RULES.md",
-      "hash": "bfc90feb4f324fe97b0b7c8d0d19bd233c3f59c7f2185dfc49f1fdb124f27489",
+      "hash": "1a00e190550e6955b11657398d6d4ca72ebf499d5d84db277488c2995a7be456",
       "headings": 63,
       "renderOk": true,
       "duplicateSlugs": []
@@ -297,7 +311,7 @@
     },
     {
       "path": "docs/SEMANTIC_LAYER.md",
-      "hash": "acd3fc2417b1c9e09d3aef5ee7a2347dec876a4d6485d9b51d3445c6cfbc8e22",
+      "hash": "b438f65676b6db28d5b95f0750b9bf1ac04f5b33a9b7bc6714eb67b93bf5eae1",
       "headings": 19,
       "renderOk": true,
       "duplicateSlugs": []
@@ -338,6 +352,6 @@
       "duplicateSlugs": []
     }
   ],
-  "total": 48,
+  "total": 50,
   "failing": 0
 }

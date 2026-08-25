@@ -4,7 +4,7 @@
  * Bun-native Bun.spawn (Bun.which('bun') resolve, like runBunGate).
  * These are the pre-commit-conditional gates promoted to full CI:
  *   deps:check · docs:check · content:check · bun:blog-map (offline)
- *   colors:check · design:check
+ *   colors:check · design:check · docs:refresh (offline triple-lock)
  * Each is offline + sub-second; parallel fan-out keeps the whole thing
  * ~the slowest single gate. Exit 1 if any gate fails.
  */
@@ -32,10 +32,16 @@ const gates = [
   ['defaults:probe'],
   ['licenses:gate'],
   ['bun:build-probe'],
+  ['docs:refresh'],
 ] as const;
 
+const GATE_ENV: Record<string, Record<string, string>> = {
+  'docs:api': { STRICT: '1' },
+  'docs:refresh': { BUN_DOCS_REFRESH_SKIP_NETWORK: '1' },
+};
+
 const run = async (name: string, args: readonly string[]): Promise<boolean> => {
-  const env = name === 'docs:api' ? { STRICT: '1' } : undefined;
+  const env = GATE_ENV[name];
   const r = await runBunCommand(['run', name, ...args], { cwd: ROOT, ...(env ? { env } : {}) });
   console.log((r.ok ? 'ok   ' : 'FAIL ') + name.padEnd(16) + r.lastLine.slice(0, 100));
   return r.ok;

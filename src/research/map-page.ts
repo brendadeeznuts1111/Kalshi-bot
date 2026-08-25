@@ -21,7 +21,7 @@ export function renderMapPage(): string {
     { cells: ['<code>built-in-react-compiler</code>', 'NOT mapped — no React/TSX in repo; option verified functional (§29)', '—'] },
     { cells: ['<code>barrel-import-optimization</code>', 'NOT mapped — default tree-shaker already wins on pure ESM (§29)', '—'] },
     { cells: ['<code>compile-time-feature-flags-with-bun-bundle</code>', 'NOT used as module; --define feature flags VERIFIED (probe: FEATURE_FLAG->enabled)', 'pipeline'] },
-    { cells: ['<code>in-memory-files-in-bun-build</code>', 'plugin virtual modules VERIFIED (probe: onLoad namespace)', 'pipeline'] },
+    { cells: ['<code>in-memory-files-in-bun-build</code>', 'plugin virtual modules VERIFIED (probe: tests/bun-plugin-namespaces.test.ts; doc: bundler-plugins.mdx §Namespaces)', 'pipeline'] },
     { cells: ['<code>single-file-html-with-compile-target-browser</code>', 'NOT mapped — serve.ts serves HTML directly, no compiled single-file', '—'] },
     { cells: ['<code>metafile-true</code>', 'YES — dist/*.meta.json feeds design budgets (design-budget.ts)', 'pipeline · channels(design)'] },
     { cells: ['<code>metafile-md</code>', 'YES — dist/*.meta.md is the mtafile (design:build --metafile-md)', 'pipeline · channels(design)'] },
