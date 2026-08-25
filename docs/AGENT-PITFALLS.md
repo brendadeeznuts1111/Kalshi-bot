@@ -3202,3 +3202,26 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
   example goes stale.
 - Artifacts: tools/docs-integrity.ts IMPORTS section; tests lock the
   markdown.ts export surface.
+
+## 67. Deeper integration — docs quality surfaced on the dashboard (2026-08-24)
+
+- The docs channel (signal-pipeline collectDocs) previously read ONLY
+  .data/docs-state.json (render health §38). Now it reads the state files
+  ALL four docs gates write, via a shared writer (src/lib/docs-state.ts):
+  - docs-state.json     → docs:render (48 files render, §38)
+  - api-state.json      → docs:api (94 tokens · N drift · STRICT flag, §62)
+  - integrity-state.json → docs:integrity (166 links · N stale src, §63/65/66)
+  - output-state.json   → output:probe (0 assertions canary, §64)
+  Each gate fails → bad; missing state → warn; >30d stale → warn. The
+  dashboard's docs section now reflects the FULL docs-quality surface,
+  not just render health.
+- Mechanics: src/lib/docs-state.ts writeDocsGateState(name, fields) writes
+  {lastChecked, ok, fails, bunVersion, ...fields} to .data/. Each tool
+  calls it before exit; collectDocs reads all four with one shared gate()
+  helper (severity ok/bad by ok field, stale-warn >30d).
+- Verified live: collectDocs emits 4 ok signals (render/api/integrity/
+  output) from the real state files; `bun run check` stays EXIT=0.
+- This closes the loop: the gates guard the docs at commit time
+  (verify:contracts) AND surface their health at runtime (dashboard
+  docs channel) — the same signal pipeline that powers the cron-refreshed
+  /dashboard.

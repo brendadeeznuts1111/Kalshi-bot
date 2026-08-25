@@ -19,6 +19,7 @@
  */
 import { readFileSync, existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
+import { writeDocsGateState } from "../src/lib/docs-state.ts";
 
 const ROOT = join(import.meta.dir, "..");
 
@@ -130,6 +131,7 @@ async function main() {
     md.push("| " + a.file + " | " + a.line + " | " + a.kind + " | `" + a.raw.trim().slice(0, 50).replace(/\|/g, "\\|") + "` | " + a.risky.join(",") + " |");
   }
   await Bun.write(join(ROOT, ".data", "output-probe.md"), md.join("\n") + "\n");
+  await writeDocsGateState("output-state.json", { ok: all.length === 0, fails: all.length, assertions: all.length, risky, jsFamily });
   console.log("report: .data/output-probe.md");
 }
 

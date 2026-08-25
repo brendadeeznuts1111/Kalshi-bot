@@ -367,32 +367,43 @@ export async function collectInventory(root: string, signals: Signal[]): Promise
 // ── Bun.cron channel: the pipeline refreshes ITSELF on a schedule ──────
 
 /**
- * docs channel: repo docs render health (§38). Reads .data/docs-state.json
- * written by docs:check — every docs/*.md must render through Bun.markdown
- * with unique heading ids. A failing doc is bad; stale state is a warn.
+ * docs channel: FULL docs-quality surface (§67). Reads the state files the
+ * docs gates write: docs-state.json (docs:check render §38), api-state.json
+ * (docs:api existence §62), integrity-state.json (docs:integrity links/
+ * imports/src §63/§65/§66), output-state.json (output:probe canary §64).
+ * Any gate failing is bad; missing state is a warn; stale is a warn.
  */
 export async function collectDocs(root: string, signals: Signal[]): Promise<void> {
   const push = (s: Signal): void => { signals.push(s); };
-  const statePath = join(root, '.data/docs-state.json');
-  const state = JSON.parse(await Bun.file(statePath).text().catch(() => 'null'));
-  if (!state || typeof state !== 'object' || !state.lastChecked) {
-    push({ id: 'docs-health', channel: 'docs', severity: 'warn', title: 'docs:check not run', detail: 'run bun run docs:check to seed .data/docs-state.json', source: 'docs:check' });
-    return;
-  }
-  const failing = state.failing ?? 0;
-  const ageDays = (Date.now() - new Date(state.lastChecked).getTime()) / 86400000;
-  push({
-    id: 'docs-health',
-    channel: 'docs',
-    severity: failing ? 'bad' : 'ok',
-    title: 'docs: ' + state.total + ' markdown file(s) render',
-    detail: failing ? failing + ' FAILING (run docs:check)' : 'all render via Bun.markdown · unique heading ids · checked ' + state.lastChecked.slice(0, 10),
-    source: 'docs:check',
-    action: 'docs-check',
-  });
-  if (ageDays > 30) {
-    push({ id: 'docs-stale', channel: 'docs', severity: 'warn', title: 'docs state stale (' + Math.round(ageDays) + 'd)', detail: 'run bun run docs:check', source: 'docs:check', action: 'docs-check' });
-  }
+  const readState = async (file: string): Promise<Record<string, unknown> | null> => {
+    const state = JSON.parse(await Bun.file(join(root, '.data', file)).text().catch(() => 'null'));
+    return state && typeof state === 'object' && state.lastChecked ? state as Record<string, unknown> : null;
+  };
+  const gate = async (file: string, id: string, label: string, source: string, detailOf: (s: Record<string, unknown>) => string) => {
+    const s = await readState(file);
+    if (!s) {
+      push({ id, channel: 'docs', severity: 'warn', title: label + ' not run', detail: 'run bun run ' + source + ' to seed .data/' + file, source });
+      return;
+    }
+    const ok = s.ok !== false;
+    const ageDays = (Date.now() - new Date(String(s.lastChecked)).getTime()) / 86400000;
+    push({
+      id,
+      channel: 'docs',
+      severity: ok ? 'ok' : 'bad',
+      title: label + ': ' + detailOf(s),
+      detail: ok ? 'checked ' + String(s.lastChecked).slice(0, 10) : 'FAILING — run ' + source,
+      source,
+      action: source,
+    });
+    if (ageDays > 30) {
+      push({ id: id + '-stale', channel: 'docs', severity: 'warn', title: label + ' state stale (' + Math.round(ageDays) + 'd)', detail: 'run ' + source, source, action: source });
+    }
+  };
+  await gate('docs-state.json', 'docs-health', 'docs:render', 'docs:check', (s) => String(s.total ?? 0) + ' markdown file(s) render');
+  await gate('api-state.json', 'docs-api', 'docs:api', 'docs:api', (s) => String(s.tokens ?? 0) + ' tokens · ' + String(s.fails ?? 0) + ' drift' + (s.strict ? ' (STRICT)' : ''));
+  await gate('integrity-state.json', 'docs-integrity', 'docs:integrity', 'docs:integrity', (s) => String(s.links ?? 0) + ' links · ' + String(s.staleSrc ?? 0) + ' stale src');
+  await gate('output-state.json', 'docs-output', 'output:probe', 'output:probe', (s) => String(s.assertions ?? 0) + ' output assertions (canary)');
 }
 
 /**

@@ -26,6 +26,7 @@ import { readFileSync, existsSync } from "node:fs";
 import { join, resolve, dirname } from "node:path";
 
 const ROOT = join(import.meta.dir, "..");
+import { writeDocsGateState } from "../src/lib/docs-state.ts";
 import { markdownHeadings } from "../src/lib/markdown-headings.ts";
 
 /** Docs that legitimately link outside docs/ (AGENTS.md, src READMEs). */
@@ -222,6 +223,7 @@ async function main() {
   }
   console.log("---");
   console.log("docs:integrity — " + (linkProblems.length ? String(linkProblems.length) + " broken links " : "all links ok ") + "· " + importProblems.length + " unresolved imports (reported) · " + srcProblems.length + " stale src refs (gate)");
+  await writeDocsGateState("integrity-state.json", { ok: fails === 0, fails, links: crossChecked + sameChecked, imports: importProblems.length, srcRefs: srcChecked, staleSrc: srcProblems.length });
   process.exit(fails === 0 ? 0 : 1);
 }
 

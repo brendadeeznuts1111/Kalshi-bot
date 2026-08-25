@@ -42,6 +42,7 @@
  */
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
+import { writeDocsGateState } from "../src/lib/docs-state.ts";
 
 const ROOT = join(import.meta.dir, "..");
 const TOKEN_RE = /\bBun\.([A-Za-z_$][A-Za-z0-9_$]*)\b/g;
@@ -177,6 +178,7 @@ async function main() {
   }
   console.log("---");
   console.log("docs:api — " + all.length + " tokens · " + rows.length + " non-exists classified · " + fails + " genuine drift" + (STRICT ? " (STRICT incl. callability)" : "") + (fails ? " (fix docs or allowlist)" : ""));
+  await writeDocsGateState("api-state.json", { ok: fails === 0, fails, tokens: all.length, strict: STRICT ? 1 : 0 });
 
   // .data/api-report.md
   const mdLines: string[] = [
