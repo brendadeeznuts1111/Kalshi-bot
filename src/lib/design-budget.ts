@@ -198,7 +198,13 @@ export function externalImports(metaJson: unknown): Array<{ from: string; specif
   if (!metaJson || typeof metaJson !== 'object') return [];
   const inputs = (metaJson as { inputs?: Record<string, unknown> }).inputs;
   if (!inputs || typeof inputs !== 'object') return [];
-  const members = new Set(Object.keys(inputs));
+  // Split chunks + assets are generated OUTPUTS, not inputs — an entry's
+  // import of ./chunk-*.js / ./x.css is internal, not external (§163).
+  const outputs = (metaJson as { outputs?: Record<string, unknown> }).outputs;
+  const members = new Set([
+    ...Object.keys(inputs),
+    ...(outputs && typeof outputs === 'object' ? Object.keys(outputs) : []),
+  ]);
   const out: Array<{ from: string; specifier: string }> = [];
   for (const [path, v] of Object.entries(inputs)) {
     const imports = (v as { imports?: Array<{ path?: unknown }> }).imports ?? [];

@@ -5871,14 +5871,41 @@ another note.
 - Artifacts: tools/bun-coverage-matrix.ts (new), package.json
   (coverage:matrix script), docs/BUN_API_COVERAGE.md (regenerated).
   verify:contracts 52/52 (unchanged).
+## 164. Realignment executed — hq-app chunking + two real bugs found (2026-08-24)
+
+- Executed the §13 per-module plan: hq-app's hash-routes.ts + surface-edge.ts
+  converted to top-level dynamic imports + splitting:true in design:build
+  — the entry shrank 49.9 -> 48.0 KB with 3 split chunks (268+1356+1066 B)
+  emitted. Behavior unchanged (app awaits chunks; HTML-import serve
+  serves them). design:check budgets pass (46.83/64 KB).
+- BUG 1 (metafile path resolution): the object-form metafile resolves
+  json/markdown paths against the OUTDIR — even ABSOLUTE paths get
+  outdir-prefixed. Since the §155 object-form migration, design:build
+  wrote meta files to dist/dist/... and design:check read STALE
+  pre-migration meta (the chunking was invisible to the gate). Fixed:
+  relative paths (module + .meta.{json,md} -> dist/). Pinned P34.
+- BUG 2 (design:check externalImports): split chunks are OUTPUTS, not
+  inputs — the check flagged ./chunk-*.js as unexpected externals
+  (design:check FAIL). Fixed: outputs join the membership set (chunks +
+  assets are internal). Unit-tested in design-budget.test.ts.
+- P33 (chunks omitted from metafile.outputs) was a FALSE PREMISE — the
+  metafile includes chunks; the omission was the stale file from BUG 1.
+- Artifacts: src/research/hq-app/app.js (dynamic imports),
+  scripts/build-design-system.ts (splitting + relative meta paths),
+  src/lib/design-budget.ts (externalImports), tests/lib/design-budget.test.ts
+  (+1), tools/metafile-probe.ts (P34), docs/AGENT-PITFALLS.md (§155 fix,
+  §164). verify:contracts 52/52 (unchanged).
 - FILENAME BEHAVIOR (pasted --metafile-md claims vs 1.4.0, gate P9-P13):
   a bare --metafile-md writes meta.md to the PROCESS CWD, NOT the
   --outdir (the pasted claim's location is wrong); --metafile-md=<path>
   resolves against the CWD (not outdir); --metafile + --metafile-md
   together write both; a bare --metafile DEFAULTS to meta.json in the
   CWD (the pasted claim says a path is always required — wrong).
-  Absolute paths write where asked — the repo design:build form is
-  safe. All pinned.
+  Absolute paths do NOT write where asked — the object form resolves
+  json/markdown paths against the OUTDIR (absolute paths get
+  outdir-prefixed; P34 pins this). Use RELATIVE names. §163's hq-app
+  chunking found design:build writing to dist/dist/ since §155 — fixed.
+  All pinned.
 - API OBJECT FORM (verified, gate P14-P16): Bun.build({ metafile:
   { json, markdown } }) writes BOTH files relative to the OUTDIR (no
   CLI CWD quirk) and res.metafile stays populated; metafile: "path"

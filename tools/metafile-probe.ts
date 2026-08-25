@@ -177,6 +177,18 @@ check("P31 kinds incl sourcemap + asset", kinds.includes("sourcemap") && kinds.i
 check("P32 artifact.sourcemap NOT the .map (misassigned)", !(art.sourcemap && art.sourcemap.path?.endsWith(".map")), "sm=" + (art.sourcemap ? art.sourcemap.path.split("/").pop() : "null"));
 
 
+
+
+
+
+// P34 CORRECTION: the object-form metafile resolves json/markdown paths
+// against the OUTDIR — even ABSOLUTE paths get outdir-prefixed (writes
+// land at outdir/<abs-path>). Use relative names for outdir-relative
+// output; §155's absolute-path claim was wrong for the object form.
+await Bun.build({ entrypoints: [F + "/entry.ts"], outdir: "scratch/mf-abs/dist", metafile: { json: process.cwd() + "/scratch/mf-abs/abs.json" } as any });
+check("P34 object-form absolute path lands under OUTDIR", (await w("scratch/mf-abs/dist" + process.cwd() + "/scratch/mf-abs/abs.json")) || !(await w(process.cwd() + "/scratch/mf-abs/abs.json")), "");
+
+
 const failed = results.filter((r) => !r.pass);
 console.log("metafile:probe — " + (results.length - failed.length) + "/" + results.length + " checks" + (failed.length ? " · FAIL: " + failed.map((f) => f.name).join(", ") : ""));
 process.exit(failed.length === 0 ? 0 : 1);

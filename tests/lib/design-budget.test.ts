@@ -190,4 +190,14 @@ describe("git-correlated history + output integrity", () => {
     await Bun.write(root + "/dist/hq-app.js", "export const ok = 2;");
     expect(await checkBundleOutputs(root)).toEqual([]);
   });
+  test("externalImports treats split chunks + assets as internal (§163)", () => {
+    const meta = {
+      inputs: {
+        "src/app.js": { imports: [{ path: "./chunk-abc.js" }, { path: "./style.css" }, { path: "node:fs" }] },
+      },
+      outputs: { "./app.js": {}, "./chunk-abc.js": {}, "./style.css": {} },
+    };
+    const ext = externalImports(meta);
+    expect(ext).toEqual([{ from: "src/app.js", specifier: "node:fs" }]);
+  });
 });

@@ -1,13 +1,10 @@
-import {
-  glossaryHash,
-  parseHqHashRoute,
-  scrollToHqHashTarget,
-} from "./hash-routes.ts";
-import {
-  normalizeTennisFilterKey,
-  passesMinimumSurfaceEdge,
-  surfaceEdgePresentation,
-} from "./surface-edge.ts";
+// §13 chunking (2026-08-24): top-level dynamic imports so splitting
+// emits hash-routes + surface-edge as SEPARATE chunks — the app.js
+// monolith was 95.8% of the bundle and the 60 KB maxContributor budget
+// forces this as it grows. Behavior is unchanged (the app awaits the
+// chunks before running; the runtime HTML-import serve serves them).
+const { glossaryHash, parseHqHashRoute, scrollToHqHashTarget } = await import("./hash-routes.ts");
+const { normalizeTennisFilterKey, passesMinimumSurfaceEdge, surfaceEdgePresentation } = await import("./surface-edge.ts");
 
 // Design tokens are injected server-side via the composed /api/design
 // manifest (no color kernel in the browser bundle). Seeds are the current

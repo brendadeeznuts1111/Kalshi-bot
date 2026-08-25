@@ -40,14 +40,17 @@ for (const module of DESIGN_MODULE_NAMES) {
     naming: spec.out,
     target: 'browser',
     minify: true,
+    splitting: true, // §13 chunking: hq-app dynamic imports become chunks
     // Object form (probe §155): writes BOTH the JSON + the LLM-friendly
     // markdown report in one build call — the CLI --metafile-md re-build
     // (and its subprocess) is gone. res.metafile stays populated in-memory.
     // bun-types 1.4.0 types metafile as boolean only — the object form
-    // is runtime-verified (§155), so cast.
+    // is runtime-verified (§155/§163), so cast. IMPORTANT: json/markdown
+    // paths resolve against the OUTDIR (even absolute ones get prefixed) —
+    // relative names land in dist/<module>.meta.{json,md} correctly.
     metafile: {
-      json: join(root, 'dist', module + '.meta.json'),
-      markdown: join(root, 'dist', module + '.meta.md'),
+      json: module + '.meta.json',
+      markdown: module + '.meta.md',
     } as any,
   });
   if (!out.success) {
