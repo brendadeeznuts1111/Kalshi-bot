@@ -5084,6 +5084,30 @@ another note.
   types + seeking out of the box.
 - Artifacts: tests/research/video-serving.test.ts (new), this section.
   verify:contracts 26/26.
+## 126. Bun.cron granularity + overlap — 5-field only, no self-overlap (2026-08-24)
+
+- CORRECTED: Bun.cron is 5-field ONLY (minute hour day month weekday).
+  A 6-field expression throws 'Invalid cron expression: too many fields.
+  Bun.cron uses 5 fields' — at BOTH Bun.cron() registration AND
+  Bun.cron.parse(). Seconds are unsupported. The repo's schedules
+  (cron-main §99, finance-cron, partner cron) are all 5-field and
+  correct; any future sub-minute cron attempt fails loudly.
+- VERIFIED (2.5-min probe, 60s interval + 90s job over a 140s window):
+  a job running LONGER than its interval does NOT run concurrently with
+  itself — fires=1, max concurrent=1, overlap=false. The missed fire is
+  neither queued behind the running job nor fired early.
+- Implication: cron-main's single-flight wrapper (createSingleFlight,
+  docs/CRON.md "single-flight, drains on graceful shutdown") is
+  DEFENSE-IN-DEPTH against self-overlap rather than strictly required —
+  it also guards cross-process/multi-tick races, so it stays.
+- The skip-vs-defer policy for the missed fire was ambiguous in the 140s
+  window (fires stayed 1 after the job finished at ~90s); resolving it
+  needs a 4+ min probe — not worth it for minute-scale jobs.
+- Locked in tests/scripts/audit-overlay-cron.test.ts: 6-field rejection
+  at both entry points + a 5-field parse round-trip.
+- Artifacts: tests/scripts/audit-overlay-cron.test.ts (+1 test), this
+  section. verify:contracts 28/28.
+
 
 
 

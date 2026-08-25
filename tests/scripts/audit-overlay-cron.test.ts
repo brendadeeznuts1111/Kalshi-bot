@@ -13,4 +13,10 @@ describe("audit-overlay cron (§99)", () => {
   test("refreshAuditOverlay is exported without executing (import.meta.main guard)", () => {
     expect(typeof refreshAuditOverlay).toBe("function");
   });
+
+  test("Bun.cron is 5-field only — seconds unsupported (§126)", () => {
+    expect(() => Bun.cron("* * * * * *", () => {})).toThrow(/too many fields/);
+    expect(() => Bun.cron.parse("* * * * * *", Date.now())).toThrow(/too many fields/);
+    expect(Bun.cron.parse("*/5 * * * *", Date.now())).toBeInstanceOf(Date);
+  });
 });
