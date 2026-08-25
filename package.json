@@ -245,6 +245,7 @@
     "xml:probe": "bun tools/xml-probe.ts",
     "image:probe": "bun tools/image-probe.ts",
     "infra:probe": "bun tools/infra-probe.ts",
+    "csrf:probe": "bun tools/csrf-probe.ts",
     "plugins:probe": "bun tools/plugins-probe.ts",
     "bun:blog-map": "bun tools/bun-blog-map.ts",
     "docs:check": "bun tools/docs-check.ts",

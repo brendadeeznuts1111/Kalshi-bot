@@ -3536,3 +3536,28 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
     probe (OS-dependent); the handler is simple cache-clears.
 - Artifacts: tools/infra-probe.ts (7 checks), tests/lib/infra-probe.test.
   ts (6 tests), verify:contracts 13/13.
+
+## 77. CSRF machinery probe — session binding verified, 14th gate (2026-08-24)
+
+- Probed src/research/csrf.ts (tools/csrf-probe.ts, `bun run csrf:probe`,
+  new verify:contracts gate, 14/14). The security-critical machinery
+  guarding the dashboard action POSTs (§74) + trading endpoints:
+- VERIFIED (9/9):
+  - Bun.CSRF.generate/verify exist; generate(undefined, opts) THROWS
+    'Secret is required' — the module's documented claim, probe-confirmed.
+  - SESSION BINDING (the critical anti-replay property): a token minted
+    for session A FAILS to verify when the request cookie carries session
+    B — an attacker cannot replay their own token in a forged request.
+    This is exactly the Bun docs requirement the module documents.
+  - missing token OR missing cookie -> reject; csrfGuard returns 403 JSON
+    before any handler runs.
+  - existing kalshi_session cookie preserves the sessionId (no churn on
+    every GET /ops).
+  - secret pinning: KALSHI_CSRF_SECRET works — a token under secret A
+    fails under secret B (tokens survive restarts only with the env pin).
+- PROBE NUANCE (Bun error message misleading, NOT a module bug):
+  - expiresIn error says 'must be an integer between 0 and 900' but only
+    NEGATIVES throw; 0, 1, 86400000 (the module's 24h), and 2^31+ all
+    accepted. The 24h value works; the message's upper bound is wrong.
+- Artifacts: tools/csrf-probe.ts (9 checks), tests/lib/csrf-probe.test.ts
+  (6 tests), verify:contracts 14/14.
