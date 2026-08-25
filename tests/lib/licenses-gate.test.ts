@@ -28,3 +28,47 @@ describe("licenses:gate (§92)", () => {
     expect(stdout).toContain("allowed");
   });
 });
+function runGateArgs(args: string[]): { exitCode: number; stdout: string } {
+  const proc = Bun.spawnSync(["bun", "run", "licenses:gate", ...args], {
+    cwd: ROOT,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  return { exitCode: proc.exitCode, stdout: (proc.stdout?.toString() ?? "") };
+}
+
+describe("licenses:gate --json (§93)", () => {
+  test("emits parseable JSON with 0 violations", () => {
+    const { exitCode, stdout } = runGateArgs(["--json"]);
+    expect(exitCode).toBe(0);
+    const doc = JSON.parse(stdout);
+    expect(doc.ok).toBe(true);
+    expect(doc.summary.total).toBe(6);
+    expect(doc.summary.violations).toBe(0);
+    expect(doc.packages.length).toBe(6);
+  });
+
+  test("JSON carries the vendor exemption", () => {
+    const { stdout } = runGateArgs(["--json"]);
+    const doc = JSON.parse(stdout);
+    const pp = doc.packages.find((p: any) => p.name === "@factorywager/proton-pass");
+    expect(pp).toBeTruthy();
+    expect(pp.matchedBy).toBe("exemption");
+  });
+});
+
+describe("licenses:gate --sbom (§93)", () => {
+  const SBOM_TEST_PATH = join(ROOT, ".data", "licenses-sbom.test.json");
+
+  test("writes a snapshot with per-package fingerprints", async () => {
+    try { await Bun.file(SBOM_TEST_PATH).delete(); } catch { /* fresh start */ }
+    const { exitCode, stdout } = runGateArgs(["--sbom", SBOM_TEST_PATH]);
+    expect(exitCode).toBe(0);
+    expect(stdout).toContain("+ added");
+    const raw = await Bun.file(SBOM_TEST_PATH).json();
+    expect(raw.format).toBe("licenses-sbom");
+    expect(raw.packages.length).toBe(6);
+    for (const p of raw.packages) expect(p.fingerprint).toMatch(/^[0-9a-f]{12}$/);
+    await Bun.file(SBOM_TEST_PATH).delete();
+  });
+});

@@ -1,0 +1,24 @@
+{
+  "policy": {
+    "allowedLicenses": [
+      "MIT", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "ISC", "0BSD", "Unlicense", "CC0-1.0"
+    ],
+    "licenseAliases": {
+      "BSD": "BSD-3-Clause",
+      "BSD-2": "BSD-2-Clause",
+      "BSD-3": "BSD-3-Clause",
+      "Apache": "Apache-2.0",
+      "Apache-2": "Apache-2.0",
+      "Apache 2.0": "Apache-2.0",
+      "MIT/X11": "MIT"
+    }
+  },
+  "exemptions": [
+    {
+      "name": "@factorywager/proton-pass",
+      "license": "Unknown",
+      "reason": "vendored file:vendor/proton-pass package with no license field in its own package.json (AGENT-PITFALLS §91/§92/§93)",
+      "expires": "2026-12-01"
+    }
+  ]
+}

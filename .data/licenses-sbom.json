@@ -1,0 +1,69 @@
+{
+  "format": "licenses-sbom",
+  "version": 1,
+  "generatedAt": "2026-08-25T03:31:22.611Z",
+  "bunVersion": "1.4.0",
+  "summary": {
+    "total": 6,
+    "allowed": 6,
+    "violations": 0,
+    "exemptions": 1
+  },
+  "packages": [
+    {
+      "name": "drizzle-orm",
+      "version": "0.45.2",
+      "reportedLicense": "Apache-2.0",
+      "normalizedLicense": "Apache-2.0",
+      "allowed": true,
+      "matchedBy": "allowlist",
+      "fingerprint": "1363a1fe7489"
+    },
+    {
+      "name": "@types/node",
+      "version": "26.1.2",
+      "reportedLicense": "MIT",
+      "normalizedLicense": "MIT",
+      "allowed": true,
+      "matchedBy": "allowlist",
+      "fingerprint": "8c630e3085ef"
+    },
+    {
+      "name": "bun-types",
+      "version": "1.4.0",
+      "reportedLicense": "MIT",
+      "normalizedLicense": "MIT",
+      "allowed": true,
+      "matchedBy": "allowlist",
+      "fingerprint": "c455aec1c975"
+    },
+    {
+      "name": "undici-types",
+      "version": "8.3.0",
+      "reportedLicense": "MIT",
+      "normalizedLicense": "MIT",
+      "allowed": true,
+      "matchedBy": "allowlist",
+      "fingerprint": "d0ac719c52b9"
+    },
+    {
+      "name": "zod",
+      "version": "4.4.3",
+      "reportedLicense": "MIT",
+      "normalizedLicense": "MIT",
+      "allowed": true,
+      "matchedBy": "allowlist",
+      "fingerprint": "432f26c29410"
+    },
+    {
+      "name": "@factorywager/proton-pass",
+      "version": "vendor/proton-pass",
+      "reportedLicense": "Unknown",
+      "normalizedLicense": "Unknown",
+      "allowed": true,
+      "matchedBy": "exemption",
+      "reason": "vendored file:vendor/proton-pass package with no license field in its own package.json (AGENT-PITFALLS §91/§92/§93) (expires 2026-12-01)",
+      "fingerprint": "6a048843f8d4"
+    }
+  ]
+}

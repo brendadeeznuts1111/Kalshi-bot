@@ -3945,3 +3945,48 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
   (same pattern as `pm diff`); naive JSON.parse fails.
 - Artifacts: tools/licenses-gate.ts, package.json (licenses:gate),
   tools/verify-contracts.ts (gate #17). verify:contracts 17/17.
+## 93. licenses:gate v2 — config-driven policy, scoped exemptions, SBOM logbook (2026-08-24)
+
+- §92 hardcoded the allowlist + vendor exception in TS. v2 moves the
+  policy to config/licenses-allowlist.json (policy.allowedLicenses,
+  policy.licenseAliases, top-level exemptions) so compliance changes are
+  config-only — no tool change — and the config is validated at load
+  (validatePolicyConfig; malformed shape = exit 1 with the message).
+- SPDX normalization (normalizeLicense in src/lib/licenses-policy.ts):
+  exact allowed match -> exact alias -> case-insensitive alias ->
+  passthrough. Aliases catch loose package definitions ('BSD' ->
+  BSD-3-Clause, 'Apache 2.0' -> Apache-2.0, 'mit' -> MIT). Unknowns are
+  never silently normalized — 'GPL-3.0' stays 'GPL-3.0' and fails.
+- Exemptions are SCOPED, not blanket: name + optional license (applies
+  ONLY while the reported license equals it) + optional version (exact
+  match on the resolved version). Probe finding: for file: deps bun
+  reports the file spec in versions ('vendor/proton-pass'), NOT semver —
+  so vendored exceptions are guarded by license-scoping + expiry, not
+  version. Auto-catch: if proton-pass v2 ships a real non-permissive
+  license, the license-scoped exemption stops matching and the gate
+  fails — upgrades cannot ride a grandfathered exception.
+- TIME-BOMB: exemptions carry expires (ISO date). An expired exemption
+  FAILS the gate ('exemption expired on <date> — re-review') —
+  temporary vendor hacks cannot become permanent. Proton-pass exception
+  expires 2026-12-01.
+- Robustness: stdout JSON is parsed from its first '{'; on parse failure
+  stderr is tried (bun may route the payload or the error there); both
+  failing exits 1 with the stderr tail. Config JSON parse errors also
+  exit 1 with the message.
+- Output modes: default human report; --json emits {ok, summary,
+  packages, violations, staleExemptions, diff} for piping; --sbom [path]
+  writes an SBOM snapshot (.data/licenses-sbom.json by default) with
+  per-package fingerprints (sha256 of name|version|license|package.json
+  file hash) and prints a diff vs the previous snapshot (added / removed
+  / changed) — the gate doubles as a logbook. Stale exemptions (config
+  names matching no prod package) warn but do not fail.
+- SBOM write trap (test-caught): the snapshot must end with a REAL
+  newline — writing a literal backslash-n makes Bun.file().json() throw
+  'Unrecognized token'. Also: --sbom with a custom path skips the 'sbom
+  written' line (it prints only for the default path) — tests assert on
+  the diff lines instead.
+- Artifacts: src/lib/licenses-policy.ts (pure, unit-tested), config/
+  licenses-allowlist.json, tools/licenses-gate.ts (v2), tests/lib/
+  licenses-policy.test.ts + licenses-gate.test.ts (--json/--sbom),
+  package.json (licenses:sbom added). verify:contracts stays 17/17.
+
