@@ -12,6 +12,7 @@ import { join } from 'node:path';
 import { auditAllDocs } from '../src/lib/docs-audit.ts';
 import { auditDocsStyle } from '../src/lib/docs-style.ts';
 import { extractCodeBlocks, validateDocsCode } from '../src/lib/docs-validate.ts';
+import { countGates } from '../src/lib/gate-count.ts';
 
 const ROOT = join(import.meta.dir, '..');
 const docs = await auditAllDocs(ROOT);
@@ -48,8 +49,7 @@ for (const f of codeFailures) {
 // Stale contract-count scan: every verify:contracts N/N reference must
 // equal the CURRENT gate count, EXCEPT AGENT-PITFALLS body lines (a
 // historical timeline — its HEADER must carry the current count).
-const vc = await Bun.file(join(ROOT, 'tools/verify-contracts.ts')).text();
-const gatesCount = (vc.match(/^\s*\['[^']+'/gm) ?? []).length;
+const gatesCount = countGates();
 const current = gatesCount + '/' + gatesCount;
 for (const d of docs) {
   const md = await Bun.file(join(ROOT, d.path)).text();

@@ -6033,3 +6033,30 @@ another note.
   scripts/audit-bun-native.ts (keep-list staleness warn),
   tools/bun-breaking-audit.ts (non-fatal report),
   tests/lib/breaking-audit.test.ts (+2 tests).
+
+## 167. Gate count derived structurally — heuristic regexes gone (2026-08-24)
+
+- The verify:contracts N/N count was derived by FORMAT-SENSITIVE
+  heuristics in two places: docs:sync-counts scanned lines starting
+  with a bracket plus quote character (charCodeAt(1)===39) and
+  docs:check regex-counted ^\s*\['[^']+' lines. A formatting change
+  (multi-line entries, quote style, comments between entries) could
+  silently drift the count or make the two sides DISAGREE.
+- Now ONE shared structural derivation: src/lib/gate-count.ts parses
+  tools/verify-contracts.ts with the TypeScript compiler API, finds
+  the gates variable declaration (initializer may be as-const wrapped -
+  the AsExpression is unwrapped), and counts the array ELEMENTS.
+  Both docs:check (FAIL side) and docs:sync-counts (FIX side) import
+  countGates() — a single source of truth, formatting-immune.
+- docs-sync-counts.ts also replaced the regex header splice with a
+  quote-free indexOf/digit-scan splice (no \d escapes to mangle).
+- Tests (tests/lib/gate-count.test.ts): a fixture with multi-line +
+  double-quoted + extra-element + as-const entries counts exactly;
+  a missing gates array throws; the LIVE repo must count 52 — gate
+  additions now fail the suite until docs:sync-counts is run.
+- Verified: countGates() == old heuristic == 52; docs:sync-counts
+  no-op ("already current"), docs:check 52/52, verify:contracts
+  52/52, guard ok, typecheck clean.
+- Artifacts: src/lib/gate-count.ts (new), tools/docs-sync-counts.ts
+  (structural + quote-free splice), tools/docs-check.ts (import +
+  countGates), tests/lib/gate-count.test.ts (new).
