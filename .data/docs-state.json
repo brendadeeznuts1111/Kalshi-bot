@@ -1,10 +1,10 @@
 {
-  "lastChecked": "2026-08-25T05:19:41.837Z",
+  "lastChecked": "2026-08-25T05:52:00.858Z",
   "docs": [
     {
       "path": "docs/AGENT-PITFALLS.md",
-      "hash": "dfaef93df709f5d67e17cfcc9995bd5e0011892cb1622ad7cb72981f722ceed0",
-      "headings": 167,
+      "hash": "8db5fb2e1f58578f3ec214048495d214c70a9a11a5774f70dd20674895078b1c",
+      "headings": 177,
       "renderOk": true,
       "duplicateSlugs": []
     },
@@ -255,7 +255,7 @@
     },
     {
       "path": "docs/PIPELINE-MAP.md",
-      "hash": "58ab001c21ebf79bdbf524945154c4081ad6d0cdd9fdd3864bf7e3dd7d5ead46",
+      "hash": "35f1409514ce293fea3d61e9f586ac836c1d6afa57c2dd2feac86c6fbde88e8d",
       "headings": 12,
       "renderOk": true,
       "duplicateSlugs": []
