@@ -1897,7 +1897,25 @@ export function createResearchServer(options: ServeOptions = {}) {
               await p.exited;
               return json({ ok: (p.exitCode ?? 1) === 0, action: name, out: out.trim().split("\n").slice(0, 3) }, 200, designCorsHeaders());
             }
-            return json({ error: "unknown action — purge-brand | deps-check | brand-card | release-check" }, 404, designCorsHeaders());
+            // Docs-quality gates (§67 actions): run the offline gate, report
+            // ok + last line. All are sub-second and covered by the same
+            // runBunCommand path as the deps-check action.
+            // Docs-quality gates (§67 actions): run the offline gate, report
+            // ok + last lines. All are sub-second offline gates.
+            if (name === "docs:check" || name === "docs:api" || name === "docs:integrity" || name === "output:probe" || name === "blog-map" || name === "content-check") {
+              const script: string =
+                name === "docs:check" ? "docs:check" :
+                name === "docs:api" ? "docs:api" :
+                name === "docs:integrity" ? "docs:integrity" :
+                name === "output:probe" ? "output:probe" :
+                name === "blog-map" ? "bun:blog-map" : "content:check";
+              const extra = name === "blog-map" ? ["--", "--offline"] : name === "content-check" ? ["--", "--check"] : [];
+              const p = Bun.spawn([Bun.which("bun") ?? "bun", "run", script, ...extra], { cwd: ROOT, stdout: "pipe", stderr: "pipe" });
+              const out = await new Response(p.stdout).text();
+              await p.exited;
+              return json({ ok: (p.exitCode ?? 1) === 0, action: name, out: out.trim().split("\n").slice(-2) }, 200, designCorsHeaders());
+            }
+            return json({ error: "unknown action — purge-brand | deps-check | brand-card | release-check | docs:check | docs:api | docs:integrity | output:probe | blog-map | content-check" }, 404, designCorsHeaders());
           }),
         );
       }

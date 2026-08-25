@@ -3430,3 +3430,29 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
     rateLimit/ETag/304/CORS pattern. NOT built: no team data source yet.
 - Rejected §71 (per-source team_logos SQLite) stays rejected; this is the
   unified alternative the user asked for.
+
+## 74. Dashboard action buttons — dead-button gap found + fixed (2026-08-24)
+
+- DEEPER probe of the signal-pipeline machinery surfaced a real gap: the
+  dashboard renders an action BUTTON for every signal carrying an
+  action field, but the POST /api/signals/actions/<name> handler only
+  implemented purge-brand | deps-check | brand-card | release-check.
+  Collectors pushed SIX unimplemented actions -> dead buttons returning
+  404: blog-map, content-check, and the FOUR docs actions added in §67
+  (docs:check / docs:api / docs:integrity / output:probe) — my own §67
+  work created dead UI.
+- FIXED: added handlers for all six — each runs the offline gate via
+  Bun.spawn (Bun.which('bun'), same path as deps-check), reports
+  {ok, action, out: last-2-lines}. Explicit per-name args: blog-map
+  gets -- --offline, content-check gets -- --check, docs gates get none.
+  Unknown-action 404 message updated to list all ten.
+- CONTRACT TEST (tests/lib/dashboard-actions.test.ts): scans
+  signal-pipeline.ts for pushed action values and serve.ts for
+  implemented name === handlers; FAILS if any pushed action has no
+  handler. Prevents future dead buttons (e.g. a new collector pushing
+  an action without wiring the endpoint).
+- Verified: the docs:integrity action spawn exits 0 and returns the gate
+  summary line; serve.ts already in SPAWN_KEEP_LIST (release-check entry).
+- Note: inventory's massey signal still pushes action 'deps-check' as a
+  generic re-check placeholder (runs deps gates, not massey) — existing
+  quirk, not dead (handler exists), left as-is.
