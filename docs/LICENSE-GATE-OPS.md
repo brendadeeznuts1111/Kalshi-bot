@@ -216,6 +216,16 @@ licenses:gate — FAIL (1 violation(s))
   and exits 1 — the FAIL state is exactly what legal needs to see.
 - The weekly cron job regenerates it automatically alongside the overlay
   refresh.
+## Compliance alerts (Telegram push)
+
+- With `COMPLIANCE_ALERTS=1` on the weekly cron (plus TELEGRAM_* and
+  subscribers), the job PUSHES a summary when something needs
+  attention: new advisories, a failing gate, or exemptions entering the
+  expiry warning window. Deduped by content fingerprint — a stable
+  situation is not re-sent weekly; any change alerts once.
+- The platform is no longer purely reactive: it pings you instead of
+  waiting to be asked.
+
 
 | `bun run licenses:report` | Write the markdown compliance report (legal/release sign-off) |
 ## Live channels

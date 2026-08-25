@@ -33,6 +33,7 @@ import { createSportsSourceRuntime } from "../src/institutions/market-registry/r
 import { unbrand } from "../src/institutions/market-registry/brands.ts";
 import { createFanout, RELEASE_FANOUT_CHANNEL } from "../src/lib/fanout.ts";
 import { refreshAuditOverlay } from "../tools/audit-overlay-update.ts";
+import { maybeSendComplianceAlert } from "../src/lib/compliance-alert.ts";
 
 // ── Config ──────────────────────────────────────────────────────
 
@@ -453,8 +454,19 @@ async function jobAuditOverlay(): Promise<void> {
     console.error("[cron:audit-overlay] " + r.found + " issue(s) found; overlay has " + r.total + " total entries \u00b7 " + (Date.now() - start) + "ms");
     // Release sign-off artifact (§103): regenerate the compliance report
     // on the same weekly cadence. Bun Shell spawn, like the massey job.
-const rep = await $`bun run licenses:report`.cwd(import.meta.dir + "/..").nothrow();
+    const rep = await $`bun run licenses:report`.cwd(import.meta.dir + "/..").nothrow();
     console.error("[cron:audit-overlay] report: " + (rep.exitCode === 0 ? "written" : "FAILED (" + rep.exitCode + ")"));
+    // Proactive compliance alert (§106): new advisories, gate FAIL, or
+    // expiring exemptions -> one Telegram summary (opt-in COMPLIANCE_ALERTS=1;
+    // deduped via .data/compliance-alert-state.json so a stable situation is
+    // not re-sent weekly).
+    const state = JSON.parse(await Bun.file(import.meta.dir + "/../.data/licenses-state.json").text().catch(() => "null"));
+    const expiringSoon = state && typeof state === "object" ? Number((state as { expiringSoon?: unknown }).expiringSoon ?? 0) : 0;
+    const alert = await maybeSendComplianceAlert(
+      { found: r.found, reportOk: rep.exitCode === 0, expiringSoon, generatedAt: new Date().toISOString() },
+      { enabled: Bun.env.COMPLIANCE_ALERTS === "1" },
+    );
+    if (alert !== "not-enabled" && alert !== "nothing-to-report") console.error("[cron:audit-overlay] compliance alert: " + alert);
   } catch (err) {
     console.error("[cron:audit-overlay] Error: " + err);
   }

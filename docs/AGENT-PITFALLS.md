@@ -4328,6 +4328,36 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
   header), tools/licenses-report.ts (serial seed + cross-link), tests/
   lib/licenses-report.test.ts (+4), docs/GATE-PATTERN.md. verify:
   contracts stays 17/17.
+## 106. Proactive compliance alerts — Telegram push from the weekly job (2026-08-24)
+
+- The platform was REACTIVE: compliance problems surfaced only when
+  someone looked (dashboard badge / commit block). The weekly
+  jobAuditOverlay now PUSHES a Telegram summary when something needs
+  attention: new advisories (bun audit found > 0), gate FAIL (report
+  exit != 0), or exemptions entering the expiry warning window
+  (licenses-state expiringSoon). Opt-in COMPLIANCE_ALERTS=1 (mirrors the
+  INVENTORY_PROMOTE_TELEGRAM precedent); TELEGRAM_* + subscribers are
+  required — no subscribers = skipped.
+- Pure message builder (buildComplianceAlertMessage): null when clean;
+  only non-zero lines included, so a clean week sends nothing.
+- DEDUPE: complianceAlertFingerprint (found|reportOk|expiringSoon) is
+  stored in .data/compliance-alert-state.json; an unchanged fingerprint
+  is 'skipped' BEFORE any subscribers lookup — a stable situation is
+  NOT re-sent weekly, any change -> a new fingerprint -> alert. The
+  dedupe-first order keeps the send path network-free in tests.
+- maybeSendComplianceAlert returns a status for the cron log
+  (sent/skipped/nothing-to-report/not-enabled/error).
+- Trap (edit-caught): the §103 backtick fix had DROPPED the report
+  spawn line's indentation (column 0) — the alert edit anchor missed;
+  the job block was re-indented while wiring the alert.
+- Tests: 8 (message null + each non-zero line, fingerprint stability,
+  disabled/clean/dedupe paths) — no network. tests/lib/compliance-
+  alert.test.ts.
+- Artifacts: src/lib/compliance-alert.ts (new), scripts/cron-main.ts
+  (alert block in jobAuditOverlay), tests/lib/compliance-alert.test.ts
+  (new), docs/LICENSE-GATE-OPS.md (alerts section). verify:contracts
+  stays 17/17.
+
 
 
 
