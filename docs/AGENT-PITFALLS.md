@@ -3661,3 +3661,29 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
 - Artifacts: tools/defaults-probe.ts (5 checks), tests/lib/defaults-
   probe.test.ts (5 tests), src/research/serve.ts explicit hostname,
   verify:contracts 16/16.
+
+## 82. More API defaults — transpiler jsx default, inspect depth, write/hash/hasher (2026-08-24)
+
+- Extended defaults:probe (tools/defaults-probe.ts now 10/10) with the
+  defaults the repo RELIES on implicitly or pins explicitly:
+- VERIFIED (probe):
+  - new Bun.Transpiler() DEFAULT loader is jsx — TS annotations fail
+    (const x: number = 1 throws under default). Explicit {loader:'ts'}
+    needed. Confirms + pins §49's ctor-loader finding: the default is
+    jsx, not ts.
+  - Bun.inspect() DEFAULT depth is UNBOUNDED — a 6-level nested object
+    prints fully (shows e:, f:). The repo's redact.ts pins depth: 32
+    explicitly (its DEFAULT_REDACT_DEPTH) — a correct enhancement vs
+    Bun's unbounded default (pathological nesting would print forever).
+  - Bun.write() returns NUMBER (bytes written): 5 for 'hello'.
+  - Bun.hash() returns BIGINT.
+  - Bun.CryptoHasher('sha256').digest() returns Buffer (32 bytes).
+  - Bun.build default: no sourcemap, output format/target undefined —
+    the repo's design build sets target:'browser', minify:true
+    explicitly (correct enhancements).
+- Cross-ref: the repo's explicit settings (transpiler loader ts in
+  docs-validate §59, redact depth 32, build target browser, probe-fetch
+  timeout 8s/retries 2) are ALL correct enhancements over the probed
+  defaults — no implicit-default reliance found needing change.
+- Artifacts: tools/defaults-probe.ts D6-D8 (10/10), tests/lib/defaults-
+  probe.test.ts (8 tests), verify:contracts 16/16.

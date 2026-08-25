@@ -48,3 +48,32 @@ describe("req.cookies routes-only (§81 cross-doc gotcha)", () => {
     expect(rBody).toBe("cookies=true");
   });
 });
+
+describe("more API defaults (§82)", () => {
+  test("Transpiler default loader is jsx (ts syntax fails; explicit ts works)", () => {
+    const def = new Bun.Transpiler();
+    let tsFails = false;
+    try { def.transformSync("const x: number = 1;"); } catch { tsFails = true; }
+    expect(tsFails).toBe(true);
+    const ts = new Bun.Transpiler({ loader: "ts" });
+    expect(ts.transformSync("const x: number = 1;").length).toBeGreaterThan(0);
+  });
+
+  test("Bun.inspect default depth is unbounded (repo redact pins 32)", () => {
+    const deep = { a: { b: { c: { d: { e: { f: 1 } } } } } };
+    const insp = Bun.inspect(deep);
+    expect(insp).toContain("e:");
+    expect(insp).toContain("f:");
+  });
+
+  test("Bun.write returns byte count; Bun.hash is bigint; CryptoHasher digest is Buffer", async () => {
+    const w = await Bun.write("/tmp/bun-def-write-test.txt", "hello");
+    expect(w).toBe(5);
+    expect(typeof Bun.hash("x")).toBe("bigint");
+    const h = new Bun.CryptoHasher("sha256");
+    h.update("x");
+    const d = h.digest();
+    expect(d).toBeInstanceOf(Uint8Array);
+    expect(d.length).toBe(32);
+  });
+});

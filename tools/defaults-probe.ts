@@ -59,6 +59,27 @@ const rBody = await rR.text();
 sR.stop(true);
 check("D5 req.cookies routes-only (not fetch)", fBody === "cookies=false" && rBody === "cookies=true", "fetch=" + fBody + " routes=" + rBody);
 
+// D6: transpiler default loader is jsx (not ts) — §82
+const tDef = new Bun.Transpiler();
+let tsFails = false;
+try { tDef.transformSync("const x: number = 1;"); } catch { tsFails = true; }
+const tTs = new Bun.Transpiler({ loader: "ts" });
+const tsWorks = tTs.transformSync("const x: number = 1;").length > 0;
+check("D6 transpiler default loader jsx (ts syntax fails; explicit ts works)", tsFails && tsWorks, "tsFails=" + tsFails + " tsWorks=" + tsWorks);
+
+// D7: Bun.inspect default is UNBOUNDED depth (§82) — repo redact pins 32
+const deep = { a: { b: { c: { d: { e: { f: 1 } } } } } };
+const insp = Bun.inspect(deep);
+check("D7 inspect default shows all nested levels (unbounded)", insp.includes("e:") && insp.includes("f:"), "shows e=" + insp.includes("e:") + " f=" + insp.includes("f:"));
+
+// D8: write/hash/hasher defaults (§82)
+const w = await Bun.write("/tmp/bun-def-write.txt", "hello");
+check("D8 Bun.write returns bytes (number)", typeof w === "number" && w === 5, "w=" + w + " typeof=" + typeof w);
+check("D8b Bun.hash returns bigint", typeof Bun.hash("x") === "bigint", "typeof=" + typeof Bun.hash("x"));
+const h = new Bun.CryptoHasher("sha256"); h.update("x");
+const digest = h.digest();
+check("D8c CryptoHasher.digest Buffer 32 bytes", digest instanceof Uint8Array && digest.length === 32, "ctor=" + digest.constructor.name + " len=" + digest.length);
+
 console.log("---");
 const fails = results.filter((r) => !r.pass);
 console.log("defaults:probe — " + (results.length - fails.length) + "/" + results.length + " pass" + (fails.length ? " · FAIL: " + fails.map((f) => f.name).join(", ") : ""));
