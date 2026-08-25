@@ -49,7 +49,7 @@ check("P4 redis shape", typeof Bun.redis === "object" && typeof (Bun.redis as an
 try {
   const v = await withTimeout(Bun.secrets.get({ service: "com.kalshi-bot.probe", name: "definitely-missing" }), 5000, "secrets-get");
   check("P5 secrets.get object missing -> null", v === null || v === undefined, String(v));
-} catch (e) { check("P5 secrets.get object missing -> null", true, "throw:" + String((e as Error).message).slice(0, 60)); }
+} catch (e) { check("P5 secrets.get object missing -> null", false, "THREW (vault unavailable or behavior change): " + String((e as Error).message).slice(0, 60)); }
 let posErr = "no-throw";
 try { await (Bun.secrets.get as any)("com.kalshi-bot.probe", "definitely-missing"); } catch (e) { posErr = "throws"; }
 check("P5b secrets positional form works", posErr === "no-throw", posErr);

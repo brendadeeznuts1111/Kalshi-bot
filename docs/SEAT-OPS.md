@@ -330,7 +330,7 @@ bun run partner:toml -- --seed              # upsert (+ shows diff + env warn)
 bun run partner:toml -- --seed --strict-env # fail if secrets missing
 bun run partner:toml -- --export --out=config/partners.export.toml
 bun run partner:capacity
-# CI / pre-commit (auto when partner TOML paths staged — see tools/pre-commit.sh):
+# CI / pre-commit (auto when partner TOML paths staged — see tools/pre-commit.ts):
 bun run partner:toml:validate
 bun run partner:health
 bun run partner:health -- --strict-env    # exit 2 if secrets missing

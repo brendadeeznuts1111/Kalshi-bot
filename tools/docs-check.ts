@@ -100,6 +100,36 @@ for (const d of docs) {
   }
 }
 
+// File-pointer freshness: a (src|tools|scripts|tests)/... token that is
+// NOT a real repo-root file is either stale or intentional — the
+// intentional set is allowlisted so real drift fails the gate (§156).
+// Package-relative commands (cd <pkg> && bun src/...) are skipped.
+const INTENTIONAL_PATHS = new Set([
+  'src/lib/ansi-width.ts', // historical: replaced by Bun.stringWidth (§132)
+  'tests/lib/ansi-width.test.ts', // historical: removed with the module
+  'src/index.ts', // prose examples in the NOT-bugs classification list
+  'src/partner/domain.ts', // documented as moved to src/partner/execution/domain.ts
+  'src/research/meta-audit.ts', // documented as "no such file"
+  'src/run-watch.ts', // package-relative: alpha/tennis-game-model/src/run-watch.ts
+  'src/backtest.ts', // package-relative: alpha/tennis-game-model/src/backtest.ts
+  'tests/patterns.test.ts', // documented convention: tests live under tests/research/
+]);
+for (const d of docs) {
+  const md = await Bun.file(join(ROOT, d.path)).text();
+  const seen = new Set<string>();
+  const re = /\b((?:src|tools|scripts|tests)\/[A-Za-z0-9_./-]+\.(?:tsx?|jsonl?|json5?|toml|ya?ml|xml|sql|mdx?|html|jsx?|mjs|cjs|sh|css|png|svg|snap))/g;
+  for (const m of md.matchAll(re)) {
+    const p = m[1]!;
+    if (seen.has(p)) continue;
+    seen.add(p);
+    if (INTENTIONAL_PATHS.has(p)) continue;
+    if (!(await Bun.file(join(ROOT, p)).exists())) {
+      console.log('docs:check FAIL ' + d.path + ' missing file pointer: ' + p);
+      bad += 1;
+    }
+  }
+}
+
 // Section-number uniqueness: ## N. headings must be unique per doc —
 // duplicate numbers make §N pointers ambiguous (the §144-§151 renumbering
 // fixed 8 collisions from interleaved work).

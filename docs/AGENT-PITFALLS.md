@@ -5702,6 +5702,31 @@ another note.
   (44 -> 45 gates), package.json (metafile:probe), scripts/audit-bun-native.ts
   (SPAWN_KEEP_LIST), docs/BUN_API_COVERAGE.md + AGENT-PITFALLS header
   (44/44 -> 45/45). verify:contracts 45/45.
+## 156. Reprobe + pointer/contract hardening (2026-08-24)
+
+- REPROBE: full suite re-run — verify:contracts 45/45, docs:check 52/52,
+  docs:api 0 drift, breaking-audit ok, guard ok, typecheck 0. Nothing
+  drifted since the gates were pinned.
+- POOR CONTRACT FIXED: tools/net-probe.ts P5 (secrets.get missing ->
+  null) PASSED on exception (catch -> check(true)), masking vault or
+  behavior regressions — now a THROW FAILS the gate (the vault is
+  reachable in this environment, so the normal null path is what
+  passes).
+- POINTER SWEEP (file pointers in docs): 16 flags -> 2 REAL (fixed:
+  SEAT-OPS pre-commit.sh -> tools/pre-commit.ts; BUN_NATIVE
+  bun-doc-refs.ts -> tools/bun-docs-index.ts). The other 14 were
+  intentional (documented absences/moves: ansi-width replaced by
+  Bun.stringWidth, partner/domain moved, meta-audit no-such-file,
+  flat tests/patterns.test.ts convention), prose examples (src/index.ts
+  NOT-bugs list), package-relative commands (alpha/tennis-game-model
+  src/run-watch.ts + src/backtest.ts — verified they exist), or regex
+  truncation (.jsonl/.ts.snap).
+- ENFORCEMENT: docs:check now FAILS on missing repo-root file pointers,
+  with an INTENTIONAL_PATHS allowlist for the deliberate cases (§156)
+  — stale file references can no longer accumulate.
+- Artifacts: tools/net-probe.ts (P5 hardened), docs/SEAT-OPS.md,
+  docs/BUN_NATIVE.md (pointers), tools/docs-check.ts (pointer rule).
+  verify:contracts 45/45.
 - FILENAME BEHAVIOR (pasted --metafile-md claims vs 1.4.0, gate P9-P13):
   a bare --metafile-md writes meta.md to the PROCESS CWD, NOT the
   --outdir (the pasted claim's location is wrong); --metafile-md=<path>

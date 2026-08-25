@@ -24,7 +24,7 @@ Top-level reference modules this repo uses most:
 | Globals | [/reference/globals](https://bun.com/reference/globals) | — |
 | Node compat | [/reference/node/…](https://bun.com/reference) (`fs`, `util`, `zlib`, …) | Node docs / Bun notes |
 
-`@see` table: [Canonical `@see` links](#canonical-see-links) (guides primary; reference dual-link for symbols). Standalone repo; monorepo `bun tools/bun-doc-refs.ts` is optional.
+`@see` table: [Canonical `@see` links](#canonical-see-links) (guides primary; reference dual-link for symbols). Standalone repo; monorepo `bun tools/bun-docs-index.ts` is optional.
 
 Deep dive: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns)
 
