@@ -75,6 +75,7 @@ export function runBreakingAudit(root: string): BreakingFinding[] {
     '**/tools/security-probe.ts',
     '**/src/research/security-page.ts',
     '**/tools/serve-tls-probe.ts', // TLS probe with a local throwaway self-signed cert (§123)
+    '**/tools/h2-probe.ts', // h2 multiplexing probe against a throwaway loopback cert (§154)
   ];
 
   // 1. res.writeHeader removed (v1.4): any usage would crash at runtime.

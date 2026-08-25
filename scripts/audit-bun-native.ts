@@ -253,6 +253,7 @@ export const SPAWN_KEEP_LIST = new Set([
   "tools/design-check.ts", // async Bun.spawn to build the bundle for the size gate
   "tools/docs-check.ts", // bun run @bun-run doc examples (execution pass, §135)
   "tools/node-compat-probe.ts", // deliberately probes node:child_process spawnSync + node:net (§140)
+  "tools/h2-probe.ts", // openssl cert-gen for the h2 loopback TLS probe (§154)
   "src/research/serve.ts", // release-check action: Bun.spawn bun:release-watch --check (pipe capture)
   "src/institutions/signal-pipeline.ts", // runBunGate def: sub-second offline dep gates (dedupe/prune/audit)
   "src/lib/run-bun.ts", // runBunCommand: the shared Bun.which+spawn gate runner (pipe capture; §54)

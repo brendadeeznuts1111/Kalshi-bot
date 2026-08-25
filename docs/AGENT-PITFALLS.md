@@ -9,7 +9,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 > The headings were renumbered to §1-§11 on 2026-08-23; the counters were kept
 > so historical notes stay traceable.
 >
-> **Current contract status: verify:contracts 43/43** (see docs/BUN_API_COVERAGE.md
+> **Current contract status: verify:contracts 44/44** (see docs/BUN_API_COVERAGE.md
 > for the full matrix). `verify:contracts N/N` lines inside older sections are
 > HISTORICAL (each records its era) — docs:check enforces that only this header
 > and non-pitfall docs may reference the current count.
@@ -5656,6 +5656,26 @@ another note.
 - Artifacts: tools/sqlite-deep-probe.ts (new, gate #43), tools/verify-contracts.ts
   (42 -> 43 gates), package.json (sqlite-deep:probe), docs/BUN_API_COVERAGE.md
   + AGENT-PITFALLS header (42/42 -> 43/43). verify:contracts 43/43.
+## 154. HTTP/2 fetch multiplexing + serve protocol semantics (2026-08-24)
+
+- tools/h2-probe.ts (gate #44, 5/5, loopback TLS via throwaway openssl
+  cert — SPAWN_KEEP_LIST + TLS_OVERRIDE_ALLOWLIST entries added).
+- H2 FETCH MULTIPLEXING (extends §124/§125): 8 CONCURRENT
+  protocol:"http2" fetches against a node:http2 server use ONE TCP
+  connection with 8 concurrent streams and ~1 round-trip elapsed
+  (156ms vs ~1200ms serial — verified with a 150ms-delayed server).
+  The research pipeline's GitHub traffic can ride h2 with full
+  multiplexing (connection-count pressure drops 8x on concurrent
+  bursts).
+- SERVE PROTOCOL: HEAD requests get an EMPTY body with the real
+  Content-Length (12 for a 12-byte body) and all headers — correct
+  HEAD semantics; streaming responses are transfer-encoding: chunked
+  with NO content-length; an Expect: 100-continue request header
+  reaches the handler unchanged (Bun.serve does not reject it).
+- Artifacts: tools/h2-probe.ts (new, gate #44), tools/verify-contracts.ts
+  (43 -> 44 gates), package.json (h2:probe), scripts/audit-bun-native.ts
+  + src/lib/breaking-audit.ts (allowlists), docs/BUN_API_COVERAGE.md +
+  AGENT-PITFALLS header (43/43 -> 44/44). verify:contracts 44/44.
 - GitHub recomputes the pie on the default branch after push (a few
   minutes). Verified with git check-attr.
 - Artifacts: .gitattributes (new). verify:contracts 38/38 (unchanged).
