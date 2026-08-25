@@ -4862,6 +4862,33 @@ another note.
   HTMLImageElement shadows it otherwise (tsc + runtime both misresolve).
 - Artifacts: tools/image-probe.ts (P15-P22, 35/35), this section.
   verify:contracts 26/26 (image:probe count grew within its gate).
+## 121. node:quic listen() pinned non-functional — deep QUIC probe (2026-08-24)
+
+- §120 verified the node:quic MODULE surface. Deeper probe of the
+  actual API: listen() is NOT functional on 1.4.0:
+  - listen({}) throws 'the callback argument must be of type function'
+  - listen(cb) RETURNS and the script CONTINUES (the marker prints),
+    then the process ABORTS asynchronously at internal:quic/quic:2811
+    with exit 1 — a hard crash, not a catchable error. A QUIC server
+    cannot be started; a full round-trip is impossible.
+  - connect({}) accepts an options object (no throw) — but no server
+    can answer, so no handshake.
+  - The blog's 'the full experimental Node v26 API is covered: listen()
+    and connect()' is OVERSTATED for the listen path on this runtime.
+- P8 PINS the crash as a NEGATIVE-BEHAVIOR gate check: the probe spawns
+  a child that calls listen(cb), asserts the child exits 1, with a 5s
+  timeout guard so a future FIXED listen (which would keep the process
+  alive) cannot hang verify:contracts — instead the check fails and
+  demands re-probing. This turns a broken vendor claim into a tracked
+  runtime fact that self-invalidates when Bun fixes it.
+- Probe nuance recorded: the crash is ASYNC — the child prints its
+  marker BEFORE aborting, so 'did the marker print?' is the WRONG
+  assertion; 'did the process exit 1?' is right.
+- bun:apis-probe P5-P8 -> 8/8 (gate #26). Keep-list +1 (P8 spawns).
+- Artifacts: tools/bun-apis-probe.ts (P8), tests/lib/bun-apis-probe.
+  test.ts (8/8), scripts/audit-bun-native.ts (keep-list), this section.
+  verify:contracts 26/26.
+
 ## 120. Blog anchor 'replay / quic' probed — node:quic + serve http3 verified (2026-08-24)
 
 - The URL anchor (replay / newly passing tests / quic) points at the

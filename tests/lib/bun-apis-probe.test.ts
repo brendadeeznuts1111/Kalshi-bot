@@ -5,7 +5,7 @@ import { join } from "node:path";
 const ROOT = join(import.meta.dir, "../..");
 
 describe("bun:apis-probe (§115)", () => {
-  test("all 7 API-surface checks verified", () => {
+  test("all 8 API-surface checks verified", () => {
     const proc = Bun.spawnSync(["bun", "tools/bun-apis-probe.ts"], {
       cwd: ROOT,
       stdout: "pipe",
@@ -13,7 +13,7 @@ describe("bun:apis-probe (§115)", () => {
     });
     expect(proc.exitCode).toBe(0);
     const out = (proc.stdout?.toString() ?? "") + (proc.stderr?.toString() ?? "");
-    expect(out).toContain("7/7 checks");
+    expect(out).toContain("8/8 checks");
     expect(out).not.toContain("FAIL");
   });
 });
