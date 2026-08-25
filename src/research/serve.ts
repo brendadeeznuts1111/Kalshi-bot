@@ -1865,6 +1865,30 @@ export function createResearchServer(options: ServeOptions = {}) {
         return rateLimiter(req, async () => json(await signalsNow(), 200, designCorsHeaders()));
       }
 
+      // Liveness/readiness: aggregate signal health into a boolean + counts.
+      // 200 when no 'bad' signal (warn = degraded but serving), 503 when a
+      // bad signal exists (a gate failed). Reuses the same 30s signals cache;
+      // rate-limited + CORS like the rest. Uptime + bunVersion for monitors.
+      if (url.pathname === "/status" || url.pathname === "/healthz") {
+        return rateLimiter(req, async () => {
+          const signals = await signalsNow();
+          const counts = { ok: 0, warn: 0, bad: 0, info: 0 };
+          for (const s of signals) counts[s.severity] += 1;
+          const ok = counts.bad === 0;
+          const body = {
+            ok,
+            status: ok ? "ok" : "degraded",
+            bunVersion: Bun.version,
+            uptimeMs: Math.round(process.uptime() * 1000),
+            checkedAt: new Date().toISOString(),
+            signals: signals.length,
+            channels: counts,
+            failing: signals.filter((s) => s.severity === "bad").map((s) => ({ id: s.id, title: s.title })),
+          };
+          return json(body, ok ? 200 : 503, designCorsHeaders());
+        });
+      }
+
       // Actions: purge brand cache / run deps gates / regenerate card /
       // refresh release check — POST, CSRF + rate limited.
       if (url.pathname.startsWith("/api/signals/actions/") && req.method === "POST") {

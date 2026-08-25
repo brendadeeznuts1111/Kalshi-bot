@@ -3456,3 +3456,38 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
 - Note: inventory's massey signal still pushes action 'deps-check' as a
   generic re-check placeholder (runs deps gates, not massey) — existing
   quirk, not dead (handler exists), left as-is.
+
+## 75. Remaining-touchpoints doc — table WRONG (all already integrated) + /status endpoint (2026-08-24)
+
+- A pasted 'remaining Bun 1.4 touchpoints' doc claimed a status table with
+  six 'Not yet' items. GROUNDED — ALL SIX are already integrated (the
+  table was written without checking this repo):
+  - Bun.cron: signal-pipeline, live-channel, scheduled, match-liquidity-
+    pipeline, tennis-lane-constants, live-page (6 files).
+  - Bun.markdown: the content pipeline + all 48 docs + posts via
+    Bun.markdown.html (§38); map/live/pruning/observability pages.
+  - Bun.WebView: massey html/fetch (headless render fallback), §12
+    screenshots.
+  - --parallel: the test script is bun test --parallel already.
+  - bun prune: deps:prune + deps:prune:prod + deps:check gate.
+  - HTTP/3: probed + documented — Bun.serve({http3:true, tls}) verified
+    to start (bun-v1.3.14-catalog rows 6-7); my probe confirmed TLS is
+    required.
+- TWO FABRICATED APIs in the doc example code (probe-verified):
+  1. Bun.WebView.launch({headless}) DOES NOT EXIST (.launch undefined) —
+     the whole puppeteer-style newPage/goto/screenshot block is invented;
+     the real API is new Bun.WebView (repo uses it).
+  2. Bun.markdown.render('# Hello **world**') returns PLAIN TEXT
+     ('Hello world'), NOT HTML — render is the callback API (§38); HTML
+     requires Bun.markdown.html. The doc claims render replaces marked/
+     remark — wrong.
+- Verified doc-correct: process.versions.node = 26.3.0, Bun.JSON5.parse
+  unquoted+single-quote sample, bun run --parallel flag, Bun.Terminal/
+  mmap/redis/randomUUIDv7 all exist.
+- NEW: /status + /healthz liveness/readiness endpoint (user asked 'do we
+  have a status api'). Aggregates the existing 30s signal cache: 200 when
+  no bad signal, 503 when a gate failed. Body: {ok, status, bunVersion,
+  uptimeMs, checkedAt, signals, channels:{ok,warn,bad,info}, failing[]}.
+  Rate-limited + CORS like the rest. Tests: tests/lib/status-endpoint.
+  test.ts (2 tests). This was the ONE genuinely-missing, consumer-grounded
+  piece (external monitors need a boolean 200/5xx).
