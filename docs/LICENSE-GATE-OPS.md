@@ -15,6 +15,27 @@ exemption decisions.
   policy edit fails the COMMIT if the license is not permissive or not
   exempted. Everything else (guard, typecheck, tests, glossary, breaking-
   audit, deps:check, docs:check, ...) runs as before.
+## Operating rhythm (the four touchpoints)
+
+- WEEKLY (or pre-release): `bun run audit:overlay:update` — the one
+  network call in the system; the gate itself stays offline. Then run
+  `bun run licenses:gate` and read the human output for new `warn
+  advisory` lines.
+- NEW PROD DEPENDENCY: `bun run licenses:gate --json` to preview the
+  verdict. If blocked, add an exemption (name/license/version scope,
+  `expires`, `remediation`) to config/licenses-allowlist.json — never
+  patch the TypeScript.
+- BEFORE A MAJOR RELEASE: `bun run licenses:sbom` and review the diff
+  printed to STDOUT (added / removed / changed lines). The file
+  .data/licenses-sbom.json holds the SNAPSHOT only — it has no
+  added/removed/changed arrays, and `git diff` on it shows little more
+  than generatedAt churn. The diff you want is the gate's own output.
+- EXEMPTION EXPIRY: the gate fails with an explicit
+  "Action: <remediation>" hint. Re-evaluate the vendor/package, then
+  remove the exemption (a license-scoped one drops itself when a real
+  license appears) or extend `expires` with a fresh note — never
+  silently re-approve.
+
 - Full merge proof: `bun run check` (same as `bun run bun:ci`) runs all
   17 verify:contracts gates every time — this is the authority; the
   pre-commit hook is the fast subset.

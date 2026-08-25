@@ -4120,6 +4120,24 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
   allowed list + error message), tests/lib/signal-docs.test.ts
   (licenses-health, all-five ok, title match), .data/licenses-state.json
   (initial snapshot). verify:contracts stays 17/17.
+## 98. The SBOM-diff misconception resurfaced (2026-08-24)
+
+- A condensed operator's rhythm again claimed "review the diff in
+  .data/licenses-sbom.json" — the SAME error §95 item 5 corrected.
+  Re-probed: the file has ZERO added/removed/changed keys; the diff is
+  printed to STDOUT by `bun run licenses:sbom`; `git diff` on the
+  snapshot shows only generatedAt churn.
+- WHY IT KEEPS RESURFACING: the command name (licenses:sbom) + a file
+  existing invites 'the diff is in the file'. The fix that sticks is the
+  corrected wording living in the OPS doc's operating-rhythm section —
+  the answer is one file away instead of a chat artifact.
+- ALSO CAUGHT: the committed .data/licenses-sbom.json predated v2.2's
+  expires/expiresInDays verdict fields — regenerated + committed so the
+  snapshot matches the current schema.
+- Artifacts: docs/LICENSE-GATE-OPS.md (operating rhythm section),
+  .data/licenses-sbom.json (schema-fresh snapshot). verify:contracts
+  stays 17/17.
+
 
 
 
