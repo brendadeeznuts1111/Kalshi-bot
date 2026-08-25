@@ -1,0 +1,46 @@
+# Design Budget PR comment.
+#
+# INACTIVE while hosted runners are billing-blocked (AGENTS.md: GitHub
+# Actions is a manual diagnostic only; local `bun run bun:ci` is merge
+# authority). This workflow activates the day hosted runners return: on
+# every pull_request it runs design:build + design:report --pr and posts
+# the budget summary as a PR comment. Until then, run manually:
+#   bun run design:build && bun run design:report -- --pr=<N>
+name: design budget comment (on hold)
+
+on:
+  pull_request:
+    paths:
+      - 'src/institutions/design-tokens.ts'
+      - 'src/institutions/hq-ui.ts'
+      - 'src/lib/color/**'
+      - 'src/research/hq-app/**'
+      - 'src/research/design-page.ts'
+      - 'src/research/trend-page.ts'
+      - 'src/partner/dashboard-data.ts'
+      - 'scripts/build-design-system.ts'
+      - 'tools/design-check.ts'
+      - 'tools/design-budget-report.ts'
+      - 'src/lib/design-budget.ts'
+  workflow_dispatch:
+
+jobs:
+  budget-comment:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.4.0'
+      - name: Install
+        run: bun install --frozen-lockfile
+      - name: Build bundles + metafiles
+        run: bun run design:build
+      - name: Post budget comment
+        run: bun run design:report -- --pr=${{ github.event.pull_request.number }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
