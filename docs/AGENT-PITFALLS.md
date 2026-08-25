@@ -3156,3 +3156,28 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
 - Revisit ONLY if the docs adopt the assertion pattern deliberately
   (e.g. a new API guide with runnable examples) — then build the gate
   on real signal.
+
+## 65. Docs vs source alignment — src-ref gate (2026-08-24)
+
+- Extends docs:integrity (tools/docs-integrity.ts) with a SRC-REFS section
+  (gate): every `src/...`-rooted path reference in docs (prose, tables,
+  code) must resolve against the source tree. 247 unique paths scanned;
+  exit 1 on stale refs.
+- Grounding probe classified 13 misses:
+  - 2 GENUINE stale refs (fixed):
+    - `src/partner/domain.ts` — moved to src/partner/execution/domain.ts
+      in commit 89ef6a7 ("hard-cut naming shims"); AUTHORIZED_EXECUTION_
+      REMAINING_WORK governance TODO still named the old path.
+    - `src/research/meta-audit.ts` — no such file; the meta contract is
+      src/research/player-profile-meta.ts (Enrichment Lock metaAudit lives
+      in hq-view.ts). CHEBNET_GRAPH_DOMINANCE spec (proposed) named a
+      stale filename twice.
+  - NOT bugs (classified): src/... / src/tools / src/title / src/index.ts
+    (prose artifacts), alpha-relative `cd <pkg> && bun src/run-watch.ts`
+    (resolves inside the alpha package — files exist there), and
+    src/lib/ansi-width.ts (AGENT-PITFALLS historical narrative: adopted,
+    then deleted).
+- Design: skips fenced-code lines with `cd <pkg> &&` (package-relative),
+  keeps a PROSE_SRC_ARTIFACTS allowlist, gate-fails everything else.
+- Artifacts: tools/docs-integrity.ts SRC-REFS section; 10/10 gates still
+  green.

@@ -136,8 +136,42 @@ async function main() {
     }
   }
 
+  // ─── SRC-REFS (gate — docs vs source alignment, §65) ─────────────
+  // Every src/-rooted path reference (prose, tables, code) must resolve
+  // against the source tree. Prose artifacts and cd-pkg-relative refs
+  // are classified, not failed.
+  const srcRe = /(?:\b|[\`"\/\(])(?:(\.\.?)\/)?(src\/[A-Za-z0-9_\-./]+\.(?:ts|tsx|js|jsx))/g;
+  // Historical narrative / alpha-relative refs (§65): domain.ts moved to
+  // execution/domain.ts (89ef6a7); meta-audit.ts is player-profile-meta.ts;
+  // run-watch/backtest resolve inside alpha/tennis-game-model after cd.
+  const PROSE_SRC_ARTIFACTS = new Set(["src/tools", "src/...", "src/title", "src/index.ts", "src/runtime/api/", "src/tools/scripts/tests", "src/institutions/event-store/match-liquidity", "src/lib/ansi-width.ts", "src/partner/domain.ts", "src/research/meta-audit.ts", "src/run-watch.ts", "src/backtest.ts"]);
+  const srcProblems: LinkProblem[] = [];
+  let srcChecked = 0;
+  for (const f of docs) {
+    const abs = resolve(join(ROOT, "docs", f));
+    const lines = readFileSync(abs, "utf8").split("\n");
+    let inFence = false;
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i]!;
+      if (/^\s*(```|~~~)/.test(line)) { inFence = !inFence; continue; }
+      for (const m of line.matchAll(srcRe)) {
+        const p = m[2]!;
+        srcChecked++;
+        if (PROSE_SRC_ARTIFACTS.has(p)) continue;
+        if (/cd\s+[A-Za-z0-9_\-./]+\s*&&/.test(line)) continue; // package-relative
+        const target = join(ROOT, p);
+        if (!existsSync(target)) {
+          srcProblems.push({ file: f, line: i + 1, kind: "src-ref", href: m[0]!, detail: "no such source file: " + p });
+        }
+      }
+    }
+  }
   // ─── report ──────────────────────────────────────────────────────
   let fails = 0;
+  for (const p of srcProblems) {
+    console.log("FAIL " + p.file + ":" + p.line + " [src-ref] " + p.href + " — " + p.detail);
+    fails++;
+  }
   console.log("--- LINKS: " + crossChecked + " cross-file + " + sameChecked + " same-anchor checked");
   for (const p of linkProblems) {
     console.log("FAIL " + p.file + ":" + p.line + " [" + p.kind + "] " + p.href + " — " + p.detail);
@@ -148,7 +182,7 @@ async function main() {
     console.log("report " + p.file + ":" + p.line + " " + p.spec + " — " + p.detail);
   }
   console.log("---");
-  console.log("docs:integrity — " + (linkProblems.length ? String(linkProblems.length) + " broken links (gate) " : "all links ok ") + "· " + importProblems.length + " unresolved imports (reported)");
+  console.log("docs:integrity — " + (linkProblems.length ? String(linkProblems.length) + " broken links " : "all links ok ") + "· " + importProblems.length + " unresolved imports (reported) · " + srcProblems.length + " stale src refs (gate)");
   process.exit(fails === 0 ? 0 : 1);
 }
 

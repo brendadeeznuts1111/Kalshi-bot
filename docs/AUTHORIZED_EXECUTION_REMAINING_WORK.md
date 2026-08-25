@@ -373,7 +373,7 @@ change flags automatically.
 Owner: documentation/governance agent after each behavior lands.
 
 - Keep `docs/AUTHORIZED_EXECUTION.md`, `docs/SEAT-OPS.md` (stub: `PARTNER-DOMAIN.md`), and
-  `src/partner/domain.ts` aligned with actual maturity.
+  `src/partner/execution/domain.ts` aligned with actual maturity.
 - Separate Kalshi authorized execution from Fantasy402 HAR-only status.
 - Add lifecycle and breaker recovery diagrams plus operator runbooks.
 - Verify every documented command exists.

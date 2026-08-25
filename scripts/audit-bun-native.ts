@@ -264,6 +264,7 @@ export const SPAWN_KEEP_LIST = new Set([
   "tools/plugins-probe.ts", // probes runtime build.module() via --preload (child bun run, pipe capture)
   "tests/lib/plugins-probe.test.ts", // same probe: runtime build.module() via child bun run (pipe capture)
   "tests/lib/docs-api.test.ts", // runs docs:api CLI with STRICT=1 env (pipe capture)
+  "tests/lib/docs-integrity.test.ts", // runs docs:integrity CLI for src-ref gate (pipe capture)
 ]);
 
 /** Flag Bun.spawn / Bun.spawnSync call sites in files outside SPAWN_KEEP_LIST. */

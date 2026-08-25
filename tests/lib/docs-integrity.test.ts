@@ -37,3 +37,31 @@ describe("docs import resolution (§63)", () => {
     expect(Bun.file(join(ROOT, "x.md")).exists()).resolves.toBe(false);
   });
 });
+
+describe("docs src-ref alignment (§65)", () => {
+  test("execution/domain.ts is the live partner-domain file (moved in 89ef6a7)", () => {
+    expect(Bun.file(join(ROOT, "src/partner/execution/domain.ts")).exists()).resolves.toBe(true);
+  });
+
+  test("player-profile-meta.ts is the meta contract (meta-audit.ts never existed)", () => {
+    expect(Bun.file(join(ROOT, "src/research/player-profile-meta.ts")).exists()).resolves.toBe(true);
+    expect(Bun.file(join(ROOT, "src/research/meta-audit.ts")).exists()).resolves.toBe(false);
+  });
+
+  test("alpha src refs resolve inside alpha/tennis-game-model (cd-package-relative)", () => {
+    expect(Bun.file(join(ROOT, "alpha/tennis-game-model/src/run-watch.ts")).exists()).resolves.toBe(true);
+    expect(Bun.file(join(ROOT, "alpha/tennis-game-model/src/backtest.ts")).exists()).resolves.toBe(true);
+  });
+
+  test("docs:integrity CLI exits 0 (no stale src refs on current docs)", async () => {
+    const proc = Bun.spawn(["bun", "run", "docs:integrity"], {
+      cwd: process.cwd(),
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const out = await new Response(proc.stdout).text();
+    const exit = await proc.exited;
+    expect(exit).toBe(0);
+    expect(out).toContain("0 stale src refs");
+  });
+});

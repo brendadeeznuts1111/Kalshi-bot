@@ -1,7 +1,7 @@
 # ChebNet Graph Dominance — Architecture Spec
 
 Status: proposed · 2026-07-29
-Depends on: Enrichment Lock (`src/research/meta-audit.ts`), event store SSOT
+Depends on: Enrichment Lock (`src/research/player-profile-meta.ts`), event store SSOT
 
 ## Intent
 
@@ -77,7 +77,7 @@ a fixed GCN (K=1 low-pass) cannot express that distinction.
 
 ## Integration points
 
-- `src/research/meta-audit.ts` — eligibility source (already live).
+- `src/research/player-profile-meta.ts` — eligibility source (already live).
 - `src/institutions/event-store/` — edges from events/resolutions tables.
 - New: `alpha/tennis-graph-chebnet/` program (program.json, shadow log,
   gates) following the existing alpha-program archetype; signals carry the
