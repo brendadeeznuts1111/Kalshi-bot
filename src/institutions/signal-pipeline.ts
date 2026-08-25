@@ -296,14 +296,14 @@ export async function collectInventory(root: string, signals: Signal[]): Promise
   const ticks = sqlCount(evDb, 'SELECT COUNT(*) as n FROM book_ticks');
 
   const masseyOk = masseySports !== null && masseySports > 0;
+  const masseySportsList = sqlCount(masseyDb, 'SELECT GROUP_CONCAT(DISTINCT sport, " · ") as n FROM massey_ratings');
   push({
     id: 'inv-massey',
     channel: 'inventory',
     severity: masseyOk ? 'ok' : 'warn',
     title: 'massey rankings: ' + (masseySports ?? 0) + ' sport(s), ' + (masseyRatings ?? 0) + ' ratings',
-    detail: masseyOk ? 'atp/wta tennis + volleyball divisions — NBA/NFL/MLB/NHL/CFB/soccer NOT synced (gap)' : 'massey.db missing — run bun run massey:sync',
+    detail: masseyOk ? (masseySportsList ?? '') + ' — synced via massey:sync' : 'massey.db missing — run bun run massey:sync',
     source: 'research/cache/massey.db',
-    action: 'deps-check', // generic re-check placeholder — remove? no: keep actionable-free
   });
   push({
     id: 'inv-events',

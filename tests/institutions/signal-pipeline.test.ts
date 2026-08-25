@@ -50,7 +50,9 @@ describe("signal pipeline (multi-source dashboard)", () => {
     expect(titles).toContain("patterns");
     expect(titles).toContain("signals across");
     const massey = inv.find((s) => s.id === "inv-massey");
-    expect(massey!.detail).toContain("NBA");
+    // Detail is now dynamic: the synced sport-code list + provenance.
+    expect(massey!.detail).toMatch(/synced via massey:sync/);
+    expect(massey!.detail.length).toBeGreaterThan(10);
   });
 
   test("releases channel cross-checks RSS and GitHub atom", async () => {
