@@ -5235,6 +5235,44 @@ another note.
 - Artifacts: tools/html-probe.ts (new, gate #30), tools/verify-contracts.ts
   (29 -> 30 gates), package.json (html:probe script). verify:contracts
   30/30.
+## 130. Bundler internals — splitting, macros, env inlining, plugins (2026-08-24)
+
+- VERIFIED (tools/build-deep-probe.ts, gate #31, 10/10, fully offline
+  + self-contained; fixtures generated at runtime into scratch/build-deep).
+- SPLITTING: splitting: true with multiple entrypoints emitting one
+  shared chunk (chunk-<hash>.js) containing the shared module ONCE;
+  without splitting the shared code is duplicated into each entry
+  output. Docs (bundler/index) claim correct.
+- MACROS: import { fn } from "./m.ts" with { type: "macro" } — the
+  FUNCTION CALL is evaluated at bundle time and the result inlined as a
+  literal (var r = "MAGIC_7_191337";); the macro source is absent from
+  the bundle (no Math.random, no magic() call). The assert { type:
+  "macro" } form behaves identically. Docs (bundler/macros) correct.
+- CORRECTION (P2b): macro CONST exports are NOT inlined. A bundle using
+  an imported macro const (TABLE.b) keeps the reference with NO
+  definition — the build succeeds but the output throws ReferenceError:
+  TABLE is not defined at runtime (same in source-run). Only macro
+  FUNCTION CALLS are replaced; consts must be returned from a function.
+- ENV INLINING: env: "PUBLIC_*" replaces literal process.env.FOO refs
+  at build time (prefix-matched); non-matched refs stay process.env.*
+  at runtime. VERIFIED via CLI (--env=PUBLIC_*) and API with the var in
+  the process STARTUP environment.
+- CORRECTION (P3, pinned): Bun.build env inlining reads the process
+  STARTUP environment — process.env.X = ... mutations made at runtime
+  are NOT seen by the inliner (output keeps process.env.FOO). A future
+  fix would flip the gate.
+- PLUGINS: onStart/onEnd fire once per build; onResolve + onLoad with
+  namespace filters implement virtual modules (import { V } from
+  "virt:data") — loader: "js" + contents returned by onLoad are bundled
+  and the virtual source is absent from output. Plugin API is a subset
+  of esbuild's (docs note pluginData/pluginName unsupported).
+- Repo note: macros could run the design-system meta pipeline pieces at
+  bundle time (no runtime cost), but macro consts are a trap — return
+  values from functions only.
+- Artifacts: tools/build-deep-probe.ts (new, gate #31), tools/verify-contracts.ts
+  (30 -> 31 gates), package.json (build-deep:probe script). verify:contracts
+  31/31.
+
 
 
 

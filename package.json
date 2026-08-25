@@ -263,6 +263,7 @@
     "serve-tls:probe": "bun tools/serve-tls-probe.ts",
     "shell:probe": "bun tools/shell-probe.ts",
     "html:probe": "bun tools/html-probe.ts",
+    "build-deep:probe": "bun tools/build-deep-probe.ts",
     "routes:check": "bun tools/routes-check.ts",
     "bun:coverage-audit": "bun tools/bun-coverage-audit.ts",
     "research:resume": "bun tools/research-resume.ts",

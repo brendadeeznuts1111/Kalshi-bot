@@ -44,6 +44,7 @@ const gates = [
   ['serve-tls:probe'],
   ['shell:probe'],
   ['html:probe'],
+  ['build-deep:probe'],
 ] as const;
 
 const GATE_ENV: Record<string, Record<string, string>> = {

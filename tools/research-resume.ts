@@ -3,9 +3,9 @@
  * research:resume — run a research dimension to COMPLETION across
  * code_search windows, automatically.
  *
- * The pipeline's WAIT=1 multi-wave gives up when the circuit trips; with
- * global hits persisted (§129) a re-run costs ~zero code_search, so a
- * simple run->wait-for-window->rerun loop is cheap and converges.
+ * The pipeline's WAIT=1 multi-wave can give up when the circuit trips;
+ * scoped inspect results persist in api_cache (repo+pushed_at), so each
+ * attempt only fetches the REMAINING repos — the loop converges (§131).
  *
  *   bun run research:resume -- --dimension=sports-nba [-- --min-stars=5]
  *
@@ -21,11 +21,10 @@ const args = Bun.argv.slice(2);
 const dimension = args.find((a) => a.startsWith("--dimension="))?.split("=")[1] ?? "all";
 
 async function runResearch(): Promise<{ ok: boolean; output: string }> {
-  // Bun.$ (repo doctrine, docs/BUN_SHELL.md) — not Bun.spawn.
-  const p = await $`bun run research -- ${args}`.env({ ...Bun.env, GITHUB_RATE_LIMIT_WAIT: "1" }).nothrow().quiet();
-  return { ok: p.exitCode === 0, output: p.stdout.toString().trim() };
+  // Bun.$ (repo doctrine); quiet() would DISCARD the output we classify.
+  const res = await $`bun run research -- ${args}`.env({ ...Bun.env, GITHUB_RATE_LIMIT_WAIT: "1" }).nothrow();
+  return { ok: res.exitCode === 0, output: (String(res.stdout ?? "") + "\n" + String(res.stderr ?? "")).trim() };
 }
-
 function isRateLimitBlocked(output: string): boolean {
   return /rate limit|code_search|blocked/i.test(output);
 }
