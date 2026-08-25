@@ -4832,6 +4832,37 @@ another note.
   keep-alive via MANUALLY tracked sockets (server.connections absent).
 - Artifacts: tools/ws-probe.ts (P8, 8/8), tests/lib/ws-probe.test.ts
   (8/8), this section. verify:contracts 26/26.
+## 117. Bun.Image API correction probed — every claim VERIFIED, probe extended (2026-08-24)
+
+- A pasted Bun.Image API correction (per-format encode methods,
+  constructors, metadata, modulate, flip/flop, extension-inferred format)
+  was probed claim-by-claim against 1.4.0 (macOS arm64). ALL VERIFIED;
+  image-probe extended P15-P22 -> 35/35:
+  - constructors: new Image(path) and new Image(bytes) both work;
+    Bun.file().image() already verified (§70)
+  - metadata {width,height,format}: format reflects the SOURCE (the
+    correction's 'jpeg' example was their input; the fixture is png)
+  - resize(width) single-arg keeps aspect (2x1 -> 10x5)
+  - rotate enforces multiples of 90 — rotate(45) throws 'rotate: only
+    multiples of 90 are supported'
+  - flip (vertical) + flop (horizontal) both exist
+  - modulate({ brightness, saturation }) works (0 = greyscale)
+  - per-format encode: .jpeg -> ffd8 magic; .png compressionLevel +
+    palette/colors/dither accepted; .webp lossless -> RIFF-WEBP-VP8L,
+    .webp quality -> VP8 (codec chunk distinguishes)
+  - EXTENSION-INFERRED FORMAT: write(path) with NO encode method uses
+    the destination extension (.jpg -> JPEG bytes) — verified
+  - terminals bytes/buffer/blob/toBase64/dataurl/write already locked
+    (§70)
+- PROBE-SIDE BUG RECORDED: comparing bytes via Uint8Array.toString()
+  gives comma-joined numbers ('82,73,70,70'), not text — my first run
+  reported 'no-riff' on a VALID RIFF-WEBP-VP8L. Use TextDecoder for
+  magic-byte checks.
+- ALSO: `Image` must be imported from 'bun' — the DOM global
+  HTMLImageElement shadows it otherwise (tsc + runtime both misresolve).
+- Artifacts: tools/image-probe.ts (P15-P22, 35/35), this section.
+  verify:contracts 26/26 (image:probe count grew within its gate).
+
 
 
 

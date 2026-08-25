@@ -24,7 +24,8 @@
  *
  * @see docs/AGENT-PITFALLS.md §70
  */
-import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, writeFileSync, readFileSync, rmSync } from "node:fs";
+import { Image } from "bun";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -134,6 +135,48 @@ check("P14b resize(null, h) THROWS (doc correction)", nullThrew.startsWith("THRE
 let undefThrew = "no-throw";
 try { const f = join(dir, "undef.png"); await Bun.file(SRC).image().resize(undefined as any, 60).png().write(f); } catch (e) { undefThrew = "THREW " + (e as Error).constructor.name; }
 check("P14c resize(undefined, h) THROWS (doc correction)", undefThrew.startsWith("THREW"), undefThrew);
+
+
+// ── §117 additions: pasted API correction fully verified ─────────────
+
+// P15: constructors — new Image(path) and new Image(bytes).
+try { await new Image(SRC).bytes(); check("P15a new Image(path) constructor", true); } catch (e) { check("P15a new Image(path) constructor", false, String(e)); }
+try { await new Image(readFileSync(SRC) as unknown as Uint8Array).bytes(); check("P15b new Image(bytes) constructor", true); } catch (e) { check("P15b new Image(bytes) constructor", false, String(e)); }
+
+// P16: metadata format value reflects the source.
+const metaFmt = (await new Image(SRC).metadata()).format;
+check("P16 metadata format reflects source", metaFmt === "png", metaFmt);
+
+// P17: resize single-arg keeps aspect (2x1 -> 10x5).
+const rs = await new Image(SRC).resize(10).bytes();
+const rsMeta = await new Image(rs).metadata();
+check("P17 resize(width) keeps aspect", rsMeta.width === 10 && rsMeta.height === 5, rsMeta.width + "x" + rsMeta.height);
+
+// P18: rotate enforces multiples of 90.
+let rotThrew = false;
+try { await new Image(SRC).rotate(45).bytes(); } catch { rotThrew = true; }
+check("P18 rotate(45) throws (multiples of 90 only)", rotThrew);
+
+// P19: flip and flop both exist.
+const flipOk = await new Image(SRC).flip().bytes();
+const flopOk = await new Image(SRC).flop().bytes();
+check("P19 flip + flop exist", flipOk.length > 0 && flopOk.length > 0);
+
+// P20: modulate brightness/saturation.
+try { const mod = await new Image(SRC).modulate({ brightness: 1.2, saturation: 0 }).bytes(); check("P20 modulate works", mod.length > 0); } catch (e) { check("P20 modulate works", false, String(e)); }
+
+// P21: per-format magics — jpeg ffd8, png 0x89, webp lossless VP8L vs lossy VP8.
+const j21 = await new Image(SRC).jpeg({ quality: 85 }).bytes();
+const p21 = await new Image(SRC).png({ compressionLevel: 6 }).bytes();
+const wl21 = new TextDecoder().decode((await new Image(SRC).webp({ lossless: true }).bytes()).slice(0, 16));
+const wq21 = new TextDecoder().decode((await new Image(SRC).webp({ quality: 80 }).bytes()).slice(0, 16));
+check("P21 per-format magics (jpeg/png/webp lossless+lossy)", j21[0] === 0xff && j21[1] === 0xd8 && p21[0] === 0x89 && wl21.includes("VP8L") && wq21.includes("VP8 "), wl21.slice(4) + "/" + wq21.slice(4));
+
+// P22: extension-inferred format — write(path) without an encode method.
+const extPath = join(dir, "out.jpg");
+await new Image(SRC).resize(10).write(extPath);
+const extBytes = readFileSync(extPath);
+check("P22 extension infers format (.jpg -> jpeg)", extBytes[0] === 0xff && extBytes[1] === 0xd8, "no encode method needed");
 
 console.log("---");
 const fails = results.filter((r) => !r.pass);
