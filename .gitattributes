@@ -1,0 +1,25 @@
+# Git attributes / GitHub Linguist language stats (§136)
+#
+# The fence lang tags in docs drive docs:check (Bun.Transpiler + bun run)
+# — they do NOT feed GitHub's language %. This file shapes the pie:
+# generated state/caches and vendored material are excluded; docs count
+# as documentation so the % reflects actual code (TypeScript dominates).
+
+# Generated state, caches, and reports — never code
+.data/**                 linguist-generated=true
+research/reports/**      linguist-generated=true
+docs/COLORS.md           linguist-generated=true
+docs/BUN_API_COVERAGE.md linguist-generated=true
+dist/**                  linguist-generated=true
+
+# Vendored / external material (audit inbox from other repos)
+.audit-inbox/**          linguist-vendored=true
+node_modules/**          linguist-vendored=true
+
+# Documentation — keep the code pie code-only (drop these lines if you
+# want Markdown % shown)
+docs/**/*.md             linguist-documentation=true
+README.md                linguist-documentation=true
+
+# Generated HTML (Bun.markdown-rendered previews)
+docs/COLORS.html         linguist-generated=true

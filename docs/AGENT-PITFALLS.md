@@ -5462,6 +5462,20 @@ another note.
   tools/docs-check.ts (untagged-fence FAIL + @bun-run execution),
   scripts/generate-color-artifacts.ts (typescript->ts template), the
   52 docs fences. docs:check — 52/52. verify:contracts 38/38.
+## 136. Git language stats — .gitattributes (Linguist) vs fence lang (2026-08-24)
+
+- The fence lang tags (ts/text/jsonc/..., §135) drive docs:check via
+  Bun.Transpiler + bun run — they do NOT feed GitHub language %.
+- GitHub language stats use Linguist, configured by .gitattributes. The
+  repo had NONE, so the pie counted generated state: 14 .data files,
+  27 research/reports, docs/COLORS.md, docs/BUN_API_COVERAGE.md.
+- Added .gitattributes: .data/** and research/reports/** and the two
+  generated docs -> linguist-generated; .audit-inbox/** and node_modules/**
+  -> linguist-vendored; docs/**/*.md + README.md -> linguist-documentation
+  (code-only pie; drop those lines to show Markdown %).
+- GitHub recomputes the pie on the default branch after push (a few
+  minutes). Verified with git check-attr.
+- Artifacts: .gitattributes (new). verify:contracts 38/38 (unchanged).
 
 
 
