@@ -457,4 +457,36 @@ describe("sports/source registry", () => {
       registrationMatch: { kind: "metadata_id", selectorParameter: "series" },
     });
   });
+
+  test("teams section is optional — absent until a source ships teams (§73)", () => {
+    const artifact = buildSportsSourceRegistryArtifact("2026-08-04T00:00:00.000Z");
+    expect(artifact.teams).toBeUndefined();
+  });
+
+  test("teams section serializes unified keys + source ids + image metadata (§73)", () => {
+    const registry = {
+      sports: [],
+      sources: [],
+      adapters: [],
+      integrations: [],
+      teams: [
+        {
+          team: "team:kalshi:CHI-BEARS",
+          sport: "american-football",
+          label: "Chicago Bears",
+          sourceIds: [{ source: "kalshi", id: "CHI-BEARS" }],
+          image: { logoUrl: "https://x/logo.png", width: 200, height: 200, format: "png" },
+        },
+      ],
+    } as const;
+    const artifact = buildSportsSourceRegistryArtifact("2026-08-04T00:00:00.000Z", registry);
+    expect(artifact.teams).toHaveLength(1);
+    expect(artifact.teams?.[0]).toMatchObject({
+      team: "team:kalshi:CHI-BEARS",
+      sport: "american-football",
+      label: "Chicago Bears",
+      sourceIds: [{ source: "kalshi", id: "CHI-BEARS" }],
+      image: { logoUrl: "https://x/logo.png", width: 200, height: 200, format: "png" },
+    });
+  });
 });

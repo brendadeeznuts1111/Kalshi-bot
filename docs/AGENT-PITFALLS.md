@@ -3389,3 +3389,44 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
     resize(Math.round(h * (srcWidth / srcHeight))).
 - Artifacts: tools/image-probe.ts P14 (3 checks, 26/26), tests/lib/
   image-probe.test.ts (4 tests, 15/15). Gate stays 12/12.
+
+## 73. Unified teams registry — the pattern, and how branding/API fits (2026-08-24)
+
+- User asked: should team/logo metadata be a GENERATED unified registry
+  that data sources map towards (vs the §71 per-source team_logos table)?
+  YES — and the repo ALREADY does this for sources: sports:registry:bake
+  generates public/registry/sports-sources.json (byte-stable, committed,
+  sports:registry:check gates staleness) with sports -> sources ->
+  adapters -> integrations; event-identity.ts unifies four event-id
+  dialects to one canonical match_key. Team/competitor identity is the
+  same family's third member.
+- BUILT (schema v1-compatible, optional section):
+  - SportsSourceRegistry.teams?: TeamRegistryEntry[] — unified canonical
+    key (team:<sport>:<key>), sport, label, per-source id mappings
+    (sourceIds: [{source, id}]), optional image metadata (logoUrl/width/
+    height/format/placeholder).
+  - SportsSourceRegistryArtifact.teams? — serialized by the same builder;
+    ABSENT until a source ships teams, so schema stays v1 + fingerprint/
+    tests/registry file unchanged (no breakage).
+  - When a source provides team data, populate registry.teams, bake,
+    commit — the byte-stable check enforces it.
+  - Tests: optional-absent + serialize-unified-keys-with-image (2 new).
+- HOW BRANDING + API WORK TODAY (the pattern a teams endpoint would
+  follow — src/research/serve.ts / src/lib/brand-image.ts):
+  - /brand/swatch/<token>.png: rateLimiter wrap -> validate token against
+    DESIGN_TOKENS -> size clamp (?size=, max 64) -> brandMetrics counter
+    -> ETag (\"swatch-<token>-<size>\") + notModified 304 -> brandSwatchPng
+    (Bun.Image pipeline) -> Response with content-type/cache-control/etag/
+    CORS. This is the repo template for image routes.
+  - /brand.svg + /brand/badge.svg: token-built SVG (no user SVG), ETag by
+    design version, param validation (tone allowlist), rate-limited.
+  - brand-image.ts: brandSwatchPng (Bun.Image from solid color),
+    transformImage (resize/rotate/re-encode chain), readImageMeta,
+    convertImageFile — the reusable Bun.Image layer the teams image
+    metadata would use when a source ships logos.
+  - A future /teams/:sport/:team route would: look up the unified key in
+    registry.teams -> serve file_path via Bun.file or on-the-fly resize
+    (width REQUIRED per §72 — compute height from aspect) -> same
+    rateLimit/ETag/304/CORS pattern. NOT built: no team data source yet.
+- Rejected §71 (per-source team_logos SQLite) stays rejected; this is the
+  unified alternative the user asked for.

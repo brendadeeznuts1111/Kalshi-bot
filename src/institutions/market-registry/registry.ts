@@ -781,5 +781,26 @@ export function buildSportsSourceRegistryArtifact(
         selector: serializeSelector(binding.selector),
       })),
     })),
+    ...(registry.teams
+      ? {
+          teams: registry.teams.map((team) => ({
+            team: team.team,
+            sport: team.sport,
+            label: team.label,
+            sourceIds: team.sourceIds.map((s) => ({ source: s.source, id: s.id })),
+            ...(team.image
+              ? {
+                  image: {
+                    ...(team.image.logoUrl ? { logoUrl: team.image.logoUrl } : {}),
+                    ...(team.image.width !== undefined ? { width: team.image.width } : {}),
+                    ...(team.image.height !== undefined ? { height: team.image.height } : {}),
+                    ...(team.image.format ? { format: team.image.format } : {}),
+                    ...(team.image.placeholder ? { placeholder: team.image.placeholder } : {}),
+                  },
+                }
+              : {}),
+          })),
+        }
+      : {}),
   };
 }
