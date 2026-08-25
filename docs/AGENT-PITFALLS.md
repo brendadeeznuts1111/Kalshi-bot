@@ -3263,3 +3263,39 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
   unknown throws).
 - Artifacts: tools/xml-probe.ts, tests/lib/xml-probe.test.ts (10 tests),
   src/research/xml-page.ts (/bun/xml widget), verify:contracts 11/11.
+
+## 69. Production-grade pipeline doc — grounded, one real gap closed (2026-08-24)
+
+- A pasted 'production-grade pipeline' doc proposed CSV streaming parser,
+  concurrency limiter, Bun.cron scheduling, circuit breaker, SQLite WAL,
+  single-executable compile, logging, auth. GROUNDED against the repo:
+  almost ALL of it already exists natively, and the doc's premise was
+  factually off:
+  - 'MasseyRatings CSV' is WRONG — the repo ingests Massey as HTML
+    (extractRatingsTableFromHtml in src/institutions/massey/fetch.ts);
+    the real CSV feed is tennis-data.co.uk (parse-tennis-data-csv.ts).
+  - circuit breaker: already ships via @factorywager/proton-pass
+    CircuitBreaker (src/protonpass/circuit.ts) — the doc's hand-rolled
+    one is WORSE (no half-open timeout, resets on every success).
+  - Bun.cron: 5+ files already use it (signal-pipeline, live-channel,
+    scheduled, match-liquidity-pipeline).
+  - WAL + SQLite tuning: massey/store.ts, open-db.ts, hq-store.ts all
+    run PRAGMA journal_mode = WAL.
+  - concurrency: runBunGate / signal pipeline already parallelize.
+  - Bun.CSV: UNDEFINED in 1.4.0 (probe) — no native CSV, so a custom
+    parser IS the native answer.
+  - bun build --compile: absent, but the repo deploys as cron + serve,
+    not a long-lived binary — no consumer.
+- ONE REAL GAP CLOSED: the repo's CSV parser split by line FIRST, so a
+  quoted field containing an embedded newline broke (probe: '\"x\ny\"'
+  split into two lines). Added parseCsvAll (state machine over the whole
+  text): quoted fields, escaped "" quotes, commas + embedded newlines
+  inside quotes, CRLF, blank-line skip. parseTennisDataCsv now uses it
+  (strict superset — real tennis-data shape regression-tested).
+- REJECTED (duplicate/worse): the doc's CSVStreamParser class (would
+  duplicate parseCsvAll with a chunked-IO API the repo doesn't need —
+  the CSV files are read whole via Bun.file), its CircuitBreaker (worse
+  than proton-pass), concurrency limiter (signal pipeline exists), and
+  worker threads (I/O-dominated, §8 of the doc agrees it's unnecessary).
+- Artifacts: parseCsvAll in parse-tennis-data-csv.ts, tests/lib/
+  csv-parser.test.ts (7 tests), §69. Gate stays 11/11.

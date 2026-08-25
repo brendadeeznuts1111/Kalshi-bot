@@ -45,6 +45,45 @@ function parseCsvLine(line: string): string[] {
   out.push(cur);
   return out;
 }
+/**
+ * Streaming CSV row tokenizer — production-grade (§69): handles quoted
+ * fields, escaped "" quotes, commas + EMBEDDED NEWLINES inside quotes,
+ * and CRLF line endings. The naive split-by-line parser breaks on a
+ * quoted field containing a newline (probe: x\ny in quotes splits into
+ * two lines). State machine over the whole text — no external package.
+ *
+ * Returns rows as string[] WITHOUT the header (header is the first row).
+ */
+export function parseCsvAll(text: string): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let field = "";
+  let inQuotes = false;
+  let i = 0;
+  while (i < text.length) {
+    const ch = text[i]!;
+    if (inQuotes) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') { field += '"'; i += 2; continue; } // escaped quote
+        inQuotes = false; i++; continue;
+      }
+      field += ch; i++; continue;
+    }
+    if (ch === '"' && field === "") { inQuotes = true; i++; continue; }
+    if (ch === ",") { row.push(field); field = ""; i++; continue; }
+    if (ch === "\n" || ch === "\r") {
+      if (ch === "\r" && text[i + 1] === "\n") i++; // CRLF
+      row.push(field); field = "";
+      if (row.some((c) => c.trim().length > 0)) rows.push(row); // skip blank
+      row = [];
+      i++; continue;
+    }
+    field += ch; i++;
+  }
+  // trailing row (no final newline)
+  if (field !== "" || row.length > 0) { row.push(field); if (row.some((c) => c.trim().length > 0)) rows.push(row); }
+  return rows;
+}
 
 function field(row: Record<string, string>, ...keys: string[]): string {
   for (const key of keys) {
@@ -107,14 +146,14 @@ function rowToRecord(headers: string[], values: string[]): Record<string, string
 }
 
 export function parseTennisDataCsv(text: string, sourceFile: string): TennisHistoryMatch[] {
-  const lines = text.split(/\r?\n/).filter((line) => line.trim().length > 0);
-  if (lines.length < 2) return [];
+  const rows = parseCsvAll(text);
+  if (rows.length < 2) return [];
 
-  const headers = parseCsvLine(lines[0]!).map(normalizeHeader);
+  const headers = rows[0]!.map(normalizeHeader);
   const out: TennisHistoryMatch[] = [];
 
-  for (let i = 1; i < lines.length; i++) {
-    const values = parseCsvLine(lines[i]!);
+  for (let i = 1; i < rows.length; i++) {
+    const values = rows[i]!;
     const row = rowToRecord(headers, values);
     const tour = inferTour(row, sourceFile);
     const winner = field(row, "winner");

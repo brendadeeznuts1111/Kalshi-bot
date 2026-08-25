@@ -59,6 +59,7 @@ const INTENTIONAL = new Set([
   "S", // §62: Bun.S undefined (blog code identifier unresolved)
   "X", // §62: Bun.X placeholder in a probe writeup
   "watch", // §62: NO Bun.watch API — content:watch is the bun --watch CLI flag
+  "CSV", // §69: no Bun.CSV in 1.4.0 (probe) — custom parser is the native answer
   "zstd", // §62: no Bun.zstd — real APIs are zstdCompressSync/zstdDecompressSync
   "image", // §12: lowercase form documented as non-existent (the API is Bun.Image capital)
 ]);
