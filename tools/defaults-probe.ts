@@ -94,6 +94,27 @@ check("D9 port precedence BUN_PORT > PORT > NODE_PORT", pAll === 4873, "all-set 
 check("D9b NODE_PORT alone read", pNode === 4861, "NODE_PORT -> " + pNode);
 check("D9c PORT alone read", pPort === 4862, "PORT -> " + pPort);
 
+// D10: BUN_* env vars the repo declares in config.ts (§84)
+import { mkdtempSync, writeFileSync, readdirSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+const e1dir = mkdtempSync(tmpdir() + "/defenv-");
+// D10a: BUN_RUNTIME_TRANSPILER_CACHE_PATH — Bun writes >4KB transpiled output there
+writeFileSync(e1dir + "/big.ts", "export const s = " + JSON.stringify("x".repeat(5000)) + ";");
+const r1 = Bun.spawnSync(["bun", "-e", "import " + JSON.stringify(e1dir + "/big.ts") + "; console.log(1);"], { env: { ...process.env, BUN_RUNTIME_TRANSPILER_CACHE_PATH: e1dir + "/cache" }, stdout: "pipe", stderr: "pipe" });
+let cacheEntries = 0;
+try { cacheEntries = readdirSync(e1dir + "/cache", { recursive: true } as any).length; } catch { cacheEntries = 0; }
+rmSync(e1dir, { recursive: true, force: true });
+check("D10a transpiler cache writes to BUN_RUNTIME_TRANSPILER_CACHE_PATH", cacheEntries > 0, "entries=" + cacheEntries + " exit=" + r1.exitCode);
+
+// D10b: BUN_CONFIG_VERBOSE_FETCH=curl logs request URL
+const e4 = Bun.spawnSync(["bun", "-e", "await fetch(\"https://example.com\").then(r => r.text());"], { env: { ...process.env, BUN_CONFIG_VERBOSE_FETCH: "curl" }, stdout: "pipe", stderr: "pipe" });
+const log4 = (e4.stderr?.toString() || "") + (e4.stdout?.toString() || "");
+check("D10b VERBOSE_FETCH=curl logs request URL", log4.includes("example.com"), "logged=" + log4.includes("example.com"));
+
+// D10c: NODE_ENV is UNSET by default (repo gates dev-mode on === 'production')
+const e5 = Bun.spawnSync(["bun", "-e", "console.log(process.env.NODE_ENV ?? \"unset\")"], { stdout: "pipe" });
+check("D10c NODE_ENV unset by default", (e5.stdout?.toString().trim() ?? "") === "unset", "got=" + (e5.stdout?.toString().trim() ?? ""));
+
 console.log("---");
 const fails = results.filter((r) => !r.pass);
 console.log("defaults:probe — " + (results.length - fails.length) + "/" + results.length + " pass" + (fails.length ? " · FAIL: " + fails.map((f) => f.name).join(", ") : ""));

@@ -1,6 +1,9 @@
 // API defaults cross-reference tests (§81) — probe-locked defaults across
 // the Bun surfaces the repo touches.
 import { describe, expect, test } from "bun:test";
+import { mkdtempSync, writeFileSync, readdirSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 describe("Bun.serve defaults (§81)", () => {
   test("default hostname is localhost, NOT 0.0.0.0 (doc correction)", () => {
@@ -94,5 +97,41 @@ describe("serve port env precedence (§83)", () => {
     const out = await new Response(proc.stdout).text();
     await proc.exited;
     expect(Number(out.trim())).toBe(4873);
+  });
+});
+
+describe("BUN_* env vars (§84)", () => {
+  test("BUN_RUNTIME_TRANSPILER_CACHE_PATH receives >4KB transpiled output", () => {
+    const dir = mkdtempSync(join(tmpdir(), "bunenv-test-"));
+    writeFileSync(join(dir, "big.ts"), "export const s = " + JSON.stringify("x".repeat(5000)) + ";");
+    const r = Bun.spawnSync(["bun", "-e", "import " + JSON.stringify(join(dir, "big.ts")) + "; console.log(1);"], {
+      env: { ...process.env, BUN_RUNTIME_TRANSPILER_CACHE_PATH: join(dir, "cache") },
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const entries = readdirSync(join(dir, "cache"), { recursive: true } as any).length;
+    rmSync(dir, { recursive: true, force: true });
+    expect(entries).toBeGreaterThan(0);
+    expect(r.exitCode).toBe(0);
+  });
+
+  test("BUN_CONFIG_VERBOSE_FETCH=curl logs the request URL", () => {
+    const r = Bun.spawnSync(["bun", "-e", "await fetch(\"https://example.com\").then(r => r.text());"], {
+      env: { ...process.env, BUN_CONFIG_VERBOSE_FETCH: "curl" },
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const log = (r.stderr?.toString() || "") + (r.stdout?.toString() || "");
+    expect(log).toContain("example.com");
+  });
+
+  test("NODE_ENV is unset in a clean subprocess (bun test sets NODE_ENV=test itself)", () => {
+    // bun test sets NODE_ENV=test in the runner env; strip it to probe the
+    // true default (the repo gates dev-mode on === 'production', so an
+    // unset NODE_ENV must mean dev).
+    const env = { ...process.env };
+    delete env.NODE_ENV;
+    const r = Bun.spawnSync(["bun", "-e", "console.log(process.env.NODE_ENV ?? \"unset\")"], { stdout: "pipe", env });
+    expect(r.stdout?.toString().trim()).toBe("unset");
   });
 });

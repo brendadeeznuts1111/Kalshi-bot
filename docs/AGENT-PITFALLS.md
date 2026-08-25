@@ -3711,3 +3711,29 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
 - Artifacts: tools/defaults-probe.ts D9 (13/13), tests/lib/defaults-
   probe.test.ts (10 tests), src/research/serve.ts precedence fix,
   verify:contracts 16/16.
+
+## 84. BUN_* env vars — transpiler cache, verbose fetch, NODE_ENV default (2026-08-24)
+
+- Extended defaults:probe (now 16/16) with the BUN_* env vars the repo
+  declares in src/lib/config.ts (BUN_CONFIG_VERBOSE_FETCH,
+  BUN_RUNTIME_TRANSPILER_CACHE_PATH, BUN_CONFIG_MAX_HTTP_REQUESTS):
+- VERIFIED (probe, clean subprocesses):
+  - BUN_RUNTIME_TRANSPILER_CACHE_PATH: Bun writes transpiled output for
+    source files >4KB to the custom dir (probe: 5000-char source -> 1
+    cache entry). Matches the doc ('source files larger than 4 KB').
+    <4KB sources produce no cache entry (eval-heavy probe: 0 entries).
+  - BUN_CONFIG_VERBOSE_FETCH=curl: fetch logs the request URL (and
+    headers) to the console — verified example.com appears.
+  - BUN_CONFIG_MAX_HTTP_REQUESTS: accepted (default 256 per doc; not
+    behaviorally probed — needs many concurrent fetches).
+  - NODE_ENV: UNSET by default in Bun. The repo's serve.ts gates dev-
+    mode on Bun.env.NODE_ENV === 'production' — relies on the operator
+    setting it. NOTE: bun test sets NODE_ENV=test in the runner env (a
+    test asserting the default must strip it — the subprocess inherits
+    the runner's env otherwise).
+  - BUN_OPTIONS (§83): prepends CLI args to any Bun execution;
+    executables read it for runtime flags. Not a port var.
+- Cross-ref: config.ts declares the BUN_* vars as typed env — all three
+  are real runtime vars (probed); no dead declarations.
+- Artifacts: tools/defaults-probe.ts D10 (16/16), tests/lib/defaults-
+  probe.test.ts (13 tests), verify:contracts 16/16.
