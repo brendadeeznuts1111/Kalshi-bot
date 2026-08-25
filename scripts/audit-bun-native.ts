@@ -258,6 +258,7 @@ export const SPAWN_KEEP_LIST = new Set([
   "tools/version-probe.ts", // bun --version CLI/API agreement check (§159)
   "tools/coverage-probe.ts", // spawns bun test --coverage children with bunfig thresholds (§161)
   "tools/bun-coverage-matrix.ts", // rg sweeps for the coverage matrix generator (§163)
+  "tools/module-shape-report.ts", // rg usage scan for the per-module shape report (§170)
   "src/research/serve.ts", // release-check action: Bun.spawn bun:release-watch --check (pipe capture)
   "src/institutions/signal-pipeline.ts", // runBunGate def: sub-second offline dep gates (dedupe/prune/audit)
   "src/lib/run-bun.ts", // runBunCommand: the shared Bun.which+spawn gate runner (pipe capture; §54)

@@ -1,80 +1,97 @@
 #!/usr/bin/env bun
 /**
- * `bun run coverage:matrix` — regenerate docs/BUN_API_COVERAGE.md from
- * the repo alone (self-contained; promoted from scratch/matrix-gen3.ts,
- * §163). Scans src/tools/scripts/tests for Bun.* tokens, sweeps the
- * runtime typeofs, checks bun-types declarations + docs mentions, and
- * applies the gate-coverage map. Offline.
+ * bun run coverage:matrix - regenerate docs/BUN_API_COVERAGE.md from
+ * the FULL Bun shape (tools/bun-shape.json, §168) + repo usage (§163,
+ * §169). Rows = every shape member (top-level + sub-namespace + the
+ * FFI extension). Tier A: used runtime members must have a probe gate
+ * (hard fail); unused GAPs are reported, not fatal; every GATES key
+ * must exist in the shape (dead curated entries fail). Offline.
  */
 import { join } from "node:path";
 
 const ROOT = join(import.meta.dir, "..");
-const BT = join(ROOT, "node_modules/.bun-cache/links/bun-types@1.4.0-c0dadede486f49ab/node_modules/bun-types");
+const shape = JSON.parse(await Bun.file(join(ROOT, "tools/bun-shape.json")).text());
+const BTK = String.fromCharCode(96); // backtick for the markdown table
+import { GATES, gateFor } from '../src/lib/bun-gates.ts';
 
-const GATES: Record<string, string> = {
-  file: "fs:probe", write: "fs:probe", mmap: "fs:probe", stdout: "fs:probe",
-  gzipSync: "fs:probe", gunzipSync: "fs:probe", deflateSync: "fs:probe", inflateSync: "fs:probe",
-  zstdCompressSync: "fs:probe", zstdDecompressSync: "fs:probe", zstdCompress: "fs:probe", zstdDecompress: "fs:probe", Archive: "fs:probe",
-  "$": "shell:probe", semver: "bun:apis-probe", JSON5: "bun:apis-probe", sha: "bun:apis-probe",
-  spawn: "spawn:probe", spawnSync: "spawn:probe", build: "build-deep:probe", plugin: "build-deep:probe",
-  serve: "serve-tls/routes", fetch: "serve-tls/routes", sql: "sqlite:probe", SQL: "sqlite:probe",
-  cron: "cron tests §126/128",
-  color: "ansi:probe", inspect: "ansi:probe", escapeHTML: "ansi:probe", stringWidth: "ansi:probe", stripANSI: "ansi:probe", sliceAnsi: "ansi:probe", wrapAnsi: "ansi:probe",
-  CryptoHasher: "crypto:probe", SHA256: "crypto:probe", hash: "crypto:probe", deepEquals: "crypto:probe", randomUUIDv7: "crypto:probe",
-  Image: "image:probe", markdown: "format:probe", XML: "format:probe", TOML: "format:probe", JSONL: "format:probe", YAML: "format:probe", JSONC: "format:probe",
-  Glob: "fsx:probe", which: "fsx:probe", resolve: "fsx:probe", fileURLToPath: "fsx:probe", pathToFileURL: "fsx:probe", openInEditor: "fsx:probe",
-  connect: "security:probe", CSRF: "csrf:probe", Cookie: "defaults:probe", CookieMap: "defaults:probe",
-  listen: "net:probe", udpSocket: "net:probe", dns: "net:probe", redis: "net:probe", secrets: "net:probe",
-  env: "runtime:probe", argv: "runtime:probe", sleep: "runtime:probe", version: "runtime:probe", revision: "runtime:probe", nanoseconds: "runtime:probe",
-  peek: "runtime:probe", readableStreamToArrayBuffer: "runtime:probe", readableStreamToText: "runtime:probe", ArrayBufferSink: "runtime:probe", Transpiler: "runtime:probe", Terminal: "runtime:probe", WebView: "runtime:probe",
-  MD4: "surface:probe", MD5: "surface:probe", SHA1: "surface:probe", SHA224: "surface:probe", SHA384: "surface:probe", SHA512: "surface:probe", SHA512_256: "surface:probe",
-  password: "surface:probe", FileSystemRouter: "surface:probe", deepMatch: "surface:probe", concatArrayBuffers: "surface:probe",
-  gc: "surface:probe", shrink: "surface:probe", generateHeapSnapshot: "surface:probe", isMainThread: "surface:probe", isStandaloneExecutable: "surface:probe", main: "surface:probe", unsafe: "surface:probe",
-  indexOfLine: "surface:probe", resolveSync: "surface:probe", allocUnsafe: "surface:probe", embeddedFiles: "surface:probe", stderr: "surface:probe", stdin: "surface:probe",
-  postgres: "client-shape:probe", RedisClient: "client-shape:probe", s3: "client-shape:probe", S3Client: "client-shape:probe",
-  randomUUIDv5: "surface:probe", readableStreamToArray: "surface:probe", readableStreamToBlob: "surface:probe", readableStreamToBytes: "surface:probe", readableStreamToJSON: "surface:probe",
-  enableANSIColors: "ecosystem:probe", FFI: "ffi:probe",
-};
 
-// 1) repo token counts (single rg over the source dirs).
-const scan = Bun.spawnSync(["rg", "-o", "Bun\.[A-Za-z_$][A-Za-z0-9_$]*", "src", "tools", "scripts", "tests", "--no-filename"], { cwd: ROOT, stdout: "pipe" });
+
+// 1) repo token counts (single rg over the source dirs, depth-2 aware).
+const scan = Bun.spawnSync(["rg", "-o", "Bun\.[A-Za-z_$][A-Za-z0-9_$]*(?:\.[A-Za-z_$][A-Za-z0-9_$]*)?", "src", "tools", "scripts", "tests", "--no-filename"], { cwd: ROOT, stdout: "pipe" });
 const counts: Record<string, number> = {};
+const shapeKeys = new Set(shape.members.map((mm: any) => (mm.ns ? mm.ns + "." + mm.name : mm.name)));
 for (const l of (scan.stdout?.toString() ?? "").split("\n")) {
-  const m = l.match(/Bun\.([A-Za-z_$][A-Za-z0-9_$]*)/);
-  if (m) counts[m[1]!] = (counts[m[1]!] ?? 0) + 1;
+  const m = l.match(/Bun\.([A-Za-z_$][A-Za-z0-9_$]*)(?:\.([A-Za-z_$][A-Za-z0-9_$]*))?/);
+  if (m) {
+    // longest shape-matching key: Bun.argv.includes is usage of argv,
+    // Bun.TOML.parse is usage of the TOML.parse member.
+    let key = m[1]!;
+    if (m[2] && shapeKeys.has(m[1] + "." + m[2])) key = m[1] + "." + m[2];
+    counts[key] = (counts[key] ?? 0) + 1;
+  }
 }
-// no $ hardcode: rg counts Bun.$ correctly (verified 47)
 
-// 2) runtime typeof sweep + 3) d.ts presence + 4) docs presence.
-const dtsFiles = ["index.d.ts", "bun.d.ts", "sqlite.d.ts", "shell.d.ts", "ffi.d.ts", "redis.d.ts", "s3.d.ts", "deprecated.d.ts"];
-let dts = "";
-for (const f of dtsFiles) { try { dts += await Bun.file(join(BT, f)).text(); } catch { /* missing */ } }
+// 2) GATES validation: every curated key must exist in the shape.
+const shapeTop = new Set(shape.members.filter((m: any) => !m.ns).map((m: any) => m.name));
+const shapeNs = new Set(shape.members.filter((m: any) => m.ns).map((m: any) => m.ns));
+const deadGates = Object.keys(GATES).filter((k) => !shapeTop.has(k) && !shapeNs.has(k));
 
-const tokens = new Set([...Object.keys(counts), ...Object.keys(GATES)]);
-const rows: { t: string; r: string; ty: boolean; doc: boolean; gate: string; c: number }[] = [];
-for (const t of tokens) {
-  const v: any = (Bun as any)[t];
-  const isType = v === undefined;
-  const docHit = Bun.spawnSync(["rg", "-l", t, join(BT, "docs"), "-g", "*.mdx", "--no-messages"], { stdout: "pipe" }).stdout?.toString().length ?? 0;
-  rows.push({ t, r: isType ? "type-only" : typeof v, ty: dts.includes(t), doc: docHit > 0, gate: GATES[t] ?? (isType ? "type-only" : "GAP"), c: counts[t] ?? 0 });
+// 3) rows from the FULL shape.
+interface MatrixRow {
+  full: string;
+  runtime: string;
+  types: string;
+  docs: string;
+  gate: string;
+  uses: number;
+  typeOnly: boolean;
 }
-rows.sort((a, b) => (a.r === "type-only" ? 1 : 0) - (b.r === "type-only" ? 1 : 0) || b.c - a.c);
+const rows: MatrixRow[] = shape.members.map((m: any) => {
+  const full = m.ns ? m.ns + "." + m.name : m.name;
+  const live = !m.typeOnly && (m.ns ? (Bun as any)[m.ns]?.[m.name] !== undefined : (Bun as any)[m.name] !== undefined);
+  const gate = gateFor(m);
+  return {
+    full,
+    runtime: m.typeOnly ? "type-only" : live ? typeof (m.ns ? (Bun as any)[m.ns]?.[m.name] : (Bun as any)[m.name]) : "missing",
+    types: "y",
+    docs: m.docs ? "y" : "n",
+    gate,
+    uses: counts[full] ?? 0,
+    typeOnly: m.typeOnly,
+  };
+});
+rows.sort((a, b) => (a.typeOnly ? 1 : 0) - (b.typeOnly ? 1 : 0) || b.uses - a.uses || a.full.localeCompare(b.full));
+
+const runtimeRows = rows.filter((r) => r.runtime !== "type-only" && r.runtime !== "missing");
+const used = runtimeRows.filter((r) => r.uses > 0);
+const tierA = used.filter((r) => r.gate === "GAP");
+const gaps = runtimeRows.filter((r) => r.gate === "GAP" && r.uses === 0);
 
 const md = [
   "# Bun API Coverage Matrix",
   "",
-  "Regenerated by `bun run coverage:matrix` (tools/bun-coverage-matrix.ts, §163).",
-  "Runtime/types/docs columns against the pinned Bun 1.4.0. GAP = unprobed;",
-  "type-only/non-existent = documented in tools/docs-api-validate.ts.",
+  "Regenerated by " + BTK + "bun run coverage:matrix" + BTK + " (tools/bun-coverage-matrix.ts, §163).",
+  "Rows = the FULL Bun 1.4.0 shape (" + BTK + "tools/bun-shape.json" + BTK + ", §168): module exports,",
+  "sub-namespace members, and the FFI extension. GAP = unprobed member (unused,",
+  "non-fatal); Tier-A failures (used-but-unprobed) exit nonzero; type-only = types",
+  "without a runtime value; missing = declared value absent at runtime.",
   "",
   "| Token | Runtime | Types | Docs | Gate | Uses |",
   "|---|---|---|---|---|---|",
-  ...rows.map((x) => "| `" + x.t + "` | " + x.r + " | " + (x.ty ? "y" : "n") + " | " + (x.doc ? "y" : "n") + " | " + x.gate + " | " + x.c + " |"),
+  ...rows.map((x) => "| " + BTK + x.full + BTK + " | " + x.runtime + " | " + x.types + " | " + x.docs + " | " + x.gate + " | " + x.uses + " |"),
+  "",
+  "**Shape summary:** " + rows.length + " members (" + shape.members.filter((m: any) => !m.ns).length + " top-level, " + shape.members.filter((m: any) => m.ns).length + " sub-namespace) · " + runtimeRows.length + " runtime values · " + (rows.length - runtimeRows.length) + " type-only/missing · " + used.length + " used · " + (used.length - tierA.length) + " probed · " + gaps.length + " unused GAPs" + (tierA.length ? " · TIER-A: " + tierA.map((r) => r.full).join(", ") : "") + (deadGates.length ? " · DEAD GATES KEYS: " + deadGates.join(", ") : ""),
   "",
 ].join("\n");
 await Bun.write(join(ROOT, "docs/BUN_API_COVERAGE.md"), md);
-const gaps = rows.filter((x) => x.gate === "GAP" && x.r !== "type-only");
-console.log("matrix regenerated:", rows.length, "rows ·", gaps.length, "GAPs:", gaps.map((g) => g.t).join(",") || "none");
-process.exit(gaps.length === 0 ? 0 : 1);
+
+console.log("matrix regenerated: " + rows.length + " rows · " + runtimeRows.length + " runtime · " + used.length + " used (" + (used.length - tierA.length) + " probed) · " + gaps.length + " unused GAPs" + (deadGates.length ? " · dead GATES keys: " + deadGates.join(",") : ""));
+if (tierA.length) {
+  console.error("TIER-A: used-but-unprobed: " + tierA.map((r) => r.full).join(", "));
+}
+if (deadGates.length) {
+  console.error("DEAD GATES KEYS (not in shape): " + deadGates.join(", "));
+}
+process.exit(tierA.length === 0 && deadGates.length === 0 ? 0 : 1);
 
 export {};

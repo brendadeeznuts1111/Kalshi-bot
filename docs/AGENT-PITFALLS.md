@@ -9,7 +9,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 > The headings were renumbered to §1-§11 on 2026-08-23; the counters were kept
 > so historical notes stay traceable.
 >
-> **Current contract status: verify:contracts 52/52** (see docs/BUN_API_COVERAGE.md
+> **Current contract status: verify:contracts 53/53** (see docs/BUN_API_COVERAGE.md
 > for the full matrix). `verify:contracts N/N` lines inside older sections are
 > HISTORICAL (each records its era) — docs:check enforces that only this header
 > and non-pitfall docs may reference the current count.
@@ -6060,3 +6060,65 @@ another note.
 - Artifacts: src/lib/gate-count.ts (new), tools/docs-sync-counts.ts
   (structural + quote-free splice), tools/docs-check.ts (import +
   countGates), tests/lib/gate-count.test.ts (new).
+
+## 168. Full Bun shape generated structurally — tools/bun-shape.json (2026-08-24)
+
+- The Bun-native stack had NO machine-readable full-API ground truth:
+  the coverage matrix was a curated used-union-GATES view (140 rows) and
+  type-drift probe regex-scanned concatenated dts. Both ALSO hardcoded
+  the same bun-types bundle path. Now there is one source of truth.
+- tools/bun-shape.ts (bun run shape:gen) parses the bundled bun-types
+  for the pinned 1.4.0 with the TS compiler API (no regex — the
+  countGates §167 pattern): every export of declare module bun is
+  captured (name, ns, kind, typeOnly, docs, deprecated, extension).
+  Sub-namespace members are captured at depth 2 (dns.prefetch,
+  TOML.parse, ...). The internal namespace is excluded; abstract
+  classes are classified type-only (they are not runtime-exported);
+  Bun.FFI (declared in ffi.d.ts outside the module export set) is
+  classified as a documented runtime extension. Globals are extracted
+  from globals.d.ts. Docs flag = bundled mdx mention of the dotted
+  name. Emits tools/bun-shape.json (committed).
+- The bun-types bundle dir name is 1.4.0-<hash> — that hash is the
+  bun-types PACKAGE version, NOT the runtime revision; do not assert
+  the hashes match (verified: runtime 34cbb9a40 vs bundle c0dadede).
+- Verified numbers: 503 members (331 top-level, 172 sub-namespace)
+  + 79 globals; runtime live keys 110; 95 declared top-level values
+  all present at runtime.
+
+## 169. shape:probe gate — full-shape runtime agreement + exhaustive matrix (2026-08-24)
+
+- tools/shape-probe.ts (bun run shape:probe, gate #53) pins the
+  committed shape to the INSTALLED runtime: S1 freshness (version +
+  revision), S2 every declared top-level VALUE exists, S2b namespaces
+  live-or-type-only (informational), S3 every live member is mapped,
+  S4 documented globals present. In-process only (no spawn, no keep-
+  list entry). A Bun upgrade or a stale shape file fails here.
+- tools/type-drift-probe.ts P1/P2 reworked to consume shape.json
+  structurally (P1 every runtime member mapped, P2 readableStreamTo*
+  via the deprecated flag) — the hardcoded bundle path is GONE from
+  both the matrix and the probe.
+- tools/bun-coverage-matrix.ts now derives rows from the FULL shape
+  (503 rows, up from 140): Token | Runtime (live typeof) | Types |
+  Docs | Gate | Uses. Gate map lives in src/lib/bun-gates.ts (shared
+  with the report): gateFor() applies namespace inheritance. Usage is
+  attributed to the LONGEST shape-matching key (Bun.argv.includes is
+  usage of argv; Bun.TOML.parse is the TOML.parse member).
+- Tier A (hard fail): used runtime members must have a probe gate —
+  all 133 used members are probed (0 failures). Unused GAPs are
+  reported, not fatal (3: readableStreamToFormData, sleepSync,
+  version_with_sha). Every GATES key must exist in the shape (dead
+  curated entries fail). coverage:matrix = shape:gen + matrix +
+  module-shape:report + docs:sync-counts (auto-FIX side; verify:
+  contracts header now 53/53).
+
+## 170. Per-module shape report — docs/BUN_MODULE_SHAPE.md (2026-08-24)
+
+- tools/module-shape-report.ts (bun run module-shape:report) groups
+  Bun usage by module (src/research/<dir>, src/lib, tools, ...) with
+  one rg pass, and annotates each token with its probe gate and docs
+  status from the shape + bun-gates. Regenerates docs/BUN_MODULE_SHAPE
+  .md (44 modules) — the data-driven per-module plans (§13) can now be
+  grounded in per-API probed/used/docs status: a module row with a GAP
+  gate is a used-but-unprobed API to prioritize.
+- Spawns rg -> tools/module-shape-report.ts added to SPAWN_KEEP_LIST.
+- Chained into coverage:matrix after the matrix generator.

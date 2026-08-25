@@ -63,6 +63,7 @@ const gates = [
   ['surface:probe'],
   ['version:probe'],
   ['type-drift:probe'],
+  ['shape:probe'], // §169 full-shape runtime agreement
   ['client-shape:probe'],
   ['coverage:probe'],
   ['fullstack:probe'],

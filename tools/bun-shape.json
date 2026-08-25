@@ -1,0 +1,4616 @@
+{
+  "bunVersion": "1.4.0",
+  "bunRevision": "34cbb9a40b4bd1bd767d134a7065e66c2432a676",
+  "pinnedVersion": "1.4.0",
+  "generatedAt": "2026-08-25T22:24:03.739Z",
+  "members": [
+    {
+      "name": "$",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "braces",
+      "ns": "$",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "cwd",
+      "ns": "$",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "env",
+      "ns": "$",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "escape",
+      "ns": "$",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "nothrow",
+      "ns": "$",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Shell",
+      "ns": "$",
+      "kind": "object",
+      "typeOnly": false,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ShellError",
+      "ns": "$",
+      "kind": "class",
+      "typeOnly": false,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ShellOutput",
+      "ns": "$",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ShellPromise",
+      "ns": "$",
+      "kind": "class",
+      "typeOnly": false,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "throws",
+      "ns": "$",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "AbstractWorker",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "AbstractWorkerEventMap",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "AddEventListenerOptions",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "allocUnsafe",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Architecture",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": true,
+      "extension": false
+    },
+    {
+      "name": "Archive",
+      "ns": "",
+      "kind": "class",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ArchiveCompression",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ArchiveExtractOptions",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ArchiveInput",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ArchiveOptions",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "argv",
+      "ns": "",
+      "kind": "object",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ArrayBufferSink",
+      "ns": "",
+      "kind": "class",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ArrayBufferView",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ArrayType",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "BeforeExitListener",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "BinaryType",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "BinaryTypeList",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "BlobOrStringOrBuffer",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "BlobPart",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "BodyInit",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "BufferSource",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "build",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Build",
+      "ns": "",
+      "kind": "namespace",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Architecture",
+      "ns": "Build",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "CompileTarget",
+      "ns": "Build",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Libc",
+      "ns": "Build",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "SIMD",
+      "ns": "Build",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "BuildArtifact",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "BuildConfig",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "BuildMetafile",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "BuildOutput",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "BunFile",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "BunInspectOptions",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "BunLockFile",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "BunLockFileBasePackageInfo",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "BunLockFilePackageArray",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "BunLockFilePackageInfo",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "BunLockFileWorkspacePackage",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "BunMessageEvent",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "BunPlugin",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "BunRegisterPlugin",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "BunRequest",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "CloseEventInit",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "color",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ColorInput",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "CompileBuildOptions",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "CompressionFormat",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "concatArrayBuffers",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "connect",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Cookie",
+      "ns": "",
+      "kind": "class",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "CookieInit",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "CookieMap",
+      "ns": "",
+      "kind": "class",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "CookieSameSite",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "CookieStoreDeleteOptions",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "CookieStoreGetOptions",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "cron",
+      "ns": "",
+      "kind": "object",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "CronController",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "CronJob",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "CronOptions",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "CronWithAutocomplete",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "CryptoHasher",
+      "ns": "",
+      "kind": "class",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "CryptoHashInterface",
+      "ns": "",
+      "kind": "class",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "CSRF",
+      "ns": "",
+      "kind": "namespace",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "generate",
+      "ns": "CSRF",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "verify",
+      "ns": "CSRF",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "CSRFAlgorithm",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "CSRFGenerateOptions",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "CSRFVerifyOptions",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "CustomEventInit",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "deepEquals",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "deepMatch",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "deflateSync",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "DigestEncoding",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "DirectUnderlyingSource",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "DisconnectListener",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "dns",
+      "ns": "",
+      "kind": "namespace",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ADDRCONFIG",
+      "ns": "dns",
+      "kind": "object",
+      "typeOnly": false,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ALL",
+      "ns": "dns",
+      "kind": "object",
+      "typeOnly": false,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "getCacheStats",
+      "ns": "dns",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "lookup",
+      "ns": "dns",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "prefetch",
+      "ns": "dns",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "V4MAPPED",
+      "ns": "dns",
+      "kind": "object",
+      "typeOnly": false,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "DNSLookup",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "DOMHighResTimeStamp",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "EditorOptions",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "embeddedFiles",
+      "ns": "",
+      "kind": "object",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "enableANSIColors",
+      "ns": "",
+      "kind": "object",
+      "typeOnly": false,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Encoding",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "env",
+      "ns": "",
+      "kind": "object",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Env",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ErrorEventInit",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Errorlike",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": true,
+      "extension": false
+    },
+    {
+      "name": "ErrorLike",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "escapeHTML",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "EventInit",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "EventListener",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "EventListenerObject",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "EventListenerOptions",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "EventListenerOrEventListenerObject",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "EventMap",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "EventSource",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "EventSourceEventMap",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ExitListener",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "FdSocketOptions",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "fetch",
+      "ns": "",
+      "kind": "object",
+      "typeOnly": false,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "FetchEvent",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "FFI",
+      "ns": "",
+      "kind": "object",
+      "typeOnly": false,
+      "docs": false,
+      "deprecated": false,
+      "extension": true
+    },
+    {
+      "name": "FFIFunctionCallable",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "file",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "FileBlob",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "FileSink",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "FileSystemRouter",
+      "ns": "",
+      "kind": "class",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "fileURLToPath",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "FormDataEntryValue",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "gc",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "generateHeapSnapshot",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "GenericTransformStream",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Glob",
+      "ns": "",
+      "kind": "class",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "GlobScanOptions",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "gunzipSync",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "gzipSync",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "hash",
+      "ns": "",
+      "kind": "object",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Hash",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "HeadersInit",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "HeapSnapshot",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "HMREvent",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "HMREventNames",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "HTMLBundle",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Image",
+      "ns": "",
+      "kind": "namespace",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ConstructorOptions",
+      "ns": "Image",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ErrorCode",
+      "ns": "Image",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Filter",
+      "ns": "Image",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Format",
+      "ns": "Image",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Metadata",
+      "ns": "Image",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ModulateOptions",
+      "ns": "Image",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ResizeOptions",
+      "ns": "Image",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Import",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ImportKind",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "indexOfLine",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "inflateSync",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "inspect",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "custom",
+      "ns": "inspect",
+      "kind": "object",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "table",
+      "ns": "inspect",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "isMainThread",
+      "ns": "",
+      "kind": "object",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "isStandaloneExecutable",
+      "ns": "",
+      "kind": "object",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "JavaScriptLoader",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "JSON5",
+      "ns": "",
+      "kind": "namespace",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "parse",
+      "ns": "JSON5",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "stringify",
+      "ns": "JSON5",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "JSONC",
+      "ns": "",
+      "kind": "namespace",
+      "typeOnly": false,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "parse",
+      "ns": "JSONC",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "JSONL",
+      "ns": "",
+      "kind": "namespace",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "parse",
+      "ns": "JSONL",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "parseChunk",
+      "ns": "JSONL",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ParseChunkResult",
+      "ns": "JSONL",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "LibdeflateCompressionOptions",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "listen",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Loader",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "MacroMap",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "main",
+      "ns": "",
+      "kind": "object",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "markdown",
+      "ns": "",
+      "kind": "namespace",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ansi",
+      "ns": "markdown",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "AnsiTheme",
+      "ns": "markdown",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "CellMeta",
+      "ns": "markdown",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "CellProps",
+      "ns": "markdown",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ChildrenProps",
+      "ns": "markdown",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "CodeBlockMeta",
+      "ns": "markdown",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "CodeBlockProps",
+      "ns": "markdown",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Component",
+      "ns": "markdown",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ComponentOverrides",
+      "ns": "markdown",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "HeadingMeta",
+      "ns": "markdown",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "HeadingProps",
+      "ns": "markdown",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "html",
+      "ns": "markdown",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ImageMeta",
+      "ns": "markdown",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ImageProps",
+      "ns": "markdown",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "LinkMeta",
+      "ns": "markdown",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "LinkProps",
+      "ns": "markdown",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ListItemMeta",
+      "ns": "markdown",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ListItemProps",
+      "ns": "markdown",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ListMeta",
+      "ns": "markdown",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Options",
+      "ns": "markdown",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "OrderedListProps",
+      "ns": "markdown",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "react",
+      "ns": "markdown",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ReactOptions",
+      "ns": "markdown",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "render",
+      "ns": "markdown",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "RenderCallbacks",
+      "ns": "markdown",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "MatchedRoute",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "MaybePromise",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "MD4",
+      "ns": "",
+      "kind": "class",
+      "typeOnly": false,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "MD5",
+      "ns": "",
+      "kind": "class",
+      "typeOnly": false,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "MessageEvent",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "MessageEventInit",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "MessageEventSource",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "MessageListener",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "mmap",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "MMapOptions",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "MultipleResolveListener",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": true,
+      "extension": false
+    },
+    {
+      "name": "MultipleResolveType",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "nanoseconds",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "NetworkSink",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "NullSubprocess",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "NullSyncSubprocess",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "OnBeforeParseCallback",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "OnEndCallback",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "OnLoadArgs",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "OnLoadCallback",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "OnLoadResult",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "OnLoadResultObject",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "OnLoadResultSourceCode",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "OnResolveArgs",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "OnResolveCallback",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "OnResolveResult",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "OnStartCallback",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "openInEditor",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "password",
+      "ns": "",
+      "kind": "object",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Password",
+      "ns": "",
+      "kind": "namespace",
+      "typeOnly": false,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "AlgorithmLabel",
+      "ns": "Password",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Argon2Algorithm",
+      "ns": "Password",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "BCryptAlgorithm",
+      "ns": "Password",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "PathLike",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "pathToFileURL",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "peek",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "status",
+      "ns": "peek",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "PipedSubprocess",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Platform",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": true,
+      "extension": false
+    },
+    {
+      "name": "plugin",
+      "ns": "",
+      "kind": "object",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "PluginBuilder",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "PluginConstraints",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "postgres",
+      "ns": "",
+      "kind": "object",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "randomUUIDv5",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "randomUUIDv7",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ReadableIO",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": true,
+      "extension": false
+    },
+    {
+      "name": "ReadableStreamController",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ReadableStreamDefaultReadManyResult",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ReadableStreamDefaultReadResult",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ReadableStreamReader",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "readableStreamToArray",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "readableStreamToArrayBuffer",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "readableStreamToBlob",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": true,
+      "extension": false
+    },
+    {
+      "name": "readableStreamToBytes",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": true,
+      "extension": false
+    },
+    {
+      "name": "readableStreamToFormData",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "readableStreamToJSON",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": true,
+      "extension": false
+    },
+    {
+      "name": "readableStreamToText",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": true,
+      "extension": false
+    },
+    {
+      "name": "ReadableSubprocess",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ReadableSyncSubprocess",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "redis",
+      "ns": "",
+      "kind": "object",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "RedisClient",
+      "ns": "",
+      "kind": "namespace",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "KeyLike",
+      "ns": "RedisClient",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "StringPubSubListener",
+      "ns": "RedisClient",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "RedisOptions",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "RejectionHandledListener",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ReservedSQL",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "resolve",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "resolveSync",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ResourceUsage",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "revision",
+      "ns": "",
+      "kind": "object",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "s3",
+      "ns": "",
+      "kind": "object",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "S3Client",
+      "ns": "",
+      "kind": "class",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "S3File",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "S3FilePresignOptions",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "S3ListObjectsOptions",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "S3ListObjectsResponse",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "S3Options",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "S3Stats",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "SavepointSQL",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "secrets",
+      "ns": "",
+      "kind": "object",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Security",
+      "ns": "",
+      "kind": "namespace",
+      "typeOnly": false,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Advisory",
+      "ns": "Security",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Package",
+      "ns": "Security",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Scanner",
+      "ns": "Security",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "semver",
+      "ns": "",
+      "kind": "namespace",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "order",
+      "ns": "semver",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "satisfies",
+      "ns": "semver",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "serve",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Serve",
+      "ns": "",
+      "kind": "namespace",
+      "typeOnly": false,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "BaseRouteValue",
+      "ns": "Serve",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "BaseServeOptions",
+      "ns": "Serve",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Development",
+      "ns": "Serve",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "DirectoryRouteOptions",
+      "ns": "Serve",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ExtractRouteParams",
+      "ns": "Serve",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "FetchOrRoutes",
+      "ns": "Serve",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "FetchOrRoutesWithWebSocket",
+      "ns": "Serve",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Handler",
+      "ns": "Serve",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "HostnamePortServeOptions",
+      "ns": "Serve",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "HTTPMethod",
+      "ns": "Serve",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Options",
+      "ns": "Serve",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Routes",
+      "ns": "Serve",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "RoutesWithUpgrade",
+      "ns": "Serve",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "UnixServeOptions",
+      "ns": "Serve",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ServeOptions",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": true,
+      "extension": false
+    },
+    {
+      "name": "Server",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ServerWebSocket",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ServerWebSocketSendStatus",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "sha",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "SHA1",
+      "ns": "",
+      "kind": "class",
+      "typeOnly": false,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "SHA224",
+      "ns": "",
+      "kind": "class",
+      "typeOnly": false,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "SHA256",
+      "ns": "",
+      "kind": "class",
+      "typeOnly": false,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "SHA384",
+      "ns": "",
+      "kind": "class",
+      "typeOnly": false,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "SHA512",
+      "ns": "",
+      "kind": "class",
+      "typeOnly": false,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "SHA512_256",
+      "ns": "",
+      "kind": "class",
+      "typeOnly": false,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ShellExpression",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ShellFunction",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": true,
+      "extension": false
+    },
+    {
+      "name": "shrink",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "SignalsListener",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "sleep",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "sleepSync",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "sliceAnsi",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "SliceAnsiOptions",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Socket",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "SocketAddress",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "SocketHandler",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "SocketListener",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "SocketOptions",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "spawn",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Spawn",
+      "ns": "",
+      "kind": "namespace",
+      "typeOnly": false,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "BaseOptions",
+      "ns": "Spawn",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "OptionsObject",
+      "ns": "Spawn",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Readable",
+      "ns": "Spawn",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ReadableToIO",
+      "ns": "Spawn",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ReadableToSyncIO",
+      "ns": "Spawn",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "SpawnOptions",
+      "ns": "Spawn",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "SpawnSyncOptions",
+      "ns": "Spawn",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Writable",
+      "ns": "Spawn",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "WritableIO",
+      "ns": "Spawn",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "WritableToIO",
+      "ns": "Spawn",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "spawnSync",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "sql",
+      "ns": "",
+      "kind": "object",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "SQL",
+      "ns": "",
+      "kind": "namespace",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "AwaitPromisesArray",
+      "ns": "SQL",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ContextCallback",
+      "ns": "SQL",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ContextCallbackResult",
+      "ns": "SQL",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Helper",
+      "ns": "SQL",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ListenSubscription",
+      "ns": "SQL",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "MySQLError",
+      "ns": "SQL",
+      "kind": "class",
+      "typeOnly": false,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Options",
+      "ns": "SQL",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "PostgresError",
+      "ns": "SQL",
+      "kind": "class",
+      "typeOnly": false,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "PostgresOrMySQLOptions",
+      "ns": "SQL",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Query",
+      "ns": "SQL",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "SavepointContextCallback",
+      "ns": "SQL",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "SQLError",
+      "ns": "SQL",
+      "kind": "class",
+      "typeOnly": false,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "SQLiteError",
+      "ns": "SQL",
+      "kind": "class",
+      "typeOnly": false,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "SQLiteOptions",
+      "ns": "SQL",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "TransactionContextCallback",
+      "ns": "SQL",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "SQLArrayParameter",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "SQLOptions",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": true,
+      "extension": false
+    },
+    {
+      "name": "SQLQuery",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": true,
+      "extension": false
+    },
+    {
+      "name": "SQLSavepointContextCallback",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": true,
+      "extension": false
+    },
+    {
+      "name": "SQLTransactionContextCallback",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": true,
+      "extension": false
+    },
+    {
+      "name": "stderr",
+      "ns": "",
+      "kind": "object",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "stdin",
+      "ns": "",
+      "kind": "object",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "stdout",
+      "ns": "",
+      "kind": "object",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "StringLike",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "StringOrBuffer",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "stringWidth",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "StringWidthOptions",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "stripANSI",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "StructuredSerializeOptions",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Subprocess",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "SupportedCryptoAlgorithms",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "SyncSubprocess",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "SystemError",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Target",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "TCPSocket",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "TCPSocketConnectOptions",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "TCPSocketListener",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "TCPSocketListenOptions",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Terminal",
+      "ns": "",
+      "kind": "class",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "TerminalOptions",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "TimerHandler",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "TLSOptions",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "TLSSocket",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "TLSUpgradeOptions",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "TOML",
+      "ns": "",
+      "kind": "namespace",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "parse",
+      "ns": "TOML",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "stringify",
+      "ns": "TOML",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "TransactionSQL",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Transferable",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "TransformerFlushCallback",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "TransformerStartCallback",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "TransformerTransformCallback",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Transpiler",
+      "ns": "",
+      "kind": "class",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "TranspilerOptions",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "TSConfig",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "udp",
+      "ns": "",
+      "kind": "namespace",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "BaseUDPSocket",
+      "ns": "udp",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ConnectedSocket",
+      "ns": "udp",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ConnectedSocketHandler",
+      "ns": "udp",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ConnectSocketOptions",
+      "ns": "udp",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Data",
+      "ns": "udp",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ReceiveFlags",
+      "ns": "udp",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Socket",
+      "ns": "udp",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "SocketHandler",
+      "ns": "udp",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "SocketOptions",
+      "ns": "udp",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "udpSocket",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "UncaughtExceptionListener",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": true,
+      "extension": false
+    },
+    {
+      "name": "UncaughtExceptionOrigin",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "UnderlyingSink",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "UnderlyingSinkAbortCallback",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "UnderlyingSinkCloseCallback",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "UnderlyingSinkStartCallback",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "UnderlyingSinkWriteCallback",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "UnderlyingSource",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "UnderlyingSourceCancelCallback",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "UnderlyingSourcePullCallback",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "UnderlyingSourceStartCallback",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "UnhandledRejectionListener",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": true,
+      "extension": false
+    },
+    {
+      "name": "UnixSocketListener",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "UnixSocketOptions",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "unsafe",
+      "ns": "",
+      "kind": "namespace",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "arrayBufferToString",
+      "ns": "unsafe",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "gcAggressionLevel",
+      "ns": "unsafe",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "memoryFootprint",
+      "ns": "unsafe",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "mimallocDump",
+      "ns": "unsafe",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "version",
+      "ns": "",
+      "kind": "object",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "version_with_sha",
+      "ns": "",
+      "kind": "object",
+      "typeOnly": false,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "WarningListener",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "WebAssembly",
+      "ns": "",
+      "kind": "namespace",
+      "typeOnly": false,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "CompileError",
+      "ns": "WebAssembly",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Exports",
+      "ns": "WebAssembly",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ExportValue",
+      "ns": "WebAssembly",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Global",
+      "ns": "WebAssembly",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "GlobalDescriptor",
+      "ns": "WebAssembly",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ImportExportKind",
+      "ns": "WebAssembly",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Imports",
+      "ns": "WebAssembly",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ImportValue",
+      "ns": "WebAssembly",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Instance",
+      "ns": "WebAssembly",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "LinkError",
+      "ns": "WebAssembly",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Memory",
+      "ns": "WebAssembly",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "MemoryDescriptor",
+      "ns": "WebAssembly",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Module",
+      "ns": "WebAssembly",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ModuleExportDescriptor",
+      "ns": "WebAssembly",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ModuleImportDescriptor",
+      "ns": "WebAssembly",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ModuleImports",
+      "ns": "WebAssembly",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "RuntimeError",
+      "ns": "WebAssembly",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Table",
+      "ns": "WebAssembly",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "TableDescriptor",
+      "ns": "WebAssembly",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "TableKind",
+      "ns": "WebAssembly",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ValueType",
+      "ns": "WebAssembly",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ValueTypeMap",
+      "ns": "WebAssembly",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "WebAssemblyInstantiatedSource",
+      "ns": "WebAssembly",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "WebSocket",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "WebSocketCompressor",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "WebSocketEventMap",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "WebSocketHandler",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "WebSocketOptions",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "WebSocketOptionsCompression",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "WebSocketOptionsHeaders",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "WebSocketOptionsProtocolsOrProtocol",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "WebSocketOptionsProxy",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "WebSocketOptionsTLS",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "WebSocketReadyState",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "WebView",
+      "ns": "",
+      "kind": "namespace",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Backend",
+      "ns": "WebView",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ClickOptions",
+      "ns": "WebView",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ClickSelectorOptions",
+      "ns": "WebView",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ConsoleCapture",
+      "ns": "WebView",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ConstructorOptions",
+      "ns": "WebView",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Modifier",
+      "ns": "WebView",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "PressOptions",
+      "ns": "WebView",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ScrollToOptions",
+      "ns": "WebView",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "VirtualKey",
+      "ns": "WebView",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "which",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "WhichOptions",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Worker",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "WorkerEventMap",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "WorkerOptions",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "WorkerType",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "wrapAnsi",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "WrapAnsiOptions",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "WritableSubprocess",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "write",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "XML",
+      "ns": "",
+      "kind": "namespace",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Comment",
+      "ns": "XML",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Document",
+      "ns": "XML",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Element",
+      "ns": "XML",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Node",
+      "ns": "XML",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "NodeInput",
+      "ns": "XML",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "parse",
+      "ns": "XML",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ParseOptions",
+      "ns": "XML",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ProcessingInstruction",
+      "ns": "XML",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Scalar",
+      "ns": "XML",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "stringify",
+      "ns": "XML",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "Value",
+      "ns": "XML",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "XMLHttpRequestBodyInit",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "YAML",
+      "ns": "",
+      "kind": "namespace",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "parse",
+      "ns": "YAML",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "stringify",
+      "ns": "YAML",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "ZlibCompressionOptions",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "docs": false,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "zstdCompress",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "zstdCompressSync",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "zstdDecompress",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    },
+    {
+      "name": "zstdDecompressSync",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "docs": true,
+      "deprecated": false,
+      "extension": false
+    }
+  ],
+  "globals": [
+    "AbortController",
+    "AbortSignal",
+    "Blob",
+    "BroadcastChannel",
+    "BuildMessage",
+    "ByteLengthQueuingStrategy",
+    "CloseEvent",
+    "CompressionStream",
+    "CountQueuingStrategy",
+    "Crypto",
+    "CryptoKey",
+    "CustomEvent",
+    "DOMException",
+    "DecompressionStream",
+    "ErrorEvent",
+    "Event",
+    "EventSource",
+    "EventTarget",
+    "File",
+    "FormData",
+    "Headers",
+    "Loader",
+    "MessageChannel",
+    "MessageEvent",
+    "MessagePort",
+    "Performance",
+    "PerformanceEntry",
+    "PerformanceMark",
+    "PerformanceMeasure",
+    "PerformanceObserver",
+    "PerformanceObserverEntryList",
+    "PerformanceResourceTiming",
+    "ReadableByteStreamController",
+    "ReadableStream",
+    "ReadableStreamBYOBReader",
+    "ReadableStreamBYOBRequest",
+    "ReadableStreamDefaultController",
+    "ReadableStreamDefaultReader",
+    "Request",
+    "ResolveMessage",
+    "Response",
+    "ShadowRealm",
+    "SubtleCrypto",
+    "TextDecoder",
+    "TextDecoderStream",
+    "TextEncoder",
+    "TextEncoderStream",
+    "TransformStream",
+    "TransformStreamDefaultController",
+    "URL",
+    "URLSearchParams",
+    "WebSocket",
+    "Worker",
+    "WritableStream",
+    "WritableStreamDefaultController",
+    "WritableStreamDefaultWriter",
+    "addEventListener",
+    "alert",
+    "clearImmediate",
+    "clearInterval",
+    "clearTimeout",
+    "confirm",
+    "console",
+    "crypto",
+    "exports",
+    "fetch",
+    "module",
+    "navigator",
+    "performance",
+    "postMessage",
+    "prompt",
+    "queueMicrotask",
+    "removeEventListener",
+    "reportError",
+    "require",
+    "setImmediate",
+    "setInterval",
+    "setTimeout",
+    "structuredClone"
+  ]
+}
