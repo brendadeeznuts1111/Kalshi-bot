@@ -4804,6 +4804,35 @@ another note.
   test.ts (new), package.json (bun:apis-probe), tools/verify-contracts.ts
   (gate #26), scripts/audit-bun-native.ts (keep-list +1), this section.
   verify:contracts 26/26.
+## 116. ws:probe deep-dive audited — pong payload verified, three claims corrected (2026-08-24)
+
+- A pasted deep-dive on ws:probe was audited against the actual probe +
+  runtime. Corrections and additions:
+  1. FALSE: 'each test runs against a fresh Bun.serve() instance' — the
+     probe uses ONE server for all checks (state is per-check via the
+     seen array, not per-instance).
+  2. VERIFIED: the pong handler RECEIVES the ping payload —
+     pong(ws, data) gets the bytes (probe: ping('pay') ->
+     'pong-payload:pay'). ws-probe extended to 8/8 (P8).
+  3. FALSE: server.connections does NOT exist on 1.4.0 (probe:
+     undefined). The writeup's ping-interval design (for-of
+     server.connections) would fail — sockets must be tracked manually
+     (open handler registers, close removes).
+  4. §111 mischaracterized: the sqlite bigint issue is NOT only a type-
+     lag — the RUNTIME ignores the option too (lossy Numbers in both
+     modes). The types AND the runtime lag together.
+  5. Bun.serve DOES accept an http2 option (probe: serve({http2:true})
+     starts and responds) — the earlier API table's 'http1 and http3
+     options' naming was wrong. Real h2 negotiation needs TLS; not yet
+     probed (next-step list, §115/§116).
+  6. Gate count: 26 (the writeup said 25; bun:apis-probe §115 followed).
+- SPORTSBOOK DESIGN NOTES (grounded, kept for the pipeline): ws.data
+  for per-book context; publish-inclusive gotcha -> dedupe by message id
+  or publisher flag in the handler; close codes for policy/error;
+  keep-alive via MANUALLY tracked sockets (server.connections absent).
+- Artifacts: tools/ws-probe.ts (P8, 8/8), tests/lib/ws-probe.test.ts
+  (8/8), this section. verify:contracts 26/26.
+
 
 
 

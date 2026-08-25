@@ -5,7 +5,7 @@ import { join } from "node:path";
 const ROOT = join(import.meta.dir, "../..");
 
 describe("ws:probe (§114)", () => {
-  test("all 7 websocket surface checks verified", () => {
+  test("all 8 websocket surface checks verified", () => {
     const proc = Bun.spawnSync(["bun", "tools/ws-probe.ts"], {
       cwd: ROOT,
       stdout: "pipe",
@@ -13,7 +13,7 @@ describe("ws:probe (§114)", () => {
     });
     expect(proc.exitCode).toBe(0);
     const out = (proc.stdout?.toString() ?? "") + (proc.stderr?.toString() ?? "");
-    expect(out).toContain("7/7 checks");
+    expect(out).toContain("8/8 checks");
     expect(out).not.toContain("FAIL");
   });
 });

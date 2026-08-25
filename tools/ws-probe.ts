@@ -19,12 +19,12 @@ const server = serve({
     return new Response("no");
   },
   websocket: {
-    open(ws) { seen.push("open:" + (ws.data as unknown as { who?: string }).who); ws.subscribe("topic"); ws.ping(); },
+    open(ws) { seen.push("open:" + (ws.data as unknown as { who?: string }).who); ws.subscribe("topic"); ws.ping(new TextEncoder().encode("pay")); },
     message(ws, msg) {
       seen.push("msg:" + (typeof msg === "string" ? "string" : msg instanceof Uint8Array ? "Uint8Array" : typeof msg));
       if (typeof msg === "string") { if (msg === "pub") { publishCount = server.publish("topic", "broadcast"); } else { ws.send("echo:" + msg); } }
     },
-    pong(ws) { seen.push("pong"); },
+    pong(ws, data) { seen.push("pong"); if (data) seen.push("pong-payload:" + new TextDecoder().decode(data as Uint8Array)); },
     close(ws, code) { seen.push("close:" + code); },
   },
 });
@@ -63,6 +63,7 @@ async function run() {
   check("P5 close code received", seen.includes("close:4001"));
   check("P6 refused upgrade -> client CLOSED", seen.includes("refuse-status:403") && seen.includes("refuse-state:3"));
   check("P7 publish broadcasts to subscribers (not publisher)", typeof publishCount === "number" && publishCount >= 0 && seen.includes("b-got:broadcast"), "publish=" + publishCount + " b-got=" + bGot);
+  check("P8 pong handler receives the ping payload", seen.includes("pong-payload:pay"));
 }
 
 await run();
