@@ -4491,8 +4491,9 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
 ## 111. Channel + route registries (2026-08-25)
 
 - channel-registry.ts is the CHANNEL SSOT: ids/labels/sources/actions/cron +
-  telegram flags. The dashboard live-refresh loop now covers ALL 11 channels
-  (was hardcoded to 7 — prune/mapping/docs/compliance never refreshed live).
+  telegram flags. The dashboard live-refresh loop now covers ALL channels
+  (was hardcoded to 7 — prune/mapping/docs/compliance never refreshed live;
+  github added §118 → 12 channels, still zero hardcoded JS).
   The /api/signals/actions dispatcher's unknown-action message derives from
   CHANNEL_ACTIONS.
 - route-manifest.ts is the API-surface SSOT (~97 entries: exact + URLPattern +
@@ -4572,5 +4573,27 @@ another note.
 - Inherent (routed around, not removed): the harness lexer itself (R2
   transports), sandbox /tmp isolation (R1).
 - Artifacts: this section. verify:contracts stays 18/18.
+## 118. Live GitHub budget channel + release-driven docs drift (2026-08-25)
+
+- github channel (§118): github-budget.ts reads the authenticated /rate_limit
+  wire (ONE fetch, 5-min in-process TTL — the endpoint itself counts against
+  core, so the TTL is the budget guard) and the channel reports token source
+  + core/search/code_search remaining + reset. Degrades to zero-network when
+  no token resolves; distinguishes "no token" from "token 401/rejected".
+- release-driven docs drift: collectSignals compares the latest Bun release
+  (RSS + atom, numeric semver via versionGt — feeds say "1.4" where maps.toml
+  pins "1.4.0", so STRING compare false-positives) against maps.toml pins;
+  a newer release pushes a docs-channel warn with a docs:refresh action
+  (dispatcher runs the network refresh to heal the triple-lock).
+- mock.module path gotcha: tests in tests/institutions/ must mock with
+  "../../src/..." (two levels up), not "../src/..." — one level up resolves
+  to tests/src/... and silently falls through to the REAL module (live
+  network in tests). tests/ root files use "../src/...".
+- tools/bun-docs-index.ts is import-safe now: main() runs under
+  import.meta.main; importing it (for githubApiAuthHeaders tests) no longer
+  triggers discovery/network/cache writes. The trees API call authenticates
+  via githubApiAuthHeaders() (Bearer when a token resolves, {} otherwise) —
+  the unauthenticated bucket is 60 req/hr and an abort kills discovery.
+
 
 

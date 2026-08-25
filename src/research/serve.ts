@@ -117,6 +117,7 @@ import {
 } from "../institutions/signal-pipeline.ts";
 import { CHANNEL_ACTIONS } from "../institutions/channel-registry.ts";
 import { collectPipelineStatus, summarizePipelines } from "../lib/pipeline-status.ts";
+import { MAPS_TOML_PATH, mapsHashOfPins, parseMapsPins } from "../lib/maps-lock.ts";
 import {
   brandBadgeSvg,
   brandCardPng,
@@ -1896,6 +1897,9 @@ export function createResearchServer(options: ServeOptions = {}) {
           const ok = counts.bad === 0;
           const pipelines = await collectPipelineStatus();
           const pip = summarizePipelines(pipelines);
+          // Live maps.toml triple-lock hash (never a placeholder).
+          const mapsText = await Bun.file(MAPS_TOML_PATH).text().catch(() => "");
+          const mapsPins = mapsText ? parseMapsPins(Bun.TOML.parse(mapsText)) : null;
           const body = {
             ok,
             status: ok ? "ok" : "degraded",
@@ -1909,8 +1913,11 @@ export function createResearchServer(options: ServeOptions = {}) {
             bun14: {
               version: Bun.version,
               revision: Bun.revision.slice(0, 8),
-              docsPages: 333,
-              mapsLock: "check via bun run docs:refresh",
+              docsPages: mapsPins?.docsPages ?? 0,
+              mapsLock: mapsPins ? mapsHashOfPins(mapsPins) : null,
+              mapsPins: mapsPins
+                ? { bun: mapsPins.bunVersion, ref: mapsPins.docsRef, scope: mapsPins.docsScope }
+                : null,
             },
           };
           return json(body, ok ? 200 : 503, designCorsHeaders());

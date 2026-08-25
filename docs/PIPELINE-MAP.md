@@ -20,7 +20,7 @@
 | Stages | sources → signals → channels → actions (`src/institutions/signal-pipeline.ts`) |
 | Artifacts | `.data/*.json` gate states (consumed, never fetched live) |
 | Gates | `verify:contracts` (docs/refresh/routes gates) |
-| Channel | all 11 channels — design · deps · brand · releases · ops · inventory · cron · prune · mapping · docs · compliance |
+| Channel | all 12 channels — design · deps · brand · releases · ops · inventory · cron · prune · mapping · docs · compliance · github |
 | Cron | `Bun.cron */5 * * * *` signal refresh + daily blog-map `0 3 * * *` |
 
 ## 2. Content pipeline (posts → hashes → ETags → prune)

@@ -27,7 +27,7 @@ import { BRAND, DESIGN_SYSTEM_VERSION } from './design-tokens.ts';
 import { isVideoFile } from '../research/video-page.ts';
 import { latestRelease, parseAtomEntries, parseRssEntries } from '../lib/release-blog.ts';
 import { CHANNEL_DEFS, CHANNEL_ORDER, type ChannelId } from './channel-registry.ts';
-import { collectGithubBudget } from './github-budget.ts';
+import { collectGithubBudget, githubTokenSource } from './github-budget.ts';
 import { parseMapsPins } from '../lib/maps-lock.ts';
 import type { GitHubRateLimitSnapshot } from '../research/github-rate-limit.ts';
 
@@ -187,7 +187,7 @@ export async function collectSignals(root: string, brand: BrandMetricsSnapshot):
   // written by docs:check — offline + fast).
   await collectDocs(root, signals);
   await collectCompliance(root, signals);
-  await collectGithubBudgetSignals(root, signals);
+  await collectGithubBudgetSignals(signals);
 
   // cron channel: the Bun.cron refresh job state.
   push({
@@ -457,16 +457,23 @@ export async function collectCompliance(root: string, signals: Signal[]): Promis
  * 30s signal cache never hammers /rate_limit (it counts against core). No
  * token → warn with the fix hint; low budget → warn per bucket.
  */
-export async function collectGithubBudgetSignals(root: string, signals: Signal[]): Promise<void> {
+export async function collectGithubBudgetSignals(signals: Signal[]): Promise<void> {
   const push = (s: Signal): void => { signals.push(s); };
   const snap = await collectGithubBudget();
   if (!snap) {
+    // Distinguish "no token" from "token present but /rate_limit failed"
+    // (401/network) — a bad GH_TOKEN is a different fix than gh auth login.
+    const source = githubTokenSource();
     push({
       id: 'github-token',
       channel: 'github',
       severity: 'warn',
-      title: 'no GitHub token — research + docs discovery run UNAUTHENTICATED',
-      detail: 'set GH_TOKEN / GITHUB_TOKEN in .env (Bun loads it natively) or run gh auth login',
+      title: source === 'none'
+        ? 'no GitHub token — research + docs discovery run UNAUTHENTICATED'
+        : 'GitHub token present but /rate_limit failed (401? network?)',
+      detail: source === 'none'
+        ? 'set GH_TOKEN / GITHUB_TOKEN in .env (Bun loads it natively) or run gh auth login'
+        : 'check GH_TOKEN / GITHUB_TOKEN validity — gh auth token fallback may be stale',
       source: 'github-budget',
     });
     return;
