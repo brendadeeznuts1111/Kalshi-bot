@@ -25,7 +25,7 @@ Hierarchical evidence model for Kalshi GitHub bot research. Locked as part of **
 
 ## Types (`src/research/types.ts`)
 
-```typescript
+```ts
 EvidenceLine   // { query, path, component }
 DetectorResult // { id, component, scope, matched, pointsContributed, maxPoints, evidence, rationale }
 RepoReport     // { fullName, score, detectors, liftNotes, strategyTags, generatedAt }

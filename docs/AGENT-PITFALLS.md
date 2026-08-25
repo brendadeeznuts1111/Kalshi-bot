@@ -5438,6 +5438,30 @@ another note.
   (new, gate #38), tools/verify-contracts.ts (36 -> 38 gates),
   package.json (net:probe, runtime:probe), docs/BUN_API_COVERAGE.md.
   verify:contracts 38/38.
+## 135. Fence lang contract — Bun-native tags, @bun-run execution (2026-08-24)
+
+- Every code fence in docs now carries a Bun-native lang tag; docs:check
+  FAILS on any untagged fence (the loader set Bun handles out of the box
+  via its transpiler).
+- Normalized fence tag typescript -> ts (the Bun loader name; the
+  generator for docs/COLORS.md updated to match). The 14 previously
+  untagged display fences (ASCII diagrams, sample output, URLs, schema
+  lines) are now tagged text.
+- Validators extended to Bun-native parsers: jsonc (Bun.JSONC.parse —
+  probe §133: comments + trailing commas OK, quoted keys REQUIRED) and
+  env (the .env loader shape of Bun: KEY=value lines, # comments). The
+  json/json5/toml/yaml/xml set was already Bun-native.
+- @bun-run EXECUTION pass: a ts/tsx block containing a // @bun-run
+  marker line is a COMPLETE, self-contained example — docs:check writes
+  it to a temp file and RUNS it via bun run (Bun executes TS/TSX out of
+  the box); non-zero exit FAILS the gate. 15 API-example blocks in
+  docs/BUN_NATIVE.md are marked (all pass; a future Bun breakage that
+  changes an example behavior flips the gate and demands a re-probe).
+  Unmarked blocks remain syntax-validated only (fragments are normal).
+- Artifacts: src/lib/docs-validate.ts (jsonc/env validators),
+  tools/docs-check.ts (untagged-fence FAIL + @bun-run execution),
+  scripts/generate-color-artifacts.ts (typescript->ts template), the
+  52 docs fences. docs:check — 52/52. verify:contracts 38/38.
 
 
 

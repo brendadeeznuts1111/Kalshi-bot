@@ -4,7 +4,7 @@
 
 You are closest to: **controlled vocabulary + data dictionary + UI copy tokens**, not a full ontology.
 
-```
+```text
 Glossary (semantic authority)          ids never rename for schema churn
     │
     ├─► Desk column registry  ── concept?: GlossaryId (FK, kind=registry)
@@ -59,6 +59,7 @@ Registry changes for CSV order / SQLite migrations. Glossary concepts are **sema
 
 ### 2. Registry features opt-in via `concept`
 
+// @bun-run
 ```ts
 const registryRow = { column: 11, feature: "kalshi_mu", concept: "kalshi_mu" };
 ```

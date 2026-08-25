@@ -4,7 +4,7 @@ Canonical naming rules for all environment variables in Kalshi-bot.
 
 ## Prefix rule
 
-```
+```text
 SERVICE_SUBSYSTEM_PROPERTY
 ```
 
@@ -41,7 +41,7 @@ Every env var MUST have a service prefix. Examples:
 
 Cron registrations MUST come in pairs:
 
-```
+```text
 SERVICE_CRON_SCHEDULE    →  "0 6 * * MON"
 SERVICE_CRON_TITLE       →  "kalshi-research-weekly"
 ```
@@ -62,7 +62,8 @@ These lack a service prefix by design:
 
 When renaming, add a backward-compat read wrapper:
 
-```typescript
+// @bun-run
+```ts
 // New name preferred, old name still works
 const hubUrl = Bun.env.OPS_DASHBOARD_URL ?? Bun.env.SERVE_URL;
 ```

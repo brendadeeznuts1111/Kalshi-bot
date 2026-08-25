@@ -116,7 +116,8 @@ for the h2 test cert-gen in `SPAWN_KEEP_LIST`). Where Bun has a native API
 
 Docs use both forms; this repo uses the named import:
 
-```typescript
+// @bun-run
+```ts
 import { $ } from "bun";
 
 await $`gh auth token`.nothrow().quiet();
@@ -132,7 +133,8 @@ The research pipeline talks to GitHub REST via `Bun.fetch` (`github-api.ts`,
 `src/research/github-network.ts` and the **auth-status health probe** in
 `tools/snapshot-data-plane.ts` (`commandSucceeds(["gh", "auth", "status"])`):
 
-```typescript
+// @bun-run
+```ts
 async function getGhToken(): Promise<string> {
   const { exitCode, stdout } = await $`gh auth token`.nothrow().quiet();
   if (exitCode === 0) return stdout.toString().trim();
@@ -149,7 +151,7 @@ moved to `Bun.fetch`; code search is `githubApiJson("search/code?...")`).
 
 Bun escapes interpolated strings ([docs](https://bun.com/docs/runtime/shell#security-in-the-bun-shell)):
 
-```typescript
+```ts
 // SAFE - token treated as one literal argument to gh
 await $`gh auth token`.nothrow().quiet();
 ```
@@ -161,7 +163,7 @@ you add interactive mode, validate inputs.
 
 **Never** do:
 
-```typescript
+```ts
 await $`bash -c "gh auth token ${userInput}"`; // hands off to system shell
 ```
 
@@ -169,7 +171,8 @@ await $`bash -c "gh auth token ${userInput}"`; // hands off to system shell
 
 When `.nothrow()` is not used and exit ≠ 0:
 
-```typescript
+// @bun-run
+```ts
 try {
   await $`gh auth token`;
 } catch (err) {

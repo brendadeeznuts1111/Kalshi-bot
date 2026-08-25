@@ -42,7 +42,7 @@ Use `--export-audit` on the research CLI to emit after a run (both tiers).
 
 Monorepo schema requires `evidence.path` under `tools/audit-evidence/`. On ingest, remap (same stored bytes; rotor uses `.ndjson` because the monorepo gitignores `*.jsonl`):
 
-```
+```text
 research/audit-evidence/{owner}__{repo}.jsonl
   → tools/audit-evidence/kalshi/{owner}__{repo}.ndjson
 ```
@@ -84,7 +84,7 @@ Ingest steps:
 
 Before ranking or export consumes a `RepoReport`:
 
-```typescript
+```ts
 import { validateRepoReport } from "./validate.ts";
 validateRepoReport(wire); // throws if structural mismatch
 ```

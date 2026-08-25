@@ -16,7 +16,7 @@ Canonical API: [bun.com/docs/runtime/cron](https://bun.com/docs/runtime/cron)
 
 ## Architecture
 
-```
+```text
 OS scheduler (launchd / crontab / Task Scheduler)
   → Bun.cron(SCHEDULED_WORKER_PATH, schedule, title)   # schedule-cli register
     → bun run --cron-title=<title> scheduled.ts

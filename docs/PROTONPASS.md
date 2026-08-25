@@ -178,7 +178,7 @@ bun run partner:vault:provision -- \
 
 The file `.env.protonpass` (gitignored) maps [secret references](https://protonpass.github.io/pass-cli/commands/contents/secret-references/) to environment variables. For [`run`](https://protonpass.github.io/pass-cli/commands/contents/run/), use **bare** `pass://` URIs (no `{{ }}`):
 
-```
+```text
 KALSHI_API_KEY_ID=pass://Kalshi Bot/Kalshi API/keyId
 KALSHI_PRIVATE_KEY=pass://Kalshi Bot/Kalshi API/privateKey
 ODDS_API_KEY=pass://Kalshi Bot/The Odds API/apiKey
@@ -393,7 +393,7 @@ All `pass-cli` subprocesses have a 15s timeout. If they hang, they receive `SIGT
 
 Three modes: `pretty` (colorized terminal), `json` (machine-parseable), `quiet` (errors only). Controlled by the logger, not CLI flags today.
 
-```typescript
+```ts
 import { createLogger } from "./src/protonpass/logger.ts";
 const log = createLogger({ prefix: "my-module", mode: "json" });
 log.info("Fetched secret", { uri, durationMs: 1200 });

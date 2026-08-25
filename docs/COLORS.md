@@ -40,7 +40,7 @@
 
 ## Usage
 
-```typescript
+```ts
 import { cssColor, foregroundCss, paint } from "../src/lib/color/index.ts";
 
 cssColor("trading")           // → "#e74c3c"

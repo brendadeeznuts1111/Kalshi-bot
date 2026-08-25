@@ -120,9 +120,11 @@ const JS_FAMILY = new Set(["js", "jsx", "ts", "tsx", "typescript"]);
 const NATIVE = {
   json: (s: string) => JSON.parse(s),
   json5: (s: string) => Bun.JSON5.parse(s),
+  jsonc: (s: string) => Bun.JSONC.parse(s), // Bun-native loader (probe §133: comments+trailing ok, quoted keys required)
   toml: (s: string) => Bun.TOML.parse(s),
   yaml: (s: string) => Bun.YAML.parse(s),
   xml: (s: string) => Bun.XML.parse(s),
+  env: (s: string) => { for (const l of s.split('\n')) { const t = l.trim(); if (t && !t.startsWith('#') && !/^[A-Za-z_][A-Za-z0-9_]*=/.test(t)) throw new Error('bad .env line: ' + l); } }, // Bun's .env loader shape
 } as const;
 
 async function validateNative(lang: string, code: string): Promise<ValidatorResult> {

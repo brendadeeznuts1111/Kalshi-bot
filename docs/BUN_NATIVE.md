@@ -151,6 +151,7 @@ if (import.meta.main) {
 | `Bun.sleepSync(ms)` | **Blocks** the thread — avoid in request paths | rare / scripts only |
 | `Bun.nanoseconds()` | Monotonic high-res clock (not wall epoch) | phase timing, live poll, protonpass telemetry · **not** a substitute for [`time-ssot`](TIME.md) event stamps |
 
+// @bun-run
 ```ts
 // @see https://bun.com/docs/runtime/utils#bun-sleep
 // @see https://bun.com/reference/bun/sleep
@@ -164,6 +165,7 @@ Domain wall-clock / epoch-ms joins stay in [`src/lib/time-ssot.ts`](../src/lib/t
 
 Built-in alternative to the `which` npm package. Optional `PATH` / `cwd` override.
 
+// @bun-run
 ```ts
 // @see https://bun.com/docs/runtime/utils#bun-which
 // @see https://bun.com/reference/bun/which
@@ -177,6 +179,7 @@ Used by research preflight and protonpass CLI discovery.
 
 UUID **v7** (timestamp-ordered, crypto random tail). Prefer over `crypto.randomUUID()` (v4) when inserts must sort by time without a separate `created_at` column.
 
+// @bun-run
 ```ts
 // @see https://bun.com/docs/runtime/utils#bun-randomuuidv7
 // @see https://bun.com/reference/bun/randomUUIDv7
@@ -209,6 +212,7 @@ Repo: [`bun-settle.ts`](../src/research/bun-settle.ts), research pool / inspect 
 
 Opens a file in `$VISUAL` / `$EDITOR` (or `bunfig.toml` `[debug] editor`, or `{ editor, line, column }`).
 
+// @bun-run
 ```ts
 // @see https://bun.com/docs/runtime/utils#bun-openineditor
 Bun.openInEditor(import.meta.path, { editor: "vscode", line: 10, column: 5 });
@@ -238,6 +242,7 @@ Repo: inspect cache equality ([`inspect-utils.ts`](../src/research/inspect-utils
 | `Bun.stripANSI` | Strip escape sequences | width-safe plain text |
 | `Bun.inspect` / `.table` | Pretty print + tabular string | analyze desks, protonpass health |
 
+// @bun-run
 ```ts
 // @see https://bun.com/docs/runtime/utils#bun-stringwidth
 // @see https://bun.com/reference/bun/stringWidth
@@ -500,7 +505,7 @@ This project uses **`drizzle-orm`** (~12 KB runtime) over `bun:sqlite` for type-
 
 **Query examples:**
 
-```typescript
+```ts
 import { db, schema } from "../src/db/client.ts";
 import { eq, gt, and } from "drizzle-orm";
 
@@ -670,7 +675,8 @@ Deep dive: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns)
 
 `Response.json()` now uses JavaScriptCore’s SIMD-optimized **FastStringifier** (v1.3.6+). Before, it was much slower than `new Response(JSON.stringify(obj))`; they are now at parity on large payloads.
 
-```typescript
+// @bun-run
+```ts
 const obj = {
   items: Array.from({ length: 100 }, (_, i) => ({ id: i, value: `item-${i}` })),
 };
@@ -696,7 +702,8 @@ new Response(JSON.stringify(obj));       // equivalent perf after v1.3.6
 | `.includes` true | 25.52 ms | 21.90 ms |
 | `.includes` false | 3.25 s | 1.42 s |
 
-```typescript
+// @bun-run
+```ts
 const buffer = Buffer.from("a".repeat(1_000_000) + "needle");
 
 buffer.indexOf("needle");   // single- and multi-byte patterns
@@ -709,7 +716,8 @@ buffer.includes("needle");
 
 Bun’s client `WebSocket` constructor accepts a `proxy` option (v1.3.6+) for corporate / gated networks.
 
-```typescript
+// @bun-run
+```ts
 // Simple proxy URL
 new WebSocket("wss://example.com", {
   proxy: "http://proxy:8080",
@@ -785,7 +793,7 @@ See [`BUN_SHELL.md`](BUN_SHELL.md).
 
 ### [`cache.ts`](../src/research/cache.ts) — sqlite SSOT
 
-```typescript
+```ts
 // @see https://bun.com/docs/runtime/sqlite
 await withCache(repo, pushedAt, "readme", fetcher);
 saveRun(runId, generatedAt, run);
@@ -793,7 +801,8 @@ saveRun(runId, generatedAt, run);
 
 ### [`preflight.ts`](../src/research/preflight.ts)
 
-```typescript
+// @bun-run
+```ts
 // @see https://bun.com/docs/runtime/utils#bun-which
 const gh = Bun.which("gh");
 if (!gh) throw new Error("gh CLI not found");
@@ -807,7 +816,7 @@ One `BunURLPattern` for `github.com/:owner/:repo` serves **three consumers**:
 2. **Reports** — `githubRepoWebUrl()` + `localRepoPath()` from capture groups (no ad-hoc concat)
 3. **Serve** — `/repo/:owner/:name` route matches the same shape
 
-```typescript
+```ts
 const ref = parseGitHubRepoRef(url);
 const web = githubRepoWebUrl(ref.owner, ref.repo);
 const local = localRepoPath(ref.owner, ref.repo); // → /repo/:owner/:name

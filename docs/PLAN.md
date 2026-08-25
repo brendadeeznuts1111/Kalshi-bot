@@ -28,7 +28,7 @@ Build a **re-runnable** research script that produces a scored shortlist of publ
 
 ## Stack and layout
 
-```
+```text
 Kalshi-bot/
   package.json              # no dependencies block
   bunfig.toml               # [run] shell=bun, [test] coverage

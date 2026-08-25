@@ -106,7 +106,7 @@ bun run reports:restore   # if tests touched committed artifacts
 
 ## Architecture (unchanged)
 
-```
+```text
 Parent TTY     → Bun.inspect.table, OSC 8 links
 IPC child      → process.send progress; skips stdout summary
 Standalone CLI → full summary on stdout

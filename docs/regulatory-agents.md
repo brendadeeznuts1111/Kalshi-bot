@@ -6,7 +6,7 @@ A role-based multi-agent regulatory compliance system with Polymarket integratio
 
 ## Agent Architecture
 
-```
+```text
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
 │   Orchestrator  │────▶│  Compliance     │     │  Market Data    │
 │                 │     │  Agent          │     │  Agent          │
@@ -41,7 +41,7 @@ A role-based multi-agent regulatory compliance system with Polymarket integratio
 
 ### Gamma API Endpoints
 
-```
+```text
 GET https://gamma-api.polymarket.com/markets?limit={n}&active=true
 GET https://gamma-api.polymarket.com/markets/{id}
 ```
@@ -99,6 +99,7 @@ class DatabaseIntegrityError extends RegulatoryError {}     // code: "DB_INTEGRI
 
 Every significant action is logged to `regulatory_audit_log` with:
 
+// @bun-run
 ```ts
 interface AuditEntry {
   traceId: string;       // Correlates across agents in a pipeline

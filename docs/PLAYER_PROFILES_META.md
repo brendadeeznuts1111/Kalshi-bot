@@ -20,7 +20,7 @@ Unit rules: [`docs/GLOSSARY.md`](GLOSSARY.md) (`countFp`, `atMs`).
 
 ## Resolve rule (volume)
 
-```
+```text
 resolved_vol = volume_24h_fp if cast(volume_24h_fp) > 0 else volume_fp
 ```
 

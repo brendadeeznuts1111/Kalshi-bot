@@ -421,7 +421,7 @@ stream-list-v2  ──every 30s──▶  new inventory_id?  ──▶  skin_eve
 Wire URL path still uses the provider’s `{stream_id}` segment (not an interior
 field). Prefer the parsed `inventoryId` in app code when composing calls.
 
-```
+```text
 https://events-d.pc.statscore.com/get_pushes/{stream_id}?messageId=…&auth=…&poll=true
 ```
 

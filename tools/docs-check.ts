@@ -11,7 +11,7 @@
 import { join } from 'node:path';
 import { auditAllDocs } from '../src/lib/docs-audit.ts';
 import { auditDocsStyle } from '../src/lib/docs-style.ts';
-import { validateDocsCode } from '../src/lib/docs-validate.ts';
+import { extractCodeBlocks, validateDocsCode } from '../src/lib/docs-validate.ts';
 
 const ROOT = join(import.meta.dir, '..');
 const docs = await auditAllDocs(ROOT);
@@ -63,6 +63,40 @@ for (const d of docs) {
     }
     console.log('docs:check FAIL ' + d.path + ' stale count: ' + ref + ' (current ' + current + ')');
     bad += 1;
+  }
+}
+
+// Every fence must carry a lang tag (Bun loader name, or a display
+// tag like text/mermaid). Untagged fences = unvalidated content — the
+// "lang as Bun supports" contract.
+for (const d of docs) {
+  const md = await Bun.file(join(ROOT, d.path)).text();
+  for (const b of extractCodeBlocks(md, d.path)) {
+    if (!b.language) {
+      console.log('docs:check FAIL ' + d.path + ':' + b.line + ' untagged fence — add a lang (Bun loader or text/mermaid)');
+      bad += 1;
+    }
+  }
+}
+
+// @bun-run execution pass: ts/tsx blocks carrying a // @bun-run marker
+// are COMPLETE, self-contained examples — run them via `bun run` (Bun
+// executes TS/TSX out of the box) and fail the gate on non-zero exit.
+const runDir = join(ROOT, 'scratch');
+let runs = 0;
+for (const d of docs) {
+  const md = await Bun.file(join(ROOT, d.path)).text();
+  for (const b of extractCodeBlocks(md, d.path)) {
+    if (b.code.includes('@bun-run')) {
+      const tmp = join(runDir, 'doc-run-' + b.file.replace(/[^a-z0-9]/gi, '_') + '-' + b.line + '.ts');
+      await Bun.write(tmp, b.code);
+      const p = Bun.spawnSync(['bun', 'run', tmp], { timeout: 15000 });
+      runs += 1;
+      if (p.exitCode !== 0) {
+        console.log('docs:check FAIL ' + d.path + ':' + b.line + ' @bun-run example exited ' + p.exitCode + ' — ' + (p.stderr?.toString() ?? '').split('\n').slice(0, 3).join(' | '));
+        bad += 1;
+      }
+    }
   }
 }
 

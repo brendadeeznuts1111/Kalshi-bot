@@ -82,7 +82,7 @@ bun run tennis:record -- --loop --top=15    # volume sampling override
 
 **Control plane (shared watch membership):**
 
-```
+```text
 sync (Kalshi REST) → events/markets
 live poll → live_scores.is_live / score_snapshots (source_clock=recv)
 watch set = start_ts ≤ now+lead OR is_live

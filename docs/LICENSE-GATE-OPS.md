@@ -48,7 +48,7 @@ exemption decisions.
    per-package verdict before you commit.
 3. If the gate blocks, the human output ends with:
 
-```
+```text
   FAIL some-lib@2.0.0 — no allowlist entry and no matching exemption
 licenses:gate — FAIL (1 violation(s))
 ```
