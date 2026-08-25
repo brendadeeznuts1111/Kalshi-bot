@@ -4730,6 +4730,28 @@ another note.
   probe.test.ts (new), package.json (serve-stream:probe), tools/verify-
   contracts.ts (gate #23), scripts/audit-bun-native.ts (keep-list +1),
   this section. verify:contracts 23/23.
+## 113. Bun.spawn probed — gate behaviors locked (2026-08-24)
+
+- Every gate spawns subprocesses (verify-contracts, pre-commit, run-bun);
+  spawn:probe (tools/spawn-probe.ts, verify:contracts gate #24 -> 24/24)
+  locks the behaviors. VERIFIED 6/6 on 1.4.0:
+  1. proc.stdout is async-iterable — but yields CHUNKS, not lines;
+     streaming callers must split on newlines themselves (run-bun uses
+     .text() so it is unaffected).
+  2. env: overrides merge over the parent environment (inherit + add).
+  3. timeout kills the child with SIGTERM (exitCode 143 = 128+SIGTERM;
+     probe: 305ms for a 300ms timeout).
+  4. a signal-killed child reports exitCode=null + signalCode=SIGTERM —
+     the exitCode/signal distinction is real.
+  5. cwd is honored.
+  6. spawnSync captures stdout and stderr separately with exitCode.
+- Gotcha for future streaming gates: chunk != line — use
+  line-splitting when consuming proc.stdout incrementally.
+- Artifacts: tools/spawn-probe.ts (new), tests/lib/spawn-probe.test.ts
+  (new), package.json (spawn:probe), tools/verify-contracts.ts (gate
+  #24), scripts/audit-bun-native.ts (keep-list +1), this section.
+  verify:contracts 24/24.
+
 
 
 

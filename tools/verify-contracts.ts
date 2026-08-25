@@ -37,6 +37,7 @@ const gates = [
   ['bun:coverage-audit'],
   ['sqlite:probe'],
   ['serve-stream:probe'],
+  ['spawn:probe'],
 ] as const;
 
 const GATE_ENV: Record<string, Record<string, string>> = {
