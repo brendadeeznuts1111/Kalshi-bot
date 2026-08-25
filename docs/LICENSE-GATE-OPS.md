@@ -155,6 +155,18 @@ licenses:gate — FAIL (1 violation(s))
 - `bun run licenses:gate --config <path>` overrides the allowlist config
   (the test suite uses it to prove the failure path: a strict
   allowedLicenses ['MIT'] fixture makes the gate exit 1).
+## Live compliance health (/status + ops dashboard)
+
+- Every default-config gate run writes .data/licenses-state.json
+  (ok/fails/packages/exemptions/advisories/expiringSoon). The signal
+  pipeline surfaces it as the licenses-health signal on /status and the
+  /ops dashboard: 'N prod packages · M violations'. Failing gate = bad
+  severity; missing state = warn (run `bun run licenses:gate` to seed);
+  stale > 30 days = warn.
+- The /ops dashboard has a licenses:gate action button (offline, ~10ms)
+  alongside docs:check/docs:api/...
+- --config runs skip the state write — only the real policy seeds it.
+
 
 ## Cheat sheet additions
 

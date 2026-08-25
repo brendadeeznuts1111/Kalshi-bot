@@ -4096,6 +4096,31 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
   EvaluatedPackage), tools/licenses-gate.ts (--config, expiringSoon,
   warnDays), tests/lib/licenses-policy.test.ts (+6), tests/lib/
   licenses-gate.test.ts (+2 e2e). verify:contracts stays 17/17.
+## 97. Licenses on the live surface — /status + ops dashboard (2026-08-24)
+
+- The license gate was invisible to the live dashboard (unlike the 4 docs
+  gates, which seed .data/*-state.json). Now licenses:gate writes
+  .data/licenses-state.json via the shared writeDocsGateState (src/lib/
+  docs-state.ts) — ok/fails/packages/exemptions/advisories/expiringSoon —
+  ONLY when run with the default config path; --config fixtures skip the
+  write so tests never pollute the live state.
+- signal-pipeline collectDocs reads it as the 5th docs-channel signal
+  (licenses-health): 'N prod packages · M violations' + ' · K expiring
+  soon'. Identical semantics to the other gates: failing = bad, missing
+  state = warn ('run bun run licenses:gate'), stale > 30d = warn.
+- /ops dashboard gained a licenses:gate action (POST runs the offline
+  gate via runBunCommand, reports ok + last lines) — same path as the
+  docs:check/docs:api/... actions (§74).
+- Trap: the state file is TRACKED and the gate rewrites it on every
+  default-config run (lastChecked churn) — same class as api-state.json
+  etc.; commit the initial snapshot so fresh clones have it (missing
+  state = warn until the first gate run).
+- Artifacts: tools/licenses-gate.ts (+state write), src/institutions/
+  signal-pipeline.ts (5th gate() call), src/research/serve.ts (action +
+  allowed list + error message), tests/lib/signal-docs.test.ts
+  (licenses-health, all-five ok, title match), .data/licenses-state.json
+  (initial snapshot). verify:contracts stays 17/17.
+
 
 
 

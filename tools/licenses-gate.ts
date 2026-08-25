@@ -20,6 +20,7 @@
  */
 import { join } from "node:path";
 import { advisoryFor, evaluatePackage, findStaleExemptions, normalizeAuditOverlay, validateAuditOverrides, validatePolicyConfig } from "../src/lib/licenses-policy.ts";
+import { writeDocsGateState } from "../src/lib/docs-state.ts";
 import type { AuditOverlay, LicenseExemption, LicensePolicy } from "../src/lib/licenses-policy.ts";
 
 const ROOT = join(import.meta.dir, "..");
@@ -180,6 +181,19 @@ async function main() {
   const expiringSoon = evaluated
     .filter((e) => e.matchedBy === "exemption" && e.expires !== undefined && e.expiresInDays !== undefined && e.expiresInDays <= warnDays)
     .map((e) => ({ name: e.name, version: e.version, expires: e.expires ?? "", expiresInDays: e.expiresInDays ?? 0, reason: e.reason ?? "" }));
+  if (configPath === CONFIG_PATH) {
+    // Live-compliance surface (§97): seed .data/licenses-state.json for the
+    // signal pipeline (/status + ops dashboard), same pattern as the docs
+    // gates. Skipped for --config fixtures so tests never pollute it.
+    await writeDocsGateState("licenses-state.json", {
+      ok: violations.length === 0,
+      fails: violations.length,
+      packages: evaluated.length,
+      exemptions: exemptions.length,
+      advisories: advisories.length,
+      expiringSoon: expiringSoon.length,
+    });
+  }
   const summary = { total: evaluated.length, allowed: evaluated.length - violations.length, violations: violations.length, exemptions: exemptions.length };
   let diff: ReturnType<typeof computeDiff> | null = null;
   if (sbomMode) {

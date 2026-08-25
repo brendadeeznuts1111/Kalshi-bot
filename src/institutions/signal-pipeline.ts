@@ -370,7 +370,8 @@ export async function collectInventory(root: string, signals: Signal[]): Promise
  * docs channel: FULL docs-quality surface (§67). Reads the state files the
  * docs gates write: docs-state.json (docs:check render §38), api-state.json
  * (docs:api existence §62), integrity-state.json (docs:integrity links/
- * imports/src §63/§65/§66), output-state.json (output:probe canary §64).
+ * imports/src §63/§65/§66), output-state.json (output:probe canary §64),
+ * licenses-state.json (licenses:gate §92-§97 — compliance surface).
  * Any gate failing is bad; missing state is a warn; stale is a warn.
  */
 export async function collectDocs(root: string, signals: Signal[]): Promise<void> {
@@ -404,6 +405,7 @@ export async function collectDocs(root: string, signals: Signal[]): Promise<void
   await gate('api-state.json', 'docs-api', 'docs:api', 'docs:api', (s) => String(s.tokens ?? 0) + ' tokens · ' + String(s.fails ?? 0) + ' drift' + (s.strict ? ' (STRICT)' : ''));
   await gate('integrity-state.json', 'docs-integrity', 'docs:integrity', 'docs:integrity', (s) => String(s.links ?? 0) + ' links · ' + String(s.staleSrc ?? 0) + ' stale src');
   await gate('output-state.json', 'docs-output', 'output:probe', 'output:probe', (s) => String(s.assertions ?? 0) + ' output assertions (canary)');
+  await gate('licenses-state.json', 'licenses-health', 'licenses:gate', 'licenses:gate', (s) => String(s.packages ?? 0) + ' prod packages \u00b7 ' + String(s.fails ?? 0) + ' violations' + (Number(s.expiringSoon ?? 0) > 0 ? ' \u00b7 ' + String(s.expiringSoon) + ' expiring soon' : ''));
 }
 
 /**
