@@ -4673,6 +4673,37 @@ another note.
   windows messaging, per-repo chunk guidance removed), cli.ts +
   tools/github-rate-budget.ts messaging, tests (global-code-search, rate-
   limit expectations, inspect.mock attribution, offline-dry-run).
+## 111. bun:sqlite surface probed — 9/9 verified, bigint option CORRECTED (2026-08-24)
+
+- The event store + odds + alpha + telegram all ride on bun:sqlite, but
+  its compiled-in feature surface was never gated. sqlite:probe
+  (tools/sqlite-probe.ts, verify:contracts gate) records what queries
+  may safely rely on. VERIFIED 9/9 on 1.4.0 (SQLite 3.51.0):
+  1. open/exec/query round-trip
+  2. PRAGMA journal_mode=WAL works and PERSISTS across connections
+  3. FTS5 virtual tables + MATCH (CREATE VIRTUAL TABLE ... USING fts5)
+  4. JSON1 functions (json_extract over a bound JSON string)
+  5. prepared statements + NAMED-ONLY binding ({ $x: 1, $y: 2 }) — a
+     positional+object mix throws 'Binding expected string, ...'
+  6. db.transaction rolls back on throw (0 rows after a failed txn)
+  7. CORRECTED: { bigint: true } is NOT honored on this runtime — an
+     INTEGER > 2^53 reads back as a LOSSY Number in both modes
+     (9007199254740993 -> 9007199254740992). The DatabaseOptions TS
+     type does not even declare bigint. Exact large ids must use
+     TEXT/BLOB — the repo already does (RFC 9562 uuid strings).
+  8. loadExtension present (not exercised — security surface)
+  9. sqlite_version() readable
+- R2 PROTOCOL PAYOFF: the probe was transported via the safe heredoc
+  pattern (double-quoted delimiter, zero single quotes) and ran 9/9 on
+  the FIRST try — the first tool written since §110 with no lexer trap.
+  The trap-removal protocol works.
+- verify:contracts is now 22/22 (parallel work added docs:refresh,
+  routes:check, bun:coverage-audit alongside this gate).
+- Artifacts: tools/sqlite-probe.ts (new), tests/lib/sqlite-probe.test.ts
+  (new), package.json (sqlite:probe), tools/verify-contracts.ts (gate),
+  scripts/audit-bun-native.ts (keep-list +1), this section.
+  verify:contracts 22/22.
+
 
 
 

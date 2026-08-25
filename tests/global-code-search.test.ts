@@ -2,8 +2,10 @@
 import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test";
 
 const hits = new Map<string, unknown>();
+let throwCodeSearch = false;
 
 async function mockGithubApiJson(path: string): Promise<unknown> {
+  if (throwCodeSearch && path.startsWith("search/code")) throw new Error("GitHub GET search/code failed (403)");
   if (path.startsWith("search/code")) {
     const q = decodeURIComponent(path.split("q=")[1]?.split("&")[0] ?? "");
     return hits.get(q) ?? { total_count: 0, items: [] };
@@ -11,13 +13,18 @@ async function mockGithubApiJson(path: string): Promise<unknown> {
   return {};
 }
 
-beforeAll(() => {
+beforeAll(async () => {
+  // Isolated cache DB — tests must never write mock rows to the real cache.db.
+  Bun.env.RESEARCH_CACHE_DB = ":memory:";
+  const { resetCacheDbConnection } = await import("../src/research/cache.ts");
+  resetCacheDbConnection();
   mock.module("../src/research/github-api.ts", () => ({
     githubApiJson: mockGithubApiJson,
   }));
 });
 
 afterAll(() => {
+  delete Bun.env.RESEARCH_CACHE_DB;
   mock.restore();
 });
 
@@ -57,5 +64,22 @@ describe("global code search (§127 global attribution)", () => {
   test("estimateGlobalCodeSearchCalls counts distinct keywords only", async () => {
     const { estimateGlobalCodeSearchCalls } = await import("../src/research/global-code-search.ts");
     expect(estimateGlobalCodeSearchCalls(["a", "b", "a"])).toBe(2);
+  });
+
+  test("degraded (throwing) fetches are NEVER persisted to disk (§129)", async () => {
+    const { fetchGlobalCodeHits, resetGlobalCodeSearchCache } = await import("../src/research/global-code-search.ts");
+    const { countGlobalCodeCache, clearGlobalCodeCache } = await import("../src/research/cache.ts");
+    clearGlobalCodeCache();
+    resetGlobalCodeSearchCache();
+    throwCodeSearch = true;
+    Bun.env.GLOBAL_CODE_SEARCH_NO_PACE = "1";
+    try {
+      const rows = await fetchGlobalCodeHits(["KALSHI_ACCESS_KEY"]);
+      expect(rows.get("KALSHI_ACCESS_KEY")!.hits).toHaveLength(0); // degraded in-process
+      expect(countGlobalCodeCache()).toBe(0); // NOT on disk
+    } finally {
+      delete Bun.env.GLOBAL_CODE_SEARCH_NO_PACE;
+      throwCodeSearch = false;
+    }
   });
 });

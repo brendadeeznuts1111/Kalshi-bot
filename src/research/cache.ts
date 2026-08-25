@@ -63,6 +63,9 @@ type CacheStatements = {
   searchHasAny: Statement;
   searchHasQueryContaining: Statement;
   searchListQueries: Statement;
+  globalCodeGet: Statement;
+  globalCodeUpsert: Statement;
+  globalCodeCount: Statement;
   runUpsert: Statement;
   runGet: Statement;
   runDelete: Statement;
@@ -123,6 +126,12 @@ function prepareStatements(conn: Database): CacheStatements {
       "SELECT 1 AS ok FROM search_cache WHERE lower(query) LIKE ? ESCAPE '\\' LIMIT 1",
     ),
     searchListQueries: conn.query("SELECT query FROM search_cache"),
+    globalCodeGet: conn.query("SELECT total_count, hits, fetched_at FROM global_code_cache WHERE query = ?"),
+    globalCodeUpsert: conn.query(
+      "INSERT INTO global_code_cache (query, total_count, hits, fetched_at) VALUES (?, ?, ?, ?) " +
+      "ON CONFLICT(query) DO UPDATE SET total_count = excluded.total_count, hits = excluded.hits, fetched_at = excluded.fetched_at",
+    ),
+    globalCodeCount: conn.query("SELECT COUNT(*) AS n FROM global_code_cache"),
     runUpsert: conn.query(
       `INSERT INTO runs (run_id, generated_at, payload) VALUES ($runId, $generatedAt, $payload)
        ON CONFLICT(run_id) DO UPDATE SET generated_at = excluded.generated_at, payload = excluded.payload`,
@@ -184,6 +193,12 @@ function getDb(): Database {
       etag TEXT,
       payload TEXT NOT NULL,
       created_at INTEGER NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS global_code_cache (
+      query TEXT PRIMARY KEY,
+      total_count INTEGER NOT NULL,
+      hits TEXT NOT NULL,
+      fetched_at INTEGER NOT NULL
     );
   `);
   stmts = prepareStatements(db);
@@ -326,6 +341,49 @@ export function listSearchCacheQueries(): string[] {
 
 export function searchQueryKey(query: string): string {
   return String(Bun.hash(query));
+}
+
+// ── global code-search cache (global_code_cache, §129) ──────────────────
+// Persisted global hits make code_search a ONE-TIME cost per keyword set
+// per TTL: a dimension re-run or a different dimension sharing keywords
+// costs ZERO code_search calls (attribution is local).
+
+/** Fresh global row for a keyword, or null. */
+export function loadGlobalCodeCache(
+  query: string,
+  ttlMs: number,
+): { totalCount: number; hits: Array<{ path: string; repo: string }>; fetchedAt: number } | null {
+  const row = getStmts().globalCodeGet.get(query) as {
+    total_count: number;
+    hits: string;
+    fetched_at: number;
+  } | null;
+  if (!row) return null;
+  if (Date.now() - row.fetched_at > ttlMs) return null;
+  try {
+    return {
+      totalCount: row.total_count,
+      hits: JSON.parse(row.hits) as Array<{ path: string; repo: string }>,
+      fetchedAt: row.fetched_at,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function saveGlobalCodeCache(query: string, totalCount: number, hits: Array<{ path: string; repo: string }>): void {
+  getStmts().globalCodeUpsert.run(query, totalCount, JSON.stringify(hits), Date.now());
+}
+
+/** How many distinct keywords are primed on disk (0 when none). */
+export function countGlobalCodeCache(): number {
+  const row = getStmts().globalCodeCount.get() as { n: number } | null;
+  return row?.n ?? 0;
+}
+
+/** Wipe the global code cache (poisoned rows / forced refresh). */
+export function clearGlobalCodeCache(): void {
+  getDb().exec("DELETE FROM global_code_cache");
 }
 
 export function loadSearchCache(

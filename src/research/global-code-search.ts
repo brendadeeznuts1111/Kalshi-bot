@@ -16,6 +16,7 @@
  */
 import { githubApiJson } from "./github-api.ts";
 import { isGitHubRateLimitError } from "./gh.ts";
+import { countGlobalCodeCache, loadGlobalCodeCache, saveGlobalCodeCache } from "./cache.ts";
 
 export type GlobalCodeHit = { path: string; repo: string };
 
@@ -34,6 +35,9 @@ const PER_PAGE = 100;
 /** Cap pages per keyword (rare: a keyword with >400 global hits). */
 const MAX_PAGES = 4;
 const DEFAULT_CODE_SEARCH_CONCURRENCY = 8;
+
+/** Disk-cache TTL for global hits — code_search stays a one-time cost. */
+export const GLOBAL_CODE_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 
 // ── code_search window pacing ──────────────────────────────────────────
 // Platform limit: 10 calls/min. Fire-and-forget over the whole keyword set
@@ -91,7 +95,8 @@ async function fetchOneGlobal(query: string): Promise<GlobalCodeSearchRow> {
       if (repo && it.path) rows.push({ path: it.path, repo });
     }
   }
-  return { query, totalCount, hits: rows };
+  const row = { query, totalCount, hits: rows };
+  return persistIfSuccess(row);
 }
 
 /**
@@ -119,30 +124,69 @@ async function pagedFetch(
   return out;
 }
 
+/** Persist a SUCCESSFUL global row to disk (errors/empties are never cached). */
+function persistIfSuccess(row: GlobalCodeSearchRow): GlobalCodeSearchRow {
+  // A row is trustworthy only when githubApiJson returned it (no throw) —
+  // degraded/error empties must not poison the 6h disk cache (§129).
+  saveGlobalCodeCache(row.query, row.totalCount, row.hits);
+  return row;
+}
+
 /**
- * Fetch every keyword ONCE (global, unscoped). In-process cached; the first
- * call for a query does the network, every later call (any repo, any
- * dimension, this run) is a Map hit.
+ * Fetch every keyword ONCE (global, unscoped). Resolution order:
+ *   in-process Map -> disk global_code_cache (fresh within TTL) -> paced
+ *   network. Network results are persisted to disk, so a dimension re-run or
+ *   a different dimension sharing keywords costs ZERO code_search (§129).
  */
 export async function fetchGlobalCodeHits(queries: string[]): Promise<Map<string, GlobalCodeSearchRow>> {
   const out = new Map<string, GlobalCodeSearchRow>();
-  const todo = [...new Set(queries)].filter((q) => !cache.has(q));
+  const todo: string[] = [];
+  for (const q of [...new Set(queries)]) {
+    const mem = cache.get(q);
+    if (mem) {
+      out.set(q, mem);
+      continue;
+    }
+    const disk = loadGlobalCodeCache(q, GLOBAL_CODE_CACHE_TTL_MS);
+    if (disk) {
+      const row = { query: q, totalCount: disk.totalCount, hits: disk.hits };
+      cache.set(q, row);
+      out.set(q, row);
+      continue;
+    }
+    todo.push(q);
+  }
   const results = await Promise.all(
     todo.map(async (q) => {
       try {
         return await fetchOneGlobal(q);
       } catch (err) {
         if (isGitHubRateLimitError(err)) throw err;
+        // Degraded: in-process only, NEVER persisted (disk stays clean).
         return { query: q, totalCount: 0, hits: [] as GlobalCodeHit[] };
       }
     }),
   );
-  for (const row of results) cache.set(row.query, row);
-  for (const q of queries) {
-    const row = cache.get(q);
-    if (row) out.set(q, row);
+  for (const row of results) {
+    cache.set(row.query, row);
+    out.set(row.query, row);
   }
   return out;
+}
+
+/** Prime the global code-search cache for a keyword set (paced network). */
+export async function primeGlobalCodeSearch(queries: string[]): Promise<{
+  primed: number;
+  total: number;
+  elapsedMs: number;
+}> {
+  const t0 = Date.now();
+  await fetchGlobalCodeHits(queries);
+  return {
+    primed: countGlobalCodeCache(),
+    total: new Set(queries).size,
+    elapsedMs: Date.now() - t0,
+  };
 }
 
 /**

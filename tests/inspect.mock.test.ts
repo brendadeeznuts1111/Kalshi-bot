@@ -32,8 +32,11 @@ async function mockGithubApiJson(path: string): Promise<unknown> {
   return {};
 }
 
-beforeAll(() => {
+beforeAll(async () => {
   Bun.env.GLOBAL_CODE_SEARCH_NO_PACE = "1"; // mocked API — no real window pacing
+  Bun.env.RESEARCH_CACHE_DB = ":memory:"; // never write mock rows to the real cache.db
+  const { resetCacheDbConnection } = await import("../src/research/cache.ts");
+  resetCacheDbConnection();
   mock.module("../src/research/github-api.ts", () => ({
     githubApiJson: mockGithubApiJson,
     githubApiGet: async (path: string) => ({
@@ -47,6 +50,7 @@ beforeAll(() => {
 
 afterAll(() => {
   delete Bun.env.GLOBAL_CODE_SEARCH_NO_PACE;
+  delete Bun.env.RESEARCH_CACHE_DB;
   mock.restore();
 });
 
