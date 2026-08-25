@@ -285,6 +285,7 @@
     "client-shape:probe": "bun tools/client-shape-probe.ts",
     "coverage:probe": "bun tools/coverage-probe.ts",
     "fullstack:probe": "bun tools/fullstack-probe.ts",
+    "coverage:matrix": "bun tools/bun-coverage-matrix.ts",
     "routes:check": "bun tools/routes-check.ts",
     "bun:coverage-audit": "bun tools/bun-coverage-audit.ts",
     "research:resume": "bun tools/research-resume.ts",

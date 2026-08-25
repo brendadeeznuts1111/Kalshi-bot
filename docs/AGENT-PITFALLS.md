@@ -5857,6 +5857,20 @@ another note.
 - Artifacts: tools/fullstack-probe.ts (new, gate #52), tools/verify-contracts.ts
   (51 -> 52 gates), package.json (fullstack:probe), docs/BUN_API_COVERAGE.md
   + AGENT-PITFALLS header (51/51 -> 52/52). verify:contracts 52/52.
+## 163. Matrix generator promoted to committed tooling (2026-08-24)
+
+- tools/bun-coverage-matrix.ts (script: coverage:matrix) — the matrix
+  generator moved OUT of gitignored scratch/ (where it depended on
+  gitignored inputs) into a committed, SELF-CONTAINED tool: scans
+  src/tools/scripts/tests for Bun.* tokens, sweeps runtime typeofs,
+  checks bun-types d.ts + docs mentions, applies the gate map, and
+  regenerates docs/BUN_API_COVERAGE.md offline.
+- The matrix is now REPRODUCIBLE on a fresh checkout (the prior
+  scratch-only generator was a reproducibility gap — the committed
+  matrix could not be regenerated). 140 rows · 0 GAPs.
+- Artifacts: tools/bun-coverage-matrix.ts (new), package.json
+  (coverage:matrix script), docs/BUN_API_COVERAGE.md (regenerated).
+  verify:contracts 52/52 (unchanged).
 - FILENAME BEHAVIOR (pasted --metafile-md claims vs 1.4.0, gate P9-P13):
   a bare --metafile-md writes meta.md to the PROCESS CWD, NOT the
   --outdir (the pasted claim's location is wrong); --metafile-md=<path>
