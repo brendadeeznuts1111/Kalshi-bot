@@ -247,6 +247,7 @@
     "docs:check": "bun tools/docs-check.ts",
     "docs:api": "bun tools/docs-api-validate.ts",
     "docs:integrity": "bun tools/docs-integrity.ts",
+    "output:probe": "bun tools/probe-output-assertions.ts",
     "verify:contracts": "bun tools/verify-contracts.ts",
     "assets:check": "bun tools/assets-check.ts",
     "imports:graph": "bun tools/imports-graph.ts"

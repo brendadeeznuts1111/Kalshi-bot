@@ -3133,3 +3133,26 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
   Tests lock this (tests/lib/docs-integrity.test.ts).
 - Artifacts: tools/docs-integrity.ts, tests/lib/docs-integrity.test.ts,
   10/10 verify:contracts gates.
+
+## 64. Output-assertion gate — REJECTED after grounding probe (2026-08-24)
+
+- Proposal: docs-output-check — extract `// =>` / `// expected:` comments
+  from code blocks, run the snippet, compare stdout to the claimed output.
+  Strict gate on semantic (not just syntactic/runtime) correctness.
+- GROUNDING PROBE (tools/probe-output-assertions.ts):
+  - `// =>`, `// expected:`, `// ⇒` in all 48 docs + widget pages: ZERO.
+  - console.log in docs: 14 total — inline-comment color examples (// red,
+    // "#7dd3fc"), diagnostic probes (PRAGMA integrity_check), redaction
+    samples. NONE are output assertions.
+- DECISION: REJECT the gate. Zero surface to validate — a strict gate
+  scanning nothing fails nothing, adds gate time, and would INCENTIVIZE
+  adding // => comments to docs to feed it (wrong direction). The repo's
+  existing layers already cover the adjacent risks: syntax (§59
+  transpiler), runtime correctness (@run + §62 API existence), structure
+  (§63 links).
+- KEPT: tools/probe-output-assertions.ts as a REPORT-ONLY canary (bun run
+  output:probe) — proves the zero-assertion state and flags the first
+  // => if a future doc introduces one. NOT a verify:contracts gate.
+- Revisit ONLY if the docs adopt the assertion pattern deliberately
+  (e.g. a new API guide with runnable examples) — then build the gate
+  on real signal.
