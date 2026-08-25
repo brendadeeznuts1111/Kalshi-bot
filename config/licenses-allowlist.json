@@ -18,6 +18,7 @@
       "name": "@factorywager/proton-pass",
       "license": "Unknown",
       "reason": "vendored file:vendor/proton-pass package with no license field in its own package.json (AGENT-PITFALLS §91/§92/§93)",
+      "remediation": "re-review vendor arrangement: upgrade to an upstream package with a declared license, or obtain written vendor approval and extend the expiry",
       "expires": "2026-12-01"
     }
   ]

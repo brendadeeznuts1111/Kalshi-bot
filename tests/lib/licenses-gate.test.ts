@@ -46,6 +46,8 @@ describe("licenses:gate --json (§93)", () => {
     expect(doc.summary.total).toBe(6);
     expect(doc.summary.violations).toBe(0);
     expect(doc.packages.length).toBe(6);
+    expect(Array.isArray(doc.advisories)).toBe(true);
+    expect(doc.advisories.length).toBe(0); // clean tree — overlay warn-only
   });
 
   test("JSON carries the vendor exemption", () => {

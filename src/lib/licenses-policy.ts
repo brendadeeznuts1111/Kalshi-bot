@@ -25,6 +25,8 @@ export interface LicenseExemption {
   /** Exact match on the resolved version when bun reports a semver. */
   version?: string;
   reason?: string;
+  /** Concrete next action printed when the exemption expires (e.g. contact legal, upgrade to v2). */
+  remediation?: string;
   /** ISO date (YYYY-MM-DD). After it, the exemption FAILS the gate. */
   expires?: string;
 }
@@ -85,7 +87,7 @@ export function evaluatePackage(
   if (ex) {
     if (ex.expires && ex.expires < todayISO) {
       return { ...base, normalizedLicense: normalized, allowed: false, matchedBy: null,
-        reason: "exemption expired on " + ex.expires + " — re-review " + pkg.name + " (" + (ex.reason ?? "no reason recorded") + ")" };
+        reason: "exemption expired on " + ex.expires + " — re-review " + pkg.name + " (" + (ex.reason ?? "no reason recorded") + ")" + (ex.remediation ? " Action: " + ex.remediation : "") };
     }
     return { ...base, normalizedLicense: normalized, allowed: true, matchedBy: "exemption",
       reason: (ex.reason ?? "exempted") + (ex.expires ? " (expires " + ex.expires + ")" : "") };
@@ -124,7 +126,61 @@ export function validatePolicyConfig(raw: unknown): string | null {
       if (e.version !== undefined && typeof e.version !== "string") return "exemption.version must be a string";
       if (e.expires !== undefined && (typeof e.expires !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(e.expires)))
         return "exemption.expires must be an ISO date (YYYY-MM-DD)";
+      if (e.remediation !== undefined && typeof e.remediation !== "string") return "exemption.remediation must be a string";
     }
   }
   return null;
+}
+
+/**
+ * Offline vulnerability overlay (§94) — a STATIC map of pkg@version to a
+ * severity, refreshed by `bun run audit:overlay:update` (network allowed
+ * there, never in the gate). The license gate WARNs on matches but never
+ * changes its exit code — license policy stays the merge authority.
+ */
+export interface AuditAdvisory {
+  severity: "critical" | "high" | "medium" | "low" | string;
+  note?: string;
+}
+
+export interface AuditOverlay {
+  advisories: Record<string, AuditAdvisory>;
+}
+
+/**
+ * Validate config/audit-overrides.json. Accepts either
+ * { "pkg@version": { severity, note? } } or the shorthand
+ * { "pkg@version": "high" }. Returns an error string or null.
+ */
+export function validateAuditOverrides(raw: unknown): string | null {
+  const c = raw as { advisories?: unknown } | Record<string, unknown>;
+  if (!c || typeof c !== "object") return "audit-overrides root must be an object";
+  const advisories = (c as { advisories?: unknown }).advisories ?? c;
+  if (typeof advisories !== "object" || Array.isArray(advisories)) return "advisories must be an object of pkg@version entries";
+  for (const [key, val] of Object.entries(advisories as Record<string, unknown>)) {
+    if (!key.includes("@")) return "advisory key must be pkg@version (got: " + key + ")";
+    if (typeof val === "string") continue; // shorthand severity
+    const o = val as { severity?: unknown; note?: unknown };
+    if (!o || typeof o !== "object" || typeof o.severity !== "string" || !o.severity)
+      return "advisory entry must be a severity string or { severity, note? } (key: " + key + ")";
+    if (o.note !== undefined && typeof o.note !== "string") return "advisory note must be a string (key: " + key + ")";
+  }
+  return null;
+}
+
+/** Normalize a validated overlay into { pkg@version: { severity, note? } }. */
+export function normalizeAuditOverlay(raw: unknown): AuditOverlay {
+  const advisories = (raw as { advisories?: Record<string, unknown> })?.advisories ?? (raw as Record<string, unknown>);
+  const out: Record<string, AuditAdvisory> = {};
+  for (const [key, val] of Object.entries(advisories)) {
+    if (typeof val === "string") { out[key] = { severity: val }; continue; }
+    const o = val as { severity: string; note?: string };
+    out[key] = { severity: o.severity, ...(o.note ? { note: o.note } : {}) };
+  }
+  return { advisories: out };
+}
+
+/** Look up an advisory for name@version (version may be a file spec for file: deps). */
+export function advisoryFor(name: string, version: string, overlay: AuditOverlay): AuditAdvisory | null {
+  return overlay.advisories[name + "@" + version] ?? null;
 }

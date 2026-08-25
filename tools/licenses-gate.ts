@@ -19,11 +19,12 @@
  * periodic review of vendor exceptions.
  */
 import { join } from "node:path";
-import { evaluatePackage, findStaleExemptions, validatePolicyConfig } from "../src/lib/licenses-policy.ts";
-import type { LicenseExemption, LicensePolicy } from "../src/lib/licenses-policy.ts";
+import { advisoryFor, evaluatePackage, findStaleExemptions, normalizeAuditOverlay, validateAuditOverrides, validatePolicyConfig } from "../src/lib/licenses-policy.ts";
+import type { AuditOverlay, LicenseExemption, LicensePolicy } from "../src/lib/licenses-policy.ts";
 
 const ROOT = join(import.meta.dir, "..");
 const CONFIG_PATH = join(ROOT, "config", "licenses-allowlist.json");
+const OVERLAY_PATH = join(ROOT, "config", "audit-overrides.json");
 const DEFAULT_SBOM_PATH = join(ROOT, ".data", "licenses-sbom.json");
 
 interface RawPackage {
@@ -137,6 +138,21 @@ async function main() {
     process.exit(1);
   }
 
+  let overlay: AuditOverlay = { advisories: {} };
+  const overlayFile = Bun.file(OVERLAY_PATH);
+  if (await overlayFile.exists()) {
+    try {
+      const oerr = validateAuditOverrides(await overlayFile.json());
+      if (oerr) throw new Error("config/audit-overrides.json: " + oerr);
+      overlay = normalizeAuditOverlay(await overlayFile.json());
+    } catch (err) {
+      const msg = "licenses:gate — " + (err instanceof Error ? err.message : String(err));
+      if (jsonMode) console.log(JSON.stringify({ ok: false, error: msg }));
+      else console.error(msg);
+      process.exit(1);
+    }
+  }
+
   const today = new Date().toISOString().slice(0, 10);
   const raw: RawPackage[] = [];
   for (const [licenseKey, pkgs] of Object.entries(data)) {
@@ -151,6 +167,10 @@ async function main() {
   }
   const violations = evaluated.filter((e) => !e.allowed);
   const stale = findStaleExemptions(evaluated, exemptions);
+  const advisories = evaluated
+    .map((e) => ({ e, adv: advisoryFor(e.name, e.version, overlay) }))
+    .filter((x) => x.adv !== null)
+    .map((x) => ({ name: x.e.name, version: x.e.version, severity: x.adv!.severity, note: x.adv!.note ?? "" }));
   const summary = { total: evaluated.length, allowed: evaluated.length - violations.length, violations: violations.length, exemptions: exemptions.length };
   let diff: ReturnType<typeof computeDiff> | null = null;
   if (sbomMode) {
@@ -176,6 +196,7 @@ async function main() {
       packages: evaluated,
       violations: violations.map((v) => ({ name: v.name, version: v.version, license: v.reportedLicense, reason: v.reason })),
       staleExemptions: stale.map((e) => e.name),
+      advisories,
       diff: diff === null ? null : {
         added: diff.added.map((e) => e.name + "@" + e.version),
         removed: diff.removed.map((e) => e.name + "@" + e.version),
@@ -190,6 +211,8 @@ async function main() {
       console.log("  " + tag + " " + e.name + "@" + e.version + how);
     }
     for (const s of stale) console.log('  warn stale exemption: ' + s.name + ' matches no prod package');
+    for (const a of advisories) console.log('  warn advisory ' + a.name + '@' + a.version + ' (' + a.severity + ')' + (a.note ? ' — ' + a.note : ''));
+    if (advisories.length) console.log('licenses:gate — ' + advisories.length + ' advisory(ies) from config/audit-overrides.json (warn-only; license policy remains the merge authority)');
     if (sbomMode && diff !== null) {
       if (sbomPath === DEFAULT_SBOM_PATH) console.log("licenses:gate — sbom written to .data/licenses-sbom.json");
       for (const a of diff.added) console.log("  + added " + a.name + "@" + a.version + " (" + a.normalizedLicense + ")");

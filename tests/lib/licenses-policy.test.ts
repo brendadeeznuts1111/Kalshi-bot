@@ -1,6 +1,6 @@
 // licenses-policy unit tests (§92/§93) — pure logic, no subprocess.
 import { describe, expect, test } from "bun:test";
-import { evaluatePackage, findStaleExemptions, normalizeLicense, validatePolicyConfig } from "../../src/lib/licenses-policy.ts";
+import { advisoryFor, evaluatePackage, findStaleExemptions, normalizeAuditOverlay, normalizeLicense, validateAuditOverrides, validatePolicyConfig } from "../../src/lib/licenses-policy.ts";
 import type { LicenseExemption, LicensePolicy } from "../../src/lib/licenses-policy.ts";
 
 const policy: LicensePolicy = {
@@ -97,3 +97,39 @@ describe("findStaleExemptions + validatePolicyConfig (§93)", () => {
     expect(validatePolicyConfig({ policy: { allowedLicenses: ["MIT"], licenseAliases: {} }, exemptions: [] })).toBeNull();
   });
 });
+describe("remediation + audit overlay (§94)", () => {
+  test("expired exemption reason includes the remediation action", () => {
+    const ex: LicenseExemption[] = [{ name: "pkg", license: "Unknown", expires: "2026-01-01", remediation: "upgrade to v2" }];
+    const v = evaluatePackage({ name: "pkg", version: "1.0.0", reportedLicense: "Unknown" }, policy, ex, TODAY);
+    expect(v.allowed).toBe(false);
+    expect(v.reason ?? "").toContain("Action: upgrade to v2");
+  });
+
+  test("unexpired exemption reason does NOT carry the action", () => {
+    const ex: LicenseExemption[] = [{ name: "pkg", license: "Unknown", expires: "2027-01-01", remediation: "upgrade to v2" }];
+    const v = evaluatePackage({ name: "pkg", version: "1.0.0", reportedLicense: "Unknown" }, policy, ex, TODAY);
+    expect(v.allowed).toBe(true);
+    expect(v.reason ?? "").not.toContain("Action:");
+  });
+
+  test("validateAuditOverrides accepts shorthand and object forms", () => {
+    expect(validateAuditOverrides({ advisories: { "a@1.0.0": "high" } })).toBeNull();
+    expect(validateAuditOverrides({ advisories: { "a@1.0.0": { severity: "critical", note: "RCE" } } })).toBeNull();
+    expect(validateAuditOverrides({ "a@1.0.0": "high" })).toBeNull();
+  });
+
+  test("validateAuditOverrides rejects malformed entries", () => {
+    expect(validateAuditOverrides({ advisories: { nope: "high" } })).not.toBeNull();
+    expect(validateAuditOverrides({ advisories: { "a@1.0.0": {} } })).not.toBeNull();
+    expect(validateAuditOverrides({ advisories: { "a@1.0.0": { severity: 7 } } })).not.toBeNull();
+    expect(validateAuditOverrides([])).not.toBeNull();
+  });
+
+  test("advisoryFor matches name@version exactly and misses otherwise", () => {
+    const overlay = normalizeAuditOverlay({ advisories: { "zod@4.4.3": { severity: "high", note: "test" } } });
+    expect(advisoryFor("zod", "4.4.3", overlay)?.severity).toBe("high");
+    expect(advisoryFor("zod", "4.4.4", overlay)).toBeNull();
+    expect(advisoryFor("other", "4.4.3", overlay)).toBeNull();
+  });
+});
+

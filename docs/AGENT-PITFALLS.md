@@ -3989,4 +3989,39 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
   licenses-allowlist.json, tools/licenses-gate.ts (v2), tests/lib/
   licenses-policy.test.ts + licenses-gate.test.ts (--json/--sbom),
   package.json (licenses:sbom added). verify:contracts stays 17/17.
+## 94. licenses:gate v2.1 — remediation hints + offline audit overlay (2026-08-24)
+
+- REMEDIATION HINTS: exemptions can now carry a remediation string
+  ("upgrade to v2", "contact legal"). When an exemption EXPIRES, the
+  failure reason appends " Action: <remediation>" — a failed gate names
+  the next step instead of leaving the dev to reverse-engineer the
+  vendor situation. Proton-pass carries a concrete remediation.
+- OFFLINE VULNERABILITY OVERLAY: config/audit-overrides.json maps
+  pkg@version -> severity (shorthand "high" string or
+  { severity, note? }). The gate WARNs on matches in human output and
+  includes them in --json (advisories array) but NEVER changes its exit
+  code — license policy remains the merge authority. A malformed overlay
+  exits 1 (config integrity, same philosophy as the allowlist).
+- THE ONE NETWORK CALL lives in `bun run audit:overlay:update`
+  (tools/audit-overlay-update.ts): shells `bun audit --json`, parses
+  with a shape-tolerant extractor (clean {} / flat pkg@version map /
+  nested vulnerabilities key), UPSERTS into the existing overlay
+  (manual entries preserved), and writes config/audit-overrides.json.
+  Run manually or on a schedule — the license gate itself stays offline
+  + sub-second.
+- Probe notes: `bun audit --json` on a clean 1.4.0 tree returns {}
+  (exit 0). The populated shape is NOT probeable without introducing a
+  vulnerable dep — the parser deliberately accepts flat and nested
+  forms (documented in the tool header).
+- Trap (test-caught, second time): Bun.write lines must carry the TS
+  escape "\n" — exactly one backslash level. "\\n" writes a LITERAL
+  backslash-n that corrupts the JSON tail (§93 SBOM + this overlay).
+- Artifacts: src/lib/licenses-policy.ts (remediation field +
+  validateAuditOverrides / normalizeAuditOverlay / advisoryFor),
+  config/licenses-allowlist.json (remediation), config/audit-overrides.
+  json, tools/audit-overlay-update.ts (+SPAWN_KEEP_LIST), package.json
+  (audit:overlay:update), tests/lib/licenses-policy.test.ts (+5),
+  tests/lib/licenses-gate.test.ts (advisories key). verify:contracts
+  stays 17/17.
+
 
