@@ -10,7 +10,7 @@ export function renderObservabilityPage(): string {
     { cells: ['<code>--cpu-prof-md</code> — CPU profile as Markdown', W_VERIFIED + ' used by profile:serve / profile:design / profile:research'] },
     { cells: ['<code>--heap-prof-md</code> — heap report as Markdown', W_VERIFIED + ' used by heap:serve'] },
     { cells: ['<code>--metafile-md</code> — bundle report as Markdown', W_VERIFIED + ' this repo design-system.meta.md + hq-app.meta.md'] },
-    { cells: ['<code>BUN_CPU_PROFILE=1</code>', W_CORRECTED + ' NO-OP in 1.4.0 (probe §55) — use --cpu-prof/--cpu-prof-md directly'] },
+    { cells: ['<code>BUN_CPU_PROFILE=1</code>', W_VERIFIED + ' enables the CPU profiler for processes you cannot pass flags to (probe §55: .cpuprofile written)'] },
     { cells: ['<code>--heap-prof-md</code>', W_VERIFIED + ' markdown heap report (Summary + Top 50 Types by Retained Size)'] },
     { cells: ['<code>process.on(memoryPressure)</code>', W_VERIFIED + ' serve.ts listener (kqueue / PSI / CreateMemoryResourceNotification)'] },
     { cells: ['<code>Bun.markdown.ansi()</code>', W_VERIFIED + ' renders Markdown to ANSI terminal output'] },

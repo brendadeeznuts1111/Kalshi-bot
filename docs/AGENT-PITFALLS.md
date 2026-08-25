@@ -3761,3 +3761,36 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
 - Artifacts: tools/defaults-probe.ts D11 (18/18), tests/lib/defaults-
   probe.test.ts (15 tests), src/lib/config.ts comment fixed,
   verify:contracts 16/16.
+
+## 86. New-claims doc (markdown/cron/terminal/ffi/dev-tooling) — BUN_CPU_PROFILE contradiction RESOLVED (2026-08-24)
+
+- Probed the pasted v1.4 new-features doc against 1.4.0:
+- CONTRADICTION RESOLVED (BUN_CPU_PROFILE):
+  - observability-page.ts claimed 'BUN_CPU_PROFILE=1 NO-OP in 1.4.0
+    (probe §55)' — WRONG, and it contradicted the §55 it cited. Decisive
+    probe: BUN_CPU_PROFILE=1 alone (no --cpu-prof) DOES write
+    CPU.*.cpuprofile (759 bytes, valid JSON nodes). §55 (line 1552) was
+    right all along; the page's later 'correction' was the error. Page
+    fixed back to W_VERIFIED + the correct claim.
+- VERIFIED (new claims):
+  - Bun.cron.parse('*/15 * * * *') returns a Date (next match, UTC):
+    '2026-08-25T03:00:00.000Z'. The repo's signal-pipeline already uses
+    it (SIGNAL_CRON_EXPR).
+  - Bun.markdown.html is NOT sanitized: raw <script>, javascript: hrefs,
+    and onerror attributes pass through verbatim (probe). REPO NOTE: the
+    repo renders only REPO-OWNED markdown (docs/*.md + content/posts —
+    committed files, content-hashed for ETag), NOT user input — no
+    exposure today, but any future user-markdown render needs sanitization
+    awareness.
+  - bun:ffi returns:'cstring' gives a plain string ('1.2.12' via
+    libz.dylib zlibVersion) — the new API shape verified.
+- NOT VERIFIABLE in sandbox (environment, not doc errors):
+  - Bun.Terminal PTY spawn option: 'Failed to open PTY' (sandbox denies
+    PTY device access).
+  - Bun.cron FILE-form (Bun.cron('./worker.ts', expr, title)): 'Failed
+    to create plist file' (launchd registration blocked in sandbox).
+    The repo uses the FUNCTION form (verified working §69).
+  - BUN_CPU_PROFILE with eval-only scripts (bun -e) vs bun run file.ts:
+    the file form profiles; keep using bun run for profile probes.
+- Artifacts: src/research/observability-page.ts corrected; §86 records
+  the resolution. Gate stays 16/16.
