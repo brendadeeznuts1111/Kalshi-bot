@@ -122,6 +122,19 @@ export async function paceCodeSearchCall(): Promise<void> {
     csWindowStart = now;
     csCallsThisWindow = 0;
   }
+  if (csCallsThisWindow === 0) {
+    // Window-boundary check: never assume a full window — a previous process
+    // or attempt may have left it short. Wait for the next reset so the
+    // batch starts clean (§132).
+    const snap = await readGitHubRateLimit("code_search").catch(() => null);
+    if (snap && snap.remaining < CS_MAX_PER_WINDOW) {
+      const waitMs = Math.max(2_000, snap.reset * 1000 - Date.now() + 3_000);
+      console.error(`[code_search] window short (${snap.remaining}/${snap.limit}) — waiting ${Math.round(waitMs / 1000)}s`);
+      await Bun.sleep(waitMs);
+      csWindowStart = Date.now();
+      csCallsThisWindow = 0;
+    }
+  }
   if (csCallsThisWindow >= CS_MAX_PER_WINDOW) {
     const waitMs = Math.max(2_000, CS_WINDOW_MS - (now - csWindowStart) + 2_000);
     console.error(`[code_search] pacing — waiting ${Math.round(waitMs / 1000)}s for the window (${CS_MAX_PER_WINDOW}/min)`);
