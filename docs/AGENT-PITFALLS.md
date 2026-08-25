@@ -9,7 +9,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 > The headings were renumbered to §1-§11 on 2026-08-23; the counters were kept
 > so historical notes stay traceable.
 >
-> **Current contract status: verify:contracts 47/47** (see docs/BUN_API_COVERAGE.md
+> **Current contract status: verify:contracts 49/49** (see docs/BUN_API_COVERAGE.md
 > for the full matrix). `verify:contracts N/N` lines inside older sections are
 > HISTORICAL (each records its era) — docs:check enforces that only this header
 > and non-pitfall docs may reference the current count.
@@ -5779,6 +5779,24 @@ another note.
   (46 -> 47 gates), package.json (surface:probe), docs/BUN_API_COVERAGE.md
   (full-surface table), AGENT-PITFALLS header (46/46 -> 47/47).
   verify:contracts 47/47.
+## 159. Systematic-risk gates — version pin + type drift (2026-08-24)
+
+- tools/version-probe.ts (gate #48, 3/3): FAILS when Bun.version/
+  revision leave the pinned 1.4.0/34cbb9a40 — a runtime bump now
+  forces RE-VERIFICATION of the whole suite instead of silently
+  invalidating every pin (the "snapshot-at-version" risk, §158).
+- tools/type-drift-probe.ts (gate #49, 3/3): every runtime Bun member
+  must have a bun-types declaration (all 110 typed on 1.4.0 — index/
+  bun/sqlite/shell/ffi/redis/s3/deprecated d.ts); the readableStreamTo*
+  family is declared in deprecated.d.ts (a deprecation signal — still
+  functional, surface:probe P4); the documented non-existence set
+  (gzip/html/image/watch/zstd/term/rename/CSV/Quic) stays absent.
+- These close the two SYSTEMATIC gaps from §158: version drift and
+  type-lag are now gate-enforced rather than found by accident.
+- Artifacts: tools/version-probe.ts (new, gate #48), tools/type-drift-probe.ts
+  (new, gate #49), tools/verify-contracts.ts (47 -> 49 gates), package.json,
+  docs/BUN_API_COVERAGE.md + AGENT-PITFALLS header (47/47 -> 49/49).
+  verify:contracts 49/49.
 - FILENAME BEHAVIOR (pasted --metafile-md claims vs 1.4.0, gate P9-P13):
   a bare --metafile-md writes meta.md to the PROCESS CWD, NOT the
   --outdir (the pasted claim's location is wrong); --metafile-md=<path>

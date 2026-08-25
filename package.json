@@ -280,6 +280,8 @@
     "metafile:probe": "bun tools/metafile-probe.ts",
     "ecosystem:probe": "bun tools/ecosystem-probe.ts",
     "surface:probe": "bun tools/surface-probe.ts",
+    "version:probe": "bun tools/version-probe.ts",
+    "type-drift:probe": "bun tools/type-drift-probe.ts",
     "routes:check": "bun tools/routes-check.ts",
     "bun:coverage-audit": "bun tools/bun-coverage-audit.ts",
     "research:resume": "bun tools/research-resume.ts",
