@@ -3918,3 +3918,30 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
   deps (zod, drizzle-orm, file: proton-pass) are pure JS, no prebuilt-
   binary optionalDependencies (esbuild etc.), so neither field applies.
 - Artifacts: tools/defaults-probe.ts D14 (29/29), verify:contracts 16/16.
+
+## 92. licenses:gate — pm-licenses output promoted to a contract gate (2026-08-24)
+
+- §91 verified `bun pm licenses --prod --json` parses — but it was a
+  REPORT-ONLY script: a non-permissive prod dep could land without any
+  gate failing. licenses:gate (tools/licenses-gate.ts, wired into
+  verify:contracts) closes that gap.
+- POLICY: a prod dependency (dependencies + bundled file: vendored
+  packages, per `--prod`) must carry a permissive license — MIT,
+  Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, 0BSD, Unlicense,
+  CC0-1.0 — or be explicitly allowed. Anything else (proprietary,
+  copyleft, Unknown) fails the gate with the exact package + license
+  printed. Exit 1 = merge-blocked, same as the other gates.
+- CURRENT STATE (1.4.0, probe): 6 prod packages — @types/node,
+  bun-types, undici-types, zod, drizzle-orm (MIT), @factorywager/
+  proton-pass (Unknown — vendored file: package with NO license field
+  in its package.json; deliberate vendor exception, mirror of §91's
+  file: note). Gate reports 6 allowed, 0 violations.
+- SCOPE NOTES: `--prod` is the correct lens for merge authority — dev
+  tooling deps are never shipped. Unknown licenses must be adjudicated
+  (vendor exception, or reject) — never auto-allowed; new Unknowns fail
+  loudly and force a human decision.
+- Trap: parse `bun pm licenses --json` output from its first '{' — the
+  command prints a human-readable table header before the JSON payload
+  (same pattern as `pm diff`); naive JSON.parse fails.
+- Artifacts: tools/licenses-gate.ts, package.json (licenses:gate),
+  tools/verify-contracts.ts (gate #17). verify:contracts 17/17.

@@ -267,6 +267,8 @@ export const SPAWN_KEEP_LIST = new Set([
   "tests/lib/defaults-probe.test.ts", // same port-precedence subprocess probe (Bun.spawn, pipe capture)
   "tests/lib/docs-api.test.ts", // runs docs:api CLI with STRICT=1 env (pipe capture)
   "tests/lib/docs-integrity.test.ts", // runs docs:integrity CLI for src-ref gate (pipe capture)
+  "tools/licenses-gate.ts", // bun pm licenses subprocess (pipe capture)
+  "tests/lib/licenses-gate.test.ts", // same gate subprocess (pipe capture)
 ]);
 
 /** Flag Bun.spawn / Bun.spawnSync call sites in files outside SPAWN_KEEP_LIST. */
