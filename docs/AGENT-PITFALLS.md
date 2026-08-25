@@ -3333,3 +3333,32 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
 - Artifacts: tools/image-probe.ts, tests/lib/image-probe.test.ts (8
   tests), src/research/image-page.ts (/bun/image widget), verify:
   contracts 12/12.
+
+## 71. Team-logo ingestion doc — rejected (no consumer), ONE error-code correction (2026-08-24)
+
+- A pasted doc proposed extending the CSV pipeline to ingest team logo
+  images via Bun.Image: a team_logos table (sport/team/logo_url/width/
+  height/format/file_path/thumb_path), fetch -> metadata -> save ->
+  thumbnail -> SQLite, plus /logos/:sport/:team HTTP routes.
+- GROUNDED — REJECTED, no consumer:
+  - The premise is false: 'MasseyRatings CSV includes a LogoUrl column'
+    — Massey is ingested as HTML here (§69); the real CSV feed
+    (tennis-data.co.uk) has no logo column.
+  - No team_logos table, logo_url, or thumb_path anywhere in src/tools.
+  - The repo's image work is BRAND ASSETS (brand-image.ts + /brand/
+    swatch/ routes) — the same metadata+resize+serve pattern, applied to
+    real assets. Building a parallel team_logos pipeline for phantom
+    CSV logo URLs would duplicate it without a consumer.
+  - The serving pattern (/logos routes returning Bun.file + metadata)
+    already exists as /brand.svg + /brand/swatch/<token>.png.
+- ONE REAL CORRECTION (probe-verified, added to image:probe P13):
+  the doc's ERR_IMAGE_FORMAT_UNSUPPORTED fallback is INCOMPLETE. That
+  code is ONLY for platform-unavailable formats (HEIC/AVIF on a machine
+  without the codec). Bad INPUT uses different codes:
+    - garbage/empty/SVG bytes -> ERR_IMAGE_UNKNOWN_FORMAT
+    - truncated/corrupt data   -> ERR_IMAGE_DECODE_FAILED
+    - platform-unavailable fmt -> ERR_IMAGE_FORMAT_UNSUPPORTED
+  A robust fallback must branch on all three (image:probe now checks
+  all three; tests lock them).
+- Artifacts: tools/image-probe.ts P13 (3 new checks, 23/23), tests/lib/
+  image-probe.test.ts (3 new tests, 11/11). Gate stays 12/12.

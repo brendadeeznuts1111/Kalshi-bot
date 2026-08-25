@@ -108,3 +108,27 @@ describe("Bun.Image misc (§70)", () => {
     rmSync(dir, { recursive: true, force: true });
   });
 });
+
+describe("Bun.Image error codes (§71)", () => {
+  test("garbage bytes -> ERR_IMAGE_UNKNOWN_FORMAT", async () => {
+    let code = "";
+    try { await new (Bun as any).Image(new TextEncoder().encode("not an image")).metadata(); }
+    catch (e) { code = (e as any).code ?? ""; }
+    expect(code).toBe("ERR_IMAGE_UNKNOWN_FORMAT");
+  });
+
+  test("truncated PNG -> ERR_IMAGE_DECODE_FAILED", async () => {
+    const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAAFElEQVR42mP8z8Dwn4GBgYGJgZGBAQAbYgIBL8f2GQAAAABJRU5ErkJggg==", "base64");
+    let code = "";
+    try { await new (Bun as any).Image(png.subarray(0, 20)).metadata(); }
+    catch (e) { code = (e as any).code ?? ""; }
+    expect(code).toBe("ERR_IMAGE_DECODE_FAILED");
+  });
+
+  test("SVG -> ERR_IMAGE_UNKNOWN_FORMAT (no rasterizer, §12)", async () => {
+    let code = "";
+    try { await new (Bun as any).Image(Buffer.from("<svg xmlns=\"http://www.w3.org/2000/svg\"><rect/></svg>")).metadata(); }
+    catch (e) { code = (e as any).code ?? ""; }
+    expect(code).toBe("ERR_IMAGE_UNKNOWN_FORMAT");
+  });
+});

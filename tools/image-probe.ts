@@ -108,6 +108,19 @@ let heic = "";
 try { heic = "ok len=" + (await Bun.file(SRC).image().resize(8, 8).heic({ quality: 80 }).bytes()).length; } catch (e) { heic = "ERR " + (e as any).code; }
 check("P12 heic encode (macOS arm64)", heic.startsWith("ok"), heic);
 
+// P13: error-code surface (§71) — the doc's ERR_IMAGE_FORMAT_UNSUPPORTED is
+// ONLY for platform-unavailable formats; bad input uses DIFFERENT codes.
+const codeOf = async (input: Uint8Array): Promise<string> => {
+  try { await new (Bun as any).Image(input).metadata(); return "no-error"; }
+  catch (e) { return (e as any).code ?? "no-code"; }
+};
+const garbage = await codeOf(new TextEncoder().encode("not an image"));
+check("P13a garbage -> ERR_IMAGE_UNKNOWN_FORMAT", garbage === "ERR_IMAGE_UNKNOWN_FORMAT", garbage);
+const truncated = await codeOf(Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAAFElEQVR42mP8z8Dwn4GBgYGJgZGBAQAbYgIBL8f2GQAAAABJRU5ErkJggg==", "base64").subarray(0, 20));
+check("P13b truncated -> ERR_IMAGE_DECODE_FAILED", truncated === "ERR_IMAGE_DECODE_FAILED", truncated);
+const svg = await codeOf(Buffer.from("<svg xmlns=\"http://www.w3.org/2000/svg\"><rect/></svg>"));
+check("P13c svg -> ERR_IMAGE_UNKNOWN_FORMAT (no rasterizer §12)", svg === "ERR_IMAGE_UNKNOWN_FORMAT", svg);
+
 console.log("---");
 const fails = results.filter((r) => !r.pass);
 console.log("image:probe — " + (results.length - fails.length) + "/" + results.length + " pass" + (fails.length ? " · FAIL: " + fails.map((f) => f.name).join(", ") : ""));
