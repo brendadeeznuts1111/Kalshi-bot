@@ -43,6 +43,8 @@ interface SbomEntry {
   matchedBy: string | null;
   fingerprint: string;
   reason?: string;
+  expires?: string;
+  expiresInDays?: number;
 }
 
 function sha256(text: string): string {
@@ -51,8 +53,8 @@ function sha256(text: string): string {
   return h.digest("hex").slice(0, 12);
 }
 
-async function loadConfig(): Promise<{ policy: LicensePolicy; exemptions: LicenseExemption[] }> {
-  const file = Bun.file(CONFIG_PATH);
+async function loadConfig(configPath: string): Promise<{ policy: LicensePolicy; exemptions: LicenseExemption[] }> {
+  const file = Bun.file(configPath);
   const raw = await file.json(); // throws on malformed JSON — caller reports
   const err = validatePolicyConfig(raw);
   if (err) throw new Error("config/licenses-allowlist.json: " + err);
@@ -111,6 +113,9 @@ async function main() {
   const sbomMode = sbomIdx >= 0;
   const next = args[sbomIdx + 1];
   const sbomPath = sbomMode && next !== undefined && !next.startsWith("--") ? next : DEFAULT_SBOM_PATH;
+  const cfgIdx = args.indexOf("--config");
+  const cfgNext = args[cfgIdx + 1];
+  const configPath = cfgIdx >= 0 && cfgNext !== undefined && !cfgNext.startsWith("--") ? cfgNext : CONFIG_PATH;
 
   const proc = Bun.spawnSync(["bun", "pm", "licenses", "--prod", "--json"], { cwd: ROOT, stdout: "pipe", stderr: "pipe" });
   const stdout = proc.stdout?.toString() ?? "";
@@ -130,7 +135,7 @@ async function main() {
   let policy: LicensePolicy;
   let exemptions: LicenseExemption[];
   try {
-    ({ policy, exemptions } = await loadConfig());
+    ({ policy, exemptions } = await loadConfig(configPath));
   } catch (err) {
     const msg = "licenses:gate — " + (err instanceof Error ? err.message : String(err));
     if (jsonMode) console.log(JSON.stringify({ ok: false, error: msg }));
@@ -171,6 +176,10 @@ async function main() {
     .map((e) => ({ e, adv: advisoryFor(e.name, e.version, overlay) }))
     .filter((x) => x.adv !== null)
     .map((x) => ({ name: x.e.name, version: x.e.version, severity: x.adv!.severity, note: x.adv!.note ?? "" }));
+  const warnDays = policy.expiryWarningDays ?? 30;
+  const expiringSoon = evaluated
+    .filter((e) => e.matchedBy === "exemption" && e.expires !== undefined && e.expiresInDays !== undefined && e.expiresInDays <= warnDays)
+    .map((e) => ({ name: e.name, version: e.version, expires: e.expires ?? "", expiresInDays: e.expiresInDays ?? 0, reason: e.reason ?? "" }));
   const summary = { total: evaluated.length, allowed: evaluated.length - violations.length, violations: violations.length, exemptions: exemptions.length };
   let diff: ReturnType<typeof computeDiff> | null = null;
   if (sbomMode) {
@@ -197,6 +206,7 @@ async function main() {
       violations: violations.map((v) => ({ name: v.name, version: v.version, license: v.reportedLicense, reason: v.reason })),
       staleExemptions: stale.map((e) => e.name),
       advisories,
+      expiringSoon,
       diff: diff === null ? null : {
         added: diff.added.map((e) => e.name + "@" + e.version),
         removed: diff.removed.map((e) => e.name + "@" + e.version),
@@ -213,6 +223,8 @@ async function main() {
     for (const s of stale) console.log('  warn stale exemption: ' + s.name + ' matches no prod package');
     for (const a of advisories) console.log('  warn advisory ' + a.name + '@' + a.version + ' (' + a.severity + ')' + (a.note ? ' — ' + a.note : ''));
     if (advisories.length) console.log('licenses:gate — ' + advisories.length + ' advisory(ies) from config/audit-overrides.json (warn-only; license policy remains the merge authority)');
+    for (const w of expiringSoon) console.log('  warn exemption ' + w.name + ' expires in ' + w.expiresInDays + ' day(s) (' + w.expires + ') — review before it fails the gate');
+    if (expiringSoon.length) console.log('licenses:gate — ' + expiringSoon.length + ' exemption(s) inside the ' + warnDays + '-day expiry warning window');
     if (sbomMode && diff !== null) {
       if (sbomPath === DEFAULT_SBOM_PATH) console.log("licenses:gate — sbom written to .data/licenses-sbom.json");
       for (const a of diff.added) console.log("  + added " + a.name + "@" + a.version + " (" + a.normalizedLicense + ")");

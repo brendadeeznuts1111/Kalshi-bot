@@ -131,6 +131,41 @@ licenses:gate — FAIL (1 violation(s))
 | `bun run audit:overlay:update` | Refresh vulnerability overlay (network; warn-only) |
 | edit `config/licenses-allowlist.json` | Allowlist, aliases, exemptions, expiry |
 
+
+## SPDX expression licenses
+
+- Compound licenses are evaluated: OR -> passes if ANY alternative is
+  allowed ('(MIT OR Apache-2.0)' passes — you may comply with MIT);
+  AND -> passes only if ALL are allowed ('MIT AND GPL-3.0' fails).
+  Parentheses nest.
+- Lowercase 'or' inside an id is not an operator — 'GPL-2.0-or-later'
+  is treated as a single (non-permissive) string, not a split.
+- Failed expressions report `no permissive alternative: <expr>`.
+
+## Expiry warning window
+
+- policy.expiryWarningDays (default 30) turns the time-bomb into a
+  countdown: exemptions expiring within the window print
+  `warn exemption <name> expires in N day(s)` and appear in the
+  expiringSoon array of --json. The exit code is unchanged — you get
+  lead time to re-review, then the gate fails on the expiry date.
+
+## Testing with an alternate config
+
+- `bun run licenses:gate --config <path>` overrides the allowlist config
+  (the test suite uses it to prove the failure path: a strict
+  allowedLicenses ['MIT'] fixture makes the gate exit 1).
+
+## Cheat sheet additions
+
+| Command | Purpose |
+| :--- | :--- |
+| `bun run licenses:gate --config <path>` | Run against a different policy file |
+
+## Config schema reference additions
+
+- policy.expiryWarningDays: non-negative integer, default 30.
+
 ## Config schema reference
 
 - policy.allowedLicenses: non-empty array of canonical SPDX ids.

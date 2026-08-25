@@ -4065,6 +4065,38 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
 - Artifacts: tools/pre-commit.ts (+licenses:gate conditional), tests/
   pre-commit.test.ts (3 updated + 5 new assertions), docs/LICENSE-GATE-
   OPS.md (new). verify:contracts stays 17/17.
+## 96. SPDX expressions + expiry warning window + --config (2026-08-24)
+
+- SPDX EXPRESSIONS: a compound license like '(MIT OR Apache-2.0)'
+  previously FAILED the gate even though the licensee may comply with
+  MIT (probe-confirmed false positive). evaluateLicenseExpression now
+  evaluates OR/AND/parens recursively: OR -> allowed if ANY alternative
+  is allowed; AND -> allowed only if ALL are. matchedBy becomes
+  "expression". Trap (test-caught): bare operands must be leaf-
+  normalized via expressionAllows — routing them back through
+  evaluateLicenseExpression returns allowed:false by design (it signals
+  'not an expression') and broke every OR/AND branch.
+- OPERATOR BOUNDARIES: lowercase 'or' in 'GPL-2.0-or-later' is NOT an
+  operator — splitTopLevel is case-sensitive with word-boundary checks,
+  so the SPDX '-or-later' suffix survives (test: isExpression false).
+- EXPIRY WARNING WINDOW: policy.expiryWarningDays (default 30) — an
+  exemption allowed today but expiring within the window prints 'warn
+  exemption <name> expires in N day(s)' in human output and appears in
+  the --json expiringSoon array (name/version/expires/expiresInDays/
+  reason). Exit code unchanged — the time-bomb now gives lead time to
+  re-review instead of detonating with zero notice.
+- --config <path>: override config/licenses-allowlist.json (ops +
+  tests). Unlocked the first END-TO-END failure-path test: a strict
+  fixture (allowedLicenses ['MIT']) makes the gate exit 1 with
+  'FAIL drizzle-orm@0.45.2' — proving the gate actually blocks, not
+  just reports. A wide-window fixture (expiryWarningDays 365) asserts
+  expiringSoon surfaces proton-pass.
+- Artifacts: src/lib/licenses-policy.ts (evaluateLicenseExpression /
+  expressionAllows / wholeDaysBetween, +expires+expiresInDays on
+  EvaluatedPackage), tools/licenses-gate.ts (--config, expiringSoon,
+  warnDays), tests/lib/licenses-policy.test.ts (+6), tests/lib/
+  licenses-gate.test.ts (+2 e2e). verify:contracts stays 17/17.
+
 
 
 

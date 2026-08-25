@@ -74,3 +74,36 @@ describe("licenses:gate --sbom (§93)", () => {
     await Bun.file(SBOM_TEST_PATH).delete();
   });
 });
+describe("licenses:gate --config (§96)", () => {
+  const STRICT_PATH = join(ROOT, ".data", "licenses-config-strict.json");
+  const WARN_PATH = join(ROOT, ".data", "licenses-config-warn.json");
+
+  test("strict policy fails the gate with a named violation", async () => {
+    const strict = { policy: { allowedLicenses: ["MIT"], licenseAliases: {} }, exemptions: [] };
+    await Bun.write(STRICT_PATH, JSON.stringify(strict, null, 2) + "\n");
+    try {
+      const { exitCode, stdout } = runGateArgs(["--config", STRICT_PATH]);
+      expect(exitCode).toBe(1);
+      expect(stdout).toContain("FAIL drizzle-orm@0.45.2");
+      expect(stdout).toContain("licenses:gate — FAIL");
+    } finally {
+      await Bun.file(STRICT_PATH).delete();
+    }
+  });
+
+  test("wide warning window surfaces expiring exemptions in --json", async () => {
+    const warn = { policy: { allowedLicenses: ["MIT", "Apache-2.0"], licenseAliases: {}, expiryWarningDays: 365 }, exemptions: [{ name: "@factorywager/proton-pass", license: "Unknown", expires: "2026-12-01" }] };
+    await Bun.write(WARN_PATH, JSON.stringify(warn, null, 2) + "\n");
+    try {
+      const { exitCode, stdout } = runGateArgs(["--config", WARN_PATH, "--json"]);
+      expect(exitCode).toBe(0);
+      const doc = JSON.parse(stdout);
+      expect(doc.expiringSoon.length).toBe(1);
+      expect(doc.expiringSoon[0].name).toBe("@factorywager/proton-pass");
+      expect(doc.expiringSoon[0].expiresInDays).toBeGreaterThan(0);
+    } finally {
+      await Bun.file(WARN_PATH).delete();
+    }
+  });
+});
+

@@ -16,6 +16,8 @@
 export interface LicensePolicy {
   allowedLicenses: string[];
   licenseAliases: Record<string, string>;
+  /** Warn (not fail) when an exemption expires within this many days. Default 30. */
+  expiryWarningDays?: number;
 }
 
 export interface LicenseExemption {
@@ -31,7 +33,7 @@ export interface LicenseExemption {
   expires?: string;
 }
 
-export type AllowMatch = "allowlist" | "exemption" | null;
+export type AllowMatch = "allowlist" | "exemption" | "expression" | null;
 
 export interface EvaluatedPackage {
   name: string;
@@ -41,6 +43,10 @@ export interface EvaluatedPackage {
   allowed: boolean;
   matchedBy: AllowMatch;
   reason?: string;
+  /** ISO expiry when allowed via an exemption with an expiry. */
+  expires?: string;
+  /** Whole days from today until expiry (only when allowed via exemption). */
+  expiresInDays?: number;
 }
 
 /**
@@ -89,8 +95,19 @@ export function evaluatePackage(
       return { ...base, normalizedLicense: normalized, allowed: false, matchedBy: null,
         reason: "exemption expired on " + ex.expires + " — re-review " + pkg.name + " (" + (ex.reason ?? "no reason recorded") + ")" + (ex.remediation ? " Action: " + ex.remediation : "") };
     }
+    const expiresInDays = ex.expires ? wholeDaysBetween(todayISO, ex.expires) : undefined;
     return { ...base, normalizedLicense: normalized, allowed: true, matchedBy: "exemption",
-      reason: (ex.reason ?? "exempted") + (ex.expires ? " (expires " + ex.expires + ")" : "") };
+      reason: (ex.reason ?? "exempted") + (ex.expires ? " (expires " + ex.expires + ")" : ""),
+      ...(ex.expires ? { expires: ex.expires } : {}),
+      ...(expiresInDays !== undefined ? { expiresInDays } : {}) };
+  }
+  const expr = evaluateLicenseExpression(pkg.reportedLicense, policy);
+  if (expr.allowed) {
+    return { ...base, normalizedLicense: expr.normalized, allowed: true, matchedBy: "expression" };
+  }
+  if (expr.isExpression) {
+    return { ...base, normalizedLicense: expr.normalized, allowed: false, matchedBy: null,
+      reason: "SPDX expression has no permissive alternative: " + expr.normalized };
   }
   return { ...base, normalizedLicense: normalized, allowed: false, matchedBy: null,
     reason: "no allowlist entry and no matching exemption" };
@@ -110,13 +127,15 @@ export function findStaleExemptions(
 
 /** Validate the loaded config shape; returns an error string or null. */
 export function validatePolicyConfig(raw: unknown): string | null {
-  const c = raw as { policy?: { allowedLicenses?: unknown; licenseAliases?: unknown }; exemptions?: unknown };
+  const c = raw as { policy?: { allowedLicenses?: unknown; licenseAliases?: unknown; expiryWarningDays?: unknown }; exemptions?: unknown };
   if (!c || typeof c !== "object") return "config root must be an object";
   const allowed = c.policy?.allowedLicenses;
   if (!Array.isArray(allowed) || allowed.length === 0) return "policy.allowedLicenses must be a non-empty array";
   for (const l of allowed) if (typeof l !== "string" || !l.trim()) return "policy.allowedLicenses entries must be non-empty strings";
   const aliases = c.policy?.licenseAliases;
   if (aliases !== undefined && (typeof aliases !== "object" || Array.isArray(aliases))) return "policy.licenseAliases must be an object";
+  const warnDays = c.policy?.expiryWarningDays;
+  if (warnDays !== undefined && (typeof warnDays !== "number" || !Number.isInteger(warnDays) || warnDays < 0)) return "policy.expiryWarningDays must be a non-negative integer";
   const ex = c.exemptions;
   if (ex !== undefined) {
     if (!Array.isArray(ex)) return "exemptions must be an array";
@@ -130,6 +149,77 @@ export function validatePolicyConfig(raw: unknown): string | null {
     }
   }
   return null;
+}
+
+/** Whole days from `fromISO` to `toISO` (ISO dates, UTC-based). */
+export function wholeDaysBetween(fromISO: string, toISO: string): number {
+  const from = Date.parse(fromISO + "T00:00:00Z");
+  const to = Date.parse(toISO + "T00:00:00Z");
+  return Math.round((to - from) / 86_400_000);
+}
+
+export interface ExpressionResult {
+  /** True when the raw string is a compound SPDX expression (OR/AND/parens). */
+  isExpression: boolean;
+  /** Whether the expression has at least one permissive compliance path. */
+  allowed: boolean;
+  normalized: string;
+}
+
+/**
+ * Split on `op` only at parenthesis depth 0 (word-boundary, case-sensitive —
+ * lowercase 'or' in 'GPL-2.0-or-later' is NOT an operator).
+ */
+function splitTopLevel(expr: string, op: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let current = "";
+  for (let i = 0; i < expr.length; i++) {
+    const ch = expr[i];
+    if (ch === "(") depth++;
+    if (ch === ")") depth--;
+    if (depth === 0 && expr.slice(i, i + op.length) === op) {
+      const before = i > 0 ? expr[i - 1] : " ";
+      const after = expr[i + op.length] ?? " ";
+      if (!/[A-Za-z0-9]/.test(before) && !/[A-Za-z0-9]/.test(after)) {
+        parts.push(current.trim());
+        current = "";
+        i += op.length - 1;
+        continue;
+      }
+    }
+    current += ch;
+  }
+  parts.push(current.trim());
+  return parts;
+}
+
+/**
+ * Evaluate a compound SPDX license expression against the allowlist.
+ * Semantics: OR -> allowed if ANY alternative is allowed (the licensee may
+ * comply with the allowed one); AND -> allowed only if ALL are allowed.
+ * Parentheses nest; bare operands fall through to normalizeLicense.
+ * Non-expression strings return { isExpression: false, allowed: false } so
+ * callers can fall through to the plain allowlist path.
+ */
+/** Recursive evaluation of an expression (operands are leaf-normalized). */
+function expressionAllows(expr: string, policy: LicensePolicy, allowedSet: Set<string>): boolean {
+  let e = expr.trim();
+  while (e.startsWith("(") && e.endsWith(")")) e = e.slice(1, -1).trim();
+  const orParts = splitTopLevel(e, "OR");
+  if (orParts.length > 1) return orParts.some((p) => expressionAllows(p, policy, allowedSet));
+  const andParts = splitTopLevel(e, "AND");
+  if (andParts.length > 1) return andParts.every((p) => expressionAllows(p, policy, allowedSet));
+  const operand = normalizeLicense(e, policy);
+  return allowedSet.has(operand.toLowerCase());
+}
+
+export function evaluateLicenseExpression(raw: string, policy: LicensePolicy): ExpressionResult {
+  const trimmed = raw.trim();
+  const isExpression = /[()]/.test(trimmed) || /\bOR\b/.test(trimmed) || /\bAND\b/.test(trimmed);
+  if (!isExpression) return { isExpression: false, allowed: false, normalized: trimmed };
+  const allowedSet = new Set(policy.allowedLicenses.map((l) => l.toLowerCase()));
+  return { isExpression: true, allowed: expressionAllows(trimmed, policy, allowedSet), normalized: trimmed };
 }
 
 /**

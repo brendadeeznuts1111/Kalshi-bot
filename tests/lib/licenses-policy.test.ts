@@ -1,6 +1,6 @@
 // licenses-policy unit tests (§92/§93) — pure logic, no subprocess.
 import { describe, expect, test } from "bun:test";
-import { advisoryFor, evaluatePackage, findStaleExemptions, normalizeAuditOverlay, normalizeLicense, validateAuditOverrides, validatePolicyConfig } from "../../src/lib/licenses-policy.ts";
+import { advisoryFor, evaluateLicenseExpression, evaluatePackage, findStaleExemptions, normalizeAuditOverlay, normalizeLicense, validateAuditOverrides, validatePolicyConfig, wholeDaysBetween } from "../../src/lib/licenses-policy.ts";
 import type { LicenseExemption, LicensePolicy } from "../../src/lib/licenses-policy.ts";
 
 const policy: LicensePolicy = {
@@ -132,4 +132,47 @@ describe("remediation + audit overlay (§94)", () => {
     expect(advisoryFor("other", "4.4.3", overlay)).toBeNull();
   });
 });
+describe("SPDX expressions + expiry warning window (§96)", () => {
+  test("OR expressions pass when any alternative is allowed", () => {
+    const v = evaluatePackage({ name: "x", version: "1.0.0", reportedLicense: "(MIT OR Apache-2.0)" }, policy, [], TODAY);
+    expect(v.allowed).toBe(true);
+    expect(v.matchedBy).toBe("expression");
+  });
+
+  test("AND expressions require ALL alternatives allowed", () => {
+    const v = evaluatePackage({ name: "x", version: "1.0.0", reportedLicense: "MIT AND GPL-3.0" }, policy, [], TODAY);
+    expect(v.allowed).toBe(false);
+    expect(v.reason ?? "").toContain("no permissive alternative");
+    const ok = evaluatePackage({ name: "x", version: "1.0.0", reportedLicense: "MIT AND BSD-3-Clause" }, policy, [], TODAY);
+    expect(ok.allowed).toBe(true);
+  });
+
+  test("nested parentheses evaluate recursively", () => {
+    const v = evaluateLicenseExpression("((MIT OR GPL-3.0))", policy);
+    expect(v.isExpression).toBe(true);
+    expect(v.allowed).toBe(true);
+  });
+
+  test("GPL-2.0-or-later is NOT split (lowercase or is not an operator)", () => {
+    const v = evaluateLicenseExpression("GPL-2.0-or-later", policy);
+    expect(v.isExpression).toBe(false);
+    const p = evaluatePackage({ name: "x", version: "1.0.0", reportedLicense: "GPL-2.0-or-later" }, policy, [], TODAY);
+    expect(p.allowed).toBe(false);
+  });
+
+  test("exemption verdict carries expires + expiresInDays for the warning window", () => {
+    const ex: LicenseExemption[] = [{ name: "pkg", license: "Unknown", expires: "2026-10-01" }];
+    const v = evaluatePackage({ name: "pkg", version: "1.0.0", reportedLicense: "Unknown" }, policy, ex, TODAY);
+    expect(v.expires).toBe("2026-10-01");
+    expect(v.expiresInDays).toBe(38); // 2026-08-24 -> 2026-10-01
+    expect(wholeDaysBetween("2026-08-24", "2026-08-25")).toBe(1);
+  });
+
+  test("validatePolicyConfig rejects a bad expiryWarningDays", () => {
+    expect(validatePolicyConfig({ policy: { allowedLicenses: ["MIT"], expiryWarningDays: -1 }, exemptions: [] })).not.toBeNull();
+    expect(validatePolicyConfig({ policy: { allowedLicenses: ["MIT"], expiryWarningDays: 1.5 }, exemptions: [] })).not.toBeNull();
+    expect(validatePolicyConfig({ policy: { allowedLicenses: ["MIT"], expiryWarningDays: 30 }, exemptions: [] })).toBeNull();
+  });
+});
+
 
