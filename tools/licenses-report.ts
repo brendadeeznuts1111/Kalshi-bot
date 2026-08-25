@@ -16,17 +16,17 @@
  */
 import { join } from "node:path";
 import { XML } from "bun";
-import { buildCycloneDxObject, renderLicensesReport } from "../src/lib/licenses-report.ts";
+import { buildCycloneDxObject, deterministicSerial, renderLicensesReport } from "../src/lib/licenses-report.ts";
 
 const ROOT = join(import.meta.dir, "..");
 const REPORT_PATH = join(ROOT, "research", "outputs", "licenses-report.md");
 const XML_SBOM_PATH = join(ROOT, "research", "outputs", "licenses-sbom.xml");
 const DEFAULT_SBOM = ".data/licenses-sbom.json";
 
-function sha256hex(text: string): string {
+function sha256hex(text: string, len = 16): string {
   const h = new Bun.CryptoHasher("sha256");
   h.update(text);
-  return h.digest("hex").slice(0, 16);
+  return h.digest("hex").slice(0, len);
 }
 
 async function configSha(): Promise<string> {
@@ -57,11 +57,15 @@ async function main(): Promise<number> {
     process.exit(1);
   }
   const enriched = { ...doc, configSha: await configSha() };
-  const report = renderLicensesReport(enriched);
+  // Content-addressed serial (§105): seed from config + package content so
+  // identical policy+deps produce the IDENTICAL BOM (reproducible artifact);
+  // any change -> a new serial. Excludes generatedAt by design.
+  const seed = enriched.configSha + "\n" + enriched.packages.map((p: { name: string; version: string; allowed: boolean }) => p.name + "@" + p.version + ":" + p.allowed).join("\n");
+  const serial = "urn:uuid:" + deterministicSerial(sha256hex(seed, 32));
+  const report = renderLicensesReport({ ...enriched, xmlSerial: serial });
   await Bun.write(REPORT_PATH, report);
   // CycloneDX 1.5 XML twin (§104) via the probed Bun.XML API (xml:probe §68):
   // XML.stringify is well-formed-or-throws; XML.parse validates the artifact.
-  const serial = "urn:uuid:" + Bun.randomUUIDv7();
   const xmlBody = XML.stringify(buildCycloneDxObject(enriched, serial), null, 2);
   await Bun.write(XML_SBOM_PATH, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" + xmlBody + "\n");
   console.log("licenses:report — wrote " + REPORT_PATH + " + " + XML_SBOM_PATH + " (gate " + (doc.ok ? "PASS" : "FAIL") + ")");

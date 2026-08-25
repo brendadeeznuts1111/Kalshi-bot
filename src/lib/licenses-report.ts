@@ -20,6 +20,8 @@ export interface ReportPackage {
 
 export interface LicensesReportInput {
   ok: boolean;
+  /** Content-addressed CycloneDX serial of the XML twin (when emitted). */
+  xmlSerial?: string;
   generatedAt: string;
   bunVersion: string;
   summary: { total: number; allowed: number; violations: number; exemptions: number };
@@ -48,6 +50,7 @@ export function renderLicensesReport(input: LicensesReportInput): string {
   push("- Bun: " + input.bunVersion);
   push("- Config fingerprint: " + input.configSha + " (licenses-allowlist.json + audit-overrides.json)");
   push("- Gate status: **" + (input.ok ? "PASS" : "FAIL") + "**");
+  if (input.xmlSerial) push("- XML SBOM serial: " + input.xmlSerial + " (licenses-sbom.xml)");
   push();
   push("## Summary");
   push();
@@ -114,6 +117,18 @@ export function renderLicensesReport(input: LicensesReportInput): string {
     for (const s of input.staleExemptions) push("- " + s);
   }
   return rows.join("\n") + "\n";
+}
+
+/**
+ * Content-addressed CycloneDX serial (§105): sha256 of a seed, formatted
+ * as a UUID (8-4-4-4-12). Identical content -> identical serial, so a
+ * reviewer can verify the BOM matches exactly the policy + dependency
+ * set that produced it; any change -> a new serial. Pure (no crypto lib
+ * dependency — caller supplies the hex).
+ */
+export function deterministicSerial(hex32: string): string {
+  const h = (hex32 ?? "").padEnd(32, "0").slice(0, 32);
+  return h.slice(0, 8) + "-" + h.slice(8, 12) + "-" + h.slice(12, 16) + "-" + h.slice(16, 20) + "-" + h.slice(20, 32);
 }
 
 /**

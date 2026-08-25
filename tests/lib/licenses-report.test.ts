@@ -2,7 +2,7 @@
 import { describe, expect, test } from "bun:test";
 import { join } from "node:path";
 import { XML } from "bun";
-import { buildCycloneDxObject, renderLicensesReport } from "../../src/lib/licenses-report.ts";
+import { buildCycloneDxObject, deterministicSerial, renderLicensesReport } from "../../src/lib/licenses-report.ts";
 
 const ROOT = join(import.meta.dir, "../..");
 const REPORT_PATH = join(ROOT, "research", "outputs", "licenses-report.md");
@@ -60,6 +60,18 @@ describe("renderLicensesReport (§103)", () => {
   });
 });
 
+describe("deterministicSerial (§105)", () => {
+  test("formats a 32-hex seed as a UUID (8-4-4-4-12)", () => {
+    const s = deterministicSerial("0123456789abcdef0123456789abcdef");
+    expect(s).toBe("01234567-89ab-cdef-0123-456789abcdef");
+  });
+
+  test("same seed -> same serial; different seed -> different serial", () => {
+    expect(deterministicSerial("a".repeat(32))).toBe(deterministicSerial("a".repeat(32)));
+    expect(deterministicSerial("a".repeat(32))).not.toBe(deterministicSerial("b".repeat(32)));
+  });
+});
+
 describe("buildCycloneDxObject (§104)", () => {
   test("produces a CycloneDX 1.5 body that stringifies and round-trips", () => {
     const obj = buildCycloneDxObject(baseInput(), "urn:uuid:test-serial") as any;
@@ -91,6 +103,11 @@ describe("licenses:report CLI (§103)", () => {
       const md = await Bun.file(REPORT_PATH).text();
       expect(md).toContain("Gate status: **FAIL**");
       expect(md).toContain("FAIL drizzle-orm@0.45.2");
+      // The FAIL state is the sign-off artifact in BOTH formats.
+      const xmlText = (await Bun.file(join(ROOT, "research", "outputs", "licenses-sbom.xml")).text()) ?? "";
+      const xmlDoc = XML.parse(xmlText) as any;
+      const props = Array.isArray(xmlDoc.bom.metadata.properties.property) ? xmlDoc.bom.metadata.properties.property : [xmlDoc.bom.metadata.properties.property];
+      expect(props.find((p: any) => p["@name"] === "kalshi-bot:gate-status")["#text"]).toBe("FAIL");
     } finally {
       await Bun.file(STRICT).delete();
       await Bun.file(join(ROOT, TEST_SBOM)).delete();
@@ -118,5 +135,18 @@ describe("licenses:report CLI (§103)", () => {
     const zod = cs.find((c: any) => c.name === "zod");
     expect(zod.licenses.license.id).toBe("MIT");
     expect(doc.bom.metadata.properties.property[0]["#text"]).toBe("PASS");
+    // Cross-link: the markdown report names the same serial as the XML.
+    const md = (await Bun.file(REPORT_PATH).text()) ?? "";
+    const mdSerial = md.match(/XML SBOM serial: (urn:uuid:[0-9a-f-]+)/)?.[1];
+    expect(mdSerial).toBe(doc.bom["@serialNumber"]);
+  });
+
+  test("serial is deterministic: identical runs produce the identical BOM serial", async () => {
+    runReport([]);
+    const s1 = ((await Bun.file(join(ROOT, "research", "outputs", "licenses-sbom.xml")).text()) ?? "").match(/serialNumber="(urn:uuid:[0-9a-f-]+)"/)?.[1];
+    runReport([]);
+    const s2 = ((await Bun.file(join(ROOT, "research", "outputs", "licenses-sbom.xml")).text()) ?? "").match(/serialNumber="(urn:uuid:[0-9a-f-]+)"/)?.[1];
+    expect(s1).toBeTruthy();
+    expect(s1).toBe(s2);
   });
 });

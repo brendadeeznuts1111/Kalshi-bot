@@ -4304,6 +4304,31 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
   (compliance describe), tests/institutions/signal-pipeline.test.ts
   (+compliance), tests/lib/licenses-report.test.ts (+2 XML).
   verify:contracts stays 17/17.
+## 105. Content-addressed CycloneDX serial + artifact cross-link (2026-08-24)
+
+- The XML twin's serial was a fresh random UUID per run — a reviewer
+  could not verify the BOM corresponds to a specific policy+deps. Now
+  deterministicSerial() (§104 builder + CLI): serial = urn:uuid: over
+  sha256(config fingerprint + each package name@version:allowed),
+  formatted 8-4-4-4-12. Identical content -> IDENTICAL serial (verified
+  by a two-run e2e asserting equality); any policy/dep change -> a new
+  serial. generatedAt is excluded by design — the serial identifies
+  CONTENT, the timestamp is a metadata field.
+- CROSS-LINK: the markdown report now carries an 'XML SBOM serial:'
+  header line, and the e2e asserts the markdown serial === the XML
+  serialNumber — the two artifacts are verifiably the same snapshot.
+- FAIL PATH COVERED: the strict-fixture e2e now also asserts the XML
+  twin is written on gate FAIL with kalshi-bot:gate-status=FAIL — the
+  FAIL state is the sign-off artifact in BOTH formats.
+- GATE-PATTERN.md gained the artifact-twin rule: human + machine-
+  readable outputs, cross-linked by a content-addressed identifier.
+- Tests: deterministicSerial 2 unit, +2 e2e assertions (cross-link,
+  determinism). tests/lib/licenses-report.test.ts now 9.
+- Artifacts: src/lib/licenses-report.ts (deterministicSerial, xmlSerial
+  header), tools/licenses-report.ts (serial seed + cross-link), tests/
+  lib/licenses-report.test.ts (+4), docs/GATE-PATTERN.md. verify:
+  contracts stays 17/17.
+
 
 
 

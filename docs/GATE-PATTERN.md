@@ -50,6 +50,10 @@ config-driven policy, fail-closed, importable, tested, documented.
 - Human output formats: asserted verbatim (the operator reads stdout).
 - Network tools: no network tests — assert module shape + schedule
   instead (§99).
+- Sign-off artifacts come in twins: human markdown + machine-readable
+  (CycloneDX XML via the probed Bun.XML API, §103-§105), cross-linked by
+  a CONTENT-ADDRESSED serial so a reviewer can verify the BOM matches
+  exactly the policy + dependency set that produced it.
 
 ## 6. Documents
 
