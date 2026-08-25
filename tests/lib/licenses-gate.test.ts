@@ -106,4 +106,52 @@ describe("licenses:gate --config (§96)", () => {
     }
   });
 });
+import { resolveLicensesData } from "../../tools/licenses-gate.ts";
+
+describe("resolveLicensesData (§100)", () => {
+  test("non-zero exit fails CLOSED with a toolchain hint", () => {
+    expect(() => resolveLicensesData("", "", 1)).toThrow(/exited 1/);
+  });
+
+  test("exit 0 with non-JSON output fails with a parse hint", () => {
+    expect(() => resolveLicensesData("bun pm: error output", "", 0)).toThrow(/non-JSON/);
+  });
+
+  test("valid JSON resolves and parses", () => {
+    const data = resolveLicensesData('{ "MIT": [{ "name": "zod", "versions": ["4.4.3"] }] }', "", 0);
+    expect(data.MIT?.[0].name).toBe("zod");
+  });
+});
+
+describe("licenses:gate --overlay (§100)", () => {
+  const FIXTURE = join(ROOT, ".data", "licenses-overlay-fixture.json");
+
+  test("surfaces advisories from an alternate overlay without changing exit code", async () => {
+    const fixture = { format: "audit-overrides", version: 1, advisories: { "zod@4.4.3": { severity: "high", note: "fixture" } } };
+    await Bun.write(FIXTURE, JSON.stringify(fixture, null, 2) + "\n");
+    try {
+      const { exitCode, stdout } = runGateArgs(["--overlay", FIXTURE, "--json"]);
+      expect(exitCode).toBe(0);
+      const doc = JSON.parse(stdout);
+      expect(doc.advisories.length).toBe(1);
+      expect(doc.advisories[0].name).toBe("zod");
+      expect(doc.advisories[0].severity).toBe("high");
+    } finally {
+      await Bun.file(FIXTURE).delete();
+    }
+  });
+
+  test("--overlay runs do not pollute the live licenses-state.json", async () => {
+    const fixture = { format: "audit-overrides", version: 1, advisories: {} };
+    await Bun.write(FIXTURE, JSON.stringify(fixture, null, 2) + "\n");
+    try {
+      runGateArgs(["--overlay", FIXTURE, "--json"]);
+      const state = await Bun.file(join(ROOT, ".data", "licenses-state.json")).json();
+      expect(state.advisories).toBe(0);
+    } finally {
+      await Bun.file(FIXTURE).delete();
+    }
+  });
+});
+
 

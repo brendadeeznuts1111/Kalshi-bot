@@ -194,6 +194,8 @@ licenses:gate — FAIL (1 violation(s))
 | Command | Purpose |
 | :--- | :--- |
 | `bun run licenses:gate --config <path>` | Run against a different policy file |
+| `bun run licenses:gate --overlay <path>` | Test against an alternate audit-overrides.json |
+
 
 ## Config schema reference additions
 

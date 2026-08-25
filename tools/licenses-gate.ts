@@ -73,6 +73,28 @@ function parseLicensesOutput(text: string): Record<string, RawPackage[]> | null 
   }
 }
 
+/**
+ * Resolve the bun pm licenses payload, failing CLOSED: a non-zero exit
+ * (lockfile/toolchain error) is reported distinctly from non-JSON output
+ * (§100). Exported for unit tests — the gate never runs on import
+ * (import.meta.main guard).
+ */
+export function resolveLicensesData(
+  stdout: string,
+  stderr: string,
+  exitCode: number,
+): Record<string, RawPackage[]> {
+  const data = parseLicensesOutput(stdout) ?? parseLicensesOutput(stderr);
+  if (!data) {
+    const hint =
+      exitCode !== 0
+        ? "bun pm licenses exited " + exitCode + " (lockfile/toolchain failure?)"
+        : "stdout and stderr are both non-JSON";
+    throw new Error("licenses:gate — could not resolve bun pm licenses --prod --json output (" + hint + ")");
+  }
+  return data;
+}
+
 async function fingerprintFor(p: RawPackage): Promise<string> {
   const dir = p.paths?.[0];
   let fileHash = "";
@@ -117,13 +139,18 @@ async function main() {
   const cfgIdx = args.indexOf("--config");
   const cfgNext = args[cfgIdx + 1];
   const configPath = cfgIdx >= 0 && cfgNext !== undefined && !cfgNext.startsWith("--") ? cfgNext : CONFIG_PATH;
+  const ovIdx = args.indexOf("--overlay");
+  const ovNext = args[ovIdx + 1];
+  const overlayPath = ovIdx >= 0 && ovNext !== undefined && !ovNext.startsWith("--") ? ovNext : OVERLAY_PATH;
 
   const proc = Bun.spawnSync(["bun", "pm", "licenses", "--prod", "--json"], { cwd: ROOT, stdout: "pipe", stderr: "pipe" });
   const stdout = proc.stdout?.toString() ?? "";
   const stderr = proc.stderr?.toString() ?? "";
-  const data = parseLicensesOutput(stdout) ?? parseLicensesOutput(stderr);
-  if (!data) {
-    const msg = "licenses:gate — could not parse bun pm licenses --prod --json output (stdout and stderr are both non-JSON)";
+  let data: Record<string, RawPackage[]>;
+  try {
+    data = resolveLicensesData(stdout, stderr, proc.exitCode ?? -1);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
     if (jsonMode) {
       console.log(JSON.stringify({ ok: false, error: msg, stderrTail: stderr.slice(-400) }));
     } else {
@@ -145,7 +172,7 @@ async function main() {
   }
 
   let overlay: AuditOverlay = { advisories: {} };
-  const overlayFile = Bun.file(OVERLAY_PATH);
+  const overlayFile = Bun.file(overlayPath);
   if (await overlayFile.exists()) {
     try {
       const oerr = validateAuditOverrides(await overlayFile.json());
@@ -181,10 +208,10 @@ async function main() {
   const expiringSoon = evaluated
     .filter((e) => e.matchedBy === "exemption" && e.expires !== undefined && e.expiresInDays !== undefined && e.expiresInDays <= warnDays)
     .map((e) => ({ name: e.name, version: e.version, expires: e.expires ?? "", expiresInDays: e.expiresInDays ?? 0, reason: e.reason ?? "" }));
-  if (configPath === CONFIG_PATH) {
+  if (configPath === CONFIG_PATH && overlayPath === OVERLAY_PATH) {
     // Live-compliance surface (§97): seed .data/licenses-state.json for the
     // signal pipeline (/status + ops dashboard), same pattern as the docs
-    // gates. Skipped for --config fixtures so tests never pollute it.
+    // gates. Skipped for --config/--overlay fixtures so tests never pollute it.
     await writeDocsGateState("licenses-state.json", {
       ok: violations.length === 0,
       fails: violations.length,
@@ -257,7 +284,7 @@ async function main() {
   if (violations.length) process.exit(1);
 }
 
-await main();
+if (import.meta.main) await main();
 
 
 

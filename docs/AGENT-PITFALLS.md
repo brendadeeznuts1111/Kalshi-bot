@@ -4169,6 +4169,29 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
   + registration), tests/scripts/audit-overlay-cron.test.ts (new),
   docs/LICENSE-GATE-OPS.md (automated weekly section). verify:contracts
   stays 17/17.
+## 100. Fail-closed bun pm resolution + --overlay flag (2026-08-24)
+
+- The gate previously parsed `bun pm licenses` output without checking
+  the subprocess EXIT CODE — a lockfile/toolchain failure producing
+  non-JSON output would mislead with 'could not parse' instead of
+  naming the real cause. Now resolveLicensesData fails CLOSED:
+  non-zero exit -> 'bun pm licenses exited N (lockfile/toolchain
+  failure?)'; exit 0 with non-JSON -> parse hint. Both exit 1 with the
+  stderr tail.
+- --overlay <path>: test an alternate config/audit-overrides.json
+  (mirrors --config). The licenses-state.json write now requires the
+  DEFAULT overlay path too — fixture runs never pollute the live state
+  (asserted by a test that runs --overlay then reads the state file).
+- IMPORT GUARD: tools/licenses-gate.ts now ends with `if (import.meta.
+  main) await main();` (the audit-overlay-update pattern, §99) — the
+  exported resolveLicensesData is unit-testable WITHOUT executing the
+  gate (which would spawn bun pm on import).
+- Tests: resolveLicensesData 3 unit (exit-1 closed, non-JSON, valid),
+  --overlay 2 e2e (advisory surfaced with exit 0; state not polluted).
+- Artifacts: tools/licenses-gate.ts (resolveLicensesData, --overlay,
+  import guard), tests/lib/licenses-gate.test.ts (+5), docs/LICENSE-
+  GATE-OPS.md (--overlay row). verify:contracts stays 17/17.
+
 
 
 
