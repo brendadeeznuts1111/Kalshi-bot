@@ -16,8 +16,10 @@ await Bun.write(FIX + "/app.ts", 'const msg = "HELLO_FROM_APP_TS";\ndocument.get
 const PNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
 await Bun.write(FIX + "/logo.png", Buffer.from(PNG, "base64"));
 
-import rawText from "../scratch/html-fixture/index.html" with { type: "text" };
-import page from "../scratch/html-fixture/index.html";
+// Dynamic imports AFTER fixture writes — the gate is self-contained on a
+// clean checkout (static imports would resolve before the fixtures exist).
+const page: any = (await import("../scratch/html-fixture/index.html")).default;
+const rawText: any = (await import("../scratch/html-fixture/index.html", { with: { type: "text" } })).default;
 // bun-types types the attribute import as HTMLBundle — cast to the runtime truth (string).
 const raw: string = rawText as unknown as string;
 
