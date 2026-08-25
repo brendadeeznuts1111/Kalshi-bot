@@ -3794,3 +3794,29 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
     the file form profiles; keep using bun run for profile probes.
 - Artifacts: src/research/observability-page.ts corrected; §86 records
   the resolution. Gate stays 16/16.
+
+## 87. Serve-files/folders + Range/conditional + fetch compress doc — verified (2026-08-24)
+
+- Probed the v1.4 serve-files + Range/conditional + fetch-compress doc:
+- VERIFIED (dir-route behaviors the repo's 3 {dir:} routes rely on —
+  /registry/*, /partner-dashboard/*, /videos/*):
+  - { dir } route serves index.html for the dir path (200).
+  - Range header -> 206 Partial Content + Content-Range (bytes 0-9/100000).
+  - If-None-Match matching ETag -> 304; If-Match with wrong ETag -> 412.
+  - If-Modified-Since matching Last-Modified -> 304.
+  - path traversal (../ via %2F) -> 404 (path normalization + openat2
+    O_RESOLVE_BENEATH, verified).
+  - The repo's /videos/* dir route already relies on Range/206 seeking —
+    behavior confirmed correct.
+- VERIFIED (fetch compress, repo uses it in resilient-fetch for UNSIGNED
+  bodies): compress:'gzip'/'br'/'zstd' all set Content-Encoding and
+  compress the body. NOTE: Bun.serve does NOT auto-decompress request
+  bodies — req.text() returns the raw gzip frame (46 bytes for a 23-byte
+  body). The DESTINATION must decompress per Content-Encoding (fine for
+  outgoing; a Bun.serve receiver needs manual decompression).
+- ENV-BLOCKED (not doc errors, sandbox network): fetch protocol:'http3'
+  THREW HTTP3HandshakeFailed even with --experimental-http3-fetch;
+  protocol:'http2' connection blocked. Consistent with bun-v1.3.14-
+  catalog.md (typed + flag confirmed, e2e blocked by sandbox).
+- Artifacts: tools/defaults-probe.ts D12 (23/23), tests/lib/defaults-
+  probe.test.ts (16 tests), verify:contracts 16/16.

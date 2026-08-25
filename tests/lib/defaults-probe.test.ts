@@ -157,3 +157,32 @@ describe(".env load order (§85)", () => {
     rmSync(dir, { recursive: true, force: true });
   });
 });
+
+describe("Bun.serve {dir:} route (§87)", () => {
+  test("serves index.html; Range -> 206; If-None-Match -> 304; If-Match -> 412; traversal -> 404", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "dirroute-test-"));
+    writeFileSync(join(dir, "index.html"), "<h1>index</h1>");
+    writeFileSync(join(dir, "file.txt"), "x".repeat(100000));
+    const srv = Bun.serve({ port: 3692, routes: { "/static/*": { dir } } });
+    try {
+      const idx = await fetch("http://127.0.0.1:3692/static/");
+      expect(idx.status).toBe(200);
+      expect(await idx.text()).toContain("<h1>index</h1>");
+      const rng = await fetch("http://127.0.0.1:3692/static/file.txt", { headers: { Range: "bytes=0-9" } });
+      expect(rng.status).toBe(206);
+      expect(rng.headers.get("content-range")).toBe("bytes 0-9/100000");
+      expect((await rng.text()).length).toBe(10);
+      const full = await fetch("http://127.0.0.1:3692/static/file.txt");
+      const etag = full.headers.get("etag") ?? "";
+      const nm = await fetch("http://127.0.0.1:3692/static/file.txt", { headers: { "If-None-Match": etag } });
+      expect(nm.status).toBe(304);
+      const im = await fetch("http://127.0.0.1:3692/static/file.txt", { headers: { "If-Match": "\"wrong\"" } });
+      expect(im.status).toBe(412);
+      const trav = await fetch("http://127.0.0.1:3692/static/..%2F..%2Fetc%2Fpasswd");
+      expect(trav.status).toBe(404);
+    } finally {
+      srv.stop(true);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});

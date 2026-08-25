@@ -131,6 +131,28 @@ rmSync(envDir, { recursive: true, force: true });
 check("D11 .env.local SKIPPED in test (.env.test wins)", inTest === "dotenv-test", "test -> " + inTest);
 check("D11b .env.local wins otherwise (.env.production loses)", inProd === "dotenv-local", "prod -> " + inProd);
 
+// D12: Bun.serve {dir:} route — index.html + Range/304/412/304-IMS/traversal (§87)
+const staticDir = mkdtempSync(tmpdir() + "/dirroute-");
+writeFileSync(staticDir + "/index.html", "<h1>index</h1>");
+writeFileSync(staticDir + "/file.txt", "x".repeat(100000));
+const srvD = Bun.serve({ port: 3691, routes: { "/static/*": { dir: staticDir } } });
+const idx = await fetch("http://127.0.0.1:3691/static/");
+const idxBody = await idx.text();
+const rng = await fetch("http://127.0.0.1:3691/static/file.txt", { headers: { Range: "bytes=0-9" } });
+const rngBody = await rng.text();
+const full = await fetch("http://127.0.0.1:3691/static/file.txt");
+const etag = full.headers.get("etag") ?? "";
+const nm = await fetch("http://127.0.0.1:3691/static/file.txt", { headers: { "If-None-Match": etag } });
+const im = await fetch("http://127.0.0.1:3691/static/file.txt", { headers: { "If-Match": "\"wrong\"" } });
+const trav = await fetch("http://127.0.0.1:3691/static/..%2F..%2Fetc%2Fpasswd");
+srvD.stop(true);
+rmSync(staticDir, { recursive: true, force: true });
+check("D12 dir route serves index.html", idx.status === 200 && idxBody.includes("<h1>index</h1>"), "status=" + idx.status);
+check("D12b Range -> 206 + Content-Range", rng.status === 206 && rng.headers.get("content-range") === "bytes 0-9/100000" && rngBody.length === 10, "status=" + rng.status + " cr=" + rng.headers.get("content-range"));
+check("D12c If-None-Match -> 304", nm.status === 304, "status=" + nm.status);
+check("D12d If-Match wrong -> 412", im.status === 412, "status=" + im.status);
+check("D12e traversal ../ -> 404", trav.status === 404, "status=" + trav.status);
+
 console.log("---");
 const fails = results.filter((r) => !r.pass);
 console.log("defaults:probe — " + (results.length - fails.length) + "/" + results.length + " pass" + (fails.length ? " · FAIL: " + fails.map((f) => f.name).join(", ") : ""));
