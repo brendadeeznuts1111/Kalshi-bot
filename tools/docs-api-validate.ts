@@ -99,6 +99,10 @@ function collectTokens(): { out: Map<string, TokenMeta>; callSites: Map<string, 
   };
   const scan = (text: string, file: string) => {
     for (const m of text.matchAll(TOKEN_RE)) add(m[1]!, file);
+    // Bun.$ is a real member but \b can never bound a trailing $, so the
+    // token scan misses it (its call-sites would flag as MISSING) - scan it
+    // explicitly (§174).
+    for (const m of text.matchAll(/Bun\.\$/g)) add("$", file);
     for (const m of text.matchAll(/\bBun\.([A-Za-z_$][A-Za-z0-9_$]*)\s*\(/g)) noteCall(m[1]!, file, false);
     for (const m of text.matchAll(/\bnew\s+Bun\.([A-Za-z_$][A-Za-z0-9_$]*)\s*\(/g)) noteCall(m[1]!, file, true);
   };

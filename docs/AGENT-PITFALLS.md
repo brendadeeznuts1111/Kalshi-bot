@@ -6157,5 +6157,41 @@ another note.
   4.3s (vs 22s racing + retries) - faster AND deterministic.
 - The real-failure fixes this round: docs:api STRICT flagged Foo/x as
   phantom tokens because §171 prose + the module-report note wrote
-  prefixed placeholders (Bun.Foo, Bun.x) - reworded to bare names;
-  the report shows unmapped tokens without the Bun. prefix.
+  prefixed placeholders - reworded to bare names; the report shows
+  unmapped tokens without the Bun. prefix.
+
+## 173. Module report pulls REAL code examples (2026-08-24)
+
+- The per-module shape report now quotes the FIRST matching source line
+  per token (Uses = matching source lines): docs/BUN_MODULE_SHAPE.md
+  shows real usage like "return new Bun.CryptoHasher("sha256")..." for
+  the execution module - the enhancement-plan data is grounded in actual
+  code, not just counts.
+- Sanitizer: the Bun. prefix is kept ONLY for LIVE runtime members.
+  Placeholder tokens (Foo, x) and type-only namespaces (Security,
+  ArchiveInput) in quoted source would otherwise reach docs:api STRICT
+  as phantom tokens. Examples truncate at a word boundary (mid-token
+  cuts created phantom tokens like deepEqu) and escape pipes for the
+  markdown table.
+
+## 174. Repo API grounded in the shape — docs/REPO_API_BUN.md (2026-08-24)
+
+- tools/repo-api-shape.ts (bun run repo-api:shape) maps every
+  ROUTE_MANIFEST entry (98 routes, 7 layers - the repo's API SSOT) to
+  its handler's Bun usage: the handler is located with the TS compiler
+  API and traced through its called functions (resolution-only BFS:
+  same-file helpers + imported modules, imports-first priority, caps
+  30 visited / 15 chain), plus global Web APIs (fetch, WebSocket,
+  crypto...) from the shape. Regenerates docs/REPO_API_BUN.md.
+- The trading layer rows show the compliance-gated authorized-
+  execution surface: handleTradingOrder traced through
+  executeKalshiLiveOrder -> placeOrder -> ... with Bun.env +
+  fetch/URL/Response globals; handleTradingBook -> fetchKalshiOrderbook
+  Wire with fetch + URL. Deep Bun surface (CryptoHasher etc.) is in
+  the module report's src/partner/execution rows.
+- BUG FIX in docs:api: TOKEN_RE ends in a word boundary, which can
+  NEVER match Bun.$ (a trailing $ is a non-word char), so Bun.$ was
+  invisible to the token scan and its call-sites flagged as MISSING
+  (unallowed). Explicit Bun.$ scan added - docs:api STRICT now 0 drift.
+- Chained into coverage:matrix after the module report. No spawn (TS
+  parse + file reads only) - no keep-list entry needed.
