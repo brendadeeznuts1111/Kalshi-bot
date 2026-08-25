@@ -2,6 +2,10 @@
 // @see https://bun.com/docs/test/mocks
 import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test";
 
+// Global-attribution model (§127): code_search hits carry the repo so the
+// inspect path attributes them locally. Set currentRepo before inspectRepo.
+let currentRepo = "mock/bot-0";
+
 async function mockGithubApiJson(path: string): Promise<unknown> {
   if (path.includes("/readme")) {
     return { content: "websocket market maker bot", encoding: "utf8" };
@@ -9,7 +13,10 @@ async function mockGithubApiJson(path: string): Promise<unknown> {
   if (path.startsWith("search/code")) {
     const q = decodeURIComponent(path.split("q=")[1]?.split("&")[0] ?? "");
     if (q.includes("KALSHI-ACCESS-KEY")) {
-      return { total_count: 1, items: [{ path: "src/client.ts" }] };
+      return {
+        total_count: 1,
+        items: [{ path: "src/client.ts", repository: { full_name: currentRepo } }],
+      };
     }
     return { total_count: 0, items: [] };
   }
@@ -66,6 +73,7 @@ describe("inspectRepo (mocked github-api)", () => {
 
     expect(loadInspectCache(repo.fullName, repo.pushedAt)).toBeNull();
 
+    currentRepo = repo.fullName;
     const signals = await inspectRepo(repo, config);
     expect(signals.hasAuthInCode).toBe(true);
     expect(signals.strategyTags).toContain("market_making");

@@ -29,7 +29,7 @@ Success is a **green live run** on `market-making`, audit export, pattern report
 
 | Blocker | Impact | Unblock |
 |---------|--------|---------|
-| **`code_search` economics** | One-shot inspect blocked even when bucket is full (10/10): ~21 queries/repo × N uncached ≫ 10/min | Proven on V5: `GITHUB_RATE_LIMIT_WAIT=1` multi-wave warms `inspect_cache` per run; 2–3 runs converge (cached repos skip live GitHub). Tighter `--min-stars` when quota is tight |
+| **`code_search` economics** | RESOLVED §127 — global attribution: one unscoped query per keyword (~21 total), hits attributed by repository.full_name; one-shot inspect fits 2-3 windows ≫ 10/min | Proven on V5: `GITHUB_RATE_LIMIT_WAIT=1` multi-wave warms `inspect_cache` per run; 2–3 runs converge (cached repos skip live GitHub). Tighter `--min-stars` when quota is tight |
 | **Agent vs report SSOT** | Polluted `cache.db` can make `agent ground` disagree with committed `latest-*.md` | Synthetic shortlists (`description:"test"` + 100★) are fixtures; `purgeIneligibleRuns({ purgeTestInspect: true })` after test leaks |
 | **CI** | Remote PRs need the same gate as local pre-commit | `.github/workflows/check.yml` runs `bun run check`; local: `bun run hooks:install` |
 

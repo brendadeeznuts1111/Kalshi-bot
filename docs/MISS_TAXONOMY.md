@@ -94,7 +94,7 @@ bun run rate-limit:status -- --gated=49 --uncached=49  # before live research
 
 ### Lane D — Data fill (blocked)
 
-**Blocked on `code_search` economics (~1029 calls for price-data at 21/repo), not an empty bucket.** A full 10/10 window still cannot one-shot the inspect; use multi-wave wait.
+**RESOLVED §127 — global attribution: one unscoped query per keyword (~21 calls/dimension, not ~21 × repos); hits attributed locally by repository.full_name. Price-data is now ~21 calls, not ~1029.** A full 10/10 window still cannot one-shot the inspect; use multi-wave wait.
 
 ```bash
 bun run rate-limit:status -- --gated=49 --uncached=49

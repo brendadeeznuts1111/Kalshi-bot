@@ -6,7 +6,7 @@ import { resolveGhRateLimitResource } from "../src/research/gh.ts";
 import {
   computeWaitMs,
   evaluateInspectRateBudget,
-  estimateCodeSearchCallsPerRepo,
+  estimateCodeSearchCallsPerDimension,
   formatDryRunPlan,
   maxWaitMsForResource,
   parseRateLimitWire,
@@ -30,7 +30,7 @@ describe("github-rate-limit", () => {
     expect(codeWait).toBe(47_000);
   });
 
-  test("evaluateInspectRateBudget fails fast when code_search quota insufficient", () => {
+  test("evaluateInspectRateBudget fails fast when code_search quota insufficient (global model §127)", () => {
     const est = evaluateInspectRateBudget({
       repoCount: 49,
       uncachedRepoCount: 49,
@@ -39,8 +39,9 @@ describe("github-rate-limit", () => {
       minRemaining: 3,
     });
     expect(est.canProceed).toBe(false);
-    expect(est.estimatedCodeSearchCalls).toBe(980);
-    expect(est.reason).toContain("980 code_search calls");
+    // Global attribution: one keyword pass (20) serves all 49 repos — NOT 980.
+    expect(est.estimatedCodeSearchCalls).toBe(20);
+    expect(est.reason).toContain("20 code_search calls");
   });
 
   test("evaluateInspectRateBudget passes when cache covers all repos", () => {
@@ -127,8 +128,8 @@ describe("github-rate-limit", () => {
       timings: { discover: 5200, gate: 180 },
     });
     expect(text).toContain("Verdict: blocked");
-    expect(text).toContain("this window");
-    expect(text).toContain("≤1");
+    expect(text).toContain("global pass");
+    expect(text).toContain("ALL 14 repos");
     expect(text).not.toContain("blocked: inspect needs");
     expect(text).not.toContain("allowed:");
     expect(text).toContain("Timing");
@@ -146,10 +147,13 @@ describe("github-rate-limit", () => {
     expect(parsed.code_search?.resource).toBe("code_search");
   });
 
-  test("estimateCodeSearchCallsPerRepo counts auth + order queries", async () => {
+  test("estimateCodeSearchCallsPerDimension counts distinct global keywords (§127)", async () => {
     const config = await loadConfig();
-    expect(estimateCodeSearchCallsPerRepo(config)).toBe(
-      config.keywords.authCodeSearch.length + config.keywords.orderCodeSearch.length,
+    expect(estimateCodeSearchCallsPerDimension(config)).toBe(
+      new Set([...config.keywords.authCodeSearch, ...config.keywords.orderCodeSearch]).size,
+    );
+    expect(estimateCodeSearchCallsPerDimension(config)).toBeLessThan(
+      (config.keywords.authCodeSearch.length + config.keywords.orderCodeSearch.length) * 2,
     );
   });
 });

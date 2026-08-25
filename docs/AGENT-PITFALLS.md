@@ -4650,6 +4650,31 @@ another note.
   CLIs (same), bun-security-scanner (npm advisory versions) — all feed
   well-formed input; none hit the ragged/invalid hazards.
 
+## 127. Global-attribution code search — 14x cheaper inspect (2026-08-25)
+
+- OLD MODEL (poor design): per-repo scoped queries q="<keyword> repo:A/B"
+  for every keyword x every repo — the same literal keywords re-queried
+  once per repo: 294 calls for sports-nba (14 repos x 21), ~1029 for
+  price-data (49 x 21) against the 10/min code_search platform limit. The
+  elaborate preflight / multi-wave / block / stale-fallback machinery
+  existed to route around a cost that was keywords x repos.
+- NEW MODEL: ONE unscoped query per keyword; hits carry repository.
+  full_name (probe-verified wire shape); attributeCodeHits maps them to the
+  per-repo { query, totalCount, paths } shape the detectors consume.
+  Cost = distinct keywords (~21) PER DIMENSION regardless of repo count.
+  sports-nba dry-run: ~21 calls (~3 windows @10/min) vs ~294 (~30 min).
+- Equivalence: deriveCodeSignals uses existence + query-marker + hit paths —
+  attribution preserves all three. totalCount becomes attributed-hit count
+  (capped by MAX_PAGES x 100/keyword; pagination to 4 pages).
+- Cache: in-process Map per keyword (cross-dimension reuse in one run);
+  per-repo results still persist via the inspect cache.
+- Files: src/research/global-code-search.ts (new), inspect.ts (global fetch
+  + attribute), github-rate-limit.ts (estimateCodeSearchCallsPerDimension,
+  windows messaging, per-repo chunk guidance removed), cli.ts +
+  tools/github-rate-budget.ts messaging, tests (global-code-search, rate-
+  limit expectations, inspect.mock attribution, offline-dry-run).
+
+
 
 
 

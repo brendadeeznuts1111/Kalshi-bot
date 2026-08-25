@@ -83,8 +83,14 @@ export function snapshotFromWire(
   return parseRateLimitWire(wire)[resource] ?? null;
 }
 
-export function estimateCodeSearchCallsPerRepo(config: ResearchConfig): number {
-  return config.keywords.authCodeSearch.length + config.keywords.orderCodeSearch.length;
+/**
+ * Code_search calls for a whole dimension: ONE global query per keyword,
+ * hits attributed to repos locally (§127 global-attribution). Not per-repo —
+ * the old model re-ran the same literal keywords once per repo (294 calls
+ * for sports-nba / 1029 price-data vs 21 now).
+ */
+export function estimateCodeSearchCallsPerDimension(config: ResearchConfig): number {
+  return new Set([...config.keywords.authCodeSearch, ...config.keywords.orderCodeSearch]).size;
 }
 
 export type InspectBudgetEstimate = {
@@ -108,7 +114,9 @@ export function evaluateInspectRateBudget(input: {
   minRemaining?: number;
 }): InspectBudgetEstimate {
   const minRemaining = input.minRemaining ?? 3;
-  const estimatedCodeSearchCalls = input.uncachedRepoCount * input.codeSearchPerRepo;
+  // Global attribution (§127): one pass of the keyword set serves every
+  // uncached repo — cost is per-DIMENSION, not per-repo.
+  const estimatedCodeSearchCalls = input.uncachedRepoCount > 0 ? input.codeSearchPerRepo : 0;
   const snap = input.codeSearch;
 
   const base: InspectBudgetEstimate = {
@@ -149,7 +157,7 @@ export function evaluateInspectRateBudget(input: {
       ...base,
       canProceed: false,
       reason:
-        `inspect needs ~${estimatedCodeSearchCalls} code_search calls (${input.uncachedRepoCount} uncached × ${input.codeSearchPerRepo}) ` +
+        `inspect needs ~${estimatedCodeSearchCalls} code_search calls (${input.codeSearchPerRepo} global keywords, ${input.uncachedRepoCount} uncached repos) ` +
         `but only ${snap.remaining}/${snap.limit} remain (~${waves} min at ${snap.limit}/min). ` +
         `Wait for reset or set GITHUB_RATE_LIMIT_WAIT=1`,
     };
@@ -160,18 +168,18 @@ export function evaluateInspectRateBudget(input: {
 
 export function formatInspectBudgetEstimate(est: InspectBudgetEstimate): string {
   const lines = [
-    `Inspect budget: ${est.uncachedRepoCount}/${est.repoCount} uncached repos × ${est.codeSearchPerRepo} code_search/repo ≈ ${est.estimatedCodeSearchCalls} calls`,
+    `Inspect budget: ${est.uncachedRepoCount}/${est.repoCount} uncached repos · ${est.codeSearchPerRepo} global keywords ≈ ${est.estimatedCodeSearchCalls} code_search calls (§127)`,
     `code_search: ${est.codeSearchRemaining ?? "?"}/${est.codeSearchLimit ?? "?"} remaining` +
       (est.codeSearchResetIso ? ` (reset ${est.codeSearchResetIso})` : ""),
   ];
   if (!est.canProceed && est.reason) {
-    const chunk =
-      est.codeSearchPerRepo > 0 && est.codeSearchRemaining !== null
-        ? Math.max(1, Math.floor(est.codeSearchRemaining / est.codeSearchPerRepo))
+    const windows =
+      est.codeSearchLimit && est.codeSearchLimit > 0 && est.estimatedCodeSearchCalls > 0
+        ? Math.max(1, Math.ceil(est.estimatedCodeSearchCalls / est.codeSearchLimit))
         : null;
-    if (chunk !== null && est.uncachedRepoCount > chunk) {
+    if (windows !== null && est.uncachedRepoCount > 0) {
       lines.push(
-        `chunk: run with at most ${chunk} uncached repos this window, or wait for reset`,
+        `global pass: one keyword sweep (~${est.estimatedCodeSearchCalls} calls) — ${windows} window(s) at ${est.codeSearchLimit}/min; ALL ${est.uncachedRepoCount} uncached repos inspect after (§127)`,
       );
     }
     lines.push(`blocked: ${est.reason}`);
@@ -260,10 +268,8 @@ export type DryRunPlan = {
 
 export function formatDryRunPlan(plan: DryRunPlan): string {
   const { budget, allowance } = plan;
-  const chunk =
-    budget.codeSearchPerRepo > 0 && budget.codeSearchRemaining !== null
-      ? Math.max(1, Math.floor(budget.codeSearchRemaining / budget.codeSearchPerRepo))
-      : null;
+  // Global-attribution model (§127): windows needed for ONE keyword sweep
+  // (per-repo chunking is obsolete — one pass inspects all repos).
   const waves =
     budget.codeSearchLimit && budget.codeSearchLimit > 0
       ? Math.ceil(budget.estimatedCodeSearchCalls / budget.codeSearchLimit)
@@ -286,8 +292,8 @@ export function formatDryRunPlan(plan: DryRunPlan): string {
 
   const budgetRows: Array<{ metric: string; value: string | number }> = [
     { metric: "uncached repos", value: `${plan.uncached}/${plan.gated}` },
-    { metric: "code_search/repo", value: budget.codeSearchPerRepo },
-    { metric: "estimated calls", value: `~${budget.estimatedCodeSearchCalls}` },
+    { metric: "global keywords", value: budget.codeSearchPerRepo },
+    { metric: "estimated calls", value: `~${budget.estimatedCodeSearchCalls} (§127 global attribution)` },
     {
       metric: plan.offline ? "quota (synthetic)" : "quota",
       value:
@@ -299,8 +305,8 @@ export function formatDryRunPlan(plan: DryRunPlan): string {
             : ""),
     },
   ];
-  if (!plan.offline && chunk !== null && plan.uncached > chunk) {
-    budgetRows.push({ metric: "this window", value: `≤${chunk} uncached repo${chunk === 1 ? "" : "s"}` });
+  if (!plan.offline && waves !== null && waves > 1) {
+    budgetRows.push({ metric: "windows @10/min", value: `~${waves} (one global pass, all repos)` });
   }
 
   const sections = [
@@ -361,8 +367,8 @@ export function formatDryRunPlan(plan: DryRunPlan): string {
     }
     sections.push("");
     sections.push("Next:");
-    if (chunk !== null && plan.uncached > chunk) {
-      sections.push(`  wait for reset, raise --min-stars, or inspect ≤${chunk} repo(s) this window`);
+    if (waves !== null && plan.uncached > 0) {
+      sections.push(`  wait for the next window — one global pass (~${budget.estimatedCodeSearchCalls} calls) inspects ALL ${plan.uncached} repos`);
     } else {
       sections.push("  wait for code_search reset or raise --min-stars");
     }
@@ -412,9 +418,10 @@ export async function ensureInspectRateBudget(input: {
   config: ResearchConfig;
   minRemaining?: number;
 }): Promise<InspectBudgetEstimate> {
-  const codeSearchPerRepo = estimateCodeSearchCallsPerRepo(input.config);
+  const codeSearchPerRepo = estimateCodeSearchCallsPerDimension(input.config);
   if (skipRatePreflight()) {
-    const estimatedCodeSearchCalls = input.uncachedRepoCount * codeSearchPerRepo;
+    // Global attribution: one keyword pass serves all uncached repos (§127).
+    const estimatedCodeSearchCalls = input.uncachedRepoCount > 0 ? codeSearchPerRepo : 0;
     return {
       repoCount: input.repoCount,
       uncachedRepoCount: input.uncachedRepoCount,
