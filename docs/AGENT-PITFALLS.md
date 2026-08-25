@@ -5743,6 +5743,10 @@ another note.
 - JSON.stringify(result.metafile) + Bun.write round-trips (P25);
   the relative-path form (Bun.write("./dist/meta.json", ...)) resolves
   against the process CWD (P26) — same rule as the CLI outputs.
+- bunfig.toml has NO [build] metafile key — a [build] metafile = true is
+  IGNORED (P27); metafile is per-call/CLI only. Pretty-print
+  JSON.stringify(mf, null, 2) and metafile:false (the env-gated
+  ANALYZE=1 pattern) verified (P28).
 - "Matches esbuild exactly" is NOT exact: inputs.imports entries are
   { path, kind, original } without the always-present external flag
   (external appears only on require-calls). The analyzer likely still

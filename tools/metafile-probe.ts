@@ -145,6 +145,23 @@ const relMf = JSON.parse(await Bun.file("scratch/mf-rel/meta.json").text());
 check("P26 Bun.write relative path (CWD-resolved)", "inputs" in relMf && "outputs" in relMf, "");
 
 
+
+// ── §155 addendum 5: bunfig absence, pretty-print, env gating ──
+
+// No bunfig.toml [build] metafile key — a [build] metafile = true is
+// IGNORED (build emits no metafile). metafile is per-call/CLI only.
+// Pretty-print and metafile:false (env gating) verified.
+const bunfigDir = "scratch/mf-bunfig";
+await Bun.write(bunfigDir + "/bunfig.toml", "[build]\nmetafile = true\n");
+const bf = Bun.spawnSync(["bun", "build", process.cwd() + "/" + F + "/entry.ts", "--outdir=dist"], { cwd: bunfigDir, stdout: "ignore", stderr: "ignore" });
+check("P27 bunfig [build] metafile IGNORED", bf.exitCode === 0 && !(await w(bunfigDir + "/dist/meta.json")), "exit=" + bf.exitCode);
+const resPP = await Bun.build({ entrypoints: [F + "/entry.ts"], outdir: "scratch/mf-pp/dist", metafile: true });
+const pretty = JSON.stringify(resPP.metafile, null, 2);
+check("P28 pretty-print indents", pretty.includes("\n  \"inputs\":"), "");
+const resOff = await Bun.build({ entrypoints: [F + "/entry.ts"], outdir: "scratch/mf-off/dist", metafile: false });
+check("P28a metafile:false accepted (env gating)", resOff.success && resOff.metafile === undefined, String(typeof resOff.metafile));
+
+
 const failed = results.filter((r) => !r.pass);
 console.log("metafile:probe — " + (results.length - failed.length) + "/" + results.length + " checks" + (failed.length ? " · FAIL: " + failed.map((f) => f.name).join(", ") : ""));
 process.exit(failed.length === 0 ? 0 : 1);
