@@ -5191,6 +5191,51 @@ another note.
   re-check elapsed time and run a catch-up pass on the next fire.
 - Artifacts: this section. verify:contracts 29/29 (shell gate #29 added
   in §127).
+## 129. HTML imports, standalone-HTML builds, HTMLRewriter — 14-claim surface (2026-08-24)
+
+- VERIFIED (tools/html-probe.ts, gate #30, 14/14, fully offline): the
+  docs' HTML surface matches the 1.4.0 runtime. Fixtures are generated
+  at gate-run time into scratch/html-fixture (gitignored).
+- TEXT IMPORT: import raw from "./x.html" with { type: "text" } yields
+  the raw HTML string (guides/runtime/import-html).
+- HTML IMPORT: a plain import of .html yields an HTMLBundle with .index
+  (string); .files is undefined at runtime import (only populated when
+  built ahead of time). The HTMLBundle type is INTERFACE-ONLY — there is
+  NO runtime global constructor (typeof undefined) and no dotted
+  namespace member (bun-types exports the type from the bun module, so
+  docs:api rejects the token); the type describes the import result.
+- STANDALONE BUILD: Bun.build({ entrypoints: [html], compile: true,
+  target: "browser" }) emits ONE self-contained .html: JS inlined as
+  <script type="module">, CSS as <style>, images/fonts as data: URIs
+  (base64), no relative refs left. Source-path comments are retained in
+  the output (e.g. /* scratch/html-fixture/style.css */) — harmless.
+- HTML-STATIC BUILD: non-compile Bun.build with an .html entry emits
+  chunk-<hash>.js + chunk-<hash>.css + hashed assets (logo-<hash>.png)
+  + a rewritten index.html referencing them (crossorigin).
+- HTMLRewriter is a GLOBAL (lol-html based): transform(string) ->
+  string; transform(Response) -> RESPONSE (call .text() on the result);
+  on(selector, handlers) supports element handlers (setAttribute,
+  before/after with { html: true }, remove, tagName setter) and text
+  handlers. Useful for pipeline HTML rewriting (e.g. preprocess the
+  design-system meta HTML before serving).
+- HTML IMPORT AS SERVE ROUTE: routes: { "/": page } compiles per
+  request — HTML references / _bun/asset/<hash>.css and
+  / _bun/client/index-<hash>.js chunks, and injects a dev-client script
+  (data-bun-dev-server-script) + a visibilitychange sendBeacon to
+  / _bun/unref EVEN in a plain Bun.serve (not just the CLI dev server).
+- CLI DEV SERVER: bun ./index.html prints "ready in ~2.5ms, url:
+  http://localhost:3000/" (default port 3000; --port is a GLOBAL flag:
+  bun --port 3999 ./index.html). GOTCHA: it binds IPv6 ::1 ONLY —
+  curl http://localhost:3999/ works, curl http://127.0.0.1:3999/ fails
+  (000). SPA FALLBACK verified: any path (e.g. /about) returns the same
+  compiled HTML (200 text/html) — the docs' client-side-router claim.
+- Repo note: the frontend-module story (mtafile/design-system meta) can
+  lean on standalone-HTML builds (single-file artifacts) + HTMLRewriter
+  for preprocessing; nothing migrated this round.
+- Artifacts: tools/html-probe.ts (new, gate #30), tools/verify-contracts.ts
+  (29 -> 30 gates), package.json (html:probe script). verify:contracts
+  30/30.
+
 
 
 
