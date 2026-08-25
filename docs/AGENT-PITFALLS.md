@@ -5397,6 +5397,43 @@ another note.
   (new, gate #36), tools/verify-contracts.ts (34 -> 36 gates),
   package.json (format:probe, fsx:probe), docs/BUN_API_COVERAGE.md.
   verify:contracts 36/36.
+## 134. Coverage goal final round — net + runtime-misc clusters, matrix COMPLETE (2026-08-24)
+
+- net:probe (gate #37, 9/9): listen+connect TCP round-trip on loopback
+  (echo verified); udpSocket send/recv — GOTCHAS: port 0 rejected
+  ("Expected port to be an integer between 1 and 65535" — no ephemeral
+  auto-bind), send(data, port, address) is POSITIONAL (no options
+  object), and the receive handler lives in options.socket with
+  signature data(socket, data, port, address, flags) — the payload is
+  the SECOND arg (first is the socket). dns: prefetch + a 17-member
+  surface (lookup/resolve/resolve* family/reverse/getServers/...);
+  lookup("localhost") resolves offline via hosts (::1 + 127.0.0.1).
+  redis: client class shape only (no server in gates — no connect).
+  secrets: get({service,name}) object form returns null on a missing
+  ref; positional form works at runtime (bun-types doesn't declare
+  it — src/lib/secrets.ts documents this); a BARE STRING throws
+  "Expected options to be an object" (pinned). Never set/delete in
+  gates (mutates the OS vault).
+- runtime:probe (gate #38, 16/16): env (object, PATH readable),
+  argv, sleep (~32ms), version 1.4.0 + revision hex, nanoseconds
+  monotonic, peek (fulfilled -> value; PENDING/REJECTED -> the promise
+  itself, not undefined — pinned; peek.status "fulfilled"/"pending"),
+  readableStreamToArrayBuffer/readableStreamToText, ArrayBufferSink
+  (write/write/end -> Uint8Array), Transpiler ({loader:"ts"} strips
+  types; tsx JSX), Terminal class (not constructed in gates — spawns a
+  pty), WebView (construct + evaluate("1+2")==3 + close works headless
+  — the repo's check-contrast pattern). P12: all bun: (test/sqlite/
+  ffi) + node: (path/fs/util/os/crypto/tls/net/child_process) imports
+  resolve.
+- MATRIX COMPLETE: docs/BUN_API_COVERAGE.md — 102/102 Bun.* tokens
+  classified, 73 runtime values ALL gated, 29 type-only/non-existent
+  pinned, ZERO GAP rows, plus the module-imports appendix (step 1 of
+  the objective). verify:contracts 38/38.
+- Artifacts: tools/net-probe.ts (new, gate #37), tools/runtime-probe.ts
+  (new, gate #38), tools/verify-contracts.ts (36 -> 38 gates),
+  package.json (net:probe, runtime:probe), docs/BUN_API_COVERAGE.md.
+  verify:contracts 38/38.
+
 
 
 

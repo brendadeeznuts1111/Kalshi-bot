@@ -269,6 +269,8 @@
     "crypto:probe": "bun tools/crypto-probe.ts",
     "format:probe": "bun tools/format-probe.ts",
     "fsx:probe": "bun tools/fsx-probe.ts",
+    "net:probe": "bun tools/net-probe.ts",
+    "runtime:probe": "bun tools/runtime-probe.ts",
     "routes:check": "bun tools/routes-check.ts",
     "bun:coverage-audit": "bun tools/bun-coverage-audit.ts",
     "research:resume": "bun tools/research-resume.ts",
