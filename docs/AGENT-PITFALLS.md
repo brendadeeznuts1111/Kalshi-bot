@@ -3737,3 +3737,27 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
   are real runtime vars (probed); no dead declarations.
 - Artifacts: tools/defaults-probe.ts D10 (16/16), tests/lib/defaults-
   probe.test.ts (13 tests), verify:contracts 16/16.
+
+## 85. .env load order — .env.local SKIPPED in test (config.ts comment corrected) (2026-08-24)
+
+- Probed the .env auto-load order (config.ts documented '.env → .env.
+  {NODE_ENV} → .env.local, .local highest'). Found a real correction:
+- VERIFIED (probe, clean subprocesses, single-var methodology):
+  - NODE_ENV=test: .env.test BEATS .env.local (X = dotenv-test).
+  - NODE_ENV=production/development/unset/staging: .env.local WINS
+    (.env.production loses).
+  - The Bun docs confirm: '.env.local (not loaded when NODE_ENV=test)'.
+    So the repo's config.ts comment was WRONG for test environments —
+    fixed to document the special case.
+  - Full order: .env → .env.{NODE_ENV} → .env.local (SKIPPED in test) →
+    .env.{NODE_ENV}.local.
+  - Why: .env.test deliberately overrides .env.local so tests run with
+    the committed test env, not a developer's local overrides (Node/CRA
+    convention).
+- Probe methodology note: the FIRST probe (multi-var A/B/C) gave a wrong
+  result (env-test beat .local) that matched the buggy comment; the
+  decisive single-var probe + docs check proved it's the test-skip rule.
+  Single-var probes are more reliable for precedence testing.
+- Artifacts: tools/defaults-probe.ts D11 (18/18), tests/lib/defaults-
+  probe.test.ts (15 tests), src/lib/config.ts comment fixed,
+  verify:contracts 16/16.

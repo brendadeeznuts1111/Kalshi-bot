@@ -115,6 +115,22 @@ check("D10b VERBOSE_FETCH=curl logs request URL", log4.includes("example.com"), 
 const e5 = Bun.spawnSync(["bun", "-e", "console.log(process.env.NODE_ENV ?? \"unset\")"], { stdout: "pipe" });
 check("D10c NODE_ENV unset by default", (e5.stdout?.toString().trim() ?? "") === "unset", "got=" + (e5.stdout?.toString().trim() ?? ""));
 
+// D11: .env load order — .env.local SKIPPED when NODE_ENV=test (§85)
+const envDir = mkdtempSync(tmpdir() + "/envload-");
+writeFileSync(envDir + "/.env", "X=dotenv\n");
+writeFileSync(envDir + "/.env.local", "X=dotenv-local\n");
+writeFileSync(envDir + "/.env.test", "X=dotenv-test\n");
+writeFileSync(envDir + "/.env.production", "X=dotenv-production\n");
+const envRead = (ne: string): string => {
+  const r = Bun.spawnSync(["bun", "-e", "console.log(process.env.X);"], { cwd: envDir, env: { ...process.env, NODE_ENV: ne }, stdout: "pipe" });
+  return r.stdout?.toString().trim() ?? "";
+};
+const inTest = envRead("test");
+const inProd = envRead("production");
+rmSync(envDir, { recursive: true, force: true });
+check("D11 .env.local SKIPPED in test (.env.test wins)", inTest === "dotenv-test", "test -> " + inTest);
+check("D11b .env.local wins otherwise (.env.production loses)", inProd === "dotenv-local", "prod -> " + inProd);
+
 console.log("---");
 const fails = results.filter((r) => !r.pass);
 console.log("defaults:probe — " + (results.length - fails.length) + "/" + results.length + " pass" + (fails.length ? " · FAIL: " + fails.map((f) => f.name).join(", ") : ""));

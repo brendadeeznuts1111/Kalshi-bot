@@ -135,3 +135,25 @@ describe("BUN_* env vars (§84)", () => {
     expect(r.stdout?.toString().trim()).toBe("unset");
   });
 });
+
+describe(".env load order (§85)", () => {
+  test(".env.local is SKIPPED when NODE_ENV=test (docs-confirmed, repo comment corrected)", () => {
+    const dir = mkdtempSync(join(tmpdir(), "envload-test-"));
+    writeFileSync(join(dir, ".env"), "X=dotenv\n");
+    writeFileSync(join(dir, ".env.local"), "X=dotenv-local\n");
+    writeFileSync(join(dir, ".env.test"), "X=dotenv-test\n");
+    const inTest = Bun.spawnSync(["bun", "-e", "console.log(process.env.X);"], { cwd: dir, env: { ...process.env, NODE_ENV: "test" }, stdout: "pipe" });
+    expect(inTest.stdout?.toString().trim()).toBe("dotenv-test");
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  test(".env.local wins for non-test NODE_ENV", () => {
+    const dir = mkdtempSync(join(tmpdir(), "envload-test2-"));
+    writeFileSync(join(dir, ".env"), "X=dotenv\n");
+    writeFileSync(join(dir, ".env.local"), "X=dotenv-local\n");
+    writeFileSync(join(dir, ".env.production"), "X=dotenv-production\n");
+    const inProd = Bun.spawnSync(["bun", "-e", "console.log(process.env.X);"], { cwd: dir, env: { ...process.env, NODE_ENV: "production" }, stdout: "pipe" });
+    expect(inProd.stdout?.toString().trim()).toBe("dotenv-local");
+    rmSync(dir, { recursive: true, force: true });
+  });
+});

@@ -6,7 +6,11 @@
  * the result. Any section may be omitted; schema defaults fill gaps.
  *
  * Environment (Bun-native — no dotenv):
- *   Auto-load order: .env → .env.{NODE_ENV} → .env.local (increasing precedence)
+ *   Auto-load order (probed §85): .env → .env.{NODE_ENV} → .env.local →
+ *   .env.{NODE_ENV}.local. SPECIAL CASE: .env.local is NOT loaded when
+ *   NODE_ENV=test (probe: .env.test beats .env.local in test; .env.local
+ *   wins for every other NODE_ENV). Bun docs: 'not loaded when
+ *   NODE_ENV=test'.
  *   Read via Bun.env (alias of process.env / import.meta.env)
  *   Override files: bun --env-file=.env.1 · disable: --no-env-file · bunfig `env = false`
  *
