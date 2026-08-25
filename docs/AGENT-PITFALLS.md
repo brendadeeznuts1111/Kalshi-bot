@@ -4862,6 +4862,30 @@ another note.
   HTMLImageElement shadows it otherwise (tsc + runtime both misresolve).
 - Artifacts: tools/image-probe.ts (P15-P22, 35/35), this section.
   verify:contracts 26/26 (image:probe count grew within its gate).
+## 125. fetch h2 version history — NOT a 1.4 feature (correction, user-flagged) (2026-08-24)
+
+- User-flagged: 'in v1.3.14 you could use fetch(url, { protocol:
+  "http2" })'. CORROBORATED by the repo's own records:
+  - docs/bun-v1.3.14-catalog.md row 8: fetch protocol "http2" VERIFIED
+    on 1.3.14 — typed @experimental, union "http2" | "http1.1" | "h2"
+    | "h1", flag --experimental-http2-fetch confirmed in --help (e2e
+    was sandbox-network-blocked back then, so the SURFACE was verified,
+    not the round-trip).
+  - §14 records both eras: 1.3.x 'plain fetch negotiates http/1.1 by
+    default — h2 requires --experimental-http2-fetch'; 1.4.0 the
+    per-request protocol:'http2' works unflagged (e2e-verified against
+    node:http2, §14 fetch-pool-h2).
+- So the 1.4 blog's 'fetch() now supports HTTP/2 and HTTP/3'
+  OVERSTATES recency for h2 — per-request h2-fetch predates 1.4
+  (1.3.14 surface). The 1.4 addition is HTTP/3 fetch
+  (--experimental-http3-fetch / Alt-Svc upgrade; h2/h3 flags both still
+  in bun --help on 1.4.0).
+- Version story (precise): 1.3.14 = per-request h2 option typed +
+  global flag, surface-verified; 1.4.0 = per-request h2 e2e-verified
+  unflagged over TLS, h3 fetch added (flag-gated Alt-Svc upgrade),
+  Bun.serve h2 still absent (docs + runtime, §123/§124).
+- Artifacts: this section. verify:contracts 28/28.
+
 ## 124. serve-h2 correction triple-confirmed — docs + blog + runtime (2026-08-24)
 
 - Challenged to re-check §123's serve-h2 correction against the docs
