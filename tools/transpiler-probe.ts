@@ -52,6 +52,51 @@ const mWs = new Bun.Transpiler({ loader: "js", minify: { whitespace: true } } as
 const mFull = new Bun.Transpiler({ loader: "js", minify: true } as any).transformSync("const x = 1; function f() { return x; } f();");
 check("P8 minify whitespace vs full", mWs.includes("function f()") && !mFull.includes("function f"), "ws=" + mWs.trim() + " | full=" + mFull.trim());
 
+
+// ── §143: doc-grounded surface (runtime/transpiler.mdx) ──
+
+// P9 per-call loader override (doc: transformSync(code, loader)).
+const tJs = new Bun.Transpiler({ loader: "js" });
+check("P9 per-call loader override", tJs.transformSync("const el = <div/>;", "tsx").includes("jsxDEV"), tJs.transformSync("const el = <div/>;", "tsx").trim().slice(0, 40));
+
+// P10 async transform() (doc: Promise<string>).
+const tAsync = await new Bun.Transpiler({ loader: "ts" }).transform("const x: number = 1;");
+check("P10 async transform()", typeof tAsync === "string" && tAsync.includes("const x = 1"), tAsync.trim());
+
+// P11 doc example: type-only imports/exports IGNORED by scan(); the docs
+// show require-call ABSENT from scan() output (scanImports includes it).
+const docCode = 'import React from "react";\nimport type { ReactNode } from "react";\nconst val = require("./cjs.js");\nimport("./loader");\nexport const name = "hello";';
+const docScan = new Bun.Transpiler({ loader: "tsx" }).scan(docCode);
+const docKinds = (docScan.imports as any[]).map((i) => i.kind).join(",");
+check("P11 scan() doc example (type-only ignored, require-call omitted)", docKinds === "import-statement,dynamic-import" && JSON.stringify(docScan.exports) === JSON.stringify(["name"]), docKinds);
+
+// P12 scanImports() includes require-call (consistent — the doc's
+// scanImports example lists it).
+const docSI = new Bun.Transpiler({ loader: "tsx" }).scanImports(docCode);
+check("P12 scanImports includes require-call", (docSI as any[]).some((i) => i.kind === "require-call" && i.path === "./cjs.js"), JSON.stringify((docSI as any[]).map((i) => i.kind)));
+
+// P13 CORRECTION: CSS import scanning unsupported on 1.4.0 (the docs
+// list import-rule/url-token kinds, but the css loader is rejected).
+let cssErr = "no-throw";
+try { new Bun.Transpiler({ loader: "css" } as any).scan("@import \"foo.css\";"); } catch (e) { cssErr = String((e as Error).message).includes("JavaScript-like") ? "css-rejected" : "throws"; }
+check("P13 CSS loader rejected (pinned)", cssErr === "css-rejected", cssErr);
+
+// P14 CORRECTION: tsconfig jsxFactory/jsxRuntime ignored — jsxDEV (the
+// automatic runtime) is emitted regardless (docs claim Preact via tsconfig).
+const tPreact = new Bun.Transpiler({ loader: "tsx", tsconfig: JSON.stringify({ jsxFactory: "h", jsxFragment: "Fragment", jsxRuntime: "classic" }) } as any);
+check("P14 tsconfig jsxFactory ignored (jsxDEV emitted)", tPreact.transformSync("const el = <div/>;").includes("jsxDEV"), tPreact.transformSync("const el = <div/>;").trim().slice(0, 30));
+
+// P15 exports eliminate/replace (doc: TranspilerOptions.exports).
+const tElim = new Bun.Transpiler({ loader: "ts", exports: { eliminate: ["unused"], replace: { keep: "renamed" } } } as any);
+const elimOut = tElim.transformSync("export const unused = 1;\nexport const keep = 2;");
+check("P15 exports eliminate + replace", !elimOut.includes("unused") && elimOut.includes("renamed"), elimOut.trim());
+
+// P16 minifyWhitespace (doc name) + inline constants (doc: inline).
+const tWs = new Bun.Transpiler({ loader: "js", minifyWhitespace: true } as any);
+const tInline = new Bun.Transpiler({ loader: "js", inline: true } as any);
+const inlineOut = tInline.transformSync("const A = 42;\nconsole.log(A);");
+check("P16 minifyWhitespace + inline", tWs.transformSync("const x = 1;   function f() { return x; }   f();").trim() === "const x=1;function f(){return x}f();" && inlineOut.includes("console.log(42)"), "ws + inline:" + (inlineOut.includes("console.log(42)")));
+
 const failed = results.filter((r) => !r.pass);
 console.log("transpiler:probe — " + (results.length - failed.length) + "/" + results.length + " checks" + (failed.length ? " · FAIL: " + failed.map((f) => f.name).join(", ") : ""));
 process.exit(failed.length === 0 ? 0 : 1);

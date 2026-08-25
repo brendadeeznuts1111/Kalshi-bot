@@ -5606,6 +5606,29 @@ another note.
   (41 -> 42 gates), package.json (transpiler:probe), docs/BUN_API_COVERAGE.md
   + AGENT-PITFALLS header (41/41 -> 42/42), §141 reworded.
   verify:contracts 42/42.
+## 143. Transpiler grounded in runtime/transpiler.mdx — 8 doc claims verified (2026-08-24)
+
+- Extended gate #42 (tools/transpiler-probe.ts) to 17 checks against the
+  installed docs (docs/runtime/transpiler.mdx).
+- VERIFIED (doc-correct): per-call loader override (transformSync(code,
+  loader) — a js-loader instance accepts tsx per call); async transform()
+  returns Promise<string>; scan() IGNORES type-only imports/exports and
+  the DOC EXAMPLE output matches the runtime exactly (require-call
+  ABSENT from scan() imports; exports array lists only value exports);
+  scanImports() INCLUDES require-call (consistent); exports option
+  { eliminate, replace } removes/renames exports; minifyWhitespace (the
+  documented option name — minify:{whitespace} also works); inline:true
+  inlines constant values.
+- CORRECTIONS (pinned): (1) CSS import scanning is UNSUPPORTED on 1.4.0
+  — the docs list import-rule/url-token kinds but the css loader throws
+  "only JavaScript-like loaders supported for now"; (2) tsconfig
+  jsxFactory/jsxFragment/jsxRuntime are IGNORED — jsxDEV (automatic
+  runtime) is emitted regardless, so the docs' Preact-via-tsconfig
+  claim does not work on 1.4.0.
+- NOTE: scan()'s require-call detection is source-shape-dependent (my
+  earlier P3 source included require-call; the doc example omits it).
+  scanImports() is the consistent surface — the guard's choice is right.
+- Artifacts: tools/transpiler-probe.ts (+P9..P16). verify:contracts 42/42.
 - GitHub recomputes the pie on the default branch after push (a few
   minutes). Verified with git check-attr.
 - Artifacts: .gitattributes (new). verify:contracts 38/38 (unchanged).
