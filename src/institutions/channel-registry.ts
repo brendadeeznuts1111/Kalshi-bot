@@ -26,6 +26,7 @@ export const CHANNEL_IDS = [
   'mapping',
   'docs',
   'compliance',
+  'github',
 ] as const;
 
 export type ChannelId = (typeof CHANNEL_IDS)[number];
@@ -128,7 +129,7 @@ export const CHANNEL_DEFS: Record<ChannelId, ChannelDef> = {
     label: 'Docs',
     description: 'Repo docs-quality gates: render, api tokens, integrity links, output canary',
     sources: ['docs:check', 'docs:api', 'docs:integrity', 'output:probe'],
-    actions: ['docs:check', 'docs:api', 'docs:integrity', 'output:probe'],
+    actions: ['docs:check', 'docs:api', 'docs:integrity', 'output:probe', 'docs:refresh'],
     dashboardOrder: 10,
   },
   compliance: {
@@ -139,6 +140,14 @@ export const CHANNEL_DEFS: Record<ChannelId, ChannelDef> = {
     actions: ['licenses:gate'],
     dashboardOrder: 11,
     telegram: true,
+  },
+  github: {
+    id: 'github',
+    label: 'GitHub',
+    description: 'Live research budget: token source + rate-limit buckets (core/search/code_search)',
+    sources: ['api.github.com/rate_limit', 'github-network.ts', 'github-budget.ts'],
+    actions: [],
+    dashboardOrder: 12,
   },
 };
 

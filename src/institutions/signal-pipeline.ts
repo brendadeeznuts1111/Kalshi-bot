@@ -27,6 +27,9 @@ import { BRAND, DESIGN_SYSTEM_VERSION } from './design-tokens.ts';
 import { isVideoFile } from '../research/video-page.ts';
 import { latestRelease, parseAtomEntries, parseRssEntries } from '../lib/release-blog.ts';
 import { CHANNEL_DEFS, CHANNEL_ORDER, type ChannelId } from './channel-registry.ts';
+import { collectGithubBudget } from './github-budget.ts';
+import { parseMapsPins } from '../lib/maps-lock.ts';
+import type { GitHubRateLimitSnapshot } from '../research/github-rate-limit.ts';
 
 export type SignalSeverity = 'ok' | 'warn' | 'bad' | 'info';
 
@@ -138,6 +141,25 @@ export async function collectSignals(root: string, brand: BrandMetricsSnapshot):
       source: 'bun.sh RSS + GitHub atom',
       action: 'release-check',
     });
+    // Dynamic docs tracking: a NEWER Bun release than the indexed runtime is
+    // docs-channel drift (maps.toml owns the indexed version — never assume).
+    // Numeric compare, not string: feeds say "1.4" where maps pins "1.4.0".
+    try {
+      const mapsText = await Bun.file(join(root, 'maps.toml')).text().catch(() => '');
+      const maps = mapsText ? parseMapsPins(Bun.TOML.parse(mapsText)) : null;
+      const latest = rssRel?.version ?? atomRel?.version ?? null;
+      if (maps && latest && versionGt(latest, maps.bunVersion)) {
+        push({
+          id: 'docs-drift',
+          channel: 'docs',
+          severity: 'warn',
+          title: 'Bun ' + latest + ' released — docs index at ' + maps.bunVersion,
+          detail: 'maps.toml still pins ' + maps.bunVersion + ' — run docs:refresh to re-index + heal the triple-lock',
+          source: 'release feeds vs maps.toml',
+          action: 'docs:refresh',
+        });
+      }
+    } catch { /* maps.toml absent/unparseable — docs gate will report it */ }
   } catch (e) {
     push({ id: 'release-unavailable', channel: 'releases', severity: 'warn', title: 'release feeds unavailable', detail: String(e).slice(0, 80), source: 'bun.sh RSS + GitHub atom', action: 'release-check' });
   }
@@ -165,6 +187,7 @@ export async function collectSignals(root: string, brand: BrandMetricsSnapshot):
   // written by docs:check — offline + fast).
   await collectDocs(root, signals);
   await collectCompliance(root, signals);
+  await collectGithubBudgetSignals(root, signals);
 
   // cron channel: the Bun.cron refresh job state.
   push({
@@ -179,6 +202,18 @@ export async function collectSignals(root: string, brand: BrandMetricsSnapshot):
   });
 
   return signals;
+}
+
+/** Numeric semver compare: "1.4" > "1.4.0" is FALSE; "1.4.1" > "1.4.0" TRUE. */
+function versionGt(a: string, b: string): boolean {
+  const an = a.replace(/^v/i, '').split('.').map((n) => Number(n) || 0);
+  const bn = b.replace(/^v/i, '').split('.').map((n) => Number(n) || 0);
+  for (let i = 0; i < Math.max(an.length, bn.length); i++) {
+    const av = an[i] ?? 0;
+    const bv = bn[i] ?? 0;
+    if (av !== bv) return av > bv;
+  }
+  return false;
 }
 
 const esc = (v: unknown): string =>
@@ -414,6 +449,53 @@ export async function collectDocs(root: string, signals: Signal[]): Promise<void
  */
 export async function collectCompliance(root: string, signals: Signal[]): Promise<void> {
   await pushGate(root, signals, 'compliance', 'licenses-state.json', 'licenses-health', 'licenses:gate', 'licenses:gate', (s) => String(s.packages ?? 0) + ' prod packages \u00b7 ' + String(s.fails ?? 0) + ' violations' + (Number(s.expiringSoon ?? 0) > 0 ? ' \u00b7 ' + String(s.expiringSoon) + ' expiring soon' : ''));
+}
+
+/**
+ * github channel: LIVE research budget — token source + per-bucket remaining
+ * (core/search/code_search). TTL-cached 5min inside github-budget.ts so the
+ * 30s signal cache never hammers /rate_limit (it counts against core). No
+ * token → warn with the fix hint; low budget → warn per bucket.
+ */
+export async function collectGithubBudgetSignals(root: string, signals: Signal[]): Promise<void> {
+  const push = (s: Signal): void => { signals.push(s); };
+  const snap = await collectGithubBudget();
+  if (!snap) {
+    push({
+      id: 'github-token',
+      channel: 'github',
+      severity: 'warn',
+      title: 'no GitHub token — research + docs discovery run UNAUTHENTICATED',
+      detail: 'set GH_TOKEN / GITHUB_TOKEN in .env (Bun loads it natively) or run gh auth login',
+      source: 'github-budget',
+    });
+    return;
+  }
+  push({
+    id: 'github-source',
+    channel: 'github',
+    severity: snap.tokenSource === 'none' ? 'warn' : 'ok',
+    title: 'token source: ' + snap.tokenSource + ' · checked ' + snap.checkedAt.slice(5, 16).replace('T', ' '),
+    detail: 'env-gh-token / env-github-token / gh-cli — never the secret itself',
+    source: 'github-budget',
+  });
+  const buckets: Array<[string, GitHubRateLimitSnapshot | null, number]> = [
+    ['core', snap.core, 200],
+    ['search', snap.search, 10],
+    ['code_search', snap.codeSearch, 5],
+  ];
+  for (const [name, b, min] of buckets) {
+    if (!b) continue;
+    const reset = new Date(b.reset * 1000).toISOString().slice(11, 16) + 'Z';
+    push({
+      id: 'github-' + name,
+      channel: 'github',
+      severity: b.remaining < min ? 'warn' : b.remaining < min * 2 ? 'info' : 'ok',
+      title: name + ' budget: ' + b.remaining + '/' + b.limit,
+      detail: 'resets ' + reset + ' · research pipeline consumes this bucket' + (b.remaining < min ? ' — LOW: rate-limit aborts incoming' : ''),
+      source: 'api.github.com/rate_limit',
+    });
+  }
 }
 
 /**

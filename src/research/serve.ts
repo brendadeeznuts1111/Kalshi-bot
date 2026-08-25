@@ -1954,13 +1954,15 @@ export function createResearchServer(options: ServeOptions = {}) {
             // runBunCommand path as the deps-check action.
             // Docs-quality gates (§67 actions): run the offline gate, report
             // ok + last lines. All are sub-second offline gates.
-            if (name === "docs:check" || name === "docs:api" || name === "docs:integrity" || name === "output:probe" || name === "blog-map" || name === "content-check" || name === "licenses:gate") {
+            if (name === "docs:check" || name === "docs:api" || name === "docs:integrity" || name === "output:probe" || name === "blog-map" || name === "content-check" || name === "licenses:gate" || name === "docs:refresh") {
               const script: string =
                 name === "docs:check" ? "docs:check" :
                 name === "docs:api" ? "docs:api" :
                 name === "docs:integrity" ? "docs:integrity" :
                 name === "output:probe" ? "output:probe" :
-                name === "blog-map" ? "bun:blog-map" : name === "content-check" ? "content:check" : "licenses:gate";
+                name === "blog-map" ? "bun:blog-map" :
+                name === "docs:refresh" ? "docs:refresh" :
+                name === "content-check" ? "content:check" : "licenses:gate";
               const extra = name === "blog-map" ? ["--", "--offline"] : name === "content-check" ? ["--", "--check"] : [];
               const p = Bun.spawn([Bun.which("bun") ?? "bun", "run", script, ...extra], { cwd: ROOT, stdout: "pipe", stderr: "pipe" });
               const out = await new Response(p.stdout).text();

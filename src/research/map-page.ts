@@ -84,7 +84,7 @@ export function renderMapPage(): string {
       { heading: '#bun-test sub-headers', html: test },
       { heading: '#bun-install sub-headers', html: install },
       { heading: '#what-s-new sub-headers', html: whatsNew },
-      { heading: 'Integration layers', html: '<ul><li><strong>channels</strong>: design/deps/brand/releases/ops/inventory/cron/prune signals on /dashboard</li><li><strong>branding</strong>: TOKENS + design-system bundle (the one-vocabulary audit)</li><li><strong>pipeline</strong>: content (hash/frontmatter/ETag) + build (metafiles/budgets) + prune (.trash/archive/restore)</li><li><strong>data</strong>: massey/event-store/registry + fetch compression/reuse</li></ul>' },
+      { heading: 'Integration layers', html: '<ul><li><strong>channels</strong>: design/deps/brand/releases/ops/inventory/cron/prune/mapping/docs/compliance/github signals on /dashboard (registry-driven, live-refresh)</li><li><strong>branding</strong>: TOKENS + design-system bundle (the one-vocabulary audit)</li><li><strong>pipeline</strong>: content (hash/frontmatter/ETag) + build (metafiles/budgets) + prune (.trash/archive/restore)</li><li><strong>data</strong>: massey/event-store/registry + fetch compression/reuse</li></ul>' },
     ],
     footer: 'Full mapping: docs/AGENT-PITFALLS.md §30 · tracker: bun:blog-map + mapping channel (§31) · our own markdown anchors are NATIVE via Bun.markdown { headings: { ids: true } } (§33 — corrected; §32 probed wrong option names)',
   });
