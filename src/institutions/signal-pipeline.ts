@@ -232,7 +232,7 @@ export function renderDashboard(signals: Signal[], csrfToken: string): string {
     'a { color: var(--acc); }' +
     'footer { color: var(--dim); font-size: 0.75rem; margin-top: 2rem; border-top: 1px solid var(--line); padding-top: 0.75rem; }' +
     '</style></head><body>' +
-    '<header><h1>' + esc(BRAND.name) + ' <span>· signal pipeline</span></h1><p>' + esc(String(signals.length)) + ' signals · <a href="/api/signals">/api/signals</a> · <a href="/bun/tooling">tooling</a> · <a href="/bun/overview">overview</a> · <a href="/design/trend">trend</a></p></header>' +
+    '<header><h1>' + esc(BRAND.name) + ' <span>· signal pipeline</span></h1><p>' + esc(String(signals.length)) + ' signals · <a href="/api/signals">/api/signals</a> · <a href="/bun/tooling">tooling</a> · <a href="/bun/overview">overview</a> · <a href="/bun/map">map</a> · <a href="/bun/api">api</a> · <a href="/bun/brand">brand</a> · <a href="/bun/xml">xml</a> · <a href="/design/trend">trend</a></p></header>' +
     body +
     '<script>' +
     'const csrf = "' + csrfToken + '";' +

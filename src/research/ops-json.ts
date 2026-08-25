@@ -77,5 +77,17 @@ export function validateOpsDashboardJson(data: unknown): OpsJsonValidation {
     }
   }
 
+  if (data.pipelines !== undefined) {
+    if (!Array.isArray(data.pipelines)) {
+      errors.push("pipelines: expected array");
+    } else {
+      for (const [i, row] of data.pipelines.entries()) {
+        if (!isRecord(row) || typeof row.pipeline !== "string" || typeof row.gate !== "string") {
+          errors.push(`pipelines[${i}]: expected object with string pipeline/gate`);
+        }
+      }
+    }
+  }
+
   return { ok: errors.length === 0, errors };
 }

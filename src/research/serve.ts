@@ -116,6 +116,7 @@ import {
   type Signal,
 } from "../institutions/signal-pipeline.ts";
 import { CHANNEL_ACTIONS } from "../institutions/channel-registry.ts";
+import { collectPipelineStatus, summarizePipelines } from "../lib/pipeline-status.ts";
 import {
   brandBadgeSvg,
   brandCardPng,
@@ -1006,6 +1007,7 @@ async function handleOpsPage(_req: Request, csrfToken: string): Promise<Response
       server: readOpsServerStats(),
       flows,
       runs: listRunSummaries(5),
+      pipelines: await collectPipelineStatus(),
     }),
   );
 }
@@ -1037,6 +1039,7 @@ async function handleOpsJson(_req: Request): Promise<Response> {
     server: readOpsServerStats(),
     flows,
     runs: listRunSummaries(5),
+    pipelines: await collectPipelineStatus(),
   };
 
   // Self-check: log schema drift but never break the endpoint on its own validator.
@@ -1891,6 +1894,8 @@ export function createResearchServer(options: ServeOptions = {}) {
           const counts = { ok: 0, warn: 0, bad: 0, info: 0 };
           for (const s of signals) counts[s.severity] += 1;
           const ok = counts.bad === 0;
+          const pipelines = await collectPipelineStatus();
+          const pip = summarizePipelines(pipelines);
           const body = {
             ok,
             status: ok ? "ok" : "degraded",
@@ -1900,6 +1905,13 @@ export function createResearchServer(options: ServeOptions = {}) {
             signals: signals.length,
             channels: counts,
             failing: signals.filter((s) => s.severity === "bad").map((s) => ({ id: s.id, title: s.title })),
+            pipelines: pip,
+            bun14: {
+              version: Bun.version,
+              revision: Bun.revision.slice(0, 8),
+              docsPages: 333,
+              mapsLock: "check via bun run docs:refresh",
+            },
           };
           return json(body, ok ? 200 : 503, designCorsHeaders());
         });

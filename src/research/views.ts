@@ -225,6 +225,8 @@ export type OpsCronFlow = {
   periodMin?: number;
 };
 
+import type { PipelineStatusRow } from "../lib/pipeline-status.ts";
+
 export type OpsDashboardData = {
   generatedAt: string;
   /** CSRF double-submit token issued by GET /ops; echoed in every POST. */
@@ -280,6 +282,8 @@ export type OpsDashboardData = {
   };
   flows: OpsCronFlow[];
   runs: RunSummary[];
+  /** Pipeline gate health (docs/data/compliance/design) — optional block. */
+  pipelines?: PipelineStatusRow[];
 };
 
 function fmtTs(ts: number): string {
@@ -298,6 +302,18 @@ export function fmtAgeMs(ms: number): string {
 }
 
 type Staleness = "fresh" | "overdue" | "stale";
+
+/** Pipeline health rows (ops:pipelines shared lib) — rendered as a table. */
+function renderOpsPipelines(rows: PipelineStatusRow[]): string {
+  const paint = (ok: boolean | null): string =>
+    ok === true ? '<span class="badge ok">ok</span>' : ok === false ? '<span class="badge bad">fail</span>' : '<span class="badge warn">seed</span>';
+  return '<table><tr><th>Pipeline</th><th>Gate</th><th>Status</th><th>Detail</th></tr>' +
+    [...rows]
+      .sort((a, b) => (a.pipeline + a.gate).localeCompare(b.pipeline + b.gate))
+      .map((r) => '<tr><td>' + escapeHtml(r.pipeline) + '</td><td><code>' + escapeHtml(r.gate) + '</code></td><td>' + paint(r.ok) + '</td><td class="dim">' + escapeHtml(r.detail) + '</td></tr>')
+      .join("") +
+    '</table>';
+}
 
 /** Staleness states for periodic-job age badges (exported for ops.json typing). */
 export type OpsStaleness = Staleness;
@@ -848,6 +864,7 @@ export function renderOps(data: OpsDashboardData): string {
   ${renderOpsData(data, nowMs)}
   <h2>Flows</h2>
   ${renderOpsFlows(data.flows, nowMs)}
+  ${data.pipelines ? `<h2>Pipelines</h2>\n  ${renderOpsPipelines(data.pipelines)}` : ""}
   <h2>Research runs (last ${data.runs.length})</h2>
   ${renderOpsRuns(data.runs)}
   ${renderOpsRefresher()}`;
