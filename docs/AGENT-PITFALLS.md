@@ -9,7 +9,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 > The headings were renumbered to §1-§11 on 2026-08-23; the counters were kept
 > so historical notes stay traceable.
 >
-> **Current contract status: verify:contracts 49/49** (see docs/BUN_API_COVERAGE.md
+> **Current contract status: verify:contracts 50/50** (see docs/BUN_API_COVERAGE.md
 > for the full matrix). `verify:contracts N/N` lines inside older sections are
 > HISTORICAL (each records its era) — docs:check enforces that only this header
 > and non-pitfall docs may reference the current count.
@@ -5797,6 +5797,32 @@ another note.
   (new, gate #49), tools/verify-contracts.ts (47 -> 49 gates), package.json,
   docs/BUN_API_COVERAGE.md + AGENT-PITFALLS header (47/47 -> 49/49).
   verify:contracts 49/49.
+## 160. Server-backed client shapes — RedisClient/S3/postgres/FSR depth (2026-08-24)
+
+- tools/client-shape-probe.ts (gate #50, 8/8) — closes the §158
+  "shape-checked only" note into real client-surface probes (no live
+  servers: constructors + method surfaces + refused-connection error
+  paths).
+- RedisClient: URL constructor (NOT an options object — options form
+  throws Invalid URL format); a ~213-method command surface (get/set/
+  hgetall/publish/subscribe/xadd/zadd/...); a refused connection makes
+  commands REJECT (Max reconnection attempts reached) — no hang.
+- S3Client: { bucket, accessKeyId, secretAccessKey } ctor; file API
+  (file/delete/write/list/presign/stat/size); S3File is BunFile-like
+  (text/arrayBuffer/bytes/stat/stream/slice + presign); presign
+  generates real signed URLs locally (X-Amz-...) — options object,
+  not a number (presign(path, { expiresIn })).
+- Bun.postgres: a thenable QUERY-BUILDER (execute/run/values/raw/
+  simple + then/catch/finally) — NOT a node-postgres tagged-template
+  client (pg`select 1` errors "Query is not a function"; the repo must
+  use .execute()/.values()). Queries reject on refused connections.
+- FileSystemRouter: params { id } with kind "dynamic" for [id]/page
+  routes (nextjs style); routes map exposes the pattern keys.
+- password: algorithm options verified — argon2id ($argon...) and
+  bcrypt ($2b$...) both hash + verify.
+- Artifacts: tools/client-shape-probe.ts (new, gate #50), tools/verify-contracts.ts
+  (49 -> 50 gates), package.json (client-shape:probe), docs/BUN_API_COVERAGE.md
+  + AGENT-PITFALLS header (49/49 -> 50/50). verify:contracts 50/50.
 - FILENAME BEHAVIOR (pasted --metafile-md claims vs 1.4.0, gate P9-P13):
   a bare --metafile-md writes meta.md to the PROCESS CWD, NOT the
   --outdir (the pasted claim's location is wrong); --metafile-md=<path>

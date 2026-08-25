@@ -63,6 +63,7 @@ const gates = [
   ['surface:probe'],
   ['version:probe'],
   ['type-drift:probe'],
+  ['client-shape:probe'],
 ] as const;
 
 const GATE_ENV: Record<string, Record<string, string>> = {
