@@ -3893,3 +3893,28 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
     like a real break would. breaking-audit now 14 checks.
 - Artifacts: src/lib/breaking-audit.ts (checks 13-14), tests/lib/
   breaking-audit.test.ts (12->14). verify:contracts 16/16.
+
+## 91. Package-manager doc — every command already adopted + verified (2026-08-24)
+
+- Cross-referenced the bun package-manager doc (global store, pm diff,
+  audit fix, dedupe, prune, licenses, update, add --filter/--catalog,
+  nativeDependencies/ignoreScripts) against the repo's deps tooling:
+- ALREADY ADOPTED + VERIFIED on 1.4.0 (probe, defaults:probe D14):
+  - bun pm diff: tools/deps-diff.ts uses it (deps:diff) — verified
+    (zod --summary: 'No differences', version-pair works).
+  - bun dedupe --check: deps:check gate uses it — verified ('No
+    duplicates — checked 9 packages').
+  - bun pm licenses --prod --json: licenses:check — verified parseable.
+  - bun audit fix --dry-run: deps:audit-fix:dry — verified ('No
+    vulnerabilities found (checked 7 packages)').
+  - bun prune + --production: deps:prune / deps:prune:prod — verified.
+  - Global virtual store: bunfig linker = "isolated" + frozenLockfile —
+    enabled (the 7x claim is vendor; the repo is 3 deps so the win is
+    small, but the layout is the recommended one).
+  - bun update: NOT adopted (the repo pins exact versions + frozen lock;
+    deliberate — updating transitive deps would churn the v1 lock).
+  - add --filter/--catalog: N/A (single package, no workspaces/catalog).
+- NOT NEEDED (verified): nativeDependencies / ignoreScripts — the repo's
+  deps (zod, drizzle-orm, file: proton-pass) are pure JS, no prebuilt-
+  binary optionalDependencies (esbuild etc.), so neither field applies.
+- Artifacts: tools/defaults-probe.ts D14 (29/29), verify:contracts 16/16.

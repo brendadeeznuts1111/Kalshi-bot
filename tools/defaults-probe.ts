@@ -159,6 +159,18 @@ const tml = Bun.TOML.parse("when = 2024-01-15T10:30:00\n") as { when: unknown };
 const tmlCtor = (tml.when as { constructor?: { name?: string } })?.constructor?.name ?? "unknown";
 check("D13b TOML bare datetime -> Temporal (PlainDateTime)", tmlCtor === "PlainDateTime", "ctor=" + tmlCtor);
 
+// D14: package-manager commands the repo uses (§91) — all verified on 1.4.0
+const pmDiff = Bun.spawnSync(["bun", "pm", "diff", "zod", "--summary"], { cwd: process.cwd(), stdout: "pipe", stderr: "pipe", timeout: 20000 });
+check("D14a bun pm diff works (deps:diff uses it)", pmDiff.exitCode === 0 && ((pmDiff.stdout?.toString() ?? "").includes("No differences") || (pmDiff.stdout?.toString() ?? "").includes("→")), "exit=" + pmDiff.exitCode);
+const dedupe = Bun.spawnSync(["bun", "dedupe", "--check"], { cwd: process.cwd(), stdout: "pipe", stderr: "pipe", timeout: 20000 });
+check("D14b bun dedupe --check works (deps:check uses it)", dedupe.exitCode === 0, "exit=" + dedupe.exitCode);
+const licenses = Bun.spawnSync(["bun", "pm", "licenses", "--prod", "--json"], { cwd: process.cwd(), stdout: "pipe", stderr: "pipe", timeout: 20000 });
+let licensesOk = false;
+try { JSON.parse(licenses.stdout?.toString() ?? "x"); licensesOk = true; } catch {}
+check("D14c bun pm licenses --prod --json parseable (licenses:check)", licenses.exitCode === 0 && licensesOk, "exit=" + licenses.exitCode);
+const bf = await Bun.file("bunfig.toml").text();
+check("D14d isolated linker enabled (global virtual store, §91)", bf.includes('linker = "isolated"'), "ok");
+
 console.log("---");
 const fails = results.filter((r) => !r.pass);
 console.log("defaults:probe — " + (results.length - fails.length) + "/" + results.length + " pass" + (fails.length ? " · FAIL: " + fails.map((f) => f.name).join(", ") : ""));
