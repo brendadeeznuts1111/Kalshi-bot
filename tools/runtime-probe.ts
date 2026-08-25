@@ -56,6 +56,30 @@ for (const m of mods) { try { const mod: any = await import(m); modResults[m] = 
 const modFail = Object.entries(modResults).filter(([, v]) => v !== "ok");
 check("P12 bun:/node: imports resolve", modFail.length === 0, JSON.stringify(modFail));
 
+// P13 sleepSync blocks synchronously (granularity ~100ms on 1.4.0).
+const s0 = performance.now();
+Bun.sleepSync(30);
+const sdt = performance.now() - s0;
+check("P13 sleepSync blocks synchronously", typeof Bun.sleepSync === "function" && sdt >= 25 && sdt < 2000, sdt.toFixed(0) + "ms for 30ms request");
+
+// P13a version_with_sha: "v1.4.0 (34cbb9a40)".
+const vws = Bun.version_with_sha;
+check("P13a version_with_sha", typeof vws === "string" && vws.startsWith("v" + Bun.version) && vws.includes(Bun.revision.slice(0, 9)), String(vws));
+
+// P13b readableStreamToFormData: exists but CANNOT parse a standard
+// multipart stream in 1.4.0 (throws for short AND long boundaries; the
+// SAME body parses via Response.formData()) - pin-negative: a future
+// fix flips this check to FAIL for re-verification.
+const LF = String.fromCharCode(10);
+const Q = String.fromCharCode(34);
+const mkBody = (b: string) => "--" + b + LF + "Content-Disposition: form-data; name=" + Q + "a" + Q + LF + LF + "1" + LF + "--" + b + "--" + LF;
+const streamOf = (body: string) => new ReadableStream({ start(c) { c.enqueue(new TextEncoder().encode(body)); c.close(); } });
+let parsedOk = false;
+try {
+  await Bun.readableStreamToFormData(streamOf(mkBody("b1")), "multipart/form-data; boundary=b1");
+  parsedOk = true;
+} catch { /* expected */ }
+check("P13b readableStreamToFormData broken in 1.4.0", parsedOk === false, parsedOk ? "parses OK - behavior CHANGED, re-verify" : "standard multipart throws (same body parses via Response.formData())");
 const failed = results.filter((r) => !r.pass);
 console.log("runtime:probe — " + (results.length - failed.length) + "/" + results.length + " checks" + (failed.length ? " · FAIL: " + failed.map((f) => f.name).join(", ") : ""));
 process.exit(failed.length === 0 ? 0 : 1);

@@ -41,6 +41,9 @@ const md: string[] = [
   "Per-module " + BTK + "Bun.*" + BTK + " usage annotated with the probe gate and docs",
   "status from the full shape (" + BTK + "tools/bun-shape.json" + BTK + ", §168).",
   "Gate = GAP means used-but-unprobed (a Tier-A failure in the matrix).",
+  "unmapped = prose/placeholder/non-existent-API mentions (e.g. Bun.rename",
+  "documents non-existence; placeholder tokens like Foo and x are shown",
+  "without the Bun. prefix) - review-only.",
   "",
 ];
 for (const mod of modules) {

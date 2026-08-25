@@ -20,7 +20,7 @@ export const GATES: Record<string, string> = {
   connect: "security:probe", CSRF: "csrf:probe", Cookie: "defaults:probe", CookieMap: "defaults:probe",
   listen: "net:probe", udpSocket: "net:probe", dns: "net:probe", redis: "net:probe", secrets: "net:probe",
   env: "runtime:probe", argv: "runtime:probe", sleep: "runtime:probe", version: "runtime:probe", revision: "runtime:probe", nanoseconds: "runtime:probe",
-  peek: "runtime:probe", readableStreamToArrayBuffer: "runtime:probe", readableStreamToText: "runtime:probe", ArrayBufferSink: "runtime:probe", Transpiler: "runtime:probe", Terminal: "runtime:probe", WebView: "runtime:probe",
+  peek: "runtime:probe", readableStreamToArrayBuffer: "runtime:probe", readableStreamToText: "runtime:probe", readableStreamToFormData: "runtime:probe", sleepSync: "runtime:probe", version_with_sha: "runtime:probe", ArrayBufferSink: "runtime:probe", Transpiler: "runtime:probe", Terminal: "runtime:probe", WebView: "runtime:probe",
   MD4: "surface:probe", MD5: "surface:probe", SHA1: "surface:probe", SHA224: "surface:probe", SHA384: "surface:probe", SHA512: "surface:probe", SHA512_256: "surface:probe",
   password: "surface:probe", FileSystemRouter: "surface:probe", deepMatch: "surface:probe", concatArrayBuffers: "surface:probe",
   gc: "surface:probe", shrink: "surface:probe", generateHeapSnapshot: "surface:probe", isMainThread: "surface:probe", isStandaloneExecutable: "surface:probe", main: "surface:probe", unsafe: "surface:probe",

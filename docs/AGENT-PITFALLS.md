@@ -6122,3 +6122,40 @@ another note.
   gate is a used-but-unprobed API to prioritize.
 - Spawns rg -> tools/module-shape-report.ts added to SPAWN_KEEP_LIST.
 - Chained into coverage:matrix after the matrix generator.
+
+## 171. Full-shape probe coverage closed — 0 GAPs + a broken-API pin (2026-08-24)
+
+- The three unused runtime GAPs from §169 are closed: sleepSync,
+  version_with_sha, and readableStreamToFormData now carry runtime:
+  probe gates (P13/P13a/P13b). The matrix reports 0 unused GAPs -
+  every runtime member of the full shape (156) has a probe gate
+  (136 used, 136 probed).
+- P13 sleepSync: blocks SYNCHRONOUSLY with ~100ms granularity (a 30ms
+  request measured 180ms). P13a version_with_sha = v1.4.0 (34cbb9a40)
+  (v + version + revision in parens).
+- P13b PIN-NEGATIVE finding: Bun.readableStreamToFormData is BROKEN in
+  1.4.0 - it throws for a standard multipart stream with SHORT
+  boundaries (missing final boundary) and LONG boundaries (boundary is
+  too long, >= 48 chars), while the SAME body parses fine via
+  Response.formData(). The probe pins the breakage: if a future Bun
+  fix makes it parse, the check flips FAIL for re-verification.
+- The module report's unmapped rows are prose/placeholder/non-existent
+  mentions (verified: Bun.rename documents non-existence; placeholder
+  tokens like Foo and x; Bun.ffi intentional) - review-only, not drift.
+
+## 172. Test-suite isolation flake fixed — bun test --isolate (2026-08-24)
+
+- The main test script ran without --isolate, so test FILES sharing a
+  worker process raced on file-level env swaps. The temp-cache helper
+  already documented it: "Prefer bun test --isolate so file-level env
+  swaps do not race across files." The race intermittently broke 3
+  searchGitHubRepos ETag-cache tests in full-suite runs (a concurrent
+  file's enterTempCache/exitTempCache swapped or deleted
+  RESEARCH_CACHE_DB mid-test) - tests that always passed in isolation.
+- Fix: "test" now runs bun test --isolate --parallel (the repo's
+  test:parallel already used it). Full suite: 0 fail, 2535 tests in
+  4.3s (vs 22s racing + retries) - faster AND deterministic.
+- The real-failure fixes this round: docs:api STRICT flagged Foo/x as
+  phantom tokens because §171 prose + the module-report note wrote
+  prefixed placeholders (Bun.Foo, Bun.x) - reworded to bare names;
+  the report shows unmapped tokens without the Bun. prefix.

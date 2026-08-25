@@ -22,7 +22,7 @@ without a runtime value; missing = declared value absent at runtime.
 | `WebView` | function | y | y | runtime:probe | 68 |
 | `Transpiler` | function | y | y | runtime:probe | 67 |
 | `Glob` | function | y | y | fsx:probe | 54 |
-| `version` | string | y | y | runtime:probe | 52 |
+| `version` | string | y | y | runtime:probe | 53 |
 | `$` | function | y | y | shell:probe | 47 |
 | `escapeHTML` | function | y | y | ansi:probe | 45 |
 | `inspect` | function | y | y | ansi:probe | 45 |
@@ -38,7 +38,7 @@ without a runtime value; missing = declared value absent at runtime.
 | `nanoseconds` | function | y | y | runtime:probe | 22 |
 | `XML.parse` | function | y | y | format:probe (ns) | 22 |
 | `markdown.html` | function | y | y | format:probe (ns) | 18 |
-| `revision` | string | y | y | runtime:probe | 17 |
+| `revision` | string | y | y | runtime:probe | 18 |
 | `secrets` | object | y | y | net:probe | 17 |
 | `XML` | object | y | y | format:probe | 16 |
 | `stripANSI` | function | y | y | ansi:probe | 15 |
@@ -106,6 +106,7 @@ without a runtime value; missing = declared value absent at runtime.
 | `readableStreamToText` | function | y | y | runtime:probe | 2 |
 | `RedisClient` | function | y | y | client-shape:probe | 2 |
 | `S3Client` | function | y | y | client-shape:probe | 2 |
+| `sleepSync` | function | y | y | runtime:probe | 2 |
 | `TOML.stringify` | function | y | y | format:probe (ns) | 2 |
 | `allocUnsafe` | function | y | y | surface:probe | 1 |
 | `concatArrayBuffers` | function | y | y | surface:probe | 1 |
@@ -126,6 +127,7 @@ without a runtime value; missing = declared value absent at runtime.
 | `readableStreamToArray` | function | y | y | surface:probe | 1 |
 | `readableStreamToBlob` | function | y | y | surface:probe | 1 |
 | `readableStreamToBytes` | function | y | y | surface:probe | 1 |
+| `readableStreamToFormData` | function | y | y | runtime:probe | 1 |
 | `readableStreamToJSON` | function | y | y | surface:probe | 1 |
 | `resolveSync` | function | y | y | surface:probe | 1 |
 | `s3` | object | y | y | client-shape:probe | 1 |
@@ -138,6 +140,7 @@ without a runtime value; missing = declared value absent at runtime.
 | `stderr` | object | y | y | surface:probe | 1 |
 | `stdin` | object | y | y | surface:probe | 1 |
 | `unsafe` | object | y | y | surface:probe | 1 |
+| `version_with_sha` | string | y | n | runtime:probe | 1 |
 | `YAML.stringify` | function | y | n | format:probe (ns) | 1 |
 | `zstdCompress` | function | y | y | fs:probe | 1 |
 | `zstdDecompress` | function | y | y | fs:probe | 1 |
@@ -155,10 +158,8 @@ without a runtime value; missing = declared value absent at runtime.
 | `dns.ALL` | number | y | n | net:probe (ns) | 0 |
 | `dns.V4MAPPED` | number | y | n | net:probe (ns) | 0 |
 | `Password` | missing | y | n | GAP | 0 |
-| `readableStreamToFormData` | function | y | y | GAP | 0 |
 | `Security` | missing | y | n | GAP | 0 |
 | `Serve` | missing | y | n | GAP | 0 |
-| `sleepSync` | function | y | y | GAP | 0 |
 | `Spawn` | missing | y | n | GAP | 0 |
 | `SQL.MySQLError` | function | y | n | sqlite:probe (ns) | 0 |
 | `SQL.PostgresError` | function | y | n | sqlite:probe (ns) | 0 |
@@ -169,7 +170,6 @@ without a runtime value; missing = declared value absent at runtime.
 | `unsafe.gcAggressionLevel` | function | y | n | surface:probe (ns) | 0 |
 | `unsafe.memoryFootprint` | function | y | n | surface:probe (ns) | 0 |
 | `unsafe.mimallocDump` | function | y | y | surface:probe (ns) | 0 |
-| `version_with_sha` | string | y | n | GAP | 0 |
 | `WebAssembly` | missing | y | n | GAP | 0 |
 | `markdown.Options` | type-only | y | n | format:probe (ns) | 12 |
 | `WebSocketOptions` | type-only | y | n | GAP | 8 |
@@ -512,4 +512,4 @@ without a runtime value; missing = declared value absent at runtime.
 | `XMLHttpRequestBodyInit` | type-only | y | n | GAP | 0 |
 | `ZlibCompressionOptions` | type-only | y | n | GAP | 0 |
 
-**Shape summary:** 503 members (331 top-level, 172 sub-namespace) · 156 runtime values · 347 type-only/missing · 133 used · 133 probed · 3 unused GAPs
+**Shape summary:** 503 members (331 top-level, 172 sub-namespace) · 156 runtime values · 347 type-only/missing · 136 used · 136 probed · 0 unused GAPs

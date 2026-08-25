@@ -54,7 +54,8 @@ describe('bun-gates gateFor (§169/§170)', () => {
   });
 
   test('GAP when no gate applies', () => {
-    expect(gateFor({ name: 'readableStreamToFormData', ns: '' })).toBe('GAP');
+    expect(gateFor({ name: 'readableStreamToFormData', ns: '' })).toBe('runtime:probe'); // §171 closure
+    expect(gateFor({ name: 'sleepSync', ns: '' })).toBe('runtime:probe');
     expect(gateFor({ name: 'someUnknown', ns: '' })).toBe('GAP');
   });
 });
