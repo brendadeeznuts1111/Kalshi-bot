@@ -5772,6 +5772,15 @@ another note.
   IGNORED (P27); metafile is per-call/CLI only. Pretty-print
   JSON.stringify(mf, null, 2) and metafile:false (the env-gated
   ANALYZE=1 pattern) verified (P28).
+- BuildOutput/BuildArtifact surface (gate P29-P32): kinds observed
+  entry-point/asset/sourcemap (+ chunk via splitting, bytecode via
+  --bytecode); loader + hash (string with [hash] naming) present.
+  CORRECTIONS: BuildArtifact is Blob-CONFORMANT but NOT instanceof Blob,
+  and .bytes() does NOT exist on it (text/arrayBuffer/size/type work);
+  artifact.sourcemap points at the CSS asset in this build, not the .map
+  (sourcemaps are separate outputs with kind sourcemap) — the pasted
+  "extends Blob ... .bytes()" and the sourcemap-field semantics are
+  overstated.
 - "Matches esbuild exactly" is NOT exact: inputs.imports entries are
   { path, kind, original } without the always-present external flag
   (external appears only on require-calls). The analyzer likely still

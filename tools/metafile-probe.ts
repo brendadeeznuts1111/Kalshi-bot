@@ -162,6 +162,21 @@ const resOff = await Bun.build({ entrypoints: [F + "/entry.ts"], outdir: "scratc
 check("P28a metafile:false accepted (env gating)", resOff.success && resOff.metafile === undefined, String(typeof resOff.metafile));
 
 
+
+// ── §155 addendum 6: BuildOutput / BuildArtifact surface ──
+
+// BuildArtifact is Blob-CONFORMANT but NOT instanceof Blob; .bytes()
+// does not exist on it; .sourcemap points at the CSS asset here (not
+// the .map); sourcemaps are separate outputs with kind sourcemap.
+const resArt = await Bun.build({ entrypoints: [F + "/entry.ts"], outdir: "scratch/mf-art/dist", minify: true, sourcemap: "external", naming: "x/[name]-[hash].[ext]" });
+const art = resArt.outputs[0] as any;
+check("P29 artifact kind/loader/hash", art.kind === "entry-point" && art.loader === "ts" && typeof art.hash === "string" && art.hash.length > 0, "kind=" + art.kind + " hash=" + art.hash);
+check("P30 artifact is Blob-conformant NOT instanceof Blob", art instanceof Blob === false && art.size > 0 && typeof art.type === "string" && typeof art.text === "function" && typeof art.arrayBuffer === "function" && typeof (art as any).bytes === "undefined", "isBlob=" + (art instanceof Blob) + " bytes=" + typeof (art as any).bytes);
+const kinds = resArt.outputs.map((o: any) => o.kind);
+check("P31 kinds incl sourcemap + asset", kinds.includes("sourcemap") && kinds.includes("asset") && kinds.includes("entry-point"), kinds.join(","));
+check("P32 artifact.sourcemap NOT the .map (misassigned)", !(art.sourcemap && art.sourcemap.path?.endsWith(".map")), "sm=" + (art.sourcemap ? art.sourcemap.path.split("/").pop() : "null"));
+
+
 const failed = results.filter((r) => !r.pass);
 console.log("metafile:probe — " + (results.length - failed.length) + "/" + results.length + " checks" + (failed.length ? " · FAIL: " + failed.map((f) => f.name).join(", ") : ""));
 process.exit(failed.length === 0 ? 0 : 1);
