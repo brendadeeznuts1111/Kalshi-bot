@@ -18,6 +18,8 @@
  *     the table's 'not yet natively shipped' is FALSE (§88)
  */
 
+export {}; // top-level await requires module context (tsc)
+
 const results: { name: string; pass: boolean; detail: string }[] = [];
 const check = (name: string, pass: boolean, detail = "") => { results.push({ name, pass, detail }); console.log((pass ? "PASS" : "FAIL") + "  " + name + (detail ? "  — " + detail : "")); };
 
@@ -38,6 +40,15 @@ check("P3 Bun.sha is SHA-512/256 (not SHA-256)", typeof shaHex === "string" && s
 
 // P4: Temporal enabled by default.
 check("P4 Temporal shipped (table claim false)", typeof Temporal === "object" && typeof (Temporal as { Instant?: unknown }).Instant === "function", "enabled by default; §88");
+
+// P5-P7: node:quic + serve http3 (§120).
+const quic = await import("node:quic");
+const quicKeys = Object.keys(quic);
+check("P5 node:quic module exists (lsquic-backed QUIC)", ["connect", "listen", "QuicSession", "QuicStream"].every((k) => quicKeys.includes(k)), "ExperimentalWarning emitted; Bun.Quic global is undefined");
+let h3Err = "";
+try { const s3 = Bun.serve({ port: 0, fetch() { return new Response("q"); }, http3: true } as any); s3.stop(true); h3Err = "accepted-without-tls"; } catch (e: any) { h3Err = String(e.message).slice(0, 60); }
+check("P6 serve http3 option recognized (requires tls)", h3Err.includes("HTTP/3 requires"), h3Err);
+check("P7 Bun.Quic global absent (QUIC is node:quic only)", typeof (Bun as Record<string, unknown>).Quic === "undefined");
 
 const failed = results.filter((r) => !r.pass);
 console.log("bun:apis-probe — " + (results.length - failed.length) + "/" + results.length + " checks" + (failed.length ? " · FAIL: " + failed.map((f) => f.name).join(", ") : ""));

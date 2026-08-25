@@ -4862,6 +4862,31 @@ another note.
   HTMLImageElement shadows it otherwise (tsc + runtime both misresolve).
 - Artifacts: tools/image-probe.ts (P15-P22, 35/35), this section.
   verify:contracts 26/26 (image:probe count grew within its gate).
+## 120. Blog anchor 'replay / quic' probed — node:quic + serve http3 verified (2026-08-24)
+
+- The URL anchor (replay / newly passing tests / quic) points at the
+  blog's interactive 'newly passing tests' CHART — '↻ replay' is the
+  chart's UI replay button, NOT a Bun runtime feature. The real claim
+  behind the anchor is node:quic.
+- node:quic VERIFIED on 1.4.0: import 'node:quic' exports
+  QuicEndpoint, QuicError, QuicSession, QuicStream, connect, listen,
+  constants (the experimental Node v26 API, per the blog) — with an
+  ExperimentalWarning. Bun.Quic is UNDEFINED — QUIC lives in the
+  node:quic module, not a Bun global.
+- serve http3 option VERIFIED: Bun.serve({ http3: true }) is a REAL
+  option — it errors 'HTTP/3 requires tls to be set' when TLS is
+  absent (the option is recognized; it needs a cert). This confirms the
+  blog's 'vendors lsquic for HTTP/3' and corrects the §115 table's
+  naming: http2 + http3 options exist; 'http1' was the invented one.
+- The chart's numbers (node:quic 235/237 tests, +235 from 0) are
+  vendor comparative benchmarks against Node's own test suite —
+  labeled marketing, not probeable in-repo (same discipline as §88).
+- bun:apis-probe extended P5-P7 -> 7/7 (verify:contracts gate still
+  #26). tsc gotcha: top-level await needs module context — added
+  'export {}' to the probe script.
+- Artifacts: tools/bun-apis-probe.ts (P5-P7, 7/7), tests/lib/bun-apis-
+  probe.test.ts (7/7), this section. verify:contracts 26/26.
+
 ## 119. Release-blog mp4s — why NOT to adopt them (probed, §118 follow-up) (2026-08-24)
 
 - The 1.4 blog DOES contain real mp4s (probe: 4 terminal demos, all
