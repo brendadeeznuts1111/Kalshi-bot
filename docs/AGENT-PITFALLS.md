@@ -5272,6 +5272,50 @@ another note.
 - Artifacts: tools/build-deep-probe.ts (new, gate #31), tools/verify-contracts.ts
   (30 -> 31 gates), package.json (build-deep:probe script). verify:contracts
   31/31.
+## 131. Filesystem layer — Bun.file/Bun.write, zlib+zstd, mmap, loaders, Archive (2026-08-24)
+
+- VERIFIED (tools/fs-probe.ts, gate #32, 20/20, fully offline +
+  self-contained; fixtures + loader imports via dynamic import after
+  writes).
+- Bun.file is lazy + Blob-conformant: size/type/text/bytes/json()/
+  stream() all correct; a missing file reports size 0, default type
+  text/plain;charset=utf-8, exists() false; type override appends
+  ;charset=utf-8. .slice(start,end) reads offsets. .delete() works.
+- Bun.write: returns byte count, OVERWRITES + truncates (writing "xy"
+  over "abcdef" leaves "xy"); accepts string, Response body, and
+  BunFile source (copy) — all verified.
+- COMPRESSION (1.4.0 surface = the four *Sync zlib forms ONLY):
+  gzipSync/gunzipSync, deflateSync/inflateSync round-trip. NO async
+  gzip/gunzip forms (typeof undefined on the dotted names — docs:api
+  rejects them) and NO brotli functions (brotliCompressSync/
+  brotliDecompressSync undefined — brotli exists only as a
+  CompressionFormat enum value). bun-types agree (no drift).
+  NOTE: these return Uint8Array — decode with TextDecoder, not
+  .toString().
+- zstd: zstdCompressSync/zstdDecompressSync AND async zstdCompress/
+  zstdDecompress all exist and round-trip (zstd is the only algorithm
+  with async forms).
+- Bun.mmap(path): returns Uint8Array<ArrayBuffer>, length = file size,
+  .slice() reads at offsets.
+- RUNTIME LOADER IMPORTS (docs claim runtime supports the bundler file
+  set — VERIFIED): import .toml -> object, .yaml -> object, .json5 ->
+  object, .xml -> { root: {...} }, .md -> string, .txt -> string. No
+  plugins needed.
+- Bun.stdout/Bun.stderr/Bun.stdin are Blob instances (BunFile).
+- CORRECTION (P19, pinned): Bun.Archive.write(path, { name: BunFile })
+  archives the entry as 0 BYTES — silent data loss (system tar
+  confirms a 0-size entry). String content archives correctly
+  (20 bytes, extract round-trips). Read path: new Archive(bytes) has
+  files/entries undefined; extract(dir) writes whatever was archived.
+  On 1.4.0 archive files with STRING/Buffer content, never BunFile
+  values; re-probe before relying on Archive for real assets.
+- Repo note: the video/assets pipeline uses Bun.file bodies for serving
+  (fine); do NOT use Bun.Archive for packaging assets until the
+  BunFile-content bug is fixed.
+- Artifacts: tools/fs-probe.ts (new, gate #32), tools/verify-contracts.ts
+  (31 -> 32 gates), package.json (fs:probe script). verify:contracts
+  32/32.
+
 
 
 

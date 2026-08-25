@@ -45,6 +45,7 @@ const gates = [
   ['shell:probe'],
   ['html:probe'],
   ['build-deep:probe'],
+  ['fs:probe'],
 ] as const;
 
 const GATE_ENV: Record<string, Record<string, string>> = {
