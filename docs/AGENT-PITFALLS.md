@@ -3632,3 +3632,32 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
   - Reading via req.cookies.get('user_id') (already §79 C9).
 - Artifacts: tools/cookies-probe.ts C10 (13/13), tests/lib/cookies-
   probe.test.ts (8 tests), verify:contracts 15/15.
+
+## 81. API defaults cross-reference — hostname doc correction + explicit binds (2026-08-24)
+
+- Cross-referenced the cookie default-locking pattern (§79/80) across the
+  other Bun APIs the repo touches (tools/defaults-probe.ts, `bun run
+  defaults:probe`, new verify:contracts gate, 16/16):
+- CORRECTION (serve hostname default):
+  - Bun 1.4.0 Bun.serve DEFAULTS to hostname "localhost" — the
+    http-server doc claims the default is "0.0.0.0" (WRONG on 1.4.0,
+    probed: default server reports hostname localhost). Deployment
+    implication: the doc's claim would have you expect all-interfaces
+    binding; the runtime is loopback-only by default.
+  - ENHANCEMENT: serve.ts now sets hostname explicitly —
+    Bun.env.SERVE_HOSTNAME ?? "127.0.0.1" (loopback, matches tests);
+    set SERVE_HOSTNAME=0.0.0.0 to expose beyond loopback deliberately.
+    The default reliance is gone; intent is explicit.
+- Cross-ref verified defaults:
+  - cookie: path "/", sameSite "lax", httpOnly false, secure false
+    (matches §79).
+  - CSRF generate without expiresIn works (no required default).
+  - serve hardening already explicit in repo: 16MB body (default 128MB),
+    idleTimeout 255 (default 10s), development off in prod.
+- CROSS-DOC GOTCHA: req.cookies (CookieMap) exists ONLY in routes
+  handlers — NOT in fetch handlers (probe: fetch cookies=false, routes
+  cookies=true). The http-cookies doc only shows routes; a developer
+  using fetch finds no cookies property. Repo uses routes (fine).
+- Artifacts: tools/defaults-probe.ts (5 checks), tests/lib/defaults-
+  probe.test.ts (5 tests), src/research/serve.ts explicit hostname,
+  verify:contracts 16/16.

@@ -29,6 +29,7 @@ const gates = [
   ['infra:probe'],
   ['csrf:probe'],
   ['cookies:probe'],
+  ['defaults:probe'],
 ] as const;
 
 const run = async (name: string, args: readonly string[]): Promise<boolean> => {

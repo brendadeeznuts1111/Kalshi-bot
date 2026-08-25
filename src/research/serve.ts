@@ -1297,6 +1297,11 @@ export function createResearchServer(options: ServeOptions = {}) {
 
   const serveOptions = {
     port,
+    // Explicit loopback bind (§81): Bun 1.4.0's DEFAULT hostname is
+    // "localhost" (the http-server doc claims 0.0.0.0 — WRONG on 1.4.0,
+    // probed). 127.0.0.1 matches the tests and keeps this local-only;
+    // set SERVE_HOSTNAME=0.0.0.0 to expose beyond loopback deliberately.
+    hostname: Bun.env.SERVE_HOSTNAME ?? "127.0.0.1",
     // Hardening: Bun's defaults are a 128MB request body cap and a 10s idle
     // timeout. Legit POSTs here are KB-scale (largest: the rotor ingest), so
     // cap bodies at 16MB; extend the idle grace for the long-lived ndjson /

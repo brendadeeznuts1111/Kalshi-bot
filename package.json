@@ -247,6 +247,7 @@
     "infra:probe": "bun tools/infra-probe.ts",
     "csrf:probe": "bun tools/csrf-probe.ts",
     "cookies:probe": "bun tools/cookies-probe.ts",
+    "defaults:probe": "bun tools/defaults-probe.ts",
     "plugins:probe": "bun tools/plugins-probe.ts",
     "bun:blog-map": "bun tools/bun-blog-map.ts",
     "docs:check": "bun tools/docs-check.ts",
