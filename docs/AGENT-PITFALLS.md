@@ -5702,6 +5702,14 @@ another note.
   (44 -> 45 gates), package.json (metafile:probe), scripts/audit-bun-native.ts
   (SPAWN_KEEP_LIST), docs/BUN_API_COVERAGE.md + AGENT-PITFALLS header
   (44/44 -> 45/45). verify:contracts 45/45.
+- FILENAME BEHAVIOR (pasted --metafile-md claims vs 1.4.0, gate P9-P13):
+  a bare --metafile-md writes meta.md to the PROCESS CWD, NOT the
+  --outdir (the pasted claim's location is wrong); --metafile-md=<path>
+  resolves against the CWD (not outdir); --metafile + --metafile-md
+  together write both; a bare --metafile DEFAULTS to meta.json in the
+  CWD (the pasted claim says a path is always required — wrong).
+  Absolute paths write where asked — the repo design:build form is
+  safe. All pinned.
 - GitHub recomputes the pie on the default branch after push (a few
   minutes). Verified with git check-attr.
 - Artifacts: .gitattributes (new). verify:contracts 38/38 (unchanged).

@@ -50,6 +50,39 @@ const cli = Bun.spawnSync(["bun", "build", F + "/entry.ts", "--outdir", "scratch
 const cliMf = JSON.parse(await Bun.file("scratch/meta-cli/meta.json").text());
 check("P8 CLI --metafile schema", cli.exitCode === 0 && "inputs" in cliMf && "outputs" in cliMf && "entryPoint" in (Object.values(cliMf.outputs as any)[0] as object), "exit=" + cli.exitCode);
 
+
+// ── §155 addendum: --metafile-md FILENAME behavior (pasted claims vs 1.4.0) ──
+
+// The pasted claim says the default meta.md lands in --outdir. On 1.4.0
+// ALL metafile outputs land in the PROCESS CWD (spawn cwd here), and a
+// bare --metafile defaults to meta.json (the claim says no default).
+const mfCwd = "scratch/mf-cwd";
+await Bun.write(mfCwd + "/.keep", "");
+const spawnCli = (args: string[], cwd: string) => Bun.spawnSync(["bun", "build", process.cwd() + "/" + F + "/entry.ts", ...args], { cwd, stdout: "ignore", stderr: "ignore" });
+const w = (p: string) => Bun.file(p).exists();
+
+// P9: bare --metafile-md -> meta.md in CWD (NOT the outdir).
+spawnCli(["--metafile-md", "--outdir=dist"], mfCwd);
+check("P9 bare --metafile-md -> meta.md in CWD", (await w(mfCwd + "/meta.md")) && !(await w(mfCwd + "/dist/meta.md")), "cwd-meta.md=" + (await w(mfCwd + "/meta.md")));
+
+// P10: --metafile-md=custom.md resolves against CWD.
+spawnCli(["--metafile-md=custom.md", "--outdir=dist"], mfCwd);
+check("P10 custom --metafile-md path in CWD", await w(mfCwd + "/custom.md"), "");
+
+// P11: --metafile + --metafile-md together -> both files.
+spawnCli(["--metafile=meta.json", "--metafile-md=meta.md", "--outdir=dist"], mfCwd);
+check("P11 both flags together", (await w(mfCwd + "/meta.json")) && (await w(mfCwd + "/meta.md")), "");
+
+// P12: bare --metafile HAS a default (meta.json in CWD) — the pasted
+// claim says "always pass a path"; the default exists on 1.4.0.
+spawnCli(["--metafile", "--outdir=dist"], mfCwd);
+check("P12 bare --metafile defaults to meta.json", await w(mfCwd + "/meta.json"), "");
+
+// P13: absolute paths (the repo design:build form) write where asked.
+spawnCli(["--metafile-md=" + process.cwd() + "/" + mfCwd + "/abs.md", "--outdir=dist"], mfCwd);
+check("P13 absolute --metafile-md path", await w(mfCwd + "/abs.md"), "");
+
+
 const failed = results.filter((r) => !r.pass);
 console.log("metafile:probe — " + (results.length - failed.length) + "/" + results.length + " checks" + (failed.length ? " · FAIL: " + failed.map((f) => f.name).join(", ") : ""));
 process.exit(failed.length === 0 ? 0 : 1);
