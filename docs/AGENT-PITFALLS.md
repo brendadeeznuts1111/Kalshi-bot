@@ -3181,3 +3181,24 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
   keeps a PROSE_SRC_ARTIFACTS allowlist, gate-fails everything else.
 - Artifacts: tools/docs-integrity.ts SRC-REFS section; 10/10 gates still
   green.
+
+## 66. Exported-symbol alignment — docs import names vs source exports (2026-08-24)
+
+- Extended docs:integrity IMPORTS section (report) with exported-symbol
+  alignment: named imports `import { X } from "spec"` must exist in the
+  resolved module's exports. Barrel re-exports (export { x } from,
+  export * from, export * as ns from) are FOLLOWED transitively so a name
+  exported through a barrel (src/domain/index.ts etc.) is valid.
+- GROUNDING: 61 named imports in docs, 36 resolvable source targets,
+  ZERO not-exported on 1.4.0 — the docs' import names match actual
+  exports. Positive control verified the scanner catches genuinely-
+  missing names (markdown.ts exports: markdownToHtml/markdownToAnsi
+  present; a fabricated name WOULD be flagged).
+- Classification: the `bun` builtin is skipped (its exports are Bun.*
+  runtime properties — randomUUIDv7/peek/$ are real, verified by
+  docs:api §62; not a source file to scan).
+- REPORTED (not gate): clean today (0 mismatches), but catches FUTURE
+  rename drift when a source export is renamed and a doc's import
+  example goes stale.
+- Artifacts: tools/docs-integrity.ts IMPORTS section; tests lock the
+  markdown.ts export surface.

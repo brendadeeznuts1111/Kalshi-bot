@@ -103,6 +103,7 @@ async function main() {
   }
 
   // ─── IMPORTS (report) ────────────────────────────────────────────
+  const exports = new Map<string, boolean>();
   const impRe = /from [\"']([^\"']+)[\"']/g;
   const importProblems: ImportProblem[] = [];
   for (const f of docs) {
@@ -131,6 +132,44 @@ async function main() {
         }
         if (!resolved) {
           importProblems.push({ file: f, line: i + 1, spec, detail: "cannot resolve from doc dir or repo root" });
+        } else if (resolved === "bun") {
+          // bun builtin: exports are Bun.* runtime properties (randomUUIDv7,
+          // peek, $ etc.) — not a source file to scan. Verified by docs:api.
+        } else {
+          // ── exported-symbol alignment (§66): named imports must exist in
+          // the resolved module's exports. Barrel re-exports followed.
+          // REPORTED (not gate): 61 named imports / 36 resolvable / 0
+          // mismatches on 1.4.0 — clean today, catches future rename drift.
+          const nm = /^\s*import\s+\{([^}]+)\}\s+from\s+["\u0027]/.exec(line);
+          if (nm) {
+            const names = nm[1]!.split(",").map((x) => x.trim().split(/\s+as\s+/)[0]!.replace(/^type\s+/, "")).filter(Boolean);
+            if (names.length) {
+              const seen = new Set<string>();
+              const queue = [resolved];
+              while (queue.length) {
+                const cur = queue.pop()!;
+                if (seen.has(cur)) continue;
+                seen.add(cur);
+                let src = "";
+                try { src = readFileSync(cur, "utf8"); } catch { continue; }
+                const exportRe = /export\s+(?:const|function|class|let|var|interface|type|enum)\s+([A-Za-z_$][A-Za-z0-9_$]*)|export\s+\{([^}]+)\}|export\s+\*\s+from\s+["\u0027]([^"\u0027]+)["\u0027]|export\s+\*\s+as\s+[^\s]+\s+from\s+["\u0027]([^"\u0027]+)["\u0027]/g;
+                for (const em of src.matchAll(exportRe)) {
+                  if (em[2]) for (const n of em[2].split(",")) { const t = n.trim().split(/\s+as\s+/)[0]!.replace(/^type\s+/, "").trim(); if (t) exports.set(t, true); }
+                  if (em[3] || em[4]) { const p = join(dirname(cur), em[3] || em[4]!); try { if (existsSync(p + ".ts")) queue.push(p + ".ts"); else if (existsSync(p + ".tsx")) queue.push(p + ".tsx"); else if (existsSync(p + "/index.ts")) queue.push(p + "/index.ts"); else if (existsSync(p)) queue.push(p); } catch {} }
+                }
+                const directExports = src.match(/export\s+(?:const|function|class|let|var)\s+([A-Za-z_$][A-Za-z0-9_$]*)/g) || [];
+                for (const d of directExports) {
+                  const n = /\s([A-Za-z_$][A-Za-z0-9_$]*)$/.exec(d);
+                  if (n) exports.set(n[1]!, true);
+                }
+              }
+              for (const n of names) {
+                if (!exports.has(n) && n !== "type" && n !== "default") {
+                  importProblems.push({ file: f, line: i + 1, spec, detail: "import { " + n + " } — not found in exports of " + resolved.replace(ROOT + "/", "") });
+                }
+              }
+            }
+          }
         }
       }
     }

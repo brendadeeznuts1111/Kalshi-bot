@@ -65,3 +65,22 @@ describe("docs src-ref alignment (§65)", () => {
     expect(out).toContain("0 stale src refs");
   });
 });
+
+describe("docs exported-symbol alignment (§66)", () => {
+  test("markdown.ts exports markdownToHtml/markdownToAnsi (docs import these)", async () => {
+    const src = await Bun.file(join(ROOT, "src/lib/markdown.ts")).text();
+    expect(src).toMatch(/export\s+function\s+markdownToHtml\b/);
+    expect(src).toMatch(/export\s+function\s+markdownToAnsi\b/);
+  });
+
+  test("bun builtin exports exist as runtime properties (randomUUIDv7, peek, $)", () => {
+    expect(typeof Bun.randomUUIDv7).toBe("function");
+    expect(typeof Bun.peek).toBe("function");
+    expect(typeof Bun.$).toBe("function");
+  });
+
+  test("execution/domain.ts is re-exported from the partner barrel", async () => {
+    const src = await Bun.file(join(ROOT, "src/partner/execution/index.ts")).text();
+    expect(src).toMatch(/export\s+\*\s+from\s+[\"']\.\/domain\.ts[\"']/);
+  });
+});
