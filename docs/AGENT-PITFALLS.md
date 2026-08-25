@@ -4504,4 +4504,73 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
   (the parser misreads the / inside the group). Escaping the slash (\/) or
   using new RegExp(String.raw`...`) parses fine. Use the RegExp form in
   tools that scan source for pathname literals.
+## 110. Trap-removal protocol — prevention, not accumulation (2026-08-24)
+
+§92-§109 recorded traps after each was hit. This section replaces that
+pattern: traps are now PREVENTED by protocol. Future work should hit
+fewer of them; when one slips through, fix the rule below, do not add
+another note.
+
+### R1 — Scratch lives in scratch/, never /tmp
+
+- tools.write and bash see DIFFERENT sandbox /tmp views (probe evidence,
+  §109 build-probe silently lost files). scratch/ at the repo root is
+  gitignored and shared by every tool (verified: tools.write -> bash read
+  works). All cross-tool scratch files go there. Exception: a SINGLE bash
+  call may use /tmp entirely within itself (the build-probe mkdtemp
+  pattern).
+
+### R2 — File transport through the run_code lexer (proven-safe only)
+
+- The lexer mangles: backticks, ${} in strings, \' in single-quoted
+  strings, \" in double-quoted strings, and any string whose content
+  contains BOTH quote types. PROVEN-SAFE transports:
+  1. single-quoted JS wrapper + double-quoted content (no escapes)
+  2. double-quoted JS wrapper + single-quoted content (no escapes)
+  3. content needing BOTH quote types: bash heredoc with a double-quoted
+     delimiter (<<"EOF" — no expansion) inside a single-quoted JS
+     wrapper, source written in ZERO single quotes.
+  Never: backticks, ${}, \' or \" in run_code strings.
+
+### R3 — Test-line quote rule (the recurring 'Expression expected')
+
+- The ENTIRE `describe("...", () => {` / `test("...", () => {` must
+  sit inside the string literal — the closing `", () => {` must never
+  fall outside the quote. Hit repeatedly (§101, §103, §105, §106, §107,
+  §109); now a rule, not a note.
+
+### R4 — Newline discipline
+
+- In JS wrappers: \n = real newline in the file (correct for source
+  files); \\n = literal backslash-n (correct when the target needs a
+  TS/JSON escape, e.g. the SBOM write §93/§94). Grep the file after
+  writing to confirm.
+
+### R5 — Mandatory post-write verification
+
+- After creating/editing ANY file: typecheck + the focused test + docs:
+  check (for docs) BEFORE proceeding. Every trap so far was caught by
+  this step; it is now unconditional, not optional.
+
+### R6 — TS inference traps
+
+- Annotate empty arrays (`[] as string[]` — never[] inference, §103);
+  coerce Bun.file().text() and XML.stringify with ?? '' (their types
+  include undefined, §104).
+
+### R7 — Behavior traps are removed at the source, never masked
+
+- Network flake -> retry inside the probe (§108 url-health). Doc claim
+  wrong -> probe and record the correction (§109). A behavior trap is
+  FIXED in code, then the fix is recorded — not a workaround note.
+
+### Status
+
+- Structurally removed: /tmp cross-tool trap (R1), lexer corruption
+  (R2), test-quote bug (R3), newline double-escape (R4), silent
+  corruption (R5), TS inference (R6), url-health flake (R7/source).
+- Inherent (routed around, not removed): the harness lexer itself (R2
+  transports), sandbox /tmp isolation (R1).
+- Artifacts: this section. verify:contracts stays 18/18.
+
 
