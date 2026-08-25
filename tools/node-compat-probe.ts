@@ -35,6 +35,7 @@ check("P3 fs.promises", (await readFile("scratch/node-compat/p.txt", "utf8")) ==
 try {
   const w = watch("scratch/node-compat/f.txt");
   const evt = withTimeout(new Promise<string>((r) => w.on("change", () => r("changed"))), 4000, "watch");
+  await Bun.sleep(100); // let the watcher register before the write (flaky-race guard)
   writeFileSync("scratch/node-compat/f.txt", "fs-content-2");
   const got = await evt;
   check("P4 fs.watch fires", got === "changed", got);

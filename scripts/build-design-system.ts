@@ -23,11 +23,9 @@
  * --outdir + --metafile-md) and for the design:check gate.
  */
 import { join } from 'node:path';
-import { $ } from 'bun';
 import { DESIGN_MODULES, DESIGN_MODULE_NAMES } from '../src/lib/design-budget.ts';
 
 const root = join(import.meta.dir, '..');
-const BUN = Bun.which('bun') ?? 'bun';
 
 let failed = false;
 
@@ -42,26 +40,18 @@ for (const module of DESIGN_MODULE_NAMES) {
     naming: spec.out,
     target: 'browser',
     minify: true,
-    metafile: true,
+    // Object form (probe §155): writes BOTH the JSON + the LLM-friendly
+    // markdown report in one build call — the CLI --metafile-md re-build
+    // (and its subprocess) is gone. res.metafile stays populated in-memory.
+    // bun-types 1.4.0 types metafile as boolean only — the object form
+    // is runtime-verified (§155), so cast.
+    metafile: {
+      json: join(root, 'dist', module + '.meta.json'),
+      markdown: join(root, 'dist', module + '.meta.md'),
+    } as any,
   });
   if (!out.success) {
     for (const log of out.logs) console.error(String(log));
-    failed = true;
-    continue;
-  }
-  if (out.metafile) {
-    await Bun.write(join(root, 'dist', module + '.meta.json'), JSON.stringify(out.metafile, null, 2));
-  }
-
-  // Markdown bundle report (--metafile-md, LLM-friendly) via the CLI - the
-  // API has no md emitter; the CLI re-build is ~4ms for these small bundles.
-  // --outfile (not --outdir): the CLI defaults the output name to the entry
-  // basename (app.js for hq-app), which would litter dist/ with a duplicate.
-  // Bun Shell (§127): interpolation is auto-escaped, .cwd()/ .nothrow()/,
-  // stderr capture verified — replaces the manual Bun.spawn plumbing.
-  const mdCmd = await $`${BUN} build ${entry} --outfile=${join(root, 'dist', spec.out)} --target=browser --minify --metafile-md=${join(root, 'dist', module + '.meta.md')}`.cwd(root).nothrow().quiet();
-  if (mdCmd.exitCode !== 0) {
-    console.error(module + ': metafile-md report failed:', mdCmd.stderr.toString());
     failed = true;
     continue;
   }

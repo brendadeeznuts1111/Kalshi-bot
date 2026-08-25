@@ -83,6 +83,21 @@ spawnCli(["--metafile-md=" + process.cwd() + "/" + mfCwd + "/abs.md", "--outdir=
 check("P13 absolute --metafile-md path", await w(mfCwd + "/abs.md"), "");
 
 
+
+// ── §155 addendum 2: API object/string metafile forms ──
+
+// The object form { json, markdown } writes BOTH files relative to the
+// OUTDIR (no CLI CWD quirk) and res.metafile stays populated; the string
+// form writes the JSON only. Used by design:build (one build call, no
+// subprocess).
+await Bun.build({ entrypoints: [F + "/entry.ts"], outdir: "scratch/mf-obj/dist", metafile: { json: "meta.json", markdown: "meta.md" } as any });
+check("P14 object form writes json+markdown in outdir", (await w("scratch/mf-obj/dist/meta.json")) && (await w("scratch/mf-obj/dist/meta.md")), "");
+const resObj = await Bun.build({ entrypoints: [F + "/entry.ts"], outdir: "scratch/mf-obj2/dist", metafile: { json: "meta.json" } as any });
+check("P15 object json-only + res.metafile populated", (await w("scratch/mf-obj2/dist/meta.json")) && !!resObj.metafile && "inputs" in resObj.metafile, "keys=" + (resObj.metafile ? Object.keys(resObj.metafile).join(",") : "null"));
+await Bun.build({ entrypoints: [F + "/entry.ts"], outdir: "scratch/mf-obj3/dist", metafile: "meta.json" as any });
+check("P16 string form writes json in outdir", await w("scratch/mf-obj3/dist/meta.json"), "");
+
+
 const failed = results.filter((r) => !r.pass);
 console.log("metafile:probe — " + (results.length - failed.length) + "/" + results.length + " checks" + (failed.length ? " · FAIL: " + failed.map((f) => f.name).join(", ") : ""));
 process.exit(failed.length === 0 ? 0 : 1);

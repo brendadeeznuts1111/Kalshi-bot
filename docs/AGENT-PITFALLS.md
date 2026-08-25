@@ -5710,6 +5710,16 @@ another note.
   CWD (the pasted claim says a path is always required — wrong).
   Absolute paths write where asked — the repo design:build form is
   safe. All pinned.
+- API OBJECT FORM (verified, gate P14-P16): Bun.build({ metafile:
+  { json, markdown } }) writes BOTH files relative to the OUTDIR (no
+  CLI CWD quirk) and res.metafile stays populated; metafile: "path"
+  writes the JSON only. bun-types 1.4.0 types metafile as boolean —
+  cast the object form.
+- ADOPTED in scripts/build-design-system.ts: the metafile object form
+  replaced the CLI --metafile-md re-build — one build call emits both
+  dist/<module>.meta.json + .meta.md, the Bun.$ subprocess is GONE
+  (and the unused $/BUN imports removed). Output identical to the
+  CLI report; design:check unchanged.
 - GitHub recomputes the pie on the default branch after push (a few
   minutes). Verified with git check-attr.
 - Artifacts: .gitattributes (new). verify:contracts 38/38 (unchanged).
