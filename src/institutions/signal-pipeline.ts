@@ -371,6 +371,36 @@ export async function collectInventory(root: string, signals: Signal[]): Promise
     source: 'research/keywords.json',
   });
 
+  // Alpha program baselines (sports models): shadow-log signal counts +
+  // program status from alpha/<name>/program.json. Offline, local files.
+  const alphaDir = join(root, 'alpha');
+  const alphaRows: Array<{ name: string; status: string; dimension: string; signals: number }> = [];
+  try {
+    for (const entry of readdirSync(alphaDir, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      const prog = await Bun.file(join(alphaDir, entry.name, 'program.json')).json().catch(() => null) as { status?: string; dimension?: string } | null;
+      if (!prog) continue;
+      let signals = 0;
+      try {
+        const text = await Bun.file(join(alphaDir, entry.name, 'shadow-log.jsonl')).text();
+        signals = text.trim() ? text.trim().split('\n').filter(Boolean).length : 0;
+      } catch { /* no shadow log yet */ }
+      alphaRows.push({ name: entry.name, status: prog.status ?? '?', dimension: prog.dimension ?? '?', signals });
+    }
+  } catch { /* no alpha dir */ }
+  if (alphaRows.length) {
+    const totalSignals = alphaRows.reduce((acc, a) => acc + a.signals, 0);
+    const empty = alphaRows.filter((a) => a.signals === 0);
+    push({
+      id: 'inv-alpha',
+      channel: 'inventory',
+      severity: empty.length === 0 ? 'ok' : 'warn',
+      title: 'alpha programs: ' + alphaRows.length + ' · ' + totalSignals + ' shadow signals',
+      detail: alphaRows.map((a) => a.name + ':' + a.signals).join(' · ') + (empty.length ? ' — 0-signal program(s): start toxicity loop + ticks' : ''),
+      source: 'alpha/*/shadow-log.jsonl',
+    });
+  }
+
   // Scale/diversity — computed last, after every other signal.
   const channels = new Set(signals.map((s) => s.channel)).size;
   const sources = new Set(signals.map((s) => s.source)).size;
