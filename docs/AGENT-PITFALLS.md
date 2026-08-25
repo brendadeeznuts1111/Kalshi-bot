@@ -4478,3 +4478,30 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
 
 
 
+
+## 110. maps.toml triple-lock landed (2026-08-25)
+
+- docs:refresh (tools/bun-docs-refresh-cli.ts) gates the four-surface lock:
+  maps.toml (committed) + bun-types/@types/bun pins (package.json) +
+  Bun.version (runtime) + the indexed docs tag ref (research/cache/bun-docs/
+  INDEX.json "mapsHash"). Offline check-only (BUN_DOCS_REFRESH_SKIP_NETWORK=1)
+  exits 1 on drift; the network run self-heals by re-indexing + regenerating
+  maps.toml. Wired into verify:contracts as gate #19.
+
+## 111. Channel + route registries (2026-08-25)
+
+- channel-registry.ts is the CHANNEL SSOT: ids/labels/sources/actions/cron +
+  telegram flags. The dashboard live-refresh loop now covers ALL 11 channels
+  (was hardcoded to 7 — prune/mapping/docs/compliance never refreshed live).
+  The /api/signals/actions dispatcher's unknown-action message derives from
+  CHANNEL_ACTIONS.
+- route-manifest.ts is the API-surface SSOT (~97 entries: exact + URLPattern +
+  dir routes + /bun/* widgets, layer-tagged). routes:check (verify:contracts
+  gate #20) scans serve.ts pathname literals + routes-map keys + BUN_WIDGETS
+  keys and fails on any unregistered route. /bun/api renders the manifest.
+- Bun 1.4.0 regex-lexer quirk (probe): a regex literal containing a bare
+  slash inside a group AND quotes — /"(/[^"]+)"/ — throws "Unexpected ^"
+  (the parser misreads the / inside the group). Escaping the slash (\/) or
+  using new RegExp(String.raw`...`) parses fine. Use the RegExp form in
+  tools that scan source for pathname literals.
+

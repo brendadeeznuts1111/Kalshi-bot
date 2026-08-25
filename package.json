@@ -254,6 +254,7 @@
     "security:probe": "bun tools/security-probe.ts",
     "xml:probe": "bun tools/xml-probe.ts",
     "bun:build-probe": "bun tools/build-probe.ts",
+    "routes:check": "bun tools/routes-check.ts",
     "image:probe": "bun tools/image-probe.ts",
     "infra:probe": "bun tools/infra-probe.ts",
     "csrf:probe": "bun tools/csrf-probe.ts",

@@ -33,6 +33,7 @@ const gates = [
   ['licenses:gate'],
   ['bun:build-probe'],
   ['docs:refresh'],
+  ['routes:check'],
 ] as const;
 
 const GATE_ENV: Record<string, Record<string, string>> = {
