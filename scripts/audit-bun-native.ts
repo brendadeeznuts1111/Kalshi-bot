@@ -271,6 +271,8 @@ export const SPAWN_KEEP_LIST = new Set([
   "tools/audit-overlay-update.ts", // bun audit --json subprocess (pipe capture; network allowed only here)
   "tools/licenses-report.ts", // spawns licenses:gate --json --sbom (pipe capture)
   "tests/lib/licenses-report.test.ts", // same gate spawn via the report CLI (pipe capture)
+  "tools/build-probe.ts", // bun build CLI + compiled binary subprocesses (pipe capture)
+  "tests/lib/build-probe.test.ts", // runs the build probe CLI (pipe capture)
   "tests/lib/licenses-gate.test.ts", // same gate subprocess (pipe capture)
 ]);
 
