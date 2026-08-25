@@ -5315,6 +5315,51 @@ another note.
 - Artifacts: tools/fs-probe.ts (new, gate #32), tools/verify-contracts.ts
   (31 -> 32 gates), package.json (fs:probe script). verify:contracts
   32/32.
+## 132. 100%-coverage goal round 1 — matrix + ANSI + crypto clusters (2026-08-24)
+
+- DELIVERABLE: docs/BUN_API_COVERAGE.md — the full matrix of the 102
+  `Bun.*` tokens the repo uses, with Runtime (typeof on 1.4.0),
+  Types (bun-types 1.4.0), Docs (installed mdx), Gate, and Uses
+  columns. 73 runtime values + 29 type-only/non-existent (the latter
+  already pinned by docs-api-validate INTENTIONAL + tests). The goal:
+  zero GAP rows. Started at 47 runtime gaps; this round closes 12.
+- ansi:probe (gate #33, 17/17): color/inspect/escapeHTML/stringWidth/
+  stripANSI/sliceAnsi/wrapAnsi — shapes the repo relies on.
+  - Bun.color is doc-correct: css returns the MOST COMPACT form (a
+    named color when one exists — #ff0000 -> "red"); ansi AUTO-
+    DETECTS terminal depth from stdout env and returns "" when stdout
+    has no color support (probe runs under a non-color shell -> "");
+    use ansi-16m / ansi-256 / ansi-16 to target a specific depth.
+    number/hex/HEX/{rgba} formats verified (red -> 16711680 /
+    #ff0000 / #FF0000 / {r:255,g:0,b:0,a:1}). Invalid input -> null.
+  - Bun.inspect options verified: { colors } adds ANSI, { depth }
+    truncates with [Object ...], { sorted } sorts keys.
+  - escapeHTML escapes < > & " to &lt; &gt; &amp; &quot;.
+  - stringWidth: ascii 1 per char, CJK 2 per char, strips ANSI codes
+    before measuring; stripANSI removes codes; sliceAnsi slices by
+    width KEEPING the ANSI codes; wrapAnsi wraps at width with \n.
+- crypto:probe (gate #34, 11/11): CryptoHasher/SHA256/hash/deepEquals/
+  randomUUIDv7.
+  - new Bun.CryptoHasher("sha256").update("abc").digest("hex") ==
+    ba7816bf... (repo's assets-audit/docs-audit pattern). Streaming
+    update() equals one-shot. digest() default -> Uint8Array (32 bytes
+    for sha256). md5/sha1/sha256/sha512 constructors work.
+  - GOTCHA (shape): CryptoHasher.digest() is DESTRUCTIVE — a second
+    digest() without re-update returns the hash of EMPTY input; a
+    later update() restarts fresh from that update. Call digest once.
+  - Bun.SHA256 is a class with update/digest/byteLength (also
+    sha256-style usage).
+  - Bun.hash(str) -> bigint (defaults-probe D8b); seeded hash differs.
+  - Bun.deepEquals deep compare + 3rd arg accepted (repo passes true
+    in generate-color-artifacts).
+  - Bun.randomUUIDv7() -> v7 UUID (version nibble 7 at index 14);
+    timestamp validation (> 2^48 throws) pinned in breaking-audit.
+- Artifacts: docs/BUN_API_COVERAGE.md (new), tools/ansi-probe.ts (new,
+  gate #33), tools/crypto-probe.ts (new, gate #34), tools/verify-contracts.ts
+  (32 -> 34 gates), package.json (ansi:probe, crypto:probe).
+  verify:contracts 34/34. Remaining runtime gaps: 35 (format/fsx/net/
+  runtime-misc clusters — next rounds).
+
 
 
 
