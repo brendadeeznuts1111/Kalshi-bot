@@ -4751,6 +4751,33 @@ another note.
   (new), package.json (spawn:probe), tools/verify-contracts.ts (gate
   #24), scripts/audit-bun-native.ts (keep-list +1), this section.
   verify:contracts 24/24.
+## 114. Bun.serve WebSocket surface probed — live channel ground truth (2026-08-24)
+
+- The live channel + live page + tennis orderbook ride on Bun.serve
+  WebSockets; ws:probe (tools/ws-probe.ts, verify:contracts gate #25 ->
+  25/25) locks the surface. VERIFIED 7/7 on 1.4.0:
+  1. upgrade({ data }) -> the open handler receives the data object
+     (per-connection context rides the upgrade).
+  2. text messages arrive as string; send() echo round-trips.
+  3. binary messages arrive as Uint8Array (both directions).
+  4. server ws.ping() -> the client AUTO-pongs -> the server pong
+     handler fires (no manual pong needed).
+  5. ws.close(code) -> the server close handler receives the code.
+  6. an upgrade REFUSED by returning a Response (403) leaves the client
+     in the CLOSED state — validation-by-response works.
+  7. server.publish broadcasts to topic subscribers — INCLUDING the
+     publishing socket if it subscribed (self-publish echo: the probe
+     first failed P2 because the publish reached the publisher; the fix
+     ordered the tests so the echo completes before the broadcast).
+     publish returns the subscriber count (publish=9 in the probe).
+- TS lag note: upgrade { data } and ws.data are typed undefined in the
+  current types — cast as any/unknown-as (the runtime honors them; the
+  types lag, like the sqlite bigint option §111).
+- Artifacts: tools/ws-probe.ts (new), tests/lib/ws-probe.test.ts (new),
+  package.json (ws:probe), tools/verify-contracts.ts (gate #25),
+  scripts/audit-bun-native.ts (keep-list +1), this section.
+  verify:contracts 25/25.
+
 
 
 

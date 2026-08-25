@@ -188,6 +188,7 @@ export function runBreakingAudit(root: string): BreakingFinding[] {
     '**/src/institutions/live-channel.ts',
     '**/src/research/live-page.ts',
     '**/src/research/map-page.ts', // documents server.upgrade() H3 caveat (§39), not a call
+    '**/tools/ws-probe.ts', // probe deliberately exercises the websocket surface (§114)
   ];
   const wsRoutes = rgFiles(root, 'websocket\\s*:\\s*\\{|\\bupgrade\\(', dirs, { exclude: [...LABEL_FILES, ...WS_ALLOWLIST] });
   findings.push({
