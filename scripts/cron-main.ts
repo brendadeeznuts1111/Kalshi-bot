@@ -17,6 +17,7 @@
  *   - Match liquidity:   every 30 minutes (recompute + ground; volume via env)
  *   - Inventory: every 1 minute when PARTNER_SYNC=1 (stream-list → skin_events)
  *   - Seat finance: when PARTNER_FINANCE_CRON=1 (registry → capacity → optional Telegram)
+ *   - Audit overlay:  weekly Sunday 00:00 UTC (opt-in AUDIT_OVERLAY_UPDATE=1, §99)
  *
  * TZ NOTE (Bun 1.4): in-process Bun.cron interprets schedules in the SYSTEM
  * LOCAL time zone (1.3.x used UTC). The UTC labels above describe intent;
@@ -31,6 +32,7 @@ import { syncSportsSourceMetadata } from "./sync-sports-source-metadata.ts";
 import { createSportsSourceRuntime } from "../src/institutions/market-registry/runtime.ts";
 import { unbrand } from "../src/institutions/market-registry/brands.ts";
 import { createFanout, RELEASE_FANOUT_CHANNEL } from "../src/lib/fanout.ts";
+import { refreshAuditOverlay } from "../tools/audit-overlay-update.ts";
 
 // ── Config ──────────────────────────────────────────────────────
 
@@ -40,6 +42,9 @@ const INTERVAL_ANALYSIS = "0 8 * * *";
 const INTERVAL_GLOSSARY_URLS = "0 2 * * *";
 /** Weekly Bun release-blog watch (opt-in BUN_RELEASE_WATCH=1). */
 export const INTERVAL_BUN_RELEASE = "0 6 * * 1";
+/** Weekly audit-overlay refresh (opt-in AUDIT_OVERLAY_UPDATE=1, §99). */
+export const INTERVAL_AUDIT_OVERLAY = "0 0 * * 0";
+const AUDIT_OVERLAY_ENABLED = Bun.env.AUDIT_OVERLAY_UPDATE === "1";
 const INTERVAL_COLOR_ARTIFACTS = "0 3 * * *";
 const INTERVAL_CONTRAST = "0 4 * * *";
 /** Match liquidity recompute + HTML ground (volume backfill opt-in via env). */
@@ -439,6 +444,18 @@ async function jobBunReleaseWatch(): Promise<void> {
   }
 }
 
+/** Weekly audit-overlay refresh (Bun.cron, opt-in AUDIT_OVERLAY_UPDATE=1, §99). */
+async function jobAuditOverlay(): Promise<void> {
+  if (!AUDIT_OVERLAY_ENABLED) return;
+  const start = Date.now();
+  try {
+    const r = await refreshAuditOverlay();
+    console.error("[cron:audit-overlay] " + r.found + " issue(s) found; overlay has " + r.total + " total entries \u00b7 " + (Date.now() - start) + "ms");
+  } catch (err) {
+    console.error("[cron:audit-overlay] Error: " + err);
+  }
+}
+
 async function jobMasseySync(): Promise<void> {
   if (!MASSEY_SYNC_ENABLED) return;
   const start = Date.now();
@@ -537,6 +554,7 @@ async function main(): Promise<void> {
     await jobInventorySync();
     await jobPartnerFinance();
     await jobMasseySync();
+    await jobAuditOverlay();
     console.error(`[cron] All jobs complete · sports metadata ${metadataOk ? "ok" : "failed"}.`);
     process.exitCode = metadataOk ? 0 : 1;
     return;
@@ -553,7 +571,8 @@ async function main(): Promise<void> {
   liquidity:${INTERVAL_LIQUIDITY}
   inventory: ${INVENTORY_SYNC_ENABLED ? INTERVAL_INVENTORY_SYNC : "off (INVENTORY_SYNC=1)"}
   finance:  ${PARTNER_FINANCE_ENABLED ? INTERVAL_PARTNER_FINANCE : "off (PARTNER_FINANCE_CRON=1)"}
-  massey:   ${MASSEY_SYNC_ENABLED ? INTERVAL_MASSEY_SYNC : "off (MASSEY_SYNC=1)"}`);
+  massey:   ${MASSEY_SYNC_ENABLED ? INTERVAL_MASSEY_SYNC : "off (MASSEY_SYNC=1)"}
+  audit:    ${AUDIT_OVERLAY_ENABLED ? INTERVAL_AUDIT_OVERLAY : "off (AUDIT_OVERLAY_UPDATE=1)"}`);
   console.error("[cron] Process running — use SIGTERM to stop.");
 
   Bun.cron(INTERVAL_LOGGER, jobLogger);
@@ -573,6 +592,10 @@ async function main(): Promise<void> {
   if (MASSEY_SYNC_ENABLED) {
     // Pin UTC: in-process Bun.cron defaults to system local time (1.4 change).
     Bun.cron(INTERVAL_MASSEY_SYNC, jobMasseySync, { tz: "UTC" });
+  }
+  if (AUDIT_OVERLAY_ENABLED) {
+    // Pin UTC: in-process Bun.cron defaults to system local time (1.4 change).
+    Bun.cron(INTERVAL_AUDIT_OVERLAY, jobAuditOverlay, { tz: "UTC" });
   }
   await new Promise(() => {});
 }

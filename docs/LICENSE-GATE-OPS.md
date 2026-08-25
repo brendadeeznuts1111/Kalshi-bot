@@ -107,7 +107,7 @@ licenses:gate — FAIL (1 violation(s))
 - Refresh: `bun run audit:overlay:update` — the one network call in the
   system. Shells `bun audit --json` (returns `{}` when clean), upserts
   into the overlay, preserves manual entries. Run weekly or before a
-  release.
+  release — or let the cron-main weekly job do it (below).
 
 ## SBOM snapshots
 

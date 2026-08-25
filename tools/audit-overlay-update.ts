@@ -10,7 +10,10 @@
  * nested { vulnerabilities: <map> }. Existing manual entries are
  * preserved; found issues are upserted.
  *
- * Run manually or on a schedule — the license gate stays offline + fast.
+ * Run manually (bun run audit:overlay:update), or scheduled in-process by
+ * cron-main (AUDIT_OVERLAY_UPDATE=1, §99). The exported
+ * refreshAuditOverlay() throws on failure so a cron caller can catch — it
+ * never process.exit()s (that would kill the cron process).
  */
 import { join } from "node:path";
 import { validateAuditOverrides } from "../src/lib/licenses-policy.ts";
@@ -26,7 +29,7 @@ function extractVulns(raw: unknown): Record<string, unknown> {
   return obj;
 }
 
-async function main() {
+export async function refreshAuditOverlay(): Promise<{ found: number; total: number }> {
   const proc = Bun.spawnSync(["bun", "audit", "--json"], { cwd: ROOT, stdout: "pipe", stderr: "pipe" });
   const stdout = proc.stdout?.toString() ?? "";
   const stderr = proc.stderr?.toString() ?? "";
@@ -34,9 +37,7 @@ async function main() {
   try {
     raw = JSON.parse(stdout);
   } catch {
-    console.error("audit:overlay:update — bun audit --json output was not JSON (network or toolchain issue)");
-    console.error(stderr.slice(-400));
-    process.exit(1);
+    throw new Error("audit:overlay:update — bun audit --json output was not JSON (network or toolchain issue)\n" + stderr.slice(-400));
   }
   const found = extractVulns(raw);
   const foundKeys = Object.keys(found);
@@ -54,11 +55,20 @@ async function main() {
   const overlay = { format: "audit-overrides", version: 1, advisories: existing };
   const verr = validateAuditOverrides(overlay);
   if (verr) {
-    console.error("audit:overlay:update — generated overlay invalid: " + verr);
-    process.exit(1);
+    throw new Error("audit:overlay:update — generated overlay invalid: " + verr);
   }
   await Bun.write(OVERLAY_PATH, JSON.stringify(overlay, null, 2) + "\n");
   console.log("audit:overlay:update — " + foundKeys.length + " issue(s) from bun audit; wrote config/audit-overrides.json (" + Object.keys(existing).length + " total entries)");
+  return { found: foundKeys.length, total: Object.keys(existing).length };
 }
 
-await main();
+async function cliMain(): Promise<void> {
+  try {
+    await refreshAuditOverlay();
+  } catch (err) {
+    console.error(err instanceof Error ? err.message : String(err));
+    process.exit(1);
+  }
+}
+
+if (import.meta.main) await cliMain();

@@ -4137,6 +4137,39 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
 - Artifacts: docs/LICENSE-GATE-OPS.md (operating rhythm section),
   .data/licenses-sbom.json (schema-fresh snapshot). verify:contracts
   stays 17/17.
+## 99. Weekly overlay refresh — follow the cron-main idiom, not ad-hoc scripts (2026-08-24)
+
+- A proposed plan: standalone Bun.cron script + wire into serve.ts.
+  Rejected — the repo ALREADY has two Bun.cron idioms: scripts/cron-
+  main.ts (the in-process 'cron master' consolidating all periodic
+  jobs; network jobs are opt-in via env, tz pinned UTC) and the
+  OS-level schedule-cli register/remove/preview pattern (research,
+  docs-refresh). A new ad-hoc script would be the third, parallel shape.
+- FOLLOWED THE IDIOM: tools/audit-overlay-update.ts refactored to export
+  refreshAuditOverlay() behind an import.meta.main guard (the
+  blog-map-run.ts precedent: 'shared by the CLI and the cron'). The
+  refactor also changed failure handling: it now THROWS instead of
+  process.exit(1) — an in-process cron caller must never kill the cron
+  process. cron-main gains INTERVAL_AUDIT_OVERLAY '0 0 * * 0' (Sunday
+  00:00, { tz: 'UTC' }), opt-in AUDIT_OVERLAY_UPDATE=1 (consistent with
+  BUN_RELEASE_WATCH/MASSEY_SYNC), a jobAuditOverlay() with the standard
+  guard + try/catch + [cron:audit-overlay] log, a registration log
+  line, and a --once slot.
+- CORRECTED PLAN CLAIM: 'audit:overlay:update is tested' — FALSE before
+  (network tool, deliberately untested). Now covered WITHOUT network:
+  tests/scripts/audit-overlay-cron.test.ts asserts the schedule parses
+  + fires on Sunday (Bun.cron.parse, UTC) and that the module imports
+  without executing (the import.meta.main guard is load-bearing — a
+  broken guard would hit the network at import time).
+- NO AUTO-COMMIT: the overlay file is updated in place; a long-running
+  process must not do git operations (AGENTS.md hygiene) — the weekly
+  diff is reviewed + committed deliberately.
+- Artifacts: tools/audit-overlay-update.ts (exported fn + import.meta.
+  main guard + throw-on-failure), scripts/cron-main.ts (job + constant
+  + registration), tests/scripts/audit-overlay-cron.test.ts (new),
+  docs/LICENSE-GATE-OPS.md (automated weekly section). verify:contracts
+  stays 17/17.
+
 
 
 
