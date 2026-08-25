@@ -77,7 +77,7 @@ export function renderMapPage(): string {
     title: 'Blog → Repo Map',
     subtitle: 'Every sub-header under #faster #bun-build #bun-test #bun-install #what-s-new → file → integration layer',
     badges: ['45 sub-headers', 'layers: channels/brand/pipeline/data'],
-    links: ['/bun/overview', '/bun/speed', '/bun/tooling', '/bun/security'],
+    links: ['/bun/overview', '/bun/speed', '/bun/tooling', '/bun/security', '/bun/api', '/bun/brand'],
     sections: [
       { heading: '#faster sub-headers', html: faster },
       { heading: '#bun-build sub-headers', html: build },

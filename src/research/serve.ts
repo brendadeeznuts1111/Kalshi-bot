@@ -105,6 +105,7 @@ import { renderXmlPage } from "./xml-page.ts";
 import { renderImagePage } from "./image-page.ts";
 import { renderPluginsPage } from "./plugins-page.ts";
 import { renderApiPage } from "./api-page.ts";
+import { renderBrandPage } from "./brand-page.ts";
 import {
   collectSignals,
   registerBlogMapCron,
@@ -1803,6 +1804,7 @@ export function createResearchServer(options: ServeOptions = {}) {
         "/bun/image": renderImagePage,
         "/bun/plugins": renderPluginsPage,
         "/bun/api": renderApiPage,
+        "/bun/brand": renderBrandPage,
       };
       if (url.pathname in BUN_WIDGETS) {
         return new Response(BUN_WIDGETS[url.pathname]!(), {

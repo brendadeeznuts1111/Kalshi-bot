@@ -128,7 +128,7 @@ export const ROUTE_MANIFEST: readonly RouteDef[] = [
   { path: '/api/trading/book', method: 'GET', layer: 'trading', handler: 'handleTradingBook', cache: 'no-cache' },
 
   // ── Bun capability widget pages (token-built, probe-verified) ──
-  ...(['networking', 'streams', 'observability', 'performance', 'utilities', 'overview', 'tooling', 'color', 'live', 'hashing', 'pruning', 'security', 'speed', 'map', 'markdown', 'transpiler', 'xml', 'image', 'plugins', 'api'] as const).map((slug) => ({
+  ...(['networking', 'streams', 'observability', 'performance', 'utilities', 'overview', 'tooling', 'color', 'live', 'hashing', 'pruning', 'security', 'speed', 'map', 'markdown', 'transpiler', 'xml', 'image', 'plugins', 'api', 'brand'] as const).map((slug) => ({
     path: '/bun/' + slug,
     method: 'GET' as const,
     layer: 'pipeline' as const,
