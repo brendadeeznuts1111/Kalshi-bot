@@ -34,6 +34,7 @@ const gates = [
   ['bun:build-probe'],
   ['docs:refresh'],
   ['routes:check'],
+  ['bun:coverage-audit'],
 ] as const;
 
 const GATE_ENV: Record<string, Record<string, string>> = {

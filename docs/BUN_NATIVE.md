@@ -57,7 +57,7 @@ Full topic map (guides from the official table; **Ref** = types API; **Here** = 
 | TCP Sockets | [`Bun.listen`](https://bun.com/docs/runtime/networking/tcp#start-a-server-bun-listen), [`Bun.connect`](https://bun.com/docs/runtime/networking/tcp#start-a-server-bun-listen) | [/listen](https://bun.com/reference/bun/listen) · [/connect](https://bun.com/reference/bun/connect) | — |
 | UDP Sockets | [`Bun.udpSocket`](https://bun.com/docs/runtime/networking/udp) | [/udpSocket](https://bun.com/reference/bun/udpSocket) | — |
 | WebSockets | `new WebSocket()` (client), [`Bun.serve`](https://bun.com/docs/runtime/http/websockets) (server) | — | yes — Kalshi orderbook client |
-| Transpiler | [`Bun.Transpiler`](https://bun.com/docs/runtime/transpiler) | [/Transpiler](https://bun.com/reference/bun/Transpiler) | — |
+| Transpiler | [`Bun.Transpiler`](https://bun.com/docs/runtime/transpiler) | [/Transpiler](https://bun.com/reference/bun/Transpiler) | yes — docs:validate syntax check (§67) |
 | Routing | [`Bun.FileSystemRouter`](https://bun.com/docs/runtime/file-system-router) | [/FileSystemRouter](https://bun.com/reference/bun/FileSystemRouter) | — |
 | Streaming HTML | [`HTMLRewriter`](https://bun.com/docs/runtime/html-rewriter) | — | yes — social/OG meta |
 | Headless Browser | [`Bun.WebView`](https://bun.com/docs/runtime/webview) | [/WebView](https://bun.com/reference/bun/WebView) | yes — tennis/liquidity ground, Massey ratings (CF bypass) |
@@ -70,13 +70,13 @@ Full topic map (guides from the official table; **Ref** = types API; **Here** = 
 | SQLite | [`bun:sqlite`](https://bun.com/docs/runtime/sqlite) | [/sqlite](https://bun.com/reference/bun/sqlite) | yes — event-store, research cache (+ drizzle) |
 | SQL Client | [`Bun.SQL`](https://bun.com/docs/runtime/sql), `Bun.sql` | [/SQL](https://bun.com/reference/bun/SQL) | — (sqlite + drizzle own this plane) |
 | Redis (Valkey) | [`Bun.RedisClient`](https://bun.com/docs/runtime/redis), `Bun.redis` | [/RedisClient](https://bun.com/reference/bun/RedisClient) | — |
-| FFI | [`bun:ffi`](https://bun.com/docs/runtime/ffi) | [/ffi](https://bun.com/reference/bun/ffi) | — |
+| FFI | [`bun:ffi`](https://bun.com/docs/runtime/ffi) | [/ffi](https://bun.com/reference/bun/ffi) | probe-only — ffi:probe dlopen verified; the 3x speedup NOT measured (decisionRef: D7) |
 | DNS | [`Bun.dns.lookup`](https://bun.com/docs/runtime/networking/dns), `Bun.dns.prefetch`, `getCacheStats`, `resolveCname/NS/TXT/MX` (runtime-probed; types lag in 1.4.0 → isolated cast) | [/dns](https://bun.com/reference/bun/dns) · [/prefetch](https://bun.com/reference/bun/dns/prefetch) | yes — Kalshi live poll preconnect + host-discover native dig replacement |
 | Testing | [`bun:test`](https://bun.com/docs/test) | [/test](https://bun.com/reference/bun/test) · [expectTypeOf](https://bun.com/reference/bun/test/expectTypeOf) | yes — `tests/**` + `*.types.test.ts` |
-| Workers | [`new Worker()`](https://bun.com/docs/runtime/workers) | — | — |
-| Module Loaders | [`Bun.plugin`](https://bun.com/docs/bundler/plugins) | [/plugin](https://bun.com/reference/bun/plugin) | — |
+| Workers | [`new Worker()`](https://bun.com/docs/runtime/workers) | — | not-for-us — BroadcastChannel fanout + Bun.cron cover the plane (decisionRef: D8) |
+| Module Loaders | [`Bun.plugin`](https://bun.com/docs/bundler/plugins) | [/plugin](https://bun.com/reference/bun/plugin) | probe-only — /bun/plugins + namespaces tests (§ Namespaces verified); no plugin in builds (decisionRef: D9) |
 | Glob | [`Bun.Glob`](https://bun.com/docs/runtime/glob) | [/Glob](https://bun.com/reference/bun/Glob) | yes — watcher, blueprint |
-| Cookies | [`Bun.Cookie`](https://bun.com/docs/runtime/cookies), [`Bun.CookieMap`](https://bun.com/docs/runtime/cookies) | [/Cookie](https://bun.com/reference/bun/Cookie) | — |
+| Cookies | [`Bun.Cookie`](https://bun.com/docs/runtime/cookies), [`Bun.CookieMap`](https://bun.com/docs/runtime/cookies) | [/Cookie](https://bun.com/reference/bun/Cookie) | probe-only — cookies:probe 13/13; csrf.ts double-submit owns the plane (decisionRef: D10) |
 | Node-API | [Node-API](https://bun.com/docs/runtime/node-api) | — | — |
 | `import.meta` | [`import.meta`](https://bun.com/docs/runtime/module-resolution#import-meta) | — | yes — `dir` / `main` |
 | Utilities | [`Bun.version`](https://bun.com/docs/runtime/utils#bun-version), [`revision`](https://bun.com/docs/runtime/utils#bun-revision), [`env`](https://bun.com/docs/runtime/utils#bun-env), [`main`](https://bun.com/docs/runtime/utils#bun-main) | [/env](https://bun.com/reference/bun/env) | yes — `Bun.env` |
@@ -107,8 +107,32 @@ Native helpers on the `Bun` global. Prefer these over npm packages (`which`, `st
 | --- | -------- | ---- |
 | `Bun.version` | CLI version string (`"1.4.x"`) | doctor / ground banners when needed |
 | `Bun.revision` | Compiled Bun git SHA | diagnostics only |
+
 | `Bun.env` | Alias of `process.env` (auto `.env` load — see [Environment variables](#environment-variables)) | everywhere |
 | `Bun.main` | Absolute path of the entry script for this process | prefer with `import.meta.path === Bun.main` **or** the shorter `import.meta.main` (this repo uses **`import.meta.main`** on CLIs) |
+
+## Not-adopted APIs — recorded decisions (bun:coverage-audit)
+
+Every topic-table row whose "Here" cell is exactly `—` must be classified
+below (decisionRef D1–D13). The coverage audit (tools/bun-coverage-audit.ts,
+verify:contracts #21) fails on any unclassified row. Decisions are probe-
+grounded; nothing is assumed.
+
+| Row | Decision | Ref |
+|-----|----------|-----|
+| TCP Sockets (`Bun.listen`/`Bun.connect`) | D1 — not-for-us: no raw-TCP consumers; client WebSocket + fetch own the plane | BUN_NATIVE §networking |
+| UDP Sockets (`Bun.udpSocket`) | D2 — not-for-us: no UDP consumers in-repo | BUN_NATIVE §networking |
+| Routing (`Bun.FileSystemRouter`) | D3 — not-for-us: serve.ts explicit dispatch + URLPattern wins; FileSystemRouter verified available | AGENT-PITFALLS §14 |
+| Object Store (`Bun.S3Client`) | D4 — not-for-us: local sqlite + files own storage; no object-store plane | BUN_NATIVE §Object Store |
+| Redis (Valkey) (`Bun.RedisClient`) | D5 — not-for-us: no Redis in-process; vault/health separate | BUN_NATIVE §Redis |
+| Node-API | D6 — not-for-us: Bun builtins cover every needed native surface; no addons | BUN_NATIVE §Node-API |
+| FFI (`bun:ffi`) | D7 — probe-only: ffi:probe dlopen verified; the 3x speedup NOT measured | map-page /bun/map ops |
+| Workers (`new Worker()`) | D8 — not-for-us: BroadcastChannel fanout + Bun.cron cover the plane | src/lib/fanout.ts |
+| Module Loaders (`Bun.plugin`) | D9 — probe-only: /bun/plugins + namespaces tests; no plugin in builds | tests/bun-plugin-namespaces.test.ts |
+| Cookies (`Bun.Cookie`) | D10 — probe-only: cookies:probe 13/13; csrf.ts double-submit owns the plane | tools/csrf-probe / src/research/csrf.ts |
+| Module Resolution (`Bun.resolveSync`) | D11 — not-for-us: runtime module resolution suffices; no custom resolver | BUN_NATIVE §Module Resolution |
+| Low-level / Internals (`mmap`, `gc`, `bun:jsc`) | D12 — probe-only: generateHeapSnapshot/memoryPressure in observability; mmap/gc not adopted | AGENT-PITFALLS §33 |
+| Terminal/PTY (`Bun.Terminal`) | D13 — partial: "Failed to open PTY" under capture; terminal.ts paint uses ANSI (replaces node-pty) | AGENT-PITFALLS §17 |
 
 ```ts
 // @see https://bun.com/docs/runtime/utils#bun-main
@@ -1150,6 +1174,6 @@ bun pm cache rm                    # clear ~/.bun/install/cache
 - `Bun.XML` — ADOPTED: `src/lib/release-blog.ts` parses the bun.com RSS with `Bun.XML.parse` (SIMD; 87KB feed in ~1.9ms verified). Import loader `with { type: 'xml' }` returns the parsed object, not the file path (verified — the 1.4 breaking change holds). Shape notes: repeated elements become arrays, single elements stay objects; RSS 2.0 is `rss.channel.item[]` with plain strings, Atom is `feed.entry` with `@`-prefixed attributes.
 - `Bun.deepMatch` — subset-matching has no consumer; `Bun.deepEquals` (via `bun-native.ts`) covers equality. Revisit if a schema-subset check appears.
 - `Bun.mmap` — no random-access large-file consumer; all file reads are full-buffer or streamed. Revisit if a memory-mapped scan appears.
-- `Bun.Transpiler` / `Bun.unsafe` — no runtime transpilation or unsafe-FFI need; nothing to adopt.
+- `Bun.unsafe` — no unsafe-FFI need; nothing to adopt. (`Bun.Transpiler` IS adopted: docs:validate uses it for syntax checks — §67.)
 - Sync seed loaders (`tennis-meta.ts` `loadSeed`, hq-data hypothesis reads) stay `readFileSync` — `Bun.file().json()` is async-only and the `??=` memoized dicts are sync by design.
 
