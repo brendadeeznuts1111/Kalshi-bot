@@ -153,6 +153,12 @@ check("D12c If-None-Match -> 304", nm.status === 304, "status=" + nm.status);
 check("D12d If-Match wrong -> 412", im.status === 412, "status=" + im.status);
 check("D12e traversal ../ -> 404", trav.status === 404, "status=" + trav.status);
 
+// D13: Temporal enabled by default + TOML bare datetimes become Temporal (§88)
+check("D13 Temporal global enabled", typeof (globalThis as any).Temporal === "object" && typeof (globalThis as any).Temporal.Instant === "function", "Temporal=" + typeof (globalThis as any).Temporal);
+const tml = Bun.TOML.parse("when = 2024-01-15T10:30:00\n") as { when: unknown };
+const tmlCtor = (tml.when as { constructor?: { name?: string } })?.constructor?.name ?? "unknown";
+check("D13b TOML bare datetime -> Temporal (PlainDateTime)", tmlCtor === "PlainDateTime", "ctor=" + tmlCtor);
+
 console.log("---");
 const fails = results.filter((r) => !r.pass);
 console.log("defaults:probe — " + (results.length - fails.length) + "/" + results.length + " pass" + (fails.length ? " · FAIL: " + fails.map((f) => f.name).join(", ") : ""));

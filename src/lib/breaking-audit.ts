@@ -50,7 +50,7 @@ export function runBreakingAudit(root: string): BreakingFinding[] {
   // probe names (not as calls): pre-commit.ts gate labels, runtime-
   // surface.ts probe names. The shared rgFiles already excludes the
   // audit glob by default; these ride the exclude option.
-  const LABEL_FILES = ['**/pre-commit.ts', '**/runtime-surface.ts'];
+  const LABEL_FILES = ['**/pre-commit.ts', '**/runtime-surface.ts', '**/defaults-probe.ts']; // defaults-probe legitimately probes Temporal (§88)
 
   // TLS probe-only exception: host-discover reads leaf SANs from ANY cert
   // (same semantics as the openssl s_client -showcerts it replaced). You

@@ -186,3 +186,13 @@ describe("Bun.serve {dir:} route (§87)", () => {
     }
   });
 });
+
+describe("Temporal + TOML datetimes (§88)", () => {
+  test("Temporal is enabled by default; TOML bare datetimes become Temporal objects", () => {
+    expect(typeof (globalThis as any).Temporal).toBe("object");
+    expect(typeof (globalThis as any).Temporal.Instant).toBe("function");
+    const t = Bun.TOML.parse("when = 2024-01-15T10:30:00\n") as { when: unknown };
+    const ctor = (t.when as { constructor?: { name?: string } })?.constructor?.name ?? "unknown";
+    expect(ctor).toBe("PlainDateTime");
+  });
+});

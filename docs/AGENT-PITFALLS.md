@@ -3820,3 +3820,25 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
   catalog.md (typed + flag confirmed, e2e blocked by sandbox).
 - Artifacts: tools/defaults-probe.ts D12 (23/23), tests/lib/defaults-
   probe.test.ts (16 tests), verify:contracts 16/16.
+
+## 88. Bun v1.4 release doc — Temporal default verified, rest already probed (2026-08-24)
+
+- Probed the v1.4 major-release doc. MOST claims were already verified in
+  earlier probes (each cited): Rust rewrite §56 (530k LOC, binary 60.6 MB
+  on this machine matches), NODE_ENV unset §84, Node 26.3.0 §75, the 8
+  APIs (Image §70, WebView §12, markdown §38, cron §69, Terminal, CSRF
+  §77, XML §68, secrets), ffi CString plain string §86, bun.lock v2
+  default (repo is v1 frozen — safe per breaking-audit). Performance
+  claims (5x idle CPU, 35% memory, 50% startup) are vendor marketing —
+  not probeable in-repo.
+- NEW VERIFIED (Temporal — the one untested claim):
+  - Temporal global is ENABLED BY DEFAULT (typeof object; Instant/
+    ZonedDateTime/Now all functional).
+  - BEHAVIORAL: Bun.TOML.parse turns BARE datetimes into Temporal
+    objects (probe: 'when = 2024-01-15T10:30:00' -> PlainDateTime) —
+    matches BUN_NATIVE.md §TOML. Code reading TOML datetimes must handle
+    Temporal, not string.
+  - The repo's breaking-audit already monitors Temporal usage (currently
+    zero in repo — gate ok). No adoption needed; awareness recorded.
+- Artifacts: tools/defaults-probe.ts D13 (25/25), tests/lib/defaults-
+  probe.test.ts (17 tests), verify:contracts 16/16.
