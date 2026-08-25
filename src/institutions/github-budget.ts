@@ -30,6 +30,9 @@ export type GithubBudgetSnapshot = {
 };
 
 const TTL_MS = 5 * 60_000;
+/** Failures (null) recover fast — a transient 401/network blip must not pin
+ * the channel to "no token" for the full positive TTL. */
+const NEG_TTL_MS = 60_000;
 let cache: { at: number; value: GithubBudgetSnapshot | null } | null = null;
 
 /** Which source would resolveGitHubToken use right now (no secret leaked). */
@@ -65,7 +68,7 @@ export function resetGithubBudgetCache(): void {
 /** Live snapshot, TTL-cached. null when the token cannot be resolved. */
 export async function collectGithubBudget(): Promise<GithubBudgetSnapshot | null> {
   const now = Date.now();
-  if (cache && now - cache.at < TTL_MS) return cache.value;
+  if (cache && now - cache.at < (cache.value ? TTL_MS : NEG_TTL_MS)) return cache.value;
 
   const source = githubTokenSource();
   let value: GithubBudgetSnapshot | null = null;

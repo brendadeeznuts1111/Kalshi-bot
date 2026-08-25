@@ -1956,11 +1956,9 @@ export function createResearchServer(options: ServeOptions = {}) {
               await p.exited;
               return json({ ok: (p.exitCode ?? 1) === 0, action: name, out: out.trim().split("\n").slice(0, 3) }, 200, designCorsHeaders());
             }
-            // Docs-quality gates (§67 actions): run the offline gate, report
-            // ok + last line. All are sub-second and covered by the same
-            // runBunCommand path as the deps-check action.
-            // Docs-quality gates (§67 actions): run the offline gate, report
-            // ok + last lines. All are sub-second offline gates.
+            // Docs-quality gates (§67 actions): run the gate, report ok +
+            // last lines. All are sub-second; docs:refresh is the network
+            // exception (re-indexes the 333-page cache + heals the lock).
             if (name === "docs:check" || name === "docs:api" || name === "docs:integrity" || name === "output:probe" || name === "blog-map" || name === "content-check" || name === "licenses:gate" || name === "docs:refresh") {
               const script: string =
                 name === "docs:check" ? "docs:check" :

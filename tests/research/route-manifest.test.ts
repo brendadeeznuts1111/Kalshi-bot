@@ -55,3 +55,16 @@ describe("route manifest", () => {
     }
   });
 });
+  test("every POST route is CSRF-guarded or a documented webhook", () => {
+    // Webhooks without a browser session are the documented exception
+    // (no double-submit CSRF): /polymarket/ingest is deliberately excluded
+    // in serve.ts — everything else browser-facing must be csrf:true.
+    const webhookAllowlist = new Set(["/polymarket/ingest"]);
+    const posts = ROUTE_MANIFEST.filter((x) => x.method === "POST" || x.method === "GET|POST");
+    expect(posts.length).toBeGreaterThanOrEqual(6);
+    for (const p of posts) {
+      if (webhookAllowlist.has(p.path)) continue;
+      expect(p.csrf, "POST " + p.path + " must be CSRF-guarded (or added to the webhook allowlist)").toBe(true);
+    }
+  });
+

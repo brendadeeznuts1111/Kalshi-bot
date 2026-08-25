@@ -205,7 +205,7 @@ export async function collectSignals(root: string, brand: BrandMetricsSnapshot):
 }
 
 /** Numeric semver compare: "1.4" > "1.4.0" is FALSE; "1.4.1" > "1.4.0" TRUE. */
-function versionGt(a: string, b: string): boolean {
+export function versionGt(a: string, b: string): boolean {
   const an = a.replace(/^v/i, '').split('.').map((n) => Number(n) || 0);
   const bn = b.replace(/^v/i, '').split('.').map((n) => Number(n) || 0);
   for (let i = 0; i < Math.max(an.length, bn.length); i++) {
