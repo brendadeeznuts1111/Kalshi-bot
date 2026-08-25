@@ -9,7 +9,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 > The headings were renumbered to §1-§11 on 2026-08-23; the counters were kept
 > so historical notes stay traceable.
 >
-> **Current contract status: verify:contracts 51/51** (see docs/BUN_API_COVERAGE.md
+> **Current contract status: verify:contracts 52/52** (see docs/BUN_API_COVERAGE.md
 > for the full matrix). `verify:contracts N/N` lines inside older sections are
 > HISTORICAL (each records its era) — docs:check enforces that only this header
 > and non-pitfall docs may reference the current count.
@@ -5840,6 +5840,23 @@ another note.
   (50 -> 51 gates), package.json (coverage:probe), scripts/audit-bun-native.ts
   (SPAWN_KEEP_LIST), docs/BUN_API_COVERAGE.md + AGENT-PITFALLS header
   (50/50 -> 51/51). verify:contracts 51/51.
+## 162. Fullstack combo + permessage-deflate — gate #52 (2026-08-24)
+
+- tools/fullstack-probe.ts (3/3, own fixture dir — html:probe owns
+  scratch/html-fixture; sharing it clobbered the HTML marker and
+  flaked the earlier gate run).
+- VERIFIED (docs bundler/fullstack.mdx): ONE Bun.serve carries an HTML
+  import route (compiled on demand) + method-keyed API routes (GET/
+  POST) + /api/users/:id params + development: true — the repo hq-app
+  serving pattern, all in one server.
+- WebSocket permessage-deflate: REAL — the type declares
+  perMessageDeflate?: boolean, DEFAULT true (the upgrade advertises
+  permessage-deflate; client_max_window_bits; false suppresses the
+  header — matching the ws package option). The diagram's
+  extensions-object form is an older shape (accepted, not typed).
+- Artifacts: tools/fullstack-probe.ts (new, gate #52), tools/verify-contracts.ts
+  (51 -> 52 gates), package.json (fullstack:probe), docs/BUN_API_COVERAGE.md
+  + AGENT-PITFALLS header (51/51 -> 52/52). verify:contracts 52/52.
 - FILENAME BEHAVIOR (pasted --metafile-md claims vs 1.4.0, gate P9-P13):
   a bare --metafile-md writes meta.md to the PROCESS CWD, NOT the
   --outdir (the pasted claim's location is wrong); --metafile-md=<path>

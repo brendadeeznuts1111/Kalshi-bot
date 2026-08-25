@@ -65,6 +65,7 @@ const gates = [
   ['type-drift:probe'],
   ['client-shape:probe'],
   ['coverage:probe'],
+  ['fullstack:probe'],
 ] as const;
 
 const GATE_ENV: Record<string, Record<string, string>> = {

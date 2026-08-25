@@ -284,6 +284,7 @@
     "type-drift:probe": "bun tools/type-drift-probe.ts",
     "client-shape:probe": "bun tools/client-shape-probe.ts",
     "coverage:probe": "bun tools/coverage-probe.ts",
+    "fullstack:probe": "bun tools/fullstack-probe.ts",
     "routes:check": "bun tools/routes-check.ts",
     "bun:coverage-audit": "bun tools/bun-coverage-audit.ts",
     "research:resume": "bun tools/research-resume.ts",
