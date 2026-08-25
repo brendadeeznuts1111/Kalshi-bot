@@ -29,9 +29,9 @@ beforeAll(() => {
 afterAll(() => { rmSync(root, { recursive: true, force: true }); });
 
 describe('runBreakingAudit', () => {
-  test('clean repo passes all 12 checks', () => {
+  test('clean repo passes all 14 checks', () => {
     const findings = runBreakingAudit(root);
-    expect(findings).toHaveLength(12);
+    expect(findings).toHaveLength(14);
     expect(breakingAuditPasses(findings)).toBe(true);
   });
 

@@ -3865,3 +3865,31 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
   -> valid (tests/institutions/event-store.test.ts).
 - Artifacts: src/institutions/event-store/parse-tennis-data-csv.ts,
   tests/institutions/event-store.test.ts. Gate stays 16/16.
+
+## 90. Official breaking-changes list (issue #28792) — 2 audit checks added (2026-08-24)
+
+- Cross-referenced the repo's breaking-audit against oven-sh/bun#28792
+  (the authoritative 1.4 breaking-changes list, 138 items). The repo's
+  12 checks already covered the headline + repo-relevant items (writeHeader,
+  lock v2, NODE_ENV, YAML 1.2, Temporal, TLS, addons, port, WS routes,
+  redirect, spawn traps, Response.error). Added 2 awareness checks for
+  repo usages the audit was missing:
+  - #13 WebSocket publish() backpressure return: server.publish() now
+    returns 0/-1 on subscriber backpressure (was always payload length).
+    Repo: live-channel + live-page publish theme/status/feed — they
+    IGNORE the return, so unaffected. Check reports ok-with-detail
+    (awareness, not a failure).
+  - #14 Bun.randomUUIDv7 timestamp validation: timestamps >= 2^48 or NaN
+    throw instead of truncating. Repo: src/lib/ids.ts + hq-view use it
+    for RFC 9562 random ids (timestamp well under 2^48) — unaffected.
+    Check reports ok-with-detail.
+  - Also verified (probe): Bun.Cookie Expires is now IMF-fixdate
+    ('Fri, 02 Jan 2026 03:04:05 GMT') — the repo's csrf.ts uses
+    Bun.Cookie (correct); Bun.color 'ansi-16' emits real SGR codes
+    ('\x1b[91m') — the repo's color kernel delegates to Bun.color
+    (auto-correct).
+  - Audit design note: these are AWARENESS checks (ok-with-detail) —
+    they document repo usage + why it is safe, without failing the gate
+    like a real break would. breaking-audit now 14 checks.
+- Artifacts: src/lib/breaking-audit.ts (checks 13-14), tests/lib/
+  breaking-audit.test.ts (12->14). verify:contracts 16/16.

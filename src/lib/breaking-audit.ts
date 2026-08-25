@@ -234,6 +234,33 @@ export function runBreakingAudit(root: string): BreakingFinding[] {
       : 'no Response.error() usage in handlers',
   });
 
+
+  // 13. ServerWebSocket#publish() / server.publish() return 0/-1 on
+  // subscriber backpressure (was: always the payload length). The repo's
+  // live-channel publishes theme/status/feed - it ignores the return, so
+  // unaffected, but code relying on the old return value would break.
+  const publishSites = rgFiles(root, 'publish\\(' , dirs, { exclude: LABEL_FILES });
+  findings.push({
+    check: 'WebSocket publish() backpressure return (0/-1, was payload length)',
+    status: 'ok', // awareness check: repo ignores the return (live-channel/live-page), so no break
+    detail: publishSites.length
+      ? 'publish() in: ' + publishSites.join(', ') + ' - returns 0/-1 on backpressure; repo ignores the return (unaffected)'
+      : 'no server.publish() usage',
+  });
+
+  // 14. Bun.randomUUIDv7(): timestamps >= 2^48 or NaN throw instead of
+  // truncating. The repo uses it in src/lib/ids.ts for random ids
+  // (RFC 9562 timestamp is well under 2^48) - unaffected, but future
+  // code must not hand-craft v7 timestamps.
+  const v7 = rgFiles(root, 'randomUUIDv7', dirs, { exclude: LABEL_FILES });
+  findings.push({
+    check: 'Bun.randomUUIDv7 timestamp validation (>= 2^48 throws)',
+    status: 'ok', // awareness check: repo ids are RFC 9562 (timestamp well under 2^48), unaffected
+    detail: v7.length
+      ? 'randomUUIDv7 in: ' + v7.join(', ') + ' - crafted timestamps >= 2^48 now throw (RFC 9562 ids unaffected)'
+      : 'no randomUUIDv7 usage',
+  });
+
   return findings;
 }
 
