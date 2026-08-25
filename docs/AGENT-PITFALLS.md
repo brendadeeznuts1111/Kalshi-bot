@@ -5720,6 +5720,17 @@ another note.
   dist/<module>.meta.json + .meta.md, the Bun.$ subprocess is GONE
   (and the unused $/BUN imports removed). Output identical to the
   CLI report; design:check unchanged.
+- REPORT CONTENT (verified, gate P17-P20): the object-form markdown has
+  the six claimed sections — Quick Summary (output size, module/entry
+  counts, ESM modules), Largest Modules by Output Contribution (size +
+  % + format), Entry Point Analysis, Dependency Chains, Full Module
+  Graph (contribution/format/imported-by/imports), Raw Data for
+  Searching with [MODULE:] / [IMPORT:] / [IMPORTED_BY:] / [ENTRY:] /
+  [EXTERNAL:] / [NODE_MODULES:] / [OUTPUT_BYTES:] / [FORMAT:] markers.
+- CORRECTIONS vs the pasted claim: the Largest section is named
+  "Largest Modules by Output Contribution" (not "Largest Input Files");
+  Quick Summary counts ESM only — NO CJS metric and NO output/input
+  ratio; the byte marker is [OUTPUT_BYTES:] not [SIZE:].
 - GitHub recomputes the pie on the default branch after push (a few
   minutes). Verified with git check-attr.
 - Artifacts: .gitattributes (new). verify:contracts 38/38 (unchanged).

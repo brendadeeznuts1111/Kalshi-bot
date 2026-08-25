@@ -98,6 +98,21 @@ await Bun.build({ entrypoints: [F + "/entry.ts"], outdir: "scratch/mf-obj3/dist"
 check("P16 string form writes json in outdir", await w("scratch/mf-obj3/dist/meta.json"), "");
 
 
+
+// ── §155 addendum 3: REPORT CONTENT claims ──
+
+// The object form report has the six claimed sections, but with
+// deviations: the Largest section is named "Largest Modules by Output
+// Contribution", Quick Summary counts ESM only (no CJS, no output/
+// input ratio), and the grep marker is [OUTPUT_BYTES:] not [SIZE:].
+const rpt = await Bun.file("scratch/mf-obj/dist/meta.md").text();
+const sections = ["Quick Summary", "Largest Modules by Output Contribution", "Entry Point Analysis", "Dependency Chains", "Full Module Graph", "Raw Data for Searching"];
+check("P17 six report sections present", sections.every((s) => rpt.includes("## " + s)), sections.filter((s) => !rpt.includes("## " + s)).join(",") || "all");
+check("P18 quick summary has output size + ESM count", rpt.includes("Total output size") && /ESM modules/.test(rpt), "");
+check("P19 grep markers MODULE/IMPORT/OUTPUT_BYTES", rpt.includes("[MODULE:") && rpt.includes("[IMPORT:") && rpt.includes("[OUTPUT_BYTES:"), "");
+check("P20 pinned deviations: no [SIZE:], no ratio, named section", !rpt.includes("[SIZE:") && !/ratio/i.test(rpt) && rpt.includes("Largest Modules by Output Contribution"), "");
+
+
 const failed = results.filter((r) => !r.pass);
 console.log("metafile:probe — " + (results.length - failed.length) + "/" + results.length + " checks" + (failed.length ? " · FAIL: " + failed.map((f) => f.name).join(", ") : ""));
 process.exit(failed.length === 0 ? 0 : 1);
