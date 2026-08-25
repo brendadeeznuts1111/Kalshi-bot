@@ -297,3 +297,29 @@ The color kernel is browser-safe: `convertColorFallback` (pure JS) matches
 `Bun.color` byte-for-byte for every cached format, proven by parity tests in
 tests/lib/color-kernel.test.ts and by executing `dist/design-system.js`
 under Node (no Bun global).
+## 13. Combined pipeline report + per-module enhancement plans (§107)
+
+`bun run design:pipeline-report` renders dist/pipeline.meta.md — the
+"mtafile of mtafiles": every module's size vs budget, largest
+contributor, growth vs history, and a DATA-DRIVEN enhancement plan per
+module (derived from budget/contributor/growth status, not hardcoded
+prose). Current findings (probe, 1.4.0):
+
+- design-system 6.32 KB / 12 KB (largest 3.53 KB — color kernel, 55.8%,
+  expected core weight) — keep the kernel lean; revisit
+  maxContributorBytes when adding color formats.
+- hq-app 48.70 KB / 64 KB — the app.js monolith is 95.8% of the bundle:
+  consider chunking hash-routes.ts + surface-edge.ts out of the entry
+  (the 60 KB maxContributorBytes budget forces the issue as it grows).
+
+The report is pure (src/lib/pipeline-report.ts — unit-tested, 5 tests)
+fed by the same buildBudgetHealth data as design:check and /api/design/
+budgets, so the report, the gate, and the live API can never drift.
+
+## 14. Builds verified (work-through, 2026-08-24)
+
+`bun run design:build` → both modules rebuilt with fresh metafiles →
+`bun run design:pipeline-report` → dist/pipeline.meta.md regenerated →
+`bun run design:check` → ok · 0 enforced · 20 backlog (playground only)
+· 32 surfaces. The full chain: build → analyze → gate, all green.
+

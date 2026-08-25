@@ -202,6 +202,7 @@
     "social:meta": "bun -e 'import { extractSocialMetadata } from \"./src/lib/extract-social-meta.ts\"; const u=process.argv[2]||\"https://bun.com\"; console.log(JSON.stringify(await extractSocialMetadata(u),null,2))'",
     "glossary:check": "bun scripts/check-glossary-usage.ts -- --hard",
     "design:check": "bun tools/design-check.ts",
+    "design:pipeline-report": "bun tools/pipeline-report.ts",
     "design:build": "bun scripts/build-design-system.ts",
     "design:build:modules": "bun scripts/build-design-system.ts",
     "design:report": "bun tools/design-budget-report.ts",
