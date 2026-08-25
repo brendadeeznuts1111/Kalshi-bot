@@ -8,6 +8,11 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 > rounds (the N-th lesson added) - NOT pointers to the §1-§11 headings above.
 > The headings were renumbered to §1-§11 on 2026-08-23; the counters were kept
 > so historical notes stay traceable.
+>
+> **Current contract status: verify:contracts 38/38** (see docs/BUN_API_COVERAGE.md
+> for the full matrix). `verify:contracts N/N` lines inside older sections are
+> HISTORICAL (each records its era) — docs:check enforces that only this header
+> and non-pitfall docs may reference the current count.
 
 
 ## 1. run_code program text (the harness lexer)

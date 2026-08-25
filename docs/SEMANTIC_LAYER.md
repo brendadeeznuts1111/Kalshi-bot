@@ -60,7 +60,7 @@ Registry changes for CSV order / SQLite migrations. Glossary concepts are **sema
 ### 2. Registry features opt-in via `concept`
 
 ```ts
-{ column: 11, feature: "kalshi_mu", concept: "kalshi_mu", … }
+const registryRow = { column: 11, feature: "kalshi_mu", concept: "kalshi_mu" };
 ```
 
 - `concept` optional (WIP features).
@@ -196,7 +196,7 @@ import { listConcepts, FILTER_CATALOG_IDS } from "./glossary.ts";
 const concepts = listConcepts();           // array
 const league = concepts.find((c) => c.id === "league");
 // filters
-for (const id of FILTER_CATALOG_IDS) { … }
+for (const id of FILTER_CATALOG_IDS) { console.log(id); }
 ```
 
 Dump (`glossary:dump`) and `GET /api/glossary` share this shape (`schemaVersion: 5`). Concepts may include a resolved `color: { key, css, foregroundCss }` from the Bun-native color kernel (`src/lib/color/`).

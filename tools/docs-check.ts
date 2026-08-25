@@ -33,13 +33,37 @@ for (const d of docs) {
   if (problems.length) bad += 1;
 }
 
-// Code-block validation — REPORTED (never fails): catches real syntax
-// bugs in JS-family blocks, but intentional pseudo-code (… elision, top-
-// level await snippets) is expected. Review the report, fix genuine bugs.
+// Code-block validation — STRICT (fails the gate): every JS-family block
+// must parse via Bun.Transpiler. Pseudo-code elision (… chars) and bare
+// fragments (top-level return/catch/throw, body-less classes, bare object
+// statements) are NOT allowed in js/ts fences — rewrite as comments or
+// complete statements. docs:check catches stale blocks automatically.
 const codeBlocks = await validateDocsCode(docs);
 const codeFailures = codeBlocks.filter((v) => !v.ok && ["js", "jsx", "ts", "tsx", "typescript"].includes(v.language.toLowerCase()));
 for (const f of codeFailures) {
-  console.log('docs:check (report) code-block FAIL ' + f.file + ':' + f.line + ' [' + f.language + '] — ' + (f.error ?? ''));
+  console.log('docs:check FAIL (code-block) ' + f.file + ':' + f.line + ' [' + f.language + '] — ' + (f.error ?? ''));
+  bad += 1;
+}
+
+// Stale contract-count scan: every verify:contracts N/N reference must
+// equal the CURRENT gate count, EXCEPT AGENT-PITFALLS body lines (a
+// historical timeline — its HEADER must carry the current count).
+const vc = await Bun.file(join(ROOT, 'tools/verify-contracts.ts')).text();
+const gatesCount = (vc.match(/^\s*\['[^']+'/gm) ?? []).length;
+const current = gatesCount + '/' + gatesCount;
+for (const d of docs) {
+  const md = await Bun.file(join(ROOT, d.path)).text();
+  const refs = md.match(/verify:contracts (\d+)\/(\d+)/g) ?? [];
+  for (const ref of refs) {
+    if (ref === 'verify:contracts ' + current) continue;
+    if (d.path.includes('AGENT-PITFALLS')) {
+      const lineNo = md.slice(0, md.indexOf(ref)).split('\n').length;
+      if (lineNo <= 40) { console.log('docs:check FAIL ' + d.path + ' header stale: ' + ref + ' (current ' + current + ')'); bad += 1; }
+      continue;
+    }
+    console.log('docs:check FAIL ' + d.path + ' stale count: ' + ref + ' (current ' + current + ')');
+    bad += 1;
+  }
 }
 
 const state = {

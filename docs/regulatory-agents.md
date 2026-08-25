@@ -67,32 +67,32 @@ All errors extend `RegulatoryError` with a canonical `code` and optional `contex
 
 ```ts
 // Bet lifecycle
-class BetBlockedError extends RegulatoryError          // code: "BET_BLOCKED"
-class BetTypeNotAllowedError extends RegulatoryError     // code: "BET_TYPE_NOT_ALLOWED"
-class WagerOutOfBoundsError extends RegulatoryError      // code: "WAGER_OUT_OF_BOUNDS"
+class BetBlockedError extends RegulatoryError {}          // code: "BET_BLOCKED"
+class BetTypeNotAllowedError extends RegulatoryError {}     // code: "BET_TYPE_NOT_ALLOWED"
+class WagerOutOfBoundsError extends RegulatoryError {}      // code: "WAGER_OUT_OF_BOUNDS"
 
 // User / identity
-class SelfExcludedError extends RegulatoryError          // code: "SELF_EXCLUDED"
-class IdentityVerificationError extends RegulatoryError  // code: "IDENTITY_VERIFICATION_REQUIRED"
+class SelfExcludedError extends RegulatoryError {}          // code: "SELF_EXCLUDED"
+class IdentityVerificationError extends RegulatoryError {}  // code: "IDENTITY_VERIFICATION_REQUIRED"
 
 // License
-class LicenseError extends RegulatoryError               // code: "LICENSE_INVALID"
+class LicenseError extends RegulatoryError {}               // code: "LICENSE_INVALID"
 
 // Rate limiting
-class RateLimitError extends RegulatoryError             // code: "RATE_LIMITED"
+class RateLimitError extends RegulatoryError {}             // code: "RATE_LIMITED"
 
 // Market data
-class PolymarketApiError extends RegulatoryError         // code: "POLYMARKET_API_ERROR"
-class SteamAlertError extends RegulatoryError            // code: "STEAM_ALERT"
-class MarketDataStaleError extends RegulatoryError       // code: "MARKET_DATA_STALE"
+class PolymarketApiError extends RegulatoryError {}         // code: "POLYMARKET_API_ERROR"
+class SteamAlertError extends RegulatoryError {}            // code: "STEAM_ALERT"
+class MarketDataStaleError extends RegulatoryError {}       // code: "MARKET_DATA_STALE"
 
 // Agent / orchestration
-class AgentNotFoundError extends RegulatoryError         // code: "AGENT_NOT_FOUND"
-class AgentTaskError extends RegulatoryError             // code: "AGENT_TASK_FAILED"
+class AgentNotFoundError extends RegulatoryError {}         // code: "AGENT_NOT_FOUND"
+class AgentTaskError extends RegulatoryError {}             // code: "AGENT_TASK_FAILED"
 
 // Database
-class MigrationError extends RegulatoryError             // code: "MIGRATION_FAILED"
-class DatabaseIntegrityError extends RegulatoryError     // code: "DB_INTEGRITY"
+class MigrationError extends RegulatoryError {}             // code: "MIGRATION_FAILED"
+class DatabaseIntegrityError extends RegulatoryError {}     // code: "DB_INTEGRITY"
 ```
 
 ## Audit Trail

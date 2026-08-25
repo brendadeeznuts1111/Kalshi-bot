@@ -133,8 +133,11 @@ The research pipeline talks to GitHub REST via `Bun.fetch` (`github-api.ts`,
 `tools/snapshot-data-plane.ts` (`commandSucceeds(["gh", "auth", "status"])`):
 
 ```typescript
-const { exitCode, stdout } = await $`gh auth token`.nothrow().quiet();
-if (exitCode === 0) return stdout.toString().trim();
+async function getGhToken(): Promise<string> {
+  const { exitCode, stdout } = await $`gh auth token`.nothrow().quiet();
+  if (exitCode === 0) return stdout.toString().trim();
+  throw new Error("gh auth token failed");
+}
 ```
 
 `src/research/gh.ts` is now a **rate-limit facade** (preflight + budget
@@ -167,10 +170,12 @@ await $`bash -c "gh auth token ${userInput}"`; // hands off to system shell
 When `.nothrow()` is not used and exit ≠ 0:
 
 ```typescript
-catch (err) {
-  err.exitCode  // number
-  err.stdout    // Buffer
-  err.stderr    // Buffer
+try {
+  await $`gh auth token`;
+} catch (err) {
+  err.exitCode; // number
+  err.stdout;   // Buffer
+  err.stderr;   // Buffer
 }
 ```
 

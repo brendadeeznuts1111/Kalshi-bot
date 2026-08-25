@@ -795,7 +795,8 @@ saveRun(runId, generatedAt, run);
 
 ```typescript
 // @see https://bun.com/docs/runtime/utils#bun-which
-Bun.which("gh") ?? throw
+const gh = Bun.which("gh");
+if (!gh) throw new Error("gh CLI not found");
 ```
 
 ### [`patterns.ts`](../src/research/patterns.ts) — URL SSOT

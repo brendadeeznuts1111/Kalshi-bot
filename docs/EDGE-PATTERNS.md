@@ -147,7 +147,7 @@ Signals:
 
 ```ts
 buildPinnacleSignalContext({
-  …,
+  // ...other context fields
   settlement: {
     sportId: 'tennis',
     phase: 'live',
