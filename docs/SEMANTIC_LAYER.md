@@ -132,7 +132,7 @@ Board dropdowns read **glossary `values`** (and optional `valueLabels`), never p
 
 ```ts
 // Server / SSR
-import { liveFilterChoices, filterLabel } from "../institutions/filter-catalog.ts";
+import { liveFilterChoices, filterLabel } from "../src/institutions/filter-catalog.ts";
 liveFilterChoices("surface", liveSurfaces);
 
 // Browser — from GET /api/glossary

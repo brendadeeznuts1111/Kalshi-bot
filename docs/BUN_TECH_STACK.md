@@ -134,7 +134,7 @@ Pure entropy (temp names, browser form) may stay on `crypto.randomUUID()` (v4).
 | `Bun.markdown.html` | **yes** | [`markdownToHtml`](../src/lib/markdown.ts) presets: `gfm` / `docs` / `dashboard` / `strict` |
 | `Bun.markdown.ansi` | **yes** | [`markdownToAnsi`](../src/lib/markdown.ts), report-term |
 
-GFM defaults: tables / strikethrough / tasklists **on**. Opt-in: `autolinks`, `headings`, `tagFilter`, `noHtmlBlocks`, … — full table in [BUN_NATIVE § markdown](BUN_NATIVE.md#bunmarkdown--native-markdown--html--ansi).
+GFM defaults: tables / strikethrough / tasklists **on**. Opt-in: `autolinks`, `headings`, `tagFilter`, `noHtmlBlocks`, … — full table in [BUN_NATIVE § markdown](BUN_NATIVE.md#bunmarkdown-native-markdown-html-ansi).
 
 **Do not** add `marked` / `markdown-it` / `remark` for standard MD→HTML.
 

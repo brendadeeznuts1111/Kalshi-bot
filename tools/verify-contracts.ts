@@ -16,7 +16,8 @@ const ROOT = join(import.meta.dir, '..');
 const gates = [
   ['deps:check'],
   ['docs:check'],
-  ['docs:api'], // STRICT=1 env set in run() below // STRICT callability via env — runBunCommand passes env through? check
+  ['docs:api'], // STRICT=1 env set in run() below
+  ['docs:integrity'], // STRICT callability via env — runBunCommand passes env through? check
   ['content:check'],
   ['assets:check'],
   ['bun:blog-map', '--', '--offline'],

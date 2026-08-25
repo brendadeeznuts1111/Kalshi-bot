@@ -3097,3 +3097,39 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
     + STRICT callability findings, feed for the docs dashboard channel.
   - Gate wiring: tools/verify-contracts.ts passes STRICT=1 env to the
     docs:api gate via runBunCommand env (probe-verified §42 PATH note).
+
+## 63. docs:integrity — internal links + import resolution gate (2026-08-24)
+
+- New gate `bun run docs:integrity` (tools/docs-integrity.ts, 10th
+  verify:contracts gate):
+  - LINKS (GATE — objective): every markdown link resolved against the
+    filesystem + heading slugs. Same-file anchors, cross-file files,
+    cross-file anchors. Headings via src/lib/markdown-headings.ts (the
+    SAME Bun.markdown render-callback machinery docs:check uses). Exit 1
+    on any broken link.
+  - IMPORTS (REPORTED — illustrative-prone): `from "spec"` in code lines
+    resolved via Bun.resolve from the doc dir, then repo root, then a
+    literal root join. Relative imports are written repo-root-relative
+    in this repo's docs (./src/... and ../src/... BOTH mean <root>/src/,
+    probe-verified). Metasyntactic placeholders (x, m, ./x.md, file:./dep)
+    and illustrative examples are allowlisted, never failed — same class
+    as the §59 pseudo-code blocks.
+- IMMEDIATE VALUE — ten genuine doc bugs caught and fixed on first run:
+  - 3 broken hrefs: links that wrote the href as `docs/NAME.md` while
+    href resolved to <docs>/docs/... (files live in docs/ directly);
+    fixed to (DATA_MODEL.md).
+  - 3 missing src/ segments: `../db/client.ts` → `../src/db/client.ts`
+    (BUN_NATIVE code example contradicted its own table which used the
+    correct ../src/db/client.ts); same for ../institutions/hq-ui.ts and
+    ../institutions/filter-catalog.ts.
+  - 4 anchor mismatches: docs used GITHUB-style slugs (em-dash → --) but
+    Bun's native ids DROP the em-dash (single hyphen). PLIVE-EZLIVE 3×
+    (#quick-reference--action-thresholds → #quick-reference-action-
+    thresholds) + BUN_TECH_STACK 1× (#bunmarkdown--native-markdown--
+    html--ansi → #bunmarkdown-native-markdown-html-ansi). Clicking the
+    old anchors found no element (dead scroll target).
+- Anchor convention locked: Bun native ids (markdownHeadings slug) are
+  authoritative for intra-doc navigation — NOT GitHub's -- convention.
+  Tests lock this (tests/lib/docs-integrity.test.ts).
+- Artifacts: tools/docs-integrity.ts, tests/lib/docs-integrity.test.ts,
+  10/10 verify:contracts gates.

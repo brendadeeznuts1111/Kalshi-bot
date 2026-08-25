@@ -35,7 +35,7 @@ Rules:
 | `hint` | 1.0.0 | `?` tooltip dot — copy from `glossary.ts` TOOLTIPS only |
 | `tag` | 1.0.0 | neutral keyword chip |
 
-Import: `import { badge, statCard, dataTable, componentCss } from "../institutions/hq-ui.ts";`
+Import: `import { badge, statCard, dataTable, componentCss } from "../src/institutions/hq-ui.ts";`
 Embed `baseCssVars() + componentCss()` once per page `<style>`.
 
 Add — never rename — registry entries; bump a component's version when its markup contract changes.

@@ -7,12 +7,12 @@
 ## Contents
 
 1. [Provenance](#provenance)
-2. [Quick reference — action thresholds](#quick-reference--action-thresholds)
-3. [Weighting playbook (lines · odds · movement)](#weighting-playbook-lines--odds--movement)
+2. [Quick reference — action thresholds](#quick-reference-action-thresholds)
+3. [Weighting playbook (lines · odds · movement)](#weighting-playbook-lines-odds-movement)
 4. [Primary sports cards](#primary-sports-cards)
 5. [General / settling / bet types](#general-betting)
 6. [Full by-sport rules](#by-sport)
-7. [Tennis desk cheat sheet](#tennis--desk-cheat-sheet-lines--movement)
+7. [Tennis desk cheat sheet](#tennis-desk-cheat-sheet-lines-movement)
 8. [Re-pull](#re-pull)
 
 ## Provenance
