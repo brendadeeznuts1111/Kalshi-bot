@@ -1,5 +1,5 @@
 {
-  "lastChecked": "2026-08-25T05:14:48.760Z",
+  "lastChecked": "2026-08-25T05:19:41.837Z",
   "docs": [
     {
       "path": "docs/AGENT-PITFALLS.md",
@@ -38,8 +38,8 @@
     },
     {
       "path": "docs/BUN_NATIVE.md",
-      "hash": "c43dbf7e2a4f8c5d3ed80b8f1a00ae8bb2cb0f1f2a502a3386dcf817dbd92b9b",
-      "headings": 65,
+      "hash": "28ff1bbdcb3e14b970c4edb2bb662b459a91b2959b55e5c9128bf40f1b57576c",
+      "headings": 66,
       "renderOk": true,
       "duplicateSlugs": []
     },
