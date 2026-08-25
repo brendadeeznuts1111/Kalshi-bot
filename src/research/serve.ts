@@ -113,6 +113,7 @@ import {
   type BrandMetricsSnapshot,
   type Signal,
 } from "../institutions/signal-pipeline.ts";
+import { CHANNEL_ACTIONS } from "../institutions/channel-registry.ts";
 import {
   brandBadgeSvg,
   brandCardPng,
@@ -1950,7 +1951,9 @@ export function createResearchServer(options: ServeOptions = {}) {
               await p.exited;
               return json({ ok: (p.exitCode ?? 1) === 0, action: name, out: out.trim().split("\n").slice(-2) }, 200, designCorsHeaders());
             }
-            return json({ error: "unknown action — purge-brand | deps-check | brand-card | release-check | docs:check | docs:api | docs:integrity | output:probe | blog-map | content-check | licenses:gate" }, 404, designCorsHeaders());
+            // Action allowlist comes from the channel registry SSOT —
+            // never a hardcoded list here.
+            return json({ error: "unknown action — " + CHANNEL_ACTIONS.join(" | ") }, 404, designCorsHeaders());
           }),
         );
       }

@@ -26,12 +26,14 @@ import {
 import { BRAND, DESIGN_SYSTEM_VERSION } from './design-tokens.ts';
 import { isVideoFile } from '../research/video-page.ts';
 import { latestRelease, parseAtomEntries, parseRssEntries } from '../lib/release-blog.ts';
+import { CHANNEL_DEFS, CHANNEL_ORDER, type ChannelId } from './channel-registry.ts';
 
 export type SignalSeverity = 'ok' | 'warn' | 'bad' | 'info';
 
 export type Signal = {
   id: string;
-  channel: 'design' | 'deps' | 'brand' | 'releases' | 'ops' | 'inventory' | 'cron' | 'prune' | 'mapping' | 'docs' | 'compliance';
+  /** Channel id from the registry (src/institutions/channel-registry.ts). */
+  channel: ChannelId;
   severity: SignalSeverity;
   title: string;
   detail: string;
@@ -184,28 +186,17 @@ const esc = (v: unknown): string =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] as string,
   );
 
-const CHANNEL_LABELS: Record<Signal['channel'], string> = {
-  design: 'Design',
-  deps: 'Dependencies',
-  brand: 'Brand',
-  releases: 'Releases',
-  ops: 'Ops',
-  inventory: 'Inventory',
-  cron: 'Cron',
-  prune: 'Content Prune',
-  mapping: 'Blog Mapping',
-  docs: 'Docs',
-  compliance: 'Compliance',
-};
+// Channel labels/order/actions come from the registry SSOT
+// (channel-registry.ts) — this module never declares a channel inline.
 
 /**
  * Token-built dashboard HTML: channels -> signals with severity badges +
  * action buttons (POST /api/signals/actions/<name> with the CSRF header).
  */
 export function renderDashboard(signals: Signal[], csrfToken: string): string {
-  const channels = (Object.keys(CHANNEL_LABELS) as Signal['channel'][]).map((id) => ({
+  const channels = CHANNEL_ORDER.map((id) => ({
     id,
-    label: CHANNEL_LABELS[id],
+    label: CHANNEL_DEFS[id].label,
     signals: signals.filter((s) => s.channel === id),
   }));
   const rows = (s: Signal): string =>
@@ -252,7 +243,7 @@ export function renderDashboard(signals: Signal[], csrfToken: string): string {
     'setTimeout(() => refresh(), 800);' +
     '}));' +
     'const escH = (v) => String(v ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", \'"\': "&quot;" }[c]));' +
-    'const channels = ["design","deps","brand","releases","ops","inventory","cron"];' +
+    'const channels = ' + '["design","deps","brand","releases","ops","inventory","cron","prune","mapping","docs","compliance"]' + ';' + // registry-driven: ALL 11 channels live-refresh
     'const refresh = async () => {' +
     'try {' +
     'const r = await fetch("/api/signals"); if (!r.ok) return;' +
@@ -507,7 +498,8 @@ export async function collectPrune(root: string, signals: Signal[]): Promise<voi
   });
 }
 
-export const SIGNAL_CRON_EXPR = '*/5 * * * *';
+// Cron expressions live in the channel registry (cron + mapping channels).
+export const SIGNAL_CRON_EXPR = CHANNEL_DEFS.cron.cron!.expr;
 
 /**
  * Daily blog-map refresh cron ("0 3 * * *" — local time, once per process,
@@ -519,7 +511,7 @@ const blogMapState = { registered: false };
 export function registerBlogMapCron(run: () => Promise<void>): void {
   if (blogMapState.registered || typeof Bun.cron !== 'function') return;
   blogMapState.registered = true;
-  const job = Bun.cron('0 3 * * *', async () => {
+  const job = Bun.cron(CHANNEL_DEFS.mapping.cron!.expr, async () => {
     try { await run(); } catch { /* next day retries */ }
   });
   job.unref();
