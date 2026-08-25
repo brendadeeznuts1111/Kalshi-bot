@@ -39,6 +39,7 @@ const gates = [
   ['serve-stream:probe'],
   ['spawn:probe'],
   ['ws:probe'],
+  ['bun:apis-probe'],
 ] as const;
 
 const GATE_ENV: Record<string, Record<string, string>> = {

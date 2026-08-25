@@ -4777,6 +4777,34 @@ another note.
   package.json (ws:probe), tools/verify-contracts.ts (gate #25),
   scripts/audit-bun-native.ts (keep-list +1), this section.
   verify:contracts 25/25.
+## 115. API-table audit — Bun.semver/JSON5 verified, two rows CORRECTED (2026-08-24)
+
+- A pasted Bun v1.4 API table was audited row by row. Most rows were
+  ALREADY probed/adopted in-repo (WebView, Image, CSRF, secrets, cron,
+  XML, Glob, Cookie/CookieMap, inspect — §24-§114). Four needed action:
+  two NEW probes and two CORRECTIONS, locked in bun:apis-probe
+  (verify:contracts gate #26 -> 26/26), VERIFIED 4/4:
+  1. Bun.semver is a GLOBAL { satisfies, order } — the docs link implies
+     a module, but import 'bun:semver' FAILS (Cannot find package).
+     satisfies('1.2.3', '^1.0.0') === true; order('2.0.0','1.9.0') > 0.
+  2. Bun.JSON5 is a GLOBAL: parse handles comments, trailing commas and
+     unquoted keys; stringify emits compact unquoted-key JSON5.
+  3. CORRECTED: the table's 'Bun.sha — SHA-256' label is wrong. Bun.sha
+     EXISTS and is SHA-512/256 (hex of 'abc' matches the sha512-256
+     vector; default returns Uint8Array) — the repo already corrected
+     this in §24; the table regressed it.
+  4. CORRECTED: the table's 'Temporal — not yet natively shipped' is
+     FALSE. Temporal is enabled by default on 1.4.0 (typeof object,
+     Instant callable) — verified in §88 and adopted in §89.
+- Lesson: a plausible API table from an LLM summary carries regressions
+  (Bun.sha's algorithm, Temporal's availability) and invention (the
+  'bun:semver' module). Row-by-row probing against the runtime is the
+  only ground truth — same discipline as §95's operator-manual audit.
+- Artifacts: tools/bun-apis-probe.ts (new), tests/lib/bun-apis-probe.
+  test.ts (new), package.json (bun:apis-probe), tools/verify-contracts.ts
+  (gate #26), scripts/audit-bun-native.ts (keep-list +1), this section.
+  verify:contracts 26/26.
+
 
 
 

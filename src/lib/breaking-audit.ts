@@ -65,7 +65,7 @@ export function runBreakingAudit(root: string): BreakingFinding[] {
   // parse-tennis-data-csv.ts deliberately uses Temporal.PlainDate to validate
   // tennis-data.co.uk dates (§89) — the old day>31 check let impossible
   // dates through; Temporal rejects them natively. Audited, deliberate.
-  const TEMPORAL_ALLOWLIST = ['**/parse-tennis-data-csv.ts', '**/tennis-meta.ts', '**/toml-config.ts']; // §89 adoption + §88-behavior prose notes (not calls)
+  const TEMPORAL_ALLOWLIST = ['**/parse-tennis-data-csv.ts', '**/tennis-meta.ts', '**/toml-config.ts', '**/tools/bun-apis-probe.ts']; // §89 adoption + §88-behavior prose notes (not calls) + §115 probe re-verification
   const TLS_OVERRIDE_ALLOWLIST = [
     '**/host-discover.ts',
     // security:probe deliberately connects with rejectUnauthorized:false to
