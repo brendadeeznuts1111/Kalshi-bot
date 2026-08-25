@@ -42,6 +42,7 @@ const gates = [
   ['bun:apis-probe'],
   ['routes:probe'],
   ['serve-tls:probe'],
+  ['shell:probe'],
 ] as const;
 
 const GATE_ENV: Record<string, Record<string, string>> = {

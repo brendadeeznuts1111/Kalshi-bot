@@ -5135,6 +5135,64 @@ another note.
   at both entry points + a 5-field parse round-trip.
 - Artifacts: tests/scripts/audit-overlay-cron.test.ts (+1 test), this
   section. verify:contracts 28/28.
+## 127. Bun Shell — $ from "bun" (not global), 12-claim surface verified (2026-08-24)
+
+- VERIFIED (tools/shell-probe.ts, gate #29, 12/12): Bun Shell is real on
+  1.4.0 and its docs' primary API matches the runtime. NOTE: there is NO
+  global shell namespace — the type Shell is exported from the "bun" module and
+  the runtime exposes Shell/ShellPromise/ShellError as props on the $
+  function (docs:api tokenizes the dotted form and rejects the token
+  Shell, which bun-types does not declare as a global).
+- $ is NOT a global — must import { $ } from "bun". The $ function
+  also carries props: Shell, ShellPromise, ShellError, braces, escape.
+- Capture methods chain BEFORE await: await $cmd.text() / .json() /
+  .bytes() / .lines() / .quiet(). Awaiting a bare $cmd with no capture
+  method INHERITS stdout to the parent (docs: "By default, shell
+  commands print to stdout").
+- .quiet() yields { stdout: Buffer, stderr: Buffer, exitCode }; .text()
+  returns string with trailing newline; .bytes() -> Uint8Array.
+- Non-zero exit THROWS ShellError { exitCode, stdout, stderr } by
+  default; .nothrow() per-promise AND $.nothrow() global toggle both
+  work.
+- .lines() is an ASYNC ITERABLE — for await (const line of $...lines()).
+  NOT a plain array: awaiting it directly yields {} (a trap; check the
+  docs' for-await form before use).
+- stdin: < ${Response} and < ${Buffer} work; a plain JS string is
+  treated as a FILE PATH (bun: No such file or directory) — the docs
+  list only Buffer/typed-array/Response/Bun.file as stdin sources.
+- Interpolation is AUTO-ESCAPED and injection-safe: echo ${"a$(touch
+  x)"} yields the literal string, no file created.
+- .cwd(), .env(), stderr separation (2>&1), and $.escape/$.braces
+  helpers all verified. bun --version passthrough works.
+- Repo note: Bun Shell is a viable replacement for Bun.spawnSync in
+  audit tooling (cleaner cwd/env/escape), but nothing was migrated
+  this round — spawn:probe contract stays authoritative for spawn.
+- Artifacts: tools/shell-probe.ts (new, gate #29), tools/verify-contracts.ts
+  (28 -> 29 gates), package.json (shell:probe script). verify:contracts
+  29/29.
+## 128. Bun.cron missed-fire policy — SKIP (lost, not deferred) (2026-08-24)
+
+- RESOLVED (§126's open question): a scheduled fire that lands while the
+  job is still running is DROPPED — it does not run at job end, and the
+  next fire is the following minute slot.
+- Probe (scratch/cron-defer.ts, 210s window, 60s interval + 95s job):
+  fire1 at t=0.8s, job1-end at t=95.8s, next fire at t=120.8s (exactly
+  fire1 + 120s — the slot AFTER the missed one at +60s). Fires stay on
+  exact minute boundaries (fire-to-fire delta 60000ms).
+- §126's 140s window was underpowered: it ended (~140s) before job1
+  finished (~155s from registration), so only fire1 had occurred and
+  skip-vs-defer looked ambiguous. With the full window the policy is
+  unambiguous.
+- Implication: Bun.cron drops a tick that collides with a running job.
+  For time-sensitive ticks (finance-cron, sports metadata) keep job
+  duration well under the interval; single-flight cannot recover a
+  dropped tick because the drop happens inside the runtime before the
+  wrapper runs. If a tick must never be lost, the job itself should
+  re-check elapsed time and run a catch-up pass on the next fire.
+- Artifacts: this section. verify:contracts 29/29 (shell gate #29 added
+  in §127).
+
+
 
 
 
