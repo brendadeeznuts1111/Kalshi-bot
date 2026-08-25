@@ -3561,3 +3561,28 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
     accepted. The 24h value works; the message's upper bound is wrong.
 - Artifacts: tools/csrf-probe.ts (9 checks), tests/lib/csrf-probe.test.ts
   (6 tests), verify:contracts 14/14.
+
+## 78. Cookie APIs — native usage verified + a native-API limitation found (2026-08-24)
+
+- User asked: does the CSRF machinery use Bun's native cookie APIs? YES:
+  - SET: new Bun.Cookie(name, value, {path, httpOnly, sameSite, secure,
+    maxAge}).toString() — verified output: Path=/, HttpOnly (omitted when
+    false), Max-Age=0 emitted, Secure only when true, SameSite=Lax default.
+  - READ: new Bun.CookieMap(cookieHeader).get(name) — verified on quoted
+    values, spaces ('c = spaced' -> 'spaced'), multiple cookies, missing
+    -> null. CORRECT use: the request Cookie header has no attributes, so
+    every name=value IS a cookie.
+- NATIVE-API LIMITATION (probe-verified, the deepen finding):
+  - Bun.CookieMap is the WRONG tool for parsing Set-Cookie RESPONSE
+    headers: it treats Path=/, Max-Age= etc. as cookie ENTRIES (probe:
+    'session=SECRET_TOKEN; Path=/' -> entries session + Path=/) — it
+    cannot distinguish attributes. CookieMap parses the Cookie REQUEST
+    header only.
+  - CookieJar (Fantasy402 session hops) parses Set-Cookie, so its manual
+    split(';')[0] logic is CORRECT — I tried refactoring it to CookieMap,
+    the test caught the regression, reverted. The reason is now a code
+    comment so nobody re-attempts it.
+  - CSRF's CookieMap use is correct because it reads the request Cookie
+    header (no attributes).
+- Artifacts: probe verified via inline bun -e (no new gate — the surface
+  is 2 call sites + cookie-jar, all now documented at their source).

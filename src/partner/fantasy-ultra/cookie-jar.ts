@@ -13,6 +13,10 @@ export class CookieJar {
       ? setCookieHeaders
       : [setCookieHeaders];
     for (const raw of list) {
+      // NOTE: Bun.CookieMap is the WRONG tool for Set-Cookie (probe §78):
+      // it treats Path=/, Max-Age= etc. as cookie ENTRIES, not attributes.
+      // CookieMap parses the Cookie REQUEST header; Set-Cookie response
+      // headers need attribute exclusion, so keep the manual split here.
       const first = raw.split(";")[0]?.trim();
       if (!first) continue;
       const eq = first.indexOf("=");
