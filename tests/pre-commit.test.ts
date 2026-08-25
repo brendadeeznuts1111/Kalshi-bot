@@ -24,10 +24,18 @@ describe("resolveConditionalGates", () => {
     expect(resolveConditionalGates(["playground/funding-playground.html"])).toEqual(["design:check"]);
   });
 
-  test("fires breaking-audit + deps:check on manifest files", () => {
-    expect(resolveConditionalGates(["package.json"])).toEqual(["bun:breaking-audit", "deps:check"]);
-    expect(resolveConditionalGates(["bun.lock"])).toEqual(["bun:breaking-audit", "deps:check"]);
+  test("fires breaking-audit + deps:check + licenses:gate on manifest files", () => {
+    expect(resolveConditionalGates(["package.json"])).toEqual(["bun:breaking-audit", "deps:check", "licenses:gate"]);
+    expect(resolveConditionalGates(["bun.lock"])).toEqual(["bun:breaking-audit", "deps:check", "licenses:gate"]);
     expect(resolveConditionalGates(["bunfig.toml"])).toEqual(["bun:breaking-audit", "deps:check"]);
+  });
+
+  test("fires licenses:gate on policy + tooling changes", () => {
+    expect(resolveConditionalGates(["config/licenses-allowlist.json"])).toEqual(["licenses:gate"]);
+    expect(resolveConditionalGates(["config/audit-overrides.json"])).toEqual(["licenses:gate"]);
+    expect(resolveConditionalGates(["tools/licenses-gate.ts"])).toEqual(["licenses:gate"]);
+    expect(resolveConditionalGates(["tools/audit-overlay-update.ts"])).toEqual(["licenses:gate"]);
+    expect(resolveConditionalGates(["src/lib/licenses-policy.ts"])).toEqual(["licenses:gate"]);
   });
 
   test("fires assets:check on content/docs + audit source", () => {

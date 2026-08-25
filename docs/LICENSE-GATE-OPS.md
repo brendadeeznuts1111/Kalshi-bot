@@ -1,0 +1,143 @@
+# License Gate — Operator's Manual
+
+Probe-verified against Bun 1.4.0 and the committed tooling (2026-08-24);
+§95 of AGENT-PITFALLS.md records the corrections. Policy changes live in
+config files ONLY — never patch the TypeScript for allowlist/alias/
+exemption decisions.
+
+## What runs where
+
+- Pre-commit hook (`.githooks/pre-commit` -> `tools/pre-commit.ts`):
+  `licenses:gate` fires as a CONDITIONAL gate when a staged path touches
+  package.json, bun.lock, config/licenses-allowlist.json, config/
+  audit-overrides.json, tools/licenses-gate.ts, tools/audit-overlay-
+  update.ts, or src/lib/licenses-policy.ts. A new prod dependency or a
+  policy edit fails the COMMIT if the license is not permissive or not
+  exempted. Everything else (guard, typecheck, tests, glossary, breaking-
+  audit, deps:check, docs:check, ...) runs as before.
+- Full merge proof: `bun run check` (same as `bun run bun:ci`) runs all
+  17 verify:contracts gates every time — this is the authority; the
+  pre-commit hook is the fast subset.
+
+## Adding a new production dependency
+
+1. `bun add <package>` and stage the lockfile. The pre-commit hook now
+   runs the gate automatically.
+2. Want a preview first? `bun run licenses:gate --json` shows the full
+   per-package verdict before you commit.
+3. If the gate blocks, the human output ends with:
+
+```
+  FAIL some-lib@2.0.0 — no allowlist entry and no matching exemption
+licenses:gate — FAIL (1 violation(s))
+```
+
+   (`--json` carries the same as a `violations` array with the reason.)
+
+4. Fix it in config/licenses-allowlist.json — the field is `name`, NOT
+   `pkg` (the schema validator rejects a missing name):
+
+```json
+{
+  "policy": {
+    "allowedLicenses": ["MIT", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "ISC", "0BSD", "Unlicense", "CC0-1.0"],
+    "licenseAliases": { "BSD": "BSD-3-Clause", "Apache 2.0": "Apache-2.0" }
+  },
+  "exemptions": [
+    {
+      "name": "some-lib",
+      "version": "2.0.0",
+      "license": "GPL-3.0",
+      "expires": "2026-12-31",
+      "remediation": "legal approved this specific version; upgrade when MIT releases"
+    }
+  ]
+}
+```
+
+   - `license` scopes the exemption: it applies ONLY while the reported
+     license equals it. A future version with a different license stops
+     matching automatically — no grandfathering.
+   - `version` is an exact match on the RESOLVED version. For file: deps
+     bun reports the file spec (e.g. `vendor/proton-pass`), not semver —
+     so vendored exceptions rely on license-scoping + `expires`, not
+     `version`.
+   - `expires` is the time-bomb: an expired exemption FAILS the gate and
+     prints `Action: <remediation>`.
+
+5. Re-run `bun run licenses:gate` to confirm green, then commit.
+
+## Mis-mapped license strings (aliases)
+
+- The alias map lives at `policy.licenseAliases` (NOT a top-level
+  `aliases` key). Matching is case-insensitive with a passthrough for
+  unknown strings — 'GPL-3.0' is never silently normalized.
+  Example entry: `"BSD": "BSD-3-Clause"`.
+- An identity alias like `"Unlicense": "Unlicense"` is a no-op —
+  Unlicense is already in allowedLicenses.
+
+## Vulnerability overlay (warn-only)
+
+- config/audit-overrides.json maps `pkg@version` -> severity (string
+  shorthand or `{ severity, note? }`). Matches are printed as `warn
+  advisory ...` in human output and appear in the `advisories` array of
+  --json. The exit code NEVER changes for advisories — license policy is
+  the merge authority.
+- Refresh: `bun run audit:overlay:update` — the one network call in the
+  system. Shells `bun audit --json` (returns `{}` when clean), upserts
+  into the overlay, preserves manual entries. Run weekly or before a
+  release.
+
+## SBOM snapshots
+
+- `bun run licenses:sbom` writes .data/licenses-sbom.json and prints the
+  diff vs the previous snapshot (added / removed / changed lines). The
+  DIFF LIVES IN STDOUT — the JSON file itself has no added/removed/
+  changed arrays (those appear in `--json` output only when combined
+  with `--sbom`).
+- The file's `generatedAt` changes on every run, so `git diff .data/
+  licenses-sbom.json` will always show that line — fingerprints (sha256
+  of name|version|license|package.json) are stable across runs.
+
+## Machine-readable output
+
+- `bun run licenses:gate --json | jq '.ok'` — boolean pass/fail. There is
+  NO `status` key (`jq '.status'` returns null).
+- Top-level keys: ok, summary (total/allowed/violations/exemptions),
+  packages, violations, advisories, staleExemptions, diff.
+
+## When an exemption expires
+
+- Example (proton-pass, expires 2026-12-01): the gate fails with
+  `FAIL @factorywager/proton-pass@vendor/proton-pass — exemption expired
+  on 2026-12-01 — re-review ... Action: re-review vendor arrangement:
+  upgrade to an upstream package with a declared license, or obtain
+  written vendor approval`.
+- Steps: (1) check whether the vendor released a version with a real
+  license — if yes, the license-scoped exemption stops matching on its
+  own; remove it from the config. (2) If not, extend `expires` and
+  refresh `remediation` — forcing an intentional re-approval. Do NOT
+  bump `version` for a file: dep (see above).
+
+## Cheat sheet
+
+| Command | Purpose |
+| :--- | :--- |
+| `git commit` | Runs pre-commit; licenses:gate fires on dep/policy changes |
+| `bun run check` | Full merge proof — all 17 contract gates |
+| `bun run licenses:gate` | Manual run, human-readable |
+| `bun run licenses:gate --json` | Machine-readable verdicts (ok/summary/violations/advisories) |
+| `bun run licenses:sbom` | Write snapshot + print diff vs previous |
+| `bun run audit:overlay:update` | Refresh vulnerability overlay (network; warn-only) |
+| edit `config/licenses-allowlist.json` | Allowlist, aliases, exemptions, expiry |
+
+## Config schema reference
+
+- policy.allowedLicenses: non-empty array of canonical SPDX ids.
+- policy.licenseAliases: loose spellings -> canonical id (case-
+  insensitive match).
+- exemptions[]: { name (required), license?, version?, reason?,
+  remediation?, expires? (YYYY-MM-DD) }. Validated at load; a malformed
+  config exits 1 with the exact message.
+- config/audit-overrides.json: { format, version, advisories: {
+  "pkg@version": "severity" | { severity, note? } } }.

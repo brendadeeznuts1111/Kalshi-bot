@@ -4023,5 +4023,48 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
   (audit:overlay:update), tests/lib/licenses-policy.test.ts (+5),
   tests/lib/licenses-gate.test.ts (advisories key). verify:contracts
   stays 17/17.
+## 95. Operator's manual — probed, corrected, folded (2026-08-24)
+
+- A pasted operator's manual for the license gate made six claims; every
+  one was probed against the committed tooling. Corrections (verified):
+  1. FALSE: "pre-commit executes bun run check (includes gate #17)".
+     The hook runs a SUBSET; licenses:gate was missing entirely — a GPL
+     dep could land with a green pre-commit. FIXED: added licenses:gate
+     as a conditional gate in tools/pre-commit.ts, firing on package.
+     json / bun.lock / config/licenses-allowlist.json / config/audit-
+     overrides.json / tools/licenses-gate.ts / tools/audit-overlay-
+     update.ts / src/lib/licenses-policy.ts (~10ms, offline). Tests in
+     tests/pre-commit.test.ts updated (exact-array assertions).
+  2. FALSE: exemption schema uses "pkg". The field is "name" —
+     validatePolicyConfig rejects a missing name, so the manual's own
+     example would fail the gate.
+  3. FALSE: aliases live in a top-level "aliases" map. They are at
+     policy.licenseAliases. An identity alias ("Unlicense": "Unlicense")
+     is a no-op — Unlicense is already allowed.
+  4. FALSE: --json exposes ".status" ("pass"/"fail"). Probed keys:
+     ok (boolean), summary, packages, violations, advisories, stale-
+     Exemptions, diff. `jq '.status'` returns null; `jq '.ok'` is the
+     switch.
+  5. FALSE: the SBOM FILE contains added/removed/changed arrays. The
+     diff is computed against the previous snapshot and printed to
+     STDOUT; the file holds only format/version/generatedAt/bunVersion/
+     summary/packages. Also: generatedAt churns every run, so git diff
+     on the committed snapshot always shows that one line.
+  6. PARTLY WRONG: "update the version field" to re-approve a vendored
+     dep — for file: deps bun reports the file spec in versions, not
+     semver, so version-scoping cannot work; the license-scoped
+     exemption auto-drops when a real license appears (probed in §93).
+     Correct guidance is extend expires + refresh remediation.
+- Folded the corrected manual into docs/LICENSE-GATE-OPS.md (commands,
+  failure formats, schema reference, cheat sheet) — the repo now carries
+  one accurate operator's doc instead of an ad-hoc chat artifact.
+- Lesson: externalized policy still needs an accurate operator's doc; a
+  plausible-but-wrong manual is worse than none (it teaches the wrong
+  config schema and promises a gate that does not run). Probe the
+  claimed behavior, then fold the correction in.
+- Artifacts: tools/pre-commit.ts (+licenses:gate conditional), tests/
+  pre-commit.test.ts (3 updated + 5 new assertions), docs/LICENSE-GATE-
+  OPS.md (new). verify:contracts stays 17/17.
+
 
 

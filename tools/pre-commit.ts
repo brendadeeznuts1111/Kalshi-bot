@@ -66,6 +66,23 @@ export const CONDITIONAL_GATES: ReadonlyArray<{ script: string; paths: readonly 
     paths: ["package.json", "bun.lock", "bunfig.toml"],
   },
   {
+    script: "licenses:gate",
+    // License compliance on dependency + policy changes (§92-§94): a new
+    // prod dep with a non-permissive license must fail the COMMIT, not
+    // just the full `bun run check` (deps:check only dedupes/prunes).
+    // Fires on the manifest files plus the policy/tooling itself —
+    // ~10ms, offline.
+    paths: [
+      "package.json",
+      "bun.lock",
+      "config/licenses-allowlist.json",
+      "config/audit-overrides.json",
+      "tools/licenses-gate.ts",
+      "tools/audit-overlay-update.ts",
+      "src/lib/licenses-policy.ts",
+    ],
+  },
+  {
     script: "design:check",
     // Every frontend module surface + design system: hardcoded colors/radii
     // outside TOKENS fail the commit (live pages must stay token-compliant),
