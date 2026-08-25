@@ -4239,6 +4239,37 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
 - Artifacts: src/lib/licenses-policy.ts (WITH branch + detection +
   diagnostics), tests/lib/licenses-policy.test.ts (+5), docs/LICENSE-
   GATE-OPS.md (diagnostics note). verify:contracts stays 17/17.
+## 103. licenses:report — static compliance artifact for legal/release sign-off (2026-08-24)
+
+- `bun run licenses:report` renders a markdown compliance report to
+  research/outputs/licenses-report.md (research/outputs is gitignored —
+  regenerate + attach at release time, no churn). Sections: header with
+  generatedAt/bunVersion + CONFIG FINGERPRINT (sha256 of both policy
+  files — proves which policy version produced the artifact), summary
+  table, per-package table (license + status + fingerprint), exemptions
+  (with expiry + days remaining), advisories, expiring-soon, drift vs
+  the previous snapshot, violations, stale exemptions.
+- RENDERING is a pure lib (src/lib/licenses-report.ts — no Bun APIs,
+  unit-tested); the CLI (tools/licenses-report.ts) spawns the gate with
+  --json --sbom (offline), fingerprints the configs, renders, writes.
+  Args are forwarded to the gate (--config/--overlay/--sbom <path> for
+  fixture runs); the CLI owns the default snapshot path.
+- FAILING GATES STILL WRITE: a violation run produces a report with the
+  FAIL status + violations listed and exits 1 — the FAIL state IS the
+  sign-off artifact (legal sees exactly what blocked the release).
+- CRON: the weekly jobAuditOverlay (§99) now regenerates the report
+  after the overlay refresh (Bun Shell $ spawn, massey idiom) — the
+  same weekly cadence covers overlay + report.
+- Trap (test-caught): Bun Shell needs REAL backticks — `$"..."` is
+  invalid TS. The run_code lexer breaks on backticks in strings, so the
+  cron line was built with String.fromCharCode(96) concatenation.
+- Tests: renderer 2 unit (PASS + FAIL renders), CLI 2 e2e (fail writes
+  + exit 1; pass writes + exit 0). SPAWN_KEEP_LIST +2.
+- Artifacts: src/lib/licenses-report.ts (new), tools/licenses-report.ts
+  (new), scripts/cron-main.ts (report in jobAuditOverlay), package.json
+  (licenses:report), tests/lib/licenses-report.test.ts (new).
+  verify:contracts stays 17/17.
+
 
 
 

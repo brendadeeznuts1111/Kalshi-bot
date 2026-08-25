@@ -38,6 +38,7 @@
     "licenses:check": "bun pm licenses --prod --json",
     "licenses:gate": "bun tools/licenses-gate.ts",
     "licenses:sbom": "bun tools/licenses-gate.ts --sbom",
+    "licenses:report": "bun tools/licenses-report.ts",
     "audit:overlay:update": "bun tools/audit-overlay-update.ts",
     "check": "bun run guard && bun run typecheck && bun run test && bun run bun:breaking-audit && bun run bun:perf-audit && bun run verify:contracts",
     "bun:ci": "bun run check",

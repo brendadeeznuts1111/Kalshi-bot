@@ -451,6 +451,10 @@ async function jobAuditOverlay(): Promise<void> {
   try {
     const r = await refreshAuditOverlay();
     console.error("[cron:audit-overlay] " + r.found + " issue(s) found; overlay has " + r.total + " total entries \u00b7 " + (Date.now() - start) + "ms");
+    // Release sign-off artifact (§103): regenerate the compliance report
+    // on the same weekly cadence. Bun Shell spawn, like the massey job.
+const rep = await $`bun run licenses:report`.cwd(import.meta.dir + "/..").nothrow();
+    console.error("[cron:audit-overlay] report: " + (rep.exitCode === 0 ? "written" : "FAILED (" + rep.exitCode + ")"));
   } catch (err) {
     console.error("[cron:audit-overlay] Error: " + err);
   }

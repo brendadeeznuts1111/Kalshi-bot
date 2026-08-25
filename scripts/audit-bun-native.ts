@@ -269,6 +269,8 @@ export const SPAWN_KEEP_LIST = new Set([
   "tests/lib/docs-integrity.test.ts", // runs docs:integrity CLI for src-ref gate (pipe capture)
   "tools/licenses-gate.ts", // bun pm licenses subprocess (pipe capture)
   "tools/audit-overlay-update.ts", // bun audit --json subprocess (pipe capture; network allowed only here)
+  "tools/licenses-report.ts", // spawns licenses:gate --json --sbom (pipe capture)
+  "tests/lib/licenses-report.test.ts", // same gate spawn via the report CLI (pipe capture)
   "tests/lib/licenses-gate.test.ts", // same gate subprocess (pipe capture)
 ]);
 

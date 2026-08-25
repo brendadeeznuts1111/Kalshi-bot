@@ -204,6 +204,21 @@ licenses:gate — FAIL (1 violation(s))
 | :--- | :--- |
 | `bun run licenses:gate --config <path>` | Run against a different policy file |
 | `bun run licenses:gate --overlay <path>` | Test against an alternate audit-overrides.json |
+## Release sign-off report
+
+- `bun run licenses:report` writes research/outputs/licenses-report.md
+  (gitignored — regenerate + attach at release time): summary, package
+  table with license status + fingerprint, exemptions with expiry,
+  advisories, expiring-soon, drift vs the previous snapshot, and any
+  violations. The header carries a config fingerprint so the artifact
+  proves which policy version produced it.
+- A FAILING gate still writes the report (with the violations listed)
+  and exits 1 — the FAIL state is exactly what legal needs to see.
+- The weekly cron job regenerates it automatically alongside the overlay
+  refresh.
+
+| `bun run licenses:report` | Write the markdown compliance report (legal/release sign-off) |
+
 
 
 ## Config schema reference additions
