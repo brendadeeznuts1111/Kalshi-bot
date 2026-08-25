@@ -11,7 +11,7 @@
  */
 import { join } from 'node:path';
 import { assertBunAtLeast } from '../src/research/bun-native.ts';
-import { runBreakingAudit, breakingAuditPasses } from '../src/lib/breaking-audit.ts';
+import { runBreakingAudit, breakingAuditPasses, staleAllowlistEntries } from '../src/lib/breaking-audit.ts';
 import { statusLine } from '../src/research/terminal-out.ts';
 
 assertBunAtLeast('1.4.0', 'bun:breaking-audit');
@@ -25,4 +25,9 @@ for (const f of findings) {
   console.log(statusLine(mark, f.check, f.detail));
 }
 console.log('breaking-audit: ' + (problems === 0 ? 'ok - no v1.4 breakage in this repo' : problems + ' finding(s) need attention') + ' · ' + findings.length + ' checks');
+const stale = await staleAllowlistEntries(ROOT);
+if (stale.length > 0) {
+  console.log(statusLine("WARN", "stale allowlist entries (non-fatal)", stale.length + " dead entry(ies):"));
+  for (const s of stale) console.log("  - " + s);
+}
 process.exit(breakingAuditPasses(findings) ? 0 : 1);

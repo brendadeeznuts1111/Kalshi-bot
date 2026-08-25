@@ -396,6 +396,15 @@ async function main(): Promise<void> {
   const surface = runRuntimeSurfaceProbe();
   const surfaceFail = surface.filter((c) => !c.ok);
 
+  // §166: keep-list entries must resolve to existing files, else a renamed
+  // or deleted keep-listed file silently leaves a dead entry behind.
+  for (const entry of SPAWN_KEEP_LIST) {
+    if (entry.includes("*")) continue; // exact paths only today
+    if (!(await Bun.file(join(root, entry)).exists())) {
+      console.warn("bun-native guard: stale SPAWN_KEEP_LIST entry (file missing): " + entry);
+    }
+  }
+
   if (violations.length === 0 && surfaceFail.length === 0) {
     console.log("bun-native guard: ok");
     return;

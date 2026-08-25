@@ -7,7 +7,7 @@ import { describe, test, expect, beforeAll, afterAll } from 'bun:test';
 import { mkdtempSync, writeFileSync, rmSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { runBreakingAudit, breakingAuditPasses } from '../../src/lib/breaking-audit.ts';
+import { runBreakingAudit, breakingAuditPasses, staleAllowlistEntries } from '../../src/lib/breaking-audit.ts';
 import type { BreakingFinding } from '../../src/lib/breaking-audit.ts';
 
 let root: string;
@@ -120,5 +120,19 @@ describe('breakingAuditPasses', () => {
       { check: 'b', status: 'warn', detail: '' },
     ];
     expect(breakingAuditPasses(findings)).toBe(false);
+  });
+});
+
+describe('staleAllowlistEntries (§166)', () => {
+  test('reports every allowlist entry as stale when none exist', async () => {
+    const stale = await staleAllowlistEntries(root);
+    expect(stale.length).toBeGreaterThan(0);
+    expect(stale[0]).toContain('no matching file');
+  });
+
+  test('finds nothing stale in this repo (dead allowlist entries fail here)', async () => {
+    const repoRoot = join(import.meta.dir, '..', '..');
+    const stale = await staleAllowlistEntries(repoRoot);
+    expect(stale).toEqual([]);
   });
 });

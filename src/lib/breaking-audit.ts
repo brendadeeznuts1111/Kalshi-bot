@@ -29,6 +29,51 @@ import { rgFiles } from './rg.ts';
 
 export type FindingStatus = 'ok' | 'warn' | 'fail';
 export type BreakingFinding = { check: string; status: FindingStatus; detail: string };
+// Audit/label text legitimately mentions removed APIs (check names) -
+// exclude those files from the call-site scan.
+// Audit/probe machinery legitimately mentions removed APIs in check
+// Extra files that legitimately mention removed APIs in check labels /
+// probe names (not as calls): pre-commit.ts gate labels, runtime-
+// surface.ts probe names. The shared rgFiles already excludes the
+// audit glob by default; these ride the exclude option.
+const LABEL_FILES = ['**/pre-commit.ts', '**/runtime-surface.ts', '**/defaults-probe.ts']; // defaults-probe legitimately probes Temporal (§88)
+
+// TLS probe-only exception: host-discover reads leaf SANs from ANY cert
+// (same semantics as the openssl s_client -showcerts it replaced). You
+// cannot chain-verify a host you are probing to identify for the first
+// time; the SANs only inform a host->skin suggestion and carry no secrets.
+// All other connections must keep chain + hostname verification.
+// docs-validate.ts deliberately uses Bun.YAML (1.2) to validate doc
+// code-block examples with the SAME parser the runtime uses - a 1.1-style
+// yes/on/no key in a doc block is exactly what should be flagged, not
+// hidden (the validator is report-only).
+const YAML_ALLOWLIST = ['**/docs-validate.ts', 'tools/format-probe.ts']; // format-probe asserts the 1.2 semantics deliberately
+// parse-tennis-data-csv.ts deliberately uses Temporal.PlainDate to validate
+// tennis-data.co.uk dates (§89) — the old day>31 check let impossible
+// dates through; Temporal rejects them natively. Audited, deliberate.
+const TEMPORAL_ALLOWLIST = ['**/parse-tennis-data-csv.ts', '**/tennis-meta.ts', '**/toml-config.ts', '**/tools/bun-apis-probe.ts']; // §89 adoption + §88-behavior prose notes (not calls) + §115 probe re-verification
+const TLS_OVERRIDE_ALLOWLIST = [
+  '**/host-discover.ts',
+  // security:probe deliberately connects with rejectUnauthorized:false to
+  // VERIFY the untrusted-handshake path (authorized=false probe) and the
+  // ca-alone-does-not-bypass-hostname behavior — a local throwaway cert,
+  // no secrets; security-page.ts only DOCUMENTS the pattern (§28).
+  '**/tools/security-probe.ts',
+  '**/src/research/security-page.ts',
+  '**/tools/serve-tls-probe.ts', // TLS probe with a local throwaway self-signed cert (§123)
+  '**/tools/h2-probe.ts', // h2 multiplexing probe against a throwaway loopback cert (§154)
+];
+
+// live-page.ts only DOCUMENTS the surface. These are the sanctioned
+// usage - the fixture in breaking-audit.test.ts (src/ws.ts) still warns.
+const WS_ALLOWLIST = [
+  '**/src/research/serve.ts',
+  '**/src/institutions/live-channel.ts',
+  '**/src/research/live-page.ts',
+  '**/src/research/map-page.ts', // documents server.upgrade() H3 caveat (§39), not a call
+  '**/tools/ws-probe.ts', // probe deliberately exercises the websocket surface (§114)
+];
+
 
 // grepFiles -> shared rgFiles (src/lib/rg.ts): mandatory audit self-
 // exclusion + escaping handled structurally (pitfalls 17/24/27).
@@ -43,40 +88,7 @@ export function runBreakingAudit(root: string): BreakingFinding[] {
   const src = join(root, 'src');
   const tools = join(root, 'tools');
   const dirs = [src, tools];
-  // Audit/label text legitimately mentions removed APIs (check names) -
-  // exclude those files from the call-site scan.
-  // Audit/probe machinery legitimately mentions removed APIs in check
-  // Extra files that legitimately mention removed APIs in check labels /
-  // probe names (not as calls): pre-commit.ts gate labels, runtime-
-  // surface.ts probe names. The shared rgFiles already excludes the
-  // audit glob by default; these ride the exclude option.
-  const LABEL_FILES = ['**/pre-commit.ts', '**/runtime-surface.ts', '**/defaults-probe.ts']; // defaults-probe legitimately probes Temporal (§88)
 
-  // TLS probe-only exception: host-discover reads leaf SANs from ANY cert
-  // (same semantics as the openssl s_client -showcerts it replaced). You
-  // cannot chain-verify a host you are probing to identify for the first
-  // time; the SANs only inform a host->skin suggestion and carry no secrets.
-  // All other connections must keep chain + hostname verification.
-  // docs-validate.ts deliberately uses Bun.YAML (1.2) to validate doc
-  // code-block examples with the SAME parser the runtime uses - a 1.1-style
-  // yes/on/no key in a doc block is exactly what should be flagged, not
-  // hidden (the validator is report-only).
-  const YAML_ALLOWLIST = ['**/docs-validate.ts', 'tools/format-probe.ts']; // format-probe asserts the 1.2 semantics deliberately
-  // parse-tennis-data-csv.ts deliberately uses Temporal.PlainDate to validate
-  // tennis-data.co.uk dates (§89) — the old day>31 check let impossible
-  // dates through; Temporal rejects them natively. Audited, deliberate.
-  const TEMPORAL_ALLOWLIST = ['**/parse-tennis-data-csv.ts', '**/tennis-meta.ts', '**/toml-config.ts', '**/tools/bun-apis-probe.ts']; // §89 adoption + §88-behavior prose notes (not calls) + §115 probe re-verification
-  const TLS_OVERRIDE_ALLOWLIST = [
-    '**/host-discover.ts',
-    // security:probe deliberately connects with rejectUnauthorized:false to
-    // VERIFY the untrusted-handshake path (authorized=false probe) and the
-    // ca-alone-does-not-bypass-hostname behavior — a local throwaway cert,
-    // no secrets; security-page.ts only DOCUMENTS the pattern (§28).
-    '**/tools/security-probe.ts',
-    '**/src/research/security-page.ts',
-    '**/tools/serve-tls-probe.ts', // TLS probe with a local throwaway self-signed cert (§123)
-    '**/tools/h2-probe.ts', // h2 multiplexing probe against a throwaway loopback cert (§154)
-  ];
 
   // 1. res.writeHeader removed (v1.4): any usage would crash at runtime.
   const wH = rgFiles(root, 'writeHeader', dirs, { exclude: LABEL_FILES });
@@ -185,15 +197,7 @@ export function runBreakingAudit(root: string): BreakingFinding[] {
   // Deliberate live channel (probe-verified AGENT-PITFALLS §23): /api/live
   // upgrade in serve.ts handles upgrade() false with 400; live-channel.ts
   // uses the standard open/message/close + subscribe/publish surface;
-  // live-page.ts only DOCUMENTS the surface. These are the sanctioned
-  // usage - the fixture in breaking-audit.test.ts (src/ws.ts) still warns.
-  const WS_ALLOWLIST = [
-    '**/src/research/serve.ts',
-    '**/src/institutions/live-channel.ts',
-    '**/src/research/live-page.ts',
-    '**/src/research/map-page.ts', // documents server.upgrade() H3 caveat (§39), not a call
-    '**/tools/ws-probe.ts', // probe deliberately exercises the websocket surface (§114)
-  ];
+
   const wsRoutes = rgFiles(root, 'websocket\\s*:\\s*\\{|\\bupgrade\\(', dirs, { exclude: [...LABEL_FILES, ...WS_ALLOWLIST] });
   findings.push({
     check: 'Bun.serve websocket routes / server.upgrade() (1.4 semantics)',
@@ -271,6 +275,40 @@ export function runBreakingAudit(root: string): BreakingFinding[] {
 }
 
 /** True when every finding is ok (usable as a gate). */
+/**
+ * Report allowlist entries whose glob/exact path matches no existing file
+ * under the repo root. A renamed or deleted allowlisted file silently
+ * leaves a dead entry behind; surfacing it keeps the allowlists honest
+ * without failing the gate (a dead entry weakens nothing - the audit
+ * gate stays on real breakage). §166.
+ */
+export async function staleAllowlistEntries(root: string): Promise<string[]> {
+  const candidates: Array<[string, string[]]> = [
+    ["LABEL_FILES", LABEL_FILES],
+    ["YAML_ALLOWLIST", YAML_ALLOWLIST],
+    ["TEMPORAL_ALLOWLIST", TEMPORAL_ALLOWLIST],
+    ["TLS_OVERRIDE_ALLOWLIST", TLS_OVERRIDE_ALLOWLIST],
+    ["WS_ALLOWLIST", WS_ALLOWLIST],
+  ];
+  const stale: string[] = [];
+  for (const [listName, entries] of candidates) {
+    for (const entry of entries) {
+      let hit = false;
+      if (entry.includes("*")) {
+        const glob = new Bun.Glob(entry);
+        for await (const _match of glob.scan({ cwd: root, onlyFiles: true })) {
+          hit = true;
+          break;
+        }
+      } else {
+        hit = existsSync(join(root, entry));
+      }
+      if (!hit) stale.push(listName + ": " + entry + " (no matching file)");
+    }
+  }
+  return stale;
+}
+
 export function breakingAuditPasses(findings: BreakingFinding[]): boolean {
   return findings.every((f) => f.status === 'ok');
 }

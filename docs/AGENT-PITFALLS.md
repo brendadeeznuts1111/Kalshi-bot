@@ -6001,3 +6001,35 @@ another note.
 
 
 
+
+## 166. Allowlist/keep-list staleness auto-detected (2026-08-24)
+
+- The guard's SPAWN_KEEP_LIST and breaking-audit's five allowlists
+  (LABEL_FILES, YAML_ALLOWLIST, TEMPORAL_ALLOWLIST,
+  TLS_OVERRIDE_ALLOWLIST, WS_ALLOWLIST) drifted silently: a renamed or
+  deleted keep-listed/allowlisted file left a DEAD entry behind (the
+  entry does nothing, but nothing told you). Both sides now report it:
+- scripts/audit-bun-native.ts: warn-level check — every SPAWN_KEEP_LIST
+  entry must resolve to an existing file (exact paths only today);
+  a missing file prints a warning but does NOT fail the gate (a rename
+  mid-flight is a normal transient state — same tolerance as the scan
+  loop's deleted-but-unstaged skip).
+- src/lib/breaking-audit.ts: the allowlists were hoisted to module
+  scope + new staleAllowlistEntries(root): glob entries are matched
+  with Bun.Glob (cwd root, onlyFiles), exact entries with existsSync;
+  zero-match entries come back as listName + entry lines. tools/bun-
+  breaking-audit.ts prints them as a non-fatal WARN (exit code
+  unchanged — a dead entry weakens nothing, the audit gate stays on
+  real breakage).
+- Unit tests (tests/lib/breaking-audit.test.ts, staleAllowlistEntries
+  describe): the fixture root reports all entries stale; the LIVE repo
+  root must report ZERO — a deleted allowlisted file now fails the
+  test suite. Auto-FIX side is deleting the entry; FAIL side is the
+  test.
+- Verified: guard ok (no stale keep-list), breaking-audit 14 checks ok
+  (0 stale), fixture tests 13/13, verify:contracts 52/52, docs:check
+  clean.
+- Artifacts: src/lib/breaking-audit.ts (hoist + staleAllowlistEntries),
+  scripts/audit-bun-native.ts (keep-list staleness warn),
+  tools/bun-breaking-audit.ts (non-fatal report),
+  tests/lib/breaking-audit.test.ts (+2 tests).
