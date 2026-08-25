@@ -85,7 +85,7 @@ export function snapshotFromWire(
 
 /**
  * Code_search calls PER REPO: auth + order keyword lists (repo-scoped —
- * the completeness-correct model, §131). Global attribution was reverted:
+ * the completeness-correct model, §151). Global attribution was reverted:
  * common keywords' top-ranked hits are dominated by unrelated repos, so
  * gated bots never appear (0 gated-repo hits across the global cache).
  * The universal pacer (github-api.ts) keeps batches inside 10/min.

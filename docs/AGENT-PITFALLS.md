@@ -1810,24 +1810,6 @@ ADOPTED: /bun/streams, /bun/observability, /bun/performance widget pages
 (src/lib/widget-page.ts), and `bun run profile:all` (runs every profiler,
 Markdown out).
 
-## 16. Streams + terminal primitives probed (2026-08-24) — the observability widgets
-
-VERIFIED in Bun 1.4.0:
-- `Bun.stringWidth` (emoji + CJK grapheme-aware: ⬇️ = 3, 下载 = 4),
-  `Bun.sliceAnsi` (slice preserves ANSI codes), `Bun.wrapAnsi`.
-- Native `CompressionStream`/`DecompressionStream`/`TextEncoderStream`/
-  `TextDecoderStream` — gzip round-trip probed (6000 -> 74 -> 6000 B).
-- `Response.clone()` — both bodies readable.
-- `Bun.markdown` exposes html/ansi/render/react — `Bun.markdown.ansi()`
-  exists (the widget claimed it; confirmed).
-- The profilers (--cpu-prof-md/--heap-prof-md/--metafile-md/
-  BUN_CPU_PROFILE) + process.on('memoryPressure') were already verified in
-  earlier probes and are used by the repo's own scripts.
-
-NOT CLAIMED: all throughput/memory/startup benchmarks in the widget copy
-are release-note marketing figures; the /bun/performance page labels them
-marketing and points at the repo's own profiles instead.
-ADOPTED: /bun/streams, /bun/observability, /bun/performance widget pages
 (token-built, audited — 19 design surfaces), shared widget-page renderer
 (src/lib/widget-page.ts), and `bun run profile:all` (runs every profiler,
 Markdown out).
@@ -4484,7 +4466,7 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
 
 
 
-## 110. maps.toml triple-lock landed (2026-08-25)
+## 144. maps.toml triple-lock landed (2026-08-25)
 
 - docs:refresh (tools/bun-docs-refresh-cli.ts) gates the four-surface lock:
   maps.toml (committed) + bun-types/@types/bun pins (package.json) +
@@ -4493,12 +4475,12 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
   exits 1 on drift; the network run self-heals by re-indexing + regenerating
   maps.toml. Wired into verify:contracts as gate #19.
 
-## 111. Channel + route registries (2026-08-25)
+## 145. Channel + route registries (2026-08-25)
 
 - channel-registry.ts is the CHANNEL SSOT: ids/labels/sources/actions/cron +
   telegram flags. The dashboard live-refresh loop now covers ALL channels
   (was hardcoded to 7 — prune/mapping/docs/compliance never refreshed live;
-  github added §118 → 12 channels, still zero hardcoded JS).
+  github added §146 → 12 channels, still zero hardcoded JS).
   The /api/signals/actions dispatcher's unknown-action message derives from
   CHANNEL_ACTIONS.
 - route-manifest.ts is the API-surface SSOT (~97 entries: exact + URLPattern +
@@ -4578,9 +4560,9 @@ another note.
 - Inherent (routed around, not removed): the harness lexer itself (R2
   transports), sandbox /tmp isolation (R1).
 - Artifacts: this section. verify:contracts stays 18/18.
-## 118. Live GitHub budget channel + release-driven docs drift (2026-08-25)
+## 146. Live GitHub budget channel + release-driven docs drift (2026-08-25)
 
-- github channel (§118): github-budget.ts reads the authenticated /rate_limit
+- github channel (§146): github-budget.ts reads the authenticated /rate_limit
   wire (ONE fetch, 5-min in-process TTL — the endpoint itself counts against
   core, so the TTL is the budget guard) and the channel reports token source
   + core/search/code_search remaining + reset. Degrades to zero-network when
@@ -4600,7 +4582,7 @@ another note.
   via githubApiAuthHeaders() (Bearer when a token resolves, {} otherwise) —
   the unauthenticated bucket is 60 req/hr and an abort kills discovery.
 
-## 121. Bun.semver is inconsistent on ragged versions (2026-08-25)
+## 147. Bun.semver is inconsistent on ragged versions (2026-08-25)
 
 - Probe: order("1.4","1.4.0") returns 1 (says 1.4 > 1.4.0) while
   satisfies("1.4",">1.4.0") returns false; order("1.4.1","1.4") returns -1
@@ -4611,7 +4593,7 @@ another note.
   (satisfies). Garbage ("unknown") throws from order() — catch → false.
 - Do NOT hand-roll numeric version loops; they drift from Bun's semantics.
 
-## 122. Bun.semver docs review — verified + 2 undocumented behaviors (2026-08-25)
+## 148. Bun.semver docs review — verified + 2 undocumented behaviors (2026-08-25)
 
 - Verified against the runtime (semver.mdx, bun-v1.4.0): exactly two
   functions (satisfies, order); named import { semver } from "bun" ===
@@ -4626,10 +4608,10 @@ another note.
   order("1.4","1.4.0")=1 (1.4 > 1.4.0!) but satisfies("1.4","^1.4.0")
   =false, and even satisfies("1.4","^1.4")=false. Missing components are
   NOT zero-padded. Normalize to major.minor.patch first (normalizeSemver,
-  §121) before calling either.
+  §147) before calling either.
 - "20x faster than node-semver" — marketing figure, not verifiable in-repo.
 
-## 123. Bun.semver deep matrix + shared SSOT (2026-08-25)
+## 149. Bun.semver deep matrix + shared SSOT (2026-08-25)
 
 - OPERATORS verified: > >= < <= = != || (space-AND) ~ ^ x/* hyphen all work
   except "!=" — satisfies("1.0.0","!=1.0.0") is TRUE (should be false) and
@@ -4655,7 +4637,7 @@ another note.
   CLIs (same), bun-security-scanner (npm advisory versions) — all feed
   well-formed input; none hit the ragged/invalid hazards.
 
-## 127. Global-attribution code search — 14x cheaper inspect (2026-08-25)
+## 150. Global-attribution code search — 14x cheaper inspect (2026-08-25)
 
 - OLD MODEL (poor design): per-repo scoped queries q="<keyword> repo:A/B"
   for every keyword x every repo — the same literal keywords re-queried
@@ -4715,9 +4697,9 @@ another note.
   verify:contracts gate #23 -> 23/23) grounds the pattern. VERIFIED 4/4
   on 1.4.0:
 
-## 131. Global-attribution code search REVERTED — completeness beats cost (2026-08-25)
+## 151. Global-attribution code search REVERTED — completeness beats cost (2026-08-25)
 
-- §127's global-attribution model (one unscoped query per keyword, hits
+- §150's global-attribution model (one unscoped query per keyword, hits
   attributed by repository.full_name) was REVERTED after a real-data audit:
   of ~660KB of global hits across all 21 keywords, ZERO referenced any of
   the 14 gated repos. The keywords are common coding tokens (place_order
@@ -4731,7 +4713,7 @@ another note.
   get per-repo content completeness. Cost is 21 x repos — that is the
   honest price of the detector model. Global attribution is sound only for
   keywords whose hit space is small enough that targets rank (none of ours).
-- WHAT STAYS (the real wins from the §127-§130 work): the UNIVERSAL code_
+- WHAT STAYS (the real wins from the global-attribution code-search work (§150-§151)): the UNIVERSAL code_
   search pacer (github-api.ts paceCodeSearchCall — 9/min token bucket,
   GLOBAL_CODE_SEARCH_NO_PACE=1 for tests), research:resume (run -> wait ->
   rerun; scoped results persist in api_cache so later attempts only fetch
@@ -5629,6 +5611,30 @@ another note.
   earlier P3 source included require-call; the doc example omits it).
   scanImports() is the consistent surface — the guard's choice is right.
 - Artifacts: tools/transpiler-probe.ts (+P9..P16). verify:contracts 42/42.
+## 152. Reference/pointer staleness audit — renumbering + uniqueness gate (2026-08-24)
+
+- Audited every §N reference + numbered heading + cross-file pointer for
+  staleness. Findings and fixes:
+- (1) EIGHT duplicate ## N. section numbers from interleaved parallel
+  work (both agents used §110/§111/§118/§121-§123/§127/§131) — pointers
+  were AMBIGUOUS (e.g. §127 meant either Bun Shell or code-search).
+  Renumbered the parallel (2026-08-25) sections to §144-§151 and
+  updated ~15 references in docs, src/lib, src/institutions, src/research,
+  scripts, tools, and tests (semver.ts/deps-outdated/version-gt ->
+  §147-§149; code-search tooling -> §150-§151; github-budget channel ->
+  §146; mock.module test ref corrected to §137).
+- (2) A VERBATIM duplicated §16 block in AGENT-PITFALLS (merge artifact)
+  deleted; (3) docs/DESIGN-PIPELINE.md had two ## 6. sections (Gate
+  matrix vs Commands) — Commands renumbered to ## 8.
+- ENFORCEMENT: docs:check now FAILS on duplicate ## N. section numbers
+  per doc (the slug check had missed identical-title duplicates). The
+  rule immediately caught the DESIGN-PIPELINE case on first run.
+- Verified: AGENTS.md doc targets (BUN_TECH_STACK/BUN_NATIVE/AUTHORIZED_
+  EXECUTION) all exist; every §N reference now resolves to exactly one
+  heading; gate names in the matrix all run (42/42).
+- Artifacts: docs/AGENT-PITFALLS.md (renumbered + §152), docs/DESIGN-PIPELINE.md,
+  tools/docs-check.ts (uniqueness rule), ~13 reference-updated files.
+  verify:contracts 42/42.
 - GitHub recomputes the pie on the default branch after push (a few
   minutes). Verified with git check-attr.
 - Artifacts: .gitattributes (new). verify:contracts 38/38 (unchanged).

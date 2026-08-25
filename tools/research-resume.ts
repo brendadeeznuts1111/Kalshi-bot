@@ -5,7 +5,7 @@
  *
  * The pipeline's WAIT=1 multi-wave can give up when the circuit trips;
  * scoped inspect results persist in api_cache (repo+pushed_at), so each
- * attempt only fetches the REMAINING repos — the loop converges (§131).
+ * attempt only fetches the REMAINING repos — the loop converges (§151).
  *
  *   bun run research:resume -- --dimension=sports-nba [-- --min-stars=5]
  *

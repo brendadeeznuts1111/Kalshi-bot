@@ -23,7 +23,7 @@ type OutdatedRow = {
 };
 
 // Version core + comparisons come from the shared SSOT
-// (src/lib/semver.ts — Bun.semver, normalize-first rule §121-§123).
+// (src/lib/semver.ts — Bun.semver, normalize-first rule §147-§149).
 import { semverCore } from "../src/lib/semver.ts";
 
 /**

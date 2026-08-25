@@ -237,7 +237,7 @@ design:check itself, so they run at every merge gate without extra commands.
 | /design page | enforced surface | token-inspector, links /design-system.css |
 | playground (2 files) | reported | prints issues; stays dev-only |
 
-## 6. Commands
+## 8. Commands
 
 ```bash
 bun run design:build      # bundle design-system + hq-app (js + meta.json + meta.md)

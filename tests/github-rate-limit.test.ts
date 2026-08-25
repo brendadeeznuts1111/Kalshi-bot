@@ -146,7 +146,7 @@ describe("github-rate-limit", () => {
     expect(parsed.code_search?.resource).toBe("code_search");
   });
 
-  test("estimateCodeSearchCallsPerRepo counts auth + order queries (scoped §131)", async () => {
+  test("estimateCodeSearchCallsPerRepo counts auth + order queries (scoped §151)", async () => {
     const config = await loadConfig();
     expect(estimateCodeSearchCallsPerRepo(config)).toBe(
       config.keywords.authCodeSearch.length + config.keywords.orderCodeSearch.length,

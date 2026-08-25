@@ -7,7 +7,7 @@ let tokenState: string | null = "mock-token-123";
 
 beforeAll(() => {
   // Full export surface — a partial mock leaks across files sharing a test
-  // worker and breaks importers of GITHUB_API_ORIGIN/etc. (§123).
+  // worker and breaks importers of GITHUB_API_ORIGIN/etc. (§137).
   mock.module("../src/research/github-network.ts", () => ({
     GITHUB_API_HOST: "api.github.com",
     GITHUB_API_ORIGIN: "https://api.github.com",

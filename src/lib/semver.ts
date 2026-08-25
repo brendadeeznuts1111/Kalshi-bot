@@ -5,11 +5,11 @@
  * and both are inconsistent/hazardous on ragged input:
  *   - order("1.4","1.4.0") === 1  (missing components are treated as LARGER)
  *   - order("garbage", ...) THROWS (documented in bun-types, omitted in the
- *     guide — AGENT-PITFALLS §122)
+ *     guide — AGENT-PITFALLS §148)
  *   - satisfies("1.4","^1.4.0") === false (ragged versions rejected, even
  *     though partial RANGES like ~1.4 / ^1.4 work)
  * So: normalize to major.minor.patch BEFORE calling Bun.semver. Never
- * hand-roll version loops; Bun.semver owns comparisons (§121-§123).
+ * hand-roll version loops; Bun.semver owns comparisons (§147-§149).
  */
 
 /** Strip a leading v + pad a ragged version to major.minor.patch.
@@ -53,6 +53,6 @@ export function versionGt(a: string, b: string): boolean {
  * tests): satisfies with the "!=" comparator returns TRUE even for a
  * version that equals the range ("1.0.0" != "1.0.0" -> true, "1.2.0"
  * != "1.x" -> true). The negation is effectively ignored. Recorded in
- * AGENT-PITFALLS §123. Avoid "!=" in ranges; express as ">=x <y" or "||".
+ * AGENT-PITFALLS §149. Avoid "!=" in ranges; express as ">=x <y" or "||".
  */
 export const SEMVER_NEQ_QUIRK_1_4 = true;

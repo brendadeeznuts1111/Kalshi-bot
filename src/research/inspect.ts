@@ -68,7 +68,7 @@ async function fetchInspectionSignals(
   repo: RepoCandidate,
   config: ResearchConfig,
 ): Promise<InspectionSignals> {
-  // Repo-scoped code search (completeness-correct, §131): the global-
+  // Repo-scoped code search (completeness-correct, §151): the global-
   // attribution model silently starved attribution — common keywords'
   // top-ranked hits are dominated by unrelated popular repos, so gated
   // bots never appear (gated-repo hits across the global cache: 0). The

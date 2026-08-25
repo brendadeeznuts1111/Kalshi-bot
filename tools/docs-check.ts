@@ -100,6 +100,22 @@ for (const d of docs) {
   }
 }
 
+// Section-number uniqueness: ## N. headings must be unique per doc —
+// duplicate numbers make §N pointers ambiguous (the §144-§151 renumbering
+// fixed 8 collisions from interleaved work).
+for (const d of docs) {
+  const md = await Bun.file(join(ROOT, d.path)).text();
+  const seenNums = new Set<string>();
+  for (const m of md.matchAll(/^## (\d+)\./gm)) {
+    const num = m[1]!;
+    if (seenNums.has(num)) {
+      console.log('docs:check FAIL ' + d.path + ' duplicate ## ' + num + '. section number (ambiguous §N pointers)');
+      bad += 1;
+    }
+    seenNums.add(num);
+  }
+}
+
 const state = {
   lastChecked: new Date().toISOString(),
   docs: docs.map((d) => ({ path: d.path, hash: d.hash, headings: d.headings, renderOk: d.renderOk, duplicateSlugs: d.duplicateSlugs })),

@@ -62,13 +62,13 @@ describe("versionGt (Bun.semver.order after normalization — docs-drift)", () =
 });
 
 describe("Bun.semver 1.4.0 quirks (pinned — recheck on upgrade)", () => {
-  test("!= comparator is effectively always true (§123)", () => {
+  test("!= comparator is effectively always true (§149)", () => {
     expect(SEMVER_NEQ_QUIRK_1_4).toBe(true);
     expect(Bun.semver.satisfies("1.0.0", "!=1.0.0")).toBe(true); // quirk
     expect(Bun.semver.satisfies("1.2.0", "!=1.x")).toBe(true); // quirk
   });
 
-  test("ragged order inflation: missing components are larger (§121)", () => {
+  test("ragged order inflation: missing components are larger (§147)", () => {
     expect(Bun.semver.order("1", "1.0.0")).toBe(1);
     expect(Bun.semver.order("0", "0.0.0")).toBe(1);
   });

@@ -206,7 +206,7 @@ export async function collectSignals(root: string, brand: BrandMetricsSnapshot):
 }
 
 // Version comparisons: src/lib/semver.ts (Bun.semver SSOT + normalize-
-// first rule, §121-§123). Never hand-roll version logic here.
+// first rule, §147-§149). Never hand-roll version logic here.
 
 const esc = (v: unknown): string =>
   String(v ?? '').replace(/[&<>\"]/g, (c) =>

@@ -2,7 +2,7 @@
 // @see https://bun.com/docs/test/mocks
 import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test";
 
-// Global-attribution model (§127): code_search hits carry the repo so the
+// Global-attribution model (§150): code_search hits carry the repo so the
 // inspect path attributes them locally. Set currentRepo before inspectRepo.
 let currentRepo = "mock/bot-0";
 
