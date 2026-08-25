@@ -5740,7 +5740,9 @@ another note.
   never populates even when the output JS carries external imports.
 - Node BUILTINS are bundled into the output (P24 — node:path polyfill
   inlined, 10KB) — esbuild keeps builtins external; a real difference.
-- JSON.stringify(result.metafile) + Bun.write round-trips (P25).
+- JSON.stringify(result.metafile) + Bun.write round-trips (P25);
+  the relative-path form (Bun.write("./dist/meta.json", ...)) resolves
+  against the process CWD (P26) — same rule as the CLI outputs.
 - "Matches esbuild exactly" is NOT exact: inputs.imports entries are
   { path, kind, original } without the always-present external flag
   (external appears only on require-calls). The analyzer likely still

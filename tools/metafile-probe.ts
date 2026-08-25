@@ -136,6 +136,15 @@ await Bun.write("scratch/mf-ext5/dist/meta.json", jsStr);
 check("P25 JSON.stringify + Bun.write round-trip", jsStr.startsWith("{\"inputs\":") && await w("scratch/mf-ext5/dist/meta.json"), "len=" + jsStr.length);
 
 
+
+// P26: the pasted Bun.write relative-path form — resolves against the
+// process CWD (same as the CLI metafile outputs).
+const resRel = await Bun.build({ entrypoints: [F + "/entry.ts"], outdir: "scratch/mf-rel/dist", metafile: true });
+await Bun.write("scratch/mf-rel/meta.json", JSON.stringify(resRel.metafile));
+const relMf = JSON.parse(await Bun.file("scratch/mf-rel/meta.json").text());
+check("P26 Bun.write relative path (CWD-resolved)", "inputs" in relMf && "outputs" in relMf, "");
+
+
 const failed = results.filter((r) => !r.pass);
 console.log("metafile:probe — " + (results.length - failed.length) + "/" + results.length + " checks" + (failed.length ? " · FAIL: " + failed.map((f) => f.name).join(", ") : ""));
 process.exit(failed.length === 0 ? 0 : 1);
