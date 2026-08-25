@@ -203,7 +203,8 @@ export function runBreakingAudit(root: string): BreakingFinding[] {
   // 10. fetch redirect:'error': 1.4 narrows it to 301/302/303/307/308 only;
   // other 3xx (e.g. 304) now RESOLVE instead of rejecting. Callers that
   // use it to reject all 3xx must check res.status.
-  const redirErr = rgFiles(root, 'redirect\\s*:\\s*["\']error["\']', dirs, { exclude: LABEL_FILES });
+  // tools/fetch-probe.ts deliberately tests the 302-throw path (§139).
+  const redirErr = rgFiles(root, 'redirect\\s*:\\s*["\']error["\']', dirs, { exclude: [...LABEL_FILES, 'tools/fetch-probe.ts'] });
   findings.push({
     check: 'fetch redirect:"error" (1.4: 304/other 3xx now resolve)',
     status: redirErr.length ? 'warn' : 'ok',

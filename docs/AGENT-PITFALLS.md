@@ -9,7 +9,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 > The headings were renumbered to §1-§11 on 2026-08-23; the counters were kept
 > so historical notes stay traceable.
 >
-> **Current contract status: verify:contracts 39/39** (see docs/BUN_API_COVERAGE.md
+> **Current contract status: verify:contracts 40/40** (see docs/BUN_API_COVERAGE.md
 > for the full matrix). `verify:contracts N/N` lines inside older sections are
 > HISTORICAL (each records its era) — docs:check enforces that only this header
 > and non-pitfall docs may reference the current count.
@@ -5518,6 +5518,31 @@ another note.
   typed number | TestOptions; test.todo requires a fn.
 - Artifacts: tools/test-probe.test.ts (+P12..P18),
   tools/__snapshots__/test-probe.test.ts.snap (new). verify:contracts 39/39.
+## 139. fetch/HTTP client semantics — keep-alive, redirects, abort, streams (2026-08-24)
+
+- tools/fetch-probe.ts (gate #40, 10/10, loopback node:http server — also
+  exercises Bun node:http compat). The research pipeline's GitHub
+  traffic rides on these semantics.
+- KEEP-ALIVE: 5 sequential fetches to one origin reuse a SINGLE TCP
+  connection (node:http server connection counter). A server
+  Connection: close header is honored — the next fetch opens a fresh
+  connection (the /close request itself reuses the pool).
+- REDIRECTS: follow default (final URL /target, 200); redirect:"error"
+  throws; CORRECTION (pinned): redirect:"manual" does NOT return an
+  opaqueredirect — it returns the 302 UNFOLLOWED as a normal response
+  (type default, status 302). Deviates from the fetch spec.
+- ABORT: AbortController aborts a streaming response mid-flight; the
+  reader rejects with an Abort-named error after the first chunk.
+- STREAMING: ReadableStream request bodies POST chunk-by-chunk and the
+  server reassembles the full payload; responses arrive incrementally
+  (chunk a, 200ms gap, chunk b — client sees the timing).
+- FormData multipart: content-type multipart/form-data with a boundary
+  and both text fields + Blob files present in the wire payload.
+- gzip auto-decompression: a Content-Encoding: gzip response decodes
+  transparently (body reads as plain text).
+- Artifacts: tools/fetch-probe.ts (new, gate #40), tools/verify-contracts.ts
+  (39 -> 40 gates), package.json (fetch:probe), docs/BUN_API_COVERAGE.md
+  + AGENT-PITFALLS header (39/39 -> 40/40). verify:contracts 40/40.
 - GitHub recomputes the pie on the default branch after push (a few
   minutes). Verified with git check-attr.
 - Artifacts: .gitattributes (new). verify:contracts 38/38 (unchanged).
