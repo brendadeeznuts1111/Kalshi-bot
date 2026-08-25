@@ -3299,3 +3299,37 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
   worker threads (I/O-dominated, §8 of the doc agrees it's unnecessary).
 - Artifacts: parseCsvAll in parse-tennis-data-csv.ts, tests/lib/
   csv-parser.test.ts (7 tests), §69. Gate stays 11/11.
+
+## 70. Bun.Image doc — probed 20/20, ONE geometry-ordering correction (2026-08-24)
+
+- Probed bun.com/docs/runtime/image against Bun 1.4.0 (macOS arm64).
+  20/20 checks pass (tools/image-probe.ts, `bun run image:probe`, new
+  verify:contracts gate). Extends §12 (which verified metadata/resize/
+  placeholder/backend basics).
+- VERIFIED:
+  - chainable pipeline: Bun.file(p).image().resize().webp().write()
+    returns bytes written; terminals bytes/buffer/blob/toBase64/dataurl
+    all verified (blob() sets output MIME).
+  - fit: inside preserves aspect (2:1 src in 50x100 -> 50x25); fill
+    stretches exactly. width/height are -1 before the first terminal,
+    output dims after.
+  - modulate chains; jpeg/png/webp encode; heic/avif encode work on this
+    machine (macOS arm64 — the doc warns platform-dependent).
+  - placeholder() returns a ThumbHash data: URL; Bun.Image.backend
+    default system, set \"bun\" forces portable Highway; clipboard
+    statics fromClipboard/hasClipboardImage/clipboardChangeCount exist.
+- CORRECTED (doc claim WRONG on 1.4.0):
+  - rotate/flip/flop AFTER resize() are NO-OPS. The doc shows
+    img.resize(...).rotate(90) chaining as valid, but the geometry op is
+    SILENTLY DROPPED when resize ran first. Verified on an asymmetric
+    hand-built 2x1 PNG: resize(20,10).flip() is byte-identical to
+    resize(20,10); resize(20,10).rotate(90) gives 20x10 (dims not
+    swapped); rotate(90).resize(20,10) == resize(20,10).rotate(90).
+    Rule: apply rotate/flip/flop BEFORE resize in the chain.
+  - rotate(90) ALONE works (2x1 -> 1x2) — only the ordering after resize
+    is broken. flip/flop alone also work (dims unchanged).
+- Probe nuance: fit:inside on a 2:1 source in 50x100 gives 50x25 (my
+  first expectation 50x100 was wrong — inside must fit BOTH dims).
+- Artifacts: tools/image-probe.ts, tests/lib/image-probe.test.ts (8
+  tests), src/research/image-page.ts (/bun/image widget), verify:
+  contracts 12/12.
