@@ -242,6 +242,7 @@
     "content:watch": "bun --watch tools/content-verify.ts -- --update",
     "ffi:probe": "bun tools/ffi-probe.ts",
     "security:probe": "bun tools/security-probe.ts",
+    "xml:probe": "bun tools/xml-probe.ts",
     "plugins:probe": "bun tools/plugins-probe.ts",
     "bun:blog-map": "bun tools/bun-blog-map.ts",
     "docs:check": "bun tools/docs-check.ts",

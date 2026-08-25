@@ -101,6 +101,7 @@ import { renderSpeedPage } from "./speed-page.ts";
 import { renderMapPage } from "./map-page.ts";
 import { renderMarkdownPage } from "./markdown-page.ts";
 import { renderTranspilerPage } from "./transpiler-page.ts";
+import { renderXmlPage } from "./xml-page.ts";
 import { renderPluginsPage } from "./plugins-page.ts";
 import {
   collectSignals,
@@ -1784,6 +1785,7 @@ export function createResearchServer(options: ServeOptions = {}) {
         "/bun/map": renderMapPage,
         "/bun/markdown": renderMarkdownPage,
         "/bun/transpiler": renderTranspilerPage,
+        "/bun/xml": renderXmlPage,
         "/bun/plugins": renderPluginsPage,
       };
       if (url.pathname in BUN_WIDGETS) {

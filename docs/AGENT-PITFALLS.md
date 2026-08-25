@@ -3225,3 +3225,41 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
   (verify:contracts) AND surface their health at runtime (dashboard
   docs channel) — the same signal pipeline that powers the cron-refreshed
   /dashboard.
+
+## 68. Bun.XML doc — probed, 33/33 verified, 11th gate (2026-08-24)
+
+- Probed bun.com/docs/runtime/xml against Bun 1.4.0. ALL 33 checks pass
+  (tools/xml-probe.ts, `bun run xml:probe`, new verify:contracts gate).
+- VERIFIED core:
+  - compact shape: one key per root; @attr/#text convention (no
+    collision — XML names cannot start with @/#); repeated children ->
+    arrays (one-or-many — read defensively [x ?? []].flat()); empty
+    element -> empty string; ALL values strings (no number/bool/null
+    coercion); #text concatenation drops whitespace-only runs between
+    children (Hello <b>world</b>! -> text Hello ! + b: world).
+  - tree shape (compact:false): {name, attributes, children} — both
+    keys present even when empty; children in document order incl.
+    comments {comment} + PIs {target, data}; disambiguate by key.
+  - namespace prefixes verbatim (soap:Body); xmlns ordinary attribute;
+    comments/PIs/declaration/DOCTYPE absent from compact.
+- VERIFIED stringify: escapes & < > + &quot;/&#x9;/&#xA; in attribute
+  values + CR anywhere; null -> empty element; undefined/function/symbol
+  skipped; Date -> ISO; bad names / control chars / array-at-root /
+  circular THROW; no prolog/DOCTYPE (concatenatable); pretty via
+  space arg (2nd param reserved); parse(stringify(x)) === x.
+- PROBE NUANCE (doc-correct, verified): `--` in a comment and `?>` in a
+  PI throw ONLY for TREE-shape children nodes ({comment}/{target,data}).
+  A compact-level `{ comment: "x" }` object is just an ELEMENT named
+  comment — stringify emits <comment>x</comment> with no constraint.
+- VERIFIED module imports: default + named import (root element is
+  both), require(), dynamic import, `with { type: "xml" }` for non-.xml
+  extensions; bundler inlines XML at build time (zero runtime cost).
+- VERIFIED conformance: SyntaxError not-well-formed (XML Parse error:
+  Expected closing tag), RangeError deep nesting, billion-laughs
+  expansion fails ~3ms, internal DTD entities expanded + attribute
+  defaults applied, undeclared entity (no DTD) is an error, NO XXE
+  (external DTDs never fetched), string input IGNORES encoding decl
+  (checked for syntax), bytes honor BOM/decl (UTF-8/16/ISO-8859-1,
+  unknown throws).
+- Artifacts: tools/xml-probe.ts, tests/lib/xml-probe.test.ts (10 tests),
+  src/research/xml-page.ts (/bun/xml widget), verify:contracts 11/11.

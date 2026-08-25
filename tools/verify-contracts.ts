@@ -24,6 +24,7 @@ const gates = [
   ['colors:check'],
   ['design:check'],
   ['plugins:probe'],
+  ['xml:probe'],
 ] as const;
 
 const run = async (name: string, args: readonly string[]): Promise<boolean> => {
