@@ -31,7 +31,7 @@ export type SignalSeverity = 'ok' | 'warn' | 'bad' | 'info';
 
 export type Signal = {
   id: string;
-  channel: 'design' | 'deps' | 'brand' | 'releases' | 'ops' | 'inventory' | 'cron' | 'prune' | 'mapping' | 'docs';
+  channel: 'design' | 'deps' | 'brand' | 'releases' | 'ops' | 'inventory' | 'cron' | 'prune' | 'mapping' | 'docs' | 'compliance';
   severity: SignalSeverity;
   title: string;
   detail: string;
@@ -162,6 +162,7 @@ export async function collectSignals(root: string, brand: BrandMetricsSnapshot):
   // docs channel: repo docs render health (from .data/docs-state.json
   // written by docs:check — offline + fast).
   await collectDocs(root, signals);
+  await collectCompliance(root, signals);
 
   // cron channel: the Bun.cron refresh job state.
   push({
@@ -194,6 +195,7 @@ const CHANNEL_LABELS: Record<Signal['channel'], string> = {
   prune: 'Content Prune',
   mapping: 'Blog Mapping',
   docs: 'Docs',
+  compliance: 'Compliance',
 };
 
 /**
@@ -374,38 +376,53 @@ export async function collectInventory(root: string, signals: Signal[]): Promise
  * licenses-state.json (licenses:gate §92-§97 — compliance surface).
  * Any gate failing is bad; missing state is a warn; stale is a warn.
  */
+/** Shared state-file gate: read .data/<file>, push ok/bad/warn (+stale) signals on a channel. */
+async function pushGate(
+  root: string,
+  signals: Signal[],
+  channel: Signal['channel'],
+  file: string,
+  id: string,
+  label: string,
+  source: string,
+  detailOf: (s: Record<string, unknown>) => string,
+): Promise<void> {
+  const state = JSON.parse(await Bun.file(join(root, '.data', file)).text().catch(() => 'null'));
+  const s = state && typeof state === 'object' && state.lastChecked ? state as Record<string, unknown> : null;
+  if (!s) {
+    signals.push({ id, channel, severity: 'warn', title: label + ' not run', detail: 'run bun run ' + source + ' to seed .data/' + file, source });
+    return;
+  }
+  const ok = s.ok !== false;
+  const ageDays = (Date.now() - new Date(String(s.lastChecked)).getTime()) / 86400000;
+  signals.push({
+    id,
+    channel,
+    severity: ok ? 'ok' : 'bad',
+    title: label + ': ' + detailOf(s),
+    detail: ok ? 'checked ' + String(s.lastChecked).slice(0, 10) : 'FAILING — run ' + source,
+    source,
+    action: source,
+  });
+  if (ageDays > 30) {
+    signals.push({ id: id + '-stale', channel, severity: 'warn', title: label + ' state stale (' + Math.round(ageDays) + 'd)', detail: 'run ' + source, source, action: source });
+  }
+}
+
 export async function collectDocs(root: string, signals: Signal[]): Promise<void> {
-  const push = (s: Signal): void => { signals.push(s); };
-  const readState = async (file: string): Promise<Record<string, unknown> | null> => {
-    const state = JSON.parse(await Bun.file(join(root, '.data', file)).text().catch(() => 'null'));
-    return state && typeof state === 'object' && state.lastChecked ? state as Record<string, unknown> : null;
-  };
-  const gate = async (file: string, id: string, label: string, source: string, detailOf: (s: Record<string, unknown>) => string) => {
-    const s = await readState(file);
-    if (!s) {
-      push({ id, channel: 'docs', severity: 'warn', title: label + ' not run', detail: 'run bun run ' + source + ' to seed .data/' + file, source });
-      return;
-    }
-    const ok = s.ok !== false;
-    const ageDays = (Date.now() - new Date(String(s.lastChecked)).getTime()) / 86400000;
-    push({
-      id,
-      channel: 'docs',
-      severity: ok ? 'ok' : 'bad',
-      title: label + ': ' + detailOf(s),
-      detail: ok ? 'checked ' + String(s.lastChecked).slice(0, 10) : 'FAILING — run ' + source,
-      source,
-      action: source,
-    });
-    if (ageDays > 30) {
-      push({ id: id + '-stale', channel: 'docs', severity: 'warn', title: label + ' state stale (' + Math.round(ageDays) + 'd)', detail: 'run ' + source, source, action: source });
-    }
-  };
-  await gate('docs-state.json', 'docs-health', 'docs:render', 'docs:check', (s) => String(s.total ?? 0) + ' markdown file(s) render');
-  await gate('api-state.json', 'docs-api', 'docs:api', 'docs:api', (s) => String(s.tokens ?? 0) + ' tokens · ' + String(s.fails ?? 0) + ' drift' + (s.strict ? ' (STRICT)' : ''));
-  await gate('integrity-state.json', 'docs-integrity', 'docs:integrity', 'docs:integrity', (s) => String(s.links ?? 0) + ' links · ' + String(s.staleSrc ?? 0) + ' stale src');
-  await gate('output-state.json', 'docs-output', 'output:probe', 'output:probe', (s) => String(s.assertions ?? 0) + ' output assertions (canary)');
-  await gate('licenses-state.json', 'licenses-health', 'licenses:gate', 'licenses:gate', (s) => String(s.packages ?? 0) + ' prod packages \u00b7 ' + String(s.fails ?? 0) + ' violations' + (Number(s.expiringSoon ?? 0) > 0 ? ' \u00b7 ' + String(s.expiringSoon) + ' expiring soon' : ''));
+  await pushGate(root, signals, 'docs', 'docs-state.json', 'docs-health', 'docs:render', 'docs:check', (s) => String(s.total ?? 0) + ' markdown file(s) render');
+  await pushGate(root, signals, 'docs', 'api-state.json', 'docs-api', 'docs:api', 'docs:api', (s) => String(s.tokens ?? 0) + ' tokens · ' + String(s.fails ?? 0) + ' drift' + (s.strict ? ' (STRICT)' : ''));
+  await pushGate(root, signals, 'docs', 'integrity-state.json', 'docs-integrity', 'docs:integrity', 'docs:integrity', (s) => String(s.links ?? 0) + ' links · ' + String(s.staleSrc ?? 0) + ' stale src');
+  await pushGate(root, signals, 'docs', 'output-state.json', 'docs-output', 'output:probe', 'output:probe', (s) => String(s.assertions ?? 0) + ' output assertions (canary)');
+}
+
+/**
+ * compliance channel (§104): the license gate's state file, surfaced on its
+ * OWN channel (was riding the docs channel §97). Same semantics: failing is
+ * bad; missing state is a warn; stale is a warn.
+ */
+export async function collectCompliance(root: string, signals: Signal[]): Promise<void> {
+  await pushGate(root, signals, 'compliance', 'licenses-state.json', 'licenses-health', 'licenses:gate', 'licenses:gate', (s) => String(s.packages ?? 0) + ' prod packages \u00b7 ' + String(s.fails ?? 0) + ' violations' + (Number(s.expiringSoon ?? 0) > 0 ? ' \u00b7 ' + String(s.expiringSoon) + ' expiring soon' : ''));
 }
 
 /**

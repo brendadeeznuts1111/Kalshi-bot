@@ -4269,6 +4269,42 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
   (new), scripts/cron-main.ts (report in jobAuditOverlay), package.json
   (licenses:report), tests/lib/licenses-report.test.ts (new).
   verify:contracts stays 17/17.
+## 104. Compliance channel + CycloneDX XML SBOM (2026-08-24)
+
+- COMPLIANCE CHANNEL: licenses-health moved OFF the docs channel onto
+  its OWN 'compliance' channel (CHANNEL_LABELS 'Compliance') — the
+  compliance surface deserves a section, not a docs row. The shared
+  state-file gate logic was extracted from collectDocs into a module-
+  level pushGate(root, signals, channel, file, id, label, source,
+  detailOf) helper, used by collectDocs AND the new collectCompliance.
+  The dashboard renders the new section automatically; the
+  'collectSignals covers every channel' test extended with 'compliance'.
+- CYCLONEDX XML SBOM: licenses:report now ALSO writes research/outputs/
+  licenses-sbom.xml (CycloneDX 1.5) — the machine-readable twin of the
+  markdown report for SBOM-ingesting pipelines. Built with the PROBED
+  Bun.XML API (xml:probe §68): XML.stringify is well-formed-or-throws;
+  the artifact's validity is asserted by XML.parse round-trip in tests.
+  The compact body comes from a PURE builder (buildCycloneDxObject(input,
+  serialNumber)) — the serial is a parameter so the lib stays Bun-free
+  and tests are deterministic. Components carry bom-ref (pkg:generic/
+  name@version), license <id> or <name>, and kalshi-bot:status/allowed
+  properties; metadata carries gate-status + config fingerprint.
+- TRAP (test-caught): compact-object ARRAY ITEMS are the ELEMENT
+  CONTENT, not wrapper objects — an item { component: {...} } under a
+  'component:' key stringifies as NESTED <component><component>...
+  </component></component>. Map items directly (attributes/children on
+  the item itself).
+- TS TRAP: Bun.XML.stringify/parse type defs return string|undefined —
+  coerce with ?? '' where the value feeds a parse.
+- The pasted Bun XML doc's claims were ALREADY fully probed (§68,
+  36/36) — no new probes; the API is now USED in production output.
+- Artifacts: src/institutions/signal-pipeline.ts (compliance channel +
+  pushGate), src/lib/licenses-report.ts (buildCycloneDxObject), tools/
+  licenses-report.ts (XML emission), tests/lib/signal-docs.test.ts
+  (compliance describe), tests/institutions/signal-pipeline.test.ts
+  (+compliance), tests/lib/licenses-report.test.ts (+2 XML).
+  verify:contracts stays 17/17.
+
 
 
 

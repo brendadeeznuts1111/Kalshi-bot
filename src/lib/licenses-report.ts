@@ -115,3 +115,41 @@ export function renderLicensesReport(input: LicensesReportInput): string {
   }
   return rows.join("\n") + "\n";
 }
+
+/**
+ * CycloneDX 1.5 XML body (§104) as a COMPACT object for Bun.XML.stringify
+ * (the verified XML API — see xml:probe §68). The CLI prepends the XML
+ * prolog and writes research/outputs/licenses-sbom.xml alongside the
+ * markdown report — the machine-readable twin for SBOM-ingesting
+ * pipelines. Namespace prefixes are kept verbatim by the runtime; the
+ * CycloneDX default-namespace elements need no prefix.
+ */
+export function buildCycloneDxObject(input: LicensesReportInput, serialNumber: string): unknown {
+  const components = input.packages.map((p) => ({
+    "@type": "library",
+    "@bom-ref": "pkg:generic/" + p.name + "@" + p.version,
+    name: p.name,
+    version: p.version,
+    licenses: { license: /^[A-Za-z0-9.+-]+$/.test(p.reportedLicense) ? { id: p.reportedLicense } : { name: p.reportedLicense } },
+    properties: { property: [
+      { "@name": "kalshi-bot:status", "#text": statusOf(p) },
+      { "@name": "kalshi-bot:allowed", "#text": String(p.allowed) },
+    ] },
+  }));
+  return {
+    bom: {
+      "@xmlns": "http://cyclonedx.org/schema/bom/1.5",
+      "@version": "1",
+      "@serialNumber": serialNumber,
+      metadata: {
+        timestamp: input.generatedAt,
+        properties: { property: [
+          { "@name": "kalshi-bot:gate-status", "#text": input.ok ? "PASS" : "FAIL" },
+          { "@name": "kalshi-bot:config-fingerprint", "#text": input.configSha },
+          { "@name": "kalshi-bot:bun", "#text": input.bunVersion },
+        ] },
+      },
+      components: { component: components },
+    },
+  };
+}

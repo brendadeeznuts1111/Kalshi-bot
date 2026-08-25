@@ -1,7 +1,8 @@
 // licenses-report (§103) — renderer unit + CLI e2e (pass + fail renders).
 import { describe, expect, test } from "bun:test";
 import { join } from "node:path";
-import { renderLicensesReport } from "../../src/lib/licenses-report.ts";
+import { XML } from "bun";
+import { buildCycloneDxObject, renderLicensesReport } from "../../src/lib/licenses-report.ts";
 
 const ROOT = join(import.meta.dir, "../..");
 const REPORT_PATH = join(ROOT, "research", "outputs", "licenses-report.md");
@@ -59,6 +60,23 @@ describe("renderLicensesReport (§103)", () => {
   });
 });
 
+describe("buildCycloneDxObject (§104)", () => {
+  test("produces a CycloneDX 1.5 body that stringifies and round-trips", () => {
+    const obj = buildCycloneDxObject(baseInput(), "urn:uuid:test-serial") as any;
+    expect(obj.bom["@xmlns"]).toBe("http://cyclonedx.org/schema/bom/1.5");
+    expect(obj.bom["@serialNumber"]).toBe("urn:uuid:test-serial");
+    const xml = XML.stringify(obj, null, 2) ?? "";
+    const back = XML.parse(xml) as any; // throws on not-well-formed
+    const cs = Array.isArray(back.bom.components.component) ? back.bom.components.component : [back.bom.components.component];
+    expect(cs.length).toBe(2);
+    const zod = cs.find((c: any) => c.name === "zod");
+    expect(zod["@bom-ref"]).toBe("pkg:generic/zod@4.4.3");
+    expect(zod.licenses.license.id).toBe("MIT");
+    const props = zod.properties.property;
+    expect(Array.isArray(props)).toBe(true);
+  });
+});
+
 describe("licenses:report CLI (§103)", () => {
   const STRICT = join(ROOT, ".data", "licenses-report-strict.json");
   const TEST_SBOM = ".data/licenses-sbom.test-report.json";
@@ -86,5 +104,19 @@ describe("licenses:report CLI (§103)", () => {
     const md = await Bun.file(REPORT_PATH).text();
     expect(md).toContain("Gate status: **PASS**");
     expect(md).toContain("| zod | 4.4.3 |");
+  });
+
+  test("CycloneDX XML twin is well-formed (Bun.XML.parse round-trip) with all components", async () => {
+    runReport([]);
+    const xmlPath = join(ROOT, "research", "outputs", "licenses-sbom.xml");
+    const text = (await Bun.file(xmlPath).text()) ?? "";
+    expect(text.startsWith("<?xml version=\"1.0\" encoding=\"UTF-8\"?>")).toBe(true);
+    // XML.parse throws SyntaxError on not-well-formed — this is the validity check.
+    const doc = XML.parse(text) as any;
+    const cs = Array.isArray(doc.bom.components.component) ? doc.bom.components.component : [doc.bom.components.component];
+    expect(cs.length).toBe(6);
+    const zod = cs.find((c: any) => c.name === "zod");
+    expect(zod.licenses.license.id).toBe("MIT");
+    expect(doc.bom.metadata.properties.property[0]["#text"]).toBe("PASS");
   });
 });

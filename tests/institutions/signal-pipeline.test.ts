@@ -21,7 +21,7 @@ describe("signal pipeline (multi-source dashboard)", () => {
   test("collectSignals covers every channel with a severity", async () => {
     const signals = await collectSignals(process.cwd(), BRAND);
     const channels = new Set(signals.map((s) => s.channel));
-    for (const ch of ["design", "deps", "brand", "releases", "ops", "inventory", "cron", "prune", "mapping", "docs"] as const) {
+    for (const ch of ["design", "deps", "brand", "releases", "ops", "inventory", "cron", "prune", "mapping", "docs", "compliance"] as const) {
       expect(channels.has(ch), ch).toBe(true);
     }
     for (const s of signals) {

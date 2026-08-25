@@ -15,10 +15,12 @@
  * --overlay, --sbom <path> for fixture runs).
  */
 import { join } from "node:path";
-import { renderLicensesReport } from "../src/lib/licenses-report.ts";
+import { XML } from "bun";
+import { buildCycloneDxObject, renderLicensesReport } from "../src/lib/licenses-report.ts";
 
 const ROOT = join(import.meta.dir, "..");
 const REPORT_PATH = join(ROOT, "research", "outputs", "licenses-report.md");
+const XML_SBOM_PATH = join(ROOT, "research", "outputs", "licenses-sbom.xml");
 const DEFAULT_SBOM = ".data/licenses-sbom.json";
 
 function sha256hex(text: string): string {
@@ -54,9 +56,15 @@ async function main(): Promise<number> {
     console.error(stderr.slice(-400));
     process.exit(1);
   }
-  const report = renderLicensesReport({ ...doc, configSha: await configSha() });
+  const enriched = { ...doc, configSha: await configSha() };
+  const report = renderLicensesReport(enriched);
   await Bun.write(REPORT_PATH, report);
-  console.log("licenses:report — wrote " + REPORT_PATH + " (gate " + (doc.ok ? "PASS" : "FAIL") + ")");
+  // CycloneDX 1.5 XML twin (§104) via the probed Bun.XML API (xml:probe §68):
+  // XML.stringify is well-formed-or-throws; XML.parse validates the artifact.
+  const serial = "urn:uuid:" + Bun.randomUUIDv7();
+  const xmlBody = XML.stringify(buildCycloneDxObject(enriched, serial), null, 2);
+  await Bun.write(XML_SBOM_PATH, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" + xmlBody + "\n");
+  console.log("licenses:report — wrote " + REPORT_PATH + " + " + XML_SBOM_PATH + " (gate " + (doc.ok ? "PASS" : "FAIL") + ")");
   return doc.ok ? 0 : 1;
 }
 

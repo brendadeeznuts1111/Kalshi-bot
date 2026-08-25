@@ -218,6 +218,23 @@ licenses:gate — FAIL (1 violation(s))
   refresh.
 
 | `bun run licenses:report` | Write the markdown compliance report (legal/release sign-off) |
+## Live channels
+
+- Compliance signals live on their OWN 'Compliance' dashboard channel
+  (licenses-health), not hidden in Docs — /status + /ops dashboard show
+  it as a first-class section.
+
+## XML SBOM twin
+
+- `bun run licenses:report` also writes research/outputs/
+  licenses-sbom.xml — CycloneDX 1.5, generated with the probed Bun.XML
+  API. Same gate data as the markdown report: components with bom-ref,
+  license id/name, kalshi-bot status properties, and a metadata block
+  with the gate status + config fingerprint. Well-formedness is tested
+  via XML.parse round-trip.
+
+| `bun run licenses:report` | Write markdown report + CycloneDX XML SBOM |
+
 
 
 
