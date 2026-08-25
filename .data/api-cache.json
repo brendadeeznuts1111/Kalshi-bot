@@ -95,6 +95,7 @@
     "zstd": "MISSING",
     "tok": "MISSING",
     "resolve": "exists",
-    "CSV": "MISSING"
+    "CSV": "MISSING",
+    "Quic": "MISSING"
   }
 }

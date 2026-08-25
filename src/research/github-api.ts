@@ -104,6 +104,34 @@ function apiUrl(path: string): string {
   return `${GITHUB_API_ORIGIN}/${trimmed}`;
 }
 
+
+// ── code_search window pacing (universal) ─────────────────────────────
+// code_search resets every minute at 10/min; bursts trip the shared circuit
+// and serialize 61s waits (§128 lesson). A token bucket paces EVERY
+// code_search call (scoped or global) so batches self-manage the window.
+let csWindowStart = 0;
+let csCallsThisWindow = 0;
+const CS_WINDOW_MS = 60_000;
+const CS_MAX_PER_WINDOW = 9;
+
+/** Budget ONE code_search call; sleeps across the window boundary. */
+export async function paceCodeSearchCall(): Promise<void> {
+  if (Bun.env.GLOBAL_CODE_SEARCH_NO_PACE === "1") return;
+  const now = Date.now();
+  if (now - csWindowStart >= CS_WINDOW_MS) {
+    csWindowStart = now;
+    csCallsThisWindow = 0;
+  }
+  if (csCallsThisWindow >= CS_MAX_PER_WINDOW) {
+    const waitMs = Math.max(2_000, CS_WINDOW_MS - (now - csWindowStart) + 2_000);
+    console.error(`[code_search] pacing — waiting ${Math.round(waitMs / 1000)}s for the window (${CS_MAX_PER_WINDOW}/min)`);
+    await Bun.sleep(waitMs);
+    csWindowStart = Date.now();
+    csCallsThisWindow = 0;
+  }
+  csCallsThisWindow++;
+}
+
 /**
  * GET a GitHub REST path (no leading host). Returns parsed JSON.
  * On 304 with etag, `notModified` is true and `data` is undefined as T — callers must use cache.
@@ -127,6 +155,7 @@ export async function githubApiGet<T>(
     };
     if (options.etag) headers["If-None-Match"] = options.etag;
 
+    if (resource === "code_search") await paceCodeSearchCall();
     const res = await fetch(apiUrl(path), { headers });
     const { reset, remaining, limit } = parseRateLimitHeaders(res.headers);
     const etag = res.headers.get("etag");

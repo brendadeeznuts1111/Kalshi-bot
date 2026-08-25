@@ -21,7 +21,7 @@ import {
 } from "./inspect-utils.ts";
 import { isGitHubApiAbortError, isGitHubRateLimitTripped, throwCacheMissIfTripped } from "./github-errors.ts";
 import { recordCacheStat } from "./github-cache-stats.ts";
-import { attributeCodeHits, fetchGlobalCodeHits } from "./global-code-search.ts";
+import { DEFAULT_CODE_SEARCH_CONCURRENCY } from "./constants.ts";
 
 type GhCodeHit = { path: string };
 type GhCommit = { commit: { author: { date: string } } };
@@ -68,18 +68,21 @@ async function fetchInspectionSignals(
   repo: RepoCandidate,
   config: ResearchConfig,
 ): Promise<InspectionSignals> {
-  // Global-attribution code search (§127): ONE unscoped query per keyword,
-  // hits attributed to this repo by repository.full_name. Cost = keywords
-  // (21), not keywords x repos (was 294 for sports-nba / 1029 price-data).
-  const [readme, global, languages, lastCommit, rootEntries] = await Promise.all([
+  // Repo-scoped code search (completeness-correct, §131): the global-
+  // attribution model silently starved attribution — common keywords'
+  // top-ranked hits are dominated by unrelated popular repos, so gated
+  // bots never appear (gated-repo hits across the global cache: 0). The
+  // scoped query always returns THIS repo's matches; the universal pacer
+  // (github-api.ts) keeps the batch inside the 10/min window.
+  const scope = `repo:${repo.fullName}`;
+  const [readme, authHits, orderHits, languages, lastCommit, rootEntries] = await Promise.all([
     fetchReadme(repo),
-    fetchGlobalCodeHits([...config.keywords.authCodeSearch, ...config.keywords.orderCodeSearch]),
+    searchCode(repo, config.keywords.authCodeSearch, scope),
+    searchCode(repo, config.keywords.orderCodeSearch, scope),
     fetchLanguages(repo),
     fetchLatestCommit(repo),
     fetchRootEntries(repo),
   ]);
-  const authHits = attributeCodeHits(global, config.keywords.authCodeSearch, repo.fullName);
-  const orderHits = attributeCodeHits(global, config.keywords.orderCodeSearch, repo.fullName);
 
   const code = deriveCodeSignals(readme, authHits, orderHits, config);
   const { hasTests, hasCi } = detectTestsAndCi(rootEntries, code.combinedText);
@@ -130,6 +133,34 @@ async function fetchReadme(repo: RepoCandidate): Promise<string> {
       return "";
     }
   });
+}
+
+async function searchCode(repo: RepoCandidate, queries: string[], scope: string) {
+  return mapPool(
+    queries,
+    DEFAULT_CODE_SEARCH_CONCURRENCY,
+    async (term) => {
+      return withCache(repo.fullName, repo.pushedAt, `code_${term}`, async () => {
+        try {
+          const q = `${term} ${scope}`;
+          const body = await githubApiJson<{ total_count?: number; items?: GhCodeHit[] }>(
+            `search/code?q=${encodeURIComponent(q)}&per_page=5`,
+            { resource: "code_search" },
+          );
+          const rows = body.items ?? [];
+          return {
+            query: term,
+            totalCount: body.total_count ?? rows.length,
+            paths: rows.map((r) => r.path).filter(Boolean),
+          };
+        } catch (err) {
+          if (isGitHubRateLimitError(err)) throw err;
+          return { query: term, totalCount: 0, paths: [] as string[] };
+        }
+      });
+    },
+    { failFast: isGitHubApiAbortError },
+  );
 }
 
 async function fetchLanguages(repo: RepoCandidate): Promise<Record<string, number>> {

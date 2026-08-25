@@ -23,7 +23,7 @@ import { ensureGh } from "./preflight.ts";
 import { ensureGhRateBudget, GitHubRateLimitError } from "./gh.ts";
 import {
   ensureInspectRateBudget,
-  estimateCodeSearchCallsPerDimension,
+  estimateCodeSearchCallsPerRepo,
   evaluateInspectRateBudget,
   formatDryRunPlan,
   formatInspectBudgetEstimate,
@@ -214,9 +214,8 @@ export async function runResearchDryRun(opts: CliOptions): Promise<ResearchDryRu
   timer.start("gate");
   const gated = applyGate(candidates, gate);
   const uncached = gated.filter((repo) => repoNeedsLiveInspect(repo)).length;
-  const codeSearchPerRepo = estimateCodeSearchCallsPerDimension(config);
-  // Global attribution (§127): one keyword pass serves all uncached repos.
-  const estimatedCalls = uncached > 0 ? codeSearchPerRepo : 0;
+  const codeSearchPerRepo = estimateCodeSearchCallsPerRepo(config);
+  const estimatedCalls = uncached * codeSearchPerRepo;
   const codeSearch = offline
     ? offlineCodeSearchSnapshot(estimatedCalls)
     : await readGitHubRateLimit("code_search");

@@ -10,7 +10,7 @@
 import { parseArgs } from "node:util";
 import { loadConfig } from "../src/research/discover.ts";
 import {
-  estimateCodeSearchCallsPerDimension,
+  estimateCodeSearchCallsPerRepo,
   evaluateInspectRateBudget,
   formatInspectBudgetEstimate,
   parseRateLimitWire,
@@ -29,7 +29,7 @@ if (import.meta.main) {
   });
 
   const config = await loadConfig();
-  const codeSearchPerRepo = estimateCodeSearchCallsPerDimension(config);
+  const codeSearchPerRepo = estimateCodeSearchCallsPerRepo(config);
   const gated = values.gated ? Number(values.gated) : null;
   const uncached = values.uncached ? Number(values.uncached) : gated;
 
@@ -62,6 +62,6 @@ if (import.meta.main) {
     console.log(
       `Tip: bun tools/github-rate-budget.ts --dimension=${values.dimension ?? "price-data"} --gated=49 --uncached=49`,
     );
-    console.log(`code_search per dimension (global keywords, §127): ${codeSearchPerRepo} queries — NOT per repo`);
+    console.log(`code_search per repo (keywords): ${codeSearchPerRepo} queries — repo-scoped, completeness-correct (§131)`);
   }
 }

@@ -4668,7 +4668,7 @@ another note.
   (capped by MAX_PAGES x 100/keyword; pagination to 4 pages).
 - Cache: in-process Map per keyword (cross-dimension reuse in one run);
   per-repo results still persist via the inspect cache.
-- Files: src/research/global-code-search.ts (new), inspect.ts (global fetch
+- Files: src/research/inspect.ts (global fetch
   + attribute), github-rate-limit.ts (estimateCodeSearchCallsPerDimension,
   windows messaging, per-repo chunk guidance removed), cli.ts +
   tools/github-rate-budget.ts messaging, tests (global-code-search, rate-
@@ -4709,6 +4709,34 @@ another note.
   replace that. serve-stream:probe (tools/serve-stream-probe.ts,
   verify:contracts gate #23 -> 23/23) grounds the pattern. VERIFIED 4/4
   on 1.4.0:
+
+## 131. Global-attribution code search REVERTED — completeness beats cost (2026-08-25)
+
+- §127's global-attribution model (one unscoped query per keyword, hits
+  attributed by repository.full_name) was REVERTED after a real-data audit:
+  of ~660KB of global hits across all 21 keywords, ZERO referenced any of
+  the 14 gated repos. The keywords are common coding tokens (place_order
+  335K matches, dry_run 5.1M); GitHub's relevance ranking surfaces huge
+  popular repos first, so small trading bots never appear in the top pages
+  (search also hard-caps at 1000 results/query). Attributed paths came back
+  0 for every repo — code-level signals (fee-aware, risk keywords, v2-in-
+  code paths) silently under-reported. The 8.3s run was fast because it was
+  finding nothing.
+- LESSON: repo-scoped queries (q="<keyword> repo:A/B") are the ONLY way to
+  get per-repo content completeness. Cost is 21 x repos — that is the
+  honest price of the detector model. Global attribution is sound only for
+  keywords whose hit space is small enough that targets rank (none of ours).
+- WHAT STAYS (the real wins from the §127-§130 work): the UNIVERSAL code_
+  search pacer (github-api.ts paceCodeSearchCall — 9/min token bucket,
+  GLOBAL_CODE_SEARCH_NO_PACE=1 for tests), research:resume (run -> wait ->
+  rerun; scoped results persist in api_cache so later attempts only fetch
+  remaining), the per-repo chunk/waves preflight messaging.
+- HYGIENE: the empty-path attributed inspect rows were cached (repo+pushed_
+  at) and would have poisoned re-runs for 30 days — cleared manually.
+  Reverted files: inspect.ts (scoped searchCode), github-rate-limit.ts
+  (estimateCodeSearchCallsPerRepo), cli.ts + tools/github-rate-budget.ts
+  messaging, removed global-code-search.ts + global_code_cache + prime CLI.
+
   1. ReadableStream Response bodies stream INCREMENTALLY — the client
      sees chunks as produced (total time ~= sum of producer sleeps;
      probe: c1c2c3 in 307ms vs 300ms of sleeps).

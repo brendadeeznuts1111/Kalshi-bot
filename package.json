@@ -263,7 +263,6 @@
     "serve-tls:probe": "bun tools/serve-tls-probe.ts",
     "routes:check": "bun tools/routes-check.ts",
     "bun:coverage-audit": "bun tools/bun-coverage-audit.ts",
-    "code-search:prime": "bun tools/code-search-prime-cli.ts",
     "research:resume": "bun tools/research-resume.ts",
     "ops:pipelines": "bun scripts/pipeline-status.ts",
     "image:probe": "bun tools/image-probe.ts",
