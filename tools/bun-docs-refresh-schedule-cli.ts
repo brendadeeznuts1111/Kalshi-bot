@@ -13,7 +13,9 @@ import { join } from "node:path";
 import { parseArgs } from "node:util";
 import { previewFireTimes } from "../src/research/schedule-cli.ts";
 
-export const BUN_DOCS_REFRESH_CRON_SCHEDULE = "0 6 * * 1";
+// Daily 06:00 — the drift signal + dashboard docs:refresh action catch
+// urgent bumps the moment releases land (§118); this cron is the floor.
+export const BUN_DOCS_REFRESH_CRON_SCHEDULE = "0 6 * * *";
 export const BUN_DOCS_REFRESH_CRON_TITLE = "bun-docs refresh";
 export const BUN_DOCS_REFRESH_WORKER_PATH = join(
   import.meta.dir,
