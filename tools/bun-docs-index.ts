@@ -57,6 +57,20 @@ import { join } from 'node:path';
 import { assertBunAtLeast } from '../src/research/bun-native.ts';
 import { hasFlag, argValue } from '../src/cli/argv.ts';
 import { fetchPool, warmDns } from '../src/lib/fetch-pool.ts';
+import { resolveGitHubToken } from '../src/research/github-network.ts';
+
+/**
+ * Bearer auth header for api.github.com when a token resolves; {} otherwise
+ * (graceful — the trees API also works unauthenticated up to 60 req/hr).
+ * Exported for tests (mock.module of github-network).
+ */
+export async function githubApiAuthHeaders(): Promise<Record<string, string>> {
+  try {
+    return { authorization: 'Bearer ' + (await resolveGitHubToken()) };
+  } catch {
+    return {};
+  }
+}
 import { statusLine, brandMark } from '../src/research/terminal-out.ts';
 import type { DnsWarmTarget } from '../src/lib/fetch-pool.ts';
 
@@ -190,7 +204,11 @@ async function discoverPages(source: Source, scope: Scope): Promise<Array<{ name
   } else {
     const prefix = scope === 'all' ? 'docs/' : 'docs/' + scope + '/';
     const ref = source === 'tag' ? TAG_REF : REPO_REF;
-    const res = await fetch(TREES_API + ref + '?recursive=1');
+    // Authenticated trees API when a token resolves (GH_TOKEN/GITHUB_TOKEN/
+    // gh auth token — github-network.ts SSOT): the unauthenticated bucket is
+    // 60 req/hr and a rate-limit abort kills the whole discovery (cache
+    // miss). Graceful fallback to unauthenticated when no token exists.
+    const res = await fetch(TREES_API + ref + '?recursive=1', { headers: await githubApiAuthHeaders() });
     const json = (await res.json()) as { tree?: Array<{ type: string; path: string }> };
     paths = (json.tree ?? [])
       .filter((t) => t.type === 'blob' && t.path.startsWith(prefix) && t.path.endsWith('.mdx'))
@@ -313,4 +331,9 @@ async function main(): Promise<void> {
   process.exit(okCount === entries.length ? 0 : 1);
 }
 
-await main();
+// Import-safe: only the CLI entry runs the pipeline (repo convention —
+// import.meta.main, see docs/BUN_NATIVE.md). Tests import this module for
+// githubApiAuthHeaders without triggering discovery/network/cache writes.
+if (import.meta.main) {
+  await main();
+}
