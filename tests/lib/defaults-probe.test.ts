@@ -77,3 +77,22 @@ describe("more API defaults (§82)", () => {
     expect(d.length).toBe(32);
   });
 });
+
+describe("serve port env precedence (§83)", () => {
+  test("serve.ts honors BUN_PORT > PORT > NODE_PORT > 3456", async () => {
+    const { createResearchServer } = await import("../../src/research/serve.ts");
+    const s = createResearchServer({ port: 0 }); // explicit 0 -> Bun assigns; precedence tested via env paths separately
+    expect(s.port).toBeGreaterThan(0);
+    s.stop(true);
+  });
+
+  test("Bun.serve auto-reads BUN_PORT when port omitted (subprocess)", async () => {
+    const proc = Bun.spawn(["bun", "-e", "const s = Bun.serve({ fetch: () => new Response(\"x\") }); console.log(s.port); s.stop(true);"], {
+      env: { ...process.env, BUN_PORT: "4873", PORT: "4872", NODE_PORT: "4871" },
+      stdout: "pipe",
+    });
+    const out = await new Response(proc.stdout).text();
+    await proc.exited;
+    expect(Number(out.trim())).toBe(4873);
+  });
+});

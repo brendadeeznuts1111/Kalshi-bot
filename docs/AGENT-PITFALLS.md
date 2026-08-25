@@ -3687,3 +3687,27 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
   defaults — no implicit-default reliance found needing change.
 - Artifacts: tools/defaults-probe.ts D6-D8 (10/10), tests/lib/defaults-
   probe.test.ts (8 tests), verify:contracts 16/16.
+
+## 83. Port env vars — BUN_PORT/PORT/NODE_PORT precedence pinned + serve.ts enhanced (2026-08-24)
+
+- User asked about BUN_PORT / PORT / BUN_OPTIONS. Probed in CLEAN
+  subprocesses (in-process Bun.env mutation is unreliable — a stale env
+  poisoned the first probe; subprocesses are definitive):
+- VERIFIED precedence (Bun.serve auto-reads when port omitted):
+  explicit options.port > BUN_PORT > PORT > NODE_PORT > 3000 (Bun
+  default). BUN_PORT beats both PORT and NODE_PORT when all set.
+  --port CLI flag also documented. config.ts's comment ('honors BUN_PORT
+  / --port') is CORRECT — my first in-process probe wrongly suggested
+  otherwise; subprocess isolation proved it.
+- BUN_OPTIONS: real but NOT a serve port var — prepends CLI args to any
+  Bun execution (env doc: BUN_OPTIONS=\"--hot\" behaves like bun --hot run);
+  standalone executables read it for runtime flags (--cpu-prof etc.).
+  Undefined in this shell (not set).
+- ENHANCEMENT (serve.ts): previously read only Bun.env.PORT ?? 3456 —
+  ignored BUN_PORT (probe: BUN_PORT=4911 PORT=4912 -> used 4912). Now
+  matches Bun's precedence: options.port ?? BUN_PORT ?? PORT ??
+  NODE_PORT ?? 3456. Verified: BUN_PORT wins, PORT alone works, no-env
+  -> 3456 (repo default preserved, not Bun's 3000).
+- Artifacts: tools/defaults-probe.ts D9 (13/13), tests/lib/defaults-
+  probe.test.ts (10 tests), src/research/serve.ts precedence fix,
+  verify:contracts 16/16.

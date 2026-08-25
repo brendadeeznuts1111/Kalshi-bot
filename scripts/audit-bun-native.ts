@@ -263,6 +263,8 @@ export const SPAWN_KEEP_LIST = new Set([
   "tools/deps-report.ts", // dep gate runner (pipe capture)
   "tools/plugins-probe.ts", // probes runtime build.module() via --preload (child bun run, pipe capture)
   "tests/lib/plugins-probe.test.ts", // same probe: runtime build.module() via child bun run (pipe capture)
+  "tools/defaults-probe.ts", // spawnSync bun -e to probe serve port env precedence in a CLEAN subprocess (in-process env mutation unreliable, §83)
+  "tests/lib/defaults-probe.test.ts", // same port-precedence subprocess probe (Bun.spawn, pipe capture)
   "tests/lib/docs-api.test.ts", // runs docs:api CLI with STRICT=1 env (pipe capture)
   "tests/lib/docs-integrity.test.ts", // runs docs:integrity CLI for src-ref gate (pipe capture)
 ]);

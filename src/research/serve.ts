@@ -1265,7 +1265,13 @@ function handleLiquidityByTournament(keyRaw: string, url: URL, dbPath: string = 
 }
 
 export function createResearchServer(options: ServeOptions = {}) {
-  const port = options.port ?? Number(Bun.env.PORT ?? 3456);
+  // Port precedence matches Bun.serve's own env reading (probed §83):
+  // explicit options.port > BUN_PORT > PORT > NODE_PORT > 3456 fallback.
+  // Bun.serve auto-reads all three env vars when port is omitted; we read
+  // them ourselves so the SAME precedence applies even when we pass port
+  // explicitly (and so 3456 stays the repo default, not Bun's 3000).
+  const envPort = Bun.env.BUN_PORT ?? Bun.env.PORT ?? Bun.env.NODE_PORT;
+  const port = options.port ?? (envPort ? Number(envPort) : 3456);
   const dbPath = options.dbPath ?? DEFAULT_EVENT_STORE_DB;
   // process.on('memoryPressure') — v1.4 low-memory notification. On
   // 'critical', drop the in-process caches so the OS doesn't kill us.

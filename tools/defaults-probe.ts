@@ -80,6 +80,20 @@ const h = new Bun.CryptoHasher("sha256"); h.update("x");
 const digest = h.digest();
 check("D8c CryptoHasher.digest Buffer 32 bytes", digest instanceof Uint8Array && digest.length === 32, "ctor=" + digest.constructor.name + " len=" + digest.length);
 
+// D9: port env precedence — Bun.serve auto-reads BUN_PORT > PORT > NODE_PORT
+// (probed §83 in clean subprocesses; in-process env mutation is unreliable).
+const readPort = (env: Record<string, string>): number => {
+  const script = "const s = Bun.serve({ fetch: () => new Response(\"x\") }); console.log(s.port); s.stop(true);";
+  const r = Bun.spawnSync(["bun", "-e", script], { env: { ...process.env, ...env }, stdout: "pipe" });
+  return Number(r.stdout?.toString().trim() ?? "0");
+};
+const pAll = readPort({ BUN_PORT: "4873", PORT: "4872", NODE_PORT: "4871" });
+const pNode = readPort({ NODE_PORT: "4861" });
+const pPort = readPort({ PORT: "4862" });
+check("D9 port precedence BUN_PORT > PORT > NODE_PORT", pAll === 4873, "all-set -> " + pAll);
+check("D9b NODE_PORT alone read", pNode === 4861, "NODE_PORT -> " + pNode);
+check("D9c PORT alone read", pPort === 4862, "PORT -> " + pPort);
+
 console.log("---");
 const fails = results.filter((r) => !r.pass);
 console.log("defaults:probe — " + (results.length - fails.length) + "/" + results.length + " pass" + (fails.length ? " · FAIL: " + fails.map((f) => f.name).join(", ") : ""));
