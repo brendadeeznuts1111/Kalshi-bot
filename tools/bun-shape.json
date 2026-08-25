@@ -2,7 +2,7 @@
   "bunVersion": "1.4.0",
   "bunRevision": "34cbb9a40b4bd1bd767d134a7065e66c2432a676",
   "pinnedVersion": "1.4.0",
-  "generatedAt": "2026-08-25T22:24:03.739Z",
+  "generatedAt": "2026-08-25T23:49:21.978Z",
   "members": [
     {
       "name": "$",
@@ -4532,6 +4532,2151 @@
       "extension": false
     }
   ],
+  "modules": {
+    "bun:bundle": [
+      {
+        "name": "feature",
+        "ns": "",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "Registry",
+        "ns": "",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      }
+    ],
+    "bun:ffi": [
+      {
+        "name": "cc",
+        "ns": "",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "CFunction",
+        "ns": "",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "ConvertFns",
+        "ns": "",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "CString",
+        "ns": "",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "CStringConstructor",
+        "ns": "",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "dlopen",
+        "ns": "",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "FFIFunction",
+        "ns": "",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "FFIFunctionCallableSymbol",
+        "ns": "",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "FFITypeOrString",
+        "ns": "",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "FFITypeStringToType",
+        "ns": "",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "FFITypeToArgsType",
+        "ns": "",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "FFITypeToReturnsType",
+        "ns": "",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "JSCallback",
+        "ns": "",
+        "kind": "class",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "Library",
+        "ns": "",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "linkSymbols",
+        "ns": "",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "Pointer",
+        "ns": "",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "ptr",
+        "ns": "",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "read",
+        "ns": "",
+        "kind": "namespace",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "f32",
+        "ns": "read",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "f64",
+        "ns": "read",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "i16",
+        "ns": "read",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "i32",
+        "ns": "read",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "i64",
+        "ns": "read",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "i8",
+        "ns": "read",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "intptr",
+        "ns": "read",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "ptr",
+        "ns": "read",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "u16",
+        "ns": "read",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "u32",
+        "ns": "read",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "u64",
+        "ns": "read",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "u8",
+        "ns": "read",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "suffix",
+        "ns": "",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "Symbols",
+        "ns": "",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "toArrayBuffer",
+        "ns": "",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "toBuffer",
+        "ns": "",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "ToFFIType",
+        "ns": "",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "viewSource",
+        "ns": "",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      }
+    ],
+    "bun:jsc": [
+      {
+        "name": "callerSourceOrigin",
+        "ns": "",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "deserialize",
+        "ns": "",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "drainMicrotasks",
+        "ns": "",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "edenGC",
+        "ns": "",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "estimateShallowMemoryUsageOf",
+        "ns": "",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "fullGC",
+        "ns": "",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "gcAndSweep",
+        "ns": "",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "getProtectedObjects",
+        "ns": "",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "getRandomSeed",
+        "ns": "",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "heapSize",
+        "ns": "",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "heapStats",
+        "ns": "",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "HeapStats",
+        "ns": "",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "isRope",
+        "ns": "",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "jscDescribe",
+        "ns": "",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "jscDescribeArray",
+        "ns": "",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "memoryUsage",
+        "ns": "",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "MemoryUsage",
+        "ns": "",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "noFTL",
+        "ns": "",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "noOSRExitFuzzing",
+        "ns": "",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "numberOfDFGCompiles",
+        "ns": "",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "optimizeNextInvocation",
+        "ns": "",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "profile",
+        "ns": "",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "releaseWeakRefs",
+        "ns": "",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "reoptimizationRetryCount",
+        "ns": "",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SamplingProfile",
+        "ns": "",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SamplingProfileStackFrame",
+        "ns": "",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SamplingProfileStackTraces",
+        "ns": "",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "serialize",
+        "ns": "",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "setRandomSeed",
+        "ns": "",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "setTimeZone",
+        "ns": "",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "startRemoteDebugger",
+        "ns": "",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "startSamplingProfiler",
+        "ns": "",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "totalCompileTime",
+        "ns": "",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      }
+    ],
+    "bun:sqlite": [
+      {
+        "name": "Changes",
+        "ns": "",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "constants",
+        "ns": "",
+        "kind": "namespace",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_FCNTL_BEGIN_ATOMIC_WRITE",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_FCNTL_BUSYHANDLER",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_FCNTL_CHUNK_SIZE",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_FCNTL_CKPT_DONE",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_FCNTL_CKPT_START",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_FCNTL_CKSM_FILE",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_FCNTL_COMMIT_ATOMIC_WRITE",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_FCNTL_COMMIT_PHASETWO",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_FCNTL_DATA_VERSION",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_FCNTL_EXTERNAL_READER",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_FCNTL_FILE_POINTER",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_FCNTL_GET_LOCKPROXYFILE",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_FCNTL_HAS_MOVED",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_FCNTL_JOURNAL_POINTER",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_FCNTL_LAST_ERRNO",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_FCNTL_LOCK_TIMEOUT",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_FCNTL_LOCKSTATE",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_FCNTL_MMAP_SIZE",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_FCNTL_OVERWRITE",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_FCNTL_PDB",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_FCNTL_PERSIST_WAL",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_FCNTL_POWERSAFE_OVERWRITE",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_FCNTL_PRAGMA",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_FCNTL_RBU",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_FCNTL_RESERVE_BYTES",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_FCNTL_RESET_CACHE",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_FCNTL_ROLLBACK_ATOMIC_WRITE",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_FCNTL_SET_LOCKPROXYFILE",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_FCNTL_SIZE_HINT",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_FCNTL_SIZE_LIMIT",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_FCNTL_SYNC",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_FCNTL_SYNC_OMITTED",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_FCNTL_TEMPFILENAME",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_FCNTL_TRACE",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_FCNTL_VFS_POINTER",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_FCNTL_VFSNAME",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_FCNTL_WAL_BLOCK",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_FCNTL_WIN32_AV_RETRY",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_FCNTL_WIN32_GET_HANDLE",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_FCNTL_WIN32_SET_HANDLE",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_FCNTL_ZIPVFS",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_OPEN_AUTOPROXY",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_OPEN_CREATE",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_OPEN_DELETEONCLOSE",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_OPEN_EXCLUSIVE",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_OPEN_EXRESCODE",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_OPEN_FULLMUTEX",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_OPEN_MAIN_DB",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_OPEN_MAIN_JOURNAL",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_OPEN_MEMORY",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_OPEN_NOFOLLOW",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_OPEN_NOMUTEX",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_OPEN_PRIVATECACHE",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_OPEN_READONLY",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_OPEN_READWRITE",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_OPEN_SHAREDCACHE",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_OPEN_SUBJOURNAL",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_OPEN_SUPER_JOURNAL",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_OPEN_TEMP_DB",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_OPEN_TEMP_JOURNAL",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_OPEN_TRANSIENT_DB",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_OPEN_URI",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_OPEN_WAL",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_PREPARE_NO_VTAB",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_PREPARE_NORMALIZE",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLITE_PREPARE_PERSISTENT",
+        "ns": "constants",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "Database",
+        "ns": "",
+        "kind": "class",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "DatabaseOptions",
+        "ns": "",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "native",
+        "ns": "",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLiteError",
+        "ns": "",
+        "kind": "class",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SQLQueryBindings",
+        "ns": "",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "Statement",
+        "ns": "",
+        "kind": "class",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      }
+    ],
+    "bun:test": [
+      {
+        "name": "afterAll",
+        "ns": "",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "afterEach",
+        "ns": "",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "AsymmetricMatcher",
+        "ns": "",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "AsymmetricMatchers",
+        "ns": "",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "AsymmetricMatchersBuiltin",
+        "ns": "",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "AsymmetricMatchersBuiltinNegated",
+        "ns": "",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "beforeAll",
+        "ns": "",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "beforeEach",
+        "ns": "",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "CustomMatcher",
+        "ns": "",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "CustomMatchersDetected",
+        "ns": "",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "describe",
+        "ns": "",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "Describe",
+        "ns": "",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "DescribeLabel",
+        "ns": "",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "EqualsFunction",
+        "ns": "",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "expect",
+        "ns": "",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "Expect",
+        "ns": "",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "ExpectExtendMatchers",
+        "ns": "",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "ExpectNot",
+        "ns": "",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "expectTypeOf",
+        "ns": "",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "FunctionLike",
+        "ns": "",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "HookOptions",
+        "ns": "",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "jest",
+        "ns": "",
+        "kind": "namespace",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "advanceTimersByTime",
+        "ns": "jest",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "advanceTimersToNextTimer",
+        "ns": "jest",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "clearAllMocks",
+        "ns": "jest",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "clearAllTimers",
+        "ns": "jest",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "fn",
+        "ns": "jest",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "getTimerCount",
+        "ns": "jest",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "isFakeTimers",
+        "ns": "jest",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "Mock",
+        "ns": "jest",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "Replaced",
+        "ns": "jest",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "resetAllMocks",
+        "ns": "jest",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "restoreAllMocks",
+        "ns": "jest",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "runAllTimers",
+        "ns": "jest",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "runOnlyPendingTimers",
+        "ns": "jest",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "setSystemTime",
+        "ns": "jest",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "setTimeout",
+        "ns": "jest",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "Spied",
+        "ns": "jest",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SpiedClass",
+        "ns": "jest",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SpiedFunction",
+        "ns": "jest",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SpiedGetter",
+        "ns": "jest",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SpiedSetter",
+        "ns": "jest",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "spyOn",
+        "ns": "jest",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "useFakeTimers",
+        "ns": "jest",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "useRealTimers",
+        "ns": "jest",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "JestMock",
+        "ns": "",
+        "kind": "namespace",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "ClassLike",
+        "ns": "JestMock",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "ConstructorLikeKeys",
+        "ns": "JestMock",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "FunctionLike",
+        "ns": "JestMock",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "MethodLikeKeys",
+        "ns": "JestMock",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "Mock",
+        "ns": "JestMock",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "MockFunctionResult",
+        "ns": "JestMock",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "MockFunctionResultIncomplete",
+        "ns": "JestMock",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "MockFunctionResultReturn",
+        "ns": "JestMock",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "MockFunctionResultThrow",
+        "ns": "JestMock",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "MockFunctionState",
+        "ns": "JestMock",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "MockInstance",
+        "ns": "JestMock",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "PropertyLikeKeys",
+        "ns": "JestMock",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "RejectType",
+        "ns": "JestMock",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "Replaced",
+        "ns": "JestMock",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "replaceProperty",
+        "ns": "JestMock",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "ResolveType",
+        "ns": "JestMock",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "Spied",
+        "ns": "JestMock",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SpiedClass",
+        "ns": "JestMock",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SpiedFunction",
+        "ns": "JestMock",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SpiedGetter",
+        "ns": "JestMock",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SpiedSetter",
+        "ns": "JestMock",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "SpyInstance",
+        "ns": "JestMock",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "spyOn",
+        "ns": "JestMock",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "UnknownClass",
+        "ns": "JestMock",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "UnknownFunction",
+        "ns": "JestMock",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "MatcherContext",
+        "ns": "",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "MatcherHintColor",
+        "ns": "",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "MatcherResult",
+        "ns": "",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "Matchers",
+        "ns": "",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "MatchersBuiltin",
+        "ns": "",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "MatcherState",
+        "ns": "",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "MatcherUtils",
+        "ns": "",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "mock",
+        "ns": "",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "Mock",
+        "ns": "",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "onTestFinished",
+        "ns": "",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "setDefaultTimeout",
+        "ns": "",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "setSystemTime",
+        "ns": "",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "spyOn",
+        "ns": "",
+        "kind": "function",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "test",
+        "ns": "",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "Test",
+        "ns": "",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "Tester",
+        "ns": "",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "TesterContext",
+        "ns": "",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "TestOptions",
+        "ns": "",
+        "kind": "type",
+        "typeOnly": true,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "vi",
+        "ns": "",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "xdescribe",
+        "ns": "",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      },
+      {
+        "name": "xtest",
+        "ns": "",
+        "kind": "object",
+        "typeOnly": false,
+        "docs": false,
+        "deprecated": false,
+        "extension": false
+      }
+    ]
+  },
   "globals": [
     "AbortController",
     "AbortSignal",

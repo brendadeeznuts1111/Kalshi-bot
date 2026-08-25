@@ -6195,3 +6195,29 @@ another note.
   (unallowed). Explicit Bun.$ scan added - docs:api STRICT now 0 drift.
 - Chained into coverage:matrix after the module report. No spawn (TS
   parse + file reads only) - no keep-list entry needed.
+
+## 175. bun:* reference module plane — grounded on bun.com/reference (2026-08-24)
+
+- The /reference API page (bun.com/reference) is generated from the SAME
+  bun-types bundle we parse locally - so grounding on it means covering
+  its MODULE plane, not just the Bun namespace. The shape generator now
+  parses every declare module "bun:*" declaration: bun:test (92 exports
+  incl. expect/expectTypeOf/mock/spyOn), bun:sqlite (74 incl. Database/
+  Statement/constants), bun:ffi (36 incl. dlopen/cc/CFunction), bun:jsc
+  (33), bun:bundle (2 - TYPES-ONLY: bun:bundle cannot be imported at
+  runtime, verified; excluded from the importability check like
+  __internal).
+- shape:probe S5: bun:test/bun:sqlite/bun:ffi/bun:jsc must import at
+  runtime with key exports present (expect, expectTypeOf, Database,
+  dlopen, jscDescribe) - 6/6 checks.
+- PROVEN GAP FIX: the Bun.* token scan misses named imports - 44 files
+  do import { X } from "bun" (serve.ts $, bun-settle.ts peek,
+  github-network.ts dns+$) and 124 import Database from "bun:sqlite".
+  The module report now counts the from-bun/bun:* import plane
+  (alias-resolved to the real member; type imports count too): the
+  execution module shows Database (15, sqlite:probe) and $ (shell:
+  probe); the matrix counts from "bun" imports into member Uses ($
+  48 -> 67, peek -> 8, dns -> 12). 63 modules now appear (was 49).
+- Module exports gate via MODULE_GATES (bun:test->test:probe,
+  bun:sqlite->sqlite:probe, bun:ffi->ffi:probe, bun:jsc->surface:probe,
+  bun:bundle->build-deep:probe).

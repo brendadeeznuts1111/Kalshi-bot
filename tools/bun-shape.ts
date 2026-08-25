@@ -48,8 +48,41 @@ interface ShapeMember {
 }
 
 const members: ShapeMember[] = [];
+const moduleMembers: Record<string, ShapeMember[]> = {};
 const seen = new Set<string>();
+const modSeen = new Set<string>();
 const keyOf = (ns: string, name: string) => (ns ? ns + "." + name : name);
+
+// bun:* module plane (bun.com/reference module pages: bun:test, bun:sqlite,
+// bun:ffi, bun:jsc, bun:bundle - generated from the same bun-types bundle).
+const modAdd = (mod: string, ns: string, name: string, kind: string, typeOnly: boolean, dep: boolean) => {
+  const k = ns ? mod + "." + ns + "." + name : mod + "." + name;
+  if (modSeen.has(k)) return;
+  modSeen.add(k);
+  if (!moduleMembers[mod]) moduleMembers[mod] = [];
+  moduleMembers[mod].push({ name, ns, kind, typeOnly, docs: false, deprecated: dep, extension: false });
+};
+
+const walkModBlock = (block: ts.ModuleBlock, mod: string, ns: string, sf: ts.SourceFile, dep: boolean) => {
+  for (const st of block.statements) {
+    if (ts.isVariableStatement(st)) {
+      for (const d of st.declarationList.declarations) modAdd(mod, ns, d.name.getText(sf), "object", false, dep);
+    } else if (ts.isFunctionDeclaration(st) && st.name) {
+      modAdd(mod, ns, st.name.text, "function", false, dep);
+    } else if (ts.isClassDeclaration(st) && st.name) {
+      const abstract = st.modifiers?.some((m) => m.kind === ts.SyntaxKind.AbstractKeyword) ?? false;
+      modAdd(mod, ns, st.name.text, "class", abstract, dep);
+    } else if (ts.isModuleDeclaration(st) && st.name && st.name.text !== "__internal") {
+      const innerNs = ns ? ns + "." + st.name.text : st.name.text;
+      modAdd(mod, ns, st.name.text, "namespace", false, dep);
+      if (st.body && ts.isModuleBlock(st.body)) walkModBlock(st.body, mod, innerNs, sf, dep);
+    } else if (ts.isInterfaceDeclaration(st) && st.name) {
+      modAdd(mod, ns, st.name.text, "type", true, dep);
+    } else if (ts.isTypeAliasDeclaration(st) && st.name) {
+      modAdd(mod, ns, st.name.text, "type", true, dep);
+    }
+  }
+};
 
 const add = (ns: string, name: string, kind: string, typeOnly: boolean, dep: boolean) => {
   const k = keyOf(ns, name);
@@ -85,6 +118,9 @@ for (const f of readdirSync(BT).filter((x) => x.endsWith(".d.ts")).sort()) {
   for (const st of sf.statements) {
     if (ts.isModuleDeclaration(st) && st.name && st.name.text === "bun" && st.body && ts.isModuleBlock(st.body)) {
       walkModuleBlock(st.body, "", sf, f === "deprecated.d.ts");
+    }
+    if (ts.isModuleDeclaration(st) && st.name && st.name.text && st.name.text.startsWith("bun:") && st.body && ts.isModuleBlock(st.body)) {
+      walkModBlock(st.body, st.name.text, "", sf, f === "deprecated.d.ts");
     }
   }
 }
@@ -135,12 +171,17 @@ globals.sort();
 
 members.sort((a, b) => keyOf(a.ns, a.name).localeCompare(keyOf(b.ns, b.name)));
 
+for (const k of Object.keys(moduleMembers)) {
+  moduleMembers[k].sort((a, b) => keyOf(a.ns, a.name).localeCompare(keyOf(b.ns, b.name)));
+}
+
 const shape = {
   bunVersion: Bun.version,
   bunRevision: Bun.revision,
   pinnedVersion: PINNED_VERSION,
   generatedAt: new Date().toISOString(),
   members,
+  modules: moduleMembers,
   globals,
 };
 await Bun.write(OUT, JSON.stringify(shape, null, 2) + "\n");

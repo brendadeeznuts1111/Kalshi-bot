@@ -1,5 +1,5 @@
 // @see https://bun.com/docs/test/index#run-tests
-import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, describe, expect, mock, test } from "bun:test";
 import { mapGitHubSearchItem, searchGitHubRepos } from "../src/research/github-search.ts";
 import { loadSearchCache, saveSearchCache, searchQueryKey } from "../src/research/cache.ts";
 import { GitHubCacheMissError, resetGitHubRateLimitCircuit, tripGitHubRateLimit } from "../src/research/github-errors.ts";
@@ -31,6 +31,16 @@ describe("searchGitHubRepos ETag cache", () => {
 
   beforeAll(async () => {
     await enterTempCache();
+    // Full-surface mock of github-network so a CONCURRENT mock from
+    // bun-docs-index-auth.test.ts (same worker, §137) can never leak
+    // resolveGitHubToken into these fetch tests - the ETag-cache flake.
+    mock.module("../src/research/github-network.ts", () => ({
+      GITHUB_API_HOST: "api.github.com",
+      GITHUB_API_ORIGIN: "https://api.github.com",
+      warmGitHubApiNetwork: () => {},
+      resetGitHubNetworkWarmup: () => {},
+      resolveGitHubToken: async () => Bun.env.GH_TOKEN ?? "test-token",
+    }));
   });
   afterAll(() => {
     exitTempCache();

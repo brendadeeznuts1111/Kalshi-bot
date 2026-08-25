@@ -8,28 +8,28 @@ without a runtime value; missing = declared value absent at runtime.
 
 | Token | Runtime | Types | Docs | Gate | Uses |
 |---|---|---|---|---|---|
-| `file` | function | y | y | fs:probe | 493 |
-| `write` | function | y | y | fs:probe | 280 |
+| `file` | function | y | y | fs:probe | 494 |
+| `write` | function | y | y | fs:probe | 281 |
 | `env` | object | y | y | runtime:probe | 239 |
-| `color` | function | y | y | ansi:probe | 133 |
-| `serve` | function | y | y | serve-tls/routes | 112 |
+| `color` | function | y | y | ansi:probe | 134 |
+| `serve` | function | y | y | serve-tls/routes | 117 |
 | `cron` | function | y | y | cron tests §126/128 | 105 |
 | `argv` | object | y | y | runtime:probe | 89 |
+| `Image` | function | y | y | image:probe | 78 |
+| `spawnSync` | function | y | y | spawn:probe | 78 |
 | `build` | function | y | y | build-deep:probe | 77 |
-| `Image` | function | y | y | image:probe | 77 |
-| `spawnSync` | function | y | y | spawn:probe | 76 |
 | `sleep` | function | y | y | runtime:probe | 73 |
 | `WebView` | function | y | y | runtime:probe | 68 |
+| `$` | function | y | y | shell:probe | 67 |
 | `Transpiler` | function | y | y | runtime:probe | 67 |
 | `Glob` | function | y | y | fsx:probe | 54 |
 | `version` | string | y | y | runtime:probe | 53 |
-| `$` | function | y | y | shell:probe | 47 |
+| `inspect` | function | y | y | ansi:probe | 46 |
+| `spawn` | function | y | y | spawn:probe | 46 |
 | `escapeHTML` | function | y | y | ansi:probe | 45 |
-| `inspect` | function | y | y | ansi:probe | 45 |
-| `spawn` | function | y | y | spawn:probe | 44 |
-| `CryptoHasher` | function | y | y | crypto:probe | 41 |
+| `CryptoHasher` | function | y | y | crypto:probe | 42 |
 | `which` | function | y | y | fsx:probe | 41 |
-| `stringWidth` | function | y | y | ansi:probe | 35 |
+| `stringWidth` | function | y | y | ansi:probe | 36 |
 | `Archive` | function | y | y | fs:probe | 33 |
 | `markdown` | object | y | y | format:probe | 31 |
 | `hash` | function | y | y | crypto:probe | 29 |
@@ -37,28 +37,31 @@ without a runtime value; missing = declared value absent at runtime.
 | `TOML.parse` | function | y | y | format:probe (ns) | 24 |
 | `nanoseconds` | function | y | y | runtime:probe | 22 |
 | `XML.parse` | function | y | y | format:probe (ns) | 22 |
+| `XML` | object | y | y | format:probe | 20 |
 | `markdown.html` | function | y | y | format:probe (ns) | 18 |
 | `revision` | string | y | y | runtime:probe | 18 |
 | `secrets` | object | y | y | net:probe | 17 |
-| `XML` | object | y | y | format:probe | 16 |
 | `stripANSI` | function | y | y | ansi:probe | 15 |
+| `deepEquals` | function | y | y | crypto:probe | 14 |
 | `semver` | object | y | y | bun:apis-probe | 14 |
 | `sha` | function | y | y | bun:apis-probe | 14 |
 | `wrapAnsi` | function | y | y | ansi:probe | 14 |
-| `deepEquals` | function | y | y | crypto:probe | 13 |
+| `dns` | object | y | y | net:probe | 12 |
 | `dns.prefetch` | function | y | y | net:probe (ns) | 12 |
 | `sliceAnsi` | function | y | n | ansi:probe | 12 |
 | `connect` | function | y | y | security:probe | 10 |
-| `dns` | object | y | y | net:probe | 10 |
 | `inspect.custom` | symbol | y | y | ansi:probe (ns) | 9 |
 | `JSON5` | object | y | y | bun:apis-probe | 9 |
+| `TOML` | object | y | y | format:probe | 9 |
 | `JSON5.parse` | function | y | y | bun:apis-probe (ns) | 8 |
 | `JSONL.parse` | function | y | y | format:probe (ns) | 8 |
 | `markdown.ansi` | function | y | n | format:probe (ns) | 8 |
-| `TOML` | object | y | y | format:probe | 8 |
+| `peek` | function | y | y | runtime:probe | 8 |
+| `plugin` | function | y | y | build-deep:probe | 8 |
+| `Cookie` | function | y | y | defaults:probe | 7 |
+| `CookieMap` | function | y | y | defaults:probe | 7 |
 | `JSONL` | object | y | y | format:probe | 7 |
 | `password` | object | y | y | surface:probe | 7 |
-| `peek` | function | y | y | runtime:probe | 7 |
 | `randomUUIDv7` | function | y | y | crypto:probe | 7 |
 | `semver.order` | function | y | y | bun:apis-probe (ns) | 7 |
 | `semver.satisfies` | function | y | y | bun:apis-probe (ns) | 7 |
@@ -68,11 +71,8 @@ without a runtime value; missing = declared value absent at runtime.
 | `SQL` | function | y | y | sqlite:probe | 6 |
 | `stdout` | object | y | y | fs:probe | 6 |
 | `XML.stringify` | function | y | y | format:probe (ns) | 6 |
-| `Cookie` | function | y | y | defaults:probe | 5 |
-| `CookieMap` | function | y | y | defaults:probe | 5 |
 | `listen` | function | y | y | net:probe | 5 |
 | `openInEditor` | function | y | y | fsx:probe | 5 |
-| `plugin` | function | y | y | build-deep:probe | 5 |
 | `Terminal` | function | y | y | runtime:probe | 5 |
 | `zstdCompressSync` | function | y | y | fs:probe | 5 |
 | `CSRF.generate` | function | y | y | csrf:probe (ns) | 4 |
@@ -131,6 +131,7 @@ without a runtime value; missing = declared value absent at runtime.
 | `readableStreamToJSON` | function | y | y | surface:probe | 1 |
 | `resolveSync` | function | y | y | surface:probe | 1 |
 | `s3` | object | y | y | client-shape:probe | 1 |
+| `Security` | missing | y | n | GAP | 1 |
 | `SHA1` | function | y | n | surface:probe | 1 |
 | `SHA224` | function | y | n | surface:probe | 1 |
 | `SHA384` | function | y | n | surface:probe | 1 |
@@ -158,7 +159,6 @@ without a runtime value; missing = declared value absent at runtime.
 | `dns.ALL` | number | y | n | net:probe (ns) | 0 |
 | `dns.V4MAPPED` | number | y | n | net:probe (ns) | 0 |
 | `Password` | missing | y | n | GAP | 0 |
-| `Security` | missing | y | n | GAP | 0 |
 | `Serve` | missing | y | n | GAP | 0 |
 | `Spawn` | missing | y | n | GAP | 0 |
 | `SQL.MySQLError` | function | y | n | sqlite:probe (ns) | 0 |
@@ -174,11 +174,12 @@ without a runtime value; missing = declared value absent at runtime.
 | `markdown.Options` | type-only | y | n | format:probe (ns) | 12 |
 | `WebSocketOptions` | type-only | y | n | GAP | 8 |
 | `CronController` | type-only | y | y | GAP | 7 |
+| `BunFile` | type-only | y | n | GAP | 3 |
 | `Serve.Options` | type-only | y | n | undefined (ns) | 3 |
-| `BunFile` | type-only | y | n | GAP | 2 |
+| `ArchiveInput` | type-only | y | n | GAP | 2 |
 | `HTMLBundle` | type-only | y | n | GAP | 2 |
-| `ArchiveInput` | type-only | y | n | GAP | 1 |
 | `BunInspectOptions` | type-only | y | n | GAP | 1 |
+| `BunPlugin` | type-only | y | n | GAP | 1 |
 | `markdown.AnsiTheme` | type-only | y | n | format:probe (ns) | 1 |
 | `Security.Advisory` | type-only | y | n | undefined (ns) | 1 |
 | `Security.Scanner` | type-only | y | n | undefined (ns) | 1 |
@@ -213,7 +214,6 @@ without a runtime value; missing = declared value absent at runtime.
 | `BunLockFilePackageInfo` | type-only | y | n | GAP | 0 |
 | `BunLockFileWorkspacePackage` | type-only | y | n | GAP | 0 |
 | `BunMessageEvent` | type-only | y | n | GAP | 0 |
-| `BunPlugin` | type-only | y | n | GAP | 0 |
 | `BunRegisterPlugin` | type-only | y | n | GAP | 0 |
 | `BunRequest` | type-only | y | n | GAP | 0 |
 | `CloseEventInit` | type-only | y | n | GAP | 0 |

@@ -30,6 +30,18 @@ for (const l of (scan.stdout?.toString() ?? "").split("\n")) {
     counts[key] = (counts[key] ?? 0) + 1;
   }
 }
+// from "bun" named imports count as member usage too (§175) - the Bun.*
+// token scan misses import { $ } from "bun" (44 files do this).
+const impScan = Bun.spawnSync(["rg", "-n", "--no-heading", "from \"bun\"", "src", "tools", "scripts", "tests"], { cwd: ROOT, stdout: "pipe" });
+const IMP_RE = /import\s+(?:type\s+)?\{([^}]*)\}\s+from\s+"bun"/;
+for (const l of (impScan.stdout?.toString() ?? "").split("\n")) {
+  const m = l.match(IMP_RE);
+  if (!m) continue;
+  for (const part of m[1].split(",")) {
+    const name = part.trim().split(/\s+as\s+/)[0].trim();
+    if (name && shapeKeys.has(name)) counts[name] = (counts[name] ?? 0) + 1;
+  }
+}
 
 // 2) GATES validation: every curated key must exist in the shape.
 const shapeTop = new Set(shape.members.filter((m: any) => !m.ns).map((m: any) => m.name));

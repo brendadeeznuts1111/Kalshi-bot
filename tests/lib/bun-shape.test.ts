@@ -40,6 +40,15 @@ describe('bun-shape.json (§168/§169)', () => {
     const names = new Set(shape.members.filter((m: any) => !m.ns).map((m: any) => m.name));
     expect(Object.keys(Bun).filter((k) => !names.has(k))).toEqual([]);
   });
+
+  test('bun:* reference module plane present (§175)', () => {
+    const mods = shape.modules ?? {};
+    expect(mods['bun:sqlite']?.some((m: any) => m.name === 'Database' && !m.typeOnly)).toBe(true);
+    expect(mods['bun:test']?.some((m: any) => m.name === 'expect')).toBe(true);
+    expect(mods['bun:test']?.some((m: any) => m.name === 'expectTypeOf')).toBe(true);
+    expect(mods['bun:ffi']?.some((m: any) => m.name === 'dlopen')).toBe(true);
+    expect(mods['bun:jsc']?.some((m: any) => m.name === 'jscDescribe')).toBe(true);
+  });
 });
 
 describe('bun-gates gateFor (§169/§170)', () => {

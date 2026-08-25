@@ -49,6 +49,27 @@ const docGlobals = ["fetch", "Request", "Response", "WebSocket", "Blob", "FormDa
 const absent = docGlobals.filter((g) => (globalThis as any)[g] === undefined);
 check("S4 documented globals present", absent.length === 0, absent.join(",") || "all " + docGlobals.length + " present");
 
+// S5: the bun:* reference module plane (bun.com/reference modules) is
+// importable at runtime with its key exports (bun:bundle is types-only -
+// not importable - by design, §175).
+const moduleChecks: Array<[string, string]> = [
+  ["bun:test", "expect"],
+  ["bun:test", "expectTypeOf"],
+  ["bun:sqlite", "Database"],
+  ["bun:ffi", "dlopen"],
+  ["bun:jsc", "jscDescribe"],
+];
+const modFails: string[] = [];
+for (const [mod, key] of moduleChecks) {
+  try {
+    const m = await import(mod);
+    if ((m as any)[key] === undefined) modFails.push(mod + "." + key);
+  } catch {
+    modFails.push(mod + " (import threw)");
+  }
+}
+check("S5 bun:* reference modules importable + key exports", modFails.length === 0, modFails.join(",") || "all " + moduleChecks.length + " checks ok");
+
 const failed = results.filter((r) => !r.pass);
 console.log("shape:probe - " + (results.length - failed.length) + "/" + results.length + " checks" + (failed.length ? " · FAIL: " + failed.map((f) => f.name).join(", ") : ""));
 process.exit(failed.length === 0 ? 0 : 1);
