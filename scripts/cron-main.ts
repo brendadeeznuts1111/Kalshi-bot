@@ -114,17 +114,27 @@ async function jobLogger(): Promise<void> {
 export function createSingleFlight<T>(work: () => Promise<T>): {
   run: () => Promise<T>;
   drain: () => Promise<void>;
+  droppedTicks: () => number;
 } {
   let active: Promise<T> | undefined;
+  // §128: Bun.cron SKIP policy — a scheduled fire that collides with a
+  // running job is LOST inside the runtime (not queued, not deferred).
+  // Coalescing into the active run also drops the tick: expose the count
+  // so the job can log catch-up pressure instead of failing silently.
+  let dropped = 0;
   return {
     run() {
-      if (active) return active;
+      if (active) {
+        dropped += 1;
+        return active;
+      }
       const current = work().finally(() => {
         if (active === current) active = undefined;
       });
       active = current;
       return current;
     },
+    droppedTicks: () => dropped,
     async drain() {
       if (active) await active;
     },
@@ -156,6 +166,12 @@ async function runSportsMetadata(): Promise<boolean> {
 const sportsMetadataFlight = createSingleFlight(runSportsMetadata);
 
 export function jobSportsMetadata(): Promise<boolean> {
+  // §128 catch-up visibility: log when the SKIP policy (or coalescing)
+  // dropped ticks — the 30m freshness deadline needs every 15m fire.
+  const drops = sportsMetadataFlight.droppedTicks();
+  if (drops > 0) {
+    console.error(`[cron:sports-metadata] ${drops} tick(s) dropped since last run (Bun.cron SKIP policy, §128) — verify freshness`);
+  }
   return sportsMetadataFlight.run();
 }
 

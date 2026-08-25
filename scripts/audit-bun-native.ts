@@ -250,7 +250,6 @@ export const SPAWN_KEEP_LIST = new Set([
   "tools/db-push-gate.ts", // true TTY fds for interactive drizzle-kit prompt
   "tools/protonpass-run.ts", // true TTY fds for pass-cli agent prompts (secrets)
   "tests/lib/fetch-pool-h2.test.ts", // Bun.spawnSync openssl cert-gen in blocking test setup
-  "scripts/build-design-system.ts", // async Bun.spawn for the CLI --metafile-md report
   "tools/design-check.ts", // async Bun.spawn to build the bundle for the size gate
   "tools/docs-check.ts", // bun run @bun-run doc examples (execution pass, §135)
   "tools/node-compat-probe.ts", // deliberately probes node:child_process spawnSync + node:net (§140)

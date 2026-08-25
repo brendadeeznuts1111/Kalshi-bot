@@ -23,6 +23,7 @@
  * --outdir + --metafile-md) and for the design:check gate.
  */
 import { join } from 'node:path';
+import { $ } from 'bun';
 import { DESIGN_MODULES, DESIGN_MODULE_NAMES } from '../src/lib/design-budget.ts';
 
 const root = join(import.meta.dir, '..');
@@ -56,15 +57,11 @@ for (const module of DESIGN_MODULE_NAMES) {
   // API has no md emitter; the CLI re-build is ~4ms for these small bundles.
   // --outfile (not --outdir): the CLI defaults the output name to the entry
   // basename (app.js for hq-app), which would litter dist/ with a duplicate.
-  const mdProc = Bun.spawn([
-    BUN,
-    'build', entry,
-    '--outfile=' + join(root, 'dist', spec.out), '--target=browser', '--minify',
-    '--metafile-md=' + join(root, 'dist', module + '.meta.md'),
-  ], { cwd: root, stdout: 'pipe', stderr: 'pipe' });
-  await mdProc.exited;
-  if (mdProc.exitCode !== 0) {
-    console.error(module + ': metafile-md report failed:', await new Response(mdProc.stderr).text());
+  // Bun Shell (§127): interpolation is auto-escaped, .cwd()/ .nothrow()/,
+  // stderr capture verified — replaces the manual Bun.spawn plumbing.
+  const mdCmd = await $`${BUN} build ${entry} --outfile=${join(root, 'dist', spec.out)} --target=browser --minify --metafile-md=${join(root, 'dist', module + '.meta.md')}`.cwd(root).nothrow().quiet();
+  if (mdCmd.exitCode !== 0) {
+    console.error(module + ': metafile-md report failed:', mdCmd.stderr.toString());
     failed = true;
     continue;
   }

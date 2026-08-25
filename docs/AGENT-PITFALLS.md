@@ -5563,6 +5563,25 @@ another note.
 - Artifacts: tools/node-compat-probe.ts (new, gate #41), tools/verify-contracts.ts
   (40 -> 41 gates), package.json (node-compat:probe), docs/BUN_API_COVERAGE.md
   + AGENT-PITFALLS header (40/40 -> 41/41). verify:contracts 41/41.
+## 141. Pattern enhancements — Bun.$ in the design pipeline, §128 catch-up visibility (2026-08-24)
+
+- MIGRATED scripts/build-design-system.ts: the CLI metafile-md report
+  subprocess was Bun.spawn + manual exited/stderr plumbing — now Bun.$
+  (interpolation auto-escape, .cwd()/.nothrow()/.stderr verified §127).
+  design:build + design:check still pass; the stale SPAWN_KEEP_LIST
+  entry was removed (no Bun.spawn left in the file).
+- ENHANCED createSingleFlight (scripts/cron-main.ts): exposes
+  droppedTicks() — a fire that lands while the job is active is
+  coalesced AND the scheduled tick is LOST (§128 SKIP policy).
+  jobSportsMetadata logs the drop count so the 30m freshness deadline
+  can never slip silently. Tested in tests/scripts/audit-overlay-cron.test.ts
+  (3 concurrent run() calls -> 2 dropped, 1 execution).
+- The rest of the repo's patterns were already Bun-native (cron jobs
+  all use Bun.$, ids.ts uses randomUUIDv7, HTML imports serve hq-app);
+  these were the last two non-native seams found in the audit.
+- Artifacts: scripts/build-design-system.ts, scripts/audit-bun-native.ts
+  (keep-list), scripts/cron-main.ts, tests/scripts/audit-overlay-cron.test.ts.
+  verify:contracts 41/41 (unchanged).
 - GitHub recomputes the pie on the default branch after push (a few
   minutes). Verified with git check-attr.
 - Artifacts: .gitattributes (new). verify:contracts 38/38 (unchanged).

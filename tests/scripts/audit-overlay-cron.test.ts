@@ -19,4 +19,20 @@ describe("audit-overlay cron (§99)", () => {
     expect(() => Bun.cron.parse("* * * * * *", Date.now())).toThrow(/too many fields/);
     expect(Bun.cron.parse("*/5 * * * *", Date.now())).toBeInstanceOf(Date);
   });
+
+  test("createSingleFlight counts coalesced ticks (§128 catch-up visibility)", async () => {
+    const { createSingleFlight } = await import("../../scripts/cron-main.ts");
+    let runs = 0;
+    let release: () => void = () => {};
+    const gate = new Promise<void>((r) => { release = r; });
+    const flight = createSingleFlight(async () => { runs++; await gate; return true; });
+    const first = flight.run();
+    const second = flight.run();
+    const third = flight.run();
+    expect(flight.droppedTicks()).toBe(2);
+    release();
+    await Promise.all([first, second, third]);
+    expect(runs).toBe(1);
+    expect(flight.droppedTicks()).toBe(2);
+  });
 });
