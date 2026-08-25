@@ -26,6 +26,7 @@ const gates = [
   ['plugins:probe'],
   ['xml:probe'],
   ['image:probe'],
+  ['infra:probe'],
 ] as const;
 
 const run = async (name: string, args: readonly string[]): Promise<boolean> => {

@@ -3508,3 +3508,31 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
     (payload shape + degraded failing-list).
   - This closes the loop: /status (pull) + status-update WS (push) +
     dashboard (render) all share the same aggregated health.
+
+## 76. Infrastructure machinery probe — rate limiter + memoryPressure (2026-08-24)
+
+- Probed the remaining untouched machinery (tools/infra-probe.ts, `bun
+  run infra:probe`, new verify:contracts gate, 13/13):
+- RATE LIMITER (src/regulatory/middleware/rate-limit.ts) — token bucket:
+  - burst of max succeeds then 429; X-RateLimit-Limit/Remaining/Reset
+    headers on every response.
+  - a FULL window fully refills; a PARTIAL window refills proportionally
+    (500ms of 1000ms window, max 10 -> floor(0.5*10)=5 tokens back -> 5
+    requests succeed then 429).
+  - per-key isolation: different X-Forwarded-For / X-Real-IP get
+    separate buckets (1.1.1.1 max 1 -> 200,429; 2.2.2.2 -> 200).
+  - skipSuccessful semantics CORRECTED (not a code bug — a doc/name
+    mismatch): true does NOT let successful requests bypass an exhausted
+    bucket. consume() blocks (429) BEFORE next() runs, so the refund
+    never executes for blocked requests. The option only prevents
+    successes from DEPLETING the bucket (refund-on-success keeps it
+    full). Failure-isolating behavior is arguably intended; documented,
+    left as-is.
+- MEMORYPRESSURE EVENT (serve.ts hot-reload guard):
+  - process.on('memoryPressure') — absent from eventNames() until a
+    listener is registered; removeListener removes it. The hot-reload
+    guard (removeListener before re-adding on globalThis) is sound.
+  - Actual OS-level 'critical' firing not reliably reproducible in a
+    probe (OS-dependent); the handler is simple cache-clears.
+- Artifacts: tools/infra-probe.ts (7 checks), tests/lib/infra-probe.test.
+  ts (6 tests), verify:contracts 13/13.
