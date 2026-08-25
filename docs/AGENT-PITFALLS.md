@@ -4606,6 +4606,24 @@ another note.
   (satisfies). Garbage ("unknown") throws from order() — catch → false.
 - Do NOT hand-roll numeric version loops; they drift from Bun's semantics.
 
+## 122. Bun.semver docs review — verified + 2 undocumented behaviors (2026-08-25)
+
+- Verified against the runtime (semver.mdx, bun-v1.4.0): exactly two
+  functions (satisfies, order); named import { semver } from "bun" ===
+  Bun.semver; all ^ / ~ / x / hyphen-range examples true; order returns
+  0/1/-1; prerelease sort order alpha < beta < rc < release; satisfies
+  returns false for invalid version/range.
+- GAP 1 (dangerous): order() THROWS "Invalid SemVer" on invalid input —
+  the doc's "invalid -> false" sentence applies to satisfies only. Never
+  feed dirty data to order() as a comparator without try/catch.
+- GAP 2: ragged versions are inconsistent across the two functions —
+  order("1.4","1.4.0")=1 (1.4 > 1.4.0!) but satisfies("1.4","^1.4.0")
+  =false, and even satisfies("1.4","^1.4")=false. Missing components are
+  NOT zero-padded. Normalize to major.minor.patch first (normalizeSemver,
+  §121) before calling either.
+- "20x faster than node-semver" — marketing figure, not verifiable in-repo.
+
+
 
 
 
