@@ -9,7 +9,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 > The headings were renumbered to §1-§11 on 2026-08-23; the counters were kept
 > so historical notes stay traceable.
 >
-> **Current contract status: verify:contracts 44/44** (see docs/BUN_API_COVERAGE.md
+> **Current contract status: verify:contracts 45/45** (see docs/BUN_API_COVERAGE.md
 > for the full matrix). `verify:contracts N/N` lines inside older sections are
 > HISTORICAL (each records its era) — docs:check enforces that only this header
 > and non-pitfall docs may reference the current count.
@@ -5676,6 +5676,32 @@ another note.
   (43 -> 44 gates), package.json (h2:probe), scripts/audit-bun-native.ts
   + src/lib/breaking-audit.ts (allowlists), docs/BUN_API_COVERAGE.md +
   AGENT-PITFALLS header (43/43 -> 44/44). verify:contracts 44/44.
+## 155. Bun.build metafile schema — the mtafile contract verified (2026-08-24)
+
+- tools/metafile-probe.ts (gate #45, 11/11): the schema the
+  design:build pipeline (dist/*.meta.json + --metafile-md) emits,
+  probed against the pasted esbuild-compatible claims.
+- VERIFIED: top-level { inputs, outputs }; inputs entries { bytes,
+  imports, format }; outputs entries { bytes, inputs, imports, exports,
+  entryPoint, cssBundle } (cssBundle only when a CSS output exists);
+  outputs.inputs = { source: { bytesInOutput } } contribution map;
+  entryPoint + cssBundle cross-references resolve; dead-code import()
+  chunks omitted from both maps; CLI --metafile=path.json emits the
+  same schema.
+- CORRECTIONS (pinned): (1) relative/package imports carry
+  { path, kind, original } — the external flag appears only on
+  node_modules require-calls (external: true), not on import-
+  statements (the pasted claim's { path, kind, external } is esbuild's
+  shape, not Bun's); (2) treeShaking: false does NOT force import()
+  chunks to appear — dead branches are eliminated regardless (tested
+  with if(false) and with an unused () => import() export).
+- Repo check: dist/design-system.meta.json (the mtafile) conforms —
+  inputs+outputs with bytes/entryPoint/exports/imports/inputs; no
+  cssBundle because the design-system bundle imports no CSS.
+- Artifacts: tools/metafile-probe.ts (new, gate #45), tools/verify-contracts.ts
+  (44 -> 45 gates), package.json (metafile:probe), scripts/audit-bun-native.ts
+  (SPAWN_KEEP_LIST), docs/BUN_API_COVERAGE.md + AGENT-PITFALLS header
+  (44/44 -> 45/45). verify:contracts 45/45.
 - GitHub recomputes the pie on the default branch after push (a few
   minutes). Verified with git check-attr.
 - Artifacts: .gitattributes (new). verify:contracts 38/38 (unchanged).
