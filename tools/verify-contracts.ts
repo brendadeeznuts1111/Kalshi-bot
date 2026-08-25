@@ -54,6 +54,7 @@ const gates = [
   ['runtime:probe'],
   ['test:probe'],
   ['fetch:probe'],
+  ['node-compat:probe'],
 ] as const;
 
 const GATE_ENV: Record<string, Record<string, string>> = {

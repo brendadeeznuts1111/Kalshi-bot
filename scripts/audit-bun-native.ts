@@ -223,7 +223,7 @@ export function findSourceViolations(
   for (const item of imports) {
     const dependency = packageName(item.path);
     const replacement = BANNED_PACKAGES.get(dependency);
-    if (replacement) {
+    if (replacement && !SPAWN_KEEP_LIST.has(file)) {
       violations.push({
         file,
         message: `${item.kind} imports ${dependency}; use ${replacement}`,
@@ -253,6 +253,7 @@ export const SPAWN_KEEP_LIST = new Set([
   "scripts/build-design-system.ts", // async Bun.spawn for the CLI --metafile-md report
   "tools/design-check.ts", // async Bun.spawn to build the bundle for the size gate
   "tools/docs-check.ts", // bun run @bun-run doc examples (execution pass, §135)
+  "tools/node-compat-probe.ts", // deliberately probes node:child_process spawnSync + node:net (§140)
   "src/research/serve.ts", // release-check action: Bun.spawn bun:release-watch --check (pipe capture)
   "src/institutions/signal-pipeline.ts", // runBunGate def: sub-second offline dep gates (dedupe/prune/audit)
   "src/lib/run-bun.ts", // runBunCommand: the shared Bun.which+spawn gate runner (pipe capture; §54)

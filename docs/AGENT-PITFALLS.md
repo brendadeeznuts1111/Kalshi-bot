@@ -9,7 +9,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 > The headings were renumbered to §1-§11 on 2026-08-23; the counters were kept
 > so historical notes stay traceable.
 >
-> **Current contract status: verify:contracts 40/40** (see docs/BUN_API_COVERAGE.md
+> **Current contract status: verify:contracts 41/41** (see docs/BUN_API_COVERAGE.md
 > for the full matrix). `verify:contracts N/N` lines inside older sections are
 > HISTORICAL (each records its era) — docs:check enforces that only this header
 > and non-pitfall docs may reference the current count.
@@ -5543,6 +5543,26 @@ another note.
 - Artifacts: tools/fetch-probe.ts (new, gate #40), tools/verify-contracts.ts
   (39 -> 40 gates), package.json (fetch:probe), docs/BUN_API_COVERAGE.md
   + AGENT-PITFALLS header (39/39 -> 40/40). verify:contracts 40/40.
+## 140. node: module behavior on Bun 1.4.0 — compat gate #41 (2026-08-24)
+
+- tools/node-compat-probe.ts (12/12, offline): the repo imports node:path
+  (103), node:fs (74), node:util (33), node:os (32), node:crypto (10),
+  node:net/tls/child_process — runtime:probe P12 proved they RESOLVE;
+  this gate proves they BEHAVE.
+- VERIFIED: path join/resolve/basename/dirname/extname/relative; fs sync
+  (readFileSync/writeFileSync/mkdirSync/existsSync) + fs/promises +
+  fs.watch firing on file change (repo: match-liquidity-db-watch);
+  os platform/arch/type/hostname/tmpdir/cpus; util format/promisify/
+  types; EventEmitter on/once; child_process spawnSync; net TCP echo
+  round-trip.
+- PARITY: node:crypto createHash("sha256").update("abc").digest("hex")
+  === Bun.CryptoHasher("sha256") hex (ba7816bf...) — the two hash
+  paths agree; createHmac works; randomBytes/randomUUID (v4).
+- Node compat on 1.4.0 is behaviorally sound for everything the repo
+  uses — no corrections needed this round.
+- Artifacts: tools/node-compat-probe.ts (new, gate #41), tools/verify-contracts.ts
+  (40 -> 41 gates), package.json (node-compat:probe), docs/BUN_API_COVERAGE.md
+  + AGENT-PITFALLS header (40/40 -> 41/41). verify:contracts 41/41.
 - GitHub recomputes the pie on the default branch after push (a few
   minutes). Verified with git check-attr.
 - Artifacts: .gitattributes (new). verify:contracts 38/38 (unchanged).

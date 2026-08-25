@@ -108,7 +108,9 @@ export function runBreakingAudit(root: string): BreakingFinding[] {
   let pkg: { scripts?: Record<string, string>; dependencies?: Record<string, string>; devDependencies?: Record<string, string> } = {};
   try { pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')); } catch { /* not a repo */ }
   const scripts = pkg.scripts ?? {};
-  const nodeScripts = Object.entries(scripts).filter(([, v]) => /(^|[^a-z])node([^a-z]|$)/.test(v ?? ''));
+  // standalone `node` token = the interpreter (bun tools/node-x.ts is a bun script);
+  // the old substring regex false-flagged file names containing node.
+  const nodeScripts = Object.entries(scripts).filter(([, v]) => /(^|[\s;&|])(node)([\s;&|]|$)/.test(v ?? ''));
   findings.push({
     check: '.env not auto-loaded under the node interpreter',
     status: nodeScripts.length ? 'warn' : 'ok',
