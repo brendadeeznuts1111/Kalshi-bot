@@ -224,6 +224,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §207 — CLI parsing audited — official guide mandates util.parseArgs; alpha:cluster migrated (2026-08-26)
 - §208 — Hand-rolled CLI parsing sweep — all tools/* migrated to util.parseArgs (2026-08-26)
 - §209 — Sweep extended — src/calibration + scripts/* all on util.parseArgs (2026-08-26)
+- §210 — bun -p/-e one-liners audited — inspect-style output (not JSON), {hsl} invalid (2026-08-26)
 - §199 — ui:regen CLI — regenerate UI artifacts from meta/variant sources + the Bun.$ template failure class (2026-08-26)
 - §187 — Extended color formats — kernel-only (lch/oklab/oklch/hsv) + inverse parsers (2026-08-26)
 - §188 — Watermark pipeline — ML-DSA key naming + WebView/Blob verified facts (2026-08-26)
@@ -7366,6 +7367,33 @@ remains anywhere in the repo (tools/, src/, scripts/):
   guard ok, docs:check 56/56. Smoke: glossary/colors/sports registry checks
   all green; calibration:maintenance still exits 1 with the usage text when
   --program is missing (unchanged behavior).
+
+
+
+## 210. bun -p / bun -e one-liner cheat-sheet audited - inspect-style output (NOT JSON), {hsl} braced form invalid (2026-08-26)
+
+Pasted 'bun -p / bun -e shape-inspection' one-liners audited against 1.4.0:
+- OFFICIAL (pinned docs cli-run.mdx): -e/--eval = evaluate as script;
+  -p/--print = evaluate AND print the result. Both verified live:
+  bun -p "1 + 2" -> 3; bun -e "1 + 2" -> (no output).
+- VERIFIED: bun -p Bun.inspect(Bun, {depth:2, colors:true}) prints the API
+  shape; XML compact vs { compact: false } tree shapes exactly as claimed;
+  Bun.inspect.table with colors works; BuildArtifact shape via bun -e
+  (needs cwd with the entrypoint - ./index.ts resolved relative to cwd);
+  bun:sqlite in-memory shape works.
+- CORRECTED 1: Bun.color('royalblue', '{hsl}') THROWS (braced hsl is not a
+  format). Bare 'hsl' works -> hsl(225, 72.7%, 56.9%); 'lab', 'number',
+  'css', 'HEX' also work (S22 already lists them). The braced forms that
+  work are {rgb}/{rgba}/{r,g,b} - and they return OBJECTS ([object Object]
+  when stringified), not strings; [rgb]/[r,g,b] return comma strings.
+- CORRECTED 2: bun -p output is Bun.inspect STYLE (JS literal: unquoted
+  keys, root: {...}), NOT JSON - piping to jq FAILS (parse error). For jq,
+  use bun -e + console.log(JSON.stringify(expr)) then pipe.
+- Gotcha: bun -e needs the entrypoint path relative to CWD (ModuleNotFound
+  for ./index.ts from the repo root); cd into the probe dir first.
+  Repo habit: probes live in tools/scratch-*.ts + bun run, not inline -p
+  (S199 lexer discipline applies to run_code program strings only).
+
 
 
 
