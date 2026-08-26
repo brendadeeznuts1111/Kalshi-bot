@@ -1,0 +1,114 @@
+{
+  "tool": "tools/feature-bench.ts",
+  "bunVersion": "1.4.0",
+  "platform": "darwin",
+  "arch": "arm64",
+  "cpu": "Apple M4",
+  "metrics": [
+    {
+      "label": "convertColorFallback hex -> lch",
+      "unit": "ns/op",
+      "value": 385
+    },
+    {
+      "label": "convertColorFallback hex -> oklab",
+      "unit": "ns/op",
+      "value": 337
+    },
+    {
+      "label": "convertColorFallback hex -> oklch",
+      "unit": "ns/op",
+      "value": 371
+    },
+    {
+      "label": "convertColorFallback hex -> hsv",
+      "unit": "ns/op",
+      "value": 342
+    },
+    {
+      "label": "convertColorFallback hex -> lab",
+      "unit": "ns/op",
+      "value": 352
+    },
+    {
+      "label": "convertColorFallback hex -> hsl",
+      "unit": "ns/op",
+      "value": 355
+    },
+    {
+      "label": "convertColorFallback hex -> number",
+      "unit": "ns/op",
+      "value": 40
+    },
+    {
+      "label": "parseExtendedColor(oklab)",
+      "unit": "ns/op",
+      "value": 231
+    },
+    {
+      "label": "parseExtendedColor(oklch)",
+      "unit": "ns/op",
+      "value": 248
+    },
+    {
+      "label": "parseExtendedColor(hsv)",
+      "unit": "ns/op",
+      "value": 207
+    },
+    {
+      "label": "parseExtendedColor(lab)",
+      "unit": "ns/op",
+      "value": 243
+    },
+    {
+      "label": "parseExtendedColor(lch)",
+      "unit": "ns/op",
+      "value": 278
+    },
+    {
+      "label": "Bun.color hex -> lab (native)",
+      "unit": "ns/op",
+      "value": 664
+    },
+    {
+      "label": "markdownToHtml docs (small)",
+      "unit": "ns/op",
+      "value": 1902
+    },
+    {
+      "label": "markdownToHtml docs (large)",
+      "unit": "ns/op",
+      "value": 53174
+    },
+    {
+      "label": "baseCssVars() theme CSS",
+      "unit": "ns/op",
+      "value": 1076
+    },
+    {
+      "label": "themeManifest() JSON",
+      "unit": "ns/op",
+      "value": 12377
+    },
+    {
+      "label": "ml-dsa-65 sign (4 KiB)",
+      "unit": "ns/op",
+      "value": 205922
+    },
+    {
+      "label": "ml-dsa-65 verify (4 KiB)",
+      "unit": "ns/op",
+      "value": 48184
+    },
+    {
+      "label": "ml-dsa-65 keygen",
+      "unit": "ms/op",
+      "value": 0.08
+    },
+    {
+      "label": "processMarkdownImages (1x1 -> webp)",
+      "unit": "ms/op",
+      "value": 41.04
+    }
+  ]
+}
