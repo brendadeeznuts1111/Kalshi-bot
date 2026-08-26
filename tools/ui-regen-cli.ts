@@ -12,6 +12,7 @@
 import { watch, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { runBunCommand } from '../src/lib/run-bun.ts';
+import { parseArgs } from 'node:util';
 
 const ROOT = join(import.meta.dir, '..');
 
@@ -28,7 +29,8 @@ async function runOne(r: Regen): Promise<void> {
   console.log('ui:regen - ' + r.label + (out.ok ? ' ok' : ' FAIL'));
 }
 
-const watchMode = Bun.argv.includes('--watch');
+const { values: uv } = parseArgs({ args: Bun.argv.slice(2), options: { watch: { type: 'boolean' } }, strict: false, allowPositionals: true });
+const watchMode = uv.watch === true;
 for (const r of regens) await runOne(r);
 if (!watchMode) {
   console.log('ui:regen - done. Add --watch to auto-regen on meta/variant changes.');

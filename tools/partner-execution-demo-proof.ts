@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 import { mkdir } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
+import { parseArgs } from "node:util";
 import {
   buildDemoProofArtifact,
   demoProofJson,
@@ -8,8 +9,9 @@ import {
   type DemoProofInput,
 } from "../src/partner/execution/demo-proof.ts";
 
-const inputArg = process.argv.find((arg) => arg.startsWith("--input="))?.slice(8);
-const outputArg = process.argv.find((arg) => arg.startsWith("--output-dir="))?.slice(13);
+const { values: pdpv } = parseArgs({ args: Bun.argv.slice(2), options: { input: { type: 'string' }, 'output-dir': { type: 'string' } }, strict: false, allowPositionals: true });
+const inputArg = typeof pdpv.input === 'string' ? pdpv.input : undefined;
+const outputArg = typeof pdpv['output-dir'] === 'string' ? pdpv['output-dir'] : undefined;
 if (!inputArg) {
   throw new Error("Usage: bun tools/partner-execution-demo-proof.ts --input=<sanitized.json> [--output-dir=<dir>]");
 }

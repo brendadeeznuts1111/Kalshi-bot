@@ -22,6 +22,7 @@
  *
  * Logs: research/cache/live-tracker/event-{id}.jsonl
  */
+import { parseArgs } from 'node:util';
 import { argValue, argValues, hasFlag } from '../src/cli/argv.ts';
 import {
   LIVE_TRACKER_EVENT_TYPES,
@@ -122,23 +123,15 @@ const BOOLEAN_FLAGS = new Set([
 ]);
 
 function positionalAfterCmd(cmd: string): string[] {
-  const idx = process.argv.indexOf(cmd);
-  if (idx < 0) return [];
-  const out: string[] = [];
-  for (let i = idx + 1; i < process.argv.length; i++) {
-    const a = process.argv[i]!;
-    if (a.startsWith('--')) {
-      const eq = a.includes('=');
-      const name = a.slice(2);
-      if (!eq && !BOOLEAN_FLAGS.has(name)) {
-        const next = process.argv[i + 1];
-        if (next && !next.startsWith('--')) i++;
-      }
-      continue;
-    }
-    out.push(a);
-  }
-  return out;
+  // parseArgs-backed (S207): string options consume their value; booleans do not.
+  const { positionals } = parseArgs({
+    args: process.argv.slice(2),
+    options: Object.fromEntries([...BOOLEAN_FLAGS].map((n) => [n, { type: 'boolean' as const }])),
+    strict: false,
+    allowPositionals: true,
+  });
+  const idx = positionals.indexOf(cmd);
+  return idx < 0 ? [] : positionals.slice(idx + 1);
 }
 
 function usage(code = 1): never {

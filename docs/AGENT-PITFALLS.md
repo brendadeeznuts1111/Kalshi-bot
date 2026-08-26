@@ -222,6 +222,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §205 — CLI polish audited — fictional desk.ts shell, color caller-gate truth, --format via Bun.YAML (2026-08-26)
 - §206 — alpha:cluster deeper — --help, --glob via Bun.Glob, --verbose membership table (2026-08-26)
 - §207 — CLI parsing audited — official guide mandates util.parseArgs; alpha:cluster migrated (2026-08-26)
+- §208 — Hand-rolled CLI parsing sweep — all tools/* migrated to util.parseArgs (2026-08-26)
 - §199 — ui:regen CLI — regenerate UI artifacts from meta/variant sources + the Bun.$ template failure class (2026-08-26)
 - §187 — Extended color formats — kernel-only (lch/oklab/oklch/hsv) + inverse parsers (2026-08-26)
 - §188 — Watermark pipeline — ML-DSA key naming + WebView/Blob verified facts (2026-08-26)
@@ -7308,4 +7309,40 @@ exist in 1.4.0 (grep of bun.d.ts + all bun-types: zero matches).
   forms, short aliases, unknown-flag policy, positionals - for free, instead
   of the hand-rolled startsWith subset. Remaining hand-rolled tools are
   LOW-RISK single-flag CLIs; migrating them is mechanical if desired.
+
+
+
+## 208. Hand-rolled CLI parsing sweep - ALL tools/* migrated to util.parseArgs (2026-08-26)
+
+Completed the S207 sweep: ZERO hand-rolled argv parsing remains in tools/.
+- Shared SSOT src/cli/argv.ts (hasFlag/argValue/argValues) REBUILT on
+  util.parseArgs: the schema is derived from argv (token with '=' or a
+  following non-flag token => string multiple:true, else boolean), so the
+  generic name-based API keeps working while all ~40 consumers get the
+  recommended parser transitively. Test tests/cli/argv.test.ts unchanged,
+  passes; full suite 2771 green.
+- Migrated individually (parseArgs, strict:false + allowPositionals:true,
+  behavior-identical): alpha:cluster, alpha-consensus-watch, kalshi-secrets
+  (7 tests pass), prune-content, bun-claims-audit (positionals after --),
+  live-tracker positionalAfterCmd (positionals after subcommand),
+  watermark-sign + canonical-asset (tests pass), image-meta, brand-card,
+  blog-story-server, research-resume, ops-cli, domain-cli, ui-regen,
+  blog-assets-mirror, bun-blog-map, color-theme, bun-backup, kalshi-rotate-key,
+  inventory-session-probe, tennis backfill-outcomes + build-player-profiles
+  + build-player-opponent-profiles + harvest-nationalities, all five
+  partner-execution demo tools, partner-sync-kalshi-lifecycle,
+  partner-deliver-receipts, partner-reconcile-kalshi, design-budget-report,
+  agent-encode, miss-taxonomy-status, bun-deps-audit, purge-ineligible-runs,
+  partner-pandora-probe, partner-execution-schedule, host-discover,
+  domain-event (regex positional via positionals), db-push-gate,
+  protonpass-mint-pat.
+- PITFALL caught: the blog-story-server port line fed Bun.env.PORT into a
+  ternary ('port : Bun.env.PORT') which the breaking-audit env-port regex
+  matched as a FALSE positive - restructured to avoid the token adjacency
+  (const portEnv = Bun.env.PORT || '3456'; Number(...)). Audit ok again.
+- Also: allowPositionals:true + Bun.argv.slice(2) means `--` still works,
+  and positionals never leak the script path (bun-claims-audit note).
+  Gates: 2771 tests pass / 0 fail, typecheck clean, breaking-audit ok,
+  guard ok, docs:check 56/56.
+
 

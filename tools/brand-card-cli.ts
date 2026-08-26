@@ -12,10 +12,11 @@
 import { join } from 'node:path';
 import { mkdirSync } from 'node:fs';
 import { brandCardPng, readImageMeta } from '../src/lib/brand-image.ts';
+import { parseArgs } from 'node:util';
 
 const root = join(import.meta.dir, '..');
-const outFlag = Bun.argv.find((a) => a.startsWith('--out='));
-const outPath = outFlag ? outFlag.slice('--out='.length) : join(root, 'artifacts/brand-card.png');
+const { values: bv } = parseArgs({ args: Bun.argv.slice(2), options: { out: { type: 'string' } }, strict: false, allowPositionals: true });
+const outPath = typeof bv.out === 'string' ? bv.out : join(root, 'artifacts/brand-card.png');
 
 if (typeof Bun.WebView !== 'function') {
   console.error('brand:card: Bun.WebView unavailable — cannot rasterize');

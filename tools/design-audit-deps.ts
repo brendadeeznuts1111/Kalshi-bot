@@ -14,6 +14,7 @@
  *   bun run design:audit-deps -- --fail   # fail on bun audit findings too
  */
 import { join } from 'node:path';
+import { parseArgs } from 'node:util';
 import {
   DESIGN_MODULE_NAMES,
   metaJsonPath,
@@ -21,7 +22,8 @@ import {
 } from '../src/lib/design-budget.ts';
 
 const ROOT = join(import.meta.dir, '..');
-const failOnAudit = Bun.argv.includes('--fail');
+const { values: dav } = parseArgs({ args: Bun.argv.slice(2), options: { fail: { type: 'boolean' } }, strict: false, allowPositionals: true });
+const failOnAudit = dav.fail === true;
 
 let violations = 0;
 for (const module of DESIGN_MODULE_NAMES) {

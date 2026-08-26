@@ -5,6 +5,7 @@
  * @see docs/MISS_TAXONOMY.md
  */
 import { joinPath } from "../src/research/paths.ts";
+import { parseArgs } from "node:util";
 
 type LaneStatus = "done" | "pending" | "blocked";
 
@@ -124,7 +125,8 @@ function statusIcon(status: LaneStatus): string {
   return "○";
 }
 
-const strict = process.argv.includes("--strict");
+const { values: mtv } = parseArgs({ args: Bun.argv.slice(2), options: { strict: { type: 'boolean' } }, strict: false, allowPositionals: true });
+const strict = mtv.strict === true;
 
 console.log("Miss taxonomy status\n");
 

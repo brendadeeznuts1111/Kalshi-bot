@@ -10,11 +10,13 @@
  * (`cross-dim-*`). Does not touch real owner/name inspect rows.
  */
 import { purgeIneligibleRuns, resetCacheDbConnection, resolveCacheDbPath } from "../src/research/cache.ts";
+import { parseArgs } from "node:util";
 
 delete Bun.env.RESEARCH_CACHE_DB;
 resetCacheDbConnection();
 
-const purgeTestInspect = process.argv.includes("--purge-test-inspect");
+const { values: pirv } = parseArgs({ args: Bun.argv.slice(2), options: { 'purge-test-inspect': { type: 'boolean' } }, strict: false, allowPositionals: true });
+const purgeTestInspect = pirv['purge-test-inspect'] === true;
 const deleted = purgeIneligibleRuns({ purgeTestInspect });
 console.log(`Purged ${deleted.length} run(s) from ${resolveCacheDbPath()}`);
 if (purgeTestInspect) {

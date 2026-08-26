@@ -11,7 +11,8 @@ export const EXECUTION_RECEIPTS_WORKER = join(import.meta.dir, "partner-receipts
 export const EXECUTION_LIFECYCLE_WORKER = join(import.meta.dir, "partner-lifecycle-scheduled.ts");
 
 export function parseExecutionScheduleArgs(argv: string[]) {
-  const command = argv.find(arg => !arg.startsWith("-"));
+  const { positionals } = parseArgs({ args: argv, options: {}, strict: false, allowPositionals: true });
+  const command = positionals[0];
   if (command !== "register" && command !== "remove" && command !== "preview") return null;
   const { values } = parseArgs({
     args: argv.slice(1), strict: false,

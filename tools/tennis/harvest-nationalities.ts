@@ -15,6 +15,7 @@ import { listFiles } from "../../src/lib/glob.ts";
 import { readJsonFile } from "../../src/lib/json-file.ts";
 import { join } from "node:path";
 import { CACHE_DIR, joinPath } from "../../src/research/paths.ts";
+import { parseArgs } from "node:util";
 import { normalizeKey } from "../../src/research/tennis-meta.ts";
 
 const STADION_DIR = join(CACHE_DIR, "itf-stadion");
@@ -91,7 +92,8 @@ export async function harvestAll(options: { dryRun?: boolean } = {}): Promise<{
 }
 
 if (import.meta.main) {
-  const dryRun = Bun.argv.includes("--dry-run");
+  const { values: hnv } = parseArgs({ args: Bun.argv.slice(2), options: { 'dry-run': { type: 'boolean' } }, strict: false, allowPositionals: true });
+const dryRun = hnv['dry-run'] === true;
   const r = await harvestAll({ dryRun });
   console.log(
     `Harvested ${r.players} player nationalities + ${r.venues} venue geos from ${r.days} Stadion days` +

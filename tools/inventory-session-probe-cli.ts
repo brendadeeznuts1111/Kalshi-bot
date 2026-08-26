@@ -16,14 +16,15 @@ import {
   formatSessionPlaneProbeReport,
   probeSessionPlanes,
 } from '../src/inventory/session-plane-probe.ts';
+import { parseArgs } from 'node:util';
 
+const { values: spv } = parseArgs({ args: Bun.argv.slice(2), options: { json: { type: 'boolean' }, gsid: { type: 'string' }, 'no-shell-gsid': { type: 'boolean' } }, strict: false, allowPositionals: true });
 function argValue(name: string): string | undefined {
-  const hit = process.argv.find((a) => a.startsWith(`--${name}=`));
-  return hit ? hit.slice(name.length + 3) : undefined;
+  const v = spv[name];
+  return typeof v === 'string' ? v : undefined;
 }
-
 function hasFlag(name: string): boolean {
-  return process.argv.includes(`--${name}`);
+  return spv[name] !== undefined;
 }
 
 const json = hasFlag('json');

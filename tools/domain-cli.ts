@@ -22,10 +22,12 @@ import {
   formatBooksMatrixText,
   formatSkinMatrixText,
 } from '../src/domain/index.ts';
+import { parseArgs } from 'node:util';
 
-const json = process.argv.includes('--json');
-const skins = process.argv.includes('--skins') || process.argv.includes('--skin-matrix');
-const books = process.argv.includes('--books') || process.argv.includes('--book-matrix');
+const { values: dv } = parseArgs({ args: Bun.argv.slice(2), options: { json: { type: 'boolean' }, skins: { type: 'boolean' }, 'skin-matrix': { type: 'boolean' }, books: { type: 'boolean' }, 'book-matrix': { type: 'boolean' } }, strict: false, allowPositionals: true });
+const json = dv.json === true;
+const skins = dv.skins === true || dv['skin-matrix'] === true;
+const books = dv.books === true || dv['book-matrix'] === true;
 
 if (skins && books) throw new TypeError('Choose one of --skins or --books');
 if (!skins && !books) {

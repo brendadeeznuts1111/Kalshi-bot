@@ -20,6 +20,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { rgFiles, escapeForRg } from '../src/lib/rg.ts';
 import { assertBunAtLeast } from '../src/research/bun-native.ts';
+import { parseArgs } from 'node:util';
 
 assertBunAtLeast('1.4.0', 'bun:deps-audit');
 
@@ -78,7 +79,8 @@ function grepCount(pattern: string, dirs: string[]): number {
 }
 
 function main(): number {
-  const check = process.argv.includes('--check');
+  const { values: bdav } = parseArgs({ args: Bun.argv.slice(2), options: { check: { type: 'boolean' } }, strict: false, allowPositionals: true });
+  const check = bdav.check === true;
   const pkg = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')) as {
     dependencies?: Record<string, string>;
     devDependencies?: Record<string, string>;

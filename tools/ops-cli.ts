@@ -20,13 +20,14 @@ import {
 } from '../src/partner/architecture.ts';
 import { mkdir } from 'node:fs/promises';
 import { dirname } from 'node:path';
+import { parseArgs } from 'node:util';
 
-const json = process.argv.includes('--json');
-const map = process.argv.includes('--map') || process.argv.includes('--mermaid');
-const outputArg = process.argv.find(arg => arg.startsWith('--output='));
-const outputPath = outputArg?.slice('--output='.length).trim();
+const { values: ov } = parseArgs({ args: Bun.argv.slice(2), options: { json: { type: 'boolean' }, map: { type: 'boolean' }, mermaid: { type: 'boolean' }, output: { type: 'string' } }, strict: false, allowPositionals: true });
+const json = ov.json === true;
+const map = ov.map === true || ov.mermaid === true;
+const outputPath = typeof ov.output === 'string' ? ov.output.trim() : undefined;
 if (json && map) throw new TypeError('Choose one of --json or --map/--mermaid');
-if (outputArg && !outputPath) throw new TypeError('--output requires a path');
+if (ov.output !== undefined && !outputPath) throw new TypeError('--output requires a path');
 
 if (map) {
   const content = `${formatPartnerExpansionMermaid()}\n`;

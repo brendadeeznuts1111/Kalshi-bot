@@ -14,13 +14,14 @@
 import { join } from 'node:path';
 import { verify } from 'node:crypto';
 import { watermarkAndSign } from '../src/lib/watermark-sign.ts';
+import { parseArgs } from 'node:util';
 
-const flags = Bun.argv.slice(2);
-const text = (flags.find((f) => f.startsWith('--text=')) ?? '').slice('--text='.length) ||
+const { values: wv } = parseArgs({ args: Bun.argv.slice(2), options: { text: { type: 'string' }, url: { type: 'string' }, out: { type: 'string' }, width: { type: 'string' } }, strict: false, allowPositionals: true });
+const text = (typeof wv.text === 'string' ? wv.text : '') ||
   (process.env.TOKEN ?? 'abc123') + ' -> ' + (process.env.RECIPIENT ?? 'alice@example.com');
-const url = (flags.find((f) => f.startsWith('--url=')) ?? '').slice('--url='.length) || 'https://bun.sh/logo.png';
-const outBase = (flags.find((f) => f.startsWith('--out=')) ?? '').slice('--out='.length) || join(import.meta.dir, '..', 'artifacts', 'watermarked');
-const width = Number((flags.find((f) => f.startsWith('--width=')) ?? '').slice('--width='.length) || 400);
+const url = typeof wv.url === 'string' ? wv.url : 'https://bun.sh/logo.png';
+const outBase = typeof wv.out === 'string' ? wv.out : join(import.meta.dir, '..', 'artifacts', 'watermarked');
+const width = Number(typeof wv.width === 'string' ? wv.width : 400);
 
 // 1) fetch + resize to a data: URL (background for the watermark)
 const res = await fetch(url, { protocol: 'http2' });

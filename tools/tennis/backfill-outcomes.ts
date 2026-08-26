@@ -18,12 +18,15 @@ import {
   isPredictionEntry,
 } from "../../src/institutions/shadow-line.ts";
 import { loadProgramManifest } from "../../src/institutions/program-manifest.ts";
+import { parseArgs } from "node:util";
 
+const { values: bfv, positionals: bfp } = parseArgs({ args: Bun.argv.slice(2), options: { program: { type: 'string' }, db: { type: 'string' }, 'dry-run': { type: 'boolean' } }, strict: false, allowPositionals: true });
 function arg(name: string): string | undefined {
-  return Bun.argv.find((a) => a.startsWith(`--${name}=`))?.slice(name.length + 3);
+  const v = bfv[name];
+  return typeof v === 'string' ? v : undefined;
 }
 function argFlag(name: string): boolean {
-  return Bun.argv.includes(`--${name}`);
+  return bfv[name] !== undefined;
 }
 
 async function main() {

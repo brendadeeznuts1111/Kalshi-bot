@@ -13,10 +13,11 @@
  * Exit 0 always (informational); --check exits 1 on duplicate specifiers.
  */
 import { join, relative } from 'node:path';
+import { parseArgs } from 'node:util';
 
 const ROOT = join(import.meta.dir, '..');
-const flags = Bun.argv.slice(2);
-const check = flags.includes('--check');
+const { values: iv } = parseArgs({ args: Bun.argv.slice(2), options: { check: { type: 'boolean' } }, strict: false, allowPositionals: true });
+const check = iv.check === true;
 const t = new Bun.Transpiler({ loader: 'tsx' });
 
 const files: string[] = [];

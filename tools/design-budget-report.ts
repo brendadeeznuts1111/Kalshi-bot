@@ -14,6 +14,7 @@
  * activates the day hosted runners return.
  */
 import { join } from 'node:path';
+import { parseArgs } from 'node:util';
 import {
   DESIGN_MODULES,
   DESIGN_MODULE_NAMES,
@@ -141,9 +142,10 @@ async function postPrComment(pr: string, body: string): Promise<boolean> {
 if (import.meta.main) {
   const body = await buildBudgetReport(ROOT);
   process.stdout.write(body);
-  const prArg = Bun.argv.find((a) => a.startsWith('--pr='));
-  if (prArg) {
-    const pr = prArg.slice('--pr='.length);
+  const { values: dbrv } = parseArgs({ args: Bun.argv.slice(2), options: { pr: { type: 'string' } }, strict: false, allowPositionals: true });
+  const prArg = typeof dbrv.pr === 'string' ? dbrv.pr : undefined;
+  if (prArg !== undefined) {
+    const pr = prArg;
     process.exit((await postPrComment(pr, body)) ? 0 : 1);
   }
 }

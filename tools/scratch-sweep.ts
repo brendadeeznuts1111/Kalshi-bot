@@ -10,12 +10,14 @@
  */
 import { readdirSync, statSync, mkdirSync, renameSync } from 'node:fs';
 import { join } from 'node:path';
+import { parseArgs } from 'node:util';
 import { isOrphaned, classify, generate } from './scratch-docs.ts';
 
 const ROOT = join(import.meta.dir, '..');
 const SCRATCH = join(ROOT, 'scratch');
 const STALE_DAYS = Number(process.env.SCRATCH_STALE_DAYS ?? 45);
-const apply = process.argv.includes('--apply');
+const { values: sw } = parseArgs({ args: Bun.argv.slice(2), options: { apply: { type: 'boolean' } }, strict: false, allowPositionals: true });
+const apply = sw.apply === true;
 
 const now = Date.now();
 const candidates: string[] = [];

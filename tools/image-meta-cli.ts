@@ -14,10 +14,11 @@ import { paint } from '../src/lib/color/index.ts';
 import { convertImageFile, readImageMeta } from '../src/lib/brand-image.ts';
 import { join } from 'node:path';
 import { readdirSync } from 'node:fs';
+import { parseArgs } from 'node:util';
 
+const { values: imv, positionals: imPos } = parseArgs({ args: Bun.argv.slice(2), options: { batch: { type: 'string' } }, strict: false, allowPositionals: true });
 function argValue(name: string): string | undefined {
-  const a = Bun.argv.find((x) => x.startsWith('--' + name + '='));
-  return a?.slice(name.length + 3);
+  return typeof imv[name] === 'string' ? (imv[name] as string) : undefined;
 }
 
 const to = argValue('to');
@@ -27,7 +28,7 @@ const fit = argValue('fit');
 const rotate = argValue('rotate') ? Number(argValue('rotate')) : undefined;
 const batchDir = argValue('batch');
 const IMAGE_EXTS = ['.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp', '.avif', '.heic', '.tiff'];
-let inputs = Bun.argv.slice(2).filter((a) => !a.startsWith('--'));
+let inputs = imPos;
 if (batchDir) {
   // Batch mode: every image file in the directory (non-recursive).
   inputs = readdirSync(batchDir)

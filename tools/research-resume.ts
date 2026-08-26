@@ -13,12 +13,14 @@
  */
 import { $ } from "bun";
 import { readGitHubRateLimit } from "../src/research/github-rate-limit.ts";
+import { parseArgs } from "node:util";
 
 const MAX_ATTEMPTS = Number(Bun.env.RESEARCH_RESUME_MAX_ATTEMPTS ?? 8);
 const RETRY_WAIT_MS = Number(Bun.env.RESEARCH_RESUME_RETRY_WAIT_MS ?? 75_000);
 
-const args = Bun.argv.slice(2);
-const dimension = args.find((a) => a.startsWith("--dimension="))?.split("=")[1] ?? "all";
+const { values: rv, positionals: rp } = parseArgs({ args: Bun.argv.slice(2), options: { dimension: { type: 'string' } }, strict: false, allowPositionals: true });
+const dimension = typeof rv.dimension === 'string' ? rv.dimension : "all";
+const args = rp;
 
 async function runResearch(): Promise<{ ok: boolean; output: string }> {
   // Bun.$ (repo doctrine); quiet() would DISCARD the output we classify.

@@ -17,11 +17,11 @@
 import { join } from "node:path";
 import { mkdirSync } from "node:fs";
 import { generateCanonicalAsset } from "../src/lib/canonical-asset.ts";
+import { parseArgs } from "node:util";
 
-const flags = Bun.argv.slice(2);
+const { values: cav, positionals: caPos } = parseArgs({ args: Bun.argv.slice(2), options: { height: { type: 'string' }, fit: { type: 'string' }, schema: { type: 'string' }, 'sort-arrays': { type: 'boolean' }, timestamp: { type: 'string' } }, strict: false, allowPositionals: true });
 const flag = (name: string): string => {
-  const f = flags.find((x) => x.startsWith("--" + name + "="));
-  return f ? f.slice(name.length + 3) : "";
+  return typeof cav[name] === 'string' ? (cav[name] as string) : '';
 };
 
 const input = flag("input") || (Bun.env.CANONICAL_INPUT ?? "");
@@ -34,9 +34,9 @@ const name = flag("name") || "asset";
 const width = Number(flag("width") || 1024) || 1024;
 const height = Number(flag("height") || 1024) || 1024;
 const fit = (flag("fit") || "inside") as "inside" | "fill";
-const sortArrays = flags.includes("--sort-arrays");
+const sortArrays = cav['sort-arrays'] === true;
 const schema = flag("schema") || undefined;
-const tsFlag = flags.find((x) => x.startsWith("--timestamp="));
+const tsFlag = typeof cav.timestamp === 'string' ? cav.timestamp : undefined;
 
 if (fit !== "inside" && fit !== "fill") {
   console.error("canonical:asset: fit must be inside | fill (Bun 1.4.0 fit set)");

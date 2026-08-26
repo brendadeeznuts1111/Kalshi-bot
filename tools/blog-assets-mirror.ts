@@ -15,6 +15,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { sha256Hex, fromBunFile } from '../src/lib/artifact.ts';
 import { join } from 'node:path';
+import { parseArgs } from 'node:util';
 
 const ROOT = join(import.meta.dir, '..');
 const DATA = join(ROOT, '.data');
@@ -83,7 +84,8 @@ export function generate(): { files: Record<string, string>; manifest: Record<st
 }
 
 function main(): number {
-  const check = process.argv.includes('--check');
+  const { values: bav } = parseArgs({ args: Bun.argv.slice(2), options: { check: { type: 'boolean' } }, strict: false, allowPositionals: true });
+  const check = bav.check === true;
   mkdirSync(OUT, { recursive: true });
   const { files } = generate();
   const keys = Object.keys(files).sort();

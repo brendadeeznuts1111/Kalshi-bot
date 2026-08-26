@@ -14,9 +14,11 @@
  * sequences must never appear raw. See docs/AGENT-PITFALLS.md section 8.
  */
 import { readFileSync } from "node:fs";
+import { parseArgs } from "node:util";
 
-const decode = process.argv.includes("--decode");
-const fileArg = process.argv.slice(2).find((a) => a !== "--decode");
+const { values: aev, positionals: aep } = parseArgs({ args: Bun.argv.slice(2), options: { decode: { type: 'boolean' } }, strict: false, allowPositionals: true });
+const decode = aev.decode === true;
+const fileArg = aep[0];
 const arg = fileArg && fileArg !== "-" ? fileArg : null;
 const input = arg ? readFileSync(arg, "utf8") : readFileSync(0, "utf8");
 if (decode) {

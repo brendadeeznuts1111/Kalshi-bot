@@ -15,6 +15,7 @@
  * Never writes HOST_TO_SKIN — human confirms before mapping.
  */
 import { argValue, hasFlag } from '../src/cli/argv.ts';
+import { parseArgs } from 'node:util';
 import {
   discoverHost,
   formatHostDiscoverText,
@@ -29,13 +30,13 @@ const weigh = hasFlag('weigh');
 const skipExtras = hasFlag('skip-extras');
 const noPersist = hasFlag('no-persist');
 const harPath = argValue('har');
+const { positionals: hdp } = parseArgs({ args: Bun.argv.slice(2), options: {}, strict: false, allowPositionals: true });
 const url =
   argValue('url') ||
   argValue('host') ||
-  process.argv.find(
+  hdp.find(
     a =>
       !a.startsWith('-') &&
-      a !== process.argv[0] &&
       a !== process.argv[1] &&
       a.includes('.') &&
       !a.endsWith('.har')

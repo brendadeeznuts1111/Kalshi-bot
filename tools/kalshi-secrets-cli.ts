@@ -40,6 +40,7 @@
  * @see src/bot/kalshi-auth.ts — runtime credential loading (env/file first, keychain fallback)
  */
 import { readFileSync } from "node:fs";
+import { parseArgs } from "node:util";
 import {
   DEFAULT_SECRET_SERVICE,
   deleteSecret,
@@ -69,34 +70,36 @@ export type CliArgs = {
  * process list; prefer `--key-file` or env for real credentials.
  */
 export function parseCliArgs(argv: string[]): CliArgs {
-  let command: string | null = null;
-  let service = DEFAULT_SECRET_SERVICE;
-  let force = false;
-  let unrestricted = false;
-  let verbose = false;
-  let keyId: string | null = null;
-  let keySecret: string | null = null;
-  let keyFile: string | null = null;
-  const take = (i: number): string | null => {
-    const v = argv[i + 1]?.trim();
-    return v ? v : null;
+  // Bun-recommended util.parseArgs (S207); command = first positional.
+  const { values, positionals } = parseArgs({
+    args: argv,
+    options: {
+      force: { type: 'boolean' },
+      unrestricted: { type: 'boolean' },
+      verbose: { type: 'boolean' },
+      service: { type: 'string' },
+      'key-id': { type: 'string' },
+      'key-secret': { type: 'string' },
+      'key-file': { type: 'string' },
+    },
+    strict: false,
+    allowPositionals: true,
+  });
+  const str = (v: unknown): string | null => {
+    if (typeof v !== 'string') return null;
+    const t = v.trim();
+    return t ? t : null;
   };
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i] ?? "";
-    if (a === "--force") force = true;
-    else if (a === "--unrestricted") unrestricted = true;
-    else if (a === "--verbose") verbose = true;
-    else if (a === "--service") { const v = take(i); if (v) { service = v; i++; } }
-    else if (a === "--key-id") { const v = take(i); if (v) { keyId = v; i++; } }
-    else if (a === "--key-secret") { const v = take(i); if (v) { keySecret = v; i++; } }
-    else if (a === "--key-file") { const v = take(i); if (v) { keyFile = v; i++; } }
-    else if (a.startsWith("--service=")) { const v = a.slice("--service=".length).trim(); if (v) service = v; }
-    else if (a.startsWith("--key-id=")) { const v = a.slice("--key-id=".length).trim(); if (v) keyId = v; }
-    else if (a.startsWith("--key-secret=")) { const v = a.slice("--key-secret=".length).trim(); if (v) keySecret = v; }
-    else if (a.startsWith("--key-file=")) { const v = a.slice("--key-file=".length).trim(); if (v) keyFile = v; }
-    else if (!a.startsWith("--") && command === null) { command = a; }
-  }
-  return { command, service, force, unrestricted, verbose, keyId, keySecret, keyFile };
+  return {
+    command: positionals[0] ?? null,
+    service: str(values.service) ?? DEFAULT_SECRET_SERVICE,
+    force: values.force === true,
+    unrestricted: values.unrestricted === true,
+    verbose: values.verbose === true,
+    keyId: str(values['key-id']),
+    keySecret: str(values['key-secret']),
+    keyFile: str(values['key-file']),
+  };
 }
 
 /** Masked fingerprint (first 8 hex of sha256) — proves identity without leaking the value. */

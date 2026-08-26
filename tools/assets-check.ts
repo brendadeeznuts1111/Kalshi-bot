@@ -11,11 +11,12 @@
  */
 import { join } from 'node:path';
 import { auditMarkdownAssets, hashFileBytes } from '../src/lib/assets-audit.ts';
+import { parseArgs } from 'node:util';
 
 const ROOT = join(import.meta.dir, '..');
 const STATE_PATH = join(ROOT, '.data/assets-state.json');
-const flags = Bun.argv.slice(2);
-const update = flags.includes('--update');
+const { values: uv } = parseArgs({ args: Bun.argv.slice(2), options: { update: { type: 'boolean' } }, strict: false, allowPositionals: true });
+const update = uv.update === true;
 
 // all markdown sources: content/posts/*.md + docs/*.md
 const globs = ['content/posts/*.md', 'docs/*.md'];

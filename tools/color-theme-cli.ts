@@ -11,6 +11,7 @@
  */
 import { join } from 'node:path';
 import { mkdirSync } from 'node:fs';
+import { parseArgs } from 'node:util';
 import {
   THEME,
   THEME_ROLES,
@@ -25,11 +26,10 @@ import {
 } from '../src/lib/color/theme.ts';
 
 const root = join(import.meta.dir, '..');
-const flags = Bun.argv.slice(2);
-const wantPng = flags.includes('--png');
-const wantJson = flags.includes('--json');
-const ansiFlag = flags.find((f) => f.startsWith('--ansi='));
-const mode: AnsiMode = (ansiFlag?.slice('--ansi='.length) as AnsiMode) ?? 'auto';
+const { values: ctv } = parseArgs({ args: Bun.argv.slice(2), options: { png: { type: 'boolean' }, json: { type: 'boolean' }, ansi: { type: 'string' } }, strict: false, allowPositionals: true });
+const wantPng = ctv.png === true;
+const wantJson = ctv.json === true;
+const mode: AnsiMode = (typeof ctv.ansi === 'string' ? ctv.ansi : 'auto') as AnsiMode;
 
 const RESET = '\x1b[0m';
 

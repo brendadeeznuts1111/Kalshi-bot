@@ -10,9 +10,11 @@
  *   DB_PUSH_YES=1 bun run db:push
  */
 import { confirmYes } from "../src/lib/readline.ts";
+import { parseArgs } from "node:util";
 
 const args = Bun.argv.slice(2).filter((a) => a !== "--yes");
-const skip = Bun.argv.includes("--yes") || Bun.env.DB_PUSH_YES === "1";
+const { values: dpgv } = parseArgs({ args: Bun.argv.slice(2), options: { yes: { type: 'boolean' } }, strict: false, allowPositionals: true });
+const skip = dpgv.yes === true || Bun.env.DB_PUSH_YES === "1";
 
 if (!skip) {
   const ok = await confirmYes("Apply schema changes to the database? (db:push)", {

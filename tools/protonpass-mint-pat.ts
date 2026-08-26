@@ -11,8 +11,10 @@
  * @see docs/PROTONPASS.md
  */
 import { loadKalshiBotToken, PASS_TOKENS_FILE, KALSHI_TOKEN_ENV } from "../src/protonpass/agent-session.ts";
+import { parseArgs } from "node:util";
 
-const check = Bun.argv.includes("--check");
+const { values: pmv } = parseArgs({ args: Bun.argv.slice(2), options: { check: { type: 'boolean' } }, strict: false, allowPositionals: true });
+const check = pmv.check === true;
 
 if (check) {
   const token = await loadKalshiBotToken();

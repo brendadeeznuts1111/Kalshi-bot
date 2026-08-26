@@ -11,11 +11,13 @@ import { join } from 'node:path';
 import { assertBunAtLeast } from '../src/research/bun-native.ts';
 import { runAdoptionAudit } from '../src/lib/adoption-audit.ts';
 import { statusLine } from '../src/research/terminal-out.ts';
+import { parseArgs } from 'node:util';
 
 assertBunAtLeast('1.4.0', 'bun:adoption-audit');
 
 const ROOT = join(import.meta.dir, '..');
-const check = process.argv.includes('--check');
+const { values: av } = parseArgs({ args: Bun.argv.slice(2), options: { check: { type: 'boolean' } }, strict: false, allowPositionals: true });
+const check = av.check === true;
 const checks = runAdoptionAudit(ROOT);
 let gaps = 0;
 for (const c of checks) {

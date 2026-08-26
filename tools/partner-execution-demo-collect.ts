@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 import { mkdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import { parseArgs } from "node:util";
 import { openEventStore } from "../src/institutions/event-store/open-db.ts";
 import { DEFAULT_EVENT_STORE_DB } from "../src/institutions/event-store/paths.ts";
 import { buildDemoProofArtifact, demoProofJson, demoProofMarkdown } from "../src/partner/execution/demo-proof.ts";
@@ -13,7 +14,8 @@ import { executionIdempotencyKeyToUuid } from "../src/partner/execution/kalshi.t
 import { migrateExecutionSchema } from "../src/partner/execution/sql.ts";
 import { getBettingAccountById } from "../src/partner/registry.ts";
 
-const value = (name: string) => process.argv.find((arg) => arg.startsWith(`--${name}=`))?.slice(name.length + 3);
+const { values: pdcv } = parseArgs({ args: Bun.argv.slice(2), options: { partner: { type: 'string' }, out: { type: 'string' }, day: { type: 'string' }, 'unknown-sla-ms': { type: 'string' }, 'output-dir': { type: 'string' }, 'record-checkpoint': { type: 'boolean' } }, strict: false, allowPositionals: true });
+const value = (name: string) => { const v = pdcv[name]; return typeof v === 'string' ? v : undefined; };
 const usage = "Usage: bun tools/partner-execution-demo-collect.ts --partner=<code> --out=<id> --day=YYYY-MM-DD [--unknown-sla-ms=900000] [--output-dir=<dir>] [--record-checkpoint]";
 const outId = required("out");
 const partnerCode = required("partner");
@@ -30,7 +32,7 @@ async function main(): Promise<void> {
   if (!account || account.provider.toLowerCase() !== "kalshi") throw new Error("Requested out is not a registered Kalshi account");
   const client = await createKalshiAccountClientResolver()(account);
   if (client.environment !== "demo") throw new Error("Demo collector resolved a non-demo client");
-  if (process.argv.includes("--record-checkpoint")) {
+  if (pdcv['record-checkpoint'] === true) {
     const capturedAtMs = Date.now();
     const balance = await client.getBalance();
     if (balance.balanceCents === null) throw new Error("Kalshi demo balance is unavailable");

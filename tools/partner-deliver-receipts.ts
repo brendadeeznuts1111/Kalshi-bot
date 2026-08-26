@@ -4,6 +4,7 @@ import { DEFAULT_EVENT_STORE_DB } from "../src/institutions/event-store/paths.ts
 import { migrateExecutionSchema } from "../src/partner/execution/sql.ts";
 import { asAuthorizationReceiptLeaseOwner } from "../src/partner/authorization/outbox.ts";
 import { deliverAuthorizationReceiptBatch } from "../src/telegram/authorization-outbox-worker.ts";
+import { parseArgs } from "node:util";
 import { sendMessage } from "../src/telegram/api.ts";
 import { mintSortableId } from "../src/lib/ids.ts";
 
@@ -27,7 +28,8 @@ export async function runReceiptDeliveryJob(options: { limit?: number; nowMs?: n
 }
 
 if (import.meta.main) {
-  const rawLimit = Bun.argv.find(arg => arg.startsWith("--limit="))?.slice(8);
+  const { values: pdrv } = parseArgs({ args: Bun.argv.slice(2), options: { limit: { type: 'string' } }, strict: false, allowPositionals: true });
+  const rawLimit = typeof pdrv.limit === 'string' ? pdrv.limit : undefined;
   const result = await runReceiptDeliveryJob({ limit: rawLimit === undefined ? 100 : Number(rawLimit) });
   console.log(JSON.stringify(result, null, 2));
   if (result.failed > 0 || result.dead > 0) process.exitCode = 2;

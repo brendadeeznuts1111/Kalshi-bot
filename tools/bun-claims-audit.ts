@@ -19,6 +19,7 @@
  */
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { parseArgs } from 'node:util';
 import { assertBunAtLeast } from '../src/research/bun-native.ts';
 import { auditClaims, htmlToText } from '../src/lib/claims-audit.ts';
 
@@ -27,22 +28,21 @@ assertBunAtLeast('1.4.0', 'bun:claims-audit');
 const ROOT = join(import.meta.dir, '..');
 const BLOG_CACHE = join(ROOT, 'research/cache/bun-blog.html');
 
-function argValue(name: string): string | undefined {
-  const hit = process.argv.find((a) => a.startsWith('--' + name + '='));
-  if (hit) return hit.slice(name.length + 3);
-  const idx = process.argv.indexOf('--' + name);
-  if (idx >= 0) return process.argv[idx + 1];
-  return undefined;
-}
-
-
 async function main(): Promise<number> {
-  const url = argValue('blog') ?? 'https://bun.com/blog/bun-v1.4';
-  const all = process.argv.includes('--all');
-  // process.argv = [bun, script, --, claim...] - slice(2) skips both;
-  // the old slice(1) leaked the script path into the claims list, making
-  // every run report it as NOT FOUND and exit 1 (recon finding, HIGH).
-  const claims = process.argv.slice(2).filter((a) => !a.startsWith('--') && a !== '--');
+  const { values, positionals } = parseArgs({
+    args: Bun.argv.slice(2),
+    options: {
+      blog: { type: 'string' },
+      all: { type: 'boolean' },
+    },
+    strict: false,
+    allowPositionals: true,
+  });
+  const url = typeof values.blog === 'string' ? values.blog : 'https://bun.com/blog/bun-v1.4';
+  const all = values.all === true;
+  // positionals = claims after `--` (parseArgs treats `--` as the separator;
+  // Bun.argv.slice(2) drops the script path so claims never leak into the list).
+  const claims = positionals;
   if (!claims.length) {
     console.error('usage: bun run bun:claims-audit -- <claim> [claim...]');
     console.error('  --blog=<url>  blog URL (default bun-v1.4 post)');

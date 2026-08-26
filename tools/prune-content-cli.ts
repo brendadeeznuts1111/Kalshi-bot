@@ -18,6 +18,7 @@
  */
 import { join } from "node:path";
 import { mkdirSync, existsSync, readFileSync } from "node:fs";
+import { parseArgs } from "node:util";
 import {
   applyPrune,
   archiveRemovedFiles,
@@ -29,17 +30,26 @@ import {
 } from "../src/lib/prune-content.ts";
 
 const root = join(import.meta.dir, "..");
-const flags = Bun.argv.slice(2);
-const apply = flags.includes("--apply");
-const check = flags.includes("--check");
-const archive = flags.includes("--archive");
-const restoreFlag = flags.find((f) => f.startsWith("--restore="));
-const restorePath = restoreFlag ? restoreFlag.slice("--restore=".length) : null;
-const dirFlag = flags.find((f) => f.startsWith("--dir="));
-const manifestFlag = flags.find((f) => f.startsWith("--manifest="));
-const dir = dirFlag ? dirFlag.slice("--dir=".length) : "content/posts";
-const manifestPath = manifestFlag
-  ? manifestFlag.slice("--manifest=".length)
+const { values: pv } = parseArgs({
+  args: Bun.argv.slice(2),
+  options: {
+    apply: { type: 'boolean' },
+    check: { type: 'boolean' },
+    archive: { type: 'boolean' },
+    restore: { type: 'string' },
+    dir: { type: 'string' },
+    manifest: { type: 'string' },
+  },
+  strict: false,
+  allowPositionals: true,
+});
+const apply = pv.apply === true;
+const check = pv.check === true;
+const archive = pv.archive === true;
+const restorePath = typeof pv.restore === 'string' ? pv.restore : null;
+const dir = typeof pv.dir === 'string' ? pv.dir : "content/posts";
+const manifestPath = typeof pv.manifest === 'string'
+  ? pv.manifest
   : ".data/manifest.json";
 const changelogPath = join(root, "CONTENT_CHANGELOG.md");
 

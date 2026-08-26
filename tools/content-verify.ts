@@ -18,10 +18,11 @@
 import { join } from 'node:path';
 import { readFileSync, existsSync } from 'node:fs';
 import { hashContent } from '../src/lib/content-pipeline.ts';
+import { parseArgs } from 'node:util';
 
 const root = join(import.meta.dir, '..');
-const flags = Bun.argv.slice(2);
-const update = flags.includes('--update') || flags.includes('--rebuild');
+const { values: cv } = parseArgs({ args: Bun.argv.slice(2), options: { update: { type: 'boolean' }, rebuild: { type: 'boolean' } }, strict: false, allowPositionals: true });
+const update = cv.update === true || cv.rebuild === true;
 
 const manifestPath = join(root, '.data/manifest.json');
 const statePath = join(root, '.data/content-state.json');

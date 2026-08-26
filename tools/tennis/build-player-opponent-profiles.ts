@@ -14,6 +14,7 @@
  */
 import { Database } from "bun:sqlite";
 import { openEventStore } from "../../src/institutions/event-store/open-db.ts";
+import { parseArgs } from "node:util";
 import {
   eventVolumeSqlForDb,
   roundVolumeFp,
@@ -159,7 +160,8 @@ export function buildPlayerOpponentProfiles(
 }
 
 if (import.meta.main) {
-  const dryRun = Bun.argv.includes("--dry-run");
+  const { values: bpov } = parseArgs({ args: Bun.argv.slice(2), options: { 'dry-run': { type: 'boolean' } }, strict: false, allowPositionals: true });
+const dryRun = bpov['dry-run'] === true;
   const db = openEventStore();
   const result = buildPlayerOpponentProfiles(db, dryRun);
   console.log(

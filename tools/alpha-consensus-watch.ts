@@ -12,6 +12,7 @@
  */
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { parseArgs } from 'node:util';
 import { fetchOdds } from '../src/alpha/odds-feed.ts';
 import { eventsToOddsPrints } from '../src/alpha/signal-context.ts';
 import { LiveConsensusStream } from '../src/alpha/cluster/live-consensus.ts';
@@ -19,18 +20,28 @@ import type { OddsEvent } from '../src/alpha/odds-types.ts';
 
 const ROOT = join(import.meta.dir, '..');
 const OUT = join(ROOT, 'research', 'outputs');
-const argv = Bun.argv.slice(2);
-const flag = (name: string, dflt: string) => {
-  const f = argv.find((a) => a.startsWith('--' + name + '='));
-  return f ? f.slice(('--' + name + '=').length) : dflt;
-};
-const sport = flag('sport', 'tennis');
-const intervalMs = Number(flag('interval', '60000'));
-const passes = Number(flag('passes', '0'));
-const minClusterSize = Number(flag('min-cluster', '3'));
-const region = flag('region', 'us');
-const markets = flag('markets', 'h2h');
-const inputFlag = argv.find((a) => a.startsWith('--input='));
+const { values: aw } = parseArgs({
+  args: Bun.argv.slice(2),
+  options: {
+    sport: { type: 'string' },
+    interval: { type: 'string' },
+    passes: { type: 'string' },
+    'min-cluster': { type: 'string' },
+    region: { type: 'string' },
+    markets: { type: 'string' },
+    input: { type: 'string' },
+  },
+  strict: false,
+  allowPositionals: true,
+});
+const str = (v: unknown, dflt: string): string => (typeof v === 'string' ? v : dflt);
+const sport = str(aw.sport, 'tennis');
+const intervalMs = Number(str(aw.interval, '60000'));
+const passes = Number(str(aw.passes, '0'));
+const minClusterSize = Number(str(aw['min-cluster'], '3'));
+const region = str(aw.region, 'us');
+const markets = str(aw.markets, 'h2h');
+const inputFlag = typeof aw.input === 'string' ? aw.input : null;
 
 const stream = new LiveConsensusStream({ minClusterSize });
 mkdirSync(OUT, { recursive: true });

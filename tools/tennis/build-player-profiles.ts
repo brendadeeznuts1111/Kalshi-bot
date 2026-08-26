@@ -21,9 +21,12 @@ import {
   SNAPSHOT_SQL,
 } from "../../src/research/player-profile-meta.ts";
 import { countryForPlayer } from "../../src/research/tennis-meta.ts";
+import { parseArgs } from "node:util";
 
+const { values: bppv } = parseArgs({ args: Bun.argv.slice(2), options: { 'dry-run': { type: 'boolean' } }, strict: false, allowPositionals: true });
 function arg(name: string): string | undefined {
-  return Bun.argv.find((a) => a.startsWith(`--${name}=`))?.slice(name.length + 3);
+  const v = bppv[name];
+  return typeof v === 'string' ? v : undefined;
 }
 
 type SurfaceStats = { wins: number; losses: number; apps: number };
@@ -285,7 +288,7 @@ export function buildPlayerProfiles(db: Database, dryRun = false, nowMs = Date.n
 }
 
 if (import.meta.main) {
-  const dryRun = Bun.argv.includes("--dry-run");
+  const dryRun = bppv['dry-run'] === true;
   const db = openEventStore();
   const result = buildPlayerProfiles(db, dryRun);
   const fillPct = (result.fillRate * 100).toFixed(1);

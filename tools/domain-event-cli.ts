@@ -26,6 +26,7 @@
  * cls = limit class (not suspend).
  */
 import { argValue, hasFlag } from '../src/cli/argv.ts';
+import { parseArgs } from 'node:util';
 import {
   formatEventBoardScan,
   formatEventLookup,
@@ -128,11 +129,12 @@ if (board) {
   process.exit(0);
 }
 
+const { positionals: dep } = parseArgs({ args: Bun.argv.slice(2), options: {}, strict: false, allowPositionals: true });
 const urlArg = argValue('url');
 const idArg =
   argValue('id') ??
   argValue('event') ??
-  process.argv.find(a => /^\d{5,}(\/[A-Za-z0-9_-]+)?$/.test(a));
+  dep.find(a => /^\d{5,}(\/[A-Za-z0-9_-]+)?$/.test(a));
 
 let eventId: string;
 let periodFromRef: string | null = null;

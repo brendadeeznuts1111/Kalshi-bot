@@ -4,6 +4,7 @@ import { DEFAULT_EVENT_STORE_DB } from "../src/institutions/event-store/paths.ts
 import { createKalshiAccountClientResolver } from "../src/partner/execution/kalshi-live.ts";
 import { syncKalshiProviderLifecycle } from "../src/partner/execution/kalshi-lifecycle-sync.ts";
 import { migrateExecutionSchema } from "../src/partner/execution/sql.ts";
+import { parseArgs } from "node:util";
 
 export async function runKalshiLifecycleSyncJob(options: {
   maxPagesPerFeed?: number | undefined;
@@ -35,8 +36,9 @@ if (import.meta.main) {
   ) process.exitCode = 2;
 }
 
+const { values: pslv } = parseArgs({ args: Bun.argv.slice(2), options: {}, strict: false, allowPositionals: true });
 function integerArg(name: string): number | undefined {
-  const raw = process.argv.find((arg) => arg.startsWith(`--${name}=`))?.slice(name.length + 3);
+  const raw = typeof pslv[name] === 'string' ? (pslv[name] as string) : undefined;
   if (raw === undefined) return undefined;
   const value = Number(raw);
   if (!Number.isSafeInteger(value) || value < 1) throw new TypeError(`--${name} must be a positive integer`);

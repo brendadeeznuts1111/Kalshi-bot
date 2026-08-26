@@ -17,6 +17,7 @@
 import { readdirSync, existsSync, statSync, unlinkSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { assertBunAtLeast } from '../src/research/bun-native.ts';
+import { parseArgs } from 'node:util';
 
 assertBunAtLeast('1.4.0', 'bun:backup');
 
@@ -33,10 +34,11 @@ function defaultBackupFiles(): string[] {
     .map((f) => join(CACHE_DIR, f));
 }
 
+const { values: bbv, positionals: bbp } = parseArgs({ args: Bun.argv.slice(2), options: { list: { type: 'boolean' }, keep: { type: 'string' } }, strict: false, allowPositionals: true });
 function argValue(name: string): number | undefined {
-  const hit = process.argv.find((a) => a.startsWith('--' + name + '='));
-  if (!hit) return undefined;
-  const n = Number(hit.slice(name.length + 3));
+  const v = bbv[name];
+  if (typeof v !== 'string') return undefined;
+  const n = Number(v);
   return Number.isFinite(n) ? n : undefined;
 }
 
@@ -51,7 +53,7 @@ async function listBackups(): Promise<void> {
 }
 
 async function main(): Promise<number> {
-  if (process.argv.includes('--list')) {
+  if (bbv.list === true) {
     await listBackups();
     return 0;
   }

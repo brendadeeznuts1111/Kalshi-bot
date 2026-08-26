@@ -1,16 +1,16 @@
 #!/usr/bin/env bun
 import { mkdir } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
+import { parseArgs } from 'node:util';
 import type { DemoProofArtifact } from '../src/partner/execution/demo-proof.ts';
 import {
   demoGraduationJson,
   verifyDemoGraduation,
 } from '../src/partner/execution/demo-graduation.ts';
 
-const inputArgs = process.argv
-  .filter(arg => arg.startsWith('--input='))
-  .map(arg => resolve(arg.slice(8)));
-const outputArg = process.argv.find(arg => arg.startsWith('--output-dir='))?.slice(13);
+const { values: pdgv } = parseArgs({ args: Bun.argv.slice(2), options: { input: { type: 'string', multiple: true }, 'output-dir': { type: 'string' } }, strict: false, allowPositionals: true });
+const inputArgs = (Array.isArray(pdgv.input) ? pdgv.input : typeof pdgv.input === 'string' ? [pdgv.input] : []).map((s) => resolve(String(s)));
+const outputArg = typeof pdgv['output-dir'] === 'string' ? pdgv['output-dir'] : undefined;
 if (inputArgs.length === 0) {
   throw new Error(
     'Usage: bun tools/partner-execution-demo-graduation.ts --input=<daily-proof.json> (repeat 7 times) [--output-dir=<dir>]'

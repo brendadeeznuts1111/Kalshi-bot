@@ -10,9 +10,11 @@
 import { join } from 'node:path';
 import { DESIGN_MODULE_NAMES, metaJsonPath } from '../src/lib/design-budget.ts';
 import { scanDeadImports } from '../src/lib/design-deadcode.ts';
+import { parseArgs } from 'node:util';
 
 const ROOT = join(import.meta.dir, '..');
-const fail = Bun.argv.includes('--fail');
+const { values: dv } = parseArgs({ args: Bun.argv.slice(2), options: { fail: { type: 'boolean' } }, strict: false, allowPositionals: true });
+const fail = dv.fail === true;
 
 const files = new Set<string>();
 for (const module of DESIGN_MODULE_NAMES) {

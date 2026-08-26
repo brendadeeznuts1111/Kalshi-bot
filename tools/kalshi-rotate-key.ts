@@ -15,13 +15,15 @@
  * Never prints secret material. Key source: https://kalshi.com/account/profile → API Keys
  */
 import { kalshiRotatePaths, rotateKalshiKey } from '../src/bot/kalshi-rotate.ts';
+import { parseArgs } from 'node:util';
 
+const { values: kv } = parseArgs({ args: Bun.argv.slice(2), options: { 'key-id': { type: 'string' }, pem: { type: 'string' }, 'dry-run': { type: 'boolean' }, yes: { type: 'boolean' } }, strict: false, allowPositionals: true });
 function flag(name: string): string | undefined {
-  const i = Bun.argv.indexOf(name);
-  return i >= 0 ? Bun.argv[i + 1] : undefined;
+  const v = kv[name.slice(2)];
+  return typeof v === 'string' ? v : undefined;
 }
 
-const DRY_RUN = Bun.argv.includes('--dry-run');
+const DRY_RUN = kv['dry-run'] === true;
 
 async function main(): Promise<void> {
   const keyId = flag('--key-id');
@@ -43,7 +45,7 @@ async function main(): Promise<void> {
   console.log(`pem:    ${pem} → ${pemDest} (0600)`);
 
   // Interactive confirm before replacing the LIVE key (--yes skips for scripts).
-  if (!DRY_RUN && !Bun.argv.includes('--yes')) {
+  if (!DRY_RUN && kv.yes !== true) {
     const { confirmYes } = await import('../src/lib/readline.ts');
     if (!(await confirmYes('Type YES to rotate the live Kalshi API key:'))) {
       console.error('aborted - no files written');

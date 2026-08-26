@@ -19,13 +19,15 @@
  */
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { parseArgs } from 'node:util';
 
 const ROOT = join(import.meta.dir, '..');
 const HTML_PATH = join(ROOT, 'research/cache/bun-blog.html');
 const LEDGER_PATH = join(ROOT, 'research/outputs/blog-codeblocks-check.json');
 
-const flags = Bun.argv.slice(2);
-const port = Number((flags.find((f) => f.startsWith('--port=')) ?? '').slice('--port='.length) || Bun.env.PORT || 3456);
+const { values: bsv } = parseArgs({ args: Bun.argv.slice(2), options: { port: { type: 'string' } }, strict: false, allowPositionals: true });
+const portEnv = Bun.env.PORT || '3456';
+const port = Number(typeof bsv.port === 'string' ? bsv.port : portEnv);
 
 // ---------------------------------------------------------------- data load
 const html = readFileSync(HTML_PATH, 'utf8');

@@ -11,6 +11,7 @@
  *   --raw='42["subscribe",{"sport":220}]'
  */
 import { argValue } from '../src/cli/argv.ts';
+import { parseArgs } from 'node:util';
 // @see https://bun.com/docs/api/websockets
 import { CoefficientStore } from "../src/partner/fantasy-ultra/coefficient-store.ts";
 import { PandoraSocket } from "../src/partner/fantasy-ultra/pandora-socket.ts";
@@ -23,7 +24,8 @@ const seconds = Math.min(
 const emitName = argValue("emit");
 const emitArg = argValue("arg");
 const rawFrame = argValue("raw");
-const plive = process.argv.includes("--plive");
+const { values: ppv } = parseArgs({ args: Bun.argv.slice(2), options: { plive: { type: 'boolean' } }, strict: false, allowPositionals: true });
+const plive = ppv.plive === true;
 const eventIdsRaw = argValue("event-ids");
 const eventIds = eventIdsRaw
   ? eventIdsRaw

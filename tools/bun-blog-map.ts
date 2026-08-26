@@ -17,17 +17,16 @@
  */
 import { join } from 'node:path';
 import { runBlogMap } from '../src/lib/blog-map-run.ts';
+import { parseArgs } from 'node:util';
 
 const ROOT = join(import.meta.dir, '..');
-const flags = Bun.argv.slice(2);
-const blogFlag = flags.find((f) => f.startsWith('--blog='));
-const reportFlag = flags.find((f) => f.startsWith('--report='));
+const { values: bmv } = parseArgs({ args: Bun.argv.slice(2), options: { blog: { type: 'string' }, report: { type: 'string' }, offline: { type: 'boolean' } }, strict: false, allowPositionals: true });
 
 const { coverage, newUnmapped, curation } = await runBlogMap({
   root: ROOT,
-  ...(blogFlag ? { blogUrl: blogFlag.slice('--blog='.length) } : {}),
-  ...(reportFlag ? { reportPath: reportFlag.slice('--report='.length) } : {}),
-  ...(flags.includes('--offline') ? { offline: true } : {}),
+  ...(typeof bmv.blog === 'string' ? { blogUrl: bmv.blog } : {}),
+  ...(typeof bmv.report === 'string' ? { reportPath: bmv.report } : {}),
+  ...(bmv.offline === true ? { offline: true } : {}),
 });
 
 console.log('blog-map: coverage ' + Math.round(coverage * 100) + '% · curation ' + Math.round((curation ?? 0) * 100) + '% · ' + newUnmapped + ' new unmapped heading(s)');

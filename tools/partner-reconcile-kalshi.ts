@@ -4,6 +4,7 @@ import { DEFAULT_EVENT_STORE_DB } from "../src/institutions/event-store/paths.ts
 import { createKalshiAccountClientResolver } from "../src/partner/execution/kalshi-live.ts";
 import { reconcileKalshiUnknownReservations } from "../src/partner/execution/reconciliation.ts";
 import { migrateExecutionSchema } from "../src/partner/execution/sql.ts";
+import { parseArgs } from "node:util";
 import { getBettingAccountById } from "../src/partner/registry.ts";
 import { asReconciliationOwner } from "../src/partner/execution/domain.ts";
 import { Database } from "bun:sqlite";
@@ -56,7 +57,8 @@ export async function runKalshiReconciliationJob(options: {
 }
 
 if (import.meta.main) {
-  const limitArg = process.argv.find((arg) => arg.startsWith("--limit="))?.slice(8);
+  const { values: prkv } = parseArgs({ args: Bun.argv.slice(2), options: { limit: { type: 'string' } }, strict: false, allowPositionals: true });
+  const limitArg = typeof prkv.limit === 'string' ? prkv.limit : undefined;
   const result = await runKalshiReconciliationJob({
     limit: limitArg === undefined ? 100 : Number(limitArg),
   });

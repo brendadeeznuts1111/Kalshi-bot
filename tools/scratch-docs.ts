@@ -5,6 +5,7 @@
  */
 import { readdirSync, statSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, basename, extname } from 'node:path';
+import { parseArgs } from 'node:util';
 
 const ROOT = join(import.meta.dir, '..');
 const SCRATCH = join(ROOT, 'scratch');
@@ -127,7 +128,8 @@ export function generate(): string {
   return out.join('\n') + '\n';
 }
 function main(): number {
-  const check = process.argv.includes('--check');
+  const { values: sv } = parseArgs({ args: Bun.argv.slice(2), options: { check: { type: 'boolean' } }, strict: false, allowPositionals: true });
+const check = sv.check === true;
   mkdirSync(SCRATCH, { recursive: true });
   const content = generate();
   let onDisk: string | null = null;
