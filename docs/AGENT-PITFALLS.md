@@ -6231,12 +6231,14 @@ another note.
   ETag (stronger than the docs claim).
 - P2 CONFIRMED: fullstack dev server with development: false adds both
   ETag and Cache-Control (Cache-Control = no-cache, not a max-age).
-- P3 CORRECTED (pin-negative): the docs claim "new Response(artifact)
-  sets Content-Type and Etag" is WRONG on 1.4.0 - Content-Type is set
-  (text/javascript;charset=utf-8) but Etag is NULL on the Response
-  wrapper. ETag appears on SERVED routes (dir/static), not on the
-  Response constructor wrapper. If a future Bun adds the Etag, the
-  check flips FAIL for re-verification.
+- P3 CORRECTED (pin-negative, deep-probed): the docs claim "new
+  Response(artifact) sets Content-Type and Etag" is WRONG on 1.4.0 -
+  Content-Type is set (text/javascript;charset=utf-8) but Etag is NULL
+  at construct time, after the body is read, served via a handler
+  route, AND as a static route value (static values get Last-Modified
+  instead). The companion claim "BuildArtifact extends Blob" is also
+  WRONG (instanceof Blob = false; no .bytes()). If a future Bun adds
+  the Etag, the checks flip FAIL for re-verification.
 - P4 PARTIAL: S3Client.stat returns a Promise and S3Stats declares
   etag: string (type-level confirmed); a live etag VALUE needs a real
   S3 object - not probed, honest pin.

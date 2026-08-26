@@ -46,11 +46,20 @@ await Bun.write("scratch/etag-fixture/input.ts", "export const value = 42;\n");
 const built = await Bun.build({ entrypoints: ["scratch/etag-fixture/input.ts"], outdir: "scratch/etag-fixture/out" });
 const art = built.outputs[0];
 const artResp = new Response(art);
-// PIN-NEGATIVE correction: the docs claim "sets Content-Type and Etag" is
-// WRONG on 1.4.0 - Content-Type is set, Etag is NOT on new Response(artifact)
-// (ETag appears on dir/static SERVED routes, not on the Response wrapper).
-// If a future Bun adds the Etag here, this flips FAIL for re-verification.
+// PIN-NEGATIVE correction (deep-probed on 1.4.0): the docs claim "sets
+// Content-Type and Etag" is WRONG - Content-Type is set but Etag is NULL
+// at construct time, after body read, served via a handler route, AND as a
+// static route value (static values get Last-Modified instead). Also
+// BuildArtifact is NOT a Blob (instanceof Blob = false; no .bytes()). If a
+// future Bun adds the Etag, these flip FAIL for re-verification.
 check("P3 Response(BuildArtifact): Content-Type set, Etag NOT (docs corrected)", artResp.headers.get("content-type") !== null && artResp.headers.get("etag") === null, "content-type=" + String(artResp.headers.get("content-type")) + " etag=" + String(artResp.headers.get("etag")));
+await artResp.arrayBuffer();
+check("P3a Etag stays null after body read", artResp.headers.get("etag") === null, "etag=" + String(artResp.headers.get("etag")));
+check("P3b BuildArtifact is NOT a Blob (docs claim corrected)", (art as any) instanceof Blob === false && typeof (art as any).bytes === "undefined", "instanceof Blob=" + String((art as any) instanceof Blob));
+const srv3 = Bun.serve({ port: 0, routes: { "/out.js": new Response(art) } });
+const s3resp = await fetch("http://127.0.0.1:" + srv3.port + "/out.js");
+check("P3c static route value: Etag null, Last-Modified present", s3resp.headers.get("etag") === null && s3resp.headers.get("last-modified") !== null, "etag=" + String(s3resp.headers.get("etag")) + " lm=" + String(s3resp.headers.get("last-modified")));
+srv3.stop(true);
 
 // P4: S3Client.stat - type-level etag metadata; live value needs real S3.
 const s3 = new Bun.S3Client({ bucket: "probe", accessKeyId: "k", secretAccessKey: "s" });
