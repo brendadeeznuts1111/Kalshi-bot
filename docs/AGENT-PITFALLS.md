@@ -205,6 +205,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §183 — Blog-assets mirror — public/blog/ + /blog/* serve route + gate #58 (2026-08-26)
 - §184 — Blog-map v2 — full-tree registry (13 sections, h3+h4, context fields) (2026-08-26)
 - §185 — Strict typing migration — tsconfig + 661 errors fixed, behavior preserved (2026-08-26)
+- §186 — Blog benchmark + code-block verification — numbers and examples grounded (2026-08-26)
 
 
 ## 1. run_code program text (the harness lexer)
@@ -6796,6 +6797,29 @@ Fixed via 15 parallel subagents + 1 cascade agent, patterns:
 Vendored vendor/proton-pass (4 files, 7 errors) fixed in the vendored source (the repo
 owns it per §91-93) then `bun install` refreshed the bun-cache copy. No behavior
 change: full suite 2604 pass / 0 fail; tsc --noEmit exits 0 project-wide.
+## 186. Blog benchmark + code-block verification — numbers and examples grounded (2026-08-26)
+
+Two new tools verify the bun-v1.4 blog against this pinned runtime:
+  - `bun run blog:bench-verify` (tools/blog-bench-verify.ts): measures the blog's
+    benchmark claims (absolute numbers parsed from the cached HTML) on this machine:
+    new URL() 49ns (blog 75), Buffer hex 164us/1MiB (blog 128), base64url 105us (blog 84),
+    Promise.race 142ns (EXACT blog match), Promise.all 125ns (blog 207), await 18ns.
+    Verdicts: CONSISTENT within 2.5x, DIFFERS beyond, RATIO-NOT-REPRODUCIBLE without a
+    1.3 runtime, NOT-MEASURABLE for absent deps (isbot) or surfaces (Bun.SourceMap is
+    NOT on 1.4.0 - the blog's `new SourceMap(json)` example uses an external class).
+    Report: research/outputs/blog-bench-verify.md + .json.
+  - `bun run blog:codeblocks-check` (tools/blog-codeblocks-check.ts): extracts the 233
+    shiki code blocks, keeps the 36 that touch the Bun API, typechecks each against
+    bun-types 1.4.0 with the repo strict tsconfig: 35 PASS / 1 PARTIAL / 0 FAIL. The
+    PARTIAL is the blog's `tls: { ... }` ellipsis placeholder (TS1109 syntax, not a
+    type error). Blocks are cross-referenced to the §9 ledger claims they touch
+    (markdown/image/serve/cron/webview/spawn/sqlite/glob/crypto/password).
+    Report: research/outputs/blog-codeblocks-check.md + .json.
+
+BENCH PITFALL: a bench fn whose result is discarded gets DCE'd by the JIT (measured 0 ns).
+Keep a live sink (module-level var written by every iteration, checked after) and create
+fresh promises per iteration; `x ? 1 : 0` on a Promise trips TS2801 - attach .then instead.
+
 
 
 

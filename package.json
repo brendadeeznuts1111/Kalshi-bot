@@ -299,6 +299,8 @@
     "docs:sync-counts": "bun tools/docs-sync-counts.ts",
     "scratch:docs": "bun tools/scratch-docs.ts",
     "blog:assets": "bun tools/blog-assets-mirror.ts",
+    "blog:bench-verify": "bun tools/blog-bench-verify.ts",
+    "blog:codeblocks-check": "bun tools/blog-codeblocks-check.ts",
     "scratch:sweep": "bun tools/scratch-sweep.ts",
     "routes:check": "bun tools/routes-check.ts",
     "bun:coverage-audit": "bun tools/bun-coverage-audit.ts",
