@@ -96,6 +96,12 @@ export const LEDGER: LedgerClaim[] = [
   { id: 'SQ-deserialize', api: 'deserialize', source: 'sqlite.d.ts', fragment: 'static deserialize', docSays: 'deserialize: STATIC Database.deserialize (not instance)', evidencePath: 'sqliteGotchas.serializeDeserialize.roundTripName', kind: 'consistent' },
   { id: 'SQ-close', api: 'close', source: 'sqlite.d.ts', fragment: 'been finalized or collected', docSays: 'close: later queries throw', evidencePath: 'sqliteGotchas.closedDbError', kind: 'consistent' },
   { id: 'SQ-constraint', api: 'run', source: 'sqlite.d.ts', fragment: 'SQLITE_CONSTRAINT', docSays: 'constraint violations carry a SQLITE_* code', evidencePath: 'sqliteGotchas.constraintErrorCode', kind: 'consistent' },
+  { id: 'UP-global', api: 'URLPattern', source: 'node url.d.ts', fragment: 'interface URLPattern', docSays: 'URLPattern is a runtime global (Web API); NOT declared in bun-types (shape gap) - typed via @types/node', evidencePath: 'urlPatternGotchas.global.typeof', kind: 'consistent' },
+  { id: 'UP-init', api: 'URLPattern', source: 'node url.d.ts', fragment: 'interface URLPatternInit', docSays: 'URLPatternInit object form ({ pathname: "/users/:id" })', evidencePath: 'urlPatternGotchas.objectForm.id', kind: 'consistent' },
+  { id: 'UP-test', api: 'test', source: 'node url.d.ts', fragment: 'test(input?: URLPatternInput', docSays: 'test: boolean match', evidencePath: 'urlPatternGotchas.objectForm.test', kind: 'consistent' },
+  { id: 'UP-exec', api: 'exec', source: 'node url.d.ts', fragment: 'exec(input?: URLPatternInput', docSays: 'exec: result with pathname.groups', evidencePath: 'urlPatternGotchas.objectForm.id', kind: 'consistent' },
+  { id: 'UP-regex', api: 'hasRegExpGroups', source: 'node url.d.ts', fragment: 'readonly hasRegExpGroups', docSays: 'hasRegExpGroups: true with regex groups', evidencePath: 'urlPatternGotchas.regexGroup.hasRegExpGroups', kind: 'consistent' },
+  { id: 'UP-components', api: 'pathname', source: 'node url.d.ts', fragment: 'readonly pathname', docSays: 'component getters: protocol/hostname/port/pathname/search/hash', evidencePath: 'urlPatternGotchas.componentGetters.pathname', kind: 'consistent' },
 ];
 
 /** APIs with grounded evidence but no ledger row (fit/filter/quality/... come from the probe gates). */
@@ -107,6 +113,7 @@ export const EXTRA_GROUNDED: string[] = [
   'tls', 'development', 'http3', 'runtime', 'importSource', 'factory',
   'prepare', 'get', 'all', 'values', 'exec', 'close', 'open', 'MAX_QUERY_CACHE_SIZE', 'file',
   'inTransaction', 'as', 'columnNames', 'columnTypes', 'paramsCount',
+  'protocol', 'hostname', 'port', 'search', 'hash', 'username', 'password', 'groups',
 ];
 
 export function checkClaim(claim: LedgerClaim, sourceText: string, ev: Evidence): CheckResult {

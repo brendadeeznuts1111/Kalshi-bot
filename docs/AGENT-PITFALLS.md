@@ -6400,3 +6400,13 @@ another note.
   now includes bun:sqlite Database/Statement members: remaining gaps
   loadExtension, setCustomSQLite, fileControl, iterate, raw, finalize,
   toString. 53 claims (47 CONSISTENT, 6 PINNED-DISCREPANCY).
+- URLPattern surface grounded (178): 6 UP ledger claims + evidence
+  urlPatternGotchas - a runtime global but NOT importable from 'bun' and NOT
+  declared in bun-types (shape gap; the repo typechecks via @types/node
+  url.d.ts, which is now the cross-check source for it). Verified: object-form
+  init, test/exec with pathname.groups.id, string+base form, wildcards
+  (groups[0]), component matching (port/search; hash ignored when unpinned),
+  regex groups (hasRegExpGroups), OPTIONAL-PARAM QUIRK (/users matches
+  /users/:id? but /users/ does NOT), component getters. Sweep now includes
+  URLPattern + URLPatternInit: remaining gap baseURL. 59 claims (53
+  CONSISTENT, 6 PINNED-DISCREPANCY).

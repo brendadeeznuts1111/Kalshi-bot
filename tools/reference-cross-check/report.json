@@ -5,7 +5,7 @@
   "bundleHash": "bun-types@1.4.0-c0dadede486f49ab",
   "verdictCounts": {
     "PINNED-DISCREPANCY": 6,
-    "CONSISTENT": 47
+    "CONSISTENT": 53
   },
   "checks": [
     {
@@ -447,6 +447,54 @@
       "docSays": "constraint violations carry a SQLITE_* code",
       "observed": "SQLITE_CONSTRAINT_PRIMARYKEY",
       "verdict": "CONSISTENT"
+    },
+    {
+      "id": "UP-global",
+      "api": "URLPattern",
+      "source": "node url.d.ts",
+      "docSays": "URLPattern is a runtime global (Web API); NOT declared in bun-types (shape gap) - typed via @types/node",
+      "observed": "function",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "UP-init",
+      "api": "URLPattern",
+      "source": "node url.d.ts",
+      "docSays": "URLPatternInit object form ({ pathname: \"/users/:id\" })",
+      "observed": "123",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "UP-test",
+      "api": "test",
+      "source": "node url.d.ts",
+      "docSays": "test: boolean match",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "UP-exec",
+      "api": "exec",
+      "source": "node url.d.ts",
+      "docSays": "exec: result with pathname.groups",
+      "observed": "123",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "UP-regex",
+      "api": "hasRegExpGroups",
+      "source": "node url.d.ts",
+      "docSays": "hasRegExpGroups: true with regex groups",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "UP-components",
+      "api": "pathname",
+      "source": "node url.d.ts",
+      "docSays": "component getters: protocol/hostname/port/pathname/search/hash",
+      "observed": "/files/*",
+      "verdict": "CONSISTENT"
     }
   ],
   "coverageGaps": [
@@ -467,7 +515,6 @@
     {
       "surface": "Serve.HostnamePortServeOptions",
       "gaps": [
-        "hostname",
         "reusePort",
         "ipv6Only",
         "http1",
@@ -495,6 +542,12 @@
         "raw",
         "finalize",
         "toString"
+      ]
+    },
+    {
+      "surface": "URLPatternInit",
+      "gaps": [
+        "baseURL"
       ]
     }
   ]

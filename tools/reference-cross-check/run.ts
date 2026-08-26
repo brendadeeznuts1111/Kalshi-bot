@@ -13,7 +13,7 @@
  * ledger is broken). Discrepancies and coverage gaps are informational.
  */
 import { join } from 'node:path';
-import { locateBundleRoot, readFile, interfaceFields, interfaceFieldsContaining, classMembers } from './docs-parser.ts';
+import { locateBundleRoot, locateCachePackage, readFile, interfaceFields, interfaceFieldsContaining, classMembers } from './docs-parser.ts';
 import { loadEvidence } from './evidence-loader.ts';
 import { LEDGER, checkClaim, EXTRA_GROUNDED, coverageGaps, type CheckResult } from './compare.ts';
 import { writeJsonReport, renderSection9, appendSection9, type CrossCheckMeta } from './reporter.ts';
@@ -28,12 +28,14 @@ export async function runCrossCheck(): Promise<number> {
   const mdx = await readFile(mdxPath);
   const serveDts = await readFile(join(bundle, 'serve.d.ts'));
   const sqliteDts = await readFile(join(bundle, 'sqlite.d.ts'));
+  const nodeTypesRoot = locateCachePackage(ROOT, '@types+node@');
+  const nodeUrlDts = await readFile(join(nodeTypesRoot, '@types/node', 'url.d.ts'));
   const ev = await loadEvidence(join(ROOT, 'tools/build-artifact-evidence.json'));
 
   // ledger checks
   const checks: CheckResult[] = [];
   for (const claim of LEDGER) {
-    const src = claim.source === 'serve.d.ts' ? serveDts : claim.source === 'sqlite.d.ts' ? sqliteDts : claim.source.endsWith('.mdx') ? mdx : dts;
+    const src = claim.source === 'serve.d.ts' ? serveDts : claim.source === 'sqlite.d.ts' ? sqliteDts : claim.source === 'node url.d.ts' ? nodeUrlDts : claim.source.endsWith('.mdx') ? mdx : dts;
     checks.push(checkClaim(claim, src, ev));
   }
 
@@ -55,6 +57,8 @@ export async function runCrossCheck(): Promise<number> {
   declared['Serve.UnixServeOptions'] = interfaceFields(serveDts, 'UnixServeOptions');
   declared['bun:sqlite.Database'] = classMembers(sqliteDts, 'Database');
   declared['bun:sqlite.Statement'] = classMembers(sqliteDts, 'Statement');
+  declared['URLPattern'] = interfaceFields(nodeUrlDts, 'URLPattern');
+  declared['URLPatternInit'] = interfaceFields(nodeUrlDts, 'URLPatternInit');
   const gaps = coverageGaps(declared, covered);
 
   const meta: CrossCheckMeta = {

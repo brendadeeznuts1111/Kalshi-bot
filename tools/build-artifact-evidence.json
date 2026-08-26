@@ -307,6 +307,40 @@
     },
     "backupAbsent": true
   },
+  "urlPatternGotchas": {
+    "global": {
+      "typeof": "function",
+      "importableFromBun": "undefined"
+    },
+    "objectForm": {
+      "test": true,
+      "id": "123"
+    },
+    "nonMatch": {
+      "test": false,
+      "execNull": true
+    },
+    "stringBaseWildcard": {
+      "groups0": "a/b"
+    },
+    "componentMatch": {
+      "all": true,
+      "wrongPort": false,
+      "hashIgnored": true
+    },
+    "regexGroup": {
+      "hasRegExpGroups": true,
+      "groups0": "42"
+    },
+    "optionalParam": {
+      "noTrailingSlash": true,
+      "trailingSlash": false,
+      "withValue": true
+    },
+    "componentGetters": {
+      "pathname": "/files/*"
+    }
+  },
   "scenarios": [
     {
       "name": "S01-artifact-surface",
@@ -753,7 +787,7 @@
         {
           "path": "outbc/pure.js.jsc",
           "kind": "bytecode",
-          "hash": "dsvr5bnh",
+          "hash": "x3wvz8rh",
           "loader": "file",
           "size": 10944,
           "type": "application/octet-stream",

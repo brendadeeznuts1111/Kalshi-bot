@@ -662,6 +662,38 @@ const sqliteGotchas = {
 };
 sq2.close();
 
+// ---------- urlPatternGotchas: URLPattern Web API (178) - runtime global, NOT in bun-types ----------
+const upGlobal = typeof URLPattern === 'function';
+const upBunImport = typeof (await import('bun') as any).URLPattern;
+const upObj = new URLPattern({ pathname: '/users/:id' });
+const upObjTest = upObj.test('https://example.com/users/123');
+const upObjId = upObj.exec('https://example.com/users/123')?.pathname.groups.id;
+const upNonTest = upObj.test('https://example.com/other');
+const upNonExec = upObj.exec('https://example.com/other') === null;
+const upWild = new URLPattern('/files/*', 'https://example.com').exec('https://example.com/files/a/b')?.pathname.groups[0];
+const upComp = new URLPattern({ protocol: 'https', hostname: 'example.com', port: '8080', pathname: '/x', search: 'q=1' });
+const upCompAll = upComp.test('https://example.com:8080/x?q=1');
+const upCompPort = upComp.test('https://example.com:9999/x?q=1');
+const upCompHash = upComp.test('https://example.com:8080/x?q=1#h');
+const upRe = new URLPattern({ pathname: '/users/(\\d+)' });
+const upReGroups = upRe.hasRegExpGroups;
+const upRe0 = upRe.exec('https://e.com/users/42')?.pathname.groups[0];
+const upOpt = new URLPattern({ pathname: '/users/:id?' });
+const upOptNoSlash = upOpt.test('https://e.com/users');
+const upOptSlash = upOpt.test('https://e.com/users/');
+const upOptVal = upOpt.test('https://e.com/users/5');
+const upGetters = { protocol: upWild ? '' : '', pathname: new URLPattern({ pathname: '/files/*' }).pathname };
+const urlPatternGotchas = {
+  global: { typeof: upGlobal ? 'function' : 'undefined', importableFromBun: String(upBunImport) },
+  objectForm: { test: upObjTest, id: upObjId },
+  nonMatch: { test: upNonTest, execNull: upNonExec },
+  stringBaseWildcard: { groups0: upWild },
+  componentMatch: { all: upCompAll, wrongPort: upCompPort, hashIgnored: upCompHash },
+  regexGroup: { hasRegExpGroups: upReGroups, groups0: upRe0 },
+  optionalParam: { noTrailingSlash: upOptNoSlash, trailingSlash: upOptSlash, withValue: upOptVal },
+  componentGetters: { pathname: upGetters.pathname },
+};
+
 // ---------- emit ----------
 const evidence = {
   tool: 'tools/build-artifact-evidence.ts',
@@ -677,6 +709,7 @@ const evidence = {
   configGapsGotchas,
   serveGotchas,
   sqliteGotchas,
+  urlPatternGotchas,
   scenarios,
 };
 await Bun.write(EVIDENCE, JSON.stringify(evidence, null, 2) + '\n');

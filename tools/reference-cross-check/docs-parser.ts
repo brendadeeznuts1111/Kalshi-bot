@@ -20,6 +20,15 @@ export function locateBundleRoot(ROOT: string): string {
   return join(cacheRoot, dir, 'node_modules/bun-types');
 }
 
+export function locateCachePackage(ROOT: string, prefix: string): string {
+  const cacheRoot = join(ROOT, 'node_modules/.bun-cache/links');
+  const dir = readdirSync(cacheRoot)
+    .filter((d) => d.startsWith(prefix))
+    .sort()[0];
+  if (!dir) throw new Error('no cached package ' + prefix + ' under ' + cacheRoot);
+  return join(cacheRoot, dir, 'node_modules');
+}
+
 export async function getAllMdx(bundleRoot: string): Promise<string[]> {
   const files: string[] = [];
   for await (const f of new Glob('docs/**/*.mdx').scan({ cwd: bundleRoot, absolute: true })) files.push(f);

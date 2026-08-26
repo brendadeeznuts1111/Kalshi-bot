@@ -553,7 +553,7 @@ Sources: bundled bun-types@1.4.0 (bun-types@1.4.0-c0dadede486f49ab) docs + `bun.
 PINNED-DISCREPANCY (doc says X, observed Y — our correction), DOC-CHANGED (fragment missing —
 the pin premise moved; re-verify), NO-EVIDENCE (ledger path broken).
 
-**Verdict summary:** 53 claims · 47 CONSISTENT · 6 PINNED-DISCREPANCY · 0 DOC-CHANGED · 0 NO-EVIDENCE.
+**Verdict summary:** 59 claims · 53 CONSISTENT · 6 PINNED-DISCREPANCY · 0 DOC-CHANGED · 0 NO-EVIDENCE.
 
 ### BuildArtifact
 
@@ -633,12 +633,24 @@ the pin premise moved; re-verify), NO-EVIDENCE (ledger path broken).
 | `SQ-close` | `close` | `sqlite.d.ts` | close: later queries throw | Cannot use a closed database | CONSISTENT |
 | `SQ-constraint` | `run` | `sqlite.d.ts` | constraint violations carry a SQLITE_* code | SQLITE_CONSTRAINT_PRIMARYKEY | CONSISTENT |
 
+### URLPattern
+
+| Claim | API | Source | Doc says | Observed | Verdict |
+|---|---|---|---|---|---|
+| `UP-global` | `URLPattern` | `node url.d.ts` | URLPattern is a runtime global (Web API); NOT declared in bun-types (shape gap) - typed via @types/node | function | CONSISTENT |
+| `UP-init` | `URLPattern` | `node url.d.ts` | URLPatternInit object form ({ pathname: "/users/:id" }) | 123 | CONSISTENT |
+| `UP-test` | `test` | `node url.d.ts` | test: boolean match | true | CONSISTENT |
+| `UP-exec` | `exec` | `node url.d.ts` | exec: result with pathname.groups | 123 | CONSISTENT |
+| `UP-regex` | `hasRegExpGroups` | `node url.d.ts` | hasRegExpGroups: true with regex groups | true | CONSISTENT |
+| `UP-components` | `pathname` | `node url.d.ts` | component getters: protocol/hostname/port/pathname/search/hash | /files/* | CONSISTENT |
+
 ### Coverage gaps — declared but not evidence-grounded
 
 - `BuildConfig`: fragment, sideEffects
 - `Serve.BaseServeOptions`: maxRequestBodySize, id
-- `Serve.HostnamePortServeOptions`: hostname, reusePort, ipv6Only, http1, idleTimeout
+- `Serve.HostnamePortServeOptions`: reusePort, ipv6Only, http1, idleTimeout
 - `Serve.UnixServeOptions`: unix
 - `bun:sqlite.Database`: loadExtension, setCustomSQLite, fileControl
 - `bun:sqlite.Statement`: iterate, raw, finalize, toString
+- `URLPatternInit`: baseURL
 

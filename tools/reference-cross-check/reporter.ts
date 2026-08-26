@@ -42,6 +42,7 @@ const SURFACES: [string, string][] = [
   ['IM', 'Bun.Image'],
   ['SV', 'Bun.serve'],
   ['SQ', 'bun:sqlite'],
+  ['UP', 'URLPattern'],
 ];
 
 export function renderSection9(checks: CheckResult[], gaps: CoverageGap[], meta: CrossCheckMeta): string {
