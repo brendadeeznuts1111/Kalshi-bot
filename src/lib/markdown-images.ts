@@ -93,13 +93,15 @@ async function processOne(
     if (!(await file.exists())) return null;
     input = await file.arrayBuffer();
   }
+  // Single decode: metadata() does not consume the instance — resize/webp
+  // chain off the SAME Image (probe-verified; write() returns bytes written).
   const img = new Bun.Image(input);
+  const meta = await img.metadata();
   const width = opts.maxWidth ?? 1200;
   const outName = basename(src, extname(src)) + '-' + fileToken(src) + '-' + width + '.webp';
   mkdirSync(opts.outDir, { recursive: true });
   const dest = join(opts.outDir, outName);
   const written = await img.resize(width).webp({ quality: opts.quality ?? 80 }).write(dest);
-  const meta = await new Bun.Image(input).metadata();
   const prefix = opts.urlPrefix ?? basename(opts.outDir);
   return { src, url: prefix + '/' + outName, width: meta.width, height: meta.height, bytes: written };
 }
