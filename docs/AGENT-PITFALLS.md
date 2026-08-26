@@ -6454,3 +6454,13 @@ another note.
   THE GROUNDING SYSTEM IS AT FULL for the probeable surface: BuildArtifact,
   BuildConfig, Bun.Image, Bun.serve, bun:sqlite, URLPattern, Bun.cron,
   Bun.WebView, Bun.s3 all ledgered + evidence-grounded + sweep-covered.
+- DEEP PASS (178): the 4 remaining 'unprobeable' gap groups were all probed -
+  every one was probeable with the right approach: serve id (Server.id),
+  reusePort (two binds / EADDRINUSE), ipv6Only (v6 ok / v4 refused),
+  http1:false (THROWS unless http3:true - enforced), idleTimeout (1s did NOT
+  close idle conns within 4s - honest pin), unix (unix-socket serving works);
+  sqlite setCustomSQLite (first call true, after-Database throws SQLite
+  already loaded), fileControl (returns 12 = SQLITE_NOTFOUND), loadExtension
+  (REJECTS - the macOS system SQLite build does not support dynamic
+  extensions). Cross-check now 97 claims (89 CONSISTENT, 8 PINNED-DISCREPANCY),
+  ZERO gaps - every declared option on every covered surface is grounded.

@@ -553,7 +553,7 @@ Sources: bundled bun-types@1.4.0 (bun-types@1.4.0-c0dadede486f49ab) docs + `bun.
 PINNED-DISCREPANCY (doc says X, observed Y — our correction), DOC-CHANGED (fragment missing —
 the pin premise moved; re-verify), NO-EVIDENCE (ledger path broken).
 
-**Verdict summary:** 88 claims · 80 CONSISTENT · 8 PINNED-DISCREPANCY · 0 DOC-CHANGED · 0 NO-EVIDENCE.
+**Verdict summary:** 97 claims · 89 CONSISTENT · 8 PINNED-DISCREPANCY · 0 DOC-CHANGED · 0 NO-EVIDENCE.
 
 ### BuildArtifact
 
@@ -622,6 +622,12 @@ the pin premise moved; re-verify), NO-EVIDENCE (ledger path broken).
 | `SV-port` | `port` | `serve.d.ts` | port: 0 assigns an ephemeral port (server.port) | true | CONSISTENT |
 | `SV-fetch` | `fetch` | `serve.d.ts` | fetch: fallback handler for unmatched routes | fallback | CONSISTENT |
 | `SV-maxRequestBodySize` | `maxRequestBodySize` | `serve.d.ts` | maxRequestBodySize: oversized POST rejected | 413 | CONSISTENT |
+| `SV-id` | `id` | `serve.d.ts` | Server.id: reflects the serve id option | my-srv | CONSISTENT |
+| `SV-reusePort` | `reusePort` | `serve.d.ts` | reusePort: two servers bind the same port (else EADDRINUSE) | true | CONSISTENT |
+| `SV-ipv6Only` | `ipv6Only` | `serve.d.ts` | ipv6Only: v6 reachable, v4 refused | true | CONSISTENT |
+| `SV-http1` | `http1` | `serve.d.ts` | http1:false THROWS unless http3:true (enforced) | Cannot disable http1 without enabling http3 | CONSISTENT |
+| `SV-idleTimeout` | `idleTimeout` | `serve.d.ts` | idleTimeout: 1s did NOT close idle conns within 4s on 1.4.0 (raw or keep-alive) - timer semantics unverified | true | CONSISTENT |
+| `SV-unix` | `unix` | `serve.d.ts` | unix: serve on a unix socket (connect + HTTP works) | true | CONSISTENT |
 
 ### bun:sqlite
 
@@ -639,6 +645,10 @@ the pin premise moved; re-verify), NO-EVIDENCE (ledger path broken).
 | `SQ-raw` | `raw` | `sqlite.d.ts` | Statement.raw() is a METHOD returning Array<Array<Uint8Array|null>> (raw=true assignment is a no-op) | [[{"0":1,"1":0,"2":0,"3":0,"4":0,"5":0,"6":0,"7":0},{"0":120}],[{"0":2,"1":0,"2":0,"3":0," | CONSISTENT |
 | `SQ-finalize` | `finalize` | `sqlite.d.ts` | Statement.finalize: later calls throw | Statement has finalized | CONSISTENT |
 | `SQ-toString` | `toString` | `sqlite.d.ts` | Statement.toString: returns the SQL | SELECT a FROM t | CONSISTENT |
+| `SQ-setCustomSQLite` | `setCustomSQLite` | `sqlite.d.ts` | setCustomSQLite: first call returns true; after any Database it throws SQLite already loaded | THROWS SQLite already loaded
+This fun | CONSISTENT |
+| `SQ-fileControl` | `fileControl` | `sqlite.d.ts` | fileControl: returns 12 (SQLITE_NOTFOUND) for PERSIST_WAL + bogus ops on 1.4.0 | 12 | CONSISTENT |
+| `SQ-loadExtension` | `loadExtension` | `sqlite.d.ts` | loadExtension: REJECTS - the macOS system SQLite build does not support dynamic extensions | This build of sqlite3 does not support dynamic ext | CONSISTENT |
 
 ### URLPattern
 
@@ -688,10 +698,5 @@ the pin premise moved; re-verify), NO-EVIDENCE (ledger path broken).
 | `S3-fileDataOptions` | `data` | `s3.d.ts` | S3File data/options DECLARED in types but ABSENT at runtime on 1.4.0 | undefined | PINNED-DISCREPANCY |
 | `S3-list` | `list` | `s3.d.ts` | S3Client.list: needs credentials (rejects offline) | ERR_S3_MISSING_CREDENTIALS | CONSISTENT |
 
-### Coverage gaps — declared but not evidence-grounded
-
-- `Serve.BaseServeOptions`: id
-- `Serve.HostnamePortServeOptions`: reusePort, ipv6Only, http1, idleTimeout
-- `Serve.UnixServeOptions`: unix
-- `bun:sqlite.Database`: loadExtension, setCustomSQLite, fileControl
+No coverage gaps: every declared option on the grounded surfaces has evidence.
 

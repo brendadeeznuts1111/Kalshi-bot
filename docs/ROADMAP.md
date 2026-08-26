@@ -80,4 +80,4 @@ bun run serve
 | [`AUDIT_ADAPTER.md`](AUDIT_ADAPTER.md) | Evidence export + integrity |
 | [`CRON.md`](CRON.md) | OS-level scheduling |
 | [`BUN_NATIVE.md`](BUN_NATIVE.md) | Bun API map |
-| [`BUN_BUILD_FINDINGS.md`](BUN_BUILD_FINDINGS.md) | Bun API findings grounded on 1.4.0: BuildArtifact, BuildConfig, Bun.Image, Bun.serve, bun:sqlite, URLPattern, Bun.cron, Bun.WebView, Bun.s3 — 88 cross-check claims, 8 pinned discrepancies, 4 unprobeable pins (178) |
+| [`BUN_BUILD_FINDINGS.md`](BUN_BUILD_FINDINGS.md) | Bun API findings grounded on 1.4.0: 9 surfaces — 97 cross-check claims (89 CONSISTENT, 8 PINNED-DISCREPANCY), ZERO coverage gaps (178; deep pass closed the last 4) |

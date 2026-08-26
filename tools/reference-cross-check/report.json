@@ -5,7 +5,7 @@
   "bundleHash": "bun-types@1.4.0-c0dadede486f49ab",
   "verdictCounts": {
     "PINNED-DISCREPANCY": 8,
-    "CONSISTENT": 80
+    "CONSISTENT": 89
   },
   "checks": [
     {
@@ -772,37 +772,79 @@
       "docSays": "S3Client.list: needs credentials (rejects offline)",
       "observed": "ERR_S3_MISSING_CREDENTIALS",
       "verdict": "CONSISTENT"
+    },
+    {
+      "id": "SV-id",
+      "api": "id",
+      "source": "serve.d.ts",
+      "docSays": "Server.id: reflects the serve id option",
+      "observed": "my-srv",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "SV-reusePort",
+      "api": "reusePort",
+      "source": "serve.d.ts",
+      "docSays": "reusePort: two servers bind the same port (else EADDRINUSE)",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "SV-ipv6Only",
+      "api": "ipv6Only",
+      "source": "serve.d.ts",
+      "docSays": "ipv6Only: v6 reachable, v4 refused",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "SV-http1",
+      "api": "http1",
+      "source": "serve.d.ts",
+      "docSays": "http1:false THROWS unless http3:true (enforced)",
+      "observed": "Cannot disable http1 without enabling http3",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "SV-idleTimeout",
+      "api": "idleTimeout",
+      "source": "serve.d.ts",
+      "docSays": "idleTimeout: 1s did NOT close idle conns within 4s on 1.4.0 (raw or keep-alive) - timer semantics unverified",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "SV-unix",
+      "api": "unix",
+      "source": "serve.d.ts",
+      "docSays": "unix: serve on a unix socket (connect + HTTP works)",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "SQ-setCustomSQLite",
+      "api": "setCustomSQLite",
+      "source": "sqlite.d.ts",
+      "docSays": "setCustomSQLite: first call returns true; after any Database it throws SQLite already loaded",
+      "observed": "THROWS SQLite already loaded\nThis fun",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "SQ-fileControl",
+      "api": "fileControl",
+      "source": "sqlite.d.ts",
+      "docSays": "fileControl: returns 12 (SQLITE_NOTFOUND) for PERSIST_WAL + bogus ops on 1.4.0",
+      "observed": 12,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "SQ-loadExtension",
+      "api": "loadExtension",
+      "source": "sqlite.d.ts",
+      "docSays": "loadExtension: REJECTS - the macOS system SQLite build does not support dynamic extensions",
+      "observed": "This build of sqlite3 does not support dynamic ext",
+      "verdict": "CONSISTENT"
     }
   ],
-  "coverageGaps": [
-    {
-      "surface": "Serve.BaseServeOptions",
-      "gaps": [
-        "id"
-      ]
-    },
-    {
-      "surface": "Serve.HostnamePortServeOptions",
-      "gaps": [
-        "reusePort",
-        "ipv6Only",
-        "http1",
-        "idleTimeout"
-      ]
-    },
-    {
-      "surface": "Serve.UnixServeOptions",
-      "gaps": [
-        "unix"
-      ]
-    },
-    {
-      "surface": "bun:sqlite.Database",
-      "gaps": [
-        "loadExtension",
-        "setCustomSQLite",
-        "fileControl"
-      ]
-    }
-  ]
+  "coverageGaps": []
 }

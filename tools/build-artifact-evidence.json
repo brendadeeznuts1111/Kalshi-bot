@@ -459,7 +459,7 @@
     },
     "reloadOk": true,
     "scrollToSelectorBased": true,
-    "resizeOk": false
+    "resizeOk": true
   },
   "s3Gotchas": {
     "fileSurface": {
@@ -489,6 +489,26 @@
       "stat": "ERR_S3_MISSING_CREDENTIALS",
       "exists": "ERR_S3_MISSING_CREDENTIALS",
       "presign": "ERR_S3_MISSING_CREDENTIALS"
+    }
+  },
+  "deepPassGotchas": {
+    "serve": {
+      "id": "my-srv",
+      "reusePortTwoBind": true,
+      "noReusePortSecondBind": "EADDRINUSE",
+      "ipv6Only": {
+        "v6Works": true,
+        "v4Fails": true
+      },
+      "http1FalseThrows": "Cannot disable http1 without enabling http3",
+      "idleTimeout1sNotClosedIn4s": true,
+      "unixWorks": true
+    },
+    "sqlite": {
+      "setCustomSQLiteAfterDb": "THROWS SQLite already loaded\nThis fun",
+      "setCustomSQLiteFirstCallVerifiedStandalone": true,
+      "fileControlPersistWalReturns": 12,
+      "loadExtensionError": "This build of sqlite3 does not support dynamic ext"
     }
   },
   "scenarios": [
@@ -937,7 +957,7 @@
         {
           "path": "outbc/pure.js.jsc",
           "kind": "bytecode",
-          "hash": "w3hpc826",
+          "hash": "3vwz5h95",
           "loader": "file",
           "size": 10944,
           "type": "application/octet-stream",

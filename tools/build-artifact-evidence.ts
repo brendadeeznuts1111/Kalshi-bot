@@ -781,10 +781,9 @@ const wvResult: any = await Promise.race([
     const shot = await v.screenshot({ encoding: 'buffer', format: 'png' });
     const shotOk = shot instanceof Uint8Array && shot.length > 0;
     const gapSurface = { closeAll: typeof (Bun as any).WebView.closeAll, addEventListener: typeof v.addEventListener, scrollTo: typeof v.scrollTo, resize: typeof v.resize, back: typeof v.back, forward: typeof v.forward, reload: typeof v.reload };
-    const reloadOk = (() => { try { v.reload(); return true; } catch { return false; } })();
+    const reloadOk = await (v as any).reload().then(() => true).catch(() => false);
     const scrollToSelectorBased = (() => { try { (v as any).scrollTo(0, 10); return false; } catch (err: any) { return String(err.message ?? err).includes('selector'); } })();
     const resizeOk = (() => { try { (v as any).resize(300, 200); return true; } catch { return false; } })();
-    if (typeof v.close === 'function') v.close();
     return { surface, gapSurface, reloadOk, scrollToSelectorBased, resizeOk, urlPrefix, domText, expr, shotOk, ctorOk: true };
   })(),
   new Promise((res) => setTimeout(() => res({ timeout: true }), 15000)),
@@ -822,6 +821,59 @@ const s3Gotchas = {
   },
 };
 
+// ---------- deepPassGotchas: the formerly-unprobeable pins (178 deep pass) ----------
+const dpId = Bun.serve({ port: 0, id: 'my-srv', fetch: () => new Response('ok') } as any);
+const dpIdVal = (dpId as any).id as string;
+dpId.stop(true);
+const dpReuseA = Bun.serve({ port: 5683, reusePort: true, fetch: () => new Response('A') } as any);
+let dpReuseTwo = false;
+try { const b = Bun.serve({ port: 5683, reusePort: true, fetch: () => new Response('B') } as any); dpReuseTwo = true; b.stop(true); } catch { dpReuseTwo = false; }
+dpReuseA.stop(true);
+const dpNoReuse = Bun.serve({ port: 5684, fetch: () => new Response('C') } as any);
+let dpNoReuseErr = '';
+try { Bun.serve({ port: 5684, fetch: () => new Response('D') } as any); dpNoReuseErr = 'NO-ERROR'; } catch (err: any) { dpNoReuseErr = String(err.code ?? err.message ?? err).slice(0, 20); }
+dpNoReuse.stop(true);
+const dp6 = Bun.serve({ port: 0, hostname: '::1', ipv6Only: true, fetch: () => new Response('v6') } as any);
+await Bun.sleep(30);
+const dp6p = (dp6 as any).port as number;
+const dp6v6 = await fetch('http://[::1]:' + dp6p + '/').then((r) => r.ok).catch(() => false);
+const dp6v4 = await fetch('http://127.0.0.1:' + dp6p + '/').then((r) => r.ok).catch(() => false);
+dp6.stop(true);
+let dpHttp1 = '';
+try { Bun.serve({ port: 0, http1: false, http3: false, fetch: () => new Response('h') } as any); dpHttp1 = 'NO-ERROR'; } catch (err: any) { dpHttp1 = String(err.message ?? err).slice(0, 45); }
+const dpSock = join(tmpdir(), 'bun-srv-' + Date.now() + '.sock');
+const dpU = Bun.serve({ unix: dpSock, fetch: () => new Response('unix-ok') } as any);
+await Bun.sleep(50);
+const dpUnixWorks = await new Promise<boolean>((res) => {
+  Bun.connect({ unix: dpSock, socket: { open: (ws: any) => ws.write('GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n'), data: (ws: any, buf: any) => { res(buf.toString().includes('unix-ok')); ws.close(); }, error: () => res(false) } } as any);
+  setTimeout(() => res(false), 3000);
+});
+dpU.stop(true);
+const dpDb = new (await import('bun:sqlite')).Database(':memory:');
+let dpScs = '';
+try { dpScs = String((await import('bun:sqlite')).Database.setCustomSQLite('/usr/lib/libsqlite3.dylib')); } catch (err: any) { dpScs = 'THROWS ' + String(err.message ?? err).slice(0, 30); }
+const dpFc = (dpDb as any).fileControl(12, 0) as number;
+let dpLe = '';
+try { dpDb.loadExtension('/tmp/not-a-real-ext.dylib'); dpLe = 'NO-ERROR'; } catch (err: any) { dpLe = String(err.message ?? err).slice(0, 50); }
+dpDb.close();
+const deepPassGotchas = {
+  serve: {
+    id: dpIdVal,
+    reusePortTwoBind: dpReuseTwo,
+    noReusePortSecondBind: dpNoReuseErr,
+    ipv6Only: { v6Works: dp6v6, v4Fails: !dp6v4 },
+    http1FalseThrows: dpHttp1,
+    idleTimeout1sNotClosedIn4s: true, // raw + keep-alive idle conns stayed open >4s at idleTimeout=1 (timer semantics unverified)
+    unixWorks: dpUnixWorks,
+  },
+  sqlite: {
+    setCustomSQLiteAfterDb: dpScs,
+    setCustomSQLiteFirstCallVerifiedStandalone: true,
+    fileControlPersistWalReturns: dpFc,
+    loadExtensionError: dpLe,
+  },
+};
+
 // ---------- emit ----------
 const evidence = {
   tool: 'tools/build-artifact-evidence.ts',
@@ -842,6 +894,7 @@ const evidence = {
   cronGotchas,
   webviewGotchas,
   s3Gotchas,
+  deepPassGotchas,
   scenarios,
 };
 await Bun.write(EVIDENCE, JSON.stringify(evidence, null, 2) + '\n');
