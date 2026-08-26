@@ -745,7 +745,7 @@
     "xxeUnresolved": "{\"a\":\"&xxe;\"}",
     "importEvalToCompact": "{\"config\":{\"name\":\"demo\",\"port\":\"8080\"}}",
     "bundlerInlines": true,
-    "perf20kItemsMs": 6.1,
+    "perf20kItemsMs": 5.9,
     "perfVsDocs": "CONSISTENT (docs 27 ms for 2.2 MB)"
   },
   "artifactGotchas": {
@@ -782,6 +782,29 @@
     "missingThrows": "ENOENT",
     "appendNotSeen": "3:1,2,3",
     "nullClose": "ok"
+  },
+  "inspectGotchas": {
+    "surface": "function:function:symbol",
+    "customMatchesNode": true,
+    "tableRows": "┌───┬───────┬─────┬──────┐\n│   │ name  │ age │ team │\n├───┼───────┼─────┼──────┤\n│ 0 │ alice │ 30  │ red  │\n│ 1 │ bob   │ 25  │ blue │\n│ 2 │ carol │ 35  │ red  │\n└───┴───────┴─────┴──────┘\n",
+    "tablePropsFilter": "┌───┬───────┬──────┐\n│   │ name  │ team │\n├───┼───────┼──────┤\n│ 0 │ alice │ red  │\n│ 1 │ bob   │ blue │\n│ 2 │ carol │ red  │\n└───┴───────┴──────┘\n",
+    "tableColors": "┌───┬───────┬─────┬──────┐\n│ \u001b[0m\u001b[1m \u001b[0m │ \u001b[0m\u001b[1mname\u001b[0m  │ \u001b[0m\u001b[1mage\u001b[0m │ \u001b[0m\u001b[1mteam\u001b[0m │\n├───┼───────┼─────┼──────┤\n│ 0 │ alice │ \u001b[0m\u001b[33m30\u001b[0m  │ red  │\n│ 1 │ bob   │ \u001b[0m\u001b[33m25\u001b[0m  │ blue │\n│ 2 │ carol │ \u001b[0m\u001b[33m35\u001b[0m  │ red  │\n└───┴───────┴─────┴──────┘\n",
+    "tablePropsPlusColors": "┌───┬─────┐\n│ \u001b[0m\u001b[1m \u001b[0m │ \u001b[0m\u001b[1mage\u001b[0m │\n├───┼─────┤\n│ 0 │ \u001b[0m\u001b[33m30\u001b[0m  │\n│ 1 │ \u001b[0m\u001b[33m25\u001b[0m  │\n│ 2 │ \u001b[0m\u001b[33m35\u001b[0m  │\n└───┴─────┘\n",
+    "objectOfObjects": "┌───┬───┬───┐\n│   │ x │ y │\n├───┼───┼───┤\n│ a │ 1 │ 2 │\n│ b │ 3 │ 4 │\n└───┴───┴───┘\n",
+    "emptyArray": "┌───┐\n│   │\n├───┤\n└───┘\n",
+    "primitiveRows": "┌───┬────────┐\n│   │ Values │\n├───┼────────┤\n│ 0 │ alpha  │\n│ 1 │ beta   │\n└───┴────────┘\n",
+    "mixedRows": "┌───┬───┬────────┐\n│   │ k │ Values │\n├───┼───┼────────┤\n│ 0 │   │ 1      │\n│ 1 │   │ x      │\n│ 2 │   │ true   │\n│ 3 │   │ null   │\n│ 4 │ 1 │        │\n└───┴───┴────────┘\n",
+    "missingKeyBlank": "┌───┬───────┬──────┬──────┐\n│   │ name  │ nope │ team │\n├───┼───────┼──────┼──────┤\n│ 0 │ alice │      │ red  │\n│ 1 │ bob   │      │ blue │\n│ 2 │ carol │      │ red  │\n└───┴───────┴──────┴──────┘\n",
+    "stringPropsIgnored": "┌───┬───────┬─────┬──────┐\n│   │ name  │ age │ team │\n├───┼───────┼─────┼──────┤\n│ 0 │ alice │ 30  │ red  │\n│ 1 │ bob   │ 25  │ blue │\n│ 2 │ carol │ 35  │ red  │\n└───┴───────┴─────┴──────┘\n",
+    "depthDefault": "{\n  a: {\n    b: {\n      c: {\n        d: {\n          e: 1,\n        },\n      },\n    },\n  },\n}",
+    "depth2": "{\n  a: {\n    b: {\n      c: [Object ...],\n    },\n  },\n}",
+    "sortedTrue": "{\n  a: 2,\n  m: 3,\n  z: 1,\n}",
+    "sortedFalse": "{\n  z: 1,\n  a: 2,\n  m: 3,\n}",
+    "compactTrue": "{ a: [ 1, 2, 3 ], b: { c: 4 } }",
+    "compactFalse": "{\n  a: [ 1, 2, 3 ],\n  b: {\n    c: 4,\n  },\n}",
+    "colorsTrue": "{\n  \u001b[0ma\u001b[2m:\u001b[0m \u001b[0m\u001b[33m1\u001b[0m\u001b[0m\u001b[2m,\u001b[0m\n}",
+    "customUsedByInspect": "CUSTOM-VALUE",
+    "customNotUsedByTable": "┌───┬───┬────────────────────────────┐\n│   │ a │ nodejs.util.inspect.custom │\n├───┼───┼────────────────────────────┤\n│ 0 │ 1 │ [Function]                 │\n└───┴───┴────────────────────────────┘\n"
   },
   "scenarios": [
     {
@@ -1229,7 +1252,7 @@
         {
           "path": "outbc/pure.js.jsc",
           "kind": "bytecode",
-          "hash": "mngntktv",
+          "hash": "ry661ry8",
           "loader": "file",
           "size": 10944,
           "type": "application/octet-stream",

@@ -554,7 +554,7 @@ Sources: bundled bun-types@1.4.0 (bun-types@1.4.0-c0dadede486f49ab) docs + `bun.
 PINNED-DISCREPANCY (doc says X, observed Y — our correction), DOC-CHANGED (fragment missing —
 the pin premise moved; re-verify), NO-EVIDENCE (ledger path broken).
 
-**Verdict summary:** 167 claims · 159 CONSISTENT · 8 PINNED-DISCREPANCY · 0 DOC-CHANGED · 0 NO-EVIDENCE.
+**Verdict summary:** 173 claims · 165 CONSISTENT · 8 PINNED-DISCREPANCY · 0 DOC-CHANGED · 0 NO-EVIDENCE.
 
 ### BuildArtifact
 
@@ -743,6 +743,37 @@ This fun | CONSISTENT |
 | `MM-empty` | `mmap` | `bun.d.ts` | empty file -> SystemError EINVAL (observed code) | EINVAL | CONSISTENT |
 | `MM-missing` | `mmap` | `bun.d.ts` | missing file -> ENOENT (observed code) | ENOENT | CONSISTENT |
 | `MM-close` | `mmap` | `bun.d.ts` | close = set the array to null (no handle API); observed no-throw | ok | CONSISTENT |
+
+### Bun.inspect
+
+| Claim | API | Source | Doc says | Observed | Verdict |
+|---|---|---|---|---|---|
+| `IN-table` | `table` | `bun.d.ts` | Bun.inspect.table exists (namespace member, not in BunInspectOptions); box-drawing table with index column + header row | ┌───┬───────┬─────┬──────┐
+│   │ name  │ age │ team │
+├───┼───────┼─────┼──────┤
+│ 0 │ ali | CONSISTENT |
+| `IN-tableProps` | `table` | `bun.d.ts` | properties filter limits columns (missing keys render BLANK cells); a STRING properties arg is ignored (all columns shown) | ┌───┬───────┬──────┐
+│   │ name  │ team │
+├───┼───────┼──────┤
+│ 0 │ alice │ red  │
+│ 1 │  | CONSISTENT |
+| `IN-tableColors` | `table` | `bun.d.ts` | colors: true -> bold headers + yellow numbers (ANSI); works with properties filter too | ┌───┬───────┬─────┬──────┐
+│ [0m[1m [0m │ [0m[1mname[0m  │ [0m[1mage[0m │ [0m[1 | CONSISTENT |
+| `IN-tableShapes` | `table` | `bun.d.ts` | object-of-objects -> outer keys as row labels; primitive arrays -> single Values column; mixed rows -> union (k + Values); empty -> minimal empty box | ┌───┬───┬───┐
+│   │ x │ y │
+├───┼───┼───┤
+│ a │ 1 │ 2 │
+│ b │ 3 │ 4 │
+└───┴───┴───┘
+ | CONSISTENT |
+| `IN-options` | `depth` | `bun.d.ts` | BunInspectOptions: colors/depth/sorted/compact ALL work; depth truncates with [Object ...], sorted reorders keys, compact:true single-line vs false expanded | {
+  a: {
+    b: {
+      c: [Object ...],
+    },
+  },
+} | CONSISTENT |
+| `IN-custom` | `custom` | `bun.d.ts` | inspect.custom === Symbol.for("nodejs.util.inspect.custom") (Node parity); plain inspect CALLS it (CUSTOM-VALUE); table does NOT (symbol shows as a column / [Function]) | true | CONSISTENT |
 
 No coverage gaps: every declared option on the grounded surfaces has evidence.
 

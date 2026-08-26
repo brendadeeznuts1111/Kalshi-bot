@@ -1252,6 +1252,36 @@ const mmapGotchas = {
     return 'ok';
   })(),
 };
+// ---------- inspectGotchas: Bun.inspect + Bun.inspect.table (options + table surface) ----------
+const inspectFn = (Bun as any).inspect;
+const inspectRows = [{ name: 'alice', age: 30, team: 'red' }, { name: 'bob', age: 25, team: 'blue' }, { name: 'carol', age: 35, team: 'red' }];
+const inspectDeep = { a: { b: { c: { d: { e: 1 } } } } };
+const inspectUnsorted = { z: 1, a: 2, m: 3 };
+const inspectCustomObj: any = { a: 1 };
+inspectCustomObj[Symbol.for('nodejs.util.inspect.custom')] = () => 'CUSTOM-VALUE';
+const inspectGotchas = {
+  surface: typeof inspectFn + ':' + typeof inspectFn.table + ':' + typeof inspectFn.custom,
+  customMatchesNode: inspectFn.custom === Symbol.for('nodejs.util.inspect.custom'),
+  tableRows: inspectFn.table(inspectRows),
+  tablePropsFilter: inspectFn.table(inspectRows, ['name', 'team']),
+  tableColors: inspectFn.table(inspectRows, { colors: true }),
+  tablePropsPlusColors: inspectFn.table(inspectRows, ['age'], { colors: true }),
+  objectOfObjects: inspectFn.table({ a: { x: 1, y: 2 }, b: { x: 3, y: 4 } }),
+  emptyArray: inspectFn.table([]),
+  primitiveRows: inspectFn.table(['alpha', 'beta']),
+  mixedRows: inspectFn.table([1, 'x', true, null, { k: 1 }]),
+  missingKeyBlank: inspectFn.table(inspectRows, ['name', 'nope', 'team']),
+  stringPropsIgnored: inspectFn.table(inspectRows, 'name'),
+  depthDefault: inspectFn(inspectDeep),
+  depth2: inspectFn(inspectDeep, { depth: 2 }),
+  sortedTrue: inspectFn(inspectUnsorted, { sorted: true }),
+  sortedFalse: inspectFn(inspectUnsorted, { sorted: false }),
+  compactTrue: inspectFn({ a: [1, 2, 3], b: { c: 4 } }, { compact: true }),
+  compactFalse: inspectFn({ a: [1, 2, 3], b: { c: 4 } }, { compact: false }),
+  colorsTrue: inspectFn({ a: 1 }, { colors: true }),
+  customUsedByInspect: inspectFn(inspectCustomObj),
+  customNotUsedByTable: inspectFn.table([inspectCustomObj]),
+};
 // ---------- emit ----------
 const evidence = {
   tool: 'tools/build-artifact-evidence.ts',
@@ -1284,6 +1314,7 @@ const evidence = {
   artifactGotchas,
   yamlGotchas,
   mmapGotchas,
+  inspectGotchas,
   scenarios,
 };
 await Bun.write(EVIDENCE, JSON.stringify(evidence, null, 2) + '\n');

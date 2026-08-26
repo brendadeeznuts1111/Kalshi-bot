@@ -5,7 +5,7 @@
   "bundleHash": "bun-types@1.4.0-c0dadede486f49ab",
   "verdictCounts": {
     "PINNED-DISCREPANCY": 8,
-    "CONSISTENT": 159
+    "CONSISTENT": 165
   },
   "checks": [
     {
@@ -1290,7 +1290,7 @@
       "api": "parse",
       "source": "docs/runtime/xml.mdx",
       "docSays": "performance: SIMD parse of a ~2 MB doc measured on this machine (docs claim 27 ms for 2.2 MB)",
-      "observed": 6.1,
+      "observed": 5.9,
       "verdict": "CONSISTENT"
     },
     {
@@ -1403,6 +1403,54 @@
       "source": "bun.d.ts",
       "docSays": "close = set the array to null (no handle API); observed no-throw",
       "observed": "ok",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "IN-table",
+      "api": "table",
+      "source": "bun.d.ts",
+      "docSays": "Bun.inspect.table exists (namespace member, not in BunInspectOptions); box-drawing table with index column + header row",
+      "observed": "┌───┬───────┬─────┬──────┐\n│   │ name  │ age │ team │\n├───┼───────┼─────┼──────┤\n│ 0 │ alice │ 30  │ red  │\n│ 1 │ bob   │ 25  │ blue │\n│ 2 │ carol │ 35  │ red  │\n└───┴───────┴─────┴──────┘\n",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "IN-tableProps",
+      "api": "table",
+      "source": "bun.d.ts",
+      "docSays": "properties filter limits columns (missing keys render BLANK cells); a STRING properties arg is ignored (all columns shown)",
+      "observed": "┌───┬───────┬──────┐\n│   │ name  │ team │\n├───┼───────┼──────┤\n│ 0 │ alice │ red  │\n│ 1 │ bob   │ blue │\n│ 2 │ carol │ red  │\n└───┴───────┴──────┘\n",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "IN-tableColors",
+      "api": "table",
+      "source": "bun.d.ts",
+      "docSays": "colors: true -> bold headers + yellow numbers (ANSI); works with properties filter too",
+      "observed": "┌───┬───────┬─────┬──────┐\n│ \u001b[0m\u001b[1m \u001b[0m │ \u001b[0m\u001b[1mname\u001b[0m  │ \u001b[0m\u001b[1mage\u001b[0m │ \u001b[0m\u001b[1mteam\u001b[0m │\n├───┼───────┼─────┼──────┤\n│ 0 │ alice │ \u001b[0m\u001b[33m30\u001b[0m  │ red  │\n│ 1 │ bob   │ \u001b[0m\u001b[33m25\u001b[0m  │ blue │\n│ 2 │ carol │ \u001b[0m\u001b[33m35\u001b[0m  │ red  │\n└───┴───────┴─────┴──────┘\n",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "IN-tableShapes",
+      "api": "table",
+      "source": "bun.d.ts",
+      "docSays": "object-of-objects -> outer keys as row labels; primitive arrays -> single Values column; mixed rows -> union (k + Values); empty -> minimal empty box",
+      "observed": "┌───┬───┬───┐\n│   │ x │ y │\n├───┼───┼───┤\n│ a │ 1 │ 2 │\n│ b │ 3 │ 4 │\n└───┴───┴───┘\n",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "IN-options",
+      "api": "depth",
+      "source": "bun.d.ts",
+      "docSays": "BunInspectOptions: colors/depth/sorted/compact ALL work; depth truncates with [Object ...], sorted reorders keys, compact:true single-line vs false expanded",
+      "observed": "{\n  a: {\n    b: {\n      c: [Object ...],\n    },\n  },\n}",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "IN-custom",
+      "api": "custom",
+      "source": "bun.d.ts",
+      "docSays": "inspect.custom === Symbol.for(\"nodejs.util.inspect.custom\") (Node parity); plain inspect CALLS it (CUSTOM-VALUE); table does NOT (symbol shows as a column / [Function])",
+      "observed": true,
       "verdict": "CONSISTENT"
     }
   ],

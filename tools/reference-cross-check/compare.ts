@@ -210,6 +210,12 @@ export const LEDGER: LedgerClaim[] = [
   { id: 'MM-empty', api: 'mmap', source: 'bun.d.ts', fragment: 'It does not support empty files. It throws a `SystemError` with `EINVAL`', docSays: 'empty file -> SystemError EINVAL (observed code)', evidencePath: 'mmapGotchas.emptyThrows', kind: 'consistent' },
   { id: 'MM-missing', api: 'mmap', source: 'bun.d.ts', fragment: 'Open a file as a live-updating `Uint8Array`', docSays: 'missing file -> ENOENT (observed code)', evidencePath: 'mmapGotchas.missingThrows', kind: 'consistent' },
   { id: 'MM-close', api: 'mmap', source: 'bun.d.ts', fragment: 'To close the file, set the array to `null`', docSays: 'close = set the array to null (no handle API); observed no-throw', evidencePath: 'mmapGotchas.nullClose', kind: 'consistent' },
+  { id: 'IN-table', api: 'table', source: 'bun.d.ts', fragment: 'function table(tabularData: object | unknown[], properties?: string[], options?: { colors?: boolean }): string', docSays: 'Bun.inspect.table exists (namespace member, not in BunInspectOptions); box-drawing table with index column + header row', evidencePath: 'inspectGotchas.tableRows', kind: 'consistent' },
+  { id: 'IN-tableProps', api: 'table', source: 'bun.d.ts', fragment: 'properties?: string[]', docSays: 'properties filter limits columns (missing keys render BLANK cells); a STRING properties arg is ignored (all columns shown)', evidencePath: 'inspectGotchas.tablePropsFilter', kind: 'consistent' },
+  { id: 'IN-tableColors', api: 'table', source: 'bun.d.ts', fragment: 'options?: { colors?: boolean }', docSays: 'colors: true -> bold headers + yellow numbers (ANSI); works with properties filter too', evidencePath: 'inspectGotchas.tableColors', kind: 'consistent' },
+  { id: 'IN-tableShapes', api: 'table', source: 'bun.d.ts', fragment: 'Like {@link console.table}, except it returns a string', docSays: 'object-of-objects -> outer keys as row labels; primitive arrays -> single Values column; mixed rows -> union (k + Values); empty -> minimal empty box', evidencePath: 'inspectGotchas.objectOfObjects', kind: 'consistent' },
+  { id: 'IN-options', api: 'depth', source: 'bun.d.ts', fragment: 'The depth of the inspection', docSays: 'BunInspectOptions: colors/depth/sorted/compact ALL work; depth truncates with [Object ...], sorted reorders keys, compact:true single-line vs false expanded', evidencePath: 'inspectGotchas.depth2', kind: 'consistent' },
+  { id: 'IN-custom', api: 'custom', source: 'bun.d.ts', fragment: 'const custom: typeof import("util").inspect.custom', docSays: 'inspect.custom === Symbol.for("nodejs.util.inspect.custom") (Node parity); plain inspect CALLS it (CUSTOM-VALUE); table does NOT (symbol shows as a column / [Function])', evidencePath: 'inspectGotchas.customMatchesNode', kind: 'consistent' },
 ];
 
 /** APIs with grounded evidence but no ledger row (fit/filter/quality/... come from the probe gates). */
@@ -236,6 +242,7 @@ export const EXTRA_GROUNDED: string[] = [
   'writer', 'exists', 'stat',
   'stringify', 'XML', 'sourcemap', 'path',
   'sync', 'shared', 'offset', 'size', 'mmap',
+  'inspect', 'sorted', 'compact', 'custom', 'table',
 ];
 
 export function checkClaim(claim: LedgerClaim, sourceText: string, ev: Evidence): CheckResult {

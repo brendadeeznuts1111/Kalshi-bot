@@ -88,6 +88,8 @@ export async function runCrossCheck(): Promise<number> {
   declared['Bun.YAML'] = ['parse', 'stringify']; // curated - namespace (like markdown)
   declared['Bun.mmap'] = ['mmap']; // function surface
   declared['Bun.MMapOptions'] = interfaceFields(dts, 'MMapOptions');
+  declared['Bun.inspect'] = ['inspect', 'custom', 'table']; // function + namespace surface
+  declared['BunInspectOptions'] = interfaceFields(dts, 'BunInspectOptions');
   declared['Bun.which'] = ['which'];
   declared['Bun.peek'] = ['peek', 'status'];
   declared['Bun.sleep'] = ['sleep', 'sleepSync'];

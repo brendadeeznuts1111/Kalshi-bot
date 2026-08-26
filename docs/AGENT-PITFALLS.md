@@ -216,6 +216,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §198 — Bun.YAML grounded — YAML 1.2 semantics confirmed (159 claims) (2026-08-26)
 - §200 — Bun.mmap grounded — live-updating Uint8Array + MAP_SHARED write-through (2026-08-26)
 - §201 — Live consensus stream — ConsensusTracker wired into a repeated-snapshot consumer (2026-08-26)
+- §202 — Bun.inspect + inspect.table — table options (properties filter + colors) grounded (2026-08-26)
 - §199 — ui:regen CLI — regenerate UI artifacts from meta/variant sources + the Bun.$ template failure class (2026-08-26)
 - §187 — Extended color formats — kernel-only (lch/oklab/oklch/hsv) + inverse parsers (2026-08-26)
 - §188 — Watermark pipeline — ML-DSA key naming + WebView/Blob verified facts (2026-08-26)
@@ -7167,3 +7168,26 @@ pushes.
 
 
 
+
+
+## 202. Bun.inspect + inspect.table grounded - table options (properties filter + colors), namespace custom symbol (2026-08-26)
+
+Bun.inspect surface grounded (IN-table/tableProps/tableColors/tableShapes/options/
+custom; evidence block inspectGotchas; tests bun-inspect-coverage, 7). Cross-check:
+173 claims (165 CONSISTENT / 8 PINNED-DISCREPANCY), gaps 0.
+- Bun.inspect is a function; Bun.inspect.table + Bun.inspect.custom live on a
+  namespace (NOT in BunInspectOptions - the options interface is colors/depth/
+  sorted/compact only).
+- inspect.table(data, properties?, { colors }?) - properties is an ARRAY of
+  column names (missing keys render BLANK cells; a STRING is ignored -> all
+  columns); colors:true -> bold headers + YELLOW numbers (ANSI).
+- Table shapes: object-of-objects -> outer keys as row labels; primitive arrays
+  -> single Values column; mixed rows -> union (k + Values); empty -> minimal
+  empty box; box-drawing with index column + trailing newline.
+- BunInspectOptions ALL work: depth truncates with [Object ...], sorted reorders
+  keys, compact:true single-line vs false expanded, colors ANSI.
+- inspect.custom === Symbol.for(nodejs.util.inspect.custom) (Node parity);
+  plain inspect CALLS it (CUSTOM-VALUE), inspect.table does NOT (the symbol key
+  surfaces as its own column).
+  Repo adoption: findings:term/alpha:cluster --styled already use ANSI;
+  inspect.table is the zero-dep pretty-printer for CLI summaries.
