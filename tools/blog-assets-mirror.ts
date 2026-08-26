@@ -13,6 +13,7 @@
  * mirror is bootstrapped, existing-but-different fails with a regen pointer.
  */
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
+import { sha256Hex, fromBunFile } from '../src/lib/artifact.ts';
 import { join } from 'node:path';
 
 const ROOT = join(import.meta.dir, '..');
@@ -72,6 +73,9 @@ export function generate(): { files: Record<string, string>; manifest: Record<st
     },
     sections,
     files: copied.sort(),
+    // artifact-manifest: per-file SHA-256 (the artifact interface, §194) so any
+    // consumer can validate a served file against the manifest without recompute.
+    hashes: Object.fromEntries(copied.sort().map((f) => [f, sha256Hex(Buffer.from(files[f]!, 'utf8'))])),
     generatedBy: 'bun run blog:assets (tools/blog-assets-mirror.ts)',
   };
   files['index.json'] = JSON.stringify(manifest, null, 2) + '\n';

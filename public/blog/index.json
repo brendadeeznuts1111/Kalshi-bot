@@ -88,5 +88,10 @@
     "blog-map.md",
     "bun-release-1.4.md"
   ],
+  "hashes": {
+    "blog-map.json": "19859f4012aeeba9f809954e8602f9dfa64c96787126ecf4ca4af14040e0d2cd",
+    "blog-map.md": "1713372d8af9fff86ee0152db70b4cdab38fc14312b636a217321f7b936e17c5",
+    "bun-release-1.4.md": "dba642f0835bae34b567b08a930e8e838b0bb1ee999f255784d79b83bb22c1b5"
+  },
   "generatedBy": "bun run blog:assets (tools/blog-assets-mirror.ts)"
 }
