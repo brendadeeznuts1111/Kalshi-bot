@@ -296,6 +296,7 @@ Details: [`docs/CRON.md`](docs/CRON.md) · Bun map: [`docs/BUN_NATIVE.md`](docs/
 - [`docs/BUN_TECH_STACK.md`](docs/BUN_TECH_STACK.md) — Bun-native stack checklist (grounded)
 - [`docs/BUN_NATIVE.md`](docs/BUN_NATIVE.md) — API map + utils/markdown deep-dive
 - [`docs/BUN_SHELL.md`](docs/BUN_SHELL.md) — `Bun.$` patterns
+- [`docs/BUN_BUILD_FINDINGS.md`](docs/BUN_BUILD_FINDINGS.md) — BuildArtifact/BuildConfig findings grounded on 1.4.0 artifacts
 - [`docs/PARTNER-EXECUTION-EXPANSION.md`](docs/PARTNER-EXECUTION-EXPANSION.md) — Telegram → partner authorization → Kalshi, with honest Polymarket expansion gates
 
 ## Dependency rule

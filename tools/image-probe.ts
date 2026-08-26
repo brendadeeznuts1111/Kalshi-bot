@@ -178,6 +178,125 @@ await new Image(SRC).resize(10).write(extPath);
 const extBytes = readFileSync(extPath);
 check("P22 extension infers format (.jpg -> jpeg)", extBytes[0] === 0xff && extBytes[1] === 0xd8, "no encode method needed");
 
+// ── §177 refactor additions: Blob#image() gotchas + BuildArtifact.image() ──
+
+// P23: BuildArtifact has NO .image() at runtime and is NOT instanceof Blob -
+// bun-types says 'extends Blob', but the runtime artifact is Blob-CONFORMANT
+// (type-level inheritance does NOT carry to runtime; S01 in BUN_BUILD_FINDINGS).
+const artDir = join(dir, 'art');
+const artEntry = join(dir, 'art.ts');
+writeFileSync(artEntry, 'export const x = 1;\n');
+const artRes = await Bun.build({ entrypoints: [artEntry], outdir: artDir });
+const art = artRes.outputs[0] as any;
+check('P23 BuildArtifact.image() ABSENT (instanceof Blob false)', typeof art.image === 'undefined' && art instanceof Blob === false, 'image=' + typeof art.image + ' isBlob=' + (art instanceof Blob));
+
+// P24: the real Blob#image() / Bun.file().image() surface (where the gotchas live).
+const plainBlob = new Blob([readFileSync(SRC)]);
+check('P24 Blob#image() + Bun.file().image() exist', typeof (plainBlob as any).image === 'function' && typeof (Bun.file(SRC) as any).image === 'function', 'blob=' + typeof (plainBlob as any).image + ' file=' + typeof (Bun.file(SRC) as any).image);
+
+// P25: format detection is by CONTENT, not extension or Content-Type.
+const fakeJpg = join(dir, 'fake.jpg');
+writeFileSync(fakeJpg, readFileSync(SRC));
+const sniffFile = await (Bun.file(fakeJpg) as any).image().metadata();
+const sniffBlob = await (new Blob([readFileSync(SRC)], { type: 'image/jpeg' }) as any).image().metadata();
+check('P25 content sniffing (.jpg file + image/jpeg Blob -> png)', sniffFile.format === 'png' && sniffBlob.format === 'png', 'file=' + sniffFile.format + ' blob=' + sniffBlob.format);
+
+// P26: maxPixels decompression-bomb guard - boundary is EXACTLY 2^28 pixels.
+const crcTable = (() => { const t = new Int32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c; } return t; })();
+const crc32 = (buf: Uint8Array) => { let c = 0xffffffff; for (const b of buf) c = crcTable[(c ^ b) & 0xff] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
+const pngChunk = (type: string, data: Buffer) => { const len = Buffer.alloc(4); len.writeUInt32BE(data.length); const t = Buffer.from(type, 'ascii'); const crc = Buffer.alloc(4); crc.writeUInt32BE(crc32(Buffer.concat([t, data]))); return Buffer.concat([len, t, data, crc]); };
+const mkHugePng = (w: number, h: number) => { const sig = Buffer.from('89504e470d0a1a0a', 'hex'); const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4); ihdr[8] = 8; ihdr[9] = 6; const idat = Buffer.from('789c63600000020001000a39', 'hex'); return Buffer.concat([sig, pngChunk('IHDR', ihdr), pngChunk('IDAT', idat), pngChunk('IEND', Buffer.alloc(0))]); };
+const pxCode = async (w: number, h: number) => { try { await new Image(mkHugePng(w, h)).metadata(); return 'OK'; } catch (e) { return (e as any).code; } };
+const underCap = await pxCode(16383, 16383);
+const atCap = await pxCode(16384, 16384);
+const bomb = await pxCode(40000, 40000);
+check('P26 maxPixels default 268402689 (16383^2 ok, 16384^2 rejects)', underCap === 'OK' && atCap === 'ERR_IMAGE_TOO_MANY_PIXELS' && bomb === 'ERR_IMAGE_TOO_MANY_PIXELS', '16383^2=' + underCap + ' 16384^2=' + atCap + ' 40000^2=' + bomb);
+
+// P27: lazy pipeline - .image() runs nothing; only terminals decode/throw.
+const GARB = join(dir, 'garbage.png');
+writeFileSync(GARB, 'not an image');
+let lazySurface = false;
+try { const im = (Bun.file(GARB) as any).image(); lazySurface = typeof im.resize === 'function' && typeof im.metadata === 'function'; } catch { lazySurface = false; }
+let garbCode = '';
+try { await (Bun.file(GARB) as any).image().metadata(); } catch (e: any) { garbCode = e.code ?? String(e); }
+check('P27 lazy (.image() no-op; terminal throws)', lazySurface && garbCode === 'ERR_IMAGE_UNKNOWN_FORMAT', 'lazy=' + lazySurface + ' terminal=' + garbCode);
+
+// P28: Response(img) - content-type + body; encode runs via terminal.
+let ct = ''; let len = 0; let rErr = '';
+try { const r = new Response((Bun.file(SRC) as any).image().resize(8, 8).png()); ct = r.headers.get('content-type') ?? 'none'; len = (await r.arrayBuffer()).byteLength; } catch (e: any) { rErr = e.code ?? String(e); }
+check('P28 Response(img) content-type + body', ct === 'image/png' && len > 0 && rErr === '', 'ct=' + ct + ' len=' + len + ' err=' + rErr);
+
+// ── §177 refactor: Image constructor gotchas (inputs, buffer guards, maxPixels, autoOrient) ──
+
+// P29: path strings are FILESYSTEM paths - an arbitrary-file-read primitive.
+let p29 = '';
+try { await new Image(join(dir, 'nope.png')).metadata(); p29 = 'no-error'; } catch (e: any) { p29 = e.code ?? String(e); }
+check('P29 path input = filesystem read (ENOENT when missing)', p29 === 'ENOENT', p29);
+
+// P30: SharedArrayBuffer + resizable ArrayBuffer rejected.
+const srcBytes = readFileSync(SRC);
+const sabU8 = new Uint8Array(new SharedArrayBuffer(srcBytes.length));
+sabU8.set(srcBytes);
+const resizAB = new ArrayBuffer(srcBytes.length, { maxByteLength: srcBytes.length * 2 });
+new Uint8Array(resizAB).set(srcBytes);
+const ctorCode = async (input: any, opts?: any): Promise<string> => { try { await new Image(input, opts).metadata(); return 'ok'; } catch (e: any) { return e.code ?? String(e); } };
+check('P30 shared + resizable ArrayBuffer rejected', (await ctorCode(sabU8)) === 'ERR_INVALID_ARG_TYPE' && (await ctorCode(resizAB)) === 'ERR_INVALID_ARG_TYPE', 'shared=' + (await ctorCode(sabU8)) + ' resizable=' + (await ctorCode(resizAB)));
+
+// P31: input transferred between ctor and terminal - OBSERVED code deviates from the docs.
+const tb = new ArrayBuffer(srcBytes.length);
+new Uint8Array(tb).set(srcBytes);
+const tImg = new Image(tb);
+structuredClone(tb, { transfer: [tb] });
+let p31 = '';
+try { await tImg.metadata(); p31 = 'ok'; } catch (e: any) { p31 = e.code ?? String(e); }
+check('P31 transferred buffer: observed ERR_IMAGE_UNKNOWN_FORMAT (docs say ERR_INVALID_STATE)', p31 === 'ERR_IMAGE_UNKNOWN_FORMAT', p31);
+
+// P32: maxPixels option override is honored.
+check('P32 maxPixels option (100: 10x10 ok, 11x11 rejects)', (await ctorCode(mkHugePng(10, 10), { maxPixels: 100 })) === 'ok' && (await ctorCode(mkHugePng(11, 11), { maxPixels: 100 })) === 'ERR_IMAGE_TOO_MANY_PIXELS', '10x10=' + (await ctorCode(mkHugePng(10, 10), { maxPixels: 100 })) + ' 11x11=' + (await ctorCode(mkHugePng(11, 11), { maxPixels: 100 })));
+
+// P33: autoOrient defaults to true - EXIF Orientation=6 applied (2x1 -> 1x2), disabled keeps raw.
+const jpeg33 = await new Image(SRC).jpeg({ quality: 90 }).bytes();
+const exif33 = Buffer.alloc(6 + 8 + 2 + 12 + 4);
+exif33.write('Exif\x00\x00', 0); exif33.write('II', 6); exif33.writeUInt16LE(42, 8); exif33.writeUInt32LE(8, 10); exif33.writeUInt16LE(1, 14); exif33.writeUInt16LE(0x0112, 16); exif33.writeUInt16LE(3, 18); exif33.writeUInt32LE(1, 20); exif33.writeUInt16LE(6, 24); exif33.writeUInt32LE(0, 28);
+const app133 = Buffer.alloc(2 + 2 + exif33.length);
+app133.writeUInt16BE(0xffe1, 0); app133.writeUInt16BE(2 + exif33.length, 2); exif33.copy(app133, 4);
+const exifJpeg = Buffer.concat([jpeg33.subarray(0, 2), app133, jpeg33.subarray(2)]);
+const m33d = await new Image(exifJpeg).metadata();
+const m33f = await new Image(exifJpeg, { autoOrient: false }).metadata();
+check('P33 autoOrient default true (EXIF orientation applied)', m33d.width === 1 && m33d.height === 2 && m33f.width === 2 && m33f.height === 1, 'default=' + m33d.width + 'x' + m33d.height + ' false=' + m33f.width + 'x' + m33f.height);
+
+// ── §177 refactor: Prisma Compute image-transformations claims ──
+
+// P34: withoutEnlargement prevents upscaling; resize(w,h) without fit stretches.
+const up34 = await new Image(SRC).resize(800, 600, { withoutEnlargement: true }).png().bytes();
+const st34 = await new Image(SRC).resize(800, 600).png().bytes();
+const upM34 = await new Image(up34).metadata();
+const stM34 = await new Image(st34).metadata();
+check('P34 withoutEnlargement (2x1 stays; no-fit stretches to 800x600)', upM34.width === 2 && upM34.height === 1 && stM34.width === 800 && stM34.height === 600, 'with=' + upM34.width + 'x' + upM34.height + ' without=' + stM34.width + 'x' + stM34.height);
+
+// P35: resize(width, undefined, options) - the applyResize helper pattern.
+let p35 = '';
+try { const b = await new Image(SRC).resize(800, undefined, { fit: 'inside', withoutEnlargement: true, filter: 'lanczos3' }).png().bytes(); const m = await new Image(b).metadata(); p35 = 'ok ' + m.width + 'x' + m.height; } catch (e: any) { p35 = 'ERR ' + (e.code ?? String(e)); }
+check('P35 resize(width, undefined, opts) accepted', p35.startsWith('ok'), p35);
+
+// P36: progressive JPEG = multi-scan (SOF2); baseline = SOF0 only.
+const hasM = (buf: Uint8Array, marker: number) => { for (let i = 0; i < buf.length - 1; i++) if (buf[i] === 0xff && buf[i + 1] === marker) return true; return false; };
+const prog36 = await new Image(SRC).jpeg({ quality: 80, progressive: true }).bytes();
+const base36 = await new Image(SRC).jpeg({ quality: 80 }).bytes();
+check('P36 progressive JPEG (SOF2) vs baseline (SOF0)', hasM(prog36, 0xc2) && hasM(base36, 0xc0) && !hasM(base36, 0xc2), 'progSOF2=' + hasM(prog36, 0xc2) + ' baseSOF0=' + hasM(base36, 0xc0) + ' baseSOF2=' + hasM(base36, 0xc2));
+
+// P37: palette PNG = indexed colour type 3.
+const pal37 = await new Image(SRC).png({ palette: true, colors: 64, dither: true }).bytes();
+const plain37 = await new Image(SRC).png().bytes();
+check('P37 palette PNG -> color type 3 (plain 6)', pal37[25] === 3 && plain37[25] === 6, 'palette=' + pal37[25] + ' plain=' + plain37[25]);
+
+// P38: Bun.s3 is an S3Client INSTANCE (not callable); Bun.s3.file().image() is the form; crop absent.
+const s3Client: any = (Bun as any).s3;
+let s3Call = 'callable';
+try { (Bun as any).s3('x'); } catch (e: any) { s3Call = 'NOT callable (S3Client instance)'; }
+const s3File = s3Client.file('x');
+check('P38 Bun.s3 is an S3Client (use .file()); crop absent', s3Call.startsWith('NOT') && typeof s3File.image === 'function' && typeof s3File.write === 'function' && typeof (new Image(SRC) as any).crop === 'undefined', s3Call + ' | file.image=' + typeof s3File.image + ' | crop=' + typeof (new Image(SRC) as any).crop);
+
 console.log("---");
 const fails = results.filter((r) => !r.pass);
 console.log("image:probe — " + (results.length - fails.length) + "/" + results.length + " pass" + (fails.length ? " · FAIL: " + fails.map((f) => f.name).join(", ") : ""));

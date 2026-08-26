@@ -4,6 +4,8 @@ This project is **Bun-native first**. Runtime dependencies are limited to the tw
 
 **Stack checklist (agents):** [`BUN_TECH_STACK.md`](BUN_TECH_STACK.md) — runtime, HTTP, DB, utils, markdown, production readiness mapped to this repo.
 
+**Grounded build/Image findings:** [`BUN_BUILD_FINDINGS.md`](BUN_BUILD_FINDINGS.md) — BuildArtifact / BuildConfig / Blob#image() / slice() / Image-constructor claims, all probe-grounded on 1.4.0 (AGENT-PITFALLS §177).
+
 **Rule:** before adding any package, check the [Bun API map](#bun-api-map) below — the runtime almost certainly already provides it.
 
 Canonical URLs (two planes — prefer both in `@see` when practical):

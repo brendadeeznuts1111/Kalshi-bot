@@ -8,22 +8,22 @@ without a runtime value; missing = declared value absent at runtime.
 
 | Token | Runtime | Types | Docs | Gate | Uses |
 |---|---|---|---|---|---|
-| `file` | function | y | y | fs:probe | 494 |
-| `write` | function | y | y | fs:probe | 281 |
-| `env` | object | y | y | runtime:probe | 239 |
+| `file` | function | y | y | fs:probe | 503 |
+| `write` | function | y | y | fs:probe | 297 |
+| `env` | object | y | y | runtime:probe | 240 |
 | `color` | function | y | y | ansi:probe | 134 |
-| `serve` | function | y | y | serve-tls/routes | 117 |
+| `serve` | function | y | y | serve-tls/routes | 121 |
 | `cron` | function | y | y | cron tests §126/128 | 105 |
+| `build` | function | y | y | build-deep:probe | 102 |
 | `argv` | object | y | y | runtime:probe | 89 |
 | `Image` | function | y | y | image:probe | 78 |
 | `spawnSync` | function | y | y | spawn:probe | 78 |
-| `build` | function | y | y | build-deep:probe | 77 |
 | `sleep` | function | y | y | runtime:probe | 73 |
 | `WebView` | function | y | y | runtime:probe | 68 |
 | `$` | function | y | y | shell:probe | 67 |
 | `Transpiler` | function | y | y | runtime:probe | 67 |
+| `version` | string | y | y | runtime:probe | 56 |
 | `Glob` | function | y | y | fsx:probe | 54 |
-| `version` | string | y | y | runtime:probe | 53 |
 | `inspect` | function | y | y | ansi:probe | 46 |
 | `spawn` | function | y | y | spawn:probe | 46 |
 | `escapeHTML` | function | y | y | ansi:probe | 45 |
@@ -37,9 +37,9 @@ without a runtime value; missing = declared value absent at runtime.
 | `TOML.parse` | function | y | y | format:probe (ns) | 24 |
 | `nanoseconds` | function | y | y | runtime:probe | 22 |
 | `XML.parse` | function | y | y | format:probe (ns) | 22 |
+| `revision` | string | y | y | runtime:probe | 21 |
 | `XML` | object | y | y | format:probe | 20 |
 | `markdown.html` | function | y | y | format:probe (ns) | 18 |
-| `revision` | string | y | y | runtime:probe | 18 |
 | `secrets` | object | y | y | net:probe | 17 |
 | `stripANSI` | function | y | y | ansi:probe | 15 |
 | `deepEquals` | function | y | y | crypto:probe | 14 |
@@ -91,6 +91,7 @@ without a runtime value; missing = declared value absent at runtime.
 | `JSONC` | object | y | n | format:probe | 3 |
 | `markdown.render` | function | y | y | format:probe (ns) | 3 |
 | `readableStreamToArrayBuffer` | function | y | y | runtime:probe | 3 |
+| `S3Client` | function | y | y | client-shape:probe | 3 |
 | `zstdDecompressSync` | function | y | y | fs:probe | 3 |
 | `ArrayBufferSink` | function | y | y | runtime:probe | 2 |
 | `deepMatch` | function | y | y | surface:probe | 2 |
@@ -105,7 +106,6 @@ without a runtime value; missing = declared value absent at runtime.
 | `pathToFileURL` | function | y | y | fsx:probe | 2 |
 | `readableStreamToText` | function | y | y | runtime:probe | 2 |
 | `RedisClient` | function | y | y | client-shape:probe | 2 |
-| `S3Client` | function | y | y | client-shape:probe | 2 |
 | `sleepSync` | function | y | y | runtime:probe | 2 |
 | `TOML.stringify` | function | y | y | format:probe (ns) | 2 |
 | `allocUnsafe` | function | y | y | surface:probe | 1 |
@@ -204,8 +204,8 @@ without a runtime value; missing = declared value absent at runtime.
 | `Build.CompileTarget` | type-only | y | y | undefined (ns) | 0 |
 | `Build.Libc` | type-only | y | n | undefined (ns) | 0 |
 | `Build.SIMD` | type-only | y | n | undefined (ns) | 0 |
-| `BuildArtifact` | type-only | y | n | GAP | 0 |
-| `BuildConfig` | type-only | y | n | GAP | 0 |
+| `BuildArtifact` | type-only | y | n | build-artifact:probe | 0 |
+| `BuildConfig` | type-only | y | n | build-artifact:probe | 0 |
 | `BuildMetafile` | type-only | y | n | GAP | 0 |
 | `BuildOutput` | type-only | y | n | GAP | 0 |
 | `BunLockFile` | type-only | y | n | GAP | 0 |

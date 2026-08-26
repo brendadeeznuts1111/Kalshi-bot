@@ -28,6 +28,7 @@ export const GATES: Record<string, string> = {
   postgres: "client-shape:probe", RedisClient: "client-shape:probe", s3: "client-shape:probe", S3Client: "client-shape:probe",
   randomUUIDv5: "surface:probe", readableStreamToArray: "surface:probe", readableStreamToBlob: "surface:probe", readableStreamToBytes: "surface:probe", readableStreamToJSON: "surface:probe",
   enableANSIColors: "ecosystem:probe", FFI: "ffi:probe",
+  BuildArtifact: "build-artifact:probe", BuildConfig: "build-artifact:probe",
 };
 
 /** Gate for a shape member: own entry, else namespace inheritance, else GAP. */

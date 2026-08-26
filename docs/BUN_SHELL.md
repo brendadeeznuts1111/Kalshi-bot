@@ -57,7 +57,7 @@ in-process side.
 
 - **Capture + exit code:** `.nothrow().quiet()` → `{ exitCode, stdout, stderr }` (Buffers).
 - **Live output (≈ `stdout: "inherit"`):** `$` without `.quiet()` streams to the parent **and** still returns captured Buffers — used by the cron jobs.
-- **stdin input:** no `.stdin()` method, and the callable-options form `$`cmd`({…})` does **not** exist in 1.4.0. Prefer JS-object redirection (verified): `$`cmd ${args} < ${Buffer.from(value)}`` feeds stdin, an empty buffer closes it immediately, and `< ${new Response(body)}` / `> ${Bun.file(path)}` also work. The `printf "%s" ${value} | cmd ${args}` pipe remains as a fallback.
+- **stdin input:** no `.stdin()` method, and the callable-options form `$`cmd`({…})` does **not** exist in 1.4.0 (the `$({…})`cmd`` object form throws too — chainable `.cwd()`/`.env()` are the supported options; pinned by shell:probe P13-P15). Prefer JS-object redirection (verified): `$`cmd ${args} < ${Buffer.from(value)}`` feeds stdin, an empty buffer closes it immediately, and `< ${new Response(body)}` / `> ${Bun.file(path)}` also work. The `printf "%s" ${value} | cmd ${args}` pipe remains as a fallback.
 - **NUL-delimited output:** `stdout.toString().split("\0").filter(Boolean)`.
 - **`.text()` / `.json()` throw on non-zero exit** — prefer `.nothrow()` unless the caller wants the exception.
 - **`.cwd(path)` / `.env({…})` methods exist;** array interpolation escapes each element as its own argv token.

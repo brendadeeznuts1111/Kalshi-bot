@@ -76,6 +76,19 @@ if (typeof dollar === "function") {
   // P12: $.escape/$.braces helpers + stderr/stdout separation (2>&1).
   const sep = await dollar`echo err-out 1>&2; echo out`.quiet();
   check("P12 helpers + stderr separation", typeof dollar.escape === "function" && typeof dollar.braces === "function" && sep.stdout.toString() === "out\n" && sep.stderr.toString() === "err-out\n", "esc=" + typeof dollar.escape + " brace=" + typeof dollar.braces);
+
+  // P13-P15 (177 refactor): BUN_SHELL.md pin-negatives — the claimed-absent forms
+  // must STAY absent, and the supported options pattern must work.
+  const sh = dollar`echo hi`;
+  check("P13 no .stdin() method on 1.4.0", typeof (sh as any).stdin === "undefined", "stdin=" + typeof (sh as any).stdin);
+  let callOptThrew = "";
+  try { await (dollar`echo hi` as any)({ quiet: true }); callOptThrew = "no-throw"; } catch (e) { callOptThrew = String((e as Error).message ?? e).slice(0, 40); }
+  let objFormThrew = "";
+  try { await (dollar as any)({ cwd: "/tmp" })`echo hi`; objFormThrew = "no-throw"; } catch (e) { objFormThrew = String((e as Error).message ?? e).slice(0, 40); }
+  check("P14 callable-options + object forms do NOT exist (chainable .cwd/.env instead)", callOptThrew !== "no-throw" && objFormThrew !== "no-throw", "call=" + callOptThrew.slice(0, 40) + " obj=" + objFormThrew.slice(0, 40));
+  const cwdOut = (await dollar`pwd`.cwd("/tmp").text()).trim();
+  const envOut = (await dollar`echo $SHELL_NEG_TEST`.env({ SHELL_NEG_TEST: "bar" } as any).text()).trim();
+  check("P15 .cwd()/.env() chainable methods exist and work", cwdOut === "/tmp" && envOut === "bar", "cwd=" + cwdOut + " env=" + envOut);
 }
 
 const failed = results.filter((r) => !r.pass);

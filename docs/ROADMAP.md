@@ -80,3 +80,4 @@ bun run serve
 | [`AUDIT_ADAPTER.md`](AUDIT_ADAPTER.md) | Evidence export + integrity |
 | [`CRON.md`](CRON.md) | OS-level scheduling |
 | [`BUN_NATIVE.md`](BUN_NATIVE.md) | Bun API map |
+| [`BUN_BUILD_FINDINGS.md`](BUN_BUILD_FINDINGS.md) | BuildArtifact/BuildConfig findings (grounded on 1.4.0) |

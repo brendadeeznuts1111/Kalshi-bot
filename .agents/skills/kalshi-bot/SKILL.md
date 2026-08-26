@@ -24,6 +24,7 @@ Bun-native project for discovering and ranking public Kalshi trading bots on Git
 | Roadmap, blockers, proof gates | `docs/ROADMAP.md` |
 | Build order, alpha doctrine, graduation gates | `.cursor/skills/plan/SKILL.md` |
 | Bun-native API map | `docs/BUN_NATIVE.md` |
+| Bun build artifact findings | `docs/BUN_BUILD_FINDINGS.md` |
 | Bun shell patterns | `docs/BUN_SHELL.md` |
 | Pipeline architecture | `docs/PLAN.md` |
 | Scoring factor stack | `docs/FACTOR_STACK.md` |

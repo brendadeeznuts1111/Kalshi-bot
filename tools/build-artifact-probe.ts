@@ -10,7 +10,10 @@
  *   P6 Response(artifact): Content-Type set; Cache-Control NOT; Etag
  *      NOT on 1.4.0 (§176 correction)
  *   P7 naming affects entrypoints only unless the object form
- * In-process (Bun.build API, no spawn). Own fixture dir.
+ * Plus evidence pinning (P17-P19, 177 refactor): the committed
+ * tools/build-artifact-evidence.json must match the runtime version
+ * and the live artifact surface; the findings doc must reference the
+ * pinned revision. In-process (Bun.build API, no spawn). Own fixture dir.
  */
 const results: { name: string; pass: boolean; detail: string }[] = [];
 const check = (name: string, pass: boolean, detail = "") => { results.push({ name, pass, detail }); console.log((pass ? "PASS" : "FAIL") + "  " + name + (detail ? "  - " + detail : "")); };
@@ -127,6 +130,33 @@ check("P16 default .xyz -> file-loader hashed asset", !!fileArt && fileArt.loade
 const ldText = await safe({ entrypoints: [F + "/d2.ts"], outdir: F + "/outld2", loader: { ".xyz": "text" } });
 const ldJs = ldText.ok ? await ldText.r.outputs[0].text() : "";
 check("P16a loader {.xyz: text} inlines the file (no artifact)", ldText.ok && ldText.r.outputs.length === 1 && ldJs.includes("BLOB-CONTENT-123"), "outputs=" + (ldText.ok ? ldText.r.outputs.length : ldText.err));
+
+// P17-P19: evidence pinning (177 refactor) - the committed evidence JSON
+// is the grounding for docs/BUN_BUILD_FINDINGS.md; it must stay in sync
+// with the installed runtime, else the gate fails.
+const evFile = JSON.parse(await Bun.file("tools/build-artifact-evidence.json").text());
+check("P17 evidence JSON matches runtime version/revision", evFile.bunVersion === Bun.version && evFile.bunRevision === Bun.revision, evFile.bunVersion + "@" + String(evFile.bunRevision).slice(0, 9));
+const evM = evFile.surface ? evFile.surface.methods : null;
+check("P18 evidence surface agrees with live artifact surface", evM !== null && evM.text === true && evM.bytes === false && evM.formData === false && evM.image === false && evM.instanceofBlob === false, evM ? JSON.stringify(evM) : "no surface in evidence");
+const docText = await Bun.file("docs/BUN_BUILD_FINDINGS.md").text();
+const revShort = String(evFile.bunRevision).slice(0, 9);
+check("P19 findings doc references the pinned revision", docText.includes(revShort) && docText.includes("## 1. BuildArtifact"), revShort);
+
+// P20-P22: BuildArtifact.slice() gotchas (177 refactor) - plain Blob return,
+// byte offsets, and the NEGATIVE-offset deviation with outdir.
+const sliceArt = withOut.outputs[0] as any;
+const sliceNoOutArt = noOut.outputs[0] as any;
+const sliceFullText = await sliceArt.text();
+const sliced = sliceArt.slice(0, 10) as any;
+const slicedAny = sliced as any;
+check("P20 slice returns a plain Blob (props lost)", typeof sliceArt.slice === 'function' && sliced instanceof Blob && slicedAny.kind === undefined && slicedAny.path === undefined && slicedAny.hash === undefined && slicedAny.loader === undefined && slicedAny.sourcemap === undefined && typeof sliced.bytes === 'function', "isBlob=" + (sliced instanceof Blob) + " bytes=" + typeof sliced.bytes);
+check("P21 byte offsets match Blob.slice for non-negative", (await sliceArt.slice(2, 6).text()) === sliceFullText.slice(2, 6) && (await sliceArt.slice(0, 10).text()) === (await new Blob([sliceFullText]).slice(0, 10).text()), JSON.stringify(await sliceArt.slice(2, 6).text()));
+const negW = (await sliceArt.slice(-4).text()).length;
+const negN = (await sliceNoOutArt.slice(-4).text()).length;
+const negB = (await new Blob([sliceFullText]).slice(-4).text()).length;
+const endW = (await sliceArt.slice(0, -4).text()).length;
+const endB = (await new Blob([sliceFullText]).slice(0, -4).text()).length;
+check("P22 NEGATIVE offsets deviate with outdir (docs corrected)", negW === 0 && negN === negB && negN === 4 && endW === sliceFullText.length && endB === sliceFullText.length - 4, "withOutdir slice(-4)=" + negW + " noOutdir=" + negN + " blob=" + negB + " slice(0,-4) withOutdir=" + endW + " blob=" + endB);
 
 const failed = results.filter((r) => !r.pass);
 console.log("build-artifact:probe - " + (results.length - failed.length) + "/" + results.length + " checks" + (failed.length ? " · FAIL: " + failed.map((f) => f.name).join(", ") : ""));

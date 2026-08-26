@@ -3329,6 +3329,11 @@ bun.sh -> 200. Probes now use `probeFetch`, not bare `fetch`.
 - Artifacts: tools/image-probe.ts, tests/lib/image-probe.test.ts (8
   tests), src/research/image-page.ts (/bun/image widget), verify:
   contracts 12/12.
+- Gotcha set + BuildArtifact.image()-absent pin (177 refactor): the
+  Blob#image() pipeline gotchas (lazy terminals, -1 dims, content
+  sniffing, maxPixels 2^28 boundary, format reuse, Response(img)) are
+  consolidated and evidence-grounded in docs/BUN_BUILD_FINDINGS.md §5;
+  BuildArtifact has NO .image() on 1.4.0 (image:probe P23).
 
 ## 71. Team-logo ingestion doc — rejected (no consumer), ONE error-code correction (2026-08-24)
 
@@ -5970,6 +5975,9 @@ another note.
   (sourcemaps are separate outputs with kind sourcemap) — the pasted
   "extends Blob ... .bytes()" and the sourcemap-field semantics are
   overstated.
+  SUPERSEDED: the BuildArtifact surface is consolidated, corrected, and
+  evidence-grounded in §177 / docs/BUN_BUILD_FINDINGS.md (S01 methods,
+  S04 sourcemap nesting). This P29-P32 bullet records the original era.
 - "Matches esbuild exactly" is NOT exact: inputs.imports entries are
   { path, kind, original } without the always-present external flag
   (external appears only on require-calls). The analyzer likely still
@@ -6242,6 +6250,8 @@ another note.
 - P4 PARTIAL: S3Client.stat returns a Promise and S3Stats declares
   etag: string (type-level confirmed); a live etag VALUE needs a real
   S3 object - not probed, honest pin.
+- BuildArtifact-side claims above are consolidated and evidence-grounded
+  in §177 / docs/BUN_BUILD_FINDINGS.md (S01 method surface, S04 sourcemap).
 - Grounds the repo's own conditional-request postures: serve.ts
   hand-rolls notModified()/If-None-Match for dynamic routes, and the
   route manifest marks /colors.css, /design-system.js etc cache: etag
@@ -6294,3 +6304,55 @@ another note.
   loader {.xyz: text} INLINES the file (no artifact) - the override
   consumes the file rather than producing a re-loader artifact.
 - verify:contracts 55/55 (header auto-synced).
+- REFACTOR (2026-08-25): findings consolidated and grounded with REAL
+  artifacts - docs/BUN_BUILD_FINDINGS.md (new) is regenerated from
+  tools/build-artifact-evidence.json (bun run build-artifact:evidence ->
+  build-artifact:findings): 42 scenarios in scratch/art-ground/, every
+  BuildArtifact property and BuildConfig option OBSERVED on live 1.4.0
+  (paths, hashes, sizes, MIME types, methods, compile executable bytes).
+  New corrections pinned by the evidence: outfile is INERT on the API
+  (bare-name output, nothing written; compile:{outfile} writes, S19/S07d);
+  env:'inline'/'disable'/'PREFIX_*' do NOT substitute process.env.X on
+  1.4.0 (S12 - use define for build-time constants); allowUnresolved only
+  the default '*' passes non-literal import() through - [] and glob lists
+  fail the build (S14); CSS assets report loader 'ts' on 1.4.0 (S01 quirk);
+  entry-point hash is identical across sourcemap modes despite different
+  output bytes (S04); compile:'bun' is invalid - target must start 'bun-'
+  (S07b); compile:true + outdir writes a ~64MB standalone executable with
+  kind still entry-point (S07a). Coverage matrix rows BuildArtifact /
+  BuildConfig now gate build-artifact:probe (not GAP); probe extended to
+  36/36 with evidence pinning (P17 evidence JSON matches runtime version/
+  revision, P18 live surface agrees with evidence, P19 findings doc
+  references the pinned revision).
+- Blob#image() + BuildArtifact.slice() gotchas grounded (docs/BUN_BUILD_FINDINGS.md §5-§6):
+  BuildArtifact.image() is ABSENT on 1.4.0 (P23, instanceof Blob false); the
+  Blob#image() pipeline gotchas apply to Blob/Bun.file().image(); maxPixels
+  guard boundary is EXACTLY 2^28 px (16384^2, P26); slice() returns a plain
+  Blob (props lost, .bytes() gained, P20), byte offsets match Blob (P21),
+  and NEGATIVE offsets deviate with outdir on 1.4.0 - negative start is
+  empty, negative end is ignored, while no-outdir artifacts are
+  spec-compliant (P22, docs/BUN_BUILD_FINDINGS.md §6 matrix); probe 36->39.
+- Image constructor gotchas grounded (docs/BUN_BUILD_FINDINGS.md §7, image:probe
+  41->46): path strings are FILESYSTEM reads (ENOENT when missing, P29);
+  SharedArrayBuffer + resizable buffers rejected (ERR_INVALID_ARG_TYPE, P30);
+  transferring the input buffer between ctor and terminal -> OBSERVED
+  ERR_IMAGE_UNKNOWN_FORMAT, deviating from the documented ERR_INVALID_STATE
+  (P31); maxPixels option honored (P32); autoOrient DEFAULTS TO true - EXIF
+  Orientation=6 spliced into a Bun-encoded JPEG rotates 2x1 -> 1x2 by
+  default, autoOrient:false keeps raw (P33). CORRECTED earlier wording: the
+  maxPixels default is 268402689 px (0x3FFF^2 = 16383^2, same as Sharp),
+  NOT 16384^2 - 16383^2 is accepted, 16384^2 rejects (strict exceeds).
+- Prisma Compute image-transformations guide claims grounded (docs/BUN_BUILD_FINDINGS.md
+  §8, image:probe 46->51): withoutEnlargement prevents upscaling (2x1 stays 2x1 at
+  800x600, P34); resize(width, undefined, opts) accepted (P35); progressive JPEG
+  emits SOF2 multi-scan (P36); palette PNG emits indexed color type 3 (P37);
+  CORRECTED: Bun.s3 is an S3Client INSTANCE, NOT callable - Bun.s3("key")
+  throws, use Bun.s3.file("key").image()/.write() (P38); crop/extract absent
+  (needs an external library); saturation-0 grayscale not directly verifiable
+  (no pixel-decode API on 1.4.0).
+- DOC-HYGIENE round (2026-08-25): docs/bun-v1.3.14-catalog.md DEPRECATED
+  (1.3.14-era; repo pins 1.4.0 — banner points to BUN_API_COVERAGE + BUN_BUILD_FINDINGS);
+  docs/BUN_NATIVE.md now links the findings doc; BUN_SHELL.md negative claims
+  gate-pinned (shell:probe 12->15): no .stdin() method (P13), callable-options
+  AND $({...})`cmd` object forms both throw on 1.4.0 — chainable .cwd()/.env()
+  are the supported options (P14/P15).

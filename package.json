@@ -290,6 +290,8 @@
     "shape:probe": "bun tools/shape-probe.ts",
     "etag:probe": "bun tools/etag-probe.ts",
     "build-artifact:probe": "bun tools/build-artifact-probe.ts",
+    "build-artifact:evidence": "bun tools/build-artifact-evidence.ts",
+    "build-artifact:findings": "bun tools/build-artifact-findings.ts",
     "module-shape:report": "bun tools/module-shape-report.ts",
     "repo-api:shape": "bun tools/repo-api-shape.ts",
     "docs:sync-counts": "bun tools/docs-sync-counts.ts",

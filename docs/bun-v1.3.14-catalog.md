@@ -1,5 +1,14 @@
 # Bun v1.3.14 — Verified Feature Catalog
 
+> **DEPRECATED (2026-08-25).** Historical catalog for the **1.3.14** era — the
+> repo now pins **bun@1.4.0** (`packageManager`), and the claims below were
+> verified against 1.3.14. Do not treat them as current. The 1.4.0 grounding:
+> [`docs/BUN_API_COVERAGE.md`](BUN_API_COVERAGE.md) (full shape matrix,
+> gate-pinned) · [`docs/BUN_BUILD_FINDINGS.md`](BUN_BUILD_FINDINGS.md)
+> (BuildArtifact/BuildConfig/Blob#image()/slice()/Image-constructor claims,
+> probe-grounded on 1.4.0) · `docs/AGENT-PITFALLS.md` §176-§177 (1.4.0 probe
+> ledger; §125 covers the fetch-h2 1.3.14→1.4.0 change).
+
 > **Scope.** Feature-by-feature catalog of the Bun v1.3.14 release, verified
 > **in-session against the installed binary** (`bun --version` → 1.3.14) and the
 > shipped `bun-types@1.3.14` declarations, with a web cross-check against the

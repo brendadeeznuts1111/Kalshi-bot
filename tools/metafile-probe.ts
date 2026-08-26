@@ -168,6 +168,7 @@ check("P28a metafile:false accepted (env gating)", resOff.success && resOff.meta
 // BuildArtifact is Blob-CONFORMANT but NOT instanceof Blob; .bytes()
 // does not exist on it; .sourcemap points at the CSS asset here (not
 // the .map); sourcemaps are separate outputs with kind sourcemap.
+// Consolidated + evidence-grounded: docs/BUN_BUILD_FINDINGS.md (177).
 const resArt = await Bun.build({ entrypoints: [F + "/entry.ts"], outdir: "scratch/mf-art/dist", minify: true, sourcemap: "external", naming: "x/[name]-[hash].[ext]" });
 const art = resArt.outputs[0] as any;
 check("P29 artifact kind/loader/hash", art.kind === "entry-point" && art.loader === "ts" && typeof art.hash === "string" && art.hash.length > 0, "kind=" + art.kind + " hash=" + art.hash);
