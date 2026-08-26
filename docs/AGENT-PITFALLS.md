@@ -233,6 +233,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §216 — Deeper 1.4 analysis audited — fs.rmdir({recursive}) removed (audit check #15), ML-KEM undefined, TOML v1.1 strict (2026-08-26)
 - §217 — Complete deep-dive audited — 'Zig to Rust rewrite' false; static-route If-Match/If-Unmodified-Since 412 verified (2026-08-26)
 - §218 — Why security wasn't secret+defined — SECRET_REGISTRY + argv-leak gate wired (2026-08-26)
+- §219 — Secret-leak audit gate — repo-wide plaintext-argv scan wired into pre-commit (2026-08-26)
 - §199 — ui:regen CLI — regenerate UI artifacts from meta/variant sources + the Bun.$ template failure class (2026-08-26)
 - §187 — Extended color formats — kernel-only (lch/oklab/oklch/hsv) + inverse parsers (2026-08-26)
 - §188 — Watermark pipeline — ML-DSA key naming + WebView/Blob verified facts (2026-08-26)
@@ -7637,6 +7638,33 @@ FIX (wired):
 - Tests: tests/lib/secret-registry.test.ts (5): policy enforcement,
   single-source-of-truth, unknown-name throw, argv leak scan.
   Gates: 2789 tests pass / 0 fail; breaking-audit 15 checks ok.
+
+
+
+## 219. Secret-leak audit GATE - repo-wide scan for plaintext-secret argv flags (2026-08-26)
+
+Deeper than S218's single-CLI gate: the argv-leak protection is now a
+REPO-WIDE gate wired into pre-commit + available as bun run secret:leak-audit.
+- src/lib/secret-leak-audit.ts: scanSecretLeaks(root) rg-scans tools/
+  scripts/ src/ CLI sources for secret-VALUE argv flags (--api-token=sk-1,
+  --key-secret PEM). PATH-taking flags (--key-file, --pem) are allowed -
+  the value is a path, not the secret. Values never appear in findings.
+- tools/secret-leak-audit-cli.ts (bun run secret:leak-audit): exits 1 with
+  findings; 0 when clean.
+- pre-commit CONDITIONAL gate: fires on src/lib/secret-*.ts, src/lib/
+  secrets.ts, tools/secret-leak-audit-cli.ts, tools/kalshi-secrets-cli.ts,
+  tools/kalshi-rotate-key.ts (scoped to avoid colliding with the per-tool
+  exact-path gates).
+- TRAPS hit (worth pinning): rgFiles exits 2 (EMPTY result) when ANY path
+  arg is missing - the scan filters to existing dirs; rgFiles returns
+  paths RELATIVE to root - resolve join(root, f) before readFileSync;
+  the scan itself must be excluded from its own results (scratch probes
+  tripped it during dev).
+- Verified clean: no secret values on any repo CLI argv. The Kalshi key
+  id path (--key-id) is a non-secret id; --pem/--key-file are paths.
+- Tests: tests/lib/secret-leak-audit.test.ts (3) + pre-commit.test.ts (13).
+  Gates: 2793 tests pass / 0 fail; breaking-audit 15 checks ok.
+
 
 
 

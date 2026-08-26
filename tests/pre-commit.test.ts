@@ -57,6 +57,12 @@ describe("resolveConditionalGates", () => {
     expect(resolveConditionalGates(["tools/bun-blog-map.ts"])).toEqual(["bun:blog-map"]);
   });
 
+  test("fires secret:leak-audit on secrets machinery changes (S219)", () => {
+    expect(resolveConditionalGates(["src/lib/secret-registry.ts"])).toEqual(["secret:leak-audit"]);
+    expect(resolveConditionalGates(["src/lib/secrets.ts"])).toEqual(["secret:leak-audit"]);
+    expect(resolveConditionalGates(["tools/kalshi-secrets-cli.ts"])).toEqual(["secret:leak-audit"]);
+  });
+
   test("fires content:check on content files + manifest + prune source", () => {
     // content/ paths also match assets:check (posts scanned for images)
     expect(resolveConditionalGates(["content/posts/hello-world.md"])).toContain("content:check");

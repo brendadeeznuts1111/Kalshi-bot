@@ -305,6 +305,7 @@
     "ui:watch": "bun tools/ui-regen-cli.ts --watch",
     "alpha:cluster": "bun tools/alpha-cluster-cli.ts",
     "alpha:consensus:watch": "bun tools/alpha-consensus-watch.ts",
+    "secret:leak-audit": "bun tools/secret-leak-audit-cli.ts",
     "agent:schedule:register": "bun tools/agent-schedule-cli.ts register",
     "agent:schedule:remove": "bun tools/agent-schedule-cli.ts remove",
     "agent:schedule:preview": "bun tools/agent-schedule-cli.ts preview",

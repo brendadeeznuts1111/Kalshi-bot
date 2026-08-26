@@ -59,6 +59,21 @@ export const CONDITIONAL_GATES: ReadonlyArray<{ script: string; paths: readonly 
     ],
   },
   {
+    script: "secret:leak-audit",
+    // S219: changes to the secrets machinery or the shared argv parser can
+    // introduce (or miss) plaintext-secret argv flags. Scoped to the
+    // security-critical files so it doesn't collide with the per-tool
+    // exact-path gates below.
+    paths: [
+      "src/lib/secret-registry.ts",
+      "src/lib/secret-leak-audit.ts",
+      "src/lib/secrets.ts",
+      "tools/secret-leak-audit-cli.ts",
+      "tools/kalshi-secrets-cli.ts",
+      "tools/kalshi-rotate-key.ts",
+    ],
+  },
+  {
     script: "deps:check",
     // Lockfile health on the same manifest files: dedupe --check (no
     // duplicate versions) + prune --dry-run (no stale packages). Both
