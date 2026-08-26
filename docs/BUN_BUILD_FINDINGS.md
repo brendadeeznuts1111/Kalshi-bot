@@ -554,7 +554,7 @@ Sources: bundled bun-types@1.4.0 (bun-types@1.4.0-c0dadede486f49ab) docs + `bun.
 PINNED-DISCREPANCY (doc says X, observed Y — our correction), DOC-CHANGED (fragment missing —
 the pin premise moved; re-verify), NO-EVIDENCE (ledger path broken).
 
-**Verdict summary:** 116 claims · 108 CONSISTENT · 8 PINNED-DISCREPANCY · 0 DOC-CHANGED · 0 NO-EVIDENCE.
+**Verdict summary:** 121 claims · 113 CONSISTENT · 8 PINNED-DISCREPANCY · 0 DOC-CHANGED · 0 NO-EVIDENCE.
 
 ### BuildArtifact
 
@@ -722,6 +722,11 @@ This fun | CONSISTENT |
 | `MD-tagFilter` | `tagFilter` | `bun.d.ts` | tagFilter: true escapes GFM-disallowed tags (script/style/iframe); allowed tags (table/div) untouched; function form ignored (type is boolean) | true | CONSISTENT |
 | `MD-noHtmlBlocks` | `noHtmlBlocks` | `bun.d.ts` | noHtmlBlocks: raw HTML block passthrough stops (block becomes a paragraph with inline HTML); with noHtmlSpans fully escaped | true | CONSISTENT |
 | `MD-hardSoftBreaks` | `hardSoftBreaks` | `bun.d.ts` | hardSoftBreaks NO effect on 1.4.0: plain newline preserved in <p>; trailing-space <br> occurs without the option | true | CONSISTENT |
+| `MD-reactProps` | `react` | `bun.d.ts` | react overrides receive element props in the tree: h1 id, a href/title, pre language, li checked, ol start, th/td align, img src/title/alt (code key applies to INLINE code; fenced blocks are pre-only) | true | CONSISTENT |
+| `MD-renderOmit` | `render` | `bun.d.ts` | render callbacks: returning null/undefined omits the element (sole heading -> empty output) | true | CONSISTENT |
+| `MD-renderPassthrough` | `render` | `bun.d.ts` | render: no callbacks -> children pass through (inline flattens to text; table keeps its source) | true | CONSISTENT |
+| `MD-listDepth` | `list` | `bun.d.ts` | render list meta depth verified: 0/1/2 for nested lists; hr callback receives empty children; ordered start from marker (3. -> 3); ul has no start | 2,1,0 | CONSISTENT |
+| `MD-inputTypes` | `html` | `bun.d.ts` | html/render/react accept TypedArray (Uint8Array) and ArrayBuffer inputs | true | CONSISTENT |
 
 No coverage gaps: every declared option on the grounded surfaces has evidence.
 

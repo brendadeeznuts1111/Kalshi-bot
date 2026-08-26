@@ -566,7 +566,15 @@
       "imageSrcTitle": "src=img.png:title=t",
       "hrBlockquote": "aHRBQ(q)",
       "htmlBlockFires": true,
-      "htmlInlineNotFired": true
+      "htmlInlineNotFired": true,
+      "nullOmits": true,
+      "undefinedOmits": true,
+      "noCallbacksPassthrough": true,
+      "noCallbacksTableSource": true,
+      "hrChildrenEmpty": true,
+      "nestedListDepths": "2,1,0",
+      "orderedStart3": "s=3",
+      "ulNoStart": "start=undefined"
     },
     "reactOverrides": {
       "h1Override": true,
@@ -574,7 +582,18 @@
       "v18Symbol": true,
       "v19Symbol": true,
       "secondArgIsOverrides": true,
-      "fnOverrideIdentity": true
+      "fnOverrideIdentity": true,
+      "propsFlow": {
+        "h1Id": true,
+        "aHrefTitle": true,
+        "preLanguage": true,
+        "liChecked": true,
+        "olStart": true,
+        "thAlign": true,
+        "imgAlt": true,
+        "codeAppliesToInline": true,
+        "fencedIsPreOnly": true
+      }
     },
     "ansiTheme": {
       "columnsWrap": true,
@@ -582,6 +601,11 @@
       "kittyGraphicsAccepted": true,
       "lightNoObservedDiff": true,
       "colorsFalsePlain": true
+    },
+    "inputs": {
+      "typedArrayHtml": true,
+      "typedArrayRender": true,
+      "arrayBufferReact": true
     },
     "notObservedToTakeEffect": {
       "latexMath": true,
@@ -1047,7 +1071,7 @@
         {
           "path": "outbc/pure.js.jsc",
           "kind": "bytecode",
-          "hash": "7eh3spve",
+          "hash": "7smjsagn",
           "loader": "file",
           "size": 10944,
           "type": "application/octet-stream",

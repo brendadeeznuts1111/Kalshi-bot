@@ -532,6 +532,36 @@ describe("Bun.markdown.render() callbacks", () => {
     Bun.markdown.render("# Hi", { render: { heading: () => { fired++; return "X"; } } } as any);
     expect(fired).toBe(0);
   });
+
+  test("returning null/undefined from a callback omits the element (MD-renderOmit)", () => {
+    expect(Bun.markdown.render("# Hi **b**", { heading: () => null })).toBe("");
+    expect(Bun.markdown.render("# Hi", { heading: () => undefined })).toBe("");
+  });
+
+  test("with NO callbacks, children pass through unchanged (MD-renderPassthrough)", () => {
+    // Inline formatting flattens to text; a table keeps its source lines.
+    expect(Bun.markdown.render("# Hi **bold**")).toBe("Hi bold");
+    expect(Bun.markdown.render("| A |\n|-|-|\n| 1 |")).toContain("| A |");
+  });
+
+  test("list meta depth tracks nesting; ordered start comes from the marker (MD-listDepth)", () => {
+    const depths: number[] = [];
+    Bun.markdown.render("- a\n  - b\n    - c", {
+      list: (_c: string, m: any) => { depths.push(m.depth); return ""; },
+    });
+    expect(depths.sort()).toEqual([0, 1, 2]);
+
+    const start = captureMeta("3. one\n4. two", "list");
+    expect(start).toMatchObject({ ordered: true, start: 3 });
+    // An unordered list has NO start key.
+    const ul = captureMeta("- a", "list");
+    expect(ul).toMatchObject({ ordered: false });
+    expect(ul.start).toBeUndefined();
+  });
+
+  test("hr callback receives empty children", () => {
+    expect(Bun.markdown.render("---", { hr: (c: string) => `[${c}]` })).toBe("[]");
+  });
 });
 
 function captureMeta(markdown: string, callback: string): any {
@@ -590,6 +620,53 @@ describe("Bun.markdown.react()", () => {
     const el: any = Bun.markdown.react("# Hello", { reactVersion: 18 } as any);
     expect(el.$$typeof).toBe(V19);
   });
+
+  test("overrides receive element props in the tree (MD-reactProps)", () => {
+    // Custom components receive the same props the default elements would.
+    // Function overrides are stored as the element type (called at React
+    // render time), so we inspect the element tree structurally.
+    const h1: any = Bun.markdown.react("# Hi", { h1: () => "H" }, { headings: { ids: true } });
+    expect(h1.props.children[0].props).toMatchObject({ id: "hi" });
+
+    const a: any = Bun.markdown.react('[b](https://x.com "t")', { a: () => "A" });
+    expect(a.props.children[0].props.children[0].props).toMatchObject({
+      href: "https://x.com",
+      title: "t",
+    });
+
+    const pre: any = Bun.markdown.react("```js\nconst x = 1;\n```", { pre: () => "P" });
+    expect(pre.props.children[0].props).toMatchObject({ language: "js" });
+
+    const img: any = Bun.markdown.react('![alt](/i.png "t")', { img: () => "I" });
+    expect(img.props.children[0].props.children[0].props).toMatchObject({
+      src: "/i.png",
+      title: "t",
+      alt: "alt",
+    });
+  });
+
+  test("li/ol/th overrides receive checked/start/align props", () => {
+    const li: any = Bun.markdown.react("- [x] done", { li: () => "L" });
+    expect(li.props.children[0].props.children[0].props).toMatchObject({ checked: true });
+
+    const ol: any = Bun.markdown.react("3. one", { ol: () => "O" });
+    expect(ol.props.children[0].props).toMatchObject({ start: 3 });
+
+    const th: any = Bun.markdown.react("| A | B |\n|:-:|--:|\n| 1 | 2 |", { th: () => "H" });
+    const thEl = th.props.children[0].props.children[0].props.children[0].props.children[0];
+    expect(thEl.props).toMatchObject({ align: "center" });
+  });
+
+  test("code override applies to INLINE code; fenced blocks are pre-only", () => {
+    const inline: any = Bun.markdown.react("a `x` b", { code: () => "C" });
+    const codeEl = inline.props.children[0].props.children[1];
+    expect(typeof codeEl.type).toBe("function");
+
+    // A fenced block produces only <pre> (with language); no nested <code>.
+    const fenced: any = Bun.markdown.react("```js\nconst x = 1;\n```");
+    expect(fenced.props.children[0].type).toBe("pre");
+    expect(fenced.props.children[0].props).toMatchObject({ language: "js" });
+  });
 });
 
 // --------------------------------------------------------------
@@ -630,5 +707,14 @@ describe("Bun.markdown.html()", () => {
     expect(typeof html).toBe("string");
     expect(html).toContain("<h1");
     expect(html).toContain('id="hello"');
+  });
+
+  test("accepts TypedArray/ArrayBuffer inputs (MD-inputTypes)", () => {
+    expect(Bun.markdown.html(new TextEncoder().encode("# Hi"))).toContain("<h1>Hi</h1>");
+    expect(Bun.markdown.render(new TextEncoder().encode("**b**"), {
+      strong: (c: string) => `S(${c})`,
+    })).toBe("S(b)");
+    const el: any = Bun.markdown.react(new TextEncoder().encode("# Hi").buffer);
+    expect(el.props.children[0].type).toBe("h1");
   });
 });

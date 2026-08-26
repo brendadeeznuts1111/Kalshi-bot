@@ -199,6 +199,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §177 — BuildArtifact gotchas probed — two docs corrections (2026-08-24)
 - §178 — Reference cross-check — official bun-types docs vs observed evidence (2026-08-25)
 - §179 — Markdown probe artifacts — three false no-ops + one bogus discrepancy found by a third-party test (2026-08-26)
+- §180 — react() override props: capture timing — function overrides only render under React (2026-08-26)
 
 
 ## 1. run_code program text (the harness lexer)
@@ -6688,4 +6689,21 @@ and assert on the real output string (print it) instead of guessing escaped form
 adversarial probes — run them (corrected to the true contract) as regression suites.
 
 Cross-check after corrections: 114 claims (106 CONSISTENT, 8 PINNED-DISCREPANCY), gaps 0.
+## 180. react() override props: capture timing — function overrides only render under React (2026-08-26)
+
+Probing whether Bun.markdown.react() overrides receive element props (id/language/href/src/checked/start/align)
+almost produced a FALSE PINNED-DISCREPANCY. Function overrides are stored as the element `type` and the body
+ONLY RUNS when React actually renders the tree — `Bun.markdown.react()` alone never calls them. A probe that
+pushes to an array inside the override function body therefore records NOTHING, which looks like 'override
+never fired / empty props'. Inspect the ELEMENT TREE instead (walk `el.props.children`, read `.type` and
+`.props` on each node): with the right options the overridden elements DO carry id/language/href/title/
+src/alt/checked/start/align — exactly per the d.ts contract (MD-reactProps, all CONSISTENT).
+
+Also pinned: fenced code blocks produce ONLY `<pre>` (language prop on pre, no nested `<code>`); the `code`
+ComponentOverrides key applies to INLINE code (codespan). Callback-contract facts: null/undefined return
+omits the element; no callbacks -> children pass through; list meta depth 0/1/2 for nesting; ordered
+start comes from the marker (3. -> 3); ul has no start; hr receives empty children; html/render/react
+accept TypedArray/ArrayBuffer inputs (MD-renderOmit, MD-renderPassthrough, MD-listDepth, MD-inputTypes).
+Cross-check now 121 claims (113 CONSISTENT, 8 PINNED-DISCREPANCY), gaps 0.
+
 

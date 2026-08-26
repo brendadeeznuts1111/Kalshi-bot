@@ -5,7 +5,7 @@
   "bundleHash": "bun-types@1.4.0-c0dadede486f49ab",
   "verdictCounts": {
     "PINNED-DISCREPANCY": 8,
-    "CONSISTENT": 108
+    "CONSISTENT": 113
   },
   "checks": [
     {
@@ -994,6 +994,46 @@
       "api": "hardSoftBreaks",
       "source": "bun.d.ts",
       "docSays": "hardSoftBreaks NO effect on 1.4.0: plain newline preserved in <p>; trailing-space <br> occurs without the option",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "MD-reactProps",
+      "api": "react",
+      "source": "bun.d.ts",
+      "docSays": "react overrides receive element props in the tree: h1 id, a href/title, pre language, li checked, ol start, th/td align, img src/title/alt (code key applies to INLINE code; fenced blocks are pre-only)",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "MD-renderOmit",
+      "api": "render",
+      "source": "bun.d.ts",
+      "docSays": "render callbacks: returning null/undefined omits the element (sole heading -> empty output)",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "MD-renderPassthrough",
+      "api": "render",
+      "source": "bun.d.ts",
+      "docSays": "render: no callbacks -> children pass through (inline flattens to text; table keeps its source)",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "MD-listDepth",
+      "api": "list",
+      "source": "bun.d.ts",
+      "docSays": "render list meta depth verified: 0/1/2 for nested lists; hr callback receives empty children; ordered start from marker (3. -> 3); ul has no start",
+      "observed": "2,1,0",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "MD-inputTypes",
+      "api": "html",
+      "source": "bun.d.ts",
+      "docSays": "html/render/react accept TypedArray (Uint8Array) and ArrayBuffer inputs",
       "observed": true,
       "verdict": "CONSISTENT"
     }
