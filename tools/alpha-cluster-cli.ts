@@ -15,13 +15,64 @@ import { ConsensusTracker } from '../src/alpha/cluster/tracker.ts';
 
 const ROOT = join(import.meta.dir, '..');
 const OUT = join(ROOT, 'research', 'outputs');
-const argv = Bun.argv.slice(2);
-const inputFlag = argv.find((a) => a.startsWith('--input='));
-const kFlag = argv.find((a) => a.startsWith('--k='));
-const mcFlag = argv.find((a) => a.startsWith('--min-cluster='));
-const styled = argv.includes('--styled');
-const k = kFlag ? Number(kFlag.slice('--k='.length)) : 5;
-const minClusterSize = mcFlag ? Number(mcFlag.slice('--min-cluster='.length)) : 3;
+
+export type ClusterCliOptions = {
+  input: string | null;
+  k: number;
+  minClusterSize: number;
+  styled: boolean;
+  format: 'table' | 'json' | 'yaml';
+};
+
+/** Parse alpha:cluster flags; returns the error string for invalid flags. */
+export function parseClusterCli(argv: string[]): { opts: ClusterCliOptions } | { error: string } {
+  const inputFlag = argv.find((a) => a.startsWith('--input='));
+  const kFlag = argv.find((a) => a.startsWith('--k='));
+  const mcFlag = argv.find((a) => a.startsWith('--min-cluster='));
+  const fmtFlag = argv.find((a) => a.startsWith('--format='));
+  const styled = argv.includes('--styled');
+  const formatRaw = fmtFlag ? fmtFlag.slice('--format='.length) : 'table';
+  if (formatRaw !== 'table' && formatRaw !== 'json' && formatRaw !== 'yaml') {
+    return { error: '--format must be table|json|yaml (got ' + formatRaw + ')' };
+  }
+  const k = kFlag ? Number(kFlag.slice('--k='.length)) : 5;
+  const minClusterSize = mcFlag ? Number(mcFlag.slice('--min-cluster='.length)) : 3;
+  if (kFlag && !Number.isFinite(k) || k < 1) return { error: '--k must be a positive number (got ' + kFlag + ')' };
+  if (mcFlag && !Number.isFinite(minClusterSize) || minClusterSize < 1) return { error: '--min-cluster must be a positive number (got ' + mcFlag + ')' };
+  return {
+    opts: {
+      input: inputFlag ? inputFlag.slice('--input='.length) : null,
+      k,
+      minClusterSize,
+      styled,
+      format: formatRaw as 'table' | 'json' | 'yaml',
+    },
+  };
+}
+
+/**
+ * Auto color gate (audit §205): the CALLER must decide color - Bun.inspect and
+ * markdown.ansi ignore NO_COLOR/FORCE_COLOR once colors are requested explicitly.
+ */
+export function cliUseColor(env: NodeJS.ProcessEnv = process.env): boolean {
+  if (env.NO_COLOR !== undefined && env.NO_COLOR !== '' && env.NO_COLOR !== '0') return false;
+  if (env.FORCE_COLOR === '0') return false;
+  return true;
+}
+
+/** Render the console summary in table/json/yaml formats (yaml via Bun.YAML, §198). */
+export function renderClusterSummary(
+  summary: { prints: number; clusters: number; noise: number; shifts: number; labels: Record<string, number> },
+  format: 'table' | 'json' | 'yaml',
+): string {
+  if (format === 'json') {
+    return JSON.stringify({ prints: summary.prints, clusters: summary.clusters, noise: summary.noise, consensusShifts: summary.shifts, labels: summary.labels }, null, 2);
+  }
+  if (format === 'yaml') {
+    return (Bun as any).YAML.stringify({ prints: summary.prints, clusters: summary.clusters, noise: summary.noise, consensusShifts: summary.shifts, labels: summary.labels });
+  }
+  return 'alpha:cluster - ' + summary.prints + ' prints, ' + summary.clusters + ' clusters, ' + summary.noise + ' noise, ' + summary.shifts + ' shifts';
+}
 
 function syntheticFixture(): OddsPrint[] {
   let s = 42;
@@ -36,8 +87,16 @@ function syntheticFixture(): OddsPrint[] {
   return prints;
 }
 
-const prints: OddsPrint[] = inputFlag
-  ? (JSON.parse(readFileSync(join(ROOT, inputFlag.slice('--input='.length)), 'utf8')) as OddsPrint[])
+const parsed = parseClusterCli(Bun.argv.slice(2));
+if ('error' in parsed) {
+  console.error('alpha:cluster: ' + parsed.error);
+  process.exit(2);
+}
+const { input, k, minClusterSize, styled, format } = parsed.opts;
+const useColor = styled && cliUseColor();
+
+const prints: OddsPrint[] = input
+  ? (JSON.parse(readFileSync(join(ROOT, input), 'utf8')) as OddsPrint[])
   : syntheticFixture();
 
 const tracker = new ConsensusTracker();
@@ -49,7 +108,7 @@ const shifts = result2.shifts;
 
 mkdirSync(OUT, { recursive: true });
 const summary = {
-  input: inputFlag ? inputFlag.slice('--input='.length) : 'synthetic-fixture',
+  input: input ?? 'synthetic-fixture',
   prints: prints.length,
   clusters: result.clusters,
   noise: result.noise,
@@ -66,10 +125,10 @@ const md: string[] = [
 ];
 for (const s of shifts) md.push('- ' + s.kind + ' from [' + s.fromLabels.join(',') + '] to ' + s.toLabel + ' (' + s.size + ' prints)');
 writeFileSync(join(OUT, 'odds-clusters.md'), md.join('\n') + '\n');
-if (styled) {
+if (styled && useColor) {
   const styledMd = ['# Odds consensus', '', '**' + prints.length + '** prints · **' + summary.clusters + '** clusters · **' + summary.noise + '** noise', 'consensus shifts: ' + shifts.length, '', ...shifts.map((s) => '- ' + s.kind + ' from [' + s.fromLabels.join(',') + '] to ' + s.toLabel + ' (' + s.size + ' prints)')].join('\n');
   console.log((Bun as any).markdown.ansi(styledMd));
 } else {
-  console.log('alpha:cluster - ' + prints.length + ' prints, ' + summary.clusters + ' clusters, ' + summary.noise + ' noise, ' + shifts.length + ' shifts');
+  console.log(renderClusterSummary({ prints: prints.length, clusters: result.clusters, noise: result.noise, shifts: shifts.length, labels: result.labels }, format));
 }
 console.log('output: research/outputs/odds-clusters.{json,md}');

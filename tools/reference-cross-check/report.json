@@ -5,7 +5,7 @@
   "bundleHash": "bun-types@1.4.0-c0dadede486f49ab",
   "verdictCounts": {
     "PINNED-DISCREPANCY": 8,
-    "CONSISTENT": 169
+    "CONSISTENT": 170
   },
   "checks": [
     {
@@ -1290,7 +1290,7 @@
       "api": "parse",
       "source": "docs/runtime/xml.mdx",
       "docSays": "performance: SIMD parse of a ~2 MB doc measured on this machine (docs claim 27 ms for 2.2 MB)",
-      "observed": 6.3,
+      "observed": 6.4,
       "verdict": "CONSISTENT"
     },
     {
@@ -1483,6 +1483,14 @@
       "source": "bun.d.ts",
       "docSays": "PARTIAL proposal claim: a long BIN NAME (100k chars) throws \"bin path is too long\"; a long PATH (20k x /x/) does NOT throw - returns null instead",
       "observed": "bin path is too long",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "IN-envColor",
+      "api": "colors",
+      "source": "bun.d.ts",
+      "docSays": "CORRECTED proposal item 3: explicit colors:true + markdown.ansi emit ANSI even PIPED (env ignored); Bun.color(hex, \"ansi\") is AUTO - EMPTY when piped, honors NO_COLOR/FORCE_COLOR only at process START. Caller must gate env, Bun.inspect will not",
+      "observed": true,
       "verdict": "CONSISTENT"
     }
   ],

@@ -554,7 +554,7 @@ Sources: bundled bun-types@1.4.0 (bun-types@1.4.0-c0dadede486f49ab) docs + `bun.
 PINNED-DISCREPANCY (doc says X, observed Y — our correction), DOC-CHANGED (fragment missing —
 the pin premise moved; re-verify), NO-EVIDENCE (ledger path broken).
 
-**Verdict summary:** 177 claims · 169 CONSISTENT · 8 PINNED-DISCREPANCY · 0 DOC-CHANGED · 0 NO-EVIDENCE.
+**Verdict summary:** 178 claims · 170 CONSISTENT · 8 PINNED-DISCREPANCY · 0 DOC-CHANGED · 0 NO-EVIDENCE.
 
 ### BuildArtifact
 
@@ -774,6 +774,7 @@ This fun | CONSISTENT |
   },
 } | CONSISTENT |
 | `IN-custom` | `custom` | `bun.d.ts` | inspect.custom === Symbol.for("nodejs.util.inspect.custom") (Node parity); plain inspect CALLS it (CUSTOM-VALUE); table does NOT (symbol shows as a column / [Function]) | true | CONSISTENT |
+| `IN-envColor` | `colors` | `bun.d.ts` | CORRECTED proposal item 3: explicit colors:true + markdown.ansi emit ANSI even PIPED (env ignored); Bun.color(hex, "ansi") is AUTO - EMPTY when piped, honors NO_COLOR/FORCE_COLOR only at process START. Caller must gate env, Bun.inspect will not | true | CONSISTENT |
 
 ### Bun.which
 

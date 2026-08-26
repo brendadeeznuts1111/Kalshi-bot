@@ -219,6 +219,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §202 — Bun.inspect + inspect.table — table options (properties filter + colors) grounded (2026-08-26)
 - §203 — Managed agent CLI — schedule register/remove/preview + offline daily ground/report cron (2026-08-26)
 - §204 — Bun.which — absolute path/null, PATH override, cwd anchors relative commands + PATH entries (2026-08-26)
+- §205 — CLI polish audited — fictional desk.ts shell, color caller-gate truth, --format via Bun.YAML (2026-08-26)
 - §199 — ui:regen CLI — regenerate UI artifacts from meta/variant sources + the Bun.$ template failure class (2026-08-26)
 - §187 — Extended color formats — kernel-only (lch/oklab/oklch/hsv) + inverse parsers (2026-08-26)
 - §188 — Watermark pipeline — ML-DSA key naming + WebView/Blob verified facts (2026-08-26)
@@ -7239,3 +7240,13 @@ miscGotchas.which expanded; tests bun-which-coverage, 5). Cross-check: 177 claim
   entry semantics are the load-bearing bits there.
 
 
+
+
+## 205. CLI polish proposal audited - fictional desk.ts shell, NO_COLOR/FORCE_COLOR caller-gate truth, --format via Bun.YAML (2026-08-26)
+
+Pasted 11-item CLI polish proposal audited against this repo:
+- FICTIONAL shell: cli/desk.ts, ODDS_DATA_DIR/--data-dir, ~/.odds/config.json,
+  .oddsrc - none exist. The real CLIs are tools/*-cli.ts (alpha:cluster,
+  alpha:consensus:watch, bash:mode, ui:regen) + src/agent/cli.ts (which already
+  has NESTED COMMANDS: status/ground/tennis/patterns/report/blueprint/run-research).
+- FALSE claim: Bun

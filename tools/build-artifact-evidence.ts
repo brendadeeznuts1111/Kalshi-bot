@@ -1310,6 +1310,9 @@ const inspectGotchas = {
   colorsTrue: inspectFn({ a: 1 }, { colors: true }),
   customUsedByInspect: inspectFn(inspectCustomObj),
   customNotUsedByTable: inspectFn.table([inspectCustomObj]),
+  inspectAnsiWhenPiped: (() => { const s = inspectFn({ a: 1 }, { colors: true }); return s.includes(String.fromCharCode(27)); })(),
+  mdAnsiWhenPiped: (() => { const s = (Bun as any).markdown.ansi('**hi**'); return s.includes(String.fromCharCode(27)); })(),
+  colorAnsiAutoWhenPiped: (() => { const s = (Bun as any).color('#ff0000', 'ansi'); return s === '' ? 'EMPTY' : s.includes(String.fromCharCode(27)) ? 'ANSI' : 'OTHER'; })(),
 };
 // ---------- emit ----------
 const evidence = {

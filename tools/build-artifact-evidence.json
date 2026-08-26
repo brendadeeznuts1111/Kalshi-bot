@@ -753,7 +753,7 @@
     "xxeUnresolved": "{\"a\":\"&xxe;\"}",
     "importEvalToCompact": "{\"config\":{\"name\":\"demo\",\"port\":\"8080\"}}",
     "bundlerInlines": true,
-    "perf20kItemsMs": 6.3,
+    "perf20kItemsMs": 6.4,
     "perfVsDocs": "CONSISTENT (docs 27 ms for 2.2 MB)"
   },
   "artifactGotchas": {
@@ -812,7 +812,10 @@
     "compactFalse": "{\n  a: [ 1, 2, 3 ],\n  b: {\n    c: 4,\n  },\n}",
     "colorsTrue": "{\n  \u001b[0ma\u001b[2m:\u001b[0m \u001b[0m\u001b[33m1\u001b[0m\u001b[0m\u001b[2m,\u001b[0m\n}",
     "customUsedByInspect": "CUSTOM-VALUE",
-    "customNotUsedByTable": "┌───┬───┬────────────────────────────┐\n│   │ a │ nodejs.util.inspect.custom │\n├───┼───┼────────────────────────────┤\n│ 0 │ 1 │ [Function]                 │\n└───┴───┴────────────────────────────┘\n"
+    "customNotUsedByTable": "┌───┬───┬────────────────────────────┐\n│   │ a │ nodejs.util.inspect.custom │\n├───┼───┼────────────────────────────┤\n│ 0 │ 1 │ [Function]                 │\n└───┴───┴────────────────────────────┘\n",
+    "inspectAnsiWhenPiped": true,
+    "mdAnsiWhenPiped": true,
+    "colorAnsiAutoWhenPiped": "EMPTY"
   },
   "scenarios": [
     {
@@ -1260,7 +1263,7 @@
         {
           "path": "outbc/pure.js.jsc",
           "kind": "bytecode",
-          "hash": "k0yqdgya",
+          "hash": "dppj1cqh",
           "loader": "file",
           "size": 10944,
           "type": "application/octet-stream",
