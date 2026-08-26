@@ -709,6 +709,20 @@
     "typeofFn": "function",
     "loopbackEcho": {}
   },
+  "fileGotchas": {
+    "name": "hello.txt",
+    "size": 13,
+    "type": "text/plain;charset=utf-8",
+    "exists": true,
+    "text": "Hello, World!",
+    "arrayBufferLen": 13,
+    "lastModifiedPos": true,
+    "statIsFile": true,
+    "statSize": 13,
+    "sliceText": "Hello",
+    "writeBytes": {},
+    "writeOverwritesBunFile": {}
+  },
   "scenarios": [
     {
       "name": "S01-artifact-surface",
@@ -1155,7 +1169,7 @@
         {
           "path": "outbc/pure.js.jsc",
           "kind": "bytecode",
-          "hash": "z7zb18vy",
+          "hash": "nv87kxgs",
           "loader": "file",
           "size": 10944,
           "type": "application/octet-stream",

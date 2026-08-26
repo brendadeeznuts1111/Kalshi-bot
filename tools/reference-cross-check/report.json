@@ -5,7 +5,7 @@
   "bundleHash": "bun-types@1.4.0-c0dadede486f49ab",
   "verdictCounts": {
     "PINNED-DISCREPANCY": 8,
-    "CONSISTENT": 135
+    "CONSISTENT": 137
   },
   "checks": [
     {
@@ -1210,6 +1210,22 @@
       "api": "send",
       "source": "bun.d.ts",
       "docSays": "udp.Socket.send(data, port, address) - LOOPBACK ECHO verified (127.0.0.1 ping-42 round-trips); address getter {address,family,port}; close() sets closed=true",
+      "observed": {},
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "FI-surface",
+      "api": "file",
+      "source": "bun.d.ts",
+      "docSays": "Bun.file(path) -> Blob-extending surface: name/size/type/lastModified/exists/text/json/arrayBuffer/stat/slice all verified",
+      "observed": "Hello, World!",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "BW-write",
+      "api": "write",
+      "source": "bun.d.ts",
+      "docSays": "Bun.write(path|BunFile, data) returns the byte count; writing to a BunFile overwrites the file",
       "observed": {},
       "verdict": "CONSISTENT"
     }

@@ -1102,6 +1102,25 @@ const udpGotchas = {
     return JSON.stringify({ sent, msg, family, closed });
   })(),
 };
+
+// ---------- fileGotchas: Bun.file / Bun.write I/O (continue round) ----------
+const fileDir = mkdtempSync(join(tmpdir(), 'art-file-'));
+writeFileSync(join(fileDir, 'hello.txt'), 'Hello, World!');
+const fObj = (Bun as any).file(join(fileDir, 'hello.txt'));
+const fileGotchas = {
+  name: fObj.name.split('/').pop(),
+  size: fObj.size,
+  type: fObj.type,
+  exists: await fObj.exists(),
+  text: await fObj.text(),
+  arrayBufferLen: (await fObj.arrayBuffer()).byteLength,
+  lastModifiedPos: typeof fObj.lastModified === 'number' && fObj.lastModified > 0,
+  statIsFile: typeof (await fObj.stat()).isFile === 'function',
+  statSize: (await fObj.stat()).size,
+  sliceText: await fObj.slice(0, 5).text(),
+  writeBytes: (async () => { const w = join(fileDir, 'written.txt'); return await (Bun as any).write(w, 'abc'); })(),
+  writeOverwritesBunFile: (async () => { const w = join(fileDir, 'w2.txt'); await (Bun as any).write(w, 'old'); await (Bun as any).write((Bun as any).file(w), 'xyz'); return await (Bun as any).file(w).text(); })(),
+};
 // ---------- emit ----------
 const evidence = {
   tool: 'tools/build-artifact-evidence.ts',
@@ -1128,6 +1147,7 @@ const evidence = {
   miscGotchas,
   archiveGotchas,
   udpGotchas,
+  fileGotchas,
   scenarios,
 };
 await Bun.write(EVIDENCE, JSON.stringify(evidence, null, 2) + '\n');

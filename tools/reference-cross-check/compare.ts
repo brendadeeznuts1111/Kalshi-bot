@@ -186,6 +186,8 @@ export const LEDGER: LedgerClaim[] = [
   { id: 'AR-files', api: 'files', source: 'bun.d.ts', fragment: 'for (const [path, file] of entries)', docSays: 'Archive.files() returns a Map of path -> file; also accepts glob filters', evidencePath: 'archiveGotchas.filesIsMap', kind: 'consistent' },
   { id: 'UDP-create', api: 'udpSocket', source: 'bun.d.ts', fragment: 'Create a UDP socket', docSays: 'Bun.udpSocket(options) resolves to a udp.Socket; handler configured via options.socket.data', evidencePath: 'udpGotchas.loopbackEcho', kind: 'consistent' },
   { id: 'UDP-send', api: 'send', source: 'bun.d.ts', fragment: 'send(data: Data, port: number, address: string): boolean;', docSays: 'udp.Socket.send(data, port, address) - LOOPBACK ECHO verified (127.0.0.1 ping-42 round-trips); address getter {address,family,port}; close() sets closed=true', evidencePath: 'udpGotchas.loopbackEcho', kind: 'consistent' },
+  { id: 'FI-surface', api: 'file', source: 'bun.d.ts', fragment: 'interface BunFile extends Blob', docSays: 'Bun.file(path) -> Blob-extending surface: name/size/type/lastModified/exists/text/json/arrayBuffer/stat/slice all verified', evidencePath: 'fileGotchas.text', kind: 'consistent' },
+  { id: 'BW-write', api: 'write', source: 'bun.d.ts', fragment: 'A promise that resolves with the number of bytes written.', docSays: 'Bun.write(path|BunFile, data) returns the byte count; writing to a BunFile overwrites the file', evidencePath: 'fileGotchas.writeBytes', kind: 'consistent' },
 ];
 
 /** APIs with grounded evidence but no ledger row (fit/filter/quality/... come from the probe gates). */
@@ -209,6 +211,7 @@ export const EXTRA_GROUNDED: string[] = [
   'transform', 'transformSync', 'scanImports',
   'compress', 'level', 'extract', 'files', 'address', 'binaryType', 'closed', 'fd',
   'ref', 'reload', 'remoteAddress', 'send', 'sendMany', 'setBroadcast', 'setTTL', 'unref',
+  'writer', 'exists', 'stat',
 ];
 
 export function checkClaim(claim: LedgerClaim, sourceText: string, ev: Evidence): CheckResult {
