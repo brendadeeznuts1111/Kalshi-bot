@@ -49,6 +49,7 @@ const SURFACES: [string, string][] = [
   ['MD', 'Bun.markdown'],
   ['MM', 'Bun.mmap'],
   ['IN', 'Bun.inspect'],
+  ['WH', 'Bun.which'],
 ];
 
 export function renderSection9(checks: CheckResult[], gaps: CoverageGap[], meta: CrossCheckMeta): string {

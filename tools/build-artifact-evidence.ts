@@ -12,7 +12,7 @@
  */
 import { markdown as mdNamed, XML as xmlNamed } from 'bun';
 import { join } from 'node:path';
-import { existsSync, rmSync, mkdtempSync, writeFileSync, mkdirSync, readdirSync, readFileSync, appendFileSync } from 'node:fs';
+import { existsSync, rmSync, mkdtempSync, writeFileSync, mkdirSync, readdirSync, readFileSync, appendFileSync, chmodSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 
 const ROOT = join(import.meta.dir, '..');
@@ -1046,6 +1046,35 @@ const miscGotchas = {
     whichBunString: typeof (Bun as any).which('bun') === 'string',
     whichBunBasename: String((Bun as any).which('bun')).split('/').pop(),
     missingNull: (Bun as any).which('definitely-not-a-real-cmd-xyz-9') === null,
+    lsAbsolute: (() => { const p = (Bun as any).which('ls'); return typeof p === 'string' && p.startsWith('/'); })(),
+    pathOverride: (Bun as any).which('ls', { PATH: '/usr/local/bin:/usr/bin:/bin' }) === (Bun as any).which('ls'),
+    emptyPathNull: (Bun as any).which('ls', { PATH: '' }) === null,
+    relativeCommandCwd: await (async () => {
+      const wd = mkdtempSync(join(tmpdir(), 'art-which-'));
+      mkdirSync(join(wd, 'bin'), { recursive: true });
+      const t = join(wd, 'bin', 'which-tool');
+      writeFileSync(t, '#!/bin/sh\necho hi');
+      chmodSync(t, 0o755);
+      return (Bun as any).which('./bin/which-tool', { cwd: wd })?.startsWith(wd) ?? false;
+    })(),
+    bareNameCwdNull: await (async () => {
+      const wd = mkdtempSync(join(tmpdir(), 'art-which-b-'));
+      mkdirSync(join(wd, 'bin'), { recursive: true });
+      const t = join(wd, 'bin', 'which-tool');
+      writeFileSync(t, '#!/bin/sh\necho hi');
+      chmodSync(t, 0o755);
+      return (Bun as any).which('which-tool', { cwd: wd }) === null;
+    })(),
+    relativePathEntryCwd: await (async () => {
+      const wd = mkdtempSync(join(tmpdir(), 'art-which-p-'));
+      mkdirSync(join(wd, 'bin'), { recursive: true });
+      const t = join(wd, 'bin', 'which-tool');
+      writeFileSync(t, '#!/bin/sh\necho hi');
+      chmodSync(t, 0o755);
+      return (Bun as any).which('which-tool', { PATH: 'bin', cwd: wd })?.startsWith(wd) ?? false;
+    })(),
+    longBinThrows: (() => { try { (Bun as any).which('x'.repeat(100000)); return 'NO-THROW'; } catch (e: any) { return e && e.message ? String(e.message).slice(0, 40) : String(e); } })(),
+    longPathNoThrow: (() => { try { const v = (Bun as any).which('ls', { PATH: '/usr/bin:' + '/x/'.repeat(20000) }); return 'RETURNED ' + (v === null ? 'null' : 'string'); } catch (e: any) { return 'THREW ' + String(e && e.message).slice(0, 40); } })(),
   },
   peek: {
     fulfilledValue: (Bun as any).peek(Promise.resolve(42)),

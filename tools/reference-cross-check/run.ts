@@ -90,7 +90,8 @@ export async function runCrossCheck(): Promise<number> {
   declared['Bun.MMapOptions'] = interfaceFields(dts, 'MMapOptions');
   declared['Bun.inspect'] = ['inspect', 'custom', 'table']; // function + namespace surface
   declared['BunInspectOptions'] = interfaceFields(dts, 'BunInspectOptions');
-  declared['Bun.which'] = ['which'];
+  declared['Bun.which'] = ['which']; // function surface
+  declared['Bun.WhichOptions'] = interfaceFields(dts, 'WhichOptions');
   declared['Bun.peek'] = ['peek', 'status'];
   declared['Bun.sleep'] = ['sleep', 'sleepSync'];
   declared['Bun.nanoseconds'] = ['nanoseconds'];

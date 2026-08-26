@@ -554,7 +554,7 @@ Sources: bundled bun-types@1.4.0 (bun-types@1.4.0-c0dadede486f49ab) docs + `bun.
 PINNED-DISCREPANCY (doc says X, observed Y — our correction), DOC-CHANGED (fragment missing —
 the pin premise moved; re-verify), NO-EVIDENCE (ledger path broken).
 
-**Verdict summary:** 173 claims · 165 CONSISTENT · 8 PINNED-DISCREPANCY · 0 DOC-CHANGED · 0 NO-EVIDENCE.
+**Verdict summary:** 177 claims · 169 CONSISTENT · 8 PINNED-DISCREPANCY · 0 DOC-CHANGED · 0 NO-EVIDENCE.
 
 ### BuildArtifact
 
@@ -774,6 +774,16 @@ This fun | CONSISTENT |
   },
 } | CONSISTENT |
 | `IN-custom` | `custom` | `bun.d.ts` | inspect.custom === Symbol.for("nodejs.util.inspect.custom") (Node parity); plain inspect CALLS it (CUSTOM-VALUE); table does NOT (symbol shows as a column / [Function]) | true | CONSISTENT |
+
+### Bun.which
+
+| Claim | API | Source | Doc says | Observed | Verdict |
+|---|---|---|---|---|---|
+| `WH-which` | `which` | `bun.d.ts` | which("bun") resolves to the bun executable; unknown command -> null | true | CONSISTENT |
+| `WH-surface` | `which` | `bun.d.ts` | Bun.which(bin, opts?) returns an ABSOLUTE path string or null; proposal claim verified (ls -> /bin/ls here, notfound -> null) | true | CONSISTENT |
+| `WH-pathOverride` | `PATH` | `bun.d.ts` | options.PATH REPLACES the env PATH (same result for ls with explicit /usr/local/bin:/usr/bin:/bin); PATH: "" -> null (no dirs to search) | true | CONSISTENT |
+| `WH-cwd` | `cwd` | `bun.d.ts` | CORRECTED: cwd anchors RELATIVE-PATH commands (./bin/x with cwd resolves; without cwd null) AND relative PATH ENTRIES (PATH: "bin" + cwd resolves); a BARE name with cwd -> null (cwd is NOT a search-dir addition - proposal framing was ambiguous) | true | CONSISTENT |
+| `WH-longBin` | `which` | `bun.d.ts` | PARTIAL proposal claim: a long BIN NAME (100k chars) throws "bin path is too long"; a long PATH (20k x /x/) does NOT throw - returns null instead | bin path is too long | CONSISTENT |
 
 No coverage gaps: every declared option on the grounded surfaces has evidence.
 

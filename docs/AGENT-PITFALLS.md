@@ -218,6 +218,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §201 — Live consensus stream — ConsensusTracker wired into a repeated-snapshot consumer (2026-08-26)
 - §202 — Bun.inspect + inspect.table — table options (properties filter + colors) grounded (2026-08-26)
 - §203 — Managed agent CLI — schedule register/remove/preview + offline daily ground/report cron (2026-08-26)
+- §204 — Bun.which — absolute path/null, PATH override, cwd anchors relative commands + PATH entries (2026-08-26)
 - §199 — ui:regen CLI — regenerate UI artifacts from meta/variant sources + the Bun.$ template failure class (2026-08-26)
 - §187 — Extended color formats — kernel-only (lch/oklab/oklch/hsv) + inverse parsers (2026-08-26)
 - §188 — Watermark pipeline — ML-DSA key naming + WebView/Blob verified facts (2026-08-26)
@@ -7214,4 +7215,27 @@ a schedule CLI + an OS-cron worker.
   pipeline end-to-end (ground + report write) in ~seconds.
   Note: agent-report.{md,json} are TIMESTAMPED regenerated artifacts - never
   stage their dirt; restore committed versions (git checkout) after smoke runs.
+
+
+
+## 204. Bun.which grounded - absolute path/null, PATH override, cwd anchors relative commands AND PATH entries, long-bin error (2026-08-26)
+
+Bun.which surface grounded (WH-surface/pathOverride/cwd/longBin; evidence block
+miscGotchas.which expanded; tests bun-which-coverage, 5). Cross-check: 177 claims
+(169 CONSISTENT / 8 PINNED-DISCREPANCY), gaps 0. Audits the pasted proposal:
+- Returns an ABSOLUTE path string (ls -> /bin/ls on this machine) or null.
+- options.PATH REPLACES the env PATH (same ls result with explicit
+  /usr/local/bin:/usr/bin:/bin); PATH: '' -> null (no dirs to search).
+- CORRECTION (proposal framing ambiguous): cwd anchors RELATIVE-PATH commands
+  (./bin/x + cwd resolves, without cwd null) AND relative PATH ENTRIES
+  (PATH: 'bin' + cwd resolves; PATH: 'bin' alone null). A BARE name with cwd
+  -> null - cwd is NOT a search-dir addition (run-bun.ts already relies on
+  the relative-PATH-entry behavior, §42).
+- PARTIAL proposal claim: a long BIN NAME (100k chars) throws
+  "bin path is too long"; a long PATH (20k x /x/) does NOT throw - returns
+  null instead.
+  Repo adoption: src/lib/run-bun.ts resolves the bun binary natively via
+  Bun.which (never node:child_process); the PATH-replacement + relative-PATH-
+  entry semantics are the load-bearing bits there.
+
 

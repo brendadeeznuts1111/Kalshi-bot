@@ -667,7 +667,15 @@
     "which": {
       "whichBunString": true,
       "whichBunBasename": "bun",
-      "missingNull": true
+      "missingNull": true,
+      "lsAbsolute": true,
+      "pathOverride": true,
+      "emptyPathNull": true,
+      "relativeCommandCwd": true,
+      "bareNameCwdNull": true,
+      "relativePathEntryCwd": true,
+      "longBinThrows": "bin path is too long",
+      "longPathNoThrow": "RETURNED null"
     },
     "peek": {
       "fulfilledValue": 42,
@@ -745,7 +753,7 @@
     "xxeUnresolved": "{\"a\":\"&xxe;\"}",
     "importEvalToCompact": "{\"config\":{\"name\":\"demo\",\"port\":\"8080\"}}",
     "bundlerInlines": true,
-    "perf20kItemsMs": 5.9,
+    "perf20kItemsMs": 6.3,
     "perfVsDocs": "CONSISTENT (docs 27 ms for 2.2 MB)"
   },
   "artifactGotchas": {
@@ -1252,7 +1260,7 @@
         {
           "path": "outbc/pure.js.jsc",
           "kind": "bytecode",
-          "hash": "ry661ry8",
+          "hash": "k0yqdgya",
           "loader": "file",
           "size": 10944,
           "type": "application/octet-stream",

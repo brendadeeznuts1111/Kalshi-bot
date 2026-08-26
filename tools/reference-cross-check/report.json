@@ -5,7 +5,7 @@
   "bundleHash": "bun-types@1.4.0-c0dadede486f49ab",
   "verdictCounts": {
     "PINNED-DISCREPANCY": 8,
-    "CONSISTENT": 165
+    "CONSISTENT": 169
   },
   "checks": [
     {
@@ -1290,7 +1290,7 @@
       "api": "parse",
       "source": "docs/runtime/xml.mdx",
       "docSays": "performance: SIMD parse of a ~2 MB doc measured on this machine (docs claim 27 ms for 2.2 MB)",
-      "observed": 5.9,
+      "observed": 6.3,
       "verdict": "CONSISTENT"
     },
     {
@@ -1451,6 +1451,38 @@
       "source": "bun.d.ts",
       "docSays": "inspect.custom === Symbol.for(\"nodejs.util.inspect.custom\") (Node parity); plain inspect CALLS it (CUSTOM-VALUE); table does NOT (symbol shows as a column / [Function])",
       "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "WH-surface",
+      "api": "which",
+      "source": "bun.d.ts",
+      "docSays": "Bun.which(bin, opts?) returns an ABSOLUTE path string or null; proposal claim verified (ls -> /bin/ls here, notfound -> null)",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "WH-pathOverride",
+      "api": "PATH",
+      "source": "bun.d.ts",
+      "docSays": "options.PATH REPLACES the env PATH (same result for ls with explicit /usr/local/bin:/usr/bin:/bin); PATH: \"\" -> null (no dirs to search)",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "WH-cwd",
+      "api": "cwd",
+      "source": "bun.d.ts",
+      "docSays": "CORRECTED: cwd anchors RELATIVE-PATH commands (./bin/x with cwd resolves; without cwd null) AND relative PATH ENTRIES (PATH: \"bin\" + cwd resolves); a BARE name with cwd -> null (cwd is NOT a search-dir addition - proposal framing was ambiguous)",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "WH-longBin",
+      "api": "which",
+      "source": "bun.d.ts",
+      "docSays": "PARTIAL proposal claim: a long BIN NAME (100k chars) throws \"bin path is too long\"; a long PATH (20k x /x/) does NOT throw - returns null instead",
+      "observed": "bin path is too long",
       "verdict": "CONSISTENT"
     }
   ],

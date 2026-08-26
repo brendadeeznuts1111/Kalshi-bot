@@ -216,6 +216,10 @@ export const LEDGER: LedgerClaim[] = [
   { id: 'IN-tableShapes', api: 'table', source: 'bun.d.ts', fragment: 'Like {@link console.table}, except it returns a string', docSays: 'object-of-objects -> outer keys as row labels; primitive arrays -> single Values column; mixed rows -> union (k + Values); empty -> minimal empty box', evidencePath: 'inspectGotchas.objectOfObjects', kind: 'consistent' },
   { id: 'IN-options', api: 'depth', source: 'bun.d.ts', fragment: 'The depth of the inspection', docSays: 'BunInspectOptions: colors/depth/sorted/compact ALL work; depth truncates with [Object ...], sorted reorders keys, compact:true single-line vs false expanded', evidencePath: 'inspectGotchas.depth2', kind: 'consistent' },
   { id: 'IN-custom', api: 'custom', source: 'bun.d.ts', fragment: 'const custom: typeof import("util").inspect.custom', docSays: 'inspect.custom === Symbol.for("nodejs.util.inspect.custom") (Node parity); plain inspect CALLS it (CUSTOM-VALUE); table does NOT (symbol shows as a column / [Function])', evidencePath: 'inspectGotchas.customMatchesNode', kind: 'consistent' },
+  { id: 'WH-surface', api: 'which', source: 'bun.d.ts', fragment: 'function which(command: string, options?: WhichOptions): string | null', docSays: 'Bun.which(bin, opts?) returns an ABSOLUTE path string or null; proposal claim verified (ls -> /bin/ls here, notfound -> null)', evidencePath: 'miscGotchas.which.lsAbsolute', kind: 'consistent' },
+  { id: 'WH-pathOverride', api: 'PATH', source: 'bun.d.ts', fragment: 'Overrides the `PATH` environment variable', docSays: 'options.PATH REPLACES the env PATH (same result for ls with explicit /usr/local/bin:/usr/bin:/bin); PATH: "" -> null (no dirs to search)', evidencePath: 'miscGotchas.which.pathOverride', kind: 'consistent' },
+  { id: 'WH-cwd', api: 'cwd', source: 'bun.d.ts', fragment: 'When `command` is a relative path, resolve it against this directory.', docSays: 'CORRECTED: cwd anchors RELATIVE-PATH commands (./bin/x with cwd resolves; without cwd null) AND relative PATH ENTRIES (PATH: "bin" + cwd resolves); a BARE name with cwd -> null (cwd is NOT a search-dir addition - proposal framing was ambiguous)', evidencePath: 'miscGotchas.which.relativeCommandCwd', kind: 'consistent' },
+  { id: 'WH-longBin', api: 'which', source: 'bun.d.ts', fragment: 'Reads the `PATH` environment variable unless overridden', docSays: 'PARTIAL proposal claim: a long BIN NAME (100k chars) throws "bin path is too long"; a long PATH (20k x /x/) does NOT throw - returns null instead', evidencePath: 'miscGotchas.which.longBinThrows', kind: 'consistent' },
 ];
 
 /** APIs with grounded evidence but no ledger row (fit/filter/quality/... come from the probe gates). */
@@ -243,6 +247,7 @@ export const EXTRA_GROUNDED: string[] = [
   'stringify', 'XML', 'sourcemap', 'path',
   'sync', 'shared', 'offset', 'size', 'mmap',
   'inspect', 'sorted', 'compact', 'custom', 'table',
+  'which', 'PATH', 'cwd',
 ];
 
 export function checkClaim(claim: LedgerClaim, sourceText: string, ev: Evidence): CheckResult {
