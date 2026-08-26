@@ -92,10 +92,9 @@ function srgbToLinear(c: number): number {
   return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
 }
 
-/** RGB -> LAB string matching Bun.color's "lab" format — CSS Color 4 uses the
- * D50 white point, so sRGB is converted to XYZ (D65) then Bradford-adapted to
- * D50 before the Lab transform. Matches Bun.color to float precision. */
-function labString(rgb: RGB): string {
+/** RGB -> LAB components (D50 white point, CSS Color 4). Shared by the
+ * "lab" and "lch" output strings. Matches Bun.color to float precision. */
+function labTriplet(rgb: RGB): { L: number; a: number; b: number } {
   const r = srgbToLinear(rgb.r);
   const g = srgbToLinear(rgb.g);
   const b = srgbToLinear(rgb.b);
@@ -112,10 +111,70 @@ function labString(rgb: RGB): string {
   const fx = f(x / 0.96422);
   const fy = f(y);
   const fz = f(z / 0.82521);
-  const L = 116 * fy - 16;
-  const a = 500 * (fx - fy);
-  const bb = 200 * (fy - fz);
-  return "lab(" + trimDecimals(L, 6) + "% " + trimDecimals(a, 6) + " " + trimDecimals(bb, 6) + ")";
+  return { L: 116 * fy - 16, a: 500 * (fx - fy), b: 200 * (fy - fz) };
+}
+
+/** RGB -> LAB string matching Bun.color's "lab" format. */
+function labString(rgb: RGB): string {
+  const { L, a, b } = labTriplet(rgb);
+  return "lab(" + trimDecimals(L, 6) + "% " + trimDecimals(a, 6) + " " + trimDecimals(b, 6) + ")";
+}
+
+/** RGB -> LCH string (kernel-defined shape; Bun.color 1.4.0 has no "lch"). */
+function lchString(rgb: RGB): string {
+  const { L, a, b } = labTriplet(rgb);
+  const c = Math.sqrt(a * a + b * b);
+  const h = (Math.atan2(b, a) * 180) / Math.PI;
+  return "lch(" + trimDecimals(L, 6) + "% " + trimDecimals(c, 6) + " " + trimDecimals(h, 6) + ")";
+}
+
+/** RGB -> HSV string (kernel-defined shape). */
+function hsvString(rgb: RGB): string {
+  const r = rgb.r / 255;
+  const g = rgb.g / 255;
+  const b = rgb.b / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const d = max - min;
+  const v = max;
+  let h = 0;
+  let s = 0;
+  if (d !== 0) {
+    s = d / max;
+    if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) * 60;
+    else if (max === g) h = ((b - r) / d + 2) * 60;
+    else h = ((r - g) / d + 4) * 60;
+  }
+  return "hsv(" + trimDecimals(h, 5) + ", " + trimDecimals(s * 100, 5) + "%, " + trimDecimals(v * 100, 5) + "%)";
+}
+
+/** sRGB -> OKLab components (standard Ottosson matrices). */
+function oklabTriplet(rgb: RGB): { L: number; a: number; b: number } {
+  const r = srgbToLinear(rgb.r);
+  const g = srgbToLinear(rgb.g);
+  const b = srgbToLinear(rgb.b);
+  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+  return {
+    L: 0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
+    a: 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
+    b: 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s,
+  };
+}
+
+/** RGB -> OKLab string (kernel-defined shape). */
+function oklabString(rgb: RGB): string {
+  const { L, a, b } = oklabTriplet(rgb);
+  return "oklab(" + trimDecimals(L, 6) + " " + trimDecimals(a, 6) + " " + trimDecimals(b, 6) + ")";
+}
+
+/** RGB -> OKLCH string (kernel-defined shape). */
+function oklchString(rgb: RGB): string {
+  const { L, a, b } = oklabTriplet(rgb);
+  const c = Math.sqrt(a * a + b * b);
+  const h = (Math.atan2(b, a) * 180) / Math.PI;
+  return "oklch(" + trimDecimals(L, 6) + " " + trimDecimals(c, 6) + " " + trimDecimals(h, 6) + ")";
 }
 
 /** ANSI-256 index via the standard 6x6x6 color cube (Bun.color "ansi-256"). */
@@ -154,6 +213,14 @@ export function convertColorFallback(value: string, format: string): string | nu
       return hslString(rgb);
     case "lab":
       return labString(rgb);
+    case "lch":
+      return lchString(rgb);
+    case "hsv":
+      return hsvString(rgb);
+    case "oklab":
+      return oklabString(rgb);
+    case "oklch":
+      return oklchString(rgb);
     case "ansi":
       return "";
     default:
@@ -167,6 +234,108 @@ function colorConvert(value: string, format: string): string | number | RGB | RG
     return Bun.color(value, format as "hex") as string | number | RGB | RGBA | null;
   }
   return convertColorFallback(value, format);
+}
+
+/** Linear-light sRGB → 8-bit gamma (inverse of srgbToLinear). */
+function linearToSrgb(c: number): number {
+  const v = c <= 0.0031308 ? c * 12.92 : 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
+  return Math.max(0, Math.min(1, v));
+}
+
+/** XYZ (D65) → linear sRGB (standard inverse of the forward matrix). */
+function xyz65ToLinearSrgb(x: number, y: number, z: number): { r: number; g: number; b: number } {
+  return {
+    r: 3.2404542 * x - 1.5371385 * y - 0.4985314 * z,
+    g: -0.969266 * x + 1.8760108 * y + 0.041556 * z,
+    b: 0.0556434 * x - 0.2040259 * y + 1.0572252 * z,
+  };
+}
+
+/** LAB (D50) → sRGB hex. Inverse of labTriplet + the D65→D50 Bradford step. */
+function labToHex(L: number, a: number, b: number): string {
+  const fy = (L + 16) / 116;
+  const fx = fy + a / 500;
+  const fz = fy - b / 200;
+  const finv = (t: number): number => {
+    const t3 = t * t * t;
+    return t3 > 0.008856 ? t3 : (t - 16 / 116) / 7.787;
+  };
+  // XYZ D50
+  const x50 = 0.96422 * finv(fx);
+  const y50 = finv(fy);
+  const z50 = 0.82521 * finv(fz);
+  // Bradford D50 -> D65 (inverse of the forward adaptation)
+  const x65 = 0.9555766 * x50 - 0.0230393 * y50 + 0.0631636 * z50;
+  const y65 = -0.0282895 * x50 + 1.0099416 * y50 + 0.0210077 * z50;
+  const z65 = 0.0122982 * x50 - 0.020483 * y50 + 1.3299098 * z50;
+  const lin = xyz65ToLinearSrgb(x65, y65, z65);
+  return toHexLower({
+    r: Math.round(linearToSrgb(lin.r) * 255),
+    g: Math.round(linearToSrgb(lin.g) * 255),
+    b: Math.round(linearToSrgb(lin.b) * 255),
+  });
+}
+
+/** OKLab → sRGB hex (inverse of oklabTriplet). */
+function oklabToHex(L: number, a: number, b: number): string {
+  const l = Math.pow(L + 0.3963377774 * a + 0.2158037573 * b, 3);
+  const m = Math.pow(L - 0.1055613458 * a - 0.0638541728 * b, 3);
+  const s = Math.pow(L - 0.0894841775 * a - 1.291485548 * b, 3);
+  const lin = {
+    r: 4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+    g: -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+    b: -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s,
+  };
+  return toHexLower({
+    r: Math.round(linearToSrgb(lin.r) * 255),
+    g: Math.round(linearToSrgb(lin.g) * 255),
+    b: Math.round(linearToSrgb(lin.b) * 255),
+  });
+}
+
+/**
+ * Parse a CSS color string in the kernel-defined extended formats into hex.
+ * Bun.color 1.4.0 returns null for lab()/lch()/oklab()/oklch()/hsv() INPUTS
+ * (probe-verified) — this kernel parser covers them (round-trips the output
+ * functions). Returns null when the string is not one of these formats.
+ */
+export function parseExtendedColor(input: string): string | null {
+  const s = input.trim();
+  let m: RegExpExecArray | null;
+  if ((m = /^hsv\(([\d.]+)\s*[, ]\s*([\d.]+)%\s*[, ]\s*([\d.]+)%\s*\)$/i.exec(s))) {
+    const h = Number(m[1]);
+    const sv = Number(m[2]) / 100;
+    const v = Number(m[3]) / 100;
+    const c = v * sv;
+    const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+    const mm = v - c;
+    const seg = Math.floor(h / 60) % 6;
+    const [r1, g1, b1] = seg === 0 ? [c, x, 0] : seg === 1 ? [x, c, 0] : seg === 2 ? [0, c, x] : seg === 3 ? [0, x, c] : seg === 4 ? [x, 0, c] : [c, 0, x];
+    return toHexLower({
+      r: Math.round((r1 + mm) * 255),
+      g: Math.round((g1 + mm) * 255),
+      b: Math.round((b1 + mm) * 255),
+    });
+  }
+  if ((m = /^lch\(([\d.]+)%\s+([\d.]+)\s+(-?[\d.]+)\s*\)$/i.exec(s))) {
+    const L = Number(m[1]);
+    const c = Number(m[2]);
+    const h = (Number(m[3]) * Math.PI) / 180;
+    return labToHex(L, c * Math.cos(h), c * Math.sin(h));
+  }
+  if ((m = /^lab\(([\d.]+)%\s+(-?[\d.]+)\s+(-?[\d.]+)\s*\)$/i.exec(s))) {
+    return labToHex(Number(m[1]), Number(m[2]), Number(m[3]));
+  }
+  if ((m = /^oklch\(([\d.]+)\s+([\d.]+)\s+(-?[\d.]+)\s*\)$/i.exec(s))) {
+    const L = Number(m[1]);
+    const c = Number(m[2]);
+    const h = (Number(m[3]) * Math.PI) / 180;
+    return oklabToHex(L, c * Math.cos(h), c * Math.sin(h));
+  }
+  if ((m = /^oklab\((-?[\d.]+)\s+(-?[\d.]+)\s+(-?[\d.]+)\s*\)$/i.exec(s))) {
+    return oklabToHex(Number(m[1]), Number(m[2]), Number(m[3]));
+  }
+  return null;
 }
 
 export type RGB = { r: number; g: number; b: number };

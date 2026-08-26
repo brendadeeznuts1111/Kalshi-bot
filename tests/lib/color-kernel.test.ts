@@ -6,7 +6,7 @@ import {
   COLOR_CSS,
   COLOR_ROLES,
   ansiColor,
-  convertColorFallback,
+  convertColorFallback, parseExtendedColor,
   cssColor,
   foregroundCss,
   hexColor,
@@ -206,3 +206,60 @@ function tintFallback(hex: string, alpha: number): string {
   const a = String(alpha).replace(/^0\./, ".");
   return `rgba(${r},${g},${b},${a})`;
 }
+describe("kernel formats beyond Bun.color 1.4.0 (lch / oklab / oklch / hsv)", () => {
+  test("all four render deterministic shapes for a fixed hex", () => {
+    const lch = convertColorFallback("#4da3ff", "lch") as string;
+    const oklab = convertColorFallback("#4da3ff", "oklab") as string;
+    const oklch = convertColorFallback("#4da3ff", "oklch") as string;
+    const hsv = convertColorFallback("#4da3ff", "hsv") as string;
+    expect(lch).toMatch(/^lch\([\d.]+% [\d.]+ -?[\d.]+\).*$/);
+    expect(oklab).toMatch(/^oklab\([\d.]+ -?[\d.]+ -?[\d.]+\).*$/);
+    expect(oklch).toMatch(/^oklch\([\d.]+ [\d.]+ -?[\d.]+\).*$/);
+    expect(hsv).toMatch(/^hsv\([\d.]+,\s*[\d.]+%,\s*[\d.]+%\).*$/);
+  });
+
+  test("hsv hue equals hsl hue (same geometry)", () => {
+    for (const key of Object.keys(COLORS) as ColorKey[]) {
+      const hsv = convertColorFallback(COLORS[key], "hsv") as string;
+      const hsl = convertColorFallback(COLORS[key], "hsl") as string;
+      const hue = (s: string): string => s.slice(s.indexOf("(") + 1, s.indexOf(","));
+      expect(hue(hsv), key).toBe(hue(hsl));
+    }
+  });
+
+  test("lch derives from lab (L matches, C = hypot(a,b))", () => {
+    const lab = convertColorFallback("#4da3ff", "lab") as string;
+    const lch = convertColorFallback("#4da3ff", "lch") as string;
+    const labL = lab.slice(lab.indexOf("(") + 1, lab.indexOf("%"));
+    const lchL = lch.slice(lch.indexOf("(") + 1, lch.indexOf("%"));
+    expect(Math.abs(Number(lchL) - Number(labL))).toBeLessThan(0.01);
+  });
+
+  test("Bun.color 1.4.0 rejects these formats (kernel is the only path)", () => {
+    for (const f of ["hsv", "lch", "oklab", "oklch"] as const) {
+      expect(() => Bun.color("#4da3ff", f as "hex")).toThrow();
+    }
+  });
+});
+
+describe("parseExtendedColor (kernel inverse parsers — Bun.color can't)", () => {
+  test("round-trips every extended output format back to the source hex", () => {
+    for (const f of ["hsv", "lch", "lab", "oklab", "oklch"] as const) {
+      const out = convertColorFallback("#4da3ff", f) as string;
+      expect(parseExtendedColor(out), f).toBe("#4da3ff");
+    }
+  });
+
+  test("parses the documented input examples (spaces or commas)", () => {
+    expect(parseExtendedColor("hsv(200 80% 70%)")).toBe(parseExtendedColor("hsv(200, 80%, 70%)"));
+    expect(parseExtendedColor("lab(50% 50 50)")).toMatch(/^#[0-9a-f]{6}$/);
+    expect(parseExtendedColor("lch(50% 50 100)")).toMatch(/^#[0-9a-f]{6}$/);
+    expect(parseExtendedColor("oklab(0.5 0.1 0.1)")).toMatch(/^#[0-9a-f]{6}$/);
+    expect(parseExtendedColor("oklch(0.5 0.2 120)")).toMatch(/^#[0-9a-f]{6}$/);
+  });
+
+  test("rejects junk and hex (hex is Bun.color's job)", () => {
+    expect(parseExtendedColor("not-a-color")).toBeNull();
+    expect(parseExtendedColor("#4da3ff")).toBeNull();
+  });
+});
