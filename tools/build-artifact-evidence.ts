@@ -505,6 +505,60 @@ const computeGuideGotchas = {
 };
 rmSync(cmpDir, { recursive: true, force: true });
 
+// ---------- configGapsGotchas: BuildConfig options the cross-check sweep surfaced (178) ----------
+const cfgDir = mkdtempSync(join(tmpdir(), 'art-ground-cfg-'));
+await Bun.write(join(cfgDir, 'pure.ts'), 'export const pure = () => 42;');
+await Bun.write(join(cfgDir, 'missing.ts'), 'import "./does-not-exist.ts";');
+await Bun.write(join(cfgDir, 'zod.ts'), 'import { z } from "zod"; export const s = z.string();');
+await Bun.write(join(cfgDir, 'feat.ts'), 'import { feature } from "bun:bundle"; export const v = feature("FEAT_A") ? "A" : "B";');
+await Bun.write(join(cfgDir, 'src/pure.ts'), 'export const pure = () => 42;');
+await Bun.write(join(cfgDir, 'tsconfig.json'), JSON.stringify({ compilerOptions: { baseUrl: '.', paths: { '@/*': ['src/*'] } } }));
+await Bun.write(join(cfgDir, 'alias.ts'), 'import { pure } from "@/pure"; export const v = pure();');
+await Bun.write(join(cfgDir, 'el.tsx'), 'export const el = <div id="x" />;');
+await Bun.write(join(cfgDir, 'dce.ts'), 'function impure() { return 1; } /* @__PURE__ */ impure(); export const y = 1;');
+await Bun.write(join(cfgDir, 'dce2.ts'), 'function impure() { return 1; } export const x = /* @__PURE__ */ impure();');
+await Bun.write(join(cfgDir, 'node_modules/barrel-pkg/package.json'), JSON.stringify({ name: 'barrel-pkg', version: '1.0.0', main: 'index.js', sideEffects: false }));
+await Bun.write(join(cfgDir, 'node_modules/barrel-pkg/index.js'), 'export const a = 1; export const b = 2; export const c = 3;');
+await Bun.write(join(cfgDir, 'barrel.ts'), 'import { a } from "barrel-pkg"; export const v = a;');
+const cfgSafe = async (opts: any) => { try { const r = await Bun.build(opts); return { ok: true, r }; } catch { return { ok: false, r: null }; } };
+const cfgText = async (opts: any) => { const s = await cfgSafe(opts); return s.ok && s.r !== null ? await s.r.outputs[0].text() : 'ERR'; };
+const bf = await cfgText({ entrypoints: [join(cfgDir, 'pure.ts')], outdir: join(cfgDir, 'o1'), banner: '/*BANNER*/', footer: '/*FOOTER*/' });
+const thr = await cfgSafe({ entrypoints: [join(cfgDir, 'missing.ts')], outdir: join(cfgDir, 'o2'), throw: false });
+const thrDef = await cfgSafe({ entrypoints: [join(cfgDir, 'missing.ts')], outdir: join(cfgDir, 'o2b') });
+const pkgs = await cfgText({ entrypoints: [join(cfgDir, 'zod.ts')], outdir: join(cfgDir, 'o3'), packages: 'external' });
+const featA = await cfgText({ entrypoints: [join(cfgDir, 'feat.ts')], outdir: join(cfgDir, 'o4a'), features: ['FEAT_A'] });
+const feat0 = await cfgText({ entrypoints: [join(cfgDir, 'feat.ts')], outdir: join(cfgDir, 'o4b') });
+const tsok = await cfgSafe({ entrypoints: [join(cfgDir, 'alias.ts')], outdir: join(cfgDir, 'o5'), tsconfig: join(cfgDir, 'tsconfig.json') });
+const jsx1 = await cfgText({ entrypoints: [join(cfgDir, 'el.tsx')], outdir: join(cfgDir, 'o6'), jsx: { runtime: 'classic', factory: 'h' } });
+const dce1 = await cfgText({ entrypoints: [join(cfgDir, 'dce.ts')], outdir: join(cfgDir, 'o7'), minify: { syntax: true, whitespace: true } });
+const dce2 = await cfgText({ entrypoints: [join(cfgDir, 'dce.ts')], outdir: join(cfgDir, 'o7b'), minify: { syntax: true, whitespace: true }, ignoreDCEAnnotations: true });
+const em1 = await cfgText({ entrypoints: [join(cfgDir, 'dce2.ts')], outdir: join(cfgDir, 'o8'), minify: { whitespace: true } });
+const em2 = await cfgText({ entrypoints: [join(cfgDir, 'dce2.ts')], outdir: join(cfgDir, 'o8b'), minify: { whitespace: true }, emitDCEAnnotations: true });
+const opt1 = await cfgSafe({ entrypoints: [join(cfgDir, 'barrel.ts')], outdir: join(cfgDir, 'o9'), optimizeImports: ['barrel-pkg'] });
+const opt0 = await cfgSafe({ entrypoints: [join(cfgDir, 'barrel.ts')], outdir: join(cfgDir, 'o9b') });
+const configGapsGotchas = {
+  bannerFooter: { bannerAtTop: bf.includes('/*BANNER*/'), footerAtEnd: bf.trimEnd().includes('/*FOOTER*/') },
+  throwOption: {
+    throwFalseReturnsSuccessFalse: thr.ok && thr.r !== null && thr.r.success === false && thr.r.logs.length === 1,
+    defaultRejects: !thrDef.ok,
+  },
+  packagesExternal: { importKept: pkgs.includes('from "zod"'), size: pkgs.length },
+  features: {
+    withFlag_keepsA: featA.includes('"A"') && !featA.includes('"B"'),
+    withoutFlag_keepsB: feat0.includes('"B"') && !feat0.includes('"A"'),
+  },
+  tsconfigPaths: { prefixedAliasResolves: tsok.ok, alias: '@/pure -> src/pure.ts' },
+  jsxClassic: { factoryHonored: jsx1.includes('h("div"'), form: 'h("div", { id: "x" })' },
+  dceAnnotations: {
+    pureStatementDroppedUnderSyntaxMinify: !dce1.includes('impure'),
+    keptWithIgnoreDCEAnnotations: dce2.includes('impure()'),
+    pureMarkEmittedWithEmitFlag: em2.includes('@__PURE__') && !em1.includes('@__PURE__'),
+  },
+  optimizeImports: { accepted: opt1.ok, baselineAccepts: opt0.ok },
+  typeLevelOnly: ['files', 'reactFastRefresh', 'reactCompiler', 'reactCompilerOutputMode'],
+};
+rmSync(cfgDir, { recursive: true, force: true });
+
 // ---------- emit ----------
 const evidence = {
   tool: 'tools/build-artifact-evidence.ts',
@@ -517,6 +571,7 @@ const evidence = {
   sliceGotchas,
   imageCtorGotchas,
   computeGuideGotchas,
+  configGapsGotchas,
   scenarios,
 };
 await Bun.write(EVIDENCE, JSON.stringify(evidence, null, 2) + '\n');

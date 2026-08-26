@@ -67,6 +67,16 @@ export const LEDGER: LedgerClaim[] = [
   { id: 'IM-progressive', api: 'progressive', source: 'bun.d.ts', fragment: 'Emit a progressive (multi-scan) JPEG', docSays: 'jpeg progressive: true emits multi-scan', evidencePath: 'computeGuideGotchas.progressiveJpeg.progressiveHasSOF2', kind: 'consistent' },
   { id: 'IM-palette', api: 'palette', source: 'bun.d.ts', fragment: 'Quantize to a palette and emit indexed (colour-type 3) PNG', docSays: 'png palette: true emits indexed PNG', evidencePath: 'computeGuideGotchas.palettePng.palette64ColorType', kind: 'consistent' },
   { id: 'IM-invalidState', api: 'ERR_INVALID_STATE', source: 'bun.d.ts', fragment: 'the input ArrayBuffer was transferred between', docSays: 'transferred input -> ERR_INVALID_STATE', evidencePath: 'imageCtorGotchas.bufferGuards.transferredBetweenCtorAndTerminal', kind: 'discrepancy' },
+  { id: 'BC-banner', api: 'banner', source: 'bun.d.ts', fragment: 'banner?: string', docSays: 'banner: prepend text to bundled code', evidencePath: 'configGapsGotchas.bannerFooter.bannerAtTop', kind: 'consistent' },
+  { id: 'BC-footer', api: 'footer', source: 'bun.d.ts', fragment: 'footer?: string', docSays: 'footer: append text to bundled code', evidencePath: 'configGapsGotchas.bannerFooter.footerAtEnd', kind: 'consistent' },
+  { id: 'BC-throw', api: 'throw', source: 'bun.d.ts', fragment: 'throw?: boolean', docSays: 'throw:false returns { success:false } instead of rejecting', evidencePath: 'configGapsGotchas.throwOption.throwFalseReturnsSuccessFalse', kind: 'consistent' },
+  { id: 'BC-packages', api: 'packages', source: 'bun.d.ts', fragment: 'packages?: "bundle" | "external"', docSays: 'packages: external leaves package imports external', evidencePath: 'configGapsGotchas.packagesExternal.importKept', kind: 'consistent' },
+  { id: 'BC-features', api: 'features', source: 'bun.d.ts', fragment: 'features?: string[]', docSays: 'features: bun:bundle feature() dead-code elimination', evidencePath: 'configGapsGotchas.features.withFlag_keepsA', kind: 'consistent' },
+  { id: 'BC-tsconfig', api: 'tsconfig', source: 'bun.d.ts', fragment: 'tsconfig?: string', docSays: 'tsconfig: custom tsconfig for path resolution', evidencePath: 'configGapsGotchas.tsconfigPaths.prefixedAliasResolves', kind: 'consistent' },
+  { id: 'BC-jsx', api: 'jsx', source: 'bun.d.ts', fragment: 'jsx?: {', docSays: 'jsx: classic factory / automatic runtime transform', evidencePath: 'configGapsGotchas.jsxClassic.factoryHonored', kind: 'consistent' },
+  { id: 'BC-ignoreDCEAnnotations', api: 'ignoreDCEAnnotations', source: 'bun.d.ts', fragment: 'Ignore dead code elimination', docSays: 'ignoreDCEAnnotations keeps @__PURE__ calls', evidencePath: 'configGapsGotchas.dceAnnotations.keptWithIgnoreDCEAnnotations', kind: 'consistent' },
+  { id: 'BC-emitDCEAnnotations', api: 'emitDCEAnnotations', source: 'bun.d.ts', fragment: 'Force emitting @__PURE__', docSays: 'emitDCEAnnotations forces @__PURE__ marks under whitespace minify', evidencePath: 'configGapsGotchas.dceAnnotations.pureMarkEmittedWithEmitFlag', kind: 'consistent' },
+  { id: 'BC-optimizeImports', api: 'optimizeImports', source: 'bun.d.ts', fragment: 'optimizeImports?: string[]', docSays: 'optimizeImports: skip unused barrel re-exports', evidencePath: 'configGapsGotchas.optimizeImports.accepted', kind: 'consistent' },
 ];
 
 /** APIs with grounded evidence but no ledger row (fit/filter/quality/... come from the probe gates). */
@@ -74,7 +84,7 @@ export const EXTRA_GROUNDED: string[] = [
   'fit', 'filter', 'quality', 'lossless', 'compressionLevel', 'colors', 'dither',
   'brightness', 'saturation', 'placeholder', 'blob', 'bytes', 'buffer', 'text',
   'arrayBuffer', 'stream', 'json', 'slice', 'write', 'cwd', 'entrypoints', 'outdir',
-  'format', 'splitting', 'loader', 'metafile', 'treeShaking',
+  'format', 'splitting', 'loader', 'metafile', 'treeShaking', 'plugins',
 ];
 
 export function checkClaim(claim: LedgerClaim, sourceText: string, ev: Evidence): CheckResult {

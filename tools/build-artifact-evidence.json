@@ -204,6 +204,47 @@
       "note": "grayscale output not directly verifiable - no pixel-decode API on 1.4.0"
     }
   },
+  "configGapsGotchas": {
+    "bannerFooter": {
+      "bannerAtTop": true,
+      "footerAtEnd": true
+    },
+    "throwOption": {
+      "throwFalseReturnsSuccessFalse": true,
+      "defaultRejects": true
+    },
+    "packagesExternal": {
+      "importKept": true,
+      "size": 161
+    },
+    "features": {
+      "withFlag_keepsA": true,
+      "withoutFlag_keepsB": true
+    },
+    "tsconfigPaths": {
+      "prefixedAliasResolves": true,
+      "alias": "@/pure -> src/pure.ts"
+    },
+    "jsxClassic": {
+      "factoryHonored": true,
+      "form": "h(\"div\", { id: \"x\" })"
+    },
+    "dceAnnotations": {
+      "pureStatementDroppedUnderSyntaxMinify": true,
+      "keptWithIgnoreDCEAnnotations": true,
+      "pureMarkEmittedWithEmitFlag": true
+    },
+    "optimizeImports": {
+      "accepted": true,
+      "baselineAccepts": true
+    },
+    "typeLevelOnly": [
+      "files",
+      "reactFastRefresh",
+      "reactCompiler",
+      "reactCompilerOutputMode"
+    ]
+  },
   "scenarios": [
     {
       "name": "S01-artifact-surface",
@@ -650,7 +691,7 @@
         {
           "path": "outbc/pure.js.jsc",
           "kind": "bytecode",
-          "hash": "jv338spg",
+          "hash": "hfjbc874",
           "loader": "file",
           "size": 10944,
           "type": "application/octet-stream",

@@ -5,7 +5,7 @@
   "bundleHash": "bun-types@1.4.0-c0dadede486f49ab",
   "verdictCounts": {
     "PINNED-DISCREPANCY": 5,
-    "CONSISTENT": 19
+    "CONSISTENT": 29
   },
   "checks": [
     {
@@ -210,23 +210,92 @@
       "docSays": "transferred input -> ERR_INVALID_STATE",
       "observed": "ERR_IMAGE_UNKNOWN_FORMAT",
       "verdict": "PINNED-DISCREPANCY"
+    },
+    {
+      "id": "BC-banner",
+      "api": "banner",
+      "source": "bun.d.ts",
+      "docSays": "banner: prepend text to bundled code",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "BC-footer",
+      "api": "footer",
+      "source": "bun.d.ts",
+      "docSays": "footer: append text to bundled code",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "BC-throw",
+      "api": "throw",
+      "source": "bun.d.ts",
+      "docSays": "throw:false returns { success:false } instead of rejecting",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "BC-packages",
+      "api": "packages",
+      "source": "bun.d.ts",
+      "docSays": "packages: external leaves package imports external",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "BC-features",
+      "api": "features",
+      "source": "bun.d.ts",
+      "docSays": "features: bun:bundle feature() dead-code elimination",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "BC-tsconfig",
+      "api": "tsconfig",
+      "source": "bun.d.ts",
+      "docSays": "tsconfig: custom tsconfig for path resolution",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "BC-jsx",
+      "api": "jsx",
+      "source": "bun.d.ts",
+      "docSays": "jsx: classic factory / automatic runtime transform",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "BC-ignoreDCEAnnotations",
+      "api": "ignoreDCEAnnotations",
+      "source": "bun.d.ts",
+      "docSays": "ignoreDCEAnnotations keeps @__PURE__ calls",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "BC-emitDCEAnnotations",
+      "api": "emitDCEAnnotations",
+      "source": "bun.d.ts",
+      "docSays": "emitDCEAnnotations forces @__PURE__ marks under whitespace minify",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "BC-optimizeImports",
+      "api": "optimizeImports",
+      "source": "bun.d.ts",
+      "docSays": "optimizeImports: skip unused barrel re-exports",
+      "observed": true,
+      "verdict": "CONSISTENT"
     }
   ],
   "coverageGaps": [
     {
       "surface": "BuildConfig",
       "gaps": [
-        "plugins",
-        "packages",
-        "ignoreDCEAnnotations",
-        "emitDCEAnnotations",
-        "banner",
-        "footer",
-        "features",
-        "optimizeImports",
-        "throw",
-        "tsconfig",
-        "jsx",
         "reactFastRefresh",
         "reactCompiler",
         "reactCompilerOutputMode",

@@ -579,8 +579,18 @@ the pin premise moved; re-verify), NO-EVIDENCE (ledger path broken).
 | `IM-progressive` | `progressive` | `bun.d.ts` | jpeg progressive: true emits multi-scan | true | CONSISTENT |
 | `IM-palette` | `palette` | `bun.d.ts` | png palette: true emits indexed PNG | 3 | CONSISTENT |
 | `IM-invalidState` | `ERR_INVALID_STATE` | `bun.d.ts` | transferred input -> ERR_INVALID_STATE | ERR_IMAGE_UNKNOWN_FORMAT | PINNED-DISCREPANCY |
+| `BC-banner` | `banner` | `bun.d.ts` | banner: prepend text to bundled code | true | CONSISTENT |
+| `BC-footer` | `footer` | `bun.d.ts` | footer: append text to bundled code | true | CONSISTENT |
+| `BC-throw` | `throw` | `bun.d.ts` | throw:false returns { success:false } instead of rejecting | true | CONSISTENT |
+| `BC-packages` | `packages` | `bun.d.ts` | packages: external leaves package imports external | true | CONSISTENT |
+| `BC-features` | `features` | `bun.d.ts` | features: bun:bundle feature() dead-code elimination | true | CONSISTENT |
+| `BC-tsconfig` | `tsconfig` | `bun.d.ts` | tsconfig: custom tsconfig for path resolution | true | CONSISTENT |
+| `BC-jsx` | `jsx` | `bun.d.ts` | jsx: classic factory / automatic runtime transform | true | CONSISTENT |
+| `BC-ignoreDCEAnnotations` | `ignoreDCEAnnotations` | `bun.d.ts` | ignoreDCEAnnotations keeps @__PURE__ calls | true | CONSISTENT |
+| `BC-emitDCEAnnotations` | `emitDCEAnnotations` | `bun.d.ts` | emitDCEAnnotations forces @__PURE__ marks under whitespace minify | true | CONSISTENT |
+| `BC-optimizeImports` | `optimizeImports` | `bun.d.ts` | optimizeImports: skip unused barrel re-exports | true | CONSISTENT |
 
 ### Coverage gaps — declared but not evidence-grounded
 
-- `BuildConfig`: plugins, packages, ignoreDCEAnnotations, emitDCEAnnotations, banner, footer, features, optimizeImports, throw, tsconfig, jsx, reactFastRefresh, reactCompiler, reactCompilerOutputMode, files
+- `BuildConfig`: reactFastRefresh, reactCompiler, reactCompilerOutputMode, files
 

@@ -6368,11 +6368,14 @@ another note.
   is type-only; outfile inert on the API; env: no substitution;
   allowUnresolved glob lists fail the build; transferred Image input ->
   ERR_IMAGE_UNKNOWN_FORMAT not ERR_INVALID_STATE).
-- Coverage sweep (auto, from the bundle interfaces): BuildConfig options
-  declared but not evidence-grounded - plugins, packages, banner, footer,
-  features, optimizeImports, throw, tsconfig, jsx, reactFastRefresh,
-  reactCompiler, reactCompilerOutputMode, files, ignoreDCEAnnotations,
-  emitDCEAnnotations - honest GAPs for future probes (non-fatal).
+- Coverage sweep (auto, from the bundle interfaces): 34 claims (29
+  CONSISTENT, 5 PINNED-DISCREPANCY). Gap closed from 14 to 4 - banner,
+  footer, throw:false, packages:external, features, tsconfig paths, jsx
+  classic, ignoreDCEAnnotations, emitDCEAnnotations, optimizeImports all
+  grounded (build-artifact:probe P23-P29, evidence configGapsGotchas);
+  remaining GAPs are type-level-only: reactFastRefresh, reactCompiler,
+  reactCompilerOutputMode (need React fixtures), files (needs a standalone
+  executable fixture).
 - Outputs: tools/reference-cross-check/report.json (deterministic, committed)
   + docs/BUN_BUILD_FINDINGS.md §9 (regenerated; idempotent).
 - Artifacts: tools/reference-cross-check/{index,run,compare,docs-parser,

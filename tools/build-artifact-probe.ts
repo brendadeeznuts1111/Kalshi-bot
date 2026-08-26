@@ -158,6 +158,35 @@ const endW = (await sliceArt.slice(0, -4).text()).length;
 const endB = (await new Blob([sliceFullText]).slice(0, -4).text()).length;
 check("P22 NEGATIVE offsets deviate with outdir (docs corrected)", negW === 0 && negN === negB && negN === 4 && endW === sliceFullText.length && endB === sliceFullText.length - 4, "withOutdir slice(-4)=" + negW + " noOutdir=" + negN + " blob=" + negB + " slice(0,-4) withOutdir=" + endW + " blob=" + endB);
 
+// P23-P31 (178 refactor): BuildConfig options surfaced by the reference cross-check.
+const gF = 'scratch/art-ground-cfg2';
+await Bun.write(gF + '/pure.ts', 'export const pure = () => 42;');
+await Bun.write(gF + '/missing.ts', 'import "./does-not-exist.ts";');
+await Bun.write(gF + '/zod.ts', 'import { z } from "zod"; export const s = z.string();');
+await Bun.write(gF + '/feat.ts', 'import { feature } from "bun:bundle"; export const v = feature("FEAT_A") ? "A" : "B";');
+await Bun.write(gF + '/src/pure.ts', 'export const pure = () => 42;');
+await Bun.write(gF + '/tsconfig.json', JSON.stringify({ compilerOptions: { baseUrl: '.', paths: { '@/*': ['src/*'] } } }));
+await Bun.write(gF + '/alias.ts', 'import { pure } from "@/pure"; export const v = pure();');
+await Bun.write(gF + '/el.tsx', 'export const el = <div id="x" />;');
+await Bun.write(gF + '/dce.ts', 'function impure() { return 1; } /* @__PURE__ */ impure(); export const y = 1;');
+const gText = async (opts: any) => { try { const r = await Bun.build(opts); return await r.outputs[0].text(); } catch (e: any) { return 'ERR ' + String(e.message ?? e).slice(0, 40); } };
+const gSafe = async (opts: any) => { try { await Bun.build(opts); return true; } catch { return false; } };
+const bfT = await gText({ entrypoints: [gF + '/pure.ts'], outdir: gF + '/o1', banner: '/*BANNER*/', footer: '/*FOOTER*/' });
+check('P23 banner/footer emitted', bfT.includes('/*BANNER*/') && bfT.trimEnd().includes('/*FOOTER*/'), bfT.slice(0, 20) + '...');
+const thrR = await Bun.build({ entrypoints: [gF + '/missing.ts'], outdir: gF + '/o2', throw: false });
+check('P24 throw:false returns success:false (no reject)', thrR.success === false && thrR.logs.length >= 1, 'success=' + thrR.success + ' logs=' + thrR.logs.length);
+const pkgsT = await gText({ entrypoints: [gF + '/zod.ts'], outdir: gF + '/o3', packages: 'external' });
+check('P25 packages:external keeps imports external', pkgsT.includes('from "zod"'), 'len=' + pkgsT.length);
+const featA = await gText({ entrypoints: [gF + '/feat.ts'], outdir: gF + '/o4a', features: ['FEAT_A'] });
+const feat0 = await gText({ entrypoints: [gF + '/feat.ts'], outdir: gF + '/o4b' });
+check('P26 features dead-code elimination', featA.includes('"A"') && !featA.includes('"B"') && feat0.includes('"B"') && !feat0.includes('"A"'), 'with=' + featA.slice(-30) + ' without=' + feat0.slice(-30));
+check('P27 tsconfig paths alias resolves', await gSafe({ entrypoints: [gF + '/alias.ts'], outdir: gF + '/o5', tsconfig: gF + '/tsconfig.json' }), '@/pure -> src/pure.ts');
+const jsxT = await gText({ entrypoints: [gF + '/el.tsx'], outdir: gF + '/o6', jsx: { runtime: 'classic', factory: 'h' } });
+check('P28 jsx classic factory honored', jsxT.includes('h("div"'), jsxT.slice(0, 60));
+const dce1 = await gText({ entrypoints: [gF + '/dce.ts'], outdir: gF + '/o7', minify: { syntax: true, whitespace: true } });
+const dce2 = await gText({ entrypoints: [gF + '/dce.ts'], outdir: gF + '/o7b', minify: { syntax: true, whitespace: true }, ignoreDCEAnnotations: true });
+check('P29 ignoreDCEAnnotations keeps @__PURE__ calls', !dce1.includes('impure') && dce2.includes('impure()'), 'drop=' + (!dce1.includes('impure')) + ' keep=' + dce2.includes('impure()'));
+
 const failed = results.filter((r) => !r.pass);
 console.log("build-artifact:probe - " + (results.length - failed.length) + "/" + results.length + " checks" + (failed.length ? " · FAIL: " + failed.map((f) => f.name).join(", ") : ""));
 process.exit(failed.length === 0 ? 0 : 1);
