@@ -33,11 +33,20 @@ export const TRACKED_SECTIONS = [
 
 export type BlogHeaderLevel = "h2" | "h3" | "h4";
 
+export type VersionBadge = {
+  verb: "Shipped in" | "Improved in";
+  version: string; // e.g. "1.4.0"
+  href: string; // release-notes link, e.g. /blog/release-notes/bun-v1.4.0
+  cls: string; // the full `since` class (border-accent/40 bg-accent-soft ... = current, border-line text-fg-faint = older)
+  tone: "accent" | "muted"; // accent = current-release styling, muted = older releases
+};
+
 export type BlogHeader = {
   id: string;
   level: BlogHeaderLevel;
   title: string; // clean title (version tags + trailing '#' stripped)
-  versions: string[]; // provenance tags parsed from the title (e.g. ["1.3.10","1.4.0"])
+  versions: string[]; // provenance: badge versions (e.g. ["1.3.10","1.4.0"])
+  badges: VersionBadge[]; // raw `since` anchors parsed from the heading HTML
   section: string; // nearest h2 id
   parent: string | null; // nearest h3 id for h4 entries, else null
   codeBlocks: number; // <pre> blocks in the section slice
@@ -90,6 +99,29 @@ export function parseTitle(raw: string): { title: string; versions: string[] } {
 }
 
 /**
+ * Parse the `since` version-badge anchors out of a heading's raw HTML.
+ * The blog encodes provenance as <a href="/blog/release-notes/bun-vX"
+ * class="since ..." title="Shipped in Bun vX|Improved in Bun vX">vX</a>;
+ * the class tone distinguishes current (accent) from older (muted) releases.
+ */
+export function extractBadges(rawHtml: string): VersionBadge[] {
+  const re = /<a href="([^"]+)" class="(since[^"]*)" title="(Shipped in|Improved in) Bun v([^"]+)"[^>]*>/g;
+  const out: VersionBadge[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(rawHtml)) !== null) {
+    const cls = m[2]!;
+    out.push({
+      href: m[1]!,
+      cls,
+      verb: m[3] as VersionBadge["verb"],
+      version: m[4]!,
+      tone: cls.includes("bg-accent-soft") ? "accent" : "muted",
+    });
+  }
+  return out;
+}
+
+/**
  * Parse the blog HTML into the full heading tree (h2/h3/h4 with ids), in
  * document order, with per-heading context sliced from the HTML between this
  * heading and the next heading of equal-or-higher level.
@@ -123,12 +155,19 @@ export function extractTree(html: string): BlogHeader[] {
       if (lvl <= curLvl) { sliceEnd = g.start; break; }
     }
     const slice = html.slice(f.end, sliceEnd);
-    const { title, versions } = parseTitle(f.rawTitle);
+    const badges = extractBadges(f.rawTitle);
+    const titleVersions = parseTitle(f.rawTitle);
+    const title = titleVersions.title;
+    // Authoritative provenance = the `since` badges; fall back to title-text tags.
+    const versions = badges.length
+      ? [...new Set(badges.map((b) => b.version))]
+      : titleVersions.versions;
     out.push({
       id: f.id,
       level: f.level,
       title,
       versions,
+      badges,
       section: curSection ?? "",
       parent: f.level === "h4" ? curParent : null,
       codeBlocks: (slice.match(/<pre[\s>]/g) || []).length,
@@ -152,6 +191,8 @@ export type BlogMapDiff = {
   curation: number;
   /** Registry size (entries). */
   total: number;
+  /** Version-badge stats across the registry. */
+  badges: { total: number; shipped: number; improved: number };
 };
 
 /** Diff the live blog tree against the registry (h3+h4 across ALL sections). */
@@ -170,6 +211,7 @@ export function diffBlogMap(html: string, registry: BlogMapEntry[]): BlogMapDiff
   const missing = [...registered].filter((id) => !trackedIds.has(id));
   const total = matched.length + newUnmapped.length;
   const curated = registry.filter((e) => e.status !== "unmapped").length;
+  const badgeAll = registry.flatMap((e) => e.badges);
   return {
     newUnmapped,
     missing,
@@ -177,6 +219,11 @@ export function diffBlogMap(html: string, registry: BlogMapEntry[]): BlogMapDiff
     coverage: total === 0 ? 1 : matched.length / total,
     curation: registry.length === 0 ? 0 : curated / registry.length,
     total: registry.length,
+    badges: {
+      total: badgeAll.length,
+      shipped: badgeAll.filter((b) => b.verb === "Shipped in").length,
+      improved: badgeAll.filter((b) => b.verb === "Improved in").length,
+    },
   };
 }
 
@@ -190,6 +237,8 @@ export function mappingReport(diff: BlogMapDiff, lastChecked: string): string {
     "## Registration: " + (diff.coverage * 100).toFixed(0) + "% (" + diff.matched.length + " of " + (diff.matched.length + diff.newUnmapped.length) + " blog headings registered)",
     "",
     "## Curation: " + (diff.curation * 100).toFixed(0) + "% (" + Math.round(diff.curation * diff.total) + " of " + diff.total + " entries mapped)",
+    "",
+    "## Version badges: " + diff.badges.total + " (" + diff.badges.shipped + " shipped in · " + diff.badges.improved + " improved in)",
     "",
   ];
   if (diff.newUnmapped.length) {

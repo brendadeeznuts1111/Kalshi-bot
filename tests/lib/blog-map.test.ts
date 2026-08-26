@@ -2,11 +2,11 @@
 // version provenance, diff contract, curation, report.
 // @see docs/AGENT-PITFALLS.md §31 / §184
 import { describe, expect, test } from "bun:test";
-import { diffBlogMap, extractTree, mappingReport, parseTitle, type BlogMapEntry } from "../../src/lib/blog-map.ts";
+import { diffBlogMap, extractBadges, extractTree, mappingReport, parseTitle, type BlogMapEntry } from "../../src/lib/blog-map.ts";
 
 const FIXTURE = [
   '<h2 id="faster">Faster</h2>',
-  '<h3 id="new-url-is-up-to-4-6-faster">new URL() <a href="#x">v 1.4.0</a></h3>',
+  '<h3 id="new-url-is-up-to-4-6-faster">new URL() <span><a href="/blog/release-notes/bun-v1.4.0" class="since not-prose rounded-full border-accent/40 bg-accent-soft text-accent-strong" title="Shipped in Bun v1.4.0">v1.4.0</a></span></h3>',
   '<p>Bun\'s URL parser was rewritten. <a href="/docs">docs</a></p>',
   '<pre><code>const u = new URL(x)</code></pre>',
   '<h3 id="faster-regexp">Faster RegExp <a href="#x">v 1.3.10 v 1.4.0</a></h3>',
@@ -16,8 +16,18 @@ const FIXTURE = [
 ].join("");
 
 const entry = (id: string, status: "verified" | "note" | "marketing" | "unmapped" = "verified"): BlogMapEntry => ({
-  id, level: "h3", title: id, versions: [], section: "faster", parent: null,
+  id, level: "h3", title: id, versions: [], badges: [], section: "faster", parent: null,
   codeBlocks: 0, links: 0, excerpt: "", mappedTo: "x", layer: "pipeline", status,
+});
+
+describe("extractBadges", () => {
+  test("parses since anchors with verb/version/href/tone", () => {
+    const html = '<a href="/blog/release-notes/bun-v1.4.0" class="since rounded-full border-accent/40 bg-accent-soft" title="Shipped in Bun v1.4.0">v1.4.0</a><a href="/blog/release-notes/bun-v1.3.10" class="since rounded-full border-line text-fg-faint" title="Improved in Bun v1.3.10">v1.3.10</a>';
+    const badges = extractBadges(html);
+    expect(badges).toHaveLength(2);
+    expect(badges[0]).toMatchObject({ verb: "Shipped in", version: "1.4.0", href: "/blog/release-notes/bun-v1.4.0", tone: "accent" });
+    expect(badges[1]).toMatchObject({ verb: "Improved in", version: "1.3.10", tone: "muted" });
+  });
 });
 
 describe("parseTitle", () => {
@@ -41,6 +51,8 @@ describe("extractTree", () => {
     ]);
     const url = tree[1]!;
     expect(url.versions).toEqual(["1.4.0"]);
+    expect(url.badges).toHaveLength(1);
+    expect(url.badges[0]).toMatchObject({ verb: "Shipped in", version: "1.4.0", href: "/blog/release-notes/bun-v1.4.0", tone: "accent" });
     expect(url.section).toBe("faster");
     expect(url.codeBlocks).toBe(1);
     expect(url.links).toBeGreaterThan(0);
