@@ -48,10 +48,9 @@ for (const module of DESIGN_MODULE_NAMES) {
 }
 
 console.log('design:audit-deps running bun audit (repo deps)...');
-const audit = Bun.spawn([Bun.which('bun') ?? 'bun', 'audit'], { cwd: ROOT, stdout: 'pipe', stderr: 'pipe' });
-const out = await new Response(audit.stdout).text();
-const err = await new Response(audit.stderr).text();
-await audit.exited;
+const audit = await Bun.$`bun audit`.cwd(ROOT).nothrow();
+const out = audit.stdout.toString();
+const err = audit.stderr.toString();
 if (out.trim()) console.log(out.trim());
 if (err.trim()) console.error(err.trim());
 const auditFindings = audit.exitCode !== 0;

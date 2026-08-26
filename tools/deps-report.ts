@@ -11,10 +11,9 @@ const root = join(import.meta.dir, '..');
 const BUN = Bun.which('bun') ?? 'bun';
 
 const run = async (args: string[]): Promise<{ ok: boolean; out: string }> => {
-  const p = Bun.spawn([BUN, ...args], { cwd: root, stdout: 'pipe', stderr: 'pipe' });
-  const out = await new Response(p.stdout).text();
-  await p.exited;
-  return { ok: (p.exitCode ?? 1) === 0, out: out.trim() };
+  // Native shape (S228): Bun.$ tagged template (async pipe capture).
+  const p = await Bun.$`bun ${args}`.cwd(root).nothrow();
+  return { ok: p.exitCode === 0, out: p.stdout.toString().trim() };
 };
 
 const pkg = (await Bun.file(join(root, 'package.json')).json()) as { dependencies: Record<string, string> };

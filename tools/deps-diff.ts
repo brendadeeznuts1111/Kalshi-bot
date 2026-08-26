@@ -16,10 +16,10 @@ for (const [name, version] of Object.entries(pkg.dependencies)) {
     console.log('=== ' + name + ' === (skipped: ' + version + ' — no registry diff)');
     continue;
   }
-  const proc = Bun.spawn([Bun.which('bun') ?? 'bun', 'pm', 'diff', name], { cwd: root, stdout: 'pipe', stderr: 'pipe' });
-  const out = await new Response(proc.stdout).text();
-  const err = await new Response(proc.stderr).text();
-  await proc.exited;
+  // Native shape (S228): Bun.$ tagged template with cwd + nothrow (async pipe capture).
+  const proc = await Bun.$`bun pm diff ${name}`.cwd(root).nothrow();
+  const out = proc.stdout.toString();
+  const err = proc.stderr.toString();
   if (proc.exitCode !== 0) {
     failed += 1;
     console.error('deps:diff ' + name + ' FAILED (' + proc.exitCode + '): ' + err.slice(0, 120));

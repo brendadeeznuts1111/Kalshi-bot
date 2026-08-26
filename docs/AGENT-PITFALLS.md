@@ -241,6 +241,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §225 — Probe/surface refactor — Bun.file + Bun.Glob consistency; symlink counter-lesson (2026-08-26)
 - §226 — Full native-alignment sweep — probe/surface on Bun.file/Bun.write/Bun.stdin; what stays node:fs (2026-08-26)
 - §227 — Best-shape audit — Bun.file.json()/exists()/auto-parent-dirs; sync helpers correctly stay node:fs (2026-08-26)
+- §228 — Deeper Bun shapes — Bun.$ .json()/.text(), subprocess stdout JSON, 4 spawn tools converted (2026-08-26)
 - §199 — ui:regen CLI — regenerate UI artifacts from meta/variant sources + the Bun.$ template failure class (2026-08-26)
 - §187 — Extended color formats — kernel-only (lch/oklab/oklch/hsv) + inverse parsers (2026-08-26)
 - §188 — Watermark pipeline — ML-DSA key naming + WebView/Blob verified facts (2026-08-26)
@@ -7913,6 +7914,35 @@ converting sync helpers to it would force async up the call chain for
 no benefit. The rule: async context -> Bun.file.json()/exists(); sync
 helper -> readFileSync stays.
   Gates: 2799 tests pass / 0 fail; verify:contracts 59/59.
+
+
+
+## 228. Deeper Bun shapes - Bun.$ .json()/.text(), subprocess stdout JSON, dynamic JSON import; 4 spawn tools converted to Bun.$ (2026-08-26)
+
+Answer to 'there's no other better bun ways?': there WERE - probed + adopted:
+- Bun.$ tagged template has .json() (Bun.$`cmd`.json() parses stdout JSON
+  directly, probe-verified) and .text()/.stdout. CONVERTED 4 async
+  pipe-capture tools from Bun.spawn + manual new Response(stdout).text():
+  audit-overlay-update (bun audit --json -> .json()), deps-diff
+  (bun pm diff -> .text()), design-audit-deps (bun audit), deps-report
+  (bun dedupe/prune/audit via array interpolation). All pass guard.
+- These 4 LEFT the SPAWN_KEEP_LIST (they now use the guard-preferred
+  Bun.$; the keep-list is for sync/TTY/IPC/cold-spawn where Bun.$
+  doesn't fit - those stay and are documented).
+- Subprocess stdout parses as JSON natively: new Response(subprocess.
+  stdout).json() works (probe-verified) - the manual pattern for any
+  remaining pipe reads.
+- Dynamic JSON import: await import(path) of a .json returns the parsed
+  default export (probe-verified) - a third native JSON path alongside
+  Bun.file().json() (static-import equivalent for runtime paths).
+- Bun.file().stream()/.writer() exist for streaming I/O (probe-verified);
+  the tooling writes are small so Bun.write stays (stream/writer are for
+  large payloads).
+The rule: async pipe-capture subprocess -> Bun.$; sync/TTY/IPC ->
+Bun.spawnSync (keep-list); JSON -> Bun.file().json() (async) or
+readFileSync (sync helper).  Gates: 2799 tests pass / 0 fail;
+verify:contracts 59/59.
+
 
 
 

@@ -30,14 +30,14 @@ function extractVulns(raw: unknown): Record<string, unknown> {
 }
 
 export async function refreshAuditOverlay(): Promise<{ found: number; total: number }> {
-  const proc = Bun.spawnSync(["bun", "audit", "--json"], { cwd: ROOT, stdout: "pipe", stderr: "pipe" });
-  const stdout = proc.stdout?.toString() ?? "";
-  const stderr = proc.stderr?.toString() ?? "";
+  // Native shape (S228): Bun.$ tagged template with .json() parses the
+  // subprocess JSON directly - replaces the spawnSync + manual JSON.parse.
+  const proc = await Bun.$`bun audit --json`.cwd(ROOT).nothrow();
   let raw: unknown;
   try {
-    raw = JSON.parse(stdout);
+    raw = await proc.json();
   } catch {
-    throw new Error("audit:overlay:update — bun audit --json output was not JSON (network or toolchain issue)\n" + stderr.slice(-400));
+    throw new Error("audit:overlay:update — bun audit --json output was not JSON (network or toolchain issue)\n" + (await proc.text()).slice(-400));
   }
   const found = extractVulns(raw);
   const foundKeys = Object.keys(found);
