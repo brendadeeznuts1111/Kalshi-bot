@@ -288,6 +288,7 @@
     "coverage:matrix": "bun tools/bun-shape.ts && bun tools/bun-coverage-matrix.ts && bun tools/module-shape-report.ts && bun tools/repo-api-shape.ts && bun tools/docs-sync-counts.ts",
     "shape:gen": "bun tools/bun-shape.ts",
     "shape:probe": "bun tools/shape-probe.ts",
+    "etag:probe": "bun tools/etag-probe.ts",
     "module-shape:report": "bun tools/module-shape-report.ts",
     "repo-api:shape": "bun tools/repo-api-shape.ts",
     "docs:sync-counts": "bun tools/docs-sync-counts.ts",

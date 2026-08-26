@@ -9,7 +9,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 > The headings were renumbered to §1-§11 on 2026-08-23; the counters were kept
 > so historical notes stay traceable.
 >
-> **Current contract status: verify:contracts 53/53** (see docs/BUN_API_COVERAGE.md
+> **Current contract status: verify:contracts 54/54** (see docs/BUN_API_COVERAGE.md
 > for the full matrix). `verify:contracts N/N` lines inside older sections are
 > HISTORICAL (each records its era) — docs:check enforces that only this header
 > and non-pitfall docs may reference the current count.
@@ -6221,3 +6221,27 @@ another note.
 - Module exports gate via MODULE_GATES (bun:test->test:probe,
   bun:sqlite->sqlite:probe, bun:ffi->ffi:probe, bun:jsc->surface:probe,
   bun:bundle->build-deep:probe).
+
+## 176. Automatic ETag/304 behavior probed — one docs claim corrected (2026-08-24)
+
+- tools/etag-probe.ts (bun run etag:probe, gate #54) probes Bun's
+  automatic ETag claims on the pinned 1.4.0, in-process:
+- P1 CONFIRMED: new Response(await file.bytes()) static routes get an
+  ETag AND If-None-Match -> 304; even a plain static Response gets an
+  ETag (stronger than the docs claim).
+- P2 CONFIRMED: fullstack dev server with development: false adds both
+  ETag and Cache-Control (Cache-Control = no-cache, not a max-age).
+- P3 CORRECTED (pin-negative): the docs claim "new Response(artifact)
+  sets Content-Type and Etag" is WRONG on 1.4.0 - Content-Type is set
+  (text/javascript;charset=utf-8) but Etag is NULL on the Response
+  wrapper. ETag appears on SERVED routes (dir/static), not on the
+  Response constructor wrapper. If a future Bun adds the Etag, the
+  check flips FAIL for re-verification.
+- P4 PARTIAL: S3Client.stat returns a Promise and S3Stats declares
+  etag: string (type-level confirmed); a live etag VALUE needs a real
+  S3 object - not probed, honest pin.
+- Grounds the repo's own conditional-request postures: serve.ts
+  hand-rolls notModified()/If-None-Match for dynamic routes, and the
+  route manifest marks /colors.css, /design-system.js etc cache: etag
+  - the probe verifies the NATIVE behavior those postures build on.
+- 7/7 checks; verify:contracts 54/54 (header auto-synced).
