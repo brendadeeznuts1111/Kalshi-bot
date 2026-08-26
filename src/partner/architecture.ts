@@ -376,6 +376,8 @@ export function buildOpsStatusReport(nowMs = Date.now()): OpsStatusReport {
         'partner:vault:provision',
         'partner:pandora-probe',
         'partner:webview-ws-capture',
+        'agent (status/ground/patterns/report/blueprint/tennis/run-research)',
+        'agent:schedule:preview/register/remove (daily offline ground+report cron)',
       ],
       missingForBotLoop: [
         'partners.telegram_chat_id + topic preferences',

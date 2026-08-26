@@ -217,6 +217,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §200 — Bun.mmap grounded — live-updating Uint8Array + MAP_SHARED write-through (2026-08-26)
 - §201 — Live consensus stream — ConsensusTracker wired into a repeated-snapshot consumer (2026-08-26)
 - §202 — Bun.inspect + inspect.table — table options (properties filter + colors) grounded (2026-08-26)
+- §203 — Managed agent CLI — schedule register/remove/preview + offline daily ground/report cron (2026-08-26)
 - §199 — ui:regen CLI — regenerate UI artifacts from meta/variant sources + the Bun.$ template failure class (2026-08-26)
 - §187 — Extended color formats — kernel-only (lch/oklab/oklch/hsv) + inverse parsers (2026-08-26)
 - §188 — Watermark pipeline — ML-DSA key naming + WebView/Blob verified facts (2026-08-26)
@@ -7191,3 +7192,26 @@ custom; evidence block inspectGotchas; tests bun-inspect-coverage, 7). Cross-che
   surfaces as its own column).
   Repo adoption: findings:term/alpha:cluster --styled already use ANSI;
   inspect.table is the zero-dep pretty-printer for CLI summaries.
+
+
+
+## 203. Managed agent CLI - schedule register/remove/preview + offline daily ground/report cron worker (2026-08-26)
+
+The agent CLI (bun run agent) is now managed like the tennis canary/experiment:
+a schedule CLI + an OS-cron worker.
+- src/agent/constants.ts: AGENT_CRON_TITLE=kalshi-agent-daily-ground,
+  AGENT_CRON_SCHEDULE='0 6 * * *' (daily 06:00 local).
+- tools/agent-schedule-cli.ts (bun run agent:schedule:{register,remove,preview}):
+  registers src/agent/scheduled.ts via Bun.cron; preview uses Bun.cron.parse
+  (UTC display, register is local time - same convention as the others).
+- src/agent/scheduled.ts: runScheduledAgent() = discovery ground over cache.db
+  (runDiscoveryGround, NO live GitHub) + agent report write (runAgentReportCmd ->
+  research/reports/agent-report.{md,json}). Deps-injectable for tests; the
+  scheduled() handler throws on non-zero so Bun.cron records the failed fire.
+- ops:status orchestration now lists agent + agent:schedule:*.
+- Tests: tests/agent/schedule.test.ts (5): parse CLI, constants defaults,
+  worker delegation + exit-code surfacing. Worker smoke: runs the real offline
+  pipeline end-to-end (ground + report write) in ~seconds.
+  Note: agent-report.{md,json} are TIMESTAMPED regenerated artifacts - never
+  stage their dirt; restore committed versions (git checkout) after smoke runs.
+
