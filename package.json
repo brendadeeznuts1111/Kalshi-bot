@@ -319,7 +319,13 @@
     "output:probe": "bun tools/probe-output-assertions.ts",
     "verify:contracts": "bun tools/verify-contracts.ts",
     "assets:check": "bun tools/assets-check.ts",
-    "imports:graph": "bun tools/imports-graph.ts"
+    "imports:graph": "bun tools/imports-graph.ts",
+    "blog:coverage": "bun tools/blog-coverage-map.ts",
+    "blog:coverage:update": "bun tools/blog-coverage-update.ts",
+    "blog:paste-coverage": "bun tools/blog-paste-coverage.ts",
+    "blog:story": "bun tools/blog-story-server.ts",
+    "palette:clip": "bun tools/palette-clip.ts",
+    "watermark:sign": "bun tools/watermark-sign.ts"
   },
   "engines": {
     "bun": ">=1.4.0"

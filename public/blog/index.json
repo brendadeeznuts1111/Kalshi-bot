@@ -34,7 +34,7 @@
     },
     "production": {
       "entries": 11,
-      "mapped": 0,
+      "mapped": 6,
       "badges": 0
     },
     "what-s-new": {
@@ -64,22 +64,22 @@
     },
     "security": {
       "entries": 6,
-      "mapped": 0,
+      "mapped": 2,
       "badges": 6
     },
     "platforms": {
       "entries": 8,
-      "mapped": 0,
+      "mapped": 5,
       "badges": 9
     },
     "upgrading-to-1-4": {
       "entries": 41,
-      "mapped": 0,
+      "mapped": 28,
       "badges": 41
     },
     "changelog": {
       "entries": 144,
-      "mapped": 0,
+      "mapped": 60,
       "badges": 129
     }
   },

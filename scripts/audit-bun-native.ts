@@ -292,6 +292,8 @@ export const SPAWN_KEEP_LIST = new Set([
   "tests/lib/routes-probe.test.ts", // runs the routes probe CLI (pipe capture)
   "tests/lib/serve-tls-probe.test.ts", // runs the serve-tls probe CLI (pipe capture)
   "tests/lib/licenses-gate.test.ts", // same gate subprocess (pipe capture)
+  "tools/blog-story-server.ts", // POST /api/run: executes ts/js blocks via `bun -e` subprocess (pipe capture + timeout kill)
+  "tools/palette-clip.ts", // ffmpeg frame composition subprocess (exit-code wait, output ignored)
 ]);
 
 /** Flag Bun.spawn / Bun.spawnSync call sites in files outside SPAWN_KEEP_LIST. */
