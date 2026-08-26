@@ -17,7 +17,7 @@ import { gateFor } from "../src/lib/bun-gates.ts";
 
 const ROOT = join(import.meta.dir, "..");
 const BTK = String.fromCharCode(96);
-const shape = JSON.parse(await Bun.file(join(ROOT, "tools/bun-shape.json")).text());
+const shape = await Bun.file(join(ROOT, "tools/bun-shape.json")).json();
 const byKey = new Map<string, any>();
 for (const m of shape.members) byKey.set(m.ns ? m.ns + "." + m.name : m.name, m);
 

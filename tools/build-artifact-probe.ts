@@ -134,7 +134,7 @@ check("P16a loader {.xyz: text} inlines the file (no artifact)", ldText.ok && ld
 // P17-P19: evidence pinning (177 refactor) - the committed evidence JSON
 // is the grounding for docs/BUN_BUILD_FINDINGS.md; it must stay in sync
 // with the installed runtime, else the gate fails.
-const evFile = JSON.parse(await Bun.file("tools/build-artifact-evidence.json").text());
+const evFile = await Bun.file("tools/build-artifact-evidence.json").json();
 check("P17 evidence JSON matches runtime version/revision", evFile.bunVersion === Bun.version && evFile.bunRevision === Bun.revision, evFile.bunVersion + "@" + String(evFile.bunRevision).slice(0, 9));
 const evM = evFile.surface ? evFile.surface.methods : null;
 check("P18 evidence surface agrees with live artifact surface", evM !== null && evM.text === true && evM.bytes === false && evM.formData === false && evM.image === false && evM.instanceofBlob === false, evM ? JSON.stringify(evM) : "no surface in evidence");

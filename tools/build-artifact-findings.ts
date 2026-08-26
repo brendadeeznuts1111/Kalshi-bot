@@ -11,7 +11,7 @@ const ROOT = join(import.meta.dir, '..');
 const EVIDENCE = join(ROOT, 'tools', 'build-artifact-evidence.json');
 const DOC = join(ROOT, 'docs', 'BUN_BUILD_FINDINGS.md');
 const BTK = String.fromCharCode(96);
-const ev = JSON.parse(await Bun.file(EVIDENCE).text());
+const ev = await Bun.file(EVIDENCE).json();
 const s = (n: string) => ev.scenarios.find((x: any) => x.name === n);
 const short = ev.bunRevision.slice(0, 9);
 

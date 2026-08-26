@@ -10,7 +10,7 @@
 import { join } from "node:path";
 
 const ROOT = join(import.meta.dir, "..");
-const shape = JSON.parse(await Bun.file(join(ROOT, "tools/bun-shape.json")).text());
+const shape = await Bun.file(join(ROOT, "tools/bun-shape.json")).json();
 const BTK = String.fromCharCode(96); // backtick for the markdown table
 import { GATES, gateFor } from '../src/lib/bun-gates.ts';
 

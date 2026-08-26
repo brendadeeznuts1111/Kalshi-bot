@@ -14,7 +14,7 @@
 import { join } from "node:path";
 
 const ROOT = join(import.meta.dir, "..");
-const shape = JSON.parse(await Bun.file(join(ROOT, "tools/bun-shape.json")).text());
+const shape = await Bun.file(join(ROOT, "tools/bun-shape.json")).json();
 const results: { name: string; pass: boolean; detail: string }[] = [];
 const check = (name: string, pass: boolean, detail = "") => { results.push({ name, pass, detail }); console.log((pass ? "PASS" : "FAIL") + "  " + name + (detail ? "  - " + detail : "")); };
 

@@ -753,7 +753,7 @@
     "xxeUnresolved": "{\"a\":\"&xxe;\"}",
     "importEvalToCompact": "{\"config\":{\"name\":\"demo\",\"port\":\"8080\"}}",
     "bundlerInlines": true,
-    "perf20kItemsMs": 6.4,
+    "perf20kItemsMs": 8.3,
     "perfVsDocs": "CONSISTENT (docs 27 ms for 2.2 MB)"
   },
   "artifactGotchas": {
@@ -1263,7 +1263,7 @@
         {
           "path": "outbc/pure.js.jsc",
           "kind": "bytecode",
-          "hash": "dppj1cqh",
+          "hash": "5kc8cys4",
           "loader": "file",
           "size": 10944,
           "type": "application/octet-stream",

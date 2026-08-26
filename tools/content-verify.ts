@@ -26,10 +26,10 @@ const update = cv.update === true || cv.rebuild === true;
 
 const manifestPath = join(root, '.data/manifest.json');
 const statePath = join(root, '.data/content-state.json');
-const files: string[] = JSON.parse(readFileSync(manifestPath, 'utf8')).files ?? [];
+const files: string[] = (await Bun.file(manifestPath).json()).files ?? [];
 
 let state: Record<string, string> = {};
-if (existsSync(statePath)) state = JSON.parse(readFileSync(statePath, 'utf8'));
+if (await Bun.file(statePath).exists()) state = await Bun.file(statePath).json();
 
 let drifted = 0;
 let added = 0;

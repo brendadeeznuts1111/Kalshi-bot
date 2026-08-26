@@ -182,7 +182,7 @@ Observed: {"kinds":["entry-point","bytecode"]}
 | Output path | kind | hash | loader | size | type | sourcemap |
 |---|---|---|---|---|---|---|
 `outbc/pure.js` | `entry-point` | `h2vnn1me` | `ts` | 1527 | `text/javascript;charset=utf-8` | `null`
-`outbc/pure.js.jsc` | `bytecode` | `mngntktv` | `file` | 10944 | `application/octet-stream` | `null`
+`outbc/pure.js.jsc` | `bytecode` | `5kc8cys4` | `file` | 10944 | `application/octet-stream` | `null`
 
 ### S07a-compile-outdir
 

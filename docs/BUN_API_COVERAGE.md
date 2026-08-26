@@ -8,8 +8,8 @@ without a runtime value; missing = declared value absent at runtime.
 
 | Token | Runtime | Types | Docs | Gate | Uses |
 |---|---|---|---|---|---|
-| `file` | function | y | y | fs:probe | 563 |
-| `write` | function | y | y | fs:probe | 356 |
+| `file` | function | y | y | fs:probe | 589 |
+| `write` | function | y | y | fs:probe | 392 |
 | `env` | object | y | y | runtime:probe | 247 |
 | `color` | function | y | y | ansi:probe | 200 |
 | `serve` | function | y | y | serve-tls/routes | 139 |
@@ -111,6 +111,7 @@ without a runtime value; missing = declared value absent at runtime.
 | `pathToFileURL` | function | y | y | fsx:probe | 2 |
 | `readableStreamToText` | function | y | y | runtime:probe | 2 |
 | `RedisClient` | function | y | y | client-shape:probe | 2 |
+| `stdin` | object | y | y | surface:probe | 2 |
 | `TOML.stringify` | function | y | y | format:probe (ns) | 2 |
 | `allocUnsafe` | function | y | y | surface:probe | 1 |
 | `concatArrayBuffers` | function | y | y | surface:probe | 1 |
@@ -140,7 +141,6 @@ without a runtime value; missing = declared value absent at runtime.
 | `SHA512_256` | function | y | n | surface:probe | 1 |
 | `shrink` | function | y | n | surface:probe | 1 |
 | `stderr` | object | y | y | surface:probe | 1 |
-| `stdin` | object | y | y | surface:probe | 1 |
 | `unsafe` | object | y | y | surface:probe | 1 |
 | `version_with_sha` | string | y | n | runtime:probe | 1 |
 | `zstdCompress` | function | y | y | fs:probe | 1 |

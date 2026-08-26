@@ -47,7 +47,7 @@ check("P7 treeShaking:false does NOT force dead chunks", !Object.keys(resNoShake
 
 // P8 CLI --metafile=path.json produces the same schema.
 const cli = Bun.spawnSync(["bun", "build", F + "/entry.ts", "--outdir", "scratch/meta-cli", "--metafile=scratch/meta-cli/meta.json"], { stdout: "ignore", stderr: "ignore" });
-const cliMf = JSON.parse(await Bun.file("scratch/meta-cli/meta.json").text());
+const cliMf = await Bun.file("scratch/meta-cli/meta.json").json();
 check("P8 CLI --metafile schema", cli.exitCode === 0 && "inputs" in cliMf && "outputs" in cliMf && "entryPoint" in (Object.values(cliMf.outputs as any)[0] as object), "exit=" + cli.exitCode);
 
 
@@ -141,7 +141,7 @@ check("P25 JSON.stringify + Bun.write round-trip", jsStr.startsWith("{\"inputs\"
 // process CWD (same as the CLI metafile outputs).
 const resRel = await Bun.build({ entrypoints: [F + "/entry.ts"], outdir: "scratch/mf-rel/dist", metafile: true });
 await Bun.write("scratch/mf-rel/meta.json", JSON.stringify(resRel.metafile));
-const relMf = JSON.parse(await Bun.file("scratch/mf-rel/meta.json").text());
+const relMf = await Bun.file("scratch/mf-rel/meta.json").json();
 check("P26 Bun.write relative path (CWD-resolved)", "inputs" in relMf && "outputs" in relMf, "");
 
 

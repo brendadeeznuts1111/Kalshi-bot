@@ -240,6 +240,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §224 — CONFIRMATION PROTOCOL — surface first, semantics second, test-locked positive (2026-08-26)
 - §225 — Probe/surface refactor — Bun.file + Bun.Glob consistency; symlink counter-lesson (2026-08-26)
 - §226 — Full native-alignment sweep — probe/surface on Bun.file/Bun.write/Bun.stdin; what stays node:fs (2026-08-26)
+- §227 — Best-shape audit — Bun.file.json()/exists()/auto-parent-dirs; sync helpers correctly stay node:fs (2026-08-26)
 - §199 — ui:regen CLI — regenerate UI artifacts from meta/variant sources + the Bun.$ template failure class (2026-08-26)
 - §187 — Extended color formats — kernel-only (lch/oklab/oklch/hsv) + inverse parsers (2026-08-26)
 - §188 — Watermark pipeline — ML-DSA key naming + WebView/Blob verified facts (2026-08-26)
@@ -7886,6 +7887,33 @@ The rule: Bun-native WHEN IT FITS the data shape (files/bytes/stdin),
 node:fs when it doesn't (recursive rm, symlink dirs, sync parser loops,
 deliberate node-compat probes). 'Native alignment' is fit, not dogma.
   Gates: 2799 tests pass / 0 fail; verify:contracts 59/59.
+
+
+
+## 227. Best-shape audit - Bun.file.json()/exists()/auto-parent-dirs; the sync helpers that correctly stay node:fs (2026-08-26)
+
+Direct answer to 'are these the best shapes Bun offers?': NO - several of
+our converted shapes were still second-best. Probed + upgraded:
+- Bun.file(path).json() EXISTS (probe-verified) - we were writing
+  JSON.parse(await Bun.file(p).text()) everywhere. Upgraded 12 sites to
+  .json(): shape-probe, bun-coverage-matrix, type-drift, module-shape-
+  report, repo-api-shape, build-artifact-findings, build-artifact-probe,
+  metafile-probe (x2), content-verify (x2).
+- Bun.file(p).exists() (probe-verified) - replaced existsSync+readFileSync
+  guards in content-verify + prune-content-cli manifest reads.
+- Bun.write AUTO-CREATES PARENT DIRS (probe-verified: nested a/b/c/deep.txt
+  wrote without mkdir) - no extra mkdirSync needed before fixture writes.
+- Bun.file surface confirmed: text/json/bytes/stream/arrayBuffer/slice/
+  stat/exists/writer/unlink all present.
+STAYS JSON.parse(readFileSync(...)) - CORRECT, not poor: sync helper
+functions called synchronously (alpha-cluster loadClusterPrints,
+docs-api loadCache, blog-story loadLedger, bun-docs-index readJson,
+repo-api-shape's sync TS-parser reads). Bun.file.json() is ASYNC-ONLY;
+converting sync helpers to it would force async up the call chain for
+no benefit. The rule: async context -> Bun.file.json()/exists(); sync
+helper -> readFileSync stays.
+  Gates: 2799 tests pass / 0 fail; verify:contracts 59/59.
+
 
 
 

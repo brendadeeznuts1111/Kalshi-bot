@@ -1290,7 +1290,7 @@
       "api": "parse",
       "source": "docs/runtime/xml.mdx",
       "docSays": "performance: SIMD parse of a ~2 MB doc measured on this machine (docs claim 27 ms for 2.2 MB)",
-      "observed": 6.4,
+      "observed": 8.3,
       "verdict": "CONSISTENT"
     },
     {

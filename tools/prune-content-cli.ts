@@ -55,8 +55,8 @@ const changelogPath = join(root, "CONTENT_CHANGELOG.md");
 
 let manifest: string[] = [];
 const absManifest = join(root, manifestPath);
-if (existsSync(absManifest)) {
-  manifest = JSON.parse(readFileSync(absManifest, "utf8")).files ?? [];
+if (await Bun.file(absManifest).exists()) {
+  manifest = (await Bun.file(absManifest).json()).files ?? [];
 }
 
 const files = await scanDirectory(root, dir, { hash: true });

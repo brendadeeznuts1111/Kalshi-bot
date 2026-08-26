@@ -12,7 +12,7 @@ const ROOT = join(import.meta.dir, "..");
 const results: { name: string; pass: boolean; detail: string }[] = [];
 const check = (name: string, pass: boolean, detail = "") => { results.push({ name, pass, detail }); console.log((pass ? "PASS" : "FAIL") + "  " + name + (detail ? "  - " + detail : "")); };
 
-const shape = JSON.parse(await Bun.file(join(ROOT, "tools/bun-shape.json")).text());
+const shape = await Bun.file(join(ROOT, "tools/bun-shape.json")).json();
 
 // P1: every runtime member has a shape entry (structural).
 const shapeNames = new Set(shape.members.filter((m: any) => !m.ns).map((m: any) => m.name));
