@@ -227,6 +227,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §210 — bun -p/-e one-liners audited — inspect-style output (not JSON), {hsl} invalid (2026-08-26)
 - §211 — Advanced bun -p diagnostics audited — isTerminal/getColorDepth/Bun.File undefined, deepMatch not wildcard (2026-08-26)
 - §212 — Proper definitions — resolveColorMode + isBunFile + shapeMatch wired into production (2026-08-26)
+- §213 — bun -p/-e evaluation engine audited — TS + top-level await verified; getters/customInspect ignored (2026-08-26)
 - §199 — ui:regen CLI — regenerate UI artifacts from meta/variant sources + the Bun.$ template failure class (2026-08-26)
 - §187 — Extended color formats — kernel-only (lch/oklab/oklch/hsv) + inverse parsers (2026-08-26)
 - §188 — Watermark pipeline — ML-DSA key naming + WebView/Blob verified facts (2026-08-26)
@@ -7452,6 +7453,35 @@ The S211 corrected items are now REAL production definitions, not doc notes:
 - Tests: tests/lib/shape-color-mode.test.ts (9) + alpha-cluster-cli (11)
   + cluster-styled (3) all green; end-to-end FORCE_COLOR=1 -> ANSI,
   NO_COLOR=1 -> plain, default piped -> plain.
+
+
+
+## 213. bun -p/-e evaluation-engine proposal audited - TS + top-level await verified; getters/customInspect are Node options Bun ignores (2026-08-26)
+
+Pasted 'Swiss Army knife' bun -p/-e proposal audited against 1.4.0:
+- NEW VERIFIED: TypeScript works in BOTH -p and -e (bun -p "const x:
+  number = 1; x + 2" -> 3); top-level await works in BOTH
+  (bun -p "await Promise.resolve(42)" -> 42, -e with console.log too).
+- NEW VERIFIED: depth: null shows EVERYTHING (Bun.inspect(Bun, {depth:
+  null}) prints the full global); works via -p too.
+- CORRECTED: getters: true does NOT evaluate getters (still [Getter]) and
+  customInspect: false does NOT disable [Bun.inspect.custom] (still runs) -
+  those are Node util.inspect options; BunInspectOptions is ONLY
+  colors/depth/sorted/compact (S202 pin). Bun.inspect IGNORES unknown opts.
+- CORRECTED: compact as a NUMBER is accepted but acts truthy/falsy
+  (compact: 2 -> single line like true; compact: 0 -> expanded like false);
+  there is NO element-grouping behavior. Type says boolean.
+- PARTIAL: JSX in -e/-p needs the JSX runtime (react/jsx-dev-runtime) -
+  bare TSX errors 'Cannot find module react/jsx-dev-runtime' without it;
+  TS-only expressions are the safe inline path.
+- RE-CONFIRMED (S211): the proposal's deepMatch schema example returns
+  FALSE (value-sensitive: '' vs 'e1') and its 'actual contains all schema
+  properties' framing is the REVERSE of reality (deepMatch checks actual
+  keys are present in EXPECTED). Use shapeMatch (S212) for wildcard shape
+  checks. The data: URL virtual build STILL fails (S211 ENOENT) and -p
+  output is inspect-style (S210), NOT the claimed colors:true wrap - the
+  wrap is env-aware (NO_COLOR/FORCE_COLOR), verified byte-level in S211.
+
 
 
 
