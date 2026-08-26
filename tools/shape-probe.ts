@@ -11,11 +11,10 @@
  * S3 every live top-level member is mapped in the shape.
  * S4 documented globals present.
  */
-import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const ROOT = join(import.meta.dir, "..");
-const shape = JSON.parse(readFileSync(join(ROOT, "tools/bun-shape.json"), "utf8"));
+const shape = JSON.parse(await Bun.file(join(ROOT, "tools/bun-shape.json")).text());
 const results: { name: string; pass: boolean; detail: string }[] = [];
 const check = (name: string, pass: boolean, detail = "") => { results.push({ name, pass, detail }); console.log((pass ? "PASS" : "FAIL") + "  " + name + (detail ? "  - " + detail : "")); };
 

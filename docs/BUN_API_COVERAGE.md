@@ -8,94 +8,99 @@ without a runtime value; missing = declared value absent at runtime.
 
 | Token | Runtime | Types | Docs | Gate | Uses |
 |---|---|---|---|---|---|
-| `file` | function | y | y | fs:probe | 529 |
-| `write` | function | y | y | fs:probe | 335 |
-| `env` | object | y | y | runtime:probe | 240 |
-| `serve` | function | y | y | serve-tls/routes | 138 |
-| `color` | function | y | y | ansi:probe | 134 |
-| `build` | function | y | y | build-deep:probe | 114 |
-| `cron` | function | y | y | cron tests §126/128 | 110 |
-| `argv` | object | y | y | runtime:probe | 89 |
-| `Image` | function | y | y | image:probe | 86 |
-| `sleep` | function | y | y | runtime:probe | 78 |
-| `spawnSync` | function | y | y | spawn:probe | 78 |
-| `WebView` | function | y | y | runtime:probe | 70 |
-| `$` | function | y | y | shell:probe | 67 |
-| `Transpiler` | function | y | y | runtime:probe | 67 |
-| `version` | string | y | y | runtime:probe | 57 |
-| `Glob` | function | y | y | fsx:probe | 54 |
-| `inspect` | function | y | y | ansi:probe | 46 |
-| `spawn` | function | y | y | spawn:probe | 46 |
-| `escapeHTML` | function | y | y | ansi:probe | 45 |
-| `CryptoHasher` | function | y | y | crypto:probe | 42 |
-| `which` | function | y | y | fsx:probe | 41 |
+| `file` | function | y | y | fs:probe | 563 |
+| `write` | function | y | y | fs:probe | 356 |
+| `env` | object | y | y | runtime:probe | 247 |
+| `color` | function | y | y | ansi:probe | 200 |
+| `serve` | function | y | y | serve-tls/routes | 139 |
+| `build` | function | y | y | build-deep:probe | 127 |
+| `cron` | function | y | y | cron tests §126/128 | 114 |
+| `Image` | function | y | y | image:probe | 107 |
+| `argv` | object | y | y | runtime:probe | 99 |
+| `WebView` | function | y | y | runtime:probe | 91 |
+| `sleep` | function | y | y | runtime:probe | 84 |
+| `spawnSync` | function | y | y | spawn:probe | 80 |
+| `$` | function | y | y | shell:probe | 73 |
+| `Transpiler` | function | y | y | runtime:probe | 72 |
+| `Glob` | function | y | y | fsx:probe | 65 |
+| `version` | string | y | y | runtime:probe | 63 |
+| `which` | function | y | y | fsx:probe | 63 |
+| `inspect` | function | y | y | ansi:probe | 62 |
+| `CryptoHasher` | function | y | y | crypto:probe | 56 |
+| `markdown.html` | function | y | y | format:probe (ns) | 54 |
+| `escapeHTML` | function | y | y | ansi:probe | 50 |
+| `markdown` | object | y | y | format:probe | 48 |
+| `spawn` | function | y | y | spawn:probe | 48 |
+| `Archive` | function | y | y | fs:probe | 44 |
+| `inspect.table` | function | y | y | ansi:probe (ns) | 44 |
 | `stringWidth` | function | y | y | ansi:probe | 36 |
-| `Archive` | function | y | y | fs:probe | 33 |
-| `markdown` | object | y | y | format:probe | 31 |
+| `nanoseconds` | function | y | y | runtime:probe | 31 |
+| `XML` | object | y | y | format:probe | 31 |
 | `hash` | function | y | y | crypto:probe | 29 |
-| `inspect.table` | function | y | y | ansi:probe (ns) | 29 |
+| `revision` | string | y | y | runtime:probe | 24 |
 | `TOML.parse` | function | y | y | format:probe (ns) | 24 |
-| `nanoseconds` | function | y | y | runtime:probe | 22 |
-| `revision` | string | y | y | runtime:probe | 22 |
 | `XML.parse` | function | y | y | format:probe (ns) | 22 |
-| `XML` | object | y | y | format:probe | 20 |
-| `markdown.html` | function | y | y | format:probe (ns) | 18 |
-| `secrets` | object | y | y | net:probe | 17 |
+| `deepEquals` | function | y | y | crypto:probe | 21 |
+| `markdown.react` | function | y | y | format:probe (ns) | 19 |
+| `markdown.render` | function | y | y | format:probe (ns) | 19 |
+| `mmap` | function | y | y | fs:probe | 19 |
+| `secrets` | object | y | y | net:probe | 19 |
+| `markdown.ansi` | function | y | n | format:probe (ns) | 16 |
+| `password` | object | y | y | surface:probe | 16 |
 | `stripANSI` | function | y | y | ansi:probe | 15 |
-| `deepEquals` | function | y | y | crypto:probe | 14 |
 | `semver` | object | y | y | bun:apis-probe | 14 |
 | `sha` | function | y | y | bun:apis-probe | 14 |
 | `wrapAnsi` | function | y | y | ansi:probe | 14 |
+| `peek` | function | y | y | runtime:probe | 13 |
 | `s3` | object | y | y | client-shape:probe | 13 |
+| `YAML` | object | y | y | format:probe | 13 |
 | `dns` | object | y | y | net:probe | 12 |
 | `dns.prefetch` | function | y | y | net:probe (ns) | 12 |
+| `SHA256` | function | y | n | crypto:probe | 12 |
 | `sliceAnsi` | function | y | n | ansi:probe | 12 |
+| `udpSocket` | function | y | y | net:probe | 12 |
+| `YAML.parse` | function | y | y | format:probe (ns) | 12 |
 | `connect` | function | y | y | security:probe | 11 |
-| `inspect.custom` | symbol | y | y | ansi:probe (ns) | 9 |
+| `inspect.custom` | symbol | y | y | ansi:probe (ns) | 11 |
 | `JSON5` | object | y | y | bun:apis-probe | 9 |
 | `TOML` | object | y | y | format:probe | 9 |
 | `JSON5.parse` | function | y | y | bun:apis-probe (ns) | 8 |
 | `JSONL.parse` | function | y | y | format:probe (ns) | 8 |
-| `markdown.ansi` | function | y | n | format:probe (ns) | 8 |
-| `peek` | function | y | y | runtime:probe | 8 |
 | `plugin` | function | y | y | build-deep:probe | 8 |
 | `Cookie` | function | y | y | defaults:probe | 7 |
 | `CookieMap` | function | y | y | defaults:probe | 7 |
 | `JSONL` | object | y | y | format:probe | 7 |
-| `password` | object | y | y | surface:probe | 7 |
 | `randomUUIDv7` | function | y | y | crypto:probe | 7 |
 | `semver.order` | function | y | y | bun:apis-probe (ns) | 7 |
 | `semver.satisfies` | function | y | y | bun:apis-probe (ns) | 7 |
-| `YAML` | object | y | y | format:probe | 7 |
+| `Terminal` | function | y | y | runtime:probe | 7 |
+| `deepMatch` | function | y | y | surface:probe | 6 |
 | `JSONC.parse` | function | y | n | format:probe (ns) | 6 |
+| `peek.status` | function | y | n | runtime:probe (ns) | 6 |
 | `postgres` | function | y | y | client-shape:probe | 6 |
 | `SQL` | function | y | y | sqlite:probe | 6 |
 | `stdout` | object | y | y | fs:probe | 6 |
 | `XML.stringify` | function | y | y | format:probe (ns) | 6 |
 | `listen` | function | y | y | net:probe | 5 |
 | `openInEditor` | function | y | y | fsx:probe | 5 |
-| `Terminal` | function | y | y | runtime:probe | 5 |
+| `resolveSync` | function | y | y | surface:probe | 5 |
+| `YAML.stringify` | function | y | n | format:probe (ns) | 5 |
 | `zstdCompressSync` | function | y | y | fs:probe | 5 |
 | `CSRF.generate` | function | y | y | csrf:probe (ns) | 4 |
 | `deflateSync` | function | y | y | fs:probe | 4 |
 | `fetch` | function | y | n | serve-tls/routes | 4 |
 | `gzipSync` | function | y | y | fs:probe | 4 |
 | `JSONL.parseChunk` | function | y | y | format:probe (ns) | 4 |
-| `peek.status` | function | y | n | runtime:probe (ns) | 4 |
 | `redis` | object | y | y | net:probe | 4 |
 | `resolve` | function | y | y | fsx:probe | 4 |
-| `SHA256` | function | y | n | crypto:probe | 4 |
 | `sql` | function | y | y | sqlite:probe | 4 |
-| `udpSocket` | function | y | y | net:probe | 4 |
-| `YAML.parse` | function | y | y | format:probe (ns) | 4 |
 | `gunzipSync` | function | y | y | fs:probe | 3 |
 | `JSONC` | object | y | n | format:probe | 3 |
-| `markdown.render` | function | y | y | format:probe (ns) | 3 |
 | `readableStreamToArrayBuffer` | function | y | y | runtime:probe | 3 |
 | `S3Client` | function | y | y | client-shape:probe | 3 |
+| `sleepSync` | function | y | y | runtime:probe | 3 |
 | `zstdDecompressSync` | function | y | y | fs:probe | 3 |
 | `ArrayBufferSink` | function | y | y | runtime:probe | 2 |
-| `deepMatch` | function | y | y | surface:probe | 2 |
 | `dns.getCacheStats` | function | y | y | net:probe (ns) | 2 |
 | `dns.lookup` | function | y | y | net:probe (ns) | 2 |
 | `enableANSIColors` | boolean | y | n | ecosystem:probe | 2 |
@@ -103,11 +108,9 @@ without a runtime value; missing = declared value absent at runtime.
 | `FileSystemRouter` | function | y | y | surface:probe | 2 |
 | `fileURLToPath` | function | y | y | fsx:probe | 2 |
 | `main` | string | y | y | surface:probe | 2 |
-| `mmap` | function | y | y | fs:probe | 2 |
 | `pathToFileURL` | function | y | y | fsx:probe | 2 |
 | `readableStreamToText` | function | y | y | runtime:probe | 2 |
 | `RedisClient` | function | y | y | client-shape:probe | 2 |
-| `sleepSync` | function | y | y | runtime:probe | 2 |
 | `TOML.stringify` | function | y | y | format:probe (ns) | 2 |
 | `allocUnsafe` | function | y | y | surface:probe | 1 |
 | `concatArrayBuffers` | function | y | y | surface:probe | 1 |
@@ -121,7 +124,6 @@ without a runtime value; missing = declared value absent at runtime.
 | `isMainThread` | boolean | y | y | surface:probe | 1 |
 | `isStandaloneExecutable` | boolean | y | y | surface:probe | 1 |
 | `JSON5.stringify` | function | y | y | bun:apis-probe (ns) | 1 |
-| `markdown.react` | function | y | y | format:probe (ns) | 1 |
 | `MD4` | function | y | n | surface:probe | 1 |
 | `MD5` | function | y | n | surface:probe | 1 |
 | `randomUUIDv5` | function | y | n | surface:probe | 1 |
@@ -130,7 +132,6 @@ without a runtime value; missing = declared value absent at runtime.
 | `readableStreamToBytes` | function | y | y | surface:probe | 1 |
 | `readableStreamToFormData` | function | y | y | runtime:probe | 1 |
 | `readableStreamToJSON` | function | y | y | surface:probe | 1 |
-| `resolveSync` | function | y | y | surface:probe | 1 |
 | `Security` | missing | y | n | GAP | 1 |
 | `SHA1` | function | y | n | surface:probe | 1 |
 | `SHA224` | function | y | n | surface:probe | 1 |
@@ -142,7 +143,6 @@ without a runtime value; missing = declared value absent at runtime.
 | `stdin` | object | y | y | surface:probe | 1 |
 | `unsafe` | object | y | y | surface:probe | 1 |
 | `version_with_sha` | string | y | n | runtime:probe | 1 |
-| `YAML.stringify` | function | y | n | format:probe (ns) | 1 |
 | `zstdCompress` | function | y | y | fs:probe | 1 |
 | `zstdDecompress` | function | y | y | fs:probe | 1 |
 | `$.braces` | function | y | n | shell:probe (ns) | 0 |
@@ -172,9 +172,9 @@ without a runtime value; missing = declared value absent at runtime.
 | `unsafe.mimallocDump` | function | y | y | surface:probe (ns) | 0 |
 | `WebAssembly` | missing | y | n | GAP | 0 |
 | `markdown.Options` | type-only | y | n | format:probe (ns) | 12 |
+| `CronController` | type-only | y | y | GAP | 8 |
 | `WebSocketOptions` | type-only | y | n | GAP | 8 |
-| `CronController` | type-only | y | y | GAP | 7 |
-| `BunFile` | type-only | y | n | GAP | 3 |
+| `BunFile` | type-only | y | n | GAP | 4 |
 | `Serve.Options` | type-only | y | n | undefined (ns) | 3 |
 | `ArchiveInput` | type-only | y | n | GAP | 2 |
 | `HTMLBundle` | type-only | y | n | GAP | 2 |
@@ -182,8 +182,10 @@ without a runtime value; missing = declared value absent at runtime.
 | `BunInspectOptions` | type-only | y | n | GAP | 1 |
 | `BunPlugin` | type-only | y | n | GAP | 1 |
 | `markdown.AnsiTheme` | type-only | y | n | format:probe (ns) | 1 |
+| `MMapOptions` | type-only | y | n | GAP | 1 |
 | `Security.Advisory` | type-only | y | n | undefined (ns) | 1 |
 | `Security.Scanner` | type-only | y | n | undefined (ns) | 1 |
+| `WhichOptions` | type-only | y | n | GAP | 1 |
 | `$.ShellOutput` | type-only | y | n | shell:probe (ns) | 0 |
 | `AbstractWorker` | type-only | y | n | GAP | 0 |
 | `AbstractWorkerEventMap` | type-only | y | n | GAP | 0 |
@@ -304,7 +306,6 @@ without a runtime value; missing = declared value absent at runtime.
 | `MessageEventInit` | type-only | y | n | GAP | 0 |
 | `MessageEventSource` | type-only | y | n | GAP | 0 |
 | `MessageListener` | type-only | y | n | GAP | 0 |
-| `MMapOptions` | type-only | y | n | GAP | 0 |
 | `MultipleResolveListener` | type-only | y | n | GAP | 0 |
 | `MultipleResolveType` | type-only | y | n | GAP | 0 |
 | `NetworkSink` | type-only | y | n | GAP | 0 |
@@ -493,7 +494,6 @@ without a runtime value; missing = declared value absent at runtime.
 | `WebView.PressOptions` | type-only | y | n | runtime:probe (ns) | 0 |
 | `WebView.ScrollToOptions` | type-only | y | n | runtime:probe (ns) | 0 |
 | `WebView.VirtualKey` | type-only | y | n | runtime:probe (ns) | 0 |
-| `WhichOptions` | type-only | y | n | GAP | 0 |
 | `Worker` | type-only | y | n | GAP | 0 |
 | `WorkerEventMap` | type-only | y | n | GAP | 0 |
 | `WorkerOptions` | type-only | y | n | GAP | 0 |

@@ -22,6 +22,9 @@ const PINNED = '1.4.0';
 
 export function locateBundleRoot(ROOT: string): string {
   const cacheRoot = join(ROOT, 'node_modules/.bun-cache/links');
+  // NOTE: the link dir holds SYMLINKS - Bun.Glob.scanSync SKIPS them, so
+  // readdirSync is the correct listing here (verified, S225). Not poor Bun
+  // usage; the docs scan below uses Glob+Bun.file for real files.
   const dir = readdirSync(cacheRoot)
     .filter((d) => d.startsWith('bun-types@' + PINNED + '-'))
     .sort()[0];

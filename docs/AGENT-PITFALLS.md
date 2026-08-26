@@ -238,6 +238,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §221 — ML-KEM 'not callable' — SUPERSEDED by §223 (our probe read wrong property/arg order; the function works) (2026-08-26)
 - §223 — ML-KEM WORKS — encapsulateBits/decapsulateBits verified + wired (ml-kem.ts + registry) (2026-08-26)
 - §224 — CONFIRMATION PROTOCOL — surface first, semantics second, test-locked positive (2026-08-26)
+- §225 — Probe/surface refactor — Bun.file + Bun.Glob consistency; symlink counter-lesson (2026-08-26)
 - §199 — ui:regen CLI — regenerate UI artifacts from meta/variant sources + the Bun.$ template failure class (2026-08-26)
 - §187 — Extended color formats — kernel-only (lch/oklab/oklch/hsv) + inverse parsers (2026-08-26)
 - §188 — Watermark pipeline — ML-DSA key naming + WebView/Blob verified facts (2026-08-26)
@@ -7825,6 +7826,35 @@ caught it in one step is now a verify gate (surface-confirm:probe, 59/59):
 This protocol applies to every future API confirmation. The S221 error
 record + S223 correction are the case study; surface-confirm:probe is the
 enforcement. Gates: verify:contracts 59/59.
+
+
+
+## 225. Probe/surface/reference refactor - Bun.file + Bun.Glob consistency, and the symlink counter-lesson (2026-08-26)
+
+Audited probe/surface/reference tooling for poor Bun API/CLI/Bun.file usage
+and refactored the real gaps (all behavior-preserving; 503-shape matrix,
+136 used / 0 gaps unchanged):
+- tools/bun-shape.ts collectDocs: readdirSync({ recursive: true }) mdx walk
+  -> listFilesAsync (Bun.Glob, src/lib/glob.ts) + Bun.file().text(). The
+  file already used Bun.write; the sync recursive walk was the odd one.
+- tools/shape-probe.ts + type-drift-probe.ts: readFileSync of
+  bun-shape.json -> Bun.file(...).text() (top-level await files; the
+  dead readFileSync import removed from type-drift).
+- COUNTER-LESSON (the refactor almost went wrong): docs-parser.ts's
+  readdirSync of node_modules/.bun-cache/links was NOT poor usage - the
+  dir holds SYMLINKS and Bun.Glob.scanSync SKIPS them (probe-verified:
+  readdirSync lists, Glob returns []). Reverted the Glob attempt; kept
+  readdirSync + a comment documenting why. 'Use Bun-native' is NOT an
+  unconditional rule - verify the tool fits the data shape first
+  (the S224 confirmation protocol applied to our own refactor).
+- Audited and left as-is (correct): node-compat-probe's deliberate
+  node:child_process spawnSync (SPAWN_KEEP_LIST, S140 probe); bun-apis-
+  probe's Bun.spawnSync of a probe file (keep-list); the d.ts
+  readdirSync in bun-shape (sync top-level loop, small listing).
+- No CLI misuse: surface/shape probes reference bun run only in doc
+  comments; no inline bun -e/-p or wrapper shells in the tooling.
+  Gates: 2799 tests pass / 0 fail; verify:contracts 59/59.
+
 
 
 

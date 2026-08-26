@@ -17,7 +17,7 @@ The trading layer is the compliance-gated authorized-execution surface
 | `/` | GET | handleHome |  |
 | `/runs` | GET | handleRunsList [traced: handleRunsList -> listRunSummaries -> json -> runDimension -> getStmts -> isResearchRun -> isFixtureRun -> normalizeDimensionId -> getDb -> looksLikeSyntheticFixtureRun -> isEligibleProductionRun -> resolveCacheDbPath] | `env` (runtime:probe), `Response` (global), `fetch` (global) |
 | `/api/runs/:id` | GET | handleRunApi [traced: handleRunApi -> loadRunFromDb -> isFixtureRun -> json -> getStmts -> isResearchRun -> looksLikeSyntheticFixtureRun -> isEligibleProductionRun -> getDb -> scoredOrCandidateRepos -> hasEligibleProductionClocks -> resolveCacheDbPath] | `env` (runtime:probe), `Response` (global) |
-| `/repo/:owner/:name` | GET | handleRepoPage [traced: handleRepoPage -> pageLayout -> fullNameFromRouteParams -> renderRepoPage -> resolveRun -> html -> findScored -> escapeHtml -> groupsToRef -> navLinks -> reportFor -> signalChecks] | `escapeHTML` (ansi:probe), `Response` (global), `URL` (global) |
+| `/repo/:owner/:name` | GET | handleRepoPage [traced: handleRepoPage -> pageLayout -> fullNameFromRouteParams -> renderRepoPage -> resolveRun -> html -> findScored -> escapeHtml -> themeToggleButton -> themeChrome -> groupsToRef -> navLinks] | `escapeHTML` (ansi:probe), `Response` (global), `URL` (global) |
 | `/reports/latest.md` | GET | handleLatestReport [traced: handleLatestReport -> joinPath] | `file` (fs:probe), `Response` (global) |
 | `/reports/*` | GET | report browser |  |
 | `/architecture` | GET | handleArchitecture [traced: handleArchitecture -> renderArchitecture -> html -> pageLayout -> navLinks -> statsBar -> renderModuleCards -> renderEntryPoints -> renderExternalServices -> renderDataFlows -> renderTypeCategories -> renderErrorConventions] | `Response` (global) |
@@ -28,13 +28,13 @@ The trading layer is the compliance-gated authorized-execution surface
 
 | Route | Method | Handler (traced) | Bun APIs + globals |
 |---|---|---|---|
-| `/dashboard` | GET | renderDashboard [traced: renderDashboard -> esc] | `fetch` (global), `setInterval` (global), `setTimeout` (global) |
+| `/dashboard` | GET | renderDashboard [traced: renderDashboard -> themeToggleButton -> themeChrome -> esc] | `fetch` (global), `setInterval` (global), `setTimeout` (global) |
 | `/api/signals` | GET | collectSignals -> json |  |
 | `/api/signals/actions/<name>` | POST | action dispatcher |  |
 
 **Layer summary:** 3 routes, 0 distinct Bun APIs used by traced handlers.
 
-## branding (17 routes)
+## branding (19 routes)
 
 | Route | Method | Handler (traced) | Bun APIs + globals |
 |---|---|---|---|
@@ -53,12 +53,14 @@ The trading layer is the compliance-gated authorized-execution surface
 | `/api/design/audit` | GET | DesignAgent.audit(live HQ) |  |
 | `/api/design/budgets` | GET | buildBudgetHealth |  |
 | `/api/color/theme` | GET | themeManifest |  |
+| `/api/color-info` | GET | parseExtendedColor + Bun.color (kernel parser) |  |
+| `/api/watermark` | GET | watermarkAndSign (WebView SVG overlay + ml-dsa-65) |  |
 | `/design` | GET | renderDesignPage |  |
 | `/design/trend` | GET | renderTrendPage |  |
 
-**Layer summary:** 17 routes, 0 distinct Bun APIs used by traced handlers.
+**Layer summary:** 19 routes, 0 distinct Bun APIs used by traced handlers.
 
-## pipeline (30 routes)
+## pipeline (31 routes)
 
 | Route | Method | Handler (traced) | Bun APIs + globals |
 |---|---|---|---|
@@ -71,6 +73,7 @@ The trading layer is the compliance-gated authorized-execution surface
 | `/api/events.jsonl` | GET | live-tracker NDJSON |  |
 | `/api/deps/health` | GET | dedupe/prune/audit gates |  |
 | `/api/meta/audit` | GET | meta audit |  |
+| `/blog/*` | GET | public/blog dir route (blog-map mirror) |  |
 | `/bun/networking` | GET | BUN_WIDGETS["/bun/networking"] |  |
 | `/bun/streams` | GET | BUN_WIDGETS["/bun/streams"] |  |
 | `/bun/observability` | GET | BUN_WIDGETS["/bun/observability"] |  |
@@ -93,7 +96,7 @@ The trading layer is the compliance-gated authorized-execution surface
 | `/bun/api` | GET | BUN_WIDGETS["/bun/api"] |  |
 | `/bun/brand` | GET | BUN_WIDGETS["/bun/brand"] |  |
 
-**Layer summary:** 30 routes, 0 distinct Bun APIs used by traced handlers.
+**Layer summary:** 31 routes, 0 distinct Bun APIs used by traced handlers.
 
 ## data (20 routes)
 

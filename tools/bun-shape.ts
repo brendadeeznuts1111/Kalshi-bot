@@ -13,6 +13,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import ts from "typescript";
+import { listFilesAsync } from "../src/lib/glob.ts"; // Bun.Glob recursive listing (S225)
 
 const ROOT = join(import.meta.dir, "..");
 const PINNED_VERSION = "1.4.0";
@@ -126,18 +127,20 @@ for (const f of readdirSync(BT).filter((x) => x.endsWith(".d.ts")).sort()) {
 }
 
 // Docs flag: bundled mdx mention of the dotted name (Bun.<name>).
+// Bun-native recursive listing via listFilesAsync (Bun.Glob) - the old
+// readdirSync({ recursive: true }) was the non-Bun walk (S225).
 const docTexts: string[] = [];
-const collectDocs = (dir: string) => {
+const collectDocs = async (dir: string) => {
   try {
-    for (const rel of readdirSync(dir, { recursive: true })) {
-      const p = join(dir, String(rel));
-      if (p.endsWith(".mdx")) docTexts.push(readFileSync(p, "utf8"));
+    const files = await listFilesAsync("**/*.mdx", { cwd: dir, onlyFiles: true });
+    for (const rel of files) {
+      docTexts.push(await Bun.file(join(dir, rel)).text());
     }
   } catch {
     /* no docs dir */
   }
 };
-collectDocs(join(BT, "docs"));
+await collectDocs(join(BT, "docs"));
 for (const m of members) {
   const full = m.ns ? m.ns + "." + m.name : m.name;
   m.docs = docTexts.some((t) => t.includes("Bun." + full));
