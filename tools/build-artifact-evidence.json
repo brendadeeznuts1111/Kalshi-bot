@@ -339,6 +339,13 @@
     },
     "componentGetters": {
       "pathname": "/files/*"
+    },
+    "serveIntegration": {
+      "hitStatus": 200,
+      "hitBody": "User 123",
+      "missStatus": 404,
+      "artifactPathIsFilesystem": true,
+      "urlPatternTestOnArtifactPath": false
     }
   },
   "scenarios": [
@@ -787,7 +794,7 @@
         {
           "path": "outbc/pure.js.jsc",
           "kind": "bytecode",
-          "hash": "x3wvz8rh",
+          "hash": "c7qtx8wf",
           "loader": "file",
           "size": 10944,
           "type": "application/octet-stream",

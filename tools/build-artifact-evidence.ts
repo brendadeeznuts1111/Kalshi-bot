@@ -692,6 +692,18 @@ const urlPatternGotchas = {
   regexGroup: { hasRegExpGroups: upReGroups, groups0: upRe0 },
   optionalParam: { noTrailingSlash: upOptNoSlash, trailingSlash: upOptSlash, withValue: upOptVal },
   componentGetters: { pathname: upGetters.pathname },
+  serveIntegration: await (async () => {
+    const pat = new URLPattern({ pathname: '/users/:id' });
+    const s = Bun.serve({ port: 0, fetch(req: any) { const m = pat.exec(req.url); if (m) return new Response('User ' + m.pathname.groups.id); return new Response('Not found', { status: 404 }); } } as any);
+    await Bun.sleep(30);
+    const port = s.port as number;
+    const hit = await fetch('http://127.0.0.1:' + port + '/users/123');
+    const miss = await fetch('http://127.0.0.1:' + port + '/other');
+    const hitStatus = hit.status; const hitBody = await hit.text(); const missStatus = miss.status;
+    s.stop(true);
+    const art = (await Bun.build({ entrypoints: [join(F, 'pure.ts')], outdir: join(F, 'out') })).outputs[0];
+    return { hitStatus, hitBody, missStatus, artifactPathIsFilesystem: art.path.startsWith('/') || art.path.startsWith('./'), urlPatternTestOnArtifactPath: pat.test(art.path) };
+  })(),
 };
 
 // ---------- emit ----------

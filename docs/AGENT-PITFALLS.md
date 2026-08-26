@@ -6410,3 +6410,9 @@ another note.
   /users/:id? but /users/ does NOT), component getters. Sweep now includes
   URLPattern + URLPatternInit: remaining gap baseURL. 59 claims (53
   CONSISTENT, 6 PINNED-DISCREPANCY).
+  Integration grounded (same source, second pass): the guide's Bun.serve fetch
+  handler + URLPattern.exec(req.url) pattern works end-to-end offline
+  (200 "User 123" / 404 fallback), and the "not related to Bun.build"
+  distinction verified: BuildArtifact.path is a filesystem path and
+  URLPattern.test rejects it (false) - evidence urlPatternGotchas.
+  serveIntegration.
