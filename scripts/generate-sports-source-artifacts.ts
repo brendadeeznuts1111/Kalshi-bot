@@ -1,11 +1,13 @@
 #!/usr/bin/env bun
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
+import { parseArgs } from "node:util";
 import { buildSportsSourceRegistryArtifact } from "../src/institutions/market-registry/registry.ts";
 
 const root = join(import.meta.dir, "..");
 const outputPath = join(root, "public/registry/sports-sources.json");
-const checkOnly = Bun.argv.includes("--check");
+const { values: ssv } = parseArgs({ args: Bun.argv.slice(2), options: { check: { type: 'boolean' } }, strict: false, allowPositionals: true });
+const checkOnly = ssv.check === true;
 
 function stableBody(generatedAt: string): string {
   return `${JSON.stringify(buildSportsSourceRegistryArtifact(generatedAt), null, 2)}\n`;

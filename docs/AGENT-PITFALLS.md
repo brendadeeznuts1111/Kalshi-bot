@@ -223,6 +223,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §206 — alpha:cluster deeper — --help, --glob via Bun.Glob, --verbose membership table (2026-08-26)
 - §207 — CLI parsing audited — official guide mandates util.parseArgs; alpha:cluster migrated (2026-08-26)
 - §208 — Hand-rolled CLI parsing sweep — all tools/* migrated to util.parseArgs (2026-08-26)
+- §209 — Sweep extended — src/calibration + scripts/* all on util.parseArgs (2026-08-26)
 - §199 — ui:regen CLI — regenerate UI artifacts from meta/variant sources + the Bun.$ template failure class (2026-08-26)
 - §187 — Extended color formats — kernel-only (lch/oklab/oklch/hsv) + inverse parsers (2026-08-26)
 - §188 — Watermark pipeline — ML-DSA key naming + WebView/Blob verified facts (2026-08-26)
@@ -7344,5 +7345,27 @@ Completed the S207 sweep: ZERO hand-rolled argv parsing remains in tools/.
   and positionals never leak the script path (bun-claims-audit note).
   Gates: 2771 tests pass / 0 fail, typecheck clean, breaking-audit ok,
   guard ok, docs:check 56/56.
+
+
+
+## 209. Hand-rolled parsing sweep extended - src/calibration + scripts/* all on util.parseArgs (2026-08-26)
+
+Continued the S208 sweep to src/ and scripts/ - ZERO hand-rolled argv parsing
+remains anywhere in the repo (tools/, src/, scripts/):
+- src/calibration/shadow-maintenance.ts parseMidArgs (--mid=TICKER:52 repeated)
+  rebuilt on parseArgs with multiple:true (same Record<string, number> output).
+- src/calibration entry points (maintenance, mark-toxicity, resolve-outcomes,
+  toxicity-loop, init-program, cli) + src/alpha/run-shadow-once.ts migrated:
+  --program/--file/--resolve/--dimension/--role as string opts; name as the
+  first positional (init-program); passthrough still forwards non-program args.
+- scripts/*: check-glossary-usage (hard/report/report-only/verbose),
+  validate-glossary-urls (soft/og/json), generate-color-artifacts +
+  generate-sports-source-artifacts (check), deps-outdated (json/latest).
+- All strict:false + allowPositionals:true (repo convention, same as S208).
+  Gates: 2771 tests pass / 0 fail, typecheck clean, breaking-audit ok,
+  guard ok, docs:check 56/56. Smoke: glossary/colors/sports registry checks
+  all green; calibration:maintenance still exits 1 with the usage text when
+  --program is missing (unchanged behavior).
+
 
 

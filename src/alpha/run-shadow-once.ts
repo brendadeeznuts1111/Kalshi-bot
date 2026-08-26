@@ -1,12 +1,15 @@
 // @see https://bun.com/docs/runtime/networking/fetch#sending-an-http-request
 /** Run one shadow tick for an alpha program directory. */
+import { parseArgs } from "node:util";
 import { $ } from "bun";
 import { joinPath } from "../research/paths.ts";
 
 const ROOT = joinPath(import.meta.dir, "../..");
 
+const { values: rsov } = parseArgs({ args: Bun.argv.slice(2), options: { program: { type: 'string' }, ticker: { type: 'string' }, price: { type: 'string' }, sport: { type: 'string' } }, strict: false, allowPositionals: true });
 function arg(name: string): string | undefined {
-  return Bun.argv.find((a) => a.startsWith(`--${name}=`))?.slice(name.length + 3);
+  const v = rsov[name];
+  return typeof v === 'string' ? v : undefined;
 }
 
 if (import.meta.main) {

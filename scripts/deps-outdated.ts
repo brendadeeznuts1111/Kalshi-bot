@@ -25,6 +25,7 @@ type OutdatedRow = {
 // Version core + comparisons come from the shared SSOT
 // (src/lib/semver.ts — Bun.semver, normalize-first rule §147-§149).
 import { semverCore } from "../src/lib/semver.ts";
+import { parseArgs } from "node:util";
 
 /**
  * Classify bump from current → target.
@@ -85,8 +86,9 @@ async function runBunOutdated(): Promise<string> {
 }
 
 async function main() {
-  const json = Bun.argv.includes("--json");
-  const preferLatest = Bun.argv.includes("--latest");
+  const { values: dov } = parseArgs({ args: Bun.argv.slice(2), options: { json: { type: 'boolean' }, latest: { type: 'boolean' } }, strict: false, allowPositionals: true });
+  const json = dov.json === true;
+  const preferLatest = dov.latest === true;
 
   const text = await runBunOutdated();
   const rows = parseOutdatedTable(text);

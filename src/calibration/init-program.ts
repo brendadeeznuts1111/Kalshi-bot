@@ -3,6 +3,7 @@
  * Instantiate alpha/<name>/ from .bun-create/alpha-program/ (no nested git).
  * Prefer: bun create alpha-program alpha/<name> --no-git
  */
+import { parseArgs } from "node:util";
 import { joinPath } from "../research/paths.ts";
 import type { ProgramGates, ProgramManifest } from "../institutions/program-manifest.ts";
 
@@ -73,13 +74,14 @@ async function copyTree(src: string, dest: string): Promise<void> {
 }
 
 if (import.meta.main) {
-  const name = Bun.argv[2];
+  const { values: ipv, positionals: ipp } = parseArgs({ args: Bun.argv.slice(2), options: { dimension: { type: 'string' }, role: { type: 'string' } }, strict: false, allowPositionals: true });
+  const name = ipp[0];
   if (!name) {
     console.error("Usage: bun src/calibration/init-program.ts <name> [--dimension=sports-soccer]");
     process.exit(1);
   }
-  const dimension = Bun.argv.find((a) => a.startsWith("--dimension="))?.slice("--dimension=".length);
-  const roleArg = Bun.argv.find((a) => a.startsWith("--role="))?.slice("--role=".length);
+  const dimension = typeof ipv.dimension === 'string' ? ipv.dimension : undefined;
+  const roleArg = typeof ipv.role === 'string' ? ipv.role : undefined;
   const role = roleArg === "baseline" || roleArg === "alpha" ? roleArg : undefined;
   const dest = await initAlphaProgram({ name, dimension, role });
   console.log(`Created ${dest} — complete hypothesis.md before code.`);

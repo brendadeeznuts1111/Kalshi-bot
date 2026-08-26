@@ -16,6 +16,7 @@
 import { readdirSync, statSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { buildDeskColumnRegistry } from "../src/institutions/column-registry.ts";
+import { parseArgs } from "node:util";
 import {
   GLOSSARY_ENTRIES,
   PENDING_REGISTRY_CONCEPTS,
@@ -34,10 +35,11 @@ const scanRoots = [
   join(root, "src/research/hq-view.ts"),
 ];
 
-const hard = Bun.argv.includes("--hard");
-const report = Bun.argv.includes("--report") || Bun.argv.includes("--report-only");
-const verbose = Bun.argv.includes("--verbose");
-const reportOnly = Bun.argv.includes("--report-only");
+const { values: gsv } = parseArgs({ args: Bun.argv.slice(2), options: { hard: { type: 'boolean' }, report: { type: 'boolean' }, 'report-only': { type: 'boolean' }, verbose: { type: 'boolean' } }, strict: false, allowPositionals: true });
+const hard = gsv.hard === true;
+const report = gsv.report === true || gsv['report-only'] === true;
+const verbose = gsv.verbose === true;
+const reportOnly = gsv['report-only'] === true;
 
 const known = new Set(GLOSSARY_ENTRIES.map((e) => e.id));
 const tipRe = /\btip\s*\(\s*["']([A-Za-z0-9_.]+)["']\s*\)/g;

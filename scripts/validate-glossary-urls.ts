@@ -16,10 +16,12 @@
  */
 import { probeOfficialCatalog } from "../src/institutions/url-health.ts";
 import { extractSocialMetadataFromResponse } from "../src/lib/extract-social-meta.ts";
+import { parseArgs } from "node:util";
 
-const soft = Bun.argv.includes("--soft");
-const withOg = Bun.argv.includes("--og");
-const asJson = Bun.argv.includes("--json");
+const { values: gv } = parseArgs({ args: Bun.argv.slice(2), options: { soft: { type: 'boolean' }, og: { type: 'boolean' }, json: { type: 'boolean' } }, strict: false, allowPositionals: true });
+const soft = gv.soft === true;
+const withOg = gv.og === true;
+const asJson = gv.json === true;
 const timeoutMs = Number(Bun.env.GLOSSARY_URL_TIMEOUT_MS ?? 8_000);
 
 // ── JSON path (shared health engine) ───────────────────────────

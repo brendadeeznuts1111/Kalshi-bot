@@ -23,6 +23,7 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { markdownToHtml } from "../src/lib/markdown.ts";
+import { parseArgs } from "node:util";
 import {
   COLORS,
   ansi16mColor,
@@ -40,7 +41,8 @@ import {
 import { TOKENS, baseCssVars } from "../src/institutions/design-tokens.ts";
 
 const root = join(import.meta.dir, "..");
-const checkOnly = Bun.argv.includes("--check");
+const { values: cav2 } = parseArgs({ args: Bun.argv.slice(2), options: { check: { type: 'boolean' } }, strict: false, allowPositionals: true });
+const checkOnly = cav2.check === true;
 
 const keys = Object.keys(COLORS) as ColorKey[];
 const venueKeys: ColorKey[] = [

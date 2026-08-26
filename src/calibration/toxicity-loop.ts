@@ -4,12 +4,15 @@
  * In-process toxicity sweep — polls every N seconds for lines in the T+60s mark window.
  * Use while shadow-running live: bun run calibration:toxicity:loop
  */
+import { parseArgs } from "node:util";
 import { runToxicitySweep } from "./shadow-maintenance.ts";
 
 const DEFAULT_INTERVAL_SEC = 15;
 
+const { values: tlv } = parseArgs({ args: Bun.argv.slice(2), options: { interval: { type: 'string' } }, strict: false, allowPositionals: true });
 function arg(name: string): string | undefined {
-  return Bun.argv.find((a) => a.startsWith(`--${name}=`))?.slice(name.length + 3);
+  const v = tlv[name];
+  return typeof v === 'string' ? v : undefined;
 }
 
 export async function runToxicityLoop(intervalSec = DEFAULT_INTERVAL_SEC): Promise<never> {

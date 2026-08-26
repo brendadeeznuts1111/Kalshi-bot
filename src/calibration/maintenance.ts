@@ -1,4 +1,5 @@
 // @see https://bun.com/docs/guides/process/argv
+import { parseArgs } from "node:util";
 import { joinPath } from "../research/paths.ts";
 import {
   loadOutcomesFile,
@@ -8,7 +9,8 @@ import {
 } from "./shadow-maintenance.ts";
 
 if (import.meta.main) {
-  const program = Bun.argv.find((a) => a.startsWith("--program="))?.slice("--program=".length);
+  const { values: mntv } = parseArgs({ args: Bun.argv.slice(2), options: { program: { type: 'string' }, 'force-due': { type: 'boolean' }, 'fetch-toxicity': { type: 'boolean' }, resolve: { type: 'string' }, mid: { type: 'string', multiple: true } }, strict: false, allowPositionals: true });
+  const program = typeof mntv.program === 'string' ? mntv.program : undefined;
   if (!program) {
     console.error(
       "Usage: bun src/calibration/maintenance.ts --program=pinnacle-nba [--fetch-toxicity] [--force-due] [--resolve=file.json]",
@@ -16,9 +18,9 @@ if (import.meta.main) {
     process.exit(1);
   }
 
-  const forceDue = Bun.argv.includes("--force-due");
-  const fetchToxicity = Bun.argv.includes("--fetch-toxicity");
-  const resolveFile = Bun.argv.find((a) => a.startsWith("--resolve="))?.slice("--resolve=".length);
+  const forceDue = mntv['force-due'] === true;
+  const fetchToxicity = mntv['fetch-toxicity'] === true;
+  const resolveFile = typeof mntv.resolve === 'string' ? mntv.resolve : undefined;
   const manualMids = parseMidArgs(Bun.argv);
 
   if (fetchToxicity || Object.keys(manualMids).length) {

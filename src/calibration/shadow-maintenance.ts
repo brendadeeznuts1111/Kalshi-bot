@@ -3,6 +3,7 @@
  * Shadow log maintenance — append-only toxicity marks + outcome resolutions.
  * Prediction lines are never rewritten; watcher joins marks at read time.
  */
+import { parseArgs } from "node:util";
 import { fetchKalshiBookSnapshot, midFromBookSnapshot } from "../bot/kalshi-market-data.ts";
 import type { FetchKalshiBookOptions } from "../bot/kalshi-market-data.ts";
 import { asKalshiMarketTicker } from "../institutions/event-store/brands.ts";
@@ -40,16 +41,17 @@ export async function resolveProgramShadow(
   return { manifest, dir, logPath };
 }
 
-/** Parse CLI mids: --mid=TICKER:52 or repeated --mid=... */
+/** Parse CLI mids: --mid=TICKER:52 or repeated --mid=... (parseArgs-backed, S208). */
 export function parseMidArgs(argv: string[]): Record<string, number> {
+  const { values } = parseArgs({ args: argv, options: { mid: { type: 'string', multiple: true } }, strict: false, allowPositionals: true });
+  const raw = values.mid === undefined ? [] : Array.isArray(values.mid) ? values.mid : [values.mid];
   const mids: Record<string, number> = {};
-  for (const a of argv) {
-    if (!a.startsWith("--mid=")) continue;
-    const raw = a.slice("--mid=".length);
-    const colon = raw.lastIndexOf(":");
+  for (const item of raw) {
+    const s = String(item);
+    const colon = s.lastIndexOf(":");
     if (colon <= 0) continue;
-    const ticker = raw.slice(0, colon);
-    const cents = Number(raw.slice(colon + 1));
+    const ticker = s.slice(0, colon);
+    const cents = Number(s.slice(colon + 1));
     if (Number.isFinite(cents)) mids[ticker] = cents;
   }
   return mids;
