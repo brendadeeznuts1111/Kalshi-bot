@@ -110,6 +110,7 @@ Niche dimensions (`sports-nba`, `tracking`, …) may discover candidates but pro
 | Types | `bun run typecheck` |
 | Feature bench | `bun run bench:feature` — ns/op evidence for color kernel, markdown, watermark, theme, image (see `tools/feature-bench-evidence.json`) |
 | Branding/content tools | `bun run blog:coverage` · `blog:coverage:update` · `blog:paste-coverage` · `blog:story` · `palette:clip` · `watermark:sign` — demo pages behind `/bun/color`, `/api/color-info`, `/api/watermark` |
+| Canonical assets | `bun run canonical:asset` — deterministic image → PNG + SHA-256 hash + canonicalized metadata + digest (see `src/lib/canonical-asset.ts`) |
 | Full check | `bun run bun:ci` — guard + typecheck + test; local merge authority |
 
 ## Cache, diff, and artifacts

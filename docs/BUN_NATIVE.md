@@ -329,6 +329,26 @@ markdownToAnsi(md);              // TTY reports (same engine as report-term)
 - Prefer `hex` over `css` for canonical palette values (`css` can emit named
   colors — `#FF0000` -> `"red"`).
 
+### Canonical asset generator — Bun.Image + CryptoHasher (src/lib/canonical-asset.ts)
+
+[@see image guide](https://bun.com/docs/runtime/image) · [@see CryptoHasher](https://bun.com/reference/bun/CryptoHasher) · [canonical-asset.ts](../src/lib/canonical-asset.ts) · CLI: `bun run canonical:asset`
+
+Deterministic digital-asset tuple from any image: PNG bytes + 0x SHA-256 asset
+hash + key-sorted/float-normalized metadata + 0x metadata digest. Grounded
+facts (AGENT-PITFALLS §190):
+
+- `Bun.file(path).image()` is a **sync factory** — await only terminals
+  (`.png().bytes()` / `.write()`).
+- `.resize(w, h, { fit })` accepts **`"fill" | "inside"` only** — `cover` /
+  `contain` / `outside` throw (bun-types + runtime agree).
+- `Bun.CryptoHasher.hash(alg, input, "hex")` static returns a hex string;
+  passing a `Uint8Array` avoids an intermediate JS string (4 KiB: 1515 vs
+  1710 ns/op — buffer ~13% faster, bench:feature evidence).
+- Determinism: explicit timestamp (epoch-0 fallback warns), typed-key array
+  sort (localeCompare is NOT canonical), floats -> fixed-point strings with
+  guards for non-finite / >= 1e21.
+- Tests: `tests/lib/canonical-asset.test.ts` · bench: `bench:feature`.
+
 ### `bun:jsc` (low-level)
 
 | API | Use |

@@ -209,6 +209,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §187 — Extended color formats — kernel-only (lch/oklab/oklch/hsv) + inverse parsers (2026-08-26)
 - §188 — Watermark pipeline — ML-DSA key naming + WebView/Blob verified facts (2026-08-26)
 - §189 — Color input-parsing correction — lab()/lch() parse natively, oklab/oklch/hsv/device-cmyk null (2026-08-26)
+- §190 — Canonical-asset generator — fit set + CryptoHasher.hash static grounded (2026-08-26)
 
 
 ## 1. run_code program text (the harness lexer)
@@ -6906,4 +6907,34 @@ inputs null — wrong), /api/color-info now tries Bun.color FIRST (native path,
 parser: bun.color) with the kernel as fallback (parser: kernel), color page
 probe table + advanced-input blurb, and parity tests in color-kernel.test.ts
 that lock the split.
+
+## 190. Canonical-asset generator — fit set + CryptoHasher.hash static grounded (2026-08-26)
+
+src/lib/canonical-asset.ts produces a deterministic digital-asset tuple (PNG
+bytes, SHA-256 asset hash, canonicalized metadata, digest). Claims re-verified
+against the guide, runtime probes, and pinned bun-types 1.4.0:
+
+  - RESIZE FIT is "fill" | "inside" ONLY. "cover"/"contain"/"outside" throw
+    ERR_INVALID_ARG_TYPE ("fit must be one of 'fill' or 'inside'") — bun-types
+    ImageResizeOptions.fit is "fill" | "inside". A draft of this module
+    defaulted to fit:"cover" and would have thrown on every call; corrected.
+  - Bun.file(path).image() is a SYNC factory (do not await it); terminals
+    (.bytes()/.write()/...) are awaited (guide: "Nothing runs until you await
+    the terminal"). png().bytes() is a valid terminal pair.
+  - Bun.CryptoHasher.hash(algorithm, input, "hex") STATIC exists and returns a
+    hex string; input may be string or Uint8Array. Passing the buffer avoids an
+    intermediate JS string — measured 1515 vs 1710 ns/op on 4 KiB (buffer ~13%
+    faster; content-pipeline §24 measured parity on 100MB). "arraybuffer"
+    encoding still throws; instance digest() returns a Buffer.
+  - Array sorting uses a deterministic typed-key comparator, NOT localeCompare
+    (ICU locale-dependent + punctuation-ignoring — not canonical across
+    environments; a test caught the draft's localeCompare producing
+    environment-dependent order).
+  - Float normalization: toFixed(precision) with trailing-zero strip; integers
+    untouched; non-finite and |n| >= 1e21 pass through (toFixed would throw
+    RangeError at 1e21).
+  - Timestamp is explicit (epoch-0 fallback warns) — a changing timestamp
+    changes the digest by design; same bytes + metadata -> byte-identical tuple.
+    Surfaces: bun run canonical:asset CLI (writes .png + .metadata.json),
+    bench:feature evidence, tests/lib/canonical-asset.test.ts.
 
