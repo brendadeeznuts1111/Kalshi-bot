@@ -225,6 +225,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §208 — Hand-rolled CLI parsing sweep — all tools/* migrated to util.parseArgs (2026-08-26)
 - §209 — Sweep extended — src/calibration + scripts/* all on util.parseArgs (2026-08-26)
 - §210 — bun -p/-e one-liners audited — inspect-style output (not JSON), {hsl} invalid (2026-08-26)
+- §211 — Advanced bun -p diagnostics audited — isTerminal/getColorDepth/Bun.File undefined, deepMatch not wildcard (2026-08-26)
 - §199 — ui:regen CLI — regenerate UI artifacts from meta/variant sources + the Bun.$ template failure class (2026-08-26)
 - §187 — Extended color formats — kernel-only (lch/oklab/oklch/hsv) + inverse parsers (2026-08-26)
 - §188 — Watermark pipeline — ML-DSA key naming + WebView/Blob verified facts (2026-08-26)
@@ -7393,6 +7394,37 @@ Pasted 'bun -p / bun -e shape-inspection' one-liners audited against 1.4.0:
   for ./index.ts from the repo root); cd into the probe dir first.
   Repo habit: probes live in tools/scratch-*.ts + bun run, not inline -p
   (S199 lexer discipline applies to run_code program strings only).
+
+
+
+## 211. Advanced bun -p diagnostics proposal audited - isTerminal/getColorDepth/Bun.File UNDEFINED, deepMatch is not a wildcard matcher (2026-08-26)
+
+Pasted 10-item advanced bun -p/-e diagnostics harness audited against 1.4.0:
+- -p color truth: FORCE_COLOR=1 -> ANSI even piped; NO_COLOR=1 / default
+  piped -> plain. The 'auto-enables colours if stdout is a TTY' claim is
+  WRONG - it is env-driven (same caller-gate truth as S205), NOT TTY-driven.
+- CORRECTED APIs (all typeof undefined on 1.4.0): Bun.isTerminal,
+  process.stdout.getColorDepth, and Bun.File (a TYPE BunFile, not a runtime
+  value - `f instanceof Bun.File` throws ReferenceError; use
+  `f instanceof Blob` + f.size/f.type, and process.stdout.isTTY - the repo's
+  isTtyStdout() in src/research/terminal-out.ts).
+- deepMatch (Bun.deepMatch, EXISTS) is NOT a shape/wildcard matcher:
+  semantics = actual keys must ALL be present in expected (actual subset of
+  expected), value-sensitive, no '*' wildcard, no partial arrays/nesting.
+  The proposal's schema example ({root:{'@id':''}} vs parsed @id:'a')
+  returns FALSE. For shape-shape comparison use deepEquals.
+- VERIFIED: Bun.deepEquals exact compare; XML.parse(Blob) works
+  (res.blob() -> parse directly); multi same-name children -> ARRAY
+  (root.child is Array, elements string); [Bun.inspect.custom](d,o,i)
+  signature works (Box({x:42}) with depth); performance.now() timing works
+  (0.09 ms for 1000 children); try/catch surfaces 'XML Parse error'.
+- CORRECTED: virtual entrypoint via new URL('data:text/javascript,...')
+  FAILS on 1.4.0 (ENOENT failed to open root directory: data:text) -
+  Bun.build needs a real filesystem entrypoint.
+- fetch(file://...) -> blob works offline (mime application/json;charset=
+  utf-8, size exact); use file:// or local servers for offline probes.
+  Repo habit: probes in tools/scratch-*.ts, not inline -p (S199).
+
 
 
 
