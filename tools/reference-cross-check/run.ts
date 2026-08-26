@@ -67,6 +67,10 @@ export async function runCrossCheck(): Promise<number> {
   declared['S3File'] = interfaceFields(s3Dts, 'S3File');
   declared['S3Client'] = classMembers(s3Dts, 'S3Client');
   declared['Bun.markdown'] = ['html', 'ansi', 'render', 'react']; // curated - namespace, not an interface
+  declared['markdown.Options'] = interfaceFields(dts, 'Options');
+  declared['markdown.RenderCallbacks'] = interfaceFields(dts, 'RenderCallbacks');
+  declared['markdown.ComponentOverrides'] = interfaceFields(dts, 'ComponentOverrides');
+  declared['markdown.AnsiTheme'] = interfaceFields(dts, 'AnsiTheme');
   const gaps = coverageGaps(declared, covered);
 
   const meta: CrossCheckMeta = {

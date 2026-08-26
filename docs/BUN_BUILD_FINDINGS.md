@@ -554,7 +554,7 @@ Sources: bundled bun-types@1.4.0 (bun-types@1.4.0-c0dadede486f49ab) docs + `bun.
 PINNED-DISCREPANCY (doc says X, observed Y — our correction), DOC-CHANGED (fragment missing —
 the pin premise moved; re-verify), NO-EVIDENCE (ledger path broken).
 
-**Verdict summary:** 104 claims · 96 CONSISTENT · 8 PINNED-DISCREPANCY · 0 DOC-CHANGED · 0 NO-EVIDENCE.
+**Verdict summary:** 111 claims · 102 CONSISTENT · 9 PINNED-DISCREPANCY · 0 DOC-CHANGED · 0 NO-EVIDENCE.
 
 ### BuildArtifact
 
@@ -710,6 +710,13 @@ This fun | CONSISTENT |
 | `MD-gfm` | `tables` | `bun.d.ts` | GFM (tables/strikethrough/tasklists) ON by default, per-feature toggles | true | CONSISTENT |
 | `MD-list` | `listItem` | `bun.d.ts` | render callbacks: list/listItem with meta (checked/start/ordered) | c=truec=false | CONSISTENT |
 | `MD-meta` | `heading` | `bun.d.ts` | render callback contract: (children, meta) - meta is the metadata arg, NOT an element | id=hi | CONSISTENT |
+| `MD-autolinks` | `autolinks` | `bun.d.ts` | autolinks OFF by default; { url: true } form works | true | CONSISTENT |
+| `MD-wikiLinks` | `wikiLinks` | `bun.d.ts` | wikiLinks renders a custom x-wikilink element | true | CONSISTENT |
+| `MD-permissiveAtx` | `permissiveAtxHeaders` | `bun.d.ts` | permissiveAtxHeaders is ON by default on 1.4.0 (types say default false) | false | PINNED-DISCREPANCY |
+| `MD-callbacks` | `code` | `bun.d.ts` | code/link/image/hr/blockquote callbacks receive (children, meta) | lang=js | CONSISTENT |
+| `MD-reactOverrides` | `react` | `bun.d.ts` | react(): component overrides + reactVersion option work | true | CONSISTENT |
+| `MD-ansiTheme` | `ansi` | `bun.d.ts` | ansi(): columns/hyperlinks/kittyGraphics accepted; light no observed diff | true | CONSISTENT |
+| `MD-noopOptions` | `latexMath` | `bun.d.ts` | latexMath/underline/collapseWhitespace/noHtmlBlocks/tagFilter DECLARED but NOT observed to take effect on 1.4.0 | true | CONSISTENT |
 
 No coverage gaps: every declared option on the grounded surfaces has evidence.
 

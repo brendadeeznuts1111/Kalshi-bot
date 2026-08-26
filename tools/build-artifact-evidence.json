@@ -535,6 +535,39 @@
       "orderedStart": "s=3",
       "tableAlign": "a=lefta=right12",
       "headingId": "id=hi"
+    },
+    "options": {
+      "autolinksDefaultOff": true,
+      "autolinksUrlOnly": true,
+      "headingsIds": true,
+      "wikiLinks": true,
+      "permissiveAtxDefaultOn": false,
+      "noIndentedCodeBlocks": true,
+      "noHtmlSpans": true,
+      "hardSoftBreaksTrailingWs": true
+    },
+    "callbacks": {
+      "codeLanguage": "lang=js",
+      "linkHrefTitle": "href=https://x.com:title=t",
+      "imageSrcTitle": "src=img.png:title=t",
+      "hrBlockquote": "aHRBQ(q)"
+    },
+    "reactOverrides": {
+      "h1Override": true,
+      "reactVersion18Ok": true
+    },
+    "ansiTheme": {
+      "columnsWrap": true,
+      "hyperlinksOsc8": true,
+      "kittyGraphicsAccepted": true,
+      "lightNoObservedDiff": true
+    },
+    "notObservedToTakeEffect": {
+      "latexMath": true,
+      "underline": true,
+      "collapseWhitespace": true,
+      "noHtmlBlocks": true,
+      "tagFilter": true
     }
   },
   "scenarios": [
@@ -983,7 +1016,7 @@
         {
           "path": "outbc/pure.js.jsc",
           "kind": "bytecode",
-          "hash": "9vcxvssb",
+          "hash": "m20hy96d",
           "loader": "file",
           "size": 10944,
           "type": "application/octet-stream",

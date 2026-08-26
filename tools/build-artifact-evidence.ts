@@ -902,6 +902,39 @@ const markdownGotchas = {
     tableAlign: mdNs.render('| A | B |\n|:--|--:|\n| 1 | 2 |', { th: (c: string, m: any) => 'a=' + String(m.align) } as any),
     headingId: mdNs.render('# Hi', { heading: (c: string, m: any) => 'id=' + String(m.id ?? 'none') } as any, { headings: { ids: true } } as any),
   },
+  options: {
+    autolinksDefaultOff: !mdNs.html('Visit https://example.com/x').includes('<a href'),
+    autolinksUrlOnly: mdNs.html('Visit https://example.com/x', { autolinks: { url: true } } as any).includes('<a href'),
+    headingsIds: mdNs.html('# Hi', { headings: { ids: true } } as any).includes('id="hi"'),
+    wikiLinks: mdNs.html('[[Home]]', { wikiLinks: true } as any).includes('x-wikilink'),
+    permissiveAtxDefaultOn: mdNs.html('#NoSpace').includes('<h1'),
+    noIndentedCodeBlocks: !mdNs.html('    x = 1', { noIndentedCodeBlocks: true } as any).includes('<pre'),
+    noHtmlSpans: !mdNs.html('a <b>x</b>', { noHtmlSpans: true } as any).includes('<b'),
+    hardSoftBreaksTrailingWs: mdNs.html('a  \nb', { hardSoftBreaks: true } as any).includes('<br'),
+  },
+  callbacks: {
+    codeLanguage: mdNs.render('```js\nconst x = 1;\n```', { code: (c: string, m: any) => 'lang=' + String(m.language) } as any),
+    linkHrefTitle: mdNs.render('[b](https://x.com "t")', { link: (c: string, m: any) => 'href=' + String(m.href) + ':title=' + String(m.title) } as any),
+    imageSrcTitle: mdNs.render('![a](img.png "t")', { image: (c: string, m: any) => 'src=' + String(m.src) + ':title=' + String(m.title) } as any),
+    hrBlockquote: mdNs.render('a\n\n---\n\n> q', { hr: () => 'HR', blockquote: (c: string) => 'BQ(' + c + ')' } as any),
+  },
+  reactOverrides: {
+    h1Override: JSON.stringify(mdNs.react('# Hi', { h1: 'MyHeading' } as any)).includes('MyHeading'),
+    reactVersion18Ok: (() => { try { mdNs.react('# Hi', undefined, { reactVersion: 18 } as any); return true; } catch { return false; } })(),
+  },
+  ansiTheme: {
+    columnsWrap: mdNs.ansi('a b c d e', { columns: 5 } as any).includes('\n'),
+    hyperlinksOsc8: mdNs.ansi('[x](https://example.com)', { hyperlinks: true } as any).includes('\x1b]8'),
+    kittyGraphicsAccepted: (() => { try { mdNs.ansi('# Hi', { kittyGraphics: true } as any); return true; } catch { return false; } })(),
+    lightNoObservedDiff: mdNs.ansi('# Hi', { light: true } as any) === mdNs.ansi('# Hi'),
+  },
+  notObservedToTakeEffect: {
+    latexMath: !mdNs.html('$x^2$', { latexMath: true } as any).includes('math'),
+    underline: !mdNs.html('__u__', { underline: true } as any).includes('<u>'),
+    collapseWhitespace: mdNs.html('a  b', { collapseWhitespace: true } as any).includes('a  b'),
+    noHtmlBlocks: mdNs.html('x <div>y</div> z', { noHtmlBlocks: true } as any).includes('<div>'),
+    tagFilter: !mdNs.html('<script>x</script>', { tagFilter: true } as any).includes('&lt;script&gt;'),
+  },
 };
 
 // ---------- emit ----------

@@ -4,8 +4,8 @@
   "bunRevision": "34cbb9a40b4bd1bd767d134a7065e66c2432a676",
   "bundleHash": "bun-types@1.4.0-c0dadede486f49ab",
   "verdictCounts": {
-    "PINNED-DISCREPANCY": 8,
-    "CONSISTENT": 96
+    "PINNED-DISCREPANCY": 9,
+    "CONSISTENT": 102
   },
   "checks": [
     {
@@ -899,6 +899,62 @@
       "source": "bun.d.ts",
       "docSays": "render callback contract: (children, meta) - meta is the metadata arg, NOT an element",
       "observed": "id=hi",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "MD-autolinks",
+      "api": "autolinks",
+      "source": "bun.d.ts",
+      "docSays": "autolinks OFF by default; { url: true } form works",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "MD-wikiLinks",
+      "api": "wikiLinks",
+      "source": "bun.d.ts",
+      "docSays": "wikiLinks renders a custom x-wikilink element",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "MD-permissiveAtx",
+      "api": "permissiveAtxHeaders",
+      "source": "bun.d.ts",
+      "docSays": "permissiveAtxHeaders is ON by default on 1.4.0 (types say default false)",
+      "observed": false,
+      "verdict": "PINNED-DISCREPANCY"
+    },
+    {
+      "id": "MD-callbacks",
+      "api": "code",
+      "source": "bun.d.ts",
+      "docSays": "code/link/image/hr/blockquote callbacks receive (children, meta)",
+      "observed": "lang=js",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "MD-reactOverrides",
+      "api": "react",
+      "source": "bun.d.ts",
+      "docSays": "react(): component overrides + reactVersion option work",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "MD-ansiTheme",
+      "api": "ansi",
+      "source": "bun.d.ts",
+      "docSays": "ansi(): columns/hyperlinks/kittyGraphics accepted; light no observed diff",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "MD-noopOptions",
+      "api": "latexMath",
+      "source": "bun.d.ts",
+      "docSays": "latexMath/underline/collapseWhitespace/noHtmlBlocks/tagFilter DECLARED but NOT observed to take effect on 1.4.0",
+      "observed": true,
       "verdict": "CONSISTENT"
     }
   ],

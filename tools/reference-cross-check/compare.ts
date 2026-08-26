@@ -147,6 +147,13 @@ export const LEDGER: LedgerClaim[] = [
   { id: 'MD-gfm', api: 'tables', source: 'bun.d.ts', fragment: 'GFM extensions (tables, strikethrough, task lists) are enabled', docSays: 'GFM (tables/strikethrough/tasklists) ON by default, per-feature toggles', evidencePath: 'markdownGotchas.gfm.tablesDefault', kind: 'consistent' },
   { id: 'MD-list', api: 'listItem', source: 'bun.d.ts', fragment: 'listItem?: (children: string, meta: ListItemMeta)', docSays: 'render callbacks: list/listItem with meta (checked/start/ordered)', evidencePath: 'markdownGotchas.renderContract.listItemChecked', kind: 'consistent' },
   { id: 'MD-meta', api: 'heading', source: 'bun.d.ts', fragment: 'Each callback receives the accumulated children', docSays: 'render callback contract: (children, meta) - meta is the metadata arg, NOT an element', evidencePath: 'markdownGotchas.renderContract.headingId', kind: 'consistent' },
+  { id: 'MD-autolinks', api: 'autolinks', source: 'bun.d.ts', fragment: 'Enable autolinks. Pass `true` to enable all autolink types', docSays: 'autolinks OFF by default; { url: true } form works', evidencePath: 'markdownGotchas.options.autolinksDefaultOff', kind: 'consistent' },
+  { id: 'MD-wikiLinks', api: 'wikiLinks', source: 'bun.d.ts', fragment: 'Enable wiki-style links', docSays: 'wikiLinks renders a custom x-wikilink element', evidencePath: 'markdownGotchas.options.wikiLinks', kind: 'consistent' },
+  { id: 'MD-permissiveAtx', api: 'permissiveAtxHeaders', source: 'bun.d.ts', fragment: 'Allow ATX headers without a space after `#`', docSays: 'permissiveAtxHeaders is ON by default on 1.4.0 (types say default false)', evidencePath: 'markdownGotchas.options.permissiveAtxDefaultOn', kind: 'discrepancy' },
+  { id: 'MD-callbacks', api: 'code', source: 'bun.d.ts', fragment: 'listItem?: (children: string, meta: ListItemMeta)', docSays: 'code/link/image/hr/blockquote callbacks receive (children, meta)', evidencePath: 'markdownGotchas.callbacks.codeLanguage', kind: 'consistent' },
+  { id: 'MD-reactOverrides', api: 'react', source: 'bun.d.ts', fragment: 'Component overrides for `react()`.', docSays: 'react(): component overrides + reactVersion option work', evidencePath: 'markdownGotchas.reactOverrides.h1Override', kind: 'consistent' },
+  { id: 'MD-ansiTheme', api: 'ansi', source: 'bun.d.ts', fragment: 'AnsiTheme', docSays: 'ansi(): columns/hyperlinks/kittyGraphics accepted; light no observed diff', evidencePath: 'markdownGotchas.ansiTheme.columnsWrap', kind: 'consistent' },
+  { id: 'MD-noopOptions', api: 'latexMath', source: 'bun.d.ts', fragment: 'Enable LaTeX math', docSays: 'latexMath/underline/collapseWhitespace/noHtmlBlocks/tagFilter DECLARED but NOT observed to take effect on 1.4.0', evidencePath: 'markdownGotchas.notObservedToTakeEffect.latexMath', kind: 'consistent' },
 ];
 
 /** APIs with grounded evidence but no ledger row (fit/filter/quality/... come from the probe gates). */
@@ -155,6 +162,7 @@ export const EXTRA_GROUNDED: string[] = [
   'brightness', 'saturation', 'placeholder', 'blob', 'bytes', 'buffer', 'text',
   'arrayBuffer', 'stream', 'json', 'slice', 'write', 'cwd', 'entrypoints', 'outdir',
   'format', 'splitting', 'loader', 'metafile', 'treeShaking', 'plugins',
+  'tables', 'strikethrough', 'tasklists', 'paragraph', 'blockquote', 'code', 'hr', 'thead', 'tbody', 'tr', 'th', 'td', 'strong', 'emphasis', 'link', 'codespan', 'image', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'ul', 'ol', 'li', 'pre', 'em', 'a', 'img', 'del', 'math', 'u', 'br', 'reactVersion', 'autolinks', 'headings', 'wikiLinks', 'noIndentedCodeBlocks', 'noHtmlSpans', 'permissiveAtxHeaders', 'hardSoftBreaks', 'columns', 'hyperlinks', 'kittyGraphics', 'light', 'url', 'www', 'email', 'ids', 'autolink', 'start', 'index', 'depth', 'checked', 'align', 'language', 'href', 'title', 'src', 'alt', 'table', 'underline', 'collapseWhitespace', 'noHtmlBlocks', 'tagFilter',
   'tls', 'development', 'http3', 'runtime', 'importSource', 'factory',
   'prepare', 'get', 'all', 'values', 'exec', 'close', 'open', 'MAX_QUERY_CACHE_SIZE', 'file',
   'inTransaction', 'as', 'columnNames', 'columnTypes', 'paramsCount',
