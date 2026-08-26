@@ -143,7 +143,7 @@ describe("browser fallback parity (no-Bun bundles)", () => {
   }
 
   test("fallback normalizes 3-digit and uppercase hex", () => {
-    expect(convertColorFallback("#fff", "css")).toBe("#ffffff");
+    expect(convertColorFallback("#fff", "css")).toBe("#fff"); // css abbreviates (Bun.color parity, 2026-08-26 fix)
     expect(convertColorFallback("#7DD3FC", "HEX")).toBe("#7DD3FC");
   });
 

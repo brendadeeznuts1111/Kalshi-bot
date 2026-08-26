@@ -253,10 +253,13 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - Known flake: the ops/kalshi-rotate-key full-apply POST test intermittently fails
   inside the full suite (passes standalone). If the hook's test gate fails once,
   re-run it.
-- Known flake: convertColorFallback fuzz parity (Bun.color oracle) fails
-  intermittently (200 RANDOM hex colors; Bun.color rendering can diverge from
-  the repo fallback for unlucky random draws - passes standalone, flaky in
-  full runs). Re-run if it fails; not a regression signal.
+- FIXED (2026-08-26): convertColorFallback fuzz parity was NOT a flake - it
+  caught a real bug: the css format did not implement CSS hex abbreviation
+  (#005544 -> #054), so abbreviable colors diverged from Bun.color on ~26/600k
+  draws (hence 'flaky'). Fixed with cssHexShorthand() (src/lib/color/kernel.ts);
+  the fuzz test now uses a seeded PRNG (deterministic, same 200 colors every
+  run) and passes 5/5; kernel test expectation updated to the parity-correct
+  #fff -> #fff. bun:ci is now free of both known flakes.
 
 ## 4. bun:test
 

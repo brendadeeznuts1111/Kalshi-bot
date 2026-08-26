@@ -43,6 +43,16 @@ function toHexUpper(rgb: RGB): string {
   return toHexLower(rgb).toUpperCase();
 }
 
+/** Bun.color css output abbreviates doubled channel pairs (#005544 -> #054, #ff8800 -> #f80). */
+function cssHexShorthand(rgb: RGB): string {
+  const pair = (v: number) => Math.round(v).toString(16).padStart(2, "0");
+  const [r, g, b] = [pair(rgb.r), pair(rgb.g), pair(rgb.b)];
+  if (r[0] === r[1] && g[0] === g[1] && b[0] === b[1]) {
+    return "#" + r[0] + g[0] + b[0];
+  }
+  return "#" + r + g + b;
+}
+
 /** Round to N decimals and strip trailing zeros ("1.5" not "1.50000"; "0" not "0.00000"). */
 function trimDecimals(value: number, digits: number): string {
   const fixed = value.toFixed(digits);
@@ -127,8 +137,9 @@ export function convertColorFallback(value: string, format: string): string | nu
     case "HEX":
       return toHexUpper(rgb);
     case "hex":
-    case "css":
       return toHexLower(rgb);
+    case "css":
+      return cssHexShorthand(rgb);
     case "number":
       return (rgb.r << 16) | (rgb.g << 8) | rgb.b;
     case "{rgb}":
