@@ -24,7 +24,7 @@
  *
  * @see docs/AGENT-PITFALLS.md §70
  */
-import { mkdtempSync, writeFileSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { Image } from "bun";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -34,7 +34,7 @@ const check = (name: string, pass: boolean, detail = "") => { results.push({ nam
 
 const dir = mkdtempSync(join(tmpdir(), "img-probe-"));
 const SRC = join(dir, "src.png");
-writeFileSync(SRC, Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAAFElEQVR42mP8z8Dwn4GBgYGJgZGBAQAbYgIBL8f2GQAAAABJRU5ErkJggg==", "base64"));
+await Bun.write(SRC, Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAAFElEQVR42mP8z8Dwn4GBgYGJgZGBAQAbYgIBL8f2GQAAAABJRU5ErkJggg==", "base64"));
 
 // P1: metadata
 const m = await Bun.file(SRC).image().metadata();
@@ -141,7 +141,7 @@ check("P14c resize(undefined, h) THROWS (doc correction)", undefThrew.startsWith
 
 // P15: constructors — new Image(path) and new Image(bytes).
 try { await new Image(SRC).bytes(); check("P15a new Image(path) constructor", true); } catch (e) { check("P15a new Image(path) constructor", false, String(e)); }
-try { await new Image(readFileSync(SRC) as unknown as Uint8Array).bytes(); check("P15b new Image(bytes) constructor", true); } catch (e) { check("P15b new Image(bytes) constructor", false, String(e)); }
+try { await new Image(await Bun.file(SRC).bytes()).bytes(); check("P15b new Image(bytes) constructor", true); } catch (e) { check("P15b new Image(bytes) constructor", false, String(e)); }
 
 // P16: metadata format value reflects the source.
 const metaFmt = (await new Image(SRC).metadata()).format;
@@ -175,7 +175,7 @@ check("P21 per-format magics (jpeg/png/webp lossless+lossy)", j21[0] === 0xff &&
 // P22: extension-inferred format — write(path) without an encode method.
 const extPath = join(dir, "out.jpg");
 await new Image(SRC).resize(10).write(extPath);
-const extBytes = readFileSync(extPath);
+const extBytes = await Bun.file(extPath).bytes();
 check("P22 extension infers format (.jpg -> jpeg)", extBytes[0] === 0xff && extBytes[1] === 0xd8, "no encode method needed");
 
 // ── §177 refactor additions: Blob#image() gotchas + BuildArtifact.image() ──
@@ -185,20 +185,20 @@ check("P22 extension infers format (.jpg -> jpeg)", extBytes[0] === 0xff && extB
 // (type-level inheritance does NOT carry to runtime; S01 in BUN_BUILD_FINDINGS).
 const artDir = join(dir, 'art');
 const artEntry = join(dir, 'art.ts');
-writeFileSync(artEntry, 'export const x = 1;\n');
+await Bun.write(artEntry, 'export const x = 1;\n');
 const artRes = await Bun.build({ entrypoints: [artEntry], outdir: artDir });
 const art = artRes.outputs[0] as any;
 check('P23 BuildArtifact.image() ABSENT (instanceof Blob false)', typeof art.image === 'undefined' && art instanceof Blob === false, 'image=' + typeof art.image + ' isBlob=' + (art instanceof Blob));
 
 // P24: the real Blob#image() / Bun.file().image() surface (where the gotchas live).
-const plainBlob = new Blob([readFileSync(SRC)]);
+const plainBlob = new Blob([await Bun.file(SRC).bytes()]);
 check('P24 Blob#image() + Bun.file().image() exist', typeof (plainBlob as any).image === 'function' && typeof (Bun.file(SRC) as any).image === 'function', 'blob=' + typeof (plainBlob as any).image + ' file=' + typeof (Bun.file(SRC) as any).image);
 
 // P25: format detection is by CONTENT, not extension or Content-Type.
 const fakeJpg = join(dir, 'fake.jpg');
-writeFileSync(fakeJpg, readFileSync(SRC));
+await Bun.write(fakeJpg, await Bun.file(SRC).bytes());
 const sniffFile = await (Bun.file(fakeJpg) as any).image().metadata();
-const sniffBlob = await (new Blob([readFileSync(SRC)], { type: 'image/jpeg' }) as any).image().metadata();
+const sniffBlob = await (new Blob([await Bun.file(SRC).bytes()], { type: 'image/jpeg' }) as any).image().metadata();
 check('P25 content sniffing (.jpg file + image/jpeg Blob -> png)', sniffFile.format === 'png' && sniffBlob.format === 'png', 'file=' + sniffFile.format + ' blob=' + sniffBlob.format);
 
 // P26: maxPixels decompression-bomb guard - boundary is EXACTLY 2^28 pixels.
@@ -214,7 +214,7 @@ check('P26 maxPixels default 268402689 (16383^2 ok, 16384^2 rejects)', underCap 
 
 // P27: lazy pipeline - .image() runs nothing; only terminals decode/throw.
 const GARB = join(dir, 'garbage.png');
-writeFileSync(GARB, 'not an image');
+await Bun.write(GARB, 'not an image');
 let lazySurface = false;
 try { const im = (Bun.file(GARB) as any).image(); lazySurface = typeof im.resize === 'function' && typeof im.metadata === 'function'; } catch { lazySurface = false; }
 let garbCode = '';
@@ -234,7 +234,7 @@ try { await new Image(join(dir, 'nope.png')).metadata(); p29 = 'no-error'; } cat
 check('P29 path input = filesystem read (ENOENT when missing)', p29 === 'ENOENT', p29);
 
 // P30: SharedArrayBuffer + resizable ArrayBuffer rejected.
-const srcBytes = readFileSync(SRC);
+const srcBytes = await Bun.file(SRC).bytes();
 const sabU8 = new Uint8Array(new SharedArrayBuffer(srcBytes.length));
 sabU8.set(srcBytes);
 const resizAB = new ArrayBuffer(srcBytes.length, { maxByteLength: srcBytes.length * 2 });

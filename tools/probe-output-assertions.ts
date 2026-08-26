@@ -17,7 +17,7 @@
  *
  * @see docs/AGENT-PITFALLS.md §64 (pending)
  */
-import { readFileSync, existsSync, mkdirSync } from "node:fs";
+import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { writeDocsGateState } from "../src/lib/docs-state.ts";
 
@@ -93,10 +93,10 @@ async function main() {
   console.log("output-assertion probe — bun " + Bun.version);
   const all: Assertion[] = [];
   for (const f of new Bun.Glob("*.md").scanSync({ cwd: join(ROOT, "docs"), onlyFiles: true })) {
-    all.push(...extractAssertions(readFileSync(join(ROOT, "docs", f), "utf8"), f));
+    all.push(...extractAssertions(await Bun.file(join(ROOT, "docs", f)).text(), f));
   }
   for (const f of new Bun.Glob("*page.ts").scanSync({ cwd: join(ROOT, "src/research"), onlyFiles: true })) {
-    all.push(...extractAssertions(readFileSync(join(ROOT, "src/research", f), "utf8"), f));
+    all.push(...extractAssertions(await Bun.file(join(ROOT, "src/research", f)).text(), f));
   }
   // stats
   const byKind = new Map<string, number>();

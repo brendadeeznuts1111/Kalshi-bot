@@ -10,7 +10,7 @@
  * 400s (bad/duplicate/conflicting Content-Length, invalid chunk size).
  * Exits 1 if any probe fails — run it after upgrading Bun.
  */
-import { readFileSync, mkdirSync, rmSync } from "node:fs";
+import { mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import net from "node:net";
@@ -26,8 +26,8 @@ if (gen.exitCode !== 0) {
   console.error("security:probe: openssl unavailable — cannot generate cert");
   process.exit(1);
 }
-const cert = readFileSync(join(dir, "cert.pem"));
-const key = readFileSync(join(dir, "key.pem"));
+const cert = await Bun.file(join(dir, "cert.pem")).bytes();
+const key = await Bun.file(join(dir, "key.pem")).bytes();
 
 let failures = 0;
 const check = (label: string, ok: boolean, detail = ""): void => {

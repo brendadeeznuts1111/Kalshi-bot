@@ -17,20 +17,20 @@
  * Create the code file with tools.write (or base64 via agent:encode) then
  * probe it. The temp is deleted after the run.
  */
-import { readFileSync, rmSync, writeFileSync } from "node:fs";
+import { rmSync } from "node:fs";
 import { join } from "node:path";
 
 const ROOT = join(import.meta.dir, "..");
 const TMP = join(ROOT, ".probe-tmp.ts");
 
 const arg = process.argv.slice(2).find((a) => a !== "--");
-const input = arg ? readFileSync(arg, "utf8") : readFileSync(0, "utf8");
+const input = arg ? await Bun.file(arg).text() : await Bun.stdin.text();
 if (!input.trim()) {
   console.error("usage: bun run agent:probe -- <code-file>  (or pipe code on stdin)");
   process.exit(2);
 }
 
-writeFileSync(TMP, input + "\n");
+await Bun.write(TMP, input + "\n");
 let code = 1;
 try {
   // Capture + forward stdout/stderr (process.exit inside try would bypass

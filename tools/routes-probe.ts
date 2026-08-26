@@ -6,15 +6,15 @@
  * SPA-fallback nested routes, wildcard param capture).
  */
 import { serve } from "bun";
-import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 
 const results: { name: string; pass: boolean; detail: string }[] = [];
 const check = (name: string, pass: boolean, detail = "") => { results.push({ name, pass, detail }); console.log((pass ? "PASS" : "FAIL") + "  " + name + (detail ? "  — " + detail : "")); };
 
 const dir = mkdtempSync(join("/tmp", "routes-probe-"));
-writeFileSync(join(dir, "index.html"), "<h1>idx</h1>");
-writeFileSync(join(dir, "a.txt"), "AAAA");
+await Bun.write(join(dir, "index.html"), "<h1>idx</h1>");
+await Bun.write(join(dir, "a.txt"), "AAAA");
 const base2 = "http://localhost:";
 
 const server = serve({

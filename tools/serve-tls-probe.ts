@@ -4,7 +4,7 @@
  * HTTP/2/3 negotiation and the serve options depth (§123).
  */
 import { serve } from "bun";
-import { mkdtempSync, readFileSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -15,8 +15,8 @@ const dir = mkdtempSync(join(tmpdir(), "tls-probe-"));
 const keyPath = join(dir, "key.pem");
 const certPath = join(dir, "cert.pem");
 const gen = Bun.spawnSync(["openssl", "req", "-x509", "-newkey", "rsa:2048", "-keyout", keyPath, "-out", certPath, "-days", "1", "-nodes", "-subj", "/CN=localhost"], { stdout: "ignore", stderr: "ignore" });
-const key = readFileSync(keyPath, "utf8");
-const cert = readFileSync(certPath, "utf8");
+const key = await Bun.file(keyPath).text();
+const cert = await Bun.file(certPath).text();
 const NOVERIFY = { rejectUnauthorized: false } as any;
 
 // P1: TLS serve + request scheme.

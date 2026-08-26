@@ -20,7 +20,7 @@
 
 export {}; // top-level await requires module context (tsc)
 
-import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -60,7 +60,7 @@ check("P7 Bun.Quic global absent (QUIC is node:quic only)", typeof (Bun as Recor
 // this check fails -> gate flags -> re-probe + update the pin.
 const qdir = mkdtempSync(join(tmpdir(), "quic-pin-"));
 const qfile = join(qdir, "listen.ts");
-writeFileSync(qfile, "import { listen } from \"node:quic\";\nlisten(() => {});\nconsole.log(\"after-listen-call\");\n");
+await Bun.write(qfile, "import { listen } from \"node:quic\";\nlisten(() => {});\nconsole.log(\"after-listen-call\");\n");
 const qproc = Bun.spawnSync(["bun", qfile], { stdout: "pipe", stderr: "pipe", timeout: 5000 });
 const listenCrashed = qproc.exitCode === 1; // async abort at internal:quic — a working listen would exit 0 or keep the process alive
 rmSync(qdir, { recursive: true, force: true });

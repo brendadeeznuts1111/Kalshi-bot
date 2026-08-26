@@ -28,7 +28,7 @@
  *     build.module() creates runtime virtual modules; bunfig key is
  *     `preload`, NOT `[runtime] plugins`
  */
-import { mkdtempSync, writeFileSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { asPluginNamespace, INVALID_PLUGIN_NAMESPACES, KNOWN_PLUGIN_NAMESPACES, tryPluginNamespace } from "../src/lib/plugin-namespaces.ts";
@@ -47,7 +47,7 @@ check("P1 plugin === Bun.plugin", (Bun as any).plugin === namedPlugin, "identity
 // compile-time (branded values) + runtime (real Bun.build) enforcement: if a
 // namespace drifts in the registry, the probe fails here, not in the docs.
 const dir = mkdtempSync(join(tmpdir(), "plugins-probe-"));
-writeFileSync(join(dir, "x.ts"), "export const x = 1;\n");
+await Bun.write(join(dir, "x.ts"), "export const x = 1;\n");
 
 let knownFail = 0;
 const knownSummary: string[] = [];
@@ -111,8 +111,8 @@ try { asPluginNamespace(""); } catch { emptyRegistryRejects = true; }
 check("P2c empty string: runtime accepts (no constraint), registry rejects (named ns)", r2c.success && emptyFired >= 1 && emptyRegistryRejects, "runtimeFired=" + emptyFired + " registryRejects=" + emptyRegistryRejects);
 
 // P3: default namespace is file; void = default resolution
-writeFileSync(join(dir, "app.ts"), 'import { v } from "./dep";\nconsole.log(v);\n');
-writeFileSync(join(dir, "dep.ts"), "export const v = 42;\n");
+await Bun.write(join(dir, "app.ts"), 'import { v } from "./dep";\nconsole.log(v);\n');
+await Bun.write(join(dir, "dep.ts"), "export const v = 42;\n");
 let sawNs = "";
 const r3 = await Bun.build({ entrypoints: [join(dir, "app.ts")], outdir: join(dir, "o3"), plugins: [{ name: "ns", setup(build) {
   build.onResolve({ filter: /\.\/dep$/, namespace: "file" }, (args) => { sawNs = args.namespace; return undefined; });
@@ -120,13 +120,13 @@ const r3 = await Bun.build({ entrypoints: [join(dir, "app.ts")], outdir: join(di
 check("P3 default ns file + void continues", r3.success && sawNs === "file", "ns=" + JSON.stringify(sawNs) + " success=" + r3.success);
 
 // P4: env-plugin virtual module in Bun.build
-writeFileSync(join(dir, "envapp.ts"), 'import env from "env";\nconsole.log(env.PROBE_ENV_VAL);\n');
+await Bun.write(join(dir, "envapp.ts"), 'import env from "env";\nconsole.log(env.PROBE_ENV_VAL);\n');
 const r4 = await Bun.build({ entrypoints: [join(dir, "envapp.ts")], outdir: join(dir, "o4"), plugins: [{ name: "env", setup(build) {
   build.onResolve({ filter: /^env$/ }, () => ({ path: "env", namespace: "env" }));
   build.onLoad({ filter: /.*/, namespace: "env" }, () => ({ contents: "export default " + JSON.stringify({ PROBE_ENV_VAL: "VIRTUAL_OK" }), loader: "js" as const }));
 } }] });
 let out4 = "";
-if (r4.success) { const f = r4.outputs.find((o) => o.kind === "entry-point"); if (f) out4 = readFileSync(f.path, "utf8"); }
+if (r4.success) { const f = r4.outputs.find((o) => o.kind === "entry-point"); if (f) out4 = await Bun.file(f.path).text(); }
 check("P4 env virtual module builds", r4.success && out4.includes("VIRTUAL_OK"), "success=" + r4.success + " has=" + out4.includes("VIRTUAL_OK"));
 
 // P5: onStart awaited before onLoad; config mutation takes effect
@@ -148,7 +148,7 @@ check("P5b onStart outdir mutation TAKES EFFECT (doc says cannot)", mutatedHas &
 // P6: onEnd awaited; success=false on failed build
 const seq6: string[] = [];
 let endSuccess = "";
-writeFileSync(join(dir, "badapp.ts"), 'import x from "no-such-pkg";\nconsole.log(x);\n');
+await Bun.write(join(dir, "badapp.ts"), 'import x from "no-such-pkg";\nconsole.log(x);\n');
 try {
   await Bun.build({ entrypoints: [join(dir, "badapp.ts")], outdir: join(dir, "o6"), plugins: [{ name: "e", setup(build) {
     build.onEnd(async (result: any) => { endSuccess = "success=" + result.success + " logs=" + (result.logs || []).length; seq6.push("end"); await Bun.sleep(15); });
@@ -158,7 +158,7 @@ seq6.push("resolved");
 check("P6 onEnd fires with success=false on failure", endSuccess.includes("success=false") && seq6[0] === "end" && seq6[seq6.length - 1] === "resolved", endSuccess + " seq=" + JSON.stringify(seq6));
 
 // P7: defer() once-only (with onResolve added — doc example lacks it)
-writeFileSync(join(dir, "deferapp.ts"), 'import stats from "stats.json";\nconsole.log(stats);\n');
+await Bun.write(join(dir, "deferapp.ts"), 'import stats from "stats.json";\nconsole.log(stats);\n');
 let deferDetail = "";
 const r7 = await Bun.build({ entrypoints: [join(dir, "deferapp.ts")], outdir: join(dir, "o7"), plugins: [{ name: "d", setup(build) {
   build.onResolve({ filter: /^stats\.json$/ }, () => ({ path: "stats.json", namespace: "stats" }));
@@ -172,15 +172,15 @@ check("P7 defer once-only", r7.success && deferDetail === "second-call=THREW", d
 
 // P8: node:fs namespace is file, not node
 let nodeNs = "";
-writeFileSync(join(dir, "nodeapp.ts"), 'import { readFileSync } from "node:fs";\nconsole.log(readFileSync);\n');
+await Bun.write(join(dir, "nodeapp.ts"), 'import { readFileSync } from "node:fs";\nconsole.log(readFileSync);\n');
 await Bun.build({ entrypoints: [join(dir, "nodeapp.ts")], outdir: join(dir, "o8"), plugins: [{ name: "n", setup(build) {
   build.onResolve({ filter: /./ }, (args) => { if (args.path === "node:fs") nodeNs = args.namespace; return undefined; });
 } }] });
 check("P8 node:fs ns is file (doc says node)", nodeNs === "file", "ns=" + JSON.stringify(nodeNs));
 
 // P9: runtime build.module() works via preload; onResolve does not fire
-writeFileSync(join(dir, "plugin.ts"), 'import { plugin } from "bun";\nplugin({ name: "vm", setup(build) {\n  build.module("hello:world", () => ({ exports: { foo: "bar" }, loader: "object" as const }));\n} });\n');
-writeFileSync(join(dir, "modapp.ts"), 'const { foo } = await import("hello:world");\nconsole.log("MODULE_API=" + foo);\n');
+await Bun.write(join(dir, "plugin.ts"), 'import { plugin } from "bun";\nplugin({ name: "vm", setup(build) {\n  build.module("hello:world", () => ({ exports: { foo: "bar" }, loader: "object" as const }));\n} });\n');
+await Bun.write(join(dir, "modapp.ts"), 'const { foo } = await import("hello:world");\nconsole.log("MODULE_API=" + foo);\n');
 const proc = Bun.spawn(["bun", "--preload", join(dir, "plugin.ts"), join(dir, "modapp.ts")], { stdout: "pipe", stderr: "pipe" });
 const out9 = await new Response(proc.stdout).text();
 const exit9 = await proc.exited;

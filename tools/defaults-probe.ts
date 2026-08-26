@@ -95,11 +95,11 @@ check("D9b NODE_PORT alone read", pNode === 4861, "NODE_PORT -> " + pNode);
 check("D9c PORT alone read", pPort === 4862, "PORT -> " + pPort);
 
 // D10: BUN_* env vars the repo declares in config.ts (§84)
-import { mkdtempSync, writeFileSync, readdirSync, rmSync } from "node:fs";
+import { mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 const e1dir = mkdtempSync(tmpdir() + "/defenv-");
 // D10a: BUN_RUNTIME_TRANSPILER_CACHE_PATH — Bun writes >4KB transpiled output there
-writeFileSync(e1dir + "/big.ts", "export const s = " + JSON.stringify("x".repeat(5000)) + ";");
+await Bun.write(e1dir + "/big.ts", "export const s = " + JSON.stringify("x".repeat(5000)) + ";");
 const r1 = Bun.spawnSync(["bun", "-e", "import " + JSON.stringify(e1dir + "/big.ts") + "; console.log(1);"], { env: { ...process.env, BUN_RUNTIME_TRANSPILER_CACHE_PATH: e1dir + "/cache" }, stdout: "pipe", stderr: "pipe" });
 let cacheEntries = 0;
 try { cacheEntries = readdirSync(e1dir + "/cache", { recursive: true } as any).length; } catch { cacheEntries = 0; }
@@ -117,10 +117,10 @@ check("D10c NODE_ENV unset by default", (e5.stdout?.toString().trim() ?? "") ===
 
 // D11: .env load order — .env.local SKIPPED when NODE_ENV=test (§85)
 const envDir = mkdtempSync(tmpdir() + "/envload-");
-writeFileSync(envDir + "/.env", "X=dotenv\n");
-writeFileSync(envDir + "/.env.local", "X=dotenv-local\n");
-writeFileSync(envDir + "/.env.test", "X=dotenv-test\n");
-writeFileSync(envDir + "/.env.production", "X=dotenv-production\n");
+await Bun.write(envDir + "/.env", "X=dotenv\n");
+await Bun.write(envDir + "/.env.local", "X=dotenv-local\n");
+await Bun.write(envDir + "/.env.test", "X=dotenv-test\n");
+await Bun.write(envDir + "/.env.production", "X=dotenv-production\n");
 const envRead = (ne: string): string => {
   const r = Bun.spawnSync(["bun", "-e", "console.log(process.env.X);"], { cwd: envDir, env: { ...process.env, NODE_ENV: ne }, stdout: "pipe" });
   return r.stdout?.toString().trim() ?? "";
@@ -133,8 +133,8 @@ check("D11b .env.local wins otherwise (.env.production loses)", inProd === "dote
 
 // D12: Bun.serve {dir:} route — index.html + Range/304/412/304-IMS/traversal (§87)
 const staticDir = mkdtempSync(tmpdir() + "/dirroute-");
-writeFileSync(staticDir + "/index.html", "<h1>index</h1>");
-writeFileSync(staticDir + "/file.txt", "x".repeat(100000));
+await Bun.write(staticDir + "/index.html", "<h1>index</h1>");
+await Bun.write(staticDir + "/file.txt", "x".repeat(100000));
 const srvD = Bun.serve({ port: 3691, routes: { "/static/*": { dir: staticDir } } });
 const idx = await fetch("http://127.0.0.1:3691/static/");
 const idxBody = await idx.text();

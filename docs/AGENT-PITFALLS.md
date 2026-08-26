@@ -239,6 +239,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §223 — ML-KEM WORKS — encapsulateBits/decapsulateBits verified + wired (ml-kem.ts + registry) (2026-08-26)
 - §224 — CONFIRMATION PROTOCOL — surface first, semantics second, test-locked positive (2026-08-26)
 - §225 — Probe/surface refactor — Bun.file + Bun.Glob consistency; symlink counter-lesson (2026-08-26)
+- §226 — Full native-alignment sweep — probe/surface on Bun.file/Bun.write/Bun.stdin; what stays node:fs (2026-08-26)
 - §199 — ui:regen CLI — regenerate UI artifacts from meta/variant sources + the Bun.$ template failure class (2026-08-26)
 - §187 — Extended color formats — kernel-only (lch/oklab/oklch/hsv) + inverse parsers (2026-08-26)
 - §188 — Watermark pipeline — ML-DSA key naming + WebView/Blob verified facts (2026-08-26)
@@ -7854,6 +7855,38 @@ and refactored the real gaps (all behavior-preserving; 503-shape matrix,
 - No CLI misuse: surface/shape probes reference bun run only in doc
   comments; no inline bun -e/-p or wrapper shells in the tooling.
   Gates: 2799 tests pass / 0 fail; verify:contracts 59/59.
+
+
+
+## 226. Full native-alignment sweep - probe/surface tooling on Bun.file/Bun.write/Bun.stdin; what stays node:fs and why (2026-08-26)
+
+Deeper than S225: every probe/surface tool audited and converted where the
+Bun-native call is a true fit (all probes still pass, 59/59 gates):
+- Fixture writes -> await Bun.write: build-probe (9), defaults-probe (8),
+  plugins-probe (9), image-probe (4), routes-probe (2), bun-apis-probe (1),
+  agent-probe (1), serve-tls-probe (1), security-probe (via Bun.$ openssl).
+- Reads -> await Bun.file(...).text()/.bytes(): image-probe (SRC bytes x4,
+  ext bytes), serve-tls (key/cert), plugins-probe (build output),
+  security-probe (cert/key), probe-output-assertions (docs/research),
+  shape-probe + type-drift (bun-shape.json, S225).
+- stdin -> await Bun.stdin.text() (agent-probe).
+- Docs walk -> listFilesAsync (bun-shape, S225).
+STAYS node:fs (justified, not poor usage):
+- rmSync(dir, {recursive,force}) cleanup - Bun has no recursive rm;
+  Bun.file.delete() is single-file only.
+- readdirSync of node_modules/.bun-cache/links - Bun.Glob SKIPS symlinks
+  (S225 counter-lesson).
+- bun-shape .d.ts listing (sync top-level, small) + repo-api-shape's
+  sync reads inside sync TS-parser helpers.
+- node-compat-probe's node:fs/node:child_process - the probe's WHOLE
+  purpose (S140, SPAWN_KEEP_LIST).
+- Bun.spawnSync(['bun','-e',...]) in defaults/build probes - deliberate
+  subprocess-env probing (SPAWN_KEEP_LIST).
+The rule: Bun-native WHEN IT FITS the data shape (files/bytes/stdin),
+node:fs when it doesn't (recursive rm, symlink dirs, sync parser loops,
+deliberate node-compat probes). 'Native alignment' is fit, not dogma.
+  Gates: 2799 tests pass / 0 fail; verify:contracts 59/59.
+
 
 
 
