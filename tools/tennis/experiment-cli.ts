@@ -101,8 +101,8 @@ export async function runExperimentCli(argv: string[]): Promise<number> {
     const id = runner.launch({
       name: (values.name as string) ?? "unnamed",
       factors,
-      fraction: Number.isFinite(fraction) ? fraction : undefined,
-      minDurationDays: Number.isFinite(minDays) ? minDays : undefined,
+      ...(fraction !== undefined && Number.isFinite(fraction) ? { fraction } : {}),
+      ...(minDays !== undefined && Number.isFinite(minDays) ? { minDurationDays: minDays } : {}),
     });
     const design = runner.getDesign(id);
     const payload = { experimentId: id, variants: design.variants.length, factors };

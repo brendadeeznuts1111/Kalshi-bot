@@ -60,9 +60,11 @@ export function createPolymarketGammaSourceAdapter(
         const payload = await fetchPolymarketEventsPageWire({
           ...options,
           tagId: asSourceTagId(request.selector.parameters.tagId!),
-          tagSlug: request.selector.parameters.tagSlug,
+          ...(request.selector.parameters.tagSlug === undefined
+            ? {}
+            : { tagSlug: request.selector.parameters.tagSlug }),
           pageSize: request.limit,
-          afterCursor: request.cursor,
+          ...(request.cursor === undefined ? {} : { afterCursor: request.cursor }),
         });
         const observedAtMs = health.observedAtMs();
         return { payload, observedAtMs } satisfies PolymarketAdapterWire;

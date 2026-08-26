@@ -63,11 +63,13 @@ for (const input of inputs) {
     const width = resize ? Number(resize.split('x')[0]) : undefined;
     const height = resize ? Number(resize.split('x')[1]) : undefined;
     const converted = await convertImageFile(input, outPath, {
-      format: to as 'png' | 'jpeg' | 'webp' | 'avif' | undefined,
-      width,
-      height,
-      fit: fit as 'inside' | 'fill' | undefined,
-      rotate,
+      ...(to !== undefined
+        ? { format: to as 'png' | 'jpeg' | 'webp' | 'avif' }
+        : {}),
+      ...(width !== undefined ? { width } : {}),
+      ...(height !== undefined ? { height } : {}),
+      ...(fit !== undefined ? { fit: fit as 'inside' | 'fill' } : {}),
+      ...(rotate !== undefined ? { rotate } : {}),
       quality,
     });
     if (converted) out = paintOk('→ ' + outPath + ' (' + converted.format + ' ' + converted.width + 'x' + converted.height + ', ' + converted.bytes + ' B)');

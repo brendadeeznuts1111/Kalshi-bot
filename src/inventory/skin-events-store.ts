@@ -92,8 +92,8 @@ export function resolveInventoryCompetitionId(input: {
   const hit = resolveCompetition({
     liveProduct: input.liveProduct,
     league: input.league,
-    sportId: isSportId(sport) ? sport : undefined,
-    inventoryBucket: bucket && bucket !== sport ? bucket : undefined,
+    ...(isSportId(sport) ? { sportId: sport } : {}),
+    ...(bucket && bucket !== sport ? { inventoryBucket: bucket } : {}),
   });
   return hit?.competitionId ?? null;
 }
@@ -421,12 +421,13 @@ export async function fetchPublicPliveStreamEvents(
   // Injected fetchImpl (tests): isolate from operator disk cache so a live watch
   // cannot poison unit fixtures.
   const isolate = options.fetchImpl != null;
+  const cachePath =
+    options.cachePath ??
+    (isolate ? `/tmp/inventory-stream-list-test-${process.pid}.json` : undefined);
   const { wire } = await fetchPublicStreamListWire({
-    fetchImpl: options.fetchImpl,
-    cacheOnly: options.cacheOnly,
-    cachePath:
-      options.cachePath ??
-      (isolate ? `/tmp/inventory-stream-list-test-${process.pid}.json` : undefined),
+    ...(options.fetchImpl !== undefined ? { fetchImpl: options.fetchImpl } : {}),
+    ...(options.cacheOnly !== undefined ? { cacheOnly: options.cacheOnly } : {}),
+    ...(cachePath !== undefined ? { cachePath } : {}),
     skipCacheWrite: options.skipCacheWrite ?? isolate,
   });
   return parseStreamList(wire, { sport: options.sport ?? 'all' });

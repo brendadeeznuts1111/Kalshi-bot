@@ -11,9 +11,9 @@ const TEMPLATE_ROOT = joinPath(ROOT, ".bun-create/alpha-program");
 
 export type InitProgramOptions = {
   name: string;
-  dimension?: string;
+  dimension?: string | undefined;
   baseline?: string;
-  role?: "baseline" | "alpha";
+  role?: "baseline" | "alpha" | undefined;
   gates?: Partial<ProgramGates>;
   minContracts?: number;
 };

@@ -103,8 +103,8 @@ export async function capturePandoraViaWebView(
     frames.push({
       t: Date.now(),
       dir: "created",
-      url: safeUrl,
-      requestId: data?.requestId,
+      ...(safeUrl !== undefined ? { url: safeUrl } : {}),
+      ...(data?.requestId !== undefined ? { requestId: data.requestId } : {}),
     });
   });
 
@@ -113,14 +113,13 @@ export async function capturePandoraViaWebView(
     data: CdpWebSocketFrame,
   ) => {
     const payload = data?.response?.payloadData ?? "";
+    const url = data?.requestId ? requestUrlById.get(data.requestId) : undefined;
     frames.push({
       t: Date.now(),
       dir,
       payload,
-      requestId: data?.requestId,
-      url: data?.requestId
-        ? requestUrlById.get(data.requestId)
-        : undefined,
+      ...(data?.requestId !== undefined ? { requestId: data.requestId } : {}),
+      ...(url !== undefined ? { url } : {}),
     });
   };
 
@@ -134,13 +133,12 @@ export async function capturePandoraViaWebView(
 
   view.addEventListener<CdpWebSocketClosed>("Network.webSocketClosed", (ev) => {
     const data = parseCdpWebSocketClosed(ev);
+    const url = data?.requestId ? requestUrlById.get(data.requestId) : undefined;
     frames.push({
       t: Date.now(),
       dir: "closed",
-      requestId: data?.requestId,
-      url: data?.requestId
-        ? requestUrlById.get(data.requestId)
-        : undefined,
+      ...(data?.requestId !== undefined ? { requestId: data.requestId } : {}),
+      ...(url !== undefined ? { url } : {}),
     });
   });
 

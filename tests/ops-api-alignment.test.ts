@@ -86,7 +86,7 @@ describe("ops dashboard ↔ API alignment", () => {
     const len = (v: unknown, key: string): number =>
       Array.isArray(v) ? v.length
       : v && typeof v === "object" && Array.isArray((v as Record<string, unknown>)[key])
-        ? ((v as Record<string, unknown[]>)[key]).length
+        ? ((v as Record<string, unknown[]>)[key]!).length
         : Number.NaN;
     const tickLen = len(ticksRes, "ticks");
     const moveLen = len(movesRes, "lineMoves");

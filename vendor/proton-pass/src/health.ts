@@ -51,7 +51,7 @@ export async function auditSecretHealth(config: SecretHealthConfig): Promise<Sec
 
   const results = await fetchSecretsParallel(uris, {
     passCli,
-    cache,
+    ...(cache !== undefined ? { cache } : {}),
     timeoutMs: 15_000,
     retry: { maxAttempts: 1 },
     logger: log,
@@ -97,7 +97,7 @@ export async function auditSecretHealth(config: SecretHealthConfig): Promise<Sec
       status: r.status,
       durationMs: r.durationMs,
       fromCache: r.fromCache,
-      error: r.error,
+      ...(r.error !== undefined ? { error: r.error } : {}),
     })),
   };
 

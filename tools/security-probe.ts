@@ -109,7 +109,7 @@ async function rawSend(payload: string): Promise<number> {
     let status = 0;
     sock.on("data", (d) => {
       const m = /^HTTP\/1\.[01] (\d{3})/.exec(d.toString());
-      if (m) status = parseInt(m[1], 10);
+      if (m) status = parseInt(m[1]!, 10);
       sock.destroy();
       resolve(status);
     });
@@ -125,7 +125,7 @@ const bad = [
   ["invalid chunk size", "POST / HTTP/1.1\r\nHost: localhost\r\nTransfer-Encoding: chunked\r\n\r\nZZZ\r\n"],
 ];
 for (const [label, payload] of bad) {
-  const st = await rawSend(payload);
+  const st = await rawSend(payload!);
   check("400 for " + label, st === 400, "status " + st);
 }
 

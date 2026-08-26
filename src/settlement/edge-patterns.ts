@@ -78,10 +78,10 @@ export type EdgePatternScope = {
 export type EdgePatternContext = {
   sportId: string;
   phase: SettlementPhase;
-  marketType?: string | null;
-  period?: string | null;
+  marketType?: string | null | undefined;
+  period?: string | null | undefined;
   /** Optional decimal odds (for future EV-aware patterns). */
-  decimalOdds?: number | null;
+  decimalOdds?: number | null | undefined;
   matchState?: {
     firstSetCompleted?: boolean;
     matchCompleted?: boolean;
@@ -92,7 +92,7 @@ export type EdgePatternContext = {
     injuryRisk?: boolean;
     /** Listed pitcher scratched / inactive player. */
     eligibilityBroken?: boolean;
-  };
+  } | undefined;
   /** Precomputed settlement (optional; computed if missing). */
   settlement?: SettlementWeighting;
 };
@@ -188,7 +188,7 @@ export type EdgePatternSortOptions = {
   /** Ordered keys; default `['family', 'id']` for catalog, `['severity', 'id']` for hits. */
   sortBy?: readonly EdgePatternSortKey[];
   /** Reverse overall order after multi-key compare. */
-  desc?: boolean;
+  desc?: boolean | undefined;
 };
 
 /** Parse CLI `--sort-by family,severity,id` (unknown tokens dropped). */

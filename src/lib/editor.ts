@@ -69,8 +69,8 @@ export function resolveEditor(
 
 export type OpenTarget = {
   path: string;
-  line?: number;
-  column?: number;
+  line?: number | undefined;
+  column?: number | undefined;
 };
 
 /**
@@ -139,8 +139,8 @@ export function openTarget(target: OpenTarget, deps: OpenTargetDeps = {}): void 
 
   try {
     Bun.openInEditor(target.path, {
-      line: target.line,
-      column: target.column,
+      ...(target.line !== undefined ? { line: target.line } : {}),
+      ...(target.column !== undefined ? { column: target.column } : {}),
     });
   } catch (err) {
     // Bun 1.4 behavior change: openInEditor() THROWS when no editor can be

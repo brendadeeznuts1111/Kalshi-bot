@@ -34,9 +34,9 @@ function parseArgs(argv: string[]): { dbPath: string; retentionDays: number } {
   const dbIdx = argv.indexOf("--db");
   const retentionIdx = argv.indexOf("--retention-days");
   return {
-    dbPath: dbIdx >= 0 ? argv[dbIdx + 1] : databasePath,
+    dbPath: dbIdx >= 0 ? argv[dbIdx + 1]! : databasePath,
     retentionDays: retentionIdx >= 0
-      ? parseInt(argv[retentionIdx + 1], 10)
+      ? parseInt(argv[retentionIdx + 1]!, 10)
       : migration.retentionDays,
   };
 }

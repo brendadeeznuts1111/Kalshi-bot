@@ -36,7 +36,7 @@ try {
 check("P3 dns prefetch/lookup fns", typeof Bun.dns.prefetch === "function" && typeof Bun.dns.lookup === "function", Object.keys(Bun.dns).join(","));
 try {
   const l = await Bun.dns.lookup("localhost");
-  check("P3a dns.lookup localhost", !!l && l.length > 0 && l[0].address !== undefined, JSON.stringify(l).slice(0, 80));
+  check("P3a dns.lookup localhost", !!l && l.length > 0 && l[0]?.address !== undefined, JSON.stringify(l).slice(0, 80));
 } catch (e) { check("P3a dns.lookup localhost", false, String((e as Error).message).slice(0, 80)); }
 
 // P4 redis: client shape only (no server in the gate — no connect).

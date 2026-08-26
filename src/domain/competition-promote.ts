@@ -39,9 +39,9 @@ export type PromoteLeagueInput = {
   sportId: string;
   leagueKey: string;
   /** Wire stream bucket (e.g. football for soccer). */
-  inventoryBucket?: string;
-  peakEventCount?: number;
-  eventCountLive?: number;
+  inventoryBucket?: string | undefined;
+  peakEventCount?: number | undefined;
+  eventCountLive?: number | undefined;
 };
 
 export type CompetitionPromoteCandidate = {

@@ -121,7 +121,11 @@ async function main(): Promise<void> {
   let odds = 0;
   const session = connectFonbetFeed({
     authKey,
-    filters: { sport, leagues: leagues.length ? leagues : undefined, teams: teams.length ? teams : undefined },
+    filters: {
+      ...(sport !== undefined ? { sport } : {}),
+      ...(leagues.length ? { leagues } : {}),
+      ...(teams.length ? { teams } : {}),
+    },
   }, {
     onEvent: (ev, markets) => {
       const row = parseFonbetEvent(ev, markets);

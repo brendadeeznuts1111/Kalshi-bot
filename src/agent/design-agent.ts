@@ -87,7 +87,7 @@ export class DesignAgent {
           base = raw.slice(0, 7); // #rrggbbaa -> #rrggbb
         } else if (raw.length === 4) {
           // #rgb -> #rrggbb
-          base = raw[0] + raw[1] + raw[1] + raw[2] + raw[2] + raw[3] + raw[3];
+          base = raw[0]! + raw[1]! + raw[1]! + raw[2]! + raw[2]! + raw[3]! + raw[3]!;
         }
         if (!legal.has(raw) && !legal.has(base)) {
           add("hardcoded-color", m[0], "color not in TOKENS — add a token or use a CSS var");

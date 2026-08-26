@@ -12,6 +12,7 @@ import type { OddsWatchSummary } from './pandora-listen.ts';
 import {
   pandoraMarketLabel,
   vigFromCoefficientLines,
+  type CoefficientLineLike,
 } from '../partner/fantasy-ultra/market-decode.ts';
 import {
   labelPeriodId,
@@ -48,6 +49,17 @@ function fmtDec(n: number | null | undefined): string {
 function fmtPct(n: number | null | undefined): string {
   if (n == null || !Number.isFinite(n)) return '—';
   return `${n.toFixed(2)}%`;
+}
+
+/** Project coefficient lines to the vig decoder's minimal shape (sideIndex dropped when absent). */
+function coefficientLineLike(lines: CoefficientLine[]): CoefficientLineLike[] {
+  return lines.map(l => ({
+    period: l.period,
+    marketType: l.marketType,
+    selection: l.selection,
+    decimal: l.decimal,
+    ...(l.sideIndex !== undefined ? { sideIndex: l.sideIndex } : {}),
+  }));
 }
 
 /** Compact price cell: ML pair or first two legs / count. Full detail via --json. */
@@ -200,7 +212,7 @@ export function formatEventLookup(r: EventLookupResult): string {
       return lab && lab !== period ? `${period} · ${lab}` : period;
     };
     const vigByKey = new Map(
-      vigFromCoefficientLines(r.pandora.lines).map(
+      vigFromCoefficientLines(coefficientLineLike(r.pandora.lines)).map(
         v => [`${v.period}/${v.marketType}`, v] as const
       )
     );
@@ -259,7 +271,7 @@ export function formatEventLookup(r: EventLookupResult): string {
     labelPeriodId(period, r.sportHint, feedForLabels);
 
   if (r.pandora.probed) {
-    const vigRows = vigFromCoefficientLines(r.pandora.lines).slice(0, 12);
+    const vigRows = vigFromCoefficientLines(coefficientLineLike(r.pandora.lines)).slice(0, 12);
     if (vigRows.length) {
       lines.push('');
       lines.push('## Vig (overround)');

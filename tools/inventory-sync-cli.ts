@@ -71,10 +71,10 @@ async function runOnce(options: {
   enrichBooked: boolean;
   enrichOnly: boolean;
   enrichBookedScope: ReturnType<typeof parseEnrichBookedScope>;
-  enrichCatalogMax?: number;
-  enrichLimit?: number | null;
-  minMatchRate?: number | null;
-  minLinkedPct?: number | null;
+  enrichCatalogMax?: number | undefined;
+  enrichLimit?: number | null | undefined;
+  minMatchRate?: number | null | undefined;
+  minLinkedPct?: number | null | undefined;
   failOnEnrichQuality?: boolean;
   json: boolean;
 }): Promise<void> {
@@ -94,11 +94,19 @@ async function runOnce(options: {
     enrichBooked: options.enrichBooked || options.enrichOnly,
     enrichOnly: options.enrichOnly,
     enrichBookedScope: options.enrichBookedScope,
-    enrichCatalogMax: options.enrichCatalogMax,
-    enrichLimit: options.enrichLimit,
+    ...(options.enrichCatalogMax !== undefined
+      ? { enrichCatalogMax: options.enrichCatalogMax }
+      : {}),
+    ...(options.enrichLimit !== undefined
+      ? { enrichLimit: options.enrichLimit }
+      : {}),
     dryRun: options.dryRun,
-    minMatchRate: options.minMatchRate,
-    minLinkedPct: options.minLinkedPct,
+    ...(options.minMatchRate !== undefined
+      ? { minMatchRate: options.minMatchRate }
+      : {}),
+    ...(options.minLinkedPct !== undefined
+      ? { minLinkedPct: options.minLinkedPct }
+      : {}),
   });
 
   if (options.json) {

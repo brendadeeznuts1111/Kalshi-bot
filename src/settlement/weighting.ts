@@ -239,8 +239,8 @@ export type SettlementContextInput = {
   sportId: string;
   /** prematch | live — required for tennis ML split */
   phase: SettlementPhase;
-  marketType?: string | null;
-  period?: string | null;
+  marketType?: string | null | undefined;
+  period?: string | null | undefined;
   /**
    * Match state for tennis retirement grading (optional).
    * firstSetCompleted: set 1 finished
@@ -251,7 +251,7 @@ export type SettlementContextInput = {
     firstSetCompleted?: boolean;
     matchCompleted?: boolean;
     periodCompleted?: boolean;
-  };
+  } | undefined;
   /** Override embedded index (tests). */
   index?: WeightingIndex;
 };
@@ -278,7 +278,7 @@ export type SettlementWeighting = {
     liveMlAction: 'match_completed' | 'void';
     /** If match stopped now: would this market have action? */
     wouldHaveAction: boolean | null;
-  };
+  } | undefined;
   settlementIdenticalPliveEzlive: boolean;
   sourceCaptured: string;
 };

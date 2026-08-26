@@ -24,9 +24,16 @@ import {
 async function main(): Promise<void> {
   const db = openEventStore({ dbPath: DEFAULT_EVENT_STORE_DB });
   try {
+    const partnerFilter = argValue("partner");
+    const riskThreshold = argValue("risk-threshold") as
+      | "error"
+      | "warn"
+      | "info"
+      | "off"
+      | undefined;
     const report = await runFinanceCron(db, {
       strictEnv: hasFlag("strict-env"),
-      partnerFilter: argValue("partner"),
+      ...(partnerFilter !== undefined ? { partnerFilter } : {}),
       probeLogin:
         hasFlag("probe-login") ||
         process.env.PARTNER_FINANCE_PROBE_LOGIN === "1",
@@ -46,12 +53,7 @@ async function main(): Promise<void> {
       riskForce:
         hasFlag("risk-force") ||
         process.env.PARTNER_FINANCE_RISK_FORCE === "1",
-      riskThreshold: argValue("risk-threshold") as
-        | "error"
-        | "warn"
-        | "info"
-        | "off"
-        | undefined,
+      ...(riskThreshold !== undefined ? { riskThreshold } : {}),
       riskIncludeHealthJson: !hasFlag("no-health-json"),
       autoWsIngest:
         hasFlag("auto-ws-ingest") ||

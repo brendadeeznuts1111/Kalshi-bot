@@ -312,7 +312,7 @@ export async function persistHostDiscoverUrls(input: {
   host: string;
   report: HostDiscoverReport;
   urls: readonly string[];
-  artifactDir?: string;
+  artifactDir?: string | undefined;
 }): Promise<string> {
   const dir = input.artifactDir ?? DEFAULT_HOST_DISCOVER_ARTIFACT_DIR;
   const safe = input.host.replace(/[^a-zA-Z0-9.-]+/g, '_');

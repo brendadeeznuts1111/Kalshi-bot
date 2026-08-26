@@ -129,7 +129,7 @@ export function classMembers(content: string, name: string): string[] {
   const names: string[] = [];
   for (const line of block.split('\n')) {
     const mm = line.match(/^\s{4}(?:static\s+|get\s+)?([a-zA-Z_$][a-zA-Z0-9_$]*)(?:\??:|<|\(|\s*=\s*[a-zA-Z_$])/);
-    if (mm && mm[1] !== 'constructor' && !names.includes(mm[1])) names.push(mm[1]!);
+    if (mm && mm[1] !== 'constructor' && !names.includes(mm[1]!)) names.push(mm[1]!);
   }
   return names;
 }

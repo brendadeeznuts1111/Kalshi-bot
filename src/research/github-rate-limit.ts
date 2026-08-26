@@ -112,7 +112,7 @@ export function evaluateInspectRateBudget(input: {
   uncachedRepoCount: number;
   codeSearchPerRepo: number;
   codeSearch: GitHubRateLimitSnapshot | null;
-  minRemaining?: number;
+  minRemaining?: number | undefined;
 }): InspectBudgetEstimate {
   const minRemaining = input.minRemaining ?? 3;
   const estimatedCodeSearchCalls = input.uncachedRepoCount * input.codeSearchPerRepo;
@@ -417,7 +417,7 @@ export async function ensureInspectRateBudget(input: {
   repoCount: number;
   uncachedRepoCount: number;
   config: ResearchConfig;
-  minRemaining?: number;
+  minRemaining?: number | undefined;
 }): Promise<InspectBudgetEstimate> {
   const codeSearchPerRepo = estimateCodeSearchCallsPerRepo(input.config);
   if (skipRatePreflight()) {

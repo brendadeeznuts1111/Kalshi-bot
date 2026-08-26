@@ -204,6 +204,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §182 — Utility surfaces grounded — Glob / CryptoHasher / password / escapeHTML / deepEquals (2026-08-26)
 - §183 — Blog-assets mirror — public/blog/ + /blog/* serve route + gate #58 (2026-08-26)
 - §184 — Blog-map v2 — full-tree registry (13 sections, h3+h4, context fields) (2026-08-26)
+- §185 — Strict typing migration — tsconfig + 661 errors fixed, behavior preserved (2026-08-26)
 
 
 ## 1. run_code program text (the harness lexer)
@@ -6780,6 +6781,22 @@ has 286 id'd headings: 13 h2 / 150 h3 / 123 h4. v2 rethink:
     pipeline-status keep reading coverage/matched/newUnmapped unchanged.
   - Curation of the 216 unmapped entries is the open work (map each to
     repo file/script + layer + status in .data/blog-map.json).
+## 185. Strict typing migration — tsconfig + 661 errors fixed, behavior preserved (2026-08-26)
+
+tsconfig.json now: strict + noUncheckedIndexedAccess + exactOptionalPropertyTypes +
+noImplicitOverride + noFallthroughCasesInSwitch + noImplicitReturns, types [bun] pinned
+to bun-types 1.4.0. Enabling the extra flags surfaced 661 errors across 248 files
+(most: TS2532/TS18048 possibly-undefined indexing; TS2379/TS2375 exactOptional).
+Fixed via 15 parallel subagents + 1 cascade agent, patterns:
+  - `!` ONLY where provably present (after length/in/type guards, fixed literal keys);
+  - safe defaults `?? 0/""` when a default matches the intent;
+  - conditional spread `...(v !== undefined ? { opt: v } : {})` for imported option types;
+  - widen in-file declared types `opt?: T | undefined` (never foreign types);
+  - zero @ts-ignore / as any introduced.
+Vendored vendor/proton-pass (4 files, 7 errors) fixed in the vendored source (the repo
+owns it per §91-93) then `bun install` refreshed the bun-cache copy. No behavior
+change: full suite 2604 pass / 0 fail; tsc --noEmit exits 0 project-wide.
+
 
 
 

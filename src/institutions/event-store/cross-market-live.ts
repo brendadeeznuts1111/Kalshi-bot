@@ -56,7 +56,7 @@ type LiveOddsCache = {
   events: PolymarketEvent[];
   freshUntilMs: number;
   staleUntilMs: number;
-  refresh?: Promise<PolymarketEvent[]>;
+  refresh?: Promise<PolymarketEvent[]> | undefined;
   consecutiveFailures: number;
   circuitOpenUntilMs: number;
   lastSuccessAtMs?: number;

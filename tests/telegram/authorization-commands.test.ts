@@ -15,7 +15,7 @@ import { getAuthorizationReceiptOutboxItem } from "../../src/partner/authorizati
 import { createAuthorizationRequest } from "../../src/partner/authorization/service.ts";
 import { migrateAuthorizationSchema } from "../../src/partner/authorization/sql.ts";
 import { handleAuthorizationCommand } from "../../src/telegram/authorization-commands.ts";
-import type { TelegramMessage } from "../../src/telegram/api.ts";
+import type { TelegramMessage, TelegramUser } from "../../src/telegram/api.ts";
 
 const NOW_MS = 1_700_000_000_000;
 
@@ -65,15 +65,23 @@ function seedRequest(db: Database, requestedPolicy = policy()) {
   return request.request;
 }
 
-function message(text: string, overrides: Partial<TelegramMessage> = {}): TelegramMessage {
+function message(
+  text: string,
+  overrides: Partial<Omit<TelegramMessage, "from">> & { from?: TelegramUser | undefined } = {},
+): TelegramMessage {
+  const { from: fromOverride, ...rest } = overrides;
   return {
     message_id: 200,
     message_thread_id: 7,
-    from: { id: 789, first_name: "Partner" },
     chat: { id: -123, type: "supergroup" },
     text,
     date: Math.floor(NOW_MS / 1_000),
-    ...overrides,
+    ...(fromOverride !== undefined
+      ? { from: fromOverride }
+      : "from" in overrides
+        ? {}
+        : { from: { id: 789, first_name: "Partner" } }),
+    ...rest,
   };
 }
 

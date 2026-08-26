@@ -17,10 +17,10 @@ function pe(
     eventId: over.eventId ?? 197510101,
     period: over.period ?? 'm',
     marketType: over.marketType ?? '3',
-    selection: over.selection,
     detail: over.detail,
-    from: over.from,
-    to: over.to,
+    ...(over.selection !== undefined ? { selection: over.selection } : {}),
+    ...(over.from !== undefined ? { from: over.from } : {}),
+    ...(over.to !== undefined ? { to: over.to } : {}),
   };
 }
 

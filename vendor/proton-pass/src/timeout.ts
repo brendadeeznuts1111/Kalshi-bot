@@ -32,7 +32,7 @@ export async function spawnWithTimeout(
 ): Promise<SpawnResult> {
   const { timeoutMs = 30_000, cwd, env } = opts;
   const proc = Bun.spawn([cmd, ...args], {
-    cwd,
+    ...(cwd !== undefined ? { cwd } : {}),
     env: env ? { ...process.env, ...env } : process.env,
     stdout: 'pipe',
     stderr: 'pipe',

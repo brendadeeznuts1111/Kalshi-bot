@@ -83,7 +83,10 @@ export async function rotateKalshiKey(opts: KalshiRotateOptions): Promise<Kalshi
   const creds: KalshiCredentials = { keyId, privateKey: createPrivateKey(opts.pemText) };
   let probe: KalshiRotateResult["probe"];
   try {
-    const res = await probeKalshiAuth(creds, { base: opts.probeBase, timeoutMs: opts.probeTimeoutMs });
+    const res = await probeKalshiAuth(creds, {
+      ...(opts.probeBase !== undefined ? { base: opts.probeBase } : {}),
+      ...(opts.probeTimeoutMs !== undefined ? { timeoutMs: opts.probeTimeoutMs } : {}),
+    });
     probe = { status: res.status, state: probeState(res.status) };
   } catch {
     probe = { status: 0, state: "unreachable" };

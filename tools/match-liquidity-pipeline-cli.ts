@@ -32,7 +32,7 @@ export async function runMatchLiquidityPipelineCli(argv: string[]): Promise<numb
 
   const limit = values.limit ? Number(values.limit) : MATCH_LIQUIDITY_PIPELINE_DEFAULT_VOLUME_LIMIT;
   const result = await runMatchLiquidityPipeline({
-    dbPath: typeof values.db === "string" ? values.db : undefined,
+    ...(typeof values.db === "string" ? { dbPath: values.db } : {}),
     fetchVolume: values["fetch-volume"] === true,
     volumeLimit: Number.isFinite(limit) ? limit : MATCH_LIQUIDITY_PIPELINE_DEFAULT_VOLUME_LIMIT,
     groundHtml: values["no-ground"] !== true,

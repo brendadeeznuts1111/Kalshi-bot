@@ -266,7 +266,7 @@ export function createKalshiClient(options: KalshiClientOptions = {}): KalshiCli
       const res = await fetchImpl(`${baseUrl}${path}`, {
         method,
         headers,
-        body: body ? JSON.stringify(body) : undefined,
+        ...(body ? { body: JSON.stringify(body) } : {}),
       });
       if (res.ok) return res.json();
       const retryable = res.status === 429 || res.status >= 500;

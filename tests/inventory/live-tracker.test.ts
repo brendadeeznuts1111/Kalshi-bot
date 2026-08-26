@@ -34,7 +34,9 @@ function mkEvents(
     eventState: null,
     eventTransitions: [],
   };
-  return eventsFromWatchUpdate(u, { file: ctx.file });
+  return eventsFromWatchUpdate(u, {
+    ...(ctx.file !== undefined ? { file: ctx.file } : {}),
+  });
 }
 
 function mkEvent(

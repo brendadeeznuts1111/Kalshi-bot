@@ -38,11 +38,39 @@ export function generate(): { files: Record<string, string>; manifest: Record<st
   for (const [src, name] of SOURCES) {
     if (existsSync(src)) { files[name] = normalize(name, readFileSync(src, 'utf8')); copied.push(name); }
   }
-  const blogMap = JSON.parse(files['blog-map.json'] ?? '{}') as { blogUrl?: string; entries?: unknown[] };
+  type Entry = {
+    id: string;
+    level: string;
+    section: string;
+    status: string;
+    badges: Array<{ verb: string; version: string; href: string; tone: string }>;
+  };
+  const blogMap = JSON.parse(files['blog-map.json'] ?? '{}') as { blogUrl?: string; entries?: Entry[] };
+  const entries = blogMap.entries ?? [];
+  const badges = entries.flatMap((e) => e.badges ?? []);
+  const versionDist: Record<string, number> = {};
+  for (const b of badges) versionDist[b.version] = (versionDist[b.version] ?? 0) + 1;
+  const sections: Record<string, { entries: number; mapped: number; badges: number }> = {};
+  for (const e of entries) {
+    const s = sections[e.section] ?? { entries: 0, mapped: 0, badges: 0 };
+    s.entries++;
+    if (e.status !== 'unmapped') s.mapped++;
+    s.badges += (e.badges ?? []).length;
+    sections[e.section] = s;
+  }
   const manifest = {
-    mirrorVersion: 1,
+    mirrorVersion: 2,
     source: blogMap.blogUrl ?? null,
-    entryCount: blogMap.entries?.length ?? 0,
+    entryCount: entries.length,
+    badgeStats: {
+      total: badges.length,
+      shipped: badges.filter((b) => b.verb === 'Shipped in').length,
+      improved: badges.filter((b) => b.verb === 'Improved in').length,
+      accent: badges.filter((b) => b.tone === 'accent').length,
+      muted: badges.filter((b) => b.tone === 'muted').length,
+      byVersion: Object.fromEntries(Object.entries(versionDist).sort((a, b) => b[0].localeCompare(a[0]))),
+    },
+    sections,
     files: copied.sort(),
     generatedBy: 'bun run blog:assets (tools/blog-assets-mirror.ts)',
   };
@@ -64,7 +92,7 @@ function main(): number {
   }
   if (check) {
     if (missing) {
-      for (const k of keys) writeFileSync(join(OUT, k), files[k]);
+      for (const k of keys) writeFileSync(join(OUT, k), files[k]!);
       console.log('blog:assets - mirror missing files, bootstrapped (' + keys.length + ' files)');
       return 0;
     }
@@ -75,7 +103,7 @@ function main(): number {
     console.log('blog:assets - mirror current (' + keys.length + ' files)');
     return 0;
   }
-  for (const k of keys) writeFileSync(join(OUT, k), files[k]);
+  for (const k of keys) writeFileSync(join(OUT, k), files[k]!);
   console.log('blog:assets - wrote public/blog/ (' + keys.length + ' files)');
   return 0;
 }

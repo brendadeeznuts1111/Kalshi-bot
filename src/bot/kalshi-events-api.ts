@@ -26,51 +26,51 @@ export type KalshiFetchImpl = (
 export type KalshiMarketWire = {
   ticker: KalshiMarketTicker;
   event_ticker: KalshiEventTicker;
-  title?: string;
-  market_type?: string;
+  title?: string | undefined;
+  market_type?: string | undefined;
   status: string;
-  yes_sub_title?: string;
-  no_sub_title?: string;
-  volume_fp?: string;
+  yes_sub_title?: string | undefined;
+  no_sub_title?: string | undefined;
+  volume_fp?: string | undefined;
   /** Trailing 24h contract volume — capacity/flow, not lifetime vanity. */
-  volume_24h_fp?: string;
-  open_interest_fp?: string;
-  yes_bid_dollars?: string;
-  yes_ask_dollars?: string;
-  no_bid_dollars?: string;
-  no_ask_dollars?: string;
-  last_price_dollars?: string;
+  volume_24h_fp?: string | undefined;
+  open_interest_fp?: string | undefined;
+  yes_bid_dollars?: string | undefined;
+  yes_ask_dollars?: string | undefined;
+  no_bid_dollars?: string | undefined;
+  no_ask_dollars?: string | undefined;
+  last_price_dollars?: string | undefined;
   /** Resting size at best YES bid (contracts). */
-  yes_bid_size_fp?: string;
+  yes_bid_size_fp?: string | undefined;
   /** Resting size at best YES ask (contracts). */
-  yes_ask_size_fp?: string;
-  occurrence_datetime?: string;
-  close_time?: string;
-  updated_time?: string;
-  expected_expiration_time?: string;
-  rules_primary?: string;
-  rules_secondary?: string;
+  yes_ask_size_fp?: string | undefined;
+  occurrence_datetime?: string | undefined;
+  close_time?: string | undefined;
+  updated_time?: string | undefined;
+  expected_expiration_time?: string | undefined;
+  rules_primary?: string | undefined;
+  rules_secondary?: string | undefined;
   custom_strike?: {
     tennis_competitor?: CompetitorId;
     tennis_doubles_competitor?: CompetitorId;
     table_tennis_competitor?: CompetitorId;
-  };
-  result?: string;
+  } | undefined;
+  result?: string | undefined;
 };
 
 export type KalshiMarketsPage = {
   markets: KalshiMarketWire[];
-  cursor?: string;
+  cursor?: string | undefined;
 };
 
 export type KalshiEventWire = {
   event_ticker: KalshiEventTicker;
-  title?: string;
-  sub_title?: string;
-  series_ticker?: SeriesTicker;
-  category?: string;
-  mutually_exclusive?: boolean;
-  product_metadata?: { competition?: string; competition_scope?: string };
+  title?: string | undefined;
+  sub_title?: string | undefined;
+  series_ticker?: SeriesTicker | undefined;
+  category?: string | undefined;
+  mutually_exclusive?: boolean | undefined;
+  product_metadata?: { competition?: string | undefined; competition_scope?: string | undefined } | undefined;
 };
 
 export type KalshiEventResponse = {
@@ -363,7 +363,7 @@ export type KalshiMarketsQuery = {
   series_ticker?: SeriesTicker;
   status?: string;
   limit?: number;
-  cursor?: string;
+  cursor?: string | undefined;
   event_ticker?: KalshiEventTicker;
   /** Unix seconds — closed markets closed at/after this time. */
   min_close_ts?: number;
@@ -377,7 +377,7 @@ export type KalshiMarketsQuery = {
 
 export async function fetchKalshiMarketsPage(
   params: KalshiMarketsQuery,
-  options: { baseUrl?: string; fetchImpl?: KalshiFetchImpl } = {},
+  options: { baseUrl?: string | undefined; fetchImpl?: KalshiFetchImpl | undefined } = {},
 ): Promise<KalshiMarketsPage> {
   const fetchImpl = options.fetchImpl ?? fetch;
   const base = resolveBaseUrl(options.baseUrl);
@@ -406,7 +406,7 @@ export async function fetchKalshiMarketsPage(
 
 export async function fetchAllKalshiMarkets(
   params: Omit<Parameters<typeof fetchKalshiMarketsPage>[0], "cursor">,
-  options: { baseUrl?: string; fetchImpl?: KalshiFetchImpl; maxPages?: number } = {},
+  options: { baseUrl?: string | undefined; fetchImpl?: KalshiFetchImpl | undefined; maxPages?: number } = {},
 ): Promise<KalshiMarketWire[]> {
   const maxPages = options.maxPages ?? 50;
   const out: KalshiMarketWire[] = [];
@@ -445,7 +445,7 @@ export async function fetchKalshiMarket(
 
 export async function fetchKalshiEvent(
   eventTicker: KalshiEventTicker,
-  options: { baseUrl?: string; fetchImpl?: KalshiFetchImpl } = {},
+  options: { baseUrl?: string | undefined; fetchImpl?: KalshiFetchImpl | undefined } = {},
 ): Promise<KalshiEventResponse> {
   const fetchImpl = options.fetchImpl ?? fetch;
   const base = resolveBaseUrl(options.baseUrl);

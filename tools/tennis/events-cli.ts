@@ -13,8 +13,8 @@ import {
 } from "../../src/institutions/event-store/summary.ts";
 
 export type TennisEventsCliOptions = {
-  ingest?: string[];
-  dbPath?: string;
+  ingest?: string[] | undefined;
+  dbPath?: string | undefined;
   json?: boolean;
 };
 

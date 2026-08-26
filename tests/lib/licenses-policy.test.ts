@@ -86,7 +86,7 @@ describe("findStaleExemptions + validatePolicyConfig (§93)", () => {
   test("exemption for a missing package is reported stale", () => {
     const stale = findStaleExemptions([{ name: "a" }], [{ name: "ghost" }]);
     expect(stale.length).toBe(1);
-    expect(stale[0].name).toBe("ghost");
+    expect(stale[0]!.name).toBe("ghost");
   });
 
   test("config validation rejects malformed shapes", () => {

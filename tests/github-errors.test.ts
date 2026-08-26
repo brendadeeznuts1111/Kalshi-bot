@@ -215,7 +215,9 @@ describe("github errors", () => {
         dimension: "price-data",
         cachedDataAvailable: true,
         cacheFallbackSource: "inspect_cache",
-        inspectCacheRepoCount: probe.inspectCacheRepoCount,
+        ...(probe.inspectCacheRepoCount !== undefined
+          ? { inspectCacheRepoCount: probe.inspectCacheRepoCount }
+          : {}),
       });
       finishGitHubResearchErrorContext();
 

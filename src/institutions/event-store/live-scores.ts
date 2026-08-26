@@ -739,7 +739,7 @@ function loadCompetitorLabels(db: Database, eventId: CanonicalEventId): Competit
  */
 export function clearStaleLiveFlags(
   db: Database,
-  options: { staleMs?: number; nowMs?: number } = {},
+  options: { staleMs?: number | undefined; nowMs?: number } = {},
 ): number {
   const staleMs = options.staleMs ?? TENNIS_LIVE_STALE_MS;
   const nowMs = options.nowMs ?? nowEpochMs();
@@ -764,8 +764,8 @@ export function clearStaleLiveFlags(
 export function listWatchEvents(
   db: Database,
   options: {
-    leadMinutes?: number;
-    limit?: number;
+    leadMinutes?: number | undefined;
+    limit?: number | undefined;
     pastGraceHours?: number;
     staleMs?: number;
     nowMs?: number;
@@ -1036,7 +1036,10 @@ async function resolveMilestoneId(
   const cacheKey = unbrand(eventTicker);
   const cached = milestoneCache.get(cacheKey);
   if (cached && Date.now() - cached.at < MILESTONE_TTL_MS) return cached.id;
-  const milestones = await fetchKalshiMilestonesForEvent(eventTicker, { fetchImpl });
+  const milestones = await fetchKalshiMilestonesForEvent(
+    eventTicker,
+    fetchImpl !== undefined ? { fetchImpl } : {},
+  );
   const pick = pickTennisMilestone(milestones);
   if (!pick) return null;
   milestoneCache.set(cacheKey, { id: pick.id, at: Date.now() });
@@ -1119,9 +1122,10 @@ async function fetchWatchLive(
         fetchError: null,
       };
     }
-    const { data, sourceUrl, fetchedTs } = await fetchKalshiLiveData(milestoneId, {
-      fetchImpl,
-    });
+    const { data, sourceUrl, fetchedTs } = await fetchKalshiLiveData(
+      milestoneId,
+      fetchImpl !== undefined ? { fetchImpl } : {},
+    );
     return { w, milestoneId, data, sourceUrl, fetchedTs, fetchError: null };
   } catch (err) {
     return {

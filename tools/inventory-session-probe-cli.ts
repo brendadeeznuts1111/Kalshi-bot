@@ -30,7 +30,10 @@ const json = hasFlag('json');
 const gsid = argValue('gsid')?.trim() || Bun.env.PLIVE_GSID?.trim() || undefined;
 const useShellGsid = !hasFlag('no-shell-gsid');
 
-const report = await probeSessionPlanes({ gsid, useShellGsid });
+const report = await probeSessionPlanes({
+  ...(gsid !== undefined ? { gsid } : {}),
+  useShellGsid,
+});
 
 if (json) {
   console.log(JSON.stringify(report, null, 2));

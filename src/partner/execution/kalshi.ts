@@ -131,7 +131,7 @@ export function projectKalshiBuyOrder(input: {
   effectiveStake: number;
   decimalOdds: number;
   side: KalshiExecutionOrder["side"];
-  postOnly?: boolean;
+  postOnly?: boolean | undefined;
 }): KalshiExecutionOrder {
   if (input.selection.toLowerCase() !== input.side) {
     throw new KalshiOrderMappingError(

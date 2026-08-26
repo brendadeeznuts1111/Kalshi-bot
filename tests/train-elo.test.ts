@@ -42,7 +42,7 @@ describe("Elo engine", () => {
     // since the match startTs is >= cutoff "2024-01-01"
     expect(predictions.length).toBeGreaterThan(0);
     // Both players start at 1500 → expected score = 0.5
-    expect(predictions[0].pA).toBeCloseTo(0.5, 1);
+    expect(predictions[0]!.pA).toBeCloseTo(0.5, 1);
   });
 
   test("expectedScore: 100-point gap ≈ 64%", () => {
@@ -65,7 +65,7 @@ describe("Elo engine", () => {
     );
     // Match is after cutoff, so it's a prediction
     expect(predictions.length).toBe(1);
-    expect(predictions[0].pA).toBeCloseTo(0.5, 1); // both 1500
+    expect(predictions[0]!.pA).toBeCloseTo(0.5, 1); // both 1500
 
     // After the match, Elo should have updated
     // Winner gained ~16, loser lost ~16 (K=32, score=1, expected=0.5 → delta=16)
@@ -97,7 +97,7 @@ describe("Elo engine", () => {
     // Since all matches have the same players, the second match's prediction
     // should show Elena with higher Elo
     if (second) {
-      expect(second.eloA[0]).toBeGreaterThan(second.eloB[0]);
+      expect(second.eloA[0]!).toBeGreaterThan(second.eloB[0]!);
       expect(second.pA).toBeGreaterThan(0.5);
     }
   });
@@ -121,8 +121,8 @@ describe("Elo engine", () => {
     const hankSnaps = elos.snapshots.get("Hank") ?? [];
     // First (and only) snapshot is pre-match
     if (graceSnaps.length > 0) {
-      expect(graceSnaps[0][0]).toBe(1500); // Hard unchanged
-      expect(hankSnaps[0][0]).toBe(1500);  // Hard unchanged
+      expect(graceSnaps[0]![0]).toBe(1500); // Hard unchanged
+      expect(hankSnaps[0]![0]).toBe(1500);  // Hard unchanged
     }
   });
 
@@ -154,11 +154,11 @@ describe("Elo engine", () => {
       expect(predictions.length).toBe(2);
 
       // First prediction: both at 1500, pA = 0.5
-      expect(predictions[0].pA).toBeCloseTo(0.5, 1);
+      expect(predictions[0]!.pA).toBeCloseTo(0.5, 1);
 
       // Second prediction: Ivan won first match, so his Elo is higher
-      expect(predictions[1].eloA[0]).toBeGreaterThan(predictions[1].eloB[0]);
-      expect(predictions[1].pA).toBeGreaterThan(0.5);
+      expect(predictions[1]!.eloA[0]!).toBeGreaterThan(predictions[1]!.eloB[0]!);
+      expect(predictions[1]!.pA).toBeGreaterThan(0.5);
     } finally {
       setSystemTime(); // reset
     }

@@ -78,7 +78,10 @@ export function resolveSelfPrior(input: {
     };
   }
 
-  const opts = { asOfMs: input.asOfMs, surface: input.surface };
+  const opts = {
+    asOfMs: input.asOfMs,
+    ...(input.surface !== undefined ? { surface: input.surface } : {}),
+  };
   if (isAmbiguousName(db, market.yes_side_label, opts) || isAmbiguousName(db, noName, opts)) {
     return { kind: "ambiguous", reason: "player name collides across corpus identities" };
   }

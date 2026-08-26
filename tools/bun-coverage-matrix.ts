@@ -37,8 +37,8 @@ const IMP_RE = /import\s+(?:type\s+)?\{([^}]*)\}\s+from\s+"bun"/;
 for (const l of (impScan.stdout?.toString() ?? "").split("\n")) {
   const m = l.match(IMP_RE);
   if (!m) continue;
-  for (const part of m[1].split(",")) {
-    const name = part.trim().split(/\s+as\s+/)[0].trim();
+  for (const part of m[1]!.split(",")) {
+    const name = part.trim().split(/\s+as\s+/)[0]!.trim();
     if (name && shapeKeys.has(name)) counts[name] = (counts[name] ?? 0) + 1;
   }
 }

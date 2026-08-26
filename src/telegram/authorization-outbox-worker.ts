@@ -35,7 +35,7 @@ export async function deliverAuthorizationReceiptBatch(
     nowMs: input.nowMs,
     leaseOwner: input.leaseOwner,
     leaseDurationMs: input.leaseDurationMs ?? 30_000,
-    limit: input.limit,
+    ...(input.limit !== undefined ? { limit: input.limit } : {}),
   });
   const result: DeliverAuthorizationReceiptsResult = {
     claimed: claimed.length,
@@ -49,10 +49,12 @@ export async function deliverAuthorizationReceiptBatch(
       const topic = numericTelegramId(item.telegramTopicId);
       const reply = numericTelegramId(item.payload.replyToMessageId ?? null);
       await input.send(item.telegramChatId, item.payload.text, {
-        parseMode: item.payload.parseMode,
+        ...(item.payload.parseMode !== undefined ? { parseMode: item.payload.parseMode } : {}),
         ...(topic === null ? {} : { messageThreadId: topic }),
         ...(reply === null ? {} : { replyToMessageId: reply }),
-        disableNotification: item.payload.disableNotification,
+        ...(item.payload.disableNotification !== undefined
+          ? { disableNotification: item.payload.disableNotification }
+          : {}),
       });
       const completedAtMs = input.clock?.() ?? Date.now();
       const sent = markAuthorizationReceiptSent(db, {
@@ -69,9 +71,9 @@ export async function deliverAuthorizationReceiptBatch(
         leaseOwner: input.leaseOwner,
         nowMs: failedAtMs,
         error: error instanceof Error ? error.message : "Telegram receipt delivery failed",
-        maxAttempts: input.maxAttempts,
-        baseDelayMs: input.baseDelayMs,
-        maxDelayMs: input.maxDelayMs,
+        ...(input.maxAttempts !== undefined ? { maxAttempts: input.maxAttempts } : {}),
+        ...(input.baseDelayMs !== undefined ? { baseDelayMs: input.baseDelayMs } : {}),
+        ...(input.maxDelayMs !== undefined ? { maxDelayMs: input.maxDelayMs } : {}),
       });
       result.failed += 1;
       if (failed?.status === "dead") result.dead += 1;

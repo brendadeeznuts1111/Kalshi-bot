@@ -172,7 +172,7 @@ globals.sort();
 members.sort((a, b) => keyOf(a.ns, a.name).localeCompare(keyOf(b.ns, b.name)));
 
 for (const k of Object.keys(moduleMembers)) {
-  moduleMembers[k].sort((a, b) => keyOf(a.ns, a.name).localeCompare(keyOf(b.ns, b.name)));
+  moduleMembers[k]!.sort((a, b) => keyOf(a.ns, a.name).localeCompare(keyOf(b.ns, b.name)));
 }
 
 const shape = {

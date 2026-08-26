@@ -37,11 +37,11 @@ export function csrFromEdges(
   for (const { a, b, w } of edges) {
     add(a, b, w);
     add(b, a, w);
-    deg[a] += w;
-    deg[b] += w;
+    deg[a]! += w;
+    deg[b]! += w;
   }
   const rowPtr = new Uint32Array(n + 1);
-  for (let i = 0; i < n; i++) rowPtr[i + 1] = rowPtr[i] + (adj.get(i)?.size ?? 0);
+  for (let i = 0; i < n; i++) rowPtr[i + 1] = rowPtr[i]! + (adj.get(i)?.size ?? 0);
   const colIdx = new Uint32Array(rowPtr[n]!);
   const val = new Float64Array(rowPtr[n]!);
   let p = 0;
@@ -52,7 +52,7 @@ export function csrFromEdges(
     for (const j of cols) {
       const w = row.get(j)!;
       colIdx[p] = j;
-      val[p] = deg[i] > 0 && deg[j] > 0 ? w / Math.sqrt(deg[i] * deg[j]) : 0;
+      val[p] = deg[i]! > 0 && deg[j]! > 0 ? w / Math.sqrt(deg[i]! * deg[j]!) : 0;
       p++;
     }
   }
@@ -63,7 +63,7 @@ export function csrFromEdges(
 export function spmv(g: SparseGraph, x: Float64Array, y: Float64Array): void {
   for (let i = 0; i < g.n; i++) {
     let s = 0;
-    for (let p = g.rowPtr[i]!; p < g.rowPtr[i + 1]!; p++) s += g.val[p]! * x[g.colIdx[p]!];
+    for (let p = g.rowPtr[i]!; p < g.rowPtr[i + 1]!; p++) s += g.val[p]! * x[g.colIdx[p]!]!;
     y[i] = s;
   }
 }
@@ -78,7 +78,7 @@ export function chebyshevBlocks(g: SparseGraph, x: Float64Array, K: number): Flo
   if (K === 0) return blocks;
   const t1 = new Float64Array(g.n);
   spmv(g, x, t1);
-  for (let i = 0; i < g.n; i++) t1[i] = -t1[i];
+  for (let i = 0; i < g.n; i++) t1[i] = -t1[i]!;
   blocks.push(t1);
   const tmp = new Float64Array(g.n);
   for (let k = 2; k <= K; k++) {
@@ -86,7 +86,7 @@ export function chebyshevBlocks(g: SparseGraph, x: Float64Array, K: number): Flo
     spmv(g, blocks[k - 1]!, tmp);
     for (let i = 0; i < g.n; i++) {
       // 2·L̃·T_{k-1} − T_{k-2}, L̃ = −A_norm → −2·spmv − T_{k-2}
-      tk[i] = -2 * tmp[i] - blocks[k - 2]![i]!;
+      tk[i] = -2 * tmp[i]! - blocks[k - 2]![i]!;
     }
     blocks.push(tk);
   }

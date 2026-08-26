@@ -136,7 +136,11 @@ describe("shadow maintenance (append-only)", () => {
     const prevEnv = Bun.env.NODE_ENV;
     Bun.env.NODE_ENV = "test";
     const result = await runToxicityMark("maint-test", { KXTEST: 50 }, { alphaRoot, forceDue: true });
-    Bun.env.NODE_ENV = prevEnv;
+    if (prevEnv === undefined) {
+      delete Bun.env.NODE_ENV;
+    } else {
+      Bun.env.NODE_ENV = prevEnv;
+    }
 
     expect(result.marked).toBe(1);
     expect(result.chainValid).toBe(true);

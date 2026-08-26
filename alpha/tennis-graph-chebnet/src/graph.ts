@@ -91,8 +91,8 @@ export function nodeFeatures(
   const losses = new Float64Array(n);
   for (const m of g.matches) {
     if (m.tsMs >= cutoffMs) continue;
-    wins[m.winner] += 1;
-    losses[m.loser] += 1;
+    wins[m.winner]! += 1;
+    losses[m.loser]! += 1;
   }
   const X = new Float64Array(n * NODE_FEATURES);
   for (let i = 0; i < n; i++) {

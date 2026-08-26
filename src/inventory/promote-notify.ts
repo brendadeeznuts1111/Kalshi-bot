@@ -29,7 +29,7 @@ export function defaultPromoteNotifyStatePath(): string {
 export function planPromoteNotify(
   candidateIds: string[],
   prev: PromoteNotifyState | null,
-  options: { nowMs?: number; force?: boolean } = {}
+  options: { nowMs?: number | undefined; force?: boolean } = {}
 ): PlanPromoteNotifyResult {
   const nowMs = options.nowMs ?? Date.now();
   const sorted = [...new Set(candidateIds.map(s => s.trim()).filter(Boolean))].sort();

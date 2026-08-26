@@ -232,8 +232,8 @@ function buildSportsSourceDiscoverySnapshot(
           ...(servingRun
             ? {
                 runId: servingRun.runId,
-                observedAtMs: servingObservedAtMs,
-                ageMs,
+                ...(servingObservedAtMs === undefined ? {} : { observedAtMs: servingObservedAtMs }),
+                ...(ageMs === undefined ? {} : { ageMs }),
                 ...(futureByMs === undefined ? {} : { futureByMs }),
                 ...(freshForMs === undefined ? {} : { freshForMs }),
                 ...(staleForMs === undefined ? {} : { staleForMs }),

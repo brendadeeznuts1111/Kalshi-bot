@@ -86,11 +86,11 @@ export function trainGraphModel(
       let z = bias;
       for (let d = 0; d < dim; d++) z += W[d]! * x[d]!;
       const err = sigmoid(z) - y;
-      for (let d = 0; d < dim; d++) gW[d] += err * x[d]!;
+      for (let d = 0; d < dim; d++) gW[d]! += err * x[d]!;
       gB += err;
     }
     const inv = 1 / train.length;
-    for (let d = 0; d < dim; d++) W[d] -= lr * (gW[d]! * inv + l2 * W[d]!);
+    for (let d = 0; d < dim; d++) W[d]! -= lr * (gW[d]! * inv + l2 * W[d]!);
     bias -= lr * gB * inv;
   }
 

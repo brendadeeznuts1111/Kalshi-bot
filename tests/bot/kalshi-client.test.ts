@@ -33,7 +33,7 @@ function makeClient(overrides: {
     });
     const res = overrides.responses[Math.min(i, overrides.responses.length - 1)];
     i++;
-    return res;
+    return res!;
   };
   const client = createKalshiClient({
     // Hermetic: local .env may set KALSHI_ENV=prod + PROD_ARMED — force demo.

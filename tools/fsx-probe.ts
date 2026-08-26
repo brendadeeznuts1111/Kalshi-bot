@@ -17,7 +17,7 @@ for await (const f of g.scan({ cwd: "tools" })) { found.push(f as string); if (f
 check("P1b Glob.scan cwd", found.length > 0 && found.every((f) => f.endsWith(".ts")), JSON.stringify(found));
 const abs: string[] = [];
 for await (const f of g.scan({ cwd: "tools", absolute: true })) { abs.push(f as string); if (abs.length > 2) break; }
-check("P1c Glob.scan absolute", abs.length > 0 && abs[0].startsWith("/"), abs[0]);
+check("P1c Glob.scan absolute", abs.length > 0 && abs[0]!.startsWith("/"), abs[0]!);
 
 // P2 which (repo: 37 uses — binary lookup)
 const w = Bun.which("bun");

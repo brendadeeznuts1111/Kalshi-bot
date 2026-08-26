@@ -100,7 +100,9 @@ export function sideCodesForEvent(
       return m?.[1] ?? null;
     })();
   if (!blob) return null;
-  const [a, b] = unique.sort((x, y) => x.localeCompare(y));
+  const sorted = unique.sort((x, y) => x.localeCompare(y));
+  const a = sorted[0]!;
+  const b = sorted[1]!;
   if (!matchupBlobIsUnambiguous(blob, a, b)) return null;
   return [a, b];
 }

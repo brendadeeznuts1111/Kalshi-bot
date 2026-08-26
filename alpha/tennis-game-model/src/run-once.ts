@@ -31,7 +31,7 @@ if (import.meta.main) {
   await executeOnce({
     live,
     ticker,
-    eventId,
-    dbPath,
+    ...(eventId !== undefined ? { eventId } : {}),
+    ...(dbPath !== undefined ? { dbPath } : {}),
   });
 }

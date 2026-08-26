@@ -193,7 +193,7 @@ async function main(): Promise<void> {
       );
     }
     const plan = planInventoryLeagueResolve(db, {
-      sport: sportFilter,
+      ...(sportFilter !== undefined ? { sport: sportFilter } : {}),
       limit: Math.min(Math.max(Number(argValue('limit') ?? '500') || 500, 1), 5000),
       threshold: Number.isFinite(threshold) ? threshold : 0.9,
       orderBy: orderBy === 'peak' ? 'peak' : 'last_seen',
@@ -257,7 +257,7 @@ async function main(): Promise<void> {
   if (reportOnly) {
     const promo = buildPromoteReport(db, {
       minPeak,
-      sportId: sportFilter && sportFilter !== 'all' ? sportFilter : undefined,
+      ...(sportFilter && sportFilter !== 'all' ? { sportId: sportFilter } : {}),
     });
     let notifyResult: Awaited<ReturnType<typeof maybeNotifyPromoteReport>> | null =
       null;
@@ -333,7 +333,7 @@ async function main(): Promise<void> {
     // Prefer durable registry; if empty, harvest first (public dry path when possible)
     let rows = listInventoryLeagues(db, {
       unmappedOnly: true,
-      sportId: sportFilter && sportFilter !== 'all' ? sportFilter : undefined,
+      ...(sportFilter && sportFilter !== 'all' ? { sportId: sportFilter } : {}),
       limit: 5000,
       orderBy: 'peak',
     });
@@ -351,7 +351,7 @@ async function main(): Promise<void> {
       });
       rows = listInventoryLeagues(db, {
         unmappedOnly: true,
-        sportId: sportFilter && sportFilter !== 'all' ? sportFilter : undefined,
+        ...(sportFilter && sportFilter !== 'all' ? { sportId: sportFilter } : {}),
         limit: 5000,
         orderBy: 'peak',
       });
@@ -536,7 +536,7 @@ async function main(): Promise<void> {
   const counts = countInventoryLeagues(db);
   const rows = listInventoryLeagues(db, {
     unmappedOnly: unmapped,
-    sportId: sportFilter && sportFilter !== 'all' ? sportFilter : undefined,
+    ...(sportFilter && sportFilter !== 'all' ? { sportId: sportFilter } : {}),
     limit,
     orderBy,
   });

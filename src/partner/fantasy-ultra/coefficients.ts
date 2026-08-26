@@ -405,7 +405,7 @@ export function calculateEffectiveEventState(
   hit: Pick<EventDataBoardHit, 'eventId' | 'sportId' | 'leagueId'> & {
     dynamic: EventDataWireDynamic | null;
   },
-  options: { blocked?: PandoraBlockedSets | null } = {}
+  options: { blocked?: PandoraBlockedSets | null | undefined } = {}
 ): { state: number | null; blockedReason: string | null } {
   const reason = pandoraBlockedReason(hit, options.blocked);
   if (reason) {
@@ -534,10 +534,10 @@ export function decodeEventOfferability(
   hit: EventDataBoardHit,
   options: {
     coeffLineCount?: number | null;
-    sportsNames?: Map<string, string> | null;
-    leagueNames?: Map<string, string> | null;
-    countryNames?: Map<string, string> | null;
-    blocked?: PandoraBlockedSets | null;
+    sportsNames?: Map<string, string> | null | undefined;
+    leagueNames?: Map<string, string> | null | undefined;
+    countryNames?: Map<string, string> | null | undefined;
+    blocked?: PandoraBlockedSets | null | undefined;
     board?: unknown;
   } = {}
 ): EventOfferability {
@@ -840,7 +840,7 @@ export type PandoraTi = {
 export type CoefficientEnvelope = {
   isDiff: boolean;
   payload: unknown;
-  ti?: PandoraTi;
+  ti?: PandoraTi | undefined;
 };
 
 /** One priced selection extracted from eventCoefficients. */
@@ -853,9 +853,9 @@ export type CoefficientLine = {
   /** Side key: `"1"`/`"2"` or line `"17.5"` / over-under index. */
   selection: string;
   /** Line for totals/spreads when present. */
-  line?: number;
+  line?: number | undefined;
   /** Over/under index when `o[line]` is a pair. */
-  sideIndex?: 0 | 1;
+  sideIndex?: 0 | 1 | undefined;
   decimal: number;
   american: number;
 };

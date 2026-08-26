@@ -80,8 +80,8 @@ async function topPatternForRepo(
 }
 
 export async function buildAgentReport(options?: {
-  dimension?: string;
-  runId?: string;
+  dimension?: string | undefined;
+  runId?: string | undefined;
 }): Promise<AgentReport> {
   const file = await loadDimensionsFile();
   const dims = selectReportDimensions(file, options?.dimension);
@@ -89,7 +89,10 @@ export async function buildAgentReport(options?: {
   const architectureNotes: string[] = [];
 
   for (const { id, label } of dims) {
-    const run = loadResearchRun({ dimension: id, runId: options?.runId });
+    const run = loadResearchRun({
+      dimension: id,
+      ...(options?.runId !== undefined ? { runId: options.runId } : {}),
+    });
     const notes: string[] = [];
     if (!run) {
       dimensions.push({

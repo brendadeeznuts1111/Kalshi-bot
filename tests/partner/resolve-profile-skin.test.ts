@@ -24,7 +24,7 @@ function stub(partial: Partial<PartnerAccountProfile>): PartnerAccountProfile {
 
 describe('resolveProfileSkinId', () => {
   test('host map wins; partner=fantasy402 does not forge SkinId alone', () => {
-    const noUrl = stub({ url: 'https://unknown-desk.example', skinId: undefined });
+    const noUrl = stub({ url: 'https://unknown-desk.example' });
     expect(resolveProfileSkinId(noUrl)).toBeUndefined();
     expect(resolveProfileAdapterId(noUrl)).toBe('unmapped');
   });
@@ -33,7 +33,6 @@ describe('resolveProfileSkinId', () => {
     const p = stub({
       url: 'https://unknown-desk.example',
       partner: 'ace',
-      skinId: undefined,
     });
     expect(resolveProfileSkinId(p)).toBe('ace');
   });
@@ -47,7 +46,7 @@ describe('resolveProfileSkinId', () => {
   });
 
   test('buckeye host → skin + fantasy-ultra adapter', () => {
-    const p = stub({ url: defaultUrlForSkin('buckeye')!, skinId: undefined });
+    const p = stub({ url: defaultUrlForSkin('buckeye')! });
     expect(resolveProfileSkinId(p)).toBe('buckeye');
     expect(resolveProfileAdapterId(p)).toBe('fantasy-ultra');
   });

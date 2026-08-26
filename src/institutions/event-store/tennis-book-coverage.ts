@@ -42,7 +42,7 @@ export function analyzeTennisBookCoverage(
     leadMinutes,
     limit,
     clearStale: false,
-    nowMs: options.nowMs,
+    ...(options.nowMs === undefined ? {} : { nowMs: options.nowMs }),
   });
 
   const bySource = db

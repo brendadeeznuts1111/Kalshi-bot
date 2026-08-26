@@ -27,11 +27,13 @@ async function main(): Promise<void> {
   const noLedger = hasFlag("no-ledger");
 
   try {
+    const sport = argValue("sport");
+    const url = argValue("url") ?? process.env.LIVE_DESKTOP_URL;
     const result = await runWebViewWsPipeline({
       capture,
-      jsonl,
-      sport: argValue("sport"),
-      url: argValue("url") ?? process.env.LIVE_DESKTOP_URL,
+      ...(jsonl !== undefined ? { jsonl } : {}),
+      ...(sport !== undefined ? { sport } : {}),
+      ...(url !== undefined ? { url } : {}),
       seconds: Number(argValue("seconds") ?? "25") || 25,
       outId: argValue("out-id") ?? "webview-plive",
       partnerId: argValue("partner-id") ?? "partner-default",

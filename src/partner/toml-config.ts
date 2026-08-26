@@ -440,8 +440,11 @@ export function resolvePartnerEnv(
 /** Presence-only check for ops (no secret echo). */
 export function partnerEnvPresence(
   bundle: PartnerEnvBundle
-): Record<PartnerEnvKey, { present: boolean; source?: string }> {
-  const out = {} as Record<PartnerEnvKey, { present: boolean; source?: string }>;
+): Record<PartnerEnvKey, { present: boolean; source?: string | undefined }> {
+  const out = {} as Record<
+    PartnerEnvKey,
+    { present: boolean; source?: string | undefined }
+  >;
   for (const key of PARTNER_ENV_KEYS) {
     out[key] = {
       present: Boolean(bundle.values[key]),
@@ -621,6 +624,7 @@ export function materializePartnersToml(doc: PartnersTomlDoc): {
       bookId = resolvedTomlBook;
     }
     const mapper = skinId ? getSkin(skinId)?.mapper.kind : undefined;
+    const defaultLiveProduct = fallbackCapacity[0]?.name;
 
     accounts.push({
       id,
@@ -638,16 +642,15 @@ export function materializePartnersToml(doc: PartnersTomlDoc): {
       mapper,
       metaJson: buildOutCapacityMeta({
         liveProducts: fallbackCapacity,
-        workingBalance:
-          o.working_balance != null || o.workingBalance != null
-            ? asFiniteNumber(o.working_balance ?? o.workingBalance)
-            : undefined,
+        ...(o.working_balance != null || o.workingBalance != null
+          ? { workingBalance: asFiniteNumber(o.working_balance ?? o.workingBalance) }
+          : {}),
         vaultId,
-        partnerCode: partnerCode || undefined,
-        defaultLiveProduct: fallbackCapacity[0]?.name,
-        skinId,
-        bookId,
-        mapper,
+        ...(partnerCode ? { partnerCode } : {}),
+        ...(defaultLiveProduct !== undefined ? { defaultLiveProduct } : {}),
+        ...(skinId !== undefined ? { skinId } : {}),
+        ...(bookId !== undefined ? { bookId } : {}),
+        ...(mapper !== undefined ? { mapper } : {}),
       }),
     });
   }
@@ -912,8 +915,8 @@ export function diffPartnersTomlVsDb(doc: PartnersTomlDoc, db: Database): Partne
 export function checkPartnersEnvPresence(
   accounts: BettingAccountRow[],
   options?: {
-    envMap?: Record<string, string | undefined>;
-    requiredKeys?: readonly PartnerEnvKey[];
+    envMap?: Record<string, string | undefined> | undefined;
+    requiredKeys?: readonly PartnerEnvKey[] | undefined;
   }
 ): EnvPresenceReport {
   const required = options?.requiredKeys ?? DEFAULT_REQUIRED_ENV_KEYS;

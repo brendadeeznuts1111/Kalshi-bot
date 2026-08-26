@@ -21,10 +21,10 @@ function argFlag(name: string): boolean {
 }
 
 export type BatchShadowOptions = {
-  dbPath?: string;
+  dbPath?: string | undefined;
   dryRun?: boolean;
-  fromDate?: string; // YYYY-MM-DD
-  toDate?: string;   // YYYY-MM-DD
+  fromDate?: string | undefined; // YYYY-MM-DD
+  toDate?: string | undefined;   // YYYY-MM-DD
 };
 
 export type BatchShadowSummary = {
@@ -36,7 +36,7 @@ export type BatchShadowSummary = {
   shadowAppended: number;
 };
 
-function buildQuery(options: { fromDate?: string; toDate?: string }): {
+function buildQuery(options: { fromDate?: string | undefined; toDate?: string | undefined }): {
   sql: string;
   params: Record<string, string>;
 } {
@@ -104,7 +104,7 @@ export async function runBatchShadow(
       await executeOnce({
         ticker: row.ticker,
         eventId: row.event_id,
-        dbPath: options.dbPath,
+        ...(options.dbPath !== undefined ? { dbPath: options.dbPath } : {}),
         batchMode: true,
       });
       processed++;

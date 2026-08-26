@@ -45,12 +45,15 @@ export function parseRssEntries(xml: string): RssEntry[] {
   const raw = parsed.rss?.channel?.item;
   const items = Array.isArray(raw) ? raw : raw ? [raw] : [];
   return items
-    .map((it) => ({
-      title: it.title ?? "",
-      link: it.link ?? "",
-      pubDate: it.pubDate ?? "",
-      ...(imageUrlOf(it) ? { imageUrl: imageUrlOf(it) } : {}),
-    }))
+    .map((it) => {
+      const imageUrl = imageUrlOf(it);
+      return {
+        title: it.title ?? "",
+        link: it.link ?? "",
+        pubDate: it.pubDate ?? "",
+        ...(imageUrl ? { imageUrl } : {}),
+      };
+    })
     .filter((e) => e.title.length > 0);
 }
 

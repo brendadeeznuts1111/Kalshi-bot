@@ -100,7 +100,7 @@ async function main(): Promise<void> {
     missing: string[];
     present: string[];
     sources: Record<string, string | undefined>;
-    login?: { ok: boolean; desktop?: string; error?: string };
+    login?: { ok: boolean; desktop?: string | undefined; error?: string };
   };
 
   const rows: Row[] = [];

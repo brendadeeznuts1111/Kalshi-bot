@@ -54,8 +54,9 @@ async function main(): Promise<void> {
     argValue("risk-threshold") ?? process.env.PARTNER_FINANCE_RISK_THRESHOLD,
     "warn",
   );
+  const oddsStaleMs = Number(argValue("odds-stale-ms") ?? "") || undefined;
   const risk = evaluateRiskHealth(db, accounts, {
-    oddsStaleMs: Number(argValue("odds-stale-ms") ?? "") || undefined,
+    ...(oddsStaleMs !== undefined ? { oddsStaleMs } : {}),
   });
   const riskOk = riskOkUnderThreshold(risk, riskThreshold);
 

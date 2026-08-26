@@ -40,7 +40,11 @@ function makeRequest(opts: {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (opts.headers) Object.assign(headers, opts.headers);
   const body = opts.body ? JSON.stringify(opts.body) : undefined;
-  return new Request(url, { method, headers, body });
+  return new Request(url, {
+    method,
+    headers,
+    ...(body !== undefined ? { body } : {}),
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

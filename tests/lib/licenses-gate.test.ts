@@ -119,7 +119,7 @@ describe("resolveLicensesData (§100)", () => {
 
   test("valid JSON resolves and parses", () => {
     const data = resolveLicensesData('{ "MIT": [{ "name": "zod", "versions": ["4.4.3"] }] }', "", 0);
-    expect(data.MIT?.[0].name).toBe("zod");
+    expect(data.MIT?.[0]!.name).toBe("zod");
   });
 });
 

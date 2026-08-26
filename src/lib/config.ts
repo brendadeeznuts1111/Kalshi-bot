@@ -364,7 +364,7 @@ function setPath(obj: Record<string, unknown>, path: string, value: unknown): vo
     if (next === null || typeof next !== "object") return;
     cursor = next as Record<string, unknown>;
   }
-  const leaf = parts[parts.length - 1];
+  const leaf = parts[parts.length - 1]!;
   if (leaf in cursor) cursor[leaf] = value;
 }
 

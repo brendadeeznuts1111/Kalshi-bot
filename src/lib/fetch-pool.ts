@@ -98,7 +98,11 @@ export type FetchCompress =
 
 export async function fetchText(
   url: string,
-  init?: RequestInit & { timeoutMs?: number; protocol?: 'http2' | 'http1.1'; compress?: FetchCompress },
+  init?: RequestInit & {
+    timeoutMs?: number | undefined;
+    protocol?: 'http2' | 'http1.1' | undefined;
+    compress?: FetchCompress | undefined;
+  },
 ): Promise<{ ok: boolean; status: number; bytes: number; text: string }> {
   const timeoutMs = init?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const signal = init?.signal ?? AbortSignal.timeout(timeoutMs);

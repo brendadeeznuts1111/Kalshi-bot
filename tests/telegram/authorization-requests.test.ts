@@ -55,7 +55,7 @@ describe("Telegram authorization request posting", () => {
         nowMs: NOW_MS,
       },
       async (chatId, text, options) => {
-        sent.push({ chatId, text, topic: options?.messageThreadId });
+        sent.push({ chatId, text, ...(options?.messageThreadId !== undefined ? { topic: options.messageThreadId } : {}) });
         return {
           message_id: 100,
           message_thread_id: 7,

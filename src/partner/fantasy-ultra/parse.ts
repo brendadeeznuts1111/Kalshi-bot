@@ -438,16 +438,17 @@ export function executionResultFromBetGroups(
       raw: wire,
     };
   }
+  const finalOdds = g.finalOdds ?? leg?.finalOdds ?? undefined;
   return {
     success: true,
     transactionId: String(g.ticketNumber),
     ticketNumber: String(g.ticketNumber),
-    betGroupId: g.betGroupId || undefined,
-    betId: leg?.betId || undefined,
-    finalOdds: g.finalOdds ?? leg?.finalOdds ?? undefined,
+    ...(g.betGroupId ? { betGroupId: g.betGroupId } : {}),
+    ...(leg?.betId ? { betId: leg.betId } : {}),
+    ...(finalOdds !== undefined ? { finalOdds } : {}),
     risk: g.risk,
     toWin: g.toWin,
-    currency: g.currency ?? undefined,
+    ...(g.currency !== null ? { currency: g.currency } : {}),
     wireErrorCode: errorCode,
     raw: wire,
   };

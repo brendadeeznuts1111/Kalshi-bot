@@ -213,7 +213,7 @@ export function buildTableSchemaDocument<K extends string>(input: {
     description: input.description,
     fields: input.fields,
     groups: groupFieldKeys(input.fields),
-    presets: input.presets,
+    ...(input.presets !== undefined ? { presets: input.presets } : {}),
     defaultColumns: input.defaultColumns,
     allColumns,
   };

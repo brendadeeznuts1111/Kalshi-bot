@@ -44,8 +44,10 @@ export async function buildSignalContext(input: {
     kalshiTicker: input.ticker,
     book: input.book,
     events: oddsEvents,
-    kalshiPriceCents: input.kalshiPriceCents,
     side: "yes",
+    ...(input.kalshiPriceCents !== undefined
+      ? { kalshiPriceCents: input.kalshiPriceCents }
+      : {}),
   });
 }
 

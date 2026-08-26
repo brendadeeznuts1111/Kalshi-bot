@@ -188,7 +188,7 @@ function splitTopLevel(expr: string, op: string): string[] {
     if (ch === "(") depth++;
     if (ch === ")") depth--;
     if (depth === 0 && expr.slice(i, i + op.length) === op) {
-      const before = i > 0 ? expr[i - 1] : " ";
+      const before = i > 0 ? (expr[i - 1] ?? " ") : " ";
       const after = expr[i + op.length] ?? " ";
       if (!/[A-Za-z0-9]/.test(before) && !/[A-Za-z0-9]/.test(after)) {
         parts.push(current.trim());
@@ -224,7 +224,7 @@ function expressionAllows(expr: string, policy: LicensePolicy, allowedSet: Set<s
     // SPDX exception modifier (e.g. GPL-2.0 WITH Classpath-exception-2.0):
     // permissiveness is decided by the BASE license — an exception never
     // makes a non-permissive license permissive for our allowlist purposes.
-    return expressionAllows(withParts[0], policy, allowedSet);
+    return expressionAllows(withParts[0]!, policy, allowedSet);
   }
   const operand = normalizeLicense(e, policy);
   return allowedSet.has(operand.toLowerCase());

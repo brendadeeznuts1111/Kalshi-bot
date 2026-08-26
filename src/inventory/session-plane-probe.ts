@@ -29,7 +29,7 @@ type SessionPlaneCheck = {
   expected: string;
   latencyMs: number;
   detail: Record<string, unknown>;
-  error?: string;
+  error?: string | undefined;
 };
 
 type SessionPlaneProbeReport = {

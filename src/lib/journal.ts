@@ -174,7 +174,7 @@ export async function reconcile(dir: string): Promise<ReconcileEntry[]> {
     const match = name.match(/^(pending|committed)-([0-9a-f-]+)\.json$/);
     if (!match) continue;
     const kind = match[1] as "pending" | "committed";
-    const txnId = match[2];
+    const txnId = match[2]!;
 
     if (kind === "committed") {
       seen.add(txnId);
@@ -195,7 +195,7 @@ export async function reconcile(dir: string): Promise<ReconcileEntry[]> {
   for (const name of entries) {
     const match = name.match(/^pending-([0-9a-f-]+)\.json$/);
     if (!match) continue;
-    const txnId = match[1];
+    const txnId = match[1]!;
     if (seen.has(txnId)) {
       // Both pending and committed exist — the pending is a leftover that
       // can be cleaned up.  Report as committed.

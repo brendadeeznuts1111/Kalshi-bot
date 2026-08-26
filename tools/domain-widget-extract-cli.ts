@@ -40,7 +40,7 @@ if (from) {
 }
 
 const snap = await extractWidgetDomainWithPandora({
-  html,
+  ...(html !== undefined ? { html } : {}),
   fetchShell: !pandoraOnly && !html,
   languageKey: lang,
   pandora: !htmlOnly,

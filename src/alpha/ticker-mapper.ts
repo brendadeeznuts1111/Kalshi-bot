@@ -168,8 +168,8 @@ export function validateTickerMapping(
   kalshiTicker: string,
   mapped: MappedEvent,
   options: MappingValidationOptions & {
-    pinnacleProb?: number;
-    kalshiPriceCents?: number;
+    pinnacleProb?: number | undefined;
+    kalshiPriceCents?: number | undefined;
   } = {},
 ): void {
   const dateToken = extractKalshiDateToken(kalshiTicker);

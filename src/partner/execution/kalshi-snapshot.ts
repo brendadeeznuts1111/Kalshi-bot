@@ -31,7 +31,7 @@ export interface LoadKalshiMarketQuoteInput {
   ticker: string;
   side: KalshiExecutionSide;
   nowMs?: number;
-  maxAgeMs?: number;
+  maxAgeMs?: number | undefined;
 }
 
 export interface KalshiExecutionSnapshotDependencies {
@@ -56,7 +56,7 @@ export interface KalshiExecutionSnapshotDependencies {
   ) => Promise<boolean> | boolean;
   isRiskHealthy: () => Promise<boolean> | boolean;
   now?: () => number;
-  maxAgeMs?: number;
+  maxAgeMs?: number | undefined;
 }
 
 type BookTickRow = {

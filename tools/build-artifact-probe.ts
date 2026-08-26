@@ -36,11 +36,11 @@ const safe = async (opts: any): Promise<{ ok: boolean; r: any; err: string }> =>
 
 // P1/P2: outdir vs no-outdir semantics.
 const withOut = await Bun.build({ entrypoints: [F + "/entry.ts"], outdir: F + "/out" });
-const wo1 = withOut.outputs[0];
+const wo1 = withOut.outputs[0]!!;
 check("P1a with outdir: path points into outdir", wo1.path.includes(F + "/out"), wo1.path);
 check("P1b file written to disk", (await Bun.file(wo1.path).exists()) === true, "exists=true");
 const noOut = await Bun.build({ entrypoints: [F + "/entry.ts"] });
-const wo2 = noOut.outputs[0];
+const wo2 = noOut.outputs[0]!;
 check("P1c without outdir: path is a bare name", !wo2.path.includes("/out"), wo2.path);
 const wo2Exists = await Bun.file(wo2.path).exists();
 check("P2 no outdir writes nothing to disk", wo2Exists === false, "exists=" + wo2Exists + " path=" + wo2.path);
@@ -53,7 +53,7 @@ check("P1e .bytes() NOT available on 1.4.0 (docs corrected)", typeof (wo2 as any
 const named = await safe({ entrypoints: [F + "/pure.ts"], outdir: F + "/out2", naming: "static/[name].js" });
 check("P3 hash NOT null with hash-less naming (docs corrected)", named.ok && named.r.outputs[0].hash !== null && named.r.outputs[0].hash !== undefined, named.ok ? "hash=" + String(named.r.outputs[0].hash) : named.err);
 const def = await Bun.build({ entrypoints: [F + "/pure.ts"], outdir: F + "/out3" });
-check("P3a default naming hash present", def.outputs[0].hash !== null && def.outputs[0].hash !== undefined, "hash=" + String(def.outputs[0].hash).slice(0, 12));
+check("P3a default naming hash present", def.outputs[0]!.hash !== null && def.outputs[0]!.hash !== undefined, "hash=" + String(def.outputs[0]!.hash).slice(0, 12));
 
 // P4: sourcemap nested artifact or null.
 const sm = await safe({ entrypoints: [F + "/pure.ts"], outdir: F + "/out4", sourcemap: "external" });
@@ -89,10 +89,10 @@ const c8 = obj7.ok ? obj7.r.outputs.find((o: any) => o.kind === "chunk") : undef
 check("P7c object naming applies to entry + chunk", obj7.ok && !!e8 && e8.path.includes("e/") && !!c8 && c8.path.includes("c/"), obj7.ok ? "entry=" + String(e8?.path) + " chunk=" + String(c8?.path) : obj7.err);
 
 // P8-P12: the full BuildArtifact shape claims (§177).
-check("P8 Blob-like surface: size/type/text/arrayBuffer/stream present", typeof def.outputs[0].size === "number" && typeof def.outputs[0].type === "string" && typeof def.outputs[0].text === "function" && typeof def.outputs[0].arrayBuffer === "function" && typeof def.outputs[0].stream === "function", "size=" + typeof def.outputs[0].size + " type=" + typeof def.outputs[0].type + " stream=" + typeof def.outputs[0].stream);
-check("P8a extends Blob: FALSE on 1.4.0 (docs corrected)", (def.outputs[0] as any) instanceof Blob === false && typeof (def.outputs[0] as any).bytes === "undefined", "instanceof=" + String(def.outputs[0] instanceof Blob) + " bytes=" + String(typeof (def.outputs[0] as any).bytes));
-check("P9 loader reflects the SOURCE loader", def.outputs[0].loader === "ts", "loader=" + String(def.outputs[0].loader));
-check("P10 entry-point hash NOT null (docs corrected - null-by-default is wrong)", def.outputs[0].hash !== null && def.outputs[0].hash !== undefined, "hash=" + String(def.outputs[0].hash));
+check("P8 Blob-like surface: size/type/text/arrayBuffer/stream present", typeof def.outputs[0]!.size === "number" && typeof def.outputs[0]!.type === "string" && typeof def.outputs[0]!.text === "function" && typeof def.outputs[0]!.arrayBuffer === "function" && typeof def.outputs[0]!.stream === "function", "size=" + typeof def.outputs[0]!.size + " type=" + typeof def.outputs[0]!.type + " stream=" + typeof def.outputs[0]!.stream);
+check("P8a extends Blob: FALSE on 1.4.0 (docs corrected)", (def.outputs[0]! as any) instanceof Blob === false && typeof (def.outputs[0]! as any).bytes === "undefined", "instanceof=" + String(def.outputs[0]! instanceof Blob) + " bytes=" + String(typeof (def.outputs[0]! as any).bytes));
+check("P9 loader reflects the SOURCE loader", def.outputs[0]!.loader === "ts", "loader=" + String(def.outputs[0]!.loader));
+check("P10 entry-point hash NOT null (docs corrected - null-by-default is wrong)", def.outputs[0]!.hash !== null && def.outputs[0]!.hash !== undefined, "hash=" + String(def.outputs[0]!.hash));
 const bc = await safe({ entrypoints: [F + "/pure.ts"], outdir: F + "/outbc", bytecode: true });
 const bcKinds = bc.ok ? bc.r.outputs.map((o: any) => o.kind) : ["build-failed"];
 check("P11 bytecode:true yields a bytecode-kind output", bcKinds.includes("bytecode"), bcKinds.join(","));
@@ -102,7 +102,7 @@ if (nestedSm) nestedText = await nestedSm.text();
 check("P12 nested sourcemap .text() returns map JSON", typeof nestedText === "string" && nestedText.includes("version") && nestedText.includes("sources"), nestedText.slice(0, 40));
 
 // P13-P16: naming/sourcemap/loader option interactions (§177).
-check("P13 default naming: entry path has NO hash", !withOut.outputs[0].path.includes(String(withOut.outputs[0].hash)), "path=" + withOut.outputs[0].path.split("/").pop());
+check("P13 default naming: entry path has NO hash", !withOut.outputs[0]!.path.includes(String(withOut.outputs[0]!.hash)), "path=" + withOut.outputs[0]!.path.split("/").pop());
 const chunkOf = split.ok ? split.r.outputs.find((o: any) => o.kind === "chunk") : undefined;
 check("P13a chunk embeds its hash in the path ([name]-[hash].[ext])", !!chunkOf && chunkOf.path.includes(String(chunkOf.hash)), chunkOf ? chunkOf.path.split("/").pop() : "no chunk");
 const cssArt = split.ok ? split.r.outputs.find((o: any) => o.kind === "asset") : undefined;
@@ -144,7 +144,7 @@ check("P19 findings doc references the pinned revision", docText.includes(revSho
 
 // P20-P22: BuildArtifact.slice() gotchas (177 refactor) - plain Blob return,
 // byte offsets, and the NEGATIVE-offset deviation with outdir.
-const sliceArt = withOut.outputs[0] as any;
+const sliceArt = withOut.outputs[0]! as any;
 const sliceNoOutArt = noOut.outputs[0] as any;
 const sliceFullText = await sliceArt.text();
 const sliced = sliceArt.slice(0, 10) as any;
@@ -169,7 +169,7 @@ await Bun.write(gF + '/tsconfig.json', JSON.stringify({ compilerOptions: { baseU
 await Bun.write(gF + '/alias.ts', 'import { pure } from "@/pure"; export const v = pure();');
 await Bun.write(gF + '/el.tsx', 'export const el = <div id="x" />;');
 await Bun.write(gF + '/dce.ts', 'function impure() { return 1; } /* @__PURE__ */ impure(); export const y = 1;');
-const gText = async (opts: any) => { try { const r = await Bun.build(opts); return await r.outputs[0].text(); } catch (e: any) { return 'ERR ' + String(e.message ?? e).slice(0, 40); } };
+const gText = async (opts: any) => { try { const r = await Bun.build(opts); return await r.outputs[0]!.text(); } catch (e: any) { return 'ERR ' + String(e.message ?? e).slice(0, 40); } };
 const gSafe = async (opts: any) => { try { await Bun.build(opts); return true; } catch { return false; } };
 const bfT = await gText({ entrypoints: [gF + '/pure.ts'], outdir: gF + '/o1', banner: '/*BANNER*/', footer: '/*FOOTER*/' });
 check('P23 banner/footer emitted', bfT.includes('/*BANNER*/') && bfT.trimEnd().includes('/*FOOTER*/'), bfT.slice(0, 20) + '...');

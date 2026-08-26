@@ -83,10 +83,10 @@ export function listRecordTickers(
   const events = listWatchEvents(db, {
     leadMinutes: resolveTennisLeadMinutes(options.leadMinutes),
     limit: resolveTennisWatchLimit(options.limit),
-    pastGraceHours: options.pastGraceHours,
-    staleMs: options.staleMs,
-    nowMs: options.nowMs,
-    clearStale: options.clearStale,
+    ...(options.pastGraceHours === undefined ? {} : { pastGraceHours: options.pastGraceHours }),
+    ...(options.staleMs === undefined ? {} : { staleMs: options.staleMs }),
+    ...(options.nowMs === undefined ? {} : { nowMs: options.nowMs }),
+    ...(options.clearStale === undefined ? {} : { clearStale: options.clearStale }),
   });
   const eventIds = events.map((e) => e.eventId);
   const tickers = listMarketTickersForEventIds(db, eventIds);

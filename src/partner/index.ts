@@ -624,12 +624,13 @@ export function getPartnerAdapter(
 ): PartnerOrderAdapter {
   const adapterId = resolveProfileAdapterId(account);
   if (adapterId === 'fantasy-ultra') {
+    const liveProduct = options.liveProduct ?? options.skin;
     return new FantasyUltraAdapter({
       credentials: credentialsFromFantasyProfile(account, {
-        liveProduct: options.liveProduct ?? options.skin,
+        ...(liveProduct !== undefined ? { liveProduct } : {}),
       }),
-      fetchImpl: options.fetchImpl,
-      warmSession: options.warmSession,
+      ...(options.fetchImpl !== undefined ? { fetchImpl: options.fetchImpl } : {}),
+      ...(options.warmSession !== undefined ? { warmSession: options.warmSession } : {}),
     });
   }
   throw new Error(
@@ -653,11 +654,12 @@ export function getFantasySessionAdapter(
       `Not a fantasy-ultra account: adapterId=${resolveProfileAdapterId(account)} skinId=${account.skinId ?? '?'}`
     );
   }
+  const liveProduct = options.liveProduct ?? options.skin;
   return new FantasyUltraAdapter({
     credentials: credentialsFromFantasyProfile(account, {
-      liveProduct: options.liveProduct ?? options.skin,
+      ...(liveProduct !== undefined ? { liveProduct } : {}),
     }),
-    fetchImpl: options.fetchImpl,
-    warmSession: options.warmSession,
+    ...(options.fetchImpl !== undefined ? { fetchImpl: options.fetchImpl } : {}),
+    ...(options.warmSession !== undefined ? { warmSession: options.warmSession } : {}),
   });
 }

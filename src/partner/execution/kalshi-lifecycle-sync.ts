@@ -72,8 +72,12 @@ export async function syncKalshiProviderLifecycle(
       load = await loadKalshiLifecycleBatch(client, {
         outId: account.id,
         observedAtMs: syncObservedAtMs,
-        maxPagesPerFeed: dependencies.maxPagesPerFeed,
-        pageSize: dependencies.pageSize,
+        ...(dependencies.maxPagesPerFeed !== undefined
+          ? { maxPagesPerFeed: dependencies.maxPagesPerFeed }
+          : {}),
+        ...(dependencies.pageSize !== undefined
+          ? { pageSize: dependencies.pageSize }
+          : {}),
         reservationForClientOrderId: (clientOrderId) => reservations.get(clientOrderId) ?? null,
       });
       if (!load.ok) {

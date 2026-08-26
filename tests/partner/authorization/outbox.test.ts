@@ -40,7 +40,7 @@ function enqueue(db: Database, suffix = "approved", availableAtMs?: number) {
         disableNotification: false,
         replyToMessageId: asTelegramMessageId("99"),
       },
-      availableAtMs,
+      ...(availableAtMs !== undefined ? { availableAtMs } : {}),
     },
     NOW_MS,
   );
@@ -171,7 +171,7 @@ describe("authorization receipt outbox", () => {
       leaseDurationMs: 1_000,
     });
     const firstFailure = markAuthorizationReceiptFailed(db, {
-      id: firstClaim.id,
+      id: firstClaim!.id,
       leaseOwner: WORKER_A,
       nowMs: NOW_MS + 1,
       error: "temporary failure",
@@ -199,7 +199,7 @@ describe("authorization receipt outbox", () => {
       leaseOwner: WORKER_B,
       leaseDurationMs: 1_000,
     });
-    expect(secondClaim.attempts).toBe(2);
+    expect(secondClaim!.attempts).toBe(2);
     const secondFailure = markAuthorizationReceiptFailed(db, {
       id: queued.id,
       leaseOwner: WORKER_B,
@@ -220,7 +220,7 @@ describe("authorization receipt outbox", () => {
       leaseOwner: WORKER_A,
       leaseDurationMs: 1_000,
     });
-    expect(thirdClaim.attempts).toBe(3);
+    expect(thirdClaim!.attempts).toBe(3);
     const dead = markAuthorizationReceiptFailed(db, {
       id: queued.id,
       leaseOwner: WORKER_A,

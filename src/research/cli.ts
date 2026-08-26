@@ -128,17 +128,17 @@ export function parseCliOptions(argv: string[]): CliOptions {
     exportAudit: values["export-audit"] === true,
     dryRun: values["dry-run"] === true,
     offline: values.offline === true,
-    dimension: dimensionRaw,
-    shortlist: values.shortlist ? Number(values.shortlist) : undefined,
-    diff: typeof values.diff === "string" ? values.diff : undefined,
-    minStars: values["min-stars"] ? Number(values["min-stars"]) : undefined,
-    minForks: values["min-forks"] ? Number(values["min-forks"]) : undefined,
-    maxAgeMonths: values["max-age-months"] ? Number(values["max-age-months"]) : undefined,
-    discoverMinStars: values["discover-min-stars"] ? Number(values["discover-min-stars"]) : undefined,
-    discoverMinForks: values["discover-min-forks"] ? Number(values["discover-min-forks"]) : undefined,
-    discoverMaxAgeMonths: values["discover-max-age-months"]
-      ? Number(values["discover-max-age-months"])
-      : undefined,
+    ...(dimensionRaw !== undefined ? { dimension: dimensionRaw } : {}),
+    ...(values.shortlist ? { shortlist: Number(values.shortlist) } : {}),
+    ...(typeof values.diff === "string" ? { diff: values.diff } : {}),
+    ...(values["min-stars"] ? { minStars: Number(values["min-stars"]) } : {}),
+    ...(values["min-forks"] ? { minForks: Number(values["min-forks"]) } : {}),
+    ...(values["max-age-months"] ? { maxAgeMonths: Number(values["max-age-months"]) } : {}),
+    ...(values["discover-min-stars"] ? { discoverMinStars: Number(values["discover-min-stars"]) } : {}),
+    ...(values["discover-min-forks"] ? { discoverMinForks: Number(values["discover-min-forks"]) } : {}),
+    ...(values["discover-max-age-months"]
+      ? { discoverMaxAgeMonths: Number(values["discover-max-age-months"]) }
+      : {}),
     discoverBroad: values["discover-broad"] === true,
     openReport: values["open-report"] === true,
   };
@@ -190,10 +190,14 @@ export async function runResearchDryRun(opts: CliOptions): Promise<ResearchDryRu
     maxAgeMonths:
       opts.maxAgeMonths ?? envNumber("RESEARCH_MAX_AGE_MONTHS") ?? config.weights.gate.maxAgeMonths,
   };
+  const discoverMinStars = opts.discoverMinStars ?? envNumber("RESEARCH_DISCOVER_MIN_STARS");
+  const discoverMinForks = opts.discoverMinForks ?? envNumber("RESEARCH_DISCOVER_MIN_FORKS");
+  const discoverMaxAgeMonths =
+    opts.discoverMaxAgeMonths ?? envNumber("RESEARCH_DISCOVER_MAX_AGE_MONTHS");
   const { apply: gate, discover: discoverGate } = resolveGates(gateInput, {
-    discoverMinStars: opts.discoverMinStars ?? envNumber("RESEARCH_DISCOVER_MIN_STARS"),
-    discoverMinForks: opts.discoverMinForks ?? envNumber("RESEARCH_DISCOVER_MIN_FORKS"),
-    discoverMaxAgeMonths: opts.discoverMaxAgeMonths ?? envNumber("RESEARCH_DISCOVER_MAX_AGE_MONTHS"),
+    ...(discoverMinStars !== undefined ? { discoverMinStars } : {}),
+    ...(discoverMinForks !== undefined ? { discoverMinForks } : {}),
+    ...(discoverMaxAgeMonths !== undefined ? { discoverMaxAgeMonths } : {}),
     discoverBroad: opts.discoverBroad || Bun.env.RESEARCH_DISCOVER_BROAD === "1",
   });
   const shortlistSize =
@@ -271,10 +275,14 @@ export async function runResearch(opts: CliOptions): Promise<ResearchRun> {
     maxAgeMonths:
       opts.maxAgeMonths ?? envNumber("RESEARCH_MAX_AGE_MONTHS") ?? config.weights.gate.maxAgeMonths,
   };
+  const discoverMinStars = opts.discoverMinStars ?? envNumber("RESEARCH_DISCOVER_MIN_STARS");
+  const discoverMinForks = opts.discoverMinForks ?? envNumber("RESEARCH_DISCOVER_MIN_FORKS");
+  const discoverMaxAgeMonths =
+    opts.discoverMaxAgeMonths ?? envNumber("RESEARCH_DISCOVER_MAX_AGE_MONTHS");
   const { apply: gate, discover: discoverGate } = resolveGates(gateInput, {
-    discoverMinStars: opts.discoverMinStars ?? envNumber("RESEARCH_DISCOVER_MIN_STARS"),
-    discoverMinForks: opts.discoverMinForks ?? envNumber("RESEARCH_DISCOVER_MIN_FORKS"),
-    discoverMaxAgeMonths: opts.discoverMaxAgeMonths ?? envNumber("RESEARCH_DISCOVER_MAX_AGE_MONTHS"),
+    ...(discoverMinStars !== undefined ? { discoverMinStars } : {}),
+    ...(discoverMinForks !== undefined ? { discoverMinForks } : {}),
+    ...(discoverMaxAgeMonths !== undefined ? { discoverMaxAgeMonths } : {}),
     discoverBroad: opts.discoverBroad || Bun.env.RESEARCH_DISCOVER_BROAD === "1",
   });
   const shortlistSize =
@@ -407,7 +415,7 @@ export async function runResearch(opts: CliOptions): Promise<ResearchRun> {
       gated: gated.length,
       inspected: inspected.length,
       shortlist: shortlist.length,
-      cache: cacheStats ?? undefined,
+      ...(cacheStats ? { cache: cacheStats } : {}),
       timings,
     },
     candidates,
@@ -415,8 +423,8 @@ export async function runResearch(opts: CliOptions): Promise<ResearchRun> {
     scored,
     shortlist,
     excludedSdkOnly,
-    gateMiss,
-    discoveryMiss,
+    ...(gateMiss !== undefined ? { gateMiss } : {}),
+    ...(discoveryMiss !== undefined ? { discoveryMiss } : {}),
     kind: "production",
     source: "pipeline",
   };

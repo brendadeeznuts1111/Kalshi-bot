@@ -1031,13 +1031,16 @@ export async function buildTennisHqPayload(
               : await fetchLiveCrossMarketOdds(
                   flatEvents
                     .filter((event) => event.markets.length >= 2)
-                    .map((event) => ({
-                      ticker: event.eventTicker,
-                      playerA: event.markets[0]?.player ?? "",
-                      playerB: event.markets[1]?.player ?? "",
-                      tournament: event.tournament ?? event.competition ?? undefined,
-                      series: asSeriesTicker(event.series),
-                    })),
+                    .map((event) => {
+                      const tournament = event.tournament ?? event.competition ?? undefined;
+                      return {
+                        ticker: event.eventTicker,
+                        playerA: event.markets[0]?.player ?? "",
+                        playerB: event.markets[1]?.player ?? "",
+                        ...(tournament != null ? { tournament } : {}),
+                        series: asSeriesTicker(event.series),
+                      };
+                    }),
                 ));
       if (oddsByTicker) {
         dataHealth = liveDataHealth(flatEvents, oddsByTicker, snapshotHealth, nowMs);

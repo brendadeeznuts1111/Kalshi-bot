@@ -138,8 +138,8 @@ export async function backfillQuotedMarketVolumes(
   for (const { ticker, eventId } of candidates) {
     try {
       const wire = await fetchMarket(ticker, {
-        fetchImpl: options.fetchImpl,
-        baseUrl: options.baseUrl,
+        ...(options.fetchImpl === undefined ? {} : { fetchImpl: options.fetchImpl }),
+        ...(options.baseUrl === undefined ? {} : { baseUrl: options.baseUrl }),
       });
       fetched++;
       if (!wire) {

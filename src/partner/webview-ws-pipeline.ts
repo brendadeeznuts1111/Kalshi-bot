@@ -64,9 +64,9 @@ export async function runWebViewWsPipeline(
     capturePath = options.jsonl;
   } else if (options.capture === true) {
     const cap = await capturePandoraViaWebView({
-      sport: options.sport,
-      url: options.url,
-      seconds: options.seconds,
+      ...(options.sport !== undefined ? { sport: options.sport } : {}),
+      ...(options.url !== undefined ? { url: options.url } : {}),
+      ...(options.seconds !== undefined ? { seconds: options.seconds } : {}),
     });
     capturePath = cap.outPath;
     const { store, report } = ingestWebViewWsFrames(cap.frames);
@@ -78,9 +78,9 @@ export async function runWebViewWsPipeline(
       capturePath = latest;
     } else if (doCapture) {
       const cap = await capturePandoraViaWebView({
-        sport: options.sport,
-        url: options.url,
-        seconds: options.seconds,
+        ...(options.sport !== undefined ? { sport: options.sport } : {}),
+        ...(options.url !== undefined ? { url: options.url } : {}),
+        ...(options.seconds !== undefined ? { seconds: options.seconds } : {}),
       });
       capturePath = cap.outPath;
       const { store, report } = ingestWebViewWsFrames(cap.frames);

@@ -64,7 +64,7 @@ export type TennisWsGroundLatest = {
   linkedEventsWithWs: number;
 };
 
-function resolveWebViewBackend(): BunWebViewOptions["backend"] {
+function resolveWebViewBackend(): NonNullable<BunWebViewOptions["backend"]> {
   return process.platform === "darwin" ? "webkit" : "chrome";
 }
 

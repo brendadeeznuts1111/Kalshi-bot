@@ -44,8 +44,8 @@ type CoeffInfo = Parameters<NonNullable<PandoraHandlers['onCoefficients']>>[0];
 async function openPandoraWindow(
   seconds: number,
   options: {
-    WebSocketImpl?: typeof WebSocket;
-    pandoraHost?: PandoraHostId | string;
+    WebSocketImpl?: typeof WebSocket | undefined;
+    pandoraHost?: PandoraHostId | string | undefined;
   },
   makeHandlers: (api: {
     subscribeLive: PandoraSocket['subscribeLive'];
@@ -57,7 +57,7 @@ async function openPandoraWindow(
     sock = new PandoraSocket({
       reconnect: false,
       host,
-      WebSocketImpl: options.WebSocketImpl,
+      ...(options.WebSocketImpl !== undefined ? { WebSocketImpl: options.WebSocketImpl } : {}),
       handlers: makeHandlers({
         subscribeLive: ((...args: Parameters<PandoraSocket['subscribeLive']>) =>
           sock.subscribeLive(...args)) as PandoraSocket['subscribeLive'],
@@ -140,8 +140,8 @@ export async function probePandoraEvent(
   eventId: number,
   options: {
     seconds?: number;
-    WebSocketImpl?: typeof WebSocket;
-    pandoraHost?: PandoraHostId | string;
+    WebSocketImpl?: typeof WebSocket | undefined;
+    pandoraHost?: PandoraHostId | string | undefined;
   } = {}
 ): Promise<{
   subscribed: boolean;
@@ -480,7 +480,17 @@ export function summarizeOddsWatch(
     byMarketTransitions: [...byMk.values()].sort(
       (a, b) => b.off + b.on + b.priceChanges - (a.off + a.on + a.priceChanges)
     ),
-    vig: vigLines.length ? vigFromCoefficientLines(vigLines) : [],
+    vig: vigLines.length
+      ? vigFromCoefficientLines(
+          vigLines.map(l => ({
+            period: l.period,
+            marketType: l.marketType,
+            selection: l.selection,
+            decimal: l.decimal,
+            ...(l.sideIndex !== undefined ? { sideIndex: l.sideIndex } : {}),
+          }))
+        )
+      : [],
     lastLineCount: last?.lineCount ?? 0,
     lastOfferedMarkets: last?.offeredMarketCount ?? 0,
   };

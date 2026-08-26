@@ -62,9 +62,11 @@ export function createKalshiEventsSourceAdapter(
         const payload = await fetchKalshiEventsPageWire({
           ...options,
           seriesTicker: asSeriesTicker(request.selector.parameters.series!),
-          status: request.selector.parameters.status,
+          ...(request.selector.parameters.status === undefined
+            ? {}
+            : { status: request.selector.parameters.status }),
           limit: request.limit,
-          cursor: request.cursor,
+          ...(request.cursor === undefined ? {} : { cursor: request.cursor }),
         });
         return { payload, observedAtMs: health.observedAtMs() } satisfies KalshiAdapterWire;
       } catch (cause) {

@@ -86,10 +86,10 @@ function seAdd(argv: string[]): number {
     return 1;
   }
 
-  const userId = argv[userIdx + 1];
-  const nodeId = argv[nodeIdx + 1];
-  const reason = argv[reasonIdx + 1];
-  const expiresAt = expiresIdx >= 0 ? Math.floor(new Date(argv[expiresIdx + 1]).getTime() / 1000) : null;
+  const userId = argv[userIdx + 1]!;
+  const nodeId = argv[nodeIdx + 1]!;
+  const reason = argv[reasonIdx + 1]!;
+  const expiresAt = expiresIdx >= 0 ? Math.floor(new Date(argv[expiresIdx + 1]!).getTime() / 1000) : null;
 
   const db = getDb();
   db.run(
@@ -115,8 +115,8 @@ function seRemove(argv: string[]): number {
     return 1;
   }
 
-  const userId = argv[userIdx + 1];
-  const nodeId = argv[nodeIdx + 1];
+  const userId = argv[userIdx + 1]!;
+  const nodeId = argv[nodeIdx + 1]!;
 
   const db = getDb();
   const result = db.run(
@@ -225,13 +225,13 @@ function limitsSet(argv: string[]): number {
     return 1;
   }
 
-  const stateCode = argv[stateIdx + 1];
-  const sportId = argv[sportIdx + 1];
-  const marketId = argv[marketIdx + 1];
-  const maxWager = parseFloat(argv[maxIdx + 1]);
-  const minWager = parseFloat(argv[minIdx + 1]);
-  const betTypes = argv[typesIdx + 1];
-  const specialRules = specialIdx >= 0 ? argv[specialIdx + 1] : null;
+  const stateCode = argv[stateIdx + 1]!;
+  const sportId = argv[sportIdx + 1]!;
+  const marketId = argv[marketIdx + 1]!;
+  const maxWager = parseFloat(argv[maxIdx + 1]!);
+  const minWager = parseFloat(argv[minIdx + 1]!);
+  const betTypes = argv[typesIdx + 1]!;
+  const specialRules = specialIdx >= 0 ? argv[specialIdx + 1]! : null;
 
   try {
     JSON.parse(betTypes);

@@ -380,9 +380,11 @@ describe("sports/source registry", () => {
 
     const missingMetadataPolicy: SportsSourceRegistry = {
       ...SPORTS_SOURCE_REGISTRY,
-      integrations: SPORTS_SOURCE_REGISTRY.integrations.map((row, index) =>
-        index === 0 ? { ...row, metadataPolicy: undefined } : row,
-      ),
+      integrations: SPORTS_SOURCE_REGISTRY.integrations.map((row, index) => {
+        if (index !== 0) return row;
+        const { metadataPolicy: _metadataPolicy, ...rest } = row;
+        return rest;
+      }),
     };
     expect(validateSportsSourceRegistry(missingMetadataPolicy)).toContain(
       "kalshi:tennis: metadata discovery requires a classification policy",
@@ -390,9 +392,11 @@ describe("sports/source registry", () => {
 
     const missingMetadataPageMode: SportsSourceRegistry = {
       ...SPORTS_SOURCE_REGISTRY,
-      adapters: SPORTS_SOURCE_REGISTRY.adapters.map((adapter, index) =>
-        index === 0 ? { ...adapter, metadataPageMode: undefined } : adapter,
-      ),
+      adapters: SPORTS_SOURCE_REGISTRY.adapters.map((adapter, index) => {
+        if (index !== 0) return adapter;
+        const { metadataPageMode: _metadataPageMode, ...rest } = adapter;
+        return rest;
+      }),
     };
     expect(validateSportsSourceRegistry(missingMetadataPageMode)).toContain(
       "kalshi-events-v1: metadata discovery requires a page mode",

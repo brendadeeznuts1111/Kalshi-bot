@@ -216,7 +216,7 @@ export async function attachPatternsToLift(
           excerpt: slice.excerpt,
           file: slice.file,
           source,
-          misses: slice.misses,
+          ...(slice.misses !== undefined ? { misses: slice.misses } : {}),
         },
       };
     }),
@@ -234,7 +234,10 @@ async function loadRepoPatternsForLift(
 }
 
 export function loadRunForLift(runId?: string, dimension?: string): ResearchRun | null {
-  return loadResearchRun({ runId, dimension });
+  return loadResearchRun({
+    ...(runId !== undefined ? { runId } : {}),
+    ...(dimension !== undefined ? { dimension } : {}),
+  });
 }
 
 export function formatLift(result: SuggestLiftResult): string {

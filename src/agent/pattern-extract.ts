@@ -37,7 +37,7 @@ export type FilePatternSlice = {
   components: string[];
   hits: PatternHits;
   excerpt: string | null;
-  excerptLine?: number;
+  excerptLine?: number | undefined;
   fetchOk: boolean;
 };
 
@@ -315,7 +315,7 @@ export function aggregatePatternReports(repos: RepoPatternReport[]): PatternRepo
 
 export async function buildPatternReport(
   run: ResearchRun,
-  options?: { repoFilter?: string; maxRepos?: number },
+  options?: { repoFilter?: string | undefined; maxRepos?: number },
 ): Promise<PatternReport> {
   let items = [...run.shortlist].sort((a, b) => b.score.total - a.score.total);
 
@@ -425,7 +425,7 @@ export function formatPatternSummary(labels: string[]): string {
 export function pickPatternSliceForComponent(
   repoReport: RepoPatternReport,
   component: ScoreComponentKey,
-): { summary: string; excerpt: string | null; file: string | null; misses?: import("./pattern-miss.ts").PatternMissSuggestion[] } {
+): { summary: string; excerpt: string | null; file: string | null; misses?: import("./pattern-miss.ts").PatternMissSuggestion[] | undefined } {
   const categories = COMPONENT_PATTERN_CATEGORIES[component];
   const labels: string[] = [];
   for (const cat of categories) {
@@ -549,7 +549,10 @@ export async function writePatternReport(report: PatternReport): Promise<string>
 }
 
 export function loadRunForPatterns(runId?: string, dimension?: string): ResearchRun | null {
-  return loadResearchRun({ runId, dimension });
+  return loadResearchRun({
+    ...(runId !== undefined ? { runId } : {}),
+    ...(dimension !== undefined ? { dimension } : {}),
+  });
 }
 
 export async function runPatternExtract(options: {

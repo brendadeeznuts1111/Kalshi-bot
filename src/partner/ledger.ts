@@ -211,7 +211,7 @@ function ticketRawFingerprint(rawJson: string): string {
 
 function buildTicketRawJson(input: {
   result: PartnerExecutionResult;
-  group?: PartnerBetGroup;
+  group?: PartnerBetGroup | undefined;
 }): string {
   const g = input.group;
   const status = classifyTicketStatus({
@@ -483,15 +483,15 @@ export function writeTicketFromBetGroup(
       success: true,
       ticketNumber: input.group.ticketNumber,
       betGroupId: input.group.betGroupId,
-      finalOdds: input.group.finalOdds ?? undefined,
+      ...(input.group.finalOdds != null ? { finalOdds: input.group.finalOdds } : {}),
       risk: input.group.risk,
       toWin: input.group.toWin,
-      currency: input.group.currency ?? undefined,
+      ...(input.group.currency != null ? { currency: input.group.currency } : {}),
     },
     group: input.group,
-    currency: input.group.currency ?? undefined,
-    nowMs: input.nowMs,
-    updateExisting: input.updateExisting,
+    ...(input.group.currency != null ? { currency: input.group.currency } : {}),
+    ...(input.nowMs !== undefined ? { nowMs: input.nowMs } : {}),
+    ...(input.updateExisting !== undefined ? { updateExisting: input.updateExisting } : {}),
   });
 }
 

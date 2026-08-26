@@ -21,21 +21,21 @@ export type PolymarketEvent = {
   ticker: string;
   slug: string;
   title: string;
-  description?: string;
+  description?: string | undefined;
   volume: number | null;
   volume24hr: number | null;
-  openInterest?: number | null;
+  openInterest?: number | null | undefined;
   liquidity: number | null;
   liquidityClob: number | null;
   active: boolean;
   closed: boolean;
-  startDate?: string;
-  endDate?: string;
-  createdAt?: string;
-  updatedAt?: string;
+  startDate?: string | undefined;
+  endDate?: string | undefined;
+  createdAt?: string | undefined;
+  updatedAt?: string | undefined;
   /** Provider-owned sport series discriminator (for example `atp-doubles`). */
-  seriesSlug?: string;
-  seriesConflict?: boolean;
+  seriesSlug?: string | undefined;
+  seriesConflict?: boolean | undefined;
   tags: PolymarketTag[];
   teams: PolymarketTeam[];
   markets: PolymarketMarket[];
@@ -59,9 +59,9 @@ export type PolymarketMarket = {
   id: string;
   slug: string;
   question: string;
-  description?: string;
+  description?: string | undefined;
   conditionId: string;
-  resolutionSource?: string;
+  resolutionSource?: string | undefined;
   outcomes: string[];       // parsed from JSON string
   /** Null entries are source-declared but not priced yet. */
   outcomePrices: Array<number | null>; // parsed from JSON string
@@ -71,20 +71,20 @@ export type PolymarketMarket = {
   volume1mo: number | null;
   liquidity: number | null;
   liquidityClob: number | null;
-  openInterest?: number | null;
+  openInterest?: number | null | undefined;
   lastTradePrice: number | null;
-  bestBid?: number;
-  bestAsk?: number;
-  spread?: number;
-  sportsMarketType?: string;
-  groupItemTitle?: string;
+  bestBid?: number | undefined;
+  bestAsk?: number | undefined;
+  spread?: number | undefined;
+  sportsMarketType?: string | undefined;
+  groupItemTitle?: string | undefined;
   active: boolean;
   closed: boolean;
   createdAt: string;
   updatedAt: string;
-  endDate?: string;
-  event?: PolymarketEvent;
-  events?: PolymarketEvent[];
+  endDate?: string | undefined;
+  event?: PolymarketEvent | undefined;
+  events?: PolymarketEvent[] | undefined;
 };
 
 export type PolymarketTick = {
@@ -315,7 +315,10 @@ export async function fetchAllPolymarketEvents(
   let afterCursor: string | undefined;
 
   for (let page = 0; page < 1_000; page++) {
-    const result = await fetchPolymarketEventsPage({ ...options, afterCursor });
+    const result = await fetchPolymarketEventsPage({
+      ...options,
+      ...(afterCursor !== undefined ? { afterCursor } : {}),
+    });
     for (const event of result.events) {
       if (seenIds.has(event.id)) {
         throw new Error(`Polymarket keyset pagination repeated event ${event.id}`);
@@ -561,7 +564,7 @@ export class PolymarketLineTracker {
     if (window.length < 2) return [];
 
     // Compare against the oldest tick in the window
-    const baseline = window[0];
+    const baseline = window[0]!;
     const moves: PolymarketLineMove[] = [];
 
     const oldPrice = baseline.yesPrice;

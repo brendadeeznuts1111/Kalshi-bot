@@ -48,7 +48,7 @@ describe('fetchPool protocol:http2', () => {
     expect(single.ok).toBe(true);
     expect(single.text).toBe('h2-ok');
     // fetchPool path with protocol option
-    const results = await fetchPool(urls, { concurrency: 4, protocol: 'http2', timeoutMs: 3000, warmDns: false, fetchInit: { tls } as Parameters<typeof fetch>[1] });
+    const results = await fetchPool(urls, { concurrency: 4, protocol: 'http2', timeoutMs: 3000, warmDns: false, fetchInit: { tls } as NonNullable<Parameters<typeof fetch>[1]> });
     expect(results).toHaveLength(12);
     expect(results.every((r) => r.ok && r.text === 'h2-ok')).toBe(true);
     expect(conns).toBe(1); // multiplexed: ONE TLS connection for all 12

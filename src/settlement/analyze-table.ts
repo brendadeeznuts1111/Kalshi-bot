@@ -285,7 +285,7 @@ export type WeightedTrackerEvent = {
   detail: string;
   from?: number | string | null;
   to?: number | string | null;
-  file?: string;
+  file?: string | undefined;
   settlement?: LiveTrackerWeightResult;
 };
 
@@ -455,8 +455,8 @@ function numOrNull(v: unknown): number | null {
 export function sortAnalyzeRows(
   rows: readonly AnalyzeWeightedRow[],
   options: {
-    sortBy?: AnalyzeRowSortKey | AnalyzeRowSortKey[];
-    desc?: boolean;
+    sortBy?: AnalyzeRowSortKey | AnalyzeRowSortKey[] | undefined;
+    desc?: boolean | undefined;
   } = {},
 ): AnalyzeWeightedRow[] {
   const keys: AnalyzeRowSortKey[] = options.sortBy
@@ -696,11 +696,11 @@ export function filterAnalyzeRows(
 export function pipelineAnalyzeRows(
   rows: readonly AnalyzeWeightedRow[],
   options: {
-    filter?: AnalyzeRowFilter;
-    sortBy?: AnalyzeRowSortKey | AnalyzeRowSortKey[];
-    desc?: boolean;
+    filter?: AnalyzeRowFilter | undefined;
+    sortBy?: AnalyzeRowSortKey | AnalyzeRowSortKey[] | undefined;
+    desc?: boolean | undefined;
     /** Keep first N after sort (top-N desk). */
-    limit?: number;
+    limit?: number | undefined;
   } = {},
 ): { rows: AnalyzeWeightedRow[]; hint: string } {
   let out = filterAnalyzeRows(rows, options.filter ?? {});
@@ -775,8 +775,8 @@ export function diffAnalyzeDisplay(
   prev: readonly AnalyzeWeightedRow[] | null | undefined,
   next: readonly AnalyzeWeightedRow[],
   options: {
-    prevSummary?: AnalyzeRowSummary | null;
-    nextSummary?: AnalyzeRowSummary | null;
+    prevSummary?: AnalyzeRowSummary | null | undefined;
+    nextSummary?: AnalyzeRowSummary | null | undefined;
   } = {},
 ): AnalyzeDisplayDelta | null {
   if (!prev) return null;
@@ -948,10 +948,10 @@ export function formatAnalyzeBanner(input: {
   sportId: string;
   phase: string;
   sortBy: string[];
-  desc?: boolean;
-  columns?: readonly string[];
+  desc?: boolean | undefined;
+  columns?: readonly string[] | undefined;
   summary: AnalyzeRowSummary;
-  schemaVersion?: number;
+  schemaVersion?: number | undefined;
 }): string {
   const s = input.summary;
   const voidBits = Object.entries(s.byVoidRisk)
@@ -1281,25 +1281,25 @@ export function buildAnalyzeSummaryChipsHtml(summary: AnalyzeRowSummary): string
 export function wrapAnalyzeHtmlDocument(input: {
   sportId: string;
   phase: string;
-  titleExtra?: string;
+  titleExtra?: string | undefined;
   bodyHtml: string;
   /** Optional footer: recipe command + focus badge. */
-  footer?: { recipe?: string; focusLabel?: string };
+  footer?: { recipe?: string | undefined; focusLabel?: string | undefined };
   /** Multi-preset jump links (already HTML). */
-  navHtml?: string;
+  navHtml?: string | undefined;
   /** Pipeline hint under title (sort / filter / limit). */
-  sortHint?: string;
+  sortHint?: string | undefined;
   /** Pre-built summary chip strip. */
-  chipsHtml?: string;
+  chipsHtml?: string | undefined;
   /** Watch-tick delta chips (optional). */
-  deltaChipsHtml?: string;
+  deltaChipsHtml?: string | undefined;
   /**
    * Browser auto-reload interval (seconds). Used with analyze `--watch --html`
    * so the written file refreshes without re-open.
    */
-  autoRefreshSec?: number;
+  autoRefreshSec?: number | undefined;
   /** ISO generated-at shown next to refresh chip. */
-  generatedAt?: string;
+  generatedAt?: string | undefined;
 }): string {
   const titleExtra = input.titleExtra ? ` · ${input.titleExtra}` : '';
   const enhanced = enhanceAnalyzeHtmlBody(input.bodyHtml);
@@ -1376,7 +1376,7 @@ export function formatAnalyzeHtmlReport(input: {
   /** Extra recipe fragments (`--void-risk=high` …). */
   recipeExtra?: string[];
   /** Inject `<meta http-equiv="refresh">` for watch-mode HTML. */
-  autoRefreshSec?: number;
+  autoRefreshSec?: number | undefined;
   /** Optional watch-tick delta for chips. */
   delta?: AnalyzeDisplayDelta | null;
 }): string {
@@ -1430,9 +1430,9 @@ export function formatAnalyzeHtmlReport(input: {
 export function buildAnalyzeHtmlRecipe(input: {
   sportId: string;
   phase: string;
-  columns?: readonly string[];
+  columns?: readonly string[] | undefined;
   /** Additional flags already formatted (`--void-risk=high`). */
-  extra?: readonly string[];
+  extra?: readonly string[] | undefined;
 }): string {
   const cols = input.columns?.length ? input.columns.join(',') : 'desk';
   const extras = input.extra?.length ? ` ${input.extra.join(' ')}` : '';
@@ -1727,10 +1727,10 @@ export function renderSportAnalyze(input: {
 export function buildAnalyzeRecipeExtras(input: {
   rowSortBy: AnalyzeRowSortKey | AnalyzeRowSortKey[];
   rowSortDesc: boolean;
-  rowFilter?: AnalyzeRowFilter;
-  rowLimit?: number;
+  rowFilter?: AnalyzeRowFilter | undefined;
+  rowLimit?: number | undefined;
   usedDefaultSort: boolean;
-  autoRefreshSec?: number;
+  autoRefreshSec?: number | undefined;
 }): string[] {
   const extra: string[] = [];
   const f = input.rowFilter;

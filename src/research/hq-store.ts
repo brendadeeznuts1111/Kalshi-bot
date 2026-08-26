@@ -109,9 +109,9 @@ export function readTradingHistory(limit = 200, store?: Database): TradingSnapsh
     return rows
       .map((r) => ({
         atMs: r.at_ms as number,
-        balanceCents: r.balance_cents,
-        portfolioValueCents: r.portfolio_value_cents,
-        exposureCents: r.exposure_cents,
+        balanceCents: r.balance_cents!,
+        portfolioValueCents: r.portfolio_value_cents!,
+        exposureCents: r.exposure_cents!,
         positionCount: (r.position_count as number) ?? 0,
         openOrderCount: (r.open_order_count as number) ?? 0,
         fillCount: (r.fill_count as number) ?? 0,

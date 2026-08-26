@@ -56,10 +56,10 @@ export function parseMidArgs(argv: string[]): Record<string, number> {
 }
 
 export type ToxicityMarkOptions = {
-  now?: number;
+  now?: number | undefined;
   /** Test-only — marks outside the 60s window produce wrong toxicity data. */
-  forceDue?: boolean;
-  alphaRoot?: string;
+  forceDue?: boolean | undefined;
+  alphaRoot?: string | undefined;
 };
 
 export async function runToxicityMark(
@@ -71,7 +71,7 @@ export async function runToxicityMark(
   const { manifest, logPath } = await resolveProgramShadow(programName, options?.alphaRoot);
   const entries = await readShadowLogEntries(logPath);
   const { toMark, pending, missed } = selectDueToxicityMarks(entries, now, {
-    forceDue: options?.forceDue,
+    ...(options?.forceDue !== undefined ? { forceDue: options.forceDue } : {}),
     allowStaleMark: options?.forceDue === true && Bun.env.NODE_ENV === "test",
   });
 
@@ -157,11 +157,11 @@ export async function fetchMidsForTickers(
 export async function runAutoToxicityMark(
   programName: string,
   options?: {
-    now?: number;
-    forceDue?: boolean;
-    fetch?: FetchKalshiBookOptions;
-    manualMids?: Record<string, number>;
-    alphaRoot?: string;
+    now?: number | undefined;
+    forceDue?: boolean | undefined;
+    fetch?: FetchKalshiBookOptions | undefined;
+    manualMids?: Record<string, number> | undefined;
+    alphaRoot?: string | undefined;
   },
 ): Promise<{
   marked: number;

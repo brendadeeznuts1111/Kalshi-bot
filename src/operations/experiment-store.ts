@@ -12,7 +12,7 @@ export type ExperimentSessionArtifact = FactorialResult & {
   experimentId: string;
   at: string;
   status: ExperimentStatus;
-  reason?: string;
+  reason?: string | undefined;
   fingerprint: string;
 };
 

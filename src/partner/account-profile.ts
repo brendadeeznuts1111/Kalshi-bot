@@ -34,7 +34,7 @@ export type PartnerAccountProfile = {
   url: string;
   status: PartnerAccountStatus;
   /** White-label SkinId when resolved (host or alias). */
-  skinId?: SkinId;
+  skinId?: SkinId | undefined;
   /** Mapper selection key (fantasy-ultra | kalshi | unmapped). */
   adapterId?: MapperAdapterId;
   /** Default live-product / Ultra wire for this out. */
@@ -59,7 +59,7 @@ export function fantasyVaultItemTitle(outId: string): string {
 /** Build profile from a resolved PartnerEnvBundle (no secret logging). */
 export function profileFromEnvBundle(
   bundle: PartnerEnvBundle,
-  options?: { accountId?: string }
+  options?: { accountId?: string | undefined }
 ): PartnerAccountProfile | null {
   const token = bundle.values.BEARER_TOKEN?.trim();
   const customerID = bundle.values.CUSTOMER_ID?.trim();

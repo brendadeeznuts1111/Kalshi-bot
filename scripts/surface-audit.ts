@@ -40,7 +40,7 @@ for (const [filePrefix, expectedSurface] of Object.entries(FILE_SURFACE_MAP)) {
     const matches = [...content.matchAll(GLOSSARY_ID_RE)];
 
     for (const m of matches) {
-      const id = m[1];
+      const id = m[1]!;
       if (!allowed.has(id)) {
         const lineNum = content.slice(0, m.index!).split("\n").length;
         console.error(

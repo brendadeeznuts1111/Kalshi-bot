@@ -315,14 +315,14 @@ function gamesWonShare(scoreText: string, winner: string, playerA: string, playe
   let loserGames = 0;
   for (const set of sets) {
     const parts = set.split("-").map(Number);
-    if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+    if (parts.length === 2 && !isNaN(parts[0]!) && !isNaN(parts[1]!)) {
       // First number is always winner's games in Kalshi score format
       if (winner === playerA || winner === playerB) {
-        winnerGames += parts[0];
-        loserGames += parts[1];
+        winnerGames += parts[0]!;
+        loserGames += parts[1]!;
       } else {
-        winnerGames += parts[1];
-        loserGames += parts[0];
+        winnerGames += parts[1]!;
+        loserGames += parts[0]!;
       }
     }
   }
@@ -447,14 +447,14 @@ function parseFilter(
 }
 
 export type LoggerOptions = {
-  dbPath?: string;
+  dbPath?: string | undefined;
   once?: boolean;
-  interval?: number;
+  interval?: number | undefined;
   dashboard?: boolean;
   /** Build one cycle and print stats without INSERT or health bumps. */
   dryRun?: boolean;
   /** Comma-separated key=value filters or bare keywords (e.g. "rps", "tier=ATP250,minEdge=3"). */
-  filter?: string;
+  filter?: string | undefined;
 };
 
 export function parseLoggerArgv(argv: string[]): LoggerOptions {
@@ -579,7 +579,7 @@ export async function runSnapshotCycleDetailed(
     const a = elos.current.get(playerA);
     const b = elos.current.get(playerB);
     if (!a || !b) return { prob: null, eloA: a?.[idx] ?? null, eloB: b?.[idx] ?? null };
-    return { prob: expectedScore(a[idx], b[idx]), eloA: a[idx], eloB: b[idx] };
+    return { prob: expectedScore(a[idx]!, b[idx]!), eloA: a[idx]!, eloB: b[idx]! };
   }
 
   // 4. Build and write snapshots

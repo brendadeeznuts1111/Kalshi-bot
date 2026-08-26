@@ -17,7 +17,7 @@ const TRADING_CORPUS = "trading";
 
 export type IngestPrimaryOptions = {
   /** singles (default) | doubles | all */
-  format?: "singles" | "doubles" | "all";
+  format?: "singles" | "doubles" | "all" | undefined;
 };
 
 export type RepairStadionToursSummary = {
@@ -198,7 +198,7 @@ export function ingestPrimaryResultMatches(
 }
 
 export type CollectItfStadionDayResult = ItfStadionCollectSummary & {
-  bridge?: BridgeSummary;
+  bridge?: BridgeSummary | undefined;
 };
 
 export async function collectItfStadionDay(
@@ -212,8 +212,8 @@ export async function collectItfStadionDay(
   } = {},
 ): Promise<CollectItfStadionDayResult> {
   const { wire, sourceUrl, fetchedTs, cacheHit } = await fetchItfStadionDay(dayIso, {
-    force: options.force,
-    fetchImpl: options.fetchImpl,
+    ...(options.force !== undefined ? { force: options.force } : {}),
+    ...(options.fetchImpl !== undefined ? { fetchImpl: options.fetchImpl } : {}),
   });
   const matches = parseItfStadionDayWire(wire, { sourceUrl, fetchedTs });
   const ingest = ingestPrimaryResultMatches(db, matches, { format: options.format });

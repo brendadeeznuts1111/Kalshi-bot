@@ -244,17 +244,21 @@ function parseDiffQuery(): DiffQuery {
   const limitRaw = argValue('limit');
   const offsetRaw = argValue('offset');
   const tailRaw = argValue('tail');
+  const eventId = argValue('market-id') ?? argValue('event-id') ?? argValue('id');
+  const marketType = argValue('market-type');
+  const period = argValue('period');
+  const columns = parseColumns();
   return {
     eventTypes: parseEventTypes(),
-    eventId: argValue('market-id') ?? argValue('event-id') ?? argValue('id'),
-    marketType: argValue('market-type'),
-    period: argValue('period'),
+    ...(eventId !== undefined ? { eventId } : {}),
+    ...(marketType !== undefined ? { marketType } : {}),
+    ...(period !== undefined ? { period } : {}),
     sortBy: parseSortBy(argValue('sort-by') ?? 'time'),
     desc: hasFlag('desc'),
-    limit: limitRaw ? Math.max(1, Number(limitRaw) || 1) : undefined,
-    offset: offsetRaw ? Math.max(0, Number(offsetRaw) || 0) : undefined,
-    tail: tailRaw ? Math.max(1, Number(tailRaw) || 1) : undefined,
-    columns: parseColumns(),
+    ...(limitRaw ? { limit: Math.max(1, Number(limitRaw) || 1) } : {}),
+    ...(offsetRaw ? { offset: Math.max(0, Number(offsetRaw) || 0) } : {}),
+    ...(tailRaw ? { tail: Math.max(1, Number(tailRaw) || 1) } : {}),
+    ...(columns !== undefined ? { columns } : {}),
   };
 }
 
@@ -359,7 +363,7 @@ function renderOutput(
 
 async function writeOrPrint(
   body: string,
-  options?: { defaultPath?: string; open?: boolean },
+  options?: { defaultPath?: string | undefined; open?: boolean },
 ): Promise<void> {
   const out = argValue('output') ?? argValue('out') ?? options?.defaultPath;
   if (out) {
@@ -407,9 +411,9 @@ async function loadDiffEvents(): Promise<{
     }
     const all =
       prev.length || next.length
-        ? diffEventLists(prev, next, { oldFile: oldP, newFile: newP })
+        ? diffEventLists(prev, next, { oldFile: oldP!, newFile: newP! })
         : [];
-    const events = all.length ? all : next.map(e => ({ ...e, file: newP }));
+    const events = all.length ? all : next.map(e => ({ ...e, file: newP! }));
     return { all: events, paths: [oldP!, newP!], mode: 'two-file' };
   }
   if (pos.length === 1) {
@@ -662,19 +666,31 @@ if (cmd === 'analyze') {
     const rowSortBy = sortRowsArg ? parseAnalyzeRowSortBy(sortRowsArg) : undefined;
     const rowSortDesc = hasFlag('rows-desc');
     // Triage allowlists + pattern-hit + structural filters (filter → sort → limit)
+    const rowVoidRisk = parseAnalyzeCsvList(argValue('void-risk'));
+    const rowMaxSeverity = parseAnalyzeCsvList(argValue('max-severity'));
+    const rowMarketClass = parseAnalyzeCsvList(argValue('market-class'));
+    const rowEventType = parseAnalyzeCsvList(argValue('event-type'));
+    const rowMarketType = parseAnalyzeCsvList(argValue('market-type'));
+    const rowPeriod = parseAnalyzeCsvList(argValue('periods'));
+    const rowEventId = parseAnalyzeCsvList(argValue('event-id'));
+    const rowPattern = parseAnalyzeCsvList(argValue('pattern'));
+    const rowPatternFamily = parseAnalyzeCsvList(argValue('pattern-family'));
+    const rowHasEye = hasFlag('has-eye') ? true : undefined;
+    const rowSinceMs = parseAnalyzeTimeBound(argValue('since'));
+    const rowUntilMs = parseAnalyzeTimeBound(argValue('until'));
     const rowFilter = {
-      voidRisk: parseAnalyzeCsvList(argValue('void-risk')),
-      maxSeverity: parseAnalyzeCsvList(argValue('max-severity')),
-      marketClass: parseAnalyzeCsvList(argValue('market-class')),
-      eventType: parseAnalyzeCsvList(argValue('event-type')),
-      marketType: parseAnalyzeCsvList(argValue('market-type')),
-      period: parseAnalyzeCsvList(argValue('periods')),
-      eventId: parseAnalyzeCsvList(argValue('event-id')),
-      pattern: parseAnalyzeCsvList(argValue('pattern')),
-      patternFamily: parseAnalyzeCsvList(argValue('pattern-family')),
-      hasEye: hasFlag('has-eye') ? true : undefined,
-      sinceMs: parseAnalyzeTimeBound(argValue('since')),
-      untilMs: parseAnalyzeTimeBound(argValue('until')),
+      ...(rowVoidRisk !== undefined ? { voidRisk: rowVoidRisk } : {}),
+      ...(rowMaxSeverity !== undefined ? { maxSeverity: rowMaxSeverity } : {}),
+      ...(rowMarketClass !== undefined ? { marketClass: rowMarketClass } : {}),
+      ...(rowEventType !== undefined ? { eventType: rowEventType } : {}),
+      ...(rowMarketType !== undefined ? { marketType: rowMarketType } : {}),
+      ...(rowPeriod !== undefined ? { period: rowPeriod } : {}),
+      ...(rowEventId !== undefined ? { eventId: rowEventId } : {}),
+      ...(rowPattern !== undefined ? { pattern: rowPattern } : {}),
+      ...(rowPatternFamily !== undefined ? { patternFamily: rowPatternFamily } : {}),
+      ...(rowHasEye !== undefined ? { hasEye: rowHasEye } : {}),
+      ...(rowSinceMs !== undefined ? { sinceMs: rowSinceMs } : {}),
+      ...(rowUntilMs !== undefined ? { untilMs: rowUntilMs } : {}),
     };
     const limitRaw = argValue('limit');
     const rowLimit =
@@ -705,10 +721,11 @@ if (cmd === 'analyze') {
     const runOnce = async (opts: { clearTty: boolean; openHtml: boolean }) => {
       const paths = pos.length ? pos : await resolveFromPaths();
       const events = paths.length ? await loadTrackerEventsFromPaths(paths) : [];
+      const periodArg = argValue('period');
       const weighted = weightTrackerEvents(events, {
         sportId,
         phase,
-        period: argValue('period') ?? undefined,
+        ...(periodArg !== undefined ? { period: periodArg } : {}),
         patternSort: { sortBy, desc },
       });
       const render = renderSportAnalyze({
@@ -716,14 +733,14 @@ if (cmd === 'analyze') {
         phase,
         sortBy,
         desc,
-        events: weighted,
-        columns: columnsArg,
+        events: weighted.map(({ file, ...e }) => (file === undefined ? e : { ...e, file })),
+        ...(columnsArg !== undefined ? { columns: columnsArg } : {}),
         colors,
-        rowSortBy,
+        ...(rowSortBy !== undefined ? { rowSortBy } : {}),
         rowSortDesc,
         rowFilter,
-        rowLimit,
-        autoRefreshSec,
+        ...(rowLimit !== undefined ? { rowLimit } : {}),
+        ...(autoRefreshSec !== undefined ? { autoRefreshSec } : {}),
         prevRows,
         prevSummary,
       });

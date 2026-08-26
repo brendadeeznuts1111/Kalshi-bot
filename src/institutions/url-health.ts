@@ -124,7 +124,7 @@ export async function probeKalshiExchange(
     ok: r.ok,
     status: r.status,
     latencyMs: r.latencyMs,
-    error: r.error,
+    ...(r.error === undefined ? {} : { error: r.error }),
   };
 }
 
@@ -215,7 +215,7 @@ export async function probeOfficialCatalog(
           status: 0,
           latencyMs: 0,
           skipped: true,
-          skipReason: job.skipReason,
+          ...(job.skipReason === undefined ? {} : { skipReason: job.skipReason }),
         };
         continue;
       }
@@ -227,7 +227,7 @@ export async function probeOfficialCatalog(
         ok: r.ok,
         status: r.status,
         latencyMs: r.latencyMs,
-        error: r.error,
+        ...(r.error === undefined ? {} : { error: r.error }),
       };
     }
   }

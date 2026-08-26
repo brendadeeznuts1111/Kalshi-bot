@@ -47,7 +47,7 @@ export function latestOddsForEvent(
     const competitor =
       r.side === "winner" ? r.winner : r.side === "loser" ? r.loser : undefined;
     const side = normalizeSideToHomeAway(r.side, {
-      competitor,
+      ...(competitor === undefined ? {} : { competitor }),
       home: r.player_a,
       away: r.player_b,
     });
@@ -146,7 +146,7 @@ export function latestOddsByMatchKey(
     const competitor =
       r.side === "winner" ? r.winner : r.side === "loser" ? r.loser : undefined;
     const side = normalizeSideToHomeAway(r.side, {
-      competitor,
+      ...(competitor === undefined ? {} : { competitor }),
       home: r.player_a,
       away: r.player_b,
     });

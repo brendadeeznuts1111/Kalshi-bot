@@ -359,9 +359,9 @@ export function upsertInventoryLeagues(
 }
 
 type ListInventoryLeaguesOptions = {
-  bookId?: string;
+  bookId?: string | undefined;
   unmappedOnly?: boolean;
-  sportId?: string;
+  sportId?: string | undefined;
   limit?: number;
   /** Prefer last_seen desc (default) or peak_event_count desc */
   orderBy?: 'last_seen' | 'peak';
@@ -510,8 +510,8 @@ export function stampInventoryLeaguesCompetitionIds(
     const hit = resolveCompetition({
       liveProduct: 'plive',
       league: row.leagueKey,
-      sportId: isSportId(sport) ? sport : undefined,
-      inventoryBucket: row.inventoryBucket || undefined,
+      ...(isSportId(sport) ? { sportId: sport } : {}),
+      ...(row.inventoryBucket ? { inventoryBucket: row.inventoryBucket } : {}),
     });
     const next = hit?.competitionId ?? null;
     const prev = row.competitionId?.trim() || null;

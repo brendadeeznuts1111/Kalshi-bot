@@ -43,7 +43,7 @@ async function main(): Promise<number> {
   for (const f of files) {
     const lines = readFileSync(join(ROOT, f), 'utf8').split('\n');
     for (let i = 0; i < lines.length - 1; i++) {
-      const sig = sigRe.exec(lines[i]);
+      const sig = sigRe.exec(lines[i]!);
       if (!sig) continue;
       const fn = sig[1]!;
       // Body must be exactly: return Bun.X(...) then close brace.

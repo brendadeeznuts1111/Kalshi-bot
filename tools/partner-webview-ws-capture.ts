@@ -44,9 +44,9 @@ const summaryPath = join(outDir, `ws-${stamp}-summary.json`);
 type Frame = {
   t: number;
   dir: 'sent' | 'recv' | 'created' | 'closed' | 'error';
-  url?: string;
-  payload?: string;
-  requestId?: string;
+  url?: string | undefined;
+  payload?: string | undefined;
+  requestId?: string | undefined;
 };
 
 const frames: Frame[] = [];

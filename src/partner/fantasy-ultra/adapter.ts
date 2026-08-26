@@ -145,7 +145,9 @@ export class FantasyUltraAdapter implements FantasySessionAdapter {
   /** Resolved PlaceBet URL (constructor / map / env) or null if unmapped. */
   getPlaceOrderUrl(): string | null {
     return resolvePlaceBetUrl({
-      placeOrderUrl: this.placeOrderUrlOpt,
+      ...(this.placeOrderUrlOpt !== undefined
+        ? { placeOrderUrl: this.placeOrderUrlOpt }
+        : {}),
       map: this.placeBetMap,
     });
   }

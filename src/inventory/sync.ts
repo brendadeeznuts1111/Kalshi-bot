@@ -201,7 +201,7 @@ export function collectBoardEnrichCandidates(
   db: Database,
   bookId: string,
   scope: EnrichBookedScope,
-  options: { limit?: number | null } = {}
+  options: { limit?: number | null | undefined } = {}
 ): Array<{
   inventoryId: string;
   home: string | null;
@@ -361,7 +361,7 @@ export function applyBookedOddsEnrich(
   catalog: BookedMatchEntry[],
   options: {
     dryRun?: boolean;
-    nowMs?: number;
+    nowMs?: number | undefined;
     /** Optional map inventoryId → SkinEventRow to stamp oddsEventId in memory */
     touch?: Map<string, SkinEventRow>;
   } = {}
@@ -379,8 +379,8 @@ export function applyBookedOddsEnrich(
   let enriched = 0;
   for (const row of candidates) {
     const cid = matchBookedOddsEventId(row.home, row.away, catalog, {
-      sport: row.sport,
-      league: row.league,
+      ...(row.sport !== undefined ? { sport: row.sport } : {}),
+      ...(row.league !== undefined ? { league: row.league } : {}),
     });
     if (!cid) continue;
     if (update) {
@@ -403,14 +403,14 @@ export function planInventoryUpsert(
   db: Database,
   events: InventoryEvent[],
   options: {
-    nowMs?: number;
-    identity?: InventoryIdentity;
+    nowMs?: number | undefined;
+    identity?: InventoryIdentity | undefined;
   } = {}
 ): SkinEventUpsertResult {
   return upsertSkinLiveEvents(db, events, {
-    nowMs: options.nowMs,
-    identity: options.identity,
     dryRun: true,
+    ...(options.nowMs !== undefined ? { nowMs: options.nowMs } : {}),
+    ...(options.identity !== undefined ? { identity: options.identity } : {}),
   });
 }
 
@@ -455,7 +455,7 @@ export async function runInventorySync(
     upsert = dryRun
       ? planInventoryUpsert(db, events, { nowMs: options.nowMs, identity })
       : upsertSkinLiveEvents(db, events, {
-          nowMs: options.nowMs,
+          ...(options.nowMs !== undefined ? { nowMs: options.nowMs } : {}),
           identity,
         });
   }
@@ -491,17 +491,17 @@ export async function runInventorySync(
           maxEvents: options.enrichCatalogMax ?? 2000,
           maxPages: 40,
           // Full catalog when enrich-only or multi-sport; single-sport poll keeps hint
-          sport: enrichOnly || sportSel.kind === 'sports' && sportSel.sports.length > 1
-            ? undefined
-            : catalogSportFilter,
+          ...(enrichOnly || (sportSel.kind === 'sports' && sportSel.sports.length > 1) || catalogSportFilter === undefined
+            ? {}
+            : { sport: catalogSportFilter }),
         });
         const byId = new Map(
           bookedCatalogToMatchList(pub.entries).map(e => [e.oddsEventId, e] as const)
         );
         try {
           const booked = await adapter.listBookedEvents({
-            sport: catalogSportFilter,
             limit: 200,
+            ...(catalogSportFilter !== undefined ? { sport: catalogSportFilter } : {}),
           });
           for (const b of booked) {
             byId.set(b.oddsEventId, {
@@ -569,10 +569,9 @@ export async function runInventorySync(
         matched: enriched,
         // Fail hard only when catalog empty (match path dead), not on name-miss alone.
         requireAnyMatchWhenCandidates: catalog.length === 0,
-        maxUnlinkedRatio:
-          options.minLinkedPct != null
-            ? 1 - options.minLinkedPct / 100
-            : undefined,
+        ...(options.minLinkedPct != null
+          ? { maxUnlinkedRatio: 1 - options.minLinkedPct / 100 }
+          : {}),
       });
       if (catalog.length === 0 && enrichCandidates > 0) {
         enrichValidation.errors.push(
@@ -583,8 +582,8 @@ export async function runInventorySync(
       enrichQuality = buildEnrichQualityReport(candidates, catalog, {
         linkedPct: enrichValidation.oddsLink?.linkedPct ?? null,
         gates: {
-          minMatchRate: options.minMatchRate,
-          minLinkedPct: options.minLinkedPct,
+          ...(options.minMatchRate !== undefined ? { minMatchRate: options.minMatchRate } : {}),
+          ...(options.minLinkedPct !== undefined ? { minLinkedPct: options.minLinkedPct } : {}),
           // Name-miss alone is expected; only gate when minMatchRate set or catalog empty.
           requireAnyMatchWhenCandidates: false,
         },
@@ -677,7 +676,7 @@ export async function runInventorySync(
       ? [...upsert.inserted, ...upsert.updated]
       : events;
   const leagues = upsertInventoryLeagues(db, leagueSource, {
-    nowMs: options.nowMs,
+    ...(options.nowMs !== undefined ? { nowMs: options.nowMs } : {}),
     identity,
     dryRun,
   });

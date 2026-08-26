@@ -68,35 +68,35 @@ async function buildVerifiedRows(): Promise<Row[]> {
       feature: "Agent Auth",
       before:  "Full-table bcrypt scan + O(n) timing leak",
       after:   "Hash prefix lookup + constant-time verify",
-      expected: expectedStates["Agent Auth"],
+      expected: expectedStates["Agent Auth"]!,
       actual:   { method: "prefix_lookup", timing: "constant" },
     },
     {
       feature: "Vault Encryption",
       before:  "Global key only — one compromise = all partners",
       after:   "HKDF per node_id + key version",
-      expected: expectedStates["Vault Encryption"],
+      expected: expectedStates["Vault Encryption"]!,
       actual:   { isolation: "per-tenant", algorithm: "HKDF-SHA256" },
     },
     {
       feature: "Tenant Isolation",
       before:  "No tenant filter enforcement — raw queries everywhere",
       after:   "ScopedRepository + lint gate",
-      expected: expectedStates["Tenant Isolation"],
+      expected: expectedStates["Tenant Isolation"]!,
       actual:   { enforced: true, scope: ["node_id", "country", "sport", "market"] },
     },
     {
       feature: "State Compliance",
       before:  "No state-level checks — regulatory blind spots",
       after:   "HTTP compliance service per partner/state (MA,NJ live)",
-      expected: expectedStates["State Compliance"],
-      actual:   complianceState.actual ?? expectedStates["State Compliance"],
+      expected: expectedStates["State Compliance"]!,
+      actual:   complianceState.actual ?? expectedStates["State Compliance"]!,
     },
     {
       feature: "Feedback Loops",
       before:  "No win/loss or line movement feedback loop",
       after:   "CLV, RLM, patterns, zip clusters, post-wager snapshots (5min)",
-      expected: expectedStates["Feedback Loops"],
+      expected: expectedStates["Feedback Loops"]!,
       actual:   { metrics: ["CLV", "RLM", "patterns", "zip", "post_bet"] },
     },
   ];
@@ -125,14 +125,14 @@ function renderTable(rows: Row[]): string {
   const top = cols.map((w) => "─".repeat(w)).join("┬");
   const bottom = cols.map((w) => "─".repeat(w)).join("┴");
 
-  const headerLine = "│ " + headers.map((h, i) => pad(h, cols[i] - 2)).join(" │ ") + " │";
+  const headerLine = "│ " + headers.map((h, i) => pad(h, cols[i]! - 2)).join(" │ ") + " │";
 
   const lines = rows.map((row) => {
     const cells = [
-      pad(row.feature, cols[0] - 2),
-      pad(row.before, cols[1] - 2),
-      pad(row.after, cols[2] - 2),
-      pad(row.status ?? "", cols[3] - 2),
+      pad(row.feature, cols[0]! - 2),
+      pad(row.before, cols[1]! - 2),
+      pad(row.after, cols[2]! - 2),
+      pad(row.status ?? "", cols[3]! - 2),
     ];
     return "│ " + cells.join(" │ ") + " │";
   });

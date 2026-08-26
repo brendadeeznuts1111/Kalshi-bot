@@ -72,16 +72,16 @@ export type BettingAccountRow = {
    * White-label SkinId from meta_json (stamped on write).
    * Not a DB column — derived for callers.
    */
-  skinId?: SkinId;
+  skinId?: SkinId | undefined;
   /**
    * Desk BookId from meta_json / host (stamped on write).
    * Not a DB column — derived for callers.
    */
-  bookId?: BookId;
+  bookId?: BookId | undefined;
   /** Mapper kind from meta_json (fantasy402 | unmapped). */
-  mapper?: OutMapperKind;
+  mapper?: OutMapperKind | undefined;
   /** Adapter id from OutIdentity (fantasy-ultra | kalshi | unmapped). */
-  adapterId?: MapperAdapterId;
+  adapterId?: MapperAdapterId | undefined;
 };
 
 export type ProviderCapacity = {
@@ -366,7 +366,7 @@ export function outIdentityFromAccount(
     skin: account.skin,
     metaJson: account.metaJson,
     status: account.status,
-    requireHost: options?.requireHost,
+    ...(options?.requireHost !== undefined ? { requireHost: options.requireHost } : {}),
   });
 }
 
@@ -502,6 +502,7 @@ export function seedFantasy402FromEnv(
   const vaultId =
     envMap.FANTASY402_VAULT_ID?.trim() ||
     (accountId.startsWith('out-') ? `vault-${accountId}` : undefined);
+  const agentID = envMap.FANTASY402_AGENT_ID?.trim() || undefined;
 
   // Host → SkinId + ⊆ check + stamp via OutIdentity inside upsertBettingAccount.
   // Column `skin` is legacy schema — always null on write (capacity in meta only).
@@ -518,12 +519,13 @@ export function seedFantasy402FromEnv(
     skin: null,
     metaJson: buildOutCapacityMeta({
       liveProducts,
-      workingBalance:
-        workingBalance != null && Number.isFinite(workingBalance) ? workingBalance : undefined,
-      vaultId,
-      partnerCode: partnerCode ?? undefined,
+      ...(workingBalance != null && Number.isFinite(workingBalance)
+        ? { workingBalance }
+        : {}),
+      ...(vaultId !== undefined ? { vaultId } : {}),
+      ...(partnerCode ? { partnerCode } : {}),
       customerID,
-      agentID: envMap.FANTASY402_AGENT_ID?.trim() || undefined,
+      ...(agentID !== undefined ? { agentID } : {}),
       defaultLiveProduct: String(liveProducts[0]?.name ?? productWire),
     }),
   };

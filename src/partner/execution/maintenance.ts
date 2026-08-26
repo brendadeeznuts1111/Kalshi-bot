@@ -55,7 +55,7 @@ export function runExecutionMaintenance(
   const recoveredStalePlacing = recoverStalePlacingReservations(db, {
     nowMs,
     staleAfterMs: options.placingStaleAfterMs ?? DEFAULT_PLACING_STALE_AFTER_MS,
-    provider: options.provider,
+    ...(options.provider !== undefined ? { provider: options.provider } : {}),
   });
   const counts = db
     .query(

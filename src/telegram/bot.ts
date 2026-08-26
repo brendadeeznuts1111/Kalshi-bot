@@ -117,8 +117,8 @@ export async function handleCommand(
   if (cmd === "subscribe") {
     const added = await addSubscriber({
       chatId,
-      username,
-      firstName,
+      ...(username !== undefined ? { username } : {}),
+      ...(firstName !== undefined ? { firstName } : {}),
       subscribedAt: new Date().toISOString(),
     });
     await sendMessage(chatId, added ? "✅ Subscribed to weekly calibration digest." : "ℹ️ Already subscribed.");

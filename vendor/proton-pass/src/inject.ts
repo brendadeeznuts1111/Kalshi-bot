@@ -169,7 +169,7 @@ export type RunResult = {
   code: number | null;
   detail: string;
   /** Temp path used when templates were materialized (already deleted). */
-  materializedPath?: string;
+  materializedPath?: string | undefined;
 };
 
 /**

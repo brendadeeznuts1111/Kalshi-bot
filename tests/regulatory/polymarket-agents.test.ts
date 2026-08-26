@@ -173,11 +173,11 @@ describe("Polymarket client", () => {
       fetchImpl: mockFetch(raw),
     });
     expect(markets).toHaveLength(1);
-    expect(markets[0].slug).toBe("will-it-rain");
-    expect(markets[0].outcomes).toEqual(["Yes", "No"]);
-    expect(markets[0].outcomePrices).toEqual([0.6, 0.4]);
-    expect(markets[0].volume).toBe(1000.5);
-    expect(markets[0].liquidityClob).toBe(5500);
+    expect(markets[0]!.slug).toBe("will-it-rain");
+    expect(markets[0]!.outcomes).toEqual(["Yes", "No"]);
+    expect(markets[0]!.outcomePrices).toEqual([0.6, 0.4]);
+    expect(markets[0]!.volume).toBe(1000.5);
+    expect(markets[0]!.liquidityClob).toBe(5500);
   });
 
   test("fetchPolymarketMarket normalizes single market", async () => {
@@ -277,8 +277,8 @@ describe("PolymarketLineTracker", () => {
     });
 
     expect(moves).toHaveLength(1);
-    expect(moves[0].deltaBp).toBe(600);
-    expect(moves[0].direction).toBe("up");
+    expect(moves[0]!.deltaBp).toBe(600);
+    expect(moves[0]!.direction).toBe("up");
   });
 
   test("ignores move below threshold", () => {
@@ -371,8 +371,8 @@ describe("AgentOrchestrator", () => {
     );
 
     expect(results).toHaveLength(2);
-    expect(results[0].ok).toBe(true);
-    expect(results[1].ok).toBe(true);
+    expect(results[0]!.ok).toBe(true);
+    expect(results[1]!.ok).toBe(true);
   });
 });
 
@@ -405,7 +405,7 @@ describe("ComplianceAgent", () => {
     // Verify violation was logged
     const v = db.query<{ reason: string }, []>(`SELECT reason FROM ${TABLE.REGULATORY_VIOLATIONS}`).all();
     expect(v).toHaveLength(1);
-    expect(v[0].reason).toContain("Steam alert");
+    expect(v[0]!.reason).toContain("Steam alert");
   });
 
   test("COMPLIANCE_CHECK blocks excluded user", async () => {
@@ -484,7 +484,7 @@ describe("MarketDataAgent", () => {
     // Verify tick in DB
     const ticks = db.query<{ slug: string }, []>(`SELECT slug FROM ${TABLE.POLYMARKET_TICKS}`).all();
     expect(ticks).toHaveLength(1);
-    expect(ticks[0].slug).toBe("market-a");
+    expect(ticks[0]!.slug).toBe("market-a");
   });
 
   test("latestTicks returns most recent per slug", async () => {
@@ -504,7 +504,7 @@ describe("MarketDataAgent", () => {
     const agent = new MarketDataAgent(db);
     const latest = agent.latestTicks(10);
     expect(latest).toHaveLength(1);
-    expect(latest[0].yesPrice).toBe(0.55);
+    expect(latest[0]!.yesPrice).toBe(0.55);
   });
 });
 

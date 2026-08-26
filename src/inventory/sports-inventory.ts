@@ -177,9 +177,9 @@ export async function fetchStreamSportsInventory(
 ): Promise<StreamSportsInventory> {
   const { fetchPublicStreamListWire } = await import("./stream-list-fetch.ts");
   const { wire, url } = await fetchPublicStreamListWire({
-    url: options.url,
-    fetchImpl: options.fetchImpl,
-    cacheOnly: options.cacheOnly,
+    ...(options.url !== undefined ? { url: options.url } : {}),
+    ...(options.fetchImpl !== undefined ? { fetchImpl: options.fetchImpl } : {}),
+    ...(options.cacheOnly !== undefined ? { cacheOnly: options.cacheOnly } : {}),
   });
   return inventoryFromStreamList(wire, { url });
 }

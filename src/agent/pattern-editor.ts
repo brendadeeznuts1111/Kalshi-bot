@@ -7,8 +7,8 @@ import { patternReportBasename, type FilePatternSlice, type PatternReport } from
 
 export type PatternEditorTarget = {
   path: string;
-  line?: number;
-  column?: number;
+  line?: number | undefined;
+  column?: number | undefined;
   source: "clone" | "report";
 };
 
@@ -47,7 +47,11 @@ export function resolvePatternEditorTarget(
 }
 
 export function openPatternEditorTarget(target: PatternEditorTarget): void {
-  openTarget({ path: target.path, line: target.line, column: target.column });
+  openTarget({
+    path: target.path,
+    ...(target.line !== undefined ? { line: target.line } : {}),
+    ...(target.column !== undefined ? { column: target.column } : {}),
+  });
 }
 
 export function openPatternReport(dimension: string, line?: number): void {

@@ -19,7 +19,9 @@ export function createKalshiDemoEvidenceSource(
         loadKalshiLifecycleBatch(client, {
           outId: options.outId,
           observedAtMs: capturedAtMs,
-          reservationForClientOrderId: options.reservationForClientOrderId,
+          ...(options.reservationForClientOrderId !== undefined
+            ? { reservationForClientOrderId: options.reservationForClientOrderId }
+            : {}),
         }),
         client.getBalance(),
         loadAllPositionPages(client),

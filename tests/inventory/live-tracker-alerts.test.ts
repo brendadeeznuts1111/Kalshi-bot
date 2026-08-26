@@ -16,9 +16,9 @@ function ev(
     eventType: over.eventType,
     eventId: over.eventId ?? 99,
     detail: over.detail,
-    period: over.period,
-    marketType: over.marketType,
-    to: over.to,
+    ...(over.period !== undefined ? { period: over.period } : {}),
+    ...(over.marketType !== undefined ? { marketType: over.marketType } : {}),
+    ...(over.to !== undefined ? { to: over.to } : {}),
   };
 }
 
@@ -80,6 +80,6 @@ describe('live-tracker-alerts', () => {
     expect(newer.shouldSend).toBe(true);
     expect(newer.reason).toBe('new_keys');
     expect(newer.newKeys.length).toBe(1);
-    expect(liveAlertKey(newer.alerts[0]!)).toBe(newer.newKeys[0]);
+    expect(liveAlertKey(newer.alerts[0]!)).toBe(newer.newKeys[0]!);
   });
 });

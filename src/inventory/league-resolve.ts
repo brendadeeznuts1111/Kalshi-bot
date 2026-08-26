@@ -228,8 +228,8 @@ function rowToSuggestion(row: InventoryLeagueRow): LeagueResolveSuggestion {
   const exact = resolveCompetition({
     liveProduct: 'plive',
     league: row.leagueKey,
-    sportId: isSportId(sport) ? sport : undefined,
-    inventoryBucket: row.inventoryBucket || undefined,
+    ...(isSportId(sport) ? { sportId: sport } : {}),
+    ...(row.inventoryBucket ? { inventoryBucket: row.inventoryBucket } : {}),
   });
 
   if (exact) {

@@ -87,12 +87,14 @@ export function buildGitHubErrorEnrichment(
 
   return {
     ...ctx,
-    staleDataRunId,
+    ...(staleDataRunId !== undefined ? { staleDataRunId } : {}),
     staleDataAgeMs,
-    staleDataSourceDimension,
+    ...(staleDataSourceDimension !== undefined ? { staleDataSourceDimension } : {}),
     cachedDataAvailable,
-    cacheFallbackSource,
-    inspectCacheRepoCount,
-    blockedOperations: overrides.blockedOperations,
+    ...(cacheFallbackSource !== undefined ? { cacheFallbackSource } : {}),
+    ...(inspectCacheRepoCount !== undefined ? { inspectCacheRepoCount } : {}),
+    ...(overrides.blockedOperations !== undefined
+      ? { blockedOperations: overrides.blockedOperations }
+      : {}),
   };
 }

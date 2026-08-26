@@ -104,8 +104,8 @@ const TOKEN_RE = /Bun\.([A-Za-z_$][A-Za-z0-9_$]*)(?:\.([A-Za-z_$][A-Za-z0-9_$]*)
 function tokensIn(span: string): string[] {
   const out = new Set<string>();
   for (const m of span.matchAll(TOKEN_RE)) {
-    let tok = m[2] ? m[1] + "." + m[2] : m[1];
-    if (tok.includes(".") && !byKey.has(tok)) tok = tok.split(".")[0];
+    let tok = m[2] ? m[1]! + "." + m[2] : m[1]!;
+    if (tok.includes(".") && !byKey.has(tok)) tok = tok.split(".")[0]!;
     out.add(tok);
   }
   return [...out];

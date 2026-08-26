@@ -62,7 +62,7 @@ export type PandoraCoverageReport = {
     wagerTypes: number;
     knownMarketTypeIds: string[];
     interestingHtmlKeys: string[];
-    wagerSampleUnmapped: Array<{ id: string; name: string; shortName?: string | null }>;
+    wagerSampleUnmapped: Array<{ id: string; name: string; shortName?: string | null | undefined }>;
   };
   competitionsSeeded: number;
 };
@@ -248,7 +248,7 @@ export function planAttachPandoraMappings(
 export function liveLeaguesToPromoteInputs(
   leagues: WidgetLiveLeague[],
   sportMap: PandoraSportMapEntry[],
-  options: { sportId?: string } = {}
+  options: { sportId?: string | undefined } = {}
 ): Array<PromoteLeagueInput & { pandoraLeagueId: string; feedSportId: string }> {
   const byFeed = new Map(sportMap.map(s => [s.feedSportId, s]));
   const want = options.sportId?.trim().toLowerCase();

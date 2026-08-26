@@ -85,7 +85,7 @@ export function openEventStore(options: OpenEventStoreOptions = {}): Database {
   }
   const db = new Database(dbPath, {
     create: !options.readonly,
-    readonly: options.readonly,
+    ...(options.readonly === undefined ? {} : { readonly: options.readonly }),
   });
   // Enforce REFERENCES on book_ticks / markets / live_scores (SQLite defaults off).
   db.run('PRAGMA foreign_keys = ON;');
@@ -532,7 +532,7 @@ export function migrateSkinEventsCompetitionIds(db: Database): void {
     const hit = resolveCompetition({
       liveProduct,
       league: row.league ?? '',
-      sportId: isSportId(sport) ? sport : undefined,
+      ...(isSportId(sport) ? { sportId: sport } : {}),
     });
     const next = hit?.competitionId ?? null;
     const prev = row.competitionId?.trim() || null;

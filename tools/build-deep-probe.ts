@@ -36,7 +36,7 @@ await Bun.write(D + "/macro.ts", 'export function magic(x: number) { return "MAG
 await Bun.write(D + "/cli.ts", 'import { magic, TABLE } from "./macro.ts" with { type: "macro" };\nconst r = magic(7);\nconsole.log(r, TABLE.b);\n');
 const r2 = await Bun.build({ entrypoints: [D + "/cli.ts"], outdir: D + "/out-macro" });
 if (r2.success) {
-  const text = await r2.outputs[0].text();
+  const text = await r2.outputs[0]!.text();
   const m = text.match(/MAGIC_7_(\d+)/);
   check("P2 macro call inlined", !!m && !text.includes("Math.random") && !text.includes("magic("), "res=" + (m ? m[1] : "none"));
   // P2b CORRECTION: macro CONST exports are NOT inlined — the reference
@@ -48,7 +48,7 @@ if (r2.success) {
 await Bun.write(D + "/cli-assert.ts", 'import { magic } from "./macro.ts" assert { type: "macro" };\nconsole.log("ASSERT", magic(3));\n');
 const r2c = await Bun.build({ entrypoints: [D + "/cli-assert.ts"], outdir: D + "/out-macro-assert" });
 if (r2c.success) {
-  const text = await r2c.outputs[0].text();
+  const text = await r2c.outputs[0]!.text();
   check("P2c assert form works", /MAGIC_3_(\d+)/.test(text), "");
 } else { check("P2c assert form works", false, JSON.stringify(r2c.logs)); }
 
@@ -60,7 +60,7 @@ process.env.PUBLIC_API_URL = "inprocess.example.com";
 await Bun.write(D + "/env.ts", 'const url = process.env.PUBLIC_API_URL;\nconst secret = process.env.SECRET_TOKEN;\nconsole.log(url, secret);\n');
 const r3 = await Bun.build({ entrypoints: [D + "/env.ts"], outdir: D + "/out-env", env: "PUBLIC_*" as any });
 if (r3.success) {
-  const text = await r3.outputs[0].text();
+  const text = await r3.outputs[0]!.text();
   check("P3 env inlining ignores in-process env", !text.includes("inprocess.example.com") && text.includes("process.env.PUBLIC_API_URL"), text.slice(0, 80));
   check("P3a non-prefixed preserved", text.includes("process.env.SECRET_TOKEN"), "");
 } else { check("P3 env inlining ignores in-process env", false, JSON.stringify(r3.logs)); }
@@ -83,7 +83,7 @@ const r4 = await Bun.build({
   }],
 });
 if (r4.success) {
-  const text = await r4.outputs[0].text();
+  const text = await r4.outputs[0]!.text();
   check("P4 virtual module plugin", text.includes("PLUG") && text.includes("42") && !text.includes("export const V = 42"), "");
   check("P4a onStart/onEnd fired", started === 1 && ended === 1, "start=" + started + " end=" + ended);
 } else { check("P4 virtual module plugin", false, JSON.stringify(r4.logs)); }

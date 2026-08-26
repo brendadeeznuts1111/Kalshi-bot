@@ -35,8 +35,8 @@ export type GhSearchRepo = {
   pushedAt: string;
   isArchived: boolean;
   url: string;
-  defaultBranch?: string;
-  license?: { spdxId?: string | null; name?: string | null; key?: string } | null;
+  defaultBranch?: string | undefined;
+  license?: { spdxId?: string | null; name?: string | null; key?: string | undefined } | null;
 };
 
 export type GitHubSearchResult = {

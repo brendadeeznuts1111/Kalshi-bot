@@ -66,8 +66,8 @@ type ResolvedMatchRow = {
 };
 
 export function evaluatePrior(opts: {
-  dbPath?: string;
-  surface?: string;
+  dbPath?: string | undefined;
+  surface?: string | undefined;
   db?: Database;
 }): PriorEvalSummary {
   const ownDb = opts.db ?? new Database(opts.dbPath ?? DEFAULT_EVENT_STORE_DB, { readonly: true });
@@ -100,7 +100,10 @@ export function evaluatePrior(opts: {
       // Strictly before this match's start — the outcome being evaluated must
       // not leak into its own strengths.
       const asOfMs = startMs - 1;
-      const strengthOpts = { asOfMs, surface: opts.surface };
+      const strengthOpts = {
+        asOfMs,
+        ...(opts.surface !== undefined ? { surface: opts.surface } : {}),
+      };
       const sA = strengthFor(db, row.player_a, strengthOpts);
       const sB = strengthFor(db, row.player_b, strengthOpts);
       const p = clampProb(matchupPriorP(sA.strength, sB.strength));

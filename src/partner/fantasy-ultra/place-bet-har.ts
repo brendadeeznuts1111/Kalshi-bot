@@ -16,7 +16,7 @@ export type PlaceBetEndpointMap = {
   version: 1;
   generatedAt: string;
   source: {
-    harPath?: string;
+    harPath?: string | undefined;
     entryIndex?: number;
     pageRef?: string | null;
   };

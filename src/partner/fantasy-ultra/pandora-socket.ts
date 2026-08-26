@@ -59,7 +59,7 @@ export type PandoraOpenInfo = {
   sid: string;
   pingInterval: number;
   pingTimeout: number;
-  maxPayload?: number;
+  maxPayload?: number | undefined;
 };
 
 export type PandoraSocketHandlers = {
@@ -99,7 +99,7 @@ export type PandoraSocketOptions = {
   reconnect?: boolean;
   maxReconnectAttempts?: number;
   /** WebSocket constructor (tests). */
-  WebSocketImpl?: typeof WebSocket;
+  WebSocketImpl?: typeof WebSocket | undefined;
 };
 
 export function defaultPandoraSocketUrl(
@@ -128,7 +128,7 @@ export type PandoraLiveSessionIds = {
   /** Base64 channel segment after live.main. */
   mainToken?: string;
   /** Optional event ids to subscribe for coefficients */
-  eventIds?: Array<string | number>;
+  eventIds?: Array<string | number> | undefined;
 };
 
 export const PANDORA_DEFAULT_SESSION: Required<

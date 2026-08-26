@@ -35,9 +35,9 @@ export type WidgetShellSport = {
 export type WidgetLiveSport = {
   id: string;
   name: string;
-  order?: number;
+  order?: number | undefined;
   /** Market-type flags from feed (`m` map). */
-  marketFlags?: Record<string, unknown>;
+  marketFlags?: Record<string, unknown> | undefined;
   /** Canonical SportId from feed id SSOT when known. */
   sportIdCanonical?: SportId | null;
 };
@@ -58,7 +58,7 @@ export type WidgetLiveLeague = {
   platformSport?: string | null;
   /** Best-effort SportId from feed SSOT (`s` then platformSport). */
   sportIdCanonical?: SportId | null;
-  order?: number;
+  order?: number | undefined;
 };
 
 export type WidgetWagerType = {
@@ -90,8 +90,8 @@ export type SportPeriodLanguageBlock = {
   /** feedSportId → periodCode → display label */
   bySport: Record<string, Record<string, string>>;
   /** feedSportId → unit noun (Inning, Quarter, Set, Game, Half, Map, Frame) */
-  periodUnit?: Record<string, string>;
-  abbreviations?: Record<string, string>;
+  periodUnit?: Record<string, string> | undefined;
+  abbreviations?: Record<string, string> | undefined;
 };
 
 export type WidgetSportPeriods = {
@@ -800,8 +800,8 @@ export function buildDomainGaps(input: {
 
 export async function fetchPliveShellHtml(
   options: {
-    url?: string;
-    fetchImpl?: typeof fetch;
+    url?: string | undefined;
+    fetchImpl?: typeof fetch | undefined;
     timeoutMs?: number;
   } = {}
 ): Promise<string> {

@@ -45,32 +45,32 @@ export type OutIdentity = {
   url: string;
   skinId: SkinId;
   /** Desk brand under the skin (host-derived); absent when no URL / unmapped book. */
-  bookId?: BookId;
+  bookId?: BookId | undefined;
   adapter: AdapterBinding;
   capacity: LiveProductCapacity[];
   defaultLiveProduct: string;
-  workingBalance?: number;
-  vaultId?: string;
-  partnerCode?: string;
-  customerID?: string;
-  agentID?: string;
+  workingBalance?: number | undefined;
+  vaultId?: string | undefined;
+  partnerCode?: string | undefined;
+  customerID?: string | undefined;
+  agentID?: string | undefined;
 };
 
 export type ParseOutIdentityInput = {
   id: string;
   partnerId: string;
   url: string;
-  provider?: string;
+  provider?: string | undefined;
   maxStake: number;
   maxWin: number;
   skin: number | null;
   metaJson: string;
-  status?: string;
+  status?: string | undefined;
   /**
    * When true (default), require resolvable host or meta.skinId.
    * False for kalshi-style rows with empty url.
    */
-  requireHost?: boolean;
+  requireHost?: boolean | undefined;
 };
 
 /** True for numeric Ultra wire ids ("2") that bypass offered-product ⊆. */
@@ -182,7 +182,7 @@ export function parseCapacityFromMeta(input: {
   maxWin: number;
   skin: number | null;
   meta: OutMeta;
-  status?: string;
+  status?: string | undefined;
 }): LiveProductCapacity[] {
   if (input.status && input.status !== 'active') return [];
 

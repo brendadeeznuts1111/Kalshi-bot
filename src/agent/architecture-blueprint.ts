@@ -70,7 +70,7 @@ export type BlueprintSection = {
   /** Gate config for the dimension run (when gateMiss is set). */
   gate?: GateOptions | null;
   /** Near misses + probe command when discover > 0 but none pass gate. */
-  gateMiss?: GateMissStats;
+  gateMiss?: GateMissStats | undefined;
 };
 
 export type ArchitectureBlueprint = {
@@ -528,8 +528,9 @@ export function formatArchitectureBlueprintMarkdown(blueprint: ArchitectureBluep
       for (const s of section.shortlistSummary) {
         const badge = formatTierBadge({
           auditTier: s.auditTier,
-          stale: section.dataFreshness?.stale,
-          ageMs: section.dataFreshness?.ageMs,
+          ...(section.dataFreshness
+            ? { stale: section.dataFreshness.stale, ageMs: section.dataFreshness.ageMs }
+            : {}),
         });
         const lic = s.unlicensed ? " · UNLICENSED" : "";
         lines.push(`- \`${s.fullName}\` — ${s.total} — ${badge}${lic}`);

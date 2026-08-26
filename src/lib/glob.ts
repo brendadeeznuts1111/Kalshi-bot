@@ -23,7 +23,11 @@ export type ListFilesOptions = {
 export function listFiles(pattern: string, opts: ListFilesOptions = {}): string[] {
   const g = new Bun.Glob(pattern);
   const out = Array.from(
-    g.scanSync({ cwd: opts.cwd ?? ".", onlyFiles: opts.onlyFiles, dot: opts.dot }),
+    g.scanSync({
+      cwd: opts.cwd ?? ".",
+      ...(opts.onlyFiles !== undefined ? { onlyFiles: opts.onlyFiles } : {}),
+      ...(opts.dot !== undefined ? { dot: opts.dot } : {}),
+    }),
   );
   return (opts.sort ?? true) ? out.sort() : out;
 }
@@ -36,7 +40,11 @@ export function listFiles(pattern: string, opts: ListFilesOptions = {}): string[
 export async function listFilesAsync(pattern: string, opts: ListFilesOptions = {}): Promise<string[]> {
   const g = new Bun.Glob(pattern);
   const out: string[] = [];
-  for await (const p of g.scan({ cwd: opts.cwd ?? ".", onlyFiles: opts.onlyFiles, dot: opts.dot })) {
+  for await (const p of g.scan({
+    cwd: opts.cwd ?? ".",
+    ...(opts.onlyFiles !== undefined ? { onlyFiles: opts.onlyFiles } : {}),
+    ...(opts.dot !== undefined ? { dot: opts.dot } : {}),
+  })) {
     out.push(p);
   }
   return (opts.sort ?? true) ? out.sort() : out;

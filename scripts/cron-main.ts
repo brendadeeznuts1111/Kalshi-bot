@@ -292,7 +292,7 @@ async function jobInventorySync(): Promise<void> {
     const report = await runInventorySync(getDb(), adapter, {
       sport,
       enrichBooked,
-      enrichBookedScope: enrichBooked ? enrichBookedScope : undefined,
+      ...(enrichBooked ? { enrichBookedScope } : {}),
     });
     const head = formatSyncReport(report).split("\n");
     console.error(`[cron:inventory] ${head[0]} · ${Date.now() - start}ms`);
@@ -404,14 +404,15 @@ async function jobPartnerFinance(): Promise<void> {
     const { runFinanceCron, formatFinanceCronReportText } = await import(
       "../src/partner/finance-cron.ts"
     );
+    const partnerFilter = Bun.env.PARTNER_FINANCE_PARTNER?.trim();
     const report = await runFinanceCron(getDb(), {
       strictEnv: Bun.env.PARTNER_FINANCE_STRICT_ENV === "1",
-      partnerFilter: Bun.env.PARTNER_FINANCE_PARTNER?.trim(),
       probeLogin: Bun.env.PARTNER_FINANCE_PROBE_LOGIN === "1",
       probeInventory: Bun.env.PARTNER_FINANCE_PROBE_INVENTORY !== "0",
       notify:
         Bun.env.PARTNER_FINANCE_NOTIFY === "1" ||
         Bun.env.PARTNER_TELEGRAM_NOTIFY === "true",
+      ...(partnerFilter !== undefined ? { partnerFilter } : {}),
     });
     console.error(
       `[cron:partner-finance] ${formatFinanceCronReportText(report).split("\n")[0]} · notified=${report.notified} · ${Date.now() - start}ms`,

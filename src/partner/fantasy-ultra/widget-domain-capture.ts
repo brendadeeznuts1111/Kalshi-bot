@@ -25,8 +25,8 @@ export type PandoraDomainRooms = {
  */
 export async function capturePandoraDomainRooms(
   options: {
-    seconds?: number;
-    WebSocketImpl?: typeof WebSocket;
+    seconds?: number | undefined;
+    WebSocketImpl?: typeof WebSocket | undefined;
   } = {}
 ): Promise<PandoraDomainRooms> {
   const seconds = Math.min(Math.max(options.seconds ?? 12, 3), 60);
@@ -113,6 +113,6 @@ export async function extractWidgetDomainWithPandora(
   }
   return extractWidgetDomain({
     ...options,
-    pandoraRooms,
+    ...(pandoraRooms !== undefined ? { pandoraRooms } : {}),
   });
 }

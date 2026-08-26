@@ -50,7 +50,9 @@ describe("fonbet parse (ODDSCORP wire shape)", () => {
   });
 
   test("events without two teams are rejected", () => {
-    expect(parseFonbetEvent({ ...EVENT, team2: undefined }, [], 1)).toBeNull();
+    const eventWithoutTeam2 = { ...EVENT };
+    delete eventWithoutTeam2.team2;
+    expect(parseFonbetEvent(eventWithoutTeam2, [], 1)).toBeNull();
   });
 
   test("numeric 1/2 selections resolve without team-name outcomes", () => {

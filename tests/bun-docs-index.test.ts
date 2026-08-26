@@ -52,7 +52,7 @@ describe.skipIf(!hasCache)("bun-docs cache integrity", () => {
       scopes: Record<string, Array<{ name: string; path: string }>>;
     };
     expect(disc.scopes).toBeDefined();
-    expect(disc.scopes.all.some((p) => p.path === "bundler/plugins.mdx")).toBe(true);
-    expect(disc.scopes.bundler.some((p) => p.path === "bundler/plugins.mdx")).toBe(true);
+    expect(disc.scopes.all!.some((p) => p.path === "bundler/plugins.mdx")).toBe(true);
+    expect(disc.scopes.bundler!.some((p) => p.path === "bundler/plugins.mdx")).toBe(true);
   });
 });

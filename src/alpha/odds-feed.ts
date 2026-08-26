@@ -161,7 +161,7 @@ export function pinnacleSnapshot(event: OddsEvent): PinnacleSnapshot | null {
   const american = {
     home: homePrice,
     away: awayPrice,
-    draw: drawOutcome?.price,
+    ...(drawOutcome?.price !== undefined ? { draw: drawOutcome.price } : {}),
   };
   const probabilities = impliedSideProbabilities(american);
 

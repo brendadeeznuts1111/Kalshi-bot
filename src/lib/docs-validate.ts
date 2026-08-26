@@ -88,7 +88,7 @@ export function validateBlock(block: CodeBlock): BlockValidation {
     }
   } catch (e) {
     v.ok = false;
-    v.error = String(e).split("\n")[0].slice(0, 100);
+    v.error = String(e).split("\n")[0]!.slice(0, 100);
   }
   return v;
 }
@@ -131,7 +131,7 @@ async function validateNative(lang: string, code: string): Promise<ValidatorResu
   const fn = NATIVE[lang as keyof typeof NATIVE];
   if (!fn) return { ok: true }; // no validator for this language
   try { fn(code); return { ok: true }; }
-  catch (e) { return { ok: false, error: String(e).split("\n")[0].slice(0, 100) }; }
+  catch (e) { return { ok: false, error: String(e).split("\n")[0]!.slice(0, 100) }; }
 }
 
 async function validateBash(code: string): Promise<ValidatorResult> {

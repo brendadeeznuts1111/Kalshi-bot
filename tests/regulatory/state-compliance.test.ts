@@ -361,7 +361,7 @@ describe("ScopedRepository", () => {
     const repo = new ScopedRepository<{ play_id: string; state_code: string | null }>(db, scope);
     const rows = repo.all("SELECT play_id, state_code FROM plays");
     expect(rows.length).toBe(1);
-    expect(rows[0].play_id).toBe("p1");
+    expect(rows[0]!.play_id).toBe("p1");
   });
 
   test("filters rows by scope with user", () => {

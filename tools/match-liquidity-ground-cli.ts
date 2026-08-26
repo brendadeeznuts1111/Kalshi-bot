@@ -58,7 +58,7 @@ export async function runMatchLiquidityGroundCli(argv: string[]): Promise<number
 
   const limit = values.limit ? Number(values.limit) : undefined;
   const artifact = await captureMatchLiquidityGround(db, {
-    limit: Number.isFinite(limit) ? limit : undefined,
+    ...(limit !== undefined && Number.isFinite(limit) ? { limit } : {}),
     htmlOnly: values["html-only"] === true,
   });
   await persistMatchLiquidityGroundArtifact(artifact);

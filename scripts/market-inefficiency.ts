@@ -200,7 +200,7 @@ function computeBrierScores(db: ReturnType<typeof openEventStore>): BrierResult 
   result.marketBrier = marketSum / rows.length;
 
   for (const surf of Object.keys(result.bySurface)) {
-    const s = result.bySurface[surf];
+    const s = result.bySurface[surf]!;
     s.elo /= s.n;
     s.market /= s.n;
   }
@@ -274,20 +274,20 @@ function computeRoi(db: ReturnType<typeof openEventStore>): RoiResult {
 
     for (const t of thresholds) {
       if (absGap >= t) {
-        result.byThreshold[t].trades++;
-        result.byThreshold[t].profitCents += profitCents;
-        if (profitCents > 0) result.byThreshold[t].wins++;
+        result.byThreshold[t]!.trades++;
+        result.byThreshold[t]!.profitCents += profitCents;
+        if (profitCents > 0) result.byThreshold[t]!.wins++;
       }
     }
   }
 
   for (const t of thresholds) {
-    const b = result.byThreshold[t];
+    const b = result.byThreshold[t]!;
     b.roiPct = b.trades > 0 ? Math.round((b.profitCents / (b.trades * 50)) * 100) : 0;
   }
 
   // Use 4¢ as primary threshold
-  const p = result.byThreshold[4];
+  const p = result.byThreshold[4]!;
   result.totalTrades = p.trades;
   result.profitableTrades = p.wins;
   result.totalProfitCents = p.profitCents;
@@ -303,7 +303,7 @@ function printRoiAnalysis(roi: RoiResult): void {
   console.log(`       ${"Threshold".padStart(10)}  ${"Trades".padStart(7)}  ${"Win%".padStart(5)}  ${"Profit".padStart(8)}  ${"ROI".padStart(5)}`);
   console.log(`       ${"─".repeat(10)}  ${"─".repeat(7)}  ${"─".repeat(5)}  ${"─".repeat(8)}  ${"─".repeat(5)}`);
   for (const t of thresholds) {
-    const b = roi.byThreshold[t];
+    const b = roi.byThreshold[t]!;
     const winPct = b.trades > 0 ? Math.round((b.wins / b.trades) * 100) : 0;
     const profitStr = b.profitCents > 0 ? `+${b.profitCents}` : String(b.profitCents);
     const roiStr = b.roiPct > 0 ? `+${b.roiPct}%` : `${b.roiPct}%`;
@@ -325,17 +325,17 @@ function printRoiAnalysis(roi: RoiResult): void {
 // ── CLI ────────────────────────────────────────────────────────
 
 export type InefficiencyOptions = {
-  dbPath?: string;
+  dbPath?: string | undefined;
   threshold?: number;
   stats?: boolean;
-  export?: string;
+  export?: string | undefined;
   top?: number;
   brier?: boolean;
   roi?: boolean;
   researchOnly?: boolean;
-  filter?: string;
-  surface?: string;
-  minEdge?: number;
+  filter?: string | undefined;
+  surface?: string | undefined;
+  minEdge?: number | undefined;
 };
 
 export function parseArgv(argv: string[]): InefficiencyOptions {

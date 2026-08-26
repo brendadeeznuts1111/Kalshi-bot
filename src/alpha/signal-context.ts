@@ -119,9 +119,9 @@ export async function buildPinnacleSignalContext(
       const w = resolveSettlementWeighting({
         sportId: input.settlement.sportId,
         phase: input.settlement.phase,
-        marketType: input.settlement.marketType,
-        period: input.settlement.period,
-        matchState: input.settlement.matchState,
+        ...(input.settlement.marketType !== undefined ? { marketType: input.settlement.marketType } : {}),
+        ...(input.settlement.period !== undefined ? { period: input.settlement.period } : {}),
+        ...(input.settlement.matchState !== undefined ? { matchState: input.settlement.matchState } : {}),
       });
       components = {
         ...components,
@@ -134,9 +134,9 @@ export async function buildPinnacleSignalContext(
       const scan = scanEdgePatterns({
         sportId: input.settlement.sportId,
         phase: input.settlement.phase,
-        marketType: input.settlement.marketType,
-        period: input.settlement.period,
-        matchState: input.settlement.matchState,
+        ...(input.settlement.marketType !== undefined ? { marketType: input.settlement.marketType } : {}),
+        ...(input.settlement.period !== undefined ? { period: input.settlement.period } : {}),
+        ...(input.settlement.matchState !== undefined ? { matchState: input.settlement.matchState } : {}),
       });
       components = attachEdgePatternComponents(components, scan);
     }

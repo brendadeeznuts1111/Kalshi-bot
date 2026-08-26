@@ -1,7 +1,88 @@
 {
-  "mirrorVersion": 1,
+  "mirrorVersion": 2,
   "source": "https://bun.sh/blog/bun-v1.4",
   "entryCount": 271,
+  "badgeStats": {
+    "total": 269,
+    "shipped": 224,
+    "improved": 45,
+    "accent": 166,
+    "muted": 103,
+    "byVersion": {
+      "1.4.0": 166,
+      "1.3.9": 3,
+      "1.3.8": 2,
+      "1.3.7": 9,
+      "1.3.6": 10,
+      "1.3.5": 5,
+      "1.3.4": 7,
+      "1.3.3": 5,
+      "1.3.2": 11,
+      "1.3.14": 12,
+      "1.3.13": 13,
+      "1.3.12": 8,
+      "1.3.11": 6,
+      "1.3.10": 7,
+      "1.3.1": 5
+    }
+  },
+  "sections": {
+    "node-js-compatibility": {
+      "entries": 6,
+      "mapped": 0,
+      "badges": 5
+    },
+    "production": {
+      "entries": 11,
+      "mapped": 0,
+      "badges": 0
+    },
+    "what-s-new": {
+      "entries": 18,
+      "mapped": 18,
+      "badges": 29
+    },
+    "bun-install": {
+      "entries": 13,
+      "mapped": 13,
+      "badges": 14
+    },
+    "bun-test": {
+      "entries": 7,
+      "mapped": 7,
+      "badges": 13
+    },
+    "bun-build": {
+      "entries": 11,
+      "mapped": 11,
+      "badges": 16
+    },
+    "faster": {
+      "entries": 6,
+      "mapped": 6,
+      "badges": 7
+    },
+    "security": {
+      "entries": 6,
+      "mapped": 0,
+      "badges": 6
+    },
+    "platforms": {
+      "entries": 8,
+      "mapped": 0,
+      "badges": 9
+    },
+    "upgrading-to-1-4": {
+      "entries": 41,
+      "mapped": 0,
+      "badges": 41
+    },
+    "changelog": {
+      "entries": 144,
+      "mapped": 0,
+      "badges": 129
+    }
+  },
   "files": [
     "blog-map.json",
     "blog-map.md",

@@ -110,7 +110,7 @@ if (markets) {
 if (promote) {
   const result = planPandoraCompetitionPromote(snapshot, {
     limit,
-    sportId: sport,
+    ...(sport !== undefined ? { sportId: sport } : {}),
   });
   if (apply) {
     const { added, skipped } = await applyPandoraPromoteToCompetitionsFile(

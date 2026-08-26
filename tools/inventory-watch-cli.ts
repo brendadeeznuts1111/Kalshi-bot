@@ -122,7 +122,7 @@ async function pollOnce(options: {
               ? 'table'
               : catalogSport;
         const booked = await loaded.adapter.listBookedEvents({
-          sport: sportFilter,
+          ...(sportFilter !== undefined ? { sport: sportFilter } : {}),
           limit: 200,
         });
         const catalog = booked.map(b => ({
@@ -259,9 +259,11 @@ async function main(): Promise<void> {
   if (loop && dryRun) {
     throw new Error('inventory:watch --dry-run cannot be combined with --loop');
   }
+  const skinArg = argValue('skin');
+  const bookArg = argValue('book');
   const identity = resolveWatchInventoryIdentity({
-    skin: argValue('skin'),
-    book: argValue('book'),
+    ...(skinArg !== undefined ? { skin: skinArg } : {}),
+    ...(bookArg !== undefined ? { book: bookArg } : {}),
   });
   // Default 30s — near-real-time inventory without hammering the feed
   const intervalMs = Math.max(Number(argValue('interval-ms') ?? '30000') || 30_000, 5_000);

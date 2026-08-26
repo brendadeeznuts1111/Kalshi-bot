@@ -121,8 +121,8 @@ type EventLookupOptions = {
   catalogCachePath?: string;
   dbPath?: string;
   db?: Database;
-  fetchImpl?: FetchFn;
-  WebSocketImpl?: typeof WebSocket;
+  fetchImpl?: FetchFn | undefined;
+  WebSocketImpl?: typeof WebSocket | undefined;
   skipStreamList?: boolean;
   skipDb?: boolean;
   skipCatalog?: boolean;
@@ -131,7 +131,7 @@ type EventLookupOptions = {
    * Pandora edge: `pandora` (plive default) or `spandora` (public sportswidgets).
    * Same LINE_SET / protocol.
    */
-  pandoraHost?: PandoraHostId | string;
+  pandoraHost?: PandoraHostId | string | undefined;
 };
 
 function competitors(ev: Record<string, unknown>): {
@@ -369,8 +369,8 @@ export function filterLinesByPeriod(
 async function lookupStreamListEvent(
   eventId: string,
   options: {
-    url?: string;
-    fetchImpl?: FetchFn;
+    url?: string | undefined;
+    fetchImpl?: FetchFn | undefined;
   } = {}
 ): Promise<StreamListEventHit | null> {
   const fetchImpl = options.fetchImpl ?? fetch;

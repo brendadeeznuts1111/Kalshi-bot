@@ -286,7 +286,7 @@ export async function runTennisRecordCli(argv: string[]): Promise<number> {
       }
       const result = await recordTopItfEvents(db, {
         top: topN,
-        minVolume: Number.isFinite(minVolume) ? minVolume : undefined,
+        ...(minVolume !== undefined && Number.isFinite(minVolume) ? { minVolume } : {}),
         syncFirst: true,
       });
       return {
@@ -372,7 +372,9 @@ export async function runTennisRecordCli(argv: string[]): Promise<number> {
         tickers,
       };
     }
-    const result = await syncAndRecordOpenItfBooks(db, { minVolume: minVol });
+    const result = await syncAndRecordOpenItfBooks(db, {
+      ...(minVol !== undefined ? { minVolume: minVol } : {}),
+    });
     return {
       dryRun,
       mode: "all",

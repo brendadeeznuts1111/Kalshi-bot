@@ -38,7 +38,7 @@ const MIGRATIONS_DIR = join(import.meta.dir, "..", migration.migrationsDir);
 
 function parseArgs(argv: string[]): { dbPath: string } {
   const idx = argv.indexOf("--db");
-  return { dbPath: idx >= 0 ? argv[idx + 1] : databasePath };
+  return { dbPath: idx >= 0 ? argv[idx + 1]! : databasePath };
 }
 
 function ensureMigrationsTable(db: Database): void {

@@ -69,7 +69,7 @@ export type HostObservations = {
   dnsNs: string[];
   certSANs: string[];
   /** True when HOST_TO_SKIN already maps this host. */
-  mappedSkinId?: SkinId;
+  mappedSkinId?: SkinId | undefined;
 };
 
 function round2(n: number): number {
@@ -129,7 +129,7 @@ export function buildHostObservations(input: {
   storedUrls?: readonly string[];
   dnsNs?: readonly string[];
   certSANs?: readonly string[];
-  mappedSkinId?: SkinId;
+  mappedSkinId?: SkinId | undefined;
 }): HostObservations {
   const stored = input.storedUrls ?? [];
   return {

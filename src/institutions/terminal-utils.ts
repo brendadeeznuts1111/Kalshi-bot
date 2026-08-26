@@ -48,9 +48,22 @@ export function inspectValue(
 ): string {
   // Context-aware verbosity: verbose=true -> full depth + colors (DEBUG dumps);
   // verbose=false -> compact depth 2 plain; unset -> match console.log depth 3.
-  if (opts.verbose === true) return Bun.inspect(value, { colors: true, depth: undefined, sorted: opts.sorted });
-  if (opts.verbose === false) return Bun.inspect(value, { colors: false, depth: 2, sorted: opts.sorted });
-  return Bun.inspect(value, { colors: opts.colors, depth: opts.depth ?? 3, sorted: opts.sorted });
+  if (opts.verbose === true)
+    return Bun.inspect(value, {
+      colors: true,
+      ...(opts.sorted === undefined ? {} : { sorted: opts.sorted }),
+    });
+  if (opts.verbose === false)
+    return Bun.inspect(value, {
+      colors: false,
+      depth: 2,
+      ...(opts.sorted === undefined ? {} : { sorted: opts.sorted }),
+    });
+  return Bun.inspect(value, {
+    ...(opts.colors === undefined ? {} : { colors: opts.colors }),
+    depth: opts.depth ?? 3,
+    ...(opts.sorted === undefined ? {} : { sorted: opts.sorted }),
+  });
 }
 
 /** Colored serialization for terminal diagnostics. */
@@ -78,7 +91,10 @@ export function inspectRedacted(
   value: unknown,
   opts: { colors?: boolean; depth?: number } = {},
 ): string {
-  return Bun.inspect(redactSecrets(value), { colors: opts.colors, depth: opts.depth });
+  return Bun.inspect(redactSecrets(value), {
+    ...(opts.colors === undefined ? {} : { colors: opts.colors }),
+    ...(opts.depth === undefined ? {} : { depth: opts.depth }),
+  });
 }
 
 

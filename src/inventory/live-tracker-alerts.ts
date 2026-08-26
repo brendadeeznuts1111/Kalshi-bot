@@ -23,8 +23,8 @@ export type LiveAlert = {
   eventId: string | number;
   time: string;
   detail: string;
-  period?: string;
-  marketType?: string;
+  period?: string | undefined;
+  marketType?: string | undefined;
 };
 
 export type LiveAlertPlan = {
@@ -105,7 +105,7 @@ export function eventsToLiveAlerts(
 export function planLiveTrackerAlerts(
   events: LiveTrackerEvent[],
   prev: LiveAlertState | null,
-  options: { force?: boolean; nowMs?: number; enabled?: boolean } = {}
+  options: { force?: boolean | undefined; nowMs?: number | undefined; enabled?: boolean | undefined } = {}
 ): LiveAlertPlan {
   if (options.enabled === false) {
     return {

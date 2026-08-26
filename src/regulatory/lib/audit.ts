@@ -21,10 +21,10 @@ export type AuditEntry = {
   traceId: string;
   actor: string;       // e.g. "compliance-agent", "admin-cli", "polymarket-ingest"
   action: string;      // e.g. "BET_PLACED", "SELF_EXCLUSION_ADDED", "LINE_MOVE_DETECTED"
-  target?: string;     // e.g. "play-123", "user-1", "will-it-rain"
+  target?: string | undefined;     // e.g. "play-123", "user-1", "will-it-rain"
   outcome: "ok" | "blocked" | "error" | "flagged";
-  details?: Record<string, unknown>;
-  latencyMs?: number;
+  details?: Record<string, unknown> | undefined;
+  latencyMs?: number | undefined;
 };
 
 export class AuditTrail {

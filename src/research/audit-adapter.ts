@@ -52,7 +52,7 @@ export type AuditEvidenceWire = {
   contentDigest: string;
   encoding?: "plain" | "zstd";
   /** Present when encoding is zstd — level used at write time. */
-  zstdLevel?: number;
+  zstdLevel?: number | undefined;
   mediaType: string;
 };
 

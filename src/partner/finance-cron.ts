@@ -120,7 +120,7 @@ export type FinanceCronOutRow = {
   envOk: boolean;
   missingKeys: PartnerEnvKey[];
   loginOk?: boolean;
-  loginError?: string;
+  loginError?: string | undefined;
 };
 
 export type FinanceCronPartnerGroup = {
@@ -138,28 +138,28 @@ export type FinanceCronReport = {
   skippedMissingSecrets: number;
   totalCapacity: number;
   /** Today's ticket ledger totals (risk / toWin) when any tickets ingested. */
-  tickets?: TicketDayTotals;
+  tickets?: TicketDayTotals | undefined;
   inventory?: {
     sportBuckets: number;
     totalEvents: number;
     primaryLive: number;
-  };
+  } | undefined;
   partners: FinanceCronPartnerGroup[];
   notified: boolean;
   /** Risk-health Telegram sent this run */
   riskNotified: boolean;
   /** Risk alert suppressed by fingerprint dedupe */
   riskAlertDeduped: boolean;
-  riskThreshold?: RiskThreshold;
-  risk?: RiskHealthReport;
-  riskFingerprint?: string;
+  riskThreshold?: RiskThreshold | undefined;
+  risk?: RiskHealthReport | undefined;
+  riskFingerprint?: string | undefined;
   /** Auto ws-ingest ran this cycle */
-  autoWsIngestRan?: boolean;
+  autoWsIngestRan?: boolean | undefined;
   autoWsIngestResult?: {
     pricedLines: number;
     pricedEvents: number;
     capturePath: string | null;
-  };
+  } | undefined;
   strictEnvFailed: boolean;
   /** desk_snapshot rows written this run */
   ledgerWrites: number;
@@ -169,7 +169,7 @@ export type FinanceCronReport = {
     pricedEvents: number;
     pricedLines: number;
     ledgerId: string | null;
-  };
+  } | undefined;
 };
 
 function partnerCodeForOut(a: BettingAccountRow): string {
@@ -465,7 +465,7 @@ export async function runFinanceCron(
         capture: options.webviewCapture === true,
         seconds: options.webviewSeconds ?? 20,
         writeLedger: writeLedger && Boolean(primary),
-        db: writeLedger ? db : undefined,
+        ...(writeLedger ? { db } : {}),
         outId: primary?.outId ?? 'webview-plive',
         partnerId: primary?.partnerId ?? 'partner-default',
         partnerCode: primary?.partnerCode ?? 'PLIVE',
@@ -488,7 +488,7 @@ export async function runFinanceCron(
   }
 
   const tickets = sumTicketTotalsForDay(db, {
-    partnerCode: filter,
+    ...(filter !== undefined ? { partnerCode: filter } : {}),
   });
 
   // Risk health after desk + optional odds write (fresh ledger state)
@@ -532,7 +532,7 @@ export async function runFinanceCron(
           capture: true,
           seconds: options.webviewSeconds ?? 25,
           writeLedger: writeLedger && Boolean(primary),
-          db: writeLedger ? db : undefined,
+          ...(writeLedger ? { db } : {}),
           outId: primary?.outId ?? 'webview-plive',
           partnerId: primary?.partnerId ?? 'partner-default',
           partnerCode: primary?.partnerCode ?? 'PLIVE',

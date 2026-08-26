@@ -8,15 +8,11 @@ import {
 describe("parseExportAuditCli", () => {
   test("parses verify and repo flags", () => {
     expect(parseExportAuditCli(["--verify", "research/exports/audit/x"])).toEqual({
-      runId: undefined,
       latest: false,
       verify: "research/exports/audit/x",
-      repo: undefined,
     });
     expect(parseExportAuditCli(["--latest", "--repo", "OctagonAI/kalshi-trading-bot-cli"])).toEqual({
-      runId: undefined,
       latest: true,
-      verify: undefined,
       repo: "OctagonAI/kalshi-trading-bot-cli",
     });
   });

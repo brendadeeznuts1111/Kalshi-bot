@@ -106,7 +106,7 @@ export async function fetchSecret(
         uri,
         durationMs: r.durationMs,
         status: 'error',
-        error: r.error,
+        ...(r.error !== undefined ? { error: r.error } : {}),
         fromCache: false,
       });
       return r;
@@ -124,7 +124,7 @@ export async function fetchSecret(
         uri,
         durationMs: r.durationMs,
         status: 'error',
-        error: r.error,
+        ...(r.error !== undefined ? { error: r.error } : {}),
         fromCache: false,
       });
       return r;
@@ -146,7 +146,7 @@ export async function fetchSecret(
         uri,
         durationMs: r.durationMs,
         status: 'error',
-        error: r.error,
+        ...(r.error !== undefined ? { error: r.error } : {}),
         fromCache: false,
       });
       return r;

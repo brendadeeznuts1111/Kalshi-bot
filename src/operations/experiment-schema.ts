@@ -64,7 +64,7 @@ export function openExperimentsDb(options: OpenExperimentsDbOptions = {}): Datab
   }
   const db = new Database(dbPath, {
     create: !options.readonly,
-    readonly: options.readonly,
+    ...(options.readonly !== undefined ? { readonly: options.readonly } : {}),
   });
   db.run("PRAGMA foreign_keys = ON;");
   if (!options.readonly && dbPath !== ":memory:") {

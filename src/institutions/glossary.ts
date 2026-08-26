@@ -1654,7 +1654,7 @@ export const TONES: Record<string, ToneStyle> = {
 } as const;
 
 export function toneStyle(entry: GlossaryEntry | undefined): ToneStyle {
-  return TONES[entry?.tone ?? ""] ?? TONES.concept;
+  return TONES[entry?.tone ?? ""] ?? TONES.concept!;
 }
 
 /** Which surfaces does this entry appear on? (derived from PAGE_SURFACES) */

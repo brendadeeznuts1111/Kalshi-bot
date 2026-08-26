@@ -81,7 +81,7 @@ describe("design agent", () => {
   test("audit flags hardcoded colors", () => {
     const bad = agent.audit('<div style="color:#ff00ff">x</div>');
     expect(bad.ok).toBe(false);
-    expect(bad.issues[0].kind).toBe("hardcoded-color");
-    expect(bad.issues[0].value).toBe("#ff00ff");
+    expect(bad.issues[0]!.kind).toBe("hardcoded-color");
+    expect(bad.issues[0]!.value).toBe("#ff00ff");
   });
 });

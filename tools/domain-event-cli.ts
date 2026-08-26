@@ -172,14 +172,16 @@ if (validate) {
       (requireSession ? ' (session required)' : ' (session if FANTASY402_* present)') +
       ` pandora=${seconds}s`
   );
+  const envPrefix = argValue('prefix');
+  const accountId = argValue('out') ?? argValue('account');
   const report = await validateEvent({
     eventId,
     periodId,
     pandoraSeconds: noPandora ? 0 : Math.max(seconds, 8),
     requireSession,
     renew: hasFlag('renew'),
-    envPrefix: argValue('prefix'),
-    accountId: argValue('out') ?? argValue('account'),
+    ...(envPrefix !== undefined ? { envPrefix } : {}),
+    ...(accountId !== undefined ? { accountId } : {}),
     pandoraHost,
   });
   if (json) {

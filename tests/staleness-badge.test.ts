@@ -21,7 +21,7 @@ function mockRun(overrides: {
       gated: 1,
       inspected: 1,
       shortlist: 1,
-      cache: overrides.cache,
+      ...(overrides.cache !== undefined ? { cache: overrides.cache } : {}),
     },
     candidates: [],
     gated: [],

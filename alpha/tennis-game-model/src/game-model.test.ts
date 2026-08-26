@@ -155,7 +155,7 @@ describe("game-model", () => {
     expect(result!.pModel).toBeGreaterThan(0.5);
     // Independent of the market echo (0.45): the prior comes from strengths.
     expect(result!.pModel).not.toBeCloseTo(0.45, 2);
-    expect(result!.components.hold_prob_yes).toBeGreaterThan(result!.components.hold_prob_no);
+    expect(result!.components.hold_prob_yes).toBeGreaterThan(result!.components.hold_prob_no!);
     db.close();
   });
 

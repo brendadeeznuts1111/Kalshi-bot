@@ -116,9 +116,9 @@ describe("phase2-evaluate leakage guard", () => {
 
     const result = evaluate(db);
     expect(result.counts.scoredMarkets).toBe(1);
-    expect(result.scored[0].selectedTs).toBe(START_MS - HOUR);
-    expect(result.scored[0].pMarket).toBe(0.45);
-    expect(result.scored[0].pElo).toBe(0.55);
+    expect(result.scored[0]!.selectedTs).toBe(START_MS - HOUR);
+    expect(result.scored[0]!.pMarket).toBe(0.45);
+    expect(result.scored[0]!.pElo).toBe(0.55);
     expect(result.counts.skippedNoPreStartPrice).toBe(0);
     db.close();
   });
@@ -149,8 +149,8 @@ describe("phase2-evaluate start_ts fallback", () => {
 
     const result = evaluate(db);
     expect(result.counts.fallbackFirstSnapshot).toBe(1);
-    expect(result.scored[0].selectedTs).toBe(START_MS - 2 * HOUR);
-    expect(result.scored[0].pMarket).toBe(0.41);
+    expect(result.scored[0]!.selectedTs).toBe(START_MS - 2 * HOUR);
+    expect(result.scored[0]!.pMarket).toBe(0.41);
     db.close();
   });
 });
@@ -168,8 +168,8 @@ describe("phase2-evaluate trade dedupe", () => {
 
     const result = evaluate(db);
     expect(result.counts.scoredMarkets).toBe(1);
-    expect(result.roiByThreshold[PRIMARY_THRESHOLD_CENTS].trades).toBe(1);
-    expect(result.roiByThreshold[PRIMARY_THRESHOLD_CENTS].dedupedExtras).toBe(0);
+    expect(result.roiByThreshold[PRIMARY_THRESHOLD_CENTS]!.trades).toBe(1);
+    expect(result.roiByThreshold[PRIMARY_THRESHOLD_CENTS]!.dedupedExtras).toBe(0);
     db.close();
   });
 
@@ -183,7 +183,7 @@ describe("phase2-evaluate trade dedupe", () => {
 
     const result = evaluate(db);
     expect(result.counts.scoredMarkets).toBe(2);
-    const roi = result.roiByThreshold[PRIMARY_THRESHOLD_CENTS];
+    const roi = result.roiByThreshold[PRIMARY_THRESHOLD_CENTS]!;
     expect(roi.trades).toBe(1);
     expect(roi.dedupedExtras).toBe(1);
     db.close();
@@ -218,7 +218,7 @@ describe("phase2-evaluate ROI math", () => {
   test("BUY_YES win at ask 62: profit = 100 - 62 - 2 = 36¢ (zero-fee 38¢)", () => {
     const { trades } = buildTrades([base], 4);
     expect(trades).toHaveLength(1);
-    const t = trades[0];
+    const t = trades[0]!;
     expect(t.direction).toBe("BUY_YES");
     expect(t.entryCents).toBe(62);
     expect(t.feeCents).toBe(2);
@@ -231,7 +231,7 @@ describe("phase2-evaluate ROI math", () => {
     const short: ScoredMarket = { ...base, pElo: 0.3, y: 1 };
     const { trades } = buildTrades([short], 4);
     expect(trades).toHaveLength(1);
-    const t = trades[0];
+    const t = trades[0]!;
     expect(t.direction).toBe("BUY_NO");
     expect(t.entryCents).toBe(42);
     expect(t.feeCents).toBe(2);
@@ -243,8 +243,8 @@ describe("phase2-evaluate ROI math", () => {
   test("missing bid/ask falls back to mid and is counted", () => {
     const noQuote: ScoredMarket = { ...base, bidCents: null, askCents: null };
     const { trades } = buildTrades([noQuote], 4);
-    expect(trades[0].entryCents).toBe(60); // mid fallback
-    expect(trades[0].usedFallbackPrice).toBe(true);
+    expect(trades[0]!.entryCents).toBe(60); // mid fallback
+    expect(trades[0]!.usedFallbackPrice).toBe(true);
   });
 });
 
@@ -266,8 +266,8 @@ describe("phase2-evaluate Brier", () => {
     expect(result.brier.n).toBe(2);
     expect(result.brier.eloBrier).toBeCloseTo(0.1, 10); // (0.04+0.16)/2
     expect(result.brier.marketBrier).toBeCloseTo(0.205, 10); // (0.16+0.25)/2
-    expect(result.brier.bySurface.clay.n).toBe(2);
-    expect(result.brier.bySurface.clay.elo).toBeCloseTo(0.1, 10);
+    expect(result.brier.bySurface.clay!.n).toBe(2);
+    expect(result.brier.bySurface.clay!.elo).toBeCloseTo(0.1, 10);
     db.close();
   });
 });

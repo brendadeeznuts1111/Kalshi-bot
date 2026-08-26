@@ -225,7 +225,10 @@ function html(body: string, status = 200): Response {
 }
 
 function json(data: unknown, status = 200, extraHeaders?: Record<string, string>): Response {
-  return Response.json(data, { status, headers: extraHeaders });
+  return Response.json(data, {
+    status,
+    ...(extraHeaders ? { headers: extraHeaders } : {}),
+  });
 }
 
 /**
@@ -432,9 +435,15 @@ export async function handleArchitecture(): Promise<Response> {
 function handlePartnerDetail(req: Request, nodeId: string, dbPath: string = DEFAULT_EVENT_STORE_DB): Response {
   const url = new URL(req.url);
   const filters = {
-    state: url.searchParams.get("state") ?? undefined,
-    sport: url.searchParams.get("sport") ?? undefined,
-    market: url.searchParams.get("market") ?? undefined,
+    ...(url.searchParams.get("state") != null
+      ? { state: url.searchParams.get("state")! }
+      : {}),
+    ...(url.searchParams.get("sport") != null
+      ? { sport: url.searchParams.get("sport")! }
+      : {}),
+    ...(url.searchParams.get("market") != null
+      ? { market: url.searchParams.get("market")! }
+      : {}),
   };
   let deskLiquidity: ReturnType<typeof buildLiquidityBoardPayload> | null = null;
   try {
@@ -521,9 +530,10 @@ export async function handleTradingOrder(
     let result: Awaited<ReturnType<typeof executeKalshiLiveOrder>>;
     try {
       migrateExecutionSchema(executionDb);
+      const actorId = req.tradingPrincipal?.actorId;
       result = await executeKalshiLiveOrder(executionDb, {
         ...parsed.command,
-        actorId: req.tradingPrincipal?.actorId,
+        ...(actorId !== undefined ? { actorId } : {}),
       }, {
         ...(runtime.client
           ? { client: runtime.client }
@@ -745,7 +755,13 @@ async function handlePolymarketIngest(req: Request): Promise<Response> {
   const limit = body.limit ? Number(body.limit) : undefined;
 
   const result = await orchestrator.dispatch(
-    { type: "MARKET_INGEST", payload: { slugs, fetchLimit: limit } },
+    {
+      type: "MARKET_INGEST",
+      payload: {
+        ...(slugs !== undefined ? { slugs } : {}),
+        ...(limit !== undefined ? { fetchLimit: limit } : {}),
+      },
+    },
     { db: regDb, now: Date.now(), traceId: `req-${Date.now()}` },
   );
 
@@ -832,7 +848,7 @@ export async function probeKalshiAuthCached(
   if (creds) {
     try {
       const probe = await probeKalshiAuth(creds, {
-        base: opts.base,
+        ...(opts.base !== undefined ? { base: opts.base } : {}),
         timeoutMs: opts.timeoutMs ?? 2_000,
       });
       const state =
@@ -1256,7 +1272,10 @@ function handleLiquidityByTournament(keyRaw: string, url: URL, dbPath: string = 
     const sportKey = url.searchParams.get("sport")?.trim() || undefined;
     const limitRaw = Number(url.searchParams.get("limit") ?? "100");
     const limit = Number.isFinite(limitRaw) ? limitRaw : 100;
-    const rows = listMatchLiquidityByTournament(store, key, { sportKey, limit });
+    const rows = listMatchLiquidityByTournament(store, key, {
+      ...(sportKey !== undefined ? { sportKey } : {}),
+      limit,
+    });
     return json({
       tournament: key,
       sportKey: sportKey ?? null,
@@ -1379,7 +1398,7 @@ export function createResearchServer(options: ServeOptions = {}) {
       // video by name with traversal-safe validation; Bun.file() bodies still
       // get Range/206 + content-type automatically.
       "/videos/:id": async (req: Request) => {
-        const id = (req as unknown as { params: Record<string, string> }).params.id;
+        const id = (req as unknown as { params: Record<string, string> }).params.id!;
         if (!isSafeVideoId(id)) {
           return json({ error: "invalid video name" }, 404, designCorsHeaders());
         }
@@ -1547,7 +1566,11 @@ export function createResearchServer(options: ServeOptions = {}) {
           const t0 = performance.now();
           if (!png) {
             brandMetrics.card.misses += 1;
-            const captured = await brandCardPng({ width, height, font: fontUrl ?? undefined });
+            const captured = await brandCardPng({
+              width,
+              height,
+              ...(fontUrl != null ? { font: fontUrl } : {}),
+            });
             if (!captured) {
               brandMetrics.card.errors += 1;
               return new Response("brand card unavailable (Bun.WebView required)", { status: 503, headers: designCorsHeaders() });
@@ -2013,7 +2036,9 @@ export function createResearchServer(options: ServeOptions = {}) {
         return json(
           readPlayerProfiles({
             limit: Number(url.searchParams.get("limit") ?? 50),
-            search: url.searchParams.get("search") ?? undefined,
+            ...(url.searchParams.get("search") != null
+              ? { search: url.searchParams.get("search")! }
+              : {}),
             sort,
           }),
         );
@@ -2024,8 +2049,12 @@ export function createResearchServer(options: ServeOptions = {}) {
         return json(
           readOpponentProfiles({
             limit: Number(url.searchParams.get("limit") ?? 50),
-            player: url.searchParams.get("player") ?? undefined,
-            opponent: url.searchParams.get("opponent") ?? undefined,
+            ...(url.searchParams.get("player") != null
+              ? { player: url.searchParams.get("player")! }
+              : {}),
+            ...(url.searchParams.get("opponent") != null
+              ? { opponent: url.searchParams.get("opponent")! }
+              : {}),
           }),
         );
       }

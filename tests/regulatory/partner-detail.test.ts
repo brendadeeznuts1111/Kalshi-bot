@@ -82,9 +82,9 @@ describe("partnerDetailHandler", () => {
     const regulatory = body.regulatory as Record<string, unknown>;
     const limits = regulatory!.limits as Array<Record<string, unknown>>;
     expect(limits.length).toBeGreaterThanOrEqual(1);
-    expect(limits[0].sport_id).toBe("soccer");
-    expect(limits[0].market_id).toBe("match_winner");
-    expect(limits[0].max_wager).toBe(5000);
+    expect(limits[0]!.sport_id).toBe("soccer");
+    expect(limits[0]!.market_id).toBe("match_winner");
+    expect(limits[0]!.max_wager).toBe(5000);
   });
 
   test("returns empty limits for nonexistent sport/market combo", async () => {
@@ -121,8 +121,8 @@ describe("partnerDetailHandler", () => {
     const regulatory = body.regulatory as Record<string, unknown>;
     const violations = regulatory!.violations as Array<Record<string, unknown>>;
     expect(violations.length).toBeGreaterThanOrEqual(1);
-    expect(violations[0].reason).toBe("max_wager exceeded");
-    expect(violations[0].blockedAtIso).toBeTruthy();
+    expect(violations[0]!.reason).toBe("max_wager exceeded");
+    expect(violations[0]!.blockedAtIso).toBeTruthy();
   });
 
   test("limits violations to 20 most recent", async () => {

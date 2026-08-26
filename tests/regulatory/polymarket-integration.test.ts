@@ -84,11 +84,11 @@ describe("fetchPolymarketMarkets", () => {
     });
 
     expect(markets.length).toBe(1);
-    expect(markets[0].slug).toBe("market-1");
-    expect(markets[0].outcomes).toEqual(["Yes", "No"]);
-    expect(markets[0].outcomePrices).toEqual([0.6, 0.4]);
-    expect(markets[0].volume).toBe(100000);
-    expect(markets[0].volume1wk).toBeNull();
+    expect(markets[0]!.slug).toBe("market-1");
+    expect(markets[0]!.outcomes).toEqual(["Yes", "No"]);
+    expect(markets[0]!.outcomePrices).toEqual([0.6, 0.4]);
+    expect(markets[0]!.volume).toBe(100000);
+    expect(markets[0]!.volume1wk).toBeNull();
   });
 
   test("uses OFFICIAL_URLS.polymarket.gammaApiBase as default base", async () => {
@@ -125,7 +125,7 @@ describe("fetchPolymarketMarkets", () => {
       fetchImpl: retryFetch, retries: 2, backoffMs: 1, jitter: 0,
     });
     expect(calls).toBe(2);
-    expect(markets[0].slug).toBe("retry-test");
+    expect(markets[0]!.slug).toBe("retry-test");
   });
 
   test("throws on non-2xx response", async () => {
@@ -459,8 +459,8 @@ describe("PolymarketLineTracker", () => {
     // Second tick triggers move: (0.56-0.50)/0.50 = 12% = 1200 bp
     const moves = tracker.ingest(t2);
     expect(moves.length).toBe(1);
-    expect(moves[0].direction).toBe("up");
-    expect(moves[0].deltaBp).toBe(1200);
+    expect(moves[0]!.direction).toBe("up");
+    expect(moves[0]!.deltaBp).toBe(1200);
   });
 
   test("ignores move below threshold", () => {
@@ -609,7 +609,7 @@ describe("PolymarketLineTracker", () => {
     tracker.ingest(slugB_t1);
     const moves = tracker.ingest(slugA_t2);
     expect(moves.length).toBe(1);
-    expect(moves[0].slug).toBe("A");
+    expect(moves[0]!.slug).toBe("A");
   });
 
   test("status returns tracked slug counts", () => {

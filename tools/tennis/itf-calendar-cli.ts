@@ -121,10 +121,10 @@ export async function runItfCalendarCli(argv: string[]): Promise<number> {
   const allRows = buildItfCalendarRows(markets);
   const stats = summarizeItfCalendar(allRows, markets.length);
   let rows = filterItfCalendarRows(allRows, {
-    date: dateFilter,
-    series: seriesFilter,
-    minVolume: Number.isFinite(minVolume) ? minVolume : undefined,
-    minVolume24h: Number.isFinite(minVolume24h) ? minVolume24h : undefined,
+    ...(dateFilter !== undefined ? { date: dateFilter } : {}),
+    ...(seriesFilter !== undefined ? { series: seriesFilter } : {}),
+    ...(minVolume !== undefined && Number.isFinite(minVolume) ? { minVolume } : {}),
+    ...(minVolume24h !== undefined && Number.isFinite(minVolume24h) ? { minVolume24h } : {}),
     sort,
     limit: Number.isFinite(limit) ? limit : 40,
   });

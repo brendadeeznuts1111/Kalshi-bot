@@ -389,17 +389,17 @@ export function evaluate(db: Database, dbPath = ":memory:"): Phase2Result {
       // ── Leakage guard ──
       let chosen: SnapshotRow | null = null;
       if (Number.isNaN(startTsMs)) {
-        chosen = list[0];
+        chosen = list[0] ?? null;
         counts.fallbackFirstSnapshot++;
       } else {
         for (const s of list) {
           if (s.ts < startTsMs) chosen = s; // list is ts-ascending → last pre-start
           else break;
         }
-        if (!chosen) {
-          counts.skippedNoPreStartPrice++;
-          continue;
-        }
+      }
+      if (!chosen) {
+        counts.skippedNoPreStartPrice++;
+        continue;
       }
 
       if (chosen.elo_prob == null || chosen.kalshi_mid_cents == null) {
@@ -509,13 +509,13 @@ export function evaluate(db: Database, dbPath = ":memory:"): Phase2Result {
     for (let i = 0; i < BOOTSTRAP_RESAMPLES; i++) {
       let sum = 0;
       for (let j = 0; j < profits.length; j++) {
-        sum += profits[Math.floor(rand() * profits.length)];
+        sum += profits[Math.floor(rand() * profits.length)]!;
       }
       means.push(sum / profits.length);
     }
     means.sort((a, b) => a - b);
-    const lo = means[Math.floor(0.025 * BOOTSTRAP_RESAMPLES)];
-    const hi = means[Math.min(BOOTSTRAP_RESAMPLES - 1, Math.ceil(0.975 * BOOTSTRAP_RESAMPLES) - 1)];
+    const lo = means[Math.floor(0.025 * BOOTSTRAP_RESAMPLES)]!;
+    const hi = means[Math.min(BOOTSTRAP_RESAMPLES - 1, Math.ceil(0.975 * BOOTSTRAP_RESAMPLES) - 1)]!;
     bootstrap = {
       resamples: BOOTSTRAP_RESAMPLES,
       trades: profits.length,
@@ -543,7 +543,7 @@ export function evaluate(db: Database, dbPath = ":memory:"): Phase2Result {
 
   // ── Verdict ──
   const insufficient = counts.scoredEvents < MIN_INDEPENDENT_EVENTS;
-  const primary = roiByThreshold[PRIMARY_THRESHOLD_CENTS];
+  const primary = roiByThreshold[PRIMARY_THRESHOLD_CENTS]!;
   const holdoutPositive = split.holdout != null && split.holdout.profitCents > 0;
   const sensitivityAllPositive =
     split.holdout != null &&
@@ -613,7 +613,7 @@ export function evaluate(db: Database, dbPath = ":memory:"): Phase2Result {
 
   const roiEverywhereNegative =
     scored.length > 0 &&
-    EDGE_THRESHOLDS_CENTS.every((t) => roiByThreshold[t].trades > 0 && roiByThreshold[t].profitCents < 0);
+    EDGE_THRESHOLDS_CENTS.every((t) => roiByThreshold[t]!.trades > 0 && roiByThreshold[t]!.profitCents < 0);
   const decisionMatrix: Phase2Result["verdict"]["decisionMatrix"] = insufficient
     ? [
         { condition: "Brier_Elo < Brier_Market", action: "test blended price λ·Elo+(1−λ)·Market", triggered: null },
@@ -702,9 +702,9 @@ function printReport(result: Phase2Result): void {
   console.log("  ── ROI_1unit per edge threshold (after fees / zero-fee) ─────");
   for (const t of EDGE_THRESHOLDS_CENTS) {
     const marker = t === PRIMARY_THRESHOLD_CENTS ? " ◀ primary" : "";
-    console.log(`  ${String(t).padStart(2)}¢  ${fmtRoi(roiByThreshold[t])}${marker}`);
+    console.log(`  ${String(t).padStart(2)}¢  ${fmtRoi(roiByThreshold[t]!)}${marker}`);
   }
-  const anyTrades = EDGE_THRESHOLDS_CENTS.some((t) => roiByThreshold[t].trades > 0);
+  const anyTrades = EDGE_THRESHOLDS_CENTS.some((t) => roiByThreshold[t]!.trades > 0);
   if (!anyTrades) console.log("  INSUFFICIENT_DATA — no scored events, no trades at any threshold.");
   console.log("");
 
@@ -750,7 +750,7 @@ function printReport(result: Phase2Result): void {
 // ── CLI ─────────────────────────────────────────────────────────
 
 export type Phase2Options = {
-  dbPath?: string;
+  dbPath?: string | undefined;
   json: boolean;
 };
 

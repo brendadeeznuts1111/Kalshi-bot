@@ -95,8 +95,8 @@ type EventValidateOptions = {
   sessionProbeFn?: (opts: {
     requireSession: boolean;
     renew: boolean;
-    envPrefix?: string;
-    accountId?: string;
+    envPrefix?: string | undefined;
+    accountId?: string | undefined;
   }) => Promise<EventValidateReport['session'] & { plane: PlaneResult }>;
 };
 
@@ -279,8 +279,8 @@ function classifyProfile(lookup: EventLookupResult): PlaneResult {
 async function probeFantasySessionPlane(options: {
   requireSession: boolean;
   renew: boolean;
-  envPrefix?: string;
-  accountId?: string;
+  envPrefix?: string | undefined;
+  accountId?: string | undefined;
 }): Promise<
   NonNullable<EventValidateReport['session']> & { plane: PlaneResult }
 > {
@@ -452,8 +452,8 @@ export async function validateEvent(
     ((opts: {
       requireSession: boolean;
       renew: boolean;
-      envPrefix?: string;
-      accountId?: string;
+      envPrefix?: string | undefined;
+      accountId?: string | undefined;
     }) => probeFantasySessionPlane(opts));
 
   const sessionRaw = await sessionProbe({

@@ -106,7 +106,7 @@ export class GitHubDegradedCacheError extends GitHubRateLimitError {
 type RateLimitBudget = {
   remaining?: number | null;
   limit?: number | null;
-  resource?: "search" | "core" | "code_search";
+  resource?: "search" | "core" | "code_search" | undefined;
 };
 
 let trippedUntilMs: number | null = null;
@@ -216,7 +216,7 @@ export function throwCacheMissIfTripped(cacheKind: GitHubCacheKind, cacheKey: st
     {
       resetAtMs: trippedUntilMs,
       source: tripSource ?? cacheKind,
-      context: activeResearchErrorContext ?? undefined,
+      ...(activeResearchErrorContext ? { context: activeResearchErrorContext } : {}),
       cacheKind,
       cacheKey,
     },
@@ -230,7 +230,7 @@ function circuitOpenError(source: string): GitHubRateLimitError {
     {
       resetAtMs: trippedUntilMs,
       source: tripSource ?? source,
-      context: activeResearchErrorContext ?? undefined,
+      ...(activeResearchErrorContext ? { context: activeResearchErrorContext } : {}),
     },
   );
 }
@@ -375,8 +375,8 @@ export type GitHubApiErrorWire = {
   resetAt: string | null;
   retryAfterSeconds: number | null;
   source: string;
-  cacheKind?: GitHubCacheKind;
-  cacheKey?: string;
+  cacheKind?: GitHubCacheKind | undefined;
+  cacheKey?: string | undefined;
   remediation: {
     action: GitHubRemediationAction;
     command: string;
@@ -388,10 +388,10 @@ export type GitHubApiErrorWire = {
     blockedOperations: string[];
     cachedDataAvailable: boolean;
     staleDataAge: string | null;
-    staleDataRunId?: string;
-    staleDataSourceDimension?: string;
-    cacheFallbackSource?: CacheFallbackSource;
-    inspectCacheRepoCount?: number;
+    staleDataRunId?: string | undefined;
+    staleDataSourceDimension?: string | undefined;
+    cacheFallbackSource?: CacheFallbackSource | undefined;
+    inspectCacheRepoCount?: number | undefined;
   };
   circuit: {
     tripped: boolean;

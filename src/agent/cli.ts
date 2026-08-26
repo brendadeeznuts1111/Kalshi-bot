@@ -85,21 +85,25 @@ export function parseAgentCommand(argv: string[]): {
 /** Cache-only tennis ground; optional live canary via --canary; optional WebView ground. */
 export async function runAgentTennis(
   json: boolean,
-  options?: { canary?: boolean; db?: string; webview?: boolean; htmlOnly?: boolean },
+  options?: { canary?: boolean; db?: string | undefined; webview?: boolean; htmlOnly?: boolean },
 ): Promise<number> {
   if (options?.canary) {
     // Live dry-run smoke first (writes canary artifact under research/cache/tennis-canary/).
     const code = await runLiveScoresCli(["--canary", ...(options.db ? [`--db=${options.db}`] : [])]);
     if (code !== 0 && json) {
       // Still emit ground so agent mesh can triage without a second process.
-      const report = await runTennisGround({ dbPath: options.db });
+      const report = await runTennisGround({
+        ...(options.db !== undefined ? { dbPath: options.db } : {}),
+      });
       console.log(JSON.stringify({ ok: false, canaryExit: code, ground: redactSecrets(report) }, null, 2));
       return code;
     }
     if (code !== 0) return code;
   }
 
-  const report = await runTennisGround({ dbPath: options?.db });
+  const report = await runTennisGround({
+    ...(options?.db !== undefined ? { dbPath: options.db } : {}),
+  });
 
   let wsGround = null;
   if (options?.webview) {
@@ -155,7 +159,9 @@ export async function runAgentStatus(json: boolean, dimension?: string): Promise
 }
 
 export async function runAgentGround(json: boolean, dimension?: string): Promise<number> {
-  const report = await runDiscoveryGround({ dimension });
+  const report = await runDiscoveryGround({
+    ...(dimension !== undefined ? { dimension } : {}),
+  });
   if (json) {
     console.log(JSON.stringify(report, null, 2));
   } else {
@@ -166,13 +172,13 @@ export async function runAgentGround(json: boolean, dimension?: string): Promise
 
 export async function runAgentResearch(
   json: boolean,
-  options?: { dimension?: string; inProcess?: boolean; exportAudit?: boolean },
+  options?: { dimension?: string | undefined; inProcess?: boolean; exportAudit?: boolean },
 ): Promise<number> {
   const researchOpts = {
     json: false,
     exportAudit: options?.exportAudit !== false,
     dryRun: false,
-    dimension: options?.dimension,
+    ...(options?.dimension !== undefined ? { dimension: options.dimension } : {}),
   };
 
   const useSpawn = !json && !options?.inProcess && isTtyStdout();
@@ -259,9 +265,9 @@ export async function runAgentPatterns(
   }
 
   const report = await runPatternExtract({
-    runId,
-    dimension,
-    repo,
+    ...(runId !== undefined ? { runId } : {}),
+    ...(dimension !== undefined ? { dimension } : {}),
+    ...(repo !== undefined ? { repo } : {}),
     write: !noWrite,
   });
   if (!report) {
@@ -294,8 +300,8 @@ export async function runAgentReportCmd(
 ): Promise<number> {
   const report = await runAgentReport({
     json,
-    dimension,
-    runId,
+    ...(dimension !== undefined ? { dimension } : {}),
+    ...(runId !== undefined ? { runId } : {}),
     write: !noWrite && !json,
   });
   if (json) {

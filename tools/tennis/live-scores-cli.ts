@@ -165,7 +165,7 @@ export async function runLiveScoresCli(argv: string[]): Promise<number> {
     const summary = await pollLiveScores(db, {
       leadMinutes,
       limit,
-      eventTickers,
+      ...(eventTickers !== undefined ? { eventTickers } : {}),
       pauseMs: 150,
       dryRun,
     });
@@ -198,7 +198,7 @@ export async function runLiveScoresCli(argv: string[]): Promise<number> {
       cadence:
         values.cadence === true
           ? analyzeScoreSnapshotCadence(db, {
-              eventTicker: eventTickers?.[0],
+              ...(eventTickers?.[0] !== undefined ? { eventTicker: eventTickers[0] } : {}),
               intervalMs,
             })
           : undefined,
@@ -262,7 +262,9 @@ export async function runLiveScoresCli(argv: string[]): Promise<number> {
     // Exclusive cadence path when only --cadence was requested without poll flags.
     if (cadenceOnly && values["dry-run"] !== true && !canary && values.sync !== true) {
       const report = analyzeScoreSnapshotCadence(db, {
-        eventTicker: typeof values.event === "string" ? asKalshiEventTicker(values.event) : undefined,
+        ...(typeof values.event === "string"
+          ? { eventTicker: asKalshiEventTicker(values.event) }
+          : {}),
         intervalMs,
       });
       emitCadence(report, values.json === true);

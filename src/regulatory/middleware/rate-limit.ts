@@ -31,7 +31,7 @@ export function createRateLimiter(options: RateLimitOptions) {
     if (keyGenerator) return keyGenerator(req);
     // Default: IP from headers or fallback
     const forwarded = req.headers.get(HEADER.X_FORWARDED_FOR);
-    if (forwarded) return forwarded.split(",")[0].trim();
+    if (forwarded) return forwarded.split(",")[0]!.trim();
     return req.headers.get(HEADER.X_REAL_IP) ?? RATE_LIMIT.FALLBACK_IP;
   }
 

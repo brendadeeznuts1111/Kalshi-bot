@@ -59,7 +59,7 @@ export type MatchLiquidityGroundLatest = {
   rows: number;
 };
 
-function resolveWebViewBackend(): BunWebViewOptions["backend"] {
+function resolveWebViewBackend(): NonNullable<BunWebViewOptions["backend"]> {
   return process.platform === "darwin" ? "webkit" : "chrome";
 }
 
@@ -84,7 +84,9 @@ export async function captureMatchLiquidityGround(
   const outDir = options.outDir ?? MATCH_LIQUIDITY_GROUND_DIR;
   mkdirSync(outDir, { recursive: true });
 
-  const model = loadMatchLiquidityDashboardModel(db, { limit: options.limit });
+  const model = loadMatchLiquidityDashboardModel(db, {
+    ...(options.limit === undefined ? {} : { limit: options.limit }),
+  });
   const html = renderMatchLiquidityDashboardHtml(model);
   const dashboardHtml = join(outDir, "dashboard.html");
   const dashboardPng = join(outDir, "dashboard.png");

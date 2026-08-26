@@ -81,6 +81,6 @@ describe("signal-context", () => {
     expect(ctx!.eventId).toBe(asFeedEventId("b8723516c8b44a2f9e7d4b1a0c3e5f6a"));
     expect(ctx!.components.pinnacle_novig_home).toBeGreaterThan(0);
     expect(ctx!.components.pinnacle_novig_away).toBeGreaterThan(0);
-    expect(ctx!.pModel).toBe(ctx!.components.pinnacle_novig_home);
+    expect(ctx!.pModel).toBe(ctx!.components.pinnacle_novig_home!);
   });
 });

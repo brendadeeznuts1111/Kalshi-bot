@@ -82,7 +82,7 @@ export type PartnerDashboardSnapshot = {
     ticketCount: number;
     totalRisk: number;
     totalToWin: number;
-  };
+  } | undefined;
   partners: Array<{
     code: string;
     hex: string;
@@ -102,7 +102,7 @@ export type PartnerDashboardSnapshot = {
     path: string;
     drift: { added: number; changed: number; removed: number } | null;
     error: string | null;
-  };
+  } | undefined;
   commands: Array<{ cmd: string; purpose: string }>;
 };
 

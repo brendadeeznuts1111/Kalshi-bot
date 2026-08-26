@@ -105,7 +105,7 @@ function renderDataFlows(): string {
       <div class="flow-chart">
         ${flow.steps.map((s, i) => {
           const [file, desc] = s.split(" — ", 2);
-          return `<div>${i > 0 ? `<span class="arrow">↓</span> ` : ""}<span class="tag">${escapeHtml(file)}</span> ${desc ? `<span class="label">— ${escapeHtml(desc)}</span>` : ""}</div>`;
+          return `<div>${i > 0 ? `<span class="arrow">↓</span> ` : ""}<span class="tag">${escapeHtml(file!)}</span> ${desc ? `<span class="label">— ${escapeHtml(desc)}</span>` : ""}</div>`;
         }).join("\n")}
       </div>
       <div class="meta">Storage: ${flow.storage.join(", ")}</div>

@@ -88,12 +88,12 @@ export async function enrichBookedEvents(
     enrichBooked: true,
     enrichBookedScope: options.enrichBookedScope ?? (enrichOnly ? 'unlinked' : 'board'),
     enrichCatalogMax: options.enrichCatalogMax ?? 2000,
-    enrichLimit: options.enrichLimit,
-    bookedCatalog: options.bookedCatalog,
+    ...(options.enrichLimit !== undefined ? { enrichLimit: options.enrichLimit } : {}),
+    ...(options.bookedCatalog !== undefined ? { bookedCatalog: options.bookedCatalog } : {}),
     dryRun: options.dryRun === true,
-    nowMs: options.nowMs,
-    minMatchRate: options.minMatchRate,
-    minLinkedPct: options.minLinkedPct,
+    ...(options.nowMs !== undefined ? { nowMs: options.nowMs } : {}),
+    ...(options.minMatchRate !== undefined ? { minMatchRate: options.minMatchRate } : {}),
+    ...(options.minLinkedPct !== undefined ? { minLinkedPct: options.minLinkedPct } : {}),
   };
 
   const report = await runInventorySync(db, adapter, syncOpts);

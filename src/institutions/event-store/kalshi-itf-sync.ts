@@ -88,10 +88,10 @@ export type ItfSyncSummary = {
 };
 
 export type ItfFetchOptions = {
-  fetchImpl?: KalshiFetchImpl;
-  baseUrl?: string;
+  fetchImpl?: KalshiFetchImpl | undefined;
+  baseUrl?: string | undefined;
   /** Override clock for retain window (ms since epoch). */
-  nowMs?: number;
+  nowMs?: number | undefined;
 };
 
 /** Default lookback for closed/settled ITF markets so Stadion collect can bridge. */
@@ -604,17 +604,17 @@ export type RecordBookTickSummary = {
   marketsPolled: number;
   errors: number;
   eventCount: number;
-  coverage?: LadderCoverage;
-  coverageLine?: string;
+  coverage?: LadderCoverage | undefined;
+  coverageLine?: string | undefined;
 };
 
 export async function recordKalshiBookTicks(
   db: Database,
   tickers: KalshiMarketTicker[],
   options: {
-    fetchBook?: typeof fetchKalshiBookSnapshot;
-    syncFirst?: boolean;
-    coverage?: LadderCoverage;
+    fetchBook?: typeof fetchKalshiBookSnapshot | undefined;
+    syncFirst?: boolean | undefined;
+    coverage?: LadderCoverage | undefined;
   } = {},
 ): Promise<RecordBookTickSummary> {
   const fetchBook = options.fetchBook ?? fetchKalshiBookSnapshot;

@@ -132,8 +132,8 @@ export type SnapshotEnvironment = {
 
 export type CaptureSnapshotOptions = {
   dbPath?: string;
-  registryDir?: string;
-  dryRun?: boolean;
+  registryDir?: string | undefined;
+  dryRun?: boolean | undefined;
   environment?: SnapshotEnvironment;
 };
 

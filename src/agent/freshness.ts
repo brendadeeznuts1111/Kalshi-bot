@@ -35,7 +35,7 @@ export function resolveRunDataFreshness(run: ResearchRun): DataFreshness {
 
 export function formatDataFreshnessSuffix(opts: {
   stale: boolean;
-  ageMs?: number | null;
+  ageMs?: number | null | undefined;
 }): string {
   if (!opts.stale) return "";
   if (typeof opts.ageMs === "number" && Number.isFinite(opts.ageMs) && opts.ageMs >= 0) {

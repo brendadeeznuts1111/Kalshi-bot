@@ -70,7 +70,7 @@ fd.append("field", "value");
 fd.append("file", new Blob(["file-content"]), "f.txt");
 const rFD = await fetch(base + "/echo", { method: "POST", body: fd });
 const fdBody = await rFD.text();
-const [ct, payload] = [fdBody.split("|")[0], fdBody.split("|")[1]];
+const [ct, payload] = [fdBody.split("|")[0]!, fdBody.split("|")[1]!];
 check("P5 FormData multipart", ct.includes("multipart/form-data") && ct.includes("boundary=") && payload.includes("file-content") && payload.includes("name=\"field\""), "ct=" + ct.slice(0, 40));
 
 // P6 gzip auto-decompression.

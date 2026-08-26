@@ -21,7 +21,7 @@ export async function runBunCommand(
   opts: RunBunOptions = {},
 ): Promise<{ ok: boolean; exitCode: number; stdout: string; stderr: string; lastLine: string }> {
   const bun = (opts.path ? Bun.which('bun', { PATH: opts.path, ...(opts.cwd ? { cwd: opts.cwd } : {}) }) : Bun.which('bun')) ?? 'bun';
-  const p = Bun.spawn([bun, ...args], { cwd: opts.cwd, stdout: 'pipe', stderr: 'pipe', ...(opts.env ? { env: opts.env } : {}) });
+  const p = Bun.spawn([bun, ...args], { stdout: 'pipe', stderr: 'pipe', ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}), ...(opts.env ? { env: opts.env } : {}) });
   const [out, err] = await Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text()]);
   await p.exited;
   const exitCode = p.exitCode ?? 1;

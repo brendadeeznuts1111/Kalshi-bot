@@ -8,7 +8,7 @@ export type OrderbookStreamState = {
 };
 
 export function createOrderbookStreamState(sid?: number): OrderbookStreamState {
-  return { sid, lastSeq: 0 };
+  return { ...(sid === undefined ? {} : { sid }), lastSeq: 0 };
 }
 
 /** Advance stream seq or detect gap / duplicate. */

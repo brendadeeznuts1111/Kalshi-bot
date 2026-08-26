@@ -27,7 +27,7 @@ import type { EventStoreSummaryRow } from "../src/institutions/event-store/types
 export type WarehouseFormat = "table" | "json" | "csv";
 
 export type WarehouseSummaryOptions = {
-  dbPath?: string;
+  dbPath?: string | undefined;
   format?: WarehouseFormat;
   help?: boolean;
 };

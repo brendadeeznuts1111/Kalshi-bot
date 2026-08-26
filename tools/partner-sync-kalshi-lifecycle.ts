@@ -6,16 +6,16 @@ import { syncKalshiProviderLifecycle } from "../src/partner/execution/kalshi-lif
 import { migrateExecutionSchema } from "../src/partner/execution/sql.ts";
 
 export async function runKalshiLifecycleSyncJob(options: {
-  maxPagesPerFeed?: number;
-  pageSize?: number;
+  maxPagesPerFeed?: number | undefined;
+  pageSize?: number | undefined;
 } = {}) {
   const db = openEventStore({ dbPath: DEFAULT_EVENT_STORE_DB });
   try {
     migrateExecutionSchema(db);
     return await syncKalshiProviderLifecycle(db, {
       resolveClient: createKalshiAccountClientResolver(),
-      maxPagesPerFeed: options.maxPagesPerFeed,
-      pageSize: options.pageSize,
+      ...(options.maxPagesPerFeed !== undefined ? { maxPagesPerFeed: options.maxPagesPerFeed } : {}),
+      ...(options.pageSize !== undefined ? { pageSize: options.pageSize } : {}),
     });
   } finally {
     db.close();

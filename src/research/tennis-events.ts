@@ -276,7 +276,7 @@ export async function fetchKalshiSportBoard(
     seriesList.map((s) =>
       fetchAllKalshiMarkets(
         { series_ticker: s, status: "open", limit: 200 },
-        { fetchImpl: options.fetchImpl },
+        { ...(options.fetchImpl !== undefined ? { fetchImpl: options.fetchImpl } : {}) },
       ),
     ),
   );
@@ -318,14 +318,15 @@ export async function fetchKalshiSportBoard(
         .filter((x): x is string => typeof x === "string" && x.length > 0)
         .slice(0, 2)
         .join(" vs ");
+      const title = isMatch
+        ? participantTitle || undefined
+        : binding?.competition
+          ? String(binding.competition)
+          : undefined;
       const synthetic: KalshiEventWire = {
         event_ticker: asKalshiEventTicker(eventTicker),
         series_ticker: s,
-        title: isMatch
-          ? participantTitle || undefined
-          : binding?.competition
-            ? String(binding.competition)
-            : undefined,
+        ...(title !== undefined ? { title } : {}),
       };
       events.push(toEventView(synthetic, eventMarkets, options.sport));
     }

@@ -67,7 +67,7 @@ describe('volleyball tiers + NCAA seeds', () => {
       expect(tier).toMatch(/^[ABCD]$/);
       // Explicit pin preferred when present
       if (VOLLEYBALL_TIER_BY_COMPETITION_ID[c.id]) {
-        expect(tier).toBe(VOLLEYBALL_TIER_BY_COMPETITION_ID[c.id]);
+        expect(tier).toBe(VOLLEYBALL_TIER_BY_COMPETITION_ID[c.id]!);
       }
     }
   });
@@ -114,7 +114,9 @@ describe('volleyball tiers + NCAA seeds', () => {
     });
     expect(hit?.competitionId).toBe('volleyball.indiya');
     expect(
-      resolveVolleyballCompetitionTier({ competitionId: hit?.competitionId }),
+      resolveVolleyballCompetitionTier({
+        ...(hit?.competitionId !== undefined ? { competitionId: hit.competitionId } : {}),
+      }),
     ).toBe('D');
     expect(inferVolleyballTierFromLeagueLabel('Indiya')).toBe('D');
   });

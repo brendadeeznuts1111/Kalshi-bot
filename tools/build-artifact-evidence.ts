@@ -126,7 +126,7 @@ const smModes: any = {};
 for (const mode of ['none', 'linked', 'external', 'inline'] as const) {
   const r = await safe({ entrypoints: [join(F, 'pure.ts')], outdir: join(F, 'outsm-' + mode), sourcemap: mode });
   const entry = r.ok ? r.outputs[0] : null;
-  const text = r.ok && entry ? await (await Bun.build({ entrypoints: [join(F, 'pure.ts')], outdir: join(F, 'outsm-' + mode + 'b'), sourcemap: mode })).outputs[0].text() : '';
+  const text = r.ok && entry ? await (await Bun.build({ entrypoints: [join(F, 'pure.ts')], outdir: join(F, 'outsm-' + mode + 'b'), sourcemap: mode })).outputs[0]!.text() : '';
   smModes[mode] = {
     kinds: r.outputs.map((o: any) => o.kind),
     entrySourcemap: entry ? entry.sourcemap : null,
@@ -181,7 +181,7 @@ push('S07d-compile-object-outfile', { entrypoints: ['pure.ts'], outfile: 'comp-o
 const tgt: any = {};
 for (const t of ['node', 'browser', 'bun'] as const) {
   const r = await safe({ entrypoints: [join(F, 'env.ts')], outdir: join(F, 'outt-' + t), target: t });
-  const text = r.ok ? await (await Bun.build({ entrypoints: [join(F, 'env.ts')], outdir: join(F, 'outt-' + t + 'b'), target: t })).outputs[0].text() : '';
+  const text = r.ok ? await (await Bun.build({ entrypoints: [join(F, 'env.ts')], outdir: join(F, 'outt-' + t + 'b'), target: t })).outputs[0]!.text() : '';
   tgt[t] = { size: r.outputs[0] ? r.outputs[0].size : null, hasBunHeader: text.includes('@bun'), hasProcess: text.includes('process') };
   push('S08-target-' + t, { entrypoints: ['env.ts'], outdir: 'outt-' + t, target: t }, r, tgt[t]);
 }
@@ -190,7 +190,7 @@ for (const t of ['node', 'browser', 'bun'] as const) {
 const fmt: any = {};
 for (const f of ['esm', 'cjs', 'iife'] as const) {
   const r = await safe({ entrypoints: [join(F, 'pure.ts')], outdir: join(F, 'outf-' + f), format: f });
-  const text = r.ok ? await (await Bun.build({ entrypoints: [join(F, 'pure.ts')], outdir: join(F, 'outf-' + f + 'b'), format: f })).outputs[0].text() : '';
+  const text = r.ok ? await (await Bun.build({ entrypoints: [join(F, 'pure.ts')], outdir: join(F, 'outf-' + f + 'b'), format: f })).outputs[0]!.text() : '';
   fmt[f] = { size: r.outputs[0] ? r.outputs[0].size : null, marker: text.slice(0, 40) };
   push('S09-format-' + f, { entrypoints: ['pure.ts'], outdir: 'outf-' + f, format: f }, r, fmt[f]);
 }
@@ -205,14 +205,14 @@ for (const [label, v] of [['off', false], ['on', true], ['object', { whitespace:
 
 // ---------- S11: define ----------
 const s11 = await safe({ entrypoints: [join(F, 'def.ts')], outdir: join(F, 'outd'), define: { MODE: '"prod"' } });
-const s11text = s11.ok ? await (await Bun.build({ entrypoints: [join(F, 'def.ts')], outdir: join(F, 'outd2'), define: { MODE: '"prod"' } })).outputs[0].text() : '';
+const s11text = s11.ok ? await (await Bun.build({ entrypoints: [join(F, 'def.ts')], outdir: join(F, 'outd2'), define: { MODE: '"prod"' } })).outputs[0]!.text() : '';
 push('S11-define', { entrypoints: ['def.ts'], outdir: 'outd', define: { MODE: '"prod"' } }, s11, { inlined: s11text.includes('prod') });
 
 // ---------- S12: env ----------
 const env: any = {};
 for (const [label, v] of [['inline', 'inline'], ['disable', 'disable'], ['prefix', 'GROUND_*']] as const) {
   const r = await safe({ entrypoints: [join(F, 'env.ts')], outdir: join(F, 'oute-' + label), env: v });
-  const text = r.ok ? await (await Bun.build({ entrypoints: [join(F, 'env.ts')], outdir: join(F, 'oute-' + label + 'b'), env: v })).outputs[0].text() : '';
+  const text = r.ok ? await (await Bun.build({ entrypoints: [join(F, 'env.ts')], outdir: join(F, 'oute-' + label + 'b'), env: v })).outputs[0]!.text() : '';
   env[label] = { size: r.outputs[0] ? r.outputs[0].size : null, substituted: text.includes('grounded-ok'), keptDynamic: text.includes('process.env.GROUND_MODE') };
   push('S12-env-' + label, { entrypoints: ['env.ts'], outdir: 'oute-' + label, env: v }, r, env[label]);
 }
@@ -220,8 +220,8 @@ for (const [label, v] of [['inline', 'inline'], ['disable', 'disable'], ['prefix
 // ---------- S13: drop ----------
 const s13a = await safe({ entrypoints: [join(F, 'drop.ts')], outdir: join(F, 'outdr') });
 const s13b = await safe({ entrypoints: [join(F, 'drop.ts')], outdir: join(F, 'outdr2'), drop: ['console.log'] });
-const t13a = s13a.ok ? await (await Bun.build({ entrypoints: [join(F, 'drop.ts')], outdir: join(F, 'outdr3') })).outputs[0].text() : '';
-const t13b = s13b.ok ? await (await Bun.build({ entrypoints: [join(F, 'drop.ts')], outdir: join(F, 'outdr4'), drop: ['console.log'] })).outputs[0].text() : '';
+const t13a = s13a.ok ? await (await Bun.build({ entrypoints: [join(F, 'drop.ts')], outdir: join(F, 'outdr3') })).outputs[0]!.text() : '';
+const t13b = s13b.ok ? await (await Bun.build({ entrypoints: [join(F, 'drop.ts')], outdir: join(F, 'outdr4'), drop: ['console.log'] })).outputs[0]!.text() : '';
 push('S13a-drop-off', { entrypoints: ['drop.ts'], outdir: 'outdr' }, s13a, { hasConsoleLog: t13a.includes('console.log') });
 push('S13b-drop-on', { entrypoints: ['drop.ts'], outdir: 'outdr2', drop: ['console.log'] }, s13b, { hasConsoleLog: t13b.includes('console.log') });
 
@@ -238,21 +238,21 @@ for (const [label, v] of [['default', undefined], ['star', ['*']], ['empty', []]
 // ---------- S15: external ----------
 const s15a = await safe({ entrypoints: [join(F, 'ext.ts')], outdir: join(F, 'outex'), external: ['zod'] });
 const s15b = await safe({ entrypoints: [join(F, 'ext.ts')], outdir: join(F, 'outex2') });
-const t15a = s15a.ok ? await (await Bun.build({ entrypoints: [join(F, 'ext.ts')], outdir: join(F, 'outex3'), external: ['zod'] })).outputs[0].text() : '';
+const t15a = s15a.ok ? await (await Bun.build({ entrypoints: [join(F, 'ext.ts')], outdir: join(F, 'outex3'), external: ['zod'] })).outputs[0]!.text() : '';
 push('S15a-external-zod', { entrypoints: ['ext.ts'], outdir: 'outex', external: ['zod'] }, s15a, { keptImport: t15a.includes('from "zod"'), size: s15a.outputs[0] ? s15a.outputs[0].size : null });
 push('S15b-bundle-zod', { entrypoints: ['ext.ts'], outdir: 'outex2' }, s15b, { size: s15b.outputs[0] ? s15b.outputs[0].size : null });
 
 // ---------- S16: conditions ----------
 const s16a = await safe({ entrypoints: [join(F, 'cond.ts')], outdir: join(F, 'outc') });
 const s16b = await safe({ entrypoints: [join(F, 'cond.ts')], outdir: join(F, 'outc2'), conditions: ['custom'] });
-const t16a = s16a.ok ? await (await Bun.build({ entrypoints: [join(F, 'cond.ts')], outdir: join(F, 'outc3') })).outputs[0].text() : '';
-const t16b = s16b.ok ? await (await Bun.build({ entrypoints: [join(F, 'cond.ts')], outdir: join(F, 'outc4'), conditions: ['custom'] })).outputs[0].text() : '';
+const t16a = s16a.ok ? await (await Bun.build({ entrypoints: [join(F, 'cond.ts')], outdir: join(F, 'outc3') })).outputs[0]!.text() : '';
+const t16b = s16b.ok ? await (await Bun.build({ entrypoints: [join(F, 'cond.ts')], outdir: join(F, 'outc4'), conditions: ['custom'] })).outputs[0]!.text() : '';
 push('S16a-conditions-default', { entrypoints: ['cond.ts'], outdir: 'outc' }, s16a, { resolvedMarker: t16a.split('\n').filter((l: string) => l.includes('tag'))[0] ?? '' });
 push('S16b-conditions-custom', { entrypoints: ['cond.ts'], outdir: 'outc2', conditions: ['custom'] }, s16b, { resolvedMarker: t16b.split('\n').filter((l: string) => l.includes('tag'))[0] ?? '' });
 
 // ---------- S17: publicPath ----------
 const s17 = await safe({ entrypoints: [join(F, 'pub.ts')], outdir: join(F, 'outp'), publicPath: '/cdn/' });
-const t17 = s17.ok ? await (await Bun.build({ entrypoints: [join(F, 'pub.ts')], outdir: join(F, 'outp2'), publicPath: '/cdn/' })).outputs[0].text() : '';
+const t17 = s17.ok ? await (await Bun.build({ entrypoints: [join(F, 'pub.ts')], outdir: join(F, 'outp2'), publicPath: '/cdn/' })).outputs[0]!.text() : '';
 const pixAsset = s17.outputs.find((o: any) => o.kind === 'asset');
 push('S17-publicPath', { entrypoints: ['pub.ts'], outdir: 'outp', publicPath: '/cdn/' }, s17, {
   jsReferencesCdn: t17.includes('/cdn/pix-'),
@@ -304,7 +304,7 @@ const imgGotchas: any = {
   })(),
   maxPixels: (async () => {
     const crcTable = (() => { const t = new Int32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c; } return t; })();
-    const crc32 = (buf: Buffer) => { let c = 0xffffffff; for (const b of buf) c = crcTable[(c ^ b) & 0xff] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
+    const crc32 = (buf: Buffer) => { let c = 0xffffffff; for (const b of buf) c = crcTable[(c ^ b) & 0xff]! ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
     const pngChunk = (type: string, data: Buffer) => { const len = Buffer.alloc(4); len.writeUInt32BE(data.length); const t = Buffer.from(type, 'ascii'); const crc = Buffer.alloc(4); crc.writeUInt32BE(crc32(Buffer.concat([t, data]))); return Buffer.concat([len, t, data, crc]); };
     const mkHuge = (w: number, h: number) => { const sig = Buffer.from('89504e470d0a1a0a', 'hex'); const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4); ihdr[8] = 8; ihdr[9] = 6; const idat = Buffer.from('789c63600000020001000a39', 'hex'); return Buffer.concat([sig, pngChunk('IHDR', ihdr), pngChunk('IDAT', idat), pngChunk('IEND', Buffer.alloc(0))]); };
     const px = async (w: number, h: number) => { try { await new (Bun as any).Image(mkHuge(w, h)).metadata(); return 'OK'; } catch (err: any) { return err.code ?? String(err); } };
@@ -409,7 +409,7 @@ const ctorImgX = new (Bun as any).Image(transferred);
 structuredClone(transferred, { transfer: [transferred] });
 const ctorPxBoundary = (async () => {
   const crcT = (() => { const t = new Int32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c; } return t; })();
-  const crc32 = (buf: Buffer) => { let c = 0xffffffff; for (const b of buf) c = crcT[(c ^ b) & 0xff] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
+  const crc32 = (buf: Buffer) => { let c = 0xffffffff; for (const b of buf) c = crcT[(c ^ b) & 0xff]! ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
   const ch = (type: string, data: Buffer) => { const len = Buffer.alloc(4); len.writeUInt32BE(data.length); const t = Buffer.from(type, 'ascii'); const crc = Buffer.alloc(4); crc.writeUInt32BE(crc32(Buffer.concat([t, data]))); return Buffer.concat([len, t, data, crc]); };
   const mk = (w: number, h: number) => { const sig = Buffer.from('89504e470d0a1a0a', 'hex'); const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4); ihdr[8] = 8; ihdr[9] = 6; const idat = Buffer.from('789c63600000020001000a39', 'hex'); return Buffer.concat([sig, ch('IHDR', ihdr), ch('IDAT', idat), ch('IEND', Buffer.alloc(0))]); };
   const px = async (w: number, h: number, o: any = {}) => { try { await new (Bun as any).Image(mk(w, h), o).metadata(); return 'OK'; } catch (e: any) { return e.code; } };
@@ -528,7 +528,7 @@ await Bun.write(join(cfgDir, 'node_modules/react/jsx-dev-runtime.js'), 'export c
 await Bun.write(join(cfgDir, 'node_modules/react/compiler-runtime.js'), 'export const useMemoCache = (x) => x;');
 await Bun.write(join(cfgDir, 'component.tsx'), 'import { useState } from "react"; export function C({ x }: any) { const [n, setN] = useState(x); return <div onClick={() => setN(n + 1)}>{n}</div>; }');
 const cfgSafe = async (opts: any) => { try { const r = await Bun.build(opts); return { ok: true, r }; } catch { return { ok: false, r: null }; } };
-const cfgText = async (opts: any) => { const s = await cfgSafe(opts); return s.ok && s.r !== null ? await s.r.outputs[0].text() : 'ERR'; };
+const cfgText = async (opts: any) => { const s = await cfgSafe(opts); return s.ok && s.r !== null ? await s.r.outputs[0]!.text() : 'ERR'; };
 const bf = await cfgText({ entrypoints: [join(cfgDir, 'pure.ts')], outdir: join(cfgDir, 'o1'), banner: '/*BANNER*/', footer: '/*FOOTER*/' });
 const thr = await cfgSafe({ entrypoints: [join(cfgDir, 'missing.ts')], outdir: join(cfgDir, 'o2'), throw: false });
 const thrDef = await cfgSafe({ entrypoints: [join(cfgDir, 'missing.ts')], outdir: join(cfgDir, 'o2b') });
@@ -550,7 +550,7 @@ const rComp = await cfgText({ ...reactJ, outdir: join(cfgDir, 'rj2'), reactCompi
 const rSsr = await cfgText({ ...reactJ, outdir: join(cfgDir, 'rj3'), reactCompiler: true, reactCompilerOutputMode: 'ssr' });
 const rClient = await cfgText({ ...reactJ, outdir: join(cfgDir, 'rj4'), reactCompiler: true, reactCompilerOutputMode: 'client' });
 const vFiles = await cfgSafe({ entrypoints: ['/app/index.ts'], outdir: join(cfgDir, 'rj5'), files: { '/app/index.ts': 'import { helper } from "./helper.ts"; export const msg = helper();', '/app/helper.ts': 'export function helper() { return "virtual"; }' } });
-const vFilesText = vFiles.ok ? await (await Bun.build({ entrypoints: ['/app/index.ts'], outdir: join(cfgDir, 'rj6'), files: { '/app/index.ts': 'import { helper } from "./helper.ts"; export const msg = helper();', '/app/helper.ts': 'export function helper() { return "virtual"; }' } })).outputs[0].text() : 'ERR';
+const vFilesText = vFiles.ok ? await (await Bun.build({ entrypoints: ['/app/index.ts'], outdir: join(cfgDir, 'rj6'), files: { '/app/index.ts': 'import { helper } from "./helper.ts"; export const msg = helper();', '/app/helper.ts': 'export function helper() { return "virtual"; }' } })).outputs[0]!.text() : 'ERR';
 const DOL = String.fromCharCode(36);
 const configGapsGotchas = {
   bannerFooter: { bannerAtTop: bf.includes('/*BANNER*/'), footerAtEnd: bf.trimEnd().includes('/*FOOTER*/') },
@@ -702,7 +702,7 @@ const urlPatternGotchas = {
     const miss = await fetch('http://127.0.0.1:' + port + '/other');
     const hitStatus = hit.status; const hitBody = await hit.text(); const missStatus = miss.status;
     s.stop(true);
-    const art = (await Bun.build({ entrypoints: [join(F, 'pure.ts')], outdir: join(F, 'out') })).outputs[0];
+    const art = (await Bun.build({ entrypoints: [join(F, 'pure.ts')], outdir: join(F, 'out') })).outputs[0]!;
     return { hitStatus, hitBody, missStatus, artifactPathIsFilesystem: art.path.startsWith('/') || art.path.startsWith('./'), urlPatternTestOnArtifactPath: pat.test(art.path) };
   })(),
 };
@@ -734,7 +734,7 @@ const gcSmallStatus = gcSmall.status; const gcBigStatus = gcBig.status;
 gcSrv.stop(true);
 const gcDir = mkdtempSync(join(tmpdir(), 'art-ground-gap-'));
 await Bun.write(join(gcDir, 'frag.tsx'), 'export const el = <><div id="a" /><span>hi</span></>;');
-const gcJ1 = await (async () => { try { const r = await Bun.build({ entrypoints: [join(gcDir, 'frag.tsx')], outdir: join(gcDir, 'o1'), jsx: { runtime: 'classic', factory: 'h', fragment: 'Frag' } }); return await r.outputs[0].text(); } catch (err: any) { return 'ERR ' + String(err.message ?? err).slice(0, 50); } })();
+const gcJ1 = await (async () => { try { const r = await Bun.build({ entrypoints: [join(gcDir, 'frag.tsx')], outdir: join(gcDir, 'o1'), jsx: { runtime: 'classic', factory: 'h', fragment: 'Frag' } }); return await r.outputs[0]!.text(); } catch (err: any) { return 'ERR ' + String(err.message ?? err).slice(0, 50); } })();
 const gcJ2 = await (async () => { try { await Bun.build({ entrypoints: [join(gcDir, 'frag.tsx')], outdir: join(gcDir, 'o2'), jsx: { runtime: 'classic', factory: 'h', fragment: 'Frag', sideEffects: true } }); return 'ok'; } catch (err: any) { return 'ERR ' + String(err.message ?? err).slice(0, 50); } })();
 rmSync(gcDir, { recursive: true, force: true });
 const gapCloseGotchas = {

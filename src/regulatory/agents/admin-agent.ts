@@ -23,8 +23,8 @@ export class AdminAgent implements Agent {
         return {
           role: this.role,
           ok: result.ok,
-          data: result.data,
-          error: result.error,
+          ...(result.data !== undefined ? { data: result.data } : {}),
+          ...(result.error !== undefined ? { error: result.error } : {}),
           latencyMs: Math.round(performance.now() - start),
         };
       }

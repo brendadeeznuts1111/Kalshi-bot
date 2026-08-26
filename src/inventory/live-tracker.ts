@@ -52,7 +52,7 @@ export type LiveTrackerEvent = {
   from?: number | string | null;
   to?: number | string | null;
   /** Source log path when loaded from disk. */
-  file?: string;
+  file?: string | undefined;
   /** Raw kind from OfferTransition / eventData. */
   rawKind?: string;
 };
@@ -97,7 +97,7 @@ export function defaultLiveTrackerLogPath(eventId: number | string): string {
 
 function offerTransitionToEvent(
   t: OfferTransition,
-  ctx: { at: string; eventId: number; file?: string; timeMs?: EpochMs | null }
+  ctx: { at: string; eventId: number; file?: string | undefined; timeMs?: EpochMs | null }
 ): LiveTrackerEvent {
   const dual = ctx.timeMs != null ? { time: ctx.at, timeMs: ctx.timeMs } : dualTime(ctx.at);
   const base = {
@@ -150,7 +150,7 @@ function offerTransitionToEvent(
 
 function eventDataTransitionToEvent(
   t: EventDataStateTransition,
-  ctx: { at: string; eventId: number; file?: string; timeMs?: EpochMs | null }
+  ctx: { at: string; eventId: number; file?: string | undefined; timeMs?: EpochMs | null }
 ): LiveTrackerEvent {
   const dual = ctx.timeMs != null ? { time: ctx.at, timeMs: ctx.timeMs } : dualTime(ctx.at);
   const base = {
@@ -187,7 +187,7 @@ function eventDataTransitionToEvent(
 /** Flatten a watch update into tracker events (empty if only heartbeat). */
 export function eventsFromWatchUpdate(
   u: OddsWatchUpdate,
-  options: { includeTicks?: boolean; file?: string } = {}
+  options: { includeTicks?: boolean | undefined; file?: string | undefined } = {}
 ): LiveTrackerEvent[] {
   const stamped = ctxDual(u.at);
   const ctx = {
@@ -368,10 +368,10 @@ export function weightTrackerEvents(
     const settlement = weightLiveTrackerMove({
       sportId: options.sportId,
       phase,
-      marketType: e.marketType,
+      ...(e.marketType !== undefined ? { marketType: e.marketType } : {}),
       period: e.period ?? options.period ?? 'm',
       decimalOdds: Number.isFinite(toNum) && toNum > 1 ? toNum : null,
-      patternSort: options.patternSort,
+      ...(options.patternSort !== undefined ? { patternSort: options.patternSort } : {}),
     });
     return { ...stamped, settlement };
   });

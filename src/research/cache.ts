@@ -461,7 +461,7 @@ function stampRunKind(run: ResearchRun): ResearchRun {
       ...run,
       kind: "fixture",
       // Synthetic shortlists without source:"pipeline" stamp as test so purge/load stay consistent.
-      source: run.source === "test" || syntheticPoison ? "test" : run.source,
+      ...(run.source === "test" || syntheticPoison ? { source: "test" as const } : {}),
     };
   } else if (hasEligibleProductionClocks(run)) {
     stamped = {

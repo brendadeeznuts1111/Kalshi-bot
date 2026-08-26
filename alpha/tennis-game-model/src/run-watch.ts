@@ -20,7 +20,9 @@ export async function runWatchShadow(options: {
     dbPath: options.dbPath ?? DEFAULT_EVENT_STORE_DB,
     readonly: true,
   });
-  const ticks = latestBookTicksForWatchSet(db, { leadMinutes: options.leadMinutes });
+  const ticks = latestBookTicksForWatchSet(db, {
+    ...(options.leadMinutes !== undefined ? { leadMinutes: options.leadMinutes } : {}),
+  });
   let ticked = 0;
   let skipped = 0;
 
@@ -34,7 +36,7 @@ export async function runWatchShadow(options: {
       await executeOnce({
         ticker: unbrand(row.ticker),
         eventId: unbrand(row.eventId),
-        dbPath: options.dbPath,
+        ...(options.dbPath !== undefined ? { dbPath: options.dbPath } : {}),
       });
       ticked++;
     } catch {
@@ -51,6 +53,10 @@ if (import.meta.main) {
   const dryRun = Bun.argv.includes("--dry-run");
   const leadMinutes = lead ? Number(lead) : undefined;
 
-  const summary = await runWatchShadow({ dbPath, leadMinutes, dryRun });
+  const summary = await runWatchShadow({
+    ...(dbPath !== undefined ? { dbPath } : {}),
+    ...(leadMinutes !== undefined ? { leadMinutes } : {}),
+    dryRun,
+  });
   console.log(`Watch-set shadow: ticked=${summary.ticked} skipped=${summary.skipped}`);
 }

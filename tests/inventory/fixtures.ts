@@ -65,7 +65,7 @@ export function coeffLine(
     selection: over.selection,
     decimal: over.decimal,
     american: over.american ?? -110,
-    line: over.line,
-    sideIndex: over.sideIndex,
+    ...(over.line !== undefined ? { line: over.line } : {}),
+    ...(over.sideIndex !== undefined ? { sideIndex: over.sideIndex } : {}),
   };
 }

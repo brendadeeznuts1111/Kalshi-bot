@@ -36,7 +36,7 @@ check("P3 no Bun.HTMLBundle runtime", typeof (Bun as any).HTMLBundle === "undefi
 const res = await Bun.build({ entrypoints: [FIX + "/index.html"], compile: true, target: "browser", outdir: "scratch/html-out" });
 if (res.success) {
   const paths = res.outputs.map((o: any) => o.path.replace(process.cwd() + "/", ""));
-  const html = await res.outputs[0].text();
+  const html = await res.outputs[0]!.text();
   check("P4 single standalone html", paths.length === 1 && paths[0].endsWith(".html"), JSON.stringify(paths));
   check("P5 everything inlined", html.includes("<style>") && html.includes("<script type=\"module\">") && html.includes("data:image/png;base64,") && html.includes("HELLO_FROM_APP_TS") && html.includes("marker-css") && !/="\.\//.test(html), "len=" + html.length);
 } else {

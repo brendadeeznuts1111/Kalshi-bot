@@ -115,7 +115,7 @@ export type BrandSemantic = "pass" | "fail" | "warn" | "info";
 export type BrandCell = {
   raw: string;
   semantic: BrandSemantic;
-  meta?: Record<string, unknown>;
+  meta?: Record<string, unknown> | undefined;
   [Bun.inspect.custom]: (depth: number, opts: Bun.BunInspectOptions, inspect: typeof Bun.inspect) => string;
 };
 

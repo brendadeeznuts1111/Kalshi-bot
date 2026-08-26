@@ -50,7 +50,7 @@ export function masseyNativeBreakerCount(): number {
 }
 
 /** webkit on macOS (zero deps), chrome elsewhere (matches tennis/liquidity ground). */
-export function resolveMasseyWebViewBackend(): BunWebViewOptions["backend"] {
+export function resolveMasseyWebViewBackend(): NonNullable<BunWebViewOptions["backend"]> {
   return process.platform === "darwin" ? "webkit" : "chrome";
 }
 

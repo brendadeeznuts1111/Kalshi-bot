@@ -167,20 +167,20 @@ describe("semantic layer — glossary root, registry consumer", () => {
     const p = buildGlossaryApiPayload();
     const cat = buildFilterCatalog();
     expect(p.filterCatalog).toEqual(cat);
-    expect(p.filterCatalog.tier.values).toContain("GS");
-    expect(p.filterCatalog["ui.events.filter.when"].valueLabels.live).toBe(
+    expect(p.filterCatalog.tier!.values).toContain("GS");
+    expect(p.filterCatalog["ui.events.filter.when"]!.valueLabels.live).toBe(
       "in play now",
     );
-    expect(p.filterCatalog["ui.sort.events"].values).toEqual([
+    expect(p.filterCatalog["ui.sort.events"]!.values).toEqual([
       "time",
       "volume",
       "alpha",
       "desk",
     ]);
-    expect(p.filterCatalog["ui.sort.events"].valueLabels.volume).toBe(
+    expect(p.filterCatalog["ui.sort.events"]!.valueLabels.volume).toBe(
       "24h volume",
     );
-    expect(p.filterCatalog["ui.sort.events"].valueLabels.desk).toBe(
+    expect(p.filterCatalog["ui.sort.events"]!.valueLabels.desk).toBe(
       "desk score",
     );
   });

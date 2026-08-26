@@ -48,7 +48,7 @@ try {
   db.exec("CREATE VIRTUAL TABLE docs USING fts5(title, body)");
   db.exec("INSERT INTO docs (title, body) VALUES (\"bun probe\", \"hello world\")");
   const ft = db.query("SELECT title FROM docs WHERE docs MATCH \"world\"").all() as { title: string }[];
-  check("P3 FTS5 virtual tables + MATCH", ft.length === 1 && ft[0].title === "bun probe");
+  check("P3 FTS5 virtual tables + MATCH", ft.length === 1 && ft[0]!.title === "bun probe");
 
   // P4: JSON1 functions over a bound JSON string.
   db.exec("CREATE TABLE j (v TEXT)");
@@ -59,7 +59,7 @@ try {
   // P5: prepared statements + named-only binding.
   const stmt = db.prepare("SELECT $x AS x, $y AS y");
   const nr = stmt.all({ $x: 1, $y: 2 }) as { x: number; y: number }[];
-  check("P5 prepared statements + named binding", nr.length === 1 && nr[0].x === 1 && nr[0].y === 2);
+  check("P5 prepared statements + named binding", nr.length === 1 && nr[0]!.x === 1 && nr[0]!.y === 2);
 
   // P6: transactions roll back on throw.
   db.exec("DELETE FROM t");

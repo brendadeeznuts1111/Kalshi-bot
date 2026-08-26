@@ -131,7 +131,7 @@ export function computeSurfaceElo(
 
     // If this match is at or after the cutoff, record a prediction using pre-match Elos
     if (cutoffTs !== null && m.startTs >= cutoffTs) {
-      const pA = expectedScore(eloA[idx], eloB[idx]);
+      const pA = expectedScore(eloA[idx]!, eloB[idx]!);
       predictions.push({
         eventId: m.eventId,
         playerA: m.playerA,
@@ -149,13 +149,13 @@ export function computeSurfaceElo(
     // Update Elo based on outcome
     const isAWinner = m.winner === m.playerA;
     const score = isAWinner ? 1 : 0;
-    const expected = expectedScore(eloA[idx], eloB[idx]);
+    const expected = expectedScore(eloA[idx]!, eloB[idx]!);
     const delta = K_FACTOR * (score - expected);
 
     const newEloA = [...eloA];
     const newEloB = [...eloB];
-    newEloA[idx] = Math.round(eloA[idx] + delta);
-    newEloB[idx] = Math.round(eloB[idx] - delta);
+    newEloA[idx] = Math.round(eloA[idx]! + delta);
+    newEloB[idx] = Math.round(eloB[idx]! - delta);
 
     current.set(m.playerA, newEloA);
     current.set(m.playerB, newEloB);
@@ -173,9 +173,9 @@ export function computeSurfaceElo(
 // ── CLI ─────────────────────────────────────────────────────────
 
 export type TrainEloOptions = {
-  dbPath?: string;
-  cutoff?: string;
-  out?: string;
+  dbPath?: string | undefined;
+  cutoff?: string | undefined;
+  out?: string | undefined;
   help?: boolean;
 };
 

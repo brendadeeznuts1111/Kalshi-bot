@@ -30,7 +30,7 @@ export type DailyCheckResult = {
   status: "running" | "early_stop" | "completed";
   daysRunning: number;
   results?: FactorialResult;
-  reason?: string;
+  reason?: string | undefined;
 };
 
 export class ExperimentRunner {
@@ -209,7 +209,7 @@ export class ExperimentRunner {
       const results = this.getResults(experimentId);
       await persistExperimentSession(experimentId, results, {
         status: "early_stop",
-        reason: early.reason,
+        ...(early.reason !== undefined ? { reason: early.reason } : {}),
       });
       return { status: "early_stop", daysRunning, results, reason: early.reason };
     }

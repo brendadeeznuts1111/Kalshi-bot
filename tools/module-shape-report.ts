@@ -67,13 +67,13 @@ for (const l of (scan.stdout?.toString() ?? "").split("\n")) {
   const path = l.slice(0, c1);
   const text = l.slice(c2 + 1);
   const seg = path.split("/");
-  const module = seg.slice(0, -1).join("/") || seg[0];
+  const module = seg.slice(0, -1).join("/") || seg[0]!;
   const matches = [...text.matchAll(TOKEN_RE)];
   if (matches.length === 0) continue;
   for (const m of matches) {
-    let tok = m[2] ? m[1] + "." + m[2] : m[1];
+    let tok = m[2] ? m[1]! + "." + m[2] : m[1]!;
     // longest shape-matching key: Bun.argv.includes is usage of argv.
-    if (tok.includes(".") && !byKey.has(tok)) tok = tok.split(".")[0];
+    if (tok.includes(".") && !byKey.has(tok)) tok = tok.split(".")[0]!;
     addUse(module, tok, isFixtureWrite(text) ? "" : text);
   }
 }
@@ -90,11 +90,11 @@ for (const l of (impScan.stdout?.toString() ?? "").split("\n")) {
   const path = l.slice(0, c1);
   const text = l.slice(c2 + 1);
   const seg = path.split("/");
-  const module = seg.slice(0, -1).join("/") || seg[0];
+  const module = seg.slice(0, -1).join("/") || seg[0]!;
   for (const m of text.matchAll(IMP_RE)) {
     const source = m[2];
-    for (const part of m[1].split(",")) {
-      const name = part.trim().split(/\s+as\s+/)[0].trim();
+    for (const part of m[1]!.split(",")) {
+      const name = part.trim().split(/\s+as\s+/)[0]!.trim();
       if (!name) continue;
       if (source === "bun") {
         const mem = byKey.get(name);

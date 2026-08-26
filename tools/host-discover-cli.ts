@@ -61,7 +61,7 @@ const opts = {
   skipNetworkExtras: skipExtras,
   persistUrls: !noPersist,
   // HAR applies only to a single explicit target (not bulk mapped hosts).
-  harPath: !multi && harPath ? harPath : undefined,
+  ...(!multi && harPath ? { harPath } : {}),
 };
 
 async function runOne(target: string): Promise<HostDiscoverReport> {

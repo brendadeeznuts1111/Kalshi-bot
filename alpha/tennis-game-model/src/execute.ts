@@ -79,7 +79,7 @@ export async function executeOnce(options: ExecuteOptions): Promise<void> {
     decision,
     priceCents,
     side: decision.side ?? "yes",
-    batchMode: options.batchMode,
+    ...(options.batchMode !== undefined ? { batchMode: options.batchMode } : {}),
   });
 
   console.log(

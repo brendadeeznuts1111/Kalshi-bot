@@ -14,9 +14,9 @@ type BookedMatchQuery = {
   home: string | null;
   away: string | null;
   /** Inventory sport id / bucket / display (e.g. table_tennis, tennis). */
-  sport?: string | null;
+  sport?: string | null | undefined;
   /** Stream league label — soft preference only. */
-  league?: string | null;
+  league?: string | null | undefined;
 };
 
 /** Inventory / stream sport → normalized Statscore sport_name aliases. */
@@ -358,7 +358,7 @@ export function diagnoseBookedMatch(
   home: string | null,
   away: string | null,
   booked: BookedMatchEntry[],
-  options: { sport?: string | null; league?: string | null } = {}
+  options: { sport?: string | null | undefined; league?: string | null | undefined } = {}
 ): BookedMatchDiagnosis {
   if (!home || !away) {
     return {
@@ -503,7 +503,7 @@ export function matchBookedOddsEventId(
   home: string | null,
   away: string | null,
   booked: BookedMatchEntry[],
-  options: { sport?: string | null; league?: string | null } = {}
+  options: { sport?: string | null | undefined; league?: string | null | undefined } = {}
 ): string | null {
   return diagnoseBookedMatch(home, away, booked, options).oddsEventId;
 }

@@ -11,11 +11,11 @@ import {
 } from "./export-audit.ts";
 
 export type ExportAuditCliOptions = {
-  runId?: string;
+  runId?: string | undefined;
   latest: boolean;
-  verify?: string;
-  repo?: string;
-  dimension?: string;
+  verify?: string | undefined;
+  repo?: string | undefined;
+  dimension?: string | undefined;
 };
 
 export function parseExportAuditCli(argv: string[]): ExportAuditCliOptions {
@@ -72,7 +72,9 @@ export async function runExportAuditCli(opts: ExportAuditCliOptions): Promise<nu
     return 1;
   }
 
-  const dir = await writeAuditExports(run, config, { repo: opts.repo });
+  const dir = await writeAuditExports(run, config, {
+    ...(opts.repo !== undefined ? { repo: opts.repo } : {}),
+  });
   if (!dir) {
     console.error(
       opts.repo

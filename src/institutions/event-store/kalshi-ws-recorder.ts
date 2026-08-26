@@ -368,8 +368,8 @@ export async function runKalshiWsWatchRecorder(
 
   const resolveTickers = (): KalshiMarketTicker[] => {
     const { tickers } = listRecordTickers(db, {
-      leadMinutes: options.leadMinutes,
-      limit: options.limit,
+      ...(options.leadMinutes !== undefined ? { leadMinutes: options.leadMinutes } : {}),
+      ...(options.limit !== undefined ? { limit: options.limit } : {}),
       clearStale: !dryRun,
     });
     return tickers;
@@ -384,8 +384,8 @@ export async function runKalshiWsWatchRecorder(
     const { promise: sessionPromise, resolve: sessionDone } = Promise.withResolvers<void>();
 
     const client = new KalshiMarketWs({
-      creds,
-      wsFactory: options.wsFactory,
+      ...(creds !== undefined ? { creds } : {}),
+      ...(options.wsFactory !== undefined ? { wsFactory: options.wsFactory } : {}),
       handlers: {
         onOpen: () => {
           attempt = 0;
