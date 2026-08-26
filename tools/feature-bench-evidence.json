@@ -8,32 +8,32 @@
     {
       "label": "convertColorFallback hex -> lch",
       "unit": "ns/op",
-      "value": 385
+      "value": 333
     },
     {
       "label": "convertColorFallback hex -> oklab",
       "unit": "ns/op",
-      "value": 337
+      "value": 285
     },
     {
       "label": "convertColorFallback hex -> oklch",
       "unit": "ns/op",
-      "value": 371
+      "value": 304
     },
     {
       "label": "convertColorFallback hex -> hsv",
       "unit": "ns/op",
-      "value": 342
+      "value": 290
     },
     {
       "label": "convertColorFallback hex -> lab",
       "unit": "ns/op",
-      "value": 352
+      "value": 304
     },
     {
       "label": "convertColorFallback hex -> hsl",
       "unit": "ns/op",
-      "value": 355
+      "value": 299
     },
     {
       "label": "convertColorFallback hex -> number",
@@ -43,72 +43,92 @@
     {
       "label": "parseExtendedColor(oklab)",
       "unit": "ns/op",
-      "value": 231
+      "value": 194
     },
     {
       "label": "parseExtendedColor(oklch)",
       "unit": "ns/op",
-      "value": 248
+      "value": 219
     },
     {
       "label": "parseExtendedColor(hsv)",
       "unit": "ns/op",
-      "value": 207
+      "value": 175
     },
     {
       "label": "parseExtendedColor(lab)",
       "unit": "ns/op",
-      "value": 243
+      "value": 210
     },
     {
       "label": "parseExtendedColor(lch)",
       "unit": "ns/op",
-      "value": 278
+      "value": 226
     },
     {
       "label": "Bun.color hex -> lab (native)",
       "unit": "ns/op",
-      "value": 664
+      "value": 618
     },
     {
       "label": "markdownToHtml docs (small)",
       "unit": "ns/op",
-      "value": 1902
+      "value": 1989
     },
     {
       "label": "markdownToHtml docs (large)",
       "unit": "ns/op",
-      "value": 53174
+      "value": 45711
     },
     {
       "label": "baseCssVars() theme CSS",
       "unit": "ns/op",
-      "value": 1076
+      "value": 1001
     },
     {
       "label": "themeManifest() JSON",
       "unit": "ns/op",
-      "value": 12377
+      "value": 15631
     },
     {
       "label": "ml-dsa-65 sign (4 KiB)",
       "unit": "ns/op",
-      "value": 205922
+      "value": 190761
     },
     {
       "label": "ml-dsa-65 verify (4 KiB)",
       "unit": "ns/op",
-      "value": 48184
+      "value": 43468
     },
     {
       "label": "ml-dsa-65 keygen",
       "unit": "ms/op",
-      "value": 0.08
+      "value": 0.06
     },
     {
       "label": "processMarkdownImages (1x1 -> webp)",
       "unit": "ms/op",
-      "value": 41.04
+      "value": 38.3
+    },
+    {
+      "label": "generateCanonicalAsset (1x1 -> 8x8 png, full tuple)",
+      "unit": "ms/op",
+      "value": 0.08
+    },
+    {
+      "label": "metadata canonicalization (sort+normalize+stringify)",
+      "unit": "ns/op",
+      "value": 1200
+    },
+    {
+      "label": "CryptoHasher.hash sha256 (4 KiB buffer)",
+      "unit": "ns/op",
+      "value": 1515
+    },
+    {
+      "label": "CryptoHasher.hash sha256 (4 KiB string)",
+      "unit": "ns/op",
+      "value": 1710
     }
   ]
 }

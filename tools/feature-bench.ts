@@ -123,6 +123,23 @@ await benchMs("processMarkdownImages (1x1 -> webp)", async () => {
   await processMarkdownImages(MD_IMG, { outDir: join(IMG_DIR, "out") });
 });
 
+// 8. canonical asset generator (image process + hash + canonicalize)
+const { generateCanonicalAsset, sortObjectKeys, normalizeNumbers } = await import("../src/lib/canonical-asset.ts");
+const CANON_OPTS = { width: 8, height: 8, fit: "inside", name: "bench", timestamp: 0, extra: { price: 0.1 + 0.2, list: [3, 1, 2, "z"] } } as const;
+await benchMs("generateCanonicalAsset (1x1 -> 8x8 png, full tuple)", async () => {
+  await generateCanonicalAsset(IMG_SRC, CANON_OPTS);
+});
+// metadata canonicalization only (no image work)
+const META = { asset_hash: "0xabc", version: "1.0.0", created_at: 0, schema: "canonical-asset/v1", name: "x", description: "", extra: { price: 0.1 + 0.2, list: [3, 1, 2, { b: 1, a: 2 }, "z"] } };
+await benchNs("metadata canonicalization (sort+normalize+stringify)", () => {
+  JSON.stringify(sortObjectKeys(normalizeNumbers(META), true));
+});
+// CryptoHasher: buffer vs string on 4 KiB (grounds the "pass Uint8Array" claim)
+const HASH_BUF = new Uint8Array(4096).fill(9);
+const HASH_STR = "x".repeat(4096);
+await benchNs("CryptoHasher.hash sha256 (4 KiB buffer)", () => { Bun.CryptoHasher.hash("sha256", HASH_BUF, "hex"); });
+await benchNs("CryptoHasher.hash sha256 (4 KiB string)", () => { Bun.CryptoHasher.hash("sha256", HASH_STR, "hex"); });
+
 // ── report ───────────────────────────────────────────────────────────────
 mkdirSync(OUT_DIR, { recursive: true });
 const report = {
