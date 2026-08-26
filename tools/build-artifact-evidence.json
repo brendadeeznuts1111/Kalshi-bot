@@ -695,6 +695,20 @@
       "bareResolvesToString": true
     }
   },
+  "archiveGotchas": {
+    "typeofClass": "function",
+    "staticWrite": {},
+    "blobSize": 10240,
+    "bytesLen": 10240,
+    "extractCount": {},
+    "globExtractExcludes": {},
+    "gzipSmaller": {},
+    "filesIsMap": {}
+  },
+  "udpGotchas": {
+    "typeofFn": "function",
+    "loopbackEcho": {}
+  },
   "scenarios": [
     {
       "name": "S01-artifact-surface",
@@ -1141,7 +1155,7 @@
         {
           "path": "outbc/pure.js.jsc",
           "kind": "bytecode",
-          "hash": "pqmhb9n6",
+          "hash": "z7zb18vy",
           "loader": "file",
           "size": 10944,
           "type": "application/octet-stream",

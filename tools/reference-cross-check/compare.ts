@@ -179,6 +179,13 @@ export const LEDGER: LedgerClaim[] = [
   { id: 'TR-transform', api: 'transform', source: 'bun.d.ts', fragment: 'Transpile code from TypeScript or JSX into valid JavaScript.', docSays: 'Transpiler: explicit ts loader strips type annotations; jsx loader emits jsxDEV; DEFAULT loader is jsx (TS annotations throw without ts loader)', evidencePath: 'miscGotchas.transpiler.tsStrip', kind: 'consistent' },
   { id: 'TR-scanImports', api: 'scanImports', source: 'bun.d.ts', fragment: 'Get a list of import paths from a TypeScript, JSX, TSX, or JavaScript file.', docSays: 'scanImports returns [{kind:"import-statement",path}] entries', evidencePath: 'miscGotchas.transpiler.scanImports', kind: 'consistent' },
   { id: 'RS-resolveSync', api: 'resolveSync', source: 'bun.d.ts', fragment: 'function resolveSync(moduleId: string, parent: string): string;', docSays: 'resolveSync: node: builtins pass through; bare specifiers resolve to absolute paths', evidencePath: 'miscGotchas.resolveSync.nodePrefixPassthrough', kind: 'consistent' },
+  { id: 'AR-write', api: 'write', source: 'bun.d.ts', fragment: 'Create an archive and write it to disk in one operation.', docSays: 'Archive.write is STATIC (path, data, options); writes a tarball to disk', evidencePath: 'archiveGotchas.staticWrite', kind: 'consistent' },
+  { id: 'AR-blobBytes', api: 'blob', source: 'bun.d.ts', fragment: 'Create an `Archive` instance from input data.', docSays: 'new Archive(object) -> instance with blob()/bytes() (tarball buffers)', evidencePath: 'archiveGotchas.blobSize', kind: 'consistent' },
+  { id: 'AR-extract', api: 'extract', source: 'bun.d.ts', fragment: 'Extract the archive contents to a directory on disk.', docSays: 'Archive.extract(dir, { glob }) returns the extracted entry count; glob filters (negative patterns exclude)', evidencePath: 'archiveGotchas.extractCount', kind: 'consistent' },
+  { id: 'AR-compress', api: 'compress', source: 'bun.d.ts', fragment: 'By default, archives are not compressed. Use `{ compress: "gzip" }`', docSays: 'ArchiveOptions { compress: "gzip", level }: gzipped archive is smaller than the plain tarball', evidencePath: 'archiveGotchas.gzipSmaller', kind: 'consistent' },
+  { id: 'AR-files', api: 'files', source: 'bun.d.ts', fragment: 'for (const [path, file] of entries)', docSays: 'Archive.files() returns a Map of path -> file; also accepts glob filters', evidencePath: 'archiveGotchas.filesIsMap', kind: 'consistent' },
+  { id: 'UDP-create', api: 'udpSocket', source: 'bun.d.ts', fragment: 'Create a UDP socket', docSays: 'Bun.udpSocket(options) resolves to a udp.Socket; handler configured via options.socket.data', evidencePath: 'udpGotchas.loopbackEcho', kind: 'consistent' },
+  { id: 'UDP-send', api: 'send', source: 'bun.d.ts', fragment: 'send(data: Data, port: number, address: string): boolean;', docSays: 'udp.Socket.send(data, port, address) - LOOPBACK ECHO verified (127.0.0.1 ping-42 round-trips); address getter {address,family,port}; close() sets closed=true', evidencePath: 'udpGotchas.loopbackEcho', kind: 'consistent' },
 ];
 
 /** APIs with grounded evidence but no ledger row (fit/filter/quality/... come from the probe gates). */
@@ -200,6 +207,8 @@ export const EXTRA_GROUNDED: string[] = [
   'verifySync', 'escapeHTML', 'deepEquals', 'deepMatch',
   'which', 'peek', 'status', 'sleep', 'sleepSync', 'nanoseconds', 'resolveSync',
   'transform', 'transformSync', 'scanImports',
+  'compress', 'level', 'extract', 'files', 'address', 'binaryType', 'closed', 'fd',
+  'ref', 'reload', 'remoteAddress', 'send', 'sendMany', 'setBroadcast', 'setTTL', 'unref',
 ];
 
 export function checkClaim(claim: LedgerClaim, sourceText: string, ev: Evidence): CheckResult {

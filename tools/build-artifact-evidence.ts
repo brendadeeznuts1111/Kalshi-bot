@@ -1073,6 +1073,35 @@ const miscGotchas = {
     bareResolvesToString: typeof (Bun as any).resolveSync('events', '/tmp') === 'string',
   },
 };
+
+// ---------- archiveGotchas + udpGotchas: Bun.Archive / Bun.udpSocket (continue round) ----------
+const arcDir = mkdtempSync(join(tmpdir(), 'art-arc-'));
+const archiveGotchas = {
+  typeofClass: typeof (Bun as any).Archive,
+  staticWrite: (async () => { const p = join(arcDir, 'out.tar'); await (Bun as any).Archive.write(p, { 'hello.txt': 'Hello' }); return existsSync(p); })(),
+  blobSize: (await new (Bun as any).Archive({ 'a.txt': 'x'.repeat(1000) }).blob()).size,
+  bytesLen: (await new (Bun as any).Archive({ 'a.txt': 'x' }).bytes()).length,
+  extractCount: (async () => { const a = new (Bun as any).Archive({ 'hello.txt': 'H', 'nested/f.txt': 'N' }); return await a.extract(join(arcDir, 'ex')); })(),
+  globExtractExcludes: (async () => { const a = new (Bun as any).Archive({ 'hello.txt': 'H', 'nested/f.txt': 'N' }); await a.extract(join(arcDir, 'exg'), { glob: 'nested/*' } as any); return !existsSync(join(arcDir, 'exg', 'hello.txt')); })(),
+  gzipSmaller: (async () => { const big = 'x'.repeat(5000); const plain = (await new (Bun as any).Archive({ 'a.txt': big }).blob()).size; const gz = (await new (Bun as any).Archive({ 'a.txt': big }, { compress: 'gzip' } as any).blob()).size; return gz < plain; })(),
+  filesIsMap: (async () => { const a = new (Bun as any).Archive({ 'a.txt': 'A' }); const f = await a.files(); return f instanceof Map ? f.size : 0; })(),
+};
+const udpGotchas = {
+  typeofFn: typeof (Bun as any).udpSocket,
+  loopbackEcho: (async () => {
+    let resolveR: (v: string) => void = () => {};
+    const rp = new Promise<string>((res) => { resolveR = res; });
+    const a = await (Bun as any).udpSocket({ hostname: '127.0.0.1', port: 0, socket: { data: (_s: any, d: any) => resolveR(String(new TextDecoder().decode(d))) } } as any);
+    const b = await (Bun as any).udpSocket({ hostname: '127.0.0.1', port: 0 } as any);
+    const sent = b.send(Buffer.from('ping-42'), a.port, '127.0.0.1');
+    const msg = await rp;
+    const family = a.address.family;
+    a.close();
+    const closed = a.closed;
+    b.close();
+    return JSON.stringify({ sent, msg, family, closed });
+  })(),
+};
 // ---------- emit ----------
 const evidence = {
   tool: 'tools/build-artifact-evidence.ts',
@@ -1097,6 +1126,8 @@ const evidence = {
   markdownGotchas,
   utilityGotchas,
   miscGotchas,
+  archiveGotchas,
+  udpGotchas,
   scenarios,
 };
 await Bun.write(EVIDENCE, JSON.stringify(evidence, null, 2) + '\n');

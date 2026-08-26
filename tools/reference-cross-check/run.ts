@@ -77,6 +77,9 @@ export async function runCrossCheck(): Promise<number> {
   declared['Bun.escapeHTML'] = ['escapeHTML']; // function surface
   declared['Bun.deepEquals'] = ['deepEquals', 'deepMatch']; // function surface
   declared['Bun.Transpiler'] = classMembers(dts, 'Transpiler');
+  declared['Bun.Archive'] = classMembers(dts, 'Archive');
+  declared['Bun.Archive.ArchiveOptions'] = interfaceFields(dts, 'ArchiveOptions');
+  declared['Bun.udpSocket'] = ['address', 'binaryType', 'close', 'closed', 'fd', 'hostname', 'port', 'ref', 'reload', 'remoteAddress', 'send', 'sendMany', 'setBroadcast', 'setTTL', 'unref']; // curated - udp.Socket
   declared['Bun.which'] = ['which'];
   declared['Bun.peek'] = ['peek', 'status'];
   declared['Bun.sleep'] = ['sleep', 'sleepSync'];

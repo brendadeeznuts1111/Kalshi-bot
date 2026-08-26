@@ -5,7 +5,7 @@
   "bundleHash": "bun-types@1.4.0-c0dadede486f49ab",
   "verdictCounts": {
     "PINNED-DISCREPANCY": 8,
-    "CONSISTENT": 128
+    "CONSISTENT": 135
   },
   "checks": [
     {
@@ -1155,6 +1155,62 @@
       "source": "bun.d.ts",
       "docSays": "resolveSync: node: builtins pass through; bare specifiers resolve to absolute paths",
       "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "AR-write",
+      "api": "write",
+      "source": "bun.d.ts",
+      "docSays": "Archive.write is STATIC (path, data, options); writes a tarball to disk",
+      "observed": {},
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "AR-blobBytes",
+      "api": "blob",
+      "source": "bun.d.ts",
+      "docSays": "new Archive(object) -> instance with blob()/bytes() (tarball buffers)",
+      "observed": 10240,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "AR-extract",
+      "api": "extract",
+      "source": "bun.d.ts",
+      "docSays": "Archive.extract(dir, { glob }) returns the extracted entry count; glob filters (negative patterns exclude)",
+      "observed": {},
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "AR-compress",
+      "api": "compress",
+      "source": "bun.d.ts",
+      "docSays": "ArchiveOptions { compress: \"gzip\", level }: gzipped archive is smaller than the plain tarball",
+      "observed": {},
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "AR-files",
+      "api": "files",
+      "source": "bun.d.ts",
+      "docSays": "Archive.files() returns a Map of path -> file; also accepts glob filters",
+      "observed": {},
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "UDP-create",
+      "api": "udpSocket",
+      "source": "bun.d.ts",
+      "docSays": "Bun.udpSocket(options) resolves to a udp.Socket; handler configured via options.socket.data",
+      "observed": {},
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "UDP-send",
+      "api": "send",
+      "source": "bun.d.ts",
+      "docSays": "udp.Socket.send(data, port, address) - LOOPBACK ECHO verified (127.0.0.1 ping-42 round-trips); address getter {address,family,port}; close() sets closed=true",
+      "observed": {},
       "verdict": "CONSISTENT"
     }
   ],
