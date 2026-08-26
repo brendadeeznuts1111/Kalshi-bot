@@ -13,7 +13,7 @@ import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 import { resolveColorMode } from '../src/lib/color/theme.ts';
 import { listFiles } from '../src/lib/glob.ts';
-import { type OddsPrint } from '../src/alpha/cluster/odds-vector.ts';
+import { clusterMetadata, type OddsPrint } from '../src/alpha/cluster/odds-vector.ts';
 import { ConsensusTracker } from '../src/alpha/cluster/tracker.ts';
 
 const ROOT = join(import.meta.dir, '..');
@@ -238,5 +238,18 @@ if (verbose) {
   })).filter((r) => r.label !== '-1');
   const noiseRows = result.prints.map((p) => ({ label: 'noise', source: p.source, event: p.eventId, implied: p.implied.toFixed(3) })).filter((_r, i) => (result.labels[result.prints[i]!.id] ?? -1) === -1);
   console.log((Bun as any).inspect.table([...rows, ...noiseRows], ['label', 'source', 'event', 'implied'], { colors: useColor }));
+  // Cluster metadata (S214): consensus / spread / tightness per cluster.
+  const byLabel = new Map<number, OddsPrint[]>();
+  for (const p of result.prints) {
+    const l = result.labels[p.id] ?? -1;
+    if (l === -1) continue;
+    const arr = byLabel.get(l) ?? [];
+    arr.push(p);
+    byLabel.set(l, arr);
+  }
+  for (const [label, members] of [...byLabel.entries()].sort((a, b) => a[0] - b[0])) {
+    const m = clusterMetadata(members);
+    console.log('  cluster ' + label + ': consensus=' + m.consensus!.toFixed(4) + ' spread=' + m.spread!.toFixed(4) + ' tightness=' + m.tightness!.toFixed(4) + ' (' + m.prints + ' prints)');
+  }
 }
 console.log('output: research/outputs/odds-clusters.{json,md}');

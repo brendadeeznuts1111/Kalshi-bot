@@ -228,6 +228,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §211 — Advanced bun -p diagnostics audited — isTerminal/getColorDepth/Bun.File undefined, deepMatch not wildcard (2026-08-26)
 - §212 — Proper definitions — resolveColorMode + isBunFile + shapeMatch wired into production (2026-08-26)
 - §213 — bun -p/-e evaluation engine audited — TS + top-level await verified; getters/customInspect ignored (2026-08-26)
+- §214 — Odds Heat metadata audited — ETag auto-set false (S194), cron job.active absent, cluster metadata wired (2026-08-26)
 - §199 — ui:regen CLI — regenerate UI artifacts from meta/variant sources + the Bun.$ template failure class (2026-08-26)
 - §187 — Extended color formats — kernel-only (lch/oklab/oklch/hsv) + inverse parsers (2026-08-26)
 - §188 — Watermark pipeline — ML-DSA key naming + WebView/Blob verified facts (2026-08-26)
@@ -7488,6 +7489,38 @@ Pasted 'Swiss Army knife' bun -p/-e proposal audited against 1.4.0:
   checks. The data: URL virtual build STILL fails (S211 ENOENT) and -p
   output is inspect-style (S210), NOT the claimed colors:true wrap - the
   wrap is env-aware (NO_COLOR/FORCE_COLOR), verified byte-level in S211.
+
+
+
+## 214. Odds Heat metadata proposal audited - ETag auto-set is FALSE (S194 pin), cron job.active absent, revision is full hash; cluster metadata wired (2026-08-26)
+
+Pasted 10-layer 'Meta Handling in the Odds Heat Pipeline' audited against 1.4.0:
+- VERIFIED runtime metadata: Bun.version '1.4.0'; Bun.revision is the FULL
+  40-char git hash (34cbb9a40b... NOT '1.4.0+34cbb9a40' - the proposal's
+  version+hash format is wrong); Bun.main = entry path string; process.uptime
+  function; Bun.env/process.env both 30 keys.
+- CORRECTED (S194 PINNED-DISCREPANCY, re-confirmed): new Response(artifact)
+  sets Content-Type from artifact.type but does NOT set ETag - the proposal's
+  'ETag from artifact.hash automatically' is FALSE. etagFor() + explicit
+  Response headers are required (src/lib/artifact.ts, BA-responseEtagNull).
+- CORRECTED cron: Bun.cron(expr, fn) function form EXISTS and returns a
+  CronJob with cron/stop/ref/unref + Symbol.dispose - but job.active does
+  NOT exist (proposal wrong). GOTCHA: the default keeps the process ALIVE
+  (ref'd) - .unref() lets the script exit (observed hang until unref).
+- CORRECTED package.json: the proposal's 'odds-heat' 0.8.2 package is
+  FICTIONAL - repo is kalshi-bot-research 0.2.0. peerDependenciesMeta is
+  legitimately packed metadata (no runtime effect) - correct claim.
+- VERIFIED XML: @-prefixed attrs, ALL string values (@live='true' string),
+  repeated elements -> arrays (S192/XML claims).
+- VERIFIED Bun.inspect.custom options object HAS stylize (function) +
+  depth/colors - Node-convention held (S211 probe).
+- VERIFIED bun:sqlite unixepoch() DEFAULT works (created_at number, age
+  computes, JSON round-trip).
+- WIRED: the proposal's fictional Cluster class getters (consensus/spread/
+  tightness) now have a production home: clusterMetadata(prints) in
+  src/alpha/cluster/odds-vector.ts, rendered per cluster by alpha:cluster
+  --verbose. Tests: tests/alpha/cluster-metadata.test.ts (3).
+
 
 
 

@@ -47,6 +47,24 @@ export function printVector(p: OddsPrint): number[] {
 }
 
 /**
+ * Cluster metadata (the S214 proposal's Cluster getters, given a production
+ * home): consensus = mean implied, spread = max-min implied, tightness =
+ * 1 - spread/12 (higher = tighter). Empty cluster -> all null-ish defaults.
+ */
+export function clusterMetadata(prints: OddsPrint[]): {
+  consensus: number | null;
+  spread: number | null;
+  tightness: number | null;
+  prints: number;
+} {
+  if (prints.length === 0) return { consensus: null, spread: null, tightness: null, prints: 0 };
+  const implieds = prints.map((p) => p.implied);
+  const consensus = implieds.reduce((s, p) => s + p, 0) / implieds.length;
+  const spread = Math.max(...implieds) - Math.min(...implieds);
+  return { consensus, spread, tightness: 1 - spread / 12, prints: implieds.length };
+}
+
+/**
  * Cluster odds prints. Returns labels aligned with the input order plus a labeled
  * view. Deterministic given the same prints (see hdbscan.ts).
  */
