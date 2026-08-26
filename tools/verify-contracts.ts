@@ -67,6 +67,7 @@ const gates = [
   ['etag:probe'], // §176 automatic ETag/304 behavior (P3 docs-corrected)
   ['build-artifact:probe'], // §177 BuildArtifact gotchas (P3/P3b docs-corrected)
   ['client-shape:probe'],
+  ['surface-confirm:probe'], // §224 surface-first confirmation protocol (ML-KEM S221->S223 lesson)
   ['coverage:probe'],
   ['fullstack:probe'],
   ['reference-cross-check'], // §178 official bun-types docs vs observed evidence

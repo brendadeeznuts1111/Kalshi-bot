@@ -9,7 +9,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 > The headings were renumbered to §1-§11 on 2026-08-23; the counters were kept
 > so historical notes stay traceable.
 >
-> **Current contract status: verify:contracts 58/58** (see docs/BUN_API_COVERAGE.md
+> **Current contract status: verify:contracts 59/59** (see docs/BUN_API_COVERAGE.md
 > for the full matrix). `verify:contracts N/N` lines inside older sections are
 > HISTORICAL (each records its era) — docs:check enforces that only this header
 > and non-pitfall docs may reference the current count.
@@ -237,6 +237,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §220 — Crypto/quantum truth — ML-DSA works (persistent registered key), ML-KEM keygen-only (2026-08-26)
 - §221 — ML-KEM 'not callable' — SUPERSEDED by §223 (our probe read wrong property/arg order; the function works) (2026-08-26)
 - §223 — ML-KEM WORKS — encapsulateBits/decapsulateBits verified + wired (ml-kem.ts + registry) (2026-08-26)
+- §224 — CONFIRMATION PROTOCOL — surface first, semantics second, test-locked positive (2026-08-26)
 - §199 — ui:regen CLI — regenerate UI artifacts from meta/variant sources + the Bun.$ template failure class (2026-08-26)
 - §187 — Extended color formats — kernel-only (lch/oklab/oklch/hsv) + inverse parsers (2026-08-26)
 - §188 — Watermark pipeline — ML-DSA key naming + WebView/Blob verified facts (2026-08-26)
@@ -7794,6 +7795,37 @@ ML-KEM key encapsulation is fully callable via crypto.subtle on 1.4.0:
   docs said encapsulate/decapsulate + sharedSecret + (key, algorithm);
   runtime is encapsulateBits/decapsulateBits + sharedKey + (algorithm, key).
   Gates: 2799 tests pass / 0 fail.
+
+
+
+## 224. The CONFIRMATION PROTOCOL - surface first, then semantics, then test-locked positive (2026-08-26)
+
+The S221->S223 episode was a PROCESS failure, not just a wrong answer: a
+hand-rolled scratch probe concluded 'API unusable' from spec-shaped calls
+without ever dumping the runtime surface. The protocol that would have
+caught it in one step is now a verify gate (surface-confirm:probe, 59/59):
+1. DUMP THE SURFACE FIRST: Object.getOwnPropertyNames(proto) + arity
+   (.length) - anchors are DISCOVERED, never assumed from docs/spec.
+   The ML-KEM surface dump shows encapsulateBits (arity 2) - the spec
+   name encapsulate/decapsulate never existed; the runtime names did.
+2. DERIVE THE CALL SHAPE FROM THE BINDING'S OWN ERROR TEXT: 'Argument 2
+   (encapsulationKey) must be an instance of CryptoKey' reveals arg
+   order (algorithm, key) - record it AND try it, don't just log it.
+3. READ THE ACTUAL RESULT SHAPE: discover the property by name
+   (/shared/i over Object.keys(result) -> sharedKey), never guess
+   sharedSecret from docs. The round-trip was ALWAYS working.
+4. LOCK A POSITIVE with assertions (test or probe gate). A scratch
+   NEGATIVE is not confirmation - if the API works, the gate stays
+   green and we know; if the API is truly absent, the gate FAILS and
+   we know loudly instead of trusting a scratch note.
+5. Docs are the NULL HYPOTHESIS: treat 'Fully implemented' as true and
+   demand strong evidence (a working call) before declaring them wrong.
+   The docs' substance (KEM implemented) was right; only the names/args
+   notation differed.
+This protocol applies to every future API confirmation. The S221 error
+record + S223 correction are the case study; surface-confirm:probe is the
+enforcement. Gates: verify:contracts 59/59.
+
 
 
 

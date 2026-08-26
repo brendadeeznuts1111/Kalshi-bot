@@ -285,6 +285,7 @@
     "type-drift:probe": "bun tools/type-drift-probe.ts",
     "client-shape:probe": "bun tools/client-shape-probe.ts",
     "coverage:probe": "bun tools/coverage-probe.ts",
+    "surface-confirm:probe": "bun tools/surface-confirm-probe.ts",
     "fullstack:probe": "bun tools/fullstack-probe.ts",
     "coverage:matrix": "bun tools/bun-shape.ts && bun tools/bun-coverage-matrix.ts && bun tools/module-shape-report.ts && bun tools/repo-api-shape.ts && bun tools/docs-sync-counts.ts",
     "shape:gen": "bun tools/bun-shape.ts",
