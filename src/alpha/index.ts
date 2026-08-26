@@ -50,6 +50,9 @@ export {
 export type { FeedEventRef, MappedEvent, TickerMapperOptions } from "./ticker-mapper.ts";
 
 export { buildPinnacleSignalContext, eventsToFeedRefs } from "./signal-context.ts";
+
+export { LiveConsensusStream } from "./cluster/live-consensus.ts";
+export type { LiveConsensusOptions } from "./cluster/live-consensus.ts";
 export type { BuildPinnacleSignalInput } from "./signal-context.ts";
 
 export { computeEdgeBreakdown, kalshiFee } from "./edge.ts";

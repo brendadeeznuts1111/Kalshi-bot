@@ -304,6 +304,7 @@
     "ui:regen": "bun tools/ui-regen-cli.ts",
     "ui:watch": "bun tools/ui-regen-cli.ts --watch",
     "alpha:cluster": "bun tools/alpha-cluster-cli.ts",
+    "alpha:consensus:watch": "bun tools/alpha-consensus-watch.ts",
     "blog:codeblocks-check": "bun tools/blog-codeblocks-check.ts",
     "scratch:sweep": "bun tools/scratch-sweep.ts",
     "routes:check": "bun tools/routes-check.ts",

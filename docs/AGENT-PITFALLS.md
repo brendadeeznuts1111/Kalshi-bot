@@ -215,6 +215,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §197 — Styled integration — alpha:cluster --styled via markdown.ansi + Bun.Terminal PTY pin (2026-08-26)
 - §198 — Bun.YAML grounded — YAML 1.2 semantics confirmed (159 claims) (2026-08-26)
 - §200 — Bun.mmap grounded — live-updating Uint8Array + MAP_SHARED write-through (2026-08-26)
+- §201 — Live consensus stream — ConsensusTracker wired into a repeated-snapshot consumer (2026-08-26)
 - §199 — ui:regen CLI — regenerate UI artifacts from meta/variant sources + the Bun.$ template failure class (2026-08-26)
 - §187 — Extended color formats — kernel-only (lch/oklab/oklch/hsv) + inverse parsers (2026-08-26)
 - §188 — Watermark pipeline — ML-DSA key naming + WebView/Blob verified facts (2026-08-26)
@@ -7140,6 +7141,28 @@ empty/missing/close; evidence block mmapGotchas; tests bun-mmap-coverage, 7).
 - Cross-check: 167 claims (159 CONSISTENT / 8 PINNED-DISCREPANCY), gaps 0.
   Repo adoption: none yet (probe-only, D12) - mmap is for hot big-file
   read-write paths; the video/assets pipeline currently uses Bun.file bodies.
+
+
+
+## 201. Live consensus stream - ConsensusTracker wired into a repeated-snapshot consumer (2026-08-26)
+
+src/alpha/cluster/live-consensus.ts (LiveConsensusStream) +
+tools/alpha-consensus-watch.ts (bun run alpha:consensus:watch) - the live
+consumer of the heap clusterer beyond the alpha:cluster CLI's two manual
+pushes.
+- LiveConsensusStream owns ONE ConsensusTracker across repeated snapshots;
+  observe(prints, ts) per pass returns the snapshot (with shifts) and appends
+  shifts to a bounded rolling window (windowSize, default 20) for alerting.
+- observeEvents(events, ts) converts The Odds API wire shape via
+  eventsToOddsPrints (signal-context) before clustering.
+- alpha:consensus:watch polls fetchOdds(sport) on an interval (default 60s,
+  --passes=0 = infinite), prints STEAM-MOVE lines on shift passes, and writes
+  research/outputs/odds-live-watch.json. Requires ODDS_API_KEY; without it the
+  fetch fails gracefully per pass (no artifact write, exit 0 after passes).
+- Exported from src/alpha/index.ts (LiveConsensusStream + LiveConsensusOptions).
+- Tests: tests/alpha/live-consensus.test.ts (5): first-pass no shifts, merge
+  on move, bounded history, wire-shape conversion, <2 prints -> null, reset.
+
 
 
 
