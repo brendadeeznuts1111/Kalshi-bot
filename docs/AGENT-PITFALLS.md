@@ -15,6 +15,191 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 > and non-pitfall docs may reference the current count.
 
 
+## Section index — 178 lessons
+
+> Navigation aid. §1-§11 are the topical headings; §12+ are the historical
+> lesson counters (see the header note above).
+
+- §1 — run_code program text (the harness lexer)
+- §2 — Calling the tools
+- §3 — bash / git
+- §4 — bun:test
+- §5 — Verification discipline (Bun APIs, docs, claims)
+- §6 — Tooling sharp edges (beyond the lexer)
+- §7 — Repo-domain facts (hard-won)
+- §8 — Bun utilities that defuse the failure classes (all PROVEN in this session)
+- §9 — Bun Shell (`Bun.$`) switch — verified API surface (2026-08-23)
+- §10 — Grep discipline + Node->Bun spawnSync (2026-08-23)
+- §11 — Docs-grounding: a word across Bun docs pages is NOT a concept (2026-08-23)
+- §12 — Bun.Image 1.4.0 — file-based decode/meta, NO rasterizer (2026-08-24)
+- §13 — Bun.serve video Range/206 + data-URL inlining pitfall (2026-08-24)
+- §14 — Bun.serve routing precedence + param-route traversal guard (2026-08-24)
+- §15 — Bun.Networking claims probed (2026-08-24) — what the marketing copy gets wrong
+- §16 — Streams + terminal primitives probed (2026-08-24) — the observability widgets
+- §17 — Built-in utilities + fetch client probed (2026-08-24) — updated widgets
+- §18 — WebView in the merge gate — final call (2026-08-24)
+- §19 — GitHub releases.atom feed folded in (2026-08-24)
+- §20 — Install/test tooling folded in (2026-08-24)
+- §21 — Bun.cron signal channel + dynamic dashboard (2026-08-24)
+- §22 — Bun color stack probed (2026-08-24) — what the marketing copy gets wrong
+- §23 — Integrated architecture probed (2026-08-24) — feed + theme + live channel
+- §24 — Content hashing probed (2026-08-24) — Bun.sha, CryptoHasher, ETags
+- §25 — Content pruning probed (2026-08-24) — archive vs delete, .trash/
+- §26 — Archive + prune-channel + dynamic content verified (2026-08-24)
+- §27 — Deepen pass: markdown render, FFI, restore (2026-08-24)
+- §28 — Bun 1.4 security hardening probed (2026-08-24) — release-blog security section
+- §29 — Faster / build / test / install claims probed (2026-08-24)
+- §30 — Full sub-header mapping — every anchor's sub-headers to the repo (2026-08-24)
+- §31 — Blog → repo mapping TRACKER (2026-08-24) — automatic, contract-gated
+- §32 — Native markdown automation — heading ids, GFM, child tracking (2026-08-24)
+- §33 — Bun.markdown documented API surface — CORRECTION (2026-08-24)
+- §34 — Bun.markdown FULL API matrix (2026-08-24) — systematic, no more gaps
+- §35 — Bun.markdown — release version + React target (verified, not guessed) (2026-08-24)
+- §36 — Poor-grounding audit — claims corrected to their real evidence level (2026-08-24)
+- §37 — Deeper grounding audit — the full claim surface re-checked (2026-08-24)
+- §38 — Repo docs managed by Bun.markdown (2026-08-24)
+- §39 — Dev tooling / HTTP3 / static / conditional / compression probed (2026-08-24)
+- §40 — Automation pass — better Bun usage (2026-08-24)
+- §41 — Deeper automation — consolidate + native conversions (2026-08-24)
+- §42 — Bun.which() probed (2026-08-24) — the which-replacement, with PATH semantics
+- §43 — Bun utils probed — deepEquals, escapeHTML, randomUUIDv7, version (2026-08-24)
+- §44 — Utils page re-probed — the missed items + Options section (2026-08-24)
+- §45 — Hand-rolled vs native — the honest test (2026-08-24)
+- §46 — assets:check gate — content-hashed images via Bun.markdown hooks (2026-08-24)
+- §47 — Bun.Transpiler probed (2026-08-24) — transform/scan + Import.kind
+- §48 — Transpiler deeper — options + parse oracle (2026-08-24)
+- §49 — Transpiler constructor loader (2026-08-24) — the anchor's option
+- §50 — Transpiler full options surface — the last unprobed ones (2026-08-24)
+- §51 — Import.kind — separated + highlighted reference + CSS correction (2026-08-24)
+- §52 — Type-only imports/exports CORRECTION (2026-08-24) — the docs were right
+- §53 — Transpiler deeper — accuracy, options, imports:graph (2026-08-24)
+- §54 — bun pm pkg + bun pm version — native package.json editing (2026-08-24)
+- §55 — Production / Observability / Streams probed (2026-08-24)
+- §56 — "We rewrote Bun in Rust" — verified + resolves the §35 contradiction (2026-08-24)
+- §57 — Context + fetch defaults — two corrections (2026-08-24)
+- §58 — "grep -c bullet count" proposal — probed + rejected for the smart gate (2026-08-24)
+- §59 — Docs code-block validation via Bun.Transpiler (2026-08-24)
+- §60 — Language-specific docs code-block validation — bash continuation join (2026-08-24)
+- §61 — Bundler plugins doc — namespaces + runtime claims probed (2026-08-24)
+- §62 — docs:api — validate every Bun.<token> in docs against the runtime (2026-08-24)
+- §63 — docs:integrity — internal links + import resolution gate (2026-08-24)
+- §64 — Output-assertion gate — REJECTED after grounding probe (2026-08-24)
+- §65 — Docs vs source alignment — src-ref gate (2026-08-24)
+- §66 — Exported-symbol alignment — docs import names vs source exports (2026-08-24)
+- §67 — Deeper integration — docs quality surfaced on the dashboard (2026-08-24)
+- §68 — Bun.XML doc — probed, 33/33 verified, 11th gate (2026-08-24)
+- §69 — Production-grade pipeline doc — grounded, one real gap closed (2026-08-24)
+- §70 — Bun.Image doc — probed 20/20, ONE geometry-ordering correction (2026-08-24)
+- §71 — Team-logo ingestion doc — rejected (no consumer), ONE error-code correction (2026-08-24)
+- §72 — On-the-fly resize doc — pattern rejected (no consumer), resize signature CORRECTED (2026-08-24)
+- §73 — Unified teams registry — the pattern, and how branding/API fits (2026-08-24)
+- §74 — Dashboard action buttons — dead-button gap found + fixed (2026-08-24)
+- §75 — Remaining-touchpoints doc — table WRONG (all already integrated) + /status endpoint (2026-08-24)
+- §76 — Infrastructure machinery probe — rate limiter + memoryPressure (2026-08-24)
+- §77 — CSRF machinery probe — session binding verified, 14th gate (2026-08-24)
+- §78 — Cookie APIs — native usage verified + a native-API limitation found (2026-08-24)
+- §79 — Bun cookie docs — full property surface probed, 15th gate (2026-08-24)
+- §80 — HTTP-cookies doc — delete behavior verified, extends §79 (2026-08-24)
+- §81 — API defaults cross-reference — hostname doc correction + explicit binds (2026-08-24)
+- §82 — More API defaults — transpiler jsx default, inspect depth, write/hash/hasher (2026-08-24)
+- §83 — Port env vars — BUN_PORT/PORT/NODE_PORT precedence pinned + serve.ts enhanced (2026-08-24)
+- §84 — BUN_* env vars — transpiler cache, verbose fetch, NODE_ENV default (2026-08-24)
+- §85 — .env load order — .env.local SKIPPED in test (config.ts comment corrected) (2026-08-24)
+- §86 — New-claims doc (markdown/cron/terminal/ffi/dev-tooling) — BUN_CPU_PROFILE contradiction RESOLVED (2026-08-24)
+- §87 — Serve-files/folders + Range/conditional + fetch compress doc — verified (2026-08-24)
+- §88 — Bun v1.4 release doc — Temporal default verified, rest already probed (2026-08-24)
+- §89 — Temporal adopted — parseTennisDataDate real-date validation (2026-08-24)
+- §90 — Official breaking-changes list (issue #28792) — 2 audit checks added (2026-08-24)
+- §91 — Package-manager doc — every command already adopted + verified (2026-08-24)
+- §92 — licenses:gate — pm-licenses output promoted to a contract gate (2026-08-24)
+- §93 — licenses:gate v2 — config-driven policy, scoped exemptions, SBOM logbook (2026-08-24)
+- §94 — licenses:gate v2.1 — remediation hints + offline audit overlay (2026-08-24)
+- §95 — Operator's manual — probed, corrected, folded (2026-08-24)
+- §96 — SPDX expressions + expiry warning window + --config (2026-08-24)
+- §97 — Licenses on the live surface — /status + ops dashboard (2026-08-24)
+- §98 — The SBOM-diff misconception resurfaced (2026-08-24)
+- §99 — Weekly overlay refresh — follow the cron-main idiom, not ad-hoc scripts (2026-08-24)
+- §100 — Fail-closed bun pm resolution + --overlay flag (2026-08-24)
+- §101 — Review pass — flag helper, snapshot guard, operator-format e2e, gate pattern codified (2026-08-24)
+- §102 — SPDX WITH exceptions + pseudo-license diagnostics (2026-08-24)
+- §103 — licenses:report — static compliance artifact for legal/release sign-off (2026-08-24)
+- §104 — Compliance channel + CycloneDX XML SBOM (2026-08-24)
+- §105 — Content-addressed CycloneDX serial + artifact cross-link (2026-08-24)
+- §106 — Proactive compliance alerts — Telegram push from the weekly job (2026-08-24)
+- §107 — Combined pipeline report — the founding mtafile ask completed (2026-08-24)
+- §108 — Transient url-health flake fixed at the source — probeHttp retries network-level failures once (2026-08-24)
+- §109 — Build-system changelog probed — 9/9 verified, 2 doc claims corrected (2026-08-24)
+- §144 — maps.toml triple-lock landed (2026-08-25)
+- §145 — Channel + route registries (2026-08-25)
+- §110 — Trap-removal protocol — prevention, not accumulation (2026-08-24)
+- §146 — Live GitHub budget channel + release-driven docs drift (2026-08-25)
+- §147 — Bun.semver is inconsistent on ragged versions (2026-08-25)
+- §148 — Bun.semver docs review — verified + 2 undocumented behaviors (2026-08-25)
+- §149 — Bun.semver deep matrix + shared SSOT (2026-08-25)
+- §150 — Global-attribution code search — 14x cheaper inspect (2026-08-25)
+- §111 — bun:sqlite surface probed — 9/9 verified, bigint option CORRECTED (2026-08-24)
+- §112 — Bun.serve streaming probed — SSE push pattern grounded (2026-08-24)
+- §151 — Global-attribution code search REVERTED — completeness beats cost (2026-08-25)
+- §113 — Bun.spawn probed — gate behaviors locked (2026-08-24)
+- §114 — Bun.serve WebSocket surface probed — live channel ground truth (2026-08-24)
+- §115 — API-table audit — Bun.semver/JSON5 verified, two rows CORRECTED (2026-08-24)
+- §116 — ws:probe deep-dive audited — pong payload verified, three claims corrected (2026-08-24)
+- §117 — Bun.Image API correction probed — every claim VERIFIED, probe extended (2026-08-24)
+- §125 — fetch h2 version history — NOT a 1.4 feature (correction, user-flagged) (2026-08-24)
+- §124 — serve-h2 correction triple-confirmed — docs + blog + runtime (2026-08-24)
+- §123 — serve-tls:probe — TLS works, http2 option is a NO-OP (CORRECTED) (2026-08-24)
+- §122 — routes:probe — Bun.serve routes API locked, non-working forms pinned (2026-08-24)
+- §121 — node:quic listen() pinned non-functional — deep QUIC probe (2026-08-24)
+- §120 — Blog anchor 'replay / quic' probed — node:quic + serve http3 verified (2026-08-24)
+- §119 — Release-blog mp4s — why NOT to adopt them (probed, §118 follow-up) (2026-08-24)
+- §118 — Bun 1.4 blog replayed via claims-audit + mp4/assets review (2026-08-24)
+- §126 — Bun.cron granularity + overlap — 5-field only, no self-overlap (2026-08-24)
+- §127 — Bun Shell — $ from "bun" (not global), 12-claim surface verified (2026-08-24)
+- §128 — Bun.cron missed-fire policy — SKIP (lost, not deferred) (2026-08-24)
+- §129 — HTML imports, standalone-HTML builds, HTMLRewriter — 14-claim surface (2026-08-24)
+- §130 — Bundler internals — splitting, macros, env inlining, plugins (2026-08-24)
+- §131 — Filesystem layer — Bun.file/Bun.write, zlib+zstd, mmap, loaders, Archive (2026-08-24)
+- §132 — 100%-coverage goal round 1 — matrix + ANSI + crypto clusters (2026-08-24)
+- §133 — Coverage goal round 2 — format + fsx clusters (2026-08-24)
+- §134 — Coverage goal final round — net + runtime-misc clusters, matrix COMPLETE (2026-08-24)
+- §135 — Fence lang contract — Bun-native tags, @bun-run execution (2026-08-24)
+- §136 — Git language stats — .gitattributes (Linguist) vs fence lang (2026-08-24)
+- §137 — bun:test runner surface — the gate IS a test file (2026-08-24)
+- §138 — bun:test deeper — fake timers, failing/if/concurrent, file snapshots (2026-08-24)
+- §139 — fetch/HTTP client semantics — keep-alive, redirects, abort, streams (2026-08-24)
+- §140 — node: module behavior on Bun 1.4.0 — compat gate #41 (2026-08-24)
+- §141 — Pattern enhancements — Bun.$ in the design pipeline, §128 catch-up visibility (2026-08-24)
+- §142 — Bun.Transpiler internals — scan APIs the repo enforcement relies on (2026-08-24)
+- §143 — Transpiler grounded in runtime/transpiler.mdx — 8 doc claims verified (2026-08-24)
+- §152 — Reference/pointer staleness audit — renumbering + uniqueness gate (2026-08-24)
+- §153 — bun:sqlite deep — strict mode, query.as, serialize, transactions (2026-08-24)
+- §154 — HTTP/2 fetch multiplexing + serve protocol semantics (2026-08-24)
+- §155 — Bun.build metafile schema — the mtafile contract verified (2026-08-24)
+- §156 — Reprobe + pointer/contract hardening (2026-08-24)
+- §157 — Enhanced-ecosystem-diagram claim audit — gate #46 (2026-08-24)
+- §158 — Full-surface gap closed — the honest completeness picture (2026-08-24)
+- §159 — Systematic-risk gates — version pin + type drift (2026-08-24)
+- §160 — Server-backed client shapes — RedisClient/S3/postgres/FSR depth (2026-08-24)
+- §161 — bun test --coverage semantics — gate #51 (2026-08-24)
+- §162 — Fullstack combo + permessage-deflate — gate #52 (2026-08-24)
+- §163 — Matrix generator promoted to committed tooling (2026-08-24)
+- §165 — Hardcoded values made auto — counts sync (2026-08-24)
+- §164 — Realignment executed — hq-app chunking + two real bugs found (2026-08-24)
+- §166 — Allowlist/keep-list staleness auto-detected (2026-08-24)
+- §167 — Gate count derived structurally — heuristic regexes gone (2026-08-24)
+- §168 — Full Bun shape generated structurally — tools/bun-shape.json (2026-08-24)
+- §169 — shape:probe gate — full-shape runtime agreement + exhaustive matrix (2026-08-24)
+- §170 — Per-module shape report — docs/BUN_MODULE_SHAPE.md (2026-08-24)
+- §171 — Full-shape probe coverage closed — 0 GAPs + a broken-API pin (2026-08-24)
+- §172 — Test-suite isolation flake fixed — bun test --isolate (2026-08-24)
+- §173 — Module report pulls REAL code examples (2026-08-24)
+- §174 — Repo API grounded in the shape — docs/REPO_API_BUN.md (2026-08-24)
+- §175 — bun:* reference module plane — grounded on bun.com/reference (2026-08-24)
+- §176 — Automatic ETag/304 behavior probed — one docs claim corrected (2026-08-24)
+- §177 — BuildArtifact gotchas probed — two docs corrections (2026-08-24)
+- §178 — Reference cross-check — official bun-types docs vs observed evidence (2026-08-25)
+
+
 ## 1. run_code program text (the harness lexer)
 
 | Symptom | Cause | Fix |
@@ -43,6 +228,13 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - tools.edit replaces literal old_string only; if old_string is not found it
   fails loudly (good). tools.write has NO such guard - a truncated content array
   overwrites silently. Prefer edit for appends to existing files.
+- ROOT CAUSE (2026-08-26): the read tool is BYTE-CAPPED (~80KB per call) and
+  reports the CAPPED total as totalLines - a full-file read of a large doc
+  (AGENT-PITFALLS is 6466 lines / 780KB) silently truncates and a
+  write-back destroys the tail. This - not the lexer - was the primary
+  cause of the recurring truncations. For large files: read in chunks of
+  ~700 lines, EOF = a chunk shorter than the requested limit; NEVER trust
+  totalLines for write-back decisions; verify wc -l after any full write.
 
 ## 3. bash / git
 
@@ -61,6 +253,10 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - Known flake: the ops/kalshi-rotate-key full-apply POST test intermittently fails
   inside the full suite (passes standalone). If the hook's test gate fails once,
   re-run it.
+- Known flake: convertColorFallback fuzz parity (Bun.color oracle) fails
+  intermittently (200 RANDOM hex colors; Bun.color rendering can diverge from
+  the repo fallback for unlucky random draws - passes standalone, flaky in
+  full runs). Re-run if it fails; not a regression signal.
 
 ## 4. bun:test
 

@@ -45,11 +45,14 @@ const resolveGate = (tok: string, m: any): string => {
 // Uses = matching source LINES, example = the first matching line).
 const scan = Bun.spawnSync(["rg", "-n", "--no-heading", "Bun\.[A-Za-z_$][A-Za-z0-9_$]*(?:\.[A-Za-z_$][A-Za-z0-9_$]*)?", "src", "tools", "scripts", "tests"], { cwd: ROOT, stdout: "pipe" });
 const usage = new Map<string, Map<string, { count: number; example: string }>>();
+// Test-fixture writes (write('src/...', ...) in tests) are counted as usage but
+// are NOT good examples - the fake path would trip docs:check's pointer rule.
+const isFixtureWrite = (text: string) => /write\(\s*['"](?:src|tools|scripts|tests)\//.test(text);
 const addUse = (module: string, tok: string, example: string) => {
   if (!usage.has(module)) usage.set(module, new Map());
   const mm = usage.get(module)!;
   const cur = mm.get(tok);
-  if (cur) cur.count += 1;
+  if (cur) { cur.count += 1; if (!cur.example && example) cur.example = example; }
   else mm.set(tok, { count: 1, example });
 };
 
@@ -71,7 +74,7 @@ for (const l of (scan.stdout?.toString() ?? "").split("\n")) {
     let tok = m[2] ? m[1] + "." + m[2] : m[1];
     // longest shape-matching key: Bun.argv.includes is usage of argv.
     if (tok.includes(".") && !byKey.has(tok)) tok = tok.split(".")[0];
-    addUse(module, tok, text);
+    addUse(module, tok, isFixtureWrite(text) ? "" : text);
   }
 }
 
@@ -143,7 +146,7 @@ for (const mod of modules) {
     const m = byKey.get(tok);
     const gate = resolveGate(tok, m);
     const docs = m ? (m.docs ? "y" : "n") : moduleByKey.has(tok) ? "y" : "?";
-    md.push("| " + BTK + tok + BTK + " | " + u.count + " | " + gate + " | " + docs + " | " + clean(u.example) + " |");
+    md.push("| " + BTK + tok + BTK + " | " + u.count + " | " + gate + " | " + docs + " | " + (u.example ? clean(u.example) : "—") + " |");
   }
   md.push("");
 }

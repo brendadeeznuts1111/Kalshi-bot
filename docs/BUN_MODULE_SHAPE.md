@@ -102,7 +102,7 @@ existent API mentions - review-only.
 | `argv` | 17 | runtime:probe | y | const program = Bun.argv.find((a) => a.startsWith("--program="))?.slice("--program=".length); |
 | `write` | 6 | fs:probe | y | await Bun.write(joinPath(dest, "program.json"), JSON.stringify(manifest, null, 2) + "\n"); |
 | `env` | 5 | runtime:probe | y | if (forceDue && Bun.env.NODE_ENV !== "test") { |
-| `file` | 4 | fs:probe | y | if (await Bun.file(joinPath(dest, "program.json")).exists()) { |
+| `file` | 4 | fs:probe | y | const raw = (await Bun.file(path).json()) as Record<string, unknown>; |
 | `cron` | 3 | cron tests §126/128 | y | await Bun.cron(TOXICITY_SCHEDULED_WORKER_PATH, opts.schedule, opts.title); |
 | `Glob` | 2 | fsx:probe | y | const glob = new Bun.Glob("**/*"); |
 | `sleep` | 1 | runtime:probe | y | await Bun.sleep(intervalSec * 1000); |
@@ -120,29 +120,29 @@ existent API mentions - review-only.
 
 | Token | Uses | Gate | Docs | Example |
 |---|---|---|---|---|
-| `cron` | 16 | cron tests §126/128 | y | if (moduleState.feedCronRegistered \|\| typeof Bun.cron !== "function") return; |
-| `file` | 13 | fs:probe | y | const file = Bun.file(path); |
+| `cron` | 16 | cron tests §126/128 | y | // cron channel: the Bun.cron refresh job state. |
+| `file` | 13 | fs:probe | y | const file = Bun.file(absPath); |
 | `color` | 6 | ansi:probe | y | /** Resolved color blob for wire / browser (pre-computed; no Bun.color in client). */ |
 | `inspect` | 6 | ansi:probe | y | * Serialize any value with Bun.inspect (Bun's console.log formatting). |
+| `env` | 3 | runtime:probe | y | if (Bun.env.GH_TOKEN?.trim()) return "env-gh-token"; |
 | `nanoseconds` | 3 | runtime:probe | y | const t0 = Bun.nanoseconds(); |
-| `env` | 3 | runtime:probe | y | const timeoutMs = opts.timeoutMs ?? Number(Bun.env.GLOSSARY_URL_TIMEOUT_MS ?? 8_000); |
+| `Archive` | 2 | fs:probe | y | *   - .trash/: archived entries + bytes + any Bun.Archive tarballs |
 | `serve` | 2 | serve-tls/routes | y | * theme updates + feed updates, zero deps (Bun.serve websocket + bun:sqlite). |
 | `Image` | 2 | image:probe | y | synonyms: ["snapshot meta", "Bun.Image metadata", "WebView evidence"], |
-| `Archive` | 2 | fs:probe | y | *   - .trash/: archived entries + bytes + any Bun.Archive tarballs |
 | `sleep` | 1 | runtime:probe | y | await Bun.sleep(delay); |
-| `SQL` | 1 | sqlite:probe | y | *   - The doc's "Bun.SQL (SQLite)" claim is WRONG: Bun.sql is a POSTGRES |
-| `sql` | 1 | sqlite:probe | y | *   - The doc's "Bun.SQL (SQLite)" claim is WRONG: Bun.sql is a POSTGRES |
-| `XML.parse` | 1 | format:probe (ns) | y | *   - Bun.XML.parse enclosure shapes (`@url` attribute convention) — |
-| `escapeHTML` | 1 | ansi:probe | y | const esc = (v: unknown): string => Bun.escapeHTML(String(v ?? "")); // native (§43) |
 | `hash` | 1 | crypto:probe | y | return String(Bun.hash(JSON.stringify(body))); |
-| `WebView` | 1 | runtime:probe | y | generator: 'brandCardPng({width,height}) via Bun.WebView raster + Bun.Image', |
 | `spawn` | 1 | spawn:probe | y | const p = Bun.spawn([Bun.which('bun') ?? 'bun', ...args], { cwd: root, stdout: 'pipe', stderr: 'pipe' }); |
 | `which` | 1 | fsx:probe | y | const p = Bun.spawn([Bun.which('bun') ?? 'bun', ...args], { cwd: root, stdout: 'pipe', stderr: 'pipe' }); |
 | `TOML.parse` | 1 | format:probe (ns) | y | const maps = mapsText ? parseMapsPins(Bun.TOML.parse(mapsText)) : null; |
 | `Glob` | 1 | fsx:probe | y | const vids = [...new Bun.Glob('*').scanSync({ cwd: join(root, 'public/videos'), onlyFiles: true... |
 | `version` | 1 | runtime:probe | y | push({ id: 'ops-uptime', channel: 'ops', severity: 'info', title: 'bun ' + Bun.version + ' · design v' +... |
 | `semver` | 1 | bun:apis-probe | y | // Version comparisons: src/lib/semver.ts (Bun.semver SSOT + normalize- |
+| `SQL` | 1 | sqlite:probe | y | *   - The doc's "Bun.SQL (SQLite)" claim is WRONG: Bun.sql is a POSTGRES |
+| `sql` | 1 | sqlite:probe | y | *   - The doc's "Bun.SQL (SQLite)" claim is WRONG: Bun.sql is a POSTGRES |
+| `XML.parse` | 1 | format:probe (ns) | y | *   - Bun.XML.parse enclosure shapes (`@url` attribute convention) — |
+| `WebView` | 1 | runtime:probe | y | generator: 'brandCardPng({width,height}) via Bun.WebView raster + Bun.Image', |
 | `inspect.table` | 1 | ansi:probe (ns) | y | return Bun.inspect.table(rows, ["#", "Event", "P", "Action", "Side", "Edge", "Reason"], { colors: true }); |
+| `escapeHTML` | 1 | ansi:probe | y | const esc = (v: unknown): string => Bun.escapeHTML(String(v ?? "")); // native (§43) |
 | `Database` | 1 | sqlite:probe | y | import { Database } from "bun:sqlite"; |
 
 ## src/institutions/event-store
@@ -150,17 +150,17 @@ existent API mentions - review-only.
 | Token | Uses | Gate | Docs | Example |
 |---|---|---|---|---|
 | `Database` | 21 | sqlite:probe | y | import type { Database } from "bun:sqlite"; |
-| `WebView` | 16 | runtime:probe | y | * Self-contained HTML dashboard for match_liquidity (Bun.WebView target). |
+| `WebView` | 16 | runtime:probe | y | /** Inline HTML for Bun.WebView `data:` navigation. */ |
 | `file` | 14 | fs:probe | y | const text = await Bun.file(path).text(); |
 | `write` | 13 | fs:probe | y | await Bun.write(joinPath(TENNIS_CANARY_DIR, ".gitkeep"), ""); |
-| `Image` | 11 | image:probe | y | /** Bun.Image thumb after WebView capture. */ |
-| `sleep` | 6 | runtime:probe | y | await Bun.sleep(kalshiWsReconnectBackoffMs(attempt, reconnectBaseMs)); |
+| `Image` | 11 | image:probe | y | export type BunImageMetadata = Awaited<ReturnType<Bun.Image["metadata"]>>; |
+| `sleep` | 6 | runtime:probe | y | if (pauseMs > 0) await Bun.sleep(pauseMs); |
+| `cron` | 5 | cron tests §126/128 | y | *   - in-process Bun.cron (scripts/cron-main.ts) |
 | `hash` | 5 | crypto:probe | y | /** Bun.hash of compact verdict + counts — drift across fires is visible. */ |
-| `cron` | 5 | cron tests §126/128 | y | /** OS Bun.cron — WS recorder (tools/tennis/ws-recorder-schedule-cli.ts). */ |
-| `CryptoHasher` | 3 | crypto:probe | y | sha256: new Bun.CryptoHasher("sha256").update(bytes).digest("hex"), |
+| `CryptoHasher` | 3 | crypto:probe | y | return new Bun.CryptoHasher("sha256").update(canonical).digest("hex"); |
 | `nanoseconds` | 3 | runtime:probe | y | /** Wall time for this poll pass (Bun.nanoseconds). */ |
-| `escapeHTML` | 2 | ansi:probe | y | return Bun.escapeHTML(s); // native (§43) |
 | `env` | 2 | runtime:probe | y | const intervalMs = options.intervalMs ?? Number(Bun.env.TENNIS_LIVE_INTERVAL_MS ?? 10_000); |
+| `escapeHTML` | 2 | ansi:probe | y | return Bun.escapeHTML(s); // native (§43) |
 | `version` | 1 | runtime:probe | y | bunVersion: Bun.version, |
 | `revision` | 1 | runtime:probe | y | bunRevision: Bun.revision, |
 
@@ -214,12 +214,12 @@ existent API mentions - review-only.
 | `markdown.Options` | 11 | format:probe (ns) | n | * Options are typed with the native Bun.markdown.Options type (no duplicated |
 | `env` | 10 | runtime:probe | y | *   Read via Bun.env (alias of process.env / import.meta.env) |
 | `Transpiler` | 10 | runtime:probe | y | // Parse-validity oracle (§47): Bun.Transpiler.scan() throws on syntax |
-| `which` | 10 | fsx:probe | y | * Editor launcher: resolve an editor CLI (PATTERN_EDITOR env or Bun.which |
+| `which` | 10 | fsx:probe | y | * run-bun.ts — shared Bun subprocess runner (the repo's Bun.which('bun') |
 | `version` | 9 | runtime:probe | y | *   (package.json) + Bun.version (runtime) + the indexed docs tag ref |
-| `build` | 9 | build-deep:probe | y | *   - "env" virtual-module pattern works in Bun.build |
+| `build` | 9 | build-deep:probe | y | *   3. Bun.build metafile analysis available where builds exist |
 | `markdown` | 8 | format:probe | y | (Bun.markdown as unknown as { |
 | `markdown.html` | 8 | format:probe (ns) | y | *   - native ids: Bun.markdown.html(md, { headings: { ids: true } }) emits |
-| `spawn` | 7 | spawn:probe | y | * Bun.spawn with line/column args, and fall back to Bun.openInEditor for the |
+| `spawn` | 7 | spawn:probe | y | *   - Bun.spawn killSignal:0 / timeout:NaN / argv0 (validation throws) |
 | `secrets` | 7 | net:probe | y | * OS-keychain credential store wrapper over `Bun.secrets` (Bun 1.4). |
 | `YAML` | 6 | format:probe | y | *   - Bun.YAML parses 1.2 semantics     (yes/on/no are strings) |
 | `WebView` | 5 | runtime:probe | y | /** Bun.WebView is available (webkit on macOS, chrome elsewhere). */ |
@@ -235,28 +235,28 @@ existent API mentions - review-only.
 | `markdown.ansi` | 4 | format:probe (ns) | n | * Bun.markdown.ansi accepts: colors (false = plain text), hyperlinks (OSC 8), |
 | `inspect.table` | 4 | ansi:probe (ns) | y | * Shared tabular schema + output helpers for Bun.inspect.table and Markdown. |
 | `markdown.render` | 3 | format:probe (ns) | y | *   - Bun.markdown.render image callback catches !\[alt](src) incl. title |
-| `openInEditor` | 3 | fsx:probe | y | * Bun.spawn with line/column args, and fall back to Bun.openInEditor for the |
 | `JSONL.parse` | 3 | format:probe (ns) | y | * \| `Bun.JSONL.parse(text\|bytes)` \| All values for clean input. On the FIRST invalid line it returns the... |
 | `JSONL.parseChunk` | 3 | format:probe (ns) | y | * \| `Bun.JSONL.parseChunk(bytes)` \| `{ values, read, done, error }`, never throws. On a bad line: `values` =... |
+| `openInEditor` | 3 | fsx:probe | y | * Bun.spawn with line/column args, and fall back to Bun.openInEditor for the |
 | `semver.order` | 2 | bun:apis-probe (ns) | y | /** "release version > indexed version" — Bun.semver.order after |
 | `YAML.parse` | 2 | format:probe (ns) | y | const y = Bun.YAML.parse('a: yes\nb: on\nc: no'); |
 | `spawnSync` | 2 | spawn:probe | y | const out = Bun.spawnSync(['rg', ...args], { stdout: 'pipe', stderr: 'pipe' }); |
 | `randomUUIDv7` | 2 | crypto:probe | y | // 14. Bun.randomUUIDv7(): timestamps >= 2^48 or NaN throw instead of |
 | `sha` | 2 | bun:apis-probe | y | *   - `Bun.sha` is NOT a general-purpose hash: it is SHA-512/256 |
 | `rename` | 2 | unmapped | ? | *   - `rename` DOES NOT EXIST — use node:fs `renameSync`. |
-| `JSONL` | 2 | format:probe | y | * ## Verified Bun.JSONL semantics (bun 1.3.14, empirical) |
+| `JSONL` | 2 | format:probe | y | * ## Verified Bun.JSONL semantics (bun 1.4.0, empirical; format:probe P4) |
 | `stdout` | 1 | fs:probe | y | const write = options.write ?? ((text: string) => { void Bun.stdout.write(text); }); |
 | `sleep` | 1 | runtime:probe | y | Bun.sleep(timeoutMs).then(() => fallback), |
 | `TOML` | 1 | format:probe | y | * Loads config.toml via Bun.TOML, validates with zod, applies |
 | `x` | 1 | unmapped | ? | return !/typeof\s+$/.test(before); // `typeof x` is safe without Bun |
 | `JSON5.parse` | 1 | bun:apis-probe (ns) | y | json5: (s: string) => Bun.JSON5.parse(s), |
 | `JSONC.parse` | 1 | format:probe (ns) | n | jsonc: (s: string) => Bun.JSONC.parse(s), // Bun-native loader (probe §133: comments+trailing ok, quoted keys... |
-| `Foo` | 1 | unmapped | ? | * Top-level Bun. identifiers mentioned in code blocks (Foo). |
 | `markdown.react` | 1 | format:probe (ns) | y | * Bun.markdown.react() is NOT used by this repo (no React dependency or JSX |
 | `wrapAnsi` | 1 | ansi:probe | y | * blocks are NOT wrapped mid-line, unlike post-hoc Bun.wrapAnsi), and |
 | `markdown.AnsiTheme` | 1 | format:probe (ns) | n | theme?: Bun.markdown.AnsiTheme, |
 | `XML.stringify` | 1 | format:probe (ns) | y | * CycloneDX 1.5 XML body (§104) as a COMPACT object for Bun.XML.stringify |
 | `cron` | 1 | cron tests §126/128 | y | * staleness without fetching the blog per request; a daily Bun.cron keeps |
+| `Foo` | 1 | unmapped | ? | * Top-level Bun. identifiers mentioned in code blocks (Foo). |
 | `Database` | 1 | sqlite:probe | y | import { Database } from "bun:sqlite"; |
 | `BunFile` | 1 | GAP | n | import type { BunFile } from "bun"; |
 
@@ -299,23 +299,23 @@ existent API mentions - review-only.
 
 | Token | Uses | Gate | Docs | Example |
 |---|---|---|---|---|
-| `color` | 17 | ansi:probe | y | name: 'Deterministic color + avatar (Bun.color)', |
-| `WebView` | 8 | runtime:probe | y | /** Chrome CDP wire shapes used with Bun.WebView.addEventListener<T>(). */ |
-| `write` | 4 | fs:probe | y | await Bun.write(svgPath, svg); |
+| `color` | 17 | ansi:probe | y | * Partner visual identity — deterministic color from partner code + Bun.color formats. |
+| `WebView` | 8 | runtime:probe | y | * Ingest Pandora WS frames captured via Bun.WebView CDP into CoefficientStore. |
 | `file` | 4 | fs:probe | y | const f = Bun.file(path); |
+| `write` | 4 | fs:probe | y | await Bun.write(svgPath, svg); |
 | `Database` | 4 | sqlite:probe | y | import type { Database } from "bun:sqlite"; |
-| `TOML` | 3 | format:probe | y | name: 'partners.toml (Bun.TOML)', |
-| `Image` | 3 | image:probe | y | notes: 'HSL→hex/rgba/ansi-16m + SVG/PNG via Bun.Image; contrast text', |
+| `Image` | 3 | image:probe | y | * Minimal RGB8 PNG (solid fill) — Bun.Image does not reliably decode SVG on all builds. |
 | `deflateSync` | 3 | fs:probe | y | // Bun.deflateSync emits RAW deflate (verified: no zlib header); PNG IDAT |
-| `CryptoHasher` | 1 | crypto:probe | y | const hash = new Bun.CryptoHasher("sha256"); |
-| `ArrayBufferSink` | 1 | runtime:probe | y | const sink = new Bun.ArrayBufferSink(); |
-| `TOML.stringify` | 1 | format:probe (ns) | y | * TOML serialization via native Bun.TOML.stringify (Bun >= 1.4.0, the pinned |
+| `TOML` | 3 | format:probe | y | name: 'partners.toml (Bun.TOML)', |
 | `JSONL.parseChunk` | 1 | format:probe (ns) | y | // Streaming JSONL read (Bun.JSONL.parseChunk) — memory-efficient for large |
 | `Glob` | 1 | fsx:probe | y | const glob = new Bun.Glob("ws-*.jsonl"); |
+| `CryptoHasher` | 1 | crypto:probe | y | const hash = new Bun.CryptoHasher("sha256"); |
+| `ArrayBufferSink` | 1 | runtime:probe | y | const sink = new Bun.ArrayBufferSink(); |
+| `TOML.parse` | 1 | format:probe (ns) | y | raw = Bun.TOML.parse(text); |
+| `TOML.stringify` | 1 | format:probe (ns) | y | * TOML serialization via native Bun.TOML.stringify (Bun >= 1.4.0, the pinned |
 | `sleep` | 1 | runtime:probe | y | await Bun.sleep(seconds * 1000); |
 | `version` | 1 | runtime:probe | y | runtime: { bunVersion: Bun.version, bunRevision: Bun.revision }, |
 | `revision` | 1 | runtime:probe | y | runtime: { bunVersion: Bun.version, bunRevision: Bun.revision }, |
-| `TOML.parse` | 1 | format:probe (ns) | y | raw = Bun.TOML.parse(text); |
 
 ## src/partner/authorization
 
@@ -407,77 +407,77 @@ existent API mentions - review-only.
 | Token | Uses | Gate | Docs | Example |
 |---|---|---|---|---|
 | `file` | 55 | fs:probe | y | const fileApi = widgetTable(['Bun.file()', 'Probe'], [ |
-| `env` | 26 | runtime:probe | y | return Bun.env.RESEARCH_CRON_SCHEDULE?.trim() \|\| RESEARCH_CRON_SCHEDULE; |
-| `serve` | 21 | serve-tls/routes | y | * Shared URLPattern SSOT — GitHub parse, Bun.serve routes, research fetch handlers. |
-| `write` | 18 | fs:probe | y | await Bun.write( |
+| `env` | 26 | runtime:probe | y | const fromEnv = Bun.env.GH_TOKEN?.trim() \|\| Bun.env.GITHUB_TOKEN?.trim(); |
+| `serve` | 21 | serve-tls/routes | y | { cells: ['<code>Bun.serve</code> websocket', '<code>server.upgrade(req)</code> + <code>websocket... |
+| `write` | 18 | fs:probe | y | Bun.write(joinPath(REPORT_DIR, `run_${run.runId}.md`), report), |
 | `Image` | 15 | image:probe | y | { cells: ['<code>Bun.Image</code>', 'sharp, jimp, gm', W_VERIFIED + ' covered at /bun/streams + brand... |
-| `cron` | 14 | cron tests §126/128 | y | { heading: 'what-s-new', html: '<p class="muted">The "15 dependencies · now built in 0" animation lists sharp... |
+| `cron` | 14 | cron tests §126/128 | y | { cells: ['Cron refresh', '<code>Bun.cron("0 * * * *")</code> hourly feed poll', W_VERIFIED + ' parse() ->... |
 | `WebView` | 10 | runtime:probe | y | { cells: ['<code>Bun.WebView</code>', 'puppeteer, playwright', W_VERIFIED + ' brand card raster, snapshots']... |
 | `build` | 10 | build-deep:probe | y | * env-plugin virtual modules in Bun.build; void onResolve = default |
-| `markdown` | 10 | format:probe | y | * markdown-page.ts — /bun/markdown: the FULL Bun.markdown API surface, |
+| `markdown` | 10 | format:probe | y | { cells: ['Markdown', 'Bun.markdown (html/ansi/render/react)'] }, |
 | `sleep` | 9 | runtime:probe | y | await Bun.sleep(capped); |
 | `color` | 9 | ansi:probe | y | { cells: ['<code>Bun.color(…, "luminance")</code>', W_CORRECTED + ' does not exist — WCAG luminance computed... |
-| `Glob` | 9 | fsx:probe | y | 'Bun.color / Bun.markdown / Bun.Glob / Bun.spawn — the design pipeline', |
+| `Glob` | 9 | fsx:probe | y | const names = [...new Bun.Glob("*").scanSync({ cwd: vidsDir, onlyFiles: true })].filter(isVideoFile); |
 | `stringWidth` | 8 | ansi:probe | y | { cells: ['<code>Bun.stringWidth / sliceAnsi / wrapAnsi</code>', 'string-width, slice-ansi, wrap-ansi',... |
-| `version` | 8 | runtime:probe | y | subtitle: 'One semantic theme -> terminal ANSI · web CSS vars · PNG swatches — zero dependencies,... |
-| `hash` | 8 | crypto:probe | y | /** sha3-256 fingerprint for audit export (Phase 2 path; local cache keeps Bun.hash). */ |
+| `hash` | 8 | crypto:probe | y | return Bun.hash(input).toString(16); |
+| `version` | 8 | runtime:probe | y | if (!Bun.semver.satisfies(Bun.version, ">=" + minVersion)) { |
 | `spawn` | 7 | spawn:probe | y | { cells: ['<code>Bun.spawn({ cgroup })</code>', 'cgcreate wrappers', W_NOTE + ' Linux-only, documented'] }, |
-| `Database` | 7 | sqlite:probe | y | import type { Database } from "bun:sqlite"; |
+| `Database` | 7 | sqlite:probe | y | import { Database } from "bun:sqlite"; |
 | `CryptoHasher` | 6 | crypto:probe | y | { cells: ['<code>Bun.CryptoHasher("sha256")</code>', 'SHA-256', W_VERIFIED + ' matches vector ba7816bf…;... |
-| `inspect` | 6 | ansi:probe | y | * (and Bun.inspect). Verified API composition (pitfalls 32-33): |
+| `inspect` | 6 | ansi:probe | y | return Bun.inspect(value, { colors: false, depth }); |
 | `XML` | 5 | format:probe | y | { cells: ['<code>Bun.XML</code>', 'fast-xml-parser, xml2js', W_VERIFIED + ' used in-repo'] }, |
 | `Transpiler` | 5 | runtime:probe | y | * transpiler-page.ts — /bun/transpiler: the Bun.Transpiler reference, |
 | `Archive` | 4 | fs:probe | y | { cells: ['<code>Bun.Archive</code>', 'tar', W_NOTE + ' present; API surface is write (docs example... |
-| `nanoseconds` | 4 | runtime:probe | y | // Bun.nanoseconds() is process uptime — elapsed = end − start. |
-| `markdown.html` | 4 | format:probe (ns) | y | // Bun.markdown.html + native TOC + content-addressed ETag/304. |
-| `$` | 4 | shell:probe | y | await Bun.$`mkdir -p ${dir}`.nothrow().quiet(); |
 | `deepEquals` | 4 | crypto:probe | y | return Bun.deepEquals(a, b, strict); |
+| `nanoseconds` | 4 | runtime:probe | y | // Bun.nanoseconds() is process uptime — elapsed = end − start. |
+| `markdown.html` | 4 | format:probe (ns) | y | { heading: 'Deepen pass (§27)', html: '<ul><li>Posts render via <code>Bun.markdown.html</code> (real HTML —... |
+| `$` | 4 | shell:probe | y | await Bun.$`mkdir -p ${dir}`.nothrow().quiet(); |
 | `SQL` | 3 | sqlite:probe | y | { cells: ['<code>Bun.SQL</code>', 'pg, mysql2, better-sqlite3', W_VERIFIED + ' used in-repo (event store)'] }, |
 | `TOML.parse` | 3 | format:probe (ns) | y | { heading: 'Folded into this repo', html: '<ul><li>Bun.JSON5.parse — massey.config.json5... |
 | `sha` | 3 | bun:apis-probe | y | * Probe-corrected claims (AGENT-PITFALLS §24): Bun.sha is SHA-512/256, |
-| `argv` | 3 | runtime:probe | y | const opts = parseScheduleCli(Bun.argv.slice(2)); |
-| `fetch` | 3 | serve-tls/routes | n | /** Full /rate_limit wire via Bun.fetch (no gh subprocess) - same JSON shape `gh api rate_limit` returns. */ |
-| `wrapAnsi` | 3 | ansi:probe | y | options?: Parameters<typeof Bun.wrapAnsi>[2], |
+| `XML.parse` | 3 | format:probe (ns) | y | { cells: ['Feed parse', '<code>Bun.XML.parse</code> RSS/Atom + enclosure <code>@url</code>', W_VERIFIED + '... |
+| `wrapAnsi` | 3 | ansi:probe | y | { cells: ['<code>Bun.sliceAnsi() / Bun.wrapAnsi()</code>', W_VERIFIED + ' slice preserves ANSI codes'] }, |
+| `fetch` | 3 | serve-tls/routes | n | * GitHub REST via Bun.fetch — shared connection pool with discover search. |
+| `argv` | 3 | runtime:probe | y | const opts = parseCliOptions(Bun.argv.slice(2)); |
+| `XML.stringify` | 3 | format:probe (ns) | y | const stringify = widgetTable(["Bun.XML.stringify", "Probe"], [ |
+| `which` | 3 | fsx:probe | y | const path = Bun.which("gh"); |
 | `inspect.custom` | 3 | ansi:probe (ns) | y | *  - [Bun.inspect.custom] symbol renders the cell custom in tables |
 | `Networking` | 3 | unmapped | ? | * networking-page.ts — /bun/networking: the Networking deep-dive widget, |
-| `XML.parse` | 3 | format:probe (ns) | y | { cells: ['Feed parse', '<code>Bun.XML.parse</code> RSS/Atom + enclosure <code>@url</code>', W_VERIFIED + '... |
-| `which` | 3 | fsx:probe | y | const path = Bun.which("gh"); |
-| `XML.stringify` | 3 | format:probe (ns) | y | const stringify = widgetTable(["Bun.XML.stringify", "Probe"], [ |
 | `JSON5` | 2 | bun:apis-probe | y | { cells: ['<code>Bun.JSON5</code>', 'json5', W_VERIFIED + ' parse works'] }, |
 | `JSONL` | 2 | format:probe | y | { cells: ['<code>Bun.JSONL</code> (parse/parseChunk)', 'ndjson', W_VERIFIED + ' parse works'] }, |
 | `plugin` | 2 | build-deep:probe | y | * Verified: plugin() named export = Bun.plugin; default namespace "file"; |
-| `CSRF.generate` | 2 | csrf:probe (ns) | y | *     (HttpOnly SameSite=Lax), generates `Bun.CSRF.generate(secret, |
-| `stripANSI` | 2 | ansi:probe | y | if (width <= 1) return Bun.stripANSI(str).slice(0, Math.max(0, width)); |
-| `sliceAnsi` | 2 | ansi:probe | n | return Bun.sliceAnsi(str, 0, width, { ellipsis: "…" }); |
-| `inspect.table` | 2 | ansi:probe (ns) | y | * A cell that renders as a brand-colored token inside Bun.inspect.table |
-| `listen` | 2 | net:probe | y | { cells: ['<code>Bun.listen()</code> — TCP + TLS', 'raw socket server, socket.reload() hot-swap', ok] }, |
 | `markdown.ansi` | 2 | format:probe (ns) | n | { cells: ['<code>Bun.markdown.ansi(md, {heading, strong, …})</code> theme callbacks', W_CORRECTED + ' options... |
-| `peek` | 2 | runtime:probe | y | * Await a promise, but read fulfilled/rejected results synchronously via Bun.peek |
-| `rename` | 2 | unmapped | ? | * The decision-matrix doc, probe-corrected (§25): rename does not exist |
-| `zstdCompressSync` | 2 | fs:probe | y | /** Encode evidence NDJSON; compress with Bun.zstdCompressSync when over threshold. */ |
 | `escapeHTML` | 2 | ansi:probe | y | /** HTML escaping SSOT — delegates to Bun.escapeHTML (SIMD-native). */ |
+| `sliceAnsi` | 2 | ansi:probe | n | { cells: ['<code>Bun.sliceAnsi() / Bun.wrapAnsi()</code>', W_VERIFIED + ' slice preserves ANSI codes'] }, |
+| `peek` | 2 | runtime:probe | y | * Await a promise, but read fulfilled/rejected results synchronously via Bun.peek |
+| `inspect.table` | 2 | ansi:probe (ns) | y | /** Rows for `Bun.inspect.table` — phase + human duration. */ |
 | `connect` | 2 | security:probe | y | { cells: ['<code>Bun.connect({tls})</code> defaults rejectUnauthorized: true', W_VERIFIED + ' handshake opens... |
+| `listen` | 2 | net:probe | y | { cells: ['<code>Bun.listen(requestCert:true)</code>', W_NOTE + ' default true per blog — needs a client-cert... |
+| `zstdCompressSync` | 2 | fs:probe | y | /** Encode evidence NDJSON; compress with Bun.zstdCompressSync when over threshold. */ |
+| `rename` | 2 | unmapped | ? | * The decision-matrix doc, probe-corrected (§25): rename does not exist |
 | `stdout` | 2 | fs:probe | y | await Bun.write(Bun.stdout, JSON.stringify(result, null, 2) + "\n"); |
+| `stripANSI` | 2 | ansi:probe | y | if (width <= 1) return Bun.stripANSI(str).slice(0, Math.max(0, width)); |
+| `CSRF.generate` | 2 | csrf:probe (ns) | y | *     (HttpOnly SameSite=Lax), generates `Bun.CSRF.generate(secret, |
 | `JSONC.parse` | 1 | format:probe (ns) | n | { cells: ['<code>Bun.JSONC.parse()</code>', 'jsonc-parser', W_VERIFIED + ' comments+trailing commas'] }, |
 | `TOML` | 1 | format:probe | y | { cells: ['<code>Bun.TOML</code> (v1.1)', '@iarna/toml', W_VERIFIED + ' used in-repo'] }, |
 | `JSON5.parse` | 1 | bun:apis-probe (ns) | y | { heading: 'Folded into this repo', html: '<ul><li>Bun.JSON5.parse — massey.config.json5... |
-| `randomUUIDv7` | 1 | crypto:probe | y | const idempotencyKey = form.idempotencyKey.value.trim() \|\| Bun.randomUUIDv7(); |
-| `Cookie` | 1 | defaults:probe | y | const sessionCookie = new Bun.Cookie(CSRF_SESSION_COOKIE, sessionId, { |
-| `CookieMap` | 1 | defaults:probe | y | return new Bun.CookieMap(cookieHeader).get(CSRF_SESSION_COOKIE) ?? null; |
-| `CSRF.verify` | 1 | csrf:probe (ns) | y | return Bun.CSRF.verify(token, { secret: csrfSecret(env), sessionId }); |
-| `term` | 1 | unmapped | ? | * CORRECTED vs the pasted factory: term undefined, bgGreen null, |
-| `BunInspectOptions` | 1 | GAP | n | [Bun.inspect.custom]: (depth: number, opts: BunInspectOptions, inspect: typeof Bun.inspect) => string; |
-| `udpSocket` | 1 | net:probe | y | { cells: ['<code>Bun.udpSocket()</code> — UDP + multicast', 'addMembership / setMulticastTTL / send', ok] }, |
 | `sql` | 1 | sqlite:probe | y | { cells: ['SQLite via <code>Bun.SQL</code>', W_CORRECTED + ' Bun.sql is a POSTGRES tagged-template client... |
+| `fileURLToPath` | 1 | fsx:probe | y | return Bun.fileURLToPath(url instanceof URL ? url : new URL(url)); |
+| `semver.satisfies` | 1 | bun:apis-probe (ns) | y | if (!Bun.semver.satisfies(Bun.version, ">=" + minVersion)) { |
+| `randomUUIDv7` | 1 | crypto:probe | y | const idempotencyKey = form.idempotencyKey.value.trim() \|\| Bun.randomUUIDv7(); |
+| `deflateSync` | 1 | fs:probe | y | { cells: ['<code>node-zlib-uses-zlib-ng</code>', 'Bun.deflateSync speed measured — zlib-ng IMPLEMENTATION... |
+| `zstdDecompressSync` | 1 | fs:probe | y | const decoded = isZstdEvidence(bytes) ? Bun.zstdDecompressSync(bytes) : bytes; |
+| `ffi` | 1 | unmapped | ? | { heading: 'Deepen pass (§27)', html: '<ul><li>Posts render via <code>Bun.markdown.html</code> (real HTML —... |
+| `CronController` | 1 | GAP | y | async scheduled(controller: CronController) { |
 | `revision` | 1 | runtime:probe | y | revision: Bun.revision.slice(0, 8), |
 | `Request` | 1 | unmapped | ? | // Bun.serve's route/fetch signatures is the headers-only Request — it |
 | `Serve.Options` | 1 | undefined (ns) | n | const server = Bun.serve(serveOptions as Serve.Options<undefined, string>); |
-| `deflateSync` | 1 | fs:probe | y | { cells: ['<code>node-zlib-uses-zlib-ng</code>', 'Bun.deflateSync speed measured — zlib-ng IMPLEMENTATION... |
-| `ffi` | 1 | unmapped | ? | { heading: 'Deepen pass (§27)', html: '<ul><li>Posts render via <code>Bun.markdown.html</code> (real HTML —... |
-| `zstdDecompressSync` | 1 | fs:probe | y | const decoded = isZstdEvidence(bytes) ? Bun.zstdDecompressSync(bytes) : bytes; |
-| `fileURLToPath` | 1 | fsx:probe | y | return Bun.fileURLToPath(url instanceof URL ? url : new URL(url)); |
-| `semver.satisfies` | 1 | bun:apis-probe (ns) | y | if (!Bun.semver.satisfies(Bun.version, ">=" + minVersion)) { |
-| `CronController` | 1 | GAP | y | async scheduled(controller: CronController) { |
+| `term` | 1 | unmapped | ? | * CORRECTED vs the pasted factory: term undefined, bgGreen null, |
+| `BunInspectOptions` | 1 | GAP | n | [Bun.inspect.custom]: (depth: number, opts: BunInspectOptions, inspect: typeof Bun.inspect) => string; |
+| `Cookie` | 1 | defaults:probe | y | const sessionCookie = new Bun.Cookie(CSRF_SESSION_COOKIE, sessionId, { |
+| `CookieMap` | 1 | defaults:probe | y | return new Bun.CookieMap(cookieHeader).get(CSRF_SESSION_COOKIE) ?? null; |
+| `CSRF.verify` | 1 | csrf:probe (ns) | y | return Bun.CSRF.verify(token, { secret: csrfSecret(env), sessionId }); |
+| `udpSocket` | 1 | net:probe | y | { cells: ['<code>Bun.udpSocket()</code> — UDP + multicast', 'addMembership / setMulticastTTL / send', ok] }, |
 | `dns` | 1 | net:probe | y | import { dns } from "bun"; |
 
 ## src/settlement
@@ -492,7 +492,7 @@ existent API mentions - review-only.
 
 | Token | Uses | Gate | Docs | Example |
 |---|---|---|---|---|
-| `escapeHTML` | 13 | ansi:probe | y | `${Bun.escapeHTML(context)}\n` + |
+| `escapeHTML` | 13 | ansi:probe | y | lines.push(`  ${Bun.escapeHTML(tag)}`); |
 | `file` | 5 | fs:probe | y | const file = Bun.file(photoPath); |
 | `Database` | 4 | sqlite:probe | y | import type { Database } from "bun:sqlite"; |
 | `sleep` | 2 | runtime:probe | y | await Bun.sleep(5000); |
@@ -503,42 +503,42 @@ existent API mentions - review-only.
 
 | Token | Uses | Gate | Docs | Example |
 |---|---|---|---|---|
-| `describe` | 72 | test:probe | y | import { describe, expect, test } from "bun:test"; |
-| `expect` | 72 | test:probe | y | import { describe, expect, test } from "bun:test"; |
-| `test` | 72 | test:probe | y | import { describe, expect, test } from "bun:test"; |
-| `env` | 26 | runtime:probe | y | const prev = Bun.env.RESEARCH_CACHE_DB; |
+| `describe` | 72 | test:probe | y | import { afterEach, describe, expect, test } from "bun:test"; |
+| `expect` | 72 | test:probe | y | import { afterEach, describe, expect, test } from "bun:test"; |
+| `test` | 72 | test:probe | y | import { afterEach, describe, expect, test } from "bun:test"; |
+| `env` | 26 | runtime:probe | y | Bun.env.GLOBAL_CODE_SEARCH_NO_PACE = "1"; // mocked API — no real window pacing |
 | `file` | 23 | fs:probe | y | await Bun.file(tmpOverrides).delete(); |
-| `write` | 15 | fs:probe | y | await Bun.write(tmpOverrides, "{}"); |
-| `afterAll` | 14 | test:probe | y | import { afterAll, beforeAll, describe, expect, test } from "bun:test"; |
-| `beforeAll` | 12 | test:probe | y | import { afterAll, beforeAll, describe, expect, test } from "bun:test"; |
-| `$` | 11 | shell:probe | y | await Bun.$`rm -f ${dbPath}`.nothrow().quiet(); |
+| `write` | 15 | fs:probe | y | await Bun.write( |
+| `afterAll` | 14 | test:probe | y | import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test"; |
+| `beforeAll` | 12 | test:probe | y | import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test"; |
+| `$` | 11 | shell:probe | y | await Bun.$`rm -rf ${SMOKE_DIR}`.quiet(); |
 | `afterEach` | 9 | test:probe | y | import { afterEach, describe, expect, test } from "bun:test"; |
-| `sleep` | 8 | runtime:probe | y | await Bun.sleep(10); |
-| `stringWidth` | 8 | ansi:probe | y | test("terminalLink preserves visible width for Bun.stringWidth", () => { |
+| `sleep` | 8 | runtime:probe | y | await Bun.sleep(5); |
+| `stringWidth` | 8 | ansi:probe | y | await Bun.write(join(root, "src", "ok.ts"), "console.log(Bun.stringWidth('ok'));"); |
 | `spawnSync` | 7 | spawn:probe | y | expect(violations[0]?.message).toContain("Bun.spawnSync()"); |
 | `Database` | 6 | sqlite:probe | y | import { Database } from "bun:sqlite"; |
 | `spawn` | 5 | spawn:probe | y | test("flags Bun.spawn / Bun.spawnSync outside the documented keep-list", () => { |
 | `stripANSI` | 4 | ansi:probe | y | expect(Bun.stripANSI(truncated)).toBe("ord…"); |
-| `wrapAnsi` | 3 | ansi:probe | y | "dependencies.wrap-ansi duplicates Bun.wrapAnsi()", |
-| `TOML.parse` | 3 | format:probe (ns) | y | "devDependencies.@iarna/toml duplicates Bun.TOML.parse() / governed tomlStringify()", |
-| `deepEquals` | 3 | crypto:probe | y | test("inspectionSignalsEqual uses Bun.deepEquals", () => { |
+| `deepEquals` | 3 | crypto:probe | y | test("deepEqual matches Bun.deepEquals", () => { |
 | `semver.satisfies` | 3 | bun:apis-probe (ns) | y | test("Bun.semver.satisfies gates the baseline", () => { |
 | `serve` | 3 | serve-tls/routes | y | const server = Bun.serve({ |
-| `beforeEach` | 3 | test:probe | y | import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test"; |
+| `wrapAnsi` | 3 | ansi:probe | y | "dependencies.wrap-ansi duplicates Bun.wrapAnsi()", |
+| `TOML.parse` | 3 | format:probe (ns) | y | "devDependencies.@iarna/toml duplicates Bun.TOML.parse() / governed tomlStringify()", |
 | `mock` | 3 | test:probe | y | import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test"; |
-| `inspect.table` | 2 | ansi:probe (ns) | y | expect(violations.map((item) => item.message).join("\n")).toContain("Bun.inspect.table()"); |
+| `beforeEach` | 3 | test:probe | y | import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test"; |
 | `build` | 2 | build-deep:probe | y | type BuildResult = Awaited<ReturnType<typeof Bun.build>>; |
-| `sliceAnsi` | 1 | ansi:probe | n | test("padDisplay truncates ANSI-colored text via Bun.sliceAnsi (width-aware, styles kept)", () => { |
-| `version` | 1 | runtime:probe | y | expect(meta?.tagRef).toBe("bun-v" + Bun.version); |
-| `markdown.ansi` | 1 | format:probe (ns) | n | test("renderReportTerm applies Bun.markdown.ansi", async () => { |
-| `inspect` | 1 | ansi:probe | y | test("formatInspectSignalsBrief uses Bun.inspect", () => { |
+| `inspect.table` | 2 | ansi:probe (ns) | y | expect(violations.map((item) => item.message).join("\n")).toContain("Bun.inspect.table()"); |
 | `escapeHTML` | 1 | ansi:probe | y | test("escapeHtml delegates to Bun.escapeHTML", () => { |
-| `cron` | 1 | cron tests §126/128 | y | Bun.cron("0 * * * *", () => {}); |
-| `CryptoHasher` | 1 | crypto:probe | y | const h = new Bun.CryptoHasher("sha3-256"); |
+| `version` | 1 | runtime:probe | y | expect(meta?.tagRef).toBe("bun-v" + Bun.version); |
+| `sliceAnsi` | 1 | ansi:probe | n | test("padDisplay truncates ANSI-colored text via Bun.sliceAnsi (width-aware, styles kept)", () => { |
 | `randomUUIDv7` | 1 | crypto:probe | y | return joinPath(import.meta.dir, `.tmp-${prefix}-${Bun.randomUUIDv7()}.db`); |
 | `peek` | 1 | runtime:probe | y | describe("awaitSettled (Bun.peek)", () => { |
-| `setSystemTime` | 1 | test:probe | y | import { setSystemTime, describe, expect, test } from "bun:test"; |
+| `cron` | 1 | cron tests §126/128 | y | Bun.cron("0 * * * *", () => {}); |
+| `CryptoHasher` | 1 | crypto:probe | y | const h = new Bun.CryptoHasher("sha3-256"); |
+| `markdown.ansi` | 1 | format:probe (ns) | n | test("renderReportTerm applies Bun.markdown.ansi", async () => { |
+| `inspect` | 1 | ansi:probe | y | test("formatInspectSignalsBrief uses Bun.inspect", () => { |
 | `BunPlugin` | 1 | GAP | n | import type { BunPlugin } from "bun"; |
+| `setSystemTime` | 1 | test:probe | y | import { setSystemTime, describe, expect, test } from "bun:test"; |
 
 ## tests/agent
 
@@ -572,7 +572,7 @@ existent API mentions - review-only.
 | `describe` | 7 | test:probe | y | import { describe, expect, test } from "bun:test"; |
 | `expect` | 7 | test:probe | y | import { describe, expect, test } from "bun:test"; |
 | `test` | 7 | test:probe | y | import { describe, expect, test } from "bun:test"; |
-| `file` | 4 | fs:probe | y | const fx = await Bun.file(FIXTURE).json(); |
+| `file` | 4 | fs:probe | y | test("maps *_FILE envs to Bun.file-backed ca/cert/key and passes scalars through", () => { |
 | `BunFile` | 2 | GAP | n | expect(typeof (f as BunFile).text).toBe("function"); |
 
 ## tests/calibration
@@ -599,18 +599,18 @@ existent API mentions - review-only.
 | `expect` | 51 | test:probe | y | import { describe, expect, test } from "bun:test"; |
 | `test` | 51 | test:probe | y | import { describe, expect, test } from "bun:test"; |
 | `describe` | 50 | test:probe | y | import { describe, expect, test } from "bun:test"; |
-| `file` | 21 | fs:probe | y | const fx = await Bun.file(FIXTURE).json(); |
+| `file` | 21 | fs:probe | y | expect(await Bun.file(artifact.dashboardHtml).exists()).toBe(true); |
 | `sleep` | 5 | runtime:probe | y | await Bun.sleep(5); |
 | `$` | 5 | shell:probe | y | await Bun.$`rm -f ${latestPath}`.nothrow().quiet(); |
 | `cron` | 4 | cron tests §126/128 | y | test("cron channel reports the Bun.cron refresh job", async () => { |
-| `serve` | 4 | serve-tls/routes | y | // and RSS imageUrl extraction. The WS roundtrip spins a REAL Bun.serve with |
-| `write` | 3 | fs:probe | y | await Bun.write(latestPath, JSON.stringify({ ...art, liveTickers: ["KXITFMATCH-26JUL22MID"] })); |
+| `serve` | 4 | serve-tls/routes | y | const server = Bun.serve({ |
+| `version` | 3 | runtime:probe | y | expect(artifact.snapshotMeta?.runtime.bunVersion).toBe(Bun.version); |
+| `write` | 3 | fs:probe | y | Bun.write(sourcePath, onePixelPng), |
 | `semver.order` | 3 | bun:apis-probe (ns) | y | describe("versionGt (Bun.semver.order after normalization — docs-drift)", () => { |
 | `env` | 3 | runtime:probe | y | Bun.env.GH_TOKEN = "test-token"; |
-| `version` | 3 | runtime:probe | y | expect(artifact.snapshotMeta?.runtime.bunVersion).toBe(Bun.version); |
+| `revision` | 2 | runtime:probe | y | expect(artifact.snapshotMeta?.runtime.bunRevision).toBe(Bun.revision); |
 | `semver` | 2 | bun:apis-probe | y | describe("normalizeSemver (pad ragged feed versions before Bun.semver)", () => { |
 | `semver.satisfies` | 2 | bun:apis-probe (ns) | y | expect(Bun.semver.satisfies("1.0.0", "!=1.0.0")).toBe(true); // quirk |
-| `revision` | 2 | runtime:probe | y | expect(artifact.snapshotMeta?.runtime.bunRevision).toBe(Bun.revision); |
 | `Database` | 2 | sqlite:probe | y | import { Database } from "bun:sqlite"; |
 | `Image` | 1 | image:probe | y | test("visual snapshot metadata is derived through Bun.Image and Bun.WebView types", async () => { |
 | `WebView` | 1 | runtime:probe | y | test("visual snapshot metadata is derived through Bun.Image and Bun.WebView types", async () => { |
@@ -667,37 +667,36 @@ existent API mentions - review-only.
 | `serve` | 22 | serve-tls/routes | y | // serve-stream:probe (§112) — the Bun.serve streaming probe must pass 4/4. |
 | `Transpiler` | 21 | runtime:probe | y | // Docs code-block validation via Bun.Transpiler (§59). |
 | `spawnSync` | 18 | spawn:probe | y | const proc = Bun.spawnSync(["bun", "tools/serve-stream-probe.ts"], { |
+| `Glob` | 12 | fsx:probe | y | test('flags a real .node addon binary (Bun.Glob scanSync)', () => { |
 | `env` | 12 | runtime:probe | y | * Bun environment loading — no dotenv; Bun.env ≡ process.env. |
-| `Glob` | 12 | fsx:probe | y | describe("Bun.Glob helpers", () => { |
 | `Image` | 10 | image:probe | y | const img = new Bun.Image(png); |
-| `Archive` | 9 | fs:probe | y | describe("archiveRemovedFiles (Bun.Archive, §26)", () => { |
+| `Archive` | 9 | fs:probe | y | * Bun.Archive round-trip (tools/bun-backup.ts path): create a tarball via |
 | `build` | 8 | build-deep:probe | y | await Bun.build({ entrypoints: [join(dir, "x.ts")], outdir: join(dir, "o"), plugins: [{ name: "bad-ns",... |
 | `which` | 8 | fsx:probe | y | // Bun.which semantics — probe-verified (§42): { PATH } replaces env PATH, |
 | `XML` | 7 | format:probe | y | describe("Bun.XML compact shape (§68)", () => { |
 | `image` | 6 | unmapped | ? | // (watch / zstd / image) and the intentional non-existence |
 | `XML.parse` | 6 | format:probe (ns) | y | test("CycloneDX XML twin is well-formed (Bun.XML.parse round-trip) with all components", async () => { |
 | `spawn` | 5 | spawn:probe | y | const proc = Bun.spawn(["bun", "run", join(dir, "app.ts")], { stdout: "pipe", stderr: "pipe" }); |
-| `inspect` | 5 | ansi:probe | y | test("Bun.inspect default depth is unbounded (repo redact pins 32)", () => { |
+| `inspect` | 5 | ansi:probe | y | const out = Bun.inspect(socket); |
 | `afterAll` | 5 | test:probe | y | import { afterAll, beforeAll, describe, expect, test } from "bun:test"; |
 | `beforeAll` | 5 | test:probe | y | import { afterAll, beforeAll, describe, expect, test } from "bun:test"; |
-| `markdown` | 4 | format:probe | y | // Native heading extraction via Bun.markdown (GFM verified) — heading ids, |
+| `markdown` | 4 | format:probe | y | // Docs managed by Bun.markdown — render contract + unique heading ids. |
 | `stripANSI` | 4 | ansi:probe | y | test("plainDisplay strips ANSI (Bun.stripANSI)", () => { |
 | `inspect.table` | 4 | ansi:probe (ns) | y | test("Bun.inspect.custom renders inside Bun.inspect.table cells", () => { |
-| `markdown.html` | 3 | format:probe (ns) | y | describe("renderMarkdownBody (§27 — Bun.markdown.html)", () => { |
 | `stringWidth` | 3 | ansi:probe | y | '<pre><code>Bun.stringWidth("\u001b[31mhi\u001b[0m"); // 2</code></pre>', |
 | `TOML.parse` | 3 | format:probe (ns) | y | test("mapsTomlContent round-trips through Bun.TOML.parse", () => { |
-| `sleep` | 3 | runtime:probe | y | await Bun.sleep(20); // t1 delivered to both |
+| `markdown.html` | 3 | format:probe (ns) | y | const html = Bun.markdown.html("## Quick reference — action thresholds", { headings: { ids: true } }); |
 | `Cookie` | 3 | defaults:probe | y | const c = new Bun.Cookie("n", "v"); |
 | `CookieMap` | 3 | defaults:probe | y | const sR = Bun.serve({ port: 3662, routes: { "/": (req: any) => new Response("cookies=" + (req.cookies... |
+| `sleep` | 3 | runtime:probe | y | await Bun.sleep(20); // t1 delivered to both |
 | `watch` | 2 | unmapped | ? | // (watch / zstd / image) and the intentional non-existence |
 | `zstd` | 2 | unmapped | ? | // (watch / zstd / image) and the intentional non-existence |
 | `$` | 2 | shell:probe | y | const flag = (await Bun.$`bun --help`.text()).includes("--cpu-prof"); |
 | `WebView` | 2 | runtime:probe | y | describe("brand card raster (Bun.WebView)", () => { |
-| `version` | 2 | runtime:probe | y | expect(body.bunVersion).toBe(Bun.version); |
+| `version` | 2 | runtime:probe | y | expect(shape.bunVersion).toBe(Bun.version); |
 | `hash` | 2 | crypto:probe | y | test("Bun.write returns byte count; Bun.hash is bigint; CryptoHasher digest is Buffer", async () => { |
 | `wrapAnsi` | 2 | ansi:probe | y | test("wrapDisplay wraps at column width (Bun.wrapAnsi)", () => { |
 | `inspect.custom` | 2 | ansi:probe (ns) | y | test("Bun.inspect.custom renders inside Bun.inspect.table cells", () => { |
-| `sha` | 1 | bun:apis-probe | y | // @see docs/AGENT-PITFALLS.md §24 (Bun.sha = SHA-512/256 correction) |
 | `zstdCompressSync` | 1 | fs:probe | y | expect(typeof Bun.zstdCompressSync).toBe("function"); |
 | `zstdDecompressSync` | 1 | fs:probe | y | expect(typeof Bun.zstdDecompressSync).toBe("function"); |
 | `ffi` | 1 | unmapped | ? | test("ffi / html are intentionally documented as non-existent", () => { |
@@ -708,16 +707,17 @@ existent API mentions - review-only.
 | `gunzipSync` | 1 | fs:probe | y | const gunzipped = new TextDecoder().decode(Bun.gunzipSync(Buffer.from(seen.b64, 'base64'))); |
 | `dns.prefetch` | 1 | net:probe (ns) | y | expect(names).toContain('Bun.dns.prefetch + getCacheStats'); |
 | `YAML` | 1 | format:probe | y | expect(names).toContain('Bun.YAML 1.2 semantics (yes/on/no are strings)'); |
-| `rename` | 1 | unmapped | ? | // @see docs/AGENT-PITFALLS.md §25 (rename missing, ensureDirectory not an API) |
 | `XML.stringify` | 1 | format:probe (ns) | y | describe("Bun.XML.stringify (§68)", () => { |
-| `CryptoHasher` | 1 | crypto:probe | y | const h = new Bun.CryptoHasher("sha256"); |
-| `sliceAnsi` | 1 | ansi:probe | n | test("padDisplay truncates by visible cells with ellipsis (Bun.sliceAnsi)", () => { |
+| `JSONL.parse` | 1 | format:probe (ns) | y | // Regression guard: raw Bun.JSONL.parse truncates at the first bad line |
+| `secrets` | 1 | net:probe | y | describe("OS keychain credential store wrapper (Bun.secrets)", () => { |
+| `revision` | 1 | runtime:probe | y | expect(shape.bunRevision).toBe(Bun.revision); |
 | `randomUUIDv7` | 1 | crypto:probe | y | expect(typeof Bun.randomUUIDv7).toBe("function"); |
 | `peek` | 1 | runtime:probe | y | expect(typeof Bun.peek).toBe("function"); |
-| `revision` | 1 | runtime:probe | y | expect(shape.bunRevision).toBe(Bun.revision); |
+| `CryptoHasher` | 1 | crypto:probe | y | const h = new Bun.CryptoHasher("sha256"); |
+| `rename` | 1 | unmapped | ? | // @see docs/AGENT-PITFALLS.md §25 (rename missing, ensureDirectory not an API) |
+| `sliceAnsi` | 1 | ansi:probe | n | test("padDisplay truncates by visible cells with ellipsis (Bun.sliceAnsi)", () => { |
 | `markdown.Options` | 1 | format:probe (ns) | n | const opts = p as Bun.markdown.Options; // presets are as-const literal types |
-| `secrets` | 1 | net:probe | y | describe("OS keychain credential store wrapper (Bun.secrets)", () => { |
-| `JSONL.parse` | 1 | format:probe (ns) | y | // Regression guard: raw Bun.JSONL.parse truncates at the first bad line |
+| `sha` | 1 | bun:apis-probe | y | // @see docs/AGENT-PITFALLS.md §24 (Bun.sha = SHA-512/256 correction) |
 | `plugin` | 1 | build-deep:probe | y | 'import { plugin } from "bun";', |
 | `expectTypeOf` | 1 | test:probe | y | import { describe, expect, test, expectTypeOf } from "bun:test"; |
 
@@ -734,7 +734,7 @@ existent API mentions - review-only.
 | `expect` | 14 | test:probe | y | import { describe, expect, test } from "bun:test"; |
 | `test` | 14 | test:probe | y | import { describe, expect, test } from "bun:test"; |
 | `describe` | 13 | test:probe | y | import { describe, expect, test } from "bun:test"; |
-| `file` | 10 | fs:probe | y | expect(await Bun.file(path).exists()).toBe(true); |
+| `file` | 10 | fs:probe | y | const har = JSON.parse(await Bun.file(FIXTURE).text()) as unknown; |
 | `Image` | 4 | image:probe | y | test("encodeSolidColorPng decodes with Bun.Image (zlib-valid IDAT)", async () => { |
 | `gzipSync` | 2 | fs:probe | y | const gz = Bun.gzipSync(JSON.stringify(envelope)); |
 | `color` | 1 | ansi:probe | y | describe("partner visuals (Bun.color)", () => { |
@@ -870,68 +870,78 @@ existent API mentions - review-only.
 
 | Token | Uses | Gate | Docs | Example |
 |---|---|---|---|---|
-| `file` | 167 | fs:probe | y | const src = Bun.file(pem); |
-| `write` | 141 | fs:probe | y | // @see https://bun.com/docs/runtime/file-io#writing-files-bun-write — Bun.write |
-| `build` | 72 | build-deep:probe | y | *   - env-plugin virtual module (onResolve+onLoad) works in Bun.build |
+| `file` | 190 | fs:probe | y | const src = Bun.file(pem); |
+| `write` | 177 | fs:probe | y | // @see https://bun.com/docs/runtime/file-io#writing-files-bun-write — Bun.write |
+| `build` | 84 | build-deep:probe | y | * (§109) against the installed runtime: feature() flags, Bun.build files, |
+| `serve` | 59 | serve-tls/routes | y | * `bun run routes:probe` — lock the Bun.serve routes API surface (§122): |
 | `env` | 44 | runtime:probe | y | const MAX_ATTEMPTS = Number(Bun.env.RESEARCH_RESUME_MAX_ATTEMPTS ?? 8); |
-| `serve` | 43 | serve-tls/routes | y | * `bun run serve-stream:probe` — probe Bun.serve streaming (§112): |
-| `spawnSync` | 39 | spawn:probe | y | const gen = Bun.spawnSync(["openssl", "req", "-x509", "-newkey", "rsa:2048", "-keyout", keyPath, "-out",... |
+| `spawnSync` | 39 | spawn:probe | y | const guard = Bun.spawnSync(["bun", join(dir, "guard.ts")], { stdout: "pipe", stderr: "pipe" }); |
 | `argv` | 36 | runtime:probe | y | const i = Bun.argv.indexOf(name); |
+| `sleep` | 32 | runtime:probe | y | await Bun.sleep(waitMs); |
 | `version` | 30 | runtime:probe | y | *        (bun-v<Bun.version>) — exactly the docs for the binary in use. |
-| `Transpiler` | 28 | runtime:probe | y | const tDef = new Bun.Transpiler(); |
-| `sleep` | 27 | runtime:probe | y | await Bun.sleep(150); |
+| `Transpiler` | 28 | runtime:probe | y | * `bun run transpiler:probe` — Bun.Transpiler internals (§142): the |
+| `Image` | 21 | image:probe | y | // P2: Bun.Image.prototype has modulate (instance method) + the rest. |
 | `color` | 20 | ansi:probe | y | // Brand-colored mark via brandMark (composes Bun.color auto-TTY + |
-| `cron` | 18 | cron tests §126/128 | y | await Bun.cron(EXECUTION_RECONCILE_WORKER, options.schedule, EXECUTION_RECONCILE_TITLE); |
+| `cron` | 19 | cron tests §126/128 | y | await Bun.cron(EXECUTION_RECONCILE_WORKER, options.schedule, EXECUTION_RECONCILE_TITLE); |
 | `which` | 17 | fsx:probe | y | * relies on new Bun.Glob(pattern).match/scan and Bun.which. Bun 1.4.0. |
-| `CryptoHasher` | 16 | crypto:probe | y | const h = new Bun.CryptoHasher("sha256"); h.update("x"); |
-| `Image` | 15 | image:probe | y | "image", // §12: lowercase form documented as non-existent (the API is Bun.Image capital) |
-| `revision` | 15 | runtime:probe | y | console.log("docs:api — bun " + Bun.version + " (" + Bun.revision.slice(0, 8) + ")" + (STRICT ? " STRICT=1" :... |
-| `spawn` | 15 | spawn:probe | y | const proc = Bun.spawn(["bun", "--preload", join(dir, "plugin.ts"), join(dir, "modapp.ts")], { stdout:... |
+| `CryptoHasher` | 16 | crypto:probe | y | const hash = new Bun.CryptoHasher("sha256").update(JSON.stringify(clone)).digest("hex"); |
+| `spawn` | 15 | spawn:probe | y | * Bun-native Bun.spawn (Bun.which('bun') resolve, like runBunGate). |
+| `revision` | 15 | runtime:probe | y | bunRevision: Bun.revision, |
 | `$` | 14 | shell:probe | y | // Bun.$ (repo doctrine); quiet() would DISCARD the output we classify. |
-| `Glob` | 14 | fsx:probe | y | for (const f of new Bun.Glob("*.md").scanSync({ cwd: join(ROOT, "docs"), onlyFiles: true })) { |
-| `WebView` | 13 | runtime:probe | y | if (typeof Bun.WebView !== 'function') { |
+| `Glob` | 14 | fsx:probe | y | * relies on new Bun.Glob(pattern).match/scan and Bun.which. Bun 1.4.0. |
+| `WebView` | 14 | runtime:probe | y | puppeteer: 'Bun.WebView', |
+| `s3` | 12 | client-shape:probe | y | check("P8 postgres/RedisClient/s3 shapes", typeof Bun.postgres === "object" \|\| typeof Bun.postgres ===... |
 | `Archive` | 11 | fs:probe | y | * Bun.Archive (§131). Verified against Bun 1.4.0 (34cbb9a40) and |
 | `inspect` | 11 | ansi:probe | y | // D7: Bun.inspect default is UNBOUNDED depth (§82) — repo redact pins 32 |
-| `stringWidth` | 10 | ansi:probe | y | check("P7 stringWidth ascii", Bun.stringWidth("abc") === 3, String(Bun.stringWidth("abc"))); |
-| `markdown` | 8 | format:probe | y | * namespaces (Bun.JSON5 / Bun.TOML / Bun.markdown) used in prose with a |
+| `stringWidth` | 10 | ansi:probe | y | 'string-width': 'Bun.stringWidth', |
 | `secrets` | 8 | net:probe | y | *             the OS credential vault via Bun.secrets. |
-| `password` | 7 | surface:probe | y | const hA = await Bun.password.hash("pw", { algorithm: "argon2id" } as any); |
+| `markdown` | 8 | format:probe | y | // The repo's own docs must render through Bun.markdown with unique |
+| `connect` | 8 | security:probe | y | 'Bun.redis', 'Bun.sql', 'Bun.spawn', 'Bun.file', 'Bun.write', 'Bun.connect', |
 | `XML` | 7 | format:probe | y | * `bun run xml:probe` — probe the Bun.XML doc claims (AGENT-PITFALLS §68) |
-| `connect` | 7 | security:probe | y | // P1 TCP round-trip: Bun.listen + Bun.connect on loopback. |
+| `password` | 7 | surface:probe | y | const pw = await Bun.password.hash("secret123"); |
 | `nanoseconds` | 7 | runtime:probe | y | const started = Bun.nanoseconds(); |
-| `JSON5` | 6 | bun:apis-probe | y | * namespaces (Bun.JSON5 / Bun.TOML / Bun.markdown) used in prose with a |
-| `postgres` | 6 | client-shape:probe | y | * rejection), S3Client/S3File (BunFile-like + presign), Bun.postgres |
-| `hash` | 6 | crypto:probe | y | check("D8b Bun.hash returns bigint", typeof Bun.hash("x") === "bigint", "typeof=" + typeof Bun.hash("x")); |
-| `TOML.parse` | 6 | format:probe (ns) | y | const tml = Bun.TOML.parse("when = 2024-01-15T10:30:00\n") as { when: unknown }; |
+| `postgres` | 6 | client-shape:probe | y | check("P8 postgres/RedisClient/s3 shapes", typeof Bun.postgres === "object" \|\| typeof Bun.postgres ===... |
 | `inspect.table` | 6 | ansi:probe (ns) | y | process.stderr.write(Bun.inspect.table(summaryRows, tableOptions) + "\n"); |
-| `sha` | 6 | bun:apis-probe | y | * Bun.JSON5 (new), plus re-confirmations of two CORRECTED rows (Bun.sha |
+| `TOML.parse` | 6 | format:probe (ns) | y | * Partner registry TOML (Bun.TOML.parse / stringify). |
+| `JSON5` | 6 | bun:apis-probe | y | * namespaces (Bun.JSON5 / Bun.TOML / Bun.markdown) used in prose with a |
+| `hash` | 6 | crypto:probe | y | check("D8b Bun.hash returns bigint", typeof Bun.hash("x") === "bigint", "typeof=" + typeof Bun.hash("x")); |
 | `deepEquals` | 6 | crypto:probe | y | * Bun.deepEquals(a, b, true), Bun.randomUUIDv7(). Bun 1.4.0. |
+| `sha` | 6 | bun:apis-probe | y | * Bun.JSON5 (new), plus re-confirmations of two CORRECTED rows (Bun.sha |
 | `XML.parse` | 5 | format:probe (ns) | y | // Bun.XML.parse (Bun 1.4 native, §68 verified): attributes -> @attr, |
-| `X` | 5 | unmapped | ? | *     S / X placeholders) |
+| `X` | 5 | unmapped | ? | * Detects: a function whose body is a SINGLE `return X(...)` on the |
+| `escapeHTML` | 5 | ansi:probe | y | * direct Bun.escapeHTML calls would break the injection contract. |
 | `plugin` | 5 | build-deep:probe | y | *   - named export `plugin` from "bun" === Bun.plugin (identity) |
-| `escapeHTML` | 5 | ansi:probe | y | check("P6 escapeHTML", Bun.escapeHTML("<a href=\"x\">a&b</a>") === "&lt;a... |
 | `semver` | 5 | bun:apis-probe | y | * pasted API table (§115) that were NOT already covered: Bun.semver and |
 | `resolve` | 4 | fsx:probe | y | const r = await Bun.resolve("node:fs", import.meta.path); |
-| `sliceAnsi` | 4 | ansi:probe | n | const sliced = Bun.sliceAnsi("\x1b[31mhello\x1b[0m world", 2, 7); |
-| `redis` | 4 | net:probe | y | check("P4 redis shape", typeof Bun.redis === "object" && typeof (Bun.redis as any)?.constructor ===... |
+| `sliceAnsi` | 4 | ansi:probe | n | 'slice-ansi': 'Bun.sliceAnsi', |
+| `Terminal` | 4 | runtime:probe | y | 'node-pty': 'Bun.Terminal', |
+| `redis` | 4 | net:probe | y | 'Bun.redis', 'Bun.sql', 'Bun.spawn', 'Bun.file', 'Bun.write', 'Bun.connect', |
 | `peek` | 4 | runtime:probe | y | check("P6 peek fulfilled value", Bun.peek(pF) === 42, String(Bun.peek(pF))); |
 | `peek.status` | 4 | runtime:probe (ns) | n | check("P6b peek.status", Bun.peek.status(pF) === "fulfilled" && Bun.peek.status(pP) === "pending",... |
-| `Terminal` | 4 | runtime:probe | y | check("P10 Terminal class", typeof Bun.Terminal === "function", typeof Bun.Terminal); |
 | `dns.prefetch` | 3 | net:probe (ns) | y | * DNS via Bun.dns.prefetch for api.github.com / raw.githubusercontent.com / |
 | `gzipSync` | 3 | fs:probe | y | check("P10 gzip round-trip", new TextDecoder().decode(Bun.gunzipSync(Bun.gzipSync("compress me"))) ===... |
 | `stdout` | 3 | fs:probe | y | check("P17 Bun.stdout is Blob", Bun.stdout instanceof Blob, (Bun.stdout as any).constructor?.name); |
+| `S3Client` | 3 | client-shape:probe | y | const s3 = new Bun.S3Client({ bucket: "probe", accessKeyId: "k", secretAccessKey: "s" }); |
+| `dns` | 3 | net:probe | y | // fully-typed class). bun-types 1.4 types memoryPressure, Bun.dns, |
 | `ffi` | 3 | unmapped | ? | *     ffi namespace, html invented claim, SourceMap undefined) |
 | `Quic` | 3 | unmapped | ? | "Quic", // §120/§122: Quic global asserted ABSENT — QUIC is the node:quic module |
-| `S3Client` | 3 | client-shape:probe | y | const s3 = new Bun.S3Client({ bucket: "x", accessKeyId: "k", secretAccessKey: "s" }); |
-| `stripANSI` | 3 | ansi:probe | y | check("P8 stripANSI", Bun.stripANSI("\x1b[31mred\x1b[0m") === "red",... |
-| `wrapAnsi` | 3 | ansi:probe | y | const wrapped = Bun.wrapAnsi("one two three four five", 10); |
-| `dns` | 3 | net:probe | y | check("P3 dns prefetch/lookup fns", typeof Bun.dns.prefetch === "function" && typeof Bun.dns.lookup ===... |
-| `JSONC.parse` | 3 | format:probe (ns) | n | const jc = Bun.JSONC.parse("// hi\n{\"a\": 1, \"b\": [1, 2,], /* x */}") as any; |
+| `JSONC.parse` | 3 | format:probe (ns) | n | 'jsonc-parser': 'Bun.JSONC.parse', |
+| `wrapAnsi` | 3 | ansi:probe | y | 'wrap-ansi': 'Bun.wrapAnsi', |
+| `stripANSI` | 3 | ansi:probe | y | 'strip-ansi': 'Bun.stripANSI()', |
 | `Database` | 3 | sqlite:probe | y | import { Database } from "bun:sqlite"; |
 | `pathToFileURL` | 2 | fsx:probe | y | const fileUrl = Bun.pathToFileURL(htmlPath).href; |
 | `mmap` | 2 | fs:probe | y | * compression (zlib/zstd), Bun.mmap, runtime loader imports, |
 | `gunzipSync` | 2 | fs:probe | y | check("P10 gzip round-trip", new TextDecoder().decode(Bun.gunzipSync(Bun.gzipSync("compress me"))) ===... |
 | `zstdCompressSync` | 2 | fs:probe | y | const z = Bun.zstdCompressSync("zstd me"); |
+| `openInEditor` | 2 | fsx:probe | y | check("P5 openInEditor", typeof Bun.openInEditor === "function", typeof Bun.openInEditor); |
+| `FileSystemRouter` | 2 | surface:probe | y | const fsr = new Bun.FileSystemRouter({ dir: "scratch/meta-fixture", style: "nextjs" }); |
+| `deepMatch` | 2 | surface:probe | y | check("P6 deepMatch + concatArrayBuffers", Bun.deepMatch({ a: { b: 1 } }, { a: { b: 1 } }) === true &&... |
+| `main` | 2 | surface:probe | y | check("P7 memory/runtime members", typeof Bun.gc === "function" && typeof Bun.shrink === "function" && typeof... |
+| `RedisClient` | 2 | client-shape:probe | y | check("P8 postgres/RedisClient/s3 shapes", typeof Bun.postgres === "object" \|\| typeof Bun.postgres ===... |
+| `CSRF.generate` | 2 | csrf:probe (ns) | y | *   - Bun.CSRF.generate/verify exist; generate(undefined, opts) THROWS |
+| `enableANSIColors` | 2 | ecosystem:probe | n | // P1: Bun.enableANSIColors is a real boolean (theme gating). |
+| `FFI` | 2 | ffi:probe | n | // Bun.FFI is live but declared in ffi.d.ts outside the module bun |
+| `CronController` | 2 | GAP | y | async scheduled(controller: CronController) { |
 | `zstd` | 2 | unmapped | ? | * §62). A doc that mentions `zstd` when the runtime only has |
 | `html` | 2 | unmapped | ? | *     ffi namespace, html invented claim, SourceMap undefined) |
 | `SourceMap` | 2 | unmapped | ? | *     ffi namespace, html invented claim, SourceMap undefined) |
@@ -943,41 +953,29 @@ existent API mentions - review-only.
 | `tok` | 2 | unmapped | ? | * STRICT=1 adds CALLABILITY checks: a `tok(...)` call-site or |
 | `TOML` | 2 | format:probe | y | * namespaces (Bun.JSON5 / Bun.TOML / Bun.markdown) used in prose with a |
 | `readableStreamToArrayBuffer` | 2 | runtime:probe | y | "readableStreamTo", // Bun.readableStreamToArrayBuffer/Array/Blob/JSON/Text |
-| `RedisClient` | 2 | client-shape:probe | y | const rc = new Bun.RedisClient("redis://127.0.0.1:1"); |
-| `FileSystemRouter` | 2 | surface:probe | y | const fsr = new Bun.FileSystemRouter({ dir: "scratch/meta-fixture", style: "nextjs" }); |
-| `openInEditor` | 2 | fsx:probe | y | check("P5 openInEditor", typeof Bun.openInEditor === "function", typeof Bun.openInEditor); |
+| `JSON5.parse` | 2 | bun:apis-probe (ns) | y | json5: 'Bun.JSON5.parse/stringify', |
+| `JSONL.parse` | 2 | format:probe (ns) | y | ndjson: 'Bun.JSONL.parse/parseChunk', |
+| `JSONC` | 2 | format:probe | n | 'Bun.serve', 'Bun.JSON5', 'Bun.JSONL', 'Bun.JSONC', 'Bun.XML', 'Bun.TOML', |
 | `Cookie` | 2 | defaults:probe | y | const c = new Bun.Cookie("n", "v"); |
 | `CookieMap` | 2 | defaults:probe | y | const sR = Bun.serve({ port: 3652, routes: { "/": (req: any) => new Response("cookies=" + (req.cookies... |
+| `randomUUIDv7` | 2 | crypto:probe | y | * Bun.deepEquals(a, b, true), Bun.randomUUIDv7(). Bun 1.4.0. |
 | `HTMLBundle` | 2 | GAP | n | // P3: HTMLBundle is interface-only — no runtime global constructor. |
-| `deepMatch` | 2 | surface:probe | y | check("P6 deepMatch + concatArrayBuffers", Bun.deepMatch({ a: { b: 1 } }, { a: { b: 1 } }) === true &&... |
-| `main` | 2 | surface:probe | y | check("P7 memory/runtime members", typeof Bun.gc === "function" && typeof Bun.shrink === "function" && typeof... |
-| `CSRF.generate` | 2 | csrf:probe (ns) | y | *   - Bun.CSRF.generate/verify exist; generate(undefined, opts) THROWS |
-| `ArchiveInput` | 2 | GAP | n | const archive = new Bun.Archive(entries as unknown as ArchiveInput); |
-| `enableANSIColors` | 2 | ecosystem:probe | n | // P1: Bun.enableANSIColors is a real boolean (theme gating). |
-| `FFI` | 2 | ffi:probe | n | // Bun.FFI is live but declared in ffi.d.ts outside the module bun |
 | `listen` | 2 | net:probe | y | // P1 TCP round-trip: Bun.listen + Bun.connect on loopback. |
 | `udpSocket` | 2 | net:probe | y | const udp = await Bun.udpSocket({ hostname: "127.0.0.1", port: p1 } as any); |
 | `dns.lookup` | 2 | net:probe (ns) | y | check("P3 dns prefetch/lookup fns", typeof Bun.dns.prefetch === "function" && typeof Bun.dns.lookup ===... |
-| `CronController` | 2 | GAP | y | async scheduled(controller: CronController) { |
-| `sleepSync` | 2 | runtime:probe | y | Bun.sleepSync(30); |
-| `YAML.parse` | 2 | format:probe (ns) | y | const y = Bun.YAML.parse("a: yes\nb: on\nc: no\nd: 5\n") as any; |
-| `JSONC` | 2 | format:probe | n | // JSON5 syntax — Bun.JSONC rejects them; pinned as the boundary below). |
-| `JSONL.parse` | 2 | format:probe (ns) | y | const jl = Bun.JSONL.parse("{\"a\":1}\n{\"a\":2}") as any[]; |
 | `image` | 2 | unmapped | ? | * Terminal image metadata + conversion via image (Bun 1.4.0 file-based |
-| `JSON5.parse` | 2 | bun:apis-probe (ns) | y | const j5 = Bun.JSON5.parse("{ a: 1, /* c */ b: 2, }") as { a: number; b: number }; |
-| `randomUUIDv7` | 2 | crypto:probe | y | * Bun.deepEquals(a, b, true), Bun.randomUUIDv7(). Bun 1.4.0. |
-| `test` | 2 | test:probe | y | await Bun.write(C + "/mod.test.ts", 'import { test, expect } from "bun:test";\nimport { covered } from... |
-| `expect` | 2 | test:probe | y | await Bun.write(C + "/mod.test.ts", 'import { test, expect } from "bun:test";\nimport { covered } from... |
+| `YAML.parse` | 2 | format:probe (ns) | y | const y = Bun.YAML.parse("a: yes\nb: on\nc: no\nd: 5\n") as any; |
+| `ArchiveInput` | 2 | GAP | n | const archive = new Bun.Archive(entries as unknown as ArchiveInput); |
+| `sleepSync` | 2 | runtime:probe | y | Bun.sleepSync(30); |
+| `feature` | 2 | build-deep:probe | y | await Bun.write(gF + '/feat.ts', 'import { feature } from "bun:bundle"; export const v = feature("FEAT_A") ?... |
+| `expect` | 2 | test:probe | y | import { afterAll, beforeAll, describe, expect, expectTypeOf, jest, mock, onTestFinished, setDefaultTimeout,... |
+| `test` | 2 | test:probe | y | import { afterAll, beforeAll, describe, expect, expectTypeOf, jest, mock, onTestFinished, setDefaultTimeout,... |
 | `gzip` | 1 | unmapped | ? | // agree) — no async gzip/gunzip, no brotli functions. |
 | `inflateSync` | 1 | fs:probe | y | check("P11 deflate round-trip", new TextDecoder().decode(Bun.inflateSync(Bun.deflateSync("deflate me"))) ===... |
 | `deflateSync` | 1 | fs:probe | y | check("P11 deflate round-trip", new TextDecoder().decode(Bun.inflateSync(Bun.deflateSync("deflate me"))) ===... |
 | `zstdDecompressSync` | 1 | fs:probe | y | check("P13 zstd sync + async", new TextDecoder().decode(Bun.zstdDecompressSync(z)) === "zstd me" && new... |
 | `zstdDecompress` | 1 | fs:probe | y | check("P13 zstd sync + async", new TextDecoder().decode(Bun.zstdDecompressSync(z)) === "zstd me" && new... |
 | `zstdCompress` | 1 | fs:probe | y | check("P13 zstd sync + async", new TextDecoder().decode(Bun.zstdDecompressSync(z)) === "zstd me" && new... |
-| `readableStreamTo` | 1 | unmapped | ? | *   - WILDCARD: `readableStreamTo*()` family notation — prefix is a |
-| `term` | 1 | unmapped | ? | "term", // §62: term UNDEFINED (no cursorTo/clearDown) |
-| `watch` | 1 | unmapped | ? | "watch", // §62: NO watch API — content:watch is the bun --watch CLI flag |
-| `CSV` | 1 | unmapped | ? | "CSV", // §69: no CSV in 1.4.0 (probe) — custom parser is the native answer |
 | `fileURLToPath` | 1 | fsx:probe | y | const p = Bun.fileURLToPath(new URL("file:///tmp/x.txt")); |
 | `MD5` | 1 | surface:probe | n | const md5 = new Bun.MD5().update("abc").digest("hex"); |
 | `SHA1` | 1 | surface:probe | n | check("P1 SHA family + known digests", md5 === "900150983cd24fb0d6963f7d28e17f72" && new... |
@@ -1004,23 +1002,25 @@ existent API mentions - review-only.
 | `embeddedFiles` | 1 | surface:probe | y | check("P7 memory/runtime members", typeof Bun.gc === "function" && typeof Bun.shrink === "function" && typeof... |
 | `stderr` | 1 | surface:probe | y | check("P7 memory/runtime members", typeof Bun.gc === "function" && typeof Bun.shrink === "function" && typeof... |
 | `stdin` | 1 | surface:probe | y | check("P7 memory/runtime members", typeof Bun.gc === "function" && typeof Bun.shrink === "function" && typeof... |
-| `s3` | 1 | client-shape:probe | y | check("P8 postgres/RedisClient/s3 shapes", typeof Bun.postgres === "object" \|\| typeof Bun.postgres ===... |
+| `readableStreamTo` | 1 | unmapped | ? | *   - WILDCARD: `readableStreamTo*()` family notation — prefix is a |
+| `term` | 1 | unmapped | ? | "term", // §62: term UNDEFINED (no cursorTo/clearDown) |
+| `watch` | 1 | unmapped | ? | "watch", // §62: NO watch API — content:watch is the bun --watch CLI flag |
+| `CSV` | 1 | unmapped | ? | "CSV", // §69: no CSV in 1.4.0 (probe) — custom parser is the native answer |
+| `JSONL` | 1 | format:probe | y | 'Bun.serve', 'Bun.JSON5', 'Bun.JSONL', 'Bun.JSONC', 'Bun.XML', 'Bun.TOML', |
+| `sql` | 1 | sqlite:probe | y | 'Bun.redis', 'Bun.sql', 'Bun.spawn', 'Bun.file', 'Bun.write', 'Bun.connect', |
+| `JSON5.stringify` | 1 | bun:apis-probe (ns) | y | const j5s = Bun.JSON5.stringify({ a: 1, b: 2 }); |
+| `Shell` | 1 | unmapped | ? | * `bun run shell:probe` — probe the Shell surface (§127): `$` from |
+| `fetch` | 1 | serve-tls/routes | n | * PR posting uses the GitHub REST API via Bun.fetch; requires GITHUB_TOKEN |
+| `TOML.stringify` | 1 | format:probe (ns) | y | const ts = Bun.TOML.stringify({ a: 1, b: "s" }) ?? ""; |
+| `YAML.stringify` | 1 | format:probe (ns) | n | const ys = Bun.YAML.stringify({ k: [1, 2], s: "v" }); |
+| `XML.stringify` | 1 | format:probe (ns) | y | const xs = Bun.XML.stringify({ root: { item: "hi" } }); |
 | `Foo` | 1 | unmapped | ? | // (Foo, x) and type-only namespaces (Security, ArchiveInput) |
 | `x` | 1 | unmapped | ? | // (Foo, x) and type-only namespaces (Security, ArchiveInput) |
 | `Security` | 1 | GAP | n | // (Foo, x) and type-only namespaces (Security, ArchiveInput) |
-| `fetch` | 1 | serve-tls/routes | n | * PR posting uses the GitHub REST API via Bun.fetch; requires GITHUB_TOKEN |
 | `readableStreamToText` | 1 | runtime:probe | y | const txt = await Bun.readableStreamToText(new Response("text-content").body!); |
 | `ArrayBufferSink` | 1 | runtime:probe | y | const sink = new Bun.ArrayBufferSink(); |
 | `version_with_sha` | 1 | runtime:probe | n | const vws = version_with_sha; |
 | `readableStreamToFormData` | 1 | runtime:probe | y | await Bun.readableStreamToFormData(streamOf(mkBody("b1")), "multipart/form-data; boundary=b1"); |
-| `TOML.stringify` | 1 | format:probe (ns) | y | const ts = Bun.TOML.stringify({ a: 1, b: "s" }) ?? ""; |
-| `YAML.stringify` | 1 | format:probe (ns) | n | const ys = Bun.YAML.stringify({ k: [1, 2], s: "v" }); |
-| `XML.stringify` | 1 | format:probe (ns) | y | const xs = Bun.XML.stringify({ root: { item: "hi" } }); |
-| `Shell` | 1 | unmapped | ? | * `bun run shell:probe` — probe the Shell surface (§127): `$` from |
-| `JSON5.stringify` | 1 | bun:apis-probe (ns) | y | const j5s = Bun.JSON5.stringify({ a: 1, b: 2 }); |
-| `JSONL` | 1 | format:probe | y | 'Bun.serve', 'Bun.JSON5', 'Bun.JSONL', 'Bun.JSONC', 'Bun.XML', 'Bun.TOML', |
-| `sql` | 1 | sqlite:probe | y | 'Bun.redis', 'Bun.sql', 'Bun.spawn', 'Bun.file', 'Bun.write', 'Bun.connect', |
-| `dlopen` | 1 | ffi:probe | y | import { dlopen, CString, FFIType } from "bun:ffi"; |
 | `afterAll` | 1 | test:probe | y | import { afterAll, beforeAll, describe, expect, expectTypeOf, jest, mock, onTestFinished, setDefaultTimeout,... |
 | `beforeAll` | 1 | test:probe | y | import { afterAll, beforeAll, describe, expect, expectTypeOf, jest, mock, onTestFinished, setDefaultTimeout,... |
 | `describe` | 1 | test:probe | y | import { afterAll, beforeAll, describe, expect, expectTypeOf, jest, mock, onTestFinished, setDefaultTimeout,... |
@@ -1032,6 +1032,7 @@ existent API mentions - review-only.
 | `setSystemTime` | 1 | test:probe | y | import { afterAll, beforeAll, describe, expect, expectTypeOf, jest, mock, onTestFinished, setDefaultTimeout,... |
 | `spyOn` | 1 | test:probe | y | import { afterAll, beforeAll, describe, expect, expectTypeOf, jest, mock, onTestFinished, setDefaultTimeout,... |
 | `vi` | 1 | test:probe | y | import { afterAll, beforeAll, describe, expect, expectTypeOf, jest, mock, onTestFinished, setDefaultTimeout,... |
+| `dlopen` | 1 | ffi:probe | y | import { dlopen, CString, FFIType } from "bun:ffi"; |
 
 ## tools/bun-security-scanner
 
@@ -1048,6 +1049,21 @@ existent API mentions - review-only.
 | `Security.Scanner` | 1 | undefined (ns) | n | export const scanner: Security.Scanner = { |
 | `Security.Advisory` | 1 | undefined (ns) | n | const results: Security.Advisory[] = []; |
 | `semver.satisfies` | 1 | bun:apis-probe (ns) | y | if (p.name === entry.name && Bun.semver.satisfies(p.version, entry.range)) { |
+
+## tools/reference-cross-check
+
+| Token | Uses | Gate | Docs | Example |
+|---|---|---|---|---|
+| `cron` | 4 | cron tests §126/128 | y | declared['Bun.cron.CronOptions'] = interfaceFields(dts, 'CronOptions'); |
+| `file` | 3 | fs:probe | y | return await Bun.file(path).text(); |
+| `write` | 2 | fs:probe | y | await Bun.write(path, JSON.stringify(report, null, 2) + '\n'); |
+| `Image` | 2 | image:probe | y | ['IM', 'Bun.Image'], |
+| `version` | 1 | runtime:probe | y | bunVersion: Bun.version, |
+| `revision` | 1 | runtime:probe | y | bunRevision: Bun.revision, |
+| `serve` | 1 | serve-tls/routes | y | ['SV', 'Bun.serve'], |
+| `WebView` | 1 | runtime:probe | y | ['WV', 'Bun.WebView'], |
+| `s3` | 1 | client-shape:probe | y | ['S3', 'Bun.s3'], |
+| `Build.CompileTarget` | 1 | undefined (ns) | y | { id: 'BC-compile', api: 'compile', source: 'bun.d.ts', fragment: 'compile?: boolean \| Build.CompileTarget \|... |
 
 ## tools/telegram
 

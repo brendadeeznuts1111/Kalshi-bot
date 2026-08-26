@@ -1,7 +1,7 @@
 /**
  * Bun-native JSONL helpers — streaming, skip-and-continue, zero deps.
  *
- * ## Verified Bun.JSONL semantics (bun 1.3.14, empirical)
+ * ## Verified Bun.JSONL semantics (bun 1.4.0, empirical; format:probe P4)
  *
  * | API | Behavior |
  * | --- | -------- |

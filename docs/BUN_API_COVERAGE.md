@@ -8,21 +8,21 @@ without a runtime value; missing = declared value absent at runtime.
 
 | Token | Runtime | Types | Docs | Gate | Uses |
 |---|---|---|---|---|---|
-| `file` | function | y | y | fs:probe | 503 |
-| `write` | function | y | y | fs:probe | 297 |
+| `file` | function | y | y | fs:probe | 529 |
+| `write` | function | y | y | fs:probe | 335 |
 | `env` | object | y | y | runtime:probe | 240 |
+| `serve` | function | y | y | serve-tls/routes | 138 |
 | `color` | function | y | y | ansi:probe | 134 |
-| `serve` | function | y | y | serve-tls/routes | 121 |
-| `cron` | function | y | y | cron tests §126/128 | 105 |
-| `build` | function | y | y | build-deep:probe | 102 |
+| `build` | function | y | y | build-deep:probe | 114 |
+| `cron` | function | y | y | cron tests §126/128 | 110 |
 | `argv` | object | y | y | runtime:probe | 89 |
-| `Image` | function | y | y | image:probe | 78 |
+| `Image` | function | y | y | image:probe | 86 |
+| `sleep` | function | y | y | runtime:probe | 78 |
 | `spawnSync` | function | y | y | spawn:probe | 78 |
-| `sleep` | function | y | y | runtime:probe | 73 |
-| `WebView` | function | y | y | runtime:probe | 68 |
+| `WebView` | function | y | y | runtime:probe | 70 |
 | `$` | function | y | y | shell:probe | 67 |
 | `Transpiler` | function | y | y | runtime:probe | 67 |
-| `version` | string | y | y | runtime:probe | 56 |
+| `version` | string | y | y | runtime:probe | 57 |
 | `Glob` | function | y | y | fsx:probe | 54 |
 | `inspect` | function | y | y | ansi:probe | 46 |
 | `spawn` | function | y | y | spawn:probe | 46 |
@@ -36,8 +36,8 @@ without a runtime value; missing = declared value absent at runtime.
 | `inspect.table` | function | y | y | ansi:probe (ns) | 29 |
 | `TOML.parse` | function | y | y | format:probe (ns) | 24 |
 | `nanoseconds` | function | y | y | runtime:probe | 22 |
+| `revision` | string | y | y | runtime:probe | 22 |
 | `XML.parse` | function | y | y | format:probe (ns) | 22 |
-| `revision` | string | y | y | runtime:probe | 21 |
 | `XML` | object | y | y | format:probe | 20 |
 | `markdown.html` | function | y | y | format:probe (ns) | 18 |
 | `secrets` | object | y | y | net:probe | 17 |
@@ -46,10 +46,11 @@ without a runtime value; missing = declared value absent at runtime.
 | `semver` | object | y | y | bun:apis-probe | 14 |
 | `sha` | function | y | y | bun:apis-probe | 14 |
 | `wrapAnsi` | function | y | y | ansi:probe | 14 |
+| `s3` | object | y | y | client-shape:probe | 13 |
 | `dns` | object | y | y | net:probe | 12 |
 | `dns.prefetch` | function | y | y | net:probe (ns) | 12 |
 | `sliceAnsi` | function | y | n | ansi:probe | 12 |
-| `connect` | function | y | y | security:probe | 10 |
+| `connect` | function | y | y | security:probe | 11 |
 | `inspect.custom` | symbol | y | y | ansi:probe (ns) | 9 |
 | `JSON5` | object | y | y | bun:apis-probe | 9 |
 | `TOML` | object | y | y | format:probe | 9 |
@@ -130,7 +131,6 @@ without a runtime value; missing = declared value absent at runtime.
 | `readableStreamToFormData` | function | y | y | runtime:probe | 1 |
 | `readableStreamToJSON` | function | y | y | surface:probe | 1 |
 | `resolveSync` | function | y | y | surface:probe | 1 |
-| `s3` | object | y | y | client-shape:probe | 1 |
 | `Security` | missing | y | n | GAP | 1 |
 | `SHA1` | function | y | n | surface:probe | 1 |
 | `SHA224` | function | y | n | surface:probe | 1 |
@@ -178,6 +178,7 @@ without a runtime value; missing = declared value absent at runtime.
 | `Serve.Options` | type-only | y | n | undefined (ns) | 3 |
 | `ArchiveInput` | type-only | y | n | GAP | 2 |
 | `HTMLBundle` | type-only | y | n | GAP | 2 |
+| `Build.CompileTarget` | type-only | y | y | undefined (ns) | 1 |
 | `BunInspectOptions` | type-only | y | n | GAP | 1 |
 | `BunPlugin` | type-only | y | n | GAP | 1 |
 | `markdown.AnsiTheme` | type-only | y | n | format:probe (ns) | 1 |
@@ -201,7 +202,6 @@ without a runtime value; missing = declared value absent at runtime.
 | `BodyInit` | type-only | y | n | GAP | 0 |
 | `BufferSource` | type-only | y | n | GAP | 0 |
 | `Build.Architecture` | type-only | y | n | undefined (ns) | 0 |
-| `Build.CompileTarget` | type-only | y | y | undefined (ns) | 0 |
 | `Build.Libc` | type-only | y | n | undefined (ns) | 0 |
 | `Build.SIMD` | type-only | y | n | undefined (ns) | 0 |
 | `BuildArtifact` | type-only | y | n | build-artifact:probe | 0 |
