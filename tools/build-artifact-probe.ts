@@ -98,6 +98,36 @@ let nestedText = "";
 if (nestedSm) nestedText = await nestedSm.text();
 check("P12 nested sourcemap .text() returns map JSON", typeof nestedText === "string" && nestedText.includes("version") && nestedText.includes("sources"), nestedText.slice(0, 40));
 
+// P13-P16: naming/sourcemap/loader option interactions (§177).
+check("P13 default naming: entry path has NO hash", !withOut.outputs[0].path.includes(String(withOut.outputs[0].hash)), "path=" + withOut.outputs[0].path.split("/").pop());
+const chunkOf = split.ok ? split.r.outputs.find((o: any) => o.kind === "chunk") : undefined;
+check("P13a chunk embeds its hash in the path ([name]-[hash].[ext])", !!chunkOf && chunkOf.path.includes(String(chunkOf.hash)), chunkOf ? chunkOf.path.split("/").pop() : "no chunk");
+const cssArt = split.ok ? split.r.outputs.find((o: any) => o.kind === "asset") : undefined;
+check("P13b CSS bundle NOT hashed by default (docs corrected - [name].[ext])", !!cssArt && !cssArt.path.includes(String(cssArt.hash)), cssArt ? cssArt.path.split("/").pop() : "no css asset");
+await Bun.write(F + "/pix.png", new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+await Bun.write(F + "/png.ts", 'import p from "./pix.png";\nexport const png = p;\n');
+const pngB = await safe({ entrypoints: [F + "/png.ts"], outdir: F + "/outpng" });
+const pngArt = pngB.ok ? pngB.r.outputs.find((o: any) => o.kind === "asset") : undefined;
+check("P13c file-loader asset (png) IS hashed", !!pngArt && pngArt.loader === "file" && pngArt.path.includes(String(pngArt.hash)), pngArt ? pngArt.path.split("/").pop() : (pngB.ok ? "no asset; outputs=" + pngB.r.outputs.map((o: any) => o.kind).join(",") : "ERR: " + pngB.err));
+const lk = await safe({ entrypoints: [F + "/pure.ts"], outdir: F + "/outlk", sourcemap: "linked" });
+const lkJs = lk.ok && lk.r.outputs.find((o: any) => o.kind === "entry-point") ? await lk.r.outputs.find((o: any) => o.kind === "entry-point").text() : "";
+check("P15 sourcemap:linked emits artifact + sourceMappingURL comment", lk.ok && lk.r.outputs.some((o: any) => o.kind === "sourcemap") && lkJs.includes("sourceMappingURL"), "kinds=" + (lk.ok ? lk.r.outputs.map((o: any) => o.kind).join(",") : lk.err));
+const exEntry = sm.ok ? sm.r.outputs.find((o: any) => o.kind === "entry-point") : undefined;
+const exJs = exEntry ? await exEntry.text() : "";
+check("P15a sourcemap:external emits artifact, NO linking comment", sm.ok && sm.r.outputs.some((o: any) => o.kind === "sourcemap") && !exJs.includes("sourceMappingURL"), "comment=" + exJs.includes("sourceMappingURL"));
+const inl = await safe({ entrypoints: [F + "/pure.ts"], outdir: F + "/outin", sourcemap: "inline" });
+const inlEntry = inl.ok ? inl.r.outputs.find((o: any) => o.kind === "entry-point") : undefined;
+const inlJs = inlEntry ? await inlEntry.text() : "";
+check("P15b sourcemap:inline -> sourcemap null, map base64-embedded", inl.ok && (inlEntry as any).sourcemap === null && !inl.r.outputs.some((o: any) => o.kind === "sourcemap") && (inlJs.includes("base64") || inlJs.includes("data:application/json")), "hasSeparateMap=" + inl.r.outputs.some((o: any) => o.kind === "sourcemap"));
+await Bun.write(F + "/blob.xyz", "BLOB-CONTENT-123");
+await Bun.write(F + "/d2.ts", 'import blob from "./blob.xyz";\nexport const b = blob;\n');
+const ldFile = await safe({ entrypoints: [F + "/d2.ts"], outdir: F + "/outld" });
+const fileArt = ldFile.ok ? ldFile.r.outputs.find((o: any) => o.kind === "asset") : undefined;
+check("P16 default .xyz -> file-loader hashed asset", !!fileArt && fileArt.loader === "file" && fileArt.path.includes(String(fileArt.hash)), fileArt ? fileArt.path.split("/").pop() : (ldFile.ok ? "no asset; outputs=" + ldFile.r.outputs.map((o: any) => o.kind).join(",") : "ERR: " + ldFile.err));
+const ldText = await safe({ entrypoints: [F + "/d2.ts"], outdir: F + "/outld2", loader: { ".xyz": "text" } });
+const ldJs = ldText.ok ? await ldText.r.outputs[0].text() : "";
+check("P16a loader {.xyz: text} inlines the file (no artifact)", ldText.ok && ldText.r.outputs.length === 1 && ldJs.includes("BLOB-CONTENT-123"), "outputs=" + (ldText.ok ? ldText.r.outputs.length : ldText.err));
+
 const failed = results.filter((r) => !r.pass);
 console.log("build-artifact:probe - " + (results.length - failed.length) + "/" + results.length + " checks" + (failed.length ? " · FAIL: " + failed.map((f) => f.name).join(", ") : ""));
 process.exit(failed.length === 0 ? 0 : 1);

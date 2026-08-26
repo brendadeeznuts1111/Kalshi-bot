@@ -6282,4 +6282,15 @@ another note.
   the 00000000 placeholder); bytecode:true yields a bytecode-kind
   output; the nested artifact.sourcemap .text() returns the map JSON
   (version 3, sources).
+- OPTION INTERACTIONS probed (probe now 33/33): default naming - entry
+  paths carry no hash, chunk paths embed [hash], file-loader assets
+  (png) ARE hashed, but CSS BUNDLES are NOT hashed by default
+  ([name].[ext] - contradicts the "asset gets [name]-[hash].[ext]"
+  claim); sourcemap modes - linked emits a separate artifact + a
+  sourceMappingURL comment in the JS, external emits the artifact with
+  NO linking comment, inline gives sourcemap null with the map
+  base64-embedded in the JS, none gives null; loader overrides - a
+  default unknown extension becomes a file-loader hashed asset, while
+  loader {.xyz: text} INLINES the file (no artifact) - the override
+  consumes the file rather than producing a re-loader artifact.
 - verify:contracts 55/55 (header auto-synced).
