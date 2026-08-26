@@ -35,12 +35,16 @@ describe("parseClusterCli", () => {
 });
 
 describe("cliUseColor", () => {
-  test("NO_COLOR disables; FORCE_COLOR=0 disables; default enabled", () => {
-    expect(cliUseColor({})).toBe(true);
+  test("NO_COLOR disables; FORCE_COLOR 1|2|3 forces; piped default = none (grounded S211)", () => {
+    // test process stdout is piped (not a TTY) - the grounded resolveColorMode
+    // correctly resolves "no env, piped" to NONE (old behavior defaulted to true).
+    expect(cliUseColor({})).toBe(false);
     expect(cliUseColor({ NO_COLOR: "1" })).toBe(false);
-    expect(cliUseColor({ NO_COLOR: "0" })).toBe(true);
     expect(cliUseColor({ FORCE_COLOR: "0" })).toBe(false);
-    expect(cliUseColor({ NO_COLOR: "1", FORCE_COLOR: "1" })).toBe(false); // NO_COLOR wins
+    expect(cliUseColor({ FORCE_COLOR: "1" })).toBe(true); // 16-color forced even piped
+    expect(cliUseColor({ FORCE_COLOR: "2" })).toBe(true);
+    expect(cliUseColor({ FORCE_COLOR: "3" })).toBe(true);
+    expect(cliUseColor({ NO_COLOR: "1", FORCE_COLOR: "3" })).toBe(false); // NO_COLOR wins
   });
 });
 

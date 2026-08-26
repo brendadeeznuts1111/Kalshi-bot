@@ -11,6 +11,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
+import { resolveColorMode } from '../src/lib/color/theme.ts';
 import { listFiles } from '../src/lib/glob.ts';
 import { type OddsPrint } from '../src/alpha/cluster/odds-vector.ts';
 import { ConsensusTracker } from '../src/alpha/cluster/tracker.ts';
@@ -139,11 +140,11 @@ export function clusterCliHelp(): string {
 /**
  * Auto color gate (audit §205): the CALLER must decide color - Bun.inspect and
  * markdown.ansi ignore NO_COLOR/FORCE_COLOR once colors are requested explicitly.
+ * Backed by resolveColorMode (grounded §211): NO_COLOR wins, FORCE_COLOR 1|2|3
+ * forces 16/256/16m, TTY default 16m, piped -> none.
  */
 export function cliUseColor(env: NodeJS.ProcessEnv = process.env): boolean {
-  if (env.NO_COLOR !== undefined && env.NO_COLOR !== '' && env.NO_COLOR !== '0') return false;
-  if (env.FORCE_COLOR === '0') return false;
-  return true;
+  return resolveColorMode(env) !== 'none';
 }
 
 /** Render the console summary in table/json/yaml formats (yaml via Bun.YAML, §198). */

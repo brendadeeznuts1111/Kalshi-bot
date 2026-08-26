@@ -58,6 +58,32 @@ export const THEME: Record<ThemeRole, string> = {
 
 export type AnsiMode = "auto" | "16" | "256" | "16m";
 
+/**
+ * Concrete terminal color depth after env resolution (grounded §211):
+ * NO_COLOR wins; FORCE_COLOR 1|2|3 -> 16 / 256 / 24-bit; TTY -> 16m default;
+ * piped (no env) -> none. Bun.isTerminal / getColorDepth DO NOT EXIST on 1.4.0,
+ * so this is the repo's proper definition of color-depth detection.
+ */
+export type ResolvedColorMode = "16" | "256" | "16m" | "none";
+
+/**
+ * Resolve the effective ANSI depth from the environment (proper definition of
+ * the FORCE_COLOR / NO_COLOR contract, §211). Explicit formats (ansi-256,
+ * ansi-16m) still emit regardless - this governs the AUTO mode only.
+ */
+export function resolveColorMode(
+  env: NodeJS.ProcessEnv = process.env,
+  opts: { isTty?: boolean } = {},
+): ResolvedColorMode {
+  if (env.NO_COLOR !== undefined && env.NO_COLOR !== "" && env.NO_COLOR !== "0") return "none";
+  if (env.FORCE_COLOR === "1") return "16";
+  if (env.FORCE_COLOR === "2") return "256";
+  if (env.FORCE_COLOR === "3") return "16m";
+  if (env.FORCE_COLOR === "0") return "none";
+  const tty = opts.isTty ?? Boolean(process.stdout.isTTY);
+  return tty ? "16m" : "none";
+}
+
 /** ANSI code for a role (foreground). Auto = Bun.color(…, "ansi"). */
 export function themeAnsi(role: ThemeRole, mode: AnsiMode = "auto"): string {
   const hex = THEME[role];

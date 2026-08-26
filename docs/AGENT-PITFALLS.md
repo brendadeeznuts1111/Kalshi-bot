@@ -226,6 +226,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §209 — Sweep extended — src/calibration + scripts/* all on util.parseArgs (2026-08-26)
 - §210 — bun -p/-e one-liners audited — inspect-style output (not JSON), {hsl} invalid (2026-08-26)
 - §211 — Advanced bun -p diagnostics audited — isTerminal/getColorDepth/Bun.File undefined, deepMatch not wildcard (2026-08-26)
+- §212 — Proper definitions — resolveColorMode + isBunFile + shapeMatch wired into production (2026-08-26)
 - §199 — ui:regen CLI — regenerate UI artifacts from meta/variant sources + the Bun.$ template failure class (2026-08-26)
 - §187 — Extended color formats — kernel-only (lch/oklab/oklch/hsv) + inverse parsers (2026-08-26)
 - §188 — Watermark pipeline — ML-DSA key naming + WebView/Blob verified facts (2026-08-26)
@@ -7424,6 +7425,34 @@ Pasted 10-item advanced bun -p/-e diagnostics harness audited against 1.4.0:
 - fetch(file://...) -> blob works offline (mime application/json;charset=
   utf-8, size exact); use file:// or local servers for offline probes.
   Repo habit: probes in tools/scratch-*.ts, not inline -p (S199).
+
+
+
+## 212. Proper definitions for the S211 corrections - resolveColorMode + isBunFile + shapeMatch wired into production (2026-08-26)
+
+The S211 corrected items are now REAL production definitions, not doc notes:
+- src/lib/color/theme.ts resolveColorMode(env, { isTty }): the proper
+  color-depth detector (Bun.isTerminal / getColorDepth DO NOT EXIST).
+  Grounded semantics: NO_COLOR wins; FORCE_COLOR 1|2|3 -> 16/256/16m;
+  FORCE_COLOR=0 -> none; TTY -> 16m; piped no-env -> none. Verified the
+  depth claim itself: Bun.color(hex,'ansi') under FORCE_COLOR=1 -> \x1b[36m
+  (16), =2 -> \x1b[38;5;23m (256), =3 -> \x1b[38;2;r;g;b (24-bit) - the
+  color-page claim is CORRECT (earlier red probe was depth-insensitive).
+- src/lib/shape.ts: isBunFile(x) type guard (Bun.File is a TYPE not a
+  runtime value; correct instanceof-Bun.File replacement: Blob + name/path),
+  and shapeMatch(actual, schema) - the proper wildcard matcher the S211
+  proposal wanted: '*' matches any value, nested objects recurse, array
+  schema with one item checks every element, primitives deepEquals-style.
+  Unlike Bun.deepMatch (actual keys must be in expected, value-sensitive),
+  shapeMatch allows EXTRA actual keys (schema is a subset) + '*' wildcard.
+- WIRED: tools/alpha-cluster-cli.ts cliUseColor() now delegates to
+  resolveColorMode - this FIXED a latent bug: the old gate defaulted to
+  true (color) when piped with no env; now correctly none. Test updated to
+  the grounded semantics (piped -> false, FORCE_COLOR 1|2|3 -> true).
+- Tests: tests/lib/shape-color-mode.test.ts (9) + alpha-cluster-cli (11)
+  + cluster-styled (3) all green; end-to-end FORCE_COLOR=1 -> ANSI,
+  NO_COLOR=1 -> plain, default piped -> plain.
+
 
 
 
