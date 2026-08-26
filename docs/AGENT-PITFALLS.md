@@ -206,6 +206,8 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §184 — Blog-map v2 — full-tree registry (13 sections, h3+h4, context fields) (2026-08-26)
 - §185 — Strict typing migration — tsconfig + 661 errors fixed, behavior preserved (2026-08-26)
 - §186 — Blog benchmark + code-block verification — numbers and examples grounded (2026-08-26)
+- §187 — Extended color formats — kernel-only (lch/oklab/oklch/hsv) + inverse parsers (2026-08-26)
+- §188 — Watermark pipeline — ML-DSA key naming + WebView/Blob verified facts (2026-08-26)
 
 
 ## 1. run_code program text (the harness lexer)
@@ -6835,10 +6837,41 @@ FULL-COVERAGE EXTENSION (same session): the checks now cover ALL of the blog.
     5.1 Linux / 15.5 Windows). 9 CONSISTENT total; prod memory/CPU is app-specific
     (NOT-MEASURABLE); ffi 3x + installs 7x remain RATIO (no 1.3 runtime).
 
+## 187. Extended color formats — kernel-only (lch/oklab/oklch/hsv) + inverse parsers (2026-08-26)
 
+The color kernel (src/lib/color/kernel.ts) now emits lch/oklab/oklch/hsv in
+addition to the Bun.color-native hex/css/rgb/hsl/lab/number:
+  - Bun.color 1.4.0 REJECTS these as output formats (verified: Bun.color(hex,
+    "hsv" | "lch" | "oklab" | "oklch") throws) AND returns null for them as
+    INPUT strings — the kernel parser (parseExtendedColor) is the only path,
+    with verified round-trips back to the source hex. Shapes are kernel-defined
+    (documented in the color page probe table as W_NOTE).
+  - Derivation facts locked by tests: hsv hue equals hsl hue (same geometry)
+    for every palette color; lch derives from lab (L matches, C = hypot(a,b));
+    oklab/oklch use the standard Ottosson matrices; lab uses the CSS Color 4
+    D50 white point (Bradford-adapted from D65) to match Bun.color "lab".
+  - Inverse parsers: labToHex/oklabToHex include the D50->D65 Bradford step
+    and the linear->gamma sRGB re-encode; round-trip is exact for the kernel's
+    own output strings (trimDecimals keeps 6 significant digits).
+  - Related trap (design-tokens): prefer Bun.color "hex" over "css" for
+    canonical palette values — "css" can emit NAMED colors (#FF0000 -> "red"),
+    which breaks hex-string audits.
 
+## 188. Watermark pipeline — ML-DSA key naming + WebView/Blob verified facts (2026-08-26)
 
-
-
-
+src/lib/watermark-sign.ts watermarks via SVG -> Bun.WebView, then signs with
+ML-DSA from node:crypto. Verified facts locked by tests:
+  - node:crypto key type names are ml-dsa-44 / ml-dsa-65 / ml-dsa-87 — bare
+    "ml-dsa" throws; modulusLength is RSA-only (ignored for ML-DSA).
+  - Bun has NO Canvas/2D API (img.canvas is undefined) — text overlay must go
+    through SVG rendered in Bun.WebView (data: URL; WebKit settle + retry).
+  - Bun.WebView screenshot() returns a Blob (image/png); navigation to blob:
+    URLs THROWS (WebKitBlobResource) — data: URLs keep it offline (repo 178
+    gotcha). WebView capture is skipped under the parallel test suite (WebKit
+    flakiness) — the real capture lives in `bun run watermark:sign`.
+  - Blob across a worker: postMessage WITHOUT a transfer list clones (sender
+    stays usable); WITH a transfer list it throws DataCloneError — transfer
+    the ArrayBuffer, not the Blob.
+  - Bun.Image .webp({quality}) is CHAINABLE (returns Image, not bytes);
+    .bytes()/.write() are the terminals; .arrayBuffer() is NOT an Image method.
 
