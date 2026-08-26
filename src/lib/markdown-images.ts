@@ -16,6 +16,10 @@
  *   - .metadata() → { width, height, format }
  * Terminal methods are bytes/buffer/toBuffer/write/blob/toBase64 — NOT
  * arrayBuffer() (that is not a Bun.Image method; probe-verified).
+ *
+ * @see https://bun.com/docs/runtime/image (chainable pipeline, metadata,
+ *      terminals — write() returns bytes, no arrayBuffer())
+ * @see https://bun.com/docs/runtime/markdown (render() image callback, html())
  */
 import { mkdirSync } from 'node:fs';
 import { join, basename, extname } from 'node:path';

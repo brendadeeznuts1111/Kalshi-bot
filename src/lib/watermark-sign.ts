@@ -10,6 +10,9 @@
  *     "ml-dsa" — probe-verified); modulusLength is RSA-only (ignored).
  *   - sign(null, data, privateKey) + verify round-trip works (3,309 B sig
  *     at ml-dsa-65).
+ *
+ * @see https://bun.com/docs/guides/webview (headless browser, screenshot() -> Blob)
+ * @see https://nodejs.org/api/crypto.html (asymmetric key types incl. ML-DSA)
  */
 import { sign, verify, generateKeyPairSync } from 'node:crypto';
 

@@ -11,6 +11,9 @@
  *     (127.0.0.1) — comparing url.hostname is therefore safe.
  *   - A reg-name whose last label is numeric but not valid IPv4
  *     (e.g. "example.1") is an INVALID URL in WHATWG/Bun — it throws.
+ *
+ * @see https://url.spec.whatwg.org/ (host parsing + normalization)
+ * @see https://www.rfc-editor.org/rfc/rfc3986#section-3.2.2 (authority)
  */
 export type UrlAuthority = {
   protocol: string;
