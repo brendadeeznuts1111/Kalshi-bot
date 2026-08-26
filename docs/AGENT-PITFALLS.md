@@ -9,7 +9,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 > The headings were renumbered to §1-§11 on 2026-08-23; the counters were kept
 > so historical notes stay traceable.
 >
-> **Current contract status: verify:contracts 54/54** (see docs/BUN_API_COVERAGE.md
+> **Current contract status: verify:contracts 55/55** (see docs/BUN_API_COVERAGE.md
 > for the full matrix). `verify:contracts N/N` lines inside older sections are
 > HISTORICAL (each records its era) — docs:check enforces that only this header
 > and non-pitfall docs may reference the current count.
@@ -6247,3 +6247,30 @@ another note.
   route manifest marks /colors.css, /design-system.js etc cache: etag
   - the probe verifies the NATIVE behavior those postures build on.
 - 7/7 checks; verify:contracts 54/54 (header auto-synced).
+
+## 177. BuildArtifact gotchas probed — two docs corrections (2026-08-24)
+
+- tools/build-artifact-probe.ts (bun run build-artifact:probe, gate #55)
+  probes the seven documented BuildArtifact gotchas on 1.4.0, 18/18:
+- P1/P2 CONFIRMED: with outdir, path is the absolute written path;
+  without outdir, path is a bare name (./entry.js), nothing is written
+  to disk, content via .text()/.arrayBuffer(). CORRECTED: .bytes() is
+  NOT available on 1.4.0 (typeof undefined) - the docs list it.
+- P3 CORRECTED: "hash can be null" is wrong for naming without [hash]
+  (hash still computed, e.g. khtpy9tb). The REAL no-content-hash case
+  is SOURCEMAP artifacts: they get a 00000000 placeholder hash.
+- P4 CONFIRMED: sourcemap:external emits a sourcemap-kind artifact and
+  artifact.sourcemap is a nested artifact object; sourcemap:none
+  produces no sourcemap output.
+- P5 CONFIRMED: kinds vary - splitting yields entry-point + chunk, a
+  css import yields an asset kind, sourcemap yields sourcemap.
+- P6 CONFIRMED: Response(artifact) sets Content-Type only - Cache-
+  Control NOT set, Etag NOT set (consistent with §176).
+- P7 CONFIRMED: a naming string applies to ENTRYPOINTS only; chunks
+  keep [name]-[hash].[ext]; the object form { entry, chunk, asset }
+  applies to all.
+- BONUS gotcha discovered: naming "static/[name].js" (no [hash]) with
+  a css-importing entry FAILS the build ("Multiple files share the
+  same output path") - hash-less naming strings are unsafe for multi-
+  output builds.
+- verify:contracts 55/55 (header auto-synced).

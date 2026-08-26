@@ -65,6 +65,7 @@ const gates = [
   ['type-drift:probe'],
   ['shape:probe'], // §169 full-shape runtime agreement
   ['etag:probe'], // §176 automatic ETag/304 behavior (P3 docs-corrected)
+  ['build-artifact:probe'], // §177 BuildArtifact gotchas (P3/P3b docs-corrected)
   ['client-shape:probe'],
   ['coverage:probe'],
   ['fullstack:probe'],
