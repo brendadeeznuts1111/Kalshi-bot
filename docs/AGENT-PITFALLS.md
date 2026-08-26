@@ -231,6 +231,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §214 — Odds Heat metadata audited — ETag auto-set false (S194), cron job.active absent, cluster metadata wired (2026-08-26)
 - §215 — Other metadata controls audited — Bun.secrets exists but {service,name}; Bun.env writable + snapshotted; Env augmentation works (2026-08-26)
 - §216 — Deeper 1.4 analysis audited — fs.rmdir({recursive}) removed (audit check #15), ML-KEM undefined, TOML v1.1 strict (2026-08-26)
+- §217 — Complete deep-dive audited — 'Zig to Rust rewrite' false; static-route If-Match/If-Unmodified-Since 412 verified (2026-08-26)
 - §199 — ui:regen CLI — regenerate UI artifacts from meta/variant sources + the Bun.$ template failure class (2026-08-26)
 - §187 — Extended color formats — kernel-only (lch/oklab/oklch/hsv) + inverse parsers (2026-08-26)
 - §188 — Watermark pipeline — ML-DSA key naming + WebView/Blob verified facts (2026-08-26)
@@ -7579,6 +7580,33 @@ URLPattern, blog benchmarks S195). NEW findings:
 - Benchmark numbers: blog release claims (startup 5.1 ms etc.) were
   machine-verified in S195; the proposal's table mirrors those - treat
   absolute numbers as doc claims, our measured values are in S195.
+
+
+
+## 217. Complete Bun 1.4 deep-dive audited - 'Zig to Rust rewrite' FALSE, static-route If-Match/If-Unmodified-Since -> 412 VERIFIED, color('reset') null (2026-08-26)
+
+Pasted 'complete deep dive' audited against 1.4.0. Most items were already
+pinned (S195 benchmarks, S216 ML-KEM/compile-autoload/rmdir/TOML, breaking-
+audit lockfile/env/ws-handshake/publish-backpressure/v7). NEW findings:
+- CORRECTED (false headline): 'complete rewrite of the core from Zig to
+  Rust' is INVENTED. Bun's core is Zig; the pinned docs mention Rust only
+  for SPECIFIC components: the JSON5 parser (docs/json5.mdx: 'written in
+  Rust and passes 100% of the official JSON5 test suite') and the native
+  plugin bindgen path. No docs claim a core rewrite.
+- VERIFIED (new): static routes honor conditional headers - If-Match
+  mismatch -> 412, match -> 200; If-Unmodified-Since before Last-Modified
+  -> 412, after -> 200 (live Bun.serve probe). Not previously pinned; a
+  real behavior for cache-conditional serving.
+- CORRECTED framing: Bun.color('reset') returns NULL (both bare and with
+  'ansi' format) - not a removal error; use raw \x1b[0m for reset.
+- .xml import change (parsed doc, not path; --loader .xml:file old
+  behavior) - the parsed-doc part is S192-pinned (xmlGotchas.
+  importEvalToCompact); no --loader .xml:file flag exists in bun build --help.
+- Other notes: WebSocket upgrade validation + publish() backpressure are
+  breaking-audit checks 9/13 (S23); URLPattern/cron OS jobs/Image/Terminal
+  are pinned surfaces (S195/S203/S22). Bun.cron in-process tz option
+  verified in cronGotchas.
+
 
 
 
