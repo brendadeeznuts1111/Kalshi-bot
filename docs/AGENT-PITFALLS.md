@@ -211,6 +211,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §193 — Heap-based odds clustering — min-heap Prim MST + HDBSCAN-lite + z-score pitfall (2026-08-26)
 - §194 — Artifact interface — uniform contract for bundles/tiles/manifests/XML + two proposal corrections (2026-08-26)
 - §195 — Bun 1.4 perf mapping — most proposal items ALREADY active here + 2 new grounded facts (2026-08-26)
+- §196 — Consensus tracker — steam-move shifts wired + k-default bug (2026-08-26)
 - §187 — Extended color formats — kernel-only (lch/oklab/oklch/hsv) + inverse parsers (2026-08-26)
 - §188 — Watermark pipeline — ML-DSA key naming + WebView/Blob verified facts (2026-08-26)
 - §189 — Color input-parsing correction — lab()/lch() parse natively, oklab/oklch/hsv/device-cmyk null (2026-08-26)
@@ -7030,6 +7031,22 @@ etagFor, responseFor (sets the strong ETag EXPLICITLY), sha256Hex (Bun.SHA256),
 fromBunFile. New grounded facts (156 claims, gaps 0):
   - BA-namingHash: naming { entry: '[name]-[hash].[ext]' } makes the entry-point
     hash NON-NULL (strong ETag source).
+## 196. Consensus tracker - steam-move shifts wired + k-default bug (2026-08-26)
+
+src/alpha/cluster/tracker.ts: ConsensusTracker keeps the previous snapshot's labels
+and emits merge/split/new/dissolved shifts on each push (the steam-move alert from
+the clustering ask). Wired into tools/alpha-cluster-cli.ts (replaced the manual
+two-snapshot shift code). Tests: first-push-no-shifts, merge detected across
+converging snapshots, stable snapshots emit nothing, reset clears.
+
+PITFALL (k-default): clusterOddsPrints defaulted k=5; the tracker passed only
+minClusterSize, so for small pockets (4 points) the 5th-nearest neighbor was a FAR
+point - the core distance collapsed to ~2.0 and the MRD had no intra-cluster
+structure, producing ONE cluster instead of two (no merge was ever detected).
+Fix: k now defaults to minClusterSize (HDBSCAN convention: core-distance neighbors
+track the minimum cluster size) unless k is given explicitly. The CLI passes k=5
+explicitly so its 24-print fixture is unaffected.
+
   - BA-sourcemapNested: sourcemap: 'linked' nests a BuildArtifact whose hash is a
     '00000000' PLACEHOLDER - not a real hash.
   - BA-sha256: Bun.SHA256 exists (class SHA256 extends CryptoHashInterface);

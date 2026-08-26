@@ -51,7 +51,10 @@ export function printVector(p: OddsPrint): number[] {
  * view. Deterministic given the same prints (see hdbscan.ts).
  */
 export function clusterOddsPrints(prints: OddsPrint[], opts: { k?: number; minClusterSize?: number } = {}): ClusterResult {
-  const k = opts.k ?? 5;
+  // HDBSCAN convention: k (core-distance neighbors) tracks minClusterSize unless
+  // given explicitly - a k larger than the pocket size makes the core distance a
+  // far point and collapses the MRD (observed in the tracker tests, §193).
+  const k = opts.k ?? opts.minClusterSize ?? 5;
   const minClusterSize = opts.minClusterSize ?? 3;
   if (prints.length < 2) return { labels: prints.map(() => -1), prints: prints.map((p) => ({ ...p, label: -1 })), clusters: new Map(), noiseCount: prints.length, epsilon: undefined };
   const vectors = zscore(prints.map(printVector));

@@ -10,8 +10,8 @@
  */
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { clusterOddsPrints, type OddsPrint } from '../src/alpha/cluster/odds-vector.ts';
-import { detectShifts } from '../src/alpha/cluster/consensus.ts';
+import { type OddsPrint } from '../src/alpha/cluster/odds-vector.ts';
+import { ConsensusTracker } from '../src/alpha/cluster/tracker.ts';
 
 const ROOT = join(import.meta.dir, '..');
 const OUT = join(ROOT, 'research', 'outputs');
@@ -39,22 +39,19 @@ const prints: OddsPrint[] = inputFlag
   ? (JSON.parse(readFileSync(join(ROOT, inputFlag.slice('--input='.length)), 'utf8')) as OddsPrint[])
   : syntheticFixture();
 
-const result = clusterOddsPrints(prints, { k, minClusterSize });
+const tracker = new ConsensusTracker();
+const result = tracker.push(prints, prints[0]?.ts ?? 0, { minClusterSize });
 // second snapshot (t+60s, slight move) for consensus shifts
 const shifted = prints.map((pr) => ({ ...pr, ts: pr.ts + 60_000, implied: pr.implied + 0.02 }));
-const result2 = clusterOddsPrints(shifted, { k, minClusterSize });
-const prevLabels: Record<string, number> = {};
-const nextLabels: Record<string, number> = {};
-for (const pr of result.prints) prevLabels[pr.id] = pr.label;
-for (const pr of result2.prints) nextLabels[pr.id] = pr.label;
-const shifts = detectShifts({ ts: prints[0]?.ts ?? 0, labels: prevLabels }, { ts: (prints[0]?.ts ?? 0) + 60_000, labels: nextLabels });
+const result2 = tracker.push(shifted, (prints[0]?.ts ?? 0) + 60_000, { minClusterSize });
+const shifts = result2.shifts;
 
 mkdirSync(OUT, { recursive: true });
 const summary = {
   input: inputFlag ? inputFlag.slice('--input='.length) : 'synthetic-fixture',
   prints: prints.length,
-  clusters: [...result.clusters.keys()].length,
-  noise: result.noiseCount,
+  clusters: result.clusters,
+  noise: result.noise,
   labels: result.labels,
   consensusShifts: shifts,
 };
