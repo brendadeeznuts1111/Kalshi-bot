@@ -69,7 +69,9 @@ describe("renderMarkdownBody (§27 — Bun.markdown.html)", () => {
   test("renders headings, lists, and code fences to real HTML", () => {
     const md = "# Hi\n\n- a\n- b\n\n\u0060\u0060\u0060ts\nconst x = 1\n\u0060\u0060\u0060\n";
     const html = renderMarkdownBody(md);
-    expect(html).toContain("<h1>Hi</h1>");
+    // upgraded contract: prose wrapper + docs preset (GFM + tagFilter + heading ids)
+    expect(html).toContain('<div class="prose">');
+    expect(html).toContain("<h1 id=\"hi\">");
     expect(html).toContain("<li>a</li>");
     expect(html).toContain('class="language-ts"');
   });

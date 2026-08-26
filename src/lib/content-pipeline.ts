@@ -83,6 +83,8 @@ export function parseFrontmatter(markdown: string): { data: Frontmatter; content
 import { headingTree, markdownHeadings } from "./markdown-headings.ts";
 
 export { headingSlug, type HeadingNode, type HeadingTree } from "./markdown-headings.ts";
+import { markdownToHtml } from "./markdown.ts";
+import { processMarkdownImages, type MarkdownImageOptions } from "./markdown-images.ts";
 
 /**
  * Plain-text extraction via Bun.markdown.render callbacks — the DOCUMENTED
@@ -121,10 +123,32 @@ export function renderMarkdownToc(body: string): string {
 
 export function renderMarkdownBody(body: string): string {
   try {
-    return Bun.markdown.html(body);
+    // docs preset: GFM + tagFilter + autolinks + heading ids (verified Bun
+    // 1.4.0 options); prose class applies the shared typography layer.
+    return '<div class="prose">' + markdownToHtml(body, "docs") + '</div>';
   } catch {
     return '<pre>' + body.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") + '</pre>';
   }
+}
+
+/**
+ * Async variant: render markdown body and process every image through
+ * Bun.Image (resize → webp → write) via the markdown-images pipeline.
+ * HTML is wrapped in the prose typography layer. Images that cannot be
+ * processed keep their original src (reported in skipped).
+ */
+export async function renderMarkdownBodyWithImages(
+  body: string,
+  opts: MarkdownImageOptions,
+): Promise<string> {
+  const { html, skipped } = await processMarkdownImages(body, opts);
+  // Do NOT embed raw srcs into HTML (comment breakout / attribute injection
+  // via '-->' or quotes). Reference by index only — the caller can join
+  // skipped[i] against the markdown srcs themselves.
+  const note = skipped.length
+    ? '<!-- markdown-images skipped: ' + skipped.length + ' image(s) (see processMarkdownImages result.skipped) -->'
+    : '';
+  return '<div class="prose">' + html + '</div>' + note;
 }
 
 /** Ingest one markdown file -> ContentItem (hash of the RAW content). */

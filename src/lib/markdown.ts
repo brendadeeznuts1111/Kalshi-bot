@@ -129,6 +129,28 @@ export function markdownToHtml(
 }
 
 /**
+ * Markdown → HTML with palette-accent headings — literally uses Bun.color to
+ * validate/normalize the accent (hex → css) before styling.
+ *
+ * @param md Source markdown
+ * @param accentHex Palette accent (hex). When omitted, headings keep the
+ *   default foreground (no style block is injected).
+ */
+export function markdownToHtmlAccent(md: string, accentHex?: string): string {
+  let style = "";
+  if (accentHex) {
+    const accent = Bun.color(accentHex, "css");
+    if (accent) {
+      style =
+        "<style>.prose h1,.prose h2,.prose h3,.prose h4{color:" +
+        accent +
+        "}</style>";
+    }
+  }
+  return style + '<div class="prose">' + markdownToHtml(md, "docs") + "</div>";
+}
+
+/**
  * Markdown → ANSI for TTY (reports). Thin wrapper over Bun.markdown.ansi.
  */
 export function markdownToAnsi(
