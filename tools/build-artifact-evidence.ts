@@ -1177,6 +1177,17 @@ const artifactGotchas = {
   sha256Hex: new (Bun as any).SHA256().update('abc').digest('hex'),
   sourcemapLinked: await (async () => { const b = await Bun.build({ entrypoints: [join(artDir, 'app.ts')], outdir: join(artDir, 'sm'), sourcemap: 'linked' as any }); const o = b.outputs[0]!; return o.sourcemap ? o.sourcemap.kind + ':' + o.sourcemap.hash : 'NONE'; })(),
 };
+
+// ---------- yamlGotchas: Bun.YAML (YAML 1.2, yes/on/no are strings) ----------
+const yamlGotchas = {
+  surface: typeof (Bun as any).YAML + ':' + Object.keys((Bun as any).YAML).join(','),
+  parseObj: JSON.stringify((Bun as any).YAML.parse('a: 1' + String.fromCharCode(10) + 'b: [1, 2]')),
+  stringifyFlow: JSON.stringify((Bun as any).YAML.stringify({ a: 1, b: [1, 2] })),
+  yesIsString: JSON.stringify((Bun as any).YAML.parse('v: yes')),
+  onIsString: JSON.stringify((Bun as any).YAML.parse('v: on')),
+  trueIsBool: JSON.stringify((Bun as any).YAML.parse('v: true')),
+  nested: JSON.stringify((Bun as any).YAML.parse('root:' + String.fromCharCode(10) + '  child:' + String.fromCharCode(10) + '    - 1' + String.fromCharCode(10) + '    - 2')),
+};
 // ---------- emit ----------
 const evidence = {
   tool: 'tools/build-artifact-evidence.ts',
@@ -1207,6 +1218,7 @@ const evidence = {
   fileGotchas,
   xmlGotchas,
   artifactGotchas,
+  yamlGotchas,
   scenarios,
 };
 await Bun.write(EVIDENCE, JSON.stringify(evidence, null, 2) + '\n');

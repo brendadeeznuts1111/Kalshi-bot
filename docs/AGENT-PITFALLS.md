@@ -213,6 +213,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §195 — Bun 1.4 perf mapping — most proposal items ALREADY active here + 2 new grounded facts (2026-08-26)
 - §196 — Consensus tracker — steam-move shifts wired + k-default bug (2026-08-26)
 - §197 — Styled integration — alpha:cluster --styled via markdown.ansi + Bun.Terminal PTY pin (2026-08-26)
+- §198 — Bun.YAML grounded — YAML 1.2 semantics confirmed (159 claims) (2026-08-26)
 - §187 — Extended color formats — kernel-only (lch/oklab/oklch/hsv) + inverse parsers (2026-08-26)
 - §188 — Watermark pipeline — ML-DSA key naming + WebView/Blob verified facts (2026-08-26)
 - §189 — Color input-parsing correction — lab()/lch() parse natively, oklab/oklch/hsv/device-cmyk null (2026-08-26)
@@ -7060,6 +7061,16 @@ The blog's Bun.spawn(["bash"], { terminal: { cols, rows } }) codeblock typecheck
 'Failed to open PTY' (no tty alloc) - same class as Bun.SourceMap. The proposal's
 terminal.warn() does not exist (warnFn undefined) - Bun.Terminal is NOT a color API.
 Evidence miscGotchas.terminal.ptyOpenInSandbox records the honest note.
+## 198. Bun.YAML grounded - YAML 1.2 semantics confirmed (159 claims) (2026-08-26)
+
+Bun.YAML surface grounded (YM-parse, YM-stringify): parse maps objects/arrays/
+nesting; stringify emits flow style ({a: 1,b: [1,2]}); and the YAML 1.2 semantics
+claimed by breaking-audit are CONFIRMED at runtime: 'v: yes' - string "yes",
+'v: on' - "on", only 'v: true' - boolean true. Cross-check: 159 claims
+(151 CONSISTENT / 8 PINNED-DISCREPANCY), gaps 0. Tests: bun-yaml-coverage (3).
+The repo already consumes Bun.YAML in breaking-audit, docs-validate,
+runtime-surface, format-probe - the claims now ground that usage.
+
 
 explicitly so its 24-print fixture is unaffected.
 

@@ -200,6 +200,8 @@ export const LEDGER: LedgerClaim[] = [
   { id: 'BA-sourcemapNested', api: 'sourcemap', source: 'bun.d.ts', fragment: 'sourcemap: BuildArtifact | null', docSays: 'BuildArtifact.sourcemap nests a BuildArtifact when sourcemap: "linked" (its hash is a 00000000 placeholder)', evidencePath: 'artifactGotchas.sourcemapLinked', kind: 'consistent' },
   { id: 'BA-sha256', api: 'SHA256', source: 'bun.d.ts', fragment: 'class SHA256 extends CryptoHashInterface', docSays: 'Bun.SHA256 exists; sha256("abc") hex matches the known digest (same as CryptoHasher sha256)', evidencePath: 'artifactGotchas.sha256Hex', kind: 'consistent' },
   { id: 'TM-terminal', api: 'Terminal', source: 'bun.d.ts', fragment: 'class Terminal implements AsyncDisposable', docSays: 'Bun.Terminal exists (class); blog what-s-new claim; proposal uses terminal.warn()', evidencePath: 'miscGotchas.terminal.exists', kind: 'consistent' },
+  { id: 'YM-parse', api: 'parse', source: 'bun.d.ts', fragment: 'The YAML string to parse', docSays: 'Bun.YAML.parse: object/nested/array mapping, YAML 1.2 (yes/on/no are STRINGS, true is boolean)', evidencePath: 'yamlGotchas.parseObj', kind: 'consistent' },
+  { id: 'YM-stringify', api: 'stringify', source: 'bun.d.ts', fragment: 'A string containing the YAML document', docSays: 'Bun.YAML.stringify: flow-style output for plain objects', evidencePath: 'yamlGotchas.stringifyFlow', kind: 'consistent' },
 ];
 
 /** APIs with grounded evidence but no ledger row (fit/filter/quality/... come from the probe gates). */

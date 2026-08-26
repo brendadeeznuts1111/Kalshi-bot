@@ -745,7 +745,7 @@
     "xxeUnresolved": "{\"a\":\"&xxe;\"}",
     "importEvalToCompact": "{\"config\":{\"name\":\"demo\",\"port\":\"8080\"}}",
     "bundlerInlines": true,
-    "perf20kItemsMs": 6,
+    "perf20kItemsMs": 6.5,
     "perfVsDocs": "CONSISTENT (docs 27 ms for 2.2 MB)"
   },
   "artifactGotchas": {
@@ -756,6 +756,15 @@
     "hasArrayBufferMethod": "function",
     "sha256Hex": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
     "sourcemapLinked": "sourcemap:00000000"
+  },
+  "yamlGotchas": {
+    "surface": "object:parse,stringify",
+    "parseObj": "{\"a\":1,\"b\":[1,2]}",
+    "stringifyFlow": "\"{a: 1,b: [1,2]}\"",
+    "yesIsString": "{\"v\":\"yes\"}",
+    "onIsString": "{\"v\":\"on\"}",
+    "trueIsBool": "{\"v\":true}",
+    "nested": "{\"root\":{\"child\":[1,2]}}"
   },
   "scenarios": [
     {
@@ -1203,7 +1212,7 @@
         {
           "path": "outbc/pure.js.jsc",
           "kind": "bytecode",
-          "hash": "8kdvage9",
+          "hash": "wcnrhjxt",
           "loader": "file",
           "size": 10944,
           "type": "application/octet-stream",

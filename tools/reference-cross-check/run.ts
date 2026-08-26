@@ -85,6 +85,7 @@ export async function runCrossCheck(): Promise<number> {
   declared['Bun.udpSocket'] = ['address', 'binaryType', 'close', 'closed', 'fd', 'hostname', 'port', 'ref', 'reload', 'remoteAddress', 'send', 'sendMany', 'setBroadcast', 'setTTL', 'unref']; // curated - udp.Socket
   declared['Bun.BunFile'] = ['name', 'size', 'type', 'lastModified', 'text', 'json', 'arrayBuffer', 'bytes', 'stream', 'slice', 'stat', 'exists', 'writer', 'unlink']; // curated - BunFile runtime surface
   declared['Bun.XML'] = ['parse', 'stringify']; // curated - namespace (like markdown)
+  declared['Bun.YAML'] = ['parse', 'stringify']; // curated - namespace (like markdown)
   declared['Bun.which'] = ['which'];
   declared['Bun.peek'] = ['peek', 'status'];
   declared['Bun.sleep'] = ['sleep', 'sleepSync'];
