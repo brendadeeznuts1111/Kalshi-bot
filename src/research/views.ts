@@ -5,7 +5,7 @@ import { shortlistTagCoverage } from "./diversify.ts";
 import { githubRepoWebUrl, localRepoPath, ROUTES } from "./patterns.ts";
 import { DEFAULT_MAX_PER_TAG, MAX_QUALITY_SCORE } from "./constants.ts";
 import { escapeHtml } from "./bun-native.ts";
-import { TOKENS, baseCssVars } from "../institutions/design-tokens.ts";
+import { TOKENS, baseCssVars, themeToggleButton, themeChrome } from "../institutions/design-tokens.ts";
 import { badge, componentCss, dataTable, statCard } from "../institutions/hq-ui.ts";
 
 export { escapeHtml };
@@ -21,35 +21,35 @@ export const STYLES = `
 ${baseCssVars()}
 ${componentCss()}
   body { max-width: 52rem; margin: 0 auto; padding: 1.5rem;
-    background: ${c.bg}; color: ${c.fg};
+    background: var(--bg); color: var(--fg);
     font: ${TOKENS.font.sizeBody}/1.5 ${TOKENS.font.body}; }
-  a { color: ${c.acc}; }
+  a { color: var(--acc); }
   nav { margin-bottom: 1.5rem; font-size: 0.9rem; }
   nav a { text-decoration: none; }
   code { font-family: ${TOKENS.font.mono}; font-size: 0.85em; }
   .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin: 1rem 0; }
-  .stat { background: ${c.panel}; border: 1px solid ${c.line}; border-radius: 6px; padding: 0.75rem; }
+  .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 0.75rem; }
   .stat strong { display: block; font-size: 1.25rem; font-family: ${TOKENS.font.mono}; }
-  .warn { background: ${c.warnTint}; border: 1px solid ${c.warn}; padding: 0.75rem; border-radius: 6px; }
-  table { width: 100%; border-collapse: collapse; background: ${c.panel}; }
-  th, td { border: 1px solid ${c.line}; padding: 0.4rem 0.6rem; text-align: left; }
-  th { background: ${c.panel2}; }
-  pre.diff { background: ${c.panel}; border: 1px solid ${c.line}; padding: 1rem; overflow-x: auto; font-size: 0.85rem; }
+  .warn { background: var(--warn-tint); border: 1px solid var(--warn); padding: 0.75rem; border-radius: 6px; }
+  table { width: 100%; border-collapse: collapse; background: var(--panel); }
+  th, td { border: 1px solid var(--line); padding: 0.4rem 0.6rem; text-align: left; }
+  th { background: var(--panel2); }
+  pre.diff { background: var(--panel); border: 1px solid var(--line); padding: 1rem; overflow-x: auto; font-size: 0.85rem; }
   .score-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
-  .score-grid div { background: ${c.panel}; border: 1px solid ${c.line}; padding: 0.5rem; border-radius: 4px; }
+  .score-grid div { background: var(--panel); border: 1px solid var(--line); padding: 0.5rem; border-radius: 4px; }
   ul.checks { list-style: none; padding: 0; }
-  ul.checks li::before { content: "✓ "; color: ${c.ok}; }
-  ul.checks li.no::before { content: "✗ "; color: ${c.bad}; }
-  .dim { color: ${c.dim}; font-size: 0.85rem; }
+  ul.checks li::before { content: "✓ "; color: var(--ok); }
+  ul.checks li.no::before { content: "✗ "; color: var(--bad); }
+  .dim { color: var(--dim); font-size: 0.85rem; }
   form.ops { display: grid; gap: 0.5rem; max-width: 34rem; margin: 0.5rem 0 1rem; }
-  form.ops textarea { font-family: ${TOKENS.font.mono}; background: ${c.panel2};
-    border: 1px solid ${c.line}; color: ${c.fg}; border-radius: 6px; }
-  form.ops button { width: fit-content; padding: 0.3rem 1rem; background: ${c.acc};
-    border: none; color: ${c.onAccent}; border-radius: 6px; font-weight: 600; }
-  form.ops input, form.ops select { background: ${c.panel2}; border: 1px solid ${c.line};
-    color: ${c.fg}; border-radius: 6px; padding: 0.3rem 0.5rem; }
-  pre.diff.ok { border-color: ${c.ok}; }
-  pre.diff.bad { border-color: ${c.bad}; }
+  form.ops textarea { font-family: ${TOKENS.font.mono}; background: var(--panel2);
+    border: 1px solid var(--line); color: var(--fg); border-radius: 6px; }
+  form.ops button { width: fit-content; padding: 0.3rem 1rem; background: var(--acc);
+    border: none; color: var(--on-accent); border-radius: 6px; font-weight: 600; }
+  form.ops input, form.ops select { background: var(--panel2); border: 1px solid var(--line);
+    color: var(--fg); border-radius: 6px; padding: 0.3rem 0.5rem; }
+  pre.diff.ok { border-color: var(--ok); }
+  pre.diff.bad { border-color: var(--bad); }
 `;
 
 export function pageLayout(title: string, body: string, opts?: { refreshSeconds?: number }): string {
@@ -64,7 +64,10 @@ export function pageLayout(title: string, body: string, opts?: { refreshSeconds?
 ${refresh}  <title>${escapeHtml(title)}</title>
   <style>${STYLES}</style>
 </head>
-<body>${body}</body>
+<body>${body}
+${themeToggleButton()}
+${themeChrome()}
+</body>
 </html>`;
 }
 

@@ -23,7 +23,7 @@ import {
   moduleBytesFromMetaJson,
   readBundleHistory,
 } from '../lib/design-budget.ts';
-import { BRAND, DESIGN_SYSTEM_VERSION } from './design-tokens.ts';
+import { BRAND, DESIGN_SYSTEM_VERSION, themeToggleButton, themeChrome } from './design-tokens.ts';
 import { isVideoFile } from '../research/video-page.ts';
 import { latestRelease, parseAtomEntries, parseRssEntries } from '../lib/release-blog.ts';
 import { CHANNEL_DEFS, CHANNEL_ORDER, type ChannelId } from './channel-registry.ts';
@@ -289,7 +289,7 @@ export function renderDashboard(signals: Signal[], csrfToken: string): string {
     'bind();' +
     'setInterval(refresh, 15000);' +
     '</script>' +
-    '</body></html>';
+    themeToggleButton() + '\n' + themeChrome() + '</body></html>';
 }
 
 import { Database } from 'bun:sqlite';

@@ -30,10 +30,16 @@ describe("design tokens", () => {
     expect(tokenPaths()).toContain("color.bg");
     expect(tokenValues()).toContain(TOKENS.color.acc);
   });
-  test("baseCssVars emits token values", () => {
+  test("baseCssVars emits token values (dual-layer theme architecture)", () => {
     const css = baseCssVars();
-    expect(css).toContain(`--acc: ${TOKENS.color.acc}`);
-    expect(css).toContain(`--bg: ${TOKENS.color.bg}`);
+    // RGB-triplet tokens (light + dark + .dark/.light + media query)
+    expect(css).toContain("--c-acc:77 163 255"); // TOKENS.color.acc as triplet
+    expect(css).toContain("--c-canvas:11 14 20"); // TOKENS.color.bg as triplet
+    expect(css).toContain("--bg: rgb(var(--c-canvas))");
+    expect(css).toContain("--acc: rgb(var(--c-acc))");
+    expect(css).toContain("@media (prefers-color-scheme: light)");
+    expect(css).toContain(".dark {");
+    expect(css).toContain(".light {");
   });
 });
 
