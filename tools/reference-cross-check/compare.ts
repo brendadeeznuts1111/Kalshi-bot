@@ -172,6 +172,13 @@ export const LEDGER: LedgerClaim[] = [
   { id: 'PW-sync', api: 'password', source: 'bun.d.ts', fragment: 'Synchronously hash a password using argon2 or bcrypt', docSays: 'password.hashSync/verifySync: bcrypt roundtrip works; widely-known $2b$10$ "password" hash REJECTED (third-party bcrypt interop pin)', evidencePath: 'utilityGotchas.password.bcryptRoundtrip', kind: 'consistent' },
   { id: 'EH-escape', api: 'escapeHTML', source: 'bun.d.ts', fragment: 'function escapeHTML(input: string | object | number | boolean): string;', docSays: 'escapeHTML escapes < > & " (not single quotes)', evidencePath: 'utilityGotchas.escapeHTML.escapesTags', kind: 'consistent' },
   { id: 'DE-equal', api: 'deepEquals', source: 'bun.d.ts', fragment: 'This also powers expect().toEqual', docSays: 'deepEquals: NaN===NaN, Dates equal, -0 vs 0 FALSE, no == coercion (1 vs "1" false even loose)', evidencePath: 'utilityGotchas.deepEquals.nanEq', kind: 'consistent' },
+  { id: 'WH-which', api: 'which', source: 'bun.d.ts', fragment: 'The path to the executable, or `null` if it isn\'t found', docSays: 'which("bun") resolves to the bun executable; unknown command -> null', evidencePath: 'miscGotchas.which.missingNull', kind: 'consistent' },
+  { id: 'PK-peek', api: 'peek', source: 'bun.d.ts', fragment: 'Extract the value from the Promise in the same tick of the event loop', docSays: 'peek: settled promise -> value, plain value -> itself, pending -> same promise; peek.status reads pending/fulfilled/rejected', evidencePath: 'miscGotchas.peek.pendingIsSame', kind: 'consistent' },
+  { id: 'SL-sleep', api: 'sleep', source: 'bun.d.ts', fragment: '`Bun.sleep` and the imported `sleep` function are interchangeable.', docSays: 'sleep(0) resolves; sleepSync blocks and returns undefined', evidencePath: 'miscGotchas.sleep.resolves', kind: 'consistent' },
+  { id: 'NS-nanoseconds', api: 'nanoseconds', source: 'bun.d.ts', fragment: 'Nanoseconds since the process started', docSays: 'nanoseconds: positive number, monotonic within a process', evidencePath: 'miscGotchas.nanoseconds.monotonic', kind: 'consistent' },
+  { id: 'TR-transform', api: 'transform', source: 'bun.d.ts', fragment: 'Transpile code from TypeScript or JSX into valid JavaScript.', docSays: 'Transpiler: explicit ts loader strips type annotations; jsx loader emits jsxDEV; DEFAULT loader is jsx (TS annotations throw without ts loader)', evidencePath: 'miscGotchas.transpiler.tsStrip', kind: 'consistent' },
+  { id: 'TR-scanImports', api: 'scanImports', source: 'bun.d.ts', fragment: 'Get a list of import paths from a TypeScript, JSX, TSX, or JavaScript file.', docSays: 'scanImports returns [{kind:"import-statement",path}] entries', evidencePath: 'miscGotchas.transpiler.scanImports', kind: 'consistent' },
+  { id: 'RS-resolveSync', api: 'resolveSync', source: 'bun.d.ts', fragment: 'function resolveSync(moduleId: string, parent: string): string;', docSays: 'resolveSync: node: builtins pass through; bare specifiers resolve to absolute paths', evidencePath: 'miscGotchas.resolveSync.nodePrefixPassthrough', kind: 'consistent' },
 ];
 
 /** APIs with grounded evidence but no ledger row (fit/filter/quality/... come from the probe gates). */
@@ -191,6 +198,8 @@ export const EXTRA_GROUNDED: string[] = [
   'scrollTo', 'reload', 'resize', 'closeAll', 'addEventListener', 'list', 'forward', 'options',
   'scan', 'scanSync', 'match', 'update', 'copy', 'digest', 'byteLength', 'algorithm', 'hashSync', 'verify',
   'verifySync', 'escapeHTML', 'deepEquals', 'deepMatch',
+  'which', 'peek', 'status', 'sleep', 'sleepSync', 'nanoseconds', 'resolveSync',
+  'transform', 'transformSync', 'scanImports',
 ];
 
 export function checkClaim(claim: LedgerClaim, sourceText: string, ev: Evidence): CheckResult {

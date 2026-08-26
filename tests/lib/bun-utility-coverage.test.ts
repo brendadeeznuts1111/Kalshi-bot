@@ -99,3 +99,65 @@ describe("Bun.deepEquals", () => {
     expect(Bun.deepEquals(1, "1")).toBe(false); // no == coercion
   });
 });
+describe("Bun.which", () => {
+  test("resolves executables and returns null for unknowns (WH-which)", () => {
+    const p = Bun.which("bun");
+    expect(typeof p).toBe("string");
+    expect(p?.split("/").pop()).toBe("bun");
+    expect(Bun.which("definitely-not-a-real-cmd-xyz-9")).toBeNull();
+  });
+});
+
+describe("Bun.peek", () => {
+  test("extracts settled values; pending promises pass through (PK-peek)", () => {
+    expect(Bun.peek(Promise.resolve(42))).toBe(42);
+    expect(Bun.peek(5)).toBe(5);
+    const pending = new Promise(() => {});
+    expect(Bun.peek(pending)).toBe(pending);
+    expect(Bun.peek.status(pending)).toBe("pending");
+    expect(Bun.peek.status(Promise.resolve(1))).toBe("fulfilled");
+  });
+});
+
+describe("Bun.sleep / nanoseconds", () => {
+  test("sleep resolves and sleepSync returns undefined (SL-sleep)", async () => {
+    await Bun.sleep(0);
+    expect(Bun.sleepSync(1)).toBeUndefined();
+  });
+
+  test("nanoseconds is a positive monotonic counter (NS-nanoseconds)", () => {
+    const a = Bun.nanoseconds();
+    const b = Bun.nanoseconds();
+    expect(typeof a).toBe("number");
+    expect(a).toBeGreaterThan(0);
+    expect(b).toBeGreaterThanOrEqual(a);
+  });
+});
+
+describe("Bun.Transpiler", () => {
+  test("explicit ts loader strips type annotations (TR-transform)", () => {
+    const t = new Bun.Transpiler();
+    expect(t.transformSync("const x: number = 1;", "ts")).toBe("const x = 1;\n");
+  });
+
+  test("default loader is jsx: TS annotations throw without the ts loader", () => {
+    const t = new Bun.Transpiler();
+    expect(() => t.transformSync("const x: number = 1;")).toThrow();
+  });
+
+  test("scanImports lists import paths (TR-scanImports)", () => {
+    const t = new Bun.Transpiler();
+    const imports = t.scanImports('import x from "y";\nimport { z } from "w";');
+    expect(imports).toEqual([
+      { kind: "import-statement", path: "y" },
+      { kind: "import-statement", path: "w" },
+    ]);
+  });
+});
+
+describe("Bun.resolveSync", () => {
+  test("node: builtins pass through; bare specifiers resolve (RS-resolveSync)", () => {
+    expect(Bun.resolveSync("node:fs", "/tmp")).toBe("node:fs");
+    expect(typeof Bun.resolveSync("events", "/tmp")).toBe("string");
+  });
+});

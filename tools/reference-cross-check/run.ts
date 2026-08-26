@@ -76,6 +76,12 @@ export async function runCrossCheck(): Promise<number> {
   declared['Bun.password'] = ['hash', 'verify', 'hashSync', 'verifySync']; // curated - namespace
   declared['Bun.escapeHTML'] = ['escapeHTML']; // function surface
   declared['Bun.deepEquals'] = ['deepEquals', 'deepMatch']; // function surface
+  declared['Bun.Transpiler'] = classMembers(dts, 'Transpiler');
+  declared['Bun.which'] = ['which'];
+  declared['Bun.peek'] = ['peek', 'status'];
+  declared['Bun.sleep'] = ['sleep', 'sleepSync'];
+  declared['Bun.nanoseconds'] = ['nanoseconds'];
+  declared['Bun.resolveSync'] = ['resolveSync'];
   const gaps = coverageGaps(declared, covered);
 
   const meta: CrossCheckMeta = {

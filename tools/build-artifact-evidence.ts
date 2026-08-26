@@ -1038,6 +1038,41 @@ const utilityGotchas = {
     dateEq: (Bun as any).deepEquals(new Date(0), new Date(0)),
   },
 };
+
+// ---------- miscGotchas: which / peek / sleep / nanoseconds / Transpiler / resolveSync (goal round 2) ----------
+const tr = new (Bun as any).Transpiler();
+const miscGotchas = {
+  which: {
+    whichBunString: typeof (Bun as any).which('bun') === 'string',
+    whichBunBasename: String((Bun as any).which('bun')).split('/').pop(),
+    missingNull: (Bun as any).which('definitely-not-a-real-cmd-xyz-9') === null,
+  },
+  peek: {
+    fulfilledValue: (Bun as any).peek(Promise.resolve(42)),
+    plainValue: (Bun as any).peek(5),
+    pendingIsSame: (() => { const p = new Promise(() => {}); return (Bun as any).peek(p) === p; })(),
+    statusPending: (Bun as any).peek.status(new Promise(() => {})),
+    statusFulfilled: (Bun as any).peek.status(Promise.resolve(1)),
+  },
+  sleep: {
+    resolves: (async () => { await (Bun as any).sleep(0); return true; })(),
+    syncReturnsUndefined: (Bun as any).sleepSync(1) === undefined,
+  },
+  nanoseconds: {
+    positiveNumber: typeof (Bun as any).nanoseconds() === 'number' && (Bun as any).nanoseconds() > 0,
+    monotonic: (() => { const a = (Bun as any).nanoseconds(); const b = (Bun as any).nanoseconds(); return b >= a; })(),
+  },
+  transpiler: {
+    tsStrip: (() => { try { return tr.transformSync('const x: number = 1;', 'ts'); } catch (e: any) { return 'THREW ' + e.name; } })(),
+    jsxDev: (() => { try { return tr.transformSync('const el = <div className="a"/>;', 'jsx').includes('jsxDEV'); } catch { return false; } })(),
+    defaultLoaderIsJsx: (() => { try { tr.transformSync('const x: number = 1;'); return false; } catch { return true; } })(),
+    scanImports: JSON.stringify(tr.scanImports('import x from "y";\nimport { z } from "w";')),
+  },
+  resolveSync: {
+    nodePrefixPassthrough: (Bun as any).resolveSync('node:fs', '/tmp') === 'node:fs',
+    bareResolvesToString: typeof (Bun as any).resolveSync('events', '/tmp') === 'string',
+  },
+};
 // ---------- emit ----------
 const evidence = {
   tool: 'tools/build-artifact-evidence.ts',
@@ -1061,6 +1096,7 @@ const evidence = {
   deepPassGotchas,
   markdownGotchas,
   utilityGotchas,
+  miscGotchas,
   scenarios,
 };
 await Bun.write(EVIDENCE, JSON.stringify(evidence, null, 2) + '\n');

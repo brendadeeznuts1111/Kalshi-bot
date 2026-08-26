@@ -5,7 +5,7 @@
   "bundleHash": "bun-types@1.4.0-c0dadede486f49ab",
   "verdictCounts": {
     "PINNED-DISCREPANCY": 8,
-    "CONSISTENT": 121
+    "CONSISTENT": 128
   },
   "checks": [
     {
@@ -1098,6 +1098,62 @@
       "api": "deepEquals",
       "source": "bun.d.ts",
       "docSays": "deepEquals: NaN===NaN, Dates equal, -0 vs 0 FALSE, no == coercion (1 vs \"1\" false even loose)",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "WH-which",
+      "api": "which",
+      "source": "bun.d.ts",
+      "docSays": "which(\"bun\") resolves to the bun executable; unknown command -> null",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "PK-peek",
+      "api": "peek",
+      "source": "bun.d.ts",
+      "docSays": "peek: settled promise -> value, plain value -> itself, pending -> same promise; peek.status reads pending/fulfilled/rejected",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "SL-sleep",
+      "api": "sleep",
+      "source": "bun.d.ts",
+      "docSays": "sleep(0) resolves; sleepSync blocks and returns undefined",
+      "observed": {},
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "NS-nanoseconds",
+      "api": "nanoseconds",
+      "source": "bun.d.ts",
+      "docSays": "nanoseconds: positive number, monotonic within a process",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "TR-transform",
+      "api": "transform",
+      "source": "bun.d.ts",
+      "docSays": "Transpiler: explicit ts loader strips type annotations; jsx loader emits jsxDEV; DEFAULT loader is jsx (TS annotations throw without ts loader)",
+      "observed": "const x = 1;\n",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "TR-scanImports",
+      "api": "scanImports",
+      "source": "bun.d.ts",
+      "docSays": "scanImports returns [{kind:\"import-statement\",path}] entries",
+      "observed": "[{\"kind\":\"import-statement\",\"path\":\"y\"},{\"kind\":\"import-statement\",\"path\":\"w\"}]",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "RS-resolveSync",
+      "api": "resolveSync",
+      "source": "bun.d.ts",
+      "docSays": "resolveSync: node: builtins pass through; bare specifiers resolve to absolute paths",
       "observed": true,
       "verdict": "CONSISTENT"
     }

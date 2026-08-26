@@ -663,6 +663,38 @@
       "dateEq": true
     }
   },
+  "miscGotchas": {
+    "which": {
+      "whichBunString": true,
+      "whichBunBasename": "bun",
+      "missingNull": true
+    },
+    "peek": {
+      "fulfilledValue": 42,
+      "plainValue": 5,
+      "pendingIsSame": true,
+      "statusPending": "pending",
+      "statusFulfilled": "fulfilled"
+    },
+    "sleep": {
+      "resolves": {},
+      "syncReturnsUndefined": true
+    },
+    "nanoseconds": {
+      "positiveNumber": true,
+      "monotonic": true
+    },
+    "transpiler": {
+      "tsStrip": "const x = 1;\n",
+      "jsxDev": true,
+      "defaultLoaderIsJsx": true,
+      "scanImports": "[{\"kind\":\"import-statement\",\"path\":\"y\"},{\"kind\":\"import-statement\",\"path\":\"w\"}]"
+    },
+    "resolveSync": {
+      "nodePrefixPassthrough": true,
+      "bareResolvesToString": true
+    }
+  },
   "scenarios": [
     {
       "name": "S01-artifact-surface",
@@ -1109,7 +1141,7 @@
         {
           "path": "outbc/pure.js.jsc",
           "kind": "bytecode",
-          "hash": "ayz9nkbt",
+          "hash": "pqmhb9n6",
           "loader": "file",
           "size": 10944,
           "type": "application/octet-stream",
