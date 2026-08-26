@@ -85,10 +85,15 @@ export function parseAgentCommand(argv: string[]): {
 /** Cache-only tennis ground; optional live canary via --canary; optional WebView ground. */
 export async function runAgentTennis(
   json: boolean,
-  options?: { canary?: boolean; db?: string | undefined; webview?: boolean; htmlOnly?: boolean },
+  options?: { canary?: boolean; db?: string | undefined; webview?: boolean; htmlOnly?: boolean; mode?: 'plan' | 'code' },
 ): Promise<number> {
   if (options?.canary) {
     // Live dry-run smoke first (writes canary artifact under research/cache/tennis-canary/).
+    // Plan mode (code-mode tier gate, §191) blocks it: the canary writes artifacts.
+    if (options.mode === 'plan') {
+      console.error('[plan mode] blocked: tennis canary smoke (writes canary artifact)');
+      return 1;
+    }
     const code = await runLiveScoresCli(["--canary", ...(options.db ? [`--db=${options.db}`] : [])]);
     if (code !== 0 && json) {
       // Still emit ground so agent mesh can triage without a second process.
@@ -390,6 +395,8 @@ export async function main(argv = Bun.argv.slice(2)): Promise<number> {
       "html-only": { type: "boolean", default: false },
       db: { type: "string" },
       help: { type: "boolean", default: false },
+      // code-mode tier gate (docs/CODE_MODE.md, §191): plan = read-only bash, code = full
+      mode: { type: "string", default: "code" },
     },
     strict: false,
   });
@@ -399,6 +406,11 @@ export async function main(argv = Bun.argv.slice(2)): Promise<number> {
     return 0;
   }
 
+  const mode = values.mode === "plan" ? "plan" : "code";
+  if (typeof values.mode === "string" && values.mode !== "plan" && values.mode !== "code") {
+    console.error("agent: --mode must be plan|code (default code)");
+    return 2;
+  }
   const json = values.json === true;
   const dimension = stringOpt(values.dimension);
   const runId = stringOpt(values.run);
@@ -417,6 +429,7 @@ export async function main(argv = Bun.argv.slice(2)): Promise<number> {
         webview: values.webview === true,
         htmlOnly: values["html-only"] === true,
         db: stringOpt(values.db),
+        mode,
       });
     case "run-research":
       return runAgentResearch(json, {

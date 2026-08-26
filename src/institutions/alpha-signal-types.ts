@@ -29,4 +29,6 @@ export interface SignalContext {
   pModel: number;
   components: Record<string, number>;
   contracts?: number;
+  /** Heap-based odds consensus summary (cluster/odds-vector.ts, §193). Null when <2 prints. */
+  consensus?: { prints: number; clusters: number; noise: number; labels: number[] } | null;
 }
