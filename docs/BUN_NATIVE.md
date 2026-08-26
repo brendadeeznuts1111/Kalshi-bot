@@ -311,6 +311,24 @@ markdownToAnsi(md);              // TTY reports (same engine as report-term)
 
 **vs Node ecosystem:** `marked` / `markdown-it` / `remark` add parse plugins and weight. For GFM tables/tasks + safe HTML, Bun is enough — do not add those packages.
 
+### `Bun.color` — native CSS color conversion + kernel-extended formats
+
+[@see guide](https://bun.com/docs/api/color) · [@see reference](https://bun.com/reference/bun/color) · cached guide: `research/cache/bun-docs/color.mdx` · [`src/lib/color/kernel.ts`](../src/lib/color/kernel.ts)
+
+- Output formats (guide table + runtime error list + pinned `bun-types` 1.4.0 all agree):
+  `css` `hex` `HEX` `rgb` `rgba` `hsl` `lab` `number` `ansi*` + object/array forms.
+  `lab` is the newest CSS4 **output**; `lch` / `oklab` / `oklch` / `hsv` **throw** as
+  outputs — the kernel computes those shapes (`convertColorFallback`).
+- Input parsing (AGENT-PITFALLS §189 — re-verified against the guide + runtime):
+  Bun.color parses `lab()` / `lch()` **inputs** natively (guide input list documents
+  lab; lch shares the parser). `oklab()` / `oklch()` / `hsv()` / `device-cmyk()`
+  return `null` — `parseExtendedColor` (kernel inverse parsers) covers those.
+- Repo surfaces: `/bun/color` page (conversion columns, advanced-input playground),
+  `/api/color-info` (native-first, kernel fallback), theme swatches via
+  `/api/color/theme`, `markdownToHtmlAccent` heading accents, `palette:clip` video.
+- Prefer `hex` over `css` for canonical palette values (`css` can emit named
+  colors — `#FF0000` -> `"red"`).
+
 ### `bun:jsc` (low-level)
 
 | API | Use |

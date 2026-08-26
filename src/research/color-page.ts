@@ -87,9 +87,9 @@ export function renderColorPage(): string {
     THEME.accent,
   );
   const accentDemo = '<section><h2>Bun.color in the markdown renderer</h2>' + accentMd + '</section>';
-  // ── Advanced input formats (kernel-parsed; Bun.color can't) ──
+  // ── Advanced input formats (kernel-parses what Bun.color can't) ──
   const advancedInputHtml =
-    '<p class="muted">Bun.color 1.4.0 parses hex / hwb / color-mix — but returns null for lab/lch/oklab/oklch/hsv inputs. The kernel inverse parsers cover them (round-trip verified).</p>' +
+    '<p class="muted">Bun.color 1.4.0 parses hex / hwb / color-mix / lab / lch inputs (guide documents lab; lch shares the parser) — but returns null for oklab/oklch/hsv/device-cmyk. The kernel inverse parsers cover those (round-trip verified).</p>' +
     '<datalist id="color-suggestions">' +
     '<option value="lab(50% 50 50)" /><option value="lch(50% 50 100)" />' +
     '<option value="oklab(0.5 0.1 0.1)" /><option value="oklch(0.5 0.2 120)" />' +
@@ -118,17 +118,19 @@ export function renderColorPage(): string {
     { cells: ['<code>color-mix(in srgb, red 50%, blue)</code> input', W_VERIFIED + ' parses to #800080'] },
     { cells: ['<code>hwb(0 0% 0%)</code> input', W_VERIFIED + ' parses to #ff0000'] },
     { cells: ['<code>hsl()</code> / <code>rgba()</code> / <code>lab</code> outputs', W_VERIFIED + ' byte-parity with the JS kernel (parity tests)'] },
+    { cells: ['<code>lab()</code> / <code>lch()</code> inputs', W_VERIFIED + ' parse natively (guide input list documents lab; lch shares the parser — parity-tested vs kernel)'] },
+    { cells: ['<code>oklab()</code> / <code>oklch()</code> / <code>hsv()</code> / <code>device-cmyk()</code> inputs', W_CORRECTED + ' return null — kernel inverse parsers cover oklab/oklch/hsv (hwb/color-mix stay Bun-native)'] },
     { cells: ['<code>FORCE_COLOR=1|2|3</code>', W_VERIFIED + ' forces 16 / 256 / 24-bit even when piped'] },
     { cells: ['<code>NO_COLOR</code>', W_VERIFIED + ' silences auto "ansi" only — explicit ansi-256/16m still emit'] },
     { cells: ['<code>Bun.color(…, "luminance")</code>', W_CORRECTED + ' does not exist — WCAG luminance computed in-kernel (theme.ts)'] },
     { cells: ['"object" / "array" output formats', W_CORRECTED + ' real names: {rgb} / {rgba} / [rgb] / [rgba]'] },
     { cells: ['color-space keyword as 2nd arg (display-p3)', W_CORRECTED + ' 2nd arg is an output format only; p3/srgb rejected'] },
-    { cells: ['<code>device-cmyk()</code> / <code>lab()</code> / <code>lch()</code> / <code>oklch()</code> inputs', W_CORRECTED + ' return null (not parsed) — hwb/color-mix are the supported CSS4 forms'] },
+
     { cells: ['<code>hex</code> output keeps alpha', W_CORRECTED + ' drops it: #ff0000aa -> #ff0000; transparent -> #000000'] },
     { cells: ['markdown.ansi(…, { heading/render }) theme callbacks', W_CORRECTED + ' options ignored in 1.4.0 — outputs are fixed'] },
     { cells: ['ImageData + new Image(imageData) pixel pipeline', W_CORRECTED + ' ImageData is not a global — solid PNGs via hand-rolled encoder'] },
     { cells: ['lch / oklab / oklch / hsv outputs', W_NOTE + ' kernel-computed — Bun.color 1.4.0 format list has lab but NOT these (verified); shapes are kernel-defined'] },
-    { cells: ['~100 ns per parse', W_MARKETING + ' measured here: ~360-550 ns/op (still native, no allocs in JS)'] },
+    { cells: ['~100 ns per parse', W_MARKETING + ' measured (bun run bench:feature, Apple M4): kernel formats 337-385 ns/op · inverse parsers 207-278 ns/op · native Bun.color lab 664 ns/op — kernel is native-fast, no allocs in JS (evidence: tools/feature-bench-evidence.json)'] },
   ];
   const probes = widgetTable(['Claim', 'Probe status'], probeRows);
 

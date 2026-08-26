@@ -2258,19 +2258,9 @@ export function createResearchServer(options: ServeOptions = {}) {
       if (url.pathname === "/api/color-info") {
         const raw = url.searchParams.get("color") ?? "";
         if (!raw) return json({ ok: false, error: "missing color" }, 400, designCorsHeaders());
-        const parsed = parseExtendedColor(raw);
-        if (parsed) {
-          const [r, g, b] = [
-            parseInt(parsed.slice(1, 3), 16),
-            parseInt(parsed.slice(3, 5), 16),
-            parseInt(parsed.slice(5, 7), 16),
-          ];
-          return json(
-            { ok: true, hex: parsed, rgb: [r, g, b], hsl: String(Bun.color(parsed, "hsl")), parser: "kernel" },
-            200,
-            designCorsHeaders(),
-          );
-        }
+        // Native first: Bun.color parses hex/hwb/color-mix/lab/lch (guide input
+        // list + runtime probe). Kernel fallback covers oklab/oklch/hsv, which
+        // Bun.color returns null for. parser field records the actual path.
         const hex = Bun.color(raw, "hex");
         if (hex) {
           const h = String(hex);
@@ -2281,6 +2271,19 @@ export function createResearchServer(options: ServeOptions = {}) {
           ];
           return json(
             { ok: true, hex: h, rgb: [r, g, b], hsl: String(Bun.color(raw, "hsl")), parser: "bun.color" },
+            200,
+            designCorsHeaders(),
+          );
+        }
+        const parsed = parseExtendedColor(raw);
+        if (parsed) {
+          const [r, g, b] = [
+            parseInt(parsed.slice(1, 3), 16),
+            parseInt(parsed.slice(3, 5), 16),
+            parseInt(parsed.slice(5, 7), 16),
+          ];
+          return json(
+            { ok: true, hex: parsed, rgb: [r, g, b], hsl: String(Bun.color(parsed, "hsl")), parser: "kernel" },
             200,
             designCorsHeaders(),
           );

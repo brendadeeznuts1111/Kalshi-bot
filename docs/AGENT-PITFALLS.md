@@ -208,6 +208,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §186 — Blog benchmark + code-block verification — numbers and examples grounded (2026-08-26)
 - §187 — Extended color formats — kernel-only (lch/oklab/oklch/hsv) + inverse parsers (2026-08-26)
 - §188 — Watermark pipeline — ML-DSA key naming + WebView/Blob verified facts (2026-08-26)
+- §189 — Color input-parsing correction — lab()/lch() parse natively, oklab/oklch/hsv/device-cmyk null (2026-08-26)
 
 
 ## 1. run_code program text (the harness lexer)
@@ -6841,11 +6842,14 @@ FULL-COVERAGE EXTENSION (same session): the checks now cover ALL of the blog.
 
 The color kernel (src/lib/color/kernel.ts) now emits lch/oklab/oklch/hsv in
 addition to the Bun.color-native hex/css/rgb/hsl/lab/number:
-  - Bun.color 1.4.0 REJECTS these as output formats (verified: Bun.color(hex,
-    "hsv" | "lch" | "oklab" | "oklch") throws) AND returns null for them as
-    INPUT strings — the kernel parser (parseExtendedColor) is the only path,
-    with verified round-trips back to the source hex. Shapes are kernel-defined
-    (documented in the color page probe table as W_NOTE).
+  - Bun.color 1.4.0 REJECTS these as OUTPUT formats (verified: Bun.color(hex,
+    "hsv" | "lch" | "oklab" | "oklch") throws; the runtime error enumerates the
+    full accepted list — lab is the newest CSS4 OUTPUT, these four are absent
+    from the guide table AND bun-types). Shapes are kernel-defined (documented
+    in the color page probe table as W_NOTE).
+  - INPUT parsing is the opposite split — see §189 for the correction: Bun.color
+    PARSES lab()/lch() inputs natively (guide input list); it returns null only
+    for oklab()/oklch()/hsv()/device-cmyk(), which the kernel parser covers.
   - Derivation facts locked by tests: hsv hue equals hsl hue (same geometry)
     for every palette color; lch derives from lab (L matches, C = hypot(a,b));
     oklab/oklch use the standard Ottosson matrices; lab uses the CSS Color 4
@@ -6874,4 +6878,32 @@ ML-DSA from node:crypto. Verified facts locked by tests:
     the ArrayBuffer, not the Blob.
   - Bun.Image .webp({quality}) is CHAINABLE (returns Image, not bytes);
     .bytes()/.write() are the terminals; .arrayBuffer() is NOT an Image method.
+
+## 189. Color input-parsing correction — lab()/lch() parse natively, oklab/oklch/hsv/device-cmyk null (2026-08-26)
+
+Correction to the §187 draft (the grounding pass re-verified every claim against
+the official guide + live probes): Bun.color 1.4.0 INPUT parsing splits
+differently than the OUTPUT format list:
+
+  - PARSES (native): hex, named, rgb/rgba, hsl/hsla, hwb, color-mix, AND
+    lab() / lch() — the guide input list documents "LAB strings like lab(50%
+    50 50)"; lch shares the CSS parser (probe: both return hex).
+  - NULL: oklab() / oklch() / hsv() / device-cmyk() — kernel-only.
+  - OUTPUT: lab IS accepted (runtime error list + bun-types 1.4.0 both include
+    it); lch/oklab/oklch/hsv THROW as outputs ("format must be one of ..." —
+    the error enumerates the full list, which the guide table mirrors).
+
+Grounding sources (all three agree):
+  - Guide: research/cache/bun-docs/color.mdx (cached bun.com/docs/api/color)
+    — output-format table + input list line for lab.
+  - Runtime: Bun 1.4.0 live probes (this session) — output throw message list,
+    lab/lch input -> hex, oklab/oklch/hsv/device-cmyk input -> null.
+  - Types: node_modules/bun-types/bun.d.ts 1.4.0 Bun.color overloads — format
+    literals include lab; no lch/oklab/oklch/hsv.
+
+Repo surfaces corrected: kernel.ts parseExtendedColor docstring (was: lab/lch
+inputs null — wrong), /api/color-info now tries Bun.color FIRST (native path,
+parser: bun.color) with the kernel as fallback (parser: kernel), color page
+probe table + advanced-input blurb, and parity tests in color-kernel.test.ts
+that lock the split.
 

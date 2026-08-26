@@ -263,3 +263,36 @@ describe("parseExtendedColor (kernel inverse parsers — Bun.color can't)", () =
     expect(parseExtendedColor("#4da3ff")).toBeNull();
   });
 });
+
+// Grounding parity (AGENT-PITFALLS §189): Bun.color 1.4.0 parses lab() and
+// lch() INPUTS natively (the official color guide documents "LAB strings like
+// lab(50% 50 50)"; lch shares the parser) — kernel must agree with the native
+// path. oklab/oklch/hsv/device-cmyk inputs return null from Bun.color, so the
+// kernel parser is the only path for those.
+describe("Bun.color input-parsing ground truth (1.4.0) vs parseExtendedColor", () => {
+  test("lab() and lch() inputs parse natively AND match the kernel parser", () => {
+    for (const s of ["lab(50% 50 50)", "lab(64.93824% -3.9721727 -54.248283)", "lch(50% 50 100)", "lch(64.93824% 54.393496 -94.19017)"]) {
+      const native = Bun.color(s, "hex");
+      expect(native, s).not.toBeNull();
+      expect(parseExtendedColor(s), s).toBe(native);
+    }
+  });
+
+  test("oklab/oklch/hsv/device-cmyk inputs return null from Bun.color (kernel only)", () => {
+    expect(Bun.color("oklab(0.5 0.1 0.1)", "hex")).toBeNull();
+    expect(Bun.color("oklch(0.5 0.2 120)", "hex")).toBeNull();
+    expect(Bun.color("hsv(200 80% 70%)", "hex")).toBeNull();
+    expect(Bun.color("device-cmyk(0 0.5 0 0)", "hex")).toBeNull();
+    // ...and the kernel parser covers the first three
+    expect(parseExtendedColor("oklab(0.5 0.1 0.1)")).toMatch(/^#[0-9a-f]{6}$/);
+    expect(parseExtendedColor("oklch(0.5 0.2 120)")).toMatch(/^#[0-9a-f]{6}$/);
+    expect(parseExtendedColor("hsv(200 80% 70%)")).toMatch(/^#[0-9a-f]{6}$/);
+  });
+
+  test("hwb / color-mix inputs parse natively (Bun.color path, not kernel)", () => {
+    expect(parseExtendedColor("hwb(200 10% 20%)")).toBeNull();
+    expect(parseExtendedColor("color-mix(in srgb, red 50%, blue)")).toBeNull();
+    expect(Bun.color("hwb(200 10% 20%)", "hex")).toBe("#1a90cc");
+    expect(Bun.color("color-mix(in srgb, red 50%, blue)", "hex")).toBe("#800080");
+  });
+});

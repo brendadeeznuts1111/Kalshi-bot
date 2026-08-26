@@ -294,10 +294,17 @@ function oklabToHex(L: number, a: number, b: number): string {
 }
 
 /**
- * Parse a CSS color string in the kernel-defined extended formats into hex.
- * Bun.color 1.4.0 returns null for lab()/lch()/oklab()/oklch()/hsv() INPUTS
- * (probe-verified) — this kernel parser covers them (round-trips the output
- * functions). Returns null when the string is not one of these formats.
+ * Parse a CSS Color 4 string into hex — covers the formats Bun.color 1.4.0
+ * cannot parse.
+ *
+ * Grounding (bun.com/docs/api/color + runtime probes on 1.4.0):
+ *   - Bun.color parses lab() and lch() INPUTS natively (the guide documents
+ *     "LAB strings like lab(50% 50 50)"; lch shares the parser — both
+ *     round-trip here via the same inverse math, verified byte-equal).
+ *   - Bun.color returns null for oklab()/oklch()/hsv()/device-cmyk() inputs
+ *     (probe-verified) — those are what THIS parser covers, along with
+ *     round-tripping the kernel's own output strings for every extended
+ *     format. Returns null when the string is not one of these formats.
  */
 export function parseExtendedColor(input: string): string | null {
   const s = input.trim();
