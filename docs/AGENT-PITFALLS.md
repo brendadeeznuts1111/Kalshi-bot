@@ -214,6 +214,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §196 — Consensus tracker — steam-move shifts wired + k-default bug (2026-08-26)
 - §197 — Styled integration — alpha:cluster --styled via markdown.ansi + Bun.Terminal PTY pin (2026-08-26)
 - §198 — Bun.YAML grounded — YAML 1.2 semantics confirmed (159 claims) (2026-08-26)
+- §200 — Bun.mmap grounded — live-updating Uint8Array + MAP_SHARED write-through (2026-08-26)
 - §199 — ui:regen CLI — regenerate UI artifacts from meta/variant sources + the Bun.$ template failure class (2026-08-26)
 - §187 — Extended color formats — kernel-only (lch/oklab/oklch/hsv) + inverse parsers (2026-08-26)
 - §188 — Watermark pipeline — ML-DSA key naming + WebView/Blob verified facts (2026-08-26)
@@ -7117,6 +7118,29 @@ scale vig with its actual signal, not z-score noise blindly.
 
 Also: MinHeap comparator must return BOOLEAN (a.to < b.to), not the diff - the
 strict types caught a number-returning comparator immediately (TS2322).
+
+
+
+## 200. Bun.mmap grounded - live-updating Uint8Array, MAP_SHARED write-through, EINVAL/ENOENT, fixed length (2026-08-26)
+
+Bun.mmap(path, opts?) grounded (MM-surface/liveWrite/liveRead/offsetSize/shared/
+empty/missing/close; evidence block mmapGotchas; tests bun-mmap-coverage, 7).
+- Returns a PLAIN Uint8Array (ctor Uint8Array, buffer ArrayBuffer); length = file
+  size; .slice() reads offsets.
+- MAP_SHARED default: writing to the array writes THROUGH to the file
+  (m[0]=99, m[1]=42 -> file bytes 99,42,3).
+- Reading is live: external file writes visible through the view. BUT appends
+  after mapping are NOT seen - length is fixed at map time (3:1,2,3).
+- offset/size map a window (offset 2 size 4 -> length 4); size clamped to file
+  size minus offset (offset 1 size 1000 on an 8-byte file -> length 7).
+- shared: false = MAP_PRIVATE: view mutation NOT written back to the file
+  (file stays 10,20,30, view shows 111).
+- Empty file -> SystemError EINVAL; missing file -> ENOENT (observed codes).
+- Close = set the array to null (no handle API); no throw.
+- Cross-check: 167 claims (159 CONSISTENT / 8 PINNED-DISCREPANCY), gaps 0.
+  Repo adoption: none yet (probe-only, D12) - mmap is for hot big-file
+  read-write paths; the video/assets pipeline currently uses Bun.file bodies.
+
 
 
 

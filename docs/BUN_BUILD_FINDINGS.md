@@ -182,7 +182,7 @@ Observed: {"kinds":["entry-point","bytecode"]}
 | Output path | kind | hash | loader | size | type | sourcemap |
 |---|---|---|---|---|---|---|
 `outbc/pure.js` | `entry-point` | `h2vnn1me` | `ts` | 1527 | `text/javascript;charset=utf-8` | `null`
-`outbc/pure.js.jsc` | `bytecode` | `62m8yyp1` | `file` | 10944 | `application/octet-stream` | `null`
+`outbc/pure.js.jsc` | `bytecode` | `mngntktv` | `file` | 10944 | `application/octet-stream` | `null`
 
 ### S07a-compile-outdir
 
@@ -554,7 +554,7 @@ Sources: bundled bun-types@1.4.0 (bun-types@1.4.0-c0dadede486f49ab) docs + `bun.
 PINNED-DISCREPANCY (doc says X, observed Y — our correction), DOC-CHANGED (fragment missing —
 the pin premise moved; re-verify), NO-EVIDENCE (ledger path broken).
 
-**Verdict summary:** 159 claims · 151 CONSISTENT · 8 PINNED-DISCREPANCY · 0 DOC-CHANGED · 0 NO-EVIDENCE.
+**Verdict summary:** 167 claims · 159 CONSISTENT · 8 PINNED-DISCREPANCY · 0 DOC-CHANGED · 0 NO-EVIDENCE.
 
 ### BuildArtifact
 
@@ -730,6 +730,19 @@ This fun | CONSISTENT |
 | `MD-renderPassthrough` | `render` | `bun.d.ts` | render: no callbacks -> children pass through (inline flattens to text; table keeps its source) | true | CONSISTENT |
 | `MD-listDepth` | `list` | `bun.d.ts` | render list meta depth verified: 0/1/2 for nested lists; hr callback receives empty children; ordered start from marker (3. -> 3); ul has no start | 2,1,0 | CONSISTENT |
 | `MD-inputTypes` | `html` | `bun.d.ts` | html/render/react accept TypedArray (Uint8Array) and ArrayBuffer inputs | true | CONSISTENT |
+
+### Bun.mmap
+
+| Claim | API | Source | Doc says | Observed | Verdict |
+|---|---|---|---|---|---|
+| `MM-surface` | `mmap` | `bun.d.ts` | Bun.mmap(path, opts) is a function returning a plain Uint8Array (ctor Uint8Array, buffer ArrayBuffer); length = file size; .slice() reads offsets | function | CONSISTENT |
+| `MM-liveWrite` | `mmap` | `bun.d.ts` | writing to the mapped array writes THROUGH to the file (m[0]=99,m[1]=42 -> file bytes 99,42,3) | 99,42,3 | CONSISTENT |
+| `MM-liveRead` | `mmap` | `bun.d.ts` | external file writes are visible through the live view; appends after mapping are NOT seen (length fixed at map time: 3:1,2,3) | 7,8,9 | CONSISTENT |
+| `MM-offsetSize` | `offset` | `bun.d.ts` | offset/size map a window (offset 2 size 4 -> length 4, bytes 3,4,5,6); size clamped to file size minus offset (offset 1 size 1000 -> 7 on an 8-byte file) | 4:3,4,5,6 | CONSISTENT |
+| `MM-shared` | `shared` | `bun.d.ts` | shared: false = MAP_PRIVATE: view mutation NOT written back to the file (file stays 10,20,30, view shows 111) | 10,20,30|view:111 | CONSISTENT |
+| `MM-empty` | `mmap` | `bun.d.ts` | empty file -> SystemError EINVAL (observed code) | EINVAL | CONSISTENT |
+| `MM-missing` | `mmap` | `bun.d.ts` | missing file -> ENOENT (observed code) | ENOENT | CONSISTENT |
+| `MM-close` | `mmap` | `bun.d.ts` | close = set the array to null (no handle API); observed no-throw | ok | CONSISTENT |
 
 No coverage gaps: every declared option on the grounded surfaces has evidence.
 

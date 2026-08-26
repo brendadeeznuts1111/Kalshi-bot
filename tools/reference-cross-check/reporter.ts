@@ -47,6 +47,7 @@ const SURFACES: [string, string][] = [
   ['WV', 'Bun.WebView'],
   ['S3', 'Bun.s3'],
   ['MD', 'Bun.markdown'],
+  ['MM', 'Bun.mmap'],
 ];
 
 export function renderSection9(checks: CheckResult[], gaps: CoverageGap[], meta: CrossCheckMeta): string {

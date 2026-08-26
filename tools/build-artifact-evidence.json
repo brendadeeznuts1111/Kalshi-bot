@@ -745,7 +745,7 @@
     "xxeUnresolved": "{\"a\":\"&xxe;\"}",
     "importEvalToCompact": "{\"config\":{\"name\":\"demo\",\"port\":\"8080\"}}",
     "bundlerInlines": true,
-    "perf20kItemsMs": 6.5,
+    "perf20kItemsMs": 6.1,
     "perfVsDocs": "CONSISTENT (docs 27 ms for 2.2 MB)"
   },
   "artifactGotchas": {
@@ -765,6 +765,23 @@
     "onIsString": "{\"v\":\"on\"}",
     "trueIsBool": "{\"v\":true}",
     "nested": "{\"root\":{\"child\":[1,2]}}"
+  },
+  "mmapGotchas": {
+    "surface": "function",
+    "isUint8": true,
+    "length": 8,
+    "ctorName": "Uint8Array",
+    "read0": 1,
+    "sliceRead": "3,4,5",
+    "writeThrough": "99,42,3",
+    "externalWriteSeen": "7,8,9",
+    "offsetSize": "4:3,4,5,6",
+    "sizeClamped": 7,
+    "privateNoWriteback": "10,20,30|view:111",
+    "emptyThrows": "EINVAL",
+    "missingThrows": "ENOENT",
+    "appendNotSeen": "3:1,2,3",
+    "nullClose": "ok"
   },
   "scenarios": [
     {
@@ -1212,7 +1229,7 @@
         {
           "path": "outbc/pure.js.jsc",
           "kind": "bytecode",
-          "hash": "wcnrhjxt",
+          "hash": "mngntktv",
           "loader": "file",
           "size": 10944,
           "type": "application/octet-stream",

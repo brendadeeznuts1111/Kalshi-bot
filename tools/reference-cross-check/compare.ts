@@ -202,6 +202,14 @@ export const LEDGER: LedgerClaim[] = [
   { id: 'TM-terminal', api: 'Terminal', source: 'bun.d.ts', fragment: 'class Terminal implements AsyncDisposable', docSays: 'Bun.Terminal exists (class); blog what-s-new claim; proposal uses terminal.warn()', evidencePath: 'miscGotchas.terminal.exists', kind: 'consistent' },
   { id: 'YM-parse', api: 'parse', source: 'bun.d.ts', fragment: 'The YAML string to parse', docSays: 'Bun.YAML.parse: object/nested/array mapping, YAML 1.2 (yes/on/no are STRINGS, true is boolean)', evidencePath: 'yamlGotchas.parseObj', kind: 'consistent' },
   { id: 'YM-stringify', api: 'stringify', source: 'bun.d.ts', fragment: 'A string containing the YAML document', docSays: 'Bun.YAML.stringify: flow-style output for plain objects', evidencePath: 'yamlGotchas.stringifyFlow', kind: 'consistent' },
+  { id: 'MM-surface', api: 'mmap', source: 'bun.d.ts', fragment: 'function mmap(path: PathLike, opts?: MMapOptions): Uint8Array<ArrayBuffer>', docSays: 'Bun.mmap(path, opts) is a function returning a plain Uint8Array (ctor Uint8Array, buffer ArrayBuffer); length = file size; .slice() reads offsets', evidencePath: 'mmapGotchas.surface', kind: 'consistent' },
+  { id: 'MM-liveWrite', api: 'mmap', source: 'bun.d.ts', fragment: 'Writing to the array writes to the file.', docSays: 'writing to the mapped array writes THROUGH to the file (m[0]=99,m[1]=42 -> file bytes 99,42,3)', evidencePath: 'mmapGotchas.writeThrough', kind: 'consistent' },
+  { id: 'MM-liveRead', api: 'mmap', source: 'bun.d.ts', fragment: 'Reading from the array reads from the file.', docSays: 'external file writes are visible through the live view; appends after mapping are NOT seen (length fixed at map time: 3:1,2,3)', evidencePath: 'mmapGotchas.externalWriteSeen', kind: 'consistent' },
+  { id: 'MM-offsetSize', api: 'offset', source: 'bun.d.ts', fragment: 'Byte offset into the file where the mapping starts.', docSays: 'offset/size map a window (offset 2 size 4 -> length 4, bytes 3,4,5,6); size clamped to file size minus offset (offset 1 size 1000 -> 7 on an 8-byte file)', evidencePath: 'mmapGotchas.offsetSize', kind: 'consistent' },
+  { id: 'MM-shared', api: 'shared', source: 'bun.d.ts', fragment: 'Whether other processes see writes immediately.', docSays: 'shared: false = MAP_PRIVATE: view mutation NOT written back to the file (file stays 10,20,30, view shows 111)', evidencePath: 'mmapGotchas.privateNoWriteback', kind: 'consistent' },
+  { id: 'MM-empty', api: 'mmap', source: 'bun.d.ts', fragment: 'It does not support empty files. It throws a `SystemError` with `EINVAL`', docSays: 'empty file -> SystemError EINVAL (observed code)', evidencePath: 'mmapGotchas.emptyThrows', kind: 'consistent' },
+  { id: 'MM-missing', api: 'mmap', source: 'bun.d.ts', fragment: 'Open a file as a live-updating `Uint8Array`', docSays: 'missing file -> ENOENT (observed code)', evidencePath: 'mmapGotchas.missingThrows', kind: 'consistent' },
+  { id: 'MM-close', api: 'mmap', source: 'bun.d.ts', fragment: 'To close the file, set the array to `null`', docSays: 'close = set the array to null (no handle API); observed no-throw', evidencePath: 'mmapGotchas.nullClose', kind: 'consistent' },
 ];
 
 /** APIs with grounded evidence but no ledger row (fit/filter/quality/... come from the probe gates). */
@@ -227,6 +235,7 @@ export const EXTRA_GROUNDED: string[] = [
   'ref', 'reload', 'remoteAddress', 'send', 'sendMany', 'setBroadcast', 'setTTL', 'unref',
   'writer', 'exists', 'stat',
   'stringify', 'XML', 'sourcemap', 'path',
+  'sync', 'shared', 'offset', 'size', 'mmap',
 ];
 
 export function checkClaim(claim: LedgerClaim, sourceText: string, ev: Evidence): CheckResult {

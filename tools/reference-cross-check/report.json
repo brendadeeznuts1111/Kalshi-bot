@@ -5,7 +5,7 @@
   "bundleHash": "bun-types@1.4.0-c0dadede486f49ab",
   "verdictCounts": {
     "PINNED-DISCREPANCY": 8,
-    "CONSISTENT": 151
+    "CONSISTENT": 159
   },
   "checks": [
     {
@@ -1290,7 +1290,7 @@
       "api": "parse",
       "source": "docs/runtime/xml.mdx",
       "docSays": "performance: SIMD parse of a ~2 MB doc measured on this machine (docs claim 27 ms for 2.2 MB)",
-      "observed": 6.5,
+      "observed": 6.1,
       "verdict": "CONSISTENT"
     },
     {
@@ -1339,6 +1339,70 @@
       "source": "bun.d.ts",
       "docSays": "Bun.YAML.stringify: flow-style output for plain objects",
       "observed": "\"{a: 1,b: [1,2]}\"",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "MM-surface",
+      "api": "mmap",
+      "source": "bun.d.ts",
+      "docSays": "Bun.mmap(path, opts) is a function returning a plain Uint8Array (ctor Uint8Array, buffer ArrayBuffer); length = file size; .slice() reads offsets",
+      "observed": "function",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "MM-liveWrite",
+      "api": "mmap",
+      "source": "bun.d.ts",
+      "docSays": "writing to the mapped array writes THROUGH to the file (m[0]=99,m[1]=42 -> file bytes 99,42,3)",
+      "observed": "99,42,3",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "MM-liveRead",
+      "api": "mmap",
+      "source": "bun.d.ts",
+      "docSays": "external file writes are visible through the live view; appends after mapping are NOT seen (length fixed at map time: 3:1,2,3)",
+      "observed": "7,8,9",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "MM-offsetSize",
+      "api": "offset",
+      "source": "bun.d.ts",
+      "docSays": "offset/size map a window (offset 2 size 4 -> length 4, bytes 3,4,5,6); size clamped to file size minus offset (offset 1 size 1000 -> 7 on an 8-byte file)",
+      "observed": "4:3,4,5,6",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "MM-shared",
+      "api": "shared",
+      "source": "bun.d.ts",
+      "docSays": "shared: false = MAP_PRIVATE: view mutation NOT written back to the file (file stays 10,20,30, view shows 111)",
+      "observed": "10,20,30|view:111",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "MM-empty",
+      "api": "mmap",
+      "source": "bun.d.ts",
+      "docSays": "empty file -> SystemError EINVAL (observed code)",
+      "observed": "EINVAL",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "MM-missing",
+      "api": "mmap",
+      "source": "bun.d.ts",
+      "docSays": "missing file -> ENOENT (observed code)",
+      "observed": "ENOENT",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "MM-close",
+      "api": "mmap",
+      "source": "bun.d.ts",
+      "docSays": "close = set the array to null (no handle API); observed no-throw",
+      "observed": "ok",
       "verdict": "CONSISTENT"
     }
   ],

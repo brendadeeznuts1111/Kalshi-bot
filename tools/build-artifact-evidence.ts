@@ -12,7 +12,7 @@
  */
 import { markdown as mdNamed, XML as xmlNamed } from 'bun';
 import { join } from 'node:path';
-import { existsSync, rmSync, mkdtempSync, writeFileSync, mkdirSync, readdirSync } from 'node:fs';
+import { existsSync, rmSync, mkdtempSync, writeFileSync, mkdirSync, readdirSync, readFileSync, appendFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 
 const ROOT = join(import.meta.dir, '..');
@@ -1188,6 +1188,70 @@ const yamlGotchas = {
   trueIsBool: JSON.stringify((Bun as any).YAML.parse('v: true')),
   nested: JSON.stringify((Bun as any).YAML.parse('root:' + String.fromCharCode(10) + '  child:' + String.fromCharCode(10) + '    - 1' + String.fromCharCode(10) + '    - 2')),
 };
+// ---------- mmapGotchas: Bun.mmap (live-updating Uint8Array over the mmap syscall) ----------
+const mmapDir = mkdtempSync(join(tmpdir(), 'art-mmap-'));
+const mmapFile = join(mmapDir, 'data.bin');
+writeFileSync(mmapFile, new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]));
+const mmapGotchas = {
+  surface: typeof (Bun as any).mmap,
+  isUint8: (Bun as any).mmap(mmapFile) instanceof Uint8Array,
+  length: (Bun as any).mmap(mmapFile).length,
+  ctorName: (Bun as any).mmap(mmapFile).constructor.name,
+  read0: (Bun as any).mmap(mmapFile)[0],
+  sliceRead: Array.from((Bun as any).mmap(mmapFile).slice(2, 5)).join(','),
+  writeThrough: await (async () => {
+    const w = join(mmapDir, 'w.bin');
+    writeFileSync(w, new Uint8Array([1, 2, 3]));
+    const m = (Bun as any).mmap(w);
+    m[0] = 99;
+    m[1] = 42;
+    return Array.from(readFileSync(w)).join(',');
+  })(),
+  externalWriteSeen: await (async () => {
+    const w = join(mmapDir, 'e.bin');
+    writeFileSync(w, new Uint8Array([1, 2, 3]));
+    const m = (Bun as any).mmap(w);
+    writeFileSync(w, new Uint8Array([7, 8, 9]));
+    return Array.from(m).join(',');
+  })(),
+  offsetSize: await (async () => {
+    const m = (Bun as any).mmap(mmapFile, { offset: 2, size: 4 } as any);
+    return m.length + ':' + Array.from(m).join(',');
+  })(),
+  sizeClamped: await (async () => {
+    const m = (Bun as any).mmap(mmapFile, { offset: 1, size: 1000 } as any);
+    return m.length;
+  })(),
+  privateNoWriteback: await (async () => {
+    const w = join(mmapDir, 'p.bin');
+    writeFileSync(w, new Uint8Array([10, 20, 30]));
+    const m = (Bun as any).mmap(w, { shared: false } as any);
+    m[0] = 111;
+    return Array.from(readFileSync(w)).join(',') + '|view:' + m[0];
+  })(),
+  emptyThrows: await (async () => {
+    const w = join(mmapDir, 'z.bin');
+    writeFileSync(w, new Uint8Array(0));
+    try { (Bun as any).mmap(w); return 'NO-THROW'; } catch (e: any) { return e && e.code ? e.code : String(e && e.message).slice(0, 40); }
+  })(),
+  missingThrows: await (async () => {
+    try { (Bun as any).mmap(join(mmapDir, 'nope.bin')); return 'NO-THROW'; } catch (e: any) { return e && e.code ? e.code : String(e && e.message).slice(0, 40); }
+  })(),
+  appendNotSeen: await (async () => {
+    const w = join(mmapDir, 'a.bin');
+    writeFileSync(w, new Uint8Array([1, 2, 3]));
+    const m = (Bun as any).mmap(w);
+    appendFileSync(w, new Uint8Array([4, 5]));
+    return m.length + ':' + Array.from(m).join(',');
+  })(),
+  nullClose: await (async () => {
+    const w = join(mmapDir, 'n.bin');
+    writeFileSync(w, new Uint8Array([1, 2, 3]));
+    let m: any = (Bun as any).mmap(w);
+    m = null;
+    return 'ok';
+  })(),
+};
 // ---------- emit ----------
 const evidence = {
   tool: 'tools/build-artifact-evidence.ts',
@@ -1219,6 +1283,7 @@ const evidence = {
   xmlGotchas,
   artifactGotchas,
   yamlGotchas,
+  mmapGotchas,
   scenarios,
 };
 await Bun.write(EVIDENCE, JSON.stringify(evidence, null, 2) + '\n');

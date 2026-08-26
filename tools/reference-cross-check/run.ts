@@ -86,6 +86,8 @@ export async function runCrossCheck(): Promise<number> {
   declared['Bun.BunFile'] = ['name', 'size', 'type', 'lastModified', 'text', 'json', 'arrayBuffer', 'bytes', 'stream', 'slice', 'stat', 'exists', 'writer', 'unlink']; // curated - BunFile runtime surface
   declared['Bun.XML'] = ['parse', 'stringify']; // curated - namespace (like markdown)
   declared['Bun.YAML'] = ['parse', 'stringify']; // curated - namespace (like markdown)
+  declared['Bun.mmap'] = ['mmap']; // function surface
+  declared['Bun.MMapOptions'] = interfaceFields(dts, 'MMapOptions');
   declared['Bun.which'] = ['which'];
   declared['Bun.peek'] = ['peek', 'status'];
   declared['Bun.sleep'] = ['sleep', 'sleepSync'];
