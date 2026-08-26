@@ -9,7 +9,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 > The headings were renumbered to §1-§11 on 2026-08-23; the counters were kept
 > so historical notes stay traceable.
 >
-> **Current contract status: verify:contracts 55/55** (see docs/BUN_API_COVERAGE.md
+> **Current contract status: verify:contracts 56/56** (see docs/BUN_API_COVERAGE.md
 > for the full matrix). `verify:contracts N/N` lines inside older sections are
 > HISTORICAL (each records its era) — docs:check enforces that only this header
 > and non-pitfall docs may reference the current count.
@@ -6356,3 +6356,25 @@ another note.
   gate-pinned (shell:probe 12->15): no .stdin() method (P13), callable-options
   AND $({...})`cmd` object forms both throw on 1.4.0 — chainable .cwd()/.env()
   are the supported options (P14/P15).
+
+## 178. Reference cross-check — official bun-types docs vs observed evidence (2026-08-25)
+
+- tools/reference-cross-check/ (bun run reference-cross-check, gate #56) audits
+  the PINNED bun-types bundle (docs + bun.d.ts) against the observed evidence:
+  every ledger claim must still find its doc fragment (DOC-CHANGED -> FAIL,
+  re-verify) and resolve its evidence path (NO-EVIDENCE -> FAIL, ledger bug);
+  verdicts CONSISTENT vs PINNED-DISCREPANCY (our corrections, non-fatal).
+- 24 claims: 19 CONSISTENT, 5 PINNED-DISCREPANCY (BuildArtifact extends Blob
+  is type-only; outfile inert on the API; env: no substitution;
+  allowUnresolved glob lists fail the build; transferred Image input ->
+  ERR_IMAGE_UNKNOWN_FORMAT not ERR_INVALID_STATE).
+- Coverage sweep (auto, from the bundle interfaces): BuildConfig options
+  declared but not evidence-grounded - plugins, packages, banner, footer,
+  features, optimizeImports, throw, tsconfig, jsx, reactFastRefresh,
+  reactCompiler, reactCompilerOutputMode, files, ignoreDCEAnnotations,
+  emitDCEAnnotations - honest GAPs for future probes (non-fatal).
+- Outputs: tools/reference-cross-check/report.json (deterministic, committed)
+  + docs/BUN_BUILD_FINDINGS.md §9 (regenerated; idempotent).
+- Artifacts: tools/reference-cross-check/{index,run,compare,docs-parser,
+  evidence-loader,reporter}.ts, package.json (reference-cross-check script),
+  tools/verify-contracts.ts (gate #56), docs:sync-counts 56/56.

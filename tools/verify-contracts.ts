@@ -69,6 +69,7 @@ const gates = [
   ['client-shape:probe'],
   ['coverage:probe'],
   ['fullstack:probe'],
+  ['reference-cross-check'], // §178 official bun-types docs vs observed evidence
 ] as const;
 
 const GATE_ENV: Record<string, Record<string, string>> = {

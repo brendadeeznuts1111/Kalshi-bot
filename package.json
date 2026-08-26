@@ -292,6 +292,7 @@
     "build-artifact:probe": "bun tools/build-artifact-probe.ts",
     "build-artifact:evidence": "bun tools/build-artifact-evidence.ts",
     "build-artifact:findings": "bun tools/build-artifact-findings.ts",
+    "reference-cross-check": "bun tools/reference-cross-check/index.ts",
     "module-shape:report": "bun tools/module-shape-report.ts",
     "repo-api:shape": "bun tools/repo-api-shape.ts",
     "docs:sync-counts": "bun tools/docs-sync-counts.ts",

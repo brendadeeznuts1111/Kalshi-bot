@@ -1,0 +1,237 @@
+{
+  "tool": "tools/reference-cross-check",
+  "bunVersion": "1.4.0",
+  "bunRevision": "34cbb9a40b4bd1bd767d134a7065e66c2432a676",
+  "bundleHash": "bun-types@1.4.0-c0dadede486f49ab",
+  "verdictCounts": {
+    "PINNED-DISCREPANCY": 5,
+    "CONSISTENT": 19
+  },
+  "checks": [
+    {
+      "id": "BA-extendsBlob",
+      "api": "kind",
+      "source": "docs/bundler/index.mdx",
+      "docSays": "BuildArtifact extends Blob (Blob methods incl. .bytes()/.image() would apply)",
+      "observed": false,
+      "verdict": "PINNED-DISCREPANCY"
+    },
+    {
+      "id": "BA-kinds",
+      "api": "kind",
+      "source": "bun.d.ts",
+      "docSays": "kind is one of five output roles",
+      "observed": [
+        "entry-point",
+        "chunk",
+        "entry-point",
+        "asset"
+      ],
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "BA-hash",
+      "api": "hash",
+      "source": "bun.d.ts",
+      "docSays": "hash is string | null",
+      "observed": "00000000",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "BC-outfile",
+      "api": "outfile",
+      "source": "bun.d.ts",
+      "docSays": "outfile: single output file path",
+      "observed": false,
+      "verdict": "PINNED-DISCREPANCY"
+    },
+    {
+      "id": "BC-env",
+      "api": "env",
+      "source": "bun.d.ts",
+      "docSays": "env: \"inline\" injects env values into the output",
+      "observed": false,
+      "verdict": "PINNED-DISCREPANCY"
+    },
+    {
+      "id": "BC-allowUnresolved",
+      "api": "allowUnresolved",
+      "source": "bun.d.ts",
+      "docSays": "allowUnresolved: glob allow-lists pass dynamic import() through",
+      "observed": false,
+      "verdict": "PINNED-DISCREPANCY"
+    },
+    {
+      "id": "BC-bytecode",
+      "api": "bytecode",
+      "source": "bun.d.ts",
+      "docSays": "bytecode: true emits bytecode",
+      "observed": [
+        "entry-point",
+        "bytecode"
+      ],
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "BC-compile",
+      "api": "compile",
+      "source": "bun.d.ts",
+      "docSays": "compile: standalone executable",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "BC-define",
+      "api": "define",
+      "source": "bun.d.ts",
+      "docSays": "define: replace expressions with constants",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "BC-drop",
+      "api": "drop",
+      "source": "bun.d.ts",
+      "docSays": "drop: remove matching calls",
+      "observed": false,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "BC-sourcemap",
+      "api": "sourcemap",
+      "source": "bun.d.ts",
+      "docSays": "sourcemap: none/linked/external/inline",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "BC-minify",
+      "api": "minify",
+      "source": "bun.d.ts",
+      "docSays": "minify: boolean or granular object",
+      "observed": 48,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "BC-conditions",
+      "api": "conditions",
+      "source": "bun.d.ts",
+      "docSays": "conditions: package.json exports conditions",
+      "observed": "var tag = \"CUSTOM\";",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "BC-publicPath",
+      "api": "publicPath",
+      "source": "bun.d.ts",
+      "docSays": "publicPath: prefix for asset paths",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "BC-root",
+      "api": "root",
+      "source": "bun.d.ts",
+      "docSays": "root: override project root for output structure",
+      "observed": "outr2/rooted/app.js",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "BC-naming",
+      "api": "naming",
+      "source": "bun.d.ts",
+      "docSays": "naming: string applies to entrypoints only",
+      "observed": [
+        "outn/static/pure.js",
+        "outn/static/pure2.js"
+      ],
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "BC-external",
+      "api": "external",
+      "source": "bun.d.ts",
+      "docSays": "external: exclude packages from bundle",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "BC-target",
+      "api": "target",
+      "source": "bun.d.ts",
+      "docSays": "target: browser | bun | node",
+      "observed": 103,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "IM-autoOrient",
+      "api": "autoOrient",
+      "source": "bun.d.ts",
+      "docSays": "autoOrient defaults to true (EXIF applied)",
+      "observed": "OK jpeg 1x2",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "IM-maxPixels",
+      "api": "maxPixels",
+      "source": "bun.d.ts",
+      "docSays": "maxPixels default 268402689 (0x3FFF^2, same as Sharp)",
+      "observed": 268402689,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "IM-withoutEnlargement",
+      "api": "withoutEnlargement",
+      "source": "bun.d.ts",
+      "docSays": "withoutEnlargement prevents upscaling",
+      "observed": "2x1",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "IM-progressive",
+      "api": "progressive",
+      "source": "bun.d.ts",
+      "docSays": "jpeg progressive: true emits multi-scan",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "IM-palette",
+      "api": "palette",
+      "source": "bun.d.ts",
+      "docSays": "png palette: true emits indexed PNG",
+      "observed": 3,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "IM-invalidState",
+      "api": "ERR_INVALID_STATE",
+      "source": "bun.d.ts",
+      "docSays": "transferred input -> ERR_INVALID_STATE",
+      "observed": "ERR_IMAGE_UNKNOWN_FORMAT",
+      "verdict": "PINNED-DISCREPANCY"
+    }
+  ],
+  "coverageGaps": [
+    {
+      "surface": "BuildConfig",
+      "gaps": [
+        "plugins",
+        "packages",
+        "ignoreDCEAnnotations",
+        "emitDCEAnnotations",
+        "banner",
+        "footer",
+        "features",
+        "optimizeImports",
+        "throw",
+        "tsconfig",
+        "jsx",
+        "reactFastRefresh",
+        "reactCompiler",
+        "reactCompilerOutputMode",
+        "files"
+      ]
+    }
+  ]
+}
