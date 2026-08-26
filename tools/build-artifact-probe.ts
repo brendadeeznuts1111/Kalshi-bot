@@ -85,6 +85,19 @@ const e8 = obj7.ok ? obj7.r.outputs.find((o: any) => o.kind === "entry-point") :
 const c8 = obj7.ok ? obj7.r.outputs.find((o: any) => o.kind === "chunk") : undefined;
 check("P7c object naming applies to entry + chunk", obj7.ok && !!e8 && e8.path.includes("e/") && !!c8 && c8.path.includes("c/"), obj7.ok ? "entry=" + String(e8?.path) + " chunk=" + String(c8?.path) : obj7.err);
 
+// P8-P12: the full BuildArtifact shape claims (§177).
+check("P8 Blob-like surface: size/type/text/arrayBuffer/stream present", typeof def.outputs[0].size === "number" && typeof def.outputs[0].type === "string" && typeof def.outputs[0].text === "function" && typeof def.outputs[0].arrayBuffer === "function" && typeof def.outputs[0].stream === "function", "size=" + typeof def.outputs[0].size + " type=" + typeof def.outputs[0].type + " stream=" + typeof def.outputs[0].stream);
+check("P8a extends Blob: FALSE on 1.4.0 (docs corrected)", (def.outputs[0] as any) instanceof Blob === false && typeof (def.outputs[0] as any).bytes === "undefined", "instanceof=" + String(def.outputs[0] instanceof Blob) + " bytes=" + String(typeof (def.outputs[0] as any).bytes));
+check("P9 loader reflects the SOURCE loader", def.outputs[0].loader === "ts", "loader=" + String(def.outputs[0].loader));
+check("P10 entry-point hash NOT null (docs corrected - null-by-default is wrong)", def.outputs[0].hash !== null && def.outputs[0].hash !== undefined, "hash=" + String(def.outputs[0].hash));
+const bc = await safe({ entrypoints: [F + "/pure.ts"], outdir: F + "/outbc", bytecode: true });
+const bcKinds = bc.ok ? bc.r.outputs.map((o: any) => o.kind) : ["build-failed"];
+check("P11 bytecode:true yields a bytecode-kind output", bcKinds.includes("bytecode"), bcKinds.join(","));
+const nestedSm = sm.ok ? (sm.r.outputs.find((o: any) => o.kind === "entry-point") as any)?.sourcemap : undefined;
+let nestedText = "";
+if (nestedSm) nestedText = await nestedSm.text();
+check("P12 nested sourcemap .text() returns map JSON", typeof nestedText === "string" && nestedText.includes("version") && nestedText.includes("sources"), nestedText.slice(0, 40));
+
 const failed = results.filter((r) => !r.pass);
 console.log("build-artifact:probe - " + (results.length - failed.length) + "/" + results.length + " checks" + (failed.length ? " · FAIL: " + failed.map((f) => f.name).join(", ") : ""));
 process.exit(failed.length === 0 ? 0 : 1);

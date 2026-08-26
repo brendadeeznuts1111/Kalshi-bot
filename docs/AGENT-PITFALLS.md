@@ -6273,4 +6273,13 @@ another note.
   a css-importing entry FAILS the build ("Multiple files share the
   same output path") - hash-less naming strings are unsafe for multi-
   output builds.
+- FULL SHAPE claims probed (probe now 24/24): the interface is
+  BuildArtifact-like, NOT extends Blob on 1.4.0 (instanceof=false,
+  .bytes() absent) - but .size/.type/.text()/.arrayBuffer()/.stream()
+  exist; loader reflects the SOURCE loader ("ts" for a .ts entry);
+  entry-point hashes are PRESENT ("null by default for entry-points"
+  is wrong on 1.4.0 - the null-ish case is sourcemap artifacts with
+  the 00000000 placeholder); bytecode:true yields a bytecode-kind
+  output; the nested artifact.sourcemap .text() returns the map JSON
+  (version 3, sources).
 - verify:contracts 55/55 (header auto-synced).
