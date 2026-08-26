@@ -10,6 +10,7 @@
  */
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { listFiles } from '../src/lib/glob.ts';
 import { type OddsPrint } from '../src/alpha/cluster/odds-vector.ts';
 import { ConsensusTracker } from '../src/alpha/cluster/tracker.ts';
 
@@ -18,19 +19,25 @@ const OUT = join(ROOT, 'research', 'outputs');
 
 export type ClusterCliOptions = {
   input: string | null;
+  glob: string | null;
   k: number;
   minClusterSize: number;
   styled: boolean;
   format: 'table' | 'json' | 'yaml';
+  verbose: boolean;
+  help: boolean;
 };
 
 /** Parse alpha:cluster flags; returns the error string for invalid flags. */
 export function parseClusterCli(argv: string[]): { opts: ClusterCliOptions } | { error: string } {
   const inputFlag = argv.find((a) => a.startsWith('--input='));
+  const globFlag = argv.find((a) => a.startsWith('--glob='));
   const kFlag = argv.find((a) => a.startsWith('--k='));
   const mcFlag = argv.find((a) => a.startsWith('--min-cluster='));
   const fmtFlag = argv.find((a) => a.startsWith('--format='));
   const styled = argv.includes('--styled');
+  const verbose = argv.includes('--verbose') || argv.includes('-v');
+  const help = argv.includes('--help') || argv.includes('-h');
   const formatRaw = fmtFlag ? fmtFlag.slice('--format='.length) : 'table';
   if (formatRaw !== 'table' && formatRaw !== 'json' && formatRaw !== 'yaml') {
     return { error: '--format must be table|json|yaml (got ' + formatRaw + ')' };
@@ -39,15 +46,70 @@ export function parseClusterCli(argv: string[]): { opts: ClusterCliOptions } | {
   const minClusterSize = mcFlag ? Number(mcFlag.slice('--min-cluster='.length)) : 3;
   if (kFlag && !Number.isFinite(k) || k < 1) return { error: '--k must be a positive number (got ' + kFlag + ')' };
   if (mcFlag && !Number.isFinite(minClusterSize) || minClusterSize < 1) return { error: '--min-cluster must be a positive number (got ' + mcFlag + ')' };
+  if (inputFlag && globFlag) return { error: '--input and --glob are mutually exclusive' };
   return {
     opts: {
       input: inputFlag ? inputFlag.slice('--input='.length) : null,
+      glob: globFlag ? globFlag.slice('--glob='.length) : null,
       k,
       minClusterSize,
       styled,
       format: formatRaw as 'table' | 'json' | 'yaml',
+      verbose,
+      help,
     },
   };
+}
+
+/**
+ * Load prints from --input (single file) or --glob (Bun.Glob over a cwd,
+ * merged in sorted order). Returns { error } for no-match on glob.
+ */
+export function loadClusterPrints(
+  opts: { input: string | null; glob: string | null },
+  roots: { fileRoot: string; globCwd: string } = { fileRoot: ROOT, globCwd: OUT },
+): { prints: OddsPrint[]; matched: number } | { error: string } {
+  if (opts.input) {
+    return { prints: JSON.parse(readFileSync(join(roots.fileRoot, opts.input), 'utf8')) as OddsPrint[], matched: 1 };
+  }
+  if (opts.glob) {
+    const files = listFiles(opts.glob, { cwd: roots.globCwd, onlyFiles: true });
+    const all: OddsPrint[] = [];
+    for (const f of files) {
+      all.push(...(JSON.parse(readFileSync(join(roots.globCwd, f), 'utf8')) as OddsPrint[]));
+    }
+    if (!all.length) return { error: '--glob matched no files under ' + roots.globCwd + ' (' + opts.glob + ')' };
+    return { prints: all, matched: files.length };
+  }
+  return { prints: syntheticFixture(), matched: 1 };
+}
+
+export function clusterCliHelp(): string {
+  return [
+    'alpha:cluster - cluster odds prints (sources x events) with the heap-based',
+    'HDBSCAN-style clusterer and emit labels + consensus-shift signals.',
+    '',
+    'Usage:',
+    '  bun run alpha:cluster [options]',
+    '',
+    'Input (one of; default deterministic synthetic 3-pocket fixture):',
+    '  --input <file>     JSON array of prints {source, eventId, side, implied, vig, ts}',
+    '  --glob <pattern>   expand a glob over research/outputs/*.json (Bun.Glob, grounded)',
+    '',
+    'Clustering:',
+    '  --k <n>            core-distance neighbors (default 5)',
+    '  --min-cluster <n>  min cluster size (default 3)',
+    '',
+    'Output:',
+    '  --format <fmt>     table|json|yaml console summary (yaml via Bun.YAML, §198; default table)',
+    '  --styled           ANSI-rendered markdown summary (respects NO_COLOR/FORCE_COLOR, §205)',
+    '  --verbose, -v      show per-source cluster membership table',
+    '',
+    'Other:',
+    '  --help, -h         show this help',
+    '',
+    'Writes: research/outputs/odds-clusters.{json,md}',
+  ].join('\n');
 }
 
 /**
@@ -92,12 +154,22 @@ if ('error' in parsed) {
   console.error('alpha:cluster: ' + parsed.error);
   process.exit(2);
 }
-const { input, k, minClusterSize, styled, format } = parsed.opts;
+const { input, glob, k, minClusterSize, styled, format, verbose, help } = parsed.opts;
+if (help) {
+  console.log(clusterCliHelp());
+  process.exit(0);
+}
 const useColor = styled && cliUseColor();
 
-const prints: OddsPrint[] = input
-  ? (JSON.parse(readFileSync(join(ROOT, input), 'utf8')) as OddsPrint[])
-  : syntheticFixture();
+const loaded = loadClusterPrints({ input, glob });
+if ('error' in loaded) {
+  console.error('alpha:cluster: ' + loaded.error);
+  process.exit(2);
+}
+if (glob) {
+  console.error('alpha:cluster: --glob matched ' + loaded.matched + ' file(s) under research/outputs');
+}
+const prints = loaded.prints;
 
 const tracker = new ConsensusTracker();
 const result = tracker.push(prints, prints[0]?.ts ?? 0, { minClusterSize });
@@ -130,5 +202,16 @@ if (styled && useColor) {
   console.log((Bun as any).markdown.ansi(styledMd));
 } else {
   console.log(renderClusterSummary({ prints: prints.length, clusters: result.clusters, noise: result.noise, shifts: shifts.length, labels: result.labels }, format));
+}
+if (verbose) {
+  // Per-source membership table (inspect.table properties filter, §202) - only meaningful in table mode.
+  const rows = result.prints.map((p) => ({
+    label: String(result.labels[p.id] ?? -1),
+    source: p.source,
+    event: p.eventId,
+    implied: p.implied.toFixed(3),
+  })).filter((r) => r.label !== '-1');
+  const noiseRows = result.prints.map((p) => ({ label: 'noise', source: p.source, event: p.eventId, implied: p.implied.toFixed(3) })).filter((_r, i) => (result.labels[result.prints[i]!.id] ?? -1) === -1);
+  console.log((Bun as any).inspect.table([...rows, ...noiseRows], ['label', 'source', 'event', 'implied'], { colors: useColor }));
 }
 console.log('output: research/outputs/odds-clusters.{json,md}');

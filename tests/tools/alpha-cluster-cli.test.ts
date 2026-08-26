@@ -1,6 +1,9 @@
 // alpha:cluster CLI polish (§205): --format json|yaml|table, NO_COLOR/FORCE_COLOR gate, flag validation.
 import { describe, expect, test } from "bun:test";
-import { parseClusterCli, cliUseColor, renderClusterSummary } from "../../tools/alpha-cluster-cli.ts";
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+import { parseClusterCli, cliUseColor, renderClusterSummary, loadClusterPrints, clusterCliHelp } from "../../tools/alpha-cluster-cli.ts";
 
 describe("parseClusterCli", () => {
   test("defaults: synthetic fixture, k=5, min-cluster=3, table", () => {
@@ -15,8 +18,8 @@ describe("parseClusterCli", () => {
   });
 
   test("accepts --format json|yaml|table and --k/--min-cluster", () => {
-    expect(parseClusterCli(["--format=yaml"])).toEqual({ opts: { input: null, k: 5, minClusterSize: 3, styled: false, format: "yaml" } });
-    expect(parseClusterCli(["--k=7", "--min-cluster=2", "--styled"])).toEqual({ opts: { input: null, k: 7, minClusterSize: 2, styled: true, format: "table" } });
+    expect(parseClusterCli(["--format=yaml"])).toEqual({ opts: { input: null, glob: null, k: 5, minClusterSize: 3, styled: false, format: "yaml", verbose: false, help: false } });
+    expect(parseClusterCli(["--k=7", "--min-cluster=2", "--styled"])).toEqual({ opts: { input: null, glob: null, k: 7, minClusterSize: 2, styled: true, format: "table", verbose: false, help: false } });
   });
 
   test("rejects invalid format and non-numeric flags (exit 2 path)", () => {
@@ -26,6 +29,8 @@ describe("parseClusterCli", () => {
     expect("error" in badK && badK.error).toContain("--k must be a positive number");
     const badMc = parseClusterCli(["--min-cluster=0"]);
     expect("error" in badMc && badMc.error).toContain("--min-cluster must be a positive number");
+    const both = parseClusterCli(["--input=a.json", "--glob=*.json"]);
+    expect("error" in both && both.error).toContain("mutually exclusive");
   });
 });
 
@@ -60,3 +65,45 @@ describe("renderClusterSummary", () => {
     expect(out).toContain("3 clusters");
   });
 });
+
+describe("loadClusterPrints", () => {
+  function tmpFeeds(files: Record<string, unknown[]>): { dir: string } {
+    const dir = mkdtempSync(join(tmpdir(), "cl-feeds-"));
+    for (const [name, arr] of Object.entries(files)) {
+      writeFileSync(join(dir, name), JSON.stringify(arr));
+    }
+    return { dir };
+  }
+  const print = (id: string, implied: number) => ({ id, source: "s", eventId: id, side: "yes", implied, vig: 0.04, ts: 1000 });
+
+  test("--glob merges matched feeds in sorted order (item 8)", () => {
+    const { dir } = tmpFeeds({ "b.json": [print("b1", 0.3)], "a.json": [print("a1", 0.5)] });
+    const r = loadClusterPrints({ input: null, glob: "*.json" }, { fileRoot: dir, globCwd: dir });
+    expect("prints" in r).toBe(true);
+    if (!("prints" in r)) return;
+    expect(r.matched).toBe(2);
+    expect(r.prints.map((p) => p.id)).toEqual(["a1", "b1"]); // sorted
+  });
+
+  test("--glob with no matches returns an error (exit 2 path)", () => {
+    const { dir } = tmpFeeds({});
+    const r = loadClusterPrints({ input: null, glob: "nope-*.json" }, { fileRoot: dir, globCwd: dir });
+    expect("error" in r && r.error).toContain("matched no files");
+  });
+
+  test("--input single file loads as-is", () => {
+    const { dir } = tmpFeeds({ "feed.json": [print("x1", 0.4)] });
+    const r = loadClusterPrints({ input: "feed.json", glob: null }, { fileRoot: dir, globCwd: dir });
+    expect("prints" in r && r.prints).toHaveLength(1);
+  });
+});
+
+describe("clusterCliHelp", () => {
+  test("documents every flag (auto-help, item 2)", () => {
+    const h = clusterCliHelp();
+    for (const flag of ["--input", "--glob", "--k", "--min-cluster", "--format", "--styled", "--verbose", "--help"]) {
+      expect(h).toContain(flag);
+    }
+  });
+});
+

@@ -220,6 +220,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §203 — Managed agent CLI — schedule register/remove/preview + offline daily ground/report cron (2026-08-26)
 - §204 — Bun.which — absolute path/null, PATH override, cwd anchors relative commands + PATH entries (2026-08-26)
 - §205 — CLI polish audited — fictional desk.ts shell, color caller-gate truth, --format via Bun.YAML (2026-08-26)
+- §206 — alpha:cluster deeper — --help, --glob via Bun.Glob, --verbose membership table (2026-08-26)
 - §199 — ui:regen CLI — regenerate UI artifacts from meta/variant sources + the Bun.$ template failure class (2026-08-26)
 - §187 — Extended color formats — kernel-only (lch/oklab/oklch/hsv) + inverse parsers (2026-08-26)
 - §188 — Watermark pipeline — ML-DSA key naming + WebView/Blob verified facts (2026-08-26)
@@ -7249,4 +7250,36 @@ Pasted 11-item CLI polish proposal audited against this repo:
   .oddsrc - none exist. The real CLIs are tools/*-cli.ts (alpha:cluster,
   alpha:consensus:watch, bash:mode, ui:regen) + src/agent/cli.ts (which already
   has NESTED COMMANDS: status/ground/tennis/patterns/report/blueprint/run-research).
-- FALSE claim: Bun
+- FALSE claim: Bun has no yaml yet - Bun.YAML.parse/stringify grounded (§198);
+  alpha:cluster now takes --format=json|yaml|table and renders yaml with it.
+- ALREADY-PRESENT (deeper than the proposal): Bun.Glob helpers in src/lib/glob.ts
+  (listFiles/listFilesAsync), inspect.table properties filter (§202), theme.ts
+  NO_COLOR/FORCE_COLOR vocabulary (config.ts declares both).
+- CORRECTED item 3 (color): Bun.inspect({colors:true}) and markdown.ansi emit
+  ANSI even PIPED - env vars are IGNORED once colors are explicit; the CALLER
+  must gate. Bun.color(hex,'ansi') is auto: EMPTY when piped, honors
+  NO_COLOR/FORCE_COLOR only at process START (FORCE_COLOR=1 bun ... forces).
+  alpha:cluster --styled now uses cliUseColor() (NO_COLOR=1/FORCE_COLOR=0 ->
+  plain; verified: shell NO_COLOR=1 suppressed, FORCE_COLOR=1+NO_COLOR= emits
+  escapes).
+- WIRED: parseClusterCli validates --k/--min-cluster/--format (NaN/invalid ->
+  exit 2, no silent Number() coercion), renderClusterSummary table/json/yaml.
+- Cross-check: 178 claims (170 CONSISTENT / 8 PINNED-DISCREPANCY), gaps 0
+  (IN-envColor pins the inspect-vs-env truth). Tests: alpha-cluster-cli (7).
+
+
+## 206. alpha:cluster deeper - --help, --glob input via Bun.Glob, --verbose membership table (2026-08-26)
+
+Completed the §205 audit items that were not yet wired into tools/alpha-cluster-cli.ts:
+- --help / -h: clusterCliHelp() documents every flag (auto-help, item 2).
+- --glob <pattern>: loadClusterPrints() expands a glob over research/outputs
+  via src/lib/glob.ts listFiles (grounded Bun.Glob GL-scan/match, §9) and
+  MERGES all matched feed files in sorted order (item 8). --input and --glob
+  are mutually exclusive (exit 2). No-match -> exit 2.
+- --verbose / -v: per-source cluster membership table via inspect.table
+  properties filter (grounded §202); labels come from the tracker snapshot's
+  labels map (result.prints are RAW OddsPrint, not labeled - pinned).
+- loadClusterPrints is roots-injectable for tests (tmpdir fixtures).
+- Tests: alpha-cluster-cli.test.ts now 11 (glob merge + no-match + single
+  input + help flag coverage). Smoke: --glob matched 1 file -> 9 prints,
+  1 cluster (z-score of 9 prints across 3 pockets is one cluster - correct).
