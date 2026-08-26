@@ -182,6 +182,37 @@ const bySection = new Map<string, { covered: number; uncovered: number }>();
 let covered = 0;
 let uncovered = 0;
 
+// heading-level demo per heading id, computed once (registry mapping first;
+// else match the heading against ALL its code blocks concatenated — an
+// output/result block inherits its paired code block's demo).
+const headingDemoCache = new Map<string, { demo: string; mapped: BlockRow['mapped'] }>();
+function demoForHeading(
+  headingKey: string,
+  regEntry: Record<string, any> | undefined,
+  code: string,
+): { demo: string; mapped: BlockRow['mapped'] } {
+  const cached = headingDemoCache.get(headingKey);
+  if (cached) return cached;
+  let hd: { demo: string; mapped: BlockRow['mapped'] };
+  const re = regEntry && regEntry.mappedTo && regEntry.mappedTo !== 'NOT mapped';
+  if (re) {
+    hd = { demo: regEntry.mappedTo, mapped: 'registry' };
+  } else if (OVERRIDES[headingKey]) {
+    hd = { demo: OVERRIDES[headingKey], mapped: 'content' };
+  } else {
+    const all = pres
+      .map((p, k) => ({ p, k }))
+      .filter((x) => headingFor(x.k).id === headingKey)
+      .map((x) => preText(x.p))
+      .join('\n');
+    const d = matchDemo(all || code);
+    if (d) hd = { demo: d.route + ' (' + d.file + ')', mapped: 'content' };
+    else hd = { demo: '', mapped: 'uncovered' };
+  }
+  headingDemoCache.set(headingKey, hd);
+  return hd;
+}
+
 for (let i = 0; i < pres.length; i++) {
   const h = headingFor(i);
   const code = preText(pres[i]!);
@@ -192,32 +223,7 @@ for (let i = 0; i < pres.length; i++) {
   const firstLine = code.split('\n').find((l) => l.trim())?.trim().slice(0, 60) ?? '';
   const regEntry = registryById.get(h.id);
 
-  // heading-level demo: registry mapping first; else match the heading against
-  // ALL its code blocks concatenated (an output/result block inherits its paired
-  // code block's demo). Output/other blocks share the heading's demo.
-  const headingDemoCache = new Map<string, { demo: string; mapped: BlockRow['mapped'] }>();
-  const headingKey = h.id;
-  let hd = headingDemoCache.get(headingKey);
-  if (!hd) {
-    const re = regEntry && regEntry.mappedTo && regEntry.mappedTo !== 'NOT mapped';
-    if (re) {
-      hd = { demo: regEntry.mappedTo, mapped: 'registry' };
-    } else if (OVERRIDES[headingKey]) {
-      hd = { demo: OVERRIDES[headingKey], mapped: 'content' };
-    } else {
-      const all = pres
-        .map((p, k) => ({ p, k }))
-        .filter((x) => headingFor(x.k).id === headingKey)
-        .map((x) => preText(x.p))
-        .join('\n');
-      const d = matchDemo(all || code);
-      if (d) hd = { demo: d.route + ' (' + d.file + ')', mapped: 'content' };
-      else hd = { demo: '', mapped: 'uncovered' };
-    }
-    headingDemoCache.set(headingKey, hd);
-  }
-  let demo = hd.demo;
-  let mapped: BlockRow['mapped'] = hd.mapped;
+  const { demo, mapped } = demoForHeading(h.id, regEntry, code);
   if (demo) covered++;
   else uncovered++;
   const sec = regEntry?.section ?? '?';

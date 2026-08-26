@@ -25,7 +25,7 @@ const isCodeLike = (l: string): boolean => {
   if (t.startsWith('- ')) return false;     // list item
   if (t.startsWith('#')) return false;      // heading
   if (t.startsWith('*') || t.startsWith('**')) return false;
-  if (/^[A-Z][a-z]+[#:]/ .test(t)) return false; // prose sentence
+  if (/^[A-Z][a-z]+[#:]/.test(t)) return false; // prose sentence
   if (t === '↻ replay' || t === 'Expand' || t === '✓') return false;
   return true;
 };
