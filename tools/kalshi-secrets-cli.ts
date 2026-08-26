@@ -121,6 +121,17 @@ function logSetCall(service: string, name: string, valueLen: number, unrestricte
 
 async function store(args: CliArgs): Promise<number> {
   const env = Bun.env;
+  // S218: --key-secret puts the PEM on the command line (visible in ps).
+  // Refuse unless the explicit escape hatch is set - the registry policy
+  // for kalshi-private-key allows vault+env ONLY (never argv).
+  if (args.keySecret && Bun.env.KALSHI_SECRETS_ALLOW_ARGV !== "1") {
+    console.error(
+      "Refusing --key-secret: the PEM would be visible in the process list (ps). " +
+        "Use --key-file, KALSHI_PRIVATE_KEY, or KALSHI_PRIVATE_KEY_PATH instead. " +
+        "To override for throwaway test keys only, set KALSHI_SECRETS_ALLOW_ARGV=1.",
+    );
+    return 2;
+  }
   const keyId = (args.keyId ?? env.KALSHI_API_KEY_ID ?? env.KALSHI_ACCESS_KEY)?.trim();
   if (!keyId) {
     console.error("Missing key id — pass --key-id or set KALSHI_API_KEY_ID (or KALSHI_ACCESS_KEY)");

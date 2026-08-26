@@ -232,6 +232,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §215 — Other metadata controls audited — Bun.secrets exists but {service,name}; Bun.env writable + snapshotted; Env augmentation works (2026-08-26)
 - §216 — Deeper 1.4 analysis audited — fs.rmdir({recursive}) removed (audit check #15), ML-KEM undefined, TOML v1.1 strict (2026-08-26)
 - §217 — Complete deep-dive audited — 'Zig to Rust rewrite' false; static-route If-Match/If-Unmodified-Since 412 verified (2026-08-26)
+- §218 — Why security wasn't secret+defined — SECRET_REGISTRY + argv-leak gate wired (2026-08-26)
 - §199 — ui:regen CLI — regenerate UI artifacts from meta/variant sources + the Bun.$ template failure class (2026-08-26)
 - §187 — Extended color formats — kernel-only (lch/oklab/oklch/hsv) + inverse parsers (2026-08-26)
 - §188 — Watermark pipeline — ML-DSA key naming + WebView/Blob verified facts (2026-08-26)
@@ -7606,6 +7607,37 @@ audit lockfile/env/ws-handshake/publish-backpressure/v7). NEW findings:
   breaking-audit checks 9/13 (S23); URLPattern/cron OS jobs/Image/Terminal
   are pinned surfaces (S195/S203/S22). Bun.cron in-process tz option
   verified in cronGotchas.
+
+
+
+## 218. Why our security was not 'secret and defined' - the gap + the fix: SECRET_REGISTRY + argv-leak gate (2026-08-26)
+
+Direct answer to 'why is our security not secret and defined': the secret
+STORE was defined (src/lib/secrets.ts wraps Bun.secrets with the correct
+{service,name} object API, injectable backends, env fallback - S215-correct)
+and OUTPUT redaction existed (redact.ts). But two gaps made it not fully
+'secret' nor 'defined':
+- NOT SECRET: tools/kalshi-secrets-cli.ts --key-secret accepted a PLAINTEXT
+  PEM on the command line (visible in ps/process list - the docstring even
+  admitted it). The Kalshi key id was also accepted via --key-id (less
+  sensitive, but still argv).
+- NOT DEFINED: secret names were raw strings scattered across modules
+  ('kalshi-api-key-id', 'kalshi-private-key' in kalshi-auth.ts + the CLI)
+  with no single typed registry, so nothing enforced a source policy.
+FIX (wired):
+- src/lib/secret-registry.ts: SECRET_REGISTRY - every secret is a typed
+  SecretPolicy {service, name, envName, sources, purpose}. Kalshi keys are
+  vault+env ONLY, never argv. secretPolicy() throws on unknown names.
+  argvSecretLeaks(argv) scans for secret-bearing flags (values redacted).
+- kalshi-auth.ts: KALSHI_KEY_ID_SECRET/KALSHI_KEY_SECRET are now typed
+  SecretName keys into the registry; service comes from the policy.
+- kalshi-secrets-cli.ts store: --key-secret is REFUSED (exit 2) unless
+  KALSHI_SECRETS_ALLOW_ARGV=1 (throwaway test keys only) - the plaintext-
+  in-ps path is closed. Use --key-file / KALSHI_PRIVATE_KEY / PATH.
+- Tests: tests/lib/secret-registry.test.ts (5): policy enforcement,
+  single-source-of-truth, unknown-name throw, argv leak scan.
+  Gates: 2789 tests pass / 0 fail; breaking-audit 15 checks ok.
+
 
 
 

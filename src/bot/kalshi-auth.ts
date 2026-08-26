@@ -12,7 +12,8 @@ import {
   type KeyObject,
 } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { DEFAULT_SECRET_SERVICE, getSecret } from "../lib/secrets.ts";
+import { getSecret } from "../lib/secrets.ts";
+import { secretPolicy, type SecretName } from "../lib/secret-registry.ts";
 import { OFFICIAL_URLS } from "../institutions/official-urls.ts";
 
 const KALSHI_WS_URL = new URL(OFFICIAL_URLS.kalshi.tradeApiWsV2);
@@ -29,9 +30,9 @@ export type KalshiCredentials = {
   privateKey: KeyObject;
 };
 
-/** OS-keychain credential names under service com.kalshi-bot — see `bun run kalshi:secrets`. */
-export const KALSHI_KEY_ID_SECRET = "kalshi-api-key-id";
-export const KALSHI_KEY_SECRET = "kalshi-private-key";
+/** OS-keychain credential names — single source of truth: SECRET_REGISTRY (S218). */
+export const KALSHI_KEY_ID_SECRET: SecretName = "kalshi-api-key-id";
+export const KALSHI_KEY_SECRET: SecretName = "kalshi-private-key";
 
 /**
  * Load credentials: env/file first (explicit, fresh), then the OS keychain
@@ -61,7 +62,7 @@ export async function loadKalshiCredentials(
     return { keyId, privateKey: createPrivateKey(pem) };
   }
   if (opts.keychain !== false) {
-    const service = opts.service ?? DEFAULT_SECRET_SERVICE;
+    const service = opts.service ?? secretPolicy(KALSHI_KEY_ID_SECRET).service;
     const vaultKeyId = await getSecret({
       service,
       name: KALSHI_KEY_ID_SECRET,
