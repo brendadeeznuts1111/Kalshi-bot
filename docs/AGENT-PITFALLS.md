@@ -7471,9 +7471,16 @@ Pasted 'Swiss Army knife' bun -p/-e proposal audited against 1.4.0:
 - CORRECTED: compact as a NUMBER is accepted but acts truthy/falsy
   (compact: 2 -> single line like true; compact: 0 -> expanded like false);
   there is NO element-grouping behavior. Type says boolean.
-- PARTIAL: JSX in -e/-p needs the JSX runtime (react/jsx-dev-runtime) -
-  bare TSX errors 'Cannot find module react/jsx-dev-runtime' without it;
-  TS-only expressions are the safe inline path.
+- CORRECTED (user check: 'is it the env?'): JSX is FULLY supported in
+  -e AND -p. The earlier 'Cannot find module react/jsx-dev-runtime' error
+  was MISSING ENV (this repo has ZERO runtime deps - no react), not a -p
+  limitation. With a local jsx-runtime.ts + jsx-dev-runtime.ts in cwd,
+  bun -p 'const el = <div className="a">hi</div>; JSON.stringify(el)'
+  returns the real element {type,key,props,children}; -e works too.
+- ENV CHECK pattern: 'bun env' is NOT a builtin (Script not found); the
+  intended env inspection is bun -p 'process.env' or Bun.env - prints all
+  30 keys (PATH/HOME present - env properly set). bun env --print in the
+  repo resolves to the missing package.json script 'env'.
 - RE-CONFIRMED (S211): the proposal's deepMatch schema example returns
   FALSE (value-sensitive: '' vs 'e1') and its 'actual contains all schema
   properties' framing is the REVERSE of reality (deepMatch checks actual
