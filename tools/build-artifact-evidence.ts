@@ -10,7 +10,7 @@
  * no timestamps. Standalone executables from compile:true are captured
  * then deleted (they are tens of MB).
  */
-import { markdown as mdNamed } from 'bun';
+import { markdown as mdNamed, XML as xmlNamed } from 'bun';
 import { join } from 'node:path';
 import { existsSync, rmSync, mkdtempSync, writeFileSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -1078,17 +1078,17 @@ const miscGotchas = {
 const arcDir = mkdtempSync(join(tmpdir(), 'art-arc-'));
 const archiveGotchas = {
   typeofClass: typeof (Bun as any).Archive,
-  staticWrite: (async () => { const p = join(arcDir, 'out.tar'); await (Bun as any).Archive.write(p, { 'hello.txt': 'Hello' }); return existsSync(p); })(),
+  staticWrite: await (async () => { const p = join(arcDir, 'out.tar'); await (Bun as any).Archive.write(p, { 'hello.txt': 'Hello' }); return existsSync(p); })(),
   blobSize: (await new (Bun as any).Archive({ 'a.txt': 'x'.repeat(1000) }).blob()).size,
   bytesLen: (await new (Bun as any).Archive({ 'a.txt': 'x' }).bytes()).length,
-  extractCount: (async () => { const a = new (Bun as any).Archive({ 'hello.txt': 'H', 'nested/f.txt': 'N' }); return await a.extract(join(arcDir, 'ex')); })(),
-  globExtractExcludes: (async () => { const a = new (Bun as any).Archive({ 'hello.txt': 'H', 'nested/f.txt': 'N' }); await a.extract(join(arcDir, 'exg'), { glob: 'nested/*' } as any); return !existsSync(join(arcDir, 'exg', 'hello.txt')); })(),
-  gzipSmaller: (async () => { const big = 'x'.repeat(5000); const plain = (await new (Bun as any).Archive({ 'a.txt': big }).blob()).size; const gz = (await new (Bun as any).Archive({ 'a.txt': big }, { compress: 'gzip' } as any).blob()).size; return gz < plain; })(),
-  filesIsMap: (async () => { const a = new (Bun as any).Archive({ 'a.txt': 'A' }); const f = await a.files(); return f instanceof Map ? f.size : 0; })(),
+  extractCount: await (async () => { const a = new (Bun as any).Archive({ 'hello.txt': 'H', 'nested/f.txt': 'N' }); return await a.extract(join(arcDir, 'ex')); })(),
+  globExtractExcludes: await (async () => { const a = new (Bun as any).Archive({ 'hello.txt': 'H', 'nested/f.txt': 'N' }); await a.extract(join(arcDir, 'exg'), { glob: 'nested/*' } as any); return !existsSync(join(arcDir, 'exg', 'hello.txt')); })(),
+  gzipSmaller: await (async () => { const big = 'x'.repeat(5000); const plain = (await new (Bun as any).Archive({ 'a.txt': big }).blob()).size; const gz = (await new (Bun as any).Archive({ 'a.txt': big }, { compress: 'gzip' } as any).blob()).size; return gz < plain; })(),
+  filesIsMap: await (async () => { const a = new (Bun as any).Archive({ 'a.txt': 'A' }); const f = await a.files(); return f instanceof Map ? f.size : 0; })(),
 };
 const udpGotchas = {
   typeofFn: typeof (Bun as any).udpSocket,
-  loopbackEcho: (async () => {
+  loopbackEcho: await (async () => {
     let resolveR: (v: string) => void = () => {};
     const rp = new Promise<string>((res) => { resolveR = res; });
     const a = await (Bun as any).udpSocket({ hostname: '127.0.0.1', port: 0, socket: { data: (_s: any, d: any) => resolveR(String(new TextDecoder().decode(d))) } } as any);
@@ -1118,8 +1118,33 @@ const fileGotchas = {
   statIsFile: typeof (await fObj.stat()).isFile === 'function',
   statSize: (await fObj.stat()).size,
   sliceText: await fObj.slice(0, 5).text(),
-  writeBytes: (async () => { const w = join(fileDir, 'written.txt'); return await (Bun as any).write(w, 'abc'); })(),
-  writeOverwritesBunFile: (async () => { const w = join(fileDir, 'w2.txt'); await (Bun as any).write(w, 'old'); await (Bun as any).write((Bun as any).file(w), 'xyz'); return await (Bun as any).file(w).text(); })(),
+  writeBytes: await (async () => { const w = join(fileDir, 'written.txt'); return await (Bun as any).write(w, 'abc'); })(),
+  writeOverwritesBunFile: await (async () => { const w = join(fileDir, 'w2.txt'); await (Bun as any).write(w, 'old'); await (Bun as any).write((Bun as any).file(w), 'xyz'); return await (Bun as any).file(w).text(); })(),
+};
+
+// ---------- xmlGotchas: Bun.XML (docs/runtime/xml.mdx, new in v1.4) ----------
+const xmlDir = mkdtempSync(join(tmpdir(), 'art-xml-'));
+const xmlFixture = join(xmlDir, 'config.xml');
+writeFileSync(xmlFixture, '<config><name>demo</name><port>8080</port></config>');
+const xmlParseDoc = xmlNamed.parse('<order id="A1"><item sku="x">Tea</item><item sku="y">Mug</item><paid/></order>');
+const xmlBig = '<root>' + Array.from({ length: 20000 }, (_u, i) => '<item id="' + i + '"><name>Item ' + i + '</name><v>' + (i * 1.5) + '</v></item>').join('') + '</root>';
+const xmlT0 = performance.now();
+xmlNamed.parse(xmlBig);
+const xmlPerfMs = Number((performance.now() - xmlT0).toFixed(1));
+const xmlGotchas = {
+  surface: { bunXml: typeof (Bun as any).XML, namedXml: typeof xmlNamed },
+  namedIdentity: (Bun as any).XML === xmlNamed,
+  parseCompact: JSON.stringify(xmlParseDoc),
+  parseTreeKeys: JSON.stringify(Object.keys(xmlNamed.parse('<p>Hello <b>world</b>!</p>', { compact: false } as any))),
+  roundtrip: xmlNamed.stringify(xmlNamed.parse('<a><b>x</b></a>')) === '<a><b>x</b></a>',
+  escapesAmp: xmlNamed.stringify({ a: { b: 'x & y < z >' } } as any),
+  scalarDate: xmlNamed.stringify({ d: new Date(0) } as any),
+  throwOnMalformed: (() => { try { xmlNamed.stringify({ 'a<b': 'x' } as any); return false; } catch { return true; } })(),
+  xxeUnresolved: (() => { try { return JSON.stringify(xmlNamed.parse('<!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><a>&xxe;</a>')).slice(0, 90); } catch (e: any) { return 'THREW ' + e.name; } })(),
+  importEvalToCompact: await (async () => { const m: any = await import(join(xmlFixture)); return JSON.stringify(m.default ?? m); })(),
+  bundlerInlines: await (async () => { const out = await Bun.build({ entrypoints: [xmlFixture], outdir: join(xmlDir, 'out') } as any); if (!out.success) return 'BUILD_FAIL'; return (await out.outputs[0]!.text()).includes('demo'); })(),
+  perf20kItemsMs: xmlPerfMs,
+  perfVsDocs: xmlPerfMs < 27 * 2.5 ? 'CONSISTENT (docs 27 ms for 2.2 MB)' : 'DIFFERS',
 };
 // ---------- emit ----------
 const evidence = {
@@ -1148,6 +1173,7 @@ const evidence = {
   archiveGotchas,
   udpGotchas,
   fileGotchas,
+  xmlGotchas,
   scenarios,
 };
 await Bun.write(EVIDENCE, JSON.stringify(evidence, null, 2) + '\n');

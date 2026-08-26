@@ -207,6 +207,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §185 — Strict typing migration — tsconfig + 661 errors fixed, behavior preserved (2026-08-26)
 - §186 — Blog benchmark + code-block verification — numbers and examples grounded (2026-08-26)
 - §191 — Code mode — the bash execution-tier gate (docs/CODE_MODE.md) (2026-08-26)
+- §192 — Bun.XML grounded + async-IIFE evidence bug (2026-08-26)
 - §187 — Extended color formats — kernel-only (lch/oklab/oklch/hsv) + inverse parsers (2026-08-26)
 - §188 — Watermark pipeline — ML-DSA key naming + WebView/Blob verified facts (2026-08-26)
 - §189 — Color input-parsing correction — lab()/lch() parse natively, oklab/oklch/hsv/device-cmyk null (2026-08-26)
@@ -6952,4 +6953,27 @@ against the guide, runtime probes, and pinned bun-types 1.4.0:
     changes the digest by design; same bytes + metadata -> byte-identical tuple.
     Surfaces: bun run canonical:asset CLI (writes .png + .metadata.json),
     bench:feature evidence, tests/lib/canonical-asset.test.ts.
+## 192. Bun.XML grounded + async-IIFE evidence bug (2026-08-26)
+
+Bun.XML surface grounded (8 claims: XML-parse/stringify/compact/xxe/import/bundler/
+namedExport/perf): parse compact shape (@name attrs, #text, child arrays), tree
+shape { compact: false }, stringify round-trips + escapes & < > + Date ISO + throws on
+malformed names, XXE-safe (DOCTYPE/ENTITY left as literal text, never resolved),
+.xml imports evaluate to the compact shape, Bun.build inlines .xml at build time
+(output contains the parsed data), import { XML } from "bun" === Bun.XML, and the
+SIMD perf claim measured: 6.2 ms for ~1.2 MB (docs: 27 ms for 2.2 MB) - CONSISTENT.
+Cross-check: 153 claims (145 CONSISTENT / 8 PINNED-DISCREPANCY), gaps 0.
+Docs source routing: run.ts only loaded docs/bundler/index.mdx - .mdx sources from
+other paths (docs/runtime/xml.mdx) resolved to the bundler doc and DOC-CHANGED;
+added xmlMdx + explicit source routing.
+
+EVIDENCE PITFALL (invalidated earlier AR/UDP/FI values): an async IIFE in an object
+literal (`staticWrite: (async () => {...})()`) returns a PENDING PROMISE -
+JSON.stringify serializes it as {}, and the cross-check treats {} as a defined
+value, so the claim passes against BOGUS evidence. Fix: top-level await
+(`staticWrite: await (async () => {...})()` - the evidence tool is ESM). Only the
+utilityGotchas password block used direct await and was correct. Re-verified:
+udp loopbackEcho now records the real 'ping-42' round-trip; archive extractCount=2;
+file writeBytes=3; xml import = compact shape.
+
 

@@ -697,17 +697,17 @@
   },
   "archiveGotchas": {
     "typeofClass": "function",
-    "staticWrite": {},
+    "staticWrite": true,
     "blobSize": 10240,
     "bytesLen": 10240,
-    "extractCount": {},
-    "globExtractExcludes": {},
-    "gzipSmaller": {},
-    "filesIsMap": {}
+    "extractCount": 2,
+    "globExtractExcludes": true,
+    "gzipSmaller": true,
+    "filesIsMap": 1
   },
   "udpGotchas": {
     "typeofFn": "function",
-    "loopbackEcho": {}
+    "loopbackEcho": "{\"sent\":true,\"msg\":\"ping-42\",\"family\":\"IPv4\",\"closed\":true}"
   },
   "fileGotchas": {
     "name": "hello.txt",
@@ -720,8 +720,26 @@
     "statIsFile": true,
     "statSize": 13,
     "sliceText": "Hello",
-    "writeBytes": {},
-    "writeOverwritesBunFile": {}
+    "writeBytes": 3,
+    "writeOverwritesBunFile": "xyz"
+  },
+  "xmlGotchas": {
+    "surface": {
+      "bunXml": "object",
+      "namedXml": "object"
+    },
+    "namedIdentity": true,
+    "parseCompact": "{\"order\":{\"@id\":\"A1\",\"item\":[{\"@sku\":\"x\",\"#text\":\"Tea\"},{\"@sku\":\"y\",\"#text\":\"Mug\"}],\"paid\":\"\"}}",
+    "parseTreeKeys": "[\"name\",\"attributes\",\"children\"]",
+    "roundtrip": true,
+    "escapesAmp": "<a><b>x &amp; y &lt; z &gt;</b></a>",
+    "scalarDate": "<d>1970-01-01T00:00:00.000Z</d>",
+    "throwOnMalformed": true,
+    "xxeUnresolved": "{\"a\":\"&xxe;\"}",
+    "importEvalToCompact": "{\"config\":{\"name\":\"demo\",\"port\":\"8080\"}}",
+    "bundlerInlines": true,
+    "perf20kItemsMs": 6.2,
+    "perfVsDocs": "CONSISTENT (docs 27 ms for 2.2 MB)"
   },
   "scenarios": [
     {
@@ -1169,7 +1187,7 @@
         {
           "path": "outbc/pure.js.jsc",
           "kind": "bytecode",
-          "hash": "nv87kxgs",
+          "hash": "m20cyq2h",
           "loader": "file",
           "size": 10944,
           "type": "application/octet-stream",

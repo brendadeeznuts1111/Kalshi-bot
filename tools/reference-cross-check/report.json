@@ -5,7 +5,7 @@
   "bundleHash": "bun-types@1.4.0-c0dadede486f49ab",
   "verdictCounts": {
     "PINNED-DISCREPANCY": 8,
-    "CONSISTENT": 137
+    "CONSISTENT": 145
   },
   "checks": [
     {
@@ -1162,7 +1162,7 @@
       "api": "write",
       "source": "bun.d.ts",
       "docSays": "Archive.write is STATIC (path, data, options); writes a tarball to disk",
-      "observed": {},
+      "observed": true,
       "verdict": "CONSISTENT"
     },
     {
@@ -1178,7 +1178,7 @@
       "api": "extract",
       "source": "bun.d.ts",
       "docSays": "Archive.extract(dir, { glob }) returns the extracted entry count; glob filters (negative patterns exclude)",
-      "observed": {},
+      "observed": 2,
       "verdict": "CONSISTENT"
     },
     {
@@ -1186,7 +1186,7 @@
       "api": "compress",
       "source": "bun.d.ts",
       "docSays": "ArchiveOptions { compress: \"gzip\", level }: gzipped archive is smaller than the plain tarball",
-      "observed": {},
+      "observed": true,
       "verdict": "CONSISTENT"
     },
     {
@@ -1194,7 +1194,7 @@
       "api": "files",
       "source": "bun.d.ts",
       "docSays": "Archive.files() returns a Map of path -> file; also accepts glob filters",
-      "observed": {},
+      "observed": 1,
       "verdict": "CONSISTENT"
     },
     {
@@ -1202,7 +1202,7 @@
       "api": "udpSocket",
       "source": "bun.d.ts",
       "docSays": "Bun.udpSocket(options) resolves to a udp.Socket; handler configured via options.socket.data",
-      "observed": {},
+      "observed": "{\"sent\":true,\"msg\":\"ping-42\",\"family\":\"IPv4\",\"closed\":true}",
       "verdict": "CONSISTENT"
     },
     {
@@ -1210,7 +1210,7 @@
       "api": "send",
       "source": "bun.d.ts",
       "docSays": "udp.Socket.send(data, port, address) - LOOPBACK ECHO verified (127.0.0.1 ping-42 round-trips); address getter {address,family,port}; close() sets closed=true",
-      "observed": {},
+      "observed": "{\"sent\":true,\"msg\":\"ping-42\",\"family\":\"IPv4\",\"closed\":true}",
       "verdict": "CONSISTENT"
     },
     {
@@ -1226,7 +1226,71 @@
       "api": "write",
       "source": "bun.d.ts",
       "docSays": "Bun.write(path|BunFile, data) returns the byte count; writing to a BunFile overwrites the file",
-      "observed": {},
+      "observed": 3,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "XML-parse",
+      "api": "parse",
+      "source": "bun.d.ts",
+      "docSays": "XML.parse: compact Document by default (root key -> attributes @name, child arrays, #text); tree shape with { compact: false }",
+      "observed": "{\"order\":{\"@id\":\"A1\",\"item\":[{\"@sku\":\"x\",\"#text\":\"Tea\"},{\"@sku\":\"y\",\"#text\":\"Mug\"}],\"paid\":\"\"}}",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "XML-stringify",
+      "api": "stringify",
+      "source": "bun.d.ts",
+      "docSays": "XML.stringify: round-trips parse(x) exactly, escapes & < >, Date scalar -> ISO, THROWS on malformed element names",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "XML-compact",
+      "api": "parse",
+      "source": "bun.d.ts",
+      "docSays": "compact shape: attributes are \"@name\" keys, child names key elements, arrays for repeats, \"#text\" for own text",
+      "observed": "{\"order\":{\"@id\":\"A1\",\"item\":[{\"@sku\":\"x\",\"#text\":\"Tea\"},{\"@sku\":\"y\",\"#text\":\"Mug\"}],\"paid\":\"\"}}",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "XML-xxe",
+      "api": "parse",
+      "source": "docs/runtime/xml.mdx",
+      "docSays": "XXE-safe: external DTDs/entities not read; a DOCTYPE/ENTITY document does NOT resolve the external entity",
+      "observed": "{\"a\":\"&xxe;\"}",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "XML-import",
+      "api": "parse",
+      "source": "bun.d.ts",
+      "docSays": "importing a .xml file evaluates to the same compact Document shape as XML.parse",
+      "observed": "{\"config\":{\"name\":\"demo\",\"port\":\"8080\"}}",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "XML-bundler",
+      "api": "parse",
+      "source": "docs/runtime/xml.mdx",
+      "docSays": "Bun.build parses imported .xml files at build time and inlines them as JS objects (output contains the parsed data)",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "XML-namedExport",
+      "api": "XML",
+      "source": "bun.d.ts",
+      "docSays": "Bun.XML and import { XML } from \"bun\" are the SAME namespace object; parse + stringify exposed",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "XML-perf",
+      "api": "parse",
+      "source": "docs/runtime/xml.mdx",
+      "docSays": "performance: SIMD parse of a ~2 MB doc measured on this machine (docs claim 27 ms for 2.2 MB)",
+      "observed": 6.2,
       "verdict": "CONSISTENT"
     }
   ],

@@ -26,6 +26,7 @@ export async function runCrossCheck(): Promise<number> {
   const dts = await readFile(dtsPath);
   const mdxPath = join(bundle, 'docs/bundler/index.mdx');
   const mdx = await readFile(mdxPath);
+  const xmlMdx = await readFile(join(bundle, 'docs/runtime/xml.mdx'));
   const serveDts = await readFile(join(bundle, 'serve.d.ts'));
   const sqliteDts = await readFile(join(bundle, 'sqlite.d.ts'));
   const nodeTypesRoot = locateCachePackage(ROOT, '@types+node@');
@@ -36,7 +37,7 @@ export async function runCrossCheck(): Promise<number> {
   // ledger checks
   const checks: CheckResult[] = [];
   for (const claim of LEDGER) {
-    const src = claim.source === 'serve.d.ts' ? serveDts : claim.source === 'sqlite.d.ts' ? sqliteDts : claim.source === 'node url.d.ts' ? nodeUrlDts : claim.source === 's3.d.ts' ? s3Dts : claim.source.endsWith('.mdx') ? mdx : dts;
+    const src = claim.source === 'serve.d.ts' ? serveDts : claim.source === 'sqlite.d.ts' ? sqliteDts : claim.source === 'node url.d.ts' ? nodeUrlDts : claim.source === 's3.d.ts' ? s3Dts : claim.source === 'docs/runtime/xml.mdx' ? xmlMdx : claim.source.endsWith('.mdx') ? mdx : dts;
     checks.push(checkClaim(claim, src, ev));
   }
 
@@ -81,6 +82,7 @@ export async function runCrossCheck(): Promise<number> {
   declared['Bun.Archive.ArchiveOptions'] = interfaceFields(dts, 'ArchiveOptions');
   declared['Bun.udpSocket'] = ['address', 'binaryType', 'close', 'closed', 'fd', 'hostname', 'port', 'ref', 'reload', 'remoteAddress', 'send', 'sendMany', 'setBroadcast', 'setTTL', 'unref']; // curated - udp.Socket
   declared['Bun.BunFile'] = ['name', 'size', 'type', 'lastModified', 'text', 'json', 'arrayBuffer', 'bytes', 'stream', 'slice', 'stat', 'exists', 'writer', 'unlink']; // curated - BunFile runtime surface
+  declared['Bun.XML'] = ['parse', 'stringify']; // curated - namespace (like markdown)
   declared['Bun.which'] = ['which'];
   declared['Bun.peek'] = ['peek', 'status'];
   declared['Bun.sleep'] = ['sleep', 'sleepSync'];

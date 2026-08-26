@@ -188,6 +188,14 @@ export const LEDGER: LedgerClaim[] = [
   { id: 'UDP-send', api: 'send', source: 'bun.d.ts', fragment: 'send(data: Data, port: number, address: string): boolean;', docSays: 'udp.Socket.send(data, port, address) - LOOPBACK ECHO verified (127.0.0.1 ping-42 round-trips); address getter {address,family,port}; close() sets closed=true', evidencePath: 'udpGotchas.loopbackEcho', kind: 'consistent' },
   { id: 'FI-surface', api: 'file', source: 'bun.d.ts', fragment: 'interface BunFile extends Blob', docSays: 'Bun.file(path) -> Blob-extending surface: name/size/type/lastModified/exists/text/json/arrayBuffer/stat/slice all verified', evidencePath: 'fileGotchas.text', kind: 'consistent' },
   { id: 'BW-write', api: 'write', source: 'bun.d.ts', fragment: 'A promise that resolves with the number of bytes written.', docSays: 'Bun.write(path|BunFile, data) returns the byte count; writing to a BunFile overwrites the file', evidencePath: 'fileGotchas.writeBytes', kind: 'consistent' },
+  { id: 'XML-parse', api: 'parse', source: 'bun.d.ts', fragment: 'Parse an XML 1.0 document.', docSays: 'XML.parse: compact Document by default (root key -> attributes @name, child arrays, #text); tree shape with { compact: false }', evidencePath: 'xmlGotchas.parseCompact', kind: 'consistent' },
+  { id: 'XML-stringify', api: 'stringify', source: 'bun.d.ts', fragment: 'The output is well-formed or', docSays: 'XML.stringify: round-trips parse(x) exactly, escapes & < >, Date scalar -> ISO, THROWS on malformed element names', evidencePath: 'xmlGotchas.roundtrip', kind: 'consistent' },
+  { id: 'XML-compact', api: 'parse', source: 'bun.d.ts', fragment: '"@name"` — one per attribute', docSays: 'compact shape: attributes are "@name" keys, child names key elements, arrays for repeats, "#text" for own text', evidencePath: 'xmlGotchas.parseCompact', kind: 'consistent' },
+  { id: 'XML-xxe', api: 'parse', source: 'docs/runtime/xml.mdx', fragment: 'so there is no XXE surface', docSays: 'XXE-safe: external DTDs/entities not read; a DOCTYPE/ENTITY document does NOT resolve the external entity', evidencePath: 'xmlGotchas.xxeUnresolved', kind: 'consistent' },
+  { id: 'XML-import', api: 'parse', source: 'bun.d.ts', fragment: 'importing an `.xml` file evaluates to', docSays: 'importing a .xml file evaluates to the same compact Document shape as XML.parse', evidencePath: 'xmlGotchas.importEvalToCompact', kind: 'consistent' },
+  { id: 'XML-bundler', api: 'parse', source: 'docs/runtime/xml.mdx', fragment: 'the bundler parses imported XML files at build time', docSays: 'Bun.build parses imported .xml files at build time and inlines them as JS objects (output contains the parsed data)', evidencePath: 'xmlGotchas.bundlerInlines', kind: 'consistent' },
+  { id: 'XML-namedExport', api: 'XML', source: 'bun.d.ts', fragment: 'XML related APIs', docSays: 'Bun.XML and import { XML } from "bun" are the SAME namespace object; parse + stringify exposed', evidencePath: 'xmlGotchas.namedIdentity', kind: 'consistent' },
+  { id: 'XML-perf', api: 'parse', source: 'docs/runtime/xml.mdx', fragment: '27 ms', docSays: 'performance: SIMD parse of a ~2 MB doc measured on this machine (docs claim 27 ms for 2.2 MB)', evidencePath: 'xmlGotchas.perf20kItemsMs', kind: 'consistent' },
 ];
 
 /** APIs with grounded evidence but no ledger row (fit/filter/quality/... come from the probe gates). */
@@ -212,6 +220,7 @@ export const EXTRA_GROUNDED: string[] = [
   'compress', 'level', 'extract', 'files', 'address', 'binaryType', 'closed', 'fd',
   'ref', 'reload', 'remoteAddress', 'send', 'sendMany', 'setBroadcast', 'setTTL', 'unref',
   'writer', 'exists', 'stat',
+  'stringify', 'XML',
 ];
 
 export function checkClaim(claim: LedgerClaim, sourceText: string, ev: Evidence): CheckResult {
