@@ -30,12 +30,13 @@ export async function runCrossCheck(): Promise<number> {
   const sqliteDts = await readFile(join(bundle, 'sqlite.d.ts'));
   const nodeTypesRoot = locateCachePackage(ROOT, '@types+node@');
   const nodeUrlDts = await readFile(join(nodeTypesRoot, '@types/node', 'url.d.ts'));
+  const s3Dts = await readFile(join(bundle, 's3.d.ts'));
   const ev = await loadEvidence(join(ROOT, 'tools/build-artifact-evidence.json'));
 
   // ledger checks
   const checks: CheckResult[] = [];
   for (const claim of LEDGER) {
-    const src = claim.source === 'serve.d.ts' ? serveDts : claim.source === 'sqlite.d.ts' ? sqliteDts : claim.source === 'node url.d.ts' ? nodeUrlDts : claim.source.endsWith('.mdx') ? mdx : dts;
+    const src = claim.source === 'serve.d.ts' ? serveDts : claim.source === 'sqlite.d.ts' ? sqliteDts : claim.source === 'node url.d.ts' ? nodeUrlDts : claim.source === 's3.d.ts' ? s3Dts : claim.source.endsWith('.mdx') ? mdx : dts;
     checks.push(checkClaim(claim, src, ev));
   }
 
@@ -59,6 +60,12 @@ export async function runCrossCheck(): Promise<number> {
   declared['bun:sqlite.Statement'] = classMembers(sqliteDts, 'Statement');
   declared['URLPattern'] = interfaceFields(nodeUrlDts, 'URLPattern');
   declared['URLPatternInit'] = interfaceFields(nodeUrlDts, 'URLPatternInit');
+  declared['Bun.cron.CronOptions'] = interfaceFields(dts, 'CronOptions');
+  declared['Bun.cron.CronJob'] = interfaceFields(dts, 'CronJob');
+  declared['Bun.cron.CronController'] = interfaceFields(dts, 'CronController');
+  declared['WebView'] = classMembers(dts, 'WebView');
+  declared['S3File'] = interfaceFields(s3Dts, 'S3File');
+  declared['S3Client'] = classMembers(s3Dts, 'S3Client');
   const gaps = coverageGaps(declared, covered);
 
   const meta: CrossCheckMeta = {

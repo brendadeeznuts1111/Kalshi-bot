@@ -43,6 +43,9 @@ const SURFACES: [string, string][] = [
   ['SV', 'Bun.serve'],
   ['SQ', 'bun:sqlite'],
   ['UP', 'URLPattern'],
+  ['CR', 'Bun.cron'],
+  ['WV', 'Bun.WebView'],
+  ['S3', 'Bun.s3'],
 ];
 
 export function renderSection9(checks: CheckResult[], gaps: CoverageGap[], meta: CrossCheckMeta): string {

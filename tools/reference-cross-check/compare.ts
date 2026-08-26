@@ -110,6 +110,27 @@ export const LEDGER: LedgerClaim[] = [
   { id: 'SV-maxRequestBodySize', api: 'maxRequestBodySize', source: 'serve.d.ts', fragment: 'maximum size of a request body', docSays: 'maxRequestBodySize: oversized POST rejected', evidencePath: 'gapCloseGotchas.serveMaxRequestBody.overStatus', kind: 'consistent' },
   { id: 'BC-jsxFragment', api: 'fragment', source: 'bun.d.ts', fragment: 'fragment?: string', docSays: 'jsx fragment: custom Fragment element', evidencePath: 'gapCloseGotchas.jsxFragment.fragmentHonored', kind: 'consistent' },
   { id: 'BC-jsxSideEffects', api: 'sideEffects', source: 'bun.d.ts', fragment: 'sideEffects?: boolean', docSays: 'jsx sideEffects: accepted', evidencePath: 'gapCloseGotchas.jsxFragment.sideEffectsAccepted', kind: 'consistent' },
+  { id: 'CR-parse', api: 'cron', source: 'bun.d.ts', fragment: 'previews the next', docSays: 'cron.parse: deterministic next-fire-time', evidencePath: 'cronGotchas.parseEveryMinuteUtc', kind: 'consistent' },
+  { id: 'CR-schedule', api: 'cron', source: 'bun.d.ts', fragment: 'minute hour day-of-month month day-of-week', docSays: '5-field cron expression', evidencePath: 'cronGotchas.parseEveryMinuteUtc', kind: 'consistent' },
+  { id: 'CR-nickname', api: 'cron', source: 'bun.d.ts', fragment: '@yearly', docSays: 'nicknames (@daily etc.)', evidencePath: 'cronGotchas.parseNicknameUtc', kind: 'consistent' },
+  { id: 'CR-tz', api: 'tz', source: 'bun.d.ts', fragment: 'IANA time-zone name to interpret the schedule', docSays: 'tz option honored (UTC/NY differ; default = system local)', evidencePath: 'cronGotchas.parseTzUtc', kind: 'consistent' },
+  { id: 'CR-invalid', api: 'cron', source: 'bun.d.ts', fragment: 'Validated at runtime by the cron parser', docSays: 'invalid expressions throw at runtime', evidencePath: 'cronGotchas.invalidThrows', kind: 'consistent' },
+  { id: 'CR-job', api: 'cron', source: 'bun.d.ts', fragment: 'Cancel this cron job', docSays: 'CronJob handle: cron/stop/ref/unref', evidencePath: 'cronGotchas.jobSurface', kind: 'consistent' },
+  { id: 'WV-navigate', api: 'navigate', source: 'bun.d.ts', fragment: 'navigate(url: string): Promise<void>', docSays: 'WebView.navigate: data: URLs work offline', evidencePath: 'webviewGotchas.navigateData.urlPrefix', kind: 'consistent' },
+  { id: 'WV-evaluate', api: 'evaluate', source: 'bun.d.ts', fragment: 'evaluate<T = unknown>(script: string)', docSays: 'WebView.evaluate (NOT eval): DOM + expression eval', evidencePath: 'webviewGotchas.evaluate.domText', kind: 'consistent' },
+  { id: 'WV-screenshot', api: 'screenshot', source: 'bun.d.ts', fragment: 'screenshot(options?: { encoding?: "blob"', docSays: 'WebView.screenshot: png buffer', evidencePath: 'webviewGotchas.screenshotPng.ok', kind: 'consistent' },
+  { id: 'WV-surface', api: 'loading', source: 'bun.d.ts', fragment: 'readonly loading: boolean', docSays: 'WebView surface: url/title/loading + navigate/evaluate/screenshot/cdp/click', evidencePath: 'webviewGotchas.surface.navigate', kind: 'consistent' },
+  { id: 'WV-close', api: 'close', source: 'bun.d.ts', fragment: 'close(): void', docSays: 'WebView disposal: close() + Symbol.dispose (no destroy)', evidencePath: 'webviewGotchas.surface.close', kind: 'consistent' },
+  { id: 'S3-file', api: 'S3File', source: 's3.d.ts', fragment: 'interface S3File extends Blob', docSays: 'S3File: Blob-extending surface (name/size/type/lastModified + read methods)', evidencePath: 's3Gotchas.fileSurface.name', kind: 'consistent' },
+  { id: 'S3-presign', api: 'presign', source: 's3.d.ts', fragment: 'Number of seconds until the presigned URL expires', docSays: 'S3File.presign: needs credentials (rejects offline)', evidencePath: 's3Gotchas.noCreds.presign', kind: 'consistent' },
+  { id: 'S3-slice', api: 'slice', source: 's3.d.ts', fragment: 'A new S3File representing the specified range', docSays: 'S3File.slice: range views', evidencePath: 's3Gotchas.fileSurface.slice', kind: 'consistent' },
+  { id: 'S3-stats', api: 'stat', source: 's3.d.ts', fragment: 'interface S3Stats', docSays: 'S3File.stat: S3Stats (needs creds)', evidencePath: 's3Gotchas.noCreds.stat', kind: 'consistent' },
+  { id: 'S3-noRead', api: 'read', source: 's3.d.ts', fragment: 'interface S3File extends Blob', docSays: 'S3File has NO .read() (use text/json/image/slice/arrayBuffer)', evidencePath: 's3Gotchas.fileSurface.read', kind: 'consistent' },
+  { id: 'WV-backForward', api: 'back', source: 'bun.d.ts', fragment: 'back():', docSays: 'WebView back/forward DECLARED in types but ABSENT at runtime on 1.4.0', evidencePath: 'webviewGotchas.gapSurface.back', kind: 'discrepancy' },
+  { id: 'WV-scrollTo', api: 'scrollTo', source: 'bun.d.ts', fragment: 'scrollTo(', docSays: 'WebView.scrollTo is SELECTOR-based (numeric args throw)', evidencePath: 'webviewGotchas.scrollToSelectorBased', kind: 'consistent' },
+  { id: 'WV-surface2', api: 'reload', source: 'bun.d.ts', fragment: 'reload()', docSays: 'WebView: closeAll/addEventListener/reload/resize present', evidencePath: 'webviewGotchas.reloadOk', kind: 'consistent' },
+  { id: 'S3-fileDataOptions', api: 'data', source: 's3.d.ts', fragment: 'interface S3File extends Blob', docSays: 'S3File data/options DECLARED in types but ABSENT at runtime on 1.4.0', evidencePath: 's3Gotchas.fileDataOptions.data', kind: 'discrepancy' },
+  { id: 'S3-list', api: 'list', source: 's3.d.ts', fragment: 'list(', docSays: 'S3Client.list: needs credentials (rejects offline)', evidencePath: 's3Gotchas.clientList', kind: 'consistent' },
 ];
 
 /** APIs with grounded evidence but no ledger row (fit/filter/quality/... come from the probe gates). */
@@ -122,6 +143,10 @@ export const EXTRA_GROUNDED: string[] = [
   'prepare', 'get', 'all', 'values', 'exec', 'close', 'open', 'MAX_QUERY_CACHE_SIZE', 'file',
   'inTransaction', 'as', 'columnNames', 'columnTypes', 'paramsCount',
   'protocol', 'hostname', 'port', 'search', 'hash', 'username', 'password', 'groups',
+  'parse', 'remove', 'type', 'scheduledTime', 'ref', 'unref', 'stop',
+  'url', 'title', 'loading', 'onNavigated', 'onNavigationFailed', 'evaluate', 'screenshot', 'cdp', 'click', 'close', 'type', 'press', 'scroll',
+  'name', 'size', 'type', 'lastModified', 'exists', 'stat', 'write', 'text', 'json', 'image', 'presign', 'unlink', 'delete', 'slice', 'arrayBuffer', 'file', 'bucket',
+  'scrollTo', 'reload', 'resize', 'closeAll', 'addEventListener', 'list', 'forward', 'options',
 ];
 
 export function checkClaim(claim: LedgerClaim, sourceText: string, ev: Evidence): CheckResult {

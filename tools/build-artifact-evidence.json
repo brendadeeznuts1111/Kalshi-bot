@@ -409,6 +409,88 @@
       "sideEffectsAccepted": true
     }
   },
+  "cronGotchas": {
+    "parseEveryMinuteUtc": "2026-01-01T00:01:00.000Z",
+    "parseStepUtc": "2026-01-01T00:05:00.000Z",
+    "parseRangeUtc": "2026-01-01T00:01:00.000Z",
+    "parseCommaUtc": "2026-01-01T00:01:00.000Z",
+    "parseNicknameUtc": "2026-01-02T00:00:00.000Z",
+    "parseTzUtc": "2026-01-01T09:30:00.000Z",
+    "parseTzNy": "2026-01-01T14:30:00.000Z",
+    "parseDefaultTzOffsetHours": 6,
+    "invalidThrows": true,
+    "jobSurface": {
+      "cron": "* * * * *",
+      "stop": "function",
+      "ref": "function",
+      "unref": "function"
+    }
+  },
+  "webviewGotchas": {
+    "ctorOk": true,
+    "navigateData": {
+      "urlPrefix": "data:text/h"
+    },
+    "evaluate": {
+      "domText": "42",
+      "expression": 2
+    },
+    "screenshotPng": {
+      "ok": true
+    },
+    "surface": {
+      "navigate": "function",
+      "evaluate": "function",
+      "screenshot": "function",
+      "cdp": "function",
+      "click": "function",
+      "close": "function",
+      "dispose": "function",
+      "destroy": "undefined"
+    },
+    "gapSurface": {
+      "closeAll": "function",
+      "addEventListener": "function",
+      "scrollTo": "function",
+      "resize": "function",
+      "back": "undefined",
+      "forward": "undefined",
+      "reload": "function"
+    },
+    "reloadOk": true,
+    "scrollToSelectorBased": true,
+    "resizeOk": false
+  },
+  "s3Gotchas": {
+    "fileSurface": {
+      "name": "string",
+      "size": "number",
+      "type": "string",
+      "lastModified": "number",
+      "exists": "function",
+      "stat": "function",
+      "write": "function",
+      "read": "undefined",
+      "text": "function",
+      "json": "function",
+      "image": "function",
+      "presign": "function",
+      "unlink": "function",
+      "delete": "function",
+      "slice": "function",
+      "arrayBuffer": "function"
+    },
+    "fileDataOptions": {
+      "data": "undefined",
+      "options": "undefined"
+    },
+    "clientList": "ERR_S3_MISSING_CREDENTIALS",
+    "noCreds": {
+      "stat": "ERR_S3_MISSING_CREDENTIALS",
+      "exists": "ERR_S3_MISSING_CREDENTIALS",
+      "presign": "ERR_S3_MISSING_CREDENTIALS"
+    }
+  },
   "scenarios": [
     {
       "name": "S01-artifact-surface",
@@ -855,7 +937,7 @@
         {
           "path": "outbc/pure.js.jsc",
           "kind": "bytecode",
-          "hash": "z9tag659",
+          "hash": "w3hpc826",
           "loader": "file",
           "size": 10944,
           "type": "application/octet-stream",

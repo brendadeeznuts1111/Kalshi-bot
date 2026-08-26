@@ -749,6 +749,79 @@ const gapCloseGotchas = {
   jsxFragment: { fragmentHonored: gcJ1.includes('Frag'), sideEffectsAccepted: gcJ2 === 'ok' },
 };
 
+// ---------- cronGotchas: Bun.cron (178) - parse is deterministic offline ----------
+const cronMod: any = (await import('bun')).cron;
+const cronBase = new Date('2026-01-01T00:00:00.000Z');
+const cronParse = (expr: string, opts: any = {}) => { try { const d = cronMod.parse(expr, cronBase, opts); return d instanceof Date ? d.toISOString() : String(d); } catch (err: any) { return 'THROWS ' + String(err.message ?? err).slice(0, 40); } };
+const cronUtc = (expr: string) => cronParse(expr, { tz: 'UTC' });
+const cronJob = cronMod('* * * * *', () => {});
+const cronGotchas = {
+  parseEveryMinuteUtc: cronUtc('* * * * *'),
+  parseStepUtc: cronUtc('*/5 * * * *'),
+  parseRangeUtc: cronUtc('1-5 * * * *'),
+  parseCommaUtc: cronUtc('1,15,30 * * * *'),
+  parseNicknameUtc: cronUtc('@daily'),
+  parseTzUtc: cronParse('30 9 * * *', { tz: 'UTC' }),
+  parseTzNy: cronParse('30 9 * * *', { tz: 'America/New_York' }),
+  parseDefaultTzOffsetHours: (() => { const d = cronMod.parse('0 0 * * *', cronBase) as Date; return Math.round((d.getTime() - Date.parse('2026-01-01T00:00:00.000Z')) / 3600000); })(),
+  invalidThrows: cronParse('not-a-cron').startsWith('THROWS'),
+  jobSurface: { cron: cronJob.cron, stop: typeof cronJob.stop, ref: typeof cronJob.ref, unref: typeof cronJob.unref },
+};
+cronJob.stop();
+
+// ---------- webviewGotchas: Bun.WebView (178) - macOS; data: URLs keep it offline; 15s guard ----------
+const wvResult: any = await Promise.race([
+  (async () => {
+    const v = new (Bun as any).WebView({ width: 200, height: 150, show: false, forceProcessCanary: false } as any);
+    const surface = { navigate: typeof v.navigate, evaluate: typeof v.evaluate, screenshot: typeof v.screenshot, cdp: typeof v.cdp, click: typeof v.click, close: typeof v.close, dispose: typeof (v as any)[Symbol.dispose], destroy: typeof v.destroy };
+    await v.navigate('data:text/html,<html><body><div id="x">42</div></body></html>');
+    const urlPrefix = String(v.url).slice(0, 11);
+    const domText = await v.evaluate('document.getElementById("x").textContent');
+    const expr = await v.evaluate('1 + 1');
+    const shot = await v.screenshot({ encoding: 'buffer', format: 'png' });
+    const shotOk = shot instanceof Uint8Array && shot.length > 0;
+    const gapSurface = { closeAll: typeof (Bun as any).WebView.closeAll, addEventListener: typeof v.addEventListener, scrollTo: typeof v.scrollTo, resize: typeof v.resize, back: typeof v.back, forward: typeof v.forward, reload: typeof v.reload };
+    const reloadOk = (() => { try { v.reload(); return true; } catch { return false; } })();
+    const scrollToSelectorBased = (() => { try { (v as any).scrollTo(0, 10); return false; } catch (err: any) { return String(err.message ?? err).includes('selector'); } })();
+    const resizeOk = (() => { try { (v as any).resize(300, 200); return true; } catch { return false; } })();
+    if (typeof v.close === 'function') v.close();
+    return { surface, gapSurface, reloadOk, scrollToSelectorBased, resizeOk, urlPrefix, domText, expr, shotOk, ctorOk: true };
+  })(),
+  new Promise((res) => setTimeout(() => res({ timeout: true }), 15000)),
+]);
+const webviewGotchas = wvResult.timeout
+  ? { ctorOk: false, timeout: true }
+  : {
+      ctorOk: wvResult.ctorOk,
+      navigateData: { urlPrefix: wvResult.urlPrefix },
+      evaluate: { domText: wvResult.domText, expression: wvResult.expr },
+      screenshotPng: { ok: wvResult.shotOk },
+      surface: wvResult.surface,
+      gapSurface: wvResult.gapSurface,
+      reloadOk: wvResult.reloadOk,
+      scrollToSelectorBased: wvResult.scrollToSelectorBased,
+      resizeOk: wvResult.resizeOk,
+    };
+
+// ---------- s3Gotchas: Bun.s3 surface (178) - offline: typeof + no-creds error path ----------
+const s3FileProbe: any = (Bun as any).s3.file('probe-key.txt');
+const s3NoCreds = async (fn: () => Promise<unknown>) => { try { await fn(); return 'OK'; } catch (err: any) { return err.code ?? err.name ?? String(err).slice(0, 30); } };
+const s3Gotchas = {
+  fileSurface: {
+    name: typeof s3FileProbe.name, size: typeof s3FileProbe.size, type: typeof s3FileProbe.type, lastModified: typeof s3FileProbe.lastModified,
+    exists: typeof s3FileProbe.exists, stat: typeof s3FileProbe.stat, write: typeof s3FileProbe.write, read: typeof s3FileProbe.read,
+    text: typeof s3FileProbe.text, json: typeof s3FileProbe.json, image: typeof s3FileProbe.image, presign: typeof s3FileProbe.presign,
+    unlink: typeof s3FileProbe.unlink, delete: typeof s3FileProbe.delete, slice: typeof s3FileProbe.slice, arrayBuffer: typeof s3FileProbe.arrayBuffer,
+  },
+  fileDataOptions: { data: typeof s3FileProbe.data, options: typeof s3FileProbe.options },
+  clientList: await s3NoCreds(() => (Bun as any).s3.list({ prefix: 'x' } as any)),
+  noCreds: {
+    stat: await s3NoCreds(() => s3FileProbe.stat()),
+    exists: await s3NoCreds(() => s3FileProbe.exists()),
+    presign: await s3NoCreds(() => s3FileProbe.presign({ expiresIn: 60 } as any)),
+  },
+};
+
 // ---------- emit ----------
 const evidence = {
   tool: 'tools/build-artifact-evidence.ts',
@@ -766,6 +839,9 @@ const evidence = {
   sqliteGotchas,
   urlPatternGotchas,
   gapCloseGotchas,
+  cronGotchas,
+  webviewGotchas,
+  s3Gotchas,
   scenarios,
 };
 await Bun.write(EVIDENCE, JSON.stringify(evidence, null, 2) + '\n');

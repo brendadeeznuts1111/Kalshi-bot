@@ -6441,3 +6441,16 @@ another note.
   probeOfficialCatalog retries the report once (same 108 philosophy as
   probeHttp's network-failure retry) - transient DNS/connection hiccups no
   longer fail bun:ci; a genuinely dead endpoint fails both attempts.
+- FULL-SURFACE round (178): Bun.cron (6 CR claims - parse is deterministic
+  offline, tz honored, nicknames, invalid throws, CronJob handle), Bun.WebView
+  (7 WV claims - navigate data: URLs, evaluate (NOT eval), screenshot,
+  close()/Symbol.dispose disposal, no destroy), Bun.s3 (6 S3 claims - S3File
+  surface, presign/stat/list reject ERR_S3_MISSING_CREDENTIALS offline). Two
+  NEW type-vs-runtime discrepancies pinned: WebView back/forward and S3File
+  data/options are DECLARED in bun-types but ABSENT at runtime on 1.4.0.
+  Cross-check now 88 claims (80 CONSISTENT, 8 PINNED-DISCREPANCY); remaining
+  4 gap groups are the offline-unprobeable pins (serve id/reusePort/ipv6Only/
+  http1/idleTimeout/unix, sqlite loadExtension/setCustomSQLite/fileControl).
+  THE GROUNDING SYSTEM IS AT FULL for the probeable surface: BuildArtifact,
+  BuildConfig, Bun.Image, Bun.serve, bun:sqlite, URLPattern, Bun.cron,
+  Bun.WebView, Bun.s3 all ledgered + evidence-grounded + sweep-covered.

@@ -4,8 +4,8 @@
   "bunRevision": "34cbb9a40b4bd1bd767d134a7065e66c2432a676",
   "bundleHash": "bun-types@1.4.0-c0dadede486f49ab",
   "verdictCounts": {
-    "PINNED-DISCREPANCY": 6,
-    "CONSISTENT": 61
+    "PINNED-DISCREPANCY": 8,
+    "CONSISTENT": 80
   },
   "checks": [
     {
@@ -598,6 +598,179 @@
       "source": "bun.d.ts",
       "docSays": "jsx sideEffects: accepted",
       "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "CR-parse",
+      "api": "cron",
+      "source": "bun.d.ts",
+      "docSays": "cron.parse: deterministic next-fire-time",
+      "observed": "2026-01-01T00:01:00.000Z",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "CR-schedule",
+      "api": "cron",
+      "source": "bun.d.ts",
+      "docSays": "5-field cron expression",
+      "observed": "2026-01-01T00:01:00.000Z",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "CR-nickname",
+      "api": "cron",
+      "source": "bun.d.ts",
+      "docSays": "nicknames (@daily etc.)",
+      "observed": "2026-01-02T00:00:00.000Z",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "CR-tz",
+      "api": "tz",
+      "source": "bun.d.ts",
+      "docSays": "tz option honored (UTC/NY differ; default = system local)",
+      "observed": "2026-01-01T09:30:00.000Z",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "CR-invalid",
+      "api": "cron",
+      "source": "bun.d.ts",
+      "docSays": "invalid expressions throw at runtime",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "CR-job",
+      "api": "cron",
+      "source": "bun.d.ts",
+      "docSays": "CronJob handle: cron/stop/ref/unref",
+      "observed": {
+        "cron": "* * * * *",
+        "stop": "function",
+        "ref": "function",
+        "unref": "function"
+      },
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "WV-navigate",
+      "api": "navigate",
+      "source": "bun.d.ts",
+      "docSays": "WebView.navigate: data: URLs work offline",
+      "observed": "data:text/h",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "WV-evaluate",
+      "api": "evaluate",
+      "source": "bun.d.ts",
+      "docSays": "WebView.evaluate (NOT eval): DOM + expression eval",
+      "observed": "42",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "WV-screenshot",
+      "api": "screenshot",
+      "source": "bun.d.ts",
+      "docSays": "WebView.screenshot: png buffer",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "WV-surface",
+      "api": "loading",
+      "source": "bun.d.ts",
+      "docSays": "WebView surface: url/title/loading + navigate/evaluate/screenshot/cdp/click",
+      "observed": "function",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "WV-close",
+      "api": "close",
+      "source": "bun.d.ts",
+      "docSays": "WebView disposal: close() + Symbol.dispose (no destroy)",
+      "observed": "function",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "S3-file",
+      "api": "S3File",
+      "source": "s3.d.ts",
+      "docSays": "S3File: Blob-extending surface (name/size/type/lastModified + read methods)",
+      "observed": "string",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "S3-presign",
+      "api": "presign",
+      "source": "s3.d.ts",
+      "docSays": "S3File.presign: needs credentials (rejects offline)",
+      "observed": "ERR_S3_MISSING_CREDENTIALS",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "S3-slice",
+      "api": "slice",
+      "source": "s3.d.ts",
+      "docSays": "S3File.slice: range views",
+      "observed": "function",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "S3-stats",
+      "api": "stat",
+      "source": "s3.d.ts",
+      "docSays": "S3File.stat: S3Stats (needs creds)",
+      "observed": "ERR_S3_MISSING_CREDENTIALS",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "S3-noRead",
+      "api": "read",
+      "source": "s3.d.ts",
+      "docSays": "S3File has NO .read() (use text/json/image/slice/arrayBuffer)",
+      "observed": "undefined",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "WV-backForward",
+      "api": "back",
+      "source": "bun.d.ts",
+      "docSays": "WebView back/forward DECLARED in types but ABSENT at runtime on 1.4.0",
+      "observed": "undefined",
+      "verdict": "PINNED-DISCREPANCY"
+    },
+    {
+      "id": "WV-scrollTo",
+      "api": "scrollTo",
+      "source": "bun.d.ts",
+      "docSays": "WebView.scrollTo is SELECTOR-based (numeric args throw)",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "WV-surface2",
+      "api": "reload",
+      "source": "bun.d.ts",
+      "docSays": "WebView: closeAll/addEventListener/reload/resize present",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "S3-fileDataOptions",
+      "api": "data",
+      "source": "s3.d.ts",
+      "docSays": "S3File data/options DECLARED in types but ABSENT at runtime on 1.4.0",
+      "observed": "undefined",
+      "verdict": "PINNED-DISCREPANCY"
+    },
+    {
+      "id": "S3-list",
+      "api": "list",
+      "source": "s3.d.ts",
+      "docSays": "S3Client.list: needs credentials (rejects offline)",
+      "observed": "ERR_S3_MISSING_CREDENTIALS",
       "verdict": "CONSISTENT"
     }
   ],
