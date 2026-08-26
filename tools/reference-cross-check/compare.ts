@@ -102,6 +102,14 @@ export const LEDGER: LedgerClaim[] = [
   { id: 'UP-exec', api: 'exec', source: 'node url.d.ts', fragment: 'exec(input?: URLPatternInput', docSays: 'exec: result with pathname.groups', evidencePath: 'urlPatternGotchas.objectForm.id', kind: 'consistent' },
   { id: 'UP-regex', api: 'hasRegExpGroups', source: 'node url.d.ts', fragment: 'readonly hasRegExpGroups', docSays: 'hasRegExpGroups: true with regex groups', evidencePath: 'urlPatternGotchas.regexGroup.hasRegExpGroups', kind: 'consistent' },
   { id: 'UP-components', api: 'pathname', source: 'node url.d.ts', fragment: 'readonly pathname', docSays: 'component getters: protocol/hostname/port/pathname/search/hash', evidencePath: 'urlPatternGotchas.componentGetters.pathname', kind: 'consistent' },
+  { id: 'SQ-iterate', api: 'iterate', source: 'sqlite.d.ts', fragment: 'iterate(', docSays: 'Statement.iterate: row iterator', evidencePath: 'gapCloseGotchas.statement.iterateRows', kind: 'consistent' },
+  { id: 'SQ-raw', api: 'raw', source: 'sqlite.d.ts', fragment: 'raw(...params', docSays: 'Statement.raw() is a METHOD returning Array<Array<Uint8Array|null>> (raw=true assignment is a no-op)', evidencePath: 'gapCloseGotchas.statement.rawMethodValue', kind: 'consistent' },
+  { id: 'SQ-finalize', api: 'finalize', source: 'sqlite.d.ts', fragment: 'finalize(', docSays: 'Statement.finalize: later calls throw', evidencePath: 'gapCloseGotchas.statement.finalizeThrows', kind: 'consistent' },
+  { id: 'SQ-toString', api: 'toString', source: 'sqlite.d.ts', fragment: 'toString(', docSays: 'Statement.toString: returns the SQL', evidencePath: 'gapCloseGotchas.statement.finalizeSql', kind: 'consistent' },
+  { id: 'UP-baseURL', api: 'baseURL', source: 'node url.d.ts', fragment: 'baseURL', docSays: 'URLPatternInit.baseURL: base for relative patterns', evidencePath: 'gapCloseGotchas.urlPatternBaseURL.test', kind: 'consistent' },
+  { id: 'SV-maxRequestBodySize', api: 'maxRequestBodySize', source: 'serve.d.ts', fragment: 'maximum size of a request body', docSays: 'maxRequestBodySize: oversized POST rejected', evidencePath: 'gapCloseGotchas.serveMaxRequestBody.overStatus', kind: 'consistent' },
+  { id: 'BC-jsxFragment', api: 'fragment', source: 'bun.d.ts', fragment: 'fragment?: string', docSays: 'jsx fragment: custom Fragment element', evidencePath: 'gapCloseGotchas.jsxFragment.fragmentHonored', kind: 'consistent' },
+  { id: 'BC-jsxSideEffects', api: 'sideEffects', source: 'bun.d.ts', fragment: 'sideEffects?: boolean', docSays: 'jsx sideEffects: accepted', evidencePath: 'gapCloseGotchas.jsxFragment.sideEffectsAccepted', kind: 'consistent' },
 ];
 
 /** APIs with grounded evidence but no ledger row (fit/filter/quality/... come from the probe gates). */

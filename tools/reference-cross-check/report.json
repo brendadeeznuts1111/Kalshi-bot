@@ -5,7 +5,7 @@
   "bundleHash": "bun-types@1.4.0-c0dadede486f49ab",
   "verdictCounts": {
     "PINNED-DISCREPANCY": 6,
-    "CONSISTENT": 53
+    "CONSISTENT": 61
   },
   "checks": [
     {
@@ -495,20 +495,116 @@
       "docSays": "component getters: protocol/hostname/port/pathname/search/hash",
       "observed": "/files/*",
       "verdict": "CONSISTENT"
+    },
+    {
+      "id": "SQ-iterate",
+      "api": "iterate",
+      "source": "sqlite.d.ts",
+      "docSays": "Statement.iterate: row iterator",
+      "observed": [
+        {
+          "a": 1,
+          "b": "x"
+        },
+        {
+          "a": 2,
+          "b": "y"
+        }
+      ],
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "SQ-raw",
+      "api": "raw",
+      "source": "sqlite.d.ts",
+      "docSays": "Statement.raw() is a METHOD returning Array<Array<Uint8Array|null>> (raw=true assignment is a no-op)",
+      "observed": [
+        [
+          {
+            "0": 1,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+            "6": 0,
+            "7": 0
+          },
+          {
+            "0": 120
+          }
+        ],
+        [
+          {
+            "0": 2,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+            "6": 0,
+            "7": 0
+          },
+          {
+            "0": 121
+          }
+        ]
+      ],
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "SQ-finalize",
+      "api": "finalize",
+      "source": "sqlite.d.ts",
+      "docSays": "Statement.finalize: later calls throw",
+      "observed": "Statement has finalized",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "SQ-toString",
+      "api": "toString",
+      "source": "sqlite.d.ts",
+      "docSays": "Statement.toString: returns the SQL",
+      "observed": "SELECT a FROM t",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "UP-baseURL",
+      "api": "baseURL",
+      "source": "node url.d.ts",
+      "docSays": "URLPatternInit.baseURL: base for relative patterns",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "SV-maxRequestBodySize",
+      "api": "maxRequestBodySize",
+      "source": "serve.d.ts",
+      "docSays": "maxRequestBodySize: oversized POST rejected",
+      "observed": 413,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "BC-jsxFragment",
+      "api": "fragment",
+      "source": "bun.d.ts",
+      "docSays": "jsx fragment: custom Fragment element",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "BC-jsxSideEffects",
+      "api": "sideEffects",
+      "source": "bun.d.ts",
+      "docSays": "jsx sideEffects: accepted",
+      "observed": true,
+      "verdict": "CONSISTENT"
     }
   ],
   "coverageGaps": [
     {
-      "surface": "BuildConfig",
-      "gaps": [
-        "fragment",
-        "sideEffects"
-      ]
-    },
-    {
       "surface": "Serve.BaseServeOptions",
       "gaps": [
-        "maxRequestBodySize",
         "id"
       ]
     },
@@ -533,21 +629,6 @@
         "loadExtension",
         "setCustomSQLite",
         "fileControl"
-      ]
-    },
-    {
-      "surface": "bun:sqlite.Statement",
-      "gaps": [
-        "iterate",
-        "raw",
-        "finalize",
-        "toString"
-      ]
-    },
-    {
-      "surface": "URLPatternInit",
-      "gaps": [
-        "baseURL"
       ]
     }
   ]

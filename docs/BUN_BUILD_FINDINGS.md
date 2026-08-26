@@ -553,7 +553,7 @@ Sources: bundled bun-types@1.4.0 (bun-types@1.4.0-c0dadede486f49ab) docs + `bun.
 PINNED-DISCREPANCY (doc says X, observed Y — our correction), DOC-CHANGED (fragment missing —
 the pin premise moved; re-verify), NO-EVIDENCE (ledger path broken).
 
-**Verdict summary:** 59 claims · 53 CONSISTENT · 6 PINNED-DISCREPANCY · 0 DOC-CHANGED · 0 NO-EVIDENCE.
+**Verdict summary:** 67 claims · 61 CONSISTENT · 6 PINNED-DISCREPANCY · 0 DOC-CHANGED · 0 NO-EVIDENCE.
 
 ### BuildArtifact
 
@@ -596,6 +596,8 @@ the pin premise moved; re-verify), NO-EVIDENCE (ledger path broken).
 | `BC-reactFastRefresh` | `reactFastRefresh` | `bun.d.ts` | reactFastRefresh: adds refresh registration markers | true | CONSISTENT |
 | `BC-reactCompiler` | `reactCompiler` | `bun.d.ts` | reactCompiler: auto-memoization (guard checks); client mode needs react/compiler-runtime | true | CONSISTENT |
 | `BC-reactCompilerOutputMode` | `reactCompilerOutputMode` | `bun.d.ts` | reactCompilerOutputMode: ssr skips the useMemoCache runtime (builds without compiler-runtime) | true | CONSISTENT |
+| `BC-jsxFragment` | `fragment` | `bun.d.ts` | jsx fragment: custom Fragment element | true | CONSISTENT |
+| `BC-jsxSideEffects` | `sideEffects` | `bun.d.ts` | jsx sideEffects: accepted | true | CONSISTENT |
 
 ### Bun.Image
 
@@ -619,6 +621,7 @@ the pin premise moved; re-verify), NO-EVIDENCE (ledger path broken).
 | `SV-error` | `error` | `serve.d.ts` | error: handler maps thrown errors to a Response | 500 | CONSISTENT |
 | `SV-port` | `port` | `serve.d.ts` | port: 0 assigns an ephemeral port (server.port) | true | CONSISTENT |
 | `SV-fetch` | `fetch` | `serve.d.ts` | fetch: fallback handler for unmatched routes | fallback | CONSISTENT |
+| `SV-maxRequestBodySize` | `maxRequestBodySize` | `serve.d.ts` | maxRequestBodySize: oversized POST rejected | 413 | CONSISTENT |
 
 ### bun:sqlite
 
@@ -632,6 +635,10 @@ the pin premise moved; re-verify), NO-EVIDENCE (ledger path broken).
 | `SQ-deserialize` | `deserialize` | `sqlite.d.ts` | deserialize: STATIC Database.deserialize (not instance) | alice | CONSISTENT |
 | `SQ-close` | `close` | `sqlite.d.ts` | close: later queries throw | Cannot use a closed database | CONSISTENT |
 | `SQ-constraint` | `run` | `sqlite.d.ts` | constraint violations carry a SQLITE_* code | SQLITE_CONSTRAINT_PRIMARYKEY | CONSISTENT |
+| `SQ-iterate` | `iterate` | `sqlite.d.ts` | Statement.iterate: row iterator | [{"a":1,"b":"x"},{"a":2,"b":"y"}] | CONSISTENT |
+| `SQ-raw` | `raw` | `sqlite.d.ts` | Statement.raw() is a METHOD returning Array<Array<Uint8Array|null>> (raw=true assignment is a no-op) | [[{"0":1,"1":0,"2":0,"3":0,"4":0,"5":0,"6":0,"7":0},{"0":120}],[{"0":2,"1":0,"2":0,"3":0," | CONSISTENT |
+| `SQ-finalize` | `finalize` | `sqlite.d.ts` | Statement.finalize: later calls throw | Statement has finalized | CONSISTENT |
+| `SQ-toString` | `toString` | `sqlite.d.ts` | Statement.toString: returns the SQL | SELECT a FROM t | CONSISTENT |
 
 ### URLPattern
 
@@ -643,14 +650,12 @@ the pin premise moved; re-verify), NO-EVIDENCE (ledger path broken).
 | `UP-exec` | `exec` | `node url.d.ts` | exec: result with pathname.groups | 123 | CONSISTENT |
 | `UP-regex` | `hasRegExpGroups` | `node url.d.ts` | hasRegExpGroups: true with regex groups | true | CONSISTENT |
 | `UP-components` | `pathname` | `node url.d.ts` | component getters: protocol/hostname/port/pathname/search/hash | /files/* | CONSISTENT |
+| `UP-baseURL` | `baseURL` | `node url.d.ts` | URLPatternInit.baseURL: base for relative patterns | true | CONSISTENT |
 
 ### Coverage gaps — declared but not evidence-grounded
 
-- `BuildConfig`: fragment, sideEffects
-- `Serve.BaseServeOptions`: maxRequestBodySize, id
+- `Serve.BaseServeOptions`: id
 - `Serve.HostnamePortServeOptions`: reusePort, ipv6Only, http1, idleTimeout
 - `Serve.UnixServeOptions`: unix
 - `bun:sqlite.Database`: loadExtension, setCustomSQLite, fileControl
-- `bun:sqlite.Statement`: iterate, raw, finalize, toString
-- `URLPatternInit`: baseURL
 

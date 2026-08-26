@@ -348,6 +348,67 @@
       "urlPatternTestOnArtifactPath": false
     }
   },
+  "gapCloseGotchas": {
+    "statement": {
+      "iterateRows": [
+        {
+          "a": 1,
+          "b": "x"
+        },
+        {
+          "a": 2,
+          "b": "y"
+        }
+      ],
+      "rawMethodValue": [
+        [
+          {
+            "0": 1,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+            "6": 0,
+            "7": 0
+          },
+          {
+            "0": 120
+          }
+        ],
+        [
+          {
+            "0": 2,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+            "6": 0,
+            "7": 0
+          },
+          {
+            "0": 121
+          }
+        ]
+      ],
+      "rawAssignmentIsNoOp": true,
+      "finalizeSql": "SELECT a FROM t",
+      "finalizeThrows": "Statement has finalized"
+    },
+    "urlPatternBaseURL": {
+      "hostname": "example.com",
+      "test": true
+    },
+    "serveMaxRequestBody": {
+      "smallStatus": 200,
+      "overStatus": 413
+    },
+    "jsxFragment": {
+      "fragmentHonored": true,
+      "sideEffectsAccepted": true
+    }
+  },
   "scenarios": [
     {
       "name": "S01-artifact-surface",
@@ -794,7 +855,7 @@
         {
           "path": "outbc/pure.js.jsc",
           "kind": "bytecode",
-          "hash": "c7qtx8wf",
+          "hash": "z9tag659",
           "loader": "file",
           "size": 10944,
           "type": "application/octet-stream",

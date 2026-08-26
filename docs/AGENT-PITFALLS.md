@@ -6416,3 +6416,18 @@ another note.
   distinction verified: BuildArtifact.path is a filesystem path and
   URLPattern.test rejects it (false) - evidence urlPatternGotchas.
   serveIntegration.
+- REPO-AUDIT (sqlite named-param convention validated): no repo code uses
+  prefix-less named-param keys (the silent-null hazard in default mode) and
+  zero strict-mode Databases exist - all bindings are prefixed ({$id: ...})
+  against default-mode DBs ({create: true}), which our mode matrix confirms is
+  correct. The grounded convention is the repo's existing convention.
+- GAP-CLOSE + STABILIZE round (178): 8 more ledger claims (67 total, 61
+  CONSISTENT / 6 PINNED-DISCREPANCY) - Statement.iterate/raw/finalize/toString
+  (raw() is a METHOD returning Array<Array<Uint8Array|null>>; raw=true
+  assignment is a NO-OP), URLPatternInit.baseURL, Serve.maxRequestBodySize
+  (over-size POST -> 413), jsx fragment/sideEffects. Remaining gaps are the
+  offline-unprobeable pins: serve id/reusePort/ipv6Only/http1/idleTimeout/unix,
+  sqlite loadExtension/setCustomSQLite/fileControl. url-health test stabilized:
+  probeOfficialCatalog retries the report once (same 108 philosophy as
+  probeHttp's network-failure retry) - transient DNS/connection hiccups no
+  longer fail bun:ci; a genuinely dead endpoint fails both attempts.

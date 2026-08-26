@@ -5,6 +5,7 @@ import {
   probeHttp,
   probeKalshiExchange,
   probeOfficialCatalog,
+  type UrlHealthReport,
 } from "../../src/institutions/url-health.ts";
 import { OFFICIAL_URLS, resolveProbeUrl } from "../../src/institutions/official-urls.ts";
 
@@ -29,15 +30,23 @@ describe("url-health", () => {
   });
 
   test("probeOfficialCatalog returns schema v1 report", async () => {
-    const report = await probeOfficialCatalog({
-      timeoutMs: 12_000,
-      includeGlossary: false,
-      concurrency: 4,
-    });
-    expect(report.schemaVersion).toBe(1);
-    expect(report.checked).toBeGreaterThan(10);
-    expect(report.skipped).toBeGreaterThanOrEqual(1); // wss
-    expect(report.ok).toBe(true);
-    expect(report.failed).toBe(0);
+    // Bounded report retry (same philosophy as probeHttp's network-failure
+    // retry, 108): one transient DNS/connection hiccup under parallel load
+    // must not fail the live liveness report; a genuinely dead endpoint
+    // fails both attempts. The probe itself is unchanged.
+    let report: UrlHealthReport | null = null;
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      report = await probeOfficialCatalog({
+        timeoutMs: 12_000,
+        includeGlossary: false,
+        concurrency: 4,
+      });
+      if (report.ok && report.failed === 0) break;
+    }
+    expect(report!.schemaVersion).toBe(1);
+    expect(report!.checked).toBeGreaterThan(10);
+    expect(report!.skipped).toBeGreaterThanOrEqual(1); // wss
+    expect(report!.ok).toBe(true);
+    expect(report!.failed).toBe(0);
   }, 60_000);
 });

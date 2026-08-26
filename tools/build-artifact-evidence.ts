@@ -706,6 +706,49 @@ const urlPatternGotchas = {
   })(),
 };
 
+// ---------- gapCloseGotchas: remaining sweep gaps (178) - Statement surface, baseURL, body cap, jsx ----------
+const gcDb = new (await import('bun:sqlite')).Database(':memory:');
+gcDb.run('CREATE TABLE t (a INTEGER, b TEXT)');
+gcDb.run('INSERT INTO t VALUES (1, ?), (2, ?)', ['x', 'y']);
+const gcSt = gcDb.prepare('SELECT a, b FROM t ORDER BY a');
+const gcIterate: any[] = []; for (const row of gcSt.iterate()) gcIterate.push(row);
+const gcRawSt = gcDb.prepare('SELECT a, b FROM t ORDER BY a');
+const gcRawValue = gcRawSt.raw();
+const gcRawAssign = gcDb.prepare('SELECT a, b FROM t');
+(gcRawAssign as any).raw = true;
+const gcRawAssignAll = gcRawAssign.all();
+const gcFin = gcDb.prepare('SELECT a FROM t');
+const gcSql = gcFin.toString();
+gcFin.finalize();
+let gcFinErr = '';
+try { gcFin.get(); } catch (err: any) { gcFinErr = String(err.message ?? err).slice(0, 40); }
+gcDb.close();
+const gcUp = new URLPattern({ pathname: '/users/:id', baseURL: 'https://example.com' } as any);
+const gcSrv = Bun.serve({ port: 0, maxRequestBodySize: 10, fetch: async (req: any) => { const body = await req.text(); return new Response('got ' + body.length); } } as any);
+await Bun.sleep(30);
+const gcPort = gcSrv.port as number;
+const gcSmall = await fetch('http://127.0.0.1:' + gcPort + '/', { method: 'POST', body: 'hi' });
+const gcBig = await fetch('http://127.0.0.1:' + gcPort + '/', { method: 'POST', body: 'x'.repeat(100) });
+const gcSmallStatus = gcSmall.status; const gcBigStatus = gcBig.status;
+gcSrv.stop(true);
+const gcDir = mkdtempSync(join(tmpdir(), 'art-ground-gap-'));
+await Bun.write(join(gcDir, 'frag.tsx'), 'export const el = <><div id="a" /><span>hi</span></>;');
+const gcJ1 = await (async () => { try { const r = await Bun.build({ entrypoints: [join(gcDir, 'frag.tsx')], outdir: join(gcDir, 'o1'), jsx: { runtime: 'classic', factory: 'h', fragment: 'Frag' } }); return await r.outputs[0].text(); } catch (err: any) { return 'ERR ' + String(err.message ?? err).slice(0, 50); } })();
+const gcJ2 = await (async () => { try { await Bun.build({ entrypoints: [join(gcDir, 'frag.tsx')], outdir: join(gcDir, 'o2'), jsx: { runtime: 'classic', factory: 'h', fragment: 'Frag', sideEffects: true } }); return 'ok'; } catch (err: any) { return 'ERR ' + String(err.message ?? err).slice(0, 50); } })();
+rmSync(gcDir, { recursive: true, force: true });
+const gapCloseGotchas = {
+  statement: {
+    iterateRows: gcIterate,
+    rawMethodValue: gcRawValue,
+    rawAssignmentIsNoOp: JSON.stringify(gcRawAssignAll[0]) === JSON.stringify(gcIterate[0]),
+    finalizeSql: gcSql,
+    finalizeThrows: gcFinErr,
+  },
+  urlPatternBaseURL: { hostname: gcUp.hostname, test: gcUp.test('https://example.com/users/5') },
+  serveMaxRequestBody: { smallStatus: gcSmallStatus, overStatus: gcBigStatus },
+  jsxFragment: { fragmentHonored: gcJ1.includes('Frag'), sideEffectsAccepted: gcJ2 === 'ok' },
+};
+
 // ---------- emit ----------
 const evidence = {
   tool: 'tools/build-artifact-evidence.ts',
@@ -722,6 +765,7 @@ const evidence = {
   serveGotchas,
   sqliteGotchas,
   urlPatternGotchas,
+  gapCloseGotchas,
   scenarios,
 };
 await Bun.write(EVIDENCE, JSON.stringify(evidence, null, 2) + '\n');
