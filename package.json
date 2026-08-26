@@ -326,7 +326,8 @@
     "blog:story": "bun tools/blog-story-server.ts",
     "palette:clip": "bun tools/palette-clip.ts",
     "watermark:sign": "bun tools/watermark-sign.ts",
-    "bench:feature": "bun tools/feature-bench.ts"
+    "bench:feature": "bun tools/feature-bench.ts",
+    "canonical:asset": "bun tools/canonical-asset.ts"
   },
   "engines": {
     "bun": ">=1.4.0"
