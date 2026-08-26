@@ -1,8 +1,10 @@
 {
-  "lastChecked": "2026-08-25T16:51:53.964Z",
+  "lastChecked": "2026-08-26T06:15:07.075Z",
   "coverage": 1,
-  "matched": 55,
+  "matched": 271,
   "newUnmapped": 0,
   "missing": [],
-  "newUnmappedIds": []
+  "newUnmappedIds": [],
+  "curation": 0.2029520295202952,
+  "total": 271
 }

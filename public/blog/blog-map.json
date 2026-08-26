@@ -1,446 +1,4293 @@
 {
-  "version": "1.1.0",
+  "version": "2.0.0",
   "blogUrl": "https://bun.sh/blog/bun-v1.4",
   "entries": [
     {
-      "anchor": "faster",
-      "subId": "new-url-is-up-to-4-6-faster",
-      "title": "new URL() is up to 4.6× faster v 1.4.0 #",
-      "mappedTo": "absolute 1.4 measurement 52ns/op on this machine — the 1.3 baseline + 4.6x ratio NOT independently reproduced",
-      "layer": "pipeline · channels",
-      "status": "verified"
-    },
-    {
-      "anchor": "faster",
-      "subId": "faster-regexp",
-      "title": "Faster RegExp v 1.4.0 #",
-      "mappedTo": "design scanner hex regex micro-bench (4.84ms/200k x20) - the blog isbot/marked numbers NOT reproduced",
-      "layer": "pipeline",
-      "status": "note"
-    },
-    {
-      "anchor": "faster",
-      "subId": "node-zlib-uses-zlib-ng",
-      "title": "node:zlib uses zlib-ng v 1.3.13 v 1.4.0 #",
-      "mappedTo": "Bun.deflateSync speed measured (0.21ms vs node:zlib 0.25ms per 1MB) — the zlib-ng IMPLEMENTATION claim NOT verified",
-      "layer": "pipeline · brand",
-      "status": "note"
-    },
-    {
-      "anchor": "faster",
-      "subId": "buffer-from-str-hex-is-8-faster-and-base64url-46-faster",
-      "title": "Buffer.from(str, \"hex\") is 8× faster and \"base64url\" 46× faster v 1.4.0 #",
-      "mappedTo": "kernel manual hex — no Buffer consumer",
-      "layer": "branding",
-      "status": "note"
-    },
-    {
-      "anchor": "faster",
-      "subId": "source-map-decoding-is-3-1-faster",
-      "title": "Source map decoding is 3.1× faster v 1.4.0 #",
-      "mappedTo": "NOT probed - runtime-wide sourcemap decode; no measured evidence in-repo",
-      "layer": "ops",
-      "status": "note"
-    },
-    {
-      "anchor": "faster",
-      "subId": "promises-are-1-5-2-4-faster",
-      "title": "Promises are 1.5–2.4× faster v 1.4.0 #",
-      "mappedTo": "NOT probed - runtime-wide; no measured evidence in-repo",
-      "layer": "all",
-      "status": "note"
-    },
-    {
-      "anchor": "bun-build",
-      "subId": "built-in-react-compiler",
-      "title": "Built-in React Compiler v 1.4.0 #",
-      "mappedTo": "NOT mapped — no React/TSX (option verified §29)",
-      "layer": "—",
-      "status": "note"
-    },
-    {
-      "anchor": "bun-build",
-      "subId": "barrel-import-optimization",
-      "title": "Barrel import optimization v 1.3.10 v 1.4.0 #",
-      "mappedTo": "NOT mapped — default tree-shaker wins (§29)",
-      "layer": "—",
-      "status": "note"
-    },
-    {
-      "anchor": "bun-build",
-      "subId": "compile-time-feature-flags-with-bun-bundle",
-      "title": "Compile-time feature flags with bun:bundle v 1.3.5 #",
-      "mappedTo": "--define verified (bun:bundle not runtime)",
-      "layer": "pipeline",
-      "status": "verified"
-    },
-    {
-      "anchor": "bun-build",
-      "subId": "in-memory-files-in-bun-build",
-      "title": "In-memory files in Bun.build() v 1.3.6 #",
-      "mappedTo": "plugin virtual modules verified",
-      "layer": "pipeline",
-      "status": "verified"
-    },
-    {
-      "anchor": "bun-build",
-      "subId": "single-file-html-with-compile-target-browser",
-      "title": "Single-file HTML with --compile --target=browser v 1.3.10 #",
-      "mappedTo": "NOT mapped — serve.ts serves HTML live",
-      "layer": "—",
-      "status": "note"
-    },
-    {
-      "anchor": "bun-build",
-      "subId": "metafile-true",
-      "title": "metafile: true v 1.3.6 v 1.4.0 #",
-      "mappedTo": "dist/*.meta.json -> design budgets",
-      "layer": "pipeline · channels(design)",
-      "status": "verified"
-    },
-    {
-      "anchor": "bun-build",
-      "subId": "metafile-md",
-      "title": "--metafile-md v 1.3.8 v 1.4.0 #",
-      "mappedTo": "dist/*.meta.md is the mtafile",
-      "layer": "pipeline · channels(design)",
-      "status": "verified"
-    },
-    {
-      "anchor": "bun-build",
-      "subId": "standard-tc39-decorators",
-      "title": "Standard TC39 decorators v 1.3.10 v 1.4.0 #",
+      "id": "playwright",
+      "level": "h3",
+      "title": "Playwright",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "node-js-compatibility",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 0,
+      "excerpt": "Playwright now runs on Bun: drive a browser with connectOverCDP() , run your suite with playwright test and a playwright.config.ts , open --",
       "mappedTo": "NOT mapped",
       "layer": "—",
-      "status": "note"
+      "status": "unmapped"
     },
     {
-      "anchor": "bun-build",
-      "subId": "asset",
-      "title": "--asset v 1.4.0 #",
+      "id": "next-js-16",
+      "level": "h3",
+      "title": "Next.js 16",
+      "versions": [
+        "1.3.2"
+      ],
+      "section": "node-js-compatibility",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 0,
+      "excerpt": "bun --bun next build works on Next.js 16.3 with Turbopack and the React Compiler.",
       "mappedTo": "NOT mapped",
       "layer": "—",
-      "status": "note"
+      "status": "unmapped"
     },
     {
-      "anchor": "bun-build",
-      "subId": "bytecode-compilation-for-es-modules",
-      "title": "Bytecode compilation for ES modules v 1.3.9 v 1.4.0 #",
+      "id": "vitest",
+      "level": "h3",
+      "title": "vitest",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "node-js-compatibility",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 0,
+      "excerpt": "vitest runs under Bun, including --coverage , with the threads and forks pools.",
       "mappedTo": "NOT mapped",
       "layer": "—",
-      "status": "note"
+      "status": "unmapped"
     },
     {
-      "anchor": "bun-build",
-      "subId": "code-splitting-on-20-000-module-graphs-is-14-faster",
-      "title": "Code splitting on 20,000-module graphs is 14× faster v 1.4.0 #",
-      "mappedTo": "marketing — no 20k graph",
-      "layer": "—",
-      "status": "marketing"
-    },
-    {
-      "anchor": "bun-test",
-      "subId": "bun-test-parallel",
-      "title": "bun test --parallel v 1.3.13 v 1.4.0 #",
-      "mappedTo": "test:parallel, test:",
-      "layer": "pipeline · channels(deps)",
-      "status": "verified"
-    },
-    {
-      "anchor": "bun-test",
-      "subId": "bun-test-isolate",
-      "title": "bun test --isolate v 1.3.13 v 1.4.0 #",
-      "mappedTo": "test:parallel (implies isolate)",
-      "layer": "pipeline",
-      "status": "verified"
-    },
-    {
-      "anchor": "bun-test",
-      "subId": "bun-test-shard",
-      "title": "bun test --shard v 1.3.13 v 1.4.0 #",
-      "mappedTo": "test:shard (TEST_SHARD)",
-      "layer": "pipeline",
-      "status": "verified"
-    },
-    {
-      "anchor": "bun-test",
-      "subId": "bun-test-timings",
-      "title": "bun test --timings v 1.4.0 #",
-      "mappedTo": "test: + .bun-test-timings.json",
-      "layer": "pipeline",
-      "status": "verified"
-    },
-    {
-      "anchor": "bun-test",
-      "subId": "bun-test-changed",
-      "title": "bun test --changed v 1.3.13 v 1.4.0 #",
-      "mappedTo": "test:changed, pre-commit --changed",
-      "layer": "pipeline",
-      "status": "verified"
-    },
-    {
-      "anchor": "bun-test",
-      "subId": "bun-test-retry",
-      "title": "bun test --retry v 1.3.3 v 1.4.0 #",
-      "mappedTo": "pre-commit --retry 1",
-      "layer": "pipeline",
-      "status": "verified"
-    },
-    {
-      "anchor": "bun-test",
-      "subId": "jest-usefaketimers",
-      "title": "jest.useFakeTimers() v 1.3.4 v 1.4.0 #",
-      "mappedTo": "available, not used (§20)",
-      "layer": "pipeline",
-      "status": "note"
-    },
-    {
-      "anchor": "bun-install",
-      "subId": "global-virtual-store-up-to-7x-faster-installs",
-      "title": "Global virtual store: up to 7x faster installs v 1.3.14 v 1.4.0 #",
-      "mappedTo": "bunfig linker=isolated",
-      "layer": "deps",
-      "status": "verified"
-    },
-    {
-      "anchor": "bun-install",
-      "subId": "bun-pm-diff",
-      "title": "bun pm diff v 1.4.0 #",
-      "mappedTo": "deps:diff (tools/deps-diff.ts)",
-      "layer": "channels(deps)",
-      "status": "verified"
-    },
-    {
-      "anchor": "bun-install",
-      "subId": "bun-audit-fix",
-      "title": "bun audit fix v 1.4.0 #",
-      "mappedTo": "deps:audit-fix:dry",
-      "layer": "channels(deps)",
-      "status": "verified"
-    },
-    {
-      "anchor": "bun-install",
-      "subId": "bun-dedupe",
-      "title": "bun dedupe v 1.4.0 #",
-      "mappedTo": "deps:check (dedupe --check)",
-      "layer": "channels(deps)",
-      "status": "verified"
-    },
-    {
-      "anchor": "bun-install",
-      "subId": "bun-prune",
-      "title": "bun prune v 1.4.0 #",
-      "mappedTo": "deps:prune(:prod) + content:prune",
-      "layer": "channels(deps+prune)",
-      "status": "verified"
-    },
-    {
-      "anchor": "bun-install",
-      "subId": "bun-pm-licenses",
-      "title": "bun pm licenses v 1.4.0 #",
-      "mappedTo": "licenses:check",
-      "layer": "channels(deps)",
-      "status": "verified"
-    },
-    {
-      "anchor": "bun-install",
-      "subId": "bun-update-updates-transitive-dependencies",
-      "title": "bun update updates transitive dependencies v 1.4.0 #",
-      "mappedTo": "not run (frozenLockfile)",
-      "layer": "deps",
-      "status": "note"
-    },
-    {
-      "anchor": "bun-install",
-      "subId": "bun-add-filter",
-      "title": "bun add --filter v 1.4.0 #",
-      "mappedTo": "NOT mapped — 3-dep repo",
-      "layer": "—",
-      "status": "note"
-    },
-    {
-      "anchor": "bun-install",
-      "subId": "bun-add-catalog",
-      "title": "bun add --catalog v 1.4.0 #",
+      "id": "opentelemetry",
+      "level": "h3",
+      "title": "OpenTelemetry",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "node-js-compatibility",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 0,
+      "excerpt": "OpenTelemetry's http and fs instrumentation export spans, and shimmer and require-in-the-middle patch bundled code.",
       "mappedTo": "NOT mapped",
       "layer": "—",
-      "status": "note"
+      "status": "unmapped"
     },
     {
-      "anchor": "bun-install",
-      "subId": "nested-overrides",
-      "title": "Nested overrides v 1.4.0 #",
+      "id": "dd-trace",
+      "level": "h3",
+      "title": "dd-trace",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "node-js-compatibility",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 0,
+      "excerpt": "dd-trace traces and @datadog/pprof profiles continuously; the V8 C++ APIs they link against are implemented.",
       "mappedTo": "NOT mapped",
       "layer": "—",
-      "status": "note"
+      "status": "unmapped"
     },
     {
-      "anchor": "bun-install",
-      "subId": "lockfile-integrity-for-github-and-tarball-dependencies",
-      "title": "Lockfile integrity for GitHub and tarball dependencies v 1.3.10 #",
-      "mappedTo": "NOT mapped — no git/tarball deps",
-      "layer": "—",
-      "status": "note"
-    },
-    {
-      "anchor": "bun-install",
-      "subId": "trusteddependencies-only-auto-trusts-the-npm-registry",
-      "title": "trustedDependencies only auto-trusts the npm registry v 1.3.5 #",
+      "id": "additional-node-js-compatibility-improvements",
+      "level": "h3",
+      "title": "Additional Node.js compatibility improvements",
+      "versions": [],
+      "section": "node-js-compatibility",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 0,
+      "excerpt": "Every day, Bun gets closer to 100% Node.js compatibility. More packages now work in Bun without changes: Nuxt : nuxt dev connects HMR and th",
       "mappedTo": "NOT mapped",
       "layer": "—",
-      "status": "note"
+      "status": "unmapped"
     },
     {
-      "anchor": "bun-install",
-      "subId": "nativedependencies-and-ignorescripts",
-      "title": "nativeDependencies and ignoreScripts v 1.3.2 #",
+      "id": "cpu-usage",
+      "level": "h3",
+      "title": "CPU usage",
+      "versions": [],
+      "section": "production",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 2,
+      "excerpt": "For Claude Code, a large long-running application built on Bun, production CPU usage dropped by 2×: p99 from 24% to 10%, p50 from 5.8% to 2.",
       "mappedTo": "NOT mapped",
       "layer": "—",
-      "status": "note"
+      "status": "unmapped"
     },
     {
-      "anchor": "what-s-new",
-      "subId": "bun-image",
-      "title": "Bun.Image v 1.3.14 #",
+      "id": "memory-usage",
+      "level": "h3",
+      "title": "Memory usage",
+      "versions": [],
+      "section": "production",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": "Applications using HTTP servers with Bun should see a 13% - 48% memory usage reduction. Peak memory under load (1,000,000 requests with 64 c",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "startup",
+      "level": "h3",
+      "title": "Startup",
+      "versions": [],
+      "section": "production",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 0,
+      "excerpt": "On Windows, Bun starts 2.5× faster. hello.js on Windows Bun 1.4 Bun 1.3.14 Node.js 26 Startup time 15.5 ms 39.0 ms 40.1 ms Peak memory 16.8 ",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "binary-size",
+      "level": "h3",
+      "title": "Binary size",
+      "versions": [],
+      "section": "production",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 0,
+      "excerpt": "On Linux and Windows, Bun gets up to 17% smaller. Bun 1.4 Bun 1.3.14 Linux x64 77.0 MB 88.5 MB Linux arm64 76.8 MB 87.6 MB Windows x64 84.8 ",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "observability",
+      "level": "h3",
+      "title": "Observability",
+      "versions": [],
+      "section": "production",
+      "parent": null,
+      "codeBlocks": 7,
+      "links": 2,
+      "excerpt": "The tools you already use work with Bun 1.4. bun --cpu-prof writes a .cpuprofile . Open it in Chrome DevTools or VS Code. bun --heap-prof wr",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "cpu-prof-md",
+      "level": "h4",
+      "title": "--cpu-prof-md",
+      "versions": [],
+      "section": "production",
+      "parent": "observability",
+      "codeBlocks": 2,
+      "links": 0,
+      "excerpt": "--cpu-prof-md writes a CPU profile as Markdown, so you can find the hot function from a terminal: the top functions by self time, the call t",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "heap-prof-md",
+      "level": "h4",
+      "title": "--heap-prof-md",
+      "versions": [],
+      "section": "production",
+      "parent": "observability",
+      "codeBlocks": 2,
+      "links": 0,
+      "excerpt": "--heap-prof-md writes a heap profile as Markdown, so you can find what is holding memory from a terminal: total size, the types that retain ",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-build-metafile-md",
+      "level": "h4",
+      "title": "bun build --metafile-md",
+      "versions": [],
+      "section": "production",
+      "parent": "observability",
+      "codeBlocks": 2,
+      "links": 0,
+      "excerpt": "bun build --metafile-md writes the bundle analysis as Markdown, so you can see why a bundle is big: the largest modules, what each entry poi",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "process-on-memorypressure",
+      "level": "h4",
+      "title": "process.on(\"memoryPressure\")",
+      "versions": [],
+      "section": "production",
+      "parent": "observability",
+      "codeBlocks": 1,
+      "links": 0,
+      "excerpt": "When the operating system is running low on memory, it notifies Bun, and Bun emits \"memoryPressure\" on process . Use it to free memory befor",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "streams-and-bodies",
+      "level": "h3",
+      "title": "Streams and bodies",
+      "versions": [],
+      "section": "production",
+      "parent": null,
+      "codeBlocks": 5,
+      "links": 0,
+      "excerpt": "ReadableStream , WritableStream , and TransformStream are now native. They use less memory, run faster, and pass 100% of the Web Platform Te",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "backpressure",
+      "level": "h3",
+      "title": "Backpressure",
+      "versions": [],
+      "section": "production",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "Bun.serve automatically pauses the ReadableStream request & response bodies when the connection can't accept more data, so a slow or stalled",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-image",
+      "level": "h3",
+      "title": "Bun.Image",
+      "versions": [
+        "1.3.14"
+      ],
+      "section": "what-s-new",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 3,
+      "excerpt": "Bun.Image is a built-in image library. await Bun. file ( \" photo.jpg \" ) . image () . resize ( 1024 , 1024 , { fit : \" inside \" }) . rotate ",
       "mappedTo": "brand-image.ts, /brand/* routes, images:meta",
       "layer": "brand · pipeline",
       "status": "verified"
     },
     {
-      "anchor": "what-s-new",
-      "subId": "bun-webview",
-      "title": "Bun.WebView v 1.3.12 v 1.4.0 #",
+      "id": "bun-webview",
+      "level": "h3",
+      "title": "Bun.WebView",
+      "versions": [
+        "1.3.12",
+        "1.4.0"
+      ],
+      "section": "what-s-new",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 4,
+      "excerpt": "Bun.WebView is headless browser automation built into Bun, without Puppeteer or Playwright. await using view = new Bun. WebView ({ width : 8",
       "mappedTo": "brand:card CLI (ground tool)",
       "layer": "brand",
       "status": "verified"
     },
     {
-      "anchor": "what-s-new",
-      "subId": "bun-markdown",
-      "title": "Bun.markdown v 1.3.8 v 1.4.0 #",
+      "id": "bun-markdown",
+      "level": "h3",
+      "title": "Bun.markdown",
+      "versions": [
+        "1.3.8",
+        "1.4.0"
+      ],
+      "section": "what-s-new",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "Bun.markdown is a Markdown parser built into Bun. const html = Bun.markdown. html ( \" # Hello **world** \" ); // \"<h1>Hello <strong>world</st",
       "mappedTo": "content-pipeline renderMarkdownBody + release-blog",
       "layer": "pipeline · channels(releases)",
       "status": "verified"
     },
     {
-      "anchor": "what-s-new",
-      "subId": "bun-cron",
-      "title": "Bun.cron() v 1.3.11 v 1.4.0 #",
+      "id": "bun-cron",
+      "level": "h3",
+      "title": "Bun.cron()",
+      "versions": [
+        "1.3.11",
+        "1.4.0"
+      ],
+      "section": "what-s-new",
+      "parent": null,
+      "codeBlocks": 2,
+      "links": 4,
+      "excerpt": "Bun.cron() registers a scheduled job with the operating system: crontab on Linux, launchd on macOS, Task Scheduler on Windows. Your script e",
       "mappedTo": "signal-pipeline cron channel + live-channel",
       "layer": "channels(cron)",
       "status": "verified"
     },
     {
-      "anchor": "what-s-new",
-      "subId": "bun-terminal",
-      "title": "Bun.Terminal v 1.3.5 v 1.4.0 #",
+      "id": "bun-terminal",
+      "level": "h3",
+      "title": "Bun.Terminal",
+      "versions": [
+        "1.3.5",
+        "1.4.0"
+      ],
+      "section": "what-s-new",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 3,
+      "excerpt": "Bun.Terminal is a built-in pseudo-terminal, so you can drive bash , vim , or htop from JavaScript without node-pty. Pass terminal to Bun.spa",
       "mappedTo": "exists PTY-only; terminal.ts ANSI paint",
       "layer": "ops",
       "status": "note"
     },
     {
-      "anchor": "what-s-new",
-      "subId": "bun-run-parallel",
-      "title": "bun run --parallel v 1.3.9 v 1.4.0 #",
+      "id": "bun-run-parallel",
+      "level": "h3",
+      "title": "bun run --parallel",
+      "versions": [
+        "1.3.9",
+        "1.4.0"
+      ],
+      "section": "what-s-new",
+      "parent": null,
+      "codeBlocks": 8,
+      "links": 1,
+      "excerpt": "bun run --parallel runs multiple package.json scripts concurrently with name-prefixed output. Glob-match script names, fan out across every ",
       "mappedTo": "NOT mapped — no parallel scripts",
       "layer": "—",
       "status": "note"
     },
     {
-      "anchor": "what-s-new",
-      "subId": "3x-faster-bun-ffi",
-      "title": "3x faster bun:ffi v 1.4.0 #",
+      "id": "3x-faster-bun-ffi",
+      "level": "h3",
+      "title": "3x faster bun:ffi",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "what-s-new",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 2,
+      "excerpt": "bun:ffi now runs on FFI built into JavaScriptCore, replacing TinyCC. We added native support for FFI to JavaScriptCore. Bun 1.3 Bun 1.4 no-o",
       "mappedTo": "dlopen/getpid/zlibVersion calls verified (ffi:probe) — the 3x speedup NOT measured",
       "layer": "ops",
       "status": "note"
     },
     {
-      "anchor": "what-s-new",
-      "subId": "dev-tooling",
-      "title": "Dev tooling v 1.3.2 v 1.4.0 #",
+      "id": "dev-tooling",
+      "level": "h3",
+      "title": "Dev tooling",
+      "versions": [
+        "1.3.2",
+        "1.4.0"
+      ],
+      "section": "what-s-new",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 6,
+      "excerpt": "--cpu-prof , --cpu-prof-md : A .cpuprofile for Chrome DevTools, or the same profile as a Markdown report for pasting into a bug or an LLM; B",
       "mappedTo": "--cpu-prof/--cpu-prof-md/--heap-prof/--heap-prof-md/--no-orphans/--no-env-file all present; bun ./README.md renders MD to terminal (probe)",
       "layer": "ops",
       "status": "verified"
     },
     {
-      "anchor": "what-s-new",
-      "subId": "http-3-in-bun-serve-experimental",
-      "title": "HTTP/3 in Bun.serve() (experimental) v 1.3.14 v 1.4.0 #",
+      "id": "http-3-in-bun-serve-experimental",
+      "level": "h3",
+      "title": "HTTP/3 in Bun.serve() (experimental)",
+      "versions": [
+        "1.3.14",
+        "1.4.0"
+      ],
+      "section": "what-s-new",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 2,
+      "excerpt": "Bun.serve() supports HTTP/3. Set http3: true next to tls , and Bun listens on UDP on the same port. HTTP/1.1 keeps working over TCP, and res",
       "mappedTo": "http3:true listens UDP same port + Alt-Svc h3=:port ma=86400 advertised (probe); upgrade() false over H3 per docs",
       "layer": "ops",
       "status": "verified"
     },
     {
-      "anchor": "what-s-new",
-      "subId": "http-2-http-3-in-fetch-experimental",
-      "title": "HTTP/2 & HTTP/3 in fetch() (experimental) v 1.3.14 v 1.4.0 #",
+      "id": "http-2-http-3-in-fetch-experimental",
+      "level": "h3",
+      "title": "HTTP/2 & HTTP/3 in fetch() (experimental)",
+      "versions": [
+        "1.3.14",
+        "1.4.0"
+      ],
+      "section": "what-s-new",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 0,
+      "excerpt": "fetch() now supports HTTP/2 and HTTP/3. Pass protocol: \"http2\" or protocol: \"http3\" . const [a, b, c] = await Promise . all ([ fetch ( \" htt",
       "mappedTo": "fetch(protocol:http2) -> 200 to bun.sh (probe); http3 flag per docs",
       "layer": "ops",
       "status": "verified"
     },
     {
-      "anchor": "what-s-new",
-      "subId": "serve-files-folders",
-      "title": "Serve files & folders v 1.4.0 #",
+      "id": "serve-files-folders",
+      "level": "h3",
+      "title": "Serve files & folders",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "what-s-new",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 2,
+      "excerpt": "Bun.serve() routes can now serve a directory. Files stream with sendfile . Content-Type , ETag , Last-Modified , 304 , and Range are handled",
       "mappedTo": "dir routes: sendfile + content-type + etag (weak W/) + last-modified + 304 + 206 (verified, repo /videos/*)",
       "layer": "ops · pipeline",
       "status": "verified"
     },
     {
-      "anchor": "what-s-new",
-      "subId": "range-and-conditional-requests",
-      "title": "Range and conditional requests v 1.3.13 v 1.4.0 #",
+      "id": "range-and-conditional-requests",
+      "level": "h3",
+      "title": "Range and conditional requests",
+      "versions": [
+        "1.3.13",
+        "1.4.0"
+      ],
+      "section": "what-s-new",
+      "parent": null,
+      "codeBlocks": 5,
+      "links": 0,
+      "excerpt": "Bun.serve honors Range headers for file responses, so video seeking and resumable downloads work. Both static routes and Bun.file() bodies r",
       "mappedTo": "dir/Bun.file bodies: Range->206, If-None-Match->304, If-Match weak->412 / *->200, If-Unmodified-Since past->412 (probe); bare Response(Bun.file) does NOT auto-etag (must use dir route)",
       "layer": "ops · pipeline",
       "status": "verified"
     },
     {
-      "anchor": "what-s-new",
-      "subId": "html-routes-sourcemaps-disabled-in-production",
-      "title": "HTML routes sourcemaps disabled in production v 1.4.0 #",
+      "id": "html-routes-sourcemaps-disabled-in-production",
+      "level": "h3",
+      "title": "HTML routes sourcemaps disabled in production",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "what-s-new",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "In production, Bun.serve no longer serves sourcemaps for HTML routes, so your original source stays on your server. Development mode still s",
       "mappedTo": "verified natively: NODE_ENV=production /design HTML route has NO sourcemap refs + no dev markers (probe, §39)",
       "layer": "ops",
       "status": "verified"
     },
     {
-      "anchor": "what-s-new",
-      "subId": "fetch-request-compression",
-      "title": "fetch() request compression v 1.4.0 #",
+      "id": "fetch-request-compression",
+      "level": "h3",
+      "title": "fetch() request compression",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "what-s-new",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "fetch() gains a compress option. It compresses the request body before sending and sets the Content-Encoding header automatically. It suppor",
       "mappedTo": "compress string + object {encoding,level} both work - gzip 5000B->55B with Content-Encoding (probe, §17)",
       "layer": "data",
       "status": "verified"
     },
     {
-      "anchor": "what-s-new",
-      "subId": "fetch-proxy-headers",
-      "title": "fetch() proxy headers v 1.3.4 #",
+      "id": "fetch-proxy-headers",
+      "level": "h3",
+      "title": "fetch() proxy headers",
+      "versions": [
+        "1.3.4"
+      ],
+      "section": "what-s-new",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "fetch() 's proxy option now also accepts an object with url and headers , letting you send custom headers (like Proxy-Authorization ) direct",
       "mappedTo": "proxy {url,headers} option shape accepted per docs - no real proxy in-repo",
       "layer": "data",
       "status": "note"
     },
     {
-      "anchor": "what-s-new",
-      "subId": "tls-session-resumption",
-      "title": "TLS session resumption v 1.4.0 #",
+      "id": "tls-session-resumption",
+      "level": "h3",
+      "title": "TLS session resumption",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "what-s-new",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": "A second cold connection to an origin resumes at 1 RTT . A 32-entry LRU caches BoringSSL client sessions per origin, so reconnecting after t",
       "mappedTo": "BoringSSL 32-entry LRU 1-RTT - internal, not probed",
       "layer": "data",
       "status": "note"
     },
     {
-      "anchor": "what-s-new",
-      "subId": "connection-reuse",
-      "title": "Connection reuse v 1.3.10 v 1.4.0 #",
+      "id": "connection-reuse",
+      "level": "h3",
+      "title": "Connection reuse",
+      "versions": [
+        "1.3.10",
+        "1.4.0"
+      ],
+      "section": "what-s-new",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 3,
+      "excerpt": "fetch() reuses connections through an HTTPS proxy, and reuses them for requests with custom TLS options like a client certificate or a custo",
       "mappedTo": "fetch-pool.ts reuse in-repo; HTTPS-proxy reuse per docs not probed",
       "layer": "data",
       "status": "note"
     },
     {
-      "anchor": "what-s-new",
-      "subId": "also-built-in",
-      "title": "Also built in v 1.3.3 v 1.4.0 #",
+      "id": "also-built-in",
+      "level": "h3",
+      "title": "Also built in",
+      "versions": [
+        "1.3.3",
+        "1.4.0"
+      ],
+      "section": "what-s-new",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 11,
+      "excerpt": "Bun.JSON5 : Bun.JSON5.parse() / stringify() ; import .json5 files directly. Replaces json5. Bun.JSONL : parse() and streaming parseChunk() f",
       "mappedTo": "sharp/puppeteer/marked list -> file-by-file",
       "layer": "all",
       "status": "verified"
+    },
+    {
+      "id": "global-virtual-store-up-to-7x-faster-installs",
+      "level": "h3",
+      "title": "Global virtual store: up to 7x faster installs",
+      "versions": [
+        "1.3.14",
+        "1.4.0"
+      ],
+      "section": "bun-install",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "bun install --linker=isolated now uses a shared global virtual store. Packages are extracted once into Bun's cache and symlinked into each p",
+      "mappedTo": "bunfig linker=isolated",
+      "layer": "deps",
+      "status": "verified"
+    },
+    {
+      "id": "bun-pm-diff",
+      "level": "h3",
+      "title": "bun pm diff",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "bun-install",
+      "parent": null,
+      "codeBlocks": 4,
+      "links": 2,
+      "excerpt": "bun pm diff shows you what changed between two versions of a package. It starts with a summary: which files changed, any new install scripts",
+      "mappedTo": "deps:diff (tools/deps-diff.ts)",
+      "layer": "channels(deps)",
+      "status": "verified"
+    },
+    {
+      "id": "bun-audit-fix",
+      "level": "h3",
+      "title": "bun audit fix",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "bun-install",
+      "parent": null,
+      "codeBlocks": 2,
+      "links": 2,
+      "excerpt": "bun audit fix upgrades vulnerable packages to a safe version and installs. If a fix needs a new major version, it tells you, and --latest le",
+      "mappedTo": "deps:audit-fix:dry",
+      "layer": "channels(deps)",
+      "status": "verified"
+    },
+    {
+      "id": "bun-dedupe",
+      "level": "h3",
+      "title": "bun dedupe",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "bun-install",
+      "parent": null,
+      "codeBlocks": 2,
+      "links": 2,
+      "excerpt": "bun dedupe removes duplicate versions of packages from bun.lock . If you have esbuild@0.15.10 and esbuild@0.15.11 and one version satisfies ",
+      "mappedTo": "deps:check (dedupe --check)",
+      "layer": "channels(deps)",
+      "status": "verified"
+    },
+    {
+      "id": "bun-prune",
+      "level": "h3",
+      "title": "bun prune",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "bun-install",
+      "parent": null,
+      "codeBlocks": 3,
+      "links": 2,
+      "excerpt": "bun prune deletes packages from node_modules that aren't in bun.lock anymore. bun prune --production also deletes devDependencies , so you c",
+      "mappedTo": "deps:prune(:prod) + content:prune",
+      "layer": "channels(deps+prune)",
+      "status": "verified"
+    },
+    {
+      "id": "bun-pm-licenses",
+      "level": "h3",
+      "title": "bun pm licenses",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "bun-install",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "bun pm licenses lists your dependencies by license. --json gives you machine-readable output, and --prod skips devDependencies . #38333 bun ",
+      "mappedTo": "licenses:check",
+      "layer": "channels(deps)",
+      "status": "verified"
+    },
+    {
+      "id": "bun-update-updates-transitive-dependencies",
+      "level": "h3",
+      "title": "bun update updates transitive dependencies",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "bun-install",
+      "parent": null,
+      "codeBlocks": 3,
+      "links": 1,
+      "excerpt": "bun update now updates the dependencies of your dependencies too, not just the ones in your package.json . bun update bun update zod bun upd",
+      "mappedTo": "not run (frozenLockfile)",
+      "layer": "deps",
+      "status": "note"
+    },
+    {
+      "id": "bun-add-filter",
+      "level": "h3",
+      "title": "bun add --filter",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "bun-install",
+      "parent": null,
+      "codeBlocks": 2,
+      "links": 0,
+      "excerpt": "bun add , bun remove , and bun update accept --filter , so you can add a package to one workspace from the root of your monorepo. bun add zo",
+      "mappedTo": "NOT mapped — 3-dep repo",
+      "layer": "—",
+      "status": "note"
+    },
+    {
+      "id": "bun-add-catalog",
+      "level": "h3",
+      "title": "bun add --catalog",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "bun-install",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 0,
+      "excerpt": "bun add <pkg> --catalog adds the package to your root catalog and writes \"catalog:\" in the workspace's package.json . bun add react --catalo",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "note"
+    },
+    {
+      "id": "nested-overrides",
+      "level": "h3",
+      "title": "Nested overrides",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "bun-install",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 0,
+      "excerpt": "You can now override a dependency's dependency without overriding it everywhere. npm's nested form, yarn's a/b , and pnpm's a>b all work, an",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "note"
+    },
+    {
+      "id": "lockfile-integrity-for-github-and-tarball-dependencies",
+      "level": "h3",
+      "title": "Lockfile integrity for GitHub and tarball dependencies",
+      "versions": [
+        "1.3.10"
+      ],
+      "section": "bun-install",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 0,
+      "excerpt": "bun.lock now records a SHA-512 hash for GitHub and tarball dependencies, the same way it always has for npm packages. Existing lockfiles pic",
+      "mappedTo": "NOT mapped — no git/tarball deps",
+      "layer": "—",
+      "status": "note"
+    },
+    {
+      "id": "trusteddependencies-only-auto-trusts-the-npm-registry",
+      "level": "h3",
+      "title": "trustedDependencies only auto-trusts the npm registry",
+      "versions": [
+        "1.3.5"
+      ],
+      "section": "bun-install",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 0,
+      "excerpt": "Bun's default trusted-dependencies list applies only to packages from the npm registry. A file: , link: , git: , or github: dependency named",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "note"
+    },
+    {
+      "id": "nativedependencies-and-ignorescripts",
+      "level": "h3",
+      "title": "nativeDependencies and ignoreScripts",
+      "versions": [
+        "1.3.2"
+      ],
+      "section": "bun-install",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 3,
+      "excerpt": "For packages that ship prebuilt binaries as per-platform optionalDependencies (esbuild and @esbuild/darwin-arm64), Bun links the right binar",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "note"
+    },
+    {
+      "id": "bun-test-parallel",
+      "level": "h3",
+      "title": "bun test --parallel",
+      "versions": [
+        "1.3.13",
+        "1.4.0"
+      ],
+      "section": "bun-test",
+      "parent": null,
+      "codeBlocks": 2,
+      "links": 2,
+      "excerpt": "bun test --parallel[=N] runs test files across N worker processes (defaulting to your CPU count). Files go to whichever worker frees up next",
+      "mappedTo": "test:parallel, test:",
+      "layer": "pipeline · channels(deps)",
+      "status": "verified"
+    },
+    {
+      "id": "bun-test-isolate",
+      "level": "h3",
+      "title": "bun test --isolate",
+      "versions": [
+        "1.3.13",
+        "1.4.0"
+      ],
+      "section": "bun-test",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 9,
+      "excerpt": "bun test --isolate runs each test file in a fresh JavaScript global object, in the same process. This is how Jest and Vitest behave by defau",
+      "mappedTo": "test:parallel (implies isolate)",
+      "layer": "pipeline",
+      "status": "verified"
+    },
+    {
+      "id": "bun-test-shard",
+      "level": "h3",
+      "title": "bun test --shard",
+      "versions": [
+        "1.3.13",
+        "1.4.0"
+      ],
+      "section": "bun-test",
+      "parent": null,
+      "codeBlocks": 4,
+      "links": 1,
+      "excerpt": "bun test --shard=M/N splits your test files across multiple CI runners. Files are sorted deterministically and distributed round-robin so ev",
+      "mappedTo": "test:shard (TEST_SHARD)",
+      "layer": "pipeline",
+      "status": "verified"
+    },
+    {
+      "id": "bun-test-timings",
+      "level": "h3",
+      "title": "bun test --timings",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "bun-test",
+      "parent": null,
+      "codeBlocks": 3,
+      "links": 2,
+      "excerpt": "--timings=<path> reads per-file durations from a previous run so --shard and --parallel balance by wall time instead of file count. --update",
+      "mappedTo": "test: + .bun-test-timings.json",
+      "layer": "pipeline",
+      "status": "verified"
+    },
+    {
+      "id": "bun-test-changed",
+      "level": "h3",
+      "title": "bun test --changed",
+      "versions": [
+        "1.3.13",
+        "1.4.0"
+      ],
+      "section": "bun-test",
+      "parent": null,
+      "codeBlocks": 4,
+      "links": 1,
+      "excerpt": "bun test --changed runs only the test files affected by your uncommitted changes, or by the diff against a branch or commit with --changed=m",
+      "mappedTo": "test:changed, pre-commit --changed",
+      "layer": "pipeline",
+      "status": "verified"
+    },
+    {
+      "id": "bun-test-retry",
+      "level": "h3",
+      "title": "bun test --retry",
+      "versions": [
+        "1.3.3",
+        "1.4.0"
+      ],
+      "section": "bun-test",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 2,
+      "excerpt": "test() accepts { retry: n } to re-run a flaky test up to n times, and { repeats: n } to run it n times and fail if any run fails. bun test -",
+      "mappedTo": "pre-commit --retry 1",
+      "layer": "pipeline",
+      "status": "verified"
+    },
+    {
+      "id": "jest-usefaketimers",
+      "level": "h3",
+      "title": "jest.useFakeTimers()",
+      "versions": [
+        "1.3.4",
+        "1.4.0"
+      ],
+      "section": "bun-test",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 3,
+      "excerpt": "jest.useFakeTimers() lets you control setTimeout , setInterval , and Date from your tests. @testing-library/react 's waitFor detects the fak",
+      "mappedTo": "available, not used (§20)",
+      "layer": "pipeline",
+      "status": "note"
+    },
+    {
+      "id": "built-in-react-compiler",
+      "level": "h3",
+      "title": "Built-in React Compiler",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "bun-build",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 2,
+      "excerpt": "bun build --react-compiler (or reactCompiler: true in Bun.build() ) runs React's auto-memoization compiler on your components and hooks with",
+      "mappedTo": "NOT mapped — no React/TSX (option verified §29)",
+      "layer": "—",
+      "status": "note"
+    },
+    {
+      "id": "barrel-import-optimization",
+      "level": "h3",
+      "title": "Barrel import optimization",
+      "versions": [
+        "1.3.10",
+        "1.4.0"
+      ],
+      "section": "bun-build",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 2,
+      "excerpt": "When you write import { Button } from \"antd\" , Bun skips the hundreds of files behind the names you didn't import. Packages that declare \"si",
+      "mappedTo": "NOT mapped — default tree-shaker wins (§29)",
+      "layer": "—",
+      "status": "note"
+    },
+    {
+      "id": "compile-time-feature-flags-with-bun-bundle",
+      "level": "h3",
+      "title": "Compile-time feature flags with bun:bundle",
+      "versions": [
+        "1.3.5"
+      ],
+      "section": "bun-build",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "feature(\"FLAG\") from bun:bundle becomes true or false at build time, and the dead branch is removed. Set flags with --feature=FLAG or featur",
+      "mappedTo": "--define verified (bun:bundle not runtime)",
+      "layer": "pipeline",
+      "status": "verified"
+    },
+    {
+      "id": "in-memory-files-in-bun-build",
+      "level": "h3",
+      "title": "In-memory files in Bun.build()",
+      "versions": [
+        "1.3.6"
+      ],
+      "section": "bun-build",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "Bun.build() accepts a files option: a map of paths to strings, Blob s, or TypedArray s. Use it to bundle entirely from memory or mix virtual",
+      "mappedTo": "plugin virtual modules verified",
+      "layer": "pipeline",
+      "status": "verified"
+    },
+    {
+      "id": "single-file-html-with-compile-target-browser",
+      "level": "h3",
+      "title": "Single-file HTML with --compile --target=browser",
+      "versions": [
+        "1.3.10"
+      ],
+      "section": "bun-build",
+      "parent": null,
+      "codeBlocks": 2,
+      "links": 1,
+      "excerpt": "bun build --compile --target=browser produces one HTML file with every script, stylesheet, and asset inlined. You can double-click it and op",
+      "mappedTo": "NOT mapped — serve.ts serves HTML live",
+      "layer": "—",
+      "status": "note"
+    },
+    {
+      "id": "metafile-true",
+      "level": "h3",
+      "title": "metafile: true",
+      "versions": [
+        "1.3.6",
+        "1.4.0"
+      ],
+      "section": "bun-build",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "Bun.build() supports metafile: true , returning build metadata in esbuild's metafile format: a full map of inputs, outputs, imports, exports",
+      "mappedTo": "dist/*.meta.json -> design budgets",
+      "layer": "pipeline · channels(design)",
+      "status": "verified"
+    },
+    {
+      "id": "metafile-md",
+      "level": "h3",
+      "title": "--metafile-md",
+      "versions": [
+        "1.3.8",
+        "1.4.0"
+      ],
+      "section": "bun-build",
+      "parent": null,
+      "codeBlocks": 3,
+      "links": 1,
+      "excerpt": "bun build --metafile-md writes the module graph as a Markdown report: a quick summary, the largest input files, per-entry-point breakdowns, ",
+      "mappedTo": "dist/*.meta.md is the mtafile",
+      "layer": "pipeline · channels(design)",
+      "status": "verified"
+    },
+    {
+      "id": "standard-tc39-decorators",
+      "level": "h3",
+      "title": "Standard TC39 decorators",
+      "versions": [
+        "1.3.10",
+        "1.4.0"
+      ],
+      "section": "bun-build",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 2,
+      "excerpt": "You can now use standard TC39 decorators in Bun. function logged ( value , { kind , name }) { if (kind === \" method \" ) { return function ( ",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "note"
+    },
+    {
+      "id": "asset",
+      "level": "h3",
+      "title": "--asset",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "bun-build",
+      "parent": null,
+      "codeBlocks": 3,
+      "links": 1,
+      "excerpt": "bun build --compile --asset <path> embeds a file or a whole directory into the executable, keeping the original filenames. Use it for a publ",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "note"
+    },
+    {
+      "id": "bytecode-compilation-for-es-modules",
+      "level": "h3",
+      "title": "Bytecode compilation for ES modules",
+      "versions": [
+        "1.3.9",
+        "1.4.0"
+      ],
+      "section": "bun-build",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": "--bytecode now supports ES modules. --bytecode --format=esm requires --compile , and enables top-level await, import.meta , dynamic imports,",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "note"
+    },
+    {
+      "id": "code-splitting-on-20-000-module-graphs-is-14-faster",
+      "level": "h3",
+      "title": "Code splitting on 20,000-module graphs is 14× faster",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "bun-build",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 2,
+      "excerpt": "The code-splitting reachability walk is now BFS and O(V+E). A 20,000-module diamond-shaped DAG links in 320 ms, from 4.65 s. The tree-shakin",
+      "mappedTo": "marketing — no 20k graph",
+      "layer": "—",
+      "status": "marketing"
+    },
+    {
+      "id": "new-url-is-up-to-4-6-faster",
+      "level": "h3",
+      "title": "new URL() is up to 4.6× faster",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "faster",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 3,
+      "excerpt": "Bun's URL parser was rewritten. WebKit's new parser does the parsing. On Bun's side, href reuses the input string, the last base URL is cach",
+      "mappedTo": "absolute 1.4 measurement 52ns/op on this machine — the 1.3 baseline + 4.6x ratio NOT independently reproduced",
+      "layer": "pipeline · channels",
+      "status": "verified"
+    },
+    {
+      "id": "faster-regexp",
+      "level": "h3",
+      "title": "Faster RegExp",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "faster",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 0,
+      "excerpt": "The RegExp performance gap between JavaScriptCore and V8 has been fixed. marked.parse() gets 138× faster. On an 80 KB Markdown fixture, it r",
+      "mappedTo": "design scanner hex regex micro-bench (4.84ms/200k x20) - the blog isbot/marked numbers NOT reproduced",
+      "layer": "pipeline",
+      "status": "note"
+    },
+    {
+      "id": "node-zlib-uses-zlib-ng",
+      "level": "h3",
+      "title": "node:zlib uses zlib-ng",
+      "versions": [
+        "1.3.13",
+        "1.4.0"
+      ],
+      "section": "faster",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 2,
+      "excerpt": "Bun now uses zlib-ng , the same library Node.js 24 and Chromium use, for node:zlib , gzipped fetch() responses, and everything else that com",
+      "mappedTo": "Bun.deflateSync speed measured (0.21ms vs node:zlib 0.25ms per 1MB) — the zlib-ng IMPLEMENTATION claim NOT verified",
+      "layer": "pipeline · brand",
+      "status": "note"
+    },
+    {
+      "id": "buffer-from-str-hex-is-8-faster-and-base64url-46-faster",
+      "level": "h3",
+      "title": "Buffer.from(str, \"hex\") is 8× faster and \"base64url\" 46× faster",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "faster",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 0,
+      "excerpt": "Buffer.from(str, \"hex\") and Buffer.from(str, \"base64url\") decode with SIMD. Decoding 1 MiB: Encoding Bun 1.4 Bun 1.3 Node.js 26 Deno 2.9 hex",
+      "mappedTo": "kernel manual hex — no Buffer consumer",
+      "layer": "branding",
+      "status": "note"
+    },
+    {
+      "id": "source-map-decoding-is-3-1-faster",
+      "level": "h3",
+      "title": "Source map decoding is 3.1× faster",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "faster",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 2,
+      "excerpt": "Source map decoding uses SIMD. new SourceMap(json) on a 9.5 MB map takes 12 ms, 3.1× faster than before and 24× faster than Node.js. #32556 ",
+      "mappedTo": "NOT probed - runtime-wide sourcemap decode; no measured evidence in-repo",
+      "layer": "ops",
+      "status": "note"
+    },
+    {
+      "id": "promises-are-1-5-2-4-faster",
+      "level": "h3",
+      "title": "Promises are 1.5–2.4× faster",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "faster",
+      "parent": null,
+      "codeBlocks": 2,
+      "links": 0,
+      "excerpt": "JavaScriptCore rewrote their Promise implementation to reduce overhead. Time per operation, 2 million iterations: Operation Bun 1.4 Bun 1.3 ",
+      "mappedTo": "NOT probed - runtime-wide; no measured evidence in-repo",
+      "layer": "all",
+      "status": "note"
+    },
+    {
+      "id": "checkserveridentity-runs-before-fetch-sends-the-request",
+      "level": "h3",
+      "title": "checkServerIdentity runs before fetch() sends the request",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "security",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 0,
+      "excerpt": "When you pass tls: { checkServerIdentity } to fetch() , the callback runs after the TLS handshake and before any of the request is written, ",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "tls-connect-now-uses-host-as-the-default-servername",
+      "level": "h3",
+      "title": "tls.connect now uses host as the default servername",
+      "versions": [
+        "1.3.13"
+      ],
+      "section": "security",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "tls.connect({ host, port }) without a servername now uses host for both SNI and the certificate identity check. This matches Node.js. Connec",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-connect-and-bun-listen-enforce-rejectunauthorized",
+      "level": "h3",
+      "title": "Bun.connect and Bun.listen enforce rejectUnauthorized",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "security",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": "Bun.connect({ tls }) , socket.upgradeTLS() , and Bun.listen() with requestCert: true now default to rejectUnauthorized: true , as node:tls a",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "redisclient-enforces-tls-hostname-verification",
+      "level": "h3",
+      "title": "RedisClient enforces TLS hostname verification",
+      "versions": [
+        "1.3.14"
+      ],
+      "section": "security",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 0,
+      "excerpt": "A rediss:// RedisClient checks the server certificate against the host in the URL, as the Postgres and MySQL clients do, and rejects the fir",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "http-request-parsing-hardening-in-bun-serve",
+      "level": "h3",
+      "title": "HTTP request parsing hardening in Bun.serve",
+      "versions": [
+        "1.3.4"
+      ],
+      "section": "security",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 0,
+      "excerpt": "Bun.serve() answers 400 and closes the connection for more kinds of malformed Content-Length and Transfer-Encoding headers and chunked bodie",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "tarball-extraction-hardening",
+      "level": "h3",
+      "title": "Tarball extraction hardening",
+      "versions": [
+        "1.3.6"
+      ],
+      "section": "security",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 0,
+      "excerpt": "Tarball extraction for github: and URL dependencies and bun create templates skips entries that would land outside the package directory. If",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "native-freebsd-builds",
+      "level": "h3",
+      "title": "Native FreeBSD builds",
+      "versions": [
+        "1.3.14",
+        "1.4.0"
+      ],
+      "section": "platforms",
+      "parent": null,
+      "codeBlocks": 5,
+      "links": 1,
+      "excerpt": "Bun now ships official FreeBSD binaries for x86_64 and aarch64. On FreeBSD 14.3+ the full runtime ( Bun.serve() , fetch() , node:fs , node:o",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "windows-on-arm64",
+      "level": "h3",
+      "title": "Windows on ARM64",
+      "versions": [
+        "1.3.7",
+        "1.4.0"
+      ],
+      "section": "platforms",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "Bun now builds natively for Windows on ARM64. Surface, Snapdragon X, and Ampere-based Windows machines run Bun natively. #26215 PS > powersh",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "experimental-android-support",
+      "level": "h3",
+      "title": "Experimental Android support",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "platforms",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 0,
+      "excerpt": "Bun ships experimental Android builds for aarch64 and x64 with every release.",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "linux-glibc-minimum-drops-to-2-17",
+      "level": "h3",
+      "title": "Linux glibc minimum drops to 2.17",
+      "versions": [
+        "1.3.13"
+      ],
+      "section": "platforms",
+      "parent": null,
+      "codeBlocks": 4,
+      "links": 1,
+      "excerpt": "Bun's minimum glibc requirement on Linux drops from 2.26 to 2.17. Bun now runs on RHEL/CentOS 7, Amazon Linux 1, and ARM64 Linux distributio",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "fallback-for-in-memory-files-on-older-linux-kernels",
+      "level": "h3",
+      "title": "Fallback for in-memory files on older Linux kernels",
+      "versions": [
+        "1.3.13"
+      ],
+      "section": "platforms",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "On Linux kernels older than 3.17, like RHEL 7, Bun detects that memfd_create is missing once and falls back. The documented minimum kernel i",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "ready-for-typescript-7",
+      "level": "h3",
+      "title": "Ready for TypeScript 7",
+      "versions": [],
+      "section": "platforms",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 2,
+      "excerpt": "bun init and the React templates ship a tsconfig.json that works with TypeScript 7, and @types/bun resolves cleanly against it. #28542 #3934",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "sub-15-ms-timers-on-windows",
+      "level": "h3",
+      "title": "Sub-15 ms timers on Windows",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "platforms",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 2,
+      "excerpt": "On Windows, setTimeout(fn, 1) fires in about 1.4 ms instead of 15.5 ms. Timers no longer round to the 15.6 ms system tick. #34834 Improved t",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-runs-inside-an-appcontainer",
+      "level": "h3",
+      "title": "Bun runs inside an AppContainer",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "platforms",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": "Bun runs inside a Windows AppContainer , so embedders can sandbox it with a lowbox token. bun install , bun run , Bun.spawn , child_process.",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "node-js-26-node-module-version-147-res-writeheader-removed-paused-read-returns-one-chunk",
+      "level": "h3",
+      "title": "Node.js 26: NODE_MODULE_VERSION 147 , res.writeHeader() removed, paused read() returns one chunk",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "upgrading-to-1-4",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 2,
+      "excerpt": "Bun now reports Node.js 26 . Three things change: process.versions.modules is 147 . Packages that pick a prebuilt native addon by NODE_MODUL",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "x64-builds-are-now-baseline-only",
+      "level": "h3",
+      "title": "x64 builds are now baseline-only",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "upgrading-to-1-4",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": "x64 releases now ship only the baseline build. The separate build compiled with -march=haswell is gone. The -baseline download URLs and npm ",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "temporal-is-now-defined-by-default-and-toequal-compares-temporal-objects-by-value",
+      "level": "h3",
+      "title": "Temporal is now defined by default, and toEqual() compares Temporal objects by value",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "upgrading-to-1-4",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 2,
+      "excerpt": "Temporal and Date.prototype.toTemporalInstant are now defined. Set BUN_JSC_useTemporal=0 to turn them off. Bun.deepEquals() , toEqual() , to",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-ffi-cstring-values-are-plain-strings-and-cstring-no-longer-has-ptr",
+      "level": "h3",
+      "title": "bun:ffi : cstring values are plain strings and CString no longer has .ptr",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "upgrading-to-1-4",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 2,
+      "excerpt": "bun:ffi is now engine-native . This changes four things: A returns: \"cstring\" value or a cstring callback argument is a plain string. A NULL",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-build-compile-no-longer-auto-loads-tsconfig-json-or-package-json-at-runtime",
+      "level": "h3",
+      "title": "bun build --compile no longer auto-loads tsconfig.json or package.json at runtime",
+      "versions": [
+        "1.3.4"
+      ],
+      "section": "upgrading-to-1-4",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": "Standalone executables built with bun build --compile no longer auto-load tsconfig.json or package.json from the runtime working directory. ",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-install-defaults-to-the-isolated-linker-for-new-monorepos",
+      "level": "h3",
+      "title": "bun install defaults to the isolated linker for new monorepos",
+      "versions": [
+        "1.3.2"
+      ],
+      "section": "upgrading-to-1-4",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "New monorepos (projects with workspaces) now use linker: \"isolated\" . This is a symlinked node_modules layout that prevents phantom dependen",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-lock-is-now-lockfileversion-2",
+      "level": "h3",
+      "title": "bun.lock is now lockfileVersion: 2",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "upgrading-to-1-4",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 0,
+      "excerpt": "New lockfiles use version 2. Version 2 adds two stricter parse-time checks: npm packages resolved to a tarball outside your configured regis",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-invoked-as-node-no-longer-loads-env-files",
+      "level": "h3",
+      "title": "Bun invoked as node no longer loads .env files",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "upgrading-to-1-4",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "When Bun runs as node (under bun --bun , bunx --bun , or a node symlink to Bun), it no longer loads .env , .env.local , or .env.{development",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-yaml-now-parses-yes-no-on-off-as-strings-not-booleans",
+      "level": "h3",
+      "title": "Bun.YAML now parses yes / no / on / off as strings, not booleans",
+      "versions": [
+        "1.3.5"
+      ],
+      "section": "upgrading-to-1-4",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "Bun.YAML now parses booleans per the YAML 1.2 spec. yes / no / on / off / y / Y are plain strings, not booleans. These are YAML 1.1 legacy v",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-toml-parse-and-bunfig-toml-are-stricter-and-throw-syntaxerror",
+      "level": "h3",
+      "title": "Bun.TOML.parse() and bunfig.toml are stricter and throw SyntaxError",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "upgrading-to-1-4",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 2,
+      "excerpt": "The rewritten Bun.TOML parser throws SyntaxError instead of BuildMessage . It rejects TOML that the old parser let through: unquoted string ",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "xml-imports-now-return-the-parsed-document-instead-of-the-file-path",
+      "level": "h3",
+      "title": ".xml imports now return the parsed document instead of the file path",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "upgrading-to-1-4",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 2,
+      "excerpt": "import or require() of a .xml file now returns the same object as Bun.XML.parse() . This applies at runtime and in bun build . Before, it re",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "import-and-import-now-resolve-as-directories",
+      "level": "h3",
+      "title": "import \".\" and import \"..\" now resolve as directories",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "upgrading-to-1-4",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "\".\" and \"..\" in import and require() now resolve to the directory's index file or package.json main . This matches Node.js. Before, they res",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "css-imports-at-runtime-now-export-instead-of-the-file-path",
+      "level": "h3",
+      "title": ".css imports at runtime now export {} instead of the file path",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "upgrading-to-1-4",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": "At runtime, the default export of a .css import is now {} . This applies to import , require() , dynamic import() , and Workers. Before, it ",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "jsx-react-jsx-in-tsconfig-json-now-emits-jsx-instead-of-jsxdev",
+      "level": "h3",
+      "title": "\"jsx\": \"react-jsx\" in tsconfig.json now emits jsx instead of jsxDEV",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "upgrading-to-1-4",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "With \"jsx\": \"react-jsx\" , bun run and bun build now import jsx and jsxs from <pkg>/jsx-runtime . Before, both imported jsxDEV from <pkg>/jsx",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "usedefineforclassfields-false-in-tsconfig-json-is-now-honored",
+      "level": "h3",
+      "title": "useDefineForClassFields: false in tsconfig.json is now honored",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "upgrading-to-1-4",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": "With useDefineForClassFields: false , Bun now does what tsc does: Instance field initializers move into the constructor, after parameter-pro",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-socket-setkeepalive-now-treats-initialdelay-as-milliseconds",
+      "level": "h3",
+      "title": "Bun.Socket#setKeepAlive() now treats initialDelay as milliseconds",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "upgrading-to-1-4",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "setKeepAlive(true, delay) on a Bun.Socket now divides delay by 1000 before setting TCP_KEEPIDLE , as documented. Before, the raw value was u",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-mmap-offset-now-starts-the-view-at-offset",
+      "level": "h3",
+      "title": "Bun.mmap({ offset }) now starts the view at offset",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "upgrading-to-1-4",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "Bun.mmap(path, { offset }) now returns a view whose index 0 is the byte at offset . Before, offset was rounded down to a page boundary. The ",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-cron-parse-and-in-process-bun-cron-now-use-local-time",
+      "level": "h3",
+      "title": "Bun.cron.parse() and in-process Bun.cron() now use local time",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "upgrading-to-1-4",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 2,
+      "excerpt": "Bun.cron.parse() and the in-process Bun.cron(schedule, handler) overload now read schedules in the process's local time zone. Before, they u",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-now-globs-only-patterns-written-in-the-template-itself",
+      "level": "h3",
+      "title": "Bun.$ now globs only patterns written in the template itself",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "upgrading-to-1-4",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "Glob characters that arrive through ${...} , a shell variable, command substitution, or quoted text are now literal. Only * , ** , and brace",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "fs-rmdir-no-longer-accepts-recursive-true",
+      "level": "h3",
+      "title": "fs.rmdir no longer accepts { recursive: true }",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "upgrading-to-1-4",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 2,
+      "excerpt": "Passing recursive: true to fs.rmdir now throws ERR_INVALID_ARG_VALUE . This matches Node.js, which removed the option after a long deprecati",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "x509certificate-serial-and-modulus-are-now-uppercase-hex",
+      "level": "h3",
+      "title": "X509Certificate serial and modulus are now uppercase hex",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "upgrading-to-1-4",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "X509Certificate#serialNumber , .toLegacyObject().modulus , and tls.TLSSocket#getPeerCertificate() now return uppercase hex. This matches Nod",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "tls-createserver-requestcert-true-now-rejects-unverified-client-certificates",
+      "level": "h3",
+      "title": "tls.createServer({ requestCert: true }) now rejects unverified client certificates",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "upgrading-to-1-4",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "A node:tls server with requestCert: true and no explicit rejectUnauthorized now applies the default of true . A connection whose client cert",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "dgram-socket-now-throws-synchronously-on-a-second-bind-and-after-close",
+      "level": "h3",
+      "title": "dgram.Socket now throws synchronously on a second bind() and after close()",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "upgrading-to-1-4",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 2,
+      "excerpt": "Two node:dgram changes, both matching Node.js: bind() on a socket that is already bound throws ERR_SOCKET_ALREADY_BOUND . Before, it emitted",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "dns-lookup-now-uses-the-system-resolver-on-linux",
+      "level": "h3",
+      "title": "dns.lookup() now uses the system resolver on Linux",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "upgrading-to-1-4",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": "On Linux, dns.lookup() , dns.promises.lookup() , and hostname resolution in net.connect() now go through getaddrinfo() , as in Node.js. Befo",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "exceptions-thrown-in-node-fs-node-dns-and-crypto-pbkdf2-callbacks-are-now-uncaughtexception",
+      "level": "h3",
+      "title": "Exceptions thrown in node:fs , node:dns , and crypto.pbkdf2 callbacks are now uncaughtException",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "upgrading-to-1-4",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "An exception thrown inside a node:fs , node:dns , or crypto.pbkdf2() callback now reaches process.on(\"uncaughtException\") , as in Node.js. B",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "net-server-and-tls-server-no-longer-auto-resume-accepted-sockets-tls-server-checks-requestcert-and-rejectunauthorized-literally",
+      "level": "h3",
+      "title": "net.Server and tls.Server no longer auto-resume accepted sockets; tls.Server checks requestCert and rejectUnauthorized literally",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "upgrading-to-1-4",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 3,
+      "excerpt": "Sockets accepted by net.Server or tls.Server are no longer resumed automatically. Bytes that arrive before a 'data' listener is attached are",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "fetch-responses-and-bun-serve-requests-now-combine-duplicate-headers-with",
+      "level": "h3",
+      "title": "fetch() responses and Bun.serve requests now combine duplicate headers with ,",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "upgrading-to-1-4",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "Duplicate headers on a fetch() response or a Bun.serve request are now joined with , , per the Fetch spec. Before, only the last value was k",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "request-clone-and-response-clone-now-throw-once-the-body-has-been-read",
+      "level": "h3",
+      "title": "Request#clone() and Response#clone() now throw once the body has been read",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "upgrading-to-1-4",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "clone() on a Request or Response whose body has been read, or whose stream is locked, now throws TypeError: Body is disturbed or locked ( ER",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "fetch-network-errors-are-now-typeerror-and-a-failed-body-read-sets-bodyused",
+      "level": "h3",
+      "title": "fetch() network errors are now TypeError , and a failed body read sets bodyUsed",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "upgrading-to-1-4",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 2,
+      "excerpt": "fetch() and response body reads now reject a network error with a TypeError . Before, it was a plain Error . .code (for example ECONNRESET )",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-serve-inspector-has-been-removed",
+      "level": "h3",
+      "title": "Bun.serve({ inspector }) has been removed",
+      "versions": [
+        "1.3.14"
+      ],
+      "section": "upgrading-to-1-4",
+      "parent": null,
+      "codeBlocks": 2,
+      "links": 2,
+      "excerpt": "The undocumented inspector: true option is now silently ignored. It mounted a /bun:inspect debugger WebSocket on your HTTP port. It predated",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "server-publish-and-ws-publish-now-return-0-or-1-under-backpressure",
+      "level": "h3",
+      "title": "server.publish() and ws.publish() now return 0 or -1 under backpressure",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "upgrading-to-1-4",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": "server.publish() , ws.publish() , ws.publishText() , and ws.publishBinary() now return: 0 if the message was dropped for any subscriber, or ",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "server-stop-now-closes-idle-connections-and-waits-for-in-flight-requests",
+      "level": "h3",
+      "title": "server.stop() now closes idle connections and waits for in-flight requests",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "upgrading-to-1-4",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 2,
+      "excerpt": "server.stop() now closes idle keep-alive connections immediately. It closes busy ones once their response is sent. It resolves when the last",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "websocket-global-no-longer-accepts-an-agent-option",
+      "level": "h3",
+      "title": "WebSocket (global) no longer accepts an agent option",
+      "versions": [
+        "1.3.6"
+      ],
+      "section": "upgrading-to-1-4",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "The non-standard agent option on the Web-standard WebSocket constructor is removed. Node.js's global WebSocket uses an undici dispatcher , n",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "websocket-close-ping-and-pong-now-validate-their-arguments",
+      "level": "h3",
+      "title": "WebSocket#close() , ping() , and pong() now validate their arguments",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "upgrading-to-1-4",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 2,
+      "excerpt": "close() now throws InvalidAccessError for a code other than 1000 to 1003 , 1007 to 1014 , or 3000 to 4999 . It throws SyntaxError for a reas",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "websocket-now-fails-the-handshake-if-a-requested-subprotocol-is-not-negotiated",
+      "level": "h3",
+      "title": "WebSocket now fails the handshake if a requested subprotocol is not negotiated",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "upgrading-to-1-4",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": "new WebSocket(url, protocols) now closes with code 1002 when the server's 101 response omits Sec-WebSocket-Protocol . This is per RFC 6455 a",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "websocket-close-no-longer-fires-close-before-it-returns",
+      "level": "h3",
+      "title": "WebSocket#close() no longer fires close before it returns",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "upgrading-to-1-4",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "ws.close() and ws.terminate() on a WebSocket client now queue the close event, as in Node.js and browsers. When the call returns, readyState",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "jest-resetallmocks-now-drops-mock-implementations",
+      "level": "h3",
+      "title": "jest.resetAllMocks() now drops mock implementations",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "upgrading-to-1-4",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "jest.resetAllMocks() and vi.resetAllMocks() now reset every mock's implementation as well as its call history. This matches Jest. Before, th",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "expect-tocontain-now-compares-with-instead-of-object-is",
+      "level": "h3",
+      "title": "expect().toContain() now compares with === instead of Object.is",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "upgrading-to-1-4",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "toContain() in bun:test now compares array and iterable elements with === instead of Object.is . This matches Jest. expect([-0]).toContain(0",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-sql-now-decodes-mysql-datetime-and-timestamp-as-utc",
+      "level": "h3",
+      "title": "Bun.sql now decodes MySQL DATETIME and TIMESTAMP as UTC",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "upgrading-to-1-4",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "MySQL DATETIME and TIMESTAMP columns are now decoded as UTC. This matches how Bun.sql encodes them, so a Date round-trips unchanged. Before,",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-sql-now-parses-mariadb-10-5-json-columns-instead-of-returning-strings",
+      "level": "h3",
+      "title": "Bun.sql now parses MariaDB 10.5+ JSON columns instead of returning strings",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "upgrading-to-1-4",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "On MariaDB 10.5 and later, Bun.sql now parses JSON columns and JSON function results such as JSON_OBJECT() and JSON_EXTRACT() . Before, it r",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "other-behavior-changes",
+      "level": "h3",
+      "title": "Other behavior changes",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "upgrading-to-1-4",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 109,
+      "excerpt": "The bun feedback command is removed. #38444 Bun.password.hash() with argon2 now requires memoryCost of at least 8. Hashes made by Bun 1.3 wi",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "runtime",
+      "level": "h3",
+      "title": "Runtime",
+      "versions": [],
+      "section": "changelog",
+      "parent": null,
+      "codeBlocks": 39,
+      "links": 126,
+      "excerpt": "ServerWebSocket.subscriptions v 1.3.2 A new subscriptions getter returns an array of every topic the socket is currently subscribed to. #242",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "serverwebsocket-subscriptions",
+      "level": "h4",
+      "title": "ServerWebSocket.subscriptions",
+      "versions": [
+        "1.3.2"
+      ],
+      "section": "changelog",
+      "parent": "runtime",
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": "A new subscriptions getter returns an array of every topic the socket is currently subscribed to. #24299",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-repl",
+      "level": "h4",
+      "title": "bun repl",
+      "versions": [
+        "1.3.10",
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "runtime",
+      "codeBlocks": 6,
+      "links": 3,
+      "excerpt": "bun repl is now native. It is built directly into the Bun binary instead of lazily downloading a separate npm package on first run. It ships",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-readme-md",
+      "level": "h4",
+      "title": "bun ./README.md",
+      "versions": [
+        "1.3.12"
+      ],
+      "section": "changelog",
+      "parent": "runtime",
+      "codeBlocks": 2,
+      "links": 1,
+      "excerpt": "Bun pretty-prints Markdown files directly to your terminal: headings, tables, task lists, blockquotes, syntax-highlighted code blocks, and c",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-json5",
+      "level": "h4",
+      "title": "Bun.JSON5",
+      "versions": [
+        "1.3.7",
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "runtime",
+      "codeBlocks": 1,
+      "links": 2,
+      "excerpt": "Bun ships a native JSON5 parser. Bun.JSON5.parse() and Bun.JSON5.stringify() are built in, and .json5 files can be imported directly in both",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-jsonl",
+      "level": "h4",
+      "title": "Bun.JSONL",
+      "versions": [
+        "1.3.7"
+      ],
+      "section": "changelog",
+      "parent": "runtime",
+      "codeBlocks": 1,
+      "links": 2,
+      "excerpt": "Bun.JSONL is a built-in newline-delimited JSON parser. It is implemented in C++ on top of JavaScriptCore's optimized JSON parser. Bun.JSONL.",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-jsonc-parse",
+      "level": "h4",
+      "title": "Bun.JSONC.parse()",
+      "versions": [
+        "1.3.6",
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "runtime",
+      "codeBlocks": 1,
+      "links": 2,
+      "excerpt": "Bun.JSONC.parse() parses JSON with // and /* */ comments and trailing commas. It's the same parser Bun uses internally to read tsconfig.json",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-xml",
+      "level": "h4",
+      "title": "Bun.XML",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "runtime",
+      "codeBlocks": 1,
+      "links": 2,
+      "excerpt": "Bun.XML is a native XML parser. Bun.XML.parse() and Bun.XML.stringify() are built in, and .xml files can be imported directly in both the ru",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-toml",
+      "level": "h4",
+      "title": "Bun.TOML",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "runtime",
+      "codeBlocks": 1,
+      "links": 3,
+      "excerpt": "Bun.TOML was rewritten for full TOML v1.1.0 conformance and now passes 708/708 cases in the official toml-test suite. const cfg = Bun. TOML ",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-archive",
+      "level": "h4",
+      "title": "Bun.Archive",
+      "versions": [
+        "1.3.6"
+      ],
+      "section": "changelog",
+      "parent": "runtime",
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "Bun.Archive is a new built-in for creating and extracting tarballs without node-tar or any other dependency. const archive = Bun.Archive. fr",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "compressionstream-and-decompressionstream",
+      "level": "h4",
+      "title": "CompressionStream and DecompressionStream",
+      "versions": [
+        "1.3.3",
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "runtime",
+      "codeBlocks": 1,
+      "links": 2,
+      "excerpt": "Bun 1.3.3 added the Web-standard CompressionStream and DecompressionStream APIs, supporting the spec formats gzip , deflate , and deflate-ra",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "urlpattern",
+      "level": "h4",
+      "title": "URLPattern",
+      "versions": [
+        "1.3.4"
+      ],
+      "section": "changelog",
+      "parent": "runtime",
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "Bun now implements the URLPattern Web API for declarative URL matching. const pattern = new URLPattern ({ pathname : \" /users/:id \" }); patt",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "ml-dsa-and-ml-kem-in-crypto-subtle",
+      "level": "h4",
+      "title": "ML-DSA and ML-KEM in crypto.subtle",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "runtime",
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "crypto.subtle supports the NIST post-quantum algorithms: ML-DSA (FIPS 204 signatures) at parameter sets 44/65/87, for sign / verify . ML-KEM",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "ml-dsa-and-ml-kem-in-node-crypto",
+      "level": "h4",
+      "title": "ML-DSA and ML-KEM in node:crypto",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "runtime",
+      "codeBlocks": 1,
+      "links": 2,
+      "excerpt": "node:crypto now supports the NIST post-quantum algorithms ML-DSA (FIPS 204 signatures) and ML-KEM (FIPS 203 key encapsulation). generateKeyP",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "response-textstream-and-request-textstream",
+      "level": "h4",
+      "title": "Response.textStream() and Request.textStream()",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "runtime",
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "Request and Response now implement textStream() , returning a ReadableStream<string> of the body decoded as UTF-8. const res = await fetch (",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-sliceansi",
+      "level": "h4",
+      "title": "Bun.sliceAnsi()",
+      "versions": [
+        "1.3.11",
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "runtime",
+      "codeBlocks": 1,
+      "links": 2,
+      "excerpt": "Bun.sliceAnsi() slices a string by terminal column width while preserving ANSI colors and terminal hyperlinks, without splitting emoji or ot",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-wrapansi",
+      "level": "h4",
+      "title": "Bun.wrapAnsi()",
+      "versions": [
+        "1.3.7",
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "runtime",
+      "codeBlocks": 1,
+      "links": 2,
+      "excerpt": "Bun.wrapAnsi() is a native, drop-in replacement for the wrap-ansi npm package. It word-wraps text to a column width with the same ANSI/hyper",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-stringwidth",
+      "level": "h4",
+      "title": "Bun.stringWidth()",
+      "versions": [
+        "1.3.5",
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "runtime",
+      "codeBlocks": 1,
+      "links": 4,
+      "excerpt": "Bun.stringWidth() returns the number of terminal columns a string occupies, accounting for ANSI escape sequences, zero-width Unicode, and mu",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-spawn-cgroup",
+      "level": "h4",
+      "title": "Bun.spawn({ cgroup })",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "runtime",
+      "codeBlocks": 1,
+      "links": 2,
+      "excerpt": "On Linux, Bun.spawn() and Bun.spawnSync() accept a cgroup option. It takes the path of an existing cgroup directory, or an open file descrip",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "async-stack-traces-from-native-i-o",
+      "level": "h4",
+      "title": "Async stack traces from native I/O",
+      "versions": [
+        "1.3.12"
+      ],
+      "section": "changelog",
+      "parent": "runtime",
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "Errors thrown from async native APIs like fs.promises , Bun.file() , Bun.S3Client , DNS, crypto, and fetch now include async stack traces th",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "cpu-prof",
+      "level": "h4",
+      "title": "--cpu-prof",
+      "versions": [
+        "1.3.2"
+      ],
+      "section": "changelog",
+      "parent": "runtime",
+      "codeBlocks": 3,
+      "links": 5,
+      "excerpt": "Bun now ships a built-in CPU profiler. Pass --cpu-prof to generate a .cpuprofile in the Chrome CPU Profiler format. It opens directly in Chr",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "heap-prof",
+      "level": "h4",
+      "title": "--heap-prof",
+      "versions": [
+        "1.3.7"
+      ],
+      "section": "changelog",
+      "parent": "runtime",
+      "codeBlocks": 4,
+      "links": 0,
+      "excerpt": "--heap-prof generates a V8-compatible .heapsnapshot that opens directly in Chrome DevTools, and --heap-prof-md emits a grep-friendly Markdow",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "no-env-file",
+      "level": "h4",
+      "title": "--no-env-file",
+      "versions": [
+        "1.3.3"
+      ],
+      "section": "changelog",
+      "parent": "runtime",
+      "codeBlocks": 2,
+      "links": 3,
+      "excerpt": "A new --no-env-file flag (and env = false in bunfig.toml ) disables Bun's automatic .env loading . This is useful in production and CI. Ther",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "no-orphans",
+      "level": "h4",
+      "title": "--no-orphans",
+      "versions": [
+        "1.3.14",
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "runtime",
+      "codeBlocks": 1,
+      "links": 4,
+      "excerpt": "A new --no-orphans flag (and [run] noOrphans = true in bunfig, or BUN_FEATURE_FLAG_NO_ORPHANS=1 ) makes Bun exit when its original parent pr",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-transpiler-repl-mode",
+      "level": "h4",
+      "title": "Bun.Transpiler REPL mode",
+      "versions": [
+        "1.3.7"
+      ],
+      "section": "changelog",
+      "parent": "runtime",
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": "A new replMode option transforms code for interactive REPL evaluation: it captures the last expression's value, hoists declarations so they ",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-yaml-passes-402-402-of-yaml-test-suite",
+      "level": "h4",
+      "title": "Bun.YAML passes 402/402 of yaml-test-suite",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "runtime",
+      "codeBlocks": 0,
+      "links": 3,
+      "excerpt": "Bun.YAML now passes 402/402 yaml-test-suite. This fixes spec-compliance bugs in: explicit ? keys tab indentation {} -style mappings & anchor",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "websocket-proxies-and-unix-sockets",
+      "level": "h4",
+      "title": "WebSocket proxies and Unix sockets",
+      "versions": [
+        "1.3.6",
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "runtime",
+      "codeBlocks": 1,
+      "links": 2,
+      "excerpt": "The WebSocket client now supports connecting through HTTP and HTTPS proxies via a new proxy option. It supports ws:// and wss:// over both H",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "websocket-url-credentials",
+      "level": "h4",
+      "title": "WebSocket URL credentials",
+      "versions": [
+        "1.3.7",
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "runtime",
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": "new WebSocket(\"ws://user:pass@host\") now forwards URL-embedded credentials as a Basic Authorization header. An explicitly provided Authoriza",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "sha-3-and-x25519-in-web-crypto",
+      "level": "h4",
+      "title": "SHA-3 and X25519 in Web Crypto",
+      "versions": [
+        "1.3.13"
+      ],
+      "section": "changelog",
+      "parent": "runtime",
+      "codeBlocks": 1,
+      "links": 2,
+      "excerpt": "SHA-3 lands in both Web Crypto and node:crypto . crypto.subtle.digest() and HMAC sign / verify now accept SHA3-256 / SHA3-384 / SHA3-512 . c",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "structuredclone-preserves-object-identity",
+      "level": "h4",
+      "title": "structuredClone preserves object identity",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "runtime",
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": "structuredClone preserves object identity for Date , RegExp , Error subclasses, DOMException , CryptoKey , KeyObject , X509Certificate , Blo",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-csrf-sessionid",
+      "level": "h4",
+      "title": "Bun.CSRF sessionId",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "runtime",
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": "Bun.CSRF.generate() and Bun.CSRF.verify() accept a new sessionId option that binds a token to a specific principal via HMAC associated data.",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-udpsocket-connection-refused-errors-and-truncation-flags",
+      "level": "h4",
+      "title": "Bun.udpSocket() connection-refused errors and truncation flags",
+      "versions": [
+        "1.3.12"
+      ],
+      "section": "changelog",
+      "parent": "runtime",
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": "On Linux, sending to a dead port now fires the error handler with ECONNREFUSED instead of silently timing out. The data callback also gains ",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "grapheme-clusters-for-indic-scripts",
+      "level": "h4",
+      "title": "Grapheme clusters for Indic scripts",
+      "versions": [
+        "1.3.7"
+      ],
+      "section": "changelog",
+      "parent": "runtime",
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": "We rewrote grapheme cluster segmentation with Indic Conjunct Break support. Devanagari and other Indic conjuncts now segment as single clust",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-s3client",
+      "level": "h4",
+      "title": "Bun.S3Client",
+      "versions": [
+        "1.3.1",
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "runtime",
+      "codeBlocks": 1,
+      "links": 7,
+      "excerpt": "Bun.S3Client now supports AWS Requester Pays buckets. Pass requestPayer: true on the client or per-operation to send the x-amz-request-payer",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-sql-is-more-reliable",
+      "level": "h4",
+      "title": "Bun.sql is more reliable",
+      "versions": [
+        "1.3.11",
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "runtime",
+      "codeBlocks": 1,
+      "links": 2,
+      "excerpt": "const sql = new Bun. SQL ({ prepare : false }); await sql `SELECT 1` ; // now safe behind PgBouncer transaction pooling PgBouncer transactio",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "named-parameters-in-bun-sql-for-sqlite",
+      "level": "h4",
+      "title": "Named parameters in Bun.sql for SQLite",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "runtime",
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": "sql.unsafe() and sql.file() accept an object of named parameters for :name , $name , and @name placeholders. Previously an object bound noth",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "sqlite-3-53-0",
+      "level": "h4",
+      "title": "SQLite 3.53.0",
+      "versions": [
+        "1.3.14"
+      ],
+      "section": "changelog",
+      "parent": "runtime",
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": "bun:sqlite 's bundled SQLite is upgraded to 3.53.0 ; db.close(true) no longer throws \"database is locked\" after db.transaction() ; non-UTF-8",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-isstandaloneexecutable",
+      "level": "h4",
+      "title": "Bun.isStandaloneExecutable",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "runtime",
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": "Bun.isStandaloneExecutable is a new read-only boolean, true inside a bun build --compile binary; unlike checking Bun.embeddedFiles.length > ",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-init-react-tanstack",
+      "level": "h4",
+      "title": "bun init --react=tanstack",
+      "versions": [
+        "1.3.4"
+      ],
+      "section": "changelog",
+      "parent": "runtime",
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": "bun init --react=tanstack is a new template that scaffolds a TanStack Start project with file-based routing, Vite, and Tailwind, running on ",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "fetch",
+      "level": "h3",
+      "title": "fetch()",
+      "versions": [],
+      "section": "changelog",
+      "parent": null,
+      "codeBlocks": 1,
+      "links": 12,
+      "excerpt": "fetch() response backpressure v 1.4.0 fetch() now applies backpressure when streaming a response body. Once a chunk is delivered to JavaScri",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "fetch-response-backpressure",
+      "level": "h4",
+      "title": "fetch() response backpressure",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "fetch",
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "fetch() now applies backpressure when streaming a response body. Once a chunk is delivered to JavaScript and nothing has consumed it, the HT",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "https-proxies-reuse-connect-tunnels",
+      "level": "h4",
+      "title": "HTTPS proxies reuse CONNECT tunnels",
+      "versions": [
+        "1.3.12",
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "fetch",
+      "codeBlocks": 0,
+      "links": 2,
+      "excerpt": "fetch() through an HTTPS proxy now reuses CONNECT tunnels . The tunneled TLS session is pooled across sequential requests to the same target",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "custom-tls-options-reuse-keep-alive-connections",
+      "level": "h4",
+      "title": "Custom TLS options reuse keep-alive connections",
+      "versions": [
+        "1.3.10"
+      ],
+      "section": "changelog",
+      "parent": "fetch",
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": "fetch() with custom TLS options now reuses keepalive connections . Identical SSL configs (client certificates, custom CA, mTLS) are interned",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "header-name-casing-is-preserved-on-the-wire",
+      "level": "h4",
+      "title": "Header name casing is preserved on the wire",
+      "versions": [
+        "1.3.7"
+      ],
+      "section": "changelog",
+      "parent": "fetch",
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": "fetch() preserves header name casing on the wire instead of lowercasing it. Headers are case-insensitive per RFC 7230, but plenty of real-wo",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "http-proxy-is-re-read-at-runtime",
+      "level": "h4",
+      "title": "HTTP_PROXY is re-read at runtime",
+      "versions": [
+        "1.3.12"
+      ],
+      "section": "changelog",
+      "parent": "fetch",
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": "process.env.HTTP_PROXY / HTTPS_PROXY / NO_PROXY set at runtime now take effect on the next fetch() call instead of only being read once at s",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "test-runner",
+      "level": "h3",
+      "title": "Test runner",
+      "versions": [],
+      "section": "changelog",
+      "parent": null,
+      "codeBlocks": 3,
+      "links": 18,
+      "excerpt": "onTestFinished() v 1.3.2 bun:test exports onTestFinished() , a Vitest-compatible hook that registers a callback to run after the current tes",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "ontestfinished",
+      "level": "h4",
+      "title": "onTestFinished()",
+      "versions": [
+        "1.3.2"
+      ],
+      "section": "changelog",
+      "parent": "test-runner",
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "bun:test exports onTestFinished() , a Vitest-compatible hook that registers a callback to run after the current test completes, after all af",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-test-only-failures",
+      "level": "h4",
+      "title": "bun test --only-failures",
+      "versions": [
+        "1.3.1"
+      ],
+      "section": "changelog",
+      "parent": "test-runner",
+      "codeBlocks": 2,
+      "links": 1,
+      "excerpt": "bun test --only-failures suppresses output for passing and skipped tests, printing only failures and the final summary. #23312 bun test --on",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-test-path-ignore-patterns",
+      "level": "h4",
+      "title": "bun test --path-ignore-patterns",
+      "versions": [
+        "1.3.11"
+      ],
+      "section": "changelog",
+      "parent": "test-runner",
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": "bun test --path-ignore-patterns (and test.pathIgnorePatterns in bunfig.toml) excludes test files by glob, so you can skip integration tests,",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-test-pass-with-no-tests",
+      "level": "h4",
+      "title": "bun test --pass-with-no-tests",
+      "versions": [
+        "1.3.1"
+      ],
+      "section": "changelog",
+      "parent": "test-runner",
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": "bun test --pass-with-no-tests exits with code 0 when no tests match, matching Jest and Vitest. Useful in monorepos where a shared pattern ru",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-test-grep",
+      "level": "h4",
+      "title": "bun test --grep",
+      "versions": [
+        "1.3.6"
+      ],
+      "section": "changelog",
+      "parent": "test-runner",
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": "bun test now accepts --grep as an alias for -t / --test-name-pattern , matching Mocha and Jest. #25788",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "using-spy-spyon",
+      "level": "h4",
+      "title": "using spy = spyOn(...)",
+      "versions": [
+        "1.3.9"
+      ],
+      "section": "changelog",
+      "parent": "test-runner",
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": "spyOn() and mock() now implement Symbol.dispose , so using spy = spyOn(obj, \"method\") automatically restores the original implementation whe",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "the-vi-global",
+      "level": "h4",
+      "title": "The vi global",
+      "versions": [
+        "1.3.1",
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "test-runner",
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": "The vi global (Vitest compatibility alias) is now defined in bun test , so files that call vi.fn() or vi.mock() without importing run unmodi",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "timeouts-on-beforeall-afterall-hooks",
+      "level": "h4",
+      "title": "Timeouts on beforeAll / afterAll hooks",
+      "versions": [
+        "1.3.2",
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "test-runner",
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": "beforeAll , beforeEach , afterAll , and afterEach now accept a numeric timeout or { timeout } options object as the second argument instead ",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bundler",
+      "level": "h3",
+      "title": "Bundler",
+      "versions": [],
+      "section": "changelog",
+      "parent": null,
+      "codeBlocks": 4,
+      "links": 16,
+      "excerpt": "Execute-only standalone binaries on Linux v 1.3.12 Standalone executables on Linux now embed the module graph in a segment the OS loads into",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "execute-only-standalone-binaries-on-linux",
+      "level": "h4",
+      "title": "Execute-only standalone binaries on Linux",
+      "versions": [
+        "1.3.12"
+      ],
+      "section": "changelog",
+      "parent": "bundler",
+      "codeBlocks": 3,
+      "links": 1,
+      "excerpt": "Standalone executables on Linux now embed the module graph in a segment the OS loads into memory with the rest of the binary. Before, they o",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "usedefineforclassfields-and-jsx-react-jsx-in-tsconfig-json",
+      "level": "h4",
+      "title": "useDefineForClassFields and \"jsx\": \"react-jsx\" in tsconfig.json",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "bundler",
+      "codeBlocks": 0,
+      "links": 2,
+      "excerpt": "useDefineForClassFields: false is honored. Instance field initializers move into the constructor after parameter-property assignments, as ts",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "native-using-and-await-using-for-target-bun",
+      "level": "h4",
+      "title": "Native using and await using for --target=bun",
+      "versions": [
+        "1.3.14",
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "bundler",
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "using and await using declarations are no longer lowered to helper functions when targeting Bun. JavaScriptCore supports explicit resource m",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "emitdecoratormetadata-implies-legacy-decorators",
+      "level": "h4",
+      "title": "emitDecoratorMetadata implies legacy decorators",
+      "versions": [
+        "1.3.11"
+      ],
+      "section": "changelog",
+      "parent": "bundler",
+      "codeBlocks": 0,
+      "links": 0,
+      "excerpt": "Setting emitDecoratorMetadata: true in tsconfig.json now implies legacy decorator semantics even when experimentalDecorators is omitted, fix",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "compile-executable-path",
+      "level": "h4",
+      "title": "--compile-executable-path",
+      "versions": [
+        "1.3.6"
+      ],
+      "section": "changelog",
+      "parent": "bundler",
+      "codeBlocks": 0,
+      "links": 0,
+      "excerpt": "bun build --compile gains --compile-executable-path to point at a local Bun binary instead of downloading one when cross-compiling, and usin",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "reactfastrefresh-and-allowunresolved-in-bun-build",
+      "level": "h4",
+      "title": "reactFastRefresh and allowUnresolved in Bun.build()",
+      "versions": [
+        "1.3.6"
+      ],
+      "section": "changelog",
+      "parent": "bundler",
+      "codeBlocks": 0,
+      "links": 0,
+      "excerpt": "Bun.build() gains reactFastRefresh: true (works on all targets). It also gains allowUnresolved: string[] , which controls which dynamic-impo",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "browser-field-remaps-for-node-builtins",
+      "level": "h4",
+      "title": "browser field remaps for Node builtins",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "bundler",
+      "codeBlocks": 0,
+      "links": 3,
+      "excerpt": "--target=browser now applies package.json \"browser\" remaps to Node builtins before falling back to Bun's polyfills. It also applies them to ",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "node-js-compatibility",
+      "level": "h3",
+      "title": "Node.js compatibility",
+      "versions": [],
+      "section": "changelog",
+      "parent": null,
+      "codeBlocks": 32,
+      "links": 111,
+      "excerpt": "node:http v 1.3.4 v 1.4.0 The node:http client has been rewritten as a direct port of Node's _http_client.js . It replaces the previous fetc",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "node-http",
+      "level": "h4",
+      "title": "node:http",
+      "versions": [
+        "1.3.4",
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "node-js-compatibility",
+      "codeBlocks": 2,
+      "links": 3,
+      "excerpt": "The node:http client has been rewritten as a direct port of Node's _http_client.js . It replaces the previous fetch() -based shim. http.Clie",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "node-http2",
+      "level": "h4",
+      "title": "node:http2",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "node-js-compatibility",
+      "codeBlocks": 1,
+      "links": 2,
+      "excerpt": "node:http2 has a spec-compliant HTTP/2 parser. Server push works end to end via pushStream() and createPushResponse() , and Node API parity ",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "node-net-and-node-tls",
+      "level": "h4",
+      "title": "node:net and node:tls",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "node-js-compatibility",
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "socket.end() now half-closes the connection instead of full-closing it. resetAndDestroy() , write-after-end errors, and ECONNRESET shapes ar",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "node-worker-threads",
+      "level": "h4",
+      "title": "node:worker_threads",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "node-js-compatibility",
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "A worker with an unsettled top-level await exits with code 13. process.abort() inside a worker ends only that worker. node:worker_threads ga",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "node-fs",
+      "level": "h4",
+      "title": "node:fs",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "node-js-compatibility",
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "fs.cp and cpSync get Node's full ERR_FS_CP_* error semantics, fs.watch gains the ignore option, and fs.promises.watch gains AbortSignal supp",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "node-stream",
+      "level": "h4",
+      "title": "node:stream",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "node-js-compatibility",
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "The experimental stream/iter and zlib/iter APIs land behind --experimental-stream-iter , readable.read() returns one buffered chunk at a tim",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "process",
+      "level": "h4",
+      "title": "process",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "node-js-compatibility",
+      "codeBlocks": 1,
+      "links": 2,
+      "excerpt": "Setting process.env.TZ now updates existing Date instances. process.env now behaves like Node's: assigned values are coerced to strings, and",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "asynclocalstorage",
+      "level": "h4",
+      "title": "AsyncLocalStorage",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "node-js-compatibility",
+      "codeBlocks": 1,
+      "links": 3,
+      "excerpt": "AsyncLocalStorage gains the Node 26 defaultValue / name constructor options and AsyncLocalStorage.prototype.withScope() . AsyncResource.bind",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "node-vm",
+      "level": "h4",
+      "title": "node:vm",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "node-js-compatibility",
+      "codeBlocks": 1,
+      "links": 2,
+      "excerpt": "Top-level await in a SourceTextModule resumes after the await , and node:vm adds the v26 module-linking API ( linkRequests() , instantiate()",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "node-cluster",
+      "level": "h4",
+      "title": "node:cluster",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "node-js-compatibility",
+      "codeBlocks": 1,
+      "links": 2,
+      "excerpt": "node:cluster shares sockets between workers. Bun 1.4 implements round-robin scheduling (the primary accepts connections and hands the file d",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "vitest-coverage",
+      "level": "h4",
+      "title": "vitest --coverage",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "node-js-compatibility",
+      "codeBlocks": 2,
+      "links": 2,
+      "excerpt": "node:inspector now implements the V8 Profiler coverage methods, so vitest --coverage with the default v8 provider works under Bun. Per-file ",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "chrome-inspect",
+      "level": "h4",
+      "title": "chrome://inspect",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "node-js-compatibility",
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "inspector.open() , inspector.url() , inspector.close() , and inspector.waitForDebugger() are implemented. Bun starts a WebSocket server that",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "node-test",
+      "level": "h4",
+      "title": "node:test",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "node-js-compatibility",
+      "codeBlocks": 2,
+      "links": 4,
+      "excerpt": "Subtests work. t.test() , t.describe() , and top-level test() / describe() called inside a running test now execute inline instead of throwi",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "node-quic",
+      "level": "h4",
+      "title": "node:quic",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "node-js-compatibility",
+      "codeBlocks": 1,
+      "links": 2,
+      "excerpt": "node:quic is now implemented. It is backed by lsquic, which Bun already vendors for HTTP/3. The full experimental Node v26 API is covered: l",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "node-sqlite",
+      "level": "h4",
+      "title": "node:sqlite",
+      "versions": [
+        "1.3.2",
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "node-js-compatibility",
+      "codeBlocks": 1,
+      "links": 6,
+      "excerpt": "node:sqlite is now implemented. It passes all 18 of Node v26.3.0's test-sqlite-* files (319 subtests, 0 failures, 4 skips, on Linux x64). ma",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "node-repl",
+      "level": "h4",
+      "title": "node:repl",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "node-js-compatibility",
+      "codeBlocks": 4,
+      "links": 3,
+      "excerpt": "node:repl is now a working port of Node v26.3.0's REPL. Before, it was a stub that threw on use. It passes 75.2% of Node's repl tests. This ",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "node-trace-events",
+      "level": "h4",
+      "title": "node:trace_events",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "node-js-compatibility",
+      "codeBlocks": 3,
+      "links": 2,
+      "excerpt": "node:trace_events is now fully implemented. It passes 100% of Node v26.3.0's trace tests. Bun supports --trace-events-enabled , --trace-even",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "node-domain",
+      "level": "h4",
+      "title": "node:domain",
+      "versions": [],
+      "section": "changelog",
+      "parent": "node-js-compatibility",
+      "codeBlocks": 1,
+      "links": 2,
+      "excerpt": "node:domain is now a real implementation instead of a ~70-line stub. It passes 66.7% of Node's domain tests. Domains propagate via Bun's Asy",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "node-buffer",
+      "level": "h4",
+      "title": "node:buffer",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "node-js-compatibility",
+      "codeBlocks": 1,
+      "links": 3,
+      "excerpt": "node:buffer now passes 92.9% (65/70) of Node.js v26.3.0's test-buffer*.js suite. Buffer.indexOf / lastIndexOf / includes gain the end parame",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "textdecoder-supports-all-whatwg-encodings",
+      "level": "h4",
+      "title": "TextDecoder supports all WHATWG encodings",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "node-js-compatibility",
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "TextDecoder now supports every encoding in the Encoding Standard. Sixteen previously-missing single-byte encodings ( iso-8859-2 , -5 , -16 ,",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "uid-and-gid-for-child-processes",
+      "level": "h4",
+      "title": "uid and gid for child processes",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "node-js-compatibility",
+      "codeBlocks": 1,
+      "links": 2,
+      "excerpt": "Bun.spawn , Bun.spawnSync , and node:child_process now honor the uid and gid options. They change the child's user and group IDs before exec",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "node-compile-cache",
+      "level": "h4",
+      "title": "NODE_COMPILE_CACHE",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "node-js-compatibility",
+      "codeBlocks": 1,
+      "links": 4,
+      "excerpt": "module.enableCompileCache() and the NODE_COMPILE_CACHE environment variable now persist bytecode to disk between runs. --cpu-prof and --heap",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "datadog-continuous-profiling-works",
+      "level": "h4",
+      "title": "Datadog continuous profiling works",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "node-js-compatibility",
+      "codeBlocks": 1,
+      "links": 2,
+      "excerpt": "dd-trace with profiling: true and @datadog/pprof now load and profile in Bun. v8::CpuProfiler is backed by JavaScriptCore's sampling profile",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "await-worker-terminate-waits-for-the-thread",
+      "level": "h4",
+      "title": "await worker.terminate() waits for the thread",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "node-js-compatibility",
+      "codeBlocks": 1,
+      "links": 4,
+      "excerpt": "Worker threads are joined by their parent. await worker.terminate() resolves with the exit code only once the thread is gone, and every work",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "node-api-version-10",
+      "level": "h4",
+      "title": "Node-API version 10",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "node-js-compatibility",
+      "codeBlocks": 0,
+      "links": 3,
+      "excerpt": "Bun now reports Node-API version 10, syncs the public headers from Node 26, and implements the five NAPI_EXPERIMENTAL node_api_* functions N",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "n-api-finalizers-run-in-lifo-order-at-exit",
+      "level": "h4",
+      "title": "N-API finalizers run in LIFO order at exit",
+      "versions": [
+        "1.3.13"
+      ],
+      "section": "changelog",
+      "parent": "node-js-compatibility",
+      "codeBlocks": 0,
+      "links": 0,
+      "excerpt": "napi_wrap finalizers now run in LIFO order at process exit. This fixes shutdown segfaults in kuzu, duckdb, sqlite3, node-llama-cpp, and @nap",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "tls-setdefaultcacertificates-and-securecontext-addcacert",
+      "level": "h4",
+      "title": "tls.setDefaultCACertificates() and secureContext.addCACert()",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "node-js-compatibility",
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": "node:tls gains per-context secureContext.addCACert() and process-wide tls.setDefaultCACertificates() . #31155",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "node-http2-diagnostics-channel-altsvc-extended-connect-and-allowhttp1",
+      "level": "h4",
+      "title": "node:http2 diagnostics_channel , AltSvc, extended CONNECT, and allowHTTP1",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "node-js-compatibility",
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": "node:http2 gains diagnostics_channel instrumentation, AltSvc and Origin frames, extended CONNECT, and allowHTTP1 fallback for the compatibil",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "fs-mkdtempdisposable-and-filehandle-pull-writer",
+      "level": "h4",
+      "title": "fs.mkdtempDisposable() and FileHandle#pull() / #writer()",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "node-js-compatibility",
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": "fs.mkdtempDisposable() and FileHandle.prototype.pull() / .writer() are implemented, and fs.watch no longer drops events when two files chang",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "node-zlib-brotli-and-zstd-dictionaries",
+      "level": "h4",
+      "title": "node:zlib brotli and zstd dictionaries",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "node-js-compatibility",
+      "codeBlocks": 0,
+      "links": 3,
+      "excerpt": "node:zlib supports brotli and zstd dictionaries, reset() is Node-compatible, async write() accepts growable SharedArrayBuffer , and zstdComp",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "node-util-styletext-hex-colors-getcallsites-tty-writestream",
+      "level": "h4",
+      "title": "node:util : styleText hex colors, getCallSites , tty.WriteStream",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "node-js-compatibility",
+      "codeBlocks": 0,
+      "links": 5,
+      "excerpt": "styleText hex colors, getCallSites , regexp highlighting, and tty.WriteStream are now implemented. parseArgs matches Node's property inserti",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "v8-gcprofiler",
+      "level": "h4",
+      "title": "v8.GCProfiler",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "node-js-compatibility",
+      "codeBlocks": 0,
+      "links": 0,
+      "excerpt": "node:v8 adds v8.GCProfiler (backed by JavaScriptCore's HeapObserver ) and v8.isStringOneByteRepresentation() .",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "ws-compatible-upgrade-and-unexpected-response-events",
+      "level": "h4",
+      "title": "ws-compatible 'upgrade' and 'unexpected-response' events",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "node-js-compatibility",
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": "Bun's WebSocket client emits 'upgrade' and 'unexpected-response' events, matching the ws package. #36272",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "dns-promises-getdefaultresultorder-and-getservers",
+      "level": "h4",
+      "title": "dns.promises.getDefaultResultOrder() and getServers()",
+      "versions": [
+        "1.3.12"
+      ],
+      "section": "changelog",
+      "parent": "node-js-compatibility",
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": "node:dns/promises now exports getDefaultResultOrder() and getServers() , fixing Vite 8 builds. #28949",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "sigwinch-on-windows",
+      "level": "h4",
+      "title": "SIGWINCH on Windows",
+      "versions": [
+        "1.3.3"
+      ],
+      "section": "changelog",
+      "parent": "node-js-compatibility",
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": "On Windows, SIGWINCH now fires on terminal resize (unblocking TUI libraries like opentui and opencode), and SIGHUP / SIGBREAK fire on consol",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "use-system-ca-reads-node-s-windows-certificate-stores",
+      "level": "h4",
+      "title": "--use-system-ca reads Node's Windows certificate stores",
+      "versions": [
+        "1.3.14"
+      ],
+      "section": "changelog",
+      "parent": "node-js-compatibility",
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": "--use-system-ca on Windows now reads the same certificate stores Node.js does ( ROOT , CA , and TrustedPeople across local-machine, current-",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "package-manager",
+      "level": "h3",
+      "title": "Package manager",
+      "versions": [],
+      "section": "changelog",
+      "parent": null,
+      "codeBlocks": 3,
+      "links": 31,
+      "excerpt": "Lockfile migration v 1.4.0 bun install 's npm package-lock.json migrator now supports lockfileVersion 1 through 4, including bundled and nes",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "lockfile-migration",
+      "level": "h4",
+      "title": "Lockfile migration",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "package-manager",
+      "codeBlocks": 0,
+      "links": 0,
+      "excerpt": "bun install 's npm package-lock.json migrator now supports lockfileVersion 1 through 4, including bundled and nested dependencies, optionalP",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-lock-versioning",
+      "level": "h4",
+      "title": "bun.lock versioning",
+      "versions": [
+        "1.3.2"
+      ],
+      "section": "changelog",
+      "parent": "package-manager",
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "bun.lock now records a configVersion alongside the existing lockfileVersion . So future Bun releases can change install defaults for new pro",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "publichoistpattern-and-hoistpattern",
+      "level": "h4",
+      "title": "publicHoistPattern and hoistPattern",
+      "versions": [
+        "1.3.1"
+      ],
+      "section": "changelog",
+      "parent": "package-manager",
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "The isolated linker now reads publicHoistPattern and hoistPattern from bunfig.toml and .npmrc . publicHoistPattern hoists matching transitiv",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "install-hoist-false",
+      "level": "h4",
+      "title": "install.hoist = false",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "package-manager",
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": "install.hoist = false in bunfig.toml (or hoist=false in .npmrc ) disables the isolated linker's hidden node_modules/.bun/node_modules fallba",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-update-recursive-and-filter-update-every-selected-workspace",
+      "level": "h4",
+      "title": "bun update --recursive and --filter update every selected workspace",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "package-manager",
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "bun update --recursive and bun update --filter <pattern> now update the dependencies of every workspace they select and write each workspace",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-update-name-updates-every-copy",
+      "level": "h4",
+      "title": "bun update <name> updates every copy",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "package-manager",
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": "bun update <name> now re-resolves every copy of <name> in the lockfile, including the copies other workspaces and your transitive dependenci",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "happy-eyeballs-for-registry-connections",
+      "level": "h4",
+      "title": "Happy Eyeballs for registry connections",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "package-manager",
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": "bun install now correctly interleaves IPv6 and IPv4 addresses per RFC 8305 when connecting to the registry, so a blackholed IPv6 route (Star",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "streaming-tarball-extraction",
+      "level": "h4",
+      "title": "Streaming tarball extraction",
+      "versions": [
+        "1.3.13"
+      ],
+      "section": "changelog",
+      "parent": "package-manager",
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": "bun install now decompresses and extracts packages while they download, with incremental integrity hashing computed on the fly. #29404",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "peer-dependency-resolution-is-up-to-8x-faster",
+      "level": "h4",
+      "title": "Peer dependency resolution is up to 8x faster",
+      "versions": [
+        "1.3.13"
+      ],
+      "section": "changelog",
+      "parent": "package-manager",
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": "bun install --linker=isolated is up to 8x faster on monorepos with heavy peer dependency graphs. The first resolution pass now deduplicates ",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-list",
+      "level": "h4",
+      "title": "bun list",
+      "versions": [
+        "1.3.2"
+      ],
+      "section": "changelog",
+      "parent": "package-manager",
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": "bun list is now a shorthand for bun pm ls , printing your dependency tree without the extra pm subcommand. #24159",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-publish-sends-your-readme",
+      "level": "h4",
+      "title": "bun publish sends your README",
+      "versions": [
+        "1.3.14"
+      ],
+      "section": "changelog",
+      "parent": "package-manager",
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": "bun publish now sends readme and readmeFilename to the registry, so packages published with Bun show their README on npmjs.com. #30257",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "per-path-npmrc-auth-tokens",
+      "level": "h4",
+      "title": "Per-path .npmrc auth tokens",
+      "versions": [
+        "1.3.11",
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "package-manager",
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": ".npmrc auth tokens are now matched by host and path, so multiple registries on the same host (Azure Artifacts, JFrog) each get their own tok",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-update-updates-catalogs",
+      "level": "h4",
+      "title": "bun update updates catalogs",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "package-manager",
+      "codeBlocks": 0,
+      "links": 2,
+      "excerpt": "bun update now updates catalog version definitions in non-interactive mode, and re-resolves catalog references when run from the workspace r",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "patcheddependencies-cache-keyed-by-full-patch-hash",
+      "level": "h4",
+      "title": "patchedDependencies cache keyed by full patch hash",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "package-manager",
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": "patchedDependencies cache entries are now keyed by a SHA-1 of the whole patch file. Previously the key was a Wyhash, and only the first 16 K",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-pm-ls-trusted",
+      "level": "h4",
+      "title": "bun pm ls --trusted",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "package-manager",
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": "bun pm ls --trusted filters the dependency tree to packages allowed to run lifecycle scripts, honoring both trustedDependencies in package.j",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "performance",
+      "level": "h3",
+      "title": "Performance",
+      "versions": [],
+      "section": "changelog",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 0,
+      "excerpt": "",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "javascriptcore",
+      "level": "h3",
+      "title": "JavaScriptCore",
+      "versions": [],
+      "section": "changelog",
+      "parent": null,
+      "codeBlocks": 2,
+      "links": 29,
+      "excerpt": "Temporal v 1.4.0 Temporal , the replacement for Date , is now enabled by default. const departure = Temporal.ZonedDateTime. from ( \" 2026-08",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "temporal",
+      "level": "h4",
+      "title": "Temporal",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "javascriptcore",
+      "codeBlocks": 1,
+      "links": 1,
+      "excerpt": "Temporal , the replacement for Date , is now enabled by default. const departure = Temporal.ZonedDateTime. from ( \" 2026-08-10T09:00[America",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "webassembly",
+      "level": "h4",
+      "title": "WebAssembly",
+      "versions": [
+        "1.4.0"
+      ],
+      "section": "changelog",
+      "parent": "javascriptcore",
+      "codeBlocks": 1,
+      "links": 3,
+      "excerpt": "JSPI (JavaScript Promise Integration) is implemented and enabled by default (53e97afd3421, 307705 ): WebAssembly.Suspending / WebAssembly.pr",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "es-module-loader-rewritten-in-c",
+      "level": "h4",
+      "title": "ES module loader rewritten in C++",
+      "versions": [],
+      "section": "changelog",
+      "parent": "javascriptcore",
+      "codeBlocks": 0,
+      "links": 2,
+      "excerpt": "JavaScriptCore's ES module loader has been rewritten ( 242740 , 4a638109b905). The previous implementation was partly written in JavaScript,",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "promises-and-async-functions",
+      "level": "h4",
+      "title": "Promises and async functions",
+      "versions": [],
+      "section": "changelog",
+      "parent": "javascriptcore",
+      "codeBlocks": 0,
+      "links": 17,
+      "excerpt": "JSC moved its Promise implementation from JavaScript builtins to C++, then layered allocation-elimination on top. This directly affects ever",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "string",
+      "level": "h4",
+      "title": "String",
+      "versions": [],
+      "section": "changelog",
+      "parent": "javascriptcore",
+      "codeBlocks": 0,
+      "links": 0,
+      "excerpt": "Operation Commit Speedup String#indexOf (1-char) on concatenated strings 3a21b7550526 44.98× String#endsWith constant arg, inlined in the JI",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "array",
+      "level": "h4",
+      "title": "Array",
+      "versions": [],
+      "section": "changelog",
+      "parent": "javascriptcore",
+      "codeBlocks": 0,
+      "links": 0,
+      "excerpt": "Operation Commit Speedup indexOf / includes string compare, 8 bytes at a time f9477aedc258 5.39× / 5.25× Resizing arrays with arr.length = N",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "map-set-weakmap",
+      "level": "h4",
+      "title": "Map / Set / WeakMap",
+      "versions": [],
+      "section": "changelog",
+      "parent": "javascriptcore",
+      "codeBlocks": 0,
+      "links": 0,
+      "excerpt": "Operation Commit Speedup [...set] spread walks the hash table directly 38411ab91e01 + 4f4154bf1726 ~6× total [...map.keys()] / [...map.value",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "object-json-intl-and-jit",
+      "level": "h4",
+      "title": "Object, JSON, Intl, and JIT",
+      "versions": [],
+      "section": "changelog",
+      "parent": "javascriptcore",
+      "codeBlocks": 0,
+      "links": 4,
+      "excerpt": "Operation Commit Speedup Intl.DurationFormat#format per-unit formatter cache 7e34b0157828 26.5× Set class-field function names at parse time",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "other-runtime-fixes",
+      "level": "h3",
+      "title": "Other runtime fixes",
+      "versions": [],
+      "section": "changelog",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 105,
+      "excerpt": "Bun.RedisClient : a failed connection closes its socket, connect() settles once, and onclose runs once. Before, a client that could not conn",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "other-fetch-fixes",
+      "level": "h3",
+      "title": "Other fetch() fixes",
+      "versions": [],
+      "section": "changelog",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 24,
+      "excerpt": "Cancelling a fetch() response reader ( reader.cancel() / res.body.cancel() ) now aborts the underlying request and closes the connection ins",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "other-test-runner-fixes",
+      "level": "h3",
+      "title": "Other test runner fixes",
+      "versions": [],
+      "section": "changelog",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 16,
+      "excerpt": "Large expect() mismatches print a real diff. The old diff engine gave up after 1 s and printed both values whole; a 456 KB string pair now d",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "other-bundler-fixes",
+      "level": "h3",
+      "title": "Other bundler fixes",
+      "versions": [],
+      "section": "changelog",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 53,
+      "excerpt": "Bun.build() waits only for its own work. A pending fs.readFile() on a FIFO no longer blocks an unrelated build. #38604 --splitting no longer",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "other-node-js-fixes",
+      "level": "h3",
+      "title": "Other Node.js fixes",
+      "versions": [],
+      "section": "changelog",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 194,
+      "excerpt": "bun --bun jest runs. require(\"module\").prototype is non-enumerable, as in Node, so jest no longer fails with \"Attempted to assign to readonl",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "other-package-manager-fixes",
+      "level": "h3",
+      "title": "Other package manager fixes",
+      "versions": [],
+      "section": "changelog",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 36,
+      "excerpt": "bun outdated and bun update -i exit 1 with the error when a manifest cannot be fetched, instead of printing an empty table and exit 0. #3880",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-serve",
+      "level": "h3",
+      "title": "Bun.serve()",
+      "versions": [],
+      "section": "changelog",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 27,
+      "excerpt": "Bun.serve HEAD and 204 responses are framed per RFC 9110/9112: HEAD returns the same headers GET would, 204 responses no longer carry Conten",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-shell",
+      "level": "h3",
+      "title": "Bun.$ (shell)",
+      "versions": [],
+      "section": "changelog",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 25,
+      "excerpt": "Bun.$ (shell) mv falls back to copy+unlink across filesystems. Bun.$ (shell) Bare cd changes to $HOME Bun.$ (shell) Comma-less brace groups ",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-sql",
+      "level": "h3",
+      "title": "Bun.sql",
+      "versions": [],
+      "section": "changelog",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 17,
+      "excerpt": "Bun.sql : a result column named \"\" (for example select '' on MySQL or MariaDB) no longer crashes the process. #38143 Bun.sql (MySQL) : JSON ",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bun-spawn",
+      "level": "h3",
+      "title": "Bun.spawn()",
+      "versions": [],
+      "section": "changelog",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 22,
+      "excerpt": "AbortSignal.timeout() now fires even if nothing is observing the signal when the deadline arrives, as in Node and browsers. Previously, remo",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "web-streams",
+      "level": "h3",
+      "title": "Web Streams",
+      "versions": [],
+      "section": "changelog",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 22,
+      "excerpt": "Response.clone() and Request.clone() no longer lock the original body's ReadableStream when .body was accessed before cloning. Both the orig",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "websocket-client",
+      "level": "h3",
+      "title": "WebSocket client",
+      "versions": [],
+      "section": "changelog",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 15,
+      "excerpt": "The WebSocket client now closes with a protocol error when the server sets the permessage-deflate compression flag mid-message, instead of s",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "windows",
+      "level": "h3",
+      "title": "Windows",
+      "versions": [],
+      "section": "changelog",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 47,
+      "excerpt": "bun:ffi now works on Windows ARM64, after fixing a TinyCC arm64 codegen bug where LLP64's 32-bit long truncated an immediate-operand mask an",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "memory-and-reliability",
+      "level": "h3",
+      "title": "Memory and reliability",
+      "versions": [],
+      "section": "changelog",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 32,
+      "excerpt": "node:zlib Brotli/Zstd reset() uses ~50x less memory . It was allocating a new encoder/decoder on every reset without freeing the previous on",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "other-performance-improvements",
+      "level": "h3",
+      "title": "Other performance improvements",
+      "versions": [],
+      "section": "changelog",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 57,
+      "excerpt": "macOS DNS : dns.lookup() no longer parks one thread per in-flight query . Rewritten on DNSServiceGetAddrInfo over a shared connection to mDN",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "other-javascriptcore-changes",
+      "level": "h3",
+      "title": "Other JavaScriptCore changes",
+      "versions": [],
+      "section": "changelog",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 28,
+      "excerpt": "Iterator.prototype.includes() is enabled by default (319f94b3db4a). #36794 Cyclic Array#join / toString now throws RangeError per spec inste",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "security-hardening",
+      "level": "h3",
+      "title": "Security hardening",
+      "versions": [],
+      "section": "changelog",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 0,
+      "excerpt": "TLS tls.Server applies its default rejectUnauthorized: true to incoming connections and gates peer-certificate verification on requestCert ,",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "platform",
+      "level": "h3",
+      "title": "Platform",
+      "versions": [],
+      "section": "changelog",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 1,
+      "excerpt": "Sockets are now created with WSA_FLAG_NO_HANDLE_INHERIT , so a detached child spawned while a server is listening no longer inherits the lis",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
+    },
+    {
+      "id": "bug-fixes",
+      "level": "h3",
+      "title": "Bug fixes",
+      "versions": [],
+      "section": "changelog",
+      "parent": null,
+      "codeBlocks": 0,
+      "links": 58,
+      "excerpt": "We fixed over 2,900 issues since Bun 1.3. Many were found through continuous fuzzing of runtime APIs with Fuzzilli, coverage-guided fuzzing ",
+      "mappedTo": "NOT mapped",
+      "layer": "—",
+      "status": "unmapped"
     }
   ]
 }

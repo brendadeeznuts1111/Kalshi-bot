@@ -1,8 +1,8 @@
 /**
- * map-page.ts — /bun/map: every sub-header under the five anchor sections
- * (#faster #bun-build #bun-test #bun-install #what-s-new) mapped to THIS
- * repo: file/script, then which integration layer it touches
- * (channels / branding / pipeline / data). Token-built audited page.
+ * map-page.ts — /bun/map: every h3/h4 heading under ALL 13 blog sections
+ * (registry v2, §184) mapped to THIS repo: file/script, then which
+ * integration layer it touches (channels / branding / pipeline / data).
+ * Token-built audited page.
  */
 import { renderWidgetPage, widgetTable, W_VERIFIED, W_MARKETING, W_NOTE } from '../lib/widget-page.ts';
 

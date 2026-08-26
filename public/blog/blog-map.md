@@ -1,5 +1,7 @@
-# Bun blog → repo mapping tracker
+# Bun blog → repo mapping tracker (v2)
 
-Checked (mirrored) — sub-headers under faster, bun-build, bun-test, bun-install, what-s-new
+Checked (mirrored) — h3/h4 across all 13 sections
 
-## Coverage: 100% (55 mapped, 0 unmapped)
+## Registration: 100% (271 of 271 blog headings registered)
+
+## Curation: 20% (55 of 271 entries mapped)

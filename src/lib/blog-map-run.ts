@@ -15,7 +15,7 @@ export type BlogMapRunOptions = {
   offline?: boolean;
 };
 
-export async function runBlogMap(options: BlogMapRunOptions = {}): Promise<{ coverage: number; newUnmapped: number }> {
+export async function runBlogMap(options: BlogMapRunOptions = {}): Promise<{ coverage: number; newUnmapped: number; curation: number }> {
   const root = options.root ?? join(import.meta.dir, '..', '..');
   const REGISTRY_PATH = join(root, '.data/blog-map.json');
   const STATE_PATH = join(root, '.data/blog-map-state.json');
@@ -32,7 +32,7 @@ export async function runBlogMap(options: BlogMapRunOptions = {}): Promise<{ cov
     // probeFetch: bounded timeout + retry + UA (bare fetch hung on a dead
     // host — §57). Null on failure -> the cache-less path stays honest.
     const res = await probeFetch(blogUrl);
-    if (!res) return { coverage: 0, newUnmapped: -1 }; // unreachable
+    if (!res) return { coverage: 0, newUnmapped: -1, curation: 0 }; // unreachable
     html = await res.text();
     mkdirSync(join(root, 'research/cache'), { recursive: true });
     writeFileSync(CACHE_PATH, html);
@@ -47,10 +47,12 @@ export async function runBlogMap(options: BlogMapRunOptions = {}): Promise<{ cov
     newUnmapped: diff.newUnmapped.length,
     missing: diff.missing,
     newUnmappedIds: diff.newUnmapped.map((u) => u.id),
+    curation: diff.curation,
+    total: diff.total,
   };
   writeFileSync(STATE_PATH, JSON.stringify(state, null, 2) + '\n');
   const report = mappingReport(diff, now);
   mkdirSync(join(reportPath, '..'), { recursive: true });
   writeFileSync(reportPath, report);
-  return { coverage: diff.coverage, newUnmapped: diff.newUnmapped.length };
+  return { coverage: diff.coverage, newUnmapped: diff.newUnmapped.length, curation: diff.curation };
 }

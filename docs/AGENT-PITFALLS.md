@@ -203,6 +203,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §181 — scratch-docs automation — index freshness gate + import-guard pitfall (2026-08-26)
 - §182 — Utility surfaces grounded — Glob / CryptoHasher / password / escapeHTML / deepEquals (2026-08-26)
 - §183 — Blog-assets mirror — public/blog/ + /blog/* serve route + gate #58 (2026-08-26)
+- §184 — Blog-map v2 — full-tree registry (13 sections, h3+h4, context fields) (2026-08-26)
 
 
 ## 1. run_code program text (the harness lexer)
@@ -6758,6 +6759,28 @@ Gate count 57 -> 58: update tests/lib/gate-count.test.ts AND the AGENT-PITFALLS 
 the README's fixture-dir section no longer renders file counts/bytes (probe gates
 write into scratch/art-ground DURING parallel verify runs) — only dir NAMES, which
 are stable across gate runs. verify:contracts 57/57 stable again before the +1.
+## 184. Blog-map v2 — full-tree registry (13 sections, h3+h4, context fields) (2026-08-26)
+
+The v1 tracker only registered the 55 h3s under 5 anchors and discarded the rest of
+the bun-v1.4 release post. The cached HTML (research/cache/bun-blog.html, 2.6 MB)
+has 286 id'd headings: 13 h2 / 150 h3 / 123 h4. v2 rethink:
+  - extractTree() parses h2/h3/h4 with hierarchy (section/parent/level), version
+    provenance parsed from the title anchor tags (clean FIRST — the ' v X.Y.Z'
+    tags sit inside <a> elements, so raw-text regexes miss them), and per-heading
+    context: codeBlocks (<pre> count), links (href count), excerpt (first 140
+    chars of the section slice).
+  - Registry v2: 271 unique h3/h4 entries (duplicate heading ids deduped — the
+    blog repeats process-on-memorypressure and code-splitting ids), 55 curated
+    (mappedTo/layer/status carried over from v1 by subId), 216 unmapped.
+  - Contract: every blog h3/h4 must be REGISTERED (registration coverage 100%),
+    curation = share with a real mapping status (20.3%) — separate signals.
+  - h2 sections are grouping keys (entry.section), NOT registry entries — the
+    first migration included them and the diff flagged all 13 as missing.
+  - State file shape is additive (curation + total) — the mapping channel and
+    pipeline-status keep reading coverage/matched/newUnmapped unchanged.
+  - Curation of the 216 unmapped entries is the open work (map each to
+    repo file/script + layer + status in .data/blog-map.json).
+
 
 
 

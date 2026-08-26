@@ -23,13 +23,13 @@ const flags = Bun.argv.slice(2);
 const blogFlag = flags.find((f) => f.startsWith('--blog='));
 const reportFlag = flags.find((f) => f.startsWith('--report='));
 
-const { coverage, newUnmapped } = await runBlogMap({
+const { coverage, newUnmapped, curation } = await runBlogMap({
   root: ROOT,
   ...(blogFlag ? { blogUrl: blogFlag.slice('--blog='.length) } : {}),
   ...(reportFlag ? { reportPath: reportFlag.slice('--report='.length) } : {}),
   ...(flags.includes('--offline') ? { offline: true } : {}),
 });
 
-console.log('blog-map: coverage ' + Math.round(coverage * 100) + '% · ' + newUnmapped + ' new unmapped sub-header(s)');
+console.log('blog-map: coverage ' + Math.round(coverage * 100) + '% · curation ' + Math.round((curation ?? 0) * 100) + '% · ' + newUnmapped + ' new unmapped heading(s)');
 console.log('state:  .data/blog-map-state.json · report: research/outputs/blog-map.md');
 process.exit(newUnmapped === 0 ? 0 : 1);

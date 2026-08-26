@@ -1,43 +1,69 @@
-// Blog → repo mapping tracker tests — registry diff, coverage, report.
-// @see docs/AGENT-PITFALLS.md §31
+// Blog → repo mapping tracker v2 tests — full-tree extraction, hierarchy,
+// version provenance, diff contract, curation, report.
+// @see docs/AGENT-PITFALLS.md §31 / §184
 import { describe, expect, test } from "bun:test";
-import { diffBlogMap, extractAnchors, mappingReport, type BlogMapEntry } from "../../src/lib/blog-map.ts";
+import { diffBlogMap, extractTree, mappingReport, parseTitle, type BlogMapEntry } from "../../src/lib/blog-map.ts";
 
 const FIXTURE = [
   '<h2 id="faster">Faster</h2>',
-  '<h3 id="new-url-is-up-to-4-6-faster">new URL()</h3>',
-  '<h3 id="faster-regexp">Faster RegExp</h3>',
+  '<h3 id="new-url-is-up-to-4-6-faster">new URL() <a href="#x">v 1.4.0</a></h3>',
+  '<p>Bun\'s URL parser was rewritten. <a href="/docs">docs</a></p>',
+  '<pre><code>const u = new URL(x)</code></pre>',
+  '<h3 id="faster-regexp">Faster RegExp <a href="#x">v 1.3.10 v 1.4.0</a></h3>',
+  '<h4 id="regexp-detail">Detail</h4>',
   '<h2 id="security">Security</h2>',
   '<h3 id="unrelated">x</h3>',
 ].join("");
 
-const entry = (subId: string): BlogMapEntry => ({
-  anchor: "faster", subId, title: subId, mappedTo: "x", layer: "pipeline", status: "verified",
+const entry = (id: string, status: "verified" | "note" | "marketing" | "unmapped" = "verified"): BlogMapEntry => ({
+  id, level: "h3", title: id, versions: [], section: "faster", parent: null,
+  codeBlocks: 0, links: 0, excerpt: "", mappedTo: "x", layer: "pipeline", status,
 });
 
-describe("extractAnchors", () => {
-  test("parses h2/h3 with ids in document order", () => {
-    const h = extractAnchors(FIXTURE);
-    expect(h.map((x) => x.id)).toEqual(["faster", "new-url-is-up-to-4-6-faster", "faster-regexp", "security", "unrelated"]);
-    expect(h[0]!.level).toBe("h2");
-    expect(h[1]!.level).toBe("h3");
+describe("parseTitle", () => {
+  test("strips version tags + trailing # from the raw title", () => {
+    const { title, versions } = parseTitle("Barrel import optimization <a href=\"#b\">v 1.3.10 v 1.4.0</a> #");
+    expect(title).toBe("Barrel import optimization");
+    expect(versions).toEqual(["1.3.10", "1.4.0"]);
+  });
+});
+
+describe("extractTree", () => {
+  test("parses h2/h3/h4 with ids, hierarchy, and per-heading context", () => {
+    const tree = extractTree(FIXTURE);
+    expect(tree.map((h) => h.id)).toEqual([
+      "faster",
+      "new-url-is-up-to-4-6-faster",
+      "faster-regexp",
+      "regexp-detail",
+      "security",
+      "unrelated",
+    ]);
+    const url = tree[1]!;
+    expect(url.versions).toEqual(["1.4.0"]);
+    expect(url.section).toBe("faster");
+    expect(url.codeBlocks).toBe(1);
+    expect(url.links).toBeGreaterThan(0);
+    expect(url.excerpt).toContain("rewritten");
+    const detail = tree[3]!;
+    expect(detail.level).toBe("h4");
+    expect(detail.parent).toBe("faster-regexp");
+    expect(detail.section).toBe("faster");
   });
 });
 
 describe("diffBlogMap", () => {
-  test("full coverage when every tracked sub-header is registered", () => {
-    const d = diffBlogMap(FIXTURE, [entry("new-url-is-up-to-4-6-faster"), entry("faster-regexp")]);
+  test("full coverage when every blog h3/h4 is registered", () => {
+    const d = diffBlogMap(FIXTURE, [entry("new-url-is-up-to-4-6-faster"), entry("faster-regexp"), entry("regexp-detail"), entry("unrelated")]);
     expect(d.newUnmapped).toEqual([]);
     expect(d.missing).toEqual([]);
     expect(d.coverage).toBe(1);
   });
 
-  test("new blog sub-headers are flagged as unmapped (contract violation)", () => {
+  test("new blog headings are flagged as unmapped across ALL sections", () => {
     const d = diffBlogMap(FIXTURE, [entry("new-url-is-up-to-4-6-faster")]);
-    expect(d.newUnmapped).toHaveLength(1);
-    expect(d.newUnmapped[0]!.id).toBe("faster-regexp");
-    expect(d.newUnmapped[0]!.anchor).toBe("faster");
-    expect(d.coverage).toBeCloseTo(0.5);
+    expect(d.newUnmapped.map((u) => u.id)).toEqual(["faster-regexp", "regexp-detail", "unrelated"]);
+    expect(d.newUnmapped.some((u) => u.section === "security")).toBe(true); // no longer ignored
   });
 
   test("registry entries missing from the blog are flagged", () => {
@@ -45,17 +71,19 @@ describe("diffBlogMap", () => {
     expect(d.missing).toContain("old-removed-subheader");
   });
 
-  test("sub-headers outside the tracked anchors are ignored", () => {
-    const d = diffBlogMap(FIXTURE, []);
-    expect(d.newUnmapped.every((u) => u.anchor !== "security")).toBe(true);
+  test("curation is the share of entries with a real mapping status", () => {
+    const d = diffBlogMap(FIXTURE, [entry("new-url-is-up-to-4-6-faster"), entry("faster-regexp", "unmapped")]);
+    expect(d.curation).toBeCloseTo(0.5);
+    expect(d.total).toBe(2);
   });
 });
 
 describe("mappingReport", () => {
-  test("includes coverage + unmapped list", () => {
+  test("includes registration + curation + unmapped list", () => {
     const d = diffBlogMap(FIXTURE, [entry("new-url-is-up-to-4-6-faster")]);
-    const r = mappingReport(d, "2026-08-24T00:00:00.000Z");
-    expect(r).toContain("Coverage: 50%");
+    const r = mappingReport(d, "2026-08-26T00:00:00.000Z");
+    expect(r).toContain("Registration:");
+    expect(r).toContain("Curation:");
     expect(r).toContain("faster-regexp");
     expect(r).toContain("contract violation");
   });
