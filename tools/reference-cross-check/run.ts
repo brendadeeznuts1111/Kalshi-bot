@@ -71,6 +71,11 @@ export async function runCrossCheck(): Promise<number> {
   declared['markdown.RenderCallbacks'] = interfaceFields(dts, 'RenderCallbacks');
   declared['markdown.ComponentOverrides'] = interfaceFields(dts, 'ComponentOverrides');
   declared['markdown.AnsiTheme'] = interfaceFields(dts, 'AnsiTheme');
+  declared['Bun.Glob'] = classMembers(dts, 'Glob');
+  declared['Bun.CryptoHasher'] = classMembers(dts, 'CryptoHasher');
+  declared['Bun.password'] = ['hash', 'verify', 'hashSync', 'verifySync']; // curated - namespace
+  declared['Bun.escapeHTML'] = ['escapeHTML']; // function surface
+  declared['Bun.deepEquals'] = ['deepEquals', 'deepMatch']; // function surface
   const gaps = coverageGaps(declared, covered);
 
   const meta: CrossCheckMeta = {

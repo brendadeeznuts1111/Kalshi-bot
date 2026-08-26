@@ -625,6 +625,44 @@
       "escapedWithNoHtmlSpans": true
     }
   },
+  "utilityGotchas": {
+    "glob": {
+      "typeofClass": "function",
+      "matchBraceExt": true,
+      "matchNoExt": true,
+      "matchNoNested": true,
+      "matchGlobstar": true,
+      "scanSyncTs": "[\"a.ts\"]",
+      "scanSyncAll": "[\"a.ts\",\"b.js\",\"sub/c.txt\"]"
+    },
+    "cryptoHasher": {
+      "sha256Hex": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+      "md5Hex": "900150983cd24fb0d6963f7d28e17f72",
+      "algorithm": "sha256",
+      "byteLength": 32,
+      "staticHashHex": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+    },
+    "password": {
+      "argon2HashPrefix": "$argon2id$v=19$m=655",
+      "argon2Verify": true,
+      "argon2VerifyWrong": true,
+      "bcryptRoundtrip": true,
+      "bcryptWrong": true,
+      "bcryptKnownHashRejected": true
+    },
+    "escapeHTML": {
+      "escapesTags": true,
+      "escapesAmpQuote": true,
+      "plainPassthrough": true
+    },
+    "deepEquals": {
+      "objEq": true,
+      "nanEq": true,
+      "negZeroVsZero": true,
+      "noCoercion": true,
+      "dateEq": true
+    }
+  },
   "scenarios": [
     {
       "name": "S01-artifact-surface",
@@ -1071,7 +1109,7 @@
         {
           "path": "outbc/pure.js.jsc",
           "kind": "bytecode",
-          "hash": "7smjsagn",
+          "hash": "ayz9nkbt",
           "loader": "file",
           "size": 10944,
           "type": "application/octet-stream",

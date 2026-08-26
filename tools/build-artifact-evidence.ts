@@ -12,7 +12,7 @@
  */
 import { markdown as mdNamed } from 'bun';
 import { join } from 'node:path';
-import { existsSync, rmSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { existsSync, rmSync, mkdtempSync, writeFileSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 
 const ROOT = join(import.meta.dir, '..');
@@ -994,6 +994,50 @@ const markdownGotchas = {
   },
 };
 
+// ---------- utilityGotchas: Glob / CryptoHasher / password / escapeHTML / deepEquals (goal round 2) ----------
+const utilGlobDir = mkdtempSync(join(tmpdir(), 'art-glob-'));
+writeFileSync(join(utilGlobDir, 'a.ts'), 'x');
+writeFileSync(join(utilGlobDir, 'b.js'), 'x');
+mkdirSync(join(utilGlobDir, 'sub'));
+writeFileSync(join(utilGlobDir, 'sub', 'c.txt'), 'x');
+const utilityGotchas = {
+  glob: {
+    typeofClass: typeof (Bun as any).Glob,
+    matchBraceExt: new (Bun as any).Glob('*.{ts,js}').match('foo.ts'),
+    matchNoExt: !new (Bun as any).Glob('*.{ts,js}').match('foo.md'),
+    matchNoNested: !new (Bun as any).Glob('*.ts').match('a/b/c.ts'),
+    matchGlobstar: new (Bun as any).Glob('**/*.txt').match('a/b/c.txt'),
+    scanSyncTs: JSON.stringify([...new (Bun as any).Glob('*.ts').scanSync({ cwd: utilGlobDir })].sort()),
+    scanSyncAll: JSON.stringify([...new (Bun as any).Glob('**/*').scanSync({ cwd: utilGlobDir })].sort()),
+  },
+  cryptoHasher: {
+    sha256Hex: (() => { const h = new (Bun as any).CryptoHasher('sha256'); h.update('abc'); return h.digest('hex'); })(),
+    md5Hex: (() => { const h = new (Bun as any).CryptoHasher('md5'); h.update('abc'); return h.digest('hex'); })(),
+    algorithm: new (Bun as any).CryptoHasher('sha256').algorithm,
+    byteLength: new (Bun as any).CryptoHasher('sha256').byteLength,
+    staticHashHex: (Bun as any).CryptoHasher.hash('sha256', 'abc', 'hex'),
+  },
+  password: {
+    argon2HashPrefix: (await (Bun as any).password.hash('hunter2', { algorithm: 'argon2id' })).slice(0, 20),
+    argon2Verify: await (Bun as any).password.verify('hunter2', await (Bun as any).password.hash('hunter2', { algorithm: 'argon2id' })),
+    argon2VerifyWrong: !(await (Bun as any).password.verify('wrong', await (Bun as any).password.hash('hunter2', { algorithm: 'argon2id' }))),
+    bcryptRoundtrip: (Bun as any).password.verifySync('secret', (Bun as any).password.hashSync('secret', 'bcrypt')),
+    bcryptWrong: !(Bun as any).password.verifySync('nope', (Bun as any).password.hashSync('secret', 'bcrypt')),
+    bcryptKnownHashRejected: !(Bun as any).password.verifySync('password', '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'bcrypt'),
+  },
+  escapeHTML: {
+    escapesTags: (Bun as any).escapeHTML('<script>') === '&lt;script&gt;',
+    escapesAmpQuote: (Bun as any).escapeHTML('& \"') === '&amp; &quot;',
+    plainPassthrough: (Bun as any).escapeHTML('plain text') === 'plain text',
+  },
+  deepEquals: {
+    objEq: (Bun as any).deepEquals({ a: [1, 2] }, { a: [1, 2] }),
+    nanEq: (Bun as any).deepEquals(NaN, NaN),
+    negZeroVsZero: !(Bun as any).deepEquals(-0, 0),
+    noCoercion: !(Bun as any).deepEquals(1, '1'),
+    dateEq: (Bun as any).deepEquals(new Date(0), new Date(0)),
+  },
+};
 // ---------- emit ----------
 const evidence = {
   tool: 'tools/build-artifact-evidence.ts',
@@ -1016,6 +1060,7 @@ const evidence = {
   s3Gotchas,
   deepPassGotchas,
   markdownGotchas,
+  utilityGotchas,
   scenarios,
 };
 await Bun.write(EVIDENCE, JSON.stringify(evidence, null, 2) + '\n');

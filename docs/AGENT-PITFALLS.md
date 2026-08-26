@@ -201,6 +201,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §179 — Markdown probe artifacts — three false no-ops + one bogus discrepancy found by a third-party test (2026-08-26)
 - §180 — react() override props: capture timing — function overrides only render under React (2026-08-26)
 - §181 — scratch-docs automation — index freshness gate + import-guard pitfall (2026-08-26)
+- §182 — Utility surfaces grounded — Glob / CryptoHasher / password / escapeHTML / deepEquals (2026-08-26)
 
 
 ## 1. run_code program text (the harness lexer)
@@ -6723,6 +6724,21 @@ The scratch/ area (git-ignored by design, .gitignore:71) now has automation:
     AGENT-PITFALLS.md header 'verify:contracts N/N' (docs:check enforces it).
 
 PITFALL: importing a tool script that ends in `process.exit(main())` RUNS main()
+## 182. Utility surfaces grounded — Glob / CryptoHasher / password / escapeHTML / deepEquals (2026-08-26)
+
+Goal round 2 extended the sweep with 8 claims (GL-scan, GL-match, CH-digest, CH-staticHash,
+PW-hashVerify, PW-sync, EH-escape, DE-equal): 129 total, 121 CONSISTENT / 8 PINNED, gaps 0.
+Notable pins:
+  - Bun.password verifySync/hashSync 3rd arg is a STRING AlgorithmLabel ('bcrypt'), not an
+    object — { algorithm: 'bcrypt' } throws ERR_INVALID_ARG_TYPE (types correct).
+  - The widely-known $2b$10$ bcrypt hash for 'password' does NOT verify on Bun 1.4.0
+    (bcryptKnownHashRejected) while Bun-generated bcrypt roundtrips fine — third-party
+    bcrypt interop pin, recorded honestly as CONSISTENT observation.
+  - deepEquals uses Object.is-style strictness: NaN===NaN true, -0 vs 0 FALSE, no == coercion.
+  - CryptoHasher sha256('abc')/md5('abc') hex digests match the known published values.
+  - Compression is NOT declared in the 1.4.0 bun-types (classMembers returns []) — skipped.
+New regression suite: tests/lib/bun-utility-coverage.test.ts (9 tests, 25 expect calls).
+
 on import. scratch-sweep.ts imports generate() from scratch-docs.ts and the
 first version silently regenerated the README and exited before its own logic
 ran. Guard with `if (import.meta.main) process.exit(main());` so the module is

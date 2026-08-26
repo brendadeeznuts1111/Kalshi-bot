@@ -164,6 +164,14 @@ export const LEDGER: LedgerClaim[] = [
   { id: 'MD-renderPassthrough', api: 'render', source: 'bun.d.ts', fragment: 'its children pass through unchanged', docSays: 'render: no callbacks -> children pass through (inline flattens to text; table keeps its source)', evidencePath: 'markdownGotchas.callbacks.noCallbacksPassthrough', kind: 'consistent' },
   { id: 'MD-listDepth', api: 'list', source: 'bun.d.ts', fragment: 'Nesting depth. `0` for a top-level list, `1` for a list inside a list item', docSays: 'render list meta depth verified: 0/1/2 for nested lists; hr callback receives empty children; ordered start from marker (3. -> 3); ul has no start', evidencePath: 'markdownGotchas.callbacks.nestedListDepths', kind: 'consistent' },
   { id: 'MD-inputTypes', api: 'html', source: 'bun.d.ts', fragment: 'NodeJS.TypedArray | DataView<ArrayBufferLike> | ArrayBufferLike', docSays: 'html/render/react accept TypedArray (Uint8Array) and ArrayBuffer inputs', evidencePath: 'markdownGotchas.inputs.typedArrayHtml', kind: 'consistent' },
+  { id: 'GL-scan', api: 'scan', source: 'bun.d.ts', fragment: 'Scan a root directory recursively for files that match this glob pattern', docSays: 'Glob.scan/scanSync: cwd-scoped recursive scan (fixture *.ts -> a.ts; **/* -> a.ts,b.js,sub/c.txt)', evidencePath: 'utilityGotchas.glob.scanSyncAll', kind: 'consistent' },
+  { id: 'GL-match', api: 'match', source: 'bun.d.ts', fragment: 'expect(glob.match', docSays: 'Glob.match: brace extension sets, no nested match without globstar, **/* matches nested paths', evidencePath: 'utilityGotchas.glob.matchGlobstar', kind: 'consistent' },
+  { id: 'CH-digest', api: 'digest', source: 'bun.d.ts', fragment: 'The algorithm chosen to hash the data', docSays: 'CryptoHasher: sha256(abc) hex = ba7816bf... (known digest), md5(abc) = 90015098..., byteLength 32, algorithm prop', evidencePath: 'utilityGotchas.cryptoHasher.sha256Hex', kind: 'consistent' },
+  { id: 'CH-staticHash', api: 'hash', source: 'bun.d.ts', fragment: 'Run the hash over the given data', docSays: 'CryptoHasher.hash(algorithm, input, encoding): static one-shot with hex encoding works', evidencePath: 'utilityGotchas.cryptoHasher.staticHashHex', kind: 'consistent' },
+  { id: 'PW-hashVerify', api: 'password', source: 'bun.d.ts', fragment: 'Hash and verify passwords using argon2 or bcrypt', docSays: 'password.hash/verify: argon2id roundtrip works, wrong password false', evidencePath: 'utilityGotchas.password.argon2Verify', kind: 'consistent' },
+  { id: 'PW-sync', api: 'password', source: 'bun.d.ts', fragment: 'Synchronously hash a password using argon2 or bcrypt', docSays: 'password.hashSync/verifySync: bcrypt roundtrip works; widely-known $2b$10$ "password" hash REJECTED (third-party bcrypt interop pin)', evidencePath: 'utilityGotchas.password.bcryptRoundtrip', kind: 'consistent' },
+  { id: 'EH-escape', api: 'escapeHTML', source: 'bun.d.ts', fragment: 'function escapeHTML(input: string | object | number | boolean): string;', docSays: 'escapeHTML escapes < > & " (not single quotes)', evidencePath: 'utilityGotchas.escapeHTML.escapesTags', kind: 'consistent' },
+  { id: 'DE-equal', api: 'deepEquals', source: 'bun.d.ts', fragment: 'This also powers expect().toEqual', docSays: 'deepEquals: NaN===NaN, Dates equal, -0 vs 0 FALSE, no == coercion (1 vs "1" false even loose)', evidencePath: 'utilityGotchas.deepEquals.nanEq', kind: 'consistent' },
 ];
 
 /** APIs with grounded evidence but no ledger row (fit/filter/quality/... come from the probe gates). */
@@ -181,6 +189,8 @@ export const EXTRA_GROUNDED: string[] = [
   'url', 'title', 'loading', 'onNavigated', 'onNavigationFailed', 'evaluate', 'screenshot', 'cdp', 'click', 'close', 'type', 'press', 'scroll',
   'name', 'size', 'type', 'lastModified', 'exists', 'stat', 'write', 'text', 'json', 'image', 'presign', 'unlink', 'delete', 'slice', 'arrayBuffer', 'file', 'bucket',
   'scrollTo', 'reload', 'resize', 'closeAll', 'addEventListener', 'list', 'forward', 'options',
+  'scan', 'scanSync', 'match', 'update', 'copy', 'digest', 'byteLength', 'algorithm', 'hashSync', 'verify',
+  'verifySync', 'escapeHTML', 'deepEquals', 'deepMatch',
 ];
 
 export function checkClaim(claim: LedgerClaim, sourceText: string, ev: Evidence): CheckResult {

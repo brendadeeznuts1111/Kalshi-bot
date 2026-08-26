@@ -5,7 +5,7 @@
   "bundleHash": "bun-types@1.4.0-c0dadede486f49ab",
   "verdictCounts": {
     "PINNED-DISCREPANCY": 8,
-    "CONSISTENT": 113
+    "CONSISTENT": 121
   },
   "checks": [
     {
@@ -1034,6 +1034,70 @@
       "api": "html",
       "source": "bun.d.ts",
       "docSays": "html/render/react accept TypedArray (Uint8Array) and ArrayBuffer inputs",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "GL-scan",
+      "api": "scan",
+      "source": "bun.d.ts",
+      "docSays": "Glob.scan/scanSync: cwd-scoped recursive scan (fixture *.ts -> a.ts; **/* -> a.ts,b.js,sub/c.txt)",
+      "observed": "[\"a.ts\",\"b.js\",\"sub/c.txt\"]",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "GL-match",
+      "api": "match",
+      "source": "bun.d.ts",
+      "docSays": "Glob.match: brace extension sets, no nested match without globstar, **/* matches nested paths",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "CH-digest",
+      "api": "digest",
+      "source": "bun.d.ts",
+      "docSays": "CryptoHasher: sha256(abc) hex = ba7816bf... (known digest), md5(abc) = 90015098..., byteLength 32, algorithm prop",
+      "observed": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "CH-staticHash",
+      "api": "hash",
+      "source": "bun.d.ts",
+      "docSays": "CryptoHasher.hash(algorithm, input, encoding): static one-shot with hex encoding works",
+      "observed": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "PW-hashVerify",
+      "api": "password",
+      "source": "bun.d.ts",
+      "docSays": "password.hash/verify: argon2id roundtrip works, wrong password false",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "PW-sync",
+      "api": "password",
+      "source": "bun.d.ts",
+      "docSays": "password.hashSync/verifySync: bcrypt roundtrip works; widely-known $2b$10$ \"password\" hash REJECTED (third-party bcrypt interop pin)",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "EH-escape",
+      "api": "escapeHTML",
+      "source": "bun.d.ts",
+      "docSays": "escapeHTML escapes < > & \" (not single quotes)",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "DE-equal",
+      "api": "deepEquals",
+      "source": "bun.d.ts",
+      "docSays": "deepEquals: NaN===NaN, Dates equal, -0 vs 0 FALSE, no == coercion (1 vs \"1\" false even loose)",
       "observed": true,
       "verdict": "CONSISTENT"
     }

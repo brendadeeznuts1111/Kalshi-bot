@@ -554,7 +554,7 @@ Sources: bundled bun-types@1.4.0 (bun-types@1.4.0-c0dadede486f49ab) docs + `bun.
 PINNED-DISCREPANCY (doc says X, observed Y — our correction), DOC-CHANGED (fragment missing —
 the pin premise moved; re-verify), NO-EVIDENCE (ledger path broken).
 
-**Verdict summary:** 121 claims · 113 CONSISTENT · 8 PINNED-DISCREPANCY · 0 DOC-CHANGED · 0 NO-EVIDENCE.
+**Verdict summary:** 129 claims · 121 CONSISTENT · 8 PINNED-DISCREPANCY · 0 DOC-CHANGED · 0 NO-EVIDENCE.
 
 ### BuildArtifact
 
