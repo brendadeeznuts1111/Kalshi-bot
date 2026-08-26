@@ -214,6 +214,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §196 — Consensus tracker — steam-move shifts wired + k-default bug (2026-08-26)
 - §197 — Styled integration — alpha:cluster --styled via markdown.ansi + Bun.Terminal PTY pin (2026-08-26)
 - §198 — Bun.YAML grounded — YAML 1.2 semantics confirmed (159 claims) (2026-08-26)
+- §199 — ui:regen CLI — regenerate UI artifacts from meta/variant sources + the Bun.$ template failure class (2026-08-26)
 - §187 — Extended color formats — kernel-only (lch/oklab/oklch/hsv) + inverse parsers (2026-08-26)
 - §188 — Watermark pipeline — ML-DSA key naming + WebView/Blob verified facts (2026-08-26)
 - §189 — Color input-parsing correction — lab()/lch() parse natively, oklab/oklch/hsv/device-cmyk null (2026-08-26)
@@ -7070,6 +7071,26 @@ claimed by breaking-audit are CONFIRMED at runtime: 'v: yes' - string "yes",
 (151 CONSISTENT / 8 PINNED-DISCREPANCY), gaps 0. Tests: bun-yaml-coverage (3).
 The repo already consumes Bun.YAML in breaking-audit, docs-validate,
 runtime-surface, format-probe - the claims now ground that usage.
+## 199. ui:regen CLI - regenerate UI artifacts from meta/variant sources + the Bun.$ template failure class (2026-08-26)
+
+tools/ui-regen-cli.ts (bun run ui:regen / ui:watch) regenerates the UI artifacts
+from their meta/variant sources: design-tokens.ts - colors.css + color-system.json
++ TOKENS/COLORS docs + hq-app css (colors:artifacts), market-registry/registry.ts
+- sports-sources.json (sports:registry:bake), .data/blog-map.json + reports -
+public/blog mirror (blog:assets). --watch uses node:fs.watch (Bun.watch is
+UNDEFINED on 1.4.0 - pinned) with a 250ms debounce; the dev server (bun --hot
+serve) picks up the regenerated artifacts. Verified end-to-end: touching
+design-tokens.ts logs the regenerating-colors line.
+
+TOOL-CALL FAILURE CLASS (the repeated parse errors this session): program lines
+containing Bun.$ followed by a BACKTICK tagged template with ${} interpolation get
+mangled by the run_code lexer (the $-bash-lexing family). RELIABLE PATTERN: never
+write Bun.$ tagged templates inside run_code program strings - call the repo's
+runBunCommand(['run', script], { cwd }) helper (src/lib/run-bun.ts) instead, and
+build file content with the plain p()-line array (no backticks, no ${, no \n inside
+lines - newlines come from the join). ui-regen-cli.ts was written first-try with
+this pattern.
+
 
 
 explicitly so its 24-print fixture is unaffected.

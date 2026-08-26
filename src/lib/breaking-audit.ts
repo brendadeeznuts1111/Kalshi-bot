@@ -47,7 +47,7 @@ const LABEL_FILES = ['**/pre-commit.ts', '**/runtime-surface.ts', '**/defaults-p
 // code-block examples with the SAME parser the runtime uses - a 1.1-style
 // yes/on/no key in a doc block is exactly what should be flagged, not
 // hidden (the validator is report-only).
-const YAML_ALLOWLIST = ['**/docs-validate.ts', 'tools/format-probe.ts']; // format-probe asserts the 1.2 semantics deliberately
+const YAML_ALLOWLIST = ['**/docs-validate.ts', 'tools/format-probe.ts', '**/build-artifact-evidence.ts', '**/reference-cross-check/compare.ts', '**/reference-cross-check/run.ts', '**/reference-cross-check/report.json']; // format-probe + the yamlGotchas probes assert the 1.2 semantics deliberately; run.ts/report.json only mention YAML in curated/generated claim text
 // parse-tennis-data-csv.ts deliberately uses Temporal.PlainDate to validate
 // tennis-data.co.uk dates (§89) — the old day>31 check let impossible
 // dates through; Temporal rejects them natively. Audited, deliberate.
