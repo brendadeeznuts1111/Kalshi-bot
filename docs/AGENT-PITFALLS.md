@@ -235,7 +235,8 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §218 — Why security wasn't secret+defined — SECRET_REGISTRY + argv-leak gate wired (2026-08-26)
 - §219 — Secret-leak audit gate — repo-wide plaintext-argv scan wired into pre-commit (2026-08-26)
 - §220 — Crypto/quantum truth — ML-DSA works (persistent registered key), ML-KEM keygen-only (2026-08-26)
-- §221 — ML-KEM not-callable root cause — JSC binding has non-standard 5/6-arg signature, unusable from JS (2026-08-26)
+- §221 — ML-KEM 'not callable' — SUPERSEDED by §223 (our probe read wrong property/arg order; the function works) (2026-08-26)
+- §223 — ML-KEM WORKS — encapsulateBits/decapsulateBits verified + wired (ml-kem.ts + registry) (2026-08-26)
 - §199 — ui:regen CLI — regenerate UI artifacts from meta/variant sources + the Bun.$ template failure class (2026-08-26)
 - §187 — Extended color formats — kernel-only (lch/oklab/oklch/hsv) + inverse parsers (2026-08-26)
 - §188 — Watermark pipeline — ML-DSA key naming + WebView/Blob verified facts (2026-08-26)
@@ -7699,7 +7700,22 @@ have these keys defined':
 
 
 
-## 221. Why ML-KEM is 'not callable' - ROOT CAUSE: JSC binding has a non-standard 5/6-arg signature (2026-08-26)
+## 221. SUPERSEDED - ML-KEM IS callable (see S223). The 'unusable' conclusion was OUR probe error (2026-08-26)
+
+THIS SECTION IS WRONG - KEPT ONLY AS THE ERROR RECORD. The user's pushback
+('the problem is us not the function') was correct. S223 has the truth:
+crypto.subtle.encapsulateBits/decapsulateBits WORK with (algorithm, key)
+arg order and the result property is 'sharedKey' (not 'sharedSecret').
+The failures below were probe mistakes, not a JSC binding gap:
+- WRONG property read: we inspected .sharedSecret (undefined) instead of
+  .sharedKey - the round-trip had ALWAYS been working.
+- WRONG arg order assumption: spec-shaped (key, algorithm) calls threw;
+  the binding is (algorithm, key).
+- The KeyUsage enum part WAS right (encapsulateBits/decapsulateBits, not
+  encapsulate/decapsulate) - that part of S221 stands.
+Do not cite this section for behavior; cite S223.
+
+## 221a. (original wrong body below - historical record)
 
 Direct answer: the methods DO exist on crypto.subtle but under JSC-internal
 names + a non-standard argument contract that no documented JS shape
@@ -7725,6 +7741,61 @@ satisfies. The spec names in the docs/proposal are wrong for this build.
   by our code. ML-DSA signing is the usable post-quantum path today (S220).
   Watch for a Bun bump that aligns the binding with the WebCrypto KEM spec
   (2-arg encapsulate/decapsulate).
+
+
+
+## 222. MLKEM secrets one-liner audited - Bun.secrets.get string form CRASHES, no MLKEM key defined, decapsulation unusable (2026-08-26)
+
+Pasted bun -p one-liner audited against 1.4.0 (re-confirms S215/S221 pins):
+- CRASHES at line 1: Bun.secrets.get('MLKEM_PRIVATE_KEY') string form
+  throws 'Expected options to be an object' - the API is the OBJECT
+  descriptor { service, name } (S215 pin). The one-liner never gets past
+  the first statement.
+- No such key: object-form get({ service, name: 'MLKEM_PRIVATE_KEY' })
+  returns null (not found). SECRET_REGISTRY has NO ML-KEM entry - the
+  repo defines kalshi-api-key-id, kalshi-private-key, watermark-mldsa-key
+  only. An MLKEM key would be useless anyway:
+- The implied 'decapsulate, decrypt token' IS possible via
+  crypto.subtle.decapsulateBits({name:'ml-kem-768'}, privateKey, ct) -
+  S221 was wrong; see S223. The one-liner's real blockers are the
+  secrets string-form crash + the undefined MLKEM key (below).
+- CORRECT parts: fetch -> res.blob() -> Bun.XML.parse(blob) works (S211);
+  Bun.inspect(parsed, { depth, colors }) works.
+- CORRECTED version (what the pipeline should do today):
+  const pem = await Bun.secrets.get({ service: 'com.kalshi-bot', name:
+  'watermark-mldsa-key' }) - the REAL registered post-quantum key (S220)
+  for ML-DSA signing, not ML-KEM decapsulation. Or env fallback
+  WATERMARK_MLDSA_PRIVATE_KEY via the registry policy.
+  Repo habit: probes in tools/scratch-*.ts + bun run, not inline -p (S199).
+
+
+
+## 223. ML-KEM WORKS on 1.4.0 - the API, verified + wired (supersedes S221's wrong 'unusable' conclusion) (2026-08-26)
+
+The user's pushback was right: the problem was OUR probe, not the function.
+ML-KEM key encapsulation is fully callable via crypto.subtle on 1.4.0:
+- Methods: encapsulateBits / decapsulateBits (the KeyUsage enum rejects
+  the spec's 'encapsulate'/'decapsulate' - use the Bits strings).
+- ARG ORDER: (algorithm, key) - NOT the spec's (key, algorithm).
+- Result: encapsulateBits -> { ciphertext: ArrayBuffer (1088B @
+  ml-kem-768), sharedKey: ArrayBuffer (32B) } - the property is
+  'sharedKey', NOT 'sharedSecret' (our original probe read the wrong
+  property and concluded 'unusable').
+- decapsulateBits(algorithm, privateKey, ciphertext) -> ArrayBuffer;
+  round-trip shared secrets MATCH; each encapsulate is FRESH.
+- ml-kem-1024 also round-trips. ml-kem-512 unsupported (docs-pinned).
+- WIRED: src/lib/ml-kem.ts (mlKemGenerateKey / mlKemEncapsulate /
+  mlKemDecapsulate, typed, runtime-cast through the bun-types gap which
+  still doesn't declare the Bits methods) + SECRET_REGISTRY entry
+  'mlkem-private-key' (vault+env, never argv) - the keys are now defined.
+- Tests: tests/lib/ml-kem.test.ts (3): round-trip, fresh secret, 1024.
+  LESSON (the real S221 lesson): when an API 'doesn't work', verify the
+  PROPERTY NAMES + ARG ORDER against the runtime, not the docs/spec -
+  docs said encapsulate/decapsulate + sharedSecret + (key, algorithm);
+  runtime is encapsulateBits/decapsulateBits + sharedKey + (algorithm, key).
+  Gates: 2799 tests pass / 0 fail.
+
+
 
 
 

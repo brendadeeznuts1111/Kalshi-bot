@@ -54,6 +54,13 @@ export const SECRET_REGISTRY: Record<string, SecretPolicy> = {
     sources: ['vault', 'env'],
     purpose: 'Persistent ML-DSA-65 watermark signing key (PNG provenance, S220)',
   },
+  'mlkem-private-key': {
+    service: DEFAULT_SECRET_SERVICE,
+    name: 'mlkem-private-key',
+    envName: 'MLKEM_PRIVATE_KEY',
+    sources: ['vault', 'env'],
+    purpose: 'ML-KEM-768 post-quantum key-agreement private key (S223)',
+  },
 };
 
 export type SecretName = keyof typeof SECRET_REGISTRY;
