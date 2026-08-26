@@ -47,6 +47,13 @@ export const SECRET_REGISTRY: Record<string, SecretPolicy> = {
     sources: ['vault', 'env'],
     purpose: 'Kalshi RSA-PSS private key (PEM)',
   },
+  'watermark-mldsa-key': {
+    service: DEFAULT_SECRET_SERVICE,
+    name: 'watermark-mldsa-key',
+    envName: 'WATERMARK_MLDSA_PRIVATE_KEY',
+    sources: ['vault', 'env'],
+    purpose: 'Persistent ML-DSA-65 watermark signing key (PNG provenance, S220)',
+  },
 };
 
 export type SecretName = keyof typeof SECRET_REGISTRY;

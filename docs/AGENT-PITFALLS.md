@@ -234,6 +234,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §217 — Complete deep-dive audited — 'Zig to Rust rewrite' false; static-route If-Match/If-Unmodified-Since 412 verified (2026-08-26)
 - §218 — Why security wasn't secret+defined — SECRET_REGISTRY + argv-leak gate wired (2026-08-26)
 - §219 — Secret-leak audit gate — repo-wide plaintext-argv scan wired into pre-commit (2026-08-26)
+- §220 — Crypto/quantum truth — ML-DSA works (persistent registered key), ML-KEM keygen-only (2026-08-26)
 - §199 — ui:regen CLI — regenerate UI artifacts from meta/variant sources + the Bun.$ template failure class (2026-08-26)
 - §187 — Extended color formats — kernel-only (lch/oklab/oklch/hsv) + inverse parsers (2026-08-26)
 - §188 — Watermark pipeline — ML-DSA key naming + WebView/Blob verified facts (2026-08-26)
@@ -7664,6 +7665,37 @@ REPO-WIDE gate wired into pre-commit + available as bun run secret:leak-audit.
   id path (--key-id) is a non-secret id; --pem/--key-file are paths.
 - Tests: tests/lib/secret-leak-audit.test.ts (3) + pre-commit.test.ts (13).
   Gates: 2793 tests pass / 0 fail; breaking-audit 15 checks ok.
+
+
+
+## 220. Crypto/quantum truth + keys now defined - ML-DSA WORKS (persistent registered key), ML-KEM is keygen-only (2026-08-26)
+
+Direct answer to 'why are we still not integrated with crypto/quantum and
+have these keys defined':
+- ML-DSA (post-quantum SIGNING) IS real on 1.4.0: node:crypto ml-dsa-44/65/
+  87 key types + crypto.subtle.generateKey({name:'ml-dsa-65'}) both work;
+  the watermark pipeline used it (S188) BUT regenerated the key pair on
+  EVERY call - signatures were unverifiable afterwards. FIXED:
+  watermarkKey() get-or-create a PERSISTENT key stored via Bun.secrets,
+  typed in SECRET_REGISTRY ('watermark-mldsa-key', vault+env, never argv).
+  watermarkAndSign now signs with the stable key; tests lock same-key
+  reuse + sign/verify round-trip.
+- ML-KEM (post-quantum ENCRYPTION) is keygen-ONLY: node:crypto
+  generateKeyPairSync('ml-kem-768'/'ml-kem-1024') WORKS (ml-kem-512
+  unsupported), but the KEM operations are NOT callable - crypto.subtle.
+  encapsulate/decapsulate are UNDEFINED at runtime, subtle.generateKey(
+  {name:'ml-kem-768'}) throws 'Unsupported key usage for an ML-KEM-768
+  key', and node:crypto encrypt/decrypt on ML-KEM keys throws
+  OPERATION_NOT_SUPPORTED. The pinned docs (nodejs-compat.mdx 'Fully
+  implemented including encapsulate*/decapsulate*') OVERSTATES this build.
+  So: no usable ML-KEM encapsulation on 1.4.0 - S216's 'crypto.
+  decapsulate undefined' holds; the keygen part is what's new here.
+- Keys defined: SECRET_REGISTRY now has 3 entries (kalshi-api-key-id,
+  kalshi-private-key, watermark-mldsa-key) - every key has a typed policy,
+  vault+env sources, never argv, and works through secrets.ts + the
+  leak-audit gate (S218/219).
+  Gates: 2796 tests pass / 0 fail; breaking-audit 15 checks ok.
+
 
 
 

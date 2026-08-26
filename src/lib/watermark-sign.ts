@@ -14,7 +14,9 @@
  * @see https://bun.com/docs/guides/webview (headless browser, screenshot() -> Blob)
  * @see https://nodejs.org/api/crypto.html (asymmetric key types incl. ML-DSA)
  */
-import { sign, verify, generateKeyPairSync } from 'node:crypto';
+import { sign, verify, generateKeyPairSync, createPrivateKey, createPublicKey, type KeyObject } from 'node:crypto';
+import { getSecret, setSecret, type SecretBackend } from './secrets.ts';
+import { secretPolicy } from './secret-registry.ts';
 
 export type WatermarkOptions = {
   /** Watermark text (token → recipient). XML-escaped before embedding. */
@@ -79,22 +81,58 @@ export async function watermarkPng(opts: WatermarkOptions): Promise<Uint8Array |
 }
 
 /**
- * Watermark + sign in one pipeline: SVG+WebView → PNG → ML-DSA-65 signature.
- * Self-verifies the signature before returning.
+ * Persistent ML-DSA-65 watermark signing key (S220): get-or-create from the
+ * OS vault (Bun.secrets) via the typed SECRET_REGISTRY entry. Previously the
+ * key was regenerated per call - signatures were unverifiable afterwards.
+ * Falls back to env (WATERMARK_MLDSA_PRIVATE_KEY) then generates + stores.
+ * Never takes the key from argv (registry policy: vault+env only).
+ */
+export async function watermarkKey(
+  opts: { keyType?: 'ml-dsa-44' | 'ml-dsa-65' | 'ml-dsa-87'; service?: string; backend?: SecretBackend } = {},
+): Promise<{ privateKey: KeyObject; publicKeyPem: string; keyType: 'ml-dsa-44' | 'ml-dsa-65' | 'ml-dsa-87' }> {
+  const keyType = opts.keyType ?? 'ml-dsa-65';
+  const policy = secretPolicy('watermark-mldsa-key');
+  const service = opts.service ?? policy.service;
+  const stored = opts.backend !== undefined
+    ? await getSecret({ service, name: policy.name }, { backend: opts.backend })
+    : policy.envName !== undefined
+      ? await getSecret({ service, name: policy.name }, { envName: policy.envName })
+      : await getSecret({ service, name: policy.name });
+  if (stored) {
+    const privateKey = createPrivateKey(stored);
+    return {
+      privateKey,
+      publicKeyPem: createPublicKey(privateKey).export({ type: 'spki', format: 'pem' }) as string,
+      keyType: privateKey.asymmetricKeyType as 'ml-dsa-44' | 'ml-dsa-65' | 'ml-dsa-87',
+    };
+  }
+  const { privateKey, publicKey } = generateKeyPairSync(keyType, {});
+  const privatePem = privateKey.export({ type: 'pkcs8', format: 'pem' }) as string;
+  await setSecret({ service, name: policy.name, value: privatePem }, opts.backend);
+  return {
+    privateKey,
+    publicKeyPem: publicKey.export({ type: 'spki', format: 'pem' }) as string,
+    keyType,
+  };
+}
+
+/**
+ * Watermark + sign in one pipeline: SVG+WebView → PNG → ML-DSA-65 signature
+ * with the PERSISTENT registered key (S220). Self-verifies before returning.
  */
 export async function watermarkAndSign(opts: WatermarkOptions & { keyType?: 'ml-dsa-44' | 'ml-dsa-65' | 'ml-dsa-87' }): Promise<SignedAsset> {
   const png = await watermarkPng(opts);
   if (!png) throw new Error('watermark: WebView unavailable or capture failed');
   const keyType = opts.keyType ?? 'ml-dsa-65';
-  const { privateKey, publicKey } = generateKeyPairSync(keyType, {});
+  const { privateKey, publicKeyPem } = await watermarkKey({ keyType });
   const signature = sign(null, png, privateKey);
-  if (!verify(null, png, publicKey, signature)) {
+  if (!verify(null, png, createPrivateKey(publicKeyPem), signature)) {
     throw new Error('watermark: ML-DSA signature self-verify failed');
   }
   return {
     png,
     signature,
-    publicKeyPem: publicKey.export({ type: 'spki', format: 'pem' }) as string,
+    publicKeyPem,
     keyType,
   };
 }
