@@ -4,8 +4,8 @@
   "bunRevision": "34cbb9a40b4bd1bd767d134a7065e66c2432a676",
   "bundleHash": "bun-types@1.4.0-c0dadede486f49ab",
   "verdictCounts": {
-    "PINNED-DISCREPANCY": 5,
-    "CONSISTENT": 40
+    "PINNED-DISCREPANCY": 6,
+    "CONSISTENT": 47
   },
   "checks": [
     {
@@ -378,6 +378,75 @@
       "docSays": "fetch: fallback handler for unmatched routes",
       "observed": "fallback",
       "verdict": "CONSISTENT"
+    },
+    {
+      "id": "SQ-queryGet",
+      "api": "query",
+      "source": "sqlite.d.ts",
+      "docSays": "query: cached statement (MAX_QUERY_CACHE_SIZE)",
+      "observed": {
+        "x": 1
+      },
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "SQ-namedParams",
+      "api": "run",
+      "source": "sqlite.d.ts",
+      "docSays": "named-param keys need no $/:@ prefix (docs claim) - true ONLY in strict mode",
+      "observed": 10,
+      "verdict": "PINNED-DISCREPANCY"
+    },
+    {
+      "id": "SQ-runChanges",
+      "api": "run",
+      "source": "sqlite.d.ts",
+      "docSays": "run: returns changes + lastInsertRowid",
+      "observed": {
+        "changes": 1,
+        "lastInsertRowid": 3
+      },
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "SQ-transaction",
+      "api": "transaction",
+      "source": "sqlite.d.ts",
+      "docSays": "transaction: atomic rollback",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "SQ-serialize",
+      "api": "serialize",
+      "source": "sqlite.d.ts",
+      "docSays": "serialize: Buffer dump",
+      "observed": "alice",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "SQ-deserialize",
+      "api": "deserialize",
+      "source": "sqlite.d.ts",
+      "docSays": "deserialize: STATIC Database.deserialize (not instance)",
+      "observed": "alice",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "SQ-close",
+      "api": "close",
+      "source": "sqlite.d.ts",
+      "docSays": "close: later queries throw",
+      "observed": "Cannot use a closed database",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "SQ-constraint",
+      "api": "run",
+      "source": "sqlite.d.ts",
+      "docSays": "constraint violations carry a SQLITE_* code",
+      "observed": "SQLITE_CONSTRAINT_PRIMARYKEY",
+      "verdict": "CONSISTENT"
     }
   ],
   "coverageGaps": [
@@ -409,6 +478,23 @@
       "surface": "Serve.UnixServeOptions",
       "gaps": [
         "unix"
+      ]
+    },
+    {
+      "surface": "bun:sqlite.Database",
+      "gaps": [
+        "loadExtension",
+        "setCustomSQLite",
+        "fileControl"
+      ]
+    },
+    {
+      "surface": "bun:sqlite.Statement",
+      "gaps": [
+        "iterate",
+        "raw",
+        "finalize",
+        "toString"
       ]
     }
   ]

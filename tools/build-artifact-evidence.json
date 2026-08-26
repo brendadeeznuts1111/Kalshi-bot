@@ -280,6 +280,33 @@
       "port0Assigned": true
     }
   },
+  "sqliteGotchas": {
+    "queryGet": {
+      "x": 1
+    },
+    "preparedGet": {
+      "v": 42
+    },
+    "namedParams": {
+      "defaultPrefixless": "null",
+      "defaultPrefixed": 10,
+      "strictPrefixless": 7,
+      "strictPrefixed": "Missing parameter \"y\""
+    },
+    "transactionAtomic": true,
+    "execMulti": true,
+    "constraintErrorCode": "SQLITE_CONSTRAINT_PRIMARYKEY",
+    "serializeDeserialize": {
+      "roundTripName": "alice",
+      "bytes": 12288
+    },
+    "closedDbError": "Cannot use a closed database",
+    "runChanges": {
+      "changes": 1,
+      "lastInsertRowid": 3
+    },
+    "backupAbsent": true
+  },
   "scenarios": [
     {
       "name": "S01-artifact-surface",
@@ -726,7 +753,7 @@
         {
           "path": "outbc/pure.js.jsc",
           "kind": "bytecode",
-          "hash": "naqw1dz4",
+          "hash": "dsvr5bnh",
           "loader": "file",
           "size": 10944,
           "type": "application/octet-stream",

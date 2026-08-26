@@ -620,6 +620,48 @@ const serveGotchas = {
 };
 rmSync(srvDir, { recursive: true, force: true });
 
+// ---------- sqliteGotchas: bun:sqlite behaviors (178) - in-memory, offline ----------
+const sq = new (await import('bun:sqlite')).Database(':memory:');
+sq.run('CREATE TABLE t (id INTEGER PRIMARY KEY, name TEXT)');
+sq.run('INSERT INTO t (name) VALUES (?)', ['alice']);
+sq.run('INSERT INTO t (name) VALUES (?)', ['bob']);
+const sqGet = (sq.query('SELECT 1 AS x') as any).get();
+const sqPrepared = (sq.prepare('SELECT ? AS v') as any).get(42);
+const sqNoPrefix = (sq.query('SELECT :x AS v') as any).get({ x: 7 });
+const sqPrefixed = (sq.query('SELECT :x AS v') as any).get({ ':x': 10 });
+const sqTx = sq.transaction(() => { sq.run('INSERT INTO t (name) VALUES (?)', ['carol']); throw new Error('rollback'); });
+try { sqTx(); } catch { }
+const sqCount = (sq.query('SELECT COUNT(*) AS n FROM t') as any).get().n as number;
+sq.exec('CREATE TABLE u (a INTEGER); INSERT INTO u VALUES (1); INSERT INTO u VALUES (2);');
+const sqExecCount = (sq.query('SELECT COUNT(*) AS n FROM u') as any).get().n as number;
+let sqConstraint = '';
+try { sq.run("INSERT INTO t (id, name) VALUES (1, 'dup')"); } catch (err: any) { sqConstraint = err.code ?? String(err); }
+const sqSer = sq.serialize();
+const sq2 = (await import('bun:sqlite')).Database.deserialize(sqSer);
+const sqRound = ((sq2.query('SELECT name FROM t') as any).get() as any).name;
+sq.close();
+let sqClosed = '';
+try { sq.query('SELECT 1').get(); } catch (err: any) { sqClosed = String(err.message ?? err).slice(0, 40); }
+const sqChanges = sq2.run('INSERT INTO t (name) VALUES (?)', ['bob']);
+const sqliteGotchas = {
+  queryGet: sqGet,
+  preparedGet: sqPrepared,
+  namedParams: {
+    defaultPrefixless: (sqNoPrefix as any)?.v === null ? 'null' : 'bound',
+    defaultPrefixed: (sqPrefixed as any)?.v === 10 ? 10 : 'unbound',
+    strictPrefixless: (await (async () => { const sd = new (await import('bun:sqlite')).Database(':memory:', { strict: true } as any); const r = sd.query('SELECT $y AS v').get({ y: 7 }); sd.close(); return (r as any)?.v ?? 'null'; })()),
+    strictPrefixed: (await (async () => { const sd = new (await import('bun:sqlite')).Database(':memory:', { strict: true } as any); try { const r = sd.query('SELECT $y AS v').get({ $y: 11 }); sd.close(); return (r as any)?.v ?? 'null'; } catch (err: any) { sd.close(); return String(err.message ?? err).slice(0, 24); } })()),
+  },
+  transactionAtomic: sqCount === 2,
+  execMulti: sqExecCount === 2,
+  constraintErrorCode: sqConstraint,
+  serializeDeserialize: { roundTripName: sqRound, bytes: sqSer.length },
+  closedDbError: sqClosed,
+  runChanges: sqChanges,
+  backupAbsent: typeof (sq2 as any).backup === 'undefined',
+};
+sq2.close();
+
 // ---------- emit ----------
 const evidence = {
   tool: 'tools/build-artifact-evidence.ts',
@@ -634,6 +676,7 @@ const evidence = {
   computeGuideGotchas,
   configGapsGotchas,
   serveGotchas,
+  sqliteGotchas,
   scenarios,
 };
 await Bun.write(EVIDENCE, JSON.stringify(evidence, null, 2) + '\n');

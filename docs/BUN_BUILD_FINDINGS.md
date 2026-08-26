@@ -553,11 +553,20 @@ Sources: bundled bun-types@1.4.0 (bun-types@1.4.0-c0dadede486f49ab) docs + `bun.
 PINNED-DISCREPANCY (doc says X, observed Y — our correction), DOC-CHANGED (fragment missing —
 the pin premise moved; re-verify), NO-EVIDENCE (ledger path broken).
 
+**Verdict summary:** 53 claims · 47 CONSISTENT · 6 PINNED-DISCREPANCY · 0 DOC-CHANGED · 0 NO-EVIDENCE.
+
+### BuildArtifact
+
 | Claim | API | Source | Doc says | Observed | Verdict |
 |---|---|---|---|---|---|
 | `BA-extendsBlob` | `kind` | `docs/bundler/index.mdx` | BuildArtifact extends Blob (Blob methods incl. .bytes()/.image() would apply) | false | PINNED-DISCREPANCY |
 | `BA-kinds` | `kind` | `bun.d.ts` | kind is one of five output roles | ["entry-point","chunk","entry-point","asset"] | CONSISTENT |
 | `BA-hash` | `hash` | `bun.d.ts` | hash is string | null | 00000000 | CONSISTENT |
+
+### BuildConfig
+
+| Claim | API | Source | Doc says | Observed | Verdict |
+|---|---|---|---|---|---|
 | `BC-outfile` | `outfile` | `bun.d.ts` | outfile: single output file path | false | PINNED-DISCREPANCY |
 | `BC-env` | `env` | `bun.d.ts` | env: "inline" injects env values into the output | false | PINNED-DISCREPANCY |
 | `BC-allowUnresolved` | `allowUnresolved` | `bun.d.ts` | allowUnresolved: glob allow-lists pass dynamic import() through | false | PINNED-DISCREPANCY |
@@ -573,12 +582,6 @@ the pin premise moved; re-verify), NO-EVIDENCE (ledger path broken).
 | `BC-naming` | `naming` | `bun.d.ts` | naming: string applies to entrypoints only | ["outn/static/pure.js","outn/static/pure2.js"] | CONSISTENT |
 | `BC-external` | `external` | `bun.d.ts` | external: exclude packages from bundle | true | CONSISTENT |
 | `BC-target` | `target` | `bun.d.ts` | target: browser | bun | node | 103 | CONSISTENT |
-| `IM-autoOrient` | `autoOrient` | `bun.d.ts` | autoOrient defaults to true (EXIF applied) | OK jpeg 1x2 | CONSISTENT |
-| `IM-maxPixels` | `maxPixels` | `bun.d.ts` | maxPixels default 268402689 (0x3FFF^2, same as Sharp) | 268402689 | CONSISTENT |
-| `IM-withoutEnlargement` | `withoutEnlargement` | `bun.d.ts` | withoutEnlargement prevents upscaling | 2x1 | CONSISTENT |
-| `IM-progressive` | `progressive` | `bun.d.ts` | jpeg progressive: true emits multi-scan | true | CONSISTENT |
-| `IM-palette` | `palette` | `bun.d.ts` | png palette: true emits indexed PNG | 3 | CONSISTENT |
-| `IM-invalidState` | `ERR_INVALID_STATE` | `bun.d.ts` | transferred input -> ERR_INVALID_STATE | ERR_IMAGE_UNKNOWN_FORMAT | PINNED-DISCREPANCY |
 | `BC-banner` | `banner` | `bun.d.ts` | banner: prepend text to bundled code | true | CONSISTENT |
 | `BC-footer` | `footer` | `bun.d.ts` | footer: append text to bundled code | true | CONSISTENT |
 | `BC-throw` | `throw` | `bun.d.ts` | throw:false returns { success:false } instead of rejecting | true | CONSISTENT |
@@ -593,6 +596,22 @@ the pin premise moved; re-verify), NO-EVIDENCE (ledger path broken).
 | `BC-reactFastRefresh` | `reactFastRefresh` | `bun.d.ts` | reactFastRefresh: adds refresh registration markers | true | CONSISTENT |
 | `BC-reactCompiler` | `reactCompiler` | `bun.d.ts` | reactCompiler: auto-memoization (guard checks); client mode needs react/compiler-runtime | true | CONSISTENT |
 | `BC-reactCompilerOutputMode` | `reactCompilerOutputMode` | `bun.d.ts` | reactCompilerOutputMode: ssr skips the useMemoCache runtime (builds without compiler-runtime) | true | CONSISTENT |
+
+### Bun.Image
+
+| Claim | API | Source | Doc says | Observed | Verdict |
+|---|---|---|---|---|---|
+| `IM-autoOrient` | `autoOrient` | `bun.d.ts` | autoOrient defaults to true (EXIF applied) | OK jpeg 1x2 | CONSISTENT |
+| `IM-maxPixels` | `maxPixels` | `bun.d.ts` | maxPixels default 268402689 (0x3FFF^2, same as Sharp) | 268402689 | CONSISTENT |
+| `IM-withoutEnlargement` | `withoutEnlargement` | `bun.d.ts` | withoutEnlargement prevents upscaling | 2x1 | CONSISTENT |
+| `IM-progressive` | `progressive` | `bun.d.ts` | jpeg progressive: true emits multi-scan | true | CONSISTENT |
+| `IM-palette` | `palette` | `bun.d.ts` | png palette: true emits indexed PNG | 3 | CONSISTENT |
+| `IM-invalidState` | `ERR_INVALID_STATE` | `bun.d.ts` | transferred input -> ERR_INVALID_STATE | ERR_IMAGE_UNKNOWN_FORMAT | PINNED-DISCREPANCY |
+
+### Bun.serve
+
+| Claim | API | Source | Doc says | Observed | Verdict |
+|---|---|---|---|---|---|
 | `SV-methodRoutes` | `routes` | `serve.d.ts` | routes: method-keyed handlers + :id params | 42 | CONSISTENT |
 | `SV-staticValue` | `routes` | `serve.d.ts` | routes: static Response/BunFile values | ok | CONSISTENT |
 | `SV-directory` | `routes` | `serve.d.ts` | routes: "/*" directory serving | hello-dir | CONSISTENT |
@@ -601,10 +620,25 @@ the pin premise moved; re-verify), NO-EVIDENCE (ledger path broken).
 | `SV-port` | `port` | `serve.d.ts` | port: 0 assigns an ephemeral port (server.port) | true | CONSISTENT |
 | `SV-fetch` | `fetch` | `serve.d.ts` | fetch: fallback handler for unmatched routes | fallback | CONSISTENT |
 
+### bun:sqlite
+
+| Claim | API | Source | Doc says | Observed | Verdict |
+|---|---|---|---|---|---|
+| `SQ-queryGet` | `query` | `sqlite.d.ts` | query: cached statement (MAX_QUERY_CACHE_SIZE) | {"x":1} | CONSISTENT |
+| `SQ-namedParams` | `run` | `sqlite.d.ts` | named-param keys need no $/:@ prefix (docs claim) - true ONLY in strict mode | 10 | PINNED-DISCREPANCY |
+| `SQ-runChanges` | `run` | `sqlite.d.ts` | run: returns changes + lastInsertRowid | {"changes":1,"lastInsertRowid":3} | CONSISTENT |
+| `SQ-transaction` | `transaction` | `sqlite.d.ts` | transaction: atomic rollback | true | CONSISTENT |
+| `SQ-serialize` | `serialize` | `sqlite.d.ts` | serialize: Buffer dump | alice | CONSISTENT |
+| `SQ-deserialize` | `deserialize` | `sqlite.d.ts` | deserialize: STATIC Database.deserialize (not instance) | alice | CONSISTENT |
+| `SQ-close` | `close` | `sqlite.d.ts` | close: later queries throw | Cannot use a closed database | CONSISTENT |
+| `SQ-constraint` | `run` | `sqlite.d.ts` | constraint violations carry a SQLITE_* code | SQLITE_CONSTRAINT_PRIMARYKEY | CONSISTENT |
+
 ### Coverage gaps — declared but not evidence-grounded
 
 - `BuildConfig`: fragment, sideEffects
 - `Serve.BaseServeOptions`: maxRequestBodySize, id
 - `Serve.HostnamePortServeOptions`: hostname, reusePort, ipv6Only, http1, idleTimeout
 - `Serve.UnixServeOptions`: unix
+- `bun:sqlite.Database`: loadExtension, setCustomSQLite, fileControl
+- `bun:sqlite.Statement`: iterate, raw, finalize, toString
 

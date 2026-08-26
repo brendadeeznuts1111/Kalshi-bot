@@ -36,6 +36,14 @@ export async function writeJsonReport(path: string, checks: CheckResult[], gaps:
   await Bun.write(path, JSON.stringify(report, null, 2) + '\n');
 }
 
+const SURFACES: [string, string][] = [
+  ['BA', 'BuildArtifact'],
+  ['BC', 'BuildConfig'],
+  ['IM', 'Bun.Image'],
+  ['SV', 'Bun.serve'],
+  ['SQ', 'bun:sqlite'],
+];
+
 export function renderSection9(checks: CheckResult[], gaps: CoverageGap[], meta: CrossCheckMeta): string {
   const L: string[] = [];
   const row = (c: CheckResult) => {
@@ -50,10 +58,21 @@ export function renderSection9(checks: CheckResult[], gaps: CoverageGap[], meta:
   L.push('PINNED-DISCREPANCY (doc says X, observed Y — our correction), DOC-CHANGED (fragment missing —');
   L.push('the pin premise moved; re-verify), NO-EVIDENCE (ledger path broken).');
   L.push('');
-  L.push('| Claim | API | Source | Doc says | Observed | Verdict |');
-  L.push('|---|---|---|---|---|---|');
-  for (const c of checks) L.push(row(c));
+  const vc: Record<string, number> = {};
+  for (const c of checks) vc[c.verdict] = (vc[c.verdict] ?? 0) + 1;
+  L.push('**Verdict summary:** ' + checks.length + ' claims · ' + (vc['CONSISTENT'] ?? 0) + ' CONSISTENT · ' + (vc['PINNED-DISCREPANCY'] ?? 0) + ' PINNED-DISCREPANCY · ' + (vc['DOC-CHANGED'] ?? 0) + ' DOC-CHANGED · ' + (vc['NO-EVIDENCE'] ?? 0) + ' NO-EVIDENCE.');
   L.push('');
+  const bySurface = (prefix: string) => checks.filter((c) => c.claim.id.startsWith(prefix));
+  for (const [prefix, name] of SURFACES) {
+    const rows = bySurface(prefix);
+    if (!rows.length) continue;
+    L.push('### ' + name);
+    L.push('');
+    L.push('| Claim | API | Source | Doc says | Observed | Verdict |');
+    L.push('|---|---|---|---|---|---|');
+    for (const c of rows) L.push(row(c));
+    L.push('');
+  }
   if (gaps.length) {
     L.push('### Coverage gaps — declared but not evidence-grounded');
     L.push('');

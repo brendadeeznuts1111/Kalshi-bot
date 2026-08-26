@@ -6390,3 +6390,13 @@ another note.
   remaining gaps are maxRequestBodySize, id, hostname, reusePort, ipv6Only,
   http1, idleTimeout, unix (+ jsx fragment/sideEffects) - 45 claims (40
   CONSISTENT, 5 PINNED-DISCREPANCY).
+- bun:sqlite surface grounded (178): 8 SQ ledger claims - query cache,
+  run changes/lastInsertRowid, transaction atomic rollback, serialize /
+  Database.deserialize (STATIC, not an instance method), close semantics,
+  constraint error codes, and the NAMED-PARAM MODE MATRIX: default mode
+  requires PREFIXED keys ({':x': 10}), strict mode requires PREFIX-LESS keys
+  ({y: 7}, sqlite-deep P2) - the sqlite.d.ts 'no longer need the prefix'
+  comment is true only in strict mode (mode-dependent pin). Coverage sweep
+  now includes bun:sqlite Database/Statement members: remaining gaps
+  loadExtension, setCustomSQLite, fileControl, iterate, raw, finalize,
+  toString. 53 claims (47 CONSISTENT, 6 PINNED-DISCREPANCY).

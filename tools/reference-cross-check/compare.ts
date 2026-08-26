@@ -88,6 +88,14 @@ export const LEDGER: LedgerClaim[] = [
   { id: 'SV-error', api: 'error', source: 'serve.d.ts', fragment: 'Called when an error is thrown during request handling', docSays: 'error: handler maps thrown errors to a Response', evidencePath: 'serveGotchas.errorHandler.status', kind: 'consistent' },
   { id: 'SV-port', api: 'port', source: 'serve.d.ts', fragment: 'port?: string | number', docSays: 'port: 0 assigns an ephemeral port (server.port)', evidencePath: 'serveGotchas.errorHandler.port0Assigned', kind: 'consistent' },
   { id: 'SV-fetch', api: 'fetch', source: 'serve.d.ts', fragment: 'fetch?(this: Server<WebSocketData>, req: Request', docSays: 'fetch: fallback handler for unmatched routes', evidencePath: 'serveGotchas.staticRoutes.fetchFallback', kind: 'consistent' },
+  { id: 'SQ-queryGet', api: 'query', source: 'sqlite.d.ts', fragment: 'Maximum number of distinct SQL strings', docSays: 'query: cached statement (MAX_QUERY_CACHE_SIZE)', evidencePath: 'sqliteGotchas.queryGet', kind: 'consistent' },
+  { id: 'SQ-namedParams', api: 'run', source: 'sqlite.d.ts', fragment: 'no longer need the', docSays: 'named-param keys need no $/:@ prefix (docs claim) - true ONLY in strict mode', evidencePath: 'sqliteGotchas.namedParams.defaultPrefixed', kind: 'discrepancy' },
+  { id: 'SQ-runChanges', api: 'run', source: 'sqlite.d.ts', fragment: 'lastInsertRowid', docSays: 'run: returns changes + lastInsertRowid', evidencePath: 'sqliteGotchas.runChanges', kind: 'consistent' },
+  { id: 'SQ-transaction', api: 'transaction', source: 'sqlite.d.ts', fragment: 'transaction', docSays: 'transaction: atomic rollback', evidencePath: 'sqliteGotchas.transactionAtomic', kind: 'consistent' },
+  { id: 'SQ-serialize', api: 'serialize', source: 'sqlite.d.ts', fragment: 'sqlite3_serialize', docSays: 'serialize: Buffer dump', evidencePath: 'sqliteGotchas.serializeDeserialize.roundTripName', kind: 'consistent' },
+  { id: 'SQ-deserialize', api: 'deserialize', source: 'sqlite.d.ts', fragment: 'static deserialize', docSays: 'deserialize: STATIC Database.deserialize (not instance)', evidencePath: 'sqliteGotchas.serializeDeserialize.roundTripName', kind: 'consistent' },
+  { id: 'SQ-close', api: 'close', source: 'sqlite.d.ts', fragment: 'been finalized or collected', docSays: 'close: later queries throw', evidencePath: 'sqliteGotchas.closedDbError', kind: 'consistent' },
+  { id: 'SQ-constraint', api: 'run', source: 'sqlite.d.ts', fragment: 'SQLITE_CONSTRAINT', docSays: 'constraint violations carry a SQLITE_* code', evidencePath: 'sqliteGotchas.constraintErrorCode', kind: 'consistent' },
 ];
 
 /** APIs with grounded evidence but no ledger row (fit/filter/quality/... come from the probe gates). */
@@ -97,6 +105,8 @@ export const EXTRA_GROUNDED: string[] = [
   'arrayBuffer', 'stream', 'json', 'slice', 'write', 'cwd', 'entrypoints', 'outdir',
   'format', 'splitting', 'loader', 'metafile', 'treeShaking', 'plugins',
   'tls', 'development', 'http3', 'runtime', 'importSource', 'factory',
+  'prepare', 'get', 'all', 'values', 'exec', 'close', 'open', 'MAX_QUERY_CACHE_SIZE', 'file',
+  'inTransaction', 'as', 'columnNames', 'columnTypes', 'paramsCount',
 ];
 
 export function checkClaim(claim: LedgerClaim, sourceText: string, ev: Evidence): CheckResult {

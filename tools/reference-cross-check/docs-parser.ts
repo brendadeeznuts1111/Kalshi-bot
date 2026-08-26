@@ -74,4 +74,26 @@ export function interfaceFieldsContaining(content: string, needles: string[]): {
   return null;
 }
 
+/** Member names of the first `class NAME ... {` block (members at exactly 4-space indent). */
+export function classMembers(content: string, name: string): string[] {
+  const re = new RegExp('(?:export\\s+)?class\\s+' + name + '(?:\\s|\\<|implements|extends|\{)');
+  const m = re.exec(content);
+  if (!m) return [];
+  const open = content.indexOf('{', m.index);
+  let depth = 0;
+  let close = open;
+  for (; close < content.length; close++) {
+    const ch = content[close];
+    if (ch === '{') depth++;
+    else if (ch === '}') { depth--; if (depth === 0) break; }
+  }
+  const block = content.slice(open, close);
+  const names: string[] = [];
+  for (const line of block.split('\n')) {
+    const mm = line.match(/^\s{4}(?:static\s+|get\s+)?([a-zA-Z_$][a-zA-Z0-9_$]*)(?:\??:|<|\(|\s*=\s*[a-zA-Z_$])/);
+    if (mm && mm[1] !== 'constructor' && !names.includes(mm[1])) names.push(mm[1]!);
+  }
+  return names;
+}
+
 export {};
