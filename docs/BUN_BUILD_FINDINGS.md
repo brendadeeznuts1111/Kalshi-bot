@@ -554,7 +554,7 @@ Sources: bundled bun-types@1.4.0 (bun-types@1.4.0-c0dadede486f49ab) docs + `bun.
 PINNED-DISCREPANCY (doc says X, observed Y — our correction), DOC-CHANGED (fragment missing —
 the pin premise moved; re-verify), NO-EVIDENCE (ledger path broken).
 
-**Verdict summary:** 153 claims · 145 CONSISTENT · 8 PINNED-DISCREPANCY · 0 DOC-CHANGED · 0 NO-EVIDENCE.
+**Verdict summary:** 156 claims · 148 CONSISTENT · 8 PINNED-DISCREPANCY · 0 DOC-CHANGED · 0 NO-EVIDENCE.
 
 ### BuildArtifact
 
@@ -563,6 +563,9 @@ the pin premise moved; re-verify), NO-EVIDENCE (ledger path broken).
 | `BA-extendsBlob` | `kind` | `docs/bundler/index.mdx` | BuildArtifact extends Blob (Blob methods incl. .bytes()/.image() would apply) | false | PINNED-DISCREPANCY |
 | `BA-kinds` | `kind` | `bun.d.ts` | kind is one of five output roles | ["entry-point","chunk","entry-point","asset"] | CONSISTENT |
 | `BA-hash` | `hash` | `bun.d.ts` | hash is string | null | 00000000 | CONSISTENT |
+| `BA-namingHash` | `naming` | `bun.d.ts` | naming { entry: "[name]-[hash].[ext]" } makes the ENTRY-POINT hash non-null (strong ETag source) | true | CONSISTENT |
+| `BA-sourcemapNested` | `sourcemap` | `bun.d.ts` | BuildArtifact.sourcemap nests a BuildArtifact when sourcemap: "linked" (its hash is a 00000000 placeholder) | sourcemap:00000000 | CONSISTENT |
+| `BA-sha256` | `SHA256` | `bun.d.ts` | Bun.SHA256 exists; sha256("abc") hex matches the known digest (same as CryptoHasher sha256) | ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad | CONSISTENT |
 
 ### BuildConfig
 

@@ -1146,6 +1146,21 @@ const xmlGotchas = {
   perf20kItemsMs: xmlPerfMs,
   perfVsDocs: xmlPerfMs < 27 * 2.5 ? 'CONSISTENT (docs 27 ms for 2.2 MB)' : 'DIFFERS',
 };
+
+// ---------- artifactGotchas: BuildArtifact contract + Bun.SHA256 (§194) ----------
+const artDir = mkdtempSync(join(tmpdir(), 'art-g-'));
+writeFileSync(join(artDir, 'app.ts'), 'export const x = 1;');
+const artBuild = await Bun.build({ entrypoints: [join(artDir, 'app.ts')], outdir: join(artDir, 'out'), naming: { entry: '[name]-[hash].[ext]' } as any });
+const artOut = artBuild.outputs[0]!;
+const artifactGotchas = {
+  namingHash: artOut.hash !== null,
+  responseCtype: new Response(artOut as any).headers.get('content-type'),
+  responseEtagNull: new Response(artOut as any).headers.get('etag') === null,
+  hasBytesMethod: typeof (artOut as any).bytes,
+  hasArrayBufferMethod: typeof (artOut as any).arrayBuffer,
+  sha256Hex: new (Bun as any).SHA256().update('abc').digest('hex'),
+  sourcemapLinked: await (async () => { const b = await Bun.build({ entrypoints: [join(artDir, 'app.ts')], outdir: join(artDir, 'sm'), sourcemap: 'linked' as any }); const o = b.outputs[0]!; return o.sourcemap ? o.sourcemap.kind + ':' + o.sourcemap.hash : 'NONE'; })(),
+};
 // ---------- emit ----------
 const evidence = {
   tool: 'tools/build-artifact-evidence.ts',
@@ -1174,6 +1189,7 @@ const evidence = {
   udpGotchas,
   fileGotchas,
   xmlGotchas,
+  artifactGotchas,
   scenarios,
 };
 await Bun.write(EVIDENCE, JSON.stringify(evidence, null, 2) + '\n');

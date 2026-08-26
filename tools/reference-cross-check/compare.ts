@@ -196,6 +196,9 @@ export const LEDGER: LedgerClaim[] = [
   { id: 'XML-bundler', api: 'parse', source: 'docs/runtime/xml.mdx', fragment: 'the bundler parses imported XML files at build time', docSays: 'Bun.build parses imported .xml files at build time and inlines them as JS objects (output contains the parsed data)', evidencePath: 'xmlGotchas.bundlerInlines', kind: 'consistent' },
   { id: 'XML-namedExport', api: 'XML', source: 'bun.d.ts', fragment: 'XML related APIs', docSays: 'Bun.XML and import { XML } from "bun" are the SAME namespace object; parse + stringify exposed', evidencePath: 'xmlGotchas.namedIdentity', kind: 'consistent' },
   { id: 'XML-perf', api: 'parse', source: 'docs/runtime/xml.mdx', fragment: '27 ms', docSays: 'performance: SIMD parse of a ~2 MB doc measured on this machine (docs claim 27 ms for 2.2 MB)', evidencePath: 'xmlGotchas.perf20kItemsMs', kind: 'consistent' },
+  { id: 'BA-namingHash', api: 'naming', source: 'bun.d.ts', fragment: 'Set up custom naming patterns for all output types', docSays: 'naming { entry: "[name]-[hash].[ext]" } makes the ENTRY-POINT hash non-null (strong ETag source)', evidencePath: 'artifactGotchas.namingHash', kind: 'consistent' },
+  { id: 'BA-sourcemapNested', api: 'sourcemap', source: 'bun.d.ts', fragment: 'sourcemap: BuildArtifact | null', docSays: 'BuildArtifact.sourcemap nests a BuildArtifact when sourcemap: "linked" (its hash is a 00000000 placeholder)', evidencePath: 'artifactGotchas.sourcemapLinked', kind: 'consistent' },
+  { id: 'BA-sha256', api: 'SHA256', source: 'bun.d.ts', fragment: 'class SHA256 extends CryptoHashInterface', docSays: 'Bun.SHA256 exists; sha256("abc") hex matches the known digest (same as CryptoHasher sha256)', evidencePath: 'artifactGotchas.sha256Hex', kind: 'consistent' },
 ];
 
 /** APIs with grounded evidence but no ledger row (fit/filter/quality/... come from the probe gates). */
@@ -220,7 +223,7 @@ export const EXTRA_GROUNDED: string[] = [
   'compress', 'level', 'extract', 'files', 'address', 'binaryType', 'closed', 'fd',
   'ref', 'reload', 'remoteAddress', 'send', 'sendMany', 'setBroadcast', 'setTTL', 'unref',
   'writer', 'exists', 'stat',
-  'stringify', 'XML',
+  'stringify', 'XML', 'sourcemap', 'path',
 ];
 
 export function checkClaim(claim: LedgerClaim, sourceText: string, ev: Evidence): CheckResult {

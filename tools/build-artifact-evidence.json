@@ -738,8 +738,17 @@
     "xxeUnresolved": "{\"a\":\"&xxe;\"}",
     "importEvalToCompact": "{\"config\":{\"name\":\"demo\",\"port\":\"8080\"}}",
     "bundlerInlines": true,
-    "perf20kItemsMs": 6.2,
+    "perf20kItemsMs": 5.9,
     "perfVsDocs": "CONSISTENT (docs 27 ms for 2.2 MB)"
+  },
+  "artifactGotchas": {
+    "namingHash": true,
+    "responseCtype": "text/javascript;charset=utf-8",
+    "responseEtagNull": true,
+    "hasBytesMethod": "undefined",
+    "hasArrayBufferMethod": "function",
+    "sha256Hex": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+    "sourcemapLinked": "sourcemap:00000000"
   },
   "scenarios": [
     {
@@ -1187,7 +1196,7 @@
         {
           "path": "outbc/pure.js.jsc",
           "kind": "bytecode",
-          "hash": "m20cyq2h",
+          "hash": "x3wvz8rh",
           "loader": "file",
           "size": 10944,
           "type": "application/octet-stream",

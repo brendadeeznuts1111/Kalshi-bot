@@ -209,6 +209,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §191 — Code mode — the bash execution-tier gate (docs/CODE_MODE.md) (2026-08-26)
 - §192 — Bun.XML grounded + async-IIFE evidence bug (2026-08-26)
 - §193 — Heap-based odds clustering — min-heap Prim MST + HDBSCAN-lite + z-score pitfall (2026-08-26)
+- §194 — Artifact interface — uniform contract for bundles/tiles/manifests/XML + two proposal corrections (2026-08-26)
 - §187 — Extended color formats — kernel-only (lch/oklab/oklch/hsv) + inverse parsers (2026-08-26)
 - §188 — Watermark pipeline — ML-DSA key naming + WebView/Blob verified facts (2026-08-26)
 - §189 — Color input-parsing correction — lab()/lch() parse natively, oklab/oklch/hsv/device-cmyk null (2026-08-26)
@@ -6995,6 +6996,29 @@ The 'heap clustering for sources data and odds' ask is implemented zero-dep:
 
 PITFALL (fixture + z-score): z-scoring a near-constant column AMPLIFIES its noise to
 unit variance, so a tight vig jitter (~0.001) dominated the vector over the real
+## 194. Artifact interface — uniform contract for bundles/tiles/manifests/XML + two proposal corrections (2026-08-26)
+
+src/lib/artifact.ts implements the uniform Artifact contract (kind/path/hash/size/
+type/sourcemap + text/json/arrayBuffer/bytes/stream) with helpers fromBuildOutput,
+etagFor, responseFor (sets the strong ETag EXPLICITLY), sha256Hex (Bun.SHA256),
+fromBunFile. New grounded facts (156 claims, gaps 0):
+  - BA-namingHash: naming { entry: '[name]-[hash].[ext]' } makes the entry-point
+    hash NON-NULL (strong ETag source).
+  - BA-sourcemapNested: sourcemap: 'linked' nests a BuildArtifact whose hash is a
+    '00000000' PLACEHOLDER - not a real hash.
+  - BA-sha256: Bun.SHA256 exists (class SHA256 extends CryptoHashInterface);
+    sha256('abc') hex = the known digest (same as CryptoHasher).
+
+TWO PROPOSAL CORRECTIONS (the pasted 'auto-ETag' design was wrong on 1.4.0):
+  1. new Response(artifact) sets Content-Type but NOT ETag from hash - you MUST set
+     the ETag header yourself ('"' + hash + '"'). Same for new Response(Bun.file).
+  2. BuildArtifact has NO .bytes() method - the read methods are arrayBuffer, text,
+     json, stream (proto: arrayBuffer/hash/json/kind/loader/path/size/slice/
+     sourcemap/stream/text/type). bytes() must be a helper over arrayBuffer().
+Cross-check: 156 claims (148 CONSISTENT / 8 PINNED-DISCREPANCY), gaps 0.
+The async-IIFE evidence pitfall from §192 recurred (sourcemapLinked) - always await
+top-level in the evidence object.
+
 implied-prob structure and smeared the pockets into one cluster. Fix: give each
 pocket its own vig level (0.030/0.040/0.050) so the dimension reinforces the
 separation instead of drowning it. Real data should choose vector weights or

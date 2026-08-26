@@ -5,7 +5,7 @@
   "bundleHash": "bun-types@1.4.0-c0dadede486f49ab",
   "verdictCounts": {
     "PINNED-DISCREPANCY": 8,
-    "CONSISTENT": 145
+    "CONSISTENT": 148
   },
   "checks": [
     {
@@ -1290,7 +1290,31 @@
       "api": "parse",
       "source": "docs/runtime/xml.mdx",
       "docSays": "performance: SIMD parse of a ~2 MB doc measured on this machine (docs claim 27 ms for 2.2 MB)",
-      "observed": 6.2,
+      "observed": 5.9,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "BA-namingHash",
+      "api": "naming",
+      "source": "bun.d.ts",
+      "docSays": "naming { entry: \"[name]-[hash].[ext]\" } makes the ENTRY-POINT hash non-null (strong ETag source)",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "BA-sourcemapNested",
+      "api": "sourcemap",
+      "source": "bun.d.ts",
+      "docSays": "BuildArtifact.sourcemap nests a BuildArtifact when sourcemap: \"linked\" (its hash is a 00000000 placeholder)",
+      "observed": "sourcemap:00000000",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "BA-sha256",
+      "api": "SHA256",
+      "source": "bun.d.ts",
+      "docSays": "Bun.SHA256 exists; sha256(\"abc\") hex matches the known digest (same as CryptoHasher sha256)",
+      "observed": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
       "verdict": "CONSISTENT"
     }
   ],

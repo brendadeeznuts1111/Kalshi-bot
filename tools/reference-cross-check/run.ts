@@ -50,6 +50,8 @@ export async function runCrossCheck(): Promise<number> {
   const covered = new Set<string>([...LEDGER.map((c) => c.api), ...EXTRA_GROUNDED]);
   const declared: Record<string, string[]> = {};
   declared['BuildConfig'] = buildConfigFields;
+  declared['BuildArtifact'] = interfaceFields(dts, 'BuildArtifact');
+  declared['Bun.SHA256'] = ['update', 'digest']; // curated - CryptoHashInterface
   if (ctor) declared['Image.' + ctor.name] = ctor.fields;
   if (resize) declared['Image.' + resize.name] = resize.fields;
   if (modulate) declared['Image.' + modulate.name] = modulate.fields;
