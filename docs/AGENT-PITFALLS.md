@@ -206,6 +206,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §184 — Blog-map v2 — full-tree registry (13 sections, h3+h4, context fields) (2026-08-26)
 - §185 — Strict typing migration — tsconfig + 661 errors fixed, behavior preserved (2026-08-26)
 - §186 — Blog benchmark + code-block verification — numbers and examples grounded (2026-08-26)
+- §191 — Code mode — the bash execution-tier gate (docs/CODE_MODE.md) (2026-08-26)
 - §187 — Extended color formats — kernel-only (lch/oklab/oklch/hsv) + inverse parsers (2026-08-26)
 - §188 — Watermark pipeline — ML-DSA key naming + WebView/Blob verified facts (2026-08-26)
 - §189 — Color input-parsing correction — lab()/lch() parse natively, oklab/oklch/hsv/device-cmyk null (2026-08-26)
@@ -6847,6 +6848,20 @@ addition to the Bun.color-native hex/css/rgb/hsl/lab/number:
     "hsv" | "lch" | "oklab" | "oklch") throws; the runtime error enumerates the
     full accepted list — lab is the newest CSS4 OUTPUT, these four are absent
     from the guide table AND bun-types). Shapes are kernel-defined (documented
+## 191. Code mode — the bash execution-tier gate (docs/CODE_MODE.md) (2026-08-26)
+
+Researched the AI-agent 'code mode' concept (Claude Code canonical: plan mode =
+read-only, code mode = execution-enabled, with ask/auto-accept/deny permission
+tiers per tool category) and implemented it natively for our bash layer:
+  - src/lib/bash-mode.ts: classifyBashTier(command) (read-only verbs: rg/grep/cat/
+    tsc/git status|diff|log/bun test; compound && chains read-only only when every
+    segment is) + runBashInMode(command, mode) via Bun.$ (guard-compliant).
+  - tools/bash-mode-cli.ts: `bun run bash:mode [--mode plan|code] -- <cmd>`.
+  - Plan mode BLOCKS full-tier commands ([plan mode] blocked, exit 2); code mode
+    is today's full behavior. Mode NEVER affects the authorized-execution runtime
+    gates (AGENTS.md) - they are independent of the bash tier.
+Tests: tests/lib/bash-mode.test.ts (6 tests).
+
     in the color page probe table as W_NOTE).
   - INPUT parsing is the opposite split — see §189 for the correction: Bun.color
     PARSES lab()/lch() inputs natively (guide input list); it returns null only

@@ -12,11 +12,12 @@
  * ledger claim id from §9 as a cross-reference.
  */
 import { readFileSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 const ROOT = join(import.meta.dir, '..');
 const HTML = readFileSync(join(ROOT, 'research/cache/bun-blog.html'), 'utf8');
-const DIR = join(ROOT, 'scratch/blog-codeblocks');
+const DIR = join(tmpdir(), 'blog-codeblocks-check');
 
 // extract plain shiki blocks
 const blocks: string[] = [];
