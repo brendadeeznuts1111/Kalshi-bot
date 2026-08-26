@@ -1,10 +1,10 @@
 {
-  "lastChecked": "2026-08-26T11:14:46.703Z",
+  "lastChecked": "2026-08-26T11:25:25.828Z",
   "docs": [
     {
       "path": "docs/AGENT-PITFALLS.md",
-      "hash": "a7771357750897fb8ad79c7edc2476ebabcacf4361625dc01566318b91d5bef2",
-      "headings": 253,
+      "hash": "70f0e759c89c5b6cef389c5e62f1058141a53c1701a9c7c4627ed34f3a96d13f",
+      "headings": 254,
       "renderOk": true,
       "duplicateSlugs": []
     },
@@ -59,8 +59,8 @@
     },
     {
       "path": "docs/BUN_NATIVE.md",
-      "hash": "ad18602c1ee26af43afa0fb210b11c7e12fd454fbed8e8fbf037ac0ba480ff75",
-      "headings": 67,
+      "hash": "bd1941258f26e9384088c28b7e36d4b08c593c038cff38a8d2442f010262ffad",
+      "headings": 68,
       "renderOk": true,
       "duplicateSlugs": []
     },
