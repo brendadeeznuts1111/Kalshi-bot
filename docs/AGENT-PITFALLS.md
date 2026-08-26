@@ -208,6 +208,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §186 — Blog benchmark + code-block verification — numbers and examples grounded (2026-08-26)
 - §191 — Code mode — the bash execution-tier gate (docs/CODE_MODE.md) (2026-08-26)
 - §192 — Bun.XML grounded + async-IIFE evidence bug (2026-08-26)
+- §193 — Heap-based odds clustering — min-heap Prim MST + HDBSCAN-lite + z-score pitfall (2026-08-26)
 - §187 — Extended color formats — kernel-only (lch/oklab/oklch/hsv) + inverse parsers (2026-08-26)
 - §188 — Watermark pipeline — ML-DSA key naming + WebView/Blob verified facts (2026-08-26)
 - §189 — Color input-parsing correction — lab()/lch() parse natively, oklab/oklch/hsv/device-cmyk null (2026-08-26)
@@ -6975,5 +6976,32 @@ value, so the claim passes against BOGUS evidence. Fix: top-level await
 utilityGotchas password block used direct await and was correct. Re-verified:
 udp loopbackEcho now records the real 'ping-42' round-trip; archive extractCount=2;
 file writeBytes=3; xml import = compact shape.
+## 193. Heap-based odds clustering — min-heap Prim MST + HDBSCAN-lite + z-score pitfall (2026-08-26)
+
+The 'heap clustering for sources data and odds' ask is implemented zero-dep:
+  - src/lib/min-heap.ts: generic binary min-heap (Prim's MST dependency).
+  - src/alpha/cluster/hdbscan.ts: coreDistances -> mutualReachability -> primMST
+    (heap) -> flatLabels. Deterministic: sorted edge iteration, tie-break by
+    (weight, from, to). Flat labels use a LARGEST-GAP epsilon (the standard
+    single-linkage elbow) but only when the gap exceeds 2x the median edge weight,
+    so a dense uniform pocket stays ONE cluster.
+  - src/alpha/cluster/odds-vector.ts: prints [implied%, vig, ts] -> z-scored vectors.
+  - src/alpha/cluster/consensus.ts: detectShifts(prev, next) -> merge/split/new/
+    dissolved signals (the steam-move alert).
+  - tools/alpha-cluster-cli.ts: `bun run alpha:cluster` (synthetic fixture default,
+    --input <json> supported) -> research/outputs/odds-clusters.{json,md}.
+  - Tests: min-heap invariants, two-pocket split, dense-pocket merge, determinism,
+    3-pocket odds separation, merge/split detection.
+
+PITFALL (fixture + z-score): z-scoring a near-constant column AMPLIFIES its noise to
+unit variance, so a tight vig jitter (~0.001) dominated the vector over the real
+implied-prob structure and smeared the pockets into one cluster. Fix: give each
+pocket its own vig level (0.030/0.040/0.050) so the dimension reinforces the
+separation instead of drowning it. Real data should choose vector weights or
+scale vig with its actual signal, not z-score noise blindly.
+
+Also: MinHeap comparator must return BOOLEAN (a.to < b.to), not the diff - the
+strict types caught a number-returning comparator immediately (TS2322).
+
 
 

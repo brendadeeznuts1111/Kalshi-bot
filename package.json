@@ -301,6 +301,7 @@
     "blog:assets": "bun tools/blog-assets-mirror.ts",
     "blog:bench-verify": "bun tools/blog-bench-verify.ts",
     "bash:mode": "bun tools/bash-mode-cli.ts",
+    "alpha:cluster": "bun tools/alpha-cluster-cli.ts",
     "blog:codeblocks-check": "bun tools/blog-codeblocks-check.ts",
     "scratch:sweep": "bun tools/scratch-sweep.ts",
     "routes:check": "bun tools/routes-check.ts",
