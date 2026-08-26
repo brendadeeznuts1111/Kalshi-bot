@@ -1,0 +1,11 @@
+{
+  "mirrorVersion": 1,
+  "source": "https://bun.sh/blog/bun-v1.4",
+  "entryCount": 55,
+  "files": [
+    "blog-map.json",
+    "blog-map.md",
+    "bun-release-1.4.md"
+  ],
+  "generatedBy": "bun run blog:assets (tools/blog-assets-mirror.ts)"
+}

@@ -119,6 +119,7 @@ export const ROUTE_MANIFEST: readonly RouteDef[] = [
   { path: '/videos/index.json', method: 'GET', layer: 'ops', handler: 'video manifest', cache: 'no-cache' },
   { path: '/videos/:id', method: 'GET', layer: 'ops', handler: 'video file (Range/206)', cache: 'dir' },
   { path: '/videos/*', method: 'GET', layer: 'ops', handler: 'public/videos dir route', cache: 'dir' },
+  { path: '/blog/*', method: 'GET', layer: 'pipeline', handler: 'public/blog dir route (blog-map mirror)', cache: 'dir', docRef: 'AGENT-PITFALLS §183' },
   { path: '/partner-dashboard/*', method: 'GET', layer: 'ops', handler: 'public/partner-dashboard dir route', cache: 'dir' },
 
   // ── Trading (compliance-gated order entry — manifest is documentation only) ──

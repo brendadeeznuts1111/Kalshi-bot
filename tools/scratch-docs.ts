@@ -77,7 +77,10 @@ export function generate(): string {
   const counts: Record<Kind, number> = { probe: 0, log: 0, cert: 0, output: 0, other: 0 };
   for (const e of entries) counts[e.kind]++;
   const orphans = entries.filter((e) => e.orphaned);
-  const totalBytes = entries.reduce((a, e) => a + e.bytes, 0) + dirs.reduce((a, d) => a + d.bytes, 0);
+  // Dir counts/bytes are NOT rendered: probe gates write into scratch/art-ground
+  // DURING parallel verify:contracts runs, which would drift the README (181).
+  // Only the top-level FILE list and dir NAMES are stable across gate runs.
+  const totalBytes = entries.reduce((a, e) => a + e.bytes, 0);
   const out: string[] = [];
   out.push('# scratch/ — probe & fixture scratchpad (git-ignored, never commit)');
   out.push('');
@@ -110,9 +113,9 @@ export function generate(): string {
   if (dirs.length > 0) {
     out.push('## Fixture directories');
     out.push('');
-    out.push('| dir | files | bytes |');
-    out.push('|---|---|---|');
-    for (const d of dirs) out.push('| ' + d.name + '/ | ' + d.count + ' | ' + d.bytes + ' |');
+    out.push('| dir |');
+    out.push('|---|');
+    for (const d of dirs) out.push('| ' + d.name + '/ |');
     out.push('');
   }
   if (orphans.length > 0) {

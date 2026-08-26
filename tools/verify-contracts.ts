@@ -71,6 +71,7 @@ const gates = [
   ['fullstack:probe'],
   ['reference-cross-check'], // §178 official bun-types docs vs observed evidence
   ['scratch:docs', '--', '--check'], // §181 scratch index freshness (bootstrap on missing)
+  ['blog:assets', '--', '--check'], // blog-map mirror freshness (public/blog/, §183)
 ] as const;
 
 const GATE_ENV: Record<string, Record<string, string>> = {

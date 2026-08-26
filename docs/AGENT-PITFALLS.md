@@ -9,7 +9,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 > The headings were renumbered to §1-§11 on 2026-08-23; the counters were kept
 > so historical notes stay traceable.
 >
-> **Current contract status: verify:contracts 57/57** (see docs/BUN_API_COVERAGE.md
+> **Current contract status: verify:contracts 58/58** (see docs/BUN_API_COVERAGE.md
 > for the full matrix). `verify:contracts N/N` lines inside older sections are
 > HISTORICAL (each records its era) — docs:check enforces that only this header
 > and non-pitfall docs may reference the current count.
@@ -202,6 +202,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §180 — react() override props: capture timing — function overrides only render under React (2026-08-26)
 - §181 — scratch-docs automation — index freshness gate + import-guard pitfall (2026-08-26)
 - §182 — Utility surfaces grounded — Glob / CryptoHasher / password / escapeHTML / deepEquals (2026-08-26)
+- §183 — Blog-assets mirror — public/blog/ + /blog/* serve route + gate #58 (2026-08-26)
 
 
 ## 1. run_code program text (the harness lexer)
@@ -6745,6 +6746,19 @@ ran. Guard with `if (import.meta.main) process.exit(main());` so the module is
 safe to import.
 
 After: verify:contracts 57/57 (scratch:docs gate active).
+## 183. Blog-assets mirror — public/blog/ + /blog/* serve route + gate #58 (2026-08-26)
+
+`bun run blog:assets` (tools/blog-assets-mirror.ts) regenerates public/blog/ from the
+tracked blog data (.data/blog-map.json + blog-map-state.json + research/outputs/*.md
+reports when present). The dev server serves it at /blog/* (dir route) with
+/blog/index.json as the manifest (source https://bun.sh/blog/bun-v1.4, 55 entries).
+Gate #58 `blog:assets --check` enforces freshness (bootstrap on missing, fail on drift).
+Gate count 57 -> 58: update tests/lib/gate-count.test.ts AND the AGENT-PITFALLS header
+(docs:check enforces the header count). Also fixed the scratch:docs drift from §181:
+the README's fixture-dir section no longer renders file counts/bytes (probe gates
+write into scratch/art-ground DURING parallel verify runs) — only dir NAMES, which
+are stable across gate runs. verify:contracts 57/57 stable again before the +1.
+
 
 
 

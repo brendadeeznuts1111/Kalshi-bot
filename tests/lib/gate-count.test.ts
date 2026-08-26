@@ -34,7 +34,7 @@ describe('countGates (§167)', () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  test('live repo gates array counts 57 (drift fails here)', () => {
-    expect(countGates()).toBe(57);
+  test('live repo gates array counts 58 (drift fails here)', () => {
+    expect(countGates()).toBe(58);
   });
 });
