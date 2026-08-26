@@ -297,6 +297,8 @@
     "module-shape:report": "bun tools/module-shape-report.ts",
     "repo-api:shape": "bun tools/repo-api-shape.ts",
     "docs:sync-counts": "bun tools/docs-sync-counts.ts",
+    "scratch:docs": "bun tools/scratch-docs.ts",
+    "scratch:sweep": "bun tools/scratch-sweep.ts",
     "routes:check": "bun tools/routes-check.ts",
     "bun:coverage-audit": "bun tools/bun-coverage-audit.ts",
     "research:resume": "bun tools/research-resume.ts",

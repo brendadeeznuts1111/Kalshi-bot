@@ -9,7 +9,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 > The headings were renumbered to §1-§11 on 2026-08-23; the counters were kept
 > so historical notes stay traceable.
 >
-> **Current contract status: verify:contracts 56/56** (see docs/BUN_API_COVERAGE.md
+> **Current contract status: verify:contracts 57/57** (see docs/BUN_API_COVERAGE.md
 > for the full matrix). `verify:contracts N/N` lines inside older sections are
 > HISTORICAL (each records its era) — docs:check enforces that only this header
 > and non-pitfall docs may reference the current count.
@@ -200,6 +200,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §178 — Reference cross-check — official bun-types docs vs observed evidence (2026-08-25)
 - §179 — Markdown probe artifacts — three false no-ops + one bogus discrepancy found by a third-party test (2026-08-26)
 - §180 — react() override props: capture timing — function overrides only render under React (2026-08-26)
+- §181 — scratch-docs automation — index freshness gate + import-guard pitfall (2026-08-26)
 
 
 ## 1. run_code program text (the harness lexer)
@@ -6705,5 +6706,29 @@ omits the element; no callbacks -> children pass through; list meta depth 0/1/2 
 start comes from the marker (3. -> 3); ul has no start; hr receives empty children; html/render/react
 accept TypedArray/ArrayBuffer inputs (MD-renderOmit, MD-renderPassthrough, MD-listDepth, MD-inputTypes).
 Cross-check now 121 claims (113 CONSISTENT, 8 PINNED-DISCREPANCY), gaps 0.
+## 181. scratch-docs automation — index freshness gate + import-guard pitfall (2026-08-26)
+
+The scratch/ area (git-ignored by design, .gitignore:71) now has automation:
+  - `bun run scratch:docs` regenerates scratch/README.md as a byte-stable index
+    (sorted file table: kind/size/orphan flag; fixture dirs with counts; NO
+    timestamps so the gate output is deterministic).
+  - verify:contracts gate #57 runs `scratch:docs --check`: missing README is
+    bootstrapped (written, pass), existing-but-different exits 1 with a pointer
+    to regenerate. Drift = someone added/removed a scratch file without regen.
+  - `bun run scratch:sweep --apply` moves top-level probe/log files that are
+    ORPHANED (basename not referenced by any committed code/docs set in
+    REFERENCE_FILES) and untouched > 45d into scratch/.stale/<date>/. Default
+    is --dry-run. Age is checked at sweep time only - never embedded in README.
+  - gate count 56 -> 57: update tests/lib/gate-count.test.ts AND the
+    AGENT-PITFALLS.md header 'verify:contracts N/N' (docs:check enforces it).
+
+PITFALL: importing a tool script that ends in `process.exit(main())` RUNS main()
+on import. scratch-sweep.ts imports generate() from scratch-docs.ts and the
+first version silently regenerated the README and exited before its own logic
+ran. Guard with `if (import.meta.main) process.exit(main());` so the module is
+safe to import.
+
+After: verify:contracts 57/57 (scratch:docs gate active).
+
 
 
