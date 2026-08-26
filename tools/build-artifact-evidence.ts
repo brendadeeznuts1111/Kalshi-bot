@@ -580,6 +580,46 @@ const configGapsGotchas = {
 };
 rmSync(cfgDir, { recursive: true, force: true });
 
+// ---------- serveGotchas: Bun.serve behaviors (178) - offline 127.0.0.1, ephemeral ports ----------
+const srvDir = mkdtempSync(join(tmpdir(), 'art-ground-srv-'));
+await Bun.write(join(srvDir, 'hello.txt'), 'hello-dir');
+const srvPort = async (srv: any) => { await Bun.sleep(30); return srv.port as number; };
+const sA = Bun.serve({ port: 0, routes: { '/api/users/:id': { GET: (req: any) => new Response(req.params.id), POST: () => new Response('posted') } } } as any);
+const pA = await srvPort(sA);
+const mGet = await fetch('http://127.0.0.1:' + pA + '/api/users/42').then((r) => r.text());
+const mPost = await fetch('http://127.0.0.1:' + pA + '/api/users/42', { method: 'POST' }).then((r) => r.text());
+const mDel = await fetch('http://127.0.0.1:' + pA + '/api/users/42', { method: 'DELETE' }).then((r) => r.status);
+sA.stop(true);
+const sB = Bun.serve({ port: 0, routes: { '/health': new Response('ok'), '/file': Bun.file(join(srvDir, 'hello.txt')) }, fetch: () => new Response('fallback') } as any);
+const pB = await srvPort(sB);
+const vRoute = await fetch('http://127.0.0.1:' + pB + '/health').then((r) => r.text());
+const bRoute = await fetch('http://127.0.0.1:' + pB + '/file').then((r) => r.text());
+const fFall = await fetch('http://127.0.0.1:' + pB + '/other').then((r) => r.text());
+sB.stop(true);
+const sC = Bun.serve({ port: 0, routes: { '/static/*': { dir: srvDir } } } as any);
+const pC = await srvPort(sC);
+const dFile = await fetch('http://127.0.0.1:' + pC + '/static/hello.txt').then((r) => r.text());
+const dMiss = await fetch('http://127.0.0.1:' + pC + '/static/nope.txt').then((r) => r.status);
+sC.stop(true);
+const sD = Bun.serve({ port: 0, websocket: { open: () => {}, message: (ws: any, msg: any) => { ws.send('echo:' + msg); }, close: () => {} }, fetch(req: any, server: any) { if (new URL(req.url).pathname === '/ws') { return server.upgrade(req) ? undefined : new Response('no', { status: 400 }); } return new Response('nope'); } } as any);
+const pD = await srvPort(sD);
+const wsEcho = await new Promise<string>((res, rej) => { const ws = new WebSocket('ws://127.0.0.1:' + pD + '/ws'); ws.onopen = () => ws.send('hi'); ws.onmessage = (ev) => { res(String(ev.data)); ws.close(); }; ws.onerror = () => rej('ws-error'); setTimeout(() => rej('timeout'), 3000); });
+sD.stop(true);
+const sE = Bun.serve({ port: 0, fetch() { throw new Error('boom'); }, error: () => new Response('handled-500', { status: 500 }) } as any);
+const pE = await srvPort(sE);
+const errRes = await fetch('http://127.0.0.1:' + pE + '/x');
+const errStatus = errRes.status;
+const errBody = await errRes.text();
+sE.stop(true);
+const serveGotchas = {
+  methodRoutes: { getParams: mGet, postMethod: mPost, unregisteredMethodStatus: mDel },
+  staticRoutes: { valueRoute: vRoute, bunFileRoute: bRoute, fetchFallback: fFall },
+  directoryRoute: { fileContent: dFile, missingStatus: dMiss },
+  websocket: { echo: wsEcho },
+  errorHandler: { status: errStatus, body: errBody, port0Assigned: pE > 0 },
+};
+rmSync(srvDir, { recursive: true, force: true });
+
 // ---------- emit ----------
 const evidence = {
   tool: 'tools/build-artifact-evidence.ts',
@@ -593,6 +633,7 @@ const evidence = {
   imageCtorGotchas,
   computeGuideGotchas,
   configGapsGotchas,
+  serveGotchas,
   scenarios,
 };
 await Bun.write(EVIDENCE, JSON.stringify(evidence, null, 2) + '\n');

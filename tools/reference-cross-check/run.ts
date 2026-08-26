@@ -26,12 +26,13 @@ export async function runCrossCheck(): Promise<number> {
   const dts = await readFile(dtsPath);
   const mdxPath = join(bundle, 'docs/bundler/index.mdx');
   const mdx = await readFile(mdxPath);
+  const serveDts = await readFile(join(bundle, 'serve.d.ts'));
   const ev = await loadEvidence(join(ROOT, 'tools/build-artifact-evidence.json'));
 
   // ledger checks
   const checks: CheckResult[] = [];
   for (const claim of LEDGER) {
-    const src = claim.source.endsWith('.mdx') ? mdx : dts;
+    const src = claim.source === 'serve.d.ts' ? serveDts : claim.source.endsWith('.mdx') ? mdx : dts;
     checks.push(checkClaim(claim, src, ev));
   }
 
@@ -48,6 +49,9 @@ export async function runCrossCheck(): Promise<number> {
   if (resize) declared['Image.' + resize.name] = resize.fields;
   if (modulate) declared['Image.' + modulate.name] = modulate.fields;
   if (encode) declared['Image.' + encode.name] = encode.fields;
+  declared['Serve.BaseServeOptions'] = interfaceFields(serveDts, 'BaseServeOptions');
+  declared['Serve.HostnamePortServeOptions'] = interfaceFields(serveDts, 'HostnamePortServeOptions');
+  declared['Serve.UnixServeOptions'] = interfaceFields(serveDts, 'UnixServeOptions');
   const gaps = coverageGaps(declared, covered);
 
   const meta: CrossCheckMeta = {

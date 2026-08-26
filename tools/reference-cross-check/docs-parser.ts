@@ -32,8 +32,10 @@ export async function readFile(path: string): Promise<string> {
 
 /** Field names of the first top-level `interface NAME { ... }` block (fields at 4-space indent). */
 export function interfaceFields(content: string, name: string): string[] {
-  const start = content.indexOf('interface ' + name + ' {');
-  if (start < 0) return [];
+  const re = new RegExp('interface\\s+' + name + '(?:<|\\s|\\{)');
+  const m = re.exec(content);
+  if (!m) return [];
+  const start = m.index;
   const open = content.indexOf('{', start);
   let depth = 0;
   let close = open;
@@ -44,7 +46,7 @@ export function interfaceFields(content: string, name: string): string[] {
   }
   const block = content.slice(open, close);
   const names: string[] = [];
-  for (const m of block.matchAll(/^\s{4}([a-zA-Z_$][a-zA-Z0-9_$]*)\??:/gm)) names.push(m[1]!);
+  for (const m of block.matchAll(/^\s{2,8}([a-zA-Z_$][a-zA-Z0-9_$]*)\??:/gm)) names.push(m[1]!);
   return names;
 }
 
@@ -64,7 +66,7 @@ export function interfaceFieldsContaining(content: string, needles: string[]): {
     const block = content.slice(open, close);
     if (needles.every((n) => block.includes(n))) {
       const fields: string[] = [];
-      for (const fm of block.matchAll(/^\s{4}([a-zA-Z_$][a-zA-Z0-9_$]*)\??:/gm)) fields.push(fm[1]!);
+      for (const fm of block.matchAll(/^\s{2,8}([a-zA-Z_$][a-zA-Z0-9_$]*)\??:/gm)) fields.push(fm[1]!);
       return { name: m[1]!, fields };
     }
     re.lastIndex = close;

@@ -5,7 +5,7 @@
   "bundleHash": "bun-types@1.4.0-c0dadede486f49ab",
   "verdictCounts": {
     "PINNED-DISCREPANCY": 5,
-    "CONSISTENT": 33
+    "CONSISTENT": 40
   },
   "checks": [
     {
@@ -322,7 +322,94 @@
       "docSays": "reactCompilerOutputMode: ssr skips the useMemoCache runtime (builds without compiler-runtime)",
       "observed": true,
       "verdict": "CONSISTENT"
+    },
+    {
+      "id": "SV-methodRoutes",
+      "api": "routes",
+      "source": "serve.d.ts",
+      "docSays": "routes: method-keyed handlers + :id params",
+      "observed": "42",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "SV-staticValue",
+      "api": "routes",
+      "source": "serve.d.ts",
+      "docSays": "routes: static Response/BunFile values",
+      "observed": "ok",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "SV-directory",
+      "api": "routes",
+      "source": "serve.d.ts",
+      "docSays": "routes: \"/*\" directory serving",
+      "observed": "hello-dir",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "SV-websocket",
+      "api": "websocket",
+      "source": "serve.d.ts",
+      "docSays": "websocket: open/message/close + server.upgrade()",
+      "observed": "echo:hi",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "SV-error",
+      "api": "error",
+      "source": "serve.d.ts",
+      "docSays": "error: handler maps thrown errors to a Response",
+      "observed": 500,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "SV-port",
+      "api": "port",
+      "source": "serve.d.ts",
+      "docSays": "port: 0 assigns an ephemeral port (server.port)",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "SV-fetch",
+      "api": "fetch",
+      "source": "serve.d.ts",
+      "docSays": "fetch: fallback handler for unmatched routes",
+      "observed": "fallback",
+      "verdict": "CONSISTENT"
     }
   ],
-  "coverageGaps": []
+  "coverageGaps": [
+    {
+      "surface": "BuildConfig",
+      "gaps": [
+        "fragment",
+        "sideEffects"
+      ]
+    },
+    {
+      "surface": "Serve.BaseServeOptions",
+      "gaps": [
+        "maxRequestBodySize",
+        "id"
+      ]
+    },
+    {
+      "surface": "Serve.HostnamePortServeOptions",
+      "gaps": [
+        "hostname",
+        "reusePort",
+        "ipv6Only",
+        "http1",
+        "idleTimeout"
+      ]
+    },
+    {
+      "surface": "Serve.UnixServeOptions",
+      "gaps": [
+        "unix"
+      ]
+    }
+  ]
 }

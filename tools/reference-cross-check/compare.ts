@@ -81,6 +81,13 @@ export const LEDGER: LedgerClaim[] = [
   { id: 'BC-reactFastRefresh', api: 'reactFastRefresh', source: 'bun.d.ts', fragment: 'Enable React Fast Refresh transform', docSays: 'reactFastRefresh: adds refresh registration markers', evidencePath: 'configGapsGotchas.reactAndFiles.reactFastRefresh.honored', kind: 'consistent' },
   { id: 'BC-reactCompiler', api: 'reactCompiler', source: 'bun.d.ts', fragment: 'Run the React Compiler over', docSays: 'reactCompiler: auto-memoization (guard checks); client mode needs react/compiler-runtime', evidencePath: 'configGapsGotchas.reactAndFiles.reactCompiler.honored', kind: 'consistent' },
   { id: 'BC-reactCompilerOutputMode', api: 'reactCompilerOutputMode', source: 'bun.d.ts', fragment: 'Output mode for the React Compiler', docSays: 'reactCompilerOutputMode: ssr skips the useMemoCache runtime (builds without compiler-runtime)', evidencePath: 'configGapsGotchas.reactAndFiles.reactCompilerOutputMode.ssrVsClientDiffer', kind: 'consistent' },
+  { id: 'SV-methodRoutes', api: 'routes', source: 'serve.d.ts', fragment: 'Partial<Record<HTTPMethod, Handler', docSays: 'routes: method-keyed handlers + :id params', evidencePath: 'serveGotchas.methodRoutes.getParams', kind: 'consistent' },
+  { id: 'SV-staticValue', api: 'routes', source: 'serve.d.ts', fragment: 'BaseRouteValue = Response | false | HTMLBundle | BunFile | DirectoryRouteOptions', docSays: 'routes: static Response/BunFile values', evidencePath: 'serveGotchas.staticRoutes.valueRoute', kind: 'consistent' },
+  { id: 'SV-directory', api: 'routes', source: 'serve.d.ts', fragment: 'interface DirectoryRouteOptions', docSays: 'routes: "/*" directory serving', evidencePath: 'serveGotchas.directoryRoute.fileContent', kind: 'consistent' },
+  { id: 'SV-websocket', api: 'websocket', source: 'serve.d.ts', fragment: 'websocket: WebSocketHandler<WebSocketData>', docSays: 'websocket: open/message/close + server.upgrade()', evidencePath: 'serveGotchas.websocket.echo', kind: 'consistent' },
+  { id: 'SV-error', api: 'error', source: 'serve.d.ts', fragment: 'Called when an error is thrown during request handling', docSays: 'error: handler maps thrown errors to a Response', evidencePath: 'serveGotchas.errorHandler.status', kind: 'consistent' },
+  { id: 'SV-port', api: 'port', source: 'serve.d.ts', fragment: 'port?: string | number', docSays: 'port: 0 assigns an ephemeral port (server.port)', evidencePath: 'serveGotchas.errorHandler.port0Assigned', kind: 'consistent' },
+  { id: 'SV-fetch', api: 'fetch', source: 'serve.d.ts', fragment: 'fetch?(this: Server<WebSocketData>, req: Request', docSays: 'fetch: fallback handler for unmatched routes', evidencePath: 'serveGotchas.staticRoutes.fetchFallback', kind: 'consistent' },
 ];
 
 /** APIs with grounded evidence but no ledger row (fit/filter/quality/... come from the probe gates). */
@@ -89,6 +96,7 @@ export const EXTRA_GROUNDED: string[] = [
   'brightness', 'saturation', 'placeholder', 'blob', 'bytes', 'buffer', 'text',
   'arrayBuffer', 'stream', 'json', 'slice', 'write', 'cwd', 'entrypoints', 'outdir',
   'format', 'splitting', 'loader', 'metafile', 'treeShaking', 'plugins',
+  'tls', 'development', 'http3', 'runtime', 'importSource', 'factory',
 ];
 
 export function checkClaim(claim: LedgerClaim, sourceText: string, ev: Evidence): CheckResult {

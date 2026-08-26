@@ -256,6 +256,30 @@
     },
     "typeLevelOnly": []
   },
+  "serveGotchas": {
+    "methodRoutes": {
+      "getParams": "42",
+      "postMethod": "posted",
+      "unregisteredMethodStatus": 404
+    },
+    "staticRoutes": {
+      "valueRoute": "ok",
+      "bunFileRoute": "hello-dir",
+      "fetchFallback": "fallback"
+    },
+    "directoryRoute": {
+      "fileContent": "hello-dir",
+      "missingStatus": 404
+    },
+    "websocket": {
+      "echo": "echo:hi"
+    },
+    "errorHandler": {
+      "status": 500,
+      "body": "handled-500",
+      "port0Assigned": true
+    }
+  },
   "scenarios": [
     {
       "name": "S01-artifact-surface",
@@ -702,7 +726,7 @@
         {
           "path": "outbc/pure.js.jsc",
           "kind": "bytecode",
-          "hash": "57fk5y1c",
+          "hash": "naqw1dz4",
           "loader": "file",
           "size": 10944,
           "type": "application/octet-stream",

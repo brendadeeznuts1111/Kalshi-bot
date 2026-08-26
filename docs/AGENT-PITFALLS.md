@@ -6382,3 +6382,11 @@ another note.
 - Artifacts: tools/reference-cross-check/{index,run,compare,docs-parser,
   evidence-loader,reporter}.ts, package.json (reference-cross-check script),
   tools/verify-contracts.ts (gate #56), docs:sync-counts 56/56.
+- Serve surface expanded (178): 7 serve ledger claims grounded offline on
+  127.0.0.1 ephemeral ports - routes method-keyed + :id params (unregistered
+  method -> 404 on 1.4.0), static Response/BunFile route values, dir routes,
+  websocket upgrade + echo, error handler (500), port 0 ephemeral assignment,
+  fetch fallback. Coverage sweep now includes the ServeOptions interfaces:
+  remaining gaps are maxRequestBodySize, id, hostname, reusePort, ipv6Only,
+  http1, idleTimeout, unix (+ jsx fragment/sideEffects) - 45 claims (40
+  CONSISTENT, 5 PINNED-DISCREPANCY).

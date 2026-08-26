@@ -593,6 +593,18 @@ the pin premise moved; re-verify), NO-EVIDENCE (ledger path broken).
 | `BC-reactFastRefresh` | `reactFastRefresh` | `bun.d.ts` | reactFastRefresh: adds refresh registration markers | true | CONSISTENT |
 | `BC-reactCompiler` | `reactCompiler` | `bun.d.ts` | reactCompiler: auto-memoization (guard checks); client mode needs react/compiler-runtime | true | CONSISTENT |
 | `BC-reactCompilerOutputMode` | `reactCompilerOutputMode` | `bun.d.ts` | reactCompilerOutputMode: ssr skips the useMemoCache runtime (builds without compiler-runtime) | true | CONSISTENT |
+| `SV-methodRoutes` | `routes` | `serve.d.ts` | routes: method-keyed handlers + :id params | 42 | CONSISTENT |
+| `SV-staticValue` | `routes` | `serve.d.ts` | routes: static Response/BunFile values | ok | CONSISTENT |
+| `SV-directory` | `routes` | `serve.d.ts` | routes: "/*" directory serving | hello-dir | CONSISTENT |
+| `SV-websocket` | `websocket` | `serve.d.ts` | websocket: open/message/close + server.upgrade() | echo:hi | CONSISTENT |
+| `SV-error` | `error` | `serve.d.ts` | error: handler maps thrown errors to a Response | 500 | CONSISTENT |
+| `SV-port` | `port` | `serve.d.ts` | port: 0 assigns an ephemeral port (server.port) | true | CONSISTENT |
+| `SV-fetch` | `fetch` | `serve.d.ts` | fetch: fallback handler for unmatched routes | fallback | CONSISTENT |
 
-No coverage gaps: every declared option on the grounded surfaces has evidence.
+### Coverage gaps — declared but not evidence-grounded
+
+- `BuildConfig`: fragment, sideEffects
+- `Serve.BaseServeOptions`: maxRequestBodySize, id
+- `Serve.HostnamePortServeOptions`: hostname, reusePort, ipv6Only, http1, idleTimeout
+- `Serve.UnixServeOptions`: unix
 
