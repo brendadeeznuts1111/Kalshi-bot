@@ -229,6 +229,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §212 — Proper definitions — resolveColorMode + isBunFile + shapeMatch wired into production (2026-08-26)
 - §213 — bun -p/-e evaluation engine audited — TS + top-level await verified; getters/customInspect ignored (2026-08-26)
 - §214 — Odds Heat metadata audited — ETag auto-set false (S194), cron job.active absent, cluster metadata wired (2026-08-26)
+- §215 — Other metadata controls audited — Bun.secrets exists but {service,name}; Bun.env writable + snapshotted; Env augmentation works (2026-08-26)
 - §199 — ui:regen CLI — regenerate UI artifacts from meta/variant sources + the Bun.$ template failure class (2026-08-26)
 - §187 — Extended color formats — kernel-only (lch/oklab/oklch/hsv) + inverse parsers (2026-08-26)
 - §188 — Watermark pipeline — ML-DSA key naming + WebView/Blob verified facts (2026-08-26)
@@ -7520,6 +7521,35 @@ Pasted 10-layer 'Meta Handling in the Odds Heat Pipeline' audited against 1.4.0:
   tightness) now have a production home: clusterMetadata(prints) in
   src/alpha/cluster/odds-vector.ts, rendered per cluster by alpha:cluster
   --verbose. Tests: tests/alpha/cluster-metadata.test.ts (3).
+
+
+
+## 215. Other Metadata Controls proposal audited - Bun.secrets EXISTS but takes {service,name}; Bun.env is writable + snapshotted; Env augmentation works (2026-08-26)
+
+Pasted 'Other Metadata Controls in the Bun Pipeline' audited against 1.4.0:
+- Bun.secrets EXISTS (get/set/delete) but the API is OBJECT-descriptor:
+  secrets.get({ service, name }) -> value|null (verified null for missing);
+  secrets.get('STRING') THROWS 'Expected options to be an object'. The
+  proposal's string form is WRONG; the fallback pattern
+  (await secrets.get({...}) || Bun.env.KEY) matches the pinned docs. Uses
+  macOS Keychain Services / Linux libsecret / Windows Credential Manager.
+- Bun.env is NOT read-only (writable at runtime - verified) and SNAPSHOTS
+  at launch: 'changes to process.env at runtime won't automatically be
+  reflected'. Typed as Env & NodeJS.ProcessEnv & ImportMetaEnv; the
+  proposal's declare global { namespace Bun { interface Env {...} } }
+  augmentation COMPILES (verified) - correct mechanism for typed keys.
+- import forms ALL work on 1.4.0: bare './config.json',
+  './config.json' with { type: 'json' }, and '.yaml' import (inlined
+  object - S131 runtime loader pin).
+- RE-CONFIRMED: Bun.isTerminal(process.stdout) is UNDEFINED (S211) - the
+  proposal's parseArgs example uses it; use process.stdout.isTTY /
+  resolveColorMode (S212) instead.
+- Bun.build define constants + util.parseArgs + config merging + feature
+  flags + /api/meta observability are all already grounded repo patterns
+  (BC-define claim, S207/208 parseArgs, hq-view /api/* meta endpoints).
+  Repo note: secrets live in Proton Pass + keychain wrappers today;
+  Bun.secrets is the native alternative if wanted.
+
 
 
 
