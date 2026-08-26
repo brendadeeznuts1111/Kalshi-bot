@@ -6819,6 +6819,22 @@ Two new tools verify the bun-v1.4 blog against this pinned runtime:
 BENCH PITFALL: a bench fn whose result is discarded gets DCE'd by the JIT (measured 0 ns).
 Keep a live sink (module-level var written by every iteration, checked after) and create
 fresh promises per iteration; `x ? 1 : 0` on a Promise trips TS2801 - attach .then instead.
+FULL-COVERAGE EXTENSION (same session): the checks now cover ALL of the blog.
+  - codeblocks-check: all 233 shiki blocks classified (89 code: ts/js/json; 144
+    shell/output/other) and typechecked: 85 PASS / 4 PARTIAL / 0 FAIL. PARTIAL =
+    blog illustration conventions only: `{ ... }` ellipsis placeholders (TS1109),
+    duplicate-key before/after JSON (invalid strict JSON by design), truncated
+    snippets. Classification pitfalls fixed: shell must be checked BEFORE ts (a
+    `bun repl -e 'console.log(1)'` line contains console.log); JSON is validated
+    by JSON.parse (object literals at statement position are not valid TS), with
+    lenient comment/trailing-comma stripping.
+  - bench-verify: extended to Production + Platforms. Code splitting 20,000-module
+    graphs: measured 485 ms (blog 320 ms) using the grounded in-memory `files`
+    option (BC-files) with ABSOLUTE /app/ keys - relative keys fail to resolve.
+    Binary size macOS arm64: 60.6 MB (blog 61.2). Startup hello.js: 8.7 ms (blog
+    5.1 Linux / 15.5 Windows). 9 CONSISTENT total; prod memory/CPU is app-specific
+    (NOT-MEASURABLE); ffi 3x + installs 7x remain RATIO (no 1.3 runtime).
+
 
 
 

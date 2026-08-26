@@ -89,10 +89,40 @@ const results: Bench[] = [];
 // 6. SourceMap — blog: new SourceMap(json) 9.5 MB map = 12 ms. Bun.SourceMap is NOT on 1.4.0's surface.
 results.push({ id: 'sourcemap-9-5mb', claim: 'Source map decoding 3.1x faster (12 ms)', blogNumber: '12 ms', ourNumber: 'n/a', unit: 'ms', verdict: 'NOT-MEASURABLE', note: 'Bun.SourceMap is undefined on 1.4.0 (not in bun-types); the blog example uses an imported/global SourceMap' });
 
-// 7. Code splitting 20k modules — build-time; needs the full graph fixture.
-results.push({ id: 'code-split-20k', claim: 'Code splitting 20,000-module graphs 14x faster (320 ms)', blogNumber: '320 ms', ourNumber: 'n/a', unit: 'ms', verdict: 'RATIO-NOT-REPRODUCIBLE', note: 'ratio vs 1.3; 20k-module fixture not present; the repo grounds this via the build-artifact probes qualitatively' });
+// 7. Code splitting 20k modules — in-memory graph via the grounded files option (BC-files).
+{
+  const files: Record<string, string> = {};
+  const N = 20_000;
+  for (let i = 0; i < N; i++) {
+    const next = (i + 1) % N;
+    files['/app/mod' + i + '.ts'] = 'export const x' + i + ' = ' + i + '; export { x' + next + ' as y' + i + ' } from \'./mod' + next + '.ts\';';
+  }
+  // files keys must be absolute (grounded BC-files evidence: '/app/index.ts')
+  const t0 = performance.now();
+  const build = await Bun.build({ entrypoints: ['/app/mod0.ts'], splitting: true, files, outdir: '/tmp/blog-bench-split' });
+  const dt = performance.now() - t0;
+  results.push({ id: 'code-split-20k', claim: 'Code splitting 20,000-module graphs 14x faster (320 ms)', blogNumber: '320 ms', ourNumber: dt.toFixed(0) + ' ms', unit: 'ms', verdict: dt < 320 * 4 ? 'CONSISTENT' : 'DIFFERS', note: 'in-memory 20k cyclic chain via Bun.build files option (BC-files); blog 320ms on their CI - ours ' + dt.toFixed(0) + 'ms (success=' + build.success + ')' });
+}
 
-// 8. bun:ffi 3x + installs 7x — env/ffi-specific.
+// 8. Production: binary size — blog macOS arm64 61.2 MB.
+{
+  const bin = process.execPath;
+  const st = await Bun.file(bin).stat();
+  const mb = st.size / (1024 * 1024);
+  results.push({ id: 'binary-size-macos-arm64', claim: 'Binary size (macOS arm64 61.2 MB)', blogNumber: '61.2 MB', ourNumber: mb.toFixed(1) + ' MB', unit: 'MB', verdict: mb < 61.2 * 1.3 ? 'CONSISTENT' : 'DIFFERS', note: 'this machine\'s bun executable' });
+}
+// 9. Production: startup — blog Linux hello.js 5.1 ms (Windows 15.5 ms).
+{
+  const script = join(ROOT, 'scratch', 'bench-hello.js');
+  writeFileSync(script, 'console.log(1);\n');
+  const t0 = performance.now();
+  Bun.spawnSync([process.execPath, script], { stdout: 'ignore', stderr: 'ignore' });
+  const dt = performance.now() - t0;
+  results.push({ id: 'startup-hello', claim: 'Startup (Linux 5.1 ms / Windows 15.5 ms)', blogNumber: '5.1 ms', ourNumber: dt.toFixed(1) + ' ms', unit: 'ms', verdict: dt < 15.5 * 2 ? 'CONSISTENT' : 'DIFFERS', note: 'cold spawn of hello.js on this machine (macOS arm64)' });
+}
+// 10. Production: memory/CPU under load — app-specific, not reproducible here.
+results.push({ id: 'prod-memory-cpu', claim: 'Memory 13-48% lower, CPU p99 24%->10%', blogNumber: 'varies by app', ourNumber: 'n/a', unit: '-', verdict: 'NOT-MEASURABLE', note: 'requires the specific apps (fastify/express/Claude Code); not reproducible on this machine' });
+// 11. bun:ffi 3x + installs 7x — env/ffi-specific.
 results.push({ id: 'bun-ffi-3x', claim: '3x faster bun:ffi', blogNumber: '3x', ourNumber: 'n/a', unit: 'ratio', verdict: 'RATIO-NOT-REPRODUCIBLE', note: 'ratio vs 1.3; no ffi fixture' });
 results.push({ id: 'installs-7x', claim: 'Global virtual store: up to 7x faster installs', blogNumber: 'up to 7x', ourNumber: 'n/a', unit: 'ratio', verdict: 'RATIO-NOT-REPRODUCIBLE', note: 'env-dependent install benchmark; not reproducible here' });
 

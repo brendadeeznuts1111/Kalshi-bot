@@ -260,6 +260,7 @@ export const SPAWN_KEEP_LIST = new Set([
   "tools/bun-coverage-matrix.ts", // rg sweeps for the coverage matrix generator (§163)
   "tools/module-shape-report.ts", // rg usage scan for the per-module shape report (§170)
   "src/research/serve.ts", // release-check action: Bun.spawn bun:release-watch --check (pipe capture)
+  "tools/blog-bench-verify.ts", // startup benchmark: measures cold-spawn wall time (Bun.spawnSync timing primitive, §186)
   "src/institutions/signal-pipeline.ts", // runBunGate def: sub-second offline dep gates (dedupe/prune/audit)
   "src/lib/run-bun.ts", // runBunCommand: the shared Bun.which+spawn gate runner (pipe capture; §54)
   "scripts/watch-design-system.ts", // watcher rebuild: spawns the build on change
