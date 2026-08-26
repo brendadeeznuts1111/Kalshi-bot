@@ -4,6 +4,15 @@
  * bundle, read its docs/ + bun.d.ts, and extract structured claims (178).
  * Offline. The bundle dir name is 1.4.0-<hash> (bun-types PACKAGE hash, not
  * the runtime revision) - same detection as tools/bun-shape.ts (168).
+ *
+ * Byte-cap-safe reading (byte-cap audit, 2026-08-26): these reads run
+ * IN-PROCESS (bun CLI, no agent read cap), and the ledger REQUIRES full
+ * reads - ledger fragments and interface blocks span all of bun.d.ts
+ * (340KB; e.g. the jsx 'fragment?: string' anchor is at line ~3165, the
+ * BuildConfig interface at ~2899). A head-slice would silently miss deep
+ * anchors and flip claims to DOC-CHANGED. The guards below warn on true
+ * giants; readHead()/getAllMdx(size filter) exist for head-scan and
+ * many-doc use cases per the byte-cap guide.
  */
 import { Glob } from 'bun';
 import { readdirSync } from 'node:fs';
@@ -29,14 +38,34 @@ export function locateCachePackage(ROOT: string, prefix: string): string {
   return join(cacheRoot, dir, 'node_modules');
 }
 
+const MAX_MDX_SCAN_BYTES = 200 * 1024;
+const MAX_FULL_READ_WARN_BYTES = 512 * 1024;
+
 export async function getAllMdx(bundleRoot: string): Promise<string[]> {
   const files: string[] = [];
-  for await (const f of new Glob('docs/**/*.mdx').scan({ cwd: bundleRoot, absolute: true })) files.push(f);
+  for await (const f of new Glob('docs/**/*.mdx').scan({ cwd: bundleRoot, absolute: true })) {
+    const stat = await Bun.file(f).stat();
+    if (stat.size > MAX_MDX_SCAN_BYTES) {
+      console.warn('reference-cross-check: skipping ' + f + ' (' + stat.size + ' bytes > ' + MAX_MDX_SCAN_BYTES + ')');
+      continue;
+    }
+    files.push(f);
+  }
   return files.sort();
 }
 
+/** Full read (needed for interface/fragment extraction spanning the file); warns on true giants. */
 export async function readFile(path: string): Promise<string> {
+  const stat = await Bun.file(path).stat();
+  if (stat.size > MAX_FULL_READ_WARN_BYTES) {
+    console.warn('reference-cross-check: full read of ' + path + ' (' + stat.size + ' bytes) - expected for bun.d.ts; verify intent if this is not it');
+  }
   return await Bun.file(path).text();
+}
+
+/** Head-scan helper: first N bytes only (top-anchored fragments). Not for interface extraction. */
+export async function readHead(path: string, bytes = 8192): Promise<string> {
+  return await Bun.file(path).slice(0, bytes).text();
 }
 
 /** Field names of the first top-level `interface NAME { ... }` block (fields at 4-space indent). */
