@@ -22,6 +22,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 | Parse errors like 'Expected comma' while authoring programs | Backticks or the two-char sequence dollar-open-brace anywhere in the program text (even inside template literals) | Keep program text template-literal-free. Literal backticks and dollar-open-brace ARE safe inside double-quoted JS strings (probed). For file content needing them, build from arrays joined by backslash-n, or fromCharCode(96), or string concatenation of the two pieces. |
 | Same parse errors on multi-line 'strings' | Literal newlines inside JS string literals are illegal | Every multi-line payload is a line-array joined by backslash-n, or escaped newlines. |
 | Parse errors when embedding TypeScript source | TS source uses double quotes; an inner quote terminates your outer double-quoted string | Use single-quoted JS strings for lines containing double quotes (watch apostrophes), double-quoted for lines containing apostrophes, escape when both appear. |
+| SILENT string truncation mid-write (file ends at a dollar sign; rest of the line + following lines vanish, tool still exits 0) | A dollar sign immediately before a quote or bracket in run_code program text: the harness lexes `$'...'` (ANSI-C quoting), `$"..."` (locale quoting) and `$[...]` (arithmetic) bash-style, truncating the double-quoted JS string at that point | Never put `$` adjacent to a quote or `[` inside run_code strings. Build it with String.fromCharCode(36) in the FILE source (e.g. `'$RefreshSig$'` -> `String.fromCharCode(36) + 'RefreshSig' + String.fromCharCode(36)`). Observed twice: `$RefreshSig$'` and `'$['` mangles (2026-08). |
 
 ## 2. Calling the tools
 
@@ -33,6 +34,15 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
   first.
 - A run_code program that fails LATE can ROLL BACK edits made earlier in the same
   program (observed). After a failed batch, re-verify the file and re-apply if needed.
+- READ/WRITE DISCIPLINE (three truncations observed 2026-08): never build a file
+  from a PARTIAL read (read limit too small, or a chunked loop that breaks early)
+  and write it back - it silently truncates. Full-read (check totalLines) before
+  full-write, or prefer targeted tools.edit for appends. AFTER any full-file
+  write, verify: wc -l + the file tail + run the tool (a silent exit-0 run with
+  no output = the emit was lost).
+- tools.edit replaces literal old_string only; if old_string is not found it
+  fails loudly (good). tools.write has NO such guard - a truncated content array
+  overwrites silently. Prefer edit for appends to existing files.
 
 ## 3. bash / git
 
