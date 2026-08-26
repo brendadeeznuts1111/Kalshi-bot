@@ -20,6 +20,7 @@ import {
   type ThemeRole,
 } from '../lib/color/theme.ts';
 import { convertColorFallback } from '../lib/color/kernel.ts';
+import { markdownToHtmlAccent } from '../lib/markdown.ts';
 
 const esc = (v: unknown): string =>
   String(v ?? '').replace(/[&<>"]/g, (c) =>
@@ -53,12 +54,16 @@ export function renderColorPage(): string {
         '<code>rgb(' + rgbS + ')</code>',
         '<code>' + esc(String(convertColorFallback(hex, 'hsl'))) + '</code>',
         '<code>' + esc(String(convertColorFallback(hex, 'lab'))) + '</code>',
+        '<code>' + esc(String(convertColorFallback(hex, 'lch'))) + '</code>',
+        '<code>' + esc(String(convertColorFallback(hex, 'oklab'))) + '</code>',
+        '<code>' + esc(String(convertColorFallback(hex, 'oklch'))) + '</code>',
+        '<code>' + esc(String(convertColorFallback(hex, 'hsv'))) + '</code>',
         '<code>' + String(convertColorFallback(hex, 'number')) + '</code>',
         '<code>' + showAnsi(themeAnsi(role, '16m')) + '</code>',
       ],
     };
   });
-  const conv = widgetTable(['Role', 'hex', 'css', 'rgb', 'hsl', 'lab', 'number', 'ansi-16m'], convRows);
+  const conv = widgetTable(['Role', 'hex', 'css', 'rgb', 'hsl', 'lab', 'lch', 'oklab', 'oklch', 'hsv', 'number', 'ansi-16m'], convRows);
 
   // ── Contrast pairs with WCAG verdicts ──
   const contrastRows = themeManifest().contrast.map((c) => ({
@@ -76,6 +81,36 @@ export function renderColorPage(): string {
     showAnsi(themeAnsi(role, '16m')) + label + '  \\x1b[0m  ' + THEME[role];
   const termPreview = '<pre>' + THEME_ROLES.map((r) => esc(termLine(r, r))).join('\n') + '</pre>';
 
+  // ── Bun.color in the markdown renderer: palette-accent headings ──
+  const accentMd = markdownToHtmlAccent(
+    '# Palette headings\n\nHeadings are styled with THEME.accent (' + THEME.accent + ') via Bun.color(hex, "css") — the palette is the source of truth.\n\n- lab / lch / oklab / oklch / hsv are kernel-computed (Bun.color 1.4.0 supports lab only)',
+    THEME.accent,
+  );
+  const accentDemo = '<section><h2>Bun.color in the markdown renderer</h2>' + accentMd + '</section>';
+  // ── Advanced input formats (kernel-parsed; Bun.color can't) ──
+  const advancedInputHtml =
+    '<p class="muted">Bun.color 1.4.0 parses hex / hwb / color-mix — but returns null for lab/lch/oklab/oklch/hsv inputs. The kernel inverse parsers cover them (round-trip verified).</p>' +
+    '<datalist id="color-suggestions">' +
+    '<option value="lab(50% 50 50)" /><option value="lch(50% 50 100)" />' +
+    '<option value="oklab(0.5 0.1 0.1)" /><option value="oklch(0.5 0.2 120)" />' +
+    '<option value="hsv(200 80% 70%)" /><option value="hwb(200 10% 20%)" />' +
+    '</datalist>' +
+    '<input list="color-suggestions" id="advanced-input" placeholder="e.g. lab(50% 50 50)" ' +
+    'style="font-family:var(--mono);background:var(--panel2);border:1px solid var(--line);color:var(--fg);border-radius:6px;padding:0.3rem 0.5rem;min-width:220px" /> ' +
+    '<button id="apply-advanced" type="button" style="padding:0.3rem 0.8rem;background:var(--acc);color:var(--on-accent);border:none;border-radius:6px;font-weight:600;cursor:pointer">Apply</button>' +
+    '<div id="advanced-result" style="margin-top:0.5rem;font-family:var(--mono);background:var(--panel2);border:1px solid var(--line);padding:0.5rem;border-radius:6px;font-size:0.82rem"></div>' +
+    '<script>' +
+    'document.getElementById("apply-advanced").addEventListener("click", function () {' +
+    '  var val = document.getElementById("advanced-input").value.trim();' +
+    '  var out = document.getElementById("advanced-result");' +
+    '  if (!val) { out.textContent = "enter a color"; return; }' +
+    '  fetch("/api/color-info?color=" + encodeURIComponent(val)).then(function (r) { return r.json(); }).then(function (d) {' +
+    '    if (!d.ok) { out.textContent = "invalid color: " + val; return; }' +
+    '    out.innerHTML = "hex " + d.hex + " · rgb(" + d.rgb.join(", ") + ") · " + d.hsl + " · parsed by " + d.parser;' +
+    '  }).catch(function () { out.textContent = "request failed"; });' +
+    '});' +
+    '</scr' + 'ipt>';
+
   // ── cssVars block ──
   const cssVars = '<pre>:root {\n' + esc(themeCssVars()) + '\n}</pre>';
 
@@ -92,6 +127,7 @@ export function renderColorPage(): string {
     { cells: ['<code>hex</code> output keeps alpha', W_CORRECTED + ' drops it: #ff0000aa -> #ff0000; transparent -> #000000'] },
     { cells: ['markdown.ansi(…, { heading/render }) theme callbacks', W_CORRECTED + ' options ignored in 1.4.0 — outputs are fixed'] },
     { cells: ['ImageData + new Image(imageData) pixel pipeline', W_CORRECTED + ' ImageData is not a global — solid PNGs via hand-rolled encoder'] },
+    { cells: ['lch / oklab / oklch / hsv outputs', W_NOTE + ' kernel-computed — Bun.color 1.4.0 format list has lab but NOT these (verified); shapes are kernel-defined'] },
     { cells: ['~100 ns per parse', W_MARKETING + ' measured here: ~360-550 ns/op (still native, no allocs in JS)'] },
   ];
   const probes = widgetTable(['Claim', 'Probe status'], probeRows);
@@ -108,6 +144,9 @@ export function renderColorPage(): string {
     badges: ['12 roles', 'TOKENS-backed', 'WCAG contrast', 'zero deps'],
     links: ['/bun/overview', '/bun/networking', '/design', '/api/color/theme'],
     sections: [
+      { heading: 'Markdown accent', html: accentDemo },
+      { heading: 'Advanced input formats', html: advancedInputHtml },
+
       { heading: 'Theme swatches (one vocabulary)', html: '<div>' + swatches + '</div><p class="muted">Every hex is a TOKENS value — the design agent audit passes by construction. Text color is the WCAG contrast pick (black/white).</p>' },
       { heading: 'Conversions (probe-verified formats)', html: conv },
       { heading: 'Contrast pairs (WCAG 2.1)', html: contrastTbl + '<p class="muted">Ratios computed in-kernel — Bun has no luminance format (corrected claim).</p>' },

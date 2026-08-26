@@ -66,6 +66,8 @@ export const ROUTE_MANIFEST: readonly RouteDef[] = [
   { path: '/api/design/audit', method: 'GET', layer: 'branding', handler: 'DesignAgent.audit(live HQ)', cache: 'no-cache' },
   { path: '/api/design/budgets', method: 'GET', layer: 'branding', handler: 'buildBudgetHealth', cache: 'no-cache' },
   { path: '/api/color/theme', method: 'GET', layer: 'branding', handler: 'themeManifest', cache: 'no-cache' },
+  { path: '/api/color-info', method: 'GET', layer: 'branding', handler: 'parseExtendedColor + Bun.color (kernel parser)', cache: 'no-cache' },
+  { path: '/api/watermark', method: 'GET', layer: 'branding', handler: 'watermarkAndSign (WebView SVG overlay + ml-dsa-65)', cache: 'no-cache' },
   { path: '/design', method: 'GET', layer: 'branding', handler: 'renderDesignPage', cache: 'no-cache' },
   { path: '/design/trend', method: 'GET', layer: 'branding', handler: 'renderTrendPage', cache: 'no-cache' },
 

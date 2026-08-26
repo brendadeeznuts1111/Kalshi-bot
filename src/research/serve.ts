@@ -33,6 +33,8 @@ import {
   type DeskLiquidityFlags,
 } from "../institutions/event-store/match-liquidity.ts";
 import { Database } from "bun:sqlite";
+import { parseExtendedColor } from "../lib/color/kernel.ts";
+import { watermarkAndSign } from "../lib/watermark-sign.ts";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { partnerDetailHandler } from "../regulatory/routes/ops/partners";
@@ -76,7 +78,7 @@ import {
 } from "../partner/execution/kalshi-live.ts";
 import { codedError, httpStatusFor, type ErrorCode } from "../institutions/error-codes.ts";
 import { designAgent } from "../agent/design-agent.ts";
-import { baseCssVars } from "../institutions/design-tokens.ts";
+import { baseCssVars, proseCss, themeToggleButton, themeChrome } from "../institutions/design-tokens.ts";
 import { themeManifest } from "../lib/color/theme.ts";
 import { renderWidgetPage, widgetTable as widgetTableLocal } from "../lib/widget-page.ts";
 import { ingestContentItem, parseFrontmatter, renderMarkdownBody, renderMarkdownToc } from "../lib/content-pipeline.ts";
@@ -1518,7 +1520,7 @@ export function createResearchServer(options: ServeOptions = {}) {
       // body is deterministic per TOKENS/hq-ui version — computed, not
       // stored, so it can never drift from the source of truth.
       if (url.pathname === "/design-system.css") {
-        return new Response(baseCssVars() + componentCss(), {
+        return new Response(baseCssVars() + componentCss() + proseCss(), {
           headers: {
             "content-type": "text/css; charset=utf-8",
             "cache-control": "no-cache",
@@ -1838,7 +1840,11 @@ export function createResearchServer(options: ServeOptions = {}) {
         "/bun/brand": renderBrandPage,
       };
       if (url.pathname in BUN_WIDGETS) {
-        return new Response(BUN_WIDGETS[url.pathname]!(), {
+        const page = BUN_WIDGETS[url.pathname]!();
+        const themed = page.includes('</body>')
+          ? page.replace('</body>', themeToggleButton() + themeChrome() + '</body>')
+          : page;
+        return new Response(themed, {
           headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-cache", ...designCorsHeaders() },
         });
       }
@@ -2211,6 +2217,77 @@ export function createResearchServer(options: ServeOptions = {}) {
 
       // Unified color theme as JSON: roles -> hex/css/ansi + WCAG contrast.
       // One call carries terminal codes, web CSS vars, and the contrast math.
+      // Advanced color parsing: /api/color-info?color=lab(50% 50 50)
+      // Bun.color 1.4.0 parses hex/hwb/color-mix etc.; the extended CSS Color 4
+      // formats (lab/lch/oklab/oklch/hsv) are parsed by the kernel inverse
+      // parsers (Bun.color returns null for them — probe-verified).
+      // Watermark + sign pipeline: /api/watermark?text=...&url=...&width=...
+      // SVG → Bun.WebView screenshot (text overlay — Bun has no Canvas) →
+      // ml-dsa-65 signature. PNG body + x-signature (hex) + x-public-key
+      // (base64 SPKI PEM) + x-key-type headers.
+      if (url.pathname === "/api/watermark") {
+        const text = url.searchParams.get("text") ?? "";
+        const imgUrl = url.searchParams.get("url");
+        const width = Number(url.searchParams.get("width") ?? 400) || 400;
+        if (!text) return json({ ok: false, error: "missing text" }, 400, designCorsHeaders());
+        try {
+          let imageDataUrl: string | undefined;
+          if (imgUrl) {
+            const r = await fetch(imgUrl, { protocol: "http2" });
+            if (r.ok) {
+              const img = new Bun.Image(await r.arrayBuffer()).resize(width);
+              const b = await img.png().bytes();
+              imageDataUrl = "data:image/png;base64," + Buffer.from(b).toString("base64");
+            }
+          }
+          const asset = await watermarkAndSign({ text, ...(imageDataUrl ? { imageDataUrl } : {}), width, height: width });
+          return new Response(new Blob([Buffer.from(asset.png)]), {
+            headers: {
+              "content-type": "image/png",
+              "x-signature": Buffer.from(asset.signature).toString("hex"),
+              "x-public-key": Buffer.from(asset.publicKeyPem).toString("base64"),
+              "x-key-type": asset.keyType,
+              ...designCorsHeaders(),
+            },
+          });
+        } catch (e) {
+          return json({ ok: false, error: String(e).slice(0, 120) }, 500, designCorsHeaders());
+        }
+      }
+
+      if (url.pathname === "/api/color-info") {
+        const raw = url.searchParams.get("color") ?? "";
+        if (!raw) return json({ ok: false, error: "missing color" }, 400, designCorsHeaders());
+        const parsed = parseExtendedColor(raw);
+        if (parsed) {
+          const [r, g, b] = [
+            parseInt(parsed.slice(1, 3), 16),
+            parseInt(parsed.slice(3, 5), 16),
+            parseInt(parsed.slice(5, 7), 16),
+          ];
+          return json(
+            { ok: true, hex: parsed, rgb: [r, g, b], hsl: String(Bun.color(parsed, "hsl")), parser: "kernel" },
+            200,
+            designCorsHeaders(),
+          );
+        }
+        const hex = Bun.color(raw, "hex");
+        if (hex) {
+          const h = String(hex);
+          const [r, g, b] = [
+            parseInt(h.slice(1, 3), 16),
+            parseInt(h.slice(3, 5), 16),
+            parseInt(h.slice(5, 7), 16),
+          ];
+          return json(
+            { ok: true, hex: h, rgb: [r, g, b], hsl: String(Bun.color(raw, "hsl")), parser: "bun.color" },
+            200,
+            designCorsHeaders(),
+          );
+        }
+        return json({ ok: false, error: "unparseable color: " + raw.slice(0, 60) }, 422, designCorsHeaders());
+      }
+
       if (url.pathname === "/api/color/theme") {
         return json(themeManifest(), 200, designCorsHeaders());
       }
