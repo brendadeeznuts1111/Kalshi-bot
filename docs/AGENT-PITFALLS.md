@@ -210,6 +210,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §192 — Bun.XML grounded + async-IIFE evidence bug (2026-08-26)
 - §193 — Heap-based odds clustering — min-heap Prim MST + HDBSCAN-lite + z-score pitfall (2026-08-26)
 - §194 — Artifact interface — uniform contract for bundles/tiles/manifests/XML + two proposal corrections (2026-08-26)
+- §195 — Bun 1.4 perf mapping — most proposal items ALREADY active here + 2 new grounded facts (2026-08-26)
 - §187 — Extended color formats — kernel-only (lch/oklab/oklch/hsv) + inverse parsers (2026-08-26)
 - §188 — Watermark pipeline — ML-DSA key naming + WebView/Blob verified facts (2026-08-26)
 - §189 — Color input-parsing correction — lab()/lch() parse natively, oklab/oklch/hsv/device-cmyk null (2026-08-26)
@@ -7000,6 +7001,31 @@ unit variance, so a tight vig jitter (~0.001) dominated the vector over the real
 
 src/lib/artifact.ts implements the uniform Artifact contract (kind/path/hash/size/
 type/sourcemap + text/json/arrayBuffer/bytes/stream) with helpers fromBuildOutput,
+## 195. Bun 1.4 perf mapping - most proposal items ALREADY active here + 2 new grounded facts (2026-08-26)
+
+A pasted Bun-1.4 performance mapping (targeting the proposal's own server.ts,
+frontend/, tiles - none of which exist in this repo) was audited item by item:
+
+ALREADY ACTIVE (verified in-tree, no work needed):
+  - bun test --parallel + --isolate: package.json test script already uses both.
+  - bun dedupe --check + prune --dry-run: tools/pre-commit.ts deps:check gate.
+  - process.on('memoryPressure'): src/research/serve.ts:1326 registers the handler
+    (clears bookCache + source catalog + auth + tennis board caches on 'critical');
+    tests/research/serve-memory-pressure.test.ts covers it.
+  - startup 50% faster + code-split 14x: measured by blog-bench-verify (8.7 ms,
+    485 ms vs blog 320 ms - CONSISTENT).
+
+NOT REPRODUCIBLE / SKIP: idle CPU 5x + HTTP memory 35% are app-specific (the blog's
+fastify/express numbers, NOT-MEASURABLE); installs 7x is env-dependent; streaming
+XML - Bun.XML.parse does NOT stream (the proposal admits it); build:all - no
+frontend/tiles pipeline exists (no geo data).
+
+NEW GROUNDED FACTS (157 claims, gaps 0):
+  - Bun.Terminal EXISTS (class Terminal implements AsyncDisposable, TM-terminal);
+    the proposal's terminal.warn() does NOT (warnFn undefined) - use console.warn.
+  - bun --cpu-prof-md writes a Markdown CPU profile (CPU.*.md) - blog Observability
+    claim grounded (evidence miscGotchas.cpuProfMd).
+
 etagFor, responseFor (sets the strong ETag EXPLICITLY), sha256Hex (Bun.SHA256),
 fromBunFile. New grounded facts (156 claims, gaps 0):
   - BA-namingHash: naming { entry: '[name]-[hash].[ext]' } makes the entry-point

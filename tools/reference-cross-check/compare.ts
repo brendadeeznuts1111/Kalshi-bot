@@ -199,6 +199,7 @@ export const LEDGER: LedgerClaim[] = [
   { id: 'BA-namingHash', api: 'naming', source: 'bun.d.ts', fragment: 'Set up custom naming patterns for all output types', docSays: 'naming { entry: "[name]-[hash].[ext]" } makes the ENTRY-POINT hash non-null (strong ETag source)', evidencePath: 'artifactGotchas.namingHash', kind: 'consistent' },
   { id: 'BA-sourcemapNested', api: 'sourcemap', source: 'bun.d.ts', fragment: 'sourcemap: BuildArtifact | null', docSays: 'BuildArtifact.sourcemap nests a BuildArtifact when sourcemap: "linked" (its hash is a 00000000 placeholder)', evidencePath: 'artifactGotchas.sourcemapLinked', kind: 'consistent' },
   { id: 'BA-sha256', api: 'SHA256', source: 'bun.d.ts', fragment: 'class SHA256 extends CryptoHashInterface', docSays: 'Bun.SHA256 exists; sha256("abc") hex matches the known digest (same as CryptoHasher sha256)', evidencePath: 'artifactGotchas.sha256Hex', kind: 'consistent' },
+  { id: 'TM-terminal', api: 'Terminal', source: 'bun.d.ts', fragment: 'class Terminal implements AsyncDisposable', docSays: 'Bun.Terminal exists (class); blog what-s-new claim; proposal uses terminal.warn()', evidencePath: 'miscGotchas.terminal.exists', kind: 'consistent' },
 ];
 
 /** APIs with grounded evidence but no ledger row (fit/filter/quality/... come from the probe gates). */

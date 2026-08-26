@@ -12,7 +12,7 @@
  */
 import { markdown as mdNamed, XML as xmlNamed } from 'bun';
 import { join } from 'node:path';
-import { existsSync, rmSync, mkdtempSync, writeFileSync, mkdirSync } from 'node:fs';
+import { existsSync, rmSync, mkdtempSync, writeFileSync, mkdirSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 
 const ROOT = join(import.meta.dir, '..');
@@ -1072,6 +1072,21 @@ const miscGotchas = {
     nodePrefixPassthrough: (Bun as any).resolveSync('node:fs', '/tmp') === 'node:fs',
     bareResolvesToString: typeof (Bun as any).resolveSync('events', '/tmp') === 'string',
   },
+  terminal: {
+    exists: typeof (Bun as any).Terminal === 'function',
+    warnFn: typeof (Bun as any).Terminal?.warn,
+  },
+  cpuProfMd: await (async () => {
+    // bun --cpu-prof-md writes a Markdown CPU profile (blog Observability claim).
+    // Probing via a subprocess in the pinned runtime; report existence only.
+    try {
+      const f = join(tmpdir(), 'prof-cpuprobe-' + process.pid + '.ts');
+      writeFileSync(f, 'const x = []; for (let i = 0; i < 50000; i++) x.push(i);\nconsole.log(x.length);');
+      const proc = await Bun.$`${process.execPath} --cpu-prof-md ${f}`.cwd(tmpdir()).quiet().nothrow();
+      const out = readdirSync(tmpdir()).filter((n) => n.startsWith('CPU.') && n.endsWith('.md'));
+      return proc.exitCode === 0 && out.length > 0 ? 'CPU.*.md written' : 'no md: exit ' + proc.exitCode;
+    } catch { return 'probe failed'; }
+  })(),
 };
 
 // ---------- archiveGotchas + udpGotchas: Bun.Archive / Bun.udpSocket (continue round) ----------
@@ -1185,6 +1200,7 @@ const evidence = {
   markdownGotchas,
   utilityGotchas,
   miscGotchas,
+  cpuProfMdNote: miscGotchas.cpuProfMd,
   archiveGotchas,
   udpGotchas,
   fileGotchas,

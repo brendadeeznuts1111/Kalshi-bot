@@ -693,8 +693,14 @@
     "resolveSync": {
       "nodePrefixPassthrough": true,
       "bareResolvesToString": true
-    }
+    },
+    "terminal": {
+      "exists": true,
+      "warnFn": "undefined"
+    },
+    "cpuProfMd": "CPU.*.md written"
   },
+  "cpuProfMdNote": "CPU.*.md written",
   "archiveGotchas": {
     "typeofClass": "function",
     "staticWrite": true,
@@ -738,7 +744,7 @@
     "xxeUnresolved": "{\"a\":\"&xxe;\"}",
     "importEvalToCompact": "{\"config\":{\"name\":\"demo\",\"port\":\"8080\"}}",
     "bundlerInlines": true,
-    "perf20kItemsMs": 5.9,
+    "perf20kItemsMs": 12.3,
     "perfVsDocs": "CONSISTENT (docs 27 ms for 2.2 MB)"
   },
   "artifactGotchas": {
@@ -1196,7 +1202,7 @@
         {
           "path": "outbc/pure.js.jsc",
           "kind": "bytecode",
-          "hash": "x3wvz8rh",
+          "hash": "5xb7a5ha",
           "loader": "file",
           "size": 10944,
           "type": "application/octet-stream",
