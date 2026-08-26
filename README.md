@@ -108,6 +108,8 @@ Niche dimensions (`sports-nba`, `tracking`, …) may discover candidates but pro
 | Restore artifacts | `bun run artifacts:restore` — fixtures → reports + audit JSONL |
 | Pre-commit gate | `bun run hooks:install` then `git commit` runs `bun run check` |
 | Types | `bun run typecheck` |
+| Feature bench | `bun run bench:feature` — ns/op evidence for color kernel, markdown, watermark, theme, image (see `tools/feature-bench-evidence.json`) |
+| Branding/content tools | `bun run blog:coverage` · `blog:coverage:update` · `blog:paste-coverage` · `blog:story` · `palette:clip` · `watermark:sign` — demo pages behind `/bun/color`, `/api/color-info`, `/api/watermark` |
 | Full check | `bun run bun:ci` — guard + typecheck + test; local merge authority |
 
 ## Cache, diff, and artifacts
