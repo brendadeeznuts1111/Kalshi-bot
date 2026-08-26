@@ -235,6 +235,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §218 — Why security wasn't secret+defined — SECRET_REGISTRY + argv-leak gate wired (2026-08-26)
 - §219 — Secret-leak audit gate — repo-wide plaintext-argv scan wired into pre-commit (2026-08-26)
 - §220 — Crypto/quantum truth — ML-DSA works (persistent registered key), ML-KEM keygen-only (2026-08-26)
+- §221 — ML-KEM not-callable root cause — JSC binding has non-standard 5/6-arg signature, unusable from JS (2026-08-26)
 - §199 — ui:regen CLI — regenerate UI artifacts from meta/variant sources + the Bun.$ template failure class (2026-08-26)
 - §187 — Extended color formats — kernel-only (lch/oklab/oklch/hsv) + inverse parsers (2026-08-26)
 - §188 — Watermark pipeline — ML-DSA key naming + WebView/Blob verified facts (2026-08-26)
@@ -7695,6 +7696,36 @@ have these keys defined':
   vault+env sources, never argv, and works through secrets.ts + the
   leak-audit gate (S218/219).
   Gates: 2796 tests pass / 0 fail; breaking-audit 15 checks ok.
+
+
+
+## 221. Why ML-KEM is 'not callable' - ROOT CAUSE: JSC binding has a non-standard 5/6-arg signature (2026-08-26)
+
+Direct answer: the methods DO exist on crypto.subtle but under JSC-internal
+names + a non-standard argument contract that no documented JS shape
+satisfies. The spec names in the docs/proposal are wrong for this build.
+- Actual JSC surface: crypto.subtle has encapsulateBits/encapsulateKey/
+  decapsulateBits/decapsulateKey (NOT encapsulate/decapsulate).
+- The KeyUsage enum rejects 'encapsulate'/'decapsulate' ('value must be
+  enumeration') but ACCEPTS 'encapsulateKey'/'encapsulateBits' -
+  generateKey({name:'ml-kem-768'}, true, ['encapsulateKey','decapsulateKey'])
+  SUCCEEDS and returns a real key.
+- The KEM calls then fail: encapsulateKey.length === 5, decapsulateKey.
+  length === 6 (the WebCrypto draft spec is 2 args). Errors name an
+  internal param 'encapsulationKey' expecting 'an instance of ...' - a
+  JSC C++ binding with its own argument layout. Every spec-shaped call
+  ('Not enough arguments' / 'Type error') and passing CryptoKeys at every
+  position ('Type error') fails. UNUSABLE from JS on 1.4.0.
+- bun-types declares NONE of this (no KeyUsage union, no KEM methods) -
+  the two pinned docs lines contradict: nodejs-compat.mdx line 424
+  ('Fully implemented including encapsulate*/decapsulate*') is aspirational;
+  line 112 ('Missing encapsulate/decapsulate') is the accurate one.
+- Conclusion: ML-KEM keygen works (node:crypto + subtle with correct
+  usages); the KEM operation is blocked by the JSC binding contract, not
+  by our code. ML-DSA signing is the usable post-quantum path today (S220).
+  Watch for a Bun bump that aligns the binding with the WebCrypto KEM spec
+  (2-arg encapsulate/decapsulate).
+
 
 
 
