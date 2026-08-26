@@ -1,10 +1,10 @@
 {
-  "lastChecked": "2026-08-25T16:51:54.132Z",
+  "lastChecked": "2026-08-26T10:39:51.540Z",
   "docs": [
     {
       "path": "docs/AGENT-PITFALLS.md",
-      "hash": "93cb2c9d5f5d59a045f5efa3099fb826fda335160c5316f8af29af3d68c5144c",
-      "headings": 204,
+      "hash": "4346a62209835730cdae7a78396596e511d86a7ef7a03652e2b9773dde07271d",
+      "headings": 250,
       "renderOk": true,
       "duplicateSlugs": []
     },
@@ -17,7 +17,7 @@
     },
     {
       "path": "docs/AUDIT_ADAPTER.md",
-      "hash": "f756946a33ca04a796ef402249a9792dffbeee2a342caa0b46bdf60c84f9aef3",
+      "hash": "48f6fe58b65252e6908716fa15999d64d64344b5c5503d4c364f4b37d4317dd3",
       "headings": 8,
       "renderOk": true,
       "duplicateSlugs": []
@@ -38,28 +38,42 @@
     },
     {
       "path": "docs/BUN_API_COVERAGE.md",
-      "hash": "13826e05ea65f37e6062aa0849ad42935b5a34aa7c85ac9a7a2a15ad857f4a94",
+      "hash": "f5ef5bdc9ba6180ab313efb3045508aeb890504a87a318f86cb9e605327f1f48",
       "headings": 1,
       "renderOk": true,
       "duplicateSlugs": []
     },
     {
+      "path": "docs/BUN_BUILD_FINDINGS.md",
+      "hash": "2ada9f571275a7f175d5d77e61b7b9d24dd51ad6ab2f5717dd13ccf338d6b72f",
+      "headings": 61,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/BUN_MODULE_SHAPE.md",
+      "hash": "742f291fbc7366943e167ec92202b62487e772ee5a25a0ec70be3ca54859c593",
+      "headings": 65,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
       "path": "docs/BUN_NATIVE.md",
-      "hash": "8b8772ca01e99c67859e0fdaecb8e7579b2b6bd0a3e355ae0e98af3aaf7e2b13",
+      "hash": "5c19549894b538b89dc6f9e38579c06cfc3cc355244ed02a49e70fb5ee1e8623",
       "headings": 66,
       "renderOk": true,
       "duplicateSlugs": []
     },
     {
       "path": "docs/BUN_SHELL.md",
-      "hash": "f3d6e0eac64e645c5ad656c428631ba77378ded9e1545a61dacbae602622b700",
+      "hash": "7701c1006270e1a86cc12f689b0c51947be8f2b191ac1dbc15fc0df1e8c92809",
       "headings": 17,
       "renderOk": true,
       "duplicateSlugs": []
     },
     {
       "path": "docs/BUN_TECH_STACK.md",
-      "hash": "0af85b928df58e6995f80e2bb48ea10aa67f5ec771413212e41dcf1a722d98d7",
+      "hash": "5bbcdeafb6441b9ce9a47d1050f4f5e89e35cd70dbdb11a92f56669837fdb2db",
       "headings": 15,
       "renderOk": true,
       "duplicateSlugs": []
@@ -73,7 +87,7 @@
     },
     {
       "path": "docs/bun-v1.3.14-catalog.md",
-      "hash": "043aa2210612d469551c09a89a4ecf19c0319f1175ef4009e19ea23c201ab566",
+      "hash": "aad784af4d3ce59d9cbfd7222401892777919ed598b623208d098fa1091afb19",
       "headings": 3,
       "renderOk": true,
       "duplicateSlugs": []
@@ -87,7 +101,7 @@
     },
     {
       "path": "docs/COLORS.md",
-      "hash": "03c52f04c5575c61fca1f0ca09212fff824f55bef944735b60cdce9971b73f8d",
+      "hash": "bdff62c717de54f5d95294c41f6435b1d08a40119fc237b587d361dbec07820f",
       "headings": 5,
       "renderOk": true,
       "duplicateSlugs": []
@@ -101,7 +115,7 @@
     },
     {
       "path": "docs/CRON.md",
-      "hash": "262aea959461f04874b227b4a87589c3c3e1a78d5e766a5a1936145ae3dd8192",
+      "hash": "672f6f4010ccef29c4cb66ab2378a6bf6f75257c5397249a9dcac70e0c1513aa",
       "headings": 11,
       "renderOk": true,
       "duplicateSlugs": []
@@ -115,7 +129,7 @@
     },
     {
       "path": "docs/DESIGN-PIPELINE.md",
-      "hash": "50ce64e3fdbfe590a837aff70c5bcdfbf412ea85e083f3005fffcdb8d33fa058",
+      "hash": "05d857a14f82e4beb86c74893592d877741a2aff5089bd559f6f1a32d823c785",
       "headings": 20,
       "renderOk": true,
       "duplicateSlugs": []
@@ -129,14 +143,14 @@
     },
     {
       "path": "docs/EDGE-PATTERNS.md",
-      "hash": "83e6348525e7358e249e09be607e998713e9da0c80476b0cfc4412945d86673b",
+      "hash": "c53b34bd97127d1500585b4465280659c627dd80c9bfcbd102c210194c9e2ab4",
       "headings": 9,
       "renderOk": true,
       "duplicateSlugs": []
     },
     {
       "path": "docs/ENV_NAMING.md",
-      "hash": "732ddd638d65c2a89d3a972414651de5348c25b713a8fbfffb7cb6cdad61545d",
+      "hash": "03a8177b5ef84924de476c08ad5efac0d451d3d8ff5eb1fc80933537e189c1ca",
       "headings": 9,
       "renderOk": true,
       "duplicateSlugs": []
@@ -157,14 +171,14 @@
     },
     {
       "path": "docs/FACTOR_STACK.md",
-      "hash": "f0315c5f948258321f398da607873b8e2dbc60640722c34c29f380d58e00db55",
+      "hash": "c65de0dd1844b8f666d1215cc30c5863cd32468cc1b67ddf7a65046589c5d84a",
       "headings": 7,
       "renderOk": true,
       "duplicateSlugs": []
     },
     {
       "path": "docs/FANTASY-ULTRA.md",
-      "hash": "27e9fb9c1091ee9116046e4070ed35d5937eff1e59e4c93b893b00635c991177",
+      "hash": "2e8a82068c1e670bcaee9cbf3af443889d7ba0a3897b5c9718549b1391ddd2ea",
       "headings": 26,
       "renderOk": true,
       "duplicateSlugs": []
@@ -213,7 +227,7 @@
     },
     {
       "path": "docs/LICENSE-GATE-OPS.md",
-      "hash": "616a44720a5039fdd1f707fc97734428789beaca37e0b12be54dfa3164cf79da",
+      "hash": "1024f2e3db94ae731fe794d6a97b2f8887d0dc48e203166aae609428794ba7d6",
       "headings": 20,
       "renderOk": true,
       "duplicateSlugs": []
@@ -234,7 +248,7 @@
     },
     {
       "path": "docs/MISS_TAXONOMY.md",
-      "hash": "87235ecc97c634784b66d8893d90573b2351f4842c01423178bdd656daded16d",
+      "hash": "f0383a857fbc0e3866c2dcf6e892761a2dfdfeaf164f64e1cffc6eea228aac95",
       "headings": 9,
       "renderOk": true,
       "duplicateSlugs": []
@@ -269,14 +283,14 @@
     },
     {
       "path": "docs/PLAN.md",
-      "hash": "667eacc4baead085288044f1caccc816d1dbd6ec8b3c69ac12054076cc3a0379",
+      "hash": "ed570d25f29e6ef1179d8733bfecb9bec845e00db8f96c2be78a11aada83670b",
       "headings": 19,
       "renderOk": true,
       "duplicateSlugs": []
     },
     {
       "path": "docs/PLAYER_PROFILES_META.md",
-      "hash": "b7e62df93110ca2338f91b08c54533b2ef96557b8ca05f0f0797faaf8dc8278f",
+      "hash": "d1a3cdd827f9c3e9b677b6de6784252ddc978a3ae3457750c0f51ab9950258a8",
       "headings": 7,
       "renderOk": true,
       "duplicateSlugs": []
@@ -297,35 +311,42 @@
     },
     {
       "path": "docs/PROTONPASS.md",
-      "hash": "f2dc926341d1be1d3763d383fab3642c6ffc602299356c6bdb475c17929d5a1f",
+      "hash": "7f5d8b7bdda051166f76420811bb39ad8aef92d98e070bd0a9023dd111f98efd",
       "headings": 31,
       "renderOk": true,
       "duplicateSlugs": []
     },
     {
       "path": "docs/regulatory-agents.md",
-      "hash": "a023784b56701dcc9611761a63a682b1da0e07060a204e7375f3b489dcdcde3e",
+      "hash": "305ba41762ffc89dcdba47d1dfaba2a20e6103e3beb46d858b177d3e598d1b9d",
       "headings": 21,
       "renderOk": true,
       "duplicateSlugs": []
     },
     {
+      "path": "docs/REPO_API_BUN.md",
+      "hash": "e97afc6c3a348138521ba7ee01f76eda7edec4fbe895494e4073381c4f4d047f",
+      "headings": 8,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
       "path": "docs/ROADMAP.md",
-      "hash": "bc0c26cabe1d27e4bae8dbcf30bb6649e30b031e4ef584d61b219b35fcaaa811",
+      "hash": "1a6064b96f79fef7d7566151164f57dc586a38859b43cd7ac24e178c273e8088",
       "headings": 7,
       "renderOk": true,
       "duplicateSlugs": []
     },
     {
       "path": "docs/SEAT-OPS.md",
-      "hash": "09c2e0c04965eea8645c4597a35c96a60fb02d2d59237707f2e30fa341808a38",
+      "hash": "c99da121a6b688b09a57d0891b2b0d29f743b8ea053fca5bff058b35d287261e",
       "headings": 27,
       "renderOk": true,
       "duplicateSlugs": []
     },
     {
       "path": "docs/SEMANTIC_LAYER.md",
-      "hash": "b438f65676b6db28d5b95f0750b9bf1ac04f5b33a9b7bc6714eb67b93bf5eae1",
+      "hash": "de366e7ae28769c5e7cf3ac5425fd47cb08aaaff150e8bb574713fbf9b047e36",
       "headings": 19,
       "renderOk": true,
       "duplicateSlugs": []
@@ -339,7 +360,7 @@
     },
     {
       "path": "docs/TENNIS_PROGRAM_ARCHETYPES.md",
-      "hash": "c68a443865bf5d0357118a689c57adbe12486891082879461d15be4f57d7f41c",
+      "hash": "e5a1871560d35eeeccc167809ef7d12094b1effbeb27aa0473d27e014986e708",
       "headings": 11,
       "renderOk": true,
       "duplicateSlugs": []
@@ -366,6 +387,6 @@
       "duplicateSlugs": []
     }
   ],
-  "total": 52,
+  "total": 55,
   "failing": 0
 }

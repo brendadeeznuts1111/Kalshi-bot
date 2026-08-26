@@ -1,7 +1,7 @@
 {
   "format": "licenses-sbom",
   "version": 1,
-  "generatedAt": "2026-08-25T06:51:07.576Z",
+  "generatedAt": "2026-08-26T10:39:47.662Z",
   "bunVersion": "1.4.0",
   "summary": {
     "total": 6,
@@ -64,7 +64,7 @@
       "matchedBy": "exemption",
       "reason": "vendored file:vendor/proton-pass package with no license field in its own package.json (AGENT-PITFALLS §91/§92/§93) (expires 2026-12-01)",
       "expires": "2026-12-01",
-      "expiresInDays": 98,
+      "expiresInDays": 97,
       "fingerprint": "6a048843f8d4"
     }
   ]
