@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "clips": [
+    {
+      "id": "palette-clip",
+      "kind": "video",
+      "title": "Bun.color palette clip",
+      "file": "palette-clip.mp4",
+      "poster": "palette-clip.png",
+      "width": 1280,
+      "height": 720,
+      "videoBytes": 43729,
+      "posterBytes": 125929,
+      "durationSeconds": 3,
+      "formats": [
+        "hex",
+        "css",
+        "rgb",
+        "hsl",
+        "lab",
+        "number",
+        "lch",
+        "oklab",
+        "oklch",
+        "hsv"
+      ],
+      "note": "Bun.WebView frame capture composed with ffmpeg; cycles Bun.color output formats (kernel computes hsv/lch/oklab/oklch)."
+    }
+  ]
+}
