@@ -527,47 +527,73 @@
       "tablesDefault": true,
       "tablesOffPlain": true,
       "strikethrough": true,
-      "tasklists": true
+      "strikethroughOffPlain": true,
+      "tasklists": true,
+      "tasklistsKeyIsLowercase": false
     },
     "renderContract": {
       "listItemChecked": "c=truec=false",
       "listOrdered": "o=false",
       "orderedStart": "s=3",
       "tableAlign": "a=lefta=right12",
-      "headingId": "id=hi"
+      "headingId": "id=hi",
+      "headingIdNeedsOption": "id=none"
     },
     "options": {
       "autolinksDefaultOff": true,
       "autolinksUrlOnly": true,
       "headingsIds": true,
       "wikiLinks": true,
-      "permissiveAtxDefaultOn": false,
+      "wwwAutolink": true,
+      "emailAutolink": true,
+      "headingsAutolinkAnchor": true,
+      "headingIdIsAutoSlug": true,
+      "permissiveAtxDefaultOff": true,
+      "permissiveAtxTrueOn": true,
+      "permissiveAtxExplicitFalseOff": true,
       "noIndentedCodeBlocks": true,
       "noHtmlSpans": true,
-      "hardSoftBreaksTrailingWs": true
+      "hardSoftBreaksTrailingWsIsCommonMark": true
     },
     "callbacks": {
       "codeLanguage": "lang=js",
       "linkHrefTitle": "href=https://x.com:title=t",
       "imageSrcTitle": "src=img.png:title=t",
-      "hrBlockquote": "aHRBQ(q)"
+      "hrBlockquote": "aHRBQ(q)",
+      "htmlBlockFires": true,
+      "htmlInlineNotFired": true
     },
     "reactOverrides": {
       "h1Override": true,
-      "reactVersion18Ok": true
+      "reactVersion18Ok": true,
+      "v18Symbol": true,
+      "v19Symbol": true,
+      "secondArgIsOverrides": true,
+      "fnOverrideIdentity": true
     },
     "ansiTheme": {
       "columnsWrap": true,
       "hyperlinksOsc8": true,
       "kittyGraphicsAccepted": true,
-      "lightNoObservedDiff": true
+      "lightNoObservedDiff": true,
+      "colorsFalsePlain": true
     },
     "notObservedToTakeEffect": {
       "latexMath": true,
       "underline": true,
       "collapseWhitespace": true,
-      "noHtmlBlocks": true,
-      "tagFilter": true
+      "hardSoftBreaks": true
+    },
+    "tagFilter": {
+      "scriptEscaped": true,
+      "styleEscaped": true,
+      "allowedTableUntouched": true,
+      "fnFormIgnored": true
+    },
+    "noHtmlBlocks": {
+      "rawPassthroughStops": true,
+      "blockBecomesParagraph": true,
+      "escapedWithNoHtmlSpans": true
     }
   },
   "scenarios": [
@@ -1016,7 +1042,7 @@
         {
           "path": "outbc/pure.js.jsc",
           "kind": "bytecode",
-          "hash": "m20hy96d",
+          "hash": "79c95y9c",
           "loader": "file",
           "size": 10944,
           "type": "application/octet-stream",

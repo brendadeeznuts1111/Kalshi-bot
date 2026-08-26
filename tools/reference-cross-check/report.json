@@ -4,8 +4,8 @@
   "bunRevision": "34cbb9a40b4bd1bd767d134a7065e66c2432a676",
   "bundleHash": "bun-types@1.4.0-c0dadede486f49ab",
   "verdictCounts": {
-    "PINNED-DISCREPANCY": 9,
-    "CONSISTENT": 102
+    "PINNED-DISCREPANCY": 8,
+    "CONSISTENT": 106
   },
   "checks": [
     {
@@ -921,9 +921,9 @@
       "id": "MD-permissiveAtx",
       "api": "permissiveAtxHeaders",
       "source": "bun.d.ts",
-      "docSays": "permissiveAtxHeaders is ON by default on 1.4.0 (types say default false)",
-      "observed": false,
-      "verdict": "PINNED-DISCREPANCY"
+      "docSays": "permissiveAtxHeaders honored; runtime default is OFF (matches types); true renders #header, false keeps it a paragraph",
+      "observed": true,
+      "verdict": "CONSISTENT"
     },
     {
       "id": "MD-callbacks",
@@ -953,7 +953,31 @@
       "id": "MD-noopOptions",
       "api": "latexMath",
       "source": "bun.d.ts",
-      "docSays": "latexMath/underline/collapseWhitespace/noHtmlBlocks/tagFilter DECLARED but NOT observed to take effect on 1.4.0",
+      "docSays": "latexMath/underline/collapseWhitespace/hardSoftBreaks DECLARED but NO effect on 1.4.0 (plain newlines preserved; trailing-space <br> is CommonMark default, not the option)",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "MD-tagFilter",
+      "api": "tagFilter",
+      "source": "bun.d.ts",
+      "docSays": "tagFilter: true escapes GFM-disallowed tags (script/style/iframe); allowed tags (table/div) untouched; function form ignored (type is boolean)",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "MD-noHtmlBlocks",
+      "api": "noHtmlBlocks",
+      "source": "bun.d.ts",
+      "docSays": "noHtmlBlocks: raw HTML block passthrough stops (block becomes a paragraph with inline HTML); with noHtmlSpans fully escaped",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "MD-hardSoftBreaks",
+      "api": "hardSoftBreaks",
+      "source": "bun.d.ts",
+      "docSays": "hardSoftBreaks NO effect on 1.4.0: plain newline preserved in <p>; trailing-space <br> occurs without the option",
       "observed": true,
       "verdict": "CONSISTENT"
     }

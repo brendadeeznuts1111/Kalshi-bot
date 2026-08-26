@@ -554,7 +554,7 @@ Sources: bundled bun-types@1.4.0 (bun-types@1.4.0-c0dadede486f49ab) docs + `bun.
 PINNED-DISCREPANCY (doc says X, observed Y — our correction), DOC-CHANGED (fragment missing —
 the pin premise moved; re-verify), NO-EVIDENCE (ledger path broken).
 
-**Verdict summary:** 111 claims · 102 CONSISTENT · 9 PINNED-DISCREPANCY · 0 DOC-CHANGED · 0 NO-EVIDENCE.
+**Verdict summary:** 114 claims · 106 CONSISTENT · 8 PINNED-DISCREPANCY · 0 DOC-CHANGED · 0 NO-EVIDENCE.
 
 ### BuildArtifact
 
@@ -712,11 +712,14 @@ This fun | CONSISTENT |
 | `MD-meta` | `heading` | `bun.d.ts` | render callback contract: (children, meta) - meta is the metadata arg, NOT an element | id=hi | CONSISTENT |
 | `MD-autolinks` | `autolinks` | `bun.d.ts` | autolinks OFF by default; { url: true } form works | true | CONSISTENT |
 | `MD-wikiLinks` | `wikiLinks` | `bun.d.ts` | wikiLinks renders a custom x-wikilink element | true | CONSISTENT |
-| `MD-permissiveAtx` | `permissiveAtxHeaders` | `bun.d.ts` | permissiveAtxHeaders is ON by default on 1.4.0 (types say default false) | false | PINNED-DISCREPANCY |
+| `MD-permissiveAtx` | `permissiveAtxHeaders` | `bun.d.ts` | permissiveAtxHeaders honored; runtime default is OFF (matches types); true renders #header, false keeps it a paragraph | true | CONSISTENT |
 | `MD-callbacks` | `code` | `bun.d.ts` | code/link/image/hr/blockquote callbacks receive (children, meta) | lang=js | CONSISTENT |
 | `MD-reactOverrides` | `react` | `bun.d.ts` | react(): component overrides + reactVersion option work | true | CONSISTENT |
 | `MD-ansiTheme` | `ansi` | `bun.d.ts` | ansi(): columns/hyperlinks/kittyGraphics accepted; light no observed diff | true | CONSISTENT |
-| `MD-noopOptions` | `latexMath` | `bun.d.ts` | latexMath/underline/collapseWhitespace/noHtmlBlocks/tagFilter DECLARED but NOT observed to take effect on 1.4.0 | true | CONSISTENT |
+| `MD-noopOptions` | `latexMath` | `bun.d.ts` | latexMath/underline/collapseWhitespace/hardSoftBreaks DECLARED but NO effect on 1.4.0 (plain newlines preserved; trailing-space <br> is CommonMark default, not the option) | true | CONSISTENT |
+| `MD-tagFilter` | `tagFilter` | `bun.d.ts` | tagFilter: true escapes GFM-disallowed tags (script/style/iframe); allowed tags (table/div) untouched; function form ignored (type is boolean) | true | CONSISTENT |
+| `MD-noHtmlBlocks` | `noHtmlBlocks` | `bun.d.ts` | noHtmlBlocks: raw HTML block passthrough stops (block becomes a paragraph with inline HTML); with noHtmlSpans fully escaped | true | CONSISTENT |
+| `MD-hardSoftBreaks` | `hardSoftBreaks` | `bun.d.ts` | hardSoftBreaks NO effect on 1.4.0: plain newline preserved in <p>; trailing-space <br> occurs without the option | true | CONSISTENT |
 
 No coverage gaps: every declared option on the grounded surfaces has evidence.
 

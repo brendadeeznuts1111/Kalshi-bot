@@ -198,6 +198,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §176 — Automatic ETag/304 behavior probed — one docs claim corrected (2026-08-24)
 - §177 — BuildArtifact gotchas probed — two docs corrections (2026-08-24)
 - §178 — Reference cross-check — official bun-types docs vs observed evidence (2026-08-25)
+- §179 — Markdown probe artifacts — three false no-ops + one bogus discrepancy found by a third-party test (2026-08-26)
 
 
 ## 1. run_code program text (the harness lexer)
@@ -6663,3 +6664,28 @@ another note.
   (REJECTS - the macOS system SQLite build does not support dynamic
   extensions). Cross-check now 97 claims (89 CONSISTENT, 8 PINNED-DISCREPANCY),
   ZERO gaps - every declared option on every covered surface is grounded.
+## 179. Markdown probe artifacts — three false no-ops + one bogus discrepancy found by a third-party test (2026-08-26)
+
+Running a third-party Bun.markdown coverage test (tests/lib/bun-markdown-coverage.test.ts) against the
+pinned 1.4.0 exposed FOUR errors in the existing evidence/ledger. Probe fixtures must exercise the ACTUAL
+construct the option governs, and every boolean "not observed" must be double-checked against the real output.
+
+1. **noHtmlBlocks was probed with an inline `<div>` — that is a SPAN, not a block.** `html('x <div>y</div> z', { noHtmlBlocks: true })`
+   keeps the div because inline HTML is governed by noHtmlSpans. A real block on its own line (`<div>block</div>` alone)
+   DOES change: raw block passthrough stops, the block becomes a paragraph with inline HTML (`<p><div>block</div></p>`).
+2. **tagFilter evidence searched for the wrong substring.** It looked for `&lt;script&gt;` (with `&gt;`) but the real output is
+   `&lt;script>` — only `<` is escaped, `>` stays literal. So `includes('&lt;script&gt;')` was false and the option was recorded as
+   a no-op. It WORKS (boolean true escapes script/style/iframe; table/div allowed).
+3. **hardSoftBreaks "works" evidence used a two-trailing-spaces fixture — that is CommonMark's own hard-break rule**, `<br>`
+   appears with the option OFF. With a plain newline (`Line 1\nLine 2`) the option has NO effect. So hardSoftBreaks is a true
+   no-op, and the earlier CONSISTENT evidence was a probe artifact.
+4. **MD-permissiveAtx was a BOGUS PINNED-DISCREPANCY.** The claim said "runtime default ON, types say false" but the default
+   is OFF (`#NoSpace` → `<p>#NoSpace</p>`), matching the types. The earlier default-on probe result was wrong; corrected to
+   CONSISTENT (kind 'discrepancy' → 'consistent', new evidencePath permissiveAtxTrueOn). PINNED-DISCREPANCY count 9 → 8.
+
+Rule: for every option marked "no effect", probe BOTH the exact construct the type doc describes AND the negative case,
+and assert on the real output string (print it) instead of guessing escaped forms. Third-party tests are cheap
+adversarial probes — run them (corrected to the true contract) as regression suites.
+
+Cross-check after corrections: 114 claims (106 CONSISTENT, 8 PINNED-DISCREPANCY), gaps 0.
+
