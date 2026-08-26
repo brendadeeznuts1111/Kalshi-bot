@@ -230,6 +230,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §213 — bun -p/-e evaluation engine audited — TS + top-level await verified; getters/customInspect ignored (2026-08-26)
 - §214 — Odds Heat metadata audited — ETag auto-set false (S194), cron job.active absent, cluster metadata wired (2026-08-26)
 - §215 — Other metadata controls audited — Bun.secrets exists but {service,name}; Bun.env writable + snapshotted; Env augmentation works (2026-08-26)
+- §216 — Deeper 1.4 analysis audited — fs.rmdir({recursive}) removed (audit check #15), ML-KEM undefined, TOML v1.1 strict (2026-08-26)
 - §199 — ui:regen CLI — regenerate UI artifacts from meta/variant sources + the Bun.$ template failure class (2026-08-26)
 - §187 — Extended color formats — kernel-only (lch/oklab/oklch/hsv) + inverse parsers (2026-08-26)
 - §188 — Watermark pipeline — ML-DSA key naming + WebView/Blob verified facts (2026-08-26)
@@ -7549,6 +7550,36 @@ Pasted 'Other Metadata Controls in the Bun Pipeline' audited against 1.4.0:
   (BC-define claim, S207/208 parseArgs, hq-view /api/* meta endpoints).
   Repo note: secrets live in Proton Pass + keychain wrappers today;
   Bun.secrets is the native alternative if wanted.
+
+
+
+## 216. Deeper Bun 1.4 analysis audited - fs.rmdir({recursive}) REMOVED (new audit check #15), crypto.decapsulate/ML-KEM UNDEFINED, TOML v1.1 strict verified (2026-08-26)
+
+Pasted 'deeper Bun 1.4 analysis' audited against 1.4.0. Most items were
+already pinned (bun.lock v2, NODE_MODULE_VERSION 147, YAML 1.2, .env node
+shim, TLS/checkServerIdentity, cron OS jobs, Terminal PTY, Image surface,
+URLPattern, blog benchmarks S195). NEW findings:
+- CONFIRMED + WIRED: fs.rmdir({ recursive: true }) is REMOVED - rmdirSync
+  with recursive throws ERR_INVALID_ARG_VALUE on ANY dir (empty or not);
+  fs.rmSync(path, { recursive: true, force: true }) works; plain rmdirSync
+  on empty dir still works. ADDED breaking-audit check #15 (repo now 15
+  checks): rgFiles rmdir(Sync)?\([^)]*recursive -> warn. Repo already uses
+  fs.rm (no remediation); tests updated (14 cases) + new case.
+- CORRECTED: crypto.decapsulate / crypto.encapsulate are UNDEFINED on 1.4.0
+  (the ML-KEM claims are aspirational - typeof undefined; the repo's S22
+  pin 'no crypto primitive need' holds). ML-DSA-65/87 via BoringSSL not
+  exposed as a JS API either.
+- CORRECTED: the --compile-autoload-* flags exist but are dotenv/bunfig
+  autoload toggles (--compile-autoload-dotenv, --compile-autoload-bunfig,
+  default true) - NOT the claimed --compile-autoload-tsconfig /
+  --compile-autoload-package-json.
+- VERIFIED: Bun.TOML.parse is strict (v1.1.0): duplicate keys rejected
+  ('Cannot redefine key a'), date/time -> Temporal.Instant, basic parse
+  works. Repo's toml-config.ts is on the TEMPORAL_ALLOWLIST already.
+- Benchmark numbers: blog release claims (startup 5.1 ms etc.) were
+  machine-verified in S195; the proposal's table mirrors those - treat
+  absolute numbers as doc claims, our measured values are in S195.
+
 
 
 

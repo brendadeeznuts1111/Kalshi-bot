@@ -274,6 +274,18 @@ export function runBreakingAudit(root: string): BreakingFinding[] {
       : 'no randomUUIDv7 usage',
   });
 
+  // 15. fs.rmdir({ recursive: true }): REMOVED in 1.4 (verified: rmdirSync
+  // with recursive throws ERR_INVALID_ARG_VALUE on any dir). Replace with
+  // fs.rm(path, { recursive: true, force: true }). Probe-pinned in S216.
+  const rmdirRec = rgFiles(root, 'rmdir(Sync)?\\([^)]*recursive', dirs, { exclude: LABEL_FILES });
+  findings.push({
+    check: 'fs.rmdir({ recursive: true }) removed (use fs.rm)',
+    status: rmdirRec.length ? 'warn' : 'ok',
+    detail: rmdirRec.length
+      ? 'rmdir with recursive in: ' + rmdirRec.join(', ') + ' - throws ERR_INVALID_ARG_VALUE on 1.4; use fs.rm(path, { recursive: true, force: true })'
+      : 'no fs.rmdir({ recursive }) usage (repo uses fs.rm already)',
+  });
+
   return findings;
 }
 

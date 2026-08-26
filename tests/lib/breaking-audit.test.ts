@@ -29,9 +29,9 @@ beforeAll(() => {
 afterAll(() => { rmSync(root, { recursive: true, force: true }); });
 
 describe('runBreakingAudit', () => {
-  test('clean repo passes all 14 checks', () => {
+  test('clean repo passes all 15 checks', () => {
     const findings = runBreakingAudit(root);
-    expect(findings).toHaveLength(14);
+    expect(findings).toHaveLength(15);
     expect(breakingAuditPasses(findings)).toBe(true);
   });
 
@@ -110,6 +110,14 @@ describe('runBreakingAudit', () => {
     const r = findings.find((f) => f.check.includes('Response.error()'))!;
     expect(r.status).toBe('warn');
     expect(r.detail).toContain('resperr.ts');
+  });
+
+  test('flags fs.rmdir({ recursive: true }) as warn (removed in 1.4, S216)', () => {
+    write('src/rmdir-rec.ts', 'rmdirSync(dir, { recursive: true });\n');
+    const findings = runBreakingAudit(root);
+    const r = findings.find((f) => f.check.includes('fs.rmdir'))!;
+    expect(r.status).toBe('warn');
+    expect(r.detail).toContain('rmdir-rec.ts');
   });
 });
 
