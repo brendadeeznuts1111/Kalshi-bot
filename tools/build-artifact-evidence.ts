@@ -889,6 +889,19 @@ const markdownGotchas = {
   ansiColorsFalsePlain: !/\x1b\[/.test(mdPlain),
   renderCallback: mdRendered,
   reactParses: mdReactOk,
+  gfm: {
+    tablesDefault: mdNs.html('| A | B |\n|---|---|\n| 1 | 2 |').includes('<table>'),
+    tablesOffPlain: !mdNs.html('| A | B |\n|---|---|\n| 1 | 2 |', { tables: false } as any).includes('<table>'),
+    strikethrough: mdNs.html('~~gone~~').includes('<del>'),
+    tasklists: mdNs.html('- [x] done\n- [ ] todo').includes('checkbox'),
+  },
+  renderContract: {
+    listItemChecked: mdNs.render('- [x] done\n- [ ] todo', { listItem: (c: string, m: any) => 'c=' + String(m.checked) } as any),
+    listOrdered: mdNs.render('- x', { list: (c: string, m: any) => 'o=' + String(m.ordered) } as any),
+    orderedStart: mdNs.render('3. one\n4. two', { list: (c: string, m: any) => 's=' + String(m.start) } as any),
+    tableAlign: mdNs.render('| A | B |\n|:--|--:|\n| 1 | 2 |', { th: (c: string, m: any) => 'a=' + String(m.align) } as any),
+    headingId: mdNs.render('# Hi', { heading: (c: string, m: any) => 'id=' + String(m.id ?? 'none') } as any, { headings: { ids: true } } as any),
+  },
 };
 
 // ---------- emit ----------

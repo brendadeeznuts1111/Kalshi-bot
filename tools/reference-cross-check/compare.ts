@@ -144,6 +144,9 @@ export const LEDGER: LedgerClaim[] = [
   { id: 'MD-ansi', api: 'ansi', source: 'bun.d.ts', fragment: 'render to an ANSI-colored string', docSays: 'markdown.ansi: ANSI escapes; colors:false -> plain', evidencePath: 'markdownGotchas.ansiHasEscapes', kind: 'consistent' },
   { id: 'MD-render', api: 'render', source: 'bun.d.ts', fragment: 'render with custom callbacks', docSays: 'markdown.render: custom element callbacks', evidencePath: 'markdownGotchas.renderCallback', kind: 'consistent' },
   { id: 'MD-react', api: 'react', source: 'bun.d.ts', fragment: 'React-compatible JSX elements', docSays: 'markdown.react: React-element parse', evidencePath: 'markdownGotchas.reactParses', kind: 'consistent' },
+  { id: 'MD-gfm', api: 'tables', source: 'bun.d.ts', fragment: 'GFM extensions (tables, strikethrough, task lists) are enabled', docSays: 'GFM (tables/strikethrough/tasklists) ON by default, per-feature toggles', evidencePath: 'markdownGotchas.gfm.tablesDefault', kind: 'consistent' },
+  { id: 'MD-list', api: 'listItem', source: 'bun.d.ts', fragment: 'listItem?: (children: string, meta: ListItemMeta)', docSays: 'render callbacks: list/listItem with meta (checked/start/ordered)', evidencePath: 'markdownGotchas.renderContract.listItemChecked', kind: 'consistent' },
+  { id: 'MD-meta', api: 'heading', source: 'bun.d.ts', fragment: 'Each callback receives the accumulated children', docSays: 'render callback contract: (children, meta) - meta is the metadata arg, NOT an element', evidencePath: 'markdownGotchas.renderContract.headingId', kind: 'consistent' },
 ];
 
 /** APIs with grounded evidence but no ledger row (fit/filter/quality/... come from the probe gates). */

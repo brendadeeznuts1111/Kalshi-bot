@@ -5,7 +5,7 @@
   "bundleHash": "bun-types@1.4.0-c0dadede486f49ab",
   "verdictCounts": {
     "PINNED-DISCREPANCY": 8,
-    "CONSISTENT": 93
+    "CONSISTENT": 96
   },
   "checks": [
     {
@@ -875,6 +875,30 @@
       "source": "bun.d.ts",
       "docSays": "markdown.react: React-element parse",
       "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "MD-gfm",
+      "api": "tables",
+      "source": "bun.d.ts",
+      "docSays": "GFM (tables/strikethrough/tasklists) ON by default, per-feature toggles",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "MD-list",
+      "api": "listItem",
+      "source": "bun.d.ts",
+      "docSays": "render callbacks: list/listItem with meta (checked/start/ordered)",
+      "observed": "c=truec=false",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "MD-meta",
+      "api": "heading",
+      "source": "bun.d.ts",
+      "docSays": "render callback contract: (children, meta) - meta is the metadata arg, NOT an element",
+      "observed": "id=hi",
       "verdict": "CONSISTENT"
     }
   ],

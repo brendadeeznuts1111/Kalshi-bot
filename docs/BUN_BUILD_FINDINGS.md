@@ -554,7 +554,7 @@ Sources: bundled bun-types@1.4.0 (bun-types@1.4.0-c0dadede486f49ab) docs + `bun.
 PINNED-DISCREPANCY (doc says X, observed Y — our correction), DOC-CHANGED (fragment missing —
 the pin premise moved; re-verify), NO-EVIDENCE (ledger path broken).
 
-**Verdict summary:** 101 claims · 93 CONSISTENT · 8 PINNED-DISCREPANCY · 0 DOC-CHANGED · 0 NO-EVIDENCE.
+**Verdict summary:** 104 claims · 96 CONSISTENT · 8 PINNED-DISCREPANCY · 0 DOC-CHANGED · 0 NO-EVIDENCE.
 
 ### BuildArtifact
 
@@ -707,6 +707,9 @@ This fun | CONSISTENT |
 | `MD-ansi` | `ansi` | `bun.d.ts` | markdown.ansi: ANSI escapes; colors:false -> plain | true | CONSISTENT |
 | `MD-render` | `render` | `bun.d.ts` | markdown.render: custom element callbacks | Hi | CONSISTENT |
 | `MD-react` | `react` | `bun.d.ts` | markdown.react: React-element parse | true | CONSISTENT |
+| `MD-gfm` | `tables` | `bun.d.ts` | GFM (tables/strikethrough/tasklists) ON by default, per-feature toggles | true | CONSISTENT |
+| `MD-list` | `listItem` | `bun.d.ts` | render callbacks: list/listItem with meta (checked/start/ordered) | c=truec=false | CONSISTENT |
+| `MD-meta` | `heading` | `bun.d.ts` | render callback contract: (children, meta) - meta is the metadata arg, NOT an element | id=hi | CONSISTENT |
 
 No coverage gaps: every declared option on the grounded surfaces has evidence.
 

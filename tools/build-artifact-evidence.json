@@ -522,7 +522,20 @@
     "ansiHasEscapes": true,
     "ansiColorsFalsePlain": true,
     "renderCallback": "Hi",
-    "reactParses": true
+    "reactParses": true,
+    "gfm": {
+      "tablesDefault": true,
+      "tablesOffPlain": true,
+      "strikethrough": true,
+      "tasklists": true
+    },
+    "renderContract": {
+      "listItemChecked": "c=truec=false",
+      "listOrdered": "o=false",
+      "orderedStart": "s=3",
+      "tableAlign": "a=lefta=right12",
+      "headingId": "id=hi"
+    }
   },
   "scenarios": [
     {
@@ -970,7 +983,7 @@
         {
           "path": "outbc/pure.js.jsc",
           "kind": "bytecode",
-          "hash": "62m8yyp1",
+          "hash": "9vcxvssb",
           "loader": "file",
           "size": 10944,
           "type": "application/octet-stream",
