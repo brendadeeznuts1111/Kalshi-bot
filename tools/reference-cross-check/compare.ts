@@ -140,6 +140,10 @@ export const LEDGER: LedgerClaim[] = [
   { id: 'SQ-setCustomSQLite', api: 'setCustomSQLite', source: 'sqlite.d.ts', fragment: 'static setCustomSQLite(path: string): boolean', docSays: 'setCustomSQLite: first call returns true; after any Database it throws SQLite already loaded', evidencePath: 'deepPassGotchas.sqlite.setCustomSQLiteAfterDb', kind: 'consistent' },
   { id: 'SQ-fileControl', api: 'fileControl', source: 'sqlite.d.ts', fragment: 'fileControl(op: number', docSays: 'fileControl: returns 12 (SQLITE_NOTFOUND) for PERSIST_WAL + bogus ops on 1.4.0', evidencePath: 'deepPassGotchas.sqlite.fileControlPersistWalReturns', kind: 'consistent' },
   { id: 'SQ-loadExtension', api: 'loadExtension', source: 'sqlite.d.ts', fragment: 'loadExtension(extension: string, entryPoint?: string): void', docSays: 'loadExtension: REJECTS - the macOS system SQLite build does not support dynamic extensions', evidencePath: 'deepPassGotchas.sqlite.loadExtensionError', kind: 'consistent' },
+  { id: 'MD-html', api: 'html', source: 'bun.d.ts', fragment: 'render to an HTML string', docSays: 'markdown.html: markdown -> HTML string', evidencePath: 'markdownGotchas.html', kind: 'consistent' },
+  { id: 'MD-ansi', api: 'ansi', source: 'bun.d.ts', fragment: 'render to an ANSI-colored string', docSays: 'markdown.ansi: ANSI escapes; colors:false -> plain', evidencePath: 'markdownGotchas.ansiHasEscapes', kind: 'consistent' },
+  { id: 'MD-render', api: 'render', source: 'bun.d.ts', fragment: 'render with custom callbacks', docSays: 'markdown.render: custom element callbacks', evidencePath: 'markdownGotchas.renderCallback', kind: 'consistent' },
+  { id: 'MD-react', api: 'react', source: 'bun.d.ts', fragment: 'React-compatible JSX elements', docSays: 'markdown.react: React-element parse', evidencePath: 'markdownGotchas.reactParses', kind: 'consistent' },
 ];
 
 /** APIs with grounded evidence but no ledger row (fit/filter/quality/... come from the probe gates). */

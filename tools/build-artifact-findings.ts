@@ -37,6 +37,7 @@ L('Grounding evidence: ' + BTK + 'tools/build-artifact-evidence.json' + BTK + ' 
 L('' + BTK + 'bun run build-artifact:evidence' + BTK + ' from LIVE ' + BTK + 'Bun.build()' + BTK + ' runs in');
 L('' + BTK + 'scratch/art-ground/' + BTK + ' on Bun ' + ev.bunVersion + ' (' + short + '). Every value below was');
 L('OBSERVED, not assumed; docs claims are compared against these artifacts, never the reverse.');
+L('View in the terminal: ' + BTK + 'bun run findings:term' + BTK + ' (Bun.markdown.ansi via report:term).');
 L();
 L('## 1. BuildArtifact — read-only output surface (result.outputs[i])');
 L();

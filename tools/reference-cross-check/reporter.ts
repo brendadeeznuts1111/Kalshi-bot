@@ -46,6 +46,7 @@ const SURFACES: [string, string][] = [
   ['CR', 'Bun.cron'],
   ['WV', 'Bun.WebView'],
   ['S3', 'Bun.s3'],
+  ['MD', 'Bun.markdown'],
 ];
 
 export function renderSection9(checks: CheckResult[], gaps: CoverageGap[], meta: CrossCheckMeta): string {

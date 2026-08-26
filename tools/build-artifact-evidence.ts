@@ -874,6 +874,23 @@ const deepPassGotchas = {
   },
 };
 
+// ---------- markdownGotchas: Bun.markdown namespace (178) - html/ansi/render/react ----------
+const mdNs: any = (Bun as any).markdown;
+const mdHtml = mdNs.html('# Hi **bold** and `code`');
+const mdAnsi = mdNs.ansi('# Hi **bold**');
+const mdPlain = mdNs.ansi('# Hi', { colors: false } as any);
+const mdRendered = mdNs.render('# Hi', { h1: (text: any, children: any) => 'H1[' + children.join('') + ']' } as any);
+let mdReactOk = false;
+try { const el = mdNs.react('# Hi'); mdReactOk = el !== null && typeof el === 'object'; } catch { mdReactOk = false; }
+const markdownGotchas = {
+  surface: { html: typeof mdNs.html, ansi: typeof mdNs.ansi, render: typeof mdNs.render, react: typeof mdNs.react },
+  html: mdHtml.trim().slice(0, 90),
+  ansiHasEscapes: /\x1b\[/.test(mdAnsi),
+  ansiColorsFalsePlain: !/\x1b\[/.test(mdPlain),
+  renderCallback: mdRendered,
+  reactParses: mdReactOk,
+};
+
 // ---------- emit ----------
 const evidence = {
   tool: 'tools/build-artifact-evidence.ts',
@@ -895,6 +912,7 @@ const evidence = {
   webviewGotchas,
   s3Gotchas,
   deepPassGotchas,
+  markdownGotchas,
   scenarios,
 };
 await Bun.write(EVIDENCE, JSON.stringify(evidence, null, 2) + '\n');

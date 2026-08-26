@@ -511,6 +511,19 @@
       "loadExtensionError": "This build of sqlite3 does not support dynamic ext"
     }
   },
+  "markdownGotchas": {
+    "surface": {
+      "html": "function",
+      "ansi": "function",
+      "render": "function",
+      "react": "function"
+    },
+    "html": "<h1>Hi <strong>bold</strong> and <code>code</code></h1>",
+    "ansiHasEscapes": true,
+    "ansiColorsFalsePlain": true,
+    "renderCallback": "Hi",
+    "reactParses": true
+  },
   "scenarios": [
     {
       "name": "S01-artifact-surface",
@@ -957,7 +970,7 @@
         {
           "path": "outbc/pure.js.jsc",
           "kind": "bytecode",
-          "hash": "3vwz5h95",
+          "hash": "62m8yyp1",
           "loader": "file",
           "size": 10944,
           "type": "application/octet-stream",

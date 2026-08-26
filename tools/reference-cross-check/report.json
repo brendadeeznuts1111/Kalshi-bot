@@ -5,7 +5,7 @@
   "bundleHash": "bun-types@1.4.0-c0dadede486f49ab",
   "verdictCounts": {
     "PINNED-DISCREPANCY": 8,
-    "CONSISTENT": 89
+    "CONSISTENT": 93
   },
   "checks": [
     {
@@ -843,6 +843,38 @@
       "source": "sqlite.d.ts",
       "docSays": "loadExtension: REJECTS - the macOS system SQLite build does not support dynamic extensions",
       "observed": "This build of sqlite3 does not support dynamic ext",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "MD-html",
+      "api": "html",
+      "source": "bun.d.ts",
+      "docSays": "markdown.html: markdown -> HTML string",
+      "observed": "<h1>Hi <strong>bold</strong> and <code>code</code></h1>",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "MD-ansi",
+      "api": "ansi",
+      "source": "bun.d.ts",
+      "docSays": "markdown.ansi: ANSI escapes; colors:false -> plain",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "MD-render",
+      "api": "render",
+      "source": "bun.d.ts",
+      "docSays": "markdown.render: custom element callbacks",
+      "observed": "Hi",
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "MD-react",
+      "api": "react",
+      "source": "bun.d.ts",
+      "docSays": "markdown.react: React-element parse",
+      "observed": true,
       "verdict": "CONSISTENT"
     }
   ],

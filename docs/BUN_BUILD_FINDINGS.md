@@ -5,6 +5,7 @@ Grounding evidence: `tools/build-artifact-evidence.json` — captured by
 `bun run build-artifact:evidence` from LIVE `Bun.build()` runs in
 `scratch/art-ground/` on Bun 1.4.0 (34cbb9a40). Every value below was
 OBSERVED, not assumed; docs claims are compared against these artifacts, never the reverse.
+View in the terminal: `bun run findings:term` (Bun.markdown.ansi via report:term).
 
 ## 1. BuildArtifact — read-only output surface (result.outputs[i])
 
@@ -181,7 +182,7 @@ Observed: {"kinds":["entry-point","bytecode"]}
 | Output path | kind | hash | loader | size | type | sourcemap |
 |---|---|---|---|---|---|---|
 `outbc/pure.js` | `entry-point` | `h2vnn1me` | `ts` | 1527 | `text/javascript;charset=utf-8` | `null`
-`outbc/pure.js.jsc` | `bytecode` | `tz4z5zba` | `file` | 10944 | `application/octet-stream` | `null`
+`outbc/pure.js.jsc` | `bytecode` | `62m8yyp1` | `file` | 10944 | `application/octet-stream` | `null`
 
 ### S07a-compile-outdir
 
@@ -553,7 +554,7 @@ Sources: bundled bun-types@1.4.0 (bun-types@1.4.0-c0dadede486f49ab) docs + `bun.
 PINNED-DISCREPANCY (doc says X, observed Y — our correction), DOC-CHANGED (fragment missing —
 the pin premise moved; re-verify), NO-EVIDENCE (ledger path broken).
 
-**Verdict summary:** 97 claims · 89 CONSISTENT · 8 PINNED-DISCREPANCY · 0 DOC-CHANGED · 0 NO-EVIDENCE.
+**Verdict summary:** 101 claims · 93 CONSISTENT · 8 PINNED-DISCREPANCY · 0 DOC-CHANGED · 0 NO-EVIDENCE.
 
 ### BuildArtifact
 
@@ -697,6 +698,15 @@ This fun | CONSISTENT |
 | `S3-noRead` | `read` | `s3.d.ts` | S3File has NO .read() (use text/json/image/slice/arrayBuffer) | undefined | CONSISTENT |
 | `S3-fileDataOptions` | `data` | `s3.d.ts` | S3File data/options DECLARED in types but ABSENT at runtime on 1.4.0 | undefined | PINNED-DISCREPANCY |
 | `S3-list` | `list` | `s3.d.ts` | S3Client.list: needs credentials (rejects offline) | ERR_S3_MISSING_CREDENTIALS | CONSISTENT |
+
+### Bun.markdown
+
+| Claim | API | Source | Doc says | Observed | Verdict |
+|---|---|---|---|---|---|
+| `MD-html` | `html` | `bun.d.ts` | markdown.html: markdown -> HTML string | <h1>Hi <strong>bold</strong> and <code>code</code></h1> | CONSISTENT |
+| `MD-ansi` | `ansi` | `bun.d.ts` | markdown.ansi: ANSI escapes; colors:false -> plain | true | CONSISTENT |
+| `MD-render` | `render` | `bun.d.ts` | markdown.render: custom element callbacks | Hi | CONSISTENT |
+| `MD-react` | `react` | `bun.d.ts` | markdown.react: React-element parse | true | CONSISTENT |
 
 No coverage gaps: every declared option on the grounded surfaces has evidence.
 

@@ -72,6 +72,9 @@ const WS_ALLOWLIST = [
   '**/src/research/live-page.ts',
   '**/src/research/map-page.ts', // documents server.upgrade() H3 caveat (§39), not a call
   '**/tools/ws-probe.ts', // probe deliberately exercises the websocket surface (§114)
+  '**/tools/build-artifact-evidence.ts', // probe harness: serveGotchas/deepPass exercise websocket + upgrade (178)
+  '**/tools/reference-cross-check/report.json', // claim TEXT containing the word websocket, not code
+  '**/tools/reference-cross-check/compare.ts', // SV-websocket claim docSays text, not a call
 ];
 
 

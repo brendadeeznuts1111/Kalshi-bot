@@ -66,6 +66,7 @@ export async function runCrossCheck(): Promise<number> {
   declared['WebView'] = classMembers(dts, 'WebView');
   declared['S3File'] = interfaceFields(s3Dts, 'S3File');
   declared['S3Client'] = classMembers(s3Dts, 'S3Client');
+  declared['Bun.markdown'] = ['html', 'ansi', 'render', 'react']; // curated - namespace, not an interface
   const gaps = coverageGaps(declared, covered);
 
   const meta: CrossCheckMeta = {
