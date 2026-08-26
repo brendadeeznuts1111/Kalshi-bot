@@ -19,6 +19,7 @@ const argv = Bun.argv.slice(2);
 const inputFlag = argv.find((a) => a.startsWith('--input='));
 const kFlag = argv.find((a) => a.startsWith('--k='));
 const mcFlag = argv.find((a) => a.startsWith('--min-cluster='));
+const styled = argv.includes('--styled');
 const k = kFlag ? Number(kFlag.slice('--k='.length)) : 5;
 const minClusterSize = mcFlag ? Number(mcFlag.slice('--min-cluster='.length)) : 3;
 
@@ -65,5 +66,10 @@ const md: string[] = [
 ];
 for (const s of shifts) md.push('- ' + s.kind + ' from [' + s.fromLabels.join(',') + '] to ' + s.toLabel + ' (' + s.size + ' prints)');
 writeFileSync(join(OUT, 'odds-clusters.md'), md.join('\n') + '\n');
-console.log('alpha:cluster - ' + prints.length + ' prints, ' + summary.clusters + ' clusters, ' + summary.noise + ' noise, ' + shifts.length + ' shifts');
+if (styled) {
+  const styledMd = ['# Odds consensus', '', '**' + prints.length + '** prints · **' + summary.clusters + '** clusters · **' + summary.noise + '** noise', 'consensus shifts: ' + shifts.length, '', ...shifts.map((s) => '- ' + s.kind + ' from [' + s.fromLabels.join(',') + '] to ' + s.toLabel + ' (' + s.size + ' prints)')].join('\n');
+  console.log((Bun as any).markdown.ansi(styledMd));
+} else {
+  console.log('alpha:cluster - ' + prints.length + ' prints, ' + summary.clusters + ' clusters, ' + summary.noise + ' noise, ' + shifts.length + ' shifts');
+}
 console.log('output: research/outputs/odds-clusters.{json,md}');

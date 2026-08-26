@@ -212,6 +212,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §194 — Artifact interface — uniform contract for bundles/tiles/manifests/XML + two proposal corrections (2026-08-26)
 - §195 — Bun 1.4 perf mapping — most proposal items ALREADY active here + 2 new grounded facts (2026-08-26)
 - §196 — Consensus tracker — steam-move shifts wired + k-default bug (2026-08-26)
+- §197 — Styled integration — alpha:cluster --styled via markdown.ansi + Bun.Terminal PTY pin (2026-08-26)
 - §187 — Extended color formats — kernel-only (lch/oklab/oklch/hsv) + inverse parsers (2026-08-26)
 - §188 — Watermark pipeline — ML-DSA key naming + WebView/Blob verified facts (2026-08-26)
 - §189 — Color input-parsing correction — lab()/lch() parse natively, oklab/oklch/hsv/device-cmyk null (2026-08-26)
@@ -7045,6 +7046,21 @@ point - the core distance collapsed to ~2.0 and the MRD had no intra-cluster
 structure, producing ONE cluster instead of two (no merge was ever detected).
 Fix: k now defaults to minClusterSize (HDBSCAN convention: core-distance neighbors
 track the minimum cluster size) unless k is given explicitly. The CLI passes k=5
+## 197. Styled integration - alpha:cluster --styled via markdown.ansi + Bun.Terminal PTY pin (2026-08-26)
+
+alpha:cluster gained --styled: the consensus summary renders through the grounded
+Bun.markdown.ansi surface (MD-ansi) - bold counts, heading, rule. Tested (ANSI
+escapes present when --styled, absent by default).
+
+Bun.Terminal grounded deeper: it is a PTY emulator (class Terminal implements
+AsyncDisposable: constructor + write/resize/setRawMode/closed; TerminalOptions =
+cols/rows/name + data/exit/drain callbacks; pairs with Bun.spawn({ terminal })).
+The blog's Bun.spawn(["bash"], { terminal: { cols, rows } }) codeblock typechecks
+(PASS in blog:codeblocks-check). Full PTY OPEN is NOT-MEASURABLE in this sandbox:
+'Failed to open PTY' (no tty alloc) - same class as Bun.SourceMap. The proposal's
+terminal.warn() does not exist (warnFn undefined) - Bun.Terminal is NOT a color API.
+Evidence miscGotchas.terminal.ptyOpenInSandbox records the honest note.
+
 explicitly so its 24-print fixture is unaffected.
 
   - BA-sourcemapNested: sourcemap: 'linked' nests a BuildArtifact whose hash is a

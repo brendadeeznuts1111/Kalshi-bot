@@ -1075,6 +1075,7 @@ const miscGotchas = {
   terminal: {
     exists: typeof (Bun as any).Terminal === 'function',
     warnFn: typeof (Bun as any).Terminal?.warn,
+    ptyOpenInSandbox: (() => { try { new (Bun as any).Terminal({}); return 'opened'; } catch (e: any) { return String(e.message).slice(0, 30); } })(),
   },
   cpuProfMd: await (async () => {
     // bun --cpu-prof-md writes a Markdown CPU profile (blog Observability claim).
