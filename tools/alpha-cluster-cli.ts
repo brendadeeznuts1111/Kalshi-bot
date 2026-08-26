@@ -10,6 +10,7 @@
  */
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { parseArgs } from 'node:util';
 import { listFiles } from '../src/lib/glob.ts';
 import { type OddsPrint } from '../src/alpha/cluster/odds-vector.ts';
 import { ConsensusTracker } from '../src/alpha/cluster/tracker.ts';
@@ -28,35 +29,58 @@ export type ClusterCliOptions = {
   help: boolean;
 };
 
-/** Parse alpha:cluster flags; returns the error string for invalid flags. */
+/**
+ * Parse alpha:cluster flags with the Bun-recommended util.parseArgs
+ * (official guide: research/cache/bun-docs/guides-process-argv.mdx, pinned
+ * bun-v1.4.0 - 'To parse argv into a more useful format, use util.parseArgs').
+ * strict:false keeps unknown flags lenient (repo convention); shorts -v/-h map
+ * to verbose/help. Returns the error string for invalid flags.
+ */
 export function parseClusterCli(argv: string[]): { opts: ClusterCliOptions } | { error: string } {
-  const inputFlag = argv.find((a) => a.startsWith('--input='));
-  const globFlag = argv.find((a) => a.startsWith('--glob='));
-  const kFlag = argv.find((a) => a.startsWith('--k='));
-  const mcFlag = argv.find((a) => a.startsWith('--min-cluster='));
-  const fmtFlag = argv.find((a) => a.startsWith('--format='));
-  const styled = argv.includes('--styled');
-  const verbose = argv.includes('--verbose') || argv.includes('-v');
-  const help = argv.includes('--help') || argv.includes('-h');
-  const formatRaw = fmtFlag ? fmtFlag.slice('--format='.length) : 'table';
+  let values: Record<string, unknown>;
+  try {
+    const parsed = parseArgs({
+      args: argv,
+      options: {
+        input: { type: 'string' },
+        glob: { type: 'string' },
+        k: { type: 'string' },
+        'min-cluster': { type: 'string' },
+        format: { type: 'string' },
+        styled: { type: 'boolean' },
+        verbose: { type: 'boolean', short: 'v' },
+        help: { type: 'boolean', short: 'h' },
+      },
+      strict: false,
+      allowPositionals: true,
+    });
+    values = parsed.values as Record<string, unknown>;
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : String(err) };
+  }
+  const formatRaw = typeof values.format === 'string' ? values.format : 'table';
   if (formatRaw !== 'table' && formatRaw !== 'json' && formatRaw !== 'yaml') {
     return { error: '--format must be table|json|yaml (got ' + formatRaw + ')' };
   }
-  const k = kFlag ? Number(kFlag.slice('--k='.length)) : 5;
-  const minClusterSize = mcFlag ? Number(mcFlag.slice('--min-cluster='.length)) : 3;
-  if (kFlag && !Number.isFinite(k) || k < 1) return { error: '--k must be a positive number (got ' + kFlag + ')' };
-  if (mcFlag && !Number.isFinite(minClusterSize) || minClusterSize < 1) return { error: '--min-cluster must be a positive number (got ' + mcFlag + ')' };
-  if (inputFlag && globFlag) return { error: '--input and --glob are mutually exclusive' };
+  const kRaw = typeof values.k === 'string' ? values.k : undefined;
+  const mcRaw = typeof values['min-cluster'] === 'string' ? values['min-cluster'] : undefined;
+  const k = kRaw !== undefined ? Number(kRaw) : 5;
+  const minClusterSize = mcRaw !== undefined ? Number(mcRaw) : 3;
+  if (kRaw !== undefined && (!Number.isFinite(k) || k < 1)) return { error: '--k must be a positive number (got ' + kRaw + ')' };
+  if (mcRaw !== undefined && (!Number.isFinite(minClusterSize) || minClusterSize < 1)) return { error: '--min-cluster must be a positive number (got ' + mcRaw + ')' };
+  const input = typeof values.input === 'string' ? values.input : null;
+  const glob = typeof values.glob === 'string' ? values.glob : null;
+  if (input && glob) return { error: '--input and --glob are mutually exclusive' };
   return {
     opts: {
-      input: inputFlag ? inputFlag.slice('--input='.length) : null,
-      glob: globFlag ? globFlag.slice('--glob='.length) : null,
+      input,
+      glob,
       k,
       minClusterSize,
-      styled,
+      styled: values.styled === true,
       format: formatRaw as 'table' | 'json' | 'yaml',
-      verbose,
-      help,
+      verbose: values.verbose === true,
+      help: values.help === true,
     },
   };
 }

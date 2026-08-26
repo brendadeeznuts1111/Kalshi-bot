@@ -221,6 +221,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §204 — Bun.which — absolute path/null, PATH override, cwd anchors relative commands + PATH entries (2026-08-26)
 - §205 — CLI polish audited — fictional desk.ts shell, color caller-gate truth, --format via Bun.YAML (2026-08-26)
 - §206 — alpha:cluster deeper — --help, --glob via Bun.Glob, --verbose membership table (2026-08-26)
+- §207 — CLI parsing audited — official guide mandates util.parseArgs; alpha:cluster migrated (2026-08-26)
 - §199 — ui:regen CLI — regenerate UI artifacts from meta/variant sources + the Bun.$ template failure class (2026-08-26)
 - §187 — Extended color formats — kernel-only (lch/oklab/oklch/hsv) + inverse parsers (2026-08-26)
 - §188 — Watermark pipeline — ML-DSA key naming + WebView/Blob verified facts (2026-08-26)
@@ -7283,3 +7284,28 @@ Completed the §205 audit items that were not yet wired into tools/alpha-cluster
 - Tests: alpha-cluster-cli.test.ts now 11 (glob merge + no-match + single
   input + help flag coverage). Smoke: --glob matched 1 file -> 9 prints,
   1 cluster (z-score of 9 prints across 3 pockets is one cluster - correct).
+
+
+
+## 207. CLI arg parsing audited against the official Bun guide - util.parseArgs is THE recommendation (2026-08-26)
+
+Question: 'is this how bun recommends doing this?' - audited against the pinned
+official docs (research/cache/bun-docs/guides-process-argv.mdx, bun-v1.4.0):
+Bun deliberately does NOT ship its own parser; the guide says 'To parse argv
+into a more useful format, use util.parseArgs' (node:util). Bun.Args does NOT
+exist in 1.4.0 (grep of bun.d.ts + all bun-types: zero matches).
+- REPO SPLIT: the schedule/tennis/match-liquidity/agent managed CLIs already
+  use parseArgs (correct). A long tail of tools hand-rolled
+  argv.find(a => a.startsWith('--x=')) + includes('--flag') - alpha:cluster,
+  alpha-consensus-watch, watermark-sign, image-meta, blog-assets-mirror,
+  brand-card, kalshi-secrets, canonical-asset, prune-content, content-verify,
+  ops-cli, domain-cli, color-theme, licenses-gate, live-tracker, etc.
+- MIGRATED NOW: alpha:cluster parseClusterCli -> util.parseArgs with shorts
+  (-v/-h), strict:false + allowPositionals:true (lenient, repo convention),
+  same error strings + defaults + exit codes (11 tests pass unchanged;
+  --k=abc and --glob no-match still exit 2).
+- Why parseArgs: value/boolean type separation, --flag=value AND --flag value
+  forms, short aliases, unknown-flag policy, positionals - for free, instead
+  of the hand-rolled startsWith subset. Remaining hand-rolled tools are
+  LOW-RISK single-flag CLIs; migrating them is mechanical if desired.
+
