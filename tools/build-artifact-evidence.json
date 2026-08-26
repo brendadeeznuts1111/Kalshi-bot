@@ -518,6 +518,10 @@
       "render": "function",
       "react": "function"
     },
+    "namedExport": {
+      "identity": true,
+      "keys": "html,ansi,render,react"
+    },
     "html": "<h1>Hi <strong>bold</strong> and <code>code</code></h1>",
     "ansiHasEscapes": true,
     "ansiColorsFalsePlain": true,
@@ -542,6 +546,7 @@
     "options": {
       "autolinksDefaultOff": true,
       "autolinksUrlOnly": true,
+      "autolinksTrueAll": true,
       "headingsIds": true,
       "wikiLinks": true,
       "wwwAutolink": true,
@@ -1042,7 +1047,7 @@
         {
           "path": "outbc/pure.js.jsc",
           "kind": "bytecode",
-          "hash": "79c95y9c",
+          "hash": "7eh3spve",
           "loader": "file",
           "size": 10944,
           "type": "application/octet-stream",

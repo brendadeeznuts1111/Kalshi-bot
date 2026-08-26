@@ -554,7 +554,7 @@ Sources: bundled bun-types@1.4.0 (bun-types@1.4.0-c0dadede486f49ab) docs + `bun.
 PINNED-DISCREPANCY (doc says X, observed Y — our correction), DOC-CHANGED (fragment missing —
 the pin premise moved; re-verify), NO-EVIDENCE (ledger path broken).
 
-**Verdict summary:** 114 claims · 106 CONSISTENT · 8 PINNED-DISCREPANCY · 0 DOC-CHANGED · 0 NO-EVIDENCE.
+**Verdict summary:** 116 claims · 108 CONSISTENT · 8 PINNED-DISCREPANCY · 0 DOC-CHANGED · 0 NO-EVIDENCE.
 
 ### BuildArtifact
 
@@ -711,6 +711,8 @@ This fun | CONSISTENT |
 | `MD-list` | `listItem` | `bun.d.ts` | render callbacks: list/listItem with meta (checked/start/ordered) | c=truec=false | CONSISTENT |
 | `MD-meta` | `heading` | `bun.d.ts` | render callback contract: (children, meta) - meta is the metadata arg, NOT an element | id=hi | CONSISTENT |
 | `MD-autolinks` | `autolinks` | `bun.d.ts` | autolinks OFF by default; { url: true } form works | true | CONSISTENT |
+| `MD-autolinksTrue` | `autolinks` | `bun.d.ts` | autolinks: true (boolean) enables url + www + email at once - verified | true | CONSISTENT |
+| `MD-namedExport` | `markdown` | `bun.d.ts` | import { markdown } from "bun" is the SAME namespace object as Bun.markdown (module aliases globalThis.Bun); html/ansi/render/react all exposed | true | CONSISTENT |
 | `MD-wikiLinks` | `wikiLinks` | `bun.d.ts` | wikiLinks renders a custom x-wikilink element | true | CONSISTENT |
 | `MD-permissiveAtx` | `permissiveAtxHeaders` | `bun.d.ts` | permissiveAtxHeaders honored; runtime default is OFF (matches types); true renders #header, false keeps it a paragraph | true | CONSISTENT |
 | `MD-callbacks` | `code` | `bun.d.ts` | code/link/image/hr/blockquote callbacks receive (children, meta) | lang=js | CONSISTENT |

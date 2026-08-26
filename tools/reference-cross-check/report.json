@@ -5,7 +5,7 @@
   "bundleHash": "bun-types@1.4.0-c0dadede486f49ab",
   "verdictCounts": {
     "PINNED-DISCREPANCY": 8,
-    "CONSISTENT": 106
+    "CONSISTENT": 108
   },
   "checks": [
     {
@@ -906,6 +906,22 @@
       "api": "autolinks",
       "source": "bun.d.ts",
       "docSays": "autolinks OFF by default; { url: true } form works",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "MD-autolinksTrue",
+      "api": "autolinks",
+      "source": "bun.d.ts",
+      "docSays": "autolinks: true (boolean) enables url + www + email at once - verified",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "MD-namedExport",
+      "api": "markdown",
+      "source": "bun.d.ts",
+      "docSays": "import { markdown } from \"bun\" is the SAME namespace object as Bun.markdown (module aliases globalThis.Bun); html/ansi/render/react all exposed",
       "observed": true,
       "verdict": "CONSISTENT"
     },

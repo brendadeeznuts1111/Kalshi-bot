@@ -36,6 +36,7 @@
  *    no escapes).
  */
 import { describe, expect, test } from "bun:test";
+import { markdown as markdownNs } from "bun";
 
 // --------------------------------------------------------------
 // 1. API SURFACE
@@ -46,6 +47,13 @@ describe("Bun.markdown API surface", () => {
     expect(Bun.markdown.render).toBeDefined();
     expect(Bun.markdown.react).toBeDefined();
     expect(Bun.markdown.ansi).toBeDefined();
+  });
+
+  test("import { markdown } from \"bun\" is the same object as Bun.markdown", () => {
+    // The d.ts declares `namespace markdown` inside `declare module "bun"` and
+    // the module aliases globalThis.Bun — one namespace, two access paths.
+    expect(markdownNs).toBe(Bun.markdown as any);
+    expect(Object.keys(markdownNs).sort()).toEqual(["ansi", "html", "react", "render"]);
   });
 });
 
@@ -123,6 +131,16 @@ describe("Bun.markdown.html()", () => {
       });
       expect(html).toContain('href="https://bun.sh"');
       expect(html).not.toContain('href="http://www.example.com"');
+    });
+
+    test("boolean true enables url + www + email at once (MD-autolinksTrue)", () => {
+      const html = Bun.markdown.html(
+        "Visit https://bun.sh or www.example.com or email me@example.com",
+        { autolinks: true },
+      );
+      expect(html).toContain('href="https://bun.sh"');
+      expect(html).toContain('href="http://www.example.com"');
+      expect(html).toContain('href="mailto:me@example.com"');
     });
 
     test("www and email autolinks enabled individually", () => {

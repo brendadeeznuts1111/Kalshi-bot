@@ -10,6 +10,7 @@
  * no timestamps. Standalone executables from compile:true are captured
  * then deleted (they are tens of MB).
  */
+import { markdown as mdNamed } from 'bun';
 import { join } from 'node:path';
 import { existsSync, rmSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -876,6 +877,10 @@ const deepPassGotchas = {
 
 // ---------- markdownGotchas: Bun.markdown namespace (178) - html/ansi/render/react ----------
 const mdNs: any = (Bun as any).markdown;
+const mdNamedExport = {
+  identity: mdNamed === mdNs,
+  keys: Object.keys(mdNamed).join(','),
+};
 const mdHtml = mdNs.html('# Hi **bold** and `code`');
 const mdAnsi = mdNs.ansi('# Hi **bold**');
 const mdPlain = mdNs.ansi('# Hi', { colors: false } as any);
@@ -884,6 +889,7 @@ let mdReactOk = false;
 try { const el = mdNs.react('# Hi'); mdReactOk = el !== null && typeof el === 'object'; } catch { mdReactOk = false; }
 const markdownGotchas = {
   surface: { html: typeof mdNs.html, ansi: typeof mdNs.ansi, render: typeof mdNs.render, react: typeof mdNs.react },
+  namedExport: mdNamedExport,
   html: mdHtml.trim().slice(0, 90),
   ansiHasEscapes: /\x1b\[/.test(mdAnsi),
   ansiColorsFalsePlain: !/\x1b\[/.test(mdPlain),
@@ -908,6 +914,7 @@ const markdownGotchas = {
   options: {
     autolinksDefaultOff: !mdNs.html('Visit https://example.com/x').includes('<a href'),
     autolinksUrlOnly: mdNs.html('Visit https://example.com/x', { autolinks: { url: true } } as any).includes('<a href'),
+    autolinksTrueAll: (() => { const h = mdNs.html('Visit https://bun.sh or www.example.com or email me@example.com', { autolinks: true } as any); return h.includes('href="https://bun.sh"') && h.includes('href="http://www.example.com"') && h.includes('href="mailto:me@example.com"'); })(),
     headingsIds: mdNs.html('# Hi', { headings: { ids: true } } as any).includes('id="hi"'),
     wikiLinks: mdNs.html('[[Home]]', { wikiLinks: true } as any).includes('x-wikilink'),
     wwwAutolink: mdNs.html('Visit www.example.com', { autolinks: { www: true } } as any).includes('href="http://www.example.com"'),
