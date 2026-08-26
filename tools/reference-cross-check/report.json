@@ -5,7 +5,7 @@
   "bundleHash": "bun-types@1.4.0-c0dadede486f49ab",
   "verdictCounts": {
     "PINNED-DISCREPANCY": 5,
-    "CONSISTENT": 29
+    "CONSISTENT": 33
   },
   "checks": [
     {
@@ -290,17 +290,39 @@
       "docSays": "optimizeImports: skip unused barrel re-exports",
       "observed": true,
       "verdict": "CONSISTENT"
+    },
+    {
+      "id": "BC-files",
+      "api": "files",
+      "source": "bun.d.ts",
+      "docSays": "files: virtual in-memory files for bundling (not standalone-embedded)",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "BC-reactFastRefresh",
+      "api": "reactFastRefresh",
+      "source": "bun.d.ts",
+      "docSays": "reactFastRefresh: adds refresh registration markers",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "BC-reactCompiler",
+      "api": "reactCompiler",
+      "source": "bun.d.ts",
+      "docSays": "reactCompiler: auto-memoization (guard checks); client mode needs react/compiler-runtime",
+      "observed": true,
+      "verdict": "CONSISTENT"
+    },
+    {
+      "id": "BC-reactCompilerOutputMode",
+      "api": "reactCompilerOutputMode",
+      "source": "bun.d.ts",
+      "docSays": "reactCompilerOutputMode: ssr skips the useMemoCache runtime (builds without compiler-runtime)",
+      "observed": true,
+      "verdict": "CONSISTENT"
     }
   ],
-  "coverageGaps": [
-    {
-      "surface": "BuildConfig",
-      "gaps": [
-        "reactFastRefresh",
-        "reactCompiler",
-        "reactCompilerOutputMode",
-        "files"
-      ]
-    }
-  ]
+  "coverageGaps": []
 }

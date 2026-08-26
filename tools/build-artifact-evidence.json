@@ -238,12 +238,23 @@
       "accepted": true,
       "baselineAccepts": true
     },
-    "typeLevelOnly": [
-      "files",
-      "reactFastRefresh",
-      "reactCompiler",
-      "reactCompilerOutputMode"
-    ]
+    "reactAndFiles": {
+      "filesVirtualBundle": true,
+      "reactFastRefresh": {
+        "honored": true,
+        "marker": true
+      },
+      "reactCompiler": {
+        "honored": true,
+        "memoizationGuards": true
+      },
+      "reactCompilerOutputMode": {
+        "ssrVsClientDiffer": true,
+        "ssrSize": 696,
+        "clientSize": 958
+      }
+    },
+    "typeLevelOnly": []
   },
   "scenarios": [
     {
@@ -691,7 +702,7 @@
         {
           "path": "outbc/pure.js.jsc",
           "kind": "bytecode",
-          "hash": "hfjbc874",
+          "hash": "57fk5y1c",
           "loader": "file",
           "size": 10944,
           "type": "application/octet-stream",

@@ -520,6 +520,12 @@ await Bun.write(join(cfgDir, 'dce2.ts'), 'function impure() { return 1; } export
 await Bun.write(join(cfgDir, 'node_modules/barrel-pkg/package.json'), JSON.stringify({ name: 'barrel-pkg', version: '1.0.0', main: 'index.js', sideEffects: false }));
 await Bun.write(join(cfgDir, 'node_modules/barrel-pkg/index.js'), 'export const a = 1; export const b = 2; export const c = 3;');
 await Bun.write(join(cfgDir, 'barrel.ts'), 'import { a } from "barrel-pkg"; export const v = a;');
+await Bun.write(join(cfgDir, 'node_modules/react/package.json'), JSON.stringify({ name: 'react', version: '19.0.0', exports: { '.': './index.js', './jsx-runtime': './jsx-runtime.js', './jsx-dev-runtime': './jsx-dev-runtime.js', './compiler-runtime': './compiler-runtime.js' } }));
+await Bun.write(join(cfgDir, 'node_modules/react/index.js'), 'export const useState = (x) => [x, () => {}]; export const Fragment = Symbol.for("react.fragment"); export default {};');
+await Bun.write(join(cfgDir, 'node_modules/react/jsx-runtime.js'), 'export const jsx = (t, p) => [t, p]; export const jsxs = (t, p) => [t, p]; export const Fragment = Symbol.for("react.fragment");');
+await Bun.write(join(cfgDir, 'node_modules/react/jsx-dev-runtime.js'), 'export const jsxDEV = (t, p) => [t, p]; export const Fragment = Symbol.for("react.fragment");');
+await Bun.write(join(cfgDir, 'node_modules/react/compiler-runtime.js'), 'export const useMemoCache = (x) => x;');
+await Bun.write(join(cfgDir, 'component.tsx'), 'import { useState } from "react"; export function C({ x }: any) { const [n, setN] = useState(x); return <div onClick={() => setN(n + 1)}>{n}</div>; }');
 const cfgSafe = async (opts: any) => { try { const r = await Bun.build(opts); return { ok: true, r }; } catch { return { ok: false, r: null }; } };
 const cfgText = async (opts: any) => { const s = await cfgSafe(opts); return s.ok && s.r !== null ? await s.r.outputs[0].text() : 'ERR'; };
 const bf = await cfgText({ entrypoints: [join(cfgDir, 'pure.ts')], outdir: join(cfgDir, 'o1'), banner: '/*BANNER*/', footer: '/*FOOTER*/' });
@@ -536,6 +542,15 @@ const em1 = await cfgText({ entrypoints: [join(cfgDir, 'dce2.ts')], outdir: join
 const em2 = await cfgText({ entrypoints: [join(cfgDir, 'dce2.ts')], outdir: join(cfgDir, 'o8b'), minify: { whitespace: true }, emitDCEAnnotations: true });
 const opt1 = await cfgSafe({ entrypoints: [join(cfgDir, 'barrel.ts')], outdir: join(cfgDir, 'o9'), optimizeImports: ['barrel-pkg'] });
 const opt0 = await cfgSafe({ entrypoints: [join(cfgDir, 'barrel.ts')], outdir: join(cfgDir, 'o9b') });
+const reactJ = { entrypoints: [join(cfgDir, 'component.tsx')], outdir: join(cfgDir, 'rj'), jsx: { runtime: 'automatic', importSource: 'react' } };
+const rBase = await cfgText(reactJ);
+const rFast = await cfgText({ ...reactJ, outdir: join(cfgDir, 'rj1'), reactFastRefresh: true });
+const rComp = await cfgText({ ...reactJ, outdir: join(cfgDir, 'rj2'), reactCompiler: true });
+const rSsr = await cfgText({ ...reactJ, outdir: join(cfgDir, 'rj3'), reactCompiler: true, reactCompilerOutputMode: 'ssr' });
+const rClient = await cfgText({ ...reactJ, outdir: join(cfgDir, 'rj4'), reactCompiler: true, reactCompilerOutputMode: 'client' });
+const vFiles = await cfgSafe({ entrypoints: ['/app/index.ts'], outdir: join(cfgDir, 'rj5'), files: { '/app/index.ts': 'import { helper } from "./helper.ts"; export const msg = helper();', '/app/helper.ts': 'export function helper() { return "virtual"; }' } });
+const vFilesText = vFiles.ok ? await (await Bun.build({ entrypoints: ['/app/index.ts'], outdir: join(cfgDir, 'rj6'), files: { '/app/index.ts': 'import { helper } from "./helper.ts"; export const msg = helper();', '/app/helper.ts': 'export function helper() { return "virtual"; }' } })).outputs[0].text() : 'ERR';
+const DOL = String.fromCharCode(36);
 const configGapsGotchas = {
   bannerFooter: { bannerAtTop: bf.includes('/*BANNER*/'), footerAtEnd: bf.trimEnd().includes('/*FOOTER*/') },
   throwOption: {
@@ -555,7 +570,13 @@ const configGapsGotchas = {
     pureMarkEmittedWithEmitFlag: em2.includes('@__PURE__') && !em1.includes('@__PURE__'),
   },
   optimizeImports: { accepted: opt1.ok, baselineAccepts: opt0.ok },
-  typeLevelOnly: ['files', 'reactFastRefresh', 'reactCompiler', 'reactCompilerOutputMode'],
+  reactAndFiles: {
+    filesVirtualBundle: vFiles.ok && vFilesText.includes('virtual'),
+    reactFastRefresh: { honored: rFast !== 'ERR' && rFast !== rBase, marker: rFast.includes(DOL + 'RefreshSig' + DOL) || rFast.includes(DOL + 'RefreshReg' + DOL) },
+    reactCompiler: { honored: rComp !== 'ERR' && rComp !== rBase, memoizationGuards: rComp.includes(DOL + '[') },
+    reactCompilerOutputMode: { ssrVsClientDiffer: rSsr !== rClient, ssrSize: rSsr.length, clientSize: rClient.length },
+  },
+  typeLevelOnly: [],
 };
 rmSync(cfgDir, { recursive: true, force: true });
 

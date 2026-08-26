@@ -589,8 +589,10 @@ the pin premise moved; re-verify), NO-EVIDENCE (ledger path broken).
 | `BC-ignoreDCEAnnotations` | `ignoreDCEAnnotations` | `bun.d.ts` | ignoreDCEAnnotations keeps @__PURE__ calls | true | CONSISTENT |
 | `BC-emitDCEAnnotations` | `emitDCEAnnotations` | `bun.d.ts` | emitDCEAnnotations forces @__PURE__ marks under whitespace minify | true | CONSISTENT |
 | `BC-optimizeImports` | `optimizeImports` | `bun.d.ts` | optimizeImports: skip unused barrel re-exports | true | CONSISTENT |
+| `BC-files` | `files` | `bun.d.ts` | files: virtual in-memory files for bundling (not standalone-embedded) | true | CONSISTENT |
+| `BC-reactFastRefresh` | `reactFastRefresh` | `bun.d.ts` | reactFastRefresh: adds refresh registration markers | true | CONSISTENT |
+| `BC-reactCompiler` | `reactCompiler` | `bun.d.ts` | reactCompiler: auto-memoization (guard checks); client mode needs react/compiler-runtime | true | CONSISTENT |
+| `BC-reactCompilerOutputMode` | `reactCompilerOutputMode` | `bun.d.ts` | reactCompilerOutputMode: ssr skips the useMemoCache runtime (builds without compiler-runtime) | true | CONSISTENT |
 
-### Coverage gaps — declared but not evidence-grounded
-
-- `BuildConfig`: reactFastRefresh, reactCompiler, reactCompilerOutputMode, files
+No coverage gaps: every declared option on the grounded surfaces has evidence.
 

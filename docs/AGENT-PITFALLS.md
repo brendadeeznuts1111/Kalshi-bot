@@ -6368,14 +6368,15 @@ another note.
   is type-only; outfile inert on the API; env: no substitution;
   allowUnresolved glob lists fail the build; transferred Image input ->
   ERR_IMAGE_UNKNOWN_FORMAT not ERR_INVALID_STATE).
-- Coverage sweep (auto, from the bundle interfaces): 34 claims (29
-  CONSISTENT, 5 PINNED-DISCREPANCY). Gap closed from 14 to 4 - banner,
-  footer, throw:false, packages:external, features, tsconfig paths, jsx
-  classic, ignoreDCEAnnotations, emitDCEAnnotations, optimizeImports all
-  grounded (build-artifact:probe P23-P29, evidence configGapsGotchas);
-  remaining GAPs are type-level-only: reactFastRefresh, reactCompiler,
-  reactCompilerOutputMode (need React fixtures), files (needs a standalone
-  executable fixture).
+- Coverage sweep: 38 claims (33 CONSISTENT, 5 PINNED-DISCREPANCY), ZERO gaps -
+  every declared BuildConfig option is now evidence-grounded. Last four,
+  grounded with a fake-react fixture + virtual-file builds (build-artifact:
+  probe P30-P33): files is VIRTUAL IN-MEMORY bundling (map of paths ->
+  contents; NOT the standalone-executable embedded-files option - earlier
+  note corrected); reactFastRefresh adds refresh registration markers;
+  reactCompiler adds memoization guard checks, and client mode requires
+  react/compiler-runtime to resolve while ssr mode builds without it
+  (reactCompilerOutputMode honored).
 - Outputs: tools/reference-cross-check/report.json (deterministic, committed)
   + docs/BUN_BUILD_FINDINGS.md §9 (regenerated; idempotent).
 - Artifacts: tools/reference-cross-check/{index,run,compare,docs-parser,

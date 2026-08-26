@@ -187,6 +187,28 @@ const dce1 = await gText({ entrypoints: [gF + '/dce.ts'], outdir: gF + '/o7', mi
 const dce2 = await gText({ entrypoints: [gF + '/dce.ts'], outdir: gF + '/o7b', minify: { syntax: true, whitespace: true }, ignoreDCEAnnotations: true });
 check('P29 ignoreDCEAnnotations keeps @__PURE__ calls', !dce1.includes('impure') && dce2.includes('impure()'), 'drop=' + (!dce1.includes('impure')) + ' keep=' + dce2.includes('impure()'));
 
+// P30-P33 (178): react transform options + virtual files - grounded with a
+// fake-react fixture (no npm deps). Dollar markers built via char code.
+const gR = 'scratch/art-ground-cfg3';
+await Bun.write(gR + '/node_modules/react/package.json', JSON.stringify({ name: 'react', version: '19.0.0', exports: { '.': './index.js', './jsx-runtime': './jsx-runtime.js', './jsx-dev-runtime': './jsx-dev-runtime.js', './compiler-runtime': './compiler-runtime.js' } }));
+await Bun.write(gR + '/node_modules/react/compiler-runtime.js', 'export const useMemoCache = (x) => x;');
+await Bun.write(gR + '/node_modules/react/index.js', 'export const useState = (x) => [x, () => {}]; export default {};');
+await Bun.write(gR + '/node_modules/react/jsx-runtime.js', 'export const jsx = (t, p) => [t, p]; export const jsxs = (t, p) => [t, p]; export const Fragment = Symbol.for("react.fragment");');
+await Bun.write(gR + '/node_modules/react/jsx-dev-runtime.js', 'export const jsxDEV = (t, p) => [t, p]; export const Fragment = Symbol.for("react.fragment");');
+await Bun.write(gR + '/component.tsx', 'import { useState } from "react"; export function C({ x }: any) { const [n, setN] = useState(x); return <div onClick={() => setN(n + 1)}>{n}</div>; }');
+const rJ = { entrypoints: [gR + '/component.tsx'], outdir: gR + '/rj', jsx: { runtime: 'automatic', importSource: 'react' } };
+const rBase = await gText(rJ);
+const rFast = await gText({ ...rJ, outdir: gR + '/rj1', reactFastRefresh: true });
+const rComp = await gText({ ...rJ, outdir: gR + '/rj2', reactCompiler: true });
+const rSsr = await gText({ ...rJ, outdir: gR + '/rj3', reactCompiler: true, reactCompilerOutputMode: 'ssr' });
+const rClient = await gText({ ...rJ, outdir: gR + '/rj4', reactCompiler: true, reactCompilerOutputMode: 'client' });
+const DL = String.fromCharCode(36);
+check('P30 reactFastRefresh adds refresh markers', rFast !== rBase && (rFast.includes(DL + 'RefreshSig' + DL) || rFast.includes(DL + 'RefreshReg' + DL)), 'differs=' + (rFast !== rBase));
+check('P31 reactCompiler adds memoization guards', rComp !== rBase && rComp.includes(DL + '['), 'differs=' + (rComp !== rBase));
+check('P32 reactCompilerOutputMode ssr != client', rSsr !== rClient, rSsr.length + ' vs ' + rClient.length);
+const vf = await gSafe({ entrypoints: ['/app/index.ts'], outdir: gR + '/rj5', files: { '/app/index.ts': 'export const m = 1;' } });
+check('P33 files: virtual in-memory bundling', vf, 'virtual entry /app/index.ts');
+
 const failed = results.filter((r) => !r.pass);
 console.log("build-artifact:probe - " + (results.length - failed.length) + "/" + results.length + " checks" + (failed.length ? " · FAIL: " + failed.map((f) => f.name).join(", ") : ""));
 process.exit(failed.length === 0 ? 0 : 1);
