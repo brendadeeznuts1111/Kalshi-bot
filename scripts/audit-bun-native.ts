@@ -257,6 +257,7 @@ export const SPAWN_KEEP_LIST = new Set([
   "tools/metafile-probe.ts", // bun build CLI --metafile schema probe (§155)
   "tools/version-probe.ts", // bun --version CLI/API agreement check (§159)
   "tools/coverage-probe.ts", // spawns bun test --coverage children with bunfig thresholds (§161)
+  "tools/ground-probes/index.ts", // cr-7 spawns bun repl with piped stdin (probe)
   "src/lib/ground.ts", // rg usage scan for the grounding manifest (sync audit helper)
   "tools/ground-bun.ts", // rg sweeps for the grounding generator (supersedes coverage-matrix)
   "tools/ground-check.ts", // rg sweeps for the grounding gate (supersedes shape-probe)

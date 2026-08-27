@@ -197,6 +197,34 @@ export const PROBES: Record<string, GroundProbe[]> = {
     p("cr-3", "Bun.deepEquals", "deep equality", async () => {
       return Bun.deepEquals({ a: [1, 2] }, { a: [1, 2] }) && !Bun.deepEquals({ a: 1 }, { a: 2 }) ? ok() : bad("mismatch");
     }),
+    p("cr-4", "crypto.subtle ML-DSA", "post-quantum keygen (verified on 1.4.0; types lag — cast)", async () => {
+      const subtle = crypto.subtle as any;
+      const kp = await subtle.generateKey({ name: "ML-DSA-65" }, false, ["sign", "verify"]);
+      const okKp = kp && typeof kp.publicKey === "object" && typeof kp.privateKey === "object";
+      const sig = await subtle.sign({ name: "ML-DSA-65" }, kp.privateKey, new TextEncoder().encode("pq"));
+      return okKp && sig instanceof ArrayBuffer && sig.byteLength > 0 ? ok("sig=" + sig.byteLength + "B") : bad("keygen/sign failed");
+    }),
+    p("cr-6", "node:crypto ML-KEM/ML-DSA", "post-quantum via generateKeyPairSync(algorithm) (NOT named exports)", async () => {
+      const nc: any = await import("node:crypto");
+      const kem = nc.generateKeyPairSync("ml-kem-768");
+      const dsa = nc.generateKeyPairSync("ml-dsa-65");
+      return kem.publicKey && dsa.publicKey ? ok() : bad("keygen failed");
+    }),
+    p("cr-7", "bun repl", "native REPL banner (async spawn, piped stdin)", async () => {
+      const proc = Bun.spawn({ cmd: ["bun", "repl"], stdin: "pipe", stdout: "pipe", stderr: "pipe" });
+      proc.stdin.write("1+1\n");
+      proc.stdin.end();
+      const [out, err] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text()]);
+      const code = await proc.exited;
+      return code === 0 && (out + err).includes("Welcome to Bun") ? ok() : bad((out + err).slice(0, 60));
+    }),
+    p("cr-5", "process.on memoryPressure", "OS low-memory event registers (types lag — not in 1.4.0 bun-types)", async () => {
+      let triggered = false;
+      const h = () => { triggered = true; };
+      process.on("memoryPressure", h);
+      process.removeListener("memoryPressure", h);
+      return triggered === false ? ok("event registered (not triggered)") : bad("unexpected");
+    }),
   ],
 
   // ── runtime:probe

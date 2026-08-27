@@ -2,6 +2,23 @@
 
 **Status:** Pin committed 2026-08-22 (Phase 6 complete) · **Target runtime:** Bun 1.4.x (the Zig→Rust port) · **Baseline:** Bun 1.4.0 (pinned)
 **Policy anchor:** [`AGENTS.md`](../AGENTS.md) — "Bun 1.4.0 stable is the supported local and production baseline."
+
+## 0. Feature-claim verification (2026-08-26, probed on the installed 1.4.0)
+
+Claims that look like post-1.4 release notes, verified against THIS pin:
+
+| Claim | Verdict on 1.4.0 (probed) | Note |
+| --- | --- | --- |
+| `process.on("memoryPressure")` (OS low-memory) | ✅ real | types lag: NOT in bun-types 1.4.0 — cast the handler |
+| ML-DSA + ML-KEM in `crypto.subtle` | ✅ real | `generateKey({name:"ML-DSA-65"})` keygen+sign; ML-KEM `encapsulateBits` (see `src/lib/ml-kem.ts`); types lag — cast |
+| ML-DSA/ML-KEM in `node:crypto` | ✅ real (corrected) | NOT named exports — `generateKeyPairSync("ml-kem-768")` / `("ml-dsa-65")` work (probed); blog is right |
+| `Bun.spawn({ cgroup })` | ✅ real + typed (bun.d.ts:7075-7097) | Linux-only effect; macOS accepts as no-op |
+| `bun repl` | ✅ real (corrected) | welcome banner probed; `--help` falls back to run-help (misleading); `-e`/`-p` work |
+| `bun ./README.md` markdown-to-terminal | ✅ real | renders headings/links; `-e`/`-p` exist on `bun` itself |
+
+Source: https://bun.com/blog/bun-v1.4#also-built-in (official 1.4 release notes — all six
+items confirmed on the installed build; two required re-probing past misleading first
+checks: named-export absence vs algorithm-arg API, and `--help` fallback vs the REPL).
 **Scope:** Shadow/canary verification only. **No live execution** on 1.4.x until Phase 5 passes.
 
 ---
