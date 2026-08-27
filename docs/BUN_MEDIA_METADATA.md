@@ -145,4 +145,46 @@ Per the audit request, the bun repo's own code was pulled and executed:
 | EXIF "append" to PNG | ⚠️ must be a chunk before IEND |
 | Repo has WebView-text heatmaps / videos | 📋 aspirational (only odds-tile exists) |
 
+## 10. MP4 serving (Range/206), markdown & YAML — verified
+
+### Serving video with Range / 304
+
+- **Range/206 is AUTOMATIC** for any `BunFile` body — zero manual code. Verified
+  on a 200 KB MP4: `Range: bytes=0-99` → `206`, `Content-Range: bytes
+  0-99/204800`, exactly 100 bytes. The repo's `/videos` route
+  (`src/research/video-page.ts`) relies on this.
+- ⚠️ **304 is NOT automatic** — Bun emits no `ETag` for file responses
+  (verified: `etag: null`), so `If-None-Match` → 304 requires you to set the
+  `ETag` and check the header yourself. The repo's content pipeline does
+  exactly that (`hashing-page.ts`: "ETag = quoted hash; `If-None-Match` ->
+  304 (notModified helper)"). Verified: manual ETag + `If-None-Match` match →
+  `304`.
+- ⚠️ `Accept-Ranges` is not set automatically (verified `null` on the 200
+  response) — browsers still send `Range`, but set it explicitly if you want
+  the advertised header.
+
+### Markdown & YAML parsing — ✅ both native on 1.4.0
+
+- **`Bun.markdown`**: methods `html`, `ansi`, `render`, `react` (verified).
+  `Bun.markdown.html("# Hello **world**")` → `<h1>Hello <strong>world</strong></h1>`;
+  `render` returns plain text; `react` returns a component (function). The
+  repo already uses it: `src/lib/markdown-images.ts` (render + html),
+  `markdown-headings.ts` (`{ headings: { ids: true } }`), `assets-audit.ts`
+  (image callback).
+- **`Bun.YAML`**: `import { YAML } from "bun"` and `Bun.YAML` — `parse` and
+  `stringify` verified (round-trip `a: 1, b: [1,2]`). The repo does not use
+  `Bun.YAML` yet (frontmatter is hand-rolled in `content-pipeline.ts`).
+
+### Repo reality: "Odds Heat" is not an MP4 pipeline
+
+`"odds-heat"` is the **XML root element** of the odds feed parsed by
+`src/lib/odds-tile.ts` (`root = "odds-heat"`) — it powers the **tile**
+pipeline (consensus → color → PNG), not an MP4 pipeline. The repo has **no MP4
+generation code** (no ffmpeg). Video in the repo is a static-serving route
+(`/videos`, `video-page.ts`) that leans on Bun's automatic Range/206. The
+i18n metadata layer in the claim (lang, YAML frontmatter, `X-Language`) is
+**aspirational**: one `lang: 'en'` field exists (`booked-catalog.ts`), no
+`X-Language` headers, no YAML frontmatter — frontmatter is hand-rolled and
+markdown is parsed with `Bun.markdown`.
+
 **Docs:** https://bun.com/docs/api/utils#concatarraybuffers · https://bun.com/docs/runtime/image · https://bun.com/docs/runtime/webview
