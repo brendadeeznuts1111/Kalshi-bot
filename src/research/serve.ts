@@ -78,6 +78,7 @@ import {
 } from "../partner/execution/kalshi-live.ts";
 import { codedError, httpStatusFor, type ErrorCode } from "../institutions/error-codes.ts";
 import {
+  buildOddsReportMarkdown,
   compareOddsVsVenues,
   detectValuePatterns,
   loadOddsRegistryConfig,
@@ -419,6 +420,8 @@ async function oddsVsVenuesResponse(): Promise<Response> {
 
 const ODDS_VALUE_PATTERNS_CACHE_MS = 5_000;
 let oddsValuePatternsCache: { expiresAtMs: number; payload: Record<string, unknown> } | undefined;
+const ODDS_REPORT_CACHE_MS = 5_000;
+let oddsReportCache: { expiresAtMs: number; markdown: string } | undefined;
 
 async function oddsValuePatternsResponse(): Promise<Response> {
   const nowMs = Date.now();
@@ -445,6 +448,67 @@ async function oddsValuePatternsResponse(): Promise<Response> {
     console.error("odds-value-patterns failed", error);
     return json({ error: "odds-value-patterns failed" }, 503);
   }
+}
+
+/**
+ * GET /api/odds-report — Odds Heat report as Markdown (`?format=html` renders
+ * it through the same Bun.markdown widget page as /docs). Same
+ * declarations-only data state as /api/odds-value-patterns; live adapters
+ * feed OddsEvent[] into buildOddsReportMarkdown for real rows. Feed-derived
+ * strings are escaped at the source (report.ts escapeMarkdownCell) AND the
+ * docs preset enables tagFilter — wire input never reaches HTML unescaped.
+ * Content-addressed ETag/304 on the markdown body.
+ */
+async function oddsReportResponse(req: Request): Promise<Response> {
+  const asHtml = new URL(req.url).searchParams.get("format") === "html";
+  const nowMs = Date.now();
+  const cached = oddsReportCache;
+  let markdown: string;
+  let cacheState: "hit" | "miss";
+  if (cached !== undefined && nowMs < cached.expiresAtMs) {
+    markdown = cached.markdown;
+    cacheState = "hit";
+  } else {
+    try {
+      const config = await loadOddsRegistryConfig(ROOT);
+      markdown = buildOddsReportMarkdown({
+        events: [],
+        title: "Odds Heat Report",
+        dataState: "declarations_only",
+      });
+      // Registry capacity rides in the header list until a live adapter feeds events.
+      markdown = markdown.replace(
+        "- Data state:",
+        "- Registry: " + config.bookmakers.length + " bookmakers · capacity floor " + config.capacityFloor + "\n- Data state:",
+      );
+      oddsReportCache = { expiresAtMs: nowMs + ODDS_REPORT_CACHE_MS, markdown };
+      cacheState = "miss";
+    } catch (error) {
+      console.error("odds-report failed", error);
+      return json({ error: "odds-report failed" }, 503);
+    }
+  }
+  const etag = '"' + new Bun.CryptoHasher("sha256").update(markdown).digest("hex").slice(0, 32) + '"';
+  const nm = notModified(req, etag);
+  if (nm) return nm;
+  const body = asHtml
+    ? renderWidgetPage({
+      title: "Odds Heat Report",
+      subtitle: "consensus · value patterns · convergence — Bun.markdown (strict escape path)",
+      badges: [cacheState === "hit" ? "cache hit" : "cache miss", "Bun.markdown", '"' + etag.slice(1, 13) + '"'],
+      links: ["/api/odds-report"],
+      sections: [{ heading: "Report", html: renderMarkdownBody(markdown) }],
+      footer: "Markdown source: /api/odds-report (text/markdown).",
+    })
+    : markdown;
+  return new Response(body, {
+    headers: {
+      "content-type": asHtml ? "text/html; charset=utf-8" : "text/markdown; charset=utf-8",
+      "cache-control": "no-store",
+      etag,
+      "x-odds-report-cache": cacheState,
+    },
+  });
 }
 
 function findScored(run: ResearchRun, fullName: string): ScoredRepo | undefined {
@@ -522,6 +586,7 @@ export function handleLlmsTxt(_req: Request): Response {
     '- /tokens?format=md — token registry as markdown (single source of truth: src/institutions/design-tokens.ts)',
     '- /tokens — token registry as JSON',
     '- /docs — rendered docs index (Bun.markdown, ETag/304)',
+    '- /api/odds-report — Odds Heat report (text/markdown; ?format=html)',
     '- /api/runs — research run API',
     '- /blog/index.json — Bun release-blog manifest',
     '- /videos/index.json — video manifest',
@@ -1656,6 +1721,10 @@ export function createResearchServer(options: ServeOptions = {}) {
 
       if (url.pathname === "/api/odds-value-patterns") {
         return await oddsValuePatternsResponse();
+      }
+
+      if (url.pathname === "/api/odds-report") {
+        return await oddsReportResponse(req);
       }
 
       // Token status card (SVG) + machine view for OG scrapers / dashboard embed.

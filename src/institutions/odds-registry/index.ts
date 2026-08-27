@@ -8,6 +8,8 @@ export { oddsRegistryHealth, statusCardPng, statusCardSvg } from "./display.ts";
 export type { StatusTone } from "./display.ts";
 export { compareOddsVsVenues, VENUE_SPORT_MAP, venueSports } from "./venues.ts";
 export { classifyConvergence, consensusSnapshot, detectValuePatterns, kalshiCentsToImplied } from "./value-patterns.ts";
+export { buildOddsReportHtml, buildOddsReportMarkdown, escapeMarkdownCell, oddsReportConsensus } from "./report.ts";
+export type { OddsReportConsensusRow, OddsReportInput } from "./report.ts";
 export type { ConvergencePattern, ConvergenceSnapshot, DetectConvergenceOptions } from "./value-patterns.ts";
 export {
   activeV3BookmakerNames,
