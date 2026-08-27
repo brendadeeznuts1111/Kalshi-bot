@@ -235,6 +235,7 @@
     "tile": "bun tools/odds-tile-cli.ts",
     "odds:report": "bun tools/odds-report-cli.ts",
     "book:logos": "bun tools/book-logos-cli.ts",
+    "showcase": "bun tools/odds-heat-showcase.ts",
     "ground": "bun tools/ground-bun.ts",
     "ground:check": "bun tools/ground-check.ts",
     "brand:card": "bun tools/brand-card-cli.ts",
