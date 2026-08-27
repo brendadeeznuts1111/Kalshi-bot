@@ -116,6 +116,21 @@ The discrepancies in this session were never local-staleness — they were in th
 `Database.reserve`, `Bun.spawn` dispose, `view.goto`) are absent from every
 source; verified APIs match everywhere.
 
+### Ran the bun repo (main, sparse clone, installed bun 1.4.0)
+
+Per the audit request, the bun repo's own code was pulled and executed:
+
+- **`test/js/bun/image/*` — 195/195 tests pass** on installed 1.4.0 (97
+  `image.test.ts` + 98 adversarial/kernels): clipboard statics, backend parity,
+  the HEIC gap, filters, quality, `Response(img)` Content-Type, maxPixels.
+- **`test/js/bun/webview/webview.test.ts` — 59 pass / 1 todo / 0 fail**:
+  `navigate` (zero `goto` anywhere), `headless: false` throws NOT_IMPLEMENTED,
+  screenshot `shmem` read via FFI — all matching this doc's verdicts.
+- **`bench/image/bench-resize.mjs --sharp` (sharp 0.35.4)**: Bun.Image beats
+  sharp on every op — metadata 0.01×, PNG→jpeg 0.66–0.84×, PNG→webp 0.79×,
+  JPEG→jpeg 0.49–0.92×, 4K→1920 0.49×, webp encodes 0.89–0.96× (ΔRSS ≈).
+- **Runtime probe**: `view.goto === undefined`; `view.navigate` is the method.
+
 ## 9. Summary
 
 | Claim | Verdict |
