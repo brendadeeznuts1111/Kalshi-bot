@@ -83,12 +83,14 @@ import {
   compareOddsVsVenues,
   detectValuePatterns,
   loadOddsRegistryConfig,
+  loadVenueStore,
   oddsRegistryHealth,
   parseOddsXmlEvents,
   statusCardSvg,
   type OddsRegistryConfig,
   type VenuePriceRef,
 } from "../institutions/odds-registry/index.ts";
+import { fetchEventWeather } from "../institutions/odds-registry/weather.ts";
 import type { OddsEvent } from "../alpha/odds-types.ts";
 import { designAgent } from "../agent/design-agent.ts";
 import { baseCssVars, proseCss, themeToggleButton, themeChrome } from "../institutions/design-tokens.ts";
@@ -487,6 +489,18 @@ async function oddsReportResponse(req: Request): Promise<Response> {
         events = parseOddsXmlEvents(await feedFile.text(), { sportKey: "soccer_epl", market: "h2h" });
         if (events.length > 0) dataState = "reference_feed";
       }
+      // Weather is (venue coords, commence)-keyed and best-effort: provider
+      // failure degrades to no weather column values, never a route failure.
+      const located = events.filter((ev) => ev.location);
+      if (located.length > 0) {
+        const forecasts = await Promise.allSettled(
+          located.map((ev) => fetchEventWeather(ev.location!, ev.commenceTime)),
+        );
+        forecasts.forEach((r, i) => {
+          const ev = located[i]!;
+          if (r.status === "fulfilled" && r.value) ev.weather = r.value;
+        });
+      }
       let patterns;
       if (events.length > 0) {
         const refsFile = Bun.file(joinPath(ROOT, "public/registry/venue-refs.json"));
@@ -498,6 +512,7 @@ async function oddsReportResponse(req: Request): Promise<Response> {
         events,
         ...(patterns ? { patterns } : {}),
         ...(events.length > 0 ? { books: booksQuoting(config, events) } : {}),
+        venueStore: await loadVenueStore(ROOT),
         title: "Odds Heat Report",
         dataState,
       });

@@ -48,6 +48,8 @@ export type OddsEvent = {
    * bookmaker. Parsed from the odds-heat cluster `venue="lat,long"`.
    */
   location?: EventLocation;
+  /** Forecast at (location, commenceTime) — attached by the weather provider. */
+  weather?: EventWeather;
   bookmakers: OddsBookmaker[];
 };
 
@@ -55,6 +57,18 @@ export type OddsEvent = {
 export type EventLocation = {
   lat: number;
   long: number;
+};
+
+/**
+ * Weather AT the event's venue coordinates, FOR the event's commence time.
+ * Belongs on the event (time-specific forecast), never on the venue —
+ * attached by the weather provider, optional everywhere.
+ */
+export type EventWeather = {
+  temperatureC?: number;
+  condition?: string;
+  windSpeedKmh?: number;
+  precipitationMm?: number;
 };
 
 export type PinnacleSnapshot = {

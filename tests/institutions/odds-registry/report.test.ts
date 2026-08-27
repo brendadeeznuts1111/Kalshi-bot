@@ -11,6 +11,7 @@ import {
   parseOddsXmlEvents,
 } from "../../../src/institutions/odds-registry/index.ts";
 import { detectValuePatterns } from "../../../src/institutions/odds-registry/value-patterns.ts";
+import type { VenueStore } from "../../../src/institutions/odds-registry/venue-store.ts";
 import { markdownToHtml } from "../../../src/lib/markdown.ts";
 
 /** Four venues quoting the same match — consensus pocket on side "Alpha". */
@@ -69,13 +70,46 @@ describe("buildOddsReportMarkdown", () => {
     );
     const md = buildOddsReportMarkdown({ events: located });
     expect(md).toContain("## Matches");
-    expect(md).toContain("| 51.5074, -0.1278 | 2026-09-01T19:00:00Z |");
+    // No venue store passed -> coordinates + UTC kickoff fallbacks.
+    expect(md).toContain("| 51.5074, -0.1278 | [map](https://www.google.com/maps?q=51.5074,-0.1278) | 2026-09-01T19:00:00.000Z |");
     // Malformed venue -> em-dash placeholder, never a broken row.
     const bad = parseOddsXmlEvents(
       '<odds-heat><cluster venue="not-coords" book="bet365" commence="2026-09-01T19:00:00Z">'
         + '<print name="Alpha FC" american="-110"/><print name="Beta FC" american="+100"/></cluster></odds-heat>',
     );
-    expect(buildOddsReportMarkdown({ events: bad })).toContain("| — | 2026-09-01T19:00:00Z |");
+    const badMd = buildOddsReportMarkdown({ events: bad });
+    expect(badMd).toContain("| — | — | 2026-09-01T19:00:00.000Z | — | — |");
+  });
+
+  test("venue store identity: name/city, local kickoff, collision badge", () => {
+    const store: VenueStore = {
+      schema: "odds-venues/v1",
+      venues: [{
+        venueKey: "v:51.5074:-0.1278",
+        name: "Alpha Park",
+        city: "London",
+        timezone: "Europe/London",
+        aliases: ["The Alpha Ground"],
+      }],
+    };
+    const mk = (id: string) => parseOddsXmlEvents(
+      `<odds-heat><cluster venue="51.5074,-0.1278" book="bet365" commence="2026-09-01T19:00:00Z">`
+        + `<home team="${id}"/><away team="Beta FC"/>`
+        + `<print name="A" american="-110"/><print name="B" american="+100"/></cluster></odds-heat>`,
+    );
+    // Two events at the same venue -> collision badge fires.
+    const events = [...mk("Alpha FC"), ...mk("Gamma FC")];
+    const md = buildOddsReportMarkdown({ events, venueStore: store });
+    expect(md).toContain("| Alpha Park, London |");
+    expect(md).toContain("[map](https://www.google.com/maps?q=51.5074,-0.1278)");
+    // 19:00Z == 20:00 BST — venue-local, not UTC.
+    expect(md).toContain("1 Sep 2026 at 20:00");
+    expect(md).toContain("| 2 events |");
+    // Weather attached on the event renders in its row.
+    events[0]!.weather = { temperatureC: 18.4, condition: "Rain", windSpeedKmh: 22 };
+    const weatherMd = buildOddsReportMarkdown({ events, venueStore: store });
+    expect(weatherMd).toContain("18.4°C Rain wind 22 km/h");
+    expect(weatherMd).not.toContain("| — | — |"); // located rows never collapse to dashes
   });
 
   test("includes value patterns when provided", () => {
@@ -152,7 +186,9 @@ describe("buildOddsReportHtml", () => {  test("hostile venue name survives rende
   });
 
   test("renders the same markdown the text route serves", () => {
-    const md = buildOddsReportMarkdown({ events: parseOddsXmlEvents(FIXTURE) });
-    expect(markdownToHtml(md, "strict")).toBe(buildOddsReportHtml({ events: parseOddsXmlEvents(FIXTURE) }));
+    const at = "2026-09-01T12:00:00Z";
+    const input = { events: parseOddsXmlEvents(FIXTURE), generatedAt: at } as const;
+    const md = buildOddsReportMarkdown(input);
+    expect(markdownToHtml(md, "strict")).toBe(buildOddsReportHtml(input));
   });
 });

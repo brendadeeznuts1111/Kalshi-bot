@@ -21,9 +21,10 @@ describe("/api/odds-report (Bun.XML feed wired)", () => {
     expect(md).toContain("Data state: reference_feed");
     // Event id is the MATCH (teams + commence date), never the venue/book.
     expect(md).toContain("| alpha-fc-vs-beta-fc-2026-09-01 | Alpha FC | 4 |");
-    // Venue is the match location; books are separate.
+    // Venue identity: store name/city + map link + venue-local kickoff
+    // (19:00Z == 20:00 Europe/London).
     expect(md).toContain("## Matches");
-    expect(md).toContain("| 51.5074, -0.1278 | 2026-09-01T19:00:00Z |");
+    expect(md).toContain("| Alpha Park, London | [map](https://www.google.com/maps?q=51.5074,-0.1278) | 1 Sep 2026 at 20:00 |");
     expect(md).toContain("venue_undervalued");
   });
 

@@ -18,9 +18,58 @@ import type { OddsEvent } from "../../alpha/odds-types.ts";
 import { markdownToHtml } from "../../lib/markdown.ts";
 import type { BookmakerProfile } from "./bookmakers.ts";
 import type { ConvergencePattern, ValuePattern } from "./value-patterns.ts";
+import {
+  localKickoff,
+  venueCollisionCounts,
+  venueKeyFor,
+  venueProfileFor,
+  type VenueStore,
+} from "./venue-store.ts";
 
 /** Cell placeholder for a profile field the registry does not declare. */
 const NO_META = "—";
+
+/** Matches table: event identity, venue identity, venue-local kickoff,
+ * weather at (coords, commence), and a collision badge for venues hosting
+ * multiple events in this feed. venueKey stays the internal grouping key. */
+function matchesTable(events: OddsEvent[], store: VenueStore | undefined): string {
+  const collisions = venueCollisionCounts(events);
+  const lines = [
+    "| Event | Match | Venue | Map | Kickoff (venue local) | Weather | At venue |",
+    "| --- | --- | --- | --- | --- | --- | --- |",
+  ];
+  for (const ev of events) {
+    const profile = ev.location ? venueProfileFor(store, ev.location) : undefined;
+    const venueCell = profile
+      ? escapeMarkdownCell(profile.city ? `${profile.name}, ${profile.city}` : profile.name)
+      : ev.location
+        ? escapeMarkdownCell(`${ev.location.lat}, ${ev.location.long}`)
+        : NO_META;
+    const mapCell = ev.location
+      ? `[map](https://www.google.com/maps?q=${ev.location.lat},${ev.location.long})`
+      : NO_META;
+    const kickoffCell = ev.commenceTime === "0" || ev.commenceTime === ""
+      ? NO_META
+      : escapeMarkdownCell(localKickoff(ev.commenceTime, profile?.timezone));
+    const w = ev.weather;
+    const weatherCell = w
+      ? escapeMarkdownCell(
+        [
+          w.temperatureC !== undefined ? `${w.temperatureC}°C` : "",
+          w.condition ?? "",
+          w.windSpeedKmh !== undefined ? `wind ${w.windSpeedKmh} km/h` : "",
+        ].filter(Boolean).join(" "),
+      ) || NO_META
+      : NO_META;
+    const atVenueCell = ev.location && (collisions.get(venueKeyFor(ev.location)) ?? 0) > 1
+      ? `${collisions.get(venueKeyFor(ev.location))} events`
+      : NO_META;
+    lines.push(
+      `| ${escapeMarkdownCell(ev.id)} | ${escapeMarkdownCell(ev.homeTeam)} vs ${escapeMarkdownCell(ev.awayTeam)} | ${venueCell} | ${mapCell} | ${kickoffCell} | ${weatherCell} | ${atVenueCell} |`,
+    );
+  }
+  return lines.join("\n");
+}
 
 function booksTable(books: BookmakerProfile[]): string {
   const lines = [
@@ -47,6 +96,8 @@ export type OddsReportInput = {
   convergence?: ConvergencePattern[];
   /** Bookmaker profiles (with book URL / logo meta) for venues in `events`. */
   books?: BookmakerProfile[];
+  /** Venue store: coordinates -> name/city/timezone identity for Matches. */
+  venueStore?: VenueStore;
   /** Report title. Defaults to "Odds Heat Report". */
   title?: string;
   /** Report timestamp; defaults to now. */
@@ -134,20 +185,6 @@ export function oddsReportConsensus(events: OddsEvent[]): OddsReportConsensusRow
   );
 }
 
-function matchesTable(events: OddsEvent[]): string {
-  const lines = [
-    "| Event | Match | Venue (lat, long) | Commence |",
-    "| --- | --- | --- | --- |",
-  ];
-  for (const ev of events) {
-    const venue = ev.location ? `${ev.location.lat}, ${ev.location.long}` : NO_META;
-    lines.push(
-      `| ${escapeMarkdownCell(ev.id)} | ${escapeMarkdownCell(ev.homeTeam)} vs ${escapeMarkdownCell(ev.awayTeam)} | ${escapeMarkdownCell(venue)} | ${escapeMarkdownCell(ev.commenceTime)} |`,
-    );
-  }
-  return lines.join("\n");
-}
-
 function consensusTable(rows: OddsReportConsensusRow[]): string {
   const lines = [
     "| Event | Side | Bookmakers | Consensus | Spread |",
@@ -210,7 +247,7 @@ export function buildOddsReportMarkdown(input: OddsReportInput): string {
 
   if (input.events.length > 0) {
     lines.push("", "## Matches", "");
-    lines.push(matchesTable(input.events));
+    lines.push(matchesTable(input.events, input.venueStore));
   }
 
   lines.push("", "## Consensus", "");

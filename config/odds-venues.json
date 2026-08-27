@@ -1,0 +1,12 @@
+{
+  "schema": "odds-venues/v1",
+  "venues": [
+    {
+      "venueKey": "v:51.5074:-0.1278",
+      "name": "Alpha Park",
+      "city": "London",
+      "timezone": "Europe/London",
+      "aliases": ["The Alpha Ground", "AP"]
+    }
+  ]
+}
