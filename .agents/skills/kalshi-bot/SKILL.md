@@ -19,6 +19,7 @@ Bun-native project for discovering and ranking public Kalshi trading bots on Git
 
 | Resource | Path |
 |----------|------|
+| Agent pitfall catalog (read before editing — 178+ lessons) | `docs/AGENT-PITFALLS.md` |
 | README (setup, scripts, layout) | `README.md` |
 | Agent CLI sub-agents | `docs/AGENT.md` |
 | Roadmap, blockers, proof gates | `docs/ROADMAP.md` |
@@ -60,6 +61,7 @@ Kalshi-bot/
 - **Deps:** Zero runtime npm deps. `drizzle-orm` + `zod` only.
 - **CLI:** `gh auth login` required for research pipeline.
 - **Secrets:** Proton Pass CLI optional; `.env.protonpass` for `KALSHI_*` / `ODDS_API_KEY`.
+- **Agent tooling — Bun lives in the host, not the code sandbox:** the agent code sandbox (`run_code`) runs plain Node and has **no `Bun` global** — `Bun.zstdDecompressSync`, `Bun.file`, `Bun.$`, `bun:sqlite`, etc. throw `ReferenceError: Bun is not defined`. For anything Bun-native, shell out through the `bash` tool to the host `bun` CLI: `bun -e '…'`, `bunx`, `bun run <script>`, `bun test` (e.g. `bun -e` + `Bun.zstdDecompressSync` to read `~/.dsh/sessions/*/session.jsonl.zstd` traces).
 
 ## Essential commands
 
@@ -185,7 +187,5 @@ bun run hooks:install  # once
 
 ## Related skills
 
-- `bet-ticker-worker` — Cloudflare Worker live wager broadcast, shade pipeline, steam detection. Similar sports-betting domain, different stack (CF Workers vs Bun-native).
-- `cascade-mover` — Real-time sports betting intelligence terminal with SQLite, WebSocket, MCP bridge. Complementary trading infrastructure.
-- `seaborn-visualization` — For analyzing calibration data, shadow log distributions, Brier scores.
-- `xlsx` — For exporting research scoring tables or calibration summaries.
+- `cascade-mover-v3` — Real-time sports betting intelligence terminal with SQLite, WebSocket, MCP bridge. Complementary trading infrastructure.
+- `bun` — Bun runtime and toolkit: CLI commands, `Bun.*` globals, `bun:sqlite`, `Bun.$`, zstd, and the agent-sandbox pitfall (no `Bun` global in `run_code`).
