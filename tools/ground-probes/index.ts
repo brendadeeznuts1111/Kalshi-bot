@@ -235,6 +235,21 @@ export const PROBES: Record<string, GroundProbe[]> = {
     p("rt-2", "Bun.revision", "revision is a string", async () => {
       return typeof Bun.revision === "string" && Bun.revision.length > 0 ? ok(Bun.revision.slice(0, 10)) : bad("missing");
     }),
+    p("rt-4", "Bun.S3Client", "S3Client class exists on Bun (CORRECTED — not Bun.s3.S3Client); no putObject", async () => {
+      const hasCtor = typeof (Bun as any).S3Client === "function";
+      let client: any = null;
+      try { client = new (Bun as any).S3Client({ accessKeyId: "x", secretAccessKey: "y", region: "us-east-1" }); } catch {}
+      const okShape = hasCtor && client && typeof client.file === "function" && typeof client.write === "function";
+      const noPut = client ? typeof client.putObject === "undefined" : true;
+      return okShape && noPut ? ok("S3Client ctor + file/write; putObject absent") : bad("shape mismatch");
+    }),
+    p("rt-5", "Bun.serve h2", "h2 option ACCEPTED at runtime (CORRECTED — types lag, option not rejected)", async () => {
+      try {
+        const s = await (Bun.serve as any)({ port: 0, fetch: () => new Response("x"), h2: true });
+        s.stop(true);
+        return ok("serve({h2:true}) accepted");
+      } catch (e) { return bad((e as Error).message.slice(0, 60)); }
+    }),
     p("rt-3", "Bun.env / argv / sleep", "env + argv + sleep resolve", async () => {
       const env = typeof Bun.env === "object" && Bun.env !== null;
       const argv = Array.isArray(Bun.argv) && Bun.argv.length > 0;

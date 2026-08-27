@@ -17,8 +17,29 @@ Claims that look like post-1.4 release notes, verified against THIS pin:
 | `bun ./README.md` markdown-to-terminal | ✅ real | renders headings/links; `-e`/`-p` exist on `bun` itself |
 
 Source: https://bun.com/blog/bun-v1.4#also-built-in (official 1.4 release notes — all six
-items confirmed on the installed build; two required re-probing past misleading first
-checks: named-export absence vs algorithm-arg API, and `--help` fallback vs the REPL).
+items confirmed on the installed build).
+
+### Verification discipline — three probe-design failures corrected 2026-08-26
+
+Claims of ABSENCE were made too fast and had to be retracted. The failure pattern:
+
+1. **`bun repl`** — probed `--help` (falls back to run-help) → concluded absent. WRONG: the
+   REPL itself works; probe the command, not its help.
+2. **`node:crypto` ML-*** — checked named exports → concluded absent. WRONG: the API is
+   `generateKeyPairSync("ml-kem-768")` (algorithm-string); absence of one access pattern
+   is not absence of the feature.
+3. **`Bun.s3.S3Client` / `putObject`** — checked `Bun.s3.S3Client` (undefined) → called the
+   whole S3Client shape fabricated. WRONG: **`Bun.S3Client` EXISTS** (`new Bun.S3Client({...})`
+   → `.file/.write/...`); only `s3.S3Client` and `putObject` are absent. Enumerate the whole
+   surface (getOwnPropertyNames + typeof on ALL sibling names).
+4. **`Bun.serve` HTTP/2** — types lack `h2` → concluded "not in 1.4.0". WRONG: the runtime
+   ACCEPTS `serve({ h2: true })` (types lag; probe runtime acceptance, not type absence).
+
+**Rule:** absence claims require (a) full runtime-surface enumeration, (b) runtime
+acceptance probes of the API call itself, (c) all plausible access patterns (named
+export / constructor / algorithm-string / options-object / sibling names), (d) the type
+declarations, and (e) confidence labels — "not found via probed pattern" ≠ "absent".
+Corrected verdicts are pinned as ground probes: rt-4 (S3Client) and rt-5 (serve h2).
 **Scope:** Shadow/canary verification only. **No live execution** on 1.4.x until Phase 5 passes.
 
 ---
