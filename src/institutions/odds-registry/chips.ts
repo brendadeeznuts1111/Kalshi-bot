@@ -40,11 +40,20 @@ const dim = (s: string) => paint(s, "misc");
 
 /**
  * Arbitrary-RGB styling for the temperature gradient — the one thing the
- * palette kernel can't do (it is key-based). Verified on 1.4.0: Bun.color
- * accepts the RGB tuple directly (values silently clamp to 0-255), honors
- * NO_COLOR at bootstrap (returns "" -> render plain), and does NOT do TTY
- * detection for "ansi" — chips keep the kernel's convention (color unless
- * NO_COLOR), so no extra stream check here.
+ * palette kernel can't do (it is key-based). Verified on 1.4.0:
+ *
+ * - Bun.color accepts the RGB tuple directly; out-of-range values silently
+ *   clamp (999 -> 255).
+ * - The "ansi" format reads the color ENVIRONMENT for depth: default and
+ *   any TERM (even xterm) -> truecolor 38;2; TERM=dumb or NO_COLOR -> ""
+ *   (render plain); FORCE_COLOR overrides both — FORCE_COLOR=3 keeps
+ *   truecolor, FORCE_COLOR=1 DOWNGRADES to 16-color (91m etc.) and
+ *   COLORTERM=truecolor does not rescue it. Under FORCE_COLOR=1 the
+ *   gradient therefore collapses to coarse buckets: acceptable, documented
+ *   degradation.
+ * - No TTY detection happens on this path — chips keep the kernel
+ *   convention (color unless the environment disables it), so styledRGB
+ *   gates only on the empty escape.
  */
 export function styledRGB(text: string, rgb: [number, number, number]): string {
   const esc = Bun.color(rgb, "ansi");
