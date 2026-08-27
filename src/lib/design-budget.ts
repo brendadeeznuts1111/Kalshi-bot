@@ -30,10 +30,15 @@ export const DESIGN_MODULES: Record<DesignModule, DesignModuleSpec> = {
   'design-system': {
     entry: 'src/institutions/design-system.ts',
     out: 'design-system.js',
-    // 12 KB — headroom over the 4.65 KB bundle (kept from the original gate).
+    // 12 KB — bundle runs 8.99 KB (0.75x) with the extended color formats.
     maxBytes: 12 * 1024,
-    // Largest contributor is the color kernel (1.9 KB) / design-tokens (1.7 KB).
-    maxContributorBytes: 4 * 1024,
+    // Largest contributor is the color kernel. Cap raised 4 KB -> 6 KB in
+    // review (2026-08): the kernel grew ~2.6x with the probed extended
+    // format surface (lch/oklab/oklch/hsv + parseExtendedColor inverse
+    // parsers, all kernel-tested) — bytesInOutput 4,929 B vs the old 4 KB
+    // cap. Budget review: single-contributor share 55% of a 0.75x bundle;
+    // next growth signal should trigger chunking, not another raise.
+    maxContributorBytes: 6 * 1024,
   },
   'hq-app': {
     entry: 'src/research/hq-app/app.js',
