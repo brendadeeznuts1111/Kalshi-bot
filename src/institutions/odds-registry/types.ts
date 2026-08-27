@@ -19,6 +19,17 @@ export interface OddsRegistryBookmaker {
   endpoint?: string;
   /** Sports the bookmaker covers (sport keys, e.g. basketball_nba). */
   sports: string[];
+  /**
+   * Feed-specific connection meta (the per-book blob). Normalized from the
+   * <bookmaker><meta> children by Bun.XML: each child element becomes a
+   * key -> text entry (with @key/@value attribute override). The feed client
+   * reads ONLY this blob to connect to a bookmaker's own feed — one book,
+   * one feed, one connection — so every feed's details live in the registry.
+   *
+   * Example for an odds-api-v3 book:
+   *   <meta><v3-name>Bet365</v3-name><api-key-ref>ODDS_API_KEY</api-key-ref></meta>
+   */
+  meta: Record<string, string>;
 }
 
 export interface OddsRegistryConfig {

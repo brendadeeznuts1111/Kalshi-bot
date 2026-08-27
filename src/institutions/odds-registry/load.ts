@@ -36,6 +36,24 @@ export function parseOddsRegistryXml(input: string | Blob): OddsRegistryConfig {
       if (!key) return [];
       const sports = asArray<XmlValue>(b["sport"])
         .flatMap((s) => (isElement(s) && typeof s["@key"] === "string" ? [s["@key"] as string] : []));
+      // Normalize the <meta> blob: each child element -> key => text; an
+      // element with @key/@value attributes wins over its tag name.
+      const meta: Record<string, string> = {};
+      const metaEl = b["meta"];
+      if (isElement(metaEl)) {
+        for (const child of Object.keys(metaEl)) {
+          if (child.startsWith("@")) continue;
+          const v = metaEl[child];
+          if (typeof v === "string") {
+            meta[child] = v;
+          } else if (isElement(v)) {
+            const attrKey = typeof v["@key"] === "string" ? (v["@key"] as string) : null;
+            const attrVal = typeof v["@value"] === "string" ? (v["@value"] as string) : null;
+            const text = typeof v["#text"] === "string" ? (v["#text"] as string) : "";
+            meta[attrKey ?? child] = attrVal ?? text;
+          }
+        }
+      }
       return [{
         key,
         name,
@@ -44,6 +62,7 @@ export function parseOddsRegistryXml(input: string | Blob): OddsRegistryConfig {
         ...(typeof b["@markets"] === "string" ? { markets: b["@markets"] as string } : {}),
         ...(typeof b["@endpoint"] === "string" ? { endpoint: b["@endpoint"] as string } : {}),
         sports,
+        meta,
       }];
     });
   return { version, capacityFloor, bookmakers };

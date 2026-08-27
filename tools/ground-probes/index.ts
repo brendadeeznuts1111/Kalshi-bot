@@ -499,6 +499,23 @@ export const PROBES: Record<string, GroundProbe[]> = {
       return cliTrunc && figTrunc && !envTrunc
         ? ok("CLI + bunfig truncate; BUN_CONSOLE_DEPTH env inert") : bad("cli=" + cliTrunc + " fig=" + figTrunc + " env=" + envTrunc);
     }),
+    p("cl-22", "Bun.XML registry meta", "<bookmaker><meta> children normalize into a key->text blob", async () => {
+      const { parseOddsRegistryXml } = await import("../../src/institutions/odds-registry/load.ts");
+      const cfg = parseOddsRegistryXml(
+        '<odds-registry version="1" capacity-floor="1"><bookmaker key="b" name="B" feed="bun-xml"><sport key="tennis_atp"/><meta><endpoint>https://x/odds.xml</endpoint><auth key="api-key-ref" value="MY_KEY"/></meta></bookmaker></odds-registry>',
+      );
+      const m = cfg.bookmakers[0]?.meta ?? {};
+      return m["endpoint"] === "https://x/odds.xml" && m["api-key-ref"] === "MY_KEY" ? ok(JSON.stringify(m)) : bad(JSON.stringify(m));
+    }),
+    p("cl-23", "Odds API v3", "registry v3 names all resolve in the live active /bookmakers list", async () => {
+      const { fetchV3Bookmakers, loadOddsRegistryConfig } = await import("../../src/institutions/odds-registry/index.ts");
+      const live = await fetchV3Bookmakers();
+      const active = new Set(live.filter((b: { active: boolean }) => b.active).map((b: { name: string }) => b.name.toLowerCase()));
+      const cfg = await loadOddsRegistryConfig(".");
+      const v3 = cfg.bookmakers.filter((b) => b.feed === "odds-api-v3");
+      const missing = v3.filter((b) => !active.has((b.meta["v3-name"] ?? b.name).toLowerCase()));
+      return missing.length === 0 ? ok(v3.length + "/" + v3.length + " names match live") : bad("missing: " + missing.map((b) => b.key).join(","));
+    }),
   ],
 };
 

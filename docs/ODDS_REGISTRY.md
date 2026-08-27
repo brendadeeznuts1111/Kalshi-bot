@@ -14,6 +14,8 @@ of ≥34 bookmakers in [`config/odds-registry.xml`](../config/odds-registry.xml)
 | Load | [`odds-registry/load.ts`](../src/institutions/odds-registry/load.ts) | `loadOddsRegistryConfig()`; normalizes Bun.XML singleton collapse |
 | Gate | [`odds-registry/validate.ts`](../src/institutions/odds-registry/validate.ts) | ≥34 capacity floor, unique keys, known feeds, endpoint requirement for `bun-xml` |
 | XML feed | [`odds-registry/xml-feed.ts`](../src/institutions/odds-registry/xml-feed.ts) | `<odds-heat>` cluster → `OddsEvent` (h2h from `<print american>`); decimal conversion |
+| v3 JSON feed | [`odds-registry/odds-api-v3.ts`](../src/institutions/odds-registry/odds-api-v3.ts) | Odds API v3 name-based adapter: `/bookmakers` + `/odds` → `OddsEvent`, SQLite WAL cache, sport-slug map |
+| Feed client | [`odds-registry/feed-client.ts`](../src/institutions/odds-registry/feed-client.ts) | Per-bookmaker connections driven by the `<meta>` blob (`connectBookmaker` / `connectAllBookmakers` fan-out) |
 | Display | [`odds-registry/display.ts`](../src/institutions/odds-registry/display.ts) | Token status card SVG + WebView-rasterized PNG (`statusCardPng`) + health summary |
 
 The model (`OddsEvent` → `OddsBookmaker` → `OddsMarket` → `OddsOutcome`) already carries
@@ -58,6 +60,31 @@ bun test tests/institutions/odds-registry/
 
 The floor is a minimum, not a ceiling: the config already declares 38 bookmakers and the
 pipeline is N-generic, so scaling past 34 is additive, not structural.
+
+## Per-bookmaker meta blob
+
+The registry XML is the SSOT for *how to reach each book*. Every `<bookmaker>`
+may carry a `<meta>` block — feed-specific connection details, normalized by
+`Bun.XML.parse` into a `Record<string, string>` (each child element → key/`#text`;
+`@key`/`@value` attributes override the tag name):
+
+```xml
+<bookmaker key="bet365" name="Bet365" feed="odds-api-v3">
+  <sport key="soccer_epl"/>
+  <meta>
+    <v3-name>Bet365</v3-name>        <!-- wire name for the v3 /odds query -->
+    <api-key-ref>ODDS_API_KEY</api-key-ref>  <!-- env var holding the key -->
+  </meta>
+</bookmaker>
+```
+
+`connectBookmaker(cfg, key, sport, opts)` reads **only** that blob and fetches
+that one book's feed through its own adapter (xml via `parseOddsXmlEvents`,
+json via `fetchV3Odds`, ws validated against `ws-url`/`auth-key-ref`) — one
+book, one feed, one connection. `connectAllBookmakers` fans out N-generic with
+per-book failure isolation (one dead feed never suppresses the rest). The v3
+names are pinned live against `/bookmakers`: all 36 registry names resolve to
+active books.
 
 ## Value patterns
 
