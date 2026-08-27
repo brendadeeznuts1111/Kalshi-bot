@@ -5,6 +5,8 @@ export { loadOddsRegistryConfig, parseOddsRegistryXml } from "./load.ts";
 export { validateOddsRegistry } from "./validate.ts";
 export { americanToDecimal, parseEventLocation, parseOddsXmlEvents } from "./xml-feed.ts";
 export { describeWeatherCode, fetchEventWeather, clearWeatherCache } from "./weather.ts";
+export { collisionChip, kickoffChip, renderOddsEventLine, renderOddsReportAnsi, venueChip, weatherChip, weatherIcon } from "./chips.ts";
+export type { OddsEventLineOptions } from "./chips.ts";
 export { canonicalVenueName, loadVenueStore, localKickoff, venueCollisionCounts, venueKeyFor, venueProfileFor } from "./venue-store.ts";
 export type { VenueProfile, VenueStore } from "./venue-store.ts";
 export { oddsRegistryHealth, statusCardPng, statusCardSvg } from "./display.ts";

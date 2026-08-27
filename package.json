@@ -233,6 +233,7 @@
     "design:browser-safety": "bun tools/design-browser-safety.ts",
     "images:meta": "bun tools/image-meta-cli.ts",
     "tile": "bun tools/odds-tile-cli.ts",
+    "odds:report": "bun tools/odds-report-cli.ts",
     "ground": "bun tools/ground-bun.ts",
     "ground:check": "bun tools/ground-check.ts",
     "brand:card": "bun tools/brand-card-cli.ts",
