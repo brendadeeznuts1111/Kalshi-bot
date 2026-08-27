@@ -13,9 +13,14 @@ of ≥34 bookmakers in [`config/odds-registry.xml`](../config/odds-registry.xml)
 | Types | [`odds-registry/types.ts`](../src/institutions/odds-registry/types.ts) | `OddsRegistryConfig`, `OddsRegistryBookmaker`, feed-type union |
 | Load | [`odds-registry/load.ts`](../src/institutions/odds-registry/load.ts) | `loadOddsRegistryConfig()`; normalizes Bun.XML singleton collapse |
 | Gate | [`odds-registry/validate.ts`](../src/institutions/odds-registry/validate.ts) | ≥34 capacity floor, unique keys, known feeds, endpoint requirement for `bun-xml` |
-| XML feed | [`odds-registry/xml-feed.ts`](../src/institutions/odds-registry/xml-feed.ts) | `<odds-heat>` cluster → `OddsEvent` (h2h from `<print american>`); decimal conversion |
+| XML feed | [`odds-registry/xml-feed.ts`](../src/institutions/odds-registry/xml-feed.ts) | `<odds-heat>` cluster → `OddsEvent` (h2h from `<print american>`); match-derived event ids; `venue="lat,long"` location; decimal conversion |
 | v3 JSON feed | [`odds-registry/odds-api-v3.ts`](../src/institutions/odds-registry/odds-api-v3.ts) | Odds API v3 name-based adapter: `/bookmakers` + `/odds` → `OddsEvent`, SQLite WAL cache, sport-slug map |
 | Feed client | [`odds-registry/feed-client.ts`](../src/institutions/odds-registry/feed-client.ts) | Per-bookmaker connections driven by the `<meta>` blob (`connectBookmaker` / `connectAllBookmakers` fan-out) |
+| Bookmaker store | [`odds-registry/bookmakers.ts`](../src/institutions/odds-registry/bookmakers.ts) | Venue → `BookmakerProfile` (name/feed/region, book `url` + `logo` from `<meta>`); `booksQuoting()` in wire order; undeclared venues resolve `registered:false` |
+| Venue store | [`odds-registry/venue-store.ts`](../src/institutions/odds-registry/venue-store.ts) | Coordinates → identity: canonical `venueKey` (4dp), name/city/timezone, alias canonicalization, collision counts; [`config/odds-venues.json`](../config/odds-venues.json) |
+| Weather | [`odds-registry/weather.ts`](../src/institutions/odds-registry/weather.ts) | `(venue coords, commence)` → `EventWeather` (Open-Meteo, no key); WMO code mapping; 10-min/negative cache; timeout-bounded |
+| Report | [`odds-registry/report.ts`](../src/institutions/odds-registry/report.ts) | `OddsEvent[]` → Markdown (Matches/Consensus/Books/Value patterns/Convergence); `escapeMarkdownCell` on every feed-derived string |
+| Chips | [`odds-registry/chips.ts`](../src/institutions/odds-registry/chips.ts) | ANSI chip line per event (weather gradient, venue pin, venue-local kickoff, collision badge) for the terminal surface |
 | Display | [`odds-registry/display.ts`](../src/institutions/odds-registry/display.ts) | Token status card SVG + WebView-rasterized PNG (`statusCardPng`) + health summary |
 
 The model (`OddsEvent` → `OddsBookmaker` → `OddsMarket` → `OddsOutcome`) already carries
@@ -38,6 +43,8 @@ Fonbet WS, another XML feed) plugs into the same downstream normalize/compare pi
 | `GET /api/odds-registry` | Config + health (`ok/bookmakerCount/capacityFloor/feeds/sports`), 5s cache |
 | `GET /api/odds-vs-venues` | Per-sport consensus table: bookmaker capacity vs Kalshi/Polymarket declared coverage (`odds-vs-venues/v1`) |
 | `GET /api/odds-value-patterns` | Value-pattern detector surface (`odds-value-patterns/v1`); `declarations_only` until a live adapter feeds `OddsEvent[]` |
+| `GET /api/odds-report` | Odds Heat report — `text/markdown` (default) or `?format=html` (widget page); wired to the reference feed via `Bun.XML.parse`; sha-256 ETag/304; 5s cache |
+| `bun run odds:report <feed> [--plain]` | ANSI chip line per event (weather / venue / kickoff / collision); `--plain` strips ANSI |
 | `GET /status.svg` | Token status card (green/red + counts) for OG scrapers and embeds |
 | `bun run odds-registry:status --json` | CLI health/JSON view |
 | `bun run odds:sync --sport=X [--db=...] [--local] [--dry-run]` | Fan out to every book's feed (registry meta), cache WAL, run value + convergence on cached events; `--local` substitutes the reference feed for offline runs |
@@ -75,6 +82,8 @@ may carry a `<meta>` block — feed-specific connection details, normalized by
   <meta>
     <v3-name>Bet365</v3-name>        <!-- wire name for the v3 /odds query -->
     <api-key-ref>ODDS_API_KEY</api-key-ref>  <!-- env var holding the key -->
+    <url>https://www.bet365.com</url>  <!-- book homepage (bookmaker store / report) -->
+    <logo>/assets/books/bet365.png</logo>  <!-- logo asset (bookmaker store / report) -->
   </meta>
 </bookmaker>
 ```
@@ -86,6 +95,87 @@ book, one feed, one connection. `connectAllBookmakers` fans out N-generic with
 per-book failure isolation (one dead feed never suppresses the rest). The v3
 names are pinned live against `/bookmakers`: all 36 registry names resolve to
 active books.
+
+## Odds-heat wire contract (event / venue / book domains)
+
+```xml
+<odds-heat>
+  <cluster venue="51.5074,-0.1278" book="bet365" commence="2026-09-01T19:00:00Z">
+    <home team="Alpha FC"/><away team="Beta FC"/>
+    <print name="Alpha FC" american="-200"/><print name="Beta FC" american="+150"/>
+  </cluster>
+</odds-heat>
+```
+
+Three domains, never conflated:
+
+| Domain | Identity | Where it lives |
+|---|---|---|
+| **Event** | The match: teams + commence date → `alpha-fc-vs-beta-fc-2026-09-01` | `OddsEvent.id` (branded `FeedEventId`) |
+| **Venue** | `venue="lat,long"` — where the match is played (range-guarded ±90/±180) | `OddsEvent.location` + the venue store |
+| **Book** | `book="key"` — the bookmaker quoting the print | `bookmakers[]` key/title + the bookmaker profile store |
+
+Rules the parser enforces (`xml-feed.ts`):
+
+- Clusters sharing match identity (commence + named teams) merge into ONE event with one
+  bookmaker entry per `book` — multi-book consensus forms from a single feed.
+- Identity-less clusters (placeholder `Home`/`Away`, time 0) stay standalone `event` placeholders.
+- A cluster `@commence` wins over the parse option; the option is the fallback for feeds
+  without `@commence` attributes.
+- Legacy feeds that put the book in `venue` (non-numeric) still parse: venue falls back to
+  the book and no location attaches. Prefer the explicit `book` attribute.
+- Malformed/out-of-range `venue` coordinates attach no location — the row degrades to a
+  dash in reports, never a dropped event.
+
+## Venue store
+
+[`config/odds-venues.json`](../config/odds-venues.json) gives coordinates a human identity
+(`venue-store.ts`):
+
+```json
+{
+  "venueKey": "v:51.5074:-0.1278",
+  "name": "Alpha Park",
+  "city": "London",
+  "timezone": "Europe/London",
+  "aliases": ["The Alpha Ground", "AP"]
+}
+```
+
+- `venueKey` = coords rounded to 4dp (~11 m) — the canonical grouping/collision key.
+- `aliases` canonicalize alternate names (`"MSG"` → `"Madison Square Garden"`);
+  unknown names pass through unchanged.
+- `timezone` drives venue-local kickoff rendering (`Intl`; UTC fallback, invalid-tz safe).
+- Undeclared coordinates resolve to no profile — reports fall back to raw coordinates,
+  never a guess.
+
+## Weather
+
+`fetchEventWeather(location, commence)` (Open-Meteo, no key) returns the optional
+`EventWeather` (temperature/condition/wind/precipitation) for exactly
+**(venue coords, commence hour)** — weather is a property of the event in time, never of
+the venue. WMO weather codes map to report conditions; results cache 10 min (failures
+60 s); every failure mode degrades to no weather, never a thrown error.
+
+## Odds Heat report
+
+`buildOddsReportMarkdown({ events, patterns, books, venueStore })`
+([`report.ts`](../src/institutions/odds-registry/report.ts)) renders sections in order:
+**Matches** (event, matchup, venue name/city or coords, map link, venue-local kickoff,
+weather, collision badge) → **Consensus** → **Books quoting** → **Value patterns** →
+**Convergence**. Untrusted-wire contract: every feed-derived cell goes through
+`escapeMarkdownCell` before assembly, and HTML rendering uses the `strict` preset
+(`tagFilter` + `noHtmlBlocks` + `noHtmlSpans`) — a hostile venue name renders inert.
+
+## ANSI chips
+
+[`chips.ts`](../src/institutions/odds-registry/chips.ts) is the terminal complement of the
+Matches table (`renderOddsReportAnsi`, or `bun run odds:report`): weather chip with a
+continuous cold→hot truecolor gradient (`tempToRGB` via `Bun.color` RGB tuples — probed:
+`styleText` has no RGB format, and `FORCE_COLOR=1` downgrades to 16-color), venue pin
+(`Bun.sliceAnsi` truncation), venue-local kickoff, and a collision badge (silent ≤1,
+yellow ≤2, orange ≤5, red past 5). Missing segments collapse — no dash rows. Color env is
+bootstrap-read: set `NO_COLOR` / `FORCE_COLOR` before launch (see [`env.template`](../env.template)).
 
 ## Value patterns
 
