@@ -35,9 +35,11 @@ WebKit backend (matches the types docstring exactly).
 The returned `name` is a POSIX shared-memory segment. Verified by opening it
 from a separate process (python `shm_open`/libc):
 
-- **Name format:** `/bun-webview-<N>-<seq>` on WebKit. ⚠️ **`N` is `process.pid + 1`**
-  in all four probes (42947→42948, 43014→43015, …), **not** the bun process pid;
-  `seq` is a per-screenshot counter (increments per call: `-1`, `-2`).
+- **Name format:** `/bun-webview-<N>-<seq>` on WebKit. ⚠️ **`N` was `process.pid + 1`
+  in all four probes** (42947→42948, 43014→43015, …) — i.e. not the bun process
+  pid — but the **mechanism is unverified** (helper pid? internal counter?);
+  treat as an observation, not a pinned contract. `seq` is a per-screenshot
+  counter (increments per call: `-1`, `-2`).
 - **Segment vs image size:** `size` is the image byte length (3135 B); the
   actual segment is page-rounded (16 384 B via `fstat`). Kitty reads exactly
   `size` bytes.

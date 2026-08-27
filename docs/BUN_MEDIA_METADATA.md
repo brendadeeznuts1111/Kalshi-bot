@@ -108,7 +108,7 @@ ALL of these and they agree with each other and the runtime:
 | Runtime probes (bun 1.4.0 installed) | this session's probes | ✅ |
 | `bun-types` 1.4.0 (= bun.com/reference source) | screenshot/Image/WebView/concatArrayBuffers decls | ✅ |
 | Docs guides (`runtime/image.md`, `runtime/webview.md`) | navigate/headless/EXIF/constructor inputs | ✅ |
-| Bun repo tests (`test/js/bun/image/*`, 2943 lines; `test/js/bun/webview/*`) | filters, quality, Response(img), maxPixels, headless:false throws, navigate, shmem via FFI | ✅ |
+| Bun repo tests (ran `test/js/bun/image/*` 195/195 + `webview.test.ts` 59/60 pass on installed 1.4.0; grepped the contested tokens) | filters, quality, Response(img), maxPixels, headless:false throws, navigate, shmem via FFI | ✅ (ran + token-grepped, not a line-by-line read) |
 | Bun repo benchmarks (`bench/image/bench-resize.mjs`, `visual-compare.mjs`) | API surface: metadata/resize/fit/jpeg/webp | ✅ |
 
 The discrepancies in this session were never local-staleness — they were in the

@@ -68,9 +68,19 @@ export function formatValue(value: unknown, options: LogOptions = {}): string {
 /**
  * console.log that inspects every argument and fits each line to the terminal
  * width — colors preserved, no awkward wrapping.
+ *
+ * Per-value truncation alone can still overflow when many args are joined
+ * (N values x columns), so the joined output is truncated once more.
  */
 export function log(...args: unknown[]): void {
-  console.log(args.map((arg) => formatValue(arg)).join(" "));
+  const joined = args.map((arg) => formatValue(arg)).join(" ");
+  const columns = terminalColumns();
+  console.log(
+    joined
+      .split("\n")
+      .map((line) => sliceAnsi(line, 0, columns, { ellipsis: "…" }))
+      .join("\n"),
+  );
 }
 
 /** Alias for the "logSafe" recipe name. */

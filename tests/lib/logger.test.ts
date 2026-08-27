@@ -33,6 +33,20 @@ describe("src/lib/logger", () => {
     }
   });
 
+  test("log() re-truncates the joined multi-arg line to the width", () => {
+    const lines: string[] = [];
+    const orig = console.log;
+    console.log = (s: string) => lines.push(String(s));
+    try {
+      log("x".repeat(200), "y".repeat(200)); // 2 x 80-wide values joined must not overflow
+    } finally {
+      console.log = orig;
+    }
+    for (const line of lines) {
+      expect(plain(line).length).toBeLessThanOrEqual(80);
+    }
+  });
+
   test("custom inspect symbol is honored", () => {
     class Marker {
       [Symbol.for("nodejs.util.inspect.custom")]() {
