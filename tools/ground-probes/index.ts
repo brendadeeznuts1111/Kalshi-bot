@@ -204,6 +204,12 @@ export const PROBES: Record<string, GroundProbe[]> = {
       const sig = await subtle.sign({ name: "ML-DSA-65" }, kp.privateKey, new TextEncoder().encode("pq"));
       return okKp && sig instanceof ArrayBuffer && sig.byteLength > 0 ? ok("sig=" + sig.byteLength + "B") : bad("keygen/sign failed");
     }),
+    p("cr-8", "CryptoHasher.update(BunFile)", "update() REJECTS a BunFile (cheatsheet zero-copy claim is broken); use .bytes() or stream chunks", async () => {
+      let threw = false;
+      try { new Bun.CryptoHasher("sha256").update(Bun.file("package.json") as any); } catch { threw = true; }
+      const bytesHash = new Bun.CryptoHasher("sha256").update(await Bun.file("package.json").bytes()).digest("hex");
+      return threw && typeof bytesHash === "string" && bytesHash.length === 64 ? ok("BunFile rejected; bytes() path works") : bad("unexpected");
+    }),
     p("cr-6", "node:crypto ML-KEM/ML-DSA", "post-quantum via generateKeyPairSync(algorithm) (NOT named exports)", async () => {
       const nc: any = await import("node:crypto");
       const kem = nc.generateKeyPairSync("ml-kem-768");
@@ -242,6 +248,20 @@ export const PROBES: Record<string, GroundProbe[]> = {
       const okShape = hasCtor && client && typeof client.file === "function" && typeof client.write === "function";
       const noPut = client ? typeof client.putObject === "undefined" : true;
       return okShape && noPut ? ok("S3Client ctor + file/write; putObject absent") : bad("shape mismatch");
+    }),
+    p("rt-7", "bun -p formatting", "-p deep-formats results (objects/Sets/Buffers) — NOT toString()", async () => {
+      const p = Bun.spawnSync(["bun", "-p", "({ a: 1, b: [1,2] })"], { stdout: "pipe", stderr: "pipe" });
+      const out = p.stdout.toString();
+      return p.exitCode === 0 && out.includes("a:") && !out.includes("[object Object]") ? ok() : bad(out.slice(0, 50));
+    }),
+    p("rt-8", "bun:sqlite named params", "$-prefixed keys required for named binding (unprefixed {hash} = 0 matches)", async () => {
+      const { Database } = await import("bun:sqlite");
+      const db = new Database(":memory:");
+      db.exec("CREATE TABLE a (h TEXT)");
+      db.run("INSERT INTO a VALUES (?)", ["0xabc"]);
+      const prefixed = (db.query("SELECT * FROM a WHERE h = $hash").all({ $hash: "0xabc" }) as unknown[]).length;
+      const unprefixed = (db.query("SELECT * FROM a WHERE h = $hash").all({ hash: "0xabc" } as any) as unknown[]).length;
+      return prefixed === 1 && unprefixed === 0 ? ok("$hash key works; {hash} does not") : bad("prefixed=" + prefixed + " unprefixed=" + unprefixed);
     }),
     p("rt-6", "Bun.serve http3/http1", "http3/http1 options recognized (domain errors; types lag on 1.4.0)", async () => {
       try {

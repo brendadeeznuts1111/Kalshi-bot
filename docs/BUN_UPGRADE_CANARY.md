@@ -61,6 +61,11 @@ Corrected verdicts are pinned as ground probes: rt-4 (S3Client) and rt-5 (serve 
 | `h2`/`http3`/`protocol` in bun-types 1.4.0 | ⚠️ types lag | 0 matches — runtime ahead of types (same pattern as the S3Client/h2 corrections); cast |
 | `bun -e` vs `bun -p` (eval vs print) | ✅ | -e runs without printing; -p auto-prints the last expression; both support top-level await, TS, ESM, CJS (`require` works); `--eval`/`--print` long forms; `--port` is a SEPARATE flag ("Set the default port for Bun.serve") |
 | JSX in `bun -p` | ❌ overclaimed | errors: Cannot find module react/jsx-dev-runtime — needs a configured JSX runtime, not default |
+| `bun -p` prints `[object Object]` → use `Bun.inspect` | ❌ WRONG | `-p` already deep-formats objects/Sets/Buffers via the Bun inspector (`({a:1})` → `{ a: 1 }`) — Bun.inspect unnecessary |
+| `CryptoHasher.update(BunFile)` zero-copy | ❌ BROKEN | `update()` rejects a BunFile; use `update(await file.bytes())` or stream chunks (see `streamingFileHash`) |
+| `bun:sqlite` `$hash` + `.all({hash})` | ⚠️ half-right | works with **`$`-prefixed keys** (`{ $hash: "…" }` → match); unprefixed `{ hash: … }` → 0 matches |
+| `bun -e/-p` startup vs `node` | ✅ | measured ~0-10ms vs ~20-40ms on this machine (qualitative win; exact numbers environment-dependent) |
+| `--inspect-brk -e`, exit codes, `BUN_FEATURE_FLAG_EXPERIMENTAL_HTTP2_CLIENT` | ✅ | inspector waits at banner; throw→1/ok→0; env accepted |
 **Scope:** Shadow/canary verification only. **No live execution** on 1.4.x until Phase 5 passes.
 
 ---
