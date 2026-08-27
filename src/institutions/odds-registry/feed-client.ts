@@ -29,6 +29,33 @@ export type ConnectOptions = {
 };
 
 /**
+ * Fetch with timeout + exponential backoff (§239 real-gap close). Retries
+ * network errors and 5xx/429; 4xx (other than 429) are final. Uses
+ * AbortSignal.timeout (Bun-native) and Bun.sleep for the backoff.
+ */
+export async function fetchWithRetry(
+  url: string,
+  opts: { timeoutMs?: number; attempts?: number; baseDelayMs?: number; headers?: Record<string, string> } = {},
+): Promise<Response> {
+  const { timeoutMs = 15000, attempts = 3, baseDelayMs = 250 } = opts;
+  let last: Response | undefined;
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    try {
+      const res = await fetch(url, {
+        signal: AbortSignal.timeout(timeoutMs),
+        ...(opts.headers ? { headers: opts.headers } : {}),
+      });
+      if (res.ok || (res.status < 500 && res.status !== 429)) return res;
+      last = res;
+    } catch (err) {
+      if (attempt === attempts - 1) throw err;
+    }
+    if (attempt < attempts - 1) await Bun.sleep(baseDelayMs * 2 ** attempt);
+  }
+  throw new Error("fetchWithRetry exhausted (" + url + ") — last status " + (last?.status ?? "network"));
+}
+
+/**
  * Fetch one bookmaker's feed for one sport. Dispatches on the feed type;
  * every branch reads its connection details from the meta blob (with the
  * bookmaker's flat attributes as fallbacks for backward compatibility).
@@ -62,7 +89,7 @@ export async function connectBookmaker(
       // Meta: endpoint (the odds-heat XML URL). Fetched with Bun-native fetch.
       const endpoint = metaVal(bk, "endpoint", bk.endpoint ?? "");
       if (!endpoint) throw new Error(bk.key + " bun-xml feed needs <meta><endpoint>");
-      const res = await fetch(endpoint, { signal: AbortSignal.timeout(15000) });
+      const res = await fetchWithRetry(endpoint);
       if (!res.ok) throw new Error(bk.key + " XML feed HTTP " + res.status);
       const text = await res.text();
       const events = parseOddsXmlEvents(text, { sportKey, market });

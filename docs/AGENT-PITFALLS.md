@@ -252,6 +252,8 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §236 — Env-var list audited — transpiler cache 4 KB not 50 KB; .env.local skipped in test; verbose-fetch logs no bodies; bun test UTC default (TZ honored); --print env inspect-style (2026-08-27)
 - §237 — BUN_OPTIONS flags audited — --no-clear is NOT a bun flag (silently ignored); use --no-clear-screen; --hot/--no-warnings valid (2026-08-27)
 - §238 — Env deep-dive audited — system env beats .env; FORCE_COLOR any non-empty forces; COLORTERM=24bit upgrades; CI does NOT enable color; bunfig lacks [runtime]/transpiler_cache_path (2026-08-27)
+- §239 — Inferred-codebase audit corrected — audited files absent; memoryPressure + rate limiters + WAL already exist; real gaps: no compression, no sitemap/robots (2026-08-27)
+- §240 — A11y + transport fixes landed — gzip via Bun.gzipSync (json/html/report); /sitemap.xml+/robots.txt (sitemap:gen); fetch retry w/ backoff; skip-link/focus/print (2026-08-27)
 - §199 — ui:regen CLI — regenerate UI artifacts from meta/variant sources + the Bun.$ template failure class (2026-08-26)
 - §187 — Extended color formats — kernel-only (lch/oklab/oklch/hsv) + inverse parsers (2026-08-26)
 - §188 — Watermark pipeline — ML-DSA key naming + WebView/Blob verified facts (2026-08-26)

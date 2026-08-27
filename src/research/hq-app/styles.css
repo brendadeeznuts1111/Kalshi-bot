@@ -159,6 +159,11 @@ td.num, th.num { text-align: right; font-family: ui-monospace, SFMono-Regular, M
 @media (max-width: 900px) { .cols { grid-template-columns: 1fr; } }
 
 * { box-sizing: border-box; }
+/* a11y: skip link, visible focus, print (WCAG 2.4.1/2.4.7/1.4.13 + print) */
+.skip-link { position: absolute; left: -9999px; top: 0; z-index: 20; background: var(--panel); padding: .5rem 1rem; }
+.skip-link:focus { left: .5rem; top: .5rem; }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+@media print { .skip-link, .links, .glossary-open, .tabs { display: none; } }
 body { margin: 0; background: var(--bg); color: var(--fg);
   font: 14px/1.5 -apple-system, "SF Pro Text", Segoe UI, sans-serif; }
 header { display: flex; align-items: baseline; gap: 1rem; padding: 1rem 1.5rem;

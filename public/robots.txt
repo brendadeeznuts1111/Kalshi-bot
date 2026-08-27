@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://oddsheat.local/sitemap.xml

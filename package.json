@@ -320,6 +320,7 @@
     "ui:regen": "bun tools/ui-regen-cli.ts",
     "ui:watch": "bun tools/ui-regen-cli.ts --watch",
     "alpha:cluster": "bun tools/alpha-cluster-cli.ts",
+    "sitemap:gen": "bun tools/odds-sitemap.ts",
     "alpha:consensus:watch": "bun tools/alpha-consensus-watch.ts",
     "secret:leak-audit": "bun tools/secret-leak-audit-cli.ts",
     "agent:schedule:register": "bun tools/agent-schedule-cli.ts register",

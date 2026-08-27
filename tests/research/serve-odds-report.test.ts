@@ -56,4 +56,15 @@ describe("/api/odds-report (Bun.XML feed wired)", () => {
     });
     expect(second.status).toBe(304);
   });
+
+  test("gzip negotiation: Accept-Encoding gzip -> content-encoding gzip; plain otherwise (§240)", async () => {
+    // Bun's fetch sends accept-encoding: gzip by default — force identity for the plain case.
+    const plain = await fetch(server.url + "api/odds-report", { headers: { "accept-encoding": "identity" } });
+    expect(plain.headers.get("content-encoding")).toBeNull();
+    const gz = await fetch(server.url + "api/odds-report", { headers: { "accept-encoding": "gzip" } });
+    expect(gz.headers.get("content-encoding")).toBe("gzip");
+    // Bun's fetch client auto-decompresses the gzip body — the header is the signal.
+    const text = await gz.text();
+    expect(text).toContain("Odds Heat Report");
+  });
 });
