@@ -77,6 +77,14 @@ import {
   parseKalshiLiveOrderCommand,
 } from "../partner/execution/kalshi-live.ts";
 import { codedError, httpStatusFor, type ErrorCode } from "../institutions/error-codes.ts";
+import {
+  compareOddsVsVenues,
+  detectValuePatterns,
+  loadOddsRegistryConfig,
+  oddsRegistryHealth,
+  statusCardSvg,
+  type OddsRegistryConfig,
+} from "../institutions/odds-registry/index.ts";
 import { designAgent } from "../agent/design-agent.ts";
 import { baseCssVars, proseCss, themeToggleButton, themeChrome } from "../institutions/design-tokens.ts";
 import { themeManifest } from "../lib/color/theme.ts";
@@ -342,6 +350,98 @@ function sportsSourceCatalogResponse(): Response {
       "X-Sports-Source-Catalog-Cache": cacheHit ? "hit" : "miss",
     },
   });
+}
+
+const ODDS_REGISTRY_CACHE_MS = 5_000;
+let oddsRegistryCache:
+  | { expiresAtMs: number; config: OddsRegistryConfig; health: ReturnType<typeof oddsRegistryHealth> }
+  | undefined;
+
+export function resetOddsRegistryCache(): void {
+  oddsRegistryCache = undefined;
+}
+
+async function oddsRegistryResponse(): Promise<Response> {
+  const nowMs = Date.now();
+  const cached = oddsRegistryCache;
+  if (cached !== undefined && nowMs < cached.expiresAtMs) {
+    return json({ config: cached.config, health: cached.health }, 200, {
+      "Cache-Control": "no-store",
+      "X-Odds-Registry-Cache": "hit",
+    });
+  }
+  try {
+    const config = await loadOddsRegistryConfig(ROOT);
+    const health = oddsRegistryHealth(config);
+    oddsRegistryCache = { expiresAtMs: nowMs + ODDS_REGISTRY_CACHE_MS, config, health };
+    return json({ config, health }, 200, {
+      "Cache-Control": "no-store",
+      "X-Odds-Registry-Cache": "miss",
+    });
+  } catch (error) {
+    console.error("odds-registry config read failed", error);
+    return json({ error: "odds-registry config read failed" }, 503);
+  }
+}
+
+const ODDS_VS_VENUES_CACHE_MS = 5_000;
+let oddsVsVenuesCache: { expiresAtMs: number; payload: ReturnType<typeof compareOddsVsVenues> } | undefined;
+
+export function resetOddsVsVenuesCache(): void {
+  oddsVsVenuesCache = undefined;
+}
+
+async function oddsVsVenuesResponse(): Promise<Response> {
+  const nowMs = Date.now();
+  const cached = oddsVsVenuesCache;
+  if (cached !== undefined && nowMs < cached.expiresAtMs) {
+    return json(cached.payload, 200, {
+      "Cache-Control": "no-store",
+      "X-Odds-Vs-Venues-Cache": "hit",
+    });
+  }
+  try {
+    const config = await loadOddsRegistryConfig(ROOT);
+    const payload = compareOddsVsVenues(config);
+    oddsVsVenuesCache = { expiresAtMs: nowMs + ODDS_VS_VENUES_CACHE_MS, payload };
+    return json(payload, 200, {
+      "Cache-Control": "no-store",
+      "X-Odds-Vs-Venues-Cache": "miss",
+    });
+  } catch (error) {
+    console.error("odds-vs-venues failed", error);
+    return json({ error: "odds-vs-venues failed" }, 503);
+  }
+}
+
+const ODDS_VALUE_PATTERNS_CACHE_MS = 5_000;
+let oddsValuePatternsCache: { expiresAtMs: number; payload: Record<string, unknown> } | undefined;
+
+async function oddsValuePatternsResponse(): Promise<Response> {
+  const nowMs = Date.now();
+  const cached = oddsValuePatternsCache;
+  if (cached !== undefined && nowMs < cached.expiresAtMs) {
+    return json(cached.payload, 200, { "Cache-Control": "no-store", "X-Odds-Value-Cache": "hit" });
+  }
+  try {
+    const config = await loadOddsRegistryConfig(ROOT);
+    // Declaration-level: without live odds, emit the detector shape with the
+    // capacity summary; live adapters feed real OddsEvent[] into the same fn.
+    const payload = {
+      schema: "odds-value-patterns/v1",
+      generatedAt: new Date().toISOString(),
+      dataState: "declarations_only" as const,
+      bookmakerCount: config.bookmakers.length,
+      capacityFloor: config.capacityFloor,
+      patterns: [] as unknown[],
+      note: "Wire live OddsEvent[] from an adapter to detectValuePatterns for real hits.",
+    };
+    oddsValuePatternsCache = { expiresAtMs: nowMs + ODDS_VALUE_PATTERNS_CACHE_MS, payload };
+    return json(payload, 200, { "Cache-Control": "no-store", "X-Odds-Value-Cache": "miss" });
+  } catch (error) {
+    console.error("odds-value-patterns failed", error);
+    return json({ error: "odds-value-patterns failed" }, 503);
+  }
 }
 
 function findScored(run: ResearchRun, fullName: string): ScoredRepo | undefined {
@@ -1477,6 +1577,30 @@ export function createResearchServer(options: ServeOptions = {}) {
 
       if (url.pathname === "/api/registry/sports-sources") {
         return sportsSourceCatalogResponse();
+      }
+
+      if (url.pathname === "/api/odds-registry") {
+        return await oddsRegistryResponse();
+      }
+
+      if (url.pathname === "/api/odds-vs-venues") {
+        return await oddsVsVenuesResponse();
+      }
+
+      if (url.pathname === "/api/odds-value-patterns") {
+        return await oddsValuePatternsResponse();
+      }
+
+      // Token status card (SVG) + machine view for OG scrapers / dashboard embed.
+      if (url.pathname === "/status.svg") {
+        const config = await loadOddsRegistryConfig(ROOT);
+        const health = oddsRegistryHealth(config);
+        return new Response(statusCardSvg(health.ok ? "ok" : "bad", `${health.bookmakerCount} bookmakers`, `capacity floor ${health.capacityFloor}`), {
+          headers: {
+            "content-type": "image/svg+xml; charset=utf-8",
+            "cache-control": "no-cache",
+          },
+        });
       }
 
       // Glossary — structured entries + flat tooltips for HQ panel/tips

@@ -37,12 +37,15 @@ export interface OddsXmlParseOptions {
   sportKey?: string;
   /** Market key for the prints (default "h2h"). */
   market?: string;
-  commenceTime?: number;
+  /** Commence time for the printed event (epoch ms or ISO string). */
+  commenceTime?: number | string;
 }
 
 /**
- * Parse odds-heat XML into OddsEvent[] (one event per cluster; prints become
- * h2h outcomes with decimal prices, american kept as the source value).
+ * Parse odds-heat XML into OddsEvent[]: clusters (venues) quoting the same
+ * match — same commence + same home/away teams — merge into ONE event with
+ * one bookmaker entry per venue, so multi-bookmaker consensus forms from a
+ * single feed. Clusters without a match twin stay standalone events.
  */
 export function parseOddsXmlEvents(input: string | Blob, opts: OddsXmlParseOptions = {}): OddsEvent[] {
   const doc = Bun.XML.parse(input) as Record<string, XmlValue | XmlValue[] | undefined>;
@@ -51,41 +54,63 @@ export function parseOddsXmlEvents(input: string | Blob, opts: OddsXmlParseOptio
   const sportKey = opts.sportKey ?? "unknown";
   const market = opts.market ?? "h2h";
   const commenceTime = opts.commenceTime ?? 0;
-  return asArray<XmlValue>(root["cluster"])
-    .flatMap((c): OddsEvent[] => {
-      if (!isElement(c)) return [];
-      const venue = typeof c["@venue"] === "string" ? (c["@venue"] as string) : "Cluster";
-      const prints = asArray<XmlValue>(c["print"]).flatMap((p): { name: string; american: number }[] => {
-        if (!isElement(p)) return [];
-        const raw = typeof p["@american"] === "string" ? (p["@american"] as string) : "";
-        const american = Number(raw);
-        if (!Number.isFinite(american)) return [];
-        return [{ name: p["@name"] && typeof p["@name"] === "string" ? (p["@name"] as string) : "", american }];
-      });
-      if (prints.length === 0) return [];
-      const id = venue.replace(/[^A-Za-z0-9]+/g, "-").toLowerCase() || "event";
-      const side = (p: { name: string; american: number } | undefined, i: number) => ({
-        name: p ? p.name || (i === 0 ? "Home" : "Away") : (i === 0 ? "Home" : "Away"),
-        price: p ? (americanToDecimal(p.american) ?? 0) : 0,
-      });
-      const home = side(prints[0], 0);
-      const away = side(prints[1], 1);
-      return [{
-        id: asFeedEventId(id),
-        sportKey,
-        commenceTime: String(commenceTime),
-        homeTeam: home.name,
-        awayTeam: away.name,
-        bookmakers: [{
-          key: id,
-          title: venue,
-          lastUpdate: "",
-          markets: [{
-            key: market,
-            outcomes: [home, away].filter((s) => s.price > 0).map((s) => ({ name: s.name, price: s.price })),
-          }],
-        }],
-      }];
+  const clusters = asArray<XmlValue>(root["cluster"]);
+  const events: OddsEvent[] = [];
+  const byMatch = new Map<string, number>(); // `${commence}|${home}|${away}` -> index in events
+  for (const c of clusters) {
+    if (!isElement(c)) continue;
+    const venue = typeof c["@venue"] === "string" ? (c["@venue"] as string) : "Cluster";
+    const prints = asArray<XmlValue>(c["print"]).flatMap((p): { name: string; american: number }[] => {
+      if (!isElement(p)) return [];
+      const raw = typeof p["@american"] === "string" ? (p["@american"] as string) : "";
+      const american = Number(raw);
+      if (!Number.isFinite(american)) return [];
+      return [{ name: p["@name"] && typeof p["@name"] === "string" ? (p["@name"] as string) : "", american }];
     });
+    if (prints.length === 0) continue;
+    // OddsEvent.price is AMERICAN odds (alpha pipeline contract — see
+    // consensus-signal.test.ts fixtures). americanToDecimal stays display-only.
+    const side = (p: { name: string; american: number } | undefined, i: number) => ({
+      name: p ? p.name || (i === 0 ? "Home" : "Away") : (i === 0 ? "Home" : "Away"),
+      price: p ? p.american : 0,
+    });
+    const home = side(prints[0], 0);
+    const away = side(prints[1], 1);
+    // Merge only when match identity is explicit (real commence and/or named
+    // prints); default placeholders (time 0, "Home"/"Away") are standalone.
+    const hasIdentity = commenceTime !== 0 || home.name !== "Home" || away.name !== "Away";
+    const matchKey = `${commenceTime}|${home.name}|${away.name}`;
+    const existingIdx = hasIdentity ? byMatch.get(matchKey) : undefined;
+    if (existingIdx !== undefined) {
+      const ev = events[existingIdx]!;
+      ev.bookmakers.push({
+        key: venue.replace(/[^A-Za-z0-9]+/g, "-").toLowerCase() || venue,
+        title: venue,
+        lastUpdate: "",
+        markets: [{ key: market, outcomes: [home, away].filter((s) => s.price !== 0).map((s) => ({ name: s.name, price: s.price })) }],
+      });
+      continue;
+    }
+    const id = venue.replace(/[^A-Za-z0-9]+/g, "-").toLowerCase() || "event";
+    const ev: OddsEvent = {
+      id: asFeedEventId(id),
+      sportKey,
+      commenceTime: String(commenceTime),
+      homeTeam: home.name,
+      awayTeam: away.name,
+      bookmakers: [{
+        key: id,
+        title: venue,
+        lastUpdate: "",
+        markets: [{
+          key: market,
+          outcomes: [home, away].filter((s) => s.price !== 0).map((s) => ({ name: s.name, price: s.price })),
+        }],
+      }],
+    };
+    byMatch.set(matchKey, events.length);
+    events.push(ev);
+  }
+  return events;
 }
 

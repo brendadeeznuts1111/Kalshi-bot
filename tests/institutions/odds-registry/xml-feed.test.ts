@@ -19,15 +19,15 @@ describe("americanToDecimal", () => {
 });
 
 describe("parseOddsXmlEvents (Bun.XML)", () => {
-  test("clusters -> OddsEvents with h2h outcomes (decimal prices)", () => {
+  test("clusters -> OddsEvents with h2h outcomes (american prices, alpha contract)", () => {
     const events = parseOddsXmlEvents(FEED, { sportKey: "tennis_atp" });
     expect(events).toHaveLength(2);
     const e0 = events[0]!;
     expect(e0.sportKey).toBe("tennis_atp");
     expect(e0.homeTeam).toBe("Home"); // unnamed prints default
     expect(e0.bookmakers[0]!.title).toBe("Center Court");
-    expect(e0.bookmakers[0]!.markets[0]!.outcomes[0]!.price).toBeCloseTo(1.6667, 3);
-    expect(e0.bookmakers[0]!.markets[0]!.outcomes[1]!.price).toBe(2.2);
+    expect(e0.bookmakers[0]!.markets[0]!.outcomes[0]!.price).toBe(-150);
+    expect(e0.bookmakers[0]!.markets[0]!.outcomes[1]!.price).toBe(120);
   });
 
   test("Blob input parses identically", () => {
