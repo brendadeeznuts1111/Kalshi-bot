@@ -114,4 +114,68 @@ runs (verified); restore `"system"` after.
 | ERR_IMAGE_FORMAT_UNSUPPORTED fallback | 📋 (macOS: everything works) |
 | JPEG IDCT-skip decode | 📋 |
 
+## 11. Deeper verification (probe-locked beyond the docs)
+
+### Guards & errors
+
+- **Decompression bomb:** `{ maxPixels: 100 }` on a 20 000-pixel input →
+  rejects with `ERR_IMAGE_TOO_MANY_PIXELS` ("input exceeds maxPixels limit").
+  Default limit is ~268 MP per docs.
+- **Garbage input:** non-image bytes → `ERR_IMAGE_UNKNOWN_FORMAT`
+  (distinct from `ERR_IMAGE_FORMAT_UNSUPPORTED`, which is for unsupported
+  *system* formats).
+- **Invalid `filter`** throws at **chain time** (before any terminal):
+  `"filter must be one of 'box', 'bilinear', 'linear', 'lanczos3', …"`.
+- **`quality` is not range-validated** — `0` and `101` are silently
+  accepted (libjpeg clamps). ⚠️
+- **`SharedArrayBuffer` / resizable `ArrayBuffer` input is refused**:
+  `"resizable / shared ArrayBuffer is not supported"` — pass `buf.slice()`.
+
+### EXIF auto-orient (crafted Orientation=6 JPEG, verified)
+
+- `metadata()` reflects EXIF orientation **by default** (a 200x100 JPEG with
+  Orientation=6 reports 100x200).
+- `autoOrient: true` (the default): `resize(800)` → 800x1600 (rotate first).
+- `autoOrient: false`: `resize(800)` → 800x400 (raw geometry).
+
+### Lazy / reuse semantics
+
+- `width`/`height` are `-1` until a terminal runs; then they reflect output
+  dims.
+- **Concurrent terminals** on one pipeline both work (`Promise.all` of
+  `.png().bytes()` + `.webp().bytes()` on the same image).
+- **Chains are independent**: `img.resize(100)` then `img.resize(200)` from
+  the same base produce 100x50 and 200x100 — `resize` does not mutate the base.
+- **`new Response(img)` directly** works — sets `Content-Type` from the
+  pipeline's output format (verified `image/webp`).
+- **`write(fd)`** works (node fd accepted).
+
+### Binary-level format checks
+
+- `jpeg({ progressive: true })` output contains the **SOF2 (0xC2)** marker;
+  baseline `jpeg()` contains SOF0 (0xC0) and no SOF2.
+- `png({ palette: true })` emits **color-type 3 (indexed)**, bit depth 8;
+  plain `png()` emits **color-type 6 (RGBA)** — verified by parsing IHDR.
+
+### Clipboard full path
+
+- `clipboardChangeCount()` is a live counter (moves when the pasteboard
+  changes: 5763 → 5764 after a copy).
+- `hasClipboardImage()` / `fromClipboard()` return false/null when the
+  pasteboard holds no image type (**`pbcopy` stores text, not an image**).
+- With a real image on the pasteboard (`osascript` PNG class): `hasClipboardImage()
+  ` → true, `fromClipboard()` → Image with correct metadata (200x100 png).
+
+### Performance (200x100 source, 50 ops)
+
+| Pipeline | ms/op |
+| --- | --- |
+| `metadata()` (header only) | 0.022 |
+| decode + `resize(800)` + `jpeg` | 0.67 |
+| decode + `resize(800)` + `webp` | 8.0 |
+| decode + `resize(800)` + `png` | 13.5 (PNG encode dominates) |
+| `placeholder()` | 0.42 |
+
+PNG encode is the expensive terminal on this fixture; JPEG is the cheap one.
+
 **Docs:** https://bun.com/docs/runtime/image · ThumbHash https://evanw.github.io/thumbhash/

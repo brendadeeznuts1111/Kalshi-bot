@@ -126,4 +126,133 @@ describe("Bun.Image (Bun 1.4.0)", () => {
       server.stop();
     }
   });
+
+  async function rejection(fn: () => unknown): Promise<{ code?: string; message?: string } | null> {
+    try { await fn(); return null; } catch (e: any) { return { code: e?.code, message: String(e?.message ?? e) }; }
+  }
+
+  test("maxPixels decompression-bomb guard rejects", async () => {
+    const err = await rejection(() => new Bun.Image(fixture(), { maxPixels: 100 } as any).metadata());
+    expect(err?.code).toBe("ERR_IMAGE_TOO_MANY_PIXELS");
+  });
+
+  test("garbage input rejects with ERR_IMAGE_UNKNOWN_FORMAT", async () => {
+    const err = await rejection(() => new Bun.Image(new TextEncoder().encode("not an image")).metadata());
+    expect(err?.code).toBe("ERR_IMAGE_UNKNOWN_FORMAT");
+  });
+
+  test("invalid filter throws at chain time", () => {
+    expect(() => input().resize(100, 100, { filter: "bogus" as any })).toThrow(/filter must be one of/);
+  });
+
+  test("SharedArrayBuffer / resizable ArrayBuffer input is refused", async () => {
+    const err1 = await rejection(() => new Bun.Image(new SharedArrayBuffer(64) as any).metadata());
+    expect(String(err1?.message ?? "")).toContain("not supported");
+    const resizable = new ArrayBuffer(64, { maxByteLength: 128 });
+    const err2 = await rejection(() => new Bun.Image(resizable as any).metadata());
+    expect(String(err2?.message ?? "")).toContain("not supported");
+  });
+
+  test("format is sniffed from bytes, ignoring file extension", async () => {
+    const jpeg = await input().jpeg().bytes();
+    const p = "/tmp/kalshi-image-fake.png"; // jpeg bytes under a .png name
+    await Bun.write(p, jpeg);
+    const m = await new Bun.Image(p).metadata();
+    expect(m.format).toBe("jpeg");
+  });
+
+  test("no format method reuses the source format", async () => {
+    const src = await input().webp().bytes();
+    const out = await new Bun.Image(src).bytes();
+    expect((await new Bun.Image(out).metadata()).format).toBe("webp");
+  });
+
+  test("width/height are -1 before a terminal, output dims after", async () => {
+    const img = input().resize(400);
+    expect(img.width).toBe(-1);
+    expect(img.height).toBe(-1);
+    await img.webp().bytes();
+    expect(img.width).toBe(400);
+    expect(img.height).toBe(200);
+  });
+
+  test("concurrent terminals on one pipeline both work", async () => {
+    const img = input().resize(400);
+    const [a, b] = await Promise.all([img.png().bytes(), img.webp().bytes()]);
+    expect((await new Bun.Image(a).metadata()).format).toBe("png");
+    expect((await new Bun.Image(b).metadata()).format).toBe("webp");
+  });
+
+  test("chains from the same base are independent", async () => {
+    const img = input();
+    const a = await dims(img.resize(100));
+    const b = await dims(img.resize(200));
+    expect(a).toEqual([100, 50]);
+    expect(b).toEqual([200, 100]);
+  });
+
+  test("new Response(img) sets Content-Type automatically", async () => {
+    const resp = new Response(input().resize(64).webp() as any);
+    expect(resp.headers.get("content-type")).toBe("image/webp");
+    const bytes = new Uint8Array(await resp.arrayBuffer());
+    expect(bytes.length).toBeGreaterThan(0);
+  });
+
+  test("write(fd) accepts a raw file descriptor", async () => {
+    const { openSync } = await import("node:fs");
+    const fd = openSync("/tmp/kalshi-image-fd.png", "w");
+    const n = await input().resize(100).png().write(fd as any);
+    expect(n).toBeGreaterThan(0);
+    expect((await Bun.file("/tmp/kalshi-image-fd.png").size)).toBe(n);
+  });
+
+  test("progressive JPEG contains SOF2; baseline contains SOF0", async () => {
+    const find = (b: Uint8Array, marker: number) => {
+      for (let i = 0; i < b.length - 1; i++) if (b[i] === 255 && b[i + 1] === marker) return i;
+      return -1;
+    };
+    const prog = await input().jpeg({ progressive: true } as any).bytes();
+    const base = await input().jpeg().bytes();
+    expect(find(prog, 0xc2)).toBeGreaterThanOrEqual(0);
+    expect(find(base, 0xc2)).toBeLessThan(0);
+    expect(find(base, 0xc0)).toBeGreaterThanOrEqual(0);
+  });
+
+  test("indexed PNG emits color-type 3; plain PNG is RGBA (6)", async () => {
+    const idx = await input().png({ palette: true, colors: 64 }).bytes();
+    const tc = await input().png().bytes();
+    expect(idx[25]).toBe(3); // IHDR color type: 8 sig + 4 len + 4 type + 8 w/h + 1 bitdepth
+    expect(idx[24]).toBe(8); // bit depth
+    expect(tc[25]).toBe(6); // Bun's default PNG is RGBA, not truecolor-2
+  });
+
+  test("EXIF orientation is applied by default; autoOrient:false skips it", async () => {
+    const jpeg = await input().jpeg().bytes();
+    const rest = jpeg.subarray(2); // after SOI
+    const restBuf = Buffer.from(rest.buffer, rest.byteOffset, rest.byteLength);
+    const exif = Buffer.alloc(6 + 8 + 18);
+    exif.write("Exif\0\0", 0, "latin1");
+    exif.writeUInt16LE(0x4949, 6);
+    exif.writeUInt16LE(42, 8);
+    exif.writeUInt32LE(8, 10);
+    exif.writeUInt16LE(1, 14);
+    exif.writeUInt16LE(0x0112, 16); // Orientation tag
+    exif.writeUInt16LE(3, 18); // SHORT
+    exif.writeUInt32LE(1, 20);
+    exif.writeUInt16LE(6, 24); // Orientation=6 (rotate 90 CW)
+    const app1 = Buffer.alloc(4 + exif.length);
+    app1.writeUInt16BE(0xffe1, 0);
+    app1.writeUInt16BE(exif.length + 2, 2);
+    exif.copy(app1, 4);
+    const out = Buffer.alloc(2 + app1.length + restBuf.length);
+    out.writeUInt16BE(0xffd8, 0);
+    app1.copy(out, 2);
+    restBuf.copy(out, 2 + app1.length);
+
+    const oriented = new Uint8Array(out);
+    const auto = await new Bun.Image(oriented).metadata();
+    expect([auto.width, auto.height]).toEqual([8, 16]); // 16x8 rotated by EXIF
+    const raw = await new Bun.Image(oriented, { autoOrient: false } as any).metadata();
+    expect([raw.width, raw.height]).toEqual([16, 8]);
+  });
 });
