@@ -8,6 +8,8 @@ export { describeWeatherCode, fetchEventWeather, clearWeatherCache } from "./wea
 export { classifyAgainstHistory, currentRecords, latestRecord, loadSnapshotStore, mergeRecords, saveSnapshotStore } from "./consensus-history.ts";
 export type { ConsensusRecord, SnapshotStore } from "./consensus-history.ts";
 export { movementChip, statusChip } from "./chips.ts";
+export { loadReportEvents, mergeFeedEvents } from "./data-source.ts";
+export type { LoadReportEventsOptions, ReportDataState, ReportEvents } from "./data-source.ts";
 export { collisionChip, kickoffChip, renderOddsEventLine, renderOddsReportAnsi, venueChip, weatherChip, weatherIcon } from "./chips.ts";
 export type { OddsEventLineOptions } from "./chips.ts";
 export { canonicalVenueName, loadVenueStore, localKickoff, venueCollisionCounts, venueKeyFor, venueProfileFor } from "./venue-store.ts";
