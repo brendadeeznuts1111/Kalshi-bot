@@ -49,6 +49,8 @@
  * @see https://bun.com/docs/runtime/markdown
  */
 
+import { TOKENS } from "../institutions/design-tokens.ts";
+
 /**
  * Explicit GFM + safety (tagFilter + autolinks).
  * Matches the common Options example in Bun docs.
@@ -163,4 +165,43 @@ export function markdownToAnsi(
 /** List preset names (for CLIs / docs). */
 export function listMarkdownPresets(): readonly MarkdownHtmlPreset[] {
   return ["gfm", "docs", "dashboard", "strict"] as const;
+}
+/**
+ * Markdown → ANSI colored by the Kalshi HQ design tokens (TOKENS) — the
+ * registry stays the single source of truth for terminal output too.
+ *
+ * Why callbacks, not Bun.markdown.ansi(): ansi()'s theme only toggles
+ * colors/hyperlinks/columns — it cannot inject arbitrary token hex
+ * (verified 1.4.0). Bun.markdown.render(md, callbacks) can; verified
+ * callback shapes: heading(children, {level}), paragraph(children),
+ * strong(children), link(children, {href}), listItem(children).
+ *
+ * Colors (RGB triplets from TOKENS hex): headings = acc, body = fg,
+ * muted chrome (bullets, links, code) = dim.
+ */
+export function markdownToAnsiTokens(md: string): string {
+  const ESC = '\u001b[';
+  const reset = ESC + '0m';
+  const bold = ESC + '1m';
+  const dim = ESC + '2m';
+  const fg = (hex: string) => {
+    const h = hex.replace(/^#/, '');
+    const r = parseInt(h.slice(0, 2), 16);
+    const g = parseInt(h.slice(2, 4), 16);
+    const b = parseInt(h.slice(4, 6), 16);
+    return ESC + '38;2;' + r + ';' + g + ';' + b + 'm';
+  };
+  const acc = fg(TOKENS.color.acc);
+  const body = fg(TOKENS.color.fg);
+  const muted = fg(TOKENS.color.dim);
+  return Bun.markdown.render(md, {
+    heading: (c) => bold + acc + c + reset + '\n',
+    paragraph: (c) => c + '\n',
+    strong: (c) => bold + body + c + reset,
+    emphasis: (c) => body + c + reset,
+    link: (c, m) => muted + c + (m && m.href ? ' (' + String(m.href) + ')' : '') + reset,
+    codespan: (c) => dim + muted + '`' + c + '`' + reset,
+    listItem: (c) => dim + '\u2022 ' + reset + c + '\n',
+    blockquote: (c) => dim + '\u2502 ' + c + reset + '\n',
+  });
 }

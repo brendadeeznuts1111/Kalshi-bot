@@ -8,6 +8,7 @@ import {
   MARKDOWN_HTML_STRICT,
   listMarkdownPresets,
   markdownToAnsi,
+  markdownToAnsiTokens,
   markdownToHtml,
 } from '../../src/lib/markdown.ts';
 
@@ -134,5 +135,22 @@ describe('markdownToAnsi', () => {
     expect(out).toContain('Hello');
     expect(out).not.toContain('<h1>');
     expect(out).not.toContain('<strong>');
+  });
+});
+describe('markdownToAnsiTokens (token registry theming)', () => {
+  test('heading uses TOKENS.color.acc RGB triplet', () => {
+    const out = markdownToAnsiTokens('# Title');
+    expect(out).toContain('38;2;77;163;255'); // #4da3ff
+    expect(out).toContain('Title');
+  });
+  test('strong uses TOKENS.color.fg; link uses TOKENS.color.dim', () => {
+    const out = markdownToAnsiTokens('**bold** and [x](https://d.dev)');
+    expect(out).toContain('38;2;215;222;233'); // #d7dee9
+    expect(out).toContain('38;2;125;135;152'); // #7d8798
+    expect(out).toContain('https://d.dev');
+  });
+  test('renders plain text with no HTML tags', () => {
+    const out = markdownToAnsiTokens('# Hello');
+    expect(out).not.toContain('<h1>');
   });
 });

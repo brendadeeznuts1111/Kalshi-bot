@@ -55,6 +55,7 @@ const INTENTIONAL = new Set([
   "html", // §38/§62: Bun.html declarative streaming is INVENTED (typeof undefined)
   "SourceMap", // §62: Bun.SourceMap undefined, bun:jsc undefined
   "term", // §62: Bun.term UNDEFINED (no cursorTo/clearDown)
+  "terminal", // BUN_MEDIA_METADATA.md §1: Bun.terminal does not exist on 1.4.0 — use process.stdout.write
   "rename", // §62: no Bun-native rename — node:fs renameSync is the path
   "S", // §62: Bun.S undefined (blog code identifier unresolved)
   "X", // §62: Bun.X placeholder in a probe writeup

@@ -196,6 +196,8 @@
     "colors:docs": "bun scripts/generate-color-docs.ts",
     "colors:artifacts": "bun scripts/generate-color-artifacts.ts",
     "colors:check": "bun scripts/generate-color-artifacts.ts -- --check",
+    "validate:tokens": "bun run colors:check && bun run design:check && bun test tests/institutions/design-system.test.ts tests/research/design-surface.test.ts",
+    "sync:docs": "bun run --parallel colors:artifacts colors:docs",
     "colors:contrast": "bun scripts/check-contrast.ts",
     "colors:bench": "bun scripts/benchmark-color.ts",
     "sports:registry:bake": "bun scripts/generate-sports-source-artifacts.ts",

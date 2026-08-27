@@ -472,6 +472,68 @@ function resolveRun(runId: string | null): ResearchRun | null {
   return resolveLatestRun();
 }
 
+
+/**
+ * AI documentation layer — machine-readable views of the token registry
+ * and the docs surface, so agents/LLMs can read the design system and the
+ * report endpoints without scraping HTML.
+ *
+ * GET /tokens?format=md  → markdown table of every TOKENS path + value
+ * GET /tokens           → JSON of the registry (same CORS as design endpoints)
+ * GET /llms.txt         → plain-text endpoint index for AI clients
+ */
+export function handleTokens(req: Request): Response {
+  const url = new URL(req.url);
+  const walk = (prefix: string, node: Record<string, unknown>, out: [string, string][]): void => {
+    for (const [k, v] of Object.entries(node)) {
+      const path = prefix ? prefix + '.' + k : k;
+      if (typeof v === 'string') out.push([path, v]);
+      else if (v && typeof v === 'object') walk(path, v as Record<string, unknown>, out);
+    }
+  };
+  const rows: [string, string][] = [];
+  walk('', DESIGN_TOKENS as unknown as Record<string, unknown>, rows);
+  if (url.searchParams.get('format') === 'md') {
+    const md = [
+      '# Kalshi HQ tokens',
+      '',
+      'Single source of truth: `src/institutions/design-tokens.ts` (semver ' +
+        DESIGN_SYSTEM_VERSION + '). Consumers import TOKENS — never hardcode hex.',
+      '',
+      '| path | value |',
+      '| --- | --- |',
+      ...rows.map(([p, v]) => '| `' + p + '` | `' + v + '` |'),
+      '',
+    ].join('\n');
+    return new Response(md, {
+      status: 200,
+      headers: { 'content-type': 'text/markdown; charset=utf-8', ...designCorsHeaders() },
+    });
+  }
+  return json({ version: DESIGN_SYSTEM_VERSION, tokens: DESIGN_TOKENS }, 200, designCorsHeaders());
+}
+
+export function handleLlmsTxt(_req: Request): Response {
+  const lines = [
+    '# Kalshi HQ — AI endpoint index',
+    '',
+    'Machine-readable surfaces served by the report browser (Bun.serve).',
+    '',
+    '- /tokens?format=md — token registry as markdown (single source of truth: src/institutions/design-tokens.ts)',
+    '- /tokens — token registry as JSON',
+    '- /docs — rendered docs index (Bun.markdown, ETag/304)',
+    '- /api/runs — research run API',
+    '- /blog/index.json — Bun release-blog manifest',
+    '- /videos/index.json — video manifest',
+    '',
+    'Registry version: ' + DESIGN_SYSTEM_VERSION + '.',
+  ].join('\n');
+  return new Response(lines + '\n', {
+    status: 200,
+    headers: { 'content-type': 'text/plain; charset=utf-8', ...designCorsHeaders() },
+  });
+}
+
 export async function handleHome(): Promise<Response> {
   const run = resolveLatestRun();
   if (!run) {
@@ -1464,6 +1526,8 @@ export function createResearchServer(options: ServeOptions = {}) {
         : { hmr: true, console: true },
     routes: {
       "/hq": hqApp,
+      "/tokens": handleTokens,
+      "/llms.txt": handleLlmsTxt,
       [ROUTES.home]: handleHome,
       [ROUTES.runsList]: handleRunsList,
       [ROUTES.runApi]: handleRunApi,

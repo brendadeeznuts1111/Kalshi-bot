@@ -79,6 +79,8 @@ export const ROUTE_MANIFEST: readonly RouteDef[] = [
   { path: '/content/posts/*', method: 'GET', layer: 'pipeline', handler: 'post render', cache: 'no-cache' },
   { path: '/docs', method: 'GET', layer: 'pipeline', handler: 'repo docs index', cache: 'no-cache' },
   { path: '/docs/<name>', method: 'GET', layer: 'pipeline', handler: 'repo doc page', cache: 'no-cache' },
+  { path: '/tokens', method: 'GET', layer: 'research', handler: 'token registry (md?format=md | json)', cache: 'no-cache' },
+  { path: '/llms.txt', method: 'GET', layer: 'research', handler: 'AI endpoint index', cache: 'no-cache' },
   { path: '/api/audit.jsonl', method: 'GET', layer: 'pipeline', handler: 'audit evidence NDJSON', cache: 'no-cache' },
   { path: '/api/events.jsonl', method: 'GET', layer: 'pipeline', handler: 'live-tracker NDJSON', cache: 'no-cache' },
   { path: '/api/deps/health', method: 'GET', layer: 'pipeline', handler: 'dedupe/prune/audit gates', cache: '60s', docRef: '/bun/tooling' },
