@@ -10,13 +10,19 @@ guides (runtime/image.md, runtime/webview.md) · the bun repo's own test suite
 ## 1. Bun.concatArrayBuffers — ✅ verified
 
 Named export from `"bun"` and `Bun.concatArrayBuffers` (same function).
-Signature (`bun-types` 1.4.0):
+Signature (`bun-types` 1.4.0) — three overloads:
 
 ```ts
 function concatArrayBuffers(
   buffers: Array<ArrayBufferView | ArrayBufferLike>,
-  maxLength?: number, // not in the docs summary — caps output length
+  maxLength?: number,
+  asUint8Array?: false,
 ): ArrayBuffer;
+function concatArrayBuffers(
+  buffers: Array<ArrayBufferView | ArrayBufferLike>,
+  maxLength: number,
+  asUint8Array: true,
+): Uint8Array;
 ```
 
 Probe evidence:
@@ -27,6 +33,32 @@ Probe evidence:
 | single buffer / empty array | 3 / 0 bytes |
 | `Uint8Array` / `Buffer` views | accepted (inputs may be views, not just `ArrayBuffer`) |
 | `maxLength: 5` | **truncates** to first 5 bytes; `maxLength: 0` → 0 bytes |
+| `asUint8Array: true` | ✅ returns a **`Uint8Array`** (verified `[1,2,3,4,5]`) |
+| `maxLength + asUint8Array: true` | ✅ truncates AND returns Uint8Array (`[1,2,3,4]`) |
+
+⚠️ The 3-arg overload declares `maxLength: number` — the common example
+`concatArrayBuffers(chunks, undefined, true)` runs but is a **type error**
+(needs a number; use the 2-arg form or pass a real limit).
+
+### Performance (100 x 1 MB = 100 MB, measured)
+
+| Approach | ms | vs concatArrayBuffers |
+| --- | --- | --- |
+| `concatArrayBuffers(chunks, undefined, true)` | 11.3 | 1.0× |
+| `Buffer.concat` | 22.5 | **0.5×** (cab ~2× faster — the "~30%" claim is conservative) |
+| manual single-pass loop (`new Uint8Array(total)` + `set()`) | 3.9 | **2.9× faster than cab** |
+| `Blob` → `arrayBuffer()` | 46.0 | 0.25× |
+
+- ❌ "~30% faster than **manual loops**" — measured **slower**: a hand-rolled
+  single-pass loop is ~3× faster on 100 MB. `concatArrayBuffers` beats
+  `Buffer.concat` (≈2×) but is not the fastest primitive.
+- ⚠️ "zero-copy / no intermediate copies" — it is **one-copy** (each chunk
+  copied into the result, same as a manual loop); nothing is zero-copy.
+- ❌ **`Bun.terminal` does not exist on 1.4.0** — the example's
+  `Bun.terminal.write(payload)` would throw; use `process.stdout.write()`
+  or `Bun.stdout.write()`.
+- "The Odds Heat pipeline uses it for MP4/terminal" — 📋 no `concatArrayBuffers`
+  usage exists in the repo (grep: zero hits); aspirational.
 
 ## 2. Named `Image` / `WebView` imports — ✅ real
 

@@ -35,4 +35,20 @@ describe("Bun.concatArrayBuffers (Bun 1.4.0)", () => {
     const out = concatArrayBuffers([new Uint8Array([1]).buffer, new Uint8Array([2]), Buffer.from([3])]);
     expect(Array.from(new Uint8Array(out))).toEqual([1, 2, 3]);
   });
+
+  test("asUint8Array: true returns a Uint8Array", () => {
+    // 3-arg overload requires a number maxLength (types); pass a bound that
+    // does not truncate.
+    const out = concatArrayBuffers([new Uint8Array([1, 2]), new Uint8Array([3, 4])], 100, true);
+    expect(out).toBeInstanceOf(Uint8Array);
+    expect(Array.from(out)).toEqual([1, 2, 3, 4]);
+  });
+
+  test("maxLength combined with asUint8Array truncates the view", () => {
+    const a = new Uint8Array([1, 2, 3, 4, 5]);
+    const b = new Uint8Array([6, 7]);
+    const out = concatArrayBuffers([a, b], 4, true);
+    expect(out).toBeInstanceOf(Uint8Array);
+    expect(Array.from(out)).toEqual([1, 2, 3, 4]);
+  });
 });
