@@ -7,7 +7,8 @@ export { americanToDecimal, parseOddsXmlEvents } from "./xml-feed.ts";
 export { oddsRegistryHealth, statusCardPng, statusCardSvg } from "./display.ts";
 export type { StatusTone } from "./display.ts";
 export { compareOddsVsVenues, VENUE_SPORT_MAP, venueSports } from "./venues.ts";
-export { detectValuePatterns, kalshiCentsToImplied } from "./value-patterns.ts";
+export { classifyConvergence, consensusSnapshot, detectValuePatterns, kalshiCentsToImplied } from "./value-patterns.ts";
+export type { ConvergencePattern, ConvergenceSnapshot, DetectConvergenceOptions } from "./value-patterns.ts";
 export {
   activeV3BookmakerNames,
   fetchV3Bookmakers,

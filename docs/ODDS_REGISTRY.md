@@ -40,6 +40,7 @@ Fonbet WS, another XML feed) plugs into the same downstream normalize/compare pi
 | `GET /api/odds-value-patterns` | Value-pattern detector surface (`odds-value-patterns/v1`); `declarations_only` until a live adapter feeds `OddsEvent[]` |
 | `GET /status.svg` | Token status card (green/red + counts) for OG scrapers and embeds |
 | `bun run odds-registry:status --json` | CLI health/JSON view |
+| `bun run odds:sync --sport=X [--db=...] [--local] [--dry-run]` | Fan out to every book's feed (registry meta), cache WAL, run value + convergence on cached events; `--local` substitutes the reference feed for offline runs |
 | `bun run odds-registry:status --out=FILE` | CLI status-card PNG (WebView) |
 
 ## Operate
@@ -96,6 +97,12 @@ active books.
 | `venue_overvalued` | Venue implied above consensus → avoid / fade |
 | `thin_consensus` | Fewer bookmakers than `minBookmakers` — gap not actionable |
 | `wide_spread` | Bookmaker disagreement above `spreadThreshold` — consensus weak |
+
+Convergence (the second P5 half): `consensusSnapshot(events, id, side)` builds a
+per-side snapshot (mean/spread/count/ts); `classifyConvergence` compares two
+snapshots and emits `converging` (spread tightened ≥ threshold — the field is
+lining up on a price), `diverging` (spread widened — disagreement growing), or
+`stale` (quote older than `maxAgeMs`).
 
 Price semantics matter: `OddsEvent.price` is American odds (alpha pipeline contract), so `eventsToOddsPrints` normalizes with `americanToImplied` before consensus forms.
 
