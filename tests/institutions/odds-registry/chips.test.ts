@@ -9,12 +9,16 @@ import type { OddsEvent } from "../../../src/alpha/odds-types.ts";
 import {
   collisionChip,
   kickoffChip,
-  parseOddsXmlEvents,
   renderOddsEventLine,
   renderOddsReportAnsi,
+  styledRGB,
+  tempToRGB,
   venueChip,
   weatherChip,
   weatherIcon,
+} from "../../../src/institutions/odds-registry/chips.ts";
+import {
+  parseOddsXmlEvents,
   venueKeyFor,
   type VenueStore,
 } from "../../../src/institutions/odds-registry/index.ts";
@@ -80,6 +84,33 @@ describe("venueChip", () => {
     const chip = plain(venueChip({ lat: 1, long: 1 }, long));
     expect(chip).toContain("…");
     expect(Bun.stringWidth(chip)).toBeLessThan(60);
+  });
+});
+
+describe("tempToRGB / styledRGB (gradient)", () => {
+  test("gradient endpoints: deep cold blue -> hot red, clamped", () => {
+    expect(tempToRGB(-20)).toEqual([0, 100, 255]);
+    expect(tempToRGB(-25)).toEqual([0, 100, 255]); // clamped
+    expect(tempToRGB(40)).toEqual([255, 45, 0]);
+    expect(tempToRGB(50)).toEqual([255, 45, 0]); // clamped
+    // midranges interpolate, never out of gamut
+    for (const t of [-3, 8, 22, 35]) {
+      const [r, g, b] = tempToRGB(t);
+      expect(r).toBeGreaterThanOrEqual(0);
+      expect(g).toBeGreaterThanOrEqual(0);
+      expect(b).toBeGreaterThanOrEqual(0);
+      expect(r).toBeLessThanOrEqual(255);
+      expect(g).toBeLessThanOrEqual(255);
+      expect(b).toBeLessThanOrEqual(255);
+    }
+  });
+
+  test("styledRGB emits a 24-bit escape (or plain under NO_COLOR bootstrap)", () => {
+    const out = styledRGB("22°C", tempToRGB(22));
+    // Either the truecolor escape wraps the text or NO_COLOR stripped it —
+    // both are correct; a garbage half-styled string is not.
+    expect(Bun.stripANSI(out)).toBe("22°C");
+    expect(out === "22°C" || out.startsWith("\x1b[38;2;")).toBe(true);
   });
 });
 

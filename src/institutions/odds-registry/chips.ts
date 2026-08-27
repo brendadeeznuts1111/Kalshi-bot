@@ -38,11 +38,36 @@ export function weatherIcon(condition?: string): string {
 
 const dim = (s: string) => paint(s, "misc");
 
-/** Temperature -> severity color key: cold blue, mild amber, hot red. */
-function tempKey(tempC: number): "kalshi" | "betfair" | "trading" {
-  if (tempC < 10) return "kalshi";
-  if (tempC < 25) return "betfair";
-  return "trading";
+/**
+ * Arbitrary-RGB styling for the temperature gradient — the one thing the
+ * palette kernel can't do (it is key-based). Verified on 1.4.0: Bun.color
+ * accepts the RGB tuple directly (values silently clamp to 0-255), honors
+ * NO_COLOR at bootstrap (returns "" -> render plain), and does NOT do TTY
+ * detection for "ansi" — chips keep the kernel's convention (color unless
+ * NO_COLOR), so no extra stream check here.
+ */
+export function styledRGB(text: string, rgb: [number, number, number]): string {
+  const esc = Bun.color(rgb, "ansi");
+  return esc ? `${esc}${text}\x1b[0m` : text;
+}
+
+/** Continuous cold->hot temperature gradient, clamped to [-20, 40] °C. */
+export function tempToRGB(tempC: number): [number, number, number] {
+  const t = Math.max(-20, Math.min(40, tempC));
+  if (t < 0) {
+    const p = (t + 20) / 20;
+    return [0, Math.round(100 + p * 155), 255];
+  }
+  if (t < 15) {
+    const p = t / 15;
+    return [0, 255, Math.round(255 - p * 155)];
+  }
+  if (t < 30) {
+    const p = (t - 15) / 15;
+    return [Math.round(p * 255), Math.round(255 - p * 60), 0];
+  }
+  const p = (t - 30) / 10;
+  return [255, Math.round(195 - p * 150), 0];
 }
 
 /** `☀ 22°C Rain wind 24 km/h` — empty string when the event has no weather. */
@@ -53,7 +78,7 @@ export function weatherChip(w: EventWeather | undefined): string {
   if (!hasData) return "";
   const parts = [
     w.temperatureC !== undefined
-      ? paint(`${weatherIcon(w.condition)} ${Math.round(w.temperatureC * 10) / 10}°C`, tempKey(w.temperatureC))
+      ? styledRGB(`${weatherIcon(w.condition)} ${Math.round(w.temperatureC * 10) / 10}°C`, tempToRGB(w.temperatureC))
       : `${weatherIcon(w.condition)}`.trim(),
     w.condition ?? "",
     w.windSpeedKmh !== undefined ? `wind ${Math.round(w.windSpeedKmh)} km/h` : "",
@@ -83,10 +108,15 @@ export function kickoffChip(commenceTime: string, timezone?: string): string {
   return `${paint("◷", "misc")} ${paint(localKickoff(commenceTime, timezone), "misc")}`;
 }
 
-/** `⟨2 events⟩` collision badge — yellow when crowded, red when >5 (severe). */
+/**
+ * `⟨2 events⟩` collision badge — silent at/below 1, yellow at 2, orange
+ * through 5 (styledRGB — no palette key for orange), red past 5 (severe).
+ */
 export function collisionChip(count: number): string {
   if (count <= 1) return "";
-  return paint(`⟨${count} events⟩`, count > 5 ? "trading" : "middleware");
+  if (count <= 2) return paint(`⟨${count} events⟩`, "middleware");
+  if (count <= 5) return styledRGB(`⟨${count} events⟩`, [255, 165, 0]);
+  return paint(`⟨${count} events⟩`, "trading");
 }
 
 export type OddsEventLineOptions = {
