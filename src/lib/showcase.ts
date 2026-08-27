@@ -21,6 +21,41 @@ import { readdirSync, readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { markdownToHtml } from "./markdown.ts";
 import { ROUTE_MANIFEST } from "../research/route-manifest.ts";
+import { TOKENS } from "../institutions/design-tokens.ts";
+
+// ── colors: palette SSOT + env overrides — no hex literals in this file ──
+
+export type ShowcaseColors = {
+  bg: string;
+  panel: string;
+  line: string;
+  fg: string;
+  dim: string;
+  accent: string;
+  warn: string;
+};
+
+/**
+ * Resolve showcase colors: design-token defaults, overridable per key via
+ * SHOWCASE_* env vars (documented in env.template). Values always come from
+ * the palette SSOT or the operator — never a literal in this file.
+ */
+export function showcaseColors(env: Record<string, string | undefined> = Bun.env): ShowcaseColors {
+  const c = TOKENS.color;
+  const pick = (envKey: string, token: string): string => {
+    const v = env[envKey];
+    return typeof v === "string" && v.trim() !== "" ? v.trim() : token;
+  };
+  return {
+    bg: pick("SHOWCASE_BG", c.bg),
+    panel: pick("SHOWCASE_PANEL", c.panel),
+    line: pick("SHOWCASE_LINE", c.line),
+    fg: pick("SHOWCASE_FG", c.fg),
+    dim: pick("SHOWCASE_DIM", c.dim),
+    accent: pick("SHOWCASE_ACCENT", c.acc),
+    warn: pick("SHOWCASE_WARN", c.warn),
+  };
+}
 
 export type ShowcaseStats = { label: string; value: number | string; source: string };
 
@@ -181,7 +216,10 @@ function esc(v: unknown): string {
   return String(v ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] as string);
 }
 
-export function renderShowcaseHtml(data: ShowcaseData): string {
+export function renderShowcaseHtml(data: ShowcaseData, colors: ShowcaseColors = showcaseColors()): string {
+  const cssVars =
+    `--bg:${colors.bg}; --panel:${colors.panel}; --line:${colors.line}; --fg:${colors.fg};` +
+    ` --dim:${colors.dim}; --acc:${colors.accent}; --warn:${colors.warn};`;
   const toc = data.sections
     .map((s, i) => `<a href="#${esc(s.id)}">${i + 1} · ${esc(s.heading)}</a>`)
     .join(" · ");
@@ -208,7 +246,7 @@ export function renderShowcaseHtml(data: ShowcaseData): string {
 <meta name="generator" content="Bun ${esc(data.bunVersion)}" />
 <title>${esc(data.title)}</title>
 <style>
-  :root { --bg:#0b0e14; --panel:#131826; --fg:#d7dee9; --dim:#8b95a7; --acc:#4da3ff; --line:#232b3a; }
+  :root { ${cssVars} }
   * { box-sizing:border-box; }
   body { margin:0 auto; max-width:1200px; background:var(--bg); color:var(--fg); font:0.95rem/1.55 -apple-system,"Segoe UI",sans-serif; padding:2rem clamp(1rem,4vw,3rem) 4rem; }
   a { color:var(--acc); }
@@ -225,16 +263,20 @@ export function renderShowcaseHtml(data: ShowcaseData): string {
   .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:1rem 1.2rem; }
   .card p { font-size:0.88rem; margin:0.35rem 0; }
   .card .note { color:var(--dim); font-size:0.78rem; border-left:2px solid var(--acc); padding-left:0.6rem; }
-  code { font-family:ui-monospace,Menlo,monospace; font-size:0.82rem; color:var(--acc); background:#0d1220; padding:0.1rem 0.35rem; border-radius:5px; }
+  code { font-family:ui-monospace,Menlo,monospace; font-size:0.82rem; color:var(--acc); background:var(--panel); padding:0.1rem 0.35rem; border-radius:5px; }
   .mermaid { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:1rem; overflow-x:auto; }
   .tablewrap { overflow-x:auto; }
+  pre { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:0.8rem 1rem; overflow-x:auto; max-width:100%; font-family:ui-monospace,Menlo,monospace; font-size:0.8rem; }
+  pre code { background:transparent; padding:0; color:var(--fg); }
+  ol { margin:0.4rem 0; padding-left:1.4rem; }
+  ol li { margin:0.25rem 0; }
   table { width:100%; border-collapse:collapse; font-size:0.85rem; }
   th,td { text-align:left; padding:0.45rem 0.6rem; border-bottom:1px solid var(--line); vertical-align:top; }
   th { color:var(--dim); font-weight:600; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; }
   td.num { text-align:right; color:var(--acc); font-family:ui-monospace,monospace; }
   .toc { color:var(--dim); font-size:0.85rem; }
   @media (max-width: 480px) { body { padding:1rem; } }
-  @media print { body { background:#fff; color:#000; } a { color:#000; } .mermaid { border-color:#000; } }
+  @media print { body { background:var(--panel); color:var(--fg); } a { color:var(--fg); } .skip, .statbar { display:none; } }
   footer { margin-top:3rem; color:var(--dim); font-size:0.78rem; border-top:1px solid var(--line); padding-top:0.8rem; }
 </style></head><body>
 <h1>${esc(data.title.split("—")[0]!.trim())} <span>· ${esc(data.title.split("—")[1]?.trim() ?? "Bun")}</span></h1>

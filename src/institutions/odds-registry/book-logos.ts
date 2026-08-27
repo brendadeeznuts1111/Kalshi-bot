@@ -20,7 +20,7 @@ export function bookColor(key: string): string {
   let h = 0;
   for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) % 360;
   const hex = Bun.color(`hsl(${h}, 62%, 42%)`, "hex");
-  return typeof hex === "string" ? hex : "#52525b";
+  return typeof hex === "string" ? hex : TOKENS.color.dim;
 }
 
 /** Initials for the swatch: first letters of up to 3 words, else first 3 chars. */
@@ -30,15 +30,27 @@ export function bookInitials(key: string, name: string): string {
   return key.replace(/[^a-z0-9]/g, "").slice(0, 3).toUpperCase();
 }
 
+import { TOKENS } from "../design-tokens.ts";
+
+export type BookLogoColors = { fill: string; label: string };
+
+/** Logo text colors from the token palette — no literals. */
+export function bookLogoColors(env: Record<string, string | undefined> = Bun.env): BookLogoColors {
+  const fg = env.SHOWCASE_FG?.trim() || TOKENS.color.fg;
+  const dim = env.SHOWCASE_DIM?.trim() || TOKENS.color.dim;
+  return { fill: fg, label: dim };
+}
+
 export function bookLogoSvg(key: string, name: string): string {
   const color = bookColor(key);
   const initials = bookInitials(key, name);
+  const { fill, label } = bookLogoColors();
   const esc = (v: string) => v.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   return (
     '<svg xmlns="http://www.w3.org/2000/svg" width="' + BOOK_LOGO_SIZE + '" height="' + BOOK_LOGO_SIZE + '" viewBox="0 0 128 128">' +
     '<rect width="128" height="128" rx="24" fill="' + color + '"/>' +
-    '<text x="64" y="78" font-family="-apple-system,Segoe UI,sans-serif" font-size="44" font-weight="700" fill="#ffffff" text-anchor="middle">' + esc(initials) + '</text>' +
-    '<text x="64" y="104" font-family="-apple-system,Segoe UI,sans-serif" font-size="13" fill="#ffffffcc" text-anchor="middle">' + esc(key) + '</text>' +
+    '<text x="64" y="78" font-family="-apple-system,Segoe UI,sans-serif" font-size="44" font-weight="700" fill="' + fill + '" text-anchor="middle">' + esc(initials) + '</text>' +
+    '<text x="64" y="104" font-family="-apple-system,Segoe UI,sans-serif" font-size="13" fill="' + label + '" text-anchor="middle">' + esc(key) + '</text>' +
     '</svg>'
   );
 }
