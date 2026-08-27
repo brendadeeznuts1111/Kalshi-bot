@@ -243,6 +243,22 @@ export const PROBES: Record<string, GroundProbe[]> = {
       const noPut = client ? typeof client.putObject === "undefined" : true;
       return okShape && noPut ? ok("S3Client ctor + file/write; putObject absent") : bad("shape mismatch");
     }),
+    p("rt-6", "Bun.serve http3/http1", "http3/http1 options recognized (domain errors; types lag on 1.4.0)", async () => {
+      try {
+        await (Bun.serve as any)({ port: 0, http3: true, fetch: () => new Response("x") });
+        return bad("http3 without tls should throw");
+      } catch (e1) {
+        const msg1 = (e1 as Error).message;
+        if (!(msg1.includes("requires") && msg1.includes("tls"))) return bad("unexpected: " + msg1.slice(0, 50));
+      }
+      try {
+        await (Bun.serve as any)({ port: 0, http1: false, fetch: () => new Response("x") });
+        return bad("http1:false without http3 should throw");
+      } catch (e2) {
+        const msg2 = (e2 as Error).message;
+        return msg2.includes("Cannot disable http1") ? ok("http3/http1 recognized") : bad("unexpected: " + msg2.slice(0, 50));
+      }
+    }),
     p("rt-5", "Bun.serve h2", "h2 option ACCEPTED at runtime (CORRECTED — types lag, option not rejected)", async () => {
       try {
         const s = await (Bun.serve as any)({ port: 0, fetch: () => new Response("x"), h2: true });

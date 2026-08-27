@@ -40,6 +40,25 @@ acceptance probes of the API call itself, (c) all plausible access patterns (nam
 export / constructor / algorithm-string / options-object / sibling names), (d) the type
 declarations, and (e) confidence labels — "not found via probed pattern" ≠ "absent".
 Corrected verdicts are pinned as ground probes: rt-4 (S3Client) and rt-5 (serve h2).
+**Rule:** absence claims require (a) full runtime-surface enumeration, (b) runtime
+acceptance probes of the API call itself, (c) all plausible access patterns (named
+export / constructor / algorithm-string / options-object / sibling names), (d) the type
+declarations, and (e) confidence labels — "not found via probed pattern" ≠ "absent".
+Corrected verdicts are pinned as ground probes: rt-4 (S3Client) and rt-5 (serve h2).
+
+### Dev tooling + HTTP/2-3 (official docs, probed 2026-08-26)
+
+| Claim | Verdict on 1.4.0 | Evidence |
+| --- | --- | --- |
+| `--cpu-prof` / `--cpu-prof-md` / `BUN_CPU_PROFILE` | ✅ | writes `CPU.<ts>.<pid>.cpuprofile` in CWD; `-md` exits 0; env accepted. Repo already uses `--cpu-prof-md` (profile:serve) |
+| `--heap-prof` / `--heap-prof-md` | ✅ | writes `Heap.<ts>.<pid>.heapprofile` in CWD; repo uses `--heap-prof-md` (heap:serve) |
+| `--no-orphans` / `BUN_FEATURE_FLAG_NO_ORPHANS` / bunfig `noOrphans` | ✅ | flag + env accepted; repo bunfig already sets `run.noOrphans = true` |
+| `--no-env-file` | ✅ | verified: skips `.env` (val=undefined) vs loaded without flag |
+| Async stack traces (fs/Bun.file/S3/DNS/crypto/fetch → await site) | ⚠️ not yet probed | official doc claim; needs a dedicated async-error stack test |
+| `Bun.serve({ http3: true })` (requires tls; `http1: false` h3-only) | ✅ recognized | domain errors: "HTTP/3 requires tls" / "Cannot disable http1 without enabling http3" — options validated, not ignored. Full QUIC handshake not exercised (needs TLS/UDP) |
+| `fetch(url, { protocol: "http2" })` | ✅ works | real request → 200 |
+| `fetch(url, { protocol: "http3" })` | ✅ recognized | attempted real QUIC handshake → HTTP3HandshakeFailed (endpoint/network) — the option drives real behavior |
+| `h2`/`http3`/`protocol` in bun-types 1.4.0 | ⚠️ types lag | 0 matches — runtime ahead of types (same pattern as the S3Client/h2 corrections); cast |
 **Scope:** Shadow/canary verification only. **No live execution** on 1.4.x until Phase 5 passes.
 
 ---
