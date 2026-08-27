@@ -59,6 +59,8 @@ Corrected verdicts are pinned as ground probes: rt-4 (S3Client) and rt-5 (serve 
 | `fetch(url, { protocol: "http2" })` | ✅ works | real request → 200 |
 | `fetch(url, { protocol: "http3" })` | ✅ recognized | attempted real QUIC handshake → HTTP3HandshakeFailed (endpoint/network) — the option drives real behavior |
 | `h2`/`http3`/`protocol` in bun-types 1.4.0 | ⚠️ types lag | 0 matches — runtime ahead of types (same pattern as the S3Client/h2 corrections); cast |
+| `bun -e` vs `bun -p` (eval vs print) | ✅ | -e runs without printing; -p auto-prints the last expression; both support top-level await, TS, ESM, CJS (`require` works); `--eval`/`--print` long forms; `--port` is a SEPARATE flag ("Set the default port for Bun.serve") |
+| JSX in `bun -p` | ❌ overclaimed | errors: Cannot find module react/jsx-dev-runtime — needs a configured JSX runtime, not default |
 **Scope:** Shadow/canary verification only. **No live execution** on 1.4.x until Phase 5 passes.
 
 ---
