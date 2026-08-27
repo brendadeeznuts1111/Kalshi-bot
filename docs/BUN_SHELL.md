@@ -204,6 +204,35 @@ Pure helpers tested in [`tests/gh.test.ts`](../tests/gh.test.ts):
 
 Live GitHub access is covered by `bun run research`, not unit tests.
 
+
+## CLI eval escaping — verified matrix (2026-08-26, probed on 1.4.0)
+
+`bun -e`/`-p` sit at layer 2 of a 4-layer escape stack: terminal → shell → bun CLI
+→ JS string → your output format (SQL/SVG/JSON). Every layer doubles the escape
+cost. All rows below are runtime-verified (isolated `bash -c` runs):
+
+| Code contains | Strategy | Verified result |
+| --- | --- | --- |
+| nothing special | single quotes: `bun -p '1+1'` | `2` |
+| `$` or backticks | **single quotes preserve** (`'$HOME'` → `$HOME`) | ✅ |
+| `$`/backticks in double quotes | **TRAP**: shell expands/runs them (`"$HOME"` → `/Users/nolarose`; `` "`echo hi`" `` → `hi`) | ❌ broken intent |
+| apostrophe `'` | ANSI-C: `$'console.log("Bun\'s")'` → `Bun's`; or concat `'"'"'`; or double-quote shell + `\"` | ✅ |
+| newlines | ANSI-C `$'a\nb'` (multi-line -e works) | ✅ `2` |
+| backslashes | single quotes preserve; shell `\\` → JS `\` → output `\` (count 2:1 per layer) | ✅ `a\b` |
+| `printf %q` injection | **WRONG for eval**: `$(printf %q "$CODE")` backslash-escapes every special → JS syntax error | ❌ use a file instead |
+
+Verified CLI capabilities:
+- `bun -e 'code' arg1 arg2` → `Bun.argv` = `[bun, arg1, arg2]` (trailing args pass through) ✅
+- `echo 'code' | bun -` → runs code from stdin ✅ (`bun -` is the stdin-eval entry)
+- `echo 'code' | bun -e` → error: `-e` requires a value (stdin ignored) ❌
+- `bun -p` prints the LAST expression; a trailing `console.log` prints `undefined` after the value
+
+**Escape-budget rule:** minimize layers — file > `bun -` (stdin) > `-e` one-liner. When a
+snippet needs more than ~2 special characters, stop fighting the shell: write it to a
+temp `.ts` and `bun file.ts` (what the repo probes do). This section supersedes the
+reword-first instinct with the verified alternatives (ANSI-C quoting for apostrophes,
+`bun -` for multi-line).
+
 ## Related docs
 
 - [`docs/BUN_NATIVE.md`](BUN_NATIVE.md) — full API map
