@@ -18,20 +18,20 @@
 // @updated Bun.write · fixed v1.3.5 · 2025-12-17 · https://bun.com/blog/bun-v1.3.5
 // @updated Bun.write · fixed v1.3.6 · 2026-01-13 · https://bun.com/blog/bun-v1.3.6
 // @updated Bun.write · fixed v1.3.12 · 2026-04-09 · https://bun.com/blog/bun-v1.3.12
-// @verified Bun.write · Bun v1.3.14 · 2026-08-06 · https://bun.com/docs/runtime/file-io#writing-files-bun-write
+// @verified Bun.write · Bun v1.4.0 · ground-verified · https://bun.com/docs/runtime/file-io#writing-files-bun-write
 // @see https://bun.com/docs/runtime/environment-variables#manually-specifying-env-files — --env-file
 // @updated --env-file · changed v1.0.12 · 2023-11-16 · https://bun.com/blog/bun-v1.0.12
-// @verified --env-file · Bun v1.3.14 · 2026-08-06 · https://bun.com/docs/runtime/environment-variables#manually-specifying-env-files
+// @verified --env-file · Bun v1.4.0 · ground-verified · https://bun.com/docs/runtime/environment-variables#manually-specifying-env-files
 // @see https://bun.com/docs/bundler/executables — --force
 // @updated --force · fixed v1.3.7 · 2026-01-27 · https://bun.com/blog/bun-v1.3.7
 // @updated --force · fixed v1.3.14 · 2026-05-13 · https://bun.com/blog/bun-v1.3.14
-// @verified --force · Bun v1.3.14 · 2026-08-06 · https://bun.com/docs/bundler/executables
+// @verified --force · Bun v1.4.0 · ground-verified · https://bun.com/docs/bundler/executables
 // @see https://bun.com/docs/runtime/utils#bun-env — Bun.env
 // @updated Bun.env · fixed v1.0.3 · 2023-09-22 · https://bun.com/blog/bun-v1.0.3
 // @updated Bun.env · changed v1.1.0 · 2024-04-01 · https://bun.com/blog/bun-v1.1
 // @updated Bun.env · fixed v1.2.8 · 2025-03-31 · https://bun.com/blog/bun-v1.2.8
 // @updated Bun.env · fixed v1.3.0 · 2025-10-10 · https://bun.com/blog/bun-v1.3
-// @verified Bun.env · Bun v1.3.14 · 2026-08-06 · https://bun.com/docs/runtime/environment-variables
+// @verified Bun.env · Bun v1.4.0 · ground-verified · https://bun.com/docs/runtime/environment-variables
 /**
  * pass-cli inject / run wrappers — vault plane boundary only.
  * Never logs secret values.

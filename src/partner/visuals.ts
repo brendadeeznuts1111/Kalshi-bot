@@ -7,7 +7,7 @@
  * @see https://bun.com/docs/runtime/utils#bun-color
  */
 // @see https://bun.com/docs/runtime/color
-// @see https://bun.com/docs/api/utils#bun-color
+// @see https://bun.com/docs/runtime/color
 
 export type RgbaObject = { r: number; g: number; b: number; a: number };
 export type RgbObject = { r: number; g: number; b: number };
@@ -220,7 +220,7 @@ export function encodeSolidColorPng(
     pngChunk("IEND", new Uint8Array(0)),
   ];
   // Single-pass concatenation — replaces the manual total+offset loop.
-  // @see https://bun.com/docs/api/utils#arraybuffersink
+  // @see https://bun.com/docs/runtime/utils
   const sink = new Bun.ArrayBufferSink();
   sink.start({ stream: false });
   for (const p of parts) sink.write(p);

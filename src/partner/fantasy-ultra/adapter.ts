@@ -1,4 +1,4 @@
-// @see https://bun.com/docs/api/fetch
+// @see https://bun.com/docs/runtime/networking/fetch
 /**
  * Fantasy402 Ultra Live partner adapter (network-capture blueprint).
  *

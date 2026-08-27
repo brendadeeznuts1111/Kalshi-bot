@@ -2,8 +2,9 @@
  * docs-audit.ts — verify repo docs render through Bun.markdown and have
  * unique native heading ids (the "docs are managed by Bun.markdown"
  * contract). Probe-verified (AGENT-PITFALLS §38): AGENT-PITFALLS.md
- * (2353 lines) renders via Bun.markdown.html with 78 headings, all slugs
- * unique — the machinery handles the repo's own docs.
+ * renders via Bun.markdown.html with unique slugs — the machinery handles the
+ * repo's own docs. (Condensed 2026-08-26: lesson bodies moved to git history;
+ * the doc is now header + section index + §1-§11 topical catalog.)
  */
 import { markdownHeadings } from "./markdown-headings.ts";
 

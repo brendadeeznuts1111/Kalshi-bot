@@ -5,8 +5,8 @@
  * `JSON.parse(await Bun.file(p).text())`. `readJsonFileOr` covers the
  * missing/corrupt-artifact fallback pattern used across tools.
  *
- * @see https://bun.com/docs/api/file-io#bunfilejson
- * @see https://bun.com/docs/api/file-io#bun-write
+ * @see https://bun.com/docs/runtime/file-io#reading-files-bun-file
+ * @see https://bun.com/docs/runtime/file-io#writing-files-bun-write
  */
 
 export async function readJsonFile<T = unknown>(path: string): Promise<T> {

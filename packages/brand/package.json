@@ -1,0 +1,29 @@
+{
+  "name": "@kalshi/brand",
+  "version": "0.1.0",
+  "private": false,
+  "type": "module",
+  "description": "Validated Kalshi HQ brand assets + design tokens. brand-card.png is verified exactly 1200x630 PNG; swatches are generated from the design system tokens.",
+  "files": ["assets", "tokens.json", "bin", "README.md"],
+  "exports": {
+    ".": "./tokens.json",
+    "./tokens.json": "./tokens.json",
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "kalshi-brand": "./bin/kalshi-brand.ts"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/",
+    "tag": "latest"
+  },
+  "scripts": {
+    "generate": "bun ../../tools/brand-package-gen.ts",
+    "validate": "bun bin/kalshi-brand.ts validate",
+    "prepublishOnly": "bun bin/kalshi-brand.ts validate",
+    "publish:check": "bun pm pack --dry-run && bun bin/kalshi-brand.ts validate",
+    "publish:public": "bun publish --access public ${NPM_TAG:+--tag $NPM_TAG} ${NPM_OTP:+--otp $NPM_OTP}"
+  },
+  "engines": { "bun": ">=1.4.0" }
+}

@@ -66,7 +66,7 @@ bun run research -- --shortlist 12       # override shortlist size
 bun run research -- --diff <run-id>      # diff vs a specific prior run
 bun run research -- --export-audit       # also write audit JSONL + rotor bundle
 bun run export-audit -- --latest         # export from latest production run in cache.db
-bun run audit:export -- --latest         # alias for export-audit
+bun run export-audit -- --latest         # alias for export-audit
 bun run export-audit -- --run <run-id>   # export from explicit run
 bun run export-audit -- --verify research/exports/audit/<run-id>
 ```
@@ -97,7 +97,7 @@ Niche dimensions (`sports-nba`, `tracking`, …) may discover candidates but pro
 | Script | Command |
 |--------|---------|
 | Research | `bun run research` |
-| Audit export | `bun run export-audit` or `bun run audit:export` |
+| Audit export | `bun run export-audit` or `bun run export-audit` |
 | Schedule (OS cron) | `bun run schedule:register` / `schedule:remove` / `schedule:preview` |
 | Agent tools | `bun run agent <cmd>` — see [`docs/AGENT.md`](docs/AGENT.md) |
 | Terminal report | `bun run report:term` / `report:diff` |

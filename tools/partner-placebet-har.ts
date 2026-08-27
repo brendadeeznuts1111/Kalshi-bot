@@ -18,7 +18,7 @@
  * @see src/partner/fantasy-ultra/place-bet-har.ts
  */
 import { argValue, hasFlag } from '../src/cli/argv.ts';
-// @see https://bun.com/docs/api/file-io
+// @see https://bun.com/docs/runtime/file-io
 import { mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { openEventStore } from "../src/institutions/event-store/open-db.ts";

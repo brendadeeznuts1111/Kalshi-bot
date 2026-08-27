@@ -43,7 +43,7 @@
 // @updated Bun.file · fixed v1.3.13 · 2026-04-20 · https://bun.com/blog/bun-v1.3.13
 // @updated Bun.file · changed v1.3.14 · 2026-05-13 · https://bun.com/blog/bun-v1.3.14
 // @updated Bun.file · fixed v1.3.14 · 2026-05-13 · https://bun.com/blog/bun-v1.3.14
-// @verified Bun.file · Bun v1.3.14 · 2026-08-06 · https://bun.com/docs/runtime/file-io
+// @verified Bun.file · Bun v1.4.0 · ground-verified · https://bun.com/docs/runtime/file-io
 // @see https://bun.com/docs/runtime/utils#bun-which — Bun.which
 // @updated Bun.which · fixed v0.2.0 · 2022-10-13 · https://bun.com/blog/bun-v0.2.0
 // @updated Bun.which · fixed v0.3.0 · 2022-12-07 · https://bun.com/blog/bun-v0.3.0
@@ -53,7 +53,7 @@
 // @updated Bun.which · fixed v1.2.19 · 2025-07-19 · https://bun.com/blog/bun-v1.2.19
 // @updated Bun.which · fixed v1.2.20 · 2025-08-10 · https://bun.com/blog/bun-v1.2.20
 // @updated Bun.which · fixed v1.3.0 · 2025-10-10 · https://bun.com/blog/bun-v1.3
-// @verified Bun.which · Bun v1.3.14 · 2026-08-06 · https://bun.com/docs/runtime/utils
+// @verified Bun.which · Bun v1.4.0 · ground-verified · https://bun.com/docs/runtime/utils
 /**
  * Locate pass-cli binary (Bun.which + known install paths).
  */

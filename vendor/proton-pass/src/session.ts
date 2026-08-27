@@ -1,13 +1,13 @@
 // @see https://bun.com/docs/bundler/executables — --force
 // @updated --force · fixed v1.3.7 · 2026-01-27 · https://bun.com/blog/bun-v1.3.7
 // @updated --force · fixed v1.3.14 · 2026-05-13 · https://bun.com/blog/bun-v1.3.14
-// @verified --force · Bun v1.3.14 · 2026-08-06 · https://bun.com/docs/bundler/executables
+// @verified --force · Bun v1.4.0 · ground-verified · https://bun.com/docs/bundler/executables
 // @see https://bun.com/docs/runtime/utils#bun-env — Bun.env
 // @updated Bun.env · fixed v1.0.3 · 2023-09-22 · https://bun.com/blog/bun-v1.0.3
 // @updated Bun.env · changed v1.1.0 · 2024-04-01 · https://bun.com/blog/bun-v1.1
 // @updated Bun.env · fixed v1.2.8 · 2025-03-31 · https://bun.com/blog/bun-v1.2.8
 // @updated Bun.env · fixed v1.3.0 · 2025-10-10 · https://bun.com/blog/bun-v1.3
-// @verified Bun.env · Bun v1.3.14 · 2026-08-06 · https://bun.com/docs/runtime/environment-variables
+// @verified Bun.env · Bun v1.4.0 · ground-verified · https://bun.com/docs/runtime/environment-variables
 // @see https://bun.com/docs/runtime/file-io#reading-files-bun-file — Bun.file
 // @updated Bun.file · fixed v0.2.2 · 2022-10-27 · https://bun.com/blog/bun-v0.2.2
 // @updated Bun.file · changed v0.6.0 · 2023-05-16 · https://bun.com/blog/bun-v0.6.0
@@ -53,7 +53,7 @@
 // @updated Bun.file · fixed v1.3.13 · 2026-04-20 · https://bun.com/blog/bun-v1.3.13
 // @updated Bun.file · changed v1.3.14 · 2026-05-13 · https://bun.com/blog/bun-v1.3.14
 // @updated Bun.file · fixed v1.3.14 · 2026-05-13 · https://bun.com/blog/bun-v1.3.14
-// @verified Bun.file · Bun v1.3.14 · 2026-08-06 · https://bun.com/docs/runtime/file-io
+// @verified Bun.file · Bun v1.4.0 · ground-verified · https://bun.com/docs/runtime/file-io
 // @see https://bun.com/docs/runtime/child-process#spawn-a-process-bun-spawn — Bun.spawn
 // @updated Bun.spawn · changed v0.2.0 · 2022-10-13 · https://bun.com/blog/bun-v0.2.0
 // @updated Bun.spawn · changed v0.3.0 · 2022-12-07 · https://bun.com/blog/bun-v0.3.0
@@ -92,7 +92,7 @@
 // @updated Bun.spawn · changed v1.3.6 · 2026-01-13 · https://bun.com/blog/bun-v1.3.6
 // @updated Bun.spawn · fixed v1.3.10 · 2026-02-26 · https://bun.com/blog/bun-v1.3.10
 // @updated Bun.spawn · fixed v1.3.14 · 2026-05-13 · https://bun.com/blog/bun-v1.3.14
-// @verified Bun.spawn · Bun v1.3.14 · 2026-08-06 · https://bun.com/docs/runtime/child-process
+// @verified Bun.spawn · Bun v1.4.0 · ground-verified · https://bun.com/docs/runtime/child-process
 /**
  * Generic Proton Pass session helpers (agent PAT + probe).
  * Hosts inject PAT env names / vault matrix; package does not own product vaults.

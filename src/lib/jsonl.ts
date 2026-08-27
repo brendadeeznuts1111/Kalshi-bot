@@ -19,7 +19,7 @@
  * errors with line numbers) on top of the C++ parser, and add byte-offset
  * streaming for large files (live-tracker logs, WS captures).
  *
- * @see https://bun.com/docs/api/jsonl
+ * @see https://bun.com/docs/runtime/jsonl
  * @see docs/BUN_NATIVE.md
  */
 

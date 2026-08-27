@@ -5,7 +5,7 @@
  * listing + a predicate for the common readdir+endsWith pattern, which the
  * guard treats as a wrapper-removal target.
  *
- * @see https://bun.com/docs/api/glob (Bun.Glob)
+ * @see https://bun.com/docs/runtime/glob (Bun.Glob)
  */
 
 export type ListFilesOptions = {

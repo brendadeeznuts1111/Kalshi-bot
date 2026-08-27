@@ -7,7 +7,7 @@
  *
  * @see docs/FANTASY-ULTRA.md — Bet ticket wire
  */
-// @see https://bun.com/docs/api/file-io
+// @see https://bun.com/docs/runtime/file-io
 
 export type PlaceBetBodyEncoding = "json" | "form" | "unknown";
 

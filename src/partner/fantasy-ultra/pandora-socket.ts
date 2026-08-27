@@ -1,4 +1,4 @@
-// @see https://bun.com/docs/api/websockets
+// @see https://bun.com/docs/runtime/http/websockets
 /**
  * Minimal Engine.IO v4 + Socket.IO client for Fantasy Ultra live odds.
  *

@@ -28,7 +28,7 @@ Top-level reference modules this repo uses most:
 
 `@see` table: [Canonical `@see` links](#canonical-see-links) (guides primary; reference dual-link for symbols). Standalone repo; monorepo `bun tools/bun-docs-index.ts` is optional.
 
-Deep dive: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns)
+Deep dives: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns) · [`BUN_FILE.md`](BUN_FILE.md) (BunFile/FileBlob — official-docs-grounded, probe-corroborated)
 
 ## Bun APIs overview (official)
 
@@ -53,8 +53,8 @@ Full topic map (guides from the official table; **Ref** = types API; **Here** = 
 | HTTP Server | [`Bun.serve`](https://bun.com/docs/runtime/http/server) | [/serve](https://bun.com/reference/bun/serve) | yes — report browser |
 | Shell | [`$`](https://bun.com/docs/runtime/shell) | [/$](https://bun.com/reference/bun/$) | yes — **default subprocess transport** · [`BUN_SHELL.md`](BUN_SHELL.md) |
 | Bundler | [`Bun.build`](https://bun.com/docs/bundler) | [/build](https://bun.com/reference/bun/build) | rare |
-| File I/O | [`Bun.file`](https://bun.com/docs/runtime/file-io#reading-files-bun-file), [`Bun.write`](https://bun.com/docs/runtime/file-io#writing-files-bun-write), `Bun.stdin`/`stdout`/`stderr` | [/file](https://bun.com/reference/bun/file) · [/write](https://bun.com/reference/bun/write) | yes |
-| JSONL | [`Bun.JSONL.parse` / `.parseChunk`](https://bun.com/docs/api/jsonl) | [/JSONL](https://bun.com/reference/bun/JSONL/parse) | yes — [`src/lib/jsonl.ts`](../src/lib/jsonl.ts): streaming logs, WS captures, `/api/*.jsonl` endpoints. **Verified gotchas:** (1) `parse()` truncates at the first bad line — does not skip; (2) `parseChunk()` `read` is UTF-8 **bytes** for strings too — never `string.slice(read)` on multibyte; (3) naive `buffer.slice(read)` loops forever on a bad line; (4) `subarray()` retains the parent buffer. Use the lib's skip-and-continue streaming helpers |
+| File I/O | [`Bun.file`](https://bun.com/docs/runtime/file-io#reading-files-bun-file), [`Bun.write`](https://bun.com/docs/runtime/file-io#writing-files-bun-write), `Bun.stdin`/`stdout`/`stderr` | [/file](https://bun.com/reference/bun/file) · [/write](https://bun.com/reference/bun/write) | yes — [`BUN_FILE.md`](BUN_FILE.md) |
+| JSONL | [`Bun.JSONL.parse` / `.parseChunk`](https://bun.com/docs/runtime/jsonl) | [/JSONL](https://bun.com/reference/bun/JSONL/parse) | yes — [`src/lib/jsonl.ts`](../src/lib/jsonl.ts): streaming logs, WS captures, `/api/*.jsonl` endpoints. **Verified gotchas:** (1) `parse()` truncates at the first bad line — does not skip; (2) `parseChunk()` `read` is UTF-8 **bytes** for strings too — never `string.slice(read)` on multibyte; (3) naive `buffer.slice(read)` loops forever on a bad line; (4) `subarray()` retains the parent buffer. Use the lib's skip-and-continue streaming helpers |
 | Child Processes | [`Bun.spawn`](https://bun.com/docs/runtime/child-process#spawn-a-process-bun-spawn), [`Bun.spawnSync`](https://bun.com/docs/runtime/child-process#blocking-api-bun-spawnsync) | [/spawn](https://bun.com/reference/bun/spawn) · [/spawnSync](https://bun.com/reference/bun/spawnSync) | yes — keep-list only: IPC, unref, sync, interactive ([`BUN_SHELL.md`](BUN_SHELL.md)) |
 | TCP Sockets | [`Bun.listen`](https://bun.com/docs/runtime/networking/tcp#start-a-server-bun-listen), [`Bun.connect`](https://bun.com/docs/runtime/networking/tcp#start-a-server-bun-listen) | [/listen](https://bun.com/reference/bun/listen) · [/connect](https://bun.com/reference/bun/connect) | — |
 | UDP Sockets | [`Bun.udpSocket`](https://bun.com/docs/runtime/networking/udp) | [/udpSocket](https://bun.com/reference/bun/udpSocket) | — |
@@ -63,7 +63,7 @@ Full topic map (guides from the official table; **Ref** = types API; **Here** = 
 | Routing | [`Bun.FileSystemRouter`](https://bun.com/docs/runtime/file-system-router) | [/FileSystemRouter](https://bun.com/reference/bun/FileSystemRouter) | — |
 | Streaming HTML | [`HTMLRewriter`](https://bun.com/docs/runtime/html-rewriter) | — | yes — social/OG meta |
 | Headless Browser | [`Bun.WebView`](https://bun.com/docs/runtime/webview) | [/WebView](https://bun.com/reference/bun/WebView) | yes — tennis/liquidity ground, Massey ratings (CF bypass) |
-| Terminal/PTY | [`Bun.Terminal`](https://bun.com/docs/runtime/terminal) | [/Terminal](https://bun.com/reference/bun/Terminal) | — (replaces node-pty) |
+| Terminal/PTY | [`Bun.Terminal`](https://bun.com/docs/runtime/utils) | [/Terminal](https://bun.com/reference/bun/Terminal) | — (replaces node-pty) |
 | Archive | [`Bun.Archive`](https://bun.com/docs/runtime/archive) | [/Archive](https://bun.com/reference/bun/Archive) | yes — `bun:backup` tars research DBs (§22; KNOWN bug: `BunFile` values archive 0-byte, use `.bytes()`) |
 | Object Store | [`Bun.S3Client`](https://bun.com/docs/runtime/s3) | [/S3Client](https://bun.com/reference/bun/S3Client) | — |
 | JSON5 / JSONC | [`Bun.JSON5.parse`](https://bun.com/docs/runtime/json5) · [`Bun.JSONC.parse`](https://bun.com/docs/runtime/jsonc) | [/JSON5](https://bun.com/reference/bun/JSON5/parse) | JSON5: config; JSONC: tsconfig-style comments |
@@ -313,7 +313,7 @@ markdownToAnsi(md);              // TTY reports (same engine as report-term)
 
 ### `Bun.color` — native CSS color conversion + kernel-extended formats
 
-[@see guide](https://bun.com/docs/api/color) · [@see reference](https://bun.com/reference/bun/color) · cached guide: `research/cache/bun-docs/color.mdx` · [`src/lib/color/kernel.ts`](../src/lib/color/kernel.ts)
+[@see guide](https://bun.com/docs/runtime/color) · [@see reference](https://bun.com/reference/bun/color) · cached guide: `research/cache/bun-docs/color.mdx` · [`src/lib/color/kernel.ts`](../src/lib/color/kernel.ts)
 
 - Output formats (guide table + runtime error list + pinned `bun-types` 1.4.0 all agree):
   `css` `hex` `HEX` `rgb` `rgba` `hsl` `lab` `number` `ansi*` + object/array forms.
@@ -585,7 +585,7 @@ bunx drizzle-kit studio
 
 Legacy raw SQL in `kalshi-itf-sync.ts`, `cache.ts`, etc. is preserved — Drizzle is additive, not a rewrite mandate.
 
-Deep dive: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns)
+Deep dives: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns) · [`BUN_FILE.md`](BUN_FILE.md) (BunFile/FileBlob — official-docs-grounded, probe-corroborated)
 
 ## Bun API map
 

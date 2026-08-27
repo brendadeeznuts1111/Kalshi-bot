@@ -3,7 +3,7 @@
  * Resilient: fetchWithRetry (403/429/5xx), disk cache TTL + stale fallback.
  * Does **not** carry prices (metadata only).
  */
-// @see https://bun.com/docs/api/fetch
+// @see https://bun.com/docs/runtime/networking/fetch
 import {
   createCircuitBreaker,
   fetchWithRetry,

@@ -67,7 +67,7 @@ const registryRow = { column: 11, feature: "kalshi_mu", concept: "kalshi_mu" };
 - `concept` optional (WIP features).
 - If set → glossary entry **must** exist and `kind === "registry"`.
 
-### 3. Bidirectional integrity (`glossary:check` / `semantic:audit`)
+### 3. Bidirectional integrity (`glossary:check` / `glossary:check`)
 
 1. Every `concept` FK resolves + kind is `registry`.
 2. Every `kind: "registry"` entry has a matching registry `feature` (or is marked pending).

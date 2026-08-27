@@ -1,5 +1,5 @@
 // @see https://bun.com/docs/runtime/utils#bun-nanoseconds — Bun.nanoseconds
-// @verified Bun.nanoseconds · Bun v1.3.14 · 2026-08-06 · https://bun.com/docs/runtime/utils#bun-nanoseconds
+// @verified Bun.nanoseconds · Bun v1.4.0 · ground-verified · https://bun.com/docs/runtime/utils#bun-nanoseconds
 /**
  * Parallel secret fetch — Promise.allSettled over pass-cli item view.
  * Fetches multiple secrets concurrently with retry, timeout, cache, circuit breaker, and telemetry.

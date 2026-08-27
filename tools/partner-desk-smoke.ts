@@ -19,7 +19,7 @@
  */
 import { argValue, hasFlag } from '../src/cli/argv.ts';
 // @see https://bun.com/docs/runtime/sqlite
-// @see https://bun.com/docs/api/file-io
+// @see https://bun.com/docs/runtime/file-io
 import { openEventStore } from "../src/institutions/event-store/open-db.ts";
 import { DEFAULT_EVENT_STORE_DB } from "../src/institutions/event-store/paths.ts";
 import {

@@ -63,14 +63,14 @@ const gates = [
   ['surface:probe'],
   ['version:probe'],
   ['type-drift:probe'],
-  ['shape:probe'], // §169 full-shape runtime agreement
+  ['ground:check'], // §169 full-shape runtime agreement + probes + URLs (replaces shape:probe, retired 2026-08-26)
   ['etag:probe'], // §176 automatic ETag/304 behavior (P3 docs-corrected)
   ['build-artifact:probe'], // §177 BuildArtifact gotchas (P3/P3b docs-corrected)
   ['client-shape:probe'],
   ['surface-confirm:probe'], // §224 surface-first confirmation protocol (ML-KEM S221->S223 lesson)
   ['coverage:probe'],
   ['fullstack:probe'],
-  ['reference-cross-check'], // §178 official bun-types docs vs observed evidence
+  ['ground:check'], // §178 official docs vs observed evidence (replaces reference-cross-check, retired 2026-08-26)
   ['scratch:docs', '--', '--check'], // §181 scratch index freshness (bootstrap on missing)
   ['blog:assets', '--', '--check'], // blog-map mirror freshness (public/blog/, §183)
 ] as const;

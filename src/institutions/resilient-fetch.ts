@@ -205,7 +205,7 @@ export async function fetchWithRetry(
 
     if (attempt < retries) {
       const delay = computeBackoffMs(attempt, baseMs, maxDelayMs, jitter, random);
-      // Native timer — @see https://bun.com/docs/api/utils#bunsleep
+      // Native timer — @see https://bun.com/docs/runtime/utils#bun-sleep
       await Bun.sleep(delay);
     }
   }

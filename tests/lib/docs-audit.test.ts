@@ -25,6 +25,6 @@ describe("auditDoc", () => {
     const audit = await auditDoc(join(process.cwd(), "docs/AGENT-PITFALLS.md"), "docs/AGENT-PITFALLS.md");
     expect(audit.renderOk).toBe(true);
     expect(audit.duplicateSlugs).toEqual([]);
-    expect(audit.headings).toBeGreaterThan(70);
+    expect(audit.headings).toBeGreaterThan(40); // condensed 2026-08-26: header + index + §1-§11 (~53 headings)
   });
 });

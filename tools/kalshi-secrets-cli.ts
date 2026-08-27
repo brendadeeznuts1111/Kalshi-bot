@@ -36,7 +36,7 @@
  * async and falls back to this vault when env/file is absent (env stays
  * authoritative when both are present).
  *
- * @see https://bun.com/docs/runtime/bun-secrets (Bun 1.4 secrets manager)
+ * @see https://bun.com/docs/runtime/secrets (Bun 1.4 secrets manager)
  * @see src/bot/kalshi-auth.ts — runtime credential loading (env/file first, keychain fallback)
  */
 import { readFileSync } from "node:fs";

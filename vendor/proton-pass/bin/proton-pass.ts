@@ -1,16 +1,16 @@
 #!/usr/bin/env bun
 // @see https://bun.com/docs/runtime/environment-variables#manually-specifying-env-files — --env-file
 // @updated --env-file · changed v1.0.12 · 2023-11-16 · https://bun.com/blog/bun-v1.0.12
-// @verified --env-file · Bun v1.3.14 · 2026-08-06 · https://bun.com/docs/runtime/environment-variables#manually-specifying-env-files
+// @verified --env-file · Bun v1.4.0 · ground-verified · https://bun.com/docs/runtime/environment-variables#manually-specifying-env-files
 // @see https://bun.com/reference/bun/argv — Bun.argv
 // @updated Bun.argv · changed v0.6.10 · 2023-06-26 · https://bun.com/blog/bun-v0.6.10
-// @verified Bun.argv · Bun v1.3.14 · 2026-08-06 · https://bun.com/reference/bun/argv
+// @verified Bun.argv · Bun v1.4.0 · ground-verified · https://bun.com/reference/bun/argv
 // @see https://bun.com/docs/runtime/utils#bun-env — Bun.env
 // @updated Bun.env · fixed v1.0.3 · 2023-09-22 · https://bun.com/blog/bun-v1.0.3
 // @updated Bun.env · changed v1.1.0 · 2024-04-01 · https://bun.com/blog/bun-v1.1
 // @updated Bun.env · fixed v1.2.8 · 2025-03-31 · https://bun.com/blog/bun-v1.2.8
 // @updated Bun.env · fixed v1.3.0 · 2025-10-10 · https://bun.com/blog/bun-v1.3
-// @verified Bun.env · Bun v1.3.14 · 2026-08-06 · https://bun.com/docs/runtime/environment-variables
+// @verified Bun.env · Bun v1.4.0 · ground-verified · https://bun.com/docs/runtime/environment-variables
 // @see https://bun.com/docs/runtime/file-io#reading-files-bun-file — Bun.file
 // @updated Bun.file · fixed v0.2.2 · 2022-10-27 · https://bun.com/blog/bun-v0.2.2
 // @updated Bun.file · changed v0.6.0 · 2023-05-16 · https://bun.com/blog/bun-v0.6.0
@@ -56,7 +56,7 @@
 // @updated Bun.file · fixed v1.3.13 · 2026-04-20 · https://bun.com/blog/bun-v1.3.13
 // @updated Bun.file · changed v1.3.14 · 2026-05-13 · https://bun.com/blog/bun-v1.3.14
 // @updated Bun.file · fixed v1.3.14 · 2026-05-13 · https://bun.com/blog/bun-v1.3.14
-// @verified Bun.file · Bun v1.3.14 · 2026-08-06 · https://bun.com/docs/runtime/file-io
+// @verified Bun.file · Bun v1.4.0 · ground-verified · https://bun.com/docs/runtime/file-io
 /**
  * @factorywager/proton-pass CLI — check | health | inject | run | version
  */

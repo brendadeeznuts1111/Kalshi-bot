@@ -2,7 +2,7 @@
 // @updated Bun.sleep · changed v0.5.6 · 2023-02-09 · https://bun.com/blog/bun-v0.5.6
 // @updated Bun.sleep · changed v0.5.8 · 2023-03-18 · https://bun.com/blog/bun-v0.5.8
 // @updated Bun.sleep · fixed v1.0.34 · 2024-03-22 · https://bun.com/blog/bun-v1.0.34
-// @verified Bun.sleep · Bun v1.3.14 · 2026-08-06 · https://bun.com/docs/runtime/utils#bun-sleep
+// @verified Bun.sleep · Bun v1.4.0 · ground-verified · https://bun.com/docs/runtime/utils#bun-sleep
 /**
  * Bun-native retry with exponential backoff.
  * Zero dependencies; uses Bun.sleep for backoff.

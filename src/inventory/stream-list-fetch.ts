@@ -2,7 +2,7 @@
  * Resilient public stream-list-v2 fetch: retry 403/429/5xx + disk cache fallback.
  * Shared by inventory events + domain:sports inventory snapshot.
  */
-// @see https://bun.com/docs/api/fetch
+// @see https://bun.com/docs/runtime/networking/fetch
 import { join } from 'node:path';
 import {
   createCircuitBreaker,

@@ -297,7 +297,7 @@ function oklabToHex(L: number, a: number, b: number): string {
  * Parse a CSS Color 4 string into hex — covers the formats Bun.color 1.4.0
  * cannot parse.
  *
- * Grounding (bun.com/docs/api/color + runtime probes on 1.4.0):
+ * Grounding (bun.com/docs/runtime/color + runtime probes on 1.4.0):
  *   - Bun.color parses lab() and lch() INPUTS natively (the guide documents
  *     "LAB strings like lab(50% 50 50)"; lch shares the parser — both
  *     round-trip here via the same inverse math, verified byte-equal).

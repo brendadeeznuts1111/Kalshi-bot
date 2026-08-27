@@ -14,7 +14,7 @@
  * (locked keychain, headless CI) — the same shape as Bun's documented
  * multi-source credential lookup.
  *
- * @see https://bun.com/docs/runtime/bun-secrets (Bun 1.4 secrets manager)
+ * @see https://bun.com/docs/runtime/secrets (Bun 1.4 secrets manager)
  * @see src/lib/redact.ts — output-side redaction; complementary, not a substitute
  */
 

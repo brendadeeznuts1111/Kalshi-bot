@@ -24,7 +24,7 @@
  *   TELEGRAM_TOPIC_ID_{CODE}            optional message_thread_id
  */
 // @see https://bun.com/docs/runtime/cron
-// @see https://bun.com/docs/api/fetch
+// @see https://bun.com/docs/runtime/networking/fetch
 import type { Database } from 'bun:sqlite';
 import { resolveDeskDomainFromEnv } from '../domain/index.ts';
 import { FantasyUltraAdapter } from './fantasy-ultra/adapter.ts';

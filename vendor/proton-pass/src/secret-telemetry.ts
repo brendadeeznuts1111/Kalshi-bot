@@ -43,7 +43,7 @@
 // @updated Bun.file · fixed v1.3.13 · 2026-04-20 · https://bun.com/blog/bun-v1.3.13
 // @updated Bun.file · changed v1.3.14 · 2026-05-13 · https://bun.com/blog/bun-v1.3.14
 // @updated Bun.file · fixed v1.3.14 · 2026-05-13 · https://bun.com/blog/bun-v1.3.14
-// @verified Bun.file · Bun v1.3.14 · 2026-08-06 · https://bun.com/docs/runtime/file-io
+// @verified Bun.file · Bun v1.4.0 · ground-verified · https://bun.com/docs/runtime/file-io
 // @see https://bun.com/docs/runtime/file-io#writing-files-bun-write — Bun.write
 // @updated Bun.write · fixed v0.4.0 · 2022-12-23 · https://bun.com/blog/bun-v0.4.0
 // @updated Bun.write · fixed v0.6.10 · 2023-06-26 · https://bun.com/blog/bun-v0.6.10
@@ -64,7 +64,7 @@
 // @updated Bun.write · fixed v1.3.5 · 2025-12-17 · https://bun.com/blog/bun-v1.3.5
 // @updated Bun.write · fixed v1.3.6 · 2026-01-13 · https://bun.com/blog/bun-v1.3.6
 // @updated Bun.write · fixed v1.3.12 · 2026-04-09 · https://bun.com/blog/bun-v1.3.12
-// @verified Bun.write · Bun v1.3.14 · 2026-08-06 · https://bun.com/docs/runtime/file-io#writing-files-bun-write
+// @verified Bun.write · Bun v1.4.0 · ground-verified · https://bun.com/docs/runtime/file-io#writing-files-bun-write
 /**
  * Telemetry — per-secret latency and success tracking.
  * Optional append-only JSONL via Bun.write (read-modify-write).

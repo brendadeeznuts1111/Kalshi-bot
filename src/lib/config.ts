@@ -18,7 +18,7 @@
  *
  * @see https://bun.com/docs/runtime/environment-variables
  * @see https://bun.com/docs/runtime/utils#bun-env
- * @see https://bun.com/docs/api/toml
+ * @see https://bun.com/docs/runtime/toml
  */
 
 import { readFileSync } from "node:fs";

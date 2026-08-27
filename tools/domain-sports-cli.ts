@@ -14,7 +14,7 @@
  *   bun run domain:sports -- --countries
  *   bun run domain:sports -- --snapshot-leagues  # from widget-domain-snapshot.json
  */
-// @see https://bun.com/docs/api/fetch
+// @see https://bun.com/docs/runtime/networking/fetch
 import { hasFlag, argValue } from "../src/cli/argv.ts";
 import { openEventStore } from "../src/institutions/event-store/open-db.ts";
 import { DEFAULT_EVENT_STORE_DB } from "../src/institutions/event-store/paths.ts";

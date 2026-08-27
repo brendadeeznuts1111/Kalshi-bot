@@ -7,7 +7,7 @@
  * Leagues/tiers are **not** fully listed in HTML — capture via Pandora.
  * Never logs gsid / Diffusion credentials. Writes only research cache artifacts.
  */
-// @see https://bun.com/docs/api/fetch
+// @see https://bun.com/docs/runtime/networking/fetch
 import { listSports, type SportId } from './sports.ts';
 import { PLIVE_STREAM_ENDPOINTS } from './live-product-endpoints.ts';
 import {

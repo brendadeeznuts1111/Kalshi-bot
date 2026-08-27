@@ -3,7 +3,7 @@
  * Coverage-only — no odds. Domain plane / inventory plane — not seat partner.
  * Compare against {@link FANTASY_SPORT_MAPPINGS}.
  */
-// @see https://bun.com/docs/api/fetch
+// @see https://bun.com/docs/runtime/networking/fetch
 import { FANTASY_ULTRA_DEFAULTS } from '../partner/fantasy-ultra/types.ts';
 import {
   FANTASY_SPORT_MAPPINGS,

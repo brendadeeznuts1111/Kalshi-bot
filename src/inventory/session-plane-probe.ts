@@ -4,7 +4,7 @@
  * Never logs full gsid / JWT / passwords — fingerprints + plane classification only.
  * Operator: `bun run inventory:session-probe` · optional `PLIVE_GSID` / `--gsid=`.
  */
-// @see https://bun.com/docs/api/fetch
+// @see https://bun.com/docs/runtime/networking/fetch
 import {
   PLIVE_STREAM_ENDPOINTS,
   type LiveStreamEndpoints,

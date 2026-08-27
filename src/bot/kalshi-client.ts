@@ -221,7 +221,7 @@ export function backoffMs(attempt: number, random: () => number = Math.random): 
   return Math.min(10_000, 500 * 2 ** attempt) + Math.floor(random() * 250);
 }
 
-/** Default sleep — native timer, no setTimeout wrapper. @see https://bun.com/docs/api/utils#bunsleep */
+/** Default sleep — native timer, no setTimeout wrapper. @see https://bun.com/docs/runtime/utils#bun-sleep */
 function defaultSleep(ms: number): Promise<void> {
   return Bun.sleep(ms);
 }

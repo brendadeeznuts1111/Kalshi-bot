@@ -32,7 +32,7 @@
  */
 import { argValue, hasFlag } from '../src/cli/argv.ts';
 import { $ } from "bun";
-// @see https://bun.com/docs/api/spawn
+// @see https://bun.com/docs/runtime/child-process
 // @see https://bun.com/docs/runtime/utils#bun-which
 import { requireDefaultUrlForUltraMapper } from "../src/domain/index.ts";
 import {

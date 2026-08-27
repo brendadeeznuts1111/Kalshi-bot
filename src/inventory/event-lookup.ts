@@ -1,5 +1,5 @@
 /** Look up plive event across inventory + Pandora. See domain:event CLI. */
-// @see https://bun.com/docs/api/fetch
+// @see https://bun.com/docs/runtime/networking/fetch
 import type { Database } from 'bun:sqlite';
 import { PLIVE_STREAM_ENDPOINTS } from '../domain/live-product-endpoints.ts';
 import {

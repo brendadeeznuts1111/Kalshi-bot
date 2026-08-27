@@ -4,7 +4,7 @@
 // @updated Bun.inspect · fixed v1.2.19 · 2025-07-19 · https://bun.com/blog/bun-v1.2.19
 // @updated Bun.inspect · fixed v1.3.0 · 2025-10-10 · https://bun.com/blog/bun-v1.3
 // @updated Bun.inspect · fixed v1.3.13 · 2026-04-20 · https://bun.com/blog/bun-v1.3.13
-// @verified Bun.inspect · Bun v1.3.14 · 2026-08-06 · https://bun.com/docs/runtime/utils#bun-inspect
+// @verified Bun.inspect · Bun v1.4.0 · ground-verified · https://bun.com/docs/runtime/utils#bun-inspect
 /**
  * Bun-native structured logger — JSON / pretty / quiet modes.
  * Zero dependencies, uses Bun.inspect for rich output.

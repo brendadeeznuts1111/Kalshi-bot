@@ -47,7 +47,7 @@ const LABEL_FILES = ['**/pre-commit.ts', '**/runtime-surface.ts', '**/defaults-p
 // code-block examples with the SAME parser the runtime uses - a 1.1-style
 // yes/on/no key in a doc block is exactly what should be flagged, not
 // hidden (the validator is report-only).
-const YAML_ALLOWLIST = ['**/docs-validate.ts', 'tools/format-probe.ts', '**/build-artifact-evidence.ts', '**/reference-cross-check/compare.ts', '**/reference-cross-check/run.ts', '**/reference-cross-check/report.json', 'tools/alpha-cluster-cli.ts']; // format-probe + the yamlGotchas probes + alpha-cluster --format=yaml assert the 1.2 semantics deliberately; run.ts/report.json only mention YAML in curated/generated claim text
+const YAML_ALLOWLIST = ['**/docs-validate.ts', 'tools/format-probe.ts', '**/build-artifact-evidence.ts', 'tools/alpha-cluster-cli.ts', '**/ground-probes/index.ts', '**/bun-grounding.json']; // format-probe + the yamlGotchas probes + alpha-cluster --format=yaml assert the 1.2 semantics deliberately; run.ts/report.json + the grounding manifest only mention YAML in curated/generated claim text
 // parse-tennis-data-csv.ts deliberately uses Temporal.PlainDate to validate
 // tennis-data.co.uk dates (§89) — the old day>31 check let impossible
 // dates through; Temporal rejects them natively. Audited, deliberate.
@@ -73,8 +73,6 @@ const WS_ALLOWLIST = [
   '**/src/research/map-page.ts', // documents server.upgrade() H3 caveat (§39), not a call
   '**/tools/ws-probe.ts', // probe deliberately exercises the websocket surface (§114)
   '**/tools/build-artifact-evidence.ts', // probe harness: serveGotchas/deepPass exercise websocket + upgrade (178)
-  '**/tools/reference-cross-check/report.json', // claim TEXT containing the word websocket, not code
-  '**/tools/reference-cross-check/compare.ts', // SV-websocket claim docSays text, not a call
 ];
 
 
@@ -101,7 +99,10 @@ export function runBreakingAudit(root: string): BreakingFinding[] {
     detail: wH.length ? 'USED in ' + wH.join(', ') : 'no usage (Response/Bun.serve handlers only)',
   });
 
-  // 2. bun.lock version: 1.4 writes v2; v1 is safe only when frozen.
+  // 2. bun.lock version: the repo baseline IS bun 1.4.0, whose native format is v2;
+  // v1 or v2 with frozenLockfile=true is the safe, committed state (v2+frozen became
+  // the norm when workspaces landed 2026-08-26). Unfrozen = the 'unfreeze dance' would
+  // rewrite the lockfile, so warn.
   const lockPath = join(root, 'bun.lock');
   let lockVersion = 'absent';
   let frozen = false;
@@ -116,7 +117,7 @@ export function runBreakingAudit(root: string): BreakingFinding[] {
   }
   findings.push({
     check: 'bun.lock version (1.4 writes v2; old Bun cannot read it)',
-    status: lockVersion === '1' && frozen ? 'ok' : 'warn',
+    status: frozen && (lockVersion === '1' || lockVersion === '2') ? 'ok' : 'warn',
     detail: 'lockfileVersion=' + lockVersion + (frozen ? ' (frozenLockfile=true, safe)' : ' (NOT frozen - unfreeze dance would rewrite to v2)'),
   });
 

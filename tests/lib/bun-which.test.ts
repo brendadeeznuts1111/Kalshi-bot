@@ -1,6 +1,6 @@
 // Bun.which semantics — probe-verified (§42): { PATH } replaces env PATH,
 // cwd resolves relative PATH entries, missing -> null.
-// @see https://bun.com/docs/api/utils#bunwhich
+// @see https://bun.com/docs/runtime/utils#bun-which
 import { describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync, chmodSync, rmSync } from "node:fs";
 import { join } from "node:path";

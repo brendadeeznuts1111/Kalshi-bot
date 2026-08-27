@@ -2,7 +2,7 @@
  * Pandora capture for widget domain rooms (sports / leagues / wagerTypes).
  * Domain parsers live in `src/domain/widget-domain-extract.ts` (no partner deps).
  */
-// @see https://bun.com/docs/api/websockets
+// @see https://bun.com/docs/runtime/http/websockets
 import {
   extractWidgetDomain,
   type ExtractWidgetDomainOptions,

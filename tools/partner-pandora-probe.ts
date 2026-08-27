@@ -12,7 +12,7 @@
  */
 import { argValue } from '../src/cli/argv.ts';
 import { parseArgs } from 'node:util';
-// @see https://bun.com/docs/api/websockets
+// @see https://bun.com/docs/runtime/http/websockets
 import { CoefficientStore } from "../src/partner/fantasy-ultra/coefficient-store.ts";
 import { PandoraSocket } from "../src/partner/fantasy-ultra/pandora-socket.ts";
 

@@ -14,10 +14,6 @@ const README = join(SCRATCH, 'README.md');
 export const REFERENCE_FILES: string[] = [
   'tools/build-artifact-evidence.ts',
   'tools/build-artifact-findings.ts',
-  'tools/reference-cross-check/run.ts',
-  'tools/reference-cross-check/compare.ts',
-  'tools/reference-cross-check/evidence-loader.ts',
-  'tools/reference-cross-check/docs-parser.ts',
   'tools/verify-contracts.ts',
   'tests/lib/bun-markdown-coverage.test.ts',
   'docs/BUN_BUILD_FINDINGS.md',

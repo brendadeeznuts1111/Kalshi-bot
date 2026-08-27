@@ -22,7 +22,7 @@
  * Canonical env_prefix: `{BOOK}_{CODE}_{N}_` from out id `out-SPEN-1`.
  *
  * @see https://bun.com/docs/runtime/toml
- * @see https://bun.com/docs/api/utils#bun-toml
+ * @see https://bun.com/docs/runtime/toml
  */
 // @see https://bun.com/docs/runtime/toml
 import type { Database } from 'bun:sqlite';

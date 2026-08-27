@@ -1,12 +1,30 @@
 [install]
 # Project hardening; machine linker/global-store/cache policy stays in ~/.bunfig.toml.
 frozenLockfile = true
+# Registry constant: the public npm registry (used by install + publish).
+# Override per-machine via ~/.bunfig.toml or .npmrc if a mirror is required.
+registry = "https://registry.npmjs.org/"
+# Project-local cache + global dirs (gitignored): keep every bun write INSIDE the
+# workspace — the DSH sandbox denies ~/.bun (global cache) with EPERM, and CI
+# should never depend on a machine cache anyway. Env overrides:
+# BUN_INSTALL_CACHE_DIR / BUN_INSTALL_GLOBAL_DIR / BUN_INSTALL_BIN.
+# @see https://bun.com/docs/runtime/bunfig#globaldir / #globalbindir
+globalDir = "./.bun-global"
+globalBinDir = "./.bun-bin"
+# NOTE: bun 1.4 has NO bunfig cacheDir key — the package cache is controlled by the
+# BUN_INSTALL_CACHE_DIR env var (see .env) or `bun install --cache-dir`.
 # Global virtual store (bun 1.4): packages extracted once into Bun's cache and
 # symlinked into each project's node_modules/.bun/ store instead of copied per
 # install — up to 7x faster warm CI installs on large projects. Opt-in via the
 # isolated linker. This repo is tiny (3 deps) so the win is small, but the
 # layout is the recommended one.
 linker = "isolated"
+
+# [install.security]
+# `bun pm scan` is a HOOK for external scanners, not a built-in vuln DB:
+# scanner = "package_name" (an npm package exporting a scanner object).
+# The repo keeps zero runtime npm deps, so the built-in `bun audit` (script
+# deps:scan) is the vulnerability check — wired into the /status deps channel.
 
 [run]
 # @see https://bun.com/docs/runtime/bunfig#run-shell-use-the-system-shell-or-buns-shell
@@ -36,5 +54,5 @@ depth = 3
 # keeps a feature-detected native call with a pre-1.4 manual fallback:
 #   Bun.TOML.parse(string) -> object
 #   Bun.TOML.stringify(object) -> string
-# @see https://bun.com/docs/api/toml
+# @see https://bun.com/docs/runtime/toml
 # ============================================================================

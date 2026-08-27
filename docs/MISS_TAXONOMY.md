@@ -101,7 +101,7 @@ bun run rate-limit:status -- --gated=49 --uncached=49
 # proceed with multi-wave (full bucket ≠ enough for one shot):
 GITHUB_RATE_LIMIT_WAIT=1 bun run research -- --dimension=price-data --min-stars=1 --min-forks=0 --export-audit
 bun run agent blueprint
-bun run reports:restore   # if tests touched committed artifacts
+bun run artifacts:restore   # if tests touched committed artifacts
 ```
 
 ## Architecture (unchanged)
