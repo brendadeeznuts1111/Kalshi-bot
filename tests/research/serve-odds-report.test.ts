@@ -19,8 +19,19 @@ describe("/api/odds-report (Bun.XML feed wired)", () => {
     expect(res.headers.get("content-type")).toContain("text/markdown");
     const md = await res.text();
     expect(md).toContain("Data state: reference_feed");
-    expect(md).toContain("| bet365 | Alpha FC | 4 |");
+    // Event id is the MATCH (teams + commence date), never the venue.
+    expect(md).toContain("| alpha-fc-vs-beta-fc-2026-09-01 | Alpha FC | 4 |");
     expect(md).toContain("venue_undervalued");
+  });
+
+  test("books quoting section separates registered books from wire-only venues", async () => {
+    const res = await fetch(server.url + "api/odds-report");
+    const md = await res.text();
+    expect(md).toContain("## Books quoting");
+    // bet365 is declared in the registry -> profile with meta url.
+    expect(md).toContain("| bet365 | Bet365 | odds-api-v3 | [link](https://www.bet365.com) |");
+    // pinnacle/draftkings/williamhill quote the wire undeclared -> honest fallback.
+    expect(md).toContain("| pinnacle | pinnacle | — | — | — | NO — wire-only venue |");
   });
 
   test("html variant renders the same feed through the widget page", async () => {

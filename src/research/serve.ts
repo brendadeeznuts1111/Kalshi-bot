@@ -78,6 +78,7 @@ import {
 } from "../partner/execution/kalshi-live.ts";
 import { codedError, httpStatusFor, type ErrorCode } from "../institutions/error-codes.ts";
 import {
+  booksQuoting,
   buildOddsReportMarkdown,
   compareOddsVsVenues,
   detectValuePatterns,
@@ -496,6 +497,7 @@ async function oddsReportResponse(req: Request): Promise<Response> {
       markdown = buildOddsReportMarkdown({
         events,
         ...(patterns ? { patterns } : {}),
+        ...(events.length > 0 ? { books: booksQuoting(config, events) } : {}),
         title: "Odds Heat Report",
         dataState,
       });

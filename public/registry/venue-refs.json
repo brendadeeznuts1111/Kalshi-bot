@@ -1,12 +1,12 @@
 [
   {
-    "eventId": "bet365",
+    "eventId": "alpha-fc-vs-beta-fc-2026-09-01",
     "venue": "kalshi",
     "side": "Alpha FC",
     "implied": 0.45
   },
   {
-    "eventId": "bet365",
+    "eventId": "alpha-fc-vs-beta-fc-2026-09-01",
     "venue": "polymarket",
     "side": "Beta FC",
     "implied": 0.42

@@ -16,7 +16,27 @@
  */
 import type { OddsEvent } from "../../alpha/odds-types.ts";
 import { markdownToHtml } from "../../lib/markdown.ts";
+import type { BookmakerProfile } from "./bookmakers.ts";
 import type { ConvergencePattern, ValuePattern } from "./value-patterns.ts";
+
+/** Cell placeholder for a profile field the registry does not declare. */
+const NO_META = "—";
+
+function booksTable(books: BookmakerProfile[]): string {
+  const lines = [
+    "| Venue | Name | Feed | Book URL | Logo | Registered |",
+    "| --- | --- | --- | --- | --- | --- |",
+  ];
+  for (const b of books) {
+    const feed = b.feed ?? NO_META;
+    const url = b.url ? `[link](${escapeMarkdownCell(b.url)})` : NO_META;
+    const logo = b.logo ? `![](${escapeMarkdownCell(b.logo)})` : NO_META;
+    lines.push(
+      `| ${escapeMarkdownCell(b.key)} | ${escapeMarkdownCell(b.name)} | ${escapeMarkdownCell(feed)} | ${url} | ${logo} | ${b.registered ? "yes" : "NO — wire-only venue"} |`,
+    );
+  }
+  return lines.join("\n");
+}
 
 export type OddsReportInput = {
   /** Normalized events (any adapter: xml/json/ws). */
@@ -25,6 +45,8 @@ export type OddsReportInput = {
   patterns?: ValuePattern[];
   /** Convergence classifications for the optional movement section. */
   convergence?: ConvergencePattern[];
+  /** Bookmaker profiles (with book URL / logo meta) for venues in `events`. */
+  books?: BookmakerProfile[];
   /** Report title. Defaults to "Odds Heat Report". */
   title?: string;
   /** Report timestamp; defaults to now. */
@@ -174,6 +196,11 @@ export function buildOddsReportMarkdown(input: OddsReportInput): string {
 
   lines.push("", "## Consensus", "");
   lines.push(consensus.length > 0 ? consensusTable(consensus) : "_No consensus sides (no valid prints)._");
+
+  if (input.books) {
+    lines.push("", "## Books quoting", "");
+    lines.push(input.books.length > 0 ? booksTable(input.books) : "_No books resolved for this feed._");
+  }
 
   if (input.patterns) {
     lines.push("", "## Value patterns", "");

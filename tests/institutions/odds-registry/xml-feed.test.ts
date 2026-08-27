@@ -44,4 +44,28 @@ describe("parseOddsXmlEvents (Bun.XML)", () => {
     const events = parseOddsXmlEvents('<odds-heat><cluster venue="X"><print american="zzz"/></cluster></odds-heat>');
     expect(events).toHaveLength(0);
   });
+
+  test("event id derives from the MATCH (teams + commence), never the venue", () => {
+    // Named prints + @commence -> match identity; the venue is a BOOKMAKER
+    // (bookmaker key/title), not the event id.
+    const events = parseOddsXmlEvents(
+      '<odds-heat>'
+        + '<cluster venue="bet365" commence="2026-09-01T19:00:00Z"><print name="Alpha FC" american="-200"/><print name="Beta FC" american="+150"/></cluster>'
+        + '<cluster venue="pinnacle" commence="2026-09-01T19:00:00Z"><print name="Alpha FC" american="-190"/><print name="Beta FC" american="+160"/></cluster>'
+        + '</odds-heat>',
+      { sportKey: "soccer_epl" },
+    );
+    expect(events).toHaveLength(1);
+    expect(String(events[0]!.id)).toBe("alpha-fc-vs-beta-fc-2026-09-01");
+    // All venues land as bookmakers on the one event.
+    expect(events[0]!.bookmakers.map((b) => b.key)).toEqual(["bet365", "pinnacle"]);
+    expect(events[0]!.bookmakers[0]!.title).toBe("bet365");
+  });
+
+  test("clusters without match identity stay standalone placeholder events", () => {
+    const events = parseOddsXmlEvents(FEED, { sportKey: "tennis_atp" });
+    expect(events.map((e) => String(e.id))).toEqual(["event", "event"]);
+    // The venue still identifies the BOOKMAKER even when the event cannot.
+    expect(events[0]!.bookmakers[0]!.key).toBe("center-court");
+  });
 });

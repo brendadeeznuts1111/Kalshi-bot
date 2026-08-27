@@ -75,6 +75,19 @@ describe("buildOddsReportMarkdown", () => {
     expect(md).toContain("Events: 0");
   });
 
+  test("books quoting table renders profiles with meta and honest fallback", () => {
+    const md = buildOddsReportMarkdown({
+      events,
+      books: [
+        { key: "bet365", name: "Bet365", feed: "odds-api-v3", url: "https://www.bet365.com", registered: true },
+        { key: "mystery", name: "Mystery", registered: false },
+      ],
+    });
+    expect(md).toContain("## Books quoting");
+    expect(md).toContain("| bet365 | Bet365 | odds-api-v3 | [link](https://www.bet365.com) | — | yes |");
+    expect(md).toContain("| mystery | Mystery | — | — | — | NO — wire-only venue |");
+  });
+
   test("feed-derived strings are escaped before markdown assembly", () => {
     // Hand-built event (bypasses the XML parser's own angle-strip) so the
     // report layer's escape contract is exercised directly.
@@ -98,8 +111,7 @@ describe("buildOddsReportMarkdown", () => {
   });
 });
 
-describe("buildOddsReportHtml", () => {
-  test("hostile venue name survives rendering inert", () => {
+describe("buildOddsReportHtml", () => {  test("hostile venue name survives rendering inert", () => {
     const hostile: OddsEvent[] = [{
       id: asFeedEventId("<img src=x onerror=alert(1)>"),
       sportKey: "soccer_epl",

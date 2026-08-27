@@ -60,6 +60,9 @@ export function parseOddsXmlEvents(input: string | Blob, opts: OddsXmlParseOptio
   for (const c of clusters) {
     if (!isElement(c)) continue;
     const venue = typeof c["@venue"] === "string" ? (c["@venue"] as string) : "Cluster";
+    // Per-cluster commence wins over the parse option (the option stays the
+    // fallback for feeds without @commence attributes).
+    const commence = typeof c["@commence"] === "string" ? (c["@commence"] as string) : commenceTime;
     const prints = asArray<XmlValue>(c["print"]).flatMap((p): { name: string; american: number }[] => {
       if (!isElement(p)) return [];
       const raw = typeof p["@american"] === "string" ? (p["@american"] as string) : "";
@@ -78,8 +81,8 @@ export function parseOddsXmlEvents(input: string | Blob, opts: OddsXmlParseOptio
     const away = side(prints[1], 1);
     // Merge only when match identity is explicit (real commence and/or named
     // prints); default placeholders (time 0, "Home"/"Away") are standalone.
-    const hasIdentity = commenceTime !== 0 || home.name !== "Home" || away.name !== "Away";
-    const matchKey = `${commenceTime}|${home.name}|${away.name}`;
+    const hasIdentity = commence !== 0 || home.name !== "Home" || away.name !== "Away";
+    const matchKey = `${commence}|${home.name}|${away.name}`;
     const existingIdx = hasIdentity ? byMatch.get(matchKey) : undefined;
     if (existingIdx !== undefined) {
       const ev = events[existingIdx]!;
@@ -91,15 +94,26 @@ export function parseOddsXmlEvents(input: string | Blob, opts: OddsXmlParseOptio
       });
       continue;
     }
-    const id = venue.replace(/[^A-Za-z0-9]+/g, "-").toLowerCase() || "event";
+    // Event identity is the MATCH (teams + commence date), never the venue:
+    // venues are bookmakers and belong in the bookmaker profile store — an
+    // event named after a book conflates the two domains.
+    const commenceDate = commence === 0
+      ? ""
+      : typeof commence === "number"
+        ? new Date(commence).toISOString().slice(0, 10)
+        : commence.slice(0, 10);
+    const venueKey = venue.replace(/[^A-Za-z0-9]+/g, "-").toLowerCase() || venue;
+    const id = hasIdentity
+      ? [`${home.name}-vs-${away.name}`.replace(/[^A-Za-z0-9]+/g, "-").toLowerCase(), commenceDate].filter(Boolean).join("-")
+      : "event";
     const ev: OddsEvent = {
       id: asFeedEventId(id),
       sportKey,
-      commenceTime: String(commenceTime),
+      commenceTime: String(commence),
       homeTeam: home.name,
       awayTeam: away.name,
       bookmakers: [{
-        key: id,
+        key: venueKey,
         title: venue,
         lastUpdate: "",
         markets: [{

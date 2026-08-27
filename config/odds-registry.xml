@@ -32,7 +32,7 @@
   <bookmaker key="bally-bet" name="Bally Bet" feed="odds-api-v3" region="us" markets="h2h,spreads,totals"><sport key="basketball_nba"/><sport key="soccer_epl"/><sport key="tennis_atp"/></bookmaker>
   <bookmaker key="barrierebet-fr" name="BarriereBet FR" feed="odds-api-v3" region="eu" markets="h2h"><sport key="soccer_epl"/></bookmaker>
   <bookmaker key="bc-game" name="BC.Game" feed="odds-api-v3" region="us" markets="h2h,spreads,totals"><sport key="soccer_epl"/><sport key="basketball_nba"/><sport key="tennis_atp"/></bookmaker>
-  <bookmaker key="bet365" name="Bet365" feed="odds-api-v3" region="us" markets="h2h,spreads,totals"><sport key="soccer_epl"/><sport key="basketball_nba"/><sport key="tennis_atp"/><sport key="baseball_mlb"/><sport key="hockey_nhl"/><meta><v3-name>Bet365</v3-name><api-key-ref>ODDS_API_KEY</api-key-ref></meta></bookmaker>
+  <bookmaker key="bet365" name="Bet365" feed="odds-api-v3" region="us" markets="h2h,spreads,totals"><sport key="soccer_epl"/><sport key="basketball_nba"/><sport key="tennis_atp"/><sport key="baseball_mlb"/><sport key="hockey_nhl"/><meta><v3-name>Bet365</v3-name><api-key-ref>ODDS_API_KEY</api-key-ref><url>https://www.bet365.com</url></meta></bookmaker>
   <bookmaker key="bet365-nj" name="bet365 NJ" feed="odds-api-v3" region="us" markets="h2h,spreads,totals"><sport key="basketball_nba"/><sport key="soccer_epl"/><sport key="tennis_atp"/></bookmaker>
   <bookmaker key="bet7k" name="Bet7k" feed="odds-api-v3" region="us" markets="h2h"><sport key="tennis_atp"/></bookmaker>
   <bookmaker key="bet9ja" name="Bet9ja" feed="odds-api-v3" region="eu" markets="h2h"><sport key="soccer_epl"/></bookmaker>
