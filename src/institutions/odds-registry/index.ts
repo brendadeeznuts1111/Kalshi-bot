@@ -3,11 +3,20 @@
  */
 export { loadOddsRegistryConfig, parseOddsRegistryXml } from "./load.ts";
 export { validateOddsRegistry } from "./validate.ts";
-export { americanToDecimal, parseOddsXmlEvents } from "./xml-feed.ts";
+export { americanToDecimal, parseEventLocation, parseOddsXmlEvents } from "./xml-feed.ts";
+export { describeWeatherCode, fetchEventWeather, clearWeatherCache } from "./weather.ts";
+export { collisionChip, kickoffChip, renderOddsEventLine, renderOddsReportAnsi, venueChip, weatherChip, weatherIcon } from "./chips.ts";
+export type { OddsEventLineOptions } from "./chips.ts";
+export { canonicalVenueName, loadVenueStore, localKickoff, venueCollisionCounts, venueKeyFor, venueProfileFor } from "./venue-store.ts";
+export type { VenueProfile, VenueStore } from "./venue-store.ts";
 export { oddsRegistryHealth, statusCardPng, statusCardSvg } from "./display.ts";
 export type { StatusTone } from "./display.ts";
 export { compareOddsVsVenues, VENUE_SPORT_MAP, venueSports } from "./venues.ts";
 export { classifyConvergence, consensusSnapshot, detectValuePatterns, kalshiCentsToImplied } from "./value-patterns.ts";
+export { buildOddsReportHtml, buildOddsReportMarkdown, escapeMarkdownCell, oddsReportConsensus } from "./report.ts";
+export type { OddsReportConsensusRow, OddsReportInput } from "./report.ts";
+export { bookmakerProfile, booksQuoting } from "./bookmakers.ts";
+export type { BookmakerProfile } from "./bookmakers.ts";
 export type { ConvergencePattern, ConvergenceSnapshot, DetectConvergenceOptions } from "./value-patterns.ts";
 export {
   activeV3BookmakerNames,

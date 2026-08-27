@@ -28,7 +28,7 @@ Canonical docs: **[protonpass.github.io/pass-cli](https://protonpass.github.io/p
 | [`run`](https://protonpass.github.io/pass-cli/commands/contents/run/) | bare `pass://vault/item/field` in env / `--env-file` | This project's default (`tools/protonpass-run.ts`) |
 | [`inject`](https://protonpass.github.io/pass-cli/commands/contents/inject/) | `{{ pass://vault/item/field }}` in templates | FactoryWager monorepo (`proton:inject:*`) |
 
-Monorepo agent PAT / inject SSOT (sibling tree): [`~/Projects/docs/harness/tenants/proton-integration.md`](../../docs/harness/tenants/proton-integration.md).
+Monorepo agent PAT / inject SSOT (sibling tree): [`~/Projects/docs/harness/tenants/proton-integration.md`](https://github.com/brendadeeznuts1111/project-R-score/blob/main/docs/harness/tenants/proton-integration.md).
 
 **Vault map (FactoryWager only):** display chrome for the monorepo lives in [`~/Projects/config/vault-map.toml`](../../config/vault-map.toml) (Bun `import … with { type: "toml" }` — [Bun TOML guide](https://bun.com/docs/guides/runtime/import-toml)). Kalshi-bot does **not** ship a parallel map; secrets stay in `.env.protonpass` + [`run`](https://protonpass.github.io/pass-cli/commands/contents/run/). When a `PROTON_PASS_KALSHI_BOT_TOKEN` exists, wire it via Projects `agent-env.sh` — do not duplicate vault-map entries here unless Kalshi joins the portal env board.
 
@@ -438,7 +438,7 @@ This avoids multiline string handling issues in child processes.
 | `Item not found` | Check item title matches exactly in `.env.protonpass` |
 | `Field not found` | Check field name; see [secret references](https://protonpass.github.io/pass-cli/commands/contents/secret-references/) |
 | `KALSHI_PRIVATE_KEY_PATH` vs inline PEM | `run` injects the field as a string. Inline PEM needs multiline handling in consumers; path stores an absolute filesystem path |
-| CLI SIGKILL / codesign | See monorepo note in [proton-integration.md](../../docs/harness/tenants/proton-integration.md); official [Troubleshoot](https://protonpass.github.io/pass-cli/help/troubleshoot/) |
+| CLI SIGKILL / codesign | See monorepo note in [proton-integration.md](https://github.com/brendadeeznuts1111/project-R-score/blob/main/docs/harness/tenants/proton-integration.md); official [Troubleshoot](https://protonpass.github.io/pass-cli/help/troubleshoot/) |
 
 ## Security notes
 

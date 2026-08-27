@@ -15,7 +15,7 @@
  * always normalize with asArray. American odds are strings; convert with
  * americanToDecimal before storing (the OddsEvent price field is decimal).
  */
-import { asFeedEventId, type OddsEvent } from "../../alpha/odds-types.ts";
+import { asFeedEventId, type EventLocation, type OddsEvent } from "../../alpha/odds-types.ts";
 
 type XmlValue = string | { [key: string]: XmlValue | XmlValue[] };
 
@@ -42,10 +42,43 @@ export interface OddsXmlParseOptions {
 }
 
 /**
- * Parse odds-heat XML into OddsEvent[]: clusters (venues) quoting the same
+ * Parse "lat,long" into an EventLocation; null unless both parts are finite
+ * floats inside the geographic ranges (lat [-90,90], long [-180,180]).
+ */
+export function parseEventLocation(raw: string): EventLocation | null {
+  const parts = raw.split(",").map((s) => Number(s.trim()));
+  if (parts.length !== 2) return null;
+  const lat = parts[0];
+  const long = parts[1];
+  if (lat === undefined || long === undefined) return null;
+  if (!Number.isFinite(lat) || !Number.isFinite(long)) return null;
+  if (lat < -90 || lat > 90 || long < -180 || long > 180) return null;
+  return { lat, long };
+}
+
+const slugKey = (s: string) => s.replace(/[^A-Za-z0-9]+/g, "-").toLowerCase() || s;
+
+/**
+ * Resolve the BOOKMAKER for a cluster. The wire contract is `book="key"`
+ * with `venue="lat,long"` carrying the match location. Legacy feeds that
+ * put the book in `venue` (non-numeric) still parse: the venue falls back
+ * to the book and no location attaches.
+ */
+function resolveBookAndLocation(c: { [key: string]: XmlValue | XmlValue[] }): { key: string; title: string; location: EventLocation | null } {
+  const bookAttr = typeof c["@book"] === "string" ? (c["@book"] as string) : "";
+  const venueAttr = typeof c["@venue"] === "string" ? (c["@venue"] as string) : "";
+  const location = parseEventLocation(venueAttr);
+  const bookRaw = bookAttr || (location ? "unknown" : venueAttr) || "unknown";
+  return { key: slugKey(bookRaw), title: bookRaw, location };
+}
+
+/**
+ * Parse odds-heat XML into OddsEvent[]: clusters quoting the same
  * match — same commence + same home/away teams — merge into ONE event with
- * one bookmaker entry per venue, so multi-bookmaker consensus forms from a
- * single feed. Clusters without a match twin stay standalone events.
+ * one bookmaker entry per book (cluster `book` attr), so multi-bookmaker
+ * consensus forms from a single feed. `venue="lat,long"` is the match
+ * location and attaches to the EVENT, not the book. Clusters without a
+ * match twin stay standalone events.
  */
 export function parseOddsXmlEvents(input: string | Blob, opts: OddsXmlParseOptions = {}): OddsEvent[] {
   const doc = Bun.XML.parse(input) as Record<string, XmlValue | XmlValue[] | undefined>;
@@ -59,7 +92,10 @@ export function parseOddsXmlEvents(input: string | Blob, opts: OddsXmlParseOptio
   const byMatch = new Map<string, number>(); // `${commence}|${home}|${away}` -> index in events
   for (const c of clusters) {
     if (!isElement(c)) continue;
-    const venue = typeof c["@venue"] === "string" ? (c["@venue"] as string) : "Cluster";
+    const { key: bookKey, title: bookTitle, location } = resolveBookAndLocation(c);
+    // Per-cluster commence wins over the parse option (the option stays the
+    // fallback for feeds without @commence attributes).
+    const commence = typeof c["@commence"] === "string" ? (c["@commence"] as string) : commenceTime;
     const prints = asArray<XmlValue>(c["print"]).flatMap((p): { name: string; american: number }[] => {
       if (!isElement(p)) return [];
       const raw = typeof p["@american"] === "string" ? (p["@american"] as string) : "";
@@ -78,29 +114,40 @@ export function parseOddsXmlEvents(input: string | Blob, opts: OddsXmlParseOptio
     const away = side(prints[1], 1);
     // Merge only when match identity is explicit (real commence and/or named
     // prints); default placeholders (time 0, "Home"/"Away") are standalone.
-    const hasIdentity = commenceTime !== 0 || home.name !== "Home" || away.name !== "Away";
-    const matchKey = `${commenceTime}|${home.name}|${away.name}`;
+    const hasIdentity = commence !== 0 || home.name !== "Home" || away.name !== "Away";
+    const matchKey = `${commence}|${home.name}|${away.name}`;
     const existingIdx = hasIdentity ? byMatch.get(matchKey) : undefined;
     if (existingIdx !== undefined) {
       const ev = events[existingIdx]!;
       ev.bookmakers.push({
-        key: venue.replace(/[^A-Za-z0-9]+/g, "-").toLowerCase() || venue,
-        title: venue,
+        key: bookKey,
+        title: bookTitle,
         lastUpdate: "",
         markets: [{ key: market, outcomes: [home, away].filter((s) => s.price !== 0).map((s) => ({ name: s.name, price: s.price })) }],
       });
       continue;
     }
-    const id = venue.replace(/[^A-Za-z0-9]+/g, "-").toLowerCase() || "event";
+    // Event identity is the MATCH (teams + commence date). The venue is the
+    // match's lat/long location; the book is the bookmaker — neither names
+    // the event.
+    const commenceDate = commence === 0
+      ? ""
+      : typeof commence === "number"
+        ? new Date(commence).toISOString().slice(0, 10)
+        : commence.slice(0, 10);
+    const id = hasIdentity
+      ? [`${home.name}-vs-${away.name}`.replace(/[^A-Za-z0-9]+/g, "-").toLowerCase(), commenceDate].filter(Boolean).join("-")
+      : "event";
     const ev: OddsEvent = {
       id: asFeedEventId(id),
       sportKey,
-      commenceTime: String(commenceTime),
+      commenceTime: String(commence),
       homeTeam: home.name,
       awayTeam: away.name,
+      ...(location ? { location } : {}),
       bookmakers: [{
-        key: id,
-        title: venue,
+        key: bookKey,
+        title: bookTitle,
         lastUpdate: "",
         markets: [{
           key: market,

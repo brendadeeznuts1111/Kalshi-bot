@@ -78,13 +78,20 @@ import {
 } from "../partner/execution/kalshi-live.ts";
 import { codedError, httpStatusFor, type ErrorCode } from "../institutions/error-codes.ts";
 import {
+  booksQuoting,
+  buildOddsReportMarkdown,
   compareOddsVsVenues,
   detectValuePatterns,
   loadOddsRegistryConfig,
+  loadVenueStore,
   oddsRegistryHealth,
+  parseOddsXmlEvents,
   statusCardSvg,
   type OddsRegistryConfig,
+  type VenuePriceRef,
 } from "../institutions/odds-registry/index.ts";
+import { fetchEventWeather } from "../institutions/odds-registry/weather.ts";
+import type { OddsEvent } from "../alpha/odds-types.ts";
 import { designAgent } from "../agent/design-agent.ts";
 import { baseCssVars, proseCss, themeToggleButton, themeChrome } from "../institutions/design-tokens.ts";
 import { themeManifest } from "../lib/color/theme.ts";
@@ -419,6 +426,8 @@ async function oddsVsVenuesResponse(): Promise<Response> {
 
 const ODDS_VALUE_PATTERNS_CACHE_MS = 5_000;
 let oddsValuePatternsCache: { expiresAtMs: number; payload: Record<string, unknown> } | undefined;
+const ODDS_REPORT_CACHE_MS = 5_000;
+let oddsReportCache: { expiresAtMs: number; markdown: string } | undefined;
 
 async function oddsValuePatternsResponse(): Promise<Response> {
   const nowMs = Date.now();
@@ -445,6 +454,101 @@ async function oddsValuePatternsResponse(): Promise<Response> {
     console.error("odds-value-patterns failed", error);
     return json({ error: "odds-value-patterns failed" }, 503);
   }
+}
+
+/**
+ * GET /api/odds-report — Odds Heat report as Markdown (`?format=html` renders
+ * it through the same Bun.markdown widget page as /docs). The report is wired
+ * to the Bun.XML feed: public/registry/odds-reference.xml parses through
+ * parseOddsXmlEvents (Bun.XML.parse) into OddsEvent[], venue refs drive
+ * detectValuePatterns, and both land in the report tables. When the feed file
+ * is missing/empty the route degrades to declarations_only (same data state
+ * as /api/odds-value-patterns). Feed-derived strings are escaped at the
+ * source (report.ts escapeMarkdownCell) AND the docs preset enables
+ * tagFilter — wire input never reaches HTML unescaped. Content-addressed
+ * ETag/304 on the markdown body.
+ */
+async function oddsReportResponse(req: Request): Promise<Response> {
+  const asHtml = new URL(req.url).searchParams.get("format") === "html";
+  const nowMs = Date.now();
+  const cached = oddsReportCache;
+  let markdown: string;
+  let cacheState: "hit" | "miss";
+  if (cached !== undefined && nowMs < cached.expiresAtMs) {
+    markdown = cached.markdown;
+    cacheState = "hit";
+  } else {
+    try {
+      const config = await loadOddsRegistryConfig(ROOT);
+      // Bun.XML feed -> OddsEvent[] -> consensus + detector -> report. The
+      // reference feed pins soccer_epl/h2h (matches the pipeline bake).
+      let events: OddsEvent[] = [];
+      let dataState = "declarations_only";
+      const feedFile = Bun.file(joinPath(ROOT, "public/registry/odds-reference.xml"));
+      if (await feedFile.exists()) {
+        events = parseOddsXmlEvents(await feedFile.text(), { sportKey: "soccer_epl", market: "h2h" });
+        if (events.length > 0) dataState = "reference_feed";
+      }
+      // Weather is (venue coords, commence)-keyed and best-effort: provider
+      // failure degrades to no weather column values, never a route failure.
+      const located = events.filter((ev) => ev.location);
+      if (located.length > 0) {
+        const forecasts = await Promise.allSettled(
+          located.map((ev) => fetchEventWeather(ev.location!, ev.commenceTime)),
+        );
+        forecasts.forEach((r, i) => {
+          const ev = located[i]!;
+          if (r.status === "fulfilled" && r.value) ev.weather = r.value;
+        });
+      }
+      let patterns;
+      if (events.length > 0) {
+        const refsFile = Bun.file(joinPath(ROOT, "public/registry/venue-refs.json"));
+        if (await refsFile.exists()) {
+          patterns = detectValuePatterns(events, (await refsFile.json()) as VenuePriceRef[]);
+        }
+      }
+      markdown = buildOddsReportMarkdown({
+        events,
+        ...(patterns ? { patterns } : {}),
+        ...(events.length > 0 ? { books: booksQuoting(config, events) } : {}),
+        venueStore: await loadVenueStore(ROOT),
+        title: "Odds Heat Report",
+        dataState,
+      });
+      // Registry capacity rides in the header list until a live adapter feeds events.
+      markdown = markdown.replace(
+        "- Data state:",
+        "- Registry: " + config.bookmakers.length + " bookmakers · capacity floor " + config.capacityFloor + "\n- Data state:",
+      );
+      oddsReportCache = { expiresAtMs: nowMs + ODDS_REPORT_CACHE_MS, markdown };
+      cacheState = "miss";
+    } catch (error) {
+      console.error("odds-report failed", error);
+      return json({ error: "odds-report failed" }, 503);
+    }
+  }
+  const etag = '"' + new Bun.CryptoHasher("sha256").update(markdown).digest("hex").slice(0, 32) + '"';
+  const nm = notModified(req, etag);
+  if (nm) return nm;
+  const body = asHtml
+    ? renderWidgetPage({
+      title: "Odds Heat Report",
+      subtitle: "consensus · value patterns · convergence — Bun.markdown (strict escape path)",
+      badges: [cacheState === "hit" ? "cache hit" : "cache miss", "Bun.markdown", '"' + etag.slice(1, 13) + '"'],
+      links: ["/api/odds-report"],
+      sections: [{ heading: "Report", html: renderMarkdownBody(markdown) }],
+      footer: "Markdown source: /api/odds-report (text/markdown).",
+    })
+    : markdown;
+  return new Response(body, {
+    headers: {
+      "content-type": asHtml ? "text/html; charset=utf-8" : "text/markdown; charset=utf-8",
+      "cache-control": "no-store",
+      etag,
+      "x-odds-report-cache": cacheState,
+    },
+  });
 }
 
 function findScored(run: ResearchRun, fullName: string): ScoredRepo | undefined {
@@ -522,6 +626,7 @@ export function handleLlmsTxt(_req: Request): Response {
     '- /tokens?format=md — token registry as markdown (single source of truth: src/institutions/design-tokens.ts)',
     '- /tokens — token registry as JSON',
     '- /docs — rendered docs index (Bun.markdown, ETag/304)',
+    '- /api/odds-report — Odds Heat report (text/markdown; ?format=html)',
     '- /api/runs — research run API',
     '- /blog/index.json — Bun release-blog manifest',
     '- /videos/index.json — video manifest',
@@ -1658,6 +1763,10 @@ export function createResearchServer(options: ServeOptions = {}) {
         return await oddsValuePatternsResponse();
       }
 
+      if (url.pathname === "/api/odds-report") {
+        return await oddsReportResponse(req);
+      }
+
       // Token status card (SVG) + machine view for OG scrapers / dashboard embed.
       if (url.pathname === "/status.svg") {
         const config = await loadOddsRegistryConfig(ROOT);
@@ -2303,9 +2412,14 @@ export function createResearchServer(options: ServeOptions = {}) {
         const f = Bun.file(joinPath(LIVE_TRACKER_LOG_DIR, file));
         if (!file || !(await f.exists())) {
           const available: string[] = [];
-          const evGlob = new Bun.Glob("*.jsonl");
-          for await (const name of evGlob.scan({ cwd: LIVE_TRACKER_LOG_DIR })) {
-            available.push(name);
+          try {
+            const evGlob = new Bun.Glob("*.jsonl");
+            for await (const name of evGlob.scan({ cwd: LIVE_TRACKER_LOG_DIR })) {
+              available.push(name);
+            }
+          } catch {
+            // Missing log directory (fresh checkout before any live-tracker
+            // run) — an empty listing is the truth, not a 500.
           }
           return json(
             { error: "no such log file: " + (file || "(none)"), available: available.slice(-10) },

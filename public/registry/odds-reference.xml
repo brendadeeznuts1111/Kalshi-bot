@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odds-heat>
-  <cluster venue="bet365" commence="2026-09-01T19:00:00Z"><home team="Alpha FC"/><away team="Beta FC"/>
+  <cluster venue="51.5074,-0.1278" book="bet365" commence="2026-09-01T19:00:00Z"><home team="Alpha FC"/><away team="Beta FC"/>
     <print name="Alpha FC" american="-200"/><print name="Beta FC" american="+150"/></cluster>
-  <cluster venue="pinnacle" commence="2026-09-01T19:00:00Z"><home team="Alpha FC"/><away team="Beta FC"/>
+  <cluster venue="51.5074,-0.1278" book="pinnacle" commence="2026-09-01T19:00:00Z"><home team="Alpha FC"/><away team="Beta FC"/>
     <print name="Alpha FC" american="-190"/><print name="Beta FC" american="+160"/></cluster>
-  <cluster venue="draftkings" commence="2026-09-01T19:00:00Z"><home team="Alpha FC"/><away team="Beta FC"/>
+  <cluster venue="51.5074,-0.1278" book="draftkings" commence="2026-09-01T19:00:00Z"><home team="Alpha FC"/><away team="Beta FC"/>
     <print name="Alpha FC" american="-210"/><print name="Beta FC" american="+145"/></cluster>
-  <cluster venue="williamhill" commence="2026-09-01T19:00:00Z"><home team="Alpha FC"/><away team="Beta FC"/>
+  <cluster venue="51.5074,-0.1278" book="williamhill" commence="2026-09-01T19:00:00Z"><home team="Alpha FC"/><away team="Beta FC"/>
     <print name="Alpha FC" american="-205"/><print name="Beta FC" american="+150"/></cluster>
 </odds-heat>
