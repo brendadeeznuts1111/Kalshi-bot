@@ -187,6 +187,8 @@ export function proseCss(): string {
     '.prose :where(code){background:rgb(var(--c-fg)/.08);border-radius:4px;padding:0 .3em;font-size:.85em;font-family:var(--mono);letter-spacing:-.01em}',
     '.prose .codeblock{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:1rem;overflow-x:auto}',
     '.prose .codeblock code{background:transparent;padding:0;font-family:var(--mono)}',
+    '.prose .langchip{display:inline-block;font-family:var(--mono);font-size:.68em;letter-spacing:.06em;text-transform:uppercase;border:1px solid currentColor;border-radius:999px;padding:.05em .55em;margin-bottom:.45em}',
+    '.prose .tablewrap{overflow-x:auto;max-width:100%}',
     '.prose .tablewrap{overflow-x:auto;max-width:100%}',
     '.prose pre{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:1rem;overflow-x:auto;font-family:var(--mono);font-size:.85em}',
     '.prose a{color:var(--acc);text-decoration:underline;text-decoration-color:rgb(var(--c-acc)/.45);text-underline-offset:3px}',
