@@ -55,6 +55,27 @@ export { LiveConsensusStream } from "./cluster/live-consensus.ts";
 export type { LiveConsensusOptions } from "./cluster/live-consensus.ts";
 export type { BuildPinnacleSignalInput } from "./signal-context.ts";
 
+export {
+  applySteamMove,
+  clampedLogit,
+  collectSteamMoves,
+  computeLeadership,
+  detectSteam,
+  detectSteamFromEvents,
+  steamScore,
+  typicalStep,
+} from "./steam.ts";
+export type {
+  LeadershipOptions,
+  LeadershipPair,
+  LeadershipResult,
+  SteamEvent,
+  SteamFollower,
+  SteamMove,
+  SteamOptions,
+  SteamResult,
+} from "./steam.ts";
+
 export { computeEdgeBreakdown, kalshiFee } from "./edge.ts";
 export type { EdgeBreakdown } from "./edge.ts";
 
