@@ -10,6 +10,7 @@ export { COLORS, isColorKey, type ColorKey } from "./palette.ts";
 export {
   ansi16mColor,
   ansiColor,
+  ansiRgbColor,
   channels,
   colorNumber,
   contrast,
@@ -42,6 +43,8 @@ export {
   paint,
   paintSemverChange,
   semverChangeColor,
+  styledRGB,
+  type RGBTuple,
   type SemverChange,
 } from "./terminal.ts";
 export { COLOR_CSS, type BrowserColorKey } from "./browser-constants.ts";

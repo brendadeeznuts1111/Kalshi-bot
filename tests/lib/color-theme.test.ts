@@ -1,6 +1,7 @@
 // Theme system tests — unified terminal/web/image theme, zero deps.
 // @see docs/AGENT-PITFALLS.md §22 (probe corrections for Bun.color claims)
 import { describe, expect, test } from "bun:test";
+import { join } from "node:path";
 import {
   THEME,
   THEME_ROLES,
@@ -97,5 +98,38 @@ describe("unified color theme", () => {
     expect(meta.width).toBe(32);
     expect(meta.height).toBe(32);
     expect(meta.format).toBe("png");
+  });
+});
+
+// styledRGB — arbitrary RGB tuple via Bun.color (docs "flexible input" + §235).
+// NOTE: Bun.color('ansi') snapshots env at process start, so auto-mode depth is
+// verified via subprocess (env per process); deterministic is env-independent.
+describe("styledRGB (Bun.color RGB-array path, §235)", () => {
+  const { styledRGB } = require("../../src/lib/color/terminal.ts") as typeof import("../../src/lib/color/terminal.ts");
+
+  test("deterministic mode emits the exact true-RGB code (orange)", () => {
+    expect(styledRGB("x", [255, 165, 0], "deterministic")).toBe("\u001b[38;2;255;165;0mx\u001b[0m");
+  });
+
+  test("deterministic mode emits the exact true-RGB code (red)", () => {
+    expect(styledRGB("x", [255, 0, 0], "deterministic")).toBe("\u001b[38;2;255;0;0mx\u001b[0m");
+  });
+
+  test("auto mode under FORCE_COLOR=3 emits 16m (subprocess)", () => {
+    const r = Bun.spawnSync([process.execPath, "-e", 'import { styledRGB } from "./src/lib/color/terminal.ts"; process.stdout.write(styledRGB("x", [255, 165, 0], "auto"));'], {
+      cwd: join(import.meta.dir, "../.."),
+      env: { ...(process.env as Record<string, string>), NO_COLOR: "", TERM: "xterm", FORCE_COLOR: "3" },
+    });
+    expect(r.exitCode).toBe(0);
+    expect((r.stdout?.toString() ?? "")).toBe("\u001b[38;2;255;165;0mx\u001b[0m");
+  });
+
+  test("auto mode falls back to plain text when env disables color (subprocess TERM=dumb)", () => {
+    const r = Bun.spawnSync([process.execPath, "-e", 'import { styledRGB } from "./src/lib/color/terminal.ts"; process.stdout.write(styledRGB("x", [255, 165, 0], "auto"));'], {
+      cwd: join(import.meta.dir, "../.."),
+      env: { ...(process.env as Record<string, string>), NO_COLOR: "", TERM: "dumb" },
+    });
+    expect(r.exitCode).toBe(0);
+    expect((r.stdout?.toString() ?? "")).toBe("x");
   });
 });

@@ -105,6 +105,58 @@ push('S01-artifact-surface', { entrypoints: ['entry.ts'], outdir: 'out' }, s01, 
   cssAssetHash: s01obj ? s01obj.hash : null,
 });
 
+// ---------- S01b: arrayBuffer() semantics (reference /reference/bun/BuildArtifact/arrayBuffer) ----------
+const s01b = await safe({ entrypoints: [join(F, 'pub.ts')], outdir: join(F, 'outab') });
+const live01b = s01b.ok ? await Bun.build({ entrypoints: [join(F, 'pub.ts')], outdir: join(F, 'outab') }) : null;
+const abEntry = live01b ? live01b.outputs.find((o: any) => o.kind === 'entry-point') : null;
+const abAsset = live01b ? live01b.outputs.find((o: any) => o.kind === 'asset') : null;
+const arrayBufferSemantics = abEntry ? await (async () => {
+  try {
+    const ab = await abEntry.arrayBuffer();
+    const pngAB = abAsset ? await abAsset.arrayBuffer() : null;
+    return {
+      present: typeof abEntry.arrayBuffer === 'function',
+      returnsArrayBuffer: ab instanceof ArrayBuffer,
+      byteLengthMatchesSize: ab.byteLength === abEntry.size,
+      utf8TextRoundTrip: new TextDecoder().decode(ab) === (await abEntry.text()),
+      slicePlainBlobArrayBufferBytes: (await abEntry.slice(0, 8).arrayBuffer()).byteLength,
+      binaryAsset: abAsset && pngAB ? { byteLengthMatchesSize: pngAB.byteLength === abAsset.size, pngMagicPreserved: new Uint8Array(pngAB.slice(0, 4)).join(',') === '137,80,78,71' } : null,
+      bytesPhantom: typeof (abEntry as any).bytes === 'undefined',
+    };
+  } catch (err: any) {
+    return { present: typeof abEntry.arrayBuffer === 'function', error: String(err).slice(0, 120) };
+  }
+})() : null;
+push('S01b-arrayBuffer-semantics', { entrypoints: ['pub.ts'], outdir: 'outab' }, s01b, { arrayBufferSemantics });
+
+// ---------- S01c: stream() semantics (type-confusion fix PR #33144 / issue #10004) ----------
+// Regression case: reading the cached .kind getter BEFORE the first .stream() call used to
+// make .stream() return the kind string (offset collision JSBlob.m_stream == JSBuildArtifact.m_kind).
+// Fixed in the runtime (build 34cbb9a40 >= fix merge 7f33321f, 2026-07-01) - probe-locked below.
+const s01c = await safe({ entrypoints: [join(F, 'pub.ts')], outdir: join(F, 'outstream') });
+const live01c = s01c.ok ? await Bun.build({ entrypoints: [join(F, 'pub.ts')], outdir: join(F, 'outstream') }) : null;
+const scEntry = live01c ? live01c.outputs.find((o: any) => o.kind === 'entry-point') : null;
+const streamSemantics = scEntry ? await (async () => {
+  try {
+    const kindBefore = scEntry.kind; // touch the cached getter FIRST (#10004 trigger)
+    const s = scEntry.stream();
+    const isReadableStream = s instanceof ReadableStream;
+    const viaStream = await new Response(s).text();
+    const viaText = await scEntry.text();
+    return {
+      present: typeof scEntry.stream === 'function',
+      isReadableStream,
+      kindBefore,
+      kindAfter: scEntry.kind,
+      streamTextEqualsText: viaStream === viaText,
+      typeConfusionAbsent: viaStream !== String(kindBefore),
+    };
+  } catch (err: any) {
+    return { present: typeof scEntry.stream === 'function', error: String(err).slice(0, 120) };
+  }
+})() : null;
+push('S01c-stream-semantics', { entrypoints: ['pub.ts'], outdir: 'outstream' }, s01c, { streamSemantics });
+
 // ---------- S02: no outdir ----------
 const s02 = await safe({ entrypoints: [join(F, 'entry.ts')] });
 const s02exists = s02.ok && s02.outputs[0] ? await Bun.file(s02.outputs[0].path).exists() : false;

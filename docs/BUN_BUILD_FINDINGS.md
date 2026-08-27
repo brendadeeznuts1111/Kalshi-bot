@@ -21,6 +21,10 @@ View in the terminal: `bun run findings:term` (Bun.markdown.ansi via report:term
 
 Methods (S01): `.text()` `.arrayBuffer()` `.stream()` `.json()` `.slice()` present; `.formData()` `.image()` `.bytes()` ABSENT on 1.4.0; `instanceof Blob` = false (Blob-CONFORMANT, not a Blob). `.slice()` returns a PLAIN Blob (see §6).
 
+arrayBuffer() semantics (S01b, @see https://bun.com/reference/bun/BuildArtifact/arrayBuffer): returns a REAL ArrayBuffer; `byteLength === size` = true; UTF-8 round-trip equals `.text()` = true; `.slice()` (plain Blob) `.arrayBuffer()` = 8 bytes; binary asset `byteLength === size` = true with PNG magic preserved (true). NOTE: the OFFICIAL bun-types example calls `artifact.bytes()` — ABSENT on 1.4.0 (`bytesPhantom=true`); the canonical byte accessor is `arrayBuffer()` (`src/lib/artifact.ts` wraps it as `Artifact.bytes()`).
+
+stream() semantics (S01c, type-confusion fix PR `oven-sh/bun#33144` / issue `#10004`): `.stream()` returns a ReadableStream; reading `.kind` FIRST (the `#10004` trigger) still yields the real content (`streamTextEqualsText=true`, `typeConfusionAbsent=true`) and `.kind` survives the stream (`entry-point` -> `entry-point`). The regression (Dec 2023 #7650 -> Jul 2026) is FIXED in this runtime (build `34cbb9a40` >= fix merge `7f33321f`, 2026-07-01).
+
 ## 2. BuildConfig — input options (passed to Bun.build())
 
 | Option | Type (bun-types 1.4.0) | Observed effect on 1.4.0 (evidence) |

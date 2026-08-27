@@ -18,8 +18,9 @@ describe("parseClusterCli", () => {
   });
 
   test("accepts --format json|yaml|table and --k/--min-cluster", () => {
-    expect(parseClusterCli(["--format=yaml"])).toEqual({ opts: { input: null, glob: null, k: 5, minClusterSize: 3, styled: false, format: "yaml", verbose: false, help: false } });
-    expect(parseClusterCli(["--k=7", "--min-cluster=2", "--styled"])).toEqual({ opts: { input: null, glob: null, k: 7, minClusterSize: 2, styled: true, format: "table", verbose: false, help: false } });
+    expect(parseClusterCli(["--format=yaml"])).toEqual({ opts: { input: null, glob: null, k: 5, minClusterSize: 3, styled: false, ptyPin: false, format: "yaml", verbose: false, help: false } });
+    expect(parseClusterCli(["--k=7", "--min-cluster=2", "--styled"])).toEqual({ opts: { input: null, glob: null, k: 7, minClusterSize: 2, styled: true, ptyPin: false, format: "table", verbose: false, help: false } });
+    expect(parseClusterCli(["--pty-pin"])).toEqual({ opts: { input: null, glob: null, k: 5, minClusterSize: 3, styled: false, ptyPin: true, format: "table", verbose: false, help: false } });
   });
 
   test("rejects invalid format and non-numeric flags (exit 2 path)", () => {
@@ -105,7 +106,7 @@ describe("loadClusterPrints", () => {
 describe("clusterCliHelp", () => {
   test("documents every flag (auto-help, item 2)", () => {
     const h = clusterCliHelp();
-    for (const flag of ["--input", "--glob", "--k", "--min-cluster", "--format", "--styled", "--verbose", "--help"]) {
+    for (const flag of ["--input", "--glob", "--k", "--min-cluster", "--format", "--styled", "--pty-pin", "--verbose", "--help"]) {
       expect(h).toContain(flag);
     }
   });

@@ -28,7 +28,7 @@ Top-level reference modules this repo uses most:
 
 `@see` table: [Canonical `@see` links](#canonical-see-links) (guides primary; reference dual-link for symbols). Standalone repo; monorepo `bun tools/bun-docs-index.ts` is optional.
 
-Deep dives: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns) · [`BUN_FILE.md`](BUN_FILE.md) (BunFile/FileBlob — official-docs-grounded, probe-corroborated) · [`BUN_INSPECT.md`](BUN_INSPECT.md) (inspect/console/sliceAnsi — probe-verified 1.4.0) · [`BLOB.md`](BLOB.md) (Web Blob API — probe-verified 1.4.0) · [`BUN_STREAMS_TLS_WS.md`](BUN_STREAMS_TLS_WS.md) (streams/TLS/WebSocket release claims — probe-verified 1.4.0) · [`BUN_DIRECT_STREAMS.md`](BUN_DIRECT_STREAMS.md) (direct ReadableStream — probe-verified 1.4.0) · [`BUN_DISPOSE.md`](BUN_DISPOSE.md) (Symbol.dispose/using — probe-verified 1.4.0) · [`BUN_IMAGE.md`](BUN_IMAGE.md) (Bun.Image — probe-verified 1.4.0) · [`BUN_WEBVIEW.md`](BUN_WEBVIEW.md) (WebView screenshot encodings — probe-verified 1.4.0) · [`BUN_MEDIA_METADATA.md`](BUN_MEDIA_METADATA.md) (binary media + metadata — probe-verified + cross-source audit) · [`BUN_RUN_PARALLEL.md`](BUN_RUN_PARALLEL.md) (bun run --parallel — verified 1.4.0) · [`BUN_FFI_DEVTOOLS.md`](BUN_FFI_DEVTOOLS.md) (bun:ffi types + dev flags — verified 1.4.0)
+Deep dives: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns) · [`BUN_FILE.md`](BUN_FILE.md) (BunFile/FileBlob — official-docs-grounded, probe-corroborated) · [`BUN_INSPECT.md`](BUN_INSPECT.md) (inspect/console/sliceAnsi — probe-verified 1.4.0) · [`BLOB.md`](BLOB.md) (Web Blob API — probe-verified 1.4.0) · [`BUN_STREAMS_TLS_WS.md`](BUN_STREAMS_TLS_WS.md) (streams/TLS/WebSocket release claims — probe-verified 1.4.0) · [`BUN_DIRECT_STREAMS.md`](BUN_DIRECT_STREAMS.md) (direct ReadableStream — probe-verified 1.4.0) · [`BUN_DISPOSE.md`](BUN_DISPOSE.md) (Symbol.dispose/using — probe-verified 1.4.0) · [`BUN_IMAGE.md`](BUN_IMAGE.md) (Bun.Image — probe-verified 1.4.0) · [`BUN_WEBVIEW.md`](BUN_WEBVIEW.md) (WebView screenshot encodings — probe-verified 1.4.0) · [`BUN_MEDIA_METADATA.md`](BUN_MEDIA_METADATA.md) (binary media + metadata — probe-verified + cross-source audit) · [`BUN_RUN_PARALLEL.md`](BUN_RUN_PARALLEL.md) (bun run --parallel — verified 1.4.0) · [`BUN_FFI_DEVTOOLS.md`](BUN_FFI_DEVTOOLS.md) (bun:ffi types + dev flags — verified 1.4.0) · [`BUN_TERMINAL.md`](BUN_TERMINAL.md) (Bun.Terminal PTY — probe-grounded 1.4.0, §197)
 
 ## Bun APIs overview (official)
 
@@ -63,7 +63,7 @@ Full topic map (guides from the official table; **Ref** = types API; **Here** = 
 | Routing | [`Bun.FileSystemRouter`](https://bun.com/docs/runtime/file-system-router) | [/FileSystemRouter](https://bun.com/reference/bun/FileSystemRouter) | — |
 | Streaming HTML | [`HTMLRewriter`](https://bun.com/docs/runtime/html-rewriter) | — | yes — social/OG meta |
 | Headless Browser | [`Bun.WebView`](https://bun.com/docs/runtime/webview) | [/WebView](https://bun.com/reference/bun/WebView) | yes — tennis/liquidity ground, Massey ratings (CF bypass) |
-| Terminal/PTY | [`Bun.Terminal`](https://bun.com/docs/runtime/utils) | [/Terminal](https://bun.com/reference/bun/Terminal) | — (replaces node-pty) |
+| Terminal/PTY | [`Bun.Terminal`](https://bun.com/docs/runtime/utils) | [/Terminal](https://bun.com/reference/bun/Terminal) | yes — alpha:cluster `--pty-pin` (§197) · [`BUN_TERMINAL.md`](BUN_TERMINAL.md) (replaces node-pty) |
 | Archive | [`Bun.Archive`](https://bun.com/docs/runtime/archive) | [/Archive](https://bun.com/reference/bun/Archive) | yes — `bun:backup` tars research DBs (§22; KNOWN bug: `BunFile` values archive 0-byte, use `.bytes()`) |
 | Object Store | [`Bun.S3Client`](https://bun.com/docs/runtime/s3) | [/S3Client](https://bun.com/reference/bun/S3Client) | — |
 | JSON5 / JSONC | [`Bun.JSON5.parse`](https://bun.com/docs/runtime/json5) · [`Bun.JSONC.parse`](https://bun.com/docs/runtime/jsonc) | [/JSON5](https://bun.com/reference/bun/JSON5/parse) | JSON5: config; JSONC: tsconfig-style comments |
@@ -134,7 +134,7 @@ grounded; nothing is assumed.
 | Cookies (`Bun.Cookie`) | D10 — probe-only: cookies:probe 13/13; csrf.ts double-submit owns the plane | tools/csrf-probe / src/research/csrf.ts |
 | Module Resolution (`Bun.resolveSync`) | D11 — not-for-us: runtime module resolution suffices; no custom resolver | BUN_NATIVE §Module Resolution |
 | Low-level / Internals (`mmap`, `gc`, `bun:jsc`) | D12 — probe-only: generateHeapSnapshot/memoryPressure in observability; mmap/gc not adopted | AGENT-PITFALLS §33 |
-| Terminal/PTY (`Bun.Terminal`) | D13 — partial: "Failed to open PTY" under capture; terminal.ts paint uses ANSI (replaces node-pty) | AGENT-PITFALLS §17 |
+| Terminal/PTY (`Bun.Terminal`) | D13 — wired: `--pty-pin` PTY pin renders styled output inside a real PTY and degrades to `{unavailable}` when the env denies PTYs; terminal.ts paint uses ANSI (replaces node-pty) | `src/alpha/cluster/pty.ts` · AGENT-PITFALLS §17/§229 · [`BUN_TERMINAL.md`](BUN_TERMINAL.md) |
 
 ```ts
 // @see https://bun.com/docs/runtime/utils#bun-main
@@ -377,6 +377,8 @@ Not required for desk paths; keep behind diagnostics.
 
 **Configuring Bun** knobs typed on `Env`: `BUN_OPTIONS`, `BUN_CONFIG_VERBOSE_FETCH`, `BUN_RUNTIME_TRANSPILER_CACHE_PATH`, `BUN_CONFIG_MAX_HTTP_REQUESTS`, `BUN_CONFIG_NO_CLEAR_TERMINAL_ON_RELOAD`, `NO_COLOR` / `FORCE_COLOR`, `TMPDIR`, `DO_NOT_TRACK`, `NODE_TLS_REJECT_UNAUTHORIZED`.
 
+Env audit (§236, docs + probe): transpiler cache applies to source files **> 4 KB** (NOT 50 KB — defaults-probe); `BUN_CONFIG_VERBOSE_FETCH=curl` logs URL/method/request+response headers only (no bodies; `=1` same minus curl format); `FORCE_COLOR` overrides `NO_COLOR` NATIVELY (with a warning — the repo's `resolveColorMode` deliberately keeps NO_COLOR-wins, §205); `.env` load order is `.env` → `.env.{NODE_ENV}` → `.env.local` (**skipped when NODE_ENV=test**) → `.env.{NODE_ENV}.local` (§85); `bun test` runs UTC by default (offset 0 — `TZ` env honored when set, §236 test); `bun --print process.env` prints inspect-style `ProcessEnv { … }`, not JSON (§210). `BUN_OPTIONS` silently ignores unknown flags: `--no-clear` is NOT a bun flag (does nothing) — the real flag is `--no-clear-screen`; `--hot`/`--no-warnings` valid (§237).
+
 Template: [`.env.example`](../.env.example). Smoke: `bun test tests/lib/bun-env.test.ts`.
 
 ## Color · dep-update visuals · social HTML
@@ -585,7 +587,7 @@ bunx drizzle-kit studio
 
 Legacy raw SQL in `kalshi-itf-sync.ts`, `cache.ts`, etc. is preserved — Drizzle is additive, not a rewrite mandate.
 
-Deep dives: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns) · [`BUN_FILE.md`](BUN_FILE.md) (BunFile/FileBlob — official-docs-grounded, probe-corroborated) · [`BUN_INSPECT.md`](BUN_INSPECT.md) (inspect/console/sliceAnsi — probe-verified 1.4.0) · [`BLOB.md`](BLOB.md) (Web Blob API — probe-verified 1.4.0) · [`BUN_STREAMS_TLS_WS.md`](BUN_STREAMS_TLS_WS.md) (streams/TLS/WebSocket release claims — probe-verified 1.4.0) · [`BUN_DIRECT_STREAMS.md`](BUN_DIRECT_STREAMS.md) (direct ReadableStream — probe-verified 1.4.0) · [`BUN_DISPOSE.md`](BUN_DISPOSE.md) (Symbol.dispose/using — probe-verified 1.4.0) · [`BUN_IMAGE.md`](BUN_IMAGE.md) (Bun.Image — probe-verified 1.4.0) · [`BUN_WEBVIEW.md`](BUN_WEBVIEW.md) (WebView screenshot encodings — probe-verified 1.4.0) · [`BUN_MEDIA_METADATA.md`](BUN_MEDIA_METADATA.md) (binary media + metadata — probe-verified + cross-source audit) · [`BUN_RUN_PARALLEL.md`](BUN_RUN_PARALLEL.md) (bun run --parallel — verified 1.4.0) · [`BUN_FFI_DEVTOOLS.md`](BUN_FFI_DEVTOOLS.md) (bun:ffi types + dev flags — verified 1.4.0)
+Deep dives: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns) · [`BUN_FILE.md`](BUN_FILE.md) (BunFile/FileBlob — official-docs-grounded, probe-corroborated) · [`BUN_INSPECT.md`](BUN_INSPECT.md) (inspect/console/sliceAnsi — probe-verified 1.4.0) · [`BLOB.md`](BLOB.md) (Web Blob API — probe-verified 1.4.0) · [`BUN_STREAMS_TLS_WS.md`](BUN_STREAMS_TLS_WS.md) (streams/TLS/WebSocket release claims — probe-verified 1.4.0) · [`BUN_DIRECT_STREAMS.md`](BUN_DIRECT_STREAMS.md) (direct ReadableStream — probe-verified 1.4.0) · [`BUN_DISPOSE.md`](BUN_DISPOSE.md) (Symbol.dispose/using — probe-verified 1.4.0) · [`BUN_IMAGE.md`](BUN_IMAGE.md) (Bun.Image — probe-verified 1.4.0) · [`BUN_WEBVIEW.md`](BUN_WEBVIEW.md) (WebView screenshot encodings — probe-verified 1.4.0) · [`BUN_MEDIA_METADATA.md`](BUN_MEDIA_METADATA.md) (binary media + metadata — probe-verified + cross-source audit) · [`BUN_RUN_PARALLEL.md`](BUN_RUN_PARALLEL.md) (bun run --parallel — verified 1.4.0) · [`BUN_FFI_DEVTOOLS.md`](BUN_FFI_DEVTOOLS.md) (bun:ffi types + dev flags — verified 1.4.0) · [`BUN_TERMINAL.md`](BUN_TERMINAL.md) (Bun.Terminal PTY — probe-grounded 1.4.0, §197)
 
 ## Bun API map
 

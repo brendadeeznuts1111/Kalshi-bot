@@ -10,9 +10,11 @@ const check = (name: string, pass: boolean, detail = "") => { results.push({ nam
 
 const esc = (s: unknown) => JSON.stringify(s);
 // color.mdx: css returns the MOST COMPACT form (named color when one
-// exists); ansi AUTO-DETECTS terminal depth from stdout env (empty
-// string when stdout has no color support) — use ansi-16m/ansi-256/
-// ansi-16 to target a specific depth.
+// exists); ansi AUTO-DETECTS terminal depth from stdout ENV VARS (docs
+// "Format colors as ANSI", §235): NO_COLOR silences; FORCE_COLOR 1|2|3
+// selects 16/256/16m (overrides even TERM=dumb); TERM/COLORTERM alone no
+// effect when piped; RGB-array input accepted — use ansi-16m/ansi-256/
+// ansi-16 to target a specific depth explicitly.
 check("P1 color css compact named form", Bun.color("#ff0000", "css") === "red" && Bun.color("rgb(255, 0, 0)", "css") === "red", esc(Bun.color("#ff0000", "css")));
 const ansi16m = Bun.color("#ff0000", "ansi-16m");
 check("P2 color ansi-16m truecolor", typeof ansi16m === "string" && ansi16m === "\u001b[38;2;255;0;0m", esc(ansi16m));
@@ -44,6 +46,32 @@ check("P9 sliceAnsi", typeof sliced === "string" && sliced.length > 0, esc(slice
 
 const wrapped = Bun.wrapAnsi("one two three four five", 10);
 check("P10 wrapAnsi", typeof wrapped === "string" && wrapped.includes("\n"), esc(wrapped));
+
+// P11: 'ansi' AUTO-PICKS depth from ENV VARS — docs "Format colors as ANSI"
+// ("detects the color depth of stdout from environment variables"). §235
+// probe: NO_COLOR silences (unless FORCE_COLOR); FORCE_COLOR 1|2|3 selects
+// 16/256/16m (overrides TERM=dumb); TERM selects depth even when PIPED
+// (xterm→16, xterm-256color→256, dumb→""); COLORTERM=truecolor upgrades to
+// 16m. Subprocess probes (env is per-process; base env clears the sandbox's
+// NO_COLOR=1/TERM=dumb so each var is tested in isolation).
+const ansiDepth = (env: Record<string, string>): string => {
+  const childEnv: Record<string, string> = { NO_COLOR: "", TERM: "xterm" };
+  for (const [k, v] of Object.entries(env)) childEnv[k] = v;
+  const r = Bun.spawnSync([process.execPath, "-e", 'process.stdout.write(Bun.color([255, 165, 0], "ansi"))'], { env: childEnv });
+  return (r.stdout?.toString() ?? "");
+};
+check("P11 ansi auto-picks 16 (FORCE_COLOR=1)", ansiDepth({ FORCE_COLOR: "1" }) === "\u001b[91m", esc(ansiDepth({ FORCE_COLOR: "1" })));
+check("P11a ansi auto-picks 256 (FORCE_COLOR=2)", ansiDepth({ FORCE_COLOR: "2" }) === "\u001b[38;5;214m", esc(ansiDepth({ FORCE_COLOR: "2" })));
+check("P11b ansi auto-picks 16m (FORCE_COLOR=3)", ansiDepth({ FORCE_COLOR: "3" }) === "\u001b[38;2;255;165;0m", esc(ansiDepth({ FORCE_COLOR: "3" })));
+check("P11c ansi NO_COLOR silences (auto)", ansiDepth({ NO_COLOR: "1" }) === "", esc(ansiDepth({ NO_COLOR: "1" })));
+check("P11d TERM=dumb silences", ansiDepth({ TERM: "dumb" }) === "", esc(ansiDepth({ TERM: "dumb" })));
+check("P11e TERM=xterm-256color selects 256 even PIPED", ansiDepth({ TERM: "xterm-256color" }) === "\u001b[38;5;214m", esc(ansiDepth({ TERM: "xterm-256color" })));
+check("P11f COLORTERM=truecolor upgrades to 16m", ansiDepth({ TERM: "xterm-256color", COLORTERM: "truecolor" }) === "\u001b[38;2;255;165;0m", esc(ansiDepth({ TERM: "xterm-256color", COLORTERM: "truecolor" })));
+check("P11g FORCE_COLOR overrides TERM=dumb", ansiDepth({ TERM: "dumb", FORCE_COLOR: "2" }) === "\u001b[38;5;214m", esc(ansiDepth({ TERM: "dumb", FORCE_COLOR: "2" })));
+check("P11h RGB-array input equals hex input", (() => {
+  const r = Bun.spawnSync([process.execPath, "-e", 'process.stdout.write(String(Bun.color([255,165,0], "ansi") === Bun.color("#ffa500", "ansi")))'], { env: { NO_COLOR: "", TERM: "xterm", FORCE_COLOR: "3" } });
+  return (r.stdout?.toString() ?? "").trim() === "true";
+})(), "");
 
 const failed = results.filter((r) => !r.pass);
 console.log("ansi:probe — " + (results.length - failed.length) + "/" + results.length + " checks" + (failed.length ? " · FAIL: " + failed.map((f) => f.name).join(", ") : ""));

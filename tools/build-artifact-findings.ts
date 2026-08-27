@@ -63,6 +63,16 @@ L('| size (Blob) | number | ' + s01entry.size + ' entry (S01), ' + s01css.size +
 L('| type (Blob) | string | ' + BTK + s01entry.type + BTK + ' entry (S01), ' + BTK + s01css.type + BTK + ' css asset (S01), ' + BTK + s17.outputs.find((o: any) => o.kind === 'asset').type + BTK + ' png (S17), ' + BTK + s04l.outputs.find((o: any) => o.kind === 'sourcemap').type + BTK + ' .map (S04) |');
 L();
 L('Methods (S01): ' + BTK + '.text()' + BTK + ' ' + BTK + '.arrayBuffer()' + BTK + ' ' + BTK + '.stream()' + BTK + ' ' + BTK + '.json()' + BTK + ' ' + BTK + '.slice()' + BTK + ' present; ' + BTK + '.formData()' + BTK + ' ' + BTK + '.image()' + BTK + ' ' + BTK + '.bytes()' + BTK + ' ABSENT on 1.4.0; ' + BTK + 'instanceof Blob' + BTK + ' = false (Blob-CONFORMANT, not a Blob). ' + BTK + '.slice()' + BTK + ' returns a PLAIN Blob (see §6).');
+const s01bSem = s('S01b-arrayBuffer-semantics')?.observed?.arrayBufferSemantics;
+if (s01bSem) {
+  L('arrayBuffer() semantics (S01b, @see https://bun.com/reference/bun/BuildArtifact/arrayBuffer): returns ' + (s01bSem.returnsArrayBuffer ? 'a REAL ArrayBuffer' : 'NOT an ArrayBuffer') + '; ' + BTK + 'byteLength === size' + BTK + ' = ' + String(s01bSem.byteLengthMatchesSize) + '; UTF-8 round-trip equals ' + BTK + '.text()' + BTK + ' = ' + String(s01bSem.utf8TextRoundTrip) + '; ' + BTK + '.slice()' + BTK + ' (plain Blob) ' + BTK + '.arrayBuffer()' + BTK + ' = ' + String(s01bSem.slicePlainBlobArrayBufferBytes) + ' bytes; binary asset ' + BTK + 'byteLength === size' + BTK + ' = ' + String(s01bSem.binaryAsset?.byteLengthMatchesSize ?? 'n/a') + ' with PNG magic preserved (' + String(s01bSem.binaryAsset?.pngMagicPreserved ?? 'n/a') + '). NOTE: the OFFICIAL bun-types example calls ' + BTK + 'artifact.bytes()' + BTK + ' — ABSENT on 1.4.0 (' + BTK + 'bytesPhantom=' + String(s01bSem.bytesPhantom) + ')' + BTK + '; the canonical byte accessor is ' + BTK + 'arrayBuffer()' + BTK + ' (' + BTK + 'src/lib/artifact.ts' + BTK + ' wraps it as ' + BTK + 'Artifact.bytes()' + BTK + ').');
+  L('');
+}
+const s01cSem = s('S01c-stream-semantics')?.observed?.streamSemantics;
+if (s01cSem) {
+  L('stream() semantics (S01c, type-confusion fix PR ' + BTK + 'oven-sh/bun#33144' + BTK + ' / issue ' + BTK + '#10004' + BTK + '): ' + BTK + '.stream()' + BTK + ' returns a ' + (s01cSem.isReadableStream ? 'ReadableStream' : 'non-stream') + '; reading ' + BTK + '.kind' + BTK + ' FIRST (the ' + BTK + '#10004' + BTK + ' trigger) still yields the real content (' + BTK + 'streamTextEqualsText=' + String(s01cSem.streamTextEqualsText) + ')' + BTK + ', ' + BTK + 'typeConfusionAbsent=' + String(s01cSem.typeConfusionAbsent) + ')' + BTK + ' and ' + BTK + '.kind' + BTK + ' survives the stream (' + BTK + String(s01cSem.kindBefore) + BTK + ' -> ' + BTK + String(s01cSem.kindAfter) + BTK + '). The regression (Dec 2023 #7650 -> Jul 2026) is FIXED in this runtime (build ' + BTK + '34cbb9a40' + BTK + ' >= fix merge ' + BTK + '7f33321f' + BTK + ', 2026-07-01).');
+  L('');
+}
 L();
 L('## 2. BuildConfig — input options (passed to Bun.build())');
 L();

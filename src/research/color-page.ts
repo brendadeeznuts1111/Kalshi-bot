@@ -122,6 +122,7 @@ export function renderColorPage(): string {
     { cells: ['<code>oklab()</code> / <code>oklch()</code> / <code>hsv()</code> / <code>device-cmyk()</code> inputs', W_CORRECTED + ' return null — kernel inverse parsers cover oklab/oklch/hsv (hwb/color-mix stay Bun-native)'] },
     { cells: ['<code>FORCE_COLOR=1|2|3</code>', W_VERIFIED + ' forces 16 / 256 / 24-bit even when piped'] },
     { cells: ['<code>NO_COLOR</code>', W_VERIFIED + ' silences auto "ansi" only — explicit ansi-256/16m still emit'] },
+    { cells: ['"ansi" auto-picks depth from env vars', W_VERIFIED + ' ENV-driven, not TTY-driven: NO_COLOR silences; FORCE_COLOR 1|2|3 → 16/256/16m (overrides TERM=dumb); TERM picks depth even piped (xterm→16, xterm-256color→256, dumb→""); COLORTERM=truecolor→16m; RGB-array input accepted — §235, styledRGB (terminal.ts)'] },
     { cells: ['<code>Bun.color(…, "luminance")</code>', W_CORRECTED + ' does not exist — WCAG luminance computed in-kernel (theme.ts)'] },
     { cells: ['"object" / "array" output formats', W_CORRECTED + ' real names: {rgb} / {rgba} / [rgb] / [rgba]'] },
     { cells: ['color-space keyword as 2nd arg (display-p3)', W_CORRECTED + ' 2nd arg is an output format only; p3/srgb rejected'] },

@@ -134,6 +134,19 @@ describe("BUN_* env vars (§84)", () => {
     const r = Bun.spawnSync(["bun", "-e", "console.log(process.env.NODE_ENV ?? \"unset\")"], { stdout: "pipe", env });
     expect(r.stdout?.toString().trim()).toBe("unset");
   });
+
+  test("bun test runs in UTC by default (offset 0); TZ env is honored when set (§236)", async () => {
+    // Default: TZ unset -> getTimezoneOffset() 0 (Bun runs UTC; process.env.TZ
+    // itself stays unset — the docs claim "UTC unless overridden" holds in
+    // effect, not by setting TZ=Etc/UTC).
+    const dir = mkdtempSync(join(tmpdir(), "bunenv-tz-"));
+    writeFileSync(join(dir, "tz.test.ts"), 'import { test } from "bun:test"; test("tz", () => { console.log(new Date().getTimezoneOffset()); });');
+    const def = Bun.spawnSync(["bun", "test", join(dir, "tz.test.ts")], { env: { ...process.env, TZ: "" }, stdout: "pipe" });
+    expect(def.stdout?.toString()).toContain("0");
+    const ny = Bun.spawnSync(["bun", "test", join(dir, "tz.test.ts")], { env: { ...process.env, TZ: "America/New_York" }, stdout: "pipe" });
+    expect(ny.stdout?.toString()).toContain("240");
+    rmSync(dir, { recursive: true, force: true });
+  });
 });
 
 describe(".env load order (§85)", () => {

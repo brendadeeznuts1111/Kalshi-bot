@@ -16,8 +16,14 @@
  *     `lab`, `lch`, `oklch` inputs return null (not parsed).
  *   - `hex` output drops alpha (`#ff0000aa` -> `#ff0000`); `transparent`
  *     -> `#000000`; no 2nd arg = identity passthrough.
- *   - `ansi` (auto) honors NO_COLOR / FORCE_COLOR / TTY; explicit formats
- *     (`ansi-16m` …) always emit (NO_COLOR does NOT silence them).
+ *   - `ansi` (auto) detects the color depth of stdout from ENVIRONMENT
+ *     VARIABLES (docs "Format colors as ANSI", §235) — ENV-driven, not
+ *     TTY-driven: NO_COLOR silences (unless FORCE_COLOR); FORCE_COLOR 1|2|3
+ *     selects 16/256/16m (overrides TERM=dumb); TERM picks depth even piped
+ *     (xterm→16, xterm-256color→256, dumb→""); COLORTERM=truecolor → 16m;
+ *     RGB-array input [r,g,b] accepted (docs "flexible input").
+ *     Explicit formats (`ansi-16m` …) always emit (NO_COLOR does NOT silence
+ *     them) — see styledRGB (src/lib/color/terminal.ts) for the RGB-tuple path.
  */
 import { TOKENS } from "../../institutions/design-tokens.ts";
 import { convertColorFallback } from "./kernel.ts";

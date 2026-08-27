@@ -43,6 +43,14 @@ const stream = new ReadableStream({
 code: when backpressure actually occurs, `n` is a `Promise`, not a negative
 number, so the branch never fires in either scenario.
 
+**Cross-check (bun-v1.4 blog, "Web Streams" list #32640):** the release blog claims
+`write() returns a negative number under backpressure, and await flush(true) waits
+for the sink to drain`. The negative-number half is **probe-contradicted** (table
+above: backpressure is `Promise<number>`, never negative — 100 MiB slow-client
+probe: 3 numbers then 397 Promises); the `await flush(true)` half is ✅ consistent
+(equivalent to awaiting the write promise). See [BUN_STREAMS_TLS_WS.md §1 Web
+Streams](BUN_STREAMS_TLS_WS.md).
+
 **Correct pattern (per the official docs):** `await` the write — it handles both
 forms uniformly:
 

@@ -5,10 +5,35 @@
  * @see https://bun.com/docs/pm/cli/update#visual-indicators
  * @see ./kernel.ts
  */
-import { ansi16mColor, ansiColor } from "./kernel.ts";
+import { ansi16mColor, ansiColor, ansiRgbColor } from "./kernel.ts";
 import type { ColorKey } from "./palette.ts";
 
 export const ANSI_RESET = "\x1b[0m";
+
+/** RGB triplet input — Bun.color accepts the array directly (docs "flexible input"). */
+export type RGBTuple = [number, number, number];
+
+/**
+ * Paint text with an arbitrary RGB triplet.
+ * `auto` delegates fully to `Bun.color(rgb, "ansi")`, which detects the color
+ * depth of stdout from ENVIRONMENT VARIABLES (docs "Format colors as ANSI") and
+ * picks ansi-16m / ansi-256 / ansi-16 accordingly, returning "" when unsupported.
+ * PROBE-VERIFIED 1.4.0 (§235): 'ansi' is ENV-driven, not TTY-driven — it emits
+ * even when stdout is piped: NO_COLOR silences (unless FORCE_COLOR); FORCE_COLOR
+ * 1|2|3 → 16/256/16m (overrides TERM=dumb); TERM picks depth (xterm→16,
+ * xterm-256color→256, dumb→""); COLORTERM=truecolor upgrades to 16m; RGB-array
+ * input === hex input. `deterministic` forces ansi-16m (true RGB regardless of
+ * env — NOTE: explicit formats ignore NO_COLOR). Returns plain text when the
+ * open sequence is empty.
+ */
+export function styledRGB(
+  text: string,
+  rgb: RGBTuple,
+  mode: "auto" | "deterministic" = "auto",
+): string {
+  const open = ansiRgbColor(rgb, mode === "auto" ? "ansi" : "ansi-16m");
+  return open ? `${open}${text}${ANSI_RESET}` : text;
+}
 
 /**
  * Paint text with a domain color.

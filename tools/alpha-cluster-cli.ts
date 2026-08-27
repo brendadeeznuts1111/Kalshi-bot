@@ -15,6 +15,8 @@ import { resolveColorMode } from '../src/lib/color/theme.ts';
 import { listFiles } from '../src/lib/glob.ts';
 import { clusterMetadata, type OddsPrint } from '../src/alpha/cluster/odds-vector.ts';
 import { ConsensusTracker } from '../src/alpha/cluster/tracker.ts';
+import { renderStyledInPty } from '../src/alpha/cluster/pty.ts';
+import { styledRGB } from '../src/lib/color/index.ts';
 
 const ROOT = join(import.meta.dir, '..');
 const OUT = join(ROOT, 'research', 'outputs');
@@ -25,6 +27,7 @@ export type ClusterCliOptions = {
   k: number;
   minClusterSize: number;
   styled: boolean;
+  ptyPin: boolean;
   format: 'table' | 'json' | 'yaml';
   verbose: boolean;
   help: boolean;
@@ -49,6 +52,7 @@ export function parseClusterCli(argv: string[]): { opts: ClusterCliOptions } | {
         'min-cluster': { type: 'string' },
         format: { type: 'string' },
         styled: { type: 'boolean' },
+        'pty-pin': { type: 'boolean' },
         verbose: { type: 'boolean', short: 'v' },
         help: { type: 'boolean', short: 'h' },
       },
@@ -79,6 +83,7 @@ export function parseClusterCli(argv: string[]): { opts: ClusterCliOptions } | {
       k,
       minClusterSize,
       styled: values.styled === true,
+      ptyPin: values['pty-pin'] === true,
       format: formatRaw as 'table' | 'json' | 'yaml',
       verbose: values.verbose === true,
       help: values.help === true,
@@ -128,6 +133,8 @@ export function clusterCliHelp(): string {
     'Output:',
     '  --format <fmt>     table|json|yaml console summary (yaml via Bun.YAML, §198; default table)',
     '  --styled           ANSI-rendered markdown summary (respects NO_COLOR/FORCE_COLOR, §205)',
+    '  --pty-pin          render the styled summary inside a Bun.Terminal PTY (captures the true',
+    '                     TTY output even when piped; requires a PTY — else falls back, §197)',
     '  --verbose, -v      show per-source cluster membership table',
     '',
     'Other:',
@@ -179,12 +186,13 @@ if ('error' in parsed) {
   console.error('alpha:cluster: ' + parsed.error);
   process.exit(2);
 }
-const { input, glob, k, minClusterSize, styled, format, verbose, help } = parsed.opts;
+const { input, glob, k, minClusterSize, styled, ptyPin, format, verbose, help } = parsed.opts;
 if (help) {
   console.log(clusterCliHelp());
   process.exit(0);
 }
-const useColor = styled && cliUseColor();
+const wantStyled = styled || ptyPin;
+const useColor = wantStyled && cliUseColor();
 
 const loaded = loadClusterPrints({ input, glob });
 if ('error' in loaded) {
@@ -222,9 +230,25 @@ const md: string[] = [
 ];
 for (const s of shifts) md.push('- ' + s.kind + ' from [' + s.fromLabels.join(',') + '] to ' + s.toLabel + ' (' + s.size + ' prints)');
 writeFileSync(join(OUT, 'odds-clusters.md'), md.join('\n') + '\n');
-if (styled && useColor) {
+if (wantStyled) {
   const styledMd = ['# Odds consensus', '', '**' + prints.length + '** prints · **' + summary.clusters + '** clusters · **' + summary.noise + '** noise', 'consensus shifts: ' + shifts.length, '', ...shifts.map((s) => '- ' + s.kind + ' from [' + s.fromLabels.join(',') + '] to ' + s.toLabel + ' (' + s.size + ' prints)')].join('\n');
-  console.log((Bun as any).markdown.ansi(styledMd));
+  const plain = () => renderClusterSummary({ prints: prints.length, clusters: result.clusters, noise: result.noise, shifts: shifts.length, labels: result.labels }, format);
+  if (ptyPin) {
+    // §197: host the styled renderer inside a Bun.Terminal PTY so the true TTY
+    // output is captured even when stdout is piped. Graceful fallback when the
+    // environment denies PTY allocation ("Failed to open PTY", D13).
+    const pinned = await renderStyledInPty(styledMd);
+    if ('ansi' in pinned) {
+      console.log(pinned.ansi);
+    } else {
+      console.error('alpha:cluster: --pty-pin unavailable (' + pinned.unavailable + ') — falling back');
+      console.log(useColor ? (Bun as any).markdown.ansi(styledMd) : plain());
+    }
+  } else if (useColor) {
+    console.log((Bun as any).markdown.ansi(styledMd));
+  } else {
+    console.log(plain());
+  }
 } else {
   console.log(renderClusterSummary({ prints: prints.length, clusters: result.clusters, noise: result.noise, shifts: shifts.length, labels: result.labels }, format));
 }
@@ -249,7 +273,13 @@ if (verbose) {
   }
   for (const [label, members] of [...byLabel.entries()].sort((a, b) => a[0] - b[0])) {
     const m = clusterMetadata(members);
-    console.log('  cluster ' + label + ': consensus=' + m.consensus!.toFixed(4) + ' spread=' + m.spread!.toFixed(4) + ' tightness=' + m.tightness!.toFixed(4) + ' (' + m.prints + ' prints)');
+    // Consensus gradient via styledRGB (Bun.color RGB-array path, §235): loose
+    // clusters red/orange, tight clusters green — only when the caller's color
+    // gate is on (resolveColorMode; Bun.color('ansi') is env-driven).
+    const t = Math.max(0, Math.min(1, ((m.consensus ?? 0.5) - 0.5) / 0.5));
+    const rgb: [number, number, number] = [Math.round(255 * (1 - t)), Math.round(60 + 170 * t), Math.round(40 + 40 * t)];
+    const shown = useColor ? styledRGB(String(label), rgb) : String(label);
+    console.log('  cluster ' + shown + ': consensus=' + m.consensus!.toFixed(4) + ' spread=' + m.spread!.toFixed(4) + ' tightness=' + m.tightness!.toFixed(4) + ' (' + m.prints + ' prints)');
   }
 }
 console.log('output: research/outputs/odds-clusters.{json,md}');

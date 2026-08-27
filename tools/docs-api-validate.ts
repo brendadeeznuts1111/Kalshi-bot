@@ -66,6 +66,7 @@ const INTENTIONAL = new Set([
   "Quic", // §120/§122: Bun.Quic global asserted ABSENT — QUIC is the node:quic module
   "Args", // §207: Bun.Args DOES NOT EXIST in 1.4.0 — the official guide mandates util.parseArgs
   "isTerminal", // §211/§212: Bun.isTerminal UNDEFINED — proper detection is resolveColorMode + process.stdout.isTTY
+  "executable", // §229: Bun.executable UNDEFINED on 1.4.0 (probe) — use process.execPath to self-spawn into a PTY
 ]);
 /** bun-types TYPE namespaces — not runtime values; typeof check is wrong for these. */
 const TYPE_ONLY = new Set([

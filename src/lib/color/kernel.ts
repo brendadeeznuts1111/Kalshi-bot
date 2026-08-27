@@ -485,6 +485,23 @@ export function ansiColor(key: ColorKey): string {
   return (colorConvert(COLORS[key], "ansi") as string | null) || "";
 }
 
+/**
+ * RGB-tuple ANSI via the kernel's Bun.color adapter — 'ansi' is ENV-driven
+ * (NO_COLOR / FORCE_COLOR 1|2|3 / TERM xterm→16, xterm-256color→256, dumb→""
+ * / COLORTERM=truecolor→16m; emits even when piped — §235); 'ansi-16m' forces
+ * true RGB. The tuple is converted to hex and routed through colorConvert so
+ * the ONLY Bun reference stays inside colorConvert's HAS_BUN_COLOR guard
+ * (browser-safety contract); the browser fallback covers the rest.
+ * Probe-verified: RGB-array input === hex input (ansi:probe P11h).
+ */
+export function ansiRgbColor(
+  rgb: [number, number, number],
+  format: "ansi" | "ansi-16m",
+): string {
+  const hex = toHexLower({ r: rgb[0], g: rgb[1], b: rgb[2] });
+  return (colorConvert(hex, format) as string | null) || "";
+}
+
 export function foregroundCss(key: ColorKey): ForegroundCss {
   return foregroundCache[key];
 }

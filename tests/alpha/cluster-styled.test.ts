@@ -20,4 +20,13 @@ describe("alpha:cluster --styled", () => {
     const proc = await $`bun run alpha:cluster`.quiet().nothrow();
     expect(proc.stdout.toString()).not.toContain("\x1b[");
   });
+
+  test("--verbose cluster labels use the consensus RGB gradient (styledRGB, §235)", async () => {
+    // kalshi pocket consensus ~0.30 -> t=0 -> [255,60,40] red; FORCE_COLOR=3 with
+    // NO_COLOR cleared lets Bun.color('ansi') auto-pick 16m for the tuple.
+    const proc = await $`bun run alpha:cluster -- --styled --verbose`.env({ ...process.env, FORCE_COLOR: "3", NO_COLOR: "", TERM: "xterm" }).quiet().nothrow();
+    const out = proc.stdout.toString();
+    expect(out).toContain("\x1b[38;2;255;60;40m0\x1b[0m"); // loose cluster label, red
+    expect(out).toContain("\x1b[38;2;101;162;64m2\x1b[0m"); // tight cluster label, green
+  });
 });

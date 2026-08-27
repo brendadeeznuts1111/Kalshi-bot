@@ -753,7 +753,7 @@
     "xxeUnresolved": "{\"a\":\"&xxe;\"}",
     "importEvalToCompact": "{\"config\":{\"name\":\"demo\",\"port\":\"8080\"}}",
     "bundlerInlines": true,
-    "perf20kItemsMs": 8.3,
+    "perf20kItemsMs": 10.4,
     "perfVsDocs": "CONSISTENT (docs 27 ms for 2.2 MB)"
   },
   "artifactGotchas": {
@@ -863,6 +863,92 @@
         "cssAssetLoader": "ts",
         "cssAssetType": "text/css;charset=utf-8",
         "cssAssetHash": "bb0yqrqw"
+      }
+    },
+    {
+      "name": "S01b-arrayBuffer-semantics",
+      "config": {
+        "entrypoints": [
+          "pub.ts"
+        ],
+        "outdir": "outab"
+      },
+      "outputs": [
+        {
+          "path": "outab/pub.js",
+          "kind": "entry-point",
+          "hash": "7b2rs1yf",
+          "loader": "ts",
+          "size": 141,
+          "type": "text/javascript;charset=utf-8",
+          "sourcemap": "null"
+        },
+        {
+          "path": "outab/pix-6kt9k1q8.png",
+          "kind": "asset",
+          "hash": "6kt9k1q8",
+          "loader": "file",
+          "size": 8,
+          "type": "image/png",
+          "sourcemap": "null"
+        }
+      ],
+      "ok": true,
+      "logs": [],
+      "observed": {
+        "arrayBufferSemantics": {
+          "present": true,
+          "returnsArrayBuffer": true,
+          "byteLengthMatchesSize": true,
+          "utf8TextRoundTrip": true,
+          "slicePlainBlobArrayBufferBytes": 8,
+          "binaryAsset": {
+            "byteLengthMatchesSize": true,
+            "pngMagicPreserved": true
+          },
+          "bytesPhantom": true
+        }
+      }
+    },
+    {
+      "name": "S01c-stream-semantics",
+      "config": {
+        "entrypoints": [
+          "pub.ts"
+        ],
+        "outdir": "outstream"
+      },
+      "outputs": [
+        {
+          "path": "outstream/pub.js",
+          "kind": "entry-point",
+          "hash": "7b2rs1yf",
+          "loader": "ts",
+          "size": 141,
+          "type": "text/javascript;charset=utf-8",
+          "sourcemap": "null"
+        },
+        {
+          "path": "outstream/pix-6kt9k1q8.png",
+          "kind": "asset",
+          "hash": "6kt9k1q8",
+          "loader": "file",
+          "size": 8,
+          "type": "image/png",
+          "sourcemap": "null"
+        }
+      ],
+      "ok": true,
+      "logs": [],
+      "observed": {
+        "streamSemantics": {
+          "present": true,
+          "isReadableStream": true,
+          "kindBefore": "entry-point",
+          "kindAfter": "entry-point",
+          "streamTextEqualsText": true,
+          "typeConfusionAbsent": true
+        }
       }
     },
     {
@@ -1263,7 +1349,7 @@
         {
           "path": "outbc/pure.js.jsc",
           "kind": "bytecode",
-          "hash": "5kc8cys4",
+          "hash": "hfjbc874",
           "loader": "file",
           "size": 10944,
           "type": "application/octet-stream",
@@ -1920,9 +2006,9 @@
         {
           "path": "outex2/ext.js",
           "kind": "entry-point",
-          "hash": "f4s3m1fk",
+          "hash": "sf0ezdtz",
           "loader": "ts",
-          "size": 490629,
+          "size": 489509,
           "type": "text/javascript;charset=utf-8",
           "sourcemap": "null"
         }
@@ -1930,7 +2016,7 @@
       "ok": true,
       "logs": [],
       "observed": {
-        "size": 490629
+        "size": 489509
       }
     },
     {

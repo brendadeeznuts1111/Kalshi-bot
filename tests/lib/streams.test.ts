@@ -46,6 +46,81 @@ describe("Streams & bodies (Bun 1.4.0)", () => {
     expect(packed).toBeLessThan(text.length);
   });
 
+  describe("Web Streams fixes (bun-v1.4 blog)", () => {
+    test("#25484 clone() after .body access keeps both bodies readable", async () => {
+      const resp = new Response("body-data");
+      expect(resp.body).toBeTruthy(); // access .body FIRST — the #25484 trigger
+      const c = resp.clone();
+      expect(await resp.text()).toBe("body-data");
+      expect(await c.text()).toBe("body-data");
+    });
+
+    test("#29229 Bun.inspect(ReadableStream) prints [class ReadableStream]", () => {
+      expect(Bun.inspect(ReadableStream)).toBe("[class ReadableStream]");
+    });
+
+    test("removed .formData()/.arrayBuffer() from ReadableStream", () => {
+      const s = new ReadableStream();
+      expect(typeof (s as any).formData).toBe("undefined");
+      expect(typeof (s as any).arrayBuffer).toBe("undefined");
+    });
+
+    test("#37692 direct flush-then-write inside pull delivers to pipeTo", async () => {
+      let piped = "";
+      const s = new ReadableStream({
+        type: "direct",
+        pull(c: any) {
+          c.write("part1-");
+          c.flush(true);
+          c.write("part2");
+          c.close();
+        },
+      } as any);
+      await s.pipeTo(new WritableStream({ write(c) { piped += new TextDecoder().decode(c as any); } }));
+      expect(piped).toBe("part1-part2");
+    });
+
+    test("#33782 direct pull() serialized on the JS reader path", async () => {
+      let concurrent = 0;
+      let maxConcurrent = 0;
+      const s = new ReadableStream({
+        type: "direct",
+        async pull(c: any) {
+          concurrent++;
+          maxConcurrent = Math.max(maxConcurrent, concurrent);
+          await Bun.sleep(20);
+          concurrent--;
+          c.write("x");
+          c.close();
+        },
+      } as any);
+      const rd = s.getReader();
+      await Promise.all([rd.read(), rd.read()]);
+      expect(maxConcurrent).toBe(1);
+    });
+
+    test("#32640 contract: direct write() returns non-negative numbers (no n<0 branch)", async () => {
+      // Blog claims "write() returns a negative number under backpressure" — on the
+      // JS path (and per the 100 MiB slow-client probe) returns are numbers >= 0 or
+      // Promise<number>; the n < 0 guard is dead code. See docs/BUN_DIRECT_STREAMS.md §2.
+      const returns: unknown[] = [];
+      const s = new ReadableStream({
+        type: "direct",
+        pull(c: any) {
+          returns.push(c.write("a"), c.write("b"), c.write("c"));
+          c.close();
+        },
+      } as any);
+      const out: string[] = [];
+      for await (const chunk of s as any) out.push(new TextDecoder().decode(chunk as Uint8Array));
+      expect(out.join("")).toBe("abc");
+      for (const r of returns) {
+        expect(typeof r).toBe("number");
+        expect(r as number).toBeGreaterThanOrEqual(0); // never negative — #32640 contradicted
+      }
+    });
+  });
+
   test("TextEncoderStream/TextDecoderStream round-trip", async () => {
     const tes = new TextEncoderStream();
     const tw = tes.writable.getWriter();
