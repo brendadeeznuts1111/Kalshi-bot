@@ -118,6 +118,84 @@ function resolveOptions(
 }
 
 /**
+ * Styled Markdown → HTML via Bun.markdown.render callbacks (verified working
+ * on 1.4.0 — the old probe claim "render is plain text" predates the
+ * callback API). Adds the styleOptions the plain .html path cannot express:
+ *
+ *   - headings carry ids (meta.id)
+ *   - fenced code blocks emit <pre class="codeblock"><code class="language-…">
+ *   - tables are wrapped in .tablewrap (reflow / 1.4.10)
+ *   - external links get target=_blank + rel=noopener; the caller can
+ *     rewrite internal hrefs (docs-surface .md links → /docs/<name>)
+ *   - images without alt are dropped (1.1.1) rather than emitted broken
+ *
+ * Parser options (third arg) enable the ids meta + GFM safety.
+ */
+export function markdownToStyledHtml(
+  md: string,
+  options: {
+    /** Rewrite link hrefs; returns the final href. Receives the raw target. */
+    rewriteHref?: (href: string) => string;
+  } = {},
+): string {
+  const rewriteHref = options.rewriteHref ?? ((href: string) => href);
+  const isExternal = (href: string) => /^https?:\/\//.test(href);
+  const escAttr = (v: string): string =>
+    v.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] as string);
+  return Bun.markdown.render(
+    md,
+    {
+      heading: (children, meta) => {
+        const level = meta.level;
+        const id = meta.id ? ` id="${escAttr(meta.id)}"` : "";
+        return `<h${level}${id}>${children}</h${level}>\n`;
+      },
+      paragraph: (children) => `<p>${children}</p>`,
+      blockquote: (children) => `<blockquote>${children}</blockquote>`,
+      code: (children, meta) =>
+        `<pre class="codeblock"><code class="language-${escAttr(meta?.language ?? "")}">${children}</code></pre>`,
+      codespan: (children) => `<code>${children}</code>`,
+      link: (children, meta) => {
+        const href = rewriteHref(meta.href);
+        return isExternal(href)
+          ? `<a href="${escAttr(href)}" target="_blank" rel="noopener noreferrer">${children}</a>`
+          : `<a href="${escAttr(href)}">${children}</a>`;
+      },
+      image: (alt, meta) => {
+        // Runtime signature: children = the alt text, meta = { src, title? }.
+        // bun-types types meta loosely (string) — cast and guard.
+        const m = meta as unknown as { src?: string } | string;
+        const src = typeof m === "object" && m !== null && typeof m.src === "string" ? m.src : "";
+        if (!src || !alt) return ""; // no alt -> dropped (1.1.1)
+        return `<img src="${escAttr(src)}" alt="${escAttr(alt)}" loading="lazy" />`;
+      },
+      list: (children, meta) => (meta.ordered ? `<ol>${children}</ol>` : `<ul>${children}</ul>`),
+      listItem: (children) => `<li>${children}</li>`,
+      table: (children) => `<div class="tablewrap"><table>${children}</table></div>`,
+      hr: () => "<hr />",
+    },
+    { headings: { ids: true }, tables: true, tagFilter: true },
+  );
+}
+
+/**
+ * Sibling/parent docs-link resolver for the /docs surface: `<name>.md` →
+ * `/docs/<name>` (the served route strips the extension — a raw `.md` href
+ * 404s because the route appends `.md` again), parent-relative repo files →
+ * absolute GitHub blob URLs (the standalone repo does not serve config/ or
+ * parent trees). External and hash hrefs pass through.
+ */
+export function docsLinkRewriter(): (href: string) => string {
+  const repoBase = "https://github.com/brendadeeznuts1111/Kalshi-bot/blob/main";
+  return (href: string) => {
+    if (href.startsWith("http") || href.startsWith("mailto:") || href.startsWith("#")) return href;
+    if (href.endsWith(".md")) return "/docs/" + href.replace(/\.md$/, "").replace(/^\.\//, "");
+    if (href.startsWith("../")) return repoBase + "/" + href.slice(3).replace(/^\//, "");
+    return href;
+  };
+}
+
+/**
  * Markdown → HTML via Bun.markdown.html.
  *
  * @param md Source markdown

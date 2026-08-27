@@ -83,7 +83,7 @@ export function parseFrontmatter(markdown: string): { data: Frontmatter; content
 import { headingTree, markdownHeadings } from "./markdown-headings.ts";
 
 export { headingSlug, type HeadingNode, type HeadingTree } from "./markdown-headings.ts";
-import { markdownToHtml } from "./markdown.ts";
+import { docsLinkRewriter, markdownToStyledHtml } from "./markdown.ts";
 import { processMarkdownImages, type MarkdownImageOptions } from "./markdown-images.ts";
 
 /**
@@ -123,9 +123,13 @@ export function renderMarkdownToc(body: string): string {
 
 export function renderMarkdownBody(body: string): string {
   try {
-    // docs preset: GFM + tagFilter + autolinks + heading ids (verified Bun
-    // 1.4.0 options); prose class applies the shared typography layer.
-    return '<div class="prose">' + markdownToHtml(body, "docs") + '</div>';
+    // Styled renderer (Bun.markdown.render callbacks, verified 1.4.0):
+    // heading ids, language-tagged codeblocks, .tablewrap tables, external-
+    // link attributes, and docs-link rewriting (sibling .md -> /docs/<name>,
+    // parent-relative repo files -> GitHub blob URLs — 200+ hrefs on the
+    // /docs surface previously 404'd). prose class applies typography.
+    const rewriteHref = docsLinkRewriter();
+    return '<div class="prose">' + markdownToStyledHtml(body, { rewriteHref }) + '</div>';
   } catch {
     return '<pre>' + body.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") + '</pre>';
   }
