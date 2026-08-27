@@ -35,7 +35,7 @@ srv.stop(true);
 // P2: WebSocket permessage-deflate option — boolean, default true (the
 // upgrade advertises permessage-deflate; client_max_window_bits). The
 // diagram's extensions-object form is NOT the documented API.
-const BT = "node_modules/.bun-cache/links/bun-types@1.4.0-c0dadede486f49ab/node_modules/bun-types/bun.d.ts";
+const BT = "node_modules/bun-types/bun.d.ts";
 const bd = await Bun.file(BT).text();
 check("P2 perMessageDeflate typed boolean default true", bd.includes("perMessageDeflate?: boolean") && bd.includes("permessage-deflate; client_max_window_bits") && bd.includes("@default true"), "");
 let extErr = "accepted";

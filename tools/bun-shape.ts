@@ -10,7 +10,7 @@
  * Consumed by tools/shape-probe.ts (freshness gate), the coverage
  * matrix generator, and the per-module shape report.
  */
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import ts from "typescript";
 import { listFilesAsync } from "../src/lib/glob.ts"; // Bun.Glob recursive listing (S225)
@@ -19,24 +19,24 @@ const ROOT = join(import.meta.dir, "..");
 const PINNED_VERSION = "1.4.0";
 const OUT = join(ROOT, "tools/bun-shape.json");
 
-// Locate the bundled bun-types for the pinned version (glob the cache
-// links dir; the bun-types dir name is 1.4.0-<hash>, which is the
-// bun-types PACKAGE version hash, NOT the runtime revision - do not
-// assert the hashes match).
-const cacheRoot = join(ROOT, "node_modules/.bun-cache/links");
-let bundleDir = "";
-try {
-  bundleDir = readdirSync(cacheRoot)
-    .filter((d) => d.startsWith("bun-types@" + PINNED_VERSION + "-"))
-    .sort()[0] ?? "";
-} catch {
-  /* no links dir */
-}
-if (!bundleDir) {
-  console.error("shape:gen: no bundled bun-types@" + PINNED_VERSION + " under " + cacheRoot + " (run bun install)");
+// Resolve the bundled bun-types for the pinned version through the stable
+// package path (node_modules/bun-types). The previous probe globbed the
+// isolated-store links dir (node_modules/.bun-cache/links/bun-types@1.4.0-<hash>)
+// — a content-hash mount that only exists on the checkout that ran the
+// install, which broke every other worktree/CI.
+const BT = join(ROOT, "node_modules", "bun-types");
+if (!existsSync(join(BT, "bun.d.ts"))) {
+  console.error("shape:gen: bun-types not installed at " + BT + " (run bun install)");
   process.exit(1);
 }
-const BT = join(cacheRoot, bundleDir, "node_modules/bun-types");
+{
+  // Guard the pinned version: the package must match PINNED_VERSION.
+  const pkg = JSON.parse(await Bun.file(join(BT, "package.json")).text()) as { version?: string };
+  if (!pkg.version?.startsWith(PINNED_VERSION)) {
+    console.error("shape:gen: bun-types " + pkg.version + " != pinned " + PINNED_VERSION);
+    process.exit(1);
+  }
+}
 
 interface ShapeMember {
   name: string;

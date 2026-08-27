@@ -35,6 +35,11 @@ try { await (pg as any).values("select 1"); } catch (e) { pgErr = "rejects:" + S
 check("P3a postgres query rejects on refused conn", pgErr.startsWith("rejects:"), pgErr);
 
 // P4 FileSystemRouter params + dynamic kind.
+// The meta-fixture dir is gitignored (scratch/) — self-create the minimal
+// route file this check matches against, idempotently, so the probe works
+// on any checkout (previously only the checkout that ran the grounding
+// session had the fixture).
+await Bun.write("scratch/meta-fixture/[id]/page.ts", 'export const page = (id: string) => "page-" + id;\n');
 const fsr = new Bun.FileSystemRouter({ dir: "scratch/meta-fixture", style: "nextjs" });
 const m = fsr.match("/abc/page");
 check("P4 FSR params {id} + dynamic", !!m && m.kind === "dynamic" && JSON.stringify(m!.params) === JSON.stringify({ id: "abc" }) && (fsr as any).style === "nextjs", "params=" + JSON.stringify(m!.params) + " kind=" + (m as any).kind);

@@ -127,6 +127,22 @@
     "randomUUIDv5": "exists",
     "concatArrayBuffers": "exists",
     "Security": "MISSING",
-    "$": "exists"
+    "$": "exists",
+    "zstdDecompress": "exists",
+    "zstdCompress": "exists",
+    "SHA224": "exists",
+    "SHA384": "exists",
+    "SHA512": "exists",
+    "SHA512_256": "exists",
+    "MD4": "exists",
+    "readableStreamToBytes": "exists",
+    "readableStreamToBlob": "exists",
+    "readableStreamToJSON": "exists",
+    "isMainThread": "exists",
+    "indexOfLine": "exists",
+    "allocUnsafe": "exists",
+    "embeddedFiles": "exists",
+    "executable": "MISSING",
+    "terminal": "MISSING"
   }
 }

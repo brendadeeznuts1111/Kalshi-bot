@@ -1,7 +1,7 @@
 {
   "format": "licenses-sbom",
   "version": 1,
-  "generatedAt": "2026-08-26T11:26:24.626Z",
+  "generatedAt": "2026-08-27T20:48:27.402Z",
   "bunVersion": "1.4.0",
   "summary": {
     "total": 6,
@@ -21,12 +21,12 @@
     },
     {
       "name": "@types/node",
-      "version": "26.1.2",
+      "version": "26.4.0",
       "reportedLicense": "MIT",
       "normalizedLicense": "MIT",
       "allowed": true,
       "matchedBy": "allowlist",
-      "fingerprint": "8c630e3085ef"
+      "fingerprint": "04fd75068610"
     },
     {
       "name": "bun-types",
@@ -64,7 +64,7 @@
       "matchedBy": "exemption",
       "reason": "vendored file:vendor/proton-pass package with no license field in its own package.json (AGENT-PITFALLS §91/§92/§93) (expires 2026-12-01)",
       "expires": "2026-12-01",
-      "expiresInDays": 97,
+      "expiresInDays": 96,
       "fingerprint": "6a048843f8d4"
     }
   ]
