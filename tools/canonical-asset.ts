@@ -5,7 +5,7 @@
  *   bun run canonical:asset -- --input=artifacts/brand-card.png
  *       [--out=artifacts/canonical] [--name=brand-card] [--width=512]
  *       [--height=512] [--fit=inside|fill] [--timestamp=<ms>] [--sort-arrays]
- *       [--schema=<url>]
+ *       [--schema=<url>] [--source-hash] [CANONICAL_METADATA_SECRET=...]
  *
  * Writes:
  *   <out>/<name>.png             processed PNG payload
@@ -19,7 +19,7 @@ import { mkdirSync } from "node:fs";
 import { generateCanonicalAsset } from "../src/lib/canonical-asset.ts";
 import { parseArgs } from "node:util";
 
-const { values: cav, positionals: caPos } = parseArgs({ args: Bun.argv.slice(2), options: { height: { type: 'string' }, fit: { type: 'string' }, schema: { type: 'string' }, 'sort-arrays': { type: 'boolean' }, timestamp: { type: 'string' } }, strict: false, allowPositionals: true });
+const { values: cav, positionals: caPos } = parseArgs({ args: Bun.argv.slice(2), options: { height: { type: 'string' }, fit: { type: 'string' }, schema: { type: 'string' }, 'sort-arrays': { type: 'boolean' }, 'source-hash': { type: 'boolean' }, timestamp: { type: 'string' } }, strict: false, allowPositionals: true });
 const flag = (name: string): string => {
   return typeof cav[name] === 'string' ? (cav[name] as string) : '';
 };
@@ -51,6 +51,8 @@ const opts: Parameters<typeof generateCanonicalAsset>[1] = {
   sortArrays,
   ...(schema ? { schema } : {}),
   ...(tsFlag ? { timestamp: Number(tsFlag.slice("--timestamp=".length)) } : {}),
+  ...(cav["source-hash"] === true ? { sourceHash: true } : {}),
+  ...(Bun.env.CANONICAL_METADATA_SECRET ? { hmacSecret: Bun.env.CANONICAL_METADATA_SECRET } : {}),
 };
 const asset = await generateCanonicalAsset(input, opts);
 

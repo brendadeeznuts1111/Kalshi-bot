@@ -34,9 +34,26 @@ export interface CanonicalAsset {
   metadata: Record<string, any>;
   /** Processed PNG payload bytes. */
   processedImage: Uint8Array;
+  /** Streaming SHA-256 of the SOURCE file (opt-in; for dedup). 0x-prefixed. */
+  sourceHash?: string;
 }
 
 export type CanonicalFit = "inside" | "fill";
+
+/**
+ * Stream a file through a CryptoHasher without loading it fully into memory
+ * (dedup-friendly source hash). Verified on 1.4.0: file.stream() + hasher.update().
+ */
+export async function streamingFileHash(path: string, algorithm: string = "sha256"): Promise<string> {
+  const hasher = new Bun.CryptoHasher(algorithm as ConstructorParameters<typeof Bun.CryptoHasher>[0]);
+  const reader = (await Bun.file(path).stream()).getReader();
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    hasher.update(value as Uint8Array);
+  }
+  return hasher.digest("hex") as string;
+}
 
 /** Recursively sorts object keys and (optionally) arrays deterministically. */
 export function sortObjectKeys(obj: any, sortArrays = false): any {
@@ -117,6 +134,12 @@ export type CanonicalAssetOptions = {
   normalizeNumbers?: boolean;
   numberPrecision?: number;
   extra?: Record<string, any>;
+  /** Stream-hash the SOURCE file before processing (dedup). Opt-in — keeps the
+   * default tuple byte-identical. Verified on 1.4.0: file.stream() + hasher.update(). */
+  sourceHash?: boolean;
+  /** When set, sign the metadata digest with HMAC-SHA-256 (verified on 1.4.0:
+   * new Bun.CryptoHasher("sha256", secret) is HMAC). Deterministic given secret. */
+  hmacSecret?: string;
 };
 
 /**
@@ -144,6 +167,9 @@ export async function generateCanonicalAsset(
     throw new Error("File not found: " + imagePath);
   }
 
+  // Opt-in streaming source hash (dedup) — verified pattern, no full-buffer load.
+  const sourceHash = options.sourceHash ? await streamingFileHash(imagePath) : undefined;
+
   // file.image() is a sync factory — await only the terminal (.bytes()).
   let processedBuffer: Uint8Array;
   try {
@@ -158,6 +184,7 @@ export async function generateCanonicalAsset(
 
   const rawMetadata = {
     asset_hash: "0x" + assetHash,
+    ...(sourceHash ? { source_hash: "0x" + sourceHash } : {}),
     version: "1.0.0",
     created_at: timestamp,
     schema: options.schema ?? "canonical-asset/v1",
@@ -170,12 +197,16 @@ export async function generateCanonicalAsset(
   const normalized = shouldNormalize ? normalizeNumbers(rawMetadata, precision) : rawMetadata;
   const sortedMetadata = sortObjectKeys(normalized, options.sortArrays ?? false);
   const metadataJson = JSON.stringify(sortedMetadata);
-  const metadataDigest = Bun.CryptoHasher.hash("sha256", metadataJson, "hex") as string;
+  // Verified on 1.4.0: new Bun.CryptoHasher("sha256", secret) is HMAC-SHA-256.
+  const metadataDigest = options.hmacSecret
+    ? (new Bun.CryptoHasher("sha256", options.hmacSecret).update(metadataJson).digest("hex") as string)
+    : (Bun.CryptoHasher.hash("sha256", metadataJson, "hex") as string);
 
   return {
     assetHash: "0x" + assetHash,
     metadataDigest: "0x" + metadataDigest,
     metadata: sortedMetadata,
     processedImage: processedBuffer,
+    ...(sourceHash ? { sourceHash: "0x" + sourceHash } : {}),
   };
 }

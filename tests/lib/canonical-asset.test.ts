@@ -6,7 +6,7 @@
 import { describe, expect, test, beforeAll, afterAll } from "bun:test";
 import { rmSync, existsSync } from "node:fs";
 import { join } from "node:path";
-import { generateCanonicalAsset, normalizeNumbers, sortObjectKeys, type CanonicalAsset } from "../../src/lib/canonical-asset.ts";
+import { generateCanonicalAsset, normalizeNumbers, sortObjectKeys, streamingFileHash, type CanonicalAsset } from "../../src/lib/canonical-asset.ts";
 
 const TMP = "/tmp/canonical-asset-test";
 const SRC = join(TMP, "src.png");
@@ -132,5 +132,33 @@ describe("sortObjectKeys", () => {
   test("sortArrays sorts arrays of mixed values deterministically", () => {
     const sorted = sortObjectKeys({ a: [10, "b", 2, { y: 1, x: 2 }] }, true);
     expect(sorted.a).toEqual([2, 10, "b", { x: 2, y: 1 }]);
+  });
+});
+
+describe("verified 1.4.0 upgrades (streaming hash + HMAC digest)", () => {
+  test("streamingFileHash matches the one-shot hash (dedup contract)", async () => {
+    const streamed = await streamingFileHash(SRC);
+    const oneShot = Bun.CryptoHasher.hash("sha256", await Bun.file(SRC).bytes(), "hex");
+    expect(streamed).toBe(oneShot);
+  });
+
+  test("HMAC metadata digest is deterministic and differs from the plain digest", async () => {
+    const a = await generateCanonicalAsset(SRC, { timestamp: 123, hmacSecret: "k" });
+    const b = await generateCanonicalAsset(SRC, { timestamp: 123, hmacSecret: "k" });
+    const plain = await generateCanonicalAsset(SRC, { timestamp: 123 });
+    expect(a.metadataDigest).toBe(b.metadataDigest);
+    expect(a.metadataDigest).not.toBe(plain.metadataDigest);
+  });
+
+  test("sourceHash opt-in includes source_hash in metadata + tuple", async () => {
+    const r = await generateCanonicalAsset(SRC, { timestamp: 123, sourceHash: true });
+    expect(r.sourceHash).toMatch(/^0x[0-9a-f]{64}$/);
+    expect(r.metadata.source_hash).toBe(r.sourceHash);
+  });
+
+  test("defaults are unchanged (no source_hash without opt-in)", async () => {
+    const r = await generateCanonicalAsset(SRC, { timestamp: 123 });
+    expect(r.sourceHash).toBeUndefined();
+    expect(r.metadata.source_hash).toBeUndefined();
   });
 });
