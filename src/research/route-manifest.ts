@@ -70,6 +70,8 @@ export const ROUTE_MANIFEST: readonly RouteDef[] = [
   { path: '/api/watermark', method: 'GET', layer: 'branding', handler: 'watermarkAndSign (WebView SVG overlay + ml-dsa-65)', cache: 'no-cache' },
   { path: '/design', method: 'GET', layer: 'branding', handler: 'renderDesignPage', cache: 'no-cache' },
   { path: '/design/trend', method: 'GET', layer: 'branding', handler: 'renderTrendPage', cache: 'no-cache' },
+  { path: '/bundle-analysis', method: 'GET', layer: 'branding', handler: 'concatenated dist/*.meta.md bundle reports', cache: 'no-cache', docRef: 'docs/DESIGN-SYSTEM.md' },
+  { path: '/bundle-dashboard', method: 'GET', layer: 'branding', handler: 'live metafile size/budget HTML dashboard', cache: 'no-cache', docRef: 'docs/DESIGN-SYSTEM.md' },
 
   // ── Pipeline (content + docs + audit surfaces) ──
   { path: '/content/posts', method: 'GET', layer: 'pipeline', handler: 'post index', cache: 'no-cache', docRef: 'src/lib/content-pipeline.ts' },

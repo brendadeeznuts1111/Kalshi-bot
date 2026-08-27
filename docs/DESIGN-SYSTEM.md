@@ -47,6 +47,23 @@ Add — never rename — registry entries; bump a component's version when its m
 `/api/design/audit` runs the audit against the live HQ page on every call —
 a passing audit (`ok: true`) is the merge gate for view changes.
 
+## Bundle visibility (metafile surfaces)
+
+`design:build` emits per-module Bun metafiles (`dist/<module>.meta.json` —
+esbuild schema — plus `dist/<module>.meta.md`, the LLM-friendly report).
+
+| Surface | What it serves |
+|---|---|
+| `bundle-analysis` | Concatenated `dist/*.meta.md` reports as `text/markdown` (404 until a build exists) |
+| `bundle-dashboard` | Live HTML: per-module sizes/budgets/largest-contributor from the metafile JSON + `bundle-history.json` trend |
+| `api/design/budgets` | Same data as JSON (`buildBudgetHealth`) |
+| `design/trend` | `bundle-history.json` rendered as a trend chart |
+| `design:check` | CI gate: budgets (≤12 KB design-system, ≤64 KB hq-app), largest-contributor caps, >25% growth fails / >10% warns, no import cycles, no unexpected externals |
+
+Notes: `metafile` object form `{ json, markdown }` writes both files into `outdir`
+(the CLI `--metafile-md` writes to CWD). `metafileMd` as a build option is
+**accepted but inert** on 1.4.0 — the object form is the real API.
+
 ## Tooltips & copy
 
 Tooltip text lives in `src/institutions/glossary.ts` (`TOOLTIPS`) — the design

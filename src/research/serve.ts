@@ -143,7 +143,10 @@ import { DESIGN_SYSTEM_VERSION } from "../institutions/design-tokens.ts";
 import { TOKENS as DESIGN_TOKENS } from "../institutions/design-tokens.ts";
 import {
   buildBudgetHealth,
+  budgetStatus,
   bundleHistoryPath,
+  DESIGN_MODULE_NAMES,
+  metaMdPath,
   readBundleHistory,
 } from "../lib/design-budget.ts";
 import { fetchKalshiBookSnapshot, midFromBookSnapshot } from "../bot/kalshi-market-data.ts";
@@ -2436,6 +2439,38 @@ export function createResearchServer(options: ServeOptions = {}) {
       if (url.pathname === "/design/trend") {
         const history = await readBundleHistory(bundleHistoryPath(ROOT));
         return new Response(renderTrendPage(history, new Date().toISOString()), {
+          headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-cache", ...designCorsHeaders() },
+        });
+      }
+
+      // Human-readable bundle report — serves the LLM-friendly markdown
+      // metafile reports (dist/<module>.meta.md) as a concatenated page.
+      if (url.pathname === "/bundle-analysis") {
+        const parts: string[] = ["# Bundle analysis\n"];
+        let found = 0;
+        for (const module of DESIGN_MODULE_NAMES) {
+          const text = await Bun.file(metaMdPath(module, ROOT)).text().catch(() => "");
+          if (text) { parts.push(text.trim() + "\n"); found += 1; }
+        }
+        if (found === 0) {
+          return new Response("Analysis not available — run `bun run design:build` first", { status: 404 });
+        }
+        return new Response(parts.join("\n\n"), {
+          headers: { "content-type": "text/markdown; charset=utf-8", "cache-control": "no-cache" },
+        });
+      }
+
+      // Live bundle dashboard — aggregate sizes/budgets across modules as HTML
+      // (metafile JSON read live; no dist file required beyond the build).
+      if (url.pathname === "/bundle-dashboard") {
+        const health = await buildBudgetHealth(ROOT);
+        const rows = Object.entries(health).map(([module, h]) => {
+          const size = budgetStatus(h.bytes, h.budget);
+          const largest = h.largest === null ? "?" : (h.largest / 1024).toFixed(2) + " KB";
+          return `<li><code>${module}</code> — ${size} (largest ${largest})</li>`;
+        }).join("");
+        const html = `<h1>Bundle Dashboard</h1><p>Live metafile sizes (build artifacts: <code>dist/*.meta.json</code>).</p><ul>${rows || "<li>no build artifacts — run <code>bun run design:build</code></li>"}</ul>`;
+        return new Response(html, {
           headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-cache", ...designCorsHeaders() },
         });
       }
