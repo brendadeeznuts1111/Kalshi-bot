@@ -17,11 +17,18 @@ Globals exist; construction, enqueue, close, and `for await` all work.
 `Response(plainReadableStream).text()` works. "Less memory, faster" are 📋
 vendor benchmarks.
 
-### TransformStream — ❌ readable never terminates on 1.4.0
+### TransformStream — ⚠️ narrow termination bug on 1.4.0 (scoped finding)
 
-The release claims TransformStream "passes 100% of the Web Platform Tests" —
-**not reproducible**. Data flows out, but the readable side **never signals
-`done`** once the writable side closes, so every read pattern hangs:
+The release claims TransformStream "passes 100% of the Web Platform Tests".
+**Scoped verdict:** the *specific pattern* below — a generic TransformStream
+with a `transform` hook, `writable.close()`, then reading to `done` —
+hangs on the installed 1.4.0: data flows out, but the readable side never
+signals `done` once the writable side closes. Note this pattern is **not
+covered by the bun repo's own streams suite**, which passes 274/281 on the
+same 1.4.0 binary (its 5 failures are direct-stream close-hook and async-
+iterator accessor edge cases) — so treat this as a narrow repro, not "Bun's
+streams are broken", and the historical "100% WPT" claim is not falsifiable
+by a later binary anyway.
 
 ```ts
 const ts = new TransformStream({ transform(c, ctrl) { ctrl.enqueue(String(c)); } });
@@ -91,7 +98,7 @@ pass the CA or `rejectUnauthorized: false` for private-CA/dev servers.
 | Claim | Verdict |
 | --- | --- |
 | ReadableStream / WritableStream native | ✅ |
-| TransformStream native, passes 100% WPT | ❌ readable never terminates on 1.4.0 |
+| TransformStream native, passes 100% WPT | ⚠️ narrow repro hangs (writable.close() → read-to-done); bun's own suite passes 274/281 and doesn't cover the pattern — broad "broken" claim withdrawn |
 | CompressionStream / DecompressionStream native | ✅ |
 | clone() shares body chunks | ✅ functional; memory internals 📋 |
 | node:tls / Bun.connect / Bun.listen rejectUnauthorized defaults | ✅ |

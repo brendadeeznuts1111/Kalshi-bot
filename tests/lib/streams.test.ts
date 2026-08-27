@@ -92,9 +92,12 @@ describe("Streams & bodies (Bun 1.4.0)", () => {
   });
 
   test.skip("TransformStream readable terminates after writable close (known 1.4.0 bug)", async () => {
-    // KNOWN BUG on Bun 1.4.0: the readable side never signals done once the
-    // writer closes — for-await/getReader/pipeTo/Response(ts.readable) all hang.
-    // docs/BUN_STREAMS_TLS_WS.md §1. Remove the skip when Bun fixes it.
+    // KNOWN BUG on Bun 1.4.0 (narrow pattern): the readable side of a generic
+    // TransformStream never signals done once the writer closes —
+    // for-await/getReader/pipeTo/Response(ts.readable) all hang. NOT covered by
+    // bun's own streams suite (274/281 pass on 1.4.0; none exercise this
+    // writable.close() -> read-to-done shape). docs/BUN_STREAMS_TLS_WS.md §1.
+    // Remove the skip when Bun fixes it.
     const ts = new TransformStream<string, string>({ transform(c, ctrl) { ctrl.enqueue(c); } });
     const w = ts.writable.getWriter();
     w.write("a");
