@@ -15,12 +15,16 @@ import {
 const ROOT = join(import.meta.dir, "..", "..", "..");
 
 describe("odds-registry pipeline (reference feed + signals)", () => {
-  test("public/registry/odds-reference.xml parses to one event with 4 bookmakers", async () => {
+  test("public/registry/odds-reference.xml parses to three events across two venues", async () => {
     const feed = await Bun.file(join(ROOT, "public/registry/odds-reference.xml")).text();
     const events = parseOddsXmlEvents(feed, { sportKey: "soccer_epl", market: "h2h" });
-    expect(events).toHaveLength(1);
+    expect(events).toHaveLength(3);
+    // Alpha + Gamma share Alpha Park (collision demo); Epsilon plays Gamma Fields.
     expect(events[0]!.bookmakers).toHaveLength(4);
     expect(events[0]!.homeTeam).toBe("Alpha FC");
+    expect(events[1]!.location).toEqual({ lat: 51.5074, long: -0.1278 });
+    expect(events[2]!.bookmakers).toHaveLength(2);
+    expect(events[2]!.location).toEqual({ lat: 53.4308, long: -2.9608 });
   });
 
   test("reference venue refs drive the report detector end-to-end", async () => {

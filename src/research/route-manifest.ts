@@ -101,6 +101,7 @@ export const ROUTE_MANIFEST: readonly RouteDef[] = [
   { path: '/robots.txt', method: 'GET', layer: 'research', handler: 'robots + sitemap pointer (sitemap:gen, §240)', cache: '1h', docRef: 'docs/ODDS_REGISTRY.md' },
   { path: '/status.svg', method: 'GET', layer: 'branding', handler: 'odds-registry token status card (SVG)', cache: 'no-cache', docRef: 'docs/ODDS_REGISTRY.md' },
   { path: '/registry/*', method: 'GET', layer: 'data', handler: 'public/registry dir route', cache: 'dir' },
+  { path: '/assets/books/*', method: 'GET', layer: 'branding', handler: 'book logo swatches (book:logos bake)', cache: 'dir' },
   { path: '/api/glossary', method: 'GET', layer: 'data', handler: 'glossary payload', cache: 'no-cache' },
   { path: '/api/kpi', method: 'GET', layer: 'data', handler: 'event-store KPIs', cache: 'no-cache' },
   { path: '/api/events', method: 'GET', layer: 'data', handler: 'events board', cache: '60s' },

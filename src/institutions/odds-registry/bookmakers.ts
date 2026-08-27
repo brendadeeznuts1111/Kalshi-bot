@@ -16,6 +16,7 @@
  * visible in reports with provenance honest.
  */
 import type { OddsEvent } from "../../alpha/odds-types.ts";
+import { bookLogoPath } from "./book-logos.ts";
 import type { OddsFeedType, OddsRegistryConfig } from "./types.ts";
 
 export type BookmakerProfile = {
@@ -49,16 +50,22 @@ function firstMeta(meta: Record<string, string>, keys: readonly string[]): strin
 /**
  * Resolve one bookmaker profile from the registry. Never undefined: an
  * unregistered wire venue returns a minimal profile with `registered: false`.
+ *
+ * `availableLogos` (optional set of book keys with a generated asset) enables
+ * the conventional logo fallback `/assets/books/<key>.png` — logos light up
+ * by convention once `bun run book:logos` has baked the assets, no config edit.
  */
 export function bookmakerProfile(
   config: Pick<OddsRegistryConfig, "bookmakers">,
   key: string,
   wireTitle?: string,
+  availableLogos?: Set<string>,
 ): BookmakerProfile {
   const declared = config.bookmakers.find((b) => b.key === key);
   if (declared) {
     const url = firstMeta(declared.meta, REGISTRY_META_KEYS.url);
-    const logo = firstMeta(declared.meta, REGISTRY_META_KEYS.logo);
+    const logo = firstMeta(declared.meta, REGISTRY_META_KEYS.logo)
+      ?? (availableLogos?.has(key) ? bookLogoPath(key) : undefined);
     return {
       key: declared.key,
       name: declared.name,
@@ -75,16 +82,18 @@ export function bookmakerProfile(
 /**
  * Profiles for every bookmaker quoting the given events, in first-seen wire
  * order, deduped by key. Unregistered venues resolve via bookmakerProfile.
+ * `availableLogos` keys get the conventional `/assets/books/<key>.png` logo.
  */
 export function booksQuoting(
   config: Pick<OddsRegistryConfig, "bookmakers">,
   events: OddsEvent[],
+  availableLogos?: Set<string>,
 ): BookmakerProfile[] {
   const seen = new Map<string, BookmakerProfile>();
   for (const ev of events) {
     for (const bk of ev.bookmakers) {
       if (!seen.has(bk.key)) {
-        seen.set(bk.key, bookmakerProfile(config, bk.key, bk.title));
+        seen.set(bk.key, bookmakerProfile(config, bk.key, bk.title, availableLogos));
       }
     }
   }

@@ -8,4 +8,12 @@
     <print name="Alpha FC" american="-210"/><print name="Beta FC" american="+145"/></cluster>
   <cluster venue="51.5074,-0.1278" book="williamhill" commence="2026-09-01T19:00:00Z"><home team="Alpha FC"/><away team="Beta FC"/>
     <print name="Alpha FC" american="-205"/><print name="Beta FC" american="+150"/></cluster>
+  <cluster venue="51.5074,-0.1278" book="bet365" commence="2026-09-01T21:00:00Z"><home team="Gamma FC"/><away team="Delta FC"/>
+    <print name="Gamma FC" american="-120"/><print name="Delta FC" american="+110"/></cluster>
+  <cluster venue="51.5074,-0.1278" book="pinnacle" commence="2026-09-01T21:00:00Z"><home team="Gamma FC"/><away team="Delta FC"/>
+    <print name="Gamma FC" american="-125"/><print name="Delta FC" american="+105"/></cluster>
+  <cluster venue="53.4308,-2.9608" book="bet365" commence="2026-09-01T22:00:00Z"><home team="Epsilon FC"/><away team="Zeta FC"/>
+    <print name="Epsilon FC" american="-130"/><print name="Zeta FC" american="+120"/></cluster>
+  <cluster venue="53.4308,-2.9608" book="draftkings" commence="2026-09-01T22:00:00Z"><home team="Epsilon FC"/><away team="Zeta FC"/>
+    <print name="Epsilon FC" american="-135"/><print name="Zeta FC" american="+115"/></cluster>
 </odds-heat>

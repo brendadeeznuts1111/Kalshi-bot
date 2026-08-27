@@ -7,6 +7,13 @@
       "city": "London",
       "timezone": "Europe/London",
       "aliases": ["The Alpha Ground", "AP"]
+    },
+    {
+      "venueKey": "v:53.4308:-2.9608",
+      "name": "Gamma Fields",
+      "city": "Liverpool",
+      "timezone": "Europe/London",
+      "aliases": ["The Fields"]
     }
   ]
 }

@@ -21,6 +21,7 @@ export { classifyConvergence, consensusSnapshot, detectValuePatterns, kalshiCent
 export { buildOddsReportHtml, buildOddsReportMarkdown, escapeMarkdownCell, oddsReportConsensus } from "./report.ts";
 export type { OddsReportConsensusRow, OddsReportInput } from "./report.ts";
 export { bookmakerProfile, booksQuoting } from "./bookmakers.ts";
+export { bookColor, bookInitials, bookLogoPng, bookLogoPath, bookLogoSvg, ensureBookLogos, BOOK_LOGO_DIR, BOOK_LOGO_SIZE } from "./book-logos.ts";
 export type { BookmakerProfile } from "./bookmakers.ts";
 export type { ConvergencePattern, ConvergenceSnapshot, DetectConvergenceOptions } from "./value-patterns.ts";
 export {
