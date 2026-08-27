@@ -296,7 +296,7 @@ export function renderShowcaseHtml(data: ShowcaseData, colors: ShowcaseColors = 
 <main id="main">
 ${sections}
 </main>
-<footer>Generated ${esc(data.generatedAt)} · Bun ${esc(data.bunVersion)} · manifest: config/odds-showcase.json5 · API: <a href="/api/showcase">/api/showcase</a> · links: ${links}</footer>
+<footer>Generated ${esc(data.generatedAt)} · Bun ${esc(data.bunVersion)} · manifest: <a href="/api/showcase">config/odds-showcase.json5</a> · Links: ${links}</footer>
 <script type="module">
   try {
     const mod = await import("https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs");
