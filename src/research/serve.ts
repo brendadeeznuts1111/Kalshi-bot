@@ -85,11 +85,11 @@ import {
   currentRecords,
   detectValuePatterns,
   loadOddsRegistryConfig,
+  loadReportEvents,
   loadSnapshotStore,
   loadVenueStore,
   mergeRecords,
   oddsRegistryHealth,
-  parseOddsXmlEvents,
   saveSnapshotStore,
   statusCardSvg,
   type OddsRegistryConfig,
@@ -490,12 +490,12 @@ async function oddsReportResponse(req: Request): Promise<Response> {
       // reference feed pins soccer_epl/h2h (matches the pipeline bake).
       let events: OddsEvent[] = [];
       let dataState = "declarations_only";
-      const feedFile = Bun.file(joinPath(ROOT, "public/registry/odds-reference.xml"));
-      if (await feedFile.exists()) {
-        events = parseOddsXmlEvents(await feedFile.text(), { sportKey: "soccer_epl", market: "h2h" });
-        if (events.length > 0) dataState = "reference_feed";
-      }
-      // Weather is (venue coords, commence)-keyed and best-effort: provider
+      // Event source ladder: live bookmaker feeds (ODDS_LIVE_FEED=1) →
+      // reference XML feed → declarations_only. The resolver merges
+      // per-book feeds into shared events and never throws on a dead feed.
+      const report = await loadReportEvents(ROOT, config, { sportKey: "soccer_epl", market: "h2h" });
+      events = report.events;
+      dataState = report.dataState;      // Weather is (venue coords, commence)-keyed and best-effort: provider
       // failure degrades to no weather column values, never a route failure.
       const located = events.filter((ev) => ev.location);
       if (located.length > 0) {
@@ -532,10 +532,10 @@ async function oddsReportResponse(req: Request): Promise<Response> {
         title: "Odds Heat Report",
         dataState,
       });
-      // Registry capacity rides in the header list until a live adapter feeds events.
+      // Source provenance + registry capacity ride in the header list.
       markdown = markdown.replace(
         "- Data state:",
-        "- Registry: " + config.bookmakers.length + " bookmakers · capacity floor " + config.capacityFloor + "\n- Data state:",
+        "- Source: " + report.sourceDetail + "\n- Registry: " + config.bookmakers.length + " bookmakers · capacity floor " + config.capacityFloor + "\n- Data state:",
       );
       oddsReportCache = { expiresAtMs: nowMs + ODDS_REPORT_CACHE_MS, markdown };
       cacheState = "miss";
