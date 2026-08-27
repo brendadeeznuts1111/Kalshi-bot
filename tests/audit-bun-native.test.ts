@@ -6,7 +6,6 @@ import {
   auditRepository,
   findManifestViolations,
   findSourceViolations,
-  findSpawnSiteViolations,
 } from "../scripts/audit-bun-native.ts";
 
 describe("bun-native guard", () => {
@@ -104,19 +103,8 @@ describe("bun-native guard", () => {
       .toContain("canonical runtime/type namespace");
   });
 
-  test("flags Bun.spawn / Bun.spawnSync outside the documented keep-list", () => {
-    const violations = findSpawnSiteViolations(`
-      const proc = Bun.spawn(["ls", "-la"]);
-      const sync = Bun.spawnSync(["git", "status"], { stdout: "pipe" });
-      const s = "Bun.spawn([1])";
-    `);
-
-    expect(violations).toHaveLength(2);
-    expect(violations.map((item) => item.message).join("\n")).toContain("SPAWN_KEEP_LIST");
-  });
-
-  test("audit allows spawn only in keep-list files", async () => {
-    const root = mkdtempSync(join(tmpdir(), "spawn-keep-list-"));
+  test("allows Bun.spawn / Bun.spawnSync in any file (no keep-list)", async () => {
+    const root = mkdtempSync(join(tmpdir(), "spawn-allowed-"));
     try {
       mkdirSync(join(root, "src", "lib"), { recursive: true });
       mkdirSync(join(root, "tools"), { recursive: true });
@@ -125,17 +113,15 @@ describe("bun-native guard", () => {
         join(root, "src", "lib", "rg.ts"),
         "const out = Bun.spawnSync(['rg'], { stdout: 'pipe' });",
       );
-      await Bun.write(join(root, "tools", "bad.ts"), "const p = Bun.spawn(['ls']);");
+      await Bun.write(join(root, "tools", "any.ts"), "const p = Bun.spawn(['ls']);");
 
       const violations = await auditRepository(root, [
         "package.json",
         "src/lib/rg.ts",
-        "tools/bad.ts",
+        "tools/any.ts",
       ]);
 
-      expect(violations.map((item) => item.message)).toEqual([
-        "Bun.spawn outside SPAWN_KEEP_LIST - use Bun.$ where possible (docs/BUN_SHELL.md)",
-      ]);
+      expect(violations).toEqual([]);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

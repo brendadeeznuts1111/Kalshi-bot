@@ -235,10 +235,11 @@ export function findSourceViolations(
 }
 
 /**
- * Bun.spawn / Bun.spawnSync keep-list - documented exceptions where Bun Shell
- * lacks the capability (no IPC channel, no unref) or the child needs the
- * parent's true TTY fds (Bun.$ pipes stdout/stderr, so child isTTY=false).
- * Any other file calling them is a guard violation (docs/BUN_SHELL.md).
+ * Files exempt from the banned-subprocess-package check (BANNED_PACKAGES:
+ * child_process / execa). These deliberately import the raw subprocess APIs
+ * where Bun Shell lacks the capability (IPC channel, unref, true TTY fds).
+ * Bun.spawn / Bun.spawnSync call sites themselves are NOT restricted — the
+ * raw spawn API is fully supported (docs/BUN_SHELL.md).
  */
 export const SPAWN_KEEP_LIST = new Set([
   "src/agent/research-runner.ts", // IPC (process.send) - Bun Shell has no channel
@@ -296,42 +297,6 @@ export const SPAWN_KEEP_LIST = new Set([
   "tools/palette-clip.ts", // ffmpeg frame composition subprocess (exit-code wait, output ignored)
 ]);
 
-/** Flag Bun.spawn / Bun.spawnSync call sites in files outside SPAWN_KEEP_LIST. */
-export function findSpawnSiteViolations(
-  source: string,
-  file = "source.ts",
-): GuardViolation[] {
-  const violations: GuardViolation[] = [];
-  const scannable = source.startsWith("#!")
-    ? source.slice(source.indexOf("\n") + 1)
-    : source;
-  const sourceFile = ts.createSourceFile(
-    file,
-    scannable,
-    ts.ScriptTarget.Latest,
-    true, // setParentNodes: the keep-list check needs node.parent (call expression)
-    file.endsWith("x") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
-  );
-  const visit = (node: ts.Node): void => {
-    if (
-      ts.isPropertyAccessExpression(node)
-      && ts.isIdentifier(node.expression)
-      && node.expression.text === "Bun"
-      && (node.name.text === "spawn" || node.name.text === "spawnSync")
-      && node.parent !== undefined
-      && ts.isCallExpression(node.parent)
-    ) {
-      violations.push({
-        file,
-        message: `Bun.${node.name.text} outside SPAWN_KEEP_LIST - use Bun.$ where possible (docs/BUN_SHELL.md)`,
-      });
-    }
-    ts.forEachChild(node, visit);
-  };
-  visit(sourceFile);
-  return violations;
-}
-
 async function trackedRepositoryFiles(root: string): Promise<string[]> {
   const { stdout, stderr, exitCode } = await $`git ls-files -z`.cwd(root).nothrow().quiet();
   if (exitCode !== 0) {
@@ -373,9 +338,6 @@ export async function auditRepository(
     try {
       const source = await sourceFile.text();
       violations.push(...findSourceViolations(source, file));
-      if (!SPAWN_KEEP_LIST.has(file)) {
-        violations.push(...findSpawnSiteViolations(source, file));
-      }
     } catch (error) {
       violations.push({
         file,

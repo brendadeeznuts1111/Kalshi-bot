@@ -90,7 +90,7 @@ const server: Server = Bun.serve({
 | API | Status | Repo |
 | --- | ------ | ---- |
 | `$` template | **yes** | token fallback (`gh auth token`), guard `git ls-files`, cron jobs · [`BUN_SHELL.md`](BUN_SHELL.md) |
-| `Bun.spawn` / `spawnSync` | **yes** | keep-list only: agent IPC, editor unref, sync gates, interactive CLIs (`SPAWN_KEEP_LIST`) |
+| `Bun.spawn` / `spawnSync` | **yes** | supported (no keep-list): agent IPC, editor unref, sync gates, interactive CLIs |
 | `Bun.which` | **yes** | preflight gh presence, protonpass CLI, editor binary |
 
 ---

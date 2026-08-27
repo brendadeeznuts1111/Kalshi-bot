@@ -15,14 +15,16 @@ The GitHub research pipeline spawns nothing; REST is `Bun.fetch`:
 | Inspect REST + code search + repo file contents | [`github-api.ts`](../src/research/github-api.ts) — `Bun.fetch` |
 | Rate-limit preflight + budget facade | [`gh.ts`](../src/research/gh.ts) (no subprocess) / [`github-rate-limit.ts`](../src/research/github-rate-limit.ts) — `Bun.fetch` + `gh auth token` fallback |
 
-No `Bun.spawn`, no `execa`, no Octokit. Token resolution still uses `gh auth token` when `GH_TOKEN` / `GITHUB_TOKEN` are unset.
+No `execa`, no Octokit; the pipeline itself never spawns. Token resolution still uses `gh auth token` when `GH_TOKEN` / `GITHUB_TOKEN` are unset.
 
 ## Repo-wide default (2026-08-23): `Bun.$` is the default subprocess transport
 
-All subprocess calls under `src/`, `scripts/`, and `tools/` go through `Bun.$`
-unless a hard reason exists (keep-list below). `bunfig.toml` `[run] shell = "bun"`
-already routes every `bun run …` through Bun Shell; this section documents the
-in-process side.
+Subprocess calls under `src/`, `scripts/`, and `tools/` prefer `Bun.$` where it
+fits; `Bun.spawn` / `Bun.spawnSync` remain fully supported for cases that need
+the raw subprocess API (IPC, `unref()`, true TTY fds, blocking sync). No
+keep-list enforcement — the raw spawn API is a first-class Bun API.
+`bunfig.toml` `[run] shell = "bun"` already routes every `bun run …` through
+Bun Shell; this section documents the in-process side.
 
 ### Converted (2026-08-23 sweep — Phase A argv + Phase B pipelines)
 
@@ -43,16 +45,17 @@ in-process side.
 | Demo scenario runner | `Bun.spawn([process.execPath,"test",…])` + env | `$`${process.execPath} test ${spec.file} --test-name-pattern ${spec.pattern}`.env({…})` — undefined env dropped (verified) · `src/partner/execution/demo-scenario-runner.ts` |
 | Regulatory CLI tests | `Bun.spawn({ cmd: […] })` pipes | `$`bun src/regulatory/scripts/… --db :memory:`.nothrow().quiet()` · `tests/regulatory/state-compliance.test.ts` |
 
-### Keep-list — `Bun.spawn` / `Bun.spawnSync` stay (deliberate)
+### Where raw `Bun.spawn` / `Bun.spawnSync` shine (no restriction)
+
+`Bun.spawn` / `Bun.spawnSync` are supported everywhere (no keep-list). They are
+the right tool when `Bun.$` cannot express the need:
 
 | Site | Reason |
 |------|--------|
 | `src/agent/research-runner.ts` | IPC — `process.send` / `serialization: "advanced"`; Bun Shell has no IPC channel |
 | `src/lib/editor.ts` | `unref()` detach for the GUI editor; `$` has no unref |
-| `tools/pre-commit.ts` · `tools/agent-probe.ts` · `src/lib/rg.ts` · `src/lib/breaking-audit.ts` | `Bun.spawnSync` in blocking sync contexts; `$` is async-only. `node:child_process` is guard-banned (`BANNED_PACKAGES`) |
+| `tools/pre-commit.ts` · `tools/agent-probe.ts` · `src/lib/rg.ts` · `src/lib/breaking-audit.ts` | `Bun.spawnSync` in blocking sync contexts; `$` is async-only |
 | `tools/protonpass-run.ts` · `tools/db-push-gate.ts` | True TTY fds via stdio inherit — `$` pipes stdout/stderr (child `isTTY=false`), which can alter prompts/colors on the secrets wrapper and the destructive schema gate. (`$` does pass stdin through — verified — but stdout TTY-ness differs.) |
-
-**Enforced:** `scripts/audit-bun-native.ts` `SPAWN_KEEP_LIST` — any `Bun.spawn` / `Bun.spawnSync` call outside these files fails `bun:ci` (AST-based; comments and strings are ignored).
 
 ## Why `Bun.$` over `Bun.spawn`
 
@@ -97,7 +100,7 @@ No `.stdin()` method, and the callable-options form `$`cmd`({…})` does **not**
 
 The shell layer is the fallback for things Bun has no native API for (`gh`,
 `git`, `launchctl`, `open`, `bunx`, `pass-cli`, `rg`, `find`; `openssl` only
-for the h2 test cert-gen in `SPAWN_KEEP_LIST`). Where Bun has a native API
+for the h2 test cert-gen). Where Bun has a native API
 (or a Node-compat one, e.g. `node:tls`) the repository migrates off shell.
 
 | Bun API | Cross-reference with the shell/subprocess layer | Where |
@@ -105,7 +108,7 @@ for the h2 test cert-gen in `SPAWN_KEEP_LIST`). Where Bun has a native API
 | `Bun.file` / `Bun.write` | `$` redirection `> ${Bun.file(path)}` / `< ${Buffer}` (tested in `tests/shell-idioms.test.ts`); artifact reads/writes beside `$`-gathered data | `tools/snapshot-data-plane.ts`, `tools/github-rate-budget.ts` |
 | `Bun.which` | Resolves binaries handed to `$` / `Bun.spawn` (`pass-cli`, editor, `bun`) | `tools/provision-fantasy402-vault.ts`, `src/lib/editor.ts`, `tools/pre-commit.ts` |
 | `Bun.spawnSync` ↔ `$` | Sync/async split of the same subprocess story (blocking gates vs async shell) | `tools/pre-commit.ts`, `src/lib/rg.ts`, `src/lib/breaking-audit.ts` |
-| `Bun.spawn` (keep-list) | IPC (`research-runner`), `unref()` (`editor`), true-TTY interactive (`protonpass`, `db-push-gate`) | `SPAWN_KEEP_LIST` in `scripts/audit-bun-native.ts` |
+| `Bun.spawn` / `spawnSync` | Raw subprocess API — IPC (`research-runner`), `unref()` (`editor`), true-TTY interactive (`protonpass`, `db-push-gate`), blocking sync gates | supported (no keep-list) |
 | `Bun.env` / `.env()` | Per-call env merge into `$` (undefined values dropped) | `scripts/deps-outdated.ts`, `src/partner/execution/demo-scenario-runner.ts` |
 | `Bun.sleep` | The only `$` timeout mechanism — `Promise.race` races | `src/research/serve.ts` (launchd probe) |
 | `Bun.cron` | In-process scheduler whose 7 jobs spawn via `$` | `scripts/cron-main.ts` |
@@ -113,8 +116,8 @@ for the h2 test cert-gen in `SPAWN_KEEP_LIST`). Where Bun has a native API
 | `Bun.Glob` | Programmatic file matching vs shell globs in `$` templates | `src/research/serve.ts`, `src/calibration/watcher.ts` |
 | `Bun.dns` | **Native replacement for `dig`** — `resolveCname/NS/TXT/MX` (shapes: `string[]`, `string[][]`, `[{priority,exchange}]`; absent CNAME rejects → `.catch(() => [])`); types lag in 1.4.0 → isolated cast + runtime-surface check | `src/domain/host-discover.ts` `probeDns`, `src/institutions/fonbet/connection.ts` |
 | `node:tls` (Node compat) | `tls.connect().getPeerCertificate()` replaces `openssl s_client` + `x509` — leaf SANs (`subjectaltname`) with zero subprocess (probed 1.4.0) | `src/domain/host-discover.ts` `probeTlsSans` |
-| `Bun.Terminal` (PTY) | The isTTY=true option the interactive keeps need (`$` pipes stdout/stderr) | not used — keep-list reasoning |
-| `Bun.Transpiler.scanImports` + `ts` AST | The enforcement loop — guard runs `git ls-files -z` via `$`, reads via `Bun.file`, walks AST for spawn sites | `scripts/audit-bun-native.ts` |
+| `Bun.Terminal` (PTY) | The isTTY=true option the interactive keeps need (`$` pipes stdout/stderr) | not used — the raw-spawn/Terminal route would cover it |
+| `Bun.Transpiler.scanImports` + `ts` AST | The enforcement loop — guard runs `git ls-files -z` via `$`, reads via `Bun.file`, walks AST for banned imports and Bun-shadowing | `scripts/audit-bun-native.ts` |
 | `Bun.fetch` | REST half of research transport — GitHub REST + `/rate_limit` (`readGitHubRateLimitWire`); `$`→`gh` only for auth (token fallback + auth-status probe) | `src/research/github-api.ts`, `src/research/gh.ts`, `src/research/github-rate-limit.ts` |
 | `bun:sqlite` | Stores what `Bun.fetch`/`$` gathers | `src/research/cache.ts`, `src/institutions/event-store/*` |
 

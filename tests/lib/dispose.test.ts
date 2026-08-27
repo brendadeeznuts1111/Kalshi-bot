@@ -94,6 +94,12 @@ describe("Symbol.dispose / using (Bun 1.4.0)", () => {
     expect(obj.method()).toBe(1);
   });
 
+  test("claim that does NOT hold: Bun.spawn is not disposable", () => {
+    const proc: any = Bun.spawn(["sleep", "0.01"]);
+    expect(typeof proc[Symbol.dispose]).toBe("undefined");
+    proc.kill();
+  });
+
   test("claim that does NOT hold: Database.reserve is a phantom API", () => {
     const db = new Database(":memory:");
     expect(typeof (db as any).reserve).toBe("undefined");
