@@ -20,7 +20,10 @@ of ≥34 bookmakers in [`config/odds-registry.xml`](../config/odds-registry.xml)
 | Venue store | [`odds-registry/venue-store.ts`](../src/institutions/odds-registry/venue-store.ts) | Coordinates → identity: canonical `venueKey` (4dp), name/city/timezone, alias canonicalization, collision counts; [`config/odds-venues.json`](../config/odds-venues.json) |
 | Weather | [`odds-registry/weather.ts`](../src/institutions/odds-registry/weather.ts) | `(venue coords, commence)` → `EventWeather` (Open-Meteo, no key); WMO code mapping; 10-min/negative cache; timeout-bounded |
 | Report | [`odds-registry/report.ts`](../src/institutions/odds-registry/report.ts) | `OddsEvent[]` → Markdown (Matches/Consensus/Books/Value patterns/Convergence); `escapeMarkdownCell` on every feed-derived string |
-| Chips | [`odds-registry/chips.ts`](../src/institutions/odds-registry/chips.ts) | ANSI chip line per event (weather gradient, venue pin, venue-local kickoff, collision badge) for the terminal surface |
+| Data source | [`odds-registry/data-source.ts`](../src/institutions/odds-registry/data-source.ts) | Event-source ladder: live bookmaker feeds (`ODDS_LIVE_FEED=1`) merged by match identity → reference feed → `declarations_only` |
+| Consensus history | [`odds-registry/consensus-history.ts`](../src/institutions/odds-registry/consensus-history.ts) | Per (event, side) snapshot store feeding `classifyConvergence` (movement verdicts between report builds) |
+| Chips | [`odds-registry/chips.ts`](../src/institutions/odds-registry/chips.ts) | ANSI chip line per event (provenance, weather gradient, venue pin, venue-local kickoff, collision + movement badges) |
+| Book logos | [`odds-registry/book-logos.ts`](../src/institutions/odds-registry/book-logos.ts) | Deterministic branded logo PNGs per book (`bun run book:logos` → `public/assets/books/`) |
 | Display | [`odds-registry/display.ts`](../src/institutions/odds-registry/display.ts) | Token status card SVG + WebView-rasterized PNG (`statusCardPng`) + health summary |
 
 The model (`OddsEvent` → `OddsBookmaker` → `OddsMarket` → `OddsOutcome`) already carries
@@ -44,7 +47,8 @@ Fonbet WS, another XML feed) plugs into the same downstream normalize/compare pi
 | `GET /api/odds-vs-venues` | Per-sport consensus table: bookmaker capacity vs Kalshi/Polymarket declared coverage (`odds-vs-venues/v1`) |
 | `GET /api/odds-value-patterns` | Value-pattern detector surface (`odds-value-patterns/v1`); `declarations_only` until a live adapter feeds `OddsEvent[]` |
 | `GET /api/odds-report` | Odds Heat report — `text/markdown` (default) or `?format=html` (widget page); wired to the reference feed via `Bun.XML.parse`; sha-256 ETag/304; 5s cache |
-| `bun run odds:report <feed> [--plain]` | ANSI chip line per event (weather / venue / kickoff / collision); `--plain` strips ANSI |
+| `bun run odds:report <feed> [--plain]` | ANSI chip line per event (provenance / weather / venue / kickoff / movement); `--plain` strips ANSI |
+| `bun run book:logos [--force]` | Bake branded book logo PNGs for every registry book (idempotent) |
 | `GET /status.svg` | Token status card (green/red + counts) for OG scrapers and embeds |
 | `bun run odds-registry:status --json` | CLI health/JSON view |
 | `bun run odds:sync --sport=X [--db=...] [--local] [--dry-run]` | Fan out to every book's feed (registry meta), cache WAL, run value + convergence on cached events; `--local` substitutes the reference feed for offline runs |
@@ -159,21 +163,59 @@ the venue. WMO weather codes map to report conditions; results cache 10 min (fai
 
 ## Odds Heat report
 
-`buildOddsReportMarkdown({ events, patterns, books, venueStore })`
+`buildOddsReportMarkdown({ events, patterns, books, venueStore, convergence })`
 ([`report.ts`](../src/institutions/odds-registry/report.ts)) renders sections in order:
-**Matches** (event, matchup, venue name/city or coords, map link, venue-local kickoff,
-weather, collision badge) → **Consensus** → **Books quoting** → **Value patterns** →
+**Matches** (event, provenance, matchup, venue name/city or coords, map link, venue-local
+kickoff, weather, collision badge) → **Consensus** → **Books quoting** → **Value patterns** →
 **Convergence**. Untrusted-wire contract: every feed-derived cell goes through
 `escapeMarkdownCell` before assembly, and HTML rendering uses the `strict` preset
 (`tagFilter` + `noHtmlBlocks` + `noHtmlSpans`) — a hostile venue name renders inert.
 
+## Event source ladder
+
+[`data-source.ts`](../src/institutions/odds-registry/data-source.ts) resolves the report's
+events with a degrade-down ladder:
+
+1. **Live** — `ODDS_LIVE_FEED=1` (or `opts.live`) fans out `connectAllBookmakers`
+   per registry book; per-book results are merged by match identity into shared
+   events (`mergeFeedEvents`), so consensus forms across separate feeds.
+   Provenance is stamped `source: "live"`.
+2. **Reference feed** — `public/registry/odds-reference.xml` (three matches across
+   two venues: Alpha + Gamma share Alpha Park → collision badge; Epsilon plays
+   Gamma Fields). Provenance `simulated`.
+3. **`declarations_only`** — no feed available; the report renders capacity +
+   structure with empty tables.
+
+Every rung absorbs its own failures (dead books are isolated by the feed client; a
+missing file degrades silently) — the route never 5xx on a feed.
+
+## Bookmaker logos
+
+`bun run book:logos` bakes a 128×128 branded PNG per registry book to
+`public/assets/books/<key>.png` (`book-logos.ts`, WebView-rasterized; deterministic
+per-key hue + initials). The bookmaker store resolves logos by **convention**:
+`bookmakerProfile` falls back to `/assets/books/<key>.png` when the `<meta>` blob has
+no `<logo>` and the key has a baked asset — new books get logos by running the CLI,
+no config edit. Explicit `<logo>` in the meta blob always wins.
+
+## Consensus history + movement
+
+[`consensus-history.ts`](../src/institutions/odds-registry/consensus-history.ts) persists
+per (event, side) consensus snapshots to gitignored
+`research/cache/odds-consensus.json`. Each report build classifies the current
+consensus against the prior via `classifyConvergence` (Convergence section), then
+records itself — build N+1's prior is build N. 24h retention, 12 records/key, dedupe;
+every IO failure degrades to "no prior". The ANSI surface renders verdicts as movement
+chips (`▲ converging` / `▼ diverging`, `movementChip`).
+
 ## ANSI chips
 
 [`chips.ts`](../src/institutions/odds-registry/chips.ts) is the terminal complement of the
-Matches table (`renderOddsReportAnsi`, or `bun run odds:report`): weather chip with a
+Matches table (`renderOddsReportAnsi`, or `bun run odds:report`): provenance chip
+(`● live` / `○ sim`), weather chip with a
 continuous cold→hot truecolor gradient (`tempToRGB` via `Bun.color` RGB tuples — probed:
 `styleText` has no RGB format, and `FORCE_COLOR=1` downgrades to 16-color), venue pin
-(`Bun.sliceAnsi` truncation), venue-local kickoff, and a collision badge (silent ≤1,
+(`Bun.sliceAnsi` truncation), venue-local kickoff, a collision badge (silent ≤1,
 yellow ≤2, orange ≤5, red past 5). Missing segments collapse — no dash rows. Color env is
 bootstrap-read: set `NO_COLOR` / `FORCE_COLOR` before launch (see [`env.template`](../env.template)).
 
