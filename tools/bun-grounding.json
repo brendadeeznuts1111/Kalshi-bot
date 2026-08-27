@@ -1,7 +1,7 @@
 {
   "bunVersion": "1.4.0",
   "shapeRevision": "34cbb9a40b4bd1bd767d134a7065e66c2432a676",
-  "generatedAt": "2026-08-26T23:44:47.900Z",
+  "generatedAt": "2026-08-27T05:23:35.618Z",
   "generator": "tools/ground-bun.ts",
   "shapeFile": "1.4.0 (34cbb9a40b)",
   "docsIndex": "https://bun.com/docs/llms.txt",
@@ -14,7 +14,7 @@
       "typeOnly": false,
       "runtime": true,
       "used": true,
-      "usageCount": 426,
+      "usageCount": 433,
       "docsUrl": "https://bun.com/docs/runtime/file-io#reading-files-bun-file",
       "gate": "fs:probe",
       "probeWired": true
@@ -27,7 +27,7 @@
       "typeOnly": false,
       "runtime": true,
       "used": true,
-      "usageCount": 329,
+      "usageCount": 334,
       "docsUrl": "https://bun.com/docs/runtime/file-io#writing-files-bun-write",
       "gate": "fs:probe",
       "probeWired": true
@@ -40,7 +40,7 @@
       "typeOnly": false,
       "runtime": true,
       "used": true,
-      "usageCount": 199,
+      "usageCount": 201,
       "docsUrl": "https://bun.com/docs/runtime/environment-variables",
       "gate": "runtime:probe",
       "probeWired": true
@@ -66,7 +66,7 @@
       "typeOnly": false,
       "runtime": true,
       "used": true,
-      "usageCount": 110,
+      "usageCount": 111,
       "docsUrl": "https://bun.com/docs/bundler",
       "gate": "build-deep:probe",
       "probeWired": false
@@ -79,10 +79,23 @@
       "typeOnly": false,
       "runtime": true,
       "used": true,
-      "usageCount": 103,
+      "usageCount": 109,
       "docsUrl": "https://bun.com/docs/runtime/http/server",
       "gate": "serve-tls/routes",
       "probeWired": false
+    },
+    {
+      "symbol": "Bun.argv",
+      "name": "argv",
+      "ns": "",
+      "kind": "object",
+      "typeOnly": false,
+      "runtime": true,
+      "used": true,
+      "usageCount": 100,
+      "docsUrl": "https://bun.com/docs/runtime/utils",
+      "gate": "runtime:probe",
+      "probeWired": true
     },
     {
       "symbol": "Bun.cron",
@@ -98,19 +111,6 @@
       "probeWired": false
     },
     {
-      "symbol": "Bun.argv",
-      "name": "argv",
-      "ns": "",
-      "kind": "object",
-      "typeOnly": false,
-      "runtime": true,
-      "used": true,
-      "usageCount": 99,
-      "docsUrl": "https://bun.com/docs/runtime/utils",
-      "gate": "runtime:probe",
-      "probeWired": true
-    },
-    {
       "symbol": "Bun.Image",
       "name": "Image",
       "ns": "",
@@ -118,7 +118,7 @@
       "typeOnly": false,
       "runtime": true,
       "used": true,
-      "usageCount": 97,
+      "usageCount": 99,
       "docsUrl": "https://bun.com/docs/runtime/image",
       "gate": "image:probe",
       "probeWired": true
@@ -131,7 +131,7 @@
       "typeOnly": false,
       "runtime": true,
       "used": true,
-      "usageCount": 82,
+      "usageCount": 88,
       "docsUrl": "https://bun.com/docs/runtime/webview",
       "gate": "runtime:probe",
       "probeWired": true
@@ -170,22 +170,22 @@
       "typeOnly": false,
       "runtime": true,
       "used": true,
-      "usageCount": 53,
+      "usageCount": 54,
       "docsUrl": "https://bun.com/docs/runtime/child-process",
       "gate": "spawn:probe",
       "probeWired": false
     },
     {
-      "symbol": "Bun.Glob",
-      "name": "Glob",
+      "symbol": "Bun.CryptoHasher",
+      "name": "CryptoHasher",
       "ns": "",
       "kind": "class",
       "typeOnly": false,
       "runtime": true,
       "used": true,
-      "usageCount": 48,
-      "docsUrl": "https://bun.com/docs/runtime/glob",
-      "gate": "fsx:probe",
+      "usageCount": 53,
+      "docsUrl": "https://bun.com/docs/runtime/utils",
+      "gate": "crypto:probe",
       "probeWired": true
     },
     {
@@ -202,6 +202,19 @@
       "probeWired": true
     },
     {
+      "symbol": "Bun.Glob",
+      "name": "Glob",
+      "ns": "",
+      "kind": "class",
+      "typeOnly": false,
+      "runtime": true,
+      "used": true,
+      "usageCount": 48,
+      "docsUrl": "https://bun.com/docs/runtime/glob",
+      "gate": "fsx:probe",
+      "probeWired": true
+    },
+    {
       "symbol": "Bun.Transpiler",
       "name": "Transpiler",
       "ns": "",
@@ -215,19 +228,6 @@
       "probeWired": true
     },
     {
-      "symbol": "Bun.CryptoHasher",
-      "name": "CryptoHasher",
-      "ns": "",
-      "kind": "class",
-      "typeOnly": false,
-      "runtime": true,
-      "used": true,
-      "usageCount": 46,
-      "docsUrl": "https://bun.com/docs/runtime/utils",
-      "gate": "crypto:probe",
-      "probeWired": true
-    },
-    {
       "symbol": "Bun.spawn",
       "name": "spawn",
       "ns": "",
@@ -235,7 +235,7 @@
       "typeOnly": false,
       "runtime": true,
       "used": true,
-      "usageCount": 34,
+      "usageCount": 35,
       "docsUrl": "https://bun.com/docs/runtime/child-process",
       "gate": "spawn:probe",
       "probeWired": false
@@ -254,29 +254,16 @@
       "probeWired": true
     },
     {
-      "symbol": "Bun.$",
-      "name": "$",
-      "ns": "",
+      "symbol": "Bun.XML.parse",
+      "name": "parse",
+      "ns": "XML",
       "kind": "function",
       "typeOnly": false,
       "runtime": true,
       "used": true,
-      "usageCount": 31,
-      "docsUrl": "https://bun.com/docs/runtime/shell",
-      "gate": "shell:probe",
-      "probeWired": true
-    },
-    {
-      "symbol": "Bun.which",
-      "name": "which",
-      "ns": "",
-      "kind": "function",
-      "typeOnly": false,
-      "runtime": true,
-      "used": true,
-      "usageCount": 31,
-      "docsUrl": "https://bun.com/docs/runtime/utils",
-      "gate": "fsx:probe",
+      "usageCount": 32,
+      "docsUrl": "https://bun.com/docs/runtime/xml",
+      "gate": "format:probe",
       "probeWired": true
     },
     {
@@ -306,16 +293,29 @@
       "probeWired": true
     },
     {
-      "symbol": "Bun.XML.parse",
-      "name": "parse",
-      "ns": "XML",
+      "symbol": "Bun.$",
+      "name": "$",
+      "ns": "",
       "kind": "function",
       "typeOnly": false,
       "runtime": true,
       "used": true,
-      "usageCount": 29,
-      "docsUrl": "https://bun.com/docs/runtime/xml",
-      "gate": "format:probe",
+      "usageCount": 31,
+      "docsUrl": "https://bun.com/docs/runtime/shell",
+      "gate": "shell:probe",
+      "probeWired": true
+    },
+    {
+      "symbol": "Bun.which",
+      "name": "which",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "runtime": true,
+      "used": true,
+      "usageCount": 31,
+      "docsUrl": "https://bun.com/docs/runtime/utils",
+      "gate": "fsx:probe",
       "probeWired": true
     },
     {
@@ -326,7 +326,7 @@
       "typeOnly": false,
       "runtime": true,
       "used": true,
-      "usageCount": 28,
+      "usageCount": 30,
       "docsUrl": "https://bun.com/docs/runtime/archive",
       "gate": "fs:probe",
       "probeWired": true
@@ -352,7 +352,7 @@
       "typeOnly": false,
       "runtime": true,
       "used": true,
-      "usageCount": 25,
+      "usageCount": 26,
       "docsUrl": "https://bun.com/docs/runtime/utils",
       "gate": "ansi:probe",
       "probeWired": true
@@ -391,8 +391,21 @@
       "typeOnly": false,
       "runtime": true,
       "used": true,
-      "usageCount": 19,
+      "usageCount": 20,
       "docsUrl": "https://bun.com/docs/runtime/toml",
+      "gate": "format:probe",
+      "probeWired": true
+    },
+    {
+      "symbol": "Bun.XML",
+      "name": "XML",
+      "ns": "",
+      "kind": "namespace",
+      "typeOnly": false,
+      "runtime": true,
+      "used": true,
+      "usageCount": 19,
+      "docsUrl": "https://bun.com/docs/runtime/xml",
       "gate": "format:probe",
       "probeWired": true
     },
@@ -423,19 +436,6 @@
       "probeWired": true
     },
     {
-      "symbol": "Bun.deepEquals",
-      "name": "deepEquals",
-      "ns": "",
-      "kind": "function",
-      "typeOnly": false,
-      "runtime": true,
-      "used": true,
-      "usageCount": 13,
-      "docsUrl": "https://bun.com/docs/runtime/utils",
-      "gate": "crypto:probe",
-      "probeWired": true
-    },
-    {
       "symbol": "Bun.stdout",
       "name": "stdout",
       "ns": "",
@@ -446,6 +446,19 @@
       "usageCount": 13,
       "docsUrl": "https://bun.com/docs/runtime/file-io",
       "gate": "fs:probe",
+      "probeWired": true
+    },
+    {
+      "symbol": "Bun.deepEquals",
+      "name": "deepEquals",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "runtime": true,
+      "used": true,
+      "usageCount": 13,
+      "docsUrl": "https://bun.com/docs/runtime/utils",
+      "gate": "crypto:probe",
       "probeWired": true
     },
     {
@@ -462,29 +475,16 @@
       "probeWired": false
     },
     {
-      "symbol": "Bun.dns.prefetch",
-      "name": "prefetch",
-      "ns": "dns",
+      "symbol": "Bun.sliceAnsi",
+      "name": "sliceAnsi",
+      "ns": "",
       "kind": "function",
       "typeOnly": false,
       "runtime": true,
       "used": true,
       "usageCount": 11,
-      "docsUrl": "https://bun.com/docs/runtime/networking/dns",
-      "gate": "net:probe",
-      "probeWired": false
-    },
-    {
-      "symbol": "Bun.XML",
-      "name": "XML",
-      "ns": "",
-      "kind": "namespace",
-      "typeOnly": false,
-      "runtime": true,
-      "used": true,
-      "usageCount": 11,
-      "docsUrl": "https://bun.com/docs/runtime/xml",
-      "gate": "format:probe",
+      "docsUrl": "https://bun.com/docs/runtime/utils",
+      "gate": "ansi:probe",
       "probeWired": true
     },
     {
@@ -498,6 +498,19 @@
       "usageCount": 11,
       "docsUrl": "https://bun.com/docs/runtime/networking/tcp",
       "gate": "security:probe",
+      "probeWired": false
+    },
+    {
+      "symbol": "Bun.dns.prefetch",
+      "name": "prefetch",
+      "ns": "dns",
+      "kind": "function",
+      "typeOnly": false,
+      "runtime": true,
+      "used": true,
+      "usageCount": 11,
+      "docsUrl": "https://bun.com/docs/runtime/networking/dns",
+      "gate": "net:probe",
       "probeWired": false
     },
     {
@@ -527,19 +540,6 @@
       "probeWired": true
     },
     {
-      "symbol": "Bun.sliceAnsi",
-      "name": "sliceAnsi",
-      "ns": "",
-      "kind": "function",
-      "typeOnly": false,
-      "runtime": true,
-      "used": true,
-      "usageCount": 10,
-      "docsUrl": "https://bun.com/docs/runtime/utils",
-      "gate": "ansi:probe",
-      "probeWired": true
-    },
-    {
       "symbol": "Bun.dns",
       "name": "dns",
       "ns": "",
@@ -550,6 +550,19 @@
       "usageCount": 10,
       "docsUrl": "https://bun.com/docs/runtime/networking/dns",
       "gate": "net:probe",
+      "probeWired": false
+    },
+    {
+      "symbol": "Bun.s3",
+      "name": "s3",
+      "ns": "",
+      "kind": "object",
+      "typeOnly": false,
+      "runtime": true,
+      "used": true,
+      "usageCount": 10,
+      "docsUrl": "https://bun.com/docs/runtime/s3",
+      "gate": "client-shape:probe",
       "probeWired": false
     },
     {
@@ -579,6 +592,19 @@
       "probeWired": true
     },
     {
+      "symbol": "Bun.JSON5",
+      "name": "JSON5",
+      "ns": "",
+      "kind": "namespace",
+      "typeOnly": false,
+      "runtime": true,
+      "used": true,
+      "usageCount": 9,
+      "docsUrl": "https://bun.com/docs/runtime/json5",
+      "gate": "changelog:probe",
+      "probeWired": true
+    },
+    {
       "symbol": "Bun.YAML",
       "name": "YAML",
       "ns": "",
@@ -592,19 +618,6 @@
       "probeWired": true
     },
     {
-      "symbol": "Bun.s3",
-      "name": "s3",
-      "ns": "",
-      "kind": "object",
-      "typeOnly": false,
-      "runtime": true,
-      "used": true,
-      "usageCount": 9,
-      "docsUrl": "https://bun.com/docs/runtime/s3",
-      "gate": "client-shape:probe",
-      "probeWired": false
-    },
-    {
       "symbol": "Bun.JSON5.parse",
       "name": "parse",
       "ns": "JSON5",
@@ -614,8 +627,8 @@
       "used": true,
       "usageCount": 8,
       "docsUrl": "https://bun.com/docs/runtime/json5",
-      "gate": "bun:apis-probe",
-      "probeWired": false
+      "gate": "changelog:probe",
+      "probeWired": true
     },
     {
       "symbol": "Bun.WebSocketOptions",
@@ -628,19 +641,6 @@
       "usageCount": 8,
       "docsUrl": "https://bun.com/docs/runtime",
       "gate": "",
-      "probeWired": false
-    },
-    {
-      "symbol": "Bun.JSON5",
-      "name": "JSON5",
-      "ns": "",
-      "kind": "namespace",
-      "typeOnly": false,
-      "runtime": true,
-      "used": true,
-      "usageCount": 8,
-      "docsUrl": "https://bun.com/docs/runtime/json5",
-      "gate": "bun:apis-probe",
       "probeWired": false
     },
     {
@@ -696,6 +696,19 @@
       "probeWired": false
     },
     {
+      "symbol": "Bun.TOML",
+      "name": "TOML",
+      "ns": "",
+      "kind": "namespace",
+      "typeOnly": false,
+      "runtime": true,
+      "used": true,
+      "usageCount": 7,
+      "docsUrl": "https://bun.com/docs/runtime/toml",
+      "gate": "format:probe",
+      "probeWired": true
+    },
+    {
       "symbol": "Bun.markdown.ansi",
       "name": "ansi",
       "ns": "markdown",
@@ -722,19 +735,6 @@
       "probeWired": true
     },
     {
-      "symbol": "Bun.JSONC.parse",
-      "name": "parse",
-      "ns": "JSONC",
-      "kind": "function",
-      "typeOnly": false,
-      "runtime": true,
-      "used": true,
-      "usageCount": 6,
-      "docsUrl": "https://bun.com/docs/runtime/json5",
-      "gate": "format:probe",
-      "probeWired": true
-    },
-    {
       "symbol": "Bun.postgres",
       "name": "postgres",
       "ns": "",
@@ -748,16 +748,16 @@
       "probeWired": false
     },
     {
-      "symbol": "Bun.deflateSync",
-      "name": "deflateSync",
-      "ns": "",
+      "symbol": "Bun.JSONC.parse",
+      "name": "parse",
+      "ns": "JSONC",
       "kind": "function",
       "typeOnly": false,
       "runtime": true,
       "used": true,
       "usageCount": 6,
-      "docsUrl": "https://bun.com/docs/runtime",
-      "gate": "fs:probe",
+      "docsUrl": "https://bun.com/docs/runtime/json5",
+      "gate": "format:probe",
       "probeWired": true
     },
     {
@@ -774,19 +774,6 @@
       "probeWired": true
     },
     {
-      "symbol": "Bun.TOML",
-      "name": "TOML",
-      "ns": "",
-      "kind": "namespace",
-      "typeOnly": false,
-      "runtime": true,
-      "used": true,
-      "usageCount": 6,
-      "docsUrl": "https://bun.com/docs/runtime/toml",
-      "gate": "format:probe",
-      "probeWired": true
-    },
-    {
       "symbol": "Bun.YAML.parse",
       "name": "parse",
       "ns": "YAML",
@@ -797,6 +784,19 @@
       "usageCount": 6,
       "docsUrl": "https://bun.com/docs/runtime/yaml",
       "gate": "format:probe",
+      "probeWired": true
+    },
+    {
+      "symbol": "Bun.deflateSync",
+      "name": "deflateSync",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "runtime": true,
+      "used": true,
+      "usageCount": 6,
+      "docsUrl": "https://bun.com/docs/runtime",
+      "gate": "fs:probe",
       "probeWired": true
     },
     {
@@ -813,10 +813,62 @@
       "probeWired": true
     },
     {
+      "symbol": "Bun.udpSocket",
+      "name": "udpSocket",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "runtime": true,
+      "used": true,
+      "usageCount": 5,
+      "docsUrl": "https://bun.com/docs/runtime/networking/udp",
+      "gate": "net:probe",
+      "probeWired": false
+    },
+    {
+      "symbol": "Bun.plugin",
+      "name": "plugin",
+      "ns": "",
+      "kind": "object",
+      "typeOnly": false,
+      "runtime": true,
+      "used": true,
+      "usageCount": 5,
+      "docsUrl": "https://bun.com/docs/bundler/plugins",
+      "gate": "build-deep:probe",
+      "probeWired": false
+    },
+    {
       "symbol": "Bun.Terminal",
       "name": "Terminal",
       "ns": "",
       "kind": "class",
+      "typeOnly": false,
+      "runtime": true,
+      "used": true,
+      "usageCount": 5,
+      "docsUrl": "https://bun.com/docs/runtime/utils",
+      "gate": "runtime:probe",
+      "probeWired": true
+    },
+    {
+      "symbol": "Bun.XML.stringify",
+      "name": "stringify",
+      "ns": "XML",
+      "kind": "function",
+      "typeOnly": false,
+      "runtime": true,
+      "used": true,
+      "usageCount": 5,
+      "docsUrl": "https://bun.com/docs/runtime/xml",
+      "gate": "format:probe",
+      "probeWired": true
+    },
+    {
+      "symbol": "Bun.peek",
+      "name": "peek",
+      "ns": "",
+      "kind": "function",
       "typeOnly": false,
       "runtime": true,
       "used": true,
@@ -852,54 +904,15 @@
       "probeWired": true
     },
     {
-      "symbol": "Bun.plugin",
-      "name": "plugin",
-      "ns": "",
-      "kind": "object",
-      "typeOnly": false,
-      "runtime": true,
-      "used": true,
-      "usageCount": 5,
-      "docsUrl": "https://bun.com/docs/bundler/plugins",
-      "gate": "build-deep:probe",
-      "probeWired": false
-    },
-    {
-      "symbol": "Bun.randomUUIDv7",
-      "name": "randomUUIDv7",
-      "ns": "",
+      "symbol": "Bun.JSONL.parseChunk",
+      "name": "parseChunk",
+      "ns": "JSONL",
       "kind": "function",
       "typeOnly": false,
       "runtime": true,
       "used": true,
       "usageCount": 5,
-      "docsUrl": "https://bun.com/docs/runtime/utils",
-      "gate": "crypto:probe",
-      "probeWired": true
-    },
-    {
-      "symbol": "Bun.peek",
-      "name": "peek",
-      "ns": "",
-      "kind": "function",
-      "typeOnly": false,
-      "runtime": true,
-      "used": true,
-      "usageCount": 5,
-      "docsUrl": "https://bun.com/docs/runtime/utils",
-      "gate": "runtime:probe",
-      "probeWired": true
-    },
-    {
-      "symbol": "Bun.XML.stringify",
-      "name": "stringify",
-      "ns": "XML",
-      "kind": "function",
-      "typeOnly": false,
-      "runtime": true,
-      "used": true,
-      "usageCount": 5,
-      "docsUrl": "https://bun.com/docs/runtime/xml",
+      "docsUrl": "https://bun.com/docs/runtime/jsonl",
       "gate": "format:probe",
       "probeWired": true
     },
@@ -914,6 +927,19 @@
       "usageCount": 5,
       "docsUrl": "https://bun.com/docs/runtime/utils",
       "gate": "fsx:probe",
+      "probeWired": true
+    },
+    {
+      "symbol": "Bun.randomUUIDv7",
+      "name": "randomUUIDv7",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "runtime": true,
+      "used": true,
+      "usageCount": 5,
+      "docsUrl": "https://bun.com/docs/runtime/utils",
+      "gate": "crypto:probe",
       "probeWired": true
     },
     {
@@ -943,58 +969,6 @@
       "probeWired": true
     },
     {
-      "symbol": "Bun.semver.order",
-      "name": "order",
-      "ns": "semver",
-      "kind": "function",
-      "typeOnly": false,
-      "runtime": true,
-      "used": true,
-      "usageCount": 4,
-      "docsUrl": "https://bun.com/docs/runtime/utils",
-      "gate": "bun:apis-probe",
-      "probeWired": false
-    },
-    {
-      "symbol": "Bun.resolve",
-      "name": "resolve",
-      "ns": "",
-      "kind": "function",
-      "typeOnly": false,
-      "runtime": true,
-      "used": true,
-      "usageCount": 4,
-      "docsUrl": "https://bun.com/docs/runtime/utils",
-      "gate": "fsx:probe",
-      "probeWired": true
-    },
-    {
-      "symbol": "Bun.fileURLToPath",
-      "name": "fileURLToPath",
-      "ns": "",
-      "kind": "function",
-      "typeOnly": false,
-      "runtime": true,
-      "used": true,
-      "usageCount": 4,
-      "docsUrl": "https://bun.com/docs/runtime/utils",
-      "gate": "fsx:probe",
-      "probeWired": true
-    },
-    {
-      "symbol": "Bun.fetch",
-      "name": "fetch",
-      "ns": "",
-      "kind": "object",
-      "typeOnly": false,
-      "runtime": true,
-      "used": true,
-      "usageCount": 4,
-      "docsUrl": "https://bun.com/docs/runtime/networking/fetch",
-      "gate": "serve-tls/routes",
-      "probeWired": false
-    },
-    {
       "symbol": "Bun.listen",
       "name": "listen",
       "ns": "",
@@ -1004,19 +978,6 @@
       "used": true,
       "usageCount": 4,
       "docsUrl": "https://bun.com/docs/runtime/networking/tcp",
-      "gate": "net:probe",
-      "probeWired": false
-    },
-    {
-      "symbol": "Bun.udpSocket",
-      "name": "udpSocket",
-      "ns": "",
-      "kind": "function",
-      "typeOnly": false,
-      "runtime": true,
-      "used": true,
-      "usageCount": 4,
-      "docsUrl": "https://bun.com/docs/runtime/networking/udp",
       "gate": "net:probe",
       "probeWired": false
     },
@@ -1034,6 +995,58 @@
       "probeWired": false
     },
     {
+      "symbol": "Bun.resolve",
+      "name": "resolve",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "runtime": true,
+      "used": true,
+      "usageCount": 4,
+      "docsUrl": "https://bun.com/docs/runtime/utils",
+      "gate": "fsx:probe",
+      "probeWired": true
+    },
+    {
+      "symbol": "Bun.S3Client",
+      "name": "S3Client",
+      "ns": "",
+      "kind": "class",
+      "typeOnly": false,
+      "runtime": true,
+      "used": true,
+      "usageCount": 4,
+      "docsUrl": "https://bun.com/docs/runtime/s3",
+      "gate": "client-shape:probe",
+      "probeWired": false
+    },
+    {
+      "symbol": "Bun.fetch",
+      "name": "fetch",
+      "ns": "",
+      "kind": "object",
+      "typeOnly": false,
+      "runtime": true,
+      "used": true,
+      "usageCount": 4,
+      "docsUrl": "https://bun.com/docs/runtime/networking/fetch",
+      "gate": "serve-tls/routes",
+      "probeWired": false
+    },
+    {
+      "symbol": "Bun.TOML.stringify",
+      "name": "stringify",
+      "ns": "TOML",
+      "kind": "function",
+      "typeOnly": false,
+      "runtime": true,
+      "used": true,
+      "usageCount": 4,
+      "docsUrl": "https://bun.com/docs/runtime/toml",
+      "gate": "format:probe",
+      "probeWired": true
+    },
+    {
       "symbol": "Bun.peek.status",
       "name": "status",
       "ns": "peek",
@@ -1045,6 +1058,32 @@
       "docsUrl": "https://bun.com/docs/runtime/utils",
       "gate": "runtime:probe",
       "probeWired": true
+    },
+    {
+      "symbol": "Bun.fileURLToPath",
+      "name": "fileURLToPath",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "runtime": true,
+      "used": true,
+      "usageCount": 4,
+      "docsUrl": "https://bun.com/docs/runtime/utils",
+      "gate": "fsx:probe",
+      "probeWired": true
+    },
+    {
+      "symbol": "Bun.semver.order",
+      "name": "order",
+      "ns": "semver",
+      "kind": "function",
+      "typeOnly": false,
+      "runtime": true,
+      "used": true,
+      "usageCount": 4,
+      "docsUrl": "https://bun.com/docs/runtime/utils",
+      "gate": "bun:apis-probe",
+      "probeWired": false
     },
     {
       "symbol": "Bun.CSRF.generate",
@@ -1073,19 +1112,6 @@
       "probeWired": false
     },
     {
-      "symbol": "Bun.JSONL.parseChunk",
-      "name": "parseChunk",
-      "ns": "JSONL",
-      "kind": "function",
-      "typeOnly": false,
-      "runtime": true,
-      "used": true,
-      "usageCount": 4,
-      "docsUrl": "https://bun.com/docs/runtime/jsonl",
-      "gate": "format:probe",
-      "probeWired": true
-    },
-    {
       "symbol": "Bun.pathToFileURL",
       "name": "pathToFileURL",
       "ns": "",
@@ -1097,6 +1123,19 @@
       "docsUrl": "https://bun.com/docs/runtime/utils",
       "gate": "fsx:probe",
       "probeWired": true
+    },
+    {
+      "symbol": "Bun.stdin",
+      "name": "stdin",
+      "ns": "",
+      "kind": "object",
+      "typeOnly": false,
+      "runtime": true,
+      "used": true,
+      "usageCount": 3,
+      "docsUrl": "https://bun.com/docs/runtime/file-io",
+      "gate": "surface:probe",
+      "probeWired": false
     },
     {
       "symbol": "Bun.CookieMap",
@@ -1112,17 +1151,30 @@
       "probeWired": false
     },
     {
-      "symbol": "Bun.S3Client",
-      "name": "S3Client",
+      "symbol": "Bun.Serve.Options",
+      "name": "Options",
+      "ns": "Serve",
+      "kind": "type",
+      "typeOnly": true,
+      "runtime": false,
+      "used": true,
+      "usageCount": 3,
+      "docsUrl": "https://bun.com/docs/runtime",
+      "gate": "",
+      "probeWired": false
+    },
+    {
+      "symbol": "Bun.JSONC",
+      "name": "JSONC",
       "ns": "",
-      "kind": "class",
+      "kind": "namespace",
       "typeOnly": false,
       "runtime": true,
       "used": true,
       "usageCount": 3,
-      "docsUrl": "https://bun.com/docs/runtime/s3",
-      "gate": "client-shape:probe",
-      "probeWired": false
+      "docsUrl": "https://bun.com/docs/runtime/json5",
+      "gate": "format:probe",
+      "probeWired": true
     },
     {
       "symbol": "Bun.gunzipSync",
@@ -1151,32 +1203,6 @@
       "probeWired": true
     },
     {
-      "symbol": "Bun.Serve.Options",
-      "name": "Options",
-      "ns": "Serve",
-      "kind": "type",
-      "typeOnly": true,
-      "runtime": false,
-      "used": true,
-      "usageCount": 3,
-      "docsUrl": "https://bun.com/docs/runtime",
-      "gate": "",
-      "probeWired": false
-    },
-    {
-      "symbol": "Bun.stdin",
-      "name": "stdin",
-      "ns": "",
-      "kind": "object",
-      "typeOnly": false,
-      "runtime": true,
-      "used": true,
-      "usageCount": 3,
-      "docsUrl": "https://bun.com/docs/runtime/file-io",
-      "gate": "surface:probe",
-      "probeWired": false
-    },
-    {
       "symbol": "Bun.sql",
       "name": "sql",
       "ns": "",
@@ -1190,29 +1216,16 @@
       "probeWired": false
     },
     {
-      "symbol": "Bun.HTMLBundle",
-      "name": "HTMLBundle",
-      "ns": "",
-      "kind": "type",
-      "typeOnly": true,
-      "runtime": false,
-      "used": true,
-      "usageCount": 2,
-      "docsUrl": "https://bun.com/docs/runtime",
-      "gate": "",
-      "probeWired": false
-    },
-    {
-      "symbol": "Bun.Cookie",
-      "name": "Cookie",
-      "ns": "",
-      "kind": "class",
+      "symbol": "Bun.dns.lookup",
+      "name": "lookup",
+      "ns": "dns",
+      "kind": "function",
       "typeOnly": false,
       "runtime": true,
       "used": true,
       "usageCount": 2,
-      "docsUrl": "https://bun.com/docs/runtime/cookies",
-      "gate": "defaults:probe",
+      "docsUrl": "https://bun.com/docs/runtime/networking/dns",
+      "gate": "net:probe",
       "probeWired": false
     },
     {
@@ -1240,6 +1253,58 @@
       "docsUrl": "https://bun.com/docs/runtime/file-system-router",
       "gate": "surface:probe",
       "probeWired": false
+    },
+    {
+      "symbol": "Bun.Cookie",
+      "name": "Cookie",
+      "ns": "",
+      "kind": "class",
+      "typeOnly": false,
+      "runtime": true,
+      "used": true,
+      "usageCount": 2,
+      "docsUrl": "https://bun.com/docs/runtime/cookies",
+      "gate": "defaults:probe",
+      "probeWired": false
+    },
+    {
+      "symbol": "Bun.readableStreamToArrayBuffer",
+      "name": "readableStreamToArrayBuffer",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "runtime": true,
+      "used": true,
+      "usageCount": 2,
+      "docsUrl": "https://bun.com/docs/runtime/utils",
+      "gate": "runtime:probe",
+      "probeWired": true
+    },
+    {
+      "symbol": "Bun.ArrayBufferSink",
+      "name": "ArrayBufferSink",
+      "ns": "",
+      "kind": "class",
+      "typeOnly": false,
+      "runtime": true,
+      "used": true,
+      "usageCount": 2,
+      "docsUrl": "https://bun.com/docs/runtime/utils",
+      "gate": "runtime:probe",
+      "probeWired": true
+    },
+    {
+      "symbol": "Bun.sleepSync",
+      "name": "sleepSync",
+      "ns": "",
+      "kind": "function",
+      "typeOnly": false,
+      "runtime": true,
+      "used": true,
+      "usageCount": 2,
+      "docsUrl": "https://bun.com/docs/runtime/utils",
+      "gate": "runtime:probe",
+      "probeWired": true
     },
     {
       "symbol": "Bun.inflateSync",
@@ -1281,19 +1346,6 @@
       "probeWired": true
     },
     {
-      "symbol": "Bun.readableStreamToArrayBuffer",
-      "name": "readableStreamToArrayBuffer",
-      "ns": "",
-      "kind": "function",
-      "typeOnly": false,
-      "runtime": true,
-      "used": true,
-      "usageCount": 2,
-      "docsUrl": "https://bun.com/docs/runtime/utils",
-      "gate": "runtime:probe",
-      "probeWired": true
-    },
-    {
       "symbol": "Bun.stderr",
       "name": "stderr",
       "ns": "",
@@ -1304,6 +1356,19 @@
       "usageCount": 2,
       "docsUrl": "https://bun.com/docs/runtime/file-io",
       "gate": "surface:probe",
+      "probeWired": false
+    },
+    {
+      "symbol": "Bun.HTMLBundle",
+      "name": "HTMLBundle",
+      "ns": "",
+      "kind": "type",
+      "typeOnly": true,
+      "runtime": false,
+      "used": true,
+      "usageCount": 2,
+      "docsUrl": "https://bun.com/docs/runtime",
+      "gate": "",
       "probeWired": false
     },
     {
@@ -1320,69 +1385,17 @@
       "probeWired": false
     },
     {
-      "symbol": "Bun.dns.lookup",
-      "name": "lookup",
-      "ns": "dns",
-      "kind": "function",
+      "symbol": "Bun.enableANSIColors",
+      "name": "enableANSIColors",
+      "ns": "",
+      "kind": "object",
       "typeOnly": false,
       "runtime": true,
       "used": true,
       "usageCount": 2,
-      "docsUrl": "https://bun.com/docs/runtime/networking/dns",
-      "gate": "net:probe",
+      "docsUrl": "https://bun.com/docs/runtime/utils",
+      "gate": "ecosystem:probe",
       "probeWired": false
-    },
-    {
-      "symbol": "Bun.ArrayBufferSink",
-      "name": "ArrayBufferSink",
-      "ns": "",
-      "kind": "class",
-      "typeOnly": false,
-      "runtime": true,
-      "used": true,
-      "usageCount": 2,
-      "docsUrl": "https://bun.com/docs/runtime/utils",
-      "gate": "runtime:probe",
-      "probeWired": true
-    },
-    {
-      "symbol": "Bun.sleepSync",
-      "name": "sleepSync",
-      "ns": "",
-      "kind": "function",
-      "typeOnly": false,
-      "runtime": true,
-      "used": true,
-      "usageCount": 2,
-      "docsUrl": "https://bun.com/docs/runtime/utils",
-      "gate": "runtime:probe",
-      "probeWired": true
-    },
-    {
-      "symbol": "Bun.TOML.stringify",
-      "name": "stringify",
-      "ns": "TOML",
-      "kind": "function",
-      "typeOnly": false,
-      "runtime": true,
-      "used": true,
-      "usageCount": 2,
-      "docsUrl": "https://bun.com/docs/runtime/toml",
-      "gate": "format:probe",
-      "probeWired": true
-    },
-    {
-      "symbol": "Bun.JSONC",
-      "name": "JSONC",
-      "ns": "",
-      "kind": "namespace",
-      "typeOnly": false,
-      "runtime": true,
-      "used": true,
-      "usageCount": 2,
-      "docsUrl": "https://bun.com/docs/runtime/json5",
-      "gate": "format:probe",
-      "probeWired": true
     },
     {
       "symbol": "Bun.main",
@@ -1411,19 +1424,6 @@
       "probeWired": false
     },
     {
-      "symbol": "Bun.enableANSIColors",
-      "name": "enableANSIColors",
-      "ns": "",
-      "kind": "object",
-      "typeOnly": false,
-      "runtime": true,
-      "used": true,
-      "usageCount": 2,
-      "docsUrl": "https://bun.com/docs/runtime/utils",
-      "gate": "ecosystem:probe",
-      "probeWired": false
-    },
-    {
       "symbol": "Bun.dns.getCacheStats",
       "name": "getCacheStats",
       "ns": "dns",
@@ -1437,30 +1437,17 @@
       "probeWired": false
     },
     {
-      "symbol": "Bun.Security.Scanner",
-      "name": "Scanner",
-      "ns": "Security",
-      "kind": "type",
-      "typeOnly": true,
-      "runtime": false,
+      "symbol": "Bun.YAML.stringify",
+      "name": "stringify",
+      "ns": "YAML",
+      "kind": "function",
+      "typeOnly": false,
+      "runtime": true,
       "used": true,
       "usageCount": 1,
-      "docsUrl": "https://bun.com/docs/runtime",
-      "gate": "",
-      "probeWired": false
-    },
-    {
-      "symbol": "Bun.Security.Advisory",
-      "name": "Advisory",
-      "ns": "Security",
-      "kind": "type",
-      "typeOnly": true,
-      "runtime": false,
-      "used": true,
-      "usageCount": 1,
-      "docsUrl": "https://bun.com/docs/runtime",
-      "gate": "",
-      "probeWired": false
+      "docsUrl": "https://bun.com/docs/runtime/yaml",
+      "gate": "format:probe",
+      "probeWired": true
     },
     {
       "symbol": "Bun.readableStreamToText",
@@ -1502,17 +1489,43 @@
       "probeWired": true
     },
     {
-      "symbol": "Bun.YAML.stringify",
-      "name": "stringify",
-      "ns": "YAML",
-      "kind": "function",
+      "symbol": "Bun.CSRF",
+      "name": "CSRF",
+      "ns": "",
+      "kind": "namespace",
       "typeOnly": false,
       "runtime": true,
       "used": true,
       "usageCount": 1,
-      "docsUrl": "https://bun.com/docs/runtime/yaml",
-      "gate": "format:probe",
-      "probeWired": true
+      "docsUrl": "https://bun.com/docs/runtime/csrf",
+      "gate": "csrf:probe",
+      "probeWired": false
+    },
+    {
+      "symbol": "Bun.Security.Scanner",
+      "name": "Scanner",
+      "ns": "Security",
+      "kind": "type",
+      "typeOnly": true,
+      "runtime": false,
+      "used": true,
+      "usageCount": 1,
+      "docsUrl": "https://bun.com/docs/runtime",
+      "gate": "",
+      "probeWired": false
+    },
+    {
+      "symbol": "Bun.Security.Advisory",
+      "name": "Advisory",
+      "ns": "Security",
+      "kind": "type",
+      "typeOnly": true,
+      "runtime": false,
+      "used": true,
+      "usageCount": 1,
+      "docsUrl": "https://bun.com/docs/runtime",
+      "gate": "",
+      "probeWired": false
     },
     {
       "symbol": "Bun.ArchiveInput",
@@ -1537,8 +1550,8 @@
       "used": true,
       "usageCount": 1,
       "docsUrl": "https://bun.com/docs/runtime/json5",
-      "gate": "bun:apis-probe",
-      "probeWired": false
+      "gate": "changelog:probe",
+      "probeWired": true
     },
     {
       "symbol": "Bun.MD5",
@@ -1840,6 +1853,19 @@
       "probeWired": false
     },
     {
+      "symbol": "Bun.CSRF.verify",
+      "name": "verify",
+      "ns": "CSRF",
+      "kind": "function",
+      "typeOnly": false,
+      "runtime": true,
+      "used": true,
+      "usageCount": 1,
+      "docsUrl": "https://bun.com/docs/runtime/csrf",
+      "gate": "csrf:probe",
+      "probeWired": false
+    },
+    {
       "symbol": "Bun.markdown.react",
       "name": "react",
       "ns": "markdown",
@@ -1864,19 +1890,6 @@
       "docsUrl": "https://bun.com/docs/runtime/markdown",
       "gate": "format:probe",
       "probeWired": true
-    },
-    {
-      "symbol": "Bun.CSRF.verify",
-      "name": "verify",
-      "ns": "CSRF",
-      "kind": "function",
-      "typeOnly": false,
-      "runtime": true,
-      "used": true,
-      "usageCount": 1,
-      "docsUrl": "https://bun.com/docs/runtime/csrf",
-      "gate": "csrf:probe",
-      "probeWired": false
     },
     {
       "symbol": "Bun.BunInspectOptions",

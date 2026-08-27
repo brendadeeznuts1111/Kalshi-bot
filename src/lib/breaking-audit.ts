@@ -72,6 +72,7 @@ const WS_ALLOWLIST = [
   '**/src/research/live-page.ts',
   '**/src/research/map-page.ts', // documents server.upgrade() H3 caveat (§39), not a call
   '**/tools/ws-probe.ts', // probe deliberately exercises the websocket surface (§114)
+  '**/tools/ground-probes/index.ts', // cl-12 probes ServerWebSocket.subscriptions (§0 33-claim batch)
   '**/tools/build-artifact-evidence.ts', // probe harness: serveGotchas/deepPass exercise websocket + upgrade (178)
 ];
 

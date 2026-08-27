@@ -9,7 +9,7 @@ export const GATES: Record<string, string> = {
   file: "fs:probe", write: "fs:probe", mmap: "fs:probe", stdout: "fs:probe",
   gzipSync: "fs:probe", gunzipSync: "fs:probe", deflateSync: "fs:probe", inflateSync: "fs:probe",
   zstdCompressSync: "fs:probe", zstdDecompressSync: "fs:probe", zstdCompress: "fs:probe", zstdDecompress: "fs:probe", Archive: "fs:probe",
-  "$": "shell:probe", semver: "bun:apis-probe", JSON5: "bun:apis-probe", sha: "bun:apis-probe",
+  "$": "shell:probe", semver: "bun:apis-probe", JSON5: "changelog:probe", sha: "bun:apis-probe",
   spawn: "spawn:probe", spawnSync: "spawn:probe", build: "build-deep:probe", plugin: "build-deep:probe",
   serve: "serve-tls/routes", fetch: "serve-tls/routes", sql: "sqlite:probe", SQL: "sqlite:probe",
   cron: "cron tests §126/128",

@@ -40,6 +40,13 @@ acceptance probes of the API call itself, (c) all plausible access patterns (nam
 export / constructor / algorithm-string / options-object / sibling names), (d) the type
 declarations, and (e) confidence labels — "not found via probed pattern" ≠ "absent".
 Corrected verdicts are pinned as ground probes: rt-4 (S3Client) and rt-5 (serve h2).
+
+5. **Async stack traces** — probed `Bun.file().exists()` on a missing file, got `false`,
+   and concluded "rejects carry no `.stack`". WRONG: `.exists()` is a soft-false API that
+   never rejects. Probe an API that actually rejects (`arrayBuffer()/text()` on a missing
+   file, fetch to a dead port / bad DNS). A non-throwing API is not evidence about
+   rejection stacks.
+
 **Rule:** absence claims require (a) full runtime-surface enumeration, (b) runtime
 acceptance probes of the API call itself, (c) all plausible access patterns (named
 export / constructor / algorithm-string / options-object / sibling names), (d) the type
@@ -54,7 +61,7 @@ Corrected verdicts are pinned as ground probes: rt-4 (S3Client) and rt-5 (serve 
 | `--heap-prof` / `--heap-prof-md` | ✅ | writes `Heap.<ts>.<pid>.heapprofile` in CWD; repo uses `--heap-prof-md` (heap:serve) |
 | `--no-orphans` / `BUN_FEATURE_FLAG_NO_ORPHANS` / bunfig `noOrphans` | ✅ | flag + env accepted; repo bunfig already sets `run.noOrphans = true` |
 | `--no-env-file` | ✅ | verified: skips `.env` (val=undefined) vs loaded without flag |
-| Async stack traces (fs/Bun.file/S3/DNS/crypto/fetch → await site) | ⚠️ nuanced (verified) | sync `Error().stack` points to the source line; **caught rejects from Bun.file/fetch carry NO `.stack`** — the printer synthesizes the display stack only for top-level throws (`[eval]:1:11`). Read stacks from a sync/rethrown path |
+| Async stack traces (fs/Bun.file/S3/DNS/crypto/fetch → await site) | ✅ real (CORRECTED 2026-08-27) | **rejects DO carry `.stack`** pointing at the await site: `Bun.file().arrayBuffer()/text()` → `ENOENT ... at async foo (file:5:8)`; `fetch` conn-refused → `Unable to connect`; DNS → `getaddrinfo ENOTFOUND` — all with async frames. The earlier "NO .stack" verdict was a probe bug: `Bun.file().exists()` returns `false` instead of rejecting, so the probe never hit a rejection. **Probe a real rejection, not a soft-false API** (see §0 discipline failure #5) |
 | `Bun.serve({ http3: true })` (requires tls; `http1: false` h3-only) | ✅ recognized | domain errors: "HTTP/3 requires tls" / "Cannot disable http1 without enabling http3" — options validated, not ignored. Full QUIC handshake not exercised (needs TLS/UDP) |
 | `fetch(url, { protocol: "http2" })` | ✅ works | real request → 200 |
 | `fetch(url, { protocol: "http3" })` | ✅ recognized | attempted real QUIC handshake → HTTP3HandshakeFailed (endpoint/network) — the option drives real behavior |
@@ -320,7 +327,52 @@ replaces the entire runtime; only the full exit table gates the pin bump.
 
 ---
 
+## 33-claim changelog verification (2026-08-27, probed on the installed 1.4.0)
+
+Bulk pasted release notes (v1.3.x → 1.4.0) probed claim-by-claim. Harness:
+`/tmp/bun-changelog-probe.ts` (33 claims, 32 pass / 1 flagged). The verified
+claims are pinned as `changelog:probe` in [`tools/ground-probes`](../tools/ground-probes/index.ts)
+(15 probes, wired via `JSON5` → `changelog:probe` in [`bun-gates.ts`](../src/lib/bun-gates.ts)).
+
+| Claim | Verdict on 1.4.0 (probed) | Note |
+| --- | --- | --- |
+| `ServerWebSocket.subscriptions` getter | ✅ | returns array of subscribed topics (`["topicB","topicA"]`); probe needs `srv.upgrade(req)` or the socket never opens |
+| `Bun.JSON5.parse/stringify` + `.json5` imports | ✅ | comments, unquoted keys, single quotes, trailing commas, stringify all work |
+| `Bun.JSONL.parse/parseChunk` | ✅ | `{values, read, done, error}`; partial chunk resumes; BOM-skipping not separately probed |
+| `Bun.JSONC.parse` | ✅ | `//` comments + trailing commas parse |
+| `Bun.TOML` v1.1.0 + `stringify` | ✅ (nuance) | datetimes parse to a Temporal-like **`Instant`** object (`epochMilliseconds`, `toZonedDateTimeISO`), NOT a string/Date — changelog's `cfg.released // "…"` is misleading; `stringify` emits `[deps]` blocks correctly |
+| `Bun.Archive` | ✅ (API differs) | **no `.from()`**; `Bun.Archive.write(path, map, {gzip:true})` creates, `new Bun.Archive(bytes)` reads, `.extract(dir)/.files/.blob()/gzip` all work. Changelog's `A.from(map)` + `write(file, archive, "gzip")` form does not exist on 1.4.0 |
+| `CompressionStream/DecompressionStream` gzip + brotli + zstd | ✅ | all three round-trip |
+| `URLPattern` | ✅ | `test`/`exec` with `:id` groups |
+| `crypto.subtle` ML-KEM-768 `encapsulateBits`/`decapsulateBits` | ✅ | shared secret identical both sides; keys survive (changelog's generateKey form works) |
+| `crypto.subtle` ML-DSA-65 sign/verify | ✅ | round-trips |
+| `Response.textStream()` | ✅ | reassembles multi-byte chars + NUL across chunk boundaries |
+| `process.on("memoryPressure")` | ✅ | registers/removes; `warning|critical` arg (types lag — cast) |
+| `Bun.sliceAnsi` | ✅ | preserves ANSI while slicing |
+| `Bun.wrapAnsi` | ✅ | wraps at column width |
+| `Bun.stringWidth` | ✅ | 5/5/2/2/3 for ascii/ANSI/ZWJ/flag/link |
+| `Bun.spawn({ cgroup })` | ✅ | macOS accepts as no-op (Linux-only effect) |
+| Async stack traces from native I/O | ✅ (CORRECTED) | see §0 row — rejects carry `.stack` with async frames; earlier probe bug (`.exists()`) |
+| `--no-orphans` | ✅ | flag accepted, exit 0 |
+| `Bun.Transpiler({ replMode: true })` | ✅ | wraps bare objects for eval |
+| `Bun.YAML` cyclic anchors/aliases | ✅ | `&x` … `*x` alias resolves |
+| WebSocket proxy / `ws+unix://` / URL credentials | ✅ (shape) | constructors accept all three; proxy round-trip not exercised (needs proxy) |
+| `crypto.subtle` SHA3-256 | ✅ | 32-byte digest |
+| `crypto.subtle` X25519 `deriveBits` | ✅ | shared secret identical both sides |
+| `structuredClone` identity (Date/RegExp/Blob/Error…) | ✅ | same instance referenced twice stays one object; distinct from source |
+| `Bun.CSRF.generate/verify` `sessionId` option | ✅ | binds token to principal; cross-session AND sessionless both fail closed (repo `src/research/csrf.ts` contract: `generate(secret,{sessionId,expiresIn})`, `verify(token,{secret,sessionId})`) |
+| `Bun.udpSocket` data-callback 5th `flags` arg | ✅ | `{truncated:false, ipv6:false}` object present (repo shape: `socket:{data:(s,buf,port,addr,flags)=>…}`); ECONNREFUSED-on-dead-port is Linux-only, not exercised here |
+| bun:sqlite bundled version | ⚠️ **MISMATCH** | runtime reports **3.51.0**, changelog claims 3.53.0 — do not assert 3.53.0 without upgrading the pin |
+| `Bun.isStandaloneExecutable` | ✅ | boolean; `false` in dev, `true` inside `bun build --compile` binaries |
+| `Bun.sql` named params / `SQL` constructor | ✅ (shape) | `Bun.SQL` exists; runtime needs a Postgres server (not exercised) |
+
+Probe-design notes from this batch: `Bun.udpSocket(...)` returns a **thenable** (must
+`await`); `Bun.Archive` has no `.from` (write-then-read path); `Bun.TOML` datetimes are
+`Instant` objects; `.exists()` is soft-false (never rejects) — probe real rejections.
+
+---
+
 *Known non-issues (verified by audit, listed to prevent re-review):
-`Bun.password` (0 usage), `Bun.XML` (0 usage; `HTMLRewriter` still the
-right tool for OG-meta extraction), `process.permission` (0 usage),
-`http3` (0 usage).*
+`Bun.password` (0 usage), `process.permission` (0 usage), `http3` (0 usage).*
+*(`Bun.XML` is now USED — the odds-registry parses `config/odds-registry.xml` with it;
+`HTMLRewriter` remains the tool for OG-meta extraction.)*

@@ -335,6 +335,112 @@ export const PROBES: Record<string, GroundProbe[]> = {
       return g.match("a.txt") && !g.match("a.md") ? ok() : bad("match mismatch");
     }),
   ],
+
+  // ── changelog:probe — 1.3.x->1.4.0 bulk release-note claims (2026-08-27)
+  "changelog:probe": [
+    p("cl-1", "Bun.JSON5", "parse comments/unquoted/single-quote/trailing + stringify", async () => {
+      const v: any = (Bun as any).JSON5?.parse?.(`{ // c\n unquoted: 's',\n trailing: [1,2,3,],\n }`);
+      const s = (Bun as any).JSON5?.stringify?.({ a: 1 });
+      return v?.unquoted === "s" && v?.trailing?.length === 3 && typeof s === "string" ? ok() : bad(JSON.stringify(v));
+    }),
+    p("cl-2", "Bun.JSONC", "comments + trailing commas", async () => {
+      const v: any = (Bun as any).JSONC?.parse?.(`{ // c\n "name": "x",\n "deps": { "bun": "1.4.0", },\n }`);
+      return v?.name === "x" && v?.deps?.bun === "1.4.0" ? ok() : bad(JSON.stringify(v));
+    }),
+    p("cl-3", "Bun.JSONL.parseChunk", "{values,read,done,error} + partial resume", async () => {
+      const chunk: any = (Bun as any).JSONL?.parseChunk?.('{"id":1}\n{"id":2}\n{"id":3');
+      return chunk?.values?.length === 2 && typeof chunk?.read === "number" && chunk?.done === false && "error" in chunk ? ok("read=" + chunk.read) : bad(JSON.stringify(chunk));
+    }),
+    p("cl-4", "Bun.TOML", "v1.1 datetime -> Instant object (not string/Date)", async () => {
+      const cfg: any = Bun.TOML.parse("released = 2026-08-10T12:00:00Z");
+      const inst = cfg?.released;
+      const isInstant = typeof inst === "object" && typeof inst?.epochMilliseconds === "number" && typeof inst?.toZonedDateTimeISO === "function";
+      return isInstant && !(inst instanceof Date) ? ok("Instant epochMs=" + inst.epochMilliseconds) : bad(JSON.stringify(inst));
+    }),
+    p("cl-5", "Bun.TOML.stringify", "emits [deps] block + quoted values", async () => {
+      const s = Bun.TOML.stringify({ name: "app", deps: { bun: "1.4.0" } }) ?? "";
+      return s.includes("[deps]") && s.includes("bun = \"1.4.0\"") ? ok() : bad(JSON.stringify(s));
+    }),
+    p("cl-6", "crypto.subtle", "ML-KEM-768 encapsulate/decapsulate shared secret", async () => {
+      const { publicKey, privateKey } = await crypto.subtle.generateKey("ML-KEM-768" as any, true, ["encapsulateBits", "decapsulateBits"] as any);
+      const enc: any = await (crypto.subtle as any).encapsulateBits({ name: "ML-KEM-768" }, publicKey);
+      const sec: any = await (crypto.subtle as any).decapsulateBits({ name: "ML-KEM-768" }, privateKey, enc?.ciphertext);
+      const a = new Uint8Array(enc?.sharedKey ?? []), b = new Uint8Array(sec ?? []);
+      return a.length > 0 && a.length === b.length && a.every((x, i) => x === b[i]) ? ok(a.length + " bytes identical") : bad("lens " + a.length + "/" + b.length);
+    }),
+    p("cl-7", "crypto.subtle", "ML-DSA-65 sign/verify round-trip", async () => {
+      const { publicKey, privateKey } = await crypto.subtle.generateKey("ML-DSA-65" as any, true, ["sign", "verify"] as any);
+      const msg = new TextEncoder().encode("pq probe");
+      const sig = await crypto.subtle.sign({ name: "ML-DSA-65" } as any, privateKey, msg);
+      return (await crypto.subtle.verify({ name: "ML-DSA-65" } as any, publicKey, sig, msg)) === true ? ok() : bad("verify false");
+    }),
+    p("cl-8", "Response.textStream", "multi-byte reassembly across chunks", async () => {
+      let joined = "";
+      for await (const chunk of new Response("h\u00e9llo \ud800\udf48 x\u0000").textStream()) joined += chunk;
+      return joined === "h\u00e9llo \ud800\udf48 x\u0000" ? ok() : bad(JSON.stringify(joined));
+    }),
+    p("cl-9", "Bun.stringWidth", "ascii/ANSI/ZWJ/flag/link columns", async () => {
+      const sw: any = (Bun as any).stringWidth;
+      return typeof sw === "function" && sw("hello") === 5 && sw("\x1b[31mhello\x1b[0m") === 5 && sw("\ud83d\udc68\u200d\ud83d\udc69\u200d\ud83d\udc67") === 2 && sw("\ud83c\uddfa\ud83c\uddf8") === 2 && sw("\x1b]8;;https://bun.sh\x07Bun\x1b]8;;\x07") === 3 ? ok() : bad(String(sw("hello")));
+    }),
+    p("cl-10", "Bun.sliceAnsi", "preserves ANSI while slicing", async () => {
+      const s: any = (Bun as any).sliceAnsi?.("\x1b[31mhello\x1b[39m", 1, 4);
+      return s === "\x1b[31mell\x1b[39m" ? ok() : bad(JSON.stringify(s));
+    }),
+    p("cl-11", "Bun.udpSocket", "data callback 5th flags arg {truncated,ipv6}", async () => {
+      const p1 = 43000 + Math.floor(Math.random() * 400);
+      const sender: any = await (Bun as any).udpSocket({ hostname: "127.0.0.1", port: p1 });
+      let got = "";
+      const recv: any = await (Bun as any).udpSocket({ hostname: "127.0.0.1", port: p1 + 1, socket: { data: (_s: unknown, _buf: unknown, _p: unknown, _a: unknown, flags: unknown) => { got = JSON.stringify(flags); } } });
+      sender.send(Buffer.from("flags"), recv.port, "127.0.0.1");
+      await new Promise((r) => { const iv = setInterval(() => { if (got) { clearInterval(iv); r(null); } }, 10); setTimeout(() => { clearInterval(iv); r(null); }, 3000); });
+      sender.close(); recv.close();
+      return got.includes("truncated") ? ok(got) : bad(got || "timeout");
+    }),
+    p("cl-12", "ServerWebSocket.subscriptions", "getter returns subscribed topics", async () => {
+      let subs: unknown;
+      const server = Bun.serve({
+        port: 0,
+        fetch(req, srv) { if (srv.upgrade(req)) return undefined; return new Response("no"); },
+        websocket: {
+          open(w) { w.subscribe("t1"); w.subscribe("t2"); subs = (w as any).subscriptions; },
+          message(w) { w.close(); },
+          close() { server.stop(true); },
+        },
+      });
+      const ws = new WebSocket("ws://127.0.0.1:" + server.port);
+      await new Promise((res) => { ws.onopen = () => ws.send("x"); ws.onclose = () => res(null); });
+      await new Promise((res) => setTimeout(res, 200));
+      return Array.isArray(subs) && subs.length === 2 ? ok(JSON.stringify(subs)) : bad(JSON.stringify(subs));
+    }),
+    p("cl-13", "bun:sqlite", "bundled sqlite version (changelog claims 3.53.0; runtime is 3.51.0)", async () => {
+      const { Database } = await import("bun:sqlite");
+      const db = new Database(":memory:");
+      const v = (db.query("select sqlite_version() as v").get() as { v: string }).v;
+      db.close();
+      return v === "3.51.0" ? ok("3.51.0 (NOT 3.53.0 — changelog mismatch pinned)") : bad("sqlite_version()=" + v);
+    }),
+    p("cl-14", "Bun.Archive", "compress options object required (string form throws)", async () => {
+      const A: any = Bun.Archive;
+      const f = D + "/cl14.tar.gz";
+      await A.write(f, { "x.txt": "x" }, { gzip: true });
+      const b = new A(await Bun.file(f).bytes());
+      await b.extract(D + "/cl14");
+      const text = await Bun.file(D + "/cl14/x.txt").text();
+      let stringFormThrew = false;
+      try { await A.write(D + "/cl14b.tar.gz", { "x.txt": "x" }, "gzip"); } catch { stringFormThrew = true; }
+      return text === "x" && stringFormThrew ? ok("object form works, string form throws") : bad("text=" + text + " threw=" + stringFormThrew);
+    }),
+    p("cl-15", "Bun.CSRF", "sessionId binds principal; cross-session + sessionless fail", async () => {
+      const C: any = (Bun as any).CSRF;
+      if (typeof C?.generate !== "function") return bad("CSRF undefined");
+      const t = C.generate("probe-secret", { sessionId: "alice", expiresIn: 60000 });
+      const v1 = C.verify(t, { secret: "probe-secret", sessionId: "alice" });
+      const v2 = C.verify(t, { secret: "probe-secret", sessionId: "bob" });
+      const v3 = C.verify(t, { secret: "probe-secret" });
+      return v1 === true && v2 === false && v3 === false ? ok("bound + fail-closed") : bad("v1=" + v1 + " v2=" + v2 + " v3=" + v3);
+    }),
+  ],
 };
 
 /** Probes registered for a (normalized) gate name. */

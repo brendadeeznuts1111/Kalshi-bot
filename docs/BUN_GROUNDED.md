@@ -10,126 +10,127 @@ docs/REPO_API_BUN.md (retired 2026-08-26; git history preserves them).
 
 - bun 1.4.0 (shape revision `34cbb9a40b`)
 - docs index: https://bun.com/docs/llms.txt
-- generated: 2026-08-26T23:44:47.900Z
-- used symbols: 145 (runtime 137, type-only 8) · unknown tokens: 0 · stale URLs: 0
+- generated: 2026-08-27T05:23:35.618Z
+- used symbols: 146 (runtime 138, type-only 8) · unknown tokens: 0 · stale URLs: 0
 
-## Used symbols — runtime surface (137)
+## Used symbols — runtime surface (138)
 
 Type-only members (8) are tracked in tools/bun-grounding.json but excluded here — they are types, not runtime values.
 
 | Symbol | Kind | TypeOnly | Docs | Gate | Probe | Uses |
 | --- | --- | --- | --- | --- | --- | --- |
-| `Bun.file` | function |  | [guide](https://bun.com/docs/runtime/file-io#reading-files-bun-file) | fs:probe | wired | 426 |
-| `Bun.write` | function |  | [guide](https://bun.com/docs/runtime/file-io#writing-files-bun-write) | fs:probe | wired | 329 |
-| `Bun.env` | object |  | [guide](https://bun.com/docs/runtime/environment-variables) | runtime:probe | wired | 199 |
+| `Bun.file` | function |  | [guide](https://bun.com/docs/runtime/file-io#reading-files-bun-file) | fs:probe | wired | 433 |
+| `Bun.write` | function |  | [guide](https://bun.com/docs/runtime/file-io#writing-files-bun-write) | fs:probe | wired | 334 |
+| `Bun.env` | object |  | [guide](https://bun.com/docs/runtime/environment-variables) | runtime:probe | wired | 201 |
 | `Bun.color` | function |  | [guide](https://bun.com/docs/runtime/color) | ansi:probe | wired | 136 |
-| `Bun.build` | function |  | [guide](https://bun.com/docs/bundler) | build-deep:probe |  | 110 |
-| `Bun.serve` | function |  | [guide](https://bun.com/docs/runtime/http/server) | serve-tls/routes |  | 103 |
+| `Bun.build` | function |  | [guide](https://bun.com/docs/bundler) | build-deep:probe |  | 111 |
+| `Bun.serve` | function |  | [guide](https://bun.com/docs/runtime/http/server) | serve-tls/routes |  | 109 |
+| `Bun.argv` | object |  | [guide](https://bun.com/docs/runtime/utils) | runtime:probe | wired | 100 |
 | `Bun.cron` | object |  | [guide](https://bun.com/docs/runtime/cron) | cron tests §126/128 |  | 100 |
-| `Bun.argv` | object |  | [guide](https://bun.com/docs/runtime/utils) | runtime:probe | wired | 99 |
-| `Bun.Image` | namespace |  | [guide](https://bun.com/docs/runtime/image) | image:probe | wired | 97 |
-| `Bun.WebView` | namespace |  | [guide](https://bun.com/docs/runtime/webview) | runtime:probe | wired | 82 |
+| `Bun.Image` | namespace |  | [guide](https://bun.com/docs/runtime/image) | image:probe | wired | 99 |
+| `Bun.WebView` | namespace |  | [guide](https://bun.com/docs/runtime/webview) | runtime:probe | wired | 88 |
 | `Bun.sleep` | function |  | [guide](https://bun.com/docs/runtime/utils#bun-sleep) | runtime:probe | wired | 65 |
 | `Bun.version` | object |  | [guide](https://bun.com/docs/runtime/utils) | runtime:probe | wired | 61 |
-| `Bun.spawnSync` | function |  | [guide](https://bun.com/docs/runtime/child-process) | spawn:probe |  | 53 |
-| `Bun.Glob` | class |  | [guide](https://bun.com/docs/runtime/glob) | fsx:probe | wired | 48 |
+| `Bun.spawnSync` | function |  | [guide](https://bun.com/docs/runtime/child-process) | spawn:probe |  | 54 |
+| `Bun.CryptoHasher` | class |  | [guide](https://bun.com/docs/runtime/utils) | crypto:probe | wired | 53 |
 | `Bun.escapeHTML` | function |  | [guide](https://bun.com/docs/runtime/utils) | ansi:probe | wired | 48 |
+| `Bun.Glob` | class |  | [guide](https://bun.com/docs/runtime/glob) | fsx:probe | wired | 48 |
 | `Bun.Transpiler` | class |  | [guide](https://bun.com/docs/runtime/utils) | runtime:probe | wired | 46 |
-| `Bun.CryptoHasher` | class |  | [guide](https://bun.com/docs/runtime/utils) | crypto:probe | wired | 46 |
-| `Bun.spawn` | function |  | [guide](https://bun.com/docs/runtime/child-process) | spawn:probe |  | 34 |
+| `Bun.spawn` | function |  | [guide](https://bun.com/docs/runtime/child-process) | spawn:probe |  | 35 |
 | `Bun.inspect` | function |  | [guide](https://bun.com/docs/runtime/utils) | ansi:probe | wired | 34 |
-| `Bun.$` | function |  | [guide](https://bun.com/docs/runtime/shell) | shell:probe | wired | 31 |
-| `Bun.which` | function |  | [guide](https://bun.com/docs/runtime/utils) | fsx:probe | wired | 31 |
+| `Bun.XML.parse` | function |  | [guide](https://bun.com/docs/runtime/xml) | format:probe | wired | 32 |
 | `Bun.markdown` | namespace |  | [guide](https://bun.com/docs/runtime/markdown) | format:probe | wired | 31 |
 | `Bun.hash` | object |  | [guide](https://bun.com/docs/runtime/utils) | crypto:probe | wired | 31 |
-| `Bun.XML.parse` | function |  | [guide](https://bun.com/docs/runtime/xml) | format:probe | wired | 29 |
-| `Bun.Archive` | class |  | [guide](https://bun.com/docs/runtime/archive) | fs:probe | wired | 28 |
+| `Bun.$` | function |  | [guide](https://bun.com/docs/runtime/shell) | shell:probe | wired | 31 |
+| `Bun.which` | function |  | [guide](https://bun.com/docs/runtime/utils) | fsx:probe | wired | 31 |
+| `Bun.Archive` | class |  | [guide](https://bun.com/docs/runtime/archive) | fs:probe | wired | 30 |
 | `Bun.nanoseconds` | function |  | [guide](https://bun.com/docs/runtime/utils) | runtime:probe | wired | 28 |
-| `Bun.stringWidth` | function |  | [guide](https://bun.com/docs/runtime/utils) | ansi:probe | wired | 25 |
+| `Bun.stringWidth` | function |  | [guide](https://bun.com/docs/runtime/utils) | ansi:probe | wired | 26 |
 | `Bun.revision` | object |  | [guide](https://bun.com/docs/runtime/utils) | runtime:probe | wired | 25 |
 | `Bun.inspect.table` | function |  | [guide](https://bun.com/docs/runtime/utils) | ansi:probe | wired | 24 |
-| `Bun.TOML.parse` | function |  | [guide](https://bun.com/docs/runtime/toml) | format:probe | wired | 19 |
+| `Bun.TOML.parse` | function |  | [guide](https://bun.com/docs/runtime/toml) | format:probe | wired | 20 |
+| `Bun.XML` | namespace |  | [guide](https://bun.com/docs/runtime/xml) | format:probe | wired | 19 |
 | `Bun.secrets` | object |  | [guide](https://bun.com/docs/runtime/secrets) | net:probe |  | 18 |
 | `Bun.markdown.html` | function |  | [guide](https://bun.com/docs/runtime/markdown) | format:probe | wired | 15 |
-| `Bun.deepEquals` | function |  | [guide](https://bun.com/docs/runtime/utils) | crypto:probe | wired | 13 |
 | `Bun.stdout` | object |  | [guide](https://bun.com/docs/runtime/file-io) | fs:probe | wired | 13 |
+| `Bun.deepEquals` | function |  | [guide](https://bun.com/docs/runtime/utils) | crypto:probe | wired | 13 |
 | `Bun.semver` | namespace |  | [guide](https://bun.com/docs/runtime/utils) | bun:apis-probe |  | 12 |
-| `Bun.dns.prefetch` | function |  | [guide](https://bun.com/docs/runtime/networking/dns) | net:probe |  | 11 |
-| `Bun.XML` | namespace |  | [guide](https://bun.com/docs/runtime/xml) | format:probe | wired | 11 |
+| `Bun.sliceAnsi` | function |  | [guide](https://bun.com/docs/runtime/utils) | ansi:probe | wired | 11 |
 | `Bun.connect` | function |  | [guide](https://bun.com/docs/runtime/networking/tcp) | security:probe |  | 11 |
+| `Bun.dns.prefetch` | function |  | [guide](https://bun.com/docs/runtime/networking/dns) | net:probe |  | 11 |
 | `Bun.sha` | function |  | [guide](https://bun.com/docs/runtime/utils) | bun:apis-probe |  | 11 |
 | `Bun.markdown.Options` | type | yes | [guide](https://bun.com/docs/runtime/markdown) | format:probe | wired | 11 |
-| `Bun.sliceAnsi` | function |  | [guide](https://bun.com/docs/runtime/utils) | ansi:probe | wired | 10 |
 | `Bun.dns` | namespace |  | [guide](https://bun.com/docs/runtime/networking/dns) | net:probe |  | 10 |
+| `Bun.s3` | object |  | [guide](https://bun.com/docs/runtime/s3) | client-shape:probe |  | 10 |
 | `Bun.wrapAnsi` | function |  | [guide](https://bun.com/docs/runtime/utils) | ansi:probe | wired | 9 |
 | `Bun.JSONL.parse` | function |  | [guide](https://bun.com/docs/runtime/jsonl) | format:probe | wired | 9 |
+| `Bun.JSON5` | namespace |  | [guide](https://bun.com/docs/runtime/json5) | changelog:probe | wired | 9 |
 | `Bun.YAML` | namespace |  | [guide](https://bun.com/docs/runtime/yaml) | format:probe | wired | 9 |
-| `Bun.s3` | object |  | [guide](https://bun.com/docs/runtime/s3) | client-shape:probe |  | 9 |
-| `Bun.JSON5.parse` | function |  | [guide](https://bun.com/docs/runtime/json5) | bun:apis-probe |  | 8 |
-| `Bun.JSON5` | namespace |  | [guide](https://bun.com/docs/runtime/json5) | bun:apis-probe |  | 8 |
+| `Bun.JSON5.parse` | function |  | [guide](https://bun.com/docs/runtime/json5) | changelog:probe | wired | 8 |
 | `Bun.SHA256` | class |  | [guide](https://bun.com/docs/runtime/utils) | crypto:probe | wired | 8 |
 | `Bun.stripANSI` | function |  | [guide](https://bun.com/docs/runtime/utils) | ansi:probe | wired | 7 |
 | `Bun.password` | object |  | [guide](https://bun.com/docs/runtime/utils) | surface:probe |  | 7 |
+| `Bun.TOML` | namespace |  | [guide](https://bun.com/docs/runtime/toml) | format:probe | wired | 7 |
 | `Bun.markdown.ansi` | function |  | [guide](https://bun.com/docs/runtime/markdown) | format:probe | wired | 7 |
 | `Bun.inspect.custom` | object |  | [guide](https://bun.com/docs/runtime/utils) | ansi:probe | wired | 7 |
-| `Bun.JSONC.parse` | function |  | [guide](https://bun.com/docs/runtime/json5) | format:probe | wired | 6 |
 | `Bun.postgres` | object |  | [guide](https://bun.com/docs/runtime/sql) | client-shape:probe |  | 6 |
-| `Bun.deflateSync` | function |  | [guide](https://bun.com/docs/runtime) | fs:probe | wired | 6 |
+| `Bun.JSONC.parse` | function |  | [guide](https://bun.com/docs/runtime/json5) | format:probe | wired | 6 |
 | `Bun.zstdCompressSync` | function |  | [guide](https://bun.com/docs/runtime) | fs:probe | wired | 6 |
-| `Bun.TOML` | namespace |  | [guide](https://bun.com/docs/runtime/toml) | format:probe | wired | 6 |
 | `Bun.YAML.parse` | function |  | [guide](https://bun.com/docs/runtime/yaml) | format:probe | wired | 6 |
+| `Bun.deflateSync` | function |  | [guide](https://bun.com/docs/runtime) | fs:probe | wired | 6 |
 | `Bun.JSONL` | namespace |  | [guide](https://bun.com/docs/runtime/jsonl) | format:probe | wired | 6 |
+| `Bun.udpSocket` | function |  | [guide](https://bun.com/docs/runtime/networking/udp) | net:probe |  | 5 |
+| `Bun.plugin` | object |  | [guide](https://bun.com/docs/bundler/plugins) | build-deep:probe |  | 5 |
 | `Bun.Terminal` | class |  | [guide](https://bun.com/docs/runtime/utils) | runtime:probe | wired | 5 |
+| `Bun.XML.stringify` | function |  | [guide](https://bun.com/docs/runtime/xml) | format:probe | wired | 5 |
+| `Bun.peek` | function |  | [guide](https://bun.com/docs/runtime/utils) | runtime:probe | wired | 5 |
 | `Bun.mmap` | function |  | [guide](https://bun.com/docs/runtime/file-io) | fs:probe | wired | 5 |
 | `Bun.gzipSync` | function |  | [guide](https://bun.com/docs/runtime) | fs:probe | wired | 5 |
-| `Bun.plugin` | object |  | [guide](https://bun.com/docs/bundler/plugins) | build-deep:probe |  | 5 |
-| `Bun.randomUUIDv7` | function |  | [guide](https://bun.com/docs/runtime/utils) | crypto:probe | wired | 5 |
-| `Bun.peek` | function |  | [guide](https://bun.com/docs/runtime/utils) | runtime:probe | wired | 5 |
-| `Bun.XML.stringify` | function |  | [guide](https://bun.com/docs/runtime/xml) | format:probe | wired | 5 |
+| `Bun.JSONL.parseChunk` | function |  | [guide](https://bun.com/docs/runtime/jsonl) | format:probe | wired | 5 |
 | `Bun.openInEditor` | function |  | [guide](https://bun.com/docs/runtime/utils) | fsx:probe | wired | 5 |
+| `Bun.randomUUIDv7` | function |  | [guide](https://bun.com/docs/runtime/utils) | crypto:probe | wired | 5 |
 | `Bun.deepMatch` | function |  | [guide](https://bun.com/docs/runtime/utils) | surface:probe |  | 5 |
 | `Bun.markdown.render` | function |  | [guide](https://bun.com/docs/runtime/markdown) | format:probe | wired | 5 |
-| `Bun.semver.order` | function |  | [guide](https://bun.com/docs/runtime/utils) | bun:apis-probe |  | 4 |
-| `Bun.resolve` | function |  | [guide](https://bun.com/docs/runtime/utils) | fsx:probe | wired | 4 |
-| `Bun.fileURLToPath` | function |  | [guide](https://bun.com/docs/runtime/utils) | fsx:probe | wired | 4 |
-| `Bun.fetch` | object |  | [guide](https://bun.com/docs/runtime/networking/fetch) | serve-tls/routes |  | 4 |
 | `Bun.listen` | function |  | [guide](https://bun.com/docs/runtime/networking/tcp) | net:probe |  | 4 |
-| `Bun.udpSocket` | function |  | [guide](https://bun.com/docs/runtime/networking/udp) | net:probe |  | 4 |
 | `Bun.redis` | object |  | [guide](https://bun.com/docs/runtime/redis) | net:probe |  | 4 |
+| `Bun.resolve` | function |  | [guide](https://bun.com/docs/runtime/utils) | fsx:probe | wired | 4 |
+| `Bun.S3Client` | class |  | [guide](https://bun.com/docs/runtime/s3) | client-shape:probe |  | 4 |
+| `Bun.fetch` | object |  | [guide](https://bun.com/docs/runtime/networking/fetch) | serve-tls/routes |  | 4 |
+| `Bun.TOML.stringify` | function |  | [guide](https://bun.com/docs/runtime/toml) | format:probe | wired | 4 |
 | `Bun.peek.status` | function |  | [guide](https://bun.com/docs/runtime/utils) | runtime:probe | wired | 4 |
+| `Bun.fileURLToPath` | function |  | [guide](https://bun.com/docs/runtime/utils) | fsx:probe | wired | 4 |
+| `Bun.semver.order` | function |  | [guide](https://bun.com/docs/runtime/utils) | bun:apis-probe |  | 4 |
 | `Bun.CSRF.generate` | function |  | [guide](https://bun.com/docs/runtime/csrf) | csrf:probe |  | 4 |
 | `Bun.SQL` | namespace |  | [guide](https://bun.com/docs/runtime/sql) | sqlite:probe |  | 4 |
-| `Bun.JSONL.parseChunk` | function |  | [guide](https://bun.com/docs/runtime/jsonl) | format:probe | wired | 4 |
 | `Bun.pathToFileURL` | function |  | [guide](https://bun.com/docs/runtime/utils) | fsx:probe | wired | 3 |
+| `Bun.stdin` | object |  | [guide](https://bun.com/docs/runtime/file-io) | surface:probe |  | 3 |
 | `Bun.CookieMap` | class |  | [guide](https://bun.com/docs/runtime/cookies) | defaults:probe |  | 3 |
-| `Bun.S3Client` | class |  | [guide](https://bun.com/docs/runtime/s3) | client-shape:probe |  | 3 |
+| `Bun.JSONC` | namespace |  | [guide](https://bun.com/docs/runtime/json5) | format:probe | wired | 3 |
 | `Bun.gunzipSync` | function |  | [guide](https://bun.com/docs/runtime) | fs:probe | wired | 3 |
 | `Bun.zstdDecompressSync` | function |  | [guide](https://bun.com/docs/runtime) | fs:probe | wired | 3 |
-| `Bun.stdin` | object |  | [guide](https://bun.com/docs/runtime/file-io) | surface:probe |  | 3 |
 | `Bun.sql` | object |  | [guide](https://bun.com/docs/runtime/sql) | sqlite:probe |  | 3 |
-| `Bun.Cookie` | class |  | [guide](https://bun.com/docs/runtime/cookies) | defaults:probe |  | 2 |
+| `Bun.dns.lookup` | function |  | [guide](https://bun.com/docs/runtime/networking/dns) | net:probe |  | 2 |
 | `Bun.RedisClient` | namespace |  | [guide](https://bun.com/docs/runtime/redis) | client-shape:probe |  | 2 |
 | `Bun.FileSystemRouter` | class |  | [guide](https://bun.com/docs/runtime/file-system-router) | surface:probe |  | 2 |
+| `Bun.Cookie` | class |  | [guide](https://bun.com/docs/runtime/cookies) | defaults:probe |  | 2 |
+| `Bun.readableStreamToArrayBuffer` | function |  | [guide](https://bun.com/docs/runtime/utils) | runtime:probe | wired | 2 |
+| `Bun.ArrayBufferSink` | class |  | [guide](https://bun.com/docs/runtime/utils) | runtime:probe | wired | 2 |
+| `Bun.sleepSync` | function |  | [guide](https://bun.com/docs/runtime/utils) | runtime:probe | wired | 2 |
 | `Bun.inflateSync` | function |  | [guide](https://bun.com/docs/runtime) | fs:probe | wired | 2 |
 | `Bun.zstdDecompress` | function |  | [guide](https://bun.com/docs/runtime) | fs:probe | wired | 2 |
 | `Bun.zstdCompress` | function |  | [guide](https://bun.com/docs/runtime) | fs:probe | wired | 2 |
-| `Bun.readableStreamToArrayBuffer` | function |  | [guide](https://bun.com/docs/runtime/utils) | runtime:probe | wired | 2 |
 | `Bun.stderr` | object |  | [guide](https://bun.com/docs/runtime/file-io) | surface:probe |  | 2 |
 | `Bun.semver.satisfies` | function |  | [guide](https://bun.com/docs/runtime/utils) | bun:apis-probe |  | 2 |
-| `Bun.dns.lookup` | function |  | [guide](https://bun.com/docs/runtime/networking/dns) | net:probe |  | 2 |
-| `Bun.ArrayBufferSink` | class |  | [guide](https://bun.com/docs/runtime/utils) | runtime:probe | wired | 2 |
-| `Bun.sleepSync` | function |  | [guide](https://bun.com/docs/runtime/utils) | runtime:probe | wired | 2 |
-| `Bun.TOML.stringify` | function |  | [guide](https://bun.com/docs/runtime/toml) | format:probe | wired | 2 |
-| `Bun.JSONC` | namespace |  | [guide](https://bun.com/docs/runtime/json5) | format:probe | wired | 2 |
+| `Bun.enableANSIColors` | object |  | [guide](https://bun.com/docs/runtime/utils) | ecosystem:probe |  | 2 |
 | `Bun.main` | object |  | [guide](https://bun.com/docs/runtime/utils) | surface:probe |  | 2 |
 | `Bun.FFI` | object |  | [guide](https://bun.com/docs/runtime/ffi) | ffi:probe |  | 2 |
-| `Bun.enableANSIColors` | object |  | [guide](https://bun.com/docs/runtime/utils) | ecosystem:probe |  | 2 |
 | `Bun.dns.getCacheStats` | function |  | [guide](https://bun.com/docs/runtime/networking/dns) | net:probe |  | 2 |
+| `Bun.YAML.stringify` | function |  | [guide](https://bun.com/docs/runtime/yaml) | format:probe | wired | 1 |
 | `Bun.readableStreamToText` | function |  | [guide](https://bun.com/docs/runtime/utils) | runtime:probe | wired | 1 |
 | `Bun.version_with_sha` | object |  | [guide](https://bun.com/docs/runtime) | runtime:probe | wired | 1 |
 | `Bun.readableStreamToFormData` | function |  | [guide](https://bun.com/docs/runtime/utils) | runtime:probe | wired | 1 |
-| `Bun.YAML.stringify` | function |  | [guide](https://bun.com/docs/runtime/yaml) | format:probe | wired | 1 |
-| `Bun.JSON5.stringify` | function |  | [guide](https://bun.com/docs/runtime/json5) | bun:apis-probe |  | 1 |
+| `Bun.CSRF` | namespace |  | [guide](https://bun.com/docs/runtime/csrf) | csrf:probe |  | 1 |
+| `Bun.JSON5.stringify` | function |  | [guide](https://bun.com/docs/runtime/json5) | changelog:probe | wired | 1 |
 | `Bun.MD5` | class |  | [guide](https://bun.com/docs/runtime) | surface:probe |  | 1 |
 | `Bun.SHA1` | class |  | [guide](https://bun.com/docs/runtime) | surface:probe |  | 1 |
 | `Bun.SHA224` | class |  | [guide](https://bun.com/docs/runtime) | surface:probe |  | 1 |
@@ -153,9 +154,9 @@ Type-only members (8) are tracked in tools/bun-grounding.json but excluded here 
 | `Bun.resolveSync` | function |  | [guide](https://bun.com/docs/runtime/utils) | surface:probe |  | 1 |
 | `Bun.allocUnsafe` | function |  | [guide](https://bun.com/docs/runtime/utils) | surface:probe |  | 1 |
 | `Bun.embeddedFiles` | object |  | [guide](https://bun.com/docs/runtime/utils) | surface:probe |  | 1 |
+| `Bun.CSRF.verify` | function |  | [guide](https://bun.com/docs/runtime/csrf) | csrf:probe |  | 1 |
 | `Bun.markdown.react` | function |  | [guide](https://bun.com/docs/runtime/markdown) | format:probe | wired | 1 |
 | `Bun.markdown.AnsiTheme` | type | yes | [guide](https://bun.com/docs/runtime/markdown) | format:probe | wired | 1 |
-| `Bun.CSRF.verify` | function |  | [guide](https://bun.com/docs/runtime/csrf) | csrf:probe |  | 1 |
 
 ## Unknown tokens (not in the pinned shape — investigate)
 
