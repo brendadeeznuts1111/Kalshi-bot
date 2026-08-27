@@ -212,6 +212,7 @@
     "release:version": "bun pm version",
     "odds-registry:artifact": "bun tools/odds-registry-artifact.ts",
     "odds-registry:status": "bun tools/odds-registry-status.ts",
+    "odds:value-report": "bun tools/odds-value-report.ts",
     "brand:pkg:generate": "bun tools/brand-package-gen.ts",
     "brand:pkg:check": "cd packages/brand && bun run publish:check",
     "brand:pkg:publish": "cd packages/brand && bun run publish:public",

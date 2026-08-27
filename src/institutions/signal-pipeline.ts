@@ -13,6 +13,7 @@
  */
 import { join } from 'node:path';
 import { readdirSync } from 'node:fs';
+import { loadOddsRegistryConfig, oddsRegistryHealth } from './odds-registry/index.ts';
 import {
   DESIGN_MODULES,
   DESIGN_MODULE_NAMES,
@@ -98,6 +99,30 @@ export async function collectSignals(root: string, brand: BrandMetricsSnapshot):
       title: module + ' ' + (bytes / 1024).toFixed(2) + ' KB / ' + (spec.maxBytes / 1024).toFixed(0) + ' KB',
       detail: 'largest ' + ((largest ?? 0) / 1024).toFixed(2) + ' KB' + (growth !== null ? ' · delta ' + (growth >= 0 ? '+' : '') + growth.toFixed(1) + '%' : '') + (over ? ' · OVER BUDGET' : '') + (largestOver ? ' · contributor OVER' : ''),
       source: 'design:check budgets',
+    });
+  }
+
+  // registry channel: odds-registry bookmaker capacity health
+  try {
+    const cfg = await loadOddsRegistryConfig(root);
+    const health = oddsRegistryHealth(cfg);
+    const feeds = Object.entries(health.feeds).map(([k, n]) => k + ' ' + n).join(' · ');
+    push({
+      id: 'registry-capacity',
+      channel: 'registry',
+      severity: health.ok ? 'ok' : 'bad',
+      title: health.bookmakerCount + ' bookmakers / floor ' + health.capacityFloor,
+      detail: 'feeds: ' + feeds + ' · sports: ' + health.sports.length + (health.ok ? '' : ' · BELOW CAPACITY FLOOR'),
+      source: 'config/odds-registry.xml',
+    });
+  } catch (error) {
+    push({
+      id: 'registry-capacity',
+      channel: 'registry',
+      severity: 'bad',
+      title: 'odds-registry config unreadable',
+      detail: String(error instanceof Error ? error.message : error),
+      source: 'config/odds-registry.xml',
     });
   }
 

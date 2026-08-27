@@ -370,6 +370,38 @@ Probe-design notes from this batch: `Bun.udpSocket(...)` returns a **thenable** 
 `await`); `Bun.Archive` has no `.from` (write-then-read path); `Bun.TOML` datetimes are
 `Instant` objects; `.exists()` is soft-false (never rejects) — probe real rejections.
 
+## Bun.inspect / console.log claims (2026-08-27, probed on the installed 1.4.0)
+
+Bulk pasted "power user" guide about `Bun.inspect` options + console layers. The
+guide mostly describes **Node's `util.inspect` options**, not Bun's. On 1.4.0 the
+real `BunInspectOptions` surface (bun.d.ts:4482) is exactly: `colors`, `depth`,
+`sorted`, `compact`. Harness: `/tmp/inspect-probe*.ts`.
+
+| Claim | Verdict on 1.4.0 (probed) | Note |
+| --- | --- | --- |
+| `Bun.inspect(obj, {colors, depth, sorted, compact})` | ✅ | all four honored: depth stops recursion (`[Object ...]`), colors emit ANSI, compact single-lines, sorted orders keys (also custom comparator) |
+| `Bun.inspect.table(rows)` | ✅ | real; box-drawing table, respects colors |
+| `Symbol.for("nodejs.util.inspect.custom")` | ✅ | respected; receives `(depth, options, inspect)`; `options.stylize` is populated inside custom (but NOT settable as an input option) |
+| Circular refs → `[Circular]` | ✅ | automatic |
+| `--console-depth N` CLI flag | ✅ | truncates console.log depth (`b: [Object ...]`) |
+| bunfig.toml `[console] depth = N` | ✅ | honored (persistent per project) |
+| `BUN_CONSOLE_DEPTH` env var | ❌ NOT honored | probed `BUN_CONSOLE_DEPTH=1` + `CONSOLE_DEPTH=1` — no truncation. The guide's three-layer precedence (CLI > env > bunfig) is wrong: env layer absent |
+| bunfig `[console]` other keys (colors/compact/sorted/maxStringLength) | ❌ NOT honored | only `depth` takes effect; the guide's full `[console]` key list is invented |
+| `maxStringLength` option | ❌ NOT honored | 300-char string with `maxStringLength:5` still 302 chars |
+| `maxArrayLength` option | ❌ NOT honored | 150-array with `maxArrayLength:5` still shows 100+1 |
+| `breakLength` option | ❌ NOT honored | no wrap at width 30 |
+| `showHidden` option | ❌ not honored / not in types | — |
+| `getters` option | ❌ NOT honored | `[Getter]` shown whether true/"get"/false |
+| `numericSeparator` option | ❌ NOT honored | `1000000` stays unseparated |
+| `stylize` option | ❌ NOT honored as input | zero calls when passed; only populated inside custom inspect methods |
+| `isTerminal` export from `bun` | ❌ DOES NOT EXIST | `typeof undefined`; the guide's logger (`import { isTerminal } from 'bun'`) won't compile. Use `process.stdout.isTTY` (undefined in non-TTY here) |
+| `inspect` named export from `bun` | ⚠️ | `Bun.inspect` works; a bare `import { inspect } from 'bun'` was not probed — `Bun.inspect` + `Bun.inspect.table` + `Bun.inspect.custom` (symbol) confirmed |
+
+Bottom line: Bun.inspect is NOT a superset of Node's util.inspect. Keep to the four
+typed options; for terminal-width truncation combine `Bun.inspect` (colors/depth) with
+`Bun.sliceAnsi` (verified earlier). The repo's `CookieJar(2 cookies)` /
+`CoefficientStore(0 events)` tests already pin `inspect.custom` usage.
+
 ---
 
 *Known non-issues (verified by audit, listed to prevent re-review):

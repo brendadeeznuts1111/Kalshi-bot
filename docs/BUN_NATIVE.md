@@ -28,7 +28,7 @@ Top-level reference modules this repo uses most:
 
 `@see` table: [Canonical `@see` links](#canonical-see-links) (guides primary; reference dual-link for symbols). Standalone repo; monorepo `bun tools/bun-docs-index.ts` is optional.
 
-Deep dives: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns) · [`BUN_FILE.md`](BUN_FILE.md) (BunFile/FileBlob — official-docs-grounded, probe-corroborated)
+Deep dives: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns) · [`BUN_FILE.md`](BUN_FILE.md) (BunFile/FileBlob — official-docs-grounded, probe-corroborated) · [`BUN_INSPECT.md`](BUN_INSPECT.md) (inspect/console/sliceAnsi — probe-verified 1.4.0)
 
 ## Bun APIs overview (official)
 
@@ -585,7 +585,7 @@ bunx drizzle-kit studio
 
 Legacy raw SQL in `kalshi-itf-sync.ts`, `cache.ts`, etc. is preserved — Drizzle is additive, not a rewrite mandate.
 
-Deep dives: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns) · [`BUN_FILE.md`](BUN_FILE.md) (BunFile/FileBlob — official-docs-grounded, probe-corroborated)
+Deep dives: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns) · [`BUN_FILE.md`](BUN_FILE.md) (BunFile/FileBlob — official-docs-grounded, probe-corroborated) · [`BUN_INSPECT.md`](BUN_INSPECT.md) (inspect/console/sliceAnsi — probe-verified 1.4.0)
 
 ## Bun API map
 

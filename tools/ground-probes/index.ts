@@ -440,6 +440,65 @@ export const PROBES: Record<string, GroundProbe[]> = {
       const v3 = C.verify(t, { secret: "probe-secret" });
       return v1 === true && v2 === false && v3 === false ? ok("bound + fail-closed") : bad("v1=" + v1 + " v2=" + v2 + " v3=" + v3);
     }),
+    p("cl-16", "Bun.inspect", "four typed options: depth/colors/sorted/compact", async () => {
+      const o = { a: { b: { c: { d: 1 } } }, z: 9 };
+      const deep = Bun.inspect(o, { depth: 1 });
+      const colored = Bun.inspect(o, { colors: true });
+      const compact = Bun.inspect({ x: { y: 1 } }, { compact: true });
+      const sorted = Bun.inspect({ b: 1, a: 2 }, { sorted: true });
+      return !deep.includes("d: 1") && colored.includes("\x1b[") && !compact.includes("\n") && sorted.indexOf("a") < sorted.indexOf("b")
+        ? ok("depth stops, colors ANSI, compact single-line, sorted orders") : bad(JSON.stringify({ deep: deep.slice(0, 30), colored: colored.slice(0, 20), compact: compact.slice(0, 20), sorted: sorted.slice(0, 20) }));
+    }),
+    p("cl-17", "Bun.inspect.table", "box-drawing table for rows", async () => {
+      const out = Bun.inspect.table([{ a: 1, b: "x" }]);
+      return typeof out === "string" && out.includes("┌") && out.includes("a") ? ok("table renders") : bad(JSON.stringify(out).slice(0, 60));
+    }),
+    p("cl-18", "Bun.inspect.custom", "nodejs.util.inspect.custom respected with (depth, options, inspect)", async () => {
+      class C {
+        [Symbol.for("nodejs.util.inspect.custom")](depth: number, options: any, inspect: any) {
+          return "d=" + depth + " sty=" + typeof options?.stylize + " insp=" + typeof inspect;
+        }
+      }
+      const out = Bun.inspect(new C(), { depth: 3, colors: true });
+      return out.includes("d=3") && out.includes("sty=function") && out.includes("insp=function") ? ok(out) : bad(out);
+    }),
+    p("cl-19", "Bun.inspect", "circular refs render [Circular]", async () => {
+      const o: any = { name: "root" };
+      o.self = o;
+      return Bun.inspect(o, { depth: 5 }).includes("[Circular]") ? ok() : bad(Bun.inspect(o).slice(0, 40));
+    }),
+    p("cl-20", "Bun.inspect", "NOT a superset: maxStringLength/numericSeparator/getters are inert", async () => {
+      const anyBun = Bun as any;
+      const long = Bun.inspect("x".repeat(30), { maxStringLength: 5 } as any);
+      const num = Bun.inspect({ big: 1000000 }, { numericSeparator: true } as any);
+      const gtr: any = {};
+      Object.defineProperty(gtr, "x", { get() { return 99; }, enumerable: true });
+      const get = Bun.inspect(gtr, { getters: true } as any);
+      const optsInTypes = ("maxStringLength" in (anyBun.inspect ?? {})) || false;
+      return long.length > 30 && num.includes("1000000") && !num.includes("1_000_000") && get.includes("[Getter]") && !optsInTypes
+        ? ok("all three inert; BunInspectOptions is colors/depth/sorted/compact only") : bad("long=" + long.length + " num=" + num + " get=" + get);
+    }),
+    p("cl-21", "console depth", "--console-depth CLI truncates; bunfig [console] depth honored; env NOT", async () => {
+      const src = "const o={a:{b:{c:{d:1}}}}; console.log(o);";
+      const p1 = Bun.spawn({ cmd: [process.execPath, "--console-depth", "1", "-e", src] });
+      const o1 = await new Response(p1.stdout).text();
+      await p1.exited;
+      const cliTrunc = o1.includes("[Object");
+      const dir = "/tmp/inspect-probe-cl21";
+      await Bun.$`rm -rf ${dir} && mkdir -p ${dir}`.quiet();
+      await Bun.write(dir + "/bunfig.toml", "[console]\ndepth = 1\n");
+      await Bun.write(dir + "/main.ts", src);
+      const p2 = Bun.spawn({ cmd: [process.execPath, dir + "/main.ts"], cwd: dir });
+      const o2 = await new Response(p2.stdout).text();
+      await p2.exited;
+      const figTrunc = o2.includes("[Object");
+      const p3 = Bun.spawn({ cmd: [process.execPath, "-e", src], env: { ...process.env, BUN_CONSOLE_DEPTH: "1" } });
+      const o3 = await new Response(p3.stdout).text();
+      await p3.exited;
+      const envTrunc = o3.includes("[Object");
+      return cliTrunc && figTrunc && !envTrunc
+        ? ok("CLI + bunfig truncate; BUN_CONSOLE_DEPTH env inert") : bad("cli=" + cliTrunc + " fig=" + figTrunc + " env=" + envTrunc);
+    }),
   ],
 };
 

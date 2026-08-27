@@ -17,6 +17,7 @@
 export const CHANNEL_IDS = [
   'design',
   'deps',
+  'registry',
   'brand',
   'releases',
   'ops',
@@ -148,6 +149,14 @@ export const CHANNEL_DEFS: Record<ChannelId, ChannelDef> = {
     sources: ['api.github.com/rate_limit', 'github-network.ts', 'github-budget.ts'],
     actions: [],
     dashboardOrder: 12,
+  },
+  registry: {
+    id: 'registry',
+    label: 'Odds Registry',
+    description: 'Bookmaker capacity health: >=34 floor, per-feed counts, declared sports (config/odds-registry.xml)',
+    sources: ['config/odds-registry.xml', 'odds-registry/validate.ts', 'odds-registry/load.ts'],
+    actions: [],
+    dashboardOrder: 13,
   },
 };
 

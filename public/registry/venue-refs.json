@@ -1,0 +1,14 @@
+[
+  {
+    "eventId": "bet365",
+    "venue": "kalshi",
+    "side": "Alpha FC",
+    "implied": 0.45
+  },
+  {
+    "eventId": "bet365",
+    "venue": "polymarket",
+    "side": "Beta FC",
+    "implied": 0.42
+  }
+]
