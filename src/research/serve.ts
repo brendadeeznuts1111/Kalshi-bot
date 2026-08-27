@@ -83,9 +83,12 @@ import {
   detectValuePatterns,
   loadOddsRegistryConfig,
   oddsRegistryHealth,
+  parseOddsXmlEvents,
   statusCardSvg,
   type OddsRegistryConfig,
+  type VenuePriceRef,
 } from "../institutions/odds-registry/index.ts";
+import type { OddsEvent } from "../alpha/odds-types.ts";
 import { designAgent } from "../agent/design-agent.ts";
 import { baseCssVars, proseCss, themeToggleButton, themeChrome } from "../institutions/design-tokens.ts";
 import { themeManifest } from "../lib/color/theme.ts";
@@ -452,12 +455,15 @@ async function oddsValuePatternsResponse(): Promise<Response> {
 
 /**
  * GET /api/odds-report — Odds Heat report as Markdown (`?format=html` renders
- * it through the same Bun.markdown widget page as /docs). Same
- * declarations-only data state as /api/odds-value-patterns; live adapters
- * feed OddsEvent[] into buildOddsReportMarkdown for real rows. Feed-derived
- * strings are escaped at the source (report.ts escapeMarkdownCell) AND the
- * docs preset enables tagFilter — wire input never reaches HTML unescaped.
- * Content-addressed ETag/304 on the markdown body.
+ * it through the same Bun.markdown widget page as /docs). The report is wired
+ * to the Bun.XML feed: public/registry/odds-reference.xml parses through
+ * parseOddsXmlEvents (Bun.XML.parse) into OddsEvent[], venue refs drive
+ * detectValuePatterns, and both land in the report tables. When the feed file
+ * is missing/empty the route degrades to declarations_only (same data state
+ * as /api/odds-value-patterns). Feed-derived strings are escaped at the
+ * source (report.ts escapeMarkdownCell) AND the docs preset enables
+ * tagFilter — wire input never reaches HTML unescaped. Content-addressed
+ * ETag/304 on the markdown body.
  */
 async function oddsReportResponse(req: Request): Promise<Response> {
   const asHtml = new URL(req.url).searchParams.get("format") === "html";
@@ -471,10 +477,27 @@ async function oddsReportResponse(req: Request): Promise<Response> {
   } else {
     try {
       const config = await loadOddsRegistryConfig(ROOT);
+      // Bun.XML feed -> OddsEvent[] -> consensus + detector -> report. The
+      // reference feed pins soccer_epl/h2h (matches the pipeline bake).
+      let events: OddsEvent[] = [];
+      let dataState = "declarations_only";
+      const feedFile = Bun.file(joinPath(ROOT, "public/registry/odds-reference.xml"));
+      if (await feedFile.exists()) {
+        events = parseOddsXmlEvents(await feedFile.text(), { sportKey: "soccer_epl", market: "h2h" });
+        if (events.length > 0) dataState = "reference_feed";
+      }
+      let patterns;
+      if (events.length > 0) {
+        const refsFile = Bun.file(joinPath(ROOT, "public/registry/venue-refs.json"));
+        if (await refsFile.exists()) {
+          patterns = detectValuePatterns(events, (await refsFile.json()) as VenuePriceRef[]);
+        }
+      }
       markdown = buildOddsReportMarkdown({
-        events: [],
+        events,
+        ...(patterns ? { patterns } : {}),
         title: "Odds Heat Report",
-        dataState: "declarations_only",
+        dataState,
       });
       // Registry capacity rides in the header list until a live adapter feeds events.
       markdown = markdown.replace(
