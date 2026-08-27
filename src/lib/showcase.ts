@@ -19,7 +19,7 @@
  */
 import { readdirSync, readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
-import { markdownToHtml } from "./markdown.ts";
+import { docsLinkRewriter, markdownToStyledHtml } from "./markdown.ts";
 import { ROUTE_MANIFEST } from "../research/route-manifest.ts";
 import { TOKENS } from "../institutions/design-tokens.ts";
 
@@ -176,10 +176,11 @@ function buildSections(manifest: { sections: ManifestSection[]; options?: { merm
       });
       continue;
     }
-    // markdown: Bun.markdown.html through the docs preset (tagFilter +
-    // autolinks + heading ids) — prose lives in docs/showcase/*.md.
+    // markdown: styled renderer (Bun.markdown.render callbacks — heading
+    // ids, language-tagged codeblocks, tablewrap, external-link attrs) +
+    // docs-link rewriting; prose class applies the shared typography layer.
     const md = readRoot(s.source!);
-    out.push({ id: s.id, heading: s.heading, kind: "markdown", html: markdownToHtml(md, "docs") });
+    out.push({ id: s.id, heading: s.heading, kind: "markdown", html: `<div class="prose md">${markdownToStyledHtml(md, { rewriteHref: docsLinkRewriter() })}</div>` });
   }
   return out;
 }
@@ -265,6 +266,15 @@ export function renderShowcaseHtml(data: ShowcaseData, colors: ShowcaseColors = 
   .card .note { color:var(--dim); font-size:0.78rem; border-left:2px solid var(--acc); padding-left:0.6rem; }
   code { font-family:ui-monospace,Menlo,monospace; font-size:0.82rem; color:var(--acc); background:var(--panel); padding:0.1rem 0.35rem; border-radius:5px; }
   .mermaid { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:1rem; overflow-x:auto; }
+  .md h2 { font-size:1.05rem; margin:1.6em 0 0.6em; }
+  .md h3 { font-size:0.95rem; margin:1.4em 0 0.5em; }
+  .md p { font-size:0.88rem; margin:0.6em 0; }
+  .md ul, .md ol { margin:0.5em 0; padding-left:1.4em; font-size:0.88rem; }
+  .md li { margin:0.3em 0; }
+  .md code { font-size:0.82em; }
+  .md .codeblock { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:0.8rem 1rem; overflow-x:auto; max-width:100%; }
+  .md .codeblock code { background:transparent; padding:0; color:var(--fg); }
+  .md .tablewrap { overflow-x:auto; max-width:100%; }
   .tablewrap { overflow-x:auto; }
   pre { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:0.8rem 1rem; overflow-x:auto; max-width:100%; font-family:ui-monospace,Menlo,monospace; font-size:0.8rem; }
   pre code { background:transparent; padding:0; color:var(--fg); }
