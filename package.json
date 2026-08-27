@@ -210,6 +210,7 @@
     "deps:scan": "bun audit",
     "deps:tree": "bun pm ls --all",
     "release:version": "bun pm version",
+    "odds-registry:artifact": "bun tools/odds-registry-artifact.ts",
     "brand:pkg:generate": "bun tools/brand-package-gen.ts",
     "brand:pkg:check": "cd packages/brand && bun run publish:check",
     "brand:pkg:publish": "cd packages/brand && bun run publish:public",

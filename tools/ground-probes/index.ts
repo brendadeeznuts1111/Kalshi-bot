@@ -157,6 +157,13 @@ export const PROBES: Record<string, GroundProbe[]> = {
       const y: any = Bun.YAML.parse("key: value\nnested:\n  x: 1");
       return y?.key === "value" && y?.nested?.x === 1 ? ok() : bad(JSON.stringify(y));
     }),
+    p("fmt-8", "Bun.XML odds-heat", "odds feed contract: clusters/prints + american->decimal + singleton collapse", async () => {
+      const { parseOddsXmlEvents } = await import("../../src/institutions/odds-registry/xml-feed.ts");
+      const events = parseOddsXmlEvents('<odds-heat><cluster venue="Center Court"><print american="-150"/><print american="+120"/></cluster><cluster venue="Court 2"><print american="-200"/></cluster></odds-heat>');
+      const e0 = events[0];
+      const dec = e0?.bookmakers?.[0]?.markets?.[0]?.outcomes?.[0]?.price ?? 0;
+      return events.length === 2 && Math.abs(dec - 1.6667) < 0.001 ? ok("2 clusters, -150 -> 1.67") : bad(JSON.stringify(events.length));
+    }),
     p("fmt-7", "Bun.markdown", "markdown.html renders headings (1.4.0: object with html/ansi/render/react)", async () => {
       const m: string = (Bun.markdown as any).html("# Title\nBody");
       return m.includes("<h1>") ? ok() : bad(m.slice(0, 80));

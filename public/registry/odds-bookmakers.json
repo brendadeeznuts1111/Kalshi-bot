@@ -1,0 +1,421 @@
+{
+  "schema": "odds-bookmakers/v1",
+  "capacityFloor": 34,
+  "bookmakerCount": 38,
+  "feeds": [
+    "odds-api-v3",
+    "fonbet-ws",
+    "bun-xml"
+  ],
+  "sports": [
+    "basketball_nba",
+    "soccer_epl",
+    "tennis_atp",
+    "baseball_mlb",
+    "hockey_nhl"
+  ],
+  "bookmakers": [
+    {
+      "key": "10bet",
+      "name": "10BET",
+      "feed": "odds-api-v3",
+      "region": "us",
+      "markets": "h2h,spreads,totals",
+      "sports": [
+        "basketball_nba",
+        "soccer_epl",
+        "tennis_atp"
+      ]
+    },
+    {
+      "key": "12bet",
+      "name": "12bet",
+      "feed": "odds-api-v3",
+      "region": "us",
+      "markets": "h2h,spreads,totals",
+      "sports": [
+        "soccer_epl",
+        "tennis_atp"
+      ]
+    },
+    {
+      "key": "18bet",
+      "name": "18bet",
+      "feed": "odds-api-v3",
+      "region": "us",
+      "markets": "h2h,spreads,totals",
+      "sports": [
+        "soccer_epl",
+        "basketball_nba"
+      ]
+    },
+    {
+      "key": "1bet",
+      "name": "1Bet",
+      "feed": "odds-api-v3",
+      "region": "us",
+      "markets": "h2h,spreads,totals",
+      "sports": [
+        "tennis_atp",
+        "soccer_epl"
+      ]
+    },
+    {
+      "key": "1xbet",
+      "name": "1xbet",
+      "feed": "odds-api-v3",
+      "region": "us",
+      "markets": "h2h,spreads,totals",
+      "sports": [
+        "soccer_epl",
+        "tennis_atp"
+      ]
+    },
+    {
+      "key": "1xbit",
+      "name": "1xBit",
+      "feed": "odds-api-v3",
+      "region": "us",
+      "markets": "h2h,spreads,totals",
+      "sports": [
+        "soccer_epl"
+      ]
+    },
+    {
+      "key": "20bet",
+      "name": "20Bet",
+      "feed": "odds-api-v3",
+      "region": "us",
+      "markets": "h2h,spreads,totals",
+      "sports": [
+        "soccer_epl",
+        "tennis_atp"
+      ]
+    },
+    {
+      "key": "22bet",
+      "name": "22Bet",
+      "feed": "odds-api-v3",
+      "region": "us",
+      "markets": "h2h,spreads,totals",
+      "sports": [
+        "soccer_epl",
+        "basketball_nba",
+        "tennis_atp"
+      ]
+    },
+    {
+      "key": "31bet",
+      "name": "31Bet",
+      "feed": "odds-api-v3",
+      "region": "us",
+      "markets": "h2h,spreads,totals",
+      "sports": [
+        "soccer_epl"
+      ]
+    },
+    {
+      "key": "7bet-lt",
+      "name": "7Bet LT",
+      "feed": "odds-api-v3",
+      "region": "eu",
+      "markets": "h2h",
+      "sports": [
+        "soccer_epl"
+      ]
+    },
+    {
+      "key": "888sport",
+      "name": "888Sport",
+      "feed": "odds-api-v3",
+      "region": "us",
+      "markets": "h2h,spreads,totals",
+      "sports": [
+        "soccer_epl",
+        "basketball_nba",
+        "tennis_atp"
+      ]
+    },
+    {
+      "key": "888sport-ca",
+      "name": "888Sport CA",
+      "feed": "odds-api-v3",
+      "region": "ca",
+      "markets": "h2h",
+      "sports": [
+        "basketball_nba"
+      ]
+    },
+    {
+      "key": "888sport-it",
+      "name": "888Sport IT",
+      "feed": "odds-api-v3",
+      "region": "eu",
+      "markets": "h2h",
+      "sports": [
+        "soccer_epl"
+      ]
+    },
+    {
+      "key": "admiralbet-de",
+      "name": "AdmiralBet DE",
+      "feed": "odds-api-v3",
+      "region": "eu",
+      "markets": "h2h",
+      "sports": [
+        "soccer_epl"
+      ]
+    },
+    {
+      "key": "admiralbet-it",
+      "name": "AdmiralBet IT",
+      "feed": "odds-api-v3",
+      "region": "eu",
+      "markets": "h2h",
+      "sports": [
+        "soccer_epl"
+      ]
+    },
+    {
+      "key": "all-british-casino",
+      "name": "All British Casino",
+      "feed": "odds-api-v3",
+      "region": "eu",
+      "markets": "h2h",
+      "sports": [
+        "soccer_epl"
+      ]
+    },
+    {
+      "key": "alphawin",
+      "name": "AlphaWin",
+      "feed": "odds-api-v3",
+      "region": "eu",
+      "markets": "h2h",
+      "sports": [
+        "tennis_atp"
+      ]
+    },
+    {
+      "key": "apostamax",
+      "name": "Apostamax",
+      "feed": "odds-api-v3",
+      "region": "eu",
+      "markets": "h2h",
+      "sports": [
+        "soccer_epl"
+      ]
+    },
+    {
+      "key": "apostatudo",
+      "name": "Apostatudo",
+      "feed": "odds-api-v3",
+      "region": "eu",
+      "markets": "h2h",
+      "sports": [
+        "soccer_epl"
+      ]
+    },
+    {
+      "key": "atg-se",
+      "name": "ATG SE",
+      "feed": "odds-api-v3",
+      "region": "eu",
+      "markets": "h2h",
+      "sports": [
+        "tennis_atp"
+      ]
+    },
+    {
+      "key": "b2xbet",
+      "name": "B2xbet",
+      "feed": "odds-api-v3",
+      "region": "us",
+      "markets": "h2h",
+      "sports": [
+        "basketball_nba"
+      ]
+    },
+    {
+      "key": "bally-bet",
+      "name": "Bally Bet",
+      "feed": "odds-api-v3",
+      "region": "us",
+      "markets": "h2h,spreads,totals",
+      "sports": [
+        "basketball_nba",
+        "soccer_epl",
+        "tennis_atp"
+      ]
+    },
+    {
+      "key": "barrierebet-fr",
+      "name": "BarriereBet FR",
+      "feed": "odds-api-v3",
+      "region": "eu",
+      "markets": "h2h",
+      "sports": [
+        "soccer_epl"
+      ]
+    },
+    {
+      "key": "bc-game",
+      "name": "BC.Game",
+      "feed": "odds-api-v3",
+      "region": "us",
+      "markets": "h2h,spreads,totals",
+      "sports": [
+        "soccer_epl",
+        "basketball_nba",
+        "tennis_atp"
+      ]
+    },
+    {
+      "key": "bet365",
+      "name": "Bet365",
+      "feed": "odds-api-v3",
+      "region": "us",
+      "markets": "h2h,spreads,totals",
+      "sports": [
+        "soccer_epl",
+        "basketball_nba",
+        "tennis_atp",
+        "baseball_mlb",
+        "hockey_nhl"
+      ]
+    },
+    {
+      "key": "bet365-nj",
+      "name": "bet365 NJ",
+      "feed": "odds-api-v3",
+      "region": "us",
+      "markets": "h2h,spreads,totals",
+      "sports": [
+        "basketball_nba",
+        "soccer_epl",
+        "tennis_atp"
+      ]
+    },
+    {
+      "key": "bet7k",
+      "name": "Bet7k",
+      "feed": "odds-api-v3",
+      "region": "us",
+      "markets": "h2h",
+      "sports": [
+        "tennis_atp"
+      ]
+    },
+    {
+      "key": "bet9ja",
+      "name": "Bet9ja",
+      "feed": "odds-api-v3",
+      "region": "eu",
+      "markets": "h2h",
+      "sports": [
+        "soccer_epl"
+      ]
+    },
+    {
+      "key": "betano",
+      "name": "Betano",
+      "feed": "odds-api-v3",
+      "region": "us",
+      "markets": "h2h,spreads,totals",
+      "sports": [
+        "soccer_epl",
+        "basketball_nba",
+        "tennis_atp"
+      ]
+    },
+    {
+      "key": "betano-bg",
+      "name": "Betano BG",
+      "feed": "odds-api-v3",
+      "region": "eu",
+      "markets": "h2h",
+      "sports": [
+        "soccer_epl"
+      ]
+    },
+    {
+      "key": "betano-br",
+      "name": "Betano BR",
+      "feed": "odds-api-v3",
+      "region": "eu",
+      "markets": "h2h",
+      "sports": [
+        "soccer_epl"
+      ]
+    },
+    {
+      "key": "betano-ca",
+      "name": "Betano CA",
+      "feed": "odds-api-v3",
+      "region": "ca",
+      "markets": "h2h",
+      "sports": [
+        "basketball_nba"
+      ]
+    },
+    {
+      "key": "betano-cz",
+      "name": "Betano CZ",
+      "feed": "odds-api-v3",
+      "region": "eu",
+      "markets": "h2h",
+      "sports": [
+        "soccer_epl"
+      ]
+    },
+    {
+      "key": "betano-de",
+      "name": "Betano DE",
+      "feed": "odds-api-v3",
+      "region": "eu",
+      "markets": "h2h",
+      "sports": [
+        "soccer_epl"
+      ]
+    },
+    {
+      "key": "betano-dk",
+      "name": "Betano DK",
+      "feed": "odds-api-v3",
+      "region": "eu",
+      "markets": "h2h",
+      "sports": [
+        "soccer_epl"
+      ]
+    },
+    {
+      "key": "betano-mx",
+      "name": "Betano MX",
+      "feed": "odds-api-v3",
+      "region": "us",
+      "markets": "h2h",
+      "sports": [
+        "soccer_epl"
+      ]
+    },
+    {
+      "key": "fonbet",
+      "name": "FONBET",
+      "feed": "fonbet-ws",
+      "sports": [
+        "tennis_atp",
+        "soccer_epl"
+      ]
+    },
+    {
+      "key": "bun-xml-reference",
+      "name": "Bun XML Reference",
+      "feed": "bun-xml",
+      "endpoint": "https://example.com/odds.xml",
+      "sports": [
+        "tennis_atp"
+      ]
+    }
+  ],
+  "generatedAt": "2026-08-27T04:52:52.301Z"
+}
