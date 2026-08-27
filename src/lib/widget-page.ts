@@ -8,13 +8,16 @@ import { BRAND, DESIGN_SYSTEM_VERSION } from '../institutions/design-tokens.ts';
 export type WidgetRow = { cells: string[]; cls?: string };
 
 export function widgetTable(headers: string[], rows: WidgetRow[]): string {
-  const head = headers.map((h) => '<th>' + esc(h) + '</th>').join('');
+  // scope="col": column headers must name their column (1.3.1); the wrap
+  // div gives narrow viewports a one-axis scroll surface (1.4.10 reflow —
+  // data tables are the documented two-dimensional exception).
+  const head = headers.map((h) => '<th scope="col">' + esc(h) + '</th>').join('');
   const body = rows
     .map((r) =>
       '<tr' + (r.cls ? ' class="' + r.cls + '"' : '') + '>' + r.cells.map((c) => '<td>' + c + '</td>').join('') + '</tr>',
     )
     .join('');
-  return '<table><tr>' + head + '</tr>' + body + '</table>';
+  return '<div class="tablewrap"><table><tr>' + head + '</tr>' + body + '</table></div>';
 }
 
 export const W_VERIFIED = '<span class="badge ok">verified</span>';
@@ -52,7 +55,13 @@ export function renderWidgetPage(p: WidgetPage): string {
     '<title>' + esc(BRAND.name) + ' — ' + esc(p.title) + '</title>' +
     '<link rel="stylesheet" href="/design-system.css" />' +
     '<style>' +
-    'body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.5 -apple-system, \"SF Pro Text\", Segoe UI, sans-serif; padding: 2rem 2.5rem 4rem; }' +
+    'body { margin: 0; background: var(--bg); color: var(--fg); font: 0.875rem/1.5 -apple-system, "SF Pro Text", Segoe UI, sans-serif; padding: 2rem 2.5rem 4rem; }' +
+    'a:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }' +
+    '.skip { position: absolute; left: -9999px; }' +
+    '.skip:focus { left: 1rem; top: 1rem; z-index: 10; background: var(--panel); color: var(--fg); padding: 0.5rem 0.75rem; border: 1px solid var(--acc); }' +
+    '.tablewrap { overflow-x: auto; }' +
+    '@media (max-width: 480px) { body { padding: 1rem; } }' +
+    '@media print { .skip { display: none; } body { background: #fff; color: #000; padding: 0; } a { color: #000; } }' +
     'header { border-bottom: 1px solid var(--line); padding-bottom: 1rem; margin-bottom: 1.5rem; }' +
     'header h1 { margin: 0; font-size: 1.25rem; letter-spacing: 0.04em; }' +
     'header h1 span { color: var(--acc); }' +
@@ -70,10 +79,13 @@ export function renderWidgetPage(p: WidgetPage): string {
     'a { color: var(--acc); }' +
     'footer { color: var(--dim); font-size: 0.75rem; margin-top: 2rem; border-top: 1px solid var(--line); padding-top: 0.75rem; }' +
     '</style></head><body>' +
+    '<a class="skip" href="#main">Skip to content</a>' +
     '<header><h1>' + esc(BRAND.name) + ' <span>· ' + esc(p.title) + '</span></h1>' +
     '<p>' + esc(p.subtitle) + ' · Bun ' + esc(Bun.version) + ' · design v' + esc(DESIGN_SYSTEM_VERSION) + '</p>' +
     '<p>' + badges + (links ? ' · ' + links : '') + '</p></header>' +
+    '<main id="main">' +
     sections +
+    '</main>' +
     (p.footer ? '<footer>' + p.footer + '</footer>' : '') +
     '</body></html>';
 }
