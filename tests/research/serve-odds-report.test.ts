@@ -33,7 +33,7 @@ describe("/api/odds-report (Bun.XML feed wired)", () => {
     const md = await res.text();
     expect(md).toContain("## Books quoting");
     // bet365 is declared in the registry -> profile with meta url.
-    expect(md).toContain("| bet365 | Bet365 | odds-api-v3 | [link](https://www.bet365.com) |");
+    expect(md).toContain("| bet365 | Bet365 | odds-api-v3 | [www.bet365.com](https://www.bet365.com) |");
     // pinnacle/draftkings/williamhill quote the wire undeclared -> honest fallback.
     expect(md).toContain("| pinnacle | pinnacle | — | — | — | NO — wire-only venue |");
   });

@@ -137,7 +137,7 @@ describe("buildOddsReportMarkdown", () => {
       ],
     });
     expect(md).toContain("## Books quoting");
-    expect(md).toContain("| bet365 | Bet365 | odds-api-v3 | [link](https://www.bet365.com) | — | yes |");
+    expect(md).toContain("| bet365 | Bet365 | odds-api-v3 | [www.bet365.com](https://www.bet365.com) | — | yes |");
     expect(md).toContain("| mystery | Mystery | — | — | — | NO — wire-only venue |");
   });
 

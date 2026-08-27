@@ -17,6 +17,19 @@ describe("Bun capability widget pages", () => {
       const a = designAgent.audit(render());
       expect(a.issues, name).toEqual([]);
     });
+
+    // WCAG 2.2 chrome contract — every widget page, not just the report.
+    test(name + " page carries the a11y chrome (skip link, main, focus, print)", () => {
+      const html = render();
+      expect(html).toContain('<html lang="en">');
+      expect(html).toContain('class="skip" href="#main"');
+      expect(html).toContain('<main id="main">');
+      expect(html).toContain("a:focus-visible");
+      expect(html).toContain("@media print");
+      expect(html).toContain('<th scope="col">');
+      expect(html).toContain("tablewrap");
+      expect(html).toContain("0.875rem/1.5"); // rem body font (56)
+    });
   }
 
   test("streams page carries verified primitives and marks benchmarks", () => {

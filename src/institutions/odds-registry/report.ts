@@ -78,8 +78,19 @@ function booksTable(books: BookmakerProfile[]): string {
   ];
   for (const b of books) {
     const feed = b.feed ?? NO_META;
-    const url = b.url ? `[link](${escapeMarkdownCell(b.url)})` : NO_META;
-    const logo = b.logo ? `![](${escapeMarkdownCell(b.logo)})` : NO_META;
+    // Link text = URL hostname (never generic "link" — 2.4.4 link purpose).
+    let url = NO_META;
+    if (b.url) {
+      let host = "";
+      try {
+        host = new URL(b.url).host;
+      } catch {
+        host = "";
+      }
+      url = `[${escapeMarkdownCell(host || b.url)}](${escapeMarkdownCell(b.url)})`;
+    }
+    // Logo alt names the book (1.1.1) — never an empty alt.
+    const logo = b.logo ? `![${escapeMarkdownCell(b.name)} logo](${escapeMarkdownCell(b.logo)})` : NO_META;
     lines.push(
       `| ${escapeMarkdownCell(b.key)} | ${escapeMarkdownCell(b.name)} | ${escapeMarkdownCell(feed)} | ${url} | ${logo} | ${b.registered ? "yes" : "NO — wire-only venue"} |`,
     );
