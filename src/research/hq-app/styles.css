@@ -159,6 +159,8 @@ td.num, th.num { text-align: right; font-family: ui-monospace, SFMono-Regular, M
 @media (max-width: 900px) { .cols { grid-template-columns: 1fr; } }
 
 * { box-sizing: border-box; }
+/* a11y: touch target size >=44px for tabs + nav links (WCAG 2.5.8 AA) */
+nav.tabs button, header .links a { min-height: 2.75rem; display: inline-flex; align-items: center; }
 /* a11y: skip link, visible focus, print (WCAG 2.4.1/2.4.7/1.4.13 + print) */
 .skip-link { position: absolute; left: -9999px; top: 0; z-index: 20; background: var(--panel); padding: .5rem 1rem; }
 .skip-link:focus { left: .5rem; top: .5rem; }

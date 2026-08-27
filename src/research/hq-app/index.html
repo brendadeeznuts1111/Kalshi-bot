@@ -12,7 +12,7 @@
 <a class="skip-link" href="#main-content">Skip to content</a>
 <header>
   <h1>KALSHI <span>HQ</span></h1>
-  <span class="stamp" id="stamp">loading…</span>
+  <span class="stamp" id="stamp" aria-live="polite">loading…</span>
   <span class="links">
     <button type="button" class="glossary-open" id="glossary-open" title="Glossary">Glossary (?)</button>
     <a href="/">Research</a><a href="/ops">Ops</a><a href="/api/hq">API</a><a href="/api/glossary">Glossary API</a><a href="/api/design">Design</a><a href="/reports/latest.md">Report</a>
@@ -27,24 +27,24 @@
   <input type="search" id="glossary-search" class="glossary-search" placeholder="Search terms…" autocomplete="off" />
   <div id="glossary-body" class="glossary-body"></div>
 </aside>
-<div id="freshness" style="display:flex;gap:.5rem;flex-wrap:wrap;padding:.5rem 1.5rem;border-bottom:1px solid var(--line);font-size:.75rem"></div>
-<nav class="tabs">
-  <button data-tab="overview" class="active">Overview</button>
-  <button data-tab="research">Research</button>
-  <button data-tab="trading">Trading</button>
-  <button data-tab="events">Events</button>
-  <button data-tab="monitor">Monitor</button>
-  <button data-tab="alpha">Alpha & Calibration</button>
-  <button data-tab="ops">Ops</button>
+<div id="freshness" aria-live="polite" style="display:flex;gap:.5rem;flex-wrap:wrap;padding:.5rem 1.5rem;border-bottom:1px solid var(--line);font-size:.75rem"></div>
+<nav class="tabs" role="tablist" aria-label="Dashboard sections">
+  <button id="tab-btn-overview" data-tab="overview" class="active" role="tab" aria-selected="true" aria-controls="tab-overview">Overview</button>
+  <button id="tab-btn-research" data-tab="research" role="tab" aria-selected="false" aria-controls="tab-research">Research</button>
+  <button id="tab-btn-trading" data-tab="trading" role="tab" aria-selected="false" aria-controls="tab-trading">Trading</button>
+  <button id="tab-btn-events" data-tab="events" role="tab" aria-selected="false" aria-controls="tab-events">Events</button>
+  <button id="tab-btn-monitor" data-tab="monitor" role="tab" aria-selected="false" aria-controls="tab-monitor">Monitor</button>
+  <button id="tab-btn-alpha" data-tab="alpha" role="tab" aria-selected="false" aria-controls="tab-alpha">Alpha & Calibration</button>
+  <button id="tab-btn-ops" data-tab="ops" role="tab" aria-selected="false" aria-controls="tab-ops">Ops</button>
 </nav>
-<main>
-  <section id="tab-overview" class="tab active"></section>
-  <section id="tab-research" class="tab"></section>
-  <section id="tab-trading" class="tab"></section>
-  <section id="tab-events" class="tab"></section>
-  <section id="tab-monitor" class="tab"></section>
-  <section id="tab-alpha" class="tab"></section>
-  <section id="tab-ops" class="tab"></section>
+<main id="main-content">
+  <section id="tab-overview" class="tab active" role="tabpanel" aria-labelledby="tab-btn-overview"></section>
+  <section id="tab-research" class="tab" role="tabpanel" aria-labelledby="tab-btn-research"></section>
+  <section id="tab-trading" class="tab" role="tabpanel" aria-labelledby="tab-btn-trading"></section>
+  <section id="tab-events" class="tab" role="tabpanel" aria-labelledby="tab-btn-events"></section>
+  <section id="tab-monitor" class="tab" role="tabpanel" aria-labelledby="tab-btn-monitor"></section>
+  <section id="tab-alpha" class="tab" role="tabpanel" aria-labelledby="tab-btn-alpha"></section>
+  <section id="tab-ops" class="tab" role="tabpanel" aria-labelledby="tab-btn-ops"></section>
 </main>
 <script type="module" src="./app.js"></script>
 </body>

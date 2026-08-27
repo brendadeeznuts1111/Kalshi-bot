@@ -1380,12 +1380,34 @@ async function refresh() {
   renderOps(ops);
 }
 
-document.querySelectorAll("nav.tabs button").forEach((b) =>
-  b.addEventListener("click", () => {
-    document.querySelectorAll("nav.tabs button").forEach((x) => x.classList.toggle("active", x === b));
-    document.querySelectorAll("section.tab").forEach((s) =>
-      s.classList.toggle("active", s.id === "tab-" + b.dataset.tab));
-  }));
+// a11y (WCAG 2.4.7/2.4.11/4.1.2): tab pattern — aria-selected + arrow-key nav.
+const tabButtons = Array.from(document.querySelectorAll("nav.tabs button"));
+const activateTab = (b) => {
+  tabButtons.forEach((x) => {
+    const on = x === b;
+    x.classList.toggle("active", on);
+    x.setAttribute("aria-selected", on ? "true" : "false");
+  });
+  document.querySelectorAll("section.tab").forEach((s) =>
+    s.classList.toggle("active", s.id === "tab-" + b.dataset.tab));
+};
+tabButtons.forEach((b) => b.addEventListener("click", () => activateTab(b)));
+const tabNav = document.querySelector("nav.tabs");
+if (tabNav) {
+  tabNav.addEventListener("keydown", (ev) => {
+    if (ev.key !== "ArrowLeft" && ev.key !== "ArrowRight") return;
+    const activeIdx = tabButtons.findIndex((x) => x.classList.contains("active"));
+    const delta = ev.key === "ArrowRight" ? 1 : -1;
+    const next = tabButtons[(activeIdx + delta + tabButtons.length) % tabButtons.length];
+    if (next) { ev.preventDefault(); activateTab(next); next.focus(); }
+  });
+}
+
+// aria-current="page" on the header nav link matching the current path (3.2.3).
+const currentPath = location.pathname;
+document.querySelectorAll("header .links a").forEach((a) => {
+  if (a.getAttribute("href") === currentPath) a.setAttribute("aria-current", "page");
+});
 
 // ── Glossary panel (slide-over) + #glossary:id deeplinks ──
 
