@@ -6,6 +6,9 @@ fact below was read from those pages (live-fetched, pinned to the Bun v1.4.0 doc
 and cross-checked against the installed runtime (bun 1.4.0, 34cbb9a40) and
 `bun-types@1.4.0`. Local probes only corroborate — they never override the docs.
 
+**Web Blob core (`new Blob`, `File`, readers):** [`BLOB.md`](BLOB.md) — the
+cross-runtime Blob surface; this file is BunFile-specific.
+
 Legend: **[official]** bun.com guide/reference · **[probe]** runtime-verified on
 bun@1.4.0 in this repo · **[repo]** pinned by `tools/fs-probe.ts` (P#) /
 AGENT-PITFALLS · **[types]** `bun-types@1.4.0`.
