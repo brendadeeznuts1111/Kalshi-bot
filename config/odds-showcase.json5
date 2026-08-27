@@ -1,0 +1,29 @@
+// odds-showcase manifest — declarative source for docs/odds-heat-showcase.html
+// and GET /showcase + GET /api/showcase. Stats are RESOLVED from live repo
+// state at build time (source keys mapped in src/lib/showcase.ts); prose
+// sections render from docs/showcase/*.md through Bun.markdown.html (docs
+// preset: tagFilter + autolinks + heading ids). Edit this file — never the
+// generated HTML.
+{
+  schema: "odds-showcase/v1",
+  title: "Odds Heat — unified on Bun 1.4",
+  description: "One blob pipeline: Bun.XML → domain stores → consensus → markdown/ANSI. Bun.Image logos, keychain secrets via Bun.secrets, content-addressed metadata, isolated linker + global store.",
+  options: { mermaid: true, toc: true },
+  stats: [
+    { label: "books in registry", source: "registry:books" },
+    { label: "venues in store", source: "venues:count" },
+    { label: "logo PNGs baked", source: "logos:count" },
+    { label: "pipeline modules", source: "modules:count" },
+    { label: "pipeline lines", source: "modules:lines" },
+    { label: "focused tests", source: "tests:count" },
+    { label: "manifest routes", source: "routes:count" },
+  ],
+  sections: [
+    { id: "pipeline", heading: "Pipeline", kind: "mermaid", source: "docs/showcase/pipeline.mmd" },
+    { id: "unified-on-blob", heading: "Unified on Blob — Bun.XML", kind: "markdown", source: "docs/showcase/unified-on-blob.md" },
+    { id: "stores-state", heading: "Stores & state — metadata, secrets, linker", kind: "cards", source: "docs/showcase/stores-state.md" },
+    { id: "runtime-env", heading: "Runtime env — bootstrap-read", kind: "markdown", source: "docs/showcase/runtime-env.md" },
+    { id: "modules", heading: "Module inventory", kind: "modules" },
+  ],
+  links: ["/", "/docs", "/api/odds-report", "/api/showcase", "/llms.txt"],
+}

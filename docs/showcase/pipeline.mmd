@@ -1,0 +1,18 @@
+flowchart LR
+  subgraph ING["Ingestion — per-book feeds"]
+    A["odds-heat XML<br/>v3 JSON · ws"] -->|"bytes / Blob"| C["Bun.XML.parse<br/>SIMD · no deps"]
+    B["config/odds-registry.xml<br/>38 books"] --> C2["Bun.XML.parse<br/>(same parser)"]
+  end
+  C --> D["data-source ladder<br/>live → reference → declarations_only"]
+  D --> E["OddsEvent[]<br/>id · venue lat,long · book · source"]
+  E --> F["bookmakers.ts<br/>profiles: url/logo"]
+  E --> G["venue-store.ts<br/>venueKey · tz · aliases"]
+  E --> H["consensus-history.ts<br/>prior snapshot"]
+  E --> I["weather.ts<br/>(coords, commence)"]
+  F --> J["report.ts<br/>escape-at-source"]
+  G --> J
+  H --> J
+  I --> J
+  J --> K["Bun.markdown<br/>strict preset"] --> L["/api/odds-report<br/>ETag/304"]
+  J --> M["chips.ts<br/>Bun.color gradient"]
+  C2 -.->|"capacity floor ≥34"| D
