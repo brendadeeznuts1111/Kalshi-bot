@@ -9,8 +9,10 @@ import type { OddsEvent } from "../../../src/alpha/odds-types.ts";
 import {
   collisionChip,
   kickoffChip,
+  movementChip,
   renderOddsEventLine,
   renderOddsReportAnsi,
+  statusChip,
   styledRGB,
   tempToRGB,
   venueChip,
@@ -128,6 +130,31 @@ describe("kickoffChip", () => {
     expect(plain(kickoffChip("2026-09-01T19:00:00Z", "Europe/London"))).toContain("1 Sep 2026 at 20:00");
     expect(kickoffChip("0")).toBe("");
     expect(kickoffChip("")).toBe("");
+  });
+});
+
+describe("statusChip / movementChip", () => {
+  test("provenance chip: ● live vs ○ sim", () => {
+    expect(plain(statusChip("live"))).toBe("● live");
+    expect(plain(statusChip("simulated"))).toBe("○ sim");
+    expect(plain(statusChip(undefined))).toBe("○ sim");
+  });
+
+  test("movement chip: converging up, diverging down, stale silent", () => {
+    expect(plain(movementChip("converging"))).toBe("▲ converging");
+    expect(plain(movementChip("diverging"))).toBe("▼ diverging");
+    expect(movementChip("stale")).toBe("");
+  });
+
+  test("report line carries provenance; movement rides the report block", () => {
+    const live = mkEvent({ source: "live" as const });
+    expect(plain(renderOddsEventLine(live, { venueStore: STORE }))).toContain("● live");
+    const events = [live, mkEvent({ id: "g2" as never, homeTeam: "Gamma FC" })];
+    const block = plain(renderOddsReportAnsi(events, {
+      venueStore: STORE,
+      convergence: [{ eventId: "alpha-fc-vs-beta-fc-2026-09-01", side: "Alpha FC", kind: "diverging", severity: "watch", consensus: 0.5, priorConsensus: 0.5, spread: 0.1, priorSpread: 0.02, note: "" }],
+    }));
+    expect(block).toContain("▼ diverging");
   });
 });
 

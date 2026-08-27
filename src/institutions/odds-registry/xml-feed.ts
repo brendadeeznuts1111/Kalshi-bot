@@ -39,6 +39,9 @@ export interface OddsXmlParseOptions {
   market?: string;
   /** Commence time for the printed event (epoch ms or ISO string). */
   commenceTime?: number | string;
+  /** Wire provenance attached to the events (default "simulated" — an XML
+   * file/reference feed is simulated until a caller declares it live). */
+  source?: "live" | "simulated";
 }
 
 /**
@@ -145,6 +148,7 @@ export function parseOddsXmlEvents(input: string | Blob, opts: OddsXmlParseOptio
       homeTeam: home.name,
       awayTeam: away.name,
       ...(location ? { location } : {}),
+      source: opts.source ?? "simulated",
       bookmakers: [{
         key: bookKey,
         title: bookTitle,

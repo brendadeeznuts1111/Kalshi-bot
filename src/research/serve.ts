@@ -80,12 +80,17 @@ import { codedError, httpStatusFor, type ErrorCode } from "../institutions/error
 import {
   booksQuoting,
   buildOddsReportMarkdown,
+  classifyAgainstHistory,
   compareOddsVsVenues,
+  currentRecords,
   detectValuePatterns,
   loadOddsRegistryConfig,
+  loadSnapshotStore,
   loadVenueStore,
+  mergeRecords,
   oddsRegistryHealth,
   parseOddsXmlEvents,
+  saveSnapshotStore,
   statusCardSvg,
   type OddsRegistryConfig,
   type VenuePriceRef,
@@ -509,9 +514,19 @@ async function oddsReportResponse(req: Request): Promise<Response> {
           patterns = detectValuePatterns(events, (await refsFile.json()) as VenuePriceRef[]);
         }
       }
+      // Convergence: current consensus vs the prior stored snapshot, then
+      // record the current one. Persist-before-render keeps build N+1's
+      // "prior" honest even if the render fails.
+      let convergence;
+      if (events.length > 0) {
+        const store = await loadSnapshotStore(ROOT);
+        convergence = classifyAgainstHistory(store, events);
+        await saveSnapshotStore(ROOT, mergeRecords(store, currentRecords(events)));
+      }
       markdown = buildOddsReportMarkdown({
         events,
         ...(patterns ? { patterns } : {}),
+        ...(convergence && convergence.length > 0 ? { convergence } : {}),
         ...(events.length > 0 ? { books: booksQuoting(config, events) } : {}),
         venueStore: await loadVenueStore(ROOT),
         title: "Odds Heat Report",

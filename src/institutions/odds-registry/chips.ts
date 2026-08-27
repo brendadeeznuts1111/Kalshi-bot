@@ -15,8 +15,9 @@
  * missing location/weather/collisions collapse away instead of printing
  * dashes — terminal rows stay short and honest.
  */
-import type { EventLocation, EventWeather, OddsEvent } from "../../alpha/odds-types.ts";
+import type { EventLocation, EventSource, EventWeather, OddsEvent } from "../../alpha/odds-types.ts";
 import { paint } from "../../lib/color/index.ts";
+import type { ConvergencePattern } from "./value-patterns.ts";
 import { localKickoff, venueCollisionCounts, venueKeyFor, venueProfileFor, type VenueStore } from "./venue-store.ts";
 
 /** Weather glyph per report condition (describeWeatherCode outputs). */
@@ -128,6 +129,26 @@ export function collisionChip(count: number): string {
   return paint(`⟨${count} events⟩`, "trading");
 }
 
+/** `● live` / `○ sim` wire-provenance chip. */
+export function statusChip(source?: "live" | "simulated"): string {
+  return source === "live"
+    ? paint("● live", "tennis")
+    : paint("○ sim", "middleware");
+}
+
+/** `▲ converging` / `▼ diverging` movement chip from a convergence verdict. */
+export function movementChip(kind: ConvergencePattern["kind"]): string {
+  switch (kind) {
+    case "converging":
+    case "venue_converging":
+      return paint("▲ converging", "tennis");
+    case "diverging":
+      return paint("▼ diverging", "trading");
+    default:
+      return "";
+  }
+}
+
 export type OddsEventLineOptions = {
   /** Venue identity store (name/city/timezone); coords fallback without it. */
   venueStore?: VenueStore;
@@ -137,14 +158,18 @@ export type OddsEventLineOptions = {
 
 /**
  * One ANSI line per event — the terminal Matches row:
- *   `Alpha FC vs Beta FC · ⌖ Alpha Park, London · ◷ 1 Sep 2026 at 20:00 · ☀ 22°C`
- * Collision chips are feed-wide, so they are appended by
- * {@link renderOddsReportAnsi}, not here (single-event context has none).
+ *   `● live · Alpha FC vs Beta FC · ⌖ Alpha Park, London · ◷ 1 Sep 2026 at 20:00 · ☀ 22°C`
+ * Collision chips are feed-wide and movement chips are verdict-level, so
+ * they are appended by {@link renderOddsReportAnsi}, not here.
  */
-export function renderOddsEventLine(ev: OddsEvent, options: OddsEventLineOptions = {}): string {
+export function renderOddsEventLine(
+  ev: OddsEvent,
+  options: OddsEventLineOptions = {},
+): string {
   const match = `${ev.homeTeam} vs ${ev.awayTeam}`;
   const profile = ev.location ? venueProfileFor(options.venueStore, ev.location) : undefined;
   const segments = [
+    statusChip(ev.source),
     paint(match, "research"),
     venueChip(ev.location, options.venueStore),
     kickoffChip(ev.commenceTime, profile?.timezone),
@@ -154,18 +179,34 @@ export function renderOddsEventLine(ev: OddsEvent, options: OddsEventLineOptions
 }
 
 /**
- * ANSI report block — header + one line per event. The collision chip uses
- * feed-wide counts (an event shares its venue with the whole feed, not just
- * itself).
+ * ANSI report block — header + one line per event. Collision chips use
+ * feed-wide counts; movement chips key off convergence verdicts by
+ * event id (first side verdict wins, ordered converging > diverging).
  */
-export function renderOddsReportAnsi(events: OddsEvent[], options: OddsEventLineOptions = {}): string {
+export function renderOddsReportAnsi(
+  events: OddsEvent[],
+  options: OddsEventLineOptions & { convergence?: ConvergencePattern[] } = {},
+): string {
   const collisions = venueCollisionCounts(events);
+  const movementByEvent = new Map<string, ConvergencePattern["kind"]>();
+  for (const c of options.convergence ?? []) {
+    const rank = (k: ConvergencePattern["kind"]) => (k === "diverging" ? 0 : 1);
+    const existing = movementByEvent.get(c.eventId);
+    if (!existing || rank(c.kind) < rank(existing)) movementByEvent.set(c.eventId, c.kind);
+  }
   const lines = [
     paint(`Odds Heat — ${events.length} event(s)`, "research"),
     ...events.map((ev) => {
+      let line = renderOddsEventLine(ev, options);
       const count = ev.location ? (collisions.get(venueKeyFor(ev.location)) ?? 0) : 0;
-      const chip = collisionChip(count);
-      return chip ? `${renderOddsEventLine(ev, options)} ${chip}` : renderOddsEventLine(ev, options);
+      const collision = collisionChip(count);
+      if (collision) line += ` ${collision}`;
+      const movement = movementByEvent.get(ev.id);
+      if (movement) {
+        const chip = movementChip(movement);
+        if (chip) line += ` ${chip}`;
+      }
+      return line;
     }),
   ];
   return lines.join("\n");

@@ -156,6 +156,7 @@ export function parseV3OddsWire(wire: unknown): OddsEvent[] {
       commenceTime: commenceRaw,
       homeTeam: homeRaw,
       awayTeam: awayRaw,
+      source: "live",
       bookmakers,
     });
   }

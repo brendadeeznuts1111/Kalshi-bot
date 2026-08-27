@@ -92,7 +92,7 @@ export async function connectBookmaker(
       const res = await fetchWithRetry(endpoint);
       if (!res.ok) throw new Error(bk.key + " XML feed HTTP " + res.status);
       const text = await res.text();
-      const events = parseOddsXmlEvents(text, { sportKey, market });
+      const events = parseOddsXmlEvents(text, { sportKey, market, source: "live" });
       return { bookmakerKey, feed: bk.feed, sportKey, events, fromCache: false, meta: bk.meta };
     }
     case "fonbet-ws": {
