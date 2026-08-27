@@ -7,7 +7,7 @@
 <meta name="generator" content="Bun 1.4.0" />
 <title>Odds Heat — unified on Bun 1.4</title>
 <style>
-  :root { --bg:#0b0e14; --panel:#131826; --fg:#d7dee9; --dim:#8b95a7; --acc:#4da3ff; --line:#232b3a; }
+  :root { --bg:#0b0e14; --panel:#12161f; --line:#232a3a; --fg:#d7dee9; --dim:#7d8798; --acc:#4da3ff; --warn:#e0a93e; }
   * { box-sizing:border-box; }
   body { margin:0 auto; max-width:1200px; background:var(--bg); color:var(--fg); font:0.95rem/1.55 -apple-system,"Segoe UI",sans-serif; padding:2rem clamp(1rem,4vw,3rem) 4rem; }
   a { color:var(--acc); }
@@ -24,21 +24,25 @@
   .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:1rem 1.2rem; }
   .card p { font-size:0.88rem; margin:0.35rem 0; }
   .card .note { color:var(--dim); font-size:0.78rem; border-left:2px solid var(--acc); padding-left:0.6rem; }
-  code { font-family:ui-monospace,Menlo,monospace; font-size:0.82rem; color:var(--acc); background:#0d1220; padding:0.1rem 0.35rem; border-radius:5px; }
+  code { font-family:ui-monospace,Menlo,monospace; font-size:0.82rem; color:var(--acc); background:var(--panel); padding:0.1rem 0.35rem; border-radius:5px; }
   .mermaid { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:1rem; overflow-x:auto; }
   .tablewrap { overflow-x:auto; }
+  pre { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:0.8rem 1rem; overflow-x:auto; max-width:100%; font-family:ui-monospace,Menlo,monospace; font-size:0.8rem; }
+  pre code { background:transparent; padding:0; color:var(--fg); }
+  ol { margin:0.4rem 0; padding-left:1.4rem; }
+  ol li { margin:0.25rem 0; }
   table { width:100%; border-collapse:collapse; font-size:0.85rem; }
   th,td { text-align:left; padding:0.45rem 0.6rem; border-bottom:1px solid var(--line); vertical-align:top; }
   th { color:var(--dim); font-weight:600; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; }
   td.num { text-align:right; color:var(--acc); font-family:ui-monospace,monospace; }
   .toc { color:var(--dim); font-size:0.85rem; }
   @media (max-width: 480px) { body { padding:1rem; } }
-  @media print { body { background:#fff; color:#000; } a { color:#000; } .mermaid { border-color:#000; } }
+  @media print { body { background:var(--panel); color:var(--fg); } a { color:var(--fg); } .skip, .statbar { display:none; } }
   footer { margin-top:3rem; color:var(--dim); font-size:0.78rem; border-top:1px solid var(--line); padding-top:0.8rem; }
 </style></head><body>
 <h1>Odds Heat <span>· unified on Bun 1.4</span></h1>
 <p class="sub">One blob pipeline: Bun.XML → domain stores → consensus → markdown/ANSI. Bun.Image logos, keychain secrets via Bun.secrets, content-addressed metadata, isolated linker + global store.</p>
-<div class="statbar"><div class="stat"><b>38</b><span>books in registry</span></div><div class="stat"><b>2</b><span>venues in store</span></div><div class="stat"><b>38</b><span>logo PNGs baked</span></div><div class="stat"><b>12</b><span>pipeline modules</span></div><div class="stat"><b>1881</b><span>pipeline lines</span></div><div class="stat"><b>98</b><span>focused tests</span></div><div class="stat"><b>115</b><span>manifest routes</span></div></div>
+<div class="statbar"><div class="stat"><b>38</b><span>books in registry</span></div><div class="stat"><b>2</b><span>venues in store</span></div><div class="stat"><b>38</b><span>logo PNGs baked</span></div><div class="stat"><b>12</b><span>pipeline modules</span></div><div class="stat"><b>1893</b><span>pipeline lines</span></div><div class="stat"><b>98</b><span>focused tests</span></div><div class="stat"><b>115</b><span>manifest routes</span></div></div>
 <p class="toc">Contents: <a href="#pipeline">1 · Pipeline</a> · <a href="#unified-on-blob">2 · Unified on Blob — Bun.XML</a> · <a href="#stores-state">3 · Stores &amp; state — metadata, secrets, linker</a> · <a href="#runtime-env">4 · Runtime env — bootstrap-read</a> · <a href="#modules">5 · Module inventory</a></p>
 <main id="main">
 <section id="pipeline"><h2>Pipeline</h2><div class="mermaid"><pre class="mermaid">flowchart LR
@@ -78,6 +82,12 @@
   C2 -.-&gt;|&quot;capacity floor ≥34&quot;| D</pre></noscript></div></section>
 <section id="unified-on-blob"><h2>Unified on Blob — Bun.XML</h2><p>One parser, every source. Wire feeds, the 38-book registry config, and reference fixtures all parse through <code>Bun.XML.parse</code> — string, Blob, Buffer, or Uint8Array. SIMD-backed, zero hand-rolled XML in the repo.</p>
 <p>Probed: a bare <code>BunFile</code> is rejected — ingest wraps bytes in a <code>Blob</code> first (<code>xml-feed.test</code>: Blob input parses identically to string).</p>
+<h2 id="the-source-ladder-numbered"><a href="#the-source-ladder-numbered">The source ladder (numbered)</a></h2>
+<ol>
+<li><strong>Live</strong> — <code>connectAllBookmakers</code> fans out per registry book; per-book results merge by match identity; provenance stamped <code>live</code>.</li>
+<li><strong>Reference feed</strong> — <code>public/registry/odds-reference.xml</code> (three matches, two venues); provenance <code>simulated</code>.</li>
+<li><strong><code>declarations_only</code></strong> — capacity + structure render with empty tables.</li>
+</ol>
 <h2 id="compact-shape-domain-split"><a href="#compact-shape-domain-split">Compact shape → domain split</a></h2>
 <p>Attributes surface as <code>@keys</code>, repeated children as arrays, singleton collapse guarded by <code>asArray</code>. The wire split:</p>
 <ul>
@@ -88,6 +98,9 @@
 <h2 id="failure-surface"><a href="#failure-surface">Failure surface</a></h2>
 <p>Unparseable prints drop; malformed/out-of-range coordinates attach no location; identity-less clusters stay standalone <code>event</code> placeholders. The report degrades per row — never a 500.</p>
 <p>Escape contract: every feed-derived cell goes through <code>escapeMarkdownCell</code> before markdown assembly, and HTML rendering uses the <code>strict</code> preset (<code>tagFilter</code> + <code>noHtmlBlocks</code> + <code>noHtmlSpans</code>) — hostile wire input renders inert.</p>
+<pre><code class="language-bash"># the whole wire contract, as one query against the parser
+bun -e 'console.log(Bun.XML.parse(`&lt;odds-heat cluster venue=&quot;51.5074,-0.1278&quot; book=&quot;bet365&quot;&gt;&lt;print american=&quot;-110&quot;/&gt;&lt;/odds-heat&gt;`))'
+</code></pre>
 </section>
 <section id="stores-state"><h2>Stores &amp; state — metadata, secrets, linker</h2><h2 id="metadata-integrity"><a href="#metadata-integrity">Metadata &amp; integrity</a></h2>
 <p>Content-addressed ETags: sha-256 of the report/docs body → <code>If-None-Match</code> 304. The maps.toml triple-lock hashes runtime version + bun-types + docs ref via <code>Bun.hash</code>, self-healed by <code>docs:refresh</code>. Bundle budgets come from <code>--metafile-md</code> with contributor caps (and <code>routes:check</code> keeps the manifest honest — it caught <code>/api/odds-report</code> itself).</p>
@@ -99,9 +112,9 @@
 <section id="runtime-env"><h2>Runtime env — bootstrap-read</h2><p><code>NO_COLOR</code> / <code>FORCE_COLOR</code> / <code>TERM</code> set color depth at bootstrap; runtime mutation is invisible (probed). Probed matrix: <code>FORCE_COLOR</code> overrides <code>NO_COLOR</code> and caps depth (<code>=1</code> downgrades the chip gradient to 16-color; <code>COLORTERM=truecolor</code> does not rescue). <code>check.yml</code> pins <code>NO_COLOR=1</code> for deterministic tests.</p>
 <p><code>ODDS_LIVE_FEED=1</code> opens the live ladder; everything else stays simulated by default.</p>
 </section>
-<section id="modules"><h2>Module inventory</h2><div class="tablewrap"><table><thead><tr><th scope="col">Module</th><th scope="col">Bun primitive</th><th scope="col">Responsibility</th><th scope="col">Lines</th></tr></thead><tbody><tr><td><code>xml-feed.ts</code></td><td>Bun.XML.parse</td><td>odds-heat clusters → OddsEvent (match ids, venue coords, book keys)</td><td class="num">168</td></tr><tr><td><code>data-source.ts</code></td><td>fetch + ladder</td><td>live books → reference feed → declarations_only</td><td class="num">113</td></tr><tr><td><code>feed-client.ts</code></td><td>fetch + &lt;meta&gt;</td><td>per-book feeds, per-book failure isolation</td><td class="num">150</td></tr><tr><td><code>bookmakers.ts</code></td><td>profile store</td><td>name/feed/region/url/logo; registered:false fallback</td><td class="num">102</td></tr><tr><td><code>venue-store.ts</code></td><td>store</td><td>venueKey (4dp) · name/city/tz · aliases · collisions</td><td class="num">108</td></tr><tr><td><code>consensus-history.ts</code></td><td>Bun.file persistence</td><td>per (event, side) snapshots → classifyConvergence</td><td class="num">121</td></tr><tr><td><code>weather.ts</code></td><td>fetch + AbortSignal.timeout</td><td>(coords, commence) → EventWeather (Open-Meteo, no key)</td><td class="num">109</td></tr><tr><td><code>report.ts</code></td><td>Bun.markdown</td><td>escape-at-source → Markdown → strict HTML preset</td><td class="num">296</td></tr><tr><td><code>chips.ts</code></td><td>Bun.color + paint()</td><td>ANSI chips: provenance, gradient, collision, movement</td><td class="num">214</td></tr><tr><td><code>book-logos.ts</code></td><td>Bun.WebView</td><td>38 branded logo PNGs, rasterized + idempotent</td><td class="num">113</td></tr><tr><td><code>value-patterns.ts</code></td><td>pure math</td><td>consensus vs venue value detector + convergence</td><td class="num">298</td></tr><tr><td><code>display.ts</code></td><td>Bun.WebView</td><td>status card SVG/PNG (Bun.Image cannot decode SVG — probed)</td><td class="num">89</td></tr></tbody></table></div></section>
+<section id="modules"><h2>Module inventory</h2><div class="tablewrap"><table><thead><tr><th scope="col">Module</th><th scope="col">Bun primitive</th><th scope="col">Responsibility</th><th scope="col">Lines</th></tr></thead><tbody><tr><td><code>xml-feed.ts</code></td><td>Bun.XML.parse</td><td>odds-heat clusters → OddsEvent (match ids, venue coords, book keys)</td><td class="num">168</td></tr><tr><td><code>data-source.ts</code></td><td>fetch + ladder</td><td>live books → reference feed → declarations_only</td><td class="num">113</td></tr><tr><td><code>feed-client.ts</code></td><td>fetch + &lt;meta&gt;</td><td>per-book feeds, per-book failure isolation</td><td class="num">150</td></tr><tr><td><code>bookmakers.ts</code></td><td>profile store</td><td>name/feed/region/url/logo; registered:false fallback</td><td class="num">102</td></tr><tr><td><code>venue-store.ts</code></td><td>store</td><td>venueKey (4dp) · name/city/tz · aliases · collisions</td><td class="num">108</td></tr><tr><td><code>consensus-history.ts</code></td><td>Bun.file persistence</td><td>per (event, side) snapshots → classifyConvergence</td><td class="num">121</td></tr><tr><td><code>weather.ts</code></td><td>fetch + AbortSignal.timeout</td><td>(coords, commence) → EventWeather (Open-Meteo, no key)</td><td class="num">109</td></tr><tr><td><code>report.ts</code></td><td>Bun.markdown</td><td>escape-at-source → Markdown → strict HTML preset</td><td class="num">296</td></tr><tr><td><code>chips.ts</code></td><td>Bun.color + paint()</td><td>ANSI chips: provenance, gradient, collision, movement</td><td class="num">214</td></tr><tr><td><code>book-logos.ts</code></td><td>Bun.WebView</td><td>38 branded logo PNGs, rasterized + idempotent</td><td class="num">125</td></tr><tr><td><code>value-patterns.ts</code></td><td>pure math</td><td>consensus vs venue value detector + convergence</td><td class="num">298</td></tr><tr><td><code>display.ts</code></td><td>Bun.WebView</td><td>status card SVG/PNG (Bun.Image cannot decode SVG — probed)</td><td class="num">89</td></tr></tbody></table></div></section>
 </main>
-<footer>Generated 2026-08-27T22:45:59.570Z · Bun 1.4.0 · manifest: config/odds-showcase.json5 · API: <a href="/api/showcase">/api/showcase</a> · links: <a href="/">/</a> · <a href="/docs">/docs</a> · <a href="/api/odds-report">/api/odds-report</a> · <a href="/api/showcase">/api/showcase</a> · <a href="/llms.txt">/llms.txt</a></footer>
+<footer>Generated 2026-08-27T23:07:59.055Z · Bun 1.4.0 · manifest: config/odds-showcase.json5 · API: <a href="/api/showcase">/api/showcase</a> · links: <a href="/">/</a> · <a href="/docs">/docs</a> · <a href="/api/odds-report">/api/odds-report</a> · <a href="/api/showcase">/api/showcase</a> · <a href="/llms.txt">/llms.txt</a></footer>
 <script type="module">
   try {
     const mod = await import("https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs");
