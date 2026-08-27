@@ -1035,7 +1035,7 @@ Two layers:
 | **Global store** | `~/.bun/install/cache/${name}@${version}` | Canonical extracted package bytes (shared across projects on the machine) |
 | **Project tree** | `./node_modules/` (gitignored here) | Per-project layout — hoisted flat or isolated `.bun/` + symlinks |
 
-Monorepo **machine** policy ([`docs/UNIFIED.md`](../../docs/UNIFIED.md) on the parent `Projects` tree) sets absolute `[install.cache].dir`, `globalStore = true`, and `linker = isolated` in `~/.bunfig.toml`. **This repo’s** [`bunfig.toml`](../bunfig.toml) does not duplicate those machine-owned keys; it only carries project install, run, and console behavior.
+Monorepo **machine** policy ([`docs/UNIFIED.md`](https://github.com/brendadeeznuts1111/project-R-score/blob/main/docs/UNIFIED.md) on the parent `Projects` tree) sets absolute `[install.cache].dir`, `globalStore = true`, and `linker = isolated` in `~/.bunfig.toml`. **This repo’s** [`bunfig.toml`](../bunfig.toml) does not duplicate those machine-owned keys; it only carries project install, run, and console behavior.
 
 Registry metadata (versions, dist-tags) is cached separately as binary `~/.bun/install/cache/*.npm` (hashed package name). Bun ignores `Cache-Control: Age` on registry responses — metadata can lag npm by ~5 minutes.
 
@@ -1059,7 +1059,7 @@ $(bun pm cache)/                    # default ~/.bun/install/cache
 
 **Registry metadata** — `*.npm` files use `${hash(packageName)}.npm` so scoped packages do not need extra directory nesting ([install docs](https://bun.com/docs/pm/cli/install)).
 
-**Global virtual store** — when `globalStore = true` (monorepo machine default in [`docs/UNIFIED.md`](../../docs/UNIFIED.md)), isolated installs also materialize under `cache/links/` with a 16-hex `entry_hash` suffix encoding the resolved dependency closure ([global virtual store](https://bun.com/docs/pm/global-store)). Project `node_modules/.bun/<pkg>@<version>` symlinks there; `readlink` on those paths is the reliable way to see the canonical on-disk tree.
+**Global virtual store** — when `globalStore = true` (monorepo machine default in [`docs/UNIFIED.md`](https://github.com/brendadeeznuts1111/project-R-score/blob/main/docs/UNIFIED.md)), isolated installs also materialize under `cache/links/` with a 16-hex `entry_hash` suffix encoding the resolved dependency closure ([global virtual store](https://bun.com/docs/pm/global-store)). Project `node_modules/.bun/<pkg>@<version>` symlinks there; `readlink` on those paths is the reliable way to see the canonical on-disk tree.
 
 **Practical lookup** (once deps exist):
 
@@ -1157,7 +1157,7 @@ bun pm cache rm                    # clear ~/.bun/install/cache
 | Lockfile / `configVersion` | https://bun.com/docs/pm/lockfile |
 | Isolated vs hoisted | https://bun.com/docs/pm/isolated-installs |
 | `bunfig.toml` `[install]` | https://bun.com/docs/runtime/bunfig |
-| Monorepo machine install policy | [`docs/UNIFIED.md`](../../docs/UNIFIED.md) (parent `Projects` repo) |
+| Monorepo machine install policy | [`docs/UNIFIED.md`](https://github.com/brendadeeznuts1111/project-R-score/blob/main/docs/UNIFIED.md) (parent `Projects` repo) |
 
 ## TypeScript
 

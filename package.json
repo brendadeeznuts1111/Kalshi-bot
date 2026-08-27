@@ -33,7 +33,7 @@
     "report:term": "bun src/agent/report-term.ts",
     "report:diff": "bun src/agent/report-term.ts research/reports/latest.diff.md",
     "findings:term": "bun src/agent/report-term.ts docs/BUN_BUILD_FINDINGS.md",
-    "test": "bun test --isolate --parallel --timings=.bun-test-timings.json --timeout 15000",
+    "test": "NO_COLOR=1 bun test --isolate --parallel --timings=.bun-test-timings.json --timeout 15000",
     "test:record-timings": "bun test --parallel --timings=.bun-test-timings.json --update-timings --timeout 15000",
     "test:parallel": "bun test --isolate --parallel",
     "test:changed": "bun test --changed",

@@ -2412,9 +2412,14 @@ export function createResearchServer(options: ServeOptions = {}) {
         const f = Bun.file(joinPath(LIVE_TRACKER_LOG_DIR, file));
         if (!file || !(await f.exists())) {
           const available: string[] = [];
-          const evGlob = new Bun.Glob("*.jsonl");
-          for await (const name of evGlob.scan({ cwd: LIVE_TRACKER_LOG_DIR })) {
-            available.push(name);
+          try {
+            const evGlob = new Bun.Glob("*.jsonl");
+            for await (const name of evGlob.scan({ cwd: LIVE_TRACKER_LOG_DIR })) {
+              available.push(name);
+            }
+          } catch {
+            // Missing log directory (fresh checkout before any live-tracker
+            // run) — an empty listing is the truth, not a 500.
           }
           return json(
             { error: "no such log file: " + (file || "(none)"), available: available.slice(-10) },
