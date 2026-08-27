@@ -2,7 +2,7 @@
  * xml-feed tests — Bun.XML odds-heat -> OddsEvent normalization.
  */
 import { describe, expect, test } from "bun:test";
-import { americanToDecimal, parseOddsXmlEvents } from "../../../src/institutions/odds-registry/index.ts";
+import { americanToDecimal, parseEventLocation, parseOddsXmlEvents } from "../../../src/institutions/odds-registry/index.ts";
 
 const FEED = '<odds-heat><cluster venue="Center Court"><print american="-150"/><print american="+120"/></cluster><cluster venue="Court 2"><print american="-200"/></cluster></odds-heat>';
 
@@ -67,5 +67,32 @@ describe("parseOddsXmlEvents (Bun.XML)", () => {
     expect(events.map((e) => String(e.id))).toEqual(["event", "event"]);
     // The venue still identifies the BOOKMAKER even when the event cannot.
     expect(events[0]!.bookmakers[0]!.key).toBe("center-court");
+  });
+
+  test("venue is the match location (lat,long); book attr names the bookmaker", () => {
+    const events = parseOddsXmlEvents(
+      '<odds-heat>'
+        + '<cluster venue="51.5074,-0.1278" book="bet365" commence="2026-09-01T19:00:00Z"><print name="Alpha FC" american="-200"/><print name="Beta FC" american="+150"/></cluster>'
+        + '<cluster venue="51.5074,-0.1278" book="pinnacle" commence="2026-09-01T19:00:00Z"><print name="Alpha FC" american="-190"/><print name="Beta FC" american="+160"/></cluster>'
+        + '</odds-heat>',
+      { sportKey: "soccer_epl" },
+    );
+    expect(events).toHaveLength(1);
+    expect(events[0]!.location).toEqual({ lat: 51.5074, long: -0.1278 });
+    expect(events[0]!.bookmakers.map((b) => b.key)).toEqual(["bet365", "pinnacle"]);
+    // Out-of-range or malformed venue strings attach no location.
+    const bad = parseOddsXmlEvents(
+      '<odds-heat><cluster venue="999,9999" book="bet365"><print name="A" american="-110"/><print name="B" american="+100"/></cluster></odds-heat>',
+    );
+    expect(bad[0]!.location).toBeUndefined();
+  });
+
+  test("parseEventLocation guards malformed and out-of-range input", () => {
+    expect(parseEventLocation("51.5074,-0.1278")).toEqual({ lat: 51.5074, long: -0.1278 });
+    expect(parseEventLocation("51.5074, -0.1278")).toEqual({ lat: 51.5074, long: -0.1278 });
+    expect(parseEventLocation("91,0")).toBeNull();
+    expect(parseEventLocation("0,181")).toBeNull();
+    expect(parseEventLocation("x,y")).toBeNull();
+    expect(parseEventLocation("51.5074")).toBeNull();
   });
 });

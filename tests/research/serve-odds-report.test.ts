@@ -19,8 +19,11 @@ describe("/api/odds-report (Bun.XML feed wired)", () => {
     expect(res.headers.get("content-type")).toContain("text/markdown");
     const md = await res.text();
     expect(md).toContain("Data state: reference_feed");
-    // Event id is the MATCH (teams + commence date), never the venue.
+    // Event id is the MATCH (teams + commence date), never the venue/book.
     expect(md).toContain("| alpha-fc-vs-beta-fc-2026-09-01 | Alpha FC | 4 |");
+    // Venue is the match location; books are separate.
+    expect(md).toContain("## Matches");
+    expect(md).toContain("| 51.5074, -0.1278 | 2026-09-01T19:00:00Z |");
     expect(md).toContain("venue_undervalued");
   });
 

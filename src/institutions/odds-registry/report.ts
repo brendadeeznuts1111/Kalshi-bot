@@ -134,6 +134,20 @@ export function oddsReportConsensus(events: OddsEvent[]): OddsReportConsensusRow
   );
 }
 
+function matchesTable(events: OddsEvent[]): string {
+  const lines = [
+    "| Event | Match | Venue (lat, long) | Commence |",
+    "| --- | --- | --- | --- |",
+  ];
+  for (const ev of events) {
+    const venue = ev.location ? `${ev.location.lat}, ${ev.location.long}` : NO_META;
+    lines.push(
+      `| ${escapeMarkdownCell(ev.id)} | ${escapeMarkdownCell(ev.homeTeam)} vs ${escapeMarkdownCell(ev.awayTeam)} | ${escapeMarkdownCell(venue)} | ${escapeMarkdownCell(ev.commenceTime)} |`,
+    );
+  }
+  return lines.join("\n");
+}
+
 function consensusTable(rows: OddsReportConsensusRow[]): string {
   const lines = [
     "| Event | Side | Bookmakers | Consensus | Spread |",
@@ -193,6 +207,11 @@ export function buildOddsReportMarkdown(input: OddsReportInput): string {
     `- Events: ${input.events.length} · bookmakers seen: ${bookmakers.size} · consensus sides: ${consensus.length}`,
   ];
   if (input.dataState) lines.push(`- Data state: ${escapeMarkdownCell(input.dataState)}`);
+
+  if (input.events.length > 0) {
+    lines.push("", "## Matches", "");
+    lines.push(matchesTable(input.events));
+  }
 
   lines.push("", "## Consensus", "");
   lines.push(consensus.length > 0 ? consensusTable(consensus) : "_No consensus sides (no valid prints)._");

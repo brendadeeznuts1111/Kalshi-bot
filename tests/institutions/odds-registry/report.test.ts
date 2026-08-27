@@ -54,9 +54,28 @@ describe("buildOddsReportMarkdown", () => {
     expect(md).toContain("## Consensus");
     // home implieds: -200,-190,-210,-205 -> ~67% consensus across 4 bookmakers
     expect(md).toMatch(/\| 4 \| 6[0-9]\.\d% \|/);
-    // exactly two rows: Alpha + Beta
-    const rows = md.split("\n").filter((l) => l.startsWith(`| ${eventId}`));
+    // exactly two consensus rows: Alpha + Beta (scope to the Consensus
+    // section — Matches rows share the event-id prefix)
+    const consensusSection = md.split("## Consensus")[1]!.split("## ")[0]!;
+    const rows = consensusSection.split("\n").filter((l) => l.startsWith(`| ${eventId}`));
     expect(rows).toHaveLength(2);
+  });
+
+  test("matches section carries the event's lat/long venue", () => {
+    const located = parseOddsXmlEvents(
+      '<odds-heat><cluster venue="51.5074,-0.1278" book="bet365" commence="2026-09-01T19:00:00Z">'
+        + '<home team="Alpha FC"/><away team="Beta FC"/>'
+        + '<print name="Alpha FC" american="-110"/><print name="Beta FC" american="+100"/></cluster></odds-heat>',
+    );
+    const md = buildOddsReportMarkdown({ events: located });
+    expect(md).toContain("## Matches");
+    expect(md).toContain("| 51.5074, -0.1278 | 2026-09-01T19:00:00Z |");
+    // Malformed venue -> em-dash placeholder, never a broken row.
+    const bad = parseOddsXmlEvents(
+      '<odds-heat><cluster venue="not-coords" book="bet365" commence="2026-09-01T19:00:00Z">'
+        + '<print name="Alpha FC" american="-110"/><print name="Beta FC" american="+100"/></cluster></odds-heat>',
+    );
+    expect(buildOddsReportMarkdown({ events: bad })).toContain("| — | 2026-09-01T19:00:00Z |");
   });
 
   test("includes value patterns when provided", () => {

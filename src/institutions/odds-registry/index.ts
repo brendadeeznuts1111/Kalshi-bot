@@ -3,7 +3,7 @@
  */
 export { loadOddsRegistryConfig, parseOddsRegistryXml } from "./load.ts";
 export { validateOddsRegistry } from "./validate.ts";
-export { americanToDecimal, parseOddsXmlEvents } from "./xml-feed.ts";
+export { americanToDecimal, parseEventLocation, parseOddsXmlEvents } from "./xml-feed.ts";
 export { oddsRegistryHealth, statusCardPng, statusCardSvg } from "./display.ts";
 export type { StatusTone } from "./display.ts";
 export { compareOddsVsVenues, VENUE_SPORT_MAP, venueSports } from "./venues.ts";
