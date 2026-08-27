@@ -97,6 +97,7 @@ import {
 } from "../institutions/odds-registry/index.ts";
 import { fetchEventWeather } from "../institutions/odds-registry/weather.ts";
 import type { OddsEvent } from "../alpha/odds-types.ts";
+import { buildShowcaseData, renderShowcaseHtml } from "../lib/showcase.ts";
 import { designAgent } from "../agent/design-agent.ts";
 import { baseCssVars, proseCss, themeToggleButton, themeChrome } from "../institutions/design-tokens.ts";
 import { themeManifest } from "../lib/color/theme.ts";
@@ -652,6 +653,8 @@ export function handleLlmsTxt(_req: Request): Response {
     '- /tokens — token registry as JSON',
     '- /docs — rendered docs index (Bun.markdown, ETag/304)',
     '- /api/odds-report — Odds Heat report (text/markdown; ?format=html)',
+    '- /showcase — Odds Heat showcase (manifest-driven HTML)',
+    '- /api/showcase — showcase data as JSON',
     '- /api/runs — research run API',
     '- /blog/index.json — Bun release-blog manifest',
     '- /videos/index.json — video manifest',
@@ -1797,6 +1800,26 @@ export function createResearchServer(options: ServeOptions = {}) {
 
       if (url.pathname === "/api/odds-value-patterns") {
         return await oddsValuePatternsResponse();
+      }
+
+      // Driven showcase: one builder (src/lib/showcase.ts), three surfaces
+      // (CLI bun run showcase, /showcase HTML, /api/showcase JSON) — all
+      // backed by config/odds-showcase.json5 + docs/showcase/*.md.
+      if (url.pathname === "/showcase") {
+        const sections = url.searchParams.get("sections")?.split(",").map((s) => s.trim()).filter(Boolean);
+        const data = await buildShowcaseData({ ...(sections ? { sections } : {}) });
+        const html = renderShowcaseHtml(data);
+        const etag = '"' + new Bun.CryptoHasher("sha256").update(html).digest("hex").slice(0, 32) + '"';
+        const nm = notModified(req, etag);
+        if (nm) return nm;
+        return new Response(html, {
+          headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-cache", etag },
+        });
+      }
+
+      if (url.pathname === "/api/showcase") {
+        const sections = url.searchParams.get("sections")?.split(",").map((s) => s.trim()).filter(Boolean);
+        return json(await buildShowcaseData({ ...(sections ? { sections } : {}) }));
       }
 
       if (url.pathname === "/api/odds-report") {
