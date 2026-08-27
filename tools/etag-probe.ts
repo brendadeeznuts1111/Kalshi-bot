@@ -66,7 +66,7 @@ const s3 = new Bun.S3Client({ bucket: "probe", accessKeyId: "k", secretAccessKey
 const statP = s3.stat("probe.txt");
 check("P4 S3Client.stat returns a Promise (etag on live stat)", typeof s3.stat === "function" && statP instanceof Promise, "typeof stat=" + typeof s3.stat);
 statP.catch(() => { /* network - expected without real S3 */ });
-const BT = "node_modules/.bun-cache/links/bun-types@1.4.0-c0dadede486f49ab/node_modules/bun-types/s3.d.ts";
+const BT = "node_modules/bun-types/s3.d.ts";
 const s3dts = await Bun.file(BT).text();
 check("P4a S3Stats declares etag: string (type-level metadata)", /etag: string/.test(s3dts), "declared in s3.d.ts");
 

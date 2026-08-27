@@ -1,10 +1,10 @@
 {
-  "lastChecked": "2026-08-26T11:26:28.243Z",
+  "lastChecked": "2026-08-27T21:09:51.698Z",
   "docs": [
     {
       "path": "docs/AGENT-PITFALLS.md",
-      "hash": "70f0e759c89c5b6cef389c5e62f1058141a53c1701a9c7c4627ed34f3a96d13f",
-      "headings": 254,
+      "hash": "96e7fa309f111677593fbc030e842d136a5fb111d5f62fe510dd760e26ea9bdd",
+      "headings": 53,
       "renderOk": true,
       "duplicateSlugs": []
     },
@@ -37,58 +37,128 @@
       "duplicateSlugs": []
     },
     {
-      "path": "docs/BUN_API_COVERAGE.md",
-      "hash": "f5ef5bdc9ba6180ab313efb3045508aeb890504a87a318f86cb9e605327f1f48",
-      "headings": 1,
+      "path": "docs/BLOB.md",
+      "hash": "79a1818e01ec023d28dfc96035919deb3eac1c4daa759a627bd43ebec16e9628",
+      "headings": 9,
       "renderOk": true,
       "duplicateSlugs": []
     },
     {
       "path": "docs/BUN_BUILD_FINDINGS.md",
-      "hash": "2ada9f571275a7f175d5d77e61b7b9d24dd51ad6ab2f5717dd13ccf338d6b72f",
-      "headings": 61,
+      "hash": "597ee1ce6c3659dffade010641feb718958f66b9cbb4b4584409975c409032c5",
+      "headings": 64,
       "renderOk": true,
       "duplicateSlugs": []
     },
     {
-      "path": "docs/BUN_MODULE_SHAPE.md",
-      "hash": "742f291fbc7366943e167ec92202b62487e772ee5a25a0ec70be3ca54859c593",
-      "headings": 65,
+      "path": "docs/BUN_DIRECT_STREAMS.md",
+      "hash": "704da0b9812a7f69978a5ee2dfaa42d65e90ca6bb48b88794bf991ebe6d32e3e",
+      "headings": 7,
       "renderOk": true,
       "duplicateSlugs": []
     },
     {
-      "path": "docs/BUN_NATIVE.md",
-      "hash": "bd1941258f26e9384088c28b7e36d4b08c593c038cff38a8d2442f010262ffad",
-      "headings": 68,
+      "path": "docs/BUN_DISPOSE.md",
+      "hash": "1800bf570fd654337b303b60a6063f461dda661276042758fcd01583ba81bea8",
+      "headings": 7,
       "renderOk": true,
       "duplicateSlugs": []
     },
     {
-      "path": "docs/BUN_SHELL.md",
-      "hash": "7701c1006270e1a86cc12f689b0c51947be8f2b191ac1dbc15fc0df1e8c92809",
-      "headings": 17,
+      "path": "docs/BUN_FFI_DEVTOOLS.md",
+      "hash": "36d42149b04307095b2377f9d98c7ac4f50acf6feb48af019447b1b4d657cad7",
+      "headings": 11,
       "renderOk": true,
       "duplicateSlugs": []
     },
     {
-      "path": "docs/BUN_TECH_STACK.md",
-      "hash": "5bbcdeafb6441b9ce9a47d1050f4f5e89e35cd70dbdb11a92f56669837fdb2db",
-      "headings": 15,
+      "path": "docs/BUN_FILE.md",
+      "hash": "9e6b7c8c7d2c8d229a2ad7c39288085771412890e928fe5cf986e3fcea98b0c0",
+      "headings": 21,
       "renderOk": true,
       "duplicateSlugs": []
     },
     {
-      "path": "docs/BUN_UPGRADE_CANARY.md",
-      "hash": "d80463c36eedc7168d6a4fe96930d4f9c331df144b4fa9b04e04f7cf51e420d7",
+      "path": "docs/BUN_GROUNDED.md",
+      "hash": "6ca0594e9878415997d7446df1b60e1666d384fc40dfae83fd43efa9ce3a9f71",
+      "headings": 5,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/BUN_IMAGE.md",
+      "hash": "4ce61563d66ecdd0c4e631a40e7a93b363bdff97c40720cd2dd61fbc4e5aab4e",
+      "headings": 18,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/BUN_INSPECT.md",
+      "hash": "9f3d0b2eb8eab420a40f59995acd7f3bbb027ecfab747cfd829750f77a9b9d6e",
+      "headings": 12,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/BUN_MEDIA_METADATA.md",
+      "hash": "e8bc6bd39d306ddf0d2eedd0c8789adfc784722ad0baeace3c0cf5179df0f0f9",
       "headings": 16,
       "renderOk": true,
       "duplicateSlugs": []
     },
     {
-      "path": "docs/bun-v1.3.14-catalog.md",
-      "hash": "aad784af4d3ce59d9cbfd7222401892777919ed598b623208d098fa1091afb19",
-      "headings": 3,
+      "path": "docs/BUN_NATIVE.md",
+      "hash": "312cf61d0e0b78f5b053ebd2063717aff9b8407545ee9bcbced2abea30aadaaf",
+      "headings": 68,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/BUN_RUN_PARALLEL.md",
+      "hash": "e930f4c64bfa077c76d1cbae714ef60c25c5605c5b1eb5049c72132f27b5ba3c",
+      "headings": 6,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/BUN_SHELL.md",
+      "hash": "19c42da35fc3feaecfe79d1238ac57a1eccffeb2cba8a98d5f2503079ae62c50",
+      "headings": 21,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/BUN_STREAMS_TLS_WS.md",
+      "hash": "92dee0652b950fadc7a465dd8466b36230048dd99dd2d15745be39b21b35b4d3",
+      "headings": 13,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/BUN_TECH_STACK.md",
+      "hash": "47563ab5d488974306cd65161e6591260d2ea40cf2a48b7b09ce4e837ae8d940",
+      "headings": 15,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/BUN_TERMINAL.md",
+      "hash": "ed8b9581374a37cdf0335d6fa9a3e6be0816d23dfc674f83856303b234847b89",
+      "headings": 6,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/BUN_UPGRADE_CANARY.md",
+      "hash": "53f9c7dd3d008235c6555954ee67687c70afabf7c472afb1b7d32eb4ad260755",
+      "headings": 21,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/BUN_WEBVIEW.md",
+      "hash": "20ac785c3ead0fbc3ebfb8ad5b23c5a5639f81e238e18f02033c799548ed33a1",
+      "headings": 6,
       "renderOk": true,
       "duplicateSlugs": []
     },
@@ -96,6 +166,13 @@
       "path": "docs/CHEBNET_GRAPH_DOMINANCE.md",
       "hash": "f341ad0e111a4e10c1d258a7fdadae0492089b4e567dc87ebfe12bb5df2b8d4d",
       "headings": 8,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/CODE_MODE.md",
+      "hash": "c80cb12bb2c3def7e8c47530eaed8065aa0dd3ff97f549f60762c2cbe0f16ced",
+      "headings": 5,
       "renderOk": true,
       "duplicateSlugs": []
     },
@@ -136,8 +213,8 @@
     },
     {
       "path": "docs/DESIGN-SYSTEM.md",
-      "hash": "2e48596e45fb9de4f81b804f1574513ce813831468aa28dd35bb9a69cd9fd3c2",
-      "headings": 6,
+      "hash": "d429443442cf0a7e48f103f2faa0cdddf19ebf544cacf839e9ecb85e4212ad52",
+      "headings": 7,
       "renderOk": true,
       "duplicateSlugs": []
     },
@@ -248,8 +325,15 @@
     },
     {
       "path": "docs/MISS_TAXONOMY.md",
-      "hash": "f0383a857fbc0e3866c2dcf6e892761a2dfdfeaf164f64e1cffc6eea228aac95",
+      "hash": "cc3ef455a5a8c7d35367d308e6d08d6e2ac5db55dce80127297845e97cd78ecf",
       "headings": 9,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/ODDS_REGISTRY.md",
+      "hash": "14d513dd7709a5db889b2f1ffa326e57daa48ef660e495fed3c58bba9787c3c3",
+      "headings": 14,
       "renderOk": true,
       "duplicateSlugs": []
     },
@@ -311,7 +395,7 @@
     },
     {
       "path": "docs/PROTONPASS.md",
-      "hash": "7f5d8b7bdda051166f76420811bb39ad8aef92d98e070bd0a9023dd111f98efd",
+      "hash": "dbd7a9bf804637cf60af480d40ce134798a6a51d1ee43114907441ef69465450",
       "headings": 31,
       "renderOk": true,
       "duplicateSlugs": []
@@ -320,13 +404,6 @@
       "path": "docs/regulatory-agents.md",
       "hash": "305ba41762ffc89dcdba47d1dfaba2a20e6103e3beb46d858b177d3e598d1b9d",
       "headings": 21,
-      "renderOk": true,
-      "duplicateSlugs": []
-    },
-    {
-      "path": "docs/REPO_API_BUN.md",
-      "hash": "e97afc6c3a348138521ba7ee01f76eda7edec4fbe895494e4073381c4f4d047f",
-      "headings": 8,
       "renderOk": true,
       "duplicateSlugs": []
     },
@@ -346,8 +423,15 @@
     },
     {
       "path": "docs/SEMANTIC_LAYER.md",
-      "hash": "de366e7ae28769c5e7cf3ac5425fd47cb08aaaff150e8bb574713fbf9b047e36",
+      "hash": "7b191673581e75b5913a860c5f62463748dee01624fd5d70a5af5f352d0f793d",
       "headings": 19,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/SNAPSHOT_LAYER.md",
+      "hash": "c5293657360113f3a95da570268a37a938de063a753113da7aef6cf58811002c",
+      "headings": 5,
       "renderOk": true,
       "duplicateSlugs": []
     },
@@ -387,6 +471,6 @@
       "duplicateSlugs": []
     }
   ],
-  "total": 55,
+  "total": 67,
   "failing": 0
 }

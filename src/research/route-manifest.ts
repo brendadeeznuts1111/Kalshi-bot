@@ -96,6 +96,7 @@ export const ROUTE_MANIFEST: readonly RouteDef[] = [
   { path: '/api/odds-registry', method: 'GET', layer: 'data', handler: 'odds-registry config + health', cache: '5s', docRef: 'docs/ODDS_REGISTRY.md' },
   { path: '/api/odds-vs-venues', method: 'GET', layer: 'data', handler: 'odds-registry vs Kalshi/Polymarket consensus', cache: '5s', docRef: 'docs/ODDS_REGISTRY.md' },
   { path: '/api/odds-value-patterns', method: 'GET', layer: 'data', handler: 'value-pattern detector surface (declarations only without live odds)', cache: '5s', docRef: 'docs/ODDS_REGISTRY.md' },
+  { path: '/api/odds-report', method: 'GET', layer: 'data', handler: 'Odds Heat markdown/HTML report (consensus, books, value patterns)', cache: '5s', docRef: 'docs/ODDS_REGISTRY.md' },
   { path: '/status.svg', method: 'GET', layer: 'branding', handler: 'odds-registry token status card (SVG)', cache: 'no-cache', docRef: 'docs/ODDS_REGISTRY.md' },
   { path: '/registry/*', method: 'GET', layer: 'data', handler: 'public/registry dir route', cache: 'dir' },
   { path: '/api/glossary', method: 'GET', layer: 'data', handler: 'glossary payload', cache: 'no-cache' },

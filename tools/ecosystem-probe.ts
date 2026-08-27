@@ -16,7 +16,7 @@ const imgMethods = Object.getOwnPropertyNames((Bun.Image as any).prototype);
 check("P2 Image.modulate + resize/rotate/flip/flop", imgMethods.includes("modulate") && imgMethods.includes("resize") && imgMethods.includes("rotate") && imgMethods.includes("flip") && imgMethods.includes("flop"), imgMethods.slice(0, 12).join(","));
 
 // P3-P7: bunfig sections — check the installed docs for documented forms.
-const bunfigDoc = await Bun.file("node_modules/.bun-cache/links/bun-types@1.4.0-c0dadede486f49ab/node_modules/bun-types/docs/runtime/bunfig.mdx").text();
+const bunfigDoc = await Bun.file("node_modules/bun-types/docs/runtime/bunfig.mdx").text();
 check("P3 [console] depth documented", /\[console\]/.test(bunfigDoc) && /depth = 3/.test(bunfigDoc), "");
 check("P4 install.globalStore documented", /install\.globalStore/.test(bunfigDoc) && /BUN_INSTALL_GLOBAL_STORE/.test(bunfigDoc), "");
 check("P5 NO [dev]/[server] bunfig sections (fabricated in the diagram)", !/\[dev\]/.test(bunfigDoc) && !/\[server\]/.test(bunfigDoc) && /\[serve\]/.test(bunfigDoc), "[serve] is the real section");
@@ -28,7 +28,7 @@ check("P6 node:http2 server push ABSENT", typeof (h2srv as any).pushStream === "
 h2srv.close();
 
 // P7: env inline lives under [serve.static], not top-level.
-const htmlDoc = await Bun.file("node_modules/.bun-cache/links/bun-types@1.4.0-c0dadede486f49ab/node_modules/bun-types/docs/bundler/html-static.mdx").text();
+const htmlDoc = await Bun.file("node_modules/bun-types/docs/bundler/html-static.mdx").text();
 const serveStaticEnv = htmlDoc.includes("[serve.static]") && htmlDoc.includes("env = \"PUBLIC_*\"");
 check("P7 [serve.static] env is the real config", serveStaticEnv, "");
 
