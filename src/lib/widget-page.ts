@@ -69,6 +69,7 @@ export function renderWidgetPage(p: WidgetPage): string {
     'section { margin-bottom: 2rem; }' +
     'h2 { font-size: 1rem; margin: 0 0 0.6rem; }' +
     'table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }' +
+    'div.prose table { display: block; max-width: 100%; width: max-content; overflow-x: auto; }' +
     'th, td { text-align: left; padding: 0.45rem 0.65rem; border-bottom: 1px solid var(--line); vertical-align: top; }' +
     'th { color: var(--dim); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; }' +
     'tr.tot td { border-top: 2px solid var(--line); }' +

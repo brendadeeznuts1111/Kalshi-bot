@@ -161,6 +161,8 @@ td.num, th.num { text-align: right; font-family: ui-monospace, SFMono-Regular, M
 * { box-sizing: border-box; }
 /* a11y: touch target size >=44px for tabs + nav links (WCAG 2.5.8 AA) */
 nav.tabs button, header .links a { min-height: 2.75rem; display: inline-flex; align-items: center; }
+.refresh-toggle { min-height: 2.75rem; padding: 0 0.75rem; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--fg); cursor: pointer; }
+.refresh-toggle[aria-pressed="true"] { border-color: var(--acc); color: var(--acc); }
 /* a11y: skip link, visible focus, print (WCAG 2.4.1/2.4.7/1.4.13 + print) */
 .skip-link { position: absolute; left: -9999px; top: 0; z-index: 20; background: var(--panel); padding: .5rem 1rem; }
 .skip-link:focus { left: .5rem; top: .5rem; }
@@ -302,13 +304,13 @@ button:disabled { opacity: 0.5; cursor: default; }
 }
 .bar-chart-header { margin-bottom: 12px; }
 .bar-chart-title {
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 600;
   color: var(--fg, #d7dee9);
   letter-spacing: 0.02em;
 }
 .bar-chart-subtitle {
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--dim, #7d8798);
   margin-top: 2px;
 }
@@ -324,7 +326,7 @@ button:disabled { opacity: 0.5; cursor: default; }
   gap: 12px;
 }
 .bar-chart-label {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--fg, #d7dee9);
   font-weight: 500;
   text-align: left;
@@ -346,7 +348,7 @@ button:disabled { opacity: 0.5; cursor: default; }
   min-width: 0;
 }
 .bar-chart-value {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--dim, #7d8798);
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";

@@ -1661,4 +1661,24 @@ document.addEventListener("click", (ev) => {
 // (tip already used on playerProfiles panel title)
 
 refresh().then(applyHashRoute);
-setInterval(() => refresh().then(applyHashRoute), 30_000);
+// Auto-refresh with a Pause/Resume control (WCAG 2.2.1/2.2.2 — timing adjustable,
+// moving content can be paused). aria-pressed mirrors the running state.
+const refreshToggle = document.getElementById("refresh-toggle");
+const refreshTick = () => refresh().then(applyHashRoute);
+let refreshTimer = setInterval(refreshTick, 30_000);
+let refreshPaused = false;
+if (refreshToggle) {
+  refreshToggle.addEventListener("click", () => {
+    refreshPaused = !refreshPaused;
+    if (refreshPaused) {
+      clearInterval(refreshTimer);
+      refreshToggle.textContent = "Resume updates";
+      refreshToggle.setAttribute("aria-pressed", "true");
+    } else {
+      refreshTimer = setInterval(refreshTick, 30_000);
+      refreshToggle.textContent = "Pause updates";
+      refreshToggle.setAttribute("aria-pressed", "false");
+      refreshTick(); // catch up immediately on resume
+    }
+  });
+}

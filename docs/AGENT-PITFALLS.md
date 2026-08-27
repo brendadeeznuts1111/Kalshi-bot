@@ -255,6 +255,7 @@ unblocks it. Order matters: run_code -> file tools -> bash/git -> tests -> verif
 - §239 — Inferred-codebase audit corrected — audited files absent; memoryPressure + rate limiters + WAL already exist; real gaps: no compression, no sitemap/robots (2026-08-27)
 - §240 — A11y + transport fixes landed — gzip via Bun.gzipSync (json/html/report); /sitemap.xml+/robots.txt (sitemap:gen); fetch retry w/ backoff; skip-link/focus/print (2026-08-27)
 - §241 — hq-app a11y deepened — tablist/tab/tabpanel + aria-selected + arrow keys, aria-live on stamp/freshness, aria-current, 44px targets; 6-test suite (2026-08-27)
+- §242 — hq-app a11y round 3 — px→rem fonts (1.4.4), .prose table reflow (1.4.10), Pause/Resume updates control w/ aria-pressed (2.2.1/2.2.2); a11y suite 9 tests (2026-08-27)
 - §199 — ui:regen CLI — regenerate UI artifacts from meta/variant sources + the Bun.$ template failure class (2026-08-26)
 - §187 — Extended color formats — kernel-only (lch/oklab/oklch/hsv) + inverse parsers (2026-08-26)
 - §188 — Watermark pipeline — ML-DSA key naming + WebView/Blob verified facts (2026-08-26)

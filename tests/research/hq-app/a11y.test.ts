@@ -41,4 +41,20 @@ describe("hq-app a11y pattern", () => {
     expect(html).toContain('class="skip-link" href="#main-content"');
     expect(html).toContain('<main id="main-content">');
   });
+
+  test("text resizable: no px font-size in hq styles (1.4.4)", () => {
+    expect(css).not.toMatch(/font-size: [0-9.]+px/);
+  });
+
+  test("markdown/report tables reflow horizontally (1.4.10)", () => {
+    const w = readFileSync(join(ROOT, "src/lib/widget-page.ts"), "utf8");
+    expect(w).toContain('div.prose table { display: block; max-width: 100%; width: max-content; overflow-x: auto; }');
+  });
+
+  test("auto-refresh pause control (2.2.1/2.2.2)", () => {
+    expect(html).toContain('id="refresh-toggle" class="refresh-toggle" aria-pressed="false"' );
+    expect(js).toContain('refreshToggle.setAttribute("aria-pressed", "true")');
+    expect(js).toContain("clearInterval(refreshTimer)");
+    expect(js).toContain('refreshToggle.textContent = "Resume updates"');
+  });
 });
