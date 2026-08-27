@@ -50,8 +50,13 @@ export type OddsEvent = {
   location?: EventLocation;
   /** Forecast at (location, commenceTime) — attached by the weather provider. */
   weather?: EventWeather;
+  /** Wire provenance: live book feeds vs simulated/reference data. Default simulated for file/xml adapters; v3/ws adapters mark live. */
+  source?: EventSource;
   bookmakers: OddsBookmaker[];
 };
+
+/** Wire provenance: live book feeds vs simulated/reference data. */
+export type EventSource = "live" | "simulated";
 
 /** Where the match is played: wire venue="lat,long" (range-guarded). */
 export type EventLocation = {

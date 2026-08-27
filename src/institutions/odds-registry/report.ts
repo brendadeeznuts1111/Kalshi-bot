@@ -29,14 +29,14 @@ import {
 /** Cell placeholder for a profile field the registry does not declare. */
 const NO_META = "—";
 
-/** Matches table: event identity, venue identity, venue-local kickoff,
- * weather at (coords, commence), and a collision badge for venues hosting
- * multiple events in this feed. venueKey stays the internal grouping key. */
+/** Matches table: event identity, provenance, venue identity, venue-local
+ * kickoff, weather at (coords, commence), and a collision badge for venues
+ * hosting multiple events in this feed. venueKey stays the internal key. */
 function matchesTable(events: OddsEvent[], store: VenueStore | undefined): string {
   const collisions = venueCollisionCounts(events);
   const lines = [
-    "| Event | Match | Venue | Map | Kickoff (venue local) | Weather | At venue |",
-    "| --- | --- | --- | --- | --- | --- | --- |",
+    "| Event | Source | Match | Venue | Map | Kickoff (venue local) | Weather | At venue |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- |",
   ];
   for (const ev of events) {
     const profile = ev.location ? venueProfileFor(store, ev.location) : undefined;
@@ -65,7 +65,7 @@ function matchesTable(events: OddsEvent[], store: VenueStore | undefined): strin
       ? `${collisions.get(venueKeyFor(ev.location))} events`
       : NO_META;
     lines.push(
-      `| ${escapeMarkdownCell(ev.id)} | ${escapeMarkdownCell(ev.homeTeam)} vs ${escapeMarkdownCell(ev.awayTeam)} | ${venueCell} | ${mapCell} | ${kickoffCell} | ${weatherCell} | ${atVenueCell} |`,
+      `| ${escapeMarkdownCell(ev.id)} | ${ev.source === "live" ? "● live" : "○ sim"} | ${escapeMarkdownCell(ev.homeTeam)} vs ${escapeMarkdownCell(ev.awayTeam)} | ${venueCell} | ${mapCell} | ${kickoffCell} | ${weatherCell} | ${atVenueCell} |`,
     );
   }
   return lines.join("\n");

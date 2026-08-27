@@ -19,6 +19,9 @@ jobs:
         run: bun run check
         env:
           RESEARCH_SKIP_RATE_PREFLIGHT: "1"
+          # Deterministic terminal color for tests (paint()/Bun.color read
+          # NO_COLOR at bootstrap; see src/lib/color + env.template).
+          NO_COLOR: "1"
       # Bun 1.4 gates (read-only, frozenLockfile-safe): security advisory scan +
       # lockfile dedupe check. Mutating forms (bun audit fix / bun dedupe)
       # conflict with bunfig frozenLockfile and are run manually.
