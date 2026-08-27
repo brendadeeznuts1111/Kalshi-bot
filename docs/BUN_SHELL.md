@@ -67,6 +67,30 @@ the right tool when `Bun.$` cannot express the need:
 | Shell injection | Your problem | Escaped by default ([security](https://bun.com/docs/runtime/shell#security-in-the-bun-shell)) |
 | Cross-platform | Depends on `/bin/sh` | Bun built-in shell |
 
+## Performance (probe-verified on 1.4.0 — 300 ops each)
+
+| Pattern | ms/op | Notes |
+| --- | --- | --- |
+| `$`echo hi`` / `$`pwd`` / `$`true`` | ~0.022 | **in-process builtins** — no process spawned (~30× faster) |
+| `$`/usr/bin/true`` | 0.725 | absolute path forces an external exec |
+| `Bun.spawn(["true"])` | 0.704 | raw spawn floor (stdout ignored) |
+| `Bun.spawn(["cat", "/dev/null"])` | 0.757 | raw spawn with pipe |
+| `$`cat /dev/null`` | 0.793 | external command via the shell |
+| `Bun.spawnSync(["echo", "hi"])` | 0.721 | blocking variant, same floor |
+| `$`echo hello \| wc -c`` | 0.818 | pipeline — two real processes |
+| 100× `Bun.spawn` in parallel | 0.221/op | concurrent spawn amortizes to ~1/3 of sequential |
+
+Takeaways:
+
+- **External commands:** the spawn cost (~0.7 ms) dominates; `Bun.$` parsing +
+  escaping adds only ~3–10% on top of `Bun.spawn`. Hot loops spawning external
+  tools should cache argv and use `Bun.spawn`.
+- **Builtin commands** (`echo`, `pwd`, `true` — verified in-process on 1.4.0):
+  `Bun.$` never spawns, so it is ~30× faster than any subprocess route.
+- The biggest performance lever is avoiding subprocesses entirely — in-process
+  APIs (`Bun.fetch`, `Bun.file`, `node:tls`, `Bun.dns`), parallel spawns, or
+  a long-lived child — not spawn-vs-$.
+
 ## Idioms (verified on Bun 1.4.0)
 
 | Idiom | Behavior |
