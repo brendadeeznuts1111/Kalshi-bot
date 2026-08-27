@@ -25,6 +25,10 @@ describe("/api/odds-report (Bun.XML feed wired)", () => {
     // (19:00Z == 20:00 Europe/London).
     expect(md).toContain("## Matches");
     expect(md).toContain("| Alpha Park, London | [map](https://www.google.com/maps?q=51.5074,-0.1278) | 1 Sep 2026 at 20:00 |");
+    // Two matches share Alpha Park -> collision badge fires.
+    expect(md).toContain("| 2 events |");
+    // Second match at Gamma Fields (second venue store entry).
+    expect(md).toContain("Gamma Fields, Liverpool");
     expect(md).toContain("venue_undervalued");
   });
 
