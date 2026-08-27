@@ -54,7 +54,7 @@ Corrected verdicts are pinned as ground probes: rt-4 (S3Client) and rt-5 (serve 
 | `--heap-prof` / `--heap-prof-md` | ✅ | writes `Heap.<ts>.<pid>.heapprofile` in CWD; repo uses `--heap-prof-md` (heap:serve) |
 | `--no-orphans` / `BUN_FEATURE_FLAG_NO_ORPHANS` / bunfig `noOrphans` | ✅ | flag + env accepted; repo bunfig already sets `run.noOrphans = true` |
 | `--no-env-file` | ✅ | verified: skips `.env` (val=undefined) vs loaded without flag |
-| Async stack traces (fs/Bun.file/S3/DNS/crypto/fetch → await site) | ⚠️ not yet probed | official doc claim; needs a dedicated async-error stack test |
+| Async stack traces (fs/Bun.file/S3/DNS/crypto/fetch → await site) | ⚠️ nuanced (verified) | sync `Error().stack` points to the source line; **caught rejects from Bun.file/fetch carry NO `.stack`** — the printer synthesizes the display stack only for top-level throws (`[eval]:1:11`). Read stacks from a sync/rethrown path |
 | `Bun.serve({ http3: true })` (requires tls; `http1: false` h3-only) | ✅ recognized | domain errors: "HTTP/3 requires tls" / "Cannot disable http1 without enabling http3" — options validated, not ignored. Full QUIC handshake not exercised (needs TLS/UDP) |
 | `fetch(url, { protocol: "http2" })` | ✅ works | real request → 200 |
 | `fetch(url, { protocol: "http3" })` | ✅ recognized | attempted real QUIC handshake → HTTP3HandshakeFailed (endpoint/network) — the option drives real behavior |

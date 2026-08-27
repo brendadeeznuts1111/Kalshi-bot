@@ -1,8 +1,13 @@
-# Bun Shell (`Bun.$`) — deep reference
+# Bun Shell (`Bun.$`) & CLI eval — deep reference
 
-Canonical entry: [bun.com/docs/runtime/shell](https://bun.com/docs/runtime/shell#getting-started)
+Two related surfaces, verified on Bun 1.4.0: the in-process **`Bun.$` shell**
+(subprocess transport) and the **`bun -e` / `-p` / `bun -` CLI eval** entrypoints.
+Canonical: [bun.com/docs/runtime/shell](https://bun.com/docs/runtime/shell#getting-started)
+· eval flags: `bun --help` (`-e, --eval=<val>` · `-p, --print=<val>`).
 
-GitHub traffic is hybrid:
+## Research transport — fetch-first (context)
+
+The GitHub research pipeline spawns nothing; REST is `Bun.fetch`:
 
 | Path | Transport |
 |------|-----------|
@@ -11,9 +16,6 @@ GitHub traffic is hybrid:
 | Rate-limit preflight + budget facade | [`gh.ts`](../src/research/gh.ts) (no subprocess) / [`github-rate-limit.ts`](../src/research/github-rate-limit.ts) — `Bun.fetch` + `gh auth token` fallback |
 
 No `Bun.spawn`, no `execa`, no Octokit. Token resolution still uses `gh auth token` when `GH_TOKEN` / `GITHUB_TOKEN` are unset.
-
-Canonical `Bun.$` entry: [bun.com/docs/runtime/shell#getting-started](https://bun.com/docs/runtime/shell#getting-started)
-
 
 ## Repo-wide default (2026-08-23): `Bun.$` is the default subprocess transport
 
@@ -50,19 +52,33 @@ in-process side.
 | `tools/pre-commit.ts` · `tools/agent-probe.ts` · `src/lib/rg.ts` · `src/lib/breaking-audit.ts` | `Bun.spawnSync` in blocking sync contexts; `$` is async-only. `node:child_process` is guard-banned (`BANNED_PACKAGES`) |
 | `tools/protonpass-run.ts` · `tools/db-push-gate.ts` | True TTY fds via stdio inherit — `$` pipes stdout/stderr (child `isTTY=false`), which can alter prompts/colors on the secrets wrapper and the destructive schema gate. (`$` does pass stdin through — verified — but stdout TTY-ness differs.) |
 
-
 **Enforced:** `scripts/audit-bun-native.ts` `SPAWN_KEEP_LIST` — any `Bun.spawn` / `Bun.spawnSync` call outside these files fails `bun:ci` (AST-based; comments and strings are ignored).
 
-### Idioms (verified on Bun 1.4.0)
+## Why `Bun.$` over `Bun.spawn`
 
-- **Capture + exit code:** `.nothrow().quiet()` → `{ exitCode, stdout, stderr }` (Buffers).
-- **Live output (≈ `stdout: "inherit"`):** `$` without `.quiet()` streams to the parent **and** still returns captured Buffers — used by the cron jobs.
-- **stdin input:** no `.stdin()` method, and the callable-options form `$`cmd`({…})` does **not** exist in 1.4.0 (the `$({…})`cmd`` object form throws too — chainable `.cwd()`/`.env()` are the supported options; pinned by shell:probe P13-P15). Prefer JS-object redirection (verified): `$`cmd ${args} < ${Buffer.from(value)}`` feeds stdin, an empty buffer closes it immediately, and `< ${new Response(body)}` / `> ${Bun.file(path)}` also work. The `printf "%s" ${value} | cmd ${args}` pipe remains as a fallback.
-- **NUL-delimited output:** `stdout.toString().split("\0").filter(Boolean)`.
-- **`.text()` / `.json()` throw on non-zero exit** — prefer `.nothrow()` unless the caller wants the exception.
-- **`.cwd(path)` / `.env({…})` methods exist;** array interpolation escapes each element as its own argv token.
+| Concern | `Bun.spawn` | `Bun.$` |
+|---------|-------------|---------|
+| Argument escaping | Manual array | Automatic per interpolated value |
+| JSON stdout | Manual stream read | `.json()` or `parseGhStdout` after `.quiet()` |
+| Non-zero exit | Check `exitCode` | `.nothrow()` → `{ exitCode, stdout, stderr }` |
+| Shell injection | Your problem | Escaped by default ([security](https://bun.com/docs/runtime/shell#security-in-the-bun-shell)) |
+| Cross-platform | Depends on `/bin/sh` | Bun built-in shell |
 
-### More verified on Bun 1.4.0 (recipes for future flows)
+## Idioms (verified on Bun 1.4.0)
+
+| Idiom | Behavior |
+| --- | --- |
+| Capture + exit code | `.nothrow().quiet()` → `{ exitCode, stdout, stderr }` (Buffers) |
+| Live output (≈ `stdout: "inherit"`) | `$` without `.quiet()` streams to the parent **and** still returns captured Buffers — used by the cron jobs |
+| NUL-delimited output | `stdout.toString().split("\0").filter(Boolean)` |
+| `.text()` / `.json()` | throw on non-zero exit — prefer `.nothrow()` unless the caller wants the exception |
+| `.cwd(path)` / `.env({…})` | methods exist; array interpolation escapes each element as its own argv token |
+
+### stdin input (the one wart)
+
+No `.stdin()` method, and the callable-options form `$`cmd`({…})` does **not** exist in 1.4.0 (the `$({…})`cmd`` object form throws too — chainable `.cwd()`/`.env()` are the supported options; pinned by shell:probe P13-P15). Prefer JS-object redirection (verified): `$`cmd ${args} < ${Buffer.from(value)}`` feeds stdin, an empty buffer closes it immediately, and `< ${new Response(body)}` / `> ${Bun.file(path)}` also work. The `printf "%s" ${value} | cmd ${args}` pipe remains as a fallback.
+
+## More verified on Bun 1.4.0 (recipes for future flows)
 
 - **Command substitution `$(...)`:** `$`echo rev=$(git rev-parse --short HEAD)`` inlines another command output into the script (verified; backtick substitution is NOT supported — use `$(...)`).
 - **Line streaming `.lines()`:** `for await (const line of $`cat list.txt | grep ${q}`.lines())` — gotcha: a trailing newline yields a final `""` entry, so `if (line !== "")` or filter(Boolean) when parsing.
@@ -77,7 +93,7 @@ in-process side.
 - `serve.ts` launchd probe: the 2 s race no longer kills the child on timeout (Bun Shell has no kill handle on the raced promise); `launchctl list` hanging is pathological, so the race still returns `null`.
 - `host-discover` s_client: stdin closes immediately via `< ${Buffer.alloc(0)}` (same as the old `stdin.end()`).
 
-### Cross-references with the rest of Bun (verified 2026-08-23)
+## Cross-references with the rest of Bun (verified 2026-08-23)
 
 The shell layer is the fallback for things Bun has no native API for (`gh`,
 `git`, `launchctl`, `open`, `bunx`, `pass-cli`, `rg`, `find`; `openssl` only
@@ -102,19 +118,7 @@ for the h2 test cert-gen in `SPAWN_KEEP_LIST`). Where Bun has a native API
 | `Bun.fetch` | REST half of research transport — GitHub REST + `/rate_limit` (`readGitHubRateLimitWire`); `$`→`gh` only for auth (token fallback + auth-status probe) | `src/research/github-api.ts`, `src/research/gh.ts`, `src/research/github-rate-limit.ts` |
 | `bun:sqlite` | Stores what `Bun.fetch`/`$` gathers | `src/research/cache.ts`, `src/institutions/event-store/*` |
 
-## Why `Bun.$` over `Bun.spawn`
-
-| Concern | `Bun.spawn` | `Bun.$` |
-|---------|-------------|---------|
-| Argument escaping | Manual array | Automatic per interpolated value |
-| JSON stdout | Manual stream read | `.json()` or `parseGhStdout` after `.quiet()` |
-| Non-zero exit | Check `exitCode` | `.nothrow()` → `{ exitCode, stdout, stderr }` |
-| Shell injection | Your problem | Escaped by default ([security](https://bun.com/docs/runtime/shell#security-in-the-bun-shell)) |
-| Cross-platform | Depends on `/bin/sh` | Bun's built-in shell |
-
 ## Import style
-
-Docs use both forms; this repo uses the named import:
 
 // @bun-run
 ```ts
@@ -182,9 +186,41 @@ try {
 }
 ```
 
+## CLI eval (`bun -e` / `-p` / `bun -`) — verified matrix (2026-08-26)
+
+`bun -e`/`-p` sit at layer 2 of a 4-layer escape stack: terminal → shell → bun CLI
+→ JS string → your output format (SQL/SVG/JSON). Every layer doubles the escape
+cost. All rows below are runtime-verified (isolated `bash -c`/`zsh` runs):
+
+| Code contains | Strategy | Verified result |
+| --- | --- | --- |
+| nothing special | single quotes: `bun -p '1+1'` | `2` |
+| `$` or backticks | **single quotes preserve** (`'$HOME'` → `$HOME`; `` '`echo hi`' `` → literal) | ✅ (bash + zsh) |
+| `$`/backticks in double quotes | **TRAP**: shell expands/runs them (`"$HOME"` → `/Users/nolarose`; `` "`echo hi`" `` → `hi`) | ❌ broken intent (bash + zsh) |
+| apostrophe `'` | ANSI-C `$'…\'…'` → `Bun's` (bash + zsh); or concat `'"'"'`; or double-quote shell + `\"` | ✅ |
+| newlines | ANSI-C `$'a\nb'` (multi-line -e works) | ✅ `2` |
+| backslashes | single quotes preserve; shell `\\` → JS `\` → output `\` (count 2:1 per layer) | ✅ `a\b` |
+| `!` / `~` | literal in non-interactive scripts / inside quotes | ✅ `hi!`, `~ literal` |
+| `printf %q` injection | **WRONG for eval**: `$(printf %q "$CODE")` backslash-escapes every special → JS syntax error | ❌ use a file instead |
+
+Verified CLI capabilities:
+- `bun -e 'code' arg1 arg2` → `Bun.argv` = `[bun, arg1, arg2]` (trailing args pass through; `--` is an argv boundary, not re-eval) ✅
+- `echo 'code' | bun -` → runs code from stdin ✅ (`bun -` is the stdin-eval entry)
+- `echo 'code' | bun -e` → error: `-e` requires a value (stdin ignored) ❌
+- multiple `-e` flags → **last wins** (only the final script runs) ✅
+- `Bun.$` inside `-e` code works when the shell preserves backticks (single quotes): `bun -e 'const out = await Bun.$`echo hi`.text()'` → `hi` ✅
+- `bun -p` prints the LAST expression; a trailing `console.log` prints `undefined` after the value
+- `--inspect-brk -e` → inspector banner, waits for a client ✅
+- **Async stack traces (nuance):** sync `Error().stack` points to the source line; but **caught rejects from `Bun.file`/`fetch` carry NO `.stack`** — the runtime only synthesizes the display stack for top-level throws (`[eval]:1:11`), not on the error object. Read stacks from a rethrown/sync path, not the caught reject.
+
+**Escape-budget rule:** minimize layers — file > `bun -` (stdin) > `-e` one-liner. When a
+snippet needs more than ~2 special characters, stop fighting the shell: write it to a
+temp `.ts` and `bun file.ts` (what the repo probes do). ANSI-C quoting (`$'…'`) is the
+verified answer for apostrophes AND newlines; `bun -` for multi-line stdin.
+
 ## Other `$` features (not used here, available)
 
-| Feature | Doc anchor | When you'd reach for it |
+| Feature | Doc anchor | When you would reach for it |
 |---------|------------|-------------------------|
 | `.env({ … })` | [environment variables](https://bun.com/docs/runtime/shell#environment-variables) | per-call env override |
 | `.cwd(path)` | [working directory](https://bun.com/docs/runtime/shell#changing-the-working-directory) | run a subprocess from another directory |
@@ -204,36 +240,8 @@ Pure helpers tested in [`tests/gh.test.ts`](../tests/gh.test.ts):
 
 Live GitHub access is covered by `bun run research`, not unit tests.
 
-
-## CLI eval escaping — verified matrix (2026-08-26, probed on 1.4.0)
-
-`bun -e`/`-p` sit at layer 2 of a 4-layer escape stack: terminal → shell → bun CLI
-→ JS string → your output format (SQL/SVG/JSON). Every layer doubles the escape
-cost. All rows below are runtime-verified (isolated `bash -c` runs):
-
-| Code contains | Strategy | Verified result |
-| --- | --- | --- |
-| nothing special | single quotes: `bun -p '1+1'` | `2` |
-| `$` or backticks | **single quotes preserve** (`'$HOME'` → `$HOME`) | ✅ |
-| `$`/backticks in double quotes | **TRAP**: shell expands/runs them (`"$HOME"` → `/Users/nolarose`; `` "`echo hi`" `` → `hi`) | ❌ broken intent |
-| apostrophe `'` | ANSI-C: `$'console.log("Bun\'s")'` → `Bun's`; or concat `'"'"'`; or double-quote shell + `\"` | ✅ |
-| newlines | ANSI-C `$'a\nb'` (multi-line -e works) | ✅ `2` |
-| backslashes | single quotes preserve; shell `\\` → JS `\` → output `\` (count 2:1 per layer) | ✅ `a\b` |
-| `printf %q` injection | **WRONG for eval**: `$(printf %q "$CODE")` backslash-escapes every special → JS syntax error | ❌ use a file instead |
-
-Verified CLI capabilities:
-- `bun -e 'code' arg1 arg2` → `Bun.argv` = `[bun, arg1, arg2]` (trailing args pass through) ✅
-- `echo 'code' | bun -` → runs code from stdin ✅ (`bun -` is the stdin-eval entry)
-- `echo 'code' | bun -e` → error: `-e` requires a value (stdin ignored) ❌
-- `bun -p` prints the LAST expression; a trailing `console.log` prints `undefined` after the value
-
-**Escape-budget rule:** minimize layers — file > `bun -` (stdin) > `-e` one-liner. When a
-snippet needs more than ~2 special characters, stop fighting the shell: write it to a
-temp `.ts` and `bun file.ts` (what the repo probes do). This section supersedes the
-reword-first instinct with the verified alternatives (ANSI-C quoting for apostrophes,
-`bun -` for multi-line).
-
 ## Related docs
 
 - [`docs/BUN_NATIVE.md`](BUN_NATIVE.md) — full API map
 - [`docs/PLAN.md`](PLAN.md) — research pipeline design
+
