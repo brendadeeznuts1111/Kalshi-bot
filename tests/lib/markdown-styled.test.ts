@@ -5,7 +5,8 @@
  * rewriting, and alt-enforced images.
  */
 import { describe, expect, test } from "bun:test";
-import { docsLinkRewriter, markdownToStyledHtml } from "../../src/lib/markdown.ts";
+import { COLORS } from "../../src/lib/color/palette.ts";
+import { docsLinkRewriter, languageChip, markdownToStyledHtml } from "../../src/lib/markdown.ts";
 
 describe("markdownToStyledHtml", () => {
   test("headings carry ids from the parser meta", () => {
@@ -15,7 +16,8 @@ describe("markdownToStyledHtml", () => {
 
   test("fenced codeblocks are language-tagged inside .codeblock", () => {
     const html = markdownToStyledHtml("```bash\necho hi\n```");
-    expect(html).toContain('<pre class="codeblock"><code class="language-bash">');
+    expect(html).toContain('<div class="codeblock"><span class="langchip" data-lang="BASH"');
+    expect(html).toContain('<code class="language-bash">');
   });
 
   test("external links get target=_blank + rel=noopener; internal stay plain", () => {
@@ -52,5 +54,28 @@ describe("markdownToStyledHtml", () => {
     const html = markdownToStyledHtml('![](img.png)\n\n![logo](logo.png)');
     expect(html).not.toContain('<img src="img.png"');
     expect(html).toContain('<img src="logo.png" alt="logo"');
+  });
+});
+
+describe("language chips", () => {
+  test("fenced blocks emit a colored lang chip in the codeblock header", () => {
+    const html = markdownToStyledHtml("```bash\necho hi\n```");
+    expect(html).toContain('<div class="codeblock"><span class="langchip" data-lang="BASH"');
+    expect(html).toContain(">BASH</span>");
+    expect(html).toContain('<code class="language-bash">');
+  });
+
+  test("chip colors come from the palette SSOT per language", () => {
+    const bash = languageChip("bash");
+    expect(bash.color).toBe(COLORS.tennis); // green family
+    const ts = languageChip("typescript");
+    expect(ts.color).toBe(COLORS.kalshi);
+    const unknown = languageChip("cobol");
+    expect(unknown.color).toBe(COLORS.unknown);
+    expect(languageChip("").label).toBe("");
+  });
+
+  test("chip labels are normalized uppercase", () => {
+    expect(languageChip("TypeScript").label).toBe("TYPESCRIPT");
   });
 });

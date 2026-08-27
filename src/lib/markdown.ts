@@ -50,6 +50,7 @@
  */
 
 import { TOKENS } from "../institutions/design-tokens.ts";
+import { COLORS, type ColorKey } from "./color/palette.ts";
 
 /**
  * Explicit GFM + safety (tagFilter + autolinks).
@@ -118,6 +119,27 @@ function resolveOptions(
 }
 
 /**
+ * Language chip colors — every fenced language maps to a palette key
+ * (COLORS SSOT); unknown languages get the neutral gray. The chip renders
+ * as a small outlined tag in the codeblock header.
+ */
+const LANG_CHIP_KEYS: Record<string, ColorKey> = {
+  bash: "tennis", sh: "tennis", shell: "tennis", zsh: "tennis",
+  ts: "kalshi", typescript: "kalshi", tsx: "kalshi",
+  js: "middleware", javascript: "middleware", jsx: "middleware", mjs: "middleware",
+  json: "env", json5: "env", jsonc: "env", toml: "env", yaml: "env", yml: "env",
+  python: "research", py: "research", sql: "pinnacle",
+  html: "betfair", css: "betfair", xml: "betfair",
+  md: "misc", markdown: "misc", text: "misc",
+};
+
+export function languageChip(lang: string): { label: string; color: string } {
+  const key = lang.trim().toLowerCase();
+  const colorKey = LANG_CHIP_KEYS[key] ?? "unknown";
+  return { label: key === "" ? "" : key.toUpperCase(), color: COLORS[colorKey] };
+}
+
+/**
  * Styled Markdown → HTML via Bun.markdown.render callbacks (verified working
  * on 1.4.0 — the old probe claim "render is plain text" predates the
  * callback API). Adds the styleOptions the plain .html path cannot express:
@@ -152,8 +174,15 @@ export function markdownToStyledHtml(
       },
       paragraph: (children) => `<p>${children}</p>`,
       blockquote: (children) => `<blockquote>${children}</blockquote>`,
-      code: (children, meta) =>
-        `<pre class="codeblock"><code class="language-${escAttr(meta?.language ?? "")}">${children}</code></pre>`,
+      code: (children, meta) => {
+        const lang = meta?.language ?? "";
+        const chip = languageChip(lang);
+        return (
+          `<div class="codeblock"><span class="langchip" data-lang="${escAttr(chip.label)}" ` +
+          `style="color:${escAttr(chip.color)};border-color:${escAttr(chip.color)}">${escAttr(chip.label)}</span>` +
+          `<pre><code class="language-${escAttr(lang)}">${children}</code></pre></div>`
+        );
+      },
       codespan: (children) => `<code>${children}</code>`,
       link: (children, meta) => {
         const href = rewriteHref(meta.href);
