@@ -1,78 +1,38 @@
+#!/usr/bin/env bun
 /**
- * `bun run bun:docs-index` — index + cache Bun reference docs locally.
+ * `bun run bun:docs-index` — index + cache the Bun docs locally, working off
+ * the TRUE index: https://bun.com/llm.txt — Bun's official LLM-oriented docs
+ * map (sibling of bun.com/docs/llms.txt, which the grounding pipeline already
+ * validates URLs against, src/lib/ground.ts).
  *
- * The page list is DISCOVERED dynamically from the source, not curated:
- *   tag/repo  GitHub trees API (git/trees/<ref>?recursive=1) filtered to
- *             docs/<scope>/**.mdx (64 runtime pages as of bun 1.4.0).
- *   site      bun.com sitemap.xml filtered to /docs/<scope>/.
- * The former 16-page curated list survives only as an offline fallback
- * when discovery fails (no network / API error).
- *
- * Sources:
- *   tag  (default) oven-sh/bun git tag matching the INSTALLED runtime
- *        (bun-v<Bun.version>) — exactly the docs for the binary in use.
- *   repo             oven-sh/bun main branch — may be AHEAD of runtime.
- *   site             bun.com/docs — released-docs surface, a rendering
- *        of the repo .mdx (frontmatter stripped + render hints).
- *        bun.sh is a BYTE-IDENTICAL alias (same deployment, different
- *        Cloudflare edge IPs; verified on workers/sql/fetch/server/
- *        webview/api + sitemap) — no separate source needed.
- *
- * Scope:
- *   runtime (default)  docs/runtime/** (API reference surface).
- *   bundler            docs/bundler/** (the bundler/plugins.mdx the map
- *                      page claims reference - 13 pages as of bun 1.4.0).
- *   all                every page under docs/.
- *
- * INDEX.json MERGES across scopes: running --scope bundler after --scope all
- * keeps the existing entries (same sourceUrls), and --scope runtime keeps
- * bundler pages cached. DISCOVERY.json records each scope's discovered list
- * in a `scopes` map (additive, per source/ref).
- *
- * Offline behavior: --check is fully offline (reads local JSON only, zero
- * network). Discovery + page fetch need network; on discovery failure the
- * tool falls back to the curated list. Before any fan-out the tool warms
- * DNS via Bun.dns.prefetch for api.github.com / raw.githubusercontent.com /
- * bun.com (best effort, in-process, never fails).
+ * Single source, no discovery bloat: llm.txt IS the page list. The indexer
+ * fetches llm.txt, parses its .md links, and caches each page as raw markdown
+ * from bun.com. GitHub trees API (tag/repo), sitemap.xml parsing, scopes, and
+ * the curated fallback are RETIRED (2026-08 debloat; docs/AGENT-PITFALLS §9).
  *
  * Flags:
- *   --refresh       re-fetch pages even when cached recently (also forces
- *                    live discovery).
- *   --check         report cache age/source without fetching; exits 1
- *                    unless every discovered page is cached, fresh (<24h),
- *                    ok, and from the requested source (gate-able).
- *   --source X      one of tag|repo|site (default tag).
- *   --scope X       one of runtime|bundler|all (default runtime).
+ *   --refresh  re-fetch pages even when cached recently (also re-reads llm.txt).
+ *   --check    report cache age/source without fetching; exits 1 unless the
+ *              cached discovery is fresh (<24h) and every page is cached,
+ *              fresh, ok, and source "llm" (gate-able).
  *
- * Provenance: INDEX.json entries carry `source`; a page cached from one
- * source is re-fetched when another source is requested (source-aware
- * freshness). DISCOVERY.json records the discovered page list per
- * source/scope/ref so --check works offline; the single INDEX.json is the
- * union across scopes (additive, never drops other scopes' entries).
+ * Artifacts (research/cache/bun-docs/, gitignored):
+ *   DISCOVERY.json  { at, source: "llm", llmUrl, llmHash, pages: [{name,url}] }
+ *   INDEX.json      { pages: [{name, source, sourceUrl, fetchedAt, bytes, ok}] }
+ *   <name>.md       the cached page bodies.
+ * DISCOVERY.json llmHash feeds the maps.toml triple-lock (docs.ref =
+ * "llm#" + llmHash), so an llm.txt change drifts the lock exactly like a Bun
+ * bump used to via the git tag ref.
  *
  * @see docs/AGENT-PITFALLS.md (verify against the reference, not guesses)
  */
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { assertBunAtLeast } from '../src/research/bun-native.ts';
-import { hasFlag, argValue } from '../src/cli/argv.ts';
+import { hasFlag } from '../src/cli/argv.ts';
 import { fetchPool, warmDns } from '../src/lib/fetch-pool.ts';
-import { resolveGitHubToken } from '../src/research/github-network.ts';
-
-/**
- * Bearer auth header for api.github.com when a token resolves; {} otherwise
- * (graceful — the trees API also works unauthenticated up to 60 req/hr).
- * Exported for tests (mock.module of github-network).
- */
-export async function githubApiAuthHeaders(): Promise<Record<string, string>> {
-  try {
-    return { authorization: 'Bearer ' + (await resolveGitHubToken()) };
-  } catch {
-    return {};
-  }
-}
-import { statusLine, brandMark } from '../src/research/terminal-out.ts';
 import type { DnsWarmTarget } from '../src/lib/fetch-pool.ts';
+import { statusLine, brandMark } from '../src/research/terminal-out.ts';
 
 assertBunAtLeast('1.4.0', 'bun:docs-index');
 
@@ -80,47 +40,25 @@ const ROOT = join(import.meta.dir, '..');
 const CACHE_DIR = join(ROOT, 'research/cache/bun-docs');
 const INDEX_PATH = join(CACHE_DIR, 'INDEX.json');
 const DISCOVERY_PATH = join(CACHE_DIR, 'DISCOVERY.json');
-const TAG_REF = 'bun-v' + Bun.version;
-const REPO_REF = 'main';
-const TREES_API = 'https://api.github.com/repos/oven-sh/bun/git/trees/';
-const TAG_BASE = 'https://raw.githubusercontent.com/oven-sh/bun/' + TAG_REF + '/docs/';
-const REPO_BASE = 'https://raw.githubusercontent.com/oven-sh/bun/main/docs/';
-const SITE_BASE = 'https://bun.com/docs/';
-const SITEMAP_URL = 'https://bun.com/sitemap.xml';
+/** The true index — the page list comes from here and nowhere else. */
+export const LLM_TXT_URL = 'https://bun.com/llm.txt';
+const DOCS_PREFIX = 'https://bun.com/docs/';
 const FRESH_MS = 24 * 60 * 60 * 1000;
 
-type Source = 'tag' | 'repo' | 'site';
-type Scope = 'runtime' | 'bundler' | 'all';
-
-/** Offline fallback when discovery fails (formerly the curated list). */
-const FALLBACK_PAGES: Array<{ name: string; path: string }> = [
-  { name: 'workers', path: 'runtime/workers.mdx' },
-  { name: 'child-process', path: 'runtime/child-process.mdx' },
-  { name: 'image', path: 'runtime/image.mdx' },
-  { name: 'markdown', path: 'runtime/markdown.mdx' },
-  { name: 'xml', path: 'runtime/xml.mdx' },
-  { name: 'secrets', path: 'runtime/secrets.mdx' },
-  { name: 'csrf', path: 'runtime/csrf.mdx' },
-  { name: 'cookies', path: 'runtime/cookies.mdx' },
-  { name: 'networking-dns', path: 'runtime/networking/dns.mdx' },
-  { name: 'networking-fetch', path: 'runtime/networking/fetch.mdx' },
-  { name: 'networking-tcp', path: 'runtime/networking/tcp.mdx' },
-  { name: 'networking-udp', path: 'runtime/networking/udp.mdx' },
-  { name: 'http-websockets', path: 'runtime/http/websockets.mdx' },
-  { name: 'http-server', path: 'runtime/http/server.mdx' },
-  { name: 'glob', path: 'runtime/glob.mdx' },
-  { name: 'sql', path: 'runtime/sql.mdx' },
-];
-
-type IndexEntry = { name: string; source: Source; sourceUrl: string; fetchedAt: string; bytes: number; ok: boolean };
+type IndexEntry = { name: string; source: 'llm'; sourceUrl: string; fetchedAt: string; bytes: number; ok: boolean };
 type Index = { pages: IndexEntry[]; fetchedAt: string };
-type Discovery = {
-  at: string;
-  source: Source;
-  ref: string;
-  /** Per-scope discovered page lists (additive across runs). */
-  scopes: Partial<Record<Scope, Array<{ name: string; path: string }>>>;
-};
+/**
+ * One llm.txt entry. `index` marks section-landing pages (the index.md
+ * links at a section root): llm.txt lists them, but bun.com does not serve
+ * raw .md for them (404/308) — they are navigation landings, not content, so
+ * they are recorded in DISCOVERY.json (the true map is fully represented)
+ * but never cached.
+ */
+type Page = { name: string; url: string; index?: boolean };
+type Discovery = { at: string; source: 'llm'; llmUrl: string; llmHash: string; pages: Page[] };
+
+/** Hosts this tool talks to (warmed before discovery + fan-out). */
+const WARM_HOSTS: DnsWarmTarget[] = [{ hostname: 'bun.com', port: 443 }];
 
 function readJson<T>(path: string): T | null {
   if (!existsSync(path)) return null;
@@ -128,212 +66,161 @@ function readJson<T>(path: string): T | null {
   catch { return null; }
 }
 
-function refFor(source: Source): string {
-  return source === 'tag' ? TAG_REF : source === 'repo' ? REPO_REF : 'sitemap';
-}
-
 /**
- * Read DISCOVERY.json, migrating the pre-merge single-scope shape
- * ({ scope, pages }) into the per-scope `scopes` map.
+ * Page name from a bun.com/docs URL: strip the prefix + .md, drop a leading
+ * "runtime" segment, join the rest with "-" (runtime/child-process.md ->
+ * child-process; guides/process/argv.md -> guides-process-argv; bundler/
+ * plugins.md -> bundler-plugins; root typescript.md -> typescript).
  */
-function readDiscovery(): Discovery | null {
-  const raw = readJson<{
-    at: string;
-    source: Source;
-    ref?: string;
-    scope?: Scope;
-    pages?: Array<{ name: string; path: string }>;
-    scopes?: Partial<Record<Scope, Array<{ name: string; path: string }>>>;
-  }>(DISCOVERY_PATH);
-  if (!raw) return null;
-  if (raw.scopes) return { at: raw.at, source: raw.source, ref: raw.ref ?? refFor(raw.source), scopes: raw.scopes };
-  return {
-    at: raw.at,
-    source: raw.source,
-    ref: raw.ref ?? refFor(raw.source),
-    scopes: { [(raw.scope ?? 'runtime') as Scope]: raw.pages ?? [] },
-  };
-}
-
-function resolveSource(raw: string | undefined): Source {
-  return raw === 'repo' || raw === 'site' ? raw : 'tag';
-}
-
-function resolveScope(raw: string | undefined): Scope {
-  return raw === 'all' ? 'all' : raw === 'bundler' ? 'bundler' : 'runtime';
-}
-
-function sourceBase(s: Source): string {
-  return s === 'tag' ? TAG_BASE : s === 'repo' ? REPO_BASE : SITE_BASE;
-}
-
-/** Hosts this tool talks to (warmed before discovery + fan-out). */
-const WARM_HOSTS: DnsWarmTarget[] = [
-  { hostname: 'api.github.com', port: 443 },
-  { hostname: 'raw.githubusercontent.com', port: 443 },
-  { hostname: 'bun.com', port: 443 },
-];
-
-/** Cache file name from a docs-relative path (runtime/networking/fetch.mdx -> networking-fetch). */
-function nameFromPath(repoPath: string): string {
-  const parts = repoPath.replace(/\.mdx$/, '').split('/');
-  // Drop a leading 'runtime' scope root (runtime/workers.mdx -> workers);
-  // under --scope bundler/all, keep bundler/... api/... guides/... and
-  // root-level pages whole (bundler/plugins.mdx -> bundler-plugins).
+export function nameFromDocsUrl(url: string): string {
+  const rel = url.startsWith(DOCS_PREFIX) ? url.slice(DOCS_PREFIX.length) : url;
+  const parts = rel.replace(/.md$/, '').split('/');
   if (parts.length > 1 && parts[0] === 'runtime') parts.shift();
   return parts.join('-') || 'index';
 }
 
-async function discoverPages(source: Source, scope: Scope): Promise<Array<{ name: string; path: string }>> {
-  let paths: string[] = [];
-  if (source === 'site') {
-    const xml = await (await fetch(SITEMAP_URL)).text();
-    // Bun.XML.parse (Bun 1.4 native, §68 verified): attributes -> @attr,
-    // text -> string, repeated elements -> arrays. Replaces the regex
-    // <loc> extraction so entities/CDATA/whitespace are handled by the
-    // parser, not a hand-rolled pattern.
-    const parsed = Bun.XML.parse(xml) as { urlset?: { url?: { loc?: string } | Array<{ loc?: string }> } };
-    const urls = parsed.urlset?.url;
-    const locs = (Array.isArray(urls) ? urls : urls ? [urls] : [])
-      .map((u) => u.loc)
-      .filter((l): l is string => typeof l === 'string');
-    const sitePrefix = 'https://bun.com/docs/' + (scope === 'all' ? '' : scope + '/');
-    paths = locs
-      .filter((l) => l.startsWith(sitePrefix) && l !== sitePrefix.slice(0, -1))
-      .map((l) => l.slice('https://bun.com/docs/'.length) + '.mdx');
-  } else {
-    const prefix = scope === 'all' ? 'docs/' : 'docs/' + scope + '/';
-    const ref = source === 'tag' ? TAG_REF : REPO_REF;
-    // Authenticated trees API when a token resolves (GH_TOKEN/GITHUB_TOKEN/
-    // gh auth token — github-network.ts SSOT): the unauthenticated bucket is
-    // 60 req/hr and a rate-limit abort kills the whole discovery (cache
-    // miss). Graceful fallback to unauthenticated when no token exists.
-    const res = await fetch(TREES_API + ref + '?recursive=1', { headers: await githubApiAuthHeaders() });
-    const json = (await res.json()) as { tree?: Array<{ type: string; path: string }> };
-    paths = (json.tree ?? [])
-      .filter((t) => t.type === 'blob' && t.path.startsWith(prefix) && t.path.endsWith('.mdx'))
-      .map((t) => t.path.slice('docs/'.length));
-  }
-  paths.sort();
+/**
+ * Fetch the true index and derive the page list. llm.txt is authoritative:
+ * links are markdown `[title](https://bun.com/docs/...md)` entries; the
+ * returned llmHash (Bun.hash of the map text) fingerprints the map for the
+ * maps.toml triple-lock.
+ */
+export async function fetchLlmIndex(): Promise<{ pages: Page[]; llmHash: string; text: string }> {
+  const res = await fetch(LLM_TXT_URL);
+  if (!res.ok) throw new Error('llm.txt fetch failed: HTTP ' + res.status);
+  const text = await res.text();
+  const urls = [...text.matchAll(/\]\((https:\/\/bun\.com\/docs\/[^)#]+\.md)\)/g)].map((m) => m[1]!);
   const seen = new Set<string>();
-  const pages: Array<{ name: string; path: string }> = [];
-  for (const p of paths) {
-    let name = nameFromPath(p);
-    if (seen.has(name)) {
+  const pages: Page[] = [];
+  for (const url of urls.sort()) {
+    if (seen.has(url)) continue;
+    seen.add(url);
+    const index = url.endsWith('/index.md');
+    let name = nameFromDocsUrl(url);
+    if (pages.some((p) => p.name === name)) {
       let n = 1;
-      while (seen.has(name + '-' + n)) n++;
+      while (pages.some((p) => p.name === name + '-' + n)) n++;
       name = name + '-' + n;
     }
-    seen.add(name);
-    pages.push({ name, path: p });
+    pages.push({ name, url, index });
   }
-  if (pages.length === 0) throw new Error('discovery returned 0 pages');
-  return pages;
+  if (pages.length === 0) throw new Error('llm.txt yielded 0 pages');
+  // 16 zero-padded hex: Bun.hash(...).toString(16) can drop leading zeros.
+  return { pages, llmHash: Bun.hash(text).toString(16).padStart(16, '0'), text };
+}
+
+function readDiscovery(): Discovery | null {
+  return readJson<Discovery>(DISCOVERY_PATH);
+}
+
+function discoveryFresh(disc: Discovery | null): boolean {
+  return disc !== null
+    && disc.source === 'llm'
+    && /^[0-9a-f]{16}$/.test(disc.llmHash)
+    && disc.pages.length > 0
+    && Date.now() - Date.parse(disc.at) < FRESH_MS;
 }
 
 async function main(): Promise<void> {
   const refresh = hasFlag('refresh');
   const check = hasFlag('check');
-  const source = resolveSource(argValue('source'));
-  const scope = resolveScope(argValue('scope'));
-  const ref = refFor(source);
   const cachedDiscovery = readDiscovery();
-  const discoveryFresh =
-    cachedDiscovery !== null &&
-    cachedDiscovery.source === source &&
-    cachedDiscovery.ref === ref &&
-    (cachedDiscovery.scopes[scope]?.length ?? 0) > 0 &&
-    Date.now() - Date.parse(cachedDiscovery.at) < FRESH_MS;
+
   if (check) {
-    if (!discoveryFresh) {
-      console.log('discovery: none or stale (' + source + '/' + scope + ') - run without --check first');
+    if (!discoveryFresh(cachedDiscovery)) {
+      console.log('discovery: none or stale (llm.txt) - run without --check first');
       process.exit(1);
     }
-    const pages = cachedDiscovery!.scopes[scope]!;
+    const pages = cachedDiscovery!.pages;
     const index = readJson<Index>(INDEX_PATH) ?? { pages: [], fetchedAt: new Date(0).toISOString() };
     const byName = new Map(index.pages.map((p) => [p.name, p]));
     let problems = 0;
     for (const p of pages) {
+      if (p.index) { console.log('  ' + p.name + ': index landing (not cached)'); continue; }
       const c = byName.get(p.name);
       if (!c) { console.log('  ' + p.name + ': not cached'); problems++; continue; }
       if (!c.ok) { console.log('  ' + p.name + ': FETCH FAILED'); problems++; continue; }
       const src = (c as { source?: string }).source ?? 'legacy';
       const ageH = (Date.now() - Date.parse(c.fetchedAt)) / 3.6e6;
       const stale = ageH > 24;
-      const srcOk = src === source;
+      const srcOk = src === 'llm';
       let line = '  ' + p.name + ': ' + src + ' ' + c.bytes + 'b @ ' + c.fetchedAt.slice(0, 10);
       if (stale) line += '  [stale ' + ageH.toFixed(0) + 'h > 24h]';
-      if (!srcOk) { line += '  [source mismatch: requested ' + source + ']'; problems++; }
+      if (!srcOk) { line += '  [source mismatch: requested llm]'; problems++; }
       console.log(line);
     }
     const verdict = problems === 0 ? 'ok' : problems + ' problem(s)';
-    console.log('check (' + source + '/' + scope + '): ' + verdict + ' - ' + pages.length + ' pages');
+    console.log('check (llm): ' + verdict + ' - ' + pages.length + ' pages');
     process.exit(problems === 0 ? 0 : 1);
     return;
   }
-  let pages: Array<{ name: string; path: string }>;
-  try {
-    pages = discoveryFresh && !refresh ? cachedDiscovery!.scopes[scope]! : await discoverPages(source, scope);
-  } catch (err) {
-    if (scope !== 'runtime') {
-      console.error('discovery failed for scope ' + scope + ' (' + (err as Error).message + ') - offline fallback covers runtime only; re-run when network returns');
-      process.exit(1);
-    }
-    console.warn('discovery failed (' + (err as Error).message + ') - using fallback ' + FALLBACK_PAGES.length + ' pages');
-    pages = FALLBACK_PAGES;
+
+  let pages: Page[];
+  let llmHash: string;
+  if (!refresh && discoveryFresh(cachedDiscovery)) {
+    pages = cachedDiscovery!.pages;
+    llmHash = cachedDiscovery!.llmHash;
+  } else {
+    const fetched = await fetchLlmIndex();
+    pages = fetched.pages;
+    llmHash = fetched.llmHash;
   }
   mkdirSync(CACHE_DIR, { recursive: true });
-  // Additive per-scope discovery: preserve the other scopes' lists, upsert this scope's.
-  writeFileSync(DISCOVERY_PATH, JSON.stringify({ at: new Date().toISOString(), source, ref, scopes: { ...cachedDiscovery?.scopes, [scope]: pages } }, null, 2) + '\n');
-  warmDns(WARM_HOSTS); // shared warmed lookups before discovery + fan-out
+  writeFileSync(DISCOVERY_PATH, JSON.stringify({ at: new Date().toISOString(), source: 'llm', llmUrl: LLM_TXT_URL, llmHash, pages }, null, 2) + '\n');
+  warmDns(WARM_HOSTS); // shared warmed lookups before fan-out
+
   const index = readJson<Index>(INDEX_PATH) ?? { pages: [], fetchedAt: new Date(0).toISOString() };
   const byName = new Map(index.pages.map((p) => [p.name, p]));
   const entries: IndexEntry[] = [];
-  const needFetch: Array<{ page: (typeof pages)[number]; url: string }> = [];
+  const needFetch: Array<{ page: Page }> = [];
   for (const page of pages) {
+    if (page.index) continue; // landing pages are recorded, never cached
     const existing = byName.get(page.name);
-    const fresh = existing?.ok && existing.source === source && Date.now() - Date.parse(existing.fetchedAt) < FRESH_MS;
+    const fresh = existing?.ok && existing.source === 'llm' && Date.now() - Date.parse(existing.fetchedAt) < FRESH_MS;
     if (!refresh && fresh) {
       entries.push(existing);
     } else {
-      needFetch.push({ page, url: sourceBase(source) + (source === 'site' ? page.path.replace(/\.mdx$/, '.md') : page.path) });
+      needFetch.push({ page });
     }
   }
   // Bounded fan-out via the shared fetch-pool default: DNS already warmed,
   // max 16 concurrent (HTTP/1.1 = one TCP connection each), bodies always
   // consumed (pooling-friendly), 30s per-request timeout. Order preserved.
-  const urls = needFetch.map((n) => n.url);
-  const fetched = await fetchPool(urls, { concurrency: 16, timeoutMs: 30_000 });
+  const fetched = await fetchPool(needFetch.map((n) => n.page.url), { concurrency: 16, timeoutMs: 30_000 });
   for (let i = 0; i < needFetch.length; i++) {
     const page = needFetch[i]!.page;
     const r = fetched[i]!;
-    if (r.ok) writeFileSync(join(CACHE_DIR, page.name + '.mdx'), r.text);
-    entries.push({ name: page.name, source, sourceUrl: r.url, fetchedAt: new Date().toISOString(), bytes: r.bytes, ok: r.ok });
-    // Brand-colored mark via brandMark (composes Bun.color auto-TTY +
-    // brand palette); statusLine's padDisplay ignores ANSI, columns align.
+    if (r.ok) writeFileSync(join(CACHE_DIR, page.name + '.md'), r.text);
+    entries.push({ name: page.name, source: 'llm', sourceUrl: r.url, fetchedAt: new Date().toISOString(), bytes: r.bytes, ok: r.ok });
     const mark = brandMark(r.ok ? 'cached' : 'FAILED', r.ok ? 'ok' : 'bad');
-    const detail = '(' + source + ', ' + r.bytes + 'b' + (r.error ? ' - ' + r.error : '') + ')';
+    const detail = '(llm, ' + r.bytes + 'b' + (r.error ? ' - ' + r.error : '') + ')';
     console.log(statusLine(mark, page.name, detail));
   }
-  // Additive INDEX: entries for pages NOT in this scope's discovery (other
-  // scopes) are preserved; this scope's entries (fresh or re-fetched) follow.
-  const discoveredNames = new Set(pages.map((p) => p.name));
-  const preserved = index.pages.filter((p) => !discoveredNames.has(p.name));
+
+  // llm.txt is authoritative: the cached set is EXACTLY the map's pages.
+  // Remove stale cache files (previous-source .mdx, pages dropped from the map).
+  const newNames = new Set(pages.map((p) => p.name));
+  for (const f of readdirSync(CACHE_DIR)) {
+    const isMdx = f.endsWith('.mdx');
+    const base = f.endsWith('.md') ? f.slice(0, -3) : f.endsWith('.mdx') ? f.slice(0, -4) : null;
+    if (base !== null && (isMdx || !newNames.has(base))) rmSync(join(CACHE_DIR, f), { force: true });
+  }
+
   // Preserve non-managed top-level keys (mapsHash/mapsMeta and any future
   // pipeline metadata) written by other steps (docs:refresh triple-lock).
   const extra: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(index)) {
     if (k !== 'pages' && k !== 'fetchedAt') extra[k] = v;
   }
-  writeFileSync(INDEX_PATH, JSON.stringify({ ...extra, pages: [...preserved, ...entries], fetchedAt: new Date().toISOString() }, null, 2) + '\n');
+  writeFileSync(INDEX_PATH, JSON.stringify({ ...extra, pages: entries, fetchedAt: new Date().toISOString() }, null, 2) + '\n');
   const okCount = entries.filter((e) => e.ok).length;
-  console.log('index: ' + okCount + '/' + entries.length + ' pages (' + source + '/' + scope + ')' + (preserved.length > 0 ? ' · merged ' + preserved.length + ' other-scope entries' : '') + ' · ' + CACHE_DIR);
+  console.log('index: ' + okCount + '/' + entries.length + ' pages (llm) · ' + CACHE_DIR);
   process.exit(okCount === entries.length ? 0 : 1);
 }
 
 // Import-safe: only the CLI entry runs the pipeline (repo convention —
 // import.meta.main, see docs/BUN_NATIVE.md). Tests import this module for
-// githubApiAuthHeaders without triggering discovery/network/cache writes.
+// nameFromDocsUrl / fetchLlmIndex without triggering network/cache writes.
 if (import.meta.main) {
   await main();
 }

@@ -36,7 +36,7 @@ const jl = Bun.JSONL.parse("{\"a\":1}\n{\"a\":2}") as any[];
 check("P4 JSONL.parse", Array.isArray(jl) && jl.length === 2 && jl[1].a === 2, JSON.stringify(jl));
 // parseChunk returns { values, read, done, error } per call; it is
 
-// P5 XML.parse attrs -> @attr (repo: bun-docs-index §68)
+// P5 XML.parse attrs -> @attr (repo: tools/xml-probe.ts §68)
 const x = Bun.XML.parse("<root><item id=\"1\">v</item><item id=\"2\">w</item></root>") as any;
 const items = x.root.item;
 check("P5 XML.parse attrs+array", Array.isArray(items) && items[0]["@id"] === "1" && items[0]["#text"] === "v" && items.length === 2, JSON.stringify(x).slice(0, 120));

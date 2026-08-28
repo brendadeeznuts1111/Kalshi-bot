@@ -89,6 +89,8 @@ describe("Symbol.dispose / using (Bun 1.4.0)", () => {
     {
       using sp = spyOn(obj, "method");
       sp.mockImplementation(() => 99);
+      // Precondition check (not a tautology): proves the spy is ACTIVE inside
+      // the block, so the post-block assertion genuinely verifies restoration.
       expect(obj.method()).toBe(99);
     }
     expect(obj.method()).toBe(1);

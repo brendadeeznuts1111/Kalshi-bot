@@ -35,7 +35,7 @@ export function renderXmlPage(): string {
     { cells: ["bundler inlines at build time", W_VERIFIED + ' <code>bun build</code> parses XML and inlines the object — zero runtime overhead (§68)'] },
   ]);
   const adoption = widgetTable(["Adoption in this repo", "Where"], [
-    { cells: ["sitemap.xml discovery (bun-docs-index)", W_VERIFIED + ' 17,907 <code>&lt;loc&gt;</code> extracted via <code>Bun.XML.parse</code> — byte-identical to the old regex (probe)'] },
+    { cells: ["sitemap.xml discovery (retired 2026-08)", W_VERIFIED + ' 17,907 <code>&lt;loc&gt;</code> extracted via <code>Bun.XML.parse</code> (probe) — superseded by llm.txt single-source discovery in bun-docs-index'] },
     { cells: ["CycloneDX SBOM twin (licenses-report)", W_VERIFIED + ' <code>Bun.XML.stringify</code> emits research/outputs/licenses-sbom.xml (§104)'] },
     { cells: ["RSS 2.0 + Atom feeds (release-blog)", W_VERIFIED + ' <code>parseRssEntries</code>/<code>parseAtomEntries</code> feed the releases channel'] },
     { cells: ["live-channel feed broadcast", W_VERIFIED + ' RSS/Atom enclosure <code>@url</code> attribute convention'] },

@@ -6,7 +6,7 @@
  * indexer is re-run against the actual runtime ref, maps.toml is regenerated
  * from the indexed surface, and INDEX.json mapsHash is updated.
  *
- *   bun run docs:refresh                          # index --scope all, gate, lock
+ *   bun run docs:refresh                          # index (llm.txt), gate, lock
  *   BUN_DOCS_REFRESH_SKIP_NETWORK=1 bun run docs:refresh  # offline: gate + lock check only
  *
  * Exits 1 when the index/gate fails, or when a check-only run finds a lock

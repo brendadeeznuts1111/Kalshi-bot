@@ -315,7 +315,10 @@ interface FileSink {
 ## Repo usage map
 
 - `src/lib/odds-tile.ts` — `loadOddsInput` (path → `file.bytes()` → `new Blob([...])` for
-  `Bun.XML.parse`); `writeTile` (png → `Bun.write`, webp/jpeg → `new Bun.Image(png)`).
+  `Bun.XML.parse`); `writeTile` (png → `Bun.write`, webp/jpeg → `new Bun.Image(png)`);
+  `writeTilePyramid` (`mkdirSync` + `writeTile` per format under `root/<z>/<x>/<y>.`<ext>,
+  default png + webp) + `tilePath` — powers `bun run tile <z> <x> <y> --feed=…`
+  (default both formats; `--png`/`--webp`/`--format=` pick one).
 - `src/lib/brand-image.ts` — `readImageMeta` / `decodeImage` / `convertImageFile`;
   `brandSwatchPng` (solid-color PNG encoder).
 - `tools/fs-probe.ts` — P1–P19 pinned facts (MIME, missing-file, truncation, delete, mmap,

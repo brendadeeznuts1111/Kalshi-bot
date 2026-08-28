@@ -1,9 +1,9 @@
 {
-  "lastChecked": "2026-08-27T21:09:51.698Z",
+  "lastChecked": "2026-08-28T04:22:15.605Z",
   "docs": [
     {
       "path": "docs/AGENT-PITFALLS.md",
-      "hash": "96e7fa309f111677593fbc030e842d136a5fb111d5f62fe510dd760e26ea9bdd",
+      "hash": "93602697271aa68035b4d015bdecefb50cac12ae7515e7c4f6385a5d54072256",
       "headings": 53,
       "renderOk": true,
       "duplicateSlugs": []
@@ -73,7 +73,7 @@
     },
     {
       "path": "docs/BUN_FILE.md",
-      "hash": "9e6b7c8c7d2c8d229a2ad7c39288085771412890e928fe5cf986e3fcea98b0c0",
+      "hash": "fb80a039be4ad75660e916da62aed7bebdae1f5145bf774312a9f76b2a32d2f0",
       "headings": 21,
       "renderOk": true,
       "duplicateSlugs": []
@@ -108,8 +108,15 @@
     },
     {
       "path": "docs/BUN_NATIVE.md",
-      "hash": "312cf61d0e0b78f5b053ebd2063717aff9b8407545ee9bcbced2abea30aadaaf",
+      "hash": "e535e166733cb658d4e6822d521dad57332e2929522a5b41e151b4bd40905fd0",
       "headings": 68,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/BUN_PM_PKG.md",
+      "hash": "44ea1965c7e0eb23451a3527ab2eca9d360064424d84690307494c07d7258813",
+      "headings": 7,
       "renderOk": true,
       "duplicateSlugs": []
     },
@@ -332,8 +339,8 @@
     },
     {
       "path": "docs/ODDS_REGISTRY.md",
-      "hash": "14d513dd7709a5db889b2f1ffa326e57daa48ef660e495fed3c58bba9787c3c3",
-      "headings": 14,
+      "hash": "78089e7ee5e6f572782f8bb3b0d255035bb831896eddb4627d318de2ce97c88a",
+      "headings": 17,
       "renderOk": true,
       "duplicateSlugs": []
     },
@@ -360,7 +367,7 @@
     },
     {
       "path": "docs/PIPELINE-MAP.md",
-      "hash": "35f1409514ce293fea3d61e9f586ac836c1d6afa57c2dd2feac86c6fbde88e8d",
+      "hash": "5c86857a6e8f432bc4a6ece121a2f106d89032bfa7675ab2e17fe57ada649349",
       "headings": 12,
       "renderOk": true,
       "duplicateSlugs": []
@@ -397,6 +404,13 @@
       "path": "docs/PROTONPASS.md",
       "hash": "dbd7a9bf804637cf60af480d40ce134798a6a51d1ee43114907441ef69465450",
       "headings": 31,
+      "renderOk": true,
+      "duplicateSlugs": []
+    },
+    {
+      "path": "docs/PTC_SLICE.md",
+      "hash": "f40cc0ef728cdda27394ab377e5a8ac1a03376fef595cdc8a4c67929448639c5",
+      "headings": 8,
       "renderOk": true,
       "duplicateSlugs": []
     },
@@ -471,6 +485,6 @@
       "duplicateSlugs": []
     }
   ],
-  "total": 67,
+  "total": 69,
   "failing": 0
 }

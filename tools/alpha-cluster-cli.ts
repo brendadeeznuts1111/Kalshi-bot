@@ -35,8 +35,9 @@ export type ClusterCliOptions = {
 
 /**
  * Parse alpha:cluster flags with the Bun-recommended util.parseArgs
- * (official guide: research/cache/bun-docs/guides-process-argv.mdx, pinned
- * bun-v1.4.0 - 'To parse argv into a more useful format, use util.parseArgs').
+ * (official guide: research/cache/bun-docs/guides-process-argv.md, from the
+ * llm.txt index, bun 1.4.0 - 'To parse argv into a more useful format, use
+ * util.parseArgs').
  * strict:false keeps unknown flags lenient (repo convention); shorts -v/-h map
  * to verbose/help. Returns the error string for invalid flags.
  */

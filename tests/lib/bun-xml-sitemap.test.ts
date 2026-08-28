@@ -8,7 +8,8 @@ const FIXTURE_SITEMAP = `<?xml version="1.0" encoding="UTF-8"?>
   <url><loc>https://bun.com/docs/runtime/markdown</loc></url>
 </urlset>`;
 
-/** The Bun.XML extraction now used by tools/bun-docs-index.ts (source=site). */
+/** Bun.XML sitemap-style extraction (probe fixture; sitemap discovery was
+ * retired from bun-docs-index with the llm.txt single-source debloat, 2026-08). */
 function extractLocsViaBunXml(xml: string): string[] {
   const parsed = Bun.XML.parse(xml) as { urlset?: { url?: { loc?: string } | Array<{ loc?: string }> } };
   const urls = parsed.urlset?.url;
@@ -22,7 +23,7 @@ function extractLocsViaRegex(xml: string): string[] {
   return [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]!);
 }
 
-describe("Bun.XML sitemap extraction (§68, bun-docs-index site source)", () => {
+describe("Bun.XML parse behaviors (§68, XML module surface)", () => {
   test("matches the regex extraction exactly on a fixture sitemap", () => {
     expect(extractLocsViaBunXml(FIXTURE_SITEMAP)).toEqual(extractLocsViaRegex(FIXTURE_SITEMAP));
     expect(extractLocsViaBunXml(FIXTURE_SITEMAP)).toEqual([

@@ -26,6 +26,7 @@
  * `v = clamp((american + 200) / 400, 0, 1)` → red at +200, blue at −200.
  */
 import { deflateSync } from "node:zlib";
+import { mkdirSync } from "node:fs";
 
 // ── XML compact-shape types (Bun.XML.parse) ────────────────────────────────
 
@@ -251,6 +252,48 @@ export async function writeTile(
   const bytes = await encoded.write(out);
   const m = await new Bun.Image(Bun.file(out)).metadata();
   return { width: m.width, height: m.height, format: m.format, bytes };
+}
+
+/**
+ * Resolve a pyramid tile path: "root/<z>/<x>/<y>.<ext>".
+ * Default root is "tiles" - matches the /tiles/z/x/y.webp serving contract.
+ */
+export function tilePath(
+  z: number,
+  x: number,
+  y: number,
+  ext: string,
+  root = "tiles",
+): string {
+  return root + "/" + z + "/" + x + "/" + y + "." + ext;
+}
+
+/**
+ * Write pyramid tiles under "root/<z>/<x>/<y>". Default writes BOTH png +
+ * webp (full asset generation); pass an explicit formats array for a
+ * single-format override. Creates parent directories on demand. Returns
+ * per-file ground-truth metadata.
+ */
+export async function writeTilePyramid(
+  png: Uint8Array,
+  z: number,
+  x: number,
+  y: number,
+  opts: { formats?: TileFormat[]; quality?: number; root?: string } = {},
+): Promise<TileMeta[]> {
+  const root = opts.root ?? "tiles";
+  const formats = opts.formats ?? (["png", "webp"] as TileFormat[]);
+  mkdirSync(root + "/" + z + "/" + x, { recursive: true });
+  const metas: TileMeta[] = [];
+  for (const format of formats) {
+    const out = tilePath(z, x, y, format, root);
+    const meta =
+      opts.quality === undefined
+        ? await writeTile(png, out, { format })
+        : await writeTile(png, out, { format, quality: opts.quality });
+    metas.push({ ...meta, format });
+  }
+  return metas;
 }
 
 // ── feed loading + analysis ─────────────────────────────────────────────────

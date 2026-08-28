@@ -142,7 +142,7 @@
     "indexOfLine": "exists",
     "allocUnsafe": "exists",
     "embeddedFiles": "exists",
-    "executable": "MISSING",
-    "terminal": "MISSING"
+    "terminal": "MISSING",
+    "executable": "MISSING"
   }
 }

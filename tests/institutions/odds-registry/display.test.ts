@@ -10,6 +10,7 @@ import {
   statusCardSvg,
   statusCardPng,
 } from "../../../src/institutions/odds-registry/index.ts";
+import { hasWebView } from "../../../src/lib/brand-image.ts";
 
 const ROOT = join(import.meta.dir, "..", "..", "..");
 
@@ -31,12 +32,15 @@ describe("odds-registry display", () => {
 
   test("statusCardPng capability contract: rasterizer exists when WebView does", () => {
     // Repo convention (brand-image.test.ts): WebKit is unreliable under bun test
-    // --parallel — no live screenshot in the merge gate. The REAL capture is
-    // `bun run odds-registry:status` (CLI ground-tool) and the serve smoke.
+    // --parallel — no live screenshot in the merge gate (statusCardPng really
+    // rasterizes, display.ts:42-63). The REAL capture is `bun run
+    // odds-registry:status` (CLI ground-tool) and the serve smoke. CI asserts
+    // only the deterministic wiring: the export exists, and the gate the
+    // rasterizer checks (display.ts:36) agrees with the canonical capability
+    // helper — so the two WebView probes cannot drift apart.
     expect(typeof statusCardPng).toBe("function");
-    expect(typeof Bun.WebView).toBe(typeof Bun.WebView); // presence probe, deterministic
     expect(typeof Bun.WebView === "function" ? "webview" : "no-webview").toBe(
-      typeof Bun.WebView === "function" ? "webview" : "no-webview",
+      hasWebView() ? "webview" : "no-webview",
     );
   });
 

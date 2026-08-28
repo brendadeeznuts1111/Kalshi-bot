@@ -1,10 +1,10 @@
 {
-  "lastChecked": "2026-08-28T08:29:18.287Z",
+  "lastChecked": "2026-08-28T08:28:59.275Z",
   "ok": true,
   "fails": 0,
   "bunVersion": "1.4.0",
-  "links": 213,
+  "links": 217,
   "imports": 0,
-  "srcRefs": 478,
+  "srcRefs": 493,
   "staleSrc": 0
 }

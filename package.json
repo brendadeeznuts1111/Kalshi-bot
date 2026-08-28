@@ -102,7 +102,7 @@
     "agent:probe": "bun tools/agent-probe.ts",
     "bun:release-watch": "bun tools/bun-release-watch.ts",
     "bun:docs-index": "bun tools/bun-docs-index.ts",
-    "bun:docs-index:bundler": "bun tools/bun-docs-index.ts --scope bundler",
+    "ptc:run": "bun tools/ptc-runner-cli.ts",
     "docs:refresh": "bun tools/bun-docs-refresh-cli.ts",
     "docs:refresh:register": "bun tools/bun-docs-refresh-schedule-cli.ts register",
     "docs:refresh:remove": "bun tools/bun-docs-refresh-schedule-cli.ts remove",

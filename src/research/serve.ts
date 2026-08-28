@@ -2308,7 +2308,7 @@ export function createResearchServer(options: ServeOptions = {}) {
               docsPages: mapsPins?.docsPages ?? 0,
               mapsLock: mapsPins ? mapsHashOfPins(mapsPins) : null,
               mapsPins: mapsPins
-                ? { bun: mapsPins.bunVersion, ref: mapsPins.docsRef, scope: mapsPins.docsScope }
+                ? { bun: mapsPins.bunVersion, ref: mapsPins.docsRef, source: "llm" }
                 : null,
             },
           };

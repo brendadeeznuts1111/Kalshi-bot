@@ -513,11 +513,13 @@ agent:encode for tricky code: encode -> write .b64 -> base64 -d -> probe.
   * spawnSync stdin: Buffer works (verified 'via-buffer'); a string
     THROWS 'stdio must be an array...'; Node's `input` option is NOT
     supported.
-  * Bun.spawn has NO signal (AbortSignal) and NO timeout option (the AI
-    paste claiming them was wrong - not in child-process.mdx). Timeouts
-    are manual: Promise.race or kill after N ms (serve.ts probeLaunchdLabels
-    is the reference pattern: Promise.race stdout vs Bun.sleep(2000),
-    proc.kill() on timeout, then await proc.exited).
+  * Bun.spawn DOES have signal (AbortSignal) and timeout + killSignal
+    options - probe-verified 1.4.0: timeout:300 kills with SIGTERM at
+    ~304ms; AbortController.abort() kills with SIGTERM; killSignal:
+    'SIGKILL' is honored. The earlier "no signal / no timeout" note here
+    was STALE (child-process.mdx documents both in the current release;
+    corrected 2026-08). Still await proc.exited after the kill lands, and
+    the caller must abort the AbortSignal itself.
   * GUI launches MUST unref(): fixed editor.ts default spawn - without
     unref() the editor:open CLI hung until the editor GUI closed.
   * Cleanup-before-exit pattern (protonpass-run): await proc.exited, then
@@ -529,6 +531,20 @@ agent:encode for tricky code: encode -> write .b64 -> base64 -d -> probe.
     native here: research-runner spawns with { ipc(...), serialization:
     'advanced' } and the child's process.send IS Bun's IPC channel
     (research-progress.ts) - an earlier 'unused no-fit' note was wrong.
+  * PTC transport lessons (src/ptc/*, docs/PTC_SLICE.md, probe-verified):
+    - A child with process.on("message") NEVER exits naturally: the IPC
+      handle keeps the event loop alive. Send complete() then exit(0);
+      and the HOST owns termination anyway (kill on complete, timeout,
+      or abort) - never rely on the child.
+    - Handshake ORDER: the child sends ready BEFORE awaiting the
+      manifest (awaiting first deadlocks - the host only manifests after
+      ready).
+    - Bun.spawn env REPLACES the environment: env:{} -> child sees 0
+      vars (probe); spread process.env to inherit.
+    - maxBuffer exists only for spawnSync; the async spawn has no output
+      cap (a PTC output-limit kind is a real gap, documented).
+    - serialization: "advanced" (structuredClone-compatible) for
+      bun<->bun; "json" only for a Node.js peer.
   * Signal death with NO listener emits NEITHER event - to run cleanup
     on a signal, listen (process.on('SIGINT'/'SIGTERM')) and call
     process.exit() from the listener (the ctrl-c guide makes the
@@ -639,12 +655,16 @@ Node APIs are intentional:
     which the release-watch cron job relies on (it waits for the fan-out
     event, so it deliberately stays ref'd). Worker.exited is genuinely
     ABSENT (runtime + types agree) - wait on messages/events, not exited.
-  * Bun reference docs are now CACHED LOCALLY: bun:docs-index DISCOVERS the
-    page list from the source (tag/repo GitHub trees, site sitemap) into
-    research/cache/bun-docs/ with an INDEX.json manifest - 64 runtime pages,
-    13 bundler pages (--scope bundler), 333 under --scope all (bun 1.4.0).
-    24h freshness + --refresh/--check; INDEX merges across scopes and the
-    docs:refresh weekly cron (docs:refresh:register) keeps it current.
+  * Bun reference docs are CACHED LOCALLY off the TRUE index: bun:docs-index
+    reads bun.com/llm.txt (Bun's official LLM-oriented docs map), derives the
+    page list, and caches each page as raw markdown in research/cache/bun-docs/
+    with INDEX.json + DISCOVERY.json manifests - 319 links in the map as of
+    bun 1.4.0, 314 cacheable content pages (the 5 **/index.md section landings
+    are recorded in DISCOVERY.json but not served as raw .md, so never cached).
+    24h freshness + --refresh/--check; DISCOVERY.json records the llm.txt hash
+    which feeds the maps.toml triple-lock (docs.ref = "llm#" + hash), so a
+    docs-map change drifts the lock like a Bun bump used to via the git tag
+    ref; the docs:refresh weekly cron (docs:refresh:register) keeps it current.
     Verification cites local copies and can detect docs drift.
   * Full-stack feed playbook verified: named imports from 'bun' (cron,
     XML, markdown, write, file) all real - unlike 'html'. Bun.cron jobs
@@ -716,36 +736,37 @@ patterns (harvest-nationalities, fonbet fixture loader converted).
   [A-Za-z0-9+/=]) is the only reliably safe encoding; all three claims were
   probe-verified.
 
-### 9. Docs sources: tag vs repo vs site (bun:docs-index)
+### 9. Docs source: the true index (bun.com/llm.txt, bun:docs-index)
 
-- THREE sources exist for Bun reference docs, verified live:
-  * tag: raw.githubusercontent.com/oven-sh/bun/bun-v<Bun.version>/docs/ -
-    matches the INSTALLED runtime exactly (default source now).
-  * repo: .../main/docs/ - can be AHEAD of the installed runtime.
-  * site: bun.com/docs/...md - a rendering of repo .mdx (YAML frontmatter
-    stripped, render hints like icon= added); content equivalent, verified
-    byte-diff on workers (10635 vs 10662 bytes = frontmatter only).
-- The page list is now DISCOVERED, not curated: tag/repo via GitHub trees
-  API (git/trees/<ref>?recursive=1, filter docs/<scope>/**.mdx) - 64
-  runtime pages at bun-v1.4.0, 333 pages under --scope all; site via
-  bun.com/sitemap.xml - 63 runtime pages (one fewer than the repo tree,
-  the released surface). Scope filter MUST run on the FULL url/path
-  before slicing (a filter on already-sliced paths yields 0 pages -
-  real bug, fixed). Name collisions: dedupe must append -1/-2... (docs/
-  has typescript.mdx AND runtime/typescript.mdx AND typescript-6.mdx).
-- bun.sh is NOT a third source: it is a byte-identical alias of bun.com
-  (same content/sitemap/CDN headers, different Cloudflare IPs; verified
-  on workers/sql/fetch/server/webview/api + root). Only two real
-  surfaces: repo (tag/main .mdx) and the rendered site (bun.com/bun.sh).
-- Scope granularity: --scope runtime (64 pages) | --scope bundler (13 pages,
-  docs/bundler/** - the bundler/plugins.mdx the /bun/map claims cite) |
-  --scope all (333). INDEX.json MERGES additively across scopes: running one
-  scope never drops another's cached entries (names unique; dedupe appends
-  -1/-2). DISCOVERY.json keeps a per-scope page list (scopes map, migrated
-  from the old single-scope shape). docs:refresh (tools/bun-docs-refresh-
-  cli.ts) refreshes --scope all then gates with the offline --check; the
-  weekly OS cron (docs:refresh:register, "0 6 * * 1") automates it, and
-  BUN_DOCS_REFRESH_SKIP_NETWORK=1 turns any run into check-only.
+- The Bun docs page list is NOT curated and NOT re-derived from three
+  sources: bun:docs-index works off the TRUE index https://bun.com/llm.txt
+  - Bun's official LLM-oriented docs map (33 KB, 319 .md links as of bun
+  1.4.0; sibling of bun.com/docs/llms.txt, which the grounding pipeline
+  validates doc URLs against, src/lib/ground.ts). GitHub trees API
+  (tag/repo) discovery, sitemap.xml parsing, scopes, and the curated
+  16-page fallback were RETIRED in the 2026-08 debloat - llm.txt IS the
+  page list. One source, one scope. 5 of the 319 links are **/index.md
+  section landings that bun.com does not serve as raw .md (404/308); they
+  stay recorded in DISCOVERY.json as index:true but are never cached, so
+  INDEX.json holds 314 content pages.
+- Pages are cached as raw markdown from bun.com/docs/**/*.md (the rendered
+  site surface: repo .mdx minus YAML frontmatter). Name derivation drops a
+  leading "runtime/" segment and joins the rest with "-": runtime/
+  child-process.md -> child-process; guides/process/argv.md ->
+  guides-process-argv; bundler/plugins.md -> bundler-plugins. Root-level
+  typescript.md + runtime/typescript.md collide -> dedupe appends -1/-2...
+  (same collision class as the old trees listing; deterministic because the
+  URL list is sorted).
+- DISCOVERY.json records { at, source: "llm", llmUrl, llmHash, pages } -
+  llmHash = Bun.hash(llm.txt).toString(16) is the fingerprint that feeds
+  the maps.toml triple-lock as docs.ref = "llm#" + llmHash, so an llm.txt
+  change drifts the lock exactly like a Bun bump used to via the git tag
+  ref (self-healing re-index still applies). --check is fully offline:
+  cached discovery must be <24h old, every page cached, ok, fresh, source
+  "llm". docs:refresh (tools/bun-docs-refresh-cli.ts) refreshes then gates
+  with the offline --check; the weekly OS cron (docs:refresh:register,
+  "0 6 * * 1") automates it, and BUN_DOCS_REFRESH_SKIP_NETWORK=1 turns any
+  run into check-only.
 - Bundler plugin namespace probe (tests/bun-plugin-namespaces.test.ts, cached
   bundler-plugins.mdx §Namespaces): namespaces are restricted to [a-zA-Z0-9_-]
   on 1.4.0 - the doc's literal namespace: "yaml:" example THROWS at build time
@@ -753,7 +774,8 @@ patterns (harvest-nationalities, fonbet fixture loader converted).
   is read via await output.arrayBuffer() (the documented .text accessor is a
   native fn returning undefined on 1.4.0).
 - maps.toml triple-lock (src/lib/maps-lock.ts): maps.toml + bun-types +
-  @types/bun + Bun.version + docs tag ref must agree. docs:refresh runs the
+  @types/bun + Bun.version + the llm.txt index hash must agree (docs.ref =
+  "llm#" + llmHash from DISCOVERY.json). docs:refresh runs the
   lock: on mismatch it logs the drifted pins, re-indexes (the indexer's
   discovery freshness also requires the ref match, so a Bun bump forces
   re-discovery), regenerates maps.toml from the indexed surface, and records
@@ -782,9 +804,9 @@ patterns (harvest-nationalities, fonbet fixture loader converted).
   HTTP/1.1 (verbose:'curl' output shows --http1.1), Cloudflare edge
   served it (x-vercel-cache: HIT, cf-cache-status: DYNAMIC, br encoding).
 - Default simultaneous fetch limit is 256; excess QUEUES (docs).
-  $BUN_CONFIG_MAX_HTTP_REQUESTS raises it (max 65535). Our --scope all
-  run fans out 333 parallel fetches - 77 queue behind the cap, which is
-  fine (pooled, same host), but cap is real.
+  $BUN_CONFIG_MAX_HTTP_REQUESTS raises it (max 65535). Our bun-docs run
+  fans out 319 parallel fetches (16 at a time through the fetch pool) -
+  well under the cap, pooled on the same host.
 
 ### 11. Bun fetch pooling mechanics (probe-verified on 1.4.0, local servers)
 
@@ -794,7 +816,7 @@ patterns (harvest-nationalities, fonbet fixture loader converted).
   opens its own connection (20 parallel -> 20 conns peak 20; 40 parallel
   -> 40 peak 40). No per-host cap below the global 256. For fan-outs this
   means N parallel fetches = N TCP connections, so warm the pool / bound
-  concurrency deliberately (our bun-docs fan-out to raw.githubusercontent
+  concurrency deliberately (our bun-docs fan-out to bun.com
   opens one conn per page in parallel).
 - Idle pooled connections do NOT time out within 15s (checked at 5/10/15s,
   zero closes) and are reused after idle. Docs do not specify an idle

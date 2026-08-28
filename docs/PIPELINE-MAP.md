@@ -47,8 +47,8 @@
 
 | | |
 |---|---|
-| SSOT | `tools/bun-docs-index.ts` (discovery) + `src/lib/maps-lock.ts` (triple-lock) + `maps.toml` |
-| Stages | discover (tag/repo/site) → fetch 333 pages → INDEX/DISCOVERY json → mapsHash lock → docs:refresh (weekly OS cron `0 6 * * 1`) |
+| SSOT | `tools/bun-docs-index.ts` (single source: `bun.com/llm.txt`) + `src/lib/maps-lock.ts` (triple-lock) + `maps.toml` |
+| Stages | discover (llm.txt) → fetch 314 content pages (319 links; 5 index landings recorded, not cached) → INDEX/DISCOVERY json → mapsHash lock → docs:refresh (weekly OS cron `0 6 * * 1`) |
 | Artifacts | `research/cache/bun-docs/` · `maps.toml` · `.data/{docs,api,integrity,output}-state.json` |
 | Gates | `docs:check` · `docs:api` (STRICT) · `docs:integrity` · `output:probe` · `docs:refresh` (verify:contracts #19) |
 | Channel | docs |

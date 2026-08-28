@@ -1,5 +1,5 @@
 // @see https://bun.com/docs/bundler/plugins#namespaces
-// (cached locally: research/cache/bun-docs/bundler-plugins.mdx)
+// (cached locally: research/cache/bun-docs/bundler-plugins.md)
 /**
  * Probe for the bundler-plugin "Namespaces" section claims (all offline):
  *  1. default namespace is "file" — a relative import matches an onResolve
@@ -56,7 +56,7 @@ async function bundleText(r: BuildResult): Promise<string> {
   return new TextDecoder().decode(await out.arrayBuffer());
 }
 
-describe("bundler plugin namespaces (docs/bundler/plugins.mdx §Namespaces)", () => {
+describe("bundler plugin namespaces (docs/bundler/plugins.md §Namespaces)", () => {
   test('default namespace is "file": onResolve scoped to file fires for a relative import', async () => {
     const seen: string[] = [];
     const r = await buildWith(

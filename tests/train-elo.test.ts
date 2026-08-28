@@ -1,5 +1,5 @@
 // @see https://bun.com/docs/test/dates-times
-import { setSystemTime, describe, expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import {
   computeSurfaceElo,
   DEFAULT_ELO_OUTPUT,
@@ -126,42 +126,34 @@ describe("Elo engine", () => {
     }
   });
 
-  test("setSystemTime: temporal ordering", () => {
-    setSystemTime(new Date("2024-07-01T00:00:00Z"));
-    try {
-      // With time frozen, Date.now() returns the mocked time
-      const now = Date.now();
-      expect(new Date(now).toISOString().startsWith("2024-07-01")).toBe(true);
+  test("walk-forward: predictions use pre-match Elo in match order", () => {
+    // computeSurfaceElo never reads Date.now() (grep-verified) — the cutoff is
+    // explicit, so no system-time mocking is needed here.
+    const match1 = makeMatch({
+      playerA: "Ivan",
+      playerB: "Julia",
+      winner: "Ivan",
+      surface: "Hard",
+      startTs: "2024-07-01T12:00:00Z",
+    });
+    const match2 = makeMatch({
+      playerA: "Ivan",
+      playerB: "Julia",
+      winner: "Julia",
+      surface: "Hard",
+      startTs: "2024-07-02T12:00:00Z",
+    });
 
-      // Create matches in order
-      const match1 = makeMatch({
-        playerA: "Ivan",
-        playerB: "Julia",
-        winner: "Ivan",
-        surface: "Hard",
-        startTs: "2024-07-01T12:00:00Z",
-      });
-      const match2 = makeMatch({
-        playerA: "Ivan",
-        playerB: "Julia",
-        winner: "Julia",
-        surface: "Hard",
-        startTs: "2024-07-02T12:00:00Z",
-      });
+    const { predictions } = computeSurfaceElo([match1, match2], "2024-07-01T00:00:00Z");
+    // Both matches are >= cutoff, so both produce predictions
+    expect(predictions.length).toBe(2);
 
-      const { predictions } = computeSurfaceElo([match1, match2], "2024-07-01T00:00:00Z");
-      // Both matches are >= cutoff, so both produce predictions
-      expect(predictions.length).toBe(2);
+    // First prediction: both at 1500, pA = 0.5
+    expect(predictions[0]!.pA).toBeCloseTo(0.5, 1);
 
-      // First prediction: both at 1500, pA = 0.5
-      expect(predictions[0]!.pA).toBeCloseTo(0.5, 1);
-
-      // Second prediction: Ivan won first match, so his Elo is higher
-      expect(predictions[1]!.eloA[0]!).toBeGreaterThan(predictions[1]!.eloB[0]!);
-      expect(predictions[1]!.pA).toBeGreaterThan(0.5);
-    } finally {
-      setSystemTime(); // reset
-    }
+    // Second prediction: Ivan won first match, so his Elo is higher
+    expect(predictions[1]!.eloA[0]!).toBeGreaterThan(predictions[1]!.eloB[0]!);
+    expect(predictions[1]!.pA).toBeGreaterThan(0.5);
   });
 
   test("no cutoff = no predictions", () => {
@@ -207,7 +199,11 @@ describe("train-elo CLI", () => {
     });
   });
 
-  test("keeps the default output in the ignored research cache", () => {
-    expect(DEFAULT_ELO_OUTPUT).toBe("research/cache/p_elo_predictions.json");
+  test("keeps the default output in the ignored research cache", async () => {
+    // Real guard: the default output must stay inside the gitignored
+    // research/cache/ tree, or p_elo_predictions.json would get committed.
+    expect(DEFAULT_ELO_OUTPUT).toStartWith("research/cache/");
+    const gitignore = await Bun.file(".gitignore").text();
+    expect(gitignore.split("\n").map((l) => l.trim())).toContain("research/cache/");
   });
 });

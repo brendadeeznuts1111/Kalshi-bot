@@ -22,7 +22,13 @@ describe("terminal-out", () => {
     expect(linked.length).toBeGreaterThan(text.length);
   });
 
-  test("repoTerminalLink uses githubRepoWebUrl", () => {
+  test("repoTerminalLink uses githubRepoWebUrl when hyperlinks are on", () => {
+    const linked = repoTerminalLink("OctagonAI/kalshi-trading-bot-cli", true);
+    expect(linked).toContain("https://github.com/OctagonAI/kalshi-trading-bot-cli");
+    expect(linked.length).toBeGreaterThan("OctagonAI/kalshi-trading-bot-cli".length);
+  });
+
+  test("repoTerminalLink returns the plain name when hyperlinks are off", () => {
     expect(repoTerminalLink("OctagonAI/kalshi-trading-bot-cli", false)).toBe(
       "OctagonAI/kalshi-trading-bot-cli",
     );

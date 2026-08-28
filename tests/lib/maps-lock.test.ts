@@ -15,23 +15,24 @@ const base: MapsPins = {
   bunVersion: "1.4.0",
   bunTypesVersion: "1.4.0",
   typesBunVersion: "1.4.0",
-  docsRef: "bun-v1.4.0",
-  docsScope: "all",
-  docsPages: 333,
+  docsRef: "llm#0123456789abcdef",
+  docsPages: 314,
 };
 
 describe("maps.toml triple-lock", () => {
   test("pins content is deterministic and stable", () => {
     expect(mapsPinsContent(base)).toBe(mapsPinsContent({ ...base }));
     expect(mapsPinsContent(base)).toContain('runtime.bun = "1.4.0"');
-    expect(mapsPinsContent(base)).toContain('docs.pages = 333');
+    expect(mapsPinsContent(base)).toContain('docs.ref = "llm#0123456789abcdef"');
+    expect(mapsPinsContent(base)).toContain('docs.pages = 314');
   });
 
   test("hash is 16 hex chars and changes when any pin drifts", () => {
     const h = mapsHashOfPins(base);
     expect(h).toMatch(/^[0-9a-f]{16}$/);
-    // A Bun bump changes runtime + docs ref -> different hash.
-    expect(mapsHashOfPins({ ...base, bunVersion: "1.5.0", docsRef: "bun-v1.5.0" })).not.toBe(h);
+    // A Bun bump or an llm.txt change (docs ref) -> different hash.
+    expect(mapsHashOfPins({ ...base, bunVersion: "1.5.0", docsRef: "llm#ffffffffffffffff" })).not.toBe(h);
+    expect(mapsHashOfPins({ ...base, docsRef: "llm#ffffffffffffffff" })).not.toBe(h);
     // A types pin drift changes the hash.
     expect(mapsHashOfPins({ ...base, bunTypesVersion: "1.5.0" })).not.toBe(h);
     // A page-count change changes the hash.
@@ -45,7 +46,7 @@ describe("maps.toml triple-lock", () => {
     expect(parsed.runtime.bun).toBe("1.4.0");
     expect(parsed.types["bun-types"]).toBe("1.4.0");
     expect(parsed.types["@types/bun"]).toBe("1.4.0");
-    expect(parsed.docs.ref).toBe("bun-v1.4.0");
+    expect(parsed.docs.ref).toBe("llm#0123456789abcdef");
     expect(parseMapsPins(parsed)).toEqual(base);
   });
 
@@ -73,7 +74,7 @@ describe("maps.toml triple-lock", () => {
 
   test("evaluate: Bun bump drift names the drifted pins", () => {
     const st = evaluateMapsLock({
-      expectedPins: { ...base, bunVersion: "1.5.0", docsRef: "bun-v1.5.0" },
+      expectedPins: { ...base, bunVersion: "1.5.0", docsRef: "llm#ffffffffffffffff" },
       filePins: base,
       recordedHash: mapsHashOfPins(base),
     });
