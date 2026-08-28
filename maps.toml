@@ -3,7 +3,7 @@
 # tools/bun-docs-refresh-scheduled.ts). Do not edit by hand.
 # INDEX.json records the pins hash as "mapsHash" (Bun.hash hex).
 
-generated = "2026-08-27T20:50:51.727Z"
+generated = "2026-08-28T08:27:31.434Z"
 
 [runtime]
 bun = "1.4.0"

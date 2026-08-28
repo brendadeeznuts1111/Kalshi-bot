@@ -219,6 +219,10 @@ export async function syncDocsLock(opts: { skipNetwork: boolean }): Promise<Sync
   if (!opts.skipNetwork) {
     const r = await run(["run", "bun:docs-index", "--scope", MAPS_DOCS_SCOPE]);
     if (!r.ok) throw new Error("docs index refresh failed: " + r.lastLine);
+    // 1b) Per-scope discovery lists (DISCOVERY.json scopes.*) — the
+    // bun-docs cache tests read the bundler scope. Best-effort: the lock
+    // contract (scope "all") stays the only hard gate.
+    await run(["run", "bun:docs-index", "--scope", "bundler"]);
   } else {
     const c = await run(["run", "bun:docs-index", "--check", "--scope", MAPS_DOCS_SCOPE]);
     if (!c.ok) throw new Error("docs index gate failed: " + c.lastLine);
