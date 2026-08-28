@@ -66,7 +66,7 @@ Full topic map (guides from the official table; **Ref** = types API; **Here** = 
 | Terminal/PTY | [`Bun.Terminal`](https://bun.com/docs/runtime/utils) | [/Terminal](https://bun.com/reference/bun/Terminal) | yes — alpha:cluster `--pty-pin` (§197) · [`BUN_TERMINAL.md`](BUN_TERMINAL.md) (replaces node-pty) |
 | Archive | [`Bun.Archive`](https://bun.com/docs/runtime/archive) | [/Archive](https://bun.com/reference/bun/Archive) | yes — `bun:backup` tars research DBs (§22; KNOWN bug: `BunFile` values archive 0-byte, use `.bytes()`) |
 | Object Store | [`Bun.S3Client`](https://bun.com/docs/runtime/s3) | [/S3Client](https://bun.com/reference/bun/S3Client) | — |
-| JSON5 / JSONC | [`Bun.JSON5.parse`](https://bun.com/docs/runtime/json5) · [`Bun.JSONC.parse`](https://bun.com/docs/runtime/jsonc) | [/JSON5](https://bun.com/reference/bun/JSON5/parse) | JSON5: config; JSONC: tsconfig-style comments |
+| JSON5 / JSONC | [`Bun.JSON5.parse`](https://bun.com/docs/runtime/json5) · [`Bun.JSONC.parse`](https://bun.com/blog/bun-v1.4#jsonc-parse) | [/JSON5](https://bun.com/reference/bun/JSON5/parse) | JSON5: config; JSONC: tsconfig-style comments |
 | Hashing | [`Bun.password`](https://bun.com/docs/runtime/hashing#bun-password), [`Bun.hash`](https://bun.com/docs/runtime/hashing#bun-hash), [`Bun.CryptoHasher`](https://bun.com/docs/runtime/hashing#bun-cryptohasher), `Bun.sha` | [/hash](https://bun.com/reference/bun/hash) · [/CryptoHasher](https://bun.com/reference/bun/CryptoHasher) | yes — cache digests, canary |
 | CSRF Protection | [`Bun.CSRF.generate`](https://bun.com/docs/runtime/csrf) / [`.verify`](https://bun.com/docs/runtime/csrf) | [/CSRF](https://bun.com/reference/bun/CSRF) | — (prefer when adding browser forms) |
 | SQLite | [`bun:sqlite`](https://bun.com/docs/runtime/sqlite) | [/sqlite](https://bun.com/reference/bun/sqlite) | yes — event-store, research cache (+ drizzle) |
@@ -313,7 +313,7 @@ markdownToAnsi(md);              // TTY reports (same engine as report-term)
 
 ### `Bun.color` — native CSS color conversion + kernel-extended formats
 
-[@see guide](https://bun.com/docs/runtime/color) · [@see reference](https://bun.com/reference/bun/color) · cached guide: `research/cache/bun-docs/color.mdx` · [`src/lib/color/kernel.ts`](../src/lib/color/kernel.ts)
+[@see guide](https://bun.com/docs/runtime/color) · [@see reference](https://bun.com/reference/bun/color) · cached guide: `research/cache/bun-docs/color.md` · [`src/lib/color/kernel.ts`](../src/lib/color/kernel.ts)
 
 - Output formats (guide table + runtime error list + pinned `bun-types` 1.4.0 all agree):
   `css` `hex` `HEX` `rgb` `rgba` `hsl` `lab` `number` `ansi*` + object/array forms.
@@ -702,14 +702,14 @@ Deep dives: [`BUN_SHELL.md`](BUN_SHELL.md) (`Bun.$` patterns) · [`BUN_FILE.md`]
 | `Bun.spawnSync` | [spawnSync](https://bun.com/docs/runtime/child-process#blocking-api-bun-spawnsync) | [/spawnSync](https://bun.com/reference/bun/spawnSync) |
 | `Bun.WebView` | [webview](https://bun.com/docs/runtime/webview) | [/WebView](https://bun.com/reference/bun/WebView) |
 | `Bun.Image` | [image](https://bun.com/docs/runtime/image) | [/Image](https://bun.com/reference/bun/Image) |
-| Client `WebSocket` (headers, `proxy`) | [websockets](https://bun.com/docs/runtime/http/websockets) · [proxy v1.3.6](https://bun.com/docs/blog/bun-v1.3.6#httphttps-proxy-support-for-websocket) | — |
+| Client `WebSocket` (headers, `proxy`) | [websockets](https://bun.com/docs/runtime/http/websockets) · [proxy v1.3.6](https://bun.com/blog/bun-v1.3.6#httphttps-proxy-support-for-websocket) | — |
 | `bun install` | [install](https://bun.com/docs/pm/cli/install) | — |
 | `bun.lock` / lockfile | [lockfile](https://bun.com/docs/pm/lockfile) | — |
 | `bunfig.toml` `[install]` | [bunfig](https://bun.com/docs/runtime/bunfig) | — |
 | Isolated installs | [isolated-installs](https://bun.com/docs/pm/isolated-installs) | — |
-| `Buffer.indexOf` / `Buffer.includes` | [blog v1.3.6](https://bun.com/docs/blog/bun-v1.3.6#faster-bufferindexof) | [node:buffer](https://bun.com/reference/node/buffer) |
-| `bun test --grep` | [blog v1.3.6](https://bun.com/docs/blog/bun-v1.3.6#grep-flag-for-bun-test) | — |
-| `Response.json()` perf | [blog v1.3.6](https://bun.com/docs/blog/bun-v1.3.6#responsejsonobject-is-now-35x-faster) | — |
+| `Buffer.indexOf` / `Buffer.includes` | [blog v1.3.6](https://bun.com/blog/bun-v1.3.6#faster-bufferindexof) | [node:buffer](https://bun.com/reference/node/buffer) |
+| `bun test --grep` | [blog v1.3.6](https://bun.com/blog/bun-v1.3.6#grep-flag-for-bun-test) | — |
+| `Response.json()` perf | [blog v1.3.6](https://bun.com/blog/bun-v1.3.6#responsejsonobject-is-now-35x-faster) | — |
 
 ## Runtime notes (Bun v1.3.6+)
 
@@ -733,7 +733,7 @@ new Response(JSON.stringify(obj));       // equivalent perf after v1.3.6
 | `JSON.stringify()` + `new Response()` | 689 ms | ~700 ms |
 | Ratio | **3.50× slower** | **~1.0× (parity)** |
 
-**This repo:** [`serve.ts`](../src/research/serve.ts) already uses `Response.json(data, { status })` for JSON routes. Test mocks still use `new Response(JSON.stringify(…))` — fine on v1.3.6+; no need to rewrite unless you want explicit `Content-Type`. See [Bun v1.3.6 — Response.json() is now 3.5× faster](https://bun.com/docs/blog/bun-v1.3.6#responsejsonobject-is-now-35x-faster).
+**This repo:** [`serve.ts`](../src/research/serve.ts) already uses `Response.json(data, { status })` for JSON routes. Test mocks still use `new Response(JSON.stringify(…))` — fine on v1.3.6+; no need to rewrite unless you want explicit `Content-Type`. See [Bun v1.3.6 — Response.json() is now 3.5× faster](https://bun.com/blog/bun-v1.3.6#responsejsonobject-is-now-35x-faster).
 
 ### Faster `Buffer.indexOf` / `Buffer.includes`
 
@@ -752,7 +752,7 @@ buffer.indexOf("needle");   // single- and multi-byte patterns
 buffer.includes("needle");
 ```
 
-**This repo:** no `Buffer.indexOf` / `includes` call sites today. Prefer these over manual byte scans when parsing binary wire (WS frames, tarball sniffing, etc.). See [Bun v1.3.6 — Faster Buffer.indexOf](https://bun.com/docs/blog/bun-v1.3.6#faster-bufferindexof).
+**This repo:** no `Buffer.indexOf` / `includes` call sites today. Prefer these over manual byte scans when parsing binary wire (WS frames, tarball sniffing, etc.). See [Bun v1.3.6 — Faster Buffer.indexOf](https://bun.com/blog/bun-v1.3.6#faster-bufferindexof).
 
 ### WebSocket `proxy` option (HTTP/HTTPS)
 
@@ -810,11 +810,11 @@ Reliability: client ping every 20s (`pingIntervalMs`); recorder reconnect via `k
 
 Net env: `resolveKalshiWsNetOptions()` reads `KALSHI_WS_PROXY` → `HTTPS_PROXY` → `HTTP_PROXY`, honoring `NO_PROXY` / `no_proxy` for the WS host (`KALSHI_WS_PROXY` explicit override wins). TLS via `KALSHI_WS_TLS_*` (`REJECT_UNAUTHORIZED`, `CA_FILE`, `CERT_FILE`, `KEY_FILE`, `PASSPHRASE`, `SERVER_NAME`, `CIPHERS`) in `defaultWsFactory`. Per-instance override via constructor `net: { proxy, tls }`; full control with injectable `wsFactory`.
 
-See [Bun v1.3.6 — HTTP/HTTPS Proxy Support for WebSocket](https://bun.com/docs/blog/bun-v1.3.6#httphttps-proxy-support-for-websocket) · [WebSocket client](https://bun.com/docs/runtime/http/websockets).
+See [Bun v1.3.6 — HTTP/HTTPS Proxy Support for WebSocket](https://bun.com/blog/bun-v1.3.6#httphttps-proxy-support-for-websocket) · [WebSocket client](https://bun.com/docs/runtime/http/websockets).
 
 ## Cache: `bun:sqlite` not JSON blobs
 
-[`research/cache/cache.db`](../research/cache/cache.db) (gitignored) replaces per-file JSON under `research/cache/`.
+[`research/cache/cache.db`] (gitignored runtime artifact — lives only on disk, never in the repo) replaces per-file JSON under `research/cache/`.
 
 ```sql
 -- api_cache: hash = Bun.hash(repo + endpoint + pushed_at), TTL on expires_at
@@ -957,7 +957,7 @@ bun test tests/institutions/live-scores.test.ts --grep "poll"
 - Use `bun test --grep "pattern"` (v1.3.6+) or `bun test -t "pattern"` to filter by test name.
 - `--grep` is an alias for `--test-name-pattern`.
 
-Filters on **`test()` / `describe()` names**, not file paths; pass a file path separately to narrow scope. Works with `--parallel --timings` (this repo’s default via [`package.json`](../package.json) `"test"` script — 5.5x faster than the old `--isolate`, §23). See [Bun v1.3.6](https://bun.com/docs/blog/bun-v1.3.6#grep-flag-for-bun-test).
+Filters on **`test()` / `describe()` names**, not file paths; pass a file path separately to narrow scope. Works with `--parallel --timings` (this repo’s default via [`package.json`](../package.json) `"test"` script — 5.5x faster than the old `--isolate`, §23). See [Bun v1.3.6](https://bun.com/blog/bun-v1.3.6#grep-flag-for-bun-test).
 
 Integration (live `gh`) is `bun run research` only.
 
