@@ -288,6 +288,52 @@ export function runBreakingAudit(root: string): BreakingFinding[] {
       : 'no fs.rmdir({ recursive }) usage (repo uses fs.rm already)',
   });
 
+  // 16. node:http res.writeHeader(): REMOVED in 1.4 (Node 26 parity). Use
+  // res.writeHead(status, headers). writeHead is unaffected.
+  const writeHeader = rgFiles(root, '\\.writeHeader\\(', dirs, { exclude: LABEL_FILES });
+  findings.push({
+    check: 'res.writeHeader() removed (use res.writeHead)',
+    status: writeHeader.length ? 'warn' : 'ok',
+    detail: writeHeader.length
+      ? 'writeHeader in: ' + writeHeader.join(', ') + ' - removed on 1.4 (Node 26 parity); use res.writeHead(status, headers)'
+      : 'no res.writeHeader usage',
+  });
+
+  // 17. new WebSocket(url, { agent }): non-standard option REMOVED on 1.4 —
+  // the global WebSocket uses an undici dispatcher; the ws package accepts
+  // agent on its own WebSocket instead.
+  const wsAgent = rgFiles(root, 'new WebSocket\\([^)]*agent', dirs, { exclude: LABEL_FILES });
+  findings.push({
+    check: 'global WebSocket { agent } option removed',
+    status: wsAgent.length ? 'warn' : 'ok',
+    detail: wsAgent.length
+      ? 'WebSocket with agent in: ' + wsAgent.join(', ') + ' - option removed on 1.4; use the ws package WebSocket for dispatcher control'
+      : 'no WebSocket { agent } usage',
+  });
+
+  // 18. Bun.serve({ inspector }): silently ignored on 1.3.14+ (never public).
+  // Use the --inspect flag to attach a debugger.
+  const serveInspector = rgFiles(root, 'serve\\(\\{[^}]*inspector', dirs, { exclude: LABEL_FILES });
+  findings.push({
+    check: 'Bun.serve({ inspector }) ignored (use --inspect)',
+    status: serveInspector.length ? 'warn' : 'ok',
+    detail: serveInspector.length
+      ? 'serve inspector in: ' + serveInspector.join(', ') + ' - silently ignored on 1.3.14+; use bun --inspect'
+      : 'no Bun.serve({ inspector }) usage',
+  });
+
+  // 19. WebSocket close/ping/pong argument validation (1.4): close() throws
+  // InvalidAccessError for codes outside the valid ranges, SyntaxError for
+  // reasons > 123 UTF-8 bytes; ping/pong throw RangeError over 125 bytes.
+  const wsCloseCode = rgFiles(root, '\\.close\\([0-9]', dirs, { exclude: LABEL_FILES });
+  findings.push({
+    check: 'WebSocket.close() code validation (InvalidAccessError on 1.4)',
+    status: 'ok', // awareness check: repo closes with no-arg/default codes
+    detail: wsCloseCode.length
+      ? 'numeric close codes in: ' + wsCloseCode.join(', ') + ' - must be 1000-1003/1007-1014/3000-4999 or InvalidAccessError; reason > 123 UTF-8 bytes throws SyntaxError'
+      : 'no numeric WebSocket.close(code) usage',
+  });
+
   return findings;
 }
 
