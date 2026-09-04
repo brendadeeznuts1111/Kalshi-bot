@@ -2,7 +2,7 @@
 // @see https://bun.com/blog/bun-v1.4.1
 // @see https://bun.com/docs/runtime/networking/fetch
 // Header / cookie jar for Massey native-fetch. Casing is preserved on the wire
-// (Bun ≥ 1.3.7). HTTPS_PROXY is re-read per fetch (Bun ≥ 1.3.12). Prefer the
+// (Bun >= 1.3.7). HTTPS_PROXY is re-read per fetch (Bun >= 1.3.12). Prefer the
 // explicit `proxy: { url, headers }` fetch option for CONNECT auth. TLS is
 // checked against the URL host, not Host (Bun 1.4.1) — do not spoof Host.
 import { mkdirSync, existsSync, readFileSync, writeFileSync } from "node:fs";
@@ -173,7 +173,7 @@ function basicProxyAuthorization(proxyUrl: string): string | undefined {
 /**
  * Explicit Bun 1.4 `fetch` proxy option. CONNECT headers live here — not on the
  * origin request, and never as a spoofed `Host`. Env overlay remains a fallback
- * because Bun ≥ 1.3.12 re-reads HTTPS_PROXY per fetch.
+ * because Bun >= 1.3.12 re-reads HTTPS_PROXY per fetch.
  */
 export function masseyFetchProxyOption(
   overlay: MasseyProxyEnv = readMasseyProxyEnv(),
@@ -212,6 +212,109 @@ export function loadHeaderJar(path: string): MasseyHeaderJar {
   }
 }
 
-export function saveHeaderJar(path: string): void {
+export function saveHeaderJar(path: string, jar: MasseyHeaderJar): void {
   mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, JSON.stringify(jar, null, 2) + "\n");
+}
+
+function readSetCookieLines(headers: Headers): string[] {
+  if (typeof headers.getSetCookie === "function") {
+    const lines = headers.getSetCookie();
+    if (lines.length) return lines;
+  }
+  if (typeof headers.getAll === "function") {
+    const lines = headers.getAll("Set-Cookie");
+    if (lines.length) return lines;
+  }
+  const single = headers.get("set-cookie");
+  return single ? [single] : [];
+}
+
+export function absorbSetCookieHeaders(
+  jar: MasseyHeaderJar,
+  headers: Headers,
+  path: MasseyHeaderJar["path"],
+  status?: number,
+): MasseyHeaderJar {
+  const incoming: MasseyCookie[] = [];
+  for (const line of readSetCookieLines(headers)) {
+    const c = parseSetCookie(line);
+    if (c) incoming.push(c);
+  }
+  return {
+    ...jar,
+    updatedAtMs: incoming.length ? Date.now() : jar.updatedAtMs,
+    path,
+    cookies: incoming.length ? mergeCookies(jar.cookies, incoming) : jar.cookies,
+    lastStatus: status ?? jar.lastStatus,
+    lastCfRay: headers.get("cf-ray") ?? jar.lastCfRay,
+  };
+}
+
+export function absorbDocumentCookies(
+  jar: MasseyHeaderJar,
+  documentCookie: string,
+  domain: string,
+  path: MasseyHeaderJar["path"],
+): MasseyHeaderJar {
+  const incoming = cookiesFromDocumentCookie(documentCookie, domain);
+  if (!incoming.length) return { ...jar, path, updatedAtMs: Date.now() };
+  return {
+    ...jar,
+    updatedAtMs: Date.now(),
+    path,
+    cookies: mergeCookies(jar.cookies, incoming),
+  };
+}
+
+export type CdpCookie = {
+  name: string;
+  value: string;
+  domain?: string;
+  path?: string;
+  expires?: number;
+  httpOnly?: boolean;
+  secure?: boolean;
+  url?: string;
+};
+
+export function cookiesToCdpSet(jar: MasseyHeaderJar, origin = MASSEY_ORIGIN): CdpCookie[] {
+  const now = Date.now();
+  return jar.cookies
+    .filter((c) => c.name && (!c.expiresMs || c.expiresMs > now))
+    .map((c) => ({
+      name: c.name,
+      value: c.value,
+      url: origin + "/",
+      domain: c.domain || "masseyratings.com",
+      path: c.path || "/",
+      secure: c.secure ?? true,
+      httpOnly: c.httpOnly ?? /clearance|cf_uvid|__cf/i.test(c.name),
+      expires: c.expiresMs && c.expiresMs > 0 ? c.expiresMs / 1000 : undefined,
+    }));
+}
+
+export function absorbCdpCookies(
+  jar: MasseyHeaderJar,
+  incoming: Array<{ name: string; value: string; domain?: string; path?: string; expires?: number; httpOnly?: boolean; secure?: boolean }>,
+  path: MasseyHeaderJar["path"] = "webview",
+): MasseyHeaderJar {
+  const next = incoming
+    .filter((c) => c.name && typeof c.value === "string")
+    .map((c) => ({
+      name: c.name,
+      value: c.value,
+      domain: c.domain,
+      path: c.path || "/",
+      expiresMs: c.expires && c.expires > 0 ? c.expires * 1000 : undefined,
+      httpOnly: c.httpOnly,
+      secure: c.secure,
+    } satisfies MasseyCookie));
+  if (!next.length) return { ...jar, path, updatedAtMs: Date.now() };
+  return {
+    ...jar,
+    updatedAtMs: Date.now(),
+    path,
+    cookies: mergeCookies(jar.cookies, next),
+  };
 }
