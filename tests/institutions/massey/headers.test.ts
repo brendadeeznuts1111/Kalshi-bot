@@ -6,14 +6,17 @@ import { tmpdir } from "node:os";
 import {
   CHALLENGE_RE,
   EMPTY_JAR,
+  absorbCdpCookies,
   absorbDocumentCookies,
   absorbSetCookieHeaders,
   applyMasseyProxyEnv,
   cookieHeader,
   cookiesFromDocumentCookie,
+  cookiesToCdpSet,
   isChallengeHtml,
   jarIsFresh,
   loadHeaderJar,
+  masseyFetchProxyOption,
   masseyRequestHeaders,
   mergeCookies,
   parseSetCookie,
@@ -22,13 +25,15 @@ import {
 } from "../../../src/institutions/massey/headers.ts";
 
 describe("massey header jar", () => {
-  test("parseSetCookie keeps name/value and max-age", () => {
+  test("parseSetCookie keeps name/value, max-age, flags", () => {
     const now = 1_000_000;
-    const c = parseSetCookie("cf_clearance=abc; Path=/; Max-Age=3600; HttpOnly", now);
+    const c = parseSetCookie("cf_clearance=abc; Path=/; Max-Age=3600; HttpOnly; Secure", now);
     expect(c?.name).toBe("cf_clearance");
     expect(c?.value).toBe("abc");
     expect(c?.path).toBe("/");
     expect(c?.expiresMs).toBe(now + 3_600_000);
+    expect(c?.httpOnly).toBe(true);
+    expect(c?.secure).toBe(true);
   });
 
   test("mergeCookies replaces same name+path", () => {
@@ -66,6 +71,7 @@ describe("massey header jar", () => {
     expect(headers["Sec-Fetch-Mode"]).toBe("navigate");
     expect(headers.Cookie).toBe("cf_clearance=tok");
     expect(Object.keys(headers)).toContain("Accept-Language");
+    expect(headers["Accept-Encoding"]).toContain("zstd");
   });
 
   test("challenge detector hits CF interstitial and 403", () => {
@@ -89,13 +95,16 @@ describe("massey header jar", () => {
     }
   });
 
-  test("absorbSetCookieHeaders uses getSetCookie()", () => {
+  test("absorbSetCookieHeaders uses getSetCookie() and the HTTP status", () => {
     const headers = new Headers();
     headers.append("set-cookie", "one=1; Path=/");
     headers.append("set-cookie", "two=2; Path=/");
-    const next = absorbSetCookieHeaders(EMPTY_JAR(), headers, "native-fetch");
+    headers.set("cf-ray", "abc-DFW");
+    const next = absorbSetCookieHeaders(EMPTY_JAR(), headers, "native-fetch", 403);
     expect(next.cookies.map((c) => c.name).sort()).toEqual(["one", "two"]);
     expect(next.path).toBe("native-fetch");
+    expect(next.lastStatus).toBe(403);
+    expect(next.lastCfRay).toBe("abc-DFW");
   });
 
   test("readMasseyProxyEnv prefers MASSEY_HTTPS_PROXY overlay", () => {
@@ -117,5 +126,38 @@ describe("massey header jar", () => {
       if (prev === undefined) delete Bun.env.HTTPS_PROXY;
       else Bun.env.HTTPS_PROXY = prev;
     }
+  });
+
+  test("masseyFetchProxyOption builds CONNECT headers from URL userinfo", () => {
+    const opt = masseyFetchProxyOption(
+      { httpsProxy: "http://desk:s3cret@127.0.0.1:8888" },
+      {},
+    );
+    expect(opt?.url).toBe("http://desk:s3cret@127.0.0.1:8888");
+    expect(opt?.headers?.["Proxy-Authorization"]).toStartWith("Basic ");
+    const decoded = atob(opt!.headers!["Proxy-Authorization"]!.slice(6));
+    expect(decoded).toBe("desk:s3cret");
+  });
+
+  test("MASSEY_PROXY_AUTHORIZATION overrides URL userinfo", () => {
+    const opt = masseyFetchProxyOption(
+      { httpsProxy: "http://desk:s3cret@127.0.0.1:8888" },
+      { MASSEY_PROXY_AUTHORIZATION: "Bearer desk-token" },
+    );
+    expect(opt?.headers?.["Proxy-Authorization"]).toBe("Bearer desk-token");
+  });
+
+  test("cookiesToCdpSet / absorbCdpCookies round-trip clearance", () => {
+    const jar = {
+      ...EMPTY_JAR(),
+      cookies: [{ name: "cf_clearance", value: "tok", domain: "masseyratings.com", path: "/", expiresMs: Date.now() + 60_000 }],
+    };
+    const cdp = cookiesToCdpSet(jar);
+    expect(cdp[0]?.name).toBe("cf_clearance");
+    expect(cdp[0]?.httpOnly).toBe(true);
+    expect(cdp[0]?.url).toContain("masseyratings.com");
+    const merged = absorbCdpCookies(EMPTY_JAR(), [{ name: "cf_clearance", value: "tok", domain: ".masseyratings.com", expires: Date.now() / 1000 + 60 }]);
+    expect(merged.cookies[0]?.name).toBe("cf_clearance");
+    expect(merged.path).toBe("webview");
   });
 });
