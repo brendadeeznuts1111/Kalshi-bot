@@ -87,6 +87,8 @@ export function openEventStore(options: OpenEventStoreOptions = {}): Database {
     create: !options.readonly,
     readonly: options.readonly,
   });
+  // Wait out other processes' locks (parallel test workers, cron + server) instead of failing with SQLITE_BUSY.
+  db.run('PRAGMA busy_timeout = 5000;');
   // Enforce REFERENCES on book_ticks / markets / live_scores (SQLite defaults off).
   db.run('PRAGMA foreign_keys = ON;');
   if (!options.readonly && dbPath !== ':memory:') {

@@ -9,6 +9,7 @@
  * Inspect uses bounded concurrency (`pool.ts` + `DEFAULT_INSPECT_CONCURRENCY`).
  * JSON dumps go to gitignored `research/outputs/`; committed reports are `latest.md` + `latest.diff.md`.
  */
+import { mkdirSync } from "node:fs";
 import { Database, type Statement } from "bun:sqlite";
 import { awaitSettled } from "./bun-settle.ts";
 import {
@@ -148,6 +149,8 @@ function getDb(): Database {
   if (db && openDbPath === path) return db;
   if (db) resetCacheDbConnection();
 
+  // `create: true` makes the file, not its directory (missing on a fresh clone).
+  if (path !== ":memory:") mkdirSync(path.replace(/\/[^/]+$/, ""), { recursive: true });
   db = new Database(path, { create: true });
   openDbPath = path;
   // @see https://bun.com/docs/runtime/sqlite — :memory: is ephemeral; WAL is for file DBs.
