@@ -32,7 +32,7 @@ import {
   type DeskLiquidityFlags,
 } from "../institutions/event-store/match-liquidity.ts";
 import { Database } from "bun:sqlite";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { partnerDetailHandler } from "../regulatory/routes/ops/partners";
 import { requireExecutionStateCompliance, requireStateCompliance, type ComplianceContext } from "../regulatory/middleware/state-compliance";
@@ -1332,9 +1332,11 @@ export function createResearchServer(options: ServeOptions = {}) {
         const f = Bun.file(joinPath(LIVE_TRACKER_LOG_DIR, file));
         if (!file || !(await f.exists())) {
           const available: string[] = [];
-          const evGlob = new Bun.Glob("*.jsonl");
-          for await (const name of evGlob.scan({ cwd: LIVE_TRACKER_LOG_DIR })) {
-            available.push(name);
+          if (existsSync(LIVE_TRACKER_LOG_DIR)) {
+            const evGlob = new Bun.Glob("*.jsonl");
+            for await (const name of evGlob.scan({ cwd: LIVE_TRACKER_LOG_DIR })) {
+              available.push(name);
+            }
           }
           return json(
             { error: "no such log file: " + (file || "(none)"), available: available.slice(-10) },
