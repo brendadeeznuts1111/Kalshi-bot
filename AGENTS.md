@@ -40,6 +40,7 @@ runtime safety.
 <!-- bun-baseline:start (managed by ~/dotfiles/bun/baseline; edit there, then run bbase --fix) -->
 ## Bun baseline
 
+- Before calling a change done, run `bun run verify` and fix what it reports. `verify` passes on a clean checkout of HEAD (`bbase --verify` proves it), so a failure comes from the current change.
 - Bun is pinned to `bun@1.4.3` in `packageManager` (and `.bun-version` where present). Don't change the pin in one repo; it moves machine-wide.
 - Don't use `tsx`, `ts-node`, `nodemon`, `concurrently` or `npx` in package.json scripts. Use `bun <file>`, `bun --watch`, `bun run --parallel` and `bun x`.
 - Type check with `bun run typecheck:bun`. This repo has a `check` script, which shadows the built-in `bun check` (even with flags or from a subfolder). Use `bun --check` instead; it only checks the root tsconfig and ignores `-p`.
