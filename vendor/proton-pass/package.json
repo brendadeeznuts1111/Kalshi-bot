@@ -1,0 +1,36 @@
+{
+  "name": "@factorywager/proton-pass",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Portable Proton Pass CLI integration — session, resolve, run/inject, redacted logging",
+  "exports": {
+    ".": "./src/index.ts",
+    "./session": "./src/session.ts",
+    "./logging": "./src/logger.ts",
+    "./cli": "./bin/proton-pass.ts",
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "proton-pass": "./bin/proton-pass.ts"
+  },
+  "module": "./src/index.ts",
+  "files": [
+    "src",
+    "bin",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "dependencies": {},
+  "peerDependencies": {
+    "bun-types": ">=1.3.0"
+  },
+  "peerDependenciesMeta": {
+    "bun-types": {
+      "optional": true
+    }
+  },
+  "scripts": {
+    "test": "bun test ./tests"
+  }
+}
