@@ -14,7 +14,7 @@ const EXCLUDED = new Set([
   "src/lib/design-colors.ts",
   "src/lib/color/palette.ts",
   "src/lib/color/kernel.ts",
-  "src/lib/color/browser-constants.ts", // macro inputs must be literal hex
+  "src/lib/color/browser-constants.ts", // CSS constants are literal hex
   "src/institutions/venue-badge.ts", // ColorKey consumers
   "src/institutions/glossary.ts", // color descriptions in glossary values
   "src/institutions/design-tokens.ts", // CSS/web design system — separate palette
