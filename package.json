@@ -1,7 +1,7 @@
 {
   "name": "kalshi-bot-research",
   "version": "0.2.0",
-  "packageManager": "bun@1.4.0",
+  "packageManager": "bun@1.4.3",
   "private": true,
   "description": "Discover and rank public Kalshi trading bots on GitHub (Bun + gh CLI)",
   "type": "module",
@@ -18,7 +18,7 @@
     "export-audit": "bun src/research/export-audit-cli.ts",
     "audit:export": "bun src/research/export-audit-cli.ts",
     "serve": "bun --hot src/research/serve.ts",
-    "dev": "NODE_ENV=development bun --watch src/research/serve.ts",
+    "dev": "NODE_ENV=development bun --check --watch src/research/serve.ts",
     "serve:once": "bun src/research/serve.ts",
     "schedule:register": "bun src/research/schedule-cli.ts register",
     "schedule:remove": "bun src/research/schedule-cli.ts remove",
@@ -36,7 +36,7 @@
     "artifacts:restore": "bun tools/restore-committed-artifacts.ts",
     "guard": "bun scripts/audit-bun-native.ts",
     "licenses:check": "bun pm licenses --prod --json",
-    "check": "bun run guard && bun run typecheck && bun run test && bun run bun:breaking-audit && bun run bun:perf-audit",
+    "check": "bun run guard && bun run typecheck:bun && bun run test && bun run bun:breaking-audit && bun run bun:perf-audit",
     "bun:ci": "bun run check",
     "rate-limit:status": "bun tools/github-rate-budget.ts",
     "miss-taxonomy:status": "bun tools/miss-taxonomy-status.ts",
@@ -211,7 +211,8 @@
     "liquidity:pipeline:preview": "bun tools/match-liquidity-schedule-cli.ts preview",
     "liquidity:pipeline:watch": "bun --watch tools/match-liquidity-pipeline-cli.ts -- --no-ground",
     "liquidity:ground:watch-db": "bun tools/match-liquidity-db-watch.ts",
-    "test:liquidity": "bun test --parallel tests/institutions/match-liquidity.test.ts tests/institutions/match-liquidity-ground.test.ts tests/institutions/match-liquidity-backfill.test.ts tests/institutions/match-liquidity-pipeline.test.ts"
+    "test:liquidity": "bun test --parallel tests/institutions/match-liquidity.test.ts tests/institutions/match-liquidity-ground.test.ts tests/institutions/match-liquidity-backfill.test.ts tests/institutions/match-liquidity-pipeline.test.ts",
+    "typecheck:bun": "bun --check"
   },
   "engines": {
     "bun": ">=1.4.0"
