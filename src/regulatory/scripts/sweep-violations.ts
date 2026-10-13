@@ -14,6 +14,7 @@
  */
 
 import { Database } from "bun:sqlite";
+import { argValue } from "../../cli/argv";
 import { databasePath, migration } from "../config";
 
 const RESET = "\x1b[0m";
@@ -30,21 +31,15 @@ const c = {
   bold: (t: string) => `\x1b[1m${t}${RESET}`,
 };
 
-function parseArgs(argv: string[]): { dbPath: string; retentionDays: number } {
-  const dbIdx = argv.indexOf("--db");
-  const retentionIdx = argv.indexOf("--retention-days");
-  return {
-    dbPath: dbIdx >= 0 ? argv[dbIdx + 1] : databasePath,
-    retentionDays: retentionIdx >= 0
-      ? parseInt(argv[retentionIdx + 1], 10)
-      : migration.retentionDays,
-  };
-}
+async function main(): Promise<number> {
+  const dbPath = argValue("db") ?? databasePath;
+  const retentionArg = argValue("retention-days");
+  const parsedRetention = retentionArg === undefined ? NaN : Number(retentionArg);
+  const retentionDays = Number.isFinite(parsedRetention) ? parsedRetention : migration.retentionDays;
 
-function main(): number {
-  const { dbPath, retentionDays } = parseArgs(process.argv.slice(2));
-
-  if (dbPath !== ":memory:" && !Bun.file(dbPath).exists()) {
+  // `Bun.file().exists()` is async (returns a Promise) — awaiting is required or
+  // the negation is always false and the missing-DB guard never fires.
+  if (dbPath !== ":memory:" && !(await Bun.file(dbPath).exists())) {
     console.error(c.err(`✖ Database not found: ${dbPath}`));
     return 1;
   }
@@ -91,5 +86,5 @@ function main(): number {
 }
 
 if (import.meta.main) {
-  process.exit(main());
+  process.exit(await main());
 }

@@ -16,15 +16,7 @@ import {
   formatSessionPlaneProbeReport,
   probeSessionPlanes,
 } from '../src/inventory/session-plane-probe.ts';
-
-function argValue(name: string): string | undefined {
-  const hit = process.argv.find((a) => a.startsWith(`--${name}=`));
-  return hit ? hit.slice(name.length + 3) : undefined;
-}
-
-function hasFlag(name: string): boolean {
-  return process.argv.includes(`--${name}`);
-}
+import { argValue, hasFlag } from '../src/cli/argv.ts';
 
 const json = hasFlag('json');
 const gsid = argValue('gsid')?.trim() || Bun.env.PLIVE_GSID?.trim() || undefined;

@@ -13,11 +13,6 @@ coverage/
 API-KEY.txt
 kalshi-bot-*.txt
 .protonpass-cache.json
-.env
-.env.*
-!.env.example
-*.pem
-kalshi-bot-*.txt
 
 # Machine-local runtime (regenerated each run)
 research/cache/
@@ -25,6 +20,19 @@ research/outputs/
 research/exports/
 research/evidence/
 research/evidence-captures/
+# Local tarball snapshots (research/audit-evidence/*.jsonl is the tracked SSOT)
+research/backups/
+
+# Third-party binaries pulled in for reference reading — never source, never tracked
+# (research PDFs *are* tracked; only installer images are not)
+docs/*.dmg
+docs/*.exe
+docs/*.zip
+docs/*.app/
+
+# Python bytecode from tools/calibration-dashboard.py (the .py itself is tracked)
+__pycache__/
+*.py[cod]
 
 # Test artifacts (never commit)
 tests/.tmp-*

@@ -31,14 +31,25 @@ describe("terminal-out (Bun ANSI primitives)", () => {
     expect(wrapDisplay("hello world", 5)).toBe("hello\n \nworld");
   });
 
-  test("brandMark composes Bun.color auto-TTY with the brand palette", () => {
-    // Non-TTY: Bun.color(key, 'ansi') returns '' so the mark is PLAIN.
-    const plain = brandMark("ok", "ok");
-    expect(plain).toBe("ok");
-    // The palette SSOT drives the color; ansi-16m always emits, so verify
-    // the same brand hex maps to the tennis green escape.
-    const tennisGreen = Bun.color("#27AE60", "ansi-16m");
-    expect(tennisGreen).toBe("\u001b[38;2;39;174;96m");
+  test("brandMark composes Bun.color with the brand palette", () => {
+    // Bun.color(input, "ansi") detects color depth from the ENVIRONMENT
+    // (COLORTERM/TERM), not from isatty — so in a piped/CI harness it still
+    // returns an escape. brandMark wraps only when it is non-empty, and falls
+    // back to plain text otherwise. Assert both branches from the real value
+    // instead of hardcoding a TTY assumption that does not hold.
+    const tennisGreen = Bun.color("#27AE60", "ansi") ?? "";
+    // "ansi" respects the environment (empty under NO_COLOR / no TERM), so the
+    // mark is plain there and brand-escaped everywhere else. Both are valid;
+    // what must hold is that the visible text survives either way.
+    expect(Bun.stripANSI(brandMark("ok", "ok"))).toBe("ok");
+
+    const mark = brandMark("ok", "ok");
+    if (tennisGreen) {
+      expect(mark).toBe(tennisGreen + "ok" + RESET);
+      expect(Bun.stripANSI(mark)).toBe("ok");
+    } else {
+      expect(mark).toBe("ok");
+    }
   });
 
   test("Bun.inspect.custom renders inside Bun.inspect.table cells", () => {
@@ -48,13 +59,18 @@ describe("terminal-out (Bun ANSI primitives)", () => {
     expect(table).toContain("[[OK]]");
   });
 
-  test("brandCell: TTY-aware brand color (plain in non-TTY harness)", () => {
+  test("brandCell: colors follow the Bun.color environment detection", () => {
     const cell = brandCell("pass", "pass");
-    // Bun.color(key,'ansi') returns '' in this non-TTY harness, so the
-    // cell renders PLAIN - the documented auto-detection, not a bug.
-    expect(Bun.inspect(cell, { colors: true } as never)).toBe("pass");
-    // With colors forced off, also plain.
+    // `colors: false` is the documented "render plain" path and is stable.
     expect(Bun.inspect(cell, { colors: false } as never)).toBe("pass");
+    // `colors: true` renders plain only when Bun.color(x,'ansi') is empty
+    // (no COLORTERM/TERM support). Otherwise the brand escape is present —
+    // compare against what Bun.color actually returns here. "pass" maps to
+    // the tennis-green palette key (COLORS.tennis = #27AE60).
+    const tennis = Bun.color("#27AE60", "ansi") ?? "";
+    const rendered = Bun.inspect(cell, { colors: true } as never);
+    expect(rendered).toBe(tennis ? tennis + "pass" + RESET : "pass");
+    expect(Bun.stripANSI(rendered)).toBe("pass");
     // And the raw/meta surface is intact for table rendering.
     expect(cell.raw).toBe("pass");
     expect(cell.semantic).toBe("pass");

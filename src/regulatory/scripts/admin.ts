@@ -73,8 +73,10 @@ ${c.info("Commands:")}
 `);
 }
 
-function getDb(): Database {
-  if (databasePath !== ":memory:" && !Bun.file(databasePath).exists()) {
+async function getDb(): Promise<Database> {
+  // `Bun.file().exists()` is async (returns a Promise) — awaiting is required or
+  // the negation is always false and the missing-DB guard never fires.
+  if (databasePath !== ":memory:" && !(await Bun.file(databasePath).exists())) {
     console.error(c.err(`✖ Database not found: ${databasePath}`));
     process.exit(1);
   }
@@ -83,7 +85,7 @@ function getDb(): Database {
 
 // ── Self-exclusion commands ──
 
-function seAdd(argv: string[]): number {
+async function seAdd(argv: string[]): Promise<number> {
   const userIdx = argv.indexOf("--user");
   const nodeIdx = argv.indexOf("--node");
   const reasonIdx = argv.indexOf("--reason");
@@ -99,7 +101,7 @@ function seAdd(argv: string[]): number {
   const reason = argv[reasonIdx + 1];
   const expiresAt = expiresIdx >= 0 ? Math.floor(new Date(argv[expiresIdx + 1]).getTime() / 1000) : null;
 
-  const db = getDb();
+  const db = await getDb();
   db.run(
     `INSERT INTO ${TABLE.SELF_EXCLUSIONS} (user_id, node_id, reason, excluded_at, expires_at)
      VALUES (?, ?, ?, ${SQL_UNIXEPOCH}, ?)
@@ -114,7 +116,7 @@ function seAdd(argv: string[]): number {
   return 0;
 }
 
-function seRemove(argv: string[]): number {
+async function seRemove(argv: string[]): Promise<number> {
   const userIdx = argv.indexOf("--user");
   const nodeIdx = argv.indexOf("--node");
 
@@ -126,7 +128,7 @@ function seRemove(argv: string[]): number {
   const userId = argv[userIdx + 1];
   const nodeId = argv[nodeIdx + 1];
 
-  const db = getDb();
+  const db = await getDb();
   const result = db.run(
     `DELETE FROM ${TABLE.SELF_EXCLUSIONS} WHERE user_id = ? AND node_id = ?`,
     [userId, nodeId],
@@ -136,14 +138,14 @@ function seRemove(argv: string[]): number {
   return 0;
 }
 
-function seList(argv: string[]): number {
+async function seList(argv: string[]): Promise<number> {
   const userIdx = argv.indexOf("--user");
   const nodeIdx = argv.indexOf("--node");
 
   const userId = userIdx >= 0 ? argv[userIdx + 1] : null;
   const nodeId = nodeIdx >= 0 ? argv[nodeIdx + 1] : null;
 
-  const db = getDb();
+  const db = await getDb();
   let sql = `SELECT user_id, node_id, reason, excluded_at, expires_at FROM ${TABLE.SELF_EXCLUSIONS} WHERE 1=1`;
   const params: (string | null)[] = [];
 
@@ -176,14 +178,14 @@ function seList(argv: string[]): number {
 
 // ── Limits commands ──
 
-function limitsList(argv: string[]): number {
+async function limitsList(argv: string[]): Promise<number> {
   const stateIdx = argv.indexOf("--state");
   const sportIdx = argv.indexOf("--sport");
 
   const stateCode = stateIdx >= 0 ? argv[stateIdx + 1] : null;
   const sportId = sportIdx >= 0 ? argv[sportIdx + 1] : null;
 
-  const db = getDb();
+  const db = await getDb();
   let sql = `SELECT state_code, sport_id, market_id, max_wager, min_wager, allowed_bet_types, special_rules, effective_from, effective_to FROM ${TABLE.REGULATORY_LIMITS} WHERE 1=1`;
   const params: (string | null)[] = [];
 
@@ -219,7 +221,7 @@ function limitsList(argv: string[]): number {
   return 0;
 }
 
-function limitsSet(argv: string[]): number {
+async function limitsSet(argv: string[]): Promise<number> {
   const stateIdx = argv.indexOf("--state");
   const sportIdx = argv.indexOf("--sport");
   const marketIdx = argv.indexOf("--market");
@@ -249,7 +251,7 @@ function limitsSet(argv: string[]): number {
     return 1;
   }
 
-  const db = getDb();
+  const db = await getDb();
   db.run(
     `INSERT INTO ${TABLE.REGULATORY_LIMITS} (state_code, sport_id, market_id, max_wager, min_wager, allowed_bet_types, special_rules, effective_from, effective_to)
      VALUES (?, ?, ?, ?, ?, ?, ?, ${SQL_UNIXEPOCH}, NULL)`,
@@ -262,7 +264,7 @@ function limitsSet(argv: string[]): number {
 
 // ── Main dispatch ──
 
-function main(): number {
+async function main(): Promise<number> {
   const argv = process.argv.slice(2);
   if (argv.length < 2) {
     printUsage();
@@ -291,5 +293,5 @@ function main(): number {
 }
 
 if (import.meta.main) {
-  process.exit(main());
+  process.exit(await main());
 }

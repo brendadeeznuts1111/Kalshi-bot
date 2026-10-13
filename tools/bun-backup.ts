@@ -10,6 +10,7 @@
  *
  * Flags:
  *   --keep=N    keep the N newest backups, delete older (default 5).
+ *               `--keep N` also works (shared src/cli/argv.ts SSOT).
  *   --list      list existing backups.
  *
  * @see docs/AGENT-PITFALLS.md section 21 (Archive was the open item)
@@ -17,6 +18,7 @@
 import { readdirSync, existsSync, statSync, unlinkSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { assertBunAtLeast } from '../src/research/bun-native.ts';
+import { argValue } from '../src/cli/argv.ts';
 
 assertBunAtLeast('1.4.0', 'bun:backup');
 
@@ -33,10 +35,10 @@ function defaultBackupFiles(): string[] {
     .map((f) => join(CACHE_DIR, f));
 }
 
-function argValue(name: string): number | undefined {
-  const hit = process.argv.find((a) => a.startsWith('--' + name + '='));
-  if (!hit) return undefined;
-  const n = Number(hit.slice(name.length + 3));
+function numArgValue(name: string): number | undefined {
+  const raw = argValue(name);
+  if (raw === undefined) return undefined;
+  const n = Number(raw);
   return Number.isFinite(n) ? n : undefined;
 }
 
@@ -55,7 +57,7 @@ async function main(): Promise<number> {
     await listBackups();
     return 0;
   }
-  const keep = argValue('keep') ?? 5;
+  const keep = numArgValue('keep') ?? 5;
   const files = defaultBackupFiles();
   if (!files.length) {
     console.error('no backup-able files in ' + CACHE_DIR);

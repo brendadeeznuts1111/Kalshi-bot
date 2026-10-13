@@ -21,19 +21,13 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { assertBunAtLeast } from '../src/research/bun-native.ts';
 import { auditClaims, htmlToText } from '../src/lib/claims-audit.ts';
+import { argValue } from '../src/cli/argv.ts';
 
 assertBunAtLeast('1.4.0', 'bun:claims-audit');
 
 const ROOT = join(import.meta.dir, '..');
 const BLOG_CACHE = join(ROOT, 'research/cache/bun-blog.html');
 
-function argValue(name: string): string | undefined {
-  const hit = process.argv.find((a) => a.startsWith('--' + name + '='));
-  if (hit) return hit.slice(name.length + 3);
-  const idx = process.argv.indexOf('--' + name);
-  if (idx >= 0) return process.argv[idx + 1];
-  return undefined;
-}
 
 
 async function main(): Promise<number> {

@@ -18,6 +18,7 @@
 import { Database } from "bun:sqlite";
 import { readFileSync, readdirSync } from "fs";
 import { join, basename } from "path";
+import { argValue } from "../../cli/argv";
 import { databasePath, migration } from "../config";
 
 const RESET = "\x1b[0m";
@@ -35,11 +36,6 @@ const c = {
 };
 
 const MIGRATIONS_DIR = join(import.meta.dir, "..", migration.migrationsDir);
-
-function parseArgs(argv: string[]): { dbPath: string } {
-  const idx = argv.indexOf("--db");
-  return { dbPath: idx >= 0 ? argv[idx + 1] : databasePath };
-}
 
 function ensureMigrationsTable(db: Database): void {
   db.run(`CREATE TABLE IF NOT EXISTS _regulatory_migrations (
@@ -86,13 +82,11 @@ function runMigration(db: Database, filename: string): void {
 }
 
 function main(): number {
-  const { dbPath } = parseArgs(process.argv.slice(2));
+  const dbPath = argValue("db") ?? databasePath;
 
-  if (dbPath !== ":memory:" && !Bun.file(dbPath).exists()) {
-    console.error(c.err(`✖ Database not found: ${dbPath}`));
-    return 1;
-  }
-
+  // No existence guard here by design: this is the bootstrap tool that *creates*
+  // the database (`create: true` below), so requiring it to pre-exist would make
+  // a fresh clone unmigratable. sweep-violations.ts / admin.ts do guard.
   const db = new Database(dbPath, { create: true });
   try {
     ensureMigrationsTable(db);
