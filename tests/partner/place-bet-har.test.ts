@@ -25,7 +25,7 @@ const FIXTURE = join(
 
 describe("place-bet HAR → map → placeOrder", () => {
   test("extracts map from fixture HAR without inventing URL", async () => {
-    const har = JSON.parse(await Bun.file(FIXTURE).text()) as unknown;
+    const har = (await Bun.file(FIXTURE).json()) as unknown;
     const { map, candidates } = extractPlaceBetMapFromHar(har, {
       harPath: FIXTURE,
     });
@@ -45,7 +45,7 @@ describe("place-bet HAR → map → placeOrder", () => {
   });
 
   test("extractBetGroupsWiresFromHar for offline ingest", async () => {
-    const har = JSON.parse(await Bun.file(FIXTURE).text()) as unknown;
+    const har = (await Bun.file(FIXTURE).json()) as unknown;
     const wires = extractBetGroupsWiresFromHar(har);
     expect(wires).toHaveLength(1);
     expect(looksLikeBetGroupsWire(wires[0])).toBe(true);
@@ -56,7 +56,7 @@ describe("place-bet HAR → map → placeOrder", () => {
   });
 
   test("buildPlaceBetBody uses HAR keys", async () => {
-    const har = JSON.parse(await Bun.file(FIXTURE).text()) as unknown;
+    const har = (await Bun.file(FIXTURE).json()) as unknown;
     const { map } = extractPlaceBetMapFromHar(har);
     const { body, encoding } = buildPlaceBetBody(
       {
@@ -99,7 +99,7 @@ describe("place-bet HAR → map → placeOrder", () => {
   });
 
   test("placeOrder dry-run reports mapped URL; live POST with mock fetch", async () => {
-    const har = JSON.parse(await Bun.file(FIXTURE).text()) as unknown;
+    const har = (await Bun.file(FIXTURE).json()) as unknown;
     const { map } = extractPlaceBetMapFromHar(har);
     expect(map).not.toBeNull();
 
