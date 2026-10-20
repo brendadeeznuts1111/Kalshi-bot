@@ -216,7 +216,7 @@
     "verify": "bun run check"
   },
   "engines": {
-    "bun": ">=1.4.0"
+    "bun": ">=1.4.3"
   },
   "dependencies": {
     "@factorywager/proton-pass": "file:vendor/proton-pass",
@@ -224,7 +224,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@types/bun": "1.4.0",
+    "@types/bun": "^1.4.3",
     "bun-types": "1.4.0",
     "typescript": "6.0.3"
   }

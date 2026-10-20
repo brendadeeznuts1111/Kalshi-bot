@@ -199,9 +199,9 @@ export async function buildRotorIngestWire(auditRelDir: string): Promise<RotorIn
   const evidenceCopies: RotorIngestWire["evidenceCopies"] = [];
 
   for (const entry of manifest.findings) {
-    const finding = JSON.parse(
-      await Bun.file(join(auditDir, `${entry.id}.finding.json`)).text(),
-    ) as AuditFindingWire;
+    const finding = (await Bun.file(
+      join(auditDir, `${entry.id}.finding.json`),
+    ).json()) as AuditFindingWire;
     const rotorFinding = toRotorFindingWire(finding);
     findings.push(rotorFinding);
     evidenceCopies.push({
