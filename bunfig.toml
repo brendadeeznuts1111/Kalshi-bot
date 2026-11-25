@@ -2,6 +2,9 @@
 # Project hardening; machine linker/global-store/cache policy stays in ~/.bunfig.toml.
 frozenLockfile = true
 
+[install.security]
+scanner = "./scripts/bun_security_scanner.ts"
+
 [run]
 # @see https://bun.com/docs/runtime/bunfig#run-shell-use-the-system-shell-or-buns-shell
 shell = "bun"

@@ -1,7 +1,7 @@
 {
   "name": "kalshi-bot-research",
   "version": "0.2.0",
-  "packageManager": "bun@1.4.4",
+  "packageManager": "bun@1.4.5",
   "private": true,
   "description": "Discover and rank public Kalshi trading bots on GitHub (Bun + gh CLI)",
   "type": "module",
@@ -227,5 +227,7 @@
     "@types/bun": "1.4.0",
     "bun-types": "1.4.0",
     "typescript": "6.0.3"
-  }
+  },
+  "license": "UNLICENSED",
+  "trustedDependencies": []
 }
