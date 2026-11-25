@@ -13,6 +13,7 @@ coverage/
 API-KEY.txt
 kalshi-bot-*.txt
 .protonpass-cache.json
+.1password/
 
 # Machine-local runtime (regenerated each run)
 research/cache/
