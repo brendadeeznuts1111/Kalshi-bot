@@ -35,3 +35,14 @@ depth = 3
 #   Bun.TOML.stringify(object) -> string
 # @see https://bun.com/docs/api/toml
 # ============================================================================
+
+[lint]
+ignorePatterns = ["**/node_modules/**", "dist/**", "research/**"]
+
+[lint.categories]
+correctness = "warn"
+
+[lint.rules]
+"unicorn/require-module-attributes" = "error"
+"unicorn/prefer-array-flat-map" = "error"
+"unicorn/prefer-blob-reading-methods" = "error"

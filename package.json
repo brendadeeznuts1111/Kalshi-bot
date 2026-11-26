@@ -56,6 +56,7 @@
     "logging:status": "bun -e \"import { openEventStore } from './src/institutions/event-store/open-db.ts'; const db = openEventStore({}); const r = db.query('SELECT COUNT(*) as n FROM price_snapshots').get(); console.log('Snapshots:', r.n);\"",
     "test:coverage": "bun test --coverage",
     "typecheck": "tsc --noEmit",
+    "lint": "bun --no-env-file scripts/lint_runner.ts",
     "alpha:init": "bun src/calibration/init-program.ts",
     "calibration:watcher": "bun src/calibration/cli.ts",
     "calibration:mark-toxicity": "bun src/calibration/mark-toxicity.ts",
