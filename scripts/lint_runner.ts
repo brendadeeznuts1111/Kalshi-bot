@@ -11,7 +11,7 @@
  * @file scripts/lint_runner.ts
  */
 
-import { existsSync } from "node:fs";
+import { accessSync, constants, existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
@@ -22,9 +22,18 @@ const CANARY_ONLY_FLAGS = new Set([
   "--fix-dangerously",
 ]);
 
+function isExecutable(bin: string): boolean {
+  try {
+    accessSync(bin, constants.X_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function hasNativeBunLint(bin: string): boolean {
   try {
-    const res = Bun.spawnSync([bin, "lint", "--help"], {
+    const res = Bun.spawnSync([bin, "lint", "--no-script", "--help"], {
       cwd: "/tmp",
       stdin: "ignore",
       stdout: "pipe",
@@ -41,14 +50,15 @@ function hasNativeBunLint(bin: string): boolean {
 function resolveNativeBunLintBin(): string | null {
   const candidates = [
     process.env.BUN_LINT_BIN?.trim(),
-    process.execPath,
     join(homedir(), ".bun-canary", "bin", "bun"),
+    Bun.which("bun-canary") ?? undefined,
+    process.execPath,
   ].filter((c): c is string => Boolean(c));
   const seen = new Set<string>();
   for (const bin of candidates) {
     if (seen.has(bin)) continue;
     seen.add(bin);
-    if (existsSync(bin) && hasNativeBunLint(bin)) return bin;
+    if (isExecutable(bin) && hasNativeBunLint(bin)) return bin;
   }
   return null;
 }
@@ -74,7 +84,7 @@ if (args.includes("--doctor")) {
 }
 
 if (nativeBin !== null) {
-  const res = Bun.spawnSync([nativeBin, "lint", ...args], {
+  const res = Bun.spawnSync([nativeBin, "lint", "--no-script", ...args], {
     cwd: process.cwd(),
     stdio: ["inherit", "inherit", "inherit"],
   });
