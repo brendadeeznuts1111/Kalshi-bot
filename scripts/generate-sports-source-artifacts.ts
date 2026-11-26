@@ -17,7 +17,7 @@ if (checkOnly) {
     console.error("public/registry/sports-sources.json missing — run bun run sports:registry:bake");
     process.exit(1);
   }
-  const actual = JSON.parse(await file.text()) as { generatedAt?: unknown };
+  const actual = (await file.json()) as { generatedAt?: unknown };
   if (typeof actual.generatedAt !== "string") {
     console.error("public sports/source registry has no generatedAt timestamp");
     process.exit(1);
